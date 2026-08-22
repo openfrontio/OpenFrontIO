@@ -74,4 +74,64 @@ describe("PollingLoop", () => {
     // Second call
     expect(taskCallCount).toBe(2);
   });
+
+  it("should stop scheduling future executions once stopped", async () => {
+    let taskCallCount = 0;
+    const task = vi.fn().mockImplementation(async () => {
+      taskCallCount++;
+    });
+
+    const stop = startPolling(task, 100);
+
+    // Initial call
+    expect(taskCallCount).toBe(1);
+    await new Promise(process.nextTick);
+
+    stop();
+
+    // Even after many intervals, no further calls should be scheduled.
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(taskCallCount).toBe(1);
+  });
+
+  it("should let an in-flight task finish but not schedule another run", async () => {
+    let taskCallCount = 0;
+    let resolveTask: ((value?: void) => void) | undefined;
+
+    const task = vi.fn().mockImplementation(() => {
+      taskCallCount++;
+      return new Promise<void>((resolve) => {
+        resolveTask = resolve;
+      });
+    });
+
+    const stop = startPolling(task, 100);
+    expect(taskCallCount).toBe(1);
+
+    // Stop while the first task is still in flight.
+    stop();
+
+    // Let the in-flight task complete - this must not throw and must not
+    // schedule a follow-up run.
+    resolveTask?.();
+    await new Promise(process.nextTick);
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(taskCallCount).toBe(1);
+  });
+
+  it("should be safe to call stop multiple times", async () => {
+    const task = vi.fn().mockResolvedValue(undefined);
+
+    const stop = startPolling(task, 100);
+    await new Promise(process.nextTick);
+
+    expect(() => {
+      stop();
+      stop();
+    }).not.toThrow();
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(task).toHaveBeenCalledTimes(1);
+  });
 });

@@ -17,6 +17,7 @@ export class PrivilegeRefresher {
     new FailOpenPrivilegeChecker();
 
   private log: Logger;
+  private stopPolling: (() => void) | null = null;
 
   constructor(
     private cosmeticsEndpoint: string,
@@ -32,7 +33,16 @@ export class PrivilegeRefresher {
     this.log.info(
       `Starting privilege refresher with interval ${this.refreshInterval}`,
     );
-    startPolling(() => this.loadPrivilegeChecker(), this.refreshInterval);
+    this.stopPolling = startPolling(
+      () => this.loadPrivilegeChecker(),
+      this.refreshInterval,
+    );
+  }
+
+  // Stops the refresh loop. Safe to call even if start() was never called.
+  public stop(): void {
+    this.stopPolling?.();
+    this.stopPolling = null;
   }
 
   public get(): PrivilegeChecker {
