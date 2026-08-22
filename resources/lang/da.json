@@ -790,7 +790,6 @@
   "kick_reason": {
     "admin": "Smidt ud af en administrator",
     "duplicate_session": "Smidt ud af spil (du spiller måske på en anden fane)",
-    "host_left": "Vært har forladt lobbyen.",
     "lobby_creator": "Smidt ud af lobbyvært"
   },
   "leaderboard": {

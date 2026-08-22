@@ -899,7 +899,6 @@
   "kick_reason": {
     "admin": "Expulso por um administrador",
     "duplicate_session": "Expulso do jogo (você provavelmente estava jogando em outra aba)",
-    "host_left": "O Anfitrião saiu da Partida.",
     "lobby_creator": "Expulso pelo Criador do lobby",
     "match_cancelled": "Jogo cancelado: um jogador falhou ao se conectar. Você não perdeu nenhum ELO."
   },

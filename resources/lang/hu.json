@@ -899,7 +899,6 @@
   "kick_reason": {
     "admin": "A lobbi adminisztrátora kirúgta",
     "duplicate_session": "Ki lettél rúgva a játékból (lehet, hogy egy másik lapon játszottál)",
-    "host_left": "A lobbi házigazdája kirúgta.",
     "lobby_creator": "A lobbi létrehozója kirúgta",
     "match_cancelled": "A mérkőzés törölve: az egyik játékos nem tudott csatlakozni. Nem veszítettél ELO-t."
   },

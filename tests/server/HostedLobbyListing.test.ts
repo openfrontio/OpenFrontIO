@@ -261,7 +261,11 @@ function fakeWs() {
   return ws;
 }
 
-function makeClient(clientID: string, persistentID: string, ws: any) {
+function makeClient(
+  clientID: string,
+  persistentID: string = clientID,
+  ws: any = fakeWs(),
+) {
   return new Client(
     clientID,
     persistentID,
@@ -278,7 +282,10 @@ function makeClient(clientID: string, persistentID: string, ws: any) {
   );
 }
 
-describe("host-left lobby teardown", () => {
+describe("host-left lobby", () => {
+  // GameServer.ts private disconnectedTimeout
+  const DISCONNECTED_TIMEOUT_MS = 30_000;
+
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -288,30 +295,65 @@ describe("host-left lobby teardown", () => {
     vi.useRealTimers();
   });
 
-  it("ends, delists and prunes an unstarted lobby when the host leaves", () => {
+  it("arms an auto-start timer, keeping remaining players, when the host leaves", () => {
     const gm = new GameManager(mockLogger);
     const game = gm.createGame("g-host-leaves", undefined, CREATOR)!;
     game.setListed(true);
 
-    const hostWs = fakeWs();
-    const guestWs = fakeWs();
-    expect(game.joinClient(makeClient("host", CREATOR, hostWs))).toBe("joined");
-    expect(game.joinClient(makeClient("guest", OTHER_CREATOR, guestWs))).toBe(
-      "joined",
-    );
+    const [host, guest] = [makeClient(CREATOR), makeClient(OTHER_CREATOR)];
+
+    expect(game.joinClient(host)).toBe("joined");
+    expect(game.joinClient(guest)).toBe("joined");
     expect(gm.listedLobbies()).toHaveLength(1);
 
-    hostWs.emit("close");
+    host.ws.emit("close");
 
-    // Remaining players are kicked and the ghost leaves the listing...
-    expect(guestWs.close).toHaveBeenCalled();
+    expect(guest.ws.close).not.toHaveBeenCalled();
+    expect(game.phase()).not.toBe(GamePhase.Finished);
+    expect(game["_hasEnded"]).toBe(false);
+    expect(game.gameInfo().startsAt).toBe(Date.now() + DISCONNECTED_TIMEOUT_MS);
+    expect(gm.listedLobbies()).toHaveLength(1);
+  });
+
+  it("ends the game when the host is the last player to leave", () => {
+    const gm = new GameManager(mockLogger);
+    const game = gm.createGame("g-host-alone", undefined, CREATOR)!;
+    game.setListed(true);
+
+    const host = makeClient(CREATOR);
+
+    expect(game.joinClient(host)).toBe("joined");
+
+    host.ws.emit("close");
+
+    expect((game as any)._hasEnded).toBe(true);
     expect(game.phase()).toBe(GamePhase.Finished);
+    expect(game.gameInfo().startsAt).toBeUndefined();
     expect(gm.listedLobbies()).toEqual([]);
+  });
 
-    // ...and the next manager tick prunes the game entirely, freeing the
-    // creator's one-listing quota.
-    gm.tick();
-    expect(gm.game("g-host-leaves")).toBeNull();
+  it("does not reset the start countdown when the host rejoin + exits", () => {
+    const gm = new GameManager(mockLogger);
+    const game = gm.createGame("g-host-flaps", undefined, CREATOR)!;
+    game.setListed(true);
+
+    const [host, guest] = [makeClient(CREATOR), makeClient(OTHER_CREATOR)];
+
+    game.joinClient(host);
+    game.joinClient(guest);
+
+    // initial disconnect arms the deadline
+    host.ws.emit("close");
+    const expectedDeadline = Date.now() + DISCONNECTED_TIMEOUT_MS;
+    expect(game.gameInfo().startsAt).toBe(expectedDeadline);
+
+    // host rejoins and leaves 5 secs later, countdown should continue
+    const rejoinedHost = makeClient(CREATOR);
+    game.joinClient(rejoinedHost);
+    vi.setSystemTime(Date.now() + 5_000);
+    rejoinedHost.ws.emit("close");
+
+    expect(game.gameInfo().startsAt).toBe(expectedDeadline);
   });
 
   it("tears down even when the host socket was already dead on join", () => {

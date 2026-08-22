@@ -865,7 +865,6 @@
   "kick_reason": {
     "admin": "Vyhozen správcem",
     "duplicate_session": "Vyhozen ze hry (možná jste měli hru otevřenou v jiném okně)",
-    "host_left": "Hostitel opustil lobby.",
     "lobby_creator": "Vyhozen tvůrcem lobby"
   },
   "leaderboard": {

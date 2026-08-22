@@ -79,7 +79,6 @@ export function hashPersistentID(persistentID: string): string {
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
 const KICK_REASON_ADMIN = "kick_reason.admin";
-const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
 const KICK_REASON_MATCH_CANCELLED = "kick_reason.match_cancelled";
 const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
@@ -1073,18 +1072,31 @@ export class GameServer {
     }
     // Remove persistentId if the game has not started to prevent going over max players
     this.persistentIdToClientId.delete(client.persistentID);
-    // Close lobby when host leaves before game starts: without a host it can
-    // never start, and a listed one would haunt the lobby browser and hold
-    // the creator's one-listing quota. phase() reports Finished once ended,
-    // so GameManager's next tick prunes it.
+
+    // If the host leaves, start the game after the disconnected timeout,
+    // giving them time to rejoin if it was an accident
     if (!this.isPublic() && client.persistentID === this.creatorPersistentID) {
-      this.log.info("Host left, closing lobby", {
-        gameID: this.id,
-      });
-      for (const c of [...this.activeClients]) {
-        this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+      if (this.numClients() === 0) {
+        this.log.info("Host left, no remaining players. Ending game.");
+        this._hasEnded = true;
+        return;
       }
-      this._hasEnded = true;
+
+      // Prevent counter from being reset by join + leave again
+      if (this.startsAt) {
+        return;
+      }
+
+      const newStartTime = Date.now() + this.disconnectedTimeout;
+
+      this.log.info(
+        `Host left, starting lobby in ${this.disconnectedTimeout / 1000} seconds.`,
+        {
+          gameID: this.id,
+        },
+      );
+
+      this.setStartsAt(newStartTime);
     }
   }
 

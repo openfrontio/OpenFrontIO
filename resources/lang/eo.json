@@ -704,7 +704,6 @@
   "kick_reason": {
     "admin": "Forpelita de administranto",
     "duplicate_session": "Forpelita de la ludo (vi eble ludis per alia langeto)",
-    "host_left": "La gastiganto eliris de la ludejo.",
     "lobby_creator": "Forpelita de la ludeja kreanto"
   },
   "leaderboard": {

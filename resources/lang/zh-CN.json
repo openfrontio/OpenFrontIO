@@ -896,8 +896,7 @@
   "kick_reason": {
     "duplicate_session": "已被踢出游戏（也可能你正在另一个标签页上玩游戏）",
     "lobby_creator": "已被房主踢出房间",
-    "admin": "被管理员踢出",
-    "host_left": "房主已离开房间。"
+    "admin": "被管理员踢出"
   },
   "send_troops_modal": {
     "title_with_name": "向 {name} 发送军队",
