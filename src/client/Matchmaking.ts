@@ -9,6 +9,7 @@ import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { JoinLobbyEvent } from "./Main";
+import { getRankedTeammate } from "./RankedTeammate";
 import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
 
@@ -16,6 +17,7 @@ type MatchmakingJoin = {
   type: "join";
   jwt: string;
   clanTag?: string;
+  teammatePublicId?: string;
 };
 
 @customElement("matchmaking-modal")
@@ -29,7 +31,17 @@ export class MatchmakingModal extends BaseModal {
   // Which queue to join; set by Main from the open-matchmaking event
   // before the modal opens.
   public mode: "1v1" | "2v2" = "1v1";
+  // Optional 2v2 teammate (public id), read from storage at queue time so the
+  // ranked screen, the requeue URL and an in-place requeue all agree. The server
+  // holds this player out of matching until that teammate names them back.
+  // Chosen before queueing, so you can never be matched solo mid-setup.
+  private teammatePublicId: string | null = null;
   @state() private connected = false;
+  // Server-reported pairing state: waiting = held for the teammate,
+  // ready = both named each other and the duo is searching.
+  @state() private partyStatus: "waiting" | "ready" | null = null;
+  // Own id, so a stale self-reference is never sent as a teammate.
+  private myPublicId: string | null = null;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
   @state() private limitReached = false;
@@ -97,6 +109,21 @@ export class MatchmakingModal extends BaseModal {
       );
     }
     if (this.gameID === null) {
+      // Held for a teammate: don't claim to be searching, since this player is
+      // excluded from the pool until the other side queues too.
+      if (this.partyStatus === "waiting") {
+        return html`
+          ${this.renderLoadingSpinner(
+            translateText("matchmaking_modal.party_waiting"),
+            "yellow",
+          )}
+          <p class="text-center text-xs text-white/40">
+            ${translateText("matchmaking_modal.party_waiting_hint", {
+              id: this.teammatePublicId ?? "",
+            })}
+          </p>
+        `;
+      }
       return html`
         ${this.queueSize !== null
           ? html`
@@ -108,7 +135,11 @@ export class MatchmakingModal extends BaseModal {
             `
           : ""}
         ${this.renderLoadingSpinner(
-          translateText("matchmaking_modal.searching"),
+          translateText(
+            this.partyStatus === "ready"
+              ? "matchmaking_modal.party_searching_duo"
+              : "matchmaking_modal.searching",
+          ),
           "green",
         )}
       `;
@@ -139,8 +170,17 @@ export class MatchmakingModal extends BaseModal {
     this.limitReached = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
+    this.loadTeammate();
     this.connect();
     return true;
+  }
+
+  // Re-read on every queue entry so all paths agree. The status itself is never
+  // assumed, only taken from the server: guessing "held" would strand a client
+  // deployed ahead of the server on "waiting" while it queues normally.
+  private loadTeammate() {
+    this.teammatePublicId =
+      this.mode === "2v2" ? getRankedTeammate(this.myPublicId) : null;
   }
 
   private openSubscriptions = () => {
@@ -232,6 +272,10 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private async connect() {
+    // Pairing state belongs to the socket that reported it. Reconnects (watchdog,
+    // close retry) call connect() directly, so clearing here stops a stale
+    // waiting/ready outliving its connection.
+    this.partyStatus = null;
     // Pending timers from a previous socket must not fire on this one.
     this.clearWatchdog();
     if (this.connectTimeout) {
@@ -276,6 +320,10 @@ export class MatchmakingModal extends BaseModal {
           ...(this.selectedClanTag === null
             ? {}
             : { clanTag: this.selectedClanTag }),
+          // Server pairs two queued players who name each other.
+          ...(this.teammatePublicId === null
+            ? {}
+            : { teammatePublicId: this.teammatePublicId }),
         };
         this.socket.send(JSON.stringify(message));
         this.connected = true;
@@ -291,6 +339,10 @@ export class MatchmakingModal extends BaseModal {
       const data = JSON.parse(event.data);
       if (data.type === "queue-size") {
         this.queueSize = data.count;
+        return;
+      }
+      if (data.type === "party-status") {
+        this.partyStatus = data.status === "ready" ? "ready" : "waiting";
         return;
       }
       if (data.type === "match-assignment") {
@@ -392,6 +444,7 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
+    this.myPublicId = userMe.player.publicId;
     const row =
       this.mode === "2v2"
         ? userMe.player.leaderboard?.twoVtwo
@@ -405,6 +458,7 @@ export class MatchmakingModal extends BaseModal {
     this.limitReached = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
+    this.loadTeammate();
     this.connect();
   }
 
