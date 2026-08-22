@@ -82,6 +82,65 @@ describe("empty game reaping", () => {
     expect(game.phase()).toBe(GamePhase.Active);
   });
 
+  it("ignores pings from a socket that is off the roster", () => {
+    const game = newGame(undefined);
+    game.prestart();
+    game.start();
+    const startClock = (game as any).lastPingUpdate;
+
+    // A socket pruned or kicked out of activeClients keeps its message
+    // listener, so it can go on pinging. Those pings must not refresh the
+    // game-wide clock the reap waits on.
+    const ghost = { clientID: "ghost", lastPing: Date.now() } as any;
+    vi.advanceTimersByTime(60_000);
+    (game as any).handlePing(ghost);
+
+    expect((game as any).lastPingUpdate).toBe(startClock);
+    expect(game.phase()).toBe(GamePhase.Finished);
+  });
+
+  it("ends an empty game whose ping clock never goes quiet", () => {
+    const game = newGame(undefined);
+    game.prestart();
+    game.start();
+
+    // Backstop only: hold lastPingUpdate warm with nobody on the roster, so
+    // the usual reap above can never fire.
+    const keepClockWarm = () => ((game as any).lastPingUpdate = Date.now());
+
+    // The timeout runs from the first tick that saw the game empty.
+    expect(game.phase()).toBe(GamePhase.Active);
+
+    vi.advanceTimersByTime(9 * 60_000);
+    keepClockWarm();
+    expect(game.phase()).toBe(GamePhase.Active);
+
+    vi.advanceTimersByTime(2 * 60_000);
+    keepClockWarm();
+    expect(game.phase()).toBe(GamePhase.Finished);
+  });
+
+  it("keeps a game with a connected client running", () => {
+    const game = newGame(undefined);
+    const client = {
+      clientID: "client01",
+      username: "client01",
+      lastPing: Date.now(),
+      friends: [],
+      ws: { readyState: 3, send: vi.fn(), close: vi.fn() },
+    } as any;
+    (game as any).activeClients = [client];
+    game.prestart();
+    game.start();
+
+    // Well past both the warmup grace and the empty-game timeout.
+    for (let i = 0; i < 40; i++) {
+      vi.advanceTimersByTime(30_000);
+      (game as any).handlePing(client);
+      expect(game.phase()).toBe(GamePhase.Active);
+    }
+  });
+
   it("finishes a full lobby everyone left before it started", () => {
     const game = newGame(undefined);
     // Reaching maxPlayers arms the auto-start without setting startsAt.
