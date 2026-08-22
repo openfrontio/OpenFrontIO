@@ -4,6 +4,7 @@ import {
   MessageType,
   NukeState,
   Player,
+  TerraNullius,
   Tick,
   TrainType,
   TrajectoryTile,
@@ -22,6 +23,7 @@ import { maxHealthWithVeterancy } from "./Veterancy";
 export class UnitImpl implements Unit {
   private _active = true;
   private _targetTile: TileRef | undefined;
+  private _targetPlayer: Player | TerraNullius | undefined;
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
@@ -57,6 +59,8 @@ export class UnitImpl implements Unit {
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._targetTile =
       "targetTile" in params ? (params.targetTile ?? undefined) : undefined;
+    this._targetPlayer =
+      "targetPlayer" in params ? (params.targetPlayer ?? undefined) : undefined;
     if ("trajectory" in params || "waitTicks" in params) {
       this._nukeState = {
         trajectory: params.trajectory ?? [],
@@ -526,6 +530,10 @@ export class UnitImpl implements Unit {
 
   targetTile(): TileRef | undefined {
     return this._targetTile;
+  }
+
+  targetPlayer(): Player | TerraNullius | undefined {
+    return this._targetPlayer;
   }
 
   setTrajectoryIndex(i: number): void {
