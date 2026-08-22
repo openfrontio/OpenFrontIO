@@ -9,16 +9,31 @@ const log = logger.child({ comp: "polling" });
  *
  * @param task The async function to execute.
  * @param intervalMs The delay in milliseconds before the next execution.
+ * @returns A function that stops the loop. Safe to call more than once. If a
+ *   task is already in flight when called, that task is allowed to finish,
+ *   but no further execution is scheduled.
  */
-export function startPolling(task: () => Promise<void>, intervalMs: number) {
+export function startPolling(
+  task: () => Promise<void>,
+  intervalMs: number,
+): () => void {
+  let stopped = false;
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
   const runLoop = () => {
     task()
       .catch((error) => {
         log.error("Error in polling loop:", error);
       })
       .finally(() => {
-        setTimeout(runLoop, intervalMs);
+        if (stopped) return;
+        timeoutHandle = setTimeout(runLoop, intervalMs);
       });
   };
   runLoop();
+
+  return () => {
+    stopped = true;
+    clearTimeout(timeoutHandle);
+  };
 }

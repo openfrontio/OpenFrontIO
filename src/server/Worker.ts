@@ -74,9 +74,14 @@ export async function startWorker() {
   // Initialize lobby service (handles WebSocket upgrade routing)
   const lobbyService = new WorkerLobbyService(server, wss, gm, log);
 
+  let stopMatchmakingPolling: (() => void) | undefined;
+  let serverClosed = false;
   setTimeout(
     () => {
-      startMatchmakingPolling(gm);
+      // The server may have already closed during this delay; don't start
+      // a loop that would then never get stopped.
+      if (serverClosed) return;
+      stopMatchmakingPolling = startMatchmakingPolling(gm);
     },
     1000 + Math.random() * 2000,
   );
@@ -92,6 +97,14 @@ export async function startWorker() {
     log,
   );
   privilegeRefresher.start();
+
+  // Both loops otherwise poll forever: stop them when the HTTP server shuts
+  // down instead of leaking timers past the point the worker is destroyed.
+  server.on("close", () => {
+    serverClosed = true;
+    stopMatchmakingPolling?.();
+    privilegeRefresher.stop();
+  });
 
   // Middleware to handle /wX path prefix
   app.use((req, res, next) => {
@@ -746,11 +759,16 @@ export async function startWorker() {
   });
 }
 
-async function startMatchmakingPolling(gm: GameManager) {
+// Returns a handle that stops both matchmaking polling loops.
+function startMatchmakingPolling(gm: GameManager): () => void {
   // One checkin serves exactly one queue, so a host serving both modes
   // runs one long-poll loop per mode.
-  startMatchmakingLoop(gm, "1v1");
-  startMatchmakingLoop(gm, "2v2");
+  const stop1v1 = startMatchmakingLoop(gm, "1v1");
+  const stop2v2 = startMatchmakingLoop(gm, "2v2");
+  return () => {
+    stop1v1();
+    stop2v2();
+  };
 }
 
 const MatchmakingAssignmentSchema = z.object({
@@ -761,8 +779,11 @@ const MatchmakingAssignmentSchema = z.object({
   teams: z.array(z.array(z.string())).optional(),
 });
 
-function startMatchmakingLoop(gm: GameManager, mode: "1v1" | "2v2") {
-  startPolling(
+function startMatchmakingLoop(
+  gm: GameManager,
+  mode: "1v1" | "2v2",
+): () => void {
+  return startPolling(
     async () => {
       try {
         const url = `${ServerEnv.jwtIssuer() + "/matchmaking/checkin"}`;
