@@ -736,6 +736,55 @@ export class PlayerImpl implements Player {
     return delta >= this.mg.config().allianceRequestCooldown();
   }
 
+  allianceRequestCooldownRemaining(other: Player): number {
+    if (this.mg.config().disableAlliances()) {
+      return 0;
+    }
+    if (other === this) {
+      return 0;
+    }
+    if (this.isDisconnected() || other.isDisconnected()) {
+      // Disconnected players are marked as not-friendly even if they are allies,
+      // so we need to return early if either player is disconnected.
+      // Otherwise we could end up sending an alliance request to someone
+      // we are already allied with.
+      return 0;
+    }
+    if (this.isFriendly(other) || !this.isAlive()) {
+      return 0;
+    }
+
+    const hasPending = this.outgoingAllianceRequests().some(
+      (ar) => ar.recipient() === other,
+    );
+
+    if (hasPending) {
+      return 0;
+    }
+
+    const hasIncoming = this.incomingAllianceRequests().some(
+      (ar) => ar.requestor() === other,
+    );
+
+    if (hasIncoming) {
+      return 0;
+    }
+
+    const recent = this.pastOutgoingAllianceRequests
+      .filter((ar) => ar.recipient() === other)
+      .sort((a, b) => b.createdAt() - a.createdAt());
+
+    if (recent.length === 0) {
+      return 0;
+    }
+
+    const delta = this.mg.ticks() - recent[0].createdAt();
+
+    const remainingTicks = this.mg.config().allianceRequestCooldown() - delta;
+
+    return Math.max(Math.floor((remainingTicks + 9) / 10), 0);
+  }
+
   breakAlliance(alliance: MutableAlliance): void {
     this.mg.breakAlliance(this, alliance);
   }

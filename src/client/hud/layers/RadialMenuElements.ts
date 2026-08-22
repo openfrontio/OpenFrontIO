@@ -96,6 +96,7 @@ export const COLORS = {
   boat: "#2a82c9",
   disabled: "#94a3b8",
   ally: "#4ade80",
+  allianceTimeLeft: "#0891b2",
   breakAlly: "#dc2626",
   breakAllyNoDebuff: "#d97706",
   delete: "#ef4444",
@@ -218,6 +219,8 @@ const allyRequestElement: MenuElement = {
   name: "request",
   disabled: (params: MenuElementParams) =>
     !params.playerActions?.interaction?.canSendAllianceRequest,
+  cooldown: (params: MenuElementParams) =>
+    params.playerActions?.interaction?.allianceRequestCooldownRemaining ?? 0,
   displayed: (params: MenuElementParams) =>
     !params.playerActions?.interaction?.canBreakAlliance,
   color: COLORS.ally,

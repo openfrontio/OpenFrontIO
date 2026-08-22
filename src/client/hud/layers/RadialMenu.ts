@@ -4,9 +4,10 @@ import { EventBus, GameEvent } from "../../../core/EventBus";
 import { Controller } from "../../Controller";
 import { CloseViewEvent } from "../../InputHandler";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
-import { getSvgAspectRatio, translateText } from "../../Utils";
+import { getSvgAspectRatio, renderDuration, translateText } from "../../Utils";
 import {
   CenterButtonElement,
+  COLORS,
   MenuElement,
   MenuElementParams,
   TooltipKey,
@@ -332,10 +333,19 @@ export class RadialMenu implements Controller {
       .attr("d", arc)
       .attr("fill", (d) => {
         const disabled = this.params === null || d.data.disabled(this.params);
-        const color = disabled
-          ? this.config.disabledColor
-          : (resolveColor(d.data, this.params) ?? "#1e3a5f");
-        const opacity = disabled ? 0.4 : 0.82;
+
+        const isAllianceCooldown =
+          d.data.id === "ally_request" &&
+          (this.params?.playerActions?.interaction
+            ?.allianceRequestCooldownRemaining ?? 0) > 0;
+
+        const color = isAllianceCooldown
+          ? COLORS.allianceTimeLeft
+          : disabled
+            ? this.config.disabledColor
+            : (resolveColor(d.data, this.params) ?? "#1e3a5f");
+
+        const opacity = isAllianceCooldown ? 0.82 : disabled ? 0.4 : 0.82;
 
         if (d.data.id === this.selectedItemId && this.currentLevel > level) {
           return color;
@@ -349,9 +359,17 @@ export class RadialMenu implements Controller {
           ? "not-allowed"
           : "pointer",
       )
-      .style("opacity", (d) =>
-        this.params === null || d.data.disabled(this.params) ? 0.5 : 1,
-      )
+
+      .style("opacity", (d) => {
+        const disabled = this.params === null || d.data.disabled(this.params);
+        const isAllianceCooldown =
+          d.data.id === "ally_request" &&
+          (this.params?.playerActions?.interaction
+            ?.allianceRequestCooldownRemaining ?? 0) > 0;
+        //to remove the fade down change 0.85 to 1
+        return isAllianceCooldown ? 0.85 : disabled ? 0.5 : 1;
+      })
+
       .style(
         "transition",
         `filter ${this.config.menuTransitionDuration / 2}ms, fill ${this.config.menuTransitionDuration / 2}ms`,
@@ -419,11 +437,25 @@ export class RadialMenu implements Controller {
       ) {
         path.attr("filter", "url(#glow)");
 
-        const color =
-          this.params === null || d.data.disabled(this.params)
+        const isAllianceCooldown =
+          d.data.id === "ally_request" &&
+          (this.params?.playerActions?.interaction
+            ?.allianceRequestCooldownRemaining ?? 0) > 0;
+        const color = isAllianceCooldown
+          ? COLORS.allianceTimeLeft
+          : this.params === null || d.data.disabled(this.params)
             ? this.config.disabledColor
             : (resolveColor(d.data, this.params) ?? "#1e3a5f");
-        path.attr("fill", color);
+
+        const opacity = isAllianceCooldown
+          ? 0.82
+          : this.params === null || d.data.disabled(this.params)
+            ? 0.4
+            : 0.82;
+        path.attr(
+          "fill",
+          d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
+        );
       }
     });
 
@@ -484,10 +516,16 @@ export class RadialMenu implements Controller {
       )
         return;
       path.style("filter", null);
-      const color = disabled
-        ? this.config.disabledColor
-        : (resolveColor(d.data, this.params) ?? "#333333");
-      const opacity = disabled ? 0.4 : 0.82;
+      const isAllianceCooldown =
+        d.data.id === "ally_request" &&
+        (this.params?.playerActions?.interaction
+          ?.allianceRequestCooldownRemaining ?? 0) > 0;
+      const color = isAllianceCooldown
+        ? COLORS.allianceTimeLeft
+        : disabled
+          ? this.config.disabledColor
+          : (resolveColor(d.data, this.params) ?? "#333333");
+      const opacity = isAllianceCooldown ? 0.82 : disabled ? 0.4 : 0.82;
 
       if (d.data.timerFraction) {
         path.attr("fill", `url(#timer-gradient-${d.data.id})`);
@@ -596,6 +634,15 @@ export class RadialMenu implements Controller {
         const contentId = d.data.id;
         const content = d3.select(`g[data-id="${contentId}"]`);
         const disabled = this.isItemDisabled(d.data);
+        const isAllianceCooldown =
+          d.data.id === "ally_request" &&
+          (this.params?.playerActions?.interaction
+            ?.allianceRequestCooldownRemaining ?? 0) > 0;
+
+        content.attr(
+          "data-cooldown-active",
+          isAllianceCooldown ? "true" : "false",
+        );
 
         if (d.data.renderType && this.params) {
           const stateKey = this.getStateKeyByType(
@@ -627,7 +674,7 @@ export class RadialMenu implements Controller {
             .attr("fill", "white")
             .attr("font-size", d.data.fontSize ?? "12px")
             .attr("font-family", "Arial, sans-serif")
-            .style("opacity", disabled ? 0.5 : 1)
+            .style("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1)
             .text(d.data.text);
         } else {
           const imgSel = content
@@ -637,38 +684,45 @@ export class RadialMenu implements Controller {
             .attr("height", this.config.iconSize)
             .attr("x", arc.centroid(d)[0] - this.config.iconSize / 2)
             .attr("y", arc.centroid(d)[1] - this.config.iconSize / 2)
-            .attr("opacity", disabled ? 0.5 : 1);
+            .attr("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1);
 
           getSvgAspectRatio(d.data.icon!).then((aspect) => {
-            if (!aspect || aspect === 1) return;
-
             let width = this.config.iconSize;
             let height = this.config.iconSize;
-            const biggerLength = Math.round(width * aspect);
-            if (aspect > 1) {
-              width = biggerLength;
-            } else {
-              height = biggerLength;
+
+            if (aspect !== null && aspect !== 1) {
+              const biggerLength = Math.round(width * aspect);
+
+              if (aspect > 1) {
+                width = biggerLength;
+              } else {
+                height = biggerLength;
+              }
             }
 
             imgSel
               .attr("width", width)
               .attr("height", height)
               .attr("x", arc.centroid(d)[0] - width / 2)
-              .attr("y", arc.centroid(d)[1] - height / 2);
+              .attr(
+                "y",
+                isAllianceCooldown ? 42 : arc.centroid(d)[1] - height / 2,
+              );
           });
 
           if (this.params && d.data.cooldown?.(this.params)) {
             const cooldown = Math.ceil(d.data.cooldown?.(this.params));
+
             content
               .append("text")
               .attr("class", `cooldown-text`)
-              .text(cooldown + "s")
+              .text(renderDuration(cooldown))
               .attr("fill", "white")
-              .attr("opacity", disabled ? 0.5 : 1)
-              .attr("font-size", "14px")
+              .attr("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1)
+              .attr("font-size", "20px")
               .attr("font-weight", "bold")
-              .attr("x", arc.centroid(d)[0] - this.config.iconSize / 4)
+              .attr("text-anchor", "middle")
+              .attr("x", arc.centroid(d)[0])
               .attr("y", arc.centroid(d)[1] + this.config.iconSize / 2 + 7);
           }
         }
@@ -1119,12 +1173,17 @@ export class RadialMenu implements Controller {
     this.menuPaths.forEach((path, itemId) => {
       const item = this.findMenuItem(itemId);
       if (item) {
+        const isAllianceCooldown =
+          item.id === "ally_request" &&
+          (this.params?.playerActions?.interaction
+            ?.allianceRequestCooldownRemaining ?? 0) > 0;
         const disabled = this.isItemDisabled(item);
-        const color = disabled
-          ? this.config.disabledColor
-          : (resolveColor(item, this.params) ?? "#333333");
-        const opacity = disabled ? 0.4 : 0.82;
-
+        const color = isAllianceCooldown
+          ? COLORS.allianceTimeLeft
+          : disabled
+            ? this.config.disabledColor
+            : (resolveColor(item, this.params) ?? "#333333");
+        const opacity = isAllianceCooldown ? 0.82 : disabled ? 0.4 : 0.82;
         // Update path appearance (skip fill for timer items — gradient handles it)
         if (!item.timerFraction) {
           path.attr(
@@ -1132,7 +1191,7 @@ export class RadialMenu implements Controller {
             d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
           );
         }
-        path.style("opacity", disabled ? 0.5 : 1);
+        path.style("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1);
         path.style("cursor", disabled ? "not-allowed" : "pointer");
 
         // Update icon/text appearance using the same logic as renderIconsAndText
@@ -1144,29 +1203,61 @@ export class RadialMenu implements Controller {
             // Update text opacity
             const textElement = icon.select("text");
             if (!textElement.empty()) {
-              textElement.style("opacity", disabled ? 0.5 : 1);
+              textElement.style(
+                "opacity",
+                isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1,
+              );
             }
 
-            // Update image opacity
+            // Update image opacity and position
             const imageElement = icon.select("image");
             if (!imageElement.empty()) {
-              imageElement.attr("opacity", disabled ? 0.5 : 1);
+              const height = parseFloat(imageElement.attr("height") ?? "0");
+              const cy = parseFloat(icon.attr("data-cy") ?? "0");
+
+              imageElement.attr("y", isAllianceCooldown ? 42 : cy - height / 2);
+
+              imageElement.attr(
+                "opacity",
+                isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1,
+              );
             }
 
             // Update cooldown text if applicable
-            const cooldownElement = icon.select(".cooldown-text");
-            if (this.params && !cooldownElement.empty() && item.cooldown) {
+            if (this.params && item.cooldown) {
               const cooldown = Math.ceil(item.cooldown(this.params));
+              let cooldownText = icon.select<SVGTextElement>(".cooldown-text");
+
               if (cooldown <= 0) {
-                cooldownElement.remove();
+                cooldownText.remove();
               } else {
-                cooldownElement.text(cooldown + "s");
+                if (cooldownText.empty()) {
+                  const cx = parseFloat(icon.attr("data-cx") ?? "0");
+                  const cy = parseFloat(icon.attr("data-cy") ?? "0");
+
+                  cooldownText = icon
+                    .append("text")
+                    .attr("class", "cooldown-text")
+                    .attr("fill", "white")
+                    .attr("font-size", "20px")
+                    .attr("font-weight", "bold")
+                    .attr("text-anchor", "middle")
+                    .attr("x", cx)
+                    .attr("y", cy + this.config.iconSize / 2 + 7);
+                }
+
+                cooldownText
+                  .text(renderDuration(cooldown))
+                  .attr(
+                    "opacity",
+                    isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1,
+                  );
               }
             }
-          }
 
-          // Update timer gradient
-          this.maybeUpdateTimerGradient(item, color, opacity);
+            // Update timer gradient
+            this.maybeUpdateTimerGradient(item, color, opacity);
+          }
         }
       }
     });
@@ -1191,29 +1282,39 @@ export class RadialMenu implements Controller {
     );
     const prevState = icon.attr("data-prev-state");
 
-    if (stateKey && stateKey === prevState) {
-      // State unchanged, skip re-render to preserve animations
-    } else {
-      const cx = parseFloat(icon.attr("data-cx") || "0");
-      const cy = parseFloat(icon.attr("data-cy") || "0");
+    const cooldownActive =
+      (this.params?.playerActions?.interaction
+        ?.allianceRequestCooldownRemaining ?? 0) > 0;
 
-      if (stateKey) {
-        icon.attr("data-prev-state", stateKey);
-      } else {
-        icon.selectAll("*").remove();
-      }
+    const previousCooldownActive = icon.attr("data-cooldown-active") === "true";
 
-      this.renderAllyExtendIcon(
-        icon.node()! as SVGGElement,
-        cx,
-        cy,
-        this.config.iconSize,
-        disabled,
-        this.params,
-        item.icon,
-        true,
-      );
+    const cooldownChanged = cooldownActive !== previousCooldownActive;
+
+    const stateChanged = stateKey !== prevState;
+
+    if (!cooldownChanged && !stateChanged) {
+      return;
     }
+
+    icon.attr("data-cooldown-active", cooldownActive ? "true" : "false");
+
+    const cx = parseFloat(icon.attr("data-cx") || "0");
+    const cy = parseFloat(icon.attr("data-cy") || "0");
+
+    if (stateKey) {
+      icon.attr("data-prev-state", stateKey);
+      // State unchanged, skip re-render to preserve animations
+    }
+    this.renderAllyExtendIcon(
+      icon.node()! as SVGGElement,
+      cx,
+      cy,
+      this.config.iconSize,
+      disabled,
+      this.params,
+      item.icon,
+      true,
+    );
   }
 
   private maybeUpdateTimerGradient(
@@ -1279,6 +1380,11 @@ export class RadialMenu implements Controller {
     icon?: string,
     update?: boolean,
   ): void {
+    const generation =
+      Number(content.getAttribute("data-render-generation") ?? "0") + 1;
+
+    content.setAttribute("data-render-generation", generation.toString());
+
     if (update) {
       while (content.firstChild) content.removeChild(content.firstChild);
     }
@@ -1292,6 +1398,12 @@ export class RadialMenu implements Controller {
     const iconUrl = icon ?? "";
 
     getSvgAspectRatio(iconUrl).then((ratio) => {
+      if (
+        Number(content.getAttribute("data-render-gneration")) !== generation
+      ) {
+        return;
+      }
+
       const width = smallSize * (ratio ?? 1);
       const gap = 2;
       const totalWidth = width * 2 + gap;
