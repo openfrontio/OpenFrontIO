@@ -17,10 +17,14 @@ import type {
 } from "../../../types";
 import type { RenderSettings } from "../../RenderSettings";
 import { FxAttackRingPass } from "./FxAttackRingPass";
-import { FxShockwavePass } from "./FxShockwavePass";
+import {
+  calculateExplosionDurationMs,
+  FxShockwavePass,
+} from "./FxShockwavePass";
 import { FxSpritePass, NUKE_EXPLOSION_RADII } from "./FxSpritePass";
 
 export type { AttackRingInput } from "../../../types";
+export { calculateExplosionDurationMs };
 
 export class FxPass {
   private spritePass: FxSpritePass;

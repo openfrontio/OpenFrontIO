@@ -39,7 +39,7 @@ export class CosmeticInfo extends LitElement {
     const rarityColor = rarityColors[this.rarity ?? ""] ?? "text-white/70";
     return html`<div
       data-cosmetic-info
-      class="group/cosmetic-info absolute right-2 top-2 z-10"
+      class="group/cosmetic-info absolute right-2 top-2 z-20 hover:z-30 focus-within:z-30"
       @click=${(event: Event) => event.stopPropagation()}
     >
       <button
@@ -51,7 +51,7 @@ export class CosmeticInfo extends LitElement {
       </button>
       <div
         role="tooltip"
-        class="pointer-events-none absolute right-0 top-9 hidden min-w-max flex-col gap-0.5 whitespace-nowrap rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs text-white shadow-xl group-hover/cosmetic-info:flex group-focus-within/cosmetic-info:flex"
+        class="pointer-events-none absolute right-0 top-9 z-30 hidden min-w-max flex-col gap-0.5 whitespace-nowrap rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs text-white shadow-xl group-hover/cosmetic-info:flex group-focus-within/cosmetic-info:flex"
       >
         ${this.rarity
           ? html`<div class="font-bold uppercase tracking-wider ${rarityColor}">

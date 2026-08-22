@@ -104,7 +104,7 @@ export function attributesToExplosionParams(
     maxRadius: attrs.size / 2,
     speed: attrs.speed,
     thickness: attrs.thickness,
-    transitionSpeed: attrs.transitionSpeed,
+    transitionSpeed: attrs.transitionSpeed ?? 0,
   };
   return attrs.type === "sparkles"
     ? { ...base, type: "sparkles", density: attrs.density }

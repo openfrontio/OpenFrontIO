@@ -6,6 +6,7 @@ import { translateText } from "../Utils";
 import "./CosmeticInfo";
 import { cosmeticDisplayName, cosmeticRarity } from "./CosmeticPresentation";
 import "./CosmeticPreview";
+import "./CosmeticPreviewBubble";
 
 const COSMETIC_CARD_STYLE_ID = "cosmetic-card-styles";
 if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
@@ -479,13 +480,16 @@ export class CosmeticCard extends LitElement {
             </div>`}
         ${this.interactive && active.cosmetic !== null
           ? html`<cosmetic-info
-              .artist=${priced?.artist}
-              .rarity=${rarity}
-              .colorPalette=${active.colorPalette?.name}
-              .showAdFree=${active.relationship === "purchasable"}
-              .usdValue=${usdValue}
-              .perks=${this.subscriptionPerks()}
-            ></cosmetic-info>`
+                .artist=${priced?.artist}
+                .rarity=${rarity}
+                .colorPalette=${active.colorPalette?.name}
+                .showAdFree=${active.relationship === "purchasable"}
+                .usdValue=${usdValue}
+                .perks=${this.subscriptionPerks()}
+              ></cosmetic-info>
+              <cosmetic-preview-bubble
+                .resolved=${active}
+              ></cosmetic-preview-bubble>`
           : nothing}
       </div>
       ${this.renderSwatches()}

@@ -281,39 +281,46 @@ export class FxSpritePass {
   // Atlas loading
   // -------------------------------------------------------------------------
 
+  private isDisposed = false;
+
   private async loadAtlas(): Promise<void> {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = fxAtlasUrl;
-    await img.decode();
-    const gl = this.gl;
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = fxAtlasUrl;
+      await img.decode();
+      if (this.isDisposed) return;
+      const gl = this.gl;
 
-    gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-    const meta = fxAtlasMeta;
-    const uvData = new Float32Array(FX_TYPE_COUNT * 4);
-    const worldData = new Float32Array(FX_TYPE_COUNT * 4);
+      const meta = fxAtlasMeta;
+      const uvData = new Float32Array(FX_TYPE_COUNT * 4);
+      const worldData = new Float32Array(FX_TYPE_COUNT * 4);
 
-    for (let i = 0; i < FX_TYPE_COUNT; i++) {
-      const row = meta.rows[i];
-      uvData[i * 4 + 0] = row.yOffset / meta.height;
-      uvData[i * 4 + 1] = row.height / meta.height;
-      uvData[i * 4 + 2] = row.worldWidth / meta.width;
-      uvData[i * 4 + 3] = 0;
-      worldData[i * 4 + 0] = row.worldWidth;
-      worldData[i * 4 + 1] = row.worldHeight;
-      worldData[i * 4 + 2] = 0;
-      worldData[i * 4 + 3] = 0;
+      for (let i = 0; i < FX_TYPE_COUNT; i++) {
+        const row = meta.rows[i];
+        uvData[i * 4 + 0] = row.yOffset / meta.height;
+        uvData[i * 4 + 1] = row.height / meta.height;
+        uvData[i * 4 + 2] = row.worldWidth / meta.width;
+        uvData[i * 4 + 3] = 0;
+        worldData[i * 4 + 0] = row.worldWidth;
+        worldData[i * 4 + 1] = row.worldHeight;
+        worldData[i * 4 + 2] = 0;
+        worldData[i * 4 + 3] = 0;
+      }
+
+      gl.useProgram(this.program);
+      gl.uniform4fv(this.uFxUV, uvData);
+      gl.uniform4fv(this.uFxWorld, worldData);
+
+      this.atlasReady = true;
+    } catch (e) {
+      console.warn("Failed to load fx atlas:", e);
     }
-
-    gl.useProgram(this.program);
-    gl.uniform4fv(this.uFxUV, uvData);
-    gl.uniform4fv(this.uFxWorld, worldData);
-
-    this.atlasReady = true;
   }
 
   // -------------------------------------------------------------------------
@@ -535,6 +542,7 @@ export class FxSpritePass {
   }
 
   dispose(): void {
+    this.isDisposed = true;
     const gl = this.gl;
     gl.deleteProgram(this.program);
     this.instanceBuf.dispose();

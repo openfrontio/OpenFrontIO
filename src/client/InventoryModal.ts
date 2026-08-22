@@ -1,5 +1,5 @@
 import type { TemplateResult } from "lit";
-import { html } from "lit";
+import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { UserMeResponse } from "../core/ApiSchemas";
@@ -30,6 +30,7 @@ import {
   cosmeticDisplayName,
   cosmeticSelectionLabel,
 } from "./components/CosmeticPresentation";
+import "./components/CosmeticPreviewModal";
 import "./components/EffectsGrid";
 import "./components/InventoryLoadoutBar";
 import type {
@@ -70,6 +71,7 @@ export class InventoryModal extends BaseModal {
   @state() private isLoading = false;
   @state() private loadFailed = false;
   @state() private ownershipState: OwnershipState = "loading";
+  @state() private previewingCosmetic: ResolvedCosmetic | null = null;
 
   private cosmetics: Cosmetics | null = null;
   private userSettings: UserSettings = new UserSettings();
@@ -111,9 +113,15 @@ export class InventoryModal extends BaseModal {
     void this.onUserMe((event as CustomEvent<UserMeResponse | false>).detail);
   };
 
+  private onOpenCosmeticPreview = (event: Event) => {
+    const customEvent = event as CustomEvent<ResolvedCosmetic>;
+    this.previewingCosmetic = customEvent.detail;
+  };
+
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this._onUserMe);
+    this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     window.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       this._onCosmeticSelected,
@@ -133,6 +141,10 @@ export class InventoryModal extends BaseModal {
   }
 
   disconnectedCallback() {
+    this.removeEventListener(
+      "open-cosmetic-preview",
+      this.onOpenCosmeticPreview,
+    );
     super.disconnectedCallback();
     document.removeEventListener("userMeResponse", this._onUserMe);
     window.removeEventListener(
@@ -628,6 +640,14 @@ export class InventoryModal extends BaseModal {
           />
         </div>
       </div>
+      ${this.previewingCosmetic
+        ? html`<cosmetic-preview-modal
+            .resolved=${this.previewingCosmetic}
+            @close-preview=${() => {
+              this.previewingCosmetic = null;
+            }}
+          ></cosmetic-preview-modal>`
+        : nothing}
     `;
   }
 
