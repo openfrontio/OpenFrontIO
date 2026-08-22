@@ -13,6 +13,14 @@ VERSION_TXT="$3"
 CHANGELOG_MD="$4"
 METADATA_FILE="$5"
 
+# The release workflow passes the GitHub release *name* as VERSION_TXT, and a
+# release can be published with an empty name (v0.33.9 was). Without a fallback
+# the placeholder resources/version.txt ("x.xx.xx") ships as-is and the header
+# reads "vx.xx.xx", so fall back to the tag, which is always present.
+if [ -z "$VERSION_TXT" ]; then
+    VERSION_TXT="$VERSION_TAG"
+fi
+
 # Set default metadata file if not provided
 if [ -z "$METADATA_FILE" ]; then
     METADATA_FILE="/tmp/build-metadata-$RANDOM.json"
@@ -82,9 +90,8 @@ echo "Git commit: $GIT_COMMIT"
 if [ -n "$CHANGELOG_MD" ]; then
     echo "$CHANGELOG_MD" > resources/changelog.md
 fi
-if [ -n "$VERSION_TXT" ]; then
-    echo "$VERSION_TXT" > resources/version.txt
-fi
+echo "Version text: $VERSION_TXT"
+echo "$VERSION_TXT" > resources/version.txt
 
 # Set up cache image reference
 CACHE_IMAGE="${GHCR_USERNAME}/${GHCR_REPO}:latest"
