@@ -162,6 +162,14 @@ export class HeadsUpMessage extends LitElement implements Controller {
     if (this.isOvertimeNotice) {
       return translateText("overtime.started");
     }
+    if (
+      this.game.config().isReplay() ||
+      this.game.config().isIntentionalSpectator()
+    ) {
+      return this.game.config().isRandomSpawn()
+        ? translateText("heads_up_message.random_spawn_spectator")
+        : translateText("heads_up_message.choose_spawn_spectator");
+    }
     return this.game.config().isRandomSpawn()
       ? translateText("heads_up_message.random_spawn")
       : translateText("heads_up_message.choose_spawn");
@@ -218,6 +226,7 @@ export class HeadsUpMessage extends LitElement implements Controller {
           : null}
         ${this.game?.inSpawnPhase() &&
         !this.game.config().isReplay() &&
+        !this.game.config().isIntentionalSpectator() &&
         this.game.config().gameConfig().rankedType !== RankedType.OneVOne &&
         this.game.config().gameConfig().gameMode === GameMode.FFA &&
         this.game.config().gameConfig().gameType === GameType.Public &&

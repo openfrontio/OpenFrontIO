@@ -150,10 +150,16 @@ export class Config {
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
     public readonly listed: boolean = false,
+    private _spectator: boolean = false,
   ) {}
 
   isReplay(): boolean {
     return this._isReplay;
+  }
+
+  /** True when the player joined the lobby as a spectator (watch-only). */
+  isIntentionalSpectator(): boolean {
+    return this._spectator;
   }
 
   traitorDefenseDebuff(): number {

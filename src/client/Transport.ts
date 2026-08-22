@@ -301,12 +301,13 @@ export class Transport {
     this.eventBus.on(SendToggleGameStartTimer, (e) =>
       this.onSendToggleGameStartTimer(e),
     );
-    this.eventBus.on(SendSpectateEvent, (e) =>
+    this.eventBus.on(SendSpectateEvent, (e) => {
+      this.lobbyConfig.spectator = e.spectator;
       this.sendMsg({
         type: "spectate",
         spectator: e.spectator,
-      } satisfies ClientSpectateMessage),
-    );
+      } satisfies ClientSpectateMessage);
+    });
   }
 
   private startPing() {
