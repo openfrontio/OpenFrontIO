@@ -128,6 +128,12 @@ export class GameServer {
 
   private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
 
+  // Backstop for reaping a started game nobody is connected to. The usual
+  // reap (see phase()) also needs the game-wide ping clock to go quiet; this
+  // one goes on the roster being empty and nothing else.
+  private emptyGameTimeout = 10 * 60 * 1000; // 10 minutes
+  private emptySince: number | null = null;
+
   private turns: Turn[] = [];
   private intents: StampedIntent[] = [];
   public activeClients: Client[] = [];
@@ -1070,8 +1076,7 @@ export class GameServer {
             break;
           }
           case "ping": {
-            this.lastPingUpdate = Date.now();
-            client.lastPing = Date.now();
+            this.handlePing(client);
             break;
           }
           case "hash": {
@@ -1128,6 +1133,19 @@ export class GameServer {
         readyState: client.ws.readyState,
       });
       this.handleClientDisconnect(client);
+    }
+  }
+
+  // lastPingUpdate is the game-wide "someone is still out there" clock the
+  // empty-game reap in phase() waits on, so only a client still on the roster
+  // may refresh it. A socket dropped from activeClients — pruned for stale
+  // pings, or kicked — keeps its message listener and can go on pinging
+  // through (or instead of) its close handshake; letting those pings through
+  // held empty games open indefinitely.
+  private handlePing(client: Client) {
+    client.lastPing = Date.now();
+    if (this.activeClients.includes(client)) {
+      this.lastPingUpdate = Date.now();
     }
   }
 
@@ -1749,9 +1767,6 @@ export class GameServer {
       return GamePhase.Finished;
     }
 
-    const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
-    const noActive = this.activeClients.length === 0;
-
     const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
     if (
       lessThanLifetime &&
@@ -1760,8 +1775,36 @@ export class GameServer {
     ) {
       return GamePhase.Lobby;
     }
-    const warmupOver = now > this.startsAt! + 30 * 1000;
-    if (noActive && warmupOver && noRecentPings) {
+
+    // Anyone still on the roster keeps the game running. Everything below is
+    // about reaping a game nobody is connected to.
+    if (this.activeClients.length > 0) {
+      this.emptySince = null;
+      return GamePhase.Active;
+    }
+    this.emptySince ??= now;
+
+    // Grace period before an empty game is reaped, measured from whenever it
+    // committed to starting. startsAt is not always set: a lobby that
+    // auto-starts by filling to maxPlayers, and admin bot games, never get one
+    // — and `undefined + 30_000` is NaN, so every comparison against it is
+    // false. Those games could never be reaped and lived on (still ticking
+    // turns, with nobody connected) until the maxGameDuration cutoff above.
+    const warmupFrom = this.startsAt ?? this._startTime ?? this.createdAt;
+    const warmupOver = now > warmupFrom + 30 * 1000;
+    const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
+    if (warmupOver && noRecentPings) {
+      return GamePhase.Finished;
+    }
+
+    // Backstop: an empty game whose ping clock never goes quiet. Only a client
+    // on the roster refreshes lastPingUpdate now, but a game that manages to
+    // keep that clock warm with nobody connected must still not outlive the
+    // players by hours — sustained emptiness is enough on its own.
+    if (this.hasStarted() && now > this.emptySince + this.emptyGameTimeout) {
+      this.log.warn("game had no connected clients past timeout, ending", {
+        gameID: this.id,
+      });
       return GamePhase.Finished;
     }
 
