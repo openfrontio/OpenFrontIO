@@ -70,10 +70,10 @@ export class PortExecution implements Execution {
 
   shouldSpawnTradeShip(): boolean {
     const numTradeShips = this.mg.unitCount(UnitType.TradeShip);
-    const spawnRate = this.mg
-      .config()
-      .tradeShipSpawnRate(this.tradeShipSpawnRejections, numTradeShips);
     for (let i = 0; i < this.port!.level(); i++) {
+      const spawnRate = this.mg
+        .config()
+        .tradeShipSpawnRate(this.tradeShipSpawnRejections, numTradeShips);
       if (this.random.chance(spawnRate)) {
         this.tradeShipSpawnRejections = 0;
         return true;

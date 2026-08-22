@@ -14,6 +14,8 @@ import {
   GameConfigSchema,
   ID,
   IntentSchema,
+  LobbyAccentSchema,
+  LobbyLabelSchema,
 } from "../core/Schemas";
 import type { GameManager } from "./GameManager";
 import { ServerEnv } from "./ServerEnv";
@@ -91,8 +93,18 @@ export function registerAdminBotRoutes(opts: {
     // serve a bot: it authorizes via isCreator + subscription, and an admin-bot
     // lobby is deliberately created with NO creatorPersistentID (below), so it has
     // no owner to match and no account to bill.
+    //
+    // `featured` rides alongside for the same reason. It lengthens the listing
+    // deadline and gives the row a label of the host's choosing, which is only
+    // safe because this endpoint is authenticated: an ordinary subscriber must
+    // not be able to name their lobby "Official Event" or hold a listing open.
     const listedParsed = z
-      .object({ listed: z.boolean().optional() })
+      .object({
+        listed: z.boolean().optional(),
+        featured: z.boolean().optional(),
+        label: LobbyLabelSchema.optional(),
+        accent: LobbyAccentSchema.optional(),
+      })
       .safeParse(req.body ?? {});
     if (!listedParsed.success) {
       return res
@@ -100,6 +112,7 @@ export function registerAdminBotRoutes(opts: {
         .json({ error: z.prettifyError(listedParsed.error) });
     }
     const listed = listedParsed.data.listed === true;
+    const featured = listedParsed.data.featured === true;
 
     // Optional team pinning. Read alongside the config for the same reason as
     // `listed`: it is not a GameConfig field, so the parse above strips it and it
@@ -141,6 +154,25 @@ export function registerAdminBotRoutes(opts: {
           seen.add(publicId);
         }
       }
+      // A pin is an index into the team list, so one past the end resolves to
+      // no team and the player is silently unpinned. Duos/Trios/Quads resolve
+      // their count at START from who turned up, and omitting it resolves to 0
+      // (GameImpl throws "Too few teams"), so neither can be checked here.
+      const playerTeams = config.playerTeams;
+      if (teams.length > 0) {
+        if (typeof playerTeams !== "number") {
+          return res
+            .status(400)
+            .json({ error: "teams_require_numeric_player_teams" });
+        }
+        if (teams.length > playerTeams) {
+          return res.status(400).json({
+            error: "teams_exceed_player_teams",
+            playerTeams,
+            teams: teams.length,
+          });
+        }
+      }
     }
     // Private only: reject Public and Singleplayer. An omitted gameType defaults
     // to Private in createGame, so it's allowed through.
@@ -165,6 +197,12 @@ export function registerAdminBotRoutes(opts: {
         return res.status(409).json({ error: "listing_host_cheats_enabled" });
       }
     }
+    // Featuring only means anything for a listed lobby: it governs the listing
+    // deadline and the browser row. Refuse rather than silently ignore, so a
+    // caller that forgot `listed` finds out.
+    if (featured && !listed) {
+      return res.status(400).json({ error: "featured_requires_listed" });
+    }
 
     const id = ServerEnv.generateGameIdForWorker(workerId);
     if (id === null) {
@@ -186,12 +224,35 @@ export function registerAdminBotRoutes(opts: {
     if (listed) {
       game.setListed(true);
     }
-    log.info(`admin bot created game ${id}`, { listed });
+    // After setListed: the deadline is measured from the listing, and featuring
+    // is what decides how long that deadline is.
+    if (featured) {
+      game.setFeatured({
+        label: listedParsed.data.label,
+        accent: listedParsed.data.accent,
+      });
+    }
+    log.info(`admin bot created game ${id}`, { listed, featured });
     res.json({
       ...game.gameInfo(),
       workerIndex: workerId,
       workerPath: ServerEnv.workerPath(id),
     });
+  });
+
+  // Who joined this game, and the account behind each one. The public game
+  // record carries no account id, so a host can otherwise see that 96 people
+  // played and identify none of them. Key-gated like every route here — the
+  // admin-bot key is the trust boundary, same as the stats endpoint above.
+  app.get("/api/adminbot/game/:id/roster", requireAdminBotKey, (req, res) => {
+    const id = req.params.id as string;
+    if (!ownsGame(id, res)) return;
+
+    const game = gm.game(id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+    res.json({ gameID: id, players: game.roster() });
   });
 
   // Read what's happening in a running game. The sim runs on the clients, so
@@ -213,6 +274,39 @@ export function registerAdminBotRoutes(opts: {
   });
 
   // Send an intent. Honors the lobby-management intents; everything else 400.
+  // Returns the resulting team list so the caller can assert what landed: a
+  // half-pinned lobby looks correct from the outside.
+  app.post("/api/adminbot/game/:id/pin", requireAdminBotKey, (req, res) => {
+    const id = req.params.id as string;
+    if (!ownsGame(id, res)) return;
+
+    const parsed = z
+      .object({
+        publicId: z.string().min(1),
+        teamIndex: z.number().int().nonnegative(),
+      })
+      .safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({ error: z.prettifyError(parsed.error) });
+    }
+    const game = gm.game(id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+
+    const result = game.addMatchmakingPin(
+      parsed.data.publicId,
+      parsed.data.teamIndex,
+    );
+    if (!result.ok) {
+      return res.status(result.status).json({ error: result.error });
+    }
+    log.info(`admin bot pinned a player on game ${id}`, {
+      teamIndex: parsed.data.teamIndex,
+    });
+    res.json({ teams: result.teams });
+  });
+
   app.post("/api/adminbot/game/:id/intent", requireAdminBotKey, (req, res) => {
     const id = req.params.id as string;
     if (!ownsGame(id, res)) return;

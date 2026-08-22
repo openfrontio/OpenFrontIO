@@ -333,7 +333,6 @@ export class BarPass {
     if (reloading === 0) return 1;
 
     const ready = maxMissiles - reloading;
-    if (ready === 0 && maxMissiles > 1) return 0;
 
     const cooldown =
       unit.unitType === UT_SAM_LAUNCHER

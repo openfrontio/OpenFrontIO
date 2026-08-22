@@ -160,8 +160,10 @@ export class PlayerPanel extends LitElement implements Controller {
           this.allianceExpirySeconds = null;
           this.allianceExpiryText = null;
         }
-        this.requestUpdate();
       }
+      // Keep repainting while the panel is visible so live values (e.g. the
+      // alliance countdowns) keep updating even after the local player dies.
+      this.requestUpdate();
     }
   }
 
@@ -658,6 +660,18 @@ export class PlayerPanel extends LitElement implements Controller {
       nameCollator.compare(a.displayName(), b.displayName()),
     );
 
+    // Map ally PlayerID → expiry tick so each ally shows its own remaining time.
+    const expiryByAlly = new Map<string, number>();
+    for (const alliance of other.alliances()) {
+      expiryByAlly.set(alliance.other, alliance.expiresAt);
+    }
+    const remainingSecondsFor = (ally: PlayerView): number | null => {
+      const expiresAt = expiryByAlly.get(ally.id());
+      if (expiresAt === undefined) return null;
+      const remainingTicks = expiresAt - this.g.ticks();
+      return Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
+    };
+
     return html`
       <div class="select-none">
         <div class="flex items-center justify-between mb-2">
@@ -691,18 +705,26 @@ export class PlayerPanel extends LitElement implements Controller {
               ? html`<li class="text-zinc-400 text-[14px] px-1">
                   ${translateText("common.none")}
                 </li>`
-              : alliesSorted.map(
-                  (p) =>
-                    html`<li
-                      class="max-w-full inline-flex items-center gap-1.5
-                             rounded-md border border-white/10 bg-white/5
-                             px-2.5 py-1 text-[14px] text-zinc-100
-                             hover:bg-white/8 active:scale-[0.99] transition"
-                      title=${p.displayName()}
-                    >
-                      <span class="truncate">${p.displayName()}</span>
-                    </li>`,
-                )}
+              : alliesSorted.map((p) => {
+                  const remainingSeconds = remainingSecondsFor(p);
+                  return html`<li
+                    class="max-w-full inline-flex items-center gap-1.5
+                           rounded-md border border-white/10 bg-white/5
+                           px-2.5 py-1 text-[14px] text-zinc-100
+                           hover:bg-white/8 active:scale-[0.99] transition"
+                    title=${p.displayName()}
+                  >
+                    <span class="truncate">${p.displayName()}</span>
+                    ${remainingSeconds !== null
+                      ? html`<span
+                          class="text-[11px] font-semibold leading-none tabular-nums ${this.getExpiryColorClass(
+                            remainingSeconds,
+                          )}"
+                          >${renderDuration(remainingSeconds)}</span
+                        >`
+                      : ""}
+                  </li>`;
+                })}
           </ul>
         </div>
       </div>
@@ -882,7 +904,8 @@ export class PlayerPanel extends LitElement implements Controller {
     if (!this.isVisible) return html``;
 
     const my = this.g.myPlayer();
-    if (!my) return html``;
+    const isSpectator = this.g.isSpectator();
+    if (!my && !isSpectator) return html``;
     if (!this.tile) return html``;
 
     const owner = this.g.owner(this.tile);
@@ -892,8 +915,10 @@ export class PlayerPanel extends LitElement implements Controller {
       return html``;
     }
     const other = owner as PlayerView;
-    const myGoldNum = my.gold();
-    const myTroopsNum = Number(my.troops());
+    // Spectators (replay viewers, dead, or pre-spawn) have no live player; use other as a read-only stand-in
+    const viewer = my ?? other;
+    const myGoldNum = viewer.gold();
+    const myTroopsNum = Number(viewer.troops());
 
     return html`
       <style>
@@ -961,9 +986,11 @@ export class PlayerPanel extends LitElement implements Controller {
                     class="p-6 flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
                   >
                     <!-- Identity (flag, name, type, traitor, relation) -->
-                    <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
+                    <div class="mb-1">
+                      ${this.renderIdentityRow(other, viewer)}
+                    </div>
 
-                    ${this.sendTarget
+                    ${this.sendTarget && !isSpectator
                       ? html`
                           <send-resource-modal
                             .open=${this.sendMode !== "none"}
@@ -972,7 +999,7 @@ export class PlayerPanel extends LitElement implements Controller {
                               ? myTroopsNum
                               : myGoldNum}
                             .uiState=${this.uiState}
-                            .myPlayer=${my}
+                            .myPlayer=${viewer}
                             .target=${this.sendTarget}
                             .gameView=${this.g}
                             .eventBus=${this.eventBus}
@@ -984,11 +1011,11 @@ export class PlayerPanel extends LitElement implements Controller {
                           ></send-resource-modal>
                         `
                       : ""}
-                    ${this.moderationTarget
+                    ${this.moderationTarget && !isSpectator
                       ? html`
                           <player-moderation-modal
                             .open=${true}
-                            .myPlayer=${my}
+                            .myPlayer=${viewer}
                             .target=${this.moderationTarget}
                             .eventBus=${this.eventBus}
                             .isAdmin=${this.isAdminRole}
@@ -1007,12 +1034,14 @@ export class PlayerPanel extends LitElement implements Controller {
                     ${this.renderResources(other)}
 
                     <!-- Rocket direction toggle -->
-                    ${other === my ? this.renderRocketDirectionToggle() : ""}
+                    ${other === viewer && !isSpectator
+                      ? this.renderRocketDirectionToggle()
+                      : ""}
 
                     <ui-divider></ui-divider>
 
                     <!-- Stats: betrayals / trading -->
-                    ${this.renderStats(other, my)}
+                    ${this.renderStats(other, viewer)}
 
                     <ui-divider></ui-divider>
 
@@ -1021,11 +1050,13 @@ export class PlayerPanel extends LitElement implements Controller {
 
                     <!-- Alliance time remaining -->
                     ${this.renderAllianceExpiry()}
-
-                    <ui-divider></ui-divider>
-
-                    <!-- Actions -->
-                    ${this.renderActions(my, other)}
+                    ${isSpectator
+                      ? ""
+                      : html`
+                          <ui-divider></ui-divider>
+                          <!-- Actions -->
+                          ${this.renderActions(viewer, other)}
+                        `}
                   </div>
                 </div>
               </div>

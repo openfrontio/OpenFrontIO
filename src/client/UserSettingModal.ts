@@ -97,20 +97,26 @@ export class UserSettingModal extends BaseModal {
       .filter(([k]) => k !== action)
       .map(([, v]) => v);
 
-    //This is so that there is not conflict when remapping altKey and emojiMenuModifier back to default
-    let isEmojiMenuModAndAltKeyConflict = false;
-    if (
-      ((action === "emojiMenuModifier" && activeKeybinds["altKey"] === value) ||
-        (action === "altKey" &&
-          activeKeybinds["emojiMenuModifier"] === value)) &&
-      (value === "AltLeft" || value === "AltRight")
-    ) {
-      isEmojiMenuModAndAltKeyConflict = true;
-    }
+    // Allow specific key pairs to share physical modifier keys without reporting conflict
+    const ALLOWED_SHARED_MODIFIERS: Array<{
+      actions: [string, string];
+      keyPrefix: string;
+    }> = [
+      { actions: ["emojiMenuModifier", "altKey"], keyPrefix: "Alt" },
+      { actions: ["boxSelectWarships", "shiftKey"], keyPrefix: "Shift" },
+    ];
+
+    const isAllowedSharedModifier = ALLOWED_SHARED_MODIFIERS.some(
+      ({ actions: [a1, a2], keyPrefix }) =>
+        ((action === a1 && activeKeybinds[a2] === value) ||
+          (action === a2 && activeKeybinds[a1] === value)) &&
+        (value === `${keyPrefix}Left` || value === `${keyPrefix}Right`),
+    );
+
     if (
       values.includes(value) &&
       value !== "Null" &&
-      !isEmojiMenuModAndAltKeyConflict
+      !isAllowedSharedModifier
     ) {
       const displayKey = formatKeyForDisplay(key || value);
       window.dispatchEvent(
@@ -178,8 +184,8 @@ export class UserSettingModal extends BaseModal {
 
   private getKeyChar(action: string): string {
     const entry = this.userKeybinds[action];
-    if (!entry) return "";
-    return entry.key || "";
+    if (!entry) return formatKeyForDisplay(this.defaultKeybinds[action] || "");
+    return entry.key || formatKeyForDisplay(entry.value || "");
   }
 
   private handleEasterEggKey = (e: KeyboardEvent) => {
@@ -290,6 +296,11 @@ export class UserSettingModal extends BaseModal {
     this.requestUpdate();
   }
 
+  private sliderNukeAllianceSafetyDuration(e: CustomEvent<{ value: number }>) {
+    this.userSettings.setNukeAllianceSafetyDuration(e.detail.value);
+    this.requestUpdate();
+  }
+
   private toggleTerritoryPatterns() {
     this.userSettings.toggleTerritoryPatterns();
 
@@ -397,10 +408,21 @@ export class UserSettingModal extends BaseModal {
         label=${translateText("user_setting.graphics_refresh_modifier")}
         description=${translateText(
           "user_setting.graphics_refresh_modifier_desc",
+          { key: this.getKeyChar("resetGfx").toUpperCase() },
         )}
-        defaultKey=${this.defaultKeybinds.altKey}
+        .defaultKey=${this.defaultKeybinds.altKey}
         .value=${this.getKeyValue("altKey")}
         .display=${this.getKeyChar("altKey")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="resetGfx"
+        label=${translateText("help_modal.action_reset_gfx")}
+        description=${translateText("user_setting.reset_gfx_desc")}
+        .defaultKey=${this.defaultKeybinds.resetGfx}
+        .value=${this.getKeyValue("resetGfx")}
+        .display=${this.getKeyChar("resetGfx")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -533,6 +555,26 @@ export class UserSettingModal extends BaseModal {
         .defaultKey=${this.defaultKeybinds.emojiMenuModifier}
         .value=${this.getKeyValue("emojiMenuModifier")}
         .display=${this.getKeyChar("emojiMenuModifier")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="boxSelectWarships"
+        label=${translateText("user_setting.box_select_warships")}
+        description=${translateText("user_setting.box_select_warships_desc")}
+        .defaultKey=${this.defaultKeybinds.boxSelectWarships}
+        .value=${this.getKeyValue("boxSelectWarships")}
+        .display=${this.getKeyChar("boxSelectWarships")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="selectAllWarships"
+        label=${translateText("user_setting.select_all_warships")}
+        description=${translateText("user_setting.select_all_warships_desc")}
+        .defaultKey=${this.defaultKeybinds.selectAllWarships}
+        .value=${this.getKeyValue("selectAllWarships")}
+        .display=${this.getKeyChar("selectAllWarships")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -874,6 +916,22 @@ export class UserSettingModal extends BaseModal {
         .value=${String(this.userSettings.attackRatioIncrement())}
         @change=${this.changeAttackRatioIncrement}
       ></setting-select>
+
+      <setting-slider
+        label="${translateText("user_setting.nuke_alliance_safety_label")}"
+        description="${translateText("user_setting.nuke_alliance_safety_desc")}"
+        min="0"
+        max="30"
+        .value=${this.userSettings.nukeAllianceSafetyDuration()}
+        .formatValue=${(val: number) =>
+          val > 0
+            ? translateText("user_setting.nuke_alliance_safety_duration", {
+                count: val,
+                seconds: (val / 10).toFixed(1),
+              })
+            : translateText("user_setting.off")}
+        @change=${this.sliderNukeAllianceSafetyDuration}
+      ></setting-slider>
 
       ${this.showEasterEggSettings
         ? html`

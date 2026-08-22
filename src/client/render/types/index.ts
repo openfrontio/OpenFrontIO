@@ -21,6 +21,7 @@ export type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
+  TerrainRect,
   UnitState,
 } from "./Renderer";
 

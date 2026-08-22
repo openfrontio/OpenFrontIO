@@ -26,6 +26,7 @@ import type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
+  TerrainRect,
   UnitState,
 } from "../types";
 import { Camera } from "./Camera";
@@ -158,8 +159,6 @@ export class GPURenderer {
   private storedLayers: MapLayer[] = [];
   /** Stored layer images for context-restore re-creation. */
   private storedLayerImages: Map<string, ImageBitmap> = new Map();
-  /** Scratch buffer for per-tile terrain byte uploads (avoids allocations). */
-  private terrainDeltaScratch = new Uint8Array(1);
 
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
@@ -274,6 +273,8 @@ export class GPURenderer {
       mapW,
       mapH,
       {
+        backgroundColor:
+          hexToRgb(this.settings.terrain.backgroundColor) ?? undefined,
         oceanColor: hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
         sandColor: hexToRgb(this.settings.terrain.sandColor) ?? undefined,
         plainsColor: hexToRgb(this.settings.terrain.plainsColor) ?? undefined,
@@ -947,51 +948,37 @@ export class GPURenderer {
   }
 
   /**
-   * Update terrain texels for tiles whose terrain byte changed (e.g. water
-   * nukes converting land → water). `terrainBytes[i]` is the new byte for
-   * `refs[i]`. Forwards to both TerrainPass (RGBA color) and RailroadPass
-   * (R8UI water-detection for bridges).
+   * Update terrain texels for regions whose terrain bytes changed (e.g. water
+   * nukes converting land → water). Each rect's bytes are stored row-major,
+   * concatenated in `bytes` in rect order. Forwards to both TerrainPass (RGBA
+   * color) and RailroadPass (R8UI water-detection for bridges). One
+   * texSubImage2D per rect — per-tile uploads cost hundreds of ms for a
+   * massive bomb.
    */
-  applyTerrainDelta(refs: readonly number[], terrainBytes: Uint8Array): void {
-    if (refs.length === 0) return;
-    this.terrainPass.applyTerrainDelta(refs, terrainBytes);
-    this.railroadPass.applyTerrainDelta(refs, terrainBytes);
+  applyTerrainRects(rects: readonly TerrainRect[], bytes: Uint8Array): void {
+    if (rects.length === 0) return;
+    this.terrainPass.applyTerrainRects(rects, bytes);
+    this.railroadPass.applyTerrainRects(rects, bytes);
     // Update the shared R8UI terrain-bytes texture used by map-layer passes.
     if (!this.terrainBytesTex) return;
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.terrainBytesTex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    // Full-map fast path: single texSubImage2D instead of per-tile uploads.
-    if (refs.length === this.mapW * this.mapH) {
+    let offset = 0;
+    for (const r of rects) {
       gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,
-        0,
-        0,
-        this.mapW,
-        this.mapH,
+        r.x,
+        r.y,
+        r.w,
+        r.h,
         gl.RED_INTEGER,
         gl.UNSIGNED_BYTE,
-        terrainBytes,
+        bytes,
+        offset,
       );
-      return;
-    }
-    for (let i = 0; i < refs.length; i++) {
-      const ref = refs[i];
-      const x = ref % this.mapW;
-      const y = Math.floor(ref / this.mapW);
-      this.terrainDeltaScratch[0] = terrainBytes[i];
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        x,
-        y,
-        1,
-        1,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_BYTE,
-        this.terrainDeltaScratch,
-      );
+      offset += r.w * r.h;
     }
   }
 
@@ -1002,6 +989,8 @@ export class GPURenderer {
    */
   rebuildTerrain(): void {
     this.terrainPass.setTerrainColors({
+      backgroundColor:
+        hexToRgb(this.settings.terrain.backgroundColor) ?? undefined,
       oceanColor: hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
       sandColor: hexToRgb(this.settings.terrain.sandColor) ?? undefined,
       plainsColor: hexToRgb(this.settings.terrain.plainsColor) ?? undefined,
@@ -1031,6 +1020,10 @@ export class GPURenderer {
         ? events.filter((e) => e.smallID === this.localPlayerID)
         : events;
     if (filtered.length > 0) this.worldTextPass.applyBonusEvents(filtered);
+  }
+
+  triggerBlockedFlash(tileX: number, tileY: number): void {
+    this.crosshairPass.triggerBlockedFlash(tileX, tileY);
   }
 
   updateAttackRings(rings: AttackRingInput[]): void {
@@ -1318,7 +1311,10 @@ export class GPURenderer {
   private drawBaseLayer(cam: Float32Array): void {
     const gl = this.gl;
     const pe = this.settings.passEnabled;
-    gl.clearColor(60 / 255, 60 / 255, 60 / 255, 1.0);
+    const [bgR, bgG, bgB] = hexToRgb(this.settings.terrain.backgroundColor) ?? [
+      60, 60, 60,
+    ];
+    gl.clearColor(bgR / 255, bgG / 255, bgB / 255, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.BLEND);
     if (pe.terrain) this.terrainPass.draw(cam);

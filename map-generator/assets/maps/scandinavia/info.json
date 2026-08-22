@@ -2,7 +2,7 @@
   "id": "Scandinavia",
   "name": "Scandinavia",
   "translation_key": "map.scandinavia",
-  "categories": ["europe", "new"],
+  "categories": ["europe"],
   "multiplayer_frequency": 7,
   "nations": [
     {

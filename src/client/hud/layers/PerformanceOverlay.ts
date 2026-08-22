@@ -167,8 +167,8 @@ export class PerformanceOverlay extends LitElement implements Controller {
     renderLayersTableHeader: string;
     tickLayersTableHeader: string;
   } = {
-    copied: "performance_overlay.copied",
-    failedCopy: "performance_overlay.failed_copy",
+    copied: "common.copied",
+    failedCopy: "common.failed_copy",
     copyClipboard: "performance_overlay.copy_clipboard",
     reset: "performance_overlay.reset",
     copyJsonTitle: "performance_overlay.copy_json_title",
@@ -211,8 +211,8 @@ export class PerformanceOverlay extends LitElement implements Controller {
     this.uiTextDefaultTranslationsRef = defaultTranslationsRef;
 
     this.uiText = {
-      copied: translateText("performance_overlay.copied"),
-      failedCopy: translateText("performance_overlay.failed_copy"),
+      copied: translateText("common.copied"),
+      failedCopy: translateText("common.failed_copy"),
       copyClipboard: translateText("performance_overlay.copy_clipboard"),
       reset: translateText("performance_overlay.reset"),
       copyJsonTitle: translateText("performance_overlay.copy_json_title"),

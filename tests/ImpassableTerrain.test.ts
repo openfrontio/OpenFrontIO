@@ -300,6 +300,15 @@ describe("Impassable Terrain", () => {
     expect(out[3]).toBe(255);
   });
 
+  test("encodeTerrainTile uses the backgroundColor override for impassable tiles", () => {
+    const out = new Uint8Array(4);
+    encodeTerrainTile(IMPASSABLE, out, 0, { backgroundColor: [10, 20, 30] });
+    expect(out[0]).toBe(10);
+    expect(out[1]).toBe(20);
+    expect(out[2]).toBe(30);
+    expect(out[3]).toBe(255);
+  });
+
   test("encodeTerrainTile renders plains normally (not background)", () => {
     const out = new Uint8Array(4);
     encodeTerrainTile(LAND_PLAINS, out, 0);

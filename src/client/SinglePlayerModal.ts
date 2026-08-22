@@ -65,6 +65,8 @@ const DEFAULT_OPTIONS = {
   waterNukes: false,
   doomsdayClock: false,
   doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
+  overtime: false,
+  overtimeStartMinutes: undefined as number | undefined,
 } as const;
 
 // A map earns achievements only if it has nations to conquer — the same rule
@@ -153,6 +155,9 @@ export class SinglePlayerModal extends BaseModal {
   @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
     DEFAULT_OPTIONS.doomsdayClockSpeed;
+  @state() private overtime: boolean = DEFAULT_OPTIONS.overtime;
+  @state() private overtimeStartMinutes: number | undefined =
+    DEFAULT_OPTIONS.overtimeStartMinutes;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -332,14 +337,14 @@ export class SinglePlayerModal extends BaseModal {
   protected renderBody() {
     const inputCards = [
       html`<toggle-input-card
-        .labelKey=${"single_modal.max_timer"}
+        .labelKey=${"game_settings.max_timer"}
         .checked=${this.maxTimer}
         .inputId=${"end-timer-value"}
         .inputMin=${1}
         .inputMax=${120}
         .inputValue=${this.maxTimerValue}
-        .inputAriaLabel=${translateText("single_modal.max_timer")}
-        .inputPlaceholder=${translateText("single_modal.max_timer_placeholder")}
+        .inputAriaLabel=${translateText("game_settings.max_timer")}
+        .inputPlaceholder=${translateText("game_settings.mins_placeholder")}
         .defaultInputValue=${30}
         .minValidOnEnable=${1}
         .onToggle=${this.handleMaxTimerToggle}
@@ -347,17 +352,15 @@ export class SinglePlayerModal extends BaseModal {
         .onKeyDown=${this.handleMaxTimerValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"single_modal.gold_multiplier"}
+        .labelKey=${"game_settings.gold_multiplier"}
         .checked=${this.goldMultiplier}
         .inputId=${"gold-multiplier-value"}
         .inputMin=${0.1}
         .inputMax=${1000}
         .inputStep=${"any"}
         .inputValue=${this.goldMultiplierValue}
-        .inputAriaLabel=${translateText("single_modal.gold_multiplier")}
-        .inputPlaceholder=${translateText(
-          "single_modal.gold_multiplier_placeholder",
-        )}
+        .inputAriaLabel=${translateText("game_settings.gold_multiplier")}
+        .inputPlaceholder=${"2.0x"}
         .defaultInputValue=${2}
         .minValidOnEnable=${0.1}
         .onToggle=${this.handleGoldMultiplierToggle}
@@ -365,17 +368,15 @@ export class SinglePlayerModal extends BaseModal {
         .onKeyDown=${this.handleGoldMultiplierValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"single_modal.starting_gold"}
+        .labelKey=${"game_settings.starting_gold"}
         .checked=${this.startingGold}
         .inputId=${"starting-gold-value"}
         .inputMin=${0.1}
         .inputMax=${1000}
         .inputStep=${"any"}
         .inputValue=${this.startingGoldValue}
-        .inputAriaLabel=${translateText("single_modal.starting_gold")}
-        .inputPlaceholder=${translateText(
-          "single_modal.starting_gold_placeholder",
-        )}
+        .inputAriaLabel=${translateText("game_settings.starting_gold")}
+        .inputPlaceholder=${"5"}
         .defaultInputValue=${5}
         .minValidOnEnable=${0.1}
         .onToggle=${this.handleStartingGoldToggle}
@@ -383,20 +384,35 @@ export class SinglePlayerModal extends BaseModal {
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"single_modal.custom_alliances"}
+        .labelKey=${"game_settings.custom_alliances"}
         .checked=${this.customAlliances}
         .inputMin=${0}
         .inputMax=${15}
         .inputStep=${1}
         .inputValue=${this.customAllianceMinutes}
-        .inputAriaLabel=${translateText("single_modal.custom_alliances")}
-        .inputPlaceholder=${translateText("single_modal.mins_placeholder")}
+        .inputAriaLabel=${translateText("game_settings.custom_alliances")}
+        .inputPlaceholder=${translateText("game_settings.mins_placeholder")}
         .defaultInputValue=${0}
         .minValidOnEnable=${0}
         .zeroLabel=${`(${translateText("public_game_modifier.disable_alliances")})`}
         .onToggle=${this.handleCustomAlliancesToggle}
         .onInput=${this.handleCustomAllianceMinutesInput}
         .onKeyDown=${this.handleCustomAllianceMinutesKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"game_settings.overtime"}
+        .checked=${this.overtime}
+        .inputMin=${1}
+        .inputMax=${120}
+        .inputStep=${1}
+        .inputValue=${this.overtimeStartMinutes}
+        .inputAriaLabel=${translateText("game_settings.overtime")}
+        .inputPlaceholder=${translateText("game_settings.mins_placeholder")}
+        .defaultInputValue=${30}
+        .minValidOnEnable=${1}
+        .onToggle=${this.handleOvertimeToggle}
+        .onInput=${this.handleOvertimeMinutesInput}
+        .onKeyDown=${this.handleOvertimeMinutesKeyDown}
       ></toggle-input-card>`,
     ];
 
@@ -426,45 +442,45 @@ export class SinglePlayerModal extends BaseModal {
                 selected: this.teamCount,
               },
               options: {
-                titleKey: "single_modal.options_title",
+                titleKey: "game_settings.options",
                 bots: {
                   value: this.bots,
-                  labelKey: "single_modal.bots",
-                  disabledKey: "single_modal.bots_disabled",
+                  labelKey: "game_settings.bots",
+                  disabledKey: "common.disabled",
                 },
                 nations: {
                   value: this.nations,
                   defaultValue: this.defaultNationCount,
-                  labelKey: "single_modal.nations",
-                  disabledKey: "single_modal.nations_disabled",
+                  labelKey: "game_settings.nations",
+                  disabledKey: "common.disabled",
                 },
                 toggles: [
                   {
-                    labelKey: "single_modal.instant_build",
+                    labelKey: "game_settings.instant_build",
                     checked: this.instantBuild,
                   },
                   {
-                    labelKey: "single_modal.random_spawn",
+                    labelKey: "game_settings.random_spawn",
                     checked: this.randomSpawn,
                   },
                   {
-                    labelKey: "single_modal.infinite_gold",
+                    labelKey: "game_settings.infinite_gold",
                     checked: this.infiniteGold,
                   },
                   {
-                    labelKey: "single_modal.infinite_troops",
+                    labelKey: "game_settings.infinite_troops",
                     checked: this.infiniteTroops,
                   },
                   {
-                    labelKey: "single_modal.compact_map",
+                    labelKey: "game_settings.compact_map",
                     checked: this.compactMap,
                   },
                   {
-                    labelKey: "single_modal.water_nukes",
+                    labelKey: "game_settings.water_nukes",
                     checked: this.waterNukes,
                   },
                   {
-                    labelKey: "single_modal.doomsday_clock",
+                    labelKey: "game_settings.doomsday_clock",
                     checked: this.doomsdayClock,
                     doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
@@ -472,7 +488,7 @@ export class SinglePlayerModal extends BaseModal {
                 inputCards,
               },
               unitTypes: {
-                titleKey: "single_modal.enables_title",
+                titleKey: "game_settings.disable_units",
                 disabledUnits: this.disabledUnits,
               },
             }}
@@ -503,7 +519,7 @@ export class SinglePlayerModal extends BaseModal {
             variant="primary"
             width="block"
             size="lg"
-            translationKey="single_modal.start"
+            translationKey="game_settings.start"
             @click=${this.startGame}
           ></o-button>
         </div>
@@ -532,6 +548,7 @@ export class SinglePlayerModal extends BaseModal {
       // Pace only matters when the mode is on (startGame drops it when off).
       (this.doomsdayClock &&
         this.doomsdayClockSpeed !== DEFAULT_OPTIONS.doomsdayClockSpeed) ||
+      this.overtime !== DEFAULT_OPTIONS.overtime ||
       this.disabledUnits.length > 0
     );
   }
@@ -563,6 +580,8 @@ export class SinglePlayerModal extends BaseModal {
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
     this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
     this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
+    this.overtime = DEFAULT_OPTIONS.overtime;
+    this.overtimeStartMinutes = DEFAULT_OPTIONS.overtimeStartMinutes;
   }
 
   protected onOpen(): void {
@@ -632,25 +651,25 @@ export class SinglePlayerModal extends BaseModal {
     const { labelKey, checked } = customEvent.detail;
 
     switch (labelKey) {
-      case "single_modal.instant_build":
+      case "game_settings.instant_build":
         this.instantBuild = checked;
         break;
-      case "single_modal.random_spawn":
+      case "game_settings.random_spawn":
         this.randomSpawn = checked;
         break;
-      case "single_modal.infinite_gold":
+      case "game_settings.infinite_gold":
         this.infiniteGold = checked;
         break;
-      case "single_modal.infinite_troops":
+      case "game_settings.infinite_troops":
         this.infiniteTroops = checked;
         break;
-      case "single_modal.compact_map":
+      case "game_settings.compact_map":
         this.handleCompactMapChange(checked);
         break;
-      case "single_modal.water_nukes":
+      case "game_settings.water_nukes":
         this.waterNukes = checked;
         break;
-      case "single_modal.doomsday_clock":
+      case "game_settings.doomsday_clock":
         this.doomsdayClock = checked;
         break;
       default:
@@ -716,6 +735,31 @@ export class SinglePlayerModal extends BaseModal {
   ) => {
     this.customAlliances = checked;
     this.customAllianceMinutes = toOptionalNumber(value);
+  };
+
+  private handleOvertimeToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.overtime = checked;
+    this.overtimeStartMinutes = toOptionalNumber(value);
+  };
+
+  private handleOvertimeMinutesKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e"]);
+  };
+
+  private handleOvertimeMinutesInput = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 1,
+      max: 120,
+      stripPattern: /[e+-]/gi,
+    });
+    if (value === undefined) {
+      return;
+    }
+    this.overtimeStartMinutes = value;
   };
 
   private handleCustomAllianceMinutesKeyDown = (e: KeyboardEvent) => {
@@ -894,6 +938,14 @@ export class SinglePlayerModal extends BaseModal {
                     doomsdayClock: {
                       enabled: true,
                       speed: this.doomsdayClockSpeed,
+                    },
+                  }
+                : {}),
+              ...(this.overtime
+                ? {
+                    overtime: {
+                      enabled: true,
+                      startMinutes: this.overtimeStartMinutes ?? 30,
                     },
                   }
                 : {}),

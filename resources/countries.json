@@ -2073,6 +2073,10 @@
     "name": "Marinid Dynasty"
   },
   {
+    "code": "FlagOfMars",
+    "name": "Mars"
+  },
+  {
     "code": "mh",
     "continent": "Oceania",
     "name": "Marshall Islands"

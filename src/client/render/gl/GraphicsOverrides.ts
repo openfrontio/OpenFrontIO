@@ -83,6 +83,9 @@ export const GraphicsOverridesSchema = z
       .partial(),
     terrain: z
       .object({
+        // "#rrggbb" hex string; overrides the map background color (the area
+        // outside the map and impassable terrain, which renders to match).
+        backgroundColor: z.string(),
         // "#rrggbb" hex string; overrides the base ocean (deep water) color.
         oceanColor: z.string(),
         sandColor: z.string(),

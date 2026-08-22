@@ -174,6 +174,13 @@ export async function fetchPublicPlayerGames(
 }
 
 let __userMe: Promise<UserMeResponse | false> | null = null;
+
+// The profile outlives the session it describes unless this is dropped with
+// it: getUserMe answers from the cache before it checks authentication, so a
+// consumer calling it after a background logout would read the expired
+// account straight back. Handled here rather than in Auth, which cannot
+// import this module — the dependency runs the other way.
+document.addEventListener("session-cleared", () => invalidateUserMe());
 export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
     return __userMe;
@@ -191,6 +198,9 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
         },
       });
       if (response.status === 401) {
+        // Clearing the session announces itself (see clearLocalSession), so
+        // consumers holding account state don't mistake this for the
+        // transient failure the `false` below also represents.
         await logOut();
         return false;
       }

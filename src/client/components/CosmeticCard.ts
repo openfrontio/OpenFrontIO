@@ -380,14 +380,10 @@ export class CosmeticCard extends LitElement {
     } ${this.rarityHoverClass(rarity)}`;
     const priced = active.cosmetic as {
       artist?: string;
-      product?: unknown;
       priceHard?: number;
     } | null;
     const usdValue =
-      (priced?.product === null || priced?.product === undefined) &&
-      priced?.priceHard !== undefined
-        ? priced.priceHard / 20
-        : undefined;
+      priced?.priceHard !== undefined ? priced.priceHard / 20 : undefined;
     // A subscription lists its perks as text, which wraps to more lines than a
     // square box holds once cards are phone-width — let it take the height it
     // needs rather than clipping the last perk.

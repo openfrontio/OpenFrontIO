@@ -169,8 +169,8 @@ function createGlStub() {
     setLocalRailColor: noop("setLocalRailColor"),
     updateSpawnOverlay: noop("updateSpawnOverlay"),
     initSkinAtlas: noop("initSkinAtlas"),
-    applyTerrainDelta: (refs: number[]) =>
-      bump("applyTerrainDelta", refs.length),
+    applyTerrainRects: (rects: unknown[]) =>
+      bump("applyTerrainRects", rects.length),
     // uploadFrameData dispatch targets (FrameUploadTarget)
     uploadTileAndTrailState: noop("uploadTileAndTrailState"),
     uploadLiveDelta: (_: unknown, changed: unknown[]) => {

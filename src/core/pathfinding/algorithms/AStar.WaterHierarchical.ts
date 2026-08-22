@@ -50,6 +50,19 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     this.sourceResolver = new SourceResolver(this.map, this.graph);
   }
 
+  /**
+   * Swap in a rebuilt abstract graph, reusing the map-sized search
+   * scratch buffers (BFSGrid alone is ~20MB on large maps — reallocating
+   * it on every water-graph rebuild causes GC churn).  Only the
+   * graph-derived helpers are recreated.  Path caches live on the graph
+   * itself, so they reset naturally with the new graph.
+   */
+  setGraph(graph: AbstractGraph): void {
+    this.graph = graph;
+    this.abstractAStar = new AbstractGraphAStar(graph);
+    this.sourceResolver = new SourceResolver(this.map, graph);
+  }
+
   findPath(from: number | number[], to: number): number[] | null {
     return DebugSpan.wrap("AStar.WaterHierarchical:findPath", () => {
       DebugSpan.set("$to", () => to);

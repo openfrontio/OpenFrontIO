@@ -17,6 +17,7 @@
     "nameDebug": false
   },
   "terrain": {
+    "backgroundColor": "#3c3c3c",
     "oceanColor": "#4785b5",
     "sandColor": "#CCCB9E",
     "plainsColor": "#BEDC8A",

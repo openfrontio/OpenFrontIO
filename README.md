@@ -144,6 +144,7 @@ npm run dev:prod
 - `/src/core` - Deterministic game simulation
 - `/src/server` - Backend game server
 - `/resources` - Static assets (images, maps, etc.)
+- `/zbin` - Compact binary wire format for zod schemas (self-contained, zod-only)
 
 ## 🤝 Contributing
 

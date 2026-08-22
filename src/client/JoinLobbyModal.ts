@@ -32,6 +32,7 @@ import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { SendSpectateEvent } from "./Transport";
 import { normaliseMapKey } from "./Utils";
 import { isReplayShellHost, versionedReplayUrl } from "./VersionedReplay";
 import { BaseModal } from "./components/BaseModal";
@@ -75,6 +76,19 @@ export class JoinLobbyModal extends BaseModal {
     return this.gameConfig?.gameType === GameType.Private;
   }
 
+  // Read off the server's own view of us, so a switch it refused (lobby full,
+  // game already started) shows the real state instead of what was asked for.
+  private get isSpectating(): boolean {
+    return (
+      this.players.find((p) => p.clientID === this.currentClientID)
+        ?.spectator === true
+    );
+  }
+
+  private setSpectating(spectator: boolean) {
+    this.eventBus?.emit(new SendSpectateEvent(spectator));
+  }
+
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
     this.currentClientID = event.myClientID;
@@ -107,6 +121,40 @@ export class JoinLobbyModal extends BaseModal {
     });
   }
 
+  // Play/Spectate switch. Hidden once the game is running: the player list is
+  // frozen at start, so the server would refuse to seat anyone new and the
+  // control would do nothing.
+  private renderSpectateToggle() {
+    // Any joined lobby can be spectated — a host-started private lobby has no
+    // scheduled start (lobbyStartAt null), and gating on it hid the toggle in
+    // exactly the lobbies it exists for. The server still refuses seating after
+    // start, so no client-side start check is needed here.
+    if (this.isConnecting) return html``;
+    const spectating = this.isSpectating;
+    const cls = (on: boolean) =>
+      `px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest transition ${
+        on ? "bg-white text-black" : "text-white/60 hover:text-white"
+      }`;
+    return html`
+      <div class="flex items-center gap-1 rounded-xl bg-white/5 p-1">
+        <button
+          class=${cls(!spectating)}
+          ?disabled=${!spectating}
+          @click=${() => this.setSpectating(false)}
+        >
+          ${translateText("private_lobby.play")}
+        </button>
+        <button
+          class=${cls(spectating)}
+          ?disabled=${spectating}
+          @click=${() => this.setSpectating(true)}
+        >
+          ${translateText("private_lobby.spectate")}
+        </button>
+      </div>
+    `;
+  }
+
   protected renderBody() {
     // Pre-join state: show lobby ID input form
     if (!this.currentLobbyId) {
@@ -132,7 +180,8 @@ export class JoinLobbyModal extends BaseModal {
             })
           : translateText("public_lobby.started");
     const maxPlayers = this.gameConfig?.maxPlayers ?? 0;
-    const playerCount = this.players?.length ?? 0;
+    // Seats, not connections: spectators are in the roster but hold none.
+    const playerCount = this.players?.filter((p) => !p.spectator).length ?? 0;
     const hostClientID = this.isPrivateLobby()
       ? (this.lobbyCreatorClientID ?? "")
       : "";
@@ -189,6 +238,7 @@ export class JoinLobbyModal extends BaseModal {
                 >
                 <span class="text-sm font-bold text-white">${statusLabel}</span>
               </div>
+              ${this.renderSpectateToggle()}
               ${maxPlayers > 0
                 ? html`
                     <div
@@ -248,11 +298,23 @@ export class JoinLobbyModal extends BaseModal {
                 @click=${this.pasteFromClipboard}
               ></o-button>
             </div>
-            <o-button
-              title=${translateText("private_lobby.join_lobby")}
-              width="block"
-              submit
-            ></o-button>
+            <div class="flex gap-2">
+              <div class="flex-[2]">
+                <o-button
+                  title=${translateText("private_lobby.join_lobby")}
+                  width="block"
+                  submit
+                ></o-button>
+              </div>
+              <div class="flex-1">
+                <o-button
+                  variant="ghost"
+                  title=${translateText("private_lobby.spectate")}
+                  width="block"
+                  @click=${this.spectateLobbyFromInput}
+                ></o-button>
+              </div>
+            </div>
           </div>
         </form>
         ${this.renderHostedLobbies()}
@@ -302,6 +364,25 @@ export class JoinLobbyModal extends BaseModal {
     const settings = c ? this.notableSettings(c, null) : [];
     const disabledUnitCount = c?.disabledUnits?.length ?? 0;
     const enabled = translateText("common.enabled");
+    // A featured lobby names itself; the map drops to the subtitle so nothing
+    // is lost. Interpolated by lit as TEXT, never markup — emoji render because
+    // they are ordinary codepoints, and the accent comes from a closed set so a
+    // label can never restyle the rest of the list.
+    const featuredLabel = lobby.featured ? lobby.label : undefined;
+    const accentClass =
+      featuredLabel === undefined
+        ? "text-white"
+        : {
+            gold: "text-amber-300",
+            blue: "text-sky-300",
+            green: "text-emerald-300",
+            red: "text-rose-300",
+          }[lobby.accent ?? "gold"];
+    const subtitle = c ? this.modeSubtitle(c) : "";
+    // The map name only moves down here when a label has taken the title line.
+    const subtitleLine = featuredLabel
+      ? [mapName, subtitle].filter(Boolean).join(" · ")
+      : subtitle;
     return html`
       <button
         type="button"
@@ -317,14 +398,14 @@ export class JoinLobbyModal extends BaseModal {
           }}
         />
         <div class="flex flex-col flex-1 min-w-0">
-          <span class="text-sm font-bold text-white truncate">${mapName}</span>
-          <span class="text-xs text-white/60"
-            >${c ? this.modeSubtitle(c) : ""}</span
+          <span class="text-sm font-bold truncate ${accentClass}"
+            >${featuredLabel ?? mapName}</span
           >
+          <span class="text-xs text-white/60">${subtitleLine}</span>
           ${settings.length > 0 || disabledUnitCount > 0
             ? html`<div class="flex flex-wrap gap-1 mt-1">
                 ${settings.map((s) => {
-                  // Some labels (e.g. host_modal.bots) already end with ": ".
+                  // Some labels (e.g. game_settings.bots) already end with ": ".
                   const label = s.label.replace(/[:\s]+$/, "");
                   return html`<span
                     class="px-1.5 py-0.5 bg-white/10 text-white/70 text-[10px] rounded font-bold"
@@ -387,16 +468,22 @@ export class JoinLobbyModal extends BaseModal {
       this.startTrackingLobby(lobbyId, lobbyInfo);
       // If opened with lobbyId but no lobbyInfo (URL join case), auto-join the lobby
       if (!lobbyInfo) {
-        this.handleUrlJoin(lobbyId);
+        this.handleUrlJoin(lobbyId, args?.spectate === true);
       }
     }
   }
 
-  private async handleUrlJoin(lobbyId: string): Promise<void> {
+  private async handleUrlJoin(
+    lobbyId: string,
+    spectator = false,
+  ): Promise<void> {
     try {
-      const gameExists = await this.checkActiveLobby(lobbyId);
+      const gameExists = await this.checkActiveLobby(lobbyId, spectator);
       if (gameExists) return;
 
+      // A finished game has no lobby to spectate, so both link forms fall
+      // through to the same archive: the play link and the spectate link
+      // become the same replay once the game is over.
       // Active lobby not found, check if it's an archived game
       switch (await this.checkArchivedGame(lobbyId)) {
         case "success":
@@ -586,22 +673,22 @@ export class JoinLobbyModal extends BaseModal {
       });
     if (c.infiniteTroops)
       items.push({
-        label: translateText("host_modal.infinite_troops"),
+        label: translateText("game_settings.infinite_troops"),
         value: enabled,
       });
     if (c.infiniteGold)
       items.push({
-        label: translateText("host_modal.infinite_gold"),
+        label: translateText("game_settings.infinite_gold"),
         value: enabled,
       });
     if (c.instantBuild)
       items.push({
-        label: translateText("host_modal.instant_build"),
+        label: translateText("game_settings.instant_build"),
         value: enabled,
       });
     if (c.randomSpawn)
       items.push({
-        label: translateText("host_modal.random_spawn"),
+        label: translateText("game_settings.random_spawn"),
         value: enabled,
       });
     if (c.maxTimerValue)
@@ -625,7 +712,7 @@ export class JoinLobbyModal extends BaseModal {
       });
     if (c.goldMultiplier)
       items.push({
-        label: translateText("host_modal.gold_multiplier"),
+        label: translateText("game_settings.gold_multiplier"),
         value: `x${c.goldMultiplier}`,
       });
     if (c.customAllianceDuration === 0 || c.disableAlliances)
@@ -645,15 +732,20 @@ export class JoinLobbyModal extends BaseModal {
       });
     if (c.waterNukes)
       items.push({
-        label: translateText("public_game_modifier.water_nukes_label"),
+        label: translateText("game_settings.water_nukes"),
         value: enabled,
       });
     if (c.doomsdayClock?.enabled)
       items.push({
-        label: translateText("public_game_modifier.doomsday_clock_label"),
+        label: translateText("game_settings.doomsday_clock"),
         value: translateText(
           `doomsday_clock_speed.${c.doomsdayClock.speed ?? "normal"}`,
         ),
+      });
+    if (c.overtime?.enabled)
+      items.push({
+        label: translateText("overtime.title"),
+        value: renderDuration((c.overtime.startMinutes ?? 30) * 60),
       });
     if (c.anonymizeNames)
       items.push({
@@ -674,14 +766,14 @@ export class JoinLobbyModal extends BaseModal {
       c.gameMapSize === GameMapSize.Compact || c.publicGameModifiers?.isCompact;
     if (isCompact)
       items.push({
-        label: translateText("host_modal.compact_map"),
+        label: translateText("game_settings.compact_map"),
         value: enabled,
       });
     {
       const defaultBots = isCompact ? 100 : 400;
       if (c.bots !== defaultBots)
         items.push({
-          label: translateText("host_modal.bots"),
+          label: translateText("game_settings.bots"),
           value: String(c.bots),
         });
     }
@@ -691,13 +783,13 @@ export class JoinLobbyModal extends BaseModal {
         : nationCount;
       if (typeof c.nations === "number" && c.nations !== defaultNations)
         items.push({
-          label: translateText("host_modal.nations"),
+          label: translateText("game_settings.nations"),
           value: String(c.nations),
         });
     }
     if (c.nations === "disabled" && !(c.gameType === GameType.Public && isTeam))
       items.push({
-        label: translateText("host_modal.nations"),
+        label: translateText("game_settings.nations"),
         value: disabled,
       });
     return items;
@@ -810,7 +902,7 @@ export class JoinLobbyModal extends BaseModal {
         html`<span
           class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
         >
-          ${translateText("host_modal.infinite_gold")}
+          ${translateText("game_settings.infinite_gold")}
         </span>`,
       );
     if (hc.infiniteTroops)
@@ -818,7 +910,7 @@ export class JoinLobbyModal extends BaseModal {
         html`<span
           class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
         >
-          ${translateText("host_modal.infinite_troops")}
+          ${translateText("game_settings.infinite_troops")}
         </span>`,
       );
     if (hc.goldMultiplier)
@@ -826,7 +918,8 @@ export class JoinLobbyModal extends BaseModal {
         html`<span
           class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
         >
-          ${translateText("host_modal.gold_multiplier")}: x${hc.goldMultiplier}
+          ${translateText("game_settings.gold_multiplier")}:
+          x${hc.goldMultiplier}
         </span>`,
       );
     if (hc.startingGold)
@@ -1020,8 +1113,16 @@ export class JoinLobbyModal extends BaseModal {
     }
   }
 
-  private async joinLobbyFromInput(e: SubmitEvent): Promise<void> {
+  private joinLobbyFromInput(e: SubmitEvent): Promise<void> {
     e.preventDefault();
+    return this.enterLobbyFromInput(false);
+  }
+
+  private spectateLobbyFromInput(): Promise<void> {
+    return this.enterLobbyFromInput(true);
+  }
+
+  private async enterLobbyFromInput(spectator: boolean): Promise<void> {
     const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
     if (!lobbyId) {
       this.showMessage(translateText("private_lobby.not_found"), "red");
@@ -1035,7 +1136,7 @@ export class JoinLobbyModal extends BaseModal {
     this.startTrackingLobby(lobbyId);
 
     try {
-      const gameExists = await this.checkActiveLobby(lobbyId);
+      const gameExists = await this.checkActiveLobby(lobbyId, spectator);
       if (gameExists) return;
 
       switch (await this.checkArchivedGame(lobbyId)) {
@@ -1075,7 +1176,10 @@ export class JoinLobbyModal extends BaseModal {
     );
   }
 
-  private async checkActiveLobby(lobbyId: string): Promise<boolean> {
+  private async checkActiveLobby(
+    lobbyId: string,
+    spectator = false,
+  ): Promise<boolean> {
     const url = `/${ClientEnv.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {
@@ -1100,7 +1204,15 @@ export class JoinLobbyModal extends BaseModal {
     }
 
     if (gameInfo.exists) {
-      this.showMessage(translateText("private_lobby.joined_waiting"));
+      // A spectator can enter a game that is already running, so the usual
+      // "waiting for host to start" is wrong for them.
+      this.showMessage(
+        translateText(
+          spectator
+            ? "private_lobby.spectating"
+            : "private_lobby.joined_waiting",
+        ),
+      );
 
       // Use the clientID that was already set by startTrackingLobby in open()
       this.dispatchEvent(
@@ -1108,6 +1220,7 @@ export class JoinLobbyModal extends BaseModal {
           detail: {
             gameID: lobbyId,
             source: "private",
+            spectator,
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,

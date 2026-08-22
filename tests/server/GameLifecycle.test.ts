@@ -15,6 +15,7 @@ vi.mock("../../src/core/Schemas", async () => {
 
 import { GameType } from "../../src/core/game/Game";
 import { GameServer } from "../../src/server/GameServer";
+import { testGameConfig } from "../util/Wire";
 
 describe("GameLifecycle", () => {
   let mockLogger: any;
@@ -35,9 +36,12 @@ describe("GameLifecycle", () => {
   });
 
   it("should not start turn interval if game has ended", async () => {
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-    } as any);
+    const game = new GameServer(
+      "test-game",
+      mockLogger,
+      Date.now(),
+      testGameConfig({ gameType: GameType.Private }),
+    );
 
     // Call end() first - this should set _hasEnded
     await game.end();
@@ -54,11 +58,12 @@ describe("GameLifecycle", () => {
 
   it("should clear turn interval and set _hasEnded on end()", async () => {
     // We need to initialize the game such that start() can succeed
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-      gameMap: "plains",
-      gameMapSize: 100,
-    } as any);
+    const game = new GameServer(
+      "test-game",
+      mockLogger,
+      Date.now(),
+      testGameConfig({ gameType: GameType.Private }),
+    );
 
     // Manually trigger prestart to fulfill some internal checks if necessary
     game.prestart();
@@ -74,9 +79,12 @@ describe("GameLifecycle", () => {
   });
 
   it("should be resilient to multiple end() calls", async () => {
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-    } as any);
+    const game = new GameServer(
+      "test-game",
+      mockLogger,
+      Date.now(),
+      testGameConfig({ gameType: GameType.Private }),
+    );
 
     await game.end();
     expect((game as any)._hasEnded).toBe(true);

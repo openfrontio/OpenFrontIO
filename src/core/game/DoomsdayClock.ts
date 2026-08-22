@@ -12,6 +12,12 @@
  */
 
 export type DoomsdayClockSpeed = "slow" | "normal" | "fast" | "veryfast";
+/** Speed sets the pace; team mode sets the bar. */
+export interface DoomsdayClockProfile {
+  speed: DoomsdayClockSpeed;
+  /** True when a side is a team rather than one player — see LEVELS_TEAM. */
+  teamGame?: boolean;
+}
 
 /** In selector order. */
 export const DOOMSDAY_CLOCK_SPEEDS: DoomsdayClockSpeed[] = [
@@ -46,6 +52,13 @@ interface WaveSchedule {
 // a higher one climbs past the leader's own share. Steps stay small because half
 // the players alive at the end hold under 0.4% of the map.
 const LEVELS = [200, 400, 700, 1100, 1700, 2500, 3500]; // 2/4/7/11/17/25/35%
+// TEAM modes climb the same ladder with the rungs raised. A side survives while
+// either member does, so equal pressure collapses the field more slowly —
+// measured, team games plateau at four sides where FFA keeps shedding. Only the
+// rungs move; grace and ramp timings are the speed's job. The ceiling is
+// unchanged: 35% is already above any runner-up share observed at game end, and
+// raising it would start dooming the leader.
+const LEVELS_TEAM = [300, 600, 1000, 1500, 2100, 2800, 3500]; // 3/6/10/15/21/28/35%
 const SCHEDULES: Record<DoomsdayClockSpeed, WaveSchedule> = {
   // grace 10:00, then seven 168s ramps + 54s pauses -> 35% at 35:00.
   normal: {
@@ -80,8 +93,9 @@ const SCHEDULES: Record<DoomsdayClockSpeed, WaveSchedule> = {
   },
 };
 
-function schedule(speed: DoomsdayClockSpeed): WaveSchedule {
-  return SCHEDULES[speed] ?? SCHEDULES.normal;
+function schedule(profile: DoomsdayClockProfile): WaveSchedule {
+  const base = SCHEDULES[profile.speed] ?? SCHEDULES.normal;
+  return profile.teamGame === true ? { ...base, levels: LEVELS_TEAM } : base;
 }
 
 /**
@@ -90,10 +104,10 @@ function schedule(speed: DoomsdayClockSpeed): WaveSchedule {
  * each. Integer-only (floored) so every client agrees.
  */
 function requiredBasisPoints(
-  speed: DoomsdayClockSpeed,
+  profile: DoomsdayClockProfile,
   elapsed: number,
 ): number {
-  const s = schedule(speed);
+  const s = schedule(profile);
   if (elapsed <= s.graceSeconds) return 0;
   let t = elapsed - s.graceSeconds;
   let prev = 0;
@@ -123,12 +137,12 @@ function requiredBasisPoints(
  * ratio, so every client agrees.
  */
 export function doomsdayClockRequiredTiles(
-  speed: DoomsdayClockSpeed,
+  profile: DoomsdayClockProfile,
   land: number,
   elapsed: number,
 ): number {
   if (land <= 0) return 0;
-  return Math.floor((requiredBasisPoints(speed, elapsed) * land) / 10000);
+  return Math.floor((requiredBasisPoints(profile, elapsed) * land) / 10000);
 }
 
 export interface DoomsdayClockWaveState {
@@ -153,11 +167,11 @@ export interface DoomsdayClockWaveState {
  * holding, and the cue window. Lives here so the schedule is defined once.
  */
 export function doomsdayClockWaveState(
-  speed: DoomsdayClockSpeed,
+  profile: DoomsdayClockProfile,
   elapsed: number,
 ): DoomsdayClockWaveState {
-  const s = schedule(speed);
-  const currentPercent = requiredBasisPoints(speed, elapsed) / 100;
+  const s = schedule(profile);
+  const currentPercent = requiredBasisPoints(profile, elapsed) / 100;
   const n = s.levels.length;
   const last = s.levels[n - 1] / 100;
 

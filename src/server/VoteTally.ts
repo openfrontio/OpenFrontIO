@@ -34,4 +34,24 @@ export class VoteRound<T> {
     }
     return null;
   }
+
+  // Re-tally against a shrunken electorate: like result(), but both the
+  // electorate and the counted votes are restricted to `activeIPs`. Votes
+  // from departed IPs must not count here — otherwise a player could vote
+  // for themselves and disconnect, and the re-tally triggered by their own
+  // departure would crown them (#4136 again, one step removed).
+  resultAmong(activeIPs: Set<string>): { value: T; votes: number } | null {
+    for (const candidate of this.candidates.values()) {
+      let votes = 0;
+      for (const ip of candidate.ips) {
+        if (activeIPs.has(ip)) {
+          votes++;
+        }
+      }
+      if (votes * 2 > activeIPs.size) {
+        return { value: candidate.value, votes };
+      }
+    }
+    return null;
+  }
 }

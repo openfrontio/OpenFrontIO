@@ -106,13 +106,31 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
 // Drop all client-side auth state without calling the API. Used after account
 // deletion (DELETE /users/@me), where the server has already revoked every
 // session and cleared the refresh cookie, so /auth/logout must not be called.
+// Announce a logout that nothing asked for. Consumers holding account state
+// can't infer it: every failing call just resolves false, which is also what a
+// transient network error looks like. Dispatched from clearLocalSession so it
+// covers all of them — an expired refresh token, a JWT issued for another
+// origin, a 401 on any endpoint — rather than the one branch that prompted it.
+//
+// Distinct from userMeResponse, which Main dispatches: account state lives
+// partly outside that event (the nav button's imperative avatar and its cached
+// profile, window.adsEnabled), so Main answers this by running the same
+// no-session path it runs at startup, which broadcasts userMeResponse itself.
+function announceLoggedOut(): void {
+  document.dispatchEvent(
+    new CustomEvent("session-cleared", { bubbles: true, cancelable: true }),
+  );
+}
+
 export function clearLocalSession(): void {
+  const hadSession = __jwt !== null;
   __jwt = null;
   localStorage.removeItem(PERSISTENT_ID_KEY);
   // Switch cosmetics back to the logged-out scope. The player's own
   // selections stay stored under their publicId and are restored on the
   // next login (#4955).
   UserSettings.setPlayerId(null);
+  if (hadSession) announceLoggedOut();
 }
 
 export async function isLoggedIn(): Promise<boolean> {

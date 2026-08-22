@@ -104,7 +104,7 @@
   "id": "Vietnam",
   "name": "Vietnam",
   "translation_key": "map.vietnam",
-  "categories": ["new", "countries", "asia"],
+  "categories": ["countries", "asia"],
   "multiplayer_frequency": 4,
   "special_team_count": 2,
   "nations": [

@@ -6,8 +6,6 @@ import {
 import { UserMeResponse } from "../src/core/ApiSchemas";
 import { Cosmetics } from "../src/core/CosmeticSchemas";
 
-const product = { productId: "prod_1", priceId: "price_1", price: "$4.99" };
-
 function makeCosmetics(overrides: Partial<Cosmetics> = {}): Cosmetics {
   return {
     patterns: {},
@@ -55,9 +53,9 @@ describe("resolveCosmetics", () => {
       name: "stripes",
       pattern: "AAAAAA",
       affiliateCode: null,
-      product,
+      product: null,
       priceSoft: undefined,
-      priceHard: undefined,
+      priceHard: 100,
       rarity: "common",
       colorPalettes: [
         { name: "red", isArchived: false },
@@ -125,7 +123,7 @@ describe("resolveCosmetics", () => {
       expect(patternItems[0].key).toBe("pattern:stripes");
     });
 
-    test("purchasable when user has no flares and product exists", () => {
+    test("purchasable when user has no flares and currency price exists", () => {
       const cosmetics = makeCosmetics({
         patterns: { stripes: pattern as any },
         colorPalettes,
@@ -236,9 +234,9 @@ describe("resolveCosmetics", () => {
       name: "cool_flag",
       url: "https://example.com/cool.png",
       affiliateCode: null,
-      product,
+      product: null,
       priceSoft: undefined,
-      priceHard: undefined,
+      priceHard: 50,
       rarity: "rare",
     };
 
@@ -253,7 +251,7 @@ describe("resolveCosmetics", () => {
       expect(flagItem?.colorPalette).toBeNull();
     });
 
-    test("purchasable when not logged in and product exists", () => {
+    test("purchasable when not logged in and currency price exists", () => {
       const cosmetics = makeCosmetics({
         flags: { cool_flag: flag as any },
       });
@@ -284,8 +282,8 @@ describe("resolveCosmetics", () => {
       expect(flagItem?.relationship).toBe("owned");
     });
 
-    test("blocked with no product", () => {
-      const freeFlag = { ...flag, product: null };
+    test("blocked with no currency price", () => {
+      const freeFlag = { ...flag, priceHard: undefined };
       const cosmetics = makeCosmetics({
         flags: { cool_flag: freeFlag as any },
       });
@@ -300,7 +298,7 @@ describe("resolveCosmetics", () => {
       name: "gold_crown",
       url: "http://localhost:8787/public/cosmetics/crown/gold",
       affiliateCode: null,
-      product,
+      product: null,
       priceSoft: undefined,
       priceHard: 5,
       artist: "sadfas",
@@ -349,10 +347,9 @@ describe("resolveCosmetics", () => {
       expect(crownItem?.relationship).toBe("owned");
     });
 
-    test("blocked with no product and no price", () => {
+    test("blocked with no currency price", () => {
       const freeCrown = {
         ...crown,
-        product: null,
         priceHard: undefined,
       };
       const cosmetics = makeCosmetics({
@@ -436,7 +433,7 @@ describe("resolveCosmetics", () => {
             name: "stripes",
             pattern: "AAAAAA",
             affiliateCode: null,
-            product,
+            product: null,
             priceSoft: null,
             priceHard: null,
             rarity: "common",
@@ -448,7 +445,7 @@ describe("resolveCosmetics", () => {
             name: "heart",
             url: "/flags/heart.svg",
             affiliateCode: null,
-            product,
+            product: null,
             priceSoft: null,
             priceHard: null,
             rarity: "common",

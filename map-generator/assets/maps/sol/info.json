@@ -2,7 +2,7 @@
   "id": "Sol",
   "name": "Sol",
   "translation_key": "map.sol",
-  "categories": ["cosmic", "new"],
+  "categories": ["cosmic"],
   "multiplayer_frequency": 20,
   "nations": [
     {

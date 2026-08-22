@@ -143,6 +143,9 @@ export function applyGraphicsOverrides(
     settings.passEnabled.falloutBloom = overrides.passEnabled.fallout;
     settings.passEnabled.falloutLight = overrides.passEnabled.fallout;
   }
+  if (overrides.terrain?.backgroundColor !== undefined) {
+    settings.terrain.backgroundColor = overrides.terrain.backgroundColor;
+  }
   if (overrides.terrain?.oceanColor !== undefined) {
     settings.terrain.oceanColor = overrides.terrain.oceanColor;
   }
