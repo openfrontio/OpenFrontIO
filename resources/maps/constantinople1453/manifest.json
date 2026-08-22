@@ -4,19 +4,19 @@
   ],
   "id": "constantinople1453",
   "map": {
-    "height": 2436,
-    "num_land_tiles": 6959693,
-    "width": 4096
+    "height": 1140,
+    "num_land_tiles": 1529779,
+    "width": 1920
   },
   "map16x": {
-    "height": 609,
-    "num_land_tiles": 433296,
-    "width": 1024
+    "height": 285,
+    "num_land_tiles": 94515,
+    "width": 480
   },
   "map4x": {
-    "height": 1218,
-    "num_land_tiles": 1737655,
-    "width": 2048
+    "height": 570,
+    "num_land_tiles": 380973,
+    "width": 960
   },
   "multiplayer_frequency": 3,
   "name": "Constantinople1453",
