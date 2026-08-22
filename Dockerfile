@@ -18,6 +18,12 @@ COPY index.html ./
 COPY resources ./resources
 COPY proprietary ./proprietary
 COPY src ./src
+# build-prod runs scripts/buildAssetHashes.ts after vite, to emit
+# static/asset-hashes.json and static/core-version.txt for the desktop
+# release descriptor. Without this the image build fails at that step with
+# ERR_MODULE_NOT_FOUND -- the unit suite cannot catch it, because only the
+# container build runs build-prod from a copied tree.
+COPY scripts ./scripts
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT="$GIT_COMMIT"
