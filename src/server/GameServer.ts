@@ -1760,7 +1760,14 @@ export class GameServer {
     ) {
       return GamePhase.Lobby;
     }
-    const warmupOver = now > this.startsAt! + 30 * 1000;
+    // Grace period before an empty game is reaped, measured from whenever it
+    // committed to starting. startsAt is not always set: a lobby that
+    // auto-starts by filling to maxPlayers, and admin bot games, never get one
+    // — and `undefined + 30_000` is NaN, so every comparison against it is
+    // false. Those games could never be reaped and lived on (still ticking
+    // turns, with nobody connected) until the maxGameDuration cutoff above.
+    const warmupFrom = this.startsAt ?? this._startTime ?? this.createdAt;
+    const warmupOver = now > warmupFrom + 30 * 1000;
     if (noActive && warmupOver && noRecentPings) {
       return GamePhase.Finished;
     }
