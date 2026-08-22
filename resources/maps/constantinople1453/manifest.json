@@ -1,0 +1,93 @@
+{
+  "categories": [
+    "europe"
+  ],
+  "id": "constantinople1453",
+  "map": {
+    "height": 2436,
+    "num_land_tiles": 6959693,
+    "width": 4096
+  },
+  "map16x": {
+    "height": 609,
+    "num_land_tiles": 433296,
+    "width": 1024
+  },
+  "map4x": {
+    "height": 1218,
+    "num_land_tiles": 1737655,
+    "width": 2048
+  },
+  "multiplayer_frequency": 3,
+  "name": "Constantinople1453",
+  "nations": [
+    {
+      "coordinates": [
+        2519,
+        292
+      ],
+      "flag": "Byzantine Empire",
+      "name": "Byzantine Empire",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        861,
+        373
+      ],
+      "name": "Constantinople",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1809,
+        119
+      ],
+      "flag": "West Roman Empire",
+      "name": "Roman Empire",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1329,
+        829
+      ],
+      "flag": "Ottoman Empire",
+      "name": "Ottoman Empire",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1908,
+        1160
+      ],
+      "name": "Ottoman Army",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        3777,
+        999
+      ],
+      "name": "Genoese",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        3598,
+        1306
+      ],
+      "name": "Venetian",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        3893,
+        1777
+      ],
+      "name": "Catalans",
+      "strength": 1
+    }
+  ],
+  "translation_key": "map.constantinople1453"
+}
