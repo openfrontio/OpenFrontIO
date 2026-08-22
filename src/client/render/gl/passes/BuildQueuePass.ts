@@ -1,7 +1,7 @@
 /**
  * BuildQueuePass — warship build progress badge on ports.
  *
- * A port with queued warships shows a small ring at the top-right of its icon
+ * A port with queued warships shows a ring over the center of its icon
  * that fills clockwise as the head of the queue is built. When more than one
  * ship is queued the queue length is drawn in the ring's center (MSDF digits,
  * same atlas as NamePass). Scales with the structure icons and hides with them
@@ -32,11 +32,11 @@ const atlasUrl = assetUrl("atlases/msdf-atlas.png");
 const RING_FLOATS = 3; // worldX, worldY, progress
 const COUNT_FLOATS = 4; // worldX, worldY, cursorX, charCode
 
-/** Badge center offset from the icon center, in halfIconSize units (+x right, -y up). */
-const BADGE_OFFSET_X = 0.95;
-const BADGE_OFFSET_Y = -0.95;
-/** Badge radius in halfIconSize units. */
-const BADGE_RADIUS = 0.6;
+/** Badge center offset from the icon center, in halfIconSize units (drawn over the icon). */
+const BADGE_OFFSET_X = 0.0;
+const BADGE_OFFSET_Y = 0.0;
+/** Badge radius in halfIconSize units — fits inside the port icon. */
+const BADGE_RADIUS = 0.55;
 /** Inner edge of the ring as a fraction of the badge radius. */
 const RING_INNER = 0.68;
 /** Digit em height in halfIconSize units. */
