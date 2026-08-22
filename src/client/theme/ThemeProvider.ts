@@ -10,6 +10,8 @@ import {
 } from "../render/gl/RenderSettings";
 import { PlayerView } from "../view";
 import { ColorAllocator } from "./ColorAllocator";
+import { ColorRegistry } from "./ColorRegistry";
+import { parseObservers } from "./ColorVision";
 
 /**
  * The color surface consumed by PlayerView and HUD components. Built from
@@ -95,9 +97,28 @@ export class SettingsTheme implements Theme {
     const nationColors = settings.nationColors.map(colord);
     const fallbackColors = settings.fallbackColors.map(colord);
 
-    this.humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
-    this.botColorAllocator = new ColorAllocator(botColors, botColors);
-    this.nationColorAllocator = new ColorAllocator(nationColors, nationColors);
+    // One registry for the whole game. Humans and nations are drawn from
+    // separate palettes, but a player looking at the map cannot tell the two
+    // apart — sharing the registry stops a nation being handed a colour a
+    // human is already using.
+    const registry = new ColorRegistry(
+      parseObservers(settings.observers),
+      settings.distinctnessFloor,
+    );
+
+    this.humanColorAllocator = new ColorAllocator(humanColors, fallbackColors, {
+      registry,
+    });
+    this.nationColorAllocator = new ColorAllocator(nationColors, [], {
+      registry,
+    });
+    // Bots deliberately share a small palette: a lobby carries hundreds of
+    // them, and giving each one a colour of its own would crowd out the
+    // players it matters most to tell apart.
+    this.botColorAllocator = new ColorAllocator(botColors, [], {
+      registry,
+      policy: "shared",
+    });
     this.teamPalettes = buildTeamPalettes(settings);
 
     this._focusedBorderColor = colord(settings.focusedBorderColor);

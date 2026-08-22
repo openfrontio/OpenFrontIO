@@ -1,12 +1,26 @@
 import { colord, Colord } from "colord";
+import colorblindThemeJson from "../src/client/render/gl/colorblind-theme.json";
 import defaultTheme from "../src/client/render/gl/default-theme.json";
+import { PALETTE_NAMES } from "../src/client/render/gl/GraphicsOverrides";
 import { createThemeSettings } from "../src/client/render/gl/RenderSettings";
 import {
   ColorAllocator,
   selectDistinctColorIndex,
 } from "../src/client/theme/ColorAllocator";
+import { deltaE2000 } from "../src/client/theme/ColorDistance";
+import {
+  paletteEnvelope,
+  sequenceColor,
+} from "../src/client/theme/ColorGenerator";
+import { ColorRegistry } from "../src/client/theme/ColorRegistry";
+import {
+  observerViews,
+  parseObservers,
+  simulate,
+} from "../src/client/theme/ColorVision";
 import { SettingsTheme } from "../src/client/theme/ThemeProvider";
-import { ColoredTeams } from "../src/core/game/Game";
+import { PlayerView } from "../src/client/view";
+import { ColoredTeams, PlayerType } from "../src/core/game/Game";
 
 const mockColors: Colord[] = [
   colord({ r: 255, g: 0, b: 0 }),
@@ -155,4 +169,435 @@ describe("selectDistinctColor", () => {
       { r: 0, g: 0, b: 255, a: 1 },
     ]).toContainEqual(rgb);
   });
+});
+
+describe("ColorVision", () => {
+  test("normal vision returns the colour unchanged", () => {
+    expect(simulate(colord("#a3e635"), "normal").toHex()).toBe("#a3e635");
+  });
+
+  test("simulates dichromacy against published reference values", () => {
+    // Machado et al. (2009) severity-1.0 matrices applied to linear-light sRGB.
+    expect(simulate(colord("#ff0000"), "protan").toHex()).toBe("#6d5f00");
+    expect(simulate(colord("#ff0000"), "deutan").toHex()).toBe("#a39000");
+    expect(simulate(colord("#0000ff"), "tritan").toHex()).toBe("#006b96");
+  });
+
+  test("achromatic colours are unaffected by any deficiency", () => {
+    for (const observer of ["protan", "deutan", "tritan"] as const) {
+      expect(simulate(colord("#ffffff"), observer).toHex()).toBe("#ffffff");
+      expect(simulate(colord("#000000"), observer).toHex()).toBe("#000000");
+    }
+  });
+
+  test("collapses a pair the default palette treats as distinct", () => {
+    // #a3e635 and #fbbf24 are both in default-theme.json humanColors and are
+    // clearly different to normal vision, but converge under deuteranopia.
+    const a = colord("#a3e635");
+    const b = colord("#fbbf24");
+    expect(a.delta(b) * 100).toBeGreaterThan(20);
+    expect(
+      simulate(a, "deutan").delta(simulate(b, "deutan")) * 100,
+    ).toBeLessThan(5);
+  });
+
+  test("parseObservers narrows valid names", () => {
+    expect(parseObservers(["normal", "deutan"])).toEqual(["normal", "deutan"]);
+  });
+
+  test("parseObservers rejects an unknown name", () => {
+    expect(() => parseObservers(["normal", "deutran"])).toThrow(/deutran/);
+  });
+
+  test("parseObservers rejects an empty list", () => {
+    expect(() => parseObservers([])).toThrow();
+  });
+
+  test("observerViews returns one view per observer, in order", () => {
+    const views = observerViews(colord("#ff0000"), ["normal", "deutan"]);
+    expect(views).toHaveLength(2);
+    expect(views[0].toHex()).toBe("#ff0000");
+    expect(views[1].toHex()).toBe("#a39000");
+  });
+});
+
+describe("ColorDistance", () => {
+  test("matches the published CIEDE2000 reference dataset", () => {
+    // Sharma, Wu & Dalal (2005), "The CIEDE2000 color-difference formula:
+    // implementation notes, supplementary test data, and mathematical
+    // observations". These pairs exercise the hue-wraparound and near-neutral
+    // branches that naive implementations get wrong.
+    const cases: [number[], number[], number][] = [
+      [[50, 2.6772, -79.7751], [50, 0, -82.7485], 2.0425],
+      [[50, 3.1571, -77.2803], [50, 0, -82.7485], 2.8615],
+      [[50, 2.8361, -74.02], [50, 0, -82.7485], 3.4412],
+      [[50, -1.3802, -84.2814], [50, 0, -82.7485], 1.0],
+      [[50, -0.9009, -85.5211], [50, 0, -82.7485], 1.0],
+      [[50, 0, 0], [50, -1, 2], 2.3669],
+      [[50, -1, 2], [50, 0, 0], 2.3669],
+      [[50, 2.49, -0.001], [50, -2.49, 0.0009], 7.1792],
+      [[50, 2.49, -0.001], [50, -2.49, 0.0011], 7.2195],
+      [[50, -0.001, 2.49], [50, 0.0009, -2.49], 4.8045],
+      [[50, 2.5, 0], [50, 0, -2.5], 4.3065],
+      [[50, 2.5, 0], [73, 25, -18], 27.1492],
+      [[50, 2.5, 0], [50, 3.1736, 0.5854], 1.0],
+      [[60.2574, -34.0099, 36.2677], [60.4626, -34.1751, 39.4387], 1.2644],
+      [[63.0109, -31.0961, -5.8663], [62.8187, -29.7946, -4.0864], 1.263],
+      [[22.7233, 20.0904, -46.694], [23.0331, 14.973, -42.5619], 2.0373],
+      [[2.0776, 0.0795, -1.135], [0.9033, -0.0636, -0.5514], 0.9082],
+    ];
+    for (const [first, second, expected] of cases) {
+      const value = deltaE2000(
+        { l: first[0], a: first[1], b: first[2], alpha: 1 },
+        { l: second[0], a: second[1], b: second[2], alpha: 1 },
+      );
+      expect(value).toBeCloseTo(expected, 3);
+    }
+  });
+
+  test("agrees with colord's delta on ordinary palette colours", () => {
+    // Sanity check that swapping the metric did not change the allocator's
+    // behaviour in the common case. colord rounds delta() to three decimals
+    // (0.1 once scaled to 0-100) and diverges from the reference formula on
+    // some near-neutral pairs, so this is a mean check, not a per-pair one.
+    const palette = defaultTheme.humanColors.map((c) => colord(c));
+    let total = 0;
+    let pairs = 0;
+    for (let i = 0; i < palette.length; i++) {
+      for (let j = i + 1; j < palette.length; j++) {
+        total += Math.abs(
+          deltaE2000(palette[i].toLab(), palette[j].toLab()) -
+            palette[i].delta(palette[j]) * 100,
+        );
+        pairs++;
+      }
+    }
+    expect(total / pairs).toBeLessThan(0.1);
+  });
+
+  test("is zero for identical colours and symmetric", () => {
+    const a = colord("#2962ff").toLab();
+    const b = colord("#eb3333").toLab();
+    expect(deltaE2000(a, a)).toBeCloseTo(0, 10);
+    expect(deltaE2000(a, b)).toBeCloseTo(deltaE2000(b, a), 10);
+  });
+
+  test("handles achromatic colours without dividing by zero", () => {
+    const black = colord("#000000").toLab();
+    const white = colord("#ffffff").toLab();
+    const grey = colord("#808080").toLab();
+    for (const value of [
+      deltaE2000(black, white),
+      deltaE2000(black, grey),
+      deltaE2000(grey, white),
+    ]) {
+      expect(Number.isFinite(value)).toBe(true);
+      expect(value).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("ColorGenerator", () => {
+  const wide = paletteEnvelope(defaultTheme.humanColors.map((c) => colord(c)));
+
+  test("is deterministic for a given index and envelope", () => {
+    expect(sequenceColor(17, wide).toHex()).toBe(
+      sequenceColor(17, wide).toHex(),
+    );
+    expect(sequenceColor(0, wide).toHex()).not.toBe(
+      sequenceColor(1, wide).toHex(),
+    );
+  });
+
+  test("avoids near-black and near-white fills", () => {
+    for (let i = 0; i < 300; i++) {
+      const lightness = sequenceColor(i, wide).toLch().l;
+      expect(lightness).toBeGreaterThan(20);
+      expect(lightness).toBeLessThan(95);
+    }
+  });
+
+  test("spreads every prefix, not just the whole sequence", () => {
+    // The point of a low-discrepancy sequence: the first N terms are already
+    // well distributed for any N, so a modest pool covers the region.
+    for (const count of [8, 16, 32]) {
+      const colors = Array.from({ length: count }, (_, i) =>
+        sequenceColor(i, wide),
+      );
+      let worst = Infinity;
+      for (let i = 0; i < colors.length; i++) {
+        for (let j = i + 1; j < colors.length; j++) {
+          const d = deltaE2000(colors[i].toLab(), colors[j].toLab());
+          if (d < worst) worst = d;
+        }
+      }
+      // The bound is deliberately loose: the sequence only has to be a good
+      // starting point, since the allocator still checks every candidate
+      // against the distinctness floor.
+      expect(worst).toBeGreaterThan(3);
+    }
+  });
+
+  test("keeps synthesised colours inside their palette's character", () => {
+    // Each player type's palette has its own look — humans vivid, nations
+    // restrained, bots nearly grey — and that difference is information. A
+    // synthesised nation colour must not arrive looking like a human's.
+    const nationEnvelope = paletteEnvelope(
+      defaultTheme.nationColors.map((c) => colord(c)),
+    );
+    const nationChroma = defaultTheme.nationColors.map(
+      (c) => colord(c).toLch().c,
+    );
+    const ceiling = Math.max(...nationChroma);
+    for (let i = 0; i < 400; i++) {
+      const lch = sequenceColor(i, nationEnvelope).toLch();
+      expect(lch.c).toBeLessThanOrEqual(ceiling + 1);
+    }
+  });
+
+  test("a muted palette yields a muted envelope", () => {
+    const bots = paletteEnvelope(defaultTheme.botColors.map((c) => colord(c)));
+    const humans = paletteEnvelope(
+      defaultTheme.humanColors.map((c) => colord(c)),
+    );
+    expect(bots.chromaMax).toBeLessThan(humans.chromaMax);
+  });
+});
+
+describe("ColorAllocator distinctness guarantees", () => {
+  const humanColors = defaultTheme.humanColors.map((c) => colord(c));
+  const fallbackPalette = defaultTheme.fallbackColors.map((c) => colord(c));
+  const observers = ["normal", "deutan", "protan"] as const;
+
+  const allocate = (count: number, floor: number) => {
+    const allocator = new ColorAllocator(humanColors, fallbackPalette, {
+      observers: [...observers],
+      distinctnessFloor: floor,
+    });
+    return Array.from({ length: count }, (_, i) =>
+      allocator.assignColor(`player_${i}`),
+    );
+  };
+
+  const worstSeparation = (colors: Colord[]) => {
+    let worst = Infinity;
+    for (let i = 0; i < colors.length; i++) {
+      for (let j = i + 1; j < colors.length; j++) {
+        for (const observer of observers) {
+          const d =
+            simulate(colors[i], observer).delta(simulate(colors[j], observer)) *
+            100;
+          if (d < worst) worst = d;
+        }
+      }
+    }
+    return worst;
+  };
+
+  test("never issues the same colour twice in a full lobby", () => {
+    // MAX_PLAYER_COUNT is 125 (src/server/MapPlaylist.ts) against a 63-colour
+    // pool, so a full public lobby exhausts the palette by design.
+    const colors = allocate(125, 5);
+    expect(new Set(colors.map((c) => c.toHex())).size).toBe(125);
+  });
+
+  test("honours the distinctness floor while candidates remain", () => {
+    expect(worstSeparation(allocate(48, 5))).toBeGreaterThanOrEqual(5);
+  });
+
+  test("generates no new colours for a 48-player game", () => {
+    // Everything up to this size comes from palette data shipped in the theme
+    // JSON, so lobbies of ordinary size keep the game's existing look — only
+    // which colour a given player receives changes.
+    const shipped = new Set([
+      ...defaultTheme.humanColors.map((c) => colord(c).toHex()),
+      ...defaultTheme.fallbackColors.map((c) => colord(c).toHex()),
+    ]);
+    for (const color of allocate(48, 5)) {
+      expect(shipped.has(color.toHex())).toBe(true);
+    }
+  });
+
+  test("separates a full lobby well past the just-noticeable threshold", () => {
+    // The shipped allocator scores 0.00 here — two players share a colour.
+    expect(worstSeparation(allocate(125, 5))).toBeGreaterThan(2.3);
+  });
+
+  test("is deterministic for the same id sequence", () => {
+    expect(allocate(40, 5).map((c) => c.toHex())).toEqual(
+      allocate(40, 5).map((c) => c.toHex()),
+    );
+  });
+
+  test("never settles for less separation than a palette could give", () => {
+    // Five near-identical reds, one distant blue in the fallback, and a floor
+    // neither palette can reach — so the allocator drops through to "take the
+    // roomiest available". Whatever it picks must be at least as far from the
+    // first colour as the fallback would have been; choosing the primary's best
+    // just because the primary is non-empty would fail this.
+    const primary = ["#ff0000", "#fb0202", "#f70404", "#f30606", "#ef0808"].map(
+      (c) => colord(c),
+    );
+    const fallback = [colord("#0000ff")];
+    const allocator = new ColorAllocator(primary, fallback, {
+      observers: ["normal"],
+      distinctnessFloor: 95,
+    });
+    const first = allocator.assignColor("player_0");
+    const second = allocator.assignColor("player_1");
+    const fallbackWouldGive = deltaE2000(first.toLab(), fallback[0].toLab());
+    expect(deltaE2000(first.toLab(), second.toLab())).toBeGreaterThanOrEqual(
+      fallbackWouldGive,
+    );
+  });
+
+  test("shared policy stays inside the palette", () => {
+    const pool = [colord("#ff0000"), colord("#00ff00"), colord("#0000ff")];
+    const allocator = new ColorAllocator(pool, [], { policy: "shared" });
+    const palette = new Set(pool.map((c) => c.toHex()));
+    for (let i = 0; i < 20; i++) {
+      expect(palette.has(allocator.assignColor(`bot_${i}`).toHex())).toBe(true);
+    }
+  });
+
+  test("distinct policy leaves the palette once it is exhausted", () => {
+    const pool = [colord("#ff0000"), colord("#00ff00"), colord("#0000ff")];
+    const allocator = new ColorAllocator(pool, [], {});
+    const assigned = Array.from({ length: 6 }, (_, i) =>
+      allocator.assignColor(`player_${i}`),
+    );
+    expect(new Set(assigned.map((c) => c.toHex())).size).toBe(6);
+  });
+});
+
+describe("cross-pool distinctness", () => {
+  const observers = ["normal", "deutan", "protan"] as const;
+  const separation = (a: Colord, b: Colord) => {
+    let worst = Infinity;
+    for (const observer of observers) {
+      const d = deltaE2000(
+        simulate(a, observer).toLab(),
+        simulate(b, observer).toLab(),
+      );
+      if (d < worst) worst = d;
+    }
+    return worst;
+  };
+
+  test("a shared registry keeps humans and nations apart", () => {
+    // Without a shared registry these pools allocate blind to each other, and
+    // a nation can land within 0.61 of a human — far below the ~2.3
+    // just-noticeable threshold. On the map they are indistinguishable.
+    const registry = new ColorRegistry([...observers], 5);
+    const humans = new ColorAllocator(
+      defaultTheme.humanColors.map((c) => colord(c)),
+      defaultTheme.fallbackColors.map((c) => colord(c)),
+      { registry },
+    );
+    const nations = new ColorAllocator(
+      defaultTheme.nationColors.map((c) => colord(c)),
+      [],
+      { registry },
+    );
+
+    const humanColors = Array.from({ length: 8 }, (_, i) =>
+      humans.assignColor(`human_${i}`),
+    );
+    const nationColors = Array.from({ length: 72 }, (_, i) =>
+      nations.assignColor(`nation_${i}`),
+    );
+
+    let worst = Infinity;
+    for (const human of humanColors) {
+      for (const nation of nationColors) {
+        const d = separation(human, nation);
+        if (d < worst) worst = d;
+      }
+    }
+    expect(worst).toBeGreaterThan(2.3);
+  });
+
+  test("a shared registry never issues one colour to two players", () => {
+    const registry = new ColorRegistry([...observers], 5);
+    const humans = new ColorAllocator(
+      defaultTheme.humanColors.map((c) => colord(c)),
+      defaultTheme.fallbackColors.map((c) => colord(c)),
+      { registry },
+    );
+    const nations = new ColorAllocator(
+      defaultTheme.nationColors.map((c) => colord(c)),
+      [],
+      { registry },
+    );
+    const all = [
+      ...Array.from({ length: 8 }, (_, i) => humans.assignColor(`h${i}`)),
+      ...Array.from({ length: 72 }, (_, i) => nations.assignColor(`n${i}`)),
+    ];
+    expect(new Set(all.map((c) => c.toHex())).size).toBe(80);
+  });
+});
+
+describe("theme colour settings", () => {
+  test("both themes declare observers and a distinctness floor", () => {
+    for (const theme of [defaultTheme, colorblindThemeJson]) {
+      expect(parseObservers(theme.observers)).toEqual(theme.observers);
+      expect(theme.distinctnessFloor).toBeGreaterThan(0);
+    }
+  });
+
+  test("the colorblind theme checks tritanopia and the default theme does not", () => {
+    expect(colorblindThemeJson.observers).toContain("tritan");
+    expect(defaultTheme.observers).not.toContain("tritan");
+  });
+
+  test("no palette contains a duplicate colour", () => {
+    for (const theme of [defaultTheme, colorblindThemeJson]) {
+      for (const palette of [
+        theme.humanColors,
+        theme.nationColors,
+        theme.botColors,
+        theme.fallbackColors,
+      ]) {
+        const normalised = palette.map((c) => colord(c).toHex());
+        expect(new Set(normalised).size).toBe(normalised.length);
+      }
+    }
+  });
+});
+
+describe("SettingsTheme allocator wiring", () => {
+  const playerStub = (id: string, type: PlayerType) =>
+    ({
+      id: () => id,
+      team: () => null,
+      type: () => type,
+    }) as unknown as PlayerView;
+
+  for (const name of PALETTE_NAMES) {
+    test(`${name}: bots reuse their palette rather than generating new colours`, () => {
+      const theme = new SettingsTheme(createThemeSettings(name));
+      const palette = new Set(
+        createThemeSettings(name).botColors.map((c) => colord(c).toHex()),
+      );
+      for (let i = 0; i < 120; i++) {
+        const color = theme.territoryColor(
+          playerStub(`bot_${i}`, PlayerType.Bot),
+        );
+        expect(palette.has(color.toHex())).toBe(true);
+      }
+    });
+
+    test(`${name}: humans in a full lobby all receive different colours`, () => {
+      const theme = new SettingsTheme(createThemeSettings(name));
+      const seen = new Set<string>();
+      for (let i = 0; i < 125; i++) {
+        seen.add(
+          theme
+            .territoryColor(playerStub(`human_${i}`, PlayerType.Human))
+            .toHex(),
+        );
+      }
+      expect(seen.size).toBe(125);
+    });
+  }
 });
