@@ -80,18 +80,25 @@
   }
 }
 
-/* Ensure the main page never scrolls; modals handle internal scrolling */
+/* The homepage scrolls at the document level (required for ad viewability).
+   In-game the page is locked: the map canvas is fixed and pans itself. */
 html {
   height: 100%; /* Fallback */
   height: 100dvh;
 }
 
 body {
-  height: 100%;
-  overflow: hidden !important;
+  min-height: 100%;
+  /* clip (not hidden) so the body doesn't become a scroll container */
+  overflow-x: clip;
   /* Safe area padding for notched devices */
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+body.in-game {
+  height: 100%;
+  overflow: hidden;
 }
 
 * {
