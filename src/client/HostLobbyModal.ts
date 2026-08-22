@@ -22,13 +22,11 @@ import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
   GameConfig,
-  GameInfo,
   LobbyInfoEvent,
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
-import { getUserMe, setLobbyListed } from "./Api";
-import { getPlayToken } from "./Auth";
+import { createLobby, getUserMe, setLobbyListed } from "./Api";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/ConfirmDialog";
@@ -1458,36 +1456,5 @@ export class HostLobbyModal extends BaseModal {
       console.warn("Failed to load nation count", error);
       // Leave existing values unchanged so the UI stays consistent
     }
-  }
-}
-
-async function createLobby(): Promise<GameInfo> {
-  // Send JWT token for creator identification - server extracts persistentID from it
-  // persistentID should never be exposed to other clients
-  const token = await getPlayToken();
-  try {
-    // No worker prefix and no id: nginx (prod) / the vite dev proxy randomly
-    // routes to a worker, which mints a self-owned id and returns it.
-    const response = await fetch(`/api/create_game`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Server error response:", errorText);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("Success:", data);
-
-    return data as GameInfo;
-  } catch (error) {
-    console.error("Error creating lobby:", error);
-    throw error;
   }
 }

@@ -823,7 +823,7 @@ export async function openSubscriptionPortal(): Promise<string | false> {
 export async function fetchLobbyListed(gameID: string): Promise<boolean> {
   try {
     const res = await fetch(
-      `/${ClientEnv.workerPath(gameID)}/api/game/${gameID}`,
+      `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(gameID)}/api/game/${gameID}`,
       { headers: { Accept: "application/json" } },
     );
     if (!res.ok) return false;
@@ -847,7 +847,7 @@ export async function setLobbyListed(
   try {
     const token = await getPlayToken();
     const response = await fetch(
-      `/${ClientEnv.workerPath(gameID)}/api/game/${gameID}/listing`,
+      `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(gameID)}/api/game/${gameID}/listing`,
       {
         method: "POST",
         headers: {
@@ -871,6 +871,42 @@ export async function setLobbyListed(
   }
 }
 
+// POST /api/create_game on the game server — mints a fresh private lobby with
+// the caller as creator. Deliberately has no worker prefix and no id: the edge
+// (nginx in prod, the vite dev proxy locally) picks a worker, which mints a
+// self-owned id and returns it.
+export async function createLobby(): Promise<GameInfo> {
+  // Send JWT token for creator identification - server extracts persistentID from it
+  // persistentID should never be exposed to other clients
+  const token = await getPlayToken();
+  try {
+    const response = await fetch(
+      `${ClientEnv.serverHttpBase()}/api/create_game`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Server error response:", errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Success:", data);
+
+    return data as GameInfo;
+  } catch (error) {
+    console.error("Error creating lobby:", error);
+    throw error;
+  }
+}
+
 // POST /wX/api/create_game?previous=<gameID>, targeted at the worker that owns
 // the finished game — mints a successor private lobby (same creator, default
 // settings) and has the old game broadcast the new id to everyone still
@@ -881,7 +917,7 @@ export async function createNextLobby(
 ): Promise<GameInfo> {
   const token = await getPlayToken();
   const response = await fetch(
-    `/${ClientEnv.workerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
+    `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
     {
       method: "POST",
       headers: {

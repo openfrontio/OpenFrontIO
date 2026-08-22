@@ -121,34 +121,81 @@ export class ClientEnv {
       window.location.host,
     );
   }
+  // Origin (scheme + host, no trailing slash) of the same game server's HTTP
+  // API — the worker routes under `/api` (create_game, game/:id/exists,
+  // game/:id/listing). Callers append the path, worker prefix included where
+  // the route needs one (e.g. `/w0/api/game/<id>`).
+  //
+  // NOT the account/shop API: that is a separate service on api.<audience>,
+  // reached via getApiBase().
+  static serverHttpBase(): string {
+    return deriveServerHttpBase(
+      ClientEnv.serverHost(),
+      window.location.protocol,
+      window.location.host,
+    );
+  }
 }
 
 /**
- * Resolve the game-server WebSocket origin.
+ * Resolve which host serves the game, and whether to reach it over TLS.
  *
- * When an explicit `serverHost` is configured, target it over TLS (wss). Only
- * the desktop app sets this: it loads the renderer from `app://openfront`,
- * where `window.location.host` is just "openfront" (not a real server), and the
+ * This is the single place that answers "which game server?". Both the
+ * WebSocket base and the HTTP base derive from it so they cannot drift apart:
+ * a lobby created over HTTP on one host is only playable over the socket on
+ * that same host. A future multi-server client (picking a host at load time
+ * from /cluster.json) changes this function and both bases follow.
+ *
+ * When an explicit `serverHost` is configured, target it over TLS. Only the
+ * desktop app sets this: it loads the renderer from `app://openfront`, where
+ * `window.location.host` is just "openfront" (not a real server), and the
  * game-server host is NOT derivable from the API audience — it is the bare
  * audience host in prod (`openfront.io`) but a branch-variable subdomain on
  * dev/staging (default `main.openfront.dev`, or `<branch>.openfront.dev`). So
  * the host is injected explicitly rather than derived.
  *
  * When no `serverHost` is configured — the normal web build — the game server
- * is same-origin as the document, so we keep the historical behaviour exactly:
- * derive scheme + host from `window.location`. This leaves the web build
- * byte-for-byte unchanged.
+ * is same-origin as the document, so we keep the historical behaviour: scheme
+ * and host come from `window.location`, which is what the previously relative
+ * URLs resolved against anyway.
  */
+function resolveServerOrigin(
+  serverHost: string | undefined,
+  locationProtocol: string,
+  locationHost: string,
+): { secure: boolean; host: string } {
+  if (serverHost) {
+    return { secure: true, host: serverHost };
+  }
+  return { secure: locationProtocol === "https:", host: locationHost };
+}
+
+/** Game-server WebSocket origin: see resolveServerOrigin. */
 export function deriveServerWsBase(
   serverHost: string | undefined,
   locationProtocol: string,
   locationHost: string,
 ): string {
-  if (serverHost) {
-    return `wss://${serverHost}`;
-  }
-  const wsProtocol = locationProtocol === "https:" ? "wss:" : "ws:";
-  return `${wsProtocol}//${locationHost}`;
+  const { secure, host } = resolveServerOrigin(
+    serverHost,
+    locationProtocol,
+    locationHost,
+  );
+  return `${secure ? "wss:" : "ws:"}//${host}`;
+}
+
+/** Game-server HTTP origin: see resolveServerOrigin. */
+export function deriveServerHttpBase(
+  serverHost: string | undefined,
+  locationProtocol: string,
+  locationHost: string,
+): string {
+  const { secure, host } = resolveServerOrigin(
+    serverHost,
+    locationProtocol,
+    locationHost,
+  );
+  return `${secure ? "https:" : "http:"}//${host}`;
 }
 /**
  * Values that flow from server → client via index.html. Set on the server from
