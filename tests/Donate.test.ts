@@ -117,12 +117,13 @@ describe("Donate gold to an ally", () => {
     const recipientGoldBefore = recipient.gold();
     game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, 5000));
 
-    for (let i = 0; i < 5; i++) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
 
-    expect(donor.gold() < donorGoldBefore).toBe(true);
-    expect(recipient.gold() > recipientGoldBefore).toBe(true);
+    // 1 tick elapsed; PlayerExecution adds 100n passive income from workers
+    const passiveIncome = 100n;
+    expect(donor.gold()).toBe(donorGoldBefore - 5000n + passiveIncome);
+    expect(recipient.gold()).toBe(recipientGoldBefore + 5000n + passiveIncome);
   });
 
   it("Gold should default to 1/3 when null is passed", async () => {
@@ -149,7 +150,11 @@ describe("Donate gold to an ally", () => {
     game.addExecution(donation);
     game.executeNextTick();
     game.executeNextTick();
-    expect(recipient.gold() >= recBefore + goldBefore / 3n).toBe(true);
+    // 1 tick elapsed for donation transfer; PlayerExecution adds 100n passive income from workers
+    const passiveIncome = 100n;
+    const expectedDonation = goldBefore / 3n;
+    expect(donor.gold()).toBe(goldBefore - expectedDonation + passiveIncome);
+    expect(recipient.gold()).toBe(recBefore + expectedDonation + passiveIncome);
   });
 });
 
