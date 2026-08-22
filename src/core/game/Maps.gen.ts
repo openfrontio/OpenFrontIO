@@ -86,6 +86,7 @@ export enum GameMapType {
   NileDelta = "Nile Delta", // map-generator/assets/maps/niledelta/info.json
   NorthAmerica = "North America", // map-generator/assets/maps/northamerica/info.json
   NorthwestPassage = "Northwest Passage", // map-generator/assets/maps/northwestpassage/info.json
+  NuttyPutty = "NuttyPutty", // map-generator/assets/maps/nuttyputty/info.json
   Oceania = "Oceania", // map-generator/assets/maps/oceania/info.json
   Onion = "Onion", // map-generator/assets/maps/onion/info.json
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
@@ -1422,6 +1423,13 @@ export const maps: readonly MapInfo[] = [
     categories: ["north_america"],
     multiplayerFrequency: 5,
     themes: ["north_america"],
+  },
+  {
+    id: "NuttyPutty",
+    type: GameMapType.NuttyPutty,
+    translationKey: "map.nuttyputty",
+    categories: ["north_america"],
+    multiplayerFrequency: 4,
   },
   {
     id: "Oceania",

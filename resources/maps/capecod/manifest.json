@@ -2,112 +2,177 @@
   "categories": ["north_america"],
   "id": "CapeCod",
   "map": {
-    "height": 1180,
-    "num_land_tiles": 582033,
-    "width": 1440
+    "height": 1240,
+    "num_land_tiles": 613528,
+    "width": 1500
   },
   "map16x": {
-    "height": 295,
-    "num_land_tiles": 33915,
-    "width": 360
+    "height": 310,
+    "num_land_tiles": 35758,
+    "width": 375
   },
   "map4x": {
-    "height": 590,
-    "num_land_tiles": 140842,
-    "width": 720
+    "height": 620,
+    "num_land_tiles": 148747,
+    "width": 750
   },
   "multiplayer_frequency": 4,
   "name": "Cape Cod",
   "nations": [
     {
-      "coordinates": [380, 162],
+      "coordinates": [417, 227],
       "flag": "us",
       "name": "Plymouth"
     },
     {
-      "coordinates": [454, 722],
+      "coordinates": [508, 746],
       "flag": "us",
       "name": "Falmouth"
     },
     {
-      "coordinates": [439, 944],
+      "coordinates": [494, 982],
       "flag": "us",
       "name": "Martha's Vineyard"
     },
     {
-      "coordinates": [1251, 1103],
+      "coordinates": [1200, 1141],
       "flag": "us",
       "name": "Nantucket"
     },
     {
-      "coordinates": [1044, 32],
+      "coordinates": [1077, 60],
       "flag": "us",
       "name": "Provincetown"
     },
     {
-      "coordinates": [114, 147],
+      "coordinates": [154, 200],
       "flag": "us",
       "name": "Bridgewater"
     },
     {
-      "coordinates": [30, 44],
+      "coordinates": [104, 67],
       "flag": "us",
       "name": "Brockton"
     },
     {
-      "coordinates": [399, 431],
+      "coordinates": [341, 490],
       "flag": "us",
       "name": "Wareham"
     },
     {
-      "coordinates": [509, 503],
+      "coordinates": [524, 488],
       "flag": "us",
       "name": "Bourne"
     },
     {
-      "coordinates": [629, 451],
+      "coordinates": [676, 482],
       "flag": "us",
       "name": "Sandwich"
     },
     {
-      "coordinates": [657, 606],
+      "coordinates": [666, 644],
       "flag": "us",
       "name": "Mashpee"
     },
     {
-      "coordinates": [908, 563],
+      "coordinates": [942, 606],
       "flag": "us",
       "name": "Barnstable"
     },
     {
-      "coordinates": [1039, 480],
+      "coordinates": [1098, 524],
       "flag": "us",
       "name": "Dennis"
     },
     {
-      "coordinates": [1362, 545],
+      "coordinates": [1373, 572],
       "flag": "us",
       "name": "Chatham"
     },
     {
-      "coordinates": [1352, 345],
+      "coordinates": [1353, 460],
       "flag": "us",
       "name": "Orleans"
     },
     {
-      "coordinates": [1353, 245],
+      "coordinates": [1363, 340],
       "flag": "us",
       "name": "Eastham"
     },
     {
-      "coordinates": [1283, 154],
+      "coordinates": [1303, 207],
       "flag": "us",
       "name": "Wellfleet"
     },
     {
-      "coordinates": [39, 614],
+      "coordinates": [59, 648],
       "flag": "us",
       "name": "New Bedford"
+    },
+    {
+      "coordinates": [222, 601],
+      "flag": "us",
+      "name": "Mattapoisett"
+    },
+    {
+      "coordinates": [432, 33],
+      "flag": "us",
+      "name": "Marshfield"
+    },
+    {
+      "coordinates": [27, 347],
+      "flag": "us",
+      "name": "Taunton"
+    },
+    {
+      "coordinates": [281, 883],
+      "flag": "us",
+      "name": "Naushon Island"
+    },
+    {
+      "coordinates": [156, 933],
+      "flag": "us",
+      "name": "Nashawena Island"
+    },
+    {
+      "coordinates": [597, 986],
+      "flag": "us",
+      "name": "Edgartown"
+    },
+    {
+      "coordinates": [562, 912],
+      "flag": "us",
+      "name": "Oak Bluffs"
+    },
+    {
+      "coordinates": [171, 471],
+      "flag": "us",
+      "name": "Rochester"
+    },
+    {
+      "coordinates": [295, 348],
+      "flag": "us",
+      "name": "South Carver"
+    },
+    {
+      "coordinates": [572, 287],
+      "flag": "us",
+      "name": "Manomet"
+    },
+    {
+      "coordinates": [231, 1175],
+      "flag": "us",
+      "name": "Nomans Land"
+    },
+    {
+      "coordinates": [1388, 1161],
+      "flag": "us",
+      "name": "Siasconset"
+    },
+    {
+      "coordinates": [997, 1114],
+      "flag": "us",
+      "name": "Tuckernuck Island"
     }
   ],
   "translation_key": "map.capecod"

@@ -6,93 +6,158 @@
   "multiplayer_frequency": 4,
   "nations": [
     {
-      "coordinates": [380, 162],
+      "coordinates": [417, 227],
       "name": "Plymouth",
       "flag": "us"
     },
     {
-      "coordinates": [454, 722],
+      "coordinates": [508, 746],
       "name": "Falmouth",
       "flag": "us"
     },
     {
-      "coordinates": [439, 944],
+      "coordinates": [494, 982],
       "name": "Martha's Vineyard",
       "flag": "us"
     },
     {
-      "coordinates": [1251, 1103],
+      "coordinates": [1200, 1141],
       "name": "Nantucket",
       "flag": "us"
     },
     {
-      "coordinates": [1044, 32],
+      "coordinates": [1077, 60],
       "name": "Provincetown",
       "flag": "us"
     },
     {
-      "coordinates": [114, 147],
+      "coordinates": [154, 200],
       "name": "Bridgewater",
       "flag": "us"
     },
     {
-      "coordinates": [30, 44],
+      "coordinates": [104, 67],
       "name": "Brockton",
       "flag": "us"
     },
     {
-      "coordinates": [399, 431],
+      "coordinates": [341, 490],
       "name": "Wareham",
       "flag": "us"
     },
     {
-      "coordinates": [509, 503],
+      "coordinates": [524, 488],
       "name": "Bourne",
       "flag": "us"
     },
     {
-      "coordinates": [629, 451],
+      "coordinates": [676, 482],
       "name": "Sandwich",
       "flag": "us"
     },
     {
-      "coordinates": [657, 606],
+      "coordinates": [666, 644],
       "name": "Mashpee",
       "flag": "us"
     },
     {
-      "coordinates": [908, 563],
+      "coordinates": [942, 606],
       "name": "Barnstable",
       "flag": "us"
     },
     {
-      "coordinates": [1039, 480],
+      "coordinates": [1098, 524],
       "name": "Dennis",
       "flag": "us"
     },
     {
-      "coordinates": [1362, 545],
+      "coordinates": [1373, 572],
       "name": "Chatham",
       "flag": "us"
     },
     {
-      "coordinates": [1352, 345],
+      "coordinates": [1353, 460],
       "name": "Orleans",
       "flag": "us"
     },
     {
-      "coordinates": [1353, 245],
+      "coordinates": [1363, 340],
       "name": "Eastham",
       "flag": "us"
     },
     {
-      "coordinates": [1283, 154],
+      "coordinates": [1303, 207],
       "name": "Wellfleet",
       "flag": "us"
     },
     {
-      "coordinates": [39, 614],
+      "coordinates": [59, 648],
       "name": "New Bedford",
+      "flag": "us"
+    },
+    {
+      "coordinates": [222, 601],
+      "name": "Mattapoisett",
+      "flag": "us"
+    },
+    {
+      "coordinates": [432, 33],
+      "name": "Marshfield",
+      "flag": "us"
+    },
+    {
+      "coordinates": [27, 347],
+      "name": "Taunton",
+      "flag": "us"
+    },
+    {
+      "coordinates": [281, 883],
+      "name": "Naushon Island",
+      "flag": "us"
+    },
+    {
+      "coordinates": [156, 933],
+      "name": "Nashawena Island",
+      "flag": "us"
+    },
+    {
+      "coordinates": [597, 986],
+      "name": "Edgartown",
+      "flag": "us"
+    },
+    {
+      "coordinates": [562, 912],
+      "name": "Oak Bluffs",
+      "flag": "us"
+    },
+    {
+      "coordinates": [171, 471],
+      "name": "Rochester",
+      "flag": "us"
+    },
+    {
+      "coordinates": [295, 348],
+      "name": "South Carver",
+      "flag": "us"
+    },
+    {
+      "coordinates": [572, 287],
+      "name": "Manomet",
+      "flag": "us"
+    },
+    {
+      "coordinates": [231, 1175],
+      "name": "Nomans Land",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1388, 1161],
+      "name": "Siasconset",
+      "flag": "us"
+    },
+    {
+      "coordinates": [997, 1114],
+      "name": "Tuckernuck Island",
       "flag": "us"
     }
   ]
