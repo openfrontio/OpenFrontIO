@@ -613,6 +613,7 @@ async function createClientGame(
     userSettings,
     lobbyConfig.gameRecord !== undefined,
     lobbyConfig.gameStartInfo.listed,
+    lobbyConfig.spectator === true,
   );
   let gameMap: TerrainMapData;
 

@@ -813,11 +813,13 @@
   "heads_up_message": {
     "catching_up": "Catching up...",
     "choose_spawn": "Choose a starting location",
+    "choose_spawn_spectator": "Players are choosing starting locations",
     "dont_show_again": "Don't show again",
     "ffa_collusion": "Reminder: teaming up before the game is not allowed in FFA",
     "multiplayer_game_paused": "Game paused by Lobby Creator",
     "pvp_immunity_active": "PVP immunity active for {seconds}s",
     "random_spawn": "Random spawn is enabled. Selecting starting location for you...",
+    "random_spawn_spectator": "Random spawn is enabled",
     "singleplayer_game_paused": "Game paused"
   },
   "help_modal": {
