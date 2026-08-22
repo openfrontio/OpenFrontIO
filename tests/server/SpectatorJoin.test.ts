@@ -126,6 +126,44 @@ describe("GameServer - spectators", () => {
     expect(game.joinClient(makeClient("p1", true))).toBe("joined");
   });
 
+  it("is exempt from the allowlist once the game has started", () => {
+    // The field is locked at start and a spectator takes no seat, so the
+    // allowlist has nothing left to protect; a caster arriving mid-game is
+    // exactly who an allowlisted (tournament) lobby is cast for.
+    const game = new GameServer(
+      "g1",
+      logger,
+      Date.now(),
+      testGameConfig({
+        gameType: GameType.Private,
+        allowedPublicIds: ["p1-pub"],
+      }),
+    );
+    (game as any)._hasStarted = true;
+    const cast = makeClient("cast", true);
+    expect(game.joinClient(cast)).toBe("joined");
+    expect(cast.spectator).toBe(true);
+    // ...and the exemption is not a way into a seat.
+    (game as any).setSpectator(cast, false);
+    expect(cast.spectator).toBe(true);
+  });
+
+  it("does not exempt a non-spectator join after the start", () => {
+    // Someone joining to play stays subject to the allowlist even though a
+    // late join would only demote them to watching anyway.
+    const game = new GameServer(
+      "g1",
+      logger,
+      Date.now(),
+      testGameConfig({
+        gameType: GameType.Private,
+        allowedPublicIds: ["p1-pub"],
+      }),
+    );
+    (game as any)._hasStarted = true;
+    expect(game.joinClient(makeClient("late"))).toBe("not_allowlisted");
+  });
+
   it("does not keep a ranked match alive on its own", () => {
     // 1v1 with one player and one spectator is a one-player game, so the
     // short-handed cancel has to see through the spectator.

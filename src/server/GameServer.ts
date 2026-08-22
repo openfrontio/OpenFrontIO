@@ -781,7 +781,11 @@ export class GameServer {
     // OFM: if an allowlist is set, only those publicIds may join. Re-checked on
     // every join attempt. Admins/root bypass it so moderation can reach any
     // private lobby; a kick still applies (checked above).
-    if (!this.passesAllowlist(client)) {
+    // A spectator is exempt once the game has started: the field is locked and
+    // they take no seat, so the allowlist has nothing left to protect — and
+    // mid-game casters are exactly who it would otherwise shut out.
+    const spectatingStartedGame = client.spectator && this._hasStarted;
+    if (!spectatingStartedGame && !this.passesAllowlist(client)) {
       this.log.warn("client not on allowlist, rejecting", {
         clientID: client.clientID,
       });
