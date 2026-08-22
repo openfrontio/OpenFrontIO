@@ -2,6 +2,7 @@ import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
+import { WarshipExecution } from "./WarshipExecution";
 
 export class PortExecution implements Execution {
   private active = true;
@@ -39,6 +40,8 @@ export class PortExecution implements Execution {
       this.createStation();
     }
 
+    this.buildQueuedWarship();
+
     // Only check every 10 ticks for performance.
     if ((this.mg.ticks() + this.checkOffset) % 10 !== 0) {
       return;
@@ -62,6 +65,30 @@ export class PortExecution implements Execution {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  /** Spawn the head of the warship queue once its build time has elapsed. */
+  private buildQueuedWarship(): void {
+    if (this.port.warshipQueue().length === 0) {
+      return;
+    }
+    const duration =
+      this.mg.unitInfo(UnitType.Warship).constructionDuration ?? 0;
+    const start = this.port.warshipBuildStartTick() ?? this.mg.ticks();
+    if (this.mg.ticks() - start < duration) {
+      return;
+    }
+    const patrolTile = this.port.dequeueWarship();
+    if (patrolTile === undefined) {
+      return;
+    }
+    const warship = this.port
+      .owner()
+      .buildUnit(UnitType.Warship, this.port.tile(), {
+        patrolTile,
+        prepaid: true,
+      });
+    this.mg.addExecution(new WarshipExecution(warship));
   }
 
   activeDuringSpawnPhase(): boolean {

@@ -259,6 +259,8 @@ export interface UnitParamsMap {
 
   [UnitType.Warship]: {
     patrolTile: TileRef;
+    /** Gold was already charged when the ship was queued at a port. */
+    prepaid?: boolean;
   };
 
   [UnitType.Shell]: Record<string, never>;
@@ -536,6 +538,13 @@ export interface Unit {
   isInCooldown(): boolean;
   missileTimerQueue(): number[];
 
+  // Ports: serial warship build queue (patrol tiles, head builds first)
+  warshipQueue(): readonly TileRef[];
+  /** Tick the head of the warship queue started building. */
+  warshipBuildStartTick(): Tick | undefined;
+  enqueueWarship(patrolTile: TileRef): void;
+  dequeueWarship(): TileRef | undefined;
+
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
   isSafeFromPirates(): boolean; // Only for trade ships
@@ -610,6 +619,8 @@ export interface Player {
   gold(): Gold;
   addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
+  /** Charge for a warship now and queue it to be built at the port. */
+  queueWarship(port: Unit, patrolTile: TileRef): void;
   troops(): number;
   setTroops(troops: number): void;
   addTroops(troops: number): void;

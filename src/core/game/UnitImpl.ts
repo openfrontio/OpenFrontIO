@@ -39,6 +39,8 @@ export class UnitImpl implements Unit {
   private _troops: number;
   // Number of missiles in cooldown, if empty all missiles are ready.
   private _missileTimerQueue: number[] = [];
+  private _warshipQueue: TileRef[] = [];
+  private _warshipBuildStartTick: Tick | undefined = undefined;
   private _hasTrainStation: boolean = false;
   private _level: number = 1;
   private _targetable: boolean = true;
@@ -162,6 +164,9 @@ export class UnitImpl implements Unit {
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
+      warshipQueueLength:
+        this._type === UnitType.Port ? this._warshipQueue.length : undefined,
+      warshipBuildStartTick: this._warshipBuildStartTick,
       level: this.level(),
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
@@ -241,6 +246,9 @@ export class UnitImpl implements Unit {
     this._lastOwner = this._owner;
     this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
     this._owner = newOwner;
+    // Queued warships were paid for by the old owner; they are lost with the port.
+    this._warshipQueue = [];
+    this._warshipBuildStartTick = undefined;
     this._owner._units.push(this);
     this.mg.addUpdate(this.toUpdate());
   }
@@ -522,6 +530,33 @@ export class UnitImpl implements Unit {
   reloadMissile(): void {
     this._missileTimerQueue.shift();
     this.mg.addUpdate(this.toUpdate());
+  }
+
+  warshipQueue(): readonly TileRef[] {
+    return this._warshipQueue;
+  }
+
+  warshipBuildStartTick(): Tick | undefined {
+    return this._warshipBuildStartTick;
+  }
+
+  enqueueWarship(patrolTile: TileRef): void {
+    if (this._type !== UnitType.Port) {
+      throw new Error("enqueueWarship called on non-port unit");
+    }
+    if (this._warshipQueue.length === 0) {
+      this._warshipBuildStartTick = this.mg.ticks();
+    }
+    this._warshipQueue.push(patrolTile);
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  dequeueWarship(): TileRef | undefined {
+    const patrolTile = this._warshipQueue.shift();
+    this._warshipBuildStartTick =
+      this._warshipQueue.length > 0 ? this.mg.ticks() : undefined;
+    this.mg.addUpdate(this.toUpdate());
+    return patrolTile;
   }
 
   setTargetTile(targetTile: TileRef | undefined) {
