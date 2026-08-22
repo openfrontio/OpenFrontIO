@@ -34,6 +34,7 @@ import { GLUnavailableError, initGL } from "./initGL";
 import { BarPass } from "./passes/BarPass";
 import { BorderComputePass } from "./passes/BorderComputePass";
 import { BorderStampPass } from "./passes/BorderStampPass";
+import { BuildQueuePass } from "./passes/BuildQueuePass";
 import { CoordinateGridPass } from "./passes/CoordinateGridPass";
 import { CrosshairPass } from "./passes/CrosshairPass";
 import { DefenseCoveragePass } from "./passes/DefenseCoveragePass";
@@ -139,6 +140,7 @@ export class GPURenderer {
   private crosshairPass: CrosshairPass;
   private railroadPass: RailroadPass;
   private barPass: BarPass;
+  private buildQueuePass: BuildQueuePass;
   private worldTextPass: WorldTextPass;
   private selectionBoxPass: SelectionBoxPass;
   private moveIndicatorPass: MoveIndicatorPass;
@@ -586,6 +588,7 @@ export class GPURenderer {
     );
     this.fxPass = new FxPass(gl, header, this.settings, config);
     this.barPass = new BarPass(gl, header, this.settings, config);
+    this.buildQueuePass = new BuildQueuePass(gl, header, this.settings, config);
     this.worldTextPass = new WorldTextPass(gl, this.settings, config);
     this.worldTextPass.setMapWidth(this.mapW);
     this.selectionBoxPass = new SelectionBoxPass(gl);
@@ -882,6 +885,7 @@ export class GPURenderer {
     this.unitPass.setFrameTick(this.frameTick);
     this.unitPass.updateUnits(units, gameTick);
     this.barPass.updateBars(units, this.lastStructures, gameTick);
+    this.buildQueuePass.updateStructures(this.lastStructures, gameTick);
     this.pointLightPass.updateLights(units);
     this.heatManager.decayHeat();
   }
@@ -1345,6 +1349,7 @@ export class GPURenderer {
     this.crosshairPass.draw(cam);
     if (pe.structure) this.structurePass.draw(cam, zoom);
     if (pe.structure) this.structureLevelPass.draw(cam, zoom);
+    if (pe.structure) this.buildQueuePass.draw(cam, zoom);
     // Small-player glow draws after structures so buildings can't hide it.
     this.smallPlayerGlowPass.draw(cam);
     if (pe.bar) this.barPass.draw(cam);
@@ -1481,6 +1486,7 @@ export class GPURenderer {
     this.nukeTrajectoryPass.dispose();
     this.nukeTelegraphPass.dispose();
     this.barPass.dispose();
+    this.buildQueuePass.dispose();
     disposeGPUResources(this.gl, this.res);
     this.gl.deleteTexture(this.paletteTex);
     this.gl.deleteTexture(this.effectTex);

@@ -470,6 +470,10 @@ export class PlayerImpl implements Player {
           total += unit.level();
         }
       }
+      // Warships waiting in a port's build queue are already paid for.
+      if (type === UnitType.Warship && unit.type() === UnitType.Port) {
+        total += unit.warshipQueue().length;
+      }
     }
     return total;
   }
@@ -1239,7 +1243,8 @@ export class PlayerImpl implements Player {
       );
     }
 
-    const cost = this.mg.unitInfo(type).cost(this.mg, this);
+    const prepaid = "prepaid" in params && params.prepaid === true;
+    const cost = prepaid ? 0n : this.mg.unitInfo(type).cost(this.mg, this);
     const b = new UnitImpl(
       type,
       this.mg,
@@ -1249,13 +1254,23 @@ export class PlayerImpl implements Player {
       params,
     );
     this._units.push(b);
-    this.recordUnitConstructed(type);
+    // Prepaid warships were counted and charged when queued (see queueWarship).
+    if (!prepaid) {
+      this.recordUnitConstructed(type);
+    }
     this.removeGold(cost);
     this.removeTroops("troops" in params ? (params.troops ?? 0) : 0);
     this.mg.addUpdate(b.toUpdate());
     this.mg.addUnit(b);
 
     return b;
+  }
+
+  queueWarship(port: Unit, patrolTile: TileRef): void {
+    const cost = this.mg.unitInfo(UnitType.Warship).cost(this.mg, this);
+    this.removeGold(cost);
+    this.recordUnitConstructed(UnitType.Warship);
+    port.enqueueWarship(patrolTile);
   }
 
   public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
@@ -1539,9 +1554,16 @@ export class PlayerImpl implements Player {
     }
 
     const tileComponent = this.mg.getWaterComponent(tile);
+    // Pick the port whose ship would reach the patrol tile soonest: time until
+    // the port's build queue frees up plus travel time (warships move one tile
+    // per tick). A backed-up nearby port loses to an idle port farther away.
+    const buildTicks =
+      this.mg.unitInfo(UnitType.Warship).constructionDuration ?? 0;
     const bestPort = findClosestBy(
       this.units(UnitType.Port),
-      (port) => this.mg.manhattanDist(port.tile(), tile),
+      (port) =>
+        this.warshipQueueWaitTicks(port, buildTicks) +
+        this.mg.manhattanDist(port.tile(), tile),
       (port) =>
         port.isActive() &&
         !port.isUnderConstruction() &&
@@ -1550,6 +1572,14 @@ export class PlayerImpl implements Player {
     );
 
     return bestPort?.tile() ?? false;
+  }
+
+  private warshipQueueWaitTicks(port: Unit, buildTicks: number): number {
+    const queued = port.warshipQueue().length;
+    if (queued === 0) return 0;
+    const headStart = port.warshipBuildStartTick() ?? this.mg.ticks();
+    const headRemaining = Math.max(0, headStart + buildTicks - this.mg.ticks());
+    return headRemaining + (queued - 1) * buildTicks;
   }
 
   landBasedUnitSpawn(tile: TileRef): TileRef | false {

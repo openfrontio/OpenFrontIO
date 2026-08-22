@@ -106,6 +106,10 @@ export interface UnitState {
   targetTile: number | null;
   troops: number;
   missileTimerQueue: number[];
+  /** Ports: warships waiting to be built (head is in progress). */
+  warshipQueueLength: number;
+  /** Ports: tick the head of the warship queue started building. */
+  warshipBuildStartTick: number | null;
   level: number;
   veterancy: number;
   hasTrainStation: boolean;
