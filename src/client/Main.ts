@@ -542,6 +542,12 @@ class Client {
       this.joinModal.eventBus = this.eventBus;
     }
 
+    this.joinModal.addEventListener("switch-to-host-lobby", (e: Event) => {
+      const { lobbyId } = (e as CustomEvent).detail;
+      this.joinModal.disarmLeaveOnClose();
+      this.hostModal.open({ existingLobbyId: lobbyId, alreadyConnected: true });
+    });
+
     // Attempt to join lobby
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => this.handleUrl());

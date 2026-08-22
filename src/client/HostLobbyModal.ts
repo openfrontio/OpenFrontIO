@@ -665,12 +665,20 @@ export class HostLobbyModal extends BaseModal {
     // of creating another game.
     const existingLobbyId =
       typeof args?.existingLobbyId === "string" ? args.existingLobbyId : null;
+
+    const alreadyConnected =
+      typeof args?.alreadyConnected === "boolean"
+        ? args.alreadyConnected
+        : false;
+
     if (existingLobbyId !== null) {
-      this.attachToExistingLobby(existingLobbyId).catch(() => {
-        // Clear clipboard so the host doesn't accidentally share a dead link,
-        // matching the createLobby() failure path below.
-        void navigator.clipboard.writeText("").catch(() => {});
-      });
+      this.attachToExistingLobby(existingLobbyId, alreadyConnected).catch(
+        () => {
+          // Clear clipboard so the host doesn't accidentally share a dead link,
+          // matching the createLobby() failure path below.
+          void navigator.clipboard.writeText("").catch(() => {});
+        },
+      );
       this.loadNationCount();
       return;
     }
@@ -718,7 +726,11 @@ export class HostLobbyModal extends BaseModal {
 
   // Bind the host view to a lobby the server already created (the successor of a
   // finished game). Mirrors the createLobby() success path, minus the creation.
-  private async attachToExistingLobby(lobbyId: string): Promise<void> {
+  // `alreadyConnected`: skips the `join-lobby` event if true
+  private async attachToExistingLobby(
+    lobbyId: string,
+    alreadyConnected = false,
+  ): Promise<void> {
     if (!isValidGameID(lobbyId)) {
       throw new Error(`Invalid lobby ID format: ${lobbyId}`);
     }
@@ -729,6 +741,10 @@ export class HostLobbyModal extends BaseModal {
     this.updateLobbyHistory(url);
     await this.updateComplete;
     void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
+
+    if (alreadyConnected) {
+      return;
+    }
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {

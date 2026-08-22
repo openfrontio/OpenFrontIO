@@ -178,6 +178,7 @@ export abstract class BaseModal extends LitElement {
    *
    * Recognized keys:
    *   - tab: string — sets active tab (validated against modalTabs)
+   *   - alreadyConnected - skips the `join-lobby` dispatch if alreadyConnected (used for switching from other lobby modals)
    */
   public open(args?: Record<string, unknown>): void {
     if (this.opening) return;

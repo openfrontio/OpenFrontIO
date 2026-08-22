@@ -65,6 +65,7 @@ export class JoinLobbyModal extends BaseModal {
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
+  private hasSwitchedToHost = false;
 
   private readonly hostedLobbySocket = new PublicLobbySocket((lobbies) => {
     this.hostedLobbies = lobbies.games?.hosted ?? [];
@@ -73,6 +74,26 @@ export class JoinLobbyModal extends BaseModal {
 
   private isPrivateLobby(): boolean {
     return this.gameConfig?.gameType === GameType.Private;
+  }
+
+  private isHost(): boolean {
+    return this.currentClientID === this.lobbyCreatorClientID;
+  }
+
+  private canSwitchToHostLobby() {
+    return !this.hasSwitchedToHost && this.isPrivateLobby() && this.isHost();
+  }
+
+  private switchToHostLobby() {
+    this.hasSwitchedToHost = true;
+    this.disarmLeaveOnClose();
+    this.dispatchEvent(
+      new CustomEvent("switch-to-host-lobby", {
+        detail: { lobbyId: this.currentLobbyId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
@@ -86,6 +107,11 @@ export class JoinLobbyModal extends BaseModal {
       ...lobby,
       startsAt: lobby.startsAt ?? undefined,
     });
+
+    // Return host controls back to the host if they rejoin the game
+    if (this.canSwitchToHostLobby()) {
+      this.switchToHostLobby();
+    }
   };
 
   protected renderHeaderSlot() {
