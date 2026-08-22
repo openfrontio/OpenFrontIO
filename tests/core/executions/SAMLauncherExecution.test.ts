@@ -12,6 +12,7 @@ import {
 } from "../../../src/core/game/Game";
 import { GameID } from "../../../src/core/Schemas";
 import { setup } from "../../util/Setup";
+import { TestConfig } from "../../util/TestConfig";
 import { constructionExecution, executeTicks } from "../../util/utils";
 
 let game: Game;
@@ -21,12 +22,24 @@ let defender: Player;
 let far_defender: Player;
 let middle_defender: Player;
 
+class LevelScalingConfig extends TestConfig {
+  override samRange(level: number): number {
+    return 20 + (level - 1) * 10;
+  }
+}
+
 describe("SAM", () => {
   beforeEach(async () => {
-    game = await setup("big_plains", {
-      infiniteGold: true,
-      instantBuild: true,
-    });
+    game = await setup(
+      "big_plains",
+      {
+        infiniteGold: true,
+        instantBuild: true,
+      },
+      [],
+      undefined,
+      LevelScalingConfig,
+    );
     const defender_info = new PlayerInfo(
       "defender_id",
       PlayerType.Human,
@@ -508,5 +521,122 @@ describe("SAM", () => {
       }
     }
     expect(warhead.nukeState().targetedBySam).toBe(true);
+  });
+
+  test("SAM dynamic range expands progressively over duration SAMCooldown / 2", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+    game.executeNextTick();
+
+    const baseRange = game.config().samRange(1); // 20
+    const targetRange = game.config().samRange(2); // 30
+    const duration = Math.floor(game.config().SAMCooldown() / 2);
+
+    expect(game.config().dynamicSamRange(sam, game.ticks())).toBe(baseRange);
+
+    // Trigger upgrade
+    sam.increaseLevel();
+    const startTick = game.ticks();
+
+    // At start: range is baseRange
+    expect(game.config().dynamicSamRange(sam, startTick)).toBe(baseRange);
+
+    // Halfway through upgrade
+    const midTick = startTick + Math.floor(duration / 2);
+    const midRange = game.config().dynamicSamRange(sam, midTick);
+    expect(midRange).toBeGreaterThan(baseRange);
+    expect(midRange).toBeLessThan(targetRange);
+
+    // At completion
+    const endTick = startTick + duration;
+    expect(game.config().dynamicSamRange(sam, endTick)).toBe(targetRange);
+    expect(game.config().dynamicSamRange(sam, endTick + 10)).toBe(targetRange);
+  });
+
+  test("SAM chained upgrade resets duration and uses current dynamic range as new base", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+    game.executeNextTick();
+
+    const baseRange = game.config().samRange(1); // 20
+    const level2Range = game.config().samRange(2); // 30
+    const level3Range = game.config().samRange(3); // 40
+    const duration = Math.floor(game.config().SAMCooldown() / 2);
+
+    // Level 1 -> Level 2
+    sam.increaseLevel();
+
+    // Advance 20 ticks into upgrade
+    executeTicks(game, 20);
+    const currentDynamicRange = game
+      .config()
+      .dynamicSamRange(sam, game.ticks());
+    expect(currentDynamicRange).toBeGreaterThan(baseRange);
+    expect(currentDynamicRange).toBeLessThan(level2Range);
+
+    // Chain Level 2 -> Level 3 mid-transition
+    sam.increaseLevel();
+    const state = sam.samLauncherState()!;
+    expect(state.startRange).toBe(currentDynamicRange);
+    expect(state.targetLevel).toBe(3);
+    expect(state.upgradeStartTick).toBe(game.ticks());
+
+    // Advance to end of new duration
+    executeTicks(game, duration);
+    expect(game.config().dynamicSamRange(sam, game.ticks())).toBe(level3Range);
+  });
+
+  test("SAM intercepts incoming nuke during dynamic range expansion that is out of level 1 range", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+    game.executeNextTick();
+
+    // Start upgrade to Level 2 (range expands from 20 to 30 over 45 ticks)
+    sam.increaseLevel();
+
+    // Advance 25 ticks: dynamic range expands to 20 + (10 * 25 / 45) = 25.555...
+    executeTicks(game, 25);
+    const dynamicRange = game.config().dynamicSamRange(sam, game.ticks());
+    expect(dynamicRange).toBeCloseTo(25.555, 2);
+
+    // Build nuke that flies along x towards (25, 1) (distance 24 from SAM at (1,1))
+    // Base Level 1 range is 20 (so Level 1 could never intercept at x = 25)
+    // But expanding SAM range at tick 25+ is 25-26, so SAM intercepts and destroys it!
+    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(97, 1), {
+      targetTile: game.ref(25, 1),
+      trajectory: [
+        { tile: game.ref(97, 1), targetable: true },
+        { tile: game.ref(85, 1), targetable: true },
+        { tile: game.ref(73, 1), targetable: true },
+        { tile: game.ref(61, 1), targetable: true },
+        { tile: game.ref(49, 1), targetable: true },
+        { tile: game.ref(37, 1), targetable: true },
+        { tile: game.ref(25, 1), targetable: true },
+      ],
+    });
+
+    executeTicks(game, 8);
+
+    expect(nuke.reachedTarget()).toBeFalsy();
+    expect(nuke.wasDestroyedByEnemy()).toBeTruthy();
+    expect(attacker.units(UnitType.AtomBomb)).toHaveLength(0);
+  });
+
+  it("SAM range resets to base level range when level is decreased", () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    sam.setUnderConstruction(false);
+
+    expect(game.config().dynamicSamRange(sam, game.ticks())).toBe(20);
+
+    // Upgrade to level 2
+    sam.increaseLevel();
+    executeTicks(game, 10);
+    expect(game.config().dynamicSamRange(sam, game.ticks())).toBeGreaterThan(
+      20,
+    );
+
+    // Demote back to level 1
+    sam.decreaseLevel();
+    expect(game.config().dynamicSamRange(sam, game.ticks())).toBe(20);
   });
 });

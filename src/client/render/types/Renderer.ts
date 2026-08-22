@@ -112,6 +112,10 @@ export interface UnitState {
   trainType: number | null; // 0=Engine, 1=TailEngine, 2=Carriage
   loaded: boolean | null;
   constructionStartTick: number | null;
+  samUpgradeStartTick: number | null;
+  samUpgradeStartRange: number | null;
+  samUpgradeTargetLevel: number | null;
+  samUpgradeDuration: number | null;
 }
 
 /** Minimal dead-unit data needed by the FX pass. */
