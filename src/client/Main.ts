@@ -396,7 +396,17 @@ class Client {
       this.emitPresence();
     });
 
-    document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
+    document.addEventListener("join-lobby", (event) => {
+      // A rejected handshake (Turnstile alerts then rejects) never assigns
+      // lobbyHandle, so nothing downstream clears the "lobby" presence
+      // emitted at the top of the join -- friends would keep being offered a
+      // Join into a lobby the player never entered. Re-throw so the failure
+      // still surfaces exactly as it does today.
+      void this.handleJoinLobby(event).catch((error) => {
+        this.resetPresenceToMenu();
+        throw error;
+      });
+    });
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
     document.addEventListener(
@@ -659,12 +669,13 @@ class Client {
     // it arrives before this renderer exists. Pull it now that we are alive.
     void desktopPresence
       .consumePendingInvite()
-      .then((gameId) =>
-        gameId === null ? undefined : this.openInvite(gameId),
-      );
+      .then((gameId) => (gameId === null ? undefined : this.openInvite(gameId)))
+      .catch(() => undefined);
 
     // Invites arriving while we are already running.
-    desktopPresence.subscribeInvites((gameId) => void this.openInvite(gameId));
+    desktopPresence.subscribeInvites((gameId) => {
+      void this.openInvite(gameId).catch(() => undefined);
+    });
 
     const onHashUpdate = () => {
       // Router-managed hash changes (#modal=...) are handled by the router
@@ -996,7 +1007,13 @@ class Client {
             ? joinInfo.numClients
             : joinInfo.clients?.filter((c) => !c.spectator).length,
       maxPlayers: joinConfig?.maxPlayers,
-      lobbyId: lobby.gameID,
+      // Omitted for singleplayer and replays: no server hosts those ids, so
+      // advertising one has the shell offer friends a Join that cannot work.
+      // The optional field already means "not joinable".
+      lobbyId:
+        lobby.source === "singleplayer" || lobby.gameRecord !== undefined
+          ? undefined
+          : lobby.gameID,
     };
     this.emitPresence();
 
@@ -1181,6 +1198,15 @@ class Client {
     });
   }
 
+  // Back to the menu, forgetting the lobby we were describing so a later one
+  // cannot inherit its map or roster.
+  private resetPresenceToMenu() {
+    this.presenceDetail = {};
+    this.presenceSpectating = false;
+    this.presenceInGame = false;
+    desktopPresence.set({ state: "menu" });
+  }
+
   // An invite lands the player exactly where a /game/<id> link would. The
   // shell validated the id already; re-checking keeps the invariant next to
   // the modal that trusts it.
@@ -1217,6 +1243,13 @@ class Client {
   }
 
   private async handleLeaveLobby(event?: CustomEvent) {
+    // Above the lobbyHandle guard on purpose. Presence goes to "lobby" when
+    // the join starts, but lobbyHandle is only assigned once the handshake
+    // finishes; a modal closed during that window dispatches leave-lobby and
+    // takes the early return below, stranding the shell on a lobby the player
+    // is not in. Leaving in place also means no navigation follows to reset it.
+    this.resetPresenceToMenu();
+
     if (this.lobbyHandle === null) {
       return;
     }
@@ -1224,12 +1257,6 @@ class Client {
     this.lobbyHandle.stop(true);
     this.lobbyHandle = null;
     this.currentUrl = null;
-
-    // Leaving in place: no navigation follows, so nothing else resets this.
-    this.presenceDetail = {};
-    this.presenceSpectating = false;
-    this.presenceInGame = false;
-    desktopPresence.set({ state: "menu" });
 
     try {
       history.replaceState(null, "", "/");

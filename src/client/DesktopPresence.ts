@@ -64,7 +64,14 @@ class DesktopPresence {
   }
 
   subscribeInvites(cb: (gameId: string) => void): () => void {
-    return bridge()?.invite?.subscribe(cb) ?? (() => undefined);
+    try {
+      return bridge()?.invite?.subscribe(cb) ?? (() => undefined);
+    } catch {
+      // A bridge that throws synchronously must not abort the caller's
+      // initialisation. Invites are cosmetic; whatever the caller wires up
+      // after this call may not be.
+      return () => undefined;
+    }
   }
 
   async openInviteDialog(): Promise<boolean> {

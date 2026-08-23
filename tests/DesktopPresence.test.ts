@@ -93,4 +93,23 @@ describe("DesktopPresence", () => {
     expect(() => unsubscribe()).not.toThrow();
     expect(innerUnsubscribe).toHaveBeenCalled();
   });
+
+  it("subscribeInvites returns a callable unsubscribe when subscribe throws synchronously", () => {
+    (window as any).openfrontDesktop = {
+      shell: { api: 2 },
+      invite: {
+        subscribe: vi.fn(() => {
+          throw new Error("boom");
+        }),
+      },
+    };
+    // The caller wires up navigation listeners after this call, so a throwing
+    // bridge must not abort it.
+    let unsubscribe: (() => void) | undefined;
+    expect(() => {
+      unsubscribe = desktopPresence.subscribeInvites(() => undefined);
+    }).not.toThrow();
+    expect(typeof unsubscribe).toBe("function");
+    expect(() => unsubscribe!()).not.toThrow();
+  });
 });
