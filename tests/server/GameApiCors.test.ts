@@ -1,4 +1,7 @@
-import { describe, expect, test, vi } from "vitest";
+import express from "express";
+import http from "http";
+import type { AddressInfo } from "net";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import {
   DESKTOP_APP_ORIGIN,
   applyGameApiCorsHeaders,
@@ -80,47 +83,126 @@ describe("applyGameApiCorsHeaders", () => {
   });
 });
 
-describe("gameApiCors middleware", () => {
-  function run(method: string, origin: string | undefined) {
-    const { headers, setHeader } = collect();
-    const res: any = {
-      setHeader,
-      statusCode: 200,
-      ended: false,
-      sendStatus(code: number) {
-        this.statusCode = code;
-        this.ended = true;
-        return this;
+describe("gameApiCors middleware, mounted on a real Express app", () => {
+  // Driven over real HTTP rather than fake req/res: the things worth checking
+  // here — that Express actually emits the headers, that a preflight really is
+  // terminated before the route runs, that an error response still carries the
+  // grant — are properties of Express's own request handling, and a hand-rolled
+  // response double would only prove the double behaves as written.
+  let server: http.Server;
+  let base: string;
+  let routeHits: string[];
+
+  beforeEach(async () => {
+    routeHits = [];
+    const app = express();
+    app.use("/api", gameApiCors);
+    app.post("/api/create_game", (_req, res) => {
+      routeHits.push("create_game");
+      res.json({ gameID: "g1" });
+    });
+    app.get("/api/game/:id/exists", (_req, res) => {
+      routeHits.push("exists");
+      res.json({ exists: true });
+    });
+    app.post("/api/boom", (_req, res) => {
+      routeHits.push("boom");
+      res.status(400).json({ error: "bad" });
+    });
+
+    server = http.createServer(app);
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    const address = server.address() as AddressInfo;
+    base = `http://127.0.0.1:${address.port}`;
+  });
+
+  afterEach(async () => {
+    await new Promise<void>((resolve, reject) =>
+      server.close((err) => (err ? reject(err) : resolve())),
+    );
+  });
+
+  test("answers a preflight without running the route", async () => {
+    const res = await fetch(`${base}/api/create_game`, {
+      method: "OPTIONS",
+      headers: {
+        Origin: DESKTOP_APP_ORIGIN,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "authorization,content-type",
       },
-    };
-    const next = vi.fn();
-    gameApiCors({ method, headers: { origin } } as any, res, next as any);
-    return { headers, res, next };
-  }
+    });
 
-  test("answers a preflight itself instead of falling through to a route", () => {
-    const { res, next } = run("OPTIONS", DESKTOP_APP_ORIGIN);
-    expect(res.statusCode).toBe(204);
-    expect(res.ended).toBe(true);
-    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toBe(204);
+    expect(res.headers.get("access-control-allow-origin")).toBe(
+      "app://openfront",
+    );
+    expect(
+      res.headers.get("access-control-allow-headers")?.toLowerCase(),
+    ).toContain("authorization");
+    expect(routeHits).toEqual([]);
   });
 
-  test("a preflight carries the allow headers", () => {
-    const { headers } = run("OPTIONS", DESKTOP_APP_ORIGIN);
-    expect(headers.get("Access-Control-Allow-Origin")).toBe("app://openfront");
+  test("grants a real request from the desktop app", async () => {
+    const res = await fetch(`${base}/api/create_game`, {
+      method: "POST",
+      headers: { Origin: DESKTOP_APP_ORIGIN },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe(
+      "app://openfront",
+    );
+    expect(routeHits).toEqual(["create_game"]);
   });
 
-  test("passes real requests through to the route", () => {
-    const { res, next } = run("POST", DESKTOP_APP_ORIGIN);
-    expect(next).toHaveBeenCalled();
-    expect(res.ended).toBe(false);
+  test("grants a worker-prefixed GET as well", async () => {
+    const res = await fetch(`${base}/api/game/abcdefgh/exists`, {
+      headers: { Origin: DESKTOP_APP_ORIGIN },
+    });
+
+    expect(res.headers.get("access-control-allow-origin")).toBe(
+      "app://openfront",
+    );
+    expect(routeHits).toEqual(["exists"]);
   });
 
-  test("still passes an unknown origin through — CORS is the browser's call", () => {
+  test("an error response still carries the grant", async () => {
+    // Otherwise the desktop client sees an opaque CORS failure and can never
+    // report the real status. This is why the middleware is mounted ahead of
+    // the rate limiter in Worker.ts.
+    const res = await fetch(`${base}/api/boom`, {
+      method: "POST",
+      headers: { Origin: DESKTOP_APP_ORIGIN },
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.headers.get("access-control-allow-origin")).toBe(
+      "app://openfront",
+    );
+  });
+
+  test("runs the route for an unknown origin but grants it nothing", async () => {
     // Rejecting server-side would break non-browser callers (the admin bot,
-    // curl) that legitimately send no or another Origin. We simply decline to
-    // grant permission, and the browser enforces it.
-    const { next } = run("POST", "https://evil.example");
-    expect(next).toHaveBeenCalled();
+    // curl) that send no Origin or another one. We withhold permission and let
+    // the browser enforce it.
+    const res = await fetch(`${base}/api/create_game`, {
+      method: "POST",
+      headers: { Origin: "https://evil.example" },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+    expect(res.headers.get("vary")).toContain("Origin");
+    expect(routeHits).toEqual(["create_game"]);
+  });
+
+  test("serves a request with no Origin at all, ungranted", async () => {
+    const res = await fetch(`${base}/api/create_game`, { method: "POST" });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+    expect(routeHits).toEqual(["create_game"]);
   });
 });
