@@ -8,6 +8,7 @@ import {
   GameInfo,
   GameRecord,
   GameStartInfo,
+  LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
 import { toWireGameStartInfo } from "../core/Util";
@@ -29,6 +30,7 @@ import {
 } from "./Cosmetics";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { desktopPresence, type PresencePayload } from "./DesktopPresence";
 import { desktopUpdate, isDesktopShell } from "./DesktopShell";
 import "./FeaturedStream";
 import "./GameModeSelector";
@@ -221,6 +223,14 @@ class Client {
   private steamLinkModal: SteamLinkModal;
   private mostRecentJoinEvent: number;
 
+  // Presence inputs. A private, hosted or matchmade JoinLobbyEvent carries
+  // nothing but the game id, so the server's lobby_info is the only place the
+  // client ever learns the map, size and roster -- keep the latest view here
+  // and reuse it once the game starts, when no lobby_info arrives any more.
+  private presenceDetail: Omit<PresencePayload, "state"> = {};
+  private presenceSpectating = false;
+  private presenceInGame = false;
+
   private turnstileTokenPromise: Promise<{
     token: string;
     createdAt: number;
@@ -228,6 +238,11 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
+
+    // Every exit from a game (win screen, in-game quit, popstate) navigates to
+    // "/" and re-runs this, so announcing the menu here also covers "returned
+    // to the menu" without hooking each of those paths.
+    desktopPresence.set({ state: "menu" });
 
     // Register modals with the URL router. Lobby modals (join/host) and
     // matchmaking are intentionally omitted — they own their own URL state
@@ -358,6 +373,27 @@ class Client {
         this.lobbyHandle.stop(true);
         await crazyGamesSDK.gameplayStop();
       }
+    });
+
+    // The server's lobby view is the only source for a lobby's real map, size
+    // and roster, and the only place the client learns that a play/spectate
+    // switch was accepted (the server can refuse it). Both feed presence.
+    this.eventBus.on(LobbyInfoEvent, (event) => {
+      const config = event.lobby.gameConfig;
+      this.presenceDetail = {
+        gameType: config?.gameType,
+        gameMode: config?.gameMode,
+        map: config?.gameMap,
+        // Seats, not connections: spectators are in the roster but hold none
+        // (mirrors LobbyPlayerView and the join modal's own count).
+        playerCount: event.lobby.clients?.filter((c) => !c.spectator).length,
+        maxPlayers: config?.maxPlayers,
+        lobbyId: event.lobby.gameID,
+      };
+      this.presenceSpectating =
+        event.lobby.clients?.find((c) => c.clientID === event.myClientID)
+          ?.spectator === true;
+      this.emitPresence();
     });
 
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
@@ -618,6 +654,17 @@ class Client {
     } else {
       this.handleUrl();
     }
+
+    // An invite accepted from outside the app is parked by the shell, because
+    // it arrives before this renderer exists. Pull it now that we are alive.
+    void desktopPresence
+      .consumePendingInvite()
+      .then((gameId) =>
+        gameId === null ? undefined : this.openInvite(gameId),
+      );
+
+    // Invites arriving while we are already running.
+    desktopPresence.subscribeInvites((gameId) => void this.openInvite(gameId));
 
     const onHashUpdate = () => {
       // Router-managed hash changes (#modal=...) are handled by the router
@@ -928,6 +975,31 @@ class Client {
     }
 
     console.log(`joining lobby ${lobby.gameID}`);
+    // Entering a lobby. Singleplayer, public lobbies and replays know their
+    // config up front; everything else is filled in by the lobby_info
+    // subscription in initialize() a moment later.
+    const joinConfig =
+      lobby.gameStartInfo?.config ??
+      lobby.publicLobbyInfo?.gameConfig ??
+      lobby.gameRecord?.info.config;
+    const joinInfo = lobby.publicLobbyInfo;
+    this.presenceInGame = false;
+    this.presenceSpectating = lobby.spectator === true;
+    this.presenceDetail = {
+      gameType: joinConfig?.gameType,
+      gameMode: joinConfig?.gameMode,
+      map: joinConfig?.gameMap,
+      playerCount:
+        joinInfo === undefined
+          ? undefined
+          : "numClients" in joinInfo
+            ? joinInfo.numClients
+            : joinInfo.clients?.filter((c) => !c.spectator).length,
+      maxPlayers: joinConfig?.maxPlayers,
+      lobbyId: lobby.gameID,
+    };
+    this.emitPresence();
+
     if (this.lobbyHandle !== null) {
       console.log("joining lobby, stopping existing game");
       this.lobbyHandle.stop(true);
@@ -981,6 +1053,11 @@ class Client {
       // The game is actually starting now (lobby wait is over). Let listeners that stay up
       // through the wait (e.g. the featured-stream panel) hide at this point instead of on join.
       document.dispatchEvent(new CustomEvent("game-starting"));
+      // Earliest point the lobby is provably closed: the server has stopped
+      // broadcasting lobby_info and refuses new seats, so the shell must stop
+      // advertising this as joinable even though terrain is still loading.
+      this.presenceInGame = true;
+      this.emitPresence();
       console.log("Closing modals");
       document.getElementById("settings-button")?.classList.add("hidden");
       if (this.usernameInput) {
@@ -1090,6 +1167,34 @@ class Client {
     });
   }
 
+  // State is derived rather than passed in so every caller agrees on what
+  // "spectating" outranks. Emitting is idempotent -- the shell diffs -- so
+  // callers never have to know whether anything actually changed.
+  private emitPresence() {
+    desktopPresence.set({
+      state: this.presenceSpectating
+        ? "spectating"
+        : this.presenceInGame
+          ? "game"
+          : "lobby",
+      ...this.presenceDetail,
+    });
+  }
+
+  // An invite lands the player exactly where a /game/<id> link would. The
+  // shell validated the id already; re-checking keeps the invariant next to
+  // the modal that trusts it.
+  private async openInvite(gameId: string): Promise<void> {
+    if (!GAME_ID_REGEX.test(gameId)) return;
+    // A cold-start invite can beat the modal's own upgrade, which would make
+    // open() a silent no-op (the CrazyGames invite path waits for the same
+    // reason).
+    await customElements.whenDefined("join-lobby-modal");
+    window.showPage?.("page-join-lobby");
+    this.joinModal?.open({ lobbyId: gameId });
+    console.log(`joining lobby ${gameId} from desktop invite`);
+  }
+
   private updateJoinUrlForShare(lobbyId: string) {
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
     let targetUrl: string;
@@ -1119,6 +1224,12 @@ class Client {
     this.lobbyHandle.stop(true);
     this.lobbyHandle = null;
     this.currentUrl = null;
+
+    // Leaving in place: no navigation follows, so nothing else resets this.
+    this.presenceDetail = {};
+    this.presenceSpectating = false;
+    this.presenceInGame = false;
+    desktopPresence.set({ state: "menu" });
 
     try {
       history.replaceState(null, "", "/");
