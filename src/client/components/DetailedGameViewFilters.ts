@@ -215,6 +215,33 @@ export function filterAndSortLobbies(
     .sort(compare);
 }
 
+/**
+ * How far back each waiting lobby sits in its bucket's queue, 1-based, where 1
+ * is the lobby directly behind the one counting down. The counting-down lobby
+ * itself isn't in the map — it shows its countdown instead — and neither are
+ * hosted lobbies, which aren't queued at all. Positions come from the
+ * *unfiltered* list so hiding a lobby with a filter doesn't renumber the ones
+ * still shown, and are counted per bucket, since each bucket has its own queue.
+ */
+export function queuePositions(lobbies: PublicGameInfo[]): Map<string, number> {
+  const positions = new Map<string, number>();
+  const buckets = new Map<string, PublicGameInfo[]>();
+  for (const lobby of lobbies) {
+    const type = lobby.publicGameType;
+    if (type === undefined || type === "hosted") continue;
+    if (lobby.startsAt !== undefined) continue;
+    const bucket = buckets.get(type);
+    if (bucket === undefined) buckets.set(type, [lobby]);
+    else bucket.push(lobby);
+  }
+  for (const bucket of buckets.values()) {
+    // Already in the server's queue order; compare() would treat them all as
+    // ties anyway, so no sort is needed here.
+    bucket.forEach((lobby, index) => positions.set(lobby.gameID, index + 1));
+  }
+  return positions;
+}
+
 // ---- Saved filter profiles ----
 
 export const FILTER_PROFILES_KEY = "detailed-view-filter-profiles";

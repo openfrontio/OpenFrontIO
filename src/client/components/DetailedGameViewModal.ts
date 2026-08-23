@@ -32,6 +32,7 @@ import {
   LobbySourceFilter,
   NAMED_TEAM_CONFIGS,
   NUMERIC_TEAM_CONFIGS,
+  queuePositions,
   saveFilterProfile,
 } from "./DetailedGameViewFilters";
 import { lobbyCard, mapAspectRatios } from "./LobbyCard";
@@ -103,6 +104,8 @@ export class DetailedGameViewModal extends BaseModal {
 
   private serverTimeOffset = 0;
   private countdownTimer: number | null = null;
+  /** Queue position per lobby, recomputed from the unfiltered list each render. */
+  private queuePositions = new Map<string, number>();
 
   private lobbySocket = new PublicLobbySocket((lobbies) => {
     this.lobbies = lobbies;
@@ -242,6 +245,7 @@ export class DetailedGameViewModal extends BaseModal {
 
     const all = flattenLobbies(this.lobbies.games);
     const shown = filterAndSortLobbies(all, this.filters);
+    this.queuePositions = queuePositions(all);
     const ofType = (lobbies: PublicGameInfo[], type: string) =>
       lobbies.filter((lobby) => lobby.publicGameType === type);
 
@@ -402,11 +406,17 @@ export class DetailedGameViewModal extends BaseModal {
   private timeDisplay(lobby: PublicGameInfo): string {
     if (lobby.startsAt === undefined) {
       // Scheduled lobbies only get a countdown once they're the active one for
-      // their bucket; the one queued behind it is simply next up. Hosted
-      // lobbies never get one — they start when the host says so.
-      return lobby.publicGameType === "hosted"
-        ? translateText("public_lobby.waiting_for_players")
-        : translateText("detailed_view.queued");
+      // their bucket; the ones behind it show where they sit in the queue.
+      // Hosted lobbies never get one — they start when the host says so.
+      if (lobby.publicGameType === "hosted") {
+        return translateText("public_lobby.waiting_for_players");
+      }
+      // The lobby directly behind the countdown is simply next up; the ones
+      // behind it say how far back they are.
+      const position = this.queuePositions.get(lobby.gameID);
+      return position === undefined || position === 1
+        ? translateText("detailed_view.queued")
+        : translateText("detailed_view.queue_position", { position });
     }
     const seconds = getSecondsUntilServerTimestamp(
       lobby.startsAt,

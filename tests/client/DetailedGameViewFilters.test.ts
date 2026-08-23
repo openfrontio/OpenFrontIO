@@ -11,6 +11,7 @@ import {
   LobbyFilters,
   MAX_FILTER_PROFILES,
   normalizeFilters,
+  queuePositions,
   saveFilterProfile,
 } from "../../src/client/components/DetailedGameViewFilters";
 import {
@@ -233,6 +234,44 @@ describe("filterAndSortLobbies", () => {
         (l) => l.gameID,
       ),
     ).toEqual(["team1"]);
+  });
+});
+
+describe("queuePositions", () => {
+  it("numbers each bucket's waiting lobbies from the front of its queue", () => {
+    const positions = queuePositions([
+      lobby({ gameID: "ffa-live", startsAt: 100 }),
+      lobby({ gameID: "ffa-1" }),
+      lobby({ gameID: "ffa-2" }),
+      lobby({ gameID: "team-live", publicGameType: "team", startsAt: 50 }),
+      lobby({ gameID: "team-1", publicGameType: "team" }),
+    ]);
+    expect(positions.get("ffa-1")).toBe(1);
+    expect(positions.get("ffa-2")).toBe(2);
+    // Each bucket queues separately, so team starts from 1 again.
+    expect(positions.get("team-1")).toBe(1);
+  });
+
+  it("leaves out the lobby counting down and hosted lobbies", () => {
+    const positions = queuePositions([
+      lobby({ gameID: "ffa-live", startsAt: 100 }),
+      lobby({ gameID: "hosted1", publicGameType: "hosted" }),
+      lobby({ gameID: "ffa-1" }),
+    ]);
+    expect(positions.has("ffa-live")).toBe(false);
+    expect(positions.has("hosted1")).toBe(false);
+    expect(positions.get("ffa-1")).toBe(1);
+  });
+
+  it("keeps the server's queue order rather than re-deriving one", () => {
+    const positions = queuePositions(
+      ["zulu", "alpha", "mike"].map((gameID) => lobby({ gameID })),
+    );
+    expect([...positions]).toEqual([
+      ["zulu", 1],
+      ["alpha", 2],
+      ["mike", 3],
+    ]);
   });
 });
 
