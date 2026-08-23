@@ -1,5 +1,14 @@
+// Mirrors SteamTicketResult in openfront-desktop's src/main/steam.ts. The two
+// repositories cannot import from each other, so this is a hand-kept copy; if
+// you change one, change the other.
+export type SteamTicketFailure = "unavailable" | "timeout" | "error";
+
+export type SteamTicketResult =
+  | { ok: true; ticket: string }
+  | { ok: false; reason: SteamTicketFailure };
+
 interface SteamBridge {
-  getAuthTicket(): Promise<string | null>;
+  getAuthTicket(): Promise<SteamTicketResult>;
   getUser(): Promise<{ steamId: string; name: string } | null>;
 }
 
@@ -21,13 +30,14 @@ class SteamSDK {
     return steamBridge() !== undefined;
   }
 
-  async getTicket(): Promise<string | null> {
+  async getTicket(): Promise<SteamTicketResult> {
     const bridge = steamBridge();
-    if (!bridge) return null;
+    if (!bridge) return { ok: false, reason: "unavailable" };
     try {
       return await bridge.getAuthTicket();
     } catch {
-      return null;
+      // The IPC call itself failed, which tells us nothing about Steam.
+      return { ok: false, reason: "error" };
     }
   }
 

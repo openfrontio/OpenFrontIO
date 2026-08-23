@@ -5,6 +5,8 @@ import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
 import { getApiBase, getAudience } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import type { DesktopSessionState, SessionFailureKind } from "./DesktopShell";
+import type { SteamTicketResult } from "./SteamSDK";
 import { steamSDK } from "./SteamSDK";
 import { generateCryptoRandomUUID } from "./Utils";
 
@@ -15,6 +17,25 @@ const PERSISTENT_ID_KEY = "player_persistent_id";
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
 let __expiresAt: number = 0;
+
+let __sessionState: DesktopSessionState = { status: "unknown" };
+
+/**
+ * The shell's current session state. Exported for components that mount after
+ * the first transition has already been published, so they are not left blank
+ * waiting for the next change -- the same reason the update bridge delivers
+ * its current state on subscribe.
+ */
+export function getDesktopSessionState(): DesktopSessionState {
+  return __sessionState;
+}
+
+function setSessionState(state: DesktopSessionState): void {
+  __sessionState = state;
+  document.dispatchEvent(
+    new CustomEvent("desktop-session-state", { detail: state }),
+  );
+}
 
 export function discordLogin() {
   const redirectUri = encodeURIComponent(window.location.href);
@@ -231,12 +252,19 @@ async function refreshJwt(): Promise<void> {
 
 async function doRefreshJwt(): Promise<void> {
   if (steamSDK.isOnSteam()) {
-    const ticket = await steamSDK.getTicket();
-    if (ticket) {
-      // On Steam, we exchange a Steam Web-API ticket for our session. No
-      // ticket (Steam unavailable) falls through to the guest flow below.
-      return doSteamLogin(ticket);
+    const result = await steamSDK.getTicket();
+    if (result.ok) {
+      // On Steam we exchange a Steam Web-API ticket for our session.
+      return doSteamLogin(result.ticket);
     }
+    // TERMINAL, deliberately: this used to fall through to /auth/refresh,
+    // which cannot succeed in the shell (the Electron profile has no refresh
+    // cookie). That was a guaranteed 401 followed by logOut(), costing two
+    // pointless round trips and the player's stored persistent ID every time
+    // Steam hiccuped. Record why and stop.
+    __jwt = null;
+    setSessionState({ status: "signed-out", reason: ticketReason(result) });
+    return;
   }
   if (crazyGamesSDK.isOnCrazyGames()) {
     const token = await crazyGamesSDK.getUserToken();
@@ -268,6 +296,21 @@ async function doRefreshJwt(): Promise<void> {
     // if server unreachable, just clear jwt
     __jwt = null;
     return;
+  }
+}
+
+// Total mapping from the shell's three ticket failures. Kept exhaustive by
+// the parameter type: adding a SteamTicketFailure value fails the build here.
+function ticketReason(
+  result: Extract<SteamTicketResult, { ok: false }>,
+): SessionFailureKind {
+  switch (result.reason) {
+    case "unavailable":
+      return "steam-unavailable";
+    case "timeout":
+      return "steam-wedged";
+    case "error":
+      return "steam-error";
   }
 }
 
@@ -312,6 +355,18 @@ async function doSteamLogin(ticket: string): Promise<void> {
     if (response.status !== 200) {
       console.error("Steam login failed", response);
       __jwt = null;
+      // 401 is infra's unauthorized("Invalid Steam ticket"); 5xx is its
+      // internalServerError for "steam unreachable" / "steam auth error",
+      // which is Steam's backend rather than anything the player did.
+      setSessionState({
+        status: "signed-out",
+        reason:
+          response.status === 401
+            ? "steam-ticket-rejected"
+            : response.status >= 500
+              ? "steam-backend"
+              : "network",
+      });
       return;
     }
     const json = await response.json();
@@ -319,9 +374,11 @@ async function doSteamLogin(ticket: string): Promise<void> {
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Steam login succeeded");
     __jwt = jwt;
+    setSessionState({ status: "signed-in" });
   } catch (e) {
     console.error("Steam login failed", e);
     __jwt = null;
+    setSessionState({ status: "signed-out", reason: "network" });
   }
 }
 
@@ -346,6 +403,32 @@ export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
     }
   })();
   return __reauthPromise;
+}
+
+// The Retry action on the desktop status bar. Single-flight for the same
+// reason reauthAfterCrazyGamesChange is: the bar and any other caller must
+// share one exchange rather than race on __jwt. A refresh already in flight
+// is allowed to settle first so its stale result cannot satisfy the retry.
+//
+// There is no automatic retry anywhere: a wedged Steam session does not
+// self-heal (only a Steam restart cleared it in both observed cases), so a
+// silent retry would buy nothing and delay the message.
+let __steamRetryPromise: Promise<UserAuth> | null = null;
+export async function retrySteamSignIn(): Promise<UserAuth> {
+  __steamRetryPromise ??= (async () => {
+    try {
+      if (__refreshPromise) {
+        await __refreshPromise.catch(() => {});
+      }
+      __jwt = null;
+      __expiresAt = 0;
+      setSessionState({ status: "retrying" });
+      return await userAuth();
+    } finally {
+      __steamRetryPromise = null;
+    }
+  })();
+  return __steamRetryPromise;
 }
 
 export async function sendMagicLink(email: string): Promise<boolean> {
