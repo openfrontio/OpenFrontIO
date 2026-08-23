@@ -34,6 +34,10 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     retaliateAttack: "Shift+KeyR",
     requestAlliance: "KeyK",
     breakAlliance: "KeyL",
+    donateGoldAttackRatio: "Shift+KeyI",
+    donateTroopsAttackRatio: "Shift+KeyO",
+    donateGoldFixedAmount: "Shift+KeyK",
+    donateTroopsFixedAmount: "Shift+KeyL",
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",
@@ -711,6 +715,24 @@ export class UserSettings {
 
   setAttackRatioIncrement(value: number): void {
     this.setFloat("settings.attackRatioIncrement", value);
+  }
+
+  donationKeybindAmount(): number {
+    const raw = this.getString("settings.donationKeybindAmount", "10");
+    if (!/^(?:[1-9]\d?|100)$/.test(raw)) return 10;
+    const amount = Number.parseInt(raw, 10);
+    return amount;
+  }
+
+  setDonationKeybindAmount(value: number): void {
+    if (!Number.isInteger(value)) {
+      this.setString("settings.donationKeybindAmount", "10");
+      return;
+    }
+    this.setString(
+      "settings.donationKeybindAmount",
+      String(Math.max(1, Math.min(100, value))),
+    );
   }
 
   // What % attack ratio is set to

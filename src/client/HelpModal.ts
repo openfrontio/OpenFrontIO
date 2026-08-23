@@ -69,6 +69,7 @@ export class HelpModal extends BaseModal {
 
   protected renderBody() {
     const keybinds = this.keybinds;
+    const donationKeybindAmount = new UserSettings().donationKeybindAmount();
 
     return html`
       <div
@@ -384,6 +385,48 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_ratio_change")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.donateGoldAttackRatio)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText(
+                        "user_setting.donate_gold_attack_ratio_desc",
+                      )}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.donateTroopsAttackRatio)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText(
+                        "user_setting.donate_troops_attack_ratio_desc",
+                      )}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.donateGoldFixedAmount)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText(
+                        "user_setting.donate_gold_fixed_amount_desc",
+                        { amount: donationKeybindAmount },
+                      )}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.donateTroopsFixedAmount)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText(
+                        "user_setting.donate_troops_fixed_amount_desc",
+                        { amount: donationKeybindAmount },
+                      )}
                     </td>
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">

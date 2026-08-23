@@ -2,6 +2,8 @@ import {
   AutoUpgradeEvent,
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
+  DoDonateGoldEvent,
+  DoDonateTroopsEvent,
   InputHandler,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
@@ -11,8 +13,11 @@ import {
 import { UIState } from "../src/client/UIState";
 import { GameView, PlayerView, UnitView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
-import { UnitType } from "../src/core/game/Game";
+import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { PlayerType, UnitType } from "../src/core/game/Game";
 import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
+import { GameID } from "../src/core/Schemas";
+import { playerInfo, setup } from "./util/Setup";
 
 class MockPointerEvent {
   button: number;
@@ -602,6 +607,114 @@ describe("InputHandler AutoUpgrade", () => {
       // default remains when parsing fails
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
       spy.mockRestore();
+    });
+  });
+
+  describe("Donation keybinds", () => {
+    beforeEach(() => inputHandler.initialize());
+
+    async function setupDonationSimulation() {
+      const game = await setup("ocean_and_land", {
+        donateGold: true,
+        donateTroops: true,
+      });
+      const donorInfo = playerInfo("donor", PlayerType.Human);
+      const recipientInfo = playerInfo("recipient", PlayerType.Human);
+      game.addPlayer(donorInfo);
+      game.addPlayer(recipientInfo);
+
+      const donor = game.player(donorInfo.id);
+      const recipient = game.player(recipientInfo.id);
+      game.addExecution(
+        new SpawnExecution(
+          "input-handler-donation" as GameID,
+          donorInfo,
+          game.ref(0, 10),
+        ),
+        new SpawnExecution(
+          "input-handler-donation" as GameID,
+          recipientInfo,
+          game.ref(0, 15),
+        ),
+      );
+      for (let i = 0; i < 5; i++) game.executeNextTick();
+
+      const request = donor.createAllianceRequest(recipient);
+      expect(request).not.toBeNull();
+      request!.accept();
+      game.executeNextTick();
+
+      eventBus.on(DoDonateGoldEvent, ({ useAttackRatio }) => {
+        const ratio = useAttackRatio
+          ? 0.2
+          : testSettings.donationKeybindAmount() / 100;
+        donor.donateGold(
+          recipient,
+          BigInt(Math.floor(Number(donor.gold()) * ratio)),
+        );
+      });
+      eventBus.on(DoDonateTroopsEvent, ({ useAttackRatio }) => {
+        const ratio = useAttackRatio
+          ? 0.2
+          : testSettings.donationKeybindAmount() / 100;
+        donor.donateTroops(recipient, Math.floor(donor.troops() * ratio));
+      });
+
+      return { donor, recipient };
+    }
+
+    it("donates gold for attack-ratio and fixed-amount keybinds", async () => {
+      testSettings.setDonationKeybindAmount(10);
+      const { donor, recipient } = await setupDonationSimulation();
+      donor.addGold(1_000n);
+      const donorGold = donor.gold();
+      const recipientGold = recipient.gold();
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyI", shiftKey: true }),
+      );
+      expect(donor.gold()).toBe(donorGold - donorGold / 5n);
+      expect(recipient.gold()).toBe(recipientGold + donorGold / 5n);
+
+      const goldAfterAttackRatio = donor.gold();
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyK", shiftKey: true }),
+      );
+      expect(donor.gold()).toBe(
+        goldAfterAttackRatio - goldAfterAttackRatio / 10n,
+      );
+      expect(recipient.gold()).toBe(
+        recipientGold + donorGold / 5n + goldAfterAttackRatio / 10n,
+      );
+    });
+
+    it("donates troops for attack-ratio and fixed-amount keybinds", async () => {
+      testSettings.setDonationKeybindAmount(10);
+      const { donor, recipient } = await setupDonationSimulation();
+      donor.addTroops(1_000);
+      const donorTroops = donor.troops();
+      const recipientTroops = recipient.troops();
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyO", shiftKey: true }),
+      );
+      expect(donor.troops()).toBe(donorTroops - Math.floor(donorTroops / 5));
+      expect(recipient.troops()).toBe(
+        recipientTroops + Math.floor(donorTroops / 5),
+      );
+
+      const troopsAfterAttackRatio = donor.troops();
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyL", shiftKey: true }),
+      );
+      expect(donor.troops()).toBe(
+        troopsAfterAttackRatio - Math.floor(troopsAfterAttackRatio / 10),
+      );
+      expect(recipient.troops()).toBe(
+        recipientTroops +
+          Math.floor(donorTroops / 5) +
+          Math.floor(troopsAfterAttackRatio / 10),
+      );
     });
   });
 

@@ -296,6 +296,20 @@ export class UserSettingModal extends BaseModal {
     this.requestUpdate();
   }
 
+  private changeDonationKeybindAmount(
+    e: CustomEvent<{ value: number | string }>,
+  ) {
+    const rawValue = e.detail?.value;
+    const value =
+      typeof rawValue === "number" ? rawValue : parseInt(String(rawValue), 10);
+    if (!Number.isFinite(value)) {
+      console.warn("Select event missing detail.value", e);
+      return;
+    }
+    this.userSettings.setDonationKeybindAmount(value);
+    this.requestUpdate();
+  }
+
   private sliderNukeAllianceSafetyDuration(e: CustomEvent<{ value: number }>) {
     this.userSettings.setNukeAllianceSafetyDuration(e.detail.value);
     this.requestUpdate();
@@ -713,6 +727,66 @@ export class UserSettingModal extends BaseModal {
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
+        ${translateText("user_setting.donation_keybinds")}
+      </h2>
+
+      <setting-keybind
+        action="donateGoldAttackRatio"
+        label=${translateText("user_setting.donate_gold_attack_ratio")}
+        description=${translateText(
+          "user_setting.donate_gold_attack_ratio_desc",
+        )}
+        defaultKey=${this.defaultKeybinds.donateGoldAttackRatio}
+        .value=${this.getKeyValue("donateGoldAttackRatio")}
+        .display=${this.getKeyChar("donateGoldAttackRatio")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="donateTroopsAttackRatio"
+        label=${translateText("user_setting.donate_troops_attack_ratio")}
+        description=${translateText(
+          "user_setting.donate_troops_attack_ratio_desc",
+        )}
+        defaultKey=${this.defaultKeybinds.donateTroopsAttackRatio}
+        .value=${this.getKeyValue("donateTroopsAttackRatio")}
+        .display=${this.getKeyChar("donateTroopsAttackRatio")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="donateGoldFixedAmount"
+        label=${translateText("user_setting.donate_gold_fixed_amount")}
+        description=${translateText(
+          "user_setting.donate_gold_fixed_amount_desc",
+          {
+            amount: this.userSettings.donationKeybindAmount(),
+          },
+        )}
+        defaultKey=${this.defaultKeybinds.donateGoldFixedAmount}
+        .value=${this.getKeyValue("donateGoldFixedAmount")}
+        .display=${this.getKeyChar("donateGoldFixedAmount")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="donateTroopsFixedAmount"
+        label=${translateText("user_setting.donate_troops_fixed_amount")}
+        description=${translateText(
+          "user_setting.donate_troops_fixed_amount_desc",
+          {
+            amount: this.userSettings.donationKeybindAmount(),
+          },
+        )}
+        defaultKey=${this.defaultKeybinds.donateTroopsFixedAmount}
+        .value=${this.getKeyValue("donateTroopsFixedAmount")}
+        .display=${this.getKeyChar("donateTroopsFixedAmount")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
         ${translateText("user_setting.zoom_controls")}
       </h2>
 
@@ -915,6 +989,45 @@ export class UserSettingModal extends BaseModal {
         ]}
         .value=${String(this.userSettings.attackRatioIncrement())}
         @change=${this.changeAttackRatioIncrement}
+      ></setting-select>
+
+      <setting-select
+        label=${translateText("user_setting.donation_keybind_amount_label")}
+        description=${translateText(
+          "user_setting.donation_keybind_amount_desc",
+        )}
+        .options=${[
+          {
+            value: 1,
+            label: translateText("user_setting.percentage", { amount: 1 }),
+          },
+          {
+            value: 2,
+            label: translateText("user_setting.percentage", { amount: 2 }),
+          },
+          {
+            value: 5,
+            label: translateText("user_setting.percentage", { amount: 5 }),
+          },
+          {
+            value: 10,
+            label: translateText("user_setting.percentage", { amount: 10 }),
+          },
+          {
+            value: 20,
+            label: translateText("user_setting.percentage", { amount: 20 }),
+          },
+          {
+            value: 25,
+            label: translateText("user_setting.percentage", { amount: 25 }),
+          },
+          {
+            value: 50,
+            label: translateText("user_setting.percentage", { amount: 50 }),
+          },
+        ]}
+        .value=${String(this.userSettings.donationKeybindAmount())}
+        @change=${this.changeDonationKeybindAmount}
       ></setting-select>
 
       <setting-slider
