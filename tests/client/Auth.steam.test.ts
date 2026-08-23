@@ -165,4 +165,27 @@ describe("Steam login", () => {
 
     expect(getTicket).toHaveBeenCalledTimes(1);
   });
+
+  // Guards against the /auth/steam fetch hanging forever: retrySteamSignIn
+  // sets "retrying" before the fetch settles, and with no AbortSignal a
+  // response that never arrives would leave the session pinned there --
+  // gated out of multiplayer with a status bar that renders no button for
+  // "retrying". The bound AbortSignal.timeout turns that into an aborted
+  // fetch, which the existing catch already maps to "network", so this
+  // proves the state always settles rather than sticking.
+  it("settles rather than sticking at retrying when the fetch rejects", async () => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: true,
+      ticket: "t",
+    });
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("aborted"));
+
+    await retrySteamSignIn();
+
+    expect(getDesktopSessionState()).toEqual({
+      status: "signed-out",
+      reason: "network",
+    });
+  });
 });

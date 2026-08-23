@@ -151,6 +151,23 @@ export function clearLocalSession(): void {
   // selections stay stored under their publicId and are restored on the
   // next login (#4955).
   UserSettings.setPlayerId(null);
+  // Keep the desktop bar's session state in sync: without this, a 401-driven
+  // logOut() (or any other clearLocalSession caller) leaves __sessionState at
+  // "signed-in" with no JWT behind it, so the bar hides and multiplayer
+  // unlocks with nothing backing it until the next join self-heals it.
+  // Guarded to Steam only -- web/CrazyGames have no bar and no session-gating
+  // to desync. Skipped while a retry is legitimately in flight (status
+  // "retrying"): retrySteamSignIn already owns that transition end-to-end via
+  // its own userAuth() call, and this must not race ahead of it with a stale
+  // "signed-out" that the retry is about to overwrite anyway.
+  //
+  // "steam-error" is the closest of the six SessionFailureKinds: unlike the
+  // others it names no specific cause (ticket rejection, backend 5xx, no
+  // client, etc.), which matches clearLocalSession not knowing why the
+  // session went away -- it just renders the bar's generic message.
+  if (steamSDK.isOnSteam() && __sessionState.status !== "retrying") {
+    setSessionState({ status: "signed-out", reason: "steam-error" });
+  }
   if (hadSession) announceLoggedOut();
 }
 
@@ -347,10 +364,17 @@ async function doCrazyGamesLogin(token: string): Promise<void> {
 async function doSteamLogin(ticket: string): Promise<void> {
   try {
     console.log("Logging in with Steam");
+    // Bounded so a response that never settles can't leave the session
+    // pinned at "retrying" forever (it gates multiplayer and the status bar
+    // renders no button for that state -- see DesktopStatusBar.sessionAction).
+    // An abort throws, which the catch below already maps to "network", so
+    // this also means the initial sign-in can no longer hang at "unknown".
+    // 10s is generous headroom over a healthy web-api round trip (~1.3s).
     const response = await fetch(getApiBase() + "/auth/steam", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ticket }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (response.status !== 200) {
       console.error("Steam login failed", response);
