@@ -1,7 +1,10 @@
 import Benchmark from "benchmark";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
-import { buildNukeTrajectory } from "../../src/client/render/gl/utils/NukeTrajectory";
+import {
+  buildNukeTrajectory,
+  SAMInfo,
+} from "../../src/client/render/gl/utils/NukeTrajectory";
 import { PlayerInfo, PlayerType, UnitType } from "../../src/core/game/Game";
 import { setup } from "../util/Setup";
 
@@ -18,16 +21,19 @@ const giantMapGame = await setup(
 
 const myPlayer = giantMapGame.player("my_player_id");
 const enemyPlayer = giantMapGame.player("enemy_player_id");
-const mapH = giantMapGame.map().height() * 50;
+const mapH = giantMapGame.map().height();
 
-// Conquer land to place units
+// Conquer land to place units (split territory between players)
 console.log("Setting up in-game board state (500 mixed units)...");
 for (let x = 0; x < giantMapGame.map().width(); x += 10) {
   for (let y = 0; y < giantMapGame.map().height(); y += 10) {
     const tile = giantMapGame.ref(x, y);
     if (giantMapGame.map().isLand(tile)) {
-      myPlayer.conquer(tile);
-      enemyPlayer.conquer(tile);
+      if ((x + y) % 20 === 0) {
+        myPlayer.conquer(tile);
+      } else {
+        enemyPlayer.conquer(tile);
+      }
     }
   }
 }
@@ -45,16 +51,16 @@ const unitTypes = [
 ];
 let unitCount = 0;
 
-for (let x = 50; x < 3500; x += 150) {
-  for (let y = 50; y < 1500; y += 150) {
+for (let x = 1; x < giantMapGame.map().width(); x += 3) {
+  for (let y = 1; y < giantMapGame.map().height(); y += 3) {
     if (unitCount >= 500) break;
-    const tile = giantMapGame.ref(Math.floor(x / 50), Math.floor(y / 50));
+    const tile = giantMapGame.ref(x, y);
     if (giantMapGame.map().isLand(tile)) {
       const isMine = unitCount % 2 === 0;
       const type = unitTypes[unitCount % unitTypes.length];
       const player = isMine ? myPlayer : enemyPlayer;
       const forceSam =
-        x >= 400 && x <= 1100 && !isMine ? UnitType.SAMLauncher : type;
+        x >= 8 && x <= 22 && !isMine ? UnitType.SAMLauncher : type;
       player.buildUnit(forceSam, tile, {});
       unitCount++;
     }
@@ -62,7 +68,7 @@ for (let x = 50; x < 3500; x += 150) {
 }
 
 // Exact mock scenarios for mathematical comparisons
-const sparseSams: { x: number; y: number; r: number }[] = [
+const sparseSams: SAMInfo[] = [
   { x: 300, y: 300, r: 120 },
   { x: 450, y: 250, r: 90 },
   { x: 600, y: 400, r: 150 },
@@ -70,21 +76,26 @@ const sparseSams: { x: number; y: number; r: number }[] = [
   { x: 950, y: 300, r: 80 },
 ];
 
-const denseSams = Array.from({ length: 20 }, (_, k) => ({
+const denseSams: SAMInfo[] = Array.from({ length: 20 }, (_, k) => ({
   x: 200 + k * 40,
   y: 200 + (k % 5) * 100,
   r: 70 + (k % 4) * 10,
 }));
 
-const giantSams = Array.from({ length: 100 }, (_, k) => ({
+const giantSams: SAMInfo[] = Array.from({ length: 100 }, (_, k) => ({
   x: 100 + (k % 10) * 350,
   y: 100 + Math.floor(k / 10) * 180,
   r: 110,
 }));
 
 // In-game: Starting nuke trajectory render extracts static SAM list ONCE
-function startNukeTrajectoryRender() {
-  const extractedSams: { x: number; y: number; r: number }[] = [];
+function startNukeTrajectoryRender(): {
+  srcX: number;
+  srcY: number;
+  directionUp: boolean;
+  sams: SAMInfo[];
+} {
+  const extractedSams: SAMInfo[] = [];
   const mapWidth = giantMapGame.map().width();
 
   for (const u of giantMapGame.units()) {
@@ -94,16 +105,16 @@ function startNukeTrajectoryRender() {
       u.isActive()
     ) {
       extractedSams.push({
-        x: (u.tile() % mapWidth) * 50,
-        y: Math.floor(u.tile() / mapWidth) * 50,
+        x: u.tile() % mapWidth,
+        y: Math.floor(u.tile() / mapWidth),
         r: 150 - 480 / (u.level() + 5),
       });
     }
   }
 
   return {
-    srcX: (mySiloTile % mapWidth) * 50,
-    srcY: Math.floor(mySiloTile / mapWidth) * 50,
+    srcX: mySiloTile % mapWidth,
+    srcY: Math.floor(mySiloTile / mapWidth),
     directionUp: true,
     sams: extractedSams,
   };

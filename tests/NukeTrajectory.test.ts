@@ -2,6 +2,7 @@ import {
   buildNukeTrajectory,
   computeNukeControlPoints,
   computeTrajectoryThresholds,
+  samRange,
 } from "../src/client/render/gl/utils/NukeTrajectory";
 
 // A large map height so the parabola arc isn't clamped.
@@ -62,7 +63,7 @@ describe("NukeTrajectory thresholds", () => {
     const srcY = 108;
     const samX = 984;
     const samY = 380;
-    const r = 150 - 480 / 11; // Level 6 SAM exact radius
+    const r = samRange(6); // Level 6 SAM exact radius
     const sams = [{ x: samX, y: samY, r }];
 
     // Direct intercept cell

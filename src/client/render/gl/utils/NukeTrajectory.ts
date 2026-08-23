@@ -17,6 +17,7 @@ const THRESHOLD_SAMPLES = 32;
 const MAX_SAM_RANGE = 150;
 const SAM_RANGE_DIVISOR = 480;
 const SAM_RANGE_OFFSET = 5;
+const SAM_SAFETY_MARGIN = 0.75;
 
 export function samRange(level: number): number {
   return MAX_SAM_RANGE - SAM_RANGE_DIVISOR / (level + SAM_RANGE_OFFSET);
@@ -164,6 +165,8 @@ export function computeTrajectoryThresholds(
 
   const dt = 1.0 / THRESHOLD_SAMPLES;
 
+  // dstX and dstY represent the rounded integer target tile coordinates (unlike cp.p3x/p3y
+  // which track the live float cursor for GPU rendering), ensuring threshold math matches Core.
   const polyCx = 3 * (cp.p1x - cp.p0x);
   const polyBx = 3 * (cp.p2x - 2 * cp.p1x + cp.p0x);
   const polyAx = dstX - 3 * cp.p2x + 3 * cp.p1x - cp.p0x;
@@ -283,15 +286,17 @@ export function computeTrajectoryThresholds(
       const segDy = y - prevY;
       const l2 = segDx * segDx + segDy * segDy;
       const invL2 = l2 === 0 ? 0 : 1.0 / l2;
+      const maxDist = Math.sqrt(l2) + MAX_SAM_RANGE + SAM_SAFETY_MARGIN;
+      const maxDSrcSq = maxDist * maxDist;
 
       for (let s = 0; s < samLen; s++) {
         const sam = sams[s];
 
-        // Fast proximity rejection
+        // Fast proximity rejection based on maximum reachable distance of this segment
         const dxSam = sam.x - prevX;
         const dySam = sam.y - prevY;
         const dSrcSq = dxSam * dxSam + dySam * dySam;
-        if (dSrcSq > 62500) {
+        if (dSrcSq > maxDSrcSq) {
           continue;
         }
 
@@ -309,7 +314,8 @@ export function computeTrajectoryThresholds(
         const rangeSq = sam.r * sam.r;
         // safety margin, since we compare straight lines to arcs
         // assures even on giant-world-map worst-case, it will correctly calculate
-        const candidateRangeSq = (sam.r + 0.75) * (sam.r + 0.75);
+        const candidateRangeSq =
+          (sam.r + SAM_SAFETY_MARGIN) * (sam.r + SAM_SAFETY_MARGIN);
         if (dSq <= candidateRangeSq) {
           const lo =
             tUntargetableEnd >= 0 && tPrev < tUntargetableEnd
