@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import {
   Difficulty,
   Game,
@@ -18,6 +19,8 @@ import {
 import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "./TestConfig";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function setup(
   mapName: string,
