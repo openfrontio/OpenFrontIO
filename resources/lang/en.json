@@ -484,6 +484,16 @@
     "verified_name": "Verified username",
     "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
   },
+  "desktop_session": {
+    "generic": "Couldn't sign in to your OpenFront account",
+    "network": "Can't reach OpenFront. Check your connection.",
+    "retry": "Retry",
+    "retrying": "Signing in…",
+    "steam_backend": "Steam is having trouble signing you in. Try again shortly.",
+    "steam_rejected": "Steam couldn't confirm your account. Restarting Steam usually fixes this.",
+    "steam_unavailable": "Steam isn't running. Start Steam to play online.",
+    "steam_wedged": "Steam couldn't verify your session. Restarting Steam usually fixes this."
+  },
   "desktop_update": {
     "blocked": "A Steam update is required for the latest version",
     "downloading": "Downloading update… {percent}%",

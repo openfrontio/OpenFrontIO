@@ -118,7 +118,7 @@ beforeEach(async () => {
   stub("join-lobby-modal", { open: joinOpen });
   stub("host-lobby-modal", { open: hostOpen });
   stub("single-player-modal", { open: vi.fn() });
-  stub("desktop-update-bar", { wiggle });
+  stub("desktop-status-bar", { wiggle });
   (window as { showPage?: (id: string) => void }).showPage = vi.fn();
   // validateAndJoin dispatches "join-lobby" as a bubbling/composed CustomEvent
   // rather than calling a modal's open() -- catch it at the document the same

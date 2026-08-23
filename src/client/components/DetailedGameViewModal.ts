@@ -752,7 +752,7 @@ export class DetailedGameViewModal extends BaseModal {
   private blockedByUpdate(): boolean {
     if (!shouldBlockMultiplayerAction(this.desktopUpdateState)) return false;
     (
-      document.querySelector("desktop-update-bar") as
+      document.querySelector("desktop-status-bar") as
         | (HTMLElement & { wiggle?: () => void })
         | null
     )?.wiggle?.();

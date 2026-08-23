@@ -327,7 +327,7 @@ export class GameModeSelector extends LitElement {
     // degrades to a silent no-op in that case instead of firing an event with
     // no listener.
     (
-      document.querySelector("desktop-update-bar") as
+      document.querySelector("desktop-status-bar") as
         | (HTMLElement & { wiggle?: () => void })
         | null
     )?.wiggle?.();

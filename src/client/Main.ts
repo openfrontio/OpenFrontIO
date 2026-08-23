@@ -75,7 +75,7 @@ import { genAnonUsername, UsernameInput } from "./UsernameInput";
 import { incrementGamesPlayed, translateText } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
-import "./components/DesktopUpdateBar";
+import "./components/DesktopStatusBar";
 import "./components/MarketingConsentToast";
 import "./components/PurchaseNudgeModal";
 import {
