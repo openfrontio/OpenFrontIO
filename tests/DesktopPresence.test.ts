@@ -1,0 +1,96 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { desktopPresence } from "../src/client/DesktopPresence";
+
+beforeEach(() => {
+  delete (window as any).openfrontDesktop;
+});
+
+describe("DesktopPresence", () => {
+  it("degrades to safe defaults without the bridge", async () => {
+    expect(desktopPresence.isAvailable()).toBe(false);
+    expect(() => desktopPresence.set({ state: "menu" })).not.toThrow();
+    expect(await desktopPresence.consumePendingInvite()).toBeNull();
+    expect(await desktopPresence.openInviteDialog()).toBe(false);
+  });
+
+  it("isAvailable is false when shell.api is 1 (older depot)", () => {
+    (window as any).openfrontDesktop = { shell: { api: 1 } };
+    expect(desktopPresence.isAvailable()).toBe(false);
+  });
+
+  it("isAvailable is true and passes through with a full bridge at api 2", async () => {
+    const setFn = vi.fn().mockResolvedValue(undefined);
+    (window as any).openfrontDesktop = {
+      shell: { api: 2 },
+      presence: { set: setFn },
+      invite: {
+        consumePending: vi.fn().mockResolvedValue("abc123"),
+        subscribe: vi.fn(() => () => undefined),
+        openInviteDialog: vi.fn().mockResolvedValue(true),
+      },
+    };
+    expect(desktopPresence.isAvailable()).toBe(true);
+    desktopPresence.set({ state: "lobby", lobbyId: "abc123" });
+    expect(setFn).toHaveBeenCalledWith({ state: "lobby", lobbyId: "abc123" });
+    expect(await desktopPresence.consumePendingInvite()).toBe("abc123");
+    expect(await desktopPresence.openInviteDialog()).toBe(true);
+  });
+
+  it("consumePendingInvite degrades to null when bridge rejects", async () => {
+    (window as any).openfrontDesktop = {
+      shell: { api: 2 },
+      invite: { consumePending: vi.fn().mockRejectedValue(new Error("boom")) },
+    };
+    expect(await desktopPresence.consumePendingInvite()).toBeNull();
+  });
+
+  it("openInviteDialog degrades to false when bridge rejects", async () => {
+    (window as any).openfrontDesktop = {
+      shell: { api: 2 },
+      invite: {
+        openInviteDialog: vi.fn().mockRejectedValue(new Error("boom")),
+      },
+    };
+    expect(await desktopPresence.openInviteDialog()).toBe(false);
+  });
+
+  it("set does not propagate when presence.set throws synchronously", () => {
+    (window as any).openfrontDesktop = {
+      shell: { api: 2 },
+      presence: {
+        set: vi.fn(() => {
+          throw new Error("boom");
+        }),
+      },
+    };
+    expect(() => desktopPresence.set({ state: "menu" })).not.toThrow();
+  });
+
+  it("subscribeInvites always returns a callable unsubscribe, no bridge", () => {
+    const unsubscribe = desktopPresence.subscribeInvites(() => undefined);
+    expect(typeof unsubscribe).toBe("function");
+    expect(() => unsubscribe()).not.toThrow();
+  });
+
+  it("subscribeInvites always returns a callable unsubscribe, bridge without invite namespace", () => {
+    (window as any).openfrontDesktop = { shell: { api: 2 } };
+    const unsubscribe = desktopPresence.subscribeInvites(() => undefined);
+    expect(typeof unsubscribe).toBe("function");
+    expect(() => unsubscribe()).not.toThrow();
+  });
+
+  it("subscribeInvites always returns a callable unsubscribe, real bridge", () => {
+    const innerUnsubscribe = vi.fn();
+    const subscribeFn = vi.fn(() => innerUnsubscribe);
+    (window as any).openfrontDesktop = {
+      shell: { api: 2 },
+      invite: { subscribe: subscribeFn },
+    };
+    const cb = vi.fn();
+    const unsubscribe = desktopPresence.subscribeInvites(cb);
+    expect(subscribeFn).toHaveBeenCalledWith(cb);
+    expect(typeof unsubscribe).toBe("function");
+    expect(() => unsubscribe()).not.toThrow();
+    expect(innerUnsubscribe).toHaveBeenCalled();
+  });
+});
