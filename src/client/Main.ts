@@ -672,9 +672,19 @@ class Client {
       .then((gameId) => (gameId === null ? undefined : this.openInvite(gameId)))
       .catch(() => undefined);
 
-    // Invites arriving while we are already running.
-    desktopPresence.subscribeInvites((gameId) => {
-      void this.openInvite(gameId).catch(() => undefined);
+    // Invites arriving while we are already running. The pushed id is
+    // deliberately ignored: the shell parks every invite as well as pushing
+    // it, so the push is only a nudge and the parked copy is the single
+    // source of truth. Pulling here is what clears it -- otherwise leaving a
+    // game (a full page load) would re-run the pull above and force the join
+    // modal open on a match that has already finished.
+    desktopPresence.subscribeInvites(() => {
+      void desktopPresence
+        .consumePendingInvite()
+        .then((gameId) =>
+          gameId === null ? undefined : this.openInvite(gameId),
+        )
+        .catch(() => undefined);
     });
 
     const onHashUpdate = () => {
@@ -1212,6 +1222,29 @@ class Client {
   // the modal that trusts it.
   private async openInvite(gameId: string): Promise<void> {
     if (!GAME_ID_REGEX.test(gameId)) return;
+    // An invite can arrive mid-match, unlike the CrazyGames invite this path
+    // was modelled on, which only ever runs at cold start. Force-opening the
+    // join UI would leave it overlaying a game whose socket and render loop
+    // keep running underneath. Same rule the back-button exit uses: stop
+    // silently when the player is not active, ask first when they are, and
+    // drop the invite entirely if they decline.
+    if (this.lobbyHandle !== null) {
+      // stop() without force is the codebase's "is the player actually in
+      // this?" test: it tears the game down and returns true when they are
+      // not, and refuses (returning false) when they are.
+      if (!this.lobbyHandle.stop()) {
+        const confirmed = await showInGameConfirm(
+          translateText("help_modal.exit_confirmation"),
+        );
+        if (!confirmed) return;
+      }
+      // The existing in-place leave: it forces the stop, clears the URL, drops
+      // the in-game class and resets presence to the menu -- which matters
+      // because the join below is not guaranteed to follow (the player can
+      // still close the modal) and friends must not be left looking at a
+      // lobby nobody is in.
+      await this.handleLeaveLobby();
+    }
     // A cold-start invite can beat the modal's own upgrade, which would make
     // open() a silent no-op (the CrazyGames invite path waits for the same
     // reason).
