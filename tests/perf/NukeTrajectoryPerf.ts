@@ -170,7 +170,7 @@ new Benchmark.Suite()
       );
     },
   )
-  .on("cycle", (event: any) => {
+  .on("cycle", (event: Benchmark.Event) => {
     results.push(String(event.target));
   })
   .on("complete", () => {
