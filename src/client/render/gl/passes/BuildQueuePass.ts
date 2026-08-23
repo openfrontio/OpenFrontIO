@@ -2,9 +2,8 @@
  * BuildQueuePass — warship build progress badge on ports.
  *
  * A port with queued warships shows a ring over the center of its icon
- * that fills clockwise as the head of the queue is built. When more than one
- * ship is queued the queue length is drawn in the ring's center (MSDF digits,
- * same atlas as NamePass). Scales with the structure icons and hides with them
+ * that fills clockwise as the head of the queue is built, with the queue
+ * length drawn in the ring's center (MSDF digits, same atlas as NamePass). Scales with the structure icons and hides with them
  * below the dots zoom threshold. Two instanced draws per frame (ring, digits).
  */
 
@@ -224,7 +223,6 @@ export class BuildQueuePass {
       ringData[ro + 2] = progress;
       rings++;
 
-      if (unit.warshipQueueLength < 2) continue;
       const text = unit.warshipQueueLength.toString();
       layoutString(
         text,
