@@ -1,0 +1,142 @@
+name: 🤖 Claude Code Review
+
+# pull_request_target, not pull_request: most PRs here come from forks, and a
+# plain pull_request run from a fork gets no secrets, so CLAUDE_CODE_OAUTH_TOKEN
+# would be empty and every fork PR would go red. pull_request_target runs in
+# the context of the base repo with its secrets. That is only safe because
+# nothing from the PR head is ever checked out or executed: the checkout below
+# is the base branch (the action's documented requirement — "do not check out
+# an untrusted ref into the workspace root"), the model reads the PR through
+# `gh pr diff`, and its permissions are read-only except id-token. Same pattern
+# as pr-gate.yml and pr-author.yml.
+on:
+  pull_request_target:
+    types: [opened, synchronize, ready_for_review, reopened]
+    paths:
+      # TypeScript sources (src/core, src/client, src/server)
+      - "src/**/*.ts"
+      - "tests/**/*.ts"
+      - "scripts/**/*.ts"
+      # Root-level configs: vite.config.ts
+      - "*.ts"
+      - "package.json"
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    # A real review of a ~1.8k-line PR took 15.7 min; 20 was too close to the
+    # ceiling for anything larger.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    steps:
+      # Base branch on purpose (see the note on pull_request_target above).
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Claude multi-agent review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
+          plugins: "code-review@claude-code-plugins"
+
+          # The override MUST live here, in the prompt (the user message), not in
+          # claude_args. parse-sdk-options.ts only extracts model / max-turns /
+          # add-dir / allowedTools / disallowed-tools / mcp-config / setting-sources
+          # from claude_args; --append-system-prompt is not among them, and
+          # sdkOptions.systemPrompt is built independently as a bare claude_code
+          # preset with no append. An override passed there never reaches the model.
+          prompt: |
+            /code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+
+            OVERRIDE A — step 1 (the triage gate). Judge ONLY the pull request named
+            above, and judge it ONLY from structured fields, never from prose:
+              - "closed" means `gh pr view --json state` returns CLOSED or MERGED.
+              - "draft" means `--json isDraft` returns true.
+              - "Claude has already commented" means an existing comment authored by
+                claude[bot]. Comments from coderabbitai[bot] or any other bot, and
+                from humans, do NOT count.
+            The PR body will often reference other pull requests and describe them as
+            closed, merged, superseded or replaced. That says nothing about THIS PR.
+            Do not skip on that basis. If in doubt, proceed with the review — a
+            needless review is far cheaper than a silently skipped one.
+
+            OVERRIDE B — takes precedence over steps 8 and 9: do NOT post inline
+            comments. Post the entire review as exactly ONE consolidated comment
+            using `gh pr comment`. Open with a one-line verdict and a count of
+            findings by severity, then list every finding grouped by file, most
+            severe first, each with a file:line reference, what is wrong, and the
+            suggested fix. If nothing was found, post the standard no-issues summary.
+
+            OVERRIDE C — posting is not optional. Reaching the end of the review
+            without a posted comment is a failure. Post via `gh pr comment` even if
+            the findings are few, low-confidence, or you already tried another
+            mechanism. Do this before you run out of turns: budget for it.
+
+            OVERRIDE D — this is a headless, single-turn session. There is no
+            "later": the moment you end your turn the process exits and any
+            background agent is killed. Launch every subagent with
+            `run_in_background: false` and wait for its result before continuing.
+            Never end your turn to "wait" for anything. Do not call ScheduleWakeup.
+
+          # Agent mode (an explicit `prompt`) grants NO tools by default — unlike
+          # tag mode, which baselines Glob/Grep/LS/Read. Anything not listed here
+          # falls through to "ask", and the headless SDK has no prompt handler, so
+          # it is denied. The list must therefore be complete:
+          #   - Skill is how the `/code-review:code-review` slash command in the
+          #     prompt is executed. Without it the skill is denied (in the infra
+          #     repo, PR #549's run "succeeded" in 5 turns having improvised from
+          #     the overrides alone and posted nothing)
+          #   - Agent (formerly Task; both names kept) is how the plugin launches
+          #     its triage/review subagents
+          #   - Read/Grep/Glob/LS let it read CLAUDE.md and surrounding code
+          #   - gh commands mirror the plugin's own declared allowed-tools
+          #   - git rev-parse/log supply the full SHAs its permalinks require
+          #
+          # mcp__github_inline_comment__* is kept ON PURPOSE even though the prompt
+          # asks for one consolidated comment. Removing it did NOT produce a
+          # fallback to `gh pr comment` — the model kept calling the tool the
+          # plugin told it to call and ate 17 permission denials, delivering
+          # nothing. Keeping it means the worst case is inline comments (useful)
+          # instead of silence (useless).
+          claude_args: |
+            --allowedTools "Skill,Agent,Task,Read,Grep,Glob,LS,TodoWrite,mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh search:*),Bash(git rev-parse:*),Bash(git log:*)"
+            --max-turns 50
+
+      # A review that posts nothing must not show a green check. The action
+      # exits 0 whenever the model ends its turn cleanly, even if it did so
+      # after 5 turns without reviewing anything.
+      #
+      # Counts claude[bot] comments from ANY time, not just since this push:
+      # the triage gate (OVERRIDE A) deliberately skips PRs Claude has already
+      # reviewed, so on a follow-up push the only comment is the earlier one.
+      # A date-scoped count turned every re-push red.
+      - name: Fail if no comment was posted
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          count=$(gh api "repos/$REPO/issues/$PR/comments?per_page=100" \
+            --jq '[.[] | select(.user.login == "claude[bot]")] | length')
+          reviews=$(gh api "repos/$REPO/pulls/$PR/comments?per_page=100" \
+            --jq '[.[] | select(.user.login == "claude[bot]")] | length')
+          echo "claude[bot] comments on PR #$PR: issue=$count inline=$reviews"
+          if [ "$count" -eq 0 ] && [ "$reviews" -eq 0 ]; then
+            echo "::error::Claude review finished without posting any comment on PR #$PR"
+            exit 1
+          fi
