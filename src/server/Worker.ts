@@ -21,6 +21,7 @@ import { decodeClientMessage, encodeServerMessage } from "../core/ZbinWire";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
 import { censorPlayer } from "./Censor";
 import { Client } from "./Client";
+import { gameApiCors } from "./GameApiCors";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import type { GameServer } from "./GameServer";
@@ -142,6 +143,12 @@ export async function startWorker() {
       },
     }),
   );
+  // Before the rate limiter on purpose: a 429 still has to carry the CORS
+  // headers, or the desktop client sees an opaque CORS failure instead of the
+  // real status. Preflights are answered here and never reach the limiter,
+  // which is fine — they do no work.
+  app.use("/api", gameApiCors);
+
   app.use(
     rateLimit({
       windowMs: 1000, // 1 second
