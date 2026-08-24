@@ -7,8 +7,8 @@ name: 🤖 Claude Code Review
 # nothing from the PR head is ever checked out or executed: the checkout below
 # is the base branch (the action's documented requirement — "do not check out
 # an untrusted ref into the workspace root"), the model reads the PR through
-# `gh pr diff`, and its permissions are read-only except id-token. Same pattern
-# as pr-gate.yml and pr-author.yml.
+# `gh pr diff`, and the job token can only read the repo and write PR
+# comments. Same pattern as pr-gate.yml and pr-author.yml.
 on:
   pull_request_target:
     types: [opened, synchronize, ready_for_review, reopened]
@@ -32,11 +32,13 @@ jobs:
     # A real review of a ~1.8k-line PR took 15.7 min; 20 was too close to the
     # ceiling for anything larger.
     timeout-minutes: 30
+    # pull-requests: write is the minimum for `gh pr comment` and the inline
+    # comment tool. No id-token: that is only for the action's OIDC exchange
+    # with the Claude GitHub App, which github_token below replaces.
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
-      id-token: write
     steps:
       # Base branch on purpose (see the note on pull_request_target above).
       - uses: actions/checkout@v7
@@ -49,6 +51,22 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # The action refuses to run for an actor without write access to the
+          # repo (src/github/validation/permissions.ts), and on a fork PR the
+          # actor is the fork's author. allowed_non_write_users is the documented
+          # bypass, and it only takes effect when github_token is passed
+          # explicitly — with the default Claude-App OIDC auth it is ignored.
+          # Consequences of the explicit token:
+          #   - comments are posted as github-actions[bot], not claude[bot]
+          #     (docs/faq.md), so the check below looks for that login and a
+          #     marker line, since pr-gate.yml comments under the same login
+          #   - the Claude GitHub App does not need to be installed here
+          # The bypass is acceptable because this job's token is limited to
+          # PR comments (see permissions) and the model's Bash is limited to
+          # the read-only gh/git commands plus `gh pr comment`.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          allowed_non_write_users: "*"
 
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
@@ -76,8 +94,9 @@ jobs:
 
             OVERRIDE B — takes precedence over steps 8 and 9: do NOT post inline
             comments. Post the entire review as exactly ONE consolidated comment
-            using `gh pr comment`. Open with a one-line verdict and a count of
-            findings by severity, then list every finding grouped by file, most
+            using `gh pr comment`. The comment MUST begin with this exact first
+            line, verbatim, so CI can find it: `## 🤖 Claude Code Review`. Then
+            give a one-line verdict and a count of findings by severity, then list every finding grouped by file, most
             severe first, each with a file:line reference, what is wrong, and the
             suggested fix. If nothing was found, post the standard no-issues summary.
 
@@ -120,10 +139,17 @@ jobs:
       # exits 0 whenever the model ends its turn cleanly, even if it did so
       # after 5 turns without reviewing anything.
       #
-      # Counts claude[bot] comments from ANY time, not just since this push:
-      # the triage gate (OVERRIDE A) deliberately skips PRs Claude has already
-      # reviewed, so on a follow-up push the only comment is the earlier one.
-      # A date-scoped count turned every re-push red.
+      # Counts comments from ANY time, not just since this push: the triage
+      # gate (OVERRIDE A) deliberately skips PRs Claude has already reviewed,
+      # so on a follow-up push the only comment is the earlier one. A
+      # date-scoped count turned every re-push red.
+      #
+      # Comments are posted as github-actions[bot] (see github_token above),
+      # and pr-gate.yml posts under that login too, so a PR comment only
+      # counts if it carries the marker line OVERRIDE B demands. Inline review
+      # comments have no marker but nothing else here posts those.
+      #
+      # --paginate: a PR can have far more than 100 comments before Claude's.
       - name: Fail if no comment was posted
         env:
           GH_TOKEN: ${{ github.token }}
@@ -131,11 +157,13 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          count=$(gh api "repos/$REPO/issues/$PR/comments?per_page=100" \
-            --jq '[.[] | select(.user.login == "claude[bot]")] | length')
-          reviews=$(gh api "repos/$REPO/pulls/$PR/comments?per_page=100" \
-            --jq '[.[] | select(.user.login == "claude[bot]")] | length')
-          echo "claude[bot] comments on PR #$PR: issue=$count inline=$reviews"
+          count=$(gh api --paginate "repos/$REPO/issues/$PR/comments?per_page=100" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("## 🤖 Claude Code Review"))) | .id' \
+            | wc -l)
+          reviews=$(gh api --paginate "repos/$REPO/pulls/$PR/comments?per_page=100" \
+            --jq '.[] | select(.user.login == "github-actions[bot]") | .id' \
+            | wc -l)
+          echo "Claude review comments on PR #$PR: issue=$count inline=$reviews"
           if [ "$count" -eq 0 ] && [ "$reviews" -eq 0 ]; then
             echo "::error::Claude review finished without posting any comment on PR #$PR"
             exit 1
