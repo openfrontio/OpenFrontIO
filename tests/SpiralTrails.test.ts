@@ -45,6 +45,8 @@ function makeUnit(
     targetTile: null,
     troops: 0,
     missileTimerQueue: [],
+    warshipQueueLength: 0,
+    warshipBuildStartTick: null,
     level: 1,
     veterancy: 0,
     hasTrainStation: false,

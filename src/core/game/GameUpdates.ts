@@ -197,6 +197,8 @@ export interface UnitUpdate {
   health?: number;
   underConstruction?: boolean;
   missileTimerQueue: number[];
+  warshipQueueLength?: number; // Only for ports
+  warshipBuildStartTick?: Tick; // Only for ports
   level: number;
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains

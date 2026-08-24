@@ -401,6 +401,7 @@ export class Config {
             (numUnits: number) => Math.min(1_000_000, (numUnits + 1) * 250_000),
             UnitType.Warship,
           ),
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
           maxHealth: 1000,
         };
         break;

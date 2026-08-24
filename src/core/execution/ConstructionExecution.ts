@@ -97,6 +97,31 @@ export class ConstructionExecution implements Execution {
     this.ticksUntilComplete--;
   }
 
+  /**
+   * Warships are built by a port over `constructionDuration` ticks. Gold is
+   * charged now; the port's queue spawns the ship (see PortExecution). With
+   * instant build the ship spawns immediately as before.
+   */
+  private queueWarship() {
+    const spawnTile = this.player.canBuild(UnitType.Warship, this.tile);
+    if (spawnTile === false) {
+      console.warn(`cannot build warship at ${this.tile}`);
+      return;
+    }
+    const duration =
+      this.mg.unitInfo(UnitType.Warship).constructionDuration ?? 0;
+    const port = this.player
+      .units(UnitType.Port)
+      .find((p) => p.tile() === spawnTile);
+    if (duration === 0 || port === undefined) {
+      this.mg.addExecution(
+        new WarshipExecution({ owner: this.player, patrolTile: this.tile }),
+      );
+      return;
+    }
+    this.player.queueWarship(port, this.tile);
+  }
+
   private completeConstruction() {
     if (this.structure) {
       this.structure.setUnderConstruction(false);
@@ -126,9 +151,7 @@ export class ConstructionExecution implements Execution {
         this.mg.addExecution(new MirvExecution(player, this.tile));
         break;
       case UnitType.Warship:
-        this.mg.addExecution(
-          new WarshipExecution({ owner: player, patrolTile: this.tile }),
-        );
+        this.queueWarship();
         break;
       case UnitType.Port:
         this.mg.addExecution(new PortExecution(this.structure!));
