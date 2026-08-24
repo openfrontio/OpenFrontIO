@@ -151,6 +151,7 @@ export interface PublicGameModifiers {
   isPeaceTime?: boolean;
   isWaterNukes?: boolean;
   isDoomsdayClock?: boolean;
+  isOvertime?: boolean;
 }
 
 // Largest bulk-purchase amount an intent may carry (mirrored by the intent

@@ -395,6 +395,7 @@ export const GameConfigSchema = z.object({
       isPeaceTime: z.boolean().optional(),
       isWaterNukes: z.boolean().optional(),
       isDoomsdayClock: z.boolean().optional(),
+      isOvertime: z.boolean().optional(),
     })
     .optional(),
   nations: z

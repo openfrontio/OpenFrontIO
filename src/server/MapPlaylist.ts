@@ -30,6 +30,9 @@ const SPECIAL_ONLY_MAPS = new Set<GameMapType>([GameMapType.ArchipelagoSea]);
 // Hard cap on player count for performance. Applied after compact-map reduction.
 const MAX_PLAYER_COUNT = 125;
 
+// Share of public FFA games that run with overtime enabled.
+const OVERTIME_FFA_CHANCE = 0.25;
+
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: 2, weight: 10 },
   { config: 3, weight: 10 },
@@ -148,6 +151,11 @@ export class MapPlaylist {
 
     let isCompact: boolean | undefined =
       this.playlists[type].length % 3 === 0 || undefined;
+    // Overtime (the win threshold sinking after 30 minutes) runs as a
+    // modifier on a quarter of public FFA games.
+    const isOvertime: boolean | undefined =
+      (mode === GameMode.FFA && Math.random() < OVERTIME_FFA_CHANCE) ||
+      undefined;
     if (
       isCompact &&
       mode === GameMode.Team &&
@@ -165,6 +173,7 @@ export class MapPlaylist {
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: {
         isCompact,
+        isOvertime,
       },
       difficulty:
         playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Medium,
@@ -183,9 +192,7 @@ export class MapPlaylist {
       spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
       disableClanTags: mode === GameMode.FFA ? true : undefined,
-      // Public lobbies are untimed, so overtime (the win threshold sinking
-      // after 30 minutes) is on by default as the anti-stalemate backstop.
-      overtime: { enabled: true },
+      overtime: isOvertime ? { enabled: true } : undefined,
     } satisfies GameConfig;
   }
 
@@ -401,9 +408,6 @@ export class MapPlaylist {
       disabledUnits,
       waterNukes: isWaterNukes ? true : undefined,
       disableClanTags: mode === GameMode.FFA ? true : undefined,
-      // Untimed like the standard rotation: overtime on by default (the
-      // doomsday-clock presets keep it too — it's a harmless backstop there).
-      overtime: { enabled: true },
     } satisfies GameConfig;
   }
 
