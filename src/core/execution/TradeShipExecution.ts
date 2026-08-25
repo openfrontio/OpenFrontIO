@@ -76,6 +76,7 @@ export class TradeShipExecution implements Execution {
         undefined,
         { name: tradeShipOwner.displayName() },
         this.tradeShip.id(),
+        tradeShipOwner.id(),
       );
     }
 
@@ -189,6 +190,8 @@ export class TradeShipExecution implements Execution {
           gold: renderNumber(gold),
           name: this.origOwner.displayName(),
         },
+        undefined,
+        this.origOwner.id(),
       );
       // Record stats
       this.mg

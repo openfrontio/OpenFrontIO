@@ -156,6 +156,7 @@ describe("TradeShipExecution", () => {
       undefined,
       { name: pirate.displayName() },
       tradeShip.id(),
+      pirate.id(),
     );
   });
 

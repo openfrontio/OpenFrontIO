@@ -248,6 +248,27 @@ export class EventsDisplay extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  // The core simulation runs identically for every client and has no notion
+  // of Anonymous Names, so a params.name value it bakes into a DisplayEvent
+  // is always the subject's real name. When the message identifies that
+  // subject via focusPlayerID, re-resolve the name through this viewer's own
+  // PlayerView instead, which already respects the local Anonymous Names
+  // setting - otherwise a message like "X conquered you" leaks X's real name
+  // even when this viewer has Anonymous Names turned on.
+  private resolveParams(
+    event: DisplayMessageUpdate,
+  ): Record<string, string | number> {
+    const params = event.params;
+    if (params?.name === undefined || event.focusPlayerID === undefined) {
+      return params ?? {};
+    }
+    const subject = this.game.playerBySmallID(event.focusPlayerID);
+    if (!subject.isPlayer()) {
+      return params;
+    }
+    return { ...params, name: subject.displayName() };
+  }
+
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
     const myPlayer = this.game.myPlayer();
     if (
@@ -265,7 +286,7 @@ export class EventsDisplay extends LitElement implements Controller {
 
     let description: string = event.message;
     if (event.message.startsWith("events_display.")) {
-      description = translateText(event.message, event.params ?? {});
+      description = translateText(event.message, this.resolveParams(event));
     }
 
     const unitView =
