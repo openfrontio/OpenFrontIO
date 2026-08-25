@@ -117,12 +117,44 @@ describe("Donate gold to an ally", () => {
     const recipientGoldBefore = recipient.gold();
     game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, 5000));
 
-    for (let i = 0; i < 5; i++) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
 
-    expect(donor.gold() < donorGoldBefore).toBe(true);
-    expect(recipient.gold() > recipientGoldBefore).toBe(true);
+    // 1 tick elapsed; PlayerExecution adds 100n passive income from workers
+    const passiveIncome = 100n;
+    expect(donor.gold()).toBe(donorGoldBefore - 5000n + passiveIncome);
+    expect(recipient.gold()).toBe(recipientGoldBefore + 5000n + passiveIncome);
+  });
+
+  it("Gold should default to 1/3 when null is passed", async () => {
+    const game = await setup("ocean_and_land", {
+      infiniteGold: false,
+      donateGold: true,
+    });
+    const dInfo = new PlayerInfo("d", PlayerType.Human, null, "d_id");
+    const rInfo = new PlayerInfo("r", PlayerType.Human, null, "r_id");
+    game.addPlayer(dInfo);
+    game.addPlayer(rInfo);
+    const donor = game.player(dInfo.id),
+      recipient = game.player(rInfo.id);
+    game.addExecution(
+      new SpawnExecution("g", dInfo, game.ref(0, 10)),
+      new SpawnExecution("g", rInfo, game.ref(0, 15)),
+    );
+    donor.createAllianceRequest(recipient)?.accept();
+    game.executeNextTick();
+    const donation = new DonateGoldExecution(donor, rInfo.id, null);
+    donor.addGold(9000n);
+    const goldBefore = donor.gold(),
+      recBefore = recipient.gold();
+    game.addExecution(donation);
+    game.executeNextTick();
+    game.executeNextTick();
+    // 1 tick elapsed for donation transfer; PlayerExecution adds 100n passive income from workers
+    const passiveIncome = 100n;
+    const expectedDonation = goldBefore / 3n;
+    expect(donor.gold()).toBe(goldBefore - expectedDonation + passiveIncome);
+    expect(recipient.gold()).toBe(recBefore + expectedDonation + passiveIncome);
   });
 });
 
