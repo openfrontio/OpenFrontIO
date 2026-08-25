@@ -636,3 +636,90 @@ describe("Attack immunity", () => {
     expect(nation.outgoingAttacks()).toHaveLength(0);
   });
 });
+
+describe("Fractional attack troop duplication (#4948)", () => {
+  let dupeGame: Game;
+  let dupeAttacker: Player;
+  let dupeDefender: Player;
+
+  beforeEach(async () => {
+    dupeGame = await setup("ocean_and_land", {
+      infiniteGold: true,
+      instantBuild: true,
+    });
+    const attackerInfo = new PlayerInfo(
+      "attacker dude",
+      PlayerType.Human,
+      null,
+      "attacker_id",
+    );
+    const defenderInfo = new PlayerInfo(
+      "defender dude",
+      PlayerType.Human,
+      null,
+      "defender_id",
+    );
+    dupeGame.addPlayer(attackerInfo);
+    dupeGame.addPlayer(defenderInfo);
+
+    dupeGame.addExecution(
+      new SpawnExecution(
+        gameID,
+        dupeGame.player(attackerInfo.id).info(),
+        dupeGame.ref(0, 10),
+      ),
+      new SpawnExecution(
+        gameID,
+        dupeGame.player(defenderInfo.id).info(),
+        dupeGame.ref(0, 15),
+      ),
+    );
+    dupeGame.executeNextTick();
+    dupeGame.executeNextTick();
+
+    dupeAttacker = dupeGame.player(attackerInfo.id);
+    dupeDefender = dupeGame.player(defenderInfo.id);
+  });
+
+  function outgoingTroops(): number {
+    return dupeAttacker
+      .outgoingAttacks()
+      .reduce((sum, attack) => sum + attack.troops(), 0);
+  }
+
+  it("carries only the troops that were actually deducted", () => {
+    dupeGame.addExecution(
+      new AttackExecution(50.7, dupeAttacker, dupeDefender.id()),
+    );
+    dupeGame.executeNextTick();
+
+    // removeTroops() floors, so 50.7 costs the owner 50. The attack must not
+    // be worth more than that, or retreat refunds troops nobody paid for.
+    expect(outgoingTroops()).toBe(50);
+  });
+
+  it("does not accumulate value from a burst of sub-troop attacks", () => {
+    for (let i = 0; i < 10; i++) {
+      dupeGame.addExecution(
+        new AttackExecution(0.999, dupeAttacker, dupeDefender.id()),
+      );
+    }
+    dupeGame.executeNextTick();
+
+    // Each request deducts 0. Combining ten of them must not produce an
+    // attack worth 9.99 that retreat would refund as 9 free troops.
+    expect(outgoingTroops()).toBe(0);
+  });
+
+  it("keeps attack troops integral so combining cannot drift", () => {
+    for (let i = 0; i < 5; i++) {
+      dupeGame.addExecution(
+        new AttackExecution(20.4, dupeAttacker, dupeDefender.id()),
+      );
+    }
+    dupeGame.executeNextTick();
+
+    expect(Number.isInteger(outgoingTroops())).toBe(true);
+    expect(outgoingTroops()).toBe(100);
+  });
+});
