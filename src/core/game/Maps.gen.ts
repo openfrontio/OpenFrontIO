@@ -3,6 +3,7 @@
 // Regenerate with `npm run gen-maps`.
 
 export enum GameMapType {
+  AbruzzoPreromano = "Abruzzo Preromano", // map-generator/assets/maps/abruzzopreromano/info.json
   Achiran = "Achiran", // map-generator/assets/maps/achiran/info.json
   Aegean = "Aegean", // map-generator/assets/maps/aegean/info.json
   Africa = "Africa", // map-generator/assets/maps/africa/info.json
@@ -203,6 +204,14 @@ export interface MapLayer {
 }
 
 export const maps: readonly MapInfo[] = [
+  {
+    id: "AbruzzoPreromano",
+    type: GameMapType.AbruzzoPreromano,
+    translationKey: "map.abruzzopreromano",
+    categories: ["europe"],
+    multiplayerFrequency: 2,
+    themes: ["europe"],
+  },
   {
     id: "Achiran",
     type: GameMapType.Achiran,

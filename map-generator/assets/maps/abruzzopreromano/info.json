@@ -1,0 +1,21 @@
+{
+  "id": "AbruzzoPreromano",
+  "name": "Abruzzo Preromano",
+  "translation_key": "map.abruzzopreromano",
+  "categories": ["europe"],
+  "multiplayer_frequency": 2,
+  "nations": [
+    { "coordinates": [1084, 384], "name": "Vestini", "flag": "Vestini" },
+    { "coordinates": [999, 282], "name": "Pretuzi", "flag": "Pretuzi" },
+    { "coordinates": [1284, 451], "name": "Marrucini", "flag": "Marrucini" },
+    { "coordinates": [1138, 633], "name": "Peligni", "flag": "Peligni" },
+    { "coordinates": [951, 672], "name": "Marsi", "flag": "Marsi" },
+    { "coordinates": [720, 627], "name": "Equi", "flag": "Equi" },
+    { "coordinates": [793, 421], "name": "Sabini", "flag": "Sabini" },
+    { "coordinates": [1465, 966], "name": "Pentri", "flag": "Pentri" },
+    { "coordinates": [1271, 711], "name": "Carricini", "flag": "Carricini" },
+    { "coordinates": [1532, 627], "name": "Frentani", "flag": "Frentani" },
+    { "coordinates": [270, 722], "name": "Roma", "flag": "Roma" }
+  ],
+  "themes": ["europe"]
+}

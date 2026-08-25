@@ -104,6 +104,12 @@ Polar Geospatial Center, 2018, "PGC Map Catalog", https://doi.org/10.7910/DVN/6R
 © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
 Licensed under ODbL
 
+### Abruzzo Preromano Map
+
+Region and coastline boundaries derived from ISTAT administrative data via [openpolis/geojson-italy](https://github.com/openpolis/geojson-italy).
+
+Nation flags are original heraldic-style designs created for this map, referencing historically attested symbols where documented in Italic-peoples scholarship (e.g. the Guerriero di Capestrano for the Vestini, the Angizia serpent cult for the Marsi, the Dioscuri for the Peligni). Peoples with no specifically attested emblem in the sources consulted use a generic stylized motif instead.
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)

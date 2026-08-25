@@ -1,0 +1,117 @@
+{
+  "categories": [
+    "europe"
+  ],
+  "id": "AbruzzoPreromano",
+  "map": {
+    "height": 1236,
+    "num_land_tiles": 1724610,
+    "width": 1972
+  },
+  "map16x": {
+    "height": 309,
+    "num_land_tiles": 106309,
+    "width": 493
+  },
+  "map4x": {
+    "height": 618,
+    "num_land_tiles": 429164,
+    "width": 986
+  },
+  "multiplayer_frequency": 2,
+  "name": "Abruzzo Preromano",
+  "nations": [
+    {
+      "coordinates": [
+        1084,
+        384
+      ],
+      "flag": "Vestini",
+      "name": "Vestini"
+    },
+    {
+      "coordinates": [
+        999,
+        282
+      ],
+      "flag": "Pretuzi",
+      "name": "Pretuzi"
+    },
+    {
+      "coordinates": [
+        1284,
+        451
+      ],
+      "flag": "Marrucini",
+      "name": "Marrucini"
+    },
+    {
+      "coordinates": [
+        1138,
+        633
+      ],
+      "flag": "Peligni",
+      "name": "Peligni"
+    },
+    {
+      "coordinates": [
+        951,
+        672
+      ],
+      "flag": "Marsi",
+      "name": "Marsi"
+    },
+    {
+      "coordinates": [
+        720,
+        627
+      ],
+      "flag": "Equi",
+      "name": "Equi"
+    },
+    {
+      "coordinates": [
+        793,
+        421
+      ],
+      "flag": "Sabini",
+      "name": "Sabini"
+    },
+    {
+      "coordinates": [
+        1465,
+        966
+      ],
+      "flag": "Pentri",
+      "name": "Pentri"
+    },
+    {
+      "coordinates": [
+        1271,
+        711
+      ],
+      "flag": "Carricini",
+      "name": "Carricini"
+    },
+    {
+      "coordinates": [
+        1532,
+        627
+      ],
+      "flag": "Frentani",
+      "name": "Frentani"
+    },
+    {
+      "coordinates": [
+        270,
+        722
+      ],
+      "flag": "Roma",
+      "name": "Roma"
+    }
+  ],
+  "themes": [
+    "europe"
+  ],
+  "translation_key": "map.abruzzopreromano"
+}
