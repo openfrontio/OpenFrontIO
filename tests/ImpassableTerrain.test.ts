@@ -3,6 +3,7 @@ import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
+import { PlayerExecution } from "../src/core/execution/PlayerExecution";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import {
   Difficulty,
@@ -18,8 +19,10 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { createGame } from "../src/core/game/GameImpl";
+import { TileRef } from "../src/core/game/GameMap";
 import { genTerrainFromBin } from "../src/core/game/TerrainMapLoader";
 import { UserSettings } from "../src/core/game/UserSettings";
+import { PathFinding } from "../src/core/pathfinding/PathFinder";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { GameConfig } from "../src/core/Schemas";
 import { TestConfig } from "./util/TestConfig";
@@ -136,8 +139,8 @@ describe("Impassable Terrain", () => {
     expect(game.terrainType(game.ref(WALL_X, 50))).toBe(TerrainType.Impassable);
   });
 
-  test("isLand returns false for impassable (can't pathfind trains through it)", () => {
-    expect(game.isLand(game.ref(WALL_X, 50))).toBe(false);
+  test("isLand returns true for impassable (solid for pathfinding)", () => {
+    expect(game.isLand(game.ref(WALL_X, 50))).toBe(true);
   });
 
   test("numLandTiles excludes impassable tiles", () => {
@@ -153,6 +156,64 @@ describe("Impassable Terrain", () => {
   test("conquer succeeds on normal land", () => {
     expect(() => player.conquer(game.ref(50, 50))).not.toThrow();
     expect(game.hasOwner(game.ref(50, 50))).toBe(true);
+  });
+
+  // ── Map edge / enclosure ─────────────────────────────────────────────
+
+  test("isOnEdgeOfMap is true next to impassable terrain, false elsewhere", () => {
+    expect(game.isOnEdgeOfMap(game.ref(WALL_X - 1, 50))).toBe(true);
+    expect(game.isOnEdgeOfMap(game.ref(WALL_X + WALL_WIDTH, 50))).toBe(true);
+    expect(game.isOnEdgeOfMap(game.ref(WALL_X - 2, 50))).toBe(false);
+    expect(game.isOnEdgeOfMap(game.ref(50, 50))).toBe(false);
+    expect(game.isOnEdgeOfMap(game.ref(0, 50))).toBe(true);
+    expect(game.isOnEdgeOfMap(game.ref(50, MAP_H - 1))).toBe(true);
+  });
+
+  test("cluster hugging the impassable wall is not annexed", () => {
+    game.addExecution(new PlayerExecution(player));
+    game.addExecution(new PlayerExecution(other));
+
+    // Player's main (largest) cluster, far from the wall.
+    for (let x = 10; x < 20; x++) {
+      for (let y = 10; y < 20; y++) {
+        player.conquer(game.ref(x, y));
+      }
+    }
+    // Small pocket against the wall; the wall is its fourth side.
+    const pocket: TileRef[] = [];
+    for (let x = WALL_X - 3; x < WALL_X; x++) {
+      for (let y = 50; y < 53; y++) {
+        pocket.push(game.ref(x, y));
+        player.conquer(game.ref(x, y));
+      }
+    }
+    // Other player owns everything around the pocket on the other 3 sides.
+    for (let x = WALL_X - 10; x < WALL_X; x++) {
+      for (let y = 40; y < 63; y++) {
+        const t = game.ref(x, y);
+        if (game.ownerID(t) === 0) other.conquer(t);
+      }
+    }
+
+    // Mirror NoInverseAnnexation: let cluster calc run, then change tiles.
+    executeTicks(game, 20);
+    other.conquer(game.ref(WALL_X - 10, 39));
+    player.conquer(game.ref(20, 10));
+    executeTicks(game, 50);
+
+    for (const t of pocket) {
+      expect(game.ownerID(t)).toBe(player.smallID());
+    }
+  });
+
+  // ── Rail pathfinding ─────────────────────────────────────────────────
+
+  test("rail pathfinding does not route through impassable terrain", () => {
+    const path = PathFinding.Rail(game).findPath(
+      game.ref(WALL_X - 10, 50),
+      game.ref(WALL_X + 10, 50),
+    );
+    expect(path).toBeNull();
   });
 
   // ── Attacks ──────────────────────────────────────────────────────────
@@ -227,10 +288,10 @@ describe("Impassable Terrain", () => {
     game.addExecution(nuke);
     executeTicks(game, 30);
 
-    // Impassable tiles should still not be land and impassable (not flooded).
+    // Impassable tiles should still be land and impassable (not flooded).
     for (let y = 95; y <= 105; y++) {
       const t = game.ref(WALL_X, y);
-      expect(game.isLand(t)).toBe(false);
+      expect(game.isLand(t)).toBe(true);
       expect(game.isImpassable(t)).toBe(true);
     }
   });
@@ -283,8 +344,7 @@ describe("Impassable Terrain", () => {
     const t = game.ref(WALL_X, 50);
     expect(game.isImpassable(t)).toBe(true);
     game.map().setWater(t);
-    expect(game.isLand(t)).toBe(false);
-    expect(game.isWater(t)).toBe(false);
+    expect(game.isLand(t)).toBe(true);
     expect(game.isImpassable(t)).toBe(true);
   });
 
