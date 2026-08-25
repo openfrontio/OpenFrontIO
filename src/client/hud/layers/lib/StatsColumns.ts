@@ -147,6 +147,9 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "playerType",
     labelKey: "leaderboard.playerType",
     headerVisual: { kind: "text", text: "leaderboard.type" },
+    // Player-table only: a team has no single type, and aggregating the
+    // per-player type codes would be meaningless.
+    kinds: ["player"],
     // Shared track: the cell reads row.value, so this column needs a value
     // getter — and the registry ties "auto" width to having one.
     align: "center",
