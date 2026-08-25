@@ -309,11 +309,20 @@ export class GameMapImpl implements GameMap {
     }
   }
 
+  // True when the tile touches the map boundary or an impassable tile.
+  // Impassable terrain acts like the map edge for enclosure checks: a
+  // cluster hugging it cannot be "surrounded" from that side.
   isOnEdgeOfMap(ref: TileRef): boolean {
-    const x = this.x(ref);
-    const y = this.y(ref);
+    const w = this.width_;
+    const x = ref % w;
+    if (x === 0 || x === w - 1 || ref < w || ref >= (this.height_ - 1) * w) {
+      return true;
+    }
     return (
-      x === 0 || x === this.width() - 1 || y === 0 || y === this.height() - 1
+      this.isImpassable(ref - 1) ||
+      this.isImpassable(ref + 1) ||
+      this.isImpassable(ref - w) ||
+      this.isImpassable(ref + w)
     );
   }
 
