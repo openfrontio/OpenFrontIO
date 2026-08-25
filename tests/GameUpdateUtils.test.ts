@@ -85,6 +85,20 @@ describe("diffPlayerUpdate", () => {
     expect(diff.clanTag).toBe("ABCDE");
   });
 
+  it("carries a changed nationFlag and stays quiet when it is unchanged", () => {
+    expect(
+      diffPlayerUpdate(
+        makePlayerUpdate({ nationFlag: "in" }),
+        makePlayerUpdate({ nationFlag: "in" }),
+      ),
+    ).toBeNull();
+    const diff = diffPlayerUpdate(
+      makePlayerUpdate({ nationFlag: null }),
+      makePlayerUpdate({ nationFlag: "pk" }),
+    )!;
+    expect(diff.nationFlag).toBe("pk");
+  });
+
   it("emits killedBy + deathPosition when a player is eliminated", () => {
     const prev = makePlayerUpdate({ killedBy: null, deathPosition: null });
     const next = makePlayerUpdate({ killedBy: "client-b", deathPosition: 3 });

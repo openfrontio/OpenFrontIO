@@ -40,6 +40,7 @@ export function diffPlayerUpdate(
     prev.name === next.name &&
     prev.displayName === next.displayName &&
     prev.clanTag === next.clanTag &&
+    prev.nationFlag === next.nationFlag &&
     prev.team === next.team &&
     prev.smallID === next.smallID &&
     prev.playerType === next.playerType &&
@@ -89,6 +90,7 @@ export function diffPlayerUpdate(
   setIfDifferent("name", prev.name === next.name);
   setIfDifferent("displayName", prev.displayName === next.displayName);
   setIfDifferent("clanTag", prev.clanTag === next.clanTag);
+  setIfDifferent("nationFlag", prev.nationFlag === next.nationFlag);
   setIfDifferent("team", prev.team === next.team);
   setIfDifferent("smallID", prev.smallID === next.smallID);
   setIfDifferent("playerType", prev.playerType === next.playerType);
