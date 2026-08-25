@@ -99,9 +99,9 @@ Written against current behaviour, using the harness:
 ## Phase 2 — Inject the hidden dependencies
 
 - [ ] Replace the 10-positional-arg constructor with `GameServerOptions` plus a
-      `GameServerDeps` object `{ archive, fetchTribes, env, turnIntervalMs,
-  telemetry, buildHash }` defaulting to the real modules.
-      `GameManager.createGame` is the only production caller.
+      `GameServerDeps` object (`archive`, `fetchTribes`, `env`,
+      `turnIntervalMs`, `telemetry`, `buildHash`) defaulting to the real
+      modules. `GameManager.createGame` is the only production caller.
 - [ ] Replace `console.error` in `prestart()` with `this.log.error`.
 - [ ] Leave `Date.now()` alone — fake timers already cover it.
 
@@ -145,9 +145,9 @@ Only after Phases 1–3: every roster path then has a test.
 ## Phase 5 — Message ingress and intent dispatch
 
 - [ ] `ClientSocket.attach(client, { onMessage, onClose })`: decode → validate
-      → rate-limit → spectator-block. `GameServer.handleClientMessage(client,
-  msg)` keeps the switch. Tests call `handleClientMessage` directly; keep a
-      few frame-level tests for the decode/kick paths.
+      → rate-limit → spectator-block. The message switch stays in
+      `GameServer.handleClientMessage(client, msg)`. Tests call it directly;
+      keep a few frame-level tests for the decode/kick paths.
 - [ ] `authorizeIntent(intent, actor): IntentOutcome | null` (pure guards,
       table-testable) separated from the effects in `handleIntent`.
 
