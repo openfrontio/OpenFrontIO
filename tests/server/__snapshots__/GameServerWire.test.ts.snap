@@ -3,8 +3,6 @@
 exports[`GameServer wire transcript > matches the golden transcript for a scripted game 1`] = `
 {
   "archived": {
-    "domain": "golden.test",
-    "gitCommit": "golden-commit",
     "info": {
       "config": {
         "bots": 5,
@@ -76,7 +74,6 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
         "host0000",
       ],
     },
-    "subdomain": "golden-sub",
     "turns": [
       {
         "hash": 1234.5,

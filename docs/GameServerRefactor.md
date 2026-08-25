@@ -111,15 +111,31 @@ no longer be looked up (`getClientIdForPersistentId`) or reconnect.
 
 ## Phase 2 — Inject the hidden dependencies
 
-- [ ] Replace the 10-positional-arg constructor with `GameServerOptions` plus a
+- [x] Replace the 10-positional-arg constructor with `GameServerOptions` plus a
       `GameServerDeps` object (`archive`, `fetchTribes`, `env`,
       `turnIntervalMs`, `telemetry`, `buildHash`) defaulting to the real
       modules. `GameManager.createGame` is the only production caller.
-- [ ] Replace `console.error` in `prestart()` with `this.log.error`.
-- [ ] Leave `Date.now()` alone — fake timers already cover it.
+- [x] Replace `console.error` in `prestart()` with `this.log.error`.
+- [x] Leave `Date.now()` alone — fake timers already cover it.
 
 Verify: golden snapshot unchanged; no `vi.mock` of server modules in
 GameServer tests; no `archiveGame` spies.
+
+Status (2026-08-25): done. `new GameServer(opts, deps?)` with
+`GameServerDeps = { archive, fetchTribes, env, turnIntervalMs, telemetry,
+telemetryBuildHash }` and `defaultGameServerDeps()`; `GameManager.createGame`
+passes only telemetry. One deviation from the plan above: `archive` takes the
+_partial_ record and the default does `archive(finalizeGameRecord(record))`,
+because `finalizeGameRecord` reads `GIT_COMMIT` and throws when it is unset —
+with the real one in the path every archive-reaching test would have had to
+spy `ServerEnv`, and a throw inside `handleWinner`'s catch silently drops the
+archive. The harness `makeGame` defaults `archive` and `fetchTribes` to inert
+spies; pass `deps: { archive }` to read the record. Golden frames unchanged
+(the snapshot lost only the three deployment stamps). No `vi.mock` of
+`Archive`/`CustomTribes` remains. `archiveGame` is still spied in
+`WinnerVoteRetally` and `ArchivePlayerRecord`, which assemble game state by
+hand rather than joining and starting; they move with Phase 3's `Consensus`
+extraction and a wire/record-based rewrite.
 
 ## Phase 3 — Extract pure modules (lowest risk first)
 

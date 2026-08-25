@@ -22,10 +22,12 @@ describe("GameServer.handleIntent (admin bot)", () => {
   });
 
   function makeGame(config: Record<string, unknown> = {}) {
-    return new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-      ...config,
-    } as any);
+    return new GameServer({
+      id: "test-game",
+      log: mockLogger,
+      createdAt: Date.now(),
+      gameConfig: { gameType: GameType.Private, ...config } as any,
+    });
   }
 
   const started = (game: GameServer) => {

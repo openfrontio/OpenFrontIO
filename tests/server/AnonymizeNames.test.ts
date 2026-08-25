@@ -38,19 +38,19 @@ function makeGame(
   nameRevealPublicIds: string[] = [],
 ) {
   const logger = mockLogger();
-  const game = new GameServer(
-    "g1",
-    logger,
-    Date.now(),
-    testGameConfig({
+  const game = new GameServer({
+    id: "g1",
+    log: logger,
+    createdAt: Date.now(),
+    gameConfig: testGameConfig({
       gameType: GameType.Private,
       anonymizeNames,
       disableClanTags,
       nameReveals,
       nameRevealPublicIds,
     }),
-    "creator-pid",
-  );
+    creatorPersistentID: "creator-pid",
+  });
   [
     makeClient("creator", "creator-pid", "CreatorReal", "HOST"),
     makeClient("admin", "admin-pid", "AdminReal", "ADM", "admin"),

@@ -24,6 +24,7 @@ import {
   Intent,
   LiveStats,
   LobbyAccent,
+  PartialGameRecord,
   PlayerLiveStats,
   PlayerRecord,
   PublicGameType,
@@ -117,6 +118,47 @@ function hostCheatsEnabled(hc: GameConfig["hostCheats"]): boolean {
       typeof hc.goldMultiplier === "number" ||
       typeof hc.startingGold === "number")
   );
+}
+
+export interface GameServerOptions {
+  id: string;
+  log: Logger;
+  createdAt: number;
+  gameConfig: GameConfig;
+  creatorPersistentID?: string;
+  startsAt?: number;
+  publicGameType?: PublicGameType;
+  // Matchmade team split from the matchmaking assignment: publicIds per
+  // team. At start each client is stamped with its team's index.
+  matchmakingTeams?: string[][];
+}
+
+// Everything a GameServer reaches outside itself for. Production takes the
+// defaults; tests substitute the pieces they need to observe or control
+// (the archive upload, the tribe fetch, the environment) without mocking
+// modules. env and turnIntervalMs are thunks so the value is read when it
+// is used, not when the game is created.
+export interface GameServerDeps {
+  // Hand a finished game's record on for upload. The default stamps the
+  // deployment (finalizeGameRecord) first; a test receives the record as the
+  // game built it.
+  archive: (record: PartialGameRecord) => Promise<void>;
+  fetchTribes: typeof fetchCustomTribes;
+  env: () => GameEnv;
+  turnIntervalMs: () => number;
+  telemetry: MatchTelemetryEmitter;
+  telemetryBuildHash: string;
+}
+
+export function defaultGameServerDeps(): GameServerDeps {
+  return {
+    archive: (record) => archive(finalizeGameRecord(record)),
+    fetchTribes: fetchCustomTribes,
+    env: () => ServerEnv.env(),
+    turnIntervalMs: () => ServerEnv.turnIntervalMs(),
+    telemetry: noopMatchTelemetryEmitter,
+    telemetryBuildHash: "DEV",
+  };
 }
 
 export class GameServer {
@@ -226,32 +268,38 @@ export class GameServer {
   private replayArchiveAttempted = false;
   private telemetryFinished = false;
 
-  constructor(
-    public readonly id: string,
-    readonly log_: Logger,
-    public readonly createdAt: number,
-    public gameConfig: GameConfig,
-    private creatorPersistentID?: string,
-    private startsAt?: number,
-    private publicGameType?: PublicGameType,
-    // Matchmade team split from the matchmaking assignment: publicIds per
-    // team. At start each client is stamped with its team's index.
-    private matchmakingTeams?: string[][],
-    private readonly telemetry: MatchTelemetryEmitter = noopMatchTelemetryEmitter,
-    private readonly telemetryBuildHash: string = "DEV",
-  ) {
-    this.log = log_.child({ gameID: id });
-    if (startsAt !== undefined) {
+  public readonly id: string;
+  public readonly createdAt: number;
+  public gameConfig: GameConfig;
+  private creatorPersistentID?: string;
+  private startsAt?: number;
+  private publicGameType?: PublicGameType;
+  // Matchmade team split from the matchmaking assignment: publicIds per
+  // team. At start each client is stamped with its team's index.
+  private matchmakingTeams?: string[][];
+  private readonly deps: GameServerDeps;
+
+  constructor(opts: GameServerOptions, deps: Partial<GameServerDeps> = {}) {
+    this.id = opts.id;
+    this.createdAt = opts.createdAt;
+    this.gameConfig = opts.gameConfig;
+    this.creatorPersistentID = opts.creatorPersistentID;
+    this.startsAt = opts.startsAt;
+    this.publicGameType = opts.publicGameType;
+    this.matchmakingTeams = opts.matchmakingTeams;
+    this.deps = { ...defaultGameServerDeps(), ...deps };
+    this.log = opts.log.child({ gameID: opts.id });
+    if (opts.startsAt !== undefined) {
       this.visibleAt = Date.now();
     }
     this.emitTelemetry("match_opened", {
-      lobbyCreatedAt: createdAt,
-      config: gameConfig,
-      publicGameType,
-      buildHash: telemetryBuildHash,
+      lobbyCreatedAt: opts.createdAt,
+      config: opts.gameConfig,
+      publicGameType: opts.publicGameType,
+      buildHash: this.deps.telemetryBuildHash,
       instanceId: ServerEnv.instanceId(),
       workerId: ServerEnv.workerId(),
-      turnIntervalMs: ServerEnv.turnIntervalMs(),
+      turnIntervalMs: this.deps.turnIntervalMs(),
     });
   }
 
@@ -270,7 +318,7 @@ export class GameServer {
       payload,
     } as MatchTelemetryEvent;
     try {
-      return this.telemetry.emit(event);
+      return this.deps.telemetry.emit(event);
     } catch {
       return "dropped";
     }
@@ -323,7 +371,7 @@ export class GameServer {
     this.emitTelemetry("match_finished", {
       endedAt: Date.now(),
       totalTurns: this.turns.length,
-      buildHash: this.telemetryBuildHash,
+      buildHash: this.deps.telemetryBuildHash,
       replayArchiveAttempted: this.replayArchiveAttempted,
     });
   }
@@ -827,7 +875,7 @@ export class GameServer {
     // Skipped in dev: local testing (multi-tab, the matchmaking e2e) is
     // inherently same-IP.
     if (
-      ServerEnv.env() !== GameEnv.Dev &&
+      this.deps.env() !== GameEnv.Dev &&
       this.gameConfig.gameType === GameType.Public &&
       this.activeClients.filter(
         (c) => c.ip === client.ip && c.clientID !== client.clientID,
@@ -840,7 +888,7 @@ export class GameServer {
       return "rejected";
     }
 
-    if (ServerEnv.env() === GameEnv.Prod) {
+    if (this.deps.env() === GameEnv.Prod) {
       // Prevent multiple clients from using the same account in prod
       const conflicting = this.activeClients.find(
         (c) =>
@@ -1220,12 +1268,9 @@ export class GameServer {
     });
 
     if (!prestartMsg.success) {
-      console.error(
-        `error creating prestart message for game ${this.id}, ${prestartMsg.error}`.substring(
-          0,
-          250,
-        ),
-      );
+      this.log.error("error creating prestart message", {
+        error: z.prettifyError(prestartMsg.error).substring(0, 250),
+      });
       return;
     }
 
@@ -1255,7 +1300,8 @@ export class GameServer {
         ? [{ clientId: c.clientID, publicId: c.publicId }]
         : [],
     );
-    fetchCustomTribes(players)
+    this.deps
+      .fetchTribes(players)
       .then((tribes) => {
         // One tribe per bot: with fewer bots than tribes, drop from the
         // tail (the global-pool slice).
@@ -1395,8 +1441,8 @@ export class GameServer {
     this.emitTelemetry("match_started", {
       startedAt: this._startTime,
       gameStartInfo: this.gameStartInfo,
-      buildHash: this.telemetryBuildHash,
-      turnIntervalMs: ServerEnv.turnIntervalMs(),
+      buildHash: this.deps.telemetryBuildHash,
+      turnIntervalMs: this.deps.turnIntervalMs(),
     });
     const wireGameStartInfo = {
       ...this.gameStartInfo,
@@ -1417,7 +1463,7 @@ export class GameServer {
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
-      ServerEnv.turnIntervalMs(),
+      this.deps.turnIntervalMs(),
     );
     this.activeClients.forEach((c) => {
       this.log.info("sending start message", {
@@ -2085,20 +2131,18 @@ export class GameServer {
       },
     );
     this.replayArchiveAttempted = true;
-    archive(
-      finalizeGameRecord(
-        createPartialGameRecord(
-          this.id,
-          this.gameStartInfo.config,
-          playerRecords,
-          this.turns,
-          this._startTime ?? 0,
-          Date.now(),
-          this.winner?.winner,
-          this.createdAt,
-          this.visibleAt,
-          this.gameStartInfo.tribes,
-        ),
+    this.deps.archive(
+      createPartialGameRecord(
+        this.id,
+        this.gameStartInfo.config,
+        playerRecords,
+        this.turns,
+        this._startTime ?? 0,
+        Date.now(),
+        this.winner?.winner,
+        this.createdAt,
+        this.visibleAt,
+        this.gameStartInfo.tribes,
       ),
     );
   }

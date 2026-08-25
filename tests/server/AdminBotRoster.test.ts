@@ -98,12 +98,12 @@ describe("GameServer.roster() — the real projection", () => {
   it("maps every joiner — including one who already disconnected", async () => {
     vi.useFakeTimers();
     try {
-      const game = new GameServer(
-        "g1",
-        logger,
-        Date.now(),
-        testGameConfig({ gameType: GameType.Private }),
-      );
+      const game = new GameServer({
+        id: "g1",
+        log: logger,
+        createdAt: Date.now(),
+        gameConfig: testGameConfig({ gameType: GameType.Private }),
+      });
       const stays = makeClient("c1", "pub1");
       const leaves = makeClient("c2", "pub2");
       const anon = makeClient("c3"); // no account — publicId stays undefined

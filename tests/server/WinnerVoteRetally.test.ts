@@ -33,9 +33,12 @@ describe("winner vote re-tally when the electorate shrinks", () => {
   }
 
   function game1v1() {
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Public,
-    } as any);
+    const game = new GameServer({
+      id: "test-game",
+      log: mockLogger,
+      createdAt: Date.now(),
+      gameConfig: { gameType: GameType.Public } as any,
+    });
     const winner = makeClient("client01", "1.1.1.1");
     const loser = makeClient("client02", "2.2.2.2");
     (game as any).activeClients = [winner, loser];

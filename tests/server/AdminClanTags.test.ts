@@ -16,18 +16,18 @@ function makeGame(gameMode: GameMode, anonymizeNames = false) {
     warn: vi.fn(),
     error: vi.fn(),
   };
-  const game = new GameServer(
-    "g1",
-    logger,
-    Date.now(),
-    {
+  const game = new GameServer({
+    id: "g1",
+    log: logger,
+    createdAt: Date.now(),
+    gameConfig: {
       gameType: GameType.Private,
       gameMode,
       disableClanTags: true,
       anonymizeNames,
     } as any,
-    "creator-pid",
-  );
+    creatorPersistentID: "creator-pid",
+  });
   const players = [
     { clientID: "creator", username: "CreatorReal", clanTag: "HOST" },
     { clientID: "alice", username: "AliceReal", clanTag: "AAA" },

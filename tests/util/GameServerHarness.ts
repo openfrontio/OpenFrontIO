@@ -14,11 +14,8 @@ import {
   ServerMessage,
 } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
-import { GameServer } from "../../src/server/GameServer";
-import {
-  noopMatchTelemetryEmitter,
-  type MatchTelemetryEmitter,
-} from "../../src/server/telemetry/MatchTelemetry";
+import { GameServer, GameServerDeps } from "../../src/server/GameServer";
+import { type MatchTelemetryEmitter } from "../../src/server/telemetry/MatchTelemetry";
 import { ZbContext } from "../../zbin";
 import { clientFrame, decodeSentServerMessage, testGameConfig } from "./Wire";
 
@@ -157,22 +154,34 @@ export interface GameOpts {
   matchmakingTeams?: string[][];
   telemetry?: MatchTelemetryEmitter;
   buildHash?: string;
+  // Overrides for what the game reaches outside itself for. By default the
+  // archive upload and the tribe fetch are inert spies: pass your own
+  // `archive` to read the record a game produced.
+  deps?: Partial<GameServerDeps>;
 }
 
 // A private FFA lobby by default. `config` is layered over testGameConfig so a
 // test names only what it cares about.
 export function makeGame(opts: GameOpts = {}): GameServer {
+  const deps: Partial<GameServerDeps> = {
+    archive: vi.fn(async () => {}),
+    fetchTribes: vi.fn(async () => []),
+  };
+  if (opts.telemetry !== undefined) deps.telemetry = opts.telemetry;
+  if (opts.buildHash !== undefined) deps.telemetryBuildHash = opts.buildHash;
+  Object.assign(deps, opts.deps);
   return new GameServer(
-    opts.id ?? cid("game"),
-    opts.log ?? mockLogger(),
-    opts.createdAt ?? Date.now(),
-    testGameConfig(opts.config),
-    opts.creatorPersistentID,
-    opts.startsAt,
-    opts.publicGameType,
-    opts.matchmakingTeams,
-    opts.telemetry ?? noopMatchTelemetryEmitter,
-    opts.buildHash ?? "DEV",
+    {
+      id: opts.id ?? cid("game"),
+      log: opts.log ?? mockLogger(),
+      createdAt: opts.createdAt ?? Date.now(),
+      gameConfig: testGameConfig(opts.config),
+      creatorPersistentID: opts.creatorPersistentID,
+      startsAt: opts.startsAt,
+      publicGameType: opts.publicGameType,
+      matchmakingTeams: opts.matchmakingTeams,
+    },
+    deps,
   );
 }
 
