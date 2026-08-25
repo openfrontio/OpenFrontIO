@@ -222,6 +222,12 @@
     "svg": "ua"
   },
   {
+    "code": "vi",
+    "native": "Tiếng Việt",
+    "en": "Vietnamese",
+    "svg": "vn"
+  },
+  {
     "code": "zh-CN",
     "native": "简体中文",
     "en": "Chinese Simplified",
