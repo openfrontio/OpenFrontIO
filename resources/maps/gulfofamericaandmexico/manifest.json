@@ -2,7 +2,7 @@
   "categories": [
     "north_america"
   ],
-  "id": "GulfOfMexico",
+  "id": "GulfOfAmericaandMexico",
   "map": {
     "height": 908,
     "num_land_tiles": 376998,
@@ -19,7 +19,7 @@
     "width": 668
   },
   "multiplayer_frequency": 3,
-  "name": "Gulf Of Mexico",
+  "name": "Gulf Of America \u0026 Mexico",
   "nations": [
     {
       "coordinates": [
@@ -144,5 +144,5 @@
       "strength": 1
     }
   ],
-  "translation_key": "map.gulfofmexico"
+  "translation_key": "map.gulfofamericaandmexico"
 }

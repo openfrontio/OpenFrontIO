@@ -52,8 +52,8 @@ export enum GameMapType {
   Germany = "Germany", // map-generator/assets/maps/germany/info.json
   GiantWorldMap = "Giant World Map", // map-generator/assets/maps/giantworldmap/info.json
   GreatLakes = "Great Lakes", // map-generator/assets/maps/greatlakes/info.json
+  GulfOfAmericaandMexico = "Gulf Of America & Mexico", // map-generator/assets/maps/gulfofamericaandmexico/info.json
   GulfOfGuinea = "Gulf Of Guinea", // map-generator/assets/maps/gulfofguinea/info.json
-  GulfOfMexico = "Gulf Of Mexico", // map-generator/assets/maps/gulfofmexico/info.json
   GulfOfStLawrence = "Gulf of St. Lawrence", // map-generator/assets/maps/gulfofstlawrence/info.json
   Halkidiki = "Halkidiki", // map-generator/assets/maps/halkidiki/info.json
   Hawaii = "Hawaii", // map-generator/assets/maps/hawaii/info.json
@@ -602,19 +602,19 @@ export const maps: readonly MapInfo[] = [
     themes: ["north_america"],
   },
   {
+    id: "GulfOfAmericaandMexico",
+    type: GameMapType.GulfOfAmericaandMexico,
+    translationKey: "map.gulfofamericaandmexico",
+    categories: ["north_america"],
+    multiplayerFrequency: 3,
+  },
+  {
     id: "GulfOfGuinea",
     type: GameMapType.GulfOfGuinea,
     translationKey: "map.gulfofguinea",
     categories: ["africa"],
     multiplayerFrequency: 5,
     themes: ["africa"],
-  },
-  {
-    id: "GulfOfMexico",
-    type: GameMapType.GulfOfMexico,
-    translationKey: "map.gulfofmexico",
-    categories: ["north_america"],
-    multiplayerFrequency: 3,
   },
   {
     id: "GulfOfStLawrence",

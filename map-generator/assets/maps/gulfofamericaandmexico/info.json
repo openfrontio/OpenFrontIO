@@ -1,7 +1,7 @@
 {
-  "id": "GulfOfMexico",
-  "name": "Gulf Of Mexico",
-  "translation_key": "map.gulfofmexico",
+  "id": "GulfOfAmericaandMexico",
+  "name": "Gulf Of America & Mexico",
+  "translation_key": "map.gulfofamericaandmexico",
   "categories": ["north_america"],
   "multiplayer_frequency": 3,
   "nations": [
