@@ -1,17 +1,10 @@
 import { GameType } from "../../src/core/game/Game";
-import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
+import {
+  makeClient as harnessClient,
+  mockLogger,
+} from "../util/GameServerHarness";
 import { testGameConfig } from "../util/Wire";
-
-function makeMockWs() {
-  return {
-    on: () => {},
-    removeAllListeners: () => {},
-    send: vi.fn(),
-    close: vi.fn(),
-    readyState: 1,
-  };
-}
 
 // clanTag and friends are populated on purpose. An earlier version of this file
 // left them null/empty, which made the "team-assignment inputs stay blank"
@@ -24,31 +17,21 @@ function makeClient(
   clanTag: string | null = "CLAN",
   friends: string[] = [],
 ) {
-  return new Client(
+  return harnessClient({
     clientID,
-    `${clientID}-pid`,
-    null,
-    null,
-    undefined,
-    "127.0.0.1",
+    persistentID: `${clientID}-pid`,
     username,
     clanTag,
-    makeMockWs() as any,
-    { verified: true },
     publicId,
     friends,
-  );
+    cosmetics: { verified: true },
+  });
 }
 
 // alice+bob are one pinned team, carol+dave the other. Bob is friends with carol,
 // an OPPONENT — so a friends leak to alice would expose a third party.
 function makeGame(matchmakingTeams?: string[][]) {
-  const logger: any = {
-    child: vi.fn().mockReturnThis(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  };
+  const logger = mockLogger();
   const game = new GameServer(
     "g1",
     logger,
