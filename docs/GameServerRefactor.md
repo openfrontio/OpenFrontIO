@@ -159,6 +159,21 @@ Notes:
 Verify per PR: golden snapshot unchanged; module has its own unit tests; the
 corresponding `(game as any)` uses are gone.
 
+Status:
+
+- [x] `ConfigPatch.ts` (2026-08-25): `applyGameConfigPatch` + `hostCheatsEnabled`;
+      `updateGameConfig` is 12 lines, keeping only the whitelist → delist
+      side effect. Two explicit key lists, checked against `GameConfig` with
+      `satisfies`; the nullable list is exactly the schema's
+      `.nullable().optional()` keys. `tests/server/ConfigPatch.test.ts` is
+      table-driven over every key. The existing tests through `GameServer`
+      (AdminBotIntent, HostedLobbyListing) stay where they are.
+- [ ] `NameVisibility.ts`
+- [ ] `DesyncDetector.ts`
+- [ ] `Consensus.ts`
+- [ ] `ListingState.ts`
+- [ ] `MatchTelemetryRecorder.ts`
+
 ## Phase 4 — Roster
 
 - [ ] `Roster.ts` collapsing the seven collections: `add`, `reconnect`,
