@@ -271,6 +271,55 @@ describe("createNationsForGame: additionalNations pool", () => {
     expect(withoutCoords!.spawnCell).toBeUndefined();
   });
 
+  test("carries each manifest nation's own flag through, even when names collide", () => {
+    // Regression test: maps can define multiple nations with the same display
+    // name (e.g. India's and Pakistan's "Punjab", split by the 1947
+    // partition). Each Nation instance must keep its own flag rather than
+    // depending on a name-keyed lookup that only the last-defined one wins.
+    const manifest: ManifestNation[] = [
+      { coordinates: [840, 305], name: "Punjab", flag: "in" },
+      { coordinates: [637, 464], name: "Punjab", flag: "pk" },
+    ];
+    const random = new PseudoRandom(5);
+
+    const nations = createNationsForGame(
+      makeGameStart(2),
+      manifest,
+      [],
+      0,
+      random,
+    );
+
+    expect(nations).toHaveLength(2);
+    const flags = nations.map((n) => n.playerInfo.nationFlag).sort();
+    expect(flags).toEqual(["in", "pk"]);
+  });
+
+  test("carries flags from additionalNations through too", () => {
+    const manifest = makeManifestNations(1);
+    const extras: AdditionalNation[] = [
+      { name: "WithFlag", flag: "fr" },
+      { name: "WithoutFlag" },
+    ];
+    const random = new PseudoRandom(5);
+
+    const nations = createNationsForGame(
+      makeGameStart(3),
+      manifest,
+      extras,
+      0,
+      random,
+    );
+
+    const withFlag = nations.find((n) => n.playerInfo.name === "WithFlag");
+    const withoutFlag = nations.find(
+      (n) => n.playerInfo.name === "WithoutFlag",
+    );
+
+    expect(withFlag!.playerInfo.nationFlag).toBe("fr");
+    expect(withoutFlag!.playerInfo.nationFlag).toBeNull();
+  });
+
   test("produces unique nation names overall", () => {
     const manifest = makeManifestNations(3);
     const extras = makeAdditionalNations(["Ex1", "Ex2", "Ex3"]);
