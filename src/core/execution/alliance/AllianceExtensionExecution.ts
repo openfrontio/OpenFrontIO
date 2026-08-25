@@ -51,6 +51,8 @@ export class AllianceExtensionExecution implements Execution {
         this.from.id(),
         undefined,
         { name: to.displayName() },
+        undefined,
+        to.id(),
       );
       mg.displayMessage(
         "events_display.alliance_renewed",
@@ -58,6 +60,8 @@ export class AllianceExtensionExecution implements Execution {
         this.toID,
         undefined,
         { name: this.from.displayName() },
+        undefined,
+        this.from.id(),
       );
     } else if (alliance.onlyOneAgreedToExtend() && !wasOnlyOneAgreed) {
       // Send message to the other player that someone wants to renew
@@ -68,6 +72,8 @@ export class AllianceExtensionExecution implements Execution {
         this.toID,
         undefined,
         { name: this.from.displayName() },
+        undefined,
+        this.from.id(),
       );
     }
   }

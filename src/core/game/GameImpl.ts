@@ -1304,6 +1304,8 @@ export class GameImpl implements Game {
         {
           name: conquered.displayName(),
         },
+        undefined,
+        conquered.id(),
       );
     } else {
       this.displayMessage(
@@ -1315,6 +1317,8 @@ export class GameImpl implements Game {
           gold: renderNumber(goldCaptured),
           name: conquered.displayName(),
         },
+        undefined,
+        conquered.id(),
       );
       conqueror.addGold(goldCaptured);
       conquered.removeGold(gold);
