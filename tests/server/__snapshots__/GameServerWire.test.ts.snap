@@ -158,10 +158,6 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
     ],
     "p3": [
       [],
-      [
-        1000,
-        "game has ended",
-      ],
     ],
     "p3Again": [
       [

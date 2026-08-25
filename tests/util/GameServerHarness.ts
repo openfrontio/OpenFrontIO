@@ -23,13 +23,22 @@ import { ZbContext } from "../../zbin";
 import { clientFrame, decodeSentServerMessage, testGameConfig } from "./Wire";
 
 // A schema-valid 8-char id from a readable tag: cid("p1") === "p1000000".
-// Throws rather than silently mangling a tag that cannot be made valid, so a
-// collision between two tags cannot hide in a fixture.
+// Throws rather than silently mangling a tag that cannot be made valid. Zero
+// padding means tags that differ only by trailing zeros ("c1", "c10") would
+// alias, so every id produced is remembered per test module and a second tag
+// mapping to an existing id throws instead of hiding a collision in a fixture.
+const cidTags = new Map<string, string>();
 export function cid(tag: string): string {
   if (!/^[A-Za-z0-9]{1,8}$/.test(tag)) {
     throw new Error(`cid: "${tag}" must be 1-8 alphanumerics`);
   }
-  return tag.padEnd(8, "0");
+  const id = tag.padEnd(8, "0");
+  const prior = cidTags.get(id);
+  if (prior !== undefined && prior !== tag) {
+    throw new Error(`cid: "${tag}" collides with "${prior}" (both -> ${id})`);
+  }
+  cidTags.set(id, tag);
+  return id;
 }
 
 export function mockLogger(): any {
@@ -61,8 +70,11 @@ export interface MockWs {
 
 // A stateful stand-in for `ws.WebSocket`: records listeners so a test can fire
 // "message" / "close", and captures sends so it can read what the server said.
+// readyState leaves OPEN once the socket is closed from either side, as the
+// real one does, so server guards like `readyState === OPEN` behave the same.
 export function makeMockWs(): MockWs {
   const listeners = new Map<string, ((...args: any[]) => void)[]>();
+  const CLOSED = 3;
   const ws: MockWs = {
     on: (event, handler) => {
       const list = listeners.get(event) ?? [];
@@ -74,10 +86,13 @@ export function makeMockWs(): MockWs {
       else listeners.delete(event);
     },
     send: vi.fn(),
-    close: vi.fn(),
+    close: vi.fn(() => {
+      ws.readyState = CLOSED;
+    }),
     readyState: 1,
     OPEN: 1,
     trigger: async (event, ...args) => {
+      if (event === "close") ws.readyState = CLOSED;
       for (const handler of listeners.get(event) ?? []) {
         await handler(...args);
       }
@@ -107,10 +122,11 @@ let nextClient = 1;
 
 // A joined-ready Client. Defaults are distinct per call (id, persistentID,
 // IP): the winner and live-stats votes are weighted by unique IP, so a shared
-// default would collapse every electorate to one voter.
+// default would collapse every electorate to one voter. The default id is
+// zero-padded on the left ("c0000001") so no two counter values alias.
 export function makeClient(opts: ClientOpts = {}): Client {
   const n = nextClient++;
-  const clientID = opts.clientID ?? cid(`c${n}`);
+  const clientID = opts.clientID ?? `c${String(n).padStart(7, "0")}`;
   return new Client(
     clientID,
     opts.persistentID ?? `${clientID}-pid`,

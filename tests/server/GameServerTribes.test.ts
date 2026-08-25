@@ -11,7 +11,6 @@ import {
   makeGame as harnessGame,
   makeClient,
   mockLogger,
-  startGame,
 } from "../util/GameServerHarness";
 
 // Lets the fetchCustomTribes .then/.catch chain in fetchTribes() settle.
@@ -122,8 +121,9 @@ describe("GameServer custom tribes", () => {
     vi.mocked(fetchCustomTribes).mockResolvedValue([]);
     const game = makeGame();
 
-    startGame(game);
+    game.prestart();
     await flushMicrotasks();
+    game.start();
 
     expect(startInfo(game).tribes).toBeUndefined();
   });
