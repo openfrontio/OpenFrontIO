@@ -1,17 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Keep the real finalizeGameRecord so the archived record is snapshotted as
-// it would be sent; only the network call is stubbed.
-vi.mock("../../src/server/Archive", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../src/server/Archive")>()),
-  archive: vi.fn(),
-}));
-
 import { GameMode, GameType } from "../../src/core/game/Game";
-import { ClientMessage } from "../../src/core/Schemas";
+import { ClientMessage, PartialGameRecord } from "../../src/core/Schemas";
 import { createGameWireContext } from "../../src/core/ZbinWire";
-import { archive } from "../../src/server/Archive";
-import { ServerEnv } from "../../src/server/ServerEnv";
 import {
   cid,
   makeClient,
@@ -29,6 +20,10 @@ import {
 // The snapshot is meant to be read when it changes: a diff here is either a
 // deliberate wire change (update it) or a regression (don't).
 
+// Receives the finished game's record as the game built it (the deployment
+// stamps finalizeGameRecord adds on the way to the upload are not the game's).
+const archive = vi.fn(async (_record: PartialGameRecord) => {});
+
 const T0 = 1_700_000_000_000;
 const TURN_MS = 100; // ServerEnv.turnIntervalMs()
 
@@ -36,17 +31,12 @@ describe("GameServer wire transcript", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(T0);
-    vi.mocked(archive).mockReset();
-    // finalizeGameRecord stamps these from the environment.
-    vi.spyOn(ServerEnv, "gitCommit").mockReturnValue("golden-commit");
-    vi.spyOn(ServerEnv, "subdomain").mockReturnValue("golden-sub");
-    vi.spyOn(ServerEnv, "domain").mockReturnValue("golden.test");
+    archive.mockReset();
   });
 
   afterEach(() => {
     vi.clearAllTimers();
     vi.useRealTimers();
-    vi.restoreAllMocks();
   });
 
   it("matches the golden transcript for a scripted game", async () => {
@@ -59,6 +49,7 @@ describe("GameServer wire transcript", () => {
       id: cid("golden"),
       creatorPersistentID: "host-pid",
       config: { gameType: GameType.Private, maxPlayers: 3 },
+      deps: { archive },
     });
     const host = makeClient({
       clientID: HOST,
@@ -228,7 +219,7 @@ describe("GameServer wire transcript", () => {
         p3Again: p3Again.close.mock.calls,
         cast: mockWsOf(cast).close.mock.calls,
       },
-      archived: vi.mocked(archive).mock.calls[0][0],
+      archived: archive.mock.calls[0][0],
     }).toMatchSnapshot();
   });
 });

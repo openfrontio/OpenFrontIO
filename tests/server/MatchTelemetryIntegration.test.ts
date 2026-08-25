@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/server/Archive", () => ({
-  archive: vi.fn(),
-  finalizeGameRecord: (record: unknown) => record,
-}));
-
 import {
   Difficulty,
   GameMapSize,
@@ -71,31 +66,32 @@ describe("GameServer match telemetry", () => {
 
   function makeGame() {
     return new GameServer(
-      "matchABC",
-      log,
-      Date.now(),
       {
-        donateGold: false,
-        donateTroops: false,
-        gameMap: GameMapType.World,
-        gameType: GameType.Private,
-        gameMapSize: GameMapSize.Normal,
-        difficulty: Difficulty.Easy,
-        nations: "default",
-        infiniteGold: false,
-        infiniteTroops: false,
-        instantBuild: false,
-        randomSpawn: false,
-        gameMode: GameMode.FFA,
-        bots: 0,
-        disabledUnits: [],
+        id: "matchABC",
+        log,
+        createdAt: Date.now(),
+        gameConfig: {
+          donateGold: false,
+          donateTroops: false,
+          gameMap: GameMapType.World,
+          gameType: GameType.Private,
+          gameMapSize: GameMapSize.Normal,
+          difficulty: Difficulty.Easy,
+          nations: "default",
+          infiniteGold: false,
+          infiniteTroops: false,
+          instantBuild: false,
+          randomSpawn: false,
+          gameMode: GameMode.FFA,
+          bots: 0,
+          disabledUnits: [],
+        },
       },
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      telemetry,
-      "0123456789012345678901234567890123456789",
+      {
+        telemetry,
+        telemetryBuildHash: "0123456789012345678901234567890123456789",
+        archive: vi.fn(async () => {}),
+      },
     );
   }
 

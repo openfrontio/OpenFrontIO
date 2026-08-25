@@ -32,16 +32,17 @@ function makeClient(
 // an OPPONENT — so a friends leak to alice would expose a third party.
 function makeGame(matchmakingTeams?: string[][]) {
   const logger = mockLogger();
-  const game = new GameServer(
-    "g1",
-    logger,
-    Date.now(),
-    testGameConfig({ gameType: GameType.Private, anonymizeNames: true }),
-    "creator-pid",
-    undefined,
-    undefined,
+  const game = new GameServer({
+    id: "g1",
+    log: logger,
+    createdAt: Date.now(),
+    gameConfig: testGameConfig({
+      gameType: GameType.Private,
+      anonymizeNames: true,
+    }),
+    creatorPersistentID: "creator-pid",
     matchmakingTeams,
-  );
+  });
   [
     makeClient("alice", "AliceReal", "alice-pub", "AAA"),
     makeClient("bob", "BobReal", "bob-pub", "BBB", ["carol-pub"]),

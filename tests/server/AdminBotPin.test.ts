@@ -24,16 +24,14 @@ describe("GameServer.addMatchmakingPin", () => {
   });
 
   const makeGame = (teams?: string[][]) =>
-    new GameServer(
-      "g1",
-      logger,
-      Date.now(),
-      { gameType: GameType.Private } as any,
-      "creator-pid",
-      undefined,
-      undefined,
-      teams,
-    );
+    new GameServer({
+      id: "g1",
+      log: logger,
+      createdAt: Date.now(),
+      gameConfig: { gameType: GameType.Private } as any,
+      creatorPersistentID: "creator-pid",
+      matchmakingTeams: teams,
+    });
 
   const started = (game: GameServer) => {
     (game as any)._hasStarted = true;

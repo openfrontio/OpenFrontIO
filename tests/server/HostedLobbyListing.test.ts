@@ -60,13 +60,13 @@ function makeGame(
   creatorPersistentID: string | undefined = CREATOR,
   config: Record<string, unknown> = {},
 ) {
-  return new GameServer(
+  return new GameServer({
     id,
-    mockLogger,
-    Date.now(),
-    testGameConfig({ gameType: GameType.Private, ...config }),
+    log: mockLogger,
+    createdAt: Date.now(),
+    gameConfig: testGameConfig({ gameType: GameType.Private, ...config }),
     creatorPersistentID,
-  );
+  });
 }
 
 describe("GameServer listing", () => {
@@ -101,9 +101,12 @@ describe("GameServer listing", () => {
   });
 
   it("never matches a creator when created without one", () => {
-    const game = new GameServer("no-creator", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-    } as any);
+    const game = new GameServer({
+      id: "no-creator",
+      log: mockLogger,
+      createdAt: Date.now(),
+      gameConfig: { gameType: GameType.Private } as any,
+    });
     expect(game.isCreator(CREATOR)).toBe(false);
     expect(game.hashedCreatorID()).toBeUndefined();
   });
@@ -143,9 +146,12 @@ describe("GameServer listing", () => {
     game.setListed(true);
     expect(game.gameInfo().listed).toBe(true);
 
-    const pub = new GameServer("pub", mockLogger, Date.now(), {
-      gameType: GameType.Public,
-    } as any);
+    const pub = new GameServer({
+      id: "pub",
+      log: mockLogger,
+      createdAt: Date.now(),
+      gameConfig: { gameType: GameType.Public } as any,
+    });
     expect(pub.gameInfo().listed).toBeUndefined();
   });
 });
@@ -759,27 +765,24 @@ describe("WorkerLobbyService hosted lobbies", () => {
   });
 
   it("excludes matchmaking games (Public but no publicGameType) from the report", () => {
-    const ranked = new GameServer(
-      "ranked-g1",
-      mockLogger,
-      Date.now(),
-      testGameConfig({
+    const ranked = new GameServer({
+      id: "ranked-g1",
+      log: mockLogger,
+      createdAt: Date.now(),
+      gameConfig: testGameConfig({
         gameType: GameType.Public,
         allowedPublicIds: ["p1", "p2"],
       }),
-      undefined,
-      Date.now() + 7000,
-      undefined, // matchmaking games are created without a publicGameType
-    );
-    const ffa = new GameServer(
-      "ffa-g1",
-      mockLogger,
-      Date.now(),
-      { gameType: GameType.Public } as any,
-      undefined,
-      undefined,
-      "ffa",
-    );
+      startsAt: Date.now() + 7000,
+      // matchmaking games are created without a publicGameType
+    });
+    const ffa = new GameServer({
+      id: "ffa-g1",
+      log: mockLogger,
+      createdAt: Date.now(),
+      gameConfig: { gameType: GameType.Public } as any,
+      publicGameType: "ffa",
+    });
     gm.publicLobbies.mockReturnValue([ranked, ffa]);
 
     emitBroadcast({ ffa: [], team: [], special: [], hosted: [] });

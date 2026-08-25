@@ -1,14 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/server/Archive", () => ({
-  archive: vi.fn(),
-  finalizeGameRecord: (record: unknown) => record,
-}));
-
 import { GameType, RankedType } from "../../src/core/game/Game";
 import { ClientMessage } from "../../src/core/Schemas";
 import { createGameWireContext } from "../../src/core/ZbinWire";
-import { archive } from "../../src/server/Archive";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
 import {
@@ -19,6 +13,9 @@ import {
   mockWsOf,
   startGame,
 } from "../util/GameServerHarness";
+
+// The upload the game hands its finished record to.
+const archive = vi.fn(async () => {});
 
 function makeClient(
   id: string,
@@ -42,7 +39,7 @@ describe("GameServer - spectators", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.mocked(archive).mockReset();
+    archive.mockReset();
     logger = mockLogger();
   });
   afterEach(() => {
@@ -54,6 +51,7 @@ describe("GameServer - spectators", () => {
     harnessGame({
       log: logger,
       config: { gameType: GameType.Private, maxPlayers },
+      deps: { archive },
     });
 
   it("takes no lobby slot, so a full game is still watchable", () => {

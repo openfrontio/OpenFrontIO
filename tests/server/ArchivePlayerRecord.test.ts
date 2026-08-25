@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/server/Archive", () => ({
-  archive: vi.fn(),
-  finalizeGameRecord: (record: unknown) => record,
-}));
-
 import { GameType } from "../../src/core/game/Game";
-import { archive } from "../../src/server/Archive";
+import { PartialGameRecord } from "../../src/core/Schemas";
 import { GameServer } from "../../src/server/GameServer";
+
+// The upload the game hands its finished record to.
+const archive = vi.fn(async (_record: PartialGameRecord) => {});
 
 describe("archiveGame player records", () => {
   let mockLogger: any;
@@ -23,9 +21,15 @@ describe("archiveGame player records", () => {
   });
 
   it("preserves simulation inputs (teamIndex, friends, isLobbyCreator) so replays stay in sync", () => {
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Public,
-    } as any);
+    const game = new GameServer(
+      {
+        id: "test-game",
+        log: mockLogger,
+        createdAt: Date.now(),
+        gameConfig: { gameType: GameType.Public } as any,
+      },
+      { archive },
+    );
 
     // Matchmade 2v2: the server stamps teamIndex on the game start info and
     // every client pins teams from it. The archived record is replayed
@@ -79,9 +83,15 @@ describe("archiveGame player records", () => {
   });
 
   it("carries custom tribe names into the archived record for infra ingest and replays", () => {
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Public,
-    } as any);
+    const game = new GameServer(
+      {
+        id: "test-game",
+        log: mockLogger,
+        createdAt: Date.now(),
+        gameConfig: { gameType: GameType.Public } as any,
+      },
+      { archive },
+    );
 
     (game as any).gameStartInfo = {
       gameID: "test-game",
@@ -102,9 +112,15 @@ describe("archiveGame player records", () => {
   });
 
   it("omits tribes from the archived record when none were fetched", () => {
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Public,
-    } as any);
+    const game = new GameServer(
+      {
+        id: "test-game",
+        log: mockLogger,
+        createdAt: Date.now(),
+        gameConfig: { gameType: GameType.Public } as any,
+      },
+      { archive },
+    );
 
     (game as any).gameStartInfo = {
       gameID: "test-game",
