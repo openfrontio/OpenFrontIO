@@ -407,7 +407,7 @@ export class BuildPreviewController implements Controller {
       sams.push({
         x: this.game.x(s.tile()),
         y: this.game.y(s.tile()),
-        rangeSq: r * r,
+        r,
       });
     }
 
