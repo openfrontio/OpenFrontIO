@@ -184,12 +184,12 @@ export class PlayerImpl implements Player {
    * return only fields that changed since the previous call (a partial
    * `{ type, id, ...changedFields }`), or `null` if nothing changed.
    *
-   * tilesOwned / gold / troops are excluded from partial updates (they churn
-   * for every alive player every tick): when any of them changed, a
-   * `[smallID, tilesOwned, gold, troops]` quad is pushed to `statsOut`
-   * instead, which GameImpl drains into the transferable
-   * `packedPlayerUpdates` buffer. Attack troop counts likewise go to
-   * `attackTroopsOut` as `[smallID, direction, index, troops]` quads
+   * tilesOwned / gold / troops / goldEarned are excluded from partial
+   * updates (they churn for nearly every alive player every tick): when any
+   * of them changed, a `[smallID, tilesOwned, gold, troops, goldEarned]`
+   * quint is pushed to `statsOut` instead, which GameImpl drains into the
+   * transferable `packedPlayerUpdates` buffer. Attack troop counts likewise
+   * go to `attackTroopsOut` as `[smallID, direction, index, troops]` quads
    * (→ `packedAttackUpdates`) instead of re-sending whole attack arrays.
    *
    * `lastSentUpdate` is updated to the full snapshot on every call.
@@ -206,10 +206,12 @@ export class PlayerImpl implements Player {
       statsOut !== undefined &&
       (prev.tilesOwned !== full.tilesOwned ||
         prev.gold !== full.gold ||
-        prev.troops !== full.troops)
+        prev.troops !== full.troops ||
+        prev.goldEarned !== full.goldEarned)
     ) {
-      // goldEarned only changes inside addGold, which always changes gold too,
-      // so the gold condition above already covers every goldEarned change.
+      // goldEarned gets its own comparison: it can change even when gold
+      // nets back to its previous value within one tick (addGold followed
+      // by removeGold), and the quint must still flush then.
       statsOut.push(
         full.smallID!,
         full.tilesOwned!,
