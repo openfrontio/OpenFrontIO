@@ -46,13 +46,19 @@ function buildTerrain(
   height: number,
   wallX: number,
   wallWidth: number,
+  wallY: [number, number] = [0, height],
 ): { data: Uint8Array; numLandTiles: number } {
   const data = new Uint8Array(width * height);
   let numLandTiles = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = y * width + x;
-      if (x >= wallX && x < wallX + wallWidth) {
+      if (
+        x >= wallX &&
+        x < wallX + wallWidth &&
+        y >= wallY[0] &&
+        y < wallY[1]
+      ) {
         data[idx] = IMPASSABLE;
         // Impassable tiles are NOT counted as land tiles.
       } else {
@@ -64,11 +70,17 @@ function buildTerrain(
   return { data, numLandTiles };
 }
 
-async function setupImpassableGame(humans: PlayerInfo[] = []): Promise<Game> {
+async function setupImpassableGame(
+  humans: PlayerInfo[] = [],
+  wallY: [number, number] = [0, MAP_H],
+): Promise<Game> {
   vi.spyOn(console, "debug").mockImplementation(() => {});
 
-  const full = buildTerrain(MAP_W, MAP_H, WALL_X, WALL_WIDTH);
-  const mini = buildTerrain(MINI_W, MINI_H, Math.floor(WALL_X / 2), 1);
+  const full = buildTerrain(MAP_W, MAP_H, WALL_X, WALL_WIDTH, wallY);
+  const mini = buildTerrain(MINI_W, MINI_H, Math.floor(WALL_X / 2), 1, [
+    Math.floor(wallY[0] / 2),
+    Math.ceil(wallY[1] / 2),
+  ]);
 
   const gameMap = await genTerrainFromBin(
     { width: MAP_W, height: MAP_H, num_land_tiles: full.numLandTiles },
@@ -169,40 +181,52 @@ describe("Impassable Terrain", () => {
     expect(game.isOnEdgeOfMap(game.ref(50, MAP_H - 1))).toBe(true);
   });
 
-  test("cluster hugging the impassable wall is not annexed", () => {
-    game.addExecution(new PlayerExecution(player));
-    game.addExecution(new PlayerExecution(other));
+  test("cluster hugging the impassable wall is not annexed", async () => {
+    // Short wall segment so the enclosure flood fill cannot walk along
+    // unowned impassable tiles to the real map edge; every escape route
+    // from the pocket must be through enemy-owned land or the wall.
+    const g = await setupImpassableGame(
+      [
+        new PlayerInfo("p", PlayerType.Human, "c1", "p_id"),
+        new PlayerInfo("o", PlayerType.Human, "c2", "o_id"),
+      ],
+      [45, 58],
+    );
+    const p = g.player("p_id");
+    const o = g.player("o_id");
+    g.addExecution(new PlayerExecution(p));
+    g.addExecution(new PlayerExecution(o));
 
     // Player's main (largest) cluster, far from the wall.
     for (let x = 10; x < 20; x++) {
       for (let y = 10; y < 20; y++) {
-        player.conquer(game.ref(x, y));
+        p.conquer(g.ref(x, y));
       }
     }
     // Small pocket against the wall; the wall is its fourth side.
     const pocket: TileRef[] = [];
     for (let x = WALL_X - 3; x < WALL_X; x++) {
       for (let y = 50; y < 53; y++) {
-        pocket.push(game.ref(x, y));
-        player.conquer(game.ref(x, y));
+        pocket.push(g.ref(x, y));
+        p.conquer(g.ref(x, y));
       }
     }
-    // Other player owns everything around the pocket on the other 3 sides.
-    for (let x = WALL_X - 10; x < WALL_X; x++) {
+    // Other player owns everything around the pocket and the wall.
+    for (let x = WALL_X - 10; x < WALL_X + 10; x++) {
       for (let y = 40; y < 63; y++) {
-        const t = game.ref(x, y);
-        if (game.ownerID(t) === 0) other.conquer(t);
+        const t = g.ref(x, y);
+        if (g.ownerID(t) === 0 && !g.isImpassable(t)) o.conquer(t);
       }
     }
 
     // Mirror NoInverseAnnexation: let cluster calc run, then change tiles.
-    executeTicks(game, 20);
-    other.conquer(game.ref(WALL_X - 10, 39));
-    player.conquer(game.ref(20, 10));
-    executeTicks(game, 50);
+    executeTicks(g, 20);
+    o.conquer(g.ref(WALL_X - 10, 39));
+    p.conquer(g.ref(20, 10));
+    executeTicks(g, 50);
 
     for (const t of pocket) {
-      expect(game.ownerID(t)).toBe(player.smallID());
+      expect(g.ownerID(t)).toBe(p.smallID());
     }
   });
 
