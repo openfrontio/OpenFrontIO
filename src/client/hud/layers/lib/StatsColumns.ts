@@ -1,6 +1,11 @@
-import { UnitType } from "../../../../core/game/Game";
+import { PlayerType, UnitType } from "../../../../core/game/Game";
 import type { ColumnId, StatsTableKind } from "../../../StatsConstants";
-import { formatPercentage, renderNumber, renderTroops } from "../../../Utils";
+import {
+  formatPercentage,
+  renderNumber,
+  renderTroops,
+  translateText,
+} from "../../../Utils";
 import type { GameView, PlayerView } from "../../../view";
 import {
   allianceIcon,
@@ -19,6 +24,7 @@ import {
   upperLimitIcon,
   warshipIcon,
 } from "../../HotbarIcons";
+import { goldRateTracker } from "./GoldRateTracker";
 
 export {
   COLUMN_IDS,
@@ -31,10 +37,13 @@ export type ColumnHeaderVisual =
       readonly kind: "icon";
       readonly src: string;
       readonly white?: true;
-      /** Small icon rendered as a superscript exponent on the main icon. */
-      readonly superscript?: { readonly src: string; readonly white?: true };
+      /** Small icon or text rendered as a superscript on the main icon. */
+      readonly superscript?:
+        | { readonly src: string; readonly white?: true }
+        | { readonly text: string };
     }
-  // A literal symbol, not copy — "#" reads the same in every language.
+  // Text is a translation key ("leaderboard.type") or a literal symbol
+  // ("#" reads the same in every language and falls back to itself).
   | { readonly kind: "text"; readonly text: string };
 export type ColumnAlignment = "start" | "center" | "end";
 
@@ -135,6 +144,40 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     cell: (row) => row.name,
   }),
   defineColumn({
+    id: "playerType",
+    labelKey: "leaderboard.playerType",
+    headerVisual: { kind: "text", text: "leaderboard.type" },
+    // Shared track: the cell reads row.value, so this column needs a value
+    // getter — and the registry ties "auto" width to having one.
+    align: "center",
+    value: (player) => {
+      switch (player.type()) {
+        case PlayerType.Human:
+          return 0;
+        case PlayerType.Nation:
+          return 1;
+        case PlayerType.Bot:
+          return 2;
+        default:
+          return 3;
+      }
+    },
+    cell: (row) => {
+      // Reuses the player_type.* keys so the Type column matches the
+      // player info overlay (bots are called "Tribes" in the UI).
+      switch (row.value) {
+        case 0:
+          return translateText("player_type.player");
+        case 1:
+          return translateText("player_type.nation");
+        case 2:
+          return translateText("player_type.bot");
+        default:
+          return "?";
+      }
+    },
+  }),
+  defineColumn({
     id: "team",
     labelKey: "leaderboard.team",
     headerVisual: { kind: "icon", src: teamIcon },
@@ -160,6 +203,50 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     headerVisual: { kind: "icon", src: goldCoinIcon },
     // Gold is a bigint, but game values remain safely below Number.MAX_SAFE_INTEGER.
     value: (player) => Number(player.gold()),
+    cell: (row) => renderNumber(row.value),
+  }),
+  defineColumn({
+    id: "goldIncomePerMin",
+    labelKey: "leaderboard.goldIncomePerMin",
+    headerVisual: {
+      kind: "icon",
+      src: goldCoinIcon,
+      superscript: { text: "/m" },
+    },
+    value: (player) => goldRateTracker.goldIncomePerMin(player.smallID()),
+    cell: (row) => renderNumber(row.value),
+  }),
+  defineColumn({
+    id: "shipTradeGoldPerMin",
+    labelKey: "leaderboard.shipTradeGoldPerMin",
+    headerVisual: {
+      kind: "icon",
+      src: portIcon,
+      superscript: { text: "/m" },
+    },
+    value: (player) => goldRateTracker.shipTradeGoldPerMin(player.smallID()),
+    cell: (row) => renderNumber(row.value),
+  }),
+  defineColumn({
+    id: "piracyGoldPerMin",
+    labelKey: "leaderboard.piracyGoldPerMin",
+    headerVisual: {
+      kind: "icon",
+      src: warshipIcon,
+      superscript: { text: "/m" },
+    },
+    value: (player) => goldRateTracker.piracyGoldPerMin(player.smallID()),
+    cell: (row) => renderNumber(row.value),
+  }),
+  defineColumn({
+    id: "trainTradeGoldPerMin",
+    labelKey: "leaderboard.trainTradeGoldPerMin",
+    headerVisual: {
+      kind: "icon",
+      src: factoryIcon,
+      superscript: { text: "/m" },
+    },
+    value: (player) => goldRateTracker.trainTradeGoldPerMin(player.smallID()),
     cell: (row) => renderNumber(row.value),
   }),
   defineColumn({
@@ -217,11 +304,34 @@ export function columnsFor(kind: StatsTableKind): readonly ColumnDef[] {
   return COLUMN_DEFS.filter((column) => column.kinds.includes(kind));
 }
 
+/**
+ * Feed the gold-rate tracker with a player's current cumulative values.
+ * Must be called at least once per player per refresh by every table kind
+ * (player rows and team aggregation) — the rate columns read back from it.
+ */
+export function recordGoldRates(player: PlayerView, game: GameView): void {
+  // Extra calls per tick (e.g. player + team tables) just append
+  // near-identical samples; rates compare first vs last sample, so
+  // duplicates don't skew the result.
+  goldRateTracker.record(
+    player.smallID(),
+    {
+      income: player.goldEarned(),
+      trade: player.tradeGold(),
+      train: player.trainGold(),
+      piracy: player.piracyGold(),
+    },
+    game.ticks(),
+  );
+}
+
 export function columnValues(
   player: PlayerView,
   game: GameView,
   columns: readonly ColumnDef[],
 ): ReadonlyMap<ColumnId, number> {
+  recordGoldRates(player, game);
+
   const values = new Map<ColumnId, number>();
   for (const column of columns) {
     if (column.value === undefined) continue;

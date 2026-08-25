@@ -179,6 +179,7 @@ export class TradeShipExecution implements Execution {
 
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
+      this.tradeShip!.owner().addPiracyGold(gold);
       this.mg.displayMessage(
         "events_display.received_gold_from_captured_ship",
         MessageType.CAPTURED_ENEMY_UNIT,
@@ -196,6 +197,8 @@ export class TradeShipExecution implements Execution {
     } else {
       this.srcPort.owner().addGold(gold, this.srcPort.tile());
       this._dstPort.owner().addGold(gold, this._dstPort.tile());
+      this.srcPort.owner().addTradeGold(gold);
+      this._dstPort.owner().addTradeGold(gold);
       // Record stats
       this.mg
         .stats()

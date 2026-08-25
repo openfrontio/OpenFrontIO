@@ -241,6 +241,14 @@ export interface PlayerUpdate {
   deathPosition?: number | null;
   tilesOwned?: number;
   gold?: Gold;
+  /** Cumulative ship-trade revenue (changes only on arrivals, so it diffs). */
+  tradeGold?: Gold;
+  /** Cumulative train revenue: own trains + external stops at own stations. */
+  trainGold?: Gold;
+  /** Cumulative piracy revenue: captured-ship payouts. */
+  piracyGold?: Gold;
+  /** Cumulative gold received from all sources (workers, trade, ...). */
+  goldEarned?: Gold;
   troops?: number;
   allies?: number[];
   embargoes?: Set<PlayerID>;

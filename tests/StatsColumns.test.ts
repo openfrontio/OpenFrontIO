@@ -69,12 +69,14 @@ describe("Stats column registry", () => {
       "rank",
       "clan",
       "player",
-      ...COLUMN_IDS.slice(4),
+      "playerType",
+      ...COLUMN_IDS.slice(5),
     ]);
     expect(columnsFor("team").map((column) => column.id)).toEqual([
       "rank",
+      "playerType",
       "team",
-      ...COLUMN_IDS.slice(4),
+      ...COLUMN_IDS.slice(5),
     ]);
   });
 

@@ -110,6 +110,15 @@ export class PlayerImpl implements Player {
   private _gold: bigint;
   private _troops: bigint;
 
+  /** Cumulative ship-trade revenue (arrival credit for src + dst port owners). */
+  private _tradeGold: bigint = 0n;
+  /** Cumulative train revenue: own trains + others' trains stopping at own stations. */
+  private _trainGold: bigint = 0n;
+  /** Cumulative piracy revenue: payouts for captured trade ships. */
+  private _piracyGold: bigint = 0n;
+  /** Cumulative gold received from all sources (incremented in addGold). */
+  private _goldEarned: bigint = 0n;
+
   markedTraitorTick = -1;
   markedDoomsdayClockTick = -1;
   /** Tick territory rot last took land from this player (-1 = never). */
@@ -199,11 +208,14 @@ export class PlayerImpl implements Player {
         prev.gold !== full.gold ||
         prev.troops !== full.troops)
     ) {
+      // goldEarned only changes inside addGold, which always changes gold too,
+      // so the gold condition above already covers every goldEarned change.
       statsOut.push(
         full.smallID!,
         full.tilesOwned!,
         Number(full.gold),
         full.troops!,
+        Number(full.goldEarned),
       );
     }
     if (attackTroopsOut !== undefined) {
@@ -334,6 +346,10 @@ export class PlayerImpl implements Player {
       deathPosition: deathStats?.deathPosition ?? null,
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
+      tradeGold: this._tradeGold,
+      trainGold: this._trainGold,
+      piracyGold: this._piracyGold,
+      goldEarned: this._goldEarned,
       troops: this.troops(),
       allies: allies,
       embargoes: embargoes,
@@ -1179,8 +1195,41 @@ export class PlayerImpl implements Player {
     return this._gold;
   }
 
+  tradeGold(): Gold {
+    return this._tradeGold;
+  }
+
+  addTradeGold(toAdd: Gold): void {
+    this._tradeGold += toAdd;
+  }
+
+  trainGold(): Gold {
+    return this._trainGold;
+  }
+
+  addTrainGold(toAdd: Gold): void {
+    this._trainGold += toAdd;
+  }
+
+  piracyGold(): Gold {
+    return this._piracyGold;
+  }
+
+  addPiracyGold(toAdd: Gold): void {
+    this._piracyGold += toAdd;
+  }
+
+  goldEarned(): Gold {
+    return this._goldEarned;
+  }
+
   addGold(toAdd: Gold, tile?: TileRef): void {
     this._gold += toAdd;
+    // Every gold grant flows through here (workers, trade, trains, piracy,
+    // conquest, donations) — track lifetime income for the leaderboard's
+    // "Gold Income/min" column. Starting gold is assigned directly to the
+    // field in the constructor and deliberately does not count as income.
+    this._goldEarned += toAdd;
     if (tile) {
       this.mg.addUpdate({
         type: GameUpdateType.BonusEvent,

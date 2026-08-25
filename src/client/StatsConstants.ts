@@ -1,18 +1,29 @@
 export const COLUMN_IDS = [
+  // Identity (only clan is hideable; rank/player/team are not).
   "rank",
   "clan",
   "player",
+  "playerType",
   "team",
+  // Territory.
   "tiles",
+  // Economy: balance, then its per-source income rates.
   "gold",
+  "goldIncomePerMin",
+  "shipTradeGoldPerMin",
+  "piracyGoldPerMin",
+  "trainTradeGoldPerMin",
+  // Military.
   "troops",
   "maxtroops",
+  // Buildings & units.
   "cities",
   "ports",
   "factories",
   "silos",
   "sams",
   "warships",
+  // Diplomacy.
   "allies",
   "betrayals",
 ] as const;

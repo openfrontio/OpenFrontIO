@@ -66,6 +66,14 @@ export interface PlayerState {
   deathPosition: number | null;
   tilesOwned: number;
   gold: number;
+  /** Cumulative ship-trade revenue (live, from PlayerUpdate). */
+  tradeGold: number;
+  /** Cumulative train revenue: own trains + external stops (live). */
+  trainGold: number;
+  /** Cumulative piracy revenue: captured-ship payouts (live). */
+  piracyGold: number;
+  /** Cumulative gold received from all sources (live). */
+  goldEarned: number;
   troops: number;
   isTraitor: boolean;
   traitorRemainingTicks: number;
