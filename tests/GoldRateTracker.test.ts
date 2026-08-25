@@ -32,19 +32,6 @@ describe("GoldRateTracker", () => {
     expect(t.goldIncomePerMin(1)).toBe(0);
   });
 
-  it("drops stale history when the sim clock resets (new game in SPA)", () => {
-    const t = new GoldRateTracker();
-    // Previous game session left high-tick samples behind.
-    t.record(1, sample(1000), 5000);
-    t.record(1, sample(2000), 5500);
-    // New game starts: ticks restart near zero. The stale samples must be
-    // discarded, otherwise the negative delta pins the rate at 0 until the
-    // new clock passes the old one.
-    t.record(1, sample(3000), 100);
-    t.record(1, sample(4000), 400); // +1000 income over 30 in-game seconds
-    expect(t.goldIncomePerMin(1)).toBeCloseTo(2000);
-  });
-
   it("evicts samples older than the 2-in-game-minute window", () => {
     const t = new GoldRateTracker();
     t.record(1, sample(0), 0);

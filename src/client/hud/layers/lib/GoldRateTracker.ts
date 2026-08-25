@@ -54,12 +54,6 @@ export class GoldRateTracker {
     if (!samples) {
       samples = [];
       this.history.set(smallID, samples);
-    } else if (samples.length > 0 && tick < samples[samples.length - 1].tick) {
-      // Sim clock went backwards: the tracker singleton outlives a game in
-      // this SPA, so these are stale samples from a previous session whose
-      // ticks are higher than the fresh game's. Drop them — otherwise the
-      // negative delta would pin rates at 0 until the new clock caught up.
-      samples.length = 0;
     }
 
     samples.push({ ...sample, tick });
