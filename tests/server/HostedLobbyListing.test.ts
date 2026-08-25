@@ -15,7 +15,6 @@ import {
   MAX_HOSTED_LOBBIES,
 } from "../../src/core/Schemas";
 import { LOBBY_LABEL_MAX, sanitizeLobbyLabel } from "../../src/core/Util";
-import { Client } from "../../src/server/Client";
 import { GameManager } from "../../src/server/GameManager";
 import {
   GamePhase,
@@ -29,6 +28,12 @@ import {
 import { MasterLobbyService } from "../../src/server/MasterLobbyService";
 import { ServerEnv } from "../../src/server/ServerEnv";
 import { WorkerLobbyService } from "../../src/server/WorkerLobbyService";
+import {
+  makeClient as harnessClient,
+  mockLogger as harnessLogger,
+  makeMockWs,
+  MockWs,
+} from "../util/GameServerHarness";
 import { decodeSentLobbyMessage, testGameConfig } from "../util/Wire";
 
 vi.mock("../../src/server/Logger", () => ({
@@ -45,12 +50,7 @@ vi.mock("../../src/server/PollingLoop", () => ({
   startPolling: vi.fn(),
 }));
 
-const mockLogger: any = {
-  child: vi.fn().mockReturnThis(),
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-};
+const mockLogger = harnessLogger();
 
 const CREATOR = "11111111-1111-4111-8111-111111111111";
 const OTHER_CREATOR = "22222222-2222-4222-8222-222222222222";
@@ -257,29 +257,16 @@ describe("listed lobby auto-start", () => {
   });
 });
 
-function fakeWs() {
-  const ws = new EventEmitter() as any;
-  ws.readyState = WebSocket.OPEN;
-  ws.send = vi.fn();
-  ws.close = vi.fn();
-  return ws;
-}
+const fakeWs = makeMockWs;
 
-function makeClient(clientID: string, persistentID: string, ws: any) {
-  return new Client(
+function makeClient(clientID: string, persistentID: string, ws: MockWs) {
+  return harnessClient({
     clientID,
     persistentID,
-    null,
-    null,
-    undefined,
-    "1.2.3.4",
-    `user_${clientID}`,
-    null,
+    ip: "1.2.3.4",
+    username: `user_${clientID}`,
     ws,
-    undefined,
-    undefined,
-    [],
-  );
+  });
 }
 
 describe("host-left lobby teardown", () => {
@@ -292,7 +279,7 @@ describe("host-left lobby teardown", () => {
     vi.useRealTimers();
   });
 
-  it("ends, delists and prunes an unstarted lobby when the host leaves", () => {
+  it("ends, delists and prunes an unstarted lobby when the host leaves", async () => {
     const gm = new GameManager(mockLogger);
     const game = gm.createGame("g-host-leaves", undefined, CREATOR)!;
     game.setListed(true);
@@ -305,7 +292,7 @@ describe("host-left lobby teardown", () => {
     );
     expect(gm.listedLobbies()).toHaveLength(1);
 
-    hostWs.emit("close");
+    await hostWs.trigger("close");
 
     // Remaining players are kicked and the ghost leaves the listing...
     expect(guestWs.close).toHaveBeenCalled();
@@ -337,7 +324,7 @@ describe("host-left lobby teardown", () => {
     expect(game.joinClient({} as any)).toBe("rejected");
   });
 
-  it("does not tear down when the host disconnects during prestart", () => {
+  it("does not tear down when the host disconnects during prestart", async () => {
     // During the lobby -> game transition the host modal closes and sockets
     // churn; a starting game (e.g. listed-lobby auto-start) must survive it.
     const gm = new GameManager(mockLogger);
@@ -348,7 +335,7 @@ describe("host-left lobby teardown", () => {
     game.joinClient(makeClient("host", CREATOR, hostWs));
     (game as any)._hasPrestarted = true;
 
-    hostWs.emit("close");
+    await hostWs.trigger("close");
 
     expect((game as any)._hasEnded).toBe(false);
     expect(game.phase()).not.toBe(GamePhase.Finished);

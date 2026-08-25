@@ -1,18 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/core/Schemas", async () => {
-  const actual = (await vi.importActual("../../src/core/Schemas")) as any;
-  return {
-    ...actual,
-    GameStartInfoSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-    ServerPrestartMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-  };
-});
-
 vi.mock("../../src/server/CustomTribes", () => ({
   fetchCustomTribes: vi.fn(),
 }));
@@ -20,21 +7,11 @@ vi.mock("../../src/server/CustomTribes", () => ({
 import { GameType } from "../../src/core/game/Game";
 import { fetchCustomTribes } from "../../src/server/CustomTribes";
 import { GameServer } from "../../src/server/GameServer";
-import { testGameConfig } from "../util/Wire";
-
-function fakeClient(clientID: string, publicId?: string) {
-  return {
-    clientID,
-    persistentID: `persist-${clientID}`,
-    publicId,
-    friends: [],
-    username: clientID,
-    clanTag: null,
-    role: null,
-    cosmetics: undefined,
-    ws: { readyState: 3, send: vi.fn() },
-  } as any;
-}
+import {
+  makeGame as harnessGame,
+  makeClient,
+  mockLogger,
+} from "../util/GameServerHarness";
 
 // Lets the fetchCustomTribes .then/.catch chain in fetchTribes() settle.
 async function flushMicrotasks() {
@@ -42,20 +19,19 @@ async function flushMicrotasks() {
   await Promise.resolve();
 }
 
+// The start info start() built. Reaches into the game until it grows an
+// accessor (see docs/GameServerRefactor.md, Phase 2).
+const startInfo = (game: GameServer) => (game as any).gameStartInfo;
+
 describe("GameServer custom tribes", () => {
-  let mockLogger: any;
+  let log: any;
 
   beforeEach(() => {
     // restoreAllMocks doesn't touch vi.mock module mocks — reset the fetch
     // mock's implementation and call history between tests explicitly.
     vi.mocked(fetchCustomTribes).mockReset();
     vi.useFakeTimers();
-    mockLogger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    log = mockLogger();
   });
 
   afterEach(() => {
@@ -64,16 +40,10 @@ describe("GameServer custom tribes", () => {
   });
 
   function makeGame(config: Record<string, unknown> = {}) {
-    return new GameServer(
-      "testgame",
-      mockLogger,
-      Date.now(),
-      testGameConfig({
-        gameType: GameType.Public,
-        bots: 400,
-        ...config,
-      }),
-    );
+    return harnessGame({
+      log,
+      config: { gameType: GameType.Public, bots: 400, ...config },
+    });
   }
 
   it("fetches the pool at prestart and embeds the tribes in the start info", async () => {
@@ -82,10 +52,9 @@ describe("GameServer custom tribes", () => {
       { name: "Night Wolves" },
     ]);
     const game = makeGame();
-    game.activeClients.push(
-      fakeClient("abcd1234", "pub-1"),
-      fakeClient("efgh5678"), // guest — no account, must be omitted
-    );
+    game.joinClient(makeClient({ clientID: "abcd1234", publicId: "pub-1" }));
+    // guest — no account, must be omitted
+    game.joinClient(makeClient({ clientID: "efgh5678" }));
 
     game.prestart();
     await flushMicrotasks();
@@ -94,7 +63,7 @@ describe("GameServer custom tribes", () => {
     expect(fetchCustomTribes).toHaveBeenCalledWith([
       { clientId: "abcd1234", publicId: "pub-1" },
     ]);
-    expect((game as any).gameStartInfo.tribes).toEqual([
+    expect(startInfo(game).tribes).toEqual([
       { name: "Dragon Riders" },
       { name: "Night Wolves" },
     ]);
@@ -111,9 +80,7 @@ describe("GameServer custom tribes", () => {
     await flushMicrotasks();
     game.start();
 
-    expect((game as any).gameStartInfo.tribes).toEqual([
-      { name: "Dragon Riders" },
-    ]);
+    expect(startInfo(game).tribes).toEqual([{ name: "Dragon Riders" }]);
   });
 
   it("skips the fetch for non-public games", async () => {
@@ -124,7 +91,7 @@ describe("GameServer custom tribes", () => {
     game.start();
 
     expect(fetchCustomTribes).not.toHaveBeenCalled();
-    expect((game as any).gameStartInfo.tribes).toBeUndefined();
+    expect(startInfo(game).tribes).toBeUndefined();
   });
 
   it("skips the fetch when bots are disabled", async () => {
@@ -144,8 +111,8 @@ describe("GameServer custom tribes", () => {
     await flushMicrotasks();
     game.start();
 
-    expect((game as any).gameStartInfo.tribes).toBeUndefined();
-    expect(mockLogger.warn).toHaveBeenCalledWith(
+    expect(startInfo(game).tribes).toBeUndefined();
+    expect(log.warn).toHaveBeenCalledWith(
       expect.stringContaining("failed to fetch custom tribes"),
     );
   });
@@ -158,6 +125,6 @@ describe("GameServer custom tribes", () => {
     await flushMicrotasks();
     game.start();
 
-    expect((game as any).gameStartInfo.tribes).toBeUndefined();
+    expect(startInfo(game).tribes).toBeUndefined();
   });
 });

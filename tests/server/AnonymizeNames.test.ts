@@ -2,17 +2,11 @@ import { GameType } from "../../src/core/game/Game";
 import { UsernameSchema } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
+import {
+  makeClient as harnessClient,
+  mockLogger,
+} from "../util/GameServerHarness";
 import { testGameConfig } from "../util/Wire";
-
-function makeMockWs() {
-  return {
-    on: () => {},
-    removeAllListeners: () => {},
-    send: vi.fn(),
-    close: vi.fn(),
-    readyState: 1,
-  };
-}
 
 function makeClient(
   clientID: string,
@@ -24,20 +18,16 @@ function makeClient(
   friends: string[] = [],
   cosmetics: { verified?: boolean } | undefined = undefined,
 ): Client {
-  return new Client(
+  return harnessClient({
     clientID,
     persistentID,
-    null,
-    role,
-    undefined,
-    "127.0.0.1",
     username,
     clanTag,
-    makeMockWs() as any,
-    cosmetics,
+    role,
     publicId,
     friends,
-  );
+    cosmetics,
+  });
 }
 
 // creator = lobby host, admin = admin role, alice + bob = regular players.
@@ -47,12 +37,7 @@ function makeGame(
   nameReveals: string[] = [],
   nameRevealPublicIds: string[] = [],
 ) {
-  const logger: any = {
-    child: vi.fn().mockReturnThis(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  };
+  const logger = mockLogger();
   const game = new GameServer(
     "g1",
     logger,
