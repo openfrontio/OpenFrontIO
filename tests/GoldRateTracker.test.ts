@@ -71,4 +71,21 @@ describe("GoldRateTracker", () => {
     t.forget(1);
     expect(t.goldIncomePerMin(1)).toBe(0);
   });
+
+  it("resetAll drops every player's history (new game in same page)", () => {
+    const t = new GoldRateTracker();
+    // Previous game left samples at high ticks; smallIDs restart from 1.
+    t.record(1, sample(1000), 14000);
+    t.record(2, sample(2000), 14100);
+
+    t.resetAll();
+
+    // Fresh game: rates read 0 until two new samples exist, and a new
+    // sample at a low tick is not mixed with stale high-tick data.
+    expect(t.goldIncomePerMin(1)).toBe(0);
+    t.record(1, sample(500), 100);
+    t.record(1, sample(1100), 700); // +600 income over 1 in-game minute
+    expect(t.goldIncomePerMin(1)).toBeCloseTo(600);
+    expect(t.goldIncomePerMin(2)).toBe(0);
+  });
 });

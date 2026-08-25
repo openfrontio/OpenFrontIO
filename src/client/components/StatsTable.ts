@@ -194,7 +194,7 @@ export abstract class StatsTable extends LitElement {
               aria-hidden="true"
             />`
           : html`<span class="text-[0.6rem] ml-0.5 self-center leading-none"
-              >${visual.superscript.text}</span
+              >${translateText(visual.superscript.text)}</span
             >`
         : nothing}
     </span>`;

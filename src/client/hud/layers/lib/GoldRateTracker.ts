@@ -74,6 +74,16 @@ export class GoldRateTracker {
     this.history.delete(smallID);
   }
 
+  /**
+   * Drop all history. Call when a new game starts: the client can transition
+   * between games in-page (joining a lobby stops the previous handle without
+   * a page reload), and smallIDs restart from 1 each game, so stale samples
+   * from the previous game would otherwise corrupt the rates.
+   */
+  resetAll(): void {
+    this.history.clear();
+  }
+
   /** Gold-income-per-minute rate (gross received, spending not deducted). */
   goldIncomePerMin(smallID: number): number {
     return this.rate(smallID, (s) => s.income);
