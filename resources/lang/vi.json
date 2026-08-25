@@ -1,9 +1,9 @@
 {
   "lang": {
-    "en": "Tiếng Anh",
-    "lang_code": "en",
-    "native": "Tiếng Anh",
-    "svg": "uk_us_flag"
+    "en": "Vietnamese",
+    "lang_code": "vi",
+    "native": "Tiếng Việt",
+    "svg": "vn"
   },
   "account_modal": {
     "cancel_subscription": "Huỷ",
