@@ -83,18 +83,31 @@ of it.
 
 Written against current behaviour, using the harness:
 
-- [ ] `joinClient`: dup-session kicks the _old_ client (Prod), 3-IP cap
+- [x] `joinClient`: dup-session kicks the _old_ client (Prod), 3-IP cap
       (Public, non-Dev), host-left closes lobby and `phase()` → `Finished`.
-- [ ] `rejoinClient`: identity update drops `verified` only when the username
+- [x] `rejoinClient`: identity update drops `verified` only when the username
       changes; ignored after start; `lastTurn` slicing; old socket closed.
-- [ ] `addListeners`: corrupt frame → `invalid_message` kick; ws
+- [x] `addListeners`: corrupt frame → `invalid_message` kick; ws
       `readyState >= 2` race handled as a disconnect.
-- [ ] `phase()`: 60s ping prune, `maxGameDuration`, the
+- [x] `phase()`: 60s ping prune, `maxGameDuration`, the
       `noActive && warmupOver && noRecentPings` exit.
-- [ ] `findOutOfSyncClients`: majority, strict-majority flip, single client,
+- [x] `findOutOfSyncClients`: majority, strict-majority flip, single client,
       `turns[n].hash` set on agreement.
-- [ ] `checkDisconnectedStatus`: only every 5 turns, flips both ways,
+- [x] `checkDisconnectedStatus`: only every 5 turns, flips both ways,
       spectators emit no `mark_disconnected`.
+
+Status (2026-08-25): done — `tests/server/GameServerJoin.test.ts`,
+`GameServerRejoin.test.ts`, `GameServerPhase.test.ts`,
+`GameServerDesync.test.ts` (35 tests, all through the public API and the
+wire; no `(game as any)`). Host-left teardown was already covered by
+`HostedLobbyListing.test.ts`. Each file was checked against a hand mutation of
+the branch it covers (5-turn boundary, strict-majority flip, post-start
+identity update, dup-session kick) and failed as expected.
+
+Suspected bug pinned as current behaviour (own PR, not a refactor side
+effect): a prod duplicate-session kick calls `kickClient()` on the old
+connection, which bans the shared persistentID — so the surviving session can
+no longer be looked up (`getClientIdForPersistentId`) or reconnect.
 
 ## Phase 2 — Inject the hidden dependencies
 
