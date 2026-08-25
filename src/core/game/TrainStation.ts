@@ -136,7 +136,7 @@ export class TrainStation {
 
   setCluster(cluster: Cluster | null) {
     // Properly disconnect cluster if it's already set
-    if (this.cluster !== null) {
+    if (this.cluster !== null && this.cluster !== cluster) {
       this.cluster.removeStation(this);
     }
     this.cluster = cluster;

@@ -4,6 +4,8 @@ import {
   MessageType,
   NukeState,
   Player,
+  SamLauncherState,
+  TerraNullius,
   Tick,
   TrainType,
   TrajectoryTile,
@@ -22,6 +24,7 @@ import { maxHealthWithVeterancy } from "./Veterancy";
 export class UnitImpl implements Unit {
   private _active = true;
   private _targetTile: TileRef | undefined;
+  private _targetPlayer: Player | TerraNullius | undefined;
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
@@ -44,6 +47,7 @@ export class UnitImpl implements Unit {
   private _trainType: TrainType | undefined;
   // Nuke only
   private _deletionAt: number | null = null;
+  private _samLauncherState: SamLauncherState | undefined;
 
   constructor(
     private _type: UnitType,
@@ -57,6 +61,8 @@ export class UnitImpl implements Unit {
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._targetTile =
       "targetTile" in params ? (params.targetTile ?? undefined) : undefined;
+    this._targetPlayer =
+      "targetPlayer" in params ? (params.targetPlayer ?? undefined) : undefined;
     if ("trajectory" in params || "waitTicks" in params) {
       this._nukeState = {
         trajectory: params.trajectory ?? [],
@@ -72,6 +78,13 @@ export class UnitImpl implements Unit {
         : 0;
     if (this._type === UnitType.TransportShip) {
       this._transportShipState = { isRetreating: false, troops: 0 };
+    }
+    if (this._type === UnitType.SAMLauncher) {
+      this._samLauncherState = {
+        startRange: this.mg.config().samRange(1),
+        targetLevel: 1,
+        duration: this.mg.config().samUpgradeDuration(),
+      };
     }
     if ("patrolTile" in params) {
       this._warshipState = {
@@ -130,7 +143,7 @@ export class UnitImpl implements Unit {
   }
 
   toUpdate(): UnitUpdate {
-    return {
+    const update: UnitUpdate = {
       type: GameUpdateType.Unit,
       unitType: this._type,
       id: this._id,
@@ -149,6 +162,10 @@ export class UnitImpl implements Unit {
           : undefined,
       nukeState:
         this._nukeState !== undefined ? { ...this._nukeState } : undefined,
+      samUpgrade:
+        this._samLauncherState?.upgradeStartTick !== undefined
+          ? { ...this._samLauncherState }
+          : undefined,
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
       targetable: this._targetable,
@@ -163,6 +180,7 @@ export class UnitImpl implements Unit {
       trainType: this._trainType,
       loaded: this._loaded,
     };
+    return update;
   }
 
   type(): UnitType {
@@ -515,6 +533,10 @@ export class UnitImpl implements Unit {
     return this._missileTimerQueue;
   }
 
+  samLauncherState(): SamLauncherState | undefined {
+    return this._samLauncherState;
+  }
+
   reloadMissile(): void {
     this._missileTimerQueue.shift();
     this.mg.addUpdate(this.toUpdate());
@@ -526,6 +548,10 @@ export class UnitImpl implements Unit {
 
   targetTile(): TileRef | undefined {
     return this._targetTile;
+  }
+
+  targetPlayer(): Player | TerraNullius | undefined {
+    return this._targetPlayer;
   }
 
   setTrajectoryIndex(i: number): void {
@@ -671,6 +697,16 @@ export class UnitImpl implements Unit {
   }
 
   increaseLevel(): void {
+    if (this._type === UnitType.SAMLauncher) {
+      const currentTick = this.mg.ticks();
+      const currentRange = this.mg.config().dynamicSamRange(this, currentTick);
+      this._samLauncherState = {
+        upgradeStartTick: currentTick,
+        startRange: currentRange,
+        targetLevel: this._level + 1,
+        duration: this.mg.config().samUpgradeDuration(),
+      };
+    }
     this._level++;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
       this._missileTimerQueue.push(this.mg.ticks());
@@ -682,6 +718,9 @@ export class UnitImpl implements Unit {
     this._level--;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
       this._missileTimerQueue.pop();
+    }
+    if (this._type === UnitType.SAMLauncher) {
+      this._samLauncherState = undefined;
     }
     if (this._level <= 0) {
       this.delete(true, destroyer);

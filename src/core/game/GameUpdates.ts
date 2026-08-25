@@ -8,6 +8,7 @@ import {
   NukeState,
   PlayerID,
   PlayerType,
+  SamLauncherState,
   Team,
   Tick,
   TrainType,
@@ -200,6 +201,7 @@ export interface UnitUpdate {
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
+  samUpgrade?: SamLauncherState;
 }
 
 export interface AttackUpdate {

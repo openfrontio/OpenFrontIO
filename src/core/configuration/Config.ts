@@ -14,6 +14,7 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
+  Unit,
   UnitInfo,
   UnitType,
 } from "../game/Game";
@@ -150,10 +151,16 @@ export class Config {
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
     public readonly listed: boolean = false,
+    private _spectator: boolean = false,
   ) {}
 
   isReplay(): boolean {
     return this._isReplay;
+  }
+
+  /** True when the player joined the lobby as a spectator (watch-only). */
+  isIntentionalSpectator(): boolean {
+    return this._spectator;
   }
 
   traitorDefenseDebuff(): number {
@@ -997,6 +1004,25 @@ export class Config {
 
   maxSamRange(): number {
     return 150;
+  }
+
+  samUpgradeDuration(): number {
+    return Math.floor(this.SAMCooldown() / 2);
+  }
+
+  dynamicSamRange(sam: Unit, currentTick: number): number {
+    const state = sam.samLauncherState();
+    if (state === undefined || state.upgradeStartTick === undefined) {
+      return this.samRange(sam.level());
+    }
+    const duration = state.duration ?? this.samUpgradeDuration();
+    const elapsed = currentTick - state.upgradeStartTick;
+    if (elapsed >= duration) {
+      return this.samRange(state.targetLevel);
+    }
+    const targetRange = this.samRange(state.targetLevel);
+    const diff = targetRange - state.startRange;
+    return state.startRange + (diff * elapsed) / duration;
   }
 
   defaultSamMissileSpeed(): number {

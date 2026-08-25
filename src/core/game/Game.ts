@@ -51,6 +51,13 @@ export type NukeState = {
   waitTicks: number;
 };
 
+export type SamLauncherState = {
+  upgradeStartTick?: number;
+  startRange: number;
+  targetLevel: number;
+  duration: number;
+};
+
 export const AllPlayers = "AllPlayers" as const;
 
 // export type GameUpdates = Record<GameUpdateType, GameUpdate[]>;
@@ -158,6 +165,7 @@ export interface PublicGameModifiers {
   isPeaceTime?: boolean;
   isWaterNukes?: boolean;
   isDoomsdayClock?: boolean;
+  isOvertime?: boolean;
 }
 
 // Largest bulk-purchase amount an intent may carry (mirrored by the intent
@@ -281,6 +289,7 @@ export interface UnitParamsMap {
 
   [UnitType.MIRV]: {
     targetTile?: number;
+    targetPlayer?: Player | TerraNullius;
   };
 
   [UnitType.MIRVWarhead]: {
@@ -488,6 +497,7 @@ export interface Unit {
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;
   targetTile(): TileRef | undefined;
+  targetPlayer(): Player | TerraNullius | undefined;
   setTrajectoryIndex(i: number): void;
   trajectoryIndex(): number;
   trajectory(): TrajectoryTile[];
@@ -533,6 +543,7 @@ export interface Unit {
   reloadMissile(): void;
   isInCooldown(): boolean;
   missileTimerQueue(): number[];
+  samLauncherState(): SamLauncherState | undefined;
 
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
