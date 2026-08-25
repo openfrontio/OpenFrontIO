@@ -619,6 +619,23 @@ export interface Player {
   gold(): Gold;
   addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
+
+  // Cumulative trade revenue, surfaced on the live PlayerUpdate so clients can
+  // compute per-source gold rates (leaderboard "Ship/Train Trade Gold/min").
+  // Mirrors StatsSchemas GOLD_INDEX_TRADE / GOLD_INDEX_TRAIN_* semantics.
+  tradeGold(): Gold;
+  addTradeGold(toAdd: Gold): void;
+  trainGold(): Gold;
+  addTrainGold(toAdd: Gold): void;
+
+  // Cumulative piracy revenue (captured trade ships; GOLD_INDEX_STEAL).
+  piracyGold(): Gold;
+  addPiracyGold(toAdd: Gold): void;
+
+  // Cumulative gold received from ALL sources (workers, trade, trains,
+  // piracy, conquest, donations). Incremented inside addGold(); surfaced on
+  // the live PlayerUpdate for the leaderboard "Gold Income/min" column.
+  goldEarned(): Gold;
   troops(): number;
   setTroops(troops: number): void;
   addTroops(troops: number): void;

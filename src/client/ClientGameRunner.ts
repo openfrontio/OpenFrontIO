@@ -69,6 +69,7 @@ import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
+import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import {
   applyGraphicsOverrides,
   createRenderSettings,
@@ -126,6 +127,7 @@ export function joinLobby(
 
   const userSettings: UserSettings = new UserSettings();
   themeProvider.reset(); // fresh colour allocators for this game
+  goldRateTracker.resetAll(); // drop samples from a previous in-page game
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
