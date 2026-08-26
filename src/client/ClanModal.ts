@@ -8,6 +8,7 @@ import "./components/clan/ClanBrowseView";
 import type { BrowseState } from "./components/clan/ClanBrowseView";
 import "./components/clan/ClanCard";
 import "./components/clan/ClanDetailView";
+import "./components/clan/ClanDonationsView";
 import "./components/clan/ClanGameHistoryView";
 import type { ClanGameHistoryCache } from "./components/clan/ClanGameHistoryView";
 import "./components/clan/ClanManageView";
@@ -33,9 +34,13 @@ type View =
   | "my-requests";
 
 // List tabs share BaseModal's `activeTab` slot with detail tabs ("overview" /
-// "members" / "game-history"); which set is live depends on `view`.
+// "members" / "game-history" / "donations"); which set is live depends on `view`.
 const LIST_TABS = ["my-clans", "browse"] as const;
 type ListTab = (typeof LIST_TABS)[number];
+
+// Detail tabs a player profile can be opened from and returned to. Overview
+// has no member links of its own, so it falls back to Members.
+type DetailReturnTab = "members" | "game-history" | "donations";
 
 function isListTab(key: string): key is ListTab {
   return (LIST_TABS as readonly string[]).includes(key);
@@ -84,8 +89,8 @@ export class ClanModal extends BaseModal {
   private preserveStateForModalHandoff = false;
   private returningFromModalHandoff = false;
   // Which detail tab opened the player-profile modal, so its Back button lands
-  // on that tab (Members vs Game History) rather than always Members.
-  private profileOpenedFromGameHistory = false;
+  // on that tab (Members / Game History / Donations) rather than always Members.
+  private profileOpenedFromTab: DetailReturnTab = "members";
   // The profile whose Clans tab opened this clan, so Back can return there,
   // plus that profile's own origin — it parks here for the detour because the
   // profile modal is reused by any member profile opened along the way. Only
@@ -124,6 +129,10 @@ export class ClanModal extends BaseModal {
               {
                 key: "game-history",
                 label: translateText("clan_modal.tab_game_history"),
+              },
+              {
+                key: "donations",
+                label: translateText("clan_modal.tab_donations"),
               },
             ]
           : [],
@@ -438,6 +447,13 @@ export class ClanModal extends BaseModal {
         ></clan-bans-view>`;
       }
       // Default: detail view — dispatched by the active detail tab
+      if (this.activeTab === "donations") {
+        return html`<clan-donations-view
+          .clanTag=${this.selectedClanTag}
+          @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(e.detail.publicId)}
+        ></clan-donations-view>`;
+      }
       if (this.activeTab === "game-history") {
         return html`<clan-game-history-view
           .clanTag=${this.selectedClanTag}
@@ -625,8 +641,11 @@ export class ClanModal extends BaseModal {
 
     // Route the profile modal's Back button to whichever tab opened it. Only
     // the game-history tab needs its scroll position preserved on return.
-    this.profileOpenedFromGameHistory = this.activeTab === "game-history";
-    if (this.profileOpenedFromGameHistory) {
+    this.profileOpenedFromTab =
+      this.activeTab === "game-history" || this.activeTab === "donations"
+        ? this.activeTab
+        : "members";
+    if (this.profileOpenedFromTab === "game-history") {
       this.gameHistoryScrollTop = this.modalEl?.getScrollTop() ?? 0;
     }
 
@@ -641,7 +660,7 @@ export class ClanModal extends BaseModal {
   }
 
   // Entry point for the profile modal's Back button (opened via openFromClan
-  // from either the Members or Game History tab).
+  // from the Members, Game History or Donations tab).
   public returnFromPlayerProfile(): void {
     // Nothing showing means the profile detoured through one of its own clans,
     // which reset this modal. Nothing is restored — land on the clan list
@@ -657,10 +676,10 @@ export class ClanModal extends BaseModal {
       this.open({ clan: this.selectedClanTag });
       return;
     }
-    if (this.profileOpenedFromGameHistory) {
+    if (this.profileOpenedFromTab === "game-history") {
       this.returnToGameHistory();
     } else {
-      this.returnToMembers();
+      this.returnToDetailTab(this.profileOpenedFromTab);
     }
   }
 
@@ -676,12 +695,12 @@ export class ClanModal extends BaseModal {
     this.openedFromProfileOrigin = origin;
   }
 
-  public returnToMembers(): void {
+  public returnToDetailTab(tab: DetailReturnTab): void {
     const tag = this.selectedClanTag;
     if (!tag) return;
 
     this.returningFromModalHandoff = true;
-    this.open({ clan: tag, tab: "members" });
+    this.open({ clan: tag, tab });
   }
 
   public returnToGameHistory(): void {

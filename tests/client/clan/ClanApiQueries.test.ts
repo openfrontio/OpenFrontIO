@@ -13,6 +13,7 @@ import { getUserMe } from "../../../src/client/Api";
 import {
   checkClanTagOwnership,
   fetchClanDetail,
+  fetchClanDonations,
   fetchClanExists,
   fetchClanGames,
   fetchClanLeaderboard,
@@ -635,5 +636,108 @@ describe("fetchClanGames", () => {
       string
     >;
     expect(headers.Authorization).toBe("Bearer test-token");
+  });
+});
+
+describe("fetchClanDonations", () => {
+  const donationsResponse = {
+    results: [
+      {
+        id: "1834",
+        currencyType: "soft",
+        amount: "500",
+        reason: "clan_donation",
+        note: null,
+        createdBy: "Xk3pQ9",
+        createdByUsername: "evan.0042",
+        createdAt: "2026-08-26T02:10:31.512Z",
+      },
+    ],
+    total: 27,
+    page: 1,
+    limit: 10,
+  };
+
+  const spyFetch = () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson(donationsResponse)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+    return fetchSpy;
+  };
+
+  it("returns parsed data on success", async () => {
+    mockFetch(() => okJson(donationsResponse));
+    const result = await fetchClanDonations("TEST");
+    expect(result).toEqual(donationsResponse);
+  });
+
+  it("sends page and limit defaults and omits currencyType when unset", async () => {
+    const fetchSpy = spyFetch();
+    await fetchClanDonations("TEST");
+    const url = new URL(fetchSpy.mock.calls[0]![0] as string);
+    expect(url.pathname).toBe("/clans/TEST/donations");
+    expect(url.searchParams.get("page")).toBe("1");
+    expect(url.searchParams.get("limit")).toBe("10");
+    // The endpoint 400s on an empty value, so the key must be absent.
+    expect(url.searchParams.has("currencyType")).toBe(false);
+  });
+
+  it("forwards page, limit and currencyType when provided", async () => {
+    const fetchSpy = spyFetch();
+    await fetchClanDonations("TEST", {
+      page: 3,
+      limit: 25,
+      currencyType: "hard",
+    });
+    const url = new URL(fetchSpy.mock.calls[0]![0] as string);
+    expect(url.searchParams.get("page")).toBe("3");
+    expect(url.searchParams.get("limit")).toBe("25");
+    expect(url.searchParams.get("currencyType")).toBe("hard");
+  });
+
+  it("URL-encodes the tag", async () => {
+    const fetchSpy = spyFetch();
+    await fetchClanDonations("a/b");
+    expect(fetchSpy.mock.calls[0]![0] as string).toContain(
+      "/clans/a%2Fb/donations?",
+    );
+  });
+
+  it("returns forbidden on HTTP 403", async () => {
+    mockFetch(() => failRes(403));
+    await expect(fetchClanDonations("TEST")).resolves.toEqual({
+      error: "forbidden",
+    });
+  });
+
+  it("returns failed on other non-OK statuses", async () => {
+    mockFetch(() => failRes(500));
+    await expect(fetchClanDonations("TEST")).resolves.toEqual({
+      error: "failed",
+    });
+  });
+
+  it("returns failed on a transport error", async () => {
+    mockFetch(() => Promise.reject(new Error("offline")));
+    await expect(fetchClanDonations("TEST")).resolves.toEqual({
+      error: "failed",
+    });
+  });
+
+  it("returns failed when the body does not match the schema", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // amount must be a string (bigint on the wire), not a number.
+    mockFetch(() =>
+      okJson({
+        ...donationsResponse,
+        results: [{ ...donationsResponse.results[0], amount: 500 }],
+      }),
+    );
+    await expect(fetchClanDonations("TEST")).resolves.toEqual({
+      error: "failed",
+    });
+    warn.mockRestore();
   });
 });
