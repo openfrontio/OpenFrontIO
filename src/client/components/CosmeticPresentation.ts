@@ -49,6 +49,28 @@ export function cosmeticSelectionLabel(resolved: ResolvedCosmetic): string {
   });
 }
 
+/**
+ * What kind of cosmetic this is, as shown to players ("Skin", "Flag",
+ * "Boat Trail Effect", …). Patterns are "Skins" throughout the store.
+ */
+export function cosmeticTypeLabel(resolved: ResolvedCosmetic): string {
+  switch (resolved.type) {
+    case "pattern":
+    case "skin":
+      return translateText("cosmetics.type_skin");
+    case "flag":
+      return translateText("cosmetics.type_flag");
+    case "crown":
+      return translateText("cosmetics.type_crown");
+    case "effect":
+      return translateText("cosmetics.type_effect", {
+        type: translateText(`effects.type.${resolved.effectType}`),
+      });
+    default:
+      return "";
+  }
+}
+
 export function cosmeticRarity(resolved: ResolvedCosmetic): string {
   return resolved.cosmetic?.rarity ?? "common";
 }

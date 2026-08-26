@@ -1,19 +1,30 @@
-import { html, LitElement, render as litRender } from "lit";
+import {
+  html,
+  LitElement,
+  render as litRender,
+  nothing,
+  TemplateResult,
+} from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { CosmeticPack } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
-import { cosmeticDisplayName } from "./CosmeticPresentation";
+import { cosmeticDisplayName, cosmeticTypeLabel } from "./CosmeticPresentation";
 import "./CosmeticPreview";
 
 /**
  * Shows everything in a cosmetic bundle: a preview of each resolved item with
- * its name underneath. Rendered into a body portal (like confirm-dialog) so it
- * sits above the store modal. Set `.pack`; dispatches `close`.
+ * its name and type underneath, and the bundle's buy action (or ownership
+ * status) at the bottom. Rendered into a body portal (like confirm-dialog) so
+ * it sits above the store modal. Set `.pack`; dispatches `close`.
  */
 @customElement("pack-contents-dialog")
 export class PackContentsDialog extends LitElement {
   @property({ attribute: false }) pack: ResolvedCosmetic | null = null;
+
+  /** The same purchase button / status the bundle's store card shows. */
+  @property({ attribute: false })
+  actionContent: TemplateResult | typeof nothing = nothing;
 
   private portal: HTMLDivElement | null = null;
 
@@ -108,9 +119,19 @@ export class PackContentsDialog extends LitElement {
                       class="w-full break-words text-center text-sm font-bold leading-tight text-white"
                       >${cosmeticDisplayName(item)}</span
                     >
+                    <span
+                      data-pack-contents-type
+                      class="text-[10px] font-bold uppercase tracking-wider text-white/50"
+                      >${cosmeticTypeLabel(item)}</span
+                    >
                   </div>`,
               )}
             </div>`}
+        ${this.actionContent !== nothing
+          ? html`<div data-pack-contents-action class="mx-auto mt-4 max-w-xs">
+              ${this.actionContent}
+            </div>`
+          : nothing}
       </div>
     </div>`;
   }

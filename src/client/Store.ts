@@ -542,6 +542,7 @@ export class StoreModal extends BaseModal {
     })}${this.openedPack
       ? html`<pack-contents-dialog
           .pack=${this.openedPack}
+          .actionContent=${this.renderCardAction(this.openedPack, false)}
           @close=${() => this.closePack()}
         ></pack-contents-dialog>`
       : ""}`;

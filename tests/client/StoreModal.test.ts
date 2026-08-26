@@ -696,8 +696,31 @@ describe("StoreModal cosmetic browser", () => {
     ).toEqual(["pattern:stripes", "flag:aurora"]);
     expect(items[1].querySelector("cosmetic-preview")).toBeTruthy();
     expect(items[1].textContent).toContain("Aurora");
+    // Each item says what kind of cosmetic it is.
+    expect(
+      items.map(
+        (item) => item.querySelector("[data-pack-contents-type]")?.textContent,
+      ),
+    ).toEqual(["cosmetics.type_skin", "cosmetics.type_flag"]);
 
-    dialog.querySelector<HTMLButtonElement>("button[aria-label]")!.click();
+    // The bundle can be bought from the dialog too, with the same action as
+    // its card.
+    const button = dialog.querySelector(
+      "[data-pack-contents-action] purchase-button",
+    ) as PurchaseButton;
+    expect(button.priceHard).toBe(250);
+    button.requestCurrencyPurchase("hard");
+    await button.updateComplete;
+    button
+      .querySelector("confirm-dialog")!
+      .dispatchEvent(new CustomEvent("confirm"));
+    await vi.waitFor(() =>
+      expect(purchaseCosmetic).toHaveBeenCalledWith(starterBundle, "hard"),
+    );
+
+    dialog
+      .querySelector<HTMLButtonElement>("button[aria-label='common.close']")!
+      .click();
     await modal.updateComplete;
     expect(document.querySelector("[data-pack-contents]")).toBeNull();
     // The card stays inspected after closing.
@@ -717,6 +740,17 @@ describe("StoreModal cosmetic browser", () => {
     await modal.updateComplete;
 
     expect(modal.querySelector("purchase-button")).toBeNull();
+    // The dialog shows the same status instead of a buy button.
+    card(modal, owned.key)!.onActivate!(owned);
+    await modal.updateComplete;
+    await (modal.querySelector("pack-contents-dialog") as LitElement)
+      .updateComplete;
+    const dialog = document.body.querySelector("[data-pack-contents]")!;
+    expect(dialog.querySelector("purchase-button")).toBeNull();
+    expect(
+      dialog.querySelector("[data-pack-contents-action] [data-store-status]")
+        ?.textContent,
+    ).toContain("store.pack_owned");
     expect(
       product(modal, owned.key)?.querySelector("[data-store-status]")
         ?.textContent,
