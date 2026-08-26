@@ -4,6 +4,7 @@ import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo } from "../../core/Schemas";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { getMapName, getModifierLabels, translateText } from "../Utils";
+import "./ConfirmDialog";
 
 /**
  * Whether the signed-in player may join trusted-only lobbies, from the
@@ -12,6 +13,32 @@ import { getMapName, getModifierLabels, translateText } from "../Utils";
  */
 export function viewerIsTrusted(userMe: UserMeResponse | false): boolean {
   return userMe !== false && userMe.player.trustTier === "trusted";
+}
+
+/** Whether the viewer may join `lobby`: it is open, or they are trusted. */
+export function canJoinTrustedLobby(
+  lobby: PublicGameInfo,
+  viewerTrusted: boolean,
+): boolean {
+  return lobby.gameConfig?.trusted !== true || viewerTrusted;
+}
+
+/**
+ * Popup shown instead of attempting to join a trusted-only lobby the viewer
+ * can't get into (the server would refuse them anyway). Tells them how to
+ * become trusted rather than letting the join fail.
+ */
+export function trustRequiredDialog(onClose: () => void): TemplateResult {
+  return html`<confirm-dialog
+    .heading=${translateText("public_lobby.trust_required_title")}
+    .message=${translateText("public_lobby.trust_required_body")}
+    variant="warning"
+    .showClose=${true}
+    .buttons=${"confirmOnly"}
+    .confirmText=${translateText("public_lobby.trust_required_ok")}
+    @cancel=${onClose}
+    @confirm=${onClose}
+  ></confirm-dialog>`;
 }
 
 /**

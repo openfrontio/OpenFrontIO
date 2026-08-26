@@ -13,8 +13,10 @@ import {
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
 import "./components/IOSAddToHomeScreenBanner";
 import {
+  canJoinTrustedLobby,
   lobbyCard,
   mapAspectRatios,
+  trustRequiredDialog,
   viewerIsTrusted,
 } from "./components/LobbyCard";
 import { multiplayerAllowed, type DesktopUpdateState } from "./DesktopShell";
@@ -51,6 +53,7 @@ export class GameModeSelector extends LitElement {
   @state() private inputValid: boolean = true;
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
   @state() private viewerTrusted: boolean = false;
+  @state() private showTrustRequired: boolean = false;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
@@ -283,6 +286,9 @@ export class GameModeSelector extends LitElement {
             true,
           )}
         </div>
+        ${this.showTrustRequired
+          ? trustRequiredDialog(() => (this.showTrustRequired = false))
+          : nothing}
       </div>
     `;
   }
@@ -424,6 +430,10 @@ export class GameModeSelector extends LitElement {
   private validateAndJoin(lobby: PublicGameInfo) {
     if (this.blockedByUpdate()) return;
     if (!this.validateUsername()) return;
+    if (!canJoinTrustedLobby(lobby, this.viewerTrusted)) {
+      this.showTrustRequired = true;
+      return;
+    }
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
