@@ -66,12 +66,14 @@ describe("lobbyCard trust lock", () => {
   it("shows a closed lock when the viewer can't join a trusted-only lobby", () => {
     const icon = trustIcon(renderCard(lobby(true), false));
     expect(icon?.dataset.trust).toBe("locked");
+    expect(icon?.classList.contains("text-red-400")).toBe(true);
     expect(icon?.getAttribute("title")).toBe("public_lobby.trusted_locked");
   });
 
   it("shows an open lock when the viewer is trusted", () => {
     const icon = trustIcon(renderCard(lobby(true), true));
     expect(icon?.dataset.trust).toBe("unlocked");
+    expect(icon?.classList.contains("text-green-400")).toBe(true);
     expect(icon?.getAttribute("title")).toBe("public_lobby.trusted_unlocked");
   });
 });

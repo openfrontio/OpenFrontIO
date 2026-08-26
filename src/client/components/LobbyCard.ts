@@ -172,8 +172,7 @@ export function lobbyCard({
               )}
             </div>`
           : html`<div></div>`}
-        <div class="shrink-0 flex items-center gap-1">
-          ${trustedOnly ? trustLockIcon(viewerTrusted) : null}
+        <div class="shrink-0">
           <span
             class="text-xs font-bold tracking-widest ${timeDisplayUppercase
               ? "uppercase"
@@ -184,9 +183,12 @@ export function lobbyCard({
       </div>
       <!-- Bottom bar: map name + mode, with player count floating above -->
       <div
-        class="absolute bottom-0 left-0 right-0 flex flex-col px-3 py-2 bg-black/55 backdrop-blur-sm rounded-b-2xl"
+        class="absolute bottom-0 left-0 right-0 flex flex-col px-3 py-2 bg-black/55 backdrop-blur-sm rounded-b-2xl ${trustedOnly
+          ? "pr-10"
+          : ""}"
         style="overflow: visible;"
       >
+        ${trustedOnly ? trustLockIcon(viewerTrusted) : null}
         <span
           class="absolute bottom-full right-2 mb-1 flex items-center gap-1 text-xs font-bold tracking-widest bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded"
         >
@@ -217,8 +219,9 @@ export function lobbyCard({
   `;
 }
 
-// Closed lock: the viewer can't join this trusted-only lobby. Open lock: they
-// can. Heroicons mini lock-closed / lock-open.
+// Bottom-right corner of the card. Red closed lock: the viewer can't join this
+// trusted-only lobby. Green open lock: they can. Heroicons mini
+// lock-closed / lock-open.
 function trustLockIcon(viewerTrusted: boolean): TemplateResult {
   const label = translateText(
     viewerTrusted
@@ -226,7 +229,9 @@ function trustLockIcon(viewerTrusted: boolean): TemplateResult {
       : "public_lobby.trusted_locked",
   );
   return html`<span
-    class="flex items-center bg-black/70 backdrop-blur-sm px-1.5 py-1 rounded"
+    class="absolute bottom-2 right-2 flex items-center bg-black/70 backdrop-blur-sm px-1.5 py-1 rounded ${viewerTrusted
+      ? "text-green-400"
+      : "text-red-400"}"
     title=${label}
     aria-label=${label}
     data-trust=${viewerTrusted ? "unlocked" : "locked"}
