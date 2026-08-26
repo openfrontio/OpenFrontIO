@@ -22,6 +22,10 @@ function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {
     deathPosition: null,
     tilesOwned: 0,
     gold: 0,
+    tradeGold: 0,
+    trainGold: 0,
+    piracyGold: 0,
+    goldEarned: 0,
     troops: 100,
     isTraitor: false,
     traitorRemainingTicks: 0,
@@ -105,6 +109,40 @@ describe("diffPlayerUpdate", () => {
     const diff = diffPlayerUpdate(prev, next)!;
     expect(diff.killedBy).toBe("client-b");
     expect(diff.deathPosition).toBe(3);
+  });
+
+  it("emits tradeGold/trainGold/piracyGold/goldEarned only when counters change", () => {
+    const prev = makePlayerUpdate({
+      tradeGold: 100n,
+      trainGold: 50n,
+      piracyGold: 10n,
+      goldEarned: 500n,
+    });
+    expect(
+      diffPlayerUpdate(
+        prev,
+        makePlayerUpdate({
+          tradeGold: 100n,
+          trainGold: 50n,
+          piracyGold: 10n,
+          goldEarned: 500n,
+        }),
+      ),
+    ).toBeNull();
+    const diff = diffPlayerUpdate(
+      prev,
+      makePlayerUpdate({
+        tradeGold: 150n,
+        trainGold: 50n,
+        piracyGold: 25n,
+        goldEarned: 800n,
+      }),
+    )!;
+    expect(diff.tradeGold).toBe(150n);
+    expect(diff.piracyGold).toBe(25n);
+    expect(diff.trainGold).toBeUndefined();
+    // goldEarned is packed-channel only — ignored by the object diff.
+    expect(diff.goldEarned).toBeUndefined();
   });
 
   it("ignores tilesOwned/gold/troops — they travel via packedPlayerUpdates", () => {
@@ -331,6 +369,28 @@ describe("applyStateUpdate", () => {
     expect(typeof target.gold).toBe("number");
   });
 
+  it("converts bigint tradeGold/trainGold/piracyGold/goldEarned to numbers", () => {
+    const target = makePlayerState({
+      tradeGold: 0,
+      trainGold: 0,
+      piracyGold: 0,
+      goldEarned: 0,
+    });
+    applyStateUpdate(target, {
+      type: GameUpdateType.Player,
+      id: "p",
+      tradeGold: 12_345n,
+      trainGold: 678n,
+      piracyGold: 90n,
+      goldEarned: 555n,
+    });
+    expect(target.tradeGold).toBe(12_345);
+    expect(target.trainGold).toBe(678);
+    expect(target.piracyGold).toBe(90);
+    expect(target.goldEarned).toBe(555);
+    expect(typeof target.goldEarned).toBe("number");
+  });
+
   it("clamps negative traitorRemainingTicks to zero", () => {
     const target = makePlayerState({ traitorRemainingTicks: 5 });
     applyStateUpdate(target, {
@@ -461,6 +521,7 @@ describe("diffPlayerUpdate — every scalar field must be wired up", () => {
     "tilesOwned",
     "gold",
     "troops",
+    "goldEarned",
   ]);
 
   function flip(value: unknown): unknown {

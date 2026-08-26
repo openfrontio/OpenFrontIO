@@ -114,7 +114,11 @@ export class AttackExecution implements Execution {
       .attackAmount(this._owner, this.target);
     if (this.removeTroops) {
       this.startTroops = Math.min(this._owner.troops(), this.startTroops);
-      this._owner.removeTroops(this.startTroops);
+      // Take the amount that was actually deducted, not the amount asked for.
+      // removeTroops() floors, so a fractional request leaves the attack
+      // holding troops the owner never paid for — and retreat refunds the
+      // combined total, turning the leftover fractions into free troops.
+      this.startTroops = this._owner.removeTroops(this.startTroops);
     }
     this.attack = this._owner.createAttack(
       this.target,

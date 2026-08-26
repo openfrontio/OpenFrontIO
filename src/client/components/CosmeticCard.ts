@@ -485,6 +485,7 @@ export class CosmeticCard extends LitElement {
               .showAdFree=${active.relationship === "purchasable"}
               .usdValue=${usdValue}
               .perks=${this.subscriptionPerks()}
+              .items=${(active.packItems ?? []).map(cosmeticDisplayName)}
             ></cosmetic-info>`
           : nothing}
       </div>

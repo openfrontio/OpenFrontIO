@@ -9,6 +9,7 @@ import type { CosmeticPreview } from "../../src/client/components/CosmeticPrevie
 
 const translations = {
   "cosmetics.free": "+{numFree} BONUS!",
+  "cosmetics.pack_more_items": "+{count} more",
   "territory_patterns.pattern.default": "Default",
   "territory_patterns.pattern.stripes": "Ocean Stripes",
   "territory_patterns.pattern.forest": "Forest Skin",
@@ -121,6 +122,25 @@ const resolved = {
     colorPalette: null,
     relationship: "purchasable",
     key: "pack:plutonium",
+  },
+  cosmeticPack: {
+    type: "cosmeticPack",
+    cosmetic: {
+      name: "starter",
+      displayName: "Starter Pack",
+      description: "",
+      priceHard: 250,
+      rarity: "epic",
+      items: [
+        { type: "flag", name: "us" },
+        { type: "crown", name: "golden" },
+        { type: "effect", name: "blue_wake" },
+      ],
+    },
+    colorPalette: null,
+    relationship: "purchasable",
+    key: "cosmeticPack:starter",
+    packItems: [],
   },
   subscription: {
     type: "subscription",
@@ -269,6 +289,43 @@ describe("CosmeticPreview", () => {
       "shrink-0",
     );
     expect(previewBox.textContent).toContain("+250 BONUS!");
+  });
+
+  it("tiles a cosmetic pack's resolved items and sums up the overflow", async () => {
+    installTranslations();
+    const items = [
+      resolved.flag,
+      resolved.crown,
+      resolved.effect,
+      resolved.skin,
+      resolved.pattern,
+    ] as ResolvedCosmetic[];
+    await render({ ...resolved.cosmeticPack, packItems: items });
+
+    const box = preview!.querySelector(
+      '[data-cosmetic-preview="cosmeticPack"]',
+    )!;
+    expect(box.className).toContain("aspect-square");
+    const tiles = [...box.querySelectorAll("[data-cosmetic-pack-item]")];
+    // Four live previews at most — a big pack shouldn't paint every item.
+    expect(
+      tiles.map((tile) => tile.getAttribute("data-cosmetic-pack-item")),
+    ).toEqual(items.slice(0, 4).map((item) => item.key));
+    expect(tiles[0].querySelector("img")?.alt).toBe("United States");
+    expect(box.textContent).toContain("+1 more");
+    expect(cosmeticDisplayName(preview!.resolved)).toBe("Starter Pack");
+    expect(cosmeticRarity(preview!.resolved)).toBe("epic");
+  });
+
+  it("renders a cosmetic pack whose items all vanished without a badge", async () => {
+    installTranslations();
+    await render(resolved.cosmeticPack);
+
+    const box = preview!.querySelector(
+      '[data-cosmetic-preview="cosmeticPack"]',
+    )!;
+    expect(box.querySelectorAll("[data-cosmetic-pack-item]")).toHaveLength(0);
+    expect(box.textContent).not.toContain("more");
   });
 
   it("lets a subscription preview grow past a square", async () => {

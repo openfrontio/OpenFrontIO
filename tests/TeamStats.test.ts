@@ -66,16 +66,26 @@ describe("TeamStats", () => {
     const players = [
       {
         id: () => "blue-player",
+        smallID: () => 0,
         team: () => "Blue",
         numTilesOwned: () => 10,
         gold: () => 10n,
+        tradeGold: () => 0,
+        trainGold: () => 0,
+        piracyGold: () => 0,
+        goldEarned: () => 0,
         isAlive: () => true,
       },
       {
         id: () => "red-player",
+        smallID: () => 1,
         team: () => "Red",
         numTilesOwned: () => 5,
         gold: () => 20n,
+        tradeGold: () => 0,
+        trainGold: () => 0,
+        piracyGold: () => 0,
+        goldEarned: () => 0,
         isAlive: () => true,
       },
     ] as unknown as PlayerView[];
@@ -83,6 +93,7 @@ describe("TeamStats", () => {
       myPlayer: () => players[0],
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;

@@ -1,33 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("../../src/core/Schemas", async () => {
-  const actual = (await vi.importActual("../../src/core/Schemas")) as any;
-  return {
-    ...actual,
-    GameStartInfoSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-    ServerPrestartMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-  };
-});
-
-import { GameType } from "../../src/core/game/Game";
-import { GameServer } from "../../src/server/GameServer";
-import { testGameConfig } from "../util/Wire";
+import { GamePhase } from "../../src/server/GameServer";
+import { makeGame, startGame } from "../util/GameServerHarness";
 
 describe("GameLifecycle", () => {
-  let mockLogger: any;
-
   beforeEach(() => {
     vi.useFakeTimers();
-    mockLogger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
   });
 
   afterEach(() => {
@@ -36,12 +13,7 @@ describe("GameLifecycle", () => {
   });
 
   it("should not start turn interval if game has ended", async () => {
-    const game = new GameServer(
-      "test-game",
-      mockLogger,
-      Date.now(),
-      testGameConfig({ gameType: GameType.Private }),
-    );
+    const game = makeGame();
 
     // Call end() first - this should set _hasEnded
     await game.end();
@@ -49,48 +21,35 @@ describe("GameLifecycle", () => {
     // Now call start() - this should be a no-op due to our fix
     game.start();
 
-    // Check if the interval ID is set (it shouldn't be)
-    expect((game as any).endTurnIntervalID).toBeUndefined();
+    // No turn interval was armed.
+    expect(vi.getTimerCount()).toBe(0);
 
     // Check if _hasStarted remained false (or at least no interval was created)
     expect(game.hasStarted()).toBe(false);
   });
 
-  it("should clear turn interval and set _hasEnded on end()", async () => {
-    // We need to initialize the game such that start() can succeed
-    const game = new GameServer(
-      "test-game",
-      mockLogger,
-      Date.now(),
-      testGameConfig({ gameType: GameType.Private }),
-    );
+  it("should clear turn interval and mark the game ended on end()", async () => {
+    const game = makeGame();
 
-    // Manually trigger prestart to fulfill some internal checks if necessary
-    game.prestart();
-
-    // start() should create the interval
-    game.start();
-    expect((game as any).endTurnIntervalID).toBeDefined();
+    // Take the game through the real lobby -> game transition.
+    startGame(game);
+    // start() arms the turn interval (nobody joined, so no lobby broadcast).
+    expect(vi.getTimerCount()).toBe(1);
 
     // end() should clear it
     await game.end();
-    expect((game as any).endTurnIntervalID).toBeUndefined();
-    expect((game as any)._hasEnded).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(game.phase()).toBe(GamePhase.Finished);
   });
 
   it("should be resilient to multiple end() calls", async () => {
-    const game = new GameServer(
-      "test-game",
-      mockLogger,
-      Date.now(),
-      testGameConfig({ gameType: GameType.Private }),
-    );
+    const game = makeGame();
 
     await game.end();
-    expect((game as any)._hasEnded).toBe(true);
+    expect(game.phase()).toBe(GamePhase.Finished);
 
     // Should not throw or crash
     await expect(game.end()).resolves.toBeUndefined();
-    expect((game as any)._hasEnded).toBe(true);
+    expect(game.phase()).toBe(GamePhase.Finished);
   });
 });

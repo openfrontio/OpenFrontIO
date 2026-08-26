@@ -20,6 +20,8 @@ import {
   PostTribeNameResponseSchema,
   PublicPlayerGamesResponse,
   PublicPlayerGamesResponseSchema,
+  PurchasePackResponse,
+  PurchasePackResponseSchema,
   PutUsernameResponse,
   PutUsernameResponseSchema,
   RankedLeaderboardResponse,
@@ -644,6 +646,99 @@ export async function purchaseWithCurrency(
   } catch (e) {
     console.error("purchaseWithCurrency: request failed", e);
     return false;
+  }
+}
+
+export type PurchaseCosmeticPackResult =
+  | { ok: true; data: PurchasePackResponse }
+  // 400 "Insufficient balance": the balance moved since the client's
+  // pre-check. Nothing charged.
+  | { ok: false; code: "insufficient_balance" }
+  // 400 insufficient_balance_debt: a refund/chargeback left the wallet
+  // negative; `debt` (bigint string) must be settled before anything is
+  // spendable. Nothing charged.
+  | { ok: false; code: "debt"; debt: string }
+  // 400 for a stale listing: pack not found / not for sale / zero price /
+  // all items deleted.
+  | { ok: false; code: "unavailable" }
+  // 409: the player already owns one or more items (`ownedFlareNames` says
+  // which). Also what a retry after a timed-out success returns — treat it as
+  // "already bought" and refetch /users/@me. Nothing charged.
+  | { ok: false; code: "already_owned"; ownedFlareNames: string[] }
+  | { ok: false; code: "failed" };
+
+const PACK_UNAVAILABLE_REASONS = [
+  "Pack not found",
+  "Pack is not for sale",
+  "Pack not available for hard currency",
+  "Pack has no items",
+];
+
+// POST /shop/purchase/pack — buy a cosmetic pack (see CosmeticPackSchema) for
+// its hard-currency price, granting every item's flare in one transaction.
+// Any error means no debit and no grants.
+export async function purchaseCosmeticPack(
+  packName: string,
+): Promise<PurchaseCosmeticPackResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/shop/purchase/pack`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ packName }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 400) {
+      const body = await response.json().catch(() => null);
+      const reason = typeof body?.reason === "string" ? body.reason : "";
+      if (reason === "Insufficient balance") {
+        return { ok: false, code: "insufficient_balance" };
+      }
+      if (reason === "insufficient_balance_debt") {
+        return { ok: false, code: "debt", debt: String(body.debt ?? "") };
+      }
+      if (PACK_UNAVAILABLE_REASONS.includes(reason)) {
+        return { ok: false, code: "unavailable" };
+      }
+      console.error("purchaseCosmeticPack: bad request", body);
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 409) {
+      const body = await response.json().catch(() => null);
+      const owned: unknown = body?.ownedFlareNames;
+      return {
+        ok: false,
+        code: "already_owned",
+        ownedFlareNames: Array.isArray(owned)
+          ? owned.filter((f): f is string => typeof f === "string")
+          : [],
+      };
+    }
+    if (!response.ok) {
+      console.error(
+        "purchaseCosmeticPack: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = PurchasePackResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error(
+        "purchaseCosmeticPack: Zod validation failed",
+        parsed.error,
+      );
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (e) {
+    console.error("purchaseCosmeticPack: request failed", e);
+    return { ok: false, code: "failed" };
   }
 }
 

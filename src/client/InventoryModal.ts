@@ -732,6 +732,12 @@ export class InventoryModal extends BaseModal {
     this.search = "";
   }
 
+  // A query typed for skins rarely matches anything in flags, so a stale
+  // search reads as an empty tab. Reset it whenever the category changes.
+  protected onTabEnter(_key: string): void {
+    this.search = "";
+  }
+
   private selectCosmetic(resolved: ResolvedCosmetic) {
     if (resolved.type === "pattern") {
       this.selectPattern(resolvedToPlayerPattern(resolved), resolved);

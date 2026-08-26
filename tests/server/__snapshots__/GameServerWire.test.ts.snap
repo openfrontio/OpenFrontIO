@@ -1,0 +1,1840 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GameServer wire transcript > matches the golden transcript for a scripted game 1`] = `
+{
+  "archived": {
+    "info": {
+      "config": {
+        "bots": 5,
+        "difficulty": "Medium",
+        "donateGold": true,
+        "donateTroops": true,
+        "gameMap": "World",
+        "gameMapSize": "Normal",
+        "gameMode": "Free For All",
+        "gameType": "Private",
+        "hostCheats": undefined,
+        "infiniteGold": false,
+        "infiniteTroops": false,
+        "instantBuild": false,
+        "maxPlayers": 3,
+        "nations": "default",
+        "randomSpawn": false,
+      },
+      "duration": 2,
+      "end": 1700000004200,
+      "gameID": "golden00",
+      "lobbyCreatedAt": 1700000000000,
+      "lobbyFillTime": 1000,
+      "num_turns": 21,
+      "players": [
+        {
+          "clanTag": "HST",
+          "clientID": "host0000",
+          "cosmetics": undefined,
+          "friends": [
+            "p2000000",
+          ],
+          "isLobbyCreator": true,
+          "persistentID": "host-pid",
+          "stats": undefined,
+          "teamIndex": undefined,
+          "username": "HostName",
+        },
+        {
+          "clanTag": null,
+          "clientID": "p2000000",
+          "cosmetics": {
+            "verified": true,
+          },
+          "friends": undefined,
+          "isLobbyCreator": false,
+          "persistentID": "p2-pid",
+          "stats": undefined,
+          "teamIndex": undefined,
+          "username": "SecondOne",
+        },
+        {
+          "clanTag": "TRD",
+          "clientID": "p3000000",
+          "cosmetics": undefined,
+          "friends": undefined,
+          "isLobbyCreator": false,
+          "persistentID": "p3-pid",
+          "stats": undefined,
+          "teamIndex": undefined,
+          "username": "ThirdOne",
+        },
+      ],
+      "start": 1700000002000,
+      "tribes": undefined,
+      "visibleAt": 1700000001000,
+      "winner": [
+        "player",
+        "host0000",
+      ],
+    },
+    "turns": [
+      {
+        "hash": 1234.5,
+        "intents": [
+          {
+            "clientID": "host0000",
+            "isDisconnected": false,
+            "type": "mark_disconnected",
+          },
+          {
+            "clientID": "p2000000",
+            "isDisconnected": false,
+            "type": "mark_disconnected",
+          },
+          {
+            "clientID": "p3000000",
+            "isDisconnected": false,
+            "type": "mark_disconnected",
+          },
+          {
+            "clientID": "p2000000",
+            "tile": 1,
+            "type": "spawn",
+          },
+        ],
+        "turnNumber": 0,
+      },
+      {
+        "intents": [
+          {
+            "clientID": "p3000000",
+            "tile": 3,
+            "type": "spawn",
+          },
+        ],
+        "turnNumber": 1,
+      },
+      {
+        "intents": [
+          {
+            "clientID": "host0000",
+            "paused": true,
+            "type": "toggle_pause",
+          },
+        ],
+        "turnNumber": 2,
+      },
+      {
+        "intents": [
+          {
+            "clientID": "host0000",
+            "paused": false,
+            "type": "toggle_pause",
+          },
+        ],
+        "turnNumber": 3,
+      },
+    ],
+    "version": "v0.0.2",
+  },
+  "closes": {
+    "cast": [
+      [
+        1000,
+        "game has ended",
+      ],
+    ],
+    "host": [
+      [
+        1000,
+        "game has ended",
+      ],
+    ],
+    "p2": [
+      [
+        1000,
+        "game has ended",
+      ],
+    ],
+    "p3": [
+      [],
+    ],
+    "p3Again": [
+      [
+        1000,
+        "game has ended",
+      ],
+    ],
+  },
+  "frames": {
+    "cast": [
+      {
+        "lobby": {
+          "clients": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "username": "SecondOne",
+              "verified": true,
+            },
+            {
+              "clanTag": null,
+              "clientID": "cast0000",
+              "spectator": true,
+              "username": "Caster",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "username": "ThirdOne",
+            },
+          ],
+          "gameConfig": {
+            "bots": 0,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatorClientID": "host0000",
+          "serverTime": 1700000001000,
+        },
+        "myClientID": "cast0000",
+        "type": "lobby_info",
+      },
+      {
+        "lobby": {
+          "clients": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "username": "SecondOne",
+              "verified": true,
+            },
+            {
+              "clanTag": null,
+              "clientID": "cast0000",
+              "spectator": true,
+              "username": "Caster",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "username": "ThirdOne",
+            },
+          ],
+          "gameConfig": {
+            "bots": 5,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatorClientID": "host0000",
+          "serverTime": 1700000002000,
+          "startsAt": 1700000001000,
+        },
+        "myClientID": "cast0000",
+        "type": "lobby_info",
+      },
+      {
+        "gameMap": "World",
+        "gameMapSize": "Normal",
+        "type": "prestart",
+      },
+      {
+        "gameStartInfo": {
+          "config": {
+            "bots": 5,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatedAt": 1700000000000,
+          "players": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "isLobbyCreator": true,
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "cosmetics": {
+                "verified": true,
+              },
+              "isLobbyCreator": false,
+              "username": "SecondOne",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "isLobbyCreator": false,
+              "username": "ThirdOne",
+            },
+          ],
+          "visibleAt": 1700000001000,
+        },
+        "lobbyCreatedAt": 1700000000000,
+        "myClientID": "cast0000",
+        "turns": [],
+        "type": "start",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p2000000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p3000000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p2000000",
+              "tile": 1,
+              "type": "spawn",
+            },
+          ],
+          "turnNumber": 0,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "p3000000",
+              "tile": 3,
+              "type": "spawn",
+            },
+          ],
+          "turnNumber": 1,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "paused": true,
+              "type": "toggle_pause",
+            },
+          ],
+          "turnNumber": 2,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "paused": false,
+              "type": "toggle_pause",
+            },
+          ],
+          "turnNumber": 3,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 4,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 5,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 6,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 7,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 8,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 9,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 10,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 11,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 12,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 13,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 14,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 15,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 16,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 17,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 18,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 19,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 20,
+        },
+        "type": "turn",
+      },
+    ],
+    "host": [
+      {
+        "lobby": {
+          "clients": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "username": "HostName",
+            },
+          ],
+          "gameConfig": {
+            "bots": 0,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatorClientID": "host0000",
+          "serverTime": 1700000000000,
+        },
+        "myClientID": "host0000",
+        "type": "lobby_info",
+      },
+      {
+        "lobby": {
+          "clients": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "username": "SecondOne",
+              "verified": true,
+            },
+            {
+              "clanTag": null,
+              "clientID": "cast0000",
+              "spectator": true,
+              "username": "Caster",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "username": "ThirdOne",
+            },
+          ],
+          "gameConfig": {
+            "bots": 0,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatorClientID": "host0000",
+          "serverTime": 1700000001000,
+        },
+        "myClientID": "host0000",
+        "type": "lobby_info",
+      },
+      {
+        "lobby": {
+          "clients": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "username": "SecondOne",
+              "verified": true,
+            },
+            {
+              "clanTag": null,
+              "clientID": "cast0000",
+              "spectator": true,
+              "username": "Caster",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "username": "ThirdOne",
+            },
+          ],
+          "gameConfig": {
+            "bots": 5,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatorClientID": "host0000",
+          "serverTime": 1700000002000,
+          "startsAt": 1700000001000,
+        },
+        "myClientID": "host0000",
+        "type": "lobby_info",
+      },
+      {
+        "gameMap": "World",
+        "gameMapSize": "Normal",
+        "type": "prestart",
+      },
+      {
+        "gameStartInfo": {
+          "config": {
+            "bots": 5,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatedAt": 1700000000000,
+          "players": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "isLobbyCreator": true,
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "cosmetics": {
+                "verified": true,
+              },
+              "isLobbyCreator": false,
+              "username": "SecondOne",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "isLobbyCreator": false,
+              "username": "ThirdOne",
+            },
+          ],
+          "visibleAt": 1700000001000,
+        },
+        "lobbyCreatedAt": 1700000000000,
+        "myClientID": "host0000",
+        "turns": [],
+        "type": "start",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p2000000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p3000000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p2000000",
+              "tile": 1,
+              "type": "spawn",
+            },
+          ],
+          "turnNumber": 0,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "p3000000",
+              "tile": 3,
+              "type": "spawn",
+            },
+          ],
+          "turnNumber": 1,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "paused": true,
+              "type": "toggle_pause",
+            },
+          ],
+          "turnNumber": 2,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "paused": false,
+              "type": "toggle_pause",
+            },
+          ],
+          "turnNumber": 3,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 4,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 5,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 6,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 7,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 8,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 9,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 10,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 11,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 12,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 13,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 14,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 15,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 16,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 17,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 18,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 19,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 20,
+        },
+        "type": "turn",
+      },
+    ],
+    "late": [
+      {
+        "error": "full-lobby",
+        "type": "error",
+      },
+    ],
+    "p2": [
+      {
+        "lobby": {
+          "clients": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "username": "SecondOne",
+              "verified": true,
+            },
+            {
+              "clanTag": null,
+              "clientID": "cast0000",
+              "spectator": true,
+              "username": "Caster",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "username": "ThirdOne",
+            },
+          ],
+          "gameConfig": {
+            "bots": 0,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatorClientID": "host0000",
+          "serverTime": 1700000001000,
+        },
+        "myClientID": "p2000000",
+        "type": "lobby_info",
+      },
+      {
+        "lobby": {
+          "clients": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "username": "SecondOne",
+              "verified": true,
+            },
+            {
+              "clanTag": null,
+              "clientID": "cast0000",
+              "spectator": true,
+              "username": "Caster",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "username": "ThirdOne",
+            },
+          ],
+          "gameConfig": {
+            "bots": 5,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatorClientID": "host0000",
+          "serverTime": 1700000002000,
+          "startsAt": 1700000001000,
+        },
+        "myClientID": "p2000000",
+        "type": "lobby_info",
+      },
+      {
+        "gameMap": "World",
+        "gameMapSize": "Normal",
+        "type": "prestart",
+      },
+      {
+        "gameStartInfo": {
+          "config": {
+            "bots": 5,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatedAt": 1700000000000,
+          "players": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "isLobbyCreator": true,
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "cosmetics": {
+                "verified": true,
+              },
+              "isLobbyCreator": false,
+              "username": "SecondOne",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "isLobbyCreator": false,
+              "username": "ThirdOne",
+            },
+          ],
+          "visibleAt": 1700000001000,
+        },
+        "lobbyCreatedAt": 1700000000000,
+        "myClientID": "p2000000",
+        "turns": [],
+        "type": "start",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p2000000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p3000000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p2000000",
+              "tile": 1,
+              "type": "spawn",
+            },
+          ],
+          "turnNumber": 0,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "p3000000",
+              "tile": 3,
+              "type": "spawn",
+            },
+          ],
+          "turnNumber": 1,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "paused": true,
+              "type": "toggle_pause",
+            },
+          ],
+          "turnNumber": 2,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "paused": false,
+              "type": "toggle_pause",
+            },
+          ],
+          "turnNumber": 3,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 4,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 5,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 6,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 7,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 8,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 9,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 10,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 11,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 12,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 13,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 14,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 15,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 16,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 17,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 18,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 19,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 20,
+        },
+        "type": "turn",
+      },
+    ],
+    "p3": [
+      {
+        "lobby": {
+          "clients": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "username": "SecondOne",
+              "verified": true,
+            },
+            {
+              "clanTag": null,
+              "clientID": "cast0000",
+              "spectator": true,
+              "username": "Caster",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "username": "ThirdOne",
+            },
+          ],
+          "gameConfig": {
+            "bots": 0,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatorClientID": "host0000",
+          "serverTime": 1700000001000,
+        },
+        "myClientID": "p3000000",
+        "type": "lobby_info",
+      },
+      {
+        "lobby": {
+          "clients": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "username": "SecondOne",
+              "verified": true,
+            },
+            {
+              "clanTag": null,
+              "clientID": "cast0000",
+              "spectator": true,
+              "username": "Caster",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "username": "ThirdOne",
+            },
+          ],
+          "gameConfig": {
+            "bots": 5,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatorClientID": "host0000",
+          "serverTime": 1700000002000,
+          "startsAt": 1700000001000,
+        },
+        "myClientID": "p3000000",
+        "type": "lobby_info",
+      },
+      {
+        "gameMap": "World",
+        "gameMapSize": "Normal",
+        "type": "prestart",
+      },
+      {
+        "gameStartInfo": {
+          "config": {
+            "bots": 5,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatedAt": 1700000000000,
+          "players": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "isLobbyCreator": true,
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "cosmetics": {
+                "verified": true,
+              },
+              "isLobbyCreator": false,
+              "username": "SecondOne",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "isLobbyCreator": false,
+              "username": "ThirdOne",
+            },
+          ],
+          "visibleAt": 1700000001000,
+        },
+        "lobbyCreatedAt": 1700000000000,
+        "myClientID": "p3000000",
+        "turns": [],
+        "type": "start",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p2000000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p3000000",
+              "isDisconnected": false,
+              "type": "mark_disconnected",
+            },
+            {
+              "clientID": "p2000000",
+              "tile": 1,
+              "type": "spawn",
+            },
+          ],
+          "turnNumber": 0,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "p3000000",
+              "tile": 3,
+              "type": "spawn",
+            },
+          ],
+          "turnNumber": 1,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "paused": true,
+              "type": "toggle_pause",
+            },
+          ],
+          "turnNumber": 2,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [
+            {
+              "clientID": "host0000",
+              "paused": false,
+              "type": "toggle_pause",
+            },
+          ],
+          "turnNumber": 3,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 4,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 5,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 6,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 7,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 8,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 9,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 10,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 11,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 12,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 13,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 14,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 15,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 16,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 17,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 18,
+        },
+        "type": "turn",
+      },
+      {
+        "clientsWithCorrectHash": 3,
+        "correctHash": 99,
+        "totalActiveClients": 4,
+        "turn": 10,
+        "type": "desync",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 19,
+        },
+        "type": "turn",
+      },
+      {
+        "turn": {
+          "intents": [],
+          "turnNumber": 20,
+        },
+        "type": "turn",
+      },
+    ],
+    "p3Again": [
+      {
+        "gameStartInfo": {
+          "config": {
+            "bots": 5,
+            "difficulty": "Medium",
+            "donateGold": true,
+            "donateTroops": true,
+            "gameMap": "World",
+            "gameMapSize": "Normal",
+            "gameMode": "Free For All",
+            "gameType": "Private",
+            "infiniteGold": false,
+            "infiniteTroops": false,
+            "instantBuild": false,
+            "maxPlayers": 3,
+            "nations": "default",
+            "randomSpawn": false,
+          },
+          "gameID": "golden00",
+          "listed": false,
+          "lobbyCreatedAt": 1700000000000,
+          "players": [
+            {
+              "clanTag": "HST",
+              "clientID": "host0000",
+              "friends": [
+                "p2000000",
+              ],
+              "isLobbyCreator": true,
+              "username": "HostName",
+            },
+            {
+              "clanTag": null,
+              "clientID": "p2000000",
+              "cosmetics": {
+                "verified": true,
+              },
+              "isLobbyCreator": false,
+              "username": "SecondOne",
+            },
+            {
+              "clanTag": "TRD",
+              "clientID": "p3000000",
+              "isLobbyCreator": false,
+              "username": "ThirdOne",
+            },
+          ],
+          "visibleAt": 1700000001000,
+        },
+        "lobbyCreatedAt": 1700000000000,
+        "myClientID": "p3000000",
+        "turns": [
+          {
+            "intents": [],
+            "turnNumber": 5,
+          },
+          {
+            "intents": [],
+            "turnNumber": 6,
+          },
+          {
+            "intents": [],
+            "turnNumber": 7,
+          },
+          {
+            "intents": [],
+            "turnNumber": 8,
+          },
+          {
+            "intents": [],
+            "turnNumber": 9,
+          },
+          {
+            "intents": [],
+            "turnNumber": 10,
+          },
+          {
+            "intents": [],
+            "turnNumber": 11,
+          },
+          {
+            "intents": [],
+            "turnNumber": 12,
+          },
+          {
+            "intents": [],
+            "turnNumber": 13,
+          },
+          {
+            "intents": [],
+            "turnNumber": 14,
+          },
+          {
+            "intents": [],
+            "turnNumber": 15,
+          },
+          {
+            "intents": [],
+            "turnNumber": 16,
+          },
+          {
+            "intents": [],
+            "turnNumber": 17,
+          },
+          {
+            "intents": [],
+            "turnNumber": 18,
+          },
+          {
+            "intents": [],
+            "turnNumber": 19,
+          },
+          {
+            "intents": [],
+            "turnNumber": 20,
+          },
+        ],
+        "type": "start",
+      },
+    ],
+  },
+  "liveStats": {
+    "players": [
+      {
+        "clientID": "host0000",
+        "connected": true,
+        "deathPosition": null,
+        "gold": "50",
+        "isAlive": true,
+        "killedBy": null,
+        "publicID": "host-pub",
+        "team": null,
+        "tilesOwned": 10,
+        "troops": 100,
+        "username": "HostName",
+      },
+    ],
+    "turn": 10,
+    "winner": "host0000",
+  },
+  "lobbyHttpView": {
+    "accent": undefined,
+    "autoStartAt": undefined,
+    "clients": [
+      {
+        "clanTag": "HST",
+        "clientID": "host0000",
+        "friends": [
+          "p2000000",
+        ],
+        "spectator": undefined,
+        "teamIndex": undefined,
+        "username": "HostName",
+        "verified": undefined,
+      },
+      {
+        "clanTag": null,
+        "clientID": "p2000000",
+        "friends": undefined,
+        "spectator": undefined,
+        "teamIndex": undefined,
+        "username": "SecondOne",
+        "verified": true,
+      },
+      {
+        "clanTag": null,
+        "clientID": "cast0000",
+        "friends": undefined,
+        "spectator": true,
+        "teamIndex": undefined,
+        "username": "Caster",
+        "verified": undefined,
+      },
+      {
+        "clanTag": "TRD",
+        "clientID": "p3000000",
+        "friends": undefined,
+        "spectator": undefined,
+        "teamIndex": undefined,
+        "username": "ThirdOne",
+        "verified": undefined,
+      },
+    ],
+    "featured": undefined,
+    "gameConfig": {
+      "bots": 5,
+      "difficulty": "Medium",
+      "donateGold": true,
+      "donateTroops": true,
+      "gameMap": "World",
+      "gameMapSize": "Normal",
+      "gameMode": "Free For All",
+      "gameType": "Private",
+      "hostCheats": undefined,
+      "infiniteGold": false,
+      "infiniteTroops": false,
+      "instantBuild": false,
+      "maxPlayers": 3,
+      "nations": "default",
+      "randomSpawn": false,
+    },
+    "gameID": "golden00",
+    "label": undefined,
+    "listed": false,
+    "lobbyCreatorClientID": "host0000",
+    "publicGameType": undefined,
+    "serverTime": 1700000002000,
+    "startsAt": 1700000001000,
+  },
+}
+`;

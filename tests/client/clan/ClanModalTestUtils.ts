@@ -45,6 +45,12 @@ export function clanApiMockFactory() {
     promoteMember: vi.fn(),
     demoteMember: vi.fn(),
     transferLeadership: vi.fn(),
+    fetchClanDonations: vi.fn(async () => ({
+      results: [],
+      total: 0,
+      page: 1,
+      limit: 10,
+    })),
     fetchClanRequests: vi.fn(async () => ({
       results: [],
       total: 0,

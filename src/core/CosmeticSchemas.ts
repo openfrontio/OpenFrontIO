@@ -9,6 +9,10 @@ export type Flag = z.infer<typeof FlagSchema>;
 export type Crown = z.infer<typeof CrownSchema>;
 export type Skin = z.infer<typeof SkinSchema>;
 export type Pack = z.infer<typeof PackSchema>;
+// A cosmetic pack: a bundle of cosmetics sold for one hard-currency price
+// (distinct from Pack, which is a currency bundle).
+export type CosmeticPack = z.infer<typeof CosmeticPackSchema>;
+export type CosmeticPackItem = z.infer<typeof CosmeticPackItemSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 // An effect cosmetic of any type — discriminated on effectType (today
 // transportShipTrail + nukeTrail + nukeExplosion + structures + warship;
@@ -405,6 +409,32 @@ export const PackSchema = CosmeticSchema.extend({
   bonusAmount: z.number().int().nonnegative(),
 });
 
+// One member of a cosmetic pack: a reference to a cosmetic elsewhere in the
+// same catalog by (type, name). patterns/flags/skins/crowns live in
+// `<type>s[name]`; an effect is found by name across effects[*] (the item
+// does not carry its effectType). The referenced cosmetic may be absent (it
+// was deleted after the listing was cached) or not sold on its own — the
+// pack is rendered from its items, never gated on the item's own price.
+export const CosmeticPackItemSchema = z.object({
+  type: z.enum(["pattern", "flag", "skin", "crown", "effect"]),
+  name: CosmeticNameSchema,
+});
+
+// A bundle of cosmetics bought in one hard-currency transaction
+// (POST /shop/purchase/pack). `name` is the slug sent to that endpoint. Only
+// packs that are for sale are listed. The price is the pack's own, not the
+// sum of its items; packs never have a soft-currency price.
+export const CosmeticPackSchema = z.object({
+  name: CosmeticNameSchema,
+  displayName: z.string(),
+  description: z.string(),
+  priceHard: z.number(),
+  rarity: z
+    .enum(["common", "uncommon", "rare", "epic", "legendary"])
+    .or(z.string()),
+  items: CosmeticPackItemSchema.array(),
+});
+
 export const SubscriptionSchema = CosmeticSchema.extend({
   description: z.string(),
   priceMonthly: z.number(),
@@ -445,6 +475,9 @@ export const CosmeticsSchema = z.object({
     })
     .optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),
+  // Cosmetic packs keyed by slug. Lenient so a pack whose items use a type
+  // this client doesn't know is dropped alone, not the whole catalog.
+  packs: lenientRecord(CosmeticPackSchema).optional(),
   subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
   // Custom tribe name pricing (store Tribes tab) — served here so the client
   // never hardcodes it. Optional: an older cosmetics.json parses, and the UI

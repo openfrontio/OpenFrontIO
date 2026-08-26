@@ -78,6 +78,7 @@ import "./components/BannedModal";
 import "./components/DesktopUpdateBar";
 import "./components/MarketingConsentToast";
 import {
+  installCtrlWheelZoomBlocker,
   installDoubleTapZoomBlocker,
   installSafariPinchZoomBlocker,
 } from "./utilities/DisableSafariPinchZoom";
@@ -1256,6 +1257,11 @@ const bootstrap = () => {
   // Same for double-tap "smart zoom", which `touch-action: manipulation`
   // alone does not reliably stop on iOS. See issue #4609.
   installDoubleTapZoomBlocker();
+
+  // Chrome and Firefox report a trackpad pinch as ctrl+wheel, which only the
+  // map canvas cancels — so pinching over a HUD panel zoomed the page instead
+  // of the map. See issue #5098.
+  installCtrlWheelZoomBlocker();
 
   initLayout();
   new Client().initialize();

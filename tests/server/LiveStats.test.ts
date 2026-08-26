@@ -35,9 +35,12 @@ describe("GameServer.handleLiveStats", () => {
 
   // A GameServer with three distinct-IP active clients wired up.
   function gameWithClients() {
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-    } as any);
+    const game = new GameServer({
+      id: "test-game",
+      log: mockLogger,
+      createdAt: Date.now(),
+      gameConfig: { gameType: GameType.Private } as any,
+    });
     const clients = [
       makeClient("client01", "1.1.1.1", "Alice"),
       makeClient("client02", "2.2.2.2", "Bob"),

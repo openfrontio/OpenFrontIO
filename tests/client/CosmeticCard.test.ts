@@ -207,6 +207,30 @@ describe("CosmeticCard", () => {
     expect(info.parentElement!.contains(name)).toBe(false);
   });
 
+  it("keeps the info bubble within the card's width", async () => {
+    installTranslations();
+    await createCard();
+    card!.resolved = {
+      ...red,
+      cosmetic: { ...red.cosmetic!, artist: "A very long artist name indeed" },
+    };
+    await card!.updateComplete;
+
+    const info = card!.querySelector<HTMLElement>("[data-cosmetic-info]")!;
+    const bubble = info.querySelector<HTMLElement>("[role=tooltip]")!;
+    // Right-aligned under the "?", the bubble used to be as wide as its
+    // longest line, so on a first-column card it ran past the modal's left
+    // edge and was clipped. Its strip spans the card and caps it there.
+    expect(info.className).toContain("inset-x-2");
+    expect(bubble.className).toContain("max-w-full");
+    expect(bubble.className).not.toContain("whitespace-nowrap");
+    // The strip must not swallow clicks meant for the artwork beneath it.
+    expect(info.className).toContain("pointer-events-none");
+    expect(info.querySelector("button")?.className).toContain(
+      "pointer-events-auto",
+    );
+  });
+
   it("does not ellipsize long cosmetic names", async () => {
     installTranslations();
     await createCard();

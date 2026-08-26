@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/server/Archive", () => ({
-  archive: vi.fn(),
-  finalizeGameRecord: (record: unknown) => record,
-}));
-
 import {
   Difficulty,
   GameMapSize,
@@ -12,7 +7,6 @@ import {
   GameMode,
   GameType,
 } from "../../src/core/game/Game";
-import { Client } from "../../src/server/Client";
 import { GameManager } from "../../src/server/GameManager";
 import { GameServer } from "../../src/server/GameServer";
 import type {
@@ -20,6 +14,11 @@ import type {
   MatchTelemetryEmitter,
   MatchTelemetryEvent,
 } from "../../src/server/telemetry/MatchTelemetry";
+import {
+  makeClient as harnessClient,
+  makeMockWs,
+  mockLogger,
+} from "../util/GameServerHarness";
 import { clientFrame, testGameConfig } from "../util/Wire";
 
 class RecordingEmitter implements MatchTelemetryEmitter {
@@ -37,35 +36,15 @@ class RecordingEmitter implements MatchTelemetryEmitter {
   stop() {}
 }
 
-function makeMockWs() {
-  const handlers: Record<string, (...args: any[]) => any> = {};
-  return {
-    on: (event: string, handler: (...args: any[]) => any) =>
-      (handlers[event] = handler),
-    removeAllListeners: vi.fn(),
-    send: vi.fn(),
-    close: vi.fn(),
-    readyState: 1,
-    trigger: (event: string, ...args: any[]) => handlers[event]?.(...args),
-  };
-}
-
 function makeClient() {
   const ws = makeMockWs();
-  const client = new Client(
-    "clientAB",
-    "persistentABC",
-    null,
-    null,
-    undefined,
-    "127.0.0.1",
-    "TestUser",
-    null,
-    ws as any,
-    undefined,
-    "publicABC",
-    [],
-  );
+  const client = harnessClient({
+    clientID: "clientAB",
+    persistentID: "persistentABC",
+    username: "TestUser",
+    publicId: "publicABC",
+    ws,
+  });
   return { client, ws };
 }
 
@@ -77,12 +56,7 @@ describe("GameServer match telemetry", () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_700_000_000_000);
     telemetry = new RecordingEmitter();
-    log = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    log = mockLogger();
   });
 
   afterEach(() => {
@@ -92,31 +66,32 @@ describe("GameServer match telemetry", () => {
 
   function makeGame() {
     return new GameServer(
-      "matchABC",
-      log,
-      Date.now(),
       {
-        donateGold: false,
-        donateTroops: false,
-        gameMap: GameMapType.World,
-        gameType: GameType.Private,
-        gameMapSize: GameMapSize.Normal,
-        difficulty: Difficulty.Easy,
-        nations: "default",
-        infiniteGold: false,
-        infiniteTroops: false,
-        instantBuild: false,
-        randomSpawn: false,
-        gameMode: GameMode.FFA,
-        bots: 0,
-        disabledUnits: [],
+        id: "matchABC",
+        log,
+        createdAt: Date.now(),
+        gameConfig: {
+          donateGold: false,
+          donateTroops: false,
+          gameMap: GameMapType.World,
+          gameType: GameType.Private,
+          gameMapSize: GameMapSize.Normal,
+          difficulty: Difficulty.Easy,
+          nations: "default",
+          infiniteGold: false,
+          infiniteTroops: false,
+          instantBuild: false,
+          randomSpawn: false,
+          gameMode: GameMode.FFA,
+          bots: 0,
+          disabledUnits: [],
+        },
       },
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      telemetry,
-      "0123456789012345678901234567890123456789",
+      {
+        telemetry,
+        telemetryBuildHash: "0123456789012345678901234567890123456789",
+        archive: vi.fn(async () => {}),
+      },
     );
   }
 

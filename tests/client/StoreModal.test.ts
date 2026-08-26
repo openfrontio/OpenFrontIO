@@ -1,3 +1,4 @@
+import type { LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchCosmetics,
@@ -189,6 +190,25 @@ const platinumSubscription: ResolvedCosmetic = {
   key: "subscription:platinum",
 };
 
+const starterBundle: ResolvedCosmetic = {
+  type: "cosmeticPack",
+  cosmetic: {
+    name: "starter",
+    displayName: "Starter Pack",
+    description: "",
+    priceHard: 250,
+    rarity: "epic",
+    items: [
+      { type: "pattern", name: "stripes" },
+      { type: "flag", name: "aurora" },
+    ],
+  },
+  colorPalette: null,
+  relationship: "purchasable",
+  key: "cosmeticPack:starter",
+  packItems: [{ ...red, colorPalette: null, key: "pattern:stripes" }, flag],
+};
+
 const affiliatePattern: ResolvedCosmetic = {
   ...red,
   cosmetic: {
@@ -282,7 +302,7 @@ async function openEffectsStore() {
   return { store, grid };
 }
 
-async function openStoreOnTab(tab: "packs" | "subscriptions") {
+async function openStoreOnTab(tab: "packs" | "subscriptions" | "bundles") {
   store = document.createElement("store-modal") as StoreModal;
   store.inline = true;
   document.body.appendChild(store);
@@ -310,7 +330,10 @@ describe("StoreModal cosmetic browser", () => {
       (_cosmetics, _userMeResponse, affiliateCode) =>
         affiliateCode
           ? resolvedCatalog.filter(
-              (item) => item.cosmetic?.affiliateCode === affiliateCode,
+              (item) =>
+                item.cosmetic !== null &&
+                "affiliateCode" in item.cosmetic &&
+                item.cosmetic.affiliateCode === affiliateCode,
             )
           : resolvedCatalog,
     );
@@ -627,6 +650,129 @@ describe("StoreModal cosmetic browser", () => {
       platinumSubscription,
       "dollar",
     );
+  });
+
+  it("sells a cosmetic bundle for plutonium with its contents listed", async () => {
+    resolvedCatalog = [starterBundle];
+    const modal = await openStoreOnTab("bundles");
+
+    expect(card(modal, starterBundle.key)?.state).toBe("focused");
+    const button = purchaseButton(modal, starterBundle.key);
+    expect(button.priceHard).toBe(250);
+    expect(button.priceSoft).toBeNull();
+    expect(button.product).toBeNull();
+    expect(button.itemName).toBe("Starter Pack");
+    expect(
+      card(modal, starterBundle.key)?.querySelector(
+        "[data-cosmetic-info-items]",
+      )?.textContent,
+    ).toContain("Stripes, Aurora");
+
+    await clickHardPurchase(modal);
+    expect(purchaseCosmetic).toHaveBeenCalledWith(starterBundle, "hard");
+  });
+
+  it("opens a contents dialog naming each bundle item when a bundle is activated", async () => {
+    resolvedCatalog = [starterBundle];
+    const modal = await openStoreOnTab("bundles");
+    expect(document.querySelector("[data-pack-contents]")).toBeNull();
+
+    card(modal, starterBundle.key)!.onActivate!(starterBundle);
+    await modal.updateComplete;
+    const dialogHost = modal.querySelector(
+      "pack-contents-dialog",
+    ) as LitElement;
+    await dialogHost.updateComplete;
+
+    // Portaled to the body so it sits above the store modal.
+    const dialog = document.body.querySelector<HTMLElement>(
+      "[data-pack-contents]",
+    )!;
+    expect(dialog.closest("store-modal")).toBeNull();
+    expect(dialog.getAttribute("aria-label")).toBe("Starter Pack");
+    const items = [...dialog.querySelectorAll("[data-pack-contents-item]")];
+    expect(
+      items.map((item) => item.getAttribute("data-pack-contents-item")),
+    ).toEqual(["pattern:stripes", "flag:aurora"]);
+    expect(items[1].querySelector("cosmetic-preview")).toBeTruthy();
+    expect(items[1].textContent).toContain("Aurora");
+    // Each item says what kind of cosmetic it is.
+    expect(
+      items.map(
+        (item) => item.querySelector("[data-pack-contents-type]")?.textContent,
+      ),
+    ).toEqual(["cosmetics.type_skin", "cosmetics.type_flag"]);
+
+    // The bundle can be bought from the dialog too, with the same action as
+    // its card.
+    const button = dialog.querySelector(
+      "[data-pack-contents-action] purchase-button",
+    ) as PurchaseButton;
+    expect(button.priceHard).toBe(250);
+    button.requestCurrencyPurchase("hard");
+    await button.updateComplete;
+    button
+      .querySelector("confirm-dialog")!
+      .dispatchEvent(new CustomEvent("confirm"));
+    await vi.waitFor(() =>
+      expect(purchaseCosmetic).toHaveBeenCalledWith(starterBundle, "hard"),
+    );
+
+    dialog
+      .querySelector<HTMLButtonElement>("button[aria-label='common.close']")!
+      .click();
+    await modal.updateComplete;
+    expect(document.querySelector("[data-pack-contents]")).toBeNull();
+    // The card stays inspected after closing.
+    expect(card(modal, starterBundle.key)?.state).toBe("focused");
+  });
+
+  it("shows owned and partially owned bundles as a status, not a sale", async () => {
+    const owned = { ...starterBundle, relationship: "owned" as const };
+    const partial = {
+      ...starterBundle,
+      relationship: "blocked" as const,
+      key: "cosmeticPack:partial",
+    };
+    resolvedCatalog = [owned, partial];
+    const modal = await openStoreOnTab("bundles");
+    await modal.onUserMe({ player: { flares: ["flag:aurora"] } } as never);
+    await modal.updateComplete;
+
+    expect(modal.querySelector("purchase-button")).toBeNull();
+    // The dialog shows the same status instead of a buy button.
+    card(modal, owned.key)!.onActivate!(owned);
+    await modal.updateComplete;
+    await (modal.querySelector("pack-contents-dialog") as LitElement)
+      .updateComplete;
+    const dialog = document.body.querySelector("[data-pack-contents]")!;
+    expect(dialog.querySelector("purchase-button")).toBeNull();
+    expect(
+      dialog.querySelector("[data-pack-contents-action] [data-store-status]")
+        ?.textContent,
+    ).toContain("store.pack_owned");
+    expect(
+      product(modal, owned.key)?.querySelector("[data-store-status]")
+        ?.textContent,
+    ).toContain("store.pack_owned");
+    // The partially owned bundle names the item that blocks it.
+    expect(
+      product(modal, partial.key)?.querySelector("[data-store-status]")
+        ?.textContent,
+    ).toContain("store.pack_partially_owned");
+  });
+
+  it("hides a bundle blocked for a reason other than partial ownership", async () => {
+    resolvedCatalog = [{ ...starterBundle, relationship: "blocked" }];
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await store.updateComplete;
+    store.open({ tab: "bundles" });
+    await store.updateComplete;
+
+    expect(store.querySelector("cosmetic-card")).toBeNull();
+    expect(store.textContent).toContain("store.no_bundles");
   });
 
   it("does not leave an inspected non-affiliate item in affiliate mode", async () => {

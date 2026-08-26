@@ -345,6 +345,19 @@ export type PostTribeBoostResponse = z.infer<
   typeof PostTribeBoostResponseSchema
 >;
 
+// POST /shop/purchase/pack response (200). `amount` is a stringified bigint;
+// `flareNames` are the flares granted (append them to the local flares list
+// or refetch /users/@me). currencyType is always "hard" today but stays a
+// plain string — a stricter literal would fail the parse (and show "purchase
+// failed") after the player was already charged.
+export const PurchasePackResponseSchema = z.object({
+  packName: z.string(),
+  currencyType: z.string(),
+  amount: z.string(),
+  flareNames: z.string().array(),
+});
+export type PurchasePackResponse = z.infer<typeof PurchasePackResponseSchema>;
+
 // GET /leaderboard/tribes?page=N — public, ranked by rolling 30-day player
 // reach. Pages are 1-based, 50 per page, capped at page 2 (top 100); the
 // response carries no total or hasMore, so a full page is the only signal

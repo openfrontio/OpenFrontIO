@@ -1,78 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  cid,
+  makeClient as harnessClient,
+  makeGame,
+  makeMockWs,
+  MockWs,
+} from "../util/GameServerHarness";
 
-vi.mock("../../src/core/Schemas", async () => {
-  const actual = (await vi.importActual("../../src/core/Schemas")) as any;
-  return {
-    ...actual,
-    GameStartInfoSchema: {
-      safeParse: (data: any) => ({ success: true, data }),
-    },
-    ServerPrestartMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data }),
-    },
-    ClientMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data }),
-    },
-  };
-});
+const C1 = cid("c1");
 
-import { GameType } from "../../src/core/game/Game";
-import { Client } from "../../src/server/Client";
-import { GameServer } from "../../src/server/GameServer";
-import { testGameConfig } from "../util/Wire";
-
-// Stateful mock that records listeners so a test can fire the "close" event,
-// exercising GameServer's real ws.on("close") handler.
-function makeMockWs() {
-  const listeners: Record<string, ((...args: any[]) => void)[]> = {};
-  return {
-    on(event: string, cb: (...args: any[]) => void) {
-      (listeners[event] ??= []).push(cb);
-    },
-    removeAllListeners() {
-      for (const k of Object.keys(listeners)) delete listeners[k];
-    },
-    emit(event: string, ...args: any[]) {
-      (listeners[event] ?? []).forEach((cb) => cb(...args));
-    },
-    send: vi.fn(),
-    close: vi.fn(),
-    readyState: 1,
-  };
-}
-
-function makeClient(
-  clientID: string,
-  persistentID: string,
-  ws: ReturnType<typeof makeMockWs>,
-): Client {
-  return new Client(
-    clientID,
-    persistentID,
-    null,
-    null,
-    undefined,
-    "127.0.0.1",
-    "TestUser",
-    null,
-    ws as any,
-    undefined,
-    undefined,
-    [],
-  );
+function makeClient(clientID: string, persistentID: string, ws: MockWs) {
+  return harnessClient({ clientID, persistentID, username: "TestUser", ws });
 }
 
 describe("GameServer - wasAdmitted (Turnstile re-admission)", () => {
-  let mockLogger: any;
-
   beforeEach(() => {
     vi.useFakeTimers();
-    mockLogger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
   });
 
   afterEach(() => {
@@ -81,15 +24,6 @@ describe("GameServer - wasAdmitted (Turnstile re-admission)", () => {
     vi.useRealTimers();
   });
 
-  function makeGame() {
-    return new GameServer(
-      "test-game",
-      mockLogger,
-      Date.now(),
-      testGameConfig({ gameType: GameType.Private }),
-    );
-  }
-
   it("reports unknown players as not admitted", () => {
     const game = makeGame();
     expect(game.wasAdmitted("nobody")).toBe(false);
@@ -97,25 +31,23 @@ describe("GameServer - wasAdmitted (Turnstile re-admission)", () => {
 
   it("marks a player admitted after a successful join", () => {
     const game = makeGame();
-    expect(game.joinClient(makeClient("c1", "p1", makeMockWs()))).toBe(
-      "joined",
-    );
+    expect(game.joinClient(makeClient(C1, "p1", makeMockWs()))).toBe("joined");
     expect(game.wasAdmitted("p1")).toBe(true);
   });
 
   // Core regression: a lobby-phase disconnect clears the reconnect mapping (to
   // free the slot), but admission must survive so the reconnect skips the
   // single-use Turnstile re-check instead of failing on the spent token.
-  it("keeps a player admitted after a lobby-phase disconnect clears their reconnect mapping", () => {
+  it("keeps a player admitted after a lobby-phase disconnect clears their reconnect mapping", async () => {
     const game = makeGame();
     const ws = makeMockWs();
-    expect(game.joinClient(makeClient("c1", "p1", ws))).toBe("joined");
-    expect(game.getClientIdForPersistentId("p1")).toBe("c1");
+    expect(game.joinClient(makeClient(C1, "p1", ws))).toBe("joined");
+    expect(game.getClientIdForPersistentId("p1")).toBe(C1);
     expect(game.wasAdmitted("p1")).toBe(true);
 
     // Socket drops before the game starts -> the close handler clears the
     // persistentID->clientID mapping.
-    ws.emit("close");
+    await ws.trigger("close");
 
     expect(game.getClientIdForPersistentId("p1")).toBeNull();
     expect(game.wasAdmitted("p1")).toBe(true);
@@ -123,12 +55,10 @@ describe("GameServer - wasAdmitted (Turnstile re-admission)", () => {
 
   it("does not treat a kicked player as admitted (kick still forces the gate)", () => {
     const game = makeGame();
-    expect(game.joinClient(makeClient("c1", "p1", makeMockWs()))).toBe(
-      "joined",
-    );
+    expect(game.joinClient(makeClient(C1, "p1", makeMockWs()))).toBe("joined");
     expect(game.wasAdmitted("p1")).toBe(true);
 
-    game.kickClient("c1");
+    game.kickClient(C1);
     expect(game.wasAdmitted("p1")).toBe(false);
   });
 
@@ -137,9 +67,7 @@ describe("GameServer - wasAdmitted (Turnstile re-admission)", () => {
   // gone) must force a re-screen.
   it("storedIdentity returns the screened pair for a joined player", () => {
     const game = makeGame();
-    expect(game.joinClient(makeClient("c1", "p1", makeMockWs()))).toBe(
-      "joined",
-    );
+    expect(game.joinClient(makeClient(C1, "p1", makeMockWs()))).toBe("joined");
     expect(game.storedIdentity("p1")).toEqual({
       username: "TestUser",
       clanTag: null,
@@ -147,12 +75,12 @@ describe("GameServer - wasAdmitted (Turnstile re-admission)", () => {
     expect(game.storedIdentity("nobody")).toBeNull();
   });
 
-  it("storedIdentity returns null once a lobby-phase disconnect clears the mapping", () => {
+  it("storedIdentity returns null once a lobby-phase disconnect clears the mapping", async () => {
     const game = makeGame();
     const ws = makeMockWs();
-    expect(game.joinClient(makeClient("c1", "p1", ws))).toBe("joined");
+    expect(game.joinClient(makeClient(C1, "p1", ws))).toBe("joined");
 
-    ws.emit("close");
+    await ws.trigger("close");
 
     // Still admitted (no Turnstile re-check), but with no stored identity
     // the reconnect must be re-screened rather than skipped.
