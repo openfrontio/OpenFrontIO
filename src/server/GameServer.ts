@@ -52,6 +52,7 @@ import {
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
+import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
 import { fetchCustomTribes } from "./CustomTribes";
 import { ServerEnv } from "./ServerEnv";
 import {
@@ -107,18 +108,6 @@ const SPECTATOR_BLOCKED_MESSAGES = new Set([
   "hash",
 ]);
 const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
-
-// Whether the host-only cheat block actually grants anything: mere presence
-// isn't enough, the client can send hostCheats with every field off.
-function hostCheatsEnabled(hc: GameConfig["hostCheats"]): boolean {
-  return (
-    hc !== undefined &&
-    (hc.infiniteGold === true ||
-      hc.infiniteTroops === true ||
-      typeof hc.goldMultiplier === "number" ||
-      typeof hc.startingGold === "number")
-  );
-}
 
 export interface GameServerOptions {
   id: string;
@@ -480,103 +469,17 @@ export class GameServer {
   }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
-    if (gameConfig.gameMap !== undefined) {
-      this.gameConfig.gameMap = gameConfig.gameMap;
+    applyGameConfigPatch(this.gameConfig, gameConfig);
+    // A join whitelist and public listing are mutually exclusive: a listed
+    // lobby must be joinable by anyone who finds it in the lobby browser.
+    if (
+      gameConfig.allowedPublicIds !== undefined &&
+      this.listed &&
+      this.hasJoinWhitelist()
+    ) {
+      this.setListed(false);
+      this.log.info("delisted lobby: join whitelist enabled");
     }
-    if (gameConfig.gameMapSize !== undefined) {
-      this.gameConfig.gameMapSize = gameConfig.gameMapSize;
-    }
-    if (gameConfig.difficulty !== undefined) {
-      this.gameConfig.difficulty = gameConfig.difficulty;
-    }
-    if (gameConfig.nations !== undefined) {
-      this.gameConfig.nations = gameConfig.nations;
-    }
-    if (gameConfig.bots !== undefined) {
-      this.gameConfig.bots = gameConfig.bots;
-    }
-    if (gameConfig.infiniteGold !== undefined) {
-      this.gameConfig.infiniteGold = gameConfig.infiniteGold;
-    }
-    if (gameConfig.donateGold !== undefined) {
-      this.gameConfig.donateGold = gameConfig.donateGold;
-    }
-    if (gameConfig.infiniteTroops !== undefined) {
-      this.gameConfig.infiniteTroops = gameConfig.infiniteTroops;
-    }
-    if (gameConfig.donateTroops !== undefined) {
-      this.gameConfig.donateTroops = gameConfig.donateTroops;
-    }
-    if (gameConfig.maxTimerValue !== undefined) {
-      this.gameConfig.maxTimerValue = gameConfig.maxTimerValue ?? undefined;
-    }
-    if (gameConfig.startDelay !== undefined) {
-      this.gameConfig.startDelay = gameConfig.startDelay ?? undefined;
-    }
-    if (gameConfig.instantBuild !== undefined) {
-      this.gameConfig.instantBuild = gameConfig.instantBuild;
-    }
-    if (gameConfig.randomSpawn !== undefined) {
-      this.gameConfig.randomSpawn = gameConfig.randomSpawn;
-    }
-    if (gameConfig.spawnImmunityDuration !== undefined) {
-      this.gameConfig.spawnImmunityDuration =
-        gameConfig.spawnImmunityDuration ?? undefined;
-    }
-    if (gameConfig.gameMode !== undefined) {
-      this.gameConfig.gameMode = gameConfig.gameMode;
-    }
-    if (gameConfig.disabledUnits !== undefined) {
-      this.gameConfig.disabledUnits = gameConfig.disabledUnits;
-    }
-    if (gameConfig.playerTeams !== undefined) {
-      this.gameConfig.playerTeams = gameConfig.playerTeams;
-    }
-    if (gameConfig.goldMultiplier !== undefined) {
-      this.gameConfig.goldMultiplier = gameConfig.goldMultiplier ?? undefined;
-    }
-    if (gameConfig.startingGold !== undefined) {
-      this.gameConfig.startingGold = gameConfig.startingGold ?? undefined;
-    }
-    if (gameConfig.disableAlliances !== undefined) {
-      this.gameConfig.disableAlliances =
-        gameConfig.disableAlliances ?? undefined;
-    }
-    if (gameConfig.customAllianceDuration !== undefined) {
-      this.gameConfig.customAllianceDuration =
-        gameConfig.customAllianceDuration ?? undefined;
-    }
-    if (gameConfig.allowedPublicIds !== undefined) {
-      this.gameConfig.allowedPublicIds = gameConfig.allowedPublicIds;
-      // A join whitelist and public listing are mutually exclusive: a listed
-      // lobby must be joinable by anyone who finds it in the lobby browser.
-      if (this.listed && this.hasJoinWhitelist()) {
-        this.setListed(false);
-        this.log.info("delisted lobby: join whitelist enabled");
-      }
-    }
-    if (gameConfig.waterNukes !== undefined) {
-      this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
-    }
-    if (gameConfig.doomsdayClock !== undefined) {
-      this.gameConfig.doomsdayClock = gameConfig.doomsdayClock;
-    }
-    if (gameConfig.overtime !== undefined) {
-      this.gameConfig.overtime = gameConfig.overtime;
-    }
-    if (gameConfig.anonymizeNames !== undefined) {
-      this.gameConfig.anonymizeNames = gameConfig.anonymizeNames;
-    }
-    if (gameConfig.nameReveals !== undefined) {
-      this.gameConfig.nameReveals = gameConfig.nameReveals;
-    }
-    if (gameConfig.nameRevealPublicIds !== undefined) {
-      this.gameConfig.nameRevealPublicIds = gameConfig.nameRevealPublicIds;
-    }
-    // Unconditional on purpose: the host clears cheats by omitting hostCheats
-    // (the full config it sends has hostCheats: undefined when the toggle is
-    // off), so `undefined` here means "clear", not "leave unchanged".
-    this.gameConfig.hostCheats = gameConfig.hostCheats;
   }
 
   // Dispatch a control/gameplay intent from either a websocket client or the
