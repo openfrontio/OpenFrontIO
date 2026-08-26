@@ -1542,6 +1542,8 @@
     "teams_hvn": "Humans vs Nations",
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "title": "Waiting for Game Start...",
+    "trusted_locked": "Trusted accounts only. Your account isn't trusted yet.",
+    "trusted_unlocked": "Trusted accounts only. Your account is trusted.",
     "waiting_for_players": "Waiting for players"
   },
   "radial_menu": {

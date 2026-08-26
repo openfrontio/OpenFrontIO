@@ -1,6 +1,7 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
+import { UserMeResponse } from "../core/ApiSchemas";
 import {
   Duos,
   GameMapType,
@@ -11,7 +12,11 @@ import {
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
 import "./components/IOSAddToHomeScreenBanner";
-import { lobbyCard, mapAspectRatios } from "./components/LobbyCard";
+import {
+  lobbyCard,
+  mapAspectRatios,
+  viewerIsTrusted,
+} from "./components/LobbyCard";
 import { multiplayerAllowed, type DesktopUpdateState } from "./DesktopShell";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
@@ -45,6 +50,7 @@ export class GameModeSelector extends LitElement {
   @state() private lobbies: PublicGames | null = null;
   @state() private inputValid: boolean = true;
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
+  @state() private viewerTrusted: boolean = false;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
@@ -76,6 +82,7 @@ export class GameModeSelector extends LitElement {
       "desktop-update-state",
       this.onDesktopUpdateState,
     );
+    document.addEventListener("userMeResponse", this.onUserMe);
     // Pick up the current value in case username-input validated before us.
     const usernameInput = document.querySelector(
       "username-input",
@@ -95,6 +102,7 @@ export class GameModeSelector extends LitElement {
       "desktop-update-state",
       this.onDesktopUpdateState,
     );
+    document.removeEventListener("userMeResponse", this.onUserMe);
     super.disconnectedCallback();
   }
 
@@ -104,6 +112,12 @@ export class GameModeSelector extends LitElement {
 
   private onDesktopUpdateState = (e: Event) => {
     this.desktopUpdateState = (e as CustomEvent<DesktopUpdateState>).detail;
+  };
+
+  private onUserMe = (e: Event) => {
+    this.viewerTrusted = viewerIsTrusted(
+      (e as CustomEvent<UserMeResponse | false>).detail,
+    );
   };
 
   public stop() {
@@ -402,6 +416,7 @@ export class GameModeSelector extends LitElement {
       timeDisplayUppercase,
       disabled: !this.inputValid,
       blocked: shouldBlockMultiplayerAction(this.desktopUpdateState),
+      viewerTrusted: this.viewerTrusted,
       onClick: () => this.validateAndJoin(lobby),
     });
   }
