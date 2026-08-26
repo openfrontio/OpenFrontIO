@@ -2,10 +2,13 @@ import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics, Product } from "../core/CosmeticSchemas";
+import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
-import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
+import {
+  cosmeticDisplayName,
+  cosmeticSelectionLabel,
+} from "./components/CosmeticPresentation";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
@@ -17,6 +20,7 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
   groupCosmeticVariants,
+  ownedPackItems,
   purchaseCosmetic,
   resolveCosmetics,
   ResolvedCosmetic,
@@ -25,6 +29,7 @@ import { translateText } from "./Utils";
 
 type StoreTab =
   | "cosmetics"
+  | "bundles"
   | "effects"
   | "merch"
   | "packs"
@@ -63,6 +68,7 @@ export class StoreModal extends BaseModal {
         { key: "packs", label: translateText("store.packs") },
         { key: "subscriptions", label: translateText("store.subscriptions") },
         { key: "cosmetics", label: translateText("store.cosmetics") },
+        { key: "bundles", label: translateText("store.bundles") },
         { key: "effects", label: translateText("store.effects") },
         { key: "tribes", label: translateText("store.tribes") },
         { key: "merch", label: translateText("store.merch") },
@@ -167,9 +173,14 @@ export class StoreModal extends BaseModal {
   private groupsForTab(tab: string): readonly (readonly ResolvedCosmetic[])[] {
     if (this.affiliateCode) {
       return groupCosmeticVariants(
-        this.resolvedPurchasables().filter(
-          (resolved) => resolved.cosmetic?.affiliateCode === this.affiliateCode,
-        ),
+        this.resolvedPurchasables().filter((resolved) => {
+          const c = resolved.cosmetic;
+          return (
+            c !== null &&
+            "affiliateCode" in c &&
+            c.affiliateCode === this.affiliateCode
+          );
+        }),
       );
     }
     if (tab === "cosmetics") {
@@ -183,6 +194,22 @@ export class StoreModal extends BaseModal {
     if (tab === "packs") {
       return this.resolvedPurchasables()
         .filter((resolved) => resolved.type === "pack")
+        .map((resolved) => [resolved]);
+    }
+    if (tab === "bundles") {
+      // Owned and partially owned bundles stay listed (as a status, not a
+      // buy button) so the player can see why one isn't for sale to them.
+      return resolveCosmetics(
+        this.cosmetics,
+        this.userMeResponse,
+        this.affiliateCode,
+      )
+        .filter(
+          (resolved) =>
+            resolved.type === "cosmeticPack" &&
+            (resolved.relationship !== "blocked" ||
+              this.ownedPackItemNames(resolved).length > 0),
+        )
         .map((resolved) => [resolved]);
     }
     if (tab === "subscriptions") {
@@ -233,6 +260,55 @@ export class StoreModal extends BaseModal {
     this.requestUpdate();
   }
 
+  /** Display names of the bundle's items the player already owns. */
+  private ownedPackItemNames(resolved: ResolvedCosmetic): string[] {
+    return ownedPackItems(
+      resolved.cosmetic as CosmeticPack,
+      this.userMeResponse,
+    ).map((item) => {
+      const found = resolved.packItems?.find(
+        (r) => r.type === item.type && r.cosmetic?.name === item.name,
+      );
+      return found ? cosmeticDisplayName(found) : item.name;
+    });
+  }
+
+  // Same box as a purchase button (w-full, min-h-11, text-base) so an owned
+  // tier or bundle reads as a peer of its neighbours' buy action instead of
+  // a small tag tucked to one side of the card.
+  private renderStatus(text: string, muted = false): TemplateResult {
+    return html`<span
+      data-store-status
+      class="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg border px-2 py-1.5 text-center font-bold ${muted
+        ? "border-white/15 bg-white/5 text-xs text-white/60"
+        : "border-emerald-500/40 bg-emerald-500/15 text-base text-emerald-300"}"
+      >${text}</span
+    >`;
+  }
+
+  private renderCardAction(
+    active: ResolvedCosmetic,
+    userHasSubscription: boolean,
+  ): TemplateResult {
+    if (active.type === "subscription" && active.relationship === "owned") {
+      return this.renderStatus(translateText("store.subscribed"));
+    }
+    if (active.type === "cosmeticPack") {
+      if (active.relationship === "owned") {
+        return this.renderStatus(translateText("store.pack_owned"));
+      }
+      if (active.relationship === "blocked") {
+        return this.renderStatus(
+          translateText("store.pack_partially_owned", {
+            items: this.ownedPackItemNames(active).join(", "),
+          }),
+          true,
+        );
+      }
+    }
+    return this.renderPurchaseAction(active, userHasSubscription);
+  }
+
   private renderCosmeticCards(
     groups: readonly (readonly ResolvedCosmetic[])[] = this.visibleGroups,
     userHasSubscription = false,
@@ -241,17 +317,7 @@ export class StoreModal extends BaseModal {
     return html`${groups.map((group) => {
       const focused = group.find((item) => item.key === this.inspected?.key);
       const active = focused ?? group[0];
-      const action =
-        active.type === "subscription" && active.relationship === "owned"
-          ? // Same box as a purchase button (w-full, min-h-11, text-base) so the
-            // owned tier reads as a peer of the other tiers' switch action
-            // instead of a small tag tucked to one side of the card.
-            html`<span
-              data-store-status
-              class="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-2 py-1.5 text-base font-bold text-emerald-300"
-              >${translateText("store.subscribed")}</span
-            >`
-          : this.renderPurchaseAction(active, userHasSubscription);
+      const action = this.renderCardAction(active, userHasSubscription);
       return html`<cosmetic-card
         data-store-product
         data-cosmetic-key=${group[0].key}
@@ -455,6 +521,12 @@ export class StoreModal extends BaseModal {
     });
   }
 
+  private renderBundleGrid(): TemplateResult {
+    return this.renderBrowser(this.visibleGroups, {
+      emptyTranslationKey: "store.no_bundles",
+    });
+  }
+
   private renderSubscriptionGrid(): TemplateResult {
     const userHasSubscription =
       this.userMeResponse !== false &&
@@ -483,6 +555,8 @@ export class StoreModal extends BaseModal {
         return this.renderCosmeticsPanel();
       case "merch":
         return this.renderMerchPanel();
+      case "bundles":
+        return this.renderBundleGrid();
       case "effects":
         return this.renderEffectGrid();
       case "subscriptions":

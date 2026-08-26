@@ -19,6 +19,8 @@ export class CosmeticInfo extends LitElement {
   @property({ type: Boolean }) showAdFree = false;
   @property({ type: Number }) usdValue?: number;
   @property({ type: Array }) perks: Array<{ label: string; info: string }> = [];
+  /** Display names of a pack's contents, listed under "Includes:". */
+  @property({ type: Array }) items: string[] = [];
 
   createRenderRoot() {
     return this;
@@ -31,7 +33,8 @@ export class CosmeticInfo extends LitElement {
       !this.colorPalette &&
       !this.showAdFree &&
       this.usdValue === undefined &&
-      this.perks.length === 0
+      this.perks.length === 0 &&
+      this.items.length === 0
     ) {
       return nothing;
     }
@@ -77,6 +80,14 @@ export class CosmeticInfo extends LitElement {
               <span class="text-white/80">${perk.info}</span>
             </div>`,
         )}
+        ${this.items.length > 0
+          ? html`<div data-cosmetic-info-items class="w-56 whitespace-normal">
+              <span class="font-bold text-purple-300"
+                >${translateText("cosmetics.pack_includes")}</span
+              >
+              <span class="text-white/80">${this.items.join(", ")}</span>
+            </div>`
+          : nothing}
         ${this.colorPalette
           ? html`<div>
               ${translateText("cosmetics.color_label")}

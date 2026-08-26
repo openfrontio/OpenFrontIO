@@ -1,10 +1,12 @@
 import {
   groupCosmeticVariants,
+  ownedPackItems,
+  packItemFlare,
   resolveCosmetics,
   ResolvedCosmetic,
 } from "../src/client/Cosmetics";
 import { UserMeResponse } from "../src/core/ApiSchemas";
-import { Cosmetics } from "../src/core/CosmeticSchemas";
+import { CosmeticPack, Cosmetics } from "../src/core/CosmeticSchemas";
 
 function makeCosmetics(overrides: Partial<Cosmetics> = {}): Cosmetics {
   return {
@@ -462,5 +464,148 @@ describe("resolveCosmetics", () => {
       const flagIdx = keys.indexOf("flag:heart");
       expect(patternIdx).toBeLessThan(flagIdx);
     });
+  });
+});
+
+describe("resolveCosmetics cosmetic packs", () => {
+  const camo = {
+    name: "camo",
+    pattern: "AAAAAA",
+    product: null,
+    priceHard: 100,
+    rarity: "common",
+    colorPalettes: [{ name: "red", isArchived: false }],
+  };
+  const pirate = {
+    name: "pirate",
+    url: "/flags/pirate.svg",
+    product: null,
+    rarity: "common",
+  };
+  const gradient = {
+    name: "ship_trail_gradient",
+    effectType: "nukeTrail",
+    attributes: {
+      type: "gradient",
+      colors: ["#f00"],
+      colorSize: 1,
+      movementSpeed: 0,
+    },
+    product: null,
+    rarity: "rare",
+  };
+  const starter = {
+    name: "starter",
+    displayName: "Starter Pack",
+    description: "",
+    priceHard: 250,
+    rarity: "common",
+    items: [
+      { type: "pattern" as const, name: "camo" },
+      { type: "flag" as const, name: "pirate" },
+      { type: "effect" as const, name: "ship_trail_gradient" },
+    ],
+  };
+  const catalog = () =>
+    makeCosmetics({
+      patterns: { camo: camo as any },
+      flags: { pirate: pirate as any },
+      effects: { nukeTrail: { ship_trail_gradient: gradient as any } },
+      packs: { starter },
+    });
+  const packOf = (result: ResolvedCosmetic[]) =>
+    result.find((r) => r.type === "cosmeticPack")!;
+
+  test("resolves the pack's items in pack order against the catalog", () => {
+    const resolved = packOf(resolveCosmetics(catalog(), makeUserMe(), null));
+    expect(resolved.key).toBe("cosmeticPack:starter");
+    expect(resolved.cosmetic).toBe(starter);
+    // A pattern item is its uncoloured entry (the pack grants "pattern:camo");
+    // an effect is found by name without knowing its effectType.
+    expect(resolved.packItems?.map((item) => item.key)).toEqual([
+      "pattern:camo",
+      "flag:pirate",
+      "effect:nukeTrail:ship_trail_gradient",
+    ]);
+  });
+
+  test("skips items whose cosmetic is no longer in the catalog", () => {
+    const cosmetics = catalog();
+    delete cosmetics.flags.pirate;
+    const resolved = packOf(resolveCosmetics(cosmetics, makeUserMe(), null));
+    expect(resolved.packItems?.map((item) => item.key)).toEqual([
+      "pattern:camo",
+      "effect:nukeTrail:ship_trail_gradient",
+    ]);
+  });
+
+  test("includes items that are not sold on their own", () => {
+    // pirate has no price of its own (a pack exclusive) — still a pack item.
+    const resolved = packOf(resolveCosmetics(catalog(), makeUserMe(), null));
+    expect(resolved.packItems?.[1].relationship).toBe("blocked");
+    expect(resolved.relationship).toBe("purchasable");
+  });
+
+  test("purchasable when the player owns none of the items", () => {
+    expect(
+      packOf(resolveCosmetics(catalog(), makeUserMe(), null)).relationship,
+    ).toBe("purchasable");
+    expect(packOf(resolveCosmetics(catalog(), false, null)).relationship).toBe(
+      "purchasable",
+    );
+  });
+
+  test("owned when every item's flare (or type wildcard) is owned", () => {
+    const owned = packOf(
+      resolveCosmetics(
+        catalog(),
+        makeUserMe(["pattern:camo", "flag:*", "effect:ship_trail_gradient"]),
+        null,
+      ),
+    );
+    expect(owned.relationship).toBe("owned");
+  });
+
+  test("blocked when only some items are owned (no partial purchase)", () => {
+    const partial = packOf(
+      resolveCosmetics(catalog(), makeUserMe(["flag:pirate"]), null),
+    );
+    expect(partial.relationship).toBe("blocked");
+    expect(
+      ownedPackItems(
+        partial.cosmetic as CosmeticPack,
+        makeUserMe(["flag:pirate"]),
+      ),
+    ).toEqual([{ type: "flag", name: "pirate" }]);
+  });
+
+  test("blocked in affiliate mode, with no items, or without a price", () => {
+    expect(
+      packOf(resolveCosmetics(catalog(), makeUserMe(), "creator")).relationship,
+    ).toBe("blocked");
+    expect(
+      packOf(
+        resolveCosmetics(
+          makeCosmetics({ packs: { starter: { ...starter, items: [] } } }),
+          makeUserMe(),
+          null,
+        ),
+      ).relationship,
+    ).toBe("blocked");
+    expect(
+      packOf(
+        resolveCosmetics(
+          makeCosmetics({ packs: { starter: { ...starter, priceHard: 0 } } }),
+          makeUserMe(),
+          null,
+        ),
+      ).relationship,
+    ).toBe("blocked");
+  });
+
+  test("packItemFlare is the flare the purchase grants", () => {
+    expect(packItemFlare({ type: "effect", name: "ship_trail_gradient" })).toBe(
+      "effect:ship_trail_gradient",
+    );
   });
 });

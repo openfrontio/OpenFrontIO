@@ -1,4 +1,4 @@
-import { Pack } from "../../core/CosmeticSchemas";
+import { CosmeticPack, Pack } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 
@@ -16,8 +16,8 @@ export function cosmeticDisplayName(resolved: ResolvedCosmetic): string {
   if (resolved.type === "pattern" || resolved.type === "skin") {
     return translateCosmetic("territory_patterns.pattern", cosmetic.name);
   }
-  if (resolved.type === "pack") {
-    return (cosmetic as Pack).displayName;
+  if (resolved.type === "pack" || resolved.type === "cosmeticPack") {
+    return (cosmetic as Pack | CosmeticPack).displayName;
   }
   if (resolved.type === "subscription") {
     return translateCosmetic("subscriptions", cosmetic.name);
