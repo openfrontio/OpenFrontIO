@@ -857,6 +857,174 @@ describe("warship effects", () => {
   });
 });
 
+describe("train effects", () => {
+  const gradient = {
+    name: "train_gradient",
+    effectType: "train",
+    attributes: {
+      type: "gradient",
+      colors: ["#ff0000", "#0000ff"],
+      colorSize: 2,
+      movementSpeed: 1,
+    },
+    affiliateCode: null,
+    product: null,
+    priceHard: 10,
+    rarity: "common",
+  };
+  const transition = {
+    name: "train_transition",
+    effectType: "train",
+    attributes: {
+      type: "transition",
+      colors: ["#ff0000", "#ffffff", "#00ff88"],
+      frequency: 3,
+    },
+    affiliateCode: null,
+    product: null,
+    rarity: "common",
+  };
+
+  it("parses the gradient and transition catalog entries", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        train: {
+          train_gradient: gradient,
+          train_transition: transition,
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.effects?.train?.train_gradient?.attributes.type).toBe(
+        "gradient",
+      );
+      expect(
+        result.data.effects?.train?.train_transition?.attributes.type,
+      ).toBe("transition");
+    }
+  });
+
+  it("resolves the train slot (slot = effectType)", () => {
+    expect(effectTypeForSlot("train")).toBe("train");
+    const parsed = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: { train: { train_gradient: gradient } },
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(
+      findEffectForSlot(parsed.data, "train", "train_gradient")?.name,
+    ).toBe("train_gradient");
+  });
+
+  it("shares trail attribute shapes but is not a trail effect", () => {
+    const eff = EffectSchema.parse(gradient);
+    // Renders through the train palette block, not a trail block.
+    expect(isTrailEffect(eff)).toBe(false);
+    expect(effectMatchesSlot(eff, "train")).toBe(true);
+    expect(effectMatchesSlot(eff, "warship")).toBe(false);
+    expect(effectMatchesSlot(eff, "structures")).toBe(false);
+    expect(effectMatchesSlot(eff, "transportShipTrail")).toBe(false);
+  });
+
+  it("rejects a train effect with an unknown attribute type", () => {
+    expect(
+      EffectSchema.safeParse({
+        ...gradient,
+        attributes: { type: "sparkle", colors: [] },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("railroad effects", () => {
+  const gradient = {
+    name: "railroad_gradient",
+    effectType: "railroad",
+    attributes: {
+      type: "gradient",
+      colors: ["#ff0000", "#0000ff"],
+      colorSize: 2,
+      movementSpeed: 1,
+    },
+    affiliateCode: null,
+    product: null,
+    priceHard: 10,
+    rarity: "common",
+  };
+  const transition = {
+    name: "railroad_transition",
+    effectType: "railroad",
+    attributes: {
+      type: "transition",
+      colors: ["#ff0000", "#ffffff", "#00ff88"],
+      frequency: 3,
+    },
+    affiliateCode: null,
+    product: null,
+    rarity: "common",
+  };
+
+  it("parses the gradient and transition catalog entries", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        railroad: {
+          railroad_gradient: gradient,
+          railroad_transition: transition,
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(
+        result.data.effects?.railroad?.railroad_gradient?.attributes.type,
+      ).toBe("gradient");
+      expect(
+        result.data.effects?.railroad?.railroad_transition?.attributes.type,
+      ).toBe("transition");
+    }
+  });
+
+  it("resolves the railroad slot (slot = effectType)", () => {
+    expect(effectTypeForSlot("railroad")).toBe("railroad");
+    const parsed = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: { railroad: { railroad_gradient: gradient } },
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(
+      findEffectForSlot(parsed.data, "railroad", "railroad_gradient")?.name,
+    ).toBe("railroad_gradient");
+  });
+
+  it("shares trail attribute shapes but is not a trail effect", () => {
+    const eff = EffectSchema.parse(gradient);
+    // Renders through the railroad palette block, not a trail block.
+    expect(isTrailEffect(eff)).toBe(false);
+    expect(effectMatchesSlot(eff, "railroad")).toBe(true);
+    expect(effectMatchesSlot(eff, "warship")).toBe(false);
+    expect(effectMatchesSlot(eff, "structures")).toBe(false);
+    expect(effectMatchesSlot(eff, "transportShipTrail")).toBe(false);
+  });
+
+  it("rejects a railroad effect with an unknown attribute type", () => {
+    expect(
+      EffectSchema.safeParse({
+        ...gradient,
+        attributes: { type: "sparkle", colors: [] },
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("isTrailEffect", () => {
   it("is true for a trail effect and false for a nukeExplosion", () => {
     const trail = EffectSchema.parse({
