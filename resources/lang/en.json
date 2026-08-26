@@ -1546,7 +1546,7 @@
   },
   "purchase_nudge": {
     "body": "Looks like you enjoy playing OpenFront! Please consider supporting us by making a purchase — any purchase makes you ad-free for life.",
-    "later": "Maybe later",
+    "close": "Close",
     "title": "Enjoying OpenFront?",
     "visit_store": "Visit store"
   },

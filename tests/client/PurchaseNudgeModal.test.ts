@@ -129,10 +129,17 @@ describe("purchase-nudge-modal", () => {
     expect(el.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it("closes on 'maybe later' without reopening", async () => {
+  it("closes only via the X, not by clicking the backdrop", async () => {
     fireUserMe(false);
     expect(await shown()).toBe(true);
-    (el.querySelector("button") as HTMLButtonElement).click();
+    (el.firstElementChild as HTMLElement).click();
+    await el.updateComplete;
+    expect(el.querySelector('[role="dialog"]')).not.toBeNull();
+    (
+      el.querySelector(
+        'button[aria-label="purchase_nudge.close"]',
+      ) as HTMLButtonElement
+    ).click();
     await el.updateComplete;
     expect(el.querySelector('[role="dialog"]')).toBeNull();
     expect(await shown()).toBe(false);

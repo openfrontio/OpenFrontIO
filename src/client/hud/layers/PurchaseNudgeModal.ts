@@ -86,30 +86,33 @@ export class PurchaseNudgeModal extends LitElement implements Controller {
   render() {
     if (!this.isVisible) return nothing;
 
+    // Deliberately no backdrop-click dismissal: closing takes an explicit
+    // click on the X (or on "Visit store").
     return html`
       <div
         class="fixed inset-0 z-[10000] bg-black/50 flex items-center justify-center p-4"
-        @click=${this.dismiss}
       >
         <div
           class="bg-gray-800 text-white rounded-xl shadow-2xl max-w-md w-full p-6"
           role="dialog"
           aria-label=${translateText("purchase_nudge.title")}
-          @click=${(e: Event) => e.stopPropagation()}
         >
-          <h2 class="text-2xl font-bold mb-3">
-            ${translateText("purchase_nudge.title")}
-          </h2>
+          <div class="flex items-start justify-between gap-4 mb-3">
+            <h2 class="text-2xl font-bold">
+              ${translateText("purchase_nudge.title")}
+            </h2>
+            <button
+              class="shrink-0 text-white/70 hover:text-white text-2xl leading-none cursor-pointer"
+              aria-label=${translateText("purchase_nudge.close")}
+              @click=${this.dismiss}
+            >
+              ✕
+            </button>
+          </div>
           <p class="mb-6 text-gray-200">
             ${translateText("purchase_nudge.body")}
           </p>
-          <div class="flex justify-end gap-3">
-            <button
-              class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
-              @click=${this.dismiss}
-            >
-              ${translateText("purchase_nudge.later")}
-            </button>
+          <div class="flex justify-end">
             <o-button
               variant="primary"
               translationKey="purchase_nudge.visit_store"
