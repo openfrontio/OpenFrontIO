@@ -1,4 +1,4 @@
-import { Pack } from "../../core/CosmeticSchemas";
+import { CosmeticPack, Pack } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 
@@ -16,8 +16,8 @@ export function cosmeticDisplayName(resolved: ResolvedCosmetic): string {
   if (resolved.type === "pattern" || resolved.type === "skin") {
     return translateCosmetic("territory_patterns.pattern", cosmetic.name);
   }
-  if (resolved.type === "pack") {
-    return (cosmetic as Pack).displayName;
+  if (resolved.type === "pack" || resolved.type === "cosmeticPack") {
+    return (cosmetic as Pack | CosmeticPack).displayName;
   }
   if (resolved.type === "subscription") {
     return translateCosmetic("subscriptions", cosmetic.name);
@@ -47,6 +47,28 @@ export function cosmeticSelectionLabel(resolved: ResolvedCosmetic): string {
       palette.name,
     ),
   });
+}
+
+/**
+ * What kind of cosmetic this is, as shown to players ("Skin", "Flag",
+ * "Boat Trail Effect", …). Patterns are "Skins" throughout the store.
+ */
+export function cosmeticTypeLabel(resolved: ResolvedCosmetic): string {
+  switch (resolved.type) {
+    case "pattern":
+    case "skin":
+      return translateText("cosmetics.type_skin");
+    case "flag":
+      return translateText("cosmetics.type_flag");
+    case "crown":
+      return translateText("cosmetics.type_crown");
+    case "effect":
+      return translateText("cosmetics.type_effect", {
+        type: translateText(`effects.type.${resolved.effectType}`),
+      });
+    default:
+      return "";
+  }
 }
 
 export function cosmeticRarity(resolved: ResolvedCosmetic): string {
