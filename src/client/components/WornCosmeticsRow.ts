@@ -43,6 +43,12 @@ export class WornCosmeticsRow extends LitElement {
     return this;
   }
 
+  protected updated(): void {
+    // Light DOM, so the host stays a flex item even when nothing renders and
+    // would add a gap under the identity row for a player with no cosmetics.
+    this.toggleAttribute("hidden", this.childElementCount === 0);
+  }
+
   connectedCallback() {
     super.connectedCallback();
     void this.load();
