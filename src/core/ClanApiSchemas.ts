@@ -245,3 +245,33 @@ export const ClanGamesResponseSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 export type ClanGamesResponse = z.infer<typeof ClanGamesResponseSchema>;
+
+// One row of a clan's donation ledger (GET /clans/:tag/donations). Only player
+// donations are listed — the clan's win-share cut, admin adjustments and refund
+// reversals are separate ledger reasons the endpoint excludes — so summing
+// `amount` is not the clan balance; use ClanInfo.softBalance/hardBalance.
+export const ClanDonationSchema = z.object({
+  // Ledger row id, a bigint serialized as a decimal string.
+  id: z.string(),
+  currencyType: z.enum(["soft", "hard"]),
+  // Positive integer as a decimal bigint string; parse with BigInt, never
+  // Number (same reasoning as ClanInfoSchema's balances).
+  amount: z.string(),
+  reason: z.string(),
+  note: z.string().nullable().optional(),
+  // Donor's public ID; null when the account has since been deleted.
+  createdBy: z.string().nullable(),
+  // Donor's display username; null when deleted or never set.
+  createdByUsername: z.string().nullable().optional(),
+  createdAt: z.iso.datetime(),
+});
+export type ClanDonation = z.infer<typeof ClanDonationSchema>;
+
+export const ClanDonationsResponseSchema = z.object({
+  results: ClanDonationSchema.array(),
+  // Donations matching the currency filter, not just this page.
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
+export type ClanDonationsResponse = z.infer<typeof ClanDonationsResponseSchema>;

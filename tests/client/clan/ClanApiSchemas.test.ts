@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   ClanBanSchema,
+  ClanDonationSchema,
+  ClanDonationsResponseSchema,
   ClanGameFilterSchema,
   ClanGamePlayerSchema,
   ClanGameResultSchema,
@@ -466,5 +468,66 @@ describe("ClanGamesResponseSchema", () => {
       nextCursor: null,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("ClanDonationSchema", () => {
+  const base = {
+    id: "1834",
+    currencyType: "soft",
+    amount: "500",
+    reason: "clan_donation",
+    note: null,
+    createdBy: "Xk3pQ9",
+    createdByUsername: "evan.0042",
+    createdAt: "2026-08-26T02:10:31.512Z",
+  };
+
+  it("accepts a donation row as documented", () => {
+    expect(ClanDonationSchema.safeParse(base).success).toBe(true);
+  });
+
+  it("accepts a deleted donor (null createdBy and username)", () => {
+    const result = ClanDonationSchema.safeParse({
+      ...base,
+      createdBy: null,
+      createdByUsername: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("tolerates absent note and createdByUsername", () => {
+    const rest: Partial<typeof base> = { ...base };
+    delete rest.note;
+    delete rest.createdByUsername;
+    expect(ClanDonationSchema.safeParse(rest).success).toBe(true);
+  });
+
+  it("rejects a numeric amount — bigints travel as strings", () => {
+    expect(ClanDonationSchema.safeParse({ ...base, amount: 500 }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects an unknown currencyType", () => {
+    expect(
+      ClanDonationSchema.safeParse({ ...base, currencyType: "gold" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a non-ISO createdAt", () => {
+    expect(
+      ClanDonationSchema.safeParse({ ...base, createdAt: "yesterday" }).success,
+    ).toBe(false);
+  });
+
+  it("parses the paginated envelope", () => {
+    const result = ClanDonationsResponseSchema.safeParse({
+      results: [base],
+      total: 27,
+      page: 1,
+      limit: 10,
+    });
+    expect(result.success).toBe(true);
   });
 });
