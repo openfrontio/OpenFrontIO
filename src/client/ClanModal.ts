@@ -299,10 +299,7 @@ export class ClanModal extends BaseModal {
     if (targetTag) {
       this.openDetail(targetTag.toUpperCase());
     }
-    // The map is public (read-only without a token), like a clan's detail.
-    this.loadMyClans({
-      allowGuest: Boolean(targetTag) || this.activeTab === "map",
-    });
+    this.loadMyClans({ allowGuest: Boolean(targetTag) });
   }
 
   protected onClose(): void {
@@ -328,7 +325,11 @@ export class ClanModal extends BaseModal {
       const me = await getUserMe();
       if (!this.isModalOpen) return;
       if (!me || Object.keys(me.user).length === 0) {
-        if (opts.allowGuest) {
+        // The map is public (read-only without a token). Checked once the
+        // response is in, not when it was requested: the router opens inline
+        // modals arg-less first and only then with the URL's tab, so a guest
+        // deep-linked to `#modal=clan&tab=map` has reached the map by now.
+        if (opts.allowGuest || this.activeTab === "map") {
           this.myPublicId = null;
           this.myPendingRequests = [];
           this.myClanRoles = new Map();
