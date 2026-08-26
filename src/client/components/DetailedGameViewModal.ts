@@ -34,6 +34,7 @@ import {
   LobbySourceFilter,
   NAMED_TEAM_CONFIGS,
   NUMERIC_TEAM_CONFIGS,
+  queuePositions,
   saveFilterProfile,
 } from "./DetailedGameViewFilters";
 import {
@@ -51,9 +52,9 @@ import { styledSelect } from "./ui/StyledSelect";
 const SCHEDULED_PANES = ["ffa", "team", "special"] as const;
 
 /**
- * Slots a pane always renders, matching QUEUED_LOBBIES_PER_TYPE on the master:
- * the lobby counting down plus the queue behind it. Holding the slot count
- * fixed keeps the pane's height steady while a started lobby is replaced.
+ * Slots a pane always renders, matching QUEUED_LOBBIES_PER_TYPE on the master.
+ * Holding the slot count fixed keeps the pane's height steady while a started
+ * lobby is replaced.
  */
 const PANE_SLOTS = 6;
 
@@ -93,10 +94,9 @@ const BUTTON_CLASS =
   "hover:text-white transition-colors";
 
 /**
- * The full lobby browser behind the homepage "More Games" button: every lobby
- * the server advertises (not just the one card per bucket the homepage shows),
- * rendered as the same map cards, with filtering, sorting and saved filter
- * profiles.
+ * The full lobby browser behind the homepage's Detailed View link: every lobby
+ * the server advertises, as the same map cards, with filtering, sorting and
+ * saved filter profiles.
  */
 @customElement("detailed-view-modal")
 export class DetailedGameViewModal extends BaseModal {
@@ -115,10 +115,16 @@ export class DetailedGameViewModal extends BaseModal {
 
   private serverTimeOffset = 0;
   private countdownTimer: number | null = null;
+  /** Queue position per lobby, from the unfiltered list of each snapshot. */
+  private queuePositions = new Map<string, number>();
 
   private lobbySocket = new PublicLobbySocket((lobbies) => {
     this.lobbies = lobbies;
     this.serverTimeOffset = calculateServerTimeOffset(lobbies.serverTime);
+    // Off the snapshot, not off the filtered list: a filter must not renumber
+    // what is left. Here rather than in render(), which should not have
+    // side effects.
+    this.queuePositions = queuePositions(flattenLobbies(lobbies.games));
     for (const lobby of flattenLobbies(lobbies.games)) {
       mapAspectRatios.ensure(lobby.gameConfig?.gameMap as GameMapType, () =>
         this.requestUpdate(),
@@ -435,12 +441,18 @@ export class DetailedGameViewModal extends BaseModal {
 
   private timeDisplay(lobby: PublicGameInfo): string {
     if (lobby.startsAt === undefined) {
-      // Scheduled lobbies only get a countdown once they're the active one for
-      // their bucket; the one queued behind it is simply next up. Hosted
-      // lobbies never get one — they start when the host says so.
-      return lobby.publicGameType === "hosted"
-        ? translateText("public_lobby.waiting_for_players")
-        : translateText("detailed_view.queued");
+      // One lobby counts down at a time, whatever its type; the rest show how
+      // far back they are. Hosted lobbies never count down — they start when
+      // the host says so.
+      if (lobby.publicGameType === "hosted") {
+        return translateText("public_lobby.waiting_for_players");
+      }
+      // Directly behind the countdown is simply next up; the rest say how far
+      // back they are.
+      const position = this.queuePositions.get(lobby.gameID);
+      return position === undefined || position === 1
+        ? translateText("detailed_view.queued")
+        : translateText("detailed_view.queue_position", { position });
     }
     const seconds = getSecondsUntilServerTimestamp(
       lobby.startsAt,

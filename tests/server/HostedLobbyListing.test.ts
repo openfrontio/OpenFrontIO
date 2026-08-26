@@ -687,14 +687,14 @@ describe("MasterLobbyService hosted lobbies", () => {
         }
       }
     }
-    // The scheduled types still get their replacement lobbies.
+    // A tick tops up each scheduled type's own queue, and hosted has none.
     const created = workers.flatMap((w) =>
       sentMessages(w).filter((m) => m.type === "createGame"),
     );
-    expect(created.map((m) => m.publicGameType).sort()).toEqual([
+    expect(created.map((m) => m.publicGameType)).toEqual([
       "ffa",
-      "special",
       "team",
+      "special",
     ]);
   });
 });

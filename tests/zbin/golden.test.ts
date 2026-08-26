@@ -11,6 +11,7 @@
 // deliberately — update the vector — but it must never happen by accident.
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { PublicGameInfoSchema } from "../../src/core/Schemas";
 import { zb } from "../../zbin";
 
 const hex = (b: Uint8Array) => Buffer.from(b).toString("hex");
@@ -121,5 +122,31 @@ describe("golden wire vectors", () => {
 
     const R = zb.object({ m: z.record(z.string(), zb.uint()) });
     expect(hex(R.serialize({ m: { a: 1 } }))).toBe("01016101");
+  });
+
+  // Not a compatibility guarantee: zbin has no version byte or field tags, so an
+  // old decoder has no way to know a trailing field is there and skips straight
+  // into the next array element's bytes. Appending only keeps the *existing*
+  // fields' bits and offsets where they were, which is what this pins — the
+  // lobby list is a long-lived payload and reordering it is easy to do by
+  // accident.
+  it("PublicGameInfo keeps its field order and presence bits", () => {
+    const S = zb.object({ info: PublicGameInfoSchema });
+    const lobby = {
+      gameID: "abcd1234",
+      numClients: 3,
+      publicGameType: "ffa" as const,
+    };
+    // header 0x00: nothing optional present. Then gameID (len 8 + bytes),
+    // numClients, and the publicGameType ordinal.
+    expect(hex(S.serialize({ info: lobby }))).toBe("000861626364313233340300");
+    // queuePosition is presence bit 6 and the last value on the wire.
+    expect(hex(S.serialize({ info: { ...lobby, queuePosition: 5 } }))).toBe(
+      "40086162636431323334030005",
+    );
+    // startsAt is bit 0, and its value still comes before queuePosition's.
+    expect(
+      hex(S.serialize({ info: { ...lobby, startsAt: 1, queuePosition: 0 } })),
+    ).toBe("4108616263643132333403010000");
   });
 });

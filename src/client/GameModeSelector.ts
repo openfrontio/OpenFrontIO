@@ -161,17 +161,20 @@ export class GameModeSelector extends LitElement {
   }
 
   /**
-   * Every scheduled lobby, soonest first: the ones counting down ahead of the
-   * ones still waiting, so the hero card is the next game to go live. Only the
-   * master knows which type it promotes next, so the waiting lobbies have no
-   * real order to show — they sort by gameID, which at least doesn't jitter
-   * between broadcasts.
+   * The queue in the order the master will promote it — ffa, team, special and
+   * round again — which only the master knows. Position 0 counts down; a lobby
+   * reported between two broadcasts has no position yet and sorts last.
    */
   private allLobbies(lobbies: PublicGames | null): PublicGameInfo[] {
+    const position = (lobby: PublicGameInfo) =>
+      lobby.queuePosition ?? Number.MAX_SAFE_INTEGER;
     return SCHEDULED_PUBLIC_GAME_TYPES.flatMap(
       (type) => lobbies?.games?.[type] ?? [],
     ).sort(
       (a, b) =>
+        position(a) - position(b) ||
+        // Unstamped, so unordered: the one counting down still leads, and the
+        // hero never points at a lobby that isn't next.
         Number(a.startsAt === undefined) - Number(b.startsAt === undefined) ||
         (a.startsAt ?? 0) - (b.startsAt ?? 0) ||
         (a.gameID > b.gameID ? 1 : -1),

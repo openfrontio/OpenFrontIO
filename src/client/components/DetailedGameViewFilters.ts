@@ -215,6 +215,30 @@ export function filterAndSortLobbies(
     .sort(compare);
 }
 
+/**
+ * How far back each waiting lobby sits, 1 being next after the countdown. The
+ * master stamps queuePosition in promotion order; the numbering here reads the
+ * unfiltered list, so a filter doesn't renumber what's left. Hosted lobbies
+ * aren't queued, and the one counting down shows its countdown instead.
+ */
+export function queuePositions(lobbies: PublicGameInfo[]): Map<string, number> {
+  const positions = new Map<string, number>();
+  lobbies
+    .filter(
+      (lobby) =>
+        lobby.publicGameType !== undefined &&
+        lobby.publicGameType !== "hosted" &&
+        lobby.startsAt === undefined,
+    )
+    .sort(
+      (a, b) =>
+        (a.queuePosition ?? Number.MAX_SAFE_INTEGER) -
+        (b.queuePosition ?? Number.MAX_SAFE_INTEGER),
+    )
+    .forEach((lobby, index) => positions.set(lobby.gameID, index + 1));
+  return positions;
+}
+
 // ---- Saved filter profiles ----
 
 export const FILTER_PROFILES_KEY = "detailed-view-filter-profiles";

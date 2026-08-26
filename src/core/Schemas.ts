@@ -293,6 +293,16 @@ export const PublicGameInfoSchema = z.object({
   label: LobbyLabelSchema.optional(),
   accent: LobbyAccentSchema.optional(),
   featured: z.boolean().optional(),
+  // Place in the order lobbies will go live; 0 is the one counting down. Only
+  // the master knows where its promotion rotation is, so only it can set this.
+  // Unset for hosted lobbies.
+  //
+  // Appended because field order is the wire order — which leaves the fields
+  // above it where they were, but does not make this readable by an older
+  // build. zbin is same-build-only (see zbin/README.md): a client still holding
+  // the previous bundle across a deploy cannot skip what it doesn't know about,
+  // and mis-reads the rest of the list.
+  queuePosition: zb.uint().optional(),
 });
 
 export const PublicGamesSchema = z.object({

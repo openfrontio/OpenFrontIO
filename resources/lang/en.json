@@ -519,6 +519,7 @@
     "per_team": "Players per team",
     "profile_name": "Profile name",
     "profiles": "Profiles",
+    "queue_position": "Queue: {position}",
     "queued": "Up next",
     "reset": "Reset",
     "save_profile": "Save",

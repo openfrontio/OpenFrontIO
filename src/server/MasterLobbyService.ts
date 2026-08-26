@@ -4,6 +4,7 @@ import {
   MAX_HOSTED_LOBBIES,
   PublicGameType,
   SCHEDULED_PUBLIC_GAME_TYPES,
+  ScheduledPublicGameType,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import {
@@ -25,11 +26,58 @@ export interface MasterLobbyServiceOptions {
 }
 
 /**
- * Lobbies the master keeps open per scheduled type: the one counting down
- * plus the queue behind it. The whole queue is advertised, so the Detailed
- * View can show what's coming, not just the lobby about to start.
+ * Lobbies the master keeps open per scheduled type. One of the three counts
+ * down at a time and the rest wait; the whole queue is advertised, so clients
+ * can show what's coming, not just the lobby about to start.
  */
 export const QUEUED_LOBBIES_PER_TYPE = 6;
+
+/**
+ * The order the lobby counting down cycles through. Which type is next comes
+ * from this rotation rather than from the queues: a queued lobby is joinable, so
+ * it can fill up and start out of turn, and taking whichever lobby is oldest let
+ * that skip a type indefinitely.
+ *
+ * The schema's own list, not a copy of it: a copy proves membership but not
+ * coverage, so a new scheduled type would silently never be promoted.
+ */
+export const PROMOTION_ROTATION = SCHEDULED_PUBLIC_GAME_TYPES;
+
+/** The rotation, starting at the type after `previous`. */
+function rotationFrom(
+  previous: ScheduledPublicGameType | undefined,
+): ScheduledPublicGameType[] {
+  const from =
+    previous === undefined ? 0 : PROMOTION_ROTATION.indexOf(previous) + 1;
+  return PROMOTION_ROTATION.map(
+    (_, i) => PROMOTION_ROTATION[(from + i) % PROMOTION_ROTATION.length],
+  );
+}
+
+/**
+ * The order lobbies will go live: the one counting down, then a lap of the
+ * rotation from wherever it is, then the next lap. Clients render this as the
+ * queue, so their "up next" is the lobby that is actually next.
+ */
+export function promotionOrder<
+  T extends { startsAt?: number; publicGameType: PublicGameType },
+>(
+  byType: Readonly<Record<ScheduledPublicGameType, readonly T[]>>,
+  lastPromoted: ScheduledPublicGameType | undefined,
+): T[] {
+  const laps = rotationFrom(lastPromoted).map((type) =>
+    byType[type].filter((lobby) => lobby.startsAt === undefined),
+  );
+  const ordered = PROMOTION_ROTATION.flatMap((type) =>
+    byType[type].filter((lobby) => lobby.startsAt !== undefined),
+  );
+  for (let lap = 0; lap < Math.max(0, ...laps.map((q) => q.length)); lap++) {
+    for (const queue of laps) {
+      if (queue[lap] !== undefined) ordered.push(queue[lap]);
+    }
+  }
+  return ordered;
+}
 
 export class MasterLobbyService {
   private readonly workers = new Map<number, Worker>();
@@ -42,6 +90,18 @@ export class MasterLobbyService {
   // round-trip); losing twice means the conflict is real, and the loser gets
   // delisted.
   private readonly loserStreaks = new Map<string, number>();
+  // Where the rotation is: the type of the lobby that last counted down, kept
+  // for the gap between that game starting and the next promotion. Read off the
+  // live lobby, so it survives lobbies filling up and starting out of turn —
+  // which reading the order off the queues could not.
+  private lastPromoted: ScheduledPublicGameType | undefined;
+  // The countdown handed out but not yet seen in a report. Scheduling polls
+  // faster than workers report, and a lobby can fill up and start inside that
+  // window without ever being reported carrying its startsAt — so this is what
+  // moves the rotation on when the report never comes.
+  private promoting:
+    | { gameID: string; type: ScheduledPublicGameType }
+    | undefined;
   private started = false;
 
   constructor(
@@ -193,6 +253,13 @@ export class MasterLobbyService {
       result.hosted = result.hosted.slice(0, MAX_HOSTED_LOBBIES);
     }
 
+    // Stamped so clients can render the queue in the order it will go live:
+    // only the master knows where the rotation is, and only it sees every
+    // worker's lobbies.
+    promotionOrder(result, this.lastPromoted).forEach((lobby, position) => {
+      lobby.queuePosition = position;
+    });
+
     return { games: result, losers };
   }
 
@@ -246,25 +313,12 @@ export class MasterLobbyService {
   private async maybeScheduleLobby() {
     const lobbiesByType = this.getAllLobbies().games;
 
+    this.maybePromote(lobbiesByType);
+
     // Scheduled types only: hosted lobbies are started by their host, never
     // given a countdown or replaced by the master.
     for (const type of SCHEDULED_PUBLIC_GAME_TYPES) {
-      const lobbies = lobbiesByType[type];
-
-      // Always ensure the next lobby has a timer, even if the queue is
-      // already full. This prevents a race where two lobbies are created before
-      // either receives a startsAt (IPC round-trip delay), leaving both stuck
-      // without a countdown.
-      const nextLobby = lobbies[0];
-      if (nextLobby && nextLobby.startsAt === undefined) {
-        this.sendMessageToWorker({
-          type: "updateLobby",
-          gameID: nextLobby.gameID,
-          startsAt: Date.now() + ServerEnv.gameCreationRate(),
-        });
-      }
-
-      if (lobbies.length >= QUEUED_LOBBIES_PER_TYPE) {
+      if (lobbiesByType[type].length >= QUEUED_LOBBIES_PER_TYPE) {
         continue;
       }
 
@@ -275,6 +329,69 @@ export class MasterLobbyService {
         publicGameType: type,
       } satisfies MasterCreateGame);
     }
+  }
+
+  /**
+   * One lobby counts down at a time, and the rotation picks whose turn it is.
+   * Nothing ever clears a countdown, so a lobby only leaves by starting — its
+   * timer runs out or it fills up, and both drop it from the reports.
+   */
+  private maybePromote(
+    lobbiesByType: Record<PublicGameType, InternalGameInfo[]>,
+  ): void {
+    // getAllLobbies sorted each type's lobbies with the counting-down one first,
+    // so the oldest queued lobby of a type is the first without a startsAt.
+    const queued = (type: ScheduledPublicGameType) =>
+      lobbiesByType[type].filter((lobby) => lobby.startsAt === undefined);
+    const live = SCHEDULED_PUBLIC_GAME_TYPES.flatMap(
+      (type) => lobbiesByType[type],
+    ).find((lobby) => lobby.startsAt !== undefined);
+    if (live !== undefined) {
+      this.lastPromoted = live.publicGameType as ScheduledPublicGameType;
+      this.promoting = undefined;
+      return;
+    }
+
+    if (this.promoting !== undefined) {
+      const stillQueued = queued(this.promoting.type).some(
+        (lobby) => lobby.gameID === this.promoting!.gameID,
+      );
+      // Waiting on the report: re-send rather than promote a second lobby, so a
+      // lost message can't leave the queue without a countdown. Costs this lobby
+      // a second per late poll.
+      if (stillQueued) {
+        this.sendCountdown(this.promoting.gameID);
+        return;
+      }
+      // Gone without ever being reported live: it filled up and started inside
+      // the report round-trip. The cursor moved when it was promoted, so its
+      // turn has counted either way.
+      this.promoting = undefined;
+    }
+
+    // A type with nothing queued loses its turn rather than stalling the
+    // rotation or handing the same type two turns running.
+    const type = rotationFrom(this.lastPromoted).find(
+      (candidate) => queued(candidate).length > 0,
+    );
+    if (type === undefined) return;
+
+    // The cursor moves now, not when the countdown is reported: broadcasts run
+    // on their own poll, and one landing in between would stamp queuePosition
+    // from the previous lap and put the wrong lobby up next. `promoting` is what
+    // stops a second lobby being promoted while this one is in flight.
+    const gameID = queued(type)[0].gameID;
+    this.lastPromoted = type;
+    this.promoting = { gameID, type };
+    this.sendCountdown(gameID);
+  }
+
+  private sendCountdown(gameID: string): void {
+    this.sendMessageToWorker({
+      type: "updateLobby",
+      gameID,
+      startsAt: Date.now() + ServerEnv.gameCreationRate(),
+    });
   }
 
   private sendMessageToWorker(msg: MasterCreateGame | MasterUpdateGame): void {

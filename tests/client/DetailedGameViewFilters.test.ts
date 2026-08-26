@@ -11,6 +11,7 @@ import {
   LobbyFilters,
   MAX_FILTER_PROFILES,
   normalizeFilters,
+  queuePositions,
   saveFilterProfile,
 } from "../../src/client/components/DetailedGameViewFilters";
 import {
@@ -233,6 +234,53 @@ describe("filterAndSortLobbies", () => {
         (l) => l.gameID,
       ),
     ).toEqual(["team1"]);
+  });
+});
+
+describe("queuePositions", () => {
+  // One queue across every type, in the master's own order, so the numbering
+  // runs straight through the types rather than restarting per bucket.
+  it("numbers the whole queue from the front, across types", () => {
+    const positions = queuePositions([
+      lobby({ gameID: "live", startsAt: 100, queuePosition: 0 }),
+      lobby({ gameID: "ffa-1", queuePosition: 3 }),
+      lobby({ gameID: "team-1", publicGameType: "team", queuePosition: 1 }),
+      lobby({
+        gameID: "special-1",
+        publicGameType: "special",
+        queuePosition: 2,
+      }),
+    ]);
+    expect([...positions]).toEqual([
+      ["team-1", 1],
+      ["special-1", 2],
+      ["ffa-1", 3],
+    ]);
+  });
+
+  it("leaves out the lobby counting down and hosted lobbies", () => {
+    const positions = queuePositions([
+      lobby({ gameID: "ffa-live", startsAt: 100 }),
+      lobby({ gameID: "hosted1", publicGameType: "hosted" }),
+      lobby({ gameID: "ffa-1" }),
+    ]);
+    expect(positions.has("ffa-live")).toBe(false);
+    expect(positions.has("hosted1")).toBe(false);
+    expect(positions.get("ffa-1")).toBe(1);
+  });
+
+  // A lobby reported between two broadcasts has no position yet.
+  it("puts lobbies without a position behind the ones that have one", () => {
+    const positions = queuePositions([
+      lobby({ gameID: "unstamped" }),
+      lobby({ gameID: "second", queuePosition: 2 }),
+      lobby({ gameID: "first", queuePosition: 1 }),
+    ]);
+    expect([...positions]).toEqual([
+      ["first", 1],
+      ["second", 2],
+      ["unstamped", 3],
+    ]);
   });
 });
 

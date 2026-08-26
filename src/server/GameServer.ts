@@ -1259,7 +1259,10 @@ export class GameServer {
     ) {
       return GamePhase.Lobby;
     }
-    const warmupOver = now > this.startsAt! + 30 * 1000;
+    // A lobby that fills up starts without a countdown, so startsAt can be
+    // unset here; comparing against it directly gives NaN, which is never
+    // greater, and an abandoned game would hold its slot until max duration.
+    const warmupOver = now > (this.startsAt ?? this.createdAt) + 30 * 1000;
     if (noActive && warmupOver && noRecentPings) {
       return GamePhase.Finished;
     }
