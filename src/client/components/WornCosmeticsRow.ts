@@ -119,7 +119,7 @@ export class WornCosmeticsRow extends LitElement {
     const rarity = worn.resolved?.cosmetic?.rarity ?? "";
     const ring = rarityRing[rarity] ?? "ring-white/15";
     const label = buyable
-      ? `${name} (${translateText("player_panel.cosmetic_get")})`
+      ? translateText("player_panel.cosmetic_get_label", { name })
       : name;
 
     return html`
