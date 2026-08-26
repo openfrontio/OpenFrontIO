@@ -89,10 +89,15 @@ describe("findOutOfSyncClients", () => {
   });
 
   it("does not hand back the caller's array when everyone is flagged", () => {
-    const active = clients(2);
+    // Three distinct hashes: two disagree with the first-seen one, which is
+    // a strict majority, so the "everyone is out of sync" branch runs.
+    const active = clients(3);
     report(active[0], 0, 1);
     report(active[1], 0, 2);
-    expect(findOutOfSyncClients(active, 0).outOfSyncClients).not.toBe(active);
+    report(active[2], 0, 3);
+    const { outOfSyncClients } = findOutOfSyncClients(active, 0);
+    expect(outOfSyncClients).toEqual(active);
+    expect(outOfSyncClients).not.toBe(active);
   });
 });
 
