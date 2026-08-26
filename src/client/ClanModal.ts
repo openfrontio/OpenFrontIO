@@ -12,6 +12,7 @@ import "./components/clan/ClanDonationsView";
 import "./components/clan/ClanGameHistoryView";
 import type { ClanGameHistoryCache } from "./components/clan/ClanGameHistoryView";
 import "./components/clan/ClanManageView";
+import "./components/clan/ClanMapView";
 import "./components/clan/ClanMyRequestsView";
 import "./components/clan/ClanRequestsView";
 import type { ClanRole } from "./components/clan/ClanShared";
@@ -35,7 +36,8 @@ type View =
 
 // List tabs share BaseModal's `activeTab` slot with detail tabs ("overview" /
 // "members" / "game-history" / "donations"); which set is live depends on `view`.
-const LIST_TABS = ["my-clans", "browse"] as const;
+// "map" is first in the tab bar but not the landing tab (see the constructor).
+const LIST_TABS = ["map", "my-clans", "browse"] as const;
 type ListTab = (typeof LIST_TABS)[number];
 
 // Detail tabs a player profile can be opened from and returned to. Overview
@@ -49,6 +51,13 @@ function isListTab(key: string): key is ListTab {
 @customElement("clan-modal")
 export class ClanModal extends BaseModal {
   protected routerName = "clan";
+
+  constructor() {
+    super();
+    // BaseModal would otherwise default to the first tab, "map", which would
+    // mount the map iframe (and its API polling) before the modal ever opens.
+    this.activeTab = "my-clans";
+  }
 
   @state() private view: View = "list";
   @state() private loading = false;
@@ -113,6 +122,7 @@ export class ClanModal extends BaseModal {
     return {
       tabs: this.onListView
         ? [
+            { key: "map", label: translateText("clan_modal.tab_map") },
             { key: "my-clans", label: translateText("clan_modal.my_clans") },
             { key: "browse", label: translateText("clan_modal.browse") },
           ]
@@ -150,7 +160,11 @@ export class ClanModal extends BaseModal {
   }
 
   protected renderBody() {
-    return html`<div class="p-4 lg:p-[1.4rem]">${this.renderInner()}</div>`;
+    // The map fills the content box edge to edge; everything else is padded.
+    const onMap = this.onListView && this.activeTab === "map";
+    return html`<div class=${onMap ? "" : "p-4 lg:p-[1.4rem]"}>
+      ${this.renderInner()}
+    </div>`;
   }
 
   protected onTabEnter(tab: string): void {
@@ -285,7 +299,10 @@ export class ClanModal extends BaseModal {
     if (targetTag) {
       this.openDetail(targetTag.toUpperCase());
     }
-    this.loadMyClans({ allowGuest: Boolean(targetTag) });
+    // The map is public (read-only without a token), like a clan's detail.
+    this.loadMyClans({
+      allowGuest: Boolean(targetTag) || this.activeTab === "map",
+    });
   }
 
   protected onClose(): void {
@@ -579,7 +596,11 @@ export class ClanModal extends BaseModal {
       ></clan-detail-view>`;
     }
 
-    // List view (my clans / browse) — header + tabs are rendered by o-modal
+    // List view (map / my clans / browse) — header + tabs are rendered by o-modal
+    if (this.activeTab === "map") {
+      // Mounted only while open: the page polls its API while framed.
+      return this.isModalOpen ? html`<clan-map-view></clan-map-view>` : html``;
+    }
     return html`
       ${this.activeTab === "my-clans"
         ? this.renderMyClans()
