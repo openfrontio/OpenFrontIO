@@ -57,6 +57,15 @@ describe("worn-cosmetics-row", () => {
     await el.updateComplete;
 
     expect(el.querySelector("button")).toBeNull();
+    // The host must not keep taking up a flex gap once it has no tiles.
+    expect(el.hasAttribute("hidden")).toBe(true);
+  });
+
+  it("unhides the host once the player has cosmetics", async () => {
+    resolveCosmetics.mockReturnValue([crownEntry("owned")]);
+    const el = await renderRow();
+
+    expect(el.hasAttribute("hidden")).toBe(false);
   });
 
   it("opens the store in a new tab for an item the viewer can buy", async () => {
