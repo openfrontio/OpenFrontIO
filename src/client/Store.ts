@@ -22,6 +22,7 @@ import {
   ResolvedCosmetic,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
+import { matchesStoreItem } from "./WornCosmetics";
 
 type StoreTab =
   | "cosmetics"
@@ -33,6 +34,13 @@ type StoreTab =
 
 const COSMETICS_SUB_TABS = ["patterns", "flags", "crowns"] as const;
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
+
+/** Sub-tab holding the catalog item a store deep link points at. */
+export function subTabForItem(itemKey: string): CosmeticsSubTab {
+  if (itemKey.startsWith("crown:")) return "crowns";
+  if (itemKey.startsWith("flag:")) return "flags";
+  return "patterns";
+}
 
 interface StoreBrowserOptions {
   emptyTranslationKey: string;
@@ -50,6 +58,9 @@ export class StoreModal extends BaseModal {
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
+  // Item the URL asked for (`#modal=store&item=<key>`). Held until its group
+  // is visible, then inspected so the store opens on that item.
+  private requestedItem: string | null = null;
   private inspected: ResolvedCosmetic | null = null;
   private visibleGroups: readonly (readonly ResolvedCosmetic[])[] = [];
 
@@ -211,6 +222,16 @@ export class StoreModal extends BaseModal {
     groups: readonly (readonly ResolvedCosmetic[])[],
   ): void {
     const visible = groups.flat();
+    const wanted = this.requestedItem;
+    if (wanted !== null) {
+      const match = visible.find((item) => matchesStoreItem(item.key, wanted));
+      // The catalog loads after open, so keep the request until its item shows.
+      if (match !== undefined) {
+        this.requestedItem = null;
+        this.inspected = match;
+        return;
+      }
+    }
     const current = visible.find((item) => item.key === this.inspected?.key);
     this.inspected = current ?? groups[0]?.[0] ?? null;
   }
@@ -511,6 +532,10 @@ export class StoreModal extends BaseModal {
     const affiliate =
       typeof args?.affiliateCode === "string" ? args.affiliateCode : null;
     this.affiliateCode = affiliate;
+    this.requestedItem = typeof args?.item === "string" ? args.item : null;
+    if (this.requestedItem !== null) {
+      this.cosmeticsSubTab = subTabForItem(this.requestedItem);
+    }
     this.cosmetics ??= await fetchCosmetics();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
@@ -518,6 +543,7 @@ export class StoreModal extends BaseModal {
 
   protected onClose(): void {
     this.affiliateCode = null;
+    this.requestedItem = null;
     this.selectVisible(this.groupsForTab(this.activeTab));
   }
 
