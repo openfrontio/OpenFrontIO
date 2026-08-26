@@ -1,8 +1,45 @@
-import { html, TemplateResult } from "lit";
+import { html, svg, TemplateResult } from "lit";
+import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo } from "../../core/Schemas";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
-import { getMapName, getModifierLabels } from "../Utils";
+import { getMapName, getModifierLabels, translateText } from "../Utils";
+import "./ConfirmDialog";
+
+/**
+ * Whether the signed-in player may join trusted-only lobbies, from the
+ * userMeResponse Main dispatches. Logged out, an API without the field, and a
+ * failed computation (null) all read as untrusted.
+ */
+export function viewerIsTrusted(userMe: UserMeResponse | false): boolean {
+  return userMe !== false && userMe.player.trustTier === "trusted";
+}
+
+/** Whether the viewer may join `lobby`: it is open, or they are trusted. */
+export function canJoinTrustedLobby(
+  lobby: PublicGameInfo,
+  viewerTrusted: boolean,
+): boolean {
+  return lobby.gameConfig?.trusted !== true || viewerTrusted;
+}
+
+/**
+ * Popup shown instead of attempting to join a trusted-only lobby the viewer
+ * can't get into (the server would refuse them anyway). Tells them how to
+ * become trusted rather than letting the join fail.
+ */
+export function trustRequiredDialog(onClose: () => void): TemplateResult {
+  return html`<confirm-dialog
+    .heading=${translateText("public_lobby.trust_required_title")}
+    .message=${translateText("public_lobby.trust_required_body")}
+    variant="warning"
+    .showClose=${true}
+    .buttons=${"confirmOnly"}
+    .confirmText=${translateText("public_lobby.trust_required_ok")}
+    @cancel=${onClose}
+    @confirm=${onClose}
+  ></confirm-dialog>`;
+}
 
 /**
  * The map-image lobby card used on the homepage and in the More Games lobby
@@ -63,6 +100,12 @@ export interface LobbyCardOptions {
    * leaving a gated card that looks broken instead of explaining itself.
    */
   blocked?: boolean;
+  /**
+   * Whether the viewer's account is trusted (viewerIsTrusted). Only matters
+   * for a trusted-only lobby, whose card shows a closed lock when the viewer
+   * can't join it and an open one when they can.
+   */
+  viewerTrusted?: boolean;
   /** Card height; defaults to the homepage's fill-the-grid-cell sizing. */
   heightClass?: string;
 }
@@ -75,6 +118,7 @@ export function lobbyCard({
   onClick,
   disabled = false,
   blocked = false,
+  viewerTrusted = false,
   heightClass = "h-44 sm:h-full",
 }: LobbyCardOptions): TemplateResult {
   const mapType = lobby.gameConfig!.gameMap as GameMapType;
@@ -109,6 +153,8 @@ export function lobbyCard({
   if (modifierLabels.length > 1) {
     modifierLabels.sort((a, b) => a.length - b.length);
   }
+
+  const trustedOnly = lobby.gameConfig?.trusted === true;
 
   return html`
     <button
@@ -164,9 +210,12 @@ export function lobbyCard({
       </div>
       <!-- Bottom bar: map name + mode, with player count floating above -->
       <div
-        class="absolute bottom-0 left-0 right-0 flex flex-col px-3 py-2 bg-black/55 backdrop-blur-sm rounded-b-2xl"
+        class="absolute bottom-0 left-0 right-0 flex flex-col px-3 py-2 bg-black/55 backdrop-blur-sm rounded-b-2xl ${trustedOnly
+          ? "pr-10"
+          : ""}"
         style="overflow: visible;"
       >
+        ${trustedOnly ? trustLockIcon(viewerTrusted) : null}
         <span
           class="absolute bottom-full right-2 mb-1 flex items-center gap-1 text-xs font-bold tracking-widest bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded"
         >
@@ -195,4 +244,41 @@ export function lobbyCard({
       </div>
     </button>
   `;
+}
+
+// Bottom-right corner of the card. Red closed lock: the viewer can't join this
+// trusted-only lobby. Green open lock: they can. Heroicons mini
+// lock-closed / lock-open.
+function trustLockIcon(viewerTrusted: boolean): TemplateResult {
+  const label = translateText(
+    viewerTrusted
+      ? "public_lobby.trusted_unlocked"
+      : "public_lobby.trusted_locked",
+  );
+  return html`<span
+    class="absolute bottom-2 right-2 flex items-center bg-black/70 backdrop-blur-sm px-1.5 py-1 rounded ${viewerTrusted
+      ? "text-green-400"
+      : "text-red-400"}"
+    title=${label}
+    aria-label=${label}
+    data-trust=${viewerTrusted ? "unlocked" : "locked"}
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      class="h-4 w-4"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      ${viewerTrusted
+        ? svg`<path
+            d="M14.5 1A4.5 4.5 0 0 0 10 5.5V9H3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1.5V5.5a3 3 0 1 1 6 0v2.75a.75.75 0 0 0 1.5 0V5.5A4.5 4.5 0 0 0 14.5 1Z"
+          ></path>`
+        : svg`<path
+            fill-rule="evenodd"
+            d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z"
+            clip-rule="evenodd"
+          ></path>`}
+    </svg>
+  </span>`;
 }

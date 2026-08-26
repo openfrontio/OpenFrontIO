@@ -177,6 +177,10 @@ export const UserMeResponseSchema = z.object({
     // True when the player may list a custom lobby publicly. The API decides
     // which subscriptions/grants confer this.
     canCreatePublicLobbies: z.boolean(),
+    // Account trust as computed by the API. "untrusted" means new, unlinked or
+    // banned, never an accusation. null when the API's computation failed;
+    // absent on an API that predates the field. Both read as untrusted.
+    trustTier: z.enum(["untrusted", "trusted"]).nullable().optional(),
     // Account username (custom-usernames). All optional so responses from an
     // API without the feature still parse; absent means the same as never set.
     // `username` is the server-resolved DISPLAY form — the bare base for an

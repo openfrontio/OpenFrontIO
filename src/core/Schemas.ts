@@ -454,6 +454,11 @@ export const GameConfigSchema = z.object({
   maxPlayers: zb.uint().optional(),
   // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
   allowedPublicIds: z.array(z.string()).max(200).optional(),
+  // Only accounts the API reports as trusted (users/@me `trustTier`) may join.
+  // Enforced server-side at join (GameServer.joinClient); advertised in the
+  // lobby browser so a card can show a lock. No host UI yet: set through
+  // create_game / update_game_config.
+  trusted: z.boolean().optional(),
   maxTimerValue: zb.uint({ min: 1, max: 120 }).nullable().optional(), // In minutes
   customAllianceDuration: zb.uint({ max: 15 }).nullable().optional(), // In minutes; 0 disables alliances
   startDelay: zb.uint({ max: 600 }).nullable().optional(), // In seconds

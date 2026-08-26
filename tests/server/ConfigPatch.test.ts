@@ -32,6 +32,7 @@ const EDITABLE: { [K in keyof GameConfig]?: GameConfig[K] } = {
   disabledUnits: [UnitType.AtomBomb],
   playerTeams: 3,
   allowedPublicIds: ["pub-a"],
+  trusted: true,
   doomsdayClock: { enabled: true, speed: "fast" },
   overtime: { enabled: true, startMinutes: 20 },
   anonymizeNames: true,
