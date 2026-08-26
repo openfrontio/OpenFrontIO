@@ -40,21 +40,25 @@ export class CosmeticInfo extends LitElement {
     }
 
     const rarityColor = rarityColors[this.rarity ?? ""] ?? "text-white/70";
+    // The strip spans the card so the bubble (right-aligned under the "?")
+    // can be capped at the card's width and wrap. Sized to its longest line,
+    // it used to run past the modal's left edge on first-column cards and
+    // get clipped. Only the button takes pointer events.
     return html`<div
       data-cosmetic-info
-      class="group/cosmetic-info absolute right-2 top-2 z-10"
+      class="group/cosmetic-info pointer-events-none absolute inset-x-2 top-2 z-10 flex justify-end"
       @click=${(event: Event) => event.stopPropagation()}
     >
       <button
         type="button"
         aria-label="Show cosmetic details"
-        class="flex h-7 w-7 cursor-help items-center justify-center rounded-full bg-black/55 text-xs font-black text-white/80 ring-1 ring-white/20 transition-colors hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+        class="pointer-events-auto flex h-7 w-7 cursor-help items-center justify-center rounded-full bg-black/55 text-xs font-black text-white/80 ring-1 ring-white/20 transition-colors hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
       >
         ?
       </button>
       <div
         role="tooltip"
-        class="pointer-events-none absolute right-0 top-9 hidden min-w-max flex-col gap-0.5 whitespace-nowrap rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs text-white shadow-xl group-hover/cosmetic-info:flex group-focus-within/cosmetic-info:flex"
+        class="pointer-events-none absolute right-0 top-9 hidden w-max max-w-full flex-col gap-0.5 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs text-white shadow-xl group-hover/cosmetic-info:flex group-focus-within/cosmetic-info:flex"
       >
         ${this.rarity
           ? html`<div class="font-bold uppercase tracking-wider ${rarityColor}">
@@ -75,13 +79,13 @@ export class CosmeticInfo extends LitElement {
           : nothing}
         ${this.perks.map(
           (perk) =>
-            html`<div class="w-56 whitespace-normal">
+            html`<div class="max-w-56">
               <span class="font-bold text-purple-300">${perk.label}:</span>
               <span class="text-white/80">${perk.info}</span>
             </div>`,
         )}
         ${this.items.length > 0
-          ? html`<div data-cosmetic-info-items class="w-56 whitespace-normal">
+          ? html`<div data-cosmetic-info-items class="max-w-56">
               <span class="font-bold text-purple-300"
                 >${translateText("cosmetics.pack_includes")}</span
               >

@@ -13,6 +13,7 @@ import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
+import "./components/PackContentsDialog";
 import "./components/PurchaseButton";
 import { alignPurchaseRows } from "./components/PurchaseButton";
 import "./components/TribesPanel";
@@ -57,6 +58,8 @@ export class StoreModal extends BaseModal {
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
   private inspected: ResolvedCosmetic | null = null;
   private visibleGroups: readonly (readonly ResolvedCosmetic[])[] = [];
+  /** The bundle whose contents dialog is open, if any. */
+  private openedPack: ResolvedCosmetic | null = null;
 
   protected modalConfig() {
     if (this.affiliateCode) {
@@ -234,6 +237,18 @@ export class StoreModal extends BaseModal {
     this.requestUpdate();
   }
 
+  // Activating a bundle also opens its contents: the card only has room to
+  // tile a few items, so the dialog is where each one is shown with its name.
+  private activate(resolved: ResolvedCosmetic): void {
+    if (resolved.type === "cosmeticPack") this.openedPack = resolved;
+    this.inspect(resolved);
+  }
+
+  private closePack(): void {
+    this.openedPack = null;
+    this.requestUpdate();
+  }
+
   private reconcileInspection(
     groups: readonly (readonly ResolvedCosmetic[])[],
   ): void {
@@ -331,7 +346,7 @@ export class StoreModal extends BaseModal {
         .activeVariantKey=${active.key}
         .actionContent=${action}
         state=${focused ? "focused" : "idle"}
-        .onActivate=${(resolved: ResolvedCosmetic) => this.inspect(resolved)}
+        .onActivate=${(resolved: ResolvedCosmetic) => this.activate(resolved)}
         .onVariantActivate=${(resolved: ResolvedCosmetic) =>
           this.inspect(resolved)}
       ></cosmetic-card>`;
@@ -522,9 +537,14 @@ export class StoreModal extends BaseModal {
   }
 
   private renderBundleGrid(): TemplateResult {
-    return this.renderBrowser(this.visibleGroups, {
+    return html`${this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_bundles",
-    });
+    })}${this.openedPack
+      ? html`<pack-contents-dialog
+          .pack=${this.openedPack}
+          @close=${() => this.closePack()}
+        ></pack-contents-dialog>`
+      : ""}`;
   }
 
   private renderSubscriptionGrid(): TemplateResult {
@@ -592,6 +612,7 @@ export class StoreModal extends BaseModal {
 
   protected onClose(): void {
     this.affiliateCode = null;
+    this.openedPack = null;
     this.selectVisible(this.groupsForTab(this.activeTab));
   }
 

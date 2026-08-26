@@ -1643,6 +1643,7 @@
     "no_tribes": "You haven't bought any tribe names yet.",
     "pack_already_owned": "You already own {items}. Nothing was charged.",
     "pack_debt": "Your Plutonium balance is {debt} in debt. Settle it before buying.",
+    "pack_no_items": "None of this bundle's items are available right now.",
     "pack_owned": "Owned",
     "pack_partially_owned": "Already own {items}",
     "pack_unavailable": "This bundle is no longer available.",

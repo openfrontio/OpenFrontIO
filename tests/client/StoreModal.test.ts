@@ -1,3 +1,4 @@
+import type { LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchCosmetics,
@@ -669,6 +670,38 @@ describe("StoreModal cosmetic browser", () => {
 
     await clickHardPurchase(modal);
     expect(purchaseCosmetic).toHaveBeenCalledWith(starterBundle, "hard");
+  });
+
+  it("opens a contents dialog naming each bundle item when a bundle is activated", async () => {
+    resolvedCatalog = [starterBundle];
+    const modal = await openStoreOnTab("bundles");
+    expect(document.querySelector("[data-pack-contents]")).toBeNull();
+
+    card(modal, starterBundle.key)!.onActivate!(starterBundle);
+    await modal.updateComplete;
+    const dialogHost = modal.querySelector(
+      "pack-contents-dialog",
+    ) as LitElement;
+    await dialogHost.updateComplete;
+
+    // Portaled to the body so it sits above the store modal.
+    const dialog = document.body.querySelector<HTMLElement>(
+      "[data-pack-contents]",
+    )!;
+    expect(dialog.closest("store-modal")).toBeNull();
+    expect(dialog.getAttribute("aria-label")).toBe("Starter Pack");
+    const items = [...dialog.querySelectorAll("[data-pack-contents-item]")];
+    expect(
+      items.map((item) => item.getAttribute("data-pack-contents-item")),
+    ).toEqual(["pattern:stripes", "flag:aurora"]);
+    expect(items[1].querySelector("cosmetic-preview")).toBeTruthy();
+    expect(items[1].textContent).toContain("Aurora");
+
+    dialog.querySelector<HTMLButtonElement>("button[aria-label]")!.click();
+    await modal.updateComplete;
+    expect(document.querySelector("[data-pack-contents]")).toBeNull();
+    // The card stays inspected after closing.
+    expect(card(modal, starterBundle.key)?.state).toBe("focused");
   });
 
   it("shows owned and partially owned bundles as a status, not a sale", async () => {
