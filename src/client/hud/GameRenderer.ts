@@ -37,7 +37,6 @@ import { NewLobbyPrompt } from "./layers/NewLobbyPrompt";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
-import { PurchaseNudgeModal } from "./layers/PurchaseNudgeModal";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
@@ -239,14 +238,6 @@ export function createRenderer(
   }
   multiTabModal.game = game;
 
-  const purchaseNudgeModal = document.querySelector(
-    "purchase-nudge-modal",
-  ) as PurchaseNudgeModal;
-  if (!(purchaseNudgeModal instanceof PurchaseNudgeModal)) {
-    console.error("purchase nudge modal not found");
-  }
-  purchaseNudgeModal.game = game;
-
   const headsUpMessage = document.querySelector(
     "heads-up-message",
   ) as HeadsUpMessage;
@@ -339,7 +330,6 @@ export function createRenderer(
     playerPanel,
     headsUpMessage,
     multiTabModal,
-    purchaseNudgeModal,
     inGamePromo,
     alertFrame,
     performanceOverlay,

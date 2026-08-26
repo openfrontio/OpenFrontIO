@@ -13,19 +13,11 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
   translateText: (key: string) => key,
 }));
 
-import { PurchaseNudgeModal } from "../../src/client/hud/layers/PurchaseNudgeModal";
-import type { GameView } from "../../src/client/view";
+import { PurchaseNudgeModal } from "../../src/client/components/PurchaseNudgeModal";
 
 function fireUserMe(adfree: boolean | null) {
   const detail = adfree === null ? false : { player: { adfree } };
   document.dispatchEvent(new CustomEvent("userMeResponse", { detail }));
-}
-
-function makeGame(opts: { spawnPhase?: boolean; replay?: boolean } = {}) {
-  return {
-    inSpawnPhase: () => opts.spawnPhase ?? true,
-    config: () => ({ isReplay: () => opts.replay ?? false }),
-  } as unknown as GameView;
 }
 
 describe("purchase-nudge-modal", () => {
@@ -36,11 +28,11 @@ describe("purchase-nudge-modal", () => {
     localStorage.setItem("gamesPlayed", "51");
     isOnCrazyGames.mockReturnValue(false);
     isDesktopShell.mockReturnValue(false);
+    window.location.hash = "";
     if (!customElements.get("purchase-nudge-modal")) {
       customElements.define("purchase-nudge-modal", PurchaseNudgeModal);
     }
     el = document.createElement("purchase-nudge-modal") as PurchaseNudgeModal;
-    el.game = makeGame();
     document.body.appendChild(el);
     await el.updateComplete;
   });
@@ -51,12 +43,11 @@ describe("purchase-nudge-modal", () => {
   });
 
   async function shown(): Promise<boolean> {
-    el.tick();
     await el.updateComplete;
     return el.querySelector('[role="dialog"]') !== null;
   }
 
-  it("shows once in the spawn phase for a long-time non-adfree player", async () => {
+  it("shows on load for a long-time non-adfree player and records it", async () => {
     fireUserMe(false);
     expect(await shown()).toBe(true);
     expect(localStorage.getItem("purchaseNudgeShown")).toBe("1");
@@ -83,12 +74,7 @@ describe("purchase-nudge-modal", () => {
   it("stays hidden for ad-free players", async () => {
     fireUserMe(true);
     expect(await shown()).toBe(false);
-  });
-
-  it("stays hidden until the profile is known", async () => {
-    expect(await shown()).toBe(false);
-    fireUserMe(false);
-    expect(await shown()).toBe(true);
+    expect(localStorage.getItem("purchaseNudgeShown")).toBeNull();
   });
 
   it("stays hidden on CrazyGames", async () => {
@@ -104,28 +90,12 @@ describe("purchase-nudge-modal", () => {
     expect(localStorage.getItem("purchaseNudgeShown")).toBeNull();
   });
 
-  it("stays hidden outside the spawn phase and in replays", async () => {
-    fireUserMe(false);
-    el.game = makeGame({ spawnPhase: false });
-    expect(await shown()).toBe(false);
-    el.game = makeGame({ replay: true });
-    expect(await shown()).toBe(false);
-  });
-
-  it("closes on its own when the spawn phase ends", async () => {
-    fireUserMe(false);
-    expect(await shown()).toBe(true);
-    el.game = makeGame({ spawnPhase: false });
-    expect(await shown()).toBe(false);
-  });
-
-  it("opens the store in a new tab and closes", async () => {
-    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+  it("opens the store and closes", async () => {
     fireUserMe(false);
     expect(await shown()).toBe(true);
     (el.querySelector("o-button") as HTMLElement).click();
     await el.updateComplete;
-    expect(open).toHaveBeenCalledWith("/#modal=store", "_blank", "noopener");
+    expect(window.location.hash).toBe("#modal=store");
     expect(el.querySelector('[role="dialog"]')).toBeNull();
   });
 
@@ -142,6 +112,8 @@ describe("purchase-nudge-modal", () => {
     ).click();
     await el.updateComplete;
     expect(el.querySelector('[role="dialog"]')).toBeNull();
+    // A later profile refresh must not bring it back.
+    fireUserMe(false);
     expect(await shown()).toBe(false);
   });
 });
