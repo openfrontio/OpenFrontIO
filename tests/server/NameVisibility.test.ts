@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameMode } from "../../src/core/game/Game";
 import { GameStartInfo } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
@@ -7,13 +7,21 @@ import {
   NameVisibility,
   NameVisibilityView,
 } from "../../src/server/NameVisibility";
-import { makeClient } from "../util/GameServerHarness";
+import {
+  cid,
+  makeClient,
+  makeGame,
+  mockWsOf,
+  startGame,
+} from "../util/GameServerHarness";
 
 // The per-viewer identity rules on their own, over a fixed roster. The lobby
 // projection (lobbyClients) and the anonymizeNames matrix are exercised
 // through GameServer.gameInfo in AnonymizeNames*.test.ts; this file covers
 // what only the module boundary exposes cleanly: the start-message reveal
-// rules with explicit real/wire inputs, and the friends lookup.
+// rules with explicit real/wire inputs, and the friends lookup — plus one
+// end-to-end check that the start message GameServer actually sends goes
+// through those rules.
 
 type Config = ReturnType<NameVisibilityView["config"]>;
 
@@ -173,5 +181,78 @@ describe("friendsLookup", () => {
       spectator: true,
     });
     expect(friendsLookup([alice, cast])(alice)).toBeUndefined();
+  });
+});
+
+describe("admin clan-tag reveal through the start message GameServer sends", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  const HOST = cid("host");
+  const ADMIN = cid("admin");
+  const OTHER = cid("other");
+
+  function startedGame(gameMode: GameMode) {
+    const game = makeGame({
+      config: { gameMode, disableClanTags: true, playerTeams: 2 },
+    });
+    const host = makeClient({
+      clientID: HOST,
+      username: "HostName",
+      clanTag: "HST",
+    });
+    const admin = makeClient({
+      clientID: ADMIN,
+      username: "AdminName",
+      clanTag: "ADM",
+      role: "admin",
+    });
+    const other = makeClient({
+      clientID: OTHER,
+      username: "OtherName",
+      clanTag: "OTH",
+    });
+    for (const c of [host, admin, other]) game.joinClient(c);
+    startGame(game);
+    // The clan tags in the start frame this client received, by player.
+    const clanTagsSeenBy = (c: Client) => {
+      const start = mockWsOf(c)
+        .sent()
+        .find((m) => m.type === "start");
+      if (start?.type !== "start") throw new Error("no start frame");
+      return Object.fromEntries(
+        start.gameStartInfo.players.map((p) => [p.clientID, p.clanTag]),
+      );
+    };
+    return { clanTagsSeenBy, admin, other };
+  }
+
+  it("FFA: the admin's frame carries real tags, everyone else's are stripped", () => {
+    const { clanTagsSeenBy, admin, other } = startedGame(GameMode.FFA);
+    expect(clanTagsSeenBy(admin)).toEqual({
+      [HOST]: "HST",
+      [ADMIN]: "ADM",
+      [OTHER]: "OTH",
+    });
+    expect(clanTagsSeenBy(other)).toEqual({
+      [HOST]: null,
+      [ADMIN]: null,
+      [OTHER]: null,
+    });
+  });
+
+  it("Team mode: stripped for the admin too, since the tags feed team assignment", () => {
+    const { clanTagsSeenBy, admin } = startedGame(GameMode.Team);
+    expect(clanTagsSeenBy(admin)).toEqual({
+      [HOST]: null,
+      [ADMIN]: null,
+      [OTHER]: null,
+    });
   });
 });

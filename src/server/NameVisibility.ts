@@ -6,9 +6,12 @@ import { Client } from "./Client";
 
 // Who may see whose real identity, and what each viewer is shown instead.
 //
-// Everything here is display-only: it shapes the per-viewer wire payloads
-// (the lobby roster and the start message), never the simulation or the
-// archived record, so it cannot desync (see #4426).
+// The NameVisibility rules are display-only: they shape the per-viewer wire
+// payloads (the lobby roster and the start message), never the simulation or
+// the archived record, so they cannot desync (see #4426). friendsLookup is
+// the one thing here the simulation does read — start() writes its result
+// into gameStartInfo.players[].friends, which feeds team assignment — which
+// is why it takes no viewer and is identical on every client.
 
 // What the rules read from the game. Thunks rather than values: the config
 // is edited in the lobby and the roster grows, and both are read at the
