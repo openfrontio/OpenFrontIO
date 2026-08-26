@@ -38,3 +38,35 @@ describe("UserMeResponseSchema steam identity", () => {
     expect(parsed.user.steam?.avatarUrl).toBeNull();
   });
 });
+
+// trustTier is optional/nullable so an API without the field, or one whose
+// trust computation failed (null), still parses; only the two tiers are valid.
+describe("UserMeResponseSchema trustTier", () => {
+  const parseWith = (player: Record<string, unknown>) =>
+    UserMeResponseSchema.parse({ user: {}, player });
+
+  it("accepts trusted and untrusted", () => {
+    expect(
+      parseWith({ ...samplePlayer(), trustTier: "trusted" }).player.trustTier,
+    ).toBe("trusted");
+    expect(
+      parseWith({ ...samplePlayer(), trustTier: "untrusted" }).player.trustTier,
+    ).toBe("untrusted");
+  });
+
+  it("accepts null and an absent field", () => {
+    expect(
+      parseWith({ ...samplePlayer(), trustTier: null }).player.trustTier,
+    ).toBeNull();
+    expect(parseWith(samplePlayer()).player.trustTier).toBeUndefined();
+  });
+
+  it("rejects an unknown tier", () => {
+    expect(
+      UserMeResponseSchema.safeParse({
+        user: {},
+        player: { ...samplePlayer(), trustTier: "admin" },
+      }).success,
+    ).toBe(false);
+  });
+});
