@@ -100,6 +100,8 @@ export function apiMockFactory() {
       user: { email: "test@test.com" },
     })),
     invalidateUserMe: vi.fn(),
+    // ClanMapView derives the map page origin from the audience.
+    getAudience: vi.fn(() => "openfront.dev"),
   };
 }
 
