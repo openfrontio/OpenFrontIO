@@ -67,8 +67,8 @@ export class StoreModal extends BaseModal {
       tabs: [
         { key: "packs", label: translateText("store.packs") },
         { key: "subscriptions", label: translateText("store.subscriptions") },
-        { key: "cosmetics", label: translateText("store.cosmetics") },
         { key: "bundles", label: translateText("store.bundles") },
+        { key: "cosmetics", label: translateText("store.cosmetics") },
         { key: "effects", label: translateText("store.effects") },
         { key: "tribes", label: translateText("store.tribes") },
         { key: "merch", label: translateText("store.merch") },
