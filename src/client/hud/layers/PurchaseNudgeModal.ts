@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import type { UserMeResponse } from "../../../core/ApiSchemas";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { isDesktopShell } from "../../DesktopShell";
 import { getGamesPlayed, translateText } from "../../Utils";
 import { GameView } from "../../view";
 
@@ -12,7 +13,8 @@ const MIN_GAMES_PLAYED = 50;
 // A one-time nudge for long-time players who haven't bought anything: shown
 // during the spawn phase once they are past MIN_GAMES_PLAYED games, then never
 // again (persisted in localStorage). Ad-free players have already purchased,
-// and CrazyGames has its own storefront, so neither sees it.
+// CrazyGames has its own storefront, and the desktop shell never shows ads,
+// so none of them see it.
 @customElement("purchase-nudge-modal")
 export class PurchaseNudgeModal extends LitElement implements Controller {
   public game: GameView;
@@ -59,6 +61,7 @@ export class PurchaseNudgeModal extends LitElement implements Controller {
       !this.profileKnown ||
       this.adFree ||
       crazyGamesSDK.isOnCrazyGames() ||
+      isDesktopShell() ||
       this.game.config().isReplay() ||
       getGamesPlayed() <= MIN_GAMES_PLAYED ||
       localStorage.getItem(SHOWN_KEY) !== null

@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { isOnCrazyGames } = vi.hoisted(() => ({
+const { isOnCrazyGames, isDesktopShell } = vi.hoisted(() => ({
   isOnCrazyGames: vi.fn(() => false),
+  isDesktopShell: vi.fn(() => false),
 }));
 vi.mock("../../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: { isOnCrazyGames },
 }));
+vi.mock("../../src/client/DesktopShell", () => ({ isDesktopShell }));
 vi.mock("../../src/client/Utils", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Utils")>()),
   translateText: (key: string) => key,
@@ -33,6 +35,7 @@ describe("purchase-nudge-modal", () => {
     localStorage.clear();
     localStorage.setItem("gamesPlayed", "51");
     isOnCrazyGames.mockReturnValue(false);
+    isDesktopShell.mockReturnValue(false);
     if (!customElements.get("purchase-nudge-modal")) {
       customElements.define("purchase-nudge-modal", PurchaseNudgeModal);
     }
@@ -92,6 +95,13 @@ describe("purchase-nudge-modal", () => {
     isOnCrazyGames.mockReturnValue(true);
     fireUserMe(false);
     expect(await shown()).toBe(false);
+  });
+
+  it("stays hidden in the desktop shell, which never shows ads", async () => {
+    isDesktopShell.mockReturnValue(true);
+    fireUserMe(false);
+    expect(await shown()).toBe(false);
+    expect(localStorage.getItem("purchaseNudgeShown")).toBeNull();
   });
 
   it("stays hidden outside the spawn phase and in replays", async () => {
