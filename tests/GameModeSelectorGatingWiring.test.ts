@@ -19,6 +19,40 @@ const { lobbiesCallbackRef } = vi.hoisted(() => ({
   lobbiesCallbackRef: { current: null as ((g: PublicGames) => void) | null },
 }));
 
+// The gate reads canPlay() off <username-input>, which PlayPage renders above
+// the selector; this file mounts one as a sibling.
+// Mounting the real element costs these stubs — the set UsernameInput.test.ts
+// uses — and buys a real lookup.
+// Partial: only the calls the selector's subtree makes on mount are stubbed
+// (identity, news, streams), so an unrelated import added later still resolves.
+vi.mock("../src/client/Api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/client/Api")>()),
+  getUserMe: async () => false,
+  invalidateUserMe: () => {},
+  getNews: async () => [],
+  getStreams: async () => ({
+    verifiedAt: new Date(0).toISOString(),
+    featured: [],
+    live: [],
+  }),
+}));
+vi.mock("../src/client/ClanApi", () => ({
+  checkClanTagOwnership: async (tag: string) => ({ tag, error: null }),
+}));
+vi.mock("../src/client/CrazyGamesSDK", () => ({
+  crazyGamesSDK: {
+    isOnCrazyGames: () => false,
+    getUsername: async () => null,
+    addAuthListener: () => {},
+  },
+}));
+vi.mock("../src/client/SteamSDK", () => ({
+  steamSDK: { isOnSteam: () => false, getUser: async () => null },
+}));
+vi.mock("../src/client/InGameModal", () => ({
+  showInGameConfirm: async () => false,
+}));
+
 vi.mock("../src/client/LobbySocket", () => ({
   PublicLobbySocket: class {
     constructor(onUpdate: (g: PublicGames) => void) {
@@ -29,8 +63,9 @@ vi.mock("../src/client/LobbySocket", () => ({
   },
 }));
 
-// Registers <game-mode-selector> as a side effect.
+// Side-effect imports register both elements; vi.mock above is hoisted over them.
 import "../src/client/GameModeSelector";
+import "../src/client/UsernameInput";
 
 function publicLobby(gameID: string): PublicGameInfo {
   return {
@@ -93,14 +128,18 @@ async function pushLobbies(games: PublicGames["games"]): Promise<void> {
   await selector.updateComplete;
 }
 
-/** The rendered public-lobby card's button, or null if none rendered. */
+/**
+ * The rendered public-lobby card's click target. The card is a container with
+ * flat layers inside it and an overlay button for the click, so the button is
+ * the one carrying the card's accessible name.
+ */
 function lobbyCardButton(): HTMLButtonElement | null {
-  return selector.querySelector("button.group");
+  return selector.querySelector("div.group button[aria-label]");
 }
 
 beforeEach(async () => {
-  // connectedCallback reads ClientEnv.gameCreationRate(), which throws without
-  // the config the server normally injects into index.html.
+  // The lobby socket reads ClientEnv on start, which throws without the config
+  // the server normally injects into index.html.
   window.BOOTSTRAP_CONFIG = {
     gameEnv: "dev",
     numWorkers: 1,
@@ -119,6 +158,8 @@ beforeEach(async () => {
   stub("host-lobby-modal", { open: hostOpen });
   stub("single-player-modal", { open: vi.fn() });
   stub("desktop-update-bar", { wiggle });
+  // A name the real <username-input> accepts, so canPlay() answers true.
+  localStorage.setItem("username", "GateTester");
   (window as { showPage?: (id: string) => void }).showPage = vi.fn();
   // validateAndJoin dispatches "join-lobby" as a bubbling/composed CustomEvent
   // rather than calling a modal's open() -- catch it at the document the same
@@ -126,6 +167,13 @@ beforeEach(async () => {
   document.addEventListener("join-lobby", joinLobby as EventListener);
 
   lobbiesCallbackRef.current = null;
+  // A real one, as a sibling: PlayPage renders it above the selector, and the
+  // selector looks it up on the document the way the app has it.
+  const username = document.createElement("username-input") as HTMLElement & {
+    updateComplete?: Promise<unknown>;
+  };
+  document.body.appendChild(username);
+  await username.updateComplete;
   selector = document.createElement("game-mode-selector") as HTMLElement & {
     updateComplete: Promise<unknown>;
   };
@@ -134,6 +182,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  localStorage.clear();
   document.removeEventListener("join-lobby", joinLobby as EventListener);
   document.body.innerHTML = "";
   window.BOOTSTRAP_CONFIG = undefined;
@@ -239,7 +288,42 @@ describe("the multiplayer gate at its real call sites", () => {
     expect(hostOpen).toHaveBeenCalled();
   });
 
-  it("never gates the single-player card", async () => {
+  // All four entry points share this lookup, so it gets its own cases.
+  it("asks the real username input before acting", async () => {
+    const username = document.querySelector("username-input") as HTMLElement & {
+      canPlay(): boolean;
+    };
+    // Spying, not replacing: fails if the lookup stops finding the element.
+    const canPlay = vi.spyOn(username, "canPlay");
+
+    await setUpdateState({ status: "current", bytes: 0, total: 0 });
+    clickEveryButton();
+
+    expect(canPlay).toHaveBeenCalled();
+    expect(joinOpen).toHaveBeenCalled();
+  });
+
+  it("stops when the username input refuses", async () => {
+    const username = document.querySelector("username-input") as HTMLElement & {
+      canPlay(): boolean;
+      updateComplete: Promise<unknown>;
+    };
+    const field = username.querySelector("input") as HTMLInputElement;
+    field.value = "";
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    await username.updateComplete;
+    expect(username.canPlay()).toBe(false);
+
+    await setUpdateState({ status: "current", bytes: 0, total: 0 });
+    clickEveryButton();
+
+    expect(joinOpen).not.toHaveBeenCalled();
+    expect(hostOpen).not.toHaveBeenCalled();
+    // Refused for a different reason, so the update bar stays still.
+    expect(wiggle).not.toHaveBeenCalled();
+  });
+
+  it("never gates solo", async () => {
     const solo = vi.fn();
     (
       document.querySelector("single-player-modal") as HTMLElement & {

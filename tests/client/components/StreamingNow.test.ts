@@ -140,15 +140,54 @@ describe("StreamingNow", () => {
       expect(el.textContent).toContain("Bob");
     });
 
-    it("stays collapsed when nobody is live", async () => {
+    // The panel used to hide itself; it stays and invites instead, so the
+    // invite is the only link on it.
+    it("invites streamers when nobody is live", async () => {
       getStreams.mockResolvedValue({
         verifiedAt: new Date().toISOString(),
         featured: [],
         live: [],
       });
       const el = await mount();
-      expect(el.style.display).toBe("none");
-      expect(el.querySelectorAll("a")).toHaveLength(0);
+      expect(el.style.display).not.toBe("none");
+      const links = el.querySelectorAll("a");
+      expect(links).toHaveLength(1);
+      expect(links[0].getAttribute("href")).toContain("discord.gg");
+    });
+
+    // A feed older than the poller's max age is delivered as the empty sentinel,
+    // the same value it hands over before the first fetch. Reading "loaded" off
+    // that would blank the panel mid-session and leave the row a column short.
+    it("keeps the panel when a loaded feed later goes stale", async () => {
+      const el = await mount();
+      expect(el.textContent).toContain("Enzo");
+
+      getStreams.mockResolvedValue({
+        verifiedAt: new Date(Date.now() - 60 * 60_000).toISOString(),
+        featured: [],
+        live: [],
+      });
+      await vi.advanceTimersByTimeAsync(5 * 60_000);
+      await el.updateComplete;
+
+      const links = el.querySelectorAll("a");
+      expect(links).toHaveLength(1);
+      expect(links[0].getAttribute("href")).toContain("discord.gg");
+    });
+
+    // A failed or stale fetch delivers the same sentinel as the pre-fetch cache.
+    // Reading "loaded" off the value alone leaves the column blank for good.
+    it("invites streamers when the feed never loads", async () => {
+      getStreams.mockResolvedValue({
+        verifiedAt: new Date(Date.now() - 60 * 60_000).toISOString(),
+        featured: [],
+        live: [],
+      });
+      const el = await mount();
+
+      const links = el.querySelectorAll("a");
+      expect(links).toHaveLength(1);
+      expect(links[0].getAttribute("href")).toContain("discord.gg");
     });
 
     it("owns no timer: disconnecting stops all polling", async () => {

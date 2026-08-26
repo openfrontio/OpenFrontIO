@@ -61,7 +61,7 @@ export function trustRequiredDialog(
 }
 
 /**
- * The map-image lobby card used on the homepage and in the More Games lobby
+ * The map-image lobby card used on the homepage and in the detailed lobby
  * browser: map art behind modifier pills, a countdown pill, the player count
  * and a bottom bar naming the map and mode.
  */
@@ -112,11 +112,9 @@ export interface LobbyCardOptions {
   onClick: () => void;
   disabled?: boolean;
   /**
-   * Gated rather than disabled: the card dims and reports `aria-disabled`, but
-   * stays clickable, so `onClick` still runs and can refuse the action itself
-   * (the desktop update bar's attention animation is triggered from there).
-   * `disabled` would swallow the click -- it also sets pointer-events-none --
-   * leaving a gated card that looks broken instead of explaining itself.
+   * Gated, not disabled: dims and reports `aria-disabled` but stays clickable,
+   * so onClick can refuse and nudge the update bar. `disabled` would swallow
+   * the click and just look broken.
    */
   blocked?: boolean;
   /**
@@ -168,116 +166,159 @@ export function lobbyCard({
     lobby.gameConfig?.publicGameModifiers,
     lobby.gameConfig?.doomsdayClock?.speed,
   );
-  // Sort by length for visual consistency (shorter labels first)
+  // Longest first: the stack is clipped from the bottom on a short card, so the
+  // labels that say the most survive, and the column tapers rather than jags.
   if (modifierLabels.length > 1) {
-    modifierLabels.sort((a, b) => a.length - b.length);
+    modifierLabels.sort((a, b) => b.length - a.length);
   }
-
+  // One rounded, clipping box with flat layers inside: a second radius would
+  // disagree with the first at the corners, drawing a bright rim. The whole card
+  // is one button, so its accessible name has to carry what the layers say --
+  // including the countdown, which is the most time-sensitive part of it.
   const trustedOnly = lobby.gameConfig?.trusted === true;
+  const label = [
+    title,
+    subtitleLine,
+    ...modifierLabels,
+    playerCount,
+    timeDisplay,
+    trustedOnly
+      ? translateText(
+          viewerTrusted
+            ? "public_lobby.trusted_unlocked"
+            : "public_lobby.trusted_locked",
+        )
+      : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return html`
-    <button
-      @click=${onClick}
-      ?disabled=${disabled}
-      aria-disabled=${blocked}
-      class="group relative w-full ${heightClass} text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)] ${disabled
+    <div
+      class="group relative w-full ${heightClass} overflow-hidden rounded-2xl border-[3px] border-transparent bg-clip-padding hover:border-malibu-blue transition-colors duration-200 bg-surface text-white uppercase ${disabled
         ? "opacity-50 cursor-not-allowed pointer-events-none"
         : blocked
           ? "opacity-50 cursor-not-allowed"
           : ""}"
     >
-      <!-- Image clipped separately so overflow-hidden doesn't block absolute children -->
+      <!-- Map -->
+      ${mapImageSrc
+        ? html`<img
+            src="${mapImageSrc}"
+            alt=""
+            draggable="false"
+            class="absolute inset-0 w-full h-full transition-transform duration-200 ${useContain
+              ? "object-contain group-hover:scale-105"
+              : "object-cover object-center scale-[1.05] group-hover:scale-[1.12]"} [image-rendering:auto]"
+          />`
+        : null}
+
+      <!-- Modifiers and countdown. Everything below is decoration: the click
+           target's aria-label carries all of it, so a screen reader in browse
+           mode doesn't read each card twice. -->
       <div
-        class="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none"
+        aria-hidden="true"
+        class="absolute inset-x-2 top-2 bottom-16 flex items-start justify-between gap-2 pointer-events-none"
       >
-        ${mapImageSrc
-          ? html`<img
-              src="${mapImageSrc}"
-              alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
-              draggable="false"
-              class="absolute inset-0 w-full h-full ${useContain
-                ? "object-contain"
-                : "object-cover object-center scale-[1.05]"} [image-rendering:auto]"
-            />`
-          : null}
-      </div>
-      <!-- Top row: modifiers + timer -->
-      <div
-        class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
-      >
-        ${modifierLabels.length > 0
-          ? html`<div
-              class="flex flex-col items-start gap-1 mt-[2px] min-w-0 max-w-[65%]"
-            >
-              ${modifierLabels.map(
-                (label) =>
-                  html`<span
-                    class="px-2 py-1 rounded text-xs font-bold uppercase tracking-widest bg-malibu-blue text-white shadow-[var(--shadow-malibu-blue-pill)]"
-                    >${label}</span
-                  >`,
-              )}
-            </div>`
-          : html`<div></div>`}
-        <div class="shrink-0">
-          <span
-            class="text-xs font-bold tracking-widest ${timeDisplayUppercase
-              ? "uppercase"
-              : "normal-case"} bg-malibu-blue text-white px-2 py-1 rounded"
-            >${timeDisplay}</span
-          >
+        <!-- Clipped to the space above the name bar: a lobby with more
+             modifiers than a short card can show loses the overflow rather
+             than printing it over its own title. -->
+        <div
+          class="flex flex-1 flex-col items-start gap-1 mt-[2px] min-w-0 h-full overflow-hidden"
+        >
+          ${modifierLabels.map(
+            (modifier) =>
+              html`<span
+                class="max-w-full shrink-0 truncate px-2 py-1 rounded text-xs font-bold uppercase tracking-widest whitespace-nowrap bg-malibu-blue text-white shadow-[var(--shadow-malibu-blue-pill)]"
+                >${modifier}</span
+              >`,
+          )}
         </div>
+        ${timeDisplay === ""
+          ? null
+          : html`<span
+              class="shrink-0 text-xs font-bold tracking-widest ${timeDisplayUppercase
+                ? "uppercase"
+                : "normal-case"} bg-malibu-blue text-white px-2 py-1 rounded"
+              >${timeDisplay}</span
+            >`}
       </div>
-      <!-- Bottom bar: map name + mode, with player count floating above -->
+
+      <!-- Player count, sitting just above the bar -->
+      <span
+        aria-hidden="true"
+        class="absolute right-2 bottom-14 mb-1 flex items-center gap-1 text-xs font-bold tracking-widest bg-black/80 px-2 py-0.5 rounded pointer-events-none"
+      >
+        ${playerCount}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4 inline-block"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+          ></path>
+        </svg>
+      </span>
+
+      <!-- Name and mode; a trusted-only lobby keeps its lock clear of the text. -->
       <div
-        class="absolute bottom-0 left-0 right-0 flex flex-col px-3 py-2 bg-black/55 backdrop-blur-sm rounded-b-2xl ${trustedOnly
+        aria-hidden="true"
+        class="absolute inset-x-0 bottom-0 h-14 flex flex-col justify-center px-3 bg-black/70 pointer-events-none ${trustedOnly
           ? "pr-10"
           : ""}"
-        style="overflow: visible;"
       >
-        ${trustedOnly ? trustLockIcon(viewerTrusted) : null}
-        <span
-          class="absolute bottom-full right-2 mb-1 flex items-center gap-1 text-xs font-bold tracking-widest bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded"
-        >
-          ${playerCount}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4 inline-block"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
-            ></path>
-          </svg>
-        </span>
+        ${trustedOnly
+          ? trustLockIcon(viewerTrusted, disabled ? undefined : onClick)
+          : null}
         ${title
           ? html`<p
-              class="text-sm sm:text-base font-bold uppercase tracking-wider text-left leading-tight"
+              class="text-sm sm:text-base font-bold uppercase tracking-wider text-left leading-tight truncate"
             >
               ${title}
             </p>`
           : ""}
-        <h3 class="text-xs text-white/70 uppercase tracking-wider text-left">
+        <h3
+          class="text-xs text-white/70 uppercase tracking-wider text-left truncate"
+        >
           ${subtitleLine}
         </h3>
       </div>
-    </button>
+
+      <!-- The card is its own click target, over the flat layers. The focus
+           ring is inset: an outline would be drawn at the container's edge,
+           where the rounded clip cuts it off. -->
+      <button
+        @click=${onClick}
+        ?disabled=${disabled}
+        aria-disabled=${blocked}
+        aria-label=${label}
+        class="absolute inset-0 w-full h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-malibu-blue"
+      ></button>
+    </div>
   `;
 }
 
 // Bottom-right corner of the card. Red closed lock: the viewer can't join this
 // trusted-only lobby. Green open lock: they can. Heroicons mini
 // lock-closed / lock-open.
-function trustLockIcon(viewerTrusted: boolean): TemplateResult {
+function trustLockIcon(
+  viewerTrusted: boolean,
+  onClick: (() => void) | undefined,
+): TemplateResult {
   const label = translateText(
     viewerTrusted
       ? "public_lobby.trusted_unlocked"
       : "public_lobby.trusted_locked",
   );
+  // Hoverable for its own tooltip, which means it takes the click too: it sits
+  // over the card's click target, so it hands the click straight back.
   return html`<span
-    class="absolute bottom-2 right-2 flex items-center bg-black/70 backdrop-blur-sm px-1.5 py-1 rounded ${viewerTrusted
+    @click=${onClick}
+    class="pointer-events-auto absolute bottom-2 right-2 z-10 flex items-center bg-black/70 backdrop-blur-sm px-1.5 py-1 rounded ${viewerTrusted
       ? "text-green-400"
-      : "text-red-400"}"
+      : "text-red-400"} ${onClick === undefined ? "" : "cursor-pointer"}"
     title=${label}
     aria-label=${label}
     data-trust=${viewerTrusted ? "unlocked" : "locked"}

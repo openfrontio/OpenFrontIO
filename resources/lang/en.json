@@ -1095,7 +1095,6 @@
     "clans": "Clans",
     "copyright": "© OpenFront™ and Contributors",
     "create": "Create Lobby",
-    "detailed_view": "Detailed View",
     "discord_avatar_alt": "Discord profile avatar",
     "github": "GitHub",
     "go_to_troubleshooting": "Go to our troubleshooting page",
@@ -1303,10 +1302,7 @@
     "ranked_1v1_title": "1v1",
     "ranked_2v2_title": "2v2",
     "ranked_pairing_note": "In team modes, clanmates and friends in the queue are placed on the same team where possible. Friends are paired first, then clanmates. If your ratings are too far apart you'll be matched separately to keep games fair.",
-    "ranked_title": "Ranked",
-    "teams_count": "{teamCount} teams",
-    "teams_of": "{teamCount} teams of {playersPerTeam}",
-    "teams_title": "Teams"
+    "ranked_title": "Ranked"
   },
   "multi_tab": {
     "detected": "Multiple open game tabs detected.",
@@ -1550,10 +1546,13 @@
   "public_lobby": {
     "connecting": "Connecting to lobby...",
     "join_timeout": "You didn't enter the game in time.",
+    "none_scheduled": "No games scheduled right now",
     "players_per_team": "of {num}",
+    "see_all": "See all {count}",
     "started": "Started",
     "starting_game": "Starting…",
     "starting_in": "Starting in {time}",
+    "starting_now": "Now",
     "status": "Status",
     "teams": "{num} teams",
     "teams_hvn": "Humans vs Nations",
@@ -1565,6 +1564,10 @@
     "trust_required_title": "Trusted account required",
     "trusted_locked": "Trusted accounts only. Your account isn't trusted yet.",
     "trusted_unlocked": "Trusted accounts only. Your account is trusted.",
+    "upcoming": "Upcoming",
+    "upcoming_help": "About upcoming games",
+    "upcoming_help_full": "If a game fills up before the countdown, it starts right away.",
+    "upcoming_help_join": "Join a game before it goes live to secure your spot.",
     "waiting_for_players": "Waiting for players"
   },
   "purchase_nudge": {
@@ -1737,6 +1740,8 @@
     "your_tribes_heading": "Your Tribe Names"
   },
   "streaming_now": {
+    "enquire": "Enquire on Discord",
+    "invite": "Nobody is live right now. Are you a streamer? Enquire on Discord to be featured here.",
     "live_count": "{count} Streaming",
     "title": "Streaming Now",
     "viewers": "{count} watching",

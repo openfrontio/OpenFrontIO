@@ -56,7 +56,11 @@ async function setViewerTrust(trustTier: string): Promise<void> {
 }
 
 async function clickCard(): Promise<void> {
-  const card = selector.querySelector("button.group") as HTMLButtonElement;
+  // The card is a container of flat layers with an overlay button for the
+  // click, so the button is the one carrying the card's accessible name.
+  const card = selector.querySelector(
+    "div.group button[aria-label]",
+  ) as HTMLButtonElement;
   expect(card).not.toBeNull();
   card.click();
   await selector.updateComplete;

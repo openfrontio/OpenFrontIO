@@ -85,9 +85,15 @@ async function pushLobbies(games: PublicGames["games"]): Promise<void> {
   await modal.updateComplete;
 }
 
-/** The rendered card button for a given lobby, or null if none rendered. */
+/**
+ * The rendered card's click target for a given lobby, or null if none
+ * rendered. The card is a container with flat layers inside it and an overlay
+ * button for the click, so the button is the one carrying the accessible name.
+ */
 function cardButton(gameID: string): HTMLButtonElement | null {
-  return modal.querySelector(`[data-lobby-slot="${gameID}"] button.group`);
+  return modal.querySelector(
+    `[data-lobby-slot="${gameID}"] div.group button[aria-label]`,
+  );
 }
 
 beforeEach(async () => {

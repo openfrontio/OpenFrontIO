@@ -1,7 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type { LiveStream } from "../../core/ApiSchemas";
-import { streamsFeed, watchUrl } from "../StreamsFeed";
+import { EMPTY_FEED, streamsFeed, watchUrl } from "../StreamsFeed";
 import { translateText } from "../Utils";
 
 // Compact viewer count: 932 -> "932", 1234 -> "1.2K", 12345 -> "12K", 1.2e6 -> "1.2M".
@@ -19,11 +19,16 @@ export function formatViewers(n: number): string {
 // OpenFront, fed by the shared streams feed. Every entry has been verified live
 // server-side (Twitch via Helix, YouTube via videos.list), so nothing here decides
 // liveness or fetches from a platform to find out. Streamers are compact cards in a
-// horizontal slider, so the bubble never grows with the count. Stays hidden until there
-// is a live stream, so the sibling news box keeps the full row when nobody is live.
+// horizontal slider, so the bubble never grows with the count. With nobody live it
+// stays put and invites streamers, so the column keeps its shape.
 @customElement("streaming-now")
 export class StreamingNow extends LitElement {
   @state() private streams: LiveStream[] = [];
+  // subscribe() hands over its cache synchronously, and on a cold load that is
+  // the empty sentinel — rendering the invite off it would flash "nobody is
+  // live" over a feed that is about to arrive.
+  @state() private loaded = false;
+  private deliveries = 0;
   private unsubscribe: (() => void) | null = null;
 
   // Light DOM so Tailwind classes apply (matches NewsBox).
@@ -33,14 +38,8 @@ export class StreamingNow extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.style.display = "none"; // hidden until the feed reports a live stream (no flash)
-    // Desktop only (host carries `hidden lg:block`); below lg, don't even subscribe.
-    if (
-      typeof window.matchMedia === "function" &&
-      !window.matchMedia("(min-width: 1024px)").matches
-    ) {
-      return;
-    }
+    // Subscribed at every width: the invite has to give way to a live stream on
+    // a phone too.
     // The shared poller owns the cadence and stops itself in-game and while the tab is
     // hidden. This previously ran its own setInterval and only cleared it in
     // disconnectedCallback — which never fires, because <play-page> is never removed
@@ -48,11 +47,13 @@ export class StreamingNow extends LitElement {
     this.unsubscribe = streamsFeed.subscribe((feed) => {
       // Highest viewer counts first (defensive; the API already sorts).
       this.streams = [...feed.live].sort((a, b) => b.viewers - a.viewers);
-      // Collapse the host when nobody is live; .streaming-live lets the play-page strip
-      // switch to its 2-column grid (via has-[]) only while the panel is actually shown.
-      const live = this.streams.length > 0;
-      this.style.display = live ? "" : "none";
-      this.classList.toggle("streaming-live", live);
+      // Loaded once a real feed lands, or once the poller has answered at all:
+      // a fetch that fails, 404s or comes back stale delivers the same sentinel
+      // as the pre-fetch cache, and the panel must not sit blank for it. Sticky,
+      // because a feed going stale later would otherwise take the panel out of
+      // the row it exists to hold.
+      this.loaded ||=
+        ++this.deliveries > 1 || feed.verifiedAt !== EMPTY_FEED.verifiedAt;
     });
   }
 
@@ -63,7 +64,8 @@ export class StreamingNow extends LitElement {
   }
 
   render() {
-    if (this.streams.length === 0) return nothing;
+    if (!this.loaded) return nothing;
+    if (this.streams.length === 0) return this.renderInvite();
     const count = translateText("streaming_now.live_count", {
       count: this.streams.length,
     });
@@ -104,6 +106,35 @@ export class StreamingNow extends LitElement {
         <div class="streaming-scroll flex snap-x gap-3 overflow-x-auto py-1.5">
           ${this.streams.map((s) => this.renderCard(s))}
         </div>
+      </div>
+    `;
+  }
+
+  // Nobody live: ask streamers in, rather than collapsing and leaving a hole.
+  private renderInvite() {
+    return html`
+      <div
+        class="flex h-full flex-col justify-center gap-2 bg-surface px-3 py-3 border-y border-white/10 sm:border-y-0 sm:rounded-xl"
+      >
+        <div class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-white/25"></span>
+          <span
+            class="text-xs font-bold uppercase tracking-wider text-white/70"
+          >
+            ${translateText("streaming_now.title")}
+          </span>
+        </div>
+        <p class="text-xs leading-relaxed text-white/55">
+          ${translateText("streaming_now.invite")}
+        </p>
+        <a
+          href="https://discord.gg/openfront"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="self-center rounded-lg bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white/80 hover:bg-white/[0.12] hover:text-white transition-colors"
+        >
+          ${translateText("streaming_now.enquire")}
+        </a>
       </div>
     `;
   }

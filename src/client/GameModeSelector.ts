@@ -1,16 +1,12 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { GameMapType } from "../core/game/Game";
 import {
-  Duos,
-  GameMapType,
-  GameMode,
-  HumansVsNations,
-  Quads,
-  Trios,
-} from "../core/game/Game";
-import { PublicGameInfo, PublicGames } from "../core/Schemas";
+  PublicGameInfo,
+  PublicGames,
+  SCHEDULED_PUBLIC_GAME_TYPES,
+} from "../core/Schemas";
 import "./components/IOSAddToHomeScreenBanner";
 import {
   canJoinTrustedLobby,
@@ -30,12 +26,31 @@ import { SinglePlayerModal } from "./SinglePlayerModal";
 import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
+  getGameModeLabel,
   getSecondsUntilServerTimestamp,
   renderDuration,
   translateText,
 } from "./Utils";
 
-const CARD_BG = "bg-surface";
+/**
+ * The homepage's play surface: the lobby counting down as the hero with
+ * solo/ranked/create/join under it, and the rest of the queue as a column of
+ * cards down the right. News, identity and streams sit above it, in PlayPage.
+ */
+
+/** Shared geometry so the primary and the secondaries read as one family. */
+const ACTION_SHAPE =
+  "flex items-center justify-center gap-2 w-full min-h-[52px] py-3 rounded-xl " +
+  "border text-center text-sm font-bold uppercase transition-colors";
+
+const PRIMARY_ACTION =
+  `${ACTION_SHAPE} px-4 tracking-wider ` +
+  "bg-malibu-blue hover:bg-aquarius border-transparent text-white";
+
+/** Three to a row, so a shade tighter: "create lobby" truncates otherwise. */
+const GHOST_ACTION =
+  `${ACTION_SHAPE} px-3 tracking-wide ` +
+  "bg-[#101b28] border-white/10 text-white hover:bg-[#182636] hover:border-white/20";
 
 /**
  * Whether a multiplayer entry point should refuse to act. Exported for tests
@@ -52,13 +67,14 @@ export function shouldBlockMultiplayerAction(
 @customElement("game-mode-selector")
 export class GameModeSelector extends LitElement {
   @state() private lobbies: PublicGames | null = null;
-  @state() private inputValid: boolean = true;
+  @state() private inputValid = true;
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
-  @state() private viewerTrusted: boolean = false;
-  @state() private viewerSignedIn: boolean = false;
-  @state() private showTrustRequired: boolean = false;
-  private serverTimeOffset: number = 0;
-  private defaultLobbyTime: number = 0;
+  @state() private viewerTrusted = false;
+  @state() private viewerSignedIn = false;
+  @state() private showTrustRequired = false;
+  /** Tapped open, for the touch devices that never hover or focus. */
+  @state() private helpOpen = false;
+  private serverTimeOffset = 0;
 
   private lobbySocket = new PublicLobbySocket((lobbies) =>
     this.handleLobbiesUpdate(lobbies),
@@ -68,18 +84,9 @@ export class GameModeSelector extends LitElement {
     return this;
   }
 
-  // Silent backstop; the buttons are already disabled while input is invalid.
-  private validateUsername(): boolean {
-    const usernameInput = document.querySelector(
-      "username-input",
-    ) as UsernameInput | null;
-    return usernameInput ? usernameInput.canPlay() : true;
-  }
-
   connectedCallback() {
     super.connectedCallback();
     this.lobbySocket.start();
-    this.defaultLobbyTime = ClientEnv.gameCreationRate() / 1000;
     window.addEventListener(
       "username-validity-change",
       this.handleValidityChange,
@@ -112,6 +119,10 @@ export class GameModeSelector extends LitElement {
     super.disconnectedCallback();
   }
 
+  public stop() {
+    this.lobbySocket.stop();
+  }
+
   private handleValidityChange = (e: Event) => {
     this.inputValid = (e as CustomEvent).detail?.isValid ?? true;
   };
@@ -133,167 +144,129 @@ export class GameModeSelector extends LitElement {
     }
   };
 
-  public stop() {
-    this.lobbySocket.stop();
+  /** True while a pending desktop update bars multiplayer. */
+  private get blocked(): boolean {
+    return shouldBlockMultiplayerAction(this.desktopUpdateState);
   }
 
   private handleLobbiesUpdate(lobbies: PublicGames) {
     this.lobbies = lobbies;
     this.serverTimeOffset = calculateServerTimeOffset(lobbies.serverTime);
-    document.dispatchEvent(
-      new CustomEvent("public-lobbies-update", {
-        detail: { payload: lobbies },
-      }),
-    );
-    this.requestUpdate();
-
-    const allGames = Object.values(lobbies.games ?? {}).flat();
-    for (const game of allGames) {
-      mapAspectRatios.ensure(game.gameConfig?.gameMap as GameMapType, () =>
+    for (const lobby of this.allLobbies(lobbies)) {
+      mapAspectRatios.ensure(lobby.gameConfig?.gameMap as GameMapType, () =>
         this.requestUpdate(),
       );
     }
+    this.requestUpdate();
+  }
+
+  /**
+   * Every scheduled lobby, soonest first: the ones counting down ahead of the
+   * ones still waiting, so the hero card is the next game to go live. Only the
+   * master knows which type it promotes next, so the waiting lobbies have no
+   * real order to show — they sort by gameID, which at least doesn't jitter
+   * between broadcasts.
+   */
+  private allLobbies(lobbies: PublicGames | null): PublicGameInfo[] {
+    return SCHEDULED_PUBLIC_GAME_TYPES.flatMap(
+      (type) => lobbies?.games?.[type] ?? [],
+    ).sort(
+      (a, b) =>
+        Number(a.startsAt === undefined) - Number(b.startsAt === undefined) ||
+        (a.startsAt ?? 0) - (b.startsAt ?? 0) ||
+        (a.gameID > b.gameID ? 1 : -1),
+    );
+  }
+
+  private secondsUntil(lobby: PublicGameInfo): number | undefined {
+    return lobby.startsAt
+      ? getSecondsUntilServerTimestamp(lobby.startsAt, this.serverTimeOffset)
+      : undefined;
+  }
+
+  /** Only the live lobby counts down; a queued one shows no pill at all. */
+  private countdown(lobby: PublicGameInfo): string {
+    const seconds = this.secondsUntil(lobby);
+    if (seconds === undefined) return "";
+    // "starting…" overflows the pill and the hero, so this gets its own label.
+    if (seconds <= 0) return translateText("public_lobby.starting_now");
+    return renderDuration(seconds);
   }
 
   render() {
-    const ffa = this.lobbies?.games?.["ffa"]?.[0];
-    const teams = this.lobbies?.games?.["team"]?.[0];
-    const special = this.lobbies?.games?.["special"]?.[0];
-
+    const queue = this.allLobbies(this.lobbies);
+    const [featured, ...rest] = queue;
     return html`
-      <div class="flex flex-col gap-4 w-full px-4 sm:px-0 mx-auto pb-4 sm:pb-0">
-        <!-- Solo + detailed view: mobile only, top. The lobby browser is one
-             column wide, matching Join Lobby below it. -->
-        <div class="sm:hidden grid grid-cols-3 gap-4 h-14">
-          <div class="col-span-2">
-            ${this.renderSmallActionCard(
-              translateText("main.solo"),
-              this.openSinglePlayerModal,
-              "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
-            )}
-          </div>
-          ${this.renderSmallActionCard(
-            translateText("main.detailed_view"),
-            this.openDetailedView,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-          )}
+      <div
+        class="flex flex-col gap-4 w-full min-h-0 px-4 pb-8 lg:px-0 lg:pt-2 lg:flex-1 lg:pb-4"
+      >
+        <div
+          class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:flex-1 lg:min-h-0 lg:max-h-[32rem]"
+        >
+          ${this.renderHero(featured)}
+          ${this.renderQueueColumn(rest, queue.length + this.hostedCount())}
         </div>
-        <!-- Create/ranked/join: mobile only, below solo -->
-        <div class="sm:hidden grid grid-cols-3 gap-4 h-14">
-          ${this.renderSmallActionCard(
-            translateText("main.create"),
-            this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-            undefined,
-            true,
-          )}
-          ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-            undefined,
-            true,
-          )}
-          ${this.renderSmallActionCard(
-            translateText("main.join"),
-            this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-            this.hostedLobbyCount(),
-            true,
-          )}
-        </div>
-        <!-- iOS Add to Home Screen banner -->
+        ${this.renderActions()}
+        <!-- Empty off iOS, and an empty element would still take the gap. -->
         <ios-add-to-home-screen-banner
-          class="no-crazygames"
+          class="no-crazygames [&:empty]:hidden"
         ></ios-add-to-home-screen-banner>
+      </div>
+    `;
+  }
 
-        <!-- Game cards grid -->
-        ${this.lobbies === null
-          ? html`<div
-              class="flex items-center justify-center h-44 sm:h-[min(24rem,40vh)]"
-            >
-              <span
-                class="w-24 h-24 border-[6px] border-blue-500/30 border-t-blue-500 rounded-full animate-spin"
-              ></span>
-            </div>`
+  // ---- Rows ----
+
+  /**
+   * Grows to whatever height the queue column beside it takes. Waiting on the
+   * first snapshot is a spinner; a snapshot with nothing scheduled in it says
+   * so, rather than spinning at a page that has finished loading.
+   */
+  private renderHero(featured: PublicGameInfo | undefined) {
+    return html`
+      <div class="lg:col-span-2 min-w-0">
+        ${featured !== undefined
+          ? this.card(featured, "h-56 lg:h-full lg:min-h-48")
           : html`<div
-              class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
+              class="h-64 lg:h-full lg:min-h-48 rounded-2xl bg-surface/60 border border-white/10 flex items-center justify-center"
             >
-              <!-- Left col: main card (desktop only) -->
-              ${ffa
-                ? html`<div class="hidden sm:block">
-                    ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
-                  </div>`
-                : nothing}
-
-              <!-- Right col: special + teams (desktop only) -->
-              <div class="hidden sm:flex sm:flex-col sm:gap-4">
-                ${special
-                  ? html`<div class="flex-1 min-h-0">
-                      ${this.renderSpecialLobbyCard(special)}
-                    </div>`
-                  : nothing}
-                ${teams
-                  ? html`<div class="flex-1 min-h-0">
-                      ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
-                    </div>`
-                  : nothing}
-              </div>
-
-              <!-- Mobile: special, ffa, teams inline -->
-              <div class="sm:hidden">
-                ${special ? this.renderSpecialLobbyCard(special) : nothing}
-              </div>
-              <div class="sm:hidden">
-                ${ffa
-                  ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
-                  : nothing}
-              </div>
-              <div class="sm:hidden">
-                ${teams
-                  ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
-                  : nothing}
-              </div>
+              ${this.lobbies === null
+                ? html`<span
+                    class="size-16 border-4 border-malibu-blue/30 border-t-malibu-blue rounded-full animate-spin"
+                  ></span>`
+                : html`<span
+                    class="px-6 text-center text-sm font-bold uppercase tracking-wider text-white/50"
+                    >${translateText("public_lobby.none_scheduled")}</span
+                  >`}
             </div>`}
+      </div>
+    `;
+  }
 
-        <!-- Solo + detailed view, desktop only. Solo spans two columns; the
-             lobby browser is one, the same width as Join Lobby below it. -->
-        <div class="hidden sm:grid grid-cols-3 gap-4 h-14">
-          <div class="col-span-2">
-            ${this.renderSmallActionCard(
-              translateText("main.solo"),
-              this.openSinglePlayerModal,
-              "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
-            )}
-          </div>
-          ${this.renderSmallActionCard(
-            translateText("main.detailed_view"),
-            this.openDetailedView,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-          )}
-        </div>
-        <!-- Bottom row: create + ranked + join (desktop only) -->
-        <div class="hidden sm:grid grid-cols-3 gap-4 h-14">
-          ${this.renderSmallActionCard(
-            translateText("main.create"),
-            this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-            undefined,
-            true,
-          )}
-          ${this.renderSmallActionCard(
+  private renderActions() {
+    return html`
+      <!-- Above the lobby cards in one column, below them once the hero and
+           queue sit side by side, which is where main puts them too. -->
+      <div class="flex flex-col gap-3 min-w-0 order-first lg:order-none">
+        <button
+          @click=${this.openSolo}
+          ?disabled=${!this.inputValid}
+          class="${PRIMARY_ACTION} ${this.inputValid
+            ? ""
+            : "opacity-50 pointer-events-none"}"
+        >
+          <span class="min-w-0 truncate">${translateText("main.solo")}</span>
+        </button>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          ${this.renderGhost(translateText("main.create"), this.openHost)}
+          ${this.renderGhost(
             translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-            undefined,
-            true,
+            this.openRanked,
           )}
-          ${this.renderSmallActionCard(
+          ${this.renderGhost(
             translateText("main.join"),
-            this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-            this.hostedLobbyCount(),
-            true,
+            this.openJoin,
+            this.hostedCount(),
           )}
         </div>
         ${this.showTrustRequired
@@ -306,26 +279,161 @@ export class GameModeSelector extends LitElement {
     `;
   }
 
-  private renderSpecialLobbyCard(lobby: PublicGameInfo) {
-    return this.renderLobbyCard(lobby, this.getLobbyTitle(lobby));
+  /**
+   * Every lobby here is the same card; only its height differs. Both fill the
+   * row the page has room for, so a short window shrinks them rather than
+   * pushing the buttons under the fold.
+   */
+  private card(lobby: PublicGameInfo, heightClass: string) {
+    return lobbyCard({
+      lobby,
+      subtitle: getGameModeLabel(lobby.gameConfig!),
+      timeDisplay: this.countdown(lobby),
+      // A word, not a duration: "now" reads wrong in a countdown's lower case.
+      timeDisplayUppercase: (this.secondsUntil(lobby) ?? 1) <= 0,
+      disabled: !this.inputValid,
+      blocked: this.blocked,
+      viewerTrusted: this.viewerTrusted,
+      heightClass,
+      onClick: () => this.validateAndJoin(lobby),
+    });
   }
+
+  /**
+   * The queue as a column beside the hero: top down, one lobby a row. Empty
+   * until the first snapshot, but from then on the heading stays even with
+   * nothing queued — it is the only way to the browser.
+   */
+  private renderQueueColumn(lobbies: PublicGameInfo[], advertised: number) {
+    if (this.lobbies === null) return nothing;
+
+    return html`
+      <section class="flex flex-col gap-3 min-w-0 min-h-0">
+        <div class="flex items-center gap-2">
+          <!-- Heading and link are one control: two adjacent bits of small
+               uppercase text read as one label, and neither looked clickable.
+               A heading may hold a button, so the semantics survive. -->
+          <h2 class="min-w-0 flex-1">
+            <button
+              @click=${this.openDetailed}
+              class="group/see-all flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 transition-colors hover:border-malibu-blue/50 hover:bg-malibu-blue/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-malibu-blue"
+            >
+              <span
+                class="truncate text-sm font-bold uppercase tracking-widest text-white/70 group-hover/see-all:text-white"
+                >${translateText("public_lobby.upcoming")}</span
+              >
+              <span
+                class="flex shrink-0 items-center gap-0.5 text-[11px] font-bold uppercase tracking-wider text-malibu-blue group-hover/see-all:text-white"
+              >
+                ${translateText("public_lobby.see_all", { count: advertised })}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="size-4"
+                  aria-hidden="true"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </span>
+            </button>
+          </h2>
+          ${this.renderQueueHelp()}
+        </div>
+        <div class="flex flex-col gap-3 lg:flex-1 lg:min-h-0">
+          ${lobbies
+            .slice(0, 2)
+            .map((lobby) => this.card(lobby, "h-32 lg:h-full lg:min-h-20"))}
+        </div>
+      </section>
+    `;
+  }
+
+  /**
+   * Hover, keyboard focus, or a tap: iOS Safari doesn't reliably focus a button
+   * on tap, and a phone is where "you can join before it goes live" most needs
+   * saying.
+   */
+  private renderQueueHelp() {
+    return html`
+      <div class="group/queue-help relative shrink-0">
+        <button
+          type="button"
+          @click=${() => (this.helpOpen = !this.helpOpen)}
+          aria-label=${translateText("public_lobby.upcoming_help")}
+          aria-expanded=${this.helpOpen}
+          aria-describedby="upcoming-help"
+          class="flex size-4 cursor-help items-center justify-center rounded-full bg-white/10 text-[10px] font-black text-white/60 transition-colors hover:bg-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-malibu-blue"
+        >
+          ?
+        </button>
+        <div
+          role="tooltip"
+          id="upcoming-help"
+          class="pointer-events-none absolute right-0 top-6 z-20 ${this.helpOpen
+            ? "flex"
+            : "hidden"} w-60 flex-col gap-1.5 rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs normal-case tracking-normal text-white/80 shadow-xl group-hover/queue-help:flex group-focus-within/queue-help:flex"
+        >
+          <span>${translateText("public_lobby.upcoming_help_join")}</span>
+          <span>${translateText("public_lobby.upcoming_help_full")}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // ---- Bits ----
+
+  /** Hosted lobbies: the Join badge's count, and part of the browser's. */
+  private hostedCount(): number {
+    return this.lobbies?.games?.hosted?.length ?? 0;
+  }
+
+  private renderGhost(
+    label: string,
+    onClick: () => void,
+    badge = 0,
+  ): TemplateResult {
+    return html`
+      <button
+        @click=${onClick}
+        ?disabled=${!this.inputValid}
+        aria-disabled=${this.blocked}
+        class="${GHOST_ACTION} ${!this.inputValid
+          ? "opacity-50 pointer-events-none"
+          : this.blocked
+            ? "opacity-50 cursor-not-allowed"
+            : ""}"
+      >
+        <span class="min-w-0 truncate">${label}</span>
+        ${badge > 0
+          ? html`<span
+              class="px-2 py-0.5 rounded-full bg-malibu-blue text-[11px] font-bold text-white tracking-normal"
+              >${badge}</span
+            >`
+          : nothing}
+      </button>
+    `;
+  }
+
+  // ---- Actions ----
 
   /**
    * Refuses the action and draws attention to the update bar. Returns true when
    * the caller should stop.
    *
-   * Deliberately NOT implemented with the `disabled` attribute the way
-   * renderSmallActionCard handles invalid input: a disabled control (and
-   * `pointer-events-none` alongside it) swallows the click, leaving nothing to
-   * trigger the wiggle. The button stays clickable and merely stops being
-   * actionable.
+   * Deliberately NOT `disabled`: a disabled control swallows the click, leaving
+   * nothing to trigger the wiggle. The button stays clickable and merely stops
+   * being actionable.
    */
   private blockedByUpdate(): boolean {
     if (!shouldBlockMultiplayerAction(this.desktopUpdateState)) return false;
-    // Optional-call the method rather than dispatching an event: the bar is a
-    // sibling custom element that may not have upgraded yet, and `?.wiggle?.()`
-    // degrades to a silent no-op in that case instead of firing an event with
-    // no listener.
+    // Optional-call rather than an event: the bar is a sibling custom element
+    // that may not have upgraded yet, and `?.wiggle?.()` degrades to a silent
+    // no-op instead of firing an event with no listener.
     (
       document.querySelector("desktop-update-bar") as
         | (HTMLElement & { wiggle?: () => void })
@@ -334,120 +442,22 @@ export class GameModeSelector extends LitElement {
     return true;
   }
 
-  private openRankedMenu = () => {
-    if (this.blockedByUpdate()) return;
-    if (!this.validateUsername()) return;
-    window.showPage?.("page-ranked");
-  };
-
-  private openDetailedView = () => {
-    if (!this.validateUsername()) return;
-    window.showPage?.("page-detailed-view");
-  };
-
-  private openSinglePlayerModal = () => {
-    if (!this.validateUsername()) return;
-    (
-      document.querySelector("single-player-modal") as SinglePlayerModal
-    )?.open();
-  };
-
-  private openHostLobby = () => {
-    if (this.blockedByUpdate()) return;
-    if (!this.validateUsername()) return;
-    (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
-  };
-
-  private openJoinLobby = () => {
-    if (this.blockedByUpdate()) return;
-    if (!this.validateUsername()) return;
-    (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
-  };
-
-  // Number of open hosted lobbies waiting in the browser; shown as a chip
-  // on the Join button.
-  private hostedLobbyCount(): number {
-    return this.lobbies?.games?.hosted?.length ?? 0;
-  }
-
-  private renderSmallActionCard(
-    title: string,
-    onClick: () => void,
-    bgClass: string = CARD_BG,
-    badge?: number,
-    // Only the three multiplayer action cards (create/ranked/join) pass this;
-    // the solo card is never gated (see openSinglePlayerModal) and must never
-    // show as disabled here.
-    gated: boolean = false,
-  ) {
-    const blocked =
-      gated && shouldBlockMultiplayerAction(this.desktopUpdateState);
-    return html`
-      <button
-        @click=${onClick}
-        ?disabled=${!this.inputValid}
-        aria-disabled=${blocked}
-        class="relative flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${!this
-          .inputValid
-          ? "opacity-50 cursor-not-allowed pointer-events-none"
-          : blocked
-            ? "opacity-50 cursor-not-allowed"
-            : ""}"
-      >
-        ${title}
-        ${badge
-          ? html`<span
-              class="absolute -top-2 -right-2 min-w-[1.375rem] h-[1.375rem] px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold tracking-normal"
-              >${badge}</span
-            >`
-          : nothing}
-      </button>
-    `;
-  }
-
-  private renderLobbyCard(
-    lobby: PublicGameInfo,
-    titleContent: string | TemplateResult,
-  ) {
-    const timeRemaining = lobby.startsAt
-      ? getSecondsUntilServerTimestamp(lobby.startsAt, this.serverTimeOffset)
-      : undefined;
-
-    let timeDisplay: string;
-    let timeDisplayUppercase = false;
-    if (timeRemaining === undefined) {
-      timeDisplay = renderDuration(this.defaultLobbyTime);
-    } else if (timeRemaining > 0) {
-      timeDisplay = renderDuration(timeRemaining);
-    } else {
-      timeDisplay = translateText("public_lobby.starting_game");
-      timeDisplayUppercase = true;
-    }
-
-    // Gated, not disabled: `disabled` (which the option below sets, together
-    // with pointer-events-none) swallows the click, and the click is what
-    // makes the update bar wiggle. `blocked` only dims and reports
-    // aria-disabled; validateAndJoin does the refusing.
-    return lobbyCard({
-      lobby,
-      subtitle: titleContent,
-      timeDisplay,
-      timeDisplayUppercase,
-      disabled: !this.inputValid,
-      blocked: shouldBlockMultiplayerAction(this.desktopUpdateState),
-      viewerTrusted: this.viewerTrusted,
-      onClick: () => this.validateAndJoin(lobby),
-    });
+  // Silent backstop; the buttons are already disabled while input is invalid.
+  private validateUsername(): boolean {
+    const usernameInput = document.querySelector(
+      "username-input",
+    ) as UsernameInput | null;
+    return usernameInput ? usernameInput.canPlay() : true;
   }
 
   private validateAndJoin(lobby: PublicGameInfo) {
     if (this.blockedByUpdate()) return;
     if (!this.validateUsername()) return;
+    // The server would refuse them anyway; this says why, and how to fix it.
     if (!canJoinTrustedLobby(lobby, this.viewerTrusted)) {
       this.showTrustRequired = true;
       return;
     }
-
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -461,71 +471,34 @@ export class GameModeSelector extends LitElement {
     );
   }
 
-  private getLobbyTitle(lobby: PublicGameInfo): string {
-    const config = lobby.gameConfig!;
-    if (config.gameMode === GameMode.FFA) {
-      return translateText("game_mode.ffa");
-    }
+  private openSolo = () => {
+    if (!this.validateUsername()) return;
+    (
+      document.querySelector("single-player-modal") as SinglePlayerModal
+    )?.open();
+  };
 
-    if (config?.gameMode === GameMode.Team) {
-      const totalPlayers = config.maxPlayers ?? lobby.numClients ?? undefined;
-      const formatTeamsOf = (
-        teamCount: number | undefined,
-        playersPerTeam: number | undefined,
-        label?: string,
-      ) => {
-        if (!teamCount)
-          return label ?? translateText("mode_selector.teams_title");
-        const baseTitle = playersPerTeam
-          ? translateText("mode_selector.teams_of", {
-              teamCount: String(teamCount),
-              playersPerTeam: String(playersPerTeam),
-            })
-          : translateText("mode_selector.teams_count", {
-              teamCount: String(teamCount),
-            });
-        return `${baseTitle}${label ? ` (${label})` : ""}`;
-      };
+  private openHost = () => {
+    if (this.blockedByUpdate()) return;
+    if (!this.validateUsername()) return;
+    (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
+  };
 
-      switch (config.playerTeams) {
-        case Duos: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 2)
-            : undefined;
-          return formatTeamsOf(teamCount, 2);
-        }
-        case Trios: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 3)
-            : undefined;
-          return formatTeamsOf(teamCount, 3);
-        }
-        case Quads: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 4)
-            : undefined;
-          return formatTeamsOf(teamCount, 4);
-        }
-        case HumansVsNations: {
-          const humanSlots = config.maxPlayers ?? lobby.numClients;
-          return humanSlots
-            ? translateText("public_lobby.teams_hvn_detailed", {
-                num: String(humanSlots),
-              })
-            : translateText("public_lobby.teams_hvn");
-        }
-        default:
-          if (typeof config.playerTeams === "number") {
-            const teamCount = config.playerTeams;
-            const playersPerTeam =
-              totalPlayers && teamCount > 0
-                ? Math.floor(totalPlayers / teamCount)
-                : undefined;
-            return formatTeamsOf(teamCount, playersPerTeam);
-          }
-      }
-    }
+  private openJoin = () => {
+    if (this.blockedByUpdate()) return;
+    if (!this.validateUsername()) return;
+    (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
+  };
 
-    return "";
-  }
+  private openRanked = () => {
+    if (this.blockedByUpdate()) return;
+    if (!this.validateUsername()) return;
+    window.showPage?.("page-ranked");
+  };
+
+  // No username gate: browsing the list is read-only, and the browser checks
+  // for itself before it joins anything.
+  private openDetailed = () => {
+    window.showPage?.("page-detailed-view");
+  };
 }
