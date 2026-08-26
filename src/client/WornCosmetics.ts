@@ -34,6 +34,13 @@ export function wornCosmetics(
   catalog: ResolvedCosmetic[],
 ): WornCosmetic[] {
   const byKey = new Map(catalog.map((r) => [r.key, r]));
+  // the catalog keys effects by their map key, which need not equal the
+  // effect's name, so match on effectType plus the name both sides carry
+  const effectByName = new Map(
+    catalog
+      .filter((r) => r.type === "effect")
+      .map((r) => [`${r.effectType}:${r.cosmetic?.name}`, r]),
+  );
   const worn: WornCosmetic[] = [];
 
   const add = (
@@ -83,9 +90,11 @@ export function wornCosmetics(
     );
   }
   for (const effect of Object.values(cosmetics.effects ?? {})) {
+    const resolved =
+      effectByName.get(`${effect.effectType}:${effect.name}`) ?? null;
     add(
       "effect",
-      `effect:${effect.effectType}:${effect.name}`,
+      resolved?.key ?? `effect:${effect.effectType}:${effect.name}`,
       effect.name,
       null,
       null,

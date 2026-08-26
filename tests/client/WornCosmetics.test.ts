@@ -22,6 +22,22 @@ function catalogEntry(
   };
 }
 
+function effectEntry(
+  key: string,
+  effectType: string,
+  name: string,
+  relationship: ResolvedCosmetic["relationship"],
+): ResolvedCosmetic {
+  return {
+    type: "effect",
+    cosmetic: { name, rarity: "rare" } as never,
+    colorPalette: null,
+    relationship,
+    key,
+    effectType,
+  } as ResolvedCosmetic;
+}
+
 const wornPattern: PlayerCosmetics = {
   pattern: {
     name: "hearts",
@@ -102,6 +118,24 @@ describe("storeRouteFor", () => {
       ]);
       expect(storeRouteFor(worn)).toBeNull();
     }
+  });
+
+  it("matches an effect whose catalog key differs from its name", () => {
+    // the catalog keys effects by their map key, which need not be the name
+    const [worn] = wornCosmetics(
+      { effects: { nukeTrail: { name: "embers", effectType: "nukeTrail" } } },
+      [
+        effectEntry(
+          "effect:nukeTrail:ember_v2",
+          "nukeTrail",
+          "embers",
+          "purchasable",
+        ),
+      ],
+    );
+
+    expect(worn.key).toBe("effect:nukeTrail:ember_v2");
+    expect(worn.relationship).toBe("purchasable");
   });
 
   it("sends effects to their tab, which has no per-item target", () => {
