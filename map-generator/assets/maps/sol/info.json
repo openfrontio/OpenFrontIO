@@ -3,7 +3,7 @@
   "name": "Sol",
   "translation_key": "map.sol",
   "categories": ["cosmic"],
-  "multiplayer_frequency": 20,
+  "multiplayer_frequency": 1,
   "nations": [
     {
       "coordinates": [2419, 1241],

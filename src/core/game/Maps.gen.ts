@@ -1122,7 +1122,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Labyrinth,
     translationKey: "map.labyrinth",
     categories: ["arcade"],
-    multiplayerFrequency: 6,
+    multiplayerFrequency: 0,
   },
   {
     id: "LasVegasStrip",
@@ -1481,14 +1481,14 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Sierpinski,
     translationKey: "map.sierpinski",
     categories: ["arcade"],
-    multiplayerFrequency: 10,
+    multiplayerFrequency: 1,
   },
   {
     id: "Sol",
     type: GameMapType.Sol,
     translationKey: "map.sol",
     categories: ["cosmic"],
-    multiplayerFrequency: 20,
+    multiplayerFrequency: 1,
     themes: ["space"],
     customTribes: [
       { name: "Actaea", coordinates: [237, 727] },
