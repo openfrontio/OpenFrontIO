@@ -49,6 +49,7 @@ import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
 import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
 import { fetchCustomTribes } from "./CustomTribes";
+import { DesyncDetector } from "./DesyncDetector";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
 import { ServerEnv } from "./ServerEnv";
 import {
@@ -147,7 +148,9 @@ export function defaultGameServerDeps(): GameServerDeps {
 }
 
 export class GameServer {
-  private sentDesyncMessageClients = new Set<ClientID>();
+  // Compares the per-turn state hashes clients report; a disagreeing client
+  // is told once and its votes are ignored from then on.
+  private readonly desync = new DesyncDetector();
 
   private intentRateLimiter = new ClientMsgRateLimiter();
 
@@ -199,7 +202,6 @@ export class GameServer {
   private tribes?: Tribe[];
 
   private kickedPersistentIds: Set<string> = new Set();
-  private outOfSyncClients: Set<ClientID> = new Set();
 
   private isPaused = false;
 
@@ -1030,7 +1032,7 @@ export class GameServer {
   }
 
   public numDesyncedClients(): number {
-    return this.outOfSyncClients.size;
+    return this.desync.count();
   }
 
   // Matchmade ranked games (1v1/2v2) must start with full attendance: the
@@ -1871,27 +1873,20 @@ export class GameServer {
   }
 
   private handleSynchronization() {
-    if (this.activeClients.length <= 1) {
+    const check = this.desync.check(this.turns.length, this.activeClients);
+    if (check === null) {
       return;
     }
-    if (this.turns.length % 10 !== 0 || this.turns.length < 10) {
-      // Check hashes every 10 turns
-      return;
-    }
-
-    const lastHashTurn = this.turns.length - 10;
-
-    const { mostCommonHash, outOfSyncClients } =
-      this.findOutOfSyncClients(lastHashTurn);
+    const { turn, mostCommonHash, outOfSyncClients } = check;
 
     if (outOfSyncClients.length === 0) {
-      this.turns[lastHashTurn].hash = mostCommonHash;
+      this.turns[turn].hash = mostCommonHash;
       return;
     }
 
     const serverDesync = ServerDesyncSchema.safeParse({
       type: "desync",
-      turn: lastHashTurn,
+      turn,
       correctHash: mostCommonHash,
       clientsWithCorrectHash:
         this.activeClients.length - outOfSyncClients.length,
@@ -1906,12 +1901,7 @@ export class GameServer {
     }
 
     const desyncMsg = encodeServerMessage(serverDesync.data, this.zbinCtx);
-    for (const c of outOfSyncClients) {
-      this.outOfSyncClients.add(c.clientID);
-      if (this.sentDesyncMessageClients.has(c.clientID)) {
-        continue;
-      }
-      this.sentDesyncMessageClients.add(c.clientID);
+    for (const c of this.desync.record(outOfSyncClients)) {
       this.log.info("sending desync to client", {
         gameID: this.id,
         clientID: c.clientID,
@@ -1923,57 +1913,9 @@ export class GameServer {
     }
   }
 
-  findOutOfSyncClients(turnNumber: number): {
-    mostCommonHash: number | null;
-    outOfSyncClients: Client[];
-  } {
-    const counts = new Map<number, number>();
-
-    // Count occurrences of each hash
-    for (const client of this.activeClients) {
-      if (client.hashes.has(turnNumber)) {
-        const clientHash = client.hashes.get(turnNumber)!;
-        counts.set(clientHash, (counts.get(clientHash) ?? 0) + 1);
-      }
-    }
-
-    // Find the most common hash
-    let mostCommonHash: number | null = null;
-    let maxCount = 0;
-
-    for (const [hash, count] of counts.entries()) {
-      if (count > maxCount) {
-        mostCommonHash = hash;
-        maxCount = count;
-      }
-    }
-
-    // Create a list of clients whose hash doesn't match the most common one
-    let outOfSyncClients: Client[] = [];
-
-    for (const client of this.activeClients) {
-      if (client.hashes.has(turnNumber)) {
-        const clientHash = client.hashes.get(turnNumber)!;
-        if (clientHash !== mostCommonHash) {
-          outOfSyncClients.push(client);
-        }
-      }
-    }
-
-    // If strict majority clients out of sync assume all are out of sync.
-    if (outOfSyncClients.length > Math.floor(this.activeClients.length / 2)) {
-      outOfSyncClients = this.activeClients;
-    }
-
-    return {
-      mostCommonHash,
-      outOfSyncClients,
-    };
-  }
-
   private handleWinner(client: Client, clientMsg: ClientSendWinnerMessage) {
     if (
-      this.outOfSyncClients.has(client.clientID) ||
+      this.desync.isDesynced(client.clientID) ||
       this.isKicked(client.clientID) ||
       this.winner !== null ||
       client.reportedWinner !== null
@@ -2043,7 +1985,7 @@ export class GameServer {
     clientMsg: ClientSendLiveStatsMessage,
   ) {
     if (
-      this.outOfSyncClients.has(client.clientID) ||
+      this.desync.isDesynced(client.clientID) ||
       this.isKicked(client.clientID)
     ) {
       return;

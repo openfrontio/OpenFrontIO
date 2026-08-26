@@ -177,7 +177,15 @@ Status:
       `NameVisibility.test.ts`; the `startInfoFor` sections of the two
       `AnonymizeNames*` files now drive the module with explicit real/wire
       inputs (no `(game as any)` left in either).
-- [ ] `DesyncDetector.ts`
+- [x] `DesyncDetector.ts` (2026-08-26): the tally moved verbatim into a pure
+      function, `findOutOfSyncClients`, taking the active clients and the
+      turn; a `DesyncDetector` holds the desynced and notified sets, with
+      `check` returning the tally when one is due and `record` returning the
+      first-time offenders — so `handleSynchronization` keeps the parse /
+      encode / send / log in the original order. `numDesyncedClients` and the
+      vote guards read the detector. The tally tests moved from
+      `GameServerDesync.test.ts` to `DesyncDetector.test.ts` (plus cadence and
+      record tests); the turn-loop tests stay through `GameServer`.
 - [ ] `Consensus.ts`
 - [ ] `ListingState.ts`
 - [ ] `MatchTelemetryRecorder.ts`
