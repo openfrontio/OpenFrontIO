@@ -48,6 +48,12 @@ export class PurchaseNudgeModal extends LitElement implements Controller {
   init() {}
 
   tick() {
+    // A spawn-phase nudge only: if the player never clicked it (random spawn,
+    // timer ran out), close it rather than leave it over live gameplay.
+    if (this.isVisible) {
+      if (!this.game.inSpawnPhase()) this.dismiss();
+      return;
+    }
     if (this.done || !this.game.inSpawnPhase()) return;
     if (
       !this.profileKnown ||

@@ -102,6 +102,13 @@ describe("purchase-nudge-modal", () => {
     expect(await shown()).toBe(false);
   });
 
+  it("closes on its own when the spawn phase ends", async () => {
+    fireUserMe(false);
+    expect(await shown()).toBe(true);
+    el.game = makeGame({ spawnPhase: false });
+    expect(await shown()).toBe(false);
+  });
+
   it("opens the store in a new tab and closes", async () => {
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
     fireUserMe(false);
