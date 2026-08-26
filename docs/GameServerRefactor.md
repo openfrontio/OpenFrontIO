@@ -168,7 +168,15 @@ Status:
       `.nullable().optional()` keys. `tests/server/ConfigPatch.test.ts` is
       table-driven over every key. The existing tests through `GameServer`
       (AdminBotIntent, HostedLobbyListing) stay where they are.
-- [ ] `NameVisibility.ts`
+- [x] `NameVisibility.ts` (2026-08-26): `seesReal` / `seesRealBeyondTeam` /
+      `anonName`, `startInfoFor(viewer, isAdmin, real, wire)`,
+      `lobbyClients(viewer, active)` and a standalone `friendsLookup`, over a
+      `NameVisibilityView` of thunks (`config`, `clients`, `teamIndex`) so
+      lobby edits and late joins are seen. `GameServer` −180 lines; `gameInfo`
+      is a field list again. `AdminClanTags.test.ts` was absorbed into
+      `NameVisibility.test.ts`; the `startInfoFor` sections of the two
+      `AnonymizeNames*` files now drive the module with explicit real/wire
+      inputs (no `(game as any)` left in either).
 - [ ] `DesyncDetector.ts`
 - [ ] `Consensus.ts`
 - [ ] `ListingState.ts`

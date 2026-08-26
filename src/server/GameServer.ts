@@ -4,10 +4,9 @@ import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
 import { ZbContext } from "../../zbin";
-import { anonWordName } from "../core/AnonNames";
 import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
-import { GameMode, GameType, RankedType } from "../core/game/Game";
+import { GameType, RankedType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessage,
@@ -39,11 +38,7 @@ import {
   Tribe,
   Turn,
 } from "../core/Schemas";
-import {
-  createPartialGameRecord,
-  sanitizeLobbyLabel,
-  simpleHash,
-} from "../core/Util";
+import { createPartialGameRecord, sanitizeLobbyLabel } from "../core/Util";
 import {
   createGameWireContext,
   decodeClientMessageUnvalidated,
@@ -54,6 +49,7 @@ import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
 import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
 import { fetchCustomTribes } from "./CustomTribes";
+import { friendsLookup, NameVisibility } from "./NameVisibility";
 import { ServerEnv } from "./ServerEnv";
 import {
   noopMatchTelemetryEmitter,
@@ -267,6 +263,9 @@ export class GameServer {
   // team. At start each client is stamped with its team's index.
   private matchmakingTeams?: string[][];
   private readonly deps: GameServerDeps;
+  // Who may see whose real identity (anonymizeNames / pinned teams / admin
+  // clan-tag reveal); shapes the per-viewer lobby roster and start message.
+  private readonly names: NameVisibility;
 
   constructor(opts: GameServerOptions, deps: Partial<GameServerDeps> = {}) {
     this.id = opts.id;
@@ -277,6 +276,12 @@ export class GameServer {
     this.publicGameType = opts.publicGameType;
     this.matchmakingTeams = opts.matchmakingTeams;
     this.deps = { ...defaultGameServerDeps(), ...deps };
+    this.names = new NameVisibility({
+      gameID: opts.id,
+      config: () => this.gameConfig,
+      clients: () => this.allClients,
+      teamIndex: (c) => this.matchmakingTeamIndex(c),
+    });
     this.log = opts.log.child({ gameID: opts.id });
     if (opts.startsAt !== undefined) {
       this.visibleAt = Date.now();
@@ -369,103 +374,6 @@ export class GameServer {
     return this.creatorPersistentID
       ? this.persistentIdToClientId.get(this.creatorPersistentID)
       : undefined;
-  }
-
-  // anonymizeNames: only players the host granted (nameReveals, or by account via
-  // nameRevealPublicIds) see real names. Nobody is exempt by default, not even the
-  // host, until he grants them.
-  private viewerSeesAllNames(viewer: ClientID | undefined): boolean {
-    if (viewer === undefined) return false;
-    if (this.gameConfig.nameReveals?.includes(viewer) ?? false) return true;
-    // Resolve the per-game clientID to its stable account publicId so a host that
-    // only knows publicIds (the admin bot) can grant reveal access at create_game.
-    const publicId = this.allClients.get(viewer)?.publicId;
-    return (
-      publicId !== undefined &&
-      (this.gameConfig.nameRevealPublicIds?.includes(publicId) ?? false)
-    );
-  }
-
-  // Same (viewer, target) -> same name in the lobby and in-game.
-  //
-  // The target's slot is its join-order position in allClients (an
-  // insertion-ordered Map): stable for the whole game, and late-joiners simply
-  // append, so existing players' names never shift. Distinct targets have
-  // distinct slots, and anonWordName maps distinct slots (at a fixed offset) to
-  // distinct handles — so within any one viewer's view no two players ever share
-  // a name. The per-viewer offset rotates the animal assignment, so different
-  // viewers still see different names for the same player (the anti-team point).
-  // Display-only: this feeds per-viewer wire payloads (startInfoFor / gameInfo),
-  // never the simulation or the archived record, so it cannot desync (see #4426).
-  private anonName(viewer: ClientID | undefined, target: ClientID): string {
-    let slot = 0;
-    for (const id of this.allClients.keys()) {
-      if (id === target) break;
-      slot++;
-    }
-    return anonWordName(slot, this.anonOffsetSeed(viewer));
-  }
-
-  // Rotates the animal assignment so viewers see different fake names for the
-  // same player. Seeded by TEAM for a matchmade viewer: teammates already see
-  // each other's real names, but were still shown different fake names for the
-  // same opponent, so they could not call a target. Everyone outside the team
-  // keeps their own rotation, so anti-teaming holds across the boundary.
-  private anonOffsetSeed(viewer: ClientID | undefined): number {
-    if (viewer === undefined) return 0;
-    const client = this.allClients.get(viewer);
-    const team =
-      client === undefined ? undefined : this.matchmakingTeamIndex(client);
-    return team === undefined
-      ? simpleHash(viewer)
-      : simpleHash(`${this.id}:team:${team}`);
-  }
-
-  // Whether `viewer` should see `target`'s real identity: when names aren't
-  // Teammates in a matchmade game. Anonymizing a player from their own team makes
-  // the team unplayable — you cannot coordinate with someone you cannot identify —
-  // so a pinned team sees itself, exactly as a player already sees themselves.
-  // Only PINNED teams: those are assigned server-side, so the server knows them
-  // here. A team game that groups by clanTag/friends is resolved on the clients,
-  // and the server has no answer to give.
-  private sameMatchmadeTeam(
-    viewer: ClientID | undefined,
-    target: ClientID,
-  ): boolean {
-    if (viewer === undefined) return false;
-    const viewerClient = this.allClients.get(viewer);
-    const targetClient = this.allClients.get(target);
-    if (viewerClient === undefined || targetClient === undefined) return false;
-    const viewerTeam = this.matchmakingTeamIndex(viewerClient);
-    return (
-      viewerTeam !== undefined &&
-      viewerTeam === this.matchmakingTeamIndex(targetClient)
-    );
-  }
-
-  // The reveal reasons that predate teammate visibility: names are not
-  // anonymized at all, the viewer is looking at themselves, or the host granted
-  // reveal access (nameReveals). Split out because these carry the FULL identity,
-  // while a teammate reveal is deliberately narrower — see gameInfo.
-  private seesRealBeyondTeam(
-    viewer: ClientID | undefined,
-    target: ClientID,
-  ): boolean {
-    return (
-      !this.gameConfig.anonymizeNames ||
-      target === viewer ||
-      this.viewerSeesAllNames(viewer)
-    );
-  }
-
-  // Whether the viewer should see the target's real identity: names aren't
-  // anonymized, when looking at themselves, when on the same pinned team, or when
-  // the host granted the viewer reveal access (nameReveals).
-  private seesReal(viewer: ClientID | undefined, target: ClientID): boolean {
-    return (
-      this.seesRealBeyondTeam(viewer, target) ||
-      this.sameMatchmadeTeam(viewer, target)
-    );
   }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
@@ -1307,7 +1215,7 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
-    const friendsFor = this.buildFriendsLookup();
+    const friendsFor = friendsLookup(this.activeClients);
 
     // allowedPublicIds / nameRevealPublicIds hold account publicIds and are
     // enforced server-side against this.gameConfig (joinClient / seesReal).
@@ -1479,42 +1387,6 @@ export class GameServer {
     this.intents.push(intent);
   }
 
-  // Per-viewer start info. The real gameStartInfo is untouched, so the
-  // archived record keeps real identities. clanTag and friends feed the
-  // deterministic team assignment (TeamAssignment.ts), so they are blanked
-  // for every player here, identical on every client, never per-viewer, or
-  // clients desync. Only the username of players this viewer can't see is
-  // anonymized, and their cosmetics hidden, neither of which the simulation
-  // reads.
-  //
-  // Exception: admins in FFA get the real clan tags (the display pipeline then
-  // shows them everywhere) so they can spot teaming live. Safe ONLY in FFA —
-  // that mode never runs assignTeams, so clanTag never reaches the simulation,
-  // and the desync hash (Player.hash) excludes names. Gated on FFA, NOT
-  // disableClanTags: a Team game with tags disabled DOES assign teams by
-  // clanTag, so a per-viewer reveal there would desync.
-  private startInfoFor(viewer: ClientID, isAdmin: boolean): GameStartInfo {
-    const revealClanTags = isAdmin && this.gameConfig.gameMode === GameMode.FFA;
-    if (!this.gameConfig.anonymizeNames) {
-      return revealClanTags ? this.gameStartInfo : this.wireGameStartInfo;
-    }
-    return {
-      ...this.wireGameStartInfo,
-      players: this.wireGameStartInfo.players.map((p, i) => {
-        const real = this.seesReal(viewer, p.clientID);
-        return {
-          ...p,
-          username: real ? p.username : this.anonName(viewer, p.clientID),
-          clanTag: revealClanTags
-            ? this.gameStartInfo.players[i].clanTag
-            : null,
-          friends: undefined,
-          cosmetics: real ? p.cosmetics : undefined,
-        };
-      }),
-    };
-  }
-
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
     // Find which client this websocket belongs to
     const client = this.activeClients.find((c) => c.ws === ws);
@@ -1542,9 +1414,11 @@ export class GameServer {
           {
             type: "start",
             turns: this.turns.slice(lastTurn),
-            gameStartInfo: this.startInfoFor(
+            gameStartInfo: this.names.startInfoFor(
               client.clientID,
               isAdminRole(client.role),
+              this.gameStartInfo,
+              this.wireGameStartInfo,
             ),
             lobbyCreatedAt: this.createdAt,
             myClientID: client.clientID,
@@ -1724,42 +1598,9 @@ export class GameServer {
   // Omitting viewer (e.g. the HTTP /api/game/:id and link-preview routes)
   // anonymizes all names when the option is on.
   public gameInfo(viewer?: ClientID): GameInfo {
-    const friendsFor = this.buildFriendsLookup();
-    const hideClanTags = this.gameConfig.disableClanTags ?? false;
     return {
       gameID: this.id,
-      // Everyone connected, spectators included and flagged. They are not in the
-      // simulation, but the lobby is the same view for them as for a player —
-      // filtering them out here emptied the roster of a lobby they were alone in.
-      clients: this.activeClients.map((c) => {
-        if (!this.seesReal(viewer, c.clientID)) {
-          return {
-            username: this.anonName(viewer, c.clientID),
-            clanTag: null,
-            clientID: c.clientID,
-            spectator: c.spectator || undefined,
-            teamIndex: this.matchmakingTeamIndex(c),
-          };
-        }
-        // A TEAMMATE reveal is deliberately narrower than the others. Seeing a
-        // teammate's clanTag and friends would hand out more than the identity
-        // needed to coordinate: `friends` in particular names a THIRD party —
-        // the viewer would learn their teammate is friends with a specific
-        // still-anonymized opponent, which the host never granted. The wider
-        // reveals (self, or host-granted nameReveals) keep the full payload.
-        const teammateOnly =
-          this.gameConfig.anonymizeNames &&
-          !this.seesRealBeyondTeam(viewer, c.clientID);
-        return {
-          username: c.username,
-          clanTag: teammateOnly || hideClanTags ? null : (c.clanTag ?? null),
-          clientID: c.clientID,
-          friends: teammateOnly ? undefined : friendsFor(c),
-          verified: c.cosmetics?.verified,
-          spectator: c.spectator || undefined,
-          teamIndex: this.matchmakingTeamIndex(c),
-        };
-      }),
+      clients: this.names.lobbyClients(viewer, this.activeClients),
       lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,
@@ -1770,27 +1611,6 @@ export class GameServer {
       label: this.label,
       accent: this.accent,
       featured: this.featured ? true : undefined,
-    };
-  }
-
-  // Maps each active client's publicId-based friends list to in-game
-  // clientIDs, dropping friends not present in this game. Returns undefined
-  // when no friends are present so the field can be omitted from the wire
-  // payload.
-  private buildFriendsLookup(): (client: Client) => ClientID[] | undefined {
-    const publicIdToClientID = new Map<string, ClientID>();
-    for (const c of this.activeClients) {
-      // Spectators are not in the simulation, and friends feed team assignment —
-      // a player befriending a caster would be teamed with a clientID that never
-      // spawns.
-      if (c.publicId && !c.spectator)
-        publicIdToClientID.set(c.publicId, c.clientID);
-    }
-    return (client: Client) => {
-      const friendClientIDs = client.friends
-        .map((pid) => publicIdToClientID.get(pid))
-        .filter((id): id is ClientID => id !== undefined);
-      return friendClientIDs.length > 0 ? friendClientIDs : undefined;
     };
   }
 

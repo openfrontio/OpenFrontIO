@@ -1,5 +1,8 @@
 import { GameType } from "../../src/core/game/Game";
+import { GameStartInfo } from "../../src/core/Schemas";
+import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
+import { NameVisibility } from "../../src/server/NameVisibility";
 import {
   makeClient as harnessClient,
   mockLogger,
@@ -43,13 +46,17 @@ function makeGame(matchmakingTeams?: string[][]) {
     creatorPersistentID: "creator-pid",
     matchmakingTeams,
   });
-  [
+  roster().forEach((c) => game.joinClient(c));
+  return game;
+}
+
+function roster(): Client[] {
+  return [
     makeClient("alice", "AliceReal", "alice-pub", "AAA"),
     makeClient("bob", "BobReal", "bob-pub", "BBB", ["carol-pub"]),
     makeClient("carol", "CarolReal", "carol-pub", "CCC"),
     makeClient("dave", "DaveReal", "dave-pub", "DDD"),
-  ].forEach((c) => game.joinClient(c));
-  return game;
+  ];
 }
 
 const TEAMS = [
@@ -210,11 +217,24 @@ describe("anonymizeNames: pinned teammates see each other (lobby)", () => {
   });
 });
 
-// startInfoFor reads wireGameStartInfo, which is only built when the game starts,
-// so it is stubbed here the same way AnonymizeNames.test.ts does it. clanTag and
-// friends are populated so the "blank for everyone" assertion is meaningful.
+// The start message is shaped from two start infos (the game's own and the
+// shared wire copy), only built when the game starts; they are stubbed here
+// as in AnonymizeNames.test.ts, and shaped by a NameVisibility over the same
+// roster and pins the game has. clanTag and friends are populated so the
+// "blank for everyone" assertion is meaningful.
 function withStartInfo(matchmakingTeams?: string[][]) {
   const game = makeGame(matchmakingTeams);
+  const names = new NameVisibility({
+    gameID: "g1",
+    config: () => game.gameConfig,
+    clients: () => new Map(roster().map((c) => [c.clientID, c])),
+    teamIndex: (c) => {
+      const i = (matchmakingTeams ?? []).findIndex(
+        (t) => c.publicId !== undefined && t.includes(c.publicId),
+      );
+      return i === -1 ? undefined : i;
+    },
+  });
   const players = [
     {
       clientID: "alice",
@@ -231,10 +251,17 @@ function withStartInfo(matchmakingTeams?: string[][]) {
     { clientID: "carol", username: "CarolReal", clanTag: "CCC", friends: [] },
     { clientID: "dave", username: "DaveReal", clanTag: "DDD", friends: [] },
   ];
-  const startInfo = { gameID: "g1", lobbyCreatedAt: 0, config: {}, players };
-  (game as any).gameStartInfo = startInfo;
-  (game as any).wireGameStartInfo = JSON.parse(JSON.stringify(startInfo));
-  return game;
+  const startInfo = {
+    gameID: "g1",
+    lobbyCreatedAt: 0,
+    config: {},
+    players,
+  } as unknown as GameStartInfo;
+  const wire = JSON.parse(JSON.stringify(startInfo)) as GameStartInfo;
+  return {
+    startInfoFor: (viewer: string) =>
+      names.startInfoFor(viewer, false, startInfo, wire),
+  };
 }
 
 describe("anonymizeNames: pinned teammates in the IN-GAME start payload", () => {
@@ -247,12 +274,12 @@ describe("anonymizeNames: pinned teammates in the IN-GAME start payload", () => 
   // startInfoFor is the payload that actually fixes "can't coordinate mid-game",
   // so the invariant is locked in here and not only in the lobby view.
   it("reveals a teammate's real username", () => {
-    const info = (withStartInfo(TEAMS) as any).startInfoFor("alice", false);
+    const info = withStartInfo(TEAMS).startInfoFor("alice");
     expect(player(info, "bob").username).toBe("BobReal");
   });
 
   it("keeps the opposing team anonymized", () => {
-    const info = (withStartInfo(TEAMS) as any).startInfoFor("alice", false);
+    const info = withStartInfo(TEAMS).startInfoFor("alice");
     for (const id of ["carol", "dave"]) {
       expect(REAL).not.toContain(player(info, id).username);
     }
@@ -262,7 +289,7 @@ describe("anonymizeNames: pinned teammates in the IN-GAME start payload", () => 
     // These feed assignTeams. A per-viewer difference here desyncs the clients,
     // which is why the in-game payload blanks them for everyone regardless of
     // who can see whose name.
-    const info = (withStartInfo(TEAMS) as any).startInfoFor("alice", false);
+    const info = withStartInfo(TEAMS).startInfoFor("alice");
     for (const id of ["alice", "bob", "carol", "dave"]) {
       expect(player(info, id).clanTag).toBeNull();
       expect(player(info, id).friends).toBeUndefined();
