@@ -199,7 +199,19 @@ Status:
       WorkerLobbyService call them) and `maybeAutoStartListed`, which is
       lifecycle. `ListingState.test.ts` covers the deadline rules and label
       sanitisation; `HostedLobbyListing.test.ts` is unchanged.
-- [ ] `MatchTelemetryRecorder.ts`
+- [x] `MatchTelemetryRecorder.ts` (2026-08-27): the event envelope and
+      sequence (`emit`), the per-tick intent counters (`intentObserved`,
+      `takeTickCounts`), the archive-attempted flag and the finished-once
+      `matchFinished`; `identityFor` is an exported function. `GameServer`
+      passes `turns.length` explicitly where the old default applied.
+      `MatchTelemetryRecorder.test.ts` covers the recorder; the integration
+      test is unchanged.
+
+Phase 3 complete (2026-08-27): six modules, six PRs, golden snapshot
+unchanged throughout. `GameServer.ts` is 1944 lines (from 2,365); test
+reach-ins 36 (from ~150), none of them spies on private methods. What is
+left reaches for `intents`, `isPaused`, `_hasStarted`, `websockets` and
+`startsAt` — all lifecycle and ingress state, which is Phases 5 and 6.
 
 ## Phase 4 — Roster
 
