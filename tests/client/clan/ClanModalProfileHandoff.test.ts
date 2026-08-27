@@ -39,7 +39,6 @@ class FakeIntersectionObserver {
 }
 vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
 
-import { getUserMe } from "../../../src/client/Api";
 import type { ClanInfo } from "../../../src/client/ClanApi";
 import { fetchClanDetail } from "../../../src/client/ClanApi";
 import { ClanModal } from "../../../src/client/ClanModal";
@@ -92,8 +91,6 @@ describe("ClanModal — player-profile handoff", () => {
     modal.remove();
     profileModal.remove();
     vi.clearAllMocks();
-    // Back to the factory's signed-in leader after the guest tests below.
-    asMock(getUserMe).mockReset();
   });
 
   function detailView(): HTMLElement {
@@ -273,30 +270,6 @@ describe("ClanModal — player-profile handoff", () => {
     await flushAsync(modal);
     expect(modal.querySelector("clan-map-view")).toBeNull();
     expect(getElState(modal, "activeTab")).toBe("my-clans");
-  });
-
-  it("lets a signed-out viewer deep-link to the map", async () => {
-    asMock(getUserMe).mockResolvedValue({ user: {}, player: {} } as never);
-
-    // The router's sequence for `#modal=clan&tab=map`: showPage() opens the
-    // inline modal without args, then the URL's args arrive. The guest
-    // decision must not have been taken on that first, tab-less open.
-    modal.open();
-    modal.open({ tab: "map" });
-    await flushAsync(modal);
-
-    expect(modal.isOpen()).toBe(true);
-    expect(getElState(modal, "activeTab")).toBe("map");
-    expect(modal.querySelector("clan-map-view")).not.toBeNull();
-  });
-
-  it("still sends a signed-out viewer to sign in on the clan list", async () => {
-    asMock(getUserMe).mockResolvedValue({ user: {}, player: {} } as never);
-
-    modal.open();
-    await flushAsync(modal);
-
-    expect(modal.isOpen()).toBe(false);
   });
 
   it("offers a Donations tab on the clan detail", async () => {

@@ -596,6 +596,9 @@ describe("ClanModal — handlers", () => {
 
       setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
       setState(modal, "myClanRoles" as keyof ClanModal, new Map() as never);
+      // Signed in but not a member; without an id the detail view offers
+      // sign-in instead of Join.
+      setState(modal, "myPublicId" as keyof ClanModal, "test-player" as never);
       setState(modal, "view" as keyof ClanModal, "detail" as never);
       await waitForSubComponent(modal, "clan-detail-view");
     });
