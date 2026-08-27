@@ -4,6 +4,7 @@ import { repeat } from "lit/directives/repeat.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../../core/Schemas";
+import { hasLinkedAccount } from "../Api";
 import { type DesktopUpdateState } from "../DesktopShell";
 import { shouldBlockMultiplayerAction } from "../GameModeSelector";
 import { JoinLobbyModal } from "../JoinLobbyModal";
@@ -188,7 +189,7 @@ export class DetailedGameViewModal extends BaseModal {
 
   private onUserMe = (e: Event) => {
     const me = (e as CustomEvent<UserMeResponse | false>).detail;
-    this.viewerSignedIn = me !== false;
+    this.viewerSignedIn = hasLinkedAccount(me);
     this.viewerTrusted = viewerIsTrusted(me);
   };
 

@@ -11,6 +11,7 @@ import {
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { hasLinkedAccount } from "./Api";
 import "./components/IOSAddToHomeScreenBanner";
 import {
   canJoinTrustedLobby,
@@ -120,7 +121,7 @@ export class GameModeSelector extends LitElement {
 
   private onUserMe = (e: Event) => {
     const me = (e as CustomEvent<UserMeResponse | false>).detail;
-    this.viewerSignedIn = me !== false;
+    this.viewerSignedIn = hasLinkedAccount(me);
     this.viewerTrusted = viewerIsTrusted(me);
   };
 
