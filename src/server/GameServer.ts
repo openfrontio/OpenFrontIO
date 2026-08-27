@@ -13,13 +13,11 @@ import {
   ClientMessageSchema,
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
-  FEATURED_LOBBY_AUTO_START_MS,
   GameConfig,
   GameID,
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
-  HOSTED_LOBBY_AUTO_START_MS,
   Intent,
   LobbyAccent,
   PartialGameRecord,
@@ -37,7 +35,7 @@ import {
   Tribe,
   Turn,
 } from "../core/Schemas";
-import { createPartialGameRecord, sanitizeLobbyLabel } from "../core/Util";
+import { createPartialGameRecord } from "../core/Util";
 import {
   createGameWireContext,
   decodeClientMessageUnvalidated,
@@ -50,6 +48,7 @@ import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
 import { LiveStatsVote, WinnerVote } from "./Consensus";
 import { fetchCustomTribes } from "./CustomTribes";
 import { DesyncDetector } from "./DesyncDetector";
+import { ListingState } from "./ListingState";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
 import { ServerEnv } from "./ServerEnv";
 import {
@@ -211,22 +210,9 @@ export class GameServer {
 
   private _hasEnded = false;
 
-  // Whether this private lobby is visible in the public lobby browser.
-  // Deliberately kept out of gameConfig so update_game_config can't set it;
-  // only the authenticated /api/game/:id/listing endpoint may (it verifies
-  // the creator's subscription).
-  private listed = false;
-  // When the lobby was listed; drives the auto-start deadline. Cleared on
-  // delist, so relisting starts a fresh deadline.
-  private listedAt?: number;
-
-  // Featured lobbies: a label shown instead of the map name, an accent for the
-  // row, and a longer auto-start deadline. Set once at create_game by an
-  // authenticated admin bot; deliberately unreachable from update_game_config,
-  // like `listed` itself.
-  private label?: string;
-  private accent?: LobbyAccent;
-  private featured = false;
+  // This private lobby's presence in the public lobby browser (see
+  // ListingState.ts).
+  private readonly listing = new ListingState();
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -374,7 +360,7 @@ export class GameServer {
     // lobby must be joinable by anyone who finds it in the lobby browser.
     if (
       gameConfig.allowedPublicIds !== undefined &&
-      this.listed &&
+      this.listing.isListed() &&
       this.hasJoinWhitelist()
     ) {
       this.setListed(false);
@@ -1258,7 +1244,7 @@ export class GameServer {
     });
     const wireGameStartInfo = {
       ...this.gameStartInfo,
-      listed: this.listed,
+      listed: this.listing.isListed(),
     };
     this.wireGameStartInfo = this.gameConfig.disableClanTags
       ? {
@@ -1617,11 +1603,11 @@ export class GameServer {
       startsAt: this.startsAt,
       serverTime: Date.now(),
       publicGameType: this.publicGameType,
-      listed: this.isPublic() ? undefined : this.listed,
-      autoStartAt: this.autoStartAt(),
-      label: this.label,
-      accent: this.accent,
-      featured: this.featured ? true : undefined,
+      listed: this.isPublic() ? undefined : this.listing.isListed(),
+      autoStartAt: this.listing.autoStartAt(),
+      label: this.listing.lobbyLabel(),
+      accent: this.listing.lobbyAccent(),
+      featured: this.listing.isFeatured() ? true : undefined,
     };
   }
 
@@ -1630,7 +1616,7 @@ export class GameServer {
   }
 
   public isListed(): boolean {
-    return this.listed;
+    return this.listing.isListed();
   }
 
   /** Who joined, and the account behind each one.
@@ -1655,45 +1641,28 @@ export class GameServer {
   }
 
   public setListed(listed: boolean): void {
-    if (this.listed === listed) {
-      // Duplicate toggles must not extend the auto-start deadline.
-      return;
-    }
-    this.listed = listed;
-    this.listedAt = listed ? Date.now() : undefined;
+    this.listing.setListed(listed);
   }
 
-  // Deadline after which a listed lobby starts automatically, so hosts
-  // can't sit on a public listing indefinitely.
   public autoStartAt(): number | undefined {
-    if (!this.listed || this.listedAt === undefined) return undefined;
-    return (
-      this.listedAt +
-      (this.featured
-        ? FEATURED_LOBBY_AUTO_START_MS
-        : HOSTED_LOBBY_AUTO_START_MS)
-    );
+    return this.listing.autoStartAt();
   }
 
   public isFeatured(): boolean {
-    return this.featured;
+    return this.listing.isFeatured();
   }
 
   public lobbyLabel(): string | undefined {
-    return this.label;
+    return this.listing.lobbyLabel();
   }
 
   public lobbyAccent(): LobbyAccent | undefined {
-    return this.accent;
+    return this.listing.lobbyAccent();
   }
 
-  // Only create_game calls this. A label is sanitised at the boundary so no
-  // unsanitised text can exist on a GameServer at all.
+  // Only create_game calls this.
   public setFeatured(opts: { label?: string; accent?: LobbyAccent }): void {
-    this.featured = true;
-    const label = opts.label ? sanitizeLobbyLabel(opts.label) : "";
-    this.label = label.length > 0 ? label : undefined;
-    this.accent = opts.accent;
+    this.listing.setFeatured(opts);
   }
 
   // Called from GameManager's tick while in the Lobby phase: once the
@@ -1704,7 +1673,7 @@ export class GameServer {
     if (this.hasStarted() || this.startsAt !== undefined) {
       return;
     }
-    const deadline = this.autoStartAt();
+    const deadline = this.listing.autoStartAt();
     if (deadline === undefined || Date.now() < deadline) {
       return;
     }

@@ -193,7 +193,12 @@ Status:
       are gone: `WinnerVoteRetally`, the `GameServer` half of `LiveStats` and
       `ArchivePlayerRecord` now join real clients, start, vote over the wire
       and read the record off the injected `archive`. Reach-ins 68 → 36.
-- [ ] `ListingState.ts`
+- [x] `ListingState.ts` (2026-08-27): the listed / listedAt / label / accent /
+      featured fields, the duplicate-toggle rule and the auto-start deadline.
+      `GameServer` keeps thin public delegates (Worker, AdminBotRoutes and
+      WorkerLobbyService call them) and `maybeAutoStartListed`, which is
+      lifecycle. `ListingState.test.ts` covers the deadline rules and label
+      sanitisation; `HostedLobbyListing.test.ts` is unchanged.
 - [ ] `MatchTelemetryRecorder.ts`
 
 ## Phase 4 — Roster
