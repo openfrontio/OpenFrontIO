@@ -779,6 +779,7 @@ export class GameServer {
 
     // Close old WebSocket to prevent resource leaks
     if (client.ws !== ws) {
+      this.websockets.delete(client.ws);
       client.ws.removeAllListeners();
       client.ws.close();
     }
@@ -998,6 +999,7 @@ export class GameServer {
   }
 
   private handleClientDisconnect(client: Client) {
+    this.websockets.delete(client.ws);
     this.activeClients = this.activeClients.filter(
       (c) => c.clientID !== client.clientID,
     );
