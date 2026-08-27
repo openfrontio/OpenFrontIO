@@ -337,6 +337,8 @@ export const RailroadEffectAttributesSchema = StructuresEffectAttributesSchema;
 
 // Recolors railroad tracks on the owner's territory with gradient / transition
 // styles (rails are colored by the tile owner, so the effect follows that).
+// Like the structures effect, shown while the owner's territory is hovered
+// and always for the local player.
 const RailroadEffectSchema = CosmeticSchema.extend({
   effectType: z.literal("railroad"),
   attributes: RailroadEffectAttributesSchema,

@@ -110,6 +110,7 @@ export class RailroadPass {
   private uGhostOwnerID: WebGLUniformLocation;
   private uLocalPlayerID: WebGLUniformLocation;
   private uLocalRailColor: WebGLUniformLocation;
+  private uHoverOwner: WebGLUniformLocation;
 
   private mapW: number;
   private mapH: number;
@@ -136,6 +137,8 @@ export class RailroadPass {
 
   private localPlayerID = 0;
   private localRailColor: [number, number, number] = [0.75, 0.75, 0.75];
+  /** Hovered territory's owner (0 = none) — shows that player's railroad effect. */
+  private hoverOwner = 0;
 
   /** Wall-clock start, for uTime (seconds) — matches TrailPass so the
    *  railroad effect animates at the same pace as the trail effects. */
@@ -191,6 +194,7 @@ export class RailroadPass {
       this.program,
       "uLocalRailColor",
     )!;
+    this.uHoverOwner = gl.getUniformLocation(this.program, "uHoverOwner")!;
 
     // Texture unit bindings + ghost defaults
     gl.useProgram(this.program);
@@ -250,6 +254,11 @@ export class RailroadPass {
   /** Rail color for the local player (0–1 RGB). */
   setLocalRailColor(r: number, g: number, b: number): void {
     this.localRailColor = [r, g, b];
+  }
+
+  /** Hovered territory's owner (0 = none) — shows that player's railroad effect. */
+  setHighlightOwner(ownerID: number): void {
+    this.hoverOwner = ownerID;
   }
 
   /**
@@ -371,6 +380,7 @@ export class RailroadPass {
     gl.uniform1f(this.uRailThickness, rs.railThickness);
     gl.uniform1f(this.uGhostOwnerID, this.ghostOwnerID);
     gl.uniform1f(this.uLocalPlayerID, this.localPlayerID);
+    gl.uniform1f(this.uHoverOwner, this.hoverOwner);
     gl.uniform3f(
       this.uLocalRailColor,
       this.localRailColor[0],

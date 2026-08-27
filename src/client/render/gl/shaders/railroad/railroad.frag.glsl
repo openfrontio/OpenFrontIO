@@ -25,6 +25,7 @@ uniform float uRailThickness;        // Track width multiplier (1 = default)
 uniform float uGhostOwnerID;         // Player smallID for ghost rail color
 uniform float uLocalPlayerID;        // Local player smallID (0 = none)
 uniform vec3 uLocalRailColor;        // Rail color for the local player's rails
+uniform float uHoverOwner;           // Hovered territory's owner smallID (0 = none)
 
 in vec2 vWorldPos;
 out vec4 fragColor;
@@ -224,9 +225,14 @@ void main() {
         : texture(uPalette, vec2((float(owner) + 0.5) / float(PALETTE_SIZE), 0.75)).rgb);
     // railroad cosmetic: rails are colored by the tile owner, so the owner's
     // railroad effect (raw catalog colors, like trails) replaces that color —
-    // including the local player's white/black rail color.
+    // including the local player's white/black rail color. Like the
+    // structures effect it shows while the owner's territory is hovered, and
+    // always for the local player (touch devices never hover, and buyers
+    // should see what they paid for).
     vec3 effectRGB;
-    if (owner != 0u && railroadEffectColor(int(owner), effectRGB)) {
+    if (owner != 0u &&
+        (owner == uint(uLocalPlayerID) || owner == uint(uHoverOwner + 0.5)) &&
+        railroadEffectColor(int(owner), effectRGB)) {
       railColor = effectRGB;
     }
     // Overlapping railroad highlight — green tint
