@@ -1842,8 +1842,6 @@
     "easter_bug_count_label": "Bug Count",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_writing_speed_label": "Writing Speed Multiplier",
-    "effect_editor": "Effect Editor",
-    "effect_editor_desc": "Live-edit cosmetic effects on your own units (singleplayer only)",
     "emoji_menu_modifier": "Emoji Menu Modifier",
     "emoji_menu_modifier_desc": "Hold this key while clicking to open the emoji menu.",
     "emojis_desc": "Toggle whether emojis are shown in game",

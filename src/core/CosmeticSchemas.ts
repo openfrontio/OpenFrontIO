@@ -19,6 +19,11 @@ export type Subscription = z.infer<typeof SubscriptionSchema>;
 // gains a member per effectType).
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = z.infer<typeof EffectTypeSchema>;
+/** The catalog attribute shape of effects of the given effectType. */
+export type EffectAttributesFor<T extends EffectType> = Extract<
+  Effect,
+  { effectType: T }
+>["attributes"];
 // Shared by every trail effectType (transportShipTrail, nukeTrail, …).
 export type TrailEffectAttributes = z.infer<typeof TrailEffectAttributesSchema>;
 // Attributes of a nuke-explosion effect (a detonation FX, not a trail).

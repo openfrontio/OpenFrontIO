@@ -1,37 +1,35 @@
 /**
- * Effect Editor — a lil-gui panel for tuning cosmetic effects live in a
- * singleplayer game. Each folder edits one effect slot (trails, structures,
+ * Effect Editor — the debug GUI folder for tuning cosmetic effects live in
+ * a running game. Each sub-folder edits one effect slot (trails, structures,
  * warship, nuke explosion) in the catalog's own attribute shape; enabling a
  * slot overrides the local player's equipped effect of that type via
  * WebGLFrameBuilder.setEffectOverride, so the result shows on your own
- * units / bombs. "Copy catalog JSON" puts a paste-ready entry on the
- * clipboard. Loaded on demand (see ClientGameRunner) to keep lil-gui out of
- * the main bundle.
+ * units / bombs (client-side rendering only — nobody else sees it). "Copy
+ * catalog JSON" puts a paste-ready entry on the clipboard.
  */
 
-import GUI, { type Controller } from "lil-gui";
+import type GUI from "lil-gui";
+import type { Controller } from "lil-gui";
 import {
   EFFECT_TYPES,
+  type EffectAttributesFor,
   type EffectType,
   NUKE_EXPLOSION_TYPES,
-} from "../../core/CosmeticSchemas";
-import { makeDraggable } from "../render/gl/debug/Wiring";
-import { copyToClipboard } from "../Utils";
-import type { EffectOverrideAttributes } from "../WebGLFrameBuilder";
+} from "../../../../core/CosmeticSchemas";
 import {
   catalogSnippet,
   defaultSlotState,
-  EFFECT_GUI_MAX_COLORS,
-  EFFECT_GUI_TYPES,
+  EFFECT_EDITOR_MAX_COLORS,
+  EFFECT_EDITOR_TYPES,
   type EffectSlotState,
   fieldsForType,
   slotAttributes,
-} from "./EffectGuiState";
+} from "./EffectEditorState";
 
-export interface EffectGuiHooks {
+export interface EffectEditorHooks {
   setOverride<T extends EffectType>(
     effectType: T,
-    attrs: EffectOverrideAttributes[T] | null,
+    attrs: EffectAttributesFor<T> | null,
   ): void;
 }
 
@@ -63,18 +61,15 @@ const NUMERIC_FIELDS: [NumericField, string, number, number, number][] = [
   ["density", "Density", 2, 2000, 1],
 ];
 
-export function createEffectGui(hooks: EffectGuiHooks): {
-  open(): void;
-  destroy(): void;
-} {
-  const gui = new GUI({ title: "Effect Editor", width: 320 });
-  gui.domElement.style.position = "fixed";
-  gui.domElement.style.top = "8px";
-  // Beside the render debug GUI (which sits at right: 8px, width 320).
-  gui.domElement.style.right = "340px";
-  gui.domElement.style.zIndex = "100";
-  makeDraggable(gui);
-
+/**
+ * Populate `gui` (the "Effect Editor" folder) with one sub-folder per effect
+ * slot. Returns a function that disables every slot (clearing its override)
+ * — call it before the panel is destroyed so no override outlives the GUI.
+ */
+export function buildEffectEditor(
+  gui: GUI,
+  hooks: EffectEditorHooks,
+): () => void {
   const slots: { effectType: EffectType; state: EffectSlotState }[] = [];
 
   for (const effectType of EFFECT_TYPES) {
@@ -101,7 +96,7 @@ export function createEffectGui(hooks: EffectGuiHooks): {
 
     folder.add(state, "enabled").name("Enabled").onChange(apply);
     folder
-      .add(state, "type", [...EFFECT_GUI_TYPES[effectType]])
+      .add(state, "type", [...EFFECT_EDITOR_TYPES[effectType]])
       .name("Type")
       .onChange(() => {
         refresh();
@@ -118,7 +113,7 @@ export function createEffectGui(hooks: EffectGuiHooks): {
     }
     // Only the fields some type of this slot uses; refresh() hides the rest.
     const usable = new Set<keyof EffectSlotState>();
-    for (const t of EFFECT_GUI_TYPES[effectType]) {
+    for (const t of EFFECT_EDITOR_TYPES[effectType]) {
       for (const f of fieldsForType(effectType, t)) usable.add(f);
     }
     for (const [field, label, min, max, step] of NUMERIC_FIELDS) {
@@ -131,14 +126,14 @@ export function createEffectGui(hooks: EffectGuiHooks): {
     fieldCtrls.push([
       "colorCount",
       folder
-        .add(state, "colorCount", 0, EFFECT_GUI_MAX_COLORS, 1)
+        .add(state, "colorCount", 0, EFFECT_EDITOR_MAX_COLORS, 1)
         .name("Colors")
         .onChange(() => {
           refresh();
           apply();
         }),
     ]);
-    for (let i = 0; i < EFFECT_GUI_MAX_COLORS; i++) {
+    for (let i = 0; i < EFFECT_EDITOR_MAX_COLORS; i++) {
       colorCtrls.push(
         folder
           .addColor(
@@ -154,7 +149,7 @@ export function createEffectGui(hooks: EffectGuiHooks): {
         {
           copy: () => {
             const snippet = catalogSnippet(effectType, state);
-            if (snippet) void copyToClipboard(snippet);
+            if (snippet) void navigator.clipboard.writeText(snippet);
             else console.warn(`Effect editor: ${effectType} is invalid`);
           },
         },
@@ -175,12 +170,5 @@ export function createEffectGui(hooks: EffectGuiHooks): {
     gui.controllersRecursive().forEach((c) => c.updateDisplay());
   };
   gui.add({ disableAll }, "disableAll").name("Disable All");
-
-  return {
-    open: () => gui.open(),
-    destroy: () => {
-      disableAll();
-      gui.destroy();
-    },
-  };
+  return disableAll;
 }

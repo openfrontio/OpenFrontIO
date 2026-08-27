@@ -1,25 +1,31 @@
 /**
  * Effect-editor state and its conversion into catalog-shaped cosmetic
- * attributes. Pure (no DOM / lil-gui) so it can be unit-tested; the panel in
- * EffectGui.ts binds lil-gui controllers to these objects.
+ * attributes. Pure (no DOM / lil-gui) so it can be unit-tested; the folder
+ * built in EffectEditor.ts binds lil-gui controllers to these objects.
  */
 
 import {
+  type EffectAttributesFor,
   type EffectType,
   NUKE_EXPLOSION_TYPES,
   NukeExplosionAttributesSchema,
   type NukeExplosionType,
   StructuresEffectAttributesSchema,
   TrailEffectAttributesSchema,
-} from "../../core/CosmeticSchemas";
-import type { EffectOverrideAttributes } from "../WebGLFrameBuilder";
+} from "../../../../core/CosmeticSchemas";
 
 /** Max colors a slot can carry — the effect palette holds 8 rows per block. */
-export const EFFECT_GUI_MAX_COLORS = 8;
+export const EFFECT_EDITOR_MAX_COLORS = 8;
 
-/** Attribute `type` options per effect slot (mirrors the catalog schemas). */
-export const EFFECT_GUI_TYPES: Record<EffectType, readonly string[]> = {
-  transportShipTrail: ["gradient", "transition", "spiral"],
+/**
+ * Attribute `type` options per effect slot. Mirrors the catalog schemas,
+ * except that `spiral` (which the shared trail schema allows) is only
+ * offered for nuke trails — the vortex renders as ribbon geometry that the
+ * renderer builds for nukes only (see SpiralTrails); ship trails would just
+ * fall back to their territory color.
+ */
+export const EFFECT_EDITOR_TYPES: Record<EffectType, readonly string[]> = {
+  transportShipTrail: ["gradient", "transition"],
   nukeTrail: ["gradient", "transition", "spiral"],
   structures: ["gradient", "transition"],
   warship: ["gradient", "transition"],
@@ -57,7 +63,7 @@ export interface EffectSlotState {
 export function defaultSlotState(effectType: EffectType): EffectSlotState {
   return {
     enabled: false,
-    type: EFFECT_GUI_TYPES[effectType][0],
+    type: EFFECT_EDITOR_TYPES[effectType][0],
     nukeType: NUKE_EXPLOSION_TYPES[0],
     colorCount: 2,
     colors: [
@@ -107,13 +113,13 @@ export function fieldsForType(
  * would accept. Returns null when the state doesn't validate (e.g. a
  * non-positive size) or the type isn't valid for the slot.
  */
-export function slotAttributes<T extends EffectType>(
-  effectType: T,
+export function slotAttributes(
+  effectType: EffectType,
   s: EffectSlotState,
-): EffectOverrideAttributes[T] | null {
+): EffectAttributesFor<EffectType> | null {
   const colors = s.colors.slice(
     0,
-    Math.min(Math.max(Math.round(s.colorCount), 0), EFFECT_GUI_MAX_COLORS),
+    Math.min(Math.max(Math.round(s.colorCount), 0), EFFECT_EDITOR_MAX_COLORS),
   );
   let candidate: unknown;
   if (effectType === "nukeExplosion") {
@@ -152,7 +158,8 @@ export function slotAttributes<T extends EffectType>(
         ? StructuresEffectAttributesSchema
         : TrailEffectAttributesSchema;
   const parsed = schema.safeParse(candidate);
-  return parsed.success ? (parsed.data as EffectOverrideAttributes[T]) : null;
+  if (!parsed.success) return null;
+  return parsed.data as EffectAttributesFor<EffectType>;
 }
 
 /** A catalog-entry fragment for the slot, ready to paste into cosmetics. */

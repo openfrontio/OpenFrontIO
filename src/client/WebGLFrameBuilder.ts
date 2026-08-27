@@ -3,6 +3,7 @@ import { base64url } from "jose";
 import { assetUrl } from "../core/AssetUrls";
 import {
   type Cosmetics,
+  type EffectAttributesFor,
   type EffectType,
   findEffect,
   findEffectForSlot,
@@ -13,7 +14,6 @@ import {
   type StructuresEffectAttributes,
   TRAIL_EFFECT_TYPES,
   type TrailEffectAttributes,
-  type WarshipEffectAttributes,
 } from "../core/CosmeticSchemas";
 import { PlayerType } from "../core/game/Game";
 import { decodePatternData } from "../core/PatternDecoder";
@@ -45,14 +45,6 @@ import type { GameView, PlayerView } from "./view";
 
 const PALETTE_SIZE = 4096;
 
-/** Catalog attribute shape per effect type — what the effect editor overrides. */
-export type EffectOverrideAttributes = {
-  transportShipTrail: TrailEffectAttributes;
-  nukeTrail: TrailEffectAttributes;
-  structures: StructuresEffectAttributes;
-  warship: WarshipEffectAttributes;
-  nukeExplosion: NukeExplosionAttributes;
-};
 type PaletteEffectAttributes =
   | TrailEffectAttributes
   | StructuresEffectAttributes;
@@ -185,15 +177,16 @@ export class WebGLFrameBuilder {
    */
   private readonly effectResolved = new Set<number>();
   /**
-   * Effect-editor overrides (singleplayer tuning): catalog-shaped attributes
-   * that replace the LOCAL player's equipped effect per type. Trail /
+   * Effect-editor overrides (debug GUI): catalog-shaped attributes that
+   * replace the LOCAL player's equipped effect per type — this client's
+   * rendering only. Trail /
    * structures / warship overrides are applied by syncPlayerEffects (the
    * local player is re-resolved on change); the nukeExplosion override is
    * applied per detonation in resolveDeadUnitExplosions.
    */
   private readonly effectOverrides = new Map<
     EffectType,
-    EffectOverrideAttributes[EffectType]
+    EffectAttributesFor<EffectType>
   >();
   /**
    * Last spawn tile pushed to the renderer per smallID. Players can re-pick
@@ -259,7 +252,7 @@ export class WebGLFrameBuilder {
    */
   setEffectOverride<T extends EffectType>(
     effectType: T,
-    attrs: EffectOverrideAttributes[T] | null,
+    attrs: EffectAttributesFor<T> | null,
   ): void {
     if (attrs) this.effectOverrides.set(effectType, attrs);
     else this.effectOverrides.delete(effectType);

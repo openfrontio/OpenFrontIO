@@ -8,7 +8,6 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import {
   AlternateViewEvent,
-  ToggleEffectGuiEvent,
   ToggleRenderDebugGuiEvent,
 } from "../../InputHandler";
 import { translateText } from "../../Utils";
@@ -56,10 +55,6 @@ export class SettingsModal extends LitElement implements Controller {
 
   @property({ type: Boolean })
   wasPausedWhenOpened = false;
-
-  /** Effect editor is singleplayer-only; set by GameRenderer. */
-  @property({ type: Boolean })
-  effectEditorEnabled = false;
 
   init() {
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
@@ -185,11 +180,6 @@ export class SettingsModal extends LitElement implements Controller {
 
   private onRenderDebugGuiButtonClick() {
     this.eventBus.emit(new ToggleRenderDebugGuiEvent());
-    this.closeModal();
-  }
-
-  private onEffectEditorButtonClick() {
-    this.eventBus.emit(new ToggleEffectGuiEvent());
     this.closeModal();
   }
 
@@ -604,28 +594,6 @@ export class SettingsModal extends LitElement implements Controller {
                   </div>
                 </div>
               </button>
-
-              ${this.effectEditorEnabled
-                ? html`<button
-                    class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-                    @click="${this.onEffectEditorButtonClick}"
-                  >
-                    <img
-                      src=${settingsIcon}
-                      alt="effectEditor"
-                      width="20"
-                      height="20"
-                    />
-                    <div class="flex-1">
-                      <div class="font-medium">
-                        ${translateText("user_setting.effect_editor")}
-                      </div>
-                      <div class="text-sm text-slate-400">
-                        ${translateText("user_setting.effect_editor_desc")}
-                      </div>
-                    </div>
-                  </button>`
-                : ""}
             </div>
 
             <div class="border-t border-slate-600 pt-3 mt-4">

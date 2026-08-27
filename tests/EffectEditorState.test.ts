@@ -2,16 +2,16 @@ import { describe, expect, test } from "vitest";
 import {
   catalogSnippet,
   defaultSlotState,
-  EFFECT_GUI_TYPES,
+  EFFECT_EDITOR_TYPES,
   fieldsForType,
   slotAttributes,
-} from "../src/client/debug/EffectGuiState";
+} from "../src/client/render/gl/debug/EffectEditorState";
 import { EFFECT_TYPES } from "../src/core/CosmeticSchemas";
 
 describe("slotAttributes", () => {
   test("every slot's default state validates for every type it offers", () => {
     for (const effectType of EFFECT_TYPES) {
-      for (const type of EFFECT_GUI_TYPES[effectType]) {
+      for (const type of EFFECT_EDITOR_TYPES[effectType]) {
         const s = { ...defaultSlotState(effectType), type };
         expect(slotAttributes(effectType, s), `${effectType}/${type}`).not.toBe(
           null,
@@ -44,12 +44,10 @@ describe("slotAttributes", () => {
     const s = defaultSlotState("nukeExplosion");
     s.nukeType = "hydro";
     const shock = slotAttributes("nukeExplosion", { ...s, type: "shockwave" });
-    expect(shock?.type).toBe("shockwave");
-    expect(shock?.nukeType).toBe("hydro");
+    expect(shock).toMatchObject({ type: "shockwave", nukeType: "hydro" });
     expect(shock && "density" in shock).toBe(false);
     const embers = slotAttributes("nukeExplosion", { ...s, type: "embers" });
-    expect(embers?.type).toBe("embers");
-    expect(embers && (embers as { density: number }).density).toBe(s.density);
+    expect(embers).toMatchObject({ type: "embers", density: s.density });
   });
 
   test("rejects state the catalog schema would reject", () => {
@@ -66,6 +64,13 @@ describe("slotAttributes", () => {
   test("clamps the color count to the palette size", () => {
     const s = { ...defaultSlotState("warship"), colorCount: 99 };
     expect(slotAttributes("warship", s)?.colors).toHaveLength(8);
+  });
+});
+
+describe("EFFECT_EDITOR_TYPES", () => {
+  test("only nuke trails offer the spiral vortex", () => {
+    expect(EFFECT_EDITOR_TYPES.nukeTrail).toContain("spiral");
+    expect(EFFECT_EDITOR_TYPES.transportShipTrail).not.toContain("spiral");
   });
 });
 

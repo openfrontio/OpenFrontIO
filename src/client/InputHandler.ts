@@ -89,9 +89,6 @@ export class RefreshGraphicsEvent implements GameEvent {}
 
 export class ToggleRenderDebugGuiEvent implements GameEvent {}
 
-/** Toggle the singleplayer effect editor (live cosmetic-effect tuning). */
-export class ToggleEffectGuiEvent implements GameEvent {}
-
 export class TogglePerformanceOverlayEvent implements GameEvent {}
 
 export class ToggleStructureEvent implements GameEvent {
