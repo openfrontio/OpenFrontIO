@@ -26,12 +26,20 @@ export function canJoinTrustedLobby(
 /**
  * Popup shown instead of attempting to join a trusted-only lobby the viewer
  * can't get into (the server would refuse them anyway). Tells them how to
- * become trusted rather than letting the join fail.
+ * become trusted rather than letting the join fail: a signed-out viewer is
+ * told to sign in first, since trust only attaches to an account.
  */
-export function trustRequiredDialog(onClose: () => void): TemplateResult {
+export function trustRequiredDialog(
+  signedIn: boolean,
+  onClose: () => void,
+): TemplateResult {
   return html`<confirm-dialog
     .heading=${translateText("public_lobby.trust_required_title")}
-    .message=${translateText("public_lobby.trust_required_body")}
+    .message=${translateText(
+      signedIn
+        ? "public_lobby.trust_required_body"
+        : "public_lobby.trust_required_body_signed_out",
+    )}
     variant="warning"
     .showClose=${true}
     .buttons=${"confirmOnly"}

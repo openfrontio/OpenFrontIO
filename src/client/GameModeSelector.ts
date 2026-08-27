@@ -53,6 +53,7 @@ export class GameModeSelector extends LitElement {
   @state() private inputValid: boolean = true;
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
   @state() private viewerTrusted: boolean = false;
+  @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
@@ -118,9 +119,9 @@ export class GameModeSelector extends LitElement {
   };
 
   private onUserMe = (e: Event) => {
-    this.viewerTrusted = viewerIsTrusted(
-      (e as CustomEvent<UserMeResponse | false>).detail,
-    );
+    const me = (e as CustomEvent<UserMeResponse | false>).detail;
+    this.viewerSignedIn = me !== false;
+    this.viewerTrusted = viewerIsTrusted(me);
   };
 
   public stop() {
@@ -287,7 +288,10 @@ export class GameModeSelector extends LitElement {
           )}
         </div>
         ${this.showTrustRequired
-          ? trustRequiredDialog(() => (this.showTrustRequired = false))
+          ? trustRequiredDialog(
+              this.viewerSignedIn,
+              () => (this.showTrustRequired = false),
+            )
           : nothing}
       </div>
     `;

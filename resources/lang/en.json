@@ -1546,6 +1546,7 @@
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "title": "Waiting for Game Start...",
     "trust_required_body": "You must have a trusted account to join this game. Please play more games or make any purchase to become trusted.",
+    "trust_required_body_signed_out": "You must sign in and play more games to join this game. Sign in to your account, then play more games or make any purchase to become trusted.",
     "trust_required_ok": "OK",
     "trust_required_title": "Trusted account required",
     "trusted_locked": "Trusted accounts only. Your account isn't trusted yet.",

@@ -108,6 +108,7 @@ export class DetailedGameViewModal extends BaseModal {
   @state() private profileName = "";
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
   @state() private viewerTrusted: boolean = false;
+  @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
 
   private serverTimeOffset = 0;
@@ -186,9 +187,9 @@ export class DetailedGameViewModal extends BaseModal {
   };
 
   private onUserMe = (e: Event) => {
-    this.viewerTrusted = viewerIsTrusted(
-      (e as CustomEvent<UserMeResponse | false>).detail,
-    );
+    const me = (e as CustomEvent<UserMeResponse | false>).detail;
+    this.viewerSignedIn = me !== false;
+    this.viewerTrusted = viewerIsTrusted(me);
   };
 
   // ---- Slot animation ----
@@ -265,7 +266,10 @@ export class DetailedGameViewModal extends BaseModal {
     return html`
       <div class="custom-scrollbar p-4 lg:p-6 flex flex-col gap-4">
         ${this.showTrustRequired
-          ? trustRequiredDialog(() => (this.showTrustRequired = false))
+          ? trustRequiredDialog(
+              this.viewerSignedIn,
+              () => (this.showTrustRequired = false),
+            )
           : nothing}
         ${this.showFilters ? this.renderFilterPanel() : nothing}
         ${shown.length === 0

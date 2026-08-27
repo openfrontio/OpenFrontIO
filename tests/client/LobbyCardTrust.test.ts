@@ -20,6 +20,7 @@ vi.mock("../../src/client/Utils", () => ({
 
 import {
   lobbyCard,
+  trustRequiredDialog,
   viewerIsTrusted,
 } from "../../src/client/components/LobbyCard";
 
@@ -89,5 +90,26 @@ describe("viewerIsTrusted", () => {
     expect(viewerIsTrusted(me(null))).toBe(false);
     expect(viewerIsTrusted(me(undefined))).toBe(false);
     expect(viewerIsTrusted(false)).toBe(false);
+  });
+});
+
+describe("trustRequiredDialog", () => {
+  function message(signedIn: boolean): unknown {
+    const host = document.createElement("div");
+    render(
+      trustRequiredDialog(signedIn, () => {}),
+      host,
+    );
+    return (
+      host.querySelector("confirm-dialog") as unknown as { message: string }
+    ).message;
+  }
+
+  it("tells a signed-in but untrusted viewer to play more games", () => {
+    expect(message(true)).toBe("public_lobby.trust_required_body");
+  });
+
+  it("tells a signed-out viewer to sign in first", () => {
+    expect(message(false)).toBe("public_lobby.trust_required_body_signed_out");
   });
 });
