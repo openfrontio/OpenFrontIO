@@ -381,7 +381,9 @@ export class GameView implements GameMap {
           // the same display name (e.g. India's and Pakistan's "Punjab").
           this._cosmetics.get(pu.clientID ?? "") ??
             (pu.playerType === PlayerType.Nation && pu.nationFlag
-              ? ({ flag: `/flags/${pu.nationFlag}.svg` } satisfies PlayerCosmetics)
+              ? ({
+                  flag: `/flags/${pu.nationFlag}.svg`,
+                } satisfies PlayerCosmetics)
               : undefined) ??
             {},
         );
