@@ -4,7 +4,11 @@ import { Subscription } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CosmeticInfo";
-import { cosmeticDisplayName, cosmeticRarity } from "./CosmeticPresentation";
+import {
+  cosmeticDisplayName,
+  cosmeticRarity,
+  cosmeticSelectionLabel,
+} from "./CosmeticPresentation";
 import "./CosmeticPreview";
 
 const COSMETIC_CARD_STYLE_ID = "cosmetic-card-styles";
@@ -485,7 +489,7 @@ export class CosmeticCard extends LitElement {
               .showAdFree=${active.relationship === "purchasable"}
               .usdValue=${usdValue}
               .perks=${this.subscriptionPerks()}
-              .items=${(active.packItems ?? []).map(cosmeticDisplayName)}
+              .items=${(active.packItems ?? []).map(cosmeticSelectionLabel)}
             ></cosmetic-info>`
           : nothing}
       </div>

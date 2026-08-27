@@ -17,6 +17,8 @@ const { getUserMe, invalidateUserMe, purchaseCosmeticPack } =
 const translations = {
   "cosmetics.hard": "plutonium",
   "flags.pirate": "Jolly Roger",
+  "inventory.selected_cosmetic_variant": "{name} ({variant})",
+  "territory_patterns.color_palette.red": "Crimson",
   "store.login_required": "log in",
   "store.pack_already_owned": "already own {items}",
   "store.pack_debt": "debt {debt}",
@@ -138,13 +140,16 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
     vi.mocked(purchaseCosmeticPack).mockResolvedValue({
       ok: false,
       code: "already_owned",
-      ownedFlareNames: ["flag:pirate", "pattern:camo"],
+      ownedFlareNames: ["flag:pirate", "pattern:camo:red"],
     });
 
     await purchaseCosmetic(starter, "hard");
 
-    // Translated where a name exists, title-cased otherwise.
-    expect(alertMock).toHaveBeenCalledWith("already own Jolly Roger, Camo");
+    // Translated where a name exists, title-cased otherwise; a coloured
+    // pattern names its colour.
+    expect(alertMock).toHaveBeenCalledWith(
+      "already own Jolly Roger, Camo (Crimson)",
+    );
     expect(invalidateUserMe).toHaveBeenCalled();
     expect(reloadMock).toHaveBeenCalled();
   });

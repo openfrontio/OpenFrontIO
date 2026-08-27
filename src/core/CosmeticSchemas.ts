@@ -412,12 +412,16 @@ export const PackSchema = CosmeticSchema.extend({
 // One member of a cosmetic pack: a reference to a cosmetic elsewhere in the
 // same catalog by (type, name). patterns/flags/skins/crowns live in
 // `<type>s[name]`; an effect is found by name across effects[*] (the item
-// does not carry its effectType). The referenced cosmetic may be absent (it
-// was deleted after the listing was cached) or not sold on its own — the
-// pack is rendered from its items, never gated on the item's own price.
+// does not carry its effectType). A pattern item names the colour palette
+// it grants ("pattern:<name>:<palette>", the same flare a single purchase
+// grants); without one it is the legacy uncoloured variant. The referenced
+// cosmetic may be absent (it was deleted after the listing was cached) or
+// not sold on its own — the pack is rendered from its items, never gated on
+// the item's own price.
 export const CosmeticPackItemSchema = z.object({
   type: z.enum(["pattern", "flag", "skin", "crown", "effect"]),
   name: CosmeticNameSchema,
+  colorPalette: z.string().optional(),
 });
 
 // A bundle of cosmetics bought in one hard-currency transaction

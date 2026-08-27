@@ -5,10 +5,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
-import {
-  cosmeticDisplayName,
-  cosmeticSelectionLabel,
-} from "./components/CosmeticPresentation";
+import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
@@ -20,6 +17,7 @@ import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
+  findPackItem,
   groupCosmeticVariants,
   ownedPackItems,
   purchaseCosmetic,
@@ -281,10 +279,8 @@ export class StoreModal extends BaseModal {
       resolved.cosmetic as CosmeticPack,
       this.userMeResponse,
     ).map((item) => {
-      const found = resolved.packItems?.find(
-        (r) => r.type === item.type && r.cosmetic?.name === item.name,
-      );
-      return found ? cosmeticDisplayName(found) : item.name;
+      const found = findPackItem(item, resolved.packItems ?? []);
+      return found ? cosmeticSelectionLabel(found) : item.name;
     });
   }
 

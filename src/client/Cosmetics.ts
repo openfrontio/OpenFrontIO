@@ -321,9 +321,12 @@ async function purchasePack(
   }
 }
 
-/** The translated name of the cosmetic a flare ("<type>:<name>") refers to. */
+/**
+ * The translated name of the cosmetic a flare refers to: "<type>:<name>",
+ * or "pattern:<name>:<palette>" for a coloured pattern ("Camo (Crimson)").
+ */
 function flareDisplayName(flare: string): string {
-  const [type, name] = flare.split(":", 2);
+  const [type, name, palette] = flare.split(":");
   const prefix = {
     pattern: "territory_patterns.pattern",
     skin: "territory_patterns.pattern",
@@ -331,7 +334,13 @@ function flareDisplayName(flare: string): string {
     crown: "crowns",
     effect: "effects",
   }[type];
-  return prefix && name ? translateCosmetic(prefix, name) : flare;
+  if (!prefix || !name) return flare;
+  const displayName = translateCosmetic(prefix, name);
+  if (!palette) return displayName;
+  return translateText("inventory.selected_cosmetic_variant", {
+    name: displayName,
+    variant: translateCosmetic("territory_patterns.color_palette", palette),
+  });
 }
 
 function simpleHash(str: string): string {
@@ -551,9 +560,29 @@ export function effectRelationship(
   );
 }
 
-/** The flare a pack item's purchase grants, e.g. "pattern:camo". */
+/** The flare a pack item's purchase grants, e.g. "pattern:camo:red". */
 export function packItemFlare(item: CosmeticPackItem): string {
-  return `${item.type}:${item.name}`;
+  const base = `${item.type}:${item.name}`;
+  return item.colorPalette ? `${base}:${item.colorPalette}` : base;
+}
+
+/**
+ * The resolved entry a pack item refers to, or undefined if its cosmetic is
+ * no longer in the catalog. A pattern item is the entry for its palette —
+ * the "pattern:<key>:<palette>" one, or the uncoloured "pattern:<key>" one
+ * when the item names no palette — since that is the flare the pack grants.
+ */
+export function findPackItem(
+  item: CosmeticPackItem,
+  candidates: readonly ResolvedCosmetic[],
+): ResolvedCosmetic | undefined {
+  return candidates.find(
+    (r) =>
+      r.type === item.type &&
+      r.cosmetic?.name === item.name &&
+      (item.type !== "pattern" ||
+        r.key.split(":")[2] === (item.colorPalette ?? undefined)),
+  );
 }
 
 /**
@@ -735,17 +764,10 @@ export function resolveCosmetics(
     });
   }
 
-  // Cosmetic packs. Items reference cosmetics resolved above by (type, name);
-  // a pattern item is its uncoloured entry — the "pattern:<key>" one, with
-  // no palette segment — since the pack grants "pattern:<name>".
+  // Cosmetic packs. Items reference cosmetics resolved above (findPackItem).
   for (const [packKey, pack] of Object.entries(cosmetics.packs ?? {})) {
     const packItems = pack.items.flatMap((item) => {
-      const found = result.find(
-        (r) =>
-          r.type === item.type &&
-          r.cosmetic?.name === item.name &&
-          (item.type !== "pattern" || r.key.split(":").length === 2),
-      );
+      const found = findPackItem(item, result);
       return found ? [found] : [];
     });
     result.push({

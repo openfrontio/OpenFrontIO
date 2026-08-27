@@ -199,14 +199,14 @@ const starterBundle: ResolvedCosmetic = {
     priceHard: 250,
     rarity: "epic",
     items: [
-      { type: "pattern", name: "stripes" },
+      { type: "pattern", name: "stripes", colorPalette: "red" },
       { type: "flag", name: "aurora" },
     ],
   },
   colorPalette: null,
   relationship: "purchasable",
   key: "cosmeticPack:starter",
-  packItems: [{ ...red, colorPalette: null, key: "pattern:stripes" }, flag],
+  packItems: [red, flag],
 };
 
 const affiliatePattern: ResolvedCosmetic = {
@@ -666,7 +666,7 @@ describe("StoreModal cosmetic browser", () => {
       card(modal, starterBundle.key)?.querySelector(
         "[data-cosmetic-info-items]",
       )?.textContent,
-    ).toContain("Stripes, Aurora");
+    ).toContain("inventory.selected_cosmetic_variant, Aurora");
 
     await clickHardPurchase(modal);
     expect(purchaseCosmetic).toHaveBeenCalledWith(starterBundle, "hard");
@@ -693,7 +693,7 @@ describe("StoreModal cosmetic browser", () => {
     const items = [...dialog.querySelectorAll("[data-pack-contents-item]")];
     expect(
       items.map((item) => item.getAttribute("data-pack-contents-item")),
-    ).toEqual(["pattern:stripes", "flag:aurora"]);
+    ).toEqual(["pattern:stripes:red", "flag:aurora"]);
     expect(items[1].querySelector("cosmetic-preview")).toBeTruthy();
     expect(items[1].textContent).toContain("Aurora");
     // Each item says what kind of cosmetic it is.
