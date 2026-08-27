@@ -128,7 +128,7 @@ export class GameManager {
   activeClients(): number {
     let totalClients = 0;
     this.games.forEach((game: GameServer) => {
-      totalClients += game.activeClients.length;
+      totalClients += game.numClients();
     });
     return totalClients;
   }

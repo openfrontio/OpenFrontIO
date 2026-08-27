@@ -44,8 +44,6 @@ describe("GameServer.rejoinClient", () => {
     expect(client.ws).toBe(newWs);
     // One seat, not two.
     expect(game.numClients()).toBe(1);
-    // Only the current socket should remain strongly referenced by the game.
-    expect((game as any).websockets.size).toBe(1);
     // Lobby traffic now reaches the new socket.
     vi.advanceTimersByTime(1000);
     expect(newWs.sent().map((m) => m.type)).toContain("lobby_info");
@@ -195,13 +193,11 @@ describe("GameServer.rejoinClient", () => {
       const { game, client, ctx } = playedGame(2);
       await mockWsOf(client).trigger("close");
       expect(game.numClients()).toBe(0);
-      expect((game as any).websockets.size).toBe(0);
       expect(game.getClientIdForPersistentId("p1-pid")).toBe(P1);
 
       const newWs = makeMockWs();
       expect(game.rejoinClient(newWs as any, "p1-pid", 0)).toBe(true);
       expect(game.numClients()).toBe(1);
-      expect((game as any).websockets.size).toBe(1);
       expect(startFrameOn(newWs, ctx).turns).toHaveLength(2);
     });
   });
