@@ -15,8 +15,6 @@ export function closeMobileSidebar() {
 export function initNavigation() {
   const showPage = (pageId: string) => {
     window.currentPageId = pageId;
-    // Inline pages scroll inside their modal, not the document (see styles.css)
-    document.body.classList.toggle("page-open", pageId !== "page-play");
 
     // Close mobile sidebar if a nav item was clicked
     closeMobileSidebar();
@@ -36,6 +34,11 @@ export function initNavigation() {
         visibleModal.classList.remove("block");
       }
     }
+
+    // Inline pages scroll inside their modal, not the document (see
+    // styles.css). Set after closing the previous modal: an inline modal's
+    // close() re-enters showPage("page-play"), which would clear this.
+    document.body.classList.toggle("page-open", pageId !== "page-play");
 
     // Handle page-play separately (it's not a page-content element)
     const pagePlayEl = document.getElementById("page-play");
