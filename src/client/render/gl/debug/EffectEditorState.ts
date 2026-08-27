@@ -11,6 +11,7 @@ import {
   NukeExplosionAttributesSchema,
   type NukeExplosionType,
   StructuresEffectAttributesSchema,
+  TRAIL_EFFECT_TYPES,
   TrailEffectAttributesSchema,
 } from "../../../../core/CosmeticSchemas";
 import { MAX_NUKE_EXPLOSION_COLORS } from "../../types";
@@ -41,6 +42,8 @@ export const EFFECT_EDITOR_TYPES: Record<EffectType, readonly string[]> = {
   nukeTrail: ["gradient", "transition", "spiral"],
   structures: ["gradient", "transition"],
   warship: ["gradient", "transition"],
+  train: ["gradient", "transition"],
+  railroad: ["gradient", "transition"],
   nukeExplosion: ["shockwave", "sparkles", "embers"],
 };
 
@@ -119,6 +122,11 @@ export function fieldsForType(
   return new Set(base);
 }
 
+/** Whether the slot is a trail (its attributes allow `spiral`). */
+function isTrailEffectType(effectType: EffectType): boolean {
+  return (TRAIL_EFFECT_TYPES as readonly string[]).includes(effectType);
+}
+
 /**
  * The catalog attributes described by a slot's state, validated through the
  * cosmetic schema so what the editor applies is exactly what the catalog
@@ -166,9 +174,9 @@ export function slotAttributes(
   const schema =
     effectType === "nukeExplosion"
       ? NukeExplosionAttributesSchema
-      : effectType === "structures" || effectType === "warship"
-        ? StructuresEffectAttributesSchema
-        : TrailEffectAttributesSchema;
+      : isTrailEffectType(effectType)
+        ? TrailEffectAttributesSchema
+        : StructuresEffectAttributesSchema;
   const parsed = schema.safeParse(candidate);
   if (!parsed.success) return null;
   return parsed.data as EffectAttributesFor<EffectType>;

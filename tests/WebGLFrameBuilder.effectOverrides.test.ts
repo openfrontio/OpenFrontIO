@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { WebGLFrameBuilder } from "../src/client/WebGLFrameBuilder";
 import {
   MAX_TRAIL_COLORS,
+  RAILROAD_EFFECT_BLOCK,
   STRUCTURES_EFFECT_BLOCK,
+  TRAIN_EFFECT_BLOCK,
 } from "../src/client/render/gl/utils/ColorUtils";
 
 const PALETTE_SIZE = 4096;
@@ -28,12 +30,10 @@ function setup() {
     setNukeTrailSpiral: () => {},
     clearNukeTrailSpiral: () => {},
   };
-  const countOf = (p: Float32Array) =>
-    p[
-      (STRUCTURES_EFFECT_BLOCK * MAX_TRAIL_COLORS * PALETTE_SIZE + LOCAL) * 4 +
-        3
-    ];
-  return { builder, gameView, uploads, countOf };
+  const countIn = (p: Float32Array, block: number) =>
+    p[(block * MAX_TRAIL_COLORS * PALETTE_SIZE + LOCAL) * 4 + 3];
+  const countOf = (p: Float32Array) => countIn(p, STRUCTURES_EFFECT_BLOCK);
+  return { builder, gameView, uploads, countOf, countIn };
 }
 
 describe("WebGLFrameBuilder effect overrides", () => {
@@ -75,6 +75,26 @@ describe("WebGLFrameBuilder effect overrides", () => {
     builder.syncPlayerEffects(gameView);
     expect(uploads).toHaveLength(2);
     expect(countOf(uploads[1])).toBe(3);
+  });
+
+  it("writes train and railroad overrides into their own palette blocks", () => {
+    const { builder, gameView, uploads, countIn } = setup();
+    builder.setEffectOverride("train", {
+      type: "gradient",
+      colors: ["#ff0000", "#ffffff", "#0000ff"],
+      colorSize: 5,
+      movementSpeed: 10,
+    });
+    builder.setEffectOverride("railroad", {
+      type: "transition",
+      colors: ["#ff0000", "#ffff00"],
+      frequency: 2,
+    });
+    builder.syncPlayerEffects(gameView);
+    expect(uploads).toHaveLength(1);
+    expect(countIn(uploads[0], TRAIN_EFFECT_BLOCK)).toBe(3);
+    expect(countIn(uploads[0], RAILROAD_EFFECT_BLOCK)).toBe(2);
+    expect(countIn(uploads[0], STRUCTURES_EFFECT_BLOCK)).toBe(0);
   });
 
   it("keeps an override-only player unresolved until the catalog loads", () => {

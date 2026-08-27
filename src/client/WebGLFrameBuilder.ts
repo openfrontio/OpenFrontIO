@@ -197,8 +197,8 @@ export class WebGLFrameBuilder {
   /**
    * Effect-editor overrides (debug GUI): catalog-shaped attributes that
    * replace the LOCAL player's equipped effect per type — this client's
-   * rendering only. Trail /
-   * structures / warship overrides are applied by syncPlayerEffects (the
+   * rendering only. Trail / structures / warship / train / railroad
+   * overrides are applied by syncPlayerEffects (the
    * local player is re-resolved on change); the nukeExplosion override is
    * applied per detonation in resolveDeadUnitExplosions.
    */
