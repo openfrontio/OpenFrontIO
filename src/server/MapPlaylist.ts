@@ -35,6 +35,11 @@ const MAX_PLAYER_COUNT = 125;
 
 // Share of public FFA games that run with overtime enabled.
 const OVERTIME_FFA_CHANCE = 0.25;
+// Every Nth scheduled public game (FFA, team and special alike, counted in
+// creation order) is trusted-only (GameConfig.trusted): only accounts the API
+// reports as trusted may join. A fixed rotation rather than a roll so the
+// lobbies on offer at any moment are never all locked.
+const TRUSTED_PUBLIC_EVERY = 4;
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: 2, weight: 10 },
@@ -141,7 +146,19 @@ export class MapPlaylist {
     team: [],
   };
 
+  // Scheduled public games handed out so far, across all types.
+  private scheduled = 0;
+
   public async gameConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
+    const config = await this.rollConfig(type);
+    this.scheduled++;
+    if (this.scheduled % TRUSTED_PUBLIC_EVERY === 0) {
+      config.trusted = true;
+    }
+    return config;
+  }
+
+  private async rollConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
     if (type === "special") {
       return this.getSpecialConfig();
     }

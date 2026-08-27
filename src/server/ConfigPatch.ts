@@ -23,6 +23,7 @@ const COPIED_KEYS = [
   "disabledUnits",
   "playerTeams",
   "allowedPublicIds",
+  "trusted",
   "doomsdayClock",
   "overtime",
   "anonymizeNames",

@@ -171,7 +171,7 @@ describe("GameServer.handleLiveStats", () => {
 
   it("ignores out-of-sync clients", () => {
     const { game, clients } = gameWithClients();
-    (game as any).outOfSyncClients = new Set(["client01"]);
+    (game as any).desync.record([clients[0]]);
     report(game, clients[0], 100, snapshot(10));
     report(game, clients[1], 100, snapshot(10));
     // Only client02's vote counted (1 of 3) -> no consensus.

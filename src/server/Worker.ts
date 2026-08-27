@@ -578,6 +578,7 @@ export async function startWorker() {
         let publicId: string | undefined;
         let friends: string[] = [];
         let ownedClanTags: string[] = [];
+        let trusted = false;
         let accountUsername:
           | { username?: string | null; usernameStatus?: string }
           | undefined;
@@ -605,6 +606,7 @@ export async function startWorker() {
           friends = result.response.player.friends;
           ownedClanTags = result.response.player.clans?.map((c) => c.tag) ?? [];
           accountUsername = result.response.player;
+          trusted = result.response.player.trustTier === "trusted";
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -678,6 +680,7 @@ export async function startWorker() {
           publicId,
           friends,
           clientMsg.spectator === true,
+          trusted,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
@@ -697,6 +700,12 @@ export async function startWorker() {
             workerId,
           });
           ws.close(1002, "You are not whitelisted");
+        } else if (joinResult === "not_trusted") {
+          log.info(`untrusted client tried to join game ${clientMsg.gameID}`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(1002, "Trusted account required");
         } else if (joinResult === "rejected") {
           log.info(`client rejected from game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,

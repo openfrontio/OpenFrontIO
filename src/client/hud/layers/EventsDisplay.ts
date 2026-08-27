@@ -329,10 +329,12 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     let otherPlayerDiplayName: string = "";
+    let otherPlayerSmallID: number | undefined;
     if (event.recipient !== null) {
       //'recipient' parameter contains sender ID or recipient ID
       const player = this.game.player(event.recipient);
       otherPlayerDiplayName = player ? player.displayName() : "";
+      otherPlayerSmallID = player?.smallID();
     }
 
     this.addEvent({
@@ -344,6 +346,7 @@ export class EventsDisplay extends LitElement implements Controller {
       highlight: true,
       type: MessageType.CHAT,
       unsafeDescription: false,
+      focusID: otherPlayerSmallID,
     });
     this.eventBus.emit(new PlaySoundEffectEvent("message"));
   }

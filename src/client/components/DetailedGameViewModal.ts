@@ -1,6 +1,7 @@
 import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../../core/Schemas";
 import { type DesktopUpdateState } from "../DesktopShell";
@@ -34,7 +35,13 @@ import {
   NUMERIC_TEAM_CONFIGS,
   saveFilterProfile,
 } from "./DetailedGameViewFilters";
-import { lobbyCard, mapAspectRatios } from "./LobbyCard";
+import {
+  canJoinTrustedLobby,
+  lobbyCard,
+  mapAspectRatios,
+  trustRequiredDialog,
+  viewerIsTrusted,
+} from "./LobbyCard";
 import { modalHeader } from "./ui/ModalHeader";
 import { styledSelect } from "./ui/StyledSelect";
 
@@ -100,6 +107,8 @@ export class DetailedGameViewModal extends BaseModal {
   @state() private selectedProfile = "";
   @state() private profileName = "";
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
+  @state() private viewerTrusted: boolean = false;
+  @state() private showTrustRequired: boolean = false;
 
   private serverTimeOffset = 0;
   private countdownTimer: number | null = null;
@@ -159,6 +168,7 @@ export class DetailedGameViewModal extends BaseModal {
       "desktop-update-state",
       this.onDesktopUpdateState,
     );
+    document.addEventListener("userMeResponse", this.onUserMe);
   }
 
   disconnectedCallback() {
@@ -166,12 +176,19 @@ export class DetailedGameViewModal extends BaseModal {
       "desktop-update-state",
       this.onDesktopUpdateState,
     );
+    document.removeEventListener("userMeResponse", this.onUserMe);
     this.onClose();
     super.disconnectedCallback();
   }
 
   private onDesktopUpdateState = (e: Event) => {
     this.desktopUpdateState = (e as CustomEvent<DesktopUpdateState>).detail;
+  };
+
+  private onUserMe = (e: Event) => {
+    this.viewerTrusted = viewerIsTrusted(
+      (e as CustomEvent<UserMeResponse | false>).detail,
+    );
   };
 
   // ---- Slot animation ----
@@ -247,6 +264,9 @@ export class DetailedGameViewModal extends BaseModal {
 
     return html`
       <div class="custom-scrollbar p-4 lg:p-6 flex flex-col gap-4">
+        ${this.showTrustRequired
+          ? trustRequiredDialog(() => (this.showTrustRequired = false))
+          : nothing}
         ${this.showFilters ? this.renderFilterPanel() : nothing}
         ${shown.length === 0
           ? html`<p class="py-12 text-center text-sm text-white/50">
@@ -395,6 +415,7 @@ export class DetailedGameViewModal extends BaseModal {
       // swallow the click that's supposed to make the update bar wiggle. join()
       // does the actual refusing.
       blocked: shouldBlockMultiplayerAction(this.desktopUpdateState),
+      viewerTrusted: this.viewerTrusted,
       onClick: () => this.join(lobby),
     });
   }
@@ -731,6 +752,12 @@ export class DetailedGameViewModal extends BaseModal {
     // leave the modal open and tell the player why, not vanish silently. This
     // sits above the hosted/public branch below so both paths are covered.
     if (this.blockedByUpdate()) return;
+    // Also before close(): the popup explains how to become trusted, so it
+    // must stay on screen with the browser rather than vanish with it.
+    if (!canJoinTrustedLobby(lobby, this.viewerTrusted)) {
+      this.showTrustRequired = true;
+      return;
+    }
     this.close();
 
     // Hosted lobbies are private games a subscriber listed publicly: joining

@@ -13,6 +13,7 @@ import "./components/clan/ClanGameHistoryView";
 import type { ClanGameHistoryCache } from "./components/clan/ClanGameHistoryView";
 import "./components/clan/ClanManageView";
 import "./components/clan/ClanMapView";
+import type { ClanMapView } from "./components/clan/ClanMapView";
 import "./components/clan/ClanMyRequestsView";
 import "./components/clan/ClanRequestsView";
 import type { ClanRole } from "./components/clan/ClanShared";
@@ -21,6 +22,7 @@ import "./components/ConfirmDialog";
 import "./components/CopyButton";
 import "./components/CurrencyDisplay";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { signedOutNotice } from "./components/ui/SignedOutNotice";
 import { modalRouter } from "./ModalRouter";
 import type { ProfileOrigin } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
@@ -61,6 +63,9 @@ export class ClanModal extends BaseModal {
 
   @state() private view: View = "list";
   @state() private loading = false;
+  // No session: the map and Browse still work; My Clans asks to sign in and
+  // the detail view offers sign-in instead of Join.
+  @state() private signedOut = false;
 
   @state() private myClans: ClanInfo[] = [];
   @state() private myPendingRequests: {
@@ -155,14 +160,18 @@ export class ClanModal extends BaseModal {
           title: translateText("clan_modal.title"),
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
+          rightContent:
+            this.activeTab === "map" ? this.fullscreenButton() : undefined,
         })
       : this.renderSubViewHeader();
   }
 
   protected renderBody() {
-    // The map fills the content box edge to edge; everything else is padded.
+    // The map fills the content box edge to edge and exactly to its height
+    // (the modal is an inline page, so the scroll area has a fixed height and
+    // anything taller scrolls); everything else is padded.
     const onMap = this.onListView && this.activeTab === "map";
-    return html`<div class=${onMap ? "" : "p-4 lg:p-[1.4rem]"}>
+    return html`<div class=${onMap ? "h-full" : "p-4 lg:p-[1.4rem]"}>
       ${this.renderInner()}
     </div>`;
   }
@@ -181,6 +190,34 @@ export class ClanModal extends BaseModal {
     }
     // Detail tabs: BaseModal already updated activeTab; renderInner reads it.
     // No additional side effects required here.
+  }
+
+  private fullscreenButton() {
+    const label = translateText("fullscreen.enter");
+    return html`<button
+      type="button"
+      data-testid="map-fullscreen"
+      title=${label}
+      aria-label=${label}
+      class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 bg-white/5 hover:bg-white/10 transition-all border border-white/10 text-white/70 hover:text-white"
+      @click=${() =>
+        this.querySelector<ClanMapView>("clan-map-view")?.enterFullscreen()}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="w-5 h-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"
+        />
+      </svg>
+    </button>`;
   }
 
   private tagPill(tag: string) {
@@ -299,7 +336,7 @@ export class ClanModal extends BaseModal {
     if (targetTag) {
       this.openDetail(targetTag.toUpperCase());
     }
-    this.loadMyClans({ allowGuest: Boolean(targetTag) });
+    this.loadMyClans();
   }
 
   protected onClose(): void {
@@ -319,36 +356,20 @@ export class ClanModal extends BaseModal {
     this.returningFromModalHandoff = false;
   }
 
-  private async loadMyClans(opts: { allowGuest?: boolean } = {}) {
+  private async loadMyClans() {
     this.loading = true;
     try {
       const me = await getUserMe();
       if (!this.isModalOpen) return;
       if (!me || Object.keys(me.user).length === 0) {
-        // The map is public (read-only without a token). Checked once the
-        // response is in, not when it was requested: the router opens inline
-        // modals arg-less first and only then with the URL's tab, so a guest
-        // deep-linked to `#modal=clan&tab=map` has reached the map by now.
-        if (opts.allowGuest || this.activeTab === "map") {
-          this.myPublicId = null;
-          this.myPendingRequests = [];
-          this.myClanRoles = new Map();
-          this.myClans = [];
-          return;
-        }
-        window.dispatchEvent(
-          new CustomEvent("show-message", {
-            detail: {
-              message: translateText("clan_modal.sign_in_for_clans"),
-              color: "red",
-              duration: 3000,
-            },
-          }),
-        );
-        this.close();
-        window.showPage?.("page-account");
+        this.signedOut = true;
+        this.myPublicId = null;
+        this.myPendingRequests = [];
+        this.myClanRoles = new Map();
+        this.myClans = [];
         return;
       }
+      this.signedOut = false;
       this.myPublicId = me.player.publicId;
       this.myPendingRequests = me.player.clanRequests ?? [];
       const roles = new Map<string, ClanRole>();
@@ -600,7 +621,9 @@ export class ClanModal extends BaseModal {
     // List view (map / my clans / browse) — header + tabs are rendered by o-modal
     if (this.activeTab === "map") {
       // Mounted only while open: the page polls its API while framed.
-      return this.isModalOpen ? html`<clan-map-view></clan-map-view>` : html``;
+      return this.isModalOpen
+        ? html`<clan-map-view class="block h-full"></clan-map-view>`
+        : html``;
     }
     return html`
       ${this.activeTab === "my-clans"
@@ -745,6 +768,12 @@ export class ClanModal extends BaseModal {
   }
 
   private renderMyClans() {
+    if (this.signedOut) {
+      return signedOutNotice(() => {
+        this.close();
+        window.showPage?.("page-account");
+      }, translateText("clan_modal.sign_in_for_clans"));
+    }
     const hasClans = this.myClans.length > 0;
     const hasRequests = this.myPendingRequests.length > 0;
 
