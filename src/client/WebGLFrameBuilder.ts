@@ -189,6 +189,12 @@ export class WebGLFrameBuilder {
     EffectAttributesFor<EffectType>
   >();
   /**
+   * Set once any override has been applied: the local player then resolves
+   * through the override path even after the last override is removed, so
+   * the entries it wrote get cleared (also when no catalog is loaded).
+   */
+  private effectOverridesUsed = false;
+  /**
    * Last spawn tile pushed to the renderer per smallID. Players can re-pick
    * spawn during the spawn phase, so this tracks the latest value rather than
    * just first-seen — re-uploads only when the tile actually changes.
@@ -256,6 +262,7 @@ export class WebGLFrameBuilder {
   ): void {
     if (attrs) this.effectOverrides.set(effectType, attrs);
     else this.effectOverrides.delete(effectType);
+    this.effectOverridesUsed = true;
     if (this.localPlayerSmallID !== 0) {
       this.effectResolved.delete(this.localPlayerSmallID);
     }
@@ -395,7 +402,7 @@ export class WebGLFrameBuilder {
     this.localPlayerSmallID = sid;
     this.view.setLocalPlayerID(sid);
     // Overrides set before the local player resolved apply to them now.
-    if (sid !== 0 && this.effectOverrides.size > 0) {
+    if (sid !== 0 && this.effectOverridesUsed) {
       this.effectResolved.delete(sid);
     }
     if (me) {
@@ -581,11 +588,13 @@ export class WebGLFrameBuilder {
       // Effect-editor overrides apply to the local player only and don't need
       // the catalog; everyone else waits for it (retry on a later tick).
       const overrides =
-        smallID === this.localPlayerSmallID && this.effectOverrides.size > 0
+        smallID === this.localPlayerSmallID && this.effectOverridesUsed
           ? this.effectOverrides
           : null;
       if (!catalog && !overrides) continue;
-      this.effectResolved.add(smallID);
+      // An override-only player (catalog still loading) is re-checked each
+      // tick so their real cosmetics resolve once the catalog arrives.
+      if (catalog) this.effectResolved.add(smallID);
 
       // Resolve each trail-styled effectType into its own block of the effect
       // palette. rowBase block*MAX_TRAIL_COLORS must match the consumer
@@ -608,7 +617,7 @@ export class WebGLFrameBuilder {
         if (!attrs) {
           // No effect for this block (or an override was just removed): a
           // zero count tells the shaders to fall back to the player color.
-          this.clearEffectEntry(smallID, rowBase);
+          if (this.clearEffectEntry(smallID, rowBase)) dirty = true;
           if (effectType === "nukeTrail")
             gameView.clearNukeTrailSpiral(smallID);
           return;
@@ -648,18 +657,30 @@ export class WebGLFrameBuilder {
           dirty = true;
         }
       });
-      // Overrides may have cleared entries, which writeEffectEntry doesn't report.
-      if (overrides) dirty = true;
     }
     if (dirty) this.view.updateEffectPalette(this.effectPalette);
   }
 
-  /** Zero an effect-palette entry (count 0 = no effect for that block). */
-  private clearEffectEntry(smallID: number, rowBase: number): void {
+  /**
+   * Zero an effect-palette entry (count 0 = no effect for that block).
+   * Returns whether anything changed, so a removed override re-uploads.
+   */
+  private clearEffectEntry(smallID: number, rowBase: number): boolean {
+    let changed = false;
     for (let r = 0; r < MAX_TRAIL_COLORS; r++) {
       const off = ((rowBase + r) * PALETTE_SIZE + smallID) * 4;
-      this.effectPalette.fill(0, off, off + 4);
+      for (let i = 0; i < 4; i++) {
+        if (this.setEffectFloat(off + i, 0)) changed = true;
+      }
     }
+    return changed;
+  }
+
+  /** Write one effect-palette float; returns whether the value changed. */
+  private setEffectFloat(index: number, value: number): boolean {
+    if (this.effectPalette[index] === value) return false;
+    this.effectPalette[index] = value;
+    return true;
   }
 
   /**
@@ -674,7 +695,8 @@ export class WebGLFrameBuilder {
    *   row 3.a = scalar1 (gradient: movementSpeed; others: unused).
    * colord doesn't throw on a bad color string (it returns black), so unparseable
    * colors are dropped — leaving an empty list, which falls back to the territory
-   * color rather than rendering black. Returns whether any color was written.
+   * color rather than rendering black. Returns whether the entry changed (so
+   * the caller re-uploads only when something is actually different).
    */
   private writeEffectEntry(
     smallID: number,
@@ -686,14 +708,6 @@ export class WebGLFrameBuilder {
       .filter((c) => c.isValid())
       .slice(0, MAX_TRAIL_COLORS)
       .map((c) => c.toRgb());
-    for (let r = 0; r < MAX_TRAIL_COLORS; r++) {
-      const off = ((rowBase + r) * PALETTE_SIZE + smallID) * 4;
-      const c = colors[r] ?? { r: 0, g: 0, b: 0 };
-      this.effectPalette[off] = c.r / 255;
-      this.effectPalette[off + 1] = c.g / 255;
-      this.effectPalette[off + 2] = c.b / 255;
-      this.effectPalette[off + 3] = 0;
-    }
     let styleId: number;
     let scalar0: number;
     let scalar1: number;
@@ -710,13 +724,18 @@ export class WebGLFrameBuilder {
       scalar0 = attrs.colorSize;
       scalar1 = attrs.movementSpeed;
     }
-    const alpha = (row: number) =>
-      ((rowBase + row) * PALETTE_SIZE + smallID) * 4 + 3;
-    this.effectPalette[alpha(0)] = colors.length;
-    this.effectPalette[alpha(1)] = styleId;
-    this.effectPalette[alpha(2)] = scalar0;
-    this.effectPalette[alpha(3)] = scalar1;
-    return colors.length > 0;
+    // Rows 0..3 carry the scalars in their alpha channel; the rest are 0.
+    const alphas = [colors.length, styleId, scalar0, scalar1];
+    let changed = false;
+    for (let r = 0; r < MAX_TRAIL_COLORS; r++) {
+      const off = ((rowBase + r) * PALETTE_SIZE + smallID) * 4;
+      const c = colors[r] ?? { r: 0, g: 0, b: 0 };
+      if (this.setEffectFloat(off, c.r / 255)) changed = true;
+      if (this.setEffectFloat(off + 1, c.g / 255)) changed = true;
+      if (this.setEffectFloat(off + 2, c.b / 255)) changed = true;
+      if (this.setEffectFloat(off + 3, alphas[r] ?? 0)) changed = true;
+    }
+    return changed;
   }
 
   private writePaletteEntry(
