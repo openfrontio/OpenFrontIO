@@ -61,13 +61,41 @@ describe("GameServer.rejoinClient", () => {
   it("does not accept messages from a kicked socket before close fires", async () => {
     const game = makeGame();
     const client = makeClient({ clientID: P1, persistentID: "p1-pid" });
+    const ws = mockWsOf(client);
     expect(game.joinClient(client)).toBe("joined");
 
+    // Model the real close handshake: kickClient() has revoked the session,
+    // but the socket can still be OPEN while close is being processed.
+    ws.close.mockImplementation(() => {});
     game.kickClient(P1);
-    await mockWsOf(client).emit({
+    expect(ws.readyState).toBe(ws.OPEN);
+    await ws.emit({
       type: "intent",
       intent: { type: "attack", targetID: null, troops: null },
     });
+
+    expect((game as any).intents).not.toContainEqual(
+      expect.objectContaining({ type: "attack" }),
+    );
+  });
+
+  it("ignores a message queued on the old socket after reconnect", async () => {
+    const game = makeGame();
+    const client = makeClient({ clientID: P1, persistentID: "p1-pid" });
+    const oldWs = mockWsOf(client);
+    expect(game.joinClient(client)).toBe("joined");
+
+    // Keep the old socket open so the stale-socket guard, rather than the
+    // readyState guard, rejects the already-queued callback.
+    oldWs.close.mockImplementation(() => {});
+    const queued = oldWs.queue({
+      type: "intent",
+      intent: { type: "attack", targetID: null, troops: null },
+    });
+    const newWs = makeMockWs();
+    expect(game.rejoinClient(newWs as any, "p1-pid")).toBe(true);
+
+    await queued;
 
     expect((game as any).intents).not.toContainEqual(
       expect.objectContaining({ type: "attack" }),

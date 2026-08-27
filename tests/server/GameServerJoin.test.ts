@@ -56,6 +56,27 @@ describe("GameServer.joinClient — environment guards", () => {
       ]);
     });
 
+    it("keeps the replacement session responsive after the duplicate kick", async () => {
+      vi.spyOn(ServerEnv, "env").mockReturnValue(GameEnv.Prod);
+      const game = makeGame();
+      const first = account("first2");
+      const second = account("second2");
+      expect(game.joinClient(first)).toBe("joined");
+      expect(game.joinClient(second)).toBe("joined");
+
+      await mockWsOf(second).emit({
+        type: "intent",
+        intent: { type: "attack", targetID: null, troops: null },
+      });
+
+      expect((game as any).intents).toContainEqual(
+        expect.objectContaining({
+          type: "attack",
+          clientID: second.clientID,
+        }),
+      );
+    });
+
     it("bans the account's persistentID as a side effect (current behaviour)", () => {
       // kickClient() records the persistentID, and the survivor shares it: the
       // seated session can no longer be looked up or reconnected. Pinned so a

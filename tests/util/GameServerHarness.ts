@@ -60,6 +60,8 @@ export interface MockWs {
   trigger: (event: string, ...args: any[]) => Promise<void>;
   /** Drive the socket the way a connected client would. */
   emit: (msg: ClientMessage) => Promise<void>;
+  /** Queue a message using the listeners currently attached to the socket. */
+  queue: (msg: ClientMessage) => Promise<void>;
   /** Every frame the server sent, decoded. Pass the game's dictionary context
    *  for frames sent after the start message (see Wire.ts). */
   sent: (ctx?: ZbContext) => ServerMessage[];
@@ -95,6 +97,15 @@ export function makeMockWs(): MockWs {
       }
     },
     emit: (msg) => ws.trigger("message", clientFrame(msg)),
+    queue: (msg) => {
+      const handlers = [...(listeners.get("message") ?? [])];
+      const frame = clientFrame(msg);
+      return Promise.resolve().then(async () => {
+        for (const handler of handlers) {
+          await handler(frame);
+        }
+      });
+    },
     sent: (ctx) =>
       ws.send.mock.calls.map(([frame]) => decodeSentServerMessage(frame, ctx)),
   };

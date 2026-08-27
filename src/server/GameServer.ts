@@ -201,7 +201,11 @@ export class GameServer {
   // fetch lands (undefined until then / on fetch failure / non-public games).
   private tribes?: Tribe[];
 
+  // Persistent IDs are account-level bans and may be shared by a replacement
+  // connection. Keep the live-session kick state separate so a duplicate
+  // session kick does not mute the replacement client.
   private kickedPersistentIds: Set<string> = new Set();
+  private kickedClients: Set<Client> = new Set();
 
   private isPaused = false;
 
@@ -830,8 +834,8 @@ export class GameServer {
         if (
           ws.readyState !== WebSocket.OPEN ||
           client.ws !== ws ||
-          !this.activeClients.includes(client) ||
-          this.isKicked(client.clientID)
+          this.kickedClients.has(client) ||
+          !this.activeClients.includes(client)
         ) {
           return;
         }
@@ -1791,6 +1795,7 @@ export class GameServer {
     }
 
     this.kickedPersistentIds.add(clientToKick.persistentID);
+    this.kickedClients.add(clientToKick);
 
     const client = this.activeClients.find((c) => c.clientID === clientID);
     if (client) {
