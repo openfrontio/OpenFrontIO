@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameType } from "../../src/core/game/Game";
 import { ADMIN_BOT_CLIENT_ID } from "../../src/core/Schemas";
 import { GameServer } from "../../src/server/GameServer";
+import {
+  makeClient,
+  makeGame as makeJoinableGame,
+  mockWsOf,
+} from "../util/GameServerHarness";
 
 describe("GameServer.handleIntent (admin bot)", () => {
   let mockLogger: any;
@@ -134,11 +139,10 @@ describe("GameServer.handleIntent (admin bot)", () => {
     });
 
     it("resolves a publicID target to a connected client's clientID", () => {
-      const game = makeGame();
-      // A connected client is in both lists; allClients is the superset we match on.
-      const connected = { clientID: "liveCID1", publicId: "pubABCD1" };
-      (game as any).activeClients.push(connected);
-      (game as any).allClients.set("liveCID1", connected);
+      const game = makeJoinableGame();
+      game.joinClient(
+        makeClient({ clientID: "liveCID1", publicId: "pubABCD1" }),
+      );
       const spy = vi.spyOn(game, "kickClient").mockImplementation(() => {});
       const result = apply(game, {
         type: "kick_player",
@@ -148,24 +152,31 @@ describe("GameServer.handleIntent (admin bot)", () => {
       expect(spy).toHaveBeenCalledWith("liveCID1", expect.any(String));
     });
 
-    it("kicks a disconnected account by publicID via allClients (bans its persistentID)", () => {
-      const game = makeGame();
-      // Disconnected: still known to the game (allClients) but already dropped
-      // from activeClients on socket close. Must stay kickable so the
-      // persistentID ban fires and blocks a rejoin/reconnect.
-      (game as any).allClients.set("goneCID1", {
+    it("kicks a disconnected account by publicID (bans its persistentID)", async () => {
+      const game = makeJoinableGame();
+      // Disconnected: still known to the game but no longer connected after
+      // the socket close. Must stay kickable so the persistentID ban fires
+      // and blocks a rejoin/reconnect.
+      const gone = makeClient({
         clientID: "goneCID1",
         publicId: "pubGONE1",
         persistentID: "persist-gone-1",
       });
+      game.joinClient(gone);
+      await mockWsOf(gone).trigger("close");
+      expect(game.numClients()).toBe(0);
+
       const result = apply(game, {
         type: "kick_player",
         targetPublicID: "pubGONE1",
       } as any);
       expect(result.status).toBe(200);
-      expect((game as any).kickedPersistentIds.has("persist-gone-1")).toBe(
-        true,
-      );
+      expect(game.wasAdmitted("persist-gone-1")).toBe(false);
+      expect(
+        game.joinClient(
+          makeClient({ clientID: "goneCID2", persistentID: "persist-gone-1" }),
+        ),
+      ).toBe("kicked");
     });
 
     it("404s when no client matches the publicID", () => {

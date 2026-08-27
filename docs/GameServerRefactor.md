@@ -215,15 +215,26 @@ left reaches for `intents`, `isPaused`, `_hasStarted`, `websockets` and
 
 ## Phase 4 — Roster
 
-- [ ] `Roster.ts` collapsing the seven collections: `add`, `reconnect`,
-      `markLeft`, `kick`, `pruneStale(now)`, `active()`, `players()`,
-      `byPersistentId()`, `votingUniqueIPs()`, `wasAdmitted()`, `isKicked()`.
-- [ ] `GameServer` keeps the _policy_ (allowlist, IP cap, dup-session,
-      host-left) and delegates bookkeeping.
-- [ ] Make `activeClients` private; `GameManager.activeClients()` uses
+- [x] `Roster.ts` (2026-08-27) collapsing the seven collections: `add`,
+      `reconnect` (also swaps in the new socket and closes the old one),
+      `markLeft`, `forgetReconnect` (the lobby-phase seat release), `kick`,
+      `pruneStale`, `closeAll`, `active()`, `players()`, `all()`, `get()`,
+      `byPersistentId()` (raw: the kicked check is the caller's policy),
+      `votingUniqueIPs()`, `wasAdmitted()`, `isKicked()`, `isDisconnected()`
+      and `setDisconnected()`.
+- [x] `GameServer` keeps the _policy_ (allowlist, IP cap, dup-session,
+      host-left, the kicked checks on join and reconnect) and delegates the
+      bookkeeping to `this.clients` — `roster()` is already a public method.
+- [x] `activeClients` is no longer public; `GameManager.activeClients()` uses
       `numClients()`.
 
 Only after Phases 1–3: every roster path then has a test.
+
+Status (2026-08-27): done. `Roster.test.ts` covers the bookkeeping; the
+`websockets`, `allClients`, `kickedPersistentIds` and `activeClients`
+reach-ins in `GameServerRejoin.test.ts` and `AdminBotIntent.test.ts` are
+replaced by real joins and observable outcomes. Golden snapshot unchanged.
+`GameServer.ts` is 1888 lines; reach-ins 29.
 
 ## Phase 5 — Message ingress and intent dispatch
 

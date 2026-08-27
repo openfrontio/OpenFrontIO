@@ -51,6 +51,7 @@ import { DesyncDetector } from "./DesyncDetector";
 import { ListingState } from "./ListingState";
 import { identityFor, MatchTelemetryRecorder } from "./MatchTelemetryRecorder";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
+import { Roster } from "./Roster";
 import { ServerEnv } from "./ServerEnv";
 import {
   noopMatchTelemetryEmitter,
@@ -155,16 +156,9 @@ export class GameServer {
 
   private turns: Turn[] = [];
   private intents: StampedIntent[] = [];
-  public activeClients: Client[] = [];
-  private allClients: Map<ClientID, Client> = new Map();
-  // Map persistentID to clientID for reconnection lookup
-  private persistentIdToClientId: Map<string, ClientID> = new Map();
-  // persistentIDs that have passed authorization (incl. Turnstile) for this
-  // game at least once. Survives lobby-phase disconnects, unlike
-  // persistentIdToClientId (which is cleared to free up player slots). Lets a
-  // reconnecting player skip the single-use Turnstile re-check.
-  private admittedPersistentIds: Set<string> = new Set();
-  private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
+  // Who joined, who is connected, and the per-account reconnect, admission
+  // and kick flags (see Roster.ts). The join policy stays here.
+  private readonly clients = new Roster();
   private _hasStarted = false;
   private _startTime: number | null = null;
   private hasReachedMaxPlayerCount: boolean = false;
@@ -194,11 +188,7 @@ export class GameServer {
   // fetch lands (undefined until then / on fetch failure / non-public games).
   private tribes?: Tribe[];
 
-  private kickedPersistentIds: Set<string> = new Set();
-
   private isPaused = false;
-
-  private websockets: Set<WebSocket> = new Set();
 
   // The end-of-game winner vote and the running live-stats vote: both
   // IP-weighted majorities among the players (see Consensus.ts).
@@ -255,7 +245,7 @@ export class GameServer {
     this.names = new NameVisibility({
       gameID: opts.id,
       config: () => this.gameConfig,
-      clients: () => this.allClients,
+      clients: () => this.clients.all(),
       teamIndex: (c) => this.matchmakingTeamIndex(c),
     });
     this.log = opts.log.child({ gameID: opts.id });
@@ -279,7 +269,7 @@ export class GameServer {
 
   private get lobbyCreatorID(): ClientID | undefined {
     return this.creatorPersistentID
-      ? this.persistentIdToClientId.get(this.creatorPersistentID)
+      ? this.clients.byPersistentId(this.creatorPersistentID)?.clientID
       : undefined;
   }
 
@@ -309,7 +299,7 @@ export class GameServer {
       acceptedReasonCode?: string,
     ): IntentOutcome => {
       if (!actor.isAdminBot) {
-        const client = this.allClients.get(actor.clientID);
+        const client = this.clients.get(actor.clientID);
         if (client !== undefined) {
           const accepted = outcome.status === 200;
           this.telemetry.intentObserved(
@@ -359,12 +349,13 @@ export class GameServer {
           });
         }
         // Resolve the target to a clientID: an explicit clientID, or an account
-        // publicId matched against allClients (a superset of activeClients that
-        // retains disconnected players), so a disconnected account can still be
-        // kicked — its persistentID is banned, blocking rejoin/reconnect.
+        // publicId matched against everyone who ever joined (a superset of the
+        // connected that retains disconnected players), so a disconnected
+        // account can still be kicked — its persistentID is banned, blocking
+        // rejoin/reconnect.
         let target = stamped.targetClientID;
         if (target === undefined && stamped.targetPublicID !== undefined) {
-          target = [...this.allClients.values()].find(
+          target = [...this.clients.all().values()].find(
             (c) => c.publicId === stamped.targetPublicID,
           )?.clientID;
         }
@@ -496,18 +487,14 @@ export class GameServer {
   }
 
   private isKicked(clientID: ClientID): boolean {
-    const persistentID = this.allClients.get(clientID)?.persistentID;
-    return (
-      persistentID !== undefined && this.kickedPersistentIds.has(persistentID)
-    );
+    const persistentID = this.clients.get(clientID)?.persistentID;
+    return persistentID !== undefined && this.clients.isKicked(persistentID);
   }
 
   // Get existing clientID for this persistentID, or null if new player
   public getClientIdForPersistentId(persistentID: string): ClientID | null {
-    const clientID = this.persistentIdToClientId.get(persistentID);
-    if (!clientID) return null;
-    if (this.kickedPersistentIds.has(persistentID)) return null;
-    return clientID;
+    if (this.clients.isKicked(persistentID)) return null;
+    return this.clients.byPersistentId(persistentID)?.clientID ?? null;
   }
 
   // Whether this persistentID has already been admitted (passed Turnstile and
@@ -515,8 +502,7 @@ export class GameServer {
   // Turnstile re-check when an already-admitted player reconnects. Kicked
   // players are excluded so a kick still forces them back through the gate.
   public wasAdmitted(persistentID: string): boolean {
-    if (this.kickedPersistentIds.has(persistentID)) return false;
-    return this.admittedPersistentIds.has(persistentID);
+    return this.clients.wasAdmitted(persistentID);
   }
 
   // Screened identity stored for this player's client record, or null if
@@ -527,7 +513,7 @@ export class GameServer {
   ): { username: string; clanTag: string | null } | null {
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (clientID === null) return null;
-    const client = this.allClients.get(clientID);
+    const client = this.clients.get(clientID);
     if (client === undefined) return null;
     return { username: client.username, clanTag: client.clanTag };
   }
@@ -540,7 +526,7 @@ export class GameServer {
     if (this._hasEnded) {
       return "rejected";
     }
-    if (this.kickedPersistentIds.has(client.persistentID)) {
+    if (this.clients.isKicked(client.persistentID)) {
       return "kicked";
     }
 
@@ -602,9 +588,10 @@ export class GameServer {
     if (
       this.deps.env() !== GameEnv.Dev &&
       this.gameConfig.gameType === GameType.Public &&
-      this.activeClients.filter(
-        (c) => c.ip === client.ip && c.clientID !== client.clientID,
-      ).length >= 3
+      this.clients
+        .active()
+        .filter((c) => c.ip === client.ip && c.clientID !== client.clientID)
+        .length >= 3
     ) {
       this.log.warn("cannot add client, already have 3 ips", {
         clientID: client.clientID,
@@ -615,11 +602,13 @@ export class GameServer {
 
     if (this.deps.env() === GameEnv.Prod) {
       // Prevent multiple clients from using the same account in prod
-      const conflicting = this.activeClients.find(
-        (c) =>
-          c.persistentID === client.persistentID &&
-          c.clientID !== client.clientID,
-      );
+      const conflicting = this.clients
+        .active()
+        .find(
+          (c) =>
+            c.persistentID === client.persistentID &&
+            c.clientID !== client.clientID,
+        );
       if (conflicting !== undefined) {
         this.log.warn("client ids do not match", {
           clientID: client.clientID,
@@ -634,15 +623,11 @@ export class GameServer {
       }
     }
 
-    // Client connection accepted
-    this.websockets.add(client.ws);
-    this.persistentIdToClientId.set(client.persistentID, client.clientID);
-    this.admittedPersistentIds.add(client.persistentID);
-    this.activeClients.push(client);
+    // Client connection accepted. Added before the first
+    // markClientDisconnected: that call consults the roster to tell a
+    // spectator from a player.
+    this.clients.add(client);
     client.lastPing = Date.now();
-    // Registered before the first markClientDisconnected: that call consults the
-    // registry to tell a spectator from a player.
-    this.allClients.set(client.clientID, client);
     this.markClientDisconnected(client.clientID, false);
     this.telemetry.emit(
       "player_joined",
@@ -682,23 +667,12 @@ export class GameServer {
   ): boolean {
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (!clientID) return false;
-    const client = this.allClients.get(clientID);
+    const client = this.clients.get(clientID);
     if (!client) return false;
 
-    this.websockets.add(ws);
     this.log.info("client rejoining", { clientID, lastTurn });
-
-    // Close old WebSocket to prevent resource leaks
-    if (client.ws !== ws) {
-      this.websockets.delete(client.ws);
-      client.ws.removeAllListeners();
-      client.ws.close();
-    }
-
-    this.activeClients = this.activeClients.filter(
-      (c) => c.clientID !== client.clientID,
-    );
-    this.activeClients.push(client);
+    // Also closes the old WebSocket, to prevent resource leaks.
+    this.clients.reconnect(client, ws);
     if (identityUpdate && !this.hasStarted()) {
       // The verified badge vouches for the exact join name — a pre-start
       // identity change under it must drop the badge (the rejoin path skips
@@ -715,7 +689,6 @@ export class GameServer {
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
 
-    client.ws = ws;
     this.addListeners(client);
     this.startLobbyInfoBroadcast();
 
@@ -910,10 +883,7 @@ export class GameServer {
   }
 
   private handleClientDisconnect(client: Client) {
-    this.websockets.delete(client.ws);
-    this.activeClients = this.activeClients.filter(
-      (c) => c.clientID !== client.clientID,
-    );
+    this.clients.markLeft(client);
     this.checkWinnerAfterElectorateShrink();
 
     // hasStarted() includes prestart: during the lobby -> game transition
@@ -923,7 +893,7 @@ export class GameServer {
       return;
     }
     // Remove persistentId if the game has not started to prevent going over max players
-    this.persistentIdToClientId.delete(client.persistentID);
+    this.clients.forgetReconnect(client);
     // Close lobby when host leaves before game starts: without a host it can
     // never start, and a listed one would haunt the lobby browser and hold
     // the creator's one-listing quota. phase() reports Finished once ended,
@@ -932,7 +902,7 @@ export class GameServer {
       this.log.info("Host left, closing lobby", {
         gameID: this.id,
       });
-      for (const c of [...this.activeClients]) {
+      for (const c of [...this.clients.active()]) {
         this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
       }
       this._hasEnded = true;
@@ -946,7 +916,7 @@ export class GameServer {
   }
 
   public numClients(): number {
-    return this.activeClients.length;
+    return this.clients.active().length;
   }
 
   public numDesyncedClients(): number {
@@ -977,7 +947,7 @@ export class GameServer {
       connected: this.playerCount(),
       expected,
     });
-    for (const c of [...this.activeClients]) {
+    for (const c of [...this.clients.active()]) {
       this.kickClient(c.clientID, KICK_REASON_MATCH_CANCELLED);
     }
     // phase() reports Finished once ended, so GameManager's next tick prunes.
@@ -1006,7 +976,7 @@ export class GameServer {
     }
 
     const msg = encodeServerMessage(prestartMsg.data, this.zbinCtx);
-    this.activeClients.forEach((c) => {
+    this.clients.active().forEach((c) => {
       this.log.info("sending prestart message", {
         clientID: c.clientID,
         persistentID: c.persistentID,
@@ -1026,11 +996,13 @@ export class GameServer {
       return;
     }
     // Logged-in humans only — guests can't own tribe names.
-    const players = this.activeClients.flatMap((c) =>
-      c.publicId !== undefined
-        ? [{ clientId: c.clientID, publicId: c.publicId }]
-        : [],
-    );
+    const players = this.clients
+      .active()
+      .flatMap((c) =>
+        c.publicId !== undefined
+          ? [{ clientId: c.clientID, publicId: c.publicId }]
+          : [],
+      );
     this.deps
       .fetchTribes(players)
       .then((tribes) => {
@@ -1058,7 +1030,7 @@ export class GameServer {
       if (
         this._hasStarted ||
         this._hasEnded ||
-        this.activeClients.length === 0
+        this.clients.active().length === 0
       ) {
         this.stopLobbyInfoBroadcast();
         return;
@@ -1078,7 +1050,7 @@ export class GameServer {
   private broadcastLobbyInfo() {
     // Off: same payload for everyone (build once). On: per-recipient.
     const shared = this.gameConfig.anonymizeNames ? null : this.gameInfo();
-    this.activeClients.forEach((c) => {
+    this.clients.active().forEach((c) => {
       if (c.ws.readyState === WebSocket.OPEN) {
         const msg = encodeServerMessage(
           {
@@ -1118,7 +1090,7 @@ export class GameServer {
       } satisfies ServerNewLobbyMessage,
       this.zbinCtx,
     );
-    this.activeClients.forEach((c) => {
+    this.clients.active().forEach((c) => {
       if (c.ws.readyState === WebSocket.OPEN) {
         c.ws.send(msg);
       }
@@ -1135,7 +1107,7 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
-    const friendsFor = friendsLookup(this.activeClients);
+    const friendsFor = friendsLookup(this.clients.active());
 
     // allowedPublicIds / nameRevealPublicIds hold account publicIds and are
     // enforced server-side against this.gameConfig (joinClient / seesReal).
@@ -1150,17 +1122,15 @@ export class GameServer {
       lobbyCreatedAt: this.createdAt,
       visibleAt: this.visibleAt,
       config,
-      players: this.activeClients
-        .filter((c) => !c.spectator)
-        .map((c) => ({
-          username: c.username,
-          clanTag: c.clanTag ?? null,
-          clientID: c.clientID,
-          cosmetics: c.cosmetics,
-          isLobbyCreator: this.lobbyCreatorID === c.clientID,
-          friends: friendsFor(c),
-          teamIndex: this.matchmakingTeamIndex(c),
-        })),
+      players: this.clients.players().map((c) => ({
+        username: c.username,
+        clanTag: c.clanTag ?? null,
+        clientID: c.clientID,
+        cosmetics: c.cosmetics,
+        isLobbyCreator: this.lobbyCreatorID === c.clientID,
+        friends: friendsFor(c),
+        teamIndex: this.matchmakingTeamIndex(c),
+      })),
       tribes: this.tribes,
     });
     if (!result.success) {
@@ -1200,7 +1170,7 @@ export class GameServer {
       () => this.endTurn(),
       this.deps.turnIntervalMs(),
     );
-    this.activeClients.forEach((c) => {
+    this.clients.active().forEach((c) => {
       this.log.info("sending start message", {
         clientID: c.clientID,
         persistentID: c.persistentID,
@@ -1212,7 +1182,7 @@ export class GameServer {
   // Connected clients who will actually play. Spectators are excluded
   // everywhere a "player" is meant: the lobby cap, and gameStartInfo.
   private playerCount(): number {
-    return this.activeClients.filter((c) => !c.spectator).length;
+    return this.clients.players().length;
   }
 
   // ONE definition of who the allowlist admits, shared by every path that can
@@ -1253,17 +1223,6 @@ export class GameServer {
     // The lobby list is derived from this flag, so everyone's view of who is
     // playing has to be refreshed rather than waiting out the next tick.
     this.broadcastLobbyInfo();
-  }
-
-  // The electorate for the winner and live-stats votes. Spectators run the
-  // simulation but may not vote, so counting them would raise the bar for a
-  // majority without anyone able to meet it: five spectators watching four
-  // players make a strict majority of nine unreachable, and the game would
-  // never reach consensus, never archive, and never be scored.
-  private votingUniqueIPs(): number {
-    return new Set(
-      this.activeClients.filter((c) => !c.spectator).map((c) => c.ip),
-    ).size;
   }
 
   // Pin a publicId to a team slot after the lobby exists, so a lobby that fills
@@ -1323,7 +1282,7 @@ export class GameServer {
 
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
     // Find which client this websocket belongs to
-    const client = this.activeClients.find((c) => c.ws === ws);
+    const client = this.clients.active().find((c) => c.ws === ws);
     if (!client) {
       this.log.warn("Could not find client for websocket in sendStartGameMsg");
       return;
@@ -1401,7 +1360,7 @@ export class GameServer {
       } satisfies ServerTurnMessage,
       this.zbinCtx,
     );
-    this.activeClients.forEach((c) => {
+    this.clients.active().forEach((c) => {
       if (c.ws.readyState === c.ws.OPEN) {
         c.ws.send(msg);
       }
@@ -1415,11 +1374,7 @@ export class GameServer {
       clearInterval(this.endTurnIntervalID);
       this.endTurnIntervalID = undefined;
     }
-    this.websockets.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close(1000, "game has ended");
-      }
-    });
+    this.clients.closeAll("game has ended");
     if (!this._hasPrestarted && !this._hasStarted) {
       this.log.info(`game not started, not archiving game`);
       this.telemetry.matchFinished(this.turns.length);
@@ -1427,7 +1382,7 @@ export class GameServer {
     }
     this.log.info(`ending game with ${this.turns.length} turns`);
     try {
-      if (this.allClients.size === 0) {
+      if (this.clients.all().size === 0) {
         this.log.info("no clients joined, not archiving game", {
           gameID: this.id,
         });
@@ -1473,25 +1428,19 @@ export class GameServer {
       return GamePhase.Finished;
     }
     const now = Date.now();
-    const alive: Client[] = [];
-    for (const client of this.activeClients) {
-      if (now - client.lastPing > 60_000) {
-        this.log.info("no pings received, terminating connection", {
-          clientID: client.clientID,
-          persistentID: client.persistentID,
-        });
-        if (client.ws.readyState === WebSocket.OPEN) {
-          client.ws.close(1000, "no heartbeats received, closing connection");
-        }
-      } else {
-        alive.push(client);
+    const stale = this.clients.pruneStale(now, 60_000);
+    for (const client of stale) {
+      this.log.info("no pings received, terminating connection", {
+        clientID: client.clientID,
+        persistentID: client.persistentID,
+      });
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.close(1000, "no heartbeats received, closing connection");
       }
     }
     // On an abrupt network drop the ws 'close' event can lag far behind this
     // ping prune, so re-check the winner vote here too.
-    const pruned = alive.length < this.activeClients.length;
-    this.activeClients = alive;
-    if (pruned) {
+    if (stale.length > 0) {
       this.checkWinnerAfterElectorateShrink();
     }
     if (now > this.createdAt + this.maxGameDuration) {
@@ -1502,7 +1451,7 @@ export class GameServer {
     }
 
     const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
-    const noActive = this.activeClients.length === 0;
+    const noActive = this.clients.active().length === 0;
 
     const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
     if (
@@ -1529,7 +1478,7 @@ export class GameServer {
   public gameInfo(viewer?: ClientID): GameInfo {
     return {
       gameID: this.id,
-      clients: this.names.lobbyClients(viewer, this.activeClients),
+      clients: this.names.lobbyClients(viewer, this.clients.active()),
       lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,
@@ -1558,14 +1507,14 @@ export class GameServer {
    *  people played and identify none of them. Restricted to lobbies the admin bot
    *  created — never a public or matchmade game.
    *
-   *  allClients, not activeClients: someone who joined and left still appears in
-   *  the record the host has to reconcile against. */
+   *  Everyone who joined, not only the connected: someone who joined and left
+   *  still appears in the record the host has to reconcile against. */
   public roster(): {
     clientID: ClientID;
     publicId: string | undefined;
     username: string;
   }[] {
-    return [...this.allClients.values()].map((c) => ({
+    return [...this.clients.all().values()].map((c) => ({
       clientID: c.clientID,
       publicId: c.publicId,
       username: c.username,
@@ -1656,8 +1605,8 @@ export class GameServer {
       return;
     }
 
-    const clientToKick = this.allClients.get(clientID);
-    if (!clientToKick) {
+    const client = this.clients.get(clientID);
+    if (!client) {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
         reasonKey,
@@ -1665,10 +1614,9 @@ export class GameServer {
       return;
     }
 
-    this.kickedPersistentIds.add(clientToKick.persistentID);
-
-    const client = this.activeClients.find((c) => c.clientID === clientID);
-    if (client) {
+    // The persistentID is banned whether or not the client is still
+    // connected; only a connected one is told and cut off.
+    if (this.clients.kick(client)) {
       this.log.info("Kicking client from game", {
         clientID: client.clientID,
         persistentID: client.persistentID,
@@ -1686,9 +1634,6 @@ export class GameServer {
         );
         client.ws.close(1000, reasonKey);
       }
-      this.activeClients = this.activeClients.filter(
-        (c) => c.clientID !== clientID,
-      );
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
@@ -1703,7 +1648,7 @@ export class GameServer {
     }
 
     const now = Date.now();
-    for (const [clientID, client] of this.allClients) {
+    for (const [clientID, client] of this.clients.all()) {
       const isDisconnected = this.isClientDisconnected(clientID);
       if (!isDisconnected && now - client.lastPing > this.disconnectedTimeout) {
         this.markClientDisconnected(clientID, true);
@@ -1717,16 +1662,16 @@ export class GameServer {
   }
 
   public isClientDisconnected(clientID: string): boolean {
-    return this.clientsDisconnectedStatus.get(clientID) ?? true;
+    return this.clients.isDisconnected(clientID);
   }
 
   private markClientDisconnected(clientID: string, isDisconnected: boolean) {
-    this.clientsDisconnectedStatus.set(clientID, isDisconnected);
+    this.clients.setDisconnected(clientID, isDisconnected);
     // Connection status is tracked for every client, but only a player's reaches
     // the simulation: a spectator has no entry in gameStartInfo.players, so an
     // intent naming them refers to nobody — and it is kept in the archived turn
     // log, where readers take mark_disconnected as a player having dropped.
-    if (this.allClients.get(clientID)?.spectator) return;
+    if (this.clients.get(clientID)?.spectator) return;
     this.addIntent({
       type: "mark_disconnected",
       clientID: clientID,
@@ -1752,8 +1697,7 @@ export class GameServer {
           clientID: player.clientID,
           username: player.username,
           clanTag: player.clanTag,
-          persistentID:
-            this.allClients.get(player.clientID)?.persistentID ?? "",
+          persistentID: this.clients.get(player.clientID)?.persistentID ?? "",
           stats,
           cosmetics: player.cosmetics,
           // Simulation inputs: teamIndex pins matchmade teams, friends bias
@@ -1784,7 +1728,7 @@ export class GameServer {
   }
 
   private handleSynchronization() {
-    const check = this.desync.check(this.turns.length, this.activeClients);
+    const check = this.desync.check(this.turns.length, this.clients.active());
     if (check === null) {
       return;
     }
@@ -1800,8 +1744,8 @@ export class GameServer {
       turn,
       correctHash: mostCommonHash,
       clientsWithCorrectHash:
-        this.activeClients.length - outOfSyncClients.length,
-      totalActiveClients: this.activeClients.length,
+        this.clients.active().length - outOfSyncClients.length,
+      totalActiveClients: this.clients.active().length,
     });
     if (!serverDesync.success) {
       this.log.warn("failed to create desync message", {
@@ -1835,7 +1779,7 @@ export class GameServer {
     }
     client.reportedWinner = clientMsg.winner;
 
-    const activeUniqueIPs = this.votingUniqueIPs();
+    const activeUniqueIPs = this.clients.votingUniqueIPs();
     const { key: winnerKey, votes } = this.winnerVote.cast(
       clientMsg,
       client.ip,
@@ -1874,7 +1818,7 @@ export class GameServer {
     if (this.winnerVote.winner() !== null || this._hasEnded) {
       return;
     }
-    const activeIPs = new Set(this.activeClients.map((c) => c.ip));
+    const activeIPs = new Set(this.clients.active().map((c) => c.ip));
     const result = this.winnerVote.tallyAmong(activeIPs);
     if (result === null) {
       return;
@@ -1903,7 +1847,7 @@ export class GameServer {
       client.clientID,
       client.ip,
       clientMsg.stats,
-      this.votingUniqueIPs(),
+      this.clients.votingUniqueIPs(),
     );
   }
 
@@ -1931,7 +1875,7 @@ export class GameServer {
       turn: latest.turn,
       winner: w?.[0] === "player" ? w[1] : null,
       players: latest.players.map((p) => {
-        const client = this.allClients.get(p.clientID);
+        const client = this.clients.get(p.clientID);
         return {
           ...p,
           username: client?.username ?? null,
