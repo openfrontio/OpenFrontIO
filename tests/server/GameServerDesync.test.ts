@@ -11,9 +11,10 @@ import {
   startGame,
 } from "../util/GameServerHarness";
 
-// Characterization tests for desync detection: the hash tally itself
-// (findOutOfSyncClients) and what the turn loop does with its verdict every
-// ten turns. See docs/GameServerRefactor.md, Phase 1.
+// Characterization tests for what the turn loop does with the desync
+// verdict every ten turns: the desync frame, the desync count, and the hash
+// recorded on an agreed turn. The tally itself is covered in
+// DesyncDetector.test.ts. See docs/GameServerRefactor.md, Phase 1.
 
 const TURN_MS = 100;
 const IDS = ["a", "b", "c", "d"].map(cid);
@@ -30,84 +31,6 @@ function lobbyWith(count: number) {
   for (const c of clients) game.joinClient(c);
   return { game, clients };
 }
-
-describe("GameServer.findOutOfSyncClients", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.clearAllTimers();
-    vi.useRealTimers();
-  });
-
-  it("flags the minority that disagrees with the majority hash", async () => {
-    const { game, clients } = lobbyWith(3);
-    const [a, b, c] = clients;
-    await reportHash(a, 0, 1);
-    await reportHash(b, 0, 1);
-    await reportHash(c, 0, 2);
-
-    const result = game.findOutOfSyncClients(0);
-    expect(result.mostCommonHash).toBe(1);
-    expect(result.outOfSyncClients).toEqual([c]);
-  });
-
-  it("treats everyone as out of sync when no hash has a majority", async () => {
-    // Three different answers: whichever hash was seen first "wins" the
-    // count, but with a strict majority disagreeing nobody can be trusted.
-    const { game, clients } = lobbyWith(3);
-    const [a, b, c] = clients;
-    await reportHash(a, 0, 1);
-    await reportHash(b, 0, 2);
-    await reportHash(c, 0, 3);
-
-    const result = game.findOutOfSyncClients(0);
-    expect(result.mostCommonHash).toBe(1);
-    expect(result.outOfSyncClients).toEqual([a, b, c]);
-  });
-
-  it("keeps an even split as-is, siding with the first-seen hash", async () => {
-    // Two of four is not a STRICT majority, so only the second pair is
-    // flagged rather than the whole room.
-    const { game, clients } = lobbyWith(4);
-    const [a, b, c, d] = clients;
-    await reportHash(a, 0, 1);
-    await reportHash(b, 0, 1);
-    await reportHash(c, 0, 2);
-    await reportHash(d, 0, 2);
-
-    const result = game.findOutOfSyncClients(0);
-    expect(result.mostCommonHash).toBe(1);
-    expect(result.outOfSyncClients).toEqual([c, d]);
-  });
-
-  it("ignores clients that have not reported that turn", async () => {
-    const { game, clients } = lobbyWith(3);
-    const [a, b] = clients;
-    await reportHash(a, 0, 1);
-    await reportHash(b, 0, 1);
-    await reportHash(b, 1, 7); // a different turn does not count either
-
-    const result = game.findOutOfSyncClients(0);
-    expect(result.mostCommonHash).toBe(1);
-    expect(result.outOfSyncClients).toEqual([]);
-  });
-
-  it("has nothing to compare with one report, or none", async () => {
-    const { game, clients } = lobbyWith(1);
-    expect(game.findOutOfSyncClients(0)).toEqual({
-      mostCommonHash: null,
-      outOfSyncClients: [],
-    });
-
-    await reportHash(clients[0], 0, 1);
-    expect(game.findOutOfSyncClients(0)).toEqual({
-      mostCommonHash: 1,
-      outOfSyncClients: [],
-    });
-  });
-});
 
 describe("desync handling in the turn loop", () => {
   beforeEach(() => {
