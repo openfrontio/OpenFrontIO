@@ -1,60 +1,53 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
 import { PlayerLiveStats } from "../../src/core/Schemas";
 import { registerAdminBotRoutes } from "../../src/server/AdminBotRoutes";
-import { GameServer } from "../../src/server/GameServer";
+import { Client } from "../../src/server/Client";
 import { ServerEnv } from "../../src/server/ServerEnv";
+import {
+  makeClient,
+  makeGame,
+  mockWsOf,
+  startGame,
+} from "../util/GameServerHarness";
+
+const TURN_MS = 100;
 
 describe("GameServer.handleLiveStats", () => {
-  let mockLogger: any;
-
   beforeEach(() => {
     vi.useFakeTimers();
-    mockLogger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    vi.setSystemTime(1_700_000_000_000);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
-  function makeClient(clientID: string, ip: string, username: string) {
-    return {
-      clientID,
-      ip,
-      persistentID: `pid-${clientID}`,
-      username,
-      publicId: clientID.replace("client", "public"), // 8-char ID, e.g. public01
-    } as any;
-  }
-
-  // A GameServer with three distinct-IP active clients wired up.
+  // A game with three distinct-IP players in the lobby.
   function gameWithClients() {
-    const game = new GameServer({
-      id: "test-game",
-      log: mockLogger,
-      createdAt: Date.now(),
-      gameConfig: { gameType: GameType.Private } as any,
-    });
+    const game = makeGame();
     const clients = [
-      makeClient("client01", "1.1.1.1", "Alice"),
-      makeClient("client02", "2.2.2.2", "Bob"),
-      makeClient("client03", "3.3.3.3", "Carol"),
+      makeClient({
+        clientID: "client01",
+        ip: "1.1.1.1",
+        username: "Alice",
+        publicId: "public01",
+      }),
+      makeClient({
+        clientID: "client02",
+        ip: "2.2.2.2",
+        username: "Bob",
+        publicId: "public02",
+      }),
+      makeClient({
+        clientID: "client03",
+        ip: "3.3.3.3",
+        username: "Carol",
+        publicId: "public03",
+      }),
     ];
-    (game as any).activeClients = clients;
-    const allClients = new Map<string, unknown>();
-    const disconnected = new Map<string, boolean>();
-    for (const c of clients) {
-      allClients.set(c.clientID, c);
-      disconnected.set(c.clientID, false); // all connected
-    }
-    (game as any).allClients = allClients;
-    (game as any).clientsDisconnectedStatus = disconnected;
+    for (const c of clients) game.joinClient(c);
     return { game, clients };
   }
 
@@ -71,26 +64,19 @@ describe("GameServer.handleLiveStats", () => {
     },
   ];
 
-  const report = (
-    game: GameServer,
-    client: any,
-    turn: number,
-    players: PlayerLiveStats[],
-  ) =>
-    (game as any).handleLiveStats(client, {
-      type: "live_stats",
-      stats: { turn, players },
-    });
+  // What a client does every ~10s: send its snapshot of the board.
+  const report = (client: Client, turn: number, players: PlayerLiveStats[]) =>
+    mockWsOf(client).emit({ type: "live_stats", stats: { turn, players } });
 
-  it("reaches consensus at a strict majority and enriches usernames", () => {
+  it("reaches consensus at a strict majority and enriches usernames", async () => {
     const { game, clients } = gameWithClients();
     const players = snapshot(10);
 
-    report(game, clients[0], 100, players);
+    await report(clients[0], 100, players);
     // 1 of 3 IPs -> not yet.
     expect(game.liveStats()).toBeNull();
 
-    report(game, clients[1], 100, players);
+    await report(clients[1], 100, players);
     // 2 of 3 IPs -> consensus.
     expect(game.liveStats()).toEqual({
       turn: 100,
@@ -106,55 +92,60 @@ describe("GameServer.handleLiveStats", () => {
     });
   });
 
-  it("reports server-side connection status per player", () => {
+  it("reports server-side connection status per player", async () => {
     const { game, clients } = gameWithClients();
-    // client01 (the only player in the snapshot) has dropped.
-    (game as any).clientsDisconnectedStatus.set("client01", true);
+    startGame(game);
+    // client01 (the only player in the snapshot) went quiet: the turn loop
+    // marks them disconnected at the next 5-turn boundary.
+    clients[0].lastPing = Date.now() - 31_000;
+    vi.advanceTimersByTime(5 * TURN_MS);
+    expect(game.isClientDisconnected("client01")).toBe(true);
+
     const players = snapshot(10);
-    report(game, clients[0], 100, players);
-    report(game, clients[1], 100, players);
+    await report(clients[0], 100, players);
+    await report(clients[1], 100, players);
     expect(game.liveStats()?.players[0].connected).toBe(false);
   });
 
-  it("does not reach consensus when clients disagree", () => {
+  it("does not reach consensus when clients disagree", async () => {
     const { game, clients } = gameWithClients();
-    report(game, clients[0], 100, snapshot(10));
-    report(game, clients[1], 100, snapshot(20));
-    report(game, clients[2], 100, snapshot(30));
+    await report(clients[0], 100, snapshot(10));
+    await report(clients[1], 100, snapshot(20));
+    await report(clients[2], 100, snapshot(30));
     expect(game.liveStats()).toBeNull();
   });
 
-  it("ignores a second vote from the same client in a turn", () => {
+  it("ignores a second vote from the same client in a turn", async () => {
     const { game, clients } = gameWithClients();
-    report(game, clients[0], 100, snapshot(10));
+    await report(clients[0], 100, snapshot(10));
     // Same client trying to back a different snapshot is ignored, so neither
     // candidate can reach a majority from this one client.
-    report(game, clients[0], 100, snapshot(20));
-    report(game, clients[1], 100, snapshot(20));
+    await report(clients[0], 100, snapshot(20));
+    await report(clients[1], 100, snapshot(20));
     expect(game.liveStats()).toBeNull();
   });
 
-  it("ignores stats for a turn already settled", () => {
+  it("ignores stats for a turn already settled", async () => {
     const { game, clients } = gameWithClients();
     const players = snapshot(10);
-    report(game, clients[0], 100, players);
-    report(game, clients[1], 100, players);
+    await report(clients[0], 100, players);
+    await report(clients[1], 100, players);
     expect(game.liveStats()?.turn).toBe(100);
 
     // Late/old turns must not overwrite the latest snapshot.
-    report(game, clients[0], 50, snapshot(99));
-    report(game, clients[1], 50, snapshot(99));
+    await report(clients[0], 50, snapshot(99));
+    await report(clients[1], 50, snapshot(99));
     expect(game.liveStats()?.turn).toBe(100);
   });
 
-  it("advances to a newer turn once it reaches consensus", () => {
+  it("advances to a newer turn once it reaches consensus", async () => {
     const { game, clients } = gameWithClients();
-    report(game, clients[0], 100, snapshot(10));
-    report(game, clients[1], 100, snapshot(10));
+    await report(clients[0], 100, snapshot(10));
+    await report(clients[1], 100, snapshot(10));
     expect(game.liveStats()?.turn).toBe(100);
 
-    report(game, clients[0], 200, snapshot(42));
-    report(game, clients[1], 200, snapshot(42));
+    await report(clients[0], 200, snapshot(42));
+    await report(clients[1], 200, snapshot(42));
     expect(game.liveStats()).toEqual({
       turn: 200,
       winner: null,
@@ -169,11 +160,19 @@ describe("GameServer.handleLiveStats", () => {
     });
   });
 
-  it("ignores out-of-sync clients", () => {
+  it("ignores out-of-sync clients", async () => {
     const { game, clients } = gameWithClients();
-    (game as any).desync.record([clients[0]]);
-    report(game, clients[0], 100, snapshot(10));
-    report(game, clients[1], 100, snapshot(10));
+    startGame(game);
+    // client01 reports a different hash for turn 0 than the other two; the
+    // check ten turns later marks them desynced.
+    await mockWsOf(clients[0]).emit({ type: "hash", hash: 1, turnNumber: 0 });
+    await mockWsOf(clients[1]).emit({ type: "hash", hash: 2, turnNumber: 0 });
+    await mockWsOf(clients[2]).emit({ type: "hash", hash: 2, turnNumber: 0 });
+    vi.advanceTimersByTime(10 * TURN_MS);
+    expect(game.numDesyncedClients()).toBe(1);
+
+    await report(clients[0], 100, snapshot(10));
+    await report(clients[1], 100, snapshot(10));
     // Only client02's vote counted (1 of 3) -> no consensus.
     expect(game.liveStats()).toBeNull();
   });

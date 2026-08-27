@@ -21,7 +21,6 @@ import {
   GameStartInfoSchema,
   HOSTED_LOBBY_AUTO_START_MS,
   Intent,
-  LiveStats,
   LobbyAccent,
   PartialGameRecord,
   PlayerLiveStats,
@@ -48,6 +47,7 @@ import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
 import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
+import { LiveStatsVote, WinnerVote } from "./Consensus";
 import { fetchCustomTribes } from "./CustomTribes";
 import { DesyncDetector } from "./DesyncDetector";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
@@ -60,7 +60,6 @@ import {
   type MatchTelemetryType,
   type TelemetryPlayerIdentity,
 } from "./telemetry/MatchTelemetry";
-import { VoteRound } from "./VoteTally";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -178,8 +177,6 @@ export class GameServer {
 
   private lastPingUpdate = 0;
 
-  private winner: ClientSendWinnerMessage | null = null;
-
   // Note: This can be undefined if accessed before the game starts.
   private gameStartInfo!: GameStartInfo;
   // Wire-only copy of gameStartInfo sent to clients. Identical to
@@ -207,17 +204,10 @@ export class GameServer {
 
   private websockets: Set<WebSocket> = new Set();
 
-  private winnerVotes = new VoteRound<ClientSendWinnerMessage>();
-
-  // Per-turn consensus on the live stats snapshot (see handleLiveStats).
-  // Tallies are keyed by turn number; an entry is removed once consensus is
-  // reached for that turn (or a later one) so the map stays small.
-  private liveStatsVotes: Map<
-    number,
-    { round: VoteRound<LiveStats>; voters: Set<ClientID> }
-  > = new Map();
-  private latestLiveStats: LiveStats | null = null;
-  private static readonly MAX_PENDING_LIVE_STATS_ROUNDS = 20;
+  // The end-of-game winner vote and the running live-stats vote: both
+  // IP-weighted majorities among the players (see Consensus.ts).
+  private readonly winnerVote = new WinnerVote();
+  private readonly liveStatsVote = new LiveStatsVote();
 
   private _hasEnded = false;
 
@@ -1523,7 +1513,7 @@ export class GameServer {
         this.log.info("no clients joined, not archiving game", {
           gameID: this.id,
         });
-      } else if (this.winner !== null) {
+      } else if (this.winnerVote.winner() !== null) {
         this.log.info("game already archived", {
           gameID: this.id,
         });
@@ -1844,15 +1834,16 @@ export class GameServer {
   }
 
   private archiveGame() {
+    const winner = this.winnerVote.winner();
     this.log.info("archiving game", {
       gameID: this.id,
-      winner: this.winner?.winner,
+      winner: winner?.winner,
     });
 
     // Players must stay in the same order as the game start info.
     const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
       (player) => {
-        const stats = this.winner?.allPlayersStats[player.clientID];
+        const stats = winner?.allPlayersStats[player.clientID];
         if (stats === undefined) {
           this.log.warn(`Unable to find stats for clientID ${player.clientID}`);
         }
@@ -1883,7 +1874,7 @@ export class GameServer {
         this.turns,
         this._startTime ?? 0,
         Date.now(),
-        this.winner?.winner,
+        winner?.winner,
         this.createdAt,
         this.visibleAt,
         this.gameStartInfo.tribes,
@@ -1936,18 +1927,18 @@ export class GameServer {
     if (
       this.desync.isDesynced(client.clientID) ||
       this.isKicked(client.clientID) ||
-      this.winner !== null ||
+      this.winnerVote.winner() !== null ||
       client.reportedWinner !== null
     ) {
       return;
     }
     client.reportedWinner = clientMsg.winner;
 
-    // Add client vote. A cancelled match ends with winner omitted;
-    // JSON.stringify(undefined) is not a string, so key those votes as "null".
-    const winnerKey = JSON.stringify(clientMsg.winner ?? null);
     const activeUniqueIPs = this.votingUniqueIPs();
-    const votes = this.winnerVotes.add(winnerKey, clientMsg, client.ip);
+    const { key: winnerKey, votes } = this.winnerVote.cast(
+      clientMsg,
+      client.ip,
+    );
 
     this.log.info(
       `received winner vote ${clientMsg.winner}, ${votes}/${activeUniqueIPs} votes for this winner`,
@@ -1956,13 +1947,12 @@ export class GameServer {
       },
     );
 
-    const result = this.winnerVotes.result(activeUniqueIPs);
+    const result = this.winnerVote.tally(activeUniqueIPs);
     if (result === null) {
       return;
     }
 
     // Vote succeeded
-    this.winner = result.value;
     this.log.info(
       `Winner determined by ${result.votes}/${activeUniqueIPs} active IPs`,
       {
@@ -1980,15 +1970,14 @@ export class GameServer {
   // winnerless (e.g. game s5bcKtj8). Re-tally whenever the electorate
   // shrinks, counting only votes from still-active IPs (see resultAmong).
   private checkWinnerAfterElectorateShrink() {
-    if (this.winner !== null || this._hasEnded) {
+    if (this.winnerVote.winner() !== null || this._hasEnded) {
       return;
     }
     const activeIPs = new Set(this.activeClients.map((c) => c.ip));
-    const result = this.winnerVotes.resultAmong(activeIPs);
+    const result = this.winnerVote.tallyAmong(activeIPs);
     if (result === null) {
       return;
     }
-    this.winner = result.value;
     this.log.info(
       `Winner determined by ${result.votes}/${activeIPs.size} active IPs after electorate shrank`,
     );
@@ -2009,52 +1998,12 @@ export class GameServer {
     ) {
       return;
     }
-    const stats = clientMsg.stats;
-    const turn = stats.turn;
-    // Ignore turns we've already reached consensus on (or older ones).
-    if (this.latestLiveStats !== null && turn <= this.latestLiveStats.turn) {
-      return;
-    }
-
-    let entry = this.liveStatsVotes.get(turn);
-    if (entry === undefined) {
-      entry = { round: new VoteRound<LiveStats>(), voters: new Set() };
-      this.liveStatsVotes.set(turn, entry);
-      this.pruneLiveStatsVotes();
-    }
-    // One vote per client per turn.
-    if (entry.voters.has(client.clientID)) {
-      return;
-    }
-    entry.voters.add(client.clientID);
-
-    const activeUniqueIPs = this.votingUniqueIPs();
-    entry.round.add(JSON.stringify(stats), stats, client.ip);
-    const result = entry.round.result(activeUniqueIPs);
-    if (result === null) {
-      return;
-    }
-
-    this.latestLiveStats = result.value;
-    // This turn (and any older still-pending ones) are now settled.
-    for (const t of this.liveStatsVotes.keys()) {
-      if (t <= turn) {
-        this.liveStatsVotes.delete(t);
-      }
-    }
-  }
-
-  // Bound the pending-vote map in case consensus is never reached for some
-  // turns (e.g. a persistent desync). Maps iterate in insertion order and turns
-  // arrive ascending, so this drops the oldest pending rounds.
-  private pruneLiveStatsVotes() {
-    while (
-      this.liveStatsVotes.size > GameServer.MAX_PENDING_LIVE_STATS_ROUNDS
-    ) {
-      const oldest = this.liveStatsVotes.keys().next().value;
-      if (oldest === undefined) break;
-      this.liveStatsVotes.delete(oldest);
-    }
+    this.liveStatsVote.cast(
+      client.clientID,
+      client.ip,
+      clientMsg.stats,
+      this.votingUniqueIPs(),
+    );
   }
 
   // Latest majority-agreed live stats snapshot, with players enriched with
@@ -2072,14 +2021,15 @@ export class GameServer {
       connected: boolean;
     })[];
   } | null {
-    if (this.latestLiveStats === null) {
+    const latest = this.liveStatsVote.latest();
+    if (latest === null) {
       return null;
     }
-    const w = this.winner?.winner;
+    const w = this.winnerVote.winner()?.winner;
     return {
-      turn: this.latestLiveStats.turn,
+      turn: latest.turn,
       winner: w?.[0] === "player" ? w[1] : null,
-      players: this.latestLiveStats.players.map((p) => {
+      players: latest.players.map((p) => {
         const client = this.allClients.get(p.clientID);
         return {
           ...p,

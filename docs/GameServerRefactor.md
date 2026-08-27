@@ -132,10 +132,9 @@ spy `ServerEnv`, and a throw inside `handleWinner`'s catch silently drops the
 archive. The harness `makeGame` defaults `archive` and `fetchTribes` to inert
 spies; pass `deps: { archive }` to read the record. Golden frames unchanged
 (the snapshot lost only the three deployment stamps). No `vi.mock` of
-`Archive`/`CustomTribes` remains. `archiveGame` is still spied in
-`WinnerVoteRetally` and `ArchivePlayerRecord`, which assemble game state by
-hand rather than joining and starting; they move with Phase 3's `Consensus`
-extraction and a wire/record-based rewrite.
+`Archive`/`CustomTribes` remains. (`archiveGame` stayed spied in
+`WinnerVoteRetally` and `ArchivePlayerRecord` until Phase 3's `Consensus`
+extraction rewrote them through real joins and starts.)
 
 ## Phase 3 — Extract pure modules (lowest risk first)
 
@@ -186,7 +185,14 @@ Status:
       vote guards read the detector. The tally tests moved from
       `GameServerDesync.test.ts` to `DesyncDetector.test.ts` (plus cadence and
       record tests); the turn-loop tests stay through `GameServer`.
-- [ ] `Consensus.ts`
+- [x] `Consensus.ts` (2026-08-26): `WinnerVote` (`cast`, `tally`,
+      `tallyAmong`, decided once) and `LiveStatsVote` (`cast` per client per
+      turn with the twenty-round window, `latest`). `GameServer` keeps the
+      desync / kick guards, `reportedWinner`, the electorate, the logging and
+      `archiveGame`, in the original order. The last two `archiveGame` spies
+      are gone: `WinnerVoteRetally`, the `GameServer` half of `LiveStats` and
+      `ArchivePlayerRecord` now join real clients, start, vote over the wire
+      and read the record off the injected `archive`. Reach-ins 68 → 36.
 - [ ] `ListingState.ts`
 - [ ] `MatchTelemetryRecorder.ts`
 
