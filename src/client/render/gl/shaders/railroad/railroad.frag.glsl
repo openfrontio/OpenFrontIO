@@ -7,9 +7,17 @@ uniform usampler2D uGhostRailTex;    // R8UI — ghost rail type per tile (0=non
 uniform usampler2D uTileTex;         // R16UI — tile state (for owner lookup)
 uniform sampler2D  uPalette;         // RGBA32F — player colors
 uniform usampler2D uTerrainTex;      // R8UI — terrain bytes (bit 7 = isLand)
+uniform sampler2D  uEffect;          // RGBA32F — shared effect palette, keyed by
+                                     //   ownerID. The railroad block starts at
+                                     //   row RAILROAD_EFFECT_ROW_BASE; same
+                                     //   layout as trail.frag.glsl (row r =
+                                     //   color r's rgb; row 0.a = count,
+                                     //   1.a = styleId, 2.a = scalar0,
+                                     //   3.a = scalar1)
 
 uniform vec2 uMapSize;
 uniform float uZoom;
+uniform float uTime;                 // seconds, for animated effect styles
 uniform float uRailDetailZoom;
 uniform float uRailAlpha;
 uniform float uRailFade;             // Zoom-based fade multiplier (0..1)
@@ -17,6 +25,7 @@ uniform float uRailThickness;        // Track width multiplier (1 = default)
 uniform float uGhostOwnerID;         // Player smallID for ghost rail color
 uniform float uLocalPlayerID;        // Local player smallID (0 = none)
 uniform vec3 uLocalRailColor;        // Rail color for the local player's rails
+uniform float uHoverOwner;           // Hovered territory's owner smallID (0 = none)
 
 in vec2 vWorldPos;
 out vec4 fragColor;
@@ -108,6 +117,48 @@ float railLineCoverage(uint rt, vec2 p) {
   return 1.0 - smoothstep(halfW - aa, halfW + aa, railLineDist(rt, p));
 }
 
+// The owner's railroad cosmetic color, if equipped. Reads the railroad block
+// of the shared effect palette with trail semantics (rails are static map
+// geometry like trails): the gradient/transition math mirrors trail.frag.glsl
+// so the same catalog attributes look identical on both. Returns false when
+// the owner has no railroad effect (count 0).
+bool railroadEffectColor(int owner, out vec3 color) {
+  const int rowBase = RAILROAD_EFFECT_ROW_BASE;
+  int count = int(texelFetch(uEffect, ivec2(owner, rowBase), 0).a + 0.5);
+  if (count <= 0) return false;
+  if (count == 1) {
+    // Single color — flat recolor.
+    color = texelFetch(uEffect, ivec2(owner, rowBase), 0).rgb;
+  } else if (int(texelFetch(uEffect, ivec2(owner, rowBase + 1), 0).a + 0.5) == 1) {
+    // transition — the whole track is one color at a time, cross-fading
+    // through the list. frequency = color changes per second.
+    float frequency = texelFetch(uEffect, ivec2(owner, rowBase + 2), 0).a;
+    float t = uTime * frequency;
+    int i = int(t) % count;
+    int j = (i + 1) % count;
+    vec3 a = texelFetch(uEffect, ivec2(owner, rowBase + i), 0).rgb;
+    vec3 b = texelFetch(uEffect, ivec2(owner, rowBase + j), 0).rgb;
+    color = mix(a, b, fract(t));
+  } else {
+    // gradient — cyclic gradient banded across the map (world-space
+    // diagonal), scrolling over time so the colors travel along the track.
+    // colorSize = band width in tiles; movementSpeed = tiles/sec the bands
+    // travel.
+    float colorSize = max(texelFetch(uEffect, ivec2(owner, rowBase + 2), 0).a, 0.001);
+    float movementSpeed = texelFetch(uEffect, ivec2(owner, rowBase + 3), 0).a;
+    float cycle = colorSize * float(count);
+    float phase =
+      fract((vWorldPos.x + vWorldPos.y - uTime * movementSpeed) / cycle);
+    float f = phase * float(count);
+    int i = int(f) % count;
+    int j = (i + 1) % count;
+    vec3 a = texelFetch(uEffect, ivec2(owner, rowBase + i), 0).rgb;
+    vec3 b = texelFetch(uEffect, ivec2(owner, rowBase + j), 0).rgb;
+    color = mix(a, b, fract(f));
+  }
+  return true;
+}
+
 void main() {
   ivec2 tc = ivec2(floor(vWorldPos));
 
@@ -172,6 +223,18 @@ void main() {
       : (owner == uint(uLocalPlayerID)
         ? uLocalRailColor
         : texture(uPalette, vec2((float(owner) + 0.5) / float(PALETTE_SIZE), 0.75)).rgb);
+    // railroad cosmetic: rails are colored by the tile owner, so the owner's
+    // railroad effect (raw catalog colors, like trails) replaces that color —
+    // including the local player's white/black rail color. Like the
+    // structures effect it shows while the owner's territory is hovered, and
+    // always for the local player (touch devices never hover, and buyers
+    // should see what they paid for).
+    vec3 effectRGB;
+    if (owner != 0u &&
+        (owner == uint(uLocalPlayerID) || owner == uint(uHoverOwner + 0.5)) &&
+        railroadEffectColor(int(owner), effectRGB)) {
+      railColor = effectRGB;
+    }
     // Overlapping railroad highlight — green tint
     if (highlighted) railColor = vec3(0.2, 0.85, 0.3);
     if (hitBridge) {

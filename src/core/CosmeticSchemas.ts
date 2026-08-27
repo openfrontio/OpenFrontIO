@@ -15,8 +15,8 @@ export type CosmeticPack = z.infer<typeof CosmeticPackSchema>;
 export type CosmeticPackItem = z.infer<typeof CosmeticPackItemSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 // An effect cosmetic of any type — discriminated on effectType (today
-// transportShipTrail + nukeTrail + nukeExplosion + structures + warship;
-// gains a member per effectType).
+// transportShipTrail + nukeTrail + nukeExplosion + structures + warship +
+// train + railroad; gains a member per effectType).
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = z.infer<typeof EffectTypeSchema>;
 /** The catalog attribute shape of effects of the given effectType. */
@@ -37,6 +37,12 @@ export type StructuresEffectAttributes = z.infer<
 // Attributes of a warship effect (recolors warship sprites, not a trail).
 export type WarshipEffectAttributes = z.infer<
   typeof WarshipEffectAttributesSchema
+>;
+// Attributes of a train effect (recolors train sprites, not a trail).
+export type TrainEffectAttributes = z.infer<typeof TrainEffectAttributesSchema>;
+// Attributes of a railroad effect (recolors railroad tracks, not a trail).
+export type RailroadEffectAttributes = z.infer<
+  typeof RailroadEffectAttributesSchema
 >;
 export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
@@ -131,6 +137,8 @@ export const EFFECT_TYPES = [
   "nukeExplosion",
   "structures",
   "warship",
+  "train",
+  "railroad",
 ] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 
@@ -303,6 +311,40 @@ const WarshipEffectSchema = CosmeticSchema.extend({
   url: z.string().optional(),
 });
 
+// Train-effect attributes: the same gradient/transition shapes as the trail
+// effects, with trail (world-space) semantics — a train is a line of tiny
+// sprites, so "gradient" bands the map like a trail (colorSize = band width in
+// tiles, movementSpeed = tiles/sec) and runs along the whole train;
+// "transition" cross-fades every car.
+export const TrainEffectAttributesSchema = StructuresEffectAttributesSchema;
+
+// Recolors the owner's trains (engine and carriages) with gradient /
+// transition styles. Always visible, like the warship effect. Train sprites
+// are tiny and the engine is drawn entirely in the border band, so the effect
+// recolors both bands (border band darkened) rather than just the fill.
+const TrainEffectSchema = CosmeticSchema.extend({
+  effectType: z.literal("train"),
+  attributes: TrainEffectAttributesSchema,
+  url: z.string().optional(),
+});
+
+// Railroad-effect attributes: the same gradient/transition shapes as the
+// trail effects, with trail (world-space) semantics — rails are static map
+// geometry, so "gradient" bands the map like a trail (colorSize = band width
+// in tiles, movementSpeed = tiles/sec) and "transition" cross-fades the
+// whole track.
+export const RailroadEffectAttributesSchema = StructuresEffectAttributesSchema;
+
+// Recolors railroad tracks on the owner's territory with gradient / transition
+// styles (rails are colored by the tile owner, so the effect follows that).
+// Like the structures effect, shown while the owner's territory is hovered
+// and always for the local player.
+const RailroadEffectSchema = CosmeticSchema.extend({
+  effectType: z.literal("railroad"),
+  attributes: RailroadEffectAttributesSchema,
+  url: z.string().optional(),
+});
+
 // Any catalog effect, discriminated on effectType. Add a member per effectType.
 export const EffectSchema = z.discriminatedUnion("effectType", [
   TransportShipTrailEffectSchema,
@@ -310,6 +352,8 @@ export const EffectSchema = z.discriminatedUnion("effectType", [
   NukeExplosionEffectSchema,
   StructuresEffectSchema,
   WarshipEffectSchema,
+  TrainEffectSchema,
+  RailroadEffectSchema,
 ]);
 
 /**
@@ -333,8 +377,8 @@ export function isNukeExplosionEffect(
 
 /**
  * A player selects one effect per "slot". A slot is the effectType itself for
- * per-type effects (transportShipTrail, nukeTrail, structures, warship) and the
- * nukeType for nuke explosions (atom, hydro, mirvWarhead) — so a player can
+ * per-type effects (transportShipTrail, nukeTrail, structures, warship, train,
+ * railroad) and the nukeType for nuke explosions (atom, hydro, mirvWarhead) — so a player can
  * equip a distinct explosion per bomb. Returns the effectType a slot resolves
  * to for catalog lookup, or undefined for an unknown/stale slot (e.g. a bare
  * "nukeExplosion" key from before the per-nukeType split).
@@ -481,6 +525,8 @@ export const CosmeticsSchema = z.object({
       nukeExplosion: lenientRecord(NukeExplosionEffectSchema).optional(),
       structures: lenientRecord(StructuresEffectSchema).optional(),
       warship: lenientRecord(WarshipEffectSchema).optional(),
+      train: lenientRecord(TrainEffectSchema).optional(),
+      railroad: lenientRecord(RailroadEffectSchema).optional(),
     })
     .optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),

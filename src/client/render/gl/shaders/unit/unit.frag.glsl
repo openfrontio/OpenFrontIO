@@ -6,10 +6,12 @@ uniform sampler2D uAtlas;
 uniform sampler2D uAffiliation;   // 256×2 RGBA8 — row 1 = unit affiliation
 uniform sampler2D uEffect;        // RGBA32F — shared effect palette, keyed by
                                   //   ownerID. The warship block starts at row
-                                  //   WARSHIP_EFFECT_ROW_BASE; same layout as
-                                  //   structure.frag.glsl (row r = color r's rgb;
-                                  //   row 0.a = count, 1.a = styleId,
-                                  //   2.a = scalar0, 3.a = scalar1)
+                                  //   WARSHIP_EFFECT_ROW_BASE and the train
+                                  //   block at TRAIN_EFFECT_ROW_BASE; same
+                                  //   layout as trail/structure.frag.glsl (row r =
+                                  //   color r's rgb; row 0.a = count,
+                                  //   1.a = styleId, 2.a = scalar0,
+                                  //   3.a = scalar1)
 uniform float uTime;              // seconds, for animated effect styles
 uniform float uTick;
 uniform float uFlickerSpeed;
@@ -22,6 +24,7 @@ uniform float uUntargetableAlpha;
 
 in vec2  vQuadPos;
 in vec2  vCellUV;
+in vec2  vWorldPos;
 flat in float vAtlasCol;
 flat in float vOwnerID;
 flat in float vFlags;
@@ -48,12 +51,16 @@ const vec3 FLICKER_COLORS[4] = vec3[4](
   vec3(1.0, 1.0, 1.0)    // white
 );
 
-// The owner's warship cosmetic color, if equipped. Reads the warship block of
-// the shared effect palette; the gradient/transition math mirrors
-// structure.frag.glsl so the same catalog attributes look identical on both.
-// Returns false when the owner has no warship effect (count 0).
-bool warshipEffectColor(int owner, out vec3 color) {
-  const int rowBase = WARSHIP_EFFECT_ROW_BASE;
+// The owner's sprite cosmetic color, if equipped, from the effect-palette
+// block starting at row rowBase (the warship or train block). Returns false
+// when the owner has no effect in that block (count 0).
+//
+// `coord` positions the gradient: with iconSpace the caller passes the sprite
+// diagonal in 0..1 (the palette spans the sprite once, sliding one cycle every
+// colorSize · count / movementSpeed seconds — structure.frag.glsl semantics);
+// otherwise it passes the world diagonal x + y (colorSize = band width in
+// tiles, movementSpeed = tiles/sec — trail.frag.glsl semantics).
+bool spriteEffectColor(int rowBase, int owner, float coord, bool iconSpace, out vec3 color) {
   int count = int(texelFetch(uEffect, ivec2(owner, rowBase), 0).a + 0.5);
   if (count <= 0) return false;
   if (count == 1) {
@@ -70,15 +77,13 @@ bool warshipEffectColor(int owner, out vec3 color) {
     vec3 b = texelFetch(uEffect, ivec2(owner, rowBase + j), 0).rgb;
     color = mix(a, b, fract(t));
   } else {
-    // gradient — the palette spans the sprite's diagonal once (vCellUV is the
-    // sprite cell, 0..1), sliding one full cycle every
-    // colorSize · count / movementSpeed seconds — the same icon-space
-    // semantics as the structures effect.
+    // gradient — cyclic palette along `coord` (see above), scrolling over
+    // time.
     float colorSize = max(texelFetch(uEffect, ivec2(owner, rowBase + 2), 0).a, 0.001);
     float movementSpeed = texelFetch(uEffect, ivec2(owner, rowBase + 3), 0).a;
-    float dn = (vCellUV.x + vCellUV.y) * 0.5; // sprite diagonal, 0..1
-    float phase =
-      fract(dn - uTime * movementSpeed / (colorSize * float(count)));
+    float cycle = colorSize * float(count);
+    float c = iconSpace ? coord : coord / cycle;
+    float phase = fract(c - uTime * movementSpeed / cycle);
     float f = phase * float(count);
     int i = int(f) % count;
     int j = (i + 1) % count;
@@ -143,8 +148,27 @@ void main() {
   // blink still darkens the center band.
   if (abs(vAtlasCol - float(WARSHIP_COL)) < 0.1) {
     vec3 effectRGB;
-    if (warshipEffectColor(int(vOwnerID + 0.5), effectRGB)) {
+    float dn = (vCellUV.x + vCellUV.y) * 0.5; // sprite diagonal, 0..1
+    if (spriteEffectColor(WARSHIP_EFFECT_ROW_BASE, int(vOwnerID + 0.5), dn, true, effectRGB)) {
       territoryColor = effectRGB;
+    }
+  }
+
+  // train cosmetic: the train sprites (engine, carriage, loaded carriage) are
+  // the last three atlas columns. The engine is drawn entirely in the border
+  // band and the carriages are a border-band frame around a territory-band
+  // fill, so recolor both bands — the border band darkened — to keep that
+  // engine/frame/fill structure while the whole train takes the effect.
+  // The gradient is world-space (like trails and the railroad effect): the
+  // 5×5 train sprites fill only the middle of the 13-tile unit cell, so an
+  // icon-space gradient would show a sliver of the palette per car, whereas a
+  // world-space one runs along the whole train.
+  if (vAtlasCol > float(TRAIN_FIRST_COL) - 0.1) {
+    vec3 effectRGB;
+    float diag = vWorldPos.x + vWorldPos.y;
+    if (spriteEffectColor(TRAIN_EFFECT_ROW_BASE, int(vOwnerID + 0.5), diag, false, effectRGB)) {
+      territoryColor = effectRGB;
+      borderColor = effectRGB * 0.6;
     }
   }
 

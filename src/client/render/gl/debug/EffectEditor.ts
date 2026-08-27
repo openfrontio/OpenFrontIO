@@ -1,11 +1,11 @@
 /**
  * Effect Editor — the debug GUI folder for tuning cosmetic effects live in
  * a running game. Each sub-folder edits one effect slot (trails, structures,
- * warship, nuke explosion) in the catalog's own attribute shape; enabling a
- * slot overrides the local player's equipped effect of that type via
- * WebGLFrameBuilder.setEffectOverride, so the result shows on your own
- * units / bombs (client-side rendering only — nobody else sees it). "Copy
- * catalog JSON" puts a paste-ready entry on the clipboard.
+ * warship, train, railroad, nuke explosion) in the catalog's own attribute
+ * shape; enabling a slot overrides the local player's equipped effect of that
+ * type via WebGLFrameBuilder.setEffectOverride, so the result shows on your
+ * own units / bombs / rails (client-side rendering only — nobody else sees
+ * it). "Copy catalog JSON" puts a paste-ready entry on the clipboard.
  */
 
 import type GUI from "lil-gui";
@@ -38,6 +38,8 @@ const SLOT_LABELS: Record<EffectType, string> = {
   nukeTrail: "Nuke Trail",
   structures: "Structures",
   warship: "Warship",
+  train: "Train",
+  railroad: "Railroad",
   nukeExplosion: "Nuke Explosion",
 };
 

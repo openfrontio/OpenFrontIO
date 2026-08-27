@@ -33,7 +33,9 @@ import {
 import {
   EFFECT_PALETTE_BLOCKS,
   MAX_TRAIL_COLORS,
+  RAILROAD_EFFECT_BLOCK,
   STRUCTURES_EFFECT_BLOCK,
+  TRAIN_EFFECT_BLOCK,
   WARSHIP_EFFECT_BLOCK,
 } from "./render/gl/utils/ColorUtils";
 import {
@@ -61,10 +63,12 @@ const SMALL_PLAYER_GLOW_RESCAN_TICKS = 10;
 // trail.frag.glsl picks its block from the trail tile's nuke bit — block 0 =
 // transportShipTrail (nuke bit 0), block 1 = nukeTrail (nuke bit 1, set by
 // NUKE_TRAIL_BIT in TrailManager) — structure.frag.glsl reads block
-// STRUCTURES_EFFECT_BLOCK (2), and unit.frag.glsl reads block
-// WARSHIP_EFFECT_BLOCK (3). Reordering TRAIL_EFFECT_TYPES in CosmeticSchemas
-// (or moving the structures/warship blocks) would silently swap effect colors,
-// so these guards fail the build if the shader-coupled order ever drifts.
+// STRUCTURES_EFFECT_BLOCK (2), unit.frag.glsl reads blocks
+// WARSHIP_EFFECT_BLOCK (3) and TRAIN_EFFECT_BLOCK (4), and railroad.frag.glsl
+// reads block RAILROAD_EFFECT_BLOCK (5). Reordering TRAIL_EFFECT_TYPES in
+// CosmeticSchemas (or moving the structures/warship/train/railroad blocks)
+// would silently swap effect colors, so these guards fail the build if the
+// shader-coupled order ever drifts.
 const _EFFECT_BLOCK_ORDER: readonly ["transportShipTrail", "nukeTrail"] =
   TRAIL_EFFECT_TYPES;
 void _EFFECT_BLOCK_ORDER;
@@ -72,6 +76,10 @@ const _STRUCTURES_BLOCK_IS_2: 2 = STRUCTURES_EFFECT_BLOCK;
 void _STRUCTURES_BLOCK_IS_2;
 const _WARSHIP_BLOCK_IS_3: 3 = WARSHIP_EFFECT_BLOCK;
 void _WARSHIP_BLOCK_IS_3;
+const _TRAIN_BLOCK_IS_4: 4 = TRAIN_EFFECT_BLOCK;
+void _TRAIN_BLOCK_IS_4;
+const _RAILROAD_BLOCK_IS_5: 5 = RAILROAD_EFFECT_BLOCK;
+void _RAILROAD_BLOCK_IS_5;
 
 // Attribute → render-param mappings:
 //   size      = the ring's final WIDTH (diameter) in world tiles when it fades
@@ -122,23 +130,32 @@ export function attributesToExplosionParams(
 
 /**
  * A player's equipped catalog effect for a palette-rendered effect type
- * (trails / structures / warship), or undefined when none is equipped or the
+ * (trails / structures / warship / train / railroad), or undefined when none is equipped or the
  * catalog entry isn't of that shape.
  */
 function catalogEffectAttributes(
   catalog: Cosmetics,
   p: PlayerView,
-  effectType: "transportShipTrail" | "nukeTrail" | "structures" | "warship",
+  effectType:
+    | "transportShipTrail"
+    | "nukeTrail"
+    | "structures"
+    | "warship"
+    | "train"
+    | "railroad",
 ): PaletteEffectAttributes | undefined {
   const selected = p.cosmetics.effects?.[effectType];
   if (!selected) return undefined;
   const effect = findEffect(catalog, effectType, selected.name);
   if (!effect || effect.effectType !== effectType) return undefined;
-  // Narrows attributes to trail attrs (structures/warship share the shape).
+  // Narrows attributes to trail attrs (structures/warship/train/railroad
+  // share the shape).
   if (
     !isTrailEffect(effect) &&
     effect.effectType !== "structures" &&
-    effect.effectType !== "warship"
+    effect.effectType !== "warship" &&
+    effect.effectType !== "train" &&
+    effect.effectType !== "railroad"
   ) {
     return undefined;
   }
@@ -161,9 +178,10 @@ export class WebGLFrameBuilder {
   // Per-player effect palette, keyed by smallID. Layout is
   // 4096×(MAX_TRAIL_COLORS·EFFECT_PALETTE_BLOCKS): block 0 (rows 0–7) =
   // transportShipTrail, block 1 (rows 8–15) = nukeTrail, block 2 (rows 16–23)
-  // = structures, block 3 (rows 24–31) = warship. Consumed by TrailPass (block
-  // from the trail tile's nuke bit), StructurePass (block 2), and UnitPass
-  // (block 3).
+  // = structures, block 3 (rows 24–31) = warship, block 4 (rows 32–39) =
+  // train, block 5 (rows 40–47) = railroad. Consumed by TrailPass (block from
+  // the trail tile's nuke bit), StructurePass (block 2), UnitPass (blocks 3
+  // and 4), and RailroadPass (block 5).
   private readonly effectPalette: Float32Array;
   private readonly patternMeta: Float32Array;
   private readonly patternData: Uint8Array;
@@ -179,8 +197,8 @@ export class WebGLFrameBuilder {
   /**
    * Effect-editor overrides (debug GUI): catalog-shaped attributes that
    * replace the LOCAL player's equipped effect per type — this client's
-   * rendering only. Trail /
-   * structures / warship overrides are applied by syncPlayerEffects (the
+   * rendering only. Trail / structures / warship / train / railroad
+   * overrides are applied by syncPlayerEffects (the
    * local player is re-resolved on change); the nukeExplosion override is
    * applied per detonation in resolveDeadUnitExplosions.
    */
@@ -602,13 +620,16 @@ export class WebGLFrameBuilder {
       // Resolve each trail-styled effectType into its own block of the effect
       // palette. rowBase block*MAX_TRAIL_COLORS must match the consumer
       // shaders' block layout (ship=0, nuke=1 in trail.frag.glsl; structures=2
-      // in structure.frag.glsl; warship=3 in unit.frag.glsl) — see
-      // _EFFECT_BLOCK_ORDER above. nukeExplosion is not trail-styled and
-      // renders through the FX pass instead.
+      // in structure.frag.glsl; warship=3, train=4 in unit.frag.glsl;
+      // railroad=5 in railroad.frag.glsl) — see _EFFECT_BLOCK_ORDER above.
+      // nukeExplosion is not trail-styled and renders through the FX pass
+      // instead.
       const blockOrder = [
         ...TRAIL_EFFECT_TYPES,
         "structures",
         "warship",
+        "train",
+        "railroad",
       ] as const;
       blockOrder.forEach((effectType, block) => {
         const rowBase = block * MAX_TRAIL_COLORS;

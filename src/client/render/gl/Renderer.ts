@@ -311,8 +311,9 @@ export class GPURenderer {
 
     // Per-player effect texture: EFFECT_PALETTE_BLOCKS stacked blocks of
     // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail,
-    // block 2 = structures, block 3 = warship). Starts zeroed (color count 0
-    // everywhere = no effect → territory/player color).
+    // block 2 = structures, block 3 = warship, block 4 = train, block 5 =
+    // railroad). Starts zeroed (color count 0 everywhere = no effect →
+    // territory/player color).
     const effectRows = MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS;
     this.effectTex = createTexture2D(gl, {
       width: palW,
@@ -539,13 +540,14 @@ export class GPURenderer {
     // --- Night composite ---
     this.nightCompositePass = new NightCompositePass(gl, this.settings);
 
-    // --- Railroad (needs tileTex) ---
+    // --- Railroad (needs tileTex, paletteTex, effectTex) ---
     this.railroadPass = new RailroadPass(
       gl,
       mapW,
       mapH,
       this.res.tileTex,
       this.paletteTex,
+      this.effectTex,
       terrainBytes,
       this.settings,
     );
@@ -1091,6 +1093,7 @@ export class GPURenderer {
     this.territoryPass.setHighlightOwner(ownerID);
     this.namePass.setHighlightOwner(ownerID);
     this.structurePass.setHighlightOwner(ownerID);
+    this.railroadPass.setHighlightOwner(ownerID);
   }
   setMouseWorldPos(x: number, y: number): void {
     this.namePass.setMouseWorldPos(x, y);

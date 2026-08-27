@@ -56,6 +56,7 @@ import unitVertSrc from "../shaders/unit/unit.vert.glsl?raw";
 import {
   getPaletteSize,
   MAX_TRAIL_COLORS,
+  TRAIN_EFFECT_BLOCK,
   WARSHIP_EFFECT_BLOCK,
 } from "../utils/ColorUtils";
 import { createProgram, shaderSrc } from "../utils/GlUtils";
@@ -93,6 +94,10 @@ const HYDROGEN_BOMB_COL = UNIT_ORDER.indexOf(UT_HYDROGEN_BOMB);
 
 /** Atlas column of the warship — gates the warship cosmetic effect. */
 const WARSHIP_COL = UNIT_ORDER.indexOf(UT_WARSHIP);
+
+/** First atlas column of the train sprites (engine, carriage, loaded
+ *  carriage are contiguous) — gates the train cosmetic effect. */
+const TRAIN_FIRST_COL = UNIT_ORDER.indexOf("TrainEngine");
 
 // ---------------------------------------------------------------------------
 // Instance data layout
@@ -242,7 +247,7 @@ export class UnitPass {
   /** Last game engine tick received for smoothing calculation resets */
   private lastGameTick = -1;
   /** Wall-clock start, for uTime (seconds) — matches StructurePass so the
-   *  warship effect animates at the same pace as the structures effect. */
+   *  warship/train effects animate at the same pace as the structures effect. */
   private startTime = performance.now();
 
   /** unitType string → atlas column (0-11) */
@@ -288,6 +293,8 @@ export class UnitPass {
         ATLAS_COLS,
         WARSHIP_COL,
         WARSHIP_EFFECT_ROW_BASE: WARSHIP_EFFECT_BLOCK * MAX_TRAIL_COLORS,
+        TRAIN_FIRST_COL,
+        TRAIN_EFFECT_ROW_BASE: TRAIN_EFFECT_BLOCK * MAX_TRAIL_COLORS,
       }),
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;

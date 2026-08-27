@@ -28,17 +28,24 @@ export const MAX_TRAIL_COLORS = 8;
  * The effect-palette texture stacks one MAX_TRAIL_COLORS-row block per
  * trail-styled effectType: block 0 = transportShipTrail, block 1 = nukeTrail
  * (matching the nuke bit in trail.frag.glsl), block 2 = structures (read by
- * structure.frag.glsl), block 3 = warship (read by unit.frag.glsl). Bump this
+ * structure.frag.glsl), block 3 = warship and block 4 = train (both read by
+ * unit.frag.glsl), block 5 = railroad (read by railroad.frag.glsl). Bump this
  * if another trail-styled effectType is added (and give its consumer shader
  * the new rowBase).
  */
-export const EFFECT_PALETTE_BLOCKS = 4;
+export const EFFECT_PALETTE_BLOCKS = 6;
 
 /** Block index of the structures effect within the effect-palette texture. */
 export const STRUCTURES_EFFECT_BLOCK = 2;
 
 /** Block index of the warship effect within the effect-palette texture. */
 export const WARSHIP_EFFECT_BLOCK = 3;
+
+/** Block index of the train effect within the effect-palette texture. */
+export const TRAIN_EFFECT_BLOCK = 4;
+
+/** Block index of the railroad effect within the effect-palette texture. */
+export const RAILROAD_EFFECT_BLOCK = 5;
 
 // ---------- Terrain ----------
 

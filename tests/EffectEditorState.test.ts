@@ -77,6 +77,24 @@ describe("EFFECT_EDITOR_TYPES", () => {
   test("only nuke trails offer the spiral vortex", () => {
     expect(EFFECT_EDITOR_TYPES.nukeTrail).toContain("spiral");
     expect(EFFECT_EDITOR_TYPES.transportShipTrail).not.toContain("spiral");
+    expect(EFFECT_EDITOR_TYPES.train).not.toContain("spiral");
+    expect(EFFECT_EDITOR_TYPES.railroad).not.toContain("spiral");
+  });
+
+  test("train and railroad slots validate through the structures-shaped schema", () => {
+    for (const effectType of ["train", "railroad"] as const) {
+      const s = { ...defaultSlotState(effectType), type: "gradient" };
+      expect(slotAttributes(effectType, s)).toEqual({
+        type: "gradient",
+        colors: s.colors.slice(0, s.colorCount),
+        colorSize: s.colorSize,
+        movementSpeed: s.movementSpeed,
+      });
+      expect(slotAttributes(effectType, { ...s, type: "spiral" })).toBe(null);
+      expect(JSON.parse(catalogSnippet(effectType, s)!).effectType).toBe(
+        effectType,
+      );
+    }
   });
 });
 
