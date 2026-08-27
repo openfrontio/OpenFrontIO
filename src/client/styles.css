@@ -101,6 +101,17 @@ body.in-game {
   overflow: hidden;
 }
 
+/* An inline page (store, settings, leaderboard, ...) is a modal rendered in
+   the content area: lock the document so it scrolls inside the modal, and
+   stack body children in a column so the content area gets the height left
+   under the header-ad slot. */
+body.page-open {
+  height: 100%;
+  overflow: hidden;
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
