@@ -48,6 +48,12 @@ export class ClanMapView extends LitElement {
     target.postMessage({ type: "clanmap:auth", jwt: auth.jwt }, origin);
   };
 
+  // Fullscreens the frame element itself, so it works from the parent
+  // without any cooperation from the page (which also has its own button).
+  public enterFullscreen(): void {
+    void this.frame?.requestFullscreen?.().catch(() => {});
+  }
+
   render() {
     // The page sizes its canvas to the frame and re-fits on resize, so the
     // frame just needs a real height: the modal is content-sized on desktop.
