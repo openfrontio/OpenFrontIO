@@ -38,6 +38,11 @@ import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
 import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
+import {
+  getClientIp,
+  PRE_AUTH_TIMEOUT_MS,
+  WebSocketAdmissionControl,
+} from "./WebSocketAdmission";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -59,6 +64,7 @@ export async function startWorker() {
     noServer: true,
     maxPayload: MAX_WEBSOCKET_PAYLOAD_BYTES,
   });
+  const wsAdmission = new WebSocketAdmissionControl();
 
   const buildHash = ServerEnv.gitCommit();
   const telemetry = createMatchTelemetryEmitter(process.env, log, {
@@ -382,8 +388,71 @@ export async function startWorker() {
 
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
+    const ip = getClientIp(req);
+    const lease = wsAdmission.acquire(ip);
+    if (lease === null) {
+      log.warn("Rejecting WebSocket: too many pending handshakes", { ip });
+      ws.close(1013, "Too many pending connections");
+      return;
+    }
+
+    let connectionClosed = false;
+    let authenticated = false;
+
+    const closePending = (code: number, reason: string) => {
+      if (connectionClosed) return;
+      connectionClosed = true;
+      clearTimeout(authTimeout);
+      lease.release();
+      if (
+        ws.readyState === WebSocket.OPEN ||
+        ws.readyState === WebSocket.CONNECTING
+      ) {
+        ws.close(code, reason);
+      }
+    };
+
+    const authTimeout = setTimeout(() => {
+      if (!authenticated && !connectionClosed) {
+        log.warn("Closing unauthenticated WebSocket after timeout", { ip });
+        closePending(1008, "Join timeout");
+      }
+    }, PRE_AUTH_TIMEOUT_MS);
+
+    const completeHandshake = (): boolean => {
+      if (connectionClosed || ws.readyState !== WebSocket.OPEN) return false;
+      authenticated = true;
+      clearTimeout(authTimeout);
+      lease.complete();
+      return true;
+    };
+
+    ws.on("close", () => {
+      connectionClosed = true;
+      clearTimeout(authTimeout);
+      lease.release();
+      ws.removeAllListeners();
+    });
+
     ws.on("message", async (message: Buffer) => {
-      const ip = getClientIp(req);
+      if (connectionClosed || authenticated) return;
+
+      const messageResult = lease.acceptMessage(message.length);
+      if (messageResult === "message_too_large") {
+        log.warn("Rejecting oversized unauthenticated WebSocket message", {
+          ip,
+          bytes: message.length,
+        });
+        closePending(1009, "Join message too large");
+        return;
+      }
+      if (messageResult !== "accepted") {
+        log.warn("Rejecting repeated unauthenticated WebSocket message", {
+          ip,
+        });
+        closePending(1008, "Only one join message is allowed");
+        return;
+      }
 
       try {
         // Every frame is zbin (see ZbinWire.ts). Nothing before join carries a
@@ -394,26 +463,33 @@ export async function startWorker() {
         } catch (e) {
           const error = String(e);
           log.warn("Error decoding client message", error);
-          ws.send(
-            encodeServerMessage(
-              {
-                type: "error",
-                error,
-              } satisfies ServerErrorMessage,
-              undefined,
-            ),
-          );
-          ws.close(1002, "ClientJoinMessageSchema");
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(
+              encodeServerMessage(
+                {
+                  type: "error",
+                  error,
+                } satisfies ServerErrorMessage,
+                undefined,
+              ),
+            );
+          }
+          closePending(1002, "ClientJoinMessageSchema");
           return;
         }
 
         if (clientMsg.type === "ping") {
-          // Ignore ping
+          // The browser starts its heartbeat before the asynchronous join
+          // token is ready. It is harmless, but still consumes one of the
+          // bounded pre-authentication frame slots.
           return;
-        } else if (clientMsg.type !== "join" && clientMsg.type !== "rejoin") {
+        }
+
+        if (clientMsg.type !== "join" && clientMsg.type !== "rejoin") {
           log.warn(
             `Invalid message before join: ${JSON.stringify(clientMsg, replacer)}`,
           );
+          closePending(1008, "Join required");
           return;
         }
 
@@ -423,22 +499,24 @@ export async function startWorker() {
           log.warn(
             `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
           );
+          closePending(1008, "Wrong worker");
           return;
         }
 
         // Verify token signature
         const result = await verifyClientToken(clientMsg.token);
+        if (connectionClosed) return;
         if (result.type === "error") {
           log.warn(`Invalid token: ${result.message}`, {
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, `Unauthorized: invalid token`);
+          closePending(1002, `Unauthorized: invalid token`);
           return;
         }
         const { persistentId, claims } = result;
 
         if (claims?.role === "banned") {
-          ws.close(1002, "Account Banned");
+          closePending(1002, "Account Banned");
           return;
         }
 
@@ -453,12 +531,12 @@ export async function startWorker() {
             clientMsg.gameID,
             clientMsg.lastTurn,
           );
-          if (!wasFound) {
-            log.warn(
-              `game ${clientMsg.gameID} not found on worker ${workerId}`,
-            );
-            ws.close(1002, "Game not found");
+          if (wasFound) {
+            completeHandshake();
+            return;
           }
+          log.warn(`game ${clientMsg.gameID} not found on worker ${workerId}`);
+          closePending(1002, "Game not found");
           return;
         }
 
@@ -517,7 +595,7 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(1002, "Unauthorized: Turnstile token rejected");
+            closePending(1002, "Unauthorized: Turnstile token rejected");
             return;
           }
           if (plan.action === "verify") {
@@ -527,6 +605,7 @@ export async function startWorker() {
               clientMsg.username,
               clientMsg.clanTag ?? null,
             );
+            if (connectionClosed) return;
             switch (verdict.status) {
               case "approved":
                 username = verdict.username;
@@ -540,7 +619,7 @@ export async function startWorker() {
                   gameID: clientMsg.gameID,
                   reason: verdict.reason,
                 });
-                ws.close(1002, "Unauthorized: Turnstile token rejected");
+                closePending(1002, "Unauthorized: Turnstile token rejected");
                 return;
               case "error":
                 // Fail open: the locally screened name stands.
@@ -571,6 +650,7 @@ export async function startWorker() {
             verifySkipped ? undefined : { username, clanTag },
           )
         ) {
+          completeHandshake();
           return;
         }
 
@@ -587,18 +667,19 @@ export async function startWorker() {
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
-            ws.close(1002, "Unauthorized");
+            closePending(1002, "Unauthorized");
             return;
           }
         } else {
           // Verify token and get player permissions
           const result = await getUserMe(clientMsg.token);
+          if (connectionClosed) return;
           if (result.type === "error") {
             log.warn(`Unauthorized: ${result.message}`, {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(1002, "Unauthorized: user me fetch failed");
+            closePending(1002, "Unauthorized: user me fetch failed");
             return;
           }
           flares = result.response.player.flares;
@@ -616,7 +697,7 @@ export async function startWorker() {
               log.warn(
                 "Forbidden: player without an allowed flare attempted to join game",
               );
-              ws.close(1002, "Forbidden");
+              closePending(1002, "Forbidden");
               return;
             }
           }
@@ -646,7 +727,7 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, cosmeticResult.reason);
+          closePending(1002, cosmeticResult.reason);
           return;
         }
 
@@ -685,38 +766,44 @@ export async function startWorker() {
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
 
+        if (joinResult === "joined") {
+          completeHandshake();
+          return;
+        }
+
         if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          ws.close(1002, "Game not found");
+          closePending(1002, "Game not found");
         } else if (joinResult === "kicked") {
           log.warn(`kicked client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Cannot join game");
+          closePending(1002, "Cannot join game");
         } else if (joinResult === "not_allowlisted") {
           log.info(`client not whitelisted for game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "You are not whitelisted");
+          closePending(1002, "You are not whitelisted");
         } else if (joinResult === "not_trusted") {
           log.info(`untrusted client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Trusted account required");
+          closePending(1002, "Trusted account required");
         } else if (joinResult === "rejected") {
           log.info(`client rejected from game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Lobby full");
+          closePending(1002, "Lobby full");
         }
 
-        // Handle other message types
+        // No failed join path can remain pending: closePending releases the
+        // admission lease immediately, even before ws emits "close".
       } catch (error) {
-        ws.close(1011, "Internal server error");
+        closePending(1011, "Internal server error");
         log.warn(
           `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
             0,
@@ -728,11 +815,10 @@ export async function startWorker() {
 
     ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
+        closePending(1002, "WS_ERR_UNEXPECTED_RSV_1");
+      } else if (!authenticated) {
+        closePending(1011, "WebSocket error");
       }
-    });
-    ws.on("close", () => {
-      ws.removeAllListeners();
     });
   });
 
@@ -859,10 +945,4 @@ function startMatchmakingLoop(gm: GameManager, mode: "1v1" | "2v2") {
     },
     5000 + Math.random() * 1000,
   );
-}
-
-function getClientIp(req: http.IncomingMessage): string {
-  const cfIp = req.headers["cf-connecting-ip"];
-  if (typeof cfIp === "string" && cfIp) return cfIp;
-  return req.socket.remoteAddress ?? "unknown";
 }

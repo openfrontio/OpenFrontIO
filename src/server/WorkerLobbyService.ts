@@ -16,6 +16,7 @@ import {
   WorkerReady,
 } from "./IPCBridgeSchema";
 import { logger } from "./Logger";
+import { getClientIp, WebSocketAdmissionControl } from "./WebSocketAdmission";
 
 // The game config advertised for a listed private lobby: everything the
 // host configured minus host-only fields. The server already rejects
@@ -49,6 +50,7 @@ export class WorkerLobbyService {
     private readonly gameWss: WebSocketServer,
     private readonly gm: GameManager,
     private readonly log: typeof logger,
+    private readonly wsAdmission = new WebSocketAdmissionControl(),
   ) {
     this.lobbiesWss = new WebSocketServer({
       noServer: true,
@@ -259,42 +261,58 @@ export class WorkerLobbyService {
   }
 
   private setupLobbiesWebSocket() {
-    this.lobbiesWss.on("connection", (ws: WebSocket) => {
-      this.lobbyClients.add(ws);
-      // Prime the new client with the most recent snapshot — otherwise it
-      // would only see counts-only deltas (which it can't apply without a
-      // base) until the next structural change.
-      if (this.lastPublicGames !== null) {
-        ws.send(
-          encodeLobbyMessage({
-            type: "full",
-            serverTime: this.lastPublicGames.serverTime,
-            games: this.sanitizeGames(this.lastPublicGames.games),
-          } satisfies PublicLobbyMessage),
-        );
-      }
-      ws.on("message", () => {
-        ws.terminate();
-      });
-      ws.on("close", () => {
-        this.lobbyClients.delete(ws);
-      });
-
-      ws.on("error", (error) => {
-        this.log.error(`Lobbies WebSocket error:`, error);
-        this.lobbyClients.delete(ws);
-        try {
-          if (
-            ws.readyState === WebSocket.OPEN ||
-            ws.readyState === WebSocket.CONNECTING
-          ) {
-            ws.close(1011, "WebSocket internal error");
-          }
-        } catch (closeError) {
-          this.log.error("Error closing lobbies WebSocket:", closeError);
+    this.lobbiesWss.on(
+      "connection",
+      (ws: WebSocket, req?: http.IncomingMessage) => {
+        const ip = req === undefined ? "unknown" : getClientIp(req);
+        const lease = this.wsAdmission.acquire(ip);
+        if (lease === null) {
+          this.log.warn("Rejecting lobby WebSocket: too many connections", {
+            ip,
+          });
+          ws.close(1013, "Too many lobby connections");
+          return;
         }
-      });
-    });
+
+        this.lobbyClients.add(ws);
+        ws.on("message", () => {
+          ws.terminate();
+        });
+        ws.on("close", () => {
+          lease.release();
+          this.lobbyClients.delete(ws);
+        });
+
+        ws.on("error", (error) => {
+          lease.release();
+          this.log.error(`Lobbies WebSocket error:`, error);
+          this.lobbyClients.delete(ws);
+          try {
+            if (
+              ws.readyState === WebSocket.OPEN ||
+              ws.readyState === WebSocket.CONNECTING
+            ) {
+              ws.close(1011, "WebSocket internal error");
+            }
+          } catch (closeError) {
+            this.log.error("Error closing lobbies WebSocket:", closeError);
+          }
+        });
+
+        // Prime the new client with the most recent snapshot — otherwise it
+        // would only see counts-only deltas (which it can't apply without a
+        // base) until the next structural change.
+        if (this.lastPublicGames !== null) {
+          ws.send(
+            encodeLobbyMessage({
+              type: "full",
+              serverTime: this.lastPublicGames.serverTime,
+              games: this.sanitizeGames(this.lastPublicGames.games),
+            } satisfies PublicLobbyMessage),
+          );
+        }
+      },
+    );
   }
 
   private broadcastLobbiesToClients(publicGames: InternalPublicGames) {
