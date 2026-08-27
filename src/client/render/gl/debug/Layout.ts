@@ -430,6 +430,10 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       ),
       slider(s.fx, "conquestFadeIn", d.fx, 0, 0.5, 0.01, "Conquest Fade In"),
       slider(s.fx, "conquestFadeOut", d.fx, 0.3, 1, 0.01, "Conquest Fade Out"),
+      slider(s.fx, "nukeRadiusAtom", d.fx, 10, 400, 5, "Atom Bomb Radius"),
+      slider(s.fx, "nukeRadiusHydro", d.fx, 10, 400, 5, "Hydrogen Bomb Radius"),
+      slider(s.fx, "nukeRadiusMirv", d.fx, 10, 400, 5, "MIRV Warhead Radius"),
+      slider(s.fx, "debrisDensity", d.fx, 0, 4, 0.1, "Debris Density ×"),
     ]),
 
     folder("Nuke Trajectory", [

@@ -308,6 +308,12 @@ export interface RenderSettings {
     conquestLifetimeMs: number;
     conquestFadeIn: number;
     conquestFadeOut: number;
+    /** Visual (not gameplay) explosion radii in world tiles, per bomb type. */
+    nukeRadiusAtom: number;
+    nukeRadiusHydro: number;
+    nukeRadiusMirv: number;
+    /** Multiplier on the nuke debris sprite count (1 = default scatter). */
+    debrisDensity: number;
   };
   nukeTrajectory: {
     lineWidth: number; // px — main line stroke width

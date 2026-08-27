@@ -248,7 +248,11 @@
     "debrisFadeOut": 0.8,
     "conquestLifetimeMs": 2500,
     "conquestFadeIn": 0.1,
-    "conquestFadeOut": 0.6
+    "conquestFadeOut": 0.6,
+    "nukeRadiusAtom": 70,
+    "nukeRadiusHydro": 160,
+    "nukeRadiusMirv": 70,
+    "debrisDensity": 1
   },
   "nukeTrajectory": {
     "lineWidth": 2.5,

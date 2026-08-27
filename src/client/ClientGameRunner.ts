@@ -738,6 +738,7 @@ async function createClientGame(
     );
 
     // Loaded on demand so lil-gui and the debug GUI stay out of the main bundle.
+    // Two folders: "Effect Editor" and "Render Settings".
     let debugGui: { open(): void; destroy(): void } | null = null;
     let debugGuiLoading = false;
     eventBus.on(ToggleRenderDebugGuiEvent, () => {
@@ -748,6 +749,10 @@ async function createClientGame(
           .then(({ createDebugGui }) => {
             debugGui = createDebugGui(
               view.getSettings(),
+              {
+                setOverride: (effectType, attrs) =>
+                  webglBuilder.setEffectOverride(effectType, attrs),
+              },
               resolveRenderSettings,
               refreshDerivedGraphics,
             );
