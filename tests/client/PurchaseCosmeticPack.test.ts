@@ -91,6 +91,7 @@ describe("purchaseCosmeticPack", () => {
       "Pack is not for sale",
       "Pack not available for hard currency",
       "Pack has no items",
+      "Pack item is missing its color palette",
     ]) {
       respond(400, { error: "Bad request", reason });
       expect(await purchaseCosmeticPack("starter")).toEqual({

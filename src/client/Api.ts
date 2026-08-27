@@ -672,6 +672,8 @@ const PACK_UNAVAILABLE_REASONS = [
   "Pack is not for sale",
   "Pack not available for hard currency",
   "Pack has no items",
+  // A pattern item predating pack colours; an admin has to pick one.
+  "Pack item is missing its color palette",
 ];
 
 // POST /shop/purchase/pack — buy a cosmetic pack (see CosmeticPackSchema) for
