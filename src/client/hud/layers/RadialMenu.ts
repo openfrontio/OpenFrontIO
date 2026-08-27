@@ -1257,7 +1257,6 @@ export class RadialMenu implements Controller {
           }
           // Update timer gradient
           this.maybeUpdateTimerGradient(item, color, opacity);
-          
         }
       }
     });
