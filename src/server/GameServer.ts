@@ -10,7 +10,6 @@ import { GameType, RankedType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessage,
-  ClientMessageSchema,
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   GameConfig,
@@ -36,14 +35,9 @@ import {
   Turn,
 } from "../core/Schemas";
 import { createPartialGameRecord } from "../core/Util";
-import {
-  createGameWireContext,
-  decodeClientMessageUnvalidated,
-  encodeServerMessage,
-} from "../core/ZbinWire";
+import { createGameWireContext, encodeServerMessage } from "../core/ZbinWire";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
-import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
 import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
 import { LiveStatsVote, WinnerVote } from "./Consensus";
 import { fetchCustomTribes } from "./CustomTribes";
@@ -53,6 +47,7 @@ import { identityFor, MatchTelemetryRecorder } from "./MatchTelemetryRecorder";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
 import { Roster } from "./Roster";
 import { ServerEnv } from "./ServerEnv";
+import { SocketIngress } from "./SocketIngress";
 import {
   noopMatchTelemetryEmitter,
   type MatchTelemetryEmitter,
@@ -89,18 +84,6 @@ const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
 const KICK_REASON_ADMIN = "kick_reason.admin";
 const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
 const KICK_REASON_MATCH_CANCELLED = "kick_reason.match_cancelled";
-const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
-
-// Messages that speak for a player in the simulation, so a spectator may not
-// send them — including hash, which feeds desync agreement. Ping and rejoin
-// remain connection housekeeping.
-const SPECTATOR_BLOCKED_MESSAGES = new Set([
-  "intent",
-  "winner",
-  "live_stats",
-  "hash",
-]);
-const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
 
 export interface GameServerOptions {
   id: string;
@@ -148,7 +131,9 @@ export class GameServer {
   // is told once and its votes are ignored from then on.
   private readonly desync = new DesyncDetector();
 
-  private intentRateLimiter = new ClientMsgRateLimiter();
+  // Socket listeners and the decode / validate / rate-limit / spectator-block
+  // pipeline every frame goes through before handleClientMessage.
+  private readonly ingress: SocketIngress;
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
@@ -249,6 +234,13 @@ export class GameServer {
       teamIndex: (c) => this.matchmakingTeamIndex(c),
     });
     this.log = opts.log.child({ gameID: opts.id });
+    this.ingress = new SocketIngress(this.log, this.telemetry, {
+      zbinCtx: () => this.zbinCtx,
+      serverTick: () => this.turns.length,
+      onMessage: (client, msg) => this.handleClientMessage(client, msg),
+      onClose: (client) => this.handleClientDisconnect(client),
+      kick: (clientID, reasonKey) => this.kickClient(clientID, reasonKey),
+    });
     if (opts.startsAt !== undefined) {
       this.visibleAt = Date.now();
     }
@@ -640,7 +632,7 @@ export class GameServer {
       },
       this.turns.length,
     );
-    this.addListeners(client);
+    this.ingress.attach(client);
     this.startLobbyInfoBroadcast();
 
     if (this.playerCount() >= (this.gameConfig.maxPlayers ?? Infinity)) {
@@ -689,7 +681,7 @@ export class GameServer {
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
 
-    this.addListeners(client);
+    this.ingress.attach(client);
     this.startLobbyInfoBroadcast();
 
     if (this._hasStarted) {
@@ -698,187 +690,62 @@ export class GameServer {
     return true;
   }
 
-  private addListeners(client: Client) {
-    client.ws.removeAllListeners("message");
-    client.ws.on("message", async (message: Buffer) => {
-      try {
-        // Decode and validate in two steps (instead of one parseBytes) so a
-        // message that is structurally sound but fails validation — the
-        // signature of a buggy or cheating client — can still be attributed
-        // to its intent in telemetry, exactly like the JSON path did.
-        let raw: ClientMessage;
-        try {
-          // A Buffer is a Uint8Array and zbin honours its byteOffset.
-          raw = decodeClientMessageUnvalidated(message, this.zbinCtx);
-        } catch (e) {
-          // Corrupt bytes: no readable type, nothing to attribute.
-          this.log.warn(`Failed to decode client message, kicking`, {
-            clientID: client.clientID,
-            error: String(e),
-          });
-          this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
-          return;
+  // A validated message from a connected client, after SocketIngress has
+  // applied the rate limit and the spectator block.
+  private handleClientMessage(client: Client, clientMsg: ClientMessage) {
+    switch (clientMsg.type) {
+      case "rejoin": {
+        // Client is already connected, no auth required, send start game message if game has started
+        if (this._hasStarted) {
+          this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
         }
-        const parsed = ClientMessageSchema.safeParse(raw);
-        if (!parsed.success) {
-          const reasonDetail = z.prettifyError(parsed.error);
-          if (raw.type === "intent") {
-            this.telemetry.intentObserved(
-              client,
-              raw.intent,
-              typeof raw.intent?.type === "string" ? raw.intent.type : null,
-              "rejected",
-              this.turns.length,
-              KICK_REASON_INVALID_MESSAGE,
-              reasonDetail,
-            );
-          }
-          this.log.warn(`Failed to parse client message, kicking`, {
-            clientID: client.clientID,
-            error: reasonDetail,
-          });
-          this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
-          return;
-        }
-        const clientMsg = parsed.data;
-        const bytes = message.length;
-        const rateResult = this.intentRateLimiter.check(
-          client.clientID,
-          clientMsg.type,
-          bytes,
-        );
-        if (rateResult === "kick") {
-          if (clientMsg.type === "intent") {
-            this.telemetry.intentObserved(
-              client,
-              { ...clientMsg.intent, clientID: client.clientID },
-              clientMsg.intent.type,
-              "rejected",
-              this.turns.length,
-              KICK_REASON_TOO_MUCH_DATA,
-            );
-          }
-          this.log.warn(`Client rate limit exceeded, kicking`, {
-            clientID: client.clientID,
-            type: clientMsg.type,
-          });
-          this.kickClient(client.clientID, KICK_REASON_TOO_MUCH_DATA);
-          return;
-        }
-        if (rateResult === "limit") {
-          if (clientMsg.type === "intent") {
-            this.telemetry.intentObserved(
-              client,
-              { ...clientMsg.intent, clientID: client.clientID },
-              clientMsg.intent.type,
-              "rejected",
-              this.turns.length,
-              "limit",
-            );
-          }
-          this.log.warn(`Client message rate limit exceeded, dropping`, {
-            clientID: client.clientID,
-            type: clientMsg.type,
-          });
-          return;
-        }
-        // A spectator is not in the simulation, so none of what it sends can be
-        // game state. Without this, claiming to spectate is a way past the lobby
-        // cap and into the intent stream.
-        if (
-          client.spectator &&
-          SPECTATOR_BLOCKED_MESSAGES.has(clientMsg.type)
-        ) {
-          this.log.warn(`dropping ${clientMsg.type} from spectator`, {
-            clientID: client.clientID,
-          });
-          return;
-        }
-        switch (clientMsg.type) {
-          case "rejoin": {
-            // Client is already connected, no auth required, send start game message if game has started
-            if (this._hasStarted) {
-              this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
-            }
-            break;
-          }
-          case "intent": {
-            // Server stamps clientID from the authenticated connection.
-            const outcome = this.handleIntent(clientMsg.intent, {
-              clientID: client.clientID,
-              isLobbyCreator: client.clientID === this.lobbyCreatorID,
-              isAdmin: isAdminRole(client.role),
-              isAdminBot: false,
-            });
-            if (outcome.status !== 200) {
-              this.log.warn(`intent rejected`, {
-                type: clientMsg.intent.type,
-                clientID: client.clientID,
-                gameID: this.id,
-                reason: outcome.error,
-              });
-            }
-            break;
-          }
-          case "ping": {
-            this.lastPingUpdate = Date.now();
-            client.lastPing = Date.now();
-            break;
-          }
-          case "hash": {
-            client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
-            break;
-          }
-          case "spectate": {
-            this.setSpectator(client, clientMsg.spectator);
-            break;
-          }
-          case "winner": {
-            this.handleWinner(client, clientMsg);
-            break;
-          }
-          case "live_stats": {
-            this.handleLiveStats(client, clientMsg);
-            break;
-          }
-          default: {
-            this.log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
-              clientID: client.clientID,
-            });
-            break;
-          }
-        }
-      } catch (error) {
-        this.log.info(
-          `error handling websocket request in game server: ${error}`,
-          {
-            clientID: client.clientID,
-          },
-        );
+        break;
       }
-    });
-    client.ws.on("close", () => {
-      this.log.info("client disconnected", {
-        clientID: client.clientID,
-        persistentID: client.persistentID,
-      });
-      this.handleClientDisconnect(client);
-    });
-    client.ws.on("error", (error: Error) => {
-      if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
+      case "intent": {
+        // Server stamps clientID from the authenticated connection.
+        const outcome = this.handleIntent(clientMsg.intent, {
+          clientID: client.clientID,
+          isLobbyCreator: client.clientID === this.lobbyCreatorID,
+          isAdmin: isAdminRole(client.role),
+          isAdminBot: false,
+        });
+        if (outcome.status !== 200) {
+          this.log.warn(`intent rejected`, {
+            type: clientMsg.intent.type,
+            clientID: client.clientID,
+            gameID: this.id,
+            reason: outcome.error,
+          });
+        }
+        break;
       }
-    });
-
-    // Check if WebSocket already closed before we added the listener (race
-    // condition) — the 'close' event has already fired, so the handler above
-    // will never run for this client.
-    if (client.ws.readyState >= 2) {
-      this.log.info("client WebSocket already closing/closed, removing", {
-        clientID: client.clientID,
-        readyState: client.ws.readyState,
-      });
-      this.handleClientDisconnect(client);
+      case "ping": {
+        this.lastPingUpdate = Date.now();
+        client.lastPing = Date.now();
+        break;
+      }
+      case "hash": {
+        client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+        break;
+      }
+      case "spectate": {
+        this.setSpectator(client, clientMsg.spectator);
+        break;
+      }
+      case "winner": {
+        this.handleWinner(client, clientMsg);
+        break;
+      }
+      case "live_stats": {
+        this.handleLiveStats(client, clientMsg);
+        break;
+      }
+      default: {
+        this.log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
+          clientID: client.clientID,
+        });
+        break;
+      }
     }
   }
 
