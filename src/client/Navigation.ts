@@ -35,6 +35,11 @@ export function initNavigation() {
       }
     }
 
+    // Inline pages scroll inside their modal, not the document (see
+    // styles.css). Set after closing the previous modal: an inline modal's
+    // close() re-enters showPage("page-play"), which would clear this.
+    document.body.classList.toggle("page-open", pageId !== "page-play");
+
     // Handle page-play separately (it's not a page-content element)
     const pagePlayEl = document.getElementById("page-play");
     if (pageId === "page-play") {

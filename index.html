@@ -58,6 +58,12 @@
         flex-basis: 100%;
         width: 100%;
       }
+      /* body is a column while an inline page is open (see styles.css):
+         size the slot to its content there, not to 100% of the height. */
+      body.page-open #pw-oop-flex_container {
+        flex-basis: auto;
+        flex-shrink: 0;
+      }
 
       /* Google Funding Choices CCPA link override */
       .fc-dns-link,
@@ -234,7 +240,7 @@
 
     <!-- MAIN CONTENT AREA -->
     <div
-      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh relative pt-[var(--top-ad-pad,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
       <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls,
            offset below the header ad when one is showing) -->
