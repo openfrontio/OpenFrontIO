@@ -1551,6 +1551,12 @@
     "trusted_unlocked": "Trusted accounts only. Your account is trusted.",
     "waiting_for_players": "Waiting for players"
   },
+  "purchase_nudge": {
+    "body": "Looks like you enjoy playing OpenFront! Please consider supporting us by making a purchase — any purchase makes you ad-free for life.",
+    "close": "Close",
+    "title": "Enjoying OpenFront?",
+    "visit_store": "Visit store"
+  },
   "radial_menu": {
     "delete_unit_description": "Click to delete the nearest unit",
     "delete_unit_title": "Delete Unit",

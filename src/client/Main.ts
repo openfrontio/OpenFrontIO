@@ -77,6 +77,7 @@ import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
 import "./components/DesktopUpdateBar";
 import "./components/MarketingConsentToast";
+import "./components/PurchaseNudgeModal";
 import {
   installCtrlWheelZoomBlocker,
   installDoubleTapZoomBlocker,
