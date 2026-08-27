@@ -49,15 +49,12 @@ import { LiveStatsVote, WinnerVote } from "./Consensus";
 import { fetchCustomTribes } from "./CustomTribes";
 import { DesyncDetector } from "./DesyncDetector";
 import { ListingState } from "./ListingState";
+import { identityFor, MatchTelemetryRecorder } from "./MatchTelemetryRecorder";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
 import { ServerEnv } from "./ServerEnv";
 import {
   noopMatchTelemetryEmitter,
   type MatchTelemetryEmitter,
-  type MatchTelemetryEvent,
-  type MatchTelemetryPayloads,
-  type MatchTelemetryType,
-  type TelemetryPlayerIdentity,
 } from "./telemetry/MatchTelemetry";
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -223,13 +220,9 @@ export class GameServer {
   // id instead of minting another lobby.
   private successorLobbyId: GameID | null = null;
 
-  private telemetrySequence = 0;
-  private telemetryTickCounts = new Map<
-    number,
-    { observed: number; enqueued: number; dropped: number }
-  >();
-  private replayArchiveAttempted = false;
-  private telemetryFinished = false;
+  // This match's telemetry stream: envelopes, sequence, per-tick intent
+  // counters, finished-once (see MatchTelemetryRecorder.ts).
+  private readonly telemetry: MatchTelemetryRecorder;
 
   public readonly id: string;
   public readonly createdAt: number;
@@ -254,6 +247,11 @@ export class GameServer {
     this.publicGameType = opts.publicGameType;
     this.matchmakingTeams = opts.matchmakingTeams;
     this.deps = { ...defaultGameServerDeps(), ...deps };
+    this.telemetry = new MatchTelemetryRecorder(
+      this.deps.telemetry,
+      opts.id,
+      this.deps.telemetryBuildHash,
+    );
     this.names = new NameVisibility({
       gameID: opts.id,
       config: () => this.gameConfig,
@@ -264,88 +262,19 @@ export class GameServer {
     if (opts.startsAt !== undefined) {
       this.visibleAt = Date.now();
     }
-    this.emitTelemetry("match_opened", {
-      lobbyCreatedAt: opts.createdAt,
-      config: opts.gameConfig,
-      publicGameType: opts.publicGameType,
-      buildHash: this.deps.telemetryBuildHash,
-      instanceId: ServerEnv.instanceId(),
-      workerId: ServerEnv.workerId(),
-      turnIntervalMs: this.deps.turnIntervalMs(),
-    });
-  }
-
-  private emitTelemetry<K extends MatchTelemetryType>(
-    type: K,
-    payload: MatchTelemetryPayloads[K],
-    serverTick: number = this.turns.length,
-  ): "enqueued" | "dropped" {
-    const event = {
-      schemaVersion: 1,
-      type,
-      matchId: this.id,
-      sequence: this.telemetrySequence++,
-      observedAt: Date.now(),
-      serverTick,
-      payload,
-    } as MatchTelemetryEvent;
-    try {
-      return this.deps.telemetry.emit(event);
-    } catch {
-      return "dropped";
-    }
-  }
-
-  private identityFor(client: Client): TelemetryPlayerIdentity {
-    // persistentID is deliberately excluded from telemetry identity.
-    return {
-      clientId: client.clientID,
-      publicId: client.publicId,
-    };
-  }
-
-  private emitIntentObserved(
-    client: Client,
-    intent: unknown,
-    intentType: string | null,
-    outcome: "accepted" | "rejected",
-    serverTick: number,
-    reasonCode?: string,
-    reasonDetail?: string,
-  ): void {
-    const counts = this.telemetryTickCounts.get(serverTick) ?? {
-      observed: 0,
-      enqueued: 0,
-      dropped: 0,
-    };
-    counts.observed++;
-    const result = this.emitTelemetry(
-      "intent_observed",
+    this.telemetry.emit(
+      "match_opened",
       {
-        identity: this.identityFor(client),
-        intentType,
-        outcome,
-        reasonCode,
-        reasonDetail,
-        intent,
+        lobbyCreatedAt: opts.createdAt,
+        config: opts.gameConfig,
+        publicGameType: opts.publicGameType,
+        buildHash: this.deps.telemetryBuildHash,
+        instanceId: ServerEnv.instanceId(),
+        workerId: ServerEnv.workerId(),
+        turnIntervalMs: this.deps.turnIntervalMs(),
       },
-      serverTick,
+      this.turns.length,
     );
-    counts[result === "enqueued" ? "enqueued" : "dropped"]++;
-    this.telemetryTickCounts.set(serverTick, counts);
-  }
-
-  private emitMatchFinished(): void {
-    if (this.telemetryFinished) {
-      return;
-    }
-    this.telemetryFinished = true;
-    this.emitTelemetry("match_finished", {
-      endedAt: Date.now(),
-      totalTurns: this.turns.length,
-      buildHash: this.deps.telemetryBuildHash,
-      replayArchiveAttempted: this.replayArchiveAttempted,
-    });
   }
 
   private get lobbyCreatorID(): ClientID | undefined {
@@ -383,7 +312,7 @@ export class GameServer {
         const client = this.allClients.get(actor.clientID);
         if (client !== undefined) {
           const accepted = outcome.status === 200;
-          this.emitIntentObserved(
+          this.telemetry.intentObserved(
             client,
             stamped,
             stamped.type,
@@ -715,13 +644,17 @@ export class GameServer {
     // registry to tell a spectator from a player.
     this.allClients.set(client.clientID, client);
     this.markClientDisconnected(client.clientID, false);
-    this.emitTelemetry("player_joined", {
-      identity: this.identityFor(client),
-      joinedAt: Date.now(),
-      username: client.username,
-      playerType: "human",
-      teamIndex: this.matchmakingTeamIndex(client),
-    });
+    this.telemetry.emit(
+      "player_joined",
+      {
+        identity: identityFor(client),
+        joinedAt: Date.now(),
+        username: client.username,
+        playerType: "human",
+        teamIndex: this.matchmakingTeamIndex(client),
+      },
+      this.turns.length,
+    );
     this.addListeners(client);
     this.startLobbyInfoBroadcast();
 
@@ -817,7 +750,7 @@ export class GameServer {
         if (!parsed.success) {
           const reasonDetail = z.prettifyError(parsed.error);
           if (raw.type === "intent") {
-            this.emitIntentObserved(
+            this.telemetry.intentObserved(
               client,
               raw.intent,
               typeof raw.intent?.type === "string" ? raw.intent.type : null,
@@ -843,7 +776,7 @@ export class GameServer {
         );
         if (rateResult === "kick") {
           if (clientMsg.type === "intent") {
-            this.emitIntentObserved(
+            this.telemetry.intentObserved(
               client,
               { ...clientMsg.intent, clientID: client.clientID },
               clientMsg.intent.type,
@@ -861,7 +794,7 @@ export class GameServer {
         }
         if (rateResult === "limit") {
           if (clientMsg.type === "intent") {
-            this.emitIntentObserved(
+            this.telemetry.intentObserved(
               client,
               { ...clientMsg.intent, clientID: client.clientID },
               clientMsg.intent.type,
@@ -1236,12 +1169,16 @@ export class GameServer {
       return;
     }
     this.gameStartInfo = result.data satisfies GameStartInfo;
-    this.emitTelemetry("match_started", {
-      startedAt: this._startTime,
-      gameStartInfo: this.gameStartInfo,
-      buildHash: this.deps.telemetryBuildHash,
-      turnIntervalMs: this.deps.turnIntervalMs(),
-    });
+    this.telemetry.emit(
+      "match_started",
+      {
+        startedAt: this._startTime,
+        gameStartInfo: this.gameStartInfo,
+        buildHash: this.deps.telemetryBuildHash,
+        turnIntervalMs: this.deps.turnIntervalMs(),
+      },
+      this.turns.length,
+    );
     const wireGameStartInfo = {
       ...this.gameStartInfo,
       listed: this.listing.isListed(),
@@ -1443,13 +1380,8 @@ export class GameServer {
     };
     this.turns.push(pastTurn);
     this.intents = [];
-    const counts = this.telemetryTickCounts.get(pastTurn.turnNumber) ?? {
-      observed: 0,
-      enqueued: 0,
-      dropped: 0,
-    };
-    this.telemetryTickCounts.delete(pastTurn.turnNumber);
-    this.emitTelemetry(
+    const counts = this.telemetry.takeTickCounts(pastTurn.turnNumber);
+    this.telemetry.emit(
       "turn_committed",
       {
         turnNumber: pastTurn.turnNumber,
@@ -1490,7 +1422,7 @@ export class GameServer {
     });
     if (!this._hasPrestarted && !this._hasStarted) {
       this.log.info(`game not started, not archiving game`);
-      this.emitMatchFinished();
+      this.telemetry.matchFinished(this.turns.length);
       return;
     }
     this.log.info(`ending game with ${this.turns.length} turns`);
@@ -1529,7 +1461,7 @@ export class GameServer {
         error: errorDetails,
       });
     }
-    this.emitMatchFinished();
+    this.telemetry.matchFinished(this.turns.length);
   }
 
   phase(): GamePhase {
@@ -1834,7 +1766,7 @@ export class GameServer {
         } satisfies PlayerRecord;
       },
     );
-    this.replayArchiveAttempted = true;
+    this.telemetry.noteArchiveAttempted();
     this.deps.archive(
       createPartialGameRecord(
         this.id,
