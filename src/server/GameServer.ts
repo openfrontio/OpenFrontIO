@@ -627,7 +627,7 @@ export class GameServer {
 
   public joinClient(
     client: Client,
-  ): "joined" | "kicked" | "rejected" | "not_allowlisted" {
+  ): "joined" | "kicked" | "rejected" | "not_allowlisted" | "not_trusted" {
     // e.g. the host left an unstarted lobby and GameManager hasn't pruned
     // it yet.
     if (this._hasEnded) {
@@ -645,6 +645,13 @@ export class GameServer {
         clientID: client.clientID,
       });
       return "not_allowlisted";
+    }
+
+    if (!this.passesTrustGate(client)) {
+      this.log.warn("client not trusted, rejecting", {
+        clientID: client.clientID,
+      });
+      return "not_trusted";
     }
 
     // gameStartInfo.players is frozen at start, so a late arrival could never
@@ -1301,6 +1308,15 @@ export class GameServer {
     return client.publicId !== undefined && allowed.includes(client.publicId);
   }
 
+  // Trusted-only lobbies (GameConfig.trusted) admit only accounts the API
+  // reported as trusted at join time. Shared by joinClient and the seat toggle
+  // for the same reason as passesAllowlist; admins bypass it the same way.
+  private passesTrustGate(client: Client): boolean {
+    if (this.gameConfig.trusted !== true) return true;
+    if (isAdminRole(client.role)) return true;
+    return client.trusted;
+  }
+
   // Switch a client between playing and watching from the lobby screen. Seating
   // is refused once the game has started (the player list is frozen), when the
   // lobby is full, or when the allowlist does not name them — the toggle must
@@ -1312,6 +1328,7 @@ export class GameServer {
     if (!spectator) {
       if (this._hasStarted || this._hasEnded) return;
       if (!this.passesAllowlist(client)) return;
+      if (!this.passesTrustGate(client)) return;
       const max = this.gameConfig.maxPlayers;
       if (max !== undefined && this.playerCount() >= max) return;
     }
