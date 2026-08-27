@@ -58,6 +58,22 @@ describe("GameServer.rejoinClient", () => {
     expect(game.rejoinClient(makeMockWs() as any, "p1-pid")).toBe(false);
   });
 
+  it("does not accept messages from a kicked socket before close fires", async () => {
+    const game = makeGame();
+    const client = makeClient({ clientID: P1, persistentID: "p1-pid" });
+    expect(game.joinClient(client)).toBe("joined");
+
+    game.kickClient(P1);
+    await mockWsOf(client).emit({
+      type: "intent",
+      intent: { type: "attack", targetID: null, troops: null },
+    });
+
+    expect((game as any).intents).not.toContainEqual(
+      expect.objectContaining({ type: "attack" }),
+    );
+  });
+
   describe("identity update", () => {
     it("applies a screened username / clan change before the start", () => {
       const game = makeGame();

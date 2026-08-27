@@ -817,9 +817,25 @@ export class GameServer {
   }
 
   private addListeners(client: Client) {
-    client.ws.removeAllListeners("message");
-    client.ws.on("message", async (message: Buffer) => {
+    // Bind the listener to the socket it was created for. A reconnect can
+    // replace client.ws while a delayed message from the old socket is still
+    // delivered.
+    const ws = client.ws;
+    ws.removeAllListeners("message");
+    ws.on("message", async (message: Buffer) => {
       try {
+        // A kicked client is removed from activeClients before the WebSocket
+        // close event necessarily fires. Reject messages during that window,
+        // and reject messages from stale sockets after a reconnect.
+        if (
+          ws.readyState !== WebSocket.OPEN ||
+          client.ws !== ws ||
+          !this.activeClients.includes(client) ||
+          this.isKicked(client.clientID)
+        ) {
+          return;
+        }
+
         // Decode and validate in two steps (instead of one parseBytes) so a
         // message that is structurally sound but fails validation — the
         // signature of a buggy or cheating client — can still be attributed
