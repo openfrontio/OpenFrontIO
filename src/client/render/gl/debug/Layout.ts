@@ -2,6 +2,7 @@ import type { RenderSettings } from "../RenderSettings";
 import type { DebugNode } from "./Folder";
 import { folder } from "./Folder";
 import { color } from "./props/Color";
+import { select } from "./props/Select";
 import { slider } from "./props/Slider";
 import { toggle } from "./props/Toggle";
 
@@ -430,6 +431,106 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       ),
       slider(s.fx, "conquestFadeIn", d.fx, 0, 0.5, 0.01, "Conquest Fade In"),
       slider(s.fx, "conquestFadeOut", d.fx, 0.3, 1, 0.01, "Conquest Fade Out"),
+      slider(s.fx, "nukeRadiusAtom", d.fx, 10, 400, 5, "Atom Bomb Radius"),
+      slider(s.fx, "nukeRadiusHydro", d.fx, 10, 400, 5, "Hydrogen Bomb Radius"),
+      slider(s.fx, "nukeRadiusMirv", d.fx, 10, 400, 5, "MIRV Warhead Radius"),
+      slider(s.fx, "debrisDensity", d.fx, 0, 4, 0.1, "Debris Density ×"),
+      folder("Nuke Explosion Override", [
+        toggle(s.fx.nukeExplosion, "override", d.fx.nukeExplosion, "Override"),
+        select(
+          s.fx.nukeExplosion,
+          "type",
+          d.fx.nukeExplosion,
+          ["shockwave", "sparkles", "embers"],
+          "Type",
+        ),
+        slider(
+          s.fx.nukeExplosion,
+          "size",
+          d.fx.nukeExplosion,
+          10,
+          800,
+          5,
+          "Size (tiles)",
+        ),
+        slider(
+          s.fx.nukeExplosion,
+          "speed",
+          d.fx.nukeExplosion,
+          5,
+          1000,
+          5,
+          "Speed (tiles/s)",
+        ),
+        slider(
+          s.fx.nukeExplosion,
+          "thickness",
+          d.fx.nukeExplosion,
+          0.5,
+          40,
+          0.5,
+          "Thickness (tiles)",
+        ),
+        slider(
+          s.fx.nukeExplosion,
+          "transitionSpeed",
+          d.fx.nukeExplosion,
+          -10,
+          10,
+          0.1,
+          "Transition (colors/s)",
+        ),
+        slider(
+          s.fx.nukeExplosion,
+          "density",
+          d.fx.nukeExplosion,
+          2,
+          2000,
+          1,
+          "Density (sparkles/embers)",
+        ),
+        slider(
+          s.fx.nukeExplosion,
+          "colorCount",
+          d.fx.nukeExplosion,
+          1,
+          4,
+          1,
+          "Color Count",
+        ),
+        color(
+          s.fx.nukeExplosion,
+          "color0R",
+          "color0G",
+          "color0B",
+          d.fx.nukeExplosion,
+          "Color 0",
+        ),
+        color(
+          s.fx.nukeExplosion,
+          "color1R",
+          "color1G",
+          "color1B",
+          d.fx.nukeExplosion,
+          "Color 1",
+        ),
+        color(
+          s.fx.nukeExplosion,
+          "color2R",
+          "color2G",
+          "color2B",
+          d.fx.nukeExplosion,
+          "Color 2",
+        ),
+        color(
+          s.fx.nukeExplosion,
+          "color3R",
+          "color3G",
+          "color3B",
+          d.fx.nukeExplosion,
+          "Color 3",
+        ),
+      ]),
     ]),
 
     folder("Nuke Trajectory", [

@@ -10,9 +10,6 @@ import type { Config } from "../../../../../core/configuration/Config";
 import type { ConquestFx, DeadUnitFx, RendererConfig } from "../../../types";
 import {
   STRUCTURE_TYPES,
-  UT_ATOM_BOMB,
-  UT_HYDROGEN_BOMB,
-  UT_MIRV_WARHEAD,
   UT_SHELL,
   UT_TRAIN,
   UT_WARSHIP,
@@ -20,6 +17,7 @@ import {
 import { DynamicInstanceBuffer } from "../../DynamicBuffer";
 import type { RenderSettings } from "../../RenderSettings";
 import { createProgram, shaderSrc } from "../../utils/GlUtils";
+import { nukeExplosionRadius } from "./FxSettings";
 
 import fxAtlasMeta from "resources/atlases/fx-atlas-meta.json";
 import { assetUrl } from "src/core/AssetUrls";
@@ -132,17 +130,6 @@ const FX_CONFIG: FxTypeConfig[] = [
     looping: false,
   },
 ];
-
-// ---------------------------------------------------------------------------
-// Nuke explosion radii — visual-only (FxLayer source, not Config). These are
-// the shockwave/debris scatter sizes, not the gameplay damage radii.
-// ---------------------------------------------------------------------------
-
-export const NUKE_EXPLOSION_RADII: Readonly<Record<string, number>> = {
-  [UT_ATOM_BOMB]: 70,
-  [UT_HYDROGEN_BOMB]: 160,
-  [UT_MIRV_WARHEAD]: 70,
-};
 
 // ---------------------------------------------------------------------------
 // Nuke debris plan
@@ -357,7 +344,7 @@ export class FxSpritePass {
     const x = unit.pos % this.mapW;
     const y = (unit.pos - x) / this.mapW;
 
-    const nukeRadius = NUKE_EXPLOSION_RADII[typeName];
+    const nukeRadius = nukeExplosionRadius(this.settings.fx, typeName);
     if (nukeRadius !== undefined) {
       if (unit.reachedTarget) {
         this.spawnNukeSprites(x, y, nukeRadius, now, unit.pos);
@@ -398,8 +385,9 @@ export class FxSpritePass {
     this.pushFx(x, y, FX_NUKE, now);
 
     let debrisIdx = 0;
+    const densityScale = this.settings.fx.debrisDensity;
     for (const { type, radiusFactor, density } of DEBRIS_PLAN) {
-      const count = Math.max(0, Math.floor(radius * density));
+      const count = Math.max(0, Math.floor(radius * density * densityScale));
       const r = radius * radiusFactor;
       for (let i = 0; i < count; i++) {
         const seed = pos * 997 + debrisIdx++;
