@@ -19,6 +19,7 @@ function setup() {
     localPlayerSmallID: number;
     effectResolved: Set<number>;
     setEffectOverride: WebGLFrameBuilder["setEffectOverride"];
+    clearCaches: WebGLFrameBuilder["clearCaches"];
     syncPlayerEffects(gameView: unknown): void;
   };
   builder.localPlayerSmallID = LOCAL;
@@ -57,6 +58,23 @@ describe("WebGLFrameBuilder effect overrides", () => {
     builder.syncPlayerEffects(gameView);
     expect(uploads).toHaveLength(2);
     expect(countOf(uploads[1])).toBe(0);
+  });
+
+  it("re-uploads after clearCaches (WebGL context restore zeroes the GPU texture)", () => {
+    const { builder, gameView, uploads, countOf } = setup();
+    builder.setEffectOverride("structures", {
+      type: "transition",
+      colors: ["#ff0000", "#00ff00", "#0000ff"],
+      frequency: 2,
+    });
+    builder.syncPlayerEffects(gameView);
+    expect(uploads).toHaveLength(1);
+
+    builder.clearCaches();
+    builder.localPlayerSmallID = LOCAL;
+    builder.syncPlayerEffects(gameView);
+    expect(uploads).toHaveLength(2);
+    expect(countOf(uploads[1])).toBe(3);
   });
 
   it("keeps an override-only player unresolved until the catalog loads", () => {

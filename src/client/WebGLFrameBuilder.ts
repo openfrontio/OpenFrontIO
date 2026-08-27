@@ -220,6 +220,9 @@ export class WebGLFrameBuilder {
   clearCaches(): void {
     this.knownSmallIDs.clear();
     this.effectResolved.clear();
+    // Effect uploads are change-driven against this mirror; the restored GPU
+    // texture starts zeroed, so the mirror must too or nothing re-uploads.
+    this.effectPalette.fill(0);
     this.lastSpawnTile.clear();
     this.localPlayerSmallID = 0;
     this.skinsInitialized = false;
