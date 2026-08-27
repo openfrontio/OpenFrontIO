@@ -1254,10 +1254,10 @@ export class RadialMenu implements Controller {
                   );
               }
             }
-
-            // Update timer gradient
-            this.maybeUpdateTimerGradient(item, color, opacity);
           }
+          // Update timer gradient
+          this.maybeUpdateTimerGradient(item, color, opacity);
+          
         }
       }
     });
@@ -1399,7 +1399,7 @@ export class RadialMenu implements Controller {
 
     getSvgAspectRatio(iconUrl).then((ratio) => {
       if (
-        Number(content.getAttribute("data-render-genration")) !== generation
+        Number(content.getAttribute("data-render-generation")) !== generation
       ) {
         return;
       }
