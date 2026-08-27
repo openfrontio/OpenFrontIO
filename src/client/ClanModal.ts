@@ -167,9 +167,11 @@ export class ClanModal extends BaseModal {
   }
 
   protected renderBody() {
-    // The map fills the content box edge to edge; everything else is padded.
+    // The map fills the content box edge to edge and exactly to its height
+    // (the modal is an inline page, so the scroll area has a fixed height and
+    // anything taller scrolls); everything else is padded.
     const onMap = this.onListView && this.activeTab === "map";
-    return html`<div class=${onMap ? "" : "p-4 lg:p-[1.4rem]"}>
+    return html`<div class=${onMap ? "h-full" : "p-4 lg:p-[1.4rem]"}>
       ${this.renderInner()}
     </div>`;
   }
@@ -619,7 +621,9 @@ export class ClanModal extends BaseModal {
     // List view (map / my clans / browse) — header + tabs are rendered by o-modal
     if (this.activeTab === "map") {
       // Mounted only while open: the page polls its API while framed.
-      return this.isModalOpen ? html`<clan-map-view></clan-map-view>` : html``;
+      return this.isModalOpen
+        ? html`<clan-map-view class="block h-full"></clan-map-view>`
+        : html``;
     }
     return html`
       ${this.activeTab === "my-clans"

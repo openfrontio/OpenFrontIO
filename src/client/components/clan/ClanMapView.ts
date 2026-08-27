@@ -55,15 +55,15 @@ export class ClanMapView extends LitElement {
   }
 
   render() {
-    // The page sizes its canvas to the frame and re-fits on resize, so the
-    // frame just needs a real height: the modal is content-sized on desktop.
-    // `allow="fullscreen"` is what makes the page's Fullscreen button appear.
+    // The page sizes its canvas to the frame and re-fits on resize; the host
+    // gives the frame its height. `allow="fullscreen"` is what makes the
+    // page's Fullscreen button appear.
     return html`<iframe
       src=${clanMapOrigin() + "/"}
       title=${translateText("clan_modal.map_frame_title")}
       allow="fullscreen"
       allowfullscreen
-      class="block w-full h-[calc(100vh-16rem)] min-h-[320px] border-0 bg-[#0e1116]"
+      class="block w-full h-full border-0 bg-[#0e1116]"
     ></iframe>`;
   }
 }
