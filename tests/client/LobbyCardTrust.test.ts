@@ -20,6 +20,8 @@ vi.mock("../../src/client/Utils", () => ({
 
 import {
   lobbyCard,
+  trustRequiredDialog,
+  viewerIsSignedIn,
   viewerIsTrusted,
 } from "../../src/client/components/LobbyCard";
 
@@ -89,5 +91,41 @@ describe("viewerIsTrusted", () => {
     expect(viewerIsTrusted(me(null))).toBe(false);
     expect(viewerIsTrusted(me(undefined))).toBe(false);
     expect(viewerIsTrusted(false)).toBe(false);
+  });
+});
+
+describe("trustRequiredDialog", () => {
+  function message(signedIn: boolean): unknown {
+    const host = document.createElement("div");
+    render(
+      trustRequiredDialog(signedIn, () => {}),
+      host,
+    );
+    return (
+      host.querySelector("confirm-dialog") as unknown as { message: string }
+    ).message;
+  }
+
+  it("tells a signed-in but untrusted viewer to play more games", () => {
+    expect(message(true)).toBe("public_lobby.trust_required_body");
+  });
+
+  it("tells a signed-out viewer to sign in first", () => {
+    expect(message(false)).toBe("public_lobby.trust_required_body_signed_out");
+  });
+});
+
+describe("viewerIsSignedIn", () => {
+  const me = (user: object) => ({ user }) as unknown as UserMeResponse;
+
+  it("counts any linked identity, including Steam-only", () => {
+    expect(viewerIsSignedIn(me({ steam: { id: "1" } }))).toBe(true);
+    expect(viewerIsSignedIn(me({ discord: { id: "1" } }))).toBe(true);
+    expect(viewerIsSignedIn(me({ email: "a@b.c" }))).toBe(true);
+  });
+
+  it("treats a guest session and a failed lookup as signed out", () => {
+    expect(viewerIsSignedIn(me({}))).toBe(false);
+    expect(viewerIsSignedIn(false)).toBe(false);
   });
 });

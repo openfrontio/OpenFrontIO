@@ -2,6 +2,7 @@ import { html, svg, TemplateResult } from "lit";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo } from "../../core/Schemas";
+import { hasLinkedIdentity } from "../AccountIdentity";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { getMapName, getModifierLabels, translateText } from "../Utils";
 import "./ConfirmDialog";
@@ -15,6 +16,16 @@ export function viewerIsTrusted(userMe: UserMeResponse | false): boolean {
   return userMe !== false && userMe.player.trustTier === "trusted";
 }
 
+/**
+ * Whether the viewer has an account to become trusted on. A guest session
+ * still resolves to a UserMeResponse, so a linked identity (Discord, Google,
+ * Steam, email) is what counts. Callers on CrazyGames must OR in the SDK
+ * profile themselves; it isn't on the API response.
+ */
+export function viewerIsSignedIn(userMe: UserMeResponse | false): boolean {
+  return userMe !== false && hasLinkedIdentity(userMe.user);
+}
+
 /** Whether the viewer may join `lobby`: it is open, or they are trusted. */
 export function canJoinTrustedLobby(
   lobby: PublicGameInfo,
@@ -26,12 +37,20 @@ export function canJoinTrustedLobby(
 /**
  * Popup shown instead of attempting to join a trusted-only lobby the viewer
  * can't get into (the server would refuse them anyway). Tells them how to
- * become trusted rather than letting the join fail.
+ * become trusted rather than letting the join fail: a signed-out viewer is
+ * told to sign in first, since trust only attaches to an account.
  */
-export function trustRequiredDialog(onClose: () => void): TemplateResult {
+export function trustRequiredDialog(
+  signedIn: boolean,
+  onClose: () => void,
+): TemplateResult {
   return html`<confirm-dialog
     .heading=${translateText("public_lobby.trust_required_title")}
-    .message=${translateText("public_lobby.trust_required_body")}
+    .message=${translateText(
+      signedIn
+        ? "public_lobby.trust_required_body"
+        : "public_lobby.trust_required_body_signed_out",
+    )}
     variant="warning"
     .showClose=${true}
     .buttons=${"confirmOnly"}

@@ -4,6 +4,7 @@ import { repeat } from "lit/directives/repeat.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../../core/Schemas";
+import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { type DesktopUpdateState } from "../DesktopShell";
 import { shouldBlockMultiplayerAction } from "../GameModeSelector";
 import { JoinLobbyModal } from "../JoinLobbyModal";
@@ -40,6 +41,7 @@ import {
   lobbyCard,
   mapAspectRatios,
   trustRequiredDialog,
+  viewerIsSignedIn,
   viewerIsTrusted,
 } from "./LobbyCard";
 import { modalHeader } from "./ui/ModalHeader";
@@ -108,6 +110,7 @@ export class DetailedGameViewModal extends BaseModal {
   @state() private profileName = "";
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
   @state() private viewerTrusted: boolean = false;
+  @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
 
   private serverTimeOffset = 0;
@@ -186,9 +189,16 @@ export class DetailedGameViewModal extends BaseModal {
   };
 
   private onUserMe = (e: Event) => {
-    this.viewerTrusted = viewerIsTrusted(
-      (e as CustomEvent<UserMeResponse | false>).detail,
-    );
+    const me = (e as CustomEvent<UserMeResponse | false>).detail;
+    this.viewerSignedIn = viewerIsSignedIn(me);
+    this.viewerTrusted = viewerIsTrusted(me);
+    // A CrazyGames sign-in surfaces as a userMeResponse without a linked
+    // identity, so re-read the SDK profile alongside it.
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      void crazyGamesSDK.getUserProfile().then((user) => {
+        if (user !== null) this.viewerSignedIn = true;
+      });
+    }
   };
 
   // ---- Slot animation ----
@@ -265,7 +275,10 @@ export class DetailedGameViewModal extends BaseModal {
     return html`
       <div class="custom-scrollbar p-4 lg:p-6 flex flex-col gap-4">
         ${this.showTrustRequired
-          ? trustRequiredDialog(() => (this.showTrustRequired = false))
+          ? trustRequiredDialog(
+              this.viewerSignedIn,
+              () => (this.showTrustRequired = false),
+            )
           : nothing}
         ${this.showFilters ? this.renderFilterPanel() : nothing}
         ${shown.length === 0

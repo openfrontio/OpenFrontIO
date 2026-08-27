@@ -17,8 +17,10 @@ import {
   lobbyCard,
   mapAspectRatios,
   trustRequiredDialog,
+  viewerIsSignedIn,
   viewerIsTrusted,
 } from "./components/LobbyCard";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { multiplayerAllowed, type DesktopUpdateState } from "./DesktopShell";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
@@ -53,6 +55,7 @@ export class GameModeSelector extends LitElement {
   @state() private inputValid: boolean = true;
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
   @state() private viewerTrusted: boolean = false;
+  @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
@@ -118,9 +121,16 @@ export class GameModeSelector extends LitElement {
   };
 
   private onUserMe = (e: Event) => {
-    this.viewerTrusted = viewerIsTrusted(
-      (e as CustomEvent<UserMeResponse | false>).detail,
-    );
+    const me = (e as CustomEvent<UserMeResponse | false>).detail;
+    this.viewerSignedIn = viewerIsSignedIn(me);
+    this.viewerTrusted = viewerIsTrusted(me);
+    // A CrazyGames sign-in surfaces as a userMeResponse without a linked
+    // identity, so re-read the SDK profile alongside it.
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      void crazyGamesSDK.getUserProfile().then((user) => {
+        if (user !== null) this.viewerSignedIn = true;
+      });
+    }
   };
 
   public stop() {
@@ -287,7 +297,10 @@ export class GameModeSelector extends LitElement {
           )}
         </div>
         ${this.showTrustRequired
-          ? trustRequiredDialog(() => (this.showTrustRequired = false))
+          ? trustRequiredDialog(
+              this.viewerSignedIn,
+              () => (this.showTrustRequired = false),
+            )
           : nothing}
       </div>
     `;
