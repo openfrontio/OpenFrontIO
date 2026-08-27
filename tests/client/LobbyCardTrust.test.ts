@@ -21,6 +21,7 @@ vi.mock("../../src/client/Utils", () => ({
 import {
   lobbyCard,
   trustRequiredDialog,
+  viewerIsSignedIn,
   viewerIsTrusted,
 } from "../../src/client/components/LobbyCard";
 
@@ -111,5 +112,20 @@ describe("trustRequiredDialog", () => {
 
   it("tells a signed-out viewer to sign in first", () => {
     expect(message(false)).toBe("public_lobby.trust_required_body_signed_out");
+  });
+});
+
+describe("viewerIsSignedIn", () => {
+  const me = (user: object) => ({ user }) as unknown as UserMeResponse;
+
+  it("counts any linked identity, including Steam-only", () => {
+    expect(viewerIsSignedIn(me({ steam: { id: "1" } }))).toBe(true);
+    expect(viewerIsSignedIn(me({ discord: { id: "1" } }))).toBe(true);
+    expect(viewerIsSignedIn(me({ email: "a@b.c" }))).toBe(true);
+  });
+
+  it("treats a guest session and a failed lookup as signed out", () => {
+    expect(viewerIsSignedIn(me({}))).toBe(false);
+    expect(viewerIsSignedIn(false)).toBe(false);
   });
 });

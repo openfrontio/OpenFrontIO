@@ -4,7 +4,7 @@ import { repeat } from "lit/directives/repeat.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../../core/Schemas";
-import { hasLinkedAccount } from "../Api";
+import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { type DesktopUpdateState } from "../DesktopShell";
 import { shouldBlockMultiplayerAction } from "../GameModeSelector";
 import { JoinLobbyModal } from "../JoinLobbyModal";
@@ -41,6 +41,7 @@ import {
   lobbyCard,
   mapAspectRatios,
   trustRequiredDialog,
+  viewerIsSignedIn,
   viewerIsTrusted,
 } from "./LobbyCard";
 import { modalHeader } from "./ui/ModalHeader";
@@ -189,8 +190,15 @@ export class DetailedGameViewModal extends BaseModal {
 
   private onUserMe = (e: Event) => {
     const me = (e as CustomEvent<UserMeResponse | false>).detail;
-    this.viewerSignedIn = hasLinkedAccount(me);
+    this.viewerSignedIn = viewerIsSignedIn(me);
     this.viewerTrusted = viewerIsTrusted(me);
+    // A CrazyGames sign-in surfaces as a userMeResponse without a linked
+    // identity, so re-read the SDK profile alongside it.
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      void crazyGamesSDK.getUserProfile().then((user) => {
+        if (user !== null) this.viewerSignedIn = true;
+      });
+    }
   };
 
   // ---- Slot animation ----

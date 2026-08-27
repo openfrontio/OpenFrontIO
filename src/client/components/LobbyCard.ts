@@ -2,6 +2,7 @@ import { html, svg, TemplateResult } from "lit";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo } from "../../core/Schemas";
+import { hasLinkedIdentity } from "../AccountIdentity";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { getMapName, getModifierLabels, translateText } from "../Utils";
 import "./ConfirmDialog";
@@ -13,6 +14,16 @@ import "./ConfirmDialog";
  */
 export function viewerIsTrusted(userMe: UserMeResponse | false): boolean {
   return userMe !== false && userMe.player.trustTier === "trusted";
+}
+
+/**
+ * Whether the viewer has an account to become trusted on. A guest session
+ * still resolves to a UserMeResponse, so a linked identity (Discord, Google,
+ * Steam, email) is what counts. Callers on CrazyGames must OR in the SDK
+ * profile themselves; it isn't on the API response.
+ */
+export function viewerIsSignedIn(userMe: UserMeResponse | false): boolean {
+  return userMe !== false && hasLinkedIdentity(userMe.user);
 }
 
 /** Whether the viewer may join `lobby`: it is open, or they are trusted. */

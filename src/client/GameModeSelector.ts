@@ -11,15 +11,16 @@ import {
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
-import { hasLinkedAccount } from "./Api";
 import "./components/IOSAddToHomeScreenBanner";
 import {
   canJoinTrustedLobby,
   lobbyCard,
   mapAspectRatios,
   trustRequiredDialog,
+  viewerIsSignedIn,
   viewerIsTrusted,
 } from "./components/LobbyCard";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { multiplayerAllowed, type DesktopUpdateState } from "./DesktopShell";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
@@ -121,8 +122,15 @@ export class GameModeSelector extends LitElement {
 
   private onUserMe = (e: Event) => {
     const me = (e as CustomEvent<UserMeResponse | false>).detail;
-    this.viewerSignedIn = hasLinkedAccount(me);
+    this.viewerSignedIn = viewerIsSignedIn(me);
     this.viewerTrusted = viewerIsTrusted(me);
+    // A CrazyGames sign-in surfaces as a userMeResponse without a linked
+    // identity, so re-read the SDK profile alongside it.
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      void crazyGamesSDK.getUserProfile().then((user) => {
+        if (user !== null) this.viewerSignedIn = true;
+      });
+    }
   };
 
   public stop() {
