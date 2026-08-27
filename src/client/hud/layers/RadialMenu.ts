@@ -1399,7 +1399,7 @@ export class RadialMenu implements Controller {
 
     getSvgAspectRatio(iconUrl).then((ratio) => {
       if (
-        Number(content.getAttribute("data-render-gneration")) !== generation
+        Number(content.getAttribute("data-render-genration")) !== generation
       ) {
         return;
       }
