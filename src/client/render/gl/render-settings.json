@@ -252,29 +252,7 @@
     "nukeRadiusAtom": 70,
     "nukeRadiusHydro": 160,
     "nukeRadiusMirv": 70,
-    "debrisDensity": 1,
-    "nukeExplosion": {
-      "override": false,
-      "type": "shockwave",
-      "size": 210,
-      "speed": 140,
-      "thickness": 4,
-      "transitionSpeed": 0,
-      "density": 300,
-      "colorCount": 1,
-      "color0R": 0.6,
-      "color0G": 0.1,
-      "color0B": 1,
-      "color1R": 1,
-      "color1G": 1,
-      "color1B": 1,
-      "color2R": 1,
-      "color2G": 0.5,
-      "color2B": 0,
-      "color3R": 1,
-      "color3G": 0,
-      "color3B": 0
-    }
+    "debrisDensity": 1
   },
   "nukeTrajectory": {
     "lineWidth": 2.5,

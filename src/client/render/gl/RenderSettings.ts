@@ -314,37 +314,6 @@ export interface RenderSettings {
     nukeRadiusMirv: number;
     /** Multiplier on the nuke debris sprite count (1 = default scatter). */
     debrisDensity: number;
-    /**
-     * Debug override for the nuke-explosion look. When `override` is on,
-     * every detonation renders with these params instead of the firing
-     * player's cosmetic — for tuning effects live in the debug GUI. Fields
-     * mirror the catalog's NukeExplosionAttributes (size = diameter in world
-     * tiles, speed = tiles/s the width grows, thickness in tiles,
-     * transitionSpeed in colors/s, density = glint/ember count); colors are
-     * the first `colorCount` of color0..color3 (rgb 0–1).
-     */
-    nukeExplosion: {
-      override: boolean;
-      type: "shockwave" | "sparkles" | "embers";
-      size: number;
-      speed: number;
-      thickness: number;
-      transitionSpeed: number;
-      density: number;
-      colorCount: number;
-      color0R: number;
-      color0G: number;
-      color0B: number;
-      color1R: number;
-      color1G: number;
-      color1B: number;
-      color2R: number;
-      color2G: number;
-      color2B: number;
-      color3R: number;
-      color3G: number;
-      color3B: number;
-    };
   };
   nukeTrajectory: {
     lineWidth: number; // px — main line stroke width

@@ -2,6 +2,8 @@ import { Colord, colord } from "colord";
 import { base64url } from "jose";
 import { assetUrl } from "../core/AssetUrls";
 import {
+  type Cosmetics,
+  type EffectType,
   findEffect,
   findEffectForSlot,
   isNukeExplosionEffect,
@@ -11,6 +13,7 @@ import {
   type StructuresEffectAttributes,
   TRAIL_EFFECT_TYPES,
   type TrailEffectAttributes,
+  type WarshipEffectAttributes,
 } from "../core/CosmeticSchemas";
 import { PlayerType } from "../core/game/Game";
 import { decodePatternData } from "../core/PatternDecoder";
@@ -38,9 +41,21 @@ import {
   UT_HYDROGEN_BOMB,
   UT_MIRV_WARHEAD,
 } from "./render/types/UnitType";
-import type { GameView } from "./view";
+import type { GameView, PlayerView } from "./view";
 
 const PALETTE_SIZE = 4096;
+
+/** Catalog attribute shape per effect type — what the effect editor overrides. */
+export type EffectOverrideAttributes = {
+  transportShipTrail: TrailEffectAttributes;
+  nukeTrail: TrailEffectAttributes;
+  structures: StructuresEffectAttributes;
+  warship: WarshipEffectAttributes;
+  nukeExplosion: NukeExplosionAttributes;
+};
+type PaletteEffectAttributes =
+  | TrailEffectAttributes
+  | StructuresEffectAttributes;
 
 // A human player counts as "small" (and glows) at or below this fraction of the
 // map; the glow is suppressed for a grace window after the game starts.
@@ -114,6 +129,31 @@ export function attributesToExplosionParams(
 }
 
 /**
+ * A player's equipped catalog effect for a palette-rendered effect type
+ * (trails / structures / warship), or undefined when none is equipped or the
+ * catalog entry isn't of that shape.
+ */
+function catalogEffectAttributes(
+  catalog: Cosmetics,
+  p: PlayerView,
+  effectType: "transportShipTrail" | "nukeTrail" | "structures" | "warship",
+): PaletteEffectAttributes | undefined {
+  const selected = p.cosmetics.effects?.[effectType];
+  if (!selected) return undefined;
+  const effect = findEffect(catalog, effectType, selected.name);
+  if (!effect || effect.effectType !== effectType) return undefined;
+  // Narrows attributes to trail attrs (structures/warship share the shape).
+  if (
+    !isTrailEffect(effect) &&
+    effect.effectType !== "structures" &&
+    effect.effectType !== "warship"
+  ) {
+    return undefined;
+  }
+  return effect.attributes;
+}
+
+/**
  * The renderer-side glue between GameView (which already builds the full
  * FrameData each tick) and the WebGL view. Two responsibilities:
  *
@@ -144,6 +184,17 @@ export class WebGLFrameBuilder {
    * — keeping it separate lets us retry next tick instead of skipping forever.
    */
   private readonly effectResolved = new Set<number>();
+  /**
+   * Effect-editor overrides (singleplayer tuning): catalog-shaped attributes
+   * that replace the LOCAL player's equipped effect per type. Trail /
+   * structures / warship overrides are applied by syncPlayerEffects (the
+   * local player is re-resolved on change); the nukeExplosion override is
+   * applied per detonation in resolveDeadUnitExplosions.
+   */
+  private readonly effectOverrides = new Map<
+    EffectType,
+    EffectOverrideAttributes[EffectType]
+  >();
   /**
    * Last spawn tile pushed to the renderer per smallID. Players can re-pick
    * spawn during the spawn phase, so this tracks the latest value rather than
@@ -201,6 +252,22 @@ export class WebGLFrameBuilder {
     this.view.refreshNames(displayNames);
   }
 
+  /**
+   * Set (or clear with null) the effect-editor override for one effect type.
+   * Takes effect on the next tick: the local player's effect entries are
+   * re-resolved from overrides first, then the catalog.
+   */
+  setEffectOverride<T extends EffectType>(
+    effectType: T,
+    attrs: EffectOverrideAttributes[T] | null,
+  ): void {
+    if (attrs) this.effectOverrides.set(effectType, attrs);
+    else this.effectOverrides.delete(effectType);
+    if (this.localPlayerSmallID !== 0) {
+      this.effectResolved.delete(this.localPlayerSmallID);
+    }
+  }
+
   private readonly highlightSetBuf = new Uint8Array(PALETTE_SIZE);
   private glowRescanTick = 0;
 
@@ -229,12 +296,25 @@ export class WebGLFrameBuilder {
   private resolveDeadUnitExplosions(gameView: GameView): void {
     const deadUnits = gameView.frameData().events.deadUnits;
     if (deadUnits.length === 0) return;
+    const override = this.effectOverrides.get("nukeExplosion") as
+      | NukeExplosionAttributes
+      | undefined;
     const catalog = getCachedCosmetics();
-    if (!catalog) return; // Catalog not loaded yet — default FX this frame.
+    if (!catalog && !override) return; // Catalog not loaded yet — default FX this frame.
     for (const du of deadUnits) {
       if (!du.reachedTarget) continue; // SAM interceptions have no explosion cosmetic
       const nukeType = UNIT_TYPE_TO_NUKE_TYPE[du.unitType];
       if (!nukeType) continue; // not a shockwave-producing bomb
+      // Effect-editor override: the local player's bombs of the edited type.
+      if (
+        override &&
+        override.nukeType === nukeType &&
+        du.ownerSmallID === this.localPlayerSmallID
+      ) {
+        du.explosion = attributesToExplosionParams(override);
+        continue;
+      }
+      if (!catalog) continue;
       // playerBySmallID throws on an unknown smallID; a stale/bad event must
       // not kill the frame builder — skip it (default FX).
       let player: ReturnType<GameView["playerBySmallID"]>;
@@ -321,6 +401,10 @@ export class WebGLFrameBuilder {
     if (sid === this.localPlayerSmallID) return;
     this.localPlayerSmallID = sid;
     this.view.setLocalPlayerID(sid);
+    // Overrides set before the local player resolved apply to them now.
+    if (sid !== 0 && this.effectOverrides.size > 0) {
+      this.effectResolved.delete(sid);
+    }
     if (me) {
       const rail = me.railColor().toRgb();
       this.view.setLocalRailColor(rail.r / 255, rail.g / 255, rail.b / 255);
@@ -497,11 +581,17 @@ export class WebGLFrameBuilder {
    */
   private syncPlayerEffects(gameView: GameView): void {
     const catalog = getCachedCosmetics();
-    if (!catalog) return; // Catalog not loaded yet — retry on a later tick.
     let dirty = false;
     for (const p of gameView.players()) {
       const smallID = p.smallID();
       if (this.effectResolved.has(smallID)) continue;
+      // Effect-editor overrides apply to the local player only and don't need
+      // the catalog; everyone else waits for it (retry on a later tick).
+      const overrides =
+        smallID === this.localPlayerSmallID && this.effectOverrides.size > 0
+          ? this.effectOverrides
+          : null;
+      if (!catalog && !overrides) continue;
       this.effectResolved.add(smallID);
 
       // Resolve each trail-styled effectType into its own block of the effect
@@ -516,47 +606,67 @@ export class WebGLFrameBuilder {
         "warship",
       ] as const;
       blockOrder.forEach((effectType, block) => {
-        const selected = p.cosmetics.effects?.[effectType];
-        if (!selected) return;
-        const effect = findEffect(catalog, effectType, selected.name);
-        if (!effect || effect.effectType !== effectType) return;
-        // Narrows attributes to trail attrs (structures/warship share the shape).
-        if (
-          !isTrailEffect(effect) &&
-          effect.effectType !== "structures" &&
-          effect.effectType !== "warship"
-        ) {
+        const rowBase = block * MAX_TRAIL_COLORS;
+        const attrs =
+          (overrides?.get(effectType) as PaletteEffectAttributes | undefined) ??
+          (catalog
+            ? catalogEffectAttributes(catalog, p, effectType)
+            : undefined);
+        if (!attrs) {
+          // No effect for this block (or an override was just removed): a
+          // zero count tells the shaders to fall back to the player color.
+          this.clearEffectEntry(smallID, rowBase);
+          if (effectType === "nukeTrail")
+            gameView.clearNukeTrailSpiral(smallID);
           return;
         }
-        // Spiral vortexes render as ribbon geometry (SpiralRibbonPass) —
-        // hand the geometry + palette to the view's SpiralTrails. Colors are
-        // parsed here so a fully unparseable list degrades to the plain
-        // stamped trail instead of an uncolored vortex.
-        if (effectType === "nukeTrail" && effect.attributes.type === "spiral") {
-          const colors = effect.attributes.colors
-            .map((s) => colord(s))
-            .filter((c) => c.isValid())
-            .slice(0, MAX_TRAIL_COLORS)
-            .map((c) => {
-              const { r, g, b } = c.toRgb();
-              return [r / 255, g / 255, b / 255] as [number, number, number];
-            });
-          if (colors.length > 0) {
+        if (effectType === "nukeTrail") {
+          // Spiral vortexes render as ribbon geometry (SpiralRibbonPass) —
+          // hand the geometry + palette to the view's SpiralTrails. Colors are
+          // parsed here so a fully unparseable list degrades to the plain
+          // stamped trail instead of an uncolored vortex.
+          const colors =
+            attrs.type === "spiral"
+              ? attrs.colors
+                  .map((s) => colord(s))
+                  .filter((c) => c.isValid())
+                  .slice(0, MAX_TRAIL_COLORS)
+                  .map((c) => {
+                    const { r, g, b } = c.toRgb();
+                    return [r / 255, g / 255, b / 255] as [
+                      number,
+                      number,
+                      number,
+                    ];
+                  })
+              : [];
+          if (attrs.type === "spiral" && colors.length > 0) {
             gameView.setNukeTrailSpiral(smallID, {
-              radius: effect.attributes.radius,
-              strands: effect.attributes.strands,
-              rotationSpeed: effect.attributes.rotationSpeed,
+              radius: attrs.radius,
+              strands: attrs.strands,
+              rotationSpeed: attrs.rotationSpeed,
               colors,
             });
+          } else {
+            gameView.clearNukeTrailSpiral(smallID);
           }
         }
-        const rowBase = block * MAX_TRAIL_COLORS;
-        if (this.writeEffectEntry(smallID, effect.attributes, rowBase)) {
+        if (this.writeEffectEntry(smallID, attrs, rowBase)) {
           dirty = true;
         }
       });
+      // Overrides may have cleared entries, which writeEffectEntry doesn't report.
+      if (overrides) dirty = true;
     }
     if (dirty) this.view.updateEffectPalette(this.effectPalette);
+  }
+
+  /** Zero an effect-palette entry (count 0 = no effect for that block). */
+  private clearEffectEntry(smallID: number, rowBase: number): void {
+    for (let r = 0; r < MAX_TRAIL_COLORS; r++) {
+      const off = ((rowBase + r) * PALETTE_SIZE + smallID) * 4;
+      this.effectPalette.fill(0, off, off + 4);
+    }
   }
 
   /**

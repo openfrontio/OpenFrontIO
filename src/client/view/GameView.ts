@@ -718,6 +718,10 @@ export class GameView implements GameMap {
     this.spiralTrails.setParams(smallID, params);
   }
 
+  clearNukeTrailSpiral(smallID: number): void {
+    this.spiralTrails.clearParams(smallID);
+  }
+
   private advanceMotionPlannedUnits(currentTick: Tick): void {
     for (const [unitId, plan] of this.unitMotionPlans) {
       const unit = this._units.get(unitId);

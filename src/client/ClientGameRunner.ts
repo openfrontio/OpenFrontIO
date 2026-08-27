@@ -14,6 +14,7 @@ import {
 import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
 import {
   BuildableUnit,
+  GameType,
   PlayerType,
   Structures,
   UnitType,
@@ -47,6 +48,7 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
   TickMetricsEvent,
+  ToggleEffectGuiEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
@@ -759,6 +761,36 @@ async function createClientGame(
       } else {
         debugGui.destroy();
         debugGui = null;
+      }
+    });
+
+    // Effect editor — singleplayer only: live-edits the cosmetic effects on
+    // the local player's units. Loaded on demand like the render debug GUI.
+    let effectGui: { open(): void; destroy(): void } | null = null;
+    let effectGuiLoading = false;
+    eventBus.on(ToggleEffectGuiEvent, () => {
+      if (
+        lobbyConfig.gameStartInfo?.config.gameType !== GameType.Singleplayer
+      ) {
+        return;
+      }
+      if (effectGui === null) {
+        if (effectGuiLoading) return;
+        effectGuiLoading = true;
+        import("./debug/EffectGui")
+          .then(({ createEffectGui }) => {
+            effectGui = createEffectGui({
+              setOverride: (effectType, attrs) =>
+                webglBuilder.setEffectOverride(effectType, attrs),
+            });
+            effectGui.open();
+          })
+          .finally(() => {
+            effectGuiLoading = false;
+          });
+      } else {
+        effectGui.destroy();
+        effectGui = null;
       }
     });
 

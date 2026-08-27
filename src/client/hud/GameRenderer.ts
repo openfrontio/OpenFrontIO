@@ -1,4 +1,5 @@
 import { EventBus } from "../../core/EventBus";
+import { GameType } from "../../core/game/Game";
 import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
 import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
@@ -190,6 +191,8 @@ export function createRenderer(
   }
   settingsModal.userSettings = userSettings;
   settingsModal.eventBus = eventBus;
+  settingsModal.effectEditorEnabled =
+    game.config().gameConfig().gameType === GameType.Singleplayer;
 
   const graphicsSettingsModal = document.querySelector(
     "graphics-settings-modal",
