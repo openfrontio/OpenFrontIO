@@ -13,9 +13,21 @@ import {
   StructuresEffectAttributesSchema,
   TrailEffectAttributesSchema,
 } from "../../../../core/CosmeticSchemas";
+import { MAX_NUKE_EXPLOSION_COLORS } from "../../types";
 
-/** Max colors a slot can carry — the effect palette holds 8 rows per block. */
+/** Max colors a palette slot can carry — the effect palette holds 8 rows per block. */
 export const EFFECT_EDITOR_MAX_COLORS = 8;
+
+/**
+ * Max colors the renderer can actually carry for a slot: nuke explosions
+ * bind MAX_NUKE_EXPLOSION_COLORS vertex attributes (extras are dropped by
+ * attributesToExplosionParams), everything else has 8 palette rows.
+ */
+export function maxColorsFor(effectType: EffectType): number {
+  return effectType === "nukeExplosion"
+    ? MAX_NUKE_EXPLOSION_COLORS
+    : EFFECT_EDITOR_MAX_COLORS;
+}
 
 /**
  * Attribute `type` options per effect slot. Mirrors the catalog schemas,
@@ -119,7 +131,7 @@ export function slotAttributes(
 ): EffectAttributesFor<EffectType> | null {
   const colors = s.colors.slice(
     0,
-    Math.min(Math.max(Math.round(s.colorCount), 0), EFFECT_EDITOR_MAX_COLORS),
+    Math.min(Math.max(Math.round(s.colorCount), 0), maxColorsFor(effectType)),
   );
   let candidate: unknown;
   if (effectType === "nukeExplosion") {

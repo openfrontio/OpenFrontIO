@@ -19,10 +19,10 @@ import {
 import {
   catalogSnippet,
   defaultSlotState,
-  EFFECT_EDITOR_MAX_COLORS,
   EFFECT_EDITOR_TYPES,
   type EffectSlotState,
   fieldsForType,
+  maxColorsFor,
   slotAttributes,
 } from "./EffectEditorState";
 
@@ -126,14 +126,14 @@ export function buildEffectEditor(
     fieldCtrls.push([
       "colorCount",
       folder
-        .add(state, "colorCount", 0, EFFECT_EDITOR_MAX_COLORS, 1)
+        .add(state, "colorCount", 0, maxColorsFor(effectType), 1)
         .name("Colors")
         .onChange(() => {
           refresh();
           apply();
         }),
     ]);
-    for (let i = 0; i < EFFECT_EDITOR_MAX_COLORS; i++) {
+    for (let i = 0; i < maxColorsFor(effectType); i++) {
       colorCtrls.push(
         folder
           .addColor(

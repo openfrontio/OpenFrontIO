@@ -4,6 +4,7 @@ import {
   defaultSlotState,
   EFFECT_EDITOR_TYPES,
   fieldsForType,
+  maxColorsFor,
   slotAttributes,
 } from "../src/client/render/gl/debug/EffectEditorState";
 import { EFFECT_TYPES } from "../src/core/CosmeticSchemas";
@@ -61,9 +62,14 @@ describe("slotAttributes", () => {
     expect(slotAttributes("structures", spiralStructures)).toBe(null);
   });
 
-  test("clamps the color count to the palette size", () => {
+  test("clamps the color count to what the renderer can carry", () => {
     const s = { ...defaultSlotState("warship"), colorCount: 99 };
     expect(slotAttributes("warship", s)?.colors).toHaveLength(8);
+    // Nuke explosions bind only 4 color attributes; extras would be inert.
+    const n = { ...defaultSlotState("nukeExplosion"), colorCount: 99 };
+    expect(slotAttributes("nukeExplosion", n)?.colors).toHaveLength(4);
+    expect(maxColorsFor("nukeExplosion")).toBe(4);
+    expect(maxColorsFor("structures")).toBe(8);
   });
 });
 
