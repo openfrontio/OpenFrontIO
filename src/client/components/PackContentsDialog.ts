@@ -9,7 +9,10 @@ import { customElement, property } from "lit/decorators.js";
 import { CosmeticPack } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
-import { cosmeticDisplayName, cosmeticTypeLabel } from "./CosmeticPresentation";
+import {
+  cosmeticSelectionLabel,
+  cosmeticTypeLabel,
+} from "./CosmeticPresentation";
 import "./CosmeticPreview";
 
 /**
@@ -117,7 +120,7 @@ export class PackContentsDialog extends LitElement {
                     </div>
                     <span
                       class="w-full break-words text-center text-sm font-bold leading-tight text-white"
-                      >${cosmeticDisplayName(item)}</span
+                      >${cosmeticSelectionLabel(item)}</span
                     >
                     <span
                       data-pack-contents-type

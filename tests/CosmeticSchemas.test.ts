@@ -1,4 +1,5 @@
 import {
+  CosmeticPackItemSchema,
   CosmeticPackSchema,
   Cosmetics,
   CosmeticsSchema,
@@ -1213,6 +1214,15 @@ describe("Cosmetic pack schemas", () => {
   it("parses packs keyed by slug with their items in order", () => {
     const parsed = CosmeticsSchema.parse({ ...base, packs: { starter } });
     expect(parsed.packs).toEqual({ starter });
+  });
+
+  it("lets a pattern item name its colour palette", () => {
+    const item = { type: "pattern", name: "camo", colorPalette: "red" };
+    expect(CosmeticPackItemSchema.parse(item)).toEqual(item);
+    // Legacy: a pattern item without a palette is the uncoloured variant.
+    expect(
+      CosmeticPackItemSchema.parse({ type: "pattern", name: "camo" }),
+    ).toEqual({ type: "pattern", name: "camo" });
   });
 
   it("is optional — an older catalog without packs still parses", () => {

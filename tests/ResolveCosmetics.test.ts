@@ -607,5 +607,66 @@ describe("resolveCosmetics cosmetic packs", () => {
     expect(packItemFlare({ type: "effect", name: "ship_trail_gradient" })).toBe(
       "effect:ship_trail_gradient",
     );
+    expect(
+      packItemFlare({ type: "pattern", name: "camo", colorPalette: "red" }),
+    ).toBe("pattern:camo:red");
+  });
+
+  describe("pattern items with a colour palette", () => {
+    const coloured = {
+      ...starter,
+      items: [{ type: "pattern" as const, name: "camo", colorPalette: "red" }],
+    };
+    const catalogWith = (packs: Record<string, typeof coloured>) =>
+      makeCosmetics({
+        patterns: { camo: camo as any },
+        colorPalettes: {
+          red: { name: "red", primaryColor: "#f00", secondaryColor: "#000" },
+        },
+        packs,
+      });
+
+    test("resolve to that palette's entry, the one the granted flare unlocks", () => {
+      const resolved = packOf(
+        resolveCosmetics(
+          catalogWith({ starter: coloured }),
+          makeUserMe(),
+          null,
+        ),
+      );
+      expect(resolved.packItems?.map((item) => item.key)).toEqual([
+        "pattern:camo:red",
+      ]);
+      expect(resolved.packItems?.[0].colorPalette?.name).toBe("red");
+    });
+
+    test("are owned by the palette flare, not the bare pattern flare", () => {
+      const cosmetics = catalogWith({ starter: coloured });
+      expect(
+        packOf(resolveCosmetics(cosmetics, makeUserMe(["pattern:camo"]), null))
+          .relationship,
+      ).toBe("purchasable");
+      expect(
+        packOf(
+          resolveCosmetics(cosmetics, makeUserMe(["pattern:camo:red"]), null),
+        ).relationship,
+      ).toBe("owned");
+    });
+
+    test("skip a palette the pattern no longer offers", () => {
+      const resolved = packOf(
+        resolveCosmetics(
+          catalogWith({
+            starter: {
+              ...coloured,
+              items: [{ type: "pattern", name: "camo", colorPalette: "gone" }],
+            },
+          }),
+          makeUserMe(),
+          null,
+        ),
+      );
+      expect(resolved.packItems).toEqual([]);
+    });
   });
 });
