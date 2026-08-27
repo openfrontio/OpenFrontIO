@@ -53,7 +53,7 @@ describe("purchase-nudge-modal", () => {
     expect(localStorage.getItem("purchaseNudgeShown")).toBe("1");
   });
 
-  it("shows for logged-out players (they cannot be ad-free)", async () => {
+  it("shows for logged-out players", async () => {
     fireUserMe(null);
     expect(await shown()).toBe(true);
   });
@@ -71,10 +71,16 @@ describe("purchase-nudge-modal", () => {
     expect(localStorage.getItem("purchaseNudgeShown")).toBeNull();
   });
 
-  it("stays hidden for ad-free players", async () => {
+  it("stays hidden for ad-free players and latches the shown flag", async () => {
     fireUserMe(true);
     expect(await shown()).toBe(false);
-    expect(localStorage.getItem("purchaseNudgeShown")).toBeNull();
+    expect(localStorage.getItem("purchaseNudgeShown")).toBe("1");
+  });
+
+  it("does not nudge an ad-free player who later logs out", async () => {
+    fireUserMe(true);
+    fireUserMe(null);
+    expect(await shown()).toBe(false);
   });
 
   it("stays hidden on CrazyGames", async () => {

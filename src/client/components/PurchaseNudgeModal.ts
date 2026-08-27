@@ -14,10 +14,11 @@ const MIN_GAMES_PLAYED = 50;
  * past MIN_GAMES_PLAYED games, then never again (persisted in localStorage).
  *
  * It reads the `userMeResponse` document event (dispatched after login / on
- * load, `false` when logged out — who can't be ad-free). Ad-free players have
- * already purchased, CrazyGames has its own storefront, and the desktop shell
- * never shows ads, so none of them see it. Closing takes an explicit click on
- * the X (or on "Visit store"); there is no backdrop-click dismissal.
+ * load, `false` when logged out). Ad-free players have already purchased —
+ * seeing one marks the nudge as shown, so it stays off even if they later
+ * log out in this browser. CrazyGames has its own storefront and the desktop
+ * shell never shows ads, so neither sees it. Closing takes an explicit click
+ * on the X (or on "Visit store"); there is no backdrop-click dismissal.
  */
 @customElement("purchase-nudge-modal")
 export class PurchaseNudgeModal extends LitElement {
@@ -26,9 +27,13 @@ export class PurchaseNudgeModal extends LitElement {
   private onUserMeResponse = (event: Event) => {
     if (this.isVisible) return;
     const detail = (event as CustomEvent<UserMeResponse | false>).detail;
-    const adFree = detail !== false && detail.player.adfree === true;
+    if (detail !== false && detail.player.adfree === true) {
+      // Already purchased: latch the flag now so that a later logged-out
+      // visit in this browser (where ad-free is unknown) can't nudge them.
+      localStorage.setItem(SHOWN_KEY, "1");
+      return;
+    }
     if (
-      adFree ||
       crazyGamesSDK.isOnCrazyGames() ||
       isDesktopShell() ||
       getGamesPlayed() <= MIN_GAMES_PLAYED ||
