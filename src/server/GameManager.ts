@@ -143,6 +143,7 @@ export class GameManager {
   tick() {
     const active = new Map<GameID, GameServer>();
     for (const [id, game] of this.games) {
+      game.pruneStaleClients();
       const phase = game.phase();
       if (phase === GamePhase.Lobby) {
         game.maybeAutoStartListed();

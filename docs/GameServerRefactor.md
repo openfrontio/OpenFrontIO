@@ -261,9 +261,11 @@ reaches for `intents`, `isPaused`, `_hasStarted`, `_hasEnded`,
 
 - [ ] One `state: "lobby" | "prestart" | "started" | "ended"` plus `paused`
       replaces the booleans. `hasStarted()` becomes `state !== "lobby"`.
-- [ ] Split `phase()` into `pruneStaleClients()` (side effects; called once per
-      `GameManager.tick`) and a pure `phase()`. `publicLobbies()` /
-      `listedLobbies()` stop mutating state.
+- [x] (2026-08-27) `phase()` is a pure read; the 60s ping prune (with its
+      winner re-tally) is `pruneStaleClients()`, which `GameManager.tick`
+      calls just before `phase()` and which is a no-op once the game has
+      ended, as the old early return made it. `publicLobbies()` and
+      `listedLobbies()` no longer close anyone's socket.
 - [ ] Decide whether `end()` should await `archive()` after checking how
       `Archive.ts` handles rejections.
 

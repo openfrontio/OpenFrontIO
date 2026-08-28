@@ -97,13 +97,13 @@ describe("winner vote re-tally when the electorate shrinks", () => {
     expect(archivedWinners()).toEqual([undefined]);
   });
 
-  it("re-tallies when the ping prune in phase() drops a stale client", async () => {
+  it("re-tallies when the ping prune drops a stale client", async () => {
     const { game, winner, loser } = game1v1();
     await vote(winner, ["player", WINNER]);
     // The loser's connection dropped without a ws close event: pings stop,
-    // and only the 60s prune in phase() removes them from activeClients.
+    // and only the 60s prune removes them from the connected clients.
     loser.lastPing = Date.now() - 61_000;
-    game.phase();
+    game.pruneStaleClients();
     expect(archivedWinners()).toEqual([["player", WINNER]]);
   });
 });

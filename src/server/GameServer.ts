@@ -1194,16 +1194,15 @@ export class GameServer {
     this.telemetry.matchFinished(this.turns.length);
   }
 
-  phase(): GamePhase {
-    // An ended game (e.g. an unstarted lobby whose host left) must report
-    // Finished: GameManager prunes on Finished, and a ghost that kept
-    // reporting Lobby would stay advertised in the lobby browser and hold
-    // the creator's one-listing quota until the max-duration cutoff.
+  // Drops the clients that have not pinged for 60s. GameManager calls this
+  // once per tick, just before phase(); it is the one lifecycle step with a
+  // side effect, and keeping it out of phase() lets the lobby browser read
+  // the phase as often as it likes without closing anyone's socket.
+  public pruneStaleClients(): void {
     if (this._hasEnded) {
-      return GamePhase.Finished;
+      return;
     }
-    const now = Date.now();
-    const stale = this.clients.pruneStale(now, 60_000);
+    const stale = this.clients.pruneStale(Date.now(), 60_000);
     for (const client of stale) {
       this.log.info("no pings received, terminating connection", {
         clientID: client.clientID,
@@ -1218,6 +1217,18 @@ export class GameServer {
     if (stale.length > 0) {
       this.checkWinnerAfterElectorateShrink();
     }
+  }
+
+  // A pure read of the lifecycle; pruneStaleClients() is the side effect.
+  phase(): GamePhase {
+    // An ended game (e.g. an unstarted lobby whose host left) must report
+    // Finished: GameManager prunes on Finished, and a ghost that kept
+    // reporting Lobby would stay advertised in the lobby browser and hold
+    // the creator's one-listing quota until the max-duration cutoff.
+    if (this._hasEnded) {
+      return GamePhase.Finished;
+    }
+    const now = Date.now();
     if (now > this.createdAt + this.maxGameDuration) {
       this.log.warn("game past max duration", {
         gameID: this.id,
