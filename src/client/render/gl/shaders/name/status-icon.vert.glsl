@@ -184,7 +184,7 @@ void main() {
     // badge is raised so its lower half overlaps the line's top edge.
     float lineHeight = uFontBase * nameWorldScale;
     iconWorldSize = lineHeight * 0.55;
-    iconX = wx + pd3.w * nameWorldScale + lineHeight * 0.04;
+    iconX = wx + pd3.w * nameWorldScale - lineHeight * 0.04;
     iconY = wy - lineHeight * 0.5 - iconWorldSize * 0.5;
   } else {
     // Count active status icons and position of this one (left-to-right).
