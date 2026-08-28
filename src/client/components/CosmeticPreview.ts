@@ -102,10 +102,10 @@ export class CosmeticPreview extends LitElement {
           .explosion=${cosmetic.attributes}
         ></shockwave-swatch>`;
       }
-      return html`<trail-swatch
+      return html`<effect-scene
         class="block w-full h-full"
-        .trail=${cosmetic.attributes}
-      ></trail-swatch>`;
+        .effect=${cosmetic}
+      ></effect-scene>`;
     }
 
     if (this.resolved.type === "crown") {

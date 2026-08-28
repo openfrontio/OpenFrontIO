@@ -253,12 +253,15 @@ describe("CosmeticPreview", () => {
     })) as unknown as typeof Element.prototype.animate;
     await render(resolved.transitionEffect as ResolvedCosmetic);
 
-    const trail = preview!.querySelector("trail-swatch")!;
+    const scene = preview!.querySelector("effect-scene")!;
     expect(preview!.classList).toContain("block");
-    expect(trail.classList).toContain("block");
-    expect(trail.querySelector("div")?.getAttribute("style")).toContain(
-      "#ff0000",
-    );
+    expect(scene.classList).toContain("block");
+    // The transition cross-fades the trail through the palette.
+    expect(
+      scene
+        .querySelector("[data-trail] animate[attributeName='fill']")
+        ?.getAttribute("values"),
+    ).toContain("#ff0000");
   });
 
   it("uses the server-provided pack display name", async () => {
