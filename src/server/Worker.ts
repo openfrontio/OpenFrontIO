@@ -40,6 +40,7 @@ import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryE
 import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
+import { stripWorkerPrefix } from "./WorkerPathPrefix";
 
 const workerId = ServerEnv.workerId() ?? 0;
 const log = logger.child({ comp: `w_${workerId}` });
@@ -94,30 +95,15 @@ export async function startWorker() {
   );
   privilegeRefresher.start();
 
-  // Middleware to handle /wX path prefix
-  app.use((req, res, next) => {
-    // Extract the original path without the worker prefix
-    const originalPath = req.url;
-    const match = originalPath.match(/^\/w(\d+)(.*)$/);
+  // Ahead of everything that can reject a request — the worker-prefix check
+  // below and the rate limiter further down — so that a 404 or a 429 still
+  // carries the CORS headers. Without them the desktop client sees an opaque
+  // CORS failure instead of the real status, which hides the actual fault.
+  // Matches both URL shapes because it runs before the prefix is stripped,
+  // including a prefix naming a different worker.
+  app.use(["/api", /^\/w\d+\/api/], gameApiCors);
 
-    if (match) {
-      const pathWorkerId = parseInt(match[1]);
-      const actualPath = match[2] || "/";
-
-      // Verify this request is for the correct worker
-      if (pathWorkerId !== workerId) {
-        return res.status(404).json({
-          error: "Worker mismatch",
-          message: `This is worker ${workerId}, but you requested worker ${pathWorkerId}`,
-        });
-      }
-
-      // Update the URL to remove the worker prefix
-      req.url = actualPath;
-    }
-
-    next();
-  });
+  app.use(stripWorkerPrefix(workerId));
 
   app.set("trust proxy", 3);
   app.use(compression());
@@ -143,12 +129,6 @@ export async function startWorker() {
       },
     }),
   );
-  // Before the rate limiter on purpose: a 429 still has to carry the CORS
-  // headers, or the desktop client sees an opaque CORS failure instead of the
-  // real status. Preflights are answered here and never reach the limiter,
-  // which is fine — they do no work.
-  app.use("/api", gameApiCors);
-
   app.use(
     rateLimit({
       windowMs: 1000, // 1 second
