@@ -190,8 +190,8 @@ export class HeadsUpMessage extends LitElement implements Controller {
                 class="fixed top-6 left-1/2 -translate-x-1/2 z-[1002] px-6 py-4 rounded-xl transition-all duration-300 animate-fade-in-out"
                 style="max-width: 90vw; min-width: 200px; text-align: center;
                   background: ${this.toastColor === "red"
-                  ? "rgba(127,29,29,0.9)"
-                  : "rgba(20,83,45,0.9)"};
+                  ? "rgba(239,68,68,0.1)"
+                  : "rgba(34,197,94,0.1)"};
                   border: 1px solid ${this.toastColor === "red"
                   ? "rgba(239,68,68,0.5)"
                   : "rgba(34,197,94,0.5)"};
