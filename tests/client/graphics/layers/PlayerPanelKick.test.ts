@@ -51,8 +51,11 @@ const mockActionButton = actionButton as unknown as ReturnType<typeof vi.fn>;
 const renderedLabels = () =>
   mockActionButton.mock.calls.map((c) => (c[0] as { label: string }).label);
 
-function gameOfType(gameType: GameType) {
-  return { config: () => ({ gameConfig: () => ({ gameType }) }) };
+function gameOfType(gameType: GameType, gameOver = false) {
+  return {
+    config: () => ({ gameConfig: () => ({ gameType }) }),
+    gameOver: () => gameOver,
+  };
 }
 
 describe("PlayerPanel - kick player moderation", () => {
@@ -171,9 +174,14 @@ describe("PlayerPanel - report player", () => {
     });
   });
 
-  test("no report button in singleplayer, for yourself, or for a nation", () => {
+  test("no report button in singleplayer, once the game is over, for yourself, or for a nation", () => {
     // Singleplayer records are client-authored; the API ignores their reports.
     (panel as any).g = gameOfType(GameType.Singleplayer);
+    (panel as any).renderModeration(me, other, false);
+    expect(mockActionButton).not.toHaveBeenCalled();
+
+    // Once decided, the record has been archived and the server refuses.
+    (panel as any).g = gameOfType(GameType.Public, true);
     (panel as any).renderModeration(me, other, false);
     expect(mockActionButton).not.toHaveBeenCalled();
 

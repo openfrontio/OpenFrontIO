@@ -378,10 +378,12 @@ export class PlayerPanel extends LitElement implements Controller {
   };
 
   // Anyone may report another human of a multiplayer game. Singleplayer
-  // records are client-authored and the API ignores their reports.
+  // records are client-authored and the API ignores their reports; once the
+  // game is decided the record has been archived and the server refuses.
   private canReport(my: PlayerView, other: PlayerView): boolean {
     return (
       this.g.config().gameConfig().gameType !== GameType.Singleplayer &&
+      !this.g.gameOver() &&
       other !== my &&
       other.type() === PlayerType.Human &&
       !!other.clientID()

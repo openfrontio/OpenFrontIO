@@ -1532,10 +1532,16 @@ export class GameServer {
   // at the number of other players — no separate rate limit needed. Rejects
   // are dropped without a log line: the message is not rate limited, so a
   // logged reject would let one client flood the logs.
+  //
+  // The record is archived once, when the winner vote resolves (or at
+  // end() if it never does), and reports only travel with it — so anything
+  // filed after that has nowhere to go and is refused rather than kept.
   private handleReport(client: Client, clientMsg: ClientReportMessage) {
     const { reported, reason } = clientMsg;
     if (
       !this._hasStarted ||
+      this._hasEnded ||
+      this.winnerVote.winner() !== null ||
       reported === client.clientID ||
       !this.gameStartInfo.players.some((p) => p.clientID === reported)
     ) {

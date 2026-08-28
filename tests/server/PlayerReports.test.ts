@@ -113,6 +113,22 @@ describe("player reports", () => {
     expect(record.info.reports).toEqual([]);
   });
 
+  it("refuses reports filed after the winner vote resolved", async () => {
+    // The record went to the API when the vote resolved; a later report
+    // would sit on the server with nowhere to go.
+    const { game, alice, bob, carol } = makeThreePlayerGame();
+    startGame(game);
+    const record = await finish(alice, bob, carol);
+    expect(record.info.reports).toEqual([]);
+
+    await mockWsOf(alice).emit({
+      type: "report",
+      reported: BOB,
+      reason: "griefing",
+    });
+    expect((game as any).reports.size).toBe(0);
+  });
+
   it("ignores reports filed before the game starts", async () => {
     // The player list is only frozen at start; the API needs both sides in
     // info.players.
