@@ -190,7 +190,9 @@ describe("GameServer match telemetry", () => {
     // the turns committed once play resumes do not carry it.
     game.handleIntent({ type: "toggle_pause", paused: false }, ADMIN_BOT);
     vi.advanceTimersByTime(TURN_MS);
-    expect(committedIntents(ws).map((i) => i.type)).not.toContain("spawn");
+    const committed = committedIntents(ws).map((i) => i.type);
+    expect(committed).toContain("toggle_pause");
+    expect(committed).not.toContain("spawn");
   });
 
   it("preserves an existing authorization rejection and reason", async () => {
@@ -215,9 +217,10 @@ describe("GameServer match telemetry", () => {
       },
     });
     vi.advanceTimersByTime(TURN_MS);
-    expect(committedIntents(ws).map((i) => i.type)).not.toContain(
-      "kick_player",
-    );
+    const committed = committedIntents(ws).map((i) => i.type);
+    // The turn did go out (it carries the join's connection mark) without it.
+    expect(committed).toContain("mark_disconnected");
+    expect(committed).not.toContain("kick_player");
   });
 
   it("captures the raw intent from a schema-invalid intent message", async () => {
