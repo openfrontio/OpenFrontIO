@@ -238,10 +238,13 @@ replaced by real joins and observable outcomes. Golden snapshot unchanged.
 
 ## Phase 5 — Message ingress and intent dispatch
 
-- [ ] `ClientSocket.attach(client, { onMessage, onClose })`: decode → validate
-      → rate-limit → spectator-block. The message switch stays in
-      `GameServer.handleClientMessage(client, msg)`. Tests call it directly;
-      keep a few frame-level tests for the decode/kick paths.
+- [x] `SocketIngress.ts` (2026-08-27): `attach(client)` wires the socket
+      listeners; `receive(client, frame)` is decode → validate → rate-limit →
+      spectator-block, then the game's `onMessage`. The message switch is
+      `GameServer.handleClientMessage(client, msg)`. The rate limiter is a
+      constructor parameter, so `SocketIngress.test.ts` drives the limit and
+      kick telemetry paths that `MatchTelemetryIntegration.test.ts` used to
+      reach in for; the frame-level decode / kick tests are unchanged.
 - [ ] `authorizeIntent(intent, actor): IntentOutcome | null` (pure guards,
       table-testable) separated from the effects in `handleIntent`.
 

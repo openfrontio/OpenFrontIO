@@ -257,60 +257,6 @@ describe("GameServer match telemetry", () => {
     ).toHaveLength(0);
   });
 
-  it.each([
-    ["limit", "limit"],
-    ["kick", "kick_reason.too_much_data"],
-  ] as const)(
-    "captures the existing %s rate-limiter outcome",
-    async (rateResult, reasonCode) => {
-      const game = makeGame();
-      (game as any).intentRateLimiter = { check: () => rateResult };
-      const { client, ws } = makeClient();
-      game.joinClient(client);
-      const intentsBefore = [...(game as any).intents];
-      expect(intentsBefore).toEqual([
-        {
-          type: "mark_disconnected",
-          clientID: "clientAB",
-          isDisconnected: false,
-        },
-      ]);
-      await ws.trigger(
-        "message",
-        clientFrame({ type: "intent", intent: { type: "spawn", tile: 1 } }),
-      );
-      const observed = telemetry.events.find(
-        (event) => event.type === "intent_observed",
-      );
-      expect(observed).toMatchObject({
-        payload: {
-          outcome: "rejected",
-          reasonCode,
-          intentType: "spawn",
-        },
-      });
-      expect(observed?.type).toBe("intent_observed");
-      if (observed?.type !== "intent_observed") {
-        throw new Error("expected intent_observed telemetry");
-      }
-      expect(observed.payload.identity).toEqual({
-        clientId: "clientAB",
-        publicId: "publicABC",
-      });
-      expect(observed.payload.intent).toEqual({
-        type: "spawn",
-        tile: 1,
-        clientID: "clientAB",
-      });
-      expect((game as any).intents).toEqual(intentsBefore);
-      if (rateResult === "kick") {
-        expect(ws.close).toHaveBeenCalledOnce();
-      } else {
-        expect(ws.close).not.toHaveBeenCalled();
-      }
-    },
-  );
-
   it("emits a turn marker after all intent decisions for that tick", async () => {
     const game = makeGame();
     const { client, ws } = makeClient();
