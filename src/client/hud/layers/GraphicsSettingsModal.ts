@@ -318,6 +318,15 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  private patchAltView(patch: Partial<GraphicsOverrides["altView"]>) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      altView: { ...current.altView, ...patch },
+    });
+    this.requestUpdate();
+  }
+
   private patchRailroad(patch: Partial<GraphicsOverrides["railroad"]>) {
     const current = this.userSettings.graphicsOverrides();
     this.userSettings.setGraphicsOverrides({
@@ -410,6 +419,13 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     );
   }
 
+  private currentAltViewFillAlpha(): number {
+    return (
+      this.userSettings.graphicsOverrides().altView?.fillAlpha ??
+      renderDefaults.altView.fillAlpha
+    );
+  }
+
   private currentCoordinateGridOpacity(): number {
     return (
       this.userSettings.graphicsOverrides().mapOverlay?.coordinateGridOpacity ??
@@ -454,6 +470,11 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   private onTerritoryAlphaChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchMapOverlay({ territoryAlpha: value });
+  }
+
+  private onAltViewFillAlphaChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchAltView({ fillAlpha: value });
   }
 
   private onCoordinateGridOpacityChange(event: Event) {
@@ -969,6 +990,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const highlightThicken = this.currentHighlightThicken();
     const territorySat = this.currentTerritorySat();
     const territoryAlpha = this.currentTerritoryAlpha();
+    const altViewFillAlpha = this.currentAltViewFillAlpha();
     const coordinateGridOpacity = this.currentCoordinateGridOpacity();
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
     const railThickness = this.currentRailThickness();
@@ -1422,6 +1444,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
         </div>
         <div class="text-sm text-slate-400 w-12 text-right">
           ${territoryAlpha.toFixed(2)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.alt_view_fill_alpha_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.alt_view_fill_alpha_desc")}
+          </div>
+          <input
+            type="range"
+            min=${TERRITORY_ALPHA_MIN}
+            max=${TERRITORY_ALPHA_MAX}
+            step=${TERRITORY_ALPHA_STEP}
+            .value=${String(altViewFillAlpha)}
+            @input=${this.onAltViewFillAlphaChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${altViewFillAlpha.toFixed(2)}
         </div>
       </div>
 

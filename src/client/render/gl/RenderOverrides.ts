@@ -104,6 +104,9 @@ export function applyGraphicsOverrides(
     settings.mapOverlay.embargoTintRatio =
       overrides.mapOverlay.embargoTintRatio;
   }
+  if (overrides.altView?.fillAlpha !== undefined) {
+    settings.altView.fillAlpha = overrides.altView.fillAlpha;
+  }
   if (overrides.affiliation?.selfColor !== undefined) {
     applyHexColor(overrides.affiliation.selfColor, (r, g, b) => {
       settings.affiliation.selfR = r;
