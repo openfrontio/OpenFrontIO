@@ -542,6 +542,7 @@ export class GameServer {
     );
     this.ingress.attach(client);
     this.startLobbyInfoBroadcast();
+    this.sendLobbyInfo(client);
 
     if (this.playerCount() >= (this.gameConfig.maxPlayers ?? Infinity)) {
       this.hasReachedMaxPlayerCount = true;
@@ -591,6 +592,7 @@ export class GameServer {
 
     this.ingress.attach(client);
     this.startLobbyInfoBroadcast();
+    this.sendLobbyInfo(client);
 
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, lastTurn);
@@ -800,7 +802,6 @@ export class GameServer {
     if (this.lobbyInfoIntervalId !== null) {
       return;
     }
-    this.broadcastLobbyInfo();
     this.lobbyInfoIntervalId = setInterval(() => {
       if (
         this._hasStarted ||
@@ -825,19 +826,32 @@ export class GameServer {
   private broadcastLobbyInfo() {
     // Off: same payload for everyone (build once). On: per-recipient.
     const shared = this.gameConfig.anonymizeNames ? null : this.gameInfo();
-    this.clients.active().forEach((c) => {
-      if (c.ws.readyState === WebSocket.OPEN) {
-        const msg = encodeServerMessage(
-          {
-            type: "lobby_info",
-            lobby: shared ?? this.gameInfo(c.clientID),
-            myClientID: c.clientID,
-          } satisfies ServerLobbyInfoMessage,
-          this.zbinCtx,
-        );
-        c.ws.send(msg);
-      }
-    });
+    this.clients.active().forEach((c) => this.sendLobbyInfo(c, shared));
+  }
+
+  // A client that has just been seated gets its lobby_info straight away
+  // rather than on the next 1s broadcast tick: the join modal shows a spinner
+  // until this message lands, so the tick was up to a second of dead wait on
+  // every join into an occupied lobby.
+  private sendLobbyInfo(c: Client, shared: GameInfo | null = null) {
+    if (c.ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    const lobby =
+      shared ??
+      (this.gameConfig.anonymizeNames
+        ? this.gameInfo(c.clientID)
+        : this.gameInfo());
+    c.ws.send(
+      encodeServerMessage(
+        {
+          type: "lobby_info",
+          lobby,
+          myClientID: c.clientID,
+        } satisfies ServerLobbyInfoMessage,
+        this.zbinCtx,
+      ),
+    );
   }
 
   // The worker created a successor lobby for this game (the host asked to
