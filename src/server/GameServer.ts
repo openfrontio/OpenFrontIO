@@ -134,7 +134,14 @@ export class GameServer {
   // Who joined, who is connected, and the per-account reconnect, admission
   // and kick flags (see Roster.ts). The join policy stays here.
   private readonly clients = new Roster();
-  private _hasStarted = false;
+  // The lobby -> prestart -> started progression. `ended` is orthogonal to
+  // it: a lobby can end without ever starting (host left, match cancelled),
+  // and a started game is still a started game once it has ended — end()
+  // archives on that, and the socket close events that follow end() still
+  // go through hasStarted() in handleClientDisconnect.
+  private stage: "lobby" | "prestart" | "started" = "lobby";
+  private ended = false;
+  private paused = false;
   private _startTime: number | null = null;
   private hasReachedMaxPlayerCount: boolean = false;
 
@@ -157,20 +164,14 @@ export class GameServer {
 
   private log: Logger;
 
-  private _hasPrestarted = false;
-
   // Purchased bot tribe names drawn for this game, set when the prestart
   // fetch lands (undefined until then / on fetch failure / non-public games).
   private tribes?: Tribe[];
-
-  private isPaused = false;
 
   // The end-of-game winner vote and the running live-stats vote: both
   // IP-weighted majorities among the players (see Consensus.ts).
   private readonly winnerVote = new WinnerVote();
   private readonly liveStatsVote = new LiveStatsVote();
-
-  private _hasEnded = false;
 
   // This private lobby's presence in the public lobby browser (see
   // ListingState.ts).
@@ -365,9 +366,9 @@ export class GameServer {
         if (stamped.paused) {
           this.addIntent(stamped);
           this.endTurn();
-          this.isPaused = true;
+          this.paused = true;
         } else {
-          this.isPaused = false;
+          this.paused = false;
           this.addIntent(stamped);
           this.endTurn();
         }
@@ -378,7 +379,7 @@ export class GameServer {
         // Gameplay intents, into the turn queue.
         // While paused the intent is accepted at ingress but not queued into a
         // turn; tag it so telemetry can tell it apart from a queued intent.
-        const paused = this.isPaused;
+        const paused = this.paused;
         const outcome = finish({ status: 200 }, paused ? "paused" : undefined);
         if (!paused) this.addIntent(stamped);
         return outcome;
@@ -423,7 +424,7 @@ export class GameServer {
   ): "joined" | "kicked" | "rejected" | "not_allowlisted" | "not_trusted" {
     // e.g. the host left an unstarted lobby and GameManager hasn't pruned
     // it yet.
-    if (this._hasEnded) {
+    if (this.ended) {
       return "rejected";
     }
     if (this.clients.isKicked(client.persistentID)) {
@@ -450,7 +451,7 @@ export class GameServer {
     // gameStartInfo.players is frozen at start, so a late arrival could never
     // spawn. They used to join as a player anyway; watching is what actually
     // happened to them, so it is what they join as.
-    if (this._hasStarted) {
+    if (this.stage === "started") {
       client.spectator = true;
     }
 
@@ -548,7 +549,7 @@ export class GameServer {
     }
 
     // In case a client joined the game late and missed the start message.
-    if (this._hasStarted) {
+    if (this.stage === "started") {
       this.sendStartGameMsg(client.ws, 0);
     }
 
@@ -592,7 +593,7 @@ export class GameServer {
     this.ingress.attach(client);
     this.startLobbyInfoBroadcast();
 
-    if (this._hasStarted) {
+    if (this.stage === "started") {
       this.sendStartGameMsg(client.ws, lastTurn);
     }
     return true;
@@ -604,7 +605,7 @@ export class GameServer {
     switch (clientMsg.type) {
       case "rejoin": {
         // Client is already connected, no auth required, send start game message if game has started
-        if (this._hasStarted) {
+        if (this.stage === "started") {
           this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
         }
         break;
@@ -680,7 +681,7 @@ export class GameServer {
       for (const c of [...this.clients.active()]) {
         this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
       }
-      this._hasEnded = true;
+      this.ended = true;
     }
   }
 
@@ -726,7 +727,7 @@ export class GameServer {
       this.kickClient(c.clientID, KICK_REASON_MATCH_CANCELLED);
     }
     // phase() reports Finished once ended, so GameManager's next tick prunes.
-    this._hasEnded = true;
+    this.ended = true;
     return true;
   }
 
@@ -734,7 +735,7 @@ export class GameServer {
     if (this.hasStarted()) {
       return;
     }
-    this._hasPrestarted = true;
+    this.stage = "prestart";
     this.fetchTribes();
 
     const prestartMsg = ServerPrestartMessageSchema.safeParse({
@@ -794,7 +795,7 @@ export class GameServer {
   }
 
   private startLobbyInfoBroadcast() {
-    if (this._hasStarted || this._hasEnded) {
+    if (this.stage === "started" || this.ended) {
       return;
     }
     if (this.lobbyInfoIntervalId !== null) {
@@ -803,8 +804,8 @@ export class GameServer {
     this.broadcastLobbyInfo();
     this.lobbyInfoIntervalId = setInterval(() => {
       if (
-        this._hasStarted ||
-        this._hasEnded ||
+        this.stage === "started" ||
+        this.ended ||
         this.clients.active().length === 0
       ) {
         this.stopLobbyInfoBroadcast();
@@ -873,10 +874,10 @@ export class GameServer {
   }
 
   public start() {
-    if (this._hasStarted || this._hasEnded) {
+    if (this.stage === "started" || this.ended) {
       return;
     }
-    this._hasStarted = true;
+    this.stage = "started";
     this._startTime = Date.now();
     // Set last ping to start so we don't immediately stop the game
     // if no client connects/pings.
@@ -988,7 +989,7 @@ export class GameServer {
   private setSpectator(client: Client, spectator: boolean): void {
     if (client.spectator === spectator) return;
     if (!spectator) {
-      if (this._hasStarted || this._hasEnded) return;
+      if (this.stage === "started" || this.ended) return;
       if (!this.passesAllowlist(client)) return;
       if (!this.passesTrustGate(client)) return;
       const max = this.gameConfig.maxPlayers;
@@ -1104,7 +1105,7 @@ export class GameServer {
 
   private endTurn() {
     // Skip turn execution if game is paused
-    if (this.isPaused) {
+    if (this.paused) {
       return;
     }
 
@@ -1143,14 +1144,14 @@ export class GameServer {
   }
 
   async end() {
-    this._hasEnded = true;
+    this.ended = true;
     // Close all WebSocket connections
     if (this.endTurnIntervalID) {
       clearInterval(this.endTurnIntervalID);
       this.endTurnIntervalID = undefined;
     }
     this.clients.closeAll("game has ended");
-    if (!this._hasPrestarted && !this._hasStarted) {
+    if (!this.hasStarted()) {
       this.log.info(`game not started, not archiving game`);
       this.telemetry.matchFinished(this.turns.length);
       return;
@@ -1166,6 +1167,8 @@ export class GameServer {
           gameID: this.id,
         });
       } else {
+        // Not awaited: the upload handles its own failures (Archive.ts), and
+        // waiting would only hold up GameManager's prune of this game.
         this.archiveGame();
       }
     } catch (error) {
@@ -1199,7 +1202,7 @@ export class GameServer {
   // side effect, and keeping it out of phase() lets the lobby browser read
   // the phase as often as it likes without closing anyone's socket.
   public pruneStaleClients(): void {
-    if (this._hasEnded) {
+    if (this.ended) {
       return;
     }
     const stale = this.clients.pruneStale(Date.now(), 60_000);
@@ -1225,7 +1228,7 @@ export class GameServer {
     // Finished: GameManager prunes on Finished, and a ghost that kept
     // reporting Lobby would stay advertised in the lobby browser and hold
     // the creator's one-listing quota until the max-duration cutoff.
-    if (this._hasEnded) {
+    if (this.ended) {
       return GamePhase.Finished;
     }
     const now = Date.now();
@@ -1256,7 +1259,11 @@ export class GameServer {
   }
 
   hasStarted(): boolean {
-    return this._hasStarted || this._hasPrestarted;
+    return this.stage !== "lobby";
+  }
+
+  isPaused(): boolean {
+    return this.paused;
   }
 
   // Omitting viewer (e.g. the HTTP /api/game/:id and link-preview routes)
@@ -1601,7 +1608,7 @@ export class GameServer {
   // winnerless (e.g. game s5bcKtj8). Re-tally whenever the electorate
   // shrinks, counting only votes from still-active IPs (see resultAmong).
   private checkWinnerAfterElectorateShrink() {
-    if (this.winnerVote.winner() !== null || this._hasEnded) {
+    if (this.winnerVote.winner() !== null || this.ended) {
       return;
     }
     const activeIPs = new Set(this.clients.active().map((c) => c.ip));
