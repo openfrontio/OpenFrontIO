@@ -1,39 +1,70 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { PreviewAnimationTicker } from "../src/client/render/preview/PreviewAnimationTicker";
 import {
-  generatePreviewMap,
+  MIRV_WARHEAD_TARGETS,
+  PreviewAnimationTicker,
+} from "../src/client/render/preview/PreviewAnimationTicker";
+import {
+  buildPreviewMap,
   getPreviewRailLoop,
-  PREVIEW_MAP_DIM,
+  PREVIEW_MAP_H,
+  PREVIEW_MAP_W,
   PREVIEW_RAIL_STATIONS,
-  type PreviewTerrainPreset,
-} from "../src/client/render/preview/PreviewMapGenerator";
+  PREVIEW_SCENE,
+  previewTileRef,
+} from "../src/client/render/preview/PreviewMap";
 
-describe("PreviewMapGenerator", () => {
-  const presets: PreviewTerrainPreset[] = [
-    "CONTINENTAL_ARCHIPELAGO",
-    "OPEN_OCEAN",
-    "COASTAL_BASEPLATE",
-  ];
+const PREVIEW_MAP_DIM = PREVIEW_MAP_W;
 
-  presets.forEach((preset) => {
-    it(`generates valid 512x512 map for preset ${preset}`, () => {
-      const map = generatePreviewMap(preset);
-      expect(map.mapW).toBe(PREVIEW_MAP_DIM);
-      expect(map.mapH).toBe(PREVIEW_MAP_DIM);
-      expect(map.terrainBytes.length).toBe(PREVIEW_MAP_DIM * PREVIEW_MAP_DIM);
-      expect(map.tileState.length).toBe(PREVIEW_MAP_DIM * PREVIEW_MAP_DIM);
+describe("PreviewMap", () => {
+  it("owns every land tile of the terrain and nothing else", () => {
+    const terrain = new Uint8Array(PREVIEW_MAP_W * PREVIEW_MAP_H);
+    terrain[previewTileRef(10, 10)] = 0x80 | 4; // land
+    terrain[previewTileRef(11, 10)] = 0x80 | 0x40 | 1; // shoreline land
+    terrain[previewTileRef(12, 10)] = 0x20 | 3; // ocean
+    const map = buildPreviewMap(terrain);
+    expect(map.mapW).toBe(PREVIEW_MAP_W);
+    expect(map.mapH).toBe(PREVIEW_MAP_H);
+    expect(map.tileState[previewTileRef(10, 10)]).toBe(1);
+    expect(map.tileState[previewTileRef(11, 10)]).toBe(1);
+    expect(map.tileState[previewTileRef(12, 10)]).toBe(0);
+    expect(() => buildPreviewMap(new Uint8Array(10))).toThrow();
+  });
 
-      if (preset === "OPEN_OCEAN") {
-        // Deep ocean tiles have bit 5 set (0x20)
-        expect(map.terrainBytes[0] & 0x20).toBe(0x20);
-      } else if (preset === "CONTINENTAL_ARCHIPELAGO") {
-        // Center tile should be land (bit 7: 0x80)
-        const centerIdx =
-          (PREVIEW_MAP_DIM / 2) * PREVIEW_MAP_DIM + PREVIEW_MAP_DIM / 2;
-        expect(map.terrainBytes[centerIdx] & 0x80).toBe(0x80);
-        expect(map.tileState[centerIdx]).toBe(1);
-      }
-    });
+  it("places every scene on the right kind of Australia terrain", () => {
+    // The real map asset: scene anchors are fixed tile coords, so a re-export
+    // of the map that moves a coastline must show up here, not in the store.
+    const bin = readFileSync("resources/maps/australia/map4x.bin");
+    const manifest = JSON.parse(
+      readFileSync("resources/maps/australia/manifest.json", "utf8"),
+    );
+    expect(manifest.map4x.width).toBe(PREVIEW_MAP_W);
+    expect(manifest.map4x.height).toBe(PREVIEW_MAP_H);
+    const map = buildPreviewMap(new Uint8Array(bin));
+    const isLand = (x: number, y: number) =>
+      (map.terrainBytes[previewTileRef(x, y)] & 0x80) !== 0;
+
+    // Inland scene: skin anchor, nuke target and the whole rail loop on land.
+    expect(isLand(PREVIEW_SCENE.land.x, PREVIEW_SCENE.land.y)).toBe(true);
+    for (const t of MIRV_WARHEAD_TARGETS) expect(isLand(t.x, t.y)).toBe(true);
+    for (const ref of getPreviewRailLoop().path) {
+      expect(map.terrainBytes[ref] & 0x80).toBe(0x80);
+    }
+    // Patrol square entirely in open water.
+    for (const dx of [-24, 24])
+      for (const dy of [-24, 24])
+        expect(
+          isLand(PREVIEW_SCENE.ocean.x + dx, PREVIEW_SCENE.ocean.y + dy),
+        ).toBe(false);
+    // Coast: shoreline tile with land to the north and water to the south.
+    const c = PREVIEW_SCENE.coast;
+    expect(isLand(c.x, c.y)).toBe(true);
+    expect(isLand(c.x, c.y - 92)).toBe(true);
+    expect(isLand(c.x, c.y + 8)).toBe(false);
+    const buildings = new PreviewAnimationTicker({ mode: "BUILDING" }).sample(
+      0,
+    ).structures!;
+    for (const b of buildings) expect(map.tileState[b.pos]).toBe(1);
   });
 });
 

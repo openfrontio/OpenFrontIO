@@ -65,11 +65,12 @@ import {
   PreviewAnimationTicker,
 } from "./PreviewAnimationTicker";
 import {
-  generatePreviewMap,
   getPreviewRailLoop,
-  PREVIEW_MAP_DIM,
-  PreviewTerrainPreset,
-} from "./PreviewMapGenerator";
+  PREVIEW_MAP_H,
+  PREVIEW_MAP_W,
+  PREVIEW_SCENE,
+  type PreviewMapData,
+} from "./PreviewMap";
 
 export interface CosmeticPreviewConfig {
   mode: CosmeticPreviewMode;
@@ -123,7 +124,7 @@ export class CosmeticPreviewRenderer {
   private paletteData = new Float32Array(getPaletteSize() * 2 * 4);
   private effectTex: WebGLTexture;
   private trailTex: WebGLTexture;
-  private liveTrailData = new Uint16Array(PREVIEW_MAP_DIM * PREVIEW_MAP_DIM);
+  private liveTrailData = new Uint16Array(PREVIEW_MAP_W * PREVIEW_MAP_H);
   private lastActiveTrailIndices: number[] = [];
   private effectBuffer = new Float32Array(
     getPaletteSize() * MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS * 4,
@@ -141,7 +142,6 @@ export class CosmeticPreviewRenderer {
 
   private ticker: PreviewAnimationTicker;
   private currentMode: CosmeticPreviewMode = "SKIN";
-  private currentPreset: PreviewTerrainPreset = "CONTINENTAL_ARCHIPELAGO";
   private currentConfig?: CosmeticPreviewConfig;
   private explosionParams?: NukeExplosionRenderParams;
   private isDisposed = false;
@@ -152,7 +152,10 @@ export class CosmeticPreviewRenderer {
   private unitMap = new Map<number, UnitState>();
   private structureMap = new Map<number, UnitState>();
 
-  constructor(private readonly canvas: HTMLCanvasElement) {
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    map: PreviewMapData,
+  ) {
     const glRes = initGL(canvas, {
       alpha: false,
       premultipliedAlpha: false,
@@ -163,34 +166,34 @@ export class CosmeticPreviewRenderer {
     this.gl = glRes.gl;
     this.settings = createRenderSettings();
     applyGraphicsOverrides(this.settings, {});
-    this.camera = new Camera(PREVIEW_MAP_DIM, PREVIEW_MAP_DIM);
+    this.camera = new Camera(PREVIEW_MAP_W, PREVIEW_MAP_H);
 
     this.paletteTex = this.createPaletteTexture();
     this.effectTex = this.createEffectTexture();
     this.trailTex = this.createTrailTexture();
 
-    const mapData = generatePreviewMap("CONTINENTAL_ARCHIPELAGO");
     this.terrainPass = new TerrainPass(
       this.gl,
-      () => mapData.terrainBytes,
-      mapData.terrainBytes,
-      mapData.mapW,
-      mapData.mapH,
+      () => map.terrainBytes,
+      map.terrainBytes,
+      map.mapW,
+      map.mapH,
     );
 
     this.territoryPass = new PreviewTerritoryPass(
       this.gl,
-      PREVIEW_MAP_DIM,
-      PREVIEW_MAP_DIM,
+      map.mapW,
+      map.mapH,
       this.paletteTex,
       this.settings,
-      mapData.tileState,
+      map.tileState,
+      PREVIEW_SCENE.land,
     );
-    this.railroadPass = this.createRailroadPass(mapData.terrainBytes);
+    this.railroadPass = this.createRailroadPass(map.terrainBytes);
 
     const rendererHeader: RendererConfig = {
-      mapWidth: PREVIEW_MAP_DIM,
-      mapHeight: PREVIEW_MAP_DIM,
+      mapWidth: PREVIEW_MAP_W,
+      mapHeight: PREVIEW_MAP_H,
       unitTypes: ALL_MOBILE_UNIT_TYPES,
       players: [],
     } as unknown as RendererConfig;
@@ -210,8 +213,8 @@ export class CosmeticPreviewRenderer {
     this.unitPass.setLocalPlayer(1);
 
     const structureHeader: RendererConfig = {
-      mapWidth: PREVIEW_MAP_DIM,
-      mapHeight: PREVIEW_MAP_DIM,
+      mapWidth: PREVIEW_MAP_W,
+      mapHeight: PREVIEW_MAP_H,
       unitTypes: ALL_STRUCTURE_TYPES,
       players: [],
     } as unknown as RendererConfig;
@@ -227,8 +230,8 @@ export class CosmeticPreviewRenderer {
 
     this.trailPass = new TrailPass(
       this.gl,
-      PREVIEW_MAP_DIM,
-      PREVIEW_MAP_DIM,
+      PREVIEW_MAP_W,
+      PREVIEW_MAP_H,
       this.trailTex,
       this.paletteTex,
       this.effectTex,
@@ -259,6 +262,14 @@ export class CosmeticPreviewRenderer {
   }
 
   setCosmetic(config: CosmeticPreviewConfig): void {
+    this.applyConfig(config, true);
+  }
+
+  /** Apply a config; `resetCamera` re-frames the scene for its mode. */
+  private applyConfig(
+    config: CosmeticPreviewConfig,
+    resetCamera: boolean,
+  ): void {
     if (this.isDisposed) return;
     this.currentConfig = config;
     this.currentMode = config.mode;
@@ -267,24 +278,7 @@ export class CosmeticPreviewRenderer {
     this.lastUnitTick = -1;
     this.updateEffectTexture(config);
 
-    const nextPreset = this.resolveTerrainPreset(config.mode);
-    if (nextPreset !== this.currentPreset) {
-      this.currentPreset = nextPreset;
-      const mapData = generatePreviewMap(nextPreset);
-      this.terrainPass.dispose();
-      this.terrainPass = new TerrainPass(
-        this.gl,
-        () => mapData.terrainBytes,
-        mapData.terrainBytes,
-        mapData.mapW,
-        mapData.mapH,
-      );
-      this.territoryPass.setTileState(mapData.tileState);
-      this.railroadPass.dispose();
-      this.railroadPass = this.createRailroadPass(mapData.terrainBytes);
-    }
-
-    this.applyCameraPreset(config.mode);
+    if (resetCamera) this.applyCameraPreset(config.mode);
 
     const rgbColors = this.toRgb01(config.effectColors);
 
@@ -326,17 +320,18 @@ export class CosmeticPreviewRenderer {
     this.applyCameraPreset(this.currentMode);
   }
 
-  /** Swap in user-picked colors (skin palette, or an effect's color list). */
+  /** Swap in user-picked colors (skin palette, or an effect's color list); keeps the camera. */
   setPreviewColors(colors: readonly string[]): void {
     if (!this.currentConfig) return;
     const attrs = this.currentConfig.effectAttributes;
-    this.setCosmetic(
+    this.applyConfig(
       attrs
         ? {
             ...this.currentConfig,
             effectAttributes: { ...attrs, colors: [...colors] },
           }
         : { ...this.currentConfig, effectColors: colors },
+      false,
     );
   }
 
@@ -362,8 +357,7 @@ export class CosmeticPreviewRenderer {
 
   setSalvoMode(enabled: boolean): void {
     if (!this.currentConfig) return;
-    this.currentConfig = { ...this.currentConfig, salvoMode: enabled };
-    this.setCosmetic(this.currentConfig);
+    this.applyConfig({ ...this.currentConfig, salvoMode: enabled }, false);
   }
 
   zoomBy(factor: number): void {
@@ -416,7 +410,7 @@ export class CosmeticPreviewRenderer {
       this.fxPass.applyDeadUnits(
         snapshot.detonationEvents.map((evt) => ({
           unitType: evt.unitType,
-          pos: Math.floor(evt.y) * PREVIEW_MAP_DIM + Math.floor(evt.x),
+          pos: Math.floor(evt.y) * PREVIEW_MAP_W + Math.floor(evt.x),
           ownerSmallID: 1,
           reachedTarget: true,
           explosion: this.explosionParams,
@@ -463,7 +457,7 @@ export class CosmeticPreviewRenderer {
 
     if (snapshot.trailPoints.length > 0) {
       for (const pt of snapshot.trailPoints) {
-        const idx = Math.floor(pt.y) * PREVIEW_MAP_DIM + Math.floor(pt.x);
+        const idx = Math.floor(pt.y) * PREVIEW_MAP_W + Math.floor(pt.x);
         if (idx >= 0 && idx < this.liveTrailData.length) {
           const ownerBits = 1 & 0x0fff;
           const flagBits = pt.isNuke ? 1 << 12 : 0;
@@ -526,8 +520,8 @@ export class CosmeticPreviewRenderer {
   private createRailroadPass(terrainBytes: Uint8Array): RailroadPass {
     const pass = new RailroadPass(
       this.gl,
-      PREVIEW_MAP_DIM,
-      PREVIEW_MAP_DIM,
+      PREVIEW_MAP_W,
+      PREVIEW_MAP_H,
       this.territoryPass.tileTexture,
       this.paletteTex,
       this.effectTex,
@@ -540,49 +534,37 @@ export class CosmeticPreviewRenderer {
     return pass;
   }
 
-  private resolveTerrainPreset(
-    mode: CosmeticPreviewMode,
-  ): PreviewTerrainPreset {
-    switch (mode) {
-      case "WARSHIP_BOAT_TRAIL":
-        return "OPEN_OCEAN";
-      case "BUILDING":
-        return "COASTAL_BASEPLATE";
-      case "SKIN":
-      case "NUKE_MISSILE_TRAIL":
-      case "MIRV_CLUSTER":
-      case "NUKE_EXPLOSION":
-      default:
-        return "CONTINENTAL_ARCHIPELAGO";
-    }
-  }
-
   private applyCameraPreset(mode: CosmeticPreviewMode): void {
-    const center = PREVIEW_MAP_DIM / 2;
+    let center: { x: number; y: number };
     let zoom: number;
     switch (mode) {
       case "WARSHIP_BOAT_TRAIL":
+        center = PREVIEW_SCENE.ocean;
         zoom = 4.4;
         break;
       case "BUILDING":
+        center = PREVIEW_SCENE.coast;
         zoom = 2.4;
         break;
       case "TRAIN":
       case "RAILROAD":
         // Above railDetailZoom so the rails draw as sprites, like up close in-game.
+        center = PREVIEW_SCENE.land;
         zoom = 6.5;
         break;
       case "NUKE_MISSILE_TRAIL":
       case "NUKE_EXPLOSION":
       case "MIRV_CLUSTER":
+        center = PREVIEW_SCENE.land;
         zoom = 1.35;
         break;
       case "SKIN":
       default:
+        center = PREVIEW_SCENE.land;
         zoom = 1.0;
         break;
     }
-    this.camera.setCameraState(center, center, zoom);
+    this.camera.setCameraState(center.x, center.y, zoom);
   }
 
   private createPaletteTexture(): WebGLTexture {
@@ -715,8 +697,8 @@ export class CosmeticPreviewRenderer {
 
   private createTrailTexture(): WebGLTexture {
     return createTexture2D(this.gl, {
-      width: PREVIEW_MAP_DIM,
-      height: PREVIEW_MAP_DIM,
+      width: PREVIEW_MAP_W,
+      height: PREVIEW_MAP_H,
       internalFormat: this.gl.R16UI,
       format: this.gl.RED_INTEGER,
       type: this.gl.UNSIGNED_SHORT,

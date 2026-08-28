@@ -6,6 +6,7 @@ import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
+import { isPreviewableCosmetic } from "./components/CosmeticPreviewBubble";
 import "./components/CosmeticPreviewModal";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
@@ -253,6 +254,7 @@ export class StoreModal extends BaseModal {
   // tile a few items, so the dialog is where each one is shown with its name.
   private activate(resolved: ResolvedCosmetic): void {
     if (resolved.type === "cosmeticPack") this.openedPack = resolved;
+    if (isPreviewableCosmetic(resolved)) this.previewingCosmetic = resolved;
     this.inspect(resolved);
   }
 
@@ -574,10 +576,17 @@ export class StoreModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
+    const userHasSubscription =
+      this.userMeResponse !== false &&
+      this.userMeResponse.player.subscription !== null;
     return html`${this.renderHeader()}
     ${this.previewingCosmetic
       ? html`<cosmetic-preview-modal
           .resolved=${this.previewingCosmetic}
+          .purchaseAction=${this.renderPurchaseAction(
+            this.previewingCosmetic,
+            userHasSubscription,
+          )}
           @close-preview=${() => {
             this.previewingCosmetic = null;
             this.requestUpdate();

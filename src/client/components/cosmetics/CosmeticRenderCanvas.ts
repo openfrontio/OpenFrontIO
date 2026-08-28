@@ -14,6 +14,7 @@ import {
   CosmeticPreviewConfig,
   CosmeticPreviewRenderer,
 } from "../../render/preview/CosmeticPreviewRenderer";
+import { loadPreviewMap } from "../../render/preview/loadPreviewMap";
 import {
   UT_ATOM_BOMB,
   UT_CITY,
@@ -31,7 +32,7 @@ import { attributesToExplosionParams } from "../../WebGLFrameBuilder";
  * Capabilities:
  * - Manages WebGL context lifecycle and continuous rendering loop.
  * - Smooth pointer drag panning (with button click filtering) and scroll wheel zoom.
- * - On-screen D-Pad, Reset Center button, keyboard WASD/Arrow navigation.
+ * - Keyboard WASD/Arrow navigation; zoom is driven by the host modal via zoomIn()/zoomOut().
  * - Interactive single / 5-nuke salvo mode toggle for atom bomb explosions.
  */
 @customElement("cosmetic-render-canvas")
@@ -64,12 +65,14 @@ export class CosmeticRenderCanvas extends LitElement {
     return this;
   }
 
-  firstUpdated() {
+  async firstUpdated() {
     this.canvas = this.querySelector<HTMLCanvasElement>("canvas");
     if (!this.canvas) return;
 
     try {
-      this.renderer = new CosmeticPreviewRenderer(this.canvas);
+      const map = await loadPreviewMap();
+      if (!this.isConnected) return;
+      this.renderer = new CosmeticPreviewRenderer(this.canvas, map);
       this.applyCosmetic();
       this.startLoop();
     } catch (e) {
@@ -85,8 +88,11 @@ export class CosmeticRenderCanvas extends LitElement {
     } else if (changedProps.has("customColors") && this.renderer) {
       if (this.customColors && this.customColors.length > 0) {
         this.renderer.setPreviewColors(this.customColors);
-      } else {
-        this.applyCosmetic(); // back to the catalog colors
+      } else if (this.resolved) {
+        // Back to the catalog colors without re-framing the camera. Only
+        // skins/patterns get custom colors, so this never clears an effect.
+        const catalog = this.buildPreviewConfig(this.resolved);
+        this.renderer.setPreviewColors(catalog.effectColors ?? []);
       }
     }
     if (changedProps.has("salvoEnabled") && this.renderer) {
@@ -212,39 +218,15 @@ export class CosmeticRenderCanvas extends LitElement {
     this.renderer.zoomAtScreen(factor, screenX, screenY);
   };
 
-  private handleZoomIn = (event: MouseEvent): void => {
-    event.stopPropagation();
-    event.preventDefault();
+  zoomIn(): void {
     this.isAutoZooming = false;
     this.renderer?.zoomBy(1.25);
-  };
-
-  private handleZoomOut = (event: MouseEvent): void => {
-    event.stopPropagation();
-    event.preventDefault();
-    this.isAutoZooming = false;
-    this.renderer?.zoomBy(0.8);
-  };
-
-  private panUp = (e: MouseEvent): void => this.pan(0, -1, e);
-  private panDown = (e: MouseEvent): void => this.pan(0, 1, e);
-  private panLeft = (e: MouseEvent): void => this.pan(-1, 0, e);
-  private panRight = (e: MouseEvent): void => this.pan(1, 0, e);
-
-  private pan(dx: number, dy: number, e: MouseEvent): void {
-    e.stopPropagation();
-    e.preventDefault();
-    this.isAutoZooming = false;
-    const zoom = this.renderer?.zoom ?? 1.0;
-    this.renderer?.pan((dx * 40) / zoom, (dy * 40) / zoom);
   }
 
-  private handleResetCenter = (e: MouseEvent): void => {
-    e.stopPropagation();
-    e.preventDefault();
+  zoomOut(): void {
     this.isAutoZooming = false;
-    this.renderer?.resetCamera();
-  };
+    this.renderer?.zoomBy(0.8);
+  }
 
   private handleToggleSalvo = (e: MouseEvent): void => {
     e.stopPropagation();
@@ -429,140 +411,6 @@ export class CosmeticRenderCanvas extends LitElement {
             </div>
           `
         : nothing}
-
-      <!-- On-screen Navigation & Zoom Controls -->
-      <div
-        class="absolute bottom-3 right-3 flex flex-col items-center gap-2 z-20 select-none pointer-events-auto"
-      >
-        <!-- Directional D-Pad -->
-        <div
-          class="grid grid-cols-3 gap-1 p-1 rounded-xl bg-zinc-900/90 backdrop-blur-md border border-white/20 shadow-xl"
-        >
-          <div></div>
-          <button
-            type="button"
-            aria-label=${translateText("user_setting.move_up")}
-            title=${translateText("user_setting.move_up")}
-            @click=${this.panUp}
-            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer"
-          >
-            <svg
-              class="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M5 15l7-7 7 7"
-              ></path>
-            </svg>
-          </button>
-          <div></div>
-
-          <button
-            type="button"
-            aria-label=${translateText("user_setting.move_left")}
-            title=${translateText("user_setting.move_left")}
-            @click=${this.panLeft}
-            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer"
-          >
-            <svg
-              class="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M15 19l-7-7 7-7"
-              ></path>
-            </svg>
-          </button>
-          <button
-            type="button"
-            aria-label=${translateText("user_setting.reset")}
-            title=${translateText("user_setting.reset")}
-            @click=${this.handleResetCenter}
-            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-cyan-600 text-white transition active:scale-90 cursor-pointer text-[10px] font-black"
-          >
-            •
-          </button>
-          <button
-            type="button"
-            aria-label=${translateText("user_setting.move_right")}
-            title=${translateText("user_setting.move_right")}
-            @click=${this.panRight}
-            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer"
-          >
-            <svg
-              class="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M9 5l7 7-7 7"
-              ></path>
-            </svg>
-          </button>
-
-          <div></div>
-          <button
-            type="button"
-            aria-label=${translateText("user_setting.move_down")}
-            title=${translateText("user_setting.move_down")}
-            @click=${this.panDown}
-            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer"
-          >
-            <svg
-              class="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M19 9l-7 7-7-7"
-              ></path>
-            </svg>
-          </button>
-          <div></div>
-        </div>
-
-        <!-- Zoom Controls (+ / -) -->
-        <div
-          class="flex flex-col gap-1 p-1 rounded-xl bg-zinc-900/90 backdrop-blur-md border border-white/20 shadow-xl"
-        >
-          <button
-            type="button"
-            aria-label=${translateText("user_setting.zoom_in")}
-            title=${translateText("user_setting.zoom_in")}
-            @click=${this.handleZoomIn}
-            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer text-sm font-bold"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            aria-label=${translateText("user_setting.zoom_out")}
-            title=${translateText("user_setting.zoom_out")}
-            @click=${this.handleZoomOut}
-            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer text-sm font-bold"
-          >
-            −
-          </button>
-        </div>
-      </div>
     </div>`;
   }
 }

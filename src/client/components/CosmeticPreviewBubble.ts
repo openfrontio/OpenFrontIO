@@ -3,6 +3,20 @@ import { customElement, property } from "lit/decorators.js";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 
+/** Skins, patterns and effects can be rendered in-game; flags, crowns, subscriptions and packs can't. */
+export function isPreviewableCosmetic(
+  resolved: ResolvedCosmetic | null | undefined,
+): boolean {
+  if (!resolved || resolved.cosmetic === null) return false;
+  const type = resolved.type;
+  return (
+    type !== "flag" &&
+    type !== "crown" &&
+    type !== "subscription" &&
+    type !== "pack"
+  );
+}
+
 @customElement("cosmetic-preview-bubble")
 export class CosmeticPreviewBubble extends LitElement {
   @property({ attribute: false })
@@ -13,18 +27,7 @@ export class CosmeticPreviewBubble extends LitElement {
   }
 
   private isPreviewable(): boolean {
-    if (!this.resolved || this.resolved.cosmetic === null) return false;
-    const type = this.resolved.type;
-    // Flags, crowns, subscriptions, and currency packs are excluded from in-game preview
-    if (
-      type === "flag" ||
-      type === "crown" ||
-      type === "subscription" ||
-      type === "pack"
-    ) {
-      return false;
-    }
-    return true;
+    return isPreviewableCosmetic(this.resolved);
   }
 
   private onBubbleClick(event: MouseEvent): void {

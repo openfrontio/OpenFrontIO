@@ -16,7 +16,7 @@ import type { RenderSettings } from "../../gl/RenderSettings";
 import { getPaletteSize } from "../../gl/utils/ColorUtils";
 import { createTexture2D } from "../../gl/utils/GlUtils";
 
-/** smallID of the preview player — matches the owner PreviewMapGenerator stamps into tileState. */
+/** smallID of the preview player — matches the owner PreviewMap stamps into tileState. */
 export const PREVIEW_OWNER_ID = 1;
 
 /** Row stride of the in-game pattern-data texture (bytes per owner). */
@@ -49,6 +49,7 @@ export class PreviewTerritoryPass {
     paletteTex: WebGLTexture,
     settings: RenderSettings,
     tileState: Uint16Array,
+    skinAnchor: { x: number; y: number },
   ) {
     const palW = getPaletteSize();
 
@@ -84,10 +85,10 @@ export class PreviewTerritoryPass {
       type: gl.UNSIGNED_BYTE,
       data: this.skinLayer,
     });
-    // Anchor the skin stamp at the island center, like a spawn tile in-game.
+    // Anchor the skin stamp like a spawn tile in-game.
     const anchors = new Uint16Array(palW * 2);
-    anchors[PREVIEW_OWNER_ID * 2] = mapW / 2;
-    anchors[PREVIEW_OWNER_ID * 2 + 1] = mapH / 2;
+    anchors[PREVIEW_OWNER_ID * 2] = skinAnchor.x;
+    anchors[PREVIEW_OWNER_ID * 2 + 1] = skinAnchor.y;
     this.skinAnchorTex = createTexture2D(gl, {
       width: palW,
       height: 1,

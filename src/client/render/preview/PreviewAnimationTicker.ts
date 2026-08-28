@@ -32,9 +32,11 @@ import {
 } from "../types/UnitType";
 import {
   getPreviewRailLoop,
-  PREVIEW_MAP_DIM,
+  PREVIEW_MAP_W,
   PREVIEW_RAIL_STATIONS,
-} from "./PreviewMapGenerator";
+  PREVIEW_SCENE,
+  previewTileRef,
+} from "./PreviewMap";
 
 export type CosmeticPreviewMode =
   | "SKIN"
@@ -91,16 +93,25 @@ const TRAIN_TILES_PER_SEC = 20;
 const TRAIN_CAR_SPACING = 2;
 const TRAIN_CARRIAGES = 5;
 
-// 8 radial scatter targets centered cleanly within the archipelago view (radius 60-70 tiles)
+const LAND = PREVIEW_SCENE.land;
+const OCEAN = PREVIEW_SCENE.ocean;
+const COAST = PREVIEW_SCENE.coast;
+const at = (
+  origin: { x: number; y: number },
+  dx: number,
+  dy: number,
+): { x: number; y: number } => ({ x: origin.x + dx, y: origin.y + dy });
+
+// 8 radial scatter targets (radius ~64 tiles) around the inland scene center.
 export const MIRV_WARHEAD_TARGETS = [
-  { x: 320, y: 256 }, // East
-  { x: 301, y: 301 }, // South-East
-  { x: 256, y: 320 }, // South
-  { x: 211, y: 301 }, // South-West
-  { x: 192, y: 256 }, // West
-  { x: 211, y: 211 }, // North-West
-  { x: 256, y: 192 }, // North
-  { x: 301, y: 211 }, // North-East
+  at(LAND, 64, 0), // East
+  at(LAND, 45, 45), // South-East
+  at(LAND, 0, 64), // South
+  at(LAND, -45, 45), // South-West
+  at(LAND, -64, 0), // West
+  at(LAND, -45, -45), // North-West
+  at(LAND, 0, -64), // North
+  at(LAND, 45, -45), // North-East
 ];
 
 export class PreviewAnimationTicker {
@@ -167,7 +178,7 @@ export class PreviewAnimationTicker {
   }
 
   private sampleSkin(): PreviewAnimationSnapshot {
-    const cityTile = 220 * PREVIEW_MAP_DIM + 204;
+    const cityTile = previewTileRef(LAND.x - 52, LAND.y - 36);
     const city = createBaseUnitState(1, UT_CITY, cityTile, cityTile);
     city.level = 1;
     city.underConstruction = false;
@@ -188,16 +199,17 @@ export class PreviewAnimationTicker {
       y: number;
       level: number;
     }> = [
-      { type: UT_PORT, x: 256, y: 256, level: 2 },
-      { type: UT_CITY, x: 204, y: 220, level: 3 },
-      { type: UT_FACTORY, x: 204, y: 292, level: 2 },
-      { type: UT_DEFENSE_POST, x: 236, y: 200, level: 2 },
-      { type: UT_SAM_LAUNCHER, x: 236, y: 312, level: 1 },
-      { type: UT_MISSILE_SILO, x: 164, y: 256, level: 1 },
+      // Port on the shoreline tile, everything else inland to the north.
+      { type: UT_PORT, ...COAST, level: 2 },
+      { type: UT_CITY, ...at(COAST, -36, -52), level: 3 },
+      { type: UT_FACTORY, ...at(COAST, 36, -52), level: 2 },
+      { type: UT_DEFENSE_POST, ...at(COAST, -56, -20), level: 2 },
+      { type: UT_SAM_LAUNCHER, ...at(COAST, 56, -20), level: 1 },
+      { type: UT_MISSILE_SILO, ...at(COAST, 0, -92), level: 1 },
     ];
 
     const units: UnitState[] = buildingLayouts.map((b, idx) => {
-      const tileRef = b.y * PREVIEW_MAP_DIM + b.x;
+      const tileRef = previewTileRef(b.x, b.y);
       const unit = createBaseUnitState(idx + 1, b.type, tileRef, tileRef);
       unit.level = b.level;
       unit.underConstruction = false;
@@ -261,9 +273,9 @@ export class PreviewAnimationTicker {
     const station = (
       id: number,
       type: string,
-      at: { x: number; y: number },
+      tile: { x: number; y: number },
     ) => {
-      const ref = at.y * PREVIEW_MAP_DIM + at.x;
+      const ref = previewTileRef(tile.x, tile.y);
       const unit = createBaseUnitState(id, type, ref, ref);
       unit.level = 2;
       unit.hasTrainStation = true;
@@ -284,10 +296,10 @@ export class PreviewAnimationTicker {
 
   private sampleWarship(time: number): PreviewAnimationSnapshot {
     const waypoints = [
-      { x: 232, y: 232 },
-      { x: 280, y: 232 },
-      { x: 280, y: 280 },
-      { x: 232, y: 280 },
+      at(OCEAN, -24, -24),
+      at(OCEAN, 24, -24),
+      at(OCEAN, 24, 24),
+      at(OCEAN, -24, 24),
     ];
 
     const segmentDuration = BOAT_CYCLE_DURATION_SEC / 4;
@@ -310,8 +322,8 @@ export class PreviewAnimationTicker {
     const prevX = from.x + (to.x - from.x) * prevT;
     const prevY = from.y + (to.y - from.y) * prevT;
 
-    const pos = Math.floor(currentY) * PREVIEW_MAP_DIM + Math.floor(currentX);
-    const lastPos = Math.floor(prevY) * PREVIEW_MAP_DIM + Math.floor(prevX);
+    const pos = Math.floor(currentY) * PREVIEW_MAP_W + Math.floor(currentX);
+    const lastPos = Math.floor(prevY) * PREVIEW_MAP_W + Math.floor(prevX);
 
     const unitType =
       this.config.cosmeticUnitType === UT_TRANSPORT ? UT_TRANSPORT : UT_WARSHIP;
@@ -391,9 +403,9 @@ export class PreviewAnimationTicker {
         ? UT_ATOM_BOMB
         : UT_HYDROGEN_BOMB;
 
-    // Centered trajectory landing in the center of the archipelago (260, 240)
-    const p0 = { x: 100, y: 370 };
-    const p1 = { x: 260, y: 240 };
+    // Launched from the south-west, landing just off the inland scene center.
+    const p0 = at(LAND, -156, 114);
+    const p1 = at(LAND, 4, -16);
     const arcHeight = 80;
 
     const units: UnitState[] = [];
@@ -420,8 +432,8 @@ export class PreviewAnimationTicker {
         const prevY =
           p0.y + (p1.y - p0.y) * prevT - 4 * arcHeight * prevT * (1 - prevT);
 
-        const pos = Math.floor(y) * PREVIEW_MAP_DIM + Math.floor(x);
-        const lastPos = Math.floor(prevY) * PREVIEW_MAP_DIM + Math.floor(prevX);
+        const pos = Math.floor(y) * PREVIEW_MAP_W + Math.floor(x);
+        const lastPos = Math.floor(prevY) * PREVIEW_MAP_W + Math.floor(prevX);
         units.push(createBaseUnitState(1 + i, unitType, pos, lastPos));
       } else if (time >= hitTime) {
         if (!this.detonatedNukes.has(i)) {
@@ -484,8 +496,8 @@ export class PreviewAnimationTicker {
 
     const sepTime = MIRV_SEP_TIME_SEC;
     const flightDuration = MIRV_FLIGHT_DURATION_SEC;
-    const p0 = { x: 100, y: 370 };
-    const pApex = { x: 220, y: 170 };
+    const p0 = at(LAND, -156, 114);
+    const pApex = at(LAND, -36, -86);
 
     if (time < sepTime) {
       return {
@@ -560,8 +572,8 @@ export class PreviewAnimationTicker {
     const prevY =
       p0.y + (pApex.y - p0.y) * prevT - 4 * arcHeight * prevT * (1 - prevT);
 
-    const pos = Math.floor(y) * PREVIEW_MAP_DIM + Math.floor(x);
-    const lastPos = Math.floor(prevY) * PREVIEW_MAP_DIM + Math.floor(prevX);
+    const pos = Math.floor(y) * PREVIEW_MAP_W + Math.floor(x);
+    const lastPos = Math.floor(prevY) * PREVIEW_MAP_W + Math.floor(prevX);
     const carrier = createBaseUnitState(1, UT_MIRV, pos, lastPos);
 
     const trailPoints: Array<{
@@ -632,9 +644,8 @@ export class PreviewAnimationTicker {
       const prevWy =
         pApex.y + (target.y - pApex.y) * prevT - 25 * Math.sin(prevT * Math.PI);
 
-      const wPos = Math.floor(wy) * PREVIEW_MAP_DIM + Math.floor(wx);
-      const wLastPos =
-        Math.floor(prevWy) * PREVIEW_MAP_DIM + Math.floor(prevWx);
+      const wPos = Math.floor(wy) * PREVIEW_MAP_W + Math.floor(wx);
+      const wLastPos = Math.floor(prevWy) * PREVIEW_MAP_W + Math.floor(prevWx);
 
       units.push(createBaseUnitState(100 + i, UT_MIRV_WARHEAD, wPos, wLastPos));
 

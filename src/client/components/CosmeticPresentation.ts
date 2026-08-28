@@ -89,3 +89,19 @@ export function cosmeticRarityLabel(resolved: ResolvedCosmetic): string {
       return translateText("cosmetics.common");
   }
 }
+
+const RARITY_BADGE_CLASSES: Record<string, string> = {
+  common: "bg-white/10 text-white/80 border-white/20",
+  uncommon: "bg-green-500/15 text-green-300 border-green-400/40",
+  rare: "bg-blue-500/15 text-blue-300 border-blue-400/40",
+  epic: "bg-purple-500/15 text-purple-300 border-purple-400/40",
+  legendary: "bg-orange-500/15 text-orange-300 border-orange-400/40",
+};
+
+/** Tailwind classes for a rarity pill, tinted by tier (matches CosmeticInfo's text colors). */
+export function cosmeticRarityBadgeClass(resolved: ResolvedCosmetic): string {
+  return (
+    RARITY_BADGE_CLASSES[cosmeticRarity(resolved)] ??
+    RARITY_BADGE_CLASSES.common
+  );
+}

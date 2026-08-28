@@ -1,5 +1,5 @@
 import { colord } from "colord";
-import { html, LitElement, nothing, PropertyValues } from "lit";
+import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ColorPalette, Pattern } from "../../core/CosmeticSchemas";
 import {
@@ -10,9 +10,11 @@ import {
 import { translateText } from "../Utils";
 import {
   cosmeticDisplayName,
+  cosmeticRarityBadgeClass,
   cosmeticRarityLabel,
 } from "./CosmeticPresentation";
 import "./cosmetics/CosmeticRenderCanvas";
+import type { CosmeticRenderCanvas } from "./cosmetics/CosmeticRenderCanvas";
 
 export const TEAM_COLORS = [
   { name: "Red", hex: "#eb3333" },
@@ -24,24 +26,48 @@ export const TEAM_COLORS = [
   { name: "Green", hex: "#41be52" },
 ];
 
+const DEFAULT = "default";
+
+/** A selectable color combination in the preview's palette bar. */
+interface PaletteOption {
+  name: string;
+  label: string;
+  primaryColor: string;
+  secondaryColor: string;
+}
+
 /**
  * CosmeticPreviewModal — fullscreen interactive preview dialog for store cosmetics.
  *
  * Features:
  * - Real-time WebGL2 rendering of selected skins, structures, trails, and explosions.
- * - Strict catalog lookup: only displays palette variants authored for that particular skin in JSON.
- * - Backdrop click & Escape key dismissal.
+ * - Skin colors: only the palette variants authored for that pattern in the catalog.
+ * - Team colors: what the cosmetic looks like in a team game, where the fill is the
+ *   team color and a pattern keeps its palette's secondary color.
+ * - Backdrop click & Escape key dismissal; optional purchase action in the header.
  */
 @customElement("cosmetic-preview-modal")
 export class CosmeticPreviewModal extends LitElement {
   @property({ attribute: false })
   resolved: ResolvedCosmetic | null = null;
 
-  @state()
-  private selectedPrimary: string = "#3b82f6";
+  /** Rendered in the header, e.g. the store's purchase button for this item. */
+  @property({ attribute: false })
+  purchaseAction: TemplateResult | typeof nothing = nothing;
 
   @state()
-  private selectedSecondary: string = "#1d4ed8";
+  private selectedPrimary: string = DEFAULT;
+
+  @state()
+  private selectedSecondary: string = DEFAULT;
+
+  /**
+   * Secondary color of the last chosen skin palette. In a team game the fill
+   * becomes the team color but a pattern keeps its palette's secondary, so
+   * team swatches pair each team color with this.
+   */
+  @state()
+  private paletteSecondary: string | null = null;
 
   createRenderRoot() {
     return this;
@@ -60,82 +86,71 @@ export class CosmeticPreviewModal extends LitElement {
     super.disconnectedCallback();
   }
 
-  private getAvailablePalettes(): ColorPalette[] {
+  /** Palette variants authored for this cosmetic (patterns), or the plain default (PNG skins). */
+  private skinPalettes(): PaletteOption[] {
     if (!this.resolved) return [];
-
     if (this.resolved.type === "skin") {
       return [
         {
-          name: "Default",
-          primaryColor: "default",
-          secondaryColor: "default",
+          name: DEFAULT,
+          label: translateText("territory_patterns.pattern.default"),
+          primaryColor: DEFAULT,
+          secondaryColor: DEFAULT,
         },
-        ...TEAM_COLORS.map((tc) => ({
-          name: tc.name,
-          primaryColor: tc.hex,
-          secondaryColor: tc.hex,
-        })),
       ];
     }
+    if (this.resolved.type !== "pattern") return [];
 
-    if (this.resolved.type === "pattern") {
-      const pattern = this.resolved.cosmetic as Pattern | null;
-      const catalog = getCachedCosmetics();
-      const palettes: ColorPalette[] = [];
-      const seen = new Set<string>();
-
-      if (this.resolved.colorPalette) {
-        palettes.push(this.resolved.colorPalette);
-        seen.add(this.resolved.colorPalette.name);
-      }
-
-      if (pattern?.colorPalettes && catalog?.colorPalettes) {
-        for (const cp of pattern.colorPalettes) {
-          if (cp.isArchived) continue;
-          if (seen.has(cp.name)) continue;
-          const pal = catalog.colorPalettes[cp.name];
-          if (pal) {
-            palettes.push(pal);
-            seen.add(cp.name);
-          }
+    const pattern = this.resolved.cosmetic as Pattern | null;
+    const catalog = getCachedCosmetics();
+    const palettes: ColorPalette[] = [];
+    const seen = new Set<string>();
+    if (this.resolved.colorPalette) {
+      palettes.push(this.resolved.colorPalette);
+      seen.add(this.resolved.colorPalette.name);
+    }
+    if (pattern?.colorPalettes && catalog?.colorPalettes) {
+      for (const cp of pattern.colorPalettes) {
+        if (cp.isArchived || seen.has(cp.name)) continue;
+        const pal = catalog.colorPalettes[cp.name];
+        if (pal) {
+          palettes.push(pal);
+          seen.add(cp.name);
         }
       }
-
-      // Add the 7 team colors for pattern skins
-      for (const tc of TEAM_COLORS) {
-        const secondary = colord(tc.hex).darken(0.125).toHex();
-        palettes.push({
-          name: tc.name,
-          primaryColor: tc.hex,
-          secondaryColor: secondary,
-        });
-      }
-
-      return palettes;
     }
+    return palettes.map((p) => ({
+      name: p.name,
+      label: translateCosmetic("territory_patterns.color_palette", p.name),
+      primaryColor: p.primaryColor,
+      secondaryColor: p.secondaryColor,
+    }));
+  }
 
-    return [];
+  private teamPalettes(): PaletteOption[] {
+    if (!this.resolved) return [];
+    const isPattern = this.resolved.type === "pattern";
+    if (!isPattern && this.resolved.type !== "skin") return [];
+    return TEAM_COLORS.map((tc) => ({
+      name: tc.name,
+      label: translateText(`team_colors.${tc.name.toLowerCase()}`),
+      primaryColor: tc.hex,
+      secondaryColor: isPattern
+        ? (this.paletteSecondary ?? colord(tc.hex).darken(0.125).toHex())
+        : tc.hex,
+    }));
   }
 
   updated(changedProps: PropertyValues) {
     super.updated(changedProps);
     if (changedProps.has("resolved") && this.resolved) {
-      if (this.resolved.type === "skin") {
-        this.selectedPrimary = "default";
-        this.selectedSecondary = "default";
-      } else if (this.resolved.colorPalette) {
-        this.selectedPrimary = this.resolved.colorPalette.primaryColor;
-        this.selectedSecondary = this.resolved.colorPalette.secondaryColor;
-      } else {
-        const available = this.getAvailablePalettes();
-        if (available.length > 0) {
-          this.selectedPrimary = available[0].primaryColor;
-          this.selectedSecondary = available[0].secondaryColor;
-        } else {
-          this.selectedPrimary = "#3b82f6";
-          this.selectedSecondary = "#1d4ed8";
-        }
-      }
+      const first = this.skinPalettes()[0];
+      this.selectedPrimary = first?.primaryColor ?? DEFAULT;
+      this.selectedSecondary = first?.secondaryColor ?? DEFAULT;
+      this.paletteSecondary =
+        this.resolved.type === "pattern"
+          ? (first?.secondaryColor ?? null)
+          : null;
     }
   }
 
@@ -147,14 +162,101 @@ export class CosmeticPreviewModal extends LitElement {
     }
   };
 
-  private selectPalette(primary: string, secondary: string): void {
-    this.selectedPrimary = primary;
-    this.selectedSecondary = secondary;
+  private selectPalette(option: PaletteOption, isSkinPalette: boolean): void {
+    this.selectedPrimary = option.primaryColor;
+    this.selectedSecondary = option.secondaryColor;
+    if (isSkinPalette && this.resolved?.type === "pattern") {
+      this.paletteSecondary = option.secondaryColor;
+    }
+  }
+
+  private get canvasEl(): CosmeticRenderCanvas | null {
+    return this.querySelector("cosmetic-render-canvas");
   }
 
   close(): void {
     this.resolved = null;
     this.dispatchEvent(new CustomEvent("close-preview", { bubbles: true }));
+  }
+
+  private customColors(): string[] | null {
+    if (!this.resolved) return null;
+    if (this.resolved.type === "skin") {
+      return this.selectedPrimary === DEFAULT ? null : [this.selectedPrimary];
+    }
+    if (this.resolved.type === "pattern") {
+      return [this.selectedPrimary, this.selectedSecondary];
+    }
+    return null;
+  }
+
+  private renderSwatch(
+    option: PaletteOption,
+    isSkinPalette: boolean,
+  ): TemplateResult {
+    const isSelected =
+      this.selectedPrimary === option.primaryColor &&
+      this.selectedSecondary === option.secondaryColor;
+    const ring = isSelected
+      ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-zinc-900 border-white"
+      : "";
+    if (option.primaryColor === DEFAULT) {
+      return html`<button
+        type="button"
+        title=${option.label}
+        aria-label=${option.label}
+        aria-pressed=${isSelected ? "true" : "false"}
+        class="group relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${isSelected
+          ? `${ring} bg-white/25 text-white shadow-sm`
+          : "border-white/30 bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"}"
+        @click=${() => this.selectPalette(option, isSkinPalette)}
+      >
+        <svg
+          class="w-3.5 h-3.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+        </svg>
+      </button>`;
+    }
+    const split = option.primaryColor !== option.secondaryColor;
+    return html`<button
+      type="button"
+      title=${option.label}
+      aria-label=${option.label}
+      aria-pressed=${isSelected ? "true" : "false"}
+      class="group relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 overflow-hidden transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${ring}"
+      @click=${() => this.selectPalette(option, isSkinPalette)}
+    >
+      <div
+        class="w-full h-full"
+        style=${split
+          ? `background-image: linear-gradient(135deg, ${option.primaryColor} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${option.secondaryColor} calc(50% + 0.5px) 100%);`
+          : `background-color: ${option.primaryColor};`}
+      ></div>
+    </button>`;
+  }
+
+  private renderPaletteGroup(
+    labelKey: string,
+    options: PaletteOption[],
+    isSkinPalette: boolean,
+  ): TemplateResult | typeof nothing {
+    if (options.length === 0) return nothing;
+    return html`<div class="flex items-center gap-2.5">
+      <span class="font-bold text-white/70 whitespace-nowrap"
+        >${translateText(labelKey)}</span
+      >
+      <div class="flex items-center gap-2.5 p-1.5">
+        ${options.map((o) => this.renderSwatch(o, isSkinPalette))}
+      </div>
+    </div>`;
   }
 
   render() {
@@ -164,7 +266,8 @@ export class CosmeticPreviewModal extends LitElement {
 
     const name = cosmeticDisplayName(this.resolved);
     const rarityLabel = cosmeticRarityLabel(this.resolved);
-    const palettes = this.getAvailablePalettes();
+    const skinPalettes = this.skinPalettes();
+    const teamPalettes = this.teamPalettes();
     const artist = (this.resolved.cosmetic as { artist?: string } | null)
       ?.artist;
 
@@ -176,172 +279,101 @@ export class CosmeticPreviewModal extends LitElement {
       }}
     >
       <div
-        class="relative flex flex-col w-full max-w-2xl h-[540px] max-h-[90vh] rounded-2xl bg-zinc-900 border border-white/15 shadow-2xl overflow-hidden"
+        class="relative flex flex-col w-full max-w-5xl h-[760px] max-h-[92vh] rounded-2xl bg-zinc-900 border border-white/15 shadow-2xl overflow-hidden"
       >
         <!-- Header -->
         <div
-          class="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-zinc-900/90"
+          class="flex items-center justify-between gap-4 px-6 py-3 border-b border-white/10 bg-zinc-900/90"
         >
-          <div class="flex items-center gap-3">
-            <h2 class="text-lg font-bold text-white tracking-wide">${name}</h2>
+          <div class="flex items-center gap-3 min-w-0">
+            <h2 class="text-lg font-bold text-white tracking-wide truncate">
+              ${name}
+            </h2>
             <span
-              class="rounded-full px-2.5 py-0.5 text-xs font-black uppercase tracking-wider bg-white/10 text-white/80 border border-white/20"
+              class="rounded-full px-2.5 py-0.5 text-xs font-black uppercase tracking-wider border ${cosmeticRarityBadgeClass(
+                this.resolved,
+              )}"
             >
               ${rarityLabel}
             </span>
             ${artist
-              ? html`<span class="text-xs text-white/60">
+              ? html`<span class="text-xs text-white/60 whitespace-nowrap">
                   ${translateText("cosmetics.artist_label")}
                   <span class="text-white/90 font-medium">${artist}</span>
                 </span>`
               : nothing}
           </div>
-          <button
-            type="button"
-            aria-label=${translateText("common.close")}
-            title=${translateText("common.close")}
-            class="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/70 hover:bg-white/15 hover:text-white transition-colors"
-            @click=${() => this.close()}
-          >
-            ✕
-          </button>
+          <div class="flex items-center gap-2 shrink-0">
+            <div
+              class="flex items-center gap-1 p-1 rounded-lg bg-white/5 border border-white/10"
+            >
+              <button
+                type="button"
+                aria-label=${translateText("user_setting.zoom_out")}
+                title=${translateText("user_setting.zoom_out")}
+                class="flex h-7 w-7 items-center justify-center rounded-md text-white/80 hover:bg-white/15 hover:text-white transition active:scale-90 cursor-pointer text-sm font-bold"
+                @click=${() => this.canvasEl?.zoomOut()}
+              >
+                −
+              </button>
+              <button
+                type="button"
+                aria-label=${translateText("user_setting.zoom_in")}
+                title=${translateText("user_setting.zoom_in")}
+                class="flex h-7 w-7 items-center justify-center rounded-md text-white/80 hover:bg-white/15 hover:text-white transition active:scale-90 cursor-pointer text-sm font-bold"
+                @click=${() => this.canvasEl?.zoomIn()}
+              >
+                +
+              </button>
+            </div>
+            ${this.purchaseAction !== nothing
+              ? html`<div
+                  data-cosmetic-preview-purchase
+                  class="flex items-center"
+                >
+                  ${this.purchaseAction}
+                </div>`
+              : nothing}
+            <button
+              type="button"
+              aria-label=${translateText("common.close")}
+              title=${translateText("common.close")}
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/70 hover:bg-white/15 hover:text-white transition-colors"
+              @click=${() => this.close()}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <!-- WebGL Canvas Viewport -->
-        <div class="flex-1 p-4 bg-zinc-950/60 min-h-0">
+        <div class="flex-1 p-3 bg-zinc-950/60 min-h-0">
           <cosmetic-render-canvas
             .resolved=${this.resolved}
-            .customColors=${this.resolved.type === "skin"
-              ? this.selectedPrimary === "default"
-                ? null
-                : [this.selectedPrimary]
-              : this.resolved.type === "pattern"
-                ? [this.selectedPrimary, this.selectedSecondary]
-                : null}
+            .customColors=${this.customColors()}
             class="block h-full w-full"
           ></cosmetic-render-canvas>
         </div>
 
-        <!-- Skin / Pattern Color Customizer (Only Palettes Specified in JSON + Team Colors for Skins) -->
-        ${palettes.length > 1
+        <!-- Skin colors (catalog palettes) and team colors (team-game look) -->
+        ${skinPalettes.length + teamPalettes.length > 1
           ? html`
               <div
-                class="flex items-center justify-between gap-3 px-6 py-2 border-t border-white/10 bg-zinc-900/80 text-xs text-white/80"
+                class="flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-2 border-t border-white/10 bg-zinc-900/80 text-xs text-white/80 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
-                <div class="flex items-center gap-3">
-                  <span class="font-bold text-white/70"
-                    >${translateText("cosmetics.color_label")}</span
-                  >
-                  <div
-                    class="flex items-center gap-2.5 p-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-w-[380px] sm:max-w-none"
-                  >
-                    ${palettes.map((p, idx) => {
-                      const isDefault = p.name === "Default";
-                      const isTeam = TEAM_COLORS.some(
-                        (tc) => tc.name === p.name,
-                      );
-                      const isFirstTeam =
-                        isTeam &&
-                        idx > 0 &&
-                        !TEAM_COLORS.some(
-                          (tc) => tc.name === palettes[idx - 1].name,
-                        );
-                      const label = isDefault
-                        ? translateText("territory_patterns.pattern.default")
-                        : isTeam
-                          ? translateText(`team_colors.${p.name.toLowerCase()}`)
-                          : translateCosmetic(
-                              "territory_patterns.color_palette",
-                              p.name,
-                            );
-                      const isSelected =
-                        this.selectedPrimary === p.primaryColor &&
-                        this.selectedSecondary === p.secondaryColor;
-                      return html`
-                        ${isFirstTeam
-                          ? html`<div
-                              class="h-5 w-px bg-white/20 mx-0.5 shrink-0"
-                              role="separator"
-                            ></div>`
-                          : nothing}
-                        ${this.resolved?.type === "skin" && isDefault
-                          ? html`
-                              <button
-                                type="button"
-                                title=${translateText(
-                                  "territory_patterns.pattern.default",
-                                )}
-                                aria-label=${translateText(
-                                  "territory_patterns.pattern.default",
-                                )}
-                                class="group relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${isSelected
-                                  ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-zinc-900 border-white bg-white/25 text-white shadow-sm"
-                                  : "border-white/30 bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"}"
-                                @click=${() =>
-                                  this.selectPalette(
-                                    p.primaryColor,
-                                    p.secondaryColor,
-                                  )}
-                              >
-                                <svg
-                                  class="w-3.5 h-3.5"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  stroke-width="2.5"
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                >
-                                  <path
-                                    d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
-                                  />
-                                  <path d="M3 3v5h5" />
-                                </svg>
-                              </button>
-                            `
-                          : html`
-                              <button
-                                type="button"
-                                title=${label}
-                                aria-label=${label}
-                                class="group relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 overflow-hidden transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${isSelected
-                                  ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-zinc-900 border-white"
-                                  : ""}"
-                                @click=${() =>
-                                  this.selectPalette(
-                                    p.primaryColor,
-                                    p.secondaryColor,
-                                  )}
-                              >
-                                <div
-                                  class="w-full h-full"
-                                  style=${isTeam
-                                    ? `background-color: ${p.primaryColor};`
-                                    : `background-image: linear-gradient(135deg, ${p.primaryColor} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${p.secondaryColor} calc(50% + 0.5px) 100%);`}
-                                ></div>
-                              </button>
-                            `}
-                      `;
-                    })}
-                  </div>
-                </div>
+                ${this.renderPaletteGroup(
+                  "store.preview_skin_colors",
+                  skinPalettes,
+                  true,
+                )}
+                ${this.renderPaletteGroup(
+                  "store.preview_team_colors",
+                  teamPalettes,
+                  false,
+                )}
               </div>
             `
           : nothing}
-
-        <!-- Footer -->
-        <div
-          class="flex items-center justify-between px-6 py-3 border-t border-white/10 bg-zinc-900/60 text-xs text-white/60"
-        >
-          <span>${translateText("store.preview_interactive_hint")}</span>
-          <button
-            type="button"
-            class="px-4 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 font-bold text-white transition-colors shadow-md shadow-cyan-950"
-            @click=${() => this.close()}
-          >
-            ${translateText("common.close")}
-          </button>
-        </div>
       </div>
     </div>`;
   }
