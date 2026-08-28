@@ -42,6 +42,11 @@ import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
 import { LiveStatsVote, WinnerVote } from "./Consensus";
 import { fetchCustomTribes } from "./CustomTribes";
 import { DesyncDetector } from "./DesyncDetector";
+import {
+  authorizeIntent,
+  IntentActor,
+  IntentOutcome,
+} from "./IntentAuthorization";
 import { ListingState } from "./ListingState";
 import { identityFor, MatchTelemetryRecorder } from "./MatchTelemetryRecorder";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
@@ -60,21 +65,6 @@ export enum GamePhase {
 
 // Identity + authority for an intent, supplied by whoever dispatched it: a
 // per-connection websocket client, or the trusted admin-bot HTTP API.
-export interface IntentActor {
-  clientID: ClientID; // stamped onto the intent
-  isLobbyCreator: boolean;
-  isAdmin: boolean; // role-based admin/root (also true for the admin bot)
-  isAdminBot: boolean; // the trusted admin-bot HTTP API
-}
-
-// Outcome of dispatching an intent. `status` is an HTTP-style code: 200 on
-// success. The admin-bot route maps a non-200 straight to its response; the
-// websocket path logs it and drops the message.
-export interface IntentOutcome {
-  status: number;
-  error?: string;
-}
-
 export function hashPersistentID(persistentID: string): string {
   return createHash("sha256").update(persistentID).digest("hex");
 }
@@ -280,9 +270,10 @@ export class GameServer {
   }
 
   // Dispatch a control/gameplay intent from either a websocket client or the
-  // trusted admin-bot HTTP API. `actor` carries the authority; the per-intent
-  // actions and game-state guards live here. Returns an HTTP-style outcome the
-  // caller maps (the bot route -> response, the websocket path -> a log).
+  // trusted admin-bot HTTP API. `actor` carries the authority; the guards are
+  // authorizeIntent, the per-intent actions live here. Returns an HTTP-style
+  // outcome the caller maps (the bot route -> response, the websocket path ->
+  // a log).
   public handleIntent(intent: Intent, actor: IntentActor): IntentOutcome {
     const serverTick = this.turns.length;
     const stamped: StampedIntent = { ...intent, clientID: actor.clientID };
@@ -308,38 +299,17 @@ export class GameServer {
       return outcome;
     };
 
-    // The admin bot only manages private games.
-    if (actor.isAdminBot && this.isPublic()) {
-      return finish({
-        status: 403,
-        error: "admin bot cannot act on public games",
-      });
+    const denied = authorizeIntent(intent, actor, {
+      isPublic: this.isPublic(),
+      isListed: this.isListed(),
+      hasStarted: this.hasStarted(),
+    });
+    if (denied !== null) {
+      return finish(denied);
     }
 
     switch (stamped.type) {
-      case "mark_disconnected":
-        return finish({
-          status: 400,
-          error: "mark_disconnected is server-internal",
-        });
-
       case "kick_player": {
-        if (!actor.isLobbyCreator && !actor.isAdmin) {
-          return finish({
-            status: 403,
-            error: "only the lobby creator or an admin can kick players",
-          });
-        }
-        // A listed lobby recruits strangers from the public browser; letting
-        // the host kick them is a griefing vector. Admins keep the power for
-        // moderation. The listed flag survives game start on purpose, so a
-        // publicly recruited game stays kick-free like a real public game.
-        if (this.isListed() && !actor.isAdmin) {
-          return finish({
-            status: 403,
-            error: "the host cannot kick players in a publicly listed lobby",
-          });
-        }
         // Resolve the target to a clientID: an explicit clientID, or an account
         // publicId matched against everyone who ever joined (a superset of the
         // connected that retains disconnected players), so a disconnected
@@ -373,51 +343,11 @@ export class GameServer {
       }
 
       case "update_game_config": {
-        if (!actor.isLobbyCreator && !actor.isAdminBot) {
-          return finish({
-            status: 403,
-            error: "only the lobby creator can update game config",
-          });
-        }
-        if (this.isPublic()) {
-          return finish({ status: 403, error: "cannot update a public game" });
-        }
-        if (this.hasStarted()) {
-          return finish({ status: 409, error: "game already started" });
-        }
-        if (stamped.config.gameType === GameType.Public) {
-          return finish({
-            status: 400,
-            error: "cannot change a game to public",
-          });
-        }
-        // Host cheats give the host an asymmetric advantage over players
-        // recruited from the lobby browser. Listing is likewise rejected
-        // while cheats are on (Worker's listing endpoint), so a listed
-        // lobby can never have them.
-        if (this.isListed() && hostCheatsEnabled(stamped.config.hostCheats)) {
-          return finish({
-            status: 409,
-            error: "cannot enable host cheats in a publicly listed lobby",
-          });
-        }
         this.updateGameConfig(stamped.config);
         return finish({ status: 200 });
       }
 
       case "toggle_game_start_timer": {
-        if (!actor.isLobbyCreator && !actor.isAdminBot) {
-          return finish({
-            status: 403,
-            error: "only the lobby creator can start",
-          });
-        }
-        if (this.isPublic()) {
-          return finish({ status: 403, error: "cannot start a public game" });
-        }
-        if (this.hasStarted()) {
-          return finish({ status: 409, error: "game already started" });
-        }
         if (this.startsAt) {
           this.startsAt = undefined;
         } else {
@@ -429,22 +359,6 @@ export class GameServer {
       }
 
       case "toggle_pause": {
-        if (!actor.isLobbyCreator && !actor.isAdminBot) {
-          return finish({
-            status: 403,
-            error: "only the lobby creator can pause",
-          });
-        }
-        if (this.isListed() && !actor.isAdminBot) {
-          return finish({
-            status: 403,
-            error: "the host cannot pause a publicly listed game",
-          });
-        }
-        // Pausing only makes sense once the game is running.
-        if (!this.hasStarted()) {
-          return finish({ status: 409, error: "game not started" });
-        }
         const outcome = finish({ status: 200 });
         // Pausing: flush the intent into a turn before isPaused short-circuits
         // endTurn(). Unpausing: clear the flag first so the next turn runs.
@@ -461,13 +375,7 @@ export class GameServer {
       }
 
       default: {
-        // Gameplay intents: websocket players only, into the turn queue.
-        if (actor.isAdminBot) {
-          return finish({
-            status: 400,
-            error: "intent not permitted for admin bot",
-          });
-        }
+        // Gameplay intents, into the turn queue.
         // While paused the intent is accepted at ingress but not queued into a
         // turn; tag it so telemetry can tell it apart from a queued intent.
         const paused = this.isPaused;

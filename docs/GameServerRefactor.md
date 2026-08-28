@@ -245,8 +245,17 @@ replaced by real joins and observable outcomes. Golden snapshot unchanged.
       constructor parameter, so `SocketIngress.test.ts` drives the limit and
       kick telemetry paths that `MatchTelemetryIntegration.test.ts` used to
       reach in for; the frame-level decode / kick tests are unchanged.
-- [ ] `authorizeIntent(intent, actor): IntentOutcome | null` (pure guards,
-      table-testable) separated from the effects in `handleIntent`.
+- [x] `IntentAuthorization.ts` (2026-08-27): `authorizeIntent` takes the
+      intent, the actor and the game state and is every actor / game-state
+      guard of `handleIntent`, in order, returning the first refusal or null;
+      `IntentActor` and `IntentOutcome` live there too. `handleIntent` keeps
+      what needs the roster (resolving a kick target) and the effects.
+      `IntentAuthorization.test.ts` is the table.
+
+Phase 5 complete (2026-08-27): two PRs, golden snapshot unchanged.
+`GameServer.ts` is 1663 lines (from 1,888); reach-ins 26. What is left
+reaches for `intents`, `isPaused`, `_hasStarted`, `_hasEnded`,
+`_hasPrestarted` and `startsAt` — the lifecycle state of Phase 6.
 
 ## Phase 6 — Lifecycle state machine
 
