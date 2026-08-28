@@ -97,7 +97,8 @@ const ATOM_BOMB = [
 // Rail types (RailroadPass texture values) drawn in the scenes.
 const RAIL_VERTICAL = 1;
 const RAIL_HORIZONTAL = 2;
-const RAIL_TOP_RIGHT = 4;
+// A corner entered from the left and exited downward (RailroadPass railDirection).
+const RAIL_BOTTOM_LEFT = 5;
 
 function scaleValue(hex: string, k: number): string {
   const hsv = colord(hex).toHsv();
@@ -291,7 +292,7 @@ function railTilePath(rt: number, x: number, y: number): string {
       let hit = i === 1 && j === 1;
       if (rt === RAIL_VERTICAL) hit ||= i === 0 || i === 2;
       else if (rt === RAIL_HORIZONTAL) hit ||= j === 0 || j === 2;
-      else if (rt === RAIL_TOP_RIGHT) hit ||= j === 0 || i === 2;
+      else if (rt === RAIL_BOTTOM_LEFT) hit ||= j === 2 || i === 0;
       if (hit) {
         d += `M${(x + i * T).toFixed(4)} ${(y + j * T).toFixed(4)}h${T.toFixed(4)}v${T.toFixed(4)}h-${T.toFixed(4)}z`;
       }
@@ -566,7 +567,7 @@ function railroadScene(
       : { paint: solid(RAIL_COLOR), defs: nothing };
   let track = "";
   for (let x = 0; x < col; x++) track += railTilePath(RAIL_HORIZONTAL, x, row);
-  track += railTilePath(RAIL_TOP_RIGHT, col, row);
+  track += railTilePath(RAIL_BOTTOM_LEFT, col, row);
   for (let y = row + 1; y < S; y++)
     track += railTilePath(RAIL_VERTICAL, col, y);
   return scene(
