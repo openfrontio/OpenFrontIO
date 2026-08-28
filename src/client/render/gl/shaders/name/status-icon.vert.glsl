@@ -180,12 +180,12 @@ void main() {
   float iconY;
   if (isVerifiedSlot) {
     // Verified badge: small mark tucked against the name's top-right corner,
-    // like a superscript. The name line spans wy +- 0.5 * lineHeight, so
-    // top-aligning the badge with the line puts it in the name's upper half.
+    // like a superscript. The name line spans wy +- 0.5 * lineHeight; the
+    // badge is raised so its lower half overlaps the line's top edge.
     float lineHeight = uFontBase * nameWorldScale;
     iconWorldSize = lineHeight * 0.55;
     iconX = wx + pd3.w * nameWorldScale + lineHeight * 0.04;
-    iconY = wy - lineHeight * 0.5;
+    iconY = wy - lineHeight * 0.5 - iconWorldSize * 0.5;
   } else {
     // Count active status icons and position of this one (left-to-right).
     // If an emoji is also active it occupies one extra slot on the right,
