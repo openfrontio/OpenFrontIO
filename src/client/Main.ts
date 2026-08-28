@@ -69,6 +69,7 @@ import {
   SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
+import { turnstileTokens } from "./TurnstileToken";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
@@ -102,7 +103,6 @@ import "./styles/modal/chat.css";
 
 declare global {
   interface Window {
-    turnstile: any;
     adsEnabled: boolean;
     gtag?: (...args: any[]) => void;
     PageOS: {
@@ -197,6 +197,9 @@ export interface JoinLobbyEvent {
  */
 function setInGameSignal(inGame: boolean): void {
   document.body.classList.toggle("in-game", inGame);
+  // Stop warming turnstile tokens in-game: the widget is interaction-only, so
+  // a challenge that needs a click would pop a box over the running game.
+  turnstileTokens.setActive(!inGame);
   void desktopUpdate()
     ?.setInGame?.(inGame)
     ?.catch(() => {});
@@ -220,11 +223,6 @@ class Client {
   private rewardsModal: RewardsModal;
   private steamLinkModal: SteamLinkModal;
   private mostRecentJoinEvent: number;
-
-  private turnstileTokenPromise: Promise<{
-    token: string;
-    createdAt: number;
-  }> | null = null;
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
@@ -287,18 +285,24 @@ class Client {
       tag: "inventory-modal",
       pageId: "page-inventory",
     });
-    // Prefetch turnstile token so it is available when the user joins a lobby.
-    // Desktop (Steam) has no Turnstile script and is server-side exempt, so
-    // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
+    // Keep a fresh turnstile token warm so joining a lobby never blocks on
+    // minting one. Dev never sends a token (see getTurnstileToken below), so
+    // there is nothing to warm. Desktop (Steam) has no Turnstile script and is
+    // server-side exempt, so skip it — otherwise minting throws "Failed to load Turnstile
     // script" after its load wait. Also skip on the versioned replay shells:
     // the replay host may not be on the Turnstile site key's domain allowlist,
-    // so rendering the widget there alerts and rejects — and replays never
-    // send a token anyway (see getTurnstileToken below).
-    this.turnstileTokenPromise =
-      ClientEnv.instanceId() === "desktop" ||
-      isReplayShellHost(window.location.hostname)
-        ? null
-        : getTurnstileToken();
+    // so rendering the widget there errors — and replays never send a token
+    // anyway (see getTurnstileToken below). CrazyGames wants a freshly minted
+    // token per join, so leaving the provider unstarted there keeps its cache
+    // empty and every take() mints.
+    if (
+      ClientEnv.env() !== GameEnv.Dev &&
+      ClientEnv.instanceId() !== "desktop" &&
+      !isReplayShellHost(window.location.hostname) &&
+      !crazyGamesSDK.isOnCrazyGames()
+    ) {
+      turnstileTokens.start();
+    }
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -1214,29 +1218,9 @@ class Client {
       return null;
     }
 
-    // Always request a new token on crazygames.
-    if (this.turnstileTokenPromise === null || crazyGamesSDK.isOnCrazyGames()) {
-      console.log("No prefetched turnstile token, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
-
-    const token = await this.turnstileTokenPromise;
-    // Clear promise so a new token is fetched next time
-    this.turnstileTokenPromise = null;
-    if (!token) {
-      console.log("No turnstile token");
-      return null;
-    }
-
-    const tokenTTL = 3 * 60 * 1000;
-    if (Date.now() < token.createdAt + tokenTTL) {
-      console.log("Prefetched turnstile token is valid");
-
-      return token.token;
-    } else {
-      console.log("Turnstile token expired, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
+    // On CrazyGames the provider is never started, so this always mints a
+    // fresh token on demand rather than reusing a warmed one.
+    return turnstileTokens.take();
   }
 }
 
@@ -1284,43 +1268,4 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", bootstrap);
 } else {
   bootstrap();
-}
-
-async function getTurnstileToken(): Promise<{
-  token: string;
-  createdAt: number;
-}> {
-  // Wait for Turnstile script to load (handles slow connections)
-  let attempts = 0;
-  while (typeof window.turnstile === "undefined" && attempts < 100) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    attempts++;
-  }
-
-  if (typeof window.turnstile === "undefined") {
-    throw new Error("Failed to load Turnstile script");
-  }
-
-  const widgetId = window.turnstile.render("#turnstile-container", {
-    sitekey: ClientEnv.turnstileSiteKey(),
-    size: "normal",
-    appearance: "interaction-only",
-    theme: "light",
-  });
-
-  return new Promise((resolve, reject) => {
-    window.turnstile.execute(widgetId, {
-      callback: (token: string) => {
-        window.turnstile.remove(widgetId);
-        console.log(`Turnstile token received: ${token}`);
-        resolve({ token, createdAt: Date.now() });
-      },
-      "error-callback": (errorCode: string) => {
-        window.turnstile.remove(widgetId);
-        console.error(`Turnstile error: ${errorCode}`);
-        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
-        reject(new Error(`Turnstile failed: ${errorCode}`));
-      },
-    });
-  });
 }
