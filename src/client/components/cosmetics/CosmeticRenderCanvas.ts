@@ -7,8 +7,6 @@ import {
   NukeExplosionAttributes,
   Pattern,
   Skin,
-  StructuresEffectAttributes,
-  TrailEffectAttributes,
 } from "../../../core/CosmeticSchemas";
 import { decodePatternData } from "../../../core/PatternDecoder";
 import { ResolvedCosmetic } from "../../Cosmetics";
@@ -87,9 +85,8 @@ export class CosmeticRenderCanvas extends LitElement {
     } else if (changedProps.has("customColors") && this.renderer) {
       if (this.customColors && this.customColors.length > 0) {
         this.renderer.setPreviewColors(this.customColors);
-      } else if (this.resolved) {
-        const defaultConfig = this.buildPreviewConfig(this.resolved);
-        this.renderer.setPreviewColors(defaultConfig.effectColors ?? []);
+      } else {
+        this.applyCosmetic(); // back to the catalog colors
       }
     }
     if (changedProps.has("salvoEnabled") && this.renderer) {
@@ -305,17 +302,6 @@ export class CosmeticRenderCanvas extends LitElement {
     return { mode: "NUKE_MISSILE_TRAIL" };
   }
 
-  private extractDynamicAttributes(
-    attrs: TrailEffectAttributes | StructuresEffectAttributes,
-  ) {
-    return {
-      movementSpeed:
-        attrs.type === "gradient" ? attrs.movementSpeed : undefined,
-      frequency: attrs.type === "transition" ? attrs.frequency : undefined,
-      colorSize: attrs.type === "gradient" ? attrs.colorSize : undefined,
-    };
-  }
-
   private buildEffectConfig(
     effect: Effect | null,
     key: string,
@@ -327,54 +313,41 @@ export class CosmeticRenderCanvas extends LitElement {
       (effect.name && effect.name.toLowerCase().includes("mirv")),
     );
 
+    // Palette-rendered effects hand their catalog attributes straight to the
+    // renderer, which packs them exactly as the game does.
     if (effect.effectType === "nukeTrail") {
-      const attrs = effect.attributes as TrailEffectAttributes;
-      const isSpiral = attrs.type === "spiral";
       return {
         mode: isMirv ? "MIRV_CLUSTER" : "NUKE_MISSILE_TRAIL",
-        effectColors: attrs.colors,
-        spiralRadius: isSpiral ? attrs.radius : 3,
-        spiralStrands: isSpiral ? attrs.strands : 2,
-        spiralSpeed: isSpiral ? attrs.rotationSpeed : 6,
-        ...this.extractDynamicAttributes(attrs),
+        effectAttributes: effect.attributes,
       };
     }
     if (effect.effectType === "transportShipTrail") {
-      const attrs = effect.attributes as TrailEffectAttributes;
       return {
         mode: "WARSHIP_BOAT_TRAIL",
         cosmeticUnitType: UT_TRANSPORT,
-        effectColors: attrs.colors,
-        ...this.extractDynamicAttributes(attrs),
+        effectAttributes: effect.attributes,
       };
     }
     if (effect.effectType === "warship") {
-      const attrs = effect.attributes as TrailEffectAttributes;
       return {
         mode: "WARSHIP_BOAT_TRAIL",
         cosmeticUnitType: UT_WARSHIP,
-        effectColors: attrs.colors,
-        ...this.extractDynamicAttributes(attrs),
+        effectAttributes: effect.attributes,
       };
     }
     if (effect.effectType === "train" || effect.effectType === "railroad") {
-      // Both share the structures attribute shape and the same rail scene;
-      // the mode picks which effect-palette block lights up.
-      const attrs = effect.attributes as StructuresEffectAttributes;
+      // Same rail scene; the mode picks which effect-palette block lights up.
       return {
         mode: effect.effectType === "train" ? "TRAIN" : "RAILROAD",
-        effectColors: attrs.colors,
-        ...this.extractDynamicAttributes(attrs),
+        effectAttributes: effect.attributes,
       };
     }
     if (effect.effectType === "structures") {
-      const attrs = effect.attributes as StructuresEffectAttributes;
       return {
         mode: "BUILDING",
         cosmeticUnitType: UT_CITY,
         structureLevel: 2,
-        effectColors: attrs.colors,
-        ...this.extractDynamicAttributes(attrs),
+        effectAttributes: effect.attributes,
       };
     }
     if (isNukeExplosionEffect(effect)) {
@@ -393,7 +366,6 @@ export class CosmeticRenderCanvas extends LitElement {
             : nukeType === "mirvWarhead"
               ? UT_MIRV
               : UT_ATOM_BOMB,
-        effectColors: attrs.colors,
         explosionParams,
       };
     }

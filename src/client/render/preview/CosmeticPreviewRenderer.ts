@@ -3,6 +3,7 @@
  */
 
 import type { Config } from "../../../core/configuration/Config";
+import type { SpiralParams } from "../frame/SpiralTrails";
 import { Camera } from "../gl/Camera";
 import { initGL } from "../gl/initGL";
 import { calculateExplosionDurationMs, FxPass } from "../gl/passes/fx-pass";
@@ -25,6 +26,12 @@ import {
   WARSHIP_EFFECT_BLOCK,
 } from "../gl/utils/ColorUtils";
 import { renderDpr } from "../gl/utils/Dpr";
+import {
+  EFFECT_ENTRY_FLOATS,
+  packEffectEntry,
+  type PaletteEffectAttributes,
+  parseEffectColors,
+} from "../gl/utils/EffectPalette";
 import { createTexture2D } from "../gl/utils/GlUtils";
 import type {
   NukeExplosionRenderParams,
@@ -70,13 +77,10 @@ export interface CosmeticPreviewConfig {
   structureLevel?: number;
   skinUrl?: string;
   patternData?: string;
+  /** Skin/pattern palette: [fill, border] (a single team color tints a PNG skin). */
   effectColors?: readonly string[];
-  movementSpeed?: number;
-  frequency?: number;
-  colorSize?: number;
-  spiralRadius?: number;
-  spiralStrands?: number;
-  spiralSpeed?: number;
+  /** Catalog attributes of a palette-rendered effect, packed exactly as in-game. */
+  effectAttributes?: PaletteEffectAttributes;
   explosionParams?: NukeExplosionRenderParams;
   salvoMode?: boolean;
 }
@@ -124,6 +128,7 @@ export class CosmeticPreviewRenderer {
   private effectBuffer = new Float32Array(
     getPaletteSize() * MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS * 4,
   );
+  private effectEntryScratch = new Float32Array(EFFECT_ENTRY_FLOATS);
 
   private terrainPass: TerrainPass;
   private territoryPass: PreviewTerritoryPass;
@@ -305,17 +310,7 @@ export class CosmeticPreviewRenderer {
       structureLevel: config.structureLevel,
       explosionDurationSec,
       salvoMode: config.salvoMode,
-      spiralParams:
-        (config.mode === "NUKE_MISSILE_TRAIL" ||
-          config.mode === "MIRV_CLUSTER") &&
-        config.spiralRadius !== undefined
-          ? {
-              radius: config.spiralRadius ?? 3,
-              strands: config.spiralStrands ?? 2,
-              rotationSpeed: config.spiralSpeed ?? 6,
-              colors: rgbColors.length > 0 ? rgbColors : [[0.2, 0.9, 0.3]],
-            }
-          : null,
+      spiralParams: this.spiralParams(config),
     });
   }
 
@@ -331,10 +326,38 @@ export class CosmeticPreviewRenderer {
     this.applyCameraPreset(this.currentMode);
   }
 
+  /** Swap in user-picked colors (skin palette, or an effect's color list). */
   setPreviewColors(colors: readonly string[]): void {
     if (!this.currentConfig) return;
-    this.currentConfig = { ...this.currentConfig, effectColors: colors };
-    this.setCosmetic(this.currentConfig);
+    const attrs = this.currentConfig.effectAttributes;
+    this.setCosmetic(
+      attrs
+        ? {
+            ...this.currentConfig,
+            effectAttributes: { ...attrs, colors: [...colors] },
+          }
+        : { ...this.currentConfig, effectColors: colors },
+    );
+  }
+
+  /** Spiral nuke trails render as ribbon geometry, like SpiralTrails in-game. */
+  private spiralParams(config: CosmeticPreviewConfig): SpiralParams | null {
+    const attrs = config.effectAttributes;
+    if (
+      (config.mode !== "NUKE_MISSILE_TRAIL" &&
+        config.mode !== "MIRV_CLUSTER") ||
+      attrs?.type !== "spiral"
+    ) {
+      return null;
+    }
+    const colors = parseEffectColors(attrs.colors);
+    if (colors.length === 0) return null;
+    return {
+      radius: attrs.radius,
+      strands: attrs.strands,
+      rotationSpeed: attrs.rotationSpeed,
+      colors,
+    };
   }
 
   setSalvoMode(enabled: boolean): void {
@@ -633,62 +656,48 @@ export class CosmeticPreviewRenderer {
     });
   }
 
+  /**
+   * Effect-palette block the previewed effect lights up, or null when the
+   * scene shows no palette effect. Mirrors the in-game consumers: transport
+   * wakes (0) and warship hulls (WARSHIP) are separate slots, nuke and MIRV
+   * warhead trails both carry the nuke bit (1).
+   */
+  private effectBlock(config: CosmeticPreviewConfig): number | null {
+    switch (config.mode) {
+      case "WARSHIP_BOAT_TRAIL":
+        if (config.cosmeticUnitType === UT_TRANSPORT) return 0;
+        if (config.cosmeticUnitType === UT_WARSHIP) return WARSHIP_EFFECT_BLOCK;
+        return null;
+      case "NUKE_MISSILE_TRAIL":
+      case "MIRV_CLUSTER":
+        return 1;
+      case "BUILDING":
+        return STRUCTURES_EFFECT_BLOCK;
+      case "TRAIN":
+        return TRAIN_EFFECT_BLOCK;
+      case "RAILROAD":
+        return RAILROAD_EFFECT_BLOCK;
+      default:
+        return null;
+    }
+  }
+
   private updateEffectTexture(config: CosmeticPreviewConfig): void {
     const width = getPaletteSize();
     const height = MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS;
-    this.effectBuffer.fill(0);
     const data = this.effectBuffer;
+    data.fill(0);
 
-    const colors = this.toRgb01(config.effectColors);
-
-    const ownerID = 1;
-    const speed = config.movementSpeed ?? 20.0;
-    const colorSize = config.colorSize ?? 6.0;
-    const freq = config.frequency ?? 2.0;
-
-    const fillBlock = (blockIndex: number, isCosmeticActive: boolean) => {
-      const rowBase = blockIndex * MAX_TRAIL_COLORS;
-      const count = isCosmeticActive ? colors.length : 0;
-
+    const block = this.effectBlock(config);
+    if (block !== null && config.effectAttributes) {
+      const entry = this.effectEntryScratch;
+      packEffectEntry(config.effectAttributes, entry);
+      const rowBase = block * MAX_TRAIL_COLORS;
       for (let r = 0; r < MAX_TRAIL_COLORS; r++) {
-        const col = count > 0 ? colors[r % count] : [0.95, 0.95, 0.95];
-        const pixelIdx = (rowBase + r) * width + ownerID;
-        const off = pixelIdx * 4;
-
-        data[off + 0] = col[0];
-        data[off + 1] = col[1];
-        data[off + 2] = col[2];
-
-        if (r === 0) {
-          data[off + 3] = count; // Color count (0 = default/solid static, >0 = cosmetic active)
-        } else if (r === 1) {
-          data[off + 3] = config.frequency !== undefined ? 1.0 : 0.0;
-        } else if (r === 2) {
-          data[off + 3] = config.frequency !== undefined ? freq : colorSize;
-        } else if (r === 3) {
-          data[off + 3] = count > 0 ? speed : 0.0; // 0 for static default
-        } else {
-          data[off + 3] = 1.0;
-        }
+        const off = ((rowBase + r) * width + PREVIEW_OWNER_ID) * 4;
+        data.set(entry.subarray(r * 4, r * 4 + 4), off);
       }
-    };
-
-    // Transport wakes and warship hulls are separate cosmetic slots in-game,
-    // so only the block for the unit being previewed lights up.
-    const isBoatMode = config.mode === "WARSHIP_BOAT_TRAIL";
-    const isTransportActive =
-      isBoatMode && config.cosmeticUnitType === UT_TRANSPORT;
-    const isWarshipActive =
-      isBoatMode && config.cosmeticUnitType === UT_WARSHIP;
-    const isNukeTrailActive = config.mode === "NUKE_MISSILE_TRAIL";
-    const isStructActive = config.mode === "BUILDING";
-
-    fillBlock(0, isTransportActive); // transport/boat wake (Block 0)
-    fillBlock(1, isNukeTrailActive); // nuke/missile trail (Block 1)
-    fillBlock(STRUCTURES_EFFECT_BLOCK, isStructActive);
-    fillBlock(WARSHIP_EFFECT_BLOCK, isWarshipActive);
-    fillBlock(TRAIN_EFFECT_BLOCK, config.mode === "TRAIN");
-    fillBlock(RAILROAD_EFFECT_BLOCK, config.mode === "RAILROAD");
+    }
 
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.effectTex);
     this.gl.texSubImage2D(

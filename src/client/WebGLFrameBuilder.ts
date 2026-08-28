@@ -11,9 +11,7 @@ import {
   isTrailEffect,
   type NukeExplosionAttributes,
   type NukeExplosionType,
-  type StructuresEffectAttributes,
   TRAIL_EFFECT_TYPES,
-  type TrailEffectAttributes,
 } from "../core/CosmeticSchemas";
 import { PlayerType } from "../core/game/Game";
 import { decodePatternData } from "../core/PatternDecoder";
@@ -39,6 +37,12 @@ import {
   WARSHIP_EFFECT_BLOCK,
 } from "./render/gl/utils/ColorUtils";
 import {
+  EFFECT_ENTRY_FLOATS,
+  packEffectEntry,
+  type PaletteEffectAttributes,
+  parseEffectColors,
+} from "./render/gl/utils/EffectPalette";
+import {
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
   UT_MIRV_WARHEAD,
@@ -46,10 +50,6 @@ import {
 import type { GameView, PlayerView } from "./view";
 
 const PALETTE_SIZE = 4096;
-
-type PaletteEffectAttributes =
-  | TrailEffectAttributes
-  | StructuresEffectAttributes;
 
 // A human player counts as "small" (and glows) at or below this fraction of the
 // map; the glow is suppressed for a grace window after the game starts.
@@ -183,6 +183,8 @@ export class WebGLFrameBuilder {
   // the trail tile's nuke bit), StructurePass (block 2), UnitPass (blocks 3
   // and 4), and RailroadPass (block 5).
   private readonly effectPalette: Float32Array;
+  /** One packed effect entry, reused by writeEffectEntry. */
+  private readonly effectEntryScratch = new Float32Array(EFFECT_ENTRY_FLOATS);
   private readonly patternMeta: Float32Array;
   private readonly patternData: Uint8Array;
 
@@ -652,20 +654,7 @@ export class WebGLFrameBuilder {
           // parsed here so a fully unparseable list degrades to the plain
           // stamped trail instead of an uncolored vortex.
           const colors =
-            attrs.type === "spiral"
-              ? attrs.colors
-                  .map((s) => colord(s))
-                  .filter((c) => c.isValid())
-                  .slice(0, MAX_TRAIL_COLORS)
-                  .map((c) => {
-                    const { r, g, b } = c.toRgb();
-                    return [r / 255, g / 255, b / 255] as [
-                      number,
-                      number,
-                      number,
-                    ];
-                  })
-              : [];
+            attrs.type === "spiral" ? parseEffectColors(attrs.colors) : [];
           if (attrs.type === "spiral" && colors.length > 0) {
             gameView.setNukeTrailSpiral(smallID, {
               radius: attrs.radius,
@@ -724,40 +713,17 @@ export class WebGLFrameBuilder {
    */
   private writeEffectEntry(
     smallID: number,
-    attrs: TrailEffectAttributes | StructuresEffectAttributes,
+    attrs: PaletteEffectAttributes,
     rowBase: number,
   ): boolean {
-    const colors = attrs.colors
-      .map((s) => colord(s))
-      .filter((c) => c.isValid())
-      .slice(0, MAX_TRAIL_COLORS)
-      .map((c) => c.toRgb());
-    let styleId: number;
-    let scalar0: number;
-    let scalar1: number;
-    if (attrs.type === "transition") {
-      styleId = 1;
-      scalar0 = attrs.frequency;
-      scalar1 = 0;
-    } else if (attrs.type === "spiral") {
-      styleId = 2;
-      scalar0 = attrs.rotationSpeed;
-      scalar1 = 0;
-    } else {
-      styleId = 0;
-      scalar0 = attrs.colorSize;
-      scalar1 = attrs.movementSpeed;
-    }
-    // Rows 0..3 carry the scalars in their alpha channel; the rest are 0.
-    const alphas = [colors.length, styleId, scalar0, scalar1];
+    const entry = this.effectEntryScratch;
+    packEffectEntry(attrs, entry);
     let changed = false;
     for (let r = 0; r < MAX_TRAIL_COLORS; r++) {
       const off = ((rowBase + r) * PALETTE_SIZE + smallID) * 4;
-      const c = colors[r] ?? { r: 0, g: 0, b: 0 };
-      if (this.setEffectFloat(off, c.r / 255)) changed = true;
-      if (this.setEffectFloat(off + 1, c.g / 255)) changed = true;
-      if (this.setEffectFloat(off + 2, c.b / 255)) changed = true;
-      if (this.setEffectFloat(off + 3, alphas[r] ?? 0)) changed = true;
+      for (let i = 0; i < 4; i++) {
+        if (this.setEffectFloat(off + i, entry[r * 4 + i])) changed = true;
+      }
     }
     return changed;
   }
