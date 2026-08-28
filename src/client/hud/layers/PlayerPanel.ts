@@ -383,6 +383,7 @@ export class PlayerPanel extends LitElement implements Controller {
   private canReport(my: PlayerView, other: PlayerView): boolean {
     return (
       this.g.config().gameConfig().gameType !== GameType.Singleplayer &&
+      !this.g.config().isReplay() &&
       !this.g.gameOver() &&
       other !== my &&
       other.type() === PlayerType.Human &&
@@ -1067,7 +1068,7 @@ export class PlayerPanel extends LitElement implements Controller {
                           ></send-resource-modal>
                         `
                       : ""}
-                    ${this.moderationTarget && !isSpectator
+                    ${this.moderationTarget
                       ? html`
                           <player-moderation-modal
                             .open=${true}
@@ -1083,7 +1084,7 @@ export class PlayerPanel extends LitElement implements Controller {
                           ></player-moderation-modal>
                         `
                       : ""}
-                    ${this.reportTarget && !isSpectator
+                    ${this.reportTarget
                       ? html`
                           <player-report-modal
                             .open=${true}
@@ -1116,13 +1117,17 @@ export class PlayerPanel extends LitElement implements Controller {
 
                     <!-- Alliance time remaining -->
                     ${this.renderAllianceExpiry()}
-                    ${isSpectator
-                      ? ""
-                      : html`
+                    ${!isSpectator
+                      ? html`
                           <ui-divider></ui-divider>
                           <!-- Actions -->
                           ${this.renderActions(viewer, other)}
-                        `}
+                        `
+                      : my
+                        ? // Dead (or not yet spawned) players still get to
+                          // report and, as host/admin, moderate.
+                          this.renderModeration(my, other, this.isAdminRole)
+                        : ""}
                   </div>
                 </div>
               </div>
