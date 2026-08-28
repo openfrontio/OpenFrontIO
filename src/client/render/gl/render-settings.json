@@ -346,7 +346,7 @@
   },
   "altView": {
     "gridFontSize": 24,
-    "fillAlpha": 0.35,
+    "fillAlpha": 0.25,
     "recolorStructures": true
   },
   "tileDrip": {
