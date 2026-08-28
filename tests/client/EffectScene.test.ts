@@ -9,17 +9,17 @@ import type { Effect } from "../../src/core/CosmeticSchemas";
 const base = { name: "fx", product: null, rarity: "rare" } as const;
 
 const gradient = {
-  type: "gradient",
+  type: "gradient" as const,
   colors: ["#ff0000", "#00ff00", "#0000ff"],
   colorSize: 2,
   movementSpeed: 3,
-} as const;
+};
 
 const transition = {
-  type: "transition",
+  type: "transition" as const,
   colors: ["#ff0000", "#ffffff"],
   frequency: 2,
-} as const;
+};
 
 function effect<T extends SceneEffect["effectType"]>(
   effectType: T,
