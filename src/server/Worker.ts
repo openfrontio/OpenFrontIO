@@ -465,10 +465,19 @@ export async function startWorker() {
         // API. Runs before the rejoin attempt so a pre-start identity
         // change on refresh is screened before it is applied.
         let verifySkipped = false;
+        const isReadmit =
+          gm.game(clientMsg.gameID)?.wasAdmitted(persistentId) ?? false;
+        // First joins need both join_verify and users/@me, and neither
+        // depends on the other, so the account fetch runs alongside the
+        // verify instead of after it: one API round trip on the join
+        // instead of two. Re-admits are left alone — rejoinClient below
+        // returns before the account is needed, keeping reconnects off the
+        // API as before.
+        const userMePending =
+          claims !== null && !isReadmit ? getUserMe(clientMsg.token) : null;
         if (ServerEnv.env() !== GameEnv.Dev) {
           const game = gm.game(clientMsg.gameID);
           const stored = game?.storedIdentity(persistentId) ?? null;
-          const isReadmit = game?.wasAdmitted(persistentId) ?? false;
           const steamAuthed = isSteamAuthenticated(claims);
           // SECURITY: the reject/skip/verify split (first joins must
           // present a token, only re-admits may omit it) lives in
@@ -572,7 +581,7 @@ export async function startWorker() {
           }
         } else {
           // Verify token and get player permissions
-          const result = await getUserMe(clientMsg.token);
+          const result = await (userMePending ?? getUserMe(clientMsg.token));
           if (result.type === "error") {
             log.warn(`Unauthorized: ${result.message}`, {
               persistentID: persistentId,
