@@ -10,6 +10,7 @@ import {
   GameStartInfo,
   PartialGameRecord,
   PlayerRecord,
+  PlayerReport,
   Tribe,
   Turn,
   Winner,
@@ -301,6 +302,9 @@ export function createPartialGameRecord(
   // ingest reads them from the record for owner appearance stats, and
   // replays rebuild GameStartInfo from the record so the same names spawn.
   tribes?: Tribe[],
+  // Player reports filed during the game (multiplayer only; see
+  // GameServer.handleReport). The API ingests them for moderation.
+  reports?: PlayerReport[],
 ): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
   const num_turns = allTurns.length;
@@ -329,6 +333,7 @@ export function createPartialGameRecord(
       num_turns,
       winner,
       tribes,
+      reports,
     },
     version: "v0.0.2",
     turns,

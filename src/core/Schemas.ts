@@ -104,7 +104,8 @@ export type ClientMessage =
   | ClientRejoinMessage
   | ClientLogMessage
   | ClientHashMessage
-  | ClientSpectateMessage;
+  | ClientSpectateMessage
+  | ClientReportMessage;
 
 export type ServerMessage =
   | ServerTurnMessage
@@ -132,6 +133,9 @@ export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientSendLiveStatsMessage = z.infer<
   typeof ClientSendLiveStatsSchema
 >;
+export type ClientReportMessage = z.infer<typeof ClientReportMessageSchema>;
+export type ReportReason = z.infer<typeof ReportReasonSchema>;
+export type PlayerReport = z.infer<typeof PlayerReportSchema>;
 export type PlayerLiveStats = z.infer<typeof PlayerLiveStatsSchema>;
 export type LiveStats = z.infer<typeof LiveStatsSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
@@ -969,6 +973,31 @@ export const ClientSendLiveStatsSchema = z.object({
   stats: LiveStatsSchema,
 });
 
+// A closed enum: the API drops reports with a reason it does not know, so a
+// new value must land in infra (REPORT_REASONS) first.
+export const ReportReasonSchema = z.enum([
+  "botting",
+  "teaming",
+  "inappropriate_username",
+  "griefing",
+]);
+
+// A player reporting another player of the same game. The server keeps them
+// out of the turn log (who reported whom is staff-only) and emits them once,
+// as info.reports of the archived record.
+export const PlayerReportSchema = z.object({
+  reportedBy: ID,
+  reported: ID,
+  reason: ReportReasonSchema,
+});
+
+// Note: reportedBy is NOT sent - the server stamps it from the connection.
+export const ClientReportMessageSchema = z.object({
+  type: z.literal("report"),
+  reported: ID,
+  reason: ReportReasonSchema,
+});
+
 export const ClientHashSchema = z.object({
   type: z.literal("hash"),
   hash: zb.float(),
@@ -1031,6 +1060,7 @@ export const ClientMessageSchema = zb.discriminatedUnion("type", [
   ClientLogMessageSchema,
   ClientHashSchema,
   ClientSpectateMessageSchema,
+  ClientReportMessageSchema,
 ]);
 
 //
@@ -1051,6 +1081,9 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   num_turns: z.number(),
   winner: WinnerSchema,
   lobbyFillTime: z.number().nonnegative(),
+  // Absent on singleplayer records and on records read back from the API,
+  // which scrubs them like persistentID.
+  reports: PlayerReportSchema.array().optional(),
 });
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 

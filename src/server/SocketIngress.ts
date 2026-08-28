@@ -11,13 +11,15 @@ export const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 export const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
 
 // Messages that speak for a player in the simulation, so a spectator may not
-// send them — including hash, which feeds desync agreement. Ping and rejoin
-// remain connection housekeeping.
+// send them — including hash, which feeds desync agreement, and report, which
+// is one player's word against another's. Ping and rejoin remain connection
+// housekeeping.
 const SPECTATOR_BLOCKED_MESSAGES = new Set([
   "intent",
   "winner",
   "live_stats",
   "hash",
+  "report",
 ]);
 
 // What the ingress needs from the game it feeds.

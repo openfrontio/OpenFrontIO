@@ -311,6 +311,9 @@ export class GameView implements GameMap {
     if (spawnPhaseEndUpdate) {
       this.startTick = spawnPhaseEndUpdate.startTick;
     }
+    if (gu.updates[GameUpdateType.Win].length > 0) {
+      this._gameOver = true;
+    }
 
     const myDisplayName = formatPlayerDisplayName(
       this._myUsername,
@@ -1077,6 +1080,13 @@ export class GameView implements GameMap {
     if (this.lastUpdate === null) return 0;
     return this.lastUpdate.tick;
   }
+  // Set once the sim has decided the game (WinUpdate). Play may go on for
+  // those who stay, but the server archives the record at that point.
+  private _gameOver = false;
+  gameOver(): boolean {
+    return this._gameOver;
+  }
+
   inSpawnPhase(): boolean {
     return this.startTick === null;
   }

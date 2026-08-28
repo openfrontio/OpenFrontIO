@@ -13,17 +13,20 @@ import { TileRef } from "../core/game/GameMap";
 import {
   AllPlayersStats,
   ClientHashMessage,
+  ClientID,
   ClientIntentMessage,
   ClientJoinMessage,
   ClientMessage,
   ClientPingMessage,
   ClientRejoinMessage,
+  ClientReportMessage,
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   ClientSpectateMessage,
   GameConfig,
   Intent,
   LiveStats,
+  ReportReason,
   ServerMessage,
   Winner,
 } from "../core/Schemas";
@@ -165,6 +168,17 @@ export class SendWinnerEvent implements GameEvent {
 export class SendLiveStatsEvent implements GameEvent {
   constructor(public readonly stats: LiveStats) {}
 }
+export class SendPlayerReportEvent implements GameEvent {
+  constructor(
+    public readonly reported: ClientID,
+    public readonly reason: ReportReason,
+  ) {}
+}
+// Emitted once a report has actually gone to the server, so the UI only
+// marks a player as reported when it has been.
+export class PlayerReportedEvent implements GameEvent {
+  constructor(public readonly reported: ClientID) {}
+}
 export class SendHashEvent implements GameEvent {
   constructor(
     public readonly tick: Tick,
@@ -274,6 +288,9 @@ export class Transport {
     this.eventBus.on(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
     this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
     this.eventBus.on(SendLiveStatsEvent, (e) => this.onSendLiveStatsEvent(e));
+    this.eventBus.on(SendPlayerReportEvent, (e) =>
+      this.onSendPlayerReportEvent(e),
+    );
     this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
     this.eventBus.on(CancelAttackIntentEvent, (e) =>
       this.onCancelAttackIntentEvent(e),
@@ -648,6 +665,25 @@ export class Transport {
         stats: event.stats,
       } satisfies ClientSendLiveStatsMessage);
     }
+  }
+
+  private onSendPlayerReportEvent(event: SendPlayerReportEvent) {
+    // Singleplayer records are client-authored and the API ignores their
+    // reports, so there is nowhere for one to go.
+    if (this.isLocal) return;
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      console.log(
+        "WebSocket is not open, dropping report. Current state:",
+        this.socket?.readyState,
+      );
+      return;
+    }
+    this.sendMsg({
+      type: "report",
+      reported: event.reported,
+      reason: event.reason,
+    } satisfies ClientReportMessage);
+    this.eventBus.emit(new PlayerReportedEvent(event.reported));
   }
 
   private onSendHashEvent(event: SendHashEvent) {
