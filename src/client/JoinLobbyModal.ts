@@ -63,6 +63,10 @@ export class JoinLobbyModal extends BaseModal {
   @state() private hostedLobbies: PublicGameInfo[] = [];
   @state() private hostedLobbiesLoaded = false;
 
+  // Player count from the lobby card the join was clicked on, shown until
+  // the server's own roster arrives.
+  @state() private previewPlayerCount = 0;
+
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
@@ -181,47 +185,37 @@ export class JoinLobbyModal extends BaseModal {
           : translateText("public_lobby.started");
     const maxPlayers = this.gameConfig?.maxPlayers ?? 0;
     // Seats, not connections: spectators are in the roster but hold none.
-    const playerCount = this.players?.filter((p) => !p.spectator).length ?? 0;
+    // Until the server's roster lands, the count comes from the lobby card.
+    const playerCount = this.isConnecting
+      ? this.previewPlayerCount
+      : (this.players?.filter((p) => !p.spectator).length ?? 0);
     const hostClientID = this.isPrivateLobby()
       ? (this.lobbyCreatorClientID ?? "")
       : "";
     return html`
       <div class="flex flex-col h-full">
         <div class="flex-1 custom-scrollbar p-6 space-y-4 mr-1">
+          ${this.gameConfig ? this.renderGameConfig() : html``}
           ${this.isConnecting
-            ? html`
-                <div
-                  class="min-h-[240px] flex flex-col items-center justify-center gap-4"
-                >
-                  <div
-                    class="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"
-                  ></div>
-                  <p class="text-center text-white/80 text-sm">
-                    ${translateText("public_lobby.connecting")}
-                  </p>
-                </div>
-              `
-            : html`
-                ${this.gameConfig ? this.renderGameConfig() : html``}
-                ${this.players.length > 0
-                  ? html`
-                      <lobby-player-view
-                        class="mt-6"
-                        .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
-                        .clients=${this.players}
-                        .lobbyCreatorClientID=${hostClientID}
-                        .currentClientID=${this.currentClientID}
-                        .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                        .isPublicGame=${this.gameConfig?.gameType ===
-                        GameType.Public}
-                        .nationCount=${nationsConfigToSlider(
-                          this.gameConfig?.nations ?? "default",
-                          this.nationCount,
-                        )}
-                      ></lobby-player-view>
-                    `
-                  : ""}
-              `}
+            ? this.renderConnecting()
+            : this.players.length > 0
+              ? html`
+                  <lobby-player-view
+                    class="mt-6"
+                    .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
+                    .clients=${this.players}
+                    .lobbyCreatorClientID=${hostClientID}
+                    .currentClientID=${this.currentClientID}
+                    .teamCount=${this.gameConfig?.playerTeams ?? 2}
+                    .isPublicGame=${this.gameConfig?.gameType ===
+                    GameType.Public}
+                    .nationCount=${nationsConfigToSlider(
+                      this.gameConfig?.nations ?? "default",
+                      this.nationCount,
+                    )}
+                  ></lobby-player-view>
+                `
+              : ""}
         </div>
 
         ${html`
@@ -260,6 +254,37 @@ export class JoinLobbyModal extends BaseModal {
             </div>
           </div>
         `}
+      </div>
+    `;
+  }
+
+  // The game's settings are known from the lobby card before the socket is
+  // even open, so they render immediately and only the roster waits on the
+  // server. A URL join has no card, so there is nothing to show but the
+  // spinner until lobby_info arrives.
+  private renderConnecting(): TemplateResult {
+    if (this.gameConfig) {
+      return html`
+        <div
+          class="mt-6 flex items-center justify-center gap-3 text-white/80 text-sm"
+        >
+          <div
+            class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"
+          ></div>
+          <span>${translateText("public_lobby.connecting")}</span>
+        </div>
+      `;
+    }
+    return html`
+      <div
+        class="min-h-[240px] flex flex-col items-center justify-center gap-4"
+      >
+        <div
+          class="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"
+        ></div>
+        <p class="text-center text-white/80 text-sm">
+          ${translateText("public_lobby.connecting")}
+        </p>
       </div>
     `;
   }
@@ -527,6 +552,7 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyStartAt = null;
     this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
+    this.previewPlayerCount = 0;
     this.isConnecting = true;
     this.handledJoinTimeout = false;
     this.startLobbyUpdates();
@@ -952,6 +978,9 @@ export class JoinLobbyModal extends BaseModal {
 
   private updateFromLobby(lobby: GameInfo | PublicGameInfo) {
     this.players = "clients" in lobby ? (lobby.clients ?? []) : [];
+    if ("numClients" in lobby) {
+      this.previewPlayerCount = lobby.numClients;
+    }
     if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
       this.serverTimeOffset = calculateServerTimeOffset(lobby.serverTime);
     }

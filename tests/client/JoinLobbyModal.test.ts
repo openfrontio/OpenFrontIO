@@ -1,3 +1,4 @@
+import { html, render } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
 
@@ -111,5 +112,76 @@ describe("JoinLobbyModal spectate link", () => {
     await (modal as any).handleUrlJoin("AbCd1234", true);
     expect((modal as any).checkArchivedGame).toHaveBeenCalledWith("AbCd1234");
     expect((modal as any).showMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe("JoinLobbyModal while connecting", () => {
+  // The lobby card the player clicked already carries the game's settings
+  // and player count, so they show at once; only the roster waits on the
+  // server's lobby_info.
+  const publicInfo = {
+    gameID: "g1",
+    numClients: 7,
+    publicGameType: "ffa",
+    gameConfig: { gameMap: "World", maxPlayers: 50 },
+  } as any;
+
+  const renderBody = (modal: JoinLobbyModal) => {
+    const host = document.createElement("div");
+    render((modal as any).renderBody(), host);
+    return host;
+  };
+
+  const modalWithStubs = () => {
+    const modal = new JoinLobbyModal();
+    (modal as any).syncCountdownTimer = vi.fn();
+    (modal as any).loadNationCount = vi.fn();
+    (modal as any).renderGameConfig = () => html`<div id="game-config"></div>`;
+    return modal;
+  };
+
+  it("shows the game settings and card player count before lobby_info", () => {
+    const modal = modalWithStubs();
+    (modal as any).startTrackingLobby("g1", publicInfo);
+    expect((modal as any).isConnecting).toBe(true);
+
+    const host = renderBody(modal);
+    expect(host.querySelector("#game-config")).not.toBeNull();
+    expect(host.querySelector(".animate-spin")).not.toBeNull();
+    expect(host.querySelector("lobby-player-view")).toBeNull();
+    expect(host.textContent).toContain("7/50");
+  });
+
+  it("falls back to the full spinner when there is no card (URL join)", () => {
+    const modal = modalWithStubs();
+    (modal as any).startTrackingLobby("g1");
+
+    const host = renderBody(modal);
+    expect(host.querySelector("#game-config")).toBeNull();
+    expect(host.querySelector(".animate-spin")).not.toBeNull();
+  });
+
+  it("switches to the server roster once lobby_info lands", () => {
+    const modal = modalWithStubs();
+    (modal as any).startTrackingLobby("g1", publicInfo);
+    (modal as any).handleLobbyInfo({
+      myClientID: "me",
+      lobby: {
+        gameID: "g1",
+        serverTime: 0,
+        gameConfig: { gameMap: "World", maxPlayers: 50 },
+        clients: [
+          { clientID: "me", username: "me" },
+          { clientID: "other", username: "other", spectator: true },
+        ],
+      },
+    });
+    expect((modal as any).isConnecting).toBe(false);
+
+    const host = renderBody(modal);
+    expect(host.querySelector("#game-config")).not.toBeNull();
+    expect(host.querySelector("lobby-player-view")).not.toBeNull();
+    // Seats, not connections: the spectator holds none.
+    expect(host.textContent).toContain("1/50");
   });
 });
