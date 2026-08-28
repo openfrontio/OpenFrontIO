@@ -15,6 +15,11 @@ const TOKEN_FRESH_MS = 4 * 60 * 1000;
 // error). Long enough not to hammer Cloudflare, short enough that a transient
 // failure doesn't leave the session cold until the next join.
 const MINT_RETRY_MS = 60 * 1000;
+// Upper bound on one mint. A non-interactive challenge settles in seconds; an
+// interactive one needs a click, which never comes if the widget is hidden
+// (e.g. the player entered a game while a prefetch was up). Without a bound a
+// stalled mint would sit in the provider forever and wedge every later join.
+export const MINT_TIMEOUT_MS = 60 * 1000;
 
 export type TurnstileToken = { token: string; createdAt: number };
 
@@ -38,7 +43,17 @@ export async function mintTurnstileToken(): Promise<TurnstileToken> {
     throw new Error("Failed to load Turnstile script");
   }
 
-  const widgetId = window.turnstile.render("#turnstile-container", {
+  const container = document.getElementById("turnstile-container");
+  if (container === null) {
+    throw new Error("Turnstile container missing");
+  }
+  // Mints can overlap (a prefetch and a join, or two joins), and rendering
+  // twice into one element does not give two widgets, so each mint gets its
+  // own host element inside the container and takes it away when done.
+  const host = document.createElement("div");
+  container.appendChild(host);
+
+  const widgetId = window.turnstile.render(host, {
     sitekey: ClientEnv.turnstileSiteKey(),
     size: "normal",
     appearance: "interaction-only",
@@ -46,15 +61,24 @@ export async function mintTurnstileToken(): Promise<TurnstileToken> {
   });
 
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (finish: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      window.turnstile.remove(widgetId);
+      host.remove();
+      finish();
+    };
+    const fail = (reason: string) =>
+      settle(() => reject(new Error(`Turnstile failed: ${reason}`)));
+    const timer = setTimeout(() => fail("timeout"), MINT_TIMEOUT_MS);
+
     window.turnstile.execute(widgetId, {
-      callback: (token: string) => {
-        window.turnstile.remove(widgetId);
-        resolve({ token, createdAt: Date.now() });
-      },
-      "error-callback": (errorCode: string) => {
-        window.turnstile.remove(widgetId);
-        reject(new Error(`Turnstile failed: ${errorCode}`));
-      },
+      callback: (token: string) =>
+        settle(() => resolve({ token, createdAt: Date.now() })),
+      "error-callback": fail,
+      "timeout-callback": () => fail("challenge timed out"),
     });
   });
 }

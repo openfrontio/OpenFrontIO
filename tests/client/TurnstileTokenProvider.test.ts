@@ -4,8 +4,13 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     `[${key}] ${JSON.stringify(params ?? {})}`,
 }));
+vi.mock("../../src/client/ClientEnv", () => ({
+  ClientEnv: { turnstileSiteKey: () => "test-site-key" },
+}));
 
 import {
+  MINT_TIMEOUT_MS,
+  mintTurnstileToken,
   TurnstileTokenProvider,
   type TurnstileToken,
 } from "../../src/client/TurnstileToken";
@@ -230,5 +235,112 @@ describe("TurnstileTokenProvider", () => {
     const next = await provider.take();
     expect(next).not.toBeNull();
     expect(next).not.toBe("token-slow");
+  });
+});
+
+// Stand-in for the Cloudflare script: records which element each widget was
+// rendered into and exposes the execute() callbacks so a test can settle a
+// challenge by hand.
+function fakeTurnstile() {
+  const widgets = new Map<
+    string,
+    { host: Element; callbacks?: Record<string, (arg?: string) => void> }
+  >();
+  let n = 0;
+  const api = {
+    render: vi.fn((host: Element) => {
+      const id = `widget-${++n}`;
+      widgets.set(id, { host });
+      return id;
+    }),
+    execute: vi.fn(
+      (id: string, callbacks: Record<string, (arg?: string) => void>) => {
+        widgets.get(id)!.callbacks = callbacks;
+      },
+    ),
+    remove: vi.fn((id: string) => {
+      widgets.delete(id);
+    }),
+  };
+  return { api, widgets };
+}
+
+describe("mintTurnstileToken", () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    container = document.createElement("div");
+    container.id = "turnstile-container";
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    container.remove();
+    delete (window as { turnstile?: unknown }).turnstile;
+  });
+
+  it("gives overlapping mints their own widget and cleans both up", async () => {
+    const { api, widgets } = fakeTurnstile();
+    window.turnstile = api;
+
+    const first = mintTurnstileToken();
+    const second = mintTurnstileToken();
+    await vi.advanceTimersByTimeAsync(0);
+
+    // Two live widgets in two different host elements, both inside the
+    // container — never two renders into the same element.
+    expect(widgets.size).toBe(2);
+    const hosts = [...widgets.values()].map((w) => w.host);
+    expect(hosts[0]).not.toBe(hosts[1]);
+    expect(hosts[0].parentElement).toBe(container);
+    expect(hosts[1].parentElement).toBe(container);
+
+    widgets.get("widget-1")!.callbacks!.callback("tok-a");
+    widgets.get("widget-2")!.callbacks!.callback("tok-b");
+    expect((await first).token).toBe("tok-a");
+    expect((await second).token).toBe("tok-b");
+
+    expect(api.remove).toHaveBeenCalledTimes(2);
+    expect(container.childElementCount).toBe(0);
+  });
+
+  it("rejects and tears the widget down when the challenge never settles", async () => {
+    const { api } = fakeTurnstile();
+    window.turnstile = api;
+
+    const minted = mintTurnstileToken();
+    const outcome = minted.then(
+      () => "resolved",
+      (e: Error) => e.message,
+    );
+    await vi.advanceTimersByTimeAsync(MINT_TIMEOUT_MS);
+
+    expect(await outcome).toBe("Turnstile failed: timeout");
+    expect(api.remove).toHaveBeenCalledWith("widget-1");
+    expect(container.childElementCount).toBe(0);
+  });
+
+  it("a hung prefetch cannot wedge the provider past the mint timeout", async () => {
+    const { api, widgets } = fakeTurnstile();
+    window.turnstile = api;
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const provider = new TurnstileTokenProvider();
+
+    provider.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(api.render).toHaveBeenCalledTimes(1);
+
+    // The prefetch's widget is never answered (say the player entered a game
+    // and the container got hidden). Once it times out, the retry brings
+    // warming back on its own.
+    await vi.advanceTimersByTimeAsync(MINT_TIMEOUT_MS + 60 * 1000);
+    expect(api.render).toHaveBeenCalledTimes(2);
+
+    widgets.get("widget-2")!.callbacks!.callback("tok-fresh");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await provider.take()).toBe("tok-fresh");
   });
 });
