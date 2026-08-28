@@ -556,6 +556,39 @@ describe("StoreModal cosmetic browser", () => {
     expect(grid.querySelector("purchase-button")).toBeNull();
   });
 
+  it("previews a bundle item from the contents dialog, then restores the dialog", async () => {
+    resolvedCatalog = [starterBundle];
+    const modal = await openStoreOnTab("bundles");
+    card(modal, starterBundle.key)!.onActivate!(starterBundle);
+    await modal.updateComplete;
+    await (modal.querySelector("pack-contents-dialog") as LitElement)
+      .updateComplete;
+
+    const dialog = () =>
+      document.body.querySelector<HTMLElement>("[data-pack-contents]");
+    const items = [...dialog()!.querySelectorAll("[data-pack-contents-item]")];
+    // Only the skin can be rendered in-game; the flag gets no eye.
+    const bubbles = items.map((item) =>
+      item.querySelector<HTMLElement>("[data-cosmetic-preview-bubble]"),
+    );
+    expect(bubbles[0]).toBeTruthy();
+    expect(bubbles[1]).toBeNull();
+
+    bubbles[0]!.querySelector("button")!.click();
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeTruthy();
+    expect(dialog()).toBeNull();
+
+    modal
+      .querySelector("cosmetic-preview-modal")!
+      .dispatchEvent(new CustomEvent("close-preview"));
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeNull();
+    await (modal.querySelector("pack-contents-dialog") as LitElement)
+      .updateComplete;
+    expect(dialog()).toBeTruthy();
+  });
+
   it("uses the browser shell and exact resolved pack purchase", async () => {
     resolvedCatalog = [pack];
     const modal = await openStoreOnTab("packs");

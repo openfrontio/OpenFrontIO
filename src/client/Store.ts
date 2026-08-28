@@ -551,8 +551,11 @@ export class StoreModal extends BaseModal {
   private renderBundleGrid(): TemplateResult {
     return html`${this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_bundles",
-    })}${this.openedPack
-      ? html`<pack-contents-dialog
+    })}${this.openedPack && !this.previewingCosmetic
+      ? // The dialog is portaled above the modal's stacking context, so a
+        // preview opened from one of its items would render underneath it.
+        // Yield to the preview; the dialog comes back when it closes.
+        html`<pack-contents-dialog
           .pack=${this.openedPack}
           .actionContent=${this.renderCardAction(this.openedPack, false)}
           @close=${() => this.closePack()}
