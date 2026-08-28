@@ -732,7 +732,7 @@ export class GameServer {
   }
 
   public prestart() {
-    if (this.hasStarted()) {
+    if (this.ended || this.hasStarted()) {
       return;
     }
     this.stage = "prestart";
@@ -1151,6 +1151,9 @@ export class GameServer {
       this.endTurnIntervalID = undefined;
     }
     this.clients.closeAll("game has ended");
+    // The lobby broadcast would stop itself on its next tick; do not leave a
+    // timer holding an ended game until then.
+    this.stopLobbyInfoBroadcast();
     // Only a started game has a record to archive: gameStartInfo is built by
     // start(), so a game that ends during prestart has nothing to upload.
     if (this.stage !== "started") {
