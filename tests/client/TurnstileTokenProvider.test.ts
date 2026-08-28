@@ -318,7 +318,7 @@ describe("mintTurnstileToken", () => {
     );
     await vi.advanceTimersByTimeAsync(MINT_TIMEOUT_MS);
 
-    expect(await outcome).toBe("Turnstile failed: timeout");
+    expect(await outcome).toBe("timeout");
     expect(api.remove).toHaveBeenCalledWith("widget-1");
     expect(container.childElementCount).toBe(0);
   });

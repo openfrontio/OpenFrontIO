@@ -70,8 +70,9 @@ export async function mintTurnstileToken(): Promise<TurnstileToken> {
       host.remove();
       finish();
     };
-    const fail = (reason: string) =>
-      settle(() => reject(new Error(`Turnstile failed: ${reason}`)));
+    // Bare reason: the join-time alert and the console log both already say
+    // this is Turnstile.
+    const fail = (reason: string) => settle(() => reject(new Error(reason)));
     const timer = setTimeout(() => fail("timeout"), MINT_TIMEOUT_MS);
 
     window.turnstile.execute(widgetId, {
