@@ -1151,7 +1151,9 @@ export class GameServer {
       this.endTurnIntervalID = undefined;
     }
     this.clients.closeAll("game has ended");
-    if (!this.hasStarted()) {
+    // Only a started game has a record to archive: gameStartInfo is built by
+    // start(), so a game that ends during prestart has nothing to upload.
+    if (this.stage !== "started") {
       this.log.info(`game not started, not archiving game`);
       this.telemetry.matchFinished(this.turns.length);
       return;

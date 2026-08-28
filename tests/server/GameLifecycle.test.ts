@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GamePhase } from "../../src/server/GameServer";
-import { makeGame, startGame } from "../util/GameServerHarness";
+import {
+  makeClient,
+  makeGame,
+  mockLogger,
+  startGame,
+} from "../util/GameServerHarness";
 
 describe("GameLifecycle", () => {
   beforeEach(() => {
@@ -40,6 +45,24 @@ describe("GameLifecycle", () => {
     await game.end();
     expect(vi.getTimerCount()).toBe(0);
     expect(game.phase()).toBe(GamePhase.Finished);
+  });
+
+  it("does not try to archive a game that ends during prestart", async () => {
+    // gameStartInfo only exists once start() has run; before that there is
+    // no record to build, let alone upload.
+    const log = mockLogger();
+    const archive = vi.fn(async () => {});
+    const game = makeGame({ log, deps: { archive } });
+    game.joinClient(makeClient());
+    game.prestart();
+
+    await expect(game.end()).resolves.toBeUndefined();
+
+    expect(archive).not.toHaveBeenCalled();
+    expect(log.error).not.toHaveBeenCalled();
+    expect(log.info).toHaveBeenCalledWith(
+      "game not started, not archiving game",
+    );
   });
 
   it("should be resilient to multiple end() calls", async () => {
