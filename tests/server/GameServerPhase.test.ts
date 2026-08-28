@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createGameWireContext } from "../../src/core/ZbinWire";
+import { GameManager } from "../../src/server/GameManager";
 import { GamePhase } from "../../src/server/GameServer";
 import {
   cid,
   makeClient,
   makeGame,
+  mockLogger,
   mockWsOf,
   startGame,
 } from "../util/GameServerHarness";
@@ -82,6 +84,7 @@ describe("GameServer.phase()", () => {
     vi.advanceTimersByTime(60_500);
     await mockWsOf(chatty).emit({ type: "ping" });
 
+    game.pruneStaleClients();
     expect(game.phase()).toBe(GamePhase.Active);
     expect(mockWsOf(quiet).close).toHaveBeenCalledWith(
       1000,
@@ -100,7 +103,70 @@ describe("GameServer.phase()", () => {
 
     // 60s without pings prunes both; the game is then unattended.
     vi.advanceTimersByTime(60_500);
+    game.pruneStaleClients();
     expect(game.phase()).toBe(GamePhase.Finished);
+    expect(game.numClients()).toBe(0);
+  });
+
+  it("reads the phase without pruning; only pruneStaleClients drops anyone", () => {
+    const game = makeGame({ startsAt: T0 + 1000 });
+    const quiet = makeClient({ clientID: cid("quiet") });
+    game.joinClient(quiet);
+    vi.advanceTimersByTime(60_500);
+
+    expect(game.phase()).toBe(GamePhase.Active);
+    expect(mockWsOf(quiet).close).not.toHaveBeenCalled();
+    expect(game.numClients()).toBe(1);
+
+    game.pruneStaleClients();
+    expect(mockWsOf(quiet).close).toHaveBeenCalled();
+    expect(game.numClients()).toBe(0);
+  });
+
+  it("does not prune once the game has ended", async () => {
+    // end() closes the sockets but leaves the roster to the close events;
+    // the prune must not get ahead of them on a game that is already over.
+    const game = makeGame();
+    game.joinClient(makeClient({ clientID: cid("quiet") }));
+    await game.end();
+    vi.advanceTimersByTime(60_500);
+
+    game.pruneStaleClients();
+    expect(game.numClients()).toBe(1);
+  });
+});
+
+describe("GameManager and the ping prune", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(T0);
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("prunes on tick, not on a lobby-browser read", () => {
+    const gm = new GameManager(mockLogger());
+    const game = gm.createGame(cid("game"), undefined, "host-pid")!;
+    game.setListed(true);
+    const quiet = makeClient({
+      clientID: cid("quiet"),
+      persistentID: "host-pid",
+    });
+    game.joinClient(quiet);
+    vi.advanceTimersByTime(60_500);
+
+    expect(gm.listedLobbies()).toEqual([game]);
+    expect(mockWsOf(quiet).close).not.toHaveBeenCalled();
+    expect(game.numClients()).toBe(1);
+
+    gm.tick();
+    expect(mockWsOf(quiet).close).toHaveBeenCalledWith(
+      1000,
+      "no heartbeats received, closing connection",
+    );
     expect(game.numClients()).toBe(0);
   });
 });
