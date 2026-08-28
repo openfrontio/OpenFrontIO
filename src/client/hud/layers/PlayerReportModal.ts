@@ -51,10 +51,8 @@ export class PlayerReportModal extends LitElement {
     const targetClientID = other.clientID();
     if (!targetClientID) return;
 
+    // Transport answers with PlayerReportedEvent once the report is sent.
     this.eventBus.emit(new SendPlayerReportEvent(targetClientID, reason));
-    this.dispatchEvent(
-      new CustomEvent("reported", { detail: { playerId: String(other.id()) } }),
-    );
     this.closeModal();
   };
 

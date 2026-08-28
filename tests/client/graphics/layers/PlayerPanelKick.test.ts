@@ -37,10 +37,12 @@ import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
 import { PlayerReportModal } from "../../../../src/client/hud/layers/PlayerReportModal";
 import { showInGameConfirm } from "../../../../src/client/InGameModal";
 import {
+  PlayerReportedEvent,
   SendKickPlayerIntentEvent,
   SendPlayerReportEvent,
 } from "../../../../src/client/Transport";
 import { PlayerView } from "../../../../src/client/view";
+import { EventBus } from "../../../../src/core/EventBus";
 import { GameType, PlayerType } from "../../../../src/core/game/Game";
 
 const mockActionButton = actionButton as unknown as ReturnType<typeof vi.fn>;
@@ -188,16 +190,25 @@ describe("PlayerPanel - report player", () => {
     expect(mockActionButton).not.toHaveBeenCalled();
   });
 
-  test("locks the button once the player has been reported", () => {
+  test("locks the button only once Transport confirms the report was sent", () => {
+    const eventBus = new EventBus();
+    panel.initEventBus(eventBus);
+
     (panel as any).openReport({ stopPropagation: vi.fn() }, other);
     expect((panel as any).reportTarget).toBe(other);
     expect((panel as any).suppressNextHide).toBe(true);
 
-    (panel as any).handleReported(
-      new CustomEvent("reported", { detail: { playerId: "2" } }),
-    );
-    expect((panel as any).reportTarget).toBe(null);
+    // Submitting alone (e.g. while the socket is reconnecting and the
+    // report is dropped) does not lock the button.
+    (panel as any).closeReport();
+    (panel as any).renderModeration(me, other, false);
+    expect(mockActionButton.mock.calls[0][0]).toMatchObject({
+      label: "player_panel.report",
+      disabled: false,
+    });
 
+    mockActionButton.mockClear();
+    eventBus.emit(new PlayerReportedEvent("client-2"));
     (panel as any).renderModeration(me, other, false);
     expect(mockActionButton.mock.calls[0][0]).toMatchObject({
       label: "player_panel.reported",
@@ -219,13 +230,13 @@ describe("PlayerReportModal", () => {
     const eventBus = { emit: vi.fn() };
     modal.eventBus = eventBus as any;
     modal.target = other;
-    const reported = vi.fn();
-    modal.addEventListener("reported", reported as any);
-    return { modal, eventBus, reported };
+    const closed = vi.fn();
+    modal.addEventListener("close", closed as any);
+    return { modal, eventBus, closed };
   }
 
-  test("submits the chosen reason for the target's clientID", () => {
-    const { modal, eventBus, reported } = makeModal();
+  test("submits the chosen reason for the target's clientID and closes", () => {
+    const { modal, eventBus, closed } = makeModal();
     (modal as any).reason = "teaming";
 
     (modal as any).handleSubmit({ stopPropagation: vi.fn() });
@@ -235,16 +246,14 @@ describe("PlayerReportModal", () => {
     expect(event).toBeInstanceOf(SendPlayerReportEvent);
     expect(event.reported).toBe("client-2");
     expect(event.reason).toBe("teaming");
-    expect((reported.mock.calls[0][0] as CustomEvent).detail).toEqual({
-      playerId: "2",
-    });
+    expect(closed).toHaveBeenCalledTimes(1);
   });
 
   test("does nothing until a reason is chosen", () => {
-    const { modal, eventBus, reported } = makeModal();
+    const { modal, eventBus, closed } = makeModal();
     (modal as any).handleSubmit({ stopPropagation: vi.fn() });
     expect(eventBus.emit).not.toHaveBeenCalled();
-    expect(reported).not.toHaveBeenCalled();
+    expect(closed).not.toHaveBeenCalled();
   });
 });
 

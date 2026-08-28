@@ -174,6 +174,11 @@ export class SendPlayerReportEvent implements GameEvent {
     public readonly reason: ReportReason,
   ) {}
 }
+// Emitted once a report has actually gone to the server, so the UI only
+// marks a player as reported when it has been.
+export class PlayerReportedEvent implements GameEvent {
+  constructor(public readonly reported: ClientID) {}
+}
 export class SendHashEvent implements GameEvent {
   constructor(
     public readonly tick: Tick,
@@ -678,6 +683,7 @@ export class Transport {
       reported: event.reported,
       reason: event.reason,
     } satisfies ClientReportMessage);
+    this.eventBus.emit(new PlayerReportedEvent(event.reported));
   }
 
   private onSendHashEvent(event: SendHashEvent) {

@@ -23,6 +23,7 @@ import {
   SwapRocketDirectionEvent,
 } from "../../InputHandler";
 import {
+  PlayerReportedEvent,
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
   SendEmbargoAllIntentEvent,
@@ -77,8 +78,9 @@ export class PlayerPanel extends LitElement implements Controller {
   @state() private suppressNextHide: boolean = false;
   @state() private moderationTarget: PlayerView | null = null;
   @state() private reportTarget: PlayerView | null = null;
-  // Players this client has reported this game; the button locks after one.
-  private reportedPlayerIDs = new Set<string>();
+  // clientIDs this client has reported this game (confirmed sent by
+  // Transport); the button locks after one.
+  private reportedClientIDs = new Set<string>();
   @state() private playerRole: string | null = null;
   // Whether this game is a publicly listed lobby. Kept out of
   // GameStartInfo (never touches records), so it's fetched from the worker.
@@ -107,6 +109,10 @@ export class PlayerPanel extends LitElement implements Controller {
     });
     eventBus.on(SwapRocketDirectionEvent, (event) => {
       this.uiState.rocketDirectionUp = event.rocketDirectionUp;
+      this.requestUpdate();
+    });
+    eventBus.on(PlayerReportedEvent, (event) => {
+      this.reportedClientIDs.add(event.reported);
       this.requestUpdate();
     });
   }
@@ -371,12 +377,6 @@ export class PlayerPanel extends LitElement implements Controller {
     this.reportTarget = null;
   };
 
-  private handleReported = (e: CustomEvent<{ playerId?: string }>) => {
-    const playerId = e.detail?.playerId;
-    if (playerId) this.reportedPlayerIDs.add(String(playerId));
-    this.closeReport();
-  };
-
   // Anyone may report another human of a multiplayer game. Singleplayer
   // records are client-authored and the API ignores their reports.
   private canReport(my: PlayerView, other: PlayerView): boolean {
@@ -510,7 +510,7 @@ export class PlayerPanel extends LitElement implements Controller {
     const canModerate =
       (my.isLobbyCreator() || isAdmin) && (!this.gameListed || isAdmin);
     if (!canReport && !canModerate) return html``;
-    const reported = this.reportedPlayerIDs.has(String(other.id()));
+    const reported = this.reportedClientIDs.has(other.clientID() ?? "");
     const reportTitle = reported
       ? translateText("player_panel.reported")
       : translateText("player_panel.report");
@@ -1088,7 +1088,6 @@ export class PlayerPanel extends LitElement implements Controller {
                             .target=${this.reportTarget}
                             .eventBus=${this.eventBus}
                             @close=${this.closeReport}
-                            @reported=${this.handleReported}
                           ></player-report-modal>
                         `
                       : ""}
