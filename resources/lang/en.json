@@ -1678,7 +1678,7 @@
     "plutonium_amount": "Plutonium amount",
     "preview_cosmetic": "In-Game Preview",
     "preview_error": "Failed to load in-game preview.",
-    "preview_interactive_hint": "Real-time in-game WebGL preview",
+    "preview_interactive_hint": "Real-time in-game preview",
     "preview_salvo_count": "{count, plural, one {Single (x#)} other {Salvo (x#)}}",
     "preview_salvo_toggle": "Toggle Salvo Mode",
     "price_per_month": "/mo",
