@@ -13,7 +13,8 @@ export function isPreviewableCosmetic(
     type !== "flag" &&
     type !== "crown" &&
     type !== "subscription" &&
-    type !== "pack"
+    type !== "pack" &&
+    type !== "cosmeticPack"
   );
 }
 

@@ -724,5 +724,10 @@ export class CosmeticPreviewRenderer {
     this.trailPass.dispose();
     this.spiralPass.dispose();
     this.fxPass.dispose();
+
+    // Deleting GL resources isn't enough — the context itself counts against
+    // the browser's WebGL context limit until it's GC'd. Explicitly drop it so
+    // repeatedly opening the preview modal doesn't overflow.
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
   }
 }
