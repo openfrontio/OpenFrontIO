@@ -638,6 +638,7 @@ export class StoreModal extends BaseModal {
   protected onClose(): void {
     this.affiliateCode = null;
     this.openedPack = null;
+    this.previewingCosmetic = null;
     this.selectVisible(this.groupsForTab(this.activeTab));
   }
 

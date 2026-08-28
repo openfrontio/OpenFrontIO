@@ -213,7 +213,8 @@ export class FxShockwavePass {
       colors: params?.colors ?? [DEFAULT_NUKE_EXPLOSION_COLOR],
       speed,
       transitionSpeed: params?.transitionSpeed ?? 0,
-      thickness: params?.thickness ?? fx.shockwaveRingWidth ?? 4.0,
+      // World tiles; the classic ring reads its width from uRingWidth instead.
+      thickness: params ? (params.thickness ?? 4.0) : 0,
       cell,
     });
   }

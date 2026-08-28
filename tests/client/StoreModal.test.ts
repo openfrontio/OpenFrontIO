@@ -556,6 +556,47 @@ describe("StoreModal cosmetic browser", () => {
     expect(grid.querySelector("purchase-button")).toBeNull();
   });
 
+  it("drops an open preview when the store closes", async () => {
+    const { store: modal } = await openEffectsStore();
+    const wakeCard = card(modal, wake.key)!;
+    wakeCard.onActivate!(wakeCard.resolved);
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeTruthy();
+
+    modal.close();
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeNull();
+  });
+
+  it("previews an uncolored pattern with its catalog colors, not the palette placeholder", async () => {
+    const base: ResolvedCosmetic = {
+      ...red,
+      colorPalette: null,
+      key: "pattern:stripes",
+    };
+    resolvedCatalog = [base, red];
+    const modal = await openStoreOnCosmetic("patterns");
+    // Both are variants of one card; activate the exact variant.
+    const canvas = async (variant: ResolvedCosmetic) => {
+      card(modal, variant.key)!.onActivate!(variant);
+      await modal.updateComplete;
+      const preview = modal.querySelector(
+        "cosmetic-preview-modal",
+      ) as LitElement;
+      await preview.updateComplete;
+      return preview.querySelector("cosmetic-render-canvas") as unknown as {
+        customColors: string[] | null;
+      };
+    };
+
+    expect((await canvas(red)).customColors).toEqual(["#ef4444", "#7f1d1d"]);
+    modal
+      .querySelector("cosmetic-preview-modal")!
+      .dispatchEvent(new CustomEvent("close-preview"));
+    await modal.updateComplete;
+    expect((await canvas(base)).customColors).toBeNull();
+  });
+
   it("previews a bundle item from the contents dialog, then restores the dialog", async () => {
     resolvedCatalog = [starterBundle];
     const modal = await openStoreOnTab("bundles");

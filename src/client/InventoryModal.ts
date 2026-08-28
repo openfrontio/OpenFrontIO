@@ -750,6 +750,7 @@ export class InventoryModal extends BaseModal {
 
   protected onClose(): void {
     this.search = "";
+    this.previewingCosmetic = null;
   }
 
   // A query typed for skins rarely matches anything in flags, so a stale

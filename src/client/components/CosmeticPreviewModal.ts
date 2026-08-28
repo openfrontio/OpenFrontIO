@@ -181,7 +181,10 @@ export class CosmeticPreviewModal extends LitElement {
       return this.selectedPrimary === DEFAULT ? null : [this.selectedPrimary];
     }
     if (this.resolved.type === "pattern") {
-      return [this.selectedPrimary, this.selectedSecondary];
+      return this.selectedPrimary === DEFAULT ||
+        this.selectedSecondary === DEFAULT
+        ? null
+        : [this.selectedPrimary, this.selectedSecondary];
     }
     return null;
   }
