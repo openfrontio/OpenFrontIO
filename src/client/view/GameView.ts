@@ -160,19 +160,11 @@ export class GameView implements GameMap {
       humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
 
-    for (const nation of this._mapData.nations) {
-      // Nations don't have client ids, so we use their name as the key instead.
-      this._cosmetics.set(nation.name, {
-        flag: nation.flag ? `/flags/${nation.flag}.svg` : undefined,
-      } satisfies PlayerCosmetics);
-    }
-    for (const extra of this._mapData.additionalNations) {
-      // Only set if not already provided by a manifest nation with the same name.
-      if (this._cosmetics.has(extra.name)) continue;
-      this._cosmetics.set(extra.name, {
-        flag: extra.flag ? `/flags/${extra.flag}.svg` : undefined,
-      } satisfies PlayerCosmetics);
-    }
+    // Nation-type players carry their own flag on the wire (PlayerUpdate.nationFlag,
+    // sourced from the manifest via PlayerInfo) rather than being looked up here by
+    // name — some maps define multiple nations with the same display name (e.g.
+    // India's and Pakistan's "Punjab", split by the 1947 partition), and a name-keyed
+    // lookup can't tell those apart. See the Nation-branch in update() below.
 
     const mapW = this._map.width();
     const mapH = this._map.height();
@@ -383,12 +375,15 @@ export class GameView implements GameMap {
           this,
           pu,
           gu.playerNameViewData?.[pu.id],
-          // First check human by clientID, then check nation by name.
-          // Only match by name for actual Nations — not Bots (tribes) whose
-          // random names may coincidentally match a nation name.
+          // Humans get cosmetics by clientID. Nations carry their flag
+          // directly on the update (see PlayerUpdate.nationFlag) rather than
+          // being looked up by name — some maps define multiple nations with
+          // the same display name (e.g. India's and Pakistan's "Punjab").
           this._cosmetics.get(pu.clientID ?? "") ??
-            (pu.playerType === PlayerType.Nation
-              ? this._cosmetics.get(pu.name!)
+            (pu.playerType === PlayerType.Nation && pu.nationFlag
+              ? ({
+                  flag: `/flags/${pu.nationFlag}.svg`,
+                } satisfies PlayerCosmetics)
               : undefined) ??
             {},
         );
