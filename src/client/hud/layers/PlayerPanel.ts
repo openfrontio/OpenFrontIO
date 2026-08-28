@@ -36,6 +36,7 @@ import {
   renderDuration,
   renderNumber,
   renderTroops,
+  showToast,
   translateText,
 } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
@@ -114,6 +115,7 @@ export class PlayerPanel extends LitElement implements Controller {
     eventBus.on(PlayerReportedEvent, (event) => {
       this.reportedClientIDs.add(event.reported);
       this.requestUpdate();
+      showToast(translateText("player_panel.report_sent"), "green");
     });
   }
   init() {

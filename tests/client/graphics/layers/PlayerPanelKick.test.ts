@@ -20,6 +20,7 @@ vi.mock("../../../../src/client/Utils", () => ({
   renderDuration: vi.fn(),
   renderNumber: vi.fn(),
   renderTroops: vi.fn(),
+  showToast: vi.fn(),
 }));
 
 vi.mock("../../../../src/client/components/ui/ActionButton", () => ({
@@ -41,6 +42,7 @@ import {
   SendKickPlayerIntentEvent,
   SendPlayerReportEvent,
 } from "../../../../src/client/Transport";
+import { showToast } from "../../../../src/client/Utils";
 import { PlayerView } from "../../../../src/client/view";
 import { EventBus } from "../../../../src/core/EventBus";
 import { GameType, PlayerType } from "../../../../src/core/game/Game";
@@ -229,6 +231,7 @@ describe("PlayerPanel - report player", () => {
       label: "player_panel.reported",
       disabled: true,
     });
+    expect(showToast).toHaveBeenCalledWith("player_panel.report_sent", "green");
   });
 });
 
