@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { GameType } from "../../src/core/game/Game";
 import { GamePhase } from "../../src/server/GameServer";
-import { makeGame, startGame } from "../util/GameServerHarness";
+import {
+  makeClient,
+  makeGame,
+  mockLogger,
+  startGame,
+} from "../util/GameServerHarness";
 
 describe("GameLifecycle", () => {
   beforeEach(() => {
@@ -40,6 +46,40 @@ describe("GameLifecycle", () => {
     await game.end();
     expect(vi.getTimerCount()).toBe(0);
     expect(game.phase()).toBe(GamePhase.Finished);
+  });
+
+  it("does not try to archive a game that ends during prestart", async () => {
+    // gameStartInfo only exists once start() has run; before that there is
+    // no record to build, let alone upload.
+    const log = mockLogger();
+    const archive = vi.fn(async () => {});
+    const game = makeGame({ log, deps: { archive } });
+    game.joinClient(makeClient());
+    game.prestart();
+
+    await expect(game.end()).resolves.toBeUndefined();
+
+    expect(archive).not.toHaveBeenCalled();
+    expect(log.error).not.toHaveBeenCalled();
+    expect(log.info).toHaveBeenCalledWith(
+      "game not started, not archiving game",
+    );
+    // The lobby-info broadcast the join armed is gone too.
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("ignores prestart() once the game has ended", async () => {
+    // start() already refuses an ended game; prestart() must too, or an
+    // ended lobby could change stage and go fetch tribes after shutdown.
+    const fetchTribes = vi.fn(async () => []);
+    const game = makeGame({
+      config: { gameType: GameType.Public, bots: 1 },
+      deps: { fetchTribes },
+    });
+    await game.end();
+    game.prestart();
+    expect(game.hasStarted()).toBe(false);
+    expect(fetchTribes).not.toHaveBeenCalled();
   });
 
   it("should be resilient to multiple end() calls", async () => {
