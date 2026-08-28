@@ -119,6 +119,7 @@ export function makePlayerUpdate(
     name: "Alice",
     displayName: "Alice",
     clanTag: null,
+    nationFlag: null,
     id: "player-a",
     smallID: 1,
     playerType: PlayerType.Human,

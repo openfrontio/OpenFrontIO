@@ -259,15 +259,29 @@ reaches for `intents`, `isPaused`, `_hasStarted`, `_hasEnded`,
 
 ## Phase 6 — Lifecycle state machine
 
-- [ ] One `state: "lobby" | "prestart" | "started" | "ended"` plus `paused`
-      replaces the booleans. `hasStarted()` becomes `state !== "lobby"`.
+- [x] (2026-08-27) `stage`, `ended` and `paused` replace the four booleans;
+      `hasStarted()` is `stage !== "lobby"`, and `isPaused()` is public. Not
+      the single four-valued state first planned: `ended` is orthogonal to
+      the lobby → prestart → started progression. A lobby can end without
+      starting (host left, match cancelled), and a started game must still
+      count as started once ended — `end()` archives on that, and the socket
+      close events that follow `end()` still go through `hasStarted()` in
+      `handleClientDisconnect`.
 - [x] (2026-08-27) `phase()` is a pure read; the 60s ping prune (with its
       winner re-tally) is `pruneStaleClients()`, which `GameManager.tick`
       calls just before `phase()` and which is a no-op once the game has
       ended, as the old early return made it. `publicLobbies()` and
       `listedLobbies()` no longer close anyone's socket.
-- [ ] Decide whether `end()` should await `archive()` after checking how
-      `Archive.ts` handles rejections.
+- [x] (2026-08-27) `end()` keeps not awaiting the archive: `Archive.ts`
+      catches both the record validation and the upload, so awaiting could
+      only delay GameManager's prune of the game. Noted at the call.
+
+Phase 6 complete (2026-08-27): two PRs, golden snapshot unchanged. The last
+reach-ins went with it: tests now drive the real lifecycle (`startGame`,
+`prestart()`, `end()`), read `gameInfo()` and `isPaused()`, and decode the
+turn and start frames a joined client received where they used to read
+`intents`, `turns` and `gameStartInfo` off the instance. No `(game as any)`
+remains under `tests/server`. `GameServer.ts` is 1681 lines.
 
 ## Out of scope
 
@@ -279,3 +293,11 @@ beyond the constructor call.
 
 `GameServer.ts` ≈ 700–900 lines of orchestration, ~6 focused modules with
 direct unit tests, and no `(game as any)` under `tests/server`.
+
+Outcome (2026-08-27): nine modules with direct unit tests (ConfigPatch,
+NameVisibility, DesyncDetector, Consensus, ListingState,
+MatchTelemetryRecorder, Roster, SocketIngress, IntentAuthorization) and no
+reach-ins, but `GameServer.ts` is 1681 lines, not 700–900: what remains is
+the join policy, the intent effects, start/end and the archive record
+builder, all of which orchestrate the modules and were never candidates for
+extraction. The estimate was optimistic; the structure is what was wanted.

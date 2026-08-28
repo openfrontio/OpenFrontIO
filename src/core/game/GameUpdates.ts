@@ -233,6 +233,7 @@ export interface PlayerUpdate {
   name?: string;
   displayName?: string;
   clanTag?: string | null;
+  nationFlag?: string | null;
   team?: Team;
   smallID?: number;
   playerType?: PlayerType;

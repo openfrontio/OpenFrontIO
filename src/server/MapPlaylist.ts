@@ -33,8 +33,6 @@ const SPECIAL_ONLY_MAPS = new Set<GameMapType>([
 // Hard cap on player count for performance. Applied after compact-map reduction.
 const MAX_PLAYER_COUNT = 125;
 
-// Share of public FFA games that run with overtime enabled.
-const OVERTIME_FFA_CHANCE = 0.25;
 // Every Nth scheduled public game (FFA, team and special alike, counted in
 // creation order) is trusted-only (GameConfig.trusted): only accounts the API
 // reports as trusted may join. A fixed rotation rather than a roll so the
@@ -171,11 +169,6 @@ export class MapPlaylist {
 
     let isCompact: boolean | undefined =
       this.playlists[type].length % 3 === 0 || undefined;
-    // Overtime (the win threshold sinking after 30 minutes) runs as a
-    // modifier on a quarter of public FFA games.
-    const isOvertime: boolean | undefined =
-      (mode === GameMode.FFA && Math.random() < OVERTIME_FFA_CHANCE) ||
-      undefined;
     if (
       isCompact &&
       mode === GameMode.Team &&
@@ -203,7 +196,6 @@ export class MapPlaylist {
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: {
         isCompact,
-        isOvertime,
       },
       difficulty:
         playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Medium,
@@ -222,7 +214,9 @@ export class MapPlaylist {
       spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
       disableClanTags: mode === GameMode.FFA ? true : undefined,
-      overtime: isOvertime ? { enabled: true } : undefined,
+      // Overtime (the win threshold sinking after 30 minutes) is the default
+      // for every public FFA game, so it carries no lobby modifier badge.
+      overtime: mode === GameMode.FFA ? { enabled: true } : undefined,
     } satisfies GameConfig;
   }
 

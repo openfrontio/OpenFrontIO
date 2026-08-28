@@ -33,6 +33,7 @@ import {
   mockLogger as harnessLogger,
   makeMockWs,
   MockWs,
+  startGame,
 } from "../util/GameServerHarness";
 import { decodeSentLobbyMessage, testGameConfig } from "../util/Wire";
 
@@ -196,7 +197,7 @@ describe("GameManager.listedLobbies", () => {
     game.setListed(true);
     expect(gm.listedLobbies()).toHaveLength(1);
 
-    (game as any)._hasStarted = true;
+    startGame(game);
     expect(gm.listedLobbies()).toEqual([]);
   });
 });
@@ -324,9 +325,9 @@ describe("host-left lobby teardown", () => {
     expect(gm.listedLobbies()).toEqual([]);
   });
 
-  it("rejects joins into an ended lobby before it is pruned", () => {
+  it("rejects joins into an ended lobby before it is pruned", async () => {
     const game = makeGame();
-    (game as any)._hasEnded = true;
+    await game.end();
     expect(game.joinClient({} as any)).toBe("rejected");
   });
 
@@ -339,11 +340,10 @@ describe("host-left lobby teardown", () => {
 
     const hostWs = fakeWs();
     game.joinClient(makeClient("host", CREATOR, hostWs));
-    (game as any)._hasPrestarted = true;
+    game.prestart();
 
     await hostWs.trigger("close");
 
-    expect((game as any)._hasEnded).toBe(false);
     expect(game.phase()).not.toBe(GamePhase.Finished);
   });
 });
@@ -403,7 +403,7 @@ describe("listed lobby host powers", () => {
 
   it("blocks host pause controls while listed", () => {
     const game = makeGame("g-pause");
-    (game as any)._hasStarted = true;
+    startGame(game);
     game.setListed(true);
 
     const pause = { type: "toggle_pause", paused: true } as any;
@@ -411,12 +411,12 @@ describe("listed lobby host powers", () => {
       status: 403,
       error: "the host cannot pause a publicly listed game",
     });
-    expect((game as any).isPaused).toBe(false);
+    expect(game.isPaused()).toBe(false);
 
     // Unlisting restores the host's pause control.
     game.setListed(false);
     expect(game.handleIntent(pause, asHost).status).toBe(200);
-    expect((game as any).isPaused).toBe(true);
+    expect(game.isPaused()).toBe(true);
   });
 
   it("lets admins kick in a listed lobby", () => {

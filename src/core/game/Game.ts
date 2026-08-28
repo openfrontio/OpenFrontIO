@@ -165,7 +165,6 @@ export interface PublicGameModifiers {
   isPeaceTime?: boolean;
   isWaterNukes?: boolean;
   isDoomsdayClock?: boolean;
-  isOvertime?: boolean;
 }
 
 // Largest bulk-purchase amount an intent may carry (mirrored by the intent
@@ -449,6 +448,11 @@ export class PlayerInfo {
     // Server-pinned team slot (index into the game's team list) for
     // matchmade team games; null = assign normally.
     public readonly teamIndex: number | null = null,
+    // Manifest flag code (e.g. "in", "pk") for PlayerType.Nation players.
+    // Carried from the map manifest through to the client so it can render
+    // the correct flag even when multiple nations on a map share a display
+    // name (e.g. India's and Pakistan's "Punjab").
+    public readonly nationFlag: string | null = null,
   ) {
     this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }

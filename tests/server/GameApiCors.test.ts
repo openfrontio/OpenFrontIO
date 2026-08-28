@@ -7,6 +7,7 @@ import {
   applyGameApiCorsHeaders,
   gameApiCors,
 } from "../../src/server/GameApiCors";
+import { stripWorkerPrefix } from "../../src/server/WorkerPathPrefix";
 
 // The game server's /api routes are same-origin for the web client, but the
 // desktop app loads its renderer from app://openfront and so reaches them
@@ -96,7 +97,9 @@ describe("gameApiCors middleware, mounted on a real Express app", () => {
   beforeEach(async () => {
     routeHits = [];
     const app = express();
-    app.use("/api", gameApiCors);
+    // Mirrors Worker.ts: CORS ahead of the prefix check, matching both shapes.
+    app.use(["/api", /^\/w\d+\/api/], gameApiCors);
+    app.use(stripWorkerPrefix(0));
     app.post("/api/create_game", (_req, res) => {
       routeHits.push("create_game");
       res.json({ gameID: "g1" });
@@ -157,15 +160,34 @@ describe("gameApiCors middleware, mounted on a real Express app", () => {
     expect(routeHits).toEqual(["create_game"]);
   });
 
-  test("grants a worker-prefixed GET as well", async () => {
-    const res = await fetch(`${base}/api/game/abcdefgh/exists`, {
+  test("grants a request addressed to this worker's prefix", async () => {
+    // The shape the client actually sends: ClientEnv.workerPath() puts the
+    // worker in the path, and nginx routes on it.
+    const res = await fetch(`${base}/w0/api/game/abcdefgh/exists`, {
       headers: { Origin: DESKTOP_APP_ORIGIN },
     });
 
+    expect(res.status).toBe(200);
     expect(res.headers.get("access-control-allow-origin")).toBe(
       "app://openfront",
     );
     expect(routeHits).toEqual(["exists"]);
+  });
+
+  test("grants a worker-mismatch 404 so the client can read it", async () => {
+    // A client that computes the wrong worker for a game id (e.g. its injected
+    // numWorkers disagrees with the server's) gets this 404. Without the grant
+    // the desktop sees an opaque CORS failure instead, which hides the actual
+    // fault — the same reasoning that puts CORS ahead of the rate limiter.
+    const res = await fetch(`${base}/w7/api/game/abcdefgh/exists`, {
+      headers: { Origin: DESKTOP_APP_ORIGIN },
+    });
+
+    expect(res.status).toBe(404);
+    expect(res.headers.get("access-control-allow-origin")).toBe(
+      "app://openfront",
+    );
+    expect(routeHits).toEqual([]);
   });
 
   test("an error response still carries the grant", async () => {
