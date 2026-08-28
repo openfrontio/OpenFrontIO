@@ -1529,7 +1529,9 @@ export class GameServer {
   // game's player sessions and drops anything else, so only a started game's
   // players are accepted here. One report per (reporter, reported) pair: the
   // API dedupes per account anyway, and it bounds what one player can file
-  // at the number of other players — no separate rate limit needed.
+  // at the number of other players — no separate rate limit needed. Rejects
+  // are dropped without a log line: the message is not rate limited, so a
+  // logged reject would let one client flood the logs.
   private handleReport(client: Client, clientMsg: ClientReportMessage) {
     const { reported, reason } = clientMsg;
     if (
@@ -1537,11 +1539,6 @@ export class GameServer {
       reported === client.clientID ||
       !this.gameStartInfo.players.some((p) => p.clientID === reported)
     ) {
-      this.log.warn("dropping report", {
-        clientID: client.clientID,
-        reported,
-        gameID: this.id,
-      });
       return;
     }
     const key = `${client.clientID}:${reported}`;

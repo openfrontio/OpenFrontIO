@@ -666,6 +666,13 @@ export class Transport {
     // Singleplayer records are client-authored and the API ignores their
     // reports, so there is nowhere for one to go.
     if (this.isLocal) return;
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      console.log(
+        "WebSocket is not open, dropping report. Current state:",
+        this.socket?.readyState,
+      );
+      return;
+    }
     this.sendMsg({
       type: "report",
       reported: event.reported,
