@@ -512,6 +512,17 @@ describe("StoreModal cosmetic browser", () => {
     expect(localStorage.getItem(EFFECTS_KEY)).toBeNull();
   });
 
+  it("opens the in-game preview when an effect card is activated", async () => {
+    const { store: modal } = await openEffectsStore();
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeNull();
+
+    const wakeCard = card(modal, wake.key)!;
+    wakeCard.onActivate!(wakeCard.resolved);
+    await modal.updateComplete;
+
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeTruthy();
+  });
+
   it("reconciles inspected effects immediately when subtype tabs change", async () => {
     const { store: modal, grid } = await openEffectsStore();
     expect(card(modal, wake.key)?.state).toBe("focused");
@@ -541,8 +552,8 @@ describe("StoreModal cosmetic browser", () => {
     nukeTabs()[2]!.click();
     await grid.updateComplete;
     await modal.updateComplete;
-    expect(modal.querySelector("[data-store-product]")).toBeNull();
-    expect(modal.querySelector("purchase-button")).toBeNull();
+    expect(grid.querySelector("[data-store-product]")).toBeNull();
+    expect(grid.querySelector("purchase-button")).toBeNull();
   });
 
   it("uses the browser shell and exact resolved pack purchase", async () => {

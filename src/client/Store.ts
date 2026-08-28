@@ -522,7 +522,7 @@ export class StoreModal extends BaseModal {
       .userMeResponse=${this.userMeResponse}
       .affiliateCode=${this.affiliateCode}
       .focusedKey=${this.inspected?.key ?? null}
-      .onPurchaseFocus=${(item: ResolvedCosmetic) => this.inspect(item)}
+      .onPurchaseFocus=${(item: ResolvedCosmetic) => this.activate(item)}
       .renderPurchaseAction=${(item: ResolvedCosmetic) =>
         this.renderPurchaseAction(item, false)}
       .onVisiblePurchaseItemsChange=${(items: readonly ResolvedCosmetic[]) => {
