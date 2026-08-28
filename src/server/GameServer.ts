@@ -566,6 +566,9 @@ export class GameServer {
     lastTurn: number = 0,
     identityUpdate?: { username: string; clanTag: string | null },
   ): boolean {
+    // As in joinClient: an ended game may still be in GameManager until its
+    // next tick, and the roster still holds the reconnect mapping.
+    if (this.ended) return false;
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (!clientID) return false;
     const client = this.clients.get(clientID);

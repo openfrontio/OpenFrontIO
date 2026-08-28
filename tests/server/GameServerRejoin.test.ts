@@ -49,6 +49,19 @@ describe("GameServer.rejoinClient", () => {
     expect(newWs.sent().map((m) => m.type)).toContain("lobby_info");
   });
 
+  it("refuses a reconnect once the game has ended", async () => {
+    // end() closes the sockets but the reconnect mapping outlives it until
+    // GameManager prunes the game; a reconnect in that window must not
+    // re-attach a socket nobody will ever close.
+    const game = makeGame();
+    game.joinClient(makeClient({ clientID: P1, persistentID: "p1-pid" }));
+    await game.end();
+
+    const newWs = makeMockWs();
+    expect(game.rejoinClient(newWs as any, "p1-pid")).toBe(false);
+    expect(newWs.sent()).toEqual([]);
+  });
+
   it("refuses a kicked player", () => {
     const game = makeGame();
     game.joinClient(makeClient({ clientID: P1, persistentID: "p1-pid" }));
