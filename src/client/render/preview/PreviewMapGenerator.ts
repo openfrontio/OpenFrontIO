@@ -91,8 +91,8 @@ function buildCoastalBaseplate(
   }
 }
 
-export const PREVIEW_ISLAND_RADIUS = 215;
-export const PREVIEW_ISLAND_WOBBLE = {
+const PREVIEW_ISLAND_RADIUS = 215;
+const PREVIEW_ISLAND_WOBBLE = {
   freq1: 4.0,
   amp1: 5.0,
   freq2: 6.0,

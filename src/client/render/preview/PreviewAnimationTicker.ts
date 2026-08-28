@@ -66,6 +66,8 @@ export interface PreviewAnimationConfig {
   salvoMode?: boolean;
 }
 
+/** One simulated tick. `lastPos` trails `pos` by this much, as in a match. */
+const TICK_SEC = 0.1;
 const NUKE_FLIGHT_DURATION_SEC = 3.4;
 const SALVO_COUNT = 5;
 const SALVO_STAGGER_SEC = 0.1;
@@ -86,14 +88,15 @@ export const MIRV_WARHEAD_TARGETS = [
 ];
 
 export class PreviewAnimationTicker {
-  private readonly startTime = performance.now();
   private readonly ribbonBuffer = new Float32Array(512 * SAMPLE_FLOATS);
   private lastCycleIndex = -1;
-  private hasDetonatedInCycle = false;
   private detonatedWarheads = new Set<number>();
   private detonatedNukes = new Set<number>();
 
-  constructor(private readonly config: PreviewAnimationConfig) {}
+  constructor(
+    private readonly config: PreviewAnimationConfig,
+    private readonly startTime = performance.now(),
+  ) {}
 
   private getNukeCycleDuration(): number {
     const expDur = this.config.explosionDurationSec ?? 3.5;
@@ -213,7 +216,7 @@ export class PreviewAnimationTicker {
     const currentX = from.x + (to.x - from.x) * segT;
     const currentY = from.y + (to.y - from.y) * segT;
 
-    const prevT = Math.max(0, segT - 0.02);
+    const prevT = Math.max(0, segT - TICK_SEC / segmentDuration);
     const prevX = from.x + (to.x - from.x) * prevT;
     const prevY = from.y + (to.y - from.y) * prevT;
 
@@ -230,6 +233,16 @@ export class PreviewAnimationTicker {
       isNuke: boolean;
       timestamp?: number;
     }> = [];
+    // Only transports leave a wake in-game (GameView TRAIL_TYPES); a warship
+    // cosmetic recolors the hull, not a trail.
+    if (unitType !== UT_TRANSPORT) {
+      return {
+        units: [ship],
+        spiralRibbons: [],
+        trailPoints,
+        detonationEvents: [],
+      };
+    }
     let lastPt: { x: number; y: number } | null = null;
     const trailSteps = 100;
     const maxTrailSec = 8.0;
@@ -276,7 +289,6 @@ export class PreviewAnimationTicker {
     let isNewCycle = false;
     if (cycleIdx !== this.lastCycleIndex) {
       this.lastCycleIndex = cycleIdx;
-      this.hasDetonatedInCycle = false;
       this.detonatedNukes.clear();
       isNewCycle = true;
     }
@@ -284,7 +296,6 @@ export class PreviewAnimationTicker {
     const flightDuration = NUKE_FLIGHT_DURATION_SEC;
     const isSalvo = !!this.config.salvoMode;
     const salvoCount = isSalvo ? SALVO_COUNT : 1;
-    const lastHitTime = flightDuration + (salvoCount - 1) * SALVO_STAGGER_SEC;
     const unitType =
       this.config.cosmeticUnitType === UT_ATOM_BOMB
         ? UT_ATOM_BOMB
@@ -297,7 +308,10 @@ export class PreviewAnimationTicker {
 
     const units: UnitState[] = [];
     const detonationEvents: DetonationEvent[] = [];
-    let maxT = 0;
+    // Furthest tail head among in-flight nukes. Trails and ribbons are stamped
+    // up to lastPos (one tick behind), like TrailManager/SpiralTrails in-game,
+    // so they never lead the smoothed missile.
+    let maxPrevT = 0;
 
     for (let i = 0; i < salvoCount; i++) {
       const launchTime = i * SALVO_STAGGER_SEC;
@@ -306,12 +320,12 @@ export class PreviewAnimationTicker {
       if (time >= launchTime && time < hitTime) {
         const flightTime = time - launchTime;
         const t = Math.min(1, flightTime / flightDuration);
-        maxT = Math.max(maxT, t);
+        const prevT = Math.max(0, (flightTime - TICK_SEC) / flightDuration);
+        maxPrevT = Math.max(maxPrevT, prevT);
 
         const x = p0.x + (p1.x - p0.x) * t;
         const y = p0.y + (p1.y - p0.y) * t - 4 * arcHeight * t * (1 - t);
 
-        const prevT = Math.max(0, t - 0.02);
         const prevX = p0.x + (p1.x - p0.x) * prevT;
         const prevY =
           p0.y + (p1.y - p0.y) * prevT - 4 * arcHeight * prevT * (1 - prevT);
@@ -320,7 +334,6 @@ export class PreviewAnimationTicker {
         const lastPos = Math.floor(prevY) * PREVIEW_MAP_DIM + Math.floor(prevX);
         units.push(createBaseUnitState(1 + i, unitType, pos, lastPos));
       } else if (time >= hitTime) {
-        maxT = 1.0;
         if (!this.detonatedNukes.has(i)) {
           this.detonatedNukes.add(i);
           detonationEvents.push({ unitType, x: p1.x, y: p1.y });
@@ -329,11 +342,13 @@ export class PreviewAnimationTicker {
     }
 
     const spiralRibbons: SpiralRibbon[] = [];
-    if (units.length > 0 && maxT > 0) {
-      const ribbon = this.buildSpiralRibbon(1, maxT, p0, p1, arcHeight);
+    if (units.length > 0 && maxPrevT > 0) {
+      const ribbon = this.buildSpiralRibbon(1, maxPrevT, p0, p1, arcHeight);
       if (ribbon) spiralRibbons.push(ribbon);
     }
 
+    // A trail lives exactly as long as its nuke: in-game TrailManager clears
+    // the tiles the tick the unit dies, so nothing lingers under the explosion.
     const trailPoints: Array<{
       x: number;
       y: number;
@@ -341,14 +356,9 @@ export class PreviewAnimationTicker {
       timestamp?: number;
     }> = [];
 
-    const detDuration = this.config.explosionDurationSec ?? 3.5;
-    const detElapsed = time - lastHitTime;
-    const decayRatio =
-      detElapsed > 0 ? Math.min(1.0, detElapsed / detDuration) : 0;
-
-    if (maxT > 0 && decayRatio < 1.0) {
+    if (units.length > 0) {
       let lastPt: { x: number; y: number } | null = null;
-      const steps = Math.floor(maxT * 100);
+      const steps = Math.floor(maxPrevT * 100);
       for (let s = 0; s <= steps; s++) {
         const u = s / 100;
         const curPt = {
@@ -378,7 +388,6 @@ export class PreviewAnimationTicker {
     let isNewCycle = false;
     if (cycleIdx !== this.lastCycleIndex) {
       this.lastCycleIndex = cycleIdx;
-      this.hasDetonatedInCycle = false;
       this.detonatedWarheads.clear();
       isNewCycle = true;
     }
@@ -433,50 +442,13 @@ export class PreviewAnimationTicker {
         ],
         isNewCycle,
       };
-    } // Persist decaying warhead trails during explosion
-    const detDuration = this.config.explosionDurationSec ?? 3.5;
-    const detElapsed = time - flightDuration;
-    const decayRatio = Math.min(1.0, detElapsed / detDuration);
-
-    const trailPoints: Array<{
-      x: number;
-      y: number;
-      isNuke: boolean;
-      timestamp?: number;
-    }> = [];
-    if (decayRatio < 1.0) {
-      for (const target of MIRV_WARHEAD_TARGETS) {
-        let lastPt: { x: number; y: number } | null = null;
-        for (let s = 0; s <= 60; s++) {
-          const u = s / 60;
-          const curPt = {
-            x: Math.round(pApex.x + (target.x - pApex.x) * u),
-            y: Math.round(
-              pApex.y + (target.y - pApex.y) * u - 25 * Math.sin(u * Math.PI),
-            ),
-          };
-          const timestamp = Math.floor(
-            sepTime * 10 + u * (flightDuration - sepTime) * 10,
-          );
-          if (lastPt) {
-            appendTrailSegment(lastPt, curPt, true, timestamp, trailPoints);
-          } else {
-            trailPoints.push({
-              x: curPt.x,
-              y: curPt.y,
-              isNuke: true,
-              timestamp,
-            });
-          }
-          lastPt = curPt;
-        }
-      }
     }
 
+    // All warheads have hit: their trails died with them, like in-game.
     return {
       units: [],
       spiralRibbons: [],
-      trailPoints,
+      trailPoints: [],
       detonationEvents,
       isNewCycle,
     };
@@ -493,7 +465,7 @@ export class PreviewAnimationTicker {
     const arcHeight = 90;
     const y = p0.y + (pApex.y - p0.y) * t - 4 * arcHeight * t * (1 - t);
 
-    const prevT = Math.max(0, t - 0.02);
+    const prevT = Math.max(0, (time - TICK_SEC) / sepTime);
     const prevX = p0.x + (pApex.x - p0.x) * prevT;
     const prevY =
       p0.y + (pApex.y - p0.y) * prevT - 4 * arcHeight * prevT * (1 - prevT);
@@ -509,7 +481,7 @@ export class PreviewAnimationTicker {
       timestamp?: number;
     }> = [];
     let lastPt: { x: number; y: number } | null = null;
-    const steps = Math.floor(t * 60);
+    const steps = Math.floor(prevT * 60);
 
     for (let s = 0; s <= steps; s++) {
       const u = s / 60;
@@ -554,32 +526,30 @@ export class PreviewAnimationTicker {
     for (let i = 0; i < MIRV_WARHEAD_TARGETS.length; i++) {
       const target = MIRV_WARHEAD_TARGETS[i];
       const hitTime = getHitTime(target);
-      const isFlying = time < hitTime;
+      // A warhead that has hit is gone, and so is its trail (as in-game).
+      if (time >= hitTime) continue;
       const t = Math.min(1, (time - sepTime) / (hitTime - sepTime));
+      const prevT = Math.max(
+        0,
+        (time - TICK_SEC - sepTime) / (hitTime - sepTime),
+      );
 
-      if (isFlying) {
-        const wx = pApex.x + (target.x - pApex.x) * t;
-        const wy =
-          pApex.y + (target.y - pApex.y) * t - 25 * Math.sin(t * Math.PI);
+      const wx = pApex.x + (target.x - pApex.x) * t;
+      const wy =
+        pApex.y + (target.y - pApex.y) * t - 25 * Math.sin(t * Math.PI);
 
-        const prevT = Math.max(0, t - 0.03);
-        const prevWx = pApex.x + (target.x - pApex.x) * prevT;
-        const prevWy =
-          pApex.y +
-          (target.y - pApex.y) * prevT -
-          25 * Math.sin(prevT * Math.PI);
+      const prevWx = pApex.x + (target.x - pApex.x) * prevT;
+      const prevWy =
+        pApex.y + (target.y - pApex.y) * prevT - 25 * Math.sin(prevT * Math.PI);
 
-        const wPos = Math.floor(wy) * PREVIEW_MAP_DIM + Math.floor(wx);
-        const wLastPos =
-          Math.floor(prevWy) * PREVIEW_MAP_DIM + Math.floor(prevWx);
+      const wPos = Math.floor(wy) * PREVIEW_MAP_DIM + Math.floor(wx);
+      const wLastPos =
+        Math.floor(prevWy) * PREVIEW_MAP_DIM + Math.floor(prevWx);
 
-        units.push(
-          createBaseUnitState(100 + i, UT_MIRV_WARHEAD, wPos, wLastPos),
-        );
-      }
+      units.push(createBaseUnitState(100 + i, UT_MIRV_WARHEAD, wPos, wLastPos));
 
       let lastPt: { x: number; y: number } | null = null;
-      const steps = Math.floor(t * 60);
+      const steps = Math.floor(prevT * 60);
       for (let s = 0; s <= steps; s++) {
         const u = s / 60;
         const curPt = {

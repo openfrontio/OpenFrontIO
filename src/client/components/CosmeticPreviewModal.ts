@@ -49,11 +49,14 @@ export class CosmeticPreviewModal extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    window.addEventListener("keydown", this.onKeyDown);
+    // Capture phase so this runs before the parent Store/Inventory modal's
+    // own window-level Escape handler (BaseModal), which would otherwise
+    // close the parent along with the preview.
+    window.addEventListener("keydown", this.onKeyDown, { capture: true });
   }
 
   disconnectedCallback() {
-    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keydown", this.onKeyDown, { capture: true });
     super.disconnectedCallback();
   }
 
@@ -137,7 +140,9 @@ export class CosmeticPreviewModal extends LitElement {
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Escape") {
+    if (e.key === "Escape" && this.resolved) {
+      e.stopImmediatePropagation();
+      e.preventDefault();
       this.close();
     }
   };

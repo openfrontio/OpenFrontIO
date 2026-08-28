@@ -45,7 +45,10 @@ import {
   UT_TRANSPORT,
   UT_WARSHIP,
 } from "../types/UnitType";
-import { PreviewSkinPass } from "./passes/PreviewSkinPass";
+import {
+  PREVIEW_OWNER_ID,
+  PreviewTerritoryPass,
+} from "./passes/PreviewTerritoryPass";
 import {
   CosmeticPreviewMode,
   PreviewAnimationSnapshot,
@@ -74,6 +77,12 @@ export interface CosmeticPreviewConfig {
   salvoMode?: boolean;
 }
 
+/** Simulated tick length — units advance and flicker once per tick, as in a match. */
+const PREVIEW_TICK_MS = 100;
+
+const DEFAULT_FILL: readonly [number, number, number] = [0.2, 0.6, 0.95];
+const DEFAULT_BORDER: readonly [number, number, number] = [0.1, 0.35, 0.7];
+
 const ALL_STRUCTURE_TYPES = [
   UT_CITY,
   UT_PORT,
@@ -101,6 +110,7 @@ export class CosmeticPreviewRenderer {
   public camera: Camera;
 
   private paletteTex: WebGLTexture;
+  private paletteData = new Float32Array(getPaletteSize() * 2 * 4);
   private effectTex: WebGLTexture;
   private trailTex: WebGLTexture;
   private liveTrailData = new Uint16Array(PREVIEW_MAP_DIM * PREVIEW_MAP_DIM);
@@ -110,7 +120,7 @@ export class CosmeticPreviewRenderer {
   );
 
   private terrainPass: TerrainPass;
-  private skinPass: PreviewSkinPass;
+  private territoryPass: PreviewTerritoryPass;
   private unitPass: UnitPass;
   private structurePass: StructurePass;
   private trailPass: TrailPass;
@@ -124,6 +134,8 @@ export class CosmeticPreviewRenderer {
   private explosionParams?: NukeExplosionRenderParams;
   private isDisposed = false;
   private initialized = false;
+  private frameTick = 0;
+  private lastUnitTick = -1;
 
   private unitMap = new Map<number, UnitState>();
 
@@ -153,10 +165,13 @@ export class CosmeticPreviewRenderer {
       mapData.mapH,
     );
 
-    this.skinPass = new PreviewSkinPass(
+    this.territoryPass = new PreviewTerritoryPass(
       this.gl,
       PREVIEW_MAP_DIM,
       PREVIEW_MAP_DIM,
+      this.paletteTex,
+      this.settings,
+      mapData.tileState,
     );
 
     const rendererHeader: RendererConfig = {
@@ -167,7 +182,7 @@ export class CosmeticPreviewRenderer {
     } as unknown as RendererConfig;
 
     const mockConfig = {
-      msPerTick: () => 100,
+      msPerTick: () => PREVIEW_TICK_MS,
     } as Config;
 
     this.unitPass = new UnitPass(
@@ -235,6 +250,7 @@ export class CosmeticPreviewRenderer {
     this.currentMode = config.mode;
     this.explosionParams = config.explosionParams;
     this.fxPass.clear();
+    this.lastUnitTick = -1;
     this.updateEffectTexture(config);
 
     const nextPreset = this.resolveTerrainPreset(config.mode);
@@ -249,6 +265,7 @@ export class CosmeticPreviewRenderer {
         mapData.mapW,
         mapData.mapH,
       );
+      this.territoryPass.setTileState(mapData.tileState);
     }
 
     this.applyCameraPreset(config.mode);
@@ -256,17 +273,14 @@ export class CosmeticPreviewRenderer {
     const rgbColors = this.toRgb01(config.effectColors);
 
     if (config.mode === "SKIN") {
-      if (config.skinUrl) {
-        this.skinPass.setPrimaryColor(
-          rgbColors.length > 0 ? rgbColors[0] : [0.2, 0.6, 0.95],
-          rgbColors.length > 0,
-        );
-        this.skinPass.setSkinUrl(config.skinUrl);
-      } else if (config.patternData) {
-        this.skinPass.setPattern(config.patternData, rgbColors);
-      } else {
-        this.skinPass.setPatternColors(rgbColors);
-      }
+      const isPngSkin = config.skinUrl !== undefined;
+      this.territoryPass.setDecoration(config.skinUrl, config.patternData);
+      // A team color on a PNG skin tints it like a team game; a pattern's
+      // palette becomes the player's fill + border colors.
+      this.territoryPass.setTeamMode(isPngSkin && rgbColors.length > 0);
+      this.updatePalette(rgbColors[0], rgbColors[1]);
+    } else {
+      this.updatePalette();
     }
     this.structurePass.setHighlightOwner(config.mode === "BUILDING" ? 1 : 0);
 
@@ -385,7 +399,7 @@ export class CosmeticPreviewRenderer {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     if (this.currentMode === "SKIN") {
-      this.skinPass.draw(camMat);
+      this.territoryPass.draw(camMat);
     }
 
     this.renderTrails(snapshot, camMat);
@@ -447,8 +461,17 @@ export class CosmeticPreviewRenderer {
       this.structurePass.draw(camMat, this.camera.zoom);
       return;
     }
+    const tick = Math.floor(now / PREVIEW_TICK_MS);
+    if (tick !== this.lastUnitTick) {
+      // Units advance once per simulated tick, as in a match: UnitPass lerps
+      // missiles lastPos→pos between ticks, and the flicker hash re-rolls per
+      // tick instead of every frame.
+      this.lastUnitTick = tick;
+      this.frameTick++;
+      this.unitPass.setFrameTick(this.frameTick);
+      this.unitPass.updateUnits(this.unitMap, tick);
+    }
     if (snapshot.units.length > 0) {
-      this.unitPass.updateUnits(this.unitMap, Math.floor(now / 100));
       this.unitPass.drawGround(camMat);
       this.unitPass.drawMissiles(camMat);
     }
@@ -495,29 +518,58 @@ export class CosmeticPreviewRenderer {
   }
 
   private createPaletteTexture(): WebGLTexture {
-    const palSize = getPaletteSize();
-    const data = new Float32Array(palSize * 2 * 4);
-    // Player 1 color: Cyan/Blue theme
-    data[1 * 4 + 0] = 0.2;
-    data[1 * 4 + 1] = 0.6;
-    data[1 * 4 + 2] = 0.95;
-    data[1 * 4 + 3] = 150 / 255;
-    // Border color: Darker blue
-    const borderOffset = palSize * 4;
-    data[borderOffset + 1 * 4 + 0] = 0.1;
-    data[borderOffset + 1 * 4 + 1] = 0.35;
-    data[borderOffset + 1 * 4 + 2] = 0.7;
-    data[borderOffset + 1 * 4 + 3] = 1.0;
-
+    this.writePaletteEntry(DEFAULT_FILL, DEFAULT_BORDER);
     return createTexture2D(this.gl, {
-      width: palSize,
+      width: getPaletteSize(),
       height: 2,
       internalFormat: this.gl.RGBA32F,
       format: this.gl.RGBA,
       type: this.gl.FLOAT,
-      data,
+      data: this.paletteData,
       filter: this.gl.NEAREST,
     });
+  }
+
+  /** Same layout as WebGLFrameBuilder.writePaletteEntry: row 0 = fill, row 1 = border. */
+  private writePaletteEntry(
+    fill: readonly [number, number, number],
+    border: readonly [number, number, number],
+  ): void {
+    const data = this.paletteData;
+    const fillOff = PREVIEW_OWNER_ID * 4;
+    data[fillOff] = fill[0];
+    data[fillOff + 1] = fill[1];
+    data[fillOff + 2] = fill[2];
+    data[fillOff + 3] = 150 / 255;
+    const borderOff = getPaletteSize() * 4 + PREVIEW_OWNER_ID * 4;
+    data[borderOff] = border[0];
+    data[borderOff + 1] = border[1];
+    data[borderOff + 2] = border[2];
+    data[borderOff + 3] = 1.0;
+  }
+
+  /** Recolor the preview player (undefined = default colors) and re-upload the palette. */
+  private updatePalette(
+    fill?: readonly [number, number, number],
+    border?: readonly [number, number, number],
+  ): void {
+    const f = fill ?? DEFAULT_FILL;
+    const b =
+      border ?? (fill ? [f[0] * 0.6, f[1] * 0.6, f[2] * 0.6] : DEFAULT_BORDER);
+    this.writePaletteEntry(f, b);
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      getPaletteSize(),
+      2,
+      gl.RGBA,
+      gl.FLOAT,
+      this.paletteData,
+    );
   }
 
   private createEffectTexture(): WebGLTexture {
@@ -576,14 +628,20 @@ export class CosmeticPreviewRenderer {
       }
     };
 
-    const isBoatActive = config.mode === "WARSHIP_BOAT_TRAIL";
+    // Transport wakes and warship hulls are separate cosmetic slots in-game,
+    // so only the block for the unit being previewed lights up.
+    const isBoatMode = config.mode === "WARSHIP_BOAT_TRAIL";
+    const isTransportActive =
+      isBoatMode && config.cosmeticUnitType === UT_TRANSPORT;
+    const isWarshipActive =
+      isBoatMode && config.cosmeticUnitType === UT_WARSHIP;
     const isNukeTrailActive = config.mode === "NUKE_MISSILE_TRAIL";
     const isStructActive = config.mode === "BUILDING";
 
-    fillBlock(0, isBoatActive); // transport/boat wake (Block 0)
+    fillBlock(0, isTransportActive); // transport/boat wake (Block 0)
     fillBlock(1, isNukeTrailActive); // nuke/missile trail (Block 1)
     fillBlock(STRUCTURES_EFFECT_BLOCK, isStructActive);
-    fillBlock(WARSHIP_EFFECT_BLOCK, isBoatActive);
+    fillBlock(WARSHIP_EFFECT_BLOCK, isWarshipActive);
 
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.effectTex);
     this.gl.texSubImage2D(
@@ -621,7 +679,7 @@ export class CosmeticPreviewRenderer {
     gl.deleteTexture(this.trailTex);
 
     this.terrainPass.dispose();
-    this.skinPass.dispose();
+    this.territoryPass.dispose();
     this.unitPass.dispose();
     this.structurePass.dispose();
     this.trailPass.dispose();
