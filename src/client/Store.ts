@@ -579,17 +579,10 @@ export class StoreModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
-    const userHasSubscription =
-      this.userMeResponse !== false &&
-      this.userMeResponse.player.subscription !== null;
     return html`${this.renderHeader()}
     ${this.previewingCosmetic
       ? html`<cosmetic-preview-modal
           .resolved=${this.previewingCosmetic}
-          .purchaseAction=${this.renderPurchaseAction(
-            this.previewingCosmetic,
-            userHasSubscription,
-          )}
           @close-preview=${() => {
             this.previewingCosmetic = null;
             this.requestUpdate();

@@ -51,10 +51,6 @@ export class CosmeticPreviewModal extends LitElement {
   @property({ attribute: false })
   resolved: ResolvedCosmetic | null = null;
 
-  /** Rendered in the header, e.g. the store's purchase button for this item. */
-  @property({ attribute: false })
-  purchaseAction: TemplateResult | typeof nothing = nothing;
-
   @state()
   private selectedPrimary: string = DEFAULT;
 
@@ -279,7 +275,7 @@ export class CosmeticPreviewModal extends LitElement {
       }}
     >
       <div
-        class="relative flex flex-col w-full max-w-5xl h-[760px] max-h-[92vh] rounded-2xl bg-zinc-900 border border-white/15 shadow-2xl overflow-hidden"
+        class="relative flex flex-col w-full max-w-3xl h-[600px] max-h-[85vh] rounded-2xl bg-zinc-900 border border-white/15 shadow-2xl overflow-hidden"
       >
         <!-- Header -->
         <div
@@ -326,14 +322,6 @@ export class CosmeticPreviewModal extends LitElement {
                 +
               </button>
             </div>
-            ${this.purchaseAction !== nothing
-              ? html`<div
-                  data-cosmetic-preview-purchase
-                  class="flex items-center"
-                >
-                  ${this.purchaseAction}
-                </div>`
-              : nothing}
             <button
               type="button"
               aria-label=${translateText("common.close")}

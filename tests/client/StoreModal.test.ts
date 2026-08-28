@@ -1,4 +1,4 @@
-import type { LitElement } from "lit";
+import { nothing, type LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchCosmetics,
@@ -566,15 +566,42 @@ describe("StoreModal cosmetic browser", () => {
 
     const dialog = () =>
       document.body.querySelector<HTMLElement>("[data-pack-contents]");
-    const items = [...dialog()!.querySelectorAll("[data-pack-contents-item]")];
-    // Only the skin can be rendered in-game; the flag gets no eye.
+    const items = [
+      ...dialog()!.querySelectorAll<CosmeticCard>(
+        "[data-pack-contents-item] cosmetic-card",
+      ),
+    ];
+    await Promise.all(items.map((item) => item.updateComplete));
+    // Items are store cards without a price. Only the skin can be rendered
+    // in-game; the flag gets no eye and activating it opens nothing.
+    expect(items[0].actionContent).toBe(nothing);
     const bubbles = items.map((item) =>
       item.querySelector<HTMLElement>("[data-cosmetic-preview-bubble]"),
     );
     expect(bubbles[0]).toBeTruthy();
     expect(bubbles[1]).toBeNull();
+    items[1].onActivate!(items[1].resolved);
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeNull();
 
-    bubbles[0]!.querySelector("button")!.click();
+    // Clicking the card (its image) previews, like everywhere else...
+    items[0].onActivate!(items[0].resolved);
+    await modal.updateComplete;
+    const preview = modal.querySelector("cosmetic-preview-modal")!;
+    expect(preview).toBeTruthy();
+    expect(preview.querySelector("purchase-button")).toBeNull();
+    expect(dialog()).toBeNull();
+    preview.dispatchEvent(new CustomEvent("close-preview"));
+    await modal.updateComplete;
+    await (modal.querySelector("pack-contents-dialog") as LitElement)
+      .updateComplete;
+
+    // ...and so does the eye.
+    const reopened = dialog()!.querySelector<CosmeticCard>("cosmetic-card")!;
+    await reopened.updateComplete;
+    reopened
+      .querySelector<HTMLElement>("[data-cosmetic-preview-bubble] button")!
+      .click();
     await modal.updateComplete;
     expect(modal.querySelector("cosmetic-preview-modal")).toBeTruthy();
     expect(dialog()).toBeNull();
