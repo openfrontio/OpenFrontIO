@@ -138,6 +138,11 @@ export class PreviewTerritoryPass {
     this.pass.setLiveRef(tileState);
   }
 
+  /** R16UI owner texture, for passes that color by tile owner (railroads). */
+  get tileTexture(): WebGLTexture {
+    return this.tileTex;
+  }
+
   /**
    * Show a PNG skin, a pattern, or neither (plain territory color). A skin
    * wins over a pattern, as in the in-game shader.

@@ -357,6 +357,16 @@ export class CosmeticRenderCanvas extends LitElement {
         ...this.extractDynamicAttributes(attrs),
       };
     }
+    if (effect.effectType === "train" || effect.effectType === "railroad") {
+      // Both share the structures attribute shape and the same rail scene;
+      // the mode picks which effect-palette block lights up.
+      const attrs = effect.attributes as StructuresEffectAttributes;
+      return {
+        mode: effect.effectType === "train" ? "TRAIN" : "RAILROAD",
+        effectColors: attrs.colors,
+        ...this.extractDynamicAttributes(attrs),
+      };
+    }
     if (effect.effectType === "structures") {
       const attrs = effect.attributes as StructuresEffectAttributes;
       return {

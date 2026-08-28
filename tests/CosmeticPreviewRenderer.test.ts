@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { PreviewAnimationTicker } from "../src/client/render/preview/PreviewAnimationTicker";
 import {
   generatePreviewMap,
+  getPreviewRailLoop,
   PREVIEW_MAP_DIM,
+  PREVIEW_RAIL_STATIONS,
   type PreviewTerrainPreset,
 } from "../src/client/render/preview/PreviewMapGenerator";
 
@@ -41,8 +43,9 @@ describe("PreviewAnimationTicker", () => {
       mode: "SKIN",
     });
     const snapshot = ticker.sample(performance.now());
-    expect(snapshot.units.length).toBe(1);
-    expect(snapshot.units[0].unitType).toBe("City");
+    expect(snapshot.units.length).toBe(0);
+    expect(snapshot.structures?.length).toBe(1);
+    expect(snapshot.structures?.[0].unitType).toBe("City");
     expect(snapshot.spiralRibbons.length).toBe(0);
     expect(snapshot.detonationEvents.length).toBe(0);
   });
@@ -52,8 +55,9 @@ describe("PreviewAnimationTicker", () => {
       mode: "BUILDING",
     });
     const snapshot = ticker.sample(performance.now());
-    expect(snapshot.units.length).toBe(6);
-    const unitTypes = snapshot.units.map((u) => u.unitType);
+    expect(snapshot.units.length).toBe(0);
+    expect(snapshot.structures?.length).toBe(6);
+    const unitTypes = (snapshot.structures ?? []).map((u) => u.unitType);
     expect(unitTypes).toContain("Port");
     expect(unitTypes).toContain("City");
     expect(unitTypes).toContain("Factory");
@@ -150,6 +154,45 @@ describe("PreviewAnimationTicker", () => {
     const detSnapshot = ticker.sample(performance.now() + 4500);
     expect(detSnapshot.units.length).toBe(0);
     expect(detSnapshot.trailPoints.length).toBe(0);
+  });
+
+  it("runs a 7-car train around the rail loop between the city and factory stations", () => {
+    const { path, railroadState } = getPreviewRailLoop();
+    const w = PREVIEW_MAP_DIM;
+    // The loop passes through both stations and every tile of it is a rail.
+    const cityRef =
+      PREVIEW_RAIL_STATIONS.city.y * w + PREVIEW_RAIL_STATIONS.city.x;
+    const factoryRef =
+      PREVIEW_RAIL_STATIONS.factory.y * w + PREVIEW_RAIL_STATIONS.factory.x;
+    expect(path).toContain(cityRef);
+    expect(path).toContain(factoryRef);
+    expect(new Set(path).size).toBe(path.length);
+    for (const ref of path) expect(railroadState[ref]).toBeGreaterThan(0);
+
+    for (const mode of ["TRAIN", "RAILROAD"] as const) {
+      const start = 1000;
+      const ticker = new PreviewAnimationTicker({ mode }, start);
+      const snapshot = ticker.sample(start + 3000);
+      expect(snapshot.structures?.map((u) => u.unitType)).toEqual([
+        "City",
+        "Factory",
+      ]);
+      expect(snapshot.units.length).toBe(7);
+      expect(snapshot.units.every((u) => u.unitType === "Train")).toBe(true);
+      // Every car sits on the rails, at a distinct tile, one tick behind pos.
+      const positions = new Set(snapshot.units.map((u) => u.pos));
+      expect(positions.size).toBe(7);
+      for (const u of snapshot.units) {
+        expect(railroadState[u.pos]).toBeGreaterThan(0);
+        expect(railroadState[u.lastPos]).toBeGreaterThan(0);
+        expect(u.lastPos).not.toBe(u.pos);
+      }
+      // In-game speed: 2 tiles per 100ms tick.
+      const later = ticker.sample(start + 3100).units[0];
+      expect(
+        path.indexOf(later.pos) - path.indexOf(snapshot.units[0].pos),
+      ).toBe(2);
+    }
   });
 
   it("samples 5-nuke salvo mode with staggered missiles and sequential detonations", () => {

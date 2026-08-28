@@ -13,6 +13,7 @@ import {
   type SpiralParams,
   type SpiralRibbon,
 } from "../frame/SpiralTrails";
+import { TrainType } from "../types";
 import type { UnitState } from "../types/Renderer";
 import {
   UT_ATOM_BOMB,
@@ -25,10 +26,15 @@ import {
   UT_MISSILE_SILO,
   UT_PORT,
   UT_SAM_LAUNCHER,
+  UT_TRAIN,
   UT_TRANSPORT,
   UT_WARSHIP,
 } from "../types/UnitType";
-import { PREVIEW_MAP_DIM } from "./PreviewMapGenerator";
+import {
+  getPreviewRailLoop,
+  PREVIEW_MAP_DIM,
+  PREVIEW_RAIL_STATIONS,
+} from "./PreviewMapGenerator";
 
 export type CosmeticPreviewMode =
   | "SKIN"
@@ -36,7 +42,9 @@ export type CosmeticPreviewMode =
   | "WARSHIP_BOAT_TRAIL"
   | "NUKE_MISSILE_TRAIL"
   | "MIRV_CLUSTER"
-  | "NUKE_EXPLOSION";
+  | "NUKE_EXPLOSION"
+  | "TRAIN"
+  | "RAILROAD";
 
 export interface DetonationEvent {
   unitType: string;
@@ -45,7 +53,10 @@ export interface DetonationEvent {
 }
 
 export interface PreviewAnimationSnapshot {
+  /** Mobile units, drawn by UnitPass. */
   units: UnitState[];
+  /** Buildings, drawn by StructurePass. */
+  structures?: UnitState[];
   spiralRibbons: SpiralRibbon[];
   trailPoints: Array<{
     x: number;
@@ -74,6 +85,11 @@ const SALVO_STAGGER_SEC = 0.1;
 const MIRV_SEP_TIME_SEC = 2.0;
 const MIRV_FLIGHT_DURATION_SEC = 3.8;
 const BOAT_CYCLE_DURATION_SEC = 19.2;
+// In-game train geometry: TrainExecution moves 2 tiles per tick with cars
+// 2 tiles apart; TrainStationExecution runs 5 carriages between the engines.
+const TRAIN_TILES_PER_SEC = 20;
+const TRAIN_CAR_SPACING = 2;
+const TRAIN_CARRIAGES = 5;
 
 // 8 radial scatter targets centered cleanly within the archipelago view (radius 60-70 tiles)
 export const MIRV_WARHEAD_TARGETS = [
@@ -128,6 +144,9 @@ export class PreviewAnimationTicker {
         return this.sampleAllBuildings();
       case "WARSHIP_BOAT_TRAIL":
         return this.sampleWarship(elapsed % BOAT_CYCLE_DURATION_SEC);
+      case "TRAIN":
+      case "RAILROAD":
+        return this.sampleTrain(elapsed);
       case "MIRV_CLUSTER": {
         const cycleDur = this.getMIRVCycleDuration();
         return this.sampleMIRV(
@@ -154,7 +173,8 @@ export class PreviewAnimationTicker {
     city.underConstruction = false;
 
     return {
-      units: [city],
+      units: [],
+      structures: [city],
       spiralRibbons: [],
       trailPoints: [],
       detonationEvents: [],
@@ -185,7 +205,77 @@ export class PreviewAnimationTicker {
     });
 
     return {
+      units: [],
+      structures: units,
+      spiralRibbons: [],
+      trailPoints: [],
+      detonationEvents: [],
+    };
+  }
+
+  /**
+   * A 7-car train (engine, 5 loaded carriages, tail engine) circling the
+   * preview rail loop between a city and a factory, at in-game speed and
+   * spacing. Used for both the train and railroad cosmetics.
+   */
+  private sampleTrain(elapsed: number): PreviewAnimationSnapshot {
+    const { path } = getPreviewRailLoop();
+    const n = path.length;
+    // The engine advances whole tiles, like TrainExecution.
+    const head = Math.floor(elapsed * TRAIN_TILES_PER_SEC);
+    const tilesPerTick = TRAIN_TILES_PER_SEC * TICK_SEC;
+    const tileBehind = (offset: number) =>
+      path[(((head - offset) % n) + n) % n];
+    const car = (
+      id: number,
+      trainType: TrainType,
+      offset: number,
+      loaded: boolean | null,
+    ): UnitState => {
+      const unit = createBaseUnitState(
+        id,
+        UT_TRAIN,
+        tileBehind(offset),
+        tileBehind(offset + tilesPerTick),
+      );
+      unit.trainType = trainType;
+      unit.loaded = loaded;
+      return unit;
+    };
+
+    const units: UnitState[] = [car(1, TrainType.Engine, 0, null)];
+    for (let i = 0; i < TRAIN_CARRIAGES; i++) {
+      units.push(
+        car(2 + i, TrainType.Carriage, (i + 1) * TRAIN_CAR_SPACING, true),
+      );
+    }
+    units.push(
+      car(
+        2 + TRAIN_CARRIAGES,
+        TrainType.TailEngine,
+        (TRAIN_CARRIAGES + 1) * TRAIN_CAR_SPACING,
+        null,
+      ),
+    );
+
+    const station = (
+      id: number,
+      type: string,
+      at: { x: number; y: number },
+    ) => {
+      const ref = at.y * PREVIEW_MAP_DIM + at.x;
+      const unit = createBaseUnitState(id, type, ref, ref);
+      unit.level = 2;
+      unit.hasTrainStation = true;
+      return unit;
+    };
+
+    return {
       units,
+      structures: [
+        station(100, UT_CITY, PREVIEW_RAIL_STATIONS.city),
+        station(101, UT_FACTORY, PREVIEW_RAIL_STATIONS.factory),
+      ],
       spiralRibbons: [],
       trailPoints: [],
       detonationEvents: [],
@@ -707,5 +797,9 @@ function createBaseUnitState(
     trainType: null,
     loaded: null,
     constructionStartTick: null,
+    samUpgradeStartTick: null,
+    samUpgradeStartRange: null,
+    samUpgradeTargetLevel: null,
+    samUpgradeDuration: null,
   };
 }

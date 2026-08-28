@@ -6,6 +6,7 @@ import type { Config } from "../../../core/configuration/Config";
 import { Camera } from "../gl/Camera";
 import { initGL } from "../gl/initGL";
 import { calculateExplosionDurationMs, FxPass } from "../gl/passes/fx-pass";
+import { RailroadPass } from "../gl/passes/RailroadPass";
 import { SpiralRibbonPass } from "../gl/passes/SpiralRibbonPass";
 import { StructurePass } from "../gl/passes/StructurePass";
 import { TerrainPass } from "../gl/passes/TerrainPass";
@@ -18,7 +19,9 @@ import {
   getPaletteSize,
   hexToRgb,
   MAX_TRAIL_COLORS,
+  RAILROAD_EFFECT_BLOCK,
   STRUCTURES_EFFECT_BLOCK,
+  TRAIN_EFFECT_BLOCK,
   WARSHIP_EFFECT_BLOCK,
 } from "../gl/utils/ColorUtils";
 import { renderDpr } from "../gl/utils/Dpr";
@@ -56,6 +59,7 @@ import {
 } from "./PreviewAnimationTicker";
 import {
   generatePreviewMap,
+  getPreviewRailLoop,
   PREVIEW_MAP_DIM,
   PreviewTerrainPreset,
 } from "./PreviewMapGenerator";
@@ -82,6 +86,8 @@ const PREVIEW_TICK_MS = 100;
 
 const DEFAULT_FILL: readonly [number, number, number] = [0.2, 0.6, 0.95];
 const DEFAULT_BORDER: readonly [number, number, number] = [0.1, 0.35, 0.7];
+/** In-game local rail color over a non-bright territory (theme focusedBorderColor). */
+const LOCAL_RAIL_COLOR: readonly [number, number, number] = [0.9, 0.9, 0.9];
 
 const ALL_STRUCTURE_TYPES = [
   UT_CITY,
@@ -121,6 +127,7 @@ export class CosmeticPreviewRenderer {
 
   private terrainPass: TerrainPass;
   private territoryPass: PreviewTerritoryPass;
+  private railroadPass: RailroadPass;
   private unitPass: UnitPass;
   private structurePass: StructurePass;
   private trailPass: TrailPass;
@@ -138,6 +145,7 @@ export class CosmeticPreviewRenderer {
   private lastUnitTick = -1;
 
   private unitMap = new Map<number, UnitState>();
+  private structureMap = new Map<number, UnitState>();
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const glRes = initGL(canvas, {
@@ -173,6 +181,7 @@ export class CosmeticPreviewRenderer {
       this.settings,
       mapData.tileState,
     );
+    this.railroadPass = this.createRailroadPass(mapData.terrainBytes);
 
     const rendererHeader: RendererConfig = {
       mapWidth: PREVIEW_MAP_DIM,
@@ -266,6 +275,8 @@ export class CosmeticPreviewRenderer {
         mapData.mapH,
       );
       this.territoryPass.setTileState(mapData.tileState);
+      this.railroadPass.dispose();
+      this.railroadPass = this.createRailroadPass(mapData.terrainBytes);
     }
 
     this.applyCameraPreset(config.mode);
@@ -398,8 +409,11 @@ export class CosmeticPreviewRenderer {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    if (this.currentMode === "SKIN") {
+    if (this.drawsTerritory(this.currentMode)) {
       this.territoryPass.draw(camMat);
+    }
+    if (this.currentMode === "TRAIN" || this.currentMode === "RAILROAD") {
+      this.railroadPass.draw(camMat, this.camera.zoom);
     }
 
     this.renderTrails(snapshot, camMat);
@@ -451,15 +465,19 @@ export class CosmeticPreviewRenderer {
     camMat: Float32Array,
     now: number,
   ): void {
+    const structures = snapshot.structures ?? [];
+    if (structures.length > 0) {
+      this.structureMap.clear();
+      for (const u of structures) {
+        this.structureMap.set(u.id, u);
+      }
+      this.structurePass.updateStructures(this.structureMap);
+      this.structurePass.draw(camMat, this.camera.zoom);
+    }
+
     this.unitMap.clear();
     for (const u of snapshot.units) {
       this.unitMap.set(u.id, u);
-    }
-
-    if (this.currentMode === "BUILDING" || this.currentMode === "SKIN") {
-      this.structurePass.updateStructures(this.unitMap);
-      this.structurePass.draw(camMat, this.camera.zoom);
-      return;
     }
     const tick = Math.floor(now / PREVIEW_TICK_MS);
     if (tick !== this.lastUnitTick) {
@@ -475,6 +493,28 @@ export class CosmeticPreviewRenderer {
       this.unitPass.drawGround(camMat);
       this.unitPass.drawMissiles(camMat);
     }
+  }
+
+  /** Owned-territory fill is part of the scene for skins and rail previews. */
+  private drawsTerritory(mode: CosmeticPreviewMode): boolean {
+    return mode === "SKIN" || mode === "TRAIN" || mode === "RAILROAD";
+  }
+
+  private createRailroadPass(terrainBytes: Uint8Array): RailroadPass {
+    const pass = new RailroadPass(
+      this.gl,
+      PREVIEW_MAP_DIM,
+      PREVIEW_MAP_DIM,
+      this.territoryPass.tileTexture,
+      this.paletteTex,
+      this.effectTex,
+      terrainBytes,
+      this.settings,
+    );
+    pass.setLocalPlayer(PREVIEW_OWNER_ID);
+    pass.setLocalRailColor(...LOCAL_RAIL_COLOR);
+    pass.uploadRailroadState(getPreviewRailLoop().railroadState);
+    return pass;
   }
 
   private resolveTerrainPreset(
@@ -503,6 +543,11 @@ export class CosmeticPreviewRenderer {
         break;
       case "BUILDING":
         zoom = 2.4;
+        break;
+      case "TRAIN":
+      case "RAILROAD":
+        // Above railDetailZoom so the rails draw as sprites, like up close in-game.
+        zoom = 6.5;
         break;
       case "NUKE_MISSILE_TRAIL":
       case "NUKE_EXPLOSION":
@@ -642,6 +687,8 @@ export class CosmeticPreviewRenderer {
     fillBlock(1, isNukeTrailActive); // nuke/missile trail (Block 1)
     fillBlock(STRUCTURES_EFFECT_BLOCK, isStructActive);
     fillBlock(WARSHIP_EFFECT_BLOCK, isWarshipActive);
+    fillBlock(TRAIN_EFFECT_BLOCK, config.mode === "TRAIN");
+    fillBlock(RAILROAD_EFFECT_BLOCK, config.mode === "RAILROAD");
 
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.effectTex);
     this.gl.texSubImage2D(
@@ -680,6 +727,7 @@ export class CosmeticPreviewRenderer {
 
     this.terrainPass.dispose();
     this.territoryPass.dispose();
+    this.railroadPass.dispose();
     this.unitPass.dispose();
     this.structurePass.dispose();
     this.trailPass.dispose();

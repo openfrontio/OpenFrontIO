@@ -8,6 +8,8 @@
  * - Bits 0-4 (0x1f): Height / depth magnitude (0..31)
  */
 
+import { computeRailTiles } from "../frame/RailroadCache";
+
 export const PREVIEW_MAP_DIM = 512;
 
 export type PreviewTerrainPreset =
@@ -155,4 +157,48 @@ function buildContinentalArchipelago(
       }
     }
   }
+}
+
+/** Stations on the preview rail loop (tile coords): city west, factory east. */
+export const PREVIEW_RAIL_STATIONS = {
+  city: { x: 226, y: 256 },
+  factory: { x: 286, y: 256 },
+} as const;
+
+export interface PreviewRailLoop {
+  /** Ordered, closed path of tile refs the train follows. */
+  path: number[];
+  /** Per-tile rail orientation (0 = none, RailType + 1) for RailroadPass. */
+  railroadState: Uint8Array;
+}
+
+let railLoop: PreviewRailLoop | undefined;
+
+/**
+ * Closed rectangular rail loop through both stations, encoded the way
+ * RailroadCache encodes live rails for the GPU. Built once and shared.
+ */
+export function getPreviewRailLoop(): PreviewRailLoop {
+  if (railLoop) return railLoop;
+  const w = PREVIEW_MAP_DIM;
+  const left = PREVIEW_RAIL_STATIONS.city.x;
+  const right = PREVIEW_RAIL_STATIONS.factory.x;
+  const top = PREVIEW_RAIL_STATIONS.city.y - 15;
+  const bottom = PREVIEW_RAIL_STATIONS.city.y + 15;
+  const path: number[] = [];
+  for (let x = left; x < right; x++) path.push(top * w + x); // eastbound
+  for (let y = top; y < bottom; y++) path.push(y * w + right); // southbound
+  for (let x = right; x > left; x--) path.push(bottom * w + x); // westbound
+  for (let y = bottom; y > top; y--) path.push(y * w + left); // northbound
+  // Orientation needs a neighbor on both sides; wrap the loop so the corners
+  // resolve instead of being treated as line ends.
+  const n = path.length;
+  const tiles = computeRailTiles([path[n - 1], ...path, path[0]], w).slice(
+    1,
+    n + 1,
+  );
+  const railroadState = new Uint8Array(w * w);
+  for (const rt of tiles) railroadState[rt.ref] = rt.type + 1;
+  railLoop = { path, railroadState };
+  return railLoop;
 }

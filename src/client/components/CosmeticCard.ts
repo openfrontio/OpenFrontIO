@@ -484,17 +484,17 @@ export class CosmeticCard extends LitElement {
             </div>`}
         ${this.interactive && active.cosmetic !== null
           ? html`<cosmetic-info
-              .artist=${priced?.artist}
-              .rarity=${rarity}
-              .colorPalette=${active.colorPalette?.name}
-              .showAdFree=${active.relationship === "purchasable"}
-              .usdValue=${usdValue}
-              .perks=${this.subscriptionPerks()}
-              .items=${(active.packItems ?? []).map(cosmeticSelectionLabel)}
-            ></cosmetic-info>
-            <cosmetic-preview-bubble
-              .resolved=${active}
-            ></cosmetic-preview-bubble>`
+                .artist=${priced?.artist}
+                .rarity=${rarity}
+                .colorPalette=${active.colorPalette?.name}
+                .showAdFree=${active.relationship === "purchasable"}
+                .usdValue=${usdValue}
+                .perks=${this.subscriptionPerks()}
+                .items=${(active.packItems ?? []).map(cosmeticSelectionLabel)}
+              ></cosmetic-info>
+              <cosmetic-preview-bubble
+                .resolved=${active}
+              ></cosmetic-preview-bubble>`
           : nothing}
       </div>
       ${this.renderSwatches()}
