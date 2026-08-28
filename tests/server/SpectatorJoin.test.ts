@@ -116,7 +116,7 @@ describe("GameServer - spectators", () => {
     expect(game.cancelShortHandedMatch()).toBe(true);
   });
 
-  it.each(["intent", "winner", "live_stats", "hash"])(
+  it.each(["intent", "winner", "live_stats", "hash", "report"])(
     "drops a %s sent by a spectator",
     async (type) => {
       // Taking no slot must not buy a way into the intent stream.
@@ -125,6 +125,7 @@ describe("GameServer - spectators", () => {
         intent: vi.spyOn(game, "handleIntent"),
         winner: vi.spyOn(game as any, "handleWinner"),
         live_stats: vi.spyOn(game as any, "handleLiveStats"),
+        report: vi.spyOn(game as any, "handleReport"),
       };
       const spectator = makeClient("cast", true);
       game.joinClient(spectator);
@@ -133,6 +134,7 @@ describe("GameServer - spectators", () => {
         winner: { type: "winner", winner: undefined, allPlayersStats: {} },
         live_stats: { type: "live_stats", stats: { turn: 1, players: [] } },
         hash: { type: "hash", hash: 42, turnNumber: 1 },
+        report: { type: "report", reported: cid("p1"), reason: "botting" },
       };
       await mockWsOf(spectator).emit(byType[type]);
       if (type === "hash") {

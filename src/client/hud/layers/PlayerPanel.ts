@@ -41,12 +41,14 @@ import { GameView, PlayerView } from "../../view";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import "./PlayerModerationModal";
+import "./PlayerReportModal";
 import "./SendResourceModal";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const chatIcon = assetUrl("images/ChatIconWhite.svg");
 const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
 const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
+const reportIcon = assetUrl("images/SirenIconWhite.svg");
 const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
 const stopTradingIcon = assetUrl("images/StopIconWhite.svg");
 const targetIcon = assetUrl("images/TargetIconWhite.svg");
@@ -74,6 +76,9 @@ export class PlayerPanel extends LitElement implements Controller {
   @state() private otherProfile: PlayerProfile | null = null;
   @state() private suppressNextHide: boolean = false;
   @state() private moderationTarget: PlayerView | null = null;
+  @state() private reportTarget: PlayerView | null = null;
+  // Players this client has reported this game; the button locks after one.
+  private reportedPlayerIDs = new Set<string>();
   @state() private playerRole: string | null = null;
   // Whether this game is a publicly listed lobby. Kept out of
   // GameStartInfo (never touches records), so it's fetched from the worker.
@@ -171,6 +176,7 @@ export class PlayerPanel extends LitElement implements Controller {
     this.actions = actions;
     this.tile = tile;
     this.moderationTarget = null;
+    this.reportTarget = null;
     this.isVisible = true;
     this.requestUpdate();
   }
@@ -186,6 +192,7 @@ export class PlayerPanel extends LitElement implements Controller {
     this.sendTarget = target;
     this.sendMode = "gold";
     this.moderationTarget = null;
+    this.reportTarget = null;
     this.isVisible = true;
     this.requestUpdate();
   }
@@ -195,6 +202,7 @@ export class PlayerPanel extends LitElement implements Controller {
     this.sendMode = "none";
     this.sendTarget = null;
     this.moderationTarget = null;
+    this.reportTarget = null;
     this.requestUpdate();
   }
 
@@ -353,6 +361,33 @@ export class PlayerPanel extends LitElement implements Controller {
     this.hide();
   };
 
+  private openReport(e: MouseEvent, other: PlayerView) {
+    e.stopPropagation();
+    this.suppressNextHide = true;
+    this.reportTarget = other;
+  }
+
+  private closeReport = () => {
+    this.reportTarget = null;
+  };
+
+  private handleReported = (e: CustomEvent<{ playerId?: string }>) => {
+    const playerId = e.detail?.playerId;
+    if (playerId) this.reportedPlayerIDs.add(String(playerId));
+    this.closeReport();
+  };
+
+  // Anyone may report another human of a multiplayer game. Singleplayer
+  // records are client-authored and the API ignores their reports.
+  private canReport(my: PlayerView, other: PlayerView): boolean {
+    return (
+      this.g.config().gameConfig().gameType !== GameType.Singleplayer &&
+      other !== my &&
+      other.type() === PlayerType.Human &&
+      !!other.clientID()
+    );
+  }
+
   private handleToggleRocketDirection(e: Event) {
     e.stopPropagation();
     const next = !this.uiState.rocketDirectionUp;
@@ -469,23 +504,42 @@ export class PlayerPanel extends LitElement implements Controller {
     other: PlayerView,
     isAdmin: boolean,
   ) {
-    if (!my.isLobbyCreator() && !isAdmin) return html``;
+    const canReport = this.canReport(my, other);
     // The host of a publicly listed game cannot kick (server-enforced), so
     // don't offer the panel; admins keep it for moderation.
-    if (this.gameListed && !isAdmin) return html``;
+    const canModerate =
+      (my.isLobbyCreator() || isAdmin) && (!this.gameListed || isAdmin);
+    if (!canReport && !canModerate) return html``;
+    const reported = this.reportedPlayerIDs.has(String(other.id()));
+    const reportTitle = reported
+      ? translateText("player_panel.reported")
+      : translateText("player_panel.report");
     const moderationTitle = translateText("player_panel.moderation");
 
     return html`
       <ui-divider></ui-divider>
       <div class="grid auto-cols-fr grid-flow-col gap-1">
-        ${actionButton({
-          onClick: (e: MouseEvent) => this.openModeration(e, other),
-          icon: shieldIcon,
-          iconAlt: "Moderation",
-          title: moderationTitle,
-          label: moderationTitle,
-          type: "red",
-        })}
+        ${canReport
+          ? actionButton({
+              onClick: (e: MouseEvent) => this.openReport(e, other),
+              icon: reportIcon,
+              iconAlt: "Report",
+              title: reportTitle,
+              label: reportTitle,
+              type: "red",
+              disabled: reported,
+            })
+          : ""}
+        ${canModerate
+          ? actionButton({
+              onClick: (e: MouseEvent) => this.openModeration(e, other),
+              icon: shieldIcon,
+              iconAlt: "Moderation",
+              title: moderationTitle,
+              label: moderationTitle,
+              type: "red",
+            })
+          : ""}
       </div>
     `;
   }
@@ -1025,6 +1079,17 @@ export class PlayerPanel extends LitElement implements Controller {
                             @close=${this.closeModeration}
                             @kicked=${this.handleModerationKicked}
                           ></player-moderation-modal>
+                        `
+                      : ""}
+                    ${this.reportTarget && !isSpectator
+                      ? html`
+                          <player-report-modal
+                            .open=${true}
+                            .target=${this.reportTarget}
+                            .eventBus=${this.eventBus}
+                            @close=${this.closeReport}
+                            @reported=${this.handleReported}
+                          ></player-report-modal>
                         `
                       : ""}
 

@@ -10,6 +10,7 @@ import { GameType, RankedType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessage,
+  ClientReportMessage,
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   GameConfig,
@@ -22,6 +23,7 @@ import {
   PartialGameRecord,
   PlayerLiveStats,
   PlayerRecord,
+  PlayerReport,
   PublicGameType,
   ServerDesyncSchema,
   ServerErrorMessage,
@@ -169,6 +171,11 @@ export class GameServer {
   // IP-weighted majorities among the players (see Consensus.ts).
   private readonly winnerVote = new WinnerVote();
   private readonly liveStatsVote = new LiveStatsVote();
+
+  // Player reports filed this game, keyed "<reportedBy>:<reported>" so each
+  // pair counts once. Never in the turn log (who reported whom is staff-only);
+  // emitted as info.reports of the archived record (see handleReport).
+  private readonly reports = new Map<string, PlayerReport>();
 
   private _hasEnded = false;
 
@@ -646,6 +653,10 @@ export class GameServer {
       }
       case "live_stats": {
         this.handleLiveStats(client, clientMsg);
+        break;
+      }
+      case "report": {
+        this.handleReport(client, clientMsg);
         break;
       }
       default: {
@@ -1509,8 +1520,39 @@ export class GameServer {
         this.createdAt,
         this.visibleAt,
         this.gameStartInfo.tribes,
+        [...this.reports.values()],
       ),
     );
+  }
+
+  // A player reporting another. The API resolves both clientIDs through this
+  // game's player sessions and drops anything else, so only a started game's
+  // players are accepted here. One report per (reporter, reported) pair: the
+  // API dedupes per account anyway, and it bounds what one player can file
+  // at the number of other players — no separate rate limit needed.
+  private handleReport(client: Client, clientMsg: ClientReportMessage) {
+    const { reported, reason } = clientMsg;
+    if (
+      !this._hasStarted ||
+      reported === client.clientID ||
+      !this.gameStartInfo.players.some((p) => p.clientID === reported)
+    ) {
+      this.log.warn("dropping report", {
+        clientID: client.clientID,
+        reported,
+        gameID: this.id,
+      });
+      return;
+    }
+    const key = `${client.clientID}:${reported}`;
+    if (this.reports.has(key)) return;
+    this.reports.set(key, { reportedBy: client.clientID, reported, reason });
+    this.log.info("player reported", {
+      clientID: client.clientID,
+      reported,
+      reason,
+      gameID: this.id,
+    });
   }
 
   private handleSynchronization() {
