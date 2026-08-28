@@ -1,4 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../src/client/Utils", () => ({
+  translateText: (key: string, params?: Record<string, string | number>) =>
+    `[${key}] ${JSON.stringify(params ?? {})}`,
+}));
+
 import {
   TurnstileTokenProvider,
   type TurnstileToken,
@@ -171,5 +177,58 @@ describe("TurnstileTokenProvider", () => {
 
     release({ token: "token-slow", createdAt: Date.now() });
     expect(await taken).toBe("token-slow");
+  });
+
+  it("gives overlapping joins on a cold cache distinct tokens", async () => {
+    const mint = fakeMint();
+    let release: (t: TurnstileToken) => void = () => {};
+    mint.mockImplementationOnce(
+      () => new Promise<TurnstileToken>((resolve) => (release = resolve)),
+    );
+    const provider = new TurnstileTokenProvider(mint);
+
+    provider.start();
+    // Both joins arrive while the prefetch is still in flight. Tokens are
+    // single-use, so only one of them may claim it; the other must mint
+    // its own.
+    const first = provider.take();
+    const second = provider.take();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mint).toHaveBeenCalledTimes(2);
+
+    release({ token: "token-slow", createdAt: Date.now() });
+    const [a, b] = await Promise.all([first, second]);
+    expect(a).toBe("token-slow");
+    expect(b).not.toBeNull();
+    expect(b).not.toBe(a);
+
+    // The claimed prefetch never lands in the cache: the next take() can't
+    // be handed the token that already went to the first join.
+    await vi.advanceTimersByTimeAsync(0);
+    const third = await provider.take();
+    expect(third).not.toBe(a);
+    expect(third).not.toBe(b);
+  });
+
+  it("does not cache a prefetch that a join already claimed", async () => {
+    const mint = fakeMint();
+    let release: (t: TurnstileToken) => void = () => {};
+    mint.mockImplementationOnce(
+      () => new Promise<TurnstileToken>((resolve) => (release = resolve)),
+    );
+    const provider = new TurnstileTokenProvider(mint);
+
+    provider.start();
+    const taken = provider.take();
+    release({ token: "token-slow", createdAt: Date.now() });
+    expect(await taken).toBe("token-slow");
+
+    // A replacement is minted for the cache and the next join gets it.
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mint).toHaveBeenCalledTimes(2);
+    mint.mockImplementationOnce(() => new Promise<TurnstileToken>(() => {}));
+    const next = await provider.take();
+    expect(next).not.toBeNull();
+    expect(next).not.toBe("token-slow");
   });
 });

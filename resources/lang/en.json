@@ -1779,6 +1779,9 @@
     "unknown": "Unknown",
     "yes": "Yes"
   },
+  "turnstile": {
+    "error": "Turnstile error: {error}. Please refresh and try again."
+  },
   "unit_type": {
     "atom_bomb": "Atom Bomb",
     "boat": "Boat",

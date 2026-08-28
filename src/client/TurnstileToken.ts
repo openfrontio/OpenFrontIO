@@ -1,4 +1,5 @@
 import { ClientEnv } from "./ClientEnv";
+import { translateText } from "./Utils";
 
 declare global {
   interface Window {
@@ -65,7 +66,9 @@ export async function mintTurnstileToken(): Promise<TurnstileToken> {
  * The provider mints on three triggers: when {@link start} is called (page
  * load), as soon as a token is consumed by {@link take}, and on a timer before
  * the cached token ages out of {@link TOKEN_FRESH_MS}. A token is only ever
- * handed out once — Cloudflare rejects a replayed one.
+ * handed out once — Cloudflare rejects a replayed one — so a join that finds
+ * the cache cold either claims the prefetch in flight for itself or, if
+ * another join already did, runs its own independent mint.
  *
  * Background minting is suspended while {@link setActive} is false. The widget
  * is `interaction-only`, so a challenge that needs a click would otherwise pop
@@ -73,7 +76,12 @@ export async function mintTurnstileToken(): Promise<TurnstileToken> {
  */
 export class TurnstileTokenProvider {
   private cached: TurnstileToken | null = null;
-  private inflight: Promise<TurnstileToken> | null = null;
+  // The background mint filling the cache. `claimed` flips when a take() has
+  // taken it for a join, so its token never lands in the cache.
+  private prefetch: {
+    promise: Promise<TurnstileToken>;
+    claimed: boolean;
+  } | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private started = false;
   private active = true;
@@ -113,17 +121,27 @@ export class TurnstileTokenProvider {
       return cached.token;
     }
 
+    // Claim the prefetch already in flight if no other join has; otherwise
+    // mint independently so two overlapping joins never share a token.
+    let minting: Promise<TurnstileToken>;
+    if (this.prefetch !== null && !this.prefetch.claimed) {
+      this.prefetch.claimed = true;
+      minting = this.prefetch.promise;
+    } else {
+      minting = this.mint();
+    }
+
     let token: string | null = null;
     try {
-      token = (await this.mintOnce()).token;
+      token = (await minting).token;
     } catch (e) {
       console.error("Failed to get Turnstile token", e);
       alert(
-        `Turnstile error: ${e instanceof Error ? e.message : e}. Please refresh and try again.`,
+        translateText("turnstile.error", {
+          error: e instanceof Error ? e.message : String(e),
+        }),
       );
     }
-    // Whatever mintOnce cached is the token we just handed out.
-    this.cached = null;
     this.warm();
     return token;
   }
@@ -134,32 +152,27 @@ export class TurnstileTokenProvider {
       this.schedule(this.cached.createdAt + TOKEN_FRESH_MS - Date.now());
       return;
     }
-    if (this.inflight !== null) return;
-    this.mintOnce().then(
-      () => this.schedule(TOKEN_FRESH_MS),
+    if (this.prefetch !== null) return;
+    const prefetch = { promise: this.mint(), claimed: false };
+    this.prefetch = prefetch;
+    prefetch.promise.then(
+      (token) => {
+        if (this.prefetch === prefetch) this.prefetch = null;
+        if (prefetch.claimed) {
+          // Handed straight to a join; mint the next one for the cache.
+          this.warm();
+          return;
+        }
+        this.cached = token;
+        this.schedule(TOKEN_FRESH_MS);
+      },
       (e) => {
+        if (this.prefetch === prefetch) this.prefetch = null;
+        if (prefetch.claimed) return; // the join reports and rewarms
         console.warn("Turnstile prefetch failed, will retry", e);
         this.schedule(MINT_RETRY_MS);
       },
     );
-  }
-
-  private mintOnce(): Promise<TurnstileToken> {
-    const inflight = this.inflight;
-    if (inflight !== null) return inflight;
-    const minted = this.mint().then(
-      (token) => {
-        if (this.inflight === minted) this.inflight = null;
-        this.cached = token;
-        return token;
-      },
-      (e) => {
-        if (this.inflight === minted) this.inflight = null;
-        throw e;
-      },
-    );
-    this.inflight = minted;
-    return minted;
   }
 
   private schedule(delayMs: number): void {
