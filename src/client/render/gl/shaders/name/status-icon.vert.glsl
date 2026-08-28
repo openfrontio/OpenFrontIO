@@ -179,11 +179,13 @@ void main() {
   float iconX;
   float iconY;
   if (isVerifiedSlot) {
-    // Verified badge: anchored just right of the name text, sitting slightly
-    // below the name line's vertical center (name glyphs center on wy).
-    iconWorldSize = uFontBase * nameWorldScale * 0.9;
-    iconX = wx + pd3.w * nameWorldScale + iconWorldSize * 0.12;
-    iconY = wy - iconWorldSize * 0.4;
+    // Verified badge: small mark tucked against the name's top-right corner,
+    // like a superscript. The name line spans wy +- 0.5 * lineHeight, so
+    // top-aligning the badge with the line puts it in the name's upper half.
+    float lineHeight = uFontBase * nameWorldScale;
+    iconWorldSize = lineHeight * 0.55;
+    iconX = wx + pd3.w * nameWorldScale + lineHeight * 0.04;
+    iconY = wy - lineHeight * 0.5;
   } else {
     // Count active status icons and position of this one (left-to-right).
     // If an emoji is also active it occupies one extra slot on the right,
