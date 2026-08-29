@@ -278,6 +278,12 @@ export async function startWorker() {
     if (game.isPublic() || game.hasStarted()) {
       return res.status(409).json({ error: "Game cannot be listed" });
     }
+    // Listing is one-way for the host: players recruited from the lobby
+    // browser must not lose the lobby they joined. Only the master delists
+    // (duplicate creator / cap overflow).
+    if (!listed && game.isListed()) {
+      return res.status(409).json({ error: "listing_permanent" });
+    }
 
     if (listed) {
       // A whitelisted lobby would be advertised to everyone yet reject every

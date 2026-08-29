@@ -88,6 +88,15 @@ export function authorizeIntent(
           error: "cannot enable host cheats in a publicly listed lobby",
         };
       }
+      // Likewise a join whitelist: a listed lobby must stay joinable by
+      // anyone who finds it, and listing is permanent, so the whitelist is
+      // rejected rather than delisting the lobby.
+      if (game.isListed && (intent.config.allowedPublicIds?.length ?? 0) > 0) {
+        return {
+          status: 409,
+          error: "cannot enable a join whitelist in a publicly listed lobby",
+        };
+      }
       return null;
 
     case "toggle_game_start_timer":
