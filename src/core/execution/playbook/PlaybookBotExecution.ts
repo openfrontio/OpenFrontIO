@@ -24,7 +24,8 @@ import { AttackExecution } from "../AttackExecution";
 import { ConstructionExecution } from "../ConstructionExecution";
 import { TransportShipExecution } from "../TransportShipExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
-import { closestTile } from "../Util";
+import { MirvExecution } from "../MIRVExecution";
+import { calculateTerritoryCenter, closestTile } from "../Util";
 
 export interface PlaybookParams {
   expandContested: number; // share of home troops per click into empty land while a rival borders us
@@ -228,6 +229,7 @@ export class PlaybookBotExecution implements Execution {
     { name: "tribe boats", every: 100, run: () => { if (this.sit.tick >= 300) this.huntBotsByBoat(); } },
     { name: "sea invasion", every: 200, run: () => { if (this.sit.tick >= 1800) this.seaInvasion(); } },
     { name: "build", every: 10, run: () => { this.build(this.sit.tick); this.maybeBomb(this.sit.tick); } },
+    { name: "mirv", every: 100, run: () => this.maybeMIRV() },
   ];
 
   tick(ticks: number): void {
@@ -279,6 +281,37 @@ export class PlaybookBotExecution implements Execution {
   }
   private density(p: Player): number {
     return p.numTilesOwned() > 0 ? p.troops() / p.numTilesOwned() : 1e9;
+  }
+
+  // ---------------------------------------------------------------- MIRV and the finish
+  private lastMirvTick = -1e9;
+  private lastSamTick = -1e9;
+  /** Playbook phase 6: a MIRV goes to (1) whoever has one in the air at us, (2) anyone over half the map,
+   *  (3) from 25:00, the largest un-allied player above us when we are in the top three — launch first, then
+   *  the collapse rule sends the army into the emptied land. */
+  private maybeMIRV(): void {
+    const me = this.player;
+    if (me.units(UnitType.MissileSilo).length === 0 || this.mg.config().isUnitDisabled(UnitType.MIRV)) return;
+    if (this.mg.ticks() - this.lastMirvTick < 600) return;
+    const cost = this.config.unitInfo(UnitType.MIRV).cost(this.mg, me);
+    if (me.gold() < cost + 1_000_000n) return;
+    const total = this.mg.numLandTiles();
+    const others = this.mg.players().filter((p) => p !== me && p.isAlive() && p.type() !== PlayerType.Bot && !me.isFriendly(p) && !me.isOnSameTeam(p));
+    let target: Player | null = null, why = "";
+    for (const p of others) for (const m of p.units(UnitType.MIRV)) { const d = m.targetTile(); if (d && this.mg.hasOwner(d) && this.mg.owner(d) === me) { target = p; why = "counter"; } }
+    if (!target) { const t = others.filter((p) => p.numTilesOwned() / total >= 0.5).sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0]; if (t) { target = t; why = "victory denial"; } }
+    if (!target && this.mg.ticks() >= 15000) {
+      const ranked = this.mg.players().filter((p) => p.isAlive() && p.type() !== PlayerType.Bot).sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+      const myRank = ranked.indexOf(me) + 1;
+      if (myRank <= 3) { const t = others.filter((p) => p.numTilesOwned() > me.numTilesOwned() * 0.8).sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0]; if (t) { target = t; why = `crown (we are #${myRank})`; } }
+    }
+    if (!target) return;
+    const center = calculateTerritoryCenter(this.mg, target);
+    if (center === null || me.canBuild(UnitType.MIRV, center) === false) return;
+    this.mg.addExecution(new MirvExecution(me, center));
+    this.lastMirvTick = this.mg.ticks();
+    this.bombs++;
+    if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} MIRV ${target.name()} ${target.numTilesOwned()}t (${why})`);
   }
 
   // ---------------------------------------------------------------- annexation
@@ -406,6 +439,9 @@ export class PlaybookBotExecution implements Execution {
     const affordable = this.mg.ticks() >= this.p.fightNotBeforeTick && nb.rivals.some((r) => r.troops() * this.p.fightRatio + 1000 <= this.sit.spendable * this.p.fightMaxShare);
     if (me.troops() < cap * this.p.fightAbove && !affordable && !(opportunity && me.troops() >= cap * this.p.homeFloor * 2)) return;
     const atCapNow = me.troops() >= cap * 0.95;
+    // invariant: one war at a time (two at cap); seven at once is how a 17M army evaporates
+    const wars = this.sit.outgoing.filter((a) => a.target().isPlayer() && (a.target() as Player).type() !== PlayerType.Bot && !this.counters.has(a.target() as Player)).length;
+    if (wars >= (atCapNow ? 2 : 1) && !opportunity) return;
     const early = !atCapNow && !opportunity && (this.mg.ticks() < this.p.fightNotBeforeTick || me.unitsOwned(UnitType.City) < this.p.fightMinCities);
     let { rivals } = nb;
     // before the 5-minute mark only clear prey: a neighbour we can hit with 2.5× its whole army
@@ -415,9 +451,10 @@ export class PlaybookBotExecution implements Execution {
     const candidates = rivals.filter((r) => me.canAttackPlayer(r) && !this.outgoingTo(r) && this.reachable(r));
     if (candidates.length === 0) return;
     const atCap = me.troops() >= cap * 0.95;
+    const endgame = this.mg.ticks() >= 15000; // 25:00 — the finish: land now is worth more than troops later
     // At cap every troop above the line is wasted growth, so commit more and accept a thinner edge.
-    const maxSend = Math.floor(me.troops() * (atCap ? 0.7 : this.p.fightMaxShare));
-    const minRatio = atCap ? 1.2 : this.p.fightRatio;
+    const maxSend = Math.floor(me.troops() * (atCap || endgame ? 0.7 : this.p.fightMaxShare));
+    const minRatio = atCap || endgame ? 1.2 : this.p.fightRatio;
     const attackingUs = new Set(me.incomingAttacks().map((a) => a.attacker()));
     const score = (r: Player) => {
       const ratio = maxSend / Math.max(1, r.troops());
@@ -954,6 +991,19 @@ export class PlaybookBotExecution implements Execution {
   }
   private railDiag = "";
 
+  /** Nations MIRV the city leader once it has >10 city units and 1.25× (Hard) / 1.5× (Medium) the runner-up's count.
+   *  Stay under that line: past it, cap comes from city levels, which the rule does not count. */
+  private cityUnitCap(): number {
+    const me = this.player;
+    let second = 0;
+    for (const p of this.mg.players()) { if (p === me || !p.isAlive() || p.type() === PlayerType.Bot) continue; second = Math.max(second, p.unitCount(UnitType.City)); }
+    return Math.max(9, Math.floor(second * 1.15));
+  }
+  private rank(): number {
+    const me = this.player;
+    return this.mg.players().filter((p) => p.isAlive() && p.type() !== PlayerType.Bot && p.numTilesOwned() > me.numTilesOwned()).length + 1;
+  }
+
   // ---------------------------------------------------------------- buildings
   private build(ticks: number): void {
     const me = this.player;
@@ -965,6 +1015,10 @@ export class PlaybookBotExecution implements Execution {
     const portLevels = me.unitsOwned(UnitType.Port);
     const capFull = me.troops() > this.cap() * this.p.capFullShare;
     const { rivals, friends } = this.neighbours();
+    const cityCapHit = cityUnits.length >= this.cityUnitCap();
+    const myRank = ticks >= 9000 ? this.rank() : 99;
+    // top three after 20:00: half of every gold pile is the MIRV fund — a crown without a MIRV loses to the first one fired
+    const mirvFund = ticks >= 12000 && myRank <= 3 && me.units(UnitType.MissileSilo).length > 0 ? this.config.unitInfo(UnitType.MIRV).cost(this.mg, me) / 2n : 0n;
     const seaFull = this.mg.unitCount(UnitType.TradeShip) >= this.p.seaFullShips || ticks >= 15000; // guide: nothing bought after 25:00 pays back
     const upgrade = (u: Unit) => { this.mg.addExecution(new UpgradeStructureExecution(me, u.id())); if (this.log.length < 200) this.log.push(`t${ticks} level ${u.type()} → ${u.level() + 1}`); };
 
@@ -981,12 +1035,22 @@ export class PlaybookBotExecution implements Execution {
       if (threat) { const tile = this.defensePostTile(threat); if (tile !== null && this.tryBuild(UnitType.DefensePost, tile)) return; this.postFailed.set(threat, ticks); if (this.log.length < 200) this.log.push(`t${ticks} post vs ${threat.name()} FAILED (${tile === null ? "no tile" : "canBuild"})`); }
       else if (ticks % 600 === 0 && this.log.length < 200) this.log.push(`t${ticks} no threat: rivals=${rivals.map((r) => r.name() + ":" + Math.round(r.troops() / 1000) + "k").join(",")} friends=${friends.length}`);
     }
-    // 2. SAM once anyone unfriendly on the map has a silo and we have something to protect
+    // 2. SAM once anyone unfriendly on the map has a silo, or once we are top three after 15:00 (the crown gets MIRVed);
+    //    level 3 when leading; a second launcher when the city stack outgrows one umbrella
     const enemySilos = this.mg.players().some((o) => o !== me && !me.isFriendly(o) && o.type() !== PlayerType.Bot && o.units(UnitType.MissileSilo).length > 0);
     const sams = me.units(UnitType.SAMLauncher);
-    if (enemySilos && cities >= 3 && gold >= cost(UnitType.SAMLauncher)) {
-      if (sams.length === 0) { const tile = this.interiorTile(UnitType.SAMLauncher); if (tile !== null && this.tryBuild(UnitType.SAMLauncher, tile)) return; }
-      else if (sams[0].level() < 2 && me.canUpgradeUnit(sams[0]) && (capFull || gold >= cost(UnitType.SAMLauncher) * 2n)) { upgrade(sams[0]); return; }
+    const wantSam = (enemySilos && cities >= 3) || myRank <= 3;
+    if (wantSam && gold >= cost(UnitType.SAMLauncher) && ticks - this.lastSamTick >= 400) { // a launcher takes 30 s to build; don't order another meanwhile
+      if (sams.length === 0) { const tile = this.interiorTile(UnitType.SAMLauncher); if (tile !== null && this.tryBuild(UnitType.SAMLauncher, tile)) { this.lastSamTick = ticks; return; } }
+      else {
+        const targetLevel = myRank === 1 ? 3 : 2;
+        const low = sams.find((sm) => sm.level() < targetLevel && me.canUpgradeUnit(sm));
+        if (low && (capFull || gold >= cost(UnitType.SAMLauncher) * 2n)) { upgrade(low); return; }
+        if (cityUnits.length >= 20 && sams.length < 3 && gold >= cost(UnitType.SAMLauncher) + 1_000_000n) {
+          const far = this.sampleTerritory(30).find((t) => sams.every((sm) => this.mg.euclideanDistSquared(sm.tile(), t) > 60 * 60) && me.canBuild(UnitType.SAMLauncher, t) !== false);
+          if (far !== undefined && this.tryBuild(UnitType.SAMLauncher, far)) { this.lastSamTick = ticks; return; }
+        }
+      }
     }
     // 3. first three city levels
     if (cities < 3 && gold >= cost(UnitType.City)) {
@@ -1014,30 +1078,30 @@ export class PlaybookBotExecution implements Execution {
     if (!wantRail && cities >= 3 && ticks % 1200 < 10 && this.log.length < 200) this.log.push(`t${ticks} no rail wanted: ports=${ports.length} partner=${partnerTile !== null} friends=${friends.length} seaFull=${seaFull}`);
     // 6. silo when rich enough not to stall the economy, and there is someone to bomb
     const idleAtCap = capFull && me.troops() > this.cap() * 0.9 && me.outgoingAttacks().length === 0;
-    const wantSilo = ticks >= this.p.siloAtTick && cities >= 3 && (portLevels >= 3 || me.unitsOwned(UnitType.Factory) > 0 || idleAtCap) && me.units(UnitType.MissileSilo).length === 0 && (rivals.some((r) => r.units(UnitType.City).length >= 2) || idleAtCap);
+    const wantSilo = ticks >= this.p.siloAtTick && cities >= 3 && (portLevels >= 3 || me.unitsOwned(UnitType.Factory) > 0 || idleAtCap || ticks >= 12000) && me.units(UnitType.MissileSilo).length === 0 && (rivals.some((r) => r.units(UnitType.City).length >= 2) || idleAtCap || ticks >= 12000);
     if (wantSilo && gold >= cost(UnitType.MissileSilo) + 400_000n) {
       const tile = this.interiorTile(UnitType.MissileSilo);
       if (tile !== null && this.tryBuild(UnitType.MissileSilo, tile)) return;
     }
     // 7. troop cap when full — unless we are saving for a silo
     const siloReserve = wantSilo ? cost(UnitType.MissileSilo) + 400_000n : 0n;
-    if (capFull && gold - siloReserve >= cost(UnitType.City)) {
-      const rt = this.railInfillTile();
+    if (capFull && gold - siloReserve - mirvFund >= cost(UnitType.City)) {
+      const rt = cityCapHit ? null : this.railInfillTile();
       if (rt !== null && this.tryBuild(UnitType.City, rt)) { this.rail.infilled++; return; }
       const city = cityUnits.find((c) => me.canUpgradeUnit(c));
       if (city) { upgrade(city); return; }
-      const tile = this.interiorTile(UnitType.City);
+      const tile = cityCapHit ? null : this.interiorTile(UnitType.City);
       if (tile !== null && this.tryBuild(UnitType.City, tile)) return;
     }
     // 8. spare gold: keep a bomb fund once we own a silo, otherwise a city level. Never hoard.
     const atWar = (this.currentTarget !== null && this.currentTarget.isAlive() && !me.isFriendly(this.currentTarget)) || me.incomingAttacks().some((a) => a.attacker().type() !== PlayerType.Bot);
     const reserve = me.units(UnitType.MissileSilo).length > 0 && (atWar || idleAtCap) ? 1_000_000n : siloReserve;
-    if (gold - reserve >= cost(UnitType.City)) {
-      const rt = this.railInfillTile();
+    if (gold - reserve - mirvFund >= cost(UnitType.City)) {
+      const rt = cityCapHit ? null : this.railInfillTile();
       if (rt !== null && this.tryBuild(UnitType.City, rt)) { this.rail.infilled++; return; }
       const city = cityUnits.find((c) => me.canUpgradeUnit(c));
       if (city) { upgrade(city); return; }
-      const tile = this.interiorTile(UnitType.City);
+      const tile = cityCapHit ? null : this.interiorTile(UnitType.City);
       if (tile !== null && this.tryBuild(UnitType.City, tile)) return;
     }
   }
