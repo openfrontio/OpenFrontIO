@@ -54,33 +54,13 @@ async function makeWorld(difficulty: Difficulty, bots: number) {
   return { game, nations };
 }
 
-/** Phase-0 spawn choice: coast, bots near, nations far, land around. Stays in the preferred region,
- *  relaxing the nation veto and radius in stages rather than falling back to anywhere on the map. */
-function pickSpawn(game: Game, nations: Nation[], prefer: [number, number], minDist: number): TileRef {
-  const bots = game.players().filter((p) => p.type() === PlayerType.Bot).map((p) => { const t = p.borderTiles().values().next().value as TileRef; return [game.x(t), game.y(t)] as [number, number]; });
-  const stages: [number, number][] = [[minDist, 250], [minDist * 0.8, 300], [minDist * 0.6, 350], [minDist * 0.45, 400]];
-  const dist = (x: number, y: number) => Math.hypot(x - prefer[0], y - prefer[1]);
-  for (const [veto, radius] of stages) {
-    let best: TileRef | null = null, bestS = -1e9;
-    for (let y = 60; y < 880; y += 3) for (let x = 60; x < 1940; x += 3) { // y < 880 keeps us off Antarctica
-      if (dist(x, y) > radius) continue;
-      const t = game.ref(x, y);
-      if (!game.isLand(t) || !game.isShore(t) || game.hasOwner(t)) continue;
-      let land = 0; for (let dy = -15; dy <= 15; dy += 5) for (let dx = -15; dx <= 15; dx += 5) { if (game.isValidCoord(x + dx, y + dy) && game.isLand(game.ref(x + dx, y + dy))) land++; }
-      if (land < 22) continue; // a straight coast is ~half land within 15 tiles
-      let score = 0, near = 0;
-      for (const n of nations) { const c = n.spawnCell!; const d = Math.abs(c.x - x) + Math.abs(c.y - y); if (d < veto) { score = -1e9; break; } if (d < 200) near += 4; else if (d < 300) near += 1; }
-      if (score < -1e8) continue;
-      score -= Math.min(near, 12); // crowded continents: cap so the region itself stays preferable
-      for (const [bx, by] of bots) { const d = Math.abs(bx - x) + Math.abs(by - y); if (d < 150) score += 3; else if (d < 250) score += 1; }
-      score -= dist(x, y) / 60; // 300 tiles from the region centre costs as much as a nation within 200
-      if (score > bestS) { bestS = score; best = t; }
-    }
-    if (best !== null) { spawnNote = `stage veto=${Math.round(veto)} radius=${radius} score=${bestS.toFixed(1)}`; return best; }
-  }
-  throw new Error("no spawn near " + prefer);
-}
 let spawnNote = "";
+function pickSpawn(game: Game, _nations: Nation[], prefer: [number, number], _minDist: number): TileRef {
+  const t = PlaybookBotExecution.pickSpawn(game, prefer);
+  if (t === null) throw new Error("no spawn near " + prefer);
+  spawnNote = "bot picker";
+  return t;
+}
 function neighboursBots(me: Player): string { return me.nearby().filter((n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot).map((b) => Math.round(b.troops() / 1000) + "k/" + b.numTilesOwned() + "t").join(" ") || "-"; }
 async function runGame(label: string, params: PlaybookParams, minutes: number, difficulty: Difficulty, prefer: [number, number]) {
   const { game, nations } = await makeWorld(difficulty, 30);

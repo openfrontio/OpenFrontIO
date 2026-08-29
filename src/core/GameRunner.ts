@@ -4,6 +4,7 @@ import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { PlaybookBotExecution } from "./execution/playbook/PlaybookBotExecution";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
+import { SpawnExecution } from "./execution/SpawnExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
@@ -30,7 +31,7 @@ import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
 import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
-import { ClientID, GameStartInfo, Turn } from "./Schemas";
+import { ClientID, GameID, GameStartInfo, Turn } from "./Schemas";
 import { simpleHash } from "./Util";
 
 export async function createGameRunner(
@@ -91,6 +92,7 @@ export async function createGameRunner(
     playbookBot && gameStart.config.gameType === GameType.Singleplayer
       ? clientID
       : undefined,
+    gameStart.gameID,
   );
   gr.init();
   return gr;
@@ -110,7 +112,9 @@ export class GameRunner {
     // When set, PlaybookBotExecution takes over this client's player once the
     // spawn phase ends. Dev/singleplayer only; the flag never leaves the client.
     private playbookBotClientID: ClientID | undefined = undefined,
+    private gameID: GameID = "",
   ) {}
+  private botSpawnQueued = false;
 
   init() {
     if (this.game.config().gameConfig().gameType !== GameType.Singleplayer) {
@@ -196,6 +200,25 @@ export class GameRunner {
     }
 
     const spawnJustEnded = wasInSpawnPhase && !this.game.inSpawnPhase();
+    // Playbook phase 0: once nations and tribes have placed themselves (tick 1),
+    // the bot picks its own spawn instead of waiting for a click.
+    if (
+      this.playbookBotClientID !== undefined &&
+      this.game.inSpawnPhase() &&
+      this.game.ticks() >= 2 &&
+      !this.botSpawnQueued
+    ) {
+      const me = this.game.playerByClientID(this.playbookBotClientID);
+      if (me !== null && !me.hasSpawned()) {
+        const tile = PlaybookBotExecution.pickSpawn(this.game);
+        if (tile !== null) {
+          this.game.addExecution(
+            new SpawnExecution(this.gameID, me.info(), tile),
+          );
+          this.botSpawnQueued = true;
+        }
+      }
+    }
     if (this.playbookBotClientID !== undefined && !this.game.inSpawnPhase()) {
       const me = this.game.playerByClientID(this.playbookBotClientID);
       if (me !== null) {
