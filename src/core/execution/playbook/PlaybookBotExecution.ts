@@ -64,6 +64,8 @@ export interface PlaybookParams {
   tribeConcurrency: number; // tribe attacks at once below 60 % of cap (one more above)
   spawnInland: number; // tiles walked inland from the chosen shore
   retreatOnAllianceEnd: boolean;
+  splitWatch: boolean; // reconnect a split territory: the owner of the gap becomes the war target
+  econWar: boolean; // attack at 1.5× (after a bomb) when our cap is 2× the target's and gold is spare
   wholeWars: boolean; // a war wave is sent whole or not at all (never trimmed by the reserve)
   stickyWar: boolean; // one enemy to the end: the current war target is the only candidate while it lives and borders us
   postsBeforeCity2: boolean; // allow threat posts even while city 2 is unaffordable
@@ -107,6 +109,8 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   tribeConcurrency: 1,
   spawnInland: 0, // 30-game lab: 8 tiles inland = 18/30 alive vs 27/30 on the shore (an inland circle can be surrounded; the coast cannot)
   retreatOnAllianceEnd: true,
+  splitWatch: true,
+  econWar: true,
   wholeWars: true,
   stickyWar: true,
   postsBeforeCity2: true, // 30-game lab: +8% land, same survival as blocking them
@@ -232,6 +236,7 @@ export class PlaybookBotExecution implements Execution {
     this.postFailed.delete(p);
   }
   private rules: { name: string; every: number; run: () => void }[] = [
+    { name: "split", every: 200, run: () => { if (this.p.splitWatch) this.watchSplit(); } },
     { name: "counter", every: 10, run: () => this.counterAttack() },
     { name: "retreats", every: 10, run: () => this.manageRetreats() },
     { name: "expand", every: 10, run: () => this.expand() },
@@ -384,6 +389,44 @@ export class PlaybookBotExecution implements Execution {
     if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} MIRV ${target.name()} ${target.numTilesOwned()}t (${why})`);
   }
 
+  // ---------------------------------------------------------------- territory integrity
+  private splitOwner: Player | null = null;
+  private splitTile: TileRef | null = null;
+  private splitSince = -1;
+  /** Every 20 s: is our land in one piece? If not, find who sits between the main body and the largest other piece.
+   *  The engine hands a surrounded piece to the surrounding player, so a split is a countdown. */
+  private watchSplit(): void {
+    const me = this.player;
+    const tiles = me.tiles();
+    if (tiles.size < 200) { this.splitOwner = null; return; }
+    const seen = new Set<TileRef>();
+    const clusters: TileRef[][] = [];
+    for (const t of me.borderTiles()) {
+      if (seen.has(t)) continue;
+      const cl: TileRef[] = []; const q = [t]; seen.add(t);
+      while (q.length > 0) { const c = q.pop()!; cl.push(c); for (const n of this.mg.neighbors(c)) { if (seen.has(n) || this.mg.owner(n) !== me) continue; seen.add(n); q.push(n); } }
+      clusters.push(cl);
+      if (clusters.length > 8) break;
+    }
+    if (clusters.length <= 1) { if (this.splitOwner !== null && this.log.length < 200) this.log.push(`t${this.mg.ticks()} territory reconnected`); this.splitOwner = null; this.splitTile = null; return; }
+    clusters.sort((a, b) => b.length - a.length);
+    const main = clusters[0], other = clusters[1];
+    // nearest pair of tiles between the two pieces (sampled), then the owner of the midpoint
+    let best = 1e18, bt: TileRef | null = null, bo: TileRef | null = null;
+    for (let i = 0; i < main.length; i += Math.max(1, Math.floor(main.length / 60))) for (let j = 0; j < other.length; j += Math.max(1, Math.floor(other.length / 60))) {
+      const d = this.mg.euclideanDistSquared(main[i], other[j]); if (d < best) { best = d; bt = main[i]; bo = other[j]; }
+    }
+    if (bt === null || bo === null) return;
+    const mx = Math.round((this.mg.x(bt) + this.mg.x(bo)) / 2), my = Math.round((this.mg.y(bt) + this.mg.y(bo)) / 2);
+    const mid = this.mg.ref(mx, my);
+    const owner = this.mg.owner(mid);
+    const who = owner.isPlayer() ? (owner as Player) : null;
+    if (this.splitSince < 0) this.splitSince = this.mg.ticks();
+    if (who !== this.splitOwner && this.log.length < 200) this.log.push(`t${this.mg.ticks()} SPLIT: ${clusters.length} pieces, second piece ${other.length}+ border tiles, gap ${Math.round(Math.sqrt(best))} tiles held by ${who ? who.name() : "nobody"}`);
+    this.splitOwner = who && who !== me && !me.isFriendly(who) ? who : null;
+    this.splitTile = this.mg.isLand(mid) && !this.mg.hasOwner(mid) ? mid : null;
+  }
+
   // ---------------------------------------------------------------- annexation
   private annexCache = new Map<Player, { tick: number; ok: boolean }>();
   /** A neighbour we could annex by encirclement: no ocean coast, no map edge, and we already hold at least
@@ -418,7 +461,7 @@ export class PlaybookBotExecution implements Execution {
     }
     // free land is the cheapest growth there is and unused troops come home: only the troop reserve applies, not the cap floor
     const ringing = [...this.sit.rivals, ...this.sit.bots, ...this.sit.friends].some((r) => this.annexable(r));
-    const frac = rivals.length > 0 || ringing ? this.p.expandContested : this.p.expandFree;
+    const frac = rivals.length > 0 || ringing || this.splitTile !== null ? this.p.expandContested : this.p.expandFree;
     this.send(this.mg.terraNullius().id(), Math.floor(this.sit.troops * frac), "expand", 100);
   }
 
@@ -503,7 +546,8 @@ export class PlaybookBotExecution implements Execution {
     const cap = this.cap();
     const nb = this.neighbours();
     for (const r of nb.rivals) this.collapsed(r);
-    const opportunity = this.mg.ticks() >= 3000 && nb.rivals.some((r) => this.collapsed(r) && r.troops() < this.sit.troops * 0.5);
+    const gapOwner = this.splitOwner && this.splitOwner.isAlive() && nb.rivals.includes(this.splitOwner) ? this.splitOwner : null;
+    const opportunity = (this.mg.ticks() >= 3000 && nb.rivals.some((r) => this.collapsed(r) && r.troops() < this.sit.troops * 0.5)) || gapOwner !== null;
     // crown, not survival: a war is on when we can afford 2× someone's whole army out of the spendable troops,
     // not only when troops reach 70 % of a cap that cities keep raising
     const affordable = this.mg.ticks() >= this.p.fightNotBeforeTick && nb.rivals.some((r) => r.troops() * this.p.fightRatio + 1000 <= this.sit.spendable * this.p.fightMaxShare);
@@ -522,7 +566,7 @@ export class PlaybookBotExecution implements Execution {
     // one enemy at a time, to the end: nations nuke whoever attacks them, and eight half-wars make eight nuclear enemies.
     // The current target stays the only candidate while it lives, borders us, and was hit within the last three minutes.
     if (this.p.stickyWar && this.currentTarget && this.currentTarget.isAlive() && rivals.includes(this.currentTarget) && this.mg.ticks() - this.lastWarTick < 1800) {
-      candidates = candidates.filter((r) => r === this.currentTarget || this.collapsed(r));
+      candidates = candidates.filter((r) => r === this.currentTarget || this.collapsed(r) || r === gapOwner);
     }
     if (candidates.length === 0) return;
     const atCap = me.troops() >= cap * 0.95;
@@ -530,12 +574,14 @@ export class PlaybookBotExecution implements Execution {
     // At cap every troop above the line is wasted growth, so commit more and accept a thinner edge.
     const maxSend = Math.floor(me.troops() * (atCap || endgame ? 0.7 : this.p.fightMaxShare));
     const minRatio = atCap || endgame ? 1.2 : this.p.fightRatio;
+    const richer = (r: Player) => this.p.econWar && this.cap() >= this.config.maxTroops(r) * 2 && this.sit.gold >= 1_000_000n; // we replace losses, they cannot
     const attackingUs = new Set(me.incomingAttacks().map((a) => a.attacker()));
     const score = (r: Player) => {
       const ratio = maxSend / Math.max(1, r.troops());
       if (this.collapsed(r) && r.troops() < this.sit.troops * 0.5) return ratio >= 1.5 ? 20 + ratio : -1; // bombed: go now at 1.5×, posts are gone
+      if (r === gapOwner) return ratio >= 1.2 ? 30 + ratio : -1; // they are cutting our land in two: reconnect before the piece is handed over
       // at cap, a neighbour already attacking us is a fair fight at 1:1 — the counter-attack cancels its wave anyway
-      if (ratio < (atCap && attackingUs.has(r) ? 1.0 : minRatio)) return -1;
+      if (ratio < (atCap && attackingUs.has(r) ? 1.0 : richer(r) ? Math.min(minRatio, 1.5) : minRatio)) return -1;
       // Playbook: never attack a big, thinly held empire — that is a troop sink. Prefer small and dense.
       if (ratio < 3 && r.numTilesOwned() > me.numTilesOwned() * 1.5 && this.density(r) < 40) return -1;
       const buildings = r.units(UnitType.City).length * 3 + r.units(UnitType.Port).length * 2 + r.units(UnitType.MissileSilo).length * 3;
@@ -553,7 +599,8 @@ export class PlaybookBotExecution implements Execution {
       if (atCapNow && this.mg.ticks() % 1200 < this.p.expandEvery && this.log.length < 200) this.log.push(`t${this.mg.ticks()} idle at cap: ${rivals.map((r) => `${r.name()} ${r.numTilesOwned()}t/${Math.round(r.troops() / 1000)}k d${Math.round(this.density(r))} p${r.units(UnitType.DefensePost).length} ${candidates.includes(r) ? "" : "(no)"}`).join("; ")}`);
       return;
     }
-    const wantRaw = Math.min(Math.ceil(best.troops() * this.p.fightRatio) + 1000, maxSend);
+    const wantRaw = Math.min(Math.ceil(best.troops() * (richer(best) ? Math.min(this.p.fightRatio, 1.5) : this.p.fightRatio)) + 1000, maxSend);
+    if (richer(best) && best !== this.currentTarget && me.units(UnitType.MissileSilo).length > 0 && this.mg.ticks() - this.lastBombTick > 100) { this.currentTarget = best; this.maybeBomb(this.mg.ticks()); } // open the war with a bomb on their cluster
     if (wantRaw < 1000) return;
     this.currentTarget = best;
     if (!me.hasEmbargoAgainst(best) && best.type() !== PlayerType.Nation) { me.addEmbargo(best, false); this.embargoedAt.set(best, this.mg.ticks()); }
@@ -640,6 +687,11 @@ export class PlaybookBotExecution implements Execution {
           for (const b of tribes) { const d = Math.abs(game.x(b) - x) + Math.abs(game.y(b) - y); if (d < 150) score += 3; else if (d < 250) score += 1; }
           for (const h of humans) { const d = Math.abs(game.x(h) - x) + Math.abs(game.y(h) - y); if (d < 150) score -= 3; }
           if (Math.min(x, y, W - x, H - y) < 80) score += 2;
+          let room = 0; for (let dy = -50; dy <= 50; dy += 10) for (let dx = -50; dx <= 50; dx += 10) { if (game.isValidCoord(x + dx, y + dy)) { const r = game.ref(x + dx, y + dy); if (game.isLand(r) && !game.hasOwner(r)) room++; } }
+          score += room / 20; // free land within 50 tiles: a pocket between two nations has little
+          let left = false, right = false, up = false, down = false;
+          for (const n of nations) { const d = Math.abs(game.x(n) - x) + Math.abs(game.y(n) - y); if (d > 260) continue; if (game.x(n) < x - 60) left = true; if (game.x(n) > x + 60) right = true; if (game.y(n) < y - 60) up = true; if (game.y(n) > y + 60) down = true; }
+          if ((left && right) || (up && down)) score -= 5; // sandwiched
           if (prefer) score -= Math.hypot(x - prefer[0], y - prefer[1]) / 60;
           if (score > bestS) { bestS = score; best = t; }
         }
