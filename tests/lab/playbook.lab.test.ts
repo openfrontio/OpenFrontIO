@@ -20,7 +20,7 @@ import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "../util/TestConfig";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const OUT = "/private/tmp/claude-501/-Users-josh-Code-openfront/f46e4d3b-aecb-4e40-bb41-205a4bfbadb7/scratchpad/";
+const OUT = process.env.LAB_OUT ? process.env.LAB_OUT.replace(/\/?$/, "/") : "/private/tmp/claude-501/-Users-josh-Code-openfront/f46e4d3b-aecb-4e40-bb41-205a4bfbadb7/scratchpad/";
 
 class LabConfig extends TestConfig {
   attackLogic(gm: Game, a: number, at: Player, d: Player | TerraNullius, t: TileRef) { return Config.prototype.attackLogic.call(this, gm, a, at, d, t); }
@@ -84,6 +84,16 @@ async function runGame(label: string, params: PlaybookParams, minutes: number, d
   const bot = new PlaybookBotExecution(me, params);
   let botMs = 0; const origTick = bot.tick.bind(bot); bot.tick = (t: number) => { const s0 = performance.now(); origTick(t); botMs += performance.now() - s0; };
   game.addExecution(bot, new WinCheckExecution());
+  const rec: { w: number; h: number; s: number; frames: { t: number; rle: number[]; players: (string | number)[][] }[]; land: number[] } | null = process.env.RECORD ? { w: Math.ceil(game.width() / 4), h: Math.ceil(game.height() / 4), s: 4, frames: [], land: [] } : null;
+  if (rec) { const land: number[] = []; let run = 0, cur = -1; for (let y = 0; y < game.height(); y += 4) for (let x = 0; x < game.width(); x += 4) { const v = game.isLand(game.ref(x, y)) ? 1 : 0; if (v === cur) run++; else { if (cur >= 0) land.push(cur, run); cur = v; run = 1; } } land.push(cur, run); rec.land = land; }
+  const snapshot = (t: number) => {
+    if (!rec) return;
+    const rle: number[] = []; let run = 0, cur = -1;
+    for (let y = 0; y < game.height(); y += 4) for (let x = 0; x < game.width(); x += 4) { const v = game.ownerID(game.ref(x, y)); if (v === cur) run++; else { if (cur >= 0) rle.push(cur, run); cur = v; run = 1; } }
+    rle.push(cur, run);
+    const players = game.players().filter((p) => p.isAlive()).map((p) => [p.smallID(), p.name(), p.type() === PlayerType.Bot ? "B" : p.type() === PlayerType.Nation ? "N" : "H", p.numTilesOwned(), Math.round(p.troops()), p.unitsOwned(UnitType.City), p.unitsOwned(UnitType.Port), me.isFriendly(p) && p !== me ? 1 : 0] as (string | number)[]);
+    rec.frames.push({ t, rle, players });
+  };
   const rows: string[] = [`== ${label} | spawn ${game.x(spawn)},${game.y(spawn)} (${spawnNote}) | ${difficulty} ==`];
   const ticks = minutes * 600;
   let allMs = 0;
@@ -91,6 +101,7 @@ async function runGame(label: string, params: PlaybookParams, minutes: number, d
     const s0 = performance.now(); game.executeNextTick(); allMs += performance.now() - s0;
     if (!me.isAlive()) { rows.push(`  DEAD at ${(t / 10).toFixed(0)}s`); break; }
     if ((t + 1) % 300 === 0) {
+      snapshot(t + 1);
       const rank = game.players().filter((p) => p.type() !== PlayerType.Bot).sort((a, b) => b.numTilesOwned() - a.numTilesOwned()).findIndex((p) => p === me) + 1;
       const bots = game.players().filter((p) => p.type() === PlayerType.Bot && p.isAlive()); const bt = bots.reduce((a, b) => a + b.troops(), 0) / Math.max(1, bots.length); const bl = bots.reduce((a, b) => a + b.numTilesOwned(), 0) / Math.max(1, bots.length); const nb = neighboursBots(me); rows.push(`  ${String((t + 1) / 10).padStart(4)}s bots=${bots.length} botTroops=${Math.round(bt)} botTiles=${Math.round(bl)} nearBotTroops=${nb} tiles=${String(me.numTilesOwned()).padStart(6)} troops=${String(Math.round(me.troops() / 1000)).padStart(5)}k cap=${String(Math.round(game.config().maxTroops(me) / 1000)).padStart(5)}k gold=${String(Math.round(Number(me.gold()) / 1000)).padStart(6)}k cities=${me.unitsOwned(UnitType.City)} ports=${me.unitsOwned(UnitType.Port)} dp=${me.unitsOwned(UnitType.DefensePost)} allies=${me.alliances().length} rank=${rank}/${game.players().filter((p) => p.type() !== PlayerType.Bot).length}`);
     }
@@ -99,6 +110,7 @@ async function runGame(label: string, params: PlaybookParams, minutes: number, d
   const rank = ranked.findIndex((p) => p === me) + 1; const leader = ranked[0]?.numTilesOwned() ?? 1;
   rows.push(`  FINAL rank=${rank || 99} share=${(me.numTilesOwned() / Math.max(1, leader)).toFixed(2)} botMs=${Math.round(botMs)} gameMs=${Math.round(allMs)} alive=${me.isAlive()} tiles=${me.numTilesOwned()} troops=${Math.round(me.troops()/1000)}k cities=${me.unitsOwned(UnitType.City)} ports=${me.unitsOwned(UnitType.Port)} factories=${me.unitsOwned(UnitType.Factory)} silos=${me.unitsOwned(UnitType.MissileSilo)} sams=${me.unitsOwned(UnitType.SAMLauncher)} bombs=${bot.bombs} trainGold=${Math.round(Number(me.trainGold())/1000)}k gold=${Math.round(Number(me.gold())/1000)}k`);
   rows.push("  log: " + bot.log.join(" | "));
+  if (rec) { snapshot(game.ticks()); fs.writeFileSync(OUT + `rec_${(process.env.TAG ?? "x")}_${label}.json`, JSON.stringify({ label, difficulty, me: me.smallID(), spawn: [game.x(spawn), game.y(spawn)], log: bot.log, rows, ...rec })); }
   return rows.join("\n");
 }
 

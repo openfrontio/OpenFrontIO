@@ -1107,7 +1107,7 @@ export class PlaybookBotExecution implements Execution {
     //    level 3 when leading; a second launcher when the city stack outgrows one umbrella
     const enemySilos = this.mg.players().some((o) => o !== me && !me.isFriendly(o) && o.type() !== PlayerType.Bot && o.units(UnitType.MissileSilo).length > 0);
     const sams = me.units(UnitType.SAMLauncher);
-    const samTarget = enemySilos || ticks >= 7200 || myRank <= 3 ? Math.max(1, Math.ceil(cityUnits.length / 5)) : 0; // nations: 0.25 per city on Hard
+    const samTarget = enemySilos || ticks >= 7200 || myRank <= 3 ? Math.max(1, Math.ceil(cityUnits.length / 8)) : 0; // nations: 0.25 per city on Hard; the bot can afford 1 per 8
     const wantSam = sams.length < samTarget || myRank <= 3;
     if (wantSam && gold >= cost(UnitType.SAMLauncher) && ticks - this.lastSamTick >= 400) { // a launcher takes 30 s to build; don't order another meanwhile
       if (sams.length === 0) { const tile = this.interiorTile(UnitType.SAMLauncher); if (tile !== null && this.tryBuild(UnitType.SAMLauncher, tile)) { this.lastSamTick = ticks; return; } }
@@ -1149,7 +1149,7 @@ export class PlaybookBotExecution implements Execution {
     //    a second at twelve, a third at twenty; a level when a bomb target sat out of range
     const idleAtCap = capFull && me.troops() > this.cap() * 0.9 && me.outgoingAttacks().length === 0;
     const silos = me.units(UnitType.MissileSilo);
-    const siloTarget = cityUnits.length >= 20 ? 3 : cityUnits.length >= 12 ? 2 : (cityUnits.length >= 4 || ticks >= this.p.siloAtTick || idleAtCap) && (portLevels >= 1 || me.unitsOwned(UnitType.Factory) > 0 || idleAtCap) ? 1 : 0;
+    const siloTarget = cityUnits.length >= 25 ? 3 : cityUnits.length >= 14 ? 2 : (ticks >= this.p.siloAtTick || idleAtCap) && (portLevels >= 1 || me.unitsOwned(UnitType.Factory) > 0 || idleAtCap) ? 1 : 0; // v8 (silo at 4 cities, SAM per 5, warships early) cost 36 % of land: the ratios wait for the economy
     const wantSilo = silos.length < siloTarget && ticks >= 3000;
     if (wantSilo && gold >= cost(UnitType.MissileSilo) + 400_000n) {
       const tile = silos.length === 0 ? this.interiorTile(UnitType.MissileSilo) : this.sampleTerritory(30).find((t) => silos.every((sl) => this.mg.euclideanDistSquared(sl.tile(), t) > 50 * 50) && me.canBuild(UnitType.MissileSilo, t) !== false) ?? null;
@@ -1174,7 +1174,7 @@ export class PlaybookBotExecution implements Execution {
     const reserve = me.units(UnitType.MissileSilo).length > 0 && (atWar || idleAtCap) ? 1_000_000n : siloReserve;
     // 9. a warship per four ports when gold is spare: it sinks landing boats and guards the trade lanes
     const warships = me.units(UnitType.Warship);
-    if (ports.length > 0 && warships.length < Math.ceil(ports.length / 4) && ticks - this.lastWarshipTick >= 600 && gold - reserve - mirvFund >= cost(UnitType.Warship) + 500_000n && !this.config.isUnitDisabled(UnitType.Warship)) {
+    if (ports.length > 0 && ticks >= 9000 && warships.length < Math.ceil(ports.length / 6) && ticks - this.lastWarshipTick >= 600 && gold - reserve - mirvFund >= cost(UnitType.Warship) + 500_000n && !this.config.isUnitDisabled(UnitType.Warship)) {
       const port = ports[warships.length % ports.length];
       for (let a = 0; a < 8; a++) {
         const x = this.mg.x(port.tile()) + Math.round(Math.cos((a / 8) * Math.PI * 2) * 20), y = this.mg.y(port.tile()) + Math.round(Math.sin((a / 8) * Math.PI * 2) * 20);
