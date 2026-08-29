@@ -121,6 +121,11 @@ export class GameModeSelector extends LitElement {
   );
 
   private handleUpdateAvailable() {
+    // The desktop shell runs the bundle from a local overlay and updates it
+    // itself (download, stage, then its own reload button, see
+    // DesktopUpdateBar). Reloading here would only re-run the old overlay,
+    // reconnect, and trigger this again until the download finishes.
+    if (isDesktopShell()) return;
     showInGameAlert(translateText("update_available.message")).then(() => {
       window.location.reload();
     });
