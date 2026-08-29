@@ -4,7 +4,7 @@ import {
   Config,
   NukeMagnitude,
 } from "../../src/core/configuration/Config";
-import { Player, TerraNullius, Tick, UnitType } from "../../src/core/game/Game";
+import { Tick, UnitType } from "../../src/core/game/Game";
 
 export class TestConfig extends Config {
   private _proximityBonusPortsNb: number = 0;
@@ -75,16 +75,7 @@ export class TestConfig extends Config {
   }
 
   attackLogic(_input: AttackLogicInput): AttackLogicResult {
-    return { attackerTroopLoss: 1, defenderTroopLoss: 1, tilesPerTickUsed: 1 };
-  }
-
-  attackTilesPerTick(
-    attackTroops: number,
-    attacker: Player,
-    defender: Player | TerraNullius,
-    numAdjacentTilesWithEnemy: number,
-  ): number {
-    return 1;
+    return { attackerTroopLoss: 1, defenderTroopLoss: 1, tickFraction: 1 };
   }
 }
 export class UseRealAttackLogic extends TestConfig {

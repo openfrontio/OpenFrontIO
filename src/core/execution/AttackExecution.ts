@@ -266,16 +266,11 @@ export class AttackExecution implements Execution {
       return;
     }
 
-    let numTilesPerTick = this.mg
-      .config()
-      .attackTilesPerTick(
-        troopCount,
-        this._owner,
-        this.target,
-        this.attack.borderSize() + this.random.nextInt(0, 5),
-      );
+    const borderSize = this.attack.borderSize() + this.random.nextInt(0, 5);
+    // Each tile consumes a fraction of the tick; conquer until it is spent.
+    let tickBudget = 1;
 
-    while (numTilesPerTick > 0) {
+    while (tickBudget > 0) {
       if (troopCount < 1) {
         this.attack.delete();
         this.active = false;
@@ -309,10 +304,12 @@ export class AttackExecution implements Execution {
         continue;
       }
       this.addNeighbors(tileToConquer);
-      const { attackerTroopLoss, defenderTroopLoss, tilesPerTickUsed } = this.mg
+      const { attackerTroopLoss, defenderTroopLoss, tickFraction } = this.mg
         .config()
-        .attackLogic(this.attackLogicInput(troopCount, tileToConquer));
-      numTilesPerTick -= tilesPerTickUsed;
+        .attackLogic(
+          this.attackLogicInput(troopCount, tileToConquer, borderSize),
+        );
+      tickBudget -= tickFraction;
       troopCount -= attackerTroopLoss;
       this.attack.setTroops(troopCount);
       if (targetPlayer) {
@@ -326,6 +323,7 @@ export class AttackExecution implements Execution {
   private attackLogicInput(
     attackTroops: number,
     tile: TileRef,
+    borderSize: number,
   ): AttackLogicInput {
     const defender = this.target.isPlayer() ? this.target : null;
     let defenderHasDefensePost = false;
@@ -363,6 +361,7 @@ export class AttackExecution implements Execution {
       falloutRatio: this.mg.hasFallout(tile)
         ? this.mg.numTilesWithFallout() / this.mg.numLandTiles()
         : null,
+      borderSize,
     };
   }
 
