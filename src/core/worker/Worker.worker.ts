@@ -151,6 +151,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           message.clientID,
           mapLoader,
           gameUpdate,
+          message.playbookBot ?? false,
         ).then((gr) => {
           sendMessage({
             type: "initialized",

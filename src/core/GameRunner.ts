@@ -2,6 +2,7 @@ import { placeName, placeSpawnName } from "../client/hud/NameBoxCalculator";
 import { Config } from "./configuration/Config";
 import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
+import { PlaybookBotExecution } from "./execution/playbook/PlaybookBotExecution";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
@@ -37,6 +38,7 @@ export async function createGameRunner(
   clientID: ClientID | undefined,
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+  playbookBot = false,
 ): Promise<GameRunner> {
   const config = new Config(gameStart.config, null, false, gameStart.listed);
   const gameMap = await loadGameMap(
@@ -86,6 +88,9 @@ export async function createGameRunner(
       gameStart.tribes?.map((t) => t.name),
     ),
     callBack,
+    playbookBot && gameStart.config.gameType === GameType.Singleplayer
+      ? clientID
+      : undefined,
   );
   gr.init();
   return gr;
@@ -102,6 +107,9 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+    // When set, PlaybookBotExecution takes over this client's player once the
+    // spawn phase ends. Dev/singleplayer only; the flag never leaves the client.
+    private playbookBotClientID: ClientID | undefined = undefined,
   ) {}
 
   init() {
@@ -188,6 +196,13 @@ export class GameRunner {
     }
 
     const spawnJustEnded = wasInSpawnPhase && !this.game.inSpawnPhase();
+    if (this.playbookBotClientID !== undefined && !this.game.inSpawnPhase()) {
+      const me = this.game.playerByClientID(this.playbookBotClientID);
+      if (me !== null) {
+        this.game.addExecution(new PlaybookBotExecution(me));
+      }
+      this.playbookBotClientID = undefined; // only ever added once
+    }
     if (
       spawnJustEnded ||
       this.game.ticks() < 3 ||

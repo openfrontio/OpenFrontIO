@@ -111,6 +111,25 @@ export interface JoinLobbyResult {
   join: Promise<void>;
 }
 
+// PlaybookBot takeover of the local player in singleplayer games (local
+// testing only; see PlaybookBotExecution). Enabled either by building with
+// VITE_PLAYBOOK_BOT=1 (`npm run bot:build`), which forces it on for every
+// singleplayer game, or on the dev server via `?bot=1` (captured at page
+// load, since the URL is rewritten when the game starts) or
+// localStorage.playbookBot = "1". Never active in a normal production build.
+const botFlagInUrl =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).has("bot");
+function playbookBotEnabled(): boolean {
+  if (import.meta.env.VITE_PLAYBOOK_BOT === "1") return true;
+  if (!import.meta.env.DEV) return false;
+  try {
+    return botFlagInUrl || localStorage.getItem("playbookBot") === "1";
+  } catch {
+    return botFlagInUrl;
+  }
+}
+
 export function joinLobby(
   eventBus: EventBus,
   lobbyConfig: LobbyConfig,
@@ -632,7 +651,11 @@ async function createClientGame(
   // Kick off the font-atlas fetch so it overlaps with worker init; the
   // render passes need it parsed before createWebGLView runs.
   const atlasDataLoad = preloadAtlasData();
-  const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
+  const worker = new WorkerClient(
+    lobbyConfig.gameStartInfo,
+    clientID,
+    playbookBotEnabled(),
+  );
   await worker.initialize();
   await atlasDataLoad;
   const gameView = new GameView(

@@ -42,6 +42,8 @@ export interface InitMessage extends BaseWorkerMessage {
   gameStartInfo: GameStartInfo;
   clientID: ClientID | undefined;
   cdnBase: string;
+  // Dev-only: let PlaybookBotExecution play the local player (singleplayer).
+  playbookBot?: boolean;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {
