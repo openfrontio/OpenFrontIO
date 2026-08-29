@@ -1,4 +1,5 @@
 import { renderTroops } from "../../client/Utils";
+import { AttackLogicInput } from "../configuration/Config";
 import {
   Attack,
   Difficulty,
@@ -10,6 +11,7 @@ import {
   PlayerType,
   TerrainType,
   TerraNullius,
+  UnitType,
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
@@ -309,13 +311,7 @@ export class AttackExecution implements Execution {
       this.addNeighbors(tileToConquer);
       const { attackerTroopLoss, defenderTroopLoss, tilesPerTickUsed } = this.mg
         .config()
-        .attackLogic(
-          this.mg,
-          troopCount,
-          this._owner,
-          this.target,
-          tileToConquer,
-        );
+        .attackLogic(this.attackLogicInput(troopCount, tileToConquer));
       numTilesPerTick -= tilesPerTickUsed;
       troopCount -= attackerTroopLoss;
       this.attack.setTroops(troopCount);
@@ -325,6 +321,49 @@ export class AttackExecution implements Execution {
       this._owner.conquer(tileToConquer);
       this.handleDeadDefender();
     }
+  }
+
+  private attackLogicInput(
+    attackTroops: number,
+    tile: TileRef,
+  ): AttackLogicInput {
+    const defender = this.target.isPlayer() ? this.target : null;
+    let defenderHasDefensePost = false;
+    if (defender !== null) {
+      for (const dp of this.mg.nearbyUnits(
+        tile,
+        this.mg.config().defensePostRange(),
+        UnitType.DefensePost,
+      )) {
+        if (dp.unit.owner() === defender) {
+          defenderHasDefensePost = true;
+          break;
+        }
+      }
+    }
+    return {
+      terrain: this.map.terrainType(tile),
+      attackTroops,
+      attacker: {
+        type: this._owner.type(),
+        numTiles: this._owner.numTilesOwned(),
+      },
+      defender:
+        defender === null
+          ? null
+          : {
+              type: defender.type(),
+              numTiles: defender.numTilesOwned(),
+              troops: defender.troops(),
+              isTraitor: defender.isTraitor(),
+              isDisconnectedTeammate:
+                defender.isDisconnected() && this._owner.isOnSameTeam(defender),
+            },
+      defenderHasDefensePost,
+      falloutRatio: this.mg.hasFallout(tile)
+        ? this.mg.numTilesWithFallout() / this.mg.numLandTiles()
+        : null,
+    };
   }
 
   private rejectIncomingAllianceRequests(target: Player) {
