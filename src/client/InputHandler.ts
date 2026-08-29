@@ -99,6 +99,29 @@ export class ToggleStructureEvent implements GameEvent {
 
 export class ConfirmGhostStructureEvent implements GameEvent {}
 
+export class TouchGhostPlacementEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class TouchGhostPlacementMoveEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class TouchGhostPlacementDragStartEvent implements GameEvent {
+  public handled = false;
+
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 export class SwapRocketDirectionEvent implements GameEvent {
   constructor(public readonly rocketDirectionUp: boolean) {}
 }
@@ -230,6 +253,7 @@ export class InputHandler {
   private lastGestureScale: number | null = null;
 
   private pointerDown: boolean = false;
+  private lastPointerType: string | null = null;
 
   private alternateView = false;
 
@@ -245,6 +269,7 @@ export class InputHandler {
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private longPressActive: boolean = false;
   private suppressNextTap: boolean = false;
+  private touchPlacementDragState: "idle" | "candidate" | "active" = "idle";
   private readonly LONG_PRESS_MS = 800;
 
   private moveInterval: NodeJS.Timeout | null = null;
@@ -511,6 +536,7 @@ export class InputHandler {
       }
       this.longPressActive = false;
       this.suppressNextTap = false;
+      this.touchPlacementDragState = "idle";
       if (this.selectionBoxActive || this.multiSelectionActive) {
         this.selectionBoxActive = false;
         this.multiSelectionActive = false;
@@ -739,6 +765,7 @@ export class InputHandler {
   }
 
   private onPointerDown(event: PointerEvent) {
+    this.lastPointerType = event.pointerType;
     if (event.button === 1) {
       event.preventDefault();
       this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
@@ -761,8 +788,26 @@ export class InputHandler {
 
       this.eventBus.emit(new MouseDownEvent(event.clientX, event.clientY));
 
+      this.touchPlacementDragState = "idle";
+      if (
+        event.pointerType === "touch" &&
+        this.uiState.ghostStructure !== null
+      ) {
+        const dragStart = new TouchGhostPlacementDragStartEvent(
+          event.clientX,
+          event.clientY,
+        );
+        this.eventBus.emit(dragStart);
+        if (dragStart.handled) {
+          this.touchPlacementDragState = "candidate";
+        }
+      }
+
       // Start long-press timer for touch devices
-      if (event.pointerType === "touch") {
+      if (
+        event.pointerType === "touch" &&
+        this.touchPlacementDragState !== "candidate"
+      ) {
         this.longPressActive = false;
         if (this.longPressTimer !== null) {
           clearTimeout(this.longPressTimer);
@@ -771,6 +816,11 @@ export class InputHandler {
         this.longPressTimer = setTimeout(() => {
           this.longPressTimer = null;
           this.longPressActive = true;
+          if (this.uiState.ghostStructure !== null) {
+            this.longPressActive = false;
+            this.suppressNextTap = true;
+            return;
+          }
           this.canvas.style.cursor = "crosshair";
           this.eventBus.emit(
             new TouchLongPressStartEvent(
@@ -791,6 +841,7 @@ export class InputHandler {
         this.longPressActive = false;
         this.canvas.style.cursor = "";
       }
+      this.touchPlacementDragState = "idle";
       this.lastPinchDistance = this.getPinchDistance();
     }
   }
@@ -814,6 +865,12 @@ export class InputHandler {
     }
     const wasLongPress = this.longPressActive;
     this.longPressActive = false;
+    const wasTouchPlacementDrag = this.touchPlacementDragState === "active";
+    this.touchPlacementDragState = "idle";
+    if (wasTouchPlacementDrag) {
+      event.preventDefault();
+      return;
+    }
     if (wasLongPress) {
       this.canvas.style.cursor = "";
       // If long-press fired but no drag happened (selectionBoxActive is false),
@@ -864,7 +921,11 @@ export class InputHandler {
           event.preventDefault();
           return;
         }
-        this.eventBus.emit(new TouchEvent(event.x, event.y));
+        if (this.uiState.ghostStructure !== null) {
+          this.eventBus.emit(new TouchGhostPlacementEvent(event.x, event.y));
+        } else {
+          this.eventBus.emit(new TouchEvent(event.x, event.y));
+        }
         event.preventDefault();
         return;
       }
@@ -963,12 +1024,19 @@ export class InputHandler {
     if (this.pointers.size === 1) {
       const deltaX = event.clientX - this.lastPointerX;
       const deltaY = event.clientY - this.lastPointerY;
+      const moveDist =
+        Math.abs(event.clientX - this.lastPointerDownX) +
+        Math.abs(event.clientY - this.lastPointerDownY);
+
+      if (
+        this.touchPlacementDragState === "candidate" &&
+        moveDist >= this.DRAG_THRESHOLD_PX
+      ) {
+        this.touchPlacementDragState = "active";
+      }
 
       // Cancel long-press if finger moved significantly before timer fires
       if (this.longPressTimer !== null) {
-        const moveDist =
-          Math.abs(event.clientX - this.lastPointerDownX) +
-          Math.abs(event.clientY - this.lastPointerDownY);
         if (moveDist >= this.DRAG_THRESHOLD_PX) {
           clearTimeout(this.longPressTimer);
           this.longPressTimer = null;
@@ -977,7 +1045,14 @@ export class InputHandler {
 
       // If shift is held OR touch long-press is active OR selection box already
       // started, continue emitting selection box updates
-      if (
+      if (this.touchPlacementDragState === "active") {
+        this.eventBus.emit(
+          new TouchGhostPlacementMoveEvent(event.clientX, event.clientY),
+        );
+      } else if (this.touchPlacementDragState === "candidate") {
+        // Keep a hold that began on the preview stable until the long-press
+        // threshold is reached; ordinary touches elsewhere still pan.
+      } else if (
         this.selectionBoxActive ||
         this.activeKeys.has(this.keybinds.boxSelectWarships) ||
         this.longPressActive
@@ -1013,6 +1088,9 @@ export class InputHandler {
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
+    if (this.lastPointerType === "touch") {
+      return;
+    }
     if (this.gameView.inSpawnPhase()) {
       return;
     }
