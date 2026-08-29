@@ -821,10 +821,9 @@ export class Config {
 
     // Attacker loss blends a ratio-driven term (how outnumbered the attack
     // is, clamped) with a density-driven term (defender troops per tile).
+    const troopRatio = defender.troops / attackTroops;
     const ratioTerm =
-      within(defender.troops / attackTroops, 0.6, 2) *
-      largeDefenderDebuff *
-      largeAttackerLossBonus;
+      within(troopRatio, 0.6, 2) * largeDefenderDebuff * largeAttackerLossBonus;
     const attackerTroopLoss =
       mag *
       traitorLossMod *
@@ -835,7 +834,7 @@ export class Config {
       attackerTroopLoss,
       defenderTroopLoss,
       tilesPerTickUsed:
-        within(defender.troops / (5 * attackTroops), 0.2, 1.5) *
+        (within(troopRatio, 1, 7.5) / 5) *
         tileCost *
         largeDefenderDebuff *
         largeAttackerCostBonus *
