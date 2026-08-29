@@ -20,6 +20,7 @@ import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "../util/TestConfig";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const REC = (process.env.LAB_REC ?? path.join(__dirname, "../../lab-out")).replace(/\/?$/, "/");
 const OUT = process.env.LAB_OUT ? process.env.LAB_OUT.replace(/\/?$/, "/") : "/private/tmp/claude-501/-Users-josh-Code-openfront/f46e4d3b-aecb-4e40-bb41-205a4bfbadb7/scratchpad/";
 
 class LabConfig extends TestConfig {
@@ -110,7 +111,7 @@ async function runGame(label: string, params: PlaybookParams, minutes: number, d
   const rank = ranked.findIndex((p) => p === me) + 1; const leader = ranked[0]?.numTilesOwned() ?? 1;
   rows.push(`  FINAL rank=${rank || 99} share=${(me.numTilesOwned() / Math.max(1, leader)).toFixed(2)} botMs=${Math.round(botMs)} gameMs=${Math.round(allMs)} alive=${me.isAlive()} tiles=${me.numTilesOwned()} troops=${Math.round(me.troops()/1000)}k cities=${me.unitsOwned(UnitType.City)} ports=${me.unitsOwned(UnitType.Port)} factories=${me.unitsOwned(UnitType.Factory)} silos=${me.unitsOwned(UnitType.MissileSilo)} sams=${me.unitsOwned(UnitType.SAMLauncher)} bombs=${bot.bombs} trainGold=${Math.round(Number(me.trainGold())/1000)}k gold=${Math.round(Number(me.gold())/1000)}k`);
   rows.push("  log: " + bot.log.join(" | "));
-  if (rec) { snapshot(game.ticks()); fs.writeFileSync(OUT + `rec_${(process.env.TAG ?? "x")}_${label}.json`, JSON.stringify({ label, difficulty, me: me.smallID(), spawn: [game.x(spawn), game.y(spawn)], log: bot.log, rows, ...rec })); }
+  if (rec) { snapshot(game.ticks()); fs.mkdirSync(REC, { recursive: true }); fs.writeFileSync(REC + `${(process.env.TAG ?? "x")}_${label}.json`, JSON.stringify({ label, difficulty, me: me.smallID(), spawn: [game.x(spawn), game.y(spawn)], log: bot.log, rows, ...rec })); }
   return rows.join("\n");
 }
 

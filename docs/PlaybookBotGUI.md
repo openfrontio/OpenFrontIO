@@ -7,10 +7,10 @@ service; the AGPL local build is fine).
 
 ## Layout
 
-| Path | Branch | Purpose |
-| --- | --- | --- |
-| `~/Code/openfront` | `playbook-bot` | Main checkout. Bot source, lab tests, active development. |
-| `~/Code/openfront-bot` | `bot-gui` | Git worktree used **only** to run the GUI. `node_modules` is a symlink to `../openfront/node_modules`. |
+| Path                   | Branch         | Purpose                                                                                                |
+| ---------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
+| `~/Code/openfront`     | `playbook-bot` | Main checkout. Bot source, lab tests, active development.                                              |
+| `~/Code/openfront-bot` | `bot-gui`      | Git worktree used **only** to run the GUI. `node_modules` is a symlink to `../openfront/node_modules`. |
 
 Why two checkouts: Vite force-reloads the page whenever a file in the Web
 Worker's module graph changes (`PlaybookBotExecution.ts`, `GameRunner.ts`, …).
@@ -35,8 +35,8 @@ changes when you deliberately sync it.
 
 ```bash
 cd ~/Code/openfront-bot
-npm run dev            # Vite + game server. Read the "Local:" line — Vite moves
-                       # to :9001 (or higher) if :9000 is already taken.
+npm run dev # Vite + game server. Read the "Local:" line — Vite moves
+# to :9001 (or higher) if :9000 is already taken.
 ```
 
 Then in Chrome open `http://localhost:<port>/?bot=1`:
@@ -46,7 +46,9 @@ Then in Chrome open `http://localhost:<port>/?bot=1`:
    400 too). Set Hard from the console with the modal open:
    ```js
    const m = document.querySelector("single-player-modal");
-   m.handleConfigDifficultySelected(new CustomEvent("difficulty-selected", { detail: { difficulty: "Hard" } }));
+   m.handleConfigDifficultySelected(
+     new CustomEvent("difficulty-selected", { detail: { difficulty: "Hard" } }),
+   );
    ```
 3. Click **Start Game**. The bot spawns itself ~2 ticks in and plays from there.
    Your own clicks still work alongside it.
@@ -56,9 +58,14 @@ Keep the tab focused: a background tab is throttled to ~1 tick/s (normal is 10).
 Ground-truth state from the console (no repo changes needed):
 
 ```js
-const g = document.querySelector("build-menu").game;   // GameView
+const g = document.querySelector("build-menu").game; // GameView
 const me = g.myPlayer();
-({ tick: g.ticks(), tiles: me.numTilesOwned(), troops: me.troops(), attacks: me.outgoingAttacks().length });
+({
+  tick: g.ticks(),
+  tiles: me.numTilesOwned(),
+  troops: me.troops(),
+  attacks: me.outgoingAttacks().length,
+});
 ```
 
 If the page bounces back to the lobby mid-game, check the dev log for
@@ -69,12 +76,12 @@ If the page bounces back to the lobby mid-game, check the dev log for
 ```bash
 # 1. main checkout: commit the bot work on playbook-bot
 cd ~/Code/openfront
-git add src/core/execution/playbook tests src/core/GameRunner.ts   # whatever changed
+git add src/core/execution/playbook tests src/core/GameRunner.ts # whatever changed
 git commit -m "bot: ..."
 
 # 2. worktree, between games (this triggers exactly one page reload)
 cd ~/Code/openfront-bot
-npm run bot:sync          # = git merge --ff-only playbook-bot
+npm run bot:sync # = git merge --ff-only playbook-bot
 ```
 
 ## Pull upstream OpenFront
@@ -83,9 +90,9 @@ npm run bot:sync          # = git merge --ff-only playbook-bot
 cd ~/Code/openfront
 git fetch origin
 git rebase origin/main playbook-bot
-npm run inst                                     # only if package-lock.json changed (never npm install)
-npx vitest tests/PlaybookBotHook.test.ts --run   # hook still wired?
-cd ~/Code/openfront-bot && git reset --hard playbook-bot   # ff-only merge won't work after a rebase
+npm run inst                                             # only if package-lock.json changed (never npm install)
+npx vitest tests/PlaybookBotHook.test.ts --run           # hook still wired?
+cd ~/Code/openfront-bot && git reset --hard playbook-bot # ff-only merge won't work after a rebase
 ```
 
 The hook touches ~25 upstream lines (`GameRunner.ts`, `src/core/worker/*`,
@@ -103,6 +110,21 @@ cd ~/Code/openfront && npx vitest tests/lab/playbook.lab.test.ts --run
 
 Differences from the GUI: `TestConfig` sets spawn immunity to 0 and the port
 proximity bonus to 0; everything else is the production `Config`.
+
+## Reviewing lab games
+
+Run any lab batch with `RECORD=1` and each game writes `lab-out/<TAG>_<spawn>.json`:
+an ownership frame every 30 s at quarter resolution, the leaderboard at each
+frame, the bot's event log and its economy rows (~2 MB per 30-minute game).
+
+```bash
+RECORD=1 MIN=30 SPAWN=north-russia npx vitest tests/lab/playbook.lab.test.ts --run
+npm run lab:review # http://localhost:8787 — pick a game, scrub the timeline
+```
+
+The viewer (`tests/lab/review/`) shows the map (bot green, allies blue, nations
+by colour, tribes grey), the top players at that frame, and the log up to that
+moment. `LAB_REC=<dir>` points both the recorder and the viewer elsewhere.
 
 ## Known dead end
 

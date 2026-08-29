@@ -33,7 +33,7 @@ export default [
             "__mocks__/fileMock.js",
             "eslint.config.js",
             "scripts/sync-assets.mjs",
-            "tests/matchmaking/*.mjs",
+            "tests/matchmaking/*.mjs", "tests/lab/review/*.mjs",
           ],
         },
         tsconfigRootDir: import.meta.dirname,
