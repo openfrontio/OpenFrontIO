@@ -211,6 +211,8 @@ export class UnitPass {
   private uFlickerSpeed: WebGLUniformLocation;
   private uAngryColor: WebGLUniformLocation;
   private uAltView: WebGLUniformLocation;
+  private uSelfColor: WebGLUniformLocation;
+  private uAllyColor: WebGLUniformLocation;
   private uHBombGlowScale: WebGLUniformLocation;
   private uHBombGlowColor: WebGLUniformLocation;
   private uHBombGlowStrength: WebGLUniformLocation;
@@ -306,6 +308,8 @@ export class UnitPass {
     this.uAngryColor = gl.getUniformLocation(this.program, "uAngryColor")!;
 
     this.uAltView = gl.getUniformLocation(this.program, "uAltView")!;
+    this.uSelfColor = gl.getUniformLocation(this.program, "uSelfColor")!;
+    this.uAllyColor = gl.getUniformLocation(this.program, "uAllyColor")!;
     this.uHBombGlowScale = gl.getUniformLocation(
       this.program,
       "uHBombGlowScale",
@@ -593,6 +597,9 @@ export class UnitPass {
     gl.uniform1f(this.uFlickerSpeed, us.flickerSpeed);
     gl.uniform3f(this.uAngryColor, us.angryR, us.angryG, us.angryB);
     gl.uniform1i(this.uAltView, this.altView ? 1 : 0);
+    const af = this.settings.affiliation;
+    gl.uniform3f(this.uSelfColor, af.selfR, af.selfG, af.selfB);
+    gl.uniform3f(this.uAllyColor, af.allyR, af.allyG, af.allyB);
     gl.uniform1f(this.uHBombGlowScale, us.hBombGlowScale);
     gl.uniform3f(
       this.uHBombGlowColor,
