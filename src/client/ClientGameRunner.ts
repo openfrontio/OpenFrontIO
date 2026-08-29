@@ -1,5 +1,5 @@
 import { Config } from "src/core/configuration/Config";
-import { translateText } from "../client/Utils";
+import { reloadForUpdate, translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
   ClientID,
@@ -351,7 +351,7 @@ export function joinLobby(
         } else {
           showInGameAlert(translateText("update_available.message")).then(
             () => {
-              window.location.reload();
+              reloadForUpdate();
             },
           );
         }
