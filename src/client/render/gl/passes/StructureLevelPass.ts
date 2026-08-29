@@ -15,6 +15,7 @@
 import type { RendererConfig, UnitState } from "../../types";
 import {
   STRUCTURE_TYPES,
+  UT_BANK,
   UT_CITY,
   UT_DEFENSE_POST,
   UT_FACTORY,
@@ -48,6 +49,7 @@ const STRUCTURE_ORDER = [
   UT_CITY,
   UT_PORT,
   UT_FACTORY,
+  UT_BANK,
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,

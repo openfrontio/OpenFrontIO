@@ -140,6 +140,10 @@
         "scale": 1.08,
         "iconFill": 0.85
       },
+      "Bank": {
+        "scale": 1.08,
+        "iconFill": 0.9
+      },
       "Defense Post": {
         "scale": 1,
         "iconFill": 0.8
@@ -357,6 +361,10 @@
       "intensity": 1
     },
     "Factory": {
+      "radius": 12,
+      "intensity": 1
+    },
+    "Bank": {
       "radius": 12,
       "intensity": 1
     },

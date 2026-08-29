@@ -14,6 +14,7 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
+  Unit,
   UnitInfo,
   UnitType,
 } from "../game/Game";
@@ -132,12 +133,16 @@ const DOOMSDAY_CLOCK_DEFAULTS = {
   warshipDrainCurveExponent: 8, // >1 = convex: stays gentle early, then spikes
 };
 
-/** Mutable result carrier for Config.attackLogic (one conquest per call). */
-export interface AttackLogicResult {
-  attackerTroopLoss: number;
-  defenderTroopLoss: number;
-  tilesPerTickUsed: number;
-}
+// Overtime tunables (anti-stalemate). Off unless enabled in GameConfig.
+// After startMinutes the percentage of tiles required to win falls from the
+// base (80% FFA / 95% team) by dropPercentPerMinute, with no floor: the bar
+// keeps sinking until the leading side crosses it, so a stalled game always
+// ends. Only `enabled` and `startMinutes` are wire-configurable.
+const OVERTIME_DEFAULTS = {
+  enabled: false,
+  startMinutes: 30,
+  dropPercentPerMinute: 2,
+};
 
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
@@ -146,10 +151,16 @@ export class Config {
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
     public readonly listed: boolean = false,
+    private _spectator: boolean = false,
   ) {}
 
   isReplay(): boolean {
     return this._isReplay;
+  }
+
+  /** True when the player joined the lobby as a spectator (watch-only). */
+  isIntentionalSpectator(): boolean {
+    return this._spectator;
   }
 
   traitorDefenseDebuff(): number {
@@ -183,6 +194,17 @@ export class Config {
       warshipDrainStartPercent: d.warshipDrainStartPercent,
       warshipDrainMaxPercent: d.warshipDrainMaxPercent,
       warshipDrainCurveExponent: d.warshipDrainCurveExponent,
+    };
+  }
+  // Overtime config, resolved against defaults.
+  overtimeConfig(): typeof OVERTIME_DEFAULTS {
+    const c = this._gameConfig.overtime;
+    const d = OVERTIME_DEFAULTS;
+    return {
+      enabled: c?.enabled ?? d.enabled,
+      startMinutes: c?.startMinutes ?? d.startMinutes,
+      // The drop rate is internal (not wire-configurable): always the default.
+      dropPercentPerMinute: d.dropPercentPerMinute,
     };
   }
   spawnImmunityDuration(): Tick {
@@ -478,6 +500,17 @@ export class Config {
           upgradable: true,
         };
         break;
+      case UnitType.Bank:
+        info = {
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            UnitType.Bank,
+          ),
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          upgradable: true,
+        };
+        break;
       case UnitType.Factory:
         info = {
           cost: this.costWrapper(
@@ -626,11 +659,25 @@ export class Config {
     return 30;
   }
 
-  percentageTilesOwnedToWin(): number {
-    if (this._gameConfig.gameMode === GameMode.Team) {
-      return 95;
+  percentageTilesOwnedToWin(elapsedGameSeconds: number): number {
+    const base = this._gameConfig.gameMode === GameMode.Team ? 95 : 80;
+    const sd = this.overtimeConfig();
+    if (!sd.enabled) {
+      return base;
     }
-    return 80;
+    // Whole seconds only: elapsedGameSeconds is ticks/10 and can carry a
+    // fractional part. The bar moves in WHOLE percentage points (one step
+    // every 60/dropPercentPerMinute seconds), so the HUD shows exactly the
+    // integer the sim checks — and integer math is trivially deterministic.
+    const secondsPastStart =
+      Math.floor(elapsedGameSeconds) - sd.startMinutes * 60;
+    if (secondsPastStart <= 0) {
+      return base;
+    }
+    return Math.max(
+      0,
+      base - Math.floor((secondsPastStart * sd.dropPercentPerMinute) / 60),
+    );
   }
   armyLimitWarningThreshold(): number {
     return 0.8;
@@ -654,19 +701,17 @@ export class Config {
     return this.bots();
   }
 
-  /**
-   * Mutable result carrier for attackLogic(). attackLogic runs once per
-   * conquered tile, so callers own a reusable result object and the method
-   * writes into it instead of allocating a fresh object per tile.
-   */
   attackLogic(
     gm: Game,
     attackTroops: number,
     attacker: Player,
     defender: Player | TerraNullius,
     tileToConquer: TileRef,
-    out: AttackLogicResult,
-  ): void {
+  ): {
+    attackerTroopLoss: number;
+    defenderTroopLoss: number;
+    tilesPerTickUsed: number;
+  } {
     let mag;
     let speed;
     const type = gm.terrainType(tileToConquer);
@@ -723,12 +768,10 @@ export class Config {
     }
 
     if (defender.isPlayer()) {
-      const defenderTroops = defender.troops(); // Number(bigint) — once
-      const defenderTiles = defender.numTilesOwned();
       const defenseSig =
         1 -
         sigmoid(
-          defenderTiles,
+          defender.numTilesOwned(),
           DEFENSE_DEBUFF_DECAY_RATE,
           DEFENSE_DEBUFF_MIDPOINT,
         );
@@ -736,21 +779,19 @@ export class Config {
       const largeDefenderSpeedDebuff = 0.7 + 0.3 * defenseSig;
       const largeDefenderAttackDebuff = 0.7 + 0.3 * defenseSig;
 
-      const attackerTiles = attacker.numTilesOwned();
       let largeAttackBonus = 1;
-      if (attackerTiles > 100_000) {
-        largeAttackBonus = Math.sqrt(100_000 / attackerTiles) ** 0.7;
+      if (attacker.numTilesOwned() > 100_000) {
+        largeAttackBonus = Math.sqrt(100_000 / attacker.numTilesOwned()) ** 0.7;
       }
       let largeAttackerSpeedBonus = 1;
-      if (attackerTiles > 100_000) {
-        largeAttackerSpeedBonus = (100_000 / attackerTiles) ** 0.6;
+      if (attacker.numTilesOwned() > 100_000) {
+        largeAttackerSpeedBonus = (100_000 / attacker.numTilesOwned()) ** 0.6;
       }
 
-      const defenderTroopLoss = defenderTroops / defenderTiles;
-      const defenderIsTraitor = defender.isTraitor();
-      const traitorMod = defenderIsTraitor ? this.traitorDefenseDebuff() : 1;
+      const defenderTroopLoss = defender.troops() / defender.numTilesOwned();
+      const traitorMod = defender.isTraitor() ? this.traitorDefenseDebuff() : 1;
       const currentAttackerLoss =
-        within(defenderTroops / attackTroops, 0.6, 2) *
+        within(defender.troops() / attackTroops, 0.6, 2) *
         mag *
         0.8 *
         largeDefenderAttackDebuff *
@@ -758,23 +799,30 @@ export class Config {
         traitorMod;
       const altAttackerLoss =
         1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
-      out.attackerTroopLoss = 0.6 * currentAttackerLoss + 0.4 * altAttackerLoss;
-      out.defenderTroopLoss = defenderTroopLoss;
-      out.tilesPerTickUsed =
-        within(defenderTroops / (5 * attackTroops), 0.2, 1.5) *
-        speed *
-        largeDefenderSpeedDebuff *
-        largeAttackerSpeedBonus *
-        (defenderIsTraitor ? this.traitorSpeedDebuff() : 1);
+      const attackerTroopLoss =
+        0.6 * currentAttackerLoss + 0.4 * altAttackerLoss;
+
+      return {
+        attackerTroopLoss,
+        defenderTroopLoss,
+        tilesPerTickUsed:
+          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
+          speed *
+          largeDefenderSpeedDebuff *
+          largeAttackerSpeedBonus *
+          (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
+      };
     } else {
-      out.attackerTroopLoss =
-        attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5;
-      out.defenderTroopLoss = 0;
-      out.tilesPerTickUsed = within(
-        (2000 * Math.max(10, speed)) / attackTroops,
-        5,
-        100,
-      );
+      return {
+        attackerTroopLoss:
+          attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5,
+        defenderTroopLoss: 0,
+        tilesPerTickUsed: within(
+          (2000 * Math.max(10, speed)) / attackTroops,
+          5,
+          100,
+        ),
+      };
     }
   }
 
@@ -845,20 +893,16 @@ export class Config {
   }
 
   maxTroops(player: Player | PlayerView): number {
-    // Single pass over the player's cities instead of filter().map().reduce()
-    // (three arrays + closures per call — this runs for every player every
-    // tick via troopIncreaseRate).
-    let cityLevels = 0;
-    for (const city of player.units(UnitType.City)) {
-      if (!city.isUnderConstruction()) {
-        cityLevels += city.level();
-      }
-    }
     const maxTroops =
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
-          cityLevels * this.cityTroopIncrease();
+          player
+            .units(UnitType.City)
+            .filter((u) => !u.isUnderConstruction())
+            .map((city) => city.level())
+            .reduce((a, b) => a + b, 0) *
+            this.cityTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;
@@ -924,7 +968,16 @@ export class Config {
     } else {
       baseRate = 100n;
     }
-    return BigInt(Math.floor(Number(baseRate) * multiplier));
+    // Banks provide a diminishing passive-income bonus per level. A bank's
+    // level is its upgrade level; additional banks stack normally.
+    const bankBonus = player
+      .units(UnitType.Bank)
+      .reduce(
+        (bonus, bank) =>
+          bonus + [0, 0.15, 0.1, 0.05, 0.025][Math.min(bank.level(), 4)],
+        0,
+      );
+    return BigInt(Math.floor(Number(baseRate) * multiplier * (1 + bankBonus)));
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {
@@ -971,6 +1024,25 @@ export class Config {
 
   maxSamRange(): number {
     return 150;
+  }
+
+  samUpgradeDuration(): number {
+    return Math.floor(this.SAMCooldown() / 2);
+  }
+
+  dynamicSamRange(sam: Unit, currentTick: number): number {
+    const state = sam.samLauncherState();
+    if (state === undefined || state.upgradeStartTick === undefined) {
+      return this.samRange(sam.level());
+    }
+    const duration = state.duration ?? this.samUpgradeDuration();
+    const elapsed = currentTick - state.upgradeStartTick;
+    if (elapsed >= duration) {
+      return this.samRange(state.targetLevel);
+    }
+    const targetRange = this.samRange(state.targetLevel);
+    const diff = targetRange - state.startRange;
+    return state.startRange + (diff * elapsed) / duration;
   }
 
   defaultSamMissileSpeed(): number {

@@ -114,7 +114,7 @@ float sdPolygon(vec2 p, float R, float n, float rot) {
 }
 
 // Per-structure-type shape SDF.
-// Atlas indices: 0=City, 1=Port, 2=Factory, 3=DefensePost, 4=SAM, 5=Silo
+// Atlas indices: 0=City, 1=Port, 2=Factory, 3=Bank, 4=DefensePost, 5=SAM, 6=Silo
 float shapeSDF(vec2 p, float R) {
   if (vAtlasIdx < 0.5)
     return length(p) - R;                     // City → circle
@@ -123,8 +123,10 @@ float shapeSDF(vec2 p, float R) {
   if (vAtlasIdx < 2.5)
     return sdPolygon(p, R, 6.0, PI / 6.0);    // Factory → hexagon (flat top)
   if (vAtlasIdx < 3.5)
-    return sdPolygon(p, R, 8.0, 0.0);         // Defense Post → octagon (flat top)
+    return sdPolygon(p, R, 6.0, 0.0);         // Bank → hexagon
   if (vAtlasIdx < 4.5)
+    return sdPolygon(p, R, 8.0, 0.0);         // Defense Post → octagon (flat top)
+  if (vAtlasIdx < 5.5)
     return sdPolygon(p, R, 4.0, 0.0);         // SAM Launcher → square (flat sides)
   return sdPolygon(p, R, 3.0, PI * 0.5);      // Missile Silo → triangle (vertex up)
 }

@@ -16,6 +16,7 @@ import { renderNumber, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
   atomBombIcon,
+  bankIcon,
   cityIcon,
   defensePostIcon,
   factoryIcon,
@@ -38,6 +39,7 @@ export class UnitDisplay extends LitElement implements Controller {
   private _cities = 0;
   private _warships = 0;
   private _factories = 0;
+  private _banks = 0;
   private _missileSilo = 0;
   private _port = 0;
   private _defensePost = 0;
@@ -101,6 +103,7 @@ export class UnitDisplay extends LitElement implements Controller {
     this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
     this._factories = player.totalUnitLevels(UnitType.Factory);
+    this._banks = player.totalUnitLevels(UnitType.Bank);
     this._warships = player.totalUnitLevels(UnitType.Warship);
     this.requestUpdate();
   }
@@ -135,6 +138,13 @@ export class UnitDisplay extends LitElement implements Controller {
             UnitType.Factory,
             "factory",
             this.keybinds["buildFactory"]?.key ?? "2",
+          )}
+          ${this.renderUnitItem(
+            bankIcon,
+            this._banks,
+            UnitType.Bank,
+            "bank",
+            this.keybinds["buildBank"]?.key ?? "N",
           )}
           ${this.renderUnitItem(
             portIcon,
