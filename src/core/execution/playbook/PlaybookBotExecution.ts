@@ -152,7 +152,7 @@ export class PlaybookBotExecution implements Execution {
     tick: number; troops: number; cap: number; capShare: number; reserve: number; spendable: number;
     gold: bigint; bots: Player[]; rivals: Player[]; friends: Player[]; wilderness: boolean;
     incoming: Attack[]; incomingBots: number; outgoing: Attack[]; tribeAttacks: number; boats: number;
-    collapsed: Player[]; expiring: Player[];
+    collapsed: Player[]; expiring: Player[]; hold: Player | null;
   };
   private prevAllies = new Set<Player>();
   private prevIncoming = new Set<string>();
@@ -172,11 +172,16 @@ export class PlaybookBotExecution implements Execution {
       boats: me.units(UnitType.TransportShip).length,
       collapsed: nb.rivals.filter((r) => this.collapsed(r)),
       expiring: me.alliances().filter((al) => al.expiresAt() - t < 450).map((al) => al.other(me)),
+      hold: null,
     };
+    // A Hard nation renews only if we look as strong as it at expiry: 45 s before an alliance with a stronger
+    // neighbour lapses, the army stays home so the check sees all of it.
+    this.sit.hold = this.sit.expiring.find((o) => o.type() === PlayerType.Nation && o.troops() > troops * 0.85) ?? null;
   }
   /** The one place troops leave home. Never below the reserve; returns what was actually sent (0 = nothing). */
   private send(targetID: string | null, n: number, why: string, min = 500, capFloor = 0): number {
     // capFloor: never leave home under this share of CAP — Hard nations betray an ally under 20 % of cap on sight
+    if (this.sit.hold !== null && why !== "counter") { if (this.log.length < 200 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} holding troops home: alliance with ${this.sit.hold.name()} about to lapse`); return 0; }
     const room = Math.floor(Math.min(this.sit.spendable, this.sit.troops - this.sit.cap * capFloor));
     const amount = Math.min(Math.floor(n), room);
     if (amount < min) { if (room < min && this.log.length < 200 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} held: ${why} wants ${Math.round(n / 1000)}k, ${Math.round(room / 1000)}k above reserve`); return 0; }
@@ -185,6 +190,7 @@ export class PlaybookBotExecution implements Execution {
     return amount;
   }
   private boat(tile: TileRef, n: number, why: string): number {
+    if (this.sit.hold !== null) return 0;
     const amount = Math.min(Math.floor(n), Math.floor(this.sit.spendable));
     if (amount < 500 || this.player.canBuild(UnitType.TransportShip, tile) === false) return 0;
     this.mg.addExecution(new TransportShipExecution(this.player, tile, amount));
