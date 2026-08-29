@@ -55,8 +55,16 @@ rsync -az --delete -e "ssh -o StrictHostKeyChecking=accept-new" \
   ./ root@"$IP":/root/openfront/
 $SSH@"$IP" 'cd /root/openfront && [ -d node_modules ] || npm run inst >/tmp/inst.log 2>&1'
 
+# Launch detached on the box and poll, so a dropped ssh session (or a killed
+# local shell) cannot take the sweep down with it.
 echo "running sweep ..."
-$SSH@"$IP" "cd /root/openfront && CONFIGS='$CONFIGS' MINUTES=$MINUTES OUT=/root/lab-out bash scripts/lab/sweep.sh"
+$SSH@"$IP" "cd /root/openfront && mkdir -p /root/lab-out && nohup env CONFIGS='$CONFIGS' MINUTES=$MINUTES OUT=/root/lab-out bash scripts/lab/sweep.sh > /root/lab-out/sweep.log 2>&1 < /dev/null & echo launched"
+sleep 15
+until ! $SSH@"$IP" 'pgrep -f scripts/lab/sweep.sh >/dev/null' 2>/dev/null; do
+  echo "  $(date +%H:%M) $($SSH@"$IP" 'grep -c "^done" /root/lab-out/sweep.log' 2>/dev/null) done, $($SSH@"$IP" 'grep -c "^FAILED" /root/lab-out/sweep.log' 2>/dev/null) failed"
+  sleep 60
+done
+$SSH@"$IP" 'tail -1 /root/lab-out/sweep.log'
 
 mkdir -p "$DEST"
 rsync -az root@"$IP":/root/lab-out/ "$DEST"/
