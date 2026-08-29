@@ -1095,6 +1095,7 @@ export class GPURenderer {
     this.namePass.setHighlightOwner(ownerID);
     this.structurePass.setHighlightOwner(ownerID);
     this.railroadPass.setHighlightOwner(ownerID);
+    this.affiliationPalette.setHoveredOwner(ownerID);
   }
   setMouseWorldPos(x: number, y: number): void {
     this.namePass.setMouseWorldPos(x, y);
