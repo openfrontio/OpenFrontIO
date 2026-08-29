@@ -59,6 +59,8 @@ export interface PlaybookParams {
   siloAtTick: number; // earliest silo
   bombEvery: number; // ticks between bombs
   bombReserve: number; // gold kept after buying a bomb
+  postsBeforeCity2: boolean; // allow threat posts even while city 2 is unaffordable
+  portWithoutPartnerTick: number; // first port on any ocean coast from this tick even with no partner (1e9 = never)
 }
 
 export const DEFAULT_PLAYBOOK: PlaybookParams = {
@@ -94,6 +96,8 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   siloAtTick: 6000,
   bombEvery: 300,
   bombReserve: 250_000,
+  postsBeforeCity2: true, // 30-game lab: +8% land, same survival as blocking them
+  portWithoutPartnerTick: 1500,
 };
 
 export class PlaybookBotExecution implements Execution {
@@ -416,7 +420,7 @@ export class PlaybookBotExecution implements Execution {
         for (let x = 30; x < W - 30; x += step) {
           if (prefer && Math.hypot(x - prefer[0], y - prefer[1]) > radius) continue;
           const t = game.ref(x, y);
-          if (!game.isLand(t) || !game.isShore(t) || game.hasOwner(t)) continue;
+          if (!game.isLand(t) || !game.isOceanShore(t) || game.hasOwner(t)) continue; // an ocean coast, not a lake: lakes have no trade partners and no un-annexable border
           let land = 0;
           for (let dy = -15; dy <= 15; dy += 5) for (let dx = -15; dx <= 15; dx += 5) { if (game.isValidCoord(x + dx, y + dy) && game.isLand(game.ref(x + dx, y + dy))) land++; }
           if (land < 22) continue; // a straight coast is about half land within 15 tiles
@@ -512,10 +516,11 @@ export class PlaybookBotExecution implements Execution {
   }
 
   /** No bots on our borders: boat to the nearest bot within reach, with 1.67× its troops. */
+  private boatedAt = new Map<Player, number>();
   private huntBotsByBoat(): void {
     const me = this.player;
     if (this.neighbours().bots.length > 0) return;
-    if (me.unitCount(UnitType.TransportShip) >= this.config.boatMaxNumber()) return;
+    if (me.units(UnitType.TransportShip).length > 0) return; // one landing at a time; a second boat to the same beach is the 'boat that takes no land'
     if (me.troops() < this.cap() * 0.4) return;
     const shore = Array.from(me.borderTiles()).filter((t) => this.mg.isShore(t));
     if (shore.length === 0) return;
@@ -524,6 +529,7 @@ export class PlaybookBotExecution implements Execution {
     let best: TileRef | null = null, bestBot: Player | null = null, bestD = 1e9;
     for (const bot of this.mg.players()) {
       if (bot.type() !== PlayerType.Bot || !bot.isAlive() || bot.numTilesOwned() < 100) continue;
+      if (this.mg.ticks() - (this.boatedAt.get(bot) ?? -1e9) < 900) continue;
       const want = Math.ceil(bot.troops() * 2) + 500;
       if (want > me.troops() * 0.3) continue;
       // sample its border for a shore tile
@@ -539,6 +545,7 @@ export class PlaybookBotExecution implements Execution {
     if (!this.acrossWater(best)) return; // reachable by land: that is a land attack, not a boat
     if (me.canBuild(UnitType.TransportShip, best) === false) return;
     const troops = Math.ceil(bestBot.troops() * 2) + 500;
+    this.boatedAt.set(bestBot, this.mg.ticks());
     this.mg.addExecution(new TransportShipExecution(me, best, troops));
     if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} BOAT to bot ${bestBot.name()} ${bestBot.numTilesOwned()}t/${Math.round(bestBot.troops())} with ${troops}, ${bestD} tiles`);
   }
@@ -563,7 +570,7 @@ export class PlaybookBotExecution implements Execution {
     let best: { tile: TileRef; p: Player; d: number; score: number } | null = null;
     for (const o of this.mg.players()) {
       if (o === me || !o.isAlive() || me.isFriendly(o) || o.type() === PlayerType.Bot || rivals.includes(o)) continue;
-      if (o.troops() > me.troops() * 0.25 || o.numTilesOwned() < 300) continue;
+      if (o.troops() > me.troops() * 0.25 || o.numTilesOwned() < 300 || o.units(UnitType.DefensePost).length > 0) continue;
       let i = 0;
       for (const t of o.borderTiles()) {
         if ((i++ % 9) !== 0 || !this.mg.isShore(t)) continue;
@@ -574,8 +581,8 @@ export class PlaybookBotExecution implements Execution {
       }
     }
     if (best === null || me.canBuild(UnitType.TransportShip, best.tile) === false) return;
-    const troops = Math.min(Math.floor(me.troops() * 0.3), Math.ceil(best.p.troops() * 2.5) + 5000);
-    if (troops < 20000) return;
+    const troops = Math.min(Math.floor(me.troops() * 0.3), Math.ceil(best.p.troops() * 3) + 5000);
+    if (troops < 20000 || troops < best.p.troops() * 3) return; // a landing under 3× is the boat that takes no land
     this.lastInvasionTick = this.mg.ticks();
     this.mg.addExecution(new TransportShipExecution(me, best.tile, troops));
     if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} INVADE ${best.p.name()} ${best.p.numTilesOwned()}t/${Math.round(best.p.troops() / 1000)}k by sea with ${Math.round(troops / 1000)}k, ${best.d} tiles`);
@@ -721,19 +728,19 @@ export class PlaybookBotExecution implements Execution {
     if (R.factory && !R.factory.isActive()) { R.factory = null; R.anchor = null; R.infilled = 0; }
     if (R.factory === null && this.pendingFactory !== null) {
       const u = this.mg.nearbyUnits(this.pendingFactory, 3, UnitType.Factory).find((x) => x.unit.owner() === me)?.unit;
-      if (u) { R.factory = u; this.pendingFactory = null; } else if (this.mg.ticks() - this.pendingFactoryTick > 60) { this.pendingFactory = null; R.failed++; }
+      if (u) { R.factory = u; this.pendingFactory = null; } else if (this.mg.ticks() - this.pendingFactoryTick > 400) { this.pendingFactory = null; R.failed++; if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} rail factory never appeared`); } // a factory takes 10 s to build; 60 ticks was too short and bought a second factory every minute
       return false;
     }
     if (R.factory === null) {
       if (gold < cost(UnitType.Factory)) return false;
       const spot = this.railFactorySpot();
-      if (spot === null) { R.failed++; return false; }
+      if (spot === null) { R.failed++; if (this.log.length < 200 && R.failed % 5 === 1) this.log.push(`t${this.mg.ticks()} rail: no factory spot (${this.railDiag})`); return false; }
       if (this.tryBuild(UnitType.Factory, spot.factory)) { this.pendingAnchor = spot.anchor; this.pendingFactory = spot.factory; this.pendingFactoryTick = this.mg.ticks(); return true; }
       R.failed++; return false;
     }
     if (R.anchor === null && this.pendingAnchor !== null && this.pendingAnchorTick >= 0) {
       const u = this.mg.nearbyUnits(this.pendingAnchor, 3, UnitType.City).find((x) => x.unit.owner() === me)?.unit;
-      if (u) { R.anchor = u; this.pendingAnchorTick = -1; } else if (this.mg.ticks() - this.pendingAnchorTick > 60) { this.pendingAnchorTick = -1; R.failed++; }
+      if (u) { R.anchor = u; this.pendingAnchorTick = -1; } else if (this.mg.ticks() - this.pendingAnchorTick > 400) { this.pendingAnchorTick = -1; R.failed++; }
       return false;
     }
     if (R.anchor === null) {
@@ -801,11 +808,13 @@ export class PlaybookBotExecution implements Execution {
   private railFactorySpot(from?: TileRef): { factory: TileRef; anchor: TileRef } | null {
     const me = this.player;
     const starts = from ? [from] : this.sampleTerritory(40);
+    let okStarts = 0, anchorsTried = 0;
     let best: { factory: TileRef; anchor: TileRef; score: number } | null = null;
     // allied cities in range are the best anchors (35k a stop)
     const allyCities = this.mg.players().filter((o) => o !== me && me.isFriendly(o)).flatMap((o) => o.units(UnitType.City));
     for (const f of starts) {
       if (me.canBuild(UnitType.Factory, f) === false) continue;
+      okStarts++;
       for (const c of allyCities) {
         const d2 = this.mg.euclideanDistSquared(f, c.tile());
         if (d2 > 105 * 105 || d2 < 40 * 40) continue;
@@ -816,11 +825,12 @@ export class PlaybookBotExecution implements Execution {
       const fx = this.mg.x(f), fy = this.mg.y(f);
       for (let a = 0; a < 16; a++) {
         const ang = (a / 16) * Math.PI * 2;
-        for (let dist = 104; dist >= 80; dist -= 8) {
+        for (let dist = 104; dist >= 40; dist -= 8) { // a 40-tile line still fits two stations; small empires need short lines
           const x = Math.round(fx + Math.cos(ang) * dist), y = Math.round(fy + Math.sin(ang) * dist);
           if (!this.mg.isValidCoord(x, y)) continue;
           const t = this.mg.ref(x, y);
           if (this.mg.owner(t) !== me) continue;
+          anchorsTried++;
           // the straight line must stay on our land (sampled)
           let ok = true;
           for (let k = 0.1; k < 1 && ok; k += 0.1) { const sx = Math.round(fx + (x - fx) * k), sy = Math.round(fy + (y - fy) * k); if (!this.mg.isValidCoord(sx, sy) || this.mg.owner(this.mg.ref(sx, sy)) !== me) ok = false; }
@@ -833,8 +843,10 @@ export class PlaybookBotExecution implements Execution {
         }
       }
     }
+    this.railDiag = `starts=${starts.length} canBuild=${okStarts} anchorsOnOurLand=${anchorsTried}`;
     return best ? { factory: best.factory, anchor: best.anchor } : null;
   }
+  private railDiag = "";
 
   // ---------------------------------------------------------------- buildings
   private build(ticks: number): void {
@@ -847,7 +859,7 @@ export class PlaybookBotExecution implements Execution {
     const portLevels = me.unitsOwned(UnitType.Port);
     const capFull = me.troops() > this.cap() * this.p.capFullShare;
     const { rivals, friends } = this.neighbours();
-    const seaFull = this.mg.unitCount(UnitType.TradeShip) >= this.p.seaFullShips;
+    const seaFull = this.mg.unitCount(UnitType.TradeShip) >= this.p.seaFullShips || ticks >= 15000; // guide: nothing bought after 25:00 pays back
     const upgrade = (u: Unit) => { this.mg.addExecution(new UpgradeStructureExecution(me, u.id())); if (this.log.length < 200) this.log.push(`t${ticks} level ${u.type()} → ${u.level() + 1}`); };
 
     // 1. defence: a post where a non-bot attack lands, or facing a threat / a boxed-in nation about to betray
@@ -856,7 +868,7 @@ export class PlaybookBotExecution implements Execution {
       const tile = this.defensePostTile(incoming.attacker());
       if (tile !== null && this.tryBuild(UnitType.DefensePost, tile)) return;
     }
-    if (cityUnits.length >= 1 && ticks >= 900 && gold >= cost(UnitType.DefensePost) && me.unitsOwned(UnitType.DefensePost) < 6) {
+    if (cityUnits.length >= 1 && ticks >= 900 && gold >= cost(UnitType.DefensePost) + (cityUnits.length < 2 && !this.p.postsBeforeCity2 ? cost(UnitType.City) : 0n) && me.unitsOwned(UnitType.DefensePost) < 6) { // a threat post never delays city 2; an actual incoming attack (above) still gets one
       // an ally whose alliance ends within 45 s counts as a threat: Hard nations attack the moment it lapses
       const expiring = me.alliances().filter((al) => al.expiresAt() - ticks < 450).map((al) => al.other(me)).filter((o) => friends.includes(o) && o.troops() >= me.troops() * 0.4);
       const threat = [...expiring, ...rivals].find((r) => ticks - (this.postFailed.get(r) ?? -1e9) > 600 && (r.troops() >= me.troops() * 0.5 || expiring.includes(r) || (r.type() === PlayerType.Nation && me.troops() > r.troops() * 3)) && !this.postFacing(r));
@@ -878,7 +890,9 @@ export class PlaybookBotExecution implements Execution {
     // 4. ports: first port when a partner exists; level the best one to 3 before a second; never past the unit cap or on a full sea
     const partnerTile = cities >= this.p.citiesBeforePort ? this.portTile() : null;
     if (gold >= cost(UnitType.Port) && !(seaFull && portLevels >= 20)) {
-      if (ports.length === 0 && partnerTile !== null && this.tryBuild(UnitType.Port, partnerTile)) { this.firstPortTick = ticks; return; }
+      // first port: facing a partner if one exists; otherwise on any ocean coast from 2:30 — nations build ports by minute 3–5 and a port earns 7× base income once they do
+      const firstTile = partnerTile ?? (cities >= 1 && ticks >= this.p.portWithoutPartnerTick ? this.oceanShoreTile() : null);
+      if (ports.length === 0 && firstTile !== null && this.tryBuild(UnitType.Port, firstTile)) { this.firstPortTick = ticks; return; }
       if (ports.length > 0) {
         const bestPort = [...ports].sort((a, b) => b.level() - a.level())[0];
         const wantLevel = bestPort.level() < this.p.portLevelBeforeSecond || ports.length >= this.p.maxPortUnits || partnerTile === null;
@@ -888,8 +902,9 @@ export class PlaybookBotExecution implements Execution {
     }
     // 5. rail line: landlocked, or an ally borders us, or the sea is full
     const deadPorts = ports.length > 0 && me.units(UnitType.TradeShip).length === 0 && ticks - this.firstPortTick > 900;
-    const wantRail = cities >= 3 && ((ports.length === 0 && partnerTile === null && ticks >= 1500) || deadPorts || (friends.length > 0 && ticks >= 1800) || (ports.length > 0 && ticks >= 3000) || seaFull) && me.unitsOwned(UnitType.Factory) < 6;
+    const wantRail = cities >= 3 && ((ports.length === 0 && partnerTile === null && ticks >= 1500) || deadPorts || (friends.length > 0 && ticks >= 1800) || (ports.length > 0 && ticks >= 1800) || seaFull) && me.unitsOwned(UnitType.Factory) < 6;
     if (wantRail && this.buildRail(gold, cost)) return;
+    if (!wantRail && cities >= 3 && ticks % 1200 < 10 && this.log.length < 200) this.log.push(`t${ticks} no rail wanted: ports=${ports.length} partner=${partnerTile !== null} friends=${friends.length} seaFull=${seaFull}`);
     // 6. silo when rich enough not to stall the economy, and there is someone to bomb
     const idleAtCap = capFull && me.troops() > this.cap() * 0.9 && me.outgoingAttacks().length === 0;
     const wantSilo = ticks >= this.p.siloAtTick && cities >= 3 && (portLevels >= 3 || me.unitsOwned(UnitType.Factory) > 0 || idleAtCap) && me.units(UnitType.MissileSilo).length === 0 && (rivals.some((r) => r.units(UnitType.City).length >= 2) || idleAtCap);
@@ -952,6 +967,13 @@ export class PlaybookBotExecution implements Execution {
       if (d > bestD && this.player.canBuild(type, t) !== false) { bestD = d; best = t; }
     }
     return best;
+  }
+  private oceanShoreTile(): TileRef | null {
+    const me = this.player;
+    const shore = Array.from(me.borderTiles()).filter((t) => this.mg.isOceanShore(t));
+    const step = Math.max(1, Math.floor(shore.length / 40));
+    for (let i = 0; i < shore.length; i += step) { if (me.canBuild(UnitType.Port, shore[i]) !== false) return shore[i]; }
+    return null;
   }
   private portTile(): TileRef | null {
     const me = this.player;

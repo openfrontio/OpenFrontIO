@@ -89,7 +89,7 @@ async function runGame(label: string, params: PlaybookParams, minutes: number, d
     }
   }
   rows.push(`  FINAL alive=${me.isAlive()} tiles=${me.numTilesOwned()} troops=${Math.round(me.troops()/1000)}k cities=${me.unitsOwned(UnitType.City)} ports=${me.unitsOwned(UnitType.Port)} factories=${me.unitsOwned(UnitType.Factory)} silos=${me.unitsOwned(UnitType.MissileSilo)} sams=${me.unitsOwned(UnitType.SAMLauncher)} bombs=${bot.bombs} trainGold=${Math.round(Number(me.trainGold())/1000)}k gold=${Math.round(Number(me.gold())/1000)}k`);
-  rows.push("  log: " + bot.log.slice(0, 60).join(" | "));
+  rows.push("  log: " + bot.log.join(" | "));
   return rows.join("\n");
 }
 
