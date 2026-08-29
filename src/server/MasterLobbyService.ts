@@ -258,7 +258,6 @@ export class MasterLobbyService {
   }
 
   private async maybeScheduleLobby() {
-    if (!this.active) return;
     const lobbiesByType = this.getAllLobbies().games;
 
     // Scheduled types only: hosted lobbies are started by their host, never
@@ -279,7 +278,9 @@ export class MasterLobbyService {
         });
       }
 
-      if (lobbies.length >= QUEUED_LOBBIES_PER_TYPE) {
+      // An inactive deployment still starts what it already queued (the
+      // countdown above), it just stops adding to the queue.
+      if (!this.active || lobbies.length >= QUEUED_LOBBIES_PER_TYPE) {
         continue;
       }
 

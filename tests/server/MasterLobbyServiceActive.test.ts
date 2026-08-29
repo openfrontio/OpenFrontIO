@@ -80,3 +80,37 @@ describe("MasterLobbyService active/inactive deployment", () => {
     expect(createGameMessages(worker).length).toBeGreaterThan(0);
   });
 });
+
+describe("MasterLobbyService inactive deployment still starts queued lobbies", () => {
+  it("assigns a countdown to a lobby that was queued before going inactive", async () => {
+    vi.spyOn(ServerEnv, "numWorkers").mockReturnValue(1);
+    const playlist = { gameConfig: vi.fn(async () => ({})) };
+    const log = { info: vi.fn(), error: vi.fn() } as any;
+    const service = new MasterLobbyService(playlist as any, log);
+    const worker = createMockWorker();
+    service.registerWorker(0, worker as any);
+    worker.emit("message", { type: "workerReady", workerId: 0 });
+
+    // Worker reports one queued ffa lobby with no startsAt yet.
+    worker.emit("message", {
+      type: "lobbyList",
+      lobbies: [
+        {
+          gameID: "QUEUED01",
+          publicGameType: "ffa",
+          numClients: 0,
+          createdAt: 1,
+        },
+      ],
+    });
+    service.setActive(false);
+    await schedulerTask()();
+
+    const updates = worker.send.mock.calls.filter(
+      ([msg]) => msg.type === "updateLobby" && msg.gameID === "QUEUED01",
+    );
+    expect(updates).toHaveLength(1);
+    expect(updates[0][0].startsAt).toBeGreaterThan(0);
+    expect(createGameMessages(worker)).toHaveLength(0);
+  });
+});
