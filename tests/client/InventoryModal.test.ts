@@ -380,6 +380,21 @@ describe("InventoryModal", () => {
     ).toBeNull();
   });
 
+  it("drops an open preview when the inventory closes", async () => {
+    modal.open();
+    await modal.updateComplete;
+    const skin = card(modal, "skin:owned_skin")!;
+    modal.dispatchEvent(
+      new CustomEvent("open-cosmetic-preview", { detail: skin.resolved }),
+    );
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeTruthy();
+
+    modal.close();
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeNull();
+  });
+
   it("keeps the auth-aware action in the modal header", async () => {
     let action = modal.querySelector<HTMLElement>(
       "[data-inventory-header-action]",

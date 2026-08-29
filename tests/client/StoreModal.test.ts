@@ -1,4 +1,4 @@
-import type { LitElement } from "lit";
+import { nothing, type LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchCosmetics,
@@ -512,6 +512,17 @@ describe("StoreModal cosmetic browser", () => {
     expect(localStorage.getItem(EFFECTS_KEY)).toBeNull();
   });
 
+  it("opens the in-game preview when an effect card is activated", async () => {
+    const { store: modal } = await openEffectsStore();
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeNull();
+
+    const wakeCard = card(modal, wake.key)!;
+    wakeCard.onActivate!(wakeCard.resolved);
+    await modal.updateComplete;
+
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeTruthy();
+  });
+
   it("reconciles inspected effects immediately when subtype tabs change", async () => {
     const { store: modal, grid } = await openEffectsStore();
     expect(card(modal, wake.key)?.state).toBe("focused");
@@ -541,8 +552,109 @@ describe("StoreModal cosmetic browser", () => {
     nukeTabs()[2]!.click();
     await grid.updateComplete;
     await modal.updateComplete;
-    expect(modal.querySelector("[data-store-product]")).toBeNull();
-    expect(modal.querySelector("purchase-button")).toBeNull();
+    expect(grid.querySelector("[data-store-product]")).toBeNull();
+    expect(grid.querySelector("purchase-button")).toBeNull();
+  });
+
+  it("drops an open preview when the store closes", async () => {
+    const { store: modal } = await openEffectsStore();
+    const wakeCard = card(modal, wake.key)!;
+    wakeCard.onActivate!(wakeCard.resolved);
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeTruthy();
+
+    modal.close();
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeNull();
+  });
+
+  it("previews an uncolored pattern with its catalog colors, not the palette placeholder", async () => {
+    const base: ResolvedCosmetic = {
+      ...red,
+      colorPalette: null,
+      key: "pattern:stripes",
+    };
+    resolvedCatalog = [base, red];
+    const modal = await openStoreOnCosmetic("patterns");
+    // Both are variants of one card; activate the exact variant.
+    const canvas = async (variant: ResolvedCosmetic) => {
+      card(modal, variant.key)!.onActivate!(variant);
+      await modal.updateComplete;
+      const preview = modal.querySelector(
+        "cosmetic-preview-modal",
+      ) as LitElement;
+      await preview.updateComplete;
+      return preview.querySelector("cosmetic-render-canvas") as unknown as {
+        customColors: string[] | null;
+      };
+    };
+
+    expect((await canvas(red)).customColors).toEqual(["#ef4444", "#7f1d1d"]);
+    modal
+      .querySelector("cosmetic-preview-modal")!
+      .dispatchEvent(new CustomEvent("close-preview"));
+    await modal.updateComplete;
+    expect((await canvas(base)).customColors).toBeNull();
+  });
+
+  it("previews a bundle item from the contents dialog, then restores the dialog", async () => {
+    resolvedCatalog = [starterBundle];
+    const modal = await openStoreOnTab("bundles");
+    card(modal, starterBundle.key)!.onActivate!(starterBundle);
+    await modal.updateComplete;
+    await (modal.querySelector("pack-contents-dialog") as LitElement)
+      .updateComplete;
+
+    const dialog = () =>
+      document.body.querySelector<HTMLElement>("[data-pack-contents]");
+    const items = [
+      ...dialog()!.querySelectorAll<CosmeticCard>(
+        "[data-pack-contents-item] cosmetic-card",
+      ),
+    ];
+    await Promise.all(items.map((item) => item.updateComplete));
+    // Items are store cards without a price. Only the skin can be rendered
+    // in-game; the flag gets no eye and activating it opens nothing.
+    expect(items[0].actionContent).toBe(nothing);
+    const bubbles = items.map((item) =>
+      item.querySelector<HTMLElement>("[data-cosmetic-preview-bubble]"),
+    );
+    expect(bubbles[0]).toBeTruthy();
+    expect(bubbles[1]).toBeNull();
+    items[1].onActivate!(items[1].resolved);
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeNull();
+
+    // Clicking the card (its image) previews, like everywhere else...
+    items[0].onActivate!(items[0].resolved);
+    await modal.updateComplete;
+    const preview = modal.querySelector("cosmetic-preview-modal")!;
+    expect(preview).toBeTruthy();
+    expect(preview.querySelector("purchase-button")).toBeNull();
+    expect(dialog()).toBeNull();
+    preview.dispatchEvent(new CustomEvent("close-preview"));
+    await modal.updateComplete;
+    await (modal.querySelector("pack-contents-dialog") as LitElement)
+      .updateComplete;
+
+    // ...and so does the eye.
+    const reopened = dialog()!.querySelector<CosmeticCard>("cosmetic-card")!;
+    await reopened.updateComplete;
+    reopened
+      .querySelector<HTMLElement>("[data-cosmetic-preview-bubble] button")!
+      .click();
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeTruthy();
+    expect(dialog()).toBeNull();
+
+    modal
+      .querySelector("cosmetic-preview-modal")!
+      .dispatchEvent(new CustomEvent("close-preview"));
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-preview-modal")).toBeNull();
+    await (modal.querySelector("pack-contents-dialog") as LitElement)
+      .updateComplete;
+    expect(dialog()).toBeTruthy();
   });
 
   it("uses the browser shell and exact resolved pack purchase", async () => {

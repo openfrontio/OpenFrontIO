@@ -9,16 +9,14 @@ import { customElement, property } from "lit/decorators.js";
 import { CosmeticPack } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
-import {
-  cosmeticSelectionLabel,
-  cosmeticTypeLabel,
-} from "./CosmeticPresentation";
-import "./CosmeticPreview";
+import "./CosmeticCard";
+import { cosmeticTypeLabel } from "./CosmeticPresentation";
+import { isPreviewableCosmetic } from "./CosmeticPreviewBubble";
 
 /**
- * Shows everything in a cosmetic bundle: a preview of each resolved item with
- * its name and type underneath, and the bundle's buy action (or ownership
- * status) at the bottom. Rendered into a body portal (like confirm-dialog) so
+ * Shows everything in a cosmetic bundle: the store card for each resolved item
+ * (without its own price) with its type underneath, and the bundle's buy action
+ * (or ownership status) at the bottom. Activating an item opens its preview. Rendered into a body portal (like confirm-dialog) so
  * it sits above the store modal. Set `.pack`; dispatches `close`.
  */
 @customElement("pack-contents-dialog")
@@ -60,6 +58,24 @@ export class PackContentsDialog extends LitElement {
     this.dispatchEvent(new CustomEvent("close"));
   }
 
+  // The overlay lives in a body portal, so an item's preview bubble can't
+  // bubble up to the store on its own: re-raise it from this host element.
+  private relayPreview = (event: Event) => {
+    event.stopPropagation();
+    this.openPreview((event as CustomEvent<ResolvedCosmetic>).detail);
+  };
+
+  private openPreview(item: ResolvedCosmetic): void {
+    if (!isPreviewableCosmetic(item)) return;
+    this.dispatchEvent(
+      new CustomEvent("open-cosmetic-preview", {
+        bubbles: true,
+        composed: true,
+        detail: item,
+      }),
+    );
+  }
+
   render() {
     if (this.portal) {
       litRender(
@@ -78,6 +94,7 @@ export class PackContentsDialog extends LitElement {
       @click=${(e: Event) => {
         if (e.target === e.currentTarget) this.close();
       }}
+      @open-cosmetic-preview=${this.relayPreview}
     >
       <div
         data-pack-contents
@@ -108,20 +125,14 @@ export class PackContentsDialog extends LitElement {
                 (item) =>
                   html`<div
                     data-pack-contents-item=${item.key}
-                    class="flex flex-col items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-2"
+                    class="flex min-w-0 flex-col items-center gap-1"
                   >
-                    <div
-                      class="flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg bg-black/30 p-2"
-                    >
-                      <cosmetic-preview
-                        .resolved=${item}
-                        size="card"
-                      ></cosmetic-preview>
-                    </div>
-                    <span
-                      class="w-full break-words text-center text-sm font-bold leading-tight text-white"
-                      >${cosmeticSelectionLabel(item)}</span
-                    >
+                    <cosmetic-card
+                      class="block w-full"
+                      .resolved=${item}
+                      .onActivate=${(r: ResolvedCosmetic) =>
+                        this.openPreview(r)}
+                    ></cosmetic-card>
                     <span
                       data-pack-contents-type
                       class="text-[10px] font-bold uppercase tracking-wider text-white/50"

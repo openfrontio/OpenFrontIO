@@ -6,6 +6,8 @@ import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
+import { isPreviewableCosmetic } from "./components/CosmeticPreviewBubble";
+import "./components/CosmeticPreviewModal";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
@@ -55,6 +57,7 @@ export class StoreModal extends BaseModal {
   private userMeResponse: UserMeResponse | false = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
   private inspected: ResolvedCosmetic | null = null;
+  private previewingCosmetic: ResolvedCosmetic | null = null;
   private visibleGroups: readonly (readonly ResolvedCosmetic[])[] = [];
   /** The bundle whose contents dialog is open, if any. */
   private openedPack: ResolvedCosmetic | null = null;
@@ -79,12 +82,8 @@ export class StoreModal extends BaseModal {
 
   connectedCallback() {
     super.connectedCallback();
-    document.addEventListener(
-      "userMeResponse",
-      (event: CustomEvent<UserMeResponse | false>) => {
-        this.onUserMe(event.detail);
-      },
-    );
+    document.addEventListener("userMeResponse", this.onUserMeEvent);
+    this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     // Rows re-wrap on resize, so which currencies share a row changes with it.
     if (typeof ResizeObserver !== "undefined") {
       this.rowObserver ??= new ResizeObserver(() => alignPurchaseRows(this));
@@ -93,6 +92,11 @@ export class StoreModal extends BaseModal {
   }
 
   disconnectedCallback() {
+    document.removeEventListener("userMeResponse", this.onUserMeEvent);
+    this.removeEventListener(
+      "open-cosmetic-preview",
+      this.onOpenCosmeticPreview,
+    );
     this.rowObserver?.disconnect();
     if (this.alignFrame !== null) cancelAnimationFrame(this.alignFrame);
     this.alignFrame = null;
@@ -110,6 +114,17 @@ export class StoreModal extends BaseModal {
       alignPurchaseRows(this);
     });
   }
+
+  private onUserMeEvent = (event: Event) => {
+    const customEvent = event as CustomEvent<UserMeResponse | false>;
+    this.onUserMe(customEvent.detail);
+  };
+
+  private onOpenCosmeticPreview = (event: Event) => {
+    const customEvent = event as CustomEvent<ResolvedCosmetic>;
+    this.previewingCosmetic = customEvent.detail;
+    this.requestUpdate();
+  };
 
   private rowObserver: ResizeObserver | null = null;
   private alignFrame: number | null = null;
@@ -239,6 +254,7 @@ export class StoreModal extends BaseModal {
   // tile a few items, so the dialog is where each one is shown with its name.
   private activate(resolved: ResolvedCosmetic): void {
     if (resolved.type === "cosmeticPack") this.openedPack = resolved;
+    if (isPreviewableCosmetic(resolved)) this.previewingCosmetic = resolved;
     this.inspect(resolved);
   }
 
@@ -506,7 +522,7 @@ export class StoreModal extends BaseModal {
       .userMeResponse=${this.userMeResponse}
       .affiliateCode=${this.affiliateCode}
       .focusedKey=${this.inspected?.key ?? null}
-      .onPurchaseFocus=${(item: ResolvedCosmetic) => this.inspect(item)}
+      .onPurchaseFocus=${(item: ResolvedCosmetic) => this.activate(item)}
       .renderPurchaseAction=${(item: ResolvedCosmetic) =>
         this.renderPurchaseAction(item, false)}
       .onVisiblePurchaseItemsChange=${(items: readonly ResolvedCosmetic[]) => {
@@ -535,8 +551,11 @@ export class StoreModal extends BaseModal {
   private renderBundleGrid(): TemplateResult {
     return html`${this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_bundles",
-    })}${this.openedPack
-      ? html`<pack-contents-dialog
+    })}${this.openedPack && !this.previewingCosmetic
+      ? // The dialog is portaled above the modal's stacking context, so a
+        // preview opened from one of its items would render underneath it.
+        // Yield to the preview; the dialog comes back when it closes.
+        html`<pack-contents-dialog
           .pack=${this.openedPack}
           .actionContent=${this.renderCardAction(this.openedPack, false)}
           @close=${() => this.closePack()}
@@ -560,7 +579,16 @@ export class StoreModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
-    return this.renderHeader();
+    return html`${this.renderHeader()}
+    ${this.previewingCosmetic
+      ? html`<cosmetic-preview-modal
+          .resolved=${this.previewingCosmetic}
+          @close-preview=${() => {
+            this.previewingCosmetic = null;
+            this.requestUpdate();
+          }}
+        ></cosmetic-preview-modal>`
+      : ""}`;
   }
 
   protected renderBody(key: string): TemplateResult {
@@ -610,6 +638,7 @@ export class StoreModal extends BaseModal {
   protected onClose(): void {
     this.affiliateCode = null;
     this.openedPack = null;
+    this.previewingCosmetic = null;
     this.selectVisible(this.groupsForTab(this.activeTab));
   }
 
