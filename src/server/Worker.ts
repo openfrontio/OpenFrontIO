@@ -425,7 +425,10 @@ export async function startWorker() {
               undefined,
             ),
           );
-          ws.close(1002, "Version mismatch");
+          // Normal closure: the typed error above is the whole message. 1002
+          // would make the client stack a generic "connection refused" alert
+          // on top of it, and any other code makes it reconnect and loop.
+          ws.close(1000, "Version mismatch");
           return;
         }
 
