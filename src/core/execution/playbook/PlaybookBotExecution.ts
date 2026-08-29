@@ -471,7 +471,6 @@ export class PlaybookBotExecution implements Execution {
       if (t === undefined) continue;
       if (p.type() === PlayerType.Nation) nations.push(t); else if (p.type() === PlayerType.Bot) tribes.push(t); else humans.push(t);
     }
-    console.log(`PlaybookBot spawn pick at tick ${game.ticks()}: ${nations.length} nations, ${tribes.length} tribes, ${humans.length} humans placed`);
     const W = game.width(), H = game.height();
     const isWorld = game.config().gameConfig().gameMap === GameMapType.World;
     const stages: [number, number][] = prefer ? [[110, 250], [88, 300], [66, 350], [50, 400]] : [[110, 1e9], [80, 1e9], [50, 1e9]];
@@ -498,10 +497,12 @@ export class PlaybookBotExecution implements Execution {
           if (score > bestS) { bestS = score; best = t; }
         }
       }
-      if (best !== null) return PlaybookBotExecution.inland(game, best, 8);
+      if (best !== null) { PlaybookBotExecution.lastSpawnDiag = `tick ${game.ticks()} nations=${nations.length} tribes=${tribes.length} humans=${humans.length} stage veto=${veto} score=${bestS.toFixed(1)} at ${game.x(best)},${game.y(best)}`; return PlaybookBotExecution.inland(game, best, 8); }
     }
+    PlaybookBotExecution.lastSpawnDiag = `no spawn: nations=${nations.length}`;
     return null;
   }
+  static lastSpawnDiag = "";
   /** Walk `d` tiles away from the sea in the direction with the most land, so the spawn circle is not half water. */
   private static inland(game: Game, shore: TileRef, d: number): TileRef {
     const sx = game.x(shore), sy = game.y(shore);

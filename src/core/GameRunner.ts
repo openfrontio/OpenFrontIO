@@ -206,6 +206,14 @@ export class GameRunner {
       this.playbookBotClientID !== undefined &&
       this.game.inSpawnPhase() &&
       this.game.ticks() >= 2 &&
+      (this.game.ticks() >= 10 ||
+        this.game
+          .nations()
+          .every(
+            (n) =>
+              this.game.hasPlayer(n.playerInfo.id) &&
+              this.game.player(n.playerInfo.id).spawnTile() !== undefined,
+          )) && // nations become players only when they land (tick 2–3); pick once all are on the map
       !this.botSpawnQueued
     ) {
       const me = this.game.playerByClientID(this.playbookBotClientID);
