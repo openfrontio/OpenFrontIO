@@ -21,7 +21,11 @@ import {
   viewerIsTrusted,
 } from "./components/LobbyCard";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import { multiplayerAllowed, type DesktopUpdateState } from "./DesktopShell";
+import {
+  isDesktopShell,
+  multiplayerAllowed,
+  type DesktopUpdateState,
+} from "./DesktopShell";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
@@ -69,6 +73,11 @@ export class GameModeSelector extends LitElement {
   );
 
   private handleUpdateAvailable() {
+    // The desktop shell runs the bundle from a local overlay and updates it
+    // itself (download, stage, then its own reload button, see
+    // DesktopUpdateBar). Reloading here would only re-run the old overlay,
+    // reconnect, and trigger this again until the download finishes.
+    if (isDesktopShell()) return;
     showInGameAlert(translateText("update_available.message")).then(() => {
       window.location.reload();
     });

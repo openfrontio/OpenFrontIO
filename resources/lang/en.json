@@ -1801,6 +1801,7 @@
     "warship": "Warship"
   },
   "update_available": {
+    "desktop": "A new version of OpenFront is available. It will download in the background; reload from the update bar once it is ready.",
     "message": "A new version of OpenFront is available. The page will now refresh to update."
   },
   "user_setting": {

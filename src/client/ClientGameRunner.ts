@@ -35,6 +35,7 @@ import {
 } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { getPersistentID } from "./Auth";
+import { isDesktopShell } from "./DesktopShell";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
@@ -341,10 +342,19 @@ export function joinLobby(
         );
       } else if (message.error === "version_mismatch") {
         // The server runs a newer build than this bundle (tab left open
-        // across a deploy). Reload to pick up the new version.
-        showInGameAlert(translateText("update_available.message")).then(() => {
-          window.location.reload();
-        });
+        // across a deploy). On the web a reload picks up the new version. The
+        // desktop shell updates its local overlay itself and reloading would
+        // only re-run the old bundle, so there we just say what's happening
+        // and let the shell's update bar take it from here.
+        if (isDesktopShell()) {
+          void showInGameAlert(translateText("update_available.desktop"));
+        } else {
+          showInGameAlert(translateText("update_available.message")).then(
+            () => {
+              window.location.reload();
+            },
+          );
+        }
       } else {
         showErrorModal(
           message.error,
