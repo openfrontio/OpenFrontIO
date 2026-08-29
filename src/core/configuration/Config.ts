@@ -98,6 +98,13 @@ const BOT_DEFENDER_LOSS_MULT = 0.7;
 const TERRA_NULLIUS_COST_SCALE = 2000;
 const TERRA_NULLIUS_MIN_COST = 5;
 const TERRA_NULLIUS_MAX_COST = 100;
+// Was sqrt(ratio) ** 0.7 and ratio ** 0.6.
+const LARGE_ATTACKER_LOSS_EXPONENT = 0.35;
+const LARGE_ATTACKER_COST_EXPONENT = 0.6;
+// Attacker loss = mag * (RATIO_WEIGHT * clampedRatio + DENSITY_WEIGHT * troopsPerTile).
+// Was 0.6 * (ratio * mag * 0.8) + 0.4 * (1.3 * density * mag / 100).
+const ATTACKER_LOSS_RATIO_WEIGHT = 0.48;
+const ATTACKER_LOSS_DENSITY_WEIGHT = 0.0052;
 
 function terrainAttackBase(terrain: TerrainType): {
   mag: number;
@@ -786,25 +793,24 @@ export class Config {
       mag *= BOT_DEFENDER_LOSS_MULT;
     }
 
-    // Big defenders are easier to bite into: both loss and cost scale down
-    // towards 0.7 as the defender's territory grows past the midpoint.
+    // Big defenders are easier to bite into: loss and cost scale from ~1
+    // down to 0.7 as the defender's territory grows past the midpoint.
     const largeDefenderDebuff =
-      0.7 +
+      1 -
       0.3 *
-        (1 -
-          sigmoid(
-            defender.numTiles,
-            DEFENSE_DEBUFF_DECAY_RATE,
-            DEFENSE_DEBUFF_MIDPOINT,
-          ));
+        sigmoid(
+          defender.numTiles,
+          DEFENSE_DEBUFF_DECAY_RATE,
+          DEFENSE_DEBUFF_MIDPOINT,
+        );
 
     // Big attackers get cheaper, faster tiles past LARGE_ATTACKER_TILES.
     let largeAttackerLossBonus = 1;
     let largeAttackerCostBonus = 1;
     if (attacker.numTiles > LARGE_ATTACKER_TILES) {
       const ratio = LARGE_ATTACKER_TILES / attacker.numTiles;
-      largeAttackerLossBonus = Math.sqrt(ratio) ** 0.7;
-      largeAttackerCostBonus = ratio ** 0.6;
+      largeAttackerLossBonus = ratio ** LARGE_ATTACKER_LOSS_EXPONENT;
+      largeAttackerCostBonus = ratio ** LARGE_ATTACKER_COST_EXPONENT;
     }
 
     const traitorLossMod = defender.isTraitor ? this.traitorDefenseDebuff() : 1;
@@ -815,21 +821,20 @@ export class Config {
 
     // Attacker loss blends a ratio-driven term (how outnumbered the attack
     // is, clamped) with a density-driven term (defender troops per tile).
-    const ratioLoss =
-      within(defender.troops / attackTroops, 0.6, 2) *
+    const troopRatio = defender.troops / attackTroops;
+    const ratioTerm =
+      within(troopRatio, 0.6, 2) * largeDefenderDebuff * largeAttackerLossBonus;
+    const attackerTroopLoss =
       mag *
-      0.8 *
-      largeDefenderDebuff *
-      largeAttackerLossBonus *
-      traitorLossMod;
-    const densityLoss = 1.3 * defenderTroopLoss * (mag / 100) * traitorLossMod;
-    const attackerTroopLoss = 0.6 * ratioLoss + 0.4 * densityLoss;
+      traitorLossMod *
+      (ATTACKER_LOSS_RATIO_WEIGHT * ratioTerm +
+        ATTACKER_LOSS_DENSITY_WEIGHT * defenderTroopLoss);
 
     return {
       attackerTroopLoss,
       defenderTroopLoss,
       tilesPerTickUsed:
-        within(defender.troops / (5 * attackTroops), 0.2, 1.5) *
+        (within(troopRatio, 1, 7.5) / 5) *
         tileCost *
         largeDefenderDebuff *
         largeAttackerCostBonus *
