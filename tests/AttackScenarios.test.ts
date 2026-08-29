@@ -94,20 +94,17 @@ interface Metrics {
 
 const DEFAULT_MAX_TICKS = 3000; // 5 minutes of game time
 
-/** Conquer every passable land tile in the rect; returns tiles conquered. */
-function conquerRect(game: Game, player: Player, r: Rect): number {
+/** Conquer every passable land tile in the rect. */
+function conquerRect(game: Game, player: Player, r: Rect): void {
   const map = game.map();
-  let n = 0;
   for (let y = r.y; y < r.y + r.h; y++) {
     for (let x = r.x; x < r.x + r.w; x++) {
       const t = map.ref(x, y);
       if (map.isLand(t) && !map.isImpassable(t)) {
         player.conquer(t);
-        n++;
       }
     }
   }
-  return n;
 }
 
 function sig(x: number): number {
@@ -138,25 +135,32 @@ async function runScenario(s: Scenario): Promise<Metrics> {
   const attacker = game.player("attacker");
   const defender = game.player("defender");
 
-  const attackerTiles = conquerRect(game, attacker, s.attacker.rect);
-  attacker.setTroops(s.attacker.troops);
-  if (s.attacker.traitor) attacker.markTraitor();
-
-  let defenderTiles = 0;
+  // Conquer the larger rect first so a small territory can sit inside a big
+  // one (the later conquer overrides ownership).
+  const area = (r: Rect) => r.w * r.h;
+  const attackerFirst =
+    defenderSide === null || area(s.attacker.rect) >= area(defenderSide.rect);
+  if (attackerFirst) conquerRect(game, attacker, s.attacker.rect);
   if (defenderSide !== null) {
-    defenderTiles = conquerRect(game, defender, defenderSide.rect);
+    conquerRect(game, defender, defenderSide.rect);
     defender.setTroops(defenderSide.troops);
     if (defenderSide.traitor) defender.markTraitor();
     for (const [x, y] of defenderSide.defensePosts ?? []) {
       defender.buildUnit(UnitType.DefensePost, game.ref(x, y), {});
     }
   }
+  if (!attackerFirst) conquerRect(game, attacker, s.attacker.rect);
+  attacker.setTroops(s.attacker.troops);
+  if (s.attacker.traitor) attacker.markTraitor();
 
   const targetID =
     defenderSide === null ? game.terraNullius().id() : defender.id();
   const attackerTroopsBefore = attacker.troops();
   const defenderTroopsBefore = defender.troops();
   const attackerTilesBefore = attacker.numTilesOwned();
+  // Actual ownership: a nested rect overrides part of the other.
+  const attackerTiles = attackerTilesBefore;
+  const defenderTiles = defenderSide === null ? 0 : defender.numTilesOwned();
 
   game.addExecution(new AttackExecution(s.attackTroops, attacker, targetID));
 
@@ -218,6 +222,20 @@ function worldBlock(bx: number, by: number): [Rect, Rect] {
 const [WORLD_PLAINS_L, WORLD_PLAINS_R] = worldBlock(1200, 100);
 const [WORLD_HILLS_L, WORLD_HILLS_R] = worldBlock(1300, 200);
 const [WORLD_MTN_L, WORLD_MTN_R] = worldBlock(1400, 200);
+
+// 20x20 (400-tile) turtle in the middle of the plains map, surrounded by the
+// attacker. Note: players with < 100 tiles are conquered outright after
+// losing a single tile (AttackExecution.handleDeadDefender), so turtles must
+// be bigger than that to exercise the formula.
+const PLAINS_TURTLE: Rect = { x: 40, y: 40, w: 20, h: 20 };
+const PLAINS_TURTLE_TINY: Rect = { x: 45, y: 45, w: 10, h: 10 };
+
+// giantworldmap: 4108x1948, ~2.3M passable land tiles.
+// x 1600..3000 full height: ~1.01M land tiles; x 3000..4108: ~590k.
+const GIANT_WEST: Rect = { x: 1600, y: 0, w: 1400, h: 1948 };
+const GIANT_EAST: Rect = { x: 3000, y: 0, w: 1108, h: 1948 };
+// 20x20 turtle on solid land inside GIANT_WEST.
+const GIANT_TURTLE: Rect = { x: 2400, y: 300, w: 20, h: 20 };
 
 const scenarios: Record<string, Scenario> = {
   // --- plains, equal territories, vary attack size --------------------------
@@ -388,6 +406,101 @@ const scenarios: Record<string, Scenario> = {
     attacker: { rect: { x: 800, y: 100, w: 400, h: 400 }, troops: 2_000_000 },
     defender: { rect: { x: 1200, y: 100, w: 400, h: 400 }, troops: 2_000_000 },
     attackTroops: 400_000,
+  },
+  // --- extremes -------------------------------------------------------------
+  // The extremes are where formulas break.
+  "plains 1-troop attack vs 50k defender": {
+    map: "plains",
+    attacker: { rect: PLAINS_LEFT, troops: 50_000 },
+    defender: { rect: PLAINS_RIGHT, troops: 50_000 },
+    attackTroops: 1,
+  },
+  "plains 100-troop attack vs 1M defender": {
+    map: "plains",
+    attacker: { rect: PLAINS_LEFT, troops: 50_000 },
+    defender: { rect: PLAINS_RIGHT, troops: 1_000_000 },
+    attackTroops: 100,
+  },
+  "plains 10M-troop attack vs defender with 1 troop": {
+    map: "plains",
+    attacker: { rect: PLAINS_LEFT, troops: 10_000_000 },
+    defender: { rect: PLAINS_RIGHT, troops: 1 },
+    attackTroops: 10_000_000,
+  },
+  "plains 50k attack vs defender with 0 troops": {
+    map: "plains",
+    attacker: { rect: PLAINS_LEFT, troops: 50_000 },
+    defender: { rect: PLAINS_RIGHT, troops: 0 },
+    attackTroops: 50_000,
+  },
+  "plains 400-tile turtle, 400k troops (1k/tile), attacked with 400k": {
+    map: "plains",
+    attacker: { rect: { x: 0, y: 0, w: 100, h: 100 }, troops: 2_000_000 },
+    defender: { rect: PLAINS_TURTLE, troops: 400_000 },
+    attackTroops: 400_000,
+  },
+  "plains 400-tile turtle, 4M troops (10k/tile) under a defense post, attacked with 1M":
+    {
+      map: "plains",
+      attacker: { rect: { x: 0, y: 0, w: 100, h: 100 }, troops: 2_000_000 },
+      defender: {
+        rect: PLAINS_TURTLE,
+        troops: 4_000_000,
+        defensePosts: [[50, 50]],
+      },
+      attackTroops: 1_000_000,
+    },
+  // Documents the <100-tile instant-conquest rule, not the formula.
+  "plains 100-tile turtle, 1M troops: conquered outright after one tile": {
+    map: "plains",
+    attacker: { rect: { x: 0, y: 0, w: 100, h: 100 }, troops: 2_000_000 },
+    defender: { rect: PLAINS_TURTLE_TINY, troops: 1_000_000 },
+    attackTroops: 100_000,
+  },
+  "giant 1M-tile attacker, 8M troops, attack 2M vs 400-tile turtle with 400k (1k/tile)":
+    {
+      map: "giantworldmap",
+      attacker: { rect: GIANT_WEST, troops: 8_000_000 },
+      defender: { rect: GIANT_TURTLE, troops: 400_000 },
+      attackTroops: 2_000_000,
+    },
+  "giant 1M-tile attacker, 8M troops, attack 2M vs 400-tile turtle with 4M (10k/tile)":
+    {
+      map: "giantworldmap",
+      attacker: { rect: GIANT_WEST, troops: 8_000_000 },
+      defender: { rect: GIANT_TURTLE, troops: 4_000_000 },
+      attackTroops: 2_000_000,
+    },
+  "giant 400-tile attacker, 100k troops, attack 50k vs 1M-tile sparse defender with 1M":
+    {
+      map: "giantworldmap",
+      attacker: { rect: GIANT_TURTLE, troops: 100_000 },
+      defender: { rect: GIANT_WEST, troops: 1_000_000 },
+      attackTroops: 50_000,
+    },
+  "giant 400-tile attacker, 1M troops all-in vs 1M-tile defender with 1M": {
+    map: "giantworldmap",
+    attacker: { rect: GIANT_TURTLE, troops: 1_000_000 },
+    defender: { rect: GIANT_WEST, troops: 1_000_000 },
+    attackTroops: 1_000_000,
+  },
+  "giant 1M vs 600k tiles, 8M vs 8M troops, attack 2M": {
+    map: "giantworldmap",
+    attacker: { rect: GIANT_WEST, troops: 8_000_000 },
+    defender: { rect: GIANT_EAST, troops: 8_000_000 },
+    attackTroops: 2_000_000,
+  },
+  "giant 1M vs 600k tiles, 8M troops all-in vs 1M defender": {
+    map: "giantworldmap",
+    attacker: { rect: GIANT_WEST, troops: 8_000_000 },
+    defender: { rect: GIANT_EAST, troops: 1_000_000 },
+    attackTroops: 8_000_000,
+  },
+  "giant 600k vs 1M tiles, 1M troops attack 500k vs 8M defender": {
+    map: "giantworldmap",
+    attacker: { rect: GIANT_EAST, troops: 1_000_000 },
+    defender: { rect: GIANT_WEST, troops: 8_000_000 },
+    attackTroops: 500_000,
   },
 };
 

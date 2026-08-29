@@ -45,6 +45,1236 @@ exports[`attackLogic golden values > attackTilesPerTick 1`] = `
 }
 `;
 
+exports[`attackLogic golden values > extremes: terra nullius 1`] = `
+{
+  "aTiles=100 attack=1": {
+    "attackerLoss": 16,
+    "defenderLoss": 0,
+    "tileCost": 100,
+  },
+  "aTiles=100 attack=10000000": {
+    "attackerLoss": 16,
+    "defenderLoss": 0,
+    "tileCost": 5,
+  },
+  "aTiles=5000000 attack=1": {
+    "attackerLoss": 16,
+    "defenderLoss": 0,
+    "tileCost": 100,
+  },
+  "aTiles=5000000 attack=10000000": {
+    "attackerLoss": 16,
+    "defenderLoss": 0,
+    "tileCost": 5,
+  },
+}
+`;
+
+exports[`attackLogic golden values > extremes: territory and troop counts 1`] = `
+{
+  "Mountain aTiles=100 dTiles=100 dTroops=0 attack=1": {
+    "attackerLoss": 33.4066,
+    "defenderLoss": 0,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=0 attack=1000": {
+    "attackerLoss": 33.4066,
+    "defenderLoss": 0,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=0 attack=1000000": {
+    "attackerLoss": 33.4066,
+    "defenderLoss": 0,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=0 attack=10000000": {
+    "attackerLoss": 33.4066,
+    "defenderLoss": 0,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1 attack=1": {
+    "attackerLoss": 55.6839,
+    "defenderLoss": 0.01,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1 attack=1000": {
+    "attackerLoss": 33.4128,
+    "defenderLoss": 0.01,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1 attack=1000000": {
+    "attackerLoss": 33.4128,
+    "defenderLoss": 0.01,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1 attack=10000000": {
+    "attackerLoss": 33.4128,
+    "defenderLoss": 0.01,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1000 attack=1": {
+    "attackerLoss": 117.595,
+    "defenderLoss": 10,
+    "tileCost": 36.2485,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1000 attack=1000": {
+    "attackerLoss": 61.9176,
+    "defenderLoss": 10,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1000 attack=1000000": {
+    "attackerLoss": 39.6466,
+    "defenderLoss": 10,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1000 attack=10000000": {
+    "attackerLoss": 39.6466,
+    "defenderLoss": 10,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1000000 attack=1": {
+    "attackerLoss": 6351.36,
+    "defenderLoss": 10000,
+    "tileCost": 36.2485,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1000000 attack=1000": {
+    "attackerLoss": 6351.36,
+    "defenderLoss": 10000,
+    "tileCost": 36.2485,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 6295.68,
+    "defenderLoss": 10000,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 6273.41,
+    "defenderLoss": 10000,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=10000000 attack=1": {
+    "attackerLoss": 62511.4,
+    "defenderLoss": 100000,
+    "tileCost": 36.2485,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=10000000 attack=1000": {
+    "attackerLoss": 62511.4,
+    "defenderLoss": 100000,
+    "tileCost": 36.2485,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 62511.4,
+    "defenderLoss": 100000,
+    "tileCost": 36.2485,
+  },
+  "Mountain aTiles=100 dTiles=100 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 62455.7,
+    "defenderLoss": 100000,
+    "tileCost": 4.83313,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=0 attack=1": {
+    "attackerLoss": 24.1921,
+    "defenderLoss": 0,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=0 attack=1000": {
+    "attackerLoss": 24.1921,
+    "defenderLoss": 0,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=0 attack=1000000": {
+    "attackerLoss": 24.1921,
+    "defenderLoss": 0,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=0 attack=10000000": {
+    "attackerLoss": 24.1921,
+    "defenderLoss": 0,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1 attack=1": {
+    "attackerLoss": 40.3201,
+    "defenderLoss": 0.000001,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1 attack=1000": {
+    "attackerLoss": 24.1921,
+    "defenderLoss": 0.000001,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1 attack=1000000": {
+    "attackerLoss": 24.1921,
+    "defenderLoss": 0.000001,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1 attack=10000000": {
+    "attackerLoss": 24.1921,
+    "defenderLoss": 0.000001,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1000 attack=1": {
+    "attackerLoss": 80.6409,
+    "defenderLoss": 0.001,
+    "tileCost": 26.2501,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1000 attack=1000": {
+    "attackerLoss": 40.3208,
+    "defenderLoss": 0.001,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1000 attack=1000000": {
+    "attackerLoss": 24.1927,
+    "defenderLoss": 0.001,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1000 attack=10000000": {
+    "attackerLoss": 24.1927,
+    "defenderLoss": 0.001,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1000000 attack=1": {
+    "attackerLoss": 81.2643,
+    "defenderLoss": 1,
+    "tileCost": 26.2501,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1000000 attack=1000": {
+    "attackerLoss": 81.2643,
+    "defenderLoss": 1,
+    "tileCost": 26.2501,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 40.9441,
+    "defenderLoss": 1,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 24.8161,
+    "defenderLoss": 1,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=10000000 attack=1": {
+    "attackerLoss": 86.8803,
+    "defenderLoss": 10,
+    "tileCost": 26.2501,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=10000000 attack=1000": {
+    "attackerLoss": 86.8803,
+    "defenderLoss": 10,
+    "tileCost": 26.2501,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 86.8803,
+    "defenderLoss": 10,
+    "tileCost": 26.2501,
+  },
+  "Mountain aTiles=100 dTiles=1000000 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 46.5601,
+    "defenderLoss": 10,
+    "tileCost": 3.50001,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=0 attack=1": {
+    "attackerLoss": 14.9222,
+    "defenderLoss": 0,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=0 attack=1000": {
+    "attackerLoss": 14.9222,
+    "defenderLoss": 0,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=0 attack=1000000": {
+    "attackerLoss": 14.9222,
+    "defenderLoss": 0,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=0 attack=10000000": {
+    "attackerLoss": 14.9222,
+    "defenderLoss": 0,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1 attack=1": {
+    "attackerLoss": 24.8765,
+    "defenderLoss": 0.01,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1 attack=1000": {
+    "attackerLoss": 14.9284,
+    "defenderLoss": 0.01,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1 attack=1000000": {
+    "attackerLoss": 14.9284,
+    "defenderLoss": 0.01,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1 attack=10000000": {
+    "attackerLoss": 14.9284,
+    "defenderLoss": 0.01,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1000 attack=1": {
+    "attackerLoss": 55.9806,
+    "defenderLoss": 10,
+    "tileCost": 9.1052,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1000 attack=1000": {
+    "attackerLoss": 31.1103,
+    "defenderLoss": 10,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1000 attack=1000000": {
+    "attackerLoss": 21.1622,
+    "defenderLoss": 10,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1000 attack=10000000": {
+    "attackerLoss": 21.1622,
+    "defenderLoss": 10,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1000000 attack=1": {
+    "attackerLoss": 6289.74,
+    "defenderLoss": 10000,
+    "tileCost": 9.1052,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1000000 attack=1000": {
+    "attackerLoss": 6289.74,
+    "defenderLoss": 10000,
+    "tileCost": 9.1052,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 6264.87,
+    "defenderLoss": 10000,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 6254.92,
+    "defenderLoss": 10000,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=10000000 attack=1": {
+    "attackerLoss": 62449.7,
+    "defenderLoss": 100000,
+    "tileCost": 9.1052,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=10000000 attack=1000": {
+    "attackerLoss": 62449.7,
+    "defenderLoss": 100000,
+    "tileCost": 9.1052,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 62449.7,
+    "defenderLoss": 100000,
+    "tileCost": 9.1052,
+  },
+  "Mountain aTiles=1000000 dTiles=100 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 62424.9,
+    "defenderLoss": 100000,
+    "tileCost": 1.21403,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=0 attack=1": {
+    "attackerLoss": 10.8062,
+    "defenderLoss": 0,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=0 attack=1000": {
+    "attackerLoss": 10.8062,
+    "defenderLoss": 0,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=0 attack=1000000": {
+    "attackerLoss": 10.8062,
+    "defenderLoss": 0,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=0 attack=10000000": {
+    "attackerLoss": 10.8062,
+    "defenderLoss": 0,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1 attack=1": {
+    "attackerLoss": 18.0103,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1 attack=1000": {
+    "attackerLoss": 10.8062,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1 attack=1000000": {
+    "attackerLoss": 10.8062,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1 attack=10000000": {
+    "attackerLoss": 10.8062,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000 attack=1": {
+    "attackerLoss": 36.0213,
+    "defenderLoss": 0.001,
+    "tileCost": 6.59372,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000 attack=1000": {
+    "attackerLoss": 18.011,
+    "defenderLoss": 0.001,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000 attack=1000000": {
+    "attackerLoss": 10.8068,
+    "defenderLoss": 0.001,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000 attack=10000000": {
+    "attackerLoss": 10.8068,
+    "defenderLoss": 0.001,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=1": {
+    "attackerLoss": 36.6447,
+    "defenderLoss": 1,
+    "tileCost": 6.59372,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=1000": {
+    "attackerLoss": 36.6447,
+    "defenderLoss": 1,
+    "tileCost": 6.59372,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 18.6343,
+    "defenderLoss": 1,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 11.4302,
+    "defenderLoss": 1,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=10000000 attack=1": {
+    "attackerLoss": 42.2607,
+    "defenderLoss": 10,
+    "tileCost": 6.59372,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=10000000 attack=1000": {
+    "attackerLoss": 42.2607,
+    "defenderLoss": 10,
+    "tileCost": 6.59372,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 42.2607,
+    "defenderLoss": 10,
+    "tileCost": 6.59372,
+  },
+  "Mountain aTiles=1000000 dTiles=1000000 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 24.2503,
+    "defenderLoss": 10,
+    "tileCost": 0.879163,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=0 attack=1": {
+    "attackerLoss": 8.49557,
+    "defenderLoss": 0,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=0 attack=1000": {
+    "attackerLoss": 8.49557,
+    "defenderLoss": 0,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=0 attack=1000000": {
+    "attackerLoss": 8.49557,
+    "defenderLoss": 0,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=0 attack=10000000": {
+    "attackerLoss": 8.49557,
+    "defenderLoss": 0,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1 attack=1": {
+    "attackerLoss": 14.1655,
+    "defenderLoss": 0.01,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1 attack=1000": {
+    "attackerLoss": 8.50181,
+    "defenderLoss": 0.01,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1 attack=1000000": {
+    "attackerLoss": 8.50181,
+    "defenderLoss": 0.01,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1 attack=10000000": {
+    "attackerLoss": 8.50181,
+    "defenderLoss": 0.01,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1000 attack=1": {
+    "attackerLoss": 34.5586,
+    "defenderLoss": 10,
+    "tileCost": 3.46663,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1000 attack=1000": {
+    "attackerLoss": 20.3993,
+    "defenderLoss": 10,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1000 attack=1000000": {
+    "attackerLoss": 14.7356,
+    "defenderLoss": 10,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1000 attack=10000000": {
+    "attackerLoss": 14.7356,
+    "defenderLoss": 10,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1000000 attack=1": {
+    "attackerLoss": 6268.32,
+    "defenderLoss": 10000,
+    "tileCost": 3.46663,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1000000 attack=1000": {
+    "attackerLoss": 6268.32,
+    "defenderLoss": 10000,
+    "tileCost": 3.46663,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 6254.16,
+    "defenderLoss": 10000,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 6248.5,
+    "defenderLoss": 10000,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=10000000 attack=1": {
+    "attackerLoss": 62428.3,
+    "defenderLoss": 100000,
+    "tileCost": 3.46663,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=10000000 attack=1000": {
+    "attackerLoss": 62428.3,
+    "defenderLoss": 100000,
+    "tileCost": 3.46663,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 62428.3,
+    "defenderLoss": 100000,
+    "tileCost": 3.46663,
+  },
+  "Mountain aTiles=5000000 dTiles=100 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 62414.2,
+    "defenderLoss": 100000,
+    "tileCost": 0.462217,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=0 attack=1": {
+    "attackerLoss": 6.15225,
+    "defenderLoss": 0,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=0 attack=1000": {
+    "attackerLoss": 6.15225,
+    "defenderLoss": 0,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=0 attack=1000000": {
+    "attackerLoss": 6.15225,
+    "defenderLoss": 0,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=0 attack=10000000": {
+    "attackerLoss": 6.15225,
+    "defenderLoss": 0,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1 attack=1": {
+    "attackerLoss": 10.2537,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1 attack=1000": {
+    "attackerLoss": 6.15225,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1 attack=1000000": {
+    "attackerLoss": 6.15225,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1 attack=10000000": {
+    "attackerLoss": 6.15225,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000 attack=1": {
+    "attackerLoss": 20.5081,
+    "defenderLoss": 0.001,
+    "tileCost": 2.51043,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000 attack=1000": {
+    "attackerLoss": 10.2544,
+    "defenderLoss": 0.001,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000 attack=1000000": {
+    "attackerLoss": 6.15287,
+    "defenderLoss": 0.001,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000 attack=10000000": {
+    "attackerLoss": 6.15287,
+    "defenderLoss": 0.001,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=1": {
+    "attackerLoss": 21.1315,
+    "defenderLoss": 1,
+    "tileCost": 2.51043,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=1000": {
+    "attackerLoss": 21.1315,
+    "defenderLoss": 1,
+    "tileCost": 2.51043,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 10.8777,
+    "defenderLoss": 1,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 6.77625,
+    "defenderLoss": 1,
+    "tileCost": 0.334724,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=10000000 attack=1": {
+    "attackerLoss": 26.7475,
+    "defenderLoss": 10,
+    "tileCost": 2.51043,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=10000000 attack=1000": {
+    "attackerLoss": 26.7475,
+    "defenderLoss": 10,
+    "tileCost": 2.51043,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 26.7475,
+    "defenderLoss": 10,
+    "tileCost": 2.51043,
+  },
+  "Mountain aTiles=5000000 dTiles=1000000 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 16.4937,
+    "defenderLoss": 10,
+    "tileCost": 0.334724,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=0 attack=1": {
+    "attackerLoss": 22.2711,
+    "defenderLoss": 0,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=0 attack=1000": {
+    "attackerLoss": 22.2711,
+    "defenderLoss": 0,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=0 attack=1000000": {
+    "attackerLoss": 22.2711,
+    "defenderLoss": 0,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=0 attack=10000000": {
+    "attackerLoss": 22.2711,
+    "defenderLoss": 0,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1 attack=1": {
+    "attackerLoss": 37.1226,
+    "defenderLoss": 0.01,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1 attack=1000": {
+    "attackerLoss": 22.2752,
+    "defenderLoss": 0.01,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1 attack=1000000": {
+    "attackerLoss": 22.2752,
+    "defenderLoss": 0.01,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1 attack=10000000": {
+    "attackerLoss": 22.2752,
+    "defenderLoss": 0.01,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1000 attack=1": {
+    "attackerLoss": 78.3968,
+    "defenderLoss": 10,
+    "tileCost": 23.924,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1000 attack=1000": {
+    "attackerLoss": 41.2784,
+    "defenderLoss": 10,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1000 attack=1000000": {
+    "attackerLoss": 26.4311,
+    "defenderLoss": 10,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1000 attack=10000000": {
+    "attackerLoss": 26.4311,
+    "defenderLoss": 10,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1000000 attack=1": {
+    "attackerLoss": 4234.24,
+    "defenderLoss": 10000,
+    "tileCost": 23.924,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1000000 attack=1000": {
+    "attackerLoss": 4234.24,
+    "defenderLoss": 10000,
+    "tileCost": 23.924,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 4197.12,
+    "defenderLoss": 10000,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 4182.27,
+    "defenderLoss": 10000,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=10000000 attack=1": {
+    "attackerLoss": 41674.2,
+    "defenderLoss": 100000,
+    "tileCost": 23.924,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=10000000 attack=1000": {
+    "attackerLoss": 41674.2,
+    "defenderLoss": 100000,
+    "tileCost": 23.924,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 41674.2,
+    "defenderLoss": 100000,
+    "tileCost": 23.924,
+  },
+  "Plains aTiles=100 dTiles=100 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 41637.1,
+    "defenderLoss": 100000,
+    "tileCost": 3.18986,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=0 attack=1": {
+    "attackerLoss": 16.1281,
+    "defenderLoss": 0,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=0 attack=1000": {
+    "attackerLoss": 16.1281,
+    "defenderLoss": 0,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=0 attack=1000000": {
+    "attackerLoss": 16.1281,
+    "defenderLoss": 0,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=0 attack=10000000": {
+    "attackerLoss": 16.1281,
+    "defenderLoss": 0,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1 attack=1": {
+    "attackerLoss": 26.8801,
+    "defenderLoss": 0.000001,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1 attack=1000": {
+    "attackerLoss": 16.1281,
+    "defenderLoss": 0.000001,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1 attack=1000000": {
+    "attackerLoss": 16.1281,
+    "defenderLoss": 0.000001,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1 attack=10000000": {
+    "attackerLoss": 16.1281,
+    "defenderLoss": 0.000001,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1000 attack=1": {
+    "attackerLoss": 53.7606,
+    "defenderLoss": 0.001,
+    "tileCost": 17.3251,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1000 attack=1000": {
+    "attackerLoss": 26.8805,
+    "defenderLoss": 0.001,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1000 attack=1000000": {
+    "attackerLoss": 16.1285,
+    "defenderLoss": 0.001,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1000 attack=10000000": {
+    "attackerLoss": 16.1285,
+    "defenderLoss": 0.001,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1000000 attack=1": {
+    "attackerLoss": 54.1762,
+    "defenderLoss": 1,
+    "tileCost": 17.3251,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1000000 attack=1000": {
+    "attackerLoss": 54.1762,
+    "defenderLoss": 1,
+    "tileCost": 17.3251,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 27.2961,
+    "defenderLoss": 1,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 16.5441,
+    "defenderLoss": 1,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=10000000 attack=1": {
+    "attackerLoss": 57.9202,
+    "defenderLoss": 10,
+    "tileCost": 17.3251,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=10000000 attack=1000": {
+    "attackerLoss": 57.9202,
+    "defenderLoss": 10,
+    "tileCost": 17.3251,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 57.9202,
+    "defenderLoss": 10,
+    "tileCost": 17.3251,
+  },
+  "Plains aTiles=100 dTiles=1000000 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 31.0401,
+    "defenderLoss": 10,
+    "tileCost": 2.31001,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=0 attack=1": {
+    "attackerLoss": 9.94811,
+    "defenderLoss": 0,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=0 attack=1000": {
+    "attackerLoss": 9.94811,
+    "defenderLoss": 0,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=0 attack=1000000": {
+    "attackerLoss": 9.94811,
+    "defenderLoss": 0,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=0 attack=10000000": {
+    "attackerLoss": 9.94811,
+    "defenderLoss": 0,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1 attack=1": {
+    "attackerLoss": 16.5844,
+    "defenderLoss": 0.01,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1 attack=1000": {
+    "attackerLoss": 9.95227,
+    "defenderLoss": 0.01,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1 attack=1000000": {
+    "attackerLoss": 9.95227,
+    "defenderLoss": 0.01,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1 attack=10000000": {
+    "attackerLoss": 9.95227,
+    "defenderLoss": 0.01,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1000 attack=1": {
+    "attackerLoss": 37.3204,
+    "defenderLoss": 10,
+    "tileCost": 6.00943,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1000 attack=1000": {
+    "attackerLoss": 20.7402,
+    "defenderLoss": 10,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1000 attack=1000000": {
+    "attackerLoss": 14.1081,
+    "defenderLoss": 10,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1000 attack=10000000": {
+    "attackerLoss": 14.1081,
+    "defenderLoss": 10,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1000000 attack=1": {
+    "attackerLoss": 4193.16,
+    "defenderLoss": 10000,
+    "tileCost": 6.00943,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1000000 attack=1000": {
+    "attackerLoss": 4193.16,
+    "defenderLoss": 10000,
+    "tileCost": 6.00943,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 4176.58,
+    "defenderLoss": 10000,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 4169.95,
+    "defenderLoss": 10000,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=10000000 attack=1": {
+    "attackerLoss": 41633.2,
+    "defenderLoss": 100000,
+    "tileCost": 6.00943,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=10000000 attack=1000": {
+    "attackerLoss": 41633.2,
+    "defenderLoss": 100000,
+    "tileCost": 6.00943,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 41633.2,
+    "defenderLoss": 100000,
+    "tileCost": 6.00943,
+  },
+  "Plains aTiles=1000000 dTiles=100 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 41616.6,
+    "defenderLoss": 100000,
+    "tileCost": 0.801258,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=0 attack=1": {
+    "attackerLoss": 7.20414,
+    "defenderLoss": 0,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=0 attack=1000": {
+    "attackerLoss": 7.20414,
+    "defenderLoss": 0,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=0 attack=1000000": {
+    "attackerLoss": 7.20414,
+    "defenderLoss": 0,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=0 attack=10000000": {
+    "attackerLoss": 7.20414,
+    "defenderLoss": 0,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1 attack=1": {
+    "attackerLoss": 12.0069,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1 attack=1000": {
+    "attackerLoss": 7.20414,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1 attack=1000000": {
+    "attackerLoss": 7.20414,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1 attack=10000000": {
+    "attackerLoss": 7.20414,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1000 attack=1": {
+    "attackerLoss": 24.0142,
+    "defenderLoss": 0.001,
+    "tileCost": 4.35186,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1000 attack=1000": {
+    "attackerLoss": 12.0073,
+    "defenderLoss": 0.001,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1000 attack=1000000": {
+    "attackerLoss": 7.20455,
+    "defenderLoss": 0.001,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1000 attack=10000000": {
+    "attackerLoss": 7.20455,
+    "defenderLoss": 0.001,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=1": {
+    "attackerLoss": 24.4298,
+    "defenderLoss": 1,
+    "tileCost": 4.35186,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=1000": {
+    "attackerLoss": 24.4298,
+    "defenderLoss": 1,
+    "tileCost": 4.35186,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 12.4229,
+    "defenderLoss": 1,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 7.62014,
+    "defenderLoss": 1,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=10000000 attack=1": {
+    "attackerLoss": 28.1738,
+    "defenderLoss": 10,
+    "tileCost": 4.35186,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=10000000 attack=1000": {
+    "attackerLoss": 28.1738,
+    "defenderLoss": 10,
+    "tileCost": 4.35186,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 28.1738,
+    "defenderLoss": 10,
+    "tileCost": 4.35186,
+  },
+  "Plains aTiles=1000000 dTiles=1000000 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 16.1669,
+    "defenderLoss": 10,
+    "tileCost": 0.580248,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=0 attack=1": {
+    "attackerLoss": 5.66371,
+    "defenderLoss": 0,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=0 attack=1000": {
+    "attackerLoss": 5.66371,
+    "defenderLoss": 0,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=0 attack=1000000": {
+    "attackerLoss": 5.66371,
+    "defenderLoss": 0,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=0 attack=10000000": {
+    "attackerLoss": 5.66371,
+    "defenderLoss": 0,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1 attack=1": {
+    "attackerLoss": 9.44368,
+    "defenderLoss": 0.01,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1 attack=1000": {
+    "attackerLoss": 5.66787,
+    "defenderLoss": 0.01,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1 attack=1000000": {
+    "attackerLoss": 5.66787,
+    "defenderLoss": 0.01,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1 attack=10000000": {
+    "attackerLoss": 5.66787,
+    "defenderLoss": 0.01,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1000 attack=1": {
+    "attackerLoss": 23.039,
+    "defenderLoss": 10,
+    "tileCost": 2.28798,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1000 attack=1000": {
+    "attackerLoss": 13.5995,
+    "defenderLoss": 10,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1000 attack=1000000": {
+    "attackerLoss": 9.82371,
+    "defenderLoss": 10,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1000 attack=10000000": {
+    "attackerLoss": 9.82371,
+    "defenderLoss": 10,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1000000 attack=1": {
+    "attackerLoss": 4178.88,
+    "defenderLoss": 10000,
+    "tileCost": 2.28798,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1000000 attack=1000": {
+    "attackerLoss": 4178.88,
+    "defenderLoss": 10000,
+    "tileCost": 2.28798,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 4169.44,
+    "defenderLoss": 10000,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 4165.66,
+    "defenderLoss": 10000,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=10000000 attack=1": {
+    "attackerLoss": 41618.9,
+    "defenderLoss": 100000,
+    "tileCost": 2.28798,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=10000000 attack=1000": {
+    "attackerLoss": 41618.9,
+    "defenderLoss": 100000,
+    "tileCost": 2.28798,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 41618.9,
+    "defenderLoss": 100000,
+    "tileCost": 2.28798,
+  },
+  "Plains aTiles=5000000 dTiles=100 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 41609.4,
+    "defenderLoss": 100000,
+    "tileCost": 0.305063,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=0 attack=1": {
+    "attackerLoss": 4.1015,
+    "defenderLoss": 0,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=0 attack=1000": {
+    "attackerLoss": 4.1015,
+    "defenderLoss": 0,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=0 attack=1000000": {
+    "attackerLoss": 4.1015,
+    "defenderLoss": 0,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=0 attack=10000000": {
+    "attackerLoss": 4.1015,
+    "defenderLoss": 0,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1 attack=1": {
+    "attackerLoss": 6.83583,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1 attack=1000": {
+    "attackerLoss": 4.1015,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1 attack=1000000": {
+    "attackerLoss": 4.1015,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1 attack=10000000": {
+    "attackerLoss": 4.1015,
+    "defenderLoss": 0.000001,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1000 attack=1": {
+    "attackerLoss": 13.6721,
+    "defenderLoss": 0.001,
+    "tileCost": 1.65689,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1000 attack=1000": {
+    "attackerLoss": 6.83624,
+    "defenderLoss": 0.001,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1000 attack=1000000": {
+    "attackerLoss": 4.10191,
+    "defenderLoss": 0.001,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1000 attack=10000000": {
+    "attackerLoss": 4.10191,
+    "defenderLoss": 0.001,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=1": {
+    "attackerLoss": 14.0877,
+    "defenderLoss": 1,
+    "tileCost": 1.65689,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=1000": {
+    "attackerLoss": 14.0877,
+    "defenderLoss": 1,
+    "tileCost": 1.65689,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=1000000": {
+    "attackerLoss": 7.25183,
+    "defenderLoss": 1,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=10000000": {
+    "attackerLoss": 4.5175,
+    "defenderLoss": 1,
+    "tileCost": 0.220918,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=10000000 attack=1": {
+    "attackerLoss": 17.8317,
+    "defenderLoss": 10,
+    "tileCost": 1.65689,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=10000000 attack=1000": {
+    "attackerLoss": 17.8317,
+    "defenderLoss": 10,
+    "tileCost": 1.65689,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=10000000 attack=1000000": {
+    "attackerLoss": 17.8317,
+    "defenderLoss": 10,
+    "tileCost": 1.65689,
+  },
+  "Plains aTiles=5000000 dTiles=1000000 dTroops=10000000 attack=10000000": {
+    "attackerLoss": 10.9958,
+    "defenderLoss": 10,
+    "tileCost": 0.220918,
+  },
+}
+`;
+
 exports[`attackLogic golden values > player vs player: large-territory curves 1`] = `
 {
   "attackerTiles=1000": {

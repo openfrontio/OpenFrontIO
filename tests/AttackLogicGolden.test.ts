@@ -199,6 +199,44 @@ describe("attackLogic golden values", () => {
     expect(table).toMatchSnapshot();
   });
 
+  // The extremes are where formulas break: giant vs tiny territories, 1-troop
+  // attacks, 10M-troop armies, empty defenders and turtles with thousands of
+  // troops per tile.
+  test("extremes: territory and troop counts", () => {
+    const attackerTiles = [100, 1_000_000, 5_000_000];
+    const defenderTiles = [100, 1_000_000];
+    const defenderTroops = [0, 1, 1_000, 1_000_000, 10_000_000];
+    const attackTroops = [1, 1_000, 1_000_000, 10_000_000];
+
+    const table: Record<string, ReturnType<typeof run>> = {};
+    for (const terrain of [TerrainType.Plains, TerrainType.Mountain])
+      for (const at of attackerTiles)
+        for (const dt of defenderTiles)
+          for (const dtr of defenderTroops)
+            for (const atr of attackTroops) {
+              const key = `${TerrainType[terrain]} aTiles=${at} dTiles=${dt} dTroops=${dtr} attack=${atr}`;
+              table[key] = run({
+                terrain,
+                attackTroops: atr,
+                attacker: { type: PlayerType.Human, numTiles: at },
+                defender: defender({ numTiles: dt, troops: dtr }),
+              });
+            }
+    expect(table).toMatchSnapshot();
+  });
+
+  test("extremes: terra nullius", () => {
+    const table: Record<string, ReturnType<typeof run>> = {};
+    for (const at of [100, 5_000_000])
+      for (const atr of [1, 10_000_000]) {
+        table[`aTiles=${at} attack=${atr}`] = run({
+          attackTroops: atr,
+          attacker: { type: PlayerType.Human, numTiles: at },
+        });
+      }
+    expect(table).toMatchSnapshot();
+  });
+
   test("impassable terrain throws", () => {
     expect(() =>
       run({ terrain: TerrainType.Impassable, attackTroops: 1 }),
