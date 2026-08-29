@@ -175,8 +175,9 @@ export class PlaybookBotExecution implements Execution {
     };
   }
   /** The one place troops leave home. Never below the reserve; returns what was actually sent (0 = nothing). */
-  private send(targetID: string | null, n: number, why: string, min = 500): number {
-    const room = Math.floor(this.sit.spendable);
+  private send(targetID: string | null, n: number, why: string, min = 500, capFloor = 0): number {
+    // capFloor: never leave home under this share of CAP — Hard nations betray an ally under 20 % of cap on sight
+    const room = Math.floor(Math.min(this.sit.spendable, this.sit.troops - this.sit.cap * capFloor));
     const amount = Math.min(Math.floor(n), room);
     if (amount < min) { if (room < min && this.log.length < 200 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} held: ${why} wants ${Math.round(n / 1000)}k, ${Math.round(room / 1000)}k above reserve`); return 0; }
     this.mg.addExecution(new AttackExecution(amount, this.player, targetID));
@@ -294,13 +295,13 @@ export class PlaybookBotExecution implements Execution {
     if (me.units(UnitType.MissileSilo).length === 0 || this.mg.config().isUnitDisabled(UnitType.MIRV)) return;
     if (this.mg.ticks() - this.lastMirvTick < 600) return;
     const cost = this.config.unitInfo(UnitType.MIRV).cost(this.mg, me);
-    if (me.gold() < cost + 1_000_000n) return;
+    if (me.gold() < cost) return;
     const total = this.mg.numLandTiles();
     const others = this.mg.players().filter((p) => p !== me && p.isAlive() && p.type() !== PlayerType.Bot && !me.isFriendly(p) && !me.isOnSameTeam(p));
     let target: Player | null = null, why = "";
     for (const p of others) for (const m of p.units(UnitType.MIRV)) { const d = m.targetTile(); if (d && this.mg.hasOwner(d) && this.mg.owner(d) === me) { target = p; why = "counter"; } }
     if (!target) { const t = others.filter((p) => p.numTilesOwned() / total >= 0.5).sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0]; if (t) { target = t; why = "victory denial"; } }
-    if (!target && this.mg.ticks() >= 15000) {
+    if (!target && this.mg.ticks() >= 12000) {
       const ranked = this.mg.players().filter((p) => p.isAlive() && p.type() !== PlayerType.Bot).sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
       const myRank = ranked.indexOf(me) + 1;
       if (myRank <= 3) { const t = others.filter((p) => p.numTilesOwned() > me.numTilesOwned() * 0.8).sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0]; if (t) { target = t; why = `crown (we are #${myRank})`; } }
@@ -433,7 +434,7 @@ export class PlaybookBotExecution implements Execution {
     const cap = this.cap();
     const nb = this.neighbours();
     for (const r of nb.rivals) this.collapsed(r);
-    const opportunity = nb.rivals.some((r) => this.collapsed(r));
+    const opportunity = this.mg.ticks() >= 3000 && nb.rivals.some((r) => this.collapsed(r) && r.troops() < this.sit.troops * 0.5);
     // crown, not survival: a war is on when we can afford 2× someone's whole army out of the spendable troops,
     // not only when troops reach 70 % of a cap that cities keep raising
     const affordable = this.mg.ticks() >= this.p.fightNotBeforeTick && nb.rivals.some((r) => r.troops() * this.p.fightRatio + 1000 <= this.sit.spendable * this.p.fightMaxShare);
@@ -441,7 +442,7 @@ export class PlaybookBotExecution implements Execution {
     const atCapNow = me.troops() >= cap * 0.95;
     // invariant: one war at a time (two at cap); seven at once is how a 17M army evaporates
     const wars = this.sit.outgoing.filter((a) => a.target().isPlayer() && (a.target() as Player).type() !== PlayerType.Bot && !this.counters.has(a.target() as Player)).length;
-    if (wars >= (atCapNow ? 2 : 1) && !opportunity) return;
+    if (wars >= (this.mg.ticks() >= 15000 && atCapNow ? 2 : 1) && !opportunity) return;
     const early = !atCapNow && !opportunity && (this.mg.ticks() < this.p.fightNotBeforeTick || me.unitsOwned(UnitType.City) < this.p.fightMinCities);
     let { rivals } = nb;
     // before the 5-minute mark only clear prey: a neighbour we can hit with 2.5× its whole army
@@ -458,7 +459,7 @@ export class PlaybookBotExecution implements Execution {
     const attackingUs = new Set(me.incomingAttacks().map((a) => a.attacker()));
     const score = (r: Player) => {
       const ratio = maxSend / Math.max(1, r.troops());
-      if (this.collapsed(r)) return ratio >= 1.0 ? 20 + ratio : -1; // bombed: go now, 1× is enough, posts are gone
+      if (this.collapsed(r) && r.troops() < this.sit.troops * 0.5) return ratio >= 1.5 ? 20 + ratio : -1; // bombed: go now at 1.5×, posts are gone
       // at cap, a neighbour already attacking us is a fair fight at 1:1 — the counter-attack cancels its wave anyway
       if (ratio < (atCap && attackingUs.has(r) ? 1.0 : minRatio)) return -1;
       // Playbook: never attack a big, thinly held empire — that is a troop sink. Prefer small and dense.
@@ -482,7 +483,7 @@ export class PlaybookBotExecution implements Execution {
     if (wantRaw < 1000) return;
     this.currentTarget = best;
     if (!me.hasEmbargoAgainst(best) && best.type() !== PlayerType.Nation) { me.addEmbargo(best, false); this.embargoedAt.set(best, this.mg.ticks()); }
-    const want = this.send(best.id(), wantRaw, "war", 1000);
+    const want = this.send(best.id(), wantRaw, "war", 1000, 0.3);
     if (want === 0) return;
     this.noteSent(best);
     if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} ATTACK ${best.name()} ${best.numTilesOwned()}t/${Math.round(best.troops() / 1000)}k ← ${Math.round(want / 1000)}k (${(want / Math.max(1, best.troops())).toFixed(2)}×)`);
@@ -724,7 +725,7 @@ export class PlaybookBotExecution implements Execution {
       }
     }
     if (best === null) return;
-    const troops = Math.min(Math.floor(this.sit.spendable * 0.5), Math.ceil(best.p.troops() * 3) + 5000);
+    const troops = Math.min(Math.floor(this.sit.spendable * 0.5), Math.floor(this.sit.troops - this.sit.cap * 0.3), Math.ceil(best.p.troops() * 3) + 5000);
     if (troops < 20000 || troops < best.p.troops() * 3) return; // a landing under 3× is the boat that takes no land
     if (this.boat(best.tile, troops, `INVADE ${best.p.name()} ${best.p.numTilesOwned()}t/${Math.round(best.p.troops() / 1000)}k, ${best.d} tiles`) === 0) return;
     this.lastInvasionTick = this.mg.ticks();
@@ -1018,7 +1019,9 @@ export class PlaybookBotExecution implements Execution {
     const cityCapHit = cityUnits.length >= this.cityUnitCap();
     const myRank = ticks >= 9000 ? this.rank() : 99;
     // top three after 20:00: half of every gold pile is the MIRV fund — a crown without a MIRV loses to the first one fired
-    const mirvFund = ticks >= 12000 && myRank <= 3 && me.units(UnitType.MissileSilo).length > 0 ? this.config.unitInfo(UnitType.MIRV).cost(this.mg, me) / 2n : 0n;
+    // top three from 20:00: the whole MIRV price is reserved (it rises 15M with every launch on the map, so the first
+    // launch is the cheap one); the economy keeps buying only while troops are under 40 % of cap
+    const mirvFund = ticks >= 12000 && myRank <= 3 && me.units(UnitType.MissileSilo).length > 0 && me.units(UnitType.MIRV).length === 0 && me.troops() >= this.cap() * 0.4 ? this.config.unitInfo(UnitType.MIRV).cost(this.mg, me) : 0n;
     const seaFull = this.mg.unitCount(UnitType.TradeShip) >= this.p.seaFullShips || ticks >= 15000; // guide: nothing bought after 25:00 pays back
     const upgrade = (u: Unit) => { this.mg.addExecution(new UpgradeStructureExecution(me, u.id())); if (this.log.length < 200) this.log.push(`t${ticks} level ${u.type()} → ${u.level() + 1}`); };
 
@@ -1059,7 +1062,7 @@ export class PlaybookBotExecution implements Execution {
     }
     // 4. ports: first port when a partner exists; level the best one to 3 before a second; never past the unit cap or on a full sea
     const partnerTile = cities >= this.p.citiesBeforePort ? this.portTile() : null;
-    if (gold >= cost(UnitType.Port) && !(seaFull && portLevels >= 20)) {
+    if (gold - mirvFund >= cost(UnitType.Port) && !(seaFull && portLevels >= 20)) {
       // first port: facing a partner if one exists; otherwise on any ocean coast from 2:30 — nations build ports by minute 3–5 and a port earns 7× base income once they do
       const firstTile = partnerTile ?? (cities >= 1 && ticks >= this.p.portWithoutPartnerTick ? this.oceanShoreTile() : null);
       if (ports.length === 0 && firstTile !== null && this.tryBuild(UnitType.Port, firstTile)) { this.firstPortTick = ticks; return; }
@@ -1074,7 +1077,7 @@ export class PlaybookBotExecution implements Execution {
     // 5. rail line: landlocked, or an ally borders us, or the sea is full
     const deadPorts = ports.length > 0 && me.units(UnitType.TradeShip).length === 0 && ticks - this.firstPortTick > 900;
     const wantRail = cities >= 3 && ((ports.length === 0 && partnerTile === null && ticks >= 1500) || deadPorts || (friends.length > 0 && ticks >= 1800) || (ports.length > 0 && ticks >= 1800) || seaFull) && me.unitsOwned(UnitType.Factory) < 6;
-    if (wantRail && this.buildRail(gold, cost)) return;
+    if (wantRail && this.buildRail(gold - mirvFund, cost)) return;
     if (!wantRail && cities >= 3 && ticks % 1200 < 10 && this.log.length < 200) this.log.push(`t${ticks} no rail wanted: ports=${ports.length} partner=${partnerTile !== null} friends=${friends.length} seaFull=${seaFull}`);
     // 6. silo when rich enough not to stall the economy, and there is someone to bomb
     const idleAtCap = capFull && me.troops() > this.cap() * 0.9 && me.outgoingAttacks().length === 0;
