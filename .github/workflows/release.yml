@@ -173,6 +173,8 @@ jobs:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
+          # Blue/green sit behind the openfront.io load balancer: see ServerEnv.siteHost.
+          SITE_HOST: ${{ vars.DOMAIN }}
           CDN_BASE: ${{ vars.CDN_BASE }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
@@ -226,6 +228,8 @@ jobs:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
+          # Blue/green sit behind the openfront.io load balancer: see ServerEnv.siteHost.
+          SITE_HOST: ${{ vars.DOMAIN }}
           CDN_BASE: ${{ vars.CDN_BASE }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
