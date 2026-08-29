@@ -200,7 +200,7 @@ export class GameRunner {
     }
 
     const spawnJustEnded = wasInSpawnPhase && !this.game.inSpawnPhase();
-    // Playbook phase 0: once nations and tribes have placed themselves (tick 1),
+    // Playbook phase 0: once nations and tribes have placed themselves (nations land at tick 2–3),
     // the bot picks its own spawn instead of waiting for a click.
     if (
       this.playbookBotClientID !== undefined &&
