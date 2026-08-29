@@ -6,9 +6,9 @@ import {
 } from "../../src/core/Schemas";
 import { ListingState } from "../../src/server/ListingState";
 
-// The listing state on its own. How the game acts on it — delisting when a
-// whitelist appears, arming the start countdown at the deadline, what the
-// lobby browser is told — is covered through GameServer in
+// The listing state on its own. How the game acts on it — rejecting a
+// whitelist while listed, arming the start countdown at the deadline, what
+// the lobby browser is told — is covered through GameServer in
 // HostedLobbyListing.test.ts.
 
 const T0 = 1_700_000_000_000;
