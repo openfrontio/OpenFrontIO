@@ -228,7 +228,7 @@ export class PlaybookBotExecution implements Execution {
     { name: "alliances", every: 300, run: () => { this.requestAlliances(); this.manageExpiries(); this.manageEmbargoes(); } },
     { name: "early boat", every: 20, run: () => { if (!this.boatSent && this.sit.tick >= this.p.boatAtTick) this.boatSent = this.earlyBoat() || this.sit.tick > this.p.boatAtTick + 600; } },
     { name: "tribe boats", every: 100, run: () => { if (this.sit.tick >= 300) this.huntBotsByBoat(); } },
-    { name: "sea invasion", every: 200, run: () => { if (this.sit.tick >= 1800) this.seaInvasion(); } },
+    { name: "sea expansion", every: 100, run: () => { if (this.sit.tick >= 600) this.seaExpansion(); } },
     { name: "build", every: 10, run: () => { this.build(this.sit.tick); this.maybeBomb(this.sit.tick); } },
     { name: "mirv", every: 100, run: () => this.maybeMIRV() },
   ];
@@ -282,6 +282,60 @@ export class PlaybookBotExecution implements Execution {
   }
   private density(p: Player): number {
     return p.numTilesOwned() > 0 ? p.troops() / p.numTilesOwned() : 1e9;
+  }
+
+  // ---------------------------------------------------------------- boats in the mid and late game
+  private lastSeaTick = -1e9;
+  /** Playbook: boats are the answer to a closed land border. Whenever a boat is free and either the land front is
+   *  blocked or troops sit above 40 % of cap, send one to the best target across water: free shore first, then a
+   *  neighbour we (or a MIRV) have just collapsed, then a weak player with no posts at 3×, then a tribe at 2×. */
+  private seaExpansion(): void {
+    const me = this.player;
+    if (this.sit.boats >= this.config.boatMaxNumber()) return;
+    if (this.mg.ticks() - this.lastSeaTick < 100) return;
+    if (this.sit.wilderness && this.sit.capShare < 0.4) return; // land first while it is free and we are small
+    if (this.sit.incoming.length > 0 && this.sit.capShare < 0.6) return; // under attack: the army stays
+    const shore = Array.from(me.borderTiles()).filter((t) => this.mg.isOceanShore(t));
+    if (shore.length === 0) return;
+    const from = shore[Math.floor(shore.length / 2)];
+    const fx = this.mg.x(from), fy = this.mg.y(from);
+    const dist = (t: TileRef) => Math.abs(this.mg.x(t) - fx) + Math.abs(this.mg.y(t) - fy);
+    const cands: { tile: TileRef; troops: number; score: number; what: string }[] = [];
+    // (a) free shore across water: 15 % of home, worth the most per troop
+    let seen = 0;
+    for (let dy = -300; dy <= 300; dy += 8) for (let dx = -300; dx <= 300; dx += 8) {
+      const x = fx + dx, y = fy + dy;
+      if (!this.mg.isValidCoord(x, y)) continue;
+      const t = this.mg.ref(x, y);
+      if (!this.mg.isLand(t) || !this.mg.isOceanShore(t) || this.mg.hasOwner(t)) continue;
+      const d = Math.abs(dx) + Math.abs(dy);
+      if (d < 30 || seen++ > 400) continue;
+      cands.push({ tile: t, troops: Math.max(5000, Math.floor(this.sit.troops * 0.15)), score: 300 - d, what: "free shore" });
+    }
+    // (b) collapsed players (bombed, MIRVed): the follow-up; (c) weak players without posts; (d) tribes
+    for (const o of this.mg.players()) {
+      if (o === me || !o.isAlive() || me.isFriendly(o) || o.numTilesOwned() < 100) continue;
+      const isBot = o.type() === PlayerType.Bot;
+      const coll = !isBot && this.collapsed(o);
+      const weak = !isBot && o.troops() < this.sit.troops * 0.25 && o.units(UnitType.DefensePost).length === 0;
+      if (!isBot && !coll && !weak) continue;
+      if (!isBot && !me.canAttackPlayer(o)) continue;
+      const want = Math.ceil(o.troops() * (isBot ? 2 : 3)) + 2000;
+      if (want > this.sit.spendable * 0.5) continue;
+      let i = 0, bestT: TileRef | null = null, bestD = 1e9;
+      for (const t of o.borderTiles()) { if ((i++ % 9) !== 0 || !this.mg.isOceanShore(t)) continue; const d = dist(t); if (d < bestD) { bestD = d; bestT = t; } }
+      if (bestT === null || bestD > 500) continue;
+      const value = coll ? 600 : weak ? 400 : 250;
+      cands.push({ tile: bestT, troops: want, score: value - bestD / 2 + (o.units(UnitType.City).length * 10), what: `${coll ? "collapsed " : weak ? "weak " : "tribe "}${o.name()} ${o.numTilesOwned()}t/${Math.round(o.troops() / 1000)}k` });
+    }
+    cands.sort((a, b) => b.score - a.score);
+    for (const c of cands.slice(0, 10)) {
+      if (c.troops > this.sit.spendable) continue;
+      if (!this.acrossWater(c.tile)) continue;
+      if (this.boat(c.tile, c.troops, `sea expansion → ${c.what}`) === 0) continue;
+      this.lastSeaTick = this.mg.ticks();
+      return;
+    }
   }
 
   // ---------------------------------------------------------------- MIRV and the finish
@@ -347,7 +401,7 @@ export class PlaybookBotExecution implements Execution {
       this.send(this.mg.terraNullius().id(), send, "all-in", 100);
       return;
     }
-    if (this.sit.troops < this.sit.cap * this.p.homeFloor) return;
+    // free land is the cheapest growth there is and unused troops come home: only the troop reserve applies, not the cap floor
     const ringing = [...this.sit.rivals, ...this.sit.bots, ...this.sit.friends].some((r) => this.annexable(r));
     const frac = rivals.length > 0 || ringing ? this.p.expandContested : this.p.expandFree;
     this.send(this.mg.terraNullius().id(), Math.floor(this.sit.troops * frac), "expand", 100);
@@ -620,7 +674,7 @@ export class PlaybookBotExecution implements Execution {
       if (want > me.troops() * 0.4) continue;
       let i = 0, bestT: TileRef | null = null, bestD = 1e9;
       for (const t of bot.borderTiles()) { if ((i++ % 5) !== 0 || !this.mg.isShore(t)) continue; const d = dist(t); if (d < bestD) { bestD = d; bestT = t; } }
-      if (bestT !== null && bestD <= 250) cands.push({ tile: bestT, troops: Math.max(want, Math.floor(me.troops() * this.p.boatShare)), d: bestD - 60, what: `tribe ${bot.name()}` }); // tribes preferred: 60-tile bonus
+      if (bestT !== null && bestD <= 250) cands.push({ tile: bestT, troops: Math.max(want, Math.floor(me.troops() * this.p.boatShare)), d: bestD + 80, what: `tribe ${bot.name()}` }); // open shore preferred: free land, no losses; a tribe only when no empty coast is near
     }
     for (let dy = -200; dy <= 200; dy += 6) for (let dx = -200; dx <= 200; dx += 6) {
       const x = fx + dx, y = fy + dy;
