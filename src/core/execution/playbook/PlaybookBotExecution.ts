@@ -184,6 +184,8 @@ export class PlaybookBotExecution implements Execution {
     if (this.sit.hold !== null && why !== "counter") { if (this.log.length < 200 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} holding troops home: alliance with ${this.sit.hold.name()} about to lapse`); return 0; }
     const room = Math.floor(Math.min(this.sit.spendable, this.sit.troops - this.sit.cap * capFloor));
     const amount = Math.min(Math.floor(n), room);
+    // a war goes whole or not at all: a 2× wave trimmed to 0.3× by the reserve is the worst attack in the game
+    if (why === "war" && amount < n * 0.9) { if (this.log.length < 200) this.log.push(`t${this.sit.tick} war held: wants ${Math.round(n / 1000)}k, only ${Math.round(room / 1000)}k spare`); return 0; }
     if (amount < min) { if (room < min && this.log.length < 200 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} held: ${why} wants ${Math.round(n / 1000)}k, ${Math.round(room / 1000)}k above reserve`); return 0; }
     this.mg.addExecution(new AttackExecution(amount, this.player, targetID));
     this.sit.spendable -= amount; this.sit.troops -= amount;
