@@ -23,6 +23,7 @@ import {
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { multiplayerAllowed, type DesktopUpdateState } from "./DesktopShell";
 import { HostLobbyModal } from "./HostLobbyModal";
+import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
@@ -60,9 +61,18 @@ export class GameModeSelector extends LitElement {
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
-  private lobbySocket = new PublicLobbySocket((lobbies) =>
-    this.handleLobbiesUpdate(lobbies),
+  private lobbySocket = new PublicLobbySocket(
+    (lobbies) => this.handleLobbiesUpdate(lobbies),
+    // This socket only runs while the player is on the homepage (Main.ts
+    // stops it when a game is joined), so it's always safe to reload here.
+    { onUpdateAvailable: () => this.handleUpdateAvailable() },
   );
+
+  private handleUpdateAvailable() {
+    showInGameAlert(translateText("update_available.message")).then(() => {
+      window.location.reload();
+    });
+  }
 
   createRenderRoot() {
     return this;

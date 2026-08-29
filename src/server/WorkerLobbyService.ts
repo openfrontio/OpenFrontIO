@@ -16,6 +16,7 @@ import {
   WorkerReady,
 } from "./IPCBridgeSchema";
 import { logger } from "./Logger";
+import { ServerEnv } from "./ServerEnv";
 
 // The game config advertised for a listed private lobby: everything the
 // host configured minus host-only fields. The server already rejects
@@ -270,6 +271,7 @@ export class WorkerLobbyService {
             type: "full",
             serverTime: this.lastPublicGames.serverTime,
             games: this.sanitizeGames(this.lastPublicGames.games),
+            gitCommit: ServerEnv.gitCommit(),
           } satisfies PublicLobbyMessage),
         );
       }
@@ -321,6 +323,7 @@ export class WorkerLobbyService {
         type: "full",
         serverTime: publicGames.serverTime,
         games: sanitizedGames,
+        gitCommit: ServerEnv.gitCommit(),
       };
       this.lastFullGameIds = fingerprint;
     } else {
