@@ -17,6 +17,8 @@ uniform float uTick;
 uniform float uFlickerSpeed;
 uniform vec3  uAngryColor;
 uniform int   uAltView;
+uniform vec3  uSelfColor;         // affiliation self/ally colors (alt-view trade ships)
+uniform vec3  uAllyColor;
 uniform vec3  uHBombGlowColor;
 uniform float uHBombGlowStrength;
 uniform float uHBombGlowInner;
@@ -39,9 +41,7 @@ const float FLAG_ANGRY          = 2.0;
 const float FLAG_TRADE_FRIENDLY = 3.0;
 const float FLAG_RETREATING     = 4.0;
 const float FLAG_FLICKER_UNTARGETABLE = 5.0; // nuke out of SAM range — dimmed
-
-// Ally color for trade-friendly override (yellow — matches affiliation.ts ALLY)
-const vec3 ALLY_COLOR = vec3(1.0, 1.0, 0.0);
+const float FLAG_TRADE_SELF     = 6.0;
 
 // Flicker hot colors: red → orange → yellow → white
 const vec3 FLICKER_COLORS[4] = vec3[4](
@@ -128,10 +128,12 @@ void main() {
 
   // Alt-view: solid affiliation color, no gray-replacement bands
   if (uAltView != 0) {
-    // Enemy trade ships heading to a self/allied port render as yellow (ally)
-    vec3 ac = abs(vFlags - FLAG_TRADE_FRIENDLY) < 0.1
-      ? ALLY_COLOR
-      : texelFetch(uAffiliation, ivec2(int(vOwnerID), 1), 0).rgb;
+    // Trade ships: green if self is on either end, yellow if an ally is
+    vec3 ac = abs(vFlags - FLAG_TRADE_SELF) < 0.1
+      ? uSelfColor
+      : abs(vFlags - FLAG_TRADE_FRIENDLY) < 0.1
+        ? uAllyColor
+        : texelFetch(uAffiliation, ivec2(int(vOwnerID), 1), 0).rgb;
     fragColor = vec4(ac, texel.a * alphaMul);
     return;
   }
