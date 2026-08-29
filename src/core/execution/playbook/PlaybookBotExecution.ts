@@ -89,8 +89,8 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   boatShare: 0.2,
   islandMaxTiles: 20000,
   fightAbove: 0.7,
-  fightRatio: 2.0,
-  fightNotBeforeTick: 3000,
+  fightRatio: 1.67, // Josh: take any 1.67× push that keeps home troops healthy (was 2.0)
+  fightNotBeforeTick: 1800,
   fightMinCities: 2,
   fightMaxShare: 0.6,
   retreatBelowRatio: 0.4,
@@ -551,7 +551,7 @@ export class PlaybookBotExecution implements Execution {
     // crown, not survival: a war is on when we can afford 2× someone's whole army out of the spendable troops,
     // not only when troops reach 70 % of a cap that cities keep raising
     const affordable = this.mg.ticks() >= this.p.fightNotBeforeTick && nb.rivals.some((r) => r.troops() * this.p.fightRatio + 1000 <= this.sit.spendable * this.p.fightMaxShare);
-    if (me.troops() < cap * this.p.fightAbove && !affordable && !(opportunity && me.troops() >= cap * this.p.homeFloor * 2)) return;
+    if (!affordable && !opportunity && me.troops() < cap * this.p.fightAbove) return; // a 1.67× push that keeps home healthy is always taken
     const atCapNow = me.troops() >= cap * 0.95;
     // invariant: one war at a time (two at cap); seven at once is how a 17M army evaporates
     const wars = this.sit.outgoing.filter((a) => a.target().isPlayer() && (a.target() as Player).type() !== PlayerType.Bot && !this.counters.has(a.target() as Player)).length;
