@@ -349,6 +349,7 @@ export class PlaybookBotExecution implements Execution {
   // ---------------------------------------------------------------- MIRV and the finish
   private lastMirvTick = -1e9;
   private lastSamTick = -1e9;
+  private lastWarTick = -1e9;
   private bombOutOfRange = 0;
   private lastWarshipTick = -1e9;
   /** Playbook phase 6: a MIRV goes to (1) whoever has one in the air at us, (2) anyone over half the map,
@@ -513,7 +514,12 @@ export class PlaybookBotExecution implements Execution {
     if (early) rivals = rivals.filter((r) => r.troops() * 2.5 <= me.troops() * this.p.fightMaxShare && r.numTilesOwned() <= me.numTilesOwned());
     if (rivals.length === 0) return;
     if (this.currentTarget && (!this.currentTarget.isAlive() || !rivals.includes(this.currentTarget))) this.currentTarget = null;
-    const candidates = rivals.filter((r) => me.canAttackPlayer(r) && !this.outgoingTo(r) && this.reachable(r));
+    let candidates = rivals.filter((r) => me.canAttackPlayer(r) && !this.outgoingTo(r) && this.reachable(r));
+    // one enemy at a time, to the end: nations nuke whoever attacks them, and eight half-wars make eight nuclear enemies.
+    // The current target stays the only candidate while it lives, borders us, and was hit within the last three minutes.
+    if (this.currentTarget && this.currentTarget.isAlive() && rivals.includes(this.currentTarget) && this.mg.ticks() - this.lastWarTick < 1800) {
+      candidates = candidates.filter((r) => r === this.currentTarget || this.collapsed(r));
+    }
     if (candidates.length === 0) return;
     const atCap = me.troops() >= cap * 0.95;
     const endgame = this.mg.ticks() >= 15000; // 25:00 — the finish: land now is worth more than troops later
@@ -549,6 +555,7 @@ export class PlaybookBotExecution implements Execution {
     if (!me.hasEmbargoAgainst(best) && best.type() !== PlayerType.Nation) { me.addEmbargo(best, false); this.embargoedAt.set(best, this.mg.ticks()); }
     const want = this.send(best.id(), wantRaw, "war", 1000, 0.3);
     if (want === 0) return;
+    this.lastWarTick = this.mg.ticks();
     this.noteSent(best);
     if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} ATTACK ${best.name()} ${best.numTilesOwned()}t/${Math.round(best.troops() / 1000)}k ← ${Math.round(want / 1000)}k (${(want / Math.max(1, best.troops())).toFixed(2)}×)`);
   }
