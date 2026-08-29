@@ -6,11 +6,13 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameEnv } from "../core/configuration/Config";
+import { fetchSiteInstanceId } from "./ActiveDeployment";
 import { getDescriptor } from "./DesktopRelease";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { MasterLobbyService } from "./MasterLobbyService";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
+import { startPolling } from "./PollingLoop";
 import { renderAppShell } from "./RenderHtml";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
@@ -173,14 +175,30 @@ export async function startMaster() {
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
+
+  // Behind a load balancer (blue/green), only the deployment the balancer
+  // currently routes to should schedule public lobbies. The balancer's
+  // /api/health reports the instanceId of whichever deployment answered, so
+  // comparing it to our own tells us if that's us. A standalone deployment
+  // (no SITE_HOST, or SITE_HOST is our own host) is always active.
+  const siteHost = ServerEnv.siteHost();
+  if (siteHost !== undefined && siteHost !== ServerEnv.publicHost()) {
+    log.info(`Polling https://${siteHost}/api/health for active deployment`);
+    startPolling(async () => {
+      const siteInstanceId = await fetchSiteInstanceId(siteHost);
+      if (siteInstanceId === null) return;
+      lobbyService.setActive(siteInstanceId === INSTANCE_ID);
+    }, 30 * 1000);
+  }
 }
 
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;
+  const instanceId = ServerEnv.instanceId();
   if (ready) {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", instanceId });
   } else {
-    res.status(503).json({ status: "unavailable" });
+    res.status(503).json({ status: "unavailable", instanceId });
   }
 });
 

@@ -65,3 +65,45 @@ describe("RenderHtml", () => {
     expect(headers.get("Content-Type")).toBe("text/html");
   });
 });
+
+describe("RenderHtml serverHost pinning", () => {
+  let tempDir: string | null = null;
+
+  beforeEach(() => {
+    vi.stubEnv("NUM_WORKERS", "1");
+    vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
+    vi.stubEnv("GIT_COMMIT", "abc");
+  });
+
+  afterEach(async () => {
+    vi.unstubAllEnvs();
+    clearAppShellContentCache();
+    if (tempDir) {
+      await fs.rm(tempDir, { recursive: true, force: true });
+      tempDir = null;
+    }
+  });
+
+  // Same expression index.html uses to emit the optional serverHost line.
+  const TEMPLATE =
+    '<%- typeof serverHost !== "undefined" && serverHost ? "serverHost: " + serverHost + "," : "" %>';
+
+  async function render(): Promise<string> {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "render-html-"));
+    const htmlPath = path.join(tempDir, "index.html");
+    await fs.writeFile(htmlPath, TEMPLATE, "utf8");
+    return getAppShellContent(htmlPath);
+  }
+
+  test("pins the page to the deployment's own host behind a load balancer", async () => {
+    vi.stubEnv("DOMAIN", "openfront.io");
+    vi.stubEnv("SUBDOMAIN", "blue");
+    expect(await render()).toBe('serverHost: "blue.openfront.io",');
+  });
+
+  test("omits serverHost in dev so the client stays same-origin", async () => {
+    vi.stubEnv("DOMAIN", "localhost");
+    vi.stubEnv("SUBDOMAIN", "");
+    expect(await render()).toBe("");
+  });
+});
