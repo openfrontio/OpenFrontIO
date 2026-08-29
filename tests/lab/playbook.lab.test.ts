@@ -56,9 +56,13 @@ async function makeWorld(difficulty: Difficulty, bots: number) {
 
 let spawnNote = "";
 function pickSpawn(game: Game, _nations: Nation[], prefer: [number, number], _minDist: number): TileRef {
-  const t = PlaybookBotExecution.pickSpawn(game, prefer);
+  // SPAWNRANK=k takes the k-th best spot in the region (each pick excludes a 120-tile circle around the earlier ones)
+  const rank = Number(process.env.SPAWNRANK ?? 0);
+  const exclude: [number, number][] = [];
+  let t: TileRef | null = null;
+  for (let i = 0; i <= rank; i++) { t = PlaybookBotExecution.pickSpawn(game, prefer, exclude); if (t === null) break; exclude.push([game.x(t), game.y(t)]); }
   if (t === null) throw new Error("no spawn near " + prefer);
-  spawnNote = "bot picker";
+  spawnNote = `bot picker rank ${rank}`;
   return t;
 }
 function neighboursBots(me: Player): string { return me.nearby().filter((n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot).map((b) => Math.round(b.troops() / 1000) + "k/" + b.numTilesOwned() + "t").join(" ") || "-"; }

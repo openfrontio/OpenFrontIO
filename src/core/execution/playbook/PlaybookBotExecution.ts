@@ -497,7 +497,7 @@ export class PlaybookBotExecution implements Execution {
   /** Phase 0 of the playbook: score every shore tile. Coast required; enough land around; no nation within
    *  `veto` tiles (relaxed in stages); nations near cost points, tribes near earn them; an edge at your back
    *  helps; other humans on the spot hurt. `prefer` keeps the search inside a region (lab use). */
-  static pickSpawn(game: Game, prefer?: [number, number]): TileRef | null {
+  static pickSpawn(game: Game, prefer?: [number, number], exclude: [number, number][] = []): TileRef | null {
     const nations: TileRef[] = [], tribes: TileRef[] = [], humans: TileRef[] = [];
     for (const p of game.players()) {
       const t = p.spawnTile();
@@ -514,6 +514,7 @@ export class PlaybookBotExecution implements Execution {
         if (isWorld && y > H * 0.88) break; // Antarctica: no nations, no trade partners, no game
         for (let x = 30; x < W - 30; x += step) {
           if (prefer && Math.hypot(x - prefer[0], y - prefer[1]) > radius) continue;
+          if (exclude.some(([ex, ey]) => Math.hypot(x - ex, y - ey) < 120)) continue; // lab: distinct spawns per batch
           const t = game.ref(x, y);
           if (!game.isLand(t) || !game.isOceanShore(t) || game.hasOwner(t)) continue; // an ocean coast, not a lake: lakes have no trade partners and no un-annexable border
           let land = 0;
