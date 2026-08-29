@@ -64,6 +64,8 @@ export interface PlaybookParams {
   tribeConcurrency: number; // tribe attacks at once below 60 % of cap (one more above)
   spawnInland: number; // tiles walked inland from the chosen shore
   retreatOnAllianceEnd: boolean;
+  wholeWars: boolean; // a war wave is sent whole or not at all (never trimmed by the reserve)
+  stickyWar: boolean; // one enemy to the end: the current war target is the only candidate while it lives and borders us
   postsBeforeCity2: boolean; // allow threat posts even while city 2 is unaffordable
   portWithoutPartnerTick: number; // first port on any ocean coast from this tick even with no partner (1e9 = never)
 }
@@ -105,6 +107,8 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   tribeConcurrency: 1,
   spawnInland: 0, // 30-game lab: 8 tiles inland = 18/30 alive vs 27/30 on the shore (an inland circle can be surrounded; the coast cannot)
   retreatOnAllianceEnd: true,
+  wholeWars: true,
+  stickyWar: true,
   postsBeforeCity2: true, // 30-game lab: +8% land, same survival as blocking them
   portWithoutPartnerTick: 1500,
 };
@@ -185,7 +189,7 @@ export class PlaybookBotExecution implements Execution {
     const room = Math.floor(Math.min(this.sit.spendable, this.sit.troops - this.sit.cap * capFloor));
     const amount = Math.min(Math.floor(n), room);
     // a war goes whole or not at all: a 2× wave trimmed to 0.3× by the reserve is the worst attack in the game
-    if (why === "war" && amount < n * 0.9) { if (this.log.length < 200) this.log.push(`t${this.sit.tick} war held: wants ${Math.round(n / 1000)}k, only ${Math.round(room / 1000)}k spare`); return 0; }
+    if (this.p.wholeWars && why === "war" && amount < n * 0.9) { if (this.log.length < 200) this.log.push(`t${this.sit.tick} war held: wants ${Math.round(n / 1000)}k, only ${Math.round(room / 1000)}k spare`); return 0; }
     if (amount < min) { if (room < min && this.log.length < 200 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} held: ${why} wants ${Math.round(n / 1000)}k, ${Math.round(room / 1000)}k above reserve`); return 0; }
     this.mg.addExecution(new AttackExecution(amount, this.player, targetID));
     this.sit.spendable -= amount; this.sit.troops -= amount;
@@ -517,7 +521,7 @@ export class PlaybookBotExecution implements Execution {
     let candidates = rivals.filter((r) => me.canAttackPlayer(r) && !this.outgoingTo(r) && this.reachable(r));
     // one enemy at a time, to the end: nations nuke whoever attacks them, and eight half-wars make eight nuclear enemies.
     // The current target stays the only candidate while it lives, borders us, and was hit within the last three minutes.
-    if (this.currentTarget && this.currentTarget.isAlive() && rivals.includes(this.currentTarget) && this.mg.ticks() - this.lastWarTick < 1800) {
+    if (this.p.stickyWar && this.currentTarget && this.currentTarget.isAlive() && rivals.includes(this.currentTarget) && this.mg.ticks() - this.lastWarTick < 1800) {
       candidates = candidates.filter((r) => r === this.currentTarget || this.collapsed(r));
     }
     if (candidates.length === 0) return;
