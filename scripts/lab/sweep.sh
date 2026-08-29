@@ -30,7 +30,8 @@ echo "sweep: $(wc -l < "$jobs_file") games, $JOBS parallel, $MINUTES min each ->
 
 # one game per line; batch -> env uses the same scheme as ab30.sh
 export MINUTES OUT
-xargs -P "$JOBS" -I{} bash -c '
+# NUL-delimited: plain xargs strips the quotes out of the JSON params
+tr '\n' '\0' < "$jobs_file" | xargs -0 -P "$JOBS" -I{} bash -c '
   IFS="|" read -r name batch sp params <<< "$1"
   case $batch in
     hard0) benv="SPAWNRANK=0";; hard1) benv="SPAWNRANK=1";; hard2) benv="SPAWNRANK=2";;
@@ -38,7 +39,7 @@ xargs -P "$JOBS" -I{} bash -c '
     *) echo "unknown batch $batch"; exit 1;;
   esac
   if env $benv PARAMS="$params" MIN="$MINUTES" SPAWN="$sp" LAB_OUT="$OUT"        OUTFILE="p_${name}_${batch}_${sp}.txt" TAG="${name}_${batch}"        npx vitest tests/lab/playbook.lab.test.ts --run > /dev/null 2>&1
-  then echo "done $name $batch $sp"; else echo "FAILED $name $batch $sp"; fi' _ {} < "$jobs_file"
+  then echo "done $name $batch $sp"; else echo "FAILED $name $batch $sp"; fi' _ {}
 
 # aggregate: one line per game, ab30 format
 for name in $names; do
