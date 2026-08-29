@@ -36,6 +36,7 @@ import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
   getSecondsUntilServerTimestamp,
+  reloadForUpdate,
   renderDuration,
   translateText,
 } from "./Utils";
@@ -79,7 +80,7 @@ export class GameModeSelector extends LitElement {
     // reconnect, and trigger this again until the download finishes.
     if (isDesktopShell()) return;
     showInGameAlert(translateText("update_available.message")).then(() => {
-      window.location.reload();
+      reloadForUpdate();
     });
   }
 
