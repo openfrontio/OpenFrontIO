@@ -105,11 +105,9 @@ export class PlaybookBotExecution implements Execution {
   private mg!: Game;
   private config!: Config;
   private random: PseudoRandom;
-  private lastAllianceTick = -1e9;
   private boatSent = false;
   private landmassChecked = false;
   private onSmallLandmass = false;
-  private lastBuildTick = -1e9;
   private currentTarget: Player | null = null;
   private waves = new Map<Player, { want: number; sent: number; last: number }>();
   private sentAt = new Map<Player, number>();
@@ -139,6 +137,91 @@ export class PlaybookBotExecution implements Execution {
     return false;
   }
 
+  // ---------------------------------------------------------------- situation, invariants, rules
+  /** One evaluated picture of the game per tick; every rule reads this instead of re-deriving state. */
+  private sit!: {
+    tick: number; troops: number; cap: number; capShare: number; reserve: number; spendable: number;
+    gold: bigint; bots: Player[]; rivals: Player[]; friends: Player[]; wilderness: boolean;
+    incoming: Attack[]; incomingBots: number; outgoing: Attack[]; tribeAttacks: number; boats: number;
+    collapsed: Player[]; expiring: Player[];
+  };
+  private prevAllies = new Set<Player>();
+  private prevIncoming = new Set<string>();
+  private readSituation(): void {
+    const me = this.player;
+    const troops = me.troops(), cap = this.cap();
+    const nb = this.neighbours();
+    const incoming = me.incomingAttacks().filter((a) => a.attacker().type() !== PlayerType.Bot);
+    const outgoing = me.outgoingAttacks();
+    const reserve = cap * this.p.homeFloor;
+    const t = this.mg.ticks();
+    this.sit = {
+      tick: t, troops, cap, capShare: cap > 0 ? troops / cap : 0, reserve, spendable: Math.max(0, troops - reserve),
+      gold: me.gold(), ...nb,
+      incoming, incomingBots: me.incomingAttacks().length - incoming.length, outgoing,
+      tribeAttacks: outgoing.filter((a) => a.target().isPlayer() && (a.target() as Player).type() === PlayerType.Bot).length,
+      boats: me.units(UnitType.TransportShip).length,
+      collapsed: nb.rivals.filter((r) => this.collapsed(r)),
+      expiring: me.alliances().filter((al) => al.expiresAt() - t < 450).map((al) => al.other(me)),
+    };
+  }
+  /** The one place troops leave home. Never below the reserve; returns what was actually sent (0 = nothing). */
+  private send(targetID: string | null, n: number, why: string, min = 500): number {
+    const room = Math.floor(this.sit.spendable);
+    const amount = Math.min(Math.floor(n), room);
+    if (amount < min) { if (room < min && this.log.length < 200 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} held: ${why} wants ${Math.round(n / 1000)}k, ${Math.round(room / 1000)}k above reserve`); return 0; }
+    this.mg.addExecution(new AttackExecution(amount, this.player, targetID));
+    this.sit.spendable -= amount; this.sit.troops -= amount;
+    return amount;
+  }
+  private boat(tile: TileRef, n: number, why: string): number {
+    const amount = Math.min(Math.floor(n), Math.floor(this.sit.spendable));
+    if (amount < 500 || this.player.canBuild(UnitType.TransportShip, tile) === false) return 0;
+    this.mg.addExecution(new TransportShipExecution(this.player, tile, amount));
+    this.sit.spendable -= amount; this.sit.troops -= amount; this.sit.boats++;
+    if (this.log.length < 200) this.log.push(`t${this.sit.tick} boat ${Math.round(amount / 1000)}k: ${why}`);
+    return amount;
+  }
+  /** Things that happened since last tick. Reactions run before the regular rules. */
+  private events(): void {
+    const me = this.player;
+    const allies = new Set(me.allies());
+    for (const p of this.prevAllies) {
+      if (allies.has(p) || !p.isAlive()) continue;
+      this.onAllianceEnded(p);
+    }
+    this.prevAllies = allies;
+    const inc = new Set(this.sit.incoming.map((a) => a.attacker().id()));
+    for (const a of this.sit.incoming) {
+      if (this.prevIncoming.has(a.attacker().id())) continue;
+      if (this.log.length < 200) this.log.push(`t${this.sit.tick} INCOMING ${a.attacker().name()} ${Math.round(a.troops() / 1000)}k`);
+    }
+    this.prevIncoming = inc;
+  }
+  /** An alliance ended (expired or broken): bring the army home, mark the post, and treat them as the threat. */
+  private onAllianceEnded(p: Player): void {
+    const me = this.player;
+    if (me.isFriendly(p)) return;
+    if (this.log.length < 200) this.log.push(`t${this.sit.tick} ALLIANCE ENDED ${p.name()} ${Math.round(p.troops() / 1000)}k vs our ${Math.round(this.sit.troops / 1000)}k`);
+    // if they are stronger, every tribe wave comes home now — the nation attacks within seconds of a lapse
+    if (p.troops() > this.sit.troops * 0.8) {
+      for (const a of this.sit.outgoing) { const t = a.target(); if (t.isPlayer() && (t as Player).type() === PlayerType.Bot) me.orderRetreat(a.id()); }
+    }
+    this.postFailed.delete(p);
+  }
+  private rules: { name: string; every: number; run: () => void }[] = [
+    { name: "counter", every: 10, run: () => this.counterAttack() },
+    { name: "retreats", every: 10, run: () => this.manageRetreats() },
+    { name: "expand", every: 10, run: () => this.expand() },
+    { name: "tribes", every: 10, run: () => this.harvestBots() },
+    { name: "wars", every: 10, run: () => this.fight() },
+    { name: "alliances", every: 300, run: () => { this.requestAlliances(); this.manageExpiries(); this.manageEmbargoes(); } },
+    { name: "early boat", every: 20, run: () => { if (!this.boatSent && this.sit.tick >= this.p.boatAtTick) this.boatSent = this.earlyBoat() || this.sit.tick > this.p.boatAtTick + 600; } },
+    { name: "tribe boats", every: 100, run: () => { if (this.sit.tick >= 300) this.huntBotsByBoat(); } },
+    { name: "sea invasion", every: 200, run: () => { if (this.sit.tick >= 1800) this.seaInvasion(); } },
+    { name: "build", every: 10, run: () => { this.build(this.sit.tick); this.maybeBomb(this.sit.tick); } },
+  ];
+
   tick(ticks: number): void {
     const me = this.player;
     if (!me.isAlive()) {
@@ -149,30 +232,10 @@ export class PlaybookBotExecution implements Execution {
       this.landmassChecked = true;
       this.onSmallLandmass = this.landmassSize(this.p.islandMaxTiles + 1) <= this.p.islandMaxTiles;
     }
+    this.readSituation();
     this.acceptAlliances();
-    if (ticks - this.lastAllianceTick >= this.p.allianceEvery) {
-      this.lastAllianceTick = ticks;
-      this.requestAlliances();
-      this.manageExpiries();
-      this.manageEmbargoes();
-    }
-    if (ticks % this.p.expandEvery === 0) {
-      this.counterAttack();
-      this.manageRetreats();
-      this.expand();
-      this.harvestBots();
-      this.fight();
-    }
-    if (!this.boatSent && ticks >= this.p.boatAtTick && ticks % 20 === 0) {
-      this.boatSent = this.earlyBoat() || ticks > this.p.boatAtTick + 600;
-    }
-    if (ticks >= 300 && ticks % 100 === 0) this.huntBotsByBoat();
-    if (ticks >= 1800 && ticks % 200 === 0) this.seaInvasion();
-    if (ticks - this.lastBuildTick >= 10) {
-      this.lastBuildTick = ticks;
-      this.build(ticks);
-      this.maybeBomb(ticks);
-    }
+    this.events();
+    for (const r of this.rules) if (ticks % r.every === 0) r.run();
   }
 
   // ---------------------------------------------------------------- helpers
@@ -219,15 +282,11 @@ export class PlaybookBotExecution implements Execution {
       // nations' opening: every 5 s, everything above a small reserve goes into empty land
       if (this.mg.ticks() % 50 !== 0) return;
       const send = Math.floor(me.troops() - this.cap() * this.p.openingKeep);
-      if (send < 100) return;
-      this.mg.addExecution(new AttackExecution(send, me, this.mg.terraNullius().id()));
+      this.send(this.mg.terraNullius().id(), send, "all-in", 100);
       return;
     }
-    if (me.troops() < this.cap() * this.p.homeFloor) return;
     const frac = rivals.length > 0 ? this.p.expandContested : this.p.expandFree;
-    const send = Math.floor(me.troops() * frac);
-    if (send < 100) return;
-    this.mg.addExecution(new AttackExecution(send, me, this.mg.terraNullius().id()));
+    this.send(this.mg.terraNullius().id(), Math.floor(this.sit.troops * frac), "expand", 100);
   }
 
   // ---------------------------------------------------------------- bots
@@ -240,6 +299,9 @@ export class PlaybookBotExecution implements Execution {
     // free land costs 16–24 a tile; a tribe costs its density plus the losses of the fight. Eat tribes
     // once the wilderness is gone, or earlier only when we are plentiful and the click is small.
     const early = wilderness && this.p.botsAfterWild;
+    // invariant: one tribe at a time below 60 % of cap, two above — three at once is how the army disappears
+    const maxConcurrent = this.sit.capShare > 0.6 ? 2 : 1;
+    let active = this.sit.tribeAttacks;
     let clicks = 0;
     for (const bot of bots) {
       if (!me.canAttackPlayer(bot) || !this.reachable(bot)) continue;
@@ -249,17 +311,17 @@ export class PlaybookBotExecution implements Execution {
         // follow-up click: the guide's two-click — a second wave 10 s later merges into the first
         const w = this.waves.get(bot);
         if (!w || w.sent >= w.want || this.mg.ticks() - w.last < this.p.botFollowUpTicks) continue;
-        const send = Math.min(w.want - w.sent, Math.floor(me.troops() * this.p.botClickCap));
-        if (send < 500) continue;
-        this.mg.addExecution(new AttackExecution(send, me, bot.id()));
+        const send = this.send(bot.id(), Math.min(w.want - w.sent, Math.floor(this.sit.troops * this.p.botClickCap)), "tribe follow-up");
+        if (send === 0) continue;
         w.sent += send; w.last = this.mg.ticks();
         continue;
       }
-      const maxSend = Math.floor(me.troops() * (early ? this.p.botEarlyShare : this.p.botMaxShare));
+      if (active >= maxConcurrent) continue;
+      const maxSend = Math.floor(this.sit.spendable * (early ? this.p.botEarlyShare : this.p.botMaxShare));
       if (want > maxSend) continue;
-      const first = Math.min(want, Math.floor(me.troops() * this.p.botClickCap));
-      if (first < 500) continue;
-      this.mg.addExecution(new AttackExecution(first, me, bot.id()));
+      const first = this.send(bot.id(), Math.min(want, Math.floor(this.sit.troops * this.p.botClickCap)), "tribe");
+      if (first === 0) continue;
+      active++;
       this.waves.set(bot, { want, sent: first, last: this.mg.ticks() });
       this.noteSent(bot);
       if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} bot ${bot.name()} ${bot.numTilesOwned()}t/${Math.round(bot.troops())} ← ${first}/${want}`);
@@ -281,9 +343,8 @@ export class PlaybookBotExecution implements Execution {
       const last = this.lastCounter.get(a) ?? -1e9;
       if (!big || this.mg.ticks() - last < 300) continue;
       this.lastCounter.set(a, this.mg.ticks());
-      const send = Math.min(Math.ceil(inc.troops() * 1.05), Math.floor(me.troops() * 0.5));
-      if (send < 1000) continue;
-      this.mg.addExecution(new AttackExecution(send, me, a.id()));
+      const send = this.send(a.id(), Math.min(Math.ceil(inc.troops() * 1.05), Math.floor(this.sit.troops * 0.5)), "counter", 1000);
+      if (send === 0) continue;
       this.noteSent(a);
       this.counters.add(a);
       if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} COUNTER ${a.name()} (${Math.round(inc.troops() / 1000)}k incoming) with ${Math.round(send / 1000)}k`);
@@ -347,11 +408,12 @@ export class PlaybookBotExecution implements Execution {
       if (atCapNow && this.mg.ticks() % 1200 < this.p.expandEvery && this.log.length < 200) this.log.push(`t${this.mg.ticks()} idle at cap: ${rivals.map((r) => `${r.name()} ${r.numTilesOwned()}t/${Math.round(r.troops() / 1000)}k d${Math.round(this.density(r))} p${r.units(UnitType.DefensePost).length} ${candidates.includes(r) ? "" : "(no)"}`).join("; ")}`);
       return;
     }
-    const want = Math.min(Math.ceil(best.troops() * this.p.fightRatio) + 1000, maxSend);
-    if (want < 1000) return;
+    const wantRaw = Math.min(Math.ceil(best.troops() * this.p.fightRatio) + 1000, maxSend);
+    if (wantRaw < 1000 || wantRaw > this.sit.spendable) return; // the reserve is not for wars
     this.currentTarget = best;
     if (!me.hasEmbargoAgainst(best) && best.type() !== PlayerType.Nation) { me.addEmbargo(best, false); this.embargoedAt.set(best, this.mg.ticks()); }
-    this.mg.addExecution(new AttackExecution(want, me, best.id()));
+    const want = this.send(best.id(), wantRaw, "war", 1000);
+    if (want === 0) return;
     this.noteSent(best);
     if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} ATTACK ${best.name()} ${best.numTilesOwned()}t/${Math.round(best.troops() / 1000)}k ← ${Math.round(want / 1000)}k (${(want / Math.max(1, best.troops())).toFixed(2)}×)`);
   }
@@ -435,9 +497,24 @@ export class PlaybookBotExecution implements Execution {
           if (score > bestS) { bestS = score; best = t; }
         }
       }
-      if (best !== null) return best;
+      if (best !== null) return PlaybookBotExecution.inland(game, best, 8);
     }
     return null;
+  }
+  /** Walk `d` tiles away from the sea in the direction with the most land, so the spawn circle is not half water. */
+  private static inland(game: Game, shore: TileRef, d: number): TileRef {
+    const sx = game.x(shore), sy = game.y(shore);
+    let best = shore, bestLand = -1;
+    for (let a = 0; a < 16; a++) {
+      const x = Math.round(sx + Math.cos((a / 16) * Math.PI * 2) * d), y = Math.round(sy + Math.sin((a / 16) * Math.PI * 2) * d);
+      if (!game.isValidCoord(x, y)) continue;
+      const t = game.ref(x, y);
+      if (!game.isLand(t) || game.hasOwner(t)) continue;
+      let land = 0;
+      for (let dy = -6; dy <= 6; dy += 3) for (let dx = -6; dx <= 6; dx += 3) { if (game.isValidCoord(x + dx, y + dy) && game.isLand(game.ref(x + dx, y + dy))) land++; }
+      if (land > bestLand) { bestLand = land; best = t; }
+    }
+    return best;
   }
 
   /** True when no land path from `t` reaches our territory (flood fill capped at `cap` tiles). */
@@ -482,9 +559,7 @@ export class PlaybookBotExecution implements Execution {
     cands.sort((a, b) => a.d - b.d);
     for (const c of cands.slice(0, 16)) {
       if (c.troops < 500 || !this.acrossWater(c.tile)) continue;
-      if (me.canBuild(UnitType.TransportShip, c.tile) === false) continue;
-      this.mg.addExecution(new TransportShipExecution(me, c.tile, c.troops));
-      this.log.push(`t${this.mg.ticks()} early boat ${c.troops} troops → ${c.what}, ${c.d} tiles`);
+      if (this.boat(c.tile, c.troops, `early boat → ${c.what}, ${c.d} tiles`) === 0) continue;
       return true;
     }
     return false;
@@ -508,11 +583,7 @@ export class PlaybookBotExecution implements Execution {
       if (d >= 30 && d < bestD) { bestD = d; best = t; }
     }
     if (best === null) return false;
-    const troops = Math.floor(me.troops() * this.p.boatShare);
-    if (troops < 500 || me.canBuild(UnitType.TransportShip, best) === false) return false;
-    this.mg.addExecution(new TransportShipExecution(me, best, troops));
-    this.log.push(`t${this.mg.ticks()} boat ${troops} troops, ${bestD} tiles`);
-    return true;
+    return this.boat(best, Math.floor(this.sit.troops * this.p.boatShare), `island boat, ${bestD} tiles`) > 0;
   }
 
   /** No bots on our borders: boat to the nearest bot within reach, with 1.67× its troops. */
@@ -543,11 +614,10 @@ export class PlaybookBotExecution implements Execution {
     }
     if (best === null || bestBot === null) return;
     if (!this.acrossWater(best)) return; // reachable by land: that is a land attack, not a boat
-    if (me.canBuild(UnitType.TransportShip, best) === false) return;
     const troops = Math.ceil(bestBot.troops() * 2) + 500;
+    if (troops > this.sit.spendable) return;
+    if (this.boat(best, troops, `to tribe ${bestBot.name()} ${bestBot.numTilesOwned()}t/${Math.round(bestBot.troops() / 1000)}k, ${bestD} tiles`) === 0) return;
     this.boatedAt.set(bestBot, this.mg.ticks());
-    this.mg.addExecution(new TransportShipExecution(me, best, troops));
-    if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} BOAT to bot ${bestBot.name()} ${bestBot.numTilesOwned()}t/${Math.round(bestBot.troops())} with ${troops}, ${bestD} tiles`);
   }
 
   /** Boxed in at cap with nothing to fight on land: land a big boat on the weakest unfriendly player within reach. */
@@ -580,12 +650,11 @@ export class PlaybookBotExecution implements Execution {
         if (best === null || score > best.score) best = { tile: t, p: o, d, score };
       }
     }
-    if (best === null || me.canBuild(UnitType.TransportShip, best.tile) === false) return;
-    const troops = Math.min(Math.floor(me.troops() * 0.3), Math.ceil(best.p.troops() * 3) + 5000);
+    if (best === null) return;
+    const troops = Math.min(Math.floor(this.sit.spendable * 0.5), Math.ceil(best.p.troops() * 3) + 5000);
     if (troops < 20000 || troops < best.p.troops() * 3) return; // a landing under 3× is the boat that takes no land
+    if (this.boat(best.tile, troops, `INVADE ${best.p.name()} ${best.p.numTilesOwned()}t/${Math.round(best.p.troops() / 1000)}k, ${best.d} tiles`) === 0) return;
     this.lastInvasionTick = this.mg.ticks();
-    this.mg.addExecution(new TransportShipExecution(me, best.tile, troops));
-    if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} INVADE ${best.p.name()} ${best.p.numTilesOwned()}t/${Math.round(best.p.troops() / 1000)}k by sea with ${Math.round(troops / 1000)}k, ${best.d} tiles`);
   }
 
   // ---------------------------------------------------------------- alliances

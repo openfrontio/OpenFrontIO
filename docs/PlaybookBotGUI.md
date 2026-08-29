@@ -42,12 +42,11 @@ npm run dev            # Vite + game server. Read the "Local:" line — Vite mov
 Then in Chrome open `http://localhost:<port>/?bot=1`:
 
 1. Click **SOLO!**.
-2. Optional settings (defaults are Easy / 400 tribes; the bot is tuned for Hard /
-   30 tribes). From the console, with the modal open:
+2. Settings: keep the default 400 tribes (what public games use; the lab uses
+   400 too). Set Hard from the console with the modal open:
    ```js
    const m = document.querySelector("single-player-modal");
    m.handleConfigDifficultySelected(new CustomEvent("difficulty-selected", { detail: { difficulty: "Hard" } }));
-   m.handleBotsChange(new CustomEvent("bots-changed", { detail: { value: 30 } }));
    ```
 3. Click **Start Game**. The bot spawns itself ~2 ticks in and plays from there.
    Your own clicks still work alongside it.

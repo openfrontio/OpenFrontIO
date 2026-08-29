@@ -63,10 +63,11 @@ function pickSpawn(game: Game, _nations: Nation[], prefer: [number, number], _mi
 }
 function neighboursBots(me: Player): string { return me.nearby().filter((n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot).map((b) => Math.round(b.troops() / 1000) + "k/" + b.numTilesOwned() + "t").join(" ") || "-"; }
 async function runGame(label: string, params: PlaybookParams, minutes: number, difficulty: Difficulty, prefer: [number, number]) {
-  const { game, nations } = await makeWorld(difficulty, 30);
+  const tribes = process.env.TRIBES ? Number(process.env.TRIBES) : 400; // online default
+  const { game, nations } = await makeWorld(difficulty, tribes);
   const gameID = "lab";
   game.addExecution(...nations.map((n) => new NationExecution(gameID, n)));
-  game.addExecution(...new TribeSpawner(game, gameID, nations.map((n) => n.spawnCell!)).spawnTribes(30));
+  game.addExecution(...new TribeSpawner(game, gameID, nations.map((n) => n.spawnCell!)).spawnTribes(tribes));
   const info = new PlayerInfo("PlaybookBot", PlayerType.Human, null, "playbook");
   game.addPlayer(info);
   // spawn phase: nations/tribes place themselves in the first ticks; we pick a spot and are placed with them
