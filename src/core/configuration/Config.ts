@@ -18,7 +18,6 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
@@ -61,6 +60,31 @@ export function parseGameEnv(value: string | undefined): GameEnv {
   }
 }
 
+export interface AttackLogicInput {
+  terrain: TerrainType;
+  attackTroops: number;
+  attacker: { type: PlayerType; numTiles: number };
+  /** null when attacking terra nullius. */
+  defender: {
+    type: PlayerType;
+    numTiles: number;
+    troops: number;
+    isTraitor: boolean;
+    /** Defender is disconnected and on the attacker's team. */
+    isDisconnectedTeammate: boolean;
+  } | null;
+  /** A defense post owned by the defender is in range of the tile. */
+  defenderHasDefensePost: boolean;
+  /** Fraction of land tiles with fallout, or null if the tile has no fallout. */
+  falloutRatio: number | null;
+}
+
+export interface AttackLogicResult {
+  attackerTroopLoss: number;
+  defenderTroopLoss: number;
+  tilesPerTickUsed: number;
+}
+
 export interface NukeMagnitude {
   inner: number;
   outer: number;
@@ -68,6 +92,30 @@ export interface NukeMagnitude {
 
 const DEFENSE_DEBUFF_MIDPOINT = 150_000;
 const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 50000;
+// attackLogic tunables
+const LARGE_ATTACKER_TILES = 100_000;
+const BOT_DEFENDER_LOSS_MULT = 0.7;
+const TERRA_NULLIUS_COST_SCALE = 2000;
+const TERRA_NULLIUS_MIN_COST = 5;
+const TERRA_NULLIUS_MAX_COST = 100;
+
+function terrainAttackBase(terrain: TerrainType): {
+  mag: number;
+  tileCost: number;
+} {
+  switch (terrain) {
+    case TerrainType.Plains:
+      return { mag: 80, tileCost: 16.5 };
+    case TerrainType.Highland:
+      return { mag: 100, tileCost: 20 };
+    case TerrainType.Mountain:
+      return { mag: 120, tileCost: 25 };
+    case TerrainType.Impassable:
+      throw new Error(`impassable terrain cannot be attacked`);
+    default:
+      throw new Error(`terrain type ${terrain} not supported`);
+  }
+}
 const DEFAULT_SPAWN_IMMUNITY_TICKS = 5 * 10;
 
 export const JwksSchema = z.object({
@@ -690,129 +738,103 @@ export class Config {
     return this.bots();
   }
 
-  attackLogic(
-    gm: Game,
-    attackTroops: number,
-    attacker: Player,
-    defender: Player | TerraNullius,
-    tileToConquer: TileRef,
-  ): {
-    attackerTroopLoss: number;
-    defenderTroopLoss: number;
-    tilesPerTickUsed: number;
-  } {
-    let mag;
-    let speed;
-    const type = gm.terrainType(tileToConquer);
-    switch (type) {
-      case TerrainType.Plains:
-        mag = 80;
-        speed = 16.5;
-        break;
-      case TerrainType.Highland:
-        mag = 100;
-        speed = 20;
-        break;
-      case TerrainType.Mountain:
-        mag = 120;
-        speed = 25;
-        break;
-      case TerrainType.Impassable:
-        throw new Error(`impassable terrain cannot be attacked`);
-      default:
-        throw new Error(`terrain type ${type} not supported`);
+  /**
+   * Per-tile attack outcome. Pure: depends only on the given input and this
+   * config's tunables, never on Game/Player objects. AttackExecution gathers
+   * the input from the simulation.
+   *
+   * Two base values come from the terrain and are scaled by the situation:
+   *  - `mag`: how bloody the tile is (drives attacker troop loss)
+   *  - `tileCost`: how much of the attack's per-tick tile budget the tile
+   *    consumes (higher = slower conquest)
+   */
+  attackLogic(input: AttackLogicInput): AttackLogicResult {
+    const { attackTroops, attacker, defender } = input;
+    let { mag, tileCost } = terrainAttackBase(input.terrain);
+
+    if (defender !== null && input.defenderHasDefensePost) {
+      mag *= this.defensePostDefenseBonus();
+      tileCost *= this.defensePostSpeedBonus();
     }
-    if (defender.isPlayer()) {
-      for (const dp of gm.nearbyUnits(
-        tileToConquer,
-        gm.config().defensePostRange(),
-        UnitType.DefensePost,
-      )) {
-        if (dp.unit.owner() === defender) {
-          mag *= this.defensePostDefenseBonus();
-          speed *= this.defensePostSpeedBonus();
-          break;
-        }
-      }
+    if (input.falloutRatio !== null) {
+      const fallout = this.falloutDefenseModifier(input.falloutRatio);
+      mag *= fallout;
+      tileCost *= fallout;
     }
 
-    if (gm.hasFallout(tileToConquer)) {
-      const falloutRatio = gm.numTilesWithFallout() / gm.numLandTiles();
-      mag *= this.falloutDefenseModifier(falloutRatio);
-      speed *= this.falloutDefenseModifier(falloutRatio);
-    }
-
-    if (attacker.isPlayer() && defender.isPlayer()) {
-      if (defender.isDisconnected() && attacker.isOnSameTeam(defender)) {
-        // No troop loss if defender is disconnected and on same team
-        mag = 0;
-      }
-      if (
-        (attacker.type() === PlayerType.Human ||
-          attacker.type() === PlayerType.Nation) &&
-        defender.type() === PlayerType.Bot
-      ) {
-        mag *= 0.7;
-      }
-    }
-
-    if (defender.isPlayer()) {
-      const defenseSig =
-        1 -
-        sigmoid(
-          defender.numTilesOwned(),
-          DEFENSE_DEBUFF_DECAY_RATE,
-          DEFENSE_DEBUFF_MIDPOINT,
-        );
-
-      const largeDefenderSpeedDebuff = 0.7 + 0.3 * defenseSig;
-      const largeDefenderAttackDebuff = 0.7 + 0.3 * defenseSig;
-
-      let largeAttackBonus = 1;
-      if (attacker.numTilesOwned() > 100_000) {
-        largeAttackBonus = Math.sqrt(100_000 / attacker.numTilesOwned()) ** 0.7;
-      }
-      let largeAttackerSpeedBonus = 1;
-      if (attacker.numTilesOwned() > 100_000) {
-        largeAttackerSpeedBonus = (100_000 / attacker.numTilesOwned()) ** 0.6;
-      }
-
-      const defenderTroopLoss = defender.troops() / defender.numTilesOwned();
-      const traitorMod = defender.isTraitor() ? this.traitorDefenseDebuff() : 1;
-      const currentAttackerLoss =
-        within(defender.troops() / attackTroops, 0.6, 2) *
-        mag *
-        0.8 *
-        largeDefenderAttackDebuff *
-        largeAttackBonus *
-        traitorMod;
-      const altAttackerLoss =
-        1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
-      const attackerTroopLoss =
-        0.6 * currentAttackerLoss + 0.4 * altAttackerLoss;
-
+    if (defender === null) {
       return {
-        attackerTroopLoss,
-        defenderTroopLoss,
-        tilesPerTickUsed:
-          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
-          speed *
-          largeDefenderSpeedDebuff *
-          largeAttackerSpeedBonus *
-          (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
-      };
-    } else {
-      return {
-        attackerTroopLoss:
-          attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5,
+        attackerTroopLoss: mag / (attacker.type === PlayerType.Bot ? 10 : 5),
         defenderTroopLoss: 0,
         tilesPerTickUsed: within(
-          (2000 * Math.max(10, speed)) / attackTroops,
-          5,
-          100,
+          (TERRA_NULLIUS_COST_SCALE * tileCost) / attackTroops,
+          TERRA_NULLIUS_MIN_COST,
+          TERRA_NULLIUS_MAX_COST,
         ),
       };
     }
+
+    if (defender.isDisconnectedTeammate) {
+      // No troop loss if defender is disconnected and on same team
+      mag = 0;
+    }
+    if (
+      (attacker.type === PlayerType.Human ||
+        attacker.type === PlayerType.Nation) &&
+      defender.type === PlayerType.Bot
+    ) {
+      mag *= BOT_DEFENDER_LOSS_MULT;
+    }
+
+    // Big defenders are easier to bite into: both loss and cost scale down
+    // towards 0.7 as the defender's territory grows past the midpoint.
+    const largeDefenderDebuff =
+      0.7 +
+      0.3 *
+        (1 -
+          sigmoid(
+            defender.numTiles,
+            DEFENSE_DEBUFF_DECAY_RATE,
+            DEFENSE_DEBUFF_MIDPOINT,
+          ));
+
+    // Big attackers get cheaper, faster tiles past LARGE_ATTACKER_TILES.
+    let largeAttackerLossBonus = 1;
+    let largeAttackerCostBonus = 1;
+    if (attacker.numTiles > LARGE_ATTACKER_TILES) {
+      const ratio = LARGE_ATTACKER_TILES / attacker.numTiles;
+      largeAttackerLossBonus = Math.sqrt(ratio) ** 0.7;
+      largeAttackerCostBonus = ratio ** 0.6;
+    }
+
+    const traitorLossMod = defender.isTraitor ? this.traitorDefenseDebuff() : 1;
+    const traitorCostMod = defender.isTraitor ? this.traitorSpeedDebuff() : 1;
+
+    // Defender loses its average troops-per-tile.
+    const defenderTroopLoss = defender.troops / defender.numTiles;
+
+    // Attacker loss blends a ratio-driven term (how outnumbered the attack
+    // is, clamped) with a density-driven term (defender troops per tile).
+    const ratioLoss =
+      within(defender.troops / attackTroops, 0.6, 2) *
+      mag *
+      0.8 *
+      largeDefenderDebuff *
+      largeAttackerLossBonus *
+      traitorLossMod;
+    const densityLoss = 1.3 * defenderTroopLoss * (mag / 100) * traitorLossMod;
+    const attackerTroopLoss = 0.6 * ratioLoss + 0.4 * densityLoss;
+
+    return {
+      attackerTroopLoss,
+      defenderTroopLoss,
+      tilesPerTickUsed:
+        within(defender.troops / (5 * attackTroops), 0.2, 1.5) *
+        tileCost *
+        largeDefenderDebuff *
+        largeAttackerCostBonus *
+        traitorCostMod,
+    };
   }
 
   attackTilesPerTick(
