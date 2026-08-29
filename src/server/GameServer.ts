@@ -265,16 +265,6 @@ export class GameServer {
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
     applyGameConfigPatch(this.gameConfig, gameConfig);
-    // A join whitelist and public listing are mutually exclusive: a listed
-    // lobby must be joinable by anyone who finds it in the lobby browser.
-    if (
-      gameConfig.allowedPublicIds !== undefined &&
-      this.listing.isListed() &&
-      this.hasJoinWhitelist()
-    ) {
-      this.setListed(false);
-      this.log.info("delisted lobby: join whitelist enabled");
-    }
   }
 
   // Dispatch a control/gameplay intent from either a websocket client or the

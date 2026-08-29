@@ -130,17 +130,6 @@ describe("GameServer listing", () => {
     ).toBe(true);
   });
 
-  it("delists when a join whitelist is added via config update", () => {
-    const game = makeGame();
-    game.setListed(true);
-
-    game.updateGameConfig({ allowedPublicIds: [] });
-    expect(game.isListed()).toBe(true);
-
-    game.updateGameConfig({ allowedPublicIds: ["p1"] });
-    expect(game.isListed()).toBe(false);
-  });
-
   it("exposes the listed flag in gameInfo for private lobbies only", () => {
     const game = makeGame();
     expect(game.gameInfo().listed).toBe(false);
@@ -437,6 +426,26 @@ describe("listed lobby host powers", () => {
         asAdmin,
       ).status,
     ).toBe(200);
+  });
+
+  it("rejects a join whitelist while listed instead of delisting", () => {
+    const game = makeGame();
+    game.setListed(true);
+
+    const empty = {
+      type: "update_game_config",
+      config: { allowedPublicIds: [] },
+    } as any;
+    expect(game.handleIntent(empty, asHost).status).toBe(200);
+    expect(game.isListed()).toBe(true);
+
+    const whitelist = {
+      type: "update_game_config",
+      config: { allowedPublicIds: ["p1"] },
+    } as any;
+    expect(game.handleIntent(whitelist, asHost).status).toBe(409);
+    expect(game.isListed()).toBe(true);
+    expect(game.hasJoinWhitelist()).toBe(false);
   });
 
   it("rejects enabling host cheats while listed", () => {

@@ -143,9 +143,9 @@ export class HostLobbyModal extends BaseModal {
     if (lobby.clients) {
       this.clients = lobby.clients;
     }
-    // The server can delist on its own (join whitelist enabled, duplicate
-    // creator resolved by the master); follow its state unless our own
-    // toggle request is mid-flight.
+    // The server can delist on its own (duplicate creator / cap overflow
+    // resolved by the master); follow its state unless our own toggle
+    // request is mid-flight.
     if (!this.listingRequestInFlight && lobby.listed !== undefined) {
       this.publiclyListed = lobby.listed;
     }
@@ -232,7 +232,9 @@ export class HostLobbyModal extends BaseModal {
 
   // Private/Public segmented toggle in the header. Shown to everyone;
   // non-subscribers get a subscription-required dialog instead of a listing
-  // request (the server re-checks the subscription regardless).
+  // request (the server re-checks the subscription regardless). Listing is
+  // one-way (the server rejects unlisting), so the Private segment goes away
+  // once the lobby is listed.
   private renderVisibilityToggle() {
     const segment = (labelKey: string, isPublic: boolean) => html`
       <button
@@ -249,7 +251,9 @@ export class HostLobbyModal extends BaseModal {
       <div
         class="flex items-center rounded-full border border-white/10 bg-white/5 p-0.5 shrink-0"
       >
-        ${segment("host_modal.visibility_private", false)}
+        ${this.publiclyListed
+          ? nothing
+          : segment("host_modal.visibility_private", false)}
         ${segment("host_modal.visibility_public", true)}
       </div>
       ${this.renderAutoStartTimer()}
