@@ -839,6 +839,7 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       slider(s.altView, "gridFontSize", d.altView, 6, 32, 1, "Grid Font Size"),
       toggle(s.altView, "recolorStructures", d.altView, "Recolor Structures"),
       slider(s.altView, "fillAlpha", d.altView, 0, 1, 0.01, "Fill Alpha"),
+      toggle(s.altView, "hoverPerspective", d.altView, "Hover Perspective"),
     ]),
 
     folder(

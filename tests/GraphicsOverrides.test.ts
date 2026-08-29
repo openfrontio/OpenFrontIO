@@ -74,6 +74,15 @@ describe("GraphicsOverridesSchema", () => {
       GraphicsOverridesSchema.safeParse({ altView: { fillAlpha: "faint" } })
         .success,
     ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({
+        altView: { hoverPerspective: false },
+      }).success,
+    ).toBe(true);
+    expect(
+      GraphicsOverridesSchema.safeParse({ altView: { hoverPerspective: "no" } })
+        .success,
+    ).toBe(false);
   });
 
   test("accepts partial railroad overrides", () => {
@@ -378,6 +387,13 @@ describe("applyGraphicsOverrides", () => {
     expect(gen({}).altView.fillAlpha).toBe(
       createRenderSettings().altView.fillAlpha,
     );
+  });
+
+  test("applies altView.hoverPerspective override (default on)", () => {
+    expect(gen({}).altView.hoverPerspective).toBe(true);
+    expect(
+      gen({ altView: { hoverPerspective: false } }).altView.hoverPerspective,
+    ).toBe(false);
   });
 
   test("mapOverlay override leaves other mapOverlay fields at defaults", () => {

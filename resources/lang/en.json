@@ -737,6 +737,8 @@
     "advanced_label": "Advanced settings",
     "alt_view_fill_alpha_desc": "How opaque the relation-colored territory fill is while holding the alt-view key (Space)",
     "alt_view_fill_alpha_label": "Alt-view fill opacity",
+    "alt_view_hover_perspective_desc": "In alt-view (Space), hovering another player shows their allies and embargoes instead of yours",
+    "alt_view_hover_perspective_label": "Alt-view hover perspective",
     "background_color_desc": "Color of the area outside the map and impassable terrain.",
     "background_color_label": "Background color",
     "black": "Black",

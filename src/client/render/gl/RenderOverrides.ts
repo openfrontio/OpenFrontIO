@@ -107,6 +107,9 @@ export function applyGraphicsOverrides(
   if (overrides.altView?.fillAlpha !== undefined) {
     settings.altView.fillAlpha = overrides.altView.fillAlpha;
   }
+  if (overrides.altView?.hoverPerspective !== undefined) {
+    settings.altView.hoverPerspective = overrides.altView.hoverPerspective;
+  }
   if (overrides.affiliation?.selfColor !== undefined) {
     applyHexColor(overrides.affiliation.selfColor, (r, g, b) => {
       settings.affiliation.selfR = r;

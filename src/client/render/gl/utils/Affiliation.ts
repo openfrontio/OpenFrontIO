@@ -75,7 +75,9 @@ export class AffiliationPalette {
   }
 
   private perspective(): number {
-    return this.hoveredOwnerID > 0 ? this.hoveredOwnerID : this.localPlayerID;
+    return this.settings.altView.hoverPerspective && this.hoveredOwnerID > 0
+      ? this.hoveredOwnerID
+      : this.localPlayerID;
   }
 
   updateRelations(data: Uint8Array, size: number): void {

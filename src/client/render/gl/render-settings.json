@@ -347,6 +347,7 @@
   "altView": {
     "gridFontSize": 24,
     "fillAlpha": 0.15,
+    "hoverPerspective": true,
     "recolorStructures": true
   },
   "tileDrip": {

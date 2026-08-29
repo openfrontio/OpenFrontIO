@@ -472,6 +472,19 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchMapOverlay({ territoryAlpha: value });
   }
 
+  private currentAltViewHoverPerspective(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().altView?.hoverPerspective ??
+      renderDefaults.altView.hoverPerspective
+    );
+  }
+
+  private onToggleAltViewHoverPerspective() {
+    this.patchAltView({
+      hoverPerspective: !this.currentAltViewHoverPerspective(),
+    });
+  }
+
   private onAltViewFillAlphaChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchAltView({ fillAlpha: value });
@@ -991,6 +1004,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const territorySat = this.currentTerritorySat();
     const territoryAlpha = this.currentTerritoryAlpha();
     const altViewFillAlpha = this.currentAltViewFillAlpha();
+    const altViewHoverPerspective = this.currentAltViewHoverPerspective();
     const coordinateGridOpacity = this.currentCoordinateGridOpacity();
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
     const railThickness = this.currentRailThickness();
@@ -1471,6 +1485,27 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
           ${altViewFillAlpha.toFixed(2)}
         </div>
       </div>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+        @click=${this.onToggleAltViewHoverPerspective}
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText(
+              "graphics_setting.alt_view_hover_perspective_label",
+            )}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.alt_view_hover_perspective_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${altViewHoverPerspective
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
 
       <div
         class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"

@@ -57,6 +57,9 @@ export const GraphicsOverridesSchema = z
         // Opacity of the translucent relation-colored territory fill shown
         // while holding the alt-view key (0 = borders only, 1 = opaque).
         fillAlpha: z.number(),
+        // When true, hovering another player's territory shows alt-view from
+        // their diplomacy; false always uses your own.
+        hoverPerspective: z.boolean(),
       })
       .partial(),
     affiliation: z
