@@ -59,6 +59,10 @@ export interface PlaybookParams {
   siloAtTick: number; // earliest silo
   bombEvery: number; // ticks between bombs
   bombReserve: number; // gold kept after buying a bomb
+  reserveShare: number; // share of CURRENT troops kept at home by send()/boat() (nations keep 30–40 %); a share of cap froze the bot whenever troops were low
+  tribeConcurrency: number; // tribe attacks at once below 60 % of cap (one more above)
+  spawnInland: number; // tiles walked inland from the chosen shore
+  retreatOnAllianceEnd: boolean;
   postsBeforeCity2: boolean; // allow threat posts even while city 2 is unaffordable
   portWithoutPartnerTick: number; // first port on any ocean coast from this tick even with no partner (1e9 = never)
 }
@@ -96,6 +100,10 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   siloAtTick: 6000,
   bombEvery: 300,
   bombReserve: 250_000,
+  reserveShare: 0.3,
+  tribeConcurrency: 1,
+  spawnInland: 0, // 30-game lab: 8 tiles inland = 18/30 alive vs 27/30 on the shore (an inland circle can be surrounded; the coast cannot)
+  retreatOnAllianceEnd: true,
   postsBeforeCity2: true, // 30-game lab: +8% land, same survival as blocking them
   portWithoutPartnerTick: 1500,
 };
@@ -153,7 +161,7 @@ export class PlaybookBotExecution implements Execution {
     const nb = this.neighbours();
     const incoming = me.incomingAttacks().filter((a) => a.attacker().type() !== PlayerType.Bot);
     const outgoing = me.outgoingAttacks();
-    const reserve = cap * this.p.homeFloor;
+    const reserve = troops * this.p.reserveShare;
     const t = this.mg.ticks();
     this.sit = {
       tick: t, troops, cap, capShare: cap > 0 ? troops / cap : 0, reserve, spendable: Math.max(0, troops - reserve),
@@ -204,7 +212,7 @@ export class PlaybookBotExecution implements Execution {
     if (me.isFriendly(p)) return;
     if (this.log.length < 200) this.log.push(`t${this.sit.tick} ALLIANCE ENDED ${p.name()} ${Math.round(p.troops() / 1000)}k vs our ${Math.round(this.sit.troops / 1000)}k`);
     // if they are stronger, every tribe wave comes home now — the nation attacks within seconds of a lapse
-    if (p.troops() > this.sit.troops * 0.8) {
+    if (this.p.retreatOnAllianceEnd && p.troops() > this.sit.troops * 0.8) {
       for (const a of this.sit.outgoing) { const t = a.target(); if (t.isPlayer() && (t as Player).type() === PlayerType.Bot) me.orderRetreat(a.id()); }
     }
     this.postFailed.delete(p);
@@ -273,6 +281,26 @@ export class PlaybookBotExecution implements Execution {
     return p.numTilesOwned() > 0 ? p.troops() / p.numTilesOwned() : 1e9;
   }
 
+  // ---------------------------------------------------------------- annexation
+  private annexCache = new Map<Player, { tick: number; ok: boolean }>();
+  /** A neighbour we could annex by encirclement: no ocean coast, no map edge, and we already hold at least
+   *  40 % of its border. Such a neighbour must never be an ally (an ally's cluster never flips). */
+  private annexable(p: Player): boolean {
+    const c = this.annexCache.get(p);
+    if (c && this.mg.ticks() - c.tick < 100) return c.ok;
+    let ok = true, ours = 0, n = 0, i = 0;
+    for (const t of p.borderTiles()) {
+      if (this.mg.isOceanShore(t) || this.mg.isOnEdgeOfMap(t)) { ok = false; break; }
+      if ((i++ % 3) !== 0) continue;
+      n++;
+      for (const nb of this.mg.neighbors(t)) { if (this.mg.owner(nb) === this.player) { ours++; break; } }
+    }
+    ok = ok && n > 0 && ours / n >= 0.4 && p.numTilesOwned() < this.player.numTilesOwned();
+    this.annexCache.set(p, { tick: this.mg.ticks(), ok });
+    if (ok && !(c && c.ok) && this.log.length < 200) this.log.push(`t${this.mg.ticks()} ANNEX target ${p.name()} ${p.numTilesOwned()}t (${Math.round((100 * ours) / n)} % of its border is ours)`);
+    return ok;
+  }
+
   // ---------------------------------------------------------------- expansion
   private expand(): void {
     const me = this.player;
@@ -285,7 +313,9 @@ export class PlaybookBotExecution implements Execution {
       this.send(this.mg.terraNullius().id(), send, "all-in", 100);
       return;
     }
-    const frac = rivals.length > 0 ? this.p.expandContested : this.p.expandFree;
+    if (this.sit.troops < this.sit.cap * this.p.homeFloor) return;
+    const ringing = [...this.sit.rivals, ...this.sit.bots, ...this.sit.friends].some((r) => this.annexable(r));
+    const frac = rivals.length > 0 || ringing ? this.p.expandContested : this.p.expandFree;
     this.send(this.mg.terraNullius().id(), Math.floor(this.sit.troops * frac), "expand", 100);
   }
 
@@ -300,7 +330,7 @@ export class PlaybookBotExecution implements Execution {
     // once the wilderness is gone, or earlier only when we are plentiful and the click is small.
     const early = wilderness && this.p.botsAfterWild;
     // invariant: one tribe at a time below 60 % of cap, two above — three at once is how the army disappears
-    const maxConcurrent = this.sit.capShare > 0.6 ? 2 : 1;
+    const maxConcurrent = this.p.tribeConcurrency + (this.sit.capShare > 0.6 ? 1 : 0);
     let active = this.sit.tribeAttacks;
     let clicks = 0;
     for (const bot of bots) {
@@ -371,7 +401,10 @@ export class PlaybookBotExecution implements Execution {
     const nb = this.neighbours();
     for (const r of nb.rivals) this.collapsed(r);
     const opportunity = nb.rivals.some((r) => this.collapsed(r));
-    if (me.troops() < cap * this.p.fightAbove && !(opportunity && me.troops() >= cap * this.p.homeFloor * 2)) return;
+    // crown, not survival: a war is on when we can afford 2× someone's whole army out of the spendable troops,
+    // not only when troops reach 70 % of a cap that cities keep raising
+    const affordable = this.mg.ticks() >= this.p.fightNotBeforeTick && nb.rivals.some((r) => r.troops() * this.p.fightRatio + 1000 <= this.sit.spendable * this.p.fightMaxShare);
+    if (me.troops() < cap * this.p.fightAbove && !affordable && !(opportunity && me.troops() >= cap * this.p.homeFloor * 2)) return;
     const atCapNow = me.troops() >= cap * 0.95;
     const early = !atCapNow && !opportunity && (this.mg.ticks() < this.p.fightNotBeforeTick || me.unitsOwned(UnitType.City) < this.p.fightMinCities);
     let { rivals } = nb;
@@ -409,7 +442,7 @@ export class PlaybookBotExecution implements Execution {
       return;
     }
     const wantRaw = Math.min(Math.ceil(best.troops() * this.p.fightRatio) + 1000, maxSend);
-    if (wantRaw < 1000 || wantRaw > this.sit.spendable) return; // the reserve is not for wars
+    if (wantRaw < 1000) return;
     this.currentTarget = best;
     if (!me.hasEmbargoAgainst(best) && best.type() !== PlayerType.Nation) { me.addEmbargo(best, false); this.embargoedAt.set(best, this.mg.ticks()); }
     const want = this.send(best.id(), wantRaw, "war", 1000);
@@ -497,7 +530,7 @@ export class PlaybookBotExecution implements Execution {
           if (score > bestS) { bestS = score; best = t; }
         }
       }
-      if (best !== null) { PlaybookBotExecution.lastSpawnDiag = `tick ${game.ticks()} nations=${nations.length} tribes=${tribes.length} humans=${humans.length} stage veto=${veto} score=${bestS.toFixed(1)} at ${game.x(best)},${game.y(best)}`; return PlaybookBotExecution.inland(game, best, 8); }
+      if (best !== null) { PlaybookBotExecution.lastSpawnDiag = `tick ${game.ticks()} nations=${nations.length} tribes=${tribes.length} humans=${humans.length} stage veto=${veto} score=${bestS.toFixed(1)} at ${game.x(best)},${game.y(best)}`; return PlaybookBotExecution.inland(game, best, DEFAULT_PLAYBOOK.spawnInland); }
     }
     PlaybookBotExecution.lastSpawnDiag = `no spawn: nations=${nations.length}`;
     return null;
@@ -665,29 +698,30 @@ export class PlaybookBotExecution implements Execution {
       const r = req.requestor();
       if (r.type() === PlayerType.Bot) continue;
       if (r === this.currentTarget || r === this.plannedTarget) continue;
-      if (this.isPrey(r)) continue;
+      if (this.isPrey(r) || this.annexable(r)) continue;
       req.accept();
     }
   }
   /** A weaker neighbour is food: with two or more neighbours we keep the weakest one unallied so the army has somewhere to go. */
   private isPrey(o: Player): boolean {
     const me = this.player;
-    // Nations on Hard attack unallied neighbours early; an alliance is a shield first and a meal only later.
-    if (this.mg.ticks() < 600) return false;
+    // Crown, not survival: the single weakest neighbour is never allied when we can take it (2× its army within our
+    // share), from 30 s on — an alliance made at 1:00 otherwise locks the whole mid game until 11:00.
+    if (this.mg.ticks() < 300) return false;
     if (o.troops() < me.troops() * 0.5 && this.mg.ticks() >= 1200) return true;
-    // the single weakest neighbour stays unallied only if we can take it right now (2× its army within our share)
-    const all = [...this.neighbours().rivals, ...this.neighbours().friends];
-    if (all.length < 3) return false;
+    const all = [...this.neighbours().rivals, ...this.neighbours().friends].filter((p) => p.type() !== PlayerType.Bot);
+    if (all.length < 2) return false;
     const weakest = all.reduce((a, b) => (b.troops() < a.troops() ? b : a));
-    return o === weakest && o.troops() * 2 < me.troops() * this.p.fightMaxShare;
+    return o === weakest && o.troops() * 2 < me.troops() * this.p.fightMaxShare && o.numTilesOwned() <= me.numTilesOwned() * 1.5;
   }
+
   private requestAlliances(): void {
     const me = this.player;
     const { rivals } = this.neighbours();
     rivals.sort((a, b) => b.troops() - a.troops());
     for (const o of rivals) {
       if (o === this.currentTarget || o === this.plannedTarget) continue;
-      if (this.isPrey(o)) continue;
+      if (this.isPrey(o) || this.annexable(o)) continue; // an ally can never be annexed
       if (!me.canSendAllianceRequest(o)) continue;
       this.mg.addExecution(new AllianceRequestExecution(me, o.id()));
     }
@@ -702,7 +736,7 @@ export class PlaybookBotExecution implements Execution {
       const left = al.expiresAt() - this.mg.ticks();
       if (left > offset || left < 0) continue;
       const { rivals, friends } = this.neighbours();
-      const prey = friends.includes(other) && other.troops() < me.troops() * 0.4 && me.troops() > this.cap() * this.p.fightAbove && rivals.length <= 1;
+      const prey = (friends.includes(other) && other.troops() < me.troops() * 0.4 && me.troops() > this.cap() * this.p.fightAbove && rivals.length <= 1) || this.annexable(other);
       // A Hard nation renews only if we are as strong as it, a threat to it, or on friendly terms.
       // A gift of 1/7 of its cap makes it friendly (+50): cheap insurance when we are the weaker side.
       if (!prey && other.type() === PlayerType.Nation && me.troops() < other.troops() * 0.9 && me.canDonateTroops(other)) {
@@ -967,7 +1001,8 @@ export class PlaybookBotExecution implements Execution {
       if (ports.length > 0) {
         const bestPort = [...ports].sort((a, b) => b.level() - a.level())[0];
         const wantLevel = bestPort.level() < this.p.portLevelBeforeSecond || ports.length >= this.p.maxPortUnits || partnerTile === null;
-        if (wantLevel && me.canUpgradeUnit(bestPort) && me.troops() < this.cap() * 0.8) { upgrade(bestPort); return; }
+        // level the port unless a city is affordable and troops are near cap (then the city comes first, below)
+        if (wantLevel && me.canUpgradeUnit(bestPort) && (me.troops() < this.cap() * 0.8 || gold < cost(UnitType.City))) { upgrade(bestPort); return; }
         if (!wantLevel && partnerTile !== null && this.tryBuild(UnitType.Port, partnerTile)) return;
       }
     }

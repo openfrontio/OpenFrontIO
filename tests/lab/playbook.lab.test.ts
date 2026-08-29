@@ -78,18 +78,22 @@ async function runGame(label: string, params: PlaybookParams, minutes: number, d
   game.endSpawnPhase();
   const me = game.player(info.id);
   const bot = new PlaybookBotExecution(me, params);
+  let botMs = 0; const origTick = bot.tick.bind(bot); bot.tick = (t: number) => { const s0 = performance.now(); origTick(t); botMs += performance.now() - s0; };
   game.addExecution(bot, new WinCheckExecution());
   const rows: string[] = [`== ${label} | spawn ${game.x(spawn)},${game.y(spawn)} (${spawnNote}) | ${difficulty} ==`];
   const ticks = minutes * 600;
+  let allMs = 0;
   for (let t = 0; t < ticks; t++) {
-    game.executeNextTick();
+    const s0 = performance.now(); game.executeNextTick(); allMs += performance.now() - s0;
     if (!me.isAlive()) { rows.push(`  DEAD at ${(t / 10).toFixed(0)}s`); break; }
     if ((t + 1) % 300 === 0) {
       const rank = game.players().filter((p) => p.type() !== PlayerType.Bot).sort((a, b) => b.numTilesOwned() - a.numTilesOwned()).findIndex((p) => p === me) + 1;
       const bots = game.players().filter((p) => p.type() === PlayerType.Bot && p.isAlive()); const bt = bots.reduce((a, b) => a + b.troops(), 0) / Math.max(1, bots.length); const bl = bots.reduce((a, b) => a + b.numTilesOwned(), 0) / Math.max(1, bots.length); const nb = neighboursBots(me); rows.push(`  ${String((t + 1) / 10).padStart(4)}s bots=${bots.length} botTroops=${Math.round(bt)} botTiles=${Math.round(bl)} nearBotTroops=${nb} tiles=${String(me.numTilesOwned()).padStart(6)} troops=${String(Math.round(me.troops() / 1000)).padStart(5)}k cap=${String(Math.round(game.config().maxTroops(me) / 1000)).padStart(5)}k gold=${String(Math.round(Number(me.gold()) / 1000)).padStart(6)}k cities=${me.unitsOwned(UnitType.City)} ports=${me.unitsOwned(UnitType.Port)} dp=${me.unitsOwned(UnitType.DefensePost)} allies=${me.alliances().length} rank=${rank}/${game.players().filter((p) => p.type() !== PlayerType.Bot).length}`);
     }
   }
-  rows.push(`  FINAL alive=${me.isAlive()} tiles=${me.numTilesOwned()} troops=${Math.round(me.troops()/1000)}k cities=${me.unitsOwned(UnitType.City)} ports=${me.unitsOwned(UnitType.Port)} factories=${me.unitsOwned(UnitType.Factory)} silos=${me.unitsOwned(UnitType.MissileSilo)} sams=${me.unitsOwned(UnitType.SAMLauncher)} bombs=${bot.bombs} trainGold=${Math.round(Number(me.trainGold())/1000)}k gold=${Math.round(Number(me.gold())/1000)}k`);
+  const ranked = game.players().filter((p) => p.type() !== PlayerType.Bot && p.isAlive()).sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+  const rank = ranked.findIndex((p) => p === me) + 1; const leader = ranked[0]?.numTilesOwned() ?? 1;
+  rows.push(`  FINAL rank=${rank || 99} share=${(me.numTilesOwned() / Math.max(1, leader)).toFixed(2)} botMs=${Math.round(botMs)} gameMs=${Math.round(allMs)} alive=${me.isAlive()} tiles=${me.numTilesOwned()} troops=${Math.round(me.troops()/1000)}k cities=${me.unitsOwned(UnitType.City)} ports=${me.unitsOwned(UnitType.Port)} factories=${me.unitsOwned(UnitType.Factory)} silos=${me.unitsOwned(UnitType.MissileSilo)} sams=${me.unitsOwned(UnitType.SAMLauncher)} bombs=${bot.bombs} trainGold=${Math.round(Number(me.trainGold())/1000)}k gold=${Math.round(Number(me.gold())/1000)}k`);
   rows.push("  log: " + bot.log.join(" | "));
   return rows.join("\n");
 }
@@ -101,7 +105,7 @@ describe("playbook lab", () => {
     const params: PlaybookParams = { ...DEFAULT_PLAYBOOK };
     if (process.env.EXPAND) { params.expandContested = Number(process.env.EXPAND); params.expandFree = Number(process.env.EXPAND) / 2; }
     if (process.env.EVERY) params.expandEvery = Number(process.env.EVERY);
-    if (process.env.PARAMS) Object.assign(params, JSON.parse(process.env.PARAMS));
+    if (process.env.PARAMS) { const o = JSON.parse(process.env.PARAMS); Object.assign(params, o); if (o.spawnInland !== undefined) DEFAULT_PLAYBOOK.spawnInland = o.spawnInland; }
     if (process.env.ALLIN) params.openingAllIn = process.env.ALLIN === "1";
     if (process.env.KEEP) params.openingKeep = Number(process.env.KEEP);
     const minutes = process.env.MIN ? Number(process.env.MIN) : 20;
