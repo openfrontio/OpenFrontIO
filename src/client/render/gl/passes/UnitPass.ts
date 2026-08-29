@@ -121,6 +121,7 @@ const FLAG_ANGRY = 2;
 const FLAG_TRADE_FRIENDLY = 3;
 const FLAG_RETREATING = 4;
 const FLAG_FLICKER_UNTARGETABLE = 5;
+const FLAG_TRADE_SELF = 6;
 
 /** Atlas column indices for train sub-types (resolved from trainType + loaded) */
 const TRAIN_ENGINE_COL = UNIT_ORDER.indexOf("TrainEngine");
@@ -475,9 +476,11 @@ export class UnitPass {
         unit.unitType === UT_WARSHIP && unit.targetUnitId !== null;
       const isFlicker = FLICKER_TYPES.has(unit.unitType);
 
-      // Enemy trade ships heading to a self/allied port get FLAG_TRADE_FRIENDLY
-      // so alt-view renders them yellow instead of red.
-      let isTradeFriendly = false;
+      // Alt-view trade ship color from owner + destination port owner:
+      //   self involved on either end        -> green  (FLAG_TRADE_SELF)
+      //   ally/teammate involved on either end -> yellow (FLAG_TRADE_FRIENDLY)
+      //   otherwise                          -> red    (owner affiliation)
+      let tradeFlag = FLAG_NORMAL;
       if (
         unit.unitType === UT_TRADE_SHIP &&
         unit.targetUnitId !== null &&
@@ -486,20 +489,23 @@ export class UnitPass {
         const targetPort = this.structures.get(unit.targetUnitId);
         if (targetPort) {
           const portOwner = targetPort.ownerID;
-          // Only recolor enemy-owned ships: a self/allied ship already renders
-          // green/yellow via its affiliation color (e.g. a captured trade ship
-          // heading to our port is ours and must stay green, not yellow).
-          isTradeFriendly =
-            unit.ownerID !== this.localPlayerID &&
-            !this.friendlyOwners.has(unit.ownerID) &&
-            (portOwner === this.localPlayerID ||
-              this.friendlyOwners.has(portOwner));
+          if (
+            unit.ownerID === this.localPlayerID ||
+            portOwner === this.localPlayerID
+          ) {
+            tradeFlag = FLAG_TRADE_SELF;
+          } else if (
+            this.friendlyOwners.has(unit.ownerID) ||
+            this.friendlyOwners.has(portOwner)
+          ) {
+            tradeFlag = FLAG_TRADE_FRIENDLY;
+          }
         }
       }
 
       let flags = FLAG_NORMAL;
-      if (isTradeFriendly) {
-        flags = FLAG_TRADE_FRIENDLY;
+      if (tradeFlag !== FLAG_NORMAL) {
+        flags = tradeFlag;
       } else if (isRetreatingWarship) {
         flags = FLAG_RETREATING;
       } else if (isAngryWarship) {
