@@ -174,8 +174,12 @@ export class PreviewTerritoryPass {
 
   private loadSkin(url: string): void {
     if (url === this.skinUrl) return;
-    this.clearSkin();
+    // Free whatever is current (the placeholder or the previous skin) rather
+    // than going through clearSkin(), whose fresh placeholder would leak here.
+    this.skinAtlas.dispose();
     this.skinUrl = url;
+    this.skinLayer[PREVIEW_OWNER_ID] = 0;
+    this.uploadSkinLayer();
     const atlas = new SkinAtlasArray(this.gl, [url], (_url, layer) => {
       if (this.isDisposed || atlas !== this.skinAtlas) return;
       this.skinLayer[PREVIEW_OWNER_ID] = layer + 1;
