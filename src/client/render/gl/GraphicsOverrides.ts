@@ -52,6 +52,16 @@ export const GraphicsOverridesSchema = z
         embargoTintRatio: z.number(),
       })
       .partial(),
+    altView: z
+      .object({
+        // Opacity of the translucent relation-colored territory fill shown
+        // while holding the alt-view key (0 = borders only, 1 = opaque).
+        fillAlpha: z.number(),
+        // When true, hovering another player's territory shows alt-view from
+        // their diplomacy; false always uses your own.
+        hoverPerspective: z.boolean(),
+      })
+      .partial(),
     affiliation: z
       .object({
         // "#rrggbb" hex strings; alt-view border colors for your own, allied,

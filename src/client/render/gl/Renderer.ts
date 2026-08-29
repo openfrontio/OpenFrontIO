@@ -629,6 +629,7 @@ export class GPURenderer {
     this.affiliationPalette = new AffiliationPalette(gl, this.settings);
     const affTex = this.affiliationPalette.getTexture();
     this.borderStampPass.setAffiliationTex(affTex);
+    this.territoryPass.setAffiliationTex(affTex);
     this.unitPass.setAffiliationTex(affTex);
     this.structurePass.setAffiliationTex(affTex);
     this.trailPass.setAffiliationTex(affTex);
@@ -1094,6 +1095,7 @@ export class GPURenderer {
     this.namePass.setHighlightOwner(ownerID);
     this.structurePass.setHighlightOwner(ownerID);
     this.railroadPass.setHighlightOwner(ownerID);
+    this.affiliationPalette.setHoveredOwner(ownerID);
   }
   setMouseWorldPos(x: number, y: number): void {
     this.namePass.setMouseWorldPos(x, y);

@@ -408,6 +408,13 @@ export interface RenderSettings {
   altView: {
     gridFontSize: number;
     recolorStructures: boolean;
+    /** Opacity of the translucent affiliation-colored territory fill. */
+    fillAlpha: number;
+    /**
+     * When true, hovering another player's territory recolors alt-view from
+     * that player's diplomacy; when false, always use the local player's.
+     */
+    hoverPerspective: boolean;
   };
   tileDrip: {
     /**
