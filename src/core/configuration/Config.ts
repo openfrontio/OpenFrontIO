@@ -101,10 +101,12 @@ const TERRA_NULLIUS_MAX_COST = 100;
 // Was sqrt(ratio) ** 0.7 and ratio ** 0.6.
 const LARGE_ATTACKER_LOSS_EXPONENT = 0.35;
 const LARGE_ATTACKER_COST_EXPONENT = 0.6;
-// Attacker loss = mag * (RATIO_WEIGHT * clampedRatio + DENSITY_WEIGHT * troopsPerTile).
-// Was 0.6 * (ratio * mag * 0.8) + 0.4 * (1.3 * density * mag / 100).
-const ATTACKER_LOSS_RATIO_WEIGHT = 0.48;
-const ATTACKER_LOSS_DENSITY_WEIGHT = 0.0052;
+// Attacker loss per tile = mag * clamp(troopRatio, 0.6, 2) * (BASE + PER_DENSITY * troopsPerTile).
+// The density share is half of what it was when it sat outside the troop
+// ratio clamp, so an attack at the clamp ceiling (ratio >= 2, the common
+// case) pays exactly what it used to; only bigger pushes get cheaper.
+const ATTACKER_LOSS_BASE = 0.48;
+const ATTACKER_LOSS_PER_DEFENDER_DENSITY = 0.0026;
 
 function terrainAttackBase(terrain: TerrainType): {
   mag: number;
@@ -819,16 +821,16 @@ export class Config {
     // Defender loses its average troops-per-tile.
     const defenderTroopLoss = defender.troops / defender.numTiles;
 
-    // Attacker loss blends a ratio-driven term (how outnumbered the attack
-    // is, clamped) with a density-driven term (defender troops per tile).
+    // A tile costs the attacker a base amount (scaled by the territory-size
+    // modifiers) plus a share of the defender's troops-per-tile. The whole
+    // cost is then scaled by how concentrated the push is: the more the
+    // attack outnumbers the defender's army, the cheaper every tile.
     const troopRatio = defender.troops / attackTroops;
-    const ratioTerm =
-      within(troopRatio, 0.6, 2) * largeDefenderDebuff * largeAttackerLossBonus;
+    const perTileLoss =
+      ATTACKER_LOSS_BASE * largeDefenderDebuff * largeAttackerLossBonus +
+      ATTACKER_LOSS_PER_DEFENDER_DENSITY * defenderTroopLoss;
     const attackerTroopLoss =
-      mag *
-      traitorLossMod *
-      (ATTACKER_LOSS_RATIO_WEIGHT * ratioTerm +
-        ATTACKER_LOSS_DENSITY_WEIGHT * defenderTroopLoss);
+      mag * traitorLossMod * within(troopRatio, 0.6, 2) * perTileLoss;
 
     return {
       attackerTroopLoss,
