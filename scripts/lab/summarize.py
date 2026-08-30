@@ -11,6 +11,9 @@ prints wins / losses / identical pairs plus the biggest swings.
   python3 scripts/lab/summarize.py DIR base cand1 …    # explicit order; first = baseline
   python3 scripts/lab/summarize.py --fitness DIR …     # JSON {config: {"fitness": …, "games": …}} for cmaes.py
   python3 scripts/lab/summarize.py --ladder DIR cand v-current v3 v2   # Bradley–Terry table over all pairs
+  python3 scripts/lab/summarize.py --at 600 DIR …      # same, but scored from the 10-minute row of each transcript
+  python3 scripts/lab/summarize.py --verdict 3 DIR …   # per config: "clear" when |wins - losses| >= 3 vs the baseline, else "unclear"
+                                                       # (exit 0 when every config is clear — remote.sh STAGED=1 uses this to skip the rest of the grid)
 
 Fitness of one game = alive (0/1) + share (0..1) + (rank <= 3 ? 1 : 0), so a
 config's fitness is in [0, 3]; a dead game scores 0.
@@ -28,6 +31,9 @@ FINAL_RE = re.compile(
     r"(?: share=(?P<share>[\d.]+))?.*?alive=(?P<alive>\w+) tiles=(?P<tiles>\d+)"
 )
 DEAD_RE = re.compile(r"DEAD at (\d+)s")
+# one per-30-s row of a transcript:  "  600s bots=… tiles=  12345 troops=… rank=3/41 share=0.62"
+ROW_RE = re.compile(r"^\s*(?P<t>\d+)s .*?tiles=\s*(?P<tiles>\d+).*?rank=(?P<rank>\d+)/\d+(?: share=(?P<share>[\d.]+))?")
+AT = None  # --at SECONDS: score games from the row at that time instead of FINAL
 
 
 def parse_line(line):
@@ -53,10 +59,44 @@ def fitness(g):
     return (1.0 if g["alive"] else 0.0) + g["share"] + (1.0 if g["rank"] is not None and g["rank"] <= 3 else 0.0)
 
 
+def parse_at(text, seconds):
+    """Game state at `seconds` from a transcript: the last row at or before that time (dead = no row and a
+    DEAD line before it). share needs the row's share= field (transcripts from 2026-08-30 on)."""
+    header = next((l for l in text.splitlines() if l.startswith("==")), None)
+    hm = re.search(r"== (?P<region>\S+) \|.*\| (?P<diff>\w+) ==", header or "")
+    if not hm:
+        return None
+    row = None
+    for l in text.splitlines():
+        m = ROW_RE.match(l)
+        if m and int(m.group("t")) <= seconds:
+            row = m
+    dead = DEAD_RE.search(text)
+    dead_at = int(dead.group(1)) if dead else None
+    alive = not (dead_at is not None and dead_at <= seconds)
+    if row is None:
+        return {"region": hm.group("region"), "diff": hm.group("diff"), "alive": alive, "rank": None, "share": 0.0, "tiles": 0, "deadAt": dead_at}
+    return {
+        "region": hm.group("region"), "diff": hm.group("diff"), "alive": alive,
+        "rank": int(row.group("rank")) if alive else None,
+        "share": float(row.group("share")) if (alive and row.group("share")) else 0.0,
+        "tiles": int(row.group("tiles")) if alive else 0, "deadAt": dead_at,
+    }
+
+
 def load(d, cfg):
     """{(batch, region): game} for one config. Falls back to the p_*.txt transcripts
-    when the aggregated ab30 files are missing (sweep died before aggregating)."""
+    when the aggregated ab30 files are missing (sweep died before aggregating).
+    With --at, always reads the transcripts."""
     games = {}
+    if AT is not None:
+        for f in sorted(glob.glob(os.path.join(d, f"p_{cfg}_*_*.txt"))):
+            rest = os.path.basename(f)[len(f"p_{cfg}_"):-4]
+            batch, _, region = rest.partition("_")
+            g = parse_at(open(f).read(), AT)
+            if g:
+                games[(batch, region)] = g
+        return games
     files = sorted(glob.glob(os.path.join(d, f"ab30_{cfg}_*.txt")))
     for f in files:
         batch = os.path.basename(f)[:-4].split("_")[-1]
@@ -189,16 +229,39 @@ def print_ladder(d, names):
         print(f"  P({cand} beats {names[j]}) = {prob:.2f}")
 
 
+def verdict(d, names, thresh):
+    """Staged A/B helper: 'clear' when |wins - losses| >= thresh vs the baseline. Exit code 0 iff all clear."""
+    data = {n: load(d, n) for n in names}
+    base = names[0]
+    all_clear = True
+    for n in names[1:]:
+        w, l, same, _ = paired(data[n], data[base])
+        clear = abs(w - l) >= thresh
+        all_clear = all_clear and clear
+        print(f"{n} {'clear' if clear else 'unclear'} wins={w} losses={l} identical={same} games={len(data[n])}")
+    return 0 if all_clear else 1
+
+
 def main(argv):
+    global AT
     mode = "table"
-    if argv and argv[0] in ("--fitness", "--ladder"):
-        mode = argv[0][2:]
-        argv = argv[1:]
+    thresh = 3
+    while argv and argv[0].startswith("--"):
+        if argv[0] == "--at":
+            AT = int(argv[1]); argv = argv[2:]
+        elif argv[0] == "--verdict":
+            mode = "verdict"; thresh = int(argv[1]); argv = argv[2:]
+        elif argv[0] in ("--fitness", "--ladder"):
+            mode = argv[0][2:]; argv = argv[1:]
+        else:
+            print(f"unknown option {argv[0]}"); return 2
     if not argv:
         print(__doc__)
         return 2
     d = argv[0]
     names = argv[1:] or discover(d)
+    if not names and AT is not None:
+        names = sorted({os.path.basename(f)[2:].rsplit("_", 2)[0] for f in glob.glob(os.path.join(d, "p_*_*_*.txt"))})
     if not names:
         print(f"no ab30_*.txt files in {d}")
         return 1
@@ -208,6 +271,11 @@ def main(argv):
             s = summary(load(d, n))
             out[n] = {"fitness": s["fitness"], "games": s["games"], "alive": s["alive"], "top3": s["top3"], "tiles": s["tiles"]}
         print(json.dumps(out, indent=1))
+    elif mode == "verdict":
+        if len(names) < 2:
+            print("--verdict needs a baseline and at least one candidate")
+            return 2
+        return verdict(d, names, thresh)
     elif mode == "ladder":
         if len(names) < 2:
             print("--ladder needs a candidate and at least one version")

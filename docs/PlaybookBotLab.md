@@ -92,8 +92,13 @@ four times (`Test Files 4 passed`), 4× the CPU.
   one shard each). Worth a support ticket: a raised CCX limit — the sim is
   integer, single-threaded work and a shared vCPU delivers about half a
   dedicated core (measured: ~2× the Mac's per-game time).
+- **ARM:** `cax41` (16 Ampere cores, 32 GB, €0.078/h in fsn1/nbg1/hel1 —
+  6× cheaper than cpx51@ash, whole cores rather than hyperthreads, outside the
+  CCX limit). Needs the arm64 snapshot: `SERVER_TYPE=cax11 LOCATION=nbg1
+  scripts/lab/snapshot.sh` once; `remote.sh` picks the snapshot whose
+  architecture matches `SERVER_TYPE`. Bench numbers below.
 - **Snapshot image:** `scripts/lab/snapshot.sh` bakes Node 24 + `node_modules`
-  into a snapshot labelled `lab-image=1` (a cpx11 for ~5 min, then
+  into a snapshot labelled `lab-image=1` and `arch=x86|arm` (a cpx11 for ~5 min, then
   ~€0.01/GB/month). `remote.sh` uses the newest one automatically
   (`IMAGE=auto`), so a worker is ready in ~1 min instead of ~4; with no
   snapshot it falls back to ubuntu + cloud-init. Re-bake after a
@@ -140,6 +145,7 @@ four times (`Test Files 4 passed`), 4× the CPU.
 | `KEEP` | 0 | 1 = leave the servers running |
 | `REUSE` | 0 | 1 = use the existing servers; rsync is incremental, so a rerun after a bot edit starts in seconds |
 | `BATCHES`, `SPAWNS`, `JOBS` | — | passed through to `sweep.sh` |
+| `STAGED` | 0 | 1 = run the first `STAGE1` (3) batches, then the rest only for configs still "unclear" (`summarize.py --verdict VERDICT`, default 3 = \|wins − losses\| < 3 vs the first config). Clear results cost 18 games instead of 30. |
 
 Run it under `nohup … &` from a tool call — it runs longer than any tool
 timeout. Watch `remote.log`; `results in …` means success.
@@ -191,6 +197,27 @@ Local use (fallback; keep it small, the Mac is also the GUI machine):
 CONFIGS='{"smoke":{}}' MINUTES=1 JOBS=1 BATCHES=hard0 SPAWNS=africa OUT=/tmp/smoke scripts/lab/sweep.sh   # 2-s smoke test
 CONFIGS='{"base":{}}' MINUTES=20 JOBS=10 OUT=/tmp/lab scripts/lab/sweep.sh                                # ~4 min
 ```
+
+## Cheaper answers: time points, staged A/Bs, shorter games
+
+- **Every transcript carries a 10- and 15-minute answer for free.** The
+  30-second rows log `tiles`, `rank` and (from 2026-08-30) `share`, so
+  `summarize.py --at 600 DIR base cand` scores the same games at 10 minutes
+  (and `--at 900` at 15). Use it to see *when* a change helps: `nearbyEvery`
+  was a wash at 20 min but **9 W / 21 L at 10 min** — the stale neighbour set
+  slows the opening and the bot catches up later.
+- **Staged A/B** (`STAGED=1` on `remote.sh`): 18 paired games first; the
+  remaining 12 only when the verdict is still inside ±3 wins. Most flags are
+  clear either way after 18.
+- **Shorter games when the flag can't matter later.** ≥20 min for anything
+  touching cities, ports, rail, wars or the endgame (the rule stands); a
+  10-min grid (`MINUTES=10`, half the cost) is fine for opening-only knobs
+  — spawn picker, `expand*`, `botRatio`/`botClickCap`, `botsAfterWild`,
+  `phaseGates`' opening→consolidate edge — and for any flag whose effect
+  shows at `--at 600` on an existing 20-min sweep.
+- Tried and rejected: `--max-semi-space-size=64` (V8 young-gen size) made no
+  difference (29.8 s vs 30.1 s); running six spawns in one warmed process
+  would save ~0.3 s a game (1 %) at the cost of parallel slots.
 
 ## Where a game's time goes (profiled 2026-08-29, 20-min Medium game)
 

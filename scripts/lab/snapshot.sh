@@ -8,9 +8,10 @@
 #   scripts/lab/snapshot.sh            # env: SERVER_TYPE (cpx11 is enough), LOCATION (ash), KEY_NAME
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-SERVER_TYPE=${SERVER_TYPE:-cpx11}
+SERVER_TYPE=${SERVER_TYPE:-cpx11}   # cax11 for an arm64 snapshot (cax* workers)
 LOCATION=${LOCATION:-ash}
-NAME=openfront-lab-snapshot
+ARCH=$(hcloud server-type describe "$SERVER_TYPE" -o "format={{.Architecture}}")
+NAME=openfront-lab-snapshot-$ARCH
 KEY_NAME=${KEY_NAME:-$(whoami)-lab}
 # Throwaway boxes get recycled IPs, so host keys are neither pinned nor remembered.
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o BatchMode=yes"
@@ -36,8 +37,8 @@ rsync -az -e "ssh $SSH_OPTS" package.json package-lock.json root@"$IP":/root/ope
 $SSH@"$IP" 'cd /root/openfront && npm run inst > /tmp/inst.log 2>&1 && cp package-lock.json node_modules/.lab-lock && rm -f /root/.ssh/known_hosts && sync'
 # /root/.lab-ready stays on the image, so remote.sh's readiness probe works for snapshot boxes too.
 hcloud server shutdown "$NAME" >/dev/null
-until [ "$(hcloud server describe "$NAME" -o format='{{.Status}}')" = off ]; do sleep 3; done
+until [ "$(hcloud server describe "$NAME" -o 'format={{.Status}}')" = off ]; do sleep 3; done
 echo "creating snapshot ..."
-IMG=$(hcloud server create-image --type snapshot --description "openfront-lab $(date +%Y-%m-%d) $(git rev-parse --short HEAD)" --label lab-image=1 "$NAME" | grep -o 'image: *[0-9]*' | grep -o '[0-9]*' | tail -1)
+IMG=$(hcloud server create-image --type snapshot --description "openfront-lab $(date +%Y-%m-%d) $(git rev-parse --short HEAD)" --label lab-image=1 --label "arch=$ARCH" "$NAME" | grep -o 'image: *[0-9]*' | grep -o '[0-9]*' | tail -1)
 hcloud server delete "$NAME" >/dev/null
-echo "snapshot $IMG ready; remote.sh uses it automatically (IMAGE=auto)"
+echo "snapshot $IMG ($ARCH) ready; remote.sh uses it automatically for $ARCH server types (IMAGE=auto)"
