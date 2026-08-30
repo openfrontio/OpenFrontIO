@@ -16,40 +16,16 @@
  * No PlayerExecution is registered, so troops do not regenerate during the
  * attack; the numbers isolate the attack formula itself.
  */
-import { Config } from "../src/core/configuration/Config";
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
-  TerraNullius,
   UnitType,
 } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
 import { UseRealAttackLogic } from "./util/TestConfig";
-
-/**
- * UseRealAttackLogic only restores attackLogic; TestConfig also stubs
- * attackTilesPerTick to 1, which would cap every attack at one tile per tick.
- * Restore that too so the attack fans out along the border like in production.
- */
-class RealAttackConfig extends UseRealAttackLogic {
-  attackTilesPerTick(
-    attackTroops: number,
-    attacker: Player,
-    defender: Player | TerraNullius,
-    numAdjacentTilesWithEnemy: number,
-  ): number {
-    return Config.prototype.attackTilesPerTick.call(
-      this,
-      attackTroops,
-      attacker,
-      defender,
-      numAdjacentTilesWithEnemy,
-    );
-  }
-}
 
 interface Rect {
   x: number;
@@ -130,7 +106,7 @@ async function runScenario(s: Scenario): Promise<Metrics> {
     {},
     [attackerInfo, defenderInfo],
     undefined,
-    RealAttackConfig,
+    UseRealAttackLogic,
   );
   const attacker = game.player("attacker");
   const defender = game.player("defender");

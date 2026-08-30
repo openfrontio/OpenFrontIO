@@ -77,12 +77,19 @@ export interface AttackLogicInput {
   defenderHasDefensePost: boolean;
   /** Fraction of land tiles with fallout, or null if the tile has no fallout. */
   falloutRatio: number | null;
+  /** Tiles on the attack front this tick (plus jitter); fixed for the tick. */
+  borderSize: number;
 }
 
 export interface AttackLogicResult {
   attackerTroopLoss: number;
   defenderTroopLoss: number;
-  tilesPerTickUsed: number;
+  /**
+   * Share of this tick's conquest budget the tile consumes. An attack keeps
+   * conquering tiles until the fractions sum to 1, so a tile costing 0.1
+   * means about ten such tiles per tick.
+   */
+  tickFraction: number;
 }
 
 export interface NukeMagnitude {
@@ -752,8 +759,11 @@ export class Config {
    *
    * Two base values come from the terrain and are scaled by the situation:
    *  - `mag`: how bloody the tile is (drives attacker troop loss)
-   *  - `tileCost`: how much of the attack's per-tick tile budget the tile
-   *    consumes (higher = slower conquest)
+   *  - `tileCost`: how expensive the tile is to take (higher = slower)
+   *
+   * Speed: each tick the attack has a budget of `borderSize` tiles, scaled
+   * by how the attack's troops compare to the defender's; each tile consumes
+   * `tileCost` of it. The result reports that as a fraction of the tick.
    */
   attackLogic(input: AttackLogicInput): AttackLogicResult {
     const { attackTroops, attacker, defender } = input;
@@ -770,14 +780,16 @@ export class Config {
     }
 
     if (defender === null) {
+      const tickBudget = input.borderSize * 2;
       return {
         attackerTroopLoss: mag / (attacker.type === PlayerType.Bot ? 10 : 5),
         defenderTroopLoss: 0,
-        tilesPerTickUsed: within(
-          (TERRA_NULLIUS_COST_SCALE * tileCost) / attackTroops,
-          TERRA_NULLIUS_MIN_COST,
-          TERRA_NULLIUS_MAX_COST,
-        ),
+        tickFraction:
+          within(
+            (TERRA_NULLIUS_COST_SCALE * tileCost) / attackTroops,
+            TERRA_NULLIUS_MIN_COST,
+            TERRA_NULLIUS_MAX_COST,
+          ) / tickBudget,
       };
     }
 
@@ -830,33 +842,24 @@ export class Config {
       (ATTACKER_LOSS_RATIO_WEIGHT * ratioTerm +
         ATTACKER_LOSS_DENSITY_WEIGHT * defenderTroopLoss);
 
+    // Per-tick tile budget: the border, scaled down as the attack is
+    // outnumbered.
+    const tickBudget =
+      within(((5 * attackTroops) / defender.troops) * 2, 0.01, 0.5) *
+      input.borderSize *
+      3;
+
     return {
       attackerTroopLoss,
       defenderTroopLoss,
-      tilesPerTickUsed:
-        (within(troopRatio, 1, 7.5) / 5) *
-        tileCost *
-        largeDefenderDebuff *
-        largeAttackerCostBonus *
-        traitorCostMod,
+      tickFraction:
+        ((within(troopRatio, 1, 7.5) / 5) *
+          tileCost *
+          largeDefenderDebuff *
+          largeAttackerCostBonus *
+          traitorCostMod) /
+        tickBudget,
     };
-  }
-
-  attackTilesPerTick(
-    attackTroops: number,
-    attacker: Player,
-    defender: Player | TerraNullius,
-    numAdjacentTilesWithEnemy: number,
-  ): number {
-    if (defender.isPlayer()) {
-      return (
-        within(((5 * attackTroops) / defender.troops()) * 2, 0.01, 0.5) *
-        numAdjacentTilesWithEnemy *
-        3
-      );
-    } else {
-      return numAdjacentTilesWithEnemy * 2;
-    }
   }
 
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number {

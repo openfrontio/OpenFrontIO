@@ -1,5 +1,5 @@
 /**
- * Golden-value tests for `Config.attackLogic` / `Config.attackTilesPerTick`.
+ * Golden-value tests for `Config.attackLogic`.
  *
  * These pin the *exact* numeric output of the per-tile attack formula across a
  * grid of inputs. They exist so the formula can be refactored with confidence
@@ -11,12 +11,7 @@
  * AttackScenarios.test.ts for end-to-end numbers on real maps.
  */
 import { AttackLogicInput, Config } from "../src/core/configuration/Config";
-import {
-  Player,
-  PlayerType,
-  TerrainType,
-  TerraNullius,
-} from "../src/core/game/Game";
+import { PlayerType, TerrainType } from "../src/core/game/Game";
 import { UserSettings } from "../src/core/game/UserSettings";
 import { GameConfig } from "../src/core/Schemas";
 
@@ -46,12 +41,13 @@ function run(o: Partial<AttackLogicInput> & { attackTroops: number }) {
     defender: null,
     defenderHasDefensePost: false,
     falloutRatio: null,
+    borderSize: 100,
     ...o,
   });
   return {
     attackerLoss: round(r.attackerTroopLoss),
     defenderLoss: round(r.defenderTroopLoss),
-    tileCost: round(r.tilesPerTickUsed),
+    tickFraction: round(r.tickFraction),
   };
 }
 
@@ -178,23 +174,22 @@ describe("attackLogic golden values", () => {
     expect(table).toMatchSnapshot();
   });
 
-  test("attackTilesPerTick", () => {
-    const table: Record<string, number> = {};
-    const attacker = {} as Player;
-    const troops = (n: number) =>
-      ({ isPlayer: () => true, troops: () => n }) as unknown as Player;
-    const terraNullius = { isPlayer: () => false } as unknown as TerraNullius;
+  test("border size", () => {
+    const table: Record<string, ReturnType<typeof run>> = {};
     for (const dtr of [1_000, 100_000, 10_000_000])
       for (const atr of [1_000, 100_000, 10_000_000])
         for (const border of [1, 10, 100, 1_000]) {
-          table[`dTroops=${dtr} attack=${atr} border=${border}`] = round(
-            config.attackTilesPerTick(atr, attacker, troops(dtr), border),
-          );
+          table[`dTroops=${dtr} attack=${atr} border=${border}`] = run({
+            attackTroops: atr,
+            defender: defender({ numTiles: 20_000, troops: dtr }),
+            borderSize: border,
+          });
         }
     for (const border of [1, 10, 100, 1_000]) {
-      table[`terraNullius border=${border}`] = round(
-        config.attackTilesPerTick(1_000, attacker, terraNullius, border),
-      );
+      table[`terraNullius border=${border}`] = run({
+        attackTroops: 1_000,
+        borderSize: border,
+      });
     }
     expect(table).toMatchSnapshot();
   });
