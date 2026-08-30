@@ -186,7 +186,6 @@ export class MapDisplay extends LitElement {
     >
       <button
         type="button"
-        aria-label="Show map details"
         @mouseenter=${this.handleInfoTooltipShow}
         @mouseleave=${this.handleInfoTooltipHide}
         @focus=${this.handleInfoTooltipShow}

@@ -1264,16 +1264,16 @@
     "world": "World"
   },
   "map_component": {
+    "designer_plural": "Map Designers:",
+    "designer_singular": "Map Designer:",
     "error": "Error",
     "favorite": "Add to favourites",
     "favorites_empty": "Click the star on any map to favourite it",
+    "info": "Info:",
     "no_results": "No maps found",
     "search_maps": "Search maps...",
     "search_results": "Search Results",
-    "unfavorite": "Remove from favourites",
-    "info": "Info:",
-    "designer_singular": "Map Designer:",
-    "designer_plural": "Map Designers:"
+    "unfavorite": "Remove from favourites"
   },
   "map_layers": {},
   "marketing_consent": {
