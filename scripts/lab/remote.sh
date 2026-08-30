@@ -101,7 +101,14 @@ for ip in "${ips[@]}"; do
 done
 sleep 15
 running() { for ip in "${ips[@]}"; do $SSH@"$ip" 'pgrep -f "[s]cripts/lab/sweep.sh" >/dev/null' 2>/dev/null && return 0; done; return 1; }
-count() { local d=0 f=0; for ip in "${ips[@]}"; do d=$((d + $($SSH@"$ip" 'grep -c "^done" /root/lab-out/sweep.log' 2>/dev/null || echo 0))); f=$((f + $($SSH@"$ip" 'grep -c "^FAILED" /root/lab-out/sweep.log' 2>/dev/null || echo 0))); done; echo "$d done, $f failed"; }
+count() {
+  local d=0 f=0 x
+  for ip in "${ips[@]}"; do
+    x=$($SSH@"$ip" 'grep -c "^done" /root/lab-out/sweep.log; true' 2>/dev/null); d=$((d + ${x:-0}))
+    x=$($SSH@"$ip" 'grep -c "^FAILED" /root/lab-out/sweep.log; true' 2>/dev/null); f=$((f + ${x:-0}))
+  done
+  echo "$d done, $f failed"
+}
 while running; do echo "  $(date +%H:%M) $(count)"; sleep 60; done
 echo "  $(date +%H:%M) $(count) — finished"
 

@@ -38,6 +38,6 @@ $SSH@"$IP" 'cd /root/openfront && npm run inst > /tmp/inst.log 2>&1 && cp packag
 hcloud server shutdown "$NAME" >/dev/null
 until [ "$(hcloud server describe "$NAME" -o format='{{.Status}}')" = off ]; do sleep 3; done
 echo "creating snapshot ..."
-IMG=$(hcloud server create-image --type snapshot --description "openfront-lab $(date +%Y-%m-%d) $(git rev-parse --short HEAD)" --label lab-image=1 "$NAME" | grep -o '[0-9]*$')
+IMG=$(hcloud server create-image --type snapshot --description "openfront-lab $(date +%Y-%m-%d) $(git rev-parse --short HEAD)" --label lab-image=1 "$NAME" | grep -o 'image: *[0-9]*' | grep -o '[0-9]*' | tail -1)
 hcloud server delete "$NAME" >/dev/null
 echo "snapshot $IMG ready; remote.sh uses it automatically (IMAGE=auto)"
