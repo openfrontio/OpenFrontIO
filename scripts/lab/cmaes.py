@@ -3,13 +3,33 @@
 
 Each generation samples a population of parameter sets, writes them as the
 CONFIGS JSON of one sweep (scripts/lab/remote.sh on Hetzner, or sweep.sh
-locally with --runner local), scores every config with summarize.py
-(fitness = mean over the 30-game grid of alive + share + top3) and updates the
-search distribution. Same grid every generation, so scores are paired.
+locally with --runner local), scores every game with summarize.py (score =
+landScore + rankScore + crown, see its docstring; --old-fitness for the old
+alive + share + top3) and updates the search distribution. Same grid every
+generation, so scores are paired.
+
+Noise handling (2026-08-30):
+  * every generation also runs the current distribution mean as config
+    "mean" (--reeval-mean, default on; --no-reeval-mean to skip; --with-base
+    still adds "base": {} as a drift reference);
+  * the value handed to CMA-ES for a member is the mean over the grid of
+    (member score - "mean" score on the same game) — a common-random-numbers
+    paired difference, so the per-game scenario noise cancels. --raw-fitness
+    ranks by plain mean score instead (the old behaviour);
+  * --games-growth: once sigma falls below --grow-below (0.12) every later
+    generation also runs --extra-batches ("med5 … med9", SPAWNRANK 5–9 on
+    Medium; see docs/PlaybookBotLab.md), i.e. 60 games per config, so the
+    fine end of the search is not fitted to 30 fixed scenarios;
+  * gen_N.json stores the per-game score matrix of every config
+    ("per_game", plus "per_game_old"), and --rescore OUT recomputes the score
+    fields of every gen_N.json from the stored ab30 files with the current
+    summarize.py without running anything (the CMA state is left as it was —
+    the populations were sampled from it).
 
   python3 scripts/lab/cmaes.py --out lab-out/cma --pop 10 --gens 12 --minutes 20     # Hetzner
   python3 scripts/lab/cmaes.py --out /tmp/cma --pop 4 --gens 2 --dry-run              # no games, synthetic fitness
   python3 scripts/lab/cmaes.py --out lab-out/cma --pop 10 --gens 12                   # again = resume from the last gen_N.json
+  python3 scripts/lab/cmaes.py --rescore lab-out/cma                                 # re-score stored results, no games
 
 State lives in OUT/gen_N.json (population, scores, mean, sigma, C, paths);
 the sweep results of generation N are in OUT/gen_N/. Re-running with the same
@@ -59,6 +79,7 @@ BUILTIN_SPEC = {
 
 SPAWNS = ["north-russia", "north-america", "east-asia", "africa", "south-america", "australia"]
 BATCHES = ["med0", "med1", "med2", "med3", "med4"]
+EXTRA_BATCHES = "med5 med6 med7 med8 med9"   # SPAWNRANK 5-9 on Medium (sweep.sh: med[0-9] -> DIFF=medium SPAWNRANK=k)
 
 
 # ---------------------------------------------------------------- linear algebra (pure python)
@@ -241,13 +262,12 @@ def results_complete(results_dir, names, batches=BATCHES):
     return True
 
 
-def run_sweep(args, gen, configs, results_dir):
+def run_sweep(args, gen, configs, results_dir, batches):
     os.makedirs(results_dir, exist_ok=True)
     env = dict(os.environ)
     env["CONFIGS"] = json.dumps(configs)
     env["MINUTES"] = str(args.minutes)
-    if args.batches:
-        env["BATCHES"] = args.batches
+    env["BATCHES"] = " ".join(batches)
     if args.runner == "local":
         env["OUT"] = results_dir
         env.setdefault("JOBS", str(args.jobs or os.cpu_count() or 4))
@@ -262,43 +282,111 @@ def run_sweep(args, gen, configs, results_dir):
         env.setdefault("SERVER_TYPE", "cpx51")
         cmd = [os.path.join(HERE, "remote.sh")]
     log = os.path.join(results_dir, "runner.log")
-    print(f"  sweep: {' '.join(cmd)} ({len(configs)} configs, {args.minutes} min) -> {results_dir}; log {log}")
+    print(f"  sweep: {' '.join(cmd)} ({len(configs)} configs, {len(batches) * len(SPAWNS)} games each, {args.minutes} min) -> {results_dir}; log {log}")
     with open(log, "a") as lf:
         rc = subprocess.call(cmd, cwd=ROOT, env=env, stdout=lf, stderr=subprocess.STDOUT)
     if rc != 0:
         sys.exit(f"sweep failed (exit {rc}); see {log}. Re-run the same command to resume.")
 
 
-def fake_sweep(args, spec, configs, results_dir, target, rng):
-    """--dry-run: write ab30 files whose FINAL lines encode a synthetic fitness."""
+def fake_sweep(args, spec, configs, results_dir, target, rng, batches):
+    """--dry-run: write ab30 files whose FINAL lines encode a synthetic per-game score.
+
+    Each (batch, region) scenario has its own fixed offset shared by every config
+    (common random numbers — what the paired objective cancels), plus a small
+    per-config noise. The FINAL lines carry players= and fired= like the real bot."""
     os.makedirs(results_dir, exist_ok=True)
     keys = list(spec.keys())
     for name, params in configs.items():
         # a config without a key (the {} base) sits at the spec's init value
         x = [(params.get(k, spec[k][2]) - spec[k][0]) / (spec[k][1] - spec[k][0]) if spec[k][1] > spec[k][0] else 0.5 for k in keys]
         d2 = sum((xi - ti) ** 2 for xi, ti in zip(x, target))
-        f = 3.0 * math.exp(-4.0 * d2 / len(keys))  # 3 at the target, ~1.5 at a typical random point
-        for b in (args.batches.split() if args.batches else BATCHES):
+        q = math.exp(-4.0 * d2 / len(keys))  # 1 at the target, ~0.5 at a typical random point
+        for b in batches:
             with open(os.path.join(results_dir, f"ab30_{name}_{b}.txt"), "w") as fh:
                 for sp in SPAWNS:
-                    g = min(3.0, max(0.0, f + rng.gauss(0, 0.25)))
-                    alive = g >= 0.5
-                    share = min(1.0, max(0.0, g - 1.0)) if alive else 0.0
-                    rank = 1 if g >= 2.9 else 2 if g >= 2.5 else 3 if g >= 2.0 else 5 + int((3 - g) * 3)
-                    tiles = int(g * 20000)
+                    scen = random.Random(f"{b}/{sp}").gauss(0, 0.15)  # per-scenario, same for every config
+                    qq = min(1.0, max(0.0, q + scen + rng.gauss(0, 0.05)))
+                    alive = qq > 0.05
+                    tiles = int(10 ** (2 + 3 * qq)) if alive else 0  # 100 .. 100k
+                    rank = 1 + int(round((1 - qq) * 39))
+                    share = min(1.0, max(0.0, qq))
+                    fired = "sim:3,trust:1" if qq > 0.5 else "-"
                     if alive:
-                        fh.write(f"== {sp} | spawn 0,0 (dry run) | Medium == FINAL rank={rank} share={share:.2f} alive=true tiles={tiles} troops=0k\n")
+                        fh.write(f"== {sp} | spawn 0,0 (dry run) | Medium == FINAL rank={rank} share={share:.2f} alive=true tiles={tiles} troops=0k players=40 fired={fired}\n")
                     else:
-                        fh.write(f"== {sp} | spawn 0,0 (dry run) | Medium == DEAD at 100s FINAL alive=false tiles=0 troops=0k\n")
+                        fh.write(f"== {sp} | spawn 0,0 (dry run) | Medium == DEAD at 100s FINAL alive=false tiles=0 troops=0k players=40 fired={fired}\n")
 
 
-def score(results_dir, names):
-    out = subprocess.check_output([sys.executable, SUMMARIZE, "--fitness", results_dir] + names, text=True)
+def score(results_dir, names, old=False, expect=30):
+    cmd = [sys.executable, SUMMARIZE] + (["--old-fitness"] if old else []) + ["--fitness", results_dir] + names
+    out = subprocess.check_output(cmd, text=True)
     fit = json.loads(out)
     for n in names:
-        if fit[n]["games"] < 30:
-            print(f"  warning: {n} has only {fit[n]['games']} games")
-    return [fit[n]["fitness"] for n in names], fit
+        if fit[n]["games"] < expect:
+            print(f"  warning: {n} has only {fit[n]['games']} games (expected {expect})")
+    return fit
+
+
+def objective(fit, names, ref, raw):
+    """Value handed to CMA-ES per member: the mean over shared games of (member - ref) with common random
+    numbers, or the plain mean score when raw (or when ref has no results)."""
+    if raw or ref not in fit or not fit[ref]["per_game"]:
+        return [fit[n]["fitness"] for n in names], "raw"
+    ref_pg = fit[ref]["per_game"]
+    vals = []
+    for n in names:
+        pg = fit[n]["per_game"]
+        shared = [k for k in pg if k in ref_pg]
+        vals.append(sum(pg[k] - ref_pg[k] for k in shared) / len(shared) if shared else 0.0)
+    return vals, f"paired-vs-{ref}"
+
+
+def score_record(record, results_dir, names, pop_names, configs, args):
+    """Fill the score fields of a gen record from results_dir; returns the CMA objective per member."""
+    fit = score(results_dir, names, old=args.old_fitness, expect=len(record.get("batches", BATCHES)) * len(SPAWNS))
+    ref = "mean" if args.reeval_mean else "base"
+    obj, kind = objective(fit, pop_names, ref, args.raw_fitness)
+    best = max(range(len(pop_names)), key=lambda i: obj[i])
+    record.update({
+        "scoring": "fit_old" if args.old_fitness else "score",
+        "objective_kind": kind,
+        "objective": dict(zip(pop_names, obj)),
+        "scores": {nm: {k: v for k, v in fit[nm].items() if not k.startswith("per_game")} for nm in names},
+        "per_game": {nm: fit[nm]["per_game"] for nm in names},
+        "per_game_old": {nm: fit[nm]["per_game_old"] for nm in names},
+        "best": {"name": pop_names[best], "objective": obj[best], "fitness": fit[pop_names[best]]["fitness"], "params": configs[pop_names[best]]},
+        "mean_fitness": sum(fit[nm]["fitness"] for nm in pop_names) / len(pop_names),
+        "mean_objective": sum(obj) / len(obj),
+    })
+    return obj, fit
+
+
+def rescore(args):
+    """--rescore OUT: recompute the score fields of every gen_N.json from OUT/gen_N/ with the current summarize.py."""
+    files = sorted(glob.glob(gen_file(args.rescore, "*")), key=lambda f: int(os.path.basename(f)[4:-5]))
+    if not files:
+        sys.exit(f"no gen_N.json in {args.rescore}")
+    for f in files:
+        record = json.load(open(f))
+        g = record["gen"]
+        results_dir = os.path.join(args.rescore, f"gen_{g}")
+        pop_names = [m["name"] for m in record["population"]]
+        configs = {m["name"]: m["params"] for m in record["population"]}
+        names = list(pop_names)
+        for extra in ("mean", "base"):
+            if glob.glob(os.path.join(results_dir, f"ab30_{extra}_*.txt")):
+                names.append(extra)
+        batches = record.get("batches", BATCHES)
+        if not results_complete(results_dir, names, batches):
+            print(f"gen {g}: results incomplete in {results_dir}, skipped")
+            continue
+        args.reeval_mean = "mean" in names
+        obj, fit = score_record(record, results_dir, names, pop_names, configs, args)
+        json.dump(record, open(f, "w"), indent=1)
+        extras = "".join(f", {x} {fit[x]['fitness']:.3f}" for x in ("mean", "base") if x in fit)
+        print(f"gen {g}: rescored ({record['scoring']}, {record['objective_kind']}, {len(batches) * len(SPAWNS)} games) "
+              f"mean fitness {record['mean_fitness']:.3f}, best {record['best']['name']} obj {record['best']['objective']:+.3f}{extras}")
 
 
 # ---------------------------------------------------------------- driver
@@ -309,7 +397,7 @@ def gen_file(out, g):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", required=True, help="campaign directory (gen_N.json + gen_N/ results)")
+    ap.add_argument("--out", help="campaign directory (gen_N.json + gen_N/ results); required unless --rescore")
     ap.add_argument("--pop", type=int, default=10, help="population per generation (configs per sweep)")
     ap.add_argument("--gens", type=int, default=12, help="total generations to reach (counting finished ones)")
     ap.add_argument("--sigma", type=float, default=0.25, help="initial step size in the unit cube")
@@ -323,7 +411,19 @@ def main():
     ap.add_argument("--jobs", type=int, help="local runner: parallel games")
     ap.add_argument("--with-base", action="store_true", help="add 'base': {} to every sweep as a drift reference (30 more games)")
     ap.add_argument("--dry-run", action="store_true", help="no sweep: synthetic fitness, writes fake ab30 files")
+    ap.add_argument("--reeval-mean", action=argparse.BooleanOptionalAction, default=True,
+                    help="also run the distribution mean as config 'mean' every generation and rank members against it (default on)")
+    ap.add_argument("--raw-fitness", action="store_true", help="rank members by plain mean score instead of the paired difference vs 'mean'")
+    ap.add_argument("--old-fitness", action="store_true", help="score games with the old alive+share+top3 fitness")
+    ap.add_argument("--games-growth", action="store_true", help="add --extra-batches once sigma < --grow-below (60 games per config)")
+    ap.add_argument("--grow-below", type=float, default=0.12, help="sigma threshold for --games-growth")
+    ap.add_argument("--extra-batches", default=EXTRA_BATCHES, help=f"batches added by --games-growth (default '{EXTRA_BATCHES}')")
+    ap.add_argument("--rescore", metavar="OUT", help="recompute the scores of every gen_N.json in OUT from its stored results; runs nothing")
     args = ap.parse_args()
+    if args.rescore:
+        return rescore(args)
+    if not args.out:
+        ap.error("--out is required")
 
     spec = parse_spec(args)
     names_spec = list(spec.keys())
@@ -347,14 +447,19 @@ def main():
             start, pending = done[-1], last
             print(f"resuming generation {done[-1]} (population already sampled)")
         rng = random.Random(args.seed + start)
+    base_batches = args.batches.split() if args.batches else list(BATCHES)
     for g in range(start, args.gens):
         cma.gen = g
         if pending:
             pop = [m["x"] for m in pending["population"]]
+            batches = pending.get("batches", base_batches)
             pending = None
         else:
             cma.rng = random.Random(args.seed * 1000 + g)
             pop = cma.ask()
+            batches = list(base_batches)
+            if args.games_growth and cma.sigma < args.grow_below:
+                batches += [b for b in args.extra_batches.split() if b not in batches]
         names = [f"g{g}p{i}" for i in range(len(pop))]
         configs = {nm: to_params(spec, x) for nm, x in zip(names, pop)}
         record = {
@@ -363,35 +468,32 @@ def main():
             "state_before": cma.state(),
             "population": [{"name": nm, "x": x, "params": configs[nm]} for nm, x in zip(names, pop)],
             "minutes": args.minutes,
+            "batches": batches,
             "runner": "dry-run" if args.dry_run else args.runner,
         }
         json.dump(record, open(gen_file(args.out, g), "w"), indent=1)
         results_dir = os.path.join(args.out, f"gen_{g}")
         sweep_configs = dict(configs)
+        if args.reeval_mean:
+            sweep_configs["mean"] = to_params(spec, cma.mean)
         if args.with_base:
             sweep_configs["base"] = {}
-        print(f"generation {g}: {len(pop)} configs, sigma={cma.sigma:.4f}")
-        if results_complete(results_dir, list(sweep_configs), args.batches.split() if args.batches else BATCHES):
+        grown = " (grown grid)" if len(batches) > len(base_batches) else ""
+        print(f"generation {g}: {len(sweep_configs)} configs x {len(batches) * len(SPAWNS)} games{grown}, sigma={cma.sigma:.4f}")
+        if results_complete(results_dir, list(sweep_configs), batches):
             print("  results already present, scoring without a sweep")
         elif args.dry_run:
-            fake_sweep(args, spec, sweep_configs, results_dir, target, random.Random(args.seed * 7 + g))
+            fake_sweep(args, spec, sweep_configs, results_dir, target, random.Random(args.seed * 7 + g), batches)
         else:
-            run_sweep(args, g, sweep_configs, results_dir)
-        scores, fit = score(results_dir, list(sweep_configs))
-        pop_scores = scores[: len(pop)]
-        cma.tell(pop, pop_scores)
-        best = max(range(len(pop)), key=lambda i: pop_scores[i])
-        record.update({
-            "scores": {nm: fit[nm] for nm in sweep_configs},
-            "best": {"name": names[best], "fitness": pop_scores[best], "params": configs[names[best]]},
-            "mean_fitness": sum(pop_scores) / len(pop_scores),
-            "mean_params": to_params(spec, cma.mean),
-            "state_after": cma.state(),
-        })
+            run_sweep(args, g, sweep_configs, results_dir, batches)
+        obj, fit = score_record(record, results_dir, list(sweep_configs), names, configs, args)
+        cma.tell(pop, obj)
+        record.update({"mean_params": to_params(spec, cma.mean), "state_after": cma.state()})
         json.dump(record, open(gen_file(args.out, g), "w"), indent=1)
-        base_note = f", base {fit['base']['fitness']:.3f}" if args.with_base else ""
-        print(f"  mean fitness {record['mean_fitness']:.3f}, best {names[best]} {pop_scores[best]:.3f}{base_note}")
-        print(f"  best params: {json.dumps(configs[names[best]])}")
+        best = record["best"]
+        extras = "".join(f", {x} {fit[x]['fitness']:.3f}" for x in ("mean", "base") if x in fit)
+        print(f"  mean fitness {record['mean_fitness']:.3f}{extras}; objective ({record['objective_kind']}) mean {record['mean_objective']:+.3f}, best {best['name']} {best['objective']:+.3f}")
+        print(f"  best params: {json.dumps(best['params'])}")
         print(f"  new mean:    {json.dumps(record['mean_params'])}  sigma -> {cma.sigma:.4f}")
     if args.runner == "remote" and not args.dry_run:
         print("campaign done; the Hetzner server(s) are still running (KEEP=1) — delete them with: hcloud server delete $(hcloud server list -l lab=1 -o noheader -o columns=name)")

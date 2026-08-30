@@ -12,15 +12,29 @@
 # Each file is {"note": "...", "params": {...}}.
 #
 # Env: RUNNER (remote = scripts/lab/remote.sh on Hetzner, default; local =
-# scripts/lab/sweep.sh), MINUTES (20), DEST (results dir, default
-# lab-out/ladder-<timestamp>), NAME_CAND (config name, default "cand"),
-# plus everything remote.sh / sweep.sh accept (SERVER_TYPE, KEEP, REUSE, JOBS,
-# BATCHES ...). SERVER_TYPE defaults to cpx51 here.
+# scripts/lab/sweep.sh), MINUTES (30 — graduation length; 20-minute games
+# truncate the endgame), SHIFT (150 — moves every spawn region by that many
+# tiles, tests/lab/playbook.lab.ts reads it, so a candidate is confirmed on a
+# grid it was not tuned on; SHIFT=0 for the tuning grid), DEST (results dir,
+# default lab-out/ladder-<timestamp>), NAME_CAND (config name, default
+# "cand"), plus everything remote.sh / sweep.sh accept (SERVER_TYPE, KEEP,
+# REUSE, JOBS, BATCHES ...). SERVER_TYPE defaults to cpx51 here.
+#
+# SHIFT reaches the games through the environment: sweep.sh's game processes
+# inherit it, so RUNNER=local honours it. remote.sh (as of 2026-08-30) builds
+# the box's env list by hand (CONFIGS MINUTES SHARD BATCHES SPAWNS JOBS) and
+# does NOT forward SHIFT — a remote ladder runs on the unshifted grid until
+# remote.sh passes it through (see docs/PlaybookBotPlan.md "Scoring").
+#
+# Prints summarize.py's table (old fitness `fit_old` and the new score side
+# by side, live-game paired stats with a verdict) and the Bradley–Terry ladder.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 cand=${1:?usage: ladder.sh '<json>' | file.json}
 RUNNER=${RUNNER:-remote}
-MINUTES=${MINUTES:-20}
+MINUTES=${MINUTES:-30}
+SHIFT=${SHIFT:-150}
+export SHIFT
 DEST=${DEST:-$PWD/lab-out/ladder-$(date +%Y%m%d-%H%M)}
 NAME_CAND=${NAME_CAND:-cand}
 VDIR=scripts/lab/versions
@@ -43,15 +57,18 @@ CONFIGS=$(node -e '
 ' _ "$NAME_CAND" "$cand_json" $versions)
 names=$(node -e 'console.log(Object.keys(JSON.parse(process.argv[1])).join(" "))' "$CONFIGS")
 
-echo "ladder: $names  ($MINUTES min, $RUNNER) -> $DEST"
+echo "ladder: $names  ($MINUTES min, $RUNNER, SHIFT=$SHIFT) -> $DEST"
+if [ "$RUNNER" != local ] && [ "$SHIFT" != 0 ]; then echo "note: remote.sh does not forward SHIFT to the box; this ladder runs on the unshifted grid"; fi
 echo "CONFIGS=$CONFIGS"
 mkdir -p "$DEST"
 if [ "$RUNNER" = local ]; then
-  CONFIGS="$CONFIGS" MINUTES="$MINUTES" OUT="$DEST" bash scripts/lab/sweep.sh
+  CONFIGS="$CONFIGS" MINUTES="$MINUTES" SHIFT="$SHIFT" OUT="$DEST" bash scripts/lab/sweep.sh
 else
-  CONFIGS="$CONFIGS" MINUTES="$MINUTES" DEST="$DEST" SERVER_TYPE="${SERVER_TYPE:-cpx51}" bash scripts/lab/remote.sh
+  CONFIGS="$CONFIGS" MINUTES="$MINUTES" SHIFT="$SHIFT" DEST="$DEST" SERVER_TYPE="${SERVER_TYPE:-cpx51}" bash scripts/lab/remote.sh
 fi
 echo
+echo "== per-config table: fit_old = alive+share+top3, score = land+rank+crown; live-game paired stats vs $NAME_CAND =="
 python3 scripts/lab/summarize.py "$DEST" $names
 echo
+echo "== Bradley-Terry ladder (pairs by alive, tiles) =="
 python3 scripts/lab/summarize.py --ladder "$DEST" $names

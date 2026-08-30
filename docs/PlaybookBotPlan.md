@@ -388,3 +388,109 @@ bsrReserve, phaseGates — each needs a rework before another A/B.
 3. Ladder run of the result vs v-current; if it wins, it becomes the next
    version and the guide's "Pressure-tested" table is updated.
 4. Repeat 1–3 on Hard.
+
+## Scoring (2026-08-30)
+
+Why the old objective was not enough (seen in the day's sweeps): on Medium
+`alive` is 30/30 for every config (zero information), `top3` is a step,
+`share` swings ±0.3 on a single war, crowns were not scored, and paired A/Bs
+counted games where the flag never fired (trustWars: 20/30 identical) as 30
+games. Fixed in `scripts/lab/summarize.py`, `cmaes.py`, `ladder.sh`.
+
+**Per-game score** (summarize.py; the old fitness stays as `fit_old`):
+
+```
+score     = landScore + rankScore + crown                 # [0.4, 2.25]
+landScore = log10(max(tiles, 100)) / 5                    # 100k tiles = 1.0, 10k = 0.8, dead = 0.4
+rankScore = alive ? 1 - (rank - 1) / (players - 1) : 0    # 1st = 1.0, last = 0.0
+crown     = rank == 1 ? 0.25 : 0
+```
+
+`players` = the new `players=N` FINAL field; if absent, N of the last
+`rank=x/N` transcript row (`p_<config>_<batch>_<region>.txt`), else N=40
+with a printed note. The real N at 20 min on Medium is ~21–26, so the 40
+fallback is lenient — keep transcripts (or the new field) for real scoring.
+The optional FINAL field `fired=flag:count,…` (`-` = none) marks which
+flagged branches ran.
+
+**Paired report** (per config vs the first config named): the old table,
+then over *live* games only (config's `fired` non-empty, or (alive, tiles)
+differ from the baseline): `n_live`, W/L/T by score, mean paired score
+difference with a bootstrap 95% CI (1000 resamples, seed 0), a two-sided
+exact sign test on W vs L, and a verdict — `decisive win` / `decisive loss`
+when p < 0.05, else `undecided (n_live=…)`. `--fitness` emits the new score
+(`--old-fitness` for the old one) plus `per_game` matrices; `--ladder`,
+`--at`, `--verdict` are unchanged; `--selftest` checks the formulas on an
+inline 3-game fixture.
+
+**cmaes.py noise handling:** every generation also runs the distribution
+mean as config `mean` (`--reeval-mean`, default on); the value handed to
+CMA-ES for a member is the mean over the grid of (member score − `mean`
+score on the same game), a common-random-numbers paired difference
+(`--raw-fitness` = old behaviour). `--games-growth` adds `--extra-batches`
+(`med5 … med9`, SPAWNRANK 5–9) once sigma < `--grow-below` (0.12), so late
+generations run 60 games per config. `gen_N.json` stores `batches`,
+`per_game` / `per_game_old` matrices, `objective`, `objective_kind`;
+`--rescore OUT` recomputes those from the stored ab30 files without running
+anything (CMA states are left alone — populations were sampled from them).
+Verified with `--dry-run --pop 4 --gens 3 --grow-below 1.0 --games-growth`
+(forces the 60-game grid from gen 0), a resume and a `--rescore`.
+
+**ladder.sh:** `MINUTES` defaults to 30 (graduation length — 20-minute games
+truncate the endgame) and `SHIFT` (default 150) moves every spawn region by
+that many tiles (`tests/lab/playbook.lab.ts` reads `process.env.SHIFT`), so a
+candidate is confirmed on a grid it was not tuned on. `sweep.sh` passes it
+through implicitly (the game processes inherit the environment), so
+`RUNNER=local` honours it; **`remote.sh` builds the box's env list by hand
+(`CONFIGS MINUTES SHARD BATCHES SPAWNS JOBS`) and does not forward `SHIFT`**
+— a remote ladder runs on the unshifted grid until `remote.sh` adds
+`${SHIFT:+SHIFT=$SHIFT}` to that list (not edited here; ladder.sh prints a
+note). Both tables (`fit_old` and `score`) and the Bradley–Terry ladder are
+printed.
+
+**C3 rounds re-scored** (no `players=` field yet; N from the transcripts).
+Live stats vs base, `dScore` = mean paired score difference [bootstrap 95% CI],
+p = sign test:
+
+Round 1 (`lab-out/c3`, base = `{}`):
+
+| config | fit_old | score | n_live | W-L-T | dScore | p | verdict | recorded in C3 |
+|---|---|---|---|---|---|---|---|---|
+| base | 1.846 | 1.672 | — | — | — | — | — | — |
+| realRetreats | 2.091 | 1.793 | 29/30 | 17-12-0 | +0.126 [−0.036, +0.293] | 0.458 | undecided | **graduated** (18W 11L) |
+| c1 bundle | 1.907 | 1.802 | 30/30 | 18-12-0 | +0.131 [−0.062, +0.318] | 0.362 | undecided | 18W 12L, unbundled |
+| scoredSpend | 1.652 | 1.604 | 29/30 | 14-15-0 | −0.070 [−0.240, +0.086] | 1.000 | undecided | dropped (12W 17L) |
+| simWars | 1.126 | 1.394 | 30/30 | 8-22-0 | −0.277 [−0.430, −0.102] | 0.016 | **decisive loss** | dropped (7W 23L) |
+
+Round 2 (`lab-out/c3b`, base = realRetreats):
+
+| config | fit_old | score | n_live | W-L-T | dScore | p | verdict | recorded in C3 |
+|---|---|---|---|---|---|---|---|---|
+| base | 2.091 | 1.793 | — | — | — | — | — | — |
+| + c1 bundle | 1.936 | 1.736 | 30/30 | 18-12-0 | −0.058 [−0.294, +0.172] | 0.362 | undecided | 17W 13L, "gain was realRetreats" |
+| + bsrReserve | 1.893 | 1.819 | 30/30 | 14-16-0 | +0.025 [−0.162, +0.212] | 0.856 | undecided | dropped (14W 16L) |
+| + trustWars | 2.200 | 1.845 | 10/30 | 6-4-0 | +0.155 [−0.199, +0.501] | 0.754 | undecided | mild positive, 20 identical |
+| + nationAware | 2.148 | 1.853 | 15/30 | 9-6-0 | +0.119 [−0.047, +0.283] | 0.607 | undecided | mild positive, 15 identical |
+| + phaseGates | 1.919 | 1.768 | 29/30 | 11-18-0 | −0.027 [−0.216, +0.156] | 0.265 | undecided | dropped (11W 18L) |
+
+Round 3 (`lab-out/c3c`, base = realRetreats):
+
+| config | fit_old | score | n_live | W-L-T | dScore | p | verdict | recorded in C3 |
+|---|---|---|---|---|---|---|---|---|
+| base | 2.091 | 1.793 | — | — | — | — | — | — |
+| + trustWars + nationAware | 2.336 | 1.917 | 19/30 | 10-9-0 | +0.194 [+0.018, +0.363] | 1.000 | undecided | **graduated** (11W 8L, 11 identical) |
+
+Where the verdicts differ from the C3 record: **realRetreats** and
+**trustWars+nationAware** were graduated on raw W/L counts; under the new
+scoring both are `undecided` — realRetreats' CI straddles zero (p = 0.46),
+and trustWars+nationAware has only 19 live games at 10-9 (p = 1.0) although
+its mean gain is positive with a CI that just excludes zero (+0.018 … +0.363;
+the gain is in magnitude — 3 more crowns — not in the count of games won).
+Neither is contradicted, but neither was decisive at 30 games; a 60-game
+shifted-grid confirmation (`ladder.sh`, SHIFT=150, 30 min) is the right
+next step for both. The c1 bundle on top of realRetreats flips from a mild
+paired win (17W 13L on tiles) to a slight negative mean score (−0.058),
+consistent with the C3 note that its round-1 gain was realRetreats'. Of the
+drops only **simWars** is a decisive loss (p = 0.016); scoredSpend,
+bsrReserve and phaseGates are undecided — dropped on direction, not
+evidence. Nothing on Hetzner was run for this section.
