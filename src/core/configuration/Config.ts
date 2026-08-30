@@ -98,8 +98,9 @@ export interface NukeMagnitude {
 }
 
 // attackLogic tunables
-const LARGE_ATTACKER_TILES = 100_000;
+const LARGE_TERRITORY_TILES = 100_000;
 const LARGE_ATTACKER_EXPONENT = 0.6;
+const LARGE_DEFENDER_EXPONENT = 0.15;
 const BOT_DEFENDER_LOSS_MULT = 0.7;
 const TERRA_NULLIUS_COST_SCALE = 2000;
 const TERRA_NULLIUS_MIN_COST = 5;
@@ -112,6 +113,13 @@ const ATTACKER_LOSS_BASE = 0.463;
 const ATTACKER_LOSS_PER_DENSITY = 0.0026;
 // Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
 const SPEED_COST_DIVISOR = 7.77;
+
+/** 1 up to LARGE_TERRITORY_TILES, then shrinking as (limit / tiles) ** exponent. */
+function largeTerritoryBonus(numTiles: number, exponent: number): number {
+  return numTiles > LARGE_TERRITORY_TILES
+    ? (LARGE_TERRITORY_TILES / numTiles) ** exponent
+    : 1;
+}
 
 function terrainAttackBase(terrain: TerrainType): {
   mag: number;
@@ -805,12 +813,16 @@ export class Config {
       mag *= BOT_DEFENDER_LOSS_MULT;
     }
 
-    // Big attackers get cheaper, faster tiles past LARGE_ATTACKER_TILES so
-    // late games stay dynamic. A big defender gets nothing for its size.
-    const largeAttackerBonus =
-      attacker.numTiles > LARGE_ATTACKER_TILES
-        ? (LARGE_ATTACKER_TILES / attacker.numTiles) ** LARGE_ATTACKER_EXPONENT
-        : 1;
+    // Big territories are cheaper and faster to attack from and into, so
+    // late games stay dynamic. The attacker's bonus is the stronger one.
+    const largeAttackerBonus = largeTerritoryBonus(
+      attacker.numTiles,
+      LARGE_ATTACKER_EXPONENT,
+    );
+    const largeDefenderBonus = largeTerritoryBonus(
+      defender.numTiles,
+      LARGE_DEFENDER_EXPONENT,
+    );
 
     const traitorLossMod = defender.isTraitor ? this.traitorDefenseDebuff() : 1;
     const traitorCostMod = defender.isTraitor ? this.traitorSpeedDebuff() : 1;
@@ -827,7 +839,7 @@ export class Config {
       mag *
       traitorLossMod *
       within(troopRatio, 0.6, 2) *
-      (ATTACKER_LOSS_BASE * largeAttackerBonus +
+      (ATTACKER_LOSS_BASE * largeAttackerBonus * largeDefenderBonus +
         ATTACKER_LOSS_PER_DENSITY * defenderTroopLoss);
 
     // Speed: a tile's cost in tick-fractions grows with how outnumbered the
@@ -843,6 +855,7 @@ export class Config {
         (speedCost *
           tileCost *
           largeAttackerBonus *
+          largeDefenderBonus *
           traitorCostMod) /
         input.borderSize,
     };
