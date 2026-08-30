@@ -48,6 +48,7 @@ export interface PlaybookParams {
   simWars: boolean; // B1: pick war targets and sizes with Estimate.ts (a replay of attackLogic over the shared border) and retreat when the re-estimate no longer wins; off = fightRatio heuristics
   realRetreats: boolean; // schedule a RetreatExecution when retreating (A1 finding: Player.orderRetreat() only flags the wave; without the execution it never comes home, stays in outgoingAttacks() and blocks that target)
   portWithoutPartnerTick: number; // first port on any ocean coast from this tick even with no partner (1e9 = never)
+  scoredSpend: boolean; // B3: Economy.build() scores every purchase (return over the phase horizon / cost, Spend.ts) and buys the best affordable one after one escrow list; off = the hand-ordered steps
 }
 
 export const DEFAULT_PLAYBOOK: PlaybookParams = {
@@ -98,4 +99,5 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   simWars: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B1)
   realRetreats: false, // default off until the 30-game A/B; on = frozen waves finally return (see the interface comment)
   portWithoutPartnerTick: 1500,
+  scoredSpend: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B3)
 };
