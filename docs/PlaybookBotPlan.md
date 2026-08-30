@@ -494,3 +494,36 @@ consistent with the C3 note that its round-1 gain was realRetreats'. Of the
 drops only **simWars** is a decisive loss (p = 0.016); scoredSpend,
 bsrReserve and phaseGates are undecided — dropped on direction, not
 evidence. Nothing on Hetzner was run for this section.
+
+## Training-loop fixes (2026-08-29, evening)
+
+Findings and what was done about them; see "Scoring" above for the formulas.
+
+1. **Flag liveness** — `fired=` on the FINAL line counts how often a flag
+   changed a decision vs off (`ctx.fire()` at every flagged branch); the
+   summariser pairs over live games only. (ada3a998b)
+2. **Score** — `landScore + rankScore + crown` with bootstrap CI and a sign
+   test replaces `alive + share + top3`; verdicts are decisive only at
+   p < 0.05. (e6e16b345)
+3. **CMA-ES noise** — the distribution mean is re-evaluated every generation
+   and members are scored as paired differences against it on shared games;
+   the grid grows to 60 games once sigma < 0.12; generations can be
+   re-scored offline. (e6e16b345)
+4. **Shifted confirmation grid** — `ladder.sh` runs 30-minute games with
+   `SHIFT=150`; `remote.sh` must forward `SHIFT` (peer's file; requested).
+5. **Graduations re-examined** — under the new score `realRetreats` and
+   `trustWars`+`nationAware` are *undecided*; their defaults stay on as
+   PROVISIONAL (bug fix with positive mean; positive mean with CI just
+   above zero) until a ladder confirmation. `simWars` is a decisive loss.
+6. **Early stopping: no.** Over 390 games, Spearman(rank at t, final rank)
+   = 0.27 / 0.48 / 0.56 / 0.58 / 0.74 at 5 / 8 / 10 / 12 / 15 min; only 43 of
+   101 crowns held at 12:00 survive to 20:00. Games are decided late — do not
+   shorten tuning games; graduation runs are 30 minutes.
+7. **Not done yet:** engine profiling for the remaining ~90 % of game CPU
+   (AttackExecution, trade ships, 400 tribes); a `nearbyEvery` variant that
+   caches only after the opening phase (peer's `--at 600` finding: the stale
+   neighbour set slows the opening, 9W/21L at 10:00 despite the 20-min wash).
+
+**Next lab session:** `ladder.sh` on the two provisional flags (60 games,
+30 min, SHIFT=150) → fold or revert; then `cmaes.py --pop 10 --gens 12
+--games-growth`; then Hard.

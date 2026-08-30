@@ -89,12 +89,12 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   finishRule: true,
   endgameV2: true,
   simWars: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B1)
-  realRetreats: true, // graduated 2026-08-29: 30-game Medium A/B 18W-11L vs off, 30/30 alive, 5 crowns (2), +70 % land (3.53M vs 2.08M tiles); on = frozen waves finally return (see the interface comment)
+  realRetreats: true, // PROVISIONAL (re-scored: 17W-12L over 29 live games, dScore +0.13 [−0.04, +0.29], undecided; kept because it is a bug fix with a positive mean — confirm with ladder.sh on a shifted 60-game grid). Original A/B: 30-game Medium A/B 18W-11L vs off, 30/30 alive, 5 crowns (2), +70 % land (3.53M vs 2.08M tiles); on = frozen waves finally return (see the interface comment)
   portWithoutPartnerTick: 1500,
   nearbyEvery: 10, // 90-game Medium 20-min A/B (openfront-00, 2026-08-29): 5 and 10 are a wash vs 1 (14W/15L, 14W/16L; alive 29/29/30) while bot CPU per game drops 19.0 s → 5.3 s. Details: PlaybookBotLab.md "Where a game's time goes".
   scoredSpend: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B3)
   bsrReserve: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md C1)
-  trustWars: true, // graduated 2026-08-29 with nationAware: 30-game Medium A/B on the realRetreats base 11W-8L (11 identical), 8 crowns vs 5, 21 top-3 vs 17, +19 % land
-  nationAware: true, // graduated 2026-08-29 with trustWars (see above); alone 9W-6L, 15 identical
+  trustWars: true, // PROVISIONAL (re-scored: 10W-9L over 19 live games, dScore +0.19 [+0.02, +0.36], sign test undecided — confirm with ladder.sh before folding). Original A/B: 30-game Medium A/B on the realRetreats base 11W-8L (11 identical), 8 crowns vs 5, 21 top-3 vs 17, +19 % land
+  nationAware: true, // PROVISIONAL, see trustWars; alone 9W-6L, 15 identical
   phaseGates: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md C1)
 };
