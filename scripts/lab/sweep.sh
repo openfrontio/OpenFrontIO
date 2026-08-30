@@ -16,7 +16,9 @@ mkdir -p "$OUT"
 : "${CONFIGS:?set CONFIGS to a JSON object of name -> params}"
 
 SPAWNS=${SPAWNS:-"north-russia north-america east-asia africa south-america australia"}
-BATCHES=${BATCHES:-"hard0 hard1 hard2 med0 med1"}
+# Medium-only until the bot is strong (Josh, 2026-08-29): 6 regions x spawn ranks 0-4.
+# Hard batches (hard0..hard4) still work when asked for via BATCHES.
+BATCHES=${BATCHES:-"med0 med1 med2 med3 med4"}
 names=$(node -e "for (const k of Object.keys(JSON.parse(process.argv[1]))) console.log(k)" "$CONFIGS")
 
 jobs_file=$(mktemp)
@@ -34,8 +36,8 @@ export MINUTES OUT
 tr '\n' '\0' < "$jobs_file" | xargs -0 -P "$JOBS" -I{} bash -c '
   IFS="|" read -r name batch sp params <<< "$1"
   case $batch in
-    hard0) benv="SPAWNRANK=0";; hard1) benv="SPAWNRANK=1";; hard2) benv="SPAWNRANK=2";;
-    med0) benv="DIFF=medium SPAWNRANK=0";; med1) benv="DIFF=medium SPAWNRANK=1";;
+    hard[0-9]) benv="SPAWNRANK=${batch#hard}";;
+    med[0-9]) benv="DIFF=medium SPAWNRANK=${batch#med}";;
     *) echo "unknown batch $batch"; exit 1;;
   esac
   if env $benv PARAMS="$params" MIN="$MINUTES" SPAWN="$sp" LAB_OUT="$OUT"        OUTFILE="p_${name}_${batch}_${sp}.txt" TAG="${name}_${batch}"        npx vitest tests/lab/playbook.lab.test.ts --run > /dev/null 2>&1

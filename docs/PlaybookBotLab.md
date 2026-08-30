@@ -31,9 +31,11 @@ hcloud server delete openfront-lab                       # when Josh says so
   ```
 
 - One **config** = a JSON object of `PlaybookParams` overrides, run over the
-  standard **30-game grid**: 6 spawn regions × 5 batches (`hard0/1/2` = Hard,
-  spawn rank 0/1/2; `med0/1` = Medium, rank 0/1). Same grid for every config,
-  so games pair up one-to-one.
+  standard **30-game grid**: 6 spawn regions × 5 batches. **Since 2026-08-29
+  the default grid is Medium-only** (`med0`–`med4` = Medium, spawn rank 0–4):
+  Josh's rule is to develop on Medium until the bot is strong, then move to
+  Hard. `hard0`–`hard9` still work via `BATCHES="hard0 hard1 ..."`. Same grid
+  for every config, so games pair up one-to-one.
 - A **sweep** = several configs on that grid. Always include the current
   default (`{}`) as the baseline in the same sweep — don't compare against an
   older run.
@@ -130,7 +132,8 @@ line per spawn — the same format as the older local `ab30.sh`, so existing
 summarizers work).
 
 Env: `CONFIGS`, `MINUTES` (20), `JOBS` (`nproc`; **pass it explicitly on
-macOS**), `OUT` (./lab-out), `BATCHES` and `SPAWNS` to run a subset.
+macOS**), `OUT` (./lab-out), `BATCHES` (default `med0 … med4`; `hardN`/`medN`
+for any rank N) and `SPAWNS` to run a subset.
 
 Gotcha already fixed, worth knowing: plain `xargs` strips double quotes from
 its input, which turned `{"botsAfterWild":false}` into `{botsAfterWild:false}`
@@ -177,8 +180,9 @@ Then, for each config against the baseline:
   triggered; those games carry no information.
 - **Print the biggest swings.** One outlier can make a total look decisive
   (+16 % land once came from a single +81k game; without it, +3 %).
-- **Split Hard and Medium.** Survival on Hard and land on Medium measure
-  different things; a 30-game total mixes them.
+- **Don't mix Hard and Medium in one total.** Medium land totals are dominated
+  by a few snowball games swinging ±200k tiles; compare medians and pair
+  counts, not sums.
 - Ten-minute games only test the opening. Use ≥20 min for anything touching
   cities, ports, rail or wars (`fightNotBeforeTick` = 3000 ticks = 5 min).
 - Write the verdict and sample size next to the parameter in
