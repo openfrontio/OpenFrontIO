@@ -1,0 +1,4 @@
+{
+  "note": "The shipped DEFAULT_PLAYBOOK (src/core/execution/playbook/PlaybookBotExecution.ts) as of playbook-bot e6dc35cdc, 2026-08-29. An empty override means 'whatever the code's defaults are right now', so this file tracks HEAD; when a CMA-ES or A/B result graduates, copy the winning overrides to vN.json (next N) with a note naming the sweep, fold them into DEFAULT_PLAYBOOK, and leave this file empty.",
+  "params": {}
+}

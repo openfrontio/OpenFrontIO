@@ -16,7 +16,7 @@ CONFIGS='{"base":{},"early":{"botsAfterWild":false},"es25":{"botEarlyShare":0.25
 nohup env CONFIGS="$CONFIGS" MINUTES=20 SERVER_TYPE=cpx51 KEEP=1 DEST=$OUT \
   scripts/lab/remote.sh > $OUT/remote.log 2>&1 &
 # ... ~25 min for 120 games; "results in ..." in remote.log marks success
-python3 <summarizer> base early es25                     # see "Reading results"
+python3 scripts/lab/summarize.py $OUT base early es25    # see "Tuning tools"
 hcloud server delete openfront-lab                       # when Josh says so
 ```
 
@@ -188,6 +188,115 @@ Then, for each config against the baseline:
 - Write the verdict and sample size next to the parameter in
   `DEFAULT_PLAYBOOK`, as the existing comments do, and note which sweep
   (date, box, minutes) produced it.
+
+## Tuning tools: `summarize.py`, `cmaes.py`, `ladder.sh`
+
+Three scripts in `scripts/lab/` turn a results dir into numbers, drive a
+CMA-ES campaign, and rank a candidate against stored versions. All python is
+stdlib-only (numpy is picked up for the eigensolver if it happens to exist).
+The **fitness of one game** everywhere below is
+
+```
+alive (0/1) + share (0..1) + (rank <= 3 ? 1 : 0)        # in [0, 3]; a dead game = 0
+```
+
+and a config's fitness is its mean over the grid. Games are always **paired
+by (batch, region)** — same spawn, same opponents — and a pair is *identical*
+when alive and tiles match, i.e. the change never triggered.
+
+### `summarize.py` — read a results dir
+
+```bash
+python3 scripts/lab/summarize.py $DEST                    # every config in $DEST; the first found is the baseline
+python3 scripts/lab/summarize.py $DEST base early es25    # explicit order; first = baseline
+python3 scripts/lab/summarize.py --fitness $DEST base early   # JSON {config: {fitness, games, alive, top3, tiles}}
+python3 scripts/lab/summarize.py --ladder $DEST cand v-current v3 v2   # Bradley–Terry table, see ladder.sh
+```
+
+Per config: games, alive, crowns (rank 1), top-3, total tiles, median land,
+fitness. Then each config vs the baseline: wins / losses / identical and the
+three biggest tile swings, so a single snowball game cannot hide in a total.
+It reads `ab30_<config>_<batch>.txt` and falls back to the `p_*.txt`
+transcripts if the sweep died before aggregating. A config with fewer than
+30 games gets a warning. This replaces the scratchpad `ab30sum.py`.
+
+### `cmaes.py` — CMA-ES over continuous params
+
+One generation = one sweep whose `CONFIGS` is the population (`g<gen>p<i>`),
+scored with `summarize.py --fitness`, same 30-game grid every generation.
+The search runs in the unit cube and maps each parameter onto `[lo, hi]`
+(`int` params are rounded); the built-in spec is the 12-parameter list from
+`PlaybookBotPlan.md` C3 with `init` = the current defaults (kept in sync by
+hand — check `BUILTIN_SPEC` against `DEFAULT_PLAYBOOK` before a campaign).
+
+```bash
+# first real generation on Hetzner: creates cpx51 "openfront-lab", keeps it (KEEP=1)
+cd ~/Code/openfront
+nohup python3 scripts/lab/cmaes.py --out lab-out/cma --pop 10 --gens 1 --minutes 20 \
+  > lab-out/cma.log 2>&1 &
+tail -f lab-out/cma.log                       # per-generation: mean/best fitness, best params, new mean, sigma
+
+# continue the campaign (resumes from the last gen_N.json; REUSE=1 is set for gen > 0)
+nohup python3 scripts/lab/cmaes.py --out lab-out/cma --pop 10 --gens 12 --minutes 20 \
+  > lab-out/cma.log 2>&1 &
+
+# options
+#   --with-base          add "base": {} to every sweep (30 more games) to see drift against the default
+#   --spec spec.json     {"fightAbove": [0.4, 0.95, 0.7], "railSpacing": [8, 32, 16, "int"]}
+#   --param fightAbove=0.4:0.95:0.7 --param railSpacing=8:32:16:int      (replaces the built-in list)
+#   --init '{"fightAbove":0.6}'   start the mean somewhere else
+#   --sigma 0.25 --seed 1         initial step in the unit cube, PRNG seed
+#   --runner local --jobs 8       scripts/lab/sweep.sh on this machine instead of remote.sh
+#   --batches "med0 med1"         smaller grid (must stay the same for the whole campaign)
+#   --dry-run                     no games: a synthetic bowl-shaped fitness, fake ab30 files; tests the loop
+```
+
+Hetzner env (`SERVER_TYPE` defaults to `cpx51` here, `NAME`, `LOCATION`,
+`KEEP`, `REUSE`) passes straight through to `remote.sh`. The server is **never
+deleted by cmaes.py** — `hcloud server delete openfront-lab` when the campaign
+is over (Josh wants to be asked first). If gen 0's sweep dies with the box
+already up, resume with `REUSE=1` in the env.
+
+Files in `--out`: `gen_N.json` (spec, population with unit-cube `x` and
+`params`, per-config scores, best, `mean_params`, and the full CMA state
+before/after) and `gen_N/` (the sweep results, `runner.log`). Resume rules:
+a generation with `state_after` is finished and skipped; one without it is
+re-scored from `gen_N/` if all 30 games per config are there, otherwise its
+already-sampled population is swept again. `mean_params` of the last
+generation is the candidate to hand to `ladder.sh`; the per-generation
+`best` is one noisy sample and should not be trusted on its own.
+
+Budget: population 10 × 30 games × 12 generations = 3,600 games ≈ 12 sweeps
+of ~25 min on one cpx51 ≈ 5 h, ≈ €0.5. Twelve parameters with population 10
+is at the low end for CMA-ES; expect a handful of generations before sigma
+starts shrinking, and prefer more generations over a bigger population.
+
+Verified 2026-08-29 without Hetzner: `--dry-run --pop 4 --gens 2` completes,
+a re-run resumes at gen 2, a gen file stripped of its scores is re-scored
+from its results dir, and a 15-generation dry run climbs from 2.06 to 2.99
+mean fitness. The first real generation on Hetzner has **not** been run yet.
+
+### `ladder.sh` and `scripts/lab/versions/`
+
+Every graduated default set is stored as `scripts/lab/versions/vN.json`
+(`{"note": "...", "params": {...}}`); `v-current.json` holds `{}` — the code's
+`DEFAULT_PLAYBOOK` — and is always in the ladder. The ladder runs a candidate
+against `v-current` plus the two highest `vN` on the standard grid and prints
+`summarize.py` followed by the Bradley–Terry table (ties count half; strength
+is the log score, 0 = average; `P(row beats column)` is given for the
+candidate against each version).
+
+```bash
+scripts/lab/ladder.sh '{"fightAbove":0.6}'                           # JSON string, Hetzner, 20 min
+scripts/lab/ladder.sh lab-out/cma/best.json                          # or a file: {...} or {"params": {...}}
+RUNNER=local JOBS=4 MINUTES=1 BATCHES=med0 SPAWNS=africa scripts/lab/ladder.sh '{}'   # ~40 s smoke run
+DEST=lab-out/ladder-x NAME_CAND=cma12 scripts/lab/ladder.sh cand.json  # results dir + config name
+python3 scripts/lab/summarize.py --ladder lab-out/ladder-x cma12 v-current   # re-print the table later
+```
+
+When a candidate wins: copy its overrides to `versions/vN.json` (next N, note
+= which sweep), fold them into `DEFAULT_PLAYBOOK`, leave `v-current.json`
+empty, and update the guide's "Pressure-tested" table.
 
 ## Clean up
 
