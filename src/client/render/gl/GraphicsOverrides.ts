@@ -105,6 +105,8 @@ export const GraphicsOverridesSchema = z
       .partial(),
     /** Per-layer visibility toggles keyed by layer id. */
     mapLayerVisibility: z.record(z.string(), z.boolean()),
+    /** Per-layer alpha (opacity 0–1) keyed by layer id. */
+    mapLayerAlpha: z.record(z.string(), z.number().min(0).max(1)),
   })
   .partial();
 

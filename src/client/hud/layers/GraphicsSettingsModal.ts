@@ -161,6 +161,9 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   public onLayerVisibilityChange:
     | ((layerId: string, visible: boolean) => void)
     | null = null;
+  /** Callback to set layer alpha on the renderer. */
+  public onLayerAlphaChange: ((layerId: string, alpha: number) => void) | null =
+    null;
 
   @state()
   private isVisible: boolean = false;
@@ -372,6 +375,41 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   private syncLayerVisibility() {
     for (const layer of this.mapLayers) {
       this.onLayerVisibilityChange?.(layer.id, this.isLayerVisible(layer.id));
+    }
+    this.syncLayerAlpha();
+  }
+
+  // ---- Map-layer alpha ----
+
+  private getLayerAlpha(layerId: string, manifestDefault?: number): number {
+    const overrides = this.userSettings.graphicsOverrides();
+    const alpha = overrides.mapLayerAlpha?.[layerId];
+    if (alpha !== undefined) return alpha;
+    return manifestDefault ?? 1;
+  }
+
+  private onLayerAlphaSliderChange(layerId: string, event: Event) {
+    const alpha = parseFloat((event.target as HTMLInputElement).value);
+    const current = this.userSettings.graphicsOverrides();
+    const currentAlpha = current.mapLayerAlpha ?? {};
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      mapLayerAlpha: { ...currentAlpha, [layerId]: alpha },
+    });
+    this.onLayerAlphaChange?.(layerId, alpha);
+    this.requestUpdate();
+  }
+
+  /**
+   * Re-apply layer alpha from current overrides to the renderer.
+   * Called after reset or preset import so the WebGL passes stay in sync.
+   */
+  private syncLayerAlpha() {
+    for (const layer of this.mapLayers) {
+      this.onLayerAlphaChange?.(
+        layer.id,
+        this.getLayerAlpha(layer.id, layer.alpha),
+      );
     }
   }
 
@@ -1509,29 +1547,66 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
             </div>
             ${this.mapLayers.map(
               (layer) => html`
-                <button
-                  class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-                  @click=${() => this.onToggleLayer(layer.id)}
-                >
-                  <div class="flex-1">
-                    <div class="font-medium">${this.layerName(layer.id)}</div>
-                    <div class="text-sm text-slate-400">
-                      ${layer.placement === "land"
-                        ? translateText("graphics_setting.layer_placement_land")
-                        : translateText(
-                            "graphics_setting.layer_placement_water",
-                          )}
-                      ${layer.nukeable
-                        ? ` · ${translateText("graphics_setting.layer_nukeable")}`
-                        : ""}
+                <div>
+                  <button
+                    class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+                    @click=${() => this.onToggleLayer(layer.id)}
+                  >
+                    <div class="flex-1">
+                      <div class="font-medium">${this.layerName(layer.id)}</div>
+                      <div class="text-sm text-slate-400">
+                        ${layer.placement === "land"
+                          ? translateText(
+                              "graphics_setting.layer_placement_land",
+                            )
+                          : translateText(
+                              "graphics_setting.layer_placement_water",
+                            )}
+                        ${layer.nukeable
+                          ? ` · ${translateText("graphics_setting.layer_nukeable")}`
+                          : ""}
+                      </div>
                     </div>
-                  </div>
-                  <div class="text-sm text-slate-400">
-                    ${this.isLayerVisible(layer.id)
-                      ? translateText("user_setting.on")
-                      : translateText("user_setting.off")}
-                  </div>
-                </button>
+                    <div class="text-sm text-slate-400">
+                      ${this.isLayerVisible(layer.id)
+                        ? translateText("user_setting.on")
+                        : translateText("user_setting.off")}
+                    </div>
+                  </button>
+                  ${this.isLayerVisible(layer.id)
+                    ? html`
+                        <div
+                          class="flex gap-3 items-center w-full text-left px-3 pb-2 text-white"
+                        >
+                          <div class="flex-1">
+                            <div class="text-sm text-slate-300">
+                              ${translateText(
+                                "graphics_setting.layer_alpha_label",
+                              )}
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="1"
+                              step="0.01"
+                              aria-label=${`${this.layerName(layer.id)} ${translateText("graphics_setting.layer_alpha_label")}`}
+                              .value=${String(
+                                this.getLayerAlpha(layer.id, layer.alpha),
+                              )}
+                              @input=${(e: Event) =>
+                                this.onLayerAlphaSliderChange(layer.id, e)}
+                              class="w-full border border-slate-500 rounded-lg"
+                            />
+                          </div>
+                          <div class="text-sm text-slate-400 w-12 text-right">
+                            ${this.getLayerAlpha(layer.id, layer.alpha).toFixed(
+                              2,
+                            )}
+                          </div>
+                        </div>
+                      `
+                    : ""}
+                </div>
               `,
             )}
           `
