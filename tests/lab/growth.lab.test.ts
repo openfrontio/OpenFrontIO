@@ -29,7 +29,7 @@ test("opening curves", async () => {
     const info = new PlayerInfo("me", PlayerType.Human, null, "me");
     const game = await setup("big_plains", {}, [info], undefined, C);
     const me = game.player("me");
-    const c = game.ref(100, 100); for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) me.conquer(game.ref(100 + dx, 100 + dy));
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) me.conquer(game.ref(100 + dx, 100 + dy));
     me.addTroops(25000 - me.troops());
     game.addExecution(new PlayerExecution(me));
     const rows: string[] = [];
