@@ -228,6 +228,8 @@ export class Transport {
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
+  // Set to true after receiving code 1002 (Connection Refused) to prevent further reconnection attempts.
+  private connectionRefused = false;
 
   // clientID dictionary for the binary wire (see ZbinWire.ts), seeded from
   // the roster in the start message. Null until the game starts, which is
@@ -385,6 +387,9 @@ export class Transport {
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
   ) {
+    if (this.connectionRefused) {
+      return;
+    }
     this.startPing();
     this.killExistingSocket();
     // WS origin comes from ClientEnv (same-origin on web, audience-derived on
@@ -441,16 +446,27 @@ export class Transport {
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
       if (event.code === 1002) {
-        showInGameAlert(
-          translateText("error_modal.connection_refused", {
-            reason: event.reason,
-          }),
-        );
+        this.handleConnectionRefused(event.reason);
       } else if (event.code !== 1000) {
         console.log(`received error code ${event.code}, reconnecting`);
         this.reconnect();
       }
     };
+  }
+
+  private handleConnectionRefused(reason: string) {
+    if (this.connectionRefused) {
+      return;
+    }
+    this.connectionRefused = true;
+    this.stopPing();
+    void showInGameAlert(
+      translateText("error_modal.connection_refused", {
+        reason,
+      }),
+    ).then(() => {
+      window.location.href = "/";
+    });
   }
 
   public reconnect() {
