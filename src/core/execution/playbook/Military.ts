@@ -311,13 +311,14 @@ export class Military {
       candidates = candidates.filter((r) => {
         const ally = this.allyThatCanPileIn(r);
         if (ally !== null && this.ctx.mg.ticks() - (this.pileInLogged.get(r) ?? -1e9) >= 600) { this.pileInLogged.set(r, this.ctx.mg.ticks()); this.ctx.log(`t${this.ctx.mg.ticks()} no war on ${r.name()}: its ally ${ally.name()} could send ${Math.round((this.ctx.sit.rival.get(ally)?.nationWouldSend ?? 0) / 1000)}k at us`); }
+        if (ally !== null) this.ctx.fire("trustWars");
         return ally === null;
       });
     }
     if (candidates.length === 0) return;
     const atCap = me.troops() >= cap * 0.95;
     const endgame = this.q.phaseOr(15000, "endgame") || this.ctx.sit.mode === "push"; // 25:00 or the push — land now is worth more than troops later
-    const trustBonus = (r: Player) => (this.ctx.p.trustWars ? 2 * (1 - (this.ctx.sit.rival.get(r)?.trust ?? 0.5)) : 0); // C1: a rival that broke faith is the better target
+    const trustBonus = (r: Player) => { const b = this.ctx.p.trustWars ? 2 * (1 - (this.ctx.sit.rival.get(r)?.trust ?? 0.5)) : 0; if (b !== 0 && b !== 1) this.ctx.fire("trustWars"); return b; }; // C1: a rival that broke faith is the better target
     // At cap every troop above the line is wasted growth, so commit more and accept a thinner edge.
     const maxSend = Math.floor(me.troops() * (atCap || endgame ? 0.7 : this.ctx.p.fightMaxShare));
     const minRatio = atCap || endgame ? 1.2 : this.ctx.p.fightRatio;
@@ -359,6 +360,7 @@ export class Military {
         if (!me.hasEmbargoAgainst(r) && r.type() !== PlayerType.Nation) { me.addEmbargo(r, false); this.embargoedAt_.set(r, this.ctx.mg.ticks()); }
         const want = this.ctx.send(r.id(), sim.troops, "war", 1000, 0.3);
         if (want === 0) return;
+        this.ctx.fire("simWars");
         this.lastWarTick = this.ctx.mg.ticks();
         this.noteSent(r);
         this.simCache.clear();
@@ -440,6 +442,7 @@ export class Military {
   retreat(a: Attack): void {
     if (!this.ctx.p.realRetreats) { this.ctx.me.orderRetreat(a.id()); return; }
     if (a.retreating() || a.retreated()) return;
+    this.ctx.fire("realRetreats");
     this.ctx.mg.addExecution(new RetreatExecution(this.ctx.me, a.id()));
   }
 
@@ -468,6 +471,7 @@ export class Military {
         this.simRetreatAt.set(a.id(), this.ctx.mg.ticks());
         const est = estimateAttack(this.ctx.mg, me, t, a.troops(), { horizonTicks: 600, stopBelow: 1 });
         if (!est.wins && !(est.ticks >= 600 && est.tilesTaken > 0 && est.troopsLeft >= a.troops() * 0.5)) {
+          this.ctx.fire("simWars");
           this.retreat(a);
           this.ctx.log(`t${this.ctx.mg.ticks()} retreat from ${t.name()} (${Math.round(a.troops() / 1000)}k left; sim: ${est.tilesTaken}t, ${Math.round(est.troopsLeft / 1000)}k left after ${est.ticks} ticks)`);
         }

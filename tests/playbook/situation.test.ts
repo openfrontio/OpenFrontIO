@@ -20,7 +20,7 @@ function context(mg: Game, me: Player, params: Partial<PlaybookParams> = {}): { 
   const ctx: BotContext = {
     mg, me, p: { ...DEFAULT_PLAYBOOK, ...params }, random: new PseudoRandom(1),
     sit: undefined as unknown as Situation, // set by read() below
-    send: () => 0, boat: () => 0, log: (l) => log.push(l),
+    send: () => 0, boat: () => 0, log: (l) => log.push(l), fire: () => {},
   };
   return { ctx, q: new SituationQueries(ctx), log };
 }

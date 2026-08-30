@@ -42,6 +42,8 @@ export class PlaybookBotExecution implements Execution {
   private landmassChecked = false;
   private onSmallLandmass = false;
   public log: string[] = [];
+  /** flag → how often it changed a decision this game (lab liveness: an A/B game where nothing fired is not evidence) */
+  public fired = new Map<string, number>();
   public kills = 0;
   /** Bombs and MIRVs fired (kept by Military). */
   get bombs(): number {
@@ -70,6 +72,7 @@ export class PlaybookBotExecution implements Execution {
       send: (targetID, n, why, min, capFloor) => bot.send(targetID, n, why, min, capFloor),
       boat: (tile, n, why) => bot.boat(tile, n, why),
       log: (line) => { if (bot.log.length < 2000) bot.log.push(line); },
+      fire: (flag) => bot.fired.set(flag, (bot.fired.get(flag) ?? 0) + 1),
     };
     this.q = new SituationQueries(this.ctx);
     this.military = new Military(this.ctx, this.q, () => this.diplomacy.plannedTarget);
@@ -126,10 +129,13 @@ export class PlaybookBotExecution implements Execution {
     // neighbour lapses, the army stays home so the check sees all of it.
     // C1 (`nationAware`): hold only for a nation whose own attack rules would let it hit us at expiry
     this.sit.hold = this.sit.expiring.find((o) => o.type() === PlayerType.Nation && (this.p.nationAware ? this.q.rivals.couldAttackAtExpiry(o, troops).can : o.troops() > troops * 0.85)) ?? null;
+    if (this.p.nationAware && t % 100 === 0) { const heur = this.sit.expiring.find((o) => o.type() === PlayerType.Nation && o.troops() > troops * 0.85) ?? null; if (heur !== this.sit.hold) this.ctx.fire("nationAware"); }
     this.q.enrichRivals(this.sit); // B2: per-rival view
     if (this.p.bsrReserve) {
       // C1: the reserve follows the border threat (SituationQueries.reserveFactor documents the curve)
-      this.sit.reserve = troops * this.p.reserveShare * SituationQueries.reserveFactor(this.sit);
+      const factor = SituationQueries.reserveFactor(this.sit);
+      if (t % 100 === 0 && Math.abs(factor - 1) > 0.05) this.ctx.fire("bsrReserve");
+      this.sit.reserve = troops * this.p.reserveShare * factor;
       this.sit.spendable = Math.max(0, troops - this.sit.reserve);
     }
     this.q.enrichPhase(this.sit); // B2: phase (reads spendable, so after the reserve)

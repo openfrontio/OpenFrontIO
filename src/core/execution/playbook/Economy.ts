@@ -471,6 +471,7 @@ export class Economy {
         this.ctx.log(`t${ticks} build Warship`);
       }
     }
+    if (done) this.ctx.fire("scoredSpend");
     if (done || ticks - this.lastSpendLog >= 600) logTop(done ? ` → ${pick.why}` : ` → ${pick.why} FAILED`);
   }
   tryBuild(type: UnitType, tile: TileRef): boolean {

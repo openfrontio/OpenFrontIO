@@ -52,7 +52,9 @@ export class SituationQueries {
    *  sit.phase !== "opening" (the 2:30–5:00 literals: wars, silos, rail). */
   phaseOr(atLeast: number, phase: "endgame" | "pastOpening"): boolean {
     if (!this.ctx.p.phaseGates) return this.ctx.mg.ticks() >= atLeast;
-    return phase === "endgame" ? this.ctx.sit.phase === "endgame" : this.ctx.sit.phase !== "opening";
+    const byPhase = phase === "endgame" ? this.ctx.sit.phase === "endgame" : this.ctx.sit.phase !== "opening";
+    if (byPhase !== this.ctx.mg.ticks() >= atLeast) this.ctx.fire("phaseGates");
+    return byPhase;
   }
   /** C1 (`bsrReserve`): reserveShare × clamp(0.5 + 0.5 · maxBsr, 0.5, 2.0) over the unfriendly neighbours in
    *  `sit.rival` — 0.5× with nobody on the border, 1× (reserveShare itself) at bsr 1, 2× from bsr 3 up. */

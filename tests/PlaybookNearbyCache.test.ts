@@ -23,6 +23,7 @@ function queries(nearbyEvery: number): SituationQueries {
     send: () => 0,
     boat: () => 0,
     log: () => {},
+    fire: () => {},
   });
 }
 

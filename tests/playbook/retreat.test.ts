@@ -58,6 +58,7 @@ describe("manageRetreats", () => {
     expect(a.retreated()).toBe(true);
     expect(a.isActive()).toBe(false);
     expect(h.me.outgoingAttacks().some((x) => x.target() === r)).toBe(false);
+    expect(h.bot.fired.get("realRetreats")).toBe(1); // lab liveness counter: the flag changed a decision this game
   });
 
   test("no retreat while the wave is healthy", async () => {

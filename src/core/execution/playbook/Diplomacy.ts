@@ -73,6 +73,7 @@ export class Diplomacy {
       // A gift of 1/7 of its cap makes it friendly (+50): cheap insurance when we are the weaker side.
       // C1 (`nationAware`): "weaker side" = its own attack rules would let it hit us at expiry, not the 0.9× heuristic.
       const weakerSide = this.ctx.p.nationAware ? this.q.rivals.couldAttackAtExpiry(other, me.troops()).can : me.troops() < other.troops() * 0.9;
+      if (this.ctx.p.nationAware && weakerSide !== me.troops() < other.troops() * 0.9) this.ctx.fire("nationAware");
       if (!prey && other.type() === PlayerType.Nation && weakerSide && me.canDonateTroops(other)) {
         const gift = Math.ceil(this.ctx.mg.config().maxTroops(other) / 7) + 1000;
         if (gift < me.troops() * 0.3 && gift <= this.ctx.mg.config().maxTroops(other) - other.troops()) {
