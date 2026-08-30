@@ -141,16 +141,28 @@ export class GameManager {
         // A matchmade game missing a player at the start deadline is
         // cancelled instead of started short-handed.
         if (!game.hasStarted() && !game.cancelShortHandedMatch()) {
-          // Prestart tells clients to start loading the game.
-          game.prestart();
-          // Start game on delay to allow time for clients to connect.
-          setTimeout(() => {
-            try {
-              game.start();
-            } catch (error) {
-              this.log.error(`error starting game ${id}: ${error}`);
-            }
-          }, 2000);
+          // Never start a game nobody is connected to. A lobby that filled up
+          // and then emptied reports Active (reaching maxPlayers takes it out
+          // of the Lobby phase), and the reap in phase() holds off until the
+          // ping clock goes quiet — so without this it would prestart and
+          // start with an empty roster, emitting a playerless match_started
+          // and running turns for nobody until the reaper caught up.
+          if (game.numClients() === 0) {
+            this.log.info("not starting game, no clients connected", {
+              gameID: id,
+            });
+          } else {
+            // Prestart tells clients to start loading the game.
+            game.prestart();
+            // Start game on delay to allow time for clients to connect.
+            setTimeout(() => {
+              try {
+                game.start();
+              } catch (error) {
+                this.log.error(`error starting game ${id}: ${error}`);
+              }
+            }, 2000);
+          }
         }
       }
 

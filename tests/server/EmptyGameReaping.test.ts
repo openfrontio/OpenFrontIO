@@ -1,19 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("../../src/core/Schemas", async () => {
-  const actual = (await vi.importActual("../../src/core/Schemas")) as any;
-  return {
-    ...actual,
-    GameStartInfoSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-    ServerPrestartMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-  };
-});
-
 import { GameType } from "../../src/core/game/Game";
+import { GameManager } from "../../src/server/GameManager";
 import { GamePhase, GameServer } from "../../src/server/GameServer";
 import { testGameConfig } from "../util/Wire";
 
@@ -26,13 +13,23 @@ describe("empty game reaping", () => {
 
   const newGame = (startsAt?: number) =>
     new GameServer(
-      "test-game",
+      "testgame",
       mockLogger,
       Date.now(),
       testGameConfig({ gameType: GameType.Private }),
       undefined,
       startsAt,
     );
+
+  const newClient = () =>
+    ({
+      clientID: "client01",
+      username: "client01",
+      clanTag: null,
+      friends: [],
+      lastPing: Date.now(),
+      ws: { readyState: 3, send: vi.fn(), close: vi.fn() },
+    }) as any;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -91,7 +88,7 @@ describe("empty game reaping", () => {
     // A socket pruned or kicked out of activeClients keeps its message
     // listener, so it can go on pinging. Those pings must not refresh the
     // game-wide clock the reap waits on.
-    const ghost = { clientID: "ghost", lastPing: Date.now() } as any;
+    const ghost = { clientID: "ghost001", lastPing: Date.now() } as any;
     vi.advanceTimersByTime(60_000);
     (game as any).handlePing(ghost);
 
@@ -122,13 +119,7 @@ describe("empty game reaping", () => {
 
   it("keeps a game with a connected client running", () => {
     const game = newGame(undefined);
-    const client = {
-      clientID: "client01",
-      username: "client01",
-      lastPing: Date.now(),
-      friends: [],
-      ws: { readyState: 3, send: vi.fn(), close: vi.fn() },
-    } as any;
+    const client = newClient();
     (game as any).activeClients = [client];
     game.prestart();
     game.start();
@@ -149,5 +140,30 @@ describe("empty game reaping", () => {
     vi.advanceTimersByTime(60_000);
 
     expect(game.phase()).toBe(GamePhase.Finished);
+  });
+
+  it("does not start a full lobby everyone left, and prunes it", () => {
+    const manager = new GameManager(mockLogger);
+    const game = manager.createGame(
+      "testgame",
+      testGameConfig({ gameType: GameType.Private }),
+    )!;
+    (game as any).hasReachedMaxPlayerCount = true;
+    // The clients who filled the lobby were pinging until the moment they
+    // left, so the reap in phase() holds off while that clock is still warm.
+    (game as any).lastPingUpdate = Date.now();
+
+    vi.advanceTimersByTime(5_000);
+
+    // Started with an empty roster, this would emit a playerless
+    // match_started and run turns for nobody.
+    expect(game.hasStarted()).toBe(false);
+    expect(manager.activeGames()).toBe(1);
+
+    // Once the ping clock goes quiet it is pruned instead.
+    vi.advanceTimersByTime(30_000);
+
+    expect(game.hasStarted()).toBe(false);
+    expect(manager.activeGames()).toBe(0);
   });
 });
