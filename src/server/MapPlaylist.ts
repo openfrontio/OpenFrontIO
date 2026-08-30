@@ -261,9 +261,17 @@ export class MapPlaylist {
         const [mod, pctStr] = entry.split(":");
         const key = mod as ModifierKey;
         const chance = pctStr !== undefined ? parseInt(pctStr, 10) / 100 : 1;
-        excludedModifiers.push(key);
         if (!excludedModifiers.includes(key) && Math.random() < chance) {
           appliedForced.add(key);
+        }
+        excludedModifiers.push(key);
+        // Also exclude mutually-exclusive counterpart(s) so the random pool
+        // can't roll a conflicting modifier (e.g. isNukesDisabled vs isWaterNukes).
+        for (const [a, b] of MUTUALLY_EXCLUSIVE_MODIFIERS) {
+          if (key === a && !excludedModifiers.includes(b))
+            excludedModifiers.push(b);
+          if (key === b && !excludedModifiers.includes(a))
+            excludedModifiers.push(a);
         }
       }
       // Cap after all rolls: if more than 3 forced modifiers passed, trim to 3.

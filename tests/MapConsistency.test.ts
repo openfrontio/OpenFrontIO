@@ -330,18 +330,31 @@ describe("Map consistency", () => {
             );
             continue;
           }
-          const [mod, pctStr] = entry.split(":");
+          const parts = entry.split(":");
+          if (parts.length > 2) {
+            errors.push(
+              `${key}: forced_modifiers "${entry}" has too many colon-separated segments (expected "modifier" or "modifier:percentage")`,
+            );
+            continue;
+          }
+          const [mod, pctStr] = parts;
           if (!VALID_MODIFIER_KEYS.has(mod)) {
             errors.push(
               `${key}: forced_modifiers contains invalid modifier "${mod}"`,
             );
           }
           if (pctStr !== undefined) {
-            const pct = parseInt(pctStr, 10);
-            if (isNaN(pct) || pct < 1 || pct > 100) {
+            if (!/^\d+$/.test(pctStr)) {
               errors.push(
-                `${key}: forced_modifiers "${entry}" has invalid percentage (must be 1-100)`,
+                `${key}: forced_modifiers "${entry}" has non-integer percentage`,
               );
+            } else {
+              const pct = parseInt(pctStr, 10);
+              if (pct < 1 || pct > 100) {
+                errors.push(
+                  `${key}: forced_modifiers "${entry}" has invalid percentage (must be 1-100)`,
+                );
+              }
             }
           }
         }
