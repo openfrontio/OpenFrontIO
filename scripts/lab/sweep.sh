@@ -1,17 +1,23 @@
 #!/usr/bin/env bash
-# Box-side lab sweep. Runs every (config × batch × spawn) game in parallel and
-# aggregates each config/batch into ab30_<config>_<batch>.txt (same format the
-# local ab30.sh produces, so the summarizers work unchanged).
+# Box-side lab sweep. Runs every (config × batch × spawn) game in parallel with the bare-node runner
+# (tests/lab/playbook.lab.ts), retries a failed game once, and aggregates each config/batch into
+# ab30_<config>_<batch>.txt via aggregate.sh (the format summarize.py reads).
 #
-#   CONFIGS='{"base":{},"early":{"botsAfterWild":false}}' MINUTES=20 JOBS=30 scripts/lab/sweep.sh
+#   CONFIGS='{"base":{},"early":{"botsAfterWild":false}}' MINUTES=20 JOBS=16 scripts/lab/sweep.sh
 #
-# Env: CONFIGS (JSON name -> PlaybookParams overrides), MINUTES (game length,
-# default 20), JOBS (parallel games, default nproc), OUT (result dir, default ./lab-out).
+# Env: CONFIGS (JSON name -> PlaybookParams overrides), MINUTES (game length, default 20), JOBS (parallel
+# games, default nproc — pass it explicitly on macOS), OUT (result dir, default ./lab-out), BATCHES /
+# SPAWNS (subset of the grid), SHARD=i/N (run only every N-th game, i in 0..N-1 — remote.sh gives each
+# worker box one shard of the same job list; the results directories are merged and aggregated locally),
+# RUNNER=node|vitest (default node; vitest = the old `npx vitest` path, ~2 s slower a game),
+# AGGREGATE=0 to skip aggregation (remote.sh aggregates after merging shards).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 MINUTES=${MINUTES:-20}
-JOBS=${JOBS:-$(nproc)}
+JOBS=${JOBS:-$(nproc 2>/dev/null || sysctl -n hw.ncpu)}
 OUT=${OUT:-$PWD/lab-out}
+RUNNER=${RUNNER:-node}
+SHARD=${SHARD:-0/1}
 mkdir -p "$OUT"
 : "${CONFIGS:?set CONFIGS to a JSON object of name -> params}"
 
@@ -21,17 +27,21 @@ SPAWNS=${SPAWNS:-"north-russia north-america east-asia africa south-america aust
 BATCHES=${BATCHES:-"med0 med1 med2 med3 med4"}
 names=$(node -e "for (const k of Object.keys(JSON.parse(process.argv[1]))) console.log(k)" "$CONFIGS")
 
+# Job list in a fixed order (config, batch, spawn) so every shard of the same CONFIGS agrees on numbering.
 jobs_file=$(mktemp)
+i=0; shard_i=${SHARD%/*}; shard_n=${SHARD#*/}
 for name in $names; do
   params=$(node -e "console.log(JSON.stringify(JSON.parse(process.argv[1])[process.argv[2]]))" "$CONFIGS" "$name")
   for batch in $BATCHES; do
-    for sp in $SPAWNS; do echo "$name|$batch|$sp|$params" >> "$jobs_file"; done
+    for sp in $SPAWNS; do
+      [ $((i % shard_n)) -eq "$shard_i" ] && echo "$name|$batch|$sp|$params" >> "$jobs_file"
+      i=$((i + 1))
+    done
   done
 done
-echo "sweep: $(wc -l < "$jobs_file") games, $JOBS parallel, $MINUTES min each -> $OUT"
+echo "sweep: $(wc -l < "$jobs_file") games (shard $SHARD of $i), $JOBS parallel, $MINUTES min each, runner $RUNNER -> $OUT"
 
-# one game per line; batch -> env uses the same scheme as ab30.sh
-export MINUTES OUT
+export MINUTES OUT RUNNER
 # NUL-delimited: plain xargs strips the quotes out of the JSON params
 tr '\n' '\0' < "$jobs_file" | xargs -0 -P "$JOBS" -I{} bash -c '
   IFS="|" read -r name batch sp params <<< "$1"
@@ -42,18 +52,19 @@ tr '\n' '\0' < "$jobs_file" | xargs -0 -P "$JOBS" -I{} bash -c '
     gh[0-9]) benv="GLOBAL=1 SPAWNRANK=${batch#gh}";;                # same on Hard
     *) echo "unknown batch $batch"; exit 1;;
   esac
-  if env $benv PARAMS="$params" MIN="$MINUTES" SPAWN="$sp" LAB_OUT="$OUT"        OUTFILE="p_${name}_${batch}_${sp}.txt" TAG="${name}_${batch}"        npx vitest tests/lab/playbook.lab.test.ts --run > /dev/null 2>&1
-  then echo "done $name $batch $sp"; else echo "FAILED $name $batch $sp"; fi' _ {}
+  run() {
+    if [ "$RUNNER" = vitest ]; then
+      # --dir tests: a bare path filter also matches copies under .claude/worktrees/ (one game per copy)
+      env $benv PARAMS="$params" MIN="$MINUTES" SPAWN="$sp" LAB_OUT="$OUT" OUTFILE="p_${name}_${batch}_${sp}.txt" TAG="${name}_${batch}" \
+        npx vitest --dir tests tests/lab/playbook.lab.test.ts --run > "$OUT/.err_${name}_${batch}_${sp}" 2>&1
+    else
+      env $benv PARAMS="$params" MIN="$MINUTES" SPAWN="$sp" LAB_OUT="$OUT" OUTFILE="p_${name}_${batch}_${sp}.txt" TAG="${name}_${batch}" \
+        node --import tsx tests/lab/playbook.lab.ts > "$OUT/.err_${name}_${batch}_${sp}" 2>&1
+    fi
+  }
+  if run || { echo "retry $name $batch $sp"; run; }; then rm -f "$OUT/.err_${name}_${batch}_${sp}"; echo "done $name $batch $sp"
+  else echo "FAILED $name $batch $sp (see $OUT/.err_${name}_${batch}_${sp})"; fi' _ {}
 
-# aggregate: one line per game, ab30 format
-for name in $names; do
-  for batch in $BATCHES; do
-    agg="$OUT/ab30_${name}_${batch}.txt"; : > "$agg"
-    for sp in $SPAWNS; do
-      f="$OUT/p_${name}_${batch}_${sp}.txt"
-      [ -f "$f" ] && grep -E "^==|DEAD|FINAL" "$f" | tr '\n' ' ' | sed -E 's/  +/ /g' >> "$agg" && echo >> "$agg"
-    done
-  done
-done
-rm -f "$jobs_file"
+rm -f "$jobs_file" "$OUT/lab_baseline.txt"
+if [ "${AGGREGATE:-1}" = 1 ]; then bash scripts/lab/aggregate.sh "$OUT"; fi
 echo "sweep complete"

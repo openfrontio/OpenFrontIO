@@ -5,7 +5,9 @@ Handoff notes for an agent who needs to measure a bot change. Companion to
 simulation; never point the bot at openfront.io.
 
 Verified end-to-end 2026-08-29: a 4-config, 120-game, 20-minute sweep on one
-`cpx51` finished in ~25 minutes for about €0.04.
+`cpx51` finished in ~25 minutes for about €0.04. Since the 2026-08-30 rework
+(bare-node runner, `nearby()` memo, headless config) a game costs ~28 % less
+CPU, and `WORKERS=N` spreads one sweep over N boxes.
 
 ## TL;DR
 
@@ -13,16 +15,18 @@ Verified end-to-end 2026-08-29: a 4-config, 120-game, 20-minute sweep on one
 cd ~/Code/openfront                                     # branch playbook-bot
 OUT=/some/dir; mkdir -p $OUT
 CONFIGS='{"base":{},"early":{"botsAfterWild":false},"es25":{"botEarlyShare":0.25}}'
-nohup env CONFIGS="$CONFIGS" MINUTES=20 SERVER_TYPE=cpx51 KEEP=1 DEST=$OUT \
+nohup env CONFIGS="$CONFIGS" MINUTES=20 WORKERS=2 DEST=$OUT \
   scripts/lab/remote.sh > $OUT/remote.log 2>&1 &
-# ... ~25 min for 120 games; "results in ..." in remote.log marks success
+# ... ~10 min for 120 games on two cpx51; "results in ..." in remote.log marks success
 python3 scripts/lab/summarize.py $OUT base early es25    # see "Tuning tools"
-hcloud server delete openfront-lab                       # when Josh says so
+hcloud server list -l lab=1                              # must be empty afterwards (KEEP=1 keeps boxes)
 ```
 
 ## What a sweep is
 
-- One **game** = `tests/lab/playbook.lab.test.ts` run once. The bot plays a
+- One **game** = `tests/lab/playbook.lab.ts` run once (bare node via
+  `node --import tsx`, or through the vitest entry
+  `tests/lab/playbook.lab.test.ts` — same code, same result). The bot plays a
   single-player World map against real nations and 400 tribes for `MIN`
   minutes of game time, headless, and writes a transcript ending in
 
@@ -41,8 +45,8 @@ hcloud server delete openfront-lab                       # when Josh says so
   older run.
 
 The sim is deterministic and single-threaded: throughput scales linearly with
-cores. A 20-minute game takes 85–100 s of CPU on a shared vCPU; games where the
-bot dies finish sooner.
+cores. A 20-minute game takes ~34 s on a Mac core and roughly twice that on a
+shared Hetzner vCPU (a hyperthread); games where the bot dies finish sooner.
 
 ## Lab test env vars
 
@@ -57,12 +61,18 @@ bot dies finish sooner.
 | `LAB_OUT` | output directory (must exist) |
 | `OUTFILE` | file name inside `LAB_OUT` |
 
-Single game by hand (≈10 s at `MIN=1`):
+Single game by hand (≈2 s at `MIN=1`, ~35 s at `MIN=20`):
 
 ```bash
 mkdir -p /tmp/lab && PARAMS='{"fightAbove":0.6}' MIN=1 SPAWN=africa LAB_OUT=/tmp/lab OUTFILE=x.txt \
-  npx vitest tests/lab/playbook.lab.test.ts --run
+  node --import tsx tests/lab/playbook.lab.ts
 ```
+
+The vitest entry still works, but **always scope it**:
+`npx vitest --dir tests tests/lab/playbook.lab.test.ts --run`. A bare path is a
+substring filter and also matches the copies of the test inside other agents'
+worktrees under `.claude/worktrees/` — on 2026-08-29 one "game" silently ran
+four times (`Test Files 4 passed`), 4× the CPU.
 
 ## Hetzner setup (exists; do not redo)
 
@@ -72,68 +82,95 @@ mkdir -p /tmp/lab && PARAMS='{"fightAbove":0.6}' MIN=1 SPAWN=africa LAB_OUT=/tmp
 - SSH key `josh-lab` in the project = `~/.ssh/id_ed25519.pub` (`remote.sh`
   uploads it if missing).
 - **Account limit:** dedicated-vCPU (CCX) servers are refused —
-  `dedicated core limit exceeded`. **Use `cpx51`** (16 shared vCPU, 32 GB,
-  ≈€0.09/h). For more throughput run two boxes with different `NAME`s, or ask
-  Hetzner support to raise the CCX limit.
+  `dedicated core limit exceeded`. **`cpx51`** (16 shared vCPU, 32 GB,
+  ≈€0.09/h) is the default. For more throughput pass `WORKERS=N` (N boxes,
+  one shard each). Worth a support ticket: a raised CCX limit — the sim is
+  integer, single-threaded work and a shared vCPU delivers about half a
+  dedicated core (measured: ~2× the Mac's per-game time).
+- **Snapshot image:** `scripts/lab/snapshot.sh` bakes Node 24 + `node_modules`
+  into a snapshot labelled `lab-image=1` (a cpx11 for ~5 min, then
+  ~€0.01/GB/month). `remote.sh` uses the newest one automatically
+  (`IMAGE=auto`), so a worker is ready in ~1 min instead of ~4; with no
+  snapshot it falls back to ubuntu + cloud-init. Re-bake after a
+  `package-lock.json` change (not required: `remote.sh` re-installs when the
+  lock differs).
+- **Labels:** every box `remote.sh` creates carries `lab=1,pool=<NAME>`.
+  `hcloud server list -l lab=1` shows what is running.
 
 ## `scripts/lab/remote.sh` — what it does
 
-1. Ensures the SSH key exists in Hetzner.
-2. Creates `NAME` (`ubuntu-24.04`, `LOCATION`, cloud-init installs Node 24) and
-   waits for `/root/.lab-ready`. With `REUSE=1` it skips this and uses the
-   running server called `NAME`.
-3. `rsync`s **26 MB** to `/root/openfront`: `src`, `tests`, package files,
+1. Ensures the SSH key exists in Hetzner; picks the newest `lab-image=1`
+   snapshot (or `IMAGE=none` → plain ubuntu + cloud-init).
+2. Creates `WORKERS` servers in parallel — `NAME` when `WORKERS=1`, else
+   `NAME-1 … NAME-N` — and waits for `/root/.lab-ready` on each. With
+   `REUSE=1` it uses the running servers with those names instead.
+3. `rsync`s **26 MB** to each box in parallel: `src`, `tests`, package files,
    `resources/maps/world/manifest.json`, lang JSON. The `.bin` maps come from
    `tests/testdata`. Do not widen the includes — the full tree is 2.2 GB
-   (`resources/maps` alone is 510 MB) and the first attempt sat idle for seven
-   minutes uploading it.
-4. `npm run inst` on the box if `node_modules` is missing (~1 min).
-5. Launches `scripts/lab/sweep.sh` on the box with `nohup`, logging to
-   `/root/lab-out/sweep.log`, and polls once a minute printing
-   `HH:MM N done, M failed`. A dropped ssh or a killed local shell cannot stop
-   the sweep; if the local script dies, just rsync `/root/lab-out/` yourself.
-6. `rsync`s `/root/lab-out/` to `DEST`.
-7. Deletes the server unless `KEEP=1`.
+   (`resources/maps` alone is 510 MB), and `.claude/` holds other agents'
+   worktrees (full copies of the tree).
+4. `npm run inst` on a box only when `node_modules` is missing or
+   `package-lock.json` changed since the last install there.
+5. Clears `/root/lab-out` and launches `scripts/lab/sweep.sh SHARD=i/N` on
+   box *i* with `nohup`, then polls once a minute printing
+   `HH:MM N done, M failed` summed over the boxes. A dropped ssh or a killed
+   local shell cannot stop a sweep; if the local script dies, rsync
+   `/root/lab-out/` from each box yourself and run
+   `scripts/lab/aggregate.sh $DEST`.
+6. `rsync`s every box's `/root/lab-out/` into `DEST` (the shards' transcripts
+   merge; `sweep.log` is the concatenation of `sweep.<i>.log`) and aggregates
+   locally.
+7. Deletes the servers unless `KEEP=1`.
 
 | Env | Default | Notes |
 | --- | --- | --- |
 | `CONFIGS` | required | JSON name → params. Use `{}` for the baseline. |
 | `MINUTES` | 20 | game length |
-| `SERVER_TYPE` | ccx53 | **pass `cpx51`** on this account |
+| `WORKERS` | 1 | boxes; each runs every N-th game of the same job list |
+| `SERVER_TYPE` | cpx51 | dedicated CCX types are refused on this account |
+| `IMAGE` | auto | newest `lab-image=1` snapshot; `none` = ubuntu + cloud-init; or an image id |
 | `LOCATION` | ash | Ashburn |
-| `NAME` | openfront-lab | server name |
+| `NAME` | openfront-lab | server name / prefix; also the `pool` label |
 | `DEST` | ./lab-out | local results dir |
-| `KEEP` | 0 | 1 = leave the server running |
-| `REUSE` | 0 | 1 = use the existing server; rsync is incremental, so a rerun after a bot edit starts in seconds |
+| `KEEP` | 0 | 1 = leave the servers running |
+| `REUSE` | 0 | 1 = use the existing servers; rsync is incremental, so a rerun after a bot edit starts in seconds |
+| `BATCHES`, `SPAWNS`, `JOBS` | — | passed through to `sweep.sh` |
 
 Run it under `nohup … &` from a tool call — it runs longer than any tool
 timeout. Watch `remote.log`; `results in …` means success.
 
-**Timing** (cpx51, 16 parallel): 120 × 20-min games ≈ 25 min; 90 games ≈ 18
-min. Shared vCPUs slow down a little under full load (load avg ~18 on 16).
+**Timing** (cpx51, 16 parallel, pre-rework runner): 120 × 20-min games ≈ 25
+min on one box. Per-game CPU is ~28 % lower since the rework, and `WORKERS=N`
+divides the wall time by ~N. A CMA-ES generation (10 configs × 30 games) is
+~15 min on `WORKERS=4` (≈ €0.25).
 
 **Verify before you trust a sweep:**
 
 ```bash
 ls $DEST | grep -c '^p_'                 # expect configs × 30
 grep -L FINAL $DEST/p_*.txt              # should print nothing
-grep -c '^FAILED' $DEST/sweep.log        # should be 0
+grep -c '^FAILED' $DEST/sweep.log        # should be 0 (each game is retried once before it counts as FAILED)
 ```
 
-A game that fails to run leaves no `p_*.txt` and prints `FAILED cfg batch
-spawn` in `sweep.log`. To see why, run one game by hand on the box with the
-same env and read vitest's output.
+A game that fails twice leaves no `p_*.txt`, prints `FAILED cfg batch spawn`
+in `sweep.log`, and keeps its stderr in `$OUT/.err_cfg_batch_spawn` on the box
+(rsynced into `DEST`).
 
 ## `scripts/lab/sweep.sh` — the box-side runner
 
-Builds a job list (config × batch × spawn), runs it with `xargs -0 -P JOBS`,
-then aggregates each config/batch into `ab30_<config>_<batch>.txt` (one FINAL
-line per spawn — the same format as the older local `ab30.sh`, so existing
-summarizers work).
+Builds a job list (config × batch × spawn) in a fixed order, keeps every N-th
+entry when `SHARD=i/N` is set, runs it with `xargs -0 -P JOBS` through
+`node --import tsx tests/lab/playbook.lab.ts` (one retry per game), then —
+unless `AGGREGATE=0` — calls `scripts/lab/aggregate.sh`, which turns the
+`p_*.txt` transcripts into `ab30_<config>_<batch>.txt` (one FINAL line per
+spawn, the format `summarize.py` reads). `aggregate.sh <dir>` is idempotent;
+run it by hand after merging shards.
 
 Env: `CONFIGS`, `MINUTES` (20), `JOBS` (`nproc`; **pass it explicitly on
 macOS**), `OUT` (./lab-out), `BATCHES` (default `med0 … med4`; `hardN`/`medN`
-for any rank N) and `SPAWNS` to run a subset.
+for any rank N, `gN`/`ghN` for the global picker ladder), `SPAWNS` (subset),
+`SHARD` (`0/1`), `RUNNER` (`node`; `vitest` = the old path, ~2 s slower a
+game), `AGGREGATE` (1).
 
 Gotcha already fixed, worth knowing: plain `xargs` strips double quotes from
 its input, which turned `{"botsAfterWild":false}` into `{botsAfterWild:false}`
@@ -144,17 +181,40 @@ all others `FAILED`, suspect quoting.
 Local use (fallback; keep it small, the Mac is also the GUI machine):
 
 ```bash
-CONFIGS='{"smoke":{}}' MINUTES=1 JOBS=1 BATCHES=hard0 SPAWNS=africa OUT=/tmp/smoke scripts/lab/sweep.sh   # 10-s smoke test
-CONFIGS='{"base":{}}' MINUTES=20 JOBS=10 OUT=/tmp/lab scripts/lab/sweep.sh                                # ~10 min
+CONFIGS='{"smoke":{}}' MINUTES=1 JOBS=1 BATCHES=hard0 SPAWNS=africa OUT=/tmp/smoke scripts/lab/sweep.sh   # 2-s smoke test
+CONFIGS='{"base":{}}' MINUTES=20 JOBS=10 OUT=/tmp/lab scripts/lab/sweep.sh                                # ~4 min
 ```
+
+## Where a game's time goes (profiled 2026-08-29, 20-min Medium game)
+
+Before the rework a 20-minute game was 46.7 s on a Mac core: **33 % the bot**
+(almost all of it `me.nearby()`, which walks every border tile and was asked
+every tick by `readSituation()` plus up to five more times by the rules),
+18 % `NationExecution`, 10 % the per-player cluster flood-fill in
+`PlayerExecution`, 7 % `AttackExecution`, 5 % render updates + sync hash, 4 %
+vitest startup. What changed:
+
+- `SituationQueries` memoises `me.nearby()` per tick (`nearbyEvery`, default
+  1; the friend/rival split is still recomputed on every call). Bit-identical
+  decisions — the FINAL line and the whole bot log matched the old code.
+- `Config.headless()` (true in `LabConfig`) skips `toUpdate()` and `hash()`:
+  render outputs, no game state (`tests/HeadlessConfig.test.ts`).
+- The sweep runs the harness with bare node instead of vitest.
+
+Together: **46.7 s → 33.8 s** (−28 %) for the same game. Left on the table:
+`nearbyEvery: 10` measured a further −16 % but it changes decisions (stale
+neighbour set for a second), so it is a default-off `PlaybookParams` flag
+until a 30-game A/B says it is harmless; the engine hot spots above are real
+game logic shared with production and are left alone.
 
 ## Output layout
 
 ```
 lab-out/
-  sweep.log                          done/FAILED per game (box side)
+  sweep.log                          done/retry/FAILED per game (all shards; sweep.<i>.log per box)
   p_<config>_<batch>_<spawn>.txt     full transcript of one game
-  ab30_<config>_<batch>.txt          6 FINAL lines, one per spawn
+  ab30_<config>_<batch>.txt          6 FINAL lines, one per spawn (scripts/lab/aggregate.sh)
+  .err_<config>_<batch>_<spawn>      stderr of a game that failed twice
 ```
 
 ## Reading results
@@ -301,11 +361,13 @@ empty, and update the guide's "Pressure-tested" table.
 ## Clean up
 
 ```bash
-hcloud server list                 # must be empty when you are done
-hcloud server delete openfront-lab
+hcloud server list -l lab=1        # must be empty when you are done
+hcloud server delete $(hcloud server list -l lab=1 -o noheader -o columns=name)
+hcloud image list --type snapshot -l lab-image=1   # snapshots are cheap; delete superseded ones now and then
 ```
 
-Josh wants to be told before a delete. A forgotten cpx51 costs ~€2/day.
+Josh wants to be told before a delete. A forgotten cpx51 costs ~€2/day; a
+forgotten pool of four, ~€9/day.
 
 ## Spawn picker: what the data says (2026-08-30)
 

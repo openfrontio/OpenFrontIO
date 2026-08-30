@@ -1,7 +1,7 @@
 // Situation: the per-tick picture every rule reads (built by PlaybookBotExecution.readSituation) and the
 // stateless-ish queries about the map and our neighbours that several modules share.
 
-import { Attack, Player, PlayerType, UnitType } from "../../game/Game";
+import { Attack, Player, PlayerType, TerraNullius, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { BotContext } from "./Context";
 
@@ -18,10 +18,21 @@ export class SituationQueries {
   constructor(private ctx: BotContext) {}
 
   // ---------------------------------------------------------------- helpers
+  // me.nearby() walks every border tile (thousands late-game) and was ~28 % of a 20-minute lab game
+  // (profiled 2026-08-29): readSituation() asks every tick and the rules ask up to five more times. The
+  // set of neighbouring players is memoised for `nearbyEvery` ticks; the friend/rival split is redone on
+  // every call because alliances can change within a tick. nearbyEvery = 1 keeps the bot's decisions
+  // bit-identical to the uncached code (golden test); larger values are a lab flag until A/B-ed.
+  private nearbyCache: { tick: number; players: (Player | TerraNullius)[] } | null = null;
+  private nearby(): (Player | TerraNullius)[] {
+    const t = this.ctx.mg.ticks(), every = Math.max(1, this.ctx.p.nearbyEvery);
+    if (this.nearbyCache === null || t - this.nearbyCache.tick >= every) this.nearbyCache = { tick: t, players: this.ctx.me.nearby() };
+    return this.nearbyCache.players;
+  }
   neighbours(): { bots: Player[]; rivals: Player[]; friends: Player[]; wilderness: boolean } {
     const bots: Player[] = [], rivals: Player[] = [], friends: Player[] = [];
     let wilderness = false;
-    for (const n of this.ctx.me.nearby()) {
+    for (const n of this.nearby()) {
       if (!n.isPlayer()) { wilderness = true; continue; }
       if (n.type() === PlayerType.Bot) bots.push(n);
       else if (this.ctx.me.isFriendly(n)) friends.push(n);

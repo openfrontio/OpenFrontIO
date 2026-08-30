@@ -510,14 +510,17 @@ export class GameImpl implements Game {
 
     this.execs.push(...inited);
     this.unInitExecs = unInited;
-    for (const player of this._players.values()) {
-      const update = player.toUpdate(
-        this.playerStatsQuads,
-        this.attackTroopsQuads,
-      );
-      if (update !== null) this.addUpdate(update);
+    const headless = this.config().headless();
+    if (!headless) {
+      for (const player of this._players.values()) {
+        const update = player.toUpdate(
+          this.playerStatsQuads,
+          this.attackTroopsQuads,
+        );
+        if (update !== null) this.addUpdate(update);
+      }
     }
-    if (this.ticks() % 10 === 0) {
+    if (!headless && this.ticks() % 10 === 0) {
       this.addUpdate({
         type: GameUpdateType.Hash,
         tick: this.ticks(),

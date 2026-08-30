@@ -279,6 +279,12 @@ export class Config {
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
   }
+  /** Headless simulation (bot lab): skip the per-tick render updates and the sync hash. They never touch
+   *  game state, so the sim is bit-identical with or without them; they cost ~5 % of a lab game. */
+  headless(): boolean {
+    return false;
+  }
+
   disableNavMesh(): boolean {
     return this._gameConfig.disableNavMesh ?? false;
   }

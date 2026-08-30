@@ -21,8 +21,10 @@ The search space is the unit cube; each parameter is mapped linearly onto
 or --param name=lo:hi[:init][:int]; the built-in spec is the 12-parameter
 list of docs/PlaybookBotPlan.md (C3). Hetzner env vars (SERVER_TYPE, NAME,
 LOCATION, …) pass through to remote.sh; the server is kept between
-generations (KEEP=1, REUSE=1 after the first) and is never deleted here —
-run `hcloud server delete <NAME>` yourself when the campaign is over.
+generations (KEEP=1, REUSE=1 after the first) and is never deleted here — run
+`hcloud server delete $(hcloud server list -l lab=1 -o noheader -o columns=name)`
+when the campaign is over. WORKERS=4 in the env spreads each generation over
+four boxes (one shard each; ~15 min a generation for pop 10).
 
 Pure python (stdlib only); numpy is used for the eigendecomposition when it
 happens to be installed, a Jacobi solver otherwise.
@@ -393,7 +395,7 @@ def main():
         print(f"  best params: {json.dumps(configs[names[best]])}")
         print(f"  new mean:    {json.dumps(record['mean_params'])}  sigma -> {cma.sigma:.4f}")
     if args.runner == "remote" and not args.dry_run:
-        print(f"campaign done; the Hetzner server is still running (KEEP=1) — delete it with: hcloud server delete {os.environ.get('NAME', 'openfront-lab')}")
+        print("campaign done; the Hetzner server(s) are still running (KEEP=1) — delete them with: hcloud server delete $(hcloud server list -l lab=1 -o noheader -o columns=name)")
 
 
 if __name__ == "__main__":

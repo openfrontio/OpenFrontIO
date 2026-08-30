@@ -46,6 +46,7 @@ export interface PlaybookParams {
   stickyWar: boolean; // one enemy to the end: the current war target is the only candidate while it lives and borders us
   postsBeforeCity2: boolean; // allow threat posts even while city 2 is unaffordable
   portWithoutPartnerTick: number; // first port on any ocean coast from this tick even with no partner (1e9 = never)
+  nearbyEvery: number; // ticks the neighbouring-player set is cached for (1 = recompute every tick, the original behaviour)
 }
 
 export const DEFAULT_PLAYBOOK: PlaybookParams = {
@@ -94,4 +95,5 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   stickyWar: true,
   postsBeforeCity2: true, // 30-game lab: +8% land, same survival as blocking them
   portWithoutPartnerTick: 1500,
+  nearbyEvery: 1, // lab flag: 10 would save ~20 % of a lab game's CPU (me.nearby() profiled at 28 %) but needs a 30-game A/B first
 };
