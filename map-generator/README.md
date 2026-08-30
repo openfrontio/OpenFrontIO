@@ -115,6 +115,8 @@ The map-generator reads `assets/maps/<map_name>/info.json` to determine nation p
   "categories": ["europe", "featured"],
   "multiplayer_frequency": 4,
   "featured_rank": 5,
+  "info": "2000x1000 px | 1.5M land px | 500k water px",
+  "designers": ["SampleDesigner"],
   "layers": [
     {
       "id": "roads",
@@ -153,6 +155,8 @@ The map-generator reads `assets/maps/<map_name>/info.json` to determine nation p
 | `themes`                |          | Array of theme strings for tribe name generation.                                                                                                                                                                                |
 | `layers`                |          | Array of map layer definitions rendered between terrain and territory (see below).                                                                                                                                               |
 | `nations`               |          | Array of nation objects (see below).                                                                                                                                                                                             |
+| `info`                  |          | String that contains information about the map that gets rendered in the map selection UI (e.g. pixel size)                                                                                                                      |
+| `designers`             |          | Array of designers of the map that gets rendered in the map selection UI                                                                                                                                                         |
 
 ### Categories
 
