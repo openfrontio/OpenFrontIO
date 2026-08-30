@@ -143,13 +143,13 @@ if [ "${STAGED:-0}" = 1 ]; then
   set -- $BATCHES; n=${STAGE1:-3}
   first=$(echo "$@" | cut -d' ' -f1-$n); rest=$(echo "$@" | cut -d' ' -f$((n + 1))-)
   run_pool "$first"
-  names=$(node -e 'console.log(Object.keys(JSON.parse(process.argv[1])).join(" "))' "$CONFIGS")
-  if python3 scripts/lab/summarize.py --verdict "${VERDICT:-3}" "$DEST" $names; then
+  cfgs=$(node -e 'console.log(Object.keys(JSON.parse(process.argv[1])).join(" "))' "$CONFIGS")
+  if python3 scripts/lab/summarize.py --verdict "${VERDICT:-3}" "$DEST" $cfgs; then
     echo "stage 1 verdict clear for every config after $n batches; skipping: $rest"
   else
     echo "stage 2: $rest"
     run_pool "$rest"
-    python3 scripts/lab/summarize.py --verdict "${VERDICT:-3}" "$DEST" $names || true
+    python3 scripts/lab/summarize.py --verdict "${VERDICT:-3}" "$DEST" $cfgs || true
   fi
 else
   run_pool "$BATCHES"
