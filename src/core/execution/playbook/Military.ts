@@ -193,16 +193,8 @@ export class Military {
 
   // ---------------------------------------------------------------- expansion
   expand(): void {
-    const me = this.ctx.me;
     const { rivals, wilderness } = this.q.neighbours();
     if (!wilderness) return;
-    if (this.ctx.p.openingAllIn) {
-      // nations' opening: every 5 s, everything above a small reserve goes into empty land
-      if (this.ctx.mg.ticks() % 50 !== 0) return;
-      const send = Math.floor(me.troops() - this.q.cap() * this.ctx.p.openingKeep);
-      this.ctx.send(this.ctx.mg.terraNullius().id(), send, "all-in", 100);
-      return;
-    }
     // free land is the cheapest growth there is and unused troops come home: only the troop reserve applies, not the cap floor
     const ringing = [...this.ctx.sit.rivals, ...this.ctx.sit.bots, ...this.ctx.sit.friends].some((r) => this.q.annexable(r));
     const frac = rivals.length > 0 || ringing || this.splitTile !== null || this.ctx.sit.mode === "push" ? this.ctx.p.expandContested : this.ctx.p.expandFree;
@@ -310,7 +302,7 @@ export class Military {
     let candidates = rivals.filter((r) => me.canAttackPlayer(r) && !this.q.outgoingTo(r) && this.reachable(r));
     // one enemy at a time, to the end: nations nuke whoever attacks them, and eight half-wars make eight nuclear enemies.
     // The current target stays the only candidate while it lives, borders us, and was hit within the last three minutes.
-    if (this.ctx.p.stickyWar && this.currentTarget_ && this.currentTarget_.isAlive() && rivals.includes(this.currentTarget_) && this.ctx.mg.ticks() - this.lastWarTick < 1800) {
+    if (this.currentTarget_ && this.currentTarget_.isAlive() && rivals.includes(this.currentTarget_) && this.ctx.mg.ticks() - this.lastWarTick < 1800) {
       candidates = candidates.filter((r) => r === this.currentTarget_ || this.collapsed(r) || r === gapOwner || r === threatHere);
     }
     if (this.ctx.sit.mode === "hold") candidates = candidates.filter((r) => this.ctx.sit.threats.includes(r)); // the hold is spent removing whoever can fire
@@ -329,7 +321,7 @@ export class Military {
     // At cap every troop above the line is wasted growth, so commit more and accept a thinner edge.
     const maxSend = Math.floor(me.troops() * (atCap || endgame ? 0.7 : this.ctx.p.fightMaxShare));
     const minRatio = atCap || endgame ? 1.2 : this.ctx.p.fightRatio;
-    const richer = (r: Player) => this.ctx.p.econWar && this.q.cap() >= this.ctx.mg.config().maxTroops(r) * 2 && this.ctx.sit.gold >= 1_000_000n; // we replace losses, they cannot
+    const richer = (r: Player) => this.q.cap() >= this.ctx.mg.config().maxTroops(r) * 2 && this.ctx.sit.gold >= 1_000_000n; // we replace losses, they cannot
     const attackingUs = new Set(me.incomingAttacks().map((a) => a.attacker()));
     const score = (r: Player) => {
       const ratio = maxSend / Math.max(1, r.troops());

@@ -142,7 +142,7 @@ export class PlaybookBotExecution implements Execution {
     const room = Math.floor(Math.min(this.sit.spendable, this.sit.troops - this.sit.cap * capFloor));
     const amount = Math.min(Math.floor(n), room);
     // a war goes whole or not at all: a 2× wave trimmed to 0.3× by the reserve is the worst attack in the game
-    if (this.p.wholeWars && why === "war" && amount < n * 0.9) { if (this.log.length < 2000) this.log.push(`t${this.sit.tick} war held: wants ${Math.round(n / 1000)}k, only ${Math.round(room / 1000)}k spare`); return 0; }
+    if (why === "war" && amount < n * 0.9) { if (this.log.length < 2000) this.log.push(`t${this.sit.tick} war held: wants ${Math.round(n / 1000)}k, only ${Math.round(room / 1000)}k spare`); return 0; }
     if (amount < min) { if (room < min && this.log.length < 2000 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} held: ${why} wants ${Math.round(n / 1000)}k, ${Math.round(room / 1000)}k above reserve`); return 0; }
     this.mg.addExecution(new AttackExecution(amount, this.player, targetID));
     this.sit.spendable -= amount; this.sit.troops -= amount;
@@ -175,7 +175,7 @@ export class PlaybookBotExecution implements Execution {
     this.prevIncoming = inc;
   }
   private rules: { name: string; every: number; run: () => void }[] = [
-    { name: "split", every: 200, run: () => { if (this.p.splitWatch) this.military.watchSplit(); } },
+    { name: "split", every: 200, run: () => this.military.watchSplit() },
     { name: "counter", every: 10, run: () => this.military.counterAttack() },
     { name: "retreats", every: 10, run: () => this.military.manageRetreats() },
     { name: "expand", every: 10, run: () => this.military.expand() },
@@ -252,10 +252,10 @@ export class PlaybookBotExecution implements Execution {
           if ((left && right) || (up && down)) score -= 5; // sandwiched (67-spawn regression: no measurable effect either way; kept for continuity)
           if (prefer) score -= Math.hypot(x - prefer[0], y - prefer[1]) / 60;
           if (score > bestS) { bestS = score; best = t; }
-          if (DEFAULT_PLAYBOOK.spawnBasin) cands.push([score, t]);
+          cands.push([score, t]);
         }
       }
-      if (best !== null && DEFAULT_PLAYBOOK.spawnBasin) {
+      if (best !== null) {
         // second pass: the cheap score cannot tell an isthmus or island from open country. For the best 60
         // candidates, flood-fill unowned land reachable within 120 tiles. 67-spawn regression (Medium, 20 min):
         // basin < 3k = 15k median land vs 64k (vetoed), < 6k = 33k (-6). Steps, not a slope: a slope (pk1) never reordered the top.

@@ -267,19 +267,25 @@ Tests: `tests/playbook/{bsrReserve,trustWars,nationAware,phaseGates}.test.ts`.
 With all four off the lab transcript is byte-identical to before (golden
 unchanged). C3 runs the four A/Bs.
 
-### C2 — Flag consolidation
+### C2 — Flag consolidation — done
 
-- Fold `wholeWars`, `stickyWar`, `splitWatch`, `econWar`, `postsBeforeCity2`,
-  `retreatOnAllianceEnd`, `spawnBasin` (all graduated, default on) into the
-  code; delete `openingAllIn` (lost). Keep `endgameV2` until the finish rule
-  is settled. Golden hash updated deliberately.
+- Folded into the code (the param and its dead branch removed): `wholeWars`,
+  `stickyWar`, `splitWatch`, `econWar`, `postsBeforeCity2`,
+  `retreatOnAllianceEnd`, `spawnBasin`. Deleted: `openingAllIn` /
+  `openingKeep` (lost their A/B) and `homeFloor` (A1 found it declared and
+  defaulted but read nowhere — the expansion floor is `reserveShare`, the
+  cap floor is `send()`'s `capFloor` argument). `endgameV2` stays until the
+  finish rule is settled. Behaviour-neutral for default params: golden
+  unchanged, lab transcript byte-identical. Lab `PARAMS` JSON must not name
+  the removed keys; `ALLIN` / `KEEP` env overrides are gone from
+  `tests/lab/playbook.lab.test.ts`.
 
 ### C3 — Lab campaign
 
 1. Each B-flag: 30-game Medium A/B, graduate or drop.
-2. CMA-ES over: `expandContested expandFree homeFloor botRatio botClickCap
+2. CMA-ES over: `expandContested expandFree botRatio botClickCap
    fightAbove fightMaxShare reserveShare retreatBelowRatio capFullShare
-   bombReserve railSpacing` (12 params), population 10, 12 generations
+   bombReserve railSpacing` (11 params; `homeFloor` was removed in C2), population 10, 12 generations
    ≈ 3.6k games ≈ €1.5 on cpx51.
 3. Ladder run of the result vs v-current; if it wins, it becomes the next
    version and the guide's "Pressure-tested" table is updated.

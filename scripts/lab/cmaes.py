@@ -44,7 +44,6 @@ SUMMARIZE = os.path.join(HERE, "summarize.py")
 BUILTIN_SPEC = {
     "expandContested": (0.05, 0.5, 0.2, False),
     "expandFree": (0.03, 0.3, 0.1, False),
-    "homeFloor": (0.1, 0.5, 0.25, False),
     "botRatio": (1.1, 3.0, 1.67, False),
     "botClickCap": (0.1, 0.6, 0.3, False),
     "fightAbove": (0.4, 0.95, 0.7, False),

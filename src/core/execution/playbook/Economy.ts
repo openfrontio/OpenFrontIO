@@ -193,7 +193,7 @@ export class Economy {
       const tile = this.defensePostTile(incoming.attacker());
       if (tile !== null && this.tryBuild(UnitType.DefensePost, tile)) return;
     }
-    if (cityUnits.length >= 1 && ticks >= 900 && gold >= cost(UnitType.DefensePost) + (cityUnits.length < 2 && !this.ctx.p.postsBeforeCity2 ? cost(UnitType.City) : 0n) && me.unitsOwned(UnitType.DefensePost) < 6) { // a threat post never delays city 2; an actual incoming attack (above) still gets one
+    if (cityUnits.length >= 1 && ticks >= 900 && gold >= cost(UnitType.DefensePost) && me.unitsOwned(UnitType.DefensePost) < 6) { // a threat post never waits for city 2 (30-game lab: +8 % land, same survival)
       // an ally whose alliance ends within 45 s counts as a threat: Hard nations attack the moment it lapses
       const expiring = me.alliances().filter((al) => al.expiresAt() - ticks < 450).map((al) => al.other(me)).filter((o) => friends.includes(o) && o.troops() >= me.troops() * 0.4);
       const threat = [...expiring, ...rivals].find((r) => ticks - (this.postFailed_.get(r) ?? -1e9) > 600 && (r.troops() >= me.troops() * 0.5 || expiring.includes(r) || (r.type() === PlayerType.Nation && me.troops() > r.troops() * 3)) && !this.q.postFacing(r));

@@ -50,15 +50,7 @@ describe("expand", () => {
     expect(h.me.troops()).toBeLessThanOrEqual(before * 0.6 + before * 0.02);
   });
 
-  // Documented gap: PlaybookParams.homeFloor ("never expand/fight below this share of cap at home") is declared
-  // and defaulted but read nowhere in the bot. The only floor on expansion is reserveShare of current troops.
-  // This test pins that down so a fix to homeFloor shows up as a deliberate change here.
-  test("homeFloor is not consulted by expand (only reserveShare binds)", async () => {
-    const h = await alone({ expandFree: 1.0, homeFloor: 0.9 });
-    const before = h.me.troops();
-    const cap = h.game.config().maxTroops(h.me);
-    expect(before).toBeLessThan(cap * 0.9); // a binding homeFloor would send nothing here
-    h.step(h.nextRuleTick(10));
-    expect(h.me.troops()).toBeLessThan(before * 0.35);
-  });
+  // The A1 finding that PlaybookParams.homeFloor was declared but read nowhere led to its removal in C2: the only
+  // floor on expansion is reserveShare of current troops (bsrReserve scales it), and the cap floor is the
+  // `capFloor` argument of send() that only wars pass.
 });
