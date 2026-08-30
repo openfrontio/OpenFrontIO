@@ -63,7 +63,9 @@ export interface PlaybookParams {
   reserveShare: number; // share of CURRENT troops kept at home by send()/boat() (nations keep 30–40 %); a share of cap froze the bot whenever troops were low
   tribeConcurrency: number; // tribe attacks at once below 60 % of cap (one more above)
   spawnInland: number; // tiles walked inland from the chosen shore
+  spawnBasin: boolean; // phase 0: refine the top spawn candidates by land-connected free land (an isthmus or a pocket between nations scores low)
   retreatOnAllianceEnd: boolean;
+  endgameV2: boolean; // 15:00+: hydrogen bombs instead of hoarding, weak allies lapse, short boat jumps at 2×
   splitWatch: boolean; // reconnect a split territory: the owner of the gap becomes the war target
   econWar: boolean; // attack at 1.5× (after a bomb) when our cap is 2× the target's and gold is spare
   wholeWars: boolean; // a war wave is sent whole or not at all (never trimmed by the reserve)
@@ -108,7 +110,9 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   reserveShare: 0.3,
   tribeConcurrency: 1,
   spawnInland: 0, // 30-game lab: 8 tiles inland = 18/30 alive vs 27/30 on the shore (an inland circle can be surrounded; the coast cannot)
+  spawnBasin: true,
   retreatOnAllianceEnd: true,
+  endgameV2: true,
   splitWatch: true,
   econWar: true,
   wholeWars: true,
@@ -189,12 +193,12 @@ export class PlaybookBotExecution implements Execution {
   /** The one place troops leave home. Never below the reserve; returns what was actually sent (0 = nothing). */
   private send(targetID: string | null, n: number, why: string, min = 500, capFloor = 0): number {
     // capFloor: never leave home under this share of CAP — Hard nations betray an ally under 20 % of cap on sight
-    if (this.sit.hold !== null && why !== "counter") { if (this.log.length < 200 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} holding troops home: alliance with ${this.sit.hold.name()} about to lapse`); return 0; }
+    if (this.sit.hold !== null && why !== "counter") { if (this.log.length < 2000 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} holding troops home: alliance with ${this.sit.hold.name()} about to lapse`); return 0; }
     const room = Math.floor(Math.min(this.sit.spendable, this.sit.troops - this.sit.cap * capFloor));
     const amount = Math.min(Math.floor(n), room);
     // a war goes whole or not at all: a 2× wave trimmed to 0.3× by the reserve is the worst attack in the game
-    if (this.p.wholeWars && why === "war" && amount < n * 0.9) { if (this.log.length < 200) this.log.push(`t${this.sit.tick} war held: wants ${Math.round(n / 1000)}k, only ${Math.round(room / 1000)}k spare`); return 0; }
-    if (amount < min) { if (room < min && this.log.length < 200 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} held: ${why} wants ${Math.round(n / 1000)}k, ${Math.round(room / 1000)}k above reserve`); return 0; }
+    if (this.p.wholeWars && why === "war" && amount < n * 0.9) { if (this.log.length < 2000) this.log.push(`t${this.sit.tick} war held: wants ${Math.round(n / 1000)}k, only ${Math.round(room / 1000)}k spare`); return 0; }
+    if (amount < min) { if (room < min && this.log.length < 2000 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} held: ${why} wants ${Math.round(n / 1000)}k, ${Math.round(room / 1000)}k above reserve`); return 0; }
     this.mg.addExecution(new AttackExecution(amount, this.player, targetID));
     this.sit.spendable -= amount; this.sit.troops -= amount;
     return amount;
@@ -205,7 +209,7 @@ export class PlaybookBotExecution implements Execution {
     if (amount < 500 || this.player.canBuild(UnitType.TransportShip, tile) === false) return 0;
     this.mg.addExecution(new TransportShipExecution(this.player, tile, amount));
     this.sit.spendable -= amount; this.sit.troops -= amount; this.sit.boats++;
-    if (this.log.length < 200) this.log.push(`t${this.sit.tick} boat ${Math.round(amount / 1000)}k: ${why}`);
+    if (this.log.length < 2000) this.log.push(`t${this.sit.tick} boat ${Math.round(amount / 1000)}k: ${why}`);
     return amount;
   }
   /** Things that happened since last tick. Reactions run before the regular rules. */
@@ -220,7 +224,7 @@ export class PlaybookBotExecution implements Execution {
     const inc = new Set(this.sit.incoming.map((a) => a.attacker().id()));
     for (const a of this.sit.incoming) {
       if (this.prevIncoming.has(a.attacker().id())) continue;
-      if (this.log.length < 200) this.log.push(`t${this.sit.tick} INCOMING ${a.attacker().name()} ${Math.round(a.troops() / 1000)}k`);
+      if (this.log.length < 2000) this.log.push(`t${this.sit.tick} INCOMING ${a.attacker().name()} ${Math.round(a.troops() / 1000)}k`);
     }
     this.prevIncoming = inc;
   }
@@ -228,7 +232,7 @@ export class PlaybookBotExecution implements Execution {
   private onAllianceEnded(p: Player): void {
     const me = this.player;
     if (me.isFriendly(p)) return;
-    if (this.log.length < 200) this.log.push(`t${this.sit.tick} ALLIANCE ENDED ${p.name()} ${Math.round(p.troops() / 1000)}k vs our ${Math.round(this.sit.troops / 1000)}k`);
+    if (this.log.length < 2000) this.log.push(`t${this.sit.tick} ALLIANCE ENDED ${p.name()} ${Math.round(p.troops() / 1000)}k vs our ${Math.round(this.sit.troops / 1000)}k`);
     // if they are stronger, every tribe wave comes home now — the nation attacks within seconds of a lapse
     if (this.p.retreatOnAllianceEnd && p.troops() > this.sit.troops * 0.8) {
       for (const a of this.sit.outgoing) { const t = a.target(); if (t.isPlayer() && (t as Player).type() === PlayerType.Bot) me.orderRetreat(a.id()); }
@@ -334,7 +338,8 @@ export class PlaybookBotExecution implements Execution {
       if (o === me || !o.isAlive() || me.isFriendly(o) || o.numTilesOwned() < 100) continue;
       const isBot = o.type() === PlayerType.Bot;
       const coll = !isBot && this.collapsed(o);
-      const weak = !isBot && o.troops() < this.sit.troops * 0.25 && o.units(UnitType.DefensePost).length === 0;
+      const late = this.p.endgameV2 && this.mg.ticks() >= 9000;
+      const weak = !isBot && ((o.troops() < this.sit.troops * 0.25 && o.units(UnitType.DefensePost).length === 0) || (late && o.troops() < this.sit.troops * 0.5));
       if (!isBot && !coll && !weak) continue;
       if (!isBot && !me.canAttackPlayer(o)) continue;
       const want = Math.ceil(o.troops() * (isBot ? 2 : 3)) + 2000;
@@ -342,6 +347,7 @@ export class PlaybookBotExecution implements Execution {
       let i = 0, bestT: TileRef | null = null, bestD = 1e9;
       for (const t of o.borderTiles()) { if ((i++ % 9) !== 0 || !this.mg.isOceanShore(t)) continue; const d = dist(t); if (d < bestD) { bestD = d; bestT = t; } }
       if (bestT === null || bestD > 500) continue;
+      if (late && weak && bestD > 150 && o.troops() >= this.sit.troops * 0.25) continue; // the late-game jump is a short one
       const value = coll ? 600 : weak ? 400 : 250;
       cands.push({ tile: bestT, troops: want, score: value - bestD / 2 + (o.units(UnitType.City).length * 10), what: `${coll ? "collapsed " : weak ? "weak " : "tribe "}${o.name()} ${o.numTilesOwned()}t/${Math.round(o.troops() / 1000)}k` });
     }
@@ -386,7 +392,7 @@ export class PlaybookBotExecution implements Execution {
     this.mg.addExecution(new MirvExecution(me, center));
     this.lastMirvTick = this.mg.ticks();
     this.bombs++;
-    if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} MIRV ${target.name()} ${target.numTilesOwned()}t (${why})`);
+    if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} MIRV ${target.name()} ${target.numTilesOwned()}t (${why})`);
   }
 
   // ---------------------------------------------------------------- territory integrity
@@ -408,7 +414,7 @@ export class PlaybookBotExecution implements Execution {
       clusters.push(cl);
       if (clusters.length > 8) break;
     }
-    if (clusters.length <= 1) { if (this.splitOwner !== null && this.log.length < 200) this.log.push(`t${this.mg.ticks()} territory reconnected`); this.splitOwner = null; this.splitTile = null; return; }
+    if (clusters.length <= 1) { if (this.splitOwner !== null && this.log.length < 2000) this.log.push(`t${this.mg.ticks()} territory reconnected`); this.splitOwner = null; this.splitTile = null; return; }
     clusters.sort((a, b) => b.length - a.length);
     const main = clusters[0], other = clusters[1];
     // nearest pair of tiles between the two pieces (sampled), then the owner of the midpoint
@@ -422,7 +428,7 @@ export class PlaybookBotExecution implements Execution {
     const owner = this.mg.owner(mid);
     const who = owner.isPlayer() ? (owner as Player) : null;
     if (this.splitSince < 0) this.splitSince = this.mg.ticks();
-    if (who !== this.splitOwner && this.log.length < 200) this.log.push(`t${this.mg.ticks()} SPLIT: ${clusters.length} pieces, second piece ${other.length}+ border tiles, gap ${Math.round(Math.sqrt(best))} tiles held by ${who ? who.name() : "nobody"}`);
+    if (who !== this.splitOwner && this.log.length < 2000) this.log.push(`t${this.mg.ticks()} SPLIT: ${clusters.length} pieces, second piece ${other.length}+ border tiles, gap ${Math.round(Math.sqrt(best))} tiles held by ${who ? who.name() : "nobody"}`);
     this.splitOwner = who && who !== me && !me.isFriendly(who) ? who : null;
     this.splitTile = this.mg.isLand(mid) && !this.mg.hasOwner(mid) ? mid : null;
   }
@@ -443,7 +449,7 @@ export class PlaybookBotExecution implements Execution {
     }
     ok = ok && n > 0 && ours / n >= 0.4 && p.numTilesOwned() < this.player.numTilesOwned();
     this.annexCache.set(p, { tick: this.mg.ticks(), ok });
-    if (ok && !(c && c.ok) && this.log.length < 200) this.log.push(`t${this.mg.ticks()} ANNEX target ${p.name()} ${p.numTilesOwned()}t (${Math.round((100 * ours) / n)} % of its border is ours)`);
+    if (ok && !(c && c.ok) && this.log.length < 2000) this.log.push(`t${this.mg.ticks()} ANNEX target ${p.name()} ${p.numTilesOwned()}t (${Math.round((100 * ours) / n)} % of its border is ours)`);
     return ok;
   }
 
@@ -500,7 +506,7 @@ export class PlaybookBotExecution implements Execution {
       active++;
       this.waves.set(bot, { want, sent: first, last: this.mg.ticks() });
       this.noteSent(bot);
-      if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} bot ${bot.name()} ${bot.numTilesOwned()}t/${Math.round(bot.troops())} ← ${first}/${want}`);
+      if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} bot ${bot.name()} ${bot.numTilesOwned()}t/${Math.round(bot.troops())} ← ${first}/${want}`);
       clicks++;
       if (!plentiful || clicks >= 2) return;
     }
@@ -523,7 +529,7 @@ export class PlaybookBotExecution implements Execution {
       if (send === 0) continue;
       this.noteSent(a);
       this.counters.add(a);
-      if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} COUNTER ${a.name()} (${Math.round(inc.troops() / 1000)}k incoming) with ${Math.round(send / 1000)}k`);
+      if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} COUNTER ${a.name()} (${Math.round(inc.troops() / 1000)}k incoming) with ${Math.round(send / 1000)}k`);
     }
   }
 
@@ -535,7 +541,7 @@ export class PlaybookBotExecution implements Execution {
     const h = this.history.get(r);
     if (h && now - h.tick < 100) return now < h.collapsedUntil;
     const snap = { tick: now, troops: r.troops(), tiles: r.numTilesOwned(), collapsedUntil: h?.collapsedUntil ?? -1 };
-    if (h && (r.troops() < h.troops * 0.5 || r.numTilesOwned() < h.tiles * 0.5)) { snap.collapsedUntil = now + 600; if (this.log.length < 200) this.log.push(`t${now} ${r.name()} COLLAPSED ${Math.round(h.troops / 1000)}k→${Math.round(r.troops() / 1000)}k, ${h.tiles}→${r.numTilesOwned()} tiles`); }
+    if (h && (r.troops() < h.troops * 0.5 || r.numTilesOwned() < h.tiles * 0.5)) { snap.collapsedUntil = now + 600; if (this.log.length < 2000) this.log.push(`t${now} ${r.name()} COLLAPSED ${Math.round(h.troops / 1000)}k→${Math.round(r.troops() / 1000)}k, ${h.tiles}→${r.numTilesOwned()} tiles`); }
     this.history.set(r, snap);
     return now < snap.collapsedUntil;
   }
@@ -596,7 +602,7 @@ export class PlaybookBotExecution implements Execution {
     let best: Player | null = null, bestS = 0;
     for (const r of candidates) { const sc = score(r); if (sc > bestS) { bestS = sc; best = r; } }
     if (best === null) {
-      if (atCapNow && this.mg.ticks() % 1200 < this.p.expandEvery && this.log.length < 200) this.log.push(`t${this.mg.ticks()} idle at cap: ${rivals.map((r) => `${r.name()} ${r.numTilesOwned()}t/${Math.round(r.troops() / 1000)}k d${Math.round(this.density(r))} p${r.units(UnitType.DefensePost).length} ${candidates.includes(r) ? "" : "(no)"}`).join("; ")}`);
+      if (atCapNow && this.mg.ticks() % 1200 < this.p.expandEvery && this.log.length < 2000) this.log.push(`t${this.mg.ticks()} idle at cap: ${rivals.map((r) => `${r.name()} ${r.numTilesOwned()}t/${Math.round(r.troops() / 1000)}k d${Math.round(this.density(r))} p${r.units(UnitType.DefensePost).length} ${candidates.includes(r) ? "" : "(no)"}`).join("; ")}`);
       return;
     }
     const wantRaw = Math.min(Math.ceil(best.troops() * (richer(best) ? Math.min(this.p.fightRatio, 1.5) : this.p.fightRatio)) + 1000, maxSend);
@@ -608,7 +614,7 @@ export class PlaybookBotExecution implements Execution {
     if (want === 0) return;
     this.lastWarTick = this.mg.ticks();
     this.noteSent(best);
-    if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} ATTACK ${best.name()} ${best.numTilesOwned()}t/${Math.round(best.troops() / 1000)}k ← ${Math.round(want / 1000)}k (${(want / Math.max(1, best.troops())).toFixed(2)}×)`);
+    if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} ATTACK ${best.name()} ${best.numTilesOwned()}t/${Math.round(best.troops() / 1000)}k ← ${Math.round(want / 1000)}k (${(want / Math.max(1, best.troops())).toFixed(2)}×)`);
   }
 
   private attackStart = new Map<string, { sent: number; targetTroops: number }>();
@@ -623,7 +629,7 @@ export class PlaybookBotExecution implements Execution {
       if (this.counters.has(t) && t !== this.currentTarget && !me.incomingAttacks().some((x) => x.attacker() === t)) {
         me.orderRetreat(a.id());
         this.counters.delete(t);
-        if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} counter done vs ${t.name()}, ${Math.round(a.troops() / 1000)}k coming home`);
+        if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} counter done vs ${t.name()}, ${Math.round(a.troops() / 1000)}k coming home`);
         continue;
       }
       let st = this.attackStart.get(a.id());
@@ -633,7 +639,7 @@ export class PlaybookBotExecution implements Execution {
       const posts = t.units(UnitType.DefensePost).length > 0 && a.troops() < st.sent * 0.5 && t.troops() > st.targetTroops * 0.9;
       if (losing || posts) {
         this.player.orderRetreat(a.id());
-        if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} retreat from ${t.name()} (${Math.round(a.troops() / 1000)}k left)`);
+        if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} retreat from ${t.name()} (${Math.round(a.troops() / 1000)}k left)`);
       }
     }
   }
@@ -670,6 +676,7 @@ export class PlaybookBotExecution implements Execution {
     const step = prefer ? 3 : 4;
     for (const [veto, radius] of stages) {
       let best: TileRef | null = null, bestS = -1e9;
+      const cands: [number, TileRef][] = [];
       for (let y = 30; y < H - 30; y += step) {
         if (isWorld && y > H * 0.88) break; // Antarctica: no nations, no trade partners, no game
         for (let x = 30; x < W - 30; x += step) {
@@ -694,6 +701,18 @@ export class PlaybookBotExecution implements Execution {
           if ((left && right) || (up && down)) score -= 5; // sandwiched
           if (prefer) score -= Math.hypot(x - prefer[0], y - prefer[1]) / 60;
           if (score > bestS) { bestS = score; best = t; }
+          if (DEFAULT_PLAYBOOK.spawnBasin) cands.push([score, t]);
+        }
+      }
+      if (best !== null && DEFAULT_PLAYBOOK.spawnBasin) {
+        // second pass: the cheap score cannot tell an isthmus from open country. For the best 40 candidates,
+        // flood-fill unowned land within 120 tiles; fewer than ~20k reachable tiles costs up to 8 points.
+        cands.sort((a, b) => b[0] - a[0]);
+        bestS = -1e9; best = null;
+        for (const [s0, t] of cands.slice(0, 40)) {
+          const basin = PlaybookBotExecution.basin(game, t, 120, 20000);
+          const s1 = s0 - 8 * (1 - Math.min(basin, 20000) / 20000);
+          if (s1 > bestS) { bestS = s1; best = t; }
         }
       }
       if (best !== null) { PlaybookBotExecution.lastSpawnDiag = `tick ${game.ticks()} nations=${nations.length} tribes=${tribes.length} humans=${humans.length} stage veto=${veto} score=${bestS.toFixed(1)} at ${game.x(best)},${game.y(best)}`; return PlaybookBotExecution.inland(game, best, DEFAULT_PLAYBOOK.spawnInland); }
@@ -702,6 +721,20 @@ export class PlaybookBotExecution implements Execution {
     return null;
   }
   static lastSpawnDiag = "";
+  /** Unowned land tiles reachable from `t` over unowned land within `radius` (manhattan), capped at `cap`. */
+  static basin(game: Game, t: TileRef, radius: number, cap: number): number {
+    const seen = new Set<TileRef>([t]);
+    const q: TileRef[] = [t];
+    let i = 0;
+    while (i < q.length && seen.size < cap) {
+      const c = q[i++];
+      for (const n of game.neighbors(c)) {
+        if (seen.has(n) || !game.isLand(n) || game.hasOwner(n) || game.manhattanDist(n, t) > radius) continue;
+        seen.add(n); q.push(n);
+      }
+    }
+    return seen.size;
+  }
   /** Walk `d` tiles away from the sea in the direction with the most land, so the spawn circle is not half water. */
   private static inland(game: Game, shore: TileRef, d: number): TileRef {
     const sx = game.x(shore), sy = game.y(shore);
@@ -902,19 +935,19 @@ export class PlaybookBotExecution implements Execution {
       const left = al.expiresAt() - this.mg.ticks();
       if (left > offset || left < 0) continue;
       const { rivals, friends } = this.neighbours();
-      const prey = (friends.includes(other) && other.troops() < me.troops() * 0.4 && me.troops() > this.cap() * this.p.fightAbove && rivals.length <= 1) || this.annexable(other);
+      const prey = (friends.includes(other) && other.troops() < me.troops() * 0.4 && me.troops() > this.cap() * this.p.fightAbove && rivals.length <= 1) || this.annexable(other) || (this.p.endgameV2 && this.mg.ticks() >= 9000 && other.troops() < me.troops() * 0.5 && other.numTilesOwned() < me.numTilesOwned());
       // A Hard nation renews only if we are as strong as it, a threat to it, or on friendly terms.
       // A gift of 1/7 of its cap makes it friendly (+50): cheap insurance when we are the weaker side.
       if (!prey && other.type() === PlayerType.Nation && me.troops() < other.troops() * 0.9 && me.canDonateTroops(other)) {
         const gift = Math.ceil(this.config.maxTroops(other) / 7) + 1000;
         if (gift < me.troops() * 0.3 && gift <= this.config.maxTroops(other) - other.troops()) {
           this.mg.addExecution(new DonateTroopsExecution(me, other.id(), gift));
-          if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} gift ${Math.round(gift / 1000)}k troops to ${other.name()} before renewal`);
+          if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} gift ${Math.round(gift / 1000)}k troops to ${other.name()} before renewal`);
         }
       }
       if (prey) {
         this.plannedTarget = other;
-        if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} let alliance with ${other.name()} lapse (${Math.round(other.troops() / 1000)}k vs our ${Math.round(me.troops() / 1000)}k)`);
+        if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} let alliance with ${other.name()} lapse (${Math.round(other.troops() / 1000)}k vs our ${Math.round(me.troops() / 1000)}k)`);
         continue;
       }
       this.mg.addExecution(new AllianceExtensionExecution(me, other.id()));
@@ -945,6 +978,14 @@ export class PlaybookBotExecution implements Execution {
     for (const inc of me.incomingAttacks()) { const a = inc.attacker(); if (a.type() !== PlayerType.Bot && !me.isFriendly(a) && inc.troops() > me.troops() * 0.05) enemies.add(a); }
     if (this.plannedTarget && this.plannedTarget.isAlive() && !me.isFriendly(this.plannedTarget)) enemies.add(this.plannedTarget);
     for (const r of this.sit.collapsed) if (!me.isFriendly(r)) enemies.add(r);
+    const mirvPrice = this.config.unitInfo(UnitType.MIRV).cost(this.mg, me);
+    const rich = this.p.endgameV2 && ticks >= 9000 && gold >= 8_000_000n && (gold < mirvPrice || me.units(UnitType.MIRV).length > 0);
+    if (rich && enemies.size === 0) {
+      // gold that can never reach the MIRV price is spent on hydrogen bombs at the strongest un-allied neighbour
+      const { rivals } = this.neighbours();
+      const pick = rivals.filter((r) => me.canAttackPlayer(r)).sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0];
+      if (pick) { enemies.add(pick); if (!this.currentTarget || !this.currentTarget.isAlive()) this.currentTarget = pick; }
+    }
     if (enemies.size === 0 && me.troops() > this.cap() * 0.9 && me.outgoingAttacks().length === 0) {
       // idle at cap: open a war — bomb the neighbour with the most buildings we could then take at 1.2×
       const { rivals } = this.neighbours();
@@ -964,8 +1005,8 @@ export class PlaybookBotExecution implements Execution {
         if (!this.clearOfFriends(tile, 32)) continue;
         for (const type of [UnitType.HydrogenBomb, UnitType.AtomBomb]) {
           const cost = type === UnitType.HydrogenBomb ? hCost : atomCost;
-          if (gold < cost + BigInt(this.p.bombReserve)) continue;
-          if (type === UnitType.HydrogenBomb && (!this.clearOfFriends(tile, 105) || enemy.numTilesOwned() < 8000)) continue;
+          if (gold < cost + BigInt(rich ? 2_000_000 : this.p.bombReserve)) continue;
+          if (type === UnitType.HydrogenBomb && (!this.clearOfFriends(tile, 105) || enemy.numTilesOwned() < (rich ? 3000 : 8000))) continue;
           const r = this.config.nukeMagnitudes(type).outer;
           let value = 0;
           for (const o of structures) if (this.mg.euclideanDistSquared(o.tile(), tile) <= r * r) value += (o.type() === UnitType.City ? 3 : o.type() === UnitType.MissileSilo || o.type() === UnitType.SAMLauncher ? 4 : 2) * o.level();
@@ -981,7 +1022,7 @@ export class PlaybookBotExecution implements Execution {
     this.lastBombTick = ticks;
     this.bombed.set(best.tile, (this.bombed.get(best.tile) ?? 0) + 1);
     this.bombs++;
-    if (this.log.length < 200) this.log.push(`t${ticks} BOMB ${best.type} at ${this.mg.x(best.tile)},${this.mg.y(best.tile)}`);
+    if (this.log.length < 2000) this.log.push(`t${ticks} BOMB ${best.type} at ${this.mg.x(best.tile)},${this.mg.y(best.tile)}`);
   }
   private clearOfFriends(tile: TileRef, r: number): boolean {
     const x = this.mg.x(tile), y = this.mg.y(tile);
@@ -1002,13 +1043,13 @@ export class PlaybookBotExecution implements Execution {
     if (R.factory && !R.factory.isActive()) { R.factory = null; R.anchor = null; R.infilled = 0; }
     if (R.factory === null && this.pendingFactory !== null) {
       const u = this.mg.nearbyUnits(this.pendingFactory, 3, UnitType.Factory).find((x) => x.unit.owner() === me)?.unit;
-      if (u) { R.factory = u; this.pendingFactory = null; } else if (this.mg.ticks() - this.pendingFactoryTick > 400) { this.pendingFactory = null; R.failed++; if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} rail factory never appeared`); } // a factory takes 10 s to build; 60 ticks was too short and bought a second factory every minute
+      if (u) { R.factory = u; this.pendingFactory = null; } else if (this.mg.ticks() - this.pendingFactoryTick > 400) { this.pendingFactory = null; R.failed++; if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} rail factory never appeared`); } // a factory takes 10 s to build; 60 ticks was too short and bought a second factory every minute
       return false;
     }
     if (R.factory === null) {
       if (gold < cost(UnitType.Factory)) return false;
       const spot = this.railFactorySpot();
-      if (spot === null) { R.failed++; if (this.log.length < 200 && R.failed % 5 === 1) this.log.push(`t${this.mg.ticks()} rail: no factory spot (${this.railDiag})`); return false; }
+      if (spot === null) { R.failed++; if (this.log.length < 2000 && R.failed % 5 === 1) this.log.push(`t${this.mg.ticks()} rail: no factory spot (${this.railDiag})`); return false; }
       if (this.tryBuild(UnitType.Factory, spot.factory)) { this.pendingAnchor = spot.anchor; this.pendingFactory = spot.factory; this.pendingFactoryTick = this.mg.ticks(); return true; }
       R.failed++; return false;
     }
@@ -1028,7 +1069,7 @@ export class PlaybookBotExecution implements Execution {
       if (me.canBuild(UnitType.City, this.pendingAnchor) === false) { R.failed++; return false; }
       this.mg.addExecution(new ConstructionExecution(me, UnitType.City, this.pendingAnchor));
       this.pendingAnchorTick = this.mg.ticks();
-      if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} rail anchor city`);
+      if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} rail anchor city`);
       return true;
     }
     // infill along the rails leaving the factory
@@ -1038,7 +1079,7 @@ export class PlaybookBotExecution implements Execution {
     if (infill !== null) {
       this.mg.addExecution(new ConstructionExecution(me, UnitType.City, infill));
       R.infilled++;
-      if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} rail infill city #${R.infilled}`);
+      if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} rail infill city #${R.infilled}`);
       return true;
     }
     // line full: extend once with a second factory beyond the anchor
@@ -1151,9 +1192,10 @@ export class PlaybookBotExecution implements Execution {
     // top three after 20:00: half of every gold pile is the MIRV fund — a crown without a MIRV loses to the first one fired
     // top three from 20:00: the whole MIRV price is reserved (it rises 15M with every launch on the map, so the first
     // launch is the cheap one); the economy keeps buying only while troops are under 40 % of cap
-    const mirvFund = ticks >= 12000 && myRank <= 3 && me.units(UnitType.MissileSilo).length > 0 && me.units(UnitType.MIRV).length === 0 && me.troops() >= this.cap() * 0.4 ? this.config.unitInfo(UnitType.MIRV).cost(this.mg, me) : 0n;
+    const mirvPriceNow = this.config.unitInfo(UnitType.MIRV).cost(this.mg, me);
+    const mirvFund = ticks >= 12000 && myRank <= 3 && me.units(UnitType.MissileSilo).length > 0 && me.units(UnitType.MIRV).length === 0 && me.troops() >= this.cap() * 0.4 && mirvPriceNow <= 40_000_000n ? mirvPriceNow : 0n; // past 40M the MIRV is a hoard, not a plan
     const seaFull = this.mg.unitCount(UnitType.TradeShip) >= this.p.seaFullShips || ticks >= 15000; // guide: nothing bought after 25:00 pays back
-    const upgrade = (u: Unit) => { this.mg.addExecution(new UpgradeStructureExecution(me, u.id())); if (this.log.length < 200) this.log.push(`t${ticks} level ${u.type()} → ${u.level() + 1}`); };
+    const upgrade = (u: Unit) => { this.mg.addExecution(new UpgradeStructureExecution(me, u.id())); if (this.log.length < 2000) this.log.push(`t${ticks} level ${u.type()} → ${u.level() + 1}`); };
 
     // 1. defence: a post where a non-bot attack lands, or facing a threat / a boxed-in nation about to betray
     const incoming = me.incomingAttacks().find((a) => a.attacker().type() !== PlayerType.Bot);
@@ -1165,8 +1207,8 @@ export class PlaybookBotExecution implements Execution {
       // an ally whose alliance ends within 45 s counts as a threat: Hard nations attack the moment it lapses
       const expiring = me.alliances().filter((al) => al.expiresAt() - ticks < 450).map((al) => al.other(me)).filter((o) => friends.includes(o) && o.troops() >= me.troops() * 0.4);
       const threat = [...expiring, ...rivals].find((r) => ticks - (this.postFailed.get(r) ?? -1e9) > 600 && (r.troops() >= me.troops() * 0.5 || expiring.includes(r) || (r.type() === PlayerType.Nation && me.troops() > r.troops() * 3)) && !this.postFacing(r));
-      if (threat) { const tile = this.defensePostTile(threat); if (tile !== null && this.tryBuild(UnitType.DefensePost, tile)) return; this.postFailed.set(threat, ticks); if (this.log.length < 200) this.log.push(`t${ticks} post vs ${threat.name()} FAILED (${tile === null ? "no tile" : "canBuild"})`); }
-      else if (ticks % 600 === 0 && this.log.length < 200) this.log.push(`t${ticks} no threat: rivals=${rivals.map((r) => r.name() + ":" + Math.round(r.troops() / 1000) + "k").join(",")} friends=${friends.length}`);
+      if (threat) { const tile = this.defensePostTile(threat); if (tile !== null && this.tryBuild(UnitType.DefensePost, tile)) return; this.postFailed.set(threat, ticks); if (this.log.length < 2000) this.log.push(`t${ticks} post vs ${threat.name()} FAILED (${tile === null ? "no tile" : "canBuild"})`); }
+      else if (ticks % 600 === 0 && this.log.length < 2000) this.log.push(`t${ticks} no threat: rivals=${rivals.map((r) => r.name() + ":" + Math.round(r.troops() / 1000) + "k").join(",")} friends=${friends.length}`);
     }
     // 2. SAM once anyone unfriendly on the map has a silo, or once we are top three after 15:00 (the crown gets MIRVed);
     //    level 3 when leading; a second launcher when the city stack outgrows one umbrella
@@ -1209,7 +1251,7 @@ export class PlaybookBotExecution implements Execution {
     const deadPorts = ports.length > 0 && me.units(UnitType.TradeShip).length === 0 && ticks - this.firstPortTick > 900;
     const wantRail = cities >= 3 && ((ports.length === 0 && partnerTile === null && ticks >= 1500) || deadPorts || (friends.length > 0 && ticks >= 1800) || (ports.length > 0 && ticks >= 1800) || seaFull) && me.unitsOwned(UnitType.Factory) < 6;
     if (wantRail && this.buildRail(gold - mirvFund, cost)) return;
-    if (!wantRail && cities >= 3 && ticks % 1200 < 10 && this.log.length < 200) this.log.push(`t${ticks} no rail wanted: ports=${ports.length} partner=${partnerTile !== null} friends=${friends.length} seaFull=${seaFull}`);
+    if (!wantRail && cities >= 3 && ticks % 1200 < 10 && this.log.length < 2000) this.log.push(`t${ticks} no rail wanted: ports=${ports.length} partner=${partnerTile !== null} friends=${friends.length} seaFull=${seaFull}`);
     // 6. silos, nation-style: the first at four city units or 10:00 (whichever comes first, once a port or factory pays),
     //    a second at twelve, a third at twenty; a level when a bomb target sat out of range
     const idleAtCap = capFull && me.troops() > this.cap() * 0.9 && me.outgoingAttacks().length === 0;
@@ -1248,7 +1290,7 @@ export class PlaybookBotExecution implements Execution {
         if (!this.mg.isOcean(t) || me.canBuild(UnitType.Warship, t) === false) continue;
         this.mg.addExecution(new ConstructionExecution(me, UnitType.Warship, t));
         this.lastWarshipTick = ticks;
-        if (this.log.length < 200) this.log.push(`t${ticks} build Warship`);
+        if (this.log.length < 2000) this.log.push(`t${ticks} build Warship`);
         return;
       }
     }
@@ -1264,7 +1306,7 @@ export class PlaybookBotExecution implements Execution {
   private tryBuild(type: UnitType, tile: TileRef): boolean {
     if (this.player.canBuild(type, tile) === false) return false;
     this.mg.addExecution(new ConstructionExecution(this.player, type, tile));
-    if (this.log.length < 200) this.log.push(`t${this.mg.ticks()} build ${type}`);
+    if (this.log.length < 2000) this.log.push(`t${this.mg.ticks()} build ${type}`);
     return true;
   }
   private sampleTerritory(n: number): TileRef[] {
