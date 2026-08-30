@@ -326,19 +326,18 @@ export class AttackExecution implements Execution {
     borderSize: number,
   ): AttackLogicInput {
     const defender = this.target.isPlayer() ? this.target : null;
-    let defenderHasDefensePost = false;
-    if (defender !== null) {
-      for (const dp of this.mg.nearbyUnits(
+    // Same test as scanning nearbyUnits() for a post owned by the defender
+    // (active, not under construction, within range), without building a
+    // result array per conquered tile — this runs for every tile of every
+    // attack on the map.
+    const defenderHasDefensePost =
+      defender !== null &&
+      this.mg.hasUnitNearby(
         tile,
         this.mg.config().defensePostRange(),
         UnitType.DefensePost,
-      )) {
-        if (dp.unit.owner() === defender) {
-          defenderHasDefensePost = true;
-          break;
-        }
-      }
-    }
+        defender.id(),
+      );
     return {
       terrain: this.map.terrainType(tile),
       attackTroops,
