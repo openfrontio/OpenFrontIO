@@ -45,6 +45,8 @@ export interface PlaybookParams {
   wholeWars: boolean; // a war wave is sent whole or not at all (never trimmed by the reserve)
   stickyWar: boolean; // one enemy to the end: the current war target is the only candidate while it lives and borders us
   postsBeforeCity2: boolean; // allow threat posts even while city 2 is unaffordable
+  simWars: boolean; // B1: pick war targets and sizes with Estimate.ts (a replay of attackLogic over the shared border) and retreat when the re-estimate no longer wins; off = fightRatio heuristics
+  realRetreats: boolean; // schedule a RetreatExecution when retreating (A1 finding: Player.orderRetreat() only flags the wave; without the execution it never comes home, stays in outgoingAttacks() and blocks that target)
   portWithoutPartnerTick: number; // first port on any ocean coast from this tick even with no partner (1e9 = never)
 }
 
@@ -93,5 +95,7 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   wholeWars: true,
   stickyWar: true,
   postsBeforeCity2: true, // 30-game lab: +8% land, same survival as blocking them
+  simWars: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B1)
+  realRetreats: false, // default off until the 30-game A/B; on = frozen waves finally return (see the interface comment)
   portWithoutPartnerTick: 1500,
 };
