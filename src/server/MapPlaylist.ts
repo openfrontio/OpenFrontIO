@@ -49,8 +49,8 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
 
 // Maps with a preferred team count in team / special games, declared via
 // "special_team_count" in each map's info.json.
-// For these maps: team-playlist frequency is doubled, and the preferred
-// team count overrides the random TEAM_WEIGHTS roll with SPECIAL_TEAM_FORCE_CHANCE.
+// For these maps the preferred team count overrides the random TEAM_WEIGHTS
+// roll with SPECIAL_TEAM_FORCE_CHANCE.
 const SPECIAL_TEAM_FORCE_CHANCE = 0.75;
 const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map(
   allMaps
@@ -263,11 +263,9 @@ export class MapPlaylist {
         const chance = pctStr !== undefined ? parseInt(pctStr, 10) / 100 : 1;
         if (!excludedModifiers.includes(key) && Math.random() < chance) {
           appliedForced.add(key);
-        }
-        excludedModifiers.push(key);
-        // Only exclude counterpart when the forced roll actually succeeded;
-        // a failed percentage roll should leave the counterpart eligible.
-        if (appliedForced.has(key)) {
+          excludedModifiers.push(key);
+          // Also exclude mutually-exclusive counterpart(s) so the random pool
+          // can't roll a conflicting modifier (e.g. isNukesDisabled vs isWaterNukes).
           for (const [a, b] of MUTUALLY_EXCLUSIVE_MODIFIERS) {
             if (key === a && !excludedModifiers.includes(b))
               excludedModifiers.push(b);
