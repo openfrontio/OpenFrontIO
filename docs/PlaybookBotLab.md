@@ -96,7 +96,11 @@ four times (`Test Files 4 passed`), 4× the CPU.
   6× cheaper than cpx51@ash, whole cores rather than hyperthreads, outside the
   CCX limit). Needs the arm64 snapshot: `SERVER_TYPE=cax11 LOCATION=nbg1
   scripts/lab/snapshot.sh` once; `remote.sh` picks the snapshot whose
-  architecture matches `SERVER_TYPE`. Bench numbers below.
+  architecture matches `SERVER_TYPE`. **Blocked on this account
+  (2026-08-30):** every `cax*` create in fsn1/nbg1/hel1 is refused with
+  `unsupported location for server type` — ARM is not enabled for the
+  project; ask for it in the same support ticket as the CCX cores. Not
+  benchmarked yet for that reason.
 - **Snapshot image:** `scripts/lab/snapshot.sh` bakes Node 24 + `node_modules`
   into a snapshot labelled `lab-image=1` and `arch=x86|arm` (a cpx11 for ~5 min, then
   ~€0.01/GB/month). `remote.sh` uses the newest one automatically
