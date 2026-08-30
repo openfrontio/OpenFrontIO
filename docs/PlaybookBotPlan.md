@@ -356,6 +356,30 @@ ports than the ladder; `Spend.ts` constants unswept). simWars dropped as
 tuned — never a crown or top-3; retune wave margin / free-land gates before
 another A/B. Round 2 unbundles c1 on top of realRetreats.
 
+**Round 2 (216f4ddaf; 180 games; base = realRetreats on):**
+
+| config | alive | crowns | top-3 | total tiles | median | paired vs base |
+|---|---|---|---|---|---|---|
+| base (realRetreats) | 30 | 5 | 17 | 3.53M | 101k | — |
+| + c1 bundle | 30 | 4 | 14 | 2.99M | 66k | 17W 13L |
+| + bsrReserve | 30 | 7 | 13 | 3.21M | 63k | 14W 16L |
+| + trustWars | 30 | 7 | 19 | 3.91M | 108k | 6W 4L, 20 identical |
+| + nationAware | 30 | 4 | 18 | 3.34M | 98k | 9W 6L, 15 identical |
+| + phaseGates | 30 | 7 | 13 | 3.13M | 78k | 11W 18L |
+
+The c1 bundle's round-1 gain was realRetreats' gain in disguise. bsrReserve
+and phaseGates dropped (phaseGates delays silos/SAMs to the endgame phase and
+costs land). trustWars and nationAware are mild positives that rarely trigger.
+
+**Round 3 (60 games; base = realRetreats on):** trustWars + nationAware
+together: 30 alive, 8 crowns (base 5), 21 top-3 (17), 4.19M tiles (3.53M),
+median 111k (101k), paired 11W 8L with 11 identical. Both graduated (default
+true, bc9108bd1). Remaining default-off flags: simWars, scoredSpend,
+bsrReserve, phaseGates — each needs a rework before another A/B.
+
+**Round 4:** CMA-ES over the 11 continuous params, population 10 + base,
+12 generations, 20-minute games, 3× cpx62 (`lab-out/cma`, NAME=openfront-cma).
+
 1. Each B-flag: 30-game Medium A/B, graduate or drop.
 2. CMA-ES over: `expandContested expandFree botRatio botClickCap
    fightAbove fightMaxShare reserveShare retreatBelowRatio capFullShare
