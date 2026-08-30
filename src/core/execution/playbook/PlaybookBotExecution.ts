@@ -16,7 +16,7 @@ import { TileRef } from "../../game/GameMap";
 import { Unit } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
 import { simpleHash } from "../../Util";
-import { GameMapType } from "../../game/Game";
+import { Difficulty, GameMapType } from "../../game/Game";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../alliance/AllianceRequestExecution";
 import { DonateTroopsExecution } from "../DonateTroopExecution";
@@ -65,6 +65,7 @@ export interface PlaybookParams {
   spawnInland: number; // tiles walked inland from the chosen shore
   spawnBasin: boolean; // phase 0: refine the top spawn candidates by land-connected free land (an isthmus or a pocket between nations scores low)
   retreatOnAllianceEnd: boolean;
+  finishRule: boolean; // hold under the nations' victory-denial line while a MIRV-capable rival exists; remove them; then push all-out
   endgameV2: boolean; // 15:00+: hydrogen bombs instead of hoarding, weak allies lapse, short boat jumps at 2×
   splitWatch: boolean; // reconnect a split territory: the owner of the gap becomes the war target
   econWar: boolean; // attack at 1.5× (after a bomb) when our cap is 2× the target's and gold is spare
@@ -112,6 +113,7 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   spawnInland: 0, // 30-game lab: 8 tiles inland = 18/30 alive vs 27/30 on the shore (an inland circle can be surrounded; the coast cannot)
   spawnBasin: true,
   retreatOnAllianceEnd: true,
+  finishRule: true,
   endgameV2: true,
   splitWatch: true,
   econWar: true,
@@ -165,7 +167,9 @@ export class PlaybookBotExecution implements Execution {
     gold: bigint; bots: Player[]; rivals: Player[]; friends: Player[]; wilderness: boolean;
     incoming: Attack[]; incomingBots: number; outgoing: Attack[]; tribeAttacks: number; boats: number;
     collapsed: Player[]; expiring: Player[]; hold: Player | null;
+    share: number; threats: Player[]; mode: "grow" | "hold" | "push";
   };
+  private lastMode: "grow" | "hold" | "push" = "grow";
   private prevAllies = new Set<Player>();
   private prevIncoming = new Set<string>();
   private readSituation(): void {
@@ -185,7 +189,17 @@ export class PlaybookBotExecution implements Execution {
       collapsed: nb.rivals.filter((r) => this.collapsed(r)),
       expiring: me.alliances().filter((al) => al.expiresAt() - t < 450).map((al) => al.other(me)),
       hold: null,
+      share: 0, threats: [], mode: "grow",
     };
+    // the finish: nations MIRV anyone over 65 % of the map on Medium (55 % Hard), allies included. Under that line
+    // while a rival can still fire; remove the rivals; then push for the win.
+    this.sit.share = me.numTilesOwned() / Math.max(1, this.mg.numLandTiles());
+    const diff = this.mg.config().gameConfig().difficulty;
+    const denial = diff === Difficulty.Easy ? 0.75 : diff === Difficulty.Medium ? 0.65 : diff === Difficulty.Hard ? 0.55 : 0.5;
+    this.sit.threats = this.mg.players().filter((p) => p !== me && p.isAlive() && p.type() !== PlayerType.Bot && !me.isOnSameTeam(p) && p.units(UnitType.MissileSilo).length > 0 && (p.gold() >= 20_000_000n || p.units(UnitType.MIRV).length > 0));
+    if (this.p.finishRule && this.sit.share >= denial - 0.03) this.sit.mode = this.sit.threats.length > 0 ? "hold" : "push";
+    else if (this.p.finishRule && this.sit.share >= 0.45 && this.sit.threats.length === 0) this.sit.mode = "push";
+    if (this.sit.mode !== this.lastMode) { if (this.log.length < 2000) this.log.push(`t${t} FINISH mode ${this.lastMode} → ${this.sit.mode}: share ${(this.sit.share * 100).toFixed(0)} %, ${this.sit.threats.length} MIRV-capable rivals${this.sit.threats.length ? " (" + this.sit.threats.map((x) => x.name()).join(", ") + ")" : ""}`); this.lastMode = this.sit.mode; }
     // A Hard nation renews only if we look as strong as it at expiry: 45 s before an alliance with a stronger
     // neighbour lapses, the army stays home so the check sees all of it.
     this.sit.hold = this.sit.expiring.find((o) => o.type() === PlayerType.Nation && o.troops() > troops * 0.85) ?? null;
@@ -193,6 +207,7 @@ export class PlaybookBotExecution implements Execution {
   /** The one place troops leave home. Never below the reserve; returns what was actually sent (0 = nothing). */
   private send(targetID: string | null, n: number, why: string, min = 500, capFloor = 0): number {
     // capFloor: never leave home under this share of CAP — Hard nations betray an ally under 20 % of cap on sight
+    if (this.sit.mode === "hold" && why !== "counter" && why !== "war") return 0; // holding under the line: no more land until the MIRV-capable rivals are gone
     if (this.sit.hold !== null && why !== "counter") { if (this.log.length < 2000 && this.sit.tick % 300 === 0) this.log.push(`t${this.sit.tick} holding troops home: alliance with ${this.sit.hold.name()} about to lapse`); return 0; }
     const room = Math.floor(Math.min(this.sit.spendable, this.sit.troops - this.sit.cap * capFloor));
     const amount = Math.min(Math.floor(n), room);
@@ -204,7 +219,7 @@ export class PlaybookBotExecution implements Execution {
     return amount;
   }
   private boat(tile: TileRef, n: number, why: string): number {
-    if (this.sit.hold !== null) return 0;
+    if (this.sit.hold !== null || (this.sit.mode === "hold" && !why.includes("collapsed"))) return 0;
     const amount = Math.min(Math.floor(n), Math.floor(this.sit.spendable));
     if (amount < 500 || this.player.canBuild(UnitType.TransportShip, tile) === false) return 0;
     this.mg.addExecution(new TransportShipExecution(this.player, tile, amount));
@@ -379,7 +394,8 @@ export class PlaybookBotExecution implements Execution {
     const total = this.mg.numLandTiles();
     const others = this.mg.players().filter((p) => p !== me && p.isAlive() && p.type() !== PlayerType.Bot && !me.isFriendly(p) && !me.isOnSameTeam(p));
     let target: Player | null = null, why = "";
-    for (const p of others) for (const m of p.units(UnitType.MIRV)) { const d = m.targetTile(); if (d && this.mg.hasOwner(d) && this.mg.owner(d) === me) { target = p; why = "counter"; } }
+    if (this.sit.mode !== "grow" && this.sit.threats.length > 0) { target = [...this.sit.threats].sort((a, b) => Number(b.gold() - a.gold()))[0]; why = `finish: ${this.sit.mode}, richest MIRV-capable rival`; }
+    if (!target) for (const p of others) for (const m of p.units(UnitType.MIRV)) { const d = m.targetTile(); if (d && this.mg.hasOwner(d) && this.mg.owner(d) === me) { target = p; why = "counter"; } }
     if (!target) { const t = others.filter((p) => p.numTilesOwned() / total >= 0.5).sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0]; if (t) { target = t; why = "victory denial"; } }
     if (!target && this.mg.ticks() >= 12000) {
       const ranked = this.mg.players().filter((p) => p.isAlive() && p.type() !== PlayerType.Bot).sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
@@ -467,7 +483,7 @@ export class PlaybookBotExecution implements Execution {
     }
     // free land is the cheapest growth there is and unused troops come home: only the troop reserve applies, not the cap floor
     const ringing = [...this.sit.rivals, ...this.sit.bots, ...this.sit.friends].some((r) => this.annexable(r));
-    const frac = rivals.length > 0 || ringing || this.splitTile !== null ? this.p.expandContested : this.p.expandFree;
+    const frac = rivals.length > 0 || ringing || this.splitTile !== null || this.sit.mode === "push" ? this.p.expandContested : this.p.expandFree;
     this.send(this.mg.terraNullius().id(), Math.floor(this.sit.troops * frac), "expand", 100);
   }
 
@@ -553,7 +569,8 @@ export class PlaybookBotExecution implements Execution {
     const nb = this.neighbours();
     for (const r of nb.rivals) this.collapsed(r);
     const gapOwner = this.splitOwner && this.splitOwner.isAlive() && nb.rivals.includes(this.splitOwner) ? this.splitOwner : null;
-    const opportunity = (this.mg.ticks() >= 3000 && nb.rivals.some((r) => this.collapsed(r) && r.troops() < this.sit.troops * 0.5)) || gapOwner !== null;
+    const threatHere = this.sit.mode === "hold" ? nb.rivals.find((r) => this.sit.threats.includes(r)) ?? null : null;
+    const opportunity = (this.mg.ticks() >= 3000 && nb.rivals.some((r) => this.collapsed(r) && r.troops() < this.sit.troops * 0.5)) || gapOwner !== null || threatHere !== null;
     // crown, not survival: a war is on when we can afford 2× someone's whole army out of the spendable troops,
     // not only when troops reach 70 % of a cap that cities keep raising
     const affordable = this.mg.ticks() >= this.p.fightNotBeforeTick && nb.rivals.some((r) => r.troops() * this.p.fightRatio + 1000 <= this.sit.spendable * this.p.fightMaxShare);
@@ -572,11 +589,12 @@ export class PlaybookBotExecution implements Execution {
     // one enemy at a time, to the end: nations nuke whoever attacks them, and eight half-wars make eight nuclear enemies.
     // The current target stays the only candidate while it lives, borders us, and was hit within the last three minutes.
     if (this.p.stickyWar && this.currentTarget && this.currentTarget.isAlive() && rivals.includes(this.currentTarget) && this.mg.ticks() - this.lastWarTick < 1800) {
-      candidates = candidates.filter((r) => r === this.currentTarget || this.collapsed(r) || r === gapOwner);
+      candidates = candidates.filter((r) => r === this.currentTarget || this.collapsed(r) || r === gapOwner || r === threatHere);
     }
+    if (this.sit.mode === "hold") candidates = candidates.filter((r) => this.sit.threats.includes(r)); // the hold is spent removing whoever can fire
     if (candidates.length === 0) return;
     const atCap = me.troops() >= cap * 0.95;
-    const endgame = this.mg.ticks() >= 15000; // 25:00 — the finish: land now is worth more than troops later
+    const endgame = this.mg.ticks() >= 15000 || this.sit.mode === "push"; // 25:00 or the push — land now is worth more than troops later
     // At cap every troop above the line is wasted growth, so commit more and accept a thinner edge.
     const maxSend = Math.floor(me.troops() * (atCap || endgame ? 0.7 : this.p.fightMaxShare));
     const minRatio = atCap || endgame ? 1.2 : this.p.fightRatio;
@@ -586,6 +604,7 @@ export class PlaybookBotExecution implements Execution {
       const ratio = maxSend / Math.max(1, r.troops());
       if (this.collapsed(r) && r.troops() < this.sit.troops * 0.5) return ratio >= 1.5 ? 20 + ratio : -1; // bombed: go now at 1.5×, posts are gone
       if (r === gapOwner) return ratio >= 1.2 ? 30 + ratio : -1; // they are cutting our land in two: reconnect before the piece is handed over
+      if (r === threatHere) return ratio >= 1.5 ? 25 + ratio : -1; // a MIRV-capable rival next door during the hold
       // at cap, a neighbour already attacking us is a fair fight at 1:1 — the counter-attack cancels its wave anyway
       if (ratio < (atCap && attackingUs.has(r) ? 1.0 : richer(r) ? Math.min(minRatio, 1.5) : minRatio)) return -1;
       // Playbook: never attack a big, thinly held empire — that is a troop sink. Prefer small and dense.
@@ -688,9 +707,14 @@ export class PlaybookBotExecution implements Execution {
           for (let dy = -15; dy <= 15; dy += 5) for (let dx = -15; dx <= 15; dx += 5) { if (game.isValidCoord(x + dx, y + dy) && game.isLand(game.ref(x + dx, y + dy))) land++; }
           if (land < 22) continue; // a straight coast is about half land within 15 tiles
           let score = 0, near = 0, ok = true;
-          for (const n of nations) { const d = Math.abs(game.x(n) - x) + Math.abs(game.y(n) - y); if (d < veto) { ok = false; break; } if (d < 200) near += 4; else if (d < 300) near += 1; }
+          let n300 = 0;
+          for (const n of nations) { const d = Math.abs(game.x(n) - x) + Math.abs(game.y(n) - y); if (d < veto) { ok = false; break; } if (d < 200) near += 4; else if (d < 300) near += 1; if (d < 300) n300++; }
           if (!ok) continue;
           score -= Math.min(near, 12);
+          // 67-spawn regression (Medium, 20 min): 12+ nations within 300 halves median land (33k vs 59k), 20+ is a
+          // 2k-tile pocket (Oman, Balkans). The capped `near` term cannot see past 12.
+          if (n300 >= 20) continue;
+          if (n300 >= 16) score -= 8; else if (n300 >= 12) score -= 4;
           for (const b of tribes) { const d = Math.abs(game.x(b) - x) + Math.abs(game.y(b) - y); if (d < 150) score += 3; else if (d < 250) score += 1; }
           for (const h of humans) { const d = Math.abs(game.x(h) - x) + Math.abs(game.y(h) - y); if (d < 150) score -= 3; }
           if (Math.min(x, y, W - x, H - y) < 80) score += 2;
@@ -698,20 +722,22 @@ export class PlaybookBotExecution implements Execution {
           score += room / 20; // free land within 50 tiles: a pocket between two nations has little
           let left = false, right = false, up = false, down = false;
           for (const n of nations) { const d = Math.abs(game.x(n) - x) + Math.abs(game.y(n) - y); if (d > 260) continue; if (game.x(n) < x - 60) left = true; if (game.x(n) > x + 60) right = true; if (game.y(n) < y - 60) up = true; if (game.y(n) > y + 60) down = true; }
-          if ((left && right) || (up && down)) score -= 5; // sandwiched
+          // (no sandwich term: 67-spawn regression found no effect, 59k vs 57k median)
           if (prefer) score -= Math.hypot(x - prefer[0], y - prefer[1]) / 60;
           if (score > bestS) { bestS = score; best = t; }
           if (DEFAULT_PLAYBOOK.spawnBasin) cands.push([score, t]);
         }
       }
       if (best !== null && DEFAULT_PLAYBOOK.spawnBasin) {
-        // second pass: the cheap score cannot tell an isthmus from open country. For the best 40 candidates,
-        // flood-fill unowned land within 120 tiles; fewer than ~20k reachable tiles costs up to 8 points.
+        // second pass: the cheap score cannot tell an isthmus or island from open country. For the best 60
+        // candidates, flood-fill unowned land reachable within 120 tiles. 67-spawn regression (Medium, 20 min):
+        // basin < 3k = 15k median land vs 64k, < 6k = 33k. Steps, not a slope: a slope never reordered the top.
         cands.sort((a, b) => b[0] - a[0]);
         bestS = -1e9; best = null;
-        for (const [s0, t] of cands.slice(0, 40)) {
-          const basin = PlaybookBotExecution.basin(game, t, 120, 20000);
-          const s1 = s0 - 8 * (1 - Math.min(basin, 20000) / 20000);
+        for (const [s0, t] of cands.slice(0, 60)) {
+          const basin = PlaybookBotExecution.basin(game, t, 120, 12000);
+          if (basin < 3000) continue;
+          const s1 = s0 - (basin < 6000 ? 6 : basin < 9000 ? 3 : 0);
           if (s1 > bestS) { bestS = s1; best = t; }
         }
       }
@@ -978,6 +1004,7 @@ export class PlaybookBotExecution implements Execution {
     for (const inc of me.incomingAttacks()) { const a = inc.attacker(); if (a.type() !== PlayerType.Bot && !me.isFriendly(a) && inc.troops() > me.troops() * 0.05) enemies.add(a); }
     if (this.plannedTarget && this.plannedTarget.isAlive() && !me.isFriendly(this.plannedTarget)) enemies.add(this.plannedTarget);
     for (const r of this.sit.collapsed) if (!me.isFriendly(r)) enemies.add(r);
+    if (this.sit.share >= 0.5) for (const r of this.sit.threats) if (me.canAttackPlayer(r) || this.neighbours().rivals.includes(r)) enemies.add(r); // whoever could fire at the crown
     const mirvPrice = this.config.unitInfo(UnitType.MIRV).cost(this.mg, me);
     const rich = this.p.endgameV2 && ticks >= 9000 && gold >= 8_000_000n && (gold < mirvPrice || me.units(UnitType.MIRV).length > 0);
     if (rich && enemies.size === 0) {
