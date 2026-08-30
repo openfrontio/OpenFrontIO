@@ -256,6 +256,7 @@ export class UnitImpl implements Unit {
     this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
     this._owner = newOwner;
     this._owner._units.push(this);
+    this.mg.bumpUnitsVersion();
     this.mg.addUpdate(this.toUpdate());
   }
 

@@ -604,6 +604,8 @@ export interface Player {
   clearDoomsdayClock(): void;
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
+  /** Counter bumped on every ownership change of one of this player's tiles (also when its border set can change). */
+  tileChangeVersion(): number;
 
   isDisconnected(): boolean;
   markDisconnected(isDisconnected: boolean): void;
