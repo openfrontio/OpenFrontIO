@@ -97,21 +97,21 @@ export interface NukeMagnitude {
   outer: number;
 }
 
-const DEFENSE_DEBUFF_MIDPOINT = 150_000;
-const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 50000;
 // attackLogic tunables
 const LARGE_ATTACKER_TILES = 100_000;
+const LARGE_ATTACKER_EXPONENT = 0.6;
 const BOT_DEFENDER_LOSS_MULT = 0.7;
 const TERRA_NULLIUS_COST_SCALE = 2000;
 const TERRA_NULLIUS_MIN_COST = 5;
 const TERRA_NULLIUS_MAX_COST = 100;
-// Was sqrt(ratio) ** 0.7 and ratio ** 0.6.
-const LARGE_ATTACKER_LOSS_EXPONENT = 0.35;
-const LARGE_ATTACKER_COST_EXPONENT = 0.6;
-// Attacker loss = mag * (RATIO_WEIGHT * clampedRatio + DENSITY_WEIGHT * troopsPerTile).
-// Was 0.6 * (ratio * mag * 0.8) + 0.4 * (1.3 * density * mag / 100).
-const ATTACKER_LOSS_RATIO_WEIGHT = 0.48;
-const ATTACKER_LOSS_DENSITY_WEIGHT = 0.0052;
+// Attacker loss = mag * clampedRatio * (BASE * largeAttackerBonus + DENSITY * troopsPerTile).
+// BASE is the old 0.48 ratio weight times the 0.965 large-defender sigmoid
+// tail that every defender used to get; DENSITY is the old 0.0052 weight at
+// the ratio clamp (2) where nearly all fights sit.
+const ATTACKER_LOSS_BASE = 0.463;
+const ATTACKER_LOSS_PER_DENSITY = 0.0026;
+// Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
+const SPEED_COST_DIVISOR = 7.77;
 
 function terrainAttackBase(terrain: TerrainType): {
   mag: number;
@@ -805,25 +805,12 @@ export class Config {
       mag *= BOT_DEFENDER_LOSS_MULT;
     }
 
-    // Big defenders are easier to bite into: loss and cost scale from ~1
-    // down to 0.7 as the defender's territory grows past the midpoint.
-    const largeDefenderDebuff =
-      1 -
-      0.3 *
-        sigmoid(
-          defender.numTiles,
-          DEFENSE_DEBUFF_DECAY_RATE,
-          DEFENSE_DEBUFF_MIDPOINT,
-        );
-
-    // Big attackers get cheaper, faster tiles past LARGE_ATTACKER_TILES.
-    let largeAttackerLossBonus = 1;
-    let largeAttackerCostBonus = 1;
-    if (attacker.numTiles > LARGE_ATTACKER_TILES) {
-      const ratio = LARGE_ATTACKER_TILES / attacker.numTiles;
-      largeAttackerLossBonus = ratio ** LARGE_ATTACKER_LOSS_EXPONENT;
-      largeAttackerCostBonus = ratio ** LARGE_ATTACKER_COST_EXPONENT;
-    }
+    // Big attackers get cheaper, faster tiles past LARGE_ATTACKER_TILES so
+    // late games stay dynamic. A big defender gets nothing for its size.
+    const largeAttackerBonus =
+      attacker.numTiles > LARGE_ATTACKER_TILES
+        ? (LARGE_ATTACKER_TILES / attacker.numTiles) ** LARGE_ATTACKER_EXPONENT
+        : 1;
 
     const traitorLossMod = defender.isTraitor ? this.traitorDefenseDebuff() : 1;
     const traitorCostMod = defender.isTraitor ? this.traitorSpeedDebuff() : 1;
@@ -831,30 +818,31 @@ export class Config {
     // Defender loses its average troops-per-tile.
     const defenderTroopLoss = defender.troops / defender.numTiles;
 
-    // Attacker loss blends a ratio-driven term (how outnumbered the attack
-    // is, clamped) with a density-driven term (defender troops per tile).
+    // Two ratios drive the attacker's loss: how outnumbered the attack is
+    // (defender army / attack stack, clamped: bigger pushes pay less per
+    // tile) scales a cost made of a base plus the defender's troop density
+    // (packed land is expensive, spread-thin land is cheap).
     const troopRatio = defender.troops / attackTroops;
-    const ratioTerm =
-      within(troopRatio, 0.6, 2) * largeDefenderDebuff * largeAttackerLossBonus;
     const attackerTroopLoss =
       mag *
       traitorLossMod *
-      (ATTACKER_LOSS_RATIO_WEIGHT * ratioTerm +
-        ATTACKER_LOSS_DENSITY_WEIGHT * defenderTroopLoss);
+      within(troopRatio, 0.6, 2) *
+      (ATTACKER_LOSS_BASE * largeAttackerBonus +
+        ATTACKER_LOSS_PER_DENSITY * defenderTroopLoss);
 
     // Speed: a tile's cost in tick-fractions grows with how outnumbered the
     // attack is. Flat at 1/5 up to parity, then rising linearly (saturating
     // at 7.5x), with a second ramp for hopeless attacks past 20x.
     const speedCost =
-      (within(troopRatio, 1, 7.5) * within(troopRatio / 20, 1, 50)) / 7.5;
+      (within(troopRatio, 1, 7.5) * within(troopRatio / 20, 1, 50)) /
+      SPEED_COST_DIVISOR;
     return {
       attackerTroopLoss,
       defenderTroopLoss,
       tickFraction:
         (speedCost *
           tileCost *
-          largeDefenderDebuff *
-          largeAttackerCostBonus *
+          largeAttackerBonus *
           traitorCostMod) /
         input.borderSize,
     };
