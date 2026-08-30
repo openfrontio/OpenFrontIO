@@ -235,28 +235,57 @@ Each card is a self-contained brief. Definition of done includes tests,
 - **Done when:** a 2-generation dry run with population 4 at `MINUTES=5`
   completes on Hetzner and the doc explains both scripts.
 
-### C1 — Wire consumers (after B1–B3 merge)
+### C1 — Wire consumers (after B1–B3 merge) — done
 
-- `reserveShare` scaled by the max `bsr` across rivals (flat 0.3 becomes
-  the value at bsr = 1); war scorer skips targets whose ally can pile in
-  and prefers targets with low `trust`; the reserve and expiry hold use
-  `nationWouldSend`; every tick literal in the rules replaced by
-  `sit.phase`. Each change behind the already-existing flags or a new one;
-  each with a lab A/B.
+Four new default-off `PlaybookParams` flags, one per consumer, so each can
+be A/B'd on its own (`PARAMS='{"<flag>":true}'`):
 
-### C2 — Flag consolidation
+- `bsrReserve`: `sit.reserve = troops × reserveShare × clamp(0.5 + 0.5·maxBsr, 0.5, 2.0)`
+  over the unfriendly neighbours' `bsr` (`SituationQueries.reserveFactor`);
+  reserveShare is the value at bsr 1. The phase is computed after the
+  reserve (it reads spendable), so `enrich` is split into `enrichRivals` +
+  `enrichPhase`.
+- `trustWars`: `Military.fight()` drops a candidate whose living ally on
+  our border has `nationCanAttack` with `nationWouldSend ≥ 0.5 × spendable`
+  (`allyThatCanPileIn`, logged once per 600 ticks) and adds
+  `2 × (1 − trust)` to the score (both scorers).
+- `nationAware`: the expiry hold and the renewal gift ask
+  `Rivals.couldAttackAtExpiry` (the RivalView rules with us counted as the
+  unfriendly neighbour we become) instead of the 0.85× / 0.9× heuristics.
+- `phaseGates`: `SituationQueries.phaseOr(literal, "endgame" | "pastOpening")`
+  replaces the phase-proxy tick literals (25:00/20:00/15:00/12:00 → endgame;
+  5:00/3:00/2:30 wars, silos, rail → past opening) in Military, Economy
+  (both build passes) and Diplomacy; `Spend.horizonForPhase` gives the
+  scored-spend horizon (opening/consolidate 6000, war 4000, endgame
+  max(1000, 15000 − tick)). Genuine timers stay: `bombEvery`,
+  `botFollowUpTicks`, `allianceEvery`, `siloAtTick`, `fightNotBeforeTick`,
+  `boatAtTick`, `portWithoutPartnerTick`, the 0:30 / 1:00 boat-rule gates,
+  the 1:30 threat-post gate, and the pure `Spend.siloReturn` /
+  `samReturn` tick inputs.
 
-- Fold `wholeWars`, `stickyWar`, `splitWatch`, `econWar`, `postsBeforeCity2`,
-  `retreatOnAllianceEnd`, `spawnBasin` (all graduated, default on) into the
-  code; delete `openingAllIn` (lost). Keep `endgameV2` until the finish rule
-  is settled. Golden hash updated deliberately.
+Tests: `tests/playbook/{bsrReserve,trustWars,nationAware,phaseGates}.test.ts`.
+With all four off the lab transcript is byte-identical to before (golden
+unchanged). C3 runs the four A/Bs.
+
+### C2 — Flag consolidation — done
+
+- Folded into the code (the param and its dead branch removed): `wholeWars`,
+  `stickyWar`, `splitWatch`, `econWar`, `postsBeforeCity2`,
+  `retreatOnAllianceEnd`, `spawnBasin`. Deleted: `openingAllIn` /
+  `openingKeep` (lost their A/B) and `homeFloor` (A1 found it declared and
+  defaulted but read nowhere — the expansion floor is `reserveShare`, the
+  cap floor is `send()`'s `capFloor` argument). `endgameV2` stays until the
+  finish rule is settled. Behaviour-neutral for default params: golden
+  unchanged, lab transcript byte-identical. Lab `PARAMS` JSON must not name
+  the removed keys; `ALLIN` / `KEEP` env overrides are gone from
+  `tests/lab/playbook.lab.test.ts`.
 
 ### C3 — Lab campaign
 
 1. Each B-flag: 30-game Medium A/B, graduate or drop.
-2. CMA-ES over: `expandContested expandFree homeFloor botRatio botClickCap
+2. CMA-ES over: `expandContested expandFree botRatio botClickCap
    fightAbove fightMaxShare reserveShare retreatBelowRatio capFullShare
-   bombReserve railSpacing` (12 params), population 10, 12 generations
+   bombReserve railSpacing` (11 params; `homeFloor` was removed in C2), population 10, 12 generations
    ≈ 3.6k games ≈ €1.5 on cpx51.
 3. Ladder run of the result vs v-current; if it wins, it becomes the next
    version and the guide's "Pressure-tested" table is updated.

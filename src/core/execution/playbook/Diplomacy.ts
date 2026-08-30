@@ -68,10 +68,12 @@ export class Diplomacy {
       const left = al.expiresAt() - this.ctx.mg.ticks();
       if (left > offset || left < 0) continue;
       const { rivals, friends } = this.q.neighbours();
-      const prey = (friends.includes(other) && other.troops() < me.troops() * 0.4 && me.troops() > this.q.cap() * this.ctx.p.fightAbove && rivals.length <= 1) || this.q.annexable(other) || (this.ctx.p.endgameV2 && this.ctx.mg.ticks() >= 9000 && other.troops() < me.troops() * 0.5 && other.numTilesOwned() < me.numTilesOwned());
+      const prey = (friends.includes(other) && other.troops() < me.troops() * 0.4 && me.troops() > this.q.cap() * this.ctx.p.fightAbove && rivals.length <= 1) || this.q.annexable(other) || (this.ctx.p.endgameV2 && this.q.phaseOr(9000, "endgame") && other.troops() < me.troops() * 0.5 && other.numTilesOwned() < me.numTilesOwned());
       // A Hard nation renews only if we are as strong as it, a threat to it, or on friendly terms.
       // A gift of 1/7 of its cap makes it friendly (+50): cheap insurance when we are the weaker side.
-      if (!prey && other.type() === PlayerType.Nation && me.troops() < other.troops() * 0.9 && me.canDonateTroops(other)) {
+      // C1 (`nationAware`): "weaker side" = its own attack rules would let it hit us at expiry, not the 0.9× heuristic.
+      const weakerSide = this.ctx.p.nationAware ? this.q.rivals.couldAttackAtExpiry(other, me.troops()).can : me.troops() < other.troops() * 0.9;
+      if (!prey && other.type() === PlayerType.Nation && weakerSide && me.canDonateTroops(other)) {
         const gift = Math.ceil(this.ctx.mg.config().maxTroops(other) / 7) + 1000;
         if (gift < me.troops() * 0.3 && gift <= this.ctx.mg.config().maxTroops(other) - other.troops()) {
           this.ctx.mg.addExecution(new DonateTroopsExecution(me, other.id(), gift));
@@ -103,7 +105,7 @@ export class Diplomacy {
     if (me.isFriendly(p)) return;
     this.ctx.log(`t${this.ctx.sit.tick} ALLIANCE ENDED ${p.name()} ${Math.round(p.troops() / 1000)}k vs our ${Math.round(this.ctx.sit.troops / 1000)}k`);
     // if they are stronger, every tribe wave comes home now — the nation attacks within seconds of a lapse
-    if (this.ctx.p.retreatOnAllianceEnd && p.troops() > this.ctx.sit.troops * 0.8) {
+    if (p.troops() > this.ctx.sit.troops * 0.8) {
       for (const a of this.ctx.sit.outgoing) { const t = a.target(); if (t.isPlayer() && (t as Player).type() === PlayerType.Bot) this.military.retreat(a); }
     }
     this.economy.postFailed.delete(p);

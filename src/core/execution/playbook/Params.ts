@@ -1,12 +1,16 @@
 // PlaybookBot parameters. Re-exported from PlaybookBotExecution.ts so callers keep one import.
+//
+// Graduated into the code (C2, no longer parameters): wholeWars (a war wave goes whole or not at all), stickyWar
+// (one enemy to the end), splitWatch (reconnect a split territory), econWar (1.5× when our cap is twice theirs and
+// gold is spare), postsBeforeCity2 (threat posts never wait for city 2; 30-game lab: +8 % land, same survival),
+// retreatOnAllianceEnd (tribe waves come home when a stronger ally lapses), spawnBasin (spawn candidates refined by
+// reachable free land). Dropped: openingAllIn/openingKeep (30-game lab: 20 %/10 % clicks beat the all-in, 24 vs 22
+// alive, 800k vs 705k tiles) and homeFloor (declared and defaulted but read nowhere — A1 finding).
 
 export interface PlaybookParams {
   expandContested: number; // share of home troops per click into empty land while a rival borders us
   expandFree: number; // same, when nobody can contest
   expandEvery: number; // ticks between clicks
-  openingAllIn: boolean; // nation-style opening: every 5 s throw everything above openingKeep of cap into empty land
-  openingKeep: number;
-  homeFloor: number; // never expand/fight below this share of cap at home
   botRatio: number; // attack bots with this multiple of their troops
   botMaxShare: number; // max share of home troops per bot click
   botEarlyShare: number; // while free land remains, only eat a tribe if the click is at most this share of home troops (and we are plentiful)
@@ -36,29 +40,23 @@ export interface PlaybookParams {
   reserveShare: number; // share of CURRENT troops kept at home by send()/boat() (nations keep 30–40 %); a share of cap froze the bot whenever troops were low
   tribeConcurrency: number; // tribe attacks at once below 60 % of cap (one more above)
   spawnInland: number; // tiles walked inland from the chosen shore
-  spawnBasin: boolean; // phase 0: refine the top spawn candidates by land-connected free land (an isthmus or a pocket between nations scores low)
-  retreatOnAllianceEnd: boolean;
   finishRule: boolean; // hold under the nations' victory-denial line while a MIRV-capable rival exists; remove them; then push all-out
   endgameV2: boolean; // 15:00+: hydrogen bombs instead of hoarding, weak allies lapse, short boat jumps at 2×
-  splitWatch: boolean; // reconnect a split territory: the owner of the gap becomes the war target
-  econWar: boolean; // attack at 1.5× (after a bomb) when our cap is 2× the target's and gold is spare
-  wholeWars: boolean; // a war wave is sent whole or not at all (never trimmed by the reserve)
-  stickyWar: boolean; // one enemy to the end: the current war target is the only candidate while it lives and borders us
-  postsBeforeCity2: boolean; // allow threat posts even while city 2 is unaffordable
   simWars: boolean; // B1: pick war targets and sizes with Estimate.ts (a replay of attackLogic over the shared border) and retreat when the re-estimate no longer wins; off = fightRatio heuristics
   realRetreats: boolean; // schedule a RetreatExecution when retreating (A1 finding: Player.orderRetreat() only flags the wave; without the execution it never comes home, stays in outgoingAttacks() and blocks that target)
   portWithoutPartnerTick: number; // first port on any ocean coast from this tick even with no partner (1e9 = never)
   nearbyEvery: number; // ticks the neighbouring-player set is cached for (1 = recompute every tick, the original behaviour)
   scoredSpend: boolean; // B3: Economy.build() scores every purchase (return over the phase horizon / cost, Spend.ts) and buys the best affordable one after one escrow list; off = the hand-ordered steps
+  bsrReserve: boolean; // C1: the troop reserve scales with the largest border-security ratio among unfriendly neighbours — reserveShare × clamp(0.5 + 0.5·maxBsr, 0.5, 2.0), so reserveShare is the value at bsr 1; off = flat reserveShare
+  trustWars: boolean; // C1: fight() skips a target whose living ally on our border could pile in (nationCanAttack with nationWouldSend ≥ half our spendable) and prefers low-trust targets (+2 × (1 − trust)); off = the plain scorer
+  nationAware: boolean; // C1: the expiry hold and the renewal gift use the nation attack rules (Rivals.couldAttackAtExpiry) instead of the 0.85× / 0.9× troop heuristics
+  phaseGates: boolean; // C1: the tick literals in the rules (25:00 endgame, 15:00 late game, 5:00 wars/silos, 2:30–3:00 rail) read sit.phase instead; Spend.horizon comes from the phase
 }
 
 export const DEFAULT_PLAYBOOK: PlaybookParams = {
   expandContested: 0.2,
   expandFree: 0.1,
   expandEvery: 10,
-  openingAllIn: false, // 30-game lab: 20%/10% clicks each second beat the all-in (24 vs 22 alive, 800k vs 705k tiles)
-  openingKeep: 0.15,
-  homeFloor: 0.25,
   botRatio: 1.67,
   botMaxShare: 0.5,
   botEarlyShare: 0.15,
@@ -88,18 +86,15 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   reserveShare: 0.3,
   tribeConcurrency: 1,
   spawnInland: 0, // 30-game lab: 8 tiles inland = 18/30 alive vs 27/30 on the shore (an inland circle can be surrounded; the coast cannot)
-  spawnBasin: true,
-  retreatOnAllianceEnd: true,
   finishRule: true,
   endgameV2: true,
-  splitWatch: true,
-  econWar: true,
-  wholeWars: true,
-  stickyWar: true,
-  postsBeforeCity2: true, // 30-game lab: +8% land, same survival as blocking them
   simWars: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B1)
   realRetreats: false, // default off until the 30-game A/B; on = frozen waves finally return (see the interface comment)
   portWithoutPartnerTick: 1500,
   nearbyEvery: 1, // lab flag: 10 would save ~20 % of a lab game's CPU (me.nearby() profiled at 28 %) but needs a 30-game A/B first
   scoredSpend: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B3)
+  bsrReserve: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md C1)
+  trustWars: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md C1)
+  nationAware: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md C1)
+  phaseGates: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md C1)
 };

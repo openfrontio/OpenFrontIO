@@ -97,7 +97,7 @@ export class Military {
       if (o === me || !o.isAlive() || me.isFriendly(o) || o.numTilesOwned() < 100) continue;
       const isBot = o.type() === PlayerType.Bot;
       const coll = !isBot && this.collapsed(o);
-      const late = this.ctx.p.endgameV2 && this.ctx.mg.ticks() >= 9000;
+      const late = this.ctx.p.endgameV2 && this.q.phaseOr(9000, "endgame");
       const weak = !isBot && ((o.troops() < this.ctx.sit.troops * 0.25 && o.units(UnitType.DefensePost).length === 0) || (late && o.troops() < this.ctx.sit.troops * 0.5));
       if (!isBot && !coll && !weak) continue;
       if (!isBot && !me.canAttackPlayer(o)) continue;
@@ -139,7 +139,7 @@ export class Military {
     if (this.ctx.sit.mode !== "grow" && this.ctx.sit.threats.length > 0) { target = [...this.ctx.sit.threats].sort((a, b) => Number(b.gold() - a.gold()))[0]; why = `finish: ${this.ctx.sit.mode}, richest MIRV-capable rival`; }
     if (!target) for (const p of others) for (const m of p.units(UnitType.MIRV)) { const d = m.targetTile(); if (d && this.ctx.mg.hasOwner(d) && this.ctx.mg.owner(d) === me) { target = p; why = "counter"; } }
     if (!target) { const t = others.filter((p) => p.numTilesOwned() / total >= 0.5).sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0]; if (t) { target = t; why = "victory denial"; } }
-    if (!target && this.ctx.mg.ticks() >= 12000) {
+    if (!target && this.q.phaseOr(12000, "endgame")) {
       const ranked = this.ctx.mg.players().filter((p) => p.isAlive() && p.type() !== PlayerType.Bot).sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
       const myRank = ranked.indexOf(me) + 1;
       if (myRank <= 3) { const t = others.filter((p) => p.numTilesOwned() > me.numTilesOwned() * 0.8).sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0]; if (t) { target = t; why = `crown (we are #${myRank})`; } }
@@ -193,16 +193,8 @@ export class Military {
 
   // ---------------------------------------------------------------- expansion
   expand(): void {
-    const me = this.ctx.me;
     const { rivals, wilderness } = this.q.neighbours();
     if (!wilderness) return;
-    if (this.ctx.p.openingAllIn) {
-      // nations' opening: every 5 s, everything above a small reserve goes into empty land
-      if (this.ctx.mg.ticks() % 50 !== 0) return;
-      const send = Math.floor(me.troops() - this.q.cap() * this.ctx.p.openingKeep);
-      this.ctx.send(this.ctx.mg.terraNullius().id(), send, "all-in", 100);
-      return;
-    }
     // free land is the cheapest growth there is and unused troops come home: only the troop reserve applies, not the cap floor
     const ringing = [...this.ctx.sit.rivals, ...this.ctx.sit.bots, ...this.ctx.sit.friends].some((r) => this.q.annexable(r));
     const frac = rivals.length > 0 || ringing || this.splitTile !== null || this.ctx.sit.mode === "push" ? this.ctx.p.expandContested : this.ctx.p.expandFree;
@@ -292,7 +284,7 @@ export class Military {
     for (const r of nb.rivals) this.collapsed(r);
     const gapOwner = this.splitOwner && this.splitOwner.isAlive() && nb.rivals.includes(this.splitOwner) ? this.splitOwner : null;
     const threatHere = this.ctx.sit.mode === "hold" ? nb.rivals.find((r) => this.ctx.sit.threats.includes(r)) ?? null : null;
-    const opportunity = (this.ctx.mg.ticks() >= 3000 && nb.rivals.some((r) => this.collapsed(r) && r.troops() < this.ctx.sit.troops * 0.5)) || gapOwner !== null || threatHere !== null;
+    const opportunity = (this.q.phaseOr(3000, "pastOpening") && nb.rivals.some((r) => this.collapsed(r) && r.troops() < this.ctx.sit.troops * 0.5)) || gapOwner !== null || threatHere !== null;
     // crown, not survival: a war is on when we can afford 2× someone's whole army out of the spendable troops,
     // not only when troops reach 70 % of a cap that cities keep raising
     const affordable = this.ctx.mg.ticks() >= this.ctx.p.fightNotBeforeTick && nb.rivals.some((r) => r.troops() * this.ctx.p.fightRatio + 1000 <= this.ctx.sit.spendable * this.ctx.p.fightMaxShare);
@@ -300,7 +292,7 @@ export class Military {
     const atCapNow = me.troops() >= cap * 0.95;
     // invariant: one war at a time (two at cap); seven at once is how a 17M army evaporates
     const wars = this.ctx.sit.outgoing.filter((a) => a.target().isPlayer() && (a.target() as Player).type() !== PlayerType.Bot && !this.counters.has(a.target() as Player)).length;
-    if (wars >= (this.ctx.mg.ticks() >= 15000 && atCapNow ? 2 : 1) && !opportunity) return;
+    if (wars >= (this.q.phaseOr(15000, "endgame") && atCapNow ? 2 : 1) && !opportunity) return;
     const early = !atCapNow && !opportunity && (this.ctx.mg.ticks() < this.ctx.p.fightNotBeforeTick || me.unitsOwned(UnitType.City) < this.ctx.p.fightMinCities);
     let { rivals } = nb;
     // before the 5-minute mark only clear prey: a neighbour we can hit with 2.5× its whole army
@@ -310,17 +302,26 @@ export class Military {
     let candidates = rivals.filter((r) => me.canAttackPlayer(r) && !this.q.outgoingTo(r) && this.reachable(r));
     // one enemy at a time, to the end: nations nuke whoever attacks them, and eight half-wars make eight nuclear enemies.
     // The current target stays the only candidate while it lives, borders us, and was hit within the last three minutes.
-    if (this.ctx.p.stickyWar && this.currentTarget_ && this.currentTarget_.isAlive() && rivals.includes(this.currentTarget_) && this.ctx.mg.ticks() - this.lastWarTick < 1800) {
+    if (this.currentTarget_ && this.currentTarget_.isAlive() && rivals.includes(this.currentTarget_) && this.ctx.mg.ticks() - this.lastWarTick < 1800) {
       candidates = candidates.filter((r) => r === this.currentTarget_ || this.collapsed(r) || r === gapOwner || r === threatHere);
     }
     if (this.ctx.sit.mode === "hold") candidates = candidates.filter((r) => this.ctx.sit.threats.includes(r)); // the hold is spent removing whoever can fire
+    if (this.ctx.p.trustWars) {
+      // C1: never open a war the target's ally next door can join with half our spendable — two nations at once is the troop sink
+      candidates = candidates.filter((r) => {
+        const ally = this.allyThatCanPileIn(r);
+        if (ally !== null && this.ctx.mg.ticks() - (this.pileInLogged.get(r) ?? -1e9) >= 600) { this.pileInLogged.set(r, this.ctx.mg.ticks()); this.ctx.log(`t${this.ctx.mg.ticks()} no war on ${r.name()}: its ally ${ally.name()} could send ${Math.round((this.ctx.sit.rival.get(ally)?.nationWouldSend ?? 0) / 1000)}k at us`); }
+        return ally === null;
+      });
+    }
     if (candidates.length === 0) return;
     const atCap = me.troops() >= cap * 0.95;
-    const endgame = this.ctx.mg.ticks() >= 15000 || this.ctx.sit.mode === "push"; // 25:00 or the push — land now is worth more than troops later
+    const endgame = this.q.phaseOr(15000, "endgame") || this.ctx.sit.mode === "push"; // 25:00 or the push — land now is worth more than troops later
+    const trustBonus = (r: Player) => (this.ctx.p.trustWars ? 2 * (1 - (this.ctx.sit.rival.get(r)?.trust ?? 0.5)) : 0); // C1: a rival that broke faith is the better target
     // At cap every troop above the line is wasted growth, so commit more and accept a thinner edge.
     const maxSend = Math.floor(me.troops() * (atCap || endgame ? 0.7 : this.ctx.p.fightMaxShare));
     const minRatio = atCap || endgame ? 1.2 : this.ctx.p.fightRatio;
-    const richer = (r: Player) => this.ctx.p.econWar && this.q.cap() >= this.ctx.mg.config().maxTroops(r) * 2 && this.ctx.sit.gold >= 1_000_000n; // we replace losses, they cannot
+    const richer = (r: Player) => this.q.cap() >= this.ctx.mg.config().maxTroops(r) * 2 && this.ctx.sit.gold >= 1_000_000n; // we replace losses, they cannot
     const attackingUs = new Set(me.incomingAttacks().map((a) => a.attacker()));
     const score = (r: Player) => {
       const ratio = maxSend / Math.max(1, r.troops());
@@ -338,7 +339,7 @@ export class Military {
       // Playbook: hit players who are already being hit, traitors (half defence), and the ally we let lapse.
       const underFire = r.incomingAttacks().reduce((acc, a) => acc + a.troops(), 0) / Math.max(1, r.troops());
       const bonus = Math.min(underFire, 1) * 4 + (r.isTraitor() ? 2 : 0) + (r === this.plannedTarget() ? 4 : 0);
-      return ratio * 2 + buildings + Math.min(this.q.density(r), 200) / 50 - posts * 3 - sizePenalty * 2 + bonus + (r === this.currentTarget_ ? 3 : 0);
+      return ratio * 2 + buildings + Math.min(this.q.density(r), 200) / 50 - posts * 3 - sizePenalty * 2 + bonus + (r === this.currentTarget_ ? 3 : 0) + trustBonus(r);
     };
     let best: Player | null = null, bestS = 0;
     if (this.ctx.p.simWars) {
@@ -349,7 +350,7 @@ export class Military {
       for (const r of candidates) {
         const sim = this.simPick(r, maxSend, gapOwner, threatHere);
         if (sim === null) continue;
-        const value = sim.tilesPerLoss * 100 + (this.collapsed(r) ? 20 : 0) + (r === gapOwner ? 30 : 0) + (r === threatHere ? 25 : 0) + (r === this.plannedTarget() ? 4 : 0) + (r === this.currentTarget_ ? 3 : 0) + (r.isTraitor() ? 2 : 0);
+        const value = sim.tilesPerLoss * 100 + (this.collapsed(r) ? 20 : 0) + (r === gapOwner ? 30 : 0) + (r === threatHere ? 25 : 0) + (r === this.plannedTarget() ? 4 : 0) + (r === this.currentTarget_ ? 3 : 0) + (r.isTraitor() ? 2 : 0) + trustBonus(r);
         if (bestSim === null || value > bestSim.sim.value) { sim.value = value; bestSim = { r, sim }; }
       }
       if (bestSim !== null) {
@@ -382,6 +383,20 @@ export class Military {
     this.lastWarTick = this.ctx.mg.ticks();
     this.noteSent(best);
     this.ctx.log(`t${this.ctx.mg.ticks()} ATTACK ${best.name()} ${best.numTilesOwned()}t/${Math.round(best.troops() / 1000)}k ← ${Math.round(want / 1000)}k (${(want / Math.max(1, best.troops())).toFixed(2)}×)`);
+  }
+
+  // ---------------------------------------------------------------- allies that can pile in (trustWars)
+  private pileInLogged = new Map<Player, number>();
+  /** A living ally of `r` on our border whose nation rules would let it attack us now (RivalView.nationCanAttack)
+   *  with at least half our spendable troops; null when no such ally exists. Our own allies never qualify
+   *  (nationCanAttack is false for friends). */
+  allyThatCanPileIn(r: Player): Player | null {
+    for (const a of r.allies()) {
+      if (!a.isAlive()) continue;
+      const v = this.ctx.sit.rival.get(a);
+      if (v && v.nationCanAttack && v.nationWouldSend >= this.ctx.sit.spendable * 0.5) return a;
+    }
+    return null;
   }
 
   // ---------------------------------------------------------------- simulated wars (simWars)
@@ -613,7 +628,7 @@ export class Military {
     for (const r of this.ctx.sit.collapsed) if (!me.isFriendly(r)) enemies.add(r);
     if (this.ctx.sit.share >= 0.5) for (const r of this.ctx.sit.threats) if (me.canAttackPlayer(r) || this.q.neighbours().rivals.includes(r)) enemies.add(r); // whoever could fire at the crown
     const mirvPrice = this.ctx.mg.config().unitInfo(UnitType.MIRV).cost(this.ctx.mg, me);
-    const rich = this.ctx.p.endgameV2 && ticks >= 9000 && gold >= 8_000_000n && (gold < mirvPrice || me.units(UnitType.MIRV).length > 0);
+    const rich = this.ctx.p.endgameV2 && this.q.phaseOr(9000, "endgame") && gold >= 8_000_000n && (gold < mirvPrice || me.units(UnitType.MIRV).length > 0);
     if (rich && enemies.size === 0) {
       // gold that can never reach the MIRV price is spent on hydrogen bombs at the strongest un-allied neighbour
       const { rivals } = this.q.neighbours();

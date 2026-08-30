@@ -62,10 +62,25 @@ export const THREAT_POST_WORTH = 400_000;
 
 // ---------------------------------------------------------------- horizon and escrow
 /** Time left in the current phase. Opening/mid: one 10-minute block; from 20:00 the game clock runs out at 25:00
- *  (guide: nothing bought after 25:00 pays back). C1 switches this to sit.phase once B2 lands. */
+ *  (guide: nothing bought after 25:00 pays back). The clock-only reading; `phaseGates` uses horizonForPhase. */
 export function horizon(tick: number): number {
   if (tick < 12000) return 6000;
   return Math.max(1000, 15000 - tick);
+}
+
+/** C1 (`phaseGates`): the horizon from the phase. Opening and consolidate: a 10-minute block; war: 4000 ticks (a war
+ *  resolves or is judged inside SIM_HORIZON + a follow-up); endgame: what is left of the 25:00 clock, and 1000
+ *  ticks past it (the last purchases that still pay: a bomb, a SAM level). */
+export function horizonForPhase(phase: "opening" | "consolidate" | "war" | "endgame", tick: number): number {
+  switch (phase) {
+    case "opening":
+    case "consolidate":
+      return 6000;
+    case "war":
+      return 4000;
+    case "endgame":
+      return Math.max(1000, 15000 - tick);
+  }
 }
 
 /** Gold left to spend: the escrow list is subtracted exactly once. `exempt` lets the purchase an escrow saves for

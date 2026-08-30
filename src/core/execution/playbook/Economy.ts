@@ -178,13 +178,13 @@ export class Economy {
     const capFull = me.troops() > this.q.cap() * this.ctx.p.capFullShare;
     const { rivals, friends } = this.q.neighbours();
     const cityCapHit = cityUnits.length >= this.cityUnitCap();
-    const myRank = ticks >= 9000 ? this.rank() : 99;
+    const myRank = this.q.phaseOr(9000, "endgame") ? this.rank() : 99;
     // top three after 20:00: half of every gold pile is the MIRV fund — a crown without a MIRV loses to the first one fired
     // top three from 20:00: the whole MIRV price is reserved (it rises 15M with every launch on the map, so the first
     // launch is the cheap one); the economy keeps buying only while troops are under 40 % of cap
     const mirvPriceNow = this.ctx.mg.config().unitInfo(UnitType.MIRV).cost(this.ctx.mg, me);
-    const mirvFund = ticks >= 12000 && myRank <= 3 && me.units(UnitType.MissileSilo).length > 0 && me.units(UnitType.MIRV).length === 0 && me.troops() >= this.q.cap() * 0.4 && mirvPriceNow <= 40_000_000n ? mirvPriceNow : 0n; // past 40M the MIRV is a hoard, not a plan
-    const seaFull = this.ctx.mg.unitCount(UnitType.TradeShip) >= this.ctx.p.seaFullShips || ticks >= 15000; // guide: nothing bought after 25:00 pays back
+    const mirvFund = this.q.phaseOr(12000, "endgame") && myRank <= 3 && me.units(UnitType.MissileSilo).length > 0 && me.units(UnitType.MIRV).length === 0 && me.troops() >= this.q.cap() * 0.4 && mirvPriceNow <= 40_000_000n ? mirvPriceNow : 0n; // past 40M the MIRV is a hoard, not a plan
+    const seaFull = this.ctx.mg.unitCount(UnitType.TradeShip) >= this.ctx.p.seaFullShips || this.q.phaseOr(15000, "endgame"); // guide: nothing bought after 25:00 pays back
     const upgrade = (u: Unit) => { this.ctx.mg.addExecution(new UpgradeStructureExecution(me, u.id())); this.ctx.log(`t${ticks} level ${u.type()} → ${u.level() + 1}`); };
 
     // 1. defence: a post where a non-bot attack lands, or facing a threat / a boxed-in nation about to betray
@@ -193,7 +193,7 @@ export class Economy {
       const tile = this.defensePostTile(incoming.attacker());
       if (tile !== null && this.tryBuild(UnitType.DefensePost, tile)) return;
     }
-    if (cityUnits.length >= 1 && ticks >= 900 && gold >= cost(UnitType.DefensePost) + (cityUnits.length < 2 && !this.ctx.p.postsBeforeCity2 ? cost(UnitType.City) : 0n) && me.unitsOwned(UnitType.DefensePost) < 6) { // a threat post never delays city 2; an actual incoming attack (above) still gets one
+    if (cityUnits.length >= 1 && ticks >= 900 && gold >= cost(UnitType.DefensePost) && me.unitsOwned(UnitType.DefensePost) < 6) { // a threat post never waits for city 2 (30-game lab: +8 % land, same survival)
       // an ally whose alliance ends within 45 s counts as a threat: Hard nations attack the moment it lapses
       const expiring = me.alliances().filter((al) => al.expiresAt() - ticks < 450).map((al) => al.other(me)).filter((o) => friends.includes(o) && o.troops() >= me.troops() * 0.4);
       const threat = [...expiring, ...rivals].find((r) => ticks - (this.postFailed_.get(r) ?? -1e9) > 600 && (r.troops() >= me.troops() * 0.5 || expiring.includes(r) || (r.type() === PlayerType.Nation && me.troops() > r.troops() * 3)) && !this.q.postFacing(r));
@@ -204,7 +204,7 @@ export class Economy {
     //    level 3 when leading; a second launcher when the city stack outgrows one umbrella
     const enemySilos = this.ctx.mg.players().some((o) => o !== me && !me.isFriendly(o) && o.type() !== PlayerType.Bot && o.units(UnitType.MissileSilo).length > 0);
     const sams = me.units(UnitType.SAMLauncher);
-    const samTarget = enemySilos || ticks >= 7200 || myRank <= 3 ? Math.max(1, Math.ceil(cityUnits.length / 8)) : 0; // nations: 0.25 per city on Hard; the bot can afford 1 per 8
+    const samTarget = enemySilos || this.q.phaseOr(7200, "endgame") || myRank <= 3 ? Math.max(1, Math.ceil(cityUnits.length / 8)) : 0; // nations: 0.25 per city on Hard; the bot can afford 1 per 8
     const wantSam = sams.length < samTarget || myRank <= 3;
     if (wantSam && gold >= cost(UnitType.SAMLauncher) && ticks - this.lastSamTick >= 400) { // a launcher takes 30 s to build; don't order another meanwhile
       if (sams.length === 0) { const tile = this.interiorTile(UnitType.SAMLauncher); if (tile !== null && this.tryBuild(UnitType.SAMLauncher, tile)) { this.lastSamTick = ticks; return; } }
@@ -239,7 +239,7 @@ export class Economy {
     }
     // 5. rail line: landlocked, or an ally borders us, or the sea is full
     const deadPorts = ports.length > 0 && me.units(UnitType.TradeShip).length === 0 && ticks - this.firstPortTick > 900;
-    const wantRail = cities >= 3 && ((ports.length === 0 && partnerTile === null && ticks >= 1500) || deadPorts || (friends.length > 0 && ticks >= 1800) || (ports.length > 0 && ticks >= 1800) || seaFull) && me.unitsOwned(UnitType.Factory) < 6;
+    const wantRail = cities >= 3 && ((ports.length === 0 && partnerTile === null && this.q.phaseOr(1500, "pastOpening")) || deadPorts || (friends.length > 0 && this.q.phaseOr(1800, "pastOpening")) || (ports.length > 0 && this.q.phaseOr(1800, "pastOpening")) || seaFull) && me.unitsOwned(UnitType.Factory) < 6;
     if (wantRail && this.buildRail(gold - mirvFund, cost)) return;
     if (!wantRail && cities >= 3 && ticks % 1200 < 10) this.ctx.log(`t${ticks} no rail wanted: ports=${ports.length} partner=${partnerTile !== null} friends=${friends.length} seaFull=${seaFull}`);
     // 6. silos, nation-style: the first at four city units or 10:00 (whichever comes first, once a port or factory pays),
@@ -247,7 +247,7 @@ export class Economy {
     const idleAtCap = capFull && me.troops() > this.q.cap() * 0.9 && me.outgoingAttacks().length === 0;
     const silos = me.units(UnitType.MissileSilo);
     const siloTarget = cityUnits.length >= 25 ? 3 : cityUnits.length >= 14 ? 2 : (ticks >= this.ctx.p.siloAtTick || idleAtCap) && (portLevels >= 1 || me.unitsOwned(UnitType.Factory) > 0 || idleAtCap) ? 1 : 0; // v8 (silo at 4 cities, SAM per 5, warships early) cost 36 % of land: the ratios wait for the economy
-    const wantSilo = silos.length < siloTarget && ticks >= 3000;
+    const wantSilo = silos.length < siloTarget && this.q.phaseOr(3000, "pastOpening");
     if (wantSilo && gold >= cost(UnitType.MissileSilo) + 400_000n) {
       const tile = silos.length === 0 ? this.interiorTile(UnitType.MissileSilo) : this.sampleTerritory(30).find((t) => silos.every((sl) => this.ctx.mg.euclideanDistSquared(sl.tile(), t) > 50 * 50) && me.canBuild(UnitType.MissileSilo, t) !== false) ?? null;
       if (tile !== null && this.tryBuild(UnitType.MissileSilo, tile)) return;
@@ -271,7 +271,7 @@ export class Economy {
     const reserve = me.units(UnitType.MissileSilo).length > 0 && (atWar || idleAtCap) ? 1_000_000n : siloReserve;
     // 9. a warship per four ports when gold is spare: it sinks landing boats and guards the trade lanes
     const warships = me.units(UnitType.Warship);
-    if (ports.length > 0 && ticks >= 9000 && warships.length < Math.ceil(ports.length / 6) && ticks - this.lastWarshipTick >= 600 && gold - reserve - mirvFund >= cost(UnitType.Warship) + 500_000n && !this.ctx.mg.config().isUnitDisabled(UnitType.Warship)) {
+    if (ports.length > 0 && this.q.phaseOr(9000, "endgame") && warships.length < Math.ceil(ports.length / 6) && ticks - this.lastWarshipTick >= 600 && gold - reserve - mirvFund >= cost(UnitType.Warship) + 500_000n && !this.ctx.mg.config().isUnitDisabled(UnitType.Warship)) {
       const port = ports[warships.length % ports.length];
       for (let a = 0; a < 8; a++) {
         const x = this.ctx.mg.x(port.tile()) + Math.round(Math.cos((a / 8) * Math.PI * 2) * 20), y = this.ctx.mg.y(port.tile()) + Math.round(Math.sin((a / 8) * Math.PI * 2) * 20);
@@ -316,8 +316,8 @@ export class Economy {
     const capFull = me.troops() > cap * p.capFullShare;
     const { rivals, friends } = this.q.neighbours();
     const cityCapHit = cityUnits.length >= this.cityUnitCap();
-    const myRank = ticks >= 9000 ? this.rank() : 99;
-    const H = Spend.horizon(ticks);
+    const myRank = this.q.phaseOr(9000, "endgame") ? this.rank() : 99;
+    const H = p.phaseGates ? Spend.horizonForPhase(this.ctx.sit.phase, ticks) : Spend.horizon(ticks); // C1: the horizon is what is left of the phase
     const upgrade = (u: Unit) => { mg.addExecution(new UpgradeStructureExecution(me, u.id())); this.ctx.log(`t${ticks} level ${u.type()} → ${u.level() + 1}`); };
     const enemySilos = mg.players().some((o) => o !== me && !me.isFriendly(o) && o.type() !== PlayerType.Bot && o.units(UnitType.MissileSilo).length > 0);
     const sams = me.units(UnitType.SAMLauncher);
@@ -341,7 +341,7 @@ export class Economy {
     //    or idle at cap, else the bombReserve param so a bomb never empties the purse).
     const escrow: Escrow[] = [];
     const mirvPriceNow = cfg.unitInfo(UnitType.MIRV).cost(mg, me);
-    if (ticks >= 12000 && myRank <= 3 && silos.length > 0 && me.units(UnitType.MIRV).length === 0 && me.troops() >= cap * 0.4 && mirvPriceNow <= 40_000_000n) escrow.push({ purpose: "mirv", amount: mirvPriceNow, until: 1e9 });
+    if (this.q.phaseOr(12000, "endgame") && myRank <= 3 && silos.length > 0 && me.units(UnitType.MIRV).length === 0 && me.troops() >= cap * 0.4 && mirvPriceNow <= 40_000_000n) escrow.push({ purpose: "mirv", amount: mirvPriceNow, until: 1e9 });
     const siloTarget = cityUnits.length >= 25 ? 3 : cityUnits.length >= 14 ? 2 : 1;
     const siloIn: Spend.SiloInputs = { enemySilos, rank: myRank, idleAtCap, cityUnits: cityUnits.length, economy: portLevels >= 1 || me.unitsOwned(UnitType.Factory) > 0, tick: ticks };
     const siloRet = silos.length < siloTarget ? Spend.siloReturn(siloIn, H) : 0;
@@ -409,7 +409,7 @@ export class Economy {
     // SAMs: a second launcher when the city stack outgrows one umbrella, a level (3 when leading) otherwise
     const samIn: Spend.SamInputs = { enemySilos, rank: myRank, tick: ticks, cityUnits: cityUnits.length };
     const samCost = cost(UnitType.SAMLauncher);
-    const samTarget = enemySilos || ticks >= 7200 || myRank <= 3 ? Math.max(1, Math.ceil(cityUnits.length / 8)) : 0;
+    const samTarget = enemySilos || this.q.phaseOr(7200, "endgame") || myRank <= 3 ? Math.max(1, Math.ceil(cityUnits.length / 8)) : 0;
     if (sams.length < samTarget && ticks - this.lastSamTick >= 400) cands.push({ kind: "build", type: UnitType.SAMLauncher, cost: samCost, value: Spend.valueOf(Spend.samReturn(samIn, "build", H), samCost), why: sams.length === 0 ? "SAM" : "SAM 2nd" });
     if (sams.length > 0) {
       const targetLevel = myRank === 1 ? 3 : 2;
@@ -418,7 +418,7 @@ export class Economy {
     }
     // warship: one per six ports after 15:00
     const warships = me.units(UnitType.Warship);
-    if (ports.length > 0 && ticks >= 9000 && warships.length < Math.ceil(ports.length / 6) && ticks - this.lastWarshipTick >= 600 && !cfg.isUnitDisabled(UnitType.Warship)) {
+    if (ports.length > 0 && this.q.phaseOr(9000, "endgame") && warships.length < Math.ceil(ports.length / 6) && ticks - this.lastWarshipTick >= 600 && !cfg.isUnitDisabled(UnitType.Warship)) {
       const wCost = cost(UnitType.Warship);
       cands.push({ kind: "build", type: UnitType.Warship, cost: wCost, value: Spend.valueOf(Spend.warshipReturn(tradePerTick, H), wCost), why: "Warship" });
     }
