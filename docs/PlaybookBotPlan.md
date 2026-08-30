@@ -341,6 +341,21 @@ unchanged). C3 runs the four A/Bs.
 
 ### C3 — Lab campaign
 
+**Round 1 (2026-08-29, dc3d1d6c3; 150 games, Medium 20 min, 3× cpx62):**
+
+| config | alive | crowns | top-3 | total tiles | median | paired vs base |
+|---|---|---|---|---|---|---|
+| base `{}` | 30 | 2 | 14 | 2.08M | 84k | — |
+| realRetreats | 30 | 5 | 17 | 3.53M | 101k | 18W 11L |
+| c1 (bsrReserve+trustWars+nationAware+phaseGates) | 30 | 6 | 12 | 3.20M | 63k | 18W 12L |
+| scoredSpend | 29 | 3 | 9 | 1.99M | 59k | 12W 17L |
+| simWars | 30 | 0 | 0 | 0.68M | 25k | 7W 23L |
+
+realRetreats graduated (default true). scoredSpend dropped as is (buys fewer
+ports than the ladder; `Spend.ts` constants unswept). simWars dropped as
+tuned — never a crown or top-3; retune wave margin / free-land gates before
+another A/B. Round 2 unbundles c1 on top of realRetreats.
+
 1. Each B-flag: 30-game Medium A/B, graduate or drop.
 2. CMA-ES over: `expandContested expandFree botRatio botClickCap
    fightAbove fightMaxShare reserveShare retreatBelowRatio capFullShare

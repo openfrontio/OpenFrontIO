@@ -89,7 +89,7 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   finishRule: true,
   endgameV2: true,
   simWars: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B1)
-  realRetreats: false, // default off until the 30-game A/B; on = frozen waves finally return (see the interface comment)
+  realRetreats: true, // graduated 2026-08-29: 30-game Medium A/B 18W-11L vs off, 30/30 alive, 5 crowns (2), +70 % land (3.53M vs 2.08M tiles); on = frozen waves finally return (see the interface comment)
   portWithoutPartnerTick: 1500,
   nearbyEvery: 10, // 90-game Medium 20-min A/B (openfront-00, 2026-08-29): 5 and 10 are a wash vs 1 (14W/15L, 14W/16L; alive 29/29/30) while bot CPU per game drops 19.0 s → 5.3 s. Details: PlaybookBotLab.md "Where a game's time goes".
   scoredSpend: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B3)

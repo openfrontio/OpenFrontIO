@@ -38,7 +38,7 @@ describe("manageRetreats", () => {
   test("retreats a wave under 20 % of what was sent while the target keeps over 70 %", async () => {
     const { h, r, a, sent, targetTroops } = await war();
     a.setTroops(Math.floor(sent * 0.15));
-    h.step(h.nextRuleTick(10));
+    h.step(h.nextRuleTick(10) + 1); // RetreatExecution flags the wave on its first tick
     expect(r.troops()).toBeGreaterThan(targetTroops * 0.7);
     expect(a.retreating()).toBe(true);
     expect(
@@ -46,23 +46,18 @@ describe("manageRetreats", () => {
     ).toBe(true);
   });
 
-  // Documented gap: the bot calls Player.orderRetreat() directly, which only flags the attack as retreating.
-  // The engine completes a retreat in RetreatExecution (executeRetreat() after a 20-tick delay), which nothing in
-  // the bot ever schedules — so a bot-ordered retreat freezes: the wave keeps its troops, stays in
-  // outgoingAttacks() (blocking outgoingTo(target) and the "one war at a time" gate), and never comes home.
-  // This test pins the current behaviour; a fix flips it deliberately.
-  test("a bot-ordered retreat never executes: the wave is frozen, the survivors never come home", async () => {
+  // realRetreats (graduated 2026-08-29, 30-game A/B 18W-11L): the bot schedules a RetreatExecution, so the wave
+  // is flagged, comes home after the 20-tick delay and leaves outgoingAttacks(). Before the fix Player.orderRetreat()
+  // was called directly and only flagged the attack: the wave froze forever (the A1 finding).
+  test("a bot-ordered retreat executes: the wave comes home and leaves outgoingAttacks()", async () => {
     const { h, r, a, sent } = await war();
     a.setTroops(Math.floor(sent * 0.15));
-    h.step(h.nextRuleTick(10));
+    h.step(h.nextRuleTick(10) + 1);
     expect(a.retreating()).toBe(true);
-    const frozen = a.troops();
     h.step(300);
-    expect(a.retreated()).toBe(false);
-    expect(a.isActive()).toBe(true);
-    expect(a.troops()).toBe(frozen);
-    expect(h.me.outgoingAttacks()).toContain(a);
-    expect(h.me.outgoingAttacks().some((x) => x.target() === r)).toBe(true);
+    expect(a.retreated()).toBe(true);
+    expect(a.isActive()).toBe(false);
+    expect(h.me.outgoingAttacks().some((x) => x.target() === r)).toBe(false);
   });
 
   test("no retreat while the wave is healthy", async () => {
@@ -85,7 +80,7 @@ describe("manageRetreats", () => {
     const { h, r, a, sent, targetTroops } = await war(true);
     expect(r.units(UnitType.DefensePost)).toHaveLength(1);
     a.setTroops(Math.floor(sent * 0.4));
-    h.step(h.nextRuleTick(10));
+    h.step(h.nextRuleTick(10) + 1);
     expect(r.troops()).toBeGreaterThan(targetTroops * 0.9);
     expect(a.retreating()).toBe(true);
   });
