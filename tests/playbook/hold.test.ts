@@ -29,7 +29,9 @@ async function allied(
     spawn: centre(me.tiles),
     tiles: me.tiles,
     troops: me.troops,
-    bot: me.bot,
+    // this file pins the hold mechanism itself via the legacy 0.85x heuristic; the graduated nationAware gate
+    // (which asks the nation's own attack rules instead) is covered by nationAware.test.ts
+    bot: { nationAware: false, ...me.bot },
     rivals: [
       {
         name: "R",
