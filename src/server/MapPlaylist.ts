@@ -265,13 +265,15 @@ export class MapPlaylist {
           appliedForced.add(key);
         }
         excludedModifiers.push(key);
-        // Also exclude mutually-exclusive counterpart(s) so the random pool
-        // can't roll a conflicting modifier (e.g. isNukesDisabled vs isWaterNukes).
-        for (const [a, b] of MUTUALLY_EXCLUSIVE_MODIFIERS) {
-          if (key === a && !excludedModifiers.includes(b))
-            excludedModifiers.push(b);
-          if (key === b && !excludedModifiers.includes(a))
-            excludedModifiers.push(a);
+        // Only exclude counterpart when the forced roll actually succeeded;
+        // a failed percentage roll should leave the counterpart eligible.
+        if (appliedForced.has(key)) {
+          for (const [a, b] of MUTUALLY_EXCLUSIVE_MODIFIERS) {
+            if (key === a && !excludedModifiers.includes(b))
+              excludedModifiers.push(b);
+            if (key === b && !excludedModifiers.includes(a))
+              excludedModifiers.push(a);
+          }
         }
       }
       // Cap after all rolls: if more than 3 forced modifiers passed, trim to 3.
