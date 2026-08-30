@@ -14,7 +14,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 MINUTES=${MINUTES:-20}
-JOBS=${JOBS:-$(nproc 2>/dev/null || sysctl -n hw.ncpu)}
+# 1.5 x vCPUs: on a cpx51 (16 shared vCPU) 24 parallel gave 46 games/min vs 42 at 16 and 30 at 8
+# (2026-08-30 bench, 5-min games); each game is slower under oversubscription but throughput is higher.
+JOBS=${JOBS:-$(( $(nproc 2>/dev/null || sysctl -n hw.ncpu) * 3 / 2 ))}
 OUT=${OUT:-$PWD/lab-out}
 RUNNER=${RUNNER:-node}
 SHARD=${SHARD:-0/1}

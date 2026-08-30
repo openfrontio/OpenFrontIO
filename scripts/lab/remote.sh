@@ -27,6 +27,7 @@ KEY_NAME=${KEY_NAME:-$(whoami)-lab}
 # Throwaway boxes get recycled IPs, so host keys are neither pinned nor remembered.
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o BatchMode=yes"
 SSH="ssh $SSH_OPTS -o ConnectTimeout=10 root"
+TIMEOUT=$(command -v timeout >/dev/null && echo "timeout 60" || true)   # coreutils; brew install coreutils on macOS
 RSYNC_SSH="ssh $SSH_OPTS"
 
 if [ "$WORKERS" -eq 1 ]; then names=("$NAME"); else names=(); for i in $(seq 1 "$WORKERS"); do names+=("$NAME-$i"); done; fi
@@ -68,7 +69,10 @@ CI
     done
   fi
   wait
-  for n in "${names[@]}"; do ips+=("$(hcloud server ip "$n")"); done
+  for n in "${names[@]}"; do
+    hcloud server describe "$n" >/dev/null 2>&1 || { echo "server $n was not created (see errors above; cpx51 exists only in ash/hil, cpx62/cx53 in the EU) — deleting the rest"; for m in "${names[@]}"; do hcloud server delete "$m" >/dev/null 2>&1 || true; done; exit 1; }
+    ips+=("$(hcloud server ip "$n")")
+  done
   echo "servers: ${names[*]} at ${ips[*]}; waiting for ssh/cloud-init ..."
   for ip in "${ips[@]}"; do until $SSH@"$ip" test -f /root/.lab-ready 2>/dev/null; do sleep 5; done; done
 fi
@@ -94,9 +98,13 @@ for ip in "${ips[@]}"; do sync_one "$ip" & done; wait
 # sweep down with it. /root/lab-out is cleared first: with REUSE a stale game from an earlier sweep with the
 # same config name would otherwise be merged into this one.
 echo "running sweep on ${#ips[@]} box(es) ..."
+# The launch runs in a subshell as a setsid/nohup'd background job, so sshd has nothing left to wait for
+# and ssh returns at once. (A bare `nohup … &` made ssh block until the whole sweep finished, which
+# serialised the shards.) `timeout` is belt and braces: a hung ssh cannot stall the other launches.
 i=0
 for ip in "${ips[@]}"; do
-  $SSH@"$ip" "cd /root/openfront && rm -rf /root/lab-out && mkdir -p /root/lab-out && nohup env CONFIGS='$CONFIGS' MINUTES=$MINUTES SHARD=$i/${#ips[@]} AGGREGATE=0 ${BATCHES:+BATCHES='$BATCHES'} ${SPAWNS:+SPAWNS='$SPAWNS'} ${JOBS:+JOBS=$JOBS} OUT=/root/lab-out bash scripts/lab/sweep.sh > /root/lab-out/sweep.log 2>&1 < /dev/null & echo launched shard $i on $ip"
+  $TIMEOUT $SSH@"$ip" "cd /root/openfront && rm -rf /root/lab-out && mkdir -p /root/lab-out && (setsid nohup env CONFIGS='$CONFIGS' MINUTES=$MINUTES SHARD=$i/${#ips[@]} AGGREGATE=0 ${BATCHES:+BATCHES='$BATCHES'} ${SPAWNS:+SPAWNS='$SPAWNS'} ${JOBS:+JOBS=$JOBS} OUT=/root/lab-out bash scripts/lab/sweep.sh > /root/lab-out/sweep.log 2>&1 < /dev/null &); sleep 1; head -1 /root/lab-out/sweep.log" \
+    || echo "WARNING: launch on $ip did not confirm; check /root/lab-out/sweep.log there"
   i=$((i + 1))
 done
 sleep 15

@@ -82,8 +82,13 @@ four times (`Test Files 4 passed`), 4× the CPU.
 - SSH key `josh-lab` in the project = `~/.ssh/id_ed25519.pub` (`remote.sh`
   uploads it if missing).
 - **Account limit:** dedicated-vCPU (CCX) servers are refused —
-  `dedicated core limit exceeded`. **`cpx51`** (16 shared vCPU, 32 GB,
-  ≈€0.09/h) is the default. For more throughput pass `WORKERS=N` (N boxes,
+  `dedicated core limit exceeded`. **`cpx51`** (16 shared vCPU, 32 GB) is
+  the default. **Prices (gross, `hcloud server-type describe`):** cpx51 in
+  ash **€0.45/h** (not the €0.09 an earlier note claimed); cpx62 (same 16
+  vCPU) in fsn1 €0.25/h; cx53 (16 vCPU) in fsn1 €0.056/h but often
+  `resource_unavailable`; ccx43 (16 dedicated) €0.52/h. cpx51 exists only in
+  ash/hil — for the EU pass `SERVER_TYPE=cpx62 LOCATION=fsn1` (verified
+  2026-08-30, the ash snapshot works there). For more throughput pass `WORKERS=N` (N boxes,
   one shard each). Worth a support ticket: a raised CCX limit — the sim is
   integer, single-threaded work and a shared vCPU delivers about half a
   dedicated core (measured: ~2× the Mac's per-game time).
@@ -139,10 +144,12 @@ four times (`Test Files 4 passed`), 4× the CPU.
 Run it under `nohup … &` from a tool call — it runs longer than any tool
 timeout. Watch `remote.log`; `results in …` means success.
 
-**Timing** (cpx51, 16 parallel, pre-rework runner): 120 × 20-min games ≈ 25
-min on one box. Per-game CPU is ~28 % lower since the rework, and `WORKERS=N`
-divides the wall time by ~N. A CMA-ES generation (10 configs × 30 games) is
-~15 min on `WORKERS=4` (≈ €0.25).
+**Timing** (cpx51): after the rework a 30-game shard of 20-min games finished
+in ~3 min (2 rounds of 16–24 parallel games, ~90 s each under load).
+`WORKERS=N` divides the wall time by ~N. A CMA-ES generation (10 configs ×
+30 games) is ~10 min on `WORKERS=3`. **Parallelism bench** (5-min games, 24
+games, one cpx51): JOBS=8 → 30 games/min, 16 → 42, 24 → 46; `sweep.sh`
+defaults to 1.5 × vCPUs.
 
 **Verify before you trust a sweep:**
 
@@ -201,11 +208,18 @@ vitest startup. What changed:
   render outputs, no game state (`tests/HeadlessConfig.test.ts`).
 - The sweep runs the harness with bare node instead of vitest.
 
-Together: **46.7 s → 33.8 s** (−28 %) for the same game. Left on the table:
-`nearbyEvery: 10` measured a further −16 % but it changes decisions (stale
-neighbour set for a second), so it is a default-off `PlaybookParams` flag
-until a 30-game A/B says it is harmless; the engine hot spots above are real
-game logic shared with production and are left alone.
+- `PlayerImpl.nearby()`/`shoreReachableNeighbors()` iterate the border with
+  `TileSet.forEach` instead of the `values()` generator (−5 %, exact).
+
+Together: **46.7 s → 32.8 s** (−30 %) for the same game. `nearbyEvery`
+(refresh the neighbour set every N ticks) was A/B-ed on 2026-08-30, 90
+Medium games: ne5 14 W / 15 L / 1 tie, ne10 14 W / 16 L vs base; fitness
+1.874 / 1.864 / 1.846; survival 29 / 29 / 30 — a wash, so the staleness is
+harmless. Bot CPU per game: 19.0 s → 7.7 s (ne5) → 5.3 s (ne10); bot share of
+the game 16 % → 7 %. Recommended default: `nearbyEvery: 10` (to be flipped
+in the C2 flag consolidation; it changes the golden hash). The remaining
+engine hot spots (nation AI, cluster flood-fill, pathfinding) are real game
+logic shared with production and are left alone.
 
 ## Output layout
 
