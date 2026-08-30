@@ -4,6 +4,9 @@
 import { Attack, Player, PlayerType, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { BotContext } from "./Context";
+import { RivalView, Rivals } from "./Rivals";
+
+export type Phase = "opening" | "consolidate" | "war" | "endgame";
 
 /** One evaluated picture of the game per tick; every rule reads this instead of re-deriving state. */
 export interface Situation {
@@ -12,10 +15,62 @@ export interface Situation {
   incoming: Attack[]; incomingBots: number; outgoing: Attack[]; tribeAttacks: number; boats: number;
   collapsed: Player[]; expiring: Player[]; hold: Player | null;
   share: number; threats: Player[]; mode: "grow" | "hold" | "push";
+  // B2: the phase of the game we are in and what we know about each non-bot neighbour (exposure only until C1)
+  phase: Phase;
+  rival: Map<Player, RivalView>;
 }
 
 export class SituationQueries {
-  constructor(private ctx: BotContext) {}
+  readonly rivals: Rivals;
+  constructor(private ctx: BotContext) {
+    this.rivals = new Rivals(ctx);
+  }
+
+  // ---------------------------------------------------------------- phase
+  private lastPhase: Phase | null = null;
+  private freeLandCache = { tick: -1e9, ok: true };
+  private rankCache = { tick: -1e9, endgame: false };
+  /** Fills `sit.phase` and `sit.rival`; the last step of readSituation. Logs every phase change. */
+  enrich(sit: Situation): void {
+    sit.rival = this.rivals.update(sit);
+    sit.phase = this.phase(sit);
+    if (sit.phase !== this.lastPhase) {
+      if (this.lastPhase !== null) this.ctx.log(`t${sit.tick} phase ${this.lastPhase} → ${sit.phase}`);
+      this.lastPhase = sit.phase;
+    }
+  }
+  /** opening while free land is reachable; endgame from 15000 or when top-3 and an unfriendly silo exists; war when a
+   *  war is affordable (Military.fight's test) or troops ≥ fightAbove·cap (fight() proceeds from there); else consolidate. */
+  private phase(sit: Situation): Phase {
+    const p = this.ctx.p;
+    if (sit.tick >= 15000 || this.endgameThreat(sit.tick)) return "endgame";
+    if (sit.wilderness || this.freeLandReachable(sit.tick)) return "opening";
+    const affordable = sit.tick >= p.fightNotBeforeTick && sit.rivals.some((r) => r.troops() * p.fightRatio + 1000 <= sit.spendable * p.fightMaxShare);
+    if (affordable || sit.troops >= sit.cap * p.fightAbove) return "war";
+    return "consolidate";
+  }
+  /** Unowned, fallout-free land on our own landmass (flood fill capped at 4000 tiles, refreshed every 100 ticks). */
+  private freeLandReachable(tick: number): boolean {
+    if (tick - this.freeLandCache.tick < 100) return this.freeLandCache.ok;
+    const mg = this.ctx.mg;
+    let ok = false;
+    for (const t of this.landmassTiles(4000)) { if (!mg.hasOwner(t) && !mg.hasFallout(t)) { ok = true; break; } }
+    this.freeLandCache = { tick, ok };
+    return ok;
+  }
+  /** rank ≤ 3 by land among non-bots and an unfriendly, living non-bot owns a missile silo (refreshed every 100 ticks). */
+  private endgameThreat(tick: number): boolean {
+    if (tick - this.rankCache.tick < 100) return this.rankCache.endgame;
+    const me = this.ctx.me;
+    let above = 0, silo = false;
+    for (const o of this.ctx.mg.players()) {
+      if (o === me || !o.isAlive() || o.type() === PlayerType.Bot) continue;
+      if (o.numTilesOwned() > me.numTilesOwned()) above++;
+      if (!silo && !me.isFriendly(o) && o.units(UnitType.MissileSilo).length > 0) silo = true;
+    }
+    this.rankCache = { tick, endgame: above < 3 && silo };
+    return this.rankCache.endgame;
+  }
 
   // ---------------------------------------------------------------- helpers
   neighbours(): { bots: Player[]; rivals: Player[]; friends: Player[]; wilderness: boolean } {
