@@ -540,9 +540,11 @@ export class PlayerImpl implements Player {
         }
       }
     };
-    for (const border of this.borderTiles()) {
+    // forEach, not for..of: TileSet.values() is a generator and border sets are
+    // huge (this loop was a quarter of a headless bot game).
+    this.borderTiles().forEach((border) => {
       map.forEachNeighbor(border, visit);
-    }
+    });
     for (const n of this.shoreReachableNeighbors()) {
       ns.add(n);
     }
@@ -557,10 +559,11 @@ export class PlayerImpl implements Player {
     const map = this.mg.map();
 
     let shoreIdx = 0;
-    for (const border of this.borderTiles()) {
-      if (!map.isShore(border)) continue;
+    const smallID = this.smallID();
+    this.borderTiles().forEach((border) => {
+      if (!map.isShore(border)) return;
       // Visit every 10th shore tile.
-      if (shoreIdx++ % 10 !== 0) continue;
+      if (shoreIdx++ % 10 !== 0) return;
 
       const bx = map.x(border);
       const by = map.y(border);
@@ -583,13 +586,13 @@ export class PlayerImpl implements Player {
         if (map.isImpassable(tile)) continue;
         if (!map.hasOwner(tile) && map.hasFallout(tile)) continue;
         const owner = map.ownerID(tile);
-        if (owner !== this.smallID()) {
+        if (owner !== smallID) {
           ns.add(
             this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
           );
         }
       }
-    }
+    });
 
     return ns;
   }
