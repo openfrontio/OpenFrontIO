@@ -124,8 +124,15 @@ export class PlaybookBotExecution implements Execution {
     if (this.sit.mode !== this.lastMode) { if (this.log.length < 2000) this.log.push(`t${t} FINISH mode ${this.lastMode} → ${this.sit.mode}: share ${(this.sit.share * 100).toFixed(0)} %, ${this.sit.threats.length} MIRV-capable rivals${this.sit.threats.length ? " (" + this.sit.threats.map((x) => x.name()).join(", ") + ")" : ""}`); this.lastMode = this.sit.mode; }
     // A Hard nation renews only if we look as strong as it at expiry: 45 s before an alliance with a stronger
     // neighbour lapses, the army stays home so the check sees all of it.
-    this.sit.hold = this.sit.expiring.find((o) => o.type() === PlayerType.Nation && o.troops() > troops * 0.85) ?? null;
-    this.q.enrich(this.sit); // B2: phase + per-rival view (exposure only)
+    // C1 (`nationAware`): hold only for a nation whose own attack rules would let it hit us at expiry
+    this.sit.hold = this.sit.expiring.find((o) => o.type() === PlayerType.Nation && (this.p.nationAware ? this.q.rivals.couldAttackAtExpiry(o, troops).can : o.troops() > troops * 0.85)) ?? null;
+    this.q.enrichRivals(this.sit); // B2: per-rival view
+    if (this.p.bsrReserve) {
+      // C1: the reserve follows the border threat (SituationQueries.reserveFactor documents the curve)
+      this.sit.reserve = troops * this.p.reserveShare * SituationQueries.reserveFactor(this.sit);
+      this.sit.spendable = Math.max(0, troops - this.sit.reserve);
+    }
+    this.q.enrichPhase(this.sit); // B2: phase (reads spendable, so after the reserve)
   }
   /** The one place troops leave home. Never below the reserve; returns what was actually sent (0 = nothing). */
   private send(targetID: string | null, n: number, why: string, min = 500, capFloor = 0): number {

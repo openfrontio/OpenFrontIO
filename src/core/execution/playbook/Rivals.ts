@@ -195,7 +195,7 @@ export class Rivals {
   // ---------------------------------------------------------------- nation rules (AiAttackBehavior re-implemented)
   /** troopSendCap for `p` (AiAttackBehavior.ts:903-949): Infinity unless Hard/Impossible FFA, where it is
    *  troops − ceil(retain × strongest unfriendly non-bot neighbour's troops), raised to the incoming total if under attack. */
-  troopSendCap(p: Player): number {
+  troopSendCap(p: Player, asIfUnallied = false): number {
     const mg = this.ctx.mg;
     if (p.type() === PlayerType.Bot) return Infinity;
     if (mg.config().gameConfig().gameMode === GameMode.Team) return Infinity;
@@ -203,7 +203,8 @@ export class Rivals {
     if (retain === undefined) return Infinity;
     let maxNeighborTroops = 0;
     for (const n of p.nearby()) {
-      if (n.isPlayer() && !p.isFriendly(n) && n.type() !== PlayerType.Bot && n.troops() > maxNeighborTroops) maxNeighborTroops = n.troops();
+      // asIfUnallied: we are read as the unfriendly neighbour we become once the alliance lapses
+      if (n.isPlayer() && (!p.isFriendly(n) || (asIfUnallied && n === this.ctx.me)) && n.type() !== PlayerType.Bot && n.troops() > maxNeighborTroops) maxNeighborTroops = n.troops();
     }
     let cap = maxNeighborTroops === 0 ? Infinity : Math.max(0, p.troops() - Math.ceil(maxNeighborTroops * retain));
     const incoming = p.incomingAttacks();
@@ -213,11 +214,11 @@ export class Rivals {
   /** Troops a land attack from `p` on us would carry (AiAttackBehavior.ts:951-1006): troops − maxTroops × reserveRatio,
    *  capped by troopSendCap. reserveRatio is per-nation random in [0.30, 0.40] (NationExecution.ts:58); the lower bound
    *  is used, so this is the most it could send. 0 when the rules would return null (< 1 troop or too weak). */
-  nationWouldSend(p: Player): number {
+  nationWouldSend(p: Player, asIfUnallied = false): number {
     const mg = this.ctx.mg;
     const maxTroops = mg.config().maxTroops(p);
     let troops = p.troops() - maxTroops * NATION_RULES.reserveRatio[0];
-    troops = Math.min(troops, this.troopSendCap(p));
+    troops = Math.min(troops, this.troopSendCap(p, asIfUnallied));
     if (troops < 1) return 0;
     if (this.isAttackTooWeak(p, troops)) return 0;
     return troops;
@@ -236,6 +237,13 @@ export class Rivals {
    *  pick a live, non-traitor neighbour also guard on troops: `weakest` needs ours < theirs (AiAttackBehavior.ts:342),
    *  `hated` (a Hostile relation) allows up to 3× theirs (line 323). Trigger ratio (line 247) is a 1-in-10 dice roll
    *  below it, so not a gate; `retaliate` (line 267) bypasses all of this once we attack them. */
+  /** C1 (`nationAware`): would this ally's nation rules let it attack us the moment the alliance lapses, given our
+   *  troops now? The same checks as the RivalView fields, with us counted as the unfriendly neighbour we become. */
+  couldAttackAtExpiry(p: Player, ourTroops: number): { can: boolean; send: number } {
+    if (p.type() !== PlayerType.Nation) return { can: false, send: 0 };
+    const send = this.nationWouldSend(p, true);
+    return { can: this.nationCanAttack(p, send, ourTroops), send };
+  }
   nationCanAttack(p: Player, wouldSend: number, ourTroops: number): boolean {
     if (p.type() !== PlayerType.Nation || !p.isAlive()) return false;
     const mg = this.ctx.mg;

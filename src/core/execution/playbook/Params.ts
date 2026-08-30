@@ -49,6 +49,10 @@ export interface PlaybookParams {
   realRetreats: boolean; // schedule a RetreatExecution when retreating (A1 finding: Player.orderRetreat() only flags the wave; without the execution it never comes home, stays in outgoingAttacks() and blocks that target)
   portWithoutPartnerTick: number; // first port on any ocean coast from this tick even with no partner (1e9 = never)
   scoredSpend: boolean; // B3: Economy.build() scores every purchase (return over the phase horizon / cost, Spend.ts) and buys the best affordable one after one escrow list; off = the hand-ordered steps
+  bsrReserve: boolean; // C1: the troop reserve scales with the largest border-security ratio among unfriendly neighbours — reserveShare × clamp(0.5 + 0.5·maxBsr, 0.5, 2.0), so reserveShare is the value at bsr 1; off = flat reserveShare
+  trustWars: boolean; // C1: fight() skips a target whose living ally on our border could pile in (nationCanAttack with nationWouldSend ≥ half our spendable) and prefers low-trust targets (+2 × (1 − trust)); off = the plain scorer
+  nationAware: boolean; // C1: the expiry hold and the renewal gift use the nation attack rules (Rivals.couldAttackAtExpiry) instead of the 0.85× / 0.9× troop heuristics
+  phaseGates: boolean; // C1: the tick literals in the rules (25:00 endgame, 15:00 late game, 5:00 wars/silos, 2:30–3:00 rail) read sit.phase instead; Spend.horizon comes from the phase
 }
 
 export const DEFAULT_PLAYBOOK: PlaybookParams = {
@@ -100,4 +104,8 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   realRetreats: false, // default off until the 30-game A/B; on = frozen waves finally return (see the interface comment)
   portWithoutPartnerTick: 1500,
   scoredSpend: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B3)
+  bsrReserve: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md C1)
+  trustWars: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md C1)
+  nationAware: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md C1)
+  phaseGates: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md C1)
 };
