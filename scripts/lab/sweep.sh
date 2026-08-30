@@ -38,6 +38,8 @@ tr '\n' '\0' < "$jobs_file" | xargs -0 -P "$JOBS" -I{} bash -c '
   case $batch in
     hard[0-9]) benv="SPAWNRANK=${batch#hard}";;
     med[0-9]) benv="DIFF=medium SPAWNRANK=${batch#med}";;
+    g[0-9]) benv="GLOBAL=1 DIFF=medium SPAWNRANK=${batch#g}";;      # global picker ranks 6k..6k+5 (Medium)
+    gh[0-9]) benv="GLOBAL=1 SPAWNRANK=${batch#gh}";;                # same on Hard
     *) echo "unknown batch $batch"; exit 1;;
   esac
   if env $benv PARAMS="$params" MIN="$MINUTES" SPAWN="$sp" LAB_OUT="$OUT"        OUTFILE="p_${name}_${batch}_${sp}.txt" TAG="${name}_${batch}"        npx vitest tests/lab/playbook.lab.test.ts --run > /dev/null 2>&1

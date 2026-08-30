@@ -58,12 +58,16 @@ async function makeWorld(difficulty: Difficulty, bots: number) {
 let spawnNote = "";
 function pickSpawn(game: Game, _nations: Nation[], prefer: [number, number], _minDist: number): TileRef {
   // SPAWNRANK=k takes the k-th best spot in the region (each pick excludes a 120-tile circle around the earlier ones)
-  const rank = Number(process.env.SPAWNRANK ?? 0);
+  // GLOBAL=1: ignore the region and take the picker's k-th choice on the whole map, k = SPAWNRANK*6 + region index
+  // (so a 5-batch x 6-region sweep walks global ranks 0..29 — the list the real bot picks from)
+  const global = process.env.GLOBAL === "1";
+  const regionIdx = ["north-russia", "north-america", "east-asia", "africa", "south-america", "australia"].indexOf(process.env.SPAWN ?? "");
+  const rank = global ? Number(process.env.SPAWNRANK ?? 0) * 6 + Math.max(0, regionIdx) : Number(process.env.SPAWNRANK ?? 0);
   const exclude: [number, number][] = [];
   let t: TileRef | null = null;
-  for (let i = 0; i <= rank; i++) { t = PlaybookBotExecution.pickSpawn(game, prefer, exclude); if (t === null) break; exclude.push([game.x(t), game.y(t)]); }
+  for (let i = 0; i <= rank; i++) { t = PlaybookBotExecution.pickSpawn(game, global ? undefined : prefer, exclude); if (t === null) break; exclude.push([game.x(t), game.y(t)]); }
   if (t === null) throw new Error("no spawn near " + prefer);
-  spawnNote = `bot picker rank ${rank}`;
+  spawnNote = global ? `global rank ${rank}` : `bot picker rank ${rank}`;
   return t;
 }
 function neighboursBots(me: Player): string { return me.nearby().filter((n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot).map((b) => Math.round(b.troops() / 1000) + "k/" + b.numTilesOwned() + "t").join(" ") || "-"; }
@@ -122,7 +126,7 @@ describe("playbook lab", () => {
     const params: PlaybookParams = { ...DEFAULT_PLAYBOOK };
     if (process.env.EXPAND) { params.expandContested = Number(process.env.EXPAND); params.expandFree = Number(process.env.EXPAND) / 2; }
     if (process.env.EVERY) params.expandEvery = Number(process.env.EVERY);
-    if (process.env.PARAMS) { const o = JSON.parse(process.env.PARAMS); Object.assign(params, o); if (o.spawnInland !== undefined) DEFAULT_PLAYBOOK.spawnInland = o.spawnInland; }
+    if (process.env.PARAMS) { const o = JSON.parse(process.env.PARAMS); Object.assign(params, o); if (o.spawnInland !== undefined) DEFAULT_PLAYBOOK.spawnInland = o.spawnInland; if (o.spawnBasin !== undefined) DEFAULT_PLAYBOOK.spawnBasin = o.spawnBasin; }
     if (process.env.ALLIN) params.openingAllIn = process.env.ALLIN === "1";
     if (process.env.KEEP) params.openingKeep = Number(process.env.KEEP);
     const minutes = process.env.MIN ? Number(process.env.MIN) : 20;

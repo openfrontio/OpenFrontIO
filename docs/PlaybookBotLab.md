@@ -198,6 +198,27 @@ hcloud server delete openfront-lab
 
 Josh wants to be told before a delete. A forgotten cpx51 costs ~€2/day.
 
+## Spawn picker: what the data says (2026-08-30)
+
+`tests/lab/spawnfeat.lab.test.ts` dumps the picker's features for a list of
+coordinates (`SPAWNS="x,y;x,y" LAB_OUT=dir OUTFILE=f.json`); joined with 288
+Medium 20-min games over 67 spawns (`lab-out/outcomes.json`):
+
+- No feature correlates linearly with land (all |ρ| ≤ 0.17); the picker's own
+  score scored ρ = +0.04. A soft basin slope (`pk1`) changed 3/30 picks and
+  nothing else.
+- Thresholds do separate: land-connected basin within 120 tiles < 3k → median
+  15k tiles vs 64k (vetoed); < 6k → 33k (−6). Nations within 300 ≥ 12 → 33k vs
+  59k (−4), ≥ 16 (−8), ≥ 20 → 2k (vetoed). Tribes within 150 ≥ 15 → 71k vs 48k
+  (existing +3/tribe term). Sandwich term: no effect.
+- Spawn identity explains most variance (between-spawn sd 0.92 of 1.21), but
+  through which nations are adjacent and how they behave, not geometry — so
+  don't expect a static scorer to rank the top 20 correctly on Medium.
+- Use the global ladder (`BATCHES="g0 g1 g2 g3 g4"`) to test a picker change:
+  it walks the picker's own ranks 0–29. **Beware confounds**: a ladder run
+  after any other bot commit is not comparable to one run before it (pk0 vs
+  pk2 was confounded this way).
+
 ## History of the tribe-timing question (for context)
 
 `botsAfterWild` = don't eat tribes while wilderness borders you unless the

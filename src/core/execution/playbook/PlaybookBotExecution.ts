@@ -722,7 +722,7 @@ export class PlaybookBotExecution implements Execution {
           score += room / 20; // free land within 50 tiles: a pocket between two nations has little
           let left = false, right = false, up = false, down = false;
           for (const n of nations) { const d = Math.abs(game.x(n) - x) + Math.abs(game.y(n) - y); if (d > 260) continue; if (game.x(n) < x - 60) left = true; if (game.x(n) > x + 60) right = true; if (game.y(n) < y - 60) up = true; if (game.y(n) > y + 60) down = true; }
-          // (no sandwich term: 67-spawn regression found no effect, 59k vs 57k median)
+          if ((left && right) || (up && down)) score -= 5; // sandwiched (67-spawn regression: no measurable effect either way; kept for continuity)
           if (prefer) score -= Math.hypot(x - prefer[0], y - prefer[1]) / 60;
           if (score > bestS) { bestS = score; best = t; }
           if (DEFAULT_PLAYBOOK.spawnBasin) cands.push([score, t]);
@@ -731,13 +731,13 @@ export class PlaybookBotExecution implements Execution {
       if (best !== null && DEFAULT_PLAYBOOK.spawnBasin) {
         // second pass: the cheap score cannot tell an isthmus or island from open country. For the best 60
         // candidates, flood-fill unowned land reachable within 120 tiles. 67-spawn regression (Medium, 20 min):
-        // basin < 3k = 15k median land vs 64k, < 6k = 33k. Steps, not a slope: a slope never reordered the top.
+        // basin < 3k = 15k median land vs 64k (vetoed), < 6k = 33k (-6). Steps, not a slope: a slope (pk1) never reordered the top.
         cands.sort((a, b) => b[0] - a[0]);
         bestS = -1e9; best = null;
         for (const [s0, t] of cands.slice(0, 60)) {
           const basin = PlaybookBotExecution.basin(game, t, 120, 12000);
           if (basin < 3000) continue;
-          const s1 = s0 - (basin < 6000 ? 6 : basin < 9000 ? 3 : 0);
+          const s1 = s0 - (basin < 6000 ? 6 : 0);
           if (s1 > bestS) { bestS = s1; best = t; }
         }
       }
