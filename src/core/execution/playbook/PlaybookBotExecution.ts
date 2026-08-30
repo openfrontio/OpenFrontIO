@@ -111,7 +111,7 @@ export class PlaybookBotExecution implements Execution {
       collapsed: nb.rivals.filter((r) => this.military.collapsed(r)),
       expiring: me.alliances().filter((al) => al.expiresAt() - t < 450).map((al) => al.other(me)),
       hold: null,
-      share: 0, threats: [], mode: "grow",
+      share: 0, threats: [], mode: "grow", phase: "opening", rival: new Map(),
     };
     // the finish: nations MIRV anyone over 65 % of the map on Medium (55 % Hard), allies included. Under that line
     // while a rival can still fire; remove the rivals; then push for the win.
@@ -125,6 +125,7 @@ export class PlaybookBotExecution implements Execution {
     // A Hard nation renews only if we look as strong as it at expiry: 45 s before an alliance with a stronger
     // neighbour lapses, the army stays home so the check sees all of it.
     this.sit.hold = this.sit.expiring.find((o) => o.type() === PlayerType.Nation && o.troops() > troops * 0.85) ?? null;
+    this.q.enrich(this.sit); // B2: phase + per-rival view (exposure only)
   }
   /** The one place troops leave home. Never below the reserve; returns what was actually sent (0 = nothing). */
   private send(targetID: string | null, n: number, why: string, min = 500, capFloor = 0): number {
@@ -156,6 +157,7 @@ export class PlaybookBotExecution implements Execution {
     for (const p of this.prevAllies) {
       if (allies.has(p) || !p.isAlive()) continue;
       this.diplomacy.onAllianceEnded(p);
+      this.q.rivals.onAllianceEnded(p);
     }
     this.prevAllies = allies;
     const inc = new Set(this.sit.incoming.map((a) => a.attacker().id()));

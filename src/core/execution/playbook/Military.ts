@@ -1,12 +1,19 @@
 // Military: expansion, tribe harvesting, counter-attacks, wars and retreats, boats, bombs, MIRV, split watch.
 
-import { Player, PlayerType, UnitType } from "../../game/Game";
+import { Attack, Player, PlayerType, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { ConstructionExecution } from "../ConstructionExecution";
 import { MirvExecution } from "../MIRVExecution";
+import { RetreatExecution } from "../RetreatExecution";
 import { calculateTerritoryCenter } from "../Util";
 import { BotContext } from "./Context";
+import { AttackEstimate, estimateAttack } from "./Estimate";
 import { SituationQueries } from "./Situation";
+
+const SIM_HORIZON = 3000; // simWars: a war that has not resolved in 5 minutes is judged on where it stands then
+const SIM_MARGIN = 0.2; // simWars: the wave must end with this share of itself still standing
+const SIM_OPPORTUNITY_LOSS_PER_TILE = 150; // simWars: even a collapsed / gap-owner / threat target is not worth more than this per tile
+interface SimPick { troops: number; est: AttackEstimate; tilesPerLoss: number; value: number }
 
 export class Military {
   private currentTarget_: Player | null = null;
@@ -334,6 +341,32 @@ export class Military {
       return ratio * 2 + buildings + Math.min(this.q.density(r), 200) / 50 - posts * 3 - sizePenalty * 2 + bonus + (r === this.currentTarget_ ? 3 : 0);
     };
     let best: Player | null = null, bestS = 0;
+    if (this.ctx.p.simWars) {
+      // B1: the estimator picks the target and the size. For each candidate the smallest wave (1k steps) that wins
+      // with a margin is found by bisection; the candidate with the most tiles per troop lost wins, keeping the
+      // opportunity bonuses (collapsed / gap owner / planned target) of the heuristic scorer.
+      let bestSim: { r: Player; sim: SimPick } | null = null;
+      for (const r of candidates) {
+        const sim = this.simPick(r, maxSend, gapOwner, threatHere);
+        if (sim === null) continue;
+        const value = sim.tilesPerLoss * 100 + (this.collapsed(r) ? 20 : 0) + (r === gapOwner ? 30 : 0) + (r === threatHere ? 25 : 0) + (r === this.plannedTarget() ? 4 : 0) + (r === this.currentTarget_ ? 3 : 0) + (r.isTraitor() ? 2 : 0);
+        if (bestSim === null || value > bestSim.sim.value) { sim.value = value; bestSim = { r, sim }; }
+      }
+      if (bestSim !== null) {
+        const { r, sim } = bestSim;
+        this.currentTarget_ = r;
+        if (!me.hasEmbargoAgainst(r) && r.type() !== PlayerType.Nation) { me.addEmbargo(r, false); this.embargoedAt_.set(r, this.ctx.mg.ticks()); }
+        const want = this.ctx.send(r.id(), sim.troops, "war", 1000, 0.3);
+        if (want === 0) return;
+        this.lastWarTick = this.ctx.mg.ticks();
+        this.noteSent(r);
+        this.simCache.clear();
+        this.ctx.log(`t${this.ctx.mg.ticks()} ATTACK ${r.name()} ${r.numTilesOwned()}t/${Math.round(r.troops() / 1000)}k ← ${Math.round(want / 1000)}k (${(want / Math.max(1, r.troops())).toFixed(2)}×) sim: ${sim.est.tilesTaken}t for ${Math.round(sim.est.attackerLoss / 1000)}k in ${sim.est.ticks} ticks${sim.est.wins ? "" : ", still going at the horizon"}`);
+      } else if (atCapNow && this.ctx.mg.ticks() % 1200 < this.ctx.p.expandEvery) {
+        this.ctx.log(`t${this.ctx.mg.ticks()} idle at cap (sim): ${rivals.map((r) => `${r.name()} ${r.numTilesOwned()}t/${Math.round(r.troops() / 1000)}k p${r.units(UnitType.DefensePost).length} ${candidates.includes(r) ? "" : "(no)"}`).join("; ")}`);
+      }
+      return;
+    }
     for (const r of candidates) { const sc = score(r); if (sc > bestS) { bestS = sc; best = r; } }
     if (best === null) {
       if (atCapNow && this.ctx.mg.ticks() % 1200 < this.ctx.p.expandEvery) this.ctx.log(`t${this.ctx.mg.ticks()} idle at cap: ${rivals.map((r) => `${r.name()} ${r.numTilesOwned()}t/${Math.round(r.troops() / 1000)}k d${Math.round(this.q.density(r))} p${r.units(UnitType.DefensePost).length} ${candidates.includes(r) ? "" : "(no)"}`).join("; ")}`);
@@ -351,6 +384,50 @@ export class Military {
     this.ctx.log(`t${this.ctx.mg.ticks()} ATTACK ${best.name()} ${best.numTilesOwned()}t/${Math.round(best.troops() / 1000)}k ← ${Math.round(want / 1000)}k (${(want / Math.max(1, best.troops())).toFixed(2)}×)`);
   }
 
+  // ---------------------------------------------------------------- simulated wars (simWars)
+  private simCache = new Map<Player, { tick: number; pick: SimPick | null }>();
+  private simRetreatAt = new Map<string, number>();
+  /** Free land costs mag/5 = 16–24 troops a tile; a war is only worth it while free land remains if it is not much
+   *  dearer. Once the wilderness is gone the bar is a troop-sink guard only. */
+  private simMaxLossPerTile(): number { return this.ctx.sit.wilderness ? 20 : 60; }
+  /** Smallest wave (1k steps, at most maxSend) whose estimate wins — or is still winning at the horizon — with a
+   *  fifth of itself to spare (the estimate ignores the defender's allies and later posts), and takes tiles cheaply
+   *  enough. Cached 50 ticks per candidate. */
+  private simPick(r: Player, maxSend: number, gapOwner: Player | null, threatHere: Player | null): SimPick | null {
+    const now = this.ctx.mg.ticks();
+    const c = this.simCache.get(r);
+    if (c && now - c.tick < 50) return c.pick;
+    const opportunity = r === gapOwner || r === threatHere || (this.collapsed(r) && r.troops() < this.ctx.sit.troops * 0.5);
+    const ok = (est: AttackEstimate, n: number) => est.tilesTaken > 0 && (est.wins || est.ticks >= SIM_HORIZON) && est.troopsLeft >= n * SIM_MARGIN;
+    let pick: SimPick | null = null;
+    const hiK = Math.floor(maxSend / 1000);
+    if (hiK >= 1) {
+      const run = (k: number) => estimateAttack(this.ctx.mg, this.ctx.me, r, k * 1000, { horizonTicks: SIM_HORIZON, stopBelow: k * 1000 * SIM_MARGIN });
+      let bestEst = run(hiK);
+      if (ok(bestEst, hiK * 1000)) {
+        let lo = 1, high = hiK; // invariant: high is ok
+        while (lo < high) {
+          const mid = Math.floor((lo + high) / 2);
+          const e = run(mid);
+          if (ok(e, mid * 1000)) { high = mid; bestEst = e; } else lo = mid + 1;
+        }
+        const perTile = bestEst.attackerLoss / Math.max(1, bestEst.tilesTaken);
+        if (perTile <= (opportunity ? SIM_OPPORTUNITY_LOSS_PER_TILE : this.simMaxLossPerTile())) pick = { troops: high * 1000, est: bestEst, tilesPerLoss: bestEst.tilesTaken / Math.max(1, bestEst.attackerLoss), value: 0 };
+      }
+    }
+    this.simCache.set(r, { tick: now, pick });
+    return pick;
+  }
+
+  /** Bring a wave home. Player.orderRetreat() only flags the attack; the troops return when a RetreatExecution
+   *  runs executeRetreat() 20 ticks later — with `realRetreats` on we schedule that execution (once: a wave
+   *  already flagged is skipped), off keeps the flag-only call (A1 finding: such waves freeze forever). */
+  retreat(a: Attack): void {
+    if (!this.ctx.p.realRetreats) { this.ctx.me.orderRetreat(a.id()); return; }
+    if (a.retreating() || a.retreated()) return;
+    this.ctx.mg.addExecution(new RetreatExecution(this.ctx.me, a.id()));
+  }
+
   private attackStart = new Map<string, { sent: number; targetTroops: number }>();
   private counters = new Set<Player>();
   manageRetreats(): void {
@@ -361,18 +438,31 @@ export class Military {
       if (a.retreating() || a.retreated()) continue;
       // a counter-attack exists to cancel a wave; once the wave is gone, bring the rest home rather than dying in their land
       if (this.counters.has(t) && t !== this.currentTarget_ && !me.incomingAttacks().some((x) => x.attacker() === t)) {
-        me.orderRetreat(a.id());
+        this.retreat(a);
         this.counters.delete(t);
         this.ctx.log(`t${this.ctx.mg.ticks()} counter done vs ${t.name()}, ${Math.round(a.troops() / 1000)}k coming home`);
         continue;
       }
       let st = this.attackStart.get(a.id());
       if (!st) { st = { sent: a.troops(), targetTroops: t.troops() }; this.attackStart.set(a.id(), st); }
+      if (this.ctx.p.simWars) {
+        // B1: every 100 ticks, re-run the estimate with what the wave has left; come home when it no longer wins
+        const last = this.simRetreatAt.get(a.id()) ?? this.ctx.mg.ticks();
+        if (!this.simRetreatAt.has(a.id())) this.simRetreatAt.set(a.id(), last);
+        if (this.ctx.mg.ticks() - last < 100) continue;
+        this.simRetreatAt.set(a.id(), this.ctx.mg.ticks());
+        const est = estimateAttack(this.ctx.mg, me, t, a.troops(), { horizonTicks: 600, stopBelow: 1 });
+        if (!est.wins && !(est.ticks >= 600 && est.tilesTaken > 0 && est.troopsLeft >= a.troops() * 0.5)) {
+          this.retreat(a);
+          this.ctx.log(`t${this.ctx.mg.ticks()} retreat from ${t.name()} (${Math.round(a.troops() / 1000)}k left; sim: ${est.tilesTaken}t, ${Math.round(est.troopsLeft / 1000)}k left after ${est.ticks} ticks)`);
+        }
+        continue;
+      }
       // Retreat only when we are losing: most of the wave is gone while the target has barely bled.
       const losing = a.troops() < st.sent * 0.2 && t.troops() > st.targetTroops * 0.7;
       const posts = t.units(UnitType.DefensePost).length > 0 && a.troops() < st.sent * 0.5 && t.troops() > st.targetTroops * 0.9;
       if (losing || posts) {
-        this.ctx.me.orderRetreat(a.id());
+        this.retreat(a);
         this.ctx.log(`t${this.ctx.mg.ticks()} retreat from ${t.name()} (${Math.round(a.troops() / 1000)}k left)`);
       }
     }

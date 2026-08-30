@@ -8,6 +8,8 @@ import { closestTile } from "../Util";
 import { BotContext } from "./Context";
 import { Military } from "./Military";
 import { SituationQueries } from "./Situation";
+import * as Spend from "./Spend";
+import { Candidate, Escrow } from "./Spend";
 
 export class Economy {
   private rail: { factory: Unit | null; anchor: Unit | null; infilled: number; extended: boolean; failed: number } = { factory: null, anchor: null, infilled: 0, extended: false, failed: 0 };
@@ -165,6 +167,7 @@ export class Economy {
 
   // ---------------------------------------------------------------- buildings
   build(ticks: number): void {
+    if (this.ctx.p.scoredSpend) { this.buildScored(ticks); return; }
     const me = this.ctx.me;
     const cost = (u: UnitType) => this.ctx.mg.config().unitInfo(u).cost(this.ctx.mg, me);
     const gold = me.gold();
@@ -289,6 +292,186 @@ export class Economy {
       const tile = cityCapHit ? null : this.interiorTile(UnitType.City);
       if (tile !== null && this.tryBuild(UnitType.City, tile)) return;
     }
+  }
+  // ---------------------------------------------------------------- scored spending (scoredSpend, plan B3)
+  private lastSpendLog = -1e9;
+  /** The escrow list of the last scored pass (kept for tests and the lab viewer). */
+  escrow: Escrow[] = [];
+  /** The ranked candidates of the last scored pass (kept for tests and the lab viewer). */
+  candidates: Candidate[] = [];
+
+  /** Hard overrides (a post where an attack lands, a first SAM under an enemy silo) → candidates → one escrow →
+   *  buy the best affordable candidate with value >= 1. Every number in the candidates comes from Spend.ts. */
+  private buildScored(ticks: number): void {
+    const me = this.ctx.me, mg = this.ctx.mg, cfg = mg.config(), p = this.ctx.p;
+    const cost = (u: UnitType) => cfg.unitInfo(u).cost(mg, me);
+    const buildTicks = (u: UnitType) => cfg.unitInfo(u).constructionDuration ?? 0;
+    const gold = me.gold();
+    const cities = me.unitsOwned(UnitType.City); // levels
+    const cityUnits = me.units(UnitType.City);
+    const ports = me.units(UnitType.Port);
+    const portLevels = me.unitsOwned(UnitType.Port);
+    const cap = this.q.cap();
+    const capShare = cap > 0 ? me.troops() / cap : 0;
+    const capFull = me.troops() > cap * p.capFullShare;
+    const { rivals, friends } = this.q.neighbours();
+    const cityCapHit = cityUnits.length >= this.cityUnitCap();
+    const myRank = ticks >= 9000 ? this.rank() : 99;
+    const H = Spend.horizon(ticks);
+    const upgrade = (u: Unit) => { mg.addExecution(new UpgradeStructureExecution(me, u.id())); this.ctx.log(`t${ticks} level ${u.type()} → ${u.level() + 1}`); };
+    const enemySilos = mg.players().some((o) => o !== me && !me.isFriendly(o) && o.type() !== PlayerType.Bot && o.units(UnitType.MissileSilo).length > 0);
+    const sams = me.units(UnitType.SAMLauncher);
+    const silos = me.units(UnitType.MissileSilo);
+    const idleAtCap = capFull && me.troops() > cap * 0.9 && me.outgoingAttacks().length === 0;
+
+    // 1. hard overrides, today's exact conditions: a post where a non-bot attack lands
+    const incoming = me.incomingAttacks().find((a) => a.attacker().type() !== PlayerType.Bot);
+    if (incoming && gold >= cost(UnitType.DefensePost) && me.unitsOwned(UnitType.DefensePost) < 8) {
+      const tile = this.defensePostTile(incoming.attacker());
+      if (tile !== null && this.tryBuild(UnitType.DefensePost, tile)) return;
+    }
+    // ... and the first SAM once an unfriendly silo exists
+    if (enemySilos && sams.length === 0 && gold >= cost(UnitType.SAMLauncher) && ticks - this.lastSamTick >= 400) {
+      const tile = this.interiorTile(UnitType.SAMLauncher);
+      if (tile !== null && this.tryBuild(UnitType.SAMLauncher, tile)) { this.lastSamTick = ticks; return; }
+    }
+
+    // 2. escrow: one list, subtracted once. MIRV fund (top three from 20:00 with a silo, while the price is a plan
+    //    and troops are not starving), silo savings (while a silo scores >= 1), bomb money (with a silo: 1M at war
+    //    or idle at cap, else the bombReserve param so a bomb never empties the purse).
+    const escrow: Escrow[] = [];
+    const mirvPriceNow = cfg.unitInfo(UnitType.MIRV).cost(mg, me);
+    if (ticks >= 12000 && myRank <= 3 && silos.length > 0 && me.units(UnitType.MIRV).length === 0 && me.troops() >= cap * 0.4 && mirvPriceNow <= 40_000_000n) escrow.push({ purpose: "mirv", amount: mirvPriceNow, until: 1e9 });
+    const siloTarget = cityUnits.length >= 25 ? 3 : cityUnits.length >= 14 ? 2 : 1;
+    const siloIn: Spend.SiloInputs = { enemySilos, rank: myRank, idleAtCap, cityUnits: cityUnits.length, economy: portLevels >= 1 || me.unitsOwned(UnitType.Factory) > 0, tick: ticks };
+    const siloRet = silos.length < siloTarget ? Spend.siloReturn(siloIn, H) : 0;
+    const siloCost = cost(UnitType.MissileSilo);
+    if (Spend.valueOf(siloRet, siloCost) >= 1) escrow.push({ purpose: "silo", amount: siloCost + 400_000n, until: ticks + 600 });
+    const atWar = (this.military.currentTarget !== null && this.military.currentTarget.isAlive() && !me.isFriendly(this.military.currentTarget)) || me.incomingAttacks().some((a) => a.attacker().type() !== PlayerType.Bot);
+    if (silos.length > 0) escrow.push({ purpose: "bomb", amount: atWar || idleAtCap ? 1_000_000n : BigInt(p.bombReserve), until: ticks + p.bombEvery });
+    this.escrow = escrow;
+    const avail = Spend.available(gold, escrow);
+
+    // 3. candidates. Tiles are only searched for candidates we could pay for this pass.
+    const cands: Candidate[] = [];
+    const affordable = (c: bigint, exempt?: string) => Spend.available(gold, escrow, exempt) >= c;
+    const shipGold = Number(cfg.tradeShipGold(500, me)); // a typical lane on World
+    const mapShips = mg.unitCount(UnitType.TradeShip);
+    const partnerTile = cities >= p.citiesBeforePort ? this.portTile() : null;
+    const portIn: Spend.PortInputs = { shipGold, mapShips, seaFullShips: p.seaFullShips, ownLevels: portLevels, partner: partnerTile !== null || ports.length > 0 };
+    const tradePerTick = portLevels * Spend.portLevelReturnPerTick({ ...portIn, ownLevels: Math.max(0, portLevels - 1) / 2 });
+    const cityCost = cost(UnitType.City);
+    const trainRate = cfg.trainSpawnRate(Math.max(1, me.units(UnitType.Factory).length));
+    const stopGold = Number(cfg.trainGold("self", 1, me));
+    // city: cap (+ a train stop when it sits on a rail)
+    if (!cityCapHit) {
+      const canPay = affordable(cityCost);
+      const infill = canPay ? this.railInfillTile() : null;
+      const extra = infill !== null ? stopGold / trainRate : 0;
+      const ret = Spend.capReturn(cfg.cityTroopIncrease(), capShare, p.capFullShare, H - buildTicks(UnitType.City), extra);
+      const tile = canPay ? infill ?? this.interiorTile(UnitType.City) : null;
+      if (!canPay || tile !== null) cands.push({ kind: "build", type: UnitType.City, tile: tile ?? undefined, cost: cityCost, value: Spend.valueOf(ret, cityCost), why: infill !== null ? "City rail" : "City" });
+    }
+    const cityUp = cityUnits.find((c) => me.canUpgradeUnit(c));
+    if (cityUp) cands.push({ kind: "upgrade", type: UnitType.City, unit: cityUp, cost: cityCost, value: Spend.valueOf(Spend.capReturn(cfg.cityTroopIncrease(), capShare, p.capFullShare, H), cityCost), why: "City lvl" });
+    // ports: a level on the best port, or a new one (partnered, or any ocean coast from portWithoutPartnerTick)
+    const portCost = cost(UnitType.Port);
+    const bestPort = ports.length > 0 ? [...ports].sort((a, b) => b.level() - a.level())[0] : null;
+    if (bestPort && me.canUpgradeUnit(bestPort)) cands.push({ kind: "upgrade", type: UnitType.Port, unit: bestPort, cost: portCost, value: Spend.valueOf(Spend.portLevelReturn(portIn, H), portCost), why: "Port lvl" });
+    if (ports.length < p.maxPortUnits) {
+      const speculative = partnerTile === null && ports.length === 0 && cities >= 1 && ticks >= p.portWithoutPartnerTick;
+      if (partnerTile !== null || speculative) {
+        const ret = Spend.newPortReturn({ ...portIn, partner: partnerTile !== null }, bestPort?.level() ?? 0, p.portLevelBeforeSecond, H, buildTicks(UnitType.Port));
+        const canPay = affordable(portCost);
+        const tile = canPay ? partnerTile ?? this.oceanShoreTile() : null;
+        if (!canPay || tile !== null) cands.push({ kind: "build", type: UnitType.Port, tile: tile ?? undefined, cost: portCost, value: Spend.valueOf(ret, portCost), why: "Port" });
+      }
+    }
+    // rail: the next step of the line (factory, anchor, infill) at the whole line's value; stations only within 110 tiles
+    if (cities >= 3 && me.unitsOwned(UnitType.Factory) < 6 && this.rail.failed <= 20) {
+      const R = this.rail;
+      const stepType = R.factory === null ? UnitType.Factory : UnitType.City;
+      const stepCost = cost(stepType);
+      const existing = R.factory !== null ? mg.nearbyUnits(R.factory.tile(), cfg.trainStationMaxRange(), [UnitType.City, UnitType.Port]).filter((x) => x.unit.owner() === me).length : 0;
+      const planned = R.factory === null ? 4 : Math.max(0, 4 - R.infilled - (R.anchor ? 1 : 0));
+      const allyStops = friends.length > 0 ? 1 : 0;
+      const railIn: Spend.RailInputs = { factories: me.units(UnitType.Factory).length, ownStops: existing + planned, allyStops, selfStopGold: stopGold, allyStopGold: Number(cfg.trainGold("ally", 1, me)) };
+      const remaining = stepCost + BigInt(planned) * cityCost;
+      const value = Spend.railValue(railIn, cfg.trainSpawnRate(railIn.factories + (R.factory === null ? 1 : 0)), remaining, H, buildTicks(stepType) + 100);
+      cands.push({ kind: "build", type: stepType, cost: stepCost, value, why: R.factory === null ? "Rail factory" : "Rail city" });
+    }
+    // silos, and a silo level when a bomb target sat out of range
+    if (silos.length < siloTarget) cands.push({ kind: "build", type: UnitType.MissileSilo, cost: siloCost, value: Spend.valueOf(siloRet, siloCost), why: "Silo" });
+    if (this.military.bombOutOfRange >= 3 && silos.length > 0) {
+      const low = silos.find((sl) => sl.level() < 4 && me.canUpgradeUnit(sl));
+      if (low) cands.push({ kind: "upgrade", type: UnitType.MissileSilo, unit: low, cost: siloCost, value: Spend.valueOf(Spend.SILO_LEVEL_WORTH * Math.min(1, H / 3000), siloCost), why: "Silo lvl" });
+    }
+    // SAMs: a second launcher when the city stack outgrows one umbrella, a level (3 when leading) otherwise
+    const samIn: Spend.SamInputs = { enemySilos, rank: myRank, tick: ticks, cityUnits: cityUnits.length };
+    const samCost = cost(UnitType.SAMLauncher);
+    const samTarget = enemySilos || ticks >= 7200 || myRank <= 3 ? Math.max(1, Math.ceil(cityUnits.length / 8)) : 0;
+    if (sams.length < samTarget && ticks - this.lastSamTick >= 400) cands.push({ kind: "build", type: UnitType.SAMLauncher, cost: samCost, value: Spend.valueOf(Spend.samReturn(samIn, "build", H), samCost), why: sams.length === 0 ? "SAM" : "SAM 2nd" });
+    if (sams.length > 0) {
+      const targetLevel = myRank === 1 ? 3 : 2;
+      const low = sams.find((sm) => sm.level() < targetLevel && me.canUpgradeUnit(sm));
+      if (low) cands.push({ kind: "upgrade", type: UnitType.SAMLauncher, unit: low, cost: samCost, value: Spend.valueOf(Spend.samReturn(samIn, "upgrade", H), samCost), why: "SAM lvl" });
+    }
+    // warship: one per six ports after 15:00
+    const warships = me.units(UnitType.Warship);
+    if (ports.length > 0 && ticks >= 9000 && warships.length < Math.ceil(ports.length / 6) && ticks - this.lastWarshipTick >= 600 && !cfg.isUnitDisabled(UnitType.Warship)) {
+      const wCost = cost(UnitType.Warship);
+      cands.push({ kind: "build", type: UnitType.Warship, cost: wCost, value: Spend.valueOf(Spend.warshipReturn(tradePerTick, H), wCost), why: "Warship" });
+    }
+    // a threat post (today's conditions for who counts as a threat)
+    if (cityUnits.length >= 1 && ticks >= 900 && me.unitsOwned(UnitType.DefensePost) < 6) {
+      const expiring = me.alliances().filter((al) => al.expiresAt() - ticks < 450).map((al) => al.other(me)).filter((o) => friends.includes(o) && o.troops() >= me.troops() * 0.4);
+      const threat = [...expiring, ...rivals].find((r) => ticks - (this.postFailed_.get(r) ?? -1e9) > 600 && (r.troops() >= me.troops() * 0.5 || expiring.includes(r) || (r.type() === PlayerType.Nation && me.troops() > r.troops() * 3)) && !this.q.postFacing(r));
+      if (threat) {
+        const dpCost = cost(UnitType.DefensePost);
+        const canPay = affordable(dpCost);
+        const tile = canPay ? this.defensePostTile(threat) : null;
+        if (canPay && tile === null) { this.postFailed_.set(threat, ticks); this.ctx.log(`t${ticks} post vs ${threat.name()} FAILED (no tile)`); }
+        else cands.push({ kind: "build", type: UnitType.DefensePost, tile: tile ?? undefined, cost: dpCost, value: Spend.valueOf(Spend.threatPostReturn(expiring.includes(threat)), dpCost), why: `Post vs ${threat.name()}` });
+      }
+    }
+
+    // 4. buy the best affordable candidate with value >= 1; log the top three so the lab shows why
+    const ranked = Spend.rankCandidates(cands);
+    this.candidates = ranked;
+    const pick = ranked.find((c) => c.value >= 1 && affordable(c.cost, c.type === UnitType.MissileSilo ? "silo" : undefined));
+    const logTop = (suffix: string) => { this.ctx.log(`t${ticks} spend: ${Spend.describeTop(ranked)}${suffix} (gold ${Math.round(Number(gold) / 1000)}k, escrow ${escrow.map((e) => e.purpose + " " + Math.round(Number(e.amount) / 1000) + "k").join("+") || "none"}, avail ${Math.round(Number(avail) / 1000)}k)`); this.lastSpendLog = ticks; };
+    if (pick === undefined) { if (ranked.length > 0 && ticks - this.lastSpendLog >= 600) logTop(""); return; }
+    let done = false;
+    if (pick.kind === "upgrade" && pick.unit) { upgrade(pick.unit); done = true; }
+    else if (pick.why.startsWith("Rail")) { done = this.buildRail(Spend.available(gold, escrow), cost); if (!done) this.rail.failed++; }
+    else if (pick.tile !== undefined) {
+      done = this.tryBuild(pick.type, pick.tile);
+      if (done && pick.type === UnitType.Port && ports.length === 0) this.firstPortTick = ticks;
+      if (done && pick.type === UnitType.SAMLauncher) this.lastSamTick = ticks;
+      if (done && pick.why === "City rail") this.rail.infilled++;
+      if (!done && pick.type === UnitType.DefensePost) this.ctx.log(`t${ticks} ${pick.why} FAILED (canBuild)`);
+    }
+    else if (pick.type === UnitType.MissileSilo) {
+      const tile = silos.length === 0 ? this.interiorTile(UnitType.MissileSilo) : this.sampleTerritory(30).find((t) => silos.every((sl) => mg.euclideanDistSquared(sl.tile(), t) > 50 * 50) && me.canBuild(UnitType.MissileSilo, t) !== false) ?? null;
+      if (tile !== null) done = this.tryBuild(UnitType.MissileSilo, tile);
+    }
+    else if (pick.type === UnitType.SAMLauncher) {
+      const far = this.sampleTerritory(30).find((t) => sams.every((sm) => mg.euclideanDistSquared(sm.tile(), t) > 60 * 60) && me.canBuild(UnitType.SAMLauncher, t) !== false);
+      if (far !== undefined && this.tryBuild(UnitType.SAMLauncher, far)) { this.lastSamTick = ticks; done = true; }
+    }
+    else if (pick.type === UnitType.Warship) {
+      const port = ports[warships.length % ports.length];
+      for (let a = 0; a < 8 && !done; a++) {
+        const x = mg.x(port.tile()) + Math.round(Math.cos((a / 8) * Math.PI * 2) * 20), y = mg.y(port.tile()) + Math.round(Math.sin((a / 8) * Math.PI * 2) * 20);
+        if (!mg.isValidCoord(x, y)) continue;
+        const t = mg.ref(x, y);
+        if (!mg.isOcean(t) || me.canBuild(UnitType.Warship, t) === false) continue;
+        mg.addExecution(new ConstructionExecution(me, UnitType.Warship, t));
+        this.lastWarshipTick = ticks; done = true;
+        this.ctx.log(`t${ticks} build Warship`);
+      }
+    }
+    if (done || ticks - this.lastSpendLog >= 600) logTop(done ? ` → ${pick.why}` : ` → ${pick.why} FAILED`);
   }
   tryBuild(type: UnitType, tile: TileRef): boolean {
     if (this.ctx.me.canBuild(type, tile) === false) return false;

@@ -45,8 +45,11 @@ export interface PlaybookParams {
   wholeWars: boolean; // a war wave is sent whole or not at all (never trimmed by the reserve)
   stickyWar: boolean; // one enemy to the end: the current war target is the only candidate while it lives and borders us
   postsBeforeCity2: boolean; // allow threat posts even while city 2 is unaffordable
+  simWars: boolean; // B1: pick war targets and sizes with Estimate.ts (a replay of attackLogic over the shared border) and retreat when the re-estimate no longer wins; off = fightRatio heuristics
+  realRetreats: boolean; // schedule a RetreatExecution when retreating (A1 finding: Player.orderRetreat() only flags the wave; without the execution it never comes home, stays in outgoingAttacks() and blocks that target)
   portWithoutPartnerTick: number; // first port on any ocean coast from this tick even with no partner (1e9 = never)
   nearbyEvery: number; // ticks the neighbouring-player set is cached for (1 = recompute every tick, the original behaviour)
+  scoredSpend: boolean; // B3: Economy.build() scores every purchase (return over the phase horizon / cost, Spend.ts) and buys the best affordable one after one escrow list; off = the hand-ordered steps
 }
 
 export const DEFAULT_PLAYBOOK: PlaybookParams = {
@@ -94,6 +97,9 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   wholeWars: true,
   stickyWar: true,
   postsBeforeCity2: true, // 30-game lab: +8% land, same survival as blocking them
+  simWars: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B1)
+  realRetreats: false, // default off until the 30-game A/B; on = frozen waves finally return (see the interface comment)
   portWithoutPartnerTick: 1500,
   nearbyEvery: 1, // lab flag: 10 would save ~20 % of a lab game's CPU (me.nearby() profiled at 28 %) but needs a 30-game A/B first
+  scoredSpend: false, // default off until the 30-game Medium A/B (PlaybookBotPlan.md B3)
 };

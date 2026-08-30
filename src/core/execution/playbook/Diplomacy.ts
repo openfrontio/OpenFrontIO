@@ -104,7 +104,7 @@ export class Diplomacy {
     this.ctx.log(`t${this.ctx.sit.tick} ALLIANCE ENDED ${p.name()} ${Math.round(p.troops() / 1000)}k vs our ${Math.round(this.ctx.sit.troops / 1000)}k`);
     // if they are stronger, every tribe wave comes home now — the nation attacks within seconds of a lapse
     if (this.ctx.p.retreatOnAllianceEnd && p.troops() > this.ctx.sit.troops * 0.8) {
-      for (const a of this.ctx.sit.outgoing) { const t = a.target(); if (t.isPlayer() && (t as Player).type() === PlayerType.Bot) me.orderRetreat(a.id()); }
+      for (const a of this.ctx.sit.outgoing) { const t = a.target(); if (t.isPlayer() && (t as Player).type() === PlayerType.Bot) this.military.retreat(a); }
     }
     this.economy.postFailed.delete(p);
   }
