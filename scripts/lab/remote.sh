@@ -108,7 +108,7 @@ run_pool() {
   # serialised the shards.) `timeout` is belt and braces: a hung ssh cannot stall the other launches.
   i=0
   for ip in "${ips[@]}"; do
-    $TIMEOUT $SSH@"$ip" "cd /root/openfront && rm -rf /root/lab-out && mkdir -p /root/lab-out && (setsid nohup env CONFIGS='$CONFIGS' MINUTES=$MINUTES SHARD=$i/${#ips[@]} AGGREGATE=0 BATCHES='$batches' ${SPAWNS:+SPAWNS='$SPAWNS'} ${JOBS:+JOBS=$JOBS} OUT=/root/lab-out bash scripts/lab/sweep.sh > /root/lab-out/sweep.log 2>&1 < /dev/null &); sleep 1; head -1 /root/lab-out/sweep.log" \
+    $TIMEOUT $SSH@"$ip" "cd /root/openfront && rm -rf /root/lab-out && mkdir -p /root/lab-out && (setsid nohup env CONFIGS='$CONFIGS' MINUTES=$MINUTES SHARD=$i/${#ips[@]} AGGREGATE=0 BATCHES='$batches' ${SPAWNS:+SPAWNS='$SPAWNS'} ${JOBS:+JOBS=$JOBS} ${SHIFT:+SHIFT=$SHIFT} OUT=/root/lab-out bash scripts/lab/sweep.sh > /root/lab-out/sweep.log 2>&1 < /dev/null &); sleep 1; head -1 /root/lab-out/sweep.log" \
       || echo "WARNING: launch on $ip did not confirm; check /root/lab-out/sweep.log there"
     i=$((i + 1))
   done

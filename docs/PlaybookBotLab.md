@@ -148,7 +148,7 @@ four times (`Test Files 4 passed`), 4× the CPU.
 | `DEST` | ./lab-out | local results dir |
 | `KEEP` | 0 | 1 = leave the servers running |
 | `REUSE` | 0 | 1 = use the existing servers; rsync is incremental, so a rerun after a bot edit starts in seconds |
-| `BATCHES`, `SPAWNS`, `JOBS` | — | passed through to `sweep.sh` |
+| `BATCHES`, `SPAWNS`, `JOBS`, `SHIFT` | — | passed through to `sweep.sh` (SHIFT offsets the spawn grid, see ladder.sh) |
 | `STAGED` | 0 | 1 = run the first `STAGE1` (3) batches, then the rest only for configs still "unclear" (`summarize.py --verdict VERDICT`, default 3 = \|wins − losses\| < 3 vs the first config). Clear results cost 18 games instead of 30. |
 
 Run it under `nohup … &` from a tool call — it runs longer than any tool
