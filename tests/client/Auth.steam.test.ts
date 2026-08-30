@@ -170,22 +170,61 @@ describe("Steam login", () => {
   // sets "retrying" before the fetch settles, and with no AbortSignal a
   // response that never arrives would leave the session pinned there --
   // gated out of multiplayer with a status bar that renders no button for
-  // "retrying". The bound AbortSignal.timeout turns that into an aborted
-  // fetch, which the existing catch already maps to "network", so this
-  // proves the state always settles rather than sticking.
-  it("settles rather than sticking at retrying when the fetch rejects", async () => {
-    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
-    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
-      ok: true,
-      ticket: "t",
-    });
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("aborted"));
+  // "retrying". This mock fetch never settles on its own -- it only rejects
+  // when the AbortSignal it was handed actually fires, the way a real fetch
+  // does -- so the test can only pass if the code under test wires the
+  // AbortSignal.timeout(10_000) into the request and the existing catch maps
+  // the resulting abort to "network".
+  //
+  // AbortSignal.timeout schedules its abort on Node's internal timer, not
+  // the global setTimeout that vi.useFakeTimers() patches, so it doesn't
+  // advance with fake timers on its own. AbortSignal.timeout itself is
+  // stubbed here to route through a (now fake) setTimeout instead, purely so
+  // the 10s deadline can be crossed deterministically with
+  // advanceTimersByTimeAsync rather than waiting on the wall clock.
+  it("aborts and settles rather than sticking at retrying when the fetch hangs past the timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+      vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+        ok: true,
+        ticket: "t",
+      });
+      vi.spyOn(AbortSignal, "timeout").mockImplementation((ms: number) => {
+        const controller = new AbortController();
+        setTimeout(
+          () =>
+            controller.abort(
+              new DOMException("The operation timed out.", "TimeoutError"),
+            ),
+          ms,
+        );
+        return controller.signal;
+      });
+      vi.spyOn(globalThis, "fetch").mockImplementation(
+        (_input, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+            signal?.addEventListener("abort", () => {
+              reject(
+                signal.reason ?? new DOMException("Aborted", "AbortError"),
+              );
+            });
+          }),
+      );
 
-    await retrySteamSignIn();
+      const signInPromise = retrySteamSignIn();
+      expect(getDesktopSessionState()).toEqual({ status: "retrying" });
 
-    expect(getDesktopSessionState()).toEqual({
-      status: "signed-out",
-      reason: "network",
-    });
+      await vi.advanceTimersByTimeAsync(10_000);
+      await signInPromise;
+
+      expect(getDesktopSessionState()).toEqual({
+        status: "signed-out",
+        reason: "network",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
