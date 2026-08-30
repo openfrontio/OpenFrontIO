@@ -8,6 +8,65 @@ measure), `PlaybookBotGUI.md` (how to watch).
 Baseline: branch `playbook-bot` at `e69862fbe`.
 Bot: `src/core/execution/playbook/PlaybookBotExecution.ts` (1,457 lines).
 
+## Handoff (state at bb03d7cd8, 2026-08-29)
+
+Read this first if you are picking the rebuild up.
+
+**Where things are**
+- Branch `playbook-bot`, HEAD `bb03d7cd8`, nothing pushed. All code packages
+  A1–C2 are merged; only C3 (the lab campaign) remains.
+- Bot: `src/core/execution/playbook/` — `PlaybookBotExecution.ts` (loop,
+  `send()`, rule table), `Situation.ts` (+ phase, `Rivals.ts`), `Military.ts`
+  (+ `Estimate.ts`), `Economy.ts` (+ `Spend.ts`), `Diplomacy.ts`, `Params.ts`.
+- Tests: `npx vitest --dir tests tests/playbook --run` (golden included; the
+  `--dir tests` matters — a bare path also matches copies under
+  `.claude/worktrees/`). `npx tsc --noEmit` and `npm run lint` are clean.
+- Lab: `docs/PlaybookBotLab.md`. Single game:
+  `PARAMS='{...}' MIN=8 SPAWN=africa DIFF=medium LAB_OUT=/tmp/x OUTFILE=a.txt node --import tsx tests/lab/playbook.lab.ts`.
+  Sweeps: `scripts/lab/remote.sh` (Hetzner, WORKERS=N) or `sweep.sh`; results
+  via `scripts/lab/summarize.py`; tuning via `cmaes.py` / `ladder.sh`.
+
+**Seven flags, all default off, all waiting for a 30-game Medium A/B**
+`simWars`, `realRetreats`, `scoredSpend`, `bsrReserve`, `trustWars`,
+`nationAware`, `phaseGates`. `{}` is the exact pre-rebuild baseline (every
+flag-off transcript was proven byte-identical at merge time).
+
+**What to do next (C3)**
+1. One sweep, MINUTES=20, all in the same CONFIGS so games pair:
+   `{"base":{},"ret":{"realRetreats":true},"spend":{"scoredSpend":true},"c1":{"bsrReserve":true,"trustWars":true,"nationAware":true,"phaseGates":true},"sim":{"simWars":true}}`
+   Keep `simWars` on its own: single-game smokes (africa, 8 min) gave baseline
+   rank 2 / 43.5k tiles, `sim` rank 10 / 23k, `spend` rank 4 / 40k, `c1`
+   rank 3 / 44k, all seven together rank 20 / 13.5k. Expect `simWars` to need
+   retuning (wave margin 20 %, free-land gates 20/60/150 troops per tile in
+   `Military.fight`) before it graduates.
+2. Graduate winners: set the default to `true`, then (a later commit) fold
+   the flag as C2 did. Drop losers. Update the golden hash only when a
+   default changes, and say so in the commit.
+3. Confirm flags were live in the transcripts: `sim:` annotations on ATTACK
+   lines, `spend:` lines, `retreat from`/`coming home` lines, `phase` lines.
+4. Then CMA-ES over the 11 continuous params (`cmaes.py` built-in spec),
+   population 10, ~12 generations; ladder the result against `v-current`.
+5. Repeat on Hard.
+
+**Rules that still apply**
+- New behaviour goes behind a default-off `PlaybookParams` flag; refactors
+  keep the golden hash; every change ships a `tests/playbook/` test.
+- One package = one worktree = one branch; `git checkout -b <branch> <sha>`
+  first — agent worktrees have been created at `main`, not `playbook-bot`.
+- Before merging into `playbook-bot`, check `git status`: another session
+  (`openfront-00`) works in the main checkout; never stash or overwrite its
+  edits — message it and merge after it commits.
+- Hetzner: cpx51 only, `KEEP=1`, never `hcloud server delete` without
+  telling Josh. A box `openfront-lab-c3` may still exist from an aborted run.
+
+**Known loose ends**
+- `realRetreats` off keeps the old no-op retreat on purpose (baseline
+  fidelity); once it graduates, delete the `orderRetreat` path.
+- `Spend.ts` value constants (`CAP_GOLD_PER_TROOP` = 20, port/rail curves)
+  are first estimates from the labs, not swept.
+- `bsr` approximates "their border facing us" by our border facing them.
+- Worker branches `bot/a1-tests … bot/c1-c2` are merged and can be deleted.
+
 ## Ground rules
 
 1. **One package = one worktree = one PR onto `playbook-bot`.** Own only the
