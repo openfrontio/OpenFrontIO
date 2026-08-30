@@ -5,6 +5,7 @@
   "categories": ["arcade"],
   "multiplayer_frequency": 0,
   "special_team_count": 4,
+  "forced_modifiers": ["isWaterNukes:50"],
   "nations": [
     {
       "coordinates": [230, 230],
