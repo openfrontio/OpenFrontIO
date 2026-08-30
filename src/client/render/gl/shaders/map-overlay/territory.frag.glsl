@@ -22,6 +22,7 @@ uniform float uStaleNukeAlpha;
 uniform vec3 uStaleNukeColor;
 uniform uint uHighlightOwner;      // 0 = no highlight; otherwise smallID of hovered owner
 uniform float uHighlightBrighten;  // hover contrast boost strength; 0 = disabled
+uniform float uHighlightIntensity; // 0–1 fade-in factor of the hover highlight
 uniform sampler2D uDefenseCoverageTex; // R8 — 1.0 = tile defended by same-owner post
 uniform float uDefenseDarken;      // multiplier applied to fill on defended tiles
 uniform sampler2D uBorderTex;      // RGBA8 — border flags; R > 0.25 = border tile
@@ -115,8 +116,10 @@ void main() {
 
   // Hover highlight: boost contrast on the hovered player's tiles, pushing
   // channels away from mid-gray. uHighlightBrighten is the strength; 0 disables.
+  // uHighlightIntensity ramps 0→1 after the hover delay so the highlight
+  // increasingly appears instead of popping (issue #4310).
   if (uHighlightOwner != 0u && owner == uHighlightOwner && uHighlightBrighten > 0.0) {
-    float contrast = 1.0 + uHighlightBrighten;
+    float contrast = 1.0 + uHighlightBrighten * uHighlightIntensity;
     color.rgb = clamp((color.rgb - 0.5) * contrast + 0.5, 0.0, 1.0);
   }
 

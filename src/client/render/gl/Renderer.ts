@@ -205,6 +205,12 @@ export class GPURenderer {
   private samGhostVisible = false;
   private samHighlightVisible = false;
 
+  // Hover highlight: the controller only forwards an owner after the hover
+  // delay has elapsed; the fade-in is animated here per frame (issue #4310).
+  private highlightOwner = 0;
+  private highlightIntensity = 0;
+  private highlightSetAtMs = 0;
+
   // Warship selection — supports any number of selections.
   private selectedUnitIds: number[] = [];
   /** Reusable scratch buffer of {x,y,r,g,b} for the selection-box pass. */
@@ -1090,12 +1096,36 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   setHighlightOwner(ownerID: number): void {
+    if (ownerID === this.highlightOwner) return;
+    this.highlightOwner = ownerID;
+    this.highlightSetAtMs = performance.now();
+    this.highlightIntensity = 0;
     this.borderPass.setHighlightOwner(ownerID);
     this.territoryPass.setHighlightOwner(ownerID);
     this.namePass.setHighlightOwner(ownerID);
     this.structurePass.setHighlightOwner(ownerID);
     this.railroadPass.setHighlightOwner(ownerID);
     this.affiliationPalette.setHoveredOwner(ownerID);
+  }
+
+  /**
+   * Fade the hover highlight in. HoverHighlightController only forwards an
+   * owner once the cursor has hovered it for `mapOverlay.highlightDelayMs`,
+   * so from this moment the highlight strength ramps 0→1 over
+   * `mapOverlay.highlightFadeMs` — the highlight increasingly appears
+   * instead of popping (issue #4310).
+   */
+  private updateHighlightFade(): void {
+    const fadeMs = this.settings.mapOverlay.highlightFadeMs;
+    const t =
+      fadeMs <= 0
+        ? 1
+        : Math.min(1, (performance.now() - this.highlightSetAtMs) / fadeMs);
+    // Smoothstep easing for a gentle start/end of the ramp.
+    this.highlightIntensity = t * t * (3 - 2 * t);
+    this.territoryPass.setHighlightIntensity(this.highlightIntensity);
+    this.borderStampPass.setHighlightIntensity(this.highlightIntensity);
+    this.namePass.setHighlightIntensity(this.highlightIntensity);
   }
   setMouseWorldPos(x: number, y: number): void {
     this.namePass.setMouseWorldPos(x, y);
@@ -1234,6 +1264,7 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   draw(): void {
+    this.updateHighlightFade();
     this.uploadTextures();
     this.computeTextures();
     this.renderFrame();

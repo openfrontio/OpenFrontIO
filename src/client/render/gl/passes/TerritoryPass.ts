@@ -37,6 +37,7 @@ export class TerritoryPass {
   private uStaleNukeColor: WebGLUniformLocation;
   private uHighlightOwner: WebGLUniformLocation;
   private uHighlightBrighten: WebGLUniformLocation;
+  private uHighlightIntensity: WebGLUniformLocation;
   private uShowPatterns: WebGLUniformLocation;
   private uIsTeamMode: WebGLUniformLocation;
   private uDefenseDarken: WebGLUniformLocation;
@@ -44,6 +45,8 @@ export class TerritoryPass {
   private uTerritoryAlpha: WebGLUniformLocation;
   private uAltFillAlpha: WebGLUniformLocation;
   private highlightOwner = 0;
+  /** 0–1 fade-in factor for the hover highlight (animated by the renderer). */
+  private highlightIntensity = 0;
   private isTeamMode = false;
 
   private vao: WebGLVertexArrayObject;
@@ -170,6 +173,10 @@ export class TerritoryPass {
     this.uHighlightBrighten = gl.getUniformLocation(
       this.program,
       "uHighlightBrighten",
+    )!;
+    this.uHighlightIntensity = gl.getUniformLocation(
+      this.program,
+      "uHighlightIntensity",
     )!;
     this.uShowPatterns = gl.getUniformLocation(this.program, "uShowPatterns")!;
     this.uIsTeamMode = gl.getUniformLocation(this.program, "uIsTeamMode")!;
@@ -406,6 +413,11 @@ export class TerritoryPass {
     this.highlightOwner = ownerID;
   }
 
+  /** Fade-in factor for the hover highlight; 0 = invisible, 1 = full strength. */
+  setHighlightIntensity(intensity: number): void {
+    this.highlightIntensity = intensity;
+  }
+
   /** Defense-coverage texture (R8) — darkens the fill on defended tiles. */
   setDefenseCoverageTex(tex: WebGLTexture): void {
     this.defenseCoverageTex = tex;
@@ -443,6 +455,7 @@ export class TerritoryPass {
     );
     gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
     gl.uniform1f(this.uHighlightBrighten, mo.highlightFillBrighten);
+    gl.uniform1f(this.uHighlightIntensity, this.highlightIntensity);
     gl.uniform1i(
       this.uShowPatterns,
       this.settings.passEnabled.territoryPatterns && this.showPatterns ? 1 : 0,

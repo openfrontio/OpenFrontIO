@@ -10,6 +10,7 @@ uniform sampler2D uAffiliation;   // 256×2 RGBA8 — affiliation colors (row 0 
 uniform vec2 uMapSize;
 uniform int uAltView;
 uniform float uHighlightBrighten;
+uniform float uHighlightIntensity; // 0–1 fade-in factor of the hover highlight
 uniform float uDefenseCheckerDarken;
 uniform float uEmbargoTintRatio;
 uniform float uFriendlyTintRatio;
@@ -45,7 +46,9 @@ void main() {
       float u = (float(owner) + 0.5) / float(PALETTE_SIZE);
       bc = texture(uPalette, vec2(u, 0.75)).rgb;
       if (isHighlightBorder) {
-        bc = mix(bc, vec3(1.0), uHighlightBrighten);
+        // Fade the brightening with uHighlightIntensity so the highlight band
+        // increasingly appears after the hover delay (issue #4310).
+        bc = mix(bc, vec3(1.0), uHighlightBrighten * uHighlightIntensity);
       }
       // Relationship tint (applied BEFORE defense checkerboard, matching game)
       if (relation > 0.75) {

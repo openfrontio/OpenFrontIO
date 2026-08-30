@@ -90,6 +90,8 @@
     "highlightBrighten": 0.25,
     "highlightFillBrighten": 0.15,
     "highlightThicken": 1,
+    "highlightDelayMs": 500,
+    "highlightFadeMs": 250,
     "defensePostRange": 30,
     "embargoTintRatio": 0.35,
     "friendlyTintRatio": 0.35,

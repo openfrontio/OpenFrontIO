@@ -14,7 +14,7 @@ uniform float uHoverGlowAlpha; // peak opacity of the hover glow
 in vec2 vUV;
 in vec4 vPlayerColor;   // player territory color (rgb) + alpha
 in float vNameShade;      // name fill grayscale shade (0.0 = black)
-flat in float vHighlight; // 1.0 when this player is hovered (white glow)
+flat in float vHighlight; // hover glow strength (0 = none, ramps to 1 after hover delay)
 out vec4 fragColor;
 
 float median(float r, float g, float b) {
@@ -67,11 +67,13 @@ void main() {
 
   // Soft white glow behind the hovered player's name. Width is clamped to
   // the SDF margin past the outline so it never hard-clips at the quad edge.
-  if (vHighlight > 0.5 && uHoverGlowAlpha > 0.0) {
+  // vHighlight carries the renderer's fade-in so the glow increasingly
+  // appears after the hover delay (issue #4310).
+  if (vHighlight > 0.0 && uHoverGlowAlpha > 0.0) {
     float glowWidth = min(uHoverGlowWidth, max(maxOutline - effectiveOutline, 0.0));
     if (glowWidth > 0.0) {
       float g = clamp(1.0 + (screenPxDist + effectiveOutline) / glowWidth, 0.0, 1.0);
-      float glowAlpha = g * g * uHoverGlowAlpha;
+      float glowAlpha = g * g * uHoverGlowAlpha * vHighlight;
       float total = coverage + glowAlpha * (1.0 - coverage);
       if (total > 0.0) {
         color = mix(vec3(1.0), color, coverage / total);

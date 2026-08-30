@@ -24,6 +24,7 @@ export class BorderStampPass {
   private uCam: WebGLUniformLocation;
   private uMapSize: WebGLUniformLocation;
   private uHighlightBrighten: WebGLUniformLocation;
+  private uHighlightIntensity: WebGLUniformLocation;
   private uDefenseCheckerDarken: WebGLUniformLocation;
   private uEmbargoTintRatio: WebGLUniformLocation;
   private uFriendlyTintRatio: WebGLUniformLocation;
@@ -38,6 +39,8 @@ export class BorderStampPass {
   private defenseCoverageTex: WebGLTexture | null = null;
   private affiliationTex: WebGLTexture | null = null;
   private altView = false;
+  /** 0–1 fade-in factor for the hover highlight (animated by the renderer). */
+  private highlightIntensity = 0;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -70,6 +73,10 @@ export class BorderStampPass {
       this.program,
       "uHighlightBrighten",
     )!;
+    this.uHighlightIntensity = gl.getUniformLocation(
+      this.program,
+      "uHighlightIntensity",
+    )!;
     this.uDefenseCheckerDarken = gl.getUniformLocation(
       this.program,
       "uDefenseCheckerDarken",
@@ -99,6 +106,11 @@ export class BorderStampPass {
   setAltView(active: boolean): void {
     this.altView = active;
   }
+
+  /** Fade-in factor for the hover highlight; 0 = invisible, 1 = full strength. */
+  setHighlightIntensity(intensity: number): void {
+    this.highlightIntensity = intensity;
+  }
   setAffiliationTex(tex: WebGLTexture): void {
     this.affiliationTex = tex;
   }
@@ -115,6 +127,7 @@ export class BorderStampPass {
     gl.uniformMatrix3fv(this.uCam, false, cameraMatrix);
     gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
     gl.uniform1f(this.uHighlightBrighten, mo.highlightBrighten);
+    gl.uniform1f(this.uHighlightIntensity, this.highlightIntensity);
     gl.uniform1f(this.uDefenseCheckerDarken, mo.defenseCheckerDarken);
     gl.uniform1f(this.uEmbargoTintRatio, mo.embargoTintRatio);
     gl.uniform1f(this.uFriendlyTintRatio, mo.friendlyTintRatio);

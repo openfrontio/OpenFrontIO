@@ -148,6 +148,16 @@ export interface RenderSettings {
     highlightBrighten: number;
     highlightFillBrighten: number;
     highlightThicken: number;
+    /**
+     * Hover highlight delay (issue #4310): the cursor must hover the same
+     * owner this long before the highlight is applied. 0 = immediate.
+     */
+    highlightDelayMs: number;
+    /**
+     * Hover highlight fade-in duration in ms, counted from when the delay
+     * elapses. 0 = pop in at full strength once the delay has passed.
+     */
+    highlightFadeMs: number;
     defensePostRange: number;
     embargoTintRatio: number;
     friendlyTintRatio: number;

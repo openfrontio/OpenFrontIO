@@ -28,13 +28,14 @@ uniform float uNameScaleFactor;
 uniform float uNameScaleCap;
 uniform float uTroopSizeMultiplier;
 uniform float uHighlightOwnerID;
+uniform float uHighlightIntensity; // 0–1 fade-in of the hover glow
 uniform float uFadeOwnerID;    // smallID of player whose name plate the cursor is over (0 = none)
 uniform float uHoverFadeAlpha; // alpha multiplier applied to that player's name plate
 
 out vec2 vUV;
 out vec4 vPlayerColor;  // player territory color (rgb) + alpha
 out float vNameShade;     // name fill grayscale shade (0.0 = black)
-flat out float vHighlight; // 1.0 when this player is hovered (white glow)
+flat out float vHighlight; // hover glow strength: 0 = none, else uHighlightIntensity
 
 void main() {
   // 1. Decode instance ID → playerIdx, lineIdx, charPos
@@ -172,5 +173,5 @@ void main() {
   vUV = vec2(mix(u0, u1, aPos.x), mix(v0, v1, aPos.y));
   vPlayerColor = vec4(pd2.rgb, pd2.a * hoverAlpha); // player territory color + alpha
   vNameShade = pd3.z;         // name fill grayscale shade (0.0 = black)
-  vHighlight = isHighlighted ? 1.0 : 0.0;
+  vHighlight = isHighlighted ? uHighlightIntensity : 0.0;
 }

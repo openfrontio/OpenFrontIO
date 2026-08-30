@@ -119,6 +119,8 @@ export class NamePass {
 
   // Hovered player's small ID (0 = no highlight, matches TerritoryPass).
   private highlightOwnerID = 0;
+  /** 0–1 fade-in factor for the name glow (animated by the renderer). */
+  private highlightIntensity = 0;
   // Cursor in world coords — fades names under it (far off-map = no fade).
   private mouseWorldX = -1e9;
   private mouseWorldY = -1e9;
@@ -702,6 +704,11 @@ export class NamePass {
     this.highlightOwnerID = ownerID;
   }
 
+  /** Fade-in factor for the hover name glow; 0 = off, 1 = full glow. */
+  setHighlightIntensity(intensity: number): void {
+    this.highlightIntensity = intensity;
+  }
+
   setMouseWorldPos(x: number, y: number): void {
     this.mouseWorldX = x;
     this.mouseWorldY = y;
@@ -822,6 +829,7 @@ export class NamePass {
       this.maxPlayers,
       ambient,
       this.highlightOwnerID,
+      this.highlightIntensity,
       fadeOwnerID,
     );
     this.statusIconProgram.draw(
