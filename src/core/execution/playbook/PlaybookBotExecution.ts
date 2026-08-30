@@ -84,12 +84,12 @@ export const DEFAULT_PLAYBOOK: PlaybookParams = {
   botEarlyShare: 0.15,
   botClickCap: 0.3, // 30-game lab: ties the single click on land, one more survivor; matches the guide's click table
   botFollowUpTicks: 100,
-  botsAfterWild: true, // 30-game lab A/B: equal survival, +16% land vs eating tribes as met (driven by a few games; 18/30 pairs identical)
+  botsAfterWild: false, // 2026-08-29 Hetzner sweeps, 20-min games: Medium 30-game A/B gate off beats on 14-7-9, median land 65k vs 37k, cities 70 vs 44, same survival; Hard 30-game A/B neutral (7-6-5). Tribes cost 2-3x more by 2:00 while free land never gets cheaper.
   boatAtTick: 50,
   boatShare: 0.2,
   islandMaxTiles: 20000,
   fightAbove: 0.7,
-  fightRatio: 1.67, // Josh: take any 1.67× push that keeps home troops healthy (was 2.0)
+  fightRatio: 2.0, // Medium 30-game sweep hz3: 1.67× = +1 crown but −13% land, 3 fewer top-3, loses paired 13–17; the gate (attack whenever affordable, from 3:00) stays
   fightNotBeforeTick: 1800,
   fightMinCities: 2,
   fightMaxShare: 0.6,
