@@ -111,21 +111,6 @@ cd ~/Code/openfront && npx vitest tests/lab/playbook.lab.test.ts --run
 Differences from the GUI: `TestConfig` sets spawn immunity to 0 and the port
 proximity bonus to 0; everything else is the production `Config`.
 
-## Reviewing lab games
-
-Run any lab batch with `RECORD=1` and each game writes `lab-out/<TAG>_<spawn>.json`:
-an ownership frame every 30 s at quarter resolution, the leaderboard at each
-frame, the bot's event log and its economy rows (~2 MB per 30-minute game).
-
-```bash
-RECORD=1 MIN=30 SPAWN=north-russia npx vitest tests/lab/playbook.lab.test.ts --run
-npm run lab:review # http://localhost:8787 — pick a game, scrub the timeline
-```
-
-The viewer (`tests/lab/review/`) shows the map (bot green, allies blue, nations
-by colour, tribes grey), the top players at that frame, and the log up to that
-moment. `LAB_REC=<dir>` points both the recorder and the viewer elsewhere.
-
 ## Known dead end
 
 A static production build (`VITE_PLAYBOOK_BOT=1 vite build`, served by
