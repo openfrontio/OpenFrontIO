@@ -761,9 +761,9 @@ export class Config {
    *  - `mag`: how bloody the tile is (drives attacker troop loss)
    *  - `tileCost`: how expensive the tile is to take (higher = slower)
    *
-   * Speed: each tick the attack has a budget of `borderSize` tiles, scaled
-   * by how the attack's troops compare to the defender's; each tile consumes
-   * `tileCost` of it. The result reports that as a fraction of the tick.
+   * Speed: each tick the attack can take about `borderSize` tiles worth of
+   * budget; each tile consumes `tileCost`, scaled by how outnumbered the
+   * attack is. The result reports that as a fraction of the tick.
    */
   attackLogic(input: AttackLogicInput): AttackLogicResult {
     const { attackTroops, attacker, defender } = input;
@@ -842,23 +842,21 @@ export class Config {
       (ATTACKER_LOSS_RATIO_WEIGHT * ratioTerm +
         ATTACKER_LOSS_DENSITY_WEIGHT * defenderTroopLoss);
 
-    // Per-tick tile budget: the border, scaled down as the attack is
-    // outnumbered.
-    const tickBudget =
-      within(((5 * attackTroops) / defender.troops) * 2, 0.01, 0.5) *
-      input.borderSize *
-      3;
-
+    // Speed: a tile's cost in tick-fractions grows with how outnumbered the
+    // attack is. Flat at 1/5 up to parity, then rising linearly (saturating
+    // at 7.5x), with a second ramp for hopeless attacks past 20x.
+    const speedCost =
+      (within(troopRatio, 1, 7.5) * within(troopRatio / 20, 1, 50)) / 7.5;
     return {
       attackerTroopLoss,
       defenderTroopLoss,
       tickFraction:
-        ((within(troopRatio, 1, 7.5) / 5) *
+        (speedCost *
           tileCost *
           largeDefenderDebuff *
           largeAttackerCostBonus *
           traitorCostMod) /
-        tickBudget,
+        input.borderSize,
     };
   }
 
