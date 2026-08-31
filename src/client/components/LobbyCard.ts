@@ -72,6 +72,9 @@ export function trustRequiredDialog(
  * `inline-block` is load-bearing -- an inline span paints its background over
  * the font's content area rather than the line box, which makes the pill 4px
  * shorter than a blockified one and changes height when the font swaps in.
+ * Both pills must also be direct children of the top row's flex container:
+ * wrapped in a block, a pill sits on a line box instead and the strut of the
+ * card's larger inherited font pushes it a couple of pixels down.
  */
 const CARD_PILL_CLASS =
   "inline-block px-2 py-1 rounded text-xs font-bold tracking-widest bg-malibu-blue text-white";
@@ -224,14 +227,12 @@ export function lobbyCard({
               )}
             </div>`
           : html`<div></div>`}
-        <div class="shrink-0">
-          <span
-            class="${CARD_PILL_CLASS} ${timeDisplayUppercase
-              ? "uppercase"
-              : "normal-case"}"
-            >${timeDisplay}</span
-          >
-        </div>
+        <span
+          class="${CARD_PILL_CLASS} shrink-0 ${timeDisplayUppercase
+            ? "uppercase"
+            : "normal-case"}"
+          >${timeDisplay}</span
+        >
       </div>
       <!-- Bottom bar: map name + mode, with player count floating above -->
       <div
