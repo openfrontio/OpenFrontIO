@@ -300,16 +300,11 @@ export class MirvExecution implements Execution {
   ): number {
     // using base speed and uncapped curve, calculate ideal mirv flight ticks
     // prevents top of map shenanigans
-
-    const idealSeparateDst = {
-      x: this.mg.x(separateDst),
-      y: this.baseY - 500 + 50,
-    };
-
+    // Intentionally pass the clamped separateDst so timing matches the drawn physical arc exactly.
     const [iP0, iP1, iP2, iP3] = getParabolaControlPoints(
       this.mg,
       spawnTile,
-      idealSeparateDst,
+      separateDst,
       { distanceBasedHeight: true, directionUp: true, ignoreMapBounds: true },
     );
     const idealMirvLength = DistanceBasedBezierCurve.getLength(
@@ -320,6 +315,7 @@ export class MirvExecution implements Execution {
     );
     const baseSpeed = this.mg.config().nukeSpeed(UnitType.MIRV);
 
+    // Math.sqrt and basic fractional division are IEEE-754 deterministic across all compliant JS engines.
     // Floating point compliant, is only used in idealMirvTicksInt which floors.
     // Kept as a const for engine optimization
     const idealMirvTicks = idealMirvLength / baseSpeed;
