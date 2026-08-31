@@ -37,14 +37,21 @@ function bridge(): PresenceBridge | undefined {
 }
 
 class DesktopPresence {
-  // shell.api >= 2 is the capability signal for these namespaces. An older
-  // depot's shell has no presence bridge, and every method below no-ops.
+  // shell.api >= 2 is the capability signal for these namespaces, and every
+  // method below gates on it rather than relying on optional chaining alone.
+  // Optional chaining would be enough today -- presence/invite and api: 2
+  // shipped in the same shell commit, so no released shell has one without
+  // the other -- but it makes the client's contract "call whatever happens to
+  // be present" instead of "call what the shell declares it supports". A shell
+  // that ever exposed half the surface without bumping api would be silently
+  // half-driven; this refuses it instead.
   isAvailable(): boolean {
     const api = bridge()?.shell?.api;
     return typeof api === "number" && api >= 2;
   }
 
   set(payload: PresencePayload | null): void {
+    if (!this.isAvailable()) return;
     try {
       void bridge()
         ?.presence?.set(payload)
@@ -56,6 +63,7 @@ class DesktopPresence {
   }
 
   async consumePendingInvite(): Promise<string | null> {
+    if (!this.isAvailable()) return null;
     try {
       return (await bridge()?.invite?.consumePending()) ?? null;
     } catch {
@@ -64,6 +72,7 @@ class DesktopPresence {
   }
 
   subscribeInvites(cb: (gameId: string) => void): () => void {
+    if (!this.isAvailable()) return () => undefined;
     try {
       return bridge()?.invite?.subscribe(cb) ?? (() => undefined);
     } catch {
@@ -75,6 +84,7 @@ class DesktopPresence {
   }
 
   async openInviteDialog(): Promise<boolean> {
+    if (!this.isAvailable()) return false;
     try {
       return (await bridge()?.invite?.openInviteDialog()) ?? false;
     } catch {

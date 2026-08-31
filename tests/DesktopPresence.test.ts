@@ -18,6 +18,38 @@ describe("DesktopPresence", () => {
     expect(desktopPresence.isAvailable()).toBe(false);
   });
 
+  // The capability signal is what the shell DECLARES, not what happens to be
+  // reachable. A shell that exposed the namespaces without bumping shell.api
+  // is advertising a contract it has not committed to, so refuse it rather
+  // than half-drive it.
+  it("refuses a shell exposing the namespaces at api 1", async () => {
+    const setFn = vi.fn().mockResolvedValue(undefined);
+    const consumeFn = vi.fn().mockResolvedValue("abc123");
+    const subscribeFn = vi.fn(() => () => undefined);
+    const dialogFn = vi.fn().mockResolvedValue(true);
+    (window as any).openfrontDesktop = {
+      shell: { api: 1 },
+      presence: { set: setFn },
+      invite: {
+        consumePending: consumeFn,
+        subscribe: subscribeFn,
+        openInviteDialog: dialogFn,
+      },
+    };
+
+    desktopPresence.set({ state: "menu" });
+    expect(await desktopPresence.consumePendingInvite()).toBeNull();
+    expect(await desktopPresence.openInviteDialog()).toBe(false);
+    expect(() =>
+      desktopPresence.subscribeInvites(() => undefined)(),
+    ).not.toThrow();
+
+    expect(setFn).not.toHaveBeenCalled();
+    expect(consumeFn).not.toHaveBeenCalled();
+    expect(subscribeFn).not.toHaveBeenCalled();
+    expect(dialogFn).not.toHaveBeenCalled();
+  });
+
   it("isAvailable is true and passes through with a full bridge at api 2", async () => {
     const setFn = vi.fn().mockResolvedValue(undefined);
     (window as any).openfrontDesktop = {
