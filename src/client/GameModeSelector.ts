@@ -6,6 +6,7 @@ import {
   Duos,
   GameMapType,
   GameMode,
+  GameType,
   HumansVsNations,
   Quads,
   Trios,
@@ -57,6 +58,20 @@ export function shouldBlockMultiplayerAction(
   if (update !== null && !multiplayerAllowed(update)) return true;
   if (session !== null && !multiplayerAllowedForSession(session)) return true;
   return false;
+}
+
+/**
+ * Whether the desktop gate applies to a given join at all. Single-player runs
+ * entirely in-client and a replay simulates from an archived record, so
+ * neither needs a session or an up-to-date build -- the same carve-out
+ * Main.ts's getTurnstileToken makes. Exported for tests and kept free of
+ * component state, like shouldBlockMultiplayerAction above.
+ */
+export function joinIsGateable(lobby: JoinLobbyEvent): boolean {
+  return (
+    lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer &&
+    lobby.gameRecord === undefined
+  );
 }
 
 @customElement("game-mode-selector")

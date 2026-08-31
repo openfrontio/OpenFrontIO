@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { shouldBlockMultiplayerAction } from "../src/client/GameModeSelector";
+import {
+  joinIsGateable,
+  shouldBlockMultiplayerAction,
+} from "../src/client/GameModeSelector";
+import { GameType } from "../src/core/game/Game";
 
 describe("shouldBlockMultiplayerAction", () => {
   it("allows everything when no desktop update state has arrived", () => {
@@ -94,5 +98,44 @@ describe("shouldBlockMultiplayerAction with a session", () => {
 
   it("does not block on the web, where neither state exists", () => {
     expect(shouldBlockMultiplayerAction(null, null)).toBe(false);
+  });
+});
+
+describe("joinIsGateable", () => {
+  // Matchmaking, deep links and the host/join modals all dispatch join-lobby
+  // without passing a dimmed button, so the funnel gate is the only thing
+  // standing between a signed-out player and the server's Turnstile close.
+  it("gates an ordinary multiplayer join", () => {
+    expect(joinIsGateable({ gameID: "g1", source: "public" } as any)).toBe(
+      true,
+    );
+  });
+
+  it("gates a matchmaking join", () => {
+    expect(joinIsGateable({ gameID: "g2", source: "matchmaking" } as any)).toBe(
+      true,
+    );
+  });
+
+  // Runs entirely in-client -- no session, no server, nothing to gate.
+  it("does not gate single-player", () => {
+    expect(
+      joinIsGateable({
+        gameID: "g3",
+        source: "private",
+        gameStartInfo: { config: { gameType: GameType.Singleplayer } },
+      } as any),
+    ).toBe(false);
+  });
+
+  // Simulates from the archived record; there is no server to refuse it.
+  it("does not gate a replay", () => {
+    expect(
+      joinIsGateable({
+        gameID: "g4",
+        source: "private",
+        gameRecord: {},
+      } as any),
+    ).toBe(false);
   });
 });

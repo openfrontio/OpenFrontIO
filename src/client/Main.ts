@@ -21,6 +21,7 @@ import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
 import {
+  getDesktopSessionState,
   reauthAfterCrazyGamesChange,
   retrySteamSignIn,
   userAuth,
@@ -35,10 +36,18 @@ import {
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { desktopPresence, type PresencePayload } from "./DesktopPresence";
-import { desktopUpdate, isDesktopShell } from "./DesktopShell";
+import {
+  desktopUpdate,
+  isDesktopShell,
+  type DesktopUpdateState,
+} from "./DesktopShell";
 import "./FeaturedStream";
 import "./GameModeSelector";
-import { GameModeSelector } from "./GameModeSelector";
+import {
+  GameModeSelector,
+  joinIsGateable,
+  shouldBlockMultiplayerAction,
+} from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GameStatsModal";
 import { HelpModal } from "./HelpModal";
@@ -635,6 +644,13 @@ class Client {
     // account button and the cached profile -- the same reason the
     // CrazyGames listener above lives here. The authGeneration guard means a
     // response that arrives after another auth change cannot be applied.
+    // The status bar re-broadcasts the shell's update state as a document
+    // event; mirror it here so blockedDesktopJoin can gate on it too. No
+    // second bridge subscription -- the bar owns that one.
+    document.addEventListener("desktop-update-state", (e: Event) => {
+      this.desktopUpdateState = (e as CustomEvent<DesktopUpdateState>).detail;
+    });
+
     document.addEventListener("desktop-session-retry", () => {
       invalidateUserMe();
       const generation = authGeneration;
@@ -1007,10 +1023,50 @@ class Client {
     return mode;
   }
 
+  private desktopUpdateState: DesktopUpdateState | null = null;
+
+  /**
+   * The real multiplayer gate. The entry-point components dim their own
+   * buttons, but EVERY join -- theirs, matchmaking's, a deep link, the
+   * host/join modals -- funnels through handleJoinLobby, and most of those
+   * never pass a button. Matchmaking is the sharpest case: it dispatches
+   * join-lobby itself when a match is found, with no click to intercept, so
+   * without this a signed-out player queues, matches, and is closed by the
+   * server with the Turnstile error this whole feature exists to replace.
+   *
+   * Single-player runs entirely in-client and a replay simulates from an
+   * archived record, so neither needs a session or a current build -- the same
+   * carve-out getTurnstileToken makes.
+   *
+   * Draws attention to the status bar rather than failing silently, matching
+   * what the dimmed buttons do.
+   */
+  private blockedDesktopJoin(lobby: JoinLobbyEvent): boolean {
+    if (!isDesktopShell()) return false;
+    if (!joinIsGateable(lobby)) return false;
+    if (
+      !shouldBlockMultiplayerAction(
+        this.desktopUpdateState,
+        getDesktopSessionState(),
+      )
+    ) {
+      return false;
+    }
+    (
+      document.querySelector("desktop-status-bar") as
+        | (HTMLElement & { wiggle?: () => void })
+        | null
+    )?.wiggle?.();
+    return true;
+  }
+
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     this.mostRecentJoinEvent = event.timeStamp;
     if (this.usernameInput && !this.usernameInput.canPlay()) {
+      return;
+    }
+    if (this.blockedDesktopJoin(lobby)) {
       return;
     }
 
