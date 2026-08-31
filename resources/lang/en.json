@@ -785,6 +785,7 @@
     "import_json_desc": "Paste settings JSON from a friend and apply it",
     "import_json_invalid": "That doesn't look like valid settings JSON",
     "import_json_label": "Import settings JSON",
+    "layer_alpha_label": "Opacity",
     "layer_nukeable": "Nukeable",
     "layer_placement_land": "Land layer",
     "layer_placement_water": "Water layer",
