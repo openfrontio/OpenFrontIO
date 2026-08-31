@@ -334,6 +334,19 @@ export class SAMLauncherExecution implements Execution {
 
     this.pseudoRandom ??= new PseudoRandom(this.sam.id());
 
+    // No nuke in flight anywhere: nothing to target, skip the grid query. Every SAM ran it every
+    // tick (~7 % of a long headless game with 150 launchers). Exact: with no nukes the query is
+    // empty and the targeting loop a no-op; the only side effect skipped is pruning cache entries
+    // of nukes that no longer exist, which the next real call prunes before anything could read
+    // them (unit ids are unique). units(type) is memoised per unit-list version, so the check is
+    // one shared walk a tick, not one a launcher.
+    if (
+      this.mg.units(UnitType.AtomBomb).length === 0 &&
+      this.mg.units(UnitType.HydrogenBomb).length === 0 &&
+      this.mg.units(UnitType.MIRVWarhead).length === 0
+    ) {
+      return;
+    }
     // target is already filtered to exclude nukes targeted by other SAMs
     const targets = this.targetingSystem.getValidTargets(ticks);
     for (const target of targets) {
