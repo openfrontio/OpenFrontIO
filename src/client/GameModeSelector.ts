@@ -21,8 +21,13 @@ import {
   viewerIsTrusted,
 } from "./components/LobbyCard";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import { multiplayerAllowed, type DesktopUpdateState } from "./DesktopShell";
+import {
+  isDesktopShell,
+  multiplayerAllowed,
+  type DesktopUpdateState,
+} from "./DesktopShell";
 import { HostLobbyModal } from "./HostLobbyModal";
+import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
@@ -31,6 +36,7 @@ import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
   getSecondsUntilServerTimestamp,
+  reloadForUpdate,
   renderDuration,
   translateText,
 } from "./Utils";
@@ -60,9 +66,23 @@ export class GameModeSelector extends LitElement {
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
-  private lobbySocket = new PublicLobbySocket((lobbies) =>
-    this.handleLobbiesUpdate(lobbies),
+  private lobbySocket = new PublicLobbySocket(
+    (lobbies) => this.handleLobbiesUpdate(lobbies),
+    // This socket only runs while the player is on the homepage (Main.ts
+    // stops it when a game is joined), so it's always safe to reload here.
+    { onUpdateAvailable: () => this.handleUpdateAvailable() },
   );
+
+  private handleUpdateAvailable() {
+    // The desktop shell runs the bundle from a local overlay and updates it
+    // itself (download, stage, then its own reload button, see
+    // DesktopUpdateBar). Reloading here would only re-run the old overlay,
+    // reconnect, and trigger this again until the download finishes.
+    if (isDesktopShell()) return;
+    showInGameAlert(translateText("update_available.message")).then(() => {
+      reloadForUpdate();
+    });
+  }
 
   createRenderRoot() {
     return this;

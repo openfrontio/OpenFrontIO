@@ -309,6 +309,12 @@ export const PublicLobbyFullSchema = z.object({
   type: z.literal("full"),
   serverTime: zb.uint(),
   games: z.partialRecord(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+  // Build commit of the serving deployment. Clients on the homepage compare
+  // it to their own bundle's commit to detect that a new version deployed
+  // and prompt a refresh. Optional only so a server can omit it in tests; a
+  // bundle built before this field cannot decode the frame at all (zbin
+  // presence header shifts), which is the usual ship-together tradeoff.
+  gitCommit: z.string().max(64).optional(),
 });
 
 export const PublicLobbyCountsSchema = z.object({
@@ -1032,6 +1038,11 @@ export const ClientJoinMessageSchema = z.object({
   turnstileToken: z.string().nullable(),
   // Watch without playing: no spawn, no team, no lobby slot.
   spectator: z.boolean().optional(),
+  // Build commit of the client bundle. The sim only stays deterministic when
+  // every client in a game runs identical code, so the server rejects joins
+  // whose commit doesn't match its own (missing counts as a mismatch —
+  // pre-feature bundles are by definition stale).
+  gitCommit: z.string().max(64).optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
@@ -1040,6 +1051,8 @@ export const ClientRejoinMessageSchema = z.object({
   // Note: clientID is NOT sent - server looks it up from persistentID in token
   lastTurn: zb.uint(),
   token: TokenSchema,
+  // See ClientJoinMessageSchema.gitCommit.
+  gitCommit: z.string().max(64).optional(),
 });
 
 // Switch between playing and watching from the lobby screen. Lobby-phase only:

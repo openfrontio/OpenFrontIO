@@ -6,6 +6,9 @@ interface LobbySocketOptions {
   reconnectDelay?: number;
   maxWsAttempts?: number;
   pollIntervalMs?: number;
+  // Fired at most once, when the server advertises a different build commit
+  // than this bundle — i.e. a new version deployed while this tab was open.
+  onUpdateAvailable?: () => void;
 }
 
 function getRandomWorkerPath(numWorkers: number): string {
@@ -25,6 +28,8 @@ export class PublicLobbySocket {
 
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
+  private readonly onUpdateAvailable?: () => void;
+  private updateAvailableFired = false;
 
   constructor(
     private onLobbiesUpdate: (data: PublicGames) => void,
@@ -32,6 +37,7 @@ export class PublicLobbySocket {
   ) {
     this.reconnectDelay = options?.reconnectDelay ?? 3000;
     this.maxWsAttempts = options?.maxWsAttempts ?? 3;
+    this.onUpdateAvailable = options?.onUpdateAvailable;
   }
 
   async start() {
@@ -92,6 +98,7 @@ export class PublicLobbySocket {
         new Uint8Array(event.data as ArrayBuffer),
       );
       if (message.type === "full") {
+        this.checkServerCommit(message.gitCommit);
         this.lastFull = {
           serverTime: message.serverTime,
           games: message.games,
@@ -136,6 +143,17 @@ export class PublicLobbySocket {
         }
       }
     }
+  }
+
+  private checkServerCommit(serverCommit: string | undefined) {
+    if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
+      return;
+    }
+    if (serverCommit === undefined) return;
+    const ownCommit = ClientEnv.gitCommit();
+    if (ownCommit === "DEV" || serverCommit === ownCommit) return;
+    this.updateAvailableFired = true;
+    this.onUpdateAvailable();
   }
 
   private handleClose() {

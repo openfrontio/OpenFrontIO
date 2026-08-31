@@ -412,6 +412,32 @@ export async function startWorker() {
           return;
         }
 
+        // The sim is deterministic only when every client in a game runs
+        // identical code, so a client built from a different commit (e.g. a
+        // tab left open across a deploy) would desync the game. Reject it
+        // with a typed error the client answers by refreshing. A missing
+        // commit means a pre-feature bundle, which is stale by definition.
+        if (clientMsg.gitCommit !== ServerEnv.gitCommit()) {
+          log.info("rejecting version-mismatched client", {
+            gameID: clientMsg.gameID,
+            clientCommit: clientMsg.gitCommit,
+          });
+          ws.send(
+            encodeServerMessage(
+              {
+                type: "error",
+                error: "version_mismatch",
+              } satisfies ServerErrorMessage,
+              undefined,
+            ),
+          );
+          // Normal closure: the typed error above is the whole message. 1002
+          // would make the client stack a generic "connection refused" alert
+          // on top of it, and any other code makes it reconnect and loop.
+          ws.close(1000, "Version mismatch");
+          return;
+        }
+
         // Verify token signature
         const result = await verifyClientToken(clientMsg.token);
         if (result.type === "error") {

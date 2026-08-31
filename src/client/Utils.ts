@@ -743,3 +743,16 @@ export function getSecondsUntilServerTimestamp(
     ),
   );
 }
+
+/**
+ * Reload to pick up a newly deployed version. The app shell is served with a
+ * shared-cache TTL (RenderHtml.ts), so a plain reload can hand back the same
+ * stale HTML — with the old gitCommit baked in — for minutes after a deploy,
+ * and a version check that reloads on mismatch would loop. A unique query
+ * string misses the shared cache, so the origin renders the current shell.
+ */
+export function reloadForUpdate(): void {
+  const url = new URL(window.location.href);
+  url.searchParams.set("v", Date.now().toString(36));
+  window.location.replace(url.toString());
+}

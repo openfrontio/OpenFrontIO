@@ -1,5 +1,5 @@
 import { Config } from "src/core/configuration/Config";
-import { translateText } from "../client/Utils";
+import { reloadForUpdate, translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
   ClientID,
@@ -35,6 +35,7 @@ import {
 } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { getPersistentID } from "./Auth";
+import { isDesktopShell } from "./DesktopShell";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
@@ -339,6 +340,21 @@ export function joinLobby(
             },
           }),
         );
+      } else if (message.error === "version_mismatch") {
+        // The server runs a newer build than this bundle (tab left open
+        // across a deploy). On the web a reload picks up the new version. The
+        // desktop shell updates its local overlay itself and reloading would
+        // only re-run the old bundle, so there we just say what's happening
+        // and let the shell's update bar take it from here.
+        if (isDesktopShell()) {
+          void showInGameAlert(translateText("update_available.desktop"));
+        } else {
+          showInGameAlert(translateText("update_available.message")).then(
+            () => {
+              reloadForUpdate();
+            },
+          );
+        }
       } else {
         showErrorModal(
           message.error,
