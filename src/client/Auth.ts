@@ -265,6 +265,30 @@ export async function userAuth(
   }
 }
 
+/**
+ * Never rest on a state that gates without offering a way out.
+ *
+ * Both "unknown" (nothing has resolved yet) and "retrying" are transient: some
+ * branch downstream is expected to publish a terminal state. But refreshJwt's
+ * finally has no catch, so an unexpected throw inside doRefreshJwt reaches
+ * userAuth's top-level catch, which logs and returns false without touching
+ * session state -- leaving the transient status published forever. "retrying"
+ * gates multiplayer and renders no button; "unknown" does not gate, so it
+ * fails the other way, silently allowing a join the server will refuse.
+ *
+ * Called from every path that can leave one of those pending, so the guarantee
+ * does not depend on each branch remembering to publish.
+ */
+function settlePendingSession(): void {
+  if (!steamSDK.isOnSteam()) return;
+  if (
+    __sessionState.status === "unknown" ||
+    __sessionState.status === "retrying"
+  ) {
+    setSessionState({ status: "signed-out", reason: "steam-error" });
+  }
+}
+
 async function refreshJwt(): Promise<void> {
   if (__refreshPromise) {
     return __refreshPromise;
@@ -274,6 +298,7 @@ async function refreshJwt(): Promise<void> {
     await __refreshPromise;
   } finally {
     __refreshPromise = null;
+    settlePendingSession();
   }
 }
 
@@ -483,9 +508,7 @@ export async function retrySteamSignIn(): Promise<UserAuth> {
       // including "retrying", and DesktopStatusBar.sessionAction renders no
       // button for it. If nothing moved us off "retrying" by the time this
       // settles, force a terminal, actionable state instead.
-      if (__sessionState.status === "retrying") {
-        setSessionState({ status: "signed-out", reason: "steam-error" });
-      }
+      settlePendingSession();
       __steamRetryPromise = null;
     }
   })();

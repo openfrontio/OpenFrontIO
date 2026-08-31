@@ -13,7 +13,6 @@ import {
 } from "../core/Schemas";
 import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import "./AccountSettingsModal";
@@ -21,6 +20,7 @@ import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
 import {
+  getDesktopSessionState,
   reauthAfterCrazyGamesChange,
   retrySteamSignIn,
   userAuth,
@@ -35,10 +35,18 @@ import {
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { desktopPresence, type PresencePayload } from "./DesktopPresence";
-import { desktopUpdate, isDesktopShell } from "./DesktopShell";
+import {
+  desktopUpdate,
+  isDesktopShell,
+  type DesktopUpdateState,
+} from "./DesktopShell";
 import "./FeaturedStream";
 import "./GameModeSelector";
-import { GameModeSelector } from "./GameModeSelector";
+import {
+  GameModeSelector,
+  joinIsGateable,
+  shouldBlockDesktopJoin,
+} from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GameStatsModal";
 import { HelpModal } from "./HelpModal";
@@ -635,6 +643,19 @@ class Client {
     // account button and the cached profile -- the same reason the
     // CrazyGames listener above lives here. The authGeneration guard means a
     // response that arrives after another auth change cannot be applied.
+    // Subscribe to the bridge directly rather than to the status bar's
+    // re-broadcast. The bar subscribes when its element upgrades and the
+    // bridge replays the current state immediately, so that event fires long
+    // before this code runs (it sits after `await userAuth()`), and a listener
+    // added here would miss it. That matters most for a `staged` update, which
+    // is persisted across restarts and then never re-emitted -- the gate would
+    // sit on a null update state forever. subscribe() replays on subscribe and
+    // the updater supports multiple subscribers, so this is safe alongside the
+    // bar's own subscription.
+    desktopUpdate()?.subscribe((state) => {
+      this.desktopUpdateState = state;
+    });
+
     document.addEventListener("desktop-session-retry", () => {
       invalidateUserMe();
       const generation = authGeneration;
@@ -1007,12 +1028,61 @@ class Client {
     return mode;
   }
 
+  private desktopUpdateState: DesktopUpdateState | null = null;
+
+  /**
+   * The real multiplayer gate. The entry-point components dim their own
+   * buttons, but EVERY join -- theirs, matchmaking's, a deep link, the
+   * host/join modals -- funnels through handleJoinLobby, and most of those
+   * never pass a button. Matchmaking is the sharpest case: it dispatches
+   * join-lobby itself when a match is found, with no click to intercept, so
+   * without this a signed-out player queues, matches, and is closed by the
+   * server with the Turnstile error this whole feature exists to replace.
+   *
+   * The decision itself lives in shouldBlockDesktopJoin, which is pure and
+   * unit-tested; this adds the shell check, the modal cleanup and the wiggle.
+   *
+   * Draws attention to the status bar rather than failing silently, matching
+   * what the dimmed buttons do.
+   */
+  private blockedDesktopJoin(lobby: JoinLobbyEvent): boolean {
+    if (!isDesktopShell()) return false;
+    if (
+      !shouldBlockDesktopJoin(
+        lobby,
+        this.desktopUpdateState,
+        getDesktopSessionState(),
+      )
+    ) {
+      return false;
+    }
+    // The dispatcher may already have told the player they are in a lobby:
+    // JoinLobbyModal dispatches only after it has joined and rendered
+    // "joined, waiting", and HostLobbyModal after the server lobby exists.
+    // Refusing without closing those would leave the UI claiming a lobby the
+    // client never entered, with the game starting without them.
+    this.joinModal?.close();
+    this.hostModal?.close();
+    (
+      document.querySelector("desktop-status-bar") as
+        | (HTMLElement & { wiggle?: () => void })
+        | null
+    )?.wiggle?.();
+    return true;
+  }
+
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
-    this.mostRecentJoinEvent = event.timeStamp;
     if (this.usernameInput && !this.usernameInput.canPlay()) {
       return;
     }
+    if (this.blockedDesktopJoin(lobby)) {
+      return;
+    }
+    // Only once the join is actually going ahead: a refused dispatch that
+    // bumped this would supersede a legitimate join still awaiting userAuth
+    // and cosmetics, stopping it as stale and leaving the player nowhere.
+    this.mostRecentJoinEvent = event.timeStamp;
 
     console.log(`joining lobby ${lobby.gameID}`);
     // Entering a lobby. Singleplayer, public lobbies and replays know their
@@ -1395,11 +1465,10 @@ class Client {
     if (
       ClientEnv.env() === GameEnv.Dev ||
       ClientEnv.instanceId() === "desktop" ||
-      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer ||
-      // Replays simulate locally from the archived record; there is no
-      // server to verify a token (and on the CDN replay shells Turnstile
-      // cannot load at all).
-      lobby.gameRecord !== undefined
+      // Single-player and replays: no server to verify a token against (and
+      // on the CDN replay shells Turnstile cannot load at all). Shared with
+      // the desktop gate so the exemption has one definition.
+      !joinIsGateable(lobby)
     ) {
       return null;
     }

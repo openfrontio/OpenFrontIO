@@ -121,6 +121,48 @@ describe("Steam login", () => {
   // available". The Electron profile has no refresh cookie, so that
   // fallthrough was a guaranteed 401 that then ran logOut() and dropped the
   // player's persistent ID. The Steam branch is now terminal.
+  // The initial sign-in had no equivalent of the retry path's guarantee: an
+  // unexpected throw inside doRefreshJwt reaches userAuth's catch, which
+  // returns false without publishing, leaving "unknown" -- which does NOT
+  // gate, so multiplayer stays open and the join is refused by the server.
+  it("settles a thrown initial sign-in instead of resting on unknown", async () => {
+    // Drive the module to a genuine "unknown" first: __sessionState is
+    // module-level and leaks between tests, and only a logOut from signed-in
+    // produces "unknown". Asserting from a leaked state would prove nothing.
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    const getTicket = vi
+      .spyOn(steamSDK, "getTicket")
+      .mockResolvedValue({ ok: true, ticket: "t" });
+    const jwt = new UnsecuredJWT({
+      jti: "some-id",
+      sub: "AAAAAAAAAAAAAAAAAAAAAA",
+      iat: Math.floor(Date.now() / 1000),
+      iss: "https://api.openfront.dev",
+      aud: "openfront.dev",
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    }).encode();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ jwt, expiresIn: 900 }), { status: 200 }),
+    );
+    await getAuthHeader();
+    await logOut();
+    expect(getDesktopSessionState()).toEqual({ status: "unknown" });
+
+    // Now an unexpected throw inside doRefreshJwt. userAuth's catch swallows
+    // it and returns false without publishing, so without the guarantee the
+    // state would rest at "unknown" -- which does NOT gate, leaving multiplayer
+    // open for a join the server will refuse.
+    getTicket.mockImplementation(() => {
+      throw new Error("boom");
+    });
+
+    await getAuthHeader();
+
+    const state = getDesktopSessionState();
+    expect(state).toEqual({ status: "signed-out", reason: "steam-error" });
+    expect(multiplayerAllowedForSession(state)).toBe(false);
+  });
+
   // A diagnosed failure must survive an UNRELATED logOut. getAuthHeader
   // returns "" when signed out, so any authenticated call still goes out and
   // still comes back 401, and Api.ts calls logOut() on 401 from 13 places.
