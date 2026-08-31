@@ -109,10 +109,11 @@ const TERRA_NULLIUS_MIN_COST = 5;
 const TERRA_NULLIUS_MAX_COST = 100;
 // Attacker loss = mag * clampedRatio * (BASE * largeAttackerBonus + DENSITY * troopsPerTile).
 // BASE is the old 0.48 ratio weight times the 0.965 large-defender sigmoid
-// tail that every defender used to get; DENSITY is the old 0.0052 weight at
-// the ratio clamp (2) where nearly all fights sit.
+// tail that every defender used to get. DENSITY sets which stack size pays
+// the old 0.0052 density weight: at 0.0039 a stack of 3/4 the defender's
+// army matches the old cost, bigger stacks pay less, smaller pay more.
 const ATTACKER_LOSS_BASE = 0.463;
-const ATTACKER_LOSS_PER_DENSITY = 0.0026;
+const ATTACKER_LOSS_PER_DENSITY = 0.0039;
 // Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
 const SPEED_COST_DIVISOR = 7.77;
 
