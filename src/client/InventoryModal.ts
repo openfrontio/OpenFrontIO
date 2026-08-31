@@ -474,9 +474,11 @@ export class InventoryModal extends BaseModal {
     );
 
     return html`
-      ${this.hasOwnedCatalogItem(["pattern", "skin"])
-        ? null
-        : this.renderEmptyState("skins")}
+      ${
+        this.hasOwnedCatalogItem(["pattern", "skin"])
+          ? null
+          : this.renderEmptyState("skins")
+      }
       <div
         data-inventory-grid="skins"
         class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
@@ -514,9 +516,11 @@ export class InventoryModal extends BaseModal {
 
     const equippedKey = this.equippedCrown()?.key;
     return html`
-      ${this.hasOwnedCatalogItem(["crown"])
-        ? null
-        : this.renderEmptyState("crowns")}
+      ${
+        this.hasOwnedCatalogItem(["crown"])
+          ? null
+          : this.renderEmptyState("crowns")
+      }
       <div
         data-inventory-grid="crowns"
         class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
@@ -613,13 +617,13 @@ export class InventoryModal extends BaseModal {
             class="no-crazygames"
             variant=${isLoggedIn ? "primary" : "danger"}
             size="sm"
-            .translationKey=${isLoggedIn
-              ? "main.store"
-              : "common.not_logged_in"}
+            .translationKey=${
+              isLoggedIn ? "main.store" : "common.not_logged_in"
+            }
             @click=${() => {
               if (isLoggedIn) {
                 this.close();
-                window.showPage?.("page-item-store");
+                window.location.hash = "modal=store&tab=cosmetics";
               } else {
                 window.showPage?.("page-account");
               }
