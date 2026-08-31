@@ -46,7 +46,19 @@ function normaliseTicketResult(value: unknown): SteamTicketResult {
     return { ok: false, reason: "unavailable" };
   }
   if (typeof value === "object" && "ok" in value) {
-    return value as SteamTicketResult;
+    const candidate = value as { ok: unknown; ticket?: unknown };
+    // Validate the success case rather than casting it: a malformed
+    // { ok: true } without a usable ticket would otherwise be POSTed to
+    // /auth/steam as-is. A malformed FAILURE needs no check here -- an
+    // unrecognised reason is already handled by ticketReason's default.
+    if (candidate.ok === true) {
+      return typeof candidate.ticket === "string" && candidate.ticket.length > 0
+        ? { ok: true, ticket: candidate.ticket }
+        : { ok: false, reason: "error" };
+    }
+    if (candidate.ok === false) {
+      return value as SteamTicketResult;
+    }
   }
   return { ok: false, reason: "error" };
 }

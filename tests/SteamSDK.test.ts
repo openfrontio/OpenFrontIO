@@ -77,6 +77,22 @@ describe("SteamSDK", () => {
     });
   });
 
+  // A structured result is not trusted either: the shell is a separate repo,
+  // so a malformed success must not reach /auth/steam as a bogus ticket.
+  it.each([
+    ["a missing ticket", { ok: true }],
+    ["a non-string ticket", { ok: true, ticket: 1234 }],
+    ["an empty ticket", { ok: true, ticket: "" }],
+  ])("rejects a malformed success object with %s", async (_label, shape) => {
+    (window as any).openfrontDesktop = {
+      steam: {
+        getAuthTicket: vi.fn().mockResolvedValue(shape),
+        getUser: vi.fn(),
+      },
+    };
+    expect(await steamSDK.getTicket()).toEqual({ ok: false, reason: "error" });
+  });
+
   // The IPC call itself has no bound otherwise: a hung shell would leave
   // getTicket() (and everything downstream of it) waiting forever, which is
   // the same "retrying" lockout the /auth/steam AbortSignal.timeout guards

@@ -121,6 +121,30 @@ describe("Steam login", () => {
   // available". The Electron profile has no refresh cookie, so that
   // fallthrough was a guaranteed 401 that then ran logOut() and dropped the
   // player's persistent ID. The Steam branch is now terminal.
+  // The boundary check in SteamSDK.getTicket exists so a malformed success
+  // from a mismatched shell is never redeemed as a ticket. Asserted end to
+  // end, not just at the SDK, because it is /auth/steam that would receive it.
+  it("never POSTs /auth/steam for a malformed success from the bridge", async () => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    (window as any).openfrontDesktop = {
+      steam: {
+        getAuthTicket: vi.fn().mockResolvedValue({ ok: true, ticket: 1234 }),
+        getUser: vi.fn(),
+      },
+    };
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    await getAuthHeader();
+
+    for (const call of fetchMock.mock.calls) {
+      expect(String(call[0])).not.toContain("/auth/steam");
+    }
+    expect(getDesktopSessionState()).toEqual({
+      status: "signed-out",
+      reason: "steam-error",
+    });
+  });
+
   it("does not fall through to /auth/refresh when the ticket fails", async () => {
     vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
     vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
