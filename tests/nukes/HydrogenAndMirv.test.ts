@@ -12,7 +12,11 @@ import { TestConfig } from "../util/TestConfig";
 
 class FastNukeTestConfig extends TestConfig {
   nukeSpeed(_: UnitType): number {
-    return 15;
+    return 50;
+  }
+
+  mirvNormalizeTargetTicks(): number {
+    return 2;
   }
 }
 

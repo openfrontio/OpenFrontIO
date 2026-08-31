@@ -1018,6 +1018,10 @@ export class Config {
     throw new Error(`Unknown nuke type: ${unitType}`);
   }
 
+  mirvNormalizeTargetTicks(): number {
+    return 14;
+  }
+
   defaultNukeTargetableRange(): number {
     return 150;
   }
