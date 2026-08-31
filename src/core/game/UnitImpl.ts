@@ -254,8 +254,10 @@ export class UnitImpl implements Unit {
     }
     this._lastOwner = this._owner;
     this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
+    this._lastOwner._myUnitsVersion++;
     this._owner = newOwner;
     this._owner._units.push(this);
+    this._owner._myUnitsVersion++;
     this.mg.bumpUnitsVersion();
     this.mg.addUpdate(this.toUpdate());
   }
@@ -330,6 +332,7 @@ export class UnitImpl implements Unit {
     this._destroyer = destroyer ?? undefined;
 
     this._owner._units = this._owner._units.filter((b) => b !== this);
+    this._owner._myUnitsVersion++;
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
@@ -505,6 +508,7 @@ export class UnitImpl implements Unit {
   setUnderConstruction(underConstruction: boolean): void {
     if (this._underConstruction !== underConstruction) {
       this._underConstruction = underConstruction;
+      this._owner._myUnitsVersion++; // unitsOwned() weighs under-construction units differently
       this.mg.addUpdate(this.toUpdate());
     }
   }
@@ -709,6 +713,9 @@ export class UnitImpl implements Unit {
       };
     }
     this._level++;
+    // unitCount()/unitsOwned() are level-weighted and memoised on these versions
+    this.mg.bumpUnitsVersion();
+    this._owner._myUnitsVersion++;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
       this._missileTimerQueue.push(this.mg.ticks());
     }

@@ -194,9 +194,8 @@ export class AttackExecution implements Execution {
 
     this.toConquer.clear();
     this.attack.clearBorder();
-    for (const tile of this._owner.borderTiles()) {
-      this.addNeighbors(tile);
-    }
+    // forEach over the dense storage — the values() generator showed up in long-game profiles
+    this._owner.borderTiles().forEach((tile) => this.addNeighbors(tile));
   }
 
   private retreat(malusPercent = 0) {

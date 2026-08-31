@@ -373,11 +373,24 @@ export class GameImpl implements Game {
     return out;
   }
 
+  // Level-weighted count of one unit type across every player. Every port asked
+  // for the trade-ship count every tick, and the walk over every player's unit
+  // list was ~3.5 % of a long headless game. Memoised on the units version, which
+  // moves on any unit list change and on every level-up (UnitImpl.increaseLevel).
+  private readonly unitCountMemo = new Map<
+    UnitType,
+    { version: number; count: number }
+  >();
   unitCount(type: UnitType): number {
+    const memo = this.unitCountMemo.get(type);
+    if (memo !== undefined && memo.version === this._unitsVersion) {
+      return memo.count;
+    }
     let total = 0;
     for (const player of this._players.values()) {
       total += player.unitCount(type);
     }
+    this.unitCountMemo.set(type, { version: this._unitsVersion, count: total });
     return total;
   }
 

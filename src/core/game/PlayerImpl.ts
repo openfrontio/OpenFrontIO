@@ -137,6 +137,21 @@ export class PlayerImpl implements Player {
   public _borderTiles = new TileSet();
 
   public _units: Unit[] = [];
+  /** Bumped on every change that can alter a per-type answer over _units: add, remove, ownership
+   *  transfer, level-up, construction toggle (see UnitImpl). Keys the three memos below. */
+  public _myUnitsVersion = 0;
+  private readonly myUnitsMemo = new Map<
+    UnitType,
+    { version: number; list: Unit[] }
+  >();
+  private readonly myUnitCountMemo = new Map<
+    UnitType,
+    { version: number; count: number }
+  >();
+  private readonly myUnitsOwnedMemo = new Map<
+    UnitType,
+    { version: number; owned: number }
+  >();
   public _tiles = new TileSet();
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
@@ -443,9 +458,21 @@ export class PlayerImpl implements Player {
         if (ts.has(u.type())) scratch[n++] = u;
       }
     } else if (second === undefined) {
+      // Single-type queries repeat heavily (warship heal, nation ship tracking,
+      // troop caps): memoised on the per-player units version; hits hand out a copy.
+      const memo = this.myUnitsMemo.get(first as UnitType);
+      if (memo !== undefined && memo.version === this._myUnitsVersion) {
+        return memo.list.slice();
+      }
       for (const u of this._units) {
         if (u.type() === first) scratch[n++] = u;
       }
+      const list = scratch.slice(0, n);
+      this.myUnitsMemo.set(first as UnitType, {
+        version: this._myUnitsVersion,
+        list,
+      });
+      return list.slice();
     } else if (third === undefined) {
       for (const u of this._units) {
         const t = u.type();
@@ -479,17 +506,31 @@ export class PlayerImpl implements Player {
 
   // Count of units owned by the player, not including construction
   unitCount(type: UnitType): number {
+    // Every train station asked for the owner's factory count every tick — a walk
+    // over the whole unit list per station (~2 % of a long headless game).
+    const memo = this.myUnitCountMemo.get(type);
+    if (memo !== undefined && memo.version === this._myUnitsVersion) {
+      return memo.count;
+    }
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
         total += unit.level();
       }
     }
+    this.myUnitCountMemo.set(type, {
+      version: this._myUnitsVersion,
+      count: total,
+    });
     return total;
   }
 
   // Count of units owned by the player, including construction
   unitsOwned(type: UnitType): number {
+    const memo = this.myUnitsOwnedMemo.get(type);
+    if (memo !== undefined && memo.version === this._myUnitsVersion) {
+      return memo.owned;
+    }
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
@@ -500,6 +541,10 @@ export class PlayerImpl implements Player {
         }
       }
     }
+    this.myUnitsOwnedMemo.set(type, {
+      version: this._myUnitsVersion,
+      owned: total,
+    });
     return total;
   }
 
@@ -1329,6 +1374,7 @@ export class PlayerImpl implements Player {
       params,
     );
     this._units.push(b);
+    this._myUnitsVersion++;
     this.recordUnitConstructed(type);
     this.removeGold(cost);
     this.removeTroops("troops" in params ? (params.troops ?? 0) : 0);
