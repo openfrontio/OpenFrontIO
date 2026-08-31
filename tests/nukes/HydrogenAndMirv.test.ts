@@ -275,9 +275,14 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     fastGame.executeNextTick();
     //tick ConstructionExe -> create and init MIRVExe
     fastGame.executeNextTick();
-    // Tick MirvExe -> create MIRV Unit + move -> Create/init NukeExe warhead
+    // Because it ticked once on the frame it was created, original path length is current + 1.
+    const execution = (fastGame as any)
+      .executions()
+      .find((e: any) => e instanceof MirvExecution) as any;
+
+    // Tick 3: MirvExe ticks -> spawns warhead executions (which init in the same tick).
     fastGame.executeNextTick();
-    // NukeExe -> create Warheads, now detectable. MIRV moves.
+    // Tick 4: NukeExecution ticks for the first time -> creates the physical warhead units!
     fastGame.executeNextTick();
     const warheads = fastPlayer.units(UnitType.MIRVWarhead);
 
@@ -289,20 +294,16 @@ describe("Hydrogen Bomb and MIRV flows", () => {
       ...warheads.map((w) => w.nukeState().waitTicks),
     );
 
-    // Since flight time is ~8 ticks, waitTicks is ~8 (strictly < 10)
-    expect(minWaitTicks).toBeGreaterThan(0);
+    // Since short-flight scaling aggressively pulls the target down, actual flight time evaluates to ~5.5 ticks
+    expect(minWaitTicks).toBeGreaterThanOrEqual(5);
     expect(minWaitTicks).toBeLessThan(10);
     expect(maxWaitTicks - minWaitTicks).toBeLessThanOrEqual(15);
 
     // Check the remaining path length in the execution.
     // An un-normalized speed 50 path would traverse 35px in 1 tick (pathLength 0 after shifting).
     // The short-flight branch slows it down to target ~7.7 ticks.
-    // Even after shifting a few points, the remaining path must be strictly > 2,
-    // proving the short-flight normalization successfully elongated the flight time.
-    const execution = (fastGame as any)
-      .executions()
-      .find((e: any) => e instanceof MirvExecution) as any;
-    expect(execution.fullPath.length).toBeGreaterThan(2);
+    // Even after shifting a few points, the remaining path must be >= 5
+    expect(execution.fullPath.length).toBeGreaterThanOrEqual(5);
 
     spy.mockRestore();
   });
