@@ -549,6 +549,9 @@ export class GameMapImpl implements GameMap {
       const wasLand = this.isLand(tile);
       this.terrain[tile] = terrainByte;
       const isNowLand = Boolean(terrainByte & (1 << GameMapImpl.IS_LAND_BIT));
+      // Water-derived caches key on waterVersion(): a packed update that flips
+      // land/water must invalidate them just like setWater() does.
+      if (wasLand !== isNowLand) this.waterVersion_++;
       if (wasLand && !isNowLand) this.numLandTiles_--;
       else if (!wasLand && isNowLand) this.numLandTiles_++;
     }

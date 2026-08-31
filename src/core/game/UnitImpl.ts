@@ -734,6 +734,9 @@ export class UnitImpl implements Unit {
       this.delete(true, destroyer);
       return;
     }
+    // unitCount()/unitsOwned() are level-weighted and memoised on these versions
+    this.mg.bumpUnitsVersion();
+    this._owner._myUnitsVersion++;
     this.mg.addUpdate(this.toUpdate());
   }
 
