@@ -812,6 +812,8 @@
     "preset_default": "Default",
     "preset_default_desc": "The standard OpenFront look",
     "preset_delete_confirm": "Delete preset \"{name}\"?",
+    "preset_evans_pick": "Evan's Pick",
+    "preset_evans_pick_desc": "The settings Evan actually plays with",
     "preset_migrated_name": "My settings",
     "preset_name_placeholder": "Preset name",
     "preset_night": "Night",
