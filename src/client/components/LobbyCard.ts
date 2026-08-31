@@ -67,14 +67,9 @@ export function trustRequiredDialog(
  */
 
 /**
- * The blue pills on a card's top row: the modifier labels on the left and the
- * countdown on the right. One class string so the two can't drift apart.
- * `inline-block` is load-bearing -- an inline span paints its background over
- * the font's content area rather than the line box, which makes the pill 4px
- * shorter than a blockified one and changes height when the font swaps in.
- * Both pills must also be direct children of the top row's flex container:
- * wrapped in a block, a pill sits on a line box instead and the strut of the
- * card's larger inherited font pushes it a couple of pixels down.
+ * One class for both of the top row's pills so they can't drift apart. Keep
+ * them direct flex children of the row: wrapped in a block, a pill picks up a
+ * line box and renders 4px short and 2px low.
  */
 const CARD_PILL_CLASS =
   "inline-block px-2 py-1 rounded text-xs font-bold tracking-widest bg-malibu-blue text-white";
