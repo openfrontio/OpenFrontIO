@@ -142,3 +142,53 @@ export function multiplayerAllowed(state: DesktopUpdateState): boolean {
   // downloading (wait) and staged (reload) both have a real remedy.
   return false;
 }
+
+export type DesktopSessionStatus =
+  | "unknown" // the first sign-in attempt is still in flight
+  | "signed-in"
+  | "retrying" // the player pressed Retry and it has not settled
+  | "signed-out";
+
+/**
+ * Why the shell has no session. Each maps to its own player-facing message,
+ * because they are not equally actionable -- `steam-wedged` is the one with a
+ * one-step fix (restart Steam), and it is the one we used to say nothing about.
+ */
+export type SessionFailureKind =
+  | "steam-unavailable" // no Steam client running, or no native addon
+  | "steam-wedged" // the web-api ticket timed out -- restart Steam
+  | "steam-error" // the native ticket call threw for some other reason
+  | "steam-ticket-rejected" // /auth/steam 401: Steam refused the ticket
+  | "steam-backend" // /auth/steam 5xx: Steam's backend, not the player
+  | "network"; // the request never completed
+
+export interface DesktopSessionState {
+  status: DesktopSessionStatus;
+  reason?: SessionFailureKind;
+}
+
+/**
+ * Whether multiplayer should be available in a given session state.
+ *
+ * This DELIBERATELY diverges from multiplayerAllowed's governing rule above
+ * ("gate when there is a remedy, not merely when there is a problem"), and the
+ * divergence is the point:
+ *
+ * With updates, declining to gate still lets the player play -- gating is a
+ * cost we impose to keep them in sync. With a missing session, declining to
+ * gate does NOT let them play. Worker.ts closes the socket on any first join
+ * without a Steam-provider JWT, and Transport.ts renders that as a Turnstile
+ * error the player never encountered. Gating is the only way that refusal
+ * happens somewhere we can name a cause and offer Retry.
+ *
+ * So every signed-out reason gates, including the ones the player cannot fix.
+ *
+ * A null state means no desktop shell -- the web build -- where a logged-out
+ * player passes Turnstile normally and must not be gated.
+ */
+export function multiplayerAllowedForSession(
+  state: DesktopSessionState | null,
+): boolean {
+  if (state === null) return true;
+  return state.status === "unknown" || state.status === "signed-in";
+}

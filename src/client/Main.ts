@@ -20,7 +20,11 @@ import "./AccountSettingsModal";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
-import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
+import {
+  reauthAfterCrazyGamesChange,
+  retrySteamSignIn,
+  userAuth,
+} from "./Auth";
 import "./ChangeUsernameModal";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
@@ -77,7 +81,7 @@ import { genAnonUsername, UsernameInput } from "./UsernameInput";
 import { incrementGamesPlayed, translateText } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
-import "./components/DesktopUpdateBar";
+import "./components/DesktopStatusBar";
 import "./components/MarketingConsentToast";
 import "./components/PurchaseNudgeModal";
 import {
@@ -620,6 +624,21 @@ class Client {
       invalidateUserMe();
       const generation = authGeneration;
       reauthAfterCrazyGamesChange().then((result) =>
+        result === false
+          ? applyUserMe(generation)(false)
+          : getUserMe().then(applyUserMe(generation)),
+      );
+    });
+
+    // The desktop status bar's Retry. Orchestrated here rather than in the
+    // bar because a successful sign-in also has to refresh userMe, the nav
+    // account button and the cached profile -- the same reason the
+    // CrazyGames listener above lives here. The authGeneration guard means a
+    // response that arrives after another auth change cannot be applied.
+    document.addEventListener("desktop-session-retry", () => {
+      invalidateUserMe();
+      const generation = authGeneration;
+      retrySteamSignIn().then((result) =>
         result === false
           ? applyUserMe(generation)(false)
           : getUserMe().then(applyUserMe(generation)),

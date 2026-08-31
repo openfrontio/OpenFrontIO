@@ -11,6 +11,7 @@ import {
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { getDesktopSessionState } from "./Auth";
 import "./components/IOSAddToHomeScreenBanner";
 import {
   canJoinTrustedLobby,
@@ -21,7 +22,13 @@ import {
   viewerIsTrusted,
 } from "./components/LobbyCard";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import { multiplayerAllowed, type DesktopUpdateState } from "./DesktopShell";
+import {
+  isDesktopShell,
+  multiplayerAllowed,
+  multiplayerAllowedForSession,
+  type DesktopSessionState,
+  type DesktopUpdateState,
+} from "./DesktopShell";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -40,13 +47,16 @@ const CARD_BG = "bg-surface";
 /**
  * Whether a multiplayer entry point should refuse to act. Exported for tests
  * and kept free of component state so the rule is checkable in isolation.
- * A null state means no desktop shell (the web build), so nothing is gated.
+ * A null state means that bridge is absent (the web build), so it gates
+ * nothing; either state alone is enough to block.
  */
 export function shouldBlockMultiplayerAction(
-  state: DesktopUpdateState | null,
+  update: DesktopUpdateState | null,
+  session: DesktopSessionState | null,
 ): boolean {
-  if (state === null) return false;
-  return !multiplayerAllowed(state);
+  if (update !== null && !multiplayerAllowed(update)) return true;
+  if (session !== null && !multiplayerAllowedForSession(session)) return true;
+  return false;
 }
 
 @customElement("game-mode-selector")
@@ -57,6 +67,7 @@ export class GameModeSelector extends LitElement {
   @state() private viewerTrusted: boolean = false;
   @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
+  @state() private desktopSessionState: DesktopSessionState | null = null;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
@@ -89,6 +100,13 @@ export class GameModeSelector extends LitElement {
       this.onDesktopUpdateState,
     );
     document.addEventListener("userMeResponse", this.onUserMe);
+    if (isDesktopShell()) {
+      this.desktopSessionState = getDesktopSessionState();
+    }
+    document.addEventListener(
+      "desktop-session-state",
+      this.onDesktopSessionState,
+    );
     // Pick up the current value in case username-input validated before us.
     const usernameInput = document.querySelector(
       "username-input",
@@ -109,6 +127,10 @@ export class GameModeSelector extends LitElement {
       this.onDesktopUpdateState,
     );
     document.removeEventListener("userMeResponse", this.onUserMe);
+    document.removeEventListener(
+      "desktop-session-state",
+      this.onDesktopSessionState,
+    );
     super.disconnectedCallback();
   }
 
@@ -131,6 +153,10 @@ export class GameModeSelector extends LitElement {
         if (user !== null) this.viewerSignedIn = true;
       });
     }
+  };
+
+  private onDesktopSessionState = (e: Event) => {
+    this.desktopSessionState = (e as CustomEvent<DesktopSessionState>).detail;
   };
 
   public stop() {
@@ -321,13 +347,19 @@ export class GameModeSelector extends LitElement {
    * actionable.
    */
   private blockedByUpdate(): boolean {
-    if (!shouldBlockMultiplayerAction(this.desktopUpdateState)) return false;
+    if (
+      !shouldBlockMultiplayerAction(
+        this.desktopUpdateState,
+        this.desktopSessionState,
+      )
+    )
+      return false;
     // Optional-call the method rather than dispatching an event: the bar is a
     // sibling custom element that may not have upgraded yet, and `?.wiggle?.()`
     // degrades to a silent no-op in that case instead of firing an event with
     // no listener.
     (
-      document.querySelector("desktop-update-bar") as
+      document.querySelector("desktop-status-bar") as
         | (HTMLElement & { wiggle?: () => void })
         | null
     )?.wiggle?.();
@@ -381,7 +413,11 @@ export class GameModeSelector extends LitElement {
     gated: boolean = false,
   ) {
     const blocked =
-      gated && shouldBlockMultiplayerAction(this.desktopUpdateState);
+      gated &&
+      shouldBlockMultiplayerAction(
+        this.desktopUpdateState,
+        this.desktopSessionState,
+      );
     return html`
       <button
         @click=${onClick}
@@ -434,7 +470,10 @@ export class GameModeSelector extends LitElement {
       timeDisplay,
       timeDisplayUppercase,
       disabled: !this.inputValid,
-      blocked: shouldBlockMultiplayerAction(this.desktopUpdateState),
+      blocked: shouldBlockMultiplayerAction(
+        this.desktopUpdateState,
+        this.desktopSessionState,
+      ),
       viewerTrusted: this.viewerTrusted,
       onClick: () => this.validateAndJoin(lobby),
     });
