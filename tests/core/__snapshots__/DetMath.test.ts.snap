@@ -1,0 +1,14 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DetMath > produces exactly these bits (guards against accidental changes) 1`] = `
+[
+  2.718281828321915,
+  0.00000372665317207867,
+  1.0986122886681382,
+  11.918390573078392,
+  659.7539553801837,
+  27977.293878826826,
+  0.6435011087932844,
+  -1.8490959858022622,
+]
+`;

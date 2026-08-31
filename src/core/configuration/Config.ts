@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
+import { exp, log, pow, pow2 } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
   Difficulty,
@@ -126,9 +127,9 @@ function largeTerritoryBonus(numTiles: number, depth: number): number {
     1 -
     depth *
       sigmoid(
-        Math.log(numTiles),
+        log(numTiles),
         LARGE_TERRITORY_STEEPNESS,
-        Math.log(LARGE_TERRITORY_MIDPOINT),
+        log(LARGE_TERRITORY_MIDPOINT),
       )
   );
 }
@@ -443,8 +444,7 @@ export class Config {
   tradeShipGold(dist: number, player: Player | PlayerView): Gold {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
-    const baseGold =
-      75_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
+    const baseGold = 75_000 / (1 + exp(-0.03 * (dist - debuff))) + 50 * dist;
     return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
   }
 
@@ -500,8 +500,7 @@ export class Config {
       case UnitType.Port:
         info = {
           cost: this.costWrapper(
-            (numUnits: number) =>
-              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 125_000),
             UnitType.Port,
             UnitType.Factory,
           ),
@@ -574,8 +573,7 @@ export class Config {
       case UnitType.City:
         info = {
           cost: this.costWrapper(
-            (numUnits: number) =>
-              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 125_000),
             UnitType.City,
           ),
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -585,8 +583,7 @@ export class Config {
       case UnitType.Factory:
         info = {
           cost: this.costWrapper(
-            (numUnits: number) =>
-              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 125_000),
             UnitType.Factory,
             UnitType.Port,
           ),
@@ -926,7 +923,7 @@ export class Config {
     const maxTroops =
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
-        : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
+        : 2 * (pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
           player
             .units(UnitType.City)
             .filter((u) => !u.isUnderConstruction())
@@ -959,7 +956,7 @@ export class Config {
   troopIncreaseRate(player: Player | PlayerView): number {
     const max = this.maxTroops(player);
 
-    let toAdd = 10 + Math.pow(player.troops(), 0.73) / 4;
+    let toAdd = 10 + pow(player.troops(), 0.73) / 4;
 
     const ratio = 1 - player.troops() / max;
     toAdd *= ratio;
@@ -1086,7 +1083,7 @@ export class Config {
 
     const steepness = 2;
     const normalizedExcess = excessTroops / maxTroops;
-    return scalingFactor * (1 - Math.exp(-steepness * normalizedExcess));
+    return scalingFactor * (1 - exp(-steepness * normalizedExcess));
   }
 
   structureMinDist(): number {
