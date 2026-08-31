@@ -10,6 +10,12 @@ describe("DetMath", () => {
     for (let n = -1022; n <= 1023; n++) {
       expect(pow2(n)).toBe(2 ** n);
     }
+    // Out of range saturates like Math.pow(2, n) rather than wrapping the shift.
+    expect(pow2(1024)).toBe(Infinity);
+    expect(pow2(1025)).toBe(Infinity);
+    expect(pow2(5000)).toBe(Infinity);
+    expect(pow2(-1023)).toBe(0);
+    expect(Math.min(1_000_000, pow2(1026) * 125_000)).toBe(1_000_000);
   });
 
   it("exp matches Math.exp to 1e-8 across the useful range", () => {

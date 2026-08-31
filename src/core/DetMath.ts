@@ -27,8 +27,10 @@ const PI_2 = 1.5707963267948966;
 const PI_4 = 0.7853981633974483;
 const TAN_PI_8 = 0.41421356237309503;
 
-/** 2 ** n for integer n in [-1022, 1023]; exact. */
+/** 2 ** n for integer n; exact, saturating to Infinity / 0 like Math.pow. */
 export function pow2(n: number): number {
+  if (n > 1023) return Infinity;
+  if (n < -1022) return 0;
   u32[HI] = (n + 1023) << 20;
   u32[LO] = 0;
   return f64[0];
