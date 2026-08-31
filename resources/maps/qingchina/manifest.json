@@ -1,0 +1,185 @@
+{
+  "categories": ["asia", "countries"],
+  "id": "QingChina",
+  "map": {
+    "height": 2024,
+    "num_land_tiles": 1830694,
+    "width": 2248
+  },
+  "map16x": {
+    "height": 506,
+    "num_land_tiles": 110249,
+    "width": 562
+  },
+  "map4x": {
+    "height": 1012,
+    "num_land_tiles": 451840,
+    "width": 1124
+  },
+  "multiplayer_frequency": 6,
+  "name": "Qing China",
+  "nations": [
+    {
+      "coordinates": [1739, 1718],
+      "flag": "Flag_of_Hong_Kong_(1959-1997)",
+      "name": "British Hong Kong"
+    },
+    {
+      "coordinates": [1580, 1698],
+      "flag": "Qing Dynasty",
+      "name": "Guangdong"
+    },
+    {
+      "coordinates": [780, 620],
+      "flag": "tannutuva",
+      "name": "Tannu Tuva"
+    },
+    {
+      "coordinates": [1746, 1053],
+      "flag": "Qing Dynasty",
+      "name": "Boxer Rebellion"
+    },
+    {
+      "coordinates": [1856, 1296],
+      "flag": "Flag_of_Taiping_Heavenly_Kingdom",
+      "name": "Taiping Heavenly Kingdom"
+    },
+    {
+      "coordinates": [1100, 1411],
+      "flag": "Qing Dynasty",
+      "name": "Sichuan"
+    },
+    {
+      "coordinates": [1775, 1474],
+      "flag": "cn",
+      "name": "Jiangxi Soviet"
+    },
+    {
+      "coordinates": [1381, 1106],
+      "flag": "cn",
+      "name": "Communist China"
+    },
+    {
+      "coordinates": [1636, 917],
+      "flag": "Qing Dynasty",
+      "name": "Peking"
+    },
+    {
+      "coordinates": [1699, 296],
+      "flag": "Flag_of_Manchukuo",
+      "name": "Heilongjiang"
+    },
+    {
+      "coordinates": [1695, 547],
+      "flag": "Flag_of_Manchukuo",
+      "name": "Manchukuo"
+    },
+    {
+      "coordinates": [1551, 793],
+      "flag": "mn",
+      "name": "Inner Mongolia"
+    },
+    {
+      "coordinates": [1249, 643],
+      "flag": "mn",
+      "name": "Outer Mongolia"
+    },
+    {
+      "coordinates": [693, 1041],
+      "flag": "Eastern_Turkistan_Flag",
+      "name": "Xinjiang"
+    },
+    {
+      "coordinates": [542, 1281],
+      "flag": "tibet",
+      "name": "Tibet"
+    },
+    {
+      "coordinates": [1018, 1021],
+      "flag": "Qing Dynasty",
+      "name": "Gansu"
+    },
+    {
+      "coordinates": [222, 980],
+      "flag": "Eastern_Turkistan_Flag",
+      "name": "Yaqub Beg Regime"
+    },
+    {
+      "coordinates": [1111, 1659],
+      "flag": "Qing Dynasty",
+      "name": "Yunnan"
+    },
+    {
+      "coordinates": [1644, 1328],
+      "flag": "Republic of China",
+      "name": "Republic of China"
+    },
+    {
+      "coordinates": [1575, 1948],
+      "flag": "Qing Dynasty",
+      "name": "Hainan"
+    },
+    {
+      "coordinates": [1800, 1157],
+      "flag": "Qing Dynasty",
+      "name": "Jiangsu"
+    },
+    {
+      "coordinates": [1680, 1200],
+      "flag": "Republic of China",
+      "name": "Anhui Clique"
+    },
+    {
+      "coordinates": [1560, 1046],
+      "flag": "Republic of China",
+      "name": "Zhili Clique"
+    },
+    {
+      "coordinates": [1678, 1751],
+      "flag": "pt",
+      "name": "Portuguese Macao"
+    },
+    {
+      "coordinates": [2010, 1600],
+      "flag": "Empire of Japan",
+      "name": "Taiwan"
+    },
+    {
+      "coordinates": [1895, 1533],
+      "flag": "Qing Dynasty",
+      "name": "Fujian"
+    },
+    {
+      "coordinates": [1555, 1512],
+      "flag": "Qing Dynasty",
+      "name": "Hunan"
+    },
+    {
+      "coordinates": [1375, 1655],
+      "flag": "Kuomintang_Emblem",
+      "name": "Kuomintang"
+    },
+    {
+      "coordinates": [1386, 1489],
+      "flag": "Qing Dynasty",
+      "name": "Guizhou"
+    },
+    {
+      "coordinates": [1882, 732],
+      "flag": "Republic of China",
+      "name": "Fengtian Clique"
+    },
+    {
+      "coordinates": [1955, 564],
+      "flag": "Qing Dynasty",
+      "name": "Jilin"
+    },
+    {
+      "coordinates": [915, 1249],
+      "flag": "Ma_Clique_Flag",
+      "name": "Ma Clique"
+    }
+  ],
+  "themes": ["asia"],
+  "translation_key": "map.qingchina"
+}
