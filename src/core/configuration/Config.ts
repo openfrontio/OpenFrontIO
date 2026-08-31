@@ -98,9 +98,11 @@ export interface NukeMagnitude {
 }
 
 // attackLogic tunables
-const LARGE_TERRITORY_TILES = 100_000;
-const LARGE_ATTACKER_EXPONENT = 0.6;
-const LARGE_DEFENDER_EXPONENT = 0.15;
+const LARGE_TERRITORY_MIDPOINT = 300_000;
+const LARGE_TERRITORY_STEEPNESS = 2.5;
+// Floors: a huge attacker's tiles cost 0.3x, a huge defender's 0.7x.
+const LARGE_ATTACKER_DEPTH = 0.7;
+const LARGE_DEFENDER_DEPTH = 0.3;
 const BOT_DEFENDER_LOSS_MULT = 0.7;
 const TERRA_NULLIUS_COST_SCALE = 2000;
 const TERRA_NULLIUS_MIN_COST = 5;
@@ -114,11 +116,20 @@ const ATTACKER_LOSS_PER_DENSITY = 0.0026;
 // Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
 const SPEED_COST_DIVISOR = 7.77;
 
-/** 1 up to LARGE_TERRITORY_TILES, then shrinking as (limit / tiles) ** exponent. */
-function largeTerritoryBonus(numTiles: number, exponent: number): number {
-  return numTiles > LARGE_TERRITORY_TILES
-    ? (LARGE_TERRITORY_TILES / numTiles) ** exponent
-    : 1;
+/**
+ * Logistic in log(tiles): ~1 for small territories, easing down to
+ * 1 - depth for huge ones, halfway at LARGE_TERRITORY_MIDPOINT.
+ */
+function largeTerritoryBonus(numTiles: number, depth: number): number {
+  return (
+    1 -
+    depth *
+      sigmoid(
+        Math.log(numTiles),
+        LARGE_TERRITORY_STEEPNESS,
+        Math.log(LARGE_TERRITORY_MIDPOINT),
+      )
+  );
 }
 
 function terrainAttackBase(terrain: TerrainType): {
@@ -817,11 +828,11 @@ export class Config {
     // late games stay dynamic. The attacker's bonus is the stronger one.
     const largeAttackerBonus = largeTerritoryBonus(
       attacker.numTiles,
-      LARGE_ATTACKER_EXPONENT,
+      LARGE_ATTACKER_DEPTH,
     );
     const largeDefenderBonus = largeTerritoryBonus(
       defender.numTiles,
-      LARGE_DEFENDER_EXPONENT,
+      LARGE_DEFENDER_DEPTH,
     );
 
     const traitorLossMod = defender.isTraitor ? this.traitorDefenseDebuff() : 1;
