@@ -76,8 +76,8 @@ function buildWaterChain(game: Game): PathFinder<TileRef> {
  * 170-minute game's queries hit at this size, and the store stays small enough
  * for the client worker, where the sim also runs. Callers get their own copy.
  */
-class WaterPathMemo implements PathFinder<TileRef> {
-  private static readonly MAX_BYTES = 24_000_000;
+export class WaterPathMemo implements PathFinder<TileRef> {
+  private static readonly DEFAULT_MAX_BYTES = 24_000_000;
   private readonly paths = new Map<number, Uint32Array | null>();
   private liveBytes = 0;
   private waterVersion: number;
@@ -86,8 +86,18 @@ class WaterPathMemo implements PathFinder<TileRef> {
     private readonly numTiles: number,
     /** The map's waterVersion() — every live water conversion advances it. */
     private readonly currentWaterVersion: () => number,
+    /** Live cache budget; the default fits the client worker. Tests shrink it to reach eviction. */
+    private readonly maxBytes: number = WaterPathMemo.DEFAULT_MAX_BYTES,
   ) {
     this.waterVersion = currentWaterVersion();
+  }
+  /** Observability for tests: entries currently stored. */
+  get entryCount(): number {
+    return this.paths.size;
+  }
+  /** Observability for tests: live bytes the stored paths account for. */
+  get byteCount(): number {
+    return this.liveBytes;
   }
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
     // The throttled waterGraphVersion (which rebuilds the chain and with it
@@ -116,7 +126,7 @@ class WaterPathMemo implements PathFinder<TileRef> {
     const stored = path === null ? null : Uint32Array.from(path);
     this.liveBytes += stored === null ? 16 : stored.byteLength;
     this.paths.set(key, stored);
-    while (this.liveBytes > WaterPathMemo.MAX_BYTES) {
+    while (this.liveBytes > this.maxBytes) {
       const oldestKey = this.paths.keys().next().value!;
       const oldest = this.paths.get(oldestKey);
       this.paths.delete(oldestKey);

@@ -6,7 +6,10 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
-import { WaterPathFinder } from "../src/core/pathfinding/PathFinder";
+import {
+  WaterPathFinder,
+  WaterPathMemo,
+} from "../src/core/pathfinding/PathFinder";
 import { setup } from "./util/Setup";
 
 let game: Game;
@@ -262,5 +265,48 @@ describe("structure spawn tile selection", () => {
     // pin the traversal-order winner so a refactor that changes the flood
     // order (GameMap.bfs stack, N/S/W/E pushes) fails loudly here
     expect(spawn).toBe(g.ref(14, y + 12));
+  });
+});
+
+// The byte-budget LRU inside WaterPathMemo: drive more distinct (from, to)
+// pairs through a REAL pathfinding chain than a shrunken budget can hold, and
+// assert eviction keeps the accounting bounded while every answer — cached,
+// evicted-and-recomputed, or null — matches a fresh query.
+describe("water-path memo eviction", () => {
+  test("evicts under a byte budget without ever serving a wrong answer", async () => {
+    const g = await setup("half_land_half_ocean", {}, [
+      new PlayerInfo("player1", PlayerType.Human, "c1", "p1"),
+    ]);
+    const map = g.map();
+    const all: TileRef[] = [];
+    map.forEachTile((t) => all.push(t));
+    const ocean = all.filter((t) => map.isOcean(t) && map.isWater(t));
+    const land = all.filter((t) => map.isLand(t));
+    const fresh = new WaterPathFinder(g, 0, false); // the real production chain
+    const budget = 2_000; // a handful of 16x16-map paths
+    const memo = new WaterPathMemo(
+      fresh,
+      map.width() * map.height(),
+      () => map.waterVersion(),
+      budget,
+    );
+    const pairs: Array<[TileRef, TileRef]> = [];
+    for (let i = 0; i < 40; i++) {
+      pairs.push([ocean[0], ocean[(i * 3) % ocean.length]]);
+      pairs.push([ocean[i % ocean.length], land[(i * 5) % land.length]]); // null answers too
+    }
+    for (const [a, b] of pairs) {
+      expect(memo.findPath(a, b)).toEqual(fresh.findPath(a, b));
+      expect(memo.byteCount).toBeLessThanOrEqual(budget);
+    }
+    // more distinct pairs went in than the budget can hold
+    expect(memo.entryCount).toBeLessThan(
+      new Set(pairs.map(([a, b]) => `${a}:${b}`)).size,
+    );
+    // the earliest pairs are the evicted ones: recomputed, not stale, not corrupted
+    for (const [a, b] of pairs.slice(0, 10)) {
+      expect(memo.findPath(a, b)).toEqual(fresh.findPath(a, b));
+      expect(memo.byteCount).toBeLessThanOrEqual(budget);
+    }
   });
 });
