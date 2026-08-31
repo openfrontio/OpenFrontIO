@@ -5,6 +5,8 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
+import { TileRef } from "../src/core/game/GameMap";
+import { WaterPathMemo } from "../src/core/pathfinding/PathFinder";
 import { setup } from "./util/Setup";
 
 let game: Game;
@@ -120,5 +122,91 @@ describe("waterVersion invalidation", () => {
       true,
     );
     expect(game.map().waterVersion()).toBe(v0 + 2);
+  });
+});
+
+// WaterManager floods land through the raw GameMap (setWater), bypassing the
+// GameImpl wrappers that bump territoryVersion — the memoised nearby() must
+// still see it (it keys on the map's waterVersion() as well).
+describe("nearby() invalidation on raw water conversion", () => {
+  const names = (r: readonly unknown[]) =>
+    r.map((o) => ((o as Player).isPlayer() ? (o as Player).name() : "TN"));
+
+  async function flooded(warmMemo: boolean): Promise<{
+    before: string[] | null;
+    after: string[];
+  }> {
+    const g = await setup("plains", {}, [
+      new PlayerInfo("player1", PlayerType.Human, "c1", "p1"),
+    ]);
+    const p = g.player("p1");
+    p.conquer(g.ref(0, 0));
+    const before = warmMemo ? names(p.nearby()) : null;
+    for (let x = 0; x <= 6; x++) {
+      for (let y = 0; y <= 6; y++) {
+        const t = g.ref(x, y);
+        if ((x !== 0 || y !== 0) && g.map().isLand(t)) g.map().setWater(t);
+      }
+    }
+    return { before, after: names(p.nearby()) };
+  }
+
+  test("a warmed memo answers like a cold one after the flood", async () => {
+    const cold = await flooded(false);
+    const warm = await flooded(true);
+    // the flood must actually change the answer, or this test proves nothing
+    expect(warm.after).not.toEqual(warm.before);
+    expect(warm.after).toEqual(cold.after);
+  });
+});
+
+describe("WaterPathMemo", () => {
+  function build() {
+    const calls: Array<[TileRef, TileRef]> = [];
+    let answer: number[] | null = null;
+    const inner = {
+      findPath: (from: TileRef | TileRef[], to: TileRef) => {
+        calls.push([from as TileRef, to]);
+        return answer === null ? null : [...answer];
+      },
+    };
+    let waterVersion = 0;
+    const memo = new WaterPathMemo(inner, 1000, () => waterVersion);
+    return {
+      memo,
+      calls,
+      setAnswer: (a: number[] | null) => (answer = a),
+      convert: () => waterVersion++,
+    };
+  }
+
+  test("caches results, including null", () => {
+    const { memo, calls, setAnswer } = build();
+    setAnswer(null);
+    expect(memo.findPath(1, 2)).toBeNull();
+    expect(memo.findPath(1, 2)).toBeNull();
+    expect(calls).toHaveLength(1);
+    setAnswer([3, 4]);
+    expect(memo.findPath(3, 4)).toEqual([3, 4]);
+    expect(memo.findPath(3, 4)).toEqual([3, 4]);
+    expect(calls).toHaveLength(2);
+  });
+
+  test("a water conversion drops the cache — a stale null cannot outlive a component merge", () => {
+    const { memo, calls, setAnswer, convert } = build();
+    setAnswer(null);
+    expect(memo.findPath(1, 2)).toBeNull(); // ports on separate components
+    convert(); // nuke floods a corridor; components merge
+    setAnswer([1, 9, 2]);
+    expect(memo.findPath(1, 2)).toEqual([1, 9, 2]); // answered live, like the un-memoised chain
+    expect(calls).toHaveLength(2);
+  });
+
+  test("hands out copies, not the stored path", () => {
+    const { memo, setAnswer } = build();
+    setAnswer([5, 6]);
+    const a = memo.findPath(5, 6)!;
+    a.push(99);
+    expect(memo.findPath(5, 6)).toEqual([5, 6]);
   });
 });

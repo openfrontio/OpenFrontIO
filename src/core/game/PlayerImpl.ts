@@ -577,19 +577,28 @@ export class PlayerImpl implements Player {
 
   private nearbyMemo: {
     version: number;
+    waterVersion: number;
     result: (Player | TerraNullius)[];
   } | null = null;
 
   nearby(): (Player | TerraNullius)[] {
     // Nation AI asks several times per tick (maybeAttack, attackBestTarget,
-    // attackBots, ...) with no map change in between; the answer only depends
-    // on tile ownership / fallout / terrain, all covered by territoryVersion.
+    // attackBots, ...) with no map change in between; the answer depends on
+    // tile ownership and fallout (covered by territoryVersion) and on the
+    // land/water/shoreline terrain. Live nuke floods mutate the latter through
+    // WaterManager on the raw GameMap — bypassing GameImpl's bump — so the
+    // map's waterVersion() is a second key, which every conversion advances.
     const version = this.mg.territoryVersion();
-    if (this.nearbyMemo !== null && this.nearbyMemo.version === version) {
+    const waterVersion = this.mg.map().waterVersion();
+    if (
+      this.nearbyMemo !== null &&
+      this.nearbyMemo.version === version &&
+      this.nearbyMemo.waterVersion === waterVersion
+    ) {
       return this.nearbyMemo.result.slice();
     }
     const result = this.computeNearby();
-    this.nearbyMemo = { version, result };
+    this.nearbyMemo = { version, waterVersion, result };
     return result.slice();
   }
 

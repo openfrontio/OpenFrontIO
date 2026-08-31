@@ -76,15 +76,33 @@ function buildWaterChain(game: Game): PathFinder<TileRef> {
  * 170-minute game's queries hit at this size, and the store stays small enough
  * for the client worker, where the sim also runs. Callers get their own copy.
  */
-class WaterPathMemo implements PathFinder<TileRef> {
+export class WaterPathMemo implements PathFinder<TileRef> {
   private static readonly MAX_BYTES = 24_000_000;
   private readonly paths = new Map<number, Uint32Array | null>();
   private liveBytes = 0;
+  private waterVersion: number;
   constructor(
     private readonly inner: PathFinder<TileRef>,
     private readonly numTiles: number,
-  ) {}
+    /** The map's waterVersion() — every live water conversion advances it. */
+    private readonly currentWaterVersion: () => number,
+  ) {
+    this.waterVersion = currentWaterVersion();
+  }
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
+    // The throttled waterGraphVersion (which rebuilds the chain and with it
+    // this memo) lags an actual conversion by up to 20 ticks, and the
+    // component check inside the chain reads state that WaterManager mutates
+    // synchronously — so a cached answer (a null especially) could outlive a
+    // component merge. Water conversions are rare: drop everything and answer
+    // live from the first query after one, exactly as the un-memoised chain
+    // would.
+    const wv = this.currentWaterVersion();
+    if (wv !== this.waterVersion) {
+      this.waterVersion = wv;
+      this.paths.clear();
+      this.liveBytes = 0;
+    }
     if (typeof from !== "number") return this.inner.findPath(from, to);
     const key = from * this.numTiles + to;
     const hit = this.paths.get(key);
@@ -122,7 +140,11 @@ function sharedWaterChain(game: Game, memoized = false): PathFinder<TileRef> {
     cached = {
       version,
       chain,
-      memo: new WaterPathMemo(chain, game.map().width() * game.map().height()),
+      memo: new WaterPathMemo(
+        chain,
+        game.map().width() * game.map().height(),
+        () => game.map().waterVersion(),
+      ),
     };
     _waterChainCache.set(game, cached);
   }
