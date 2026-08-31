@@ -239,9 +239,9 @@ describe("structure spawn tile selection", () => {
     for (let x = 0; x <= 28; x++) p.conquer(g.ref(x, y));
     p.buildUnit(UnitType.City, g.ref(5, y), {});
     const spawn = p.canBuild(UnitType.City, g.ref(14, y));
-    // x 15..19 are inside minDist of the city; (20, y) is the first tile at
-    // exactly minDist (the check is strict <) and the closest valid to the target
-    expect(spawn).toBe(g.ref(20, y));
+    // x 15..19 are inside minDist of the city; (5 + minDist, y) is the first
+    // tile at exactly minDist (the check is strict <) and the closest valid
+    expect(spawn).toBe(g.ref(5 + minDist, y));
   });
 
   test("equal-distance candidates resolve in traversal order, deterministically", () => {
