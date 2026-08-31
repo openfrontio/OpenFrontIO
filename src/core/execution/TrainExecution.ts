@@ -224,10 +224,20 @@ export class TrainExecution implements Execution {
     }
   }
 
-  private nextStation() {
+  private nextStation(): boolean {
     if (this.stations.length > 2) {
       this.stations.shift();
-      const railRoad = getOrientedRailroad(this.stations[0], this.stations[1]);
+      let railRoad = getOrientedRailroad(this.stations[0], this.stations[1]);
+      if (!railRoad) {
+        const subPath = this.railNetwork.findStationsPath(
+          this.stations[0],
+          this.stations[1],
+        );
+        if (subPath && subPath.length > 2) {
+          this.stations.splice(1, 0, ...subPath.slice(1, -1));
+          railRoad = getOrientedRailroad(this.stations[0], this.stations[1]);
+        }
+      }
       if (railRoad) {
         this.currentRailroad = railRoad;
         return true;
