@@ -159,14 +159,17 @@ export function clearLocalSession(): void {
   // to desync. Skipped while a retry is legitimately in flight (status
   // "retrying"): retrySteamSignIn already owns that transition end-to-end via
   // its own userAuth() call, and this must not race ahead of it with a stale
-  // "signed-out" that the retry is about to overwrite anyway.
+  // state that the retry is about to overwrite anyway.
   //
-  // "steam-error" is the closest of the six SessionFailureKinds: unlike the
-  // others it names no specific cause (ticket rejection, backend 5xx, no
-  // client, etc.), which matches clearLocalSession not knowing why the
-  // session went away -- it just renders the bar's generic message.
+  // Publish "unknown" rather than a failure reason: logOut() runs on ANY 401
+  // from /users/@me, on key rotation, and on an iss/aud claim mismatch --
+  // none of which mean Steam sign-in failed. Asserting "signed-out" with a
+  // Steam reason here would gate multiplayer and show a Steam-specific error
+  // for an unrelated auth event that used to self-heal invisibly. "unknown"
+  // does not gate (see multiplayerAllowedForSession), and the next
+  // userAuth() call re-establishes the real state.
   if (steamSDK.isOnSteam() && __sessionState.status !== "retrying") {
-    setSessionState({ status: "signed-out", reason: "steam-error" });
+    setSessionState({ status: "unknown" });
   }
   if (hadSession) announceLoggedOut();
 }
@@ -318,6 +321,12 @@ async function doRefreshJwt(): Promise<void> {
 
 // Total mapping from the shell's three ticket failures. Kept exhaustive by
 // the parameter type: adding a SteamTicketFailure value fails the build here.
+// The `default` is not reachable through that exhaustive type, but the shell
+// lives in a separate repo and the bridge shape reaches us as `unknown` at
+// the boundary (see SteamSDK.getTicket's normalisation) -- a malformed
+// `reason` from an old or misbehaving shell must still map to something
+// rather than return `undefined` at runtime despite the non-optional return
+// type.
 function ticketReason(
   result: Extract<SteamTicketResult, { ok: false }>,
 ): SessionFailureKind {
@@ -327,6 +336,8 @@ function ticketReason(
     case "timeout":
       return "steam-wedged";
     case "error":
+      return "steam-error";
+    default:
       return "steam-error";
   }
 }
@@ -381,7 +392,11 @@ async function doSteamLogin(ticket: string): Promise<void> {
       __jwt = null;
       // 401 is infra's unauthorized("Invalid Steam ticket"); 5xx is its
       // internalServerError for "steam unreachable" / "steam auth error",
-      // which is Steam's backend rather than anything the player did.
+      // which is Steam's backend rather than anything the player did. Any
+      // other status (a Cloudflare WAF 403, a 429) still reached the server
+      // -- it is not a transport failure, so it must not render "Can't reach
+      // OpenFront. Check your connection." Fold it into "steam-error", the
+      // generic bucket, rather than "network".
       setSessionState({
         status: "signed-out",
         reason:
@@ -389,7 +404,7 @@ async function doSteamLogin(ticket: string): Promise<void> {
             ? "steam-ticket-rejected"
             : response.status >= 500
               ? "steam-backend"
-              : "network",
+              : "steam-error",
       });
       return;
     }
@@ -449,6 +464,21 @@ export async function retrySteamSignIn(): Promise<UserAuth> {
       setSessionState({ status: "retrying" });
       return await userAuth();
     } finally {
+      // Guarantee, not a duplicate of the happy path: userAuth() is expected
+      // to publish a terminal state itself via doSteamLogin/doRefreshJwt's
+      // Steam branch. But refreshJwt()'s finally has no catch, so an
+      // exception inside doRefreshJwt() (e.g. steamSDK.getTicket() throwing
+      // synchronously, or doSteamLogin throwing before it can call
+      // setSessionState) propagates straight to userAuth()'s top-level catch,
+      // which logs and returns false without touching session state --
+      // leaving "retrying" published forever. That is a lockout:
+      // multiplayerAllowedForSession gates on every non-signed-in status
+      // including "retrying", and DesktopStatusBar.sessionAction renders no
+      // button for it. If nothing moved us off "retrying" by the time this
+      // settles, force a terminal, actionable state instead.
+      if (__sessionState.status === "retrying") {
+        setSessionState({ status: "signed-out", reason: "steam-error" });
+      }
       __steamRetryPromise = null;
     }
   })();

@@ -7,6 +7,7 @@ import {
   retrySteamSignIn,
 } from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
+import { multiplayerAllowedForSession } from "../../src/client/DesktopShell";
 import { steamSDK } from "../../src/client/SteamSDK";
 
 function setBootstrapConfig() {
@@ -57,6 +58,65 @@ describe("Steam login", () => {
     expect(getDesktopSessionState()).toEqual({ status: "signed-in" });
   });
 
+  // A shell older than this client's SteamTicketResult contract may still
+  // return the legacy `string | null` shape from getAuthTicket(). These two
+  // exercise SteamSDK's normalisation end-to-end through Auth.ts, so they
+  // mock the raw bridge rather than steamSDK.getTicket directly.
+  it("signs in via /auth/steam when the bridge returns a legacy string ticket", async () => {
+    (window as any).openfrontDesktop = {
+      steam: {
+        getAuthTicket: vi.fn().mockResolvedValue("legacyhexticket"),
+        getUser: vi.fn(),
+      },
+    };
+    try {
+      const jwt = new UnsecuredJWT({
+        jti: "some-id",
+        sub: "AAAAAAAAAAAAAAAAAAAAAA",
+        iat: Math.floor(Date.now() / 1000),
+        iss: "https://api.openfront.dev",
+        aud: "openfront.dev",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      }).encode();
+
+      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ jwt, expiresIn: 900 }), {
+          status: 200,
+        }),
+      );
+
+      const header = await getAuthHeader();
+
+      expect(String(fetchMock.mock.calls[0][0])).toContain("/auth/steam");
+      expect(header).toBe(`Bearer ${jwt}`);
+      expect(getDesktopSessionState()).toEqual({ status: "signed-in" });
+    } finally {
+      delete (window as any).openfrontDesktop;
+    }
+  });
+
+  it("yields signed-out/steam-unavailable without throwing when the bridge returns a legacy null", async () => {
+    (window as any).openfrontDesktop = {
+      steam: {
+        getAuthTicket: vi.fn().mockResolvedValue(null),
+        getUser: vi.fn(),
+      },
+    };
+    try {
+      const fetchMock = vi.spyOn(globalThis, "fetch");
+
+      await expect(getAuthHeader()).resolves.toBe("");
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(getDesktopSessionState()).toEqual({
+        status: "signed-out",
+        reason: "steam-unavailable",
+      });
+    } finally {
+      delete (window as any).openfrontDesktop;
+    }
+  });
+
   // Replaces "falls through to the guest/refresh flow when no Steam ticket is
   // available". The Electron profile has no refresh cookie, so that
   // fallthrough was a guaranteed 401 that then ran logOut() and dropped the
@@ -99,6 +159,10 @@ describe("Steam login", () => {
   it.each([
     [401, "steam-ticket-rejected"],
     [500, "steam-backend"],
+    // A Cloudflare WAF 403 (or a 429) still reached the server -- it is not a
+    // transport failure, so it must not fall into the "network" bucket
+    // ("Can't reach OpenFront. Check your connection.") the way it used to.
+    [403, "steam-error"],
   ] as const)(
     "maps /auth/steam %i to session reason %s",
     async (status, sessionReason) => {
@@ -164,6 +228,42 @@ describe("Steam login", () => {
     await Promise.all([retrySteamSignIn(), retrySteamSignIn()]);
 
     expect(getTicket).toHaveBeenCalledTimes(1);
+  });
+
+  // logOut() runs clearLocalSession() on ANY 401 from /users/@me, on key
+  // rotation, and on an iss/aud claim mismatch -- none of which mean Steam
+  // sign-in failed. It must not assert a Steam failure (which would gate
+  // multiplayer and show a Steam-specific error for an unrelated event); it
+  // must publish "unknown", which does not gate.
+  it("publishes unknown (not a Steam failure) and does not gate multiplayer after logOut on Steam", async () => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 200 }),
+    );
+
+    await logOut();
+
+    const state = getDesktopSessionState();
+    expect(state).toEqual({ status: "unknown" });
+    expect(multiplayerAllowedForSession(state)).toBe(true);
+  });
+
+  // refreshJwt()'s finally has no catch, so an exception inside
+  // doRefreshJwt() (here, steamSDK.getTicket() rejecting) propagates to
+  // userAuth()'s top-level catch, which logs and returns false without
+  // touching session state. Without retrySteamSignIn's guarantee that would
+  // leave the session pinned at "retrying" forever -- gated out of
+  // multiplayer with a status bar that renders no button for that state.
+  it("settles to signed-out instead of sticking at retrying when doRefreshJwt throws", async () => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getTicket").mockRejectedValue(new Error("boom"));
+
+    await retrySteamSignIn();
+
+    expect(getDesktopSessionState()).toEqual({
+      status: "signed-out",
+      reason: "steam-error",
+    });
   });
 
   // Guards against the /auth/steam fetch hanging forever: retrySteamSignIn
