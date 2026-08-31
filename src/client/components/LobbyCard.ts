@@ -67,6 +67,16 @@ export function trustRequiredDialog(
  */
 
 /**
+ * The blue pills on a card's top row: the modifier labels on the left and the
+ * countdown on the right. One class string so the two can't drift apart.
+ * `inline-block` is load-bearing -- an inline span paints its background over
+ * the font's content area rather than the line box, which makes the pill 4px
+ * shorter than a blockified one and changes height when the font swaps in.
+ */
+const CARD_PILL_CLASS =
+  "inline-block px-2 py-1 rounded text-xs font-bold tracking-widest bg-malibu-blue text-white";
+
+/**
  * Aspect ratios keyed by map, loaded lazily from each map's manifest. Shared
  * so the second component to render a map doesn't refetch it.
  */
@@ -205,11 +215,10 @@ export function lobbyCard({
         class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
       >
         ${modifierLabels.length > 0
-          ? html`<div class="flex flex-col items-start gap-1 mt-[2px] min-w-0">
+          ? html`<div class="flex flex-col items-start gap-1 min-w-0">
               ${modifierLabels.map(
                 (label) =>
-                  html`<span
-                    class="px-2 py-1 rounded text-xs font-bold uppercase tracking-widest bg-malibu-blue text-white shadow-[var(--shadow-malibu-blue-pill)]"
+                  html`<span class="${CARD_PILL_CLASS} uppercase"
                     >${label}</span
                   >`,
               )}
@@ -217,9 +226,9 @@ export function lobbyCard({
           : html`<div></div>`}
         <div class="shrink-0">
           <span
-            class="text-xs font-bold tracking-widest ${timeDisplayUppercase
+            class="${CARD_PILL_CLASS} ${timeDisplayUppercase
               ? "uppercase"
-              : "normal-case"} bg-malibu-blue text-white px-2 py-1 rounded"
+              : "normal-case"}"
             >${timeDisplay}</span
           >
         </div>
