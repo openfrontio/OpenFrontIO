@@ -63,8 +63,9 @@ export function shouldBlockMultiplayerAction(
 /**
  * Whether the desktop gate applies to a given join at all. Single-player runs
  * entirely in-client and a replay simulates from an archived record, so
- * neither needs a session or an up-to-date build -- the same carve-out
- * Main.ts's getTurnstileToken makes. Exported for tests and kept free of
+ * neither needs a session or an up-to-date build. getTurnstileToken in
+ * Main.ts exempts the same pair (alongside two conditions irrelevant here),
+ * and calls this so the two cannot drift. Exported for tests and kept free of
  * component state, like shouldBlockMultiplayerAction above.
  */
 export function joinIsGateable(lobby: JoinLobbyEvent): boolean {
@@ -72,6 +73,20 @@ export function joinIsGateable(lobby: JoinLobbyEvent): boolean {
     lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer &&
     lobby.gameRecord === undefined
   );
+}
+
+/**
+ * The whole gate decision for one join, as a pure function so it is testable
+ * without mounting Main's client. Main adds only the shell check and the
+ * status-bar wiggle around it.
+ */
+export function shouldBlockDesktopJoin(
+  lobby: JoinLobbyEvent,
+  update: DesktopUpdateState | null,
+  session: DesktopSessionState | null,
+): boolean {
+  if (!joinIsGateable(lobby)) return false;
+  return shouldBlockMultiplayerAction(update, session);
 }
 
 @customElement("game-mode-selector")

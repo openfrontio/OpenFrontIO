@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   joinIsGateable,
+  shouldBlockDesktopJoin,
   shouldBlockMultiplayerAction,
 } from "../src/client/GameModeSelector";
 import { GameType } from "../src/core/game/Game";
@@ -137,5 +138,55 @@ describe("joinIsGateable", () => {
         gameRecord: {},
       } as any),
     ).toBe(false);
+  });
+});
+
+describe("shouldBlockDesktopJoin", () => {
+  const mp = { gameID: "g", source: "matchmaking" } as any;
+  const solo = {
+    gameID: "g",
+    source: "private",
+    gameStartInfo: { config: { gameType: GameType.Singleplayer } },
+  } as any;
+  const healthy = { status: "current", bytes: 0, total: 0 } as const;
+
+  it("allows a multiplayer join when both states are healthy", () => {
+    expect(shouldBlockDesktopJoin(mp, healthy, { status: "signed-in" })).toBe(
+      false,
+    );
+  });
+
+  it("blocks a multiplayer join when signed out", () => {
+    expect(
+      shouldBlockDesktopJoin(mp, healthy, {
+        status: "signed-out",
+        reason: "steam-wedged",
+      }),
+    ).toBe(true);
+  });
+
+  // The claim that update-gating inherits the funnel fix, actually pinned.
+  it("blocks a multiplayer join on a pending update even when signed in", () => {
+    expect(
+      shouldBlockDesktopJoin(
+        mp,
+        { status: "staged", bytes: 0, total: 0 },
+        { status: "signed-in" },
+      ),
+    ).toBe(true);
+  });
+
+  it("never blocks single-player, whatever the states say", () => {
+    expect(
+      shouldBlockDesktopJoin(
+        solo,
+        { status: "staged", bytes: 0, total: 0 },
+        { status: "signed-out", reason: "steam-wedged" },
+      ),
+    ).toBe(false);
+  });
+
+  it("does not block on the web, where neither state exists", () => {
+    expect(shouldBlockDesktopJoin(mp, null, null)).toBe(false);
   });
 });
