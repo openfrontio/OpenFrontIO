@@ -15,6 +15,7 @@ COPY tsconfig.json ./
 COPY vite.config.ts ./
 COPY eslint.config.js ./
 COPY index.html ./
+COPY client-api.json ./
 COPY resources ./resources
 COPY proprietary ./proprietary
 COPY src ./src
@@ -77,6 +78,7 @@ COPY resources ./resources
 # Remove maps because they are not used by the server.
 RUN rm -rf ./resources/maps
 COPY tsconfig.json ./
+COPY client-api.json ./
 COPY src ./src
 COPY zbin ./zbin
 
