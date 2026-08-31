@@ -338,12 +338,13 @@ export class SAMLauncherExecution implements Execution {
     // tick (~7 % of a long headless game with 150 launchers). Exact: with no nukes the query is
     // empty and the targeting loop a no-op; the only side effect skipped is pruning cache entries
     // of nukes that no longer exist, which the next real call prunes before anything could read
-    // them (unit ids are unique). units(type) is memoised per unit-list version, so the check is
-    // one shared walk a tick, not one a launcher.
+    // them (unit ids are unique). unitCount(type) is memoised per unit-list version — one shared
+    // walk a tick, not one a launcher — and unlike units(type) a hit allocates nothing. A nuke's
+    // level is always 1, so a zero count is exactly an empty list.
     if (
-      this.mg.units(UnitType.AtomBomb).length === 0 &&
-      this.mg.units(UnitType.HydrogenBomb).length === 0 &&
-      this.mg.units(UnitType.MIRVWarhead).length === 0
+      this.mg.unitCount(UnitType.AtomBomb) === 0 &&
+      this.mg.unitCount(UnitType.HydrogenBomb) === 0 &&
+      this.mg.unitCount(UnitType.MIRVWarhead) === 0
     ) {
       return;
     }

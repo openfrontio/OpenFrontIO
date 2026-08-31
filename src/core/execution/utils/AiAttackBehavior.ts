@@ -773,13 +773,13 @@ export class AiAttackBehavior {
   }
 
   private hasLandBorderWithTerraNullius(): boolean {
-    // Allocation-free: neighbors() built an array per border tile and this
-    // runs on every terra-nullius attack decision of every nation.
+    // Allocation-free (neighbors() built an array per border tile and this
+    // runs on every terra-nullius attack decision of every nation) — but
+    // through for...of, not forEach: the dominant caller path answers true,
+    // and the early exit matters more than the generator's overhead.
     const map = this.game.map();
     const nbuf = this.nbuf;
-    let found = false;
-    this.player.borderTiles().forEach((border) => {
-      if (found) return;
+    for (const border of this.player.borderTiles()) {
       const n = map.neighbors4(border, nbuf);
       for (let i = 0; i < n; i++) {
         const neighbor = nbuf[i];
@@ -788,12 +788,11 @@ export class AiAttackBehavior {
           !map.isImpassable(neighbor) &&
           !map.hasOwner(neighbor)
         ) {
-          found = true;
-          return;
+          return true;
         }
       }
-    });
-    return found;
+    }
+    return false;
   }
 
   private readonly nbuf: TileRef[] = [0, 0, 0, 0];

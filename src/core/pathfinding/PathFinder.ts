@@ -76,7 +76,7 @@ function buildWaterChain(game: Game): PathFinder<TileRef> {
  * 170-minute game's queries hit at this size, and the store stays small enough
  * for the client worker, where the sim also runs. Callers get their own copy.
  */
-export class WaterPathMemo implements PathFinder<TileRef> {
+class WaterPathMemo implements PathFinder<TileRef> {
   private static readonly MAX_BYTES = 24_000_000;
   private readonly paths = new Map<number, Uint32Array | null>();
   private liveBytes = 0;

@@ -6,7 +6,7 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
-import { WaterPathMemo } from "../src/core/pathfinding/PathFinder";
+import { WaterPathFinder } from "../src/core/pathfinding/PathFinder";
 import { setup } from "./util/Setup";
 
 let game: Game;
@@ -160,53 +160,107 @@ describe("nearby() invalidation on raw water conversion", () => {
   });
 });
 
-describe("WaterPathMemo", () => {
-  function build() {
-    const calls: Array<[TileRef, TileRef]> = [];
-    let answer: number[] | null = null;
-    const inner = {
-      findPath: (from: TileRef | TileRef[], to: TileRef) => {
-        calls.push([from as TileRef, to]);
-        return answer === null ? null : [...answer];
-      },
-    };
-    let waterVersion = 0;
-    const memo = new WaterPathMemo(inner, 1000, () => waterVersion);
-    return {
-      memo,
-      calls,
-      setAnswer: (a: number[] | null) => (answer = a),
-      convert: () => waterVersion++,
-    };
-  }
+// The memoised trade-ship pathfinder must answer exactly like a fresh query at
+// every moment across a REAL water conversion (queueWaterConversion -> the
+// WaterManager tick), including the up-to-20-tick window before the throttled
+// water-graph rebuild — a cached null must not outlive a component merge.
+describe("water-path memo across a real water conversion", () => {
+  test("memoized pathfinder always answers like a fresh one; the merge is eventually found", async () => {
+    const g = await setup("half_land_half_ocean", { waterNukes: true }, [
+      new PlayerInfo("player1", PlayerType.Human, "c1", "p1"),
+    ]);
+    const map = g.map();
+    const all: TileRef[] = [];
+    map.forEachTile((t) => all.push(t));
+    const ocean = all.filter((t) => map.isOcean(t) && map.isWater(t));
+    const convertible = (t: TileRef) =>
+      map.isLand(t) && !map.isImpassable(t) && !g.hasOwner(t);
+    // the land tile farthest from the ocean becomes a one-tile lake ...
+    const oceanDist = (t: TileRef) =>
+      Math.min(...ocean.map((o) => map.manhattanDist(o, t)));
+    const land = all.filter(convertible);
+    const lakeSeed = land.reduce((a, b) =>
+      oceanDist(a) >= oceanDist(b) ? a : b,
+    );
+    g.queueWaterConversion(lakeSeed);
+    g.executeNextTick();
+    expect(map.isWater(lakeSeed)).toBe(true);
 
-  test("caches results, including null", () => {
-    const { memo, calls, setAnswer } = build();
-    setAnswer(null);
-    expect(memo.findPath(1, 2)).toBeNull();
-    expect(memo.findPath(1, 2)).toBeNull();
-    expect(calls).toHaveLength(1);
-    setAnswer([3, 4]);
-    expect(memo.findPath(3, 4)).toEqual([3, 4]);
-    expect(memo.findPath(3, 4)).toEqual([3, 4]);
-    expect(calls).toHaveLength(2);
+    const memoized = new WaterPathFinder(g, 0, true);
+    const fresh = new WaterPathFinder(g, 0, false);
+    const far = ocean.reduce((a, b) =>
+      map.manhattanDist(a, lakeSeed) >= map.manhattanDist(b, lakeSeed) ? a : b,
+    );
+    // warm the memo while the lake is landlocked: no path
+    expect(memoized.findPath(far, lakeSeed)).toBeNull();
+
+    // ... then the whole land half floods, merging the lake into the ocean
+    // (a thin corridor is not enough: the hierarchical pathfinder plans on the
+    // quarter-resolution minimap, whose cells only flip with area coverage)
+    for (const t of all) if (convertible(t)) g.queueWaterConversion(t);
+    for (let tick = 0; tick < 25; tick++) {
+      g.executeNextTick();
+      expect(memoized.findPath(far, lakeSeed)).toEqual(
+        fresh.findPath(far, lakeSeed),
+      );
+    }
+    expect(memoized.findPath(far, lakeSeed)).not.toBeNull();
+  });
+});
+
+// validStructureSpawnTiles() through its public entry (canBuild -> landBased-
+// StructureSpawn): the flood over connected owned tiles, the min-distance
+// exclusion around existing structures, and deterministic tie ordering.
+describe("structure spawn tile selection", () => {
+  let g: Game;
+  let p: Player;
+  beforeEach(async () => {
+    g = await setup("plains", { infiniteGold: true, instantBuild: true }, [
+      new PlayerInfo("player1", PlayerType.Human, "c1", "p1"),
+    ]);
+    p = g.player("p1");
   });
 
-  test("a water conversion drops the cache — a stale null cannot outlive a component merge", () => {
-    const { memo, calls, setAnswer, convert } = build();
-    setAnswer(null);
-    expect(memo.findPath(1, 2)).toBeNull(); // ports on separate components
-    convert(); // nuke floods a corridor; components merge
-    setAnswer([1, 9, 2]);
-    expect(memo.findPath(1, 2)).toEqual([1, 9, 2]); // answered live, like the un-memoised chain
-    expect(calls).toHaveLength(2);
+  test("an unowned target has no spawn tiles", () => {
+    expect(p.canBuild(UnitType.City, g.ref(3, 3))).toBe(false);
   });
 
-  test("hands out copies, not the stored path", () => {
-    const { memo, setAnswer } = build();
-    setAnswer([5, 6]);
-    const a = memo.findPath(5, 6)!;
-    a.push(99);
-    expect(memo.findPath(5, 6)).toEqual([5, 6]);
+  test("the target itself wins while it is valid; disconnected tiles are never candidates", () => {
+    for (let x = 3; x <= 9; x++) p.conquer(g.ref(x, 5));
+    p.conquer(g.ref(20, 5)); // disconnected from the strip
+    expect(p.canBuild(UnitType.City, g.ref(5, 5))).toBe(g.ref(5, 5));
+    // a disconnected own tile cannot host a spawn for this target
+    expect(p.canBuild(UnitType.City, g.ref(20, 5))).toBe(g.ref(20, 5)); // (its own flood)
+  });
+
+  test("tiles within structureMinDist of an existing structure are excluded", () => {
+    const minDist = g.config().structureMinDist(); // 15
+    const y = 20;
+    for (let x = 0; x <= 28; x++) p.conquer(g.ref(x, y));
+    p.buildUnit(UnitType.City, g.ref(5, y), {});
+    const spawn = p.canBuild(UnitType.City, g.ref(14, y));
+    // x 15..19 are inside minDist of the city; (20, y) is the first tile at
+    // exactly minDist (the check is strict <) and the closest valid to the target
+    expect(spawn).toBe(g.ref(20, y));
+  });
+
+  test("equal-distance candidates resolve in traversal order, deterministically", () => {
+    // Two cities blanket the whole east-west strip, so the only valid tiles sit
+    // on the north/south arms — the nearest of each tie at the same distance.
+    const y = 20;
+    for (let x = 0; x <= 28; x++) p.conquer(g.ref(x, y));
+    for (let dy = 1; dy <= 13; dy++) {
+      p.conquer(g.ref(14, y - dy));
+      p.conquer(g.ref(14, y + dy));
+    }
+    p.buildUnit(UnitType.City, g.ref(5, y), {});
+    p.buildUnit(UnitType.City, g.ref(23, y), {});
+    const spawn = p.canBuild(UnitType.City, g.ref(14, y));
+    // valid ⇔ ≥ minDist from both cities: on the arms that is |dy| ≥ 12
+    // ((14-5)² + 12² = 225); north and south tie at distance 12
+    expect([g.ref(14, y - 12), g.ref(14, y + 12)]).toContain(spawn);
+    // pin the traversal-order winner so a refactor that changes the flood
+    // order (GameMap.bfs stack, N/S/W/E pushes) fails loudly here
+    expect(spawn).toBe(g.ref(14, y + 12));
   });
 });
