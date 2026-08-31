@@ -123,6 +123,7 @@ export {
   type GameMapName,
   type MapCategory,
   type MapInfo,
+  type SpecialModifierKey,
 } from "./Maps.gen";
 
 export enum GameType {
