@@ -447,4 +447,89 @@ describe("Hydrogen Bomb and MIRV flows", () => {
 
     spy.mockRestore();
   });
+
+  test("Top-of-map MIRV launch uses unclamped y to prevent speed exploit", async () => {
+    // A target at y=2 has baseY=2. A target at y=20 has baseY=20.
+    // Both are < 500 tiles, so separateDst.y is 50 for both.
+    // If the ideal flight path didn't unclamp, the y=2 target would have a drastically shorter flight time.
+    const giantGame = await setup(
+      "giantworldmap",
+      { infiniteGold: true, instantBuild: true },
+      [info],
+    );
+    const giantPlayer = giantGame.player(info.id);
+
+    // Mock isLand so we can build Silos anywhere on the giant map.
+    const isLandSpy = vi
+      .spyOn(giantGame as any, "isLand")
+      .mockReturnValue(true);
+    const spy = vi
+      .spyOn(MirvExecution.prototype as any, "isOverlapping")
+      .mockReturnValue(false);
+
+    // Conquer tiles.
+    giantPlayer.conquer(giantGame.ref(100, 2));
+    giantPlayer.conquer(giantGame.ref(100, 20));
+    giantPlayer.conquer(giantGame.ref(150, 2)); // Top-of-map target
+    giantPlayer.conquer(giantGame.ref(150, 20)); // Deeper target
+
+    // -- TOP SHOT --
+    giantGame.addExecution(
+      new ConstructionExecution(
+        giantPlayer,
+        UnitType.MissileSilo,
+        giantGame.ref(100, 2),
+      ),
+    );
+    giantGame.executeNextTick();
+    giantGame.executeNextTick();
+    giantGame.addExecution(
+      new ConstructionExecution(
+        giantPlayer,
+        UnitType.MIRV,
+        giantGame.ref(150, 2),
+      ),
+    );
+    giantGame.executeNextTick();
+    giantGame.executeNextTick();
+    giantGame.executeNextTick(); // Path generated
+
+    const topExec = (giantGame as any)
+      .executions()
+      .filter((e: any) => e instanceof MirvExecution)[0] as any;
+    const topFlightTicks = topExec.fullPath.length;
+
+    // -- DEEP SHOT --
+    giantGame.addExecution(
+      new ConstructionExecution(
+        giantPlayer,
+        UnitType.MissileSilo,
+        giantGame.ref(100, 20),
+      ),
+    );
+    giantGame.executeNextTick();
+    giantGame.executeNextTick();
+    giantGame.addExecution(
+      new ConstructionExecution(
+        giantPlayer,
+        UnitType.MIRV,
+        giantGame.ref(150, 20),
+      ),
+    );
+    giantGame.executeNextTick();
+    giantGame.executeNextTick();
+    giantGame.executeNextTick(); // Path generated
+
+    const deepExec = (giantGame as any)
+      .executions()
+      .filter((e: any) => e instanceof MirvExecution)[1] as any;
+    const deepFlightTicks = deepExec.fullPath.length;
+
+    // The two shots should have nearly identical flight times.
+    // (Within 1-2 ticks due to rounding).
+    expect(Math.abs(topFlightTicks - deepFlightTicks)).toBeLessThanOrEqual(2);
+
+    spy.mockRestore();
+    isLandSpy.mockRestore();
+  });
 });

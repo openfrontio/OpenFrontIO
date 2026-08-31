@@ -300,10 +300,16 @@ export class MirvExecution implements Execution {
   ): number {
     // using base speed and uncapped curve, calculate ideal mirv flight ticks
     // prevents top of map shenanigans
+
+    const idealSeparateDst = {
+      x: this.mg.x(separateDst),
+      y: this.baseY - 500 + 50,
+    };
+
     const [iP0, iP1, iP2, iP3] = getParabolaControlPoints(
       this.mg,
       spawnTile,
-      separateDst,
+      idealSeparateDst,
       { distanceBasedHeight: true, directionUp: true, ignoreMapBounds: true },
     );
     const idealMirvLength = DistanceBasedBezierCurve.getLength(

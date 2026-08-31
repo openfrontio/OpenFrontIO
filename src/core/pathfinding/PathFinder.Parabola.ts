@@ -14,8 +14,8 @@ const PARABOLA_MIN_HEIGHT = 50;
 
 export function getParabolaControlPoints(
   gameMap: GameMap,
-  from: TileRef,
-  to: TileRef,
+  from: TileRef | { x: number; y: number },
+  to: TileRef | { x: number; y: number },
   options?: ParabolaOptions,
 ): [
   { x: number; y: number },
@@ -27,8 +27,12 @@ export function getParabolaControlPoints(
   const directionUp = options?.directionUp ?? true;
   const ignoreMapBounds = options?.ignoreMapBounds ?? false;
 
-  const p0 = { x: gameMap.x(from), y: gameMap.y(from) };
-  const p3 = { x: gameMap.x(to), y: gameMap.y(to) };
+  const p0 =
+    typeof from === "number"
+      ? { x: gameMap.x(from), y: gameMap.y(from) }
+      : from;
+  const p3 =
+    typeof to === "number" ? { x: gameMap.x(to), y: gameMap.y(to) } : to;
   const dx = p3.x - p0.x;
   const dy = p3.y - p0.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
