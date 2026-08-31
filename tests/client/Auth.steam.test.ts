@@ -121,6 +121,34 @@ describe("Steam login", () => {
   // available". The Electron profile has no refresh cookie, so that
   // fallthrough was a guaranteed 401 that then ran logOut() and dropped the
   // player's persistent ID. The Steam branch is now terminal.
+  // A diagnosed failure must survive an UNRELATED logOut. getAuthHeader
+  // returns "" when signed out, so any authenticated call still goes out and
+  // still comes back 401, and Api.ts calls logOut() on 401 from 13 places.
+  // Resetting to "unknown" there would un-gate multiplayer and hide the bar,
+  // handing the player back the raw Turnstile error this work exists to remove.
+  it("keeps a diagnosed signed-out state through an unrelated logOut", async () => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: false,
+      reason: "timeout",
+    });
+    await getAuthHeader();
+    expect(getDesktopSessionState()).toEqual({
+      status: "signed-out",
+      reason: "steam-wedged",
+    });
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 401 }),
+    );
+    await logOut();
+
+    expect(getDesktopSessionState()).toEqual({
+      status: "signed-out",
+      reason: "steam-wedged",
+    });
+  });
+
   // The boundary check in SteamSDK.getTicket exists so a malformed success
   // from a mismatched shell is never redeemed as a ticket. Asserted end to
   // end, not just at the SDK, because it is /auth/steam that would receive it.
@@ -259,11 +287,30 @@ describe("Steam login", () => {
   // sign-in failed. It must not assert a Steam failure (which would gate
   // multiplayer and show a Steam-specific error for an unrelated event); it
   // must publish "unknown", which does not gate.
-  it("publishes unknown (not a Steam failure) and does not gate multiplayer after logOut on Steam", async () => {
+  // The narrow job of clearLocalSession: a state still claiming "signed-in"
+  // after the session was dropped is a lie, so it is downgraded to "unknown".
+  // "unknown" rather than a Steam failure, because logOut() fires on any 401,
+  // key rotation, or claim mismatch -- none of which mean Steam failed.
+  it("downgrades a stale signed-in to unknown after logOut on Steam", async () => {
     vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: true,
+      ticket: "t",
+    });
+    const jwt = new UnsecuredJWT({
+      jti: "some-id",
+      sub: "AAAAAAAAAAAAAAAAAAAAAA",
+      iat: Math.floor(Date.now() / 1000),
+      iss: "https://api.openfront.dev",
+      aud: "openfront.dev",
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    }).encode();
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(null, { status: 200 }),
+      new Response(JSON.stringify({ jwt, expiresIn: 900 }), { status: 200 }),
     );
+
+    await getAuthHeader();
+    expect(getDesktopSessionState()).toEqual({ status: "signed-in" });
 
     await logOut();
 

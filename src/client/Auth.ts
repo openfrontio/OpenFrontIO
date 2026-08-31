@@ -161,14 +161,21 @@ export function clearLocalSession(): void {
   // its own userAuth() call, and this must not race ahead of it with a stale
   // state that the retry is about to overwrite anyway.
   //
-  // Publish "unknown" rather than a failure reason: logOut() runs on ANY 401
-  // from /users/@me, on key rotation, and on an iss/aud claim mismatch --
-  // none of which mean Steam sign-in failed. Asserting "signed-out" with a
-  // Steam reason here would gate multiplayer and show a Steam-specific error
-  // for an unrelated auth event that used to self-heal invisibly. "unknown"
-  // does not gate (see multiplayerAllowedForSession), and the next
-  // userAuth() call re-establishes the real state.
-  if (steamSDK.isOnSteam() && __sessionState.status !== "retrying") {
+  // Scoped to "signed-in" ONLY. The job here is narrow: a session was just
+  // dropped, so a state still claiming "signed-in" is now a lie and must be
+  // downgraded. "unknown" is the right downgrade rather than a failure reason
+  // -- logOut() runs on ANY 401, on key rotation, and on an iss/aud claim
+  // mismatch, none of which mean Steam sign-in failed, and asserting a Steam
+  // error for those would gate multiplayer over an unrelated auth event.
+  //
+  // Every other status must survive untouched. A diagnosed
+  // {signed-out, steam-*} is the whole point of this feature, and getAuthHeader
+  // returns "" once signed out, so an authenticated call still fires and still
+  // 401s -- which reaches logOut() from any of Api.ts's call sites. Resetting
+  // there would un-gate multiplayer and hide the bar, handing the player back
+  // the raw Turnstile error. "retrying" must survive for the same reason:
+  // retrySteamSignIn owns that transition end to end.
+  if (steamSDK.isOnSteam() && __sessionState.status === "signed-in") {
     setSessionState({ status: "unknown" });
   }
   if (hadSession) announceLoggedOut();
