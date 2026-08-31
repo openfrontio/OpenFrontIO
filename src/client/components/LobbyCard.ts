@@ -168,9 +168,9 @@ export function lobbyCard({
     lobby.gameConfig?.publicGameModifiers,
     lobby.gameConfig?.doomsdayClock?.speed,
   );
-  // Sort by length for visual consistency (shorter labels first)
+  // Longest first: on a short card the pills that say the most stay legible.
   if (modifierLabels.length > 1) {
-    modifierLabels.sort((a, b) => a.length - b.length);
+    modifierLabels.sort((a, b) => b.length - a.length);
   }
 
   const trustedOnly = lobby.gameConfig?.trusted === true;
@@ -180,16 +180,15 @@ export function lobbyCard({
       @click=${onClick}
       ?disabled=${disabled}
       aria-disabled=${blocked}
-      class="group relative w-full ${heightClass} text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)] ${disabled
+      class="group relative w-full ${heightClass} text-white uppercase rounded-2xl overflow-hidden transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)] ${disabled
         ? "opacity-50 cursor-not-allowed pointer-events-none"
         : blocked
           ? "opacity-50 cursor-not-allowed"
           : ""}"
     >
-      <!-- Image clipped separately so overflow-hidden doesn't block absolute children -->
-      <div
-        class="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none"
-      >
+      <!-- The card is the only rounded, clipping box: a radius on this layer
+           and on the name bar too drew a rim along the corners. -->
+      <div class="absolute inset-0 pointer-events-none">
         ${mapImageSrc
           ? html`<img
               src="${mapImageSrc}"
@@ -206,9 +205,7 @@ export function lobbyCard({
         class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
       >
         ${modifierLabels.length > 0
-          ? html`<div
-              class="flex flex-col items-start gap-1 mt-[2px] min-w-0 max-w-[65%]"
-            >
+          ? html`<div class="flex flex-col items-start gap-1 mt-[2px] min-w-0">
               ${modifierLabels.map(
                 (label) =>
                   html`<span
@@ -229,7 +226,7 @@ export function lobbyCard({
       </div>
       <!-- Bottom bar: map name + mode, with player count floating above -->
       <div
-        class="absolute bottom-0 left-0 right-0 flex flex-col px-3 py-2 bg-black/55 backdrop-blur-sm rounded-b-2xl ${trustedOnly
+        class="absolute bottom-0 left-0 right-0 flex flex-col px-3 py-2 bg-black/55 backdrop-blur-sm ${trustedOnly
           ? "pr-10"
           : ""}"
         style="overflow: visible;"
