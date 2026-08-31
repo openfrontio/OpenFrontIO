@@ -251,13 +251,10 @@ export class TrainExecution implements Execution {
     for (let i = 0; i < path.length - 1; i++) {
       const segment = getOrientedRailroad(path[i], path[i + 1]);
       if (!segment) return null;
-      cursor += segment.getTiles().length;
-      if (
-        i < path.length - 2 &&
-        this.pathTiles[cursor] !== segment.getEnd().tile() &&
-        this.pathTiles[cursor - 1] !== segment.getEnd().tile()
-      ) {
-        return null;
+      for (const tile of segment.getTiles()) {
+        if (this.pathTiles[cursor++] !== tile) {
+          return null;
+        }
       }
     }
     this.stations.splice(0, 2, ...path);

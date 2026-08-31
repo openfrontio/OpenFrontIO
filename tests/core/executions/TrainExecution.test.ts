@@ -105,4 +105,98 @@ describe("TrainExecution", () => {
     // At station B, the train attempts nextStation() but rejects the detour through tile 4
     expect(exec.isActive()).toBe(false);
   });
+
+  it("re-resolves when intermediate station is placed off-track (adjacent building tile)", async () => {
+    const game = await setup("plains", { instantBuild: true }, [
+      new PlayerInfo("p1", PlayerType.Human, null, "p1"),
+    ]);
+    const player = game.player("p1")!;
+
+    [0, 1, 2, 3, 4, 10].forEach((t) => player.conquer(t));
+    // Station D is at tile 10 (adjacent off-track building tile, not in the railroad tile array)
+    const [stationA, stationB, stationC, stationD] = [0, 1, 3, 10].map(
+      (t) => new TrainStation(game, player.buildUnit(UnitType.City, t, {})),
+    );
+
+    const net = game.railNetwork();
+    const stationManager = net.stationManager();
+    [stationA, stationB, stationC].forEach((s) => stationManager.addStation(s));
+
+    const link = (
+      a: TrainStation,
+      b: TrainStation,
+      tiles: TileRef[],
+      id: number,
+    ) => {
+      const r = new Railroad(a, b, tiles, id);
+      a.addRailroad(r);
+      b.addRailroad(r);
+      return r;
+    };
+
+    link(stationA, stationB, [0, 1], 1);
+    const railBC = link(stationB, stationC, [1, 2, 2, 3], 2);
+
+    const exec = new TrainExecution(net, player, stationA, stationC, 1);
+    exec.init(game, 0);
+
+    // Split edge B->C into B->D [1, 2] and D->C [2, 3], where stationD.tile() = 10
+    stationB.removeRailroad(railBC);
+    stationC.removeRailroad(railBC);
+    stationManager.addStation(stationD);
+    link(stationB, stationD, [1, 2], 3);
+    link(stationD, stationC, [2, 3], 4);
+
+    exec.tick(1);
+    expect(exec.isActive()).toBe(true);
+    exec.tick(2);
+    expect(exec.isActive()).toBe(true);
+    exec.tick(3);
+    expect(exec.isActive()).toBe(false);
+  });
+
+  it("rejects detour when only the final segment detours off motion plan", async () => {
+    const game = await setup("plains", { instantBuild: true }, [
+      new PlayerInfo("p1", PlayerType.Human, null, "p1"),
+    ]);
+    const player = game.player("p1")!;
+
+    [0, 1, 2, 3, 9].forEach((t) => player.conquer(t));
+    const [stationA, stationB, stationC, stationD] = [0, 1, 3, 2].map(
+      (t) => new TrainStation(game, player.buildUnit(UnitType.City, t, {})),
+    );
+
+    const net = game.railNetwork();
+    const stationManager = net.stationManager();
+    [stationA, stationB, stationC].forEach((s) => stationManager.addStation(s));
+
+    const link = (
+      a: TrainStation,
+      b: TrainStation,
+      tiles: TileRef[],
+      id: number,
+    ) => {
+      const r = new Railroad(a, b, tiles, id);
+      a.addRailroad(r);
+      b.addRailroad(r);
+      return r;
+    };
+
+    link(stationA, stationB, [0, 1], 1);
+    const railBC = link(stationB, stationC, [1, 2, 2, 3], 2);
+
+    const exec = new TrainExecution(net, player, stationA, stationC, 1);
+    exec.init(game, 0);
+
+    // B->D uses planned tiles [1, 2], but D->C detours through tile 9 [2, 9, 3]
+    stationB.removeRailroad(railBC);
+    stationC.removeRailroad(railBC);
+    stationManager.addStation(stationD);
+    link(stationB, stationD, [1, 2], 3);
+    link(stationD, stationC, [2, 9, 3], 4);
+
+    exec.tick(1);
+    // Rejects because final segment D->C uses unrecorded tile 9
+    expect(exec.isActive()).toBe(false);
+  });
 });
