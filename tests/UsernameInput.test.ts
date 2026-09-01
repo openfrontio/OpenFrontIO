@@ -962,6 +962,32 @@ describe("UsernameInput claim grace, live behaviour", () => {
     );
   });
 
+  // Reconnecting after the deadline passed while detached. connectedCallback
+  // short-circuits the getUserMe continuation when userMe is already set, so
+  // this path never reaches applyVerifiedPreference: re-arming the timer alone
+  // left the stale "reserved until {past date}" wording in place. Unreachable
+  // in the app today — <play-page> is hidden by class toggling, not removed —
+  // but the code claims to handle it, so something should hold that.
+  it("escalates on reconnect when the deadline passed while detached", async () => {
+    vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    const el = await mount();
+    await signIn(el, lapsedUser());
+    expect(q(el, GRACE)!.textContent).toContain("username.claim_reserved");
+    showInGameAlert.mockClear();
+
+    const parent = el.parentElement!;
+    parent.removeChild(el);
+    vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+    parent.appendChild(el);
+    await el.updateComplete;
+
+    expect(q(el, GRACE)!.textContent).toContain("username.claim_at_risk");
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(showInGameAlert.mock.calls[0][0]).toContain(
+      "username.lapse_notice_at_risk",
+    );
+  });
+
   // usernameClaimExpiresAt's schema comment: "A past date means 'at risk', not
   // 'lost' — it stays set until the name is actually taken." The banner has to
   // follow that, not a clock.

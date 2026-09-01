@@ -330,11 +330,21 @@ export class UsernameInput extends LitElement {
         localStorage.getItem(verifiedDefaultAllowedKey) === "true",
       ) &&
       this.verifiedName() !== null;
+    this.refreshClaimGrace();
+    this.requestUpdate();
+    this.validateAndStore();
+  }
+
+  // Re-derive the reservation, re-arm the clock, and speak up if the phase
+  // changed. Every path that can move this state goes through here — an
+  // account event, the expiry timer, and reconnecting — so none of them can
+  // do two of the three and silently skip the other. That is exactly how the
+  // banner once escalated with no alert behind it, and how reconnecting past
+  // a deadline left the stale wording in place.
+  private refreshClaimGrace() {
     this.claimGrace = verifiedClaimGrace(this.userMe);
     this.scheduleClaimGraceExpiry();
     this.announceLapse();
-    this.requestUpdate();
-    this.validateAndStore();
   }
 
   // Escalate the notice the moment the reservation lapses.
@@ -363,13 +373,7 @@ export class UsernameInput extends LitElement {
     const delay = Math.min(ms, MAX_TIMEOUT_MS);
     this.claimGraceTimer = setTimeout(() => {
       this.claimGraceTimer = null;
-      this.claimGrace = verifiedClaimGrace(this.userMe);
-      this.scheduleClaimGraceExpiry();
-      // Mirrors applyVerifiedPreference. Without this the live transition only
-      // updates the standing banner, and the one interruption the phase-keyed
-      // marker exists to allow never happens for the player it was written
-      // for: the one sitting on the main menu across their own deadline.
-      this.announceLapse();
+      this.refreshClaimGrace();
     }, delay);
   }
 
@@ -410,8 +414,14 @@ export class UsernameInput extends LitElement {
     // translation files, and auth can resolve first. Announcing here would
     // show the player the literal string "username.lapse_notice" AND burn the
     // marker, so the real notice would never fire — for a one-shot warning
-    // that is the only channel a Steam-only account has. Bail instead;
-    // applyVerifiedPreference runs again on later account events.
+    // that is the only channel a Steam-only account has.
+    //
+    // Bailing costs the alert for this session, not for good: the marker is
+    // left unwritten, so it fires normally on the next launch. Nothing
+    // re-enters this when the language files land — applyVerifiedPreference
+    // only re-runs on account events, and LangSelector's requestUpdate
+    // re-renders the standing banner without coming back through here. Only
+    // reachable on a non-English locale, since `en` is a static import.
     if (message === key) return;
     // Recorded before the dialog, not after: the alert resolves only when the
     // player dismisses it, and an unawaited promise that never settles would
@@ -556,14 +566,18 @@ export class UsernameInput extends LitElement {
     for (const type of CLAN_MEMBERSHIP_EVENTS) {
       document.addEventListener(type, this.handleClanMembershipChange);
     }
-    // Re-arm unconditionally, before the fetch below can short-circuit.
+    // Refresh unconditionally, before the fetch below can short-circuit.
     // disconnectedCallback clears the timer but leaves userMe set, so a
     // detach/reattach of the same instance takes the `userMe !== null` early
-    // return and never reaches applyVerifiedPreference — leaving a stale
-    // claimGrace with nothing scheduled to clear it, which is the exact
-    // failure the timer exists to prevent. Safe when nothing is pending: it
-    // clears any existing timer and no-ops on a null grace.
-    this.scheduleClaimGraceExpiry();
+    // return and never reaches applyVerifiedPreference. Re-arming alone was
+    // not enough: if the deadline passed while detached, the stale grace made
+    // the scheduler bail on `ms <= 0` without ever flipping to the at-risk
+    // wording or announcing it. Re-deriving first is what closes that.
+    //
+    // This path looks unreachable today — <play-page> is hidden by class
+    // toggling rather than removed — so treat it as keeping the comment
+    // honest rather than fixing a live bug.
+    this.refreshClaimGrace();
     // userMeResponse is dispatched once and can fire before this connects.
     // Cached, so this re-reads that response rather than refetching.
     void getUserMe().then((me) => {
