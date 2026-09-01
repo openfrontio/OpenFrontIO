@@ -159,7 +159,12 @@ export function desktopUpdate(): DesktopUpdateBridge | null {
  * asserting all four error kinds.
  *
  * The one place the two DELIBERATELY differ is the unrecognised-kind branch
- * below, which has no counterpart in the shell -- see failedAllowsMultiplayer.
+ * below, which has no counterpart in the shell. The asymmetry follows from
+ * which direction the values travel: THE CLIENT MAY RECEIVE FROM A NEWER
+ * SHELL, BUT THE SHELL CANNOT RECEIVE FROM A NEWER CLIENT. The shell only
+ * ever classifies errors it raised itself, against a closed union, so an
+ * unrecognised kind is unreachable there by construction. Do not "restore
+ * symmetry" by deleting the branch here.
  */
 export function multiplayerAllowed(state: DesktopUpdateState): boolean {
   const { status } = state;
@@ -188,8 +193,13 @@ export function multiplayerAllowed(state: DesktopUpdateState): boolean {
  *      mistake became a safety hole with no compile error.
  *
  * Written as an explicit switch rather than a set lookup so each kind states
- * its own reason, and so adding a kind to DesktopUpdateErrorKind without
- * deciding its gating is a visible omission rather than a silent default.
+ * its own reason next to it.
+ *
+ * Note this switch is NOT exhaustiveness-checked, and cannot be: `kind` is the
+ * permissive wire type, so a new member added to DesktopUpdateErrorKind and
+ * left uncased here is not a compile error. It falls to `default` and gates,
+ * which is the safe answer but a silent one. Adding a kind means adding a case
+ * here deliberately.
  */
 function failedAllowsMultiplayer(
   kind: DesktopUpdateErrorKindWire | undefined,
