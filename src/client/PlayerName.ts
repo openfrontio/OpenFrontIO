@@ -81,10 +81,17 @@ export function accountVerifiedName(
 function truncateToCap(name: string): string {
   if (name.length <= MAX_USERNAME_LENGTH) return name;
   const hard = name.slice(0, MAX_USERNAME_LENGTH).trim();
-  const lastSpace = hard.lastIndexOf(" ");
-  if (lastSpace < MIN_USERNAME_LENGTH) return hard;
-  // Already ended on a boundary — the next character is where the cut fell.
+  // Already a clean cut — don't go looking for an earlier boundary and throw
+  // away a whole word that fitted. Two ways that happens: the character after
+  // the cut is a space, or `trim()` just removed one from the end of the slice
+  // (which is the only thing it can remove, since `collapsed` arrives with no
+  // leading, trailing or repeated whitespace).
+  if (hard.length < MAX_USERNAME_LENGTH) return hard;
   if (name[MAX_USERNAME_LENGTH] === " ") return hard;
+  const lastSpace = hard.lastIndexOf(" ");
+  // No boundary worth cutting back to — a single long word is cut where it
+  // falls rather than reduced to a stub.
+  if (lastSpace < MIN_USERNAME_LENGTH) return hard;
   return hard.slice(0, lastSpace);
 }
 

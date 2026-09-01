@@ -212,11 +212,19 @@ describe("sanitizePersona", () => {
 
   // The whole point of the change: these all used to be discarded wholesale,
   // dropping the player to a generated AnonWombat3.
-  it("keeps accented and Latin Extended-A names the renderer can draw", () => {
+  it("keeps the accented Latin-1 names the renderer can draw", () => {
     expect(sanitizePersona("José")).toBe("José");
     expect(sanitizePersona("Müller")).toBe("Müller");
-    expect(sanitizePersona("Łukasz")).toBe("Łukasz");
     expect(sanitizePersona("Bjørn")).toBe("Bjørn");
+    expect(sanitizePersona("Iñigo")).toBe("Iñigo");
+  });
+
+  // Above U+00FF the string path truncates mod 256 and the atlas has no real
+  // glyph, so Ł would draw as "A". Stripped like any other unrenderable
+  // codepoint rather than kept.
+  it("strips Latin Extended-A, which the renderer cannot draw", () => {
+    expect(sanitizePersona("Łukasz")).toBe("ukasz");
+    expect(sanitizePersona("Łódź")).toBeNull();
   });
 
   it("keeps hyphens, underscores and periods", () => {
@@ -255,6 +263,26 @@ describe("sanitizePersona", () => {
   it("does not leave a trailing space after truncating", () => {
     const name = sanitizePersona("abcdefghijklmnopqrs tuv");
     expect(name).toBe("abcdefghijklmnopqrs");
+  });
+
+  // Regression: when the cut lands one past a space, trim() alone already
+  // produced a clean word-boundary cut. Looking for an *earlier* boundary on
+  // top of that threw away a whole word that had fitted — "Ada Lovelacetheguru"
+  // collapsed to "Ada".
+  it("keeps a word that fits when the cut lands on a boundary", () => {
+    expect(sanitizePersona("Ada Lovelacetheguru xyz")).toBe(
+      "Ada Lovelacetheguru",
+    );
+    // The same shape with the space exactly at the cut index.
+    expect(sanitizePersona("Ada Lovelacethegurus xyz")).toBe(
+      "Ada Lovelacethegurus",
+    );
+  });
+
+  // A partial word at the cut is still dropped — that is the case the word
+  // boundary exists for.
+  it("drops a word the cut lands inside", () => {
+    expect(sanitizePersona("Ada Lovelacetheguruxyz")).toBe("Ada");
   });
 
   it("returns null for nothing to sanitise", () => {
