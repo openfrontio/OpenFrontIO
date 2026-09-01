@@ -22,6 +22,10 @@ function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
     warships: 0,
     siloDisabled: false,
     silos: 0,
+    atomDisabled: false,
+    atomLaunched: false,
+    hydrogenDisabled: false,
+    mirvDisabled: false,
     ...overrides,
   };
 }
@@ -110,8 +114,11 @@ describe("TutorialProgress", () => {
       factoryDisabled: true,
       warshipDisabled: true,
       siloDisabled: true,
+      atomDisabled: true,
+      hydrogenDisabled: true,
+      mirvDisabled: true,
     });
-    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 8);
+    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 12);
 
     settle(p, c);
     settle(p, c);
@@ -182,6 +189,21 @@ describe("TutorialProgress", () => {
     p.update(ctx({ factories: 1, ports: 1, warships: 1 }));
     expect(p.stepDone()).toBe(false);
     settle(p, ctx({ factories: 1, ports: 1, warships: 1, silos: 1 }));
+
+    expect(p.current()?.id).toBe("launch_atom");
+    expect(p.current()?.highlight).toBe("atom");
+    settle(p, ctx({ silos: 1, atomLaunched: true }));
+
+    for (const [id, highlight] of [
+      ["atom_info", "atom"],
+      ["hydrogen_info", "hydrogen"],
+      ["mirv_info", "mirv"],
+    ]) {
+      expect(p.current()?.id).toBe(id);
+      expect(p.current()?.highlight).toBe(highlight);
+      p.acknowledge();
+      settle(p, ctx({ silos: 1 }));
+    }
     expect(p.finished()).toBe(true);
   });
 });
