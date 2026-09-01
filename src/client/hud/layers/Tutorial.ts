@@ -8,11 +8,6 @@ export class TutorialHighlightEvent implements GameEvent {
   constructor(public readonly target: TutorialHighlight | null) {}
 }
 
-/** Emitted when the tutorial panel is shown or hidden. */
-export class TutorialStateEvent implements GameEvent {
-  constructor(public readonly active: boolean) {}
-}
-
 /** Snapshot of the player's state that the steps are evaluated against. */
 export interface TutorialContext {
   hasSpawned: boolean;
@@ -107,6 +102,13 @@ export class TutorialProgress {
     if (step?.manual && this.doneTicks === null) {
       this.doneTicks = 0;
     }
+  }
+
+  /** Moves past the current step without completing it. */
+  skip(): void {
+    if (this.finished()) return;
+    this.index++;
+    this.doneTicks = null;
   }
 
   update(ctx: TutorialContext): void {

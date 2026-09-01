@@ -1,10 +1,8 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
 import { adGatekeeper } from "../../AdGatekeeper";
 import { Controller } from "../../Controller";
 import { GameView } from "../../view";
-import { TutorialStateEvent } from "./Tutorial";
 
 const AD_TYPES = [
   { type: "standard_iab_left1", selectorId: "in-game-bottom-left-ad" },
@@ -15,13 +13,8 @@ const AD_TYPES = [
 @customElement("in-game-promo")
 export class InGamePromo extends LitElement implements Controller {
   public game: GameView;
-  public eventBus: EventBus;
 
   private shouldShow: boolean = false;
-  // The bottom-left ad shares its corner with the tutorial panel, so it waits
-  // until the tutorial is closed.
-  private tutorialActive: boolean = false;
-  private adDeferred: boolean = false;
   private adsVisible: boolean = false;
   private bottomRailDestroyed: boolean = false;
   private cornerAdShown: boolean = false;
@@ -32,15 +25,7 @@ export class InGamePromo extends LitElement implements Controller {
     return this;
   }
 
-  init() {
-    this.eventBus.on(TutorialStateEvent, (e) => {
-      this.tutorialActive = e.active;
-      if (!e.active && this.adDeferred) {
-        this.adDeferred = false;
-        this.showAd();
-      }
-    });
-  }
+  init() {}
 
   tick() {
     if (!this.game.inSpawnPhase()) {
@@ -50,12 +35,8 @@ export class InGamePromo extends LitElement implements Controller {
       }
       if (!this.cornerAdShown) {
         this.cornerAdShown = true;
-        if (this.tutorialActive) {
-          this.adDeferred = true;
-        } else {
-          console.log("[InGamePromo] Spawn phase ended, triggering showAd");
-          this.showAd();
-        }
+        console.log("[InGamePromo] Spawn phase ended, triggering showAd");
+        this.showAd();
       }
     }
   }
