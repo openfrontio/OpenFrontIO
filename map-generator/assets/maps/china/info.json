@@ -169,6 +169,11 @@
       "coordinates": [779, 1192],
       "name": "Qinghai",
       "flag": "cn"
+    },
+    {
+      "coordinates": [1226, 1049],
+      "flag": "cn",
+      "name": "Ningxia"
     }
   ],
   "themes": ["asia"]
