@@ -1562,6 +1562,7 @@
   },
   "public_lobby": {
     "connecting": "Connecting to lobby...",
+    "invite_friends": "Invite Friends",
     "join_timeout": "You didn't enter the game in time.",
     "players_per_team": "of {num}",
     "started": "Started",
