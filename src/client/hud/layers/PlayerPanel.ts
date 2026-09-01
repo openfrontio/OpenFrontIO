@@ -585,8 +585,8 @@ export class PlayerPanel extends LitElement implements Controller {
         ${flagPath
           ? html`<img
               src=${assetUrl(flagPath)}
-              alt=${country?.name ?? "Flag"}
-              title=${country?.name ?? "Flag"}
+              alt=${country?.name ?? translateText("cosmetics.type_flag")}
+              title=${country?.name ?? translateText("cosmetics.type_flag")}
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {
                 (e.target as HTMLImageElement).style.display = "none";
