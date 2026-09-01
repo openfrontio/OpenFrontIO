@@ -16,7 +16,7 @@ import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { ConstructionExecution } from "../ConstructionExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
-import { closestTile, closestTwoTiles } from "../Util";
+import { nearestTileDist, nearestTileDistCapped } from "../Util";
 import { randTerritoryTileArray } from "./NationUtils";
 
 /**
@@ -366,7 +366,13 @@ export class NationStructureBehavior {
       if (!game.isValidCoord(x, y)) continue;
       const t = game.ref(x, y);
       if (game.owner(t) !== player) continue;
-      const [, borderDist] = closestTile(game, borderTiles, t);
+      // Only "inside [min, max]" matters, so the search is capped at max.
+      const borderDist = nearestTileDistCapped(
+        game,
+        borderTiles,
+        t,
+        maxBorderDist,
+      );
       if (borderDist < minBorderDist || borderDist > maxBorderDist) continue;
       if (!player.canBuild(unitType, t)) continue;
       result.push(t);
@@ -924,17 +930,20 @@ export class NationStructureBehavior {
       w += game.magnitude(tile);
 
       // Prefer to be away from the border
-      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
+      // Clamped at borderSpacing, so the ring search may stop there.
+      const closestBorderDist = nearestTileDistCapped(
+        game,
+        borderTiles,
+        tile,
+        borderSpacing,
+      );
       w += Math.min(closestBorderDist, borderSpacing);
 
       // Prefer to be away from other structures of the same type
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
-      if (closestOther !== null) {
-        const d = game.manhattanDist(closestOther.x, tile);
-        w += Math.min(d, structureSpacing);
-      }
+      const d = nearestTileDist(game, otherTiles, tile);
+      if (d !== Infinity) w += Math.min(d, structureSpacing);
 
       return w;
     };
@@ -954,7 +963,7 @@ export class NationStructureBehavior {
       // Prefer to be as far as possible from other ports
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const [, closestOtherDist] = closestTile(game, otherTiles, tile);
+      const closestOtherDist = nearestTileDist(game, otherTiles, tile);
       w += closestOtherDist;
 
       return w;
@@ -998,24 +1007,24 @@ export class NationStructureBehavior {
       w += game.magnitude(tile);
 
       // Prefer to be away from the border
-      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
+      // Clamped at borderSpacing, so the ring search may stop there.
+      const closestBorderDist = nearestTileDistCapped(
+        game,
+        borderTiles,
+        tile,
+        borderSpacing,
+      );
       w += Math.min(closestBorderDist, borderSpacing);
 
       // Prefer to be away from other factories
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
-      if (closestOther !== null) {
-        const d = game.manhattanDist(closestOther.x, tile);
-        w += Math.min(d, stationRange);
-      }
+      const d = nearestTileDist(game, otherTiles, tile);
+      if (d !== Infinity) w += Math.min(d, stationRange);
 
       // Prefer to be away from cities (cross-type spacing)
-      const closestCity = closestTwoTiles(game, cityTiles, [tile]);
-      if (closestCity !== null) {
-        const d = game.manhattanDist(closestCity.x, tile);
-        w += Math.min(d, structureSpacing);
-      }
+      const d2 = nearestTileDist(game, cityTiles, tile);
+      if (d2 !== Infinity) w += Math.min(d2, structureSpacing);
 
       if (!useConnectionScore) {
         return w;
@@ -1213,23 +1222,23 @@ export class NationStructureBehavior {
 
       w += game.magnitude(tile);
 
-      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
+      // Clamped at borderSpacing, so the ring search may stop there.
+      const closestBorderDist = nearestTileDistCapped(
+        game,
+        borderTiles,
+        tile,
+        borderSpacing,
+      );
       w += Math.min(closestBorderDist, borderSpacing);
 
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
-      if (closestOther !== null) {
-        const d = game.manhattanDist(closestOther.x, tile);
-        w += Math.min(d, structureSpacing);
-      }
+      const d = nearestTileDist(game, otherTiles, tile);
+      if (d !== Infinity) w += Math.min(d, structureSpacing);
 
       // Prefer to be away from factories (cross-type spacing)
-      const closestFactory = closestTwoTiles(game, factoryTiles, [tile]);
-      if (closestFactory !== null) {
-        const d = game.manhattanDist(closestFactory.x, tile);
-        w += Math.min(d, structureSpacing);
-      }
+      const d2 = nearestTileDist(game, factoryTiles, tile);
+      if (d2 !== Infinity) w += Math.min(d2, structureSpacing);
 
       if (!useConnectionScore) {
         return w;
@@ -1307,20 +1316,23 @@ export class NationStructureBehavior {
       w += game.magnitude(tile);
 
       // Prefer to be away from the border
-      const closestBorder = closestTwoTiles(game, borderTiles, [tile]);
-      if (closestBorder !== null) {
-        const d = game.manhattanDist(closestBorder.x, tile);
-        w += Math.min(d, borderSpacing);
+      const closestBorderDist = nearestTileDistCapped(
+        game,
+        borderTiles,
+        tile,
+        borderSpacing,
+      );
+      // Infinity here also means "farther than borderSpacing", which still
+      // earns the clamped term; only an empty border set contributes nothing.
+      if (borderTiles.size > 0) {
+        w += Math.min(closestBorderDist, borderSpacing);
       }
 
       // Prefer to be away from other structures of the same type
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
-      if (closestOther !== null) {
-        const d = game.manhattanDist(closestOther.x, tile);
-        w += Math.min(d, structureSpacing);
-      }
+      const d = nearestTileDist(game, otherTiles, tile);
+      if (d !== Infinity) w += Math.min(d, structureSpacing);
 
       // Prefer to be in range of other structures (skip on easy difficulty)
       if (difficulty !== Difficulty.Easy) {

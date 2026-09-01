@@ -1,5 +1,6 @@
 {
   "categories": ["asia"],
+  "forced_modifiers": ["isWaterNukes:50"],
   "id": "Baikal",
   "map": {
     "height": 1564,

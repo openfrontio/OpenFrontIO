@@ -23,6 +23,8 @@ export interface GameMap {
   terrainByte(ref: TileRef): number;
   // Terrain setters
   setWater(ref: TileRef): void;
+  /** Bumped every time a land tile turns to water; lets callers cache anything derived from water components. */
+  waterVersion(): number;
   setShorelineBit(ref: TileRef): void;
   clearShorelineBit(ref: TileRef): void;
   setOcean(ref: TileRef): void;
@@ -247,8 +249,14 @@ export class GameMapImpl implements GameMap {
     return this.terrain[ref];
   }
 
+  private waterVersion_ = 0;
+  waterVersion(): number {
+    return this.waterVersion_;
+  }
+
   setWater(ref: TileRef): void {
     if (!this.isLand(ref) || this.isImpassable(ref)) return;
+    this.waterVersion_++;
     this.terrain[ref] = 0; // Lake water: no land, no ocean, no shoreline, magnitude 0
     this.numLandTiles_--;
   }
@@ -541,6 +549,9 @@ export class GameMapImpl implements GameMap {
       const wasLand = this.isLand(tile);
       this.terrain[tile] = terrainByte;
       const isNowLand = Boolean(terrainByte & (1 << GameMapImpl.IS_LAND_BIT));
+      // Water-derived caches key on waterVersion(): a packed update that flips
+      // land/water must invalidate them just like setWater() does.
+      if (wasLand !== isNowLand) this.waterVersion_++;
       if (wasLand && !isNowLand) this.numLandTiles_--;
       else if (!wasLand && isNowLand) this.numLandTiles_++;
     }
