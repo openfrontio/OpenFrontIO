@@ -64,11 +64,39 @@ export type DesktopUpdateStatus =
   | "blocked"
   | "failed";
 
+/**
+ * The update-error kinds this client knows how to reason about.
+ *
+ * openfront-desktop's src/main/update/state.ts (`UpdateErrorKind`) is the
+ * SOURCE OF TRUTH -- the shell produces these values and this client only
+ * consumes them. The two repositories cannot import from each other, so this
+ * must track that one by hand, the same arrangement multiplayerAllowed below
+ * already relies on.
+ */
+export type DesktopUpdateErrorKind = "network" | "refused" | "verify" | "parse";
+
+/**
+ * A `kind` as it actually arrives over IPC.
+ *
+ * Deliberately permissive rather than the closed union above. The shell ships
+ * in the Steam depot and updates on Steam's schedule while this client updates
+ * at runtime, so running against a shell NEWER than the client is ordinary --
+ * and such a shell may classify a failure into a kind this client has never
+ * heard of.
+ *
+ * Typing the wire value as the closed union would be a lie about data we do
+ * not control, and TypeScript would then narrow the unrecognised branch of
+ * multiplayerAllowed to `never` and treat it as dead code -- which is exactly
+ * the branch that has to exist. `(string & {})` admits any string while
+ * keeping editor completion for the four known literals.
+ */
+export type DesktopUpdateErrorKindWire = DesktopUpdateErrorKind | (string & {});
+
 export interface DesktopUpdateState {
   status: DesktopUpdateStatus;
   bytes: number;
   total: number;
-  error?: { kind: string; message: string };
+  error?: { kind: DesktopUpdateErrorKindWire; message: string };
 }
 
 export interface DesktopUpdateBridge {
@@ -125,10 +153,13 @@ export function desktopUpdate(): DesktopUpdateBridge | null {
  * Takes the whole state rather than the bare status because the error kind is
  * load-bearing in that decision.
  *
- * This duplicates multiplayerAllowed in openfront-desktop's
+ * This mirrors multiplayerAllowed in openfront-desktop's
  * src/main/update/state.ts. The two repositories cannot import from each other;
- * if you change one, change the other. Both are covered by tests asserting all
- * four error kinds.
+ * if you change the rule, change it in both. Both are covered by tests
+ * asserting all four error kinds.
+ *
+ * The one place the two DELIBERATELY differ is the unrecognised-kind branch
+ * below, which has no counterpart in the shell -- see failedAllowsMultiplayer.
  */
 export function multiplayerAllowed(state: DesktopUpdateState): boolean {
   const { status } = state;
@@ -136,11 +167,62 @@ export function multiplayerAllowed(state: DesktopUpdateState): boolean {
     return true;
   }
   if (status === "failed") {
-    const kind = state.error?.kind;
-    return kind !== "network" && kind !== "verify";
+    return failedAllowsMultiplayer(state.error?.kind);
   }
   // downloading (wait) and staged (reload) both have a real remedy.
   return false;
+}
+
+/**
+ * The `failed` half of the rule above, as an ALLOW-LIST.
+ *
+ * It was previously a deny-list (`kind !== "network" && kind !== "verify"`),
+ * which meant anything unrecognised fell through to ungated. Two problems with
+ * that, and they are the reason for OPE-194:
+ *
+ *   1. It answered "I don't know what went wrong" with "then play on". For the
+ *      one safety property this subsystem exists to provide, the default
+ *      belongs the other way round.
+ *   2. A typo on either side of that comparison -- "NETWORK", "verify " --
+ *      compiled cleanly and silently ungated multiplayer. A one-character
+ *      mistake became a safety hole with no compile error.
+ *
+ * Written as an explicit switch rather than a set lookup so each kind states
+ * its own reason, and so adding a kind to DesktopUpdateErrorKind without
+ * deciding its gating is a visible omission rather than a silent default.
+ */
+function failedAllowsMultiplayer(
+  kind: DesktopUpdateErrorKindWire | undefined,
+): boolean {
+  switch (kind) {
+    // `error` is optional on DesktopUpdateState, so a malformed `failed` state
+    // can carry no kind at all. Every shell emit site classifies before
+    // emitting, so this is unreachable from a real shell rather than a
+    // forward-compatibility case -- unlike the default branch below, this is
+    // absence of evidence, not evidence we cannot read. Kept ungated, which is
+    // the pre-existing deliberate behaviour: an entirely unclassified failure
+    // should not lock a player out.
+    case undefined:
+      return true;
+    // Deterministic and entirely server-side: Retry re-runs the identical
+    // failure, so gating is punishment without recourse.
+    case "refused":
+    case "parse":
+      return true;
+    // Retry is a real remedy, so gating buys something.
+    case "network":
+    case "verify":
+      return false;
+    // A kind from a shell newer than this client. The shell decided this
+    // failure was worth naming and we cannot read the name -- so we cannot
+    // reason about whether the player has a remedy. Fail safe: gate.
+    //
+    // This branch is reachable only because DesktopUpdateErrorKindWire is
+    // permissive. Narrowing that type to the closed union would make this
+    // `never` and delete the safety net.
+    default:
+      return false;
+  }
 }
 
 export type DesktopSessionStatus =

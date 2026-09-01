@@ -42,6 +42,26 @@ describe("barSource", () => {
     ).toBe("session");
   });
 
+  // OPE-194 pairs with this: an unrecognised error kind now GATES multiplayer,
+  // so it must never gate silently. The bar's visibility and its label/action
+  // key off `status`, not `error.kind`, so a failure this client cannot
+  // classify still surfaces "couldn't download the update" plus Retry -- a
+  // visible reason and an action, which is what keeps gating from being
+  // punishment without recourse.
+  it("surfaces a failure whose error kind is unrecognised", () => {
+    expect(
+      barSource(
+        {
+          status: "failed",
+          bytes: 0,
+          total: 0,
+          error: { kind: "quota-exceeded", message: "from a newer shell" },
+        },
+        { status: "signed-in" },
+      ),
+    ).toBe("update");
+  });
+
   it("shows nothing on the web, where neither bridge exists", () => {
     expect(barSource(null, null)).toBe("none");
   });
