@@ -1819,6 +1819,7 @@
     "got_it": "Got it",
     "hide_for_game": "Hide for this game",
     "never_show": "Don't show again",
+    "skip": "Skip",
     "step": {
       "attack_bot": "Now click on a neighboring bot's territory to attack it and take its land.",
       "attack_wilderness": "Click on the unclaimed land next to you to attack it and expand your territory.",

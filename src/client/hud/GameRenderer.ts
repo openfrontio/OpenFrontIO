@@ -287,7 +287,6 @@ export function createRenderer(
     console.error("in-game promo not found");
   }
   inGamePromo.game = game;
-  inGamePromo.eventBus = eventBus;
 
   const tutorialPanel = document.querySelector(
     "tutorial-panel",

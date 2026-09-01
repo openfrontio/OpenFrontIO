@@ -12,7 +12,6 @@ import {
   TutorialHighlight,
   TutorialHighlightEvent,
   TutorialProgress,
-  TutorialStateEvent,
 } from "./Tutorial";
 
 /** How often (in ticks) to ask the worker for the current city cost. */
@@ -29,6 +28,9 @@ export class TutorialPanel extends LitElement implements Controller {
   @state() private active = false;
   @state() private confirmingClose = false;
   @state() private ctx: TutorialContext | null = null;
+  /** Viewport position once the player has dragged the panel; null = docked. */
+  @state() private dragPos: { x: number; y: number } | null = null;
+  private dragOffset: { x: number; y: number } | null = null;
 
   private progress = new TutorialProgress();
   private started = false;
@@ -121,8 +123,10 @@ export class TutorialPanel extends LitElement implements Controller {
   private setActive(active: boolean) {
     if (this.active === active) return;
     this.active = active;
+    // The host sits in the top-right flex stack; leave the flow when hidden
+    // so it doesn't add a gap under the control bar.
+    this.classList.toggle("hidden", !active);
     if (!active) this.setHighlight(null);
-    this.eventBus.emit(new TutorialStateEvent(active));
   }
 
   private dismissForever() {
@@ -130,14 +134,52 @@ export class TutorialPanel extends LitElement implements Controller {
     this.setActive(false);
   }
 
+  private onDragStart(e: PointerEvent) {
+    if ((e.target as HTMLElement).closest("button")) return;
+    const panel = e.currentTarget as HTMLElement;
+    const rect = panel.parentElement!.getBoundingClientRect();
+    this.dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    panel.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+
+  private onDragMove(e: PointerEvent) {
+    if (this.dragOffset === null) return;
+    const panel = (e.currentTarget as HTMLElement).parentElement!;
+    const maxX = window.innerWidth - panel.offsetWidth;
+    const maxY = window.innerHeight - panel.offsetHeight;
+    this.dragPos = {
+      x: Math.max(0, Math.min(maxX, e.clientX - this.dragOffset.x)),
+      y: Math.max(0, Math.min(maxY, e.clientY - this.dragOffset.y)),
+    };
+  }
+
+  private onDragEnd(e: PointerEvent) {
+    this.dragOffset = null;
+    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+  }
+
   render() {
     if (!this.active) return nothing;
+    const dragged = this.dragPos !== null;
     return html`
       <div
-        class="fixed z-[210] pointer-events-auto w-[min(20rem,calc(100vw-1rem))] rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-sm p-3 top-14 left-1/2 -translate-x-1/2 lg:top-auto lg:left-4 lg:bottom-4 lg:translate-x-0"
+        class="pointer-events-auto w-[min(20rem,calc(100vw-1rem))] rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-sm p-3 ${dragged
+          ? "fixed"
+          : ""}"
+        style=${dragged
+          ? `left: ${this.dragPos!.x}px; top: ${this.dragPos!.y}px;`
+          : ""}
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
-        <div class="flex items-center justify-between gap-2 mb-1.5">
+        <div
+          class="flex items-center justify-between gap-2 mb-1.5 cursor-move select-none"
+          style="touch-action: none;"
+          @pointerdown=${(e: PointerEvent) => this.onDragStart(e)}
+          @pointermove=${(e: PointerEvent) => this.onDragMove(e)}
+          @pointerup=${(e: PointerEvent) => this.onDragEnd(e)}
+          @pointercancel=${(e: PointerEvent) => this.onDragEnd(e)}
+        >
           <span class="font-bold text-cyber-yellow uppercase tracking-wide"
             >${translateText("tutorial.title")}</span
           >
@@ -198,14 +240,24 @@ export class TutorialPanel extends LitElement implements Controller {
           })}</span
         >
       </p>
-      ${step.manual && !done
-        ? html`<button
-            class="mt-2 rounded-md bg-malibu-blue hover:bg-aquarius px-3 py-1 font-semibold"
-            @click=${() => this.progress.acknowledge()}
-          >
-            ${translateText("tutorial.got_it")}
-          </button>`
-        : nothing}
+      ${done
+        ? nothing
+        : html`<div class="mt-2 flex items-center gap-2">
+            ${step.manual
+              ? html`<button
+                  class="rounded-md bg-malibu-blue hover:bg-aquarius px-3 py-1 font-semibold"
+                  @click=${() => this.progress.acknowledge()}
+                >
+                  ${translateText("tutorial.got_it")}
+                </button>`
+              : nothing}
+            <button
+              class="text-gray-400 hover:text-white underline px-1 py-1"
+              @click=${() => this.progress.skip()}
+            >
+              ${translateText("tutorial.skip")}
+            </button>
+          </div>`}
     `;
   }
 }

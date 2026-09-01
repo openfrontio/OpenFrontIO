@@ -126,3 +126,33 @@ describe("TutorialProgress", () => {
     expect(p.stepDone()).toBe(true);
   });
 });
+
+describe("TutorialProgress.skip", () => {
+  it("moves past the current step without completing it", () => {
+    const p = new TutorialProgress();
+    p.update(ctx());
+    expect(p.current()?.id).toBe("spawn");
+
+    p.skip();
+    expect(p.stepDone()).toBe(false);
+    p.update(ctx());
+    expect(p.current()?.id).toBe("attack_wilderness");
+
+    // Skipping lands on the next *applicable* step.
+    p.skip();
+    p.update(ctx({ botsExist: false }));
+    expect(p.current()?.id).toBe("troops");
+    p.skip();
+    p.update(ctx({ botsExist: false }));
+    expect(p.current()?.id).toBe("gold");
+  });
+
+  it("can skip through to the end", () => {
+    const p = new TutorialProgress();
+    for (let i = 0; i < TUTORIAL_STEPS.length; i++) p.skip();
+    p.update(ctx());
+    expect(p.finished()).toBe(true);
+    p.skip();
+    expect(p.finished()).toBe(true);
+  });
+});
