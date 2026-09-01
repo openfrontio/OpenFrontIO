@@ -1339,7 +1339,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Labyrinth,
     translationKey: "map.labyrinth",
     categories: ["arcade"],
-    multiplayerFrequency: 3,
+    multiplayerFrequency: 2,
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
