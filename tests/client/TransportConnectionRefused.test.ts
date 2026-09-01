@@ -169,6 +169,7 @@ describe("Transport terminal connection refused", () => {
     [1006, ""],
     [1002, "WS_ERR_UNEXPECTED_RSV_1"],
     [1002, "Unauthorized: user me fetch failed"],
+    [1002, "Unauthorized: invalid token"],
   ])("still reconnects after a retryable close: %i %s", (code, reason) => {
     connectTransport();
 

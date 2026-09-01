@@ -418,7 +418,7 @@ export async function startWorker() {
           log.warn(`Invalid token: ${result.message}`, {
             gameID: clientMsg.gameID,
           });
-          ws.close(1003, `Unauthorized: invalid token`);
+          ws.close(1002, `Unauthorized: invalid token`);
           return;
         }
         const { persistentId, claims } = result;

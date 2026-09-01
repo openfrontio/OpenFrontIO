@@ -229,7 +229,7 @@ export class Transport {
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
   // Latched by a 1003 close (rejection the server will repeat). 1002 stays
-  // retryable (mangled frames, account-API blips). Blocks connectRemote so
+  // retryable (mangled frames, account-API / JWKS blips). Blocks connectRemote
   // neither the ping nor ClientGameRunner's silence check can reopen it.
   private connectionRefused = false;
 
