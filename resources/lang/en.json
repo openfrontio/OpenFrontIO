@@ -486,6 +486,10 @@
     "verified_name": "Verified username",
     "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
   },
+  "desktop_presence": {
+    "in_game": "In game",
+    "spectating": "Spectating"
+  },
   "desktop_session": {
     "generic": "Couldn't sign in to your OpenFront account",
     "network": "Can't reach OpenFront. Check your connection.",
