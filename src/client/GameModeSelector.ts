@@ -193,6 +193,24 @@ export class GameModeSelector extends LitElement {
     this.lobbySocket.stop();
   }
 
+  /**
+   * Re-open the public-lobby socket after stop().
+   *
+   * connectedCallback() used to be the only caller of lobbySocket.start(),
+   * which was fine while every exit from a started game reloaded the page. It
+   * is not fine for an exit that leaves in place (openInvite, OPE-255): this
+   * element is never disconnected, so connectedCallback never runs again and
+   * the lobby list stayed frozen on whatever it last received.
+   *
+   * Safe to call when already running -- PublicLobbySocket.start() closes any
+   * existing socket before opening a new one -- but callers should still only
+   * use it to undo a stop(), since a needless reconnect drops the cached
+   * snapshot and re-primes the list from the server.
+   */
+  public start() {
+    this.lobbySocket.start();
+  }
+
   private handleLobbiesUpdate(lobbies: PublicGames) {
     this.lobbies = lobbies;
     this.serverTimeOffset = calculateServerTimeOffset(lobbies.serverTime);
