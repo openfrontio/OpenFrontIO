@@ -262,6 +262,27 @@ export const UserMeResponseSchema = z.object({
         hasEmail: z.boolean(),
       })
       .optional(),
+    // The caller's ACTIVE creator-support binding (Creator Code programme), or
+    // null if unbound. Shown regardless of the creator's current status —
+    // suspending a creator doesn't un-bind their existing supporters, only
+    // blocks *new* bindings (enforced server-side at PUT /users/@me/creator).
+    // `sinceAt` is when the binding started; `canChangeAt` is null once the
+    // 7-day change cooldown has elapsed, so the client can tell "still bound,
+    // cooldown over" from "still bound, cooldown running" without hardcoding
+    // the cooldown length itself. `creator: null` does NOT by itself mean a
+    // new bind is unthrottled — a cooldown can still be running from a recent
+    // unbind; only PUT's own 429 reveals that.
+    // .optional() exists ONLY so an older API without the field is tolerated
+    // (the UI renders nothing then).
+    creator: z
+      .object({
+        code: z.string(),
+        displayName: z.string(),
+        sinceAt: z.string(),
+        canChangeAt: z.string().nullable(),
+      })
+      .nullable()
+      .optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
@@ -305,6 +326,29 @@ export const PutUsernameResponseSchema = z.object({
   bareClaim: BareClaimSchema.optional(),
 });
 export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
+
+// GET /creators/code/:code — public creator-code lookup (Creator Code
+// programme; no auth). Used to preview/validate a code before binding, e.g.
+// from an openfront.io/c/CODE share link. `status` is the creator's account
+// state; today the endpoint only ever resolves an "active" creator (a
+// suspended/terminated/unknown code 404s), but the field is kept here to
+// mirror the server's row shape rather than assume that never changes.
+export const PublicCreatorSchema = z.object({
+  code: z.string(),
+  displayName: z.string(),
+  status: z.enum(["active", "suspended", "terminated"]),
+});
+export type PublicCreator = z.infer<typeof PublicCreatorSchema>;
+
+// PUT /users/@me/creator success payload — confirms the code and display
+// name of the creator the caller is now bound to. Deliberately just the
+// public pair, not the full player.creator record (sinceAt/canChangeAt):
+// callers invalidate the cached /users/@me instead of duplicating those here.
+export const PutCreatorResponseSchema = PublicCreatorSchema.pick({
+  code: true,
+  displayName: true,
+});
+export type PutCreatorResponse = z.infer<typeof PutCreatorResponseSchema>;
 
 // Custom tribe names — text names a player buys with hard currency that get
 // assigned to bots ("tribes") in real games. Names go live right away; review

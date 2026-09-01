@@ -13,8 +13,10 @@ import {
   PlayerLeaderboardEntrySchema,
   PlayerProfileSchema,
   PostTribeBoostResponseSchema,
+  PublicCreatorSchema,
   PublicPlayerGameSchema,
   PublicPlayerGamesResponseSchema,
+  PutCreatorResponseSchema,
   PutUsernameResponseSchema,
   RankedLeaderboardEntrySchema,
   RewardSchema,
@@ -875,6 +877,124 @@ describe("PutUsernameResponseSchema", () => {
     const rest: Record<string, unknown> = { ...base };
     delete rest.base;
     expect(PutUsernameResponseSchema.safeParse(rest).success).toBe(false);
+  });
+});
+
+describe("UserMeResponseSchema creator", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    unlimitedRanked: false,
+    canCreatePublicLobbies: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("accepts a player with no creator binding", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: { ...basePlayer, creator: null },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.creator).toBeNull();
+    }
+  });
+
+  it("accepts a player bound to a creator, cooldown running", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        creator: {
+          code: "LEWIS",
+          displayName: "Lewis",
+          sinceAt: "2026-08-01T00:00:00.000Z",
+          canChangeAt: "2026-08-08T00:00:00.000Z",
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.creator).toEqual({
+        code: "LEWIS",
+        displayName: "Lewis",
+        sinceAt: "2026-08-01T00:00:00.000Z",
+        canChangeAt: "2026-08-08T00:00:00.000Z",
+      });
+    }
+  });
+
+  it("accepts a player bound to a creator, cooldown elapsed (canChangeAt null)", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        creator: {
+          code: "LEWIS",
+          displayName: "Lewis",
+          sinceAt: "2026-08-01T00:00:00.000Z",
+          canChangeAt: null,
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.creator?.canChangeAt).toBeNull();
+    }
+  });
+
+  // This client ships before an API without the field, and after one that
+  // predates it — both must parse so old and new deployments coexist.
+  it("accepts a response without the field at all (older API)", () => {
+    expect(
+      UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
+    ).toBe(true);
+  });
+});
+
+describe("PublicCreatorSchema", () => {
+  it("parses a public creator card", () => {
+    const result = PublicCreatorSchema.safeParse({
+      code: "LEWIS",
+      displayName: "Lewis",
+      status: "active",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({
+        code: "LEWIS",
+        displayName: "Lewis",
+        status: "active",
+      });
+    }
+  });
+
+  it("rejects a status outside the known enum", () => {
+    expect(
+      PublicCreatorSchema.safeParse({
+        code: "LEWIS",
+        displayName: "Lewis",
+        status: "banned",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("PutCreatorResponseSchema", () => {
+  it("parses the bind confirmation (code + displayName only)", () => {
+    const result = PutCreatorResponseSchema.safeParse({
+      code: "LEWIS",
+      displayName: "Lewis",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a missing displayName", () => {
+    expect(PutCreatorResponseSchema.safeParse({ code: "LEWIS" }).success).toBe(
+      false,
+    );
   });
 });
 
