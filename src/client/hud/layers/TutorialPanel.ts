@@ -44,6 +44,7 @@ export class TutorialPanel extends LitElement implements Controller {
   private started = false;
   private cityCost: bigint | null = null;
   private keybinds: Record<string, { key?: string }> | null = null;
+  private tribeGlowActive = false;
   private completeTicks: number | null = null;
   private highlight: TutorialHighlight | null = null;
 
@@ -92,9 +93,27 @@ export class TutorialPanel extends LitElement implements Controller {
       return;
     }
     const step = this.progress.current();
-    this.setHighlight(
-      step && !this.progress.stepDone() ? (step.highlight ?? null) : null,
-    );
+    const target =
+      step && !this.progress.stepDone() ? (step.highlight ?? null) : null;
+    this.setHighlight(target);
+    this.syncTribeGlow(target);
+  }
+
+  /** Keeps every living tribe glowing on the map during the tribes step. */
+  private syncTribeGlow(target: TutorialHighlight | null) {
+    if (target !== "tribes") {
+      if (this.tribeGlowActive) {
+        this.tribeGlowActive = false;
+        this.game.setGlowingPlayers(null);
+      }
+      return;
+    }
+    const ids = new Set<number>();
+    for (const p of this.game.playerViews()) {
+      if (p.type() === PlayerType.Bot && p.isAlive()) ids.add(p.smallID());
+    }
+    this.game.setGlowingPlayers(ids);
+    this.tribeGlowActive = true;
   }
 
   private buildContext(player: PlayerView): TutorialContext {
@@ -145,7 +164,10 @@ export class TutorialPanel extends LitElement implements Controller {
     // The host sits in the top-right flex stack; leave the flow when hidden
     // so it doesn't add a gap under the control bar.
     this.classList.toggle("hidden", !active);
-    if (!active) this.setHighlight(null);
+    if (!active) {
+      this.setHighlight(null);
+      this.syncTribeGlow(null);
+    }
   }
 
   private dismissForever() {
