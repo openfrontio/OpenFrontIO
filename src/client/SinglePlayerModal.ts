@@ -26,6 +26,7 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
+import { fallbackPlayerName } from "./PlayerName";
 import { UsernameInput } from "./UsernameInput";
 import {
   getBotsForCompactMap,
@@ -878,6 +879,8 @@ export class SinglePlayerModal extends BaseModal {
     // getUsername(), so a fast single-player start uses the Steam persona
     // rather than the interim generated anon name. Always resolves.
     await usernameInput?.whenSeeded();
+    // Name and badge from one resolution, as on the multiplayer join path.
+    const resolvedName = usernameInput?.resolvedName() ?? fallbackPlayerName();
 
     await crazyGamesSDK.requestMidgameAd();
 
@@ -890,9 +893,11 @@ export class SinglePlayerModal extends BaseModal {
             players: [
               {
                 clientID,
-                username: usernameInput.getUsername(),
-                clanTag: usernameInput.getClanTag() ?? null,
-                cosmetics: await getPlayerCosmetics(),
+                username: resolvedName.name,
+                clanTag: usernameInput?.getClanTag() ?? null,
+                cosmetics: await getPlayerCosmetics({
+                  verified: resolvedName.verified,
+                }),
               },
             ],
             config: {
