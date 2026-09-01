@@ -276,8 +276,8 @@ export class MapRenderer {
   }
 
   /** Set the small-player glow set (1 byte per owner smallID), or null = off. */
-  updateSmallPlayerGlow(set: Uint8Array | null): void {
-    this.renderer?.updateSmallPlayerGlow(set);
+  updateSmallPlayerGlow(set: Uint8Array | null, minStrength: number = 0): void {
+    this.renderer?.updateSmallPlayerGlow(set, minStrength);
   }
 
   // ---- Map layers ----

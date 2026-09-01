@@ -54,6 +54,7 @@ export class SmallPlayerGlowPass {
   private quadVao: WebGLVertexArrayObject;
 
   private active = false;
+  private minStrength = 0;
   private dirty = false; // aura needs rebuilding (set changed)
   private animTime = 0;
   private lastTime = 0;
@@ -121,8 +122,14 @@ export class SmallPlayerGlowPass {
     this.quadVao = createFullscreenQuad(gl);
   }
 
-  /** Push the highlight set (1 byte per owner smallID), or null to disable. */
-  update(set: Uint8Array | null): void {
+  /**
+   * Push the highlight set (1 byte per owner smallID), or null to disable.
+   * minStrength floors the user's glow-strength setting while this set is
+   * showing — the tutorial's tribe highlight must stay visible even when the
+   * player has turned the small-player glow off.
+   */
+  update(set: Uint8Array | null, minStrength: number = 0): void {
+    this.minStrength = minStrength;
     if (set === null) {
       this.active = false;
       return;
@@ -165,7 +172,10 @@ export class SmallPlayerGlowPass {
     // frame (not tick-gated), so a slider change is live even while the sim is
     // paused (e.g. the graphics settings modal is open). Clamped to 1 so a
     // value persisted from the old 500% range can't over-brighten.
-    const strength = Math.min(1, this.settings.strength);
+    const strength = Math.min(
+      1,
+      Math.max(this.settings.strength, this.minStrength),
+    );
     if (!this.active || strength <= 0) return;
 
     const gl = this.gl;

@@ -1081,8 +1081,8 @@ export class GPURenderer {
     this.spawnOverlayPass.update(inSpawnPhase, centers);
   }
 
-  updateSmallPlayerGlow(set: Uint8Array | null): void {
-    this.smallPlayerGlowPass.update(set);
+  updateSmallPlayerGlow(set: Uint8Array | null, minStrength: number = 0): void {
+    this.smallPlayerGlowPass.update(set, minStrength);
   }
 
   // ---------------------------------------------------------------------------
