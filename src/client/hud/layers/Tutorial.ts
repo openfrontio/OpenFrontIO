@@ -88,7 +88,6 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     isDone: (c) =>
       c.cities > 0 || (c.cityCost !== null && c.gold >= c.cityCost),
   },
-  { id: "gold", highlight: "gold", manual: true },
   {
     id: "buy_city",
     highlight: "city",
