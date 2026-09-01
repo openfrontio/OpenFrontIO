@@ -1130,18 +1130,6 @@ export function getAudience() {
   return ClientEnv.jwtAudience();
 }
 
-// Check if the user's account is linked to a Discord, Google, or email account.
-export function hasLinkedAccount(
-  userMeResponse: UserMeResponse | false,
-): boolean {
-  return (
-    userMeResponse !== false &&
-    (userMeResponse.user?.discord !== undefined ||
-      userMeResponse.user?.google !== undefined ||
-      userMeResponse.user?.email !== undefined)
-  );
-}
-
 export async function fetchGameById(
   gameId: string,
 ): Promise<AnalyticsRecord | false> {
