@@ -35,6 +35,7 @@ export class TutorialPanel extends LitElement implements Controller {
   private progress = new TutorialProgress();
   private started = false;
   private cityCost: bigint | null = null;
+  private cityHotkey: string | null = null;
   private completeTicks: number | null = null;
   private highlight: TutorialHighlight | null = null;
 
@@ -237,6 +238,8 @@ export class TutorialPanel extends LitElement implements Controller {
         <span
           >${translateText(`tutorial.step.${step.id}`, {
             cost: renderNumber(this.cityCost ?? 0n),
+            key: (this.cityHotkey ??=
+              this.userSettings.parsedUserKeybinds()["buildCity"]?.key ?? "1"),
           })}</span
         >
       </p>
