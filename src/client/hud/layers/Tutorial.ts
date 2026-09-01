@@ -7,6 +7,8 @@ export type TutorialHighlight =
   | "city"
   | "port"
   | "factory"
+  | "warship"
+  | "silo"
   | "tribes";
 
 /** Emitted whenever the highlighted HUD element changes (null clears it). */
@@ -30,13 +32,27 @@ export interface TutorialContext {
   ports: number;
   factoryDisabled: boolean;
   factories: number;
+  warshipDisabled: boolean;
+  warships: number;
+  siloDisabled: boolean;
+  silos: number;
 }
 
 export interface TutorialStep {
   id: string;
   highlight?: TutorialHighlight;
   /** Keybind action whose key is interpolated into the step text as {key}. */
-  hotkey?: "buildCity" | "buildPort" | "buildFactory";
+  hotkey?:
+    | "buildCity"
+    | "buildPort"
+    | "buildFactory"
+    | "buildWarship"
+    | "buildMissileSilo";
+  /**
+   * Render these `tutorial.step.*` keys as a bullet list instead of the
+   * step's own single text.
+   */
+  bullets?: string[];
   /** Steps that don't fit this game's config are skipped. Defaults to always. */
   applies?: (ctx: TutorialContext) => boolean;
   /** Informational steps complete when the player clicks "Got it". */
@@ -72,6 +88,18 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     isDone: (c) => c.cities > 0,
   },
   {
+    id: "buy_factory",
+    highlight: "factory",
+    hotkey: "buildFactory",
+    applies: (c) => !c.factoryDisabled,
+    isDone: (c) => c.factories > 0,
+  },
+  {
+    id: "factory_info",
+    applies: (c) => !c.factoryDisabled,
+    manual: true,
+  },
+  {
     id: "buy_port",
     highlight: "port",
     hotkey: "buildPort",
@@ -79,11 +107,25 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     isDone: (c) => c.ports > 0,
   },
   {
-    id: "buy_factory",
-    highlight: "factory",
-    hotkey: "buildFactory",
-    applies: (c) => !c.factoryDisabled,
-    isDone: (c) => c.factories > 0,
+    id: "port_info",
+    bullets: ["port_info_ships", "port_info_warships"],
+    applies: (c) => !c.portDisabled,
+    manual: true,
+  },
+  // Warships are built from ports, so this step needs one.
+  {
+    id: "buy_warship",
+    highlight: "warship",
+    hotkey: "buildWarship",
+    applies: (c) => !c.warshipDisabled && !c.portDisabled,
+    isDone: (c) => c.warships > 0,
+  },
+  {
+    id: "buy_silo",
+    highlight: "silo",
+    hotkey: "buildMissileSilo",
+    applies: (c) => !c.siloDisabled,
+    isDone: (c) => c.silos > 0,
   },
 ];
 

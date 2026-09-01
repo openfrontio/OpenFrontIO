@@ -28,6 +28,8 @@ const HOTKEY_FALLBACKS = {
   buildCity: "1",
   buildFactory: "2",
   buildPort: "3",
+  buildWarship: "7",
+  buildMissileSilo: "5",
 } as const;
 
 @customElement("tutorial-panel")
@@ -151,6 +153,10 @@ export class TutorialPanel extends LitElement implements Controller {
       ports: player.units(UnitType.Port).length,
       factoryDisabled: this.game.config().isUnitDisabled(UnitType.Factory),
       factories: player.units(UnitType.Factory).length,
+      warshipDisabled: this.game.config().isUnitDisabled(UnitType.Warship),
+      warships: player.units(UnitType.Warship).length,
+      siloDisabled: this.game.config().isUnitDisabled(UnitType.MissileSilo),
+      silos: player.units(UnitType.MissileSilo).length,
     };
   }
 
@@ -292,13 +298,21 @@ export class TutorialPanel extends LitElement implements Controller {
     const done = this.progress.stepDone();
     return html`
       <p class="flex gap-1.5 ${done ? "text-green-400" : ""}">
-        <span class="shrink-0">${done ? "✓" : "▸"}</span>
-        <span
-          >${translateText(`tutorial.step.${step.id}`, {
-            cost: renderNumber(this.cityCost ?? 0n),
-            key: this.hotkeyFor(step),
-          })}</span
-        >
+        ${step.bullets && !done
+          ? nothing
+          : html`<span class="shrink-0">${done ? "✓" : "▸"}</span>`}
+        ${step.bullets
+          ? html`<ul class="list-disc ml-4 flex flex-col gap-1">
+              ${step.bullets.map(
+                (b) => html`<li>${translateText(`tutorial.step.${b}`)}</li>`,
+              )}
+            </ul>`
+          : html`<span
+              >${translateText(`tutorial.step.${step.id}`, {
+                cost: renderNumber(this.cityCost ?? 0n),
+                key: this.hotkeyFor(step),
+              })}</span
+            >`}
       </p>
       ${done
         ? nothing
