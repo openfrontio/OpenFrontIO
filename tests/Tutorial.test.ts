@@ -9,7 +9,6 @@ function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
   return {
     hasSpawned: false,
     attacking: false,
-    attackingBot: false,
     botsExist: true,
     gold: 0n,
     cityCost: null,
@@ -62,7 +61,7 @@ describe("TutorialProgress", () => {
         cityCost: 125_000n,
       }),
     );
-    expect(p.current()?.id).toBe("attack_bot");
+    expect(p.current()?.id).toBe("gold");
   });
 
   it("lingers on a completed step before advancing", () => {
@@ -112,7 +111,7 @@ describe("TutorialProgress", () => {
       warshipDisabled: true,
       siloDisabled: true,
     });
-    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 9);
+    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 8);
 
     settle(p, c);
     settle(p, c);

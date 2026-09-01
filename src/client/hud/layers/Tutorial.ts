@@ -21,7 +21,6 @@ export interface TutorialContext {
   hasSpawned: boolean;
   /** Any outgoing attack, wilderness or player. */
   attacking: boolean;
-  attackingBot: boolean;
   botsExist: boolean;
   gold: bigint;
   /** Null until the worker has reported it. */
@@ -73,11 +72,6 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     applies: (c) => c.botsExist && !c.cityDisabled,
     isDone: (c) =>
       c.cities > 0 || (c.cityCost !== null && c.gold >= c.cityCost),
-  },
-  {
-    id: "attack_bot",
-    applies: (c) => c.botsExist,
-    isDone: (c) => c.attackingBot,
   },
   { id: "gold", highlight: "gold", manual: true },
   {

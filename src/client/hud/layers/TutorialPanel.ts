@@ -141,7 +141,6 @@ export class TutorialPanel extends LitElement implements Controller {
     return {
       hasSpawned: player.hasSpawned(),
       attacking: attacks.length > 0,
-      attackingBot: attacks.some((a) => this.isBot(a.targetID)),
       botsExist: this.game
         .playerViews()
         .some((p) => p.type() === PlayerType.Bot && p.isAlive()),
@@ -164,16 +163,6 @@ export class TutorialPanel extends LitElement implements Controller {
     if (!step.hotkey) return "";
     this.keybinds ??= this.userSettings.parsedUserKeybinds();
     return this.keybinds[step.hotkey]?.key ?? HOTKEY_FALLBACKS[step.hotkey];
-  }
-
-  private isBot(smallID: number): boolean {
-    if (smallID === 0) return false;
-    try {
-      const target = this.game.playerBySmallID(smallID);
-      return target.isPlayer() && target.type() === PlayerType.Bot;
-    } catch {
-      return false;
-    }
   }
 
   private setHighlight(target: TutorialHighlight | null) {
