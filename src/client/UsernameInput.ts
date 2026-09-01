@@ -48,6 +48,9 @@ const verifiedDefaultAllowedKey: string = "verifiedNameDefaultAllowed";
 // The reserved name we have already warned this device about; see
 // announceLapse. Holds a name, not a boolean, so a later lapse still speaks up.
 const lapseNoticeKey: string = "verifiedLapseNotice";
+// setTimeout stores its delay in a 32-bit signed int. Anything larger does not
+// saturate — Node warns and fires after 1ms.
+const MAX_TIMEOUT_MS = 2_147_483_647;
 
 // Announced by the clan modal, which invalidates /users/@me but dispatches no
 // fresh userMeResponse.
@@ -133,6 +136,11 @@ export class UsernameInput extends LitElement {
   // The bare name still reserved for this player and its deadline, while a
   // lapsed subscription's grace clock runs. Null whenever nothing is at stake.
   @state() private claimGrace: ClaimGrace | null = null;
+  // Fires once, at the reservation's deadline, so a client left open across it
+  // drops the notice instead of counting down to a date already past. The
+  // grace value itself only changes on account events, which a sitting client
+  // never receives.
+  private claimGraceTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Clans aren't supported on CrazyGames — hide the tag input and never submit one.
   private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
@@ -323,9 +331,41 @@ export class UsernameInput extends LitElement {
       ) &&
       this.verifiedName() !== null;
     this.claimGrace = verifiedClaimGrace(this.userMe);
+    this.scheduleClaimGraceExpiry();
     this.announceLapse();
     this.requestUpdate();
     this.validateAndStore();
+  }
+
+  // Drop the notice the moment the reservation actually ends.
+  //
+  // verifiedClaimGrace is evaluated only when account state changes, and a
+  // client sitting on the main menu receives none — so without this the notice
+  // would keep naming a deadline that had already passed. Re-deriving from the
+  // same userMe is what clears it: verifiedClaimGrace returns null once the
+  // deadline is behind us.
+  //
+  // The delay must be clamped by us. A 30-day reservation exceeds setTimeout's
+  // 32-bit millisecond field, and Node does not saturate — it warns and fires
+  // after 1ms, which would re-arm in a tight loop. Capping below the limit
+  // makes an over-long wait fire early, re-derive to the same non-null value
+  // and re-arm for the remainder: two timers across a 30-day grace, not
+  // millions.
+  private scheduleClaimGraceExpiry() {
+    if (this.claimGraceTimer !== null) {
+      clearTimeout(this.claimGraceTimer);
+      this.claimGraceTimer = null;
+    }
+    const grace = this.claimGrace;
+    if (grace === null) return;
+    const ms = grace.expiresAt.getTime() - Date.now();
+    if (ms <= 0) return;
+    const delay = Math.min(ms, MAX_TIMEOUT_MS);
+    this.claimGraceTimer = setTimeout(() => {
+      this.claimGraceTimer = null;
+      this.claimGrace = verifiedClaimGrace(this.userMe);
+      this.scheduleClaimGraceExpiry();
+    }, delay);
   }
 
   // Say it once, the first time we see a reservation with a clock running.
@@ -590,6 +630,10 @@ export class UsernameInput extends LitElement {
       document.removeEventListener(type, this.handleClanMembershipChange);
     }
     this.clanMenuOpen = false;
+    if (this.claimGraceTimer !== null) {
+      clearTimeout(this.claimGraceTimer);
+      this.claimGraceTimer = null;
+    }
     super.disconnectedCallback();
   }
 
@@ -658,16 +702,28 @@ export class UsernameInput extends LitElement {
       <div class="flex items-center w-full h-full gap-1.5 sm:gap-2">
         ${this.renderClanControl()} ${this.renderNameControl()}
       </div>
-      ${this.validationError
+      <!-- One positioned slot, stacked. An error and the reservation reminder
+           are not alternatives: the error is transient and self-inflicted
+           (mid-edit on a free-form name), while the reminder is a 30-day
+           countdown the player cannot recover once it lapses. Hiding the
+           second behind the first put the time-critical one last. -->
+      ${this.validationError || this.clanTagOwnershipError || this.claimGrace
         ? html`<div
-            id="username-validation-error"
-            class="absolute top-full left-0 z-50 w-full mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg"
+            class="absolute top-full left-0 z-50 w-full mt-1 flex flex-col gap-1"
           >
-            ${this.validationError}
+            ${this.validationError
+              ? html`<div
+                  id="username-validation-error"
+                  class="w-full px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg"
+                >
+                  ${this.validationError}
+                </div>`
+              : this.clanTagOwnershipError
+                ? this.renderClanTagOwnershipError()
+                : null}
+            ${this.renderClaimGrace()}
           </div>`
-        : this.clanTagOwnershipError
-          ? this.renderClanTagOwnershipError()
-          : this.renderClaimGrace()}
+        : null}
     `;
   }
 
@@ -676,16 +732,16 @@ export class UsernameInput extends LitElement {
   // who was not at the keyboard when it fired — still sees, every launch,
   // until either they resubscribe or the name is gone.
   //
-  // Amber rather than red: nothing is broken and play is not blocked. It sits
-  // in the same slot as the validation error, which cannot be showing at the
-  // same time (that would mean the player is mid-edit on their free-form name,
-  // and this notice would be the less urgent of the two).
+  // Amber rather than red: nothing is broken and play is not blocked. It
+  // stacks under any validation error rather than replacing it — a player
+  // mid-edit on an invalid name is exactly who still needs to know their
+  // reserved name is expiring. Positioning lives on the shared wrapper.
   private renderClaimGrace() {
     const grace = this.claimGrace;
     if (grace === null) return null;
     return html`<div
       id="username-claim-grace"
-      class="absolute top-full left-0 z-40 w-full mt-1 px-3 py-2 text-sm font-medium border border-amber-500/40 rounded-lg bg-amber-950/90 text-amber-200 backdrop-blur-md shadow-lg"
+      class="w-full px-3 py-2 text-sm font-medium border border-amber-500/40 rounded-lg bg-amber-950/90 text-amber-200 backdrop-blur-md shadow-lg"
     >
       ${translateText("username.claim_reserved", {
         name: grace.name,
@@ -966,7 +1022,7 @@ export class UsernameInput extends LitElement {
       tag: this.clanTag,
     });
     const className =
-      "absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg lg:whitespace-nowrap";
+      "self-start px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg lg:whitespace-nowrap";
 
     if (this.clanTagOwnershipError !== "username.tag_not_member") {
       return html`<div id="clan-tag-validation-error" class=${className}>

@@ -906,3 +906,56 @@ describe("UsernameInput lapse notice", () => {
     expect(showInGameAlert).not.toHaveBeenCalled();
   });
 });
+
+describe("UsernameInput claim grace, live behaviour", () => {
+  const SOON = "2026-10-01T00:00:00.000Z";
+  const GRACE = "#username-claim-grace";
+  const ERROR = "#username-validation-error";
+
+  function lapsedUser(overrides: Record<string, unknown> = {}): UserMeResponse {
+    return {
+      player: {
+        username: "RyanTheGreat",
+        usernameBase: "RyanTheGreat",
+        usernameStatus: "claimed",
+        usernameClaimExpiresAt: SOON,
+        ...overrides,
+      },
+    } as unknown as UserMeResponse;
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // The grace value is only re-derived on account events, and a client sitting
+  // on the main menu receives none. Without the timer the notice would keep
+  // naming a deadline that had already passed.
+  it("drops the notice when the deadline passes while mounted", async () => {
+    vi.useFakeTimers({ now: new Date("2026-09-30T23:59:00.000Z") });
+    const el = await mount();
+    await signIn(el, lapsedUser());
+    expect(q(el, GRACE)).not.toBeNull();
+
+    await vi.advanceTimersByTimeAsync(61_000);
+    await el.updateComplete;
+
+    expect(q(el, GRACE)).toBeNull();
+  });
+
+  // The error is transient and self-inflicted; the reservation is a 30-day
+  // countdown the player cannot recover. Rendering them as alternatives put
+  // the time-critical one last.
+  it("keeps the reservation notice visible alongside a validation error", async () => {
+    vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    const el = await mount();
+    await signIn(el, lapsedUser());
+    expect(q(el, GRACE)).not.toBeNull();
+
+    el.validationError = "username.invalid_chars";
+    await el.updateComplete;
+
+    expect(q(el, ERROR)).not.toBeNull();
+    expect(q(el, GRACE)).not.toBeNull();
+  });
+});
