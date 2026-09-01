@@ -1828,6 +1828,7 @@
       "buy_silo": "Finally, build a Missile Silo: press {key}, then click your territory to place it. Silos launch atom bombs, hydrogen bombs and MIRVs.",
       "buy_warship": "Now build a Warship: press {key}, then click open water near your port. Warships capture trade ships and protect your waters.",
       "capture_tribes": "Capturing tribes is a great way to earn gold — the nearest ones are glowing on the map. Conquer them until you have {cost} gold for a City.",
+      "earn_gold": "Attack neighbors to steal their land, conquer them to take their gold. You need {cost} for a {unit}.",
       "factory_info": "Factories are connected to cities and other factories by tracks, and spawn trains that grant gold.",
       "gold": "Gold builds up over time from your land and population. Spend it on buildings and weapons.",
       "port_info_ships": "Ports send out trade ships, which earn you gold.",

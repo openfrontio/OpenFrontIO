@@ -1,4 +1,5 @@
 import { GameEvent } from "../../../core/EventBus";
+import { UnitType } from "../../../core/game/Game";
 
 /** HUD elements the tutorial can draw attention to. */
 export type TutorialHighlight =
@@ -40,6 +41,11 @@ export interface TutorialContext {
 export interface TutorialStep {
   id: string;
   highlight?: TutorialHighlight;
+  /**
+   * Build steps: the unit this step asks for. While the player can't afford
+   * it, the panel shows the generic earn-gold text instead of the step's own.
+   */
+  unit?: UnitType;
   /** Keybind action whose key is interpolated into the step text as {key}. */
   hotkey?:
     | "buildCity"
@@ -77,6 +83,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: "buy_city",
     highlight: "city",
+    unit: UnitType.City,
     hotkey: "buildCity",
     applies: (c) => !c.cityDisabled,
     isDone: (c) => c.cities > 0,
@@ -84,6 +91,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: "buy_factory",
     highlight: "factory",
+    unit: UnitType.Factory,
     hotkey: "buildFactory",
     applies: (c) => !c.factoryDisabled,
     isDone: (c) => c.factories > 0,
@@ -96,6 +104,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: "buy_port",
     highlight: "port",
+    unit: UnitType.Port,
     hotkey: "buildPort",
     applies: (c) => !c.portDisabled,
     isDone: (c) => c.ports > 0,
@@ -110,6 +119,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: "buy_warship",
     highlight: "warship",
+    unit: UnitType.Warship,
     hotkey: "buildWarship",
     applies: (c) => !c.warshipDisabled && !c.portDisabled,
     isDone: (c) => c.warships > 0,
@@ -117,6 +127,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: "buy_silo",
     highlight: "silo",
+    unit: UnitType.MissileSilo,
     hotkey: "buildMissileSilo",
     applies: (c) => !c.siloDisabled,
     isDone: (c) => c.silos > 0,
