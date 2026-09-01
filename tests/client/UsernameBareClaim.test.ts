@@ -1,16 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PutUsernameResponseSchema } from "../../src/core/ApiSchemas";
 
 // The panel reaches the API and the in-game dialog; stub both boundaries so
 // these exercise the branch on the response body rather than the network.
-const updateUsername = vi.fn();
+//
+// vi.hoisted because vi.mock is hoisted above the imports: the spies have to
+// exist before the factories can close over them. Same shape as
+// UsernameVerifiedRoute.test.ts.
+const { updateUsername, showInGameConfirm, showInGameAlert } = vi.hoisted(
+  () => ({
+    updateUsername: vi.fn(),
+    showInGameConfirm: vi.fn(async (_message: string, _options?: unknown) =>
+      Promise.resolve(true),
+    ),
+    showInGameAlert: vi.fn(async (_message: string) => Promise.resolve(true)),
+  }),
+);
 vi.mock("../../src/client/Api", () => ({
   updateUsername: (name: string) => updateUsername(name),
 }));
-const showInGameConfirm = vi.fn(
-  async (_message: string, _options?: unknown) => true,
-);
-const showInGameAlert = vi.fn(async (_message: string) => true);
 vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: (message: string, options?: unknown) =>
     showInGameConfirm(message, options),
@@ -68,6 +76,11 @@ describe("PutUsernameResponseSchema bareClaim", () => {
 
 describe("UsernamePanel bare-claim fallback", () => {
   let reload: ReturnType<typeof vi.fn>;
+  const realLocation = window.location;
+  const realLocationDescriptor = Object.getOwnPropertyDescriptor(
+    window,
+    "location",
+  )!;
 
   function player(
     overrides: Record<string, unknown> = {},
@@ -115,11 +128,19 @@ describe("UsernamePanel bare-claim fallback", () => {
     showInGameAlert.mockReset();
     showInGameAlert.mockResolvedValue(true);
     reload = vi.fn();
-    // jsdom's location.reload is not implemented; replace it outright.
+    // jsdom's location.reload throws "not implemented", and `reload` itself is
+    // a non-configurable own property — vi.spyOn(window.location, "reload")
+    // fails with "Cannot redefine property". `window.location` as a whole IS
+    // configurable here, so replacing the object is the way in.
     Object.defineProperty(window, "location", {
       configurable: true,
-      value: { ...window.location, reload, hash: "" },
+      value: { ...realLocation, reload, hash: "" },
     });
+  });
+
+  afterEach(() => {
+    // Put the real one back rather than leaving a global replaced.
+    Object.defineProperty(window, "location", realLocationDescriptor);
   });
 
   // The whole point of this change: a fallback is a 200, so without it the
