@@ -65,7 +65,7 @@ describe("TutorialProgress", () => {
         cityCost: 125_000n,
       }),
     );
-    expect(p.current()?.id).toBe("gold");
+    expect(p.current()?.id).toBe("buy_city");
   });
 
   it("lingers on a completed step before advancing", () => {
@@ -124,11 +124,6 @@ describe("TutorialProgress", () => {
     settle(p, c);
     expect(p.current()?.id).toBe("troops");
     expect(p.position(c)).toBe(3);
-
-    p.acknowledge();
-    settle(p, c);
-    expect(p.current()?.id).toBe("gold");
-    expect(p.position(c)).toBe(4);
 
     p.acknowledge();
     settle(p, c);
@@ -224,8 +219,8 @@ describe("TutorialProgress.skip", () => {
     p.update(ctx({ botsExist: false }));
     expect(p.current()?.id).toBe("troops");
     p.skip();
-    p.update(ctx({ botsExist: false }));
-    expect(p.current()?.id).toBe("gold");
+    p.update(ctx({ botsExist: false, cityDisabled: true }));
+    expect(p.current()?.id).toBe("buy_factory");
   });
 
   it("can skip through to the end", () => {
