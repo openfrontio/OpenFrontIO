@@ -226,9 +226,45 @@ export type LobbyAccent = z.infer<typeof LobbyAccentSchema>;
 // included, so a verified account name is always representable on the wire —
 // verified play skips free-form validation, so an unrepresentable name would
 // reach the server and be closed with 1002.
+//
+// Letters and digits the in-game name renderer can actually draw, plus the
+// punctuation a name may carry. The renderer is an MSDF atlas covering char
+// IDs 0..CHAR_RANGE-1 (Latin Extended-A, U+017F), so every letter in Latin-1
+// Supplement and Latin Extended-A already has a glyph — José, Müller and
+// Łukasz render fine and used to be rejected anyway.
+//
+// Deliberately NOT everything below U+0180: that would admit control
+// characters, the C1 block, and HTML-significant punctuation. The letter
+// ranges skip × (U+00D7) and ÷ (U+00F7), which are maths symbols sitting
+// inside the Latin-1 letter block, and the ordinal/micro signs.
+//
+// Emoji are excluded on purpose and stay excluded: the renderer draws them as
+// a separate icon beside the name, never inline, so an emoji in the name
+// itself has no glyph at all.
+// Regex source for the character class, not a finished pattern: the wire
+// schema, the free-form form rule and the persona sanitiser all need the same
+// set in different shapes, and a single source is what keeps them from
+// drifting apart by hand (which is how the charsets got out of step before).
+export const RENDERABLE_NAME_ALNUM =
+  "a-zA-Z0-9\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u017F";
+export const RENDERABLE_NAME_CHARS = ` _.\\-${RENDERABLE_NAME_ALNUM}`;
+
+/** One renderable character. Used per-codepoint by the persona sanitiser. */
+export const RENDERABLE_NAME_CHAR_RE = new RegExp(
+  `^[${RENDERABLE_NAME_CHARS}]$`,
+  "u",
+);
+
+/** At least one letter or digit — punctuation alone is not a name. */
+export const RENDERABLE_NAME_HAS_ALNUM_RE = new RegExp(
+  `[${RENDERABLE_NAME_ALNUM}]`,
+  "u",
+);
+
+// Requires at least one non-space so a name is never all padding.
 export const UsernameSchema = z
   .string()
-  .regex(/^(?=.*\S)[a-zA-Z0-9_\- üÜ.]+$/u)
+  .regex(new RegExp(`^(?=.*\\S)[${RENDERABLE_NAME_CHARS}]+$`, "u"))
   .min(3)
   .max(27);
 

@@ -46,11 +46,11 @@ describe("UsernameInput Steam seeding", () => {
     expect(el.getUsername()).toBe("Ada");
   });
 
-  it("keeps a valid generated name when the persona is invalid", async () => {
+  it("keeps a valid generated name when nothing of the persona survives", async () => {
     vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
     vi.spyOn(steamSDK, "getUser").mockResolvedValue({
       steamId: "77",
-      name: "x".repeat(100),
+      name: "日本語",
     });
     const el = new UsernameInput();
     el.connectedCallback();
@@ -58,11 +58,125 @@ describe("UsernameInput Steam seeding", () => {
     // the generated anon name loadStoredUsername() just produced.
     const generated = el.getUsername();
     await new Promise((r) => setTimeout(r, 0));
-    // The invalid persona must be rejected and the exact generated name kept —
-    // not merely replaced by some other valid name.
+    // The unusable persona must be rejected and the exact generated name kept
+    // — not merely replaced by some other valid name.
     expect(el.getUsername()).toBe(generated);
-    expect(generated).not.toBe("x".repeat(100));
     expect(generated.length).toBeGreaterThan(0);
+    // Still ours, so a later launch or a Steam rename gets another go.
+    expect(localStorage.getItem("usernameIsGenerated")).toBe("true");
+  });
+
+  // The old rule ran the persona through validateUsername() and threw the
+  // whole thing away on any failure, so most real Steam personas — which
+  // carry decoration — produced a guest name. This is the launch bug.
+  it.each([
+    ["🔥Ada🔥", "Ada"],
+    ["José", "José"],
+    ["Müller-42", "Müller-42"],
+    ["★★ Ada Lovelace ★★", "Ada Lovelace"],
+    ["日本語Ada", "Ada"],
+    ["Ada Lovelace the Countess of Lovelace", "Ada Lovelace the"],
+  ])("seeds %s as %s rather than a guest name", async (persona, expected) => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getUser").mockResolvedValue({
+      steamId: "77",
+      name: persona,
+    });
+    const el = new UsernameInput();
+    el.connectedCallback();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(el.getUsername()).toBe(expected);
+    expect(localStorage.getItem("username")).toBe(expected);
+    // A seeded persona is the player's own identity, not ours to overwrite.
+    expect(localStorage.getItem("usernameIsGenerated")).toBe("false");
+    expect(el.canPlay()).toBe(true);
+  });
+});
+
+describe("UsernameInput Steam reseeding", () => {
+  function mountWithPersona(name: string): UsernameInput {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getUser").mockResolvedValue({ steamId: "77", name });
+    const el = new UsernameInput();
+    el.connectedCallback();
+    return el;
+  }
+
+  // The seed used to be gated on empty localStorage, so one launch that
+  // finished before getUser() resolved — or, before the sanitiser change, any
+  // launch with a decorated persona — left a generated name that nothing would
+  // ever replace.
+  it("reseeds over a name we generated", async () => {
+    localStorage.setItem("username", "AnonAnchor");
+    localStorage.setItem("usernameIsGenerated", "true");
+
+    const el = mountWithPersona("Ada");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(el.getUsername()).toBe("Ada");
+    expect(localStorage.getItem("username")).toBe("Ada");
+  });
+
+  // Installs from before the flag existed have no key to read, so the name's
+  // own shape is what un-poisons them.
+  it("reseeds over a generated name stored before the flag existed", async () => {
+    localStorage.setItem("username", "AnonAnchor3");
+
+    const el = mountWithPersona("Ada");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(el.getUsername()).toBe("Ada");
+  });
+
+  it("never reseeds over a name the player typed", async () => {
+    localStorage.setItem("username", "MyCoolName");
+    localStorage.setItem("usernameIsGenerated", "false");
+
+    const el = mountWithPersona("Ada");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(el.getUsername()).toBe("MyCoolName");
+    expect(localStorage.getItem("username")).toBe("MyCoolName");
+  });
+
+  it("never reseeds over a pre-flag name that is not one of ours", async () => {
+    localStorage.setItem("username", "MyCoolName");
+
+    const el = mountWithPersona("Ada");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(el.getUsername()).toBe("MyCoolName");
+  });
+
+  // The flag has to follow the name it describes, or the next launch reseeds
+  // over something the player chose.
+  it("stops reseeding once the player types their own name", async () => {
+    const el = mountWithPersona("Ada");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(localStorage.getItem("usernameIsGenerated")).toBe("false");
+
+    const input = document.createElement("input");
+    input.value = "MyCoolName";
+    (
+      el as unknown as { handleUsernameChange: (e: Event) => void }
+    ).handleUsernameChange({ target: input } as unknown as Event);
+
+    expect(localStorage.getItem("username")).toBe("MyCoolName");
+    expect(localStorage.getItem("usernameIsGenerated")).toBe("false");
+  });
+
+  it("does not reseed off Steam", async () => {
+    localStorage.setItem("username", "AnonAnchor");
+    localStorage.setItem("usernameIsGenerated", "true");
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(false);
+    const getUser = vi.spyOn(steamSDK, "getUser");
+
+    const el = new UsernameInput();
+    el.connectedCallback();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(getUser).not.toHaveBeenCalled();
+    expect(el.getUsername()).toBe("AnonAnchor");
   });
 });
 

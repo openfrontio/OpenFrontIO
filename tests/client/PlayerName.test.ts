@@ -4,13 +4,17 @@ import {
   clampUsername,
   fallbackPlayerName,
   genAnonUsername,
+  looksGenerated,
   resolvePlayerName,
   sanitizePersona,
   type PlayerNameInputs,
 } from "../../src/client/PlayerName";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
 import { UsernameSchema } from "../../src/core/Schemas";
-import { MAX_USERNAME_LENGTH } from "../../src/core/validations/username";
+import {
+  MAX_USERNAME_LENGTH,
+  validateUsername,
+} from "../../src/core/validations/username";
 
 // The resolver takes plain values, so every case below is expressed as a full
 // set of inputs rather than by mounting the component.
@@ -115,10 +119,18 @@ describe("resolvePlayerName precedence", () => {
     });
   });
 
-  it("uses the generated name when the persona is unusable", () => {
-    expect(resolvePlayerName(inputs({ persona: "x".repeat(100) }))).toEqual({
+  it("uses the generated name when nothing of the persona survives", () => {
+    expect(resolvePlayerName(inputs({ persona: "日本語" }))).toEqual({
       name: "AnonBadger",
       source: "generated",
+      verified: false,
+    });
+  });
+
+  it("uses the persona once its decoration is stripped", () => {
+    expect(resolvePlayerName(inputs({ persona: "🔥José🔥" }))).toEqual({
+      name: "José",
+      source: "persona",
       verified: false,
     });
   });
@@ -167,6 +179,10 @@ describe("resolvePlayerName wire-schema invariant", () => {
       inputs({ persona: "[Ada]" }),
       inputs({ persona: "Ada Lovelace" }),
       inputs({ persona: "x".repeat(100) }),
+      inputs({ persona: "🔥José🔥" }),
+      inputs({ persona: "Ada🔥Lovelace the Countess of Lovelace" }),
+      inputs({ persona: "日本語" }),
+      inputs({ persona: "..." }),
       inputs(),
     ];
     for (const c of cases) {
@@ -188,9 +204,57 @@ describe("resolvePlayerName wire-schema invariant", () => {
 });
 
 describe("sanitizePersona", () => {
-  it("strips the bracket decoration Steam personas carry", () => {
-    expect(sanitizePersona("[Ada]")).toBe("Ada");
+  it("keeps a persona that is already clean", () => {
+    expect(sanitizePersona("Ada")).toBe("Ada");
+    expect(sanitizePersona("Ada Lovelace")).toBe("Ada Lovelace");
     expect(sanitizePersona("  Ada  ")).toBe("Ada");
+  });
+
+  // The whole point of the change: these all used to be discarded wholesale,
+  // dropping the player to a generated AnonWombat3.
+  it("keeps accented and Latin Extended-A names the renderer can draw", () => {
+    expect(sanitizePersona("José")).toBe("José");
+    expect(sanitizePersona("Müller")).toBe("Müller");
+    expect(sanitizePersona("Łukasz")).toBe("Łukasz");
+    expect(sanitizePersona("Bjørn")).toBe("Bjørn");
+  });
+
+  it("keeps hyphens, underscores and periods", () => {
+    expect(sanitizePersona("Müller-42")).toBe("Müller-42");
+    expect(sanitizePersona("ada_lovelace")).toBe("ada_lovelace");
+    expect(sanitizePersona("Ada.L")).toBe("Ada.L");
+  });
+
+  it("strips decoration rather than rejecting the whole persona", () => {
+    expect(sanitizePersona("🔥Ada🔥")).toBe("Ada");
+    expect(sanitizePersona("[Ada]")).toBe("Ada");
+    expect(sanitizePersona("★★ Ada ★★")).toBe("Ada");
+    expect(sanitizePersona("xX_Ada_Xx")).toBe("xX_Ada_Xx");
+  });
+
+  it("keeps the Latin part of a mixed-script persona", () => {
+    expect(sanitizePersona("日本語Ada")).toBe("Ada");
+    expect(sanitizePersona("Пётр Ada")).toBe("Ada");
+  });
+
+  // A dropped codepoint becomes a space, so words either side of a decorative
+  // separator stay separate words rather than running together.
+  it("keeps word boundaries where the decoration was", () => {
+    expect(sanitizePersona("Ada🔥Lovelace")).toBe("Ada Lovelace");
+    expect(sanitizePersona("Ada   Lovelace")).toBe("Ada Lovelace");
+  });
+
+  it("truncates to the free-form cap instead of rejecting", () => {
+    // Previously this returned null and the player got a generated name.
+    const long = sanitizePersona("Ada Lovelace the Countess of Lovelace");
+    expect(long).toBe("Ada Lovelace the");
+    expect(long!.length).toBeLessThanOrEqual(MAX_USERNAME_LENGTH);
+    expect(sanitizePersona("x".repeat(100))).toBe("x".repeat(20));
+  });
+
+  it("does not leave a trailing space after truncating", () => {
+    const name = sanitizePersona("abcdefghijklmnopqrs tuv");
+    expect(name).toBe("abcdefghijklmnopqrs");
   });
 
   it("returns null for nothing to sanitise", () => {
@@ -201,24 +265,71 @@ describe("sanitizePersona", () => {
     expect(sanitizePersona("[]")).toBeNull();
   });
 
-  // Today's rule is reject-wholesale: anything the free-form charset does not
-  // already allow falls through to a generated name. These fixtures pin that
-  // behaviour so OPE-221 — which replaces it with strip-and-keep and widens
-  // the charset to the MSDF atlas range — has to change them deliberately.
-  it("rejects personas outside the free-form charset (OPE-221 will keep them)", () => {
-    expect(sanitizePersona("José")).toBeNull();
-    expect(sanitizePersona("Müller-42")).toBeNull();
-    expect(sanitizePersona("🔥Ada🔥")).toBeNull();
+  it("returns null when nothing renderable survives", () => {
     expect(sanitizePersona("日本語")).toBeNull();
     expect(sanitizePersona("Пётр")).toBeNull();
+    expect(sanitizePersona("🔥🔥🔥")).toBeNull();
+    expect(sanitizePersona("ｄａｒｋ")).toBeNull();
   });
 
-  it("rejects an over-length persona rather than truncating it to a stub", () => {
-    expect(sanitizePersona("x".repeat(100))).toBeNull();
-  });
-
-  it("rejects residue shorter than the minimum", () => {
+  it("returns null for residue shorter than the minimum", () => {
     expect(sanitizePersona("[ab]")).toBeNull();
+    expect(sanitizePersona("🔥a🔥")).toBeNull();
+  });
+
+  // "..." passes the charset and the length bound but is not a name; a
+  // placeholder that reads as one is better than punctuation.
+  it("returns null for punctuation with no letters or digits", () => {
+    expect(sanitizePersona("...")).toBeNull();
+    expect(sanitizePersona("___")).toBeNull();
+    expect(sanitizePersona("★★★★")).toBeNull();
+    expect(sanitizePersona("- . _ -")).toBeNull();
+  });
+
+  it("returns something the form and the wire both accept", () => {
+    const personas = [
+      "🔥José🔥",
+      "Ada🔥Lovelace",
+      "[Müller-42]",
+      "Ada Lovelace the Countess of Lovelace",
+      "x".repeat(100),
+      "日本語Ada Lovelace",
+      "Łukasz",
+    ];
+    for (const p of personas) {
+      const name = sanitizePersona(p);
+      expect(name, p).not.toBeNull();
+      // Seeded straight into the field, so it has to survive the form rule...
+      expect(validateUsername(name!).isValid, `${p} -> ${name}`).toBe(true);
+      // ...and reach the server without closing the socket.
+      expect(UsernameSchema.safeParse(name!).success, `${p} -> ${name}`).toBe(
+        true,
+      );
+    }
+  });
+});
+
+describe("looksGenerated", () => {
+  it("recognises what genAnonUsername produces", () => {
+    for (let i = 0; i < 200; i++) {
+      const name = genAnonUsername();
+      expect(looksGenerated(name), name).toBe(true);
+    }
+  });
+
+  it("does not claim an ordinary name", () => {
+    for (const name of [
+      "Ada",
+      "AnonymousCoward",
+      "Anonymous",
+      "Anon",
+      "AnonBadger42",
+      "NotAnonBadger",
+      "anonbadger",
+      "José",
+    ]) {
+      expect(looksGenerated(name), name).toBe(false);
+    }
   });
 });
 

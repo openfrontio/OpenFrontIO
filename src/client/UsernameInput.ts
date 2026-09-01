@@ -20,6 +20,7 @@ import {
   accountVerifiedName,
   clampUsername,
   genAnonUsername,
+  looksGenerated,
   resolvePlayerName,
   type ResolvedPlayerName,
 } from "./PlayerName";
@@ -34,6 +35,9 @@ interface LangSelectorLike {
 const usernameKey: string = "username";
 const clanTagKey: string = "clanTag";
 const useVerifiedNameKey: string = "useVerifiedName";
+// "The stored username is one we generated, not one the player chose." Written
+// alongside the name itself; see usernameIsGenerated.
+const usernameIsGeneratedKey: string = "usernameIsGenerated";
 
 // Announced by the clan modal, which invalidates /users/@me but dispatches no
 // fresh userMeResponse.
@@ -65,6 +69,10 @@ export class UsernameInput extends LitElement {
   // Minted once so re-resolving is stable: the player must never watch their
   // placeholder name change under them.
   private readonly generatedName: string = genAnonUsername();
+  // Whether the name in baseUsername is one we generated rather than one the
+  // player chose. Persisted, because one localStorage string cannot tell the
+  // two apart and the reseed rule turns entirely on the difference.
+  private usernameIsGenerated: boolean = false;
 
   // Clans aren't supported on CrazyGames — hide the tag input and never submit one.
   private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
@@ -390,7 +398,13 @@ export class UsernameInput extends LitElement {
     // Captured before loadStoredUsername(), which — when nothing is stored —
     // fills in a fresh anon username AND persists it immediately. Checking
     // localStorage afterwards would therefore never see it as empty.
-    const noStoredUsername = this.onSteam && !localStorage.getItem(usernameKey);
+    //
+    // Reseedable, not one-shot: the old gate was "nothing stored at all", so a
+    // single launch before the persona landed (or before this fix, when a
+    // decorated persona was rejected outright) left a generated Anon… name in
+    // localStorage that nothing would ever replace. A name we generated is
+    // ours to overwrite; a name the player typed never is.
+    const reseedable = this.onSteam && this.storedNameIsGenerated();
     this.loadStoredUsername();
     // On CrazyGames the account username is applied here but never persisted
     // (see loadStoredUsername / validateAndStore), so logging out — which
@@ -400,20 +414,22 @@ export class UsernameInput extends LitElement {
     crazyGamesSDK.getUsername().then((username) => {
       if (username) {
         this.baseUsername = clampUsername(username);
+        this.usernameIsGenerated = false;
         this.validateAndStore();
       }
     });
     crazyGamesSDK.addAuthListener((user) => {
       if (user) {
         this.baseUsername = clampUsername(user.username);
+        this.usernameIsGenerated = false;
         this.validateAndStore();
       }
     });
-    // Seed the in-game name from the Steam persona, once, only when nothing
-    // is stored yet. Unlike CrazyGames, Steam persists normally (see
+    // Seed the in-game name from the Steam persona whenever the name in hand
+    // is one we generated. Unlike CrazyGames, Steam persists normally (see
     // validateAndStore's onCrazyGames guard), and there's no logout event to
     // handle since the Steam identity is fixed for the session.
-    if (noStoredUsername) {
+    if (reseedable) {
       // The anon name loadStoredUsername() just generated. Only overwrite it if
       // the player hasn't typed their own name while getUser() was in flight,
       // so a late Steam result never clobbers a name they entered.
@@ -426,16 +442,21 @@ export class UsernameInput extends LitElement {
         .then((user) => {
           if (this.baseUsername !== generated) return;
           this.persona = user?.name ?? null;
-          // Nothing is stored (that is what got us here), so this is branch 3
-          // then 4: the sanitised persona, or the same generated name back
+          // storedName is deliberately null: whatever is stored is a name we
+          // generated, which this is entitled to replace. So this is branch 3
+          // then 4 — the sanitised persona, or the same generated name back
           // when none of it survives. Either way the player can start a game.
-          this.baseUsername = resolvePlayerName({
+          const seeded = resolvePlayerName({
             verifiedName: null,
             verifiedOptIn: false,
             storedName: null,
             persona: this.persona,
             generatedName: generated,
-          }).name;
+          });
+          this.baseUsername = seeded.name;
+          // Still ours if nothing of the persona survived, so a later launch
+          // (or a renamed Steam account) gets another go at it.
+          this.usernameIsGenerated = seeded.source === "generated";
           this.validateAndStore();
         })
         .catch(() => {
@@ -488,15 +509,33 @@ export class UsernameInput extends LitElement {
     }
     // No persona yet — it arrives asynchronously and reseeds in
     // connectedCallback, so this settles on the stored or generated name.
-    this.baseUsername = resolvePlayerName({
+    const resolved = resolvePlayerName({
       verifiedName: null,
       verifiedOptIn: false,
       storedName: storedUsername,
       persona: null,
       generatedName: this.generatedName,
-    }).name;
+    });
+    this.baseUsername = resolved.name;
+    this.usernameIsGenerated = storedUsername
+      ? this.storedNameIsGenerated()
+      : resolved.source === "generated";
     this.validateAndStore();
     if (storedUsername) this.startClanCheck();
+  }
+
+  // Whether the name already in localStorage is one we generated.
+  //
+  // Installs that predate the flag have no key to read, so fall back to the
+  // name's shape: genAnonUsername produces "Anon" + a word from a fixed bank,
+  // which is recognisable. That is what un-poisons a Steam install whose one
+  // and only seed attempt happened before this fix — without it, everyone who
+  // has already launched the game keeps their guest name forever.
+  private storedNameIsGenerated(): boolean {
+    const stored = localStorage.getItem(usernameKey);
+    if (!stored) return true;
+    const flag = localStorage.getItem(usernameIsGeneratedKey);
+    return flag === null ? looksGenerated(stored) : flag === "true";
   }
 
   render() {
@@ -866,6 +905,8 @@ export class UsernameInput extends LitElement {
       );
     }
     this.baseUsername = val;
+    // Typed by the player, so no longer ours to reseed over.
+    this.usernameIsGenerated = false;
     this.validateAndStore();
   }
 
@@ -903,6 +944,12 @@ export class UsernameInput extends LitElement {
       // (page reload) restores a guest username instead of the account name.
       if (!this.onCrazyGames) {
         localStorage.setItem(usernameKey, trimmedBase);
+        // Written with the name, never separately: a stale flag would either
+        // strand a player on a generated name or overwrite one they chose.
+        localStorage.setItem(
+          usernameIsGeneratedKey,
+          String(this.usernameIsGenerated),
+        );
         localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
       }
       this.validationError = "";
