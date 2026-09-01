@@ -455,6 +455,9 @@ export class AccountModal extends BaseModal {
   ): void => {
     if (!this.userMeResponse) return;
     this.userMeResponse.player.creator = event.detail.creator;
+    // One-shot: a share-link prefill must not reappear in the input after the
+    // player has bound or unbound a creator in this session.
+    this.prefillCreatorCode = undefined;
     this.requestUpdate();
   };
 

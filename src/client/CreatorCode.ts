@@ -7,7 +7,7 @@
 // code cannot ride along in the URL: it has to be stashed in localStorage
 // before redirecting, and read back once the player returns signed in.
 
-const PENDING_CREATOR_CODE_KEY = "creator-code-pending";
+export const PENDING_CREATOR_CODE_KEY = "creator-code-pending";
 
 // How long a stashed code stays worth resuming. There is no server-side
 // ticket to expire against here (unlike Steam's link token) -- this is

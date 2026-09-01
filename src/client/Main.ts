@@ -259,6 +259,21 @@ class Client {
   }> | null = null;
 
   async initialize(): Promise<void> {
+    // A store referral banner / account "copy link" hands out `/c/<code>`.
+    // There's nothing to open here yet -- the code only does anything once
+    // the player is signed in (resumePendingCreatorCode in onUserMe handles
+    // that), so this just stashes it and cleans the URL. See CreatorCode.ts
+    // for why an invalid code is silently dropped and the path is stripped
+    // either way.
+    //
+    // Must run before ANY await below (including userAuth()): onUserMe() can
+    // fire resumePendingCreatorCode() as soon as getUserMe() settles, and
+    // getUserMe() is kicked off right after userAuth() resolves -- racing
+    // this against handleUrl() (which used to stash the code) risked
+    // consuming an empty stash before the code was ever written, losing the
+    // prefill for an already-signed-in visitor hitting /c/CODE directly.
+    consumeCreatorCodePath();
+
     crazyGamesSDK.maybeInit();
 
     // Every exit from a game (win screen, in-game quit, popstate) navigates to
@@ -881,13 +896,10 @@ class Client {
     const decodedHash = decodeURIComponent(hash);
     const params = new URLSearchParams(decodedHash.split("?")[1] || "");
 
-    // A store referral banner / account "copy link" hands out `/c/<code>`.
-    // There's nothing to open here yet -- the code only does anything once
-    // the player is signed in (resumePendingCreatorCode in onUserMe handles
-    // that, whether that's immediately below or after a login redirect), so
-    // this just stashes it and cleans the URL. See CreatorCode.ts for why an
-    // invalid code is silently dropped and the path is stripped either way.
-    consumeCreatorCodePath();
+    // The `/c/<code>` share-link path is stashed (and stripped) by
+    // consumeCreatorCodePath() at the very start of initialize(), before this
+    // method is ever scheduled -- see the comment there for why that has to
+    // run ahead of userAuth()/getUserMe() rather than here.
 
     // Handle different hash sections
     if (decodedHash.startsWith("#purchase-completed")) {

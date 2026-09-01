@@ -2,11 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   consumeCreatorCodePath,
   parseCreatorCodePath,
+  PENDING_CREATOR_CODE_KEY,
   resumePendingCreatorCode,
   stashPendingCreatorCode,
 } from "../../src/client/CreatorCode";
-
-const PENDING_CREATOR_CODE_KEY = "creator-code-pending";
 
 beforeEach(() => {
   localStorage.clear();

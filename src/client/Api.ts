@@ -452,7 +452,7 @@ export type SetCreatorCodeResult =
         | "failed"
         | "rate_limited";
     }
-  | { ok: false; code: "cooldown"; retryAfterSeconds: number };
+  | { ok: false; code: "cooldown"; retryAfterSeconds: number | null };
 
 const SET_CREATOR_CODE_ERROR_CODES = [
   "invalid",
@@ -516,7 +516,7 @@ export async function setCreatorCode(
         return {
           ok: false,
           code: "cooldown",
-          retryAfterSeconds: Number.isFinite(seconds) ? seconds : 0,
+          retryAfterSeconds: Number.isFinite(seconds) ? seconds : null,
         };
       }
       return { ok: false, code: "rate_limited" };

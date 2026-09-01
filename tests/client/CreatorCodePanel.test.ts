@@ -406,6 +406,25 @@ describe("CreatorCodePanel", () => {
       expect(reload).not.toHaveBeenCalled();
     });
 
+    it("shows a generic cooldown message when retryAfterSeconds is null (no Retry-After header)", async () => {
+      setCreatorCode.mockResolvedValue({
+        ok: false,
+        code: "cooldown",
+        retryAfterSeconds: null,
+      });
+      const el = await mount(null);
+      await type(el, "wombat");
+
+      findButton(el, "creator_code.support")!.click();
+      await el.updateComplete;
+      findButton(el, "creator_code.confirm_lock")!.click();
+      await settle(el);
+
+      expect(el.textContent).toContain("creator_code.errors.cooldown");
+      expect(el.textContent).not.toContain("creator_code.cooldown_days");
+      expect(reload).not.toHaveBeenCalled();
+    });
+
     it("shows a generic failure message when unsupport fails", async () => {
       clearCreatorCode.mockResolvedValue(false);
       const el = await mount(creator());

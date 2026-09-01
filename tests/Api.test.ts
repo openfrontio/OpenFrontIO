@@ -83,7 +83,10 @@ describe("getAudience / getApiBase from BOOTSTRAP_CONFIG", () => {
   });
 });
 
-function userMeBody(overrides: Record<string, unknown> = {}) {
+function userMeBody(
+  playerOverrides: Record<string, unknown> = {},
+  overrides: Record<string, unknown> = {},
+) {
   return {
     user: {},
     player: {
@@ -94,8 +97,9 @@ function userMeBody(overrides: Record<string, unknown> = {}) {
       achievements: { singleplayerMap: [] },
       friends: [],
       subscription: null,
-      ...overrides,
+      ...playerOverrides,
     },
+    ...overrides,
   };
 }
 
@@ -197,6 +201,23 @@ describe("creator code client functions", () => {
         ok: false,
         code: "cooldown",
         retryAfterSeconds: 300,
+      });
+    });
+
+    // A missing/unparseable Retry-After must not be coerced into a fake
+    // one-day cooldown (a `0` fallback would ceil to 1 day) -- null tells
+    // the panel to render a generic message instead of a bogus day count.
+    it("maps a cooldown 429 with no Retry-After to retryAfterSeconds: null", async () => {
+      respond(429, {
+        error: "Too many requests",
+        message: "You can change your supported creator again soon",
+        ok: false,
+        code: "cooldown",
+      });
+      expect(await setCreatorCode("LEWIS")).toEqual({
+        ok: false,
+        code: "cooldown",
+        retryAfterSeconds: null,
       });
     });
 

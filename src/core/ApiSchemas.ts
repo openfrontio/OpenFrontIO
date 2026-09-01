@@ -278,8 +278,8 @@ export const UserMeResponseSchema = z.object({
       .object({
         code: z.string(),
         displayName: z.string(),
-        sinceAt: z.string(),
-        canChangeAt: z.string().nullable(),
+        sinceAt: z.iso.datetime(),
+        canChangeAt: z.iso.datetime().nullable(),
       })
       .nullable()
       .optional(),

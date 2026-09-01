@@ -197,6 +197,12 @@ export class CreatorCodePanel extends LitElement {
       case "rate_limited":
         return translateText("creator_code.errors.rate_limited");
       case "cooldown":
+        // Retry-After was missing/unparseable -- a generic message beats
+        // guessing at a day count (or worse, rendering a fake one-day
+        // cooldown from a 0 fallback).
+        if (result.retryAfterSeconds === null) {
+          return translateText("creator_code.errors.cooldown");
+        }
         return translateText("creator_code.cooldown_days", {
           days: Math.max(1, Math.ceil(result.retryAfterSeconds / 86_400)),
         });
