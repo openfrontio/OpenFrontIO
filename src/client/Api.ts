@@ -333,10 +333,16 @@ export type UpdateUsernameResult =
   | { ok: false; code: "failed" };
 
 // PUT /users/@me/username — renames the account username. Every failure is
-// atomic (no name change, no cooldown consumed). Both 409 bodies ("name
-// exclusively held" and "suffix space exhausted") map to "taken": the user
-// remedy is the same — pick another name. Invalidates the cached /users/@me
-// on success so the next read reflects the new name.
+// atomic (no name change, no cooldown consumed). The surviving 409 bodies
+// ("name equals an existing public id" and "suffix space exhausted") map to
+// "taken": the user remedy is the same — pick another name. Invalidates the
+// cached /users/@me on success so the next read reflects the new name.
+//
+// A premium player whose chosen bare name is already held no longer 409s: the
+// API grants the suffixed form and returns 200 with `bareClaim:
+// "unavailable"`. That is a real rename and it consumes the cooldown, so `ok:
+// true` alone is not enough to act on — callers must read `data.bareClaim`
+// and tell the player (see UsernamePanel).
 export async function updateUsername(
   username: string,
 ): Promise<UpdateUsernameResult> {

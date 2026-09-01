@@ -72,6 +72,8 @@
     "tab_stats": "Stats",
     "title": "Account",
     "unclaimed_rewards": "Unclaimed Rewards",
+    "username_bare_unavailable": "\"{requested}\" is already taken, so your name is now \"{name}\". This used your name change — you can change it again on {date}.",
+    "username_bare_unavailable_no_date": "\"{requested}\" is already taken, so your name is now \"{name}\". This used your name change.",
     "username_change_ready": "Change available",
     "username_confirm_abandon": "You will permanently give up your reserved name \"{name}\".",
     "username_confirm_body": "Your new name will be locked for 30 days.",
