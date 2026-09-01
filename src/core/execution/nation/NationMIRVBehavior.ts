@@ -52,20 +52,22 @@ export class NationMIRVBehavior {
     }
   }
 
+  // Whole percent of the land, so the comparison can be cross-multiplied
+  // against tile counts and stay exact integer math (src/core is deterministic).
   // One ladder for teams and lone players alike: the win bar is the same 80%
   // in every game mode (Config.percentageTilesOwnedToWin), so a separate,
   // higher team ladder would only sit above the bar and never fire.
-  private get victoryDenialThreshold(): number {
+  private get victoryDenialThresholdPercent(): number {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
-        return 0.75; // Only react right before the game ends (80%)
+        return 75; // Only react right before the game ends (80%)
       case Difficulty.Medium:
-        return 0.65;
+        return 65;
       case Difficulty.Hard:
-        return 0.55;
+        return 55;
       case Difficulty.Impossible:
-        return 0.4; // Reacts early
+        return 40; // Reacts early
       default:
         assertNever(difficulty);
     }
@@ -154,6 +156,12 @@ export class NationMIRVBehavior {
     if (this.player === null) throw new Error("not initialized");
     const totalLand = this.game.numLandTiles();
     if (totalLand === 0) return null;
+    // Severity is a TILE COUNT, not a share: every candidate divides by the
+    // same totalLand, so ranking by tiles ranks them exactly as shares would,
+    // without the division.
+    // Both sides of the comparison are scaled by 100: tiles * 100 against
+    // totalLand * percent.
+    const scaledThreshold = totalLand * this.victoryDenialThresholdPercent;
     let best: { p: Player; severity: number } | null = null;
     for (const p of this.getValidMirvTargetPlayers()) {
       let severity = 0;
@@ -165,8 +173,7 @@ export class NationMIRVBehavior {
         const teamTerritory = teamMembers
           .map((x) => x.numTilesOwned())
           .reduce((a, b) => a + b, 0);
-        const teamShare = teamTerritory / totalLand;
-        if (teamShare >= this.victoryDenialThreshold) {
+        if (teamTerritory * 100 >= scaledThreshold) {
           // Only consider the largest team member as the target when team exceeds threshold
           let largestMember: Player | null = null;
           let largestTiles = -1;
@@ -178,14 +185,14 @@ export class NationMIRVBehavior {
             }
           }
           if (largestMember === p) {
-            severity = teamShare;
+            severity = teamTerritory;
           } else {
             severity = 0; // Skip non-largest members
           }
         }
       } else {
-        const share = p.numTilesOwned() / totalLand;
-        if (share >= this.victoryDenialThreshold) severity = share;
+        const tiles = p.numTilesOwned();
+        if (tiles * 100 >= scaledThreshold) severity = tiles;
       }
       if (severity > 0) {
         if (best === null || severity > best.severity) best = { p, severity };
