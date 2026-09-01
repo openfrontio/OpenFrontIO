@@ -98,20 +98,33 @@ function truncateToCap(name: string): string {
 // Does the stored per-device preference mean "play under the verified name"?
 //
 // Tri-state, not a boolean: `"true"` is an explicit opt-in, `"false"` an
-// explicit opt-out, and *absent* is neither. Absent now defaults ON. The old
-// `=== "true"` test collapsed absent into opt-out, so every fresh profile —
-// which is every Steam install, and every new browser — silently declined the
-// perk the subscription was sold on: the player launched, got their persona,
-// and never played under the name they paid for.
+// explicit opt-out, and *absent* is neither. The old `=== "true"` test
+// collapsed absent into opt-out, so a fresh profile — every Steam install, and
+// every new browser — silently declined the perk the subscription was sold on:
+// the player launched, got their persona, and never played under the name they
+// paid for.
 //
-// An explicit opt-out still wins, and always will. This is a privacy default,
-// so it only fills the gap where the player has expressed nothing; one visible
-// click undoes it, and that click is recorded as `"false"`.
+// But absent does NOT mean "new". Before the default existed the toggle
+// rendered off and the only writer of this key was a click, so an existing
+// eligible subscriber who looked at the toggle and left it alone also has no
+// key. Defaulting *them* on would change the name they play under, in public,
+// with no action on their part — the opposite of what a privacy default is
+// for. `defaultAllowed` is what separates the two; see
+// resolveVerifiedDefaultCohort, which decides it once per profile.
+//
+// An explicit answer always wins, in both directions. Anything unrecognised is
+// not an answer the player gave, so it falls through to the cohort rather than
+// silently declining.
 //
 // Eligibility is the caller's business — this answers only what the player
 // asked for, not whether they may have it.
-export function verifiedNameOptIn(stored: string | null): boolean {
-  return stored !== "false";
+export function verifiedNameOptIn(
+  stored: string | null,
+  defaultAllowed: boolean,
+): boolean {
+  if (stored === "true") return true;
+  if (stored === "false") return false;
+  return defaultAllowed;
 }
 
 // A platform persona reduced to something playable, or null when nothing

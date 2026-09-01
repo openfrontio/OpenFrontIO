@@ -39,11 +39,50 @@ const useVerifiedNameKey: string = "useVerifiedName";
 // "The stored username is one we generated, not one the player chose." Written
 // alongside the name itself; see usernameIsGenerated.
 const usernameIsGeneratedKey: string = "usernameIsGenerated";
+// Whether the verified-name default may apply to this profile at all. Decided
+// once, the first time this code runs here, and never revisited. See
+// resolveVerifiedDefaultCohort.
+const verifiedDefaultAllowedKey: string = "verifiedNameDefaultAllowed";
 
 // Announced by the clan modal, which invalidates /users/@me but dispatches no
 // fresh userMeResponse.
 const CLAN_REMOVED_EVENTS = ["clan-left", "clan-disbanded"];
 const CLAN_MEMBERSHIP_EVENTS = ["clan-joined", ...CLAN_REMOVED_EVENTS];
+
+// Decide, once per profile, whether the verified-name default is allowed to
+// apply here — and record it, because the evidence is destroyed moments later.
+//
+// The default exists for players who have never seen the toggle. But "no
+// stored preference" does not mean that on its own: before the default
+// existed the toggle rendered off and the only writer of the preference was a
+// click, so an existing eligible subscriber who looked at it and left it alone
+// is in exactly the same state as a brand-new install. Turning that player's
+// real account name on without them touching anything is a silent public
+// identity change, which is the opposite of what a privacy default is for.
+//
+// A stored username is the only durable trace a profile leaves, and
+// validateAndStore is its only writer — so at construction, before
+// loadStoredUsername runs, "no stored username" means "this profile has never
+// played here". That is the whole discriminator.
+//
+// It has to be recorded rather than recomputed: one boot later the new profile
+// has a stored username too and would be indistinguishable from an old one, so
+// a re-mount or a reload would revoke the default it had just granted.
+function resolveVerifiedDefaultCohort(onCrazyGames: boolean): void {
+  // CrazyGames never persists a username (see validateAndStore), so there is
+  // no history to read, and verifiedActive is gated off there regardless.
+  if (onCrazyGames) return;
+  if (localStorage.getItem(verifiedDefaultAllowedKey) !== null) return;
+  // An answered preference makes the default moot either way; record the
+  // decision anyway so this never re-runs against a profile that has since
+  // acquired a stored username.
+  const answered = localStorage.getItem(useVerifiedNameKey) !== null;
+  const hasPlayedHere = localStorage.getItem(usernameKey) !== null;
+  localStorage.setItem(
+    verifiedDefaultAllowedKey,
+    String(!answered && !hasPlayedHere),
+  );
+}
 
 // Shared by the input and the verified chip, which swap places: any drift in
 // box or text metrics shows up as the name jumping on toggle.
@@ -119,6 +158,9 @@ export class UsernameInput extends LitElement {
 
   constructor() {
     super();
+    // Before anything can write a username: this reads the absence of one as
+    // "this profile is new", and loadStoredUsername destroys that evidence.
+    resolveVerifiedDefaultCohort(this.onCrazyGames);
     // Account state for the verified-name toggle. Same document-level pattern
     // as AccountModal; Main dispatches this after auth resolves and on
     // CrazyGames sign-in.
@@ -250,7 +292,10 @@ export class UsernameInput extends LitElement {
   private applyVerifiedPreference() {
     this.verifiedActive =
       !this.onCrazyGames &&
-      verifiedNameOptIn(localStorage.getItem(useVerifiedNameKey)) &&
+      verifiedNameOptIn(
+        localStorage.getItem(useVerifiedNameKey),
+        localStorage.getItem(verifiedDefaultAllowedKey) === "true",
+      ) &&
       this.verifiedName() !== null;
     this.requestUpdate();
     this.validateAndStore();

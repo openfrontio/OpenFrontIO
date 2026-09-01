@@ -398,23 +398,38 @@ describe("accountVerifiedName", () => {
 });
 
 describe("verifiedNameOptIn", () => {
-  it("honours an explicit choice in both directions", () => {
-    expect(verifiedNameOptIn("true")).toBe(true);
-    expect(verifiedNameOptIn("false")).toBe(false);
+  it("honours an explicit choice in both directions, whatever the cohort", () => {
+    expect(verifiedNameOptIn("true", false)).toBe(true);
+    expect(verifiedNameOptIn("true", true)).toBe(true);
+    expect(verifiedNameOptIn("false", true)).toBe(false);
+    expect(verifiedNameOptIn("false", false)).toBe(false);
   });
 
   // The gap this closes: reading the preference as `=== "true"` treated
   // "never asked" as "declined", so a fresh profile — every Steam install —
   // never played under the name the subscription was sold on.
-  it("defaults on when the player has expressed nothing", () => {
-    expect(verifiedNameOptIn(null)).toBe(true);
+  it("defaults on for a profile that has expressed nothing and is new", () => {
+    expect(verifiedNameOptIn(null, true)).toBe(true);
   });
 
-  // Only the exact opt-out string turns it off; anything else is not an answer
-  // the player gave, so it falls to the default rather than silently declining.
+  // The cohort is the whole point: an existing subscriber who looked at the
+  // toggle and left it alone has no stored preference either, and flipping
+  // their public identity without them touching anything is the harm the
+  // default was supposed to avoid.
+  it("stays off for a profile with no preference that is not new", () => {
+    expect(verifiedNameOptIn(null, false)).toBe(false);
+  });
+
+  // Not an answer the player gave, so it falls through to the cohort rather
+  // than being read as either choice.
   it("treats an unrecognised value as no preference", () => {
     for (const stored of ["", "False", "FALSE", "0", "no", "yes"]) {
-      expect(verifiedNameOptIn(stored), JSON.stringify(stored)).toBe(true);
+      expect(verifiedNameOptIn(stored, true), JSON.stringify(stored)).toBe(
+        true,
+      );
+      expect(verifiedNameOptIn(stored, false), JSON.stringify(stored)).toBe(
+        false,
+      );
     }
   });
 });
