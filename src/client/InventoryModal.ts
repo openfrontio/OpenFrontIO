@@ -644,14 +644,16 @@ export class InventoryModal extends BaseModal {
           />
         </div>
       </div>
-      ${this.previewingCosmetic
-        ? html`<cosmetic-preview-modal
-            .resolved=${this.previewingCosmetic}
-            @close-preview=${() => {
+      ${
+        this.previewingCosmetic
+          ? html`<cosmetic-preview-modal
+              .resolved=${this.previewingCosmetic}
+              @close-preview=${() => {
               this.previewingCosmetic = null;
             }}
-          ></cosmetic-preview-modal>`
-        : nothing}
+            ></cosmetic-preview-modal>`
+          : nothing
+      }
     `;
   }
 
