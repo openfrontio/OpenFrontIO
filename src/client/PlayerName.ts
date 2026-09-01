@@ -1,8 +1,12 @@
 import { ANON_WORDS, anonWordName } from "../core/AnonNames";
 import { isTemporaryUsername, type UserMeResponse } from "../core/ApiSchemas";
 import {
+  RENDERABLE_NAME_CHAR_RE,
+  RENDERABLE_NAME_HAS_ALNUM_RE,
+} from "../core/Schemas";
+import {
   MAX_USERNAME_LENGTH,
-  validateUsername,
+  MIN_USERNAME_LENGTH,
 } from "../core/validations/username";
 
 // What name a player plays under, resolved in one place.
@@ -67,23 +71,71 @@ export function accountVerifiedName(
   return player.username;
 }
 
+// Cut to the free-form cap, not the wire cap: the result becomes the name in
+// the field, so anything longer would be seeded and then rejected by the very
+// form the player is looking at.
+//
+// Prefer a word boundary — "Ada Lovelace the Countess" reads as "Ada Lovelace
+// the", not "Ada Lovelace the Cou" — but only when enough survives; a single
+// long word is cut where it falls.
+function truncateToCap(name: string): string {
+  if (name.length <= MAX_USERNAME_LENGTH) return name;
+  const hard = name.slice(0, MAX_USERNAME_LENGTH).trim();
+  // Already a clean cut — don't go looking for an earlier boundary and throw
+  // away a whole word that fitted. Two ways that happens: the character after
+  // the cut is a space, or `trim()` just removed one from the end of the slice
+  // (which is the only thing it can remove, since `collapsed` arrives with no
+  // leading, trailing or repeated whitespace).
+  if (hard.length < MAX_USERNAME_LENGTH) return hard;
+  if (name[MAX_USERNAME_LENGTH] === " ") return hard;
+  const lastSpace = hard.lastIndexOf(" ");
+  // No boundary worth cutting back to — a single long word is cut where it
+  // falls rather than reduced to a stub.
+  if (lastSpace < MIN_USERNAME_LENGTH) return hard;
+  return hard.slice(0, lastSpace);
+}
+
 // A platform persona reduced to something playable, or null when nothing
 // usable survives.
 //
-// Steam personas can contain characters our usernames disallow (e.g. brackets)
-// or exceed the length limit; strip brackets, trim, and only accept the persona
-// if it validates. Not clamped, unlike stored names: a wildly long persona is
-// rejected rather than truncated to a stub.
+// Strip and keep, never reject wholesale. The old rule ran the persona through
+// validateUsername() and threw the whole thing away if anything failed, so a
+// single emoji, hyphen or accented letter — the decoration most Steam personas
+// carry — dropped the player to a generated Anon… name. That is the whole
+// "Steam buyers appear as random guests" complaint.
 //
-// OPE-221 replaces this reject-wholesale rule with strip-and-keep, which is
-// what actually fixes Steam buyers landing on a generated guest name — any
-// emoji, hyphen, accent or non-Latin script currently falls through here.
+// Unrenderable codepoints become a space rather than vanishing, so the words
+// either side of a decorative separator stay separate words: "Ada🔥Lovelace"
+// is "Ada Lovelace", not "AdaLovelace". Brackets fall out here too — they are
+// simply not in the allowlist — so no special case is needed for them.
 export function sanitizePersona(
   persona: string | null | undefined,
 ): string | null {
-  const candidate = persona?.replace(/[[\]]/g, "").trim();
-  if (!candidate) return null;
-  return validateUsername(candidate).isValid ? candidate : null;
+  if (!persona) return null;
+  const kept = Array.from(persona, (ch) =>
+    RENDERABLE_NAME_CHAR_RE.test(ch) ? ch : " ",
+  ).join("");
+  const collapsed = kept.replace(/\s+/g, " ").trim();
+  const name = truncateToCap(collapsed);
+  if (name.length < MIN_USERNAME_LENGTH) return null;
+  // Punctuation alone is not a name. Without this a persona of "★★★★" or
+  // "..." would seed "..." — worse for the player than an Anon… name, which
+  // at least reads as a placeholder.
+  if (!RENDERABLE_NAME_HAS_ALNUM_RE.test(name)) return null;
+  return name;
+}
+
+// Whether a stored name has the exact shape genAnonUsername produces:
+// "Anon" + a word from the bank + an optional round digit.
+//
+// Only used to recognise names generated before the usernameIsGenerated flag
+// existed, so that an install already poisoned by the one-shot seed can be
+// reseeded once. A player who deliberately typed one of these gets reseeded
+// from their own Steam persona, which is the same thing they would have got
+// had the seed worked in the first place.
+export function looksGenerated(name: string): boolean {
+  const match = /^Anon([A-Za-z]+)\d?$/u.exec(name);
+  return match !== null && ANON_WORDS.includes(match[1]);
 }
 
 /**

@@ -1976,7 +1976,7 @@
     "clan_none_joined": "You haven't joined a clan yet.",
     "clan_your_clans": "Your clans",
     "enter_username": "Enter your username",
-    "invalid_chars": "Username can only contain letters, numbers, spaces, and underscores.",
+    "invalid_chars": "Username can only contain letters, numbers, spaces, underscores, hyphens, and periods.",
     "not_string": "Username must be a string.",
     "tag": "TAG",
     "tag_invalid_chars": "Clan tag can only contain letters and numbers.",
