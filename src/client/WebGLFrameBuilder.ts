@@ -18,6 +18,7 @@ import { decodePatternData } from "../core/PatternDecoder";
 import { getCachedCosmetics } from "./Cosmetics";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
 import { uploadFrameData } from "./render/frame/Upload";
+import renderDefaults from "./render/gl/render-settings.json";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
 import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
@@ -496,9 +497,11 @@ export class WebGLFrameBuilder {
     const set = this.highlightSetBuf;
     set.fill(0);
     let any = false;
+    let explicitAny = false;
     for (const id of gameView.glowingPlayers() ?? []) {
       set[id] = 1;
       any = true;
+      explicitAny = true;
     }
     // Strength (incl. off at 0) is read live in the glow pass; here we only
     // decide who qualifies. Skip spawn + the first minute.
@@ -518,7 +521,12 @@ export class WebGLFrameBuilder {
         }
       }
     }
-    this.view.updateSmallPlayerGlow(any ? set : null);
+    // The explicit set must show even when the player has set the
+    // small-player glow strength to 0, so floor it at the default.
+    this.view.updateSmallPlayerGlow(
+      any ? set : null,
+      explicitAny ? renderDefaults.smallPlayerGlow.strength : 0,
+    );
   }
 
   private syncPlayers(gameView: GameView): void {
