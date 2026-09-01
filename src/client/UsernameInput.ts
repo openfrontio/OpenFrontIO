@@ -285,10 +285,15 @@ export class UsernameInput extends LitElement {
   // Turn the toggle on iff the player has not opted out AND is still eligible;
   // silently off otherwise (logout, lapsed sub, TEMPORARY rename).
   //
-  // "Has not opted out" rather than "opted in": the preference is tri-state
-  // and an absent one defaults on for an eligible player (see
-  // verifiedNameOptIn). Deliberately not persisted here — leaving it absent is
-  // what keeps a later explicit opt-out distinguishable from the default.
+  // "Has not opted out" rather than "opted in": the preference is tri-state,
+  // and an absent one defaults on only for a profile we identified as new
+  // (see verifiedNameOptIn and resolveVerifiedDefaultCohort). An existing
+  // player with no stored preference is treated as having declined.
+  //
+  // The default is deliberately never written back into the preference. The
+  // cohort marker records what we observed about the profile; recording an
+  // opt-in the player never expressed is a different thing, and it is the
+  // value account-level settings sync would later propagate.
   private applyVerifiedPreference() {
     this.verifiedActive =
       !this.onCrazyGames &&
