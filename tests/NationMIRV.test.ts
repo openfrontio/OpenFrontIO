@@ -588,8 +588,7 @@ describe("Nation MIRV Retaliation", () => {
   });
 
   test("nation launches MIRV to prevent team victory when team approaches victory denial threshold (targets biggest team member)", async () => {
-    // 70% is above the shared victory-denial threshold (0.65 on Medium) but
-    // below the old team-only 0.8 ladder, which sat above the win bar itself.
+    // 70% share: above the Medium threshold (65%), below the old team-only 80%.
     // Setup game
     const teamPlayer1Info = new PlayerInfo(
       "team_player_1",

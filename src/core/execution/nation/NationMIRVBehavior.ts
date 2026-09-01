@@ -52,11 +52,8 @@ export class NationMIRVBehavior {
     }
   }
 
-  // Whole percent of the land, so the comparison can be cross-multiplied
-  // against tile counts and stay exact integer math (src/core is deterministic).
-  // One ladder for teams and lone players alike: the win bar is the same 80%
-  // in every game mode (Config.percentageTilesOwnedToWin), so a separate,
-  // higher team ladder would only sit above the bar and never fire.
+  // Whole percent of the land, for exact integer comparison. One ladder for
+  // teams and lone players: the win bar is 80% in every game mode.
   private get victoryDenialThresholdPercent(): number {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
@@ -156,11 +153,8 @@ export class NationMIRVBehavior {
     if (this.player === null) throw new Error("not initialized");
     const totalLand = this.game.numLandTiles();
     if (totalLand === 0) return null;
-    // Severity is a TILE COUNT, not a share: every candidate divides by the
-    // same totalLand, so ranking by tiles ranks them exactly as shares would,
-    // without the division.
-    // Both sides of the comparison are scaled by 100: tiles * 100 against
-    // totalLand * percent.
+    // Compared against tiles * 100; severity ranks by tile count, which
+    // orders candidates the same as by share (same denominator).
     const scaledThreshold = totalLand * this.victoryDenialThresholdPercent;
     let best: { p: Player; severity: number } | null = null;
     for (const p of this.getValidMirvTargetPlayers()) {

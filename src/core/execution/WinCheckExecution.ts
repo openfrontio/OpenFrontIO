@@ -110,8 +110,8 @@ export class WinCheckExecution implements Execution {
     }
   }
 
-  // The one win bar, shared by every game mode: hold more than the required
-  // share of the (non-fallout) land, or outlast the lobby timer / hard limit.
+  // Hold more than the required share of non-fallout land, or outlast the
+  // lobby timer / hard limit.
   private hasWon(tilesOwned: number): boolean {
     if (this.mg === null) throw new Error("Not initialized");
     const timeElapsed = this.mg.elapsedGameSeconds();
@@ -129,8 +129,8 @@ export class WinCheckExecution implements Execution {
     }
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
-    // Cross-multiplied instead of dividing: the threshold is always a whole
-    // percentage, so this is exact integer math (src/core stays deterministic).
+    // Cross-multiplied: the threshold is a whole percentage, so this is
+    // exact integer math.
     return (
       tilesOwned * 100 >
       numTilesWithoutFallout *

@@ -591,8 +591,7 @@ describe("WinCheckExecution - Overtime", () => {
   });
 
   test("a null maxTimerValue is no timer, not a zero-minute one", async () => {
-    // Host lobbies send null when the max-timer toggle is off; treating that
-    // as 0 minutes would hand the leader an instant win on the first check.
+    // Host lobbies send null when the max-timer toggle is off.
     const game = await setup("big_plains", {
       gameMode: GameMode.FFA,
       maxTimerValue: null,
