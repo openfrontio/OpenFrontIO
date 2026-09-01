@@ -315,7 +315,7 @@ describe("WinCheckExecution - Nation Winners", () => {
 
     // Skip spawn phase
 
-    // Assign 96% of land to bot team (above 95% Team mode threshold)
+    // Assign 96% of land to bot team (above the 80% win threshold)
     const totalLand = game.numLandTiles();
     const botTeamTiles = Math.ceil(totalLand * 0.96);
     let bot1Assigned = 0;
@@ -336,9 +336,9 @@ describe("WinCheckExecution - Nation Winners", () => {
       }
     });
 
-    // Verify territory ownership (bot team has > 95%)
+    // Verify territory ownership (bot team is above the 80% win threshold)
     const botTeamTotal = bot1.numTilesOwned() + bot2.numTilesOwned();
-    expect(botTeamTotal / totalLand).toBeGreaterThan(0.95);
+    expect(botTeamTotal / totalLand).toBeGreaterThan(0.8);
 
     // Mock setWinner to capture calls
     const setWinnerSpy = vi.fn();

@@ -53,7 +53,9 @@ export class NationMIRVBehavior {
   }
 
   // Whole percent of the land, for exact integer comparison. One ladder for
-  // teams and lone players: the win bar is 80% in every game mode.
+  // teams and lone players: the win bar is 80% in every game mode. Rough
+  // alignment only: the win check divides by non-fallout land and its bar
+  // sinks during overtime; this divides by all land and stays fixed.
   private get victoryDenialThresholdPercent(): number {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
