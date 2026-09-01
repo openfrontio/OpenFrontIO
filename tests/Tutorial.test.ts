@@ -43,6 +43,17 @@ describe("TutorialProgress", () => {
     expect(p.current()?.id).toBe("attack_wilderness");
 
     settle(p, ctx({ hasSpawned: true, attacking: true }));
+    expect(p.current()?.id).toBe("capture_tribes");
+
+    settle(
+      p,
+      ctx({
+        hasSpawned: true,
+        attacking: true,
+        gold: 125_000n,
+        cityCost: 125_000n,
+      }),
+    );
     expect(p.current()?.id).toBe("troops");
   });
 
@@ -59,7 +70,13 @@ describe("TutorialProgress", () => {
 
   it("only advances informational steps on acknowledge", () => {
     const p = new TutorialProgress();
-    const c = ctx({ hasSpawned: true, attacking: true });
+    const c = ctx({
+      hasSpawned: true,
+      attacking: true,
+      gold: 125_000n,
+      cityCost: 125_000n,
+    });
+    settle(p, c);
     settle(p, c);
     settle(p, c);
     expect(p.current()?.id).toBe("troops");
@@ -109,9 +126,9 @@ describe("TutorialProgress", () => {
     expect(p.current()).toBeNull();
   });
 
-  it("gates the city step on affordable gold, then on the city existing", () => {
+  it("gates the tribes step on affordable gold, then the city step on the city existing", () => {
     const p = new TutorialProgress([
-      TUTORIAL_STEPS.find((s) => s.id === "earn_city_gold")!,
+      TUTORIAL_STEPS.find((s) => s.id === "capture_tribes")!,
       TUTORIAL_STEPS.find((s) => s.id === "buy_city")!,
     ]);
     p.update(ctx({ gold: 500_000n, cityCost: null }));

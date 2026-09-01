@@ -483,38 +483,39 @@ export class WebGLFrameBuilder {
    * smallIDs so the glow pass radiates around their territory. Skips the first
    * minute of play so everyone's tiny starting territory doesn't glow.
    * Client-only view — toggle it live in the settings.
+   *
+   * The view's explicit glow set (`GameView.glowingPlayers()`, e.g. the
+   * tutorial pointing at capturable tribes) is merged in and is exempt from
+   * the spawn/grace gate.
    */
   private syncSmallPlayerGlow(gameView: GameView): void {
-    // Strength (incl. off at 0) is read live in the glow pass; here we only
-    // decide who qualifies. Skip spawn + the first minute.
-    if (
-      gameView.inSpawnPhase() ||
-      gameView.elapsedGameSeconds() < SMALL_PLAYER_GLOW_GRACE_SECONDS
-    ) {
-      this.view.updateSmallPlayerGlow(null);
-      return;
-    }
     // Throttle the per-player scan + upload; the glow keeps rendering the last
-    // set between rescans. The off/spawn/grace checks above run every tick, so
-    // toggling off takes effect on the next tick (deferred while the game is
-    // paused, since ticks stop; it clears on unpause).
+    // set between rescans, so changes take effect within a second (deferred
+    // while the game is paused, since ticks stop).
     if (this.glowRescanTick++ % SMALL_PLAYER_GLOW_RESCAN_TICKS !== 0) return;
-    // "% of the map" uses the same denominator the leaderboard/win-check use.
-    const denom = gameView.numLandTiles() - gameView.numTilesWithFallout();
-    if (denom <= 0) {
-      this.view.updateSmallPlayerGlow(null);
-      return;
-    }
     const set = this.highlightSetBuf;
     set.fill(0);
     let any = false;
-    for (const p of gameView.players()) {
-      if (!p.isPlayer() || p.type() !== PlayerType.Human || !p.isAlive()) {
-        continue;
-      }
-      if (p.numTilesOwned() / denom <= SMALL_PLAYER_MAX_MAP_FRACTION) {
-        set[p.smallID()] = 1;
-        any = true;
+    for (const id of gameView.glowingPlayers() ?? []) {
+      set[id] = 1;
+      any = true;
+    }
+    // Strength (incl. off at 0) is read live in the glow pass; here we only
+    // decide who qualifies. Skip spawn + the first minute.
+    if (
+      !gameView.inSpawnPhase() &&
+      gameView.elapsedGameSeconds() >= SMALL_PLAYER_GLOW_GRACE_SECONDS
+    ) {
+      // "% of the map" uses the same denominator the leaderboard/win-check use.
+      const denom = gameView.numLandTiles() - gameView.numTilesWithFallout();
+      for (const p of denom > 0 ? gameView.players() : []) {
+        if (!p.isPlayer() || p.type() !== PlayerType.Human || !p.isAlive()) {
+          continue;
+        }
+        if (p.numTilesOwned() / denom <= SMALL_PLAYER_MAX_MAP_FRACTION) {
+          set[p.smallID()] = 1;
+          any = true;
+        }
       }
     }
     this.view.updateSmallPlayerGlow(any ? set : null);

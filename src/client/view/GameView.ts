@@ -1330,7 +1330,22 @@ export class GameView implements GameMap {
     return this._gameID;
   }
 
+  private _glowingPlayers: ReadonlySet<number> | null = null;
+
   focusedPlayer(): PlayerView | null {
     return this.myPlayer();
+  }
+
+  /**
+   * Extra owner smallIDs the map glow pass radiates around, on top of the
+   * small-player highlight set (e.g. the tutorial pointing at capturable
+   * tribes). Null when nothing is requested.
+   */
+  setGlowingPlayers(ids: ReadonlySet<number> | null): void {
+    this._glowingPlayers = ids;
+  }
+
+  glowingPlayers(): ReadonlySet<number> | null {
+    return this._glowingPlayers;
   }
 }
