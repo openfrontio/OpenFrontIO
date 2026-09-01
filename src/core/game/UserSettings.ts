@@ -346,6 +346,14 @@ export class UserSettings {
     this.setBool("settings.helpMessages", !this.helpMessages());
   }
 
+  tutorialDismissed() {
+    return this.getBool("settings.tutorialDismissed", false);
+  }
+
+  setTutorialDismissed(value: boolean) {
+    this.setBool("settings.tutorialDismissed", value);
+  }
+
   toggleRandomName() {
     this.setBool("settings.anonymousNames", !this.anonymousNames());
   }

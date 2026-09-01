@@ -1,0 +1,139 @@
+import { GameEvent } from "../../../core/EventBus";
+
+/** HUD elements the tutorial can draw attention to. */
+export type TutorialHighlight = "troops" | "gold" | "city";
+
+/** Emitted whenever the highlighted HUD element changes (null clears it). */
+export class TutorialHighlightEvent implements GameEvent {
+  constructor(public readonly target: TutorialHighlight | null) {}
+}
+
+/** Emitted when the tutorial panel is shown or hidden. */
+export class TutorialStateEvent implements GameEvent {
+  constructor(public readonly active: boolean) {}
+}
+
+/** Snapshot of the player's state that the steps are evaluated against. */
+export interface TutorialContext {
+  hasSpawned: boolean;
+  /** Any outgoing attack, wilderness or player. */
+  attacking: boolean;
+  attackingBot: boolean;
+  botsExist: boolean;
+  gold: bigint;
+  /** Null until the worker has reported it. */
+  cityCost: bigint | null;
+  cityDisabled: boolean;
+  cities: number;
+}
+
+export interface TutorialStep {
+  id: string;
+  highlight?: TutorialHighlight;
+  /** Steps that don't fit this game's config are skipped. Defaults to always. */
+  applies?: (ctx: TutorialContext) => boolean;
+  /** Informational steps complete when the player clicks "Got it". */
+  manual?: true;
+  isDone?: (ctx: TutorialContext) => boolean;
+}
+
+export const TUTORIAL_STEPS: readonly TutorialStep[] = [
+  { id: "spawn", isDone: (c) => c.hasSpawned },
+  // Any attack counts so a player who hits a bot first doesn't get stuck.
+  { id: "attack_wilderness", isDone: (c) => c.attacking },
+  { id: "troops", highlight: "troops", manual: true },
+  {
+    id: "attack_bot",
+    applies: (c) => c.botsExist,
+    isDone: (c) => c.attackingBot,
+  },
+  { id: "gold", highlight: "gold", manual: true },
+  {
+    id: "earn_city_gold",
+    highlight: "gold",
+    applies: (c) => !c.cityDisabled,
+    isDone: (c) =>
+      c.cities > 0 || (c.cityCost !== null && c.gold >= c.cityCost),
+  },
+  {
+    id: "buy_city",
+    highlight: "city",
+    applies: (c) => !c.cityDisabled,
+    isDone: (c) => c.cities > 0,
+  },
+];
+
+/** Ticks a completed step stays on screen (with its checkmark) before advancing. */
+export const STEP_DONE_LINGER_TICKS = 15;
+
+/**
+ * Cursor over the step list. Pure: feed it a context once per tick and read
+ * back the current step. Steps whose `applies` is false for the current
+ * context are skipped, so the visible count adapts to the game's config.
+ */
+export class TutorialProgress {
+  private index = 0;
+  /** Ticks since the current step completed, or null while it's pending. */
+  private doneTicks: number | null = null;
+
+  constructor(
+    private readonly steps: readonly TutorialStep[] = TUTORIAL_STEPS,
+  ) {}
+
+  current(): TutorialStep | null {
+    return this.steps[this.index] ?? null;
+  }
+
+  finished(): boolean {
+    return this.index >= this.steps.length;
+  }
+
+  stepDone(): boolean {
+    return this.doneTicks !== null;
+  }
+
+  /** 1-based position of the current step among the steps that apply. */
+  position(ctx: TutorialContext): number {
+    return this.applicable(ctx, this.index) + 1;
+  }
+
+  total(ctx: TutorialContext): number {
+    return this.applicable(ctx, this.steps.length);
+  }
+
+  /** Completes the current step if it's an informational ("Got it") one. */
+  acknowledge(): void {
+    const step = this.current();
+    if (step?.manual && this.doneTicks === null) {
+      this.doneTicks = 0;
+    }
+  }
+
+  update(ctx: TutorialContext): void {
+    if (this.doneTicks !== null) {
+      this.doneTicks++;
+      if (this.doneTicks < STEP_DONE_LINGER_TICKS) return;
+      this.index++;
+      this.doneTicks = null;
+    }
+    while (!this.finished() && !this.stepApplies(this.index, ctx)) {
+      this.index++;
+    }
+    const step = this.current();
+    if (step?.isDone?.(ctx)) {
+      this.doneTicks = 0;
+    }
+  }
+
+  private stepApplies(i: number, ctx: TutorialContext): boolean {
+    return this.steps[i].applies?.(ctx) ?? true;
+  }
+
+  private applicable(ctx: TutorialContext, before: number): number {
+    let n = 0;
+    for (let i = 0; i < before; i++) {
+      if (this.stepApplies(i, ctx)) n++;
+    }
+    return n;
+  }
+}
