@@ -12,12 +12,20 @@ import {
   TutorialHighlight,
   TutorialHighlightEvent,
   TutorialProgress,
+  TutorialStep,
 } from "./Tutorial";
 
 /** How often (in ticks) to ask the worker for the current city cost. */
 const CITY_COST_POLL_TICKS = 10;
 /** Ticks the "you're ready" message stays up before the panel closes. */
 const COMPLETE_LINGER_TICKS = 50;
+
+/** Defaults shown when the player hasn't rebound the action (see UnitDisplay). */
+const HOTKEY_FALLBACKS = {
+  buildCity: "1",
+  buildFactory: "2",
+  buildPort: "3",
+} as const;
 
 @customElement("tutorial-panel")
 export class TutorialPanel extends LitElement implements Controller {
@@ -35,7 +43,7 @@ export class TutorialPanel extends LitElement implements Controller {
   private progress = new TutorialProgress();
   private started = false;
   private cityCost: bigint | null = null;
-  private cityHotkey: string | null = null;
+  private keybinds: Record<string, { key?: string }> | null = null;
   private completeTicks: number | null = null;
   private highlight: TutorialHighlight | null = null;
 
@@ -102,7 +110,17 @@ export class TutorialPanel extends LitElement implements Controller {
       cityCost: this.cityCost,
       cityDisabled: this.game.config().isUnitDisabled(UnitType.City),
       cities: player.units(UnitType.City).length,
+      portDisabled: this.game.config().isUnitDisabled(UnitType.Port),
+      ports: player.units(UnitType.Port).length,
+      factoryDisabled: this.game.config().isUnitDisabled(UnitType.Factory),
+      factories: player.units(UnitType.Factory).length,
     };
+  }
+
+  private hotkeyFor(step: TutorialStep): string {
+    if (!step.hotkey) return "";
+    this.keybinds ??= this.userSettings.parsedUserKeybinds();
+    return this.keybinds[step.hotkey]?.key ?? HOTKEY_FALLBACKS[step.hotkey];
   }
 
   private isBot(smallID: number): boolean {
@@ -238,8 +256,7 @@ export class TutorialPanel extends LitElement implements Controller {
         <span
           >${translateText(`tutorial.step.${step.id}`, {
             cost: renderNumber(this.cityCost ?? 0n),
-            key: (this.cityHotkey ??=
-              this.userSettings.parsedUserKeybinds()["buildCity"]?.key ?? "1"),
+            key: this.hotkeyFor(step),
           })}</span
         >
       </p>

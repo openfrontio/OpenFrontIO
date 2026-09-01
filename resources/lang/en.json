@@ -1824,6 +1824,8 @@
       "attack_bot": "Now click on a neighboring bot's territory to attack it and take its land.",
       "attack_wilderness": "Click on the unclaimed land next to you to attack it and expand your territory.",
       "buy_city": "You can afford a City! Press {key} (or click the City icon under the control panel), then click your territory to place it. Cities raise your max troops.",
+      "buy_factory": "Now build a Factory: press {key}, then click your territory to place it. Factories create railroads and spawn trains that earn gold.",
+      "buy_port": "Next, build a Port: press {key}, then click your coastline to place it. Ports send trade ships that earn you gold.",
       "earn_city_gold": "Keep expanding until you have {cost} gold — enough to build a City.",
       "gold": "Gold builds up over time from your land and population. Spend it on buildings and weapons.",
       "spawn": "Click anywhere on the map to pick where you spawn.",

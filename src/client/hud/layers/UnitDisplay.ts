@@ -27,7 +27,7 @@ import {
   samLauncherIcon,
   warshipIcon,
 } from "../HotbarIcons";
-import { TutorialHighlightEvent } from "./Tutorial";
+import { TutorialHighlight, TutorialHighlightEvent } from "./Tutorial";
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Controller {
@@ -45,7 +45,7 @@ export class UnitDisplay extends LitElement implements Controller {
   private _samLauncher = 0;
   private allDisabled = false;
   private _hoveredUnit: PlayerBuildableUnitType | null = null;
-  private tutorialHighlightsCity = false;
+  private tutorialHighlight: PlayerBuildableUnitType | null = null;
 
   createRenderRoot() {
     return this;
@@ -59,8 +59,15 @@ export class UnitDisplay extends LitElement implements Controller {
 
     this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
 
+    const highlightUnits: Partial<
+      Record<TutorialHighlight, PlayerBuildableUnitType>
+    > = {
+      city: UnitType.City,
+      port: UnitType.Port,
+      factory: UnitType.Factory,
+    };
     this.eventBus.on(TutorialHighlightEvent, (e) => {
-      this.tutorialHighlightsCity = e.target === "city";
+      this.tutorialHighlight = (e.target && highlightUnits[e.target]) ?? null;
       this.requestUpdate();
     });
     this.requestUpdate();
@@ -268,9 +275,7 @@ export class UnitDisplay extends LitElement implements Controller {
             : "opacity-40"} border border-slate-500 rounded-sm px-0.5 pb-0.5 flex items-center gap-0.5 cursor-pointer
              ${selected ? "hover:bg-gray-400/10" : "hover:bg-gray-800"}
              rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}
-             ${this.tutorialHighlightsCity && unitType === UnitType.City
-            ? "tutorial-highlight"
-            : ""}"
+             ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
           @click=${() => {
             if (selected) {
               this.uiState.ghostStructure = null;
