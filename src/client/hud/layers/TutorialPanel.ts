@@ -15,8 +15,26 @@ import {
   TutorialStep,
 } from "./Tutorial";
 
-/** How often (in ticks) to ask the worker for the current city cost. */
-const CITY_COST_POLL_TICKS = 10;
+/** How often (in ticks) to ask the worker for current build costs. */
+const COST_POLL_TICKS = 10;
+
+/** Units whose costs the panel tracks (the build steps). */
+const COST_POLL_TYPES = [
+  UnitType.City,
+  UnitType.Factory,
+  UnitType.Port,
+  UnitType.Warship,
+  UnitType.MissileSilo,
+] as const;
+
+/** `unit_type.*` name key per build-step unit, for the earn-gold text. */
+const UNIT_NAME_KEYS: Partial<Record<UnitType, string>> = {
+  [UnitType.City]: "city",
+  [UnitType.Factory]: "factory",
+  [UnitType.Port]: "port",
+  [UnitType.Warship]: "warship",
+  [UnitType.MissileSilo]: "missile_silo",
+};
 /** Ticks the "you're ready" message stays up before the panel closes. */
 const COMPLETE_LINGER_TICKS = 50;
 
@@ -47,7 +65,7 @@ export class TutorialPanel extends LitElement implements Controller {
 
   private progress = new TutorialProgress();
   private started = false;
-  private cityCost: bigint | null = null;
+  private costs = new Map<UnitType, bigint>();
   private keybinds: Record<string, { key?: string }> | null = null;
   private tribeGlowActive = false;
   private completeTicks: number | null = null;
@@ -81,10 +99,9 @@ export class TutorialPanel extends LitElement implements Controller {
       return;
     }
 
-    if (this.game.ticks() % CITY_COST_POLL_TICKS === 0) {
-      player.buildables(undefined, [UnitType.City]).then((buildables) => {
-        this.cityCost =
-          buildables.find((b) => b.type === UnitType.City)?.cost ?? null;
+    if (this.game.ticks() % COST_POLL_TICKS === 0) {
+      player.buildables(undefined, COST_POLL_TYPES).then((buildables) => {
+        this.costs = new Map(buildables.map((b) => [b.type, b.cost]));
       });
     }
 
@@ -145,7 +162,7 @@ export class TutorialPanel extends LitElement implements Controller {
         .playerViews()
         .some((p) => p.type() === PlayerType.Bot && p.isAlive()),
       gold: player.gold(),
-      cityCost: this.cityCost,
+      cityCost: this.costs.get(UnitType.City) ?? null,
       cityDisabled: this.game.config().isUnitDisabled(UnitType.City),
       cities: player.units(UnitType.City).length,
       portDisabled: this.game.config().isUnitDisabled(UnitType.Port),
@@ -285,6 +302,14 @@ export class TutorialPanel extends LitElement implements Controller {
     const step = this.progress.current();
     if (step === null) return nothing;
     const done = this.progress.stepDone();
+    // Build steps: until the unit is affordable, ask for gold instead of
+    // telling the player to build something they can't.
+    const cost =
+      step.unit !== undefined ? this.costs.get(step.unit) : undefined;
+    const needsGold =
+      !done &&
+      cost !== undefined &&
+      (this.game.myPlayer()?.gold() ?? 0n) < cost;
     return html`
       <p class="flex gap-1.5 ${done ? "text-green-400" : ""}">
         ${step.bullets && !done
@@ -297,10 +322,17 @@ export class TutorialPanel extends LitElement implements Controller {
               )}
             </ul>`
           : html`<span
-              >${translateText(`tutorial.step.${step.id}`, {
-                cost: renderNumber(this.cityCost ?? 0n),
-                key: this.hotkeyFor(step),
-              })}</span
+              >${needsGold
+                ? translateText("tutorial.step.earn_gold", {
+                    unit: translateText(
+                      `unit_type.${UNIT_NAME_KEYS[step.unit!]}`,
+                    ),
+                    cost: renderNumber(cost!),
+                  })
+                : translateText(`tutorial.step.${step.id}`, {
+                    cost: renderNumber(this.costs.get(UnitType.City) ?? 0n),
+                    key: this.hotkeyFor(step),
+                  })}</span
             >`}
       </p>
       ${done
