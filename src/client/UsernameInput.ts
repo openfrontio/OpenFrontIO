@@ -1,8 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { ANON_WORDS, anonWordName } from "../core/AnonNames";
-import { isTemporaryUsername, UserMeResponse } from "../core/ApiSchemas";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { sanitizeClanTag } from "../core/Util";
 import {
   MAX_CLAN_TAG_LENGTH,
@@ -17,6 +16,13 @@ import { checkClanTagOwnership } from "./ClanApi";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { showInGameConfirm } from "./InGameModal";
+import {
+  accountVerifiedName,
+  clampUsername,
+  genAnonUsername,
+  resolvePlayerName,
+  type ResolvedPlayerName,
+} from "./PlayerName";
 import { steamSDK } from "./SteamSDK";
 
 interface LangSelectorLike {
@@ -33,14 +39,6 @@ const useVerifiedNameKey: string = "useVerifiedName";
 // fresh userMeResponse.
 const CLAN_REMOVED_EVENTS = ["clan-left", "clan-disbanded"];
 const CLAN_MEMBERSHIP_EVENTS = ["clan-joined", ...CLAN_REMOVED_EVENTS];
-
-// Trim rather than reject: a name stored before the cap would otherwise fail
-// validation and block play.
-function clampUsername(name: string): string {
-  return name.length > MAX_USERNAME_LENGTH
-    ? name.slice(0, MAX_USERNAME_LENGTH).trim()
-    : name;
-}
 
 // Shared by the input and the verified chip, which swap places: any drift in
 // box or text metrics shows up as the name jumping on toggle.
@@ -61,6 +59,12 @@ export class UsernameInput extends LitElement {
   // name stays in baseUsername/localStorage so unchecking restores it.
   @state() private verifiedActive: boolean = false;
   private userMe: UserMeResponse | false | null = null;
+  // The raw Steam persona, once it lands. Kept alongside the free-form name so
+  // resolution sees the same inputs the seed did (see resolvedName).
+  private persona: string | null = null;
+  // Minted once so re-resolving is stable: the player must never watch their
+  // placeholder name change under them.
+  private readonly generatedName: string = genAnonUsername();
 
   // Clans aren't supported on CrazyGames — hide the tag input and never submit one.
   private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
@@ -220,18 +224,11 @@ export class UsernameInput extends LitElement {
     });
   };
 
-  // The server-resolved bare name this player may play verified under, or null
-  // when ineligible. Sub-only by design: `claimed` (lapsed) holders and
-  // TEMPORARY####-renamed players don't qualify.
+  // The bare name this player may play verified under, or null when
+  // ineligible. The rule itself lives in PlayerName so the join path and the
+  // resolver can't disagree with the toggle about who qualifies.
   private verifiedName(): string | null {
-    if (this.userMe === null || this.userMe === false) return null;
-    const player = this.userMe.player;
-    const status = player.usernameStatus;
-    if (status !== "premium" && status !== "indefinite") return null;
-    if (!player.username || isTemporaryUsername(player.usernameBase)) {
-      return null;
-    }
-    return player.username;
+    return accountVerifiedName(this.userMe);
   }
 
   // Turn the toggle on iff the player opted in previously AND is still
@@ -278,17 +275,31 @@ export class UsernameInput extends LitElement {
     }
   }
 
+  /**
+   * The name this player will play under, and where it came from. The single
+   * seam join paths read — they take the whole result rather than asking the
+   * component two separate questions and risking them disagreeing.
+   *
+   * `verifiedActive` already folds in eligibility and the CrazyGames exclusion
+   * (see applyVerifiedPreference), so it is the opt-in the resolver wants.
+   */
+  public resolvedName(): ResolvedPlayerName {
+    return resolvePlayerName({
+      verifiedName: this.verifiedName(),
+      verifiedOptIn: this.verifiedActive,
+      storedName: this.baseUsername,
+      persona: this.persona,
+      generatedName: this.generatedName,
+    });
+  }
+
   public getUsername(): string {
-    if (this.verifiedActive) {
-      const verified = this.verifiedName();
-      if (verified !== null) return verified;
-    }
-    return this.baseUsername.trim();
+    return this.resolvedName().name;
   }
 
   /** True when the player is playing under their verified account name. */
   public isVerified(): boolean {
-    return this.verifiedActive && this.verifiedName() !== null;
+    return this.resolvedName().verified;
   }
 
   public getClanTag(): string | null {
@@ -414,17 +425,18 @@ export class UsernameInput extends LitElement {
         .getUser()
         .then((user) => {
           if (this.baseUsername !== generated) return;
-          // Steam personas can contain characters our usernames disallow (e.g.
-          // brackets) or exceed the length limit; strip brackets, trim, and only
-          // accept the persona if it validates — otherwise keep the generated
-          // name so the player can always start a game.
-          // Not clamped, unlike stored and CrazyGames names: a wildly long
-          // persona is rejected rather than truncated to a stub.
-          const candidate = user?.name?.replace(/[[\]]/g, "").trim();
-          if (candidate && validateUsername(candidate).isValid) {
-            this.baseUsername = candidate;
-            this.validateAndStore();
-          }
+          this.persona = user?.name ?? null;
+          // Nothing is stored (that is what got us here), so this is branch 3
+          // then 4: the sanitised persona, or the same generated name back
+          // when none of it survives. Either way the player can start a game.
+          this.baseUsername = resolvePlayerName({
+            verifiedName: null,
+            verifiedOptIn: false,
+            storedName: null,
+            persona: this.persona,
+            generatedName: generated,
+          }).name;
+          this.validateAndStore();
         })
         .catch(() => {
           // Swallow: keep the generated name so the player can always play.
@@ -473,13 +485,18 @@ export class UsernameInput extends LitElement {
       : localStorage.getItem(usernameKey);
     if (storedUsername) {
       this.clanTag = localStorage.getItem(clanTagKey) ?? "";
-      this.baseUsername = clampUsername(storedUsername);
-      this.validateAndStore();
-      this.startClanCheck();
-    } else {
-      this.baseUsername = genAnonUsername();
-      this.validateAndStore();
     }
+    // No persona yet — it arrives asynchronously and reseeds in
+    // connectedCallback, so this settles on the stored or generated name.
+    this.baseUsername = resolvePlayerName({
+      verifiedName: null,
+      verifiedOptIn: false,
+      storedName: storedUsername,
+      persona: null,
+      generatedName: this.generatedName,
+    }).name;
+    this.validateAndStore();
+    if (storedUsername) this.startClanCheck();
   }
 
   render() {
@@ -853,7 +870,10 @@ export class UsernameInput extends LitElement {
   }
 
   private validateAndStore() {
-    const trimmedBase = this.getUsername();
+    // The free-form field's own contents, not resolvedName(): resolution falls
+    // through an emptied field to the persona or a generated name, and play
+    // must stay blocked until the player puts a name back.
+    const trimmedBase = this.baseUsername.trim();
 
     const clanTagResult = validateClanTag(this.clanTag);
     if (!clanTagResult.isValid) {
@@ -907,37 +927,4 @@ export class UsernameInput extends LitElement {
       this._isValid && this.clanTagOwnershipError !== "username.tag_not_member"
     );
   }
-}
-
-// Whether the player is currently playing under their verified account name.
-// For join paths that can't reach the component instance (Cosmetics refs).
-export function isPlayingVerified(): boolean {
-  const el = document.querySelector<UsernameInput>("username-input");
-  return el?.isVerified() ?? false;
-}
-
-// A memorable anonymous username: "Anon" + animal (+ digit). Draws from the same
-// word bank as the server-side anonymisation overlay, but keeps the "Anon" prefix
-// that the overlay drops — here it tells the player their name is a placeholder.
-// Client-side fallback for players who never set a name — no roster here, so it
-// draws a random slot (best-effort-unique); the overlay is what guarantees
-// uniqueness in-game.
-//
-// Rejection-sample a uniform slot in [0, bound) from the CSPRNG: drawing a raw
-// uint32 and taking `% bound` would be very slightly biased (the top partial
-// bucket), so we discard the unrepresentable tail first. The bias is cosmetically
-// irrelevant here, but this keeps the draw provably uniform.
-export function genAnonUsername(): string {
-  const bound = ANON_WORDS.length * 10;
-  const limit = Math.floor(0x1_0000_0000 / bound) * bound;
-  const buf = new Uint32Array(1);
-  let rand: number;
-  do {
-    crypto.getRandomValues(buf);
-    rand = buf[0] ?? 0;
-  } while (rand >= limit);
-  // The "Anon" prefix lives HERE, not in anonWordName: a signed-out player's
-  // handle should say it is a placeholder, whereas the in-game anonymisation
-  // setting makes everyone anonymous and gains nothing from repeating the word.
-  return `Anon${anonWordName(rand % bound)}`;
 }
