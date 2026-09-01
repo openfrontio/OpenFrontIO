@@ -952,6 +952,14 @@ describe("UsernameInput claim grace, live behaviour", () => {
     const line = q(el, GRACE);
     expect(line).not.toBeNull();
     expect(line!.textContent).toContain("username.claim_at_risk");
+
+    // And the interruption actually fires. Asserting only on the banner missed
+    // that the timer updated it silently: the one player the timer exists for
+    // — sitting on the menu across their own deadline — got no alert at all.
+    expect(showInGameAlert).toHaveBeenCalledTimes(2);
+    expect(showInGameAlert.mock.calls[1][0]).toContain(
+      "username.lapse_notice_at_risk",
+    );
   });
 
   // usernameClaimExpiresAt's schema comment: "A past date means 'at risk', not

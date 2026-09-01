@@ -365,6 +365,11 @@ export class UsernameInput extends LitElement {
       this.claimGraceTimer = null;
       this.claimGrace = verifiedClaimGrace(this.userMe);
       this.scheduleClaimGraceExpiry();
+      // Mirrors applyVerifiedPreference. Without this the live transition only
+      // updates the standing banner, and the one interruption the phase-keyed
+      // marker exists to allow never happens for the player it was written
+      // for: the one sitting on the main menu across their own deadline.
+      this.announceLapse();
     }, delay);
   }
 
