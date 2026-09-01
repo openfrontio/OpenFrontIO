@@ -1969,6 +1969,7 @@
   },
   "username": {
     "account_invalid_chars": "Username can only contain letters, numbers, underscores, hyphens, and single spaces between words.",
+    "claim_at_risk": "\"{name}\" is no longer reserved and can be taken by another player at any moment. Resubscribe now to keep it.",
     "claim_reserved": "\"{name}\" is reserved for you until {date}. Resubscribe before then to keep it.",
     "clan_browse": "Browse clans",
     "clan_clear": "No tag",
@@ -1979,6 +1980,7 @@
     "enter_username": "Enter your username",
     "invalid_chars": "Username can only contain letters, numbers, spaces, underscores, hyphens, and periods.",
     "lapse_notice": "Your subscription ended, so you are no longer playing as \"{name}\". It stays reserved for you until {date} — resubscribe before then to keep it. After that anyone can take it.",
+    "lapse_notice_at_risk": "You are no longer playing as \"{name}\", and it is no longer reserved. Another player can take it at any moment — resubscribe now to keep it.",
     "not_string": "Username must be a string.",
     "tag": "TAG",
     "tag_invalid_chars": "Clan tag can only contain letters and numbers.",

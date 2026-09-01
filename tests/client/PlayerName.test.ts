@@ -418,6 +418,7 @@ describe("verifiedClaimGrace", () => {
     expect(verifiedClaimGrace(lapsed(), NOW)).toEqual({
       name: "RyanTheGreat",
       expiresAt: new Date(SOON),
+      atRisk: false,
     });
   });
 
@@ -453,11 +454,22 @@ describe("verifiedClaimGrace", () => {
 
   // The reservation is over — a countdown to a past date is worse than
   // silence, and the name may already belong to someone else.
-  it("says nothing once the deadline has passed", () => {
+  // Inverted deliberately. usernameClaimExpiresAt's schema comment says a past
+  // date means "at risk", not "lost": the field stays set until the name is
+  // actually taken, and resubscribing still recovers it until then. Returning
+  // null here switched the warning off at the point of highest risk. What ends
+  // the notice is the `claimed` guard — a name actually taken moves the player
+  // out of that status.
+  it("flags at-risk once the deadline has passed, rather than going silent", () => {
     expect(
       verifiedClaimGrace(lapsed(), new Date("2026-10-01T00:00:01.000Z")),
-    ).toBeNull();
-    expect(verifiedClaimGrace(lapsed(), new Date(SOON))).toBeNull();
+    ).toEqual({
+      name: "RyanTheGreat",
+      expiresAt: new Date(SOON),
+      atRisk: true,
+    });
+    // Exactly on the deadline counts as at risk: the reservation is over.
+    expect(verifiedClaimGrace(lapsed(), new Date(SOON))?.atRisk).toBe(true);
   });
 
   it("says nothing for a TEMPORARY#### rename", () => {

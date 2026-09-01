@@ -337,13 +337,13 @@ export class UsernameInput extends LitElement {
     this.validateAndStore();
   }
 
-  // Drop the notice the moment the reservation actually ends.
+  // Escalate the notice the moment the reservation lapses.
   //
   // verifiedClaimGrace is evaluated only when account state changes, and a
   // client sitting on the main menu receives none — so without this the notice
-  // would keep naming a deadline that had already passed. Re-deriving from the
-  // same userMe is what clears it: verifiedClaimGrace returns null once the
-  // deadline is behind us.
+  // would keep saying "reserved until {date}" after that date. Re-deriving from
+  // the same userMe flips it to the at-risk wording; nothing arms afterwards,
+  // because at-risk has no further deadline to wait for.
   //
   // The delay must be clamped by us. A 30-day reservation exceeds setTimeout's
   // 32-bit millisecond field, and Node does not saturate — it warns and fires
@@ -387,17 +387,32 @@ export class UsernameInput extends LitElement {
     }
     const grace = this.claimGrace;
     if (grace === null) return;
-    if (localStorage.getItem(lapseNoticeKey) === grace.name) return;
+    // Keyed on the phase as well as the name: crossing the deadline is a
+    // material change to what the player must do (resubscribe "before then"
+    // becomes "now, before someone takes it"), so it earns one more
+    // interruption. Without the phase a player warned while it was still
+    // reserved would never hear that it no longer is.
+    const marker = `${grace.name}:${grace.atRisk ? "atrisk" : "reserved"}`;
+    if (localStorage.getItem(lapseNoticeKey) === marker) return;
+    const key = grace.atRisk
+      ? "username.lapse_notice_at_risk"
+      : "username.lapse_notice";
+    const message = translateText(key, {
+      name: grace.name,
+      date: formatClaimDate(grace.expiresAt),
+    });
+    // translateText echoes the key back until <lang-selector> has fetched its
+    // translation files, and auth can resolve first. Announcing here would
+    // show the player the literal string "username.lapse_notice" AND burn the
+    // marker, so the real notice would never fire — for a one-shot warning
+    // that is the only channel a Steam-only account has. Bail instead;
+    // applyVerifiedPreference runs again on later account events.
+    if (message === key) return;
     // Recorded before the dialog, not after: the alert resolves only when the
     // player dismisses it, and an unawaited promise that never settles would
     // let a second announcement through.
-    localStorage.setItem(lapseNoticeKey, grace.name);
-    void showInGameAlert(
-      translateText("username.lapse_notice", {
-        name: grace.name,
-        date: formatClaimDate(grace.expiresAt),
-      }),
-    );
+    localStorage.setItem(lapseNoticeKey, marker);
+    void showInGameAlert(message);
   }
 
   private async handleVerifiedToggle() {
@@ -536,6 +551,14 @@ export class UsernameInput extends LitElement {
     for (const type of CLAN_MEMBERSHIP_EVENTS) {
       document.addEventListener(type, this.handleClanMembershipChange);
     }
+    // Re-arm unconditionally, before the fetch below can short-circuit.
+    // disconnectedCallback clears the timer but leaves userMe set, so a
+    // detach/reattach of the same instance takes the `userMe !== null` early
+    // return and never reaches applyVerifiedPreference — leaving a stale
+    // claimGrace with nothing scheduled to clear it, which is the exact
+    // failure the timer exists to prevent. Safe when nothing is pending: it
+    // clears any existing timer and no-ops on a null grace.
+    this.scheduleClaimGraceExpiry();
     // userMeResponse is dispatched once and can fire before this connects.
     // Cached, so this re-reads that response rather than refetching.
     void getUserMe().then((me) => {
@@ -743,10 +766,10 @@ export class UsernameInput extends LitElement {
       id="username-claim-grace"
       class="w-full px-3 py-2 text-sm font-medium border border-amber-500/40 rounded-lg bg-amber-950/90 text-amber-200 backdrop-blur-md shadow-lg"
     >
-      ${translateText("username.claim_reserved", {
-        name: grace.name,
-        date: formatClaimDate(grace.expiresAt),
-      })}
+      ${translateText(
+        grace.atRisk ? "username.claim_at_risk" : "username.claim_reserved",
+        { name: grace.name, date: formatClaimDate(grace.expiresAt) },
+      )}
     </div>`;
   }
 

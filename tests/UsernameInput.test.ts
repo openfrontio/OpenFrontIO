@@ -887,13 +887,20 @@ describe("UsernameInput lapse notice", () => {
     expect(q(second, GRACE)).not.toBeNull();
   });
 
-  it("drops the line once the deadline has passed", async () => {
+  // Inverted from "drops the line once the deadline has passed". That was
+  // wrong: usernameClaimExpiresAt's schema comment says a past date means "at
+  // risk", not "lost" — the field stays set until the name is actually taken,
+  // and resubscribing still recovers it. Going silent switched the warning off
+  // at the point of highest risk and lowest cost to act. The `claimed` guard in
+  // verifiedClaimGrace is what ends the notice, because a name actually taken
+  // moves the player out of that status.
+  it("keeps warning past the deadline, in stronger terms", async () => {
     vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
     const el = await mount();
     await signIn(el, lapsedUser());
 
-    expect(q(el, GRACE)).toBeNull();
-    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(q(el, GRACE)!.textContent).toContain("username.claim_at_risk");
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
   });
 
   it("shows nothing while the subscription is still active", async () => {
@@ -930,17 +937,56 @@ describe("UsernameInput claim grace, live behaviour", () => {
 
   // The grace value is only re-derived on account events, and a client sitting
   // on the main menu receives none. Without the timer the notice would keep
-  // naming a deadline that had already passed.
-  it("drops the notice when the deadline passes while mounted", async () => {
+  // saying "reserved until {date}" after that date had passed.
+  it("escalates the notice when the deadline passes while mounted", async () => {
     vi.useFakeTimers({ now: new Date("2026-09-30T23:59:00.000Z") });
     const el = await mount();
     await signIn(el, lapsedUser());
-    expect(q(el, GRACE)).not.toBeNull();
+    expect(q(el, GRACE)!.textContent).toContain("username.claim_reserved");
 
     await vi.advanceTimersByTimeAsync(61_000);
     await el.updateComplete;
 
-    expect(q(el, GRACE)).toBeNull();
+    // Still shown, and now saying the name can be taken at any moment. Going
+    // silent here would switch the warning off at the point of highest risk.
+    const line = q(el, GRACE);
+    expect(line).not.toBeNull();
+    expect(line!.textContent).toContain("username.claim_at_risk");
+  });
+
+  // usernameClaimExpiresAt's schema comment: "A past date means 'at risk', not
+  // 'lost' — it stays set until the name is actually taken." The banner has to
+  // follow that, not a clock.
+  it("still warns after the deadline, while the name is takeable but not taken", async () => {
+    vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+    const el = await mount();
+    await signIn(el, lapsedUser());
+
+    expect(q(el, GRACE)!.textContent).toContain("username.claim_at_risk");
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(showInGameAlert.mock.calls[0][0]).toContain(
+      "username.lapse_notice_at_risk",
+    );
+  });
+
+  // Crossing the deadline changes what the player has to do, so it earns one
+  // more interruption — the marker is keyed on the phase, not just the name.
+  it("announces again when a warned reservation lapses into at-risk", async () => {
+    vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    const first = await mount();
+    await signIn(first, lapsedUser());
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+
+    showInGameAlert.mockClear();
+    document.body.innerHTML = "";
+    vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+    const second = await mount();
+    await signIn(second, lapsedUser());
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(showInGameAlert.mock.calls[0][0]).toContain(
+      "username.lapse_notice_at_risk",
+    );
   });
 
   // The error is transient and self-inflicted; the reservation is a 30-day
