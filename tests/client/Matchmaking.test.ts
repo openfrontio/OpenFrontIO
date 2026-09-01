@@ -1,3 +1,4 @@
+import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
@@ -6,9 +7,12 @@ const apiMocks = vi.hoisted(() => ({
   invalidateUserMe: vi.fn(),
 }));
 
+// Deliberately NOT mocking the identity predicate. The previous version of
+// this file stubbed it to `() => true`, which is precisely why these tests
+// stayed green while Steam-only players were being hard-rejected from ranked
+// (OPE-260). The gate is exercised for real below.
 vi.mock("../../src/client/Api", () => ({
   getUserMe: apiMocks.getUserMe,
-  hasLinkedAccount: vi.fn(() => true),
   invalidateUserMe: apiMocks.invalidateUserMe,
 }));
 
@@ -76,9 +80,25 @@ class FakeWebSocket {
 
 const sockets: FakeWebSocket[] = [];
 
-function userMe(clanTags: string[] = []): UserMeResponse {
+// A Steam-only session, exactly as the API sends it: `user.steam` and nothing
+// else. See infra `users/@me/GET.ts` — buildLinkedIdentities() emits each
+// identity independently, and the steam login path never writes players.email.
+const STEAM_ONLY_USER = {
+  steam: {
+    steamId: "76561198000000000",
+    personaName: "Player",
+    avatarUrl: null,
+  },
+} as UserMeResponse["user"];
+
+function userMe(
+  clanTags: string[] = [],
+  user: UserMeResponse["user"] = {
+    email: "player@example.com",
+  } as UserMeResponse["user"],
+): UserMeResponse {
   return {
-    user: { email: "player@example.com" },
+    user,
     player: {
       publicId: "player-id",
       adfree: false,
@@ -213,5 +233,83 @@ describe("MatchmakingModal clan-aware joins", () => {
     expect(showMessage).toHaveBeenCalledOnce();
     expect(sockets).toHaveLength(1);
     window.removeEventListener("show-message", showMessage);
+  });
+});
+
+// The ranked lockout (OPE-260). A Steam-only account is a real, authenticated
+// session, but the retired `hasLinkedAccount` predicate had no steam term, so
+// this gate rejected it: must_login toast, modal closed, redirect to the
+// account page — with no way through. Steam-only is the default state for
+// anyone who buys on Steam and never links another provider.
+describe("MatchmakingModal identity gate", () => {
+  let showPage: Mock<(page: string) => void>;
+  let showMessage: Mock<(event: Event) => void>;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    sockets.length = 0;
+    apiMocks.getUserMe.mockReset();
+    apiMocks.invalidateUserMe.mockReset();
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    showPage = vi.fn<(page: string) => void>();
+    (window as unknown as { showPage: unknown }).showPage = showPage;
+    showMessage = vi.fn<(event: Event) => void>();
+    window.addEventListener("show-message", showMessage);
+    installClanSelection(null);
+  });
+
+  afterEach(() => {
+    window.removeEventListener("show-message", showMessage);
+    delete (window as unknown as { showPage?: unknown }).showPage;
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  async function openWith(response: UserMeResponse | false) {
+    apiMocks.getUserMe.mockResolvedValue(response);
+    const modal = new MatchmakingModal();
+    modal.mode = "1v1";
+    modal.open();
+    await vi.waitFor(() => expect(apiMocks.getUserMe).toHaveBeenCalled());
+    await vi.advanceTimersByTimeAsync(0);
+    return modal;
+  }
+
+  it("admits a Steam-only account to ranked matchmaking", async () => {
+    const modal = await openWith(userMe([], STEAM_ONLY_USER));
+
+    await vi.waitFor(() => expect(sockets).toHaveLength(1));
+    expect(modal.isOpen()).toBe(true);
+    expect(showPage).not.toHaveBeenCalled();
+    expect(showMessage).not.toHaveBeenCalled();
+  });
+
+  it("admits an email account to ranked matchmaking", async () => {
+    await openWith(userMe());
+
+    await vi.waitFor(() => expect(sockets).toHaveLength(1));
+    expect(showPage).not.toHaveBeenCalled();
+  });
+
+  it("still rejects a genuinely absent session", async () => {
+    const modal = await openWith(false);
+
+    await vi.waitFor(() =>
+      expect(showPage).toHaveBeenCalledWith("page-account"),
+    );
+    expect(sockets).toHaveLength(0);
+    expect(modal.isOpen()).toBe(false);
+    expect(showMessage).toHaveBeenCalledOnce();
+  });
+
+  it("still rejects a session with no linked identity at all", async () => {
+    const modal = await openWith(userMe([], {} as UserMeResponse["user"]));
+
+    await vi.waitFor(() =>
+      expect(showPage).toHaveBeenCalledWith("page-account"),
+    );
+    expect(sockets).toHaveLength(0);
+    expect(modal.isOpen()).toBe(false);
   });
 });

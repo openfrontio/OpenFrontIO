@@ -4,8 +4,13 @@ import { repeat } from "lit/directives/repeat.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../../core/Schemas";
+import { getDesktopSessionState } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
-import { type DesktopUpdateState } from "../DesktopShell";
+import {
+  isDesktopShell,
+  type DesktopSessionState,
+  type DesktopUpdateState,
+} from "../DesktopShell";
 import { shouldBlockMultiplayerAction } from "../GameModeSelector";
 import { JoinLobbyModal } from "../JoinLobbyModal";
 import { PublicLobbySocket } from "../LobbySocket";
@@ -112,6 +117,7 @@ export class DetailedGameViewModal extends BaseModal {
   @state() private viewerTrusted: boolean = false;
   @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
+  @state() private desktopSessionState: DesktopSessionState | null = null;
 
   private serverTimeOffset = 0;
   private countdownTimer: number | null = null;
@@ -172,6 +178,13 @@ export class DetailedGameViewModal extends BaseModal {
       this.onDesktopUpdateState,
     );
     document.addEventListener("userMeResponse", this.onUserMe);
+    if (isDesktopShell()) {
+      this.desktopSessionState = getDesktopSessionState();
+    }
+    document.addEventListener(
+      "desktop-session-state",
+      this.onDesktopSessionState,
+    );
   }
 
   disconnectedCallback() {
@@ -180,6 +193,10 @@ export class DetailedGameViewModal extends BaseModal {
       this.onDesktopUpdateState,
     );
     document.removeEventListener("userMeResponse", this.onUserMe);
+    document.removeEventListener(
+      "desktop-session-state",
+      this.onDesktopSessionState,
+    );
     this.onClose();
     super.disconnectedCallback();
   }
@@ -199,6 +216,10 @@ export class DetailedGameViewModal extends BaseModal {
         if (user !== null) this.viewerSignedIn = true;
       });
     }
+  };
+
+  private onDesktopSessionState = (e: Event) => {
+    this.desktopSessionState = (e as CustomEvent<DesktopSessionState>).detail;
   };
 
   // ---- Slot animation ----
@@ -427,7 +448,10 @@ export class DetailedGameViewModal extends BaseModal {
       // Gated, not disabled: `disabled` also sets pointer-events-none and would
       // swallow the click that's supposed to make the update bar wiggle. join()
       // does the actual refusing.
-      blocked: shouldBlockMultiplayerAction(this.desktopUpdateState),
+      blocked: shouldBlockMultiplayerAction(
+        this.desktopUpdateState,
+        this.desktopSessionState,
+      ),
       viewerTrusted: this.viewerTrusted,
       onClick: () => this.join(lobby),
     });
@@ -750,9 +774,15 @@ export class DetailedGameViewModal extends BaseModal {
    * click.
    */
   private blockedByUpdate(): boolean {
-    if (!shouldBlockMultiplayerAction(this.desktopUpdateState)) return false;
+    if (
+      !shouldBlockMultiplayerAction(
+        this.desktopUpdateState,
+        this.desktopSessionState,
+      )
+    )
+      return false;
     (
-      document.querySelector("desktop-update-bar") as
+      document.querySelector("desktop-status-bar") as
         | (HTMLElement & { wiggle?: () => void })
         | null
     )?.wiggle?.();

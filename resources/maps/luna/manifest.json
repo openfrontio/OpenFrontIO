@@ -1,5 +1,6 @@
 {
   "categories": ["cosmic"],
+  "forced_modifiers": ["isWaterNukes:50"],
   "id": "Luna",
   "map": {
     "height": 3508,

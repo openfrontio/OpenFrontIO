@@ -49,6 +49,11 @@ export interface MapLayer {
   placement: LayerPlacement;
   /** If true, the layer is permanently destroyed in nuke impact radii. */
   nukeable?: boolean;
+  /**
+   * Default opacity for this layer (0–1). Used as the initial value for the
+   * player's layer-alpha slider.  Omit to default to 1 (fully opaque).
+   */
+  alpha?: number;
 }
 
 export interface Nation {
@@ -126,12 +131,20 @@ export async function loadTerrainMap(
 
   const layers = manifest.layers;
 
-  // Validate layer placements at game start.
+  // Validate layer placements and alpha at game start.
   if (layers) {
     for (const layer of layers) {
       if (layer.placement !== "land" && layer.placement !== "water") {
         throw new Error(
           `Map ${map}: layer "${layer.id}" has invalid placement "${layer.placement}" (must be "land" or "water")`,
+        );
+      }
+      if (
+        layer.alpha !== undefined &&
+        (!Number.isFinite(layer.alpha) || layer.alpha < 0 || layer.alpha > 1)
+      ) {
+        throw new Error(
+          `Map ${map}: layer "${layer.id}" has invalid alpha ${layer.alpha} (must be a finite number between 0 and 1)`,
         );
       }
     }

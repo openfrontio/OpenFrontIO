@@ -56,6 +56,10 @@ import {
 } from "./GameUpdates";
 import { ReadonlyTileSet, TileSet } from "./TileSet";
 import {
+  bumpTraversalGeneration,
+  tileTraversalScratch,
+} from "./TileTraversalScratch";
+import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
 } from "./TransportShipUtils";
@@ -105,6 +109,9 @@ Object.freeze(EMPTY_EMOJIS);
 
 export class PlayerImpl implements Player {
   public _lastTileChange: number = 0;
+  // Bumped on every ownership change of one of this player's tiles (several
+  // can happen within one tick, so the tick alone is not a cache key).
+  public _tileChangeVersion: number = 0;
   public _pseudo_random: PseudoRandom;
 
   private _gold: bigint;
@@ -130,6 +137,21 @@ export class PlayerImpl implements Player {
   public _borderTiles = new TileSet();
 
   public _units: Unit[] = [];
+  /** Bumped on every change that can alter a per-type answer over _units: add, remove, ownership
+   *  transfer, level-up, construction toggle (see UnitImpl). Keys the three memos below. */
+  public _myUnitsVersion = 0;
+  private readonly myUnitsMemo = new Map<
+    UnitType,
+    { version: number; list: Unit[] }
+  >();
+  private readonly myUnitCountMemo = new Map<
+    UnitType,
+    { version: number; count: number }
+  >();
+  private readonly myUnitsOwnedMemo = new Map<
+    UnitType,
+    { version: number; owned: number }
+  >();
   public _tiles = new TileSet();
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
@@ -436,9 +458,21 @@ export class PlayerImpl implements Player {
         if (ts.has(u.type())) scratch[n++] = u;
       }
     } else if (second === undefined) {
+      // Single-type queries repeat heavily (warship heal, nation ship tracking,
+      // troop caps): memoised on the per-player units version; hits hand out a copy.
+      const memo = this.myUnitsMemo.get(first as UnitType);
+      if (memo !== undefined && memo.version === this._myUnitsVersion) {
+        return memo.list.slice();
+      }
       for (const u of this._units) {
         if (u.type() === first) scratch[n++] = u;
       }
+      const list = scratch.slice(0, n);
+      this.myUnitsMemo.set(first as UnitType, {
+        version: this._myUnitsVersion,
+        list,
+      });
+      return list.slice();
     } else if (third === undefined) {
       for (const u of this._units) {
         const t = u.type();
@@ -472,17 +506,31 @@ export class PlayerImpl implements Player {
 
   // Count of units owned by the player, not including construction
   unitCount(type: UnitType): number {
+    // Every train station asked for the owner's factory count every tick — a walk
+    // over the whole unit list per station (~2 % of a long headless game).
+    const memo = this.myUnitCountMemo.get(type);
+    if (memo !== undefined && memo.version === this._myUnitsVersion) {
+      return memo.count;
+    }
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
         total += unit.level();
       }
     }
+    this.myUnitCountMemo.set(type, {
+      version: this._myUnitsVersion,
+      count: total,
+    });
     return total;
   }
 
   // Count of units owned by the player, including construction
   unitsOwned(type: UnitType): number {
+    const memo = this.myUnitsOwnedMemo.get(type);
+    if (memo !== undefined && memo.version === this._myUnitsVersion) {
+      return memo.owned;
+    }
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
@@ -493,6 +541,10 @@ export class PlayerImpl implements Player {
         }
       }
     }
+    this.myUnitsOwnedMemo.set(type, {
+      version: this._myUnitsVersion,
+      owned: total,
+    });
     return total;
   }
 
@@ -523,7 +575,34 @@ export class PlayerImpl implements Player {
     return this._borderTiles;
   }
 
+  private nearbyMemo: {
+    version: number;
+    waterVersion: number;
+    result: (Player | TerraNullius)[];
+  } | null = null;
+
   nearby(): (Player | TerraNullius)[] {
+    // Nation AI asks several times per tick (maybeAttack, attackBestTarget,
+    // attackBots, ...) with no map change in between; the answer depends on
+    // tile ownership and fallout (covered by territoryVersion) and on the
+    // land/water/shoreline terrain. Live nuke floods mutate the latter through
+    // WaterManager on the raw GameMap — bypassing GameImpl's bump — so the
+    // map's waterVersion() is a second key, which every conversion advances.
+    const version = this.mg.territoryVersion();
+    const waterVersion = this.mg.map().waterVersion();
+    if (
+      this.nearbyMemo !== null &&
+      this.nearbyMemo.version === version &&
+      this.nearbyMemo.waterVersion === waterVersion
+    ) {
+      return this.nearbyMemo.result.slice();
+    }
+    const result = this.computeNearby();
+    this.nearbyMemo = { version, waterVersion, result };
+    return result.slice();
+  }
+
+  private computeNearby(): (Player | TerraNullius)[] {
     const ns: Set<Player | TerraNullius> = new Set();
     const map = this.mg.map();
     const smallID = this.smallID();
@@ -1304,6 +1383,7 @@ export class PlayerImpl implements Player {
       params,
     );
     this._units.push(b);
+    this._myUnitsVersion++;
     this.recordUnitConstructed(type);
     this.removeGold(cost);
     this.removeTroops("troops" in params ? (params.troops ?? 0) : 0);
@@ -1636,24 +1716,57 @@ export class PlayerImpl implements Player {
       undefined,
       true,
     );
-    const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
+    // Flood the player's own tiles inside the radius. Same traversal as
+    // GameMap.bfs (stack, N/S/W/E push order) so `nearbyTiles` comes out in
+    // the same order — the stable sort below keeps that order for ties and
+    // callers take the first entry — but on the shared visited array instead
+    // of a Set per call (nation placement calls this per candidate tile).
+    const map = this.mg.map();
+    const w = map.width();
+    const cx = tile % w;
+    const cy = (tile / w) | 0;
+    const smallID = this.smallID();
+    const inside = (t: TileRef): boolean => {
+      const dx = (t % w) - cx;
+      const dy = ((t / w) | 0) - cy;
       return (
-        this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
-        gm.ownerID(t) === this.smallID()
+        dx * dx + dy * dy < searchRadiusSquared && map.ownerID(t) === smallID
       );
-    });
-    const validSet: Set<TileRef> = new Set(nearbyTiles);
+    };
+    const scratch = tileTraversalScratch(this.mg);
+    const gen = bumpTraversalGeneration(scratch);
+    const visited = scratch.visited;
+    const stack = scratch.stack;
+    stack.length = 0;
+    const nearbyTiles: TileRef[] = [];
+    if (inside(tile)) {
+      visited[tile] = gen;
+      nearbyTiles.push(tile);
+      stack.push(tile);
+    }
+    const visit = (n: TileRef) => {
+      if (visited[n] !== gen && inside(n)) {
+        visited[n] = gen;
+        nearbyTiles.push(n);
+        stack.push(n);
+      }
+    };
+    while (stack.length > 0) {
+      map.forEachNeighbor(stack.pop()!, visit);
+    }
 
     const minDistSquared = this.mg.config().structureMinDist() ** 2;
+    const valid: TileRef[] = [];
     for (const t of nearbyTiles) {
+      let blocked = false;
       for (const { unit } of nearbyUnits) {
         if (this.mg.euclideanDistSquared(unit.tile(), t) < minDistSquared) {
-          validSet.delete(t);
+          blocked = true;
           break;
         }
       }
+      if (!blocked) valid.push(t);
     }
-    const valid = Array.from(validSet);
     valid.sort(
       (a, b) =>
         this.mg.euclideanDistSquared(a, tile) -
@@ -1667,6 +1780,10 @@ export class PlayerImpl implements Player {
       ? targetTile
       : false;
   }
+  tileChangeVersion(): number {
+    return this._tileChangeVersion;
+  }
+
   lastTileChange(): Tick {
     return this._lastTileChange;
   }

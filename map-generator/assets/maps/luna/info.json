@@ -5,6 +5,7 @@
   "categories": ["cosmic"],
   "multiplayer_frequency": 0,
   "special_team_count": 2,
+  "forced_modifiers": ["isWaterNukes:50"],
   "nations": [
     {
       "coordinates": [265, 662],
