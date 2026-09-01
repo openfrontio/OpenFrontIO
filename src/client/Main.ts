@@ -92,7 +92,7 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { incrementGamesPlayed, translateText } from "./Utils";
+import { incrementGamesPlayed, presenceMapKey, translateText } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
 import "./components/DesktopStatusBar";
@@ -401,7 +401,7 @@ class Client {
       this.presenceDetail = {
         gameType: config?.gameType,
         gameMode: config?.gameMode,
-        map: config?.gameMap,
+        map: presenceMapKey(config?.gameMap),
         // Seats, not connections: spectators are in the roster but hold none
         // (mirrors LobbyPlayerView and the join modal's own count).
         playerCount: event.lobby.clients?.filter((c) => !c.spectator).length,
@@ -1104,7 +1104,7 @@ class Client {
     this.presenceDetail = {
       gameType: joinConfig?.gameType,
       gameMode: joinConfig?.gameMode,
-      map: joinConfig?.gameMap,
+      map: presenceMapKey(joinConfig?.gameMap),
       playerCount:
         joinInfo === undefined
           ? undefined
