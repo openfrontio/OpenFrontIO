@@ -165,6 +165,42 @@ describe("UsernameInput Steam reseeding", () => {
     expect(localStorage.getItem("usernameIsGenerated")).toBe("false");
   });
 
+  // The text check alone is not enough: a player can type something else and
+  // then type the generated name back before getUser() resolves, leaving the
+  // name looking untouched while handleUsernameChange has already marked it
+  // theirs. Reseeding over that would overwrite a deliberate choice.
+  it("does not reseed over a generated name the player retyped", async () => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    let resolveUser: (u: { steamId: string; name: string }) => void = () => {};
+    vi.spyOn(steamSDK, "getUser").mockReturnValue(
+      new Promise((r) => {
+        resolveUser = r;
+      }),
+    );
+
+    const el = new UsernameInput();
+    el.connectedCallback();
+    const generated = el.getUsername();
+
+    // Types something else, then puts the original text back — character for
+    // character the same name, but chosen rather than generated.
+    const type = (value: string) => {
+      const input = document.createElement("input");
+      input.value = value;
+      (
+        el as unknown as { handleUsernameChange: (e: Event) => void }
+      ).handleUsernameChange({ target: input } as unknown as Event);
+    };
+    type("MyCoolName");
+    type(generated);
+
+    resolveUser({ steamId: "77", name: "Ada" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(el.getUsername()).toBe(generated);
+    expect(localStorage.getItem("usernameIsGenerated")).toBe("false");
+  });
+
   it("does not reseed off Steam", async () => {
     localStorage.setItem("username", "AnonAnchor");
     localStorage.setItem("usernameIsGenerated", "true");

@@ -440,7 +440,12 @@ export class UsernameInput extends LitElement {
       this.steamSeedReady = steamSDK
         .getUser()
         .then((user) => {
+          // Both halves matter. The text check catches the player typing
+          // while getUser() was in flight; the ownership flag catches them
+          // typing and then restoring the same text, which leaves the name
+          // looking untouched but makes it theirs (see handleUsernameChange).
           if (this.baseUsername !== generated) return;
+          if (!this.usernameIsGenerated) return;
           this.persona = user?.name ?? null;
           // storedName is deliberately null: whatever is stored is a name we
           // generated, which this is entitled to replace. So this is branch 3
