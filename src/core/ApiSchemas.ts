@@ -272,12 +272,37 @@ export type UserSubscription = NonNullable<
 // PUT /users/@me/username success payload. `username` is the resolved display
 // form (safe for optimistic UI). The suffix is re-rolled on every rename and
 // the response carries the fresh 30-day cooldown.
+// What happened to the bare-name claim on a successful rename.
+//
+// `claimed` — premium, got the bare name ("Ninja").
+// `unavailable` — premium, someone else holds the bare name, so the suffixed
+//   form was granted instead ("Ninja.4471"). A 200, not a 409: the rename
+//   happened and the cooldown was consumed. This is the case worth telling
+//   the player about.
+// `not_eligible` — not premium, so a suffix is simply how free names work.
+//   Nothing to say.
+//
+// Three values rather than a boolean so callers don't have to re-derive
+// eligibility from usernameStatus to avoid showing a free player a "fallback"
+// message on a perfectly ordinary rename.
+export const BareClaimSchema = z.enum([
+  "claimed",
+  "unavailable",
+  "not_eligible",
+]);
+export type BareClaim = z.infer<typeof BareClaimSchema>;
+
 export const PutUsernameResponseSchema = z.object({
   username: z.string(),
   base: z.string(),
   discriminator: z.string(),
   usernameStatus: UsernameStatusSchema,
   nextUsernameChangeAt: z.iso.datetime().nullable(),
+  // Optional because this client ships BEFORE the API that sends it. The
+  // response is parsed with safeParse, so requiring the field would make every
+  // rename against the current API fail validation and surface as a generic
+  // "failed". Treat `undefined` as "the API predates this" and say nothing.
+  bareClaim: BareClaimSchema.optional(),
 });
 export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
 
