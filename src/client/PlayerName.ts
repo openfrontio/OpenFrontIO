@@ -127,6 +127,41 @@ export function verifiedNameOptIn(
   return defaultAllowed;
 }
 
+/** A bare name still reserved for a lapsed holder, and when that ends. */
+export interface ClaimGrace {
+  name: string;
+  expiresAt: Date;
+}
+
+// What the player is about to lose, or null when nothing is at stake.
+//
+// `claimed` is the lapsed state: the subscription is gone, so the player no
+// longer plays under the name, but the server keeps the bare claim reserved
+// until `usernameClaimExpiresAt`. Resubscribing inside that window is safe —
+// tryClaimBareUsername sees the holder is still them and clears the deadline.
+//
+// After it expires anyone may take the name, and if they do, a later
+// resubscribe puts the original holder through ensureBareClaim's TEMPORARY####
+// rename. That is the outcome this whole notice exists to prevent, and there
+// is no out-of-game channel to warn a Steam-only account through.
+//
+// Returns null once the deadline has passed: the reservation is over, so a
+// countdown to a date in the past would be worse than saying nothing.
+export function verifiedClaimGrace(
+  userMe: UserMeResponse | false | null,
+  now: Date = new Date(),
+): ClaimGrace | null {
+  if (userMe === null || userMe === false) return null;
+  const player = userMe.player;
+  if (player.usernameStatus !== "claimed") return null;
+  const name = player.usernameBase;
+  const at = player.usernameClaimExpiresAt;
+  if (!name || !at || isTemporaryUsername(name)) return null;
+  const expiresAt = new Date(at);
+  if (!(expiresAt.getTime() > now.getTime())) return null;
+  return { name, expiresAt };
+}
+
 // A platform persona reduced to something playable, or null when nothing
 // usable survives.
 //

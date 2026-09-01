@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserMeResponse } from "../src/core/ApiSchemas";
 import { MAX_USERNAME_LENGTH } from "../src/core/validations/username";
 
@@ -33,15 +33,21 @@ vi.mock("../src/client/CrazyGamesSDK", () => ({
 vi.mock("../src/client/SteamSDK", () => ({
   steamSDK: { isOnSteam: () => false, getUser: async () => null },
 }));
+const { showInGameAlert } = vi.hoisted(() => ({
+  showInGameAlert: vi.fn(async (_message: string) => Promise.resolve(true)),
+}));
 vi.mock("../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(async () => false),
+  showInGameAlert: (message: string) => showInGameAlert(message),
 }));
 // Partial: only translateText is stubbed (echoing keys so assertions read as
 // i18n keys). The rest of Utils stays real, so an unrelated import added to
 // this graph later doesn't fail on a missing export.
 vi.mock("../src/client/Utils", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/client/Utils")>()),
-  translateText: (key: string) => key,
+  // Interpolations are echoed after the key so assertions can read both.
+  translateText: (key: string, vars?: Record<string, unknown>) =>
+    vars ? `${key}:${JSON.stringify(vars)}` : key,
 }));
 
 // Side-effect import registers <username-input>; vi.mock is hoisted above it.
@@ -95,6 +101,7 @@ beforeEach(() => {
     tag,
     error: null,
   }));
+  showInGameAlert.mockClear();
 });
 
 // Lets a handler's `await getUserMe()` continuation run before asserting.
@@ -749,5 +756,153 @@ describe("UsernameInput verified name", () => {
 
     expect(el.isVerified()).toBe(false);
     expect(el.getUsername()).toBe("MyCoolName");
+  });
+});
+
+describe("UsernameInput lapse notice", () => {
+  const SOON = "2026-10-01T00:00:00.000Z";
+  const GRACE = "#username-claim-grace";
+
+  // Lapsed: no longer premium, so the name reverts — but the server still
+  // reserves the bare claim until the deadline.
+  function lapsedUser(overrides: Record<string, unknown> = {}): UserMeResponse {
+    return {
+      player: {
+        username: "RyanTheGreat",
+        usernameBase: "RyanTheGreat",
+        usernameStatus: "claimed",
+        usernameClaimExpiresAt: SOON,
+        ...overrides,
+      },
+    } as unknown as UserMeResponse;
+  }
+
+  beforeEach(() => {
+    vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // The whole point: the toggle used to switch itself off and the name revert
+  // with nothing said. This is the only channel a Steam-only account has.
+  it("announces the lapse once, naming the name and the date", async () => {
+    localStorage.setItem("useVerifiedName", "true");
+    localStorage.setItem("username", "MyCoolName");
+    const el = await mount();
+    await signIn(el, lapsedUser());
+
+    expect(el.isVerified()).toBe(false);
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    const message = showInGameAlert.mock.calls[0][0];
+    expect(message).toContain("username.lapse_notice");
+    expect(message).toContain("RyanTheGreat");
+  });
+
+  it("does not announce it again on the next launch", async () => {
+    localStorage.setItem("username", "MyCoolName");
+    const first = await mount();
+    await signIn(first, lapsedUser());
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+
+    // A second launch on the same device: same reservation, nothing new.
+    showInGameAlert.mockClear();
+    document.body.innerHTML = "";
+    const second = await mount();
+    await signIn(second, lapsedUser());
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+
+  // Resubscribe clears the record, so a later lapse speaks up again. A bare
+  // "already announced" flag would stay quiet for the life of the install.
+  it("announces again after a resubscribe and a second lapse", async () => {
+    const el = await mount();
+    await signIn(el, lapsedUser());
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+
+    showInGameAlert.mockClear();
+    await signIn(el, premiumUser());
+    await signIn(el, lapsedUser());
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+  });
+
+  // Neither has a deadline attached and neither costs the player a name, so
+  // neither is worth interrupting them for.
+  it("stays silent for a sign-out or a TEMPORARY rename", async () => {
+    localStorage.setItem("useVerifiedName", "true");
+    const el = await mount();
+
+    await signIn(el, premiumUser());
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: false }),
+    );
+    await el.updateComplete;
+    expect(showInGameAlert).not.toHaveBeenCalled();
+
+    await signIn(
+      el,
+      lapsedUser({
+        username: "TEMPORARY7823",
+        usernameBase: "TEMPORARY7823",
+      }),
+    );
+    expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+
+  // Silent when the server sends no deadline. infra#594 sets
+  // usernameClaimExpiresAt, so this is not the common case any more — but a
+  // lapse recorded before that shipped still has no date on it.
+  it("stays silent while the server sends no deadline", async () => {
+    const el = await mount();
+    await signIn(el, lapsedUser({ usernameClaimExpiresAt: null }));
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(q(el, GRACE)).toBeNull();
+  });
+
+  it("keeps a standing line while the reservation lasts", async () => {
+    const el = await mount();
+    await signIn(el, lapsedUser());
+
+    const line = q(el, GRACE);
+    expect(line).not.toBeNull();
+    expect(line!.textContent).toContain("username.claim_reserved");
+    expect(line!.textContent).toContain("RyanTheGreat");
+  });
+
+  // The player dismissed the one-time notice; the standing line is what they
+  // still see every launch until they act or the name is gone.
+  it("still shows the line on a later launch, after the notice is spent", async () => {
+    const first = await mount();
+    await signIn(first, lapsedUser());
+    document.body.innerHTML = "";
+
+    const second = await mount();
+    await signIn(second, lapsedUser());
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(q(second, GRACE)).not.toBeNull();
+  });
+
+  it("drops the line once the deadline has passed", async () => {
+    vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+    const el = await mount();
+    await signIn(el, lapsedUser());
+
+    expect(q(el, GRACE)).toBeNull();
+    expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+
+  it("shows nothing while the subscription is still active", async () => {
+    localStorage.setItem("useVerifiedName", "true");
+    const el = await mount();
+    await signIn(el, premiumUser());
+
+    expect(el.isVerified()).toBe(true);
+    expect(q(el, GRACE)).toBeNull();
+    expect(showInGameAlert).not.toHaveBeenCalled();
   });
 });
