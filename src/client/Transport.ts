@@ -37,7 +37,7 @@ import {
 } from "../core/ZbinWire";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
-import { showInGameAlert } from "./InGameModal";
+import { showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
 import { translateText } from "./Utils";
 import { PlayerView } from "./view";
@@ -228,7 +228,9 @@ export class Transport {
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
-  // Set to true after receiving code 1002 (Connection Refused) to prevent further reconnection attempts.
+  // Latched by a 1003 close (rejection the server will repeat). 1002 stays
+  // retryable (mangled frames, account-API blips). Blocks connectRemote so
+  // neither the ping nor ClientGameRunner's silence check can reopen it.
   private connectionRefused = false;
 
   // clientID dictionary for the binary wire (see ZbinWire.ts), seeded from
@@ -445,7 +447,7 @@ export class Transport {
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
-      if (event.code === 1002) {
+      if (event.code === 1003) {
         this.handleConnectionRefused(event.reason);
       } else if (event.code !== 1000) {
         console.log(`received error code ${event.code}, reconnecting`);
@@ -460,12 +462,19 @@ export class Transport {
     }
     this.connectionRefused = true;
     this.stopPing();
-    void showInGameAlert(
+    void showInGameConfirm(
       translateText("error_modal.connection_refused", {
         reason,
       }),
-    ).then(() => {
-      window.location.href = "/";
+      {
+        variant: "warning",
+        confirmText: translateText("win_modal.exit"),
+        cancelText: translateText("common.close"),
+      },
+    ).then((goHome) => {
+      if (goHome) {
+        window.location.href = "/";
+      }
     });
   }
 

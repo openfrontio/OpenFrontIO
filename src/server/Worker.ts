@@ -389,7 +389,7 @@ export async function startWorker() {
               undefined,
             ),
           );
-          ws.close(1002, "ClientJoinMessageSchema");
+          ws.close(1003, "ClientJoinMessageSchema");
           return;
         }
 
@@ -418,13 +418,13 @@ export async function startWorker() {
           log.warn(`Invalid token: ${result.message}`, {
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, `Unauthorized: invalid token`);
+          ws.close(1003, `Unauthorized: invalid token`);
           return;
         }
         const { persistentId, claims } = result;
 
         if (claims?.role === "banned") {
-          ws.close(1002, "Account Banned");
+          ws.close(1003, "Account Banned");
           return;
         }
 
@@ -443,7 +443,7 @@ export async function startWorker() {
             log.warn(
               `game ${clientMsg.gameID} not found on worker ${workerId}`,
             );
-            ws.close(1002, "Game not found");
+            ws.close(1003, "Game not found");
           }
           return;
         }
@@ -503,7 +503,7 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(1002, "Unauthorized: Turnstile token rejected");
+            ws.close(1003, "Unauthorized: Turnstile token rejected");
             return;
           }
           if (plan.action === "verify") {
@@ -526,7 +526,7 @@ export async function startWorker() {
                   gameID: clientMsg.gameID,
                   reason: verdict.reason,
                 });
-                ws.close(1002, "Unauthorized: Turnstile token rejected");
+                ws.close(1003, "Unauthorized: Turnstile token rejected");
                 return;
               case "error":
                 // Fail open: the locally screened name stands.
@@ -573,7 +573,7 @@ export async function startWorker() {
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
-            ws.close(1002, "Unauthorized");
+            ws.close(1003, "Unauthorized");
             return;
           }
         } else {
@@ -602,7 +602,7 @@ export async function startWorker() {
               log.warn(
                 "Forbidden: player without an allowed flare attempted to join game",
               );
-              ws.close(1002, "Forbidden");
+              ws.close(1003, "Forbidden");
               return;
             }
           }
@@ -632,7 +632,7 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, cosmeticResult.reason);
+          ws.close(1003, cosmeticResult.reason);
           return;
         }
 
@@ -673,31 +673,31 @@ export async function startWorker() {
 
         if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          ws.close(1002, "Game not found");
+          ws.close(1003, "Game not found");
         } else if (joinResult === "kicked") {
           log.warn(`kicked client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Cannot join game");
+          ws.close(1003, "Cannot join game");
         } else if (joinResult === "not_allowlisted") {
           log.info(`client not whitelisted for game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "You are not whitelisted");
+          ws.close(1003, "You are not whitelisted");
         } else if (joinResult === "not_trusted") {
           log.info(`untrusted client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Trusted account required");
+          ws.close(1003, "Trusted account required");
         } else if (joinResult === "rejected") {
           log.info(`client rejected from game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Lobby full");
+          ws.close(1003, "Lobby full");
         }
 
         // Handle other message types

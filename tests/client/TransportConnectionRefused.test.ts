@@ -2,11 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";
 
 const modalMocks = vi.hoisted(() => ({
-  showInGameAlert: vi.fn<(message: string) => Promise<boolean>>(),
+  showInGameConfirm:
+    vi.fn<
+      (
+        message: string,
+        options?: { confirmText?: string; cancelText?: string },
+      ) => Promise<boolean>
+    >(),
 }));
 
 vi.mock("../../src/client/InGameModal", () => ({
-  showInGameAlert: modalMocks.showInGameAlert,
+  showInGameConfirm: modalMocks.showInGameConfirm,
 }));
 
 vi.mock("../../src/client/Utils", () => ({
@@ -69,19 +75,19 @@ function lobbyConfig(): LobbyConfig {
   };
 }
 
-describe("Transport 1002 connection refused", () => {
+describe("Transport terminal connection refused", () => {
   let mockLocationHref = "";
-  let dismissAlert: ((value: boolean) => void) | undefined;
+  let dismissDialog: ((value: boolean) => void) | undefined;
 
   beforeEach(() => {
     sockets.length = 0;
     mockLocationHref = "http://localhost:9000/w1/game/abcd1234";
-    dismissAlert = undefined;
-    modalMocks.showInGameAlert.mockReset();
-    modalMocks.showInGameAlert.mockImplementation(
+    dismissDialog = undefined;
+    modalMocks.showInGameConfirm.mockReset();
+    modalMocks.showInGameConfirm.mockImplementation(
       () =>
         new Promise<boolean>((resolve) => {
-          dismissAlert = resolve;
+          dismissDialog = resolve;
         }),
     );
 
@@ -115,41 +121,60 @@ describe("Transport 1002 connection refused", () => {
     return transport;
   }
 
-  it("shows the refused alert once and goes home when Close is clicked", async () => {
+  it("shows the refused dialog once and goes home when Return to menu is clicked", async () => {
     connectTransport();
     expect(sockets).toHaveLength(1);
 
-    sockets[0].serverClose(1002, "Game not found");
+    sockets[0].serverClose(1003, "Game not found");
 
-    expect(modalMocks.showInGameAlert).toHaveBeenCalledTimes(1);
-    expect(modalMocks.showInGameAlert.mock.calls[0][0]).toContain(
+    expect(modalMocks.showInGameConfirm).toHaveBeenCalledTimes(1);
+    expect(modalMocks.showInGameConfirm.mock.calls[0][0]).toContain(
       "Game not found",
     );
+    expect(modalMocks.showInGameConfirm.mock.calls[0][1]).toMatchObject({
+      confirmText: "win_modal.exit",
+      cancelText: "common.close",
+    });
     expect(window.location.href).toBe("http://localhost:9000/w1/game/abcd1234");
 
-    dismissAlert?.(true);
+    dismissDialog?.(true);
     await Promise.resolve();
 
     expect(window.location.href).toBe("/");
   });
 
+  it("stays on the game page when Close is clicked", async () => {
+    connectTransport();
+    sockets[0].serverClose(1003, "Game not found");
+
+    dismissDialog?.(false);
+    await Promise.resolve();
+
+    expect(window.location.href).toBe("http://localhost:9000/w1/game/abcd1234");
+    expect(sockets).toHaveLength(1);
+  });
+
   it("does not reopen the socket after Game not found", () => {
     const transport = connectTransport();
-    sockets[0].serverClose(1002, "Game not found");
+    sockets[0].serverClose(1003, "Game not found");
 
     transport.reconnect();
     transport.reconnect();
 
     expect(sockets).toHaveLength(1);
-    expect(modalMocks.showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(modalMocks.showInGameConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it("still reconnects after an abnormal close", () => {
+  it.each([
+    [1006, ""],
+    [1002, "WS_ERR_UNEXPECTED_RSV_1"],
+    [1002, "Unauthorized: user me fetch failed"],
+  ])("still reconnects after a retryable close: %i %s", (code, reason) => {
     connectTransport();
 
-    sockets[0].serverClose(1006, "");
+    sockets[0].serverClose(code, reason);
 
     expect(sockets).toHaveLength(2);
-    expect(modalMocks.showInGameAlert).not.toHaveBeenCalled();
+    expect(modalMocks.showInGameConfirm).not.toHaveBeenCalled();
   });
 });
