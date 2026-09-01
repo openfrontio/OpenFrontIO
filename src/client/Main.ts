@@ -1343,9 +1343,24 @@ class Client {
       // the invite survives the reload without needing to be stashed: the
       // path parser in handleUrl() opens the join modal on the way back up,
       // which is the same route a shared lobby link takes.
-      this.resetPresenceToMenu();
-      window.location.href = `/${ClientEnv.workerPath(gameId)}/game/${gameId}`;
-      return;
+      // The /w<n>/game/<id> shape only exists on the game-server origin, so
+      // this root-relative navigation must not run on the replay shell host --
+      // it would resolve against replay.<domain>, 404, and lose the invite,
+      // which consumePendingInvite() has already taken. Same guard, for the
+      // same reason, as handleJoinLobby and updateJoinUrlForShare above.
+      //
+      // Not reachable from the desktop shell today: it classifies every
+      // https:// URL as open-externally, so redirectToVersionedShell() hands
+      // the replay host to the OS browser and this window stays on
+      // app://openfront/. That is a policy in a different repo though, and
+      // nothing here would notice if it changed -- so guard rather than depend
+      // on it. On the replay host, fall back to the in-place leave.
+      if (!isReplayShellHost(window.location.hostname)) {
+        this.resetPresenceToMenu();
+        window.location.href = `/${ClientEnv.workerPath(gameId)}/game/${gameId}`;
+        return;
+      }
+      await this.handleLeaveLobby();
     }
     // A cold-start invite can beat the modal's own upgrade, which would make
     // open() a silent no-op (the CrazyGames invite path waits for the same
