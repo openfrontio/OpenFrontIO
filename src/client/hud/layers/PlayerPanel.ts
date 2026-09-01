@@ -569,7 +569,7 @@ export class PlayerPanel extends LitElement implements Controller {
 
   private renderIdentityRow(other: PlayerView, my: PlayerView) {
     const flagPath = other.cosmetics.flag;
-    const flagCode = flagPath?.match(/\/flags\/([A-Za-z0-9_-]+)\.svg/)?.[1];
+    const flagCode = flagPath?.match(/\/flags\/(.+)\.svg$/)?.[1];
     const country =
       typeof flagCode === "string"
         ? Countries.find((c) => c.code === flagCode)
