@@ -52,23 +52,10 @@ export class NationMIRVBehavior {
     }
   }
 
-  private get victoryDenialTeamThreshold(): number {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 0.9; // Only react right before the game ends (95%)
-      case Difficulty.Medium:
-        return 0.8;
-      case Difficulty.Hard:
-        return 0.7;
-      case Difficulty.Impossible:
-        return 0.6; // Reacts early
-      default:
-        assertNever(difficulty);
-    }
-  }
-
-  private get victoryDenialIndividualThreshold(): number {
+  // One ladder for teams and lone players alike: the win bar is the same 80%
+  // in every game mode (Config.percentageTilesOwnedToWin), so a separate,
+  // higher team ladder would only sit above the bar and never fire.
+  private get victoryDenialThreshold(): number {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
@@ -179,7 +166,7 @@ export class NationMIRVBehavior {
           .map((x) => x.numTilesOwned())
           .reduce((a, b) => a + b, 0);
         const teamShare = teamTerritory / totalLand;
-        if (teamShare >= this.victoryDenialTeamThreshold) {
+        if (teamShare >= this.victoryDenialThreshold) {
           // Only consider the largest team member as the target when team exceeds threshold
           let largestMember: Player | null = null;
           let largestTiles = -1;
@@ -198,7 +185,7 @@ export class NationMIRVBehavior {
         }
       } else {
         const share = p.numTilesOwned() / totalLand;
-        if (share >= this.victoryDenialIndividualThreshold) severity = share;
+        if (share >= this.victoryDenialThreshold) severity = share;
       }
       if (severity > 0) {
         if (best === null || severity > best.severity) best = { p, severity };

@@ -129,9 +129,12 @@ export class WinCheckExecution implements Execution {
     }
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
+    // Cross-multiplied instead of dividing: the threshold is always a whole
+    // percentage, so this is exact integer math (src/core stays deterministic).
     return (
-      (tilesOwned / numTilesWithoutFallout) * 100 >
-      this.mg.config().percentageTilesOwnedToWin(timeElapsed)
+      tilesOwned * 100 >
+      numTilesWithoutFallout *
+        this.mg.config().percentageTilesOwnedToWin(timeElapsed)
     );
   }
 

@@ -588,6 +588,8 @@ describe("Nation MIRV Retaliation", () => {
   });
 
   test("nation launches MIRV to prevent team victory when team approaches victory denial threshold (targets biggest team member)", async () => {
+    // 70% is above the shared victory-denial threshold (0.65 on Medium) but
+    // below the old team-only 0.8 ladder, which sat above the win bar itself.
     // Setup game
     const teamPlayer1Info = new PlayerInfo(
       "team_player_1",
@@ -652,7 +654,7 @@ describe("Nation MIRV Retaliation", () => {
     // Give team players a large amount of territory to exceed team threshold,
     // but skew so teamPlayer1 is clearly the largest member
     const totalLandTiles = game.map().numLandTiles();
-    const teamTargetTiles = Math.floor(totalLandTiles * 0.82);
+    const teamTargetTiles = Math.floor(totalLandTiles * 0.7);
 
     let conqueredTiles = 0;
     for (
@@ -694,7 +696,8 @@ describe("Nation MIRV Retaliation", () => {
     const teamTerritory =
       teamPlayer1.numTilesOwned() + teamPlayer2.numTilesOwned();
     const teamShare = teamTerritory / game.map().numLandTiles();
-    expect(teamShare).toBeGreaterThan(0.8); //
+    expect(teamShare).toBeGreaterThan(0.65);
+    expect(teamShare).toBeLessThan(0.8);
 
     // Track MIRVs before nation considers team victory denial
     const mirvCountBefore = nation.units(UnitType.MIRV).length;

@@ -613,12 +613,10 @@ describe("WinCheckExecution - Overtime", () => {
       assigned++;
     });
 
-    const setWinnerSpy = vi.fn();
-    game.setWinner = setWinnerSpy;
     const winCheck = new WinCheckExecution();
     winCheck.init(game, 0);
     winCheck.checkWinnerFFA();
-    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(game.getWinner()).toBeNull();
     expect(winCheck.isActive()).toBe(true);
   });
 
