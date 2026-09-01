@@ -1813,6 +1813,24 @@
     "unknown": "Unknown",
     "yes": "Yes"
   },
+  "tutorial": {
+    "close": "Close tutorial",
+    "complete": "You're ready! Good luck out there.",
+    "got_it": "Got it",
+    "hide_for_game": "Hide for this game",
+    "never_show": "Don't show again",
+    "step": {
+      "attack_bot": "Now click on a neighboring bot's territory to attack it and take its land.",
+      "attack_wilderness": "Click on the unclaimed land next to you to attack it and expand your territory.",
+      "buy_city": "You can afford a City! Open the build menu (right-click your land, or Ctrl+click) and pick City. Cities raise your max troops.",
+      "earn_city_gold": "Keep expanding until you have {cost} gold — enough to build a City.",
+      "gold": "Gold builds up over time from your land and population. Spend it on buildings and weapons.",
+      "spawn": "Click anywhere on the map to pick where you spawn.",
+      "troops": "Keep an eye on your troop count. Attacking with too few troops leaves you weak — let them regrow between attacks."
+    },
+    "step_counter": "Step {current} of {total}",
+    "title": "Tutorial"
+  },
   "unit_type": {
     "atom_bomb": "Atom Bomb",
     "boat": "Boat",

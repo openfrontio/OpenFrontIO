@@ -659,6 +659,27 @@ news-button .active button::after {
   animation: newsPulse 1.5s ease-in-out infinite;
 }
 
+/* Pulsing ring the in-game tutorial puts around the HUD element it's describing. */
+.tutorial-highlight {
+  border-radius: 0.375rem;
+  animation: tutorialHighlight 1.2s ease-in-out infinite;
+}
+
+@keyframes tutorialHighlight {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px #ffd700,
+      0 0 8px rgba(255, 215, 0, 0.5);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 4px #ffd700,
+      0 0 16px rgba(255, 215, 0, 0.9);
+  }
+}
+
 @keyframes newsPulse {
   0%,
   100% {
