@@ -665,6 +665,42 @@ news-button .active button::after {
   animation: tutorialHighlight 1.2s ease-in-out infinite;
 }
 
+/* Hotbar buttons get the loud treatment: enlarged, gold-tinted, with a
+   bobbing arrow pointing at them. The control panel's wide bars keep just
+   the ring above (scaling them would break the layout). */
+unit-display .tutorial-highlight {
+  position: relative;
+  z-index: 10;
+  transform: scale(1.3);
+  transform-origin: bottom center;
+  border-color: #ffd700 !important;
+  background: rgba(255, 215, 0, 0.25);
+}
+
+unit-display .tutorial-highlight::after {
+  content: "▼";
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  color: #ffd700;
+  font-size: 15px;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  animation: tutorialArrowBob 0.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes tutorialArrowBob {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+
+  50% {
+    transform: translate(-50%, -5px);
+  }
+}
+
 @keyframes tutorialHighlight {
   0%,
   100% {
