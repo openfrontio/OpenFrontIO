@@ -61,6 +61,11 @@ import { initLayout } from "./Layout";
 import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
+import {
+  hideMenuChrome,
+  menuChromeIsTornDown,
+  restoreMenuChrome,
+} from "./MenuChrome";
 import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
@@ -1234,9 +1239,7 @@ class Client {
         }
       });
       this.gameModeSelector.stop();
-      document.querySelectorAll(".ad").forEach((ad) => {
-        (ad as HTMLElement).style.display = "none";
-      });
+      hideMenuChrome();
 
       crazyGamesSDK.loadingStart();
 
@@ -1254,9 +1257,7 @@ class Client {
       this.gameModeSelector.stop();
       incrementGamesPlayed();
 
-      document.querySelectorAll(".ad").forEach((ad) => {
-        (ad as HTMLElement).style.display = "none";
-      });
+      hideMenuChrome();
 
       if (window.PageOS?.session?.newPageView) {
         window.PageOS.session.newPageView();
@@ -1423,6 +1424,22 @@ class Client {
     }
 
     setInGameSignal(false);
+
+    // The inverse of the game-start teardown. Every other exit from a started
+    // game navigates, and the reload did this implicitly; this path leaves in
+    // place, so it has to do it explicitly (OPE-255). It lives here rather
+    // than in openInvite() because handleLeaveLobby is reached from several
+    // places and any of them could be the next to hit it after a teardown.
+    //
+    // The gate asks whether the chrome is torn down, NOT whether we were
+    // in-game: the teardown happens at prestart while the in-game signal is
+    // only set at join, so gating on the signal missed a leave landing in the
+    // window between them. Because the gate no longer reads that signal, it
+    // does not matter that setInGameSignal(false) has already run above.
+    if (menuChromeIsTornDown()) {
+      this.gameModeSelector?.start();
+      restoreMenuChrome();
+    }
 
     if (this.joinModal.isOpen()) {
       this.joinModal.close();
