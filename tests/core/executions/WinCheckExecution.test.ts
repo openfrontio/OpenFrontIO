@@ -580,14 +580,46 @@ describe("WinCheckExecution - Overtime", () => {
     expect(game.config().percentageTilesOwnedToWin(10_000)).toBe(80);
   });
 
-  test("team games decay from the 95% base", async () => {
+  test("team games use the same base and decay as FFA", async () => {
     const game = await setup("big_plains", {
       gameMode: GameMode.Team,
       playerTeams: 2,
       overtime: { enabled: true, startMinutes: 1 },
     });
-    expect(game.config().percentageTilesOwnedToWin(0)).toBe(95);
-    expect(game.config().percentageTilesOwnedToWin(60 + 5 * 60)).toBe(85);
+    expect(game.config().percentageTilesOwnedToWin(0)).toBe(80);
+    expect(game.config().percentageTilesOwnedToWin(60 + 5 * 60)).toBe(70);
+  });
+
+  test("a null maxTimerValue is no timer, not a zero-minute one", async () => {
+    // Host lobbies send null when the max-timer toggle is off; treating that
+    // as 0 minutes would hand the leader an instant win on the first check.
+    const game = await setup("big_plains", {
+      gameMode: GameMode.FFA,
+      maxTimerValue: null,
+    });
+    const nationInfo = new PlayerInfo(
+      "TestNation",
+      PlayerType.Nation,
+      null,
+      "nation_id",
+    );
+    game.addPlayer(nationInfo);
+    const nation = game.player("nation_id");
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (assigned >= 10) return;
+      if (!game.map().isLand(tile)) return;
+      nation.conquer(tile);
+      assigned++;
+    });
+
+    const setWinnerSpy = vi.fn();
+    game.setWinner = setWinnerSpy;
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    winCheck.checkWinnerFFA();
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
   });
 
   test("leader wins once the shrinking bar drops below their share", async () => {
