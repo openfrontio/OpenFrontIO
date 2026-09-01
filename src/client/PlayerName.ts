@@ -95,6 +95,25 @@ function truncateToCap(name: string): string {
   return hard.slice(0, lastSpace);
 }
 
+// Does the stored per-device preference mean "play under the verified name"?
+//
+// Tri-state, not a boolean: `"true"` is an explicit opt-in, `"false"` an
+// explicit opt-out, and *absent* is neither. Absent now defaults ON. The old
+// `=== "true"` test collapsed absent into opt-out, so every fresh profile —
+// which is every Steam install, and every new browser — silently declined the
+// perk the subscription was sold on: the player launched, got their persona,
+// and never played under the name they paid for.
+//
+// An explicit opt-out still wins, and always will. This is a privacy default,
+// so it only fills the gap where the player has expressed nothing; one visible
+// click undoes it, and that click is recorded as `"false"`.
+//
+// Eligibility is the caller's business — this answers only what the player
+// asked for, not whether they may have it.
+export function verifiedNameOptIn(stored: string | null): boolean {
+  return stored !== "false";
+}
+
 // A platform persona reduced to something playable, or null when nothing
 // usable survives.
 //

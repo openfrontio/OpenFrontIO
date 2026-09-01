@@ -22,6 +22,7 @@ import {
   genAnonUsername,
   looksGenerated,
   resolvePlayerName,
+  verifiedNameOptIn,
   type ResolvedPlayerName,
 } from "./PlayerName";
 import { steamSDK } from "./SteamSDK";
@@ -239,14 +240,17 @@ export class UsernameInput extends LitElement {
     return accountVerifiedName(this.userMe);
   }
 
-  // Turn the toggle on iff the player opted in previously AND is still
-  // eligible; silently off otherwise (logout, lapsed sub, TEMPORARY rename).
-  // Never auto-enables without a stored opt-in — players who want to stay
-  // anonymous must be able to play under an unrelated name.
+  // Turn the toggle on iff the player has not opted out AND is still eligible;
+  // silently off otherwise (logout, lapsed sub, TEMPORARY rename).
+  //
+  // "Has not opted out" rather than "opted in": the preference is tri-state
+  // and an absent one defaults on for an eligible player (see
+  // verifiedNameOptIn). Deliberately not persisted here — leaving it absent is
+  // what keeps a later explicit opt-out distinguishable from the default.
   private applyVerifiedPreference() {
     this.verifiedActive =
       !this.onCrazyGames &&
-      localStorage.getItem(useVerifiedNameKey) === "true" &&
+      verifiedNameOptIn(localStorage.getItem(useVerifiedNameKey)) &&
       this.verifiedName() !== null;
     this.requestUpdate();
     this.validateAndStore();

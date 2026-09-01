@@ -596,13 +596,56 @@ describe("UsernameInput name length", () => {
 });
 
 describe("UsernameInput verified name", () => {
-  it("renders the free-text field and an off-state toggle by default", async () => {
+  // An eligible subscriber who has expressed no preference plays under the
+  // name they paid for. The preference used to be read as `=== "true"`, which
+  // collapsed "never asked" into "declined" — so every fresh profile, which is
+  // every Steam install, silently opted out of the headline perk.
+  it("plays verified by default when eligible and no preference is stored", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser());
+
+    expect(el.isVerified()).toBe(true);
+    expect(el.getUsername()).toBe("RyanTheGreat");
+    // Only the active trailing button exists, so neither can be tabbed to or
+    // read out while it doesn't apply.
+    expect(q(el, CHANGE)).not.toBeNull();
+    expect(q(el, TOGGLE)).toBeNull();
+  });
+
+  // The default fills a gap; it never overrides an answer.
+  it("stays off when the player has explicitly opted out", async () => {
+    localStorage.setItem("useVerifiedName", "false");
+    localStorage.setItem("username", "MyCoolName");
     const el = await mount();
     await signIn(el, premiumUser());
 
     expect(el.isVerified()).toBe(false);
-    // Only the active trailing button exists, so neither can be tabbed to or
-    // read out while it doesn't apply.
+    expect(el.getUsername()).toBe("MyCoolName");
+    expect(q(el, TOGGLE)).not.toBeNull();
+    expect(q(el, CHANGE)).toBeNull();
+  });
+
+  // Leaving the default unpersisted is what keeps a later opt-out
+  // distinguishable from it.
+  it("does not persist the default, and records an explicit opt-out", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser());
+    expect(localStorage.getItem("useVerifiedName")).toBeNull();
+
+    q(el, CHANGE)!.click();
+    await el.updateComplete;
+
+    expect(localStorage.getItem("useVerifiedName")).toBe("false");
+    expect(el.isVerified()).toBe(false);
+  });
+
+  it("renders the free-text field and an off-state toggle when ineligible", async () => {
+    const el = await mount();
+    await signIn(el, {
+      player: { username: null, usernameBase: null, usernameStatus: "none" },
+    } as unknown as UserMeResponse);
+
+    expect(el.isVerified()).toBe(false);
     expect(q(el, TOGGLE)).not.toBeNull();
     expect(q(el, CHANGE)).toBeNull();
   });
@@ -628,6 +671,9 @@ describe("UsernameInput verified name", () => {
   });
 
   it("restores the stored custom name when switching back", async () => {
+    // Starts opted out so the round trip begins on the free-form name; the
+    // default-on case is covered above.
+    localStorage.setItem("useVerifiedName", "false");
     localStorage.setItem("username", "MyCoolName");
     const el = await mount();
     await signIn(el, premiumUser());

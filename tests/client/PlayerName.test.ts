@@ -7,6 +7,7 @@ import {
   looksGenerated,
   resolvePlayerName,
   sanitizePersona,
+  verifiedNameOptIn,
   type PlayerNameInputs,
 } from "../../src/client/PlayerName";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
@@ -393,6 +394,28 @@ describe("accountVerifiedName", () => {
         player({ username: "TEMPORARY7823", usernameBase: "TEMPORARY7823" }),
       ),
     ).toBeNull();
+  });
+});
+
+describe("verifiedNameOptIn", () => {
+  it("honours an explicit choice in both directions", () => {
+    expect(verifiedNameOptIn("true")).toBe(true);
+    expect(verifiedNameOptIn("false")).toBe(false);
+  });
+
+  // The gap this closes: reading the preference as `=== "true"` treated
+  // "never asked" as "declined", so a fresh profile — every Steam install —
+  // never played under the name the subscription was sold on.
+  it("defaults on when the player has expressed nothing", () => {
+    expect(verifiedNameOptIn(null)).toBe(true);
+  });
+
+  // Only the exact opt-out string turns it off; anything else is not an answer
+  // the player gave, so it falls to the default rather than silently declining.
+  it("treats an unrecognised value as no preference", () => {
+    for (const stored of ["", "False", "FALSE", "0", "no", "yes"]) {
+      expect(verifiedNameOptIn(stored), JSON.stringify(stored)).toBe(true);
+    }
   });
 });
 
