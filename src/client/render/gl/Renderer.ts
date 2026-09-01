@@ -311,8 +311,9 @@ export class GPURenderer {
 
     // Per-player effect texture: EFFECT_PALETTE_BLOCKS stacked blocks of
     // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail,
-    // block 2 = structures, block 3 = warship). Starts zeroed (color count 0
-    // everywhere = no effect → territory/player color).
+    // block 2 = structures, block 3 = warship, block 4 = train, block 5 =
+    // railroad). Starts zeroed (color count 0 everywhere = no effect →
+    // territory/player color).
     const effectRows = MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS;
     this.effectTex = createTexture2D(gl, {
       width: palW,
@@ -539,13 +540,14 @@ export class GPURenderer {
     // --- Night composite ---
     this.nightCompositePass = new NightCompositePass(gl, this.settings);
 
-    // --- Railroad (needs tileTex) ---
+    // --- Railroad (needs tileTex, paletteTex, effectTex) ---
     this.railroadPass = new RailroadPass(
       gl,
       mapW,
       mapH,
       this.res.tileTex,
       this.paletteTex,
+      this.effectTex,
       terrainBytes,
       this.settings,
     );
@@ -627,6 +629,7 @@ export class GPURenderer {
     this.affiliationPalette = new AffiliationPalette(gl, this.settings);
     const affTex = this.affiliationPalette.getTexture();
     this.borderStampPass.setAffiliationTex(affTex);
+    this.territoryPass.setAffiliationTex(affTex);
     this.unitPass.setAffiliationTex(affTex);
     this.structurePass.setAffiliationTex(affTex);
     this.trailPass.setAffiliationTex(affTex);
@@ -1091,6 +1094,8 @@ export class GPURenderer {
     this.territoryPass.setHighlightOwner(ownerID);
     this.namePass.setHighlightOwner(ownerID);
     this.structurePass.setHighlightOwner(ownerID);
+    this.railroadPass.setHighlightOwner(ownerID);
+    this.affiliationPalette.setHoveredOwner(ownerID);
   }
   setMouseWorldPos(x: number, y: number): void {
     this.namePass.setMouseWorldPos(x, y);
@@ -1420,6 +1425,11 @@ export class GPURenderer {
   /** Toggle visibility of a single layer (driven by graphics settings). */
   setLayerVisible(layerId: string, visible: boolean): void {
     this.mapLayerPasses.get(layerId)?.setVisible(visible);
+  }
+
+  /** Set the alpha multiplier for a single layer (0–1). */
+  setLayerAlpha(layerId: string, alpha: number): void {
+    this.mapLayerPasses.get(layerId)?.setAlpha(alpha);
   }
 
   /**

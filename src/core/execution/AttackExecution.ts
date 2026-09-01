@@ -1,4 +1,5 @@
 import { renderTroops } from "../../client/Utils";
+import { AttackLogicInput } from "../configuration/Config";
 import {
   Attack,
   Difficulty,
@@ -10,6 +11,7 @@ import {
   PlayerType,
   TerrainType,
   TerraNullius,
+  UnitType,
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
@@ -114,7 +116,11 @@ export class AttackExecution implements Execution {
       .attackAmount(this._owner, this.target);
     if (this.removeTroops) {
       this.startTroops = Math.min(this._owner.troops(), this.startTroops);
-      this._owner.removeTroops(this.startTroops);
+      // Take the amount that was actually deducted, not the amount asked for.
+      // removeTroops() floors, so a fractional request leaves the attack
+      // holding troops the owner never paid for — and retreat refunds the
+      // combined total, turning the leftover fractions into free troops.
+      this.startTroops = this._owner.removeTroops(this.startTroops);
     }
     this.attack = this._owner.createAttack(
       this.target,
@@ -188,9 +194,8 @@ export class AttackExecution implements Execution {
 
     this.toConquer.clear();
     this.attack.clearBorder();
-    for (const tile of this._owner.borderTiles()) {
-      this.addNeighbors(tile);
-    }
+    // forEach over the dense storage — the values() generator showed up in long-game profiles
+    this._owner.borderTiles().forEach((tile) => this.addNeighbors(tile));
   }
 
   private retreat(malusPercent = 0) {
@@ -260,16 +265,11 @@ export class AttackExecution implements Execution {
       return;
     }
 
-    let numTilesPerTick = this.mg
-      .config()
-      .attackTilesPerTick(
-        troopCount,
-        this._owner,
-        this.target,
-        this.attack.borderSize() + this.random.nextInt(0, 5),
-      );
+    const borderSize = this.attack.borderSize() + this.random.nextInt(0, 5);
+    // Each tile consumes a fraction of the tick; conquer until it is spent.
+    let tickBudget = 1;
 
-    while (numTilesPerTick > 0) {
+    while (tickBudget > 0) {
       if (troopCount < 1) {
         this.attack.delete();
         this.active = false;
@@ -303,16 +303,12 @@ export class AttackExecution implements Execution {
         continue;
       }
       this.addNeighbors(tileToConquer);
-      const { attackerTroopLoss, defenderTroopLoss, tilesPerTickUsed } = this.mg
+      const { attackerTroopLoss, defenderTroopLoss, tickFraction } = this.mg
         .config()
         .attackLogic(
-          this.mg,
-          troopCount,
-          this._owner,
-          this.target,
-          tileToConquer,
+          this.attackLogicInput(troopCount, tileToConquer, borderSize),
         );
-      numTilesPerTick -= tilesPerTickUsed;
+      tickBudget -= tickFraction;
       troopCount -= attackerTroopLoss;
       this.attack.setTroops(troopCount);
       if (targetPlayer) {
@@ -321,6 +317,50 @@ export class AttackExecution implements Execution {
       this._owner.conquer(tileToConquer);
       this.handleDeadDefender();
     }
+  }
+
+  private attackLogicInput(
+    attackTroops: number,
+    tile: TileRef,
+    borderSize: number,
+  ): AttackLogicInput {
+    const defender = this.target.isPlayer() ? this.target : null;
+    // Same test as scanning nearbyUnits() for a post owned by the defender
+    // (active, not under construction, within range), without building a
+    // result array per conquered tile — this runs for every tile of every
+    // attack on the map.
+    const defenderHasDefensePost =
+      defender !== null &&
+      this.mg.hasUnitNearby(
+        tile,
+        this.mg.config().defensePostRange(),
+        UnitType.DefensePost,
+        defender.id(),
+      );
+    return {
+      terrain: this.map.terrainType(tile),
+      attackTroops,
+      attacker: {
+        type: this._owner.type(),
+        numTiles: this._owner.numTilesOwned(),
+      },
+      defender:
+        defender === null
+          ? null
+          : {
+              type: defender.type(),
+              numTiles: defender.numTilesOwned(),
+              troops: defender.troops(),
+              isTraitor: defender.isTraitor(),
+              isDisconnectedTeammate:
+                defender.isDisconnected() && this._owner.isOnSameTeam(defender),
+            },
+      defenderHasDefensePost,
+      falloutRatio: this.mg.hasFallout(tile)
+        ? this.mg.numTilesWithFallout() / this.mg.numLandTiles()
+        : null,
+      borderSize,
+    };
   }
 
   private rejectIncomingAllianceRequests(target: Player) {

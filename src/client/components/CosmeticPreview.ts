@@ -102,10 +102,10 @@ export class CosmeticPreview extends LitElement {
           .explosion=${cosmetic.attributes}
         ></shockwave-swatch>`;
       }
-      return html`<trail-swatch
+      return html`<effect-scene
         class="block w-full h-full"
-        .trail=${cosmetic.attributes}
-      ></trail-swatch>`;
+        .effect=${cosmetic}
+      ></effect-scene>`;
     }
 
     if (this.resolved.type === "crown") {
@@ -153,6 +153,10 @@ export class CosmeticPreview extends LitElement {
             </div>`
           : nothing}
       </div>`;
+    }
+
+    if (this.resolved.type === "cosmeticPack") {
+      return this.renderPackPreview(this.resolved.packItems ?? []);
     }
 
     if (this.resolved.type === "subscription") {
@@ -220,6 +224,36 @@ export class CosmeticPreview extends LitElement {
         }
       }}
     />`;
+  }
+
+  // Up to four of the pack's items tiled 2×2; more are summed up in a badge
+  // (each tile is a live preview, so a big pack shouldn't paint them all).
+  private renderPackPreview(
+    items: readonly ResolvedCosmetic[],
+  ): TemplateResult {
+    const shown = items.slice(0, 4);
+    const hidden = items.length - shown.length;
+    return html`<div
+      class="relative grid h-full w-full grid-cols-2 grid-rows-2 gap-1 overflow-hidden"
+    >
+      ${shown.map(
+        (item) =>
+          html`<div
+            data-cosmetic-pack-item=${item.key}
+            class="flex min-h-0 min-w-0 items-center justify-center overflow-hidden rounded bg-black/30 p-1"
+          >
+            <cosmetic-preview .resolved=${item} size="card"></cosmetic-preview>
+          </div>`,
+      )}
+      ${hidden > 0
+        ? html`<span
+            class="absolute bottom-1 right-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white"
+            >${translateText("cosmetics.pack_more_items", {
+              count: hidden,
+            })}</span
+          >`
+        : nothing}
+    </div>`;
   }
 
   private renderDefaultPreview(): TemplateResult {

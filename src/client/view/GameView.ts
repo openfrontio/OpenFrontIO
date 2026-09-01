@@ -160,19 +160,11 @@ export class GameView implements GameMap {
       humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
 
-    for (const nation of this._mapData.nations) {
-      // Nations don't have client ids, so we use their name as the key instead.
-      this._cosmetics.set(nation.name, {
-        flag: nation.flag ? `/flags/${nation.flag}.svg` : undefined,
-      } satisfies PlayerCosmetics);
-    }
-    for (const extra of this._mapData.additionalNations) {
-      // Only set if not already provided by a manifest nation with the same name.
-      if (this._cosmetics.has(extra.name)) continue;
-      this._cosmetics.set(extra.name, {
-        flag: extra.flag ? `/flags/${extra.flag}.svg` : undefined,
-      } satisfies PlayerCosmetics);
-    }
+    // Nation-type players carry their own flag on the wire (PlayerUpdate.nationFlag,
+    // sourced from the manifest via PlayerInfo) rather than being looked up here by
+    // name — some maps define multiple nations with the same display name (e.g.
+    // India's and Pakistan's "Punjab", split by the 1947 partition), and a name-keyed
+    // lookup can't tell those apart. See the Nation-branch in update() below.
 
     const mapW = this._map.width();
     const mapH = this._map.height();
@@ -319,6 +311,9 @@ export class GameView implements GameMap {
     if (spawnPhaseEndUpdate) {
       this.startTick = spawnPhaseEndUpdate.startTick;
     }
+    if (gu.updates[GameUpdateType.Win].length > 0) {
+      this._gameOver = true;
+    }
 
     const myDisplayName = formatPlayerDisplayName(
       this._myUsername,
@@ -383,12 +378,15 @@ export class GameView implements GameMap {
           this,
           pu,
           gu.playerNameViewData?.[pu.id],
-          // First check human by clientID, then check nation by name.
-          // Only match by name for actual Nations — not Bots (tribes) whose
-          // random names may coincidentally match a nation name.
+          // Humans get cosmetics by clientID. Nations carry their flag
+          // directly on the update (see PlayerUpdate.nationFlag) rather than
+          // being looked up by name — some maps define multiple nations with
+          // the same display name (e.g. India's and Pakistan's "Punjab").
           this._cosmetics.get(pu.clientID ?? "") ??
-            (pu.playerType === PlayerType.Nation
-              ? this._cosmetics.get(pu.name!)
+            (pu.playerType === PlayerType.Nation && pu.nationFlag
+              ? ({
+                  flag: `/flags/${pu.nationFlag}.svg`,
+                } satisfies PlayerCosmetics)
               : undefined) ??
             {},
         );
@@ -421,19 +419,20 @@ export class GameView implements GameMap {
       player.setEmbargoSmallIDs(smallIDs);
     });
 
-    // Packed per-player stats: [smallID, tilesOwned, gold, troops] quads for
-    // every player whose stats changed this tick (the per-tick churn that no
-    // longer travels in PlayerUpdate objects). Applied after pass 1 so
-    // first-emission players exist; their quad carries the same values as
-    // the full update, so double-applying is harmless.
+    // Packed per-player stats: [smallID, tilesOwned, gold, troops, goldEarned]
+    // quints for every player whose stats changed this tick (the per-tick
+    // churn that no longer travels in PlayerUpdate objects). Applied after
+    // pass 1 so first-emission players exist; their quad carries the same
+    // values as the full update, so double-applying is harmless.
     const packedStats = gu.packedPlayerUpdates;
     if (packedStats !== undefined) {
-      for (let i = 0; i + 3 < packedStats.length; i += 4) {
+      for (let i = 0; i + 4 < packedStats.length; i += 5) {
         const state = this._playerStates.get(packedStats[i]);
         if (state === undefined) continue;
         state.tilesOwned = packedStats[i + 1];
         state.gold = packedStats[i + 2];
         state.troops = packedStats[i + 3];
+        state.goldEarned = packedStats[i + 4];
       }
     }
 
@@ -715,6 +714,10 @@ export class GameView implements GameMap {
    */
   setNukeTrailSpiral(smallID: number, params: SpiralParams): void {
     this.spiralTrails.setParams(smallID, params);
+  }
+
+  clearNukeTrailSpiral(smallID: number): void {
+    this.spiralTrails.clearParams(smallID);
   }
 
   private advanceMotionPlannedUnits(currentTick: Tick): void {
@@ -1077,6 +1080,13 @@ export class GameView implements GameMap {
     if (this.lastUpdate === null) return 0;
     return this.lastUpdate.tick;
   }
+  // Set once the sim has decided the game (WinUpdate). Play may go on for
+  // those who stay, but the server archives the record at that point.
+  private _gameOver = false;
+  gameOver(): boolean {
+    return this._gameOver;
+  }
+
   inSpawnPhase(): boolean {
     return this.startTick === null;
   }
@@ -1190,6 +1200,9 @@ export class GameView implements GameMap {
   }
   numLandTiles(): number {
     return this._map.numLandTiles();
+  }
+  waterVersion(): number {
+    return this._map.waterVersion();
   }
   /** Map layers defined in the map's info.json, if any. */
   layers(): import("../../core/game/TerrainMapLoader").MapLayer[] {

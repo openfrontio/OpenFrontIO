@@ -15,6 +15,7 @@ COPY tsconfig.json ./
 COPY vite.config.ts ./
 COPY eslint.config.js ./
 COPY index.html ./
+COPY client-api.json ./
 COPY resources ./resources
 COPY proprietary ./proprietary
 COPY src ./src
@@ -77,6 +78,7 @@ COPY resources ./resources
 # Remove maps because they are not used by the server.
 RUN rm -rf ./resources/maps
 COPY tsconfig.json ./
+COPY client-api.json ./
 COPY src ./src
 COPY zbin ./zbin
 
@@ -92,7 +94,7 @@ RUN <<'EOF' tee /usr/local/bin/start.sh
 /usr/local/bin/generate-nginx-upstream.sh
 
 if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
-    exec timeout 25h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+    exec timeout 200h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 else
     exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 fi

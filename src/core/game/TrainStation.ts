@@ -30,9 +30,11 @@ class TradeStationStopHandler implements TrainStopHandler {
     // Share revenue with the station owner if it's not the current player
     if (trainOwner !== stationOwner) {
       stationOwner.addGold(gold, station.tile());
+      stationOwner.addTrainGold(gold);
       mg.stats().trainExternalTrade(stationOwner, gold);
     }
     trainOwner.addGold(gold, station.tile());
+    trainOwner.addTrainGold(gold);
     mg.stats().trainSelfTrade(trainOwner, gold);
   }
 }
@@ -136,7 +138,7 @@ export class TrainStation {
 
   setCluster(cluster: Cluster | null) {
     // Properly disconnect cluster if it's already set
-    if (this.cluster !== null) {
+    if (this.cluster !== null && this.cluster !== cluster) {
       this.cluster.removeStation(this);
     }
     this.cluster = cluster;

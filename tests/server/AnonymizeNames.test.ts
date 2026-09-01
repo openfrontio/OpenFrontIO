@@ -1,18 +1,13 @@
 import { GameType } from "../../src/core/game/Game";
-import { UsernameSchema } from "../../src/core/Schemas";
+import { GameStartInfo, UsernameSchema } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
+import { NameVisibility } from "../../src/server/NameVisibility";
+import {
+  makeClient as harnessClient,
+  mockLogger,
+} from "../util/GameServerHarness";
 import { testGameConfig } from "../util/Wire";
-
-function makeMockWs() {
-  return {
-    on: () => {},
-    removeAllListeners: () => {},
-    send: vi.fn(),
-    close: vi.fn(),
-    readyState: 1,
-  };
-}
 
 function makeClient(
   clientID: string,
@@ -24,49 +19,21 @@ function makeClient(
   friends: string[] = [],
   cosmetics: { verified?: boolean } | undefined = undefined,
 ): Client {
-  return new Client(
+  return harnessClient({
     clientID,
     persistentID,
-    null,
-    role,
-    undefined,
-    "127.0.0.1",
     username,
     clanTag,
-    makeMockWs() as any,
-    cosmetics,
+    role,
     publicId,
     friends,
-  );
+    cosmetics,
+  });
 }
 
 // creator = lobby host, admin = admin role, alice + bob = regular players.
-function makeGame(
-  anonymizeNames: boolean,
-  disableClanTags = false,
-  nameReveals: string[] = [],
-  nameRevealPublicIds: string[] = [],
-) {
-  const logger: any = {
-    child: vi.fn().mockReturnThis(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  };
-  const game = new GameServer(
-    "g1",
-    logger,
-    Date.now(),
-    testGameConfig({
-      gameType: GameType.Private,
-      anonymizeNames,
-      disableClanTags,
-      nameReveals,
-      nameRevealPublicIds,
-    }),
-    "creator-pid",
-  );
-  [
+function roster(): Client[] {
+  return [
     makeClient("creator", "creator-pid", "CreatorReal", "HOST"),
     makeClient("admin", "admin-pid", "AdminReal", "ADM", "admin"),
     makeClient(
@@ -81,7 +48,30 @@ function makeGame(
       { verified: true },
     ),
     makeClient("bob", "bob-pid", "BobReal", "BBB", null, "bob-pub"),
-  ].forEach((c) => game.joinClient(c));
+  ];
+}
+
+function makeGame(
+  anonymizeNames: boolean,
+  disableClanTags = false,
+  nameReveals: string[] = [],
+  nameRevealPublicIds: string[] = [],
+) {
+  const logger = mockLogger();
+  const game = new GameServer({
+    id: "g1",
+    log: logger,
+    createdAt: Date.now(),
+    gameConfig: testGameConfig({
+      gameType: GameType.Private,
+      anonymizeNames,
+      disableClanTags,
+      nameReveals,
+      nameRevealPublicIds,
+    }),
+    creatorPersistentID: "creator-pid",
+  });
+  roster().forEach((c) => game.joinClient(c));
   return game;
 }
 
@@ -226,8 +216,18 @@ describe("anonymizeNames: startInfoFor (in-game start payload)", () => {
     vi.useRealTimers();
   });
 
+  // The start message is shaped from two start infos: the game's own (real
+  // identities, what gets archived) and the shared wire copy. Stubbed here as
+  // start() would leave them, and shaped per viewer by a NameVisibility over
+  // the same roster order and config the game uses.
   function withStartInfo(anonymizeNames: boolean) {
     const game = makeGame(anonymizeNames);
+    const names = new NameVisibility({
+      gameID: "g1",
+      config: () => game.gameConfig,
+      clients: () => new Map(roster().map((c) => [c.clientID, c])),
+      teamIndex: () => undefined,
+    });
     const players = [
       {
         clientID: "creator",
@@ -245,17 +245,23 @@ describe("anonymizeNames: startInfoFor (in-game start payload)", () => {
       },
       { clientID: "bob", username: "BobReal", clanTag: "BBB", friends: [] },
     ];
-    const startInfo = { gameID: "g1", lobbyCreatedAt: 0, config: {}, players };
-    (game as any).gameStartInfo = startInfo;
-    (game as any).wireGameStartInfo = JSON.parse(JSON.stringify(startInfo));
-    return game;
+    const startInfo = {
+      gameID: "g1",
+      lobbyCreatedAt: 0,
+      config: {},
+      players,
+    } as unknown as GameStartInfo;
+    const wire = JSON.parse(JSON.stringify(startInfo)) as GameStartInfo;
+    const startInfoFor = (viewer: string) =>
+      names.startInfoFor(viewer, false, startInfo, wire);
+    return { game, startInfo, wire, startInfoFor };
   }
 
   const player = (info: any, id: string) =>
     info.players.find((x: any) => x.clientID === id);
 
   it("anonymizes others, keeps self, strips clan/cosmetics/friends", () => {
-    const info = (withStartInfo(true) as any).startInfoFor("bob");
+    const info = withStartInfo(true).startInfoFor("bob");
     expect(player(info, "bob").username).toBe("BobReal"); // self
     const alice = player(info, "alice");
     expect(alice.username).not.toBe("AliceReal");
@@ -266,24 +272,22 @@ describe("anonymizeNames: startInfoFor (in-game start payload)", () => {
   });
 
   it("shows the same anonymized name in-game as in the lobby", () => {
-    const game = withStartInfo(true);
-    const inGame = player((game as any).startInfoFor("bob"), "alice").username;
+    const { game, startInfoFor } = withStartInfo(true);
+    const inGame = player(startInfoFor("bob"), "alice").username;
     expect(inGame).toBe(byId(game.gameInfo("bob"), "alice").username);
   });
 
-  it("never mutates gameStartInfo (the archived record stays real)", () => {
-    const game = withStartInfo(true);
-    (game as any).startInfoFor("bob");
-    const rec = player((game as any).gameStartInfo, "alice");
+  it("never mutates the real start info (the archived record stays real)", () => {
+    const { startInfo, startInfoFor } = withStartInfo(true);
+    startInfoFor("bob");
+    const rec = player(startInfo, "alice");
     expect(rec.username).toBe("AliceReal");
     expect(rec.clanTag).toBe("AAA");
     expect(rec.cosmetics).toEqual({ flag: "fr" });
   });
 
   it("off: returns the shared wire start info unchanged", () => {
-    const game = withStartInfo(false);
-    expect((game as any).startInfoFor("bob")).toBe(
-      (game as any).wireGameStartInfo,
-    );
+    const { wire, startInfoFor } = withStartInfo(false);
+    expect(startInfoFor("bob")).toBe(wire);
   });
 });

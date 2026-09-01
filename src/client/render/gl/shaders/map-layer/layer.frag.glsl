@@ -21,6 +21,9 @@ uniform int uNukeable;
 // 0.0 = hidden (user toggle), 1.0 = visible.
 uniform float uVisible;
 
+// Per-layer alpha multiplier (0–1).  Manifest default × user slider.
+uniform float uAlpha;
+
 in vec2 vUV;
 out vec4 fragColor;
 
@@ -51,5 +54,5 @@ void main() {
   vec4 layer = texture(uLayerTex, vUV);
   if (layer.a < 0.01) discard;
 
-  fragColor = layer;
+  fragColor = vec4(layer.rgb, layer.a * uAlpha);
 }

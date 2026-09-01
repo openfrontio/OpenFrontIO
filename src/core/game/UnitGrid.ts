@@ -67,14 +67,14 @@ export class UnitGrid {
   updateUnitCell(unit: Unit | UnitView) {
     const newTile = unit.tile();
     const oldTile = unit.lastTile();
-    const [gridX, gridY] = this.getGridCoords(
-      this.gm.x(oldTile),
-      this.gm.y(oldTile),
-    );
-    const [newGridX, newGridY] = this.getGridCoords(
-      this.gm.x(newTile),
-      this.gm.y(newTile),
-    );
+    if (newTile === oldTile) return;
+    // Runs on every unit move (hundreds of ships a tick): compare cells without
+    // allocating the coordinate tuples.
+    const cs = this.cellSize;
+    const gridX = Math.floor(this.gm.x(oldTile) / cs);
+    const gridY = Math.floor(this.gm.y(oldTile) / cs);
+    const newGridX = Math.floor(this.gm.x(newTile) / cs);
+    const newGridY = Math.floor(this.gm.y(newTile) / cs);
     if (gridX !== newGridX || gridY !== newGridY) {
       this.removeUnitByTile(unit, oldTile);
       this.addUnit(unit);

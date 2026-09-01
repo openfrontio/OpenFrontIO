@@ -20,6 +20,7 @@ import {
   encodeClientMessage,
   encodeLobbyMessage,
 } from "../../src/core/ZbinWire";
+import { ZbContext } from "../../zbin";
 
 // A frame as a client would put it on the wire. Tests hand these to the
 // server's "message" listener.
@@ -29,20 +30,29 @@ export function clientFrame(msg: ClientMessage): Buffer {
 
 // Every server message a mocked `ws.send` captured, decoded back to objects.
 //
-// Frames are decoded without a dictionary context, which is what a peer that
-// has not yet seen the start message does; ids then ride inline. Validation is
-// skipped: the question these helpers answer is "what did the server put on
-// the wire", and server-test fixtures routinely use placeholder clientIDs
-// ("creator-cid") that were never ID-schema-valid. Structural corruption still
-// throws — that is the decoder, not the validator.
-export function sentServerMessages(ws: {
-  send: { mock: { calls: unknown[][] } };
-}): ServerMessage[] {
-  return ws.send.mock.calls.map(([frame]) => decodeSentServerMessage(frame));
+// Without `ctx`, frames are decoded with no dictionary context, which is what
+// a peer that has not yet seen the start message does; ids then ride inline.
+// Once the game has started the server dictionary-encodes player ids, so a
+// test reading post-start frames passes the same context the server built
+// (createGameWireContext over the start-info players). Validation is skipped:
+// the question these helpers answer is "what did the server put on the wire",
+// and server-test fixtures routinely use placeholder clientIDs ("creator-cid")
+// that were never ID-schema-valid. Structural corruption still throws — that
+// is the decoder, not the validator.
+export function sentServerMessages(
+  ws: { send: { mock: { calls: unknown[][] } } },
+  ctx?: ZbContext,
+): ServerMessage[] {
+  return ws.send.mock.calls.map(([frame]) =>
+    decodeSentServerMessage(frame, ctx),
+  );
 }
 
-export function decodeSentServerMessage(frame: unknown): ServerMessage {
-  return ServerMessageSchema.decodeBytesUnvalidated(frame as Uint8Array);
+export function decodeSentServerMessage(
+  frame: unknown,
+  ctx?: ZbContext,
+): ServerMessage {
+  return ServerMessageSchema.decodeBytesUnvalidated(frame as Uint8Array, ctx);
 }
 
 export function lobbyFrame(msg: PublicLobbyMessage): Uint8Array {

@@ -308,6 +308,12 @@ export interface RenderSettings {
     conquestLifetimeMs: number;
     conquestFadeIn: number;
     conquestFadeOut: number;
+    /** Visual (not gameplay) explosion radii in world tiles, per bomb type. */
+    nukeRadiusAtom: number;
+    nukeRadiusHydro: number;
+    nukeRadiusMirv: number;
+    /** Multiplier on the nuke debris sprite count (1 = default scatter). */
+    debrisDensity: number;
   };
   nukeTrajectory: {
     lineWidth: number; // px — main line stroke width
@@ -402,6 +408,13 @@ export interface RenderSettings {
   altView: {
     gridFontSize: number;
     recolorStructures: boolean;
+    /** Opacity of the translucent affiliation-colored territory fill. */
+    fillAlpha: number;
+    /**
+     * When true, hovering another player's territory recolors alt-view from
+     * that player's diplomacy; when false, always use the local player's.
+     */
+    hoverPerspective: boolean;
   };
   tileDrip: {
     /**

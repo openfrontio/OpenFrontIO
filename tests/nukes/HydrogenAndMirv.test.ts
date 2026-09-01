@@ -12,7 +12,11 @@ import { TestConfig } from "../util/TestConfig";
 
 class FastNukeTestConfig extends TestConfig {
   nukeSpeed(_: UnitType): number {
-    return 15;
+    return 50;
+  }
+
+  mirvNormalizeTargetTicks(): number {
+    return 8;
   }
 }
 
@@ -271,13 +275,18 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     fastGame.executeNextTick();
     //tick ConstructionExe -> create and init MIRVExe
     fastGame.executeNextTick();
-    // Tick MirvExe -> create MIRV Unit + move -> Create/init NukeExe warhead
+    // Because it ticked once on the frame it was created, original path length is current + 1.
+    const execution = (fastGame as any)
+      .executions()
+      .find((e: any) => e instanceof MirvExecution) as any;
+
+    // Tick 3: MirvExe ticks -> spawns warhead executions (which init in the same tick).
     fastGame.executeNextTick();
-    // NukeExe -> create Warheads, now detectable. MIRV moves.
+    // Tick 4: NukeExecution ticks for the first time -> creates the physical warhead units!
     fastGame.executeNextTick();
     const warheads = fastPlayer.units(UnitType.MIRVWarhead);
 
-    // 1 tick until separation. WaitTicks must all be between 1-16
+    // 1 tick until separation.
     const minWaitTicks = Math.min(
       ...warheads.map((w) => w.nukeState().waitTicks),
     );
@@ -285,10 +294,157 @@ describe("Hydrogen Bomb and MIRV flows", () => {
       ...warheads.map((w) => w.nukeState().waitTicks),
     );
 
-    // Since flight time is ~3 ticks (< 10), base waitTicks is ~3 (strictly < 10)
-    expect(minWaitTicks).toBeGreaterThan(0);
-    expect(minWaitTicks).toBeLessThan(4);
+    // Since short-flight scaling aggressively pulls the target down, actual flight time evaluates to ~5.5 ticks
+    expect(minWaitTicks).toBeGreaterThanOrEqual(5);
+    expect(minWaitTicks).toBeLessThan(10);
     expect(maxWaitTicks - minWaitTicks).toBeLessThanOrEqual(15);
+
+    // Check the remaining path length in the execution.
+    // An un-normalized speed 50 path would traverse 35px in 1 tick (pathLength 0 after shifting).
+    // The short-flight branch slows it down to target ~7.7 ticks.
+    // Even after shifting a few points, the remaining path must be >= 5
+    expect(execution.fullPath.length).toBeGreaterThanOrEqual(5);
+
+    spy.mockRestore();
+  });
+
+  test("Long-distance MIRV launch (> baseTicks) dynamically uses long-flight branch", async () => {
+    // Normal configuration (nukeSpeed = 15, base target = 14)
+    // Launching cross-map forces idealMirvTicksInt > baseTicksScaled, triggering the long-flight branch.
+    // We use "plains" (all land) and launch from x=5 to x=90 (1275 pixels).
+    const longGame = await setup(
+      "plains",
+      { infiniteGold: true, instantBuild: true },
+      [info],
+    );
+    const longPlayer = longGame.player(info.id);
+
+    const spawnX = 5;
+    const spawnY = 50;
+    const targetX = 90;
+    const targetY = 50;
+
+    longPlayer.conquer(longGame.ref(spawnX, spawnY));
+    for (let x = targetX - 5; x <= targetX + 5; x++) {
+      for (let y = targetY - 5; y <= targetY + 5; y++) {
+        longPlayer.conquer(longGame.ref(x, y));
+      }
+    }
+
+    const spy = vi
+      .spyOn(MirvExecution.prototype as any, "isOverlapping")
+      .mockReturnValue(false);
+    longGame.addExecution(
+      new ConstructionExecution(
+        longPlayer,
+        UnitType.MissileSilo,
+        longGame.ref(spawnX, spawnY),
+      ),
+    );
+    longGame.executeNextTick();
+    longGame.executeNextTick();
+
+    longGame.addExecution(
+      new ConstructionExecution(
+        longPlayer,
+        UnitType.MIRV,
+        longGame.ref(targetX, targetY),
+      ),
+    );
+    longGame.executeNextTick();
+    longGame.executeNextTick();
+    longGame.executeNextTick(); // MIRV unit spawned and path generated
+
+    const execution = (longGame as any)
+      .executions()
+      .find((e: any) => e instanceof MirvExecution) as any;
+    expect(execution).toBeDefined();
+
+    const pathLength = execution.fullPath.length;
+
+    // Ideal flight ticks for 1275px at 15 speed is ~85 ticks.
+    // Normalized curve pulls this down significantly, but it must be strictly > 14 base ticks.
+    expect(pathLength).toBeGreaterThan(14);
+    // At default longFlightMult=14 and linear 10%, it should land comfortably under the 85 tick ideal ceiling.
+    expect(pathLength).toBeLessThan(80);
+
+    spy.mockRestore();
+  });
+
+  test("MIRV flight time remains consistent and avoids map-edge-bounce acceleration", async () => {
+    // Launch identical distance shots: one hugging the top edge (y=1), one safely away (y=50)
+    // Both should yield identical total flight ticks because ignoreMapBounds calculates the ideal unclamped curve for normalization.
+    const edgeGame = await setup(
+      "plains",
+      { infiniteGold: true, instantBuild: true },
+      [info],
+    );
+    const edgePlayer = edgeGame.player(info.id);
+
+    edgePlayer.conquer(edgeGame.ref(10, 1));
+    edgePlayer.conquer(edgeGame.ref(90, 1)); // Edge target
+    edgePlayer.conquer(edgeGame.ref(10, 50));
+    edgePlayer.conquer(edgeGame.ref(90, 50)); // Non-edge target
+
+    const spy = vi
+      .spyOn(MirvExecution.prototype as any, "isOverlapping")
+      .mockReturnValue(false);
+
+    // -- EDGE SHOT --
+    edgeGame.addExecution(
+      new ConstructionExecution(
+        edgePlayer,
+        UnitType.MissileSilo,
+        edgeGame.ref(10, 1),
+      ),
+    );
+    edgeGame.executeNextTick();
+    edgeGame.executeNextTick();
+    edgeGame.addExecution(
+      new ConstructionExecution(edgePlayer, UnitType.MIRV, edgeGame.ref(90, 1)),
+    );
+    edgeGame.executeNextTick();
+    edgeGame.executeNextTick();
+    edgeGame.executeNextTick(); // Path generated
+
+    const edgeExec = (edgeGame as any)
+      .executions()
+      .filter((e: any) => e instanceof MirvExecution)[0] as any;
+    const edgeFlightTicks = edgeExec.fullPath.length;
+
+    // -- NORMAL SHOT --
+    edgeGame.addExecution(
+      new ConstructionExecution(
+        edgePlayer,
+        UnitType.MissileSilo,
+        edgeGame.ref(10, 50),
+      ),
+    );
+    edgeGame.executeNextTick();
+    edgeGame.executeNextTick();
+    edgeGame.addExecution(
+      new ConstructionExecution(
+        edgePlayer,
+        UnitType.MIRV,
+        edgeGame.ref(90, 50),
+      ),
+    );
+    edgeGame.executeNextTick();
+    edgeGame.executeNextTick();
+    edgeGame.executeNextTick(); // Path generated
+
+    const normalExec = (edgeGame as any)
+      .executions()
+      .filter((e: any) => e instanceof MirvExecution)[1] as any;
+    const normalFlightTicks = normalExec.fullPath.length;
+
+    // The total flight duration (ticks) should be nearly identical (within 1-2 ticks due to math rounding limits).
+    // Before this normalization, edge shots were significantly faster due to the shorter clamped arc.
+    // Ensure that edgeFlightTicks is not drastically shorter than normalFlightTicks.
+    expect(Math.abs(edgeFlightTicks - normalFlightTicks)).toBeLessThanOrEqual(
+      1,
+    );
+
     spy.mockRestore();
   });
 });

@@ -21,6 +21,7 @@ import { decodeClientMessage, encodeServerMessage } from "../core/ZbinWire";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
 import { censorPlayer } from "./Censor";
 import { Client } from "./Client";
+import { gameApiCors } from "./GameApiCors";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import type { GameServer } from "./GameServer";
@@ -39,6 +40,7 @@ import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryE
 import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
+import { stripWorkerPrefix } from "./WorkerPathPrefix";
 
 const workerId = ServerEnv.workerId() ?? 0;
 const log = logger.child({ comp: `w_${workerId}` });
@@ -93,30 +95,15 @@ export async function startWorker() {
   );
   privilegeRefresher.start();
 
-  // Middleware to handle /wX path prefix
-  app.use((req, res, next) => {
-    // Extract the original path without the worker prefix
-    const originalPath = req.url;
-    const match = originalPath.match(/^\/w(\d+)(.*)$/);
+  // Ahead of everything that can reject a request — the worker-prefix check
+  // below and the rate limiter further down — so that a 404 or a 429 still
+  // carries the CORS headers. Without them the desktop client sees an opaque
+  // CORS failure instead of the real status, which hides the actual fault.
+  // Matches both URL shapes because it runs before the prefix is stripped,
+  // including a prefix naming a different worker.
+  app.use(["/api", /^\/w\d+\/api/], gameApiCors);
 
-    if (match) {
-      const pathWorkerId = parseInt(match[1]);
-      const actualPath = match[2] || "/";
-
-      // Verify this request is for the correct worker
-      if (pathWorkerId !== workerId) {
-        return res.status(404).json({
-          error: "Worker mismatch",
-          message: `This is worker ${workerId}, but you requested worker ${pathWorkerId}`,
-        });
-      }
-
-      // Update the URL to remove the worker prefix
-      req.url = actualPath;
-    }
-
-    next();
-  });
+  app.use(stripWorkerPrefix(workerId));
 
   app.set("trust proxy", 3);
   app.use(compression());
@@ -290,6 +277,12 @@ export async function startWorker() {
     }
     if (game.isPublic() || game.hasStarted()) {
       return res.status(409).json({ error: "Game cannot be listed" });
+    }
+    // Listing is one-way for the host: players recruited from the lobby
+    // browser must not lose the lobby they joined. Only the master delists
+    // (duplicate creator / cap overflow).
+    if (!listed && game.isListed()) {
+      return res.status(409).json({ error: "listing_permanent" });
     }
 
     if (listed) {
@@ -571,6 +564,7 @@ export async function startWorker() {
         let publicId: string | undefined;
         let friends: string[] = [];
         let ownedClanTags: string[] = [];
+        let trusted = false;
         let accountUsername:
           | { username?: string | null; usernameStatus?: string }
           | undefined;
@@ -598,6 +592,7 @@ export async function startWorker() {
           friends = result.response.player.friends;
           ownedClanTags = result.response.player.clans?.map((c) => c.tag) ?? [];
           accountUsername = result.response.player;
+          trusted = result.response.player.trustTier === "trusted";
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -671,6 +666,7 @@ export async function startWorker() {
           publicId,
           friends,
           clientMsg.spectator === true,
+          trusted,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
@@ -690,6 +686,12 @@ export async function startWorker() {
             workerId,
           });
           ws.close(1002, "You are not whitelisted");
+        } else if (joinResult === "not_trusted") {
+          log.info(`untrusted client tried to join game ${clientMsg.gameID}`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(1002, "Trusted account required");
         } else if (joinResult === "rejected") {
           log.info(`client rejected from game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,

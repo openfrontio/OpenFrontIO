@@ -25,13 +25,14 @@ import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
 
-const SPECIAL_ONLY_MAPS = new Set<GameMapType>([
-  GameMapType.ArchipelagoSea,
-  GameMapType.Sol,
-]);
-
 // Hard cap on player count for performance. Applied after compact-map reduction.
 const MAX_PLAYER_COUNT = 125;
+
+// Every Nth scheduled public game (FFA, team and special alike, counted in
+// creation order) is trusted-only (GameConfig.trusted): only accounts the API
+// reports as trusted may join. A fixed rotation rather than a roll so the
+// lobbies on offer at any moment are never all locked.
+const TRUSTED_PUBLIC_EVERY = 4;
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: 2, weight: 10 },
@@ -48,10 +49,9 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
 
 // Maps with a preferred team count in team / special games, declared via
 // "special_team_count" in each map's info.json.
-// For these maps: team-playlist frequency is doubled, and the preferred
-// team count overrides the random TEAM_WEIGHTS roll with SPECIAL_TEAM_FORCE_CHANCE.
+// For these maps the preferred team count overrides the random TEAM_WEIGHTS
+// roll with SPECIAL_TEAM_FORCE_CHANCE.
 const SPECIAL_TEAM_FORCE_CHANCE = 0.75;
-const SPECIAL_TEAM_FREQ_MULTIPLIER = 2;
 const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map(
   allMaps
     .filter((m) => m.specialTeamCount !== undefined)
@@ -103,24 +103,6 @@ const DOOMSDAY_ROTATION_SPEEDS = [
   "veryfast",
 ] as const;
 
-// Maps where water nukes have a higher chance on top of the normal pool
-// Water nukes are especially fun here
-const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
-  GameMapType.FourIslands,
-  GameMapType.Baikal,
-  GameMapType.Luna,
-  GameMapType.ArchipelagoSea,
-  GameMapType.ChoppingBlock,
-  GameMapType.Sol,
-]);
-
-// Maps that are entirely land.
-// - Water nukes forced on 75% of the time (overrides WATER_NUKES_BOOSTED_MAPS)
-const FULL_LAND_MAPS: ReadonlySet<GameMapType> = new Set([
-  GameMapType.TheBox,
-  GameMapType.Alps,
-]);
-
 // Modifiers that cannot be active at the same time.
 const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["startingGold5M", "startingGold25M"],
@@ -138,7 +120,19 @@ export class MapPlaylist {
     team: [],
   };
 
+  // Scheduled public games handed out so far, across all types.
+  private scheduled = 0;
+
   public async gameConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
+    const config = await this.rollConfig(type);
+    this.scheduled++;
+    if (this.scheduled % TRUSTED_PUBLIC_EVERY === 0) {
+      config.trusted = true;
+    }
+    return config;
+  }
+
+  private async rollConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
     if (type === "special") {
       return this.getSpecialConfig();
     }
@@ -196,9 +190,9 @@ export class MapPlaylist {
       spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
       disableClanTags: mode === GameMode.FFA ? true : undefined,
-      // Public lobbies are untimed, so overtime (the win threshold sinking
-      // after 30 minutes) is on by default as the anti-stalemate backstop.
-      overtime: { enabled: true },
+      // Overtime (the win threshold sinking after 30 minutes) is the default
+      // for every public FFA game, so it carries no lobby modifier badge.
+      overtime: mode === GameMode.FFA ? { enabled: true } : undefined,
     } satisfies GameConfig;
   }
 
@@ -248,22 +242,51 @@ export class MapPlaylist {
       excludedModifiers.push("isPeaceTime"); // Nations don't have PVP immunity
     }
 
-    // Boost water nukes chance
-    // When boosted, water nukes is forced on and takes one modifier slot.
-    const waterNukesBoostChance = FULL_LAND_MAPS.has(map)
-      ? 0.75
-      : WATER_NUKES_BOOSTED_MAPS.has(map)
-        ? 0.5
-        : 0;
-    const boostWaterNukes = Math.random() < waterNukesBoostChance;
-    if (boostWaterNukes) {
-      excludedModifiers.push("isWaterNukes", "isNukesDisabled");
+    // Per-map disabled modifiers from info.json (e.g. island maps disable isRandomSpawn).
+    const mapInfo = allMaps.find((m) => m.type === map);
+    if (mapInfo?.disabledModifiers) {
+      for (const mod of mapInfo.disabledModifiers) {
+        excludedModifiers.push(mod as ModifierKey);
+      }
     }
 
+    // Per-map forced modifiers from info.json. Format: "modifier" (always on)
+    // or "modifier:percentage" (e.g. "goldMultiplier:75" = 75% chance).
+    // Forced modifiers are excluded from the random pool so they don't
+    // get rolled twice, but they respect excludedModifiers.
+    // Roll percentage chances now so we can count them toward the 3-modifier cap.
+    const appliedForced = new Set<ModifierKey>();
+    if (mapInfo?.forcedModifiers) {
+      for (const entry of mapInfo.forcedModifiers) {
+        const [mod, pctStr] = entry.split(":");
+        const key = mod as ModifierKey;
+        const chance = pctStr !== undefined ? parseInt(pctStr, 10) / 100 : 1;
+        if (!excludedModifiers.includes(key) && Math.random() < chance) {
+          appliedForced.add(key);
+          excludedModifiers.push(key);
+          // Also exclude mutually-exclusive counterpart(s) so the random pool
+          // can't roll a conflicting modifier (e.g. isNukesDisabled vs isWaterNukes).
+          for (const [a, b] of MUTUALLY_EXCLUSIVE_MODIFIERS) {
+            if (key === a && !excludedModifiers.includes(b))
+              excludedModifiers.push(b);
+            if (key === b && !excludedModifiers.includes(a))
+              excludedModifiers.push(a);
+          }
+        }
+      }
+      // Cap after all rolls: if more than 3 forced modifiers passed, trim to 3.
+      if (appliedForced.size > 3) {
+        const trimmed = [...appliedForced].slice(0, 3);
+        appliedForced.clear();
+        for (const key of trimmed) appliedForced.add(key);
+      }
+    }
+
+    // Forced modifiers count toward the 3-modifier cap.
     const poolResult = this.getRandomSpecialGameModifiers(
       excludedModifiers,
       undefined,
-      boostWaterNukes ? 1 : 0,
+      appliedForced.size,
     );
     let {
       isCrowded,
@@ -279,9 +302,22 @@ export class MapPlaylist {
       isWaterNukes,
       isDoomsdayClock,
     } = poolResult;
-    if (boostWaterNukes) {
-      isWaterNukes = true;
-    }
+
+    // Apply per-map forced modifiers (already rolled and respecting excludedModifiers).
+    if (appliedForced.has("isRandomSpawn")) isRandomSpawn = true;
+    if (appliedForced.has("isCompact")) isCompact = true;
+    if (appliedForced.has("isCrowded")) isCrowded = true;
+    if (appliedForced.has("isHardNations")) isHardNations = true;
+    if (appliedForced.has("startingGold1M")) startingGold = 1_000_000;
+    if (appliedForced.has("startingGold5M")) startingGold = 5_000_000;
+    if (appliedForced.has("startingGold25M")) startingGold = 25_000_000;
+    if (appliedForced.has("goldMultiplier")) goldMultiplier = 2;
+    if (appliedForced.has("isAlliancesDisabled")) isAlliancesDisabled = true;
+    if (appliedForced.has("isNukesDisabled")) isNukesDisabled = true;
+    if (appliedForced.has("isSAMsDisabled")) isSAMsDisabled = true;
+    if (appliedForced.has("isPeaceTime")) isPeaceTime = true;
+    if (appliedForced.has("isWaterNukes")) isWaterNukes = true;
+    if (appliedForced.has("isDoomsdayClock")) isDoomsdayClock = true;
 
     // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
     // set player count to MAX_PLAYER_COUNT (or 60 if compact map is also enabled)
@@ -417,9 +453,6 @@ export class MapPlaylist {
       disabledUnits,
       waterNukes: isWaterNukes ? true : undefined,
       disableClanTags: mode === GameMode.FFA ? true : undefined,
-      // Untimed like the standard rotation: overtime on by default (the
-      // doomsday-clock presets keep it too — it's a harmless backstop there).
-      overtime: { enabled: true },
     } satisfies GameConfig;
   }
 
@@ -547,13 +580,27 @@ export class MapPlaylist {
     const maps: GameMapType[] = [];
     allMaps.forEach((mapInfo) => {
       const map = mapInfo.type;
-      if (type !== "special" && SPECIAL_ONLY_MAPS.has(map)) {
-        return;
-      }
-      let freq = mapInfo.multiplayerFrequency;
-      // Boost frequency for special team maps in the team playlist
-      if (type === "team" && SPECIAL_TEAM_MAPS.has(map)) {
-        freq *= SPECIAL_TEAM_FREQ_MULTIPLIER;
+      // Use per-mode frequency if set (>= 0), otherwise fall back to multiplayerFrequency.
+      let freq: number;
+      switch (type) {
+        case "ffa":
+          freq =
+            mapInfo.ffaFrequency >= 0
+              ? mapInfo.ffaFrequency
+              : mapInfo.multiplayerFrequency;
+          break;
+        case "team":
+          freq =
+            mapInfo.teamFrequency >= 0
+              ? mapInfo.teamFrequency
+              : mapInfo.multiplayerFrequency;
+          break;
+        case "special":
+          freq =
+            mapInfo.specialFrequency >= 0
+              ? mapInfo.specialFrequency
+              : mapInfo.multiplayerFrequency;
+          break;
       }
       for (let i = 0; i < freq; i++) {
         maps.push(map);

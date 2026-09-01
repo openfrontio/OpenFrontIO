@@ -14,13 +14,18 @@
  *   R8UI terrainTex           → water detection for bridge rendering (shader neighbor lookup)
  *   R16UI tileTex (shared)   → owner lookup for rail color
  *   RGBA32F paletteTex        → player color lookup
+ *   RGBA32F effectTex (shared) → per-owner railroad cosmetic effect
  */
 
 import type { GhostPreviewData, TerrainRect } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import overlayVertSrc from "../shaders/map-overlay/overlay.vert.glsl?raw";
 import railroadFragSrc from "../shaders/railroad/railroad.frag.glsl?raw";
-import { getPaletteSize } from "../utils/ColorUtils";
+import {
+  getPaletteSize,
+  MAX_TRAIL_COLORS,
+  RAILROAD_EFFECT_BLOCK,
+} from "../utils/ColorUtils";
 import {
   createMapQuad,
   createProgram,
@@ -90,12 +95,14 @@ export class RailroadPass {
   private ghostRailTex: WebGLTexture;
   private tileTex: WebGLTexture;
   private paletteTex: WebGLTexture;
+  private effectTex: WebGLTexture;
   private terrainTex: WebGLTexture;
   private vao: WebGLVertexArrayObject;
 
   private uCamera: WebGLUniformLocation;
   private uMapSize: WebGLUniformLocation;
   private uZoom: WebGLUniformLocation;
+  private uTime: WebGLUniformLocation;
   private uRailDetailZoom: WebGLUniformLocation;
   private uRailAlpha: WebGLUniformLocation;
   private uRailFade: WebGLUniformLocation;
@@ -103,6 +110,7 @@ export class RailroadPass {
   private uGhostOwnerID: WebGLUniformLocation;
   private uLocalPlayerID: WebGLUniformLocation;
   private uLocalRailColor: WebGLUniformLocation;
+  private uHoverOwner: WebGLUniformLocation;
 
   private mapW: number;
   private mapH: number;
@@ -129,6 +137,12 @@ export class RailroadPass {
 
   private localPlayerID = 0;
   private localRailColor: [number, number, number] = [0.75, 0.75, 0.75];
+  /** Hovered territory's owner (0 = none) — shows that player's railroad effect. */
+  private hoverOwner = 0;
+
+  /** Wall-clock start, for uTime (seconds) — matches TrailPass so the
+   *  railroad effect animates at the same pace as the trail effects. */
+  private readonly startTime = performance.now();
 
   constructor(
     private gl: WebGL2RenderingContext,
@@ -136,6 +150,7 @@ export class RailroadPass {
     mapH: number,
     tileTex: WebGLTexture,
     paletteTex: WebGLTexture,
+    effectTex: WebGLTexture,
     terrainBytes: Uint8Array,
     settings: RenderSettings,
   ) {
@@ -143,6 +158,7 @@ export class RailroadPass {
     this.mapH = mapH;
     this.tileTex = tileTex;
     this.paletteTex = paletteTex;
+    this.effectTex = effectTex;
     this.settings = settings;
 
     this.program = createProgram(
@@ -150,6 +166,7 @@ export class RailroadPass {
       overlayVertSrc,
       shaderSrc(railroadFragSrc, {
         PALETTE_SIZE: getPaletteSize(),
+        RAILROAD_EFFECT_ROW_BASE: RAILROAD_EFFECT_BLOCK * MAX_TRAIL_COLORS,
         ...TILE_DEFINES,
       }),
     );
@@ -157,6 +174,7 @@ export class RailroadPass {
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;
     this.uZoom = gl.getUniformLocation(this.program, "uZoom")!;
+    this.uTime = gl.getUniformLocation(this.program, "uTime")!;
     this.uRailDetailZoom = gl.getUniformLocation(
       this.program,
       "uRailDetailZoom",
@@ -176,6 +194,7 @@ export class RailroadPass {
       this.program,
       "uLocalRailColor",
     )!;
+    this.uHoverOwner = gl.getUniformLocation(this.program, "uHoverOwner")!;
 
     // Texture unit bindings + ghost defaults
     gl.useProgram(this.program);
@@ -184,6 +203,7 @@ export class RailroadPass {
     gl.uniform1i(gl.getUniformLocation(this.program, "uPalette"), 2);
     gl.uniform1i(gl.getUniformLocation(this.program, "uTerrainTex"), 3);
     gl.uniform1i(gl.getUniformLocation(this.program, "uGhostRailTex"), 4);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uEffect"), 5);
     gl.uniform1f(this.uGhostOwnerID, 0);
 
     // R8UI terrain texture (static, uploaded once for bridge detection)
@@ -234,6 +254,11 @@ export class RailroadPass {
   /** Rail color for the local player (0–1 RGB). */
   setLocalRailColor(r: number, g: number, b: number): void {
     this.localRailColor = [r, g, b];
+  }
+
+  /** Hovered territory's owner (0 = none) — shows that player's railroad effect. */
+  setHighlightOwner(ownerID: number): void {
+    this.hoverOwner = ownerID;
   }
 
   /**
@@ -348,12 +373,14 @@ export class RailroadPass {
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
     gl.uniform1f(this.uZoom, zoom);
+    gl.uniform1f(this.uTime, (performance.now() - this.startTime) / 1000);
     gl.uniform1f(this.uRailDetailZoom, rs.railDetailZoom);
     gl.uniform1f(this.uRailAlpha, rs.railAlpha);
     gl.uniform1f(this.uRailFade, fade);
     gl.uniform1f(this.uRailThickness, rs.railThickness);
     gl.uniform1f(this.uGhostOwnerID, this.ghostOwnerID);
     gl.uniform1f(this.uLocalPlayerID, this.localPlayerID);
+    gl.uniform1f(this.uHoverOwner, this.hoverOwner);
     gl.uniform3f(
       this.uLocalRailColor,
       this.localRailColor[0],
@@ -361,7 +388,8 @@ export class RailroadPass {
       this.localRailColor[2],
     );
 
-    // Bind textures: 0=railroad, 1=tile, 2=palette, 3=terrain, 4=ghostRail
+    // Bind textures: 0=railroad, 1=tile, 2=palette, 3=terrain, 4=ghostRail,
+    // 5=effect
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.railroadTex);
 
@@ -376,6 +404,9 @@ export class RailroadPass {
 
     gl.activeTexture(gl.TEXTURE4);
     gl.bindTexture(gl.TEXTURE_2D, this.ghostRailTex);
+
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_2D, this.effectTex);
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -447,6 +478,6 @@ export class RailroadPass {
     gl.deleteTexture(this.railroadTex);
     gl.deleteTexture(this.ghostRailTex);
     gl.deleteTexture(this.terrainTex);
-    // Don't delete tileTex or paletteTex — shared with other passes
+    // Don't delete tileTex, paletteTex, or effectTex — shared with other passes
   }
 }

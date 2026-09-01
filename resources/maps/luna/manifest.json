@@ -1,5 +1,6 @@
 {
   "categories": ["cosmic"],
+  "forced_modifiers": ["isWaterNukes:50"],
   "id": "Luna",
   "map": {
     "height": 3508,
@@ -16,7 +17,7 @@
     "num_land_tiles": 363006,
     "width": 654
   },
-  "multiplayer_frequency": 2,
+  "multiplayer_frequency": 0,
   "name": "Luna",
   "nations": [
     {

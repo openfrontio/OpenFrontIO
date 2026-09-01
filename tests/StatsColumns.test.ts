@@ -69,12 +69,14 @@ describe("Stats column registry", () => {
       "rank",
       "clan",
       "player",
-      ...COLUMN_IDS.slice(4),
+      "playerType",
+      ...COLUMN_IDS.slice(5),
     ]);
+    // The team table has no clan and no player type (a team has no type).
     expect(columnsFor("team").map((column) => column.id)).toEqual([
       "rank",
       "team",
-      ...COLUMN_IDS.slice(4),
+      ...COLUMN_IDS.slice(5),
     ]);
   });
 

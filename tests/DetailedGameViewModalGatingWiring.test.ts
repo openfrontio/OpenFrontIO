@@ -95,7 +95,7 @@ beforeEach(async () => {
   wiggle = vi.fn();
   joinLobby = vi.fn();
   stub("join-lobby-modal", { open: joinModalOpen });
-  stub("desktop-update-bar", { wiggle });
+  stub("desktop-status-bar", { wiggle });
   // join() dispatches "join-lobby" as a bubbling/composed CustomEvent rather
   // than calling a modal's open() -- catch it at the document the same way
   // Main.ts's real listener would.
