@@ -54,7 +54,7 @@ export class SmallPlayerGlowPass {
   private quadVao: WebGLVertexArrayObject;
 
   private active = false;
-  private minStrength = 0;
+  private strengthOverride: number | null = null;
   private dirty = false; // aura needs rebuilding (set changed)
   private animTime = 0;
   private lastTime = 0;
@@ -124,12 +124,13 @@ export class SmallPlayerGlowPass {
 
   /**
    * Push the highlight set (1 byte per owner smallID), or null to disable.
-   * minStrength floors the user's glow-strength setting while this set is
-   * showing — the tutorial's tribe highlight must stay visible even when the
-   * player has turned the small-player glow off.
+   * strengthOverride replaces the user's glow-strength setting while this
+   * set is showing — the tutorial's tribe highlight is drawn at a fixed
+   * subtle strength, visible even when the player has turned the
+   * small-player glow off.
    */
-  update(set: Uint8Array | null, minStrength: number = 0): void {
-    this.minStrength = minStrength;
+  update(set: Uint8Array | null, strengthOverride: number | null = null): void {
+    this.strengthOverride = strengthOverride;
     if (set === null) {
       this.active = false;
       return;
@@ -174,7 +175,7 @@ export class SmallPlayerGlowPass {
     // value persisted from the old 500% range can't over-brighten.
     const strength = Math.min(
       1,
-      Math.max(this.settings.strength, this.minStrength),
+      this.strengthOverride ?? this.settings.strength,
     );
     if (!this.active || strength <= 0) return;
 

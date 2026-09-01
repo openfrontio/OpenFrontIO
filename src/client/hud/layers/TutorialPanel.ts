@@ -20,6 +20,9 @@ const CITY_COST_POLL_TICKS = 10;
 /** Ticks the "you're ready" message stays up before the panel closes. */
 const COMPLETE_LINGER_TICKS = 50;
 
+/** How many of the nearest tribes glow during the capture-tribes step. */
+const NEARBY_TRIBE_GLOW_COUNT = 3;
+
 /** Defaults shown when the player hasn't rebound the action (see UnitDisplay). */
 const HOTKEY_FALLBACKS = {
   buildCity: "1",
@@ -99,7 +102,10 @@ export class TutorialPanel extends LitElement implements Controller {
     this.syncTribeGlow(target);
   }
 
-  /** Keeps every living tribe glowing on the map during the tribes step. */
+  /**
+   * Keeps the few tribes nearest the player glowing on the map during the
+   * tribes step; as they're captured, the next nearest take their place.
+   */
   private syncTribeGlow(target: TutorialHighlight | null) {
     if (target !== "tribes") {
       if (this.tribeGlowActive) {
@@ -108,11 +114,23 @@ export class TutorialPanel extends LitElement implements Controller {
       }
       return;
     }
-    const ids = new Set<number>();
+    // Name locations are the position anchor; they're recomputed every ~3s.
+    // Keep the last set while ours is missing rather than flashing empty.
+    const me = this.game.myPlayer()?.nameLocation();
+    if (!me || (me.x === 0 && me.y === 0)) return;
+    const tribes: { id: number; distSquared: number }[] = [];
     for (const p of this.game.playerViews()) {
-      if (p.type() === PlayerType.Bot && p.isAlive()) ids.add(p.smallID());
+      if (p.type() !== PlayerType.Bot || !p.isAlive()) continue;
+      const loc = p.nameLocation();
+      if (!loc || (loc.x === 0 && loc.y === 0)) continue;
+      const dx = loc.x - me.x;
+      const dy = loc.y - me.y;
+      tribes.push({ id: p.smallID(), distSquared: dx * dx + dy * dy });
     }
-    this.game.setGlowingPlayers(ids);
+    tribes.sort((a, b) => a.distSquared - b.distSquared);
+    this.game.setGlowingPlayers(
+      new Set(tribes.slice(0, NEARBY_TRIBE_GLOW_COUNT).map((t) => t.id)),
+    );
     this.tribeGlowActive = true;
   }
 
