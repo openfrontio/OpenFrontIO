@@ -61,7 +61,11 @@ import { initLayout } from "./Layout";
 import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
-import { hideMenuChrome, inStartedGame, restoreMenuChrome } from "./MenuChrome";
+import {
+  hideMenuChrome,
+  menuChromeIsTornDown,
+  restoreMenuChrome,
+} from "./MenuChrome";
 import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
@@ -1419,21 +1423,20 @@ class Client {
       console.warn("Failed to restore URL on leave:", e);
     }
 
-    // Read before setInGameSignal(false) clears it: the class is only set once
-    // the join resolves, so it is the record of whether a game actually
-    // STARTED. Only a started game had its menu chrome torn down, and only
-    // that case needs putting back -- a pre-start leave never hid anything,
-    // and restarting a live lobby socket would drop its snapshot for nothing.
-    const wasInStartedGame = inStartedGame();
-
     setInGameSignal(false);
 
     // The inverse of the game-start teardown. Every other exit from a started
     // game navigates, and the reload did this implicitly; this path leaves in
     // place, so it has to do it explicitly (OPE-255). It lives here rather
-    // than in openInvite() because handleLeaveLobby is dispatched from four
-    // places and any of them could be the next to reach it post-start.
-    if (wasInStartedGame) {
+    // than in openInvite() because handleLeaveLobby is reached from several
+    // places and any of them could be the next to hit it after a teardown.
+    //
+    // The gate asks whether the chrome is torn down, NOT whether we were
+    // in-game: the teardown happens at prestart while the in-game signal is
+    // only set at join, so gating on the signal missed a leave landing in the
+    // window between them. Because the gate no longer reads that signal, it
+    // does not matter that setInGameSignal(false) has already run above.
+    if (menuChromeIsTornDown()) {
       this.gameModeSelector?.start();
       restoreMenuChrome();
     }
