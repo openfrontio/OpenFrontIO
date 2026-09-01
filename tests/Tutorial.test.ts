@@ -43,6 +43,10 @@ describe("TutorialProgress", () => {
     expect(p.current()?.id).toBe("attack_wilderness");
 
     settle(p, ctx({ hasSpawned: true, attacking: true }));
+    expect(p.current()?.id).toBe("troops");
+
+    p.acknowledge();
+    settle(p, ctx({ hasSpawned: true, attacking: true }));
     expect(p.current()?.id).toBe("capture_tribes");
 
     settle(
@@ -54,7 +58,7 @@ describe("TutorialProgress", () => {
         cityCost: 125_000n,
       }),
     );
-    expect(p.current()?.id).toBe("troops");
+    expect(p.current()?.id).toBe("attack_bot");
   });
 
   it("lingers on a completed step before advancing", () => {
@@ -70,13 +74,7 @@ describe("TutorialProgress", () => {
 
   it("only advances informational steps on acknowledge", () => {
     const p = new TutorialProgress();
-    const c = ctx({
-      hasSpawned: true,
-      attacking: true,
-      gold: 125_000n,
-      cityCost: 125_000n,
-    });
-    settle(p, c);
+    const c = ctx({ hasSpawned: true, attacking: true });
     settle(p, c);
     settle(p, c);
     expect(p.current()?.id).toBe("troops");
@@ -88,7 +86,7 @@ describe("TutorialProgress", () => {
     p.acknowledge();
     expect(p.stepDone()).toBe(true);
     settle(p, c);
-    expect(p.current()?.id).toBe("attack_bot");
+    expect(p.current()?.id).toBe("capture_tribes");
   });
 
   it("ignores acknowledge on action steps", () => {

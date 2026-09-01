@@ -18,7 +18,6 @@ import { decodePatternData } from "../core/PatternDecoder";
 import { getCachedCosmetics } from "./Cosmetics";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
 import { uploadFrameData } from "./render/frame/Upload";
-import renderDefaults from "./render/gl/render-settings.json";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
 import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
@@ -59,6 +58,10 @@ const SMALL_PLAYER_GLOW_GRACE_SECONDS = 60;
 // The set is a visual aid, not tick-critical, so rescan ~once a second
 // (10 ticks) instead of every tick.
 const SMALL_PLAYER_GLOW_RESCAN_TICKS = 10;
+// Subtle fixed strength for the explicit (tutorial) glow set — quieter than
+// the small-player default, and independent of the user's strength slider so
+// it still shows when that's 0.
+const EXPLICIT_GLOW_STRENGTH = 0.2;
 
 // The effect-palette block order: index = block (rows block·MAX_TRAIL_COLORS …).
 // trail.frag.glsl picks its block from the trail tile's nuke bit — block 0 =
@@ -521,11 +524,9 @@ export class WebGLFrameBuilder {
         }
       }
     }
-    // The explicit set must show even when the player has set the
-    // small-player glow strength to 0, so floor it at the default.
     this.view.updateSmallPlayerGlow(
       any ? set : null,
-      explicitAny ? renderDefaults.smallPlayerGlow.strength : 0,
+      explicitAny ? EXPLICIT_GLOW_STRENGTH : null,
     );
   }
 
