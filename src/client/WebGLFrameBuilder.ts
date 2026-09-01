@@ -507,8 +507,12 @@ export class WebGLFrameBuilder {
       explicitAny = true;
     }
     // Strength (incl. off at 0) is read live in the glow pass; here we only
-    // decide who qualifies. Skip spawn + the first minute.
+    // decide who qualifies. Skip spawn + the first minute. Also skip while
+    // the explicit set is showing: the pass draws the whole set at one
+    // strength, so merging would force the fixed tutorial strength onto
+    // small players and override the user's slider for them.
     if (
+      !explicitAny &&
       !gameView.inSpawnPhase() &&
       gameView.elapsedGameSeconds() >= SMALL_PLAYER_GLOW_GRACE_SECONDS
     ) {
