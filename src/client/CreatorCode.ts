@@ -89,6 +89,57 @@ export function normalizeCreatorCodeInput(raw: string): string | null {
   return CREATOR_CODE_PATTERN.test(candidate) ? candidate : null;
 }
 
+// Pulls the code segment out of a `/c/<code>` share-link path (see the
+// module comment above -- this is the boot-time counterpart that fires
+// before the player has necessarily logged in). Deliberately stops at
+// extracting the raw segment rather than also normalizing it: a path that
+// matches `/c/...` but carries an invalid code still needs its path
+// stripped by the caller, which a single "valid code or null" return
+// couldn't distinguish from "not a /c/ path at all".
+//
+// decodeURIComponent throws on a malformed percent-escape (e.g. a bare `%`
+// from a link mangled by some other tool) -- since this runs unconditionally
+// on every boot, that must degrade to "parse against the raw pathname"
+// rather than crash the app before anything else has a chance to load. A
+// raw, undecoded pathname either still matches the pattern (the common
+// case -- most share links have nothing to decode) or fails to match and is
+// treated as "not a /c/ link", both of which are safe outcomes.
+export function parseCreatorCodePath(pathname: string): string | null {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    decoded = pathname;
+  }
+  const match = /^\/c\/([^/]+)$/.exec(decoded);
+  return match ? match[1] : null;
+}
+
+// Boot-time entry point for the `/c/<code>` share link: stashes a valid code
+// (silently drops an invalid one -- see parseCreatorCodePath above) and
+// always strips the `/c/...` segment back to `/`, keeping any existing
+// search/hash untouched. A no-op when the current path isn't a /c/ link, so
+// Main.ts's handleUrl() can call this unconditionally on every load rather
+// than needing its own branch. Reads/writes `window.location`/`history`
+// directly (no DOM mounting required), which is what makes it callable
+// straight from a test the same way tests/client/LoginResult.test.ts drives
+// consumeLoginResult.
+export function consumeCreatorCodePath(): void {
+  const segment = parseCreatorCodePath(window.location.pathname);
+  if (segment === null) return;
+
+  const code = normalizeCreatorCodeInput(segment);
+  if (code !== null) {
+    stashPendingCreatorCode(code);
+  }
+
+  history.replaceState(
+    null,
+    "",
+    "/" + window.location.search + window.location.hash,
+  );
+}
+
 // Resumes a creator-code binding flow that was interrupted by a login
 // redirect. Takes a plain callback rather than a modal/element reference
 // (contrast SteamLink.ts's PendingLinkModal interface) because there is
