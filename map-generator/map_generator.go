@@ -938,15 +938,19 @@ func majorityNeighborType(coords []Coord, terrain [][]Terrain, selfType TerrainT
 		inBody[c] = true
 	}
 
+	// Track seen external neighbors so each unique tile votes at most once.
+	seen := make(map[Coord]bool, len(coords)*4)
+
 	var buf [4]Coord
 	counts := [3]int{} // index = TerrainType
 
 	for _, c := range coords {
 		n := neighborCoords(c.X, c.Y, width, height, &buf)
 		for _, nb := range buf[:n] {
-			if inBody[nb] {
+			if inBody[nb] || seen[nb] {
 				continue
 			}
+			seen[nb] = true
 			counts[terrain[nb.X][nb.Y].Type]++
 		}
 	}
