@@ -1,7 +1,8 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
-import { getUserMe, hasLinkedAccount } from "../Api";
+import { responseHasLinkedIdentity } from "../AccountIdentity";
+import { getUserMe } from "../Api";
 import { userAuth } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { translateText } from "../Utils";
@@ -22,7 +23,9 @@ export class RankedModal extends BaseModal {
 
   // Eligible to see/play ranked: a linked account or a signed-in CrazyGames one.
   private isRankedEligible(): boolean {
-    return hasLinkedAccount(this.userMeResponse) || this.crazyGamesSignedIn;
+    return (
+      responseHasLinkedIdentity(this.userMeResponse) || this.crazyGamesSignedIn
+    );
   }
 
   constructor() {

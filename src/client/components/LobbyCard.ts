@@ -2,7 +2,7 @@ import { html, svg, TemplateResult } from "lit";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo } from "../../core/Schemas";
-import { hasLinkedIdentity } from "../AccountIdentity";
+import { responseHasLinkedIdentity } from "../AccountIdentity";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { getMapName, getModifierLabels, translateText } from "../Utils";
 import "./ConfirmDialog";
@@ -23,7 +23,7 @@ export function viewerIsTrusted(userMe: UserMeResponse | false): boolean {
  * profile themselves; it isn't on the API response.
  */
 export function viewerIsSignedIn(userMe: UserMeResponse | false): boolean {
-  return userMe !== false && hasLinkedIdentity(userMe.user);
+  return responseHasLinkedIdentity(userMe);
 }
 
 /** Whether the viewer may join `lobby`: it is open, or they are trusted. */
