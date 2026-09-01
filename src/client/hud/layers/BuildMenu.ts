@@ -26,7 +26,6 @@ import {
 import { UIState } from "../../UIState";
 import { renderNumber } from "../../Utils";
 import { GameView } from "../../view";
-import { TutorialHighlightEvent } from "./Tutorial";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
@@ -134,12 +133,7 @@ export class BuildMenu extends LitElement implements Controller {
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
   public transformHandler: TransformHandler;
 
-  @state() private tutorialHighlightsCity = false;
-
   init() {
-    this.eventBus.on(TutorialHighlightEvent, (e) => {
-      this.tutorialHighlightsCity = e.target === "city";
-    });
     this.eventBus.on(ShowBuildMenuEvent, (e) => {
       if (!this.game.myPlayer()?.isAlive()) {
         return;
@@ -199,23 +193,6 @@ export class BuildMenu extends LitElement implements Controller {
       justify-content: center;
       flex-wrap: wrap;
       width: 100%;
-    }
-    /* Mirrors .tutorial-highlight in styles.css; shadow DOM can't see that one. */
-    .build-button.tutorial-highlight {
-      animation: tutorialHighlight 1.2s ease-in-out infinite;
-    }
-    @keyframes tutorialHighlight {
-      0%,
-      100% {
-        box-shadow:
-          0 0 0 2px #ffd700,
-          0 0 8px rgba(255, 215, 0, 0.5);
-      }
-      50% {
-        box-shadow:
-          0 0 0 4px #ffd700,
-          0 0 16px rgba(255, 215, 0, 0.9);
-      }
     }
     .build-button {
       position: relative;
@@ -447,10 +424,7 @@ export class BuildMenu extends LitElement implements Controller {
                   buildableUnit.canUpgrade !== false;
                 return html`
                   <button
-                    class="build-button ${this.tutorialHighlightsCity &&
-                    item.unitType === UnitType.City
-                      ? "tutorial-highlight"
-                      : ""}"
+                    class="build-button"
                     @click=${() =>
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
