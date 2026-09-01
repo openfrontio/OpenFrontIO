@@ -21,6 +21,8 @@ import "./components/baseComponents/stats/PlayerStatsTree";
 import "./components/baseComponents/stats/SteamUserHeader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
+import "./components/CreatorCodePanel";
+import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
 import "./components/FriendsList";
@@ -66,6 +68,10 @@ export class AccountModal extends BaseModal {
   // One-shot outcome of a rejected sign-in, read from the `login=` router
   // arg on open. Reassigned on every open, so reopening clears it.
   @state() private loginError: LoginResult | undefined;
+  // One-shot prefill for the creator-code panel's unbound-state input, read
+  // from the `creatorCode=` router arg (a `/c/CODE` share-link visit).
+  // Reassigned on every open, same as loginError above.
+  @state() private prefillCreatorCode: string | undefined;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -265,7 +271,8 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderRewardsPanel()} ${this.renderDesktopLinkGateAction()}
+        ${this.renderRewardsPanel()} ${this.renderCreatorCodePanel()}
+        ${this.renderDesktopLinkGateAction()}
       </div>
     `;
   }
@@ -415,6 +422,17 @@ export class AccountModal extends BaseModal {
     ></rewards-panel>`;
   }
 
+  // Not rendered on the CrazyGames account branch (renderCrazyGamesAccount) —
+  // CrazyGames identity comes from the SDK, not the /users/@me `player`
+  // record this panel reads its state from.
+  private renderCreatorCodePanel(): TemplateResult {
+    return html`<creator-code-panel
+      .creator=${this.userMeResponse?.player?.creator}
+      .prefillCode=${this.prefillCreatorCode}
+      @creator-changed=${this.handleCreatorChanged}
+    ></creator-code-panel>`;
+  }
+
   // A claim moved unclaimed rewards into the balances; both were returned by
   // the claim endpoint, so update in place instead of re-fetching /users/@me.
   private handleRewardsChanged = (
@@ -425,6 +443,18 @@ export class AccountModal extends BaseModal {
     if (event.detail.currency) {
       this.userMeResponse.player.currency = event.detail.currency;
     }
+    this.requestUpdate();
+  };
+
+  // The panel already re-fetched /users/@me itself (its mutating calls
+  // invalidate the cache) after a successful set/switch/unsupport — patch the
+  // fresh creator field into our own cached copy in place, same idiom as
+  // handleRewardsChanged above, rather than reloading the page.
+  private handleCreatorChanged = (
+    event: CustomEvent<CreatorChangedDetail>,
+  ): void => {
+    if (!this.userMeResponse) return;
+    this.userMeResponse.player.creator = event.detail.creator;
     this.requestUpdate();
   };
 
@@ -739,10 +769,38 @@ export class AccountModal extends BaseModal {
     }
   };
 
+  // Reads the one-shot `creatorCode=` router arg and strips it from the URL,
+  // same idiom as consumeLoginResult above — a refresh or re-open must not
+  // replay a stale prefill into the (by-then possibly bound) panel.
+  private consumeCreatorCodeArg(
+    args?: Record<string, unknown>,
+  ): string | undefined {
+    const code =
+      typeof args?.creatorCode === "string" ? args.creatorCode : undefined;
+    // Empty string counts as absent, same as undefined: a bare
+    // `creatorCode=` in the hash (or an upstream edge case that resolves to
+    // "") must never reach the panel as a prefill -- normalizeCreatorCodeInput
+    // would reject it as too short and the panel would show a spurious
+    // "invalid code" error for a player who never actually had one.
+    if (!code) return undefined;
+
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    params.delete("creatorCode");
+    const rest = params.toString();
+    history.replaceState(
+      null,
+      "",
+      rest ? `#${rest}` : window.location.pathname + window.location.search,
+    );
+
+    return code;
+  }
+
   protected onOpen(args?: Record<string, unknown>): void {
     this.isLoadingUser = true;
     consumeGoogleLinkResult(args);
     this.loginError = consumeLoginResult(args);
+    this.prefillCreatorCode = this.consumeCreatorCodeArg(args);
 
     this.refreshCrazyGamesUser();
 
