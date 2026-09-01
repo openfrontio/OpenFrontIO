@@ -212,10 +212,13 @@ export class AccountSettingsPanel extends LitElement {
       // no self-service cancel). Every session is already revoked and the
       // refresh cookie cleared, so only local state is left to drop; calling
       // /auth/logout here would be wrong (the credential no longer exists).
+      // Drop local state before the alert: it resolves only when the player
+      // clicks Close, and closing the tab instead must not leave the revoked
+      // session looking signed in on the next launch.
+      clearLocalSession();
       await showInGameAlert(
         translateText("account_modal.delete_account_scheduled"),
       );
-      clearLocalSession();
       window.location.reload();
       return;
     }
