@@ -15,6 +15,10 @@ function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
     cityCost: null,
     cityDisabled: false,
     cities: 0,
+    portDisabled: false,
+    ports: 0,
+    factoryDisabled: false,
+    factories: 0,
     ...overrides,
   };
 }
@@ -84,8 +88,10 @@ describe("TutorialProgress", () => {
       attacking: true,
       botsExist: false,
       cityDisabled: true,
+      portDisabled: true,
+      factoryDisabled: true,
     });
-    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 3);
+    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 5);
 
     settle(p, c);
     settle(p, c);
@@ -123,6 +129,24 @@ describe("TutorialProgress", () => {
     p.update(ctx({ gold: 0n, cityCost: 125_000n }));
     expect(p.stepDone()).toBe(false);
     p.update(ctx({ gold: 0n, cityCost: 250_000n, cities: 1 }));
+    expect(p.stepDone()).toBe(true);
+  });
+
+  it("follows the city with a port and then a factory", () => {
+    const p = new TutorialProgress([
+      TUTORIAL_STEPS.find((s) => s.id === "buy_port")!,
+      TUTORIAL_STEPS.find((s) => s.id === "buy_factory")!,
+    ]);
+    p.update(ctx());
+    expect(p.current()?.id).toBe("buy_port");
+    expect(p.current()?.highlight).toBe("port");
+
+    settle(p, ctx({ ports: 1 }));
+    expect(p.current()?.id).toBe("buy_factory");
+    expect(p.current()?.highlight).toBe("factory");
+    p.update(ctx({ ports: 1 }));
+    expect(p.stepDone()).toBe(false);
+    p.update(ctx({ ports: 1, factories: 1 }));
     expect(p.stepDone()).toBe(true);
   });
 });

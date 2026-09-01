@@ -1,7 +1,7 @@
 import { GameEvent } from "../../../core/EventBus";
 
 /** HUD elements the tutorial can draw attention to. */
-export type TutorialHighlight = "troops" | "gold" | "city";
+export type TutorialHighlight = "troops" | "gold" | "city" | "port" | "factory";
 
 /** Emitted whenever the highlighted HUD element changes (null clears it). */
 export class TutorialHighlightEvent implements GameEvent {
@@ -20,11 +20,17 @@ export interface TutorialContext {
   cityCost: bigint | null;
   cityDisabled: boolean;
   cities: number;
+  portDisabled: boolean;
+  ports: number;
+  factoryDisabled: boolean;
+  factories: number;
 }
 
 export interface TutorialStep {
   id: string;
   highlight?: TutorialHighlight;
+  /** Keybind action whose key is interpolated into the step text as {key}. */
+  hotkey?: "buildCity" | "buildPort" | "buildFactory";
   /** Steps that don't fit this game's config are skipped. Defaults to always. */
   applies?: (ctx: TutorialContext) => boolean;
   /** Informational steps complete when the player clicks "Got it". */
@@ -53,8 +59,23 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: "buy_city",
     highlight: "city",
+    hotkey: "buildCity",
     applies: (c) => !c.cityDisabled,
     isDone: (c) => c.cities > 0,
+  },
+  {
+    id: "buy_port",
+    highlight: "port",
+    hotkey: "buildPort",
+    applies: (c) => !c.portDisabled,
+    isDone: (c) => c.ports > 0,
+  },
+  {
+    id: "buy_factory",
+    highlight: "factory",
+    hotkey: "buildFactory",
+    applies: (c) => !c.factoryDisabled,
+    isDone: (c) => c.factories > 0,
   },
 ];
 
