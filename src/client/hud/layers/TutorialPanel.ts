@@ -25,6 +25,7 @@ const COST_POLL_TYPES = [
   UnitType.Port,
   UnitType.Warship,
   UnitType.MissileSilo,
+  UnitType.AtomBomb,
 ] as const;
 
 /** `unit_type.*` name key per build-step unit, for the earn-gold text. */
@@ -34,6 +35,7 @@ const UNIT_NAME_KEYS: Partial<Record<UnitType, string>> = {
   [UnitType.Port]: "port",
   [UnitType.Warship]: "warship",
   [UnitType.MissileSilo]: "missile_silo",
+  [UnitType.AtomBomb]: "atom_bomb",
 };
 /** Ticks the "you're ready" message stays up before the panel closes. */
 const COMPLETE_LINGER_TICKS = 50;
@@ -48,6 +50,7 @@ const HOTKEY_FALLBACKS = {
   buildPort: "3",
   buildWarship: "7",
   buildMissileSilo: "5",
+  buildAtomBomb: "8",
 } as const;
 
 @customElement("tutorial-panel")
@@ -173,6 +176,12 @@ export class TutorialPanel extends LitElement implements Controller {
       warships: player.units(UnitType.Warship).length,
       siloDisabled: this.game.config().isUnitDisabled(UnitType.MissileSilo),
       silos: player.units(UnitType.MissileSilo).length,
+      atomDisabled: this.game.config().isUnitDisabled(UnitType.AtomBomb),
+      atomLaunched: player.units(UnitType.AtomBomb).length > 0,
+      hydrogenDisabled: this.game
+        .config()
+        .isUnitDisabled(UnitType.HydrogenBomb),
+      mirvDisabled: this.game.config().isUnitDisabled(UnitType.MIRV),
     };
   }
 

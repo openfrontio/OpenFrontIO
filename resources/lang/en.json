@@ -1821,6 +1821,7 @@
     "never_show": "Don't show again",
     "skip": "Skip",
     "step": {
+      "atom_info": "Atom Bomb — small tactical strikes that take out structures.",
       "attack_wilderness": "Click on the unclaimed land next to you to attack it and expand your territory.",
       "buy_city": "You can afford a City! Press {key} (or click the City icon under the control panel), then click your territory to place it. Cities raise your max troops.",
       "buy_factory": "Now build a Factory: press {key}, then click your territory to place it.",
@@ -1831,6 +1832,9 @@
       "earn_gold": "Attack neighbors to steal their land, conquer them to take their gold. You need {cost} for a {unit}.",
       "factory_info": "Factories are connected to cities and other factories by tracks, and spawn trains that grant gold.",
       "gold": "Gold builds up over time from your land and population. Spend it on buildings and weapons.",
+      "hydrogen_info": "Hydrogen Bomb — large strategic strikes that weaken the enemy.",
+      "launch_atom": "Your silo is armed! Press {key}, then click a neighbor's territory to launch an Atom Bomb.",
+      "mirv_info": "MIRV — a massive missile attack to cripple your enemy.",
       "port_info_ships": "Ports send out trade ships, which earn you gold.",
       "port_info_warships": "Ports can also be used to construct warships.",
       "spawn": "Click anywhere on the map to pick where you spawn.",

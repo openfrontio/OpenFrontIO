@@ -10,6 +10,9 @@ export type TutorialHighlight =
   | "factory"
   | "warship"
   | "silo"
+  | "atom"
+  | "hydrogen"
+  | "mirv"
   | "tribes";
 
 /** Emitted whenever the highlighted HUD element changes (null clears it). */
@@ -36,6 +39,11 @@ export interface TutorialContext {
   warships: number;
   siloDisabled: boolean;
   silos: number;
+  atomDisabled: boolean;
+  /** An atom bomb of ours is (or was seen) in flight. */
+  atomLaunched: boolean;
+  hydrogenDisabled: boolean;
+  mirvDisabled: boolean;
 }
 
 export interface TutorialStep {
@@ -52,7 +60,8 @@ export interface TutorialStep {
     | "buildPort"
     | "buildFactory"
     | "buildWarship"
-    | "buildMissileSilo";
+    | "buildMissileSilo"
+    | "buildAtomBomb";
   /**
    * Render these `tutorial.step.*` keys as a bullet list instead of the
    * step's own single text.
@@ -131,6 +140,35 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     hotkey: "buildMissileSilo",
     applies: (c) => !c.siloDisabled,
     isDone: (c) => c.silos > 0,
+  },
+  // Waits (via the earn-gold text) until the bomb is affordable, then asks
+  // for a launch; done as soon as one of ours is in flight.
+  {
+    id: "launch_atom",
+    highlight: "atom",
+    unit: UnitType.AtomBomb,
+    hotkey: "buildAtomBomb",
+    applies: (c) => !c.siloDisabled && !c.atomDisabled,
+    isDone: (c) => c.atomLaunched,
+  },
+  // One stop per weapon, each highlighting its spot in the unit hotbar.
+  {
+    id: "atom_info",
+    highlight: "atom",
+    applies: (c) => !c.siloDisabled && !c.atomDisabled,
+    manual: true,
+  },
+  {
+    id: "hydrogen_info",
+    highlight: "hydrogen",
+    applies: (c) => !c.siloDisabled && !c.hydrogenDisabled,
+    manual: true,
+  },
+  {
+    id: "mirv_info",
+    highlight: "mirv",
+    applies: (c) => !c.siloDisabled && !c.mirvDisabled,
+    manual: true,
   },
 ];
 
