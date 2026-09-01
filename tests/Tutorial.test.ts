@@ -19,6 +19,10 @@ function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
     ports: 0,
     factoryDisabled: false,
     factories: 0,
+    warshipDisabled: false,
+    warships: 0,
+    siloDisabled: false,
+    silos: 0,
     ...overrides,
   };
 }
@@ -105,8 +109,10 @@ describe("TutorialProgress", () => {
       cityDisabled: true,
       portDisabled: true,
       factoryDisabled: true,
+      warshipDisabled: true,
+      siloDisabled: true,
     });
-    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 5);
+    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 9);
 
     settle(p, c);
     settle(p, c);
@@ -147,22 +153,37 @@ describe("TutorialProgress", () => {
     expect(p.stepDone()).toBe(true);
   });
 
-  it("follows the city with a port and then a factory", () => {
-    const p = new TutorialProgress([
-      TUTORIAL_STEPS.find((s) => s.id === "buy_port")!,
-      TUTORIAL_STEPS.find((s) => s.id === "buy_factory")!,
-    ]);
+  it("runs city, factory, port, warship, silo, pausing on each info step", () => {
+    const first = TUTORIAL_STEPS.findIndex((s) => s.id === "buy_factory");
+    const p = new TutorialProgress(TUTORIAL_STEPS.slice(first));
     p.update(ctx());
+    expect(p.current()?.id).toBe("buy_factory");
+
+    settle(p, ctx({ factories: 1 }));
+    expect(p.current()?.id).toBe("factory_info");
+    for (let i = 0; i < 50; i++) p.update(ctx({ factories: 1 }));
+    expect(p.current()?.id).toBe("factory_info");
+    p.acknowledge();
+    settle(p, ctx({ factories: 1 }));
+
     expect(p.current()?.id).toBe("buy_port");
     expect(p.current()?.highlight).toBe("port");
+    settle(p, ctx({ factories: 1, ports: 1 }));
+    expect(p.current()?.id).toBe("port_info");
+    expect(p.current()?.bullets).toHaveLength(2);
+    p.acknowledge();
+    settle(p, ctx({ factories: 1, ports: 1 }));
 
-    settle(p, ctx({ ports: 1 }));
-    expect(p.current()?.id).toBe("buy_factory");
-    expect(p.current()?.highlight).toBe("factory");
-    p.update(ctx({ ports: 1 }));
+    expect(p.current()?.id).toBe("buy_warship");
+    expect(p.current()?.highlight).toBe("warship");
+    settle(p, ctx({ factories: 1, ports: 1, warships: 1 }));
+
+    expect(p.current()?.id).toBe("buy_silo");
+    expect(p.current()?.highlight).toBe("silo");
+    p.update(ctx({ factories: 1, ports: 1, warships: 1 }));
     expect(p.stepDone()).toBe(false);
-    p.update(ctx({ ports: 1, factories: 1 }));
-    expect(p.stepDone()).toBe(true);
+    settle(p, ctx({ factories: 1, ports: 1, warships: 1, silos: 1 }));
+    expect(p.finished()).toBe(true);
   });
 });
 
