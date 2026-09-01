@@ -65,6 +65,7 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import { fallbackPlayerName } from "./PlayerName";
 import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
@@ -85,7 +86,7 @@ import {
 } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
-import { genAnonUsername, UsernameInput } from "./UsernameInput";
+import { UsernameInput } from "./UsernameInput";
 import { incrementGamesPlayed, translateText } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
@@ -1138,11 +1139,18 @@ class Client {
     // handshake. whenSeeded() always resolves (falling back to the generated
     // anon name on failure/timeout), so this can only delay, never block.
     await this.usernameInput?.whenSeeded();
+    // One resolution for the whole join: the name and the verified badge have
+    // to describe the same decision, so they are read together rather than
+    // asked for separately.
+    const resolvedName =
+      this.usernameInput?.resolvedName() ?? fallbackPlayerName();
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
-      cosmetics: await getPlayerCosmeticsRefs(),
+      cosmetics: await getPlayerCosmeticsRefs({
+        verified: resolvedName.verified,
+      }),
       turnstileToken: await this.getTurnstileToken(lobby),
-      playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
+      playerName: resolvedName.name,
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
       clanTagCheck: this.usernameInput?.getClanCheck(),
       playerRole,

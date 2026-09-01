@@ -32,7 +32,6 @@ import {
   purchaseWithCurrency,
 } from "./Api";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
-import { isPlayingVerified } from "./UsernameInput";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -848,7 +847,13 @@ export function resolvedToPlayerPattern(
   };
 }
 
-export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
+// `verified` is passed in rather than looked up: the caller has already
+// resolved what name the player is joining under (see resolvePlayerName), and
+// the badge has to agree with that exact decision. Reading it back out of the
+// DOM here was the same missing seam.
+export async function getPlayerCosmeticsRefs(
+  opts: { verified?: boolean } = {},
+): Promise<PlayerCosmeticRefs> {
   const userSettings = new UserSettings();
   // Resolve the profile first: getUserMe activates the per-player cosmetics
   // scope (UserSettings.setPlayerId), which must happen before selections are
@@ -978,12 +983,14 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     skinName,
     crownName,
     effects: Object.keys(effects).length > 0 ? effects : undefined,
-    verified: isPlayingVerified() ? true : undefined,
+    verified: opts.verified ? true : undefined,
   };
 }
 
-export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
-  const refs = await getPlayerCosmeticsRefs();
+export async function getPlayerCosmetics(
+  opts: { verified?: boolean } = {},
+): Promise<PlayerCosmetics> {
+  const refs = await getPlayerCosmeticsRefs(opts);
   const cosmetics = await fetchCosmetics();
 
   const result: PlayerCosmetics = {};
