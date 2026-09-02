@@ -219,14 +219,17 @@ export class AccountSettingsPanel extends LitElement {
       await showInGameAlert(
         translateText("account_modal.delete_account_scheduled"),
       );
-      window.location.reload();
+      // Navigate to the homepage rather than reloading in place: reloading
+      // keeps the #modal=account-settings hash, which reopens a login-gated
+      // modal for a now-logged-out player.
+      window.location.replace("/");
       return;
     }
     if (result.code === "logged_out") {
       // 401: the session was already gone and the cookie is cleared. Nothing
       // was queued; drop local state so the player can sign in and retry.
       clearLocalSession();
-      window.location.reload();
+      window.location.replace("/");
       return;
     }
     if (result.code === "forbidden" && result.message !== undefined) {
