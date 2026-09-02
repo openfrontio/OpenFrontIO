@@ -597,7 +597,8 @@ export class GameView implements GameMap {
       tick: gu.tick,
       allianceDuration: this._config.allianceDuration(),
       isTransitiveTarget: (sid) =>
-        this._myPlayer?.hasTransitiveTarget(sid) ?? false,
+        (this._markedPlayers?.has(sid) ?? false) ||
+        (this._myPlayer?.hasTransitiveTarget(sid) ?? false),
       doomsdayClockWarnTicks:
         this._config.doomsdayClockConfig().warnSeconds * 10,
     });
@@ -1330,22 +1331,22 @@ export class GameView implements GameMap {
     return this._gameID;
   }
 
-  private _glowingPlayers: ReadonlySet<number> | null = null;
+  private _markedPlayers: ReadonlySet<number> | null = null;
 
   focusedPlayer(): PlayerView | null {
     return this.myPlayer();
   }
 
   /**
-   * Extra owner smallIDs the map glow pass radiates around, on top of the
-   * small-player highlight set (e.g. the tutorial pointing at capturable
-   * tribes). Null when nothing is requested.
+   * Extra smallIDs drawn with the target crosshair by the name pass, on top
+   * of the player's real transitive targets (e.g. the tutorial pointing at
+   * capturable tribes). Null when nothing is requested.
    */
-  setGlowingPlayers(ids: ReadonlySet<number> | null): void {
-    this._glowingPlayers = ids;
+  setMarkedPlayers(ids: ReadonlySet<number> | null): void {
+    this._markedPlayers = ids;
   }
 
-  glowingPlayers(): ReadonlySet<number> | null {
-    return this._glowingPlayers;
+  markedPlayers(): ReadonlySet<number> | null {
+    return this._markedPlayers;
   }
 }

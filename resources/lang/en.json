@@ -1828,7 +1828,7 @@
       "buy_port": "Next, build a Port: press {key}, then click your coastline to place it.",
       "buy_silo": "Finally, build a Missile Silo: press {key}, then click your territory to place it. Silos launch atom bombs, hydrogen bombs and MIRVs.",
       "buy_warship": "Now build a Warship: press {key}, then click open water near your port. Warships capture trade ships and protect your waters.",
-      "capture_tribes": "Capturing tribes is a great way to earn gold — the nearest ones are glowing on the map. Conquer them until you have {cost} gold for a City.",
+      "capture_tribes": "Capturing tribes is a great way to earn gold — the nearest ones are marked with a target on the map. Conquer them until you have {cost} gold for a City.",
       "earn_gold": "Attack neighbors to steal their land, conquer them to take their gold. You need {cost} for a {unit}.",
       "factory_info": "Factories are connected to cities and other factories by tracks, and spawn trains that grant gold.",
       "hydrogen_info": "Hydrogen Bomb — large strategic strikes that weaken the enemy.",

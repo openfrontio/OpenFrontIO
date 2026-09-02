@@ -40,8 +40,8 @@ const UNIT_NAME_KEYS: Partial<Record<UnitType, string>> = {
 /** Ticks the "you're ready" message stays up before the panel closes. */
 const COMPLETE_LINGER_TICKS = 50;
 
-/** How many of the nearest tribes glow during the capture-tribes step. */
-const NEARBY_TRIBE_GLOW_COUNT = 3;
+/** How many of the nearest tribes get a target marker during the tribes step. */
+const NEARBY_TRIBE_MARK_COUNT = 3;
 
 /** Defaults shown when the player hasn't rebound the action (see UnitDisplay). */
 const HOTKEY_FALLBACKS = {
@@ -67,7 +67,7 @@ export class TutorialPanel extends LitElement implements Controller {
   private started = false;
   private costs = new Map<UnitType, bigint>();
   private keybinds: Record<string, { key?: string }> | null = null;
-  private tribeGlowActive = false;
+  private tribeMarksActive = false;
   private completeTicks: number | null = null;
   private highlight: TutorialHighlight | null = null;
 
@@ -118,18 +118,18 @@ export class TutorialPanel extends LitElement implements Controller {
     const target =
       step && !this.progress.stepDone() ? (step.highlight ?? null) : null;
     this.setHighlight(target);
-    this.syncTribeGlow(target);
+    this.syncTribeMarkers(target);
   }
 
   /**
-   * Keeps the few tribes nearest the player glowing on the map during the
-   * tribes step; as they're captured, the next nearest take their place.
+   * Marks the few tribes nearest the player with the target crosshair during
+   * the tribes step; as they're captured, the next nearest take their place.
    */
-  private syncTribeGlow(target: TutorialHighlight | null) {
+  private syncTribeMarkers(target: TutorialHighlight | null) {
     if (target !== "tribes") {
-      if (this.tribeGlowActive) {
-        this.tribeGlowActive = false;
-        this.game.setGlowingPlayers(null);
+      if (this.tribeMarksActive) {
+        this.tribeMarksActive = false;
+        this.game.setMarkedPlayers(null);
       }
       return;
     }
@@ -147,10 +147,10 @@ export class TutorialPanel extends LitElement implements Controller {
       tribes.push({ id: p.smallID(), distSquared: dx * dx + dy * dy });
     }
     tribes.sort((a, b) => a.distSquared - b.distSquared);
-    this.game.setGlowingPlayers(
-      new Set(tribes.slice(0, NEARBY_TRIBE_GLOW_COUNT).map((t) => t.id)),
+    this.game.setMarkedPlayers(
+      new Set(tribes.slice(0, NEARBY_TRIBE_MARK_COUNT).map((t) => t.id)),
     );
-    this.tribeGlowActive = true;
+    this.tribeMarksActive = true;
   }
 
   private buildContext(player: PlayerView): TutorialContext {
@@ -202,7 +202,7 @@ export class TutorialPanel extends LitElement implements Controller {
     this.classList.toggle("hidden", !active);
     if (!active) {
       this.setHighlight(null);
-      this.syncTribeGlow(null);
+      this.syncTribeMarkers(null);
     }
   }
 
@@ -215,14 +215,16 @@ export class TutorialPanel extends LitElement implements Controller {
     if (!this.active) return nothing;
     return html`
       <div
-        class="pointer-events-auto w-full rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-sm p-3 mb-1"
+        class="pointer-events-auto w-full rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-sm p-2 mb-1"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
-        <div class="flex items-center justify-between gap-2 mb-1.5">
-          <span class="font-bold text-cyber-yellow uppercase tracking-wide"
+        <div class="flex items-center justify-between gap-2 mb-1">
+          <span
+            class="font-bold text-cyber-yellow uppercase tracking-wide text-xs"
             >${translateText("tutorial.title")}</span
           >
           <span class="flex items-center gap-2 text-xs text-gray-300">
+            ${this.confirmingClose ? nothing : this.renderHeaderActions()}
             ${this.ctx && !this.progress.finished()
               ? translateText("tutorial.step_counter", {
                   current: this.progress.position(this.ctx),
@@ -241,6 +243,33 @@ export class TutorialPanel extends LitElement implements Controller {
         </div>
         ${this.confirmingClose ? this.renderCloseChoice() : this.renderStep()}
       </div>
+    `;
+  }
+
+  /** Got it / Skip live in the header row to keep the panel short. */
+  private renderHeaderActions() {
+    const step = this.progress.current();
+    if (
+      step === null ||
+      this.completeTicks !== null ||
+      this.progress.stepDone()
+    )
+      return nothing;
+    return html`
+      ${step.manual
+        ? html`<button
+            class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
+            @click=${() => this.progress.acknowledge()}
+          >
+            ${translateText("tutorial.got_it")}
+          </button>`
+        : nothing}
+      <button
+        class="text-gray-400 hover:text-white underline"
+        @click=${() => this.progress.skip()}
+      >
+        ${translateText("tutorial.skip")}
+      </button>
     `;
   }
 
@@ -303,24 +332,6 @@ export class TutorialPanel extends LitElement implements Controller {
                   })}</span
             >`}
       </p>
-      ${done
-        ? nothing
-        : html`<div class="mt-2 flex items-center gap-2">
-            ${step.manual
-              ? html`<button
-                  class="rounded-md bg-malibu-blue hover:bg-aquarius px-3 py-1 font-semibold"
-                  @click=${() => this.progress.acknowledge()}
-                >
-                  ${translateText("tutorial.got_it")}
-                </button>`
-              : nothing}
-            <button
-              class="text-gray-400 hover:text-white underline px-1 py-1"
-              @click=${() => this.progress.skip()}
-            >
-              ${translateText("tutorial.skip")}
-            </button>
-          </div>`}
     `;
   }
 }
