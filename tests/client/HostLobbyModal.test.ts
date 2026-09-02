@@ -64,6 +64,16 @@ describe("HostLobbyModal Steam invite button", () => {
     expect(header.querySelector(COPY)).not.toBeNull();
   });
 
+  // createLobby() assigns lobbyId asynchronously and this modal renders before
+  // it lands. A button live in that window has no shadow lobby behind it, so
+  // the invite would silently no-op.
+  it("is absent until the lobby id lands, even on the desktop shell", () => {
+    presenceMocks.isAvailable.mockReturnValue(true);
+    const modal = new HostLobbyModal();
+
+    expect(renderHeader(modal).querySelector(INVITE)).toBeNull();
+  });
+
   it("appears beside the copy button on the desktop shell", () => {
     presenceMocks.isAvailable.mockReturnValue(true);
     const header = renderHeader(hostModal());

@@ -232,7 +232,12 @@ export class HostLobbyModal extends BaseModal {
           .lobbySuffix=${this.lobbyUrlSuffix}
           include-lobby-query
         ></copy-button>`;
-        const invite = inviteFriendsButton();
+        // Not until there is a lobby to invite anyone into. createLobby()
+        // assigns lobbyId asynchronously and the modal renders before it
+        // lands, so without this the button is live during that window with
+        // no shadow lobby behind it — the invite would silently no-op. The
+        // join modal gets this free from its own !currentLobbyId early return.
+        const invite = this.lobbyId ? inviteFriendsButton() : undefined;
         return invite
           ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
           : copy;
