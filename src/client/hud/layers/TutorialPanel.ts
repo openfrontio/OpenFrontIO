@@ -172,7 +172,10 @@ export class TutorialPanel extends LitElement implements Controller {
           )
         : candidates;
     if (spec.type === PlayerType.Nation) {
-      this.fetchNationRelations(picked.slice(0, 5).map((c) => c.id));
+      // Refresh from the pre-filter list: relations decay back toward
+      // neutral, so a nation that dipped hostile must stay refreshable or
+      // it would be blacklisted forever.
+      this.fetchNationRelations(candidates.slice(0, 5).map((c) => c.id));
     }
     this.game.setMarkedPlayers(
       new Set(picked.slice(0, spec.count).map((c) => c.id)),
