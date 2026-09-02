@@ -35,6 +35,7 @@ import "./components/GameConfigSettings";
 import "./components/InputCard";
 import "./components/LobbyPlayerView";
 import "./components/ToggleInputCard";
+import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
@@ -220,13 +221,22 @@ export class HostLobbyModal extends BaseModal {
         this.close();
       },
       ariaLabel: translateText("common.back"),
-      rightContent: html`
-        <copy-button
+      // Both answer "get my friends into this lobby", so they sit together —
+      // the host is the player holding the code and deciding who joins, and
+      // was the one surface the invite button originally missed. Paired behind
+      // a wrapper only when the invite is present, so a browser renders exactly
+      // the markup it did before.
+      rightContent: (() => {
+        const copy = html`<copy-button
           .lobbyId=${this.lobbyId}
           .lobbySuffix=${this.lobbyUrlSuffix}
           include-lobby-query
-        ></copy-button>
-      `,
+        ></copy-button>`;
+        const invite = inviteFriendsButton();
+        return invite
+          ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
+          : copy;
+      })(),
     });
   }
 
