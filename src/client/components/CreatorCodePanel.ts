@@ -153,14 +153,18 @@ export class CreatorCodePanel extends LitElement {
     }
     this.armed = null;
     this.busy = true;
-    const ok = await clearCreatorCode();
-    if (ok) {
+    const result = await clearCreatorCode();
+    if (result.ok) {
       await this.refreshAfterChange();
       this.busy = false;
       return;
     }
     this.busy = false;
-    this.error = translateText("creator_code.errors.failed");
+    this.error = translateText(
+      result.code === "rate_limited"
+        ? "creator_code.errors.rate_limited"
+        : "creator_code.errors.failed",
+    );
   }
 
   // setCreatorCode()/clearCreatorCode() already invalidated the cached

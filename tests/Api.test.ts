@@ -301,7 +301,7 @@ describe("creator code client functions", () => {
       const callsBeforeMutation = fetchMock.mock.calls.length;
 
       respond(200, { ok: true });
-      expect(await clearCreatorCode()).toBe(true);
+      expect(await clearCreatorCode()).toEqual({ ok: true });
       expect(fetchMock.mock.calls.length).toBe(callsBeforeMutation + 1);
 
       const [url, init] = fetchMock.mock.calls[callsBeforeMutation] as [
@@ -321,8 +321,32 @@ describe("creator code client functions", () => {
 
     it("logs out and fails closed on 401", async () => {
       respond(401, {});
-      expect(await clearCreatorCode()).toBe(false);
+      expect(await clearCreatorCode()).toEqual({ ok: false, code: "failed" });
       expect(logOut).toHaveBeenCalled();
+    });
+
+    // Unbinding is never gated by the real 7-day cooldown (see the doc
+    // comment on clearCreatorCode), so the only 429 this endpoint can ever
+    // return is the shared 10s mutation debounce — map it to rate_limited
+    // rather than lumping it into the generic failure.
+    it("maps the shared debounce 429 to rate_limited", async () => {
+      respond(
+        429,
+        {
+          error: "Too many requests",
+          message: "Please wait a moment before trying again",
+        },
+        { "Retry-After": "10" },
+      );
+      expect(await clearCreatorCode()).toEqual({
+        ok: false,
+        code: "rate_limited",
+      });
+    });
+
+    it("fails closed on a network error", async () => {
+      fetchMock.mockRejectedValueOnce(new Error("offline"));
+      expect(await clearCreatorCode()).toEqual({ ok: false, code: "failed" });
     });
   });
 });

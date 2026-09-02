@@ -291,7 +291,7 @@ describe("CreatorCodePanel", () => {
     });
 
     it("arms then fires unsupport on two clicks (confirm copy warns about the next-bind lock), and refreshes in place (no reload)", async () => {
-      clearCreatorCode.mockResolvedValue(true);
+      clearCreatorCode.mockResolvedValue({ ok: true });
       getUserMe.mockResolvedValue(userMeWith(null));
       const el = await mount(creator());
       const events = captureCreatorChanged(el);
@@ -318,7 +318,7 @@ describe("CreatorCodePanel", () => {
 
     // The whole point of fix #1: unbinding is never blocked, even mid-cooldown.
     it("keeps Unsupport clickable and completes the arm-then-fire flow while canChangeAt is in the future", async () => {
-      clearCreatorCode.mockResolvedValue(true);
+      clearCreatorCode.mockResolvedValue({ ok: true });
       getUserMe.mockResolvedValue(userMeWith(null));
       const future = new Date(
         Date.now() + 3 * 24 * 60 * 60 * 1000,
@@ -426,7 +426,7 @@ describe("CreatorCodePanel", () => {
     });
 
     it("shows a generic failure message when unsupport fails", async () => {
-      clearCreatorCode.mockResolvedValue(false);
+      clearCreatorCode.mockResolvedValue({ ok: false, code: "failed" });
       const el = await mount(creator());
 
       findButton(el, "creator_code.unsupport")!.click();
@@ -435,6 +435,23 @@ describe("CreatorCodePanel", () => {
       await settle(el);
 
       expect(el.textContent).toContain("creator_code.errors.failed");
+      expect(reload).not.toHaveBeenCalled();
+      expect(getUserMe).not.toHaveBeenCalled();
+    });
+
+    // Same shared 10s debounce as set/switch — unsupport must show the
+    // "wait a moment" message, not the generic failure, for the identical
+    // underlying situation.
+    it("shows the rate_limited message when unsupport hits the shared debounce", async () => {
+      clearCreatorCode.mockResolvedValue({ ok: false, code: "rate_limited" });
+      const el = await mount(creator());
+
+      findButton(el, "creator_code.unsupport")!.click();
+      await el.updateComplete;
+      findButton(el, "creator_code.confirm_unsupport")!.click();
+      await settle(el);
+
+      expect(el.textContent).toContain("creator_code.errors.rate_limited");
       expect(reload).not.toHaveBeenCalled();
       expect(getUserMe).not.toHaveBeenCalled();
     });

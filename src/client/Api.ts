@@ -542,12 +542,18 @@ export async function setCreatorCode(
   }
 }
 
+export type ClearCreatorCodeResult =
+  | { ok: true }
+  | { ok: false; code: "rate_limited" | "failed" };
+
 // DELETE /users/@me/creator — unbinds the caller's supported creator, if any
 // (Creator Code programme). Always safe: unbinding is never gated by the
 // 7-day change cooldown (that cooldown only governs the NEXT bind, whose
-// anchor moves to "now" on unbind). Invalidates the cached /users/@me on
-// success so the cleared binding shows up on the next read.
-export async function clearCreatorCode(): Promise<boolean> {
+// anchor moves to "now" on unbind) — so unlike setCreatorCode's 429, a 429
+// here can only ever be the shared 10s mutation debounce, never a real
+// cooldown, and maps straight to "rate_limited". Invalidates the cached
+// /users/@me on success so the cleared binding shows up on the next read.
+export async function clearCreatorCode(): Promise<ClearCreatorCodeResult> {
   try {
     const response = await fetch(`${getApiBase()}/users/@me/creator`, {
       method: "DELETE",
@@ -557,7 +563,10 @@ export async function clearCreatorCode(): Promise<boolean> {
     });
     if (response.status === 401) {
       await logOut();
-      return false;
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 429) {
+      return { ok: false, code: "rate_limited" };
     }
     if (!response.ok) {
       console.error(
@@ -565,13 +574,13 @@ export async function clearCreatorCode(): Promise<boolean> {
         response.status,
         response.statusText,
       );
-      return false;
+      return { ok: false, code: "failed" };
     }
     invalidateUserMe();
-    return true;
+    return { ok: true };
   } catch (e) {
     console.error("clearCreatorCode: request failed", e);
-    return false;
+    return { ok: false, code: "failed" };
   }
 }
 
