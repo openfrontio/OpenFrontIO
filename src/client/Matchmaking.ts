@@ -2,7 +2,8 @@ import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { getUserMe, hasLinkedAccount, invalidateUserMe } from "./Api";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
+import { getUserMe, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
@@ -365,8 +366,7 @@ export class MatchmakingModal extends BaseModal {
     }
 
     // CrazyGames players authenticate through the SDK rather than a linked
-    // Discord/Google/email account, so a signed-in CrazyGames user counts as
-    // logged in for ranked.
+    // account, so a signed-in CrazyGames user counts as logged in for ranked.
     const crazyGamesSignedIn =
       crazyGamesSDK.isOnCrazyGames() &&
       (await crazyGamesSDK.getUserProfile()) !== null;
@@ -374,9 +374,14 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
+    // The `userMe === false` term is not redundant with the predicate below,
+    // which also returns false for `false`: it is what stops a signed-in
+    // CrazyGames player with no /users/@me from falling through to the
+    // leaderboard read, which would dereference `false`. It also narrows the
+    // type for that read.
     if (
       userMe === false ||
-      (!hasLinkedAccount(userMe) && !crazyGamesSignedIn)
+      (!responseHasLinkedIdentity(userMe) && !crazyGamesSignedIn)
     ) {
       window.dispatchEvent(
         new CustomEvent("show-message", {

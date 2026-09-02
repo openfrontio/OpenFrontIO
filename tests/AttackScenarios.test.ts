@@ -233,6 +233,62 @@ const scenarios: Record<string, Scenario> = {
     defender: { rect: PLAINS_RIGHT, troops: 50_000 },
     attackTroops: 50_000,
   },
+  "plains dense defender (200k on 5k tiles, 40/tile, ~half the no-city cap), stack 1/4 their army":
+    {
+      map: "plains",
+      attacker: { rect: PLAINS_LEFT, troops: 400_000 },
+      defender: { rect: PLAINS_RIGHT, troops: 200_000 },
+      attackTroops: 50_000,
+    },
+  "plains dense defender (200k on 5k tiles, 40/tile, ~half the no-city cap), stack 3/4 their army":
+    {
+      map: "plains",
+      attacker: { rect: PLAINS_LEFT, troops: 400_000 },
+      defender: { rect: PLAINS_RIGHT, troops: 200_000 },
+      attackTroops: 150_000,
+    },
+  "plains dense defender (200k on 5k tiles, 40/tile, ~half the no-city cap), stack 1x their army":
+    {
+      map: "plains",
+      attacker: { rect: PLAINS_LEFT, troops: 400_000 },
+      defender: { rect: PLAINS_RIGHT, troops: 200_000 },
+      attackTroops: 200_000,
+    },
+  "plains dense defender (200k on 5k tiles, 40/tile, ~half the no-city cap), stack 1.67x their army":
+    {
+      map: "plains",
+      attacker: { rect: PLAINS_LEFT, troops: 400_000 },
+      defender: { rect: PLAINS_RIGHT, troops: 200_000 },
+      attackTroops: 334_000,
+    },
+  "plains very dense defender (650k on 5k tiles, 130/tile, ~1 city over cap), stack 1/4 their army":
+    {
+      map: "plains",
+      attacker: { rect: PLAINS_LEFT, troops: 1_300_000 },
+      defender: { rect: PLAINS_RIGHT, troops: 650_000 },
+      attackTroops: 162_500,
+    },
+  "plains very dense defender (650k on 5k tiles, 130/tile, ~1 city over cap), stack 3/4 their army":
+    {
+      map: "plains",
+      attacker: { rect: PLAINS_LEFT, troops: 1_300_000 },
+      defender: { rect: PLAINS_RIGHT, troops: 650_000 },
+      attackTroops: 487_500,
+    },
+  "plains very dense defender (650k on 5k tiles, 130/tile, ~1 city over cap), stack 1x their army":
+    {
+      map: "plains",
+      attacker: { rect: PLAINS_LEFT, troops: 1_300_000 },
+      defender: { rect: PLAINS_RIGHT, troops: 650_000 },
+      attackTroops: 650_000,
+    },
+  "plains very dense defender (650k on 5k tiles, 130/tile, ~1 city over cap), stack 1.67x their army":
+    {
+      map: "plains",
+      attacker: { rect: PLAINS_LEFT, troops: 1_300_000 },
+      defender: { rect: PLAINS_RIGHT, troops: 650_000 },
+      attackTroops: 1_085_500,
+    },
   // --- plains, troop imbalance ---------------------------------------------
   "plains overwhelming 200k vs 20k, attack 40k": {
     map: "plains",

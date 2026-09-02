@@ -1,5 +1,6 @@
 {
   "categories": ["fictional"],
+  "forced_modifiers": ["isWaterNukes:50"],
   "id": "FourIslands",
   "map": {
     "height": 1500,

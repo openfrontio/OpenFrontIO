@@ -10,14 +10,15 @@
     "claim_failed": "Failed to claim reward. Please try again.",
     "clear_session": "Clear Session",
     "connected_as": "Connected as",
-    "delete_account_blocked": "Your account can't be deleted automatically. Please contact support.",
     "delete_account_confirm_button": "Permanently Delete",
     "delete_account_confirm_word": "DELETE",
     "delete_account_desc": "Permanently delete your account and all of its data.",
     "delete_account_failed": "Delete failed, please contact support at support@openfront.io",
+    "delete_account_rate_limited": "Account deletion is temporarily unavailable, please try again later.",
+    "delete_account_scheduled": "Your account will be deleted in 24 hours. If you change your mind, please contact support to cancel.",
     "delete_account_title": "Delete account",
     "delete_account_type_to_confirm": "Type \"{word}\" to confirm",
-    "delete_account_warning": "Your account will be deleted immediately and permanently. There is no grace period and no way to recover it. You will be logged out on all devices.",
+    "delete_account_warning": "Your account will be permanently deleted 24 hours after you confirm, and you will be logged out on all devices right away. Signing in again does not cancel it; only support can, within those 24 hours.",
     "email_placeholder": "Enter your email address",
     "enter_email_address": "Please enter an email address",
     "failed_to_send_recovery_email": "Failed to send recovery email",
@@ -72,6 +73,8 @@
     "tab_stats": "Stats",
     "title": "Account",
     "unclaimed_rewards": "Unclaimed Rewards",
+    "username_bare_unavailable": "\"{requested}\" is already taken, so your name is now \"{name}\". This used your name change — you can change it again on {date}.",
+    "username_bare_unavailable_no_date": "\"{requested}\" is already taken, so your name is now \"{name}\". This used your name change.",
     "username_change_ready": "Change available",
     "username_confirm_abandon": "You will permanently give up your reserved name \"{name}\".",
     "username_confirm_body": "Your new name will be locked for 30 days.",
@@ -484,6 +487,20 @@
     "verified_name": "Verified username",
     "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
   },
+  "desktop_presence": {
+    "in_game": "In game",
+    "spectating": "Spectating"
+  },
+  "desktop_session": {
+    "generic": "Couldn't sign in to your OpenFront account",
+    "network": "Can't reach OpenFront. Check your connection.",
+    "retry": "Retry",
+    "retrying": "Signing in…",
+    "steam_backend": "Steam is having trouble signing you in. Try again shortly.",
+    "steam_rejected": "Steam couldn't confirm your account. Restarting Steam usually fixes this.",
+    "steam_unavailable": "Steam isn't running. Start Steam to play online.",
+    "steam_wedged": "Steam couldn't verify your session. Restarting Steam usually fixes this."
+  },
   "desktop_update": {
     "blocked": "A Steam update is required for the latest version",
     "downloading": "Downloading update… {percent}%",
@@ -583,11 +600,13 @@
     "copy_clipboard": "Copy to clipboard",
     "crashed": "Game crashed!",
     "desync_notice": "You are desynced from other players. What you see might differ from other players.",
+    "login_failed": "Login failed. Please try again later.",
     "paste_discord": "Please paste the following in your bug report in Discord:",
     "spawn_failed": {
       "description": "Automatic spawn selection failed. You can't play this game.",
       "title": "Spawn failed"
-    }
+    },
+    "turnstile_error": "Verification error: {code}. Please refresh and try again."
   },
   "events_display": {
     "about_to_expire": "Your alliance with {name} is about to expire!",
@@ -775,6 +794,7 @@
     "import_json_desc": "Paste settings JSON from a friend and apply it",
     "import_json_invalid": "That doesn't look like valid settings JSON",
     "import_json_label": "Import settings JSON",
+    "layer_alpha_label": "Opacity",
     "layer_nukeable": "Nukeable",
     "layer_placement_land": "Land layer",
     "layer_placement_water": "Water layer",
@@ -801,6 +821,8 @@
     "preset_default": "Default",
     "preset_default_desc": "The standard OpenFront look",
     "preset_delete_confirm": "Delete preset \"{name}\"?",
+    "preset_evans_pick": "Evan's Pick",
+    "preset_evans_pick_desc": "The settings Evan actually plays with",
     "preset_migrated_name": "My settings",
     "preset_name_placeholder": "Preset name",
     "preset_night": "Night",
@@ -1549,6 +1571,7 @@
   },
   "public_lobby": {
     "connecting": "Connecting to lobby...",
+    "invite_friends": "Invite Friends",
     "join_timeout": "You didn't enter the game in time.",
     "players_per_team": "of {num}",
     "started": "Started",
@@ -1961,7 +1984,7 @@
     "clan_none_joined": "You haven't joined a clan yet.",
     "clan_your_clans": "Your clans",
     "enter_username": "Enter your username",
-    "invalid_chars": "Username can only contain letters, numbers, spaces, and underscores.",
+    "invalid_chars": "Username can only contain letters, numbers, spaces, underscores, hyphens, and periods.",
     "not_string": "Username must be a string.",
     "tag": "TAG",
     "tag_invalid_chars": "Clan tag can only contain letters and numbers.",

@@ -234,6 +234,7 @@ export function invalidateUserMe() {
 }
 
 export type DeleteAccountResult =
+  // 204: deletion queued — the server deletes the account 24 hours later.
   | { ok: true }
   // 401: missing/unknown/expired refresh token — already logged out, and the
   // server cleared the cookie.
@@ -241,18 +242,19 @@ export type DeleteAccountResult =
   // 403: refused by policy. `message` is the server's player-facing reason
   // (root player / banned account), shown as-is.
   | { ok: false; code: "forbidden"; message?: string }
-  // 409: the player authored content other players depend on — deletion needs
-  // support. The body's message is for support, not end users.
-  | { ok: false; code: "blocked" }
-  // Anything else, including 429 rate limiting: the client shows a
-  // "contact support" failure.
+  // 429: the global deletion rate limit (one per 20 minutes across all
+  // players) — nothing was queued, try again later.
+  | { ok: false; code: "rate_limited" }
+  // Anything else: the client shows a "contact support" failure.
   | { ok: false; code: "failed" };
 
-// DELETE /users/@me — deletes the account immediately and irreversibly. The
-// HttpOnly refresh cookie is the credential (same as /auth/logout), so no
-// Authorization header. On 204 every session on every device is invalidated
-// and the cookie is cleared — callers drop local auth state themselves and
-// must NOT call /auth/logout afterwards.
+// DELETE /users/@me — queues the account for deletion; the server performs it
+// 24 hours later, and only support can cancel in the meantime (there is no
+// self-service cancel endpoint). The HttpOnly refresh cookie is the credential
+// (same as /auth/logout), so no Authorization header. On 204 every session on
+// every device is invalidated and the cookie is cleared — callers drop local
+// auth state themselves and must NOT call /auth/logout afterwards. Signing in
+// again during the 24 hours works but does not cancel the deletion.
 export async function deleteAccount(): Promise<DeleteAccountResult> {
   try {
     const response = await fetch(`${getApiBase()}/users/@me`, {
@@ -270,8 +272,8 @@ export async function deleteAccount(): Promise<DeleteAccountResult> {
         message: typeof body?.message === "string" ? body.message : undefined,
       };
     }
-    if (response.status === 409) {
-      return { ok: false, code: "blocked" };
+    if (response.status === 429) {
+      return { ok: false, code: "rate_limited" };
     }
     if (!response.ok) {
       console.error(
@@ -333,10 +335,16 @@ export type UpdateUsernameResult =
   | { ok: false; code: "failed" };
 
 // PUT /users/@me/username — renames the account username. Every failure is
-// atomic (no name change, no cooldown consumed). Both 409 bodies ("name
-// exclusively held" and "suffix space exhausted") map to "taken": the user
-// remedy is the same — pick another name. Invalidates the cached /users/@me
-// on success so the next read reflects the new name.
+// atomic (no name change, no cooldown consumed). The surviving 409 bodies
+// ("name equals an existing public id" and "suffix space exhausted") map to
+// "taken": the user remedy is the same — pick another name. Invalidates the
+// cached /users/@me on success so the next read reflects the new name.
+//
+// A premium player whose chosen bare name is already held no longer 409s: the
+// API grants the suffixed form and returns 200 with `bareClaim:
+// "unavailable"`. That is a real rename and it consumes the cooldown, so `ok:
+// true` alone is not enough to act on — callers must read `data.bareClaim`
+// and tell the player (see UsernamePanel).
 export async function updateUsername(
   username: string,
 ): Promise<UpdateUsernameResult> {
@@ -1128,18 +1136,6 @@ export function getAudience() {
   // Sourced from BOOTSTRAP_CONFIG (server/desktop-injected) rather than
   // window.location, so the desktop app (app://openfront) targets real infra.
   return ClientEnv.jwtAudience();
-}
-
-// Check if the user's account is linked to a Discord, Google, or email account.
-export function hasLinkedAccount(
-  userMeResponse: UserMeResponse | false,
-): boolean {
-  return (
-    userMeResponse !== false &&
-    (userMeResponse.user?.discord !== undefined ||
-      userMeResponse.user?.google !== undefined ||
-      userMeResponse.user?.email !== undefined)
-  );
 }
 
 export async function fetchGameById(
