@@ -170,9 +170,10 @@ export class GameManager {
               try {
                 // The roster can empty inside the delay, and start() does not
                 // check: it would emit a playerless match_started and run
-                // turns for nobody.
+                // turns for nobody. Held rather than cancelled, because a
+                // socket that just closed is often reconnecting.
                 if (game.numClients() === 0) {
-                  game.cancelAbandonedStart();
+                  game.deferStart();
                   return;
                 }
                 game.start();
@@ -181,6 +182,10 @@ export class GameManager {
               }
             }, 2000);
           }
+        } else {
+          // A start held because the roster was momentarily empty runs as
+          // soon as anyone is back. No-op for every other running game.
+          game.resumeDeferredStart();
         }
       }
 

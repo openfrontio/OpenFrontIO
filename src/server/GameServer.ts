@@ -148,6 +148,8 @@ export class GameServer {
   // archives on that, and the socket close events that follow end() still
   // go through hasStarted() in handleClientDisconnect.
   private stage: "lobby" | "prestart" | "started" = "lobby";
+  // Set when the delayed start found an empty roster (see deferStart).
+  private startDeferred = false;
   private ended = false;
   private paused = false;
   private _startTime: number | null = null;
@@ -608,6 +610,15 @@ export class GameServer {
   // A validated message from a connected client, after SocketIngress has
   // applied the rate limit and the spectator block.
   private handleClientMessage(client: Client, clientMsg: ClientMessage) {
+    // Nothing from a socket that is no longer on the roster reaches the game.
+    // Dropping a client (a kick, the stale-ping prune, a close) leaves its
+    // listener attached and the socket able to deliver frames — close() is a
+    // handshake, and the prune only calls it on an OPEN socket at all — so
+    // without this a kicked player could still land intents and votes, and a
+    // ghost's pings could hold the empty-game reap off forever.
+    if (!this.clients.isConnected(client)) {
+      return;
+    }
     switch (clientMsg.type) {
       case "rejoin": {
         // Client is already connected, no auth required, send start game message if game has started
@@ -635,7 +646,10 @@ export class GameServer {
         break;
       }
       case "ping": {
-        this.handlePing(client);
+        // Only a roster member reaches here, so this is also the game-wide
+        // "someone is still out there" clock the empty-game reap waits on.
+        this.lastPingUpdate = Date.now();
+        client.lastPing = Date.now();
         break;
       }
       case "hash": {
@@ -664,19 +678,6 @@ export class GameServer {
         });
         break;
       }
-    }
-  }
-
-  // lastPingUpdate is the game-wide "someone is still out there" clock the
-  // empty-game reap in phase() waits on, so only a client still on the roster
-  // may refresh it. A socket dropped from the roster — pruned for stale pings,
-  // or kicked — keeps its message listener and can go on pinging through (or
-  // instead of) its close handshake; letting those pings through held empty
-  // games open indefinitely.
-  private handlePing(client: Client) {
-    client.lastPing = Date.now();
-    if (this.clients.isConnected(client)) {
-      this.lastPingUpdate = Date.now();
     }
   }
 
@@ -753,19 +754,33 @@ export class GameServer {
     return true;
   }
 
-  // Everyone left between prestart and start. Merely skipping start() would
-  // strand the game: prestart counts as hasStarted(), so GameManager never
-  // revisits the start branch, and a client reconnecting before the reap
-  // would sit in a game whose turns never run. phase() reports Finished once
-  // ended, so GameManager's next tick prunes it instead.
-  public cancelAbandonedStart(): void {
-    if (this.stage === "started" || this.ended) {
+  // Nobody was connected when the delayed start came due. An empty roster at
+  // that moment is not proof the game is abandoned: handleClientDisconnect
+  // drops a client the instant its socket closes, blip or not, and the client
+  // is normally reconnecting already. Ending the game there would be
+  // permanent and silent — rejoinClient refuses an ended game, the worker
+  // closes that socket with 1002, and the client treats 1002 as terminal
+  // rather than retrying. So hold the start instead of cancelling it.
+  public deferStart(): void {
+    if (this.stage !== "prestart") {
       return;
     }
-    this.log.info("cancelling game, no clients connected at start", {
+    this.log.info("deferring start, no clients connected", {
       gameID: this.id,
     });
-    this.ended = true;
+    this.startDeferred = true;
+  }
+
+  // Runs a held start once someone is connected again. Nobody comes back ->
+  // the game stays empty and phase() reaps it on the usual rules, so a truly
+  // abandoned game still never reaches start(). Returns whether it started.
+  public resumeDeferredStart(): boolean {
+    if (!this.startDeferred || this.ended || this.numClients() === 0) {
+      return false;
+    }
+    this.startDeferred = false;
+    this.start();
+    return true;
   }
 
   public prestart() {

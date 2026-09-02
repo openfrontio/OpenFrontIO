@@ -11,6 +11,7 @@ import {
   cid,
   makeClient,
   makeGame,
+  makeMockWs,
   mockLogger,
   mockWsOf,
   startGame,
@@ -175,31 +176,79 @@ describe("empty game reaping", () => {
     expect(manager.activeGames()).toBe(0);
   });
 
-  it("cancels the start when the roster empties during the start delay", async () => {
+  // The roster empties the instant a socket closes, blip or not, so an empty
+  // roster when the delayed start comes due is not proof of abandonment.
+  describe("a roster that empties during the start delay", () => {
+    const prestartedGame = (telemetry: RecordingEmitter) => {
+      const manager = new GameManager(log, telemetry);
+      const game: GameServer = manager.createGame(cid("delay"), undefined)!;
+      const client = makeClient();
+      game.joinClient(client);
+      (game as any).hasReachedMaxPlayerCount = true;
+      // One tick: the lobby is full, so the manager prestarts and schedules
+      // start() 2s out.
+      runManager(1_000);
+      expect(game.hasStarted()).toBe(true);
+      expect(telemetry.types).not.toContain("match_started");
+      return { manager, game, client };
+    };
+
+    it("holds the start rather than running it for nobody", async () => {
+      const telemetry = new RecordingEmitter();
+      const { manager, client } = prestartedGame(telemetry);
+
+      await mockWsOf(client).trigger("close");
+      runManager(3_000);
+
+      expect(telemetry.types).not.toContain("match_started");
+      expect(manager.activeGames()).toBe(1);
+    });
+
+    it("starts the held game when a dropped client reconnects", async () => {
+      const telemetry = new RecordingEmitter();
+      const { manager, game, client } = prestartedGame(telemetry);
+
+      // A blip: the socket closes and the client reconnects a moment later,
+      // which is what Transport does on any close bar 1000 and 1002.
+      await mockWsOf(client).trigger("close");
+      runManager(3_000);
+      expect(game.rejoinClient(makeMockWs() as any, client.persistentID)).toBe(
+        true,
+      );
+
+      runManager(1_000);
+
+      expect(telemetry.types).toContain("match_started");
+      expect(manager.activeGames()).toBe(1);
+    });
+
+    it("reaps the held game if nobody comes back", async () => {
+      const telemetry = new RecordingEmitter();
+      const { manager, client } = prestartedGame(telemetry);
+
+      await mockWsOf(client).trigger("close");
+      runManager(60_000);
+
+      expect(telemetry.types).not.toContain("match_started");
+      expect(manager.activeGames()).toBe(0);
+    });
+  });
+
+  it("ignores messages from a socket that has left the roster", async () => {
     const telemetry = new RecordingEmitter();
-    const manager = new GameManager(log, telemetry);
-    const game: GameServer = manager.createGame(cid("delay"), undefined)!;
-    const client = makeClient();
-    game.joinClient(client);
-    (game as any).hasReachedMaxPlayerCount = true;
+    const game = makeGame({ log, telemetry });
+    const staying = makeClient({ clientID: cid("stays") });
+    const leaving = makeClient({ clientID: cid("leaves") });
+    game.joinClient(staying);
+    game.joinClient(leaving);
+    startGame(game);
 
-    // One tick: the lobby is full, so the manager prestarts and schedules
-    // start() 2s out.
-    runManager(1_000);
-    expect(telemetry.types).toContain("player_joined");
-    expect(game.hasStarted()).toBe(true);
-    expect(telemetry.types).not.toContain("match_started");
+    // Its listener outlives the close, as a real socket's does through the
+    // handshake — but nothing it sends may still reach the game.
+    const ws = mockWsOf(leaving);
+    await ws.trigger("close");
+    await ws.emit({ type: "intent", intent: { type: "spawn", tile: 1 } });
 
-    // The last client leaves inside that window.
-    await mockWsOf(client).trigger("close");
-    runManager(3_000);
-
-    // start() must not have run for the empty roster, and the game must not
-    // be left stranded in prestart either.
-    expect(telemetry.types).not.toContain("match_started");
-    expect(game.phase()).toBe(GamePhase.Finished);
-
-    runManager(1_000);
-    expect(manager.activeGames()).toBe(0);
+    expect(telemetry.types).not.toContain("intent_observed");
   });
 });
