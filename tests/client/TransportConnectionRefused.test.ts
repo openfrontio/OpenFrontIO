@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";
+import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
 
 const modalMocks = vi.hoisted(() => ({
   showInGameConfirm:
@@ -80,6 +81,7 @@ describe("Transport terminal connection refused", () => {
   let dismissDialog: ((value: boolean) => void) | undefined;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     sockets.length = 0;
     mockLocationHref = "http://localhost:9000/w1/game/abcd1234";
     dismissDialog = undefined;
@@ -108,6 +110,7 @@ describe("Transport terminal connection refused", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -125,11 +128,11 @@ describe("Transport terminal connection refused", () => {
     connectTransport();
     expect(sockets).toHaveLength(1);
 
-    sockets[0].serverClose(1003, "Game not found");
+    sockets[0].serverClose(CloseCode.GameNotFound, CloseReason.GameNotFound);
 
     expect(modalMocks.showInGameConfirm).toHaveBeenCalledTimes(1);
     expect(modalMocks.showInGameConfirm.mock.calls[0][0]).toContain(
-      "Game not found",
+      CloseReason.GameNotFound,
     );
     expect(modalMocks.showInGameConfirm.mock.calls[0][1]).toMatchObject({
       confirmText: "win_modal.exit",
@@ -145,7 +148,7 @@ describe("Transport terminal connection refused", () => {
 
   it("stays on the game page when Close is clicked", async () => {
     connectTransport();
-    sockets[0].serverClose(1003, "Game not found");
+    sockets[0].serverClose(CloseCode.GameNotFound, CloseReason.GameNotFound);
 
     dismissDialog?.(false);
     await Promise.resolve();
@@ -156,7 +159,7 @@ describe("Transport terminal connection refused", () => {
 
   it("does not reopen the socket after Game not found", () => {
     const transport = connectTransport();
-    sockets[0].serverClose(1003, "Game not found");
+    sockets[0].serverClose(CloseCode.GameNotFound, CloseReason.GameNotFound);
 
     transport.reconnect();
     transport.reconnect();
@@ -167,13 +170,14 @@ describe("Transport terminal connection refused", () => {
 
   it.each([
     [1006, ""],
-    [1002, "WS_ERR_UNEXPECTED_RSV_1"],
-    [1002, "Unauthorized: user me fetch failed"],
-    [1002, "Unauthorized: invalid token"],
+    [CloseCode.ProtocolError, CloseReason.ProtocolError],
+    [CloseCode.InternalError, CloseReason.AccountLookupFailed],
+    [CloseCode.InternalError, CloseReason.InvalidToken],
   ])("still reconnects after a retryable close: %i %s", (code, reason) => {
     connectTransport();
 
     sockets[0].serverClose(code, reason);
+    vi.advanceTimersByTime(0);
 
     expect(sockets).toHaveLength(2);
     expect(modalMocks.showInGameConfirm).not.toHaveBeenCalled();

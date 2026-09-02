@@ -1,5 +1,6 @@
 import { ClientEnv } from "src/client/ClientEnv";
 import { ZbContext } from "../../zbin";
+import { CloseCode, isTerminalClose } from "../core/CloseCodes";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
@@ -37,7 +38,7 @@ import {
 } from "../core/ZbinWire";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
-import { showInGameConfirm } from "./InGameModal";
+import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
 import { translateText } from "./Utils";
 import { PlayerView } from "./view";
@@ -216,6 +217,9 @@ export class SendSpectateEvent implements GameEvent {
   constructor(public readonly spectator: boolean) {}
 }
 
+const RECONNECT_DELAY_MS = 3000;
+const MAX_RECONNECT_ATTEMPTS = 20;
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -227,10 +231,13 @@ export class Transport {
   private onmessage: (msg: ServerMessage) => void;
 
   private pingInterval: number | null = null;
+  private reconnectTimeout: number | null = null;
+  private reconnectAttempts = 0;
   public readonly isLocal: boolean;
-  // Latched by a 1003 close (rejection the server will repeat). 1002 stays
-  // retryable (mangled frames, account-API / JWKS blips). Blocks connectRemote
-  // neither the ping nor ClientGameRunner's silence check can reopen it.
+  // Latched by a terminal close (a rejection the server will repeat). 1xxx
+  // stays retryable (mangled frames, account-API / JWKS blips). Blocks
+  // connectRemote so neither the ping nor ClientGameRunner's silence check
+  // can reopen it.
   private connectionRefused = false;
 
   // clientID dictionary for the binary wire (see ZbinWire.ts), seeded from
@@ -404,6 +411,7 @@ export class Transport {
     this.onmessage = onmessage;
     this.socket.onopen = () => {
       console.log("Connected to game server!");
+      this.reconnectAttempts = 0;
       if (this.socket === null) {
         console.error("socket is null");
         return;
@@ -447,12 +455,26 @@ export class Transport {
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
-      if (event.code === 1003) {
-        this.handleConnectionRefused(event.reason);
-      } else if (event.code !== 1000) {
-        console.log(`received error code ${event.code}, reconnecting`);
-        this.reconnect();
+      if (isTerminalClose(event.code)) {
+        if (event.code !== CloseCode.Normal) {
+          this.handleConnectionRefused(event.reason);
+        }
+        return;
       }
+      if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        console.log(`giving up after ${this.reconnectAttempts} attempts`);
+        showInGameAlert(translateText("error_modal.connection_lost"));
+        return;
+      }
+      const delay = this.reconnectAttempts === 0 ? 0 : RECONNECT_DELAY_MS;
+      this.reconnectAttempts++;
+      console.log(
+        `received error code ${event.code}, reconnecting in ${delay}ms`,
+      );
+      this.reconnectTimeout = window.setTimeout(() => {
+        this.reconnectTimeout = null;
+        this.reconnect();
+      }, delay);
     };
   }
 
@@ -464,7 +486,7 @@ export class Transport {
     this.stopPing();
     void showInGameConfirm(
       translateText("error_modal.connection_refused", {
-        reason,
+        reason: translateText(reason),
       }),
       {
         variant: "warning",
@@ -813,6 +835,10 @@ export class Transport {
   }
 
   private killExistingSocket(): void {
+    if (this.reconnectTimeout !== null) {
+      window.clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
     if (this.socket === null) {
       return;
     }

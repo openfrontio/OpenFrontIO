@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
+import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
@@ -389,7 +390,7 @@ export async function startWorker() {
               undefined,
             ),
           );
-          ws.close(1003, "ClientJoinMessageSchema");
+          ws.close(CloseCode.BadRequest, CloseReason.InvalidMessage);
           return;
         }
 
@@ -418,13 +419,13 @@ export async function startWorker() {
           log.warn(`Invalid token: ${result.message}`, {
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, `Unauthorized: invalid token`);
+          ws.close(CloseCode.InternalError, CloseReason.InvalidToken);
           return;
         }
         const { persistentId, claims } = result;
 
         if (claims?.role === "banned") {
-          ws.close(1003, "Account Banned");
+          ws.close(CloseCode.Banned, CloseReason.Banned);
           return;
         }
 
@@ -443,7 +444,7 @@ export async function startWorker() {
             log.warn(
               `game ${clientMsg.gameID} not found on worker ${workerId}`,
             );
-            ws.close(1003, "Game not found");
+            ws.close(CloseCode.GameNotFound, CloseReason.GameNotFound);
           }
           return;
         }
@@ -503,7 +504,7 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(1003, "Unauthorized: Turnstile token rejected");
+            ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
             return;
           }
           if (plan.action === "verify") {
@@ -526,7 +527,7 @@ export async function startWorker() {
                   gameID: clientMsg.gameID,
                   reason: verdict.reason,
                 });
-                ws.close(1003, "Unauthorized: Turnstile token rejected");
+                ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
                 return;
               case "error":
                 // Fail open: the locally screened name stands.
@@ -573,7 +574,7 @@ export async function startWorker() {
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
-            ws.close(1003, "Unauthorized");
+            ws.close(CloseCode.Unauthorized, CloseReason.LoginRequired);
             return;
           }
         } else {
@@ -584,7 +585,7 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(1002, "Unauthorized: user me fetch failed");
+            ws.close(CloseCode.InternalError, CloseReason.AccountLookupFailed);
             return;
           }
           flares = result.response.player.flares;
@@ -602,7 +603,7 @@ export async function startWorker() {
               log.warn(
                 "Forbidden: player without an allowed flare attempted to join game",
               );
-              ws.close(1003, "Forbidden");
+              ws.close(CloseCode.Forbidden, CloseReason.Forbidden);
               return;
             }
           }
@@ -632,7 +633,7 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
           });
-          ws.close(1003, cosmeticResult.reason);
+          ws.close(CloseCode.Forbidden, CloseReason.CosmeticsForbidden);
           return;
         }
 
@@ -673,36 +674,36 @@ export async function startWorker() {
 
         if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          ws.close(1003, "Game not found");
+          ws.close(CloseCode.GameNotFound, CloseReason.GameNotFound);
         } else if (joinResult === "kicked") {
           log.warn(`kicked client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1003, "Cannot join game");
+          ws.close(CloseCode.GameClosed, CloseReason.CannotJoin);
         } else if (joinResult === "not_allowlisted") {
           log.info(`client not whitelisted for game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1003, "You are not whitelisted");
+          ws.close(CloseCode.Forbidden, CloseReason.NotAllowlisted);
         } else if (joinResult === "not_trusted") {
           log.info(`untrusted client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1003, "Trusted account required");
+          ws.close(CloseCode.Forbidden, CloseReason.NotTrusted);
         } else if (joinResult === "rejected") {
           log.info(`client rejected from game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1003, "Lobby full");
+          ws.close(CloseCode.LobbyFull, CloseReason.LobbyFull);
         }
 
         // Handle other message types
       } catch (error) {
-        ws.close(1011, "Internal server error");
+        ws.close(CloseCode.InternalError, CloseReason.InternalError);
         log.warn(
           `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
             0,
@@ -714,7 +715,7 @@ export async function startWorker() {
 
     ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
+        ws.close(CloseCode.ProtocolError, CloseReason.ProtocolError);
       }
     });
     ws.on("close", () => {

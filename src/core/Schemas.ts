@@ -225,7 +225,7 @@ export type LobbyAccent = z.infer<typeof LobbyAccentSchema>;
 // The charset accepts everything AccountUsernameSchema can produce, hyphens
 // included, so a verified account name is always representable on the wire —
 // verified play skips free-form validation, so an unrepresentable name would
-// reach the server and be closed with 1003.
+// reach the server and be closed with CloseCode.BadRequest.
 //
 // Letters and digits the in-game name renderer can actually draw, plus the
 // punctuation a name may carry. This is what lets José, Müller, Renée and
