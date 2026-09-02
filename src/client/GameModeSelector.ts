@@ -43,7 +43,11 @@ import {
   translateText,
 } from "./Utils";
 
-const CARD_BG = "bg-surface";
+const PRIMARY_ACTION =
+  "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]";
+const SECONDARY_ACTION =
+  "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]";
+const DISABLED = "opacity-50 cursor-not-allowed pointer-events-none";
 
 /**
  * Whether a multiplayer entry point should refuse to act. Exported for tests
@@ -233,143 +237,92 @@ export class GameModeSelector extends LitElement {
     const ffa = this.lobbies?.games?.["ffa"]?.[0];
     const teams = this.lobbies?.games?.["team"]?.[0];
     const special = this.lobbies?.games?.["special"]?.[0];
+    // The hero slot holds the spinner, then the FFA card; loaded without one
+    // it goes and the upcoming column takes the whole row.
+    const heroSlot = this.lobbies === null || ffa !== undefined;
+    // A lone secondary card takes both of the column's card rows.
+    const cardRows =
+      teams && special
+        ? { special: "sm:row-start-2", teams: "sm:row-start-3" }
+        : {
+            special: "sm:row-start-2 sm:row-span-2",
+            teams: "sm:row-start-2 sm:row-span-2",
+          };
 
+    // DOM is in phone order; sm+ places the same elements onto a grid and
+    // reading-flow keeps focus order following the rows (Chromium only).
     return html`
-      <div class="flex flex-col gap-4 w-full px-4 sm:px-0 mx-auto pb-4 sm:pb-0">
-        <!-- Solo + detailed view: mobile only, top. The lobby browser is one
-             column wide, matching Join Lobby below it. -->
-        <div class="sm:hidden grid grid-cols-3 gap-4 h-14">
-          <div class="col-span-2">
-            ${this.renderSmallActionCard(
-              translateText("main.solo"),
-              this.openSinglePlayerModal,
-              "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
-            )}
-          </div>
-          ${this.renderSmallActionCard(
-            translateText("main.detailed_view"),
-            this.openDetailedView,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-          )}
-        </div>
-        <!-- Create/ranked/join: mobile only, below solo -->
-        <div class="sm:hidden grid grid-cols-3 gap-4 h-14">
-          ${this.renderSmallActionCard(
-            translateText("main.create"),
-            this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-            undefined,
-            true,
-          )}
-          ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-            undefined,
-            true,
-          )}
-          ${this.renderSmallActionCard(
-            translateText("main.join"),
-            this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-            this.hostedLobbyCount(),
-            true,
-          )}
-        </div>
-        <!-- iOS Add to Home Screen banner -->
+      <div
+        class="flex flex-col gap-4 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] sm:[reading-flow:grid-rows]"
+      >
         <ios-add-to-home-screen-banner
-          class="no-crazygames"
+          class="no-crazygames [&:empty]:hidden sm:col-span-2 sm:row-start-1"
         ></ios-add-to-home-screen-banner>
 
-        <!-- Game cards grid -->
-        ${this.lobbies === null
-          ? html`<div
-              class="flex items-center justify-center h-44 sm:h-[min(24rem,40vh)]"
-            >
-              <span
-                class="w-24 h-24 border-[6px] border-blue-500/30 border-t-blue-500 rounded-full animate-spin"
-              ></span>
-            </div>`
-          : html`<div
-              class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
-            >
-              <!-- Left col: main card (desktop only) -->
-              ${ffa
-                ? html`<div class="hidden sm:block">
-                    ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
-                  </div>`
-                : nothing}
-
-              <!-- Right col: special + teams (desktop only) -->
-              <div class="hidden sm:flex sm:flex-col sm:gap-4">
-                ${special
-                  ? html`<div class="flex-1 min-h-0">
-                      ${this.renderSpecialLobbyCard(special)}
-                    </div>`
-                  : nothing}
-                ${teams
-                  ? html`<div class="flex-1 min-h-0">
-                      ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
-                    </div>`
-                  : nothing}
-              </div>
-
-              <!-- Mobile: special, ffa, teams inline -->
-              <div class="sm:hidden">
-                ${special ? this.renderSpecialLobbyCard(special) : nothing}
-              </div>
-              <div class="sm:hidden">
-                ${ffa
-                  ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
-                  : nothing}
-              </div>
-              <div class="sm:hidden">
-                ${teams
-                  ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
-                  : nothing}
-              </div>
-            </div>`}
-
-        <!-- Solo + detailed view, desktop only. Solo spans two columns; the
-             lobby browser is one, the same width as Join Lobby below it. -->
-        <div class="hidden sm:grid grid-cols-3 gap-4 h-14">
-          <div class="col-span-2">
-            ${this.renderSmallActionCard(
-              translateText("main.solo"),
-              this.openSinglePlayerModal,
-              "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
-            )}
-          </div>
+        <div class="h-14 sm:col-span-2 sm:row-start-3">
           ${this.renderSmallActionCard(
-            translateText("main.detailed_view"),
-            this.openDetailedView,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            translateText("main.solo"),
+            this.openSinglePlayerModal,
+            PRIMARY_ACTION,
           )}
         </div>
-        <!-- Bottom row: create + ranked + join (desktop only) -->
-        <div class="hidden sm:grid grid-cols-3 gap-4 h-14">
+        <div class="grid grid-cols-3 gap-4 h-14 sm:col-span-2 sm:row-start-4">
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            SECONDARY_ACTION,
             undefined,
             true,
           )}
           ${this.renderSmallActionCard(
             translateText("mode_selector.ranked_title"),
             this.openRankedMenu,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            SECONDARY_ACTION,
             undefined,
             true,
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            SECONDARY_ACTION,
             this.hostedLobbyCount(),
             true,
           )}
         </div>
+
+        ${heroSlot
+          ? html`<div class="min-w-0 sm:col-start-1 sm:row-start-2">
+              ${ffa
+                ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
+                : html`<div
+                    class="flex items-center justify-center h-44 sm:h-full"
+                  >
+                    <span
+                      class="size-24 rounded-full border-[6px] border-blue-500/30 border-t-blue-500 animate-spin"
+                    ></span>
+                  </div>`}
+            </div>`
+          : nothing}
+
+        <!-- Always rendered: the heading is the only way into the lobby browser. -->
+        <section
+          class="flex flex-col gap-4 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] sm:row-start-2 sm:min-h-0 sm:[reading-flow:grid-rows] ${heroSlot
+            ? "sm:col-start-2"
+            : "sm:col-start-1 sm:col-span-2"}"
+        >
+          ${teams
+            ? html`<div class="min-w-0 sm:min-h-0 ${cardRows.teams}">
+                ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
+              </div>`
+            : nothing}
+          ${special
+            ? html`<div class="min-w-0 sm:min-h-0 ${cardRows.special}">
+                ${this.renderLobbyCard(special, this.getLobbyTitle(special))}
+              </div>`
+            : nothing}
+          ${this.renderUpcomingHeading()}
+        </section>
+
         ${this.showTrustRequired
           ? trustRequiredDialog(
               this.viewerSignedIn,
@@ -378,10 +331,6 @@ export class GameModeSelector extends LitElement {
           : nothing}
       </div>
     `;
-  }
-
-  private renderSpecialLobbyCard(lobby: PublicGameInfo) {
-    return this.renderLobbyCard(lobby, this.getLobbyTitle(lobby));
   }
 
   /**
@@ -446,6 +395,63 @@ export class GameModeSelector extends LitElement {
 
   // Number of open hosted lobbies waiting in the browser; shown as a chip
   // on the Join button.
+  /**
+   * The heading over the upcoming column, and the way to the lobby browser now
+   * that the Detailed View button is gone. Heading and link are one control:
+   * side by side they were two runs of small uppercase text, and neither read
+   * as clickable. A heading may hold a button, so the h2 survives.
+   *
+   * Dims and stops responding on an invalid username, as the button it
+   * replaces did: openDetailedView's own check is a silent backstop that
+   * assumes its control already looks disabled.
+   */
+  /** Heading over the upcoming column; also the link to the lobby browser. */
+  private renderUpcomingHeading() {
+    const count = this.advertisedLobbyCount();
+    return html`
+      <h2 class="min-w-0 sm:row-start-1">
+        <button
+          @click=${this.openDetailedView}
+          ?disabled=${!this.inputValid}
+          class="group/upcoming flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.04] py-1.5 pl-2.5 pr-1.5 transition-colors hover:border-malibu-blue/50 hover:bg-malibu-blue/15 ${this
+            .inputValid
+            ? ""
+            : DISABLED}"
+        >
+          <span
+            class="truncate text-sm font-bold uppercase tracking-widest text-white/70 group-hover/upcoming:text-white"
+            >${translateText("public_lobby.upcoming")}</span
+          >
+          <span
+            class="flex shrink-0 items-center gap-0.5 rounded bg-malibu-blue py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wider text-white group-hover/upcoming:bg-aquarius"
+          >
+            ${count > 0
+              ? translateText("public_lobby.see_all", { count })
+              : nothing}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              class="size-4"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </span>
+        </button>
+      </h2>
+    `;
+  }
+
+  /** Every lobby the browser lists, hosted included. */
+  private advertisedLobbyCount(): number {
+    return Object.values(this.lobbies?.games ?? {}).flat().length;
+  }
+
   private hostedLobbyCount(): number {
     return this.lobbies?.games?.hosted?.length ?? 0;
   }
@@ -453,7 +459,7 @@ export class GameModeSelector extends LitElement {
   private renderSmallActionCard(
     title: string,
     onClick: () => void,
-    bgClass: string = CARD_BG,
+    bgClass: string = SECONDARY_ACTION,
     badge?: number,
     // Only the three multiplayer action cards (create/ranked/join) pass this;
     // the solo card is never gated (see openSinglePlayerModal) and must never
@@ -473,7 +479,7 @@ export class GameModeSelector extends LitElement {
         aria-disabled=${blocked}
         class="relative flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${!this
           .inputValid
-          ? "opacity-50 cursor-not-allowed pointer-events-none"
+          ? DISABLED
           : blocked
             ? "opacity-50 cursor-not-allowed"
             : ""}"

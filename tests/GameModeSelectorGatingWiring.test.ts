@@ -98,6 +98,18 @@ function lobbyCardButton(): HTMLButtonElement | null {
   return selector.querySelector("button.group");
 }
 
+/** The UPCOMING heading, which is itself the link to the lobby browser. */
+function upcomingHeadingButton(): HTMLButtonElement | null {
+  return selector.querySelector("h2 button");
+}
+
+async function setUsernameValid(isValid: boolean): Promise<void> {
+  window.dispatchEvent(
+    new CustomEvent("username-validity-change", { detail: { isValid } }),
+  );
+  await selector.updateComplete;
+}
+
 beforeEach(async () => {
   // connectedCallback reads ClientEnv.gameCreationRate(), which throws without
   // the config the server normally injects into index.html.
@@ -305,5 +317,106 @@ describe("the public lobby card (validateAndJoin)", () => {
     card!.click();
 
     expect(joinLobby).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The heading over the upcoming column replaced the Detailed View card, so it
+ * is the homepage's only route to the lobby browser. openDetailedView's own
+ * username check is a silent backstop -- it returns without telling anyone --
+ * so the control has to carry the disabled state itself, as the card it
+ * replaced did.
+ */
+describe("the upcoming heading (the route to the lobby browser)", () => {
+  beforeEach(async () => {
+    await pushLobbies({ ffa: [publicLobby("game-1")] });
+  });
+
+  it("is there before any snapshot, so a dead feed can't strand the player", async () => {
+    // No pushLobbies() here on purpose: `lobbies` is still null, which used to
+    // replace this whole block with a spinner. The browser opens its own
+    // socket, so it is worth reaching even when the homepage's never connects.
+    const fresh = document.createElement(
+      "game-mode-selector",
+    ) as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    document.body.appendChild(fresh);
+    await fresh.updateComplete;
+
+    const heading = fresh.querySelector("h2 button");
+    expect(heading).not.toBeNull();
+    (heading as HTMLButtonElement).click();
+
+    expect(window.showPage).toHaveBeenCalledWith("page-detailed-view");
+  });
+
+  it("opens the browser while the username is valid", async () => {
+    await setUsernameValid(true);
+
+    const heading = upcomingHeadingButton();
+    expect(heading).not.toBeNull();
+    expect(heading!.disabled).toBe(false);
+    heading!.click();
+
+    expect(window.showPage).toHaveBeenCalledWith("page-detailed-view");
+  });
+
+  it("dims and stops responding once the username is invalid", async () => {
+    await setUsernameValid(false);
+
+    const heading = upcomingHeadingButton();
+    expect(heading).not.toBeNull();
+    expect(heading!.disabled).toBe(true);
+    expect(heading!.className).toContain("cursor-not-allowed");
+    heading!.click();
+
+    expect(window.showPage).not.toHaveBeenCalledWith("page-detailed-view");
+  });
+});
+
+/**
+ * At sm+ the block is a placed grid, so the class strings are the layout.
+ * These pin the three states where an unconditional placement collided or
+ * left a track empty: loading, a snapshot with no FFA lobby, and a column
+ * with only one of its two cards.
+ */
+describe("grid placement", () => {
+  const section = () => selector.querySelector("section")!;
+  const heroSlot = () =>
+    selector.querySelector(":scope > div > div.sm\\:col-start-1");
+
+  it("keeps the upcoming column beside the spinner while loading", () => {
+    expect(heroSlot()).not.toBeNull();
+    expect(section().className).toContain("sm:col-start-2");
+    expect(section().className).not.toContain("sm:col-span-2");
+  });
+
+  it("drops the hero slot and spans the row when there is no FFA lobby", async () => {
+    await pushLobbies({ team: [publicLobby("team-1")] });
+    expect(heroSlot()).toBeNull();
+    expect(section().className).toContain("sm:col-start-1 sm:col-span-2");
+  });
+
+  it("lets a lone card take both card rows", async () => {
+    await pushLobbies({
+      ffa: [publicLobby("ffa-1")],
+      team: [publicLobby("t")],
+    });
+    const card = section().querySelector("div.sm\\:min-h-0")!;
+    expect(card.className).toContain("sm:row-start-2 sm:row-span-2");
+  });
+
+  it("stacks two cards on their own rows", async () => {
+    await pushLobbies({
+      ffa: [publicLobby("ffa-1")],
+      team: [publicLobby("t")],
+      special: [publicLobby("s")],
+    });
+    const rows = Array.from(section().querySelectorAll("div.sm\\:min-h-0")).map(
+      (c) => c.className,
+    );
+    expect(rows.some((c) => c.includes("sm:row-start-3"))).toBe(true);
+    expect(rows.some((c) => c.includes("sm:row-span-2"))).toBe(false);
   });
 });
