@@ -62,9 +62,6 @@ export class TutorialPanel extends LitElement implements Controller {
   @state() private active = false;
   @state() private confirmingClose = false;
   @state() private ctx: TutorialContext | null = null;
-  /** Viewport position once the player has dragged the panel; null = docked. */
-  @state() private dragPos: { x: number; y: number } | null = null;
-  private dragOffset: { x: number; y: number } | null = null;
 
   private progress = new TutorialProgress();
   private started = false;
@@ -200,8 +197,8 @@ export class TutorialPanel extends LitElement implements Controller {
   private setActive(active: boolean) {
     if (this.active === active) return;
     this.active = active;
-    // The host sits in the top-right flex stack; leave the flow when hidden
-    // so it doesn't add a gap under the control bar.
+    // The host sits in the bottom HUD column above the control panel; leave
+    // the flow when hidden so it doesn't add a gap there.
     this.classList.toggle("hidden", !active);
     if (!active) {
       this.setHighlight(null);
@@ -214,52 +211,14 @@ export class TutorialPanel extends LitElement implements Controller {
     this.setActive(false);
   }
 
-  private onDragStart(e: PointerEvent) {
-    if ((e.target as HTMLElement).closest("button")) return;
-    const panel = e.currentTarget as HTMLElement;
-    const rect = panel.parentElement!.getBoundingClientRect();
-    this.dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    panel.setPointerCapture(e.pointerId);
-    e.preventDefault();
-  }
-
-  private onDragMove(e: PointerEvent) {
-    if (this.dragOffset === null) return;
-    const panel = (e.currentTarget as HTMLElement).parentElement!;
-    const maxX = window.innerWidth - panel.offsetWidth;
-    const maxY = window.innerHeight - panel.offsetHeight;
-    this.dragPos = {
-      x: Math.max(0, Math.min(maxX, e.clientX - this.dragOffset.x)),
-      y: Math.max(0, Math.min(maxY, e.clientY - this.dragOffset.y)),
-    };
-  }
-
-  private onDragEnd(e: PointerEvent) {
-    this.dragOffset = null;
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-  }
-
   render() {
     if (!this.active) return nothing;
-    const dragged = this.dragPos !== null;
     return html`
       <div
-        class="pointer-events-auto w-[min(20rem,calc(100vw-1rem))] rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-sm p-3 ${dragged
-          ? "fixed"
-          : ""}"
-        style=${dragged
-          ? `left: ${this.dragPos!.x}px; top: ${this.dragPos!.y}px;`
-          : ""}
+        class="pointer-events-auto w-full rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-sm p-3 mb-1"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
-        <div
-          class="flex items-center justify-between gap-2 mb-1.5 cursor-move select-none"
-          style="touch-action: none;"
-          @pointerdown=${(e: PointerEvent) => this.onDragStart(e)}
-          @pointermove=${(e: PointerEvent) => this.onDragMove(e)}
-          @pointerup=${(e: PointerEvent) => this.onDragEnd(e)}
-          @pointercancel=${(e: PointerEvent) => this.onDragEnd(e)}
-        >
+        <div class="flex items-center justify-between gap-2 mb-1.5">
           <span class="font-bold text-cyber-yellow uppercase tracking-wide"
             >${translateText("tutorial.title")}</span
           >
