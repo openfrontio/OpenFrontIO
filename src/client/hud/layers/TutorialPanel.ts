@@ -238,6 +238,7 @@ export class TutorialPanel extends LitElement implements Controller {
         .config()
         .isUnitDisabled(UnitType.HydrogenBomb),
       mirvDisabled: this.game.config().isUnitDisabled(UnitType.MIRV),
+      samDisabled: this.game.config().isUnitDisabled(UnitType.SAMLauncher),
     };
   }
 

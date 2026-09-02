@@ -15,6 +15,7 @@ export type TutorialHighlight =
   | "atom"
   | "hydrogen"
   | "mirv"
+  | "sam"
   | "tribes"
   | "nation";
 
@@ -53,6 +54,7 @@ export interface TutorialContext {
   atomLaunched: boolean;
   hydrogenDisabled: boolean;
   mirvDisabled: boolean;
+  samDisabled: boolean;
 }
 
 export interface TutorialStep {
@@ -191,6 +193,12 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     id: "mirv_info",
     highlight: "mirv",
     applies: (c) => !c.siloDisabled && !c.mirvDisabled,
+    manual: true,
+  },
+  {
+    id: "sam_info",
+    highlight: "sam",
+    applies: (c) => !c.samDisabled,
     manual: true,
   },
 ];

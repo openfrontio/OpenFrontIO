@@ -30,6 +30,7 @@ function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
     atomLaunched: false,
     hydrogenDisabled: false,
     mirvDisabled: false,
+    samDisabled: false,
     ...overrides,
   };
 }
@@ -128,8 +129,9 @@ describe("TutorialProgress", () => {
       atomDisabled: true,
       hydrogenDisabled: true,
       mirvDisabled: true,
+      samDisabled: true,
     });
-    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 14);
+    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 15);
 
     settle(p, c);
     settle(p, c);
@@ -229,6 +231,7 @@ describe("TutorialProgress", () => {
       ["atom_info", "atom"],
       ["hydrogen_info", "hydrogen"],
       ["mirv_info", "mirv"],
+      ["sam_info", "sam"],
     ]) {
       expect(p.current()?.id).toBe(id);
       expect(p.current()?.highlight).toBe(highlight);
