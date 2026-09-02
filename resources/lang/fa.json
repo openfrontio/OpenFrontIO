@@ -16,6 +16,13 @@
     "claim_failed": "دریافت جایزه ناموفق بود. لطفاً دوباره تلاش کنید.",
     "clear_session": "پاک کردن سشن",
     "connected_as": "متصل به عنوان",
+    "delete_account_confirm_button": "حذف دائمی",
+    "delete_account_confirm_word": "حذف",
+    "delete_account_desc": "حساب کاربری و تمام داده‌های آن را به‌طور دائمی حذف کنید.",
+    "delete_account_failed": "حذف ناموفق بود. لطفاً با پشتیبانی به نشانی support@openfront.io تماس بگیرید",
+    "delete_account_title": "حذف حساب",
+    "delete_account_type_to_confirm": "برای تأیید، عبارت \"{word}\" را وارد کنید",
+    "delete_account_warning": "حساب کاربری شما بلافاصله و به‌طور دائمی حذف می‌شود. هیچ دوره مهلتی وجود ندارد و هیچ راهی برای بازیابی آن نیست. شما از تمامی دستگاه‌ها خارج خواهید شد.",
     "email_placeholder": "آدرس ایمیل خود را وارد کنید",
     "enter_email_address": "لطفا یک آدرس ایمیل را وارد کنید",
     "failed_to_send_recovery_email": "ارسال ایمیل بازیابی ناموفق بود",
@@ -37,6 +44,7 @@
     "linked_account": "ورود به حساب به عنوان {account_name}",
     "linked_to_google": "متصل به گوگل",
     "linked_to_google_email": "متصل به گوگل ({email})",
+    "login_email_exists": "شما از قبل با این ایمیل حساب کاربری دارید. وارد آن شوید و سپس این حساب را در تنظیمات پیوند دهید.",
     "manage_subscription": "مدیریت",
     "marketing_desc": "اخبار، رویدادها و به‌روزرسانی‌های گاه‌به‌گاه بازی. هر زمان بخواهید می‌توانید لغو اشتراک کنید.",
     "marketing_no_email": "یک ایمیل به حساب خود پیوند دهید تا در به‌روزرسانی‌ها مشترک شوید.",
@@ -69,16 +77,20 @@
     "tab_stats": "آمار",
     "title": "حساب",
     "unclaimed_rewards": "جوایز دریافت نشده",
+    "username_change_ready": "تغییر امکان‌پذیر است",
     "username_confirm_abandon": "شما برای همیشه نام رزروشدهٔ «{name}» را از دست خواهید داد.",
     "username_confirm_body": "نام جدید شما به مدت ۳۰ روز قفل خواهد شد.",
     "username_confirm_button": "تغییر نام",
     "username_confirm_case_only": "نام جدید فقط از نظر بزرگی و کوچکی حروف با نام فعلی شما تفاوت دارد — بااین‌حال، قفل ۳۰روزه را دوباره فعال می‌کند.",
     "username_confirm_heading": "تغییر نام کاربری؟",
+    "username_current_label": "نام فعلی",
     "username_error_cooldown": "می‌توانید پس از {days} روز دوباره نام کاربری خود را تغییر دهید.",
     "username_error_failed": "تغییر نام کاربری امکان‌پذیر نبود. لطفاً بعداً دوباره تلاش کنید.",
     "username_error_profane": "این نام کاربری مجاز نیست.",
     "username_error_taken": "این نام کاربری قبلاً گرفته شده است — نام دیگری را امتحان کنید.",
     "username_grace_warning": "در تاریخ {date} حق انحصاری استفاده از «{name}» را از دست خواهید داد. برای حفظ آن، دوباره مشترک شوید.",
+    "username_locked_until": "تا تاریخ {date} قفل است",
+    "username_new_label": "نام جدید",
     "username_not_set": "نام کاربری خود را ثبت کنید — این نام شما را در تمام بازی‌هایتان شناسایی می‌کند.",
     "username_placeholder": "نام کاربری را وارد کنید",
     "username_save": "ذخیره",
@@ -86,11 +98,10 @@
     "username_temporary_prompt": "نام کاربری شما توسط بازیکن دیگری گرفته شده است. اکنون نام جدیدی انتخاب می‌کنید؟ این تغییر نام رایگان است.",
     "username_temporary_prompt_confirm": "یک نام انتخاب کنید",
     "username_title": "نام‌کاربری",
-    "games_username": "نام‌کاربری",
-    "log_out": "خروج از حساب",
-    "tab_settings": "تنظیمات",
-    "username_cooldown_until": "می‌توانید در تاریخ {date} دوباره نام کاربری خود را تغییر دهید.",
-    "your_subscription": "اشتراک شما"
+    "delete_account_blocked": "حساب کاربری شما به صورت خودکار حذف نمی‌شود. لطفاً با پشتیبانی تماس بگیرید."
+  },
+  "account_settings_modal": {
+    "title": "تنظیمات اکانت"
   },
   "ban_notice": {
     "appeal": "اگر فکر می‌کنید این یک اشتباه است، از طریق دیسکورد با ما تماس بگیرید.",
@@ -129,6 +140,10 @@
     "not_enough_money": "پول کافی نیست",
     "upgrade_amount": "×{amount}",
     "warship_shift_hint": "برای انتخاب همزمان چندین کشتی جنگی، Shift را نگه دارید و بکشید"
+  },
+  "change_username_modal": {
+    "title": "تغییر نام کاربری",
+    "unavailable": "مدیریت نام کاربری هنوز برای این حساب در دسترس نیست."
   },
   "chat": {
     "attack": {
@@ -251,6 +266,18 @@
     "discord_section_title": "دیسکورد",
     "discord_url_hint": "از دعوت‌نامه‌ای که هرگز منقضی نمی‌شود استفاده کنید.",
     "discord_url_label": "لینک دعوت دیسکورد",
+    "donate": "حمایت مالی",
+    "donate_amount": "مبلغ",
+    "donate_insufficient": "مقدار {currency} کافی نیست.",
+    "donate_invalid_amount": "یک عدد صحیح بزرگ‌تر از ۰ وارد کنید.",
+    "donate_irreversible": "اهدایی‌ها دائمی و غیرقابل بازگشت هستند. ارزی که به کلن اهدا می‌کنید، هرگز به شما بازگردانده نخواهد شد.",
+    "donate_irreversible_hard": "پلوتونیوم ارز ویژه است. پس از اهدا، قابل بازپرداخت، برداشت یا انتقال به حساب شما نیست.",
+    "donate_not_member": "برای اهدا باید عضو کلن باشید.",
+    "donate_submitting": "در حال اهدا…",
+    "donate_subtitle": "ارز را از حساب کاربری خود به خزانه کلن منتقل کنید.",
+    "donate_success": "{amount} {currency} به [{tag}] اهدا شد!",
+    "donate_title": "اهدا به [{tag}]",
+    "donate_your_balance": "شما {balance} دارید",
     "error_already_member": "در حال حاضر عضو است",
     "error_banned": "شما از این قبیله بن شده‌اید.",
     "error_banned_reason": "شما از این کلن بن شده‌اید. دلیل: {reason}",
@@ -372,16 +399,7 @@
     "title": "قبیله ها",
     "transfer_leadership": "انتقال رهبری",
     "transfer_warning": "این کار عضو انتخاب شده را به عنوان رهبر جدید تبدیل می‌کند. شما به یک عضو عادی تبدیل خواهید شد. این اقدام قابل لغو نیست.",
-    "unban": "آن بن",
-    "history_filter_hvn": "HvN",
-    "history_filter_ranked": "رنک",
-    "stats_collapse_all": "جمع کردن همه",
-    "stats_duos": "دو نفره",
-    "stats_expand_all": "باز کردن همه",
-    "stats_ffa": "FFA",
-    "stats_quads": "چهارنفره",
-    "stats_trios": "سه‌نفره",
-    "tab_members": "اعضا"
+    "unban": "آن بن"
   },
   "common": {
     "available": "در دسترس",
@@ -391,6 +409,7 @@
     "cap_tooltip": "ظرفیت باقی‌ماندهٔ گیرنده",
     "click_to_copy": "کلیک برای کپی",
     "close": "بستن",
+    "collapse_all": "بستن همه",
     "confirm": "تأیید",
     "copied": "کپی شد!",
     "copy": "کپی",
@@ -399,6 +418,10 @@
     "duration_minute_short": "دقیقه",
     "duration_second_short": "ثانیه",
     "enabled": "فعال",
+    "error_generic": "مشکلی پیش آمد. لطفاً دوباره تلاش کنید.",
+    "expand_all": "باز کردن همه",
+    "failed_copy": "کپی کردن ناموفق بود",
+    "loading": "در حال بارگذاری...",
     "map_default": "نقشه پیش فرض",
     "month_apr": "آوریل",
     "month_aug": "آگوست",
@@ -417,10 +440,10 @@
     "paste": "جای‌گذاری",
     "preset_max": "حداکثر",
     "send": "فرستادن",
+    "slider_tooltip": "{percent}% • {amount}",
     "summary_keep": "نگه داشتن",
     "target_dead": "هدف نابود شد",
-    "target_dead_note": "نمی توانید به بازیکن نابود شده منابع ارسال کنید.",
-    "summary_send": "فرستادن"
+    "target_dead_note": "نمی توانید به بازیکن نابود شده منابع ارسال کنید."
   },
   "control_panel": {
     "allied_afk_neighbor_info": "شما می‌توانید به بازیکنان قطع‌شده حمله کنید حتی اگر با آن‌ها متحد باشید.",
@@ -450,9 +473,54 @@
     "unlimited_ranked_info": "بدون محدودیت در تعداد بازی‌های رنک که می‌توانید انجام دهید.",
     "usd_value": "ارزش: {usd}",
     "verified_name": "نام کاربری تأییدشده",
-    "verified_name_info": "نام کاربری شما برای حسابتان رزرو شده و نشان تأییدشده درون بازی نمایش داده می‌شود.",
-    "button_title": "لوازم تزئینی خود را انتخاب کنید!",
-    "title": "لوازم تزئینی"
+    "verified_name_info": "نام کاربری شما برای حسابتان رزرو شده و نشان تأییدشده درون بازی نمایش داده می‌شود."
+  },
+  "desktop_update": {
+    "blocked": "برای آخرین نسخه، به‌روزرسانی استیم لازم است",
+    "downloading": "در حال دانلود به‌روزرسانی... {percent}%",
+    "failed": "نتوانست به‌روزرسانی را دانلود کند",
+    "ready": "به‌روزرسانی آماده است",
+    "reload": "بارگذاری مجدد",
+    "retry": "تلاش مجدد"
+  },
+  "detailed_view": {
+    "capacity": "ظرفیت",
+    "delete_profile": "حذف",
+    "filters": "فیلترها",
+    "filters_with_count": "فیلترها ({count})",
+    "hide_empty": "مخفی کردن لابی‌های خالی",
+    "joined_players": "بازیکنان پیوسته",
+    "layout_duos": "دو نفره",
+    "layout_quads": "چهارنفره",
+    "layout_trios": "سه‌نفره",
+    "max": "حداکثر",
+    "min": "دقیقه",
+    "mode": "نوع لابی",
+    "mode_ffa": "FFA",
+    "mode_hvn": "انسان‌ها در برابر ملت‌ها",
+    "mode_teams": "تیم ها",
+    "no_lobbies": "هیچ لابی‌ای با فیلترهای شما مطابقت ندارد.",
+    "no_profile": "بدون پروفایل",
+    "pane_empty": "بدون لابی",
+    "pane_ffa": "آزاد برای همه",
+    "pane_heading": "{name} ({count})",
+    "pane_hosted": "میزبانی‌شده",
+    "pane_special": "ویژه",
+    "pane_team": "تیم ها",
+    "per_team": "بازیکنان در هر تیم",
+    "profile_name": "نام پروفایل",
+    "profiles": "پروفایل ها",
+    "queued": "بعدی",
+    "reset": "بازنشانی",
+    "save_profile": "ذخیره",
+    "source": "منبع",
+    "source_hosted": "میزبانی‌شده",
+    "source_public": "عمومی",
+    "spawning": "در حال ایجاد بازی…",
+    "tab_all": "همه",
+    "team_count": "تعداد تیم ها",
+    "team_size": "سایز تیم",
+    "title": "نمای دقیق"
   },
   "difficulty": {
     "difficulty": "سختی ملت ها",
@@ -508,9 +576,7 @@
     "spawn_failed": {
       "description": "انتخاب خودکار اسپاون ناموفق بود. شما نمی‌توانید این بازی را انجام دهید.",
       "title": "اسپاون شکست خورد"
-    },
-    "copied": "کپی شد!",
-    "failed_copy": "کپی کردن ناموفق بود"
+    }
   },
   "events_display": {
     "about_to_expire": "اتحاد شما با {name} در حال انقضا است!",
@@ -587,8 +653,7 @@
     "send_request": "ارسال درخواست",
     "team_info": "دوستان در یک تیم قرار می‌گیرند.",
     "withdraw": "برداشت",
-    "your_friends": "دوستان شما",
-    "error_generic": "مشکلی پیش آمد. لطفاً دوباره تلاش کنید."
+    "your_friends": "دوستان شما"
   },
   "fullscreen": {
     "enter": "ورود به حالت تمام صفحه",
@@ -628,6 +693,26 @@
     "hvn": "انسان‌ها در برابر ملت‌ها",
     "teams": "تیم‌‌ها"
   },
+  "game_settings": {
+    "bots": "قبیله ها: ",
+    "compact_map": "نقشه فشرده",
+    "custom_alliances": "مدت زمان اتحاد",
+    "disable_units": "غیرفعال کردن واحدها",
+    "doomsday_clock": "ساعت آخرالزمان",
+    "gold_multiplier": "ضریب طلا",
+    "infinite_gold": "طلای نامحدود",
+    "infinite_troops": "سربازان نامحدود",
+    "instant_build": "ساخت سریع",
+    "max_timer": "مدت زمان بازی (دقیقه)",
+    "mins_placeholder": "دقیقه‌ها",
+    "nations": "ملت ها: ",
+    "options": "تنظیمات",
+    "overtime": "وقت اضافه پس از (دقیقه)",
+    "random_spawn": "اسپاون تصادفی",
+    "start": "شروع بازی",
+    "starting_gold": "طلایه اولیه (میلیون)",
+    "water_nukes": "بمب‌های هسته‌ای آبی"
+  },
   "game_starting_modal": {
     "code_license": "کد تحت مجوز AGPL-3.0 است (بدون تضمین)",
     "credits": "سازندگان",
@@ -639,6 +724,8 @@
   "graphics_setting": {
     "advanced_desc": "تنظیم دقیق گزینه‌های گرافیکی مجزا",
     "advanced_label": "تنظیمات پیشرفته",
+    "background_color_desc": "رنگ ناحیه خارج از نقشه و زمین‌های غیرقابل عبور.",
+    "background_color_label": "رنگ پس‌زمینه",
     "black": "سیاه",
     "classic_icons_desc": "حاشیه روشن‌تر با داخل تقریباً مشکی",
     "classic_icons_label": "آیکون‌های کلاسیک",
@@ -727,17 +814,18 @@
     "territory_alpha_label": "کدری قلمرو",
     "territory_sat_desc": "میزان غلظت رنگ‌های پرکردن قلمرو (هرچه کمتر باشد، رنگ‌ها ملایم‌تر می‌شوند)",
     "territory_sat_label": "اشباع رنگ قلمرو",
-    "title": "تنظیمات گرافیک",
-    "copy_json_copied": "کپی شد!"
+    "title": "تنظیمات گرافیک"
   },
   "heads_up_message": {
     "catching_up": "درحال بروزرسانی...",
     "choose_spawn": "یک مکان شروع انتخاب کنید",
+    "choose_spawn_spectator": "بازیکنان در حال انتخاب مکان‌های شروع هستند",
     "dont_show_again": "دوباره نشان نده",
     "ffa_collusion": "یادآوری: تبانی پیش از شروع بازی در حالت همه در برابر همه مجاز نیست",
     "multiplayer_game_paused": "بازی توسط سازنده لابی متوقف شد",
     "pvp_immunity_active": "محافظ PVP برای {seconds} ثانیه فعال است",
     "random_spawn": "تخم ریزی تصادفی فعال است. در حال انتخاب مکان شروع برای شما...",
+    "random_spawn_spectator": "اسپاون تصادفی فعال است",
     "singleplayer_game_paused": "بازی متوقف شد"
   },
   "help_modal": {
@@ -832,19 +920,7 @@
     "ui_wilderness": "بیابان",
     "ui_your_team": "تیم شما:",
     "video_tutorial": "ویدیو آموزشی",
-    "video_tutorial_title": "آموزش OpenFront.io",
-    "action_alt_view": "نمای جایگزین (پوشش زمین/کشورها)",
-    "action_center": "دوربین را روی بازیکن بیاور",
-    "build_atom": "بمب اتم",
-    "build_city": "شهر",
-    "build_defense": "پست دفاعی",
-    "build_factory": "کارخانه",
-    "build_hydrogen": "بمب هیدروژنی",
-    "build_mirv": "میرووی",
-    "build_port": "بندر",
-    "build_sam": "لانچر موشک دفاعی",
-    "build_silo": "سیلوی موشکی",
-    "build_warship": "کشتی جنگی"
+    "video_tutorial_title": "آموزش OpenFront.io"
   },
   "host_modal": {
     "anonymous_players": "بازیکنان ناشناس",
@@ -868,6 +944,8 @@
     "player_whitelist_placeholder": "جدا شده با کاما",
     "players": "بازیکنان",
     "remove_player": "حذف {username}",
+    "spectator": "تماشاگر",
+    "spectators": "تماشاگران",
     "start_delay": "تأخیر شروع (ثانیه)",
     "starting_in": "شروع در {time}. برای لغو کلیک کنید",
     "subscription_required_body": "برای عمومی کردن لابی خود باید مشترک باشید.",
@@ -882,29 +960,33 @@
     "view_subscriptions": "مشاهده اشتراک ها",
     "visibility_private": "خصوصی",
     "visibility_public": "عمومی",
-    "waiting": "در انتظار برای بازیکن ها...",
-    "bots": "قبیله ها: ",
-    "bots_disabled": "غیرفعال شده",
-    "compact_map": "نقشه فشرده",
-    "custom_alliances": "مدت اتحاد",
-    "doomsday_clock": "ساعت آخرالزمان",
-    "enables_title": "غیرفعال کردن واحدها",
-    "gold_multiplier": "ضریب طلا",
-    "gold_multiplier_placeholder": "2.0 برابر",
-    "infinite_gold": "طلای نامحدود",
-    "infinite_troops": "سربازان نامحدود",
-    "instant_build": "ساخت سریع",
-    "max_timer": "مدت زمان بازی (دقیقه)",
-    "mins_placeholder": "دقیقه‌ها",
-    "nations": "ملت ها: ",
-    "nations_disabled": "غیرفعال",
-    "options_title": "تنظیمات",
-    "random_spawn": "اسپاون تصادفی",
-    "start": "شروع بازی",
-    "start_delay_placeholder": "3",
-    "starting_gold": "طلایه اولیه (میلیون)",
-    "starting_gold_placeholder": "۵",
-    "water_nukes": "بمب‌های هسته‌ای آبی"
+    "waiting": "در انتظار برای بازیکن ها..."
+  },
+  "inventory": {
+    "equipped": "مجهز شده",
+    "load_failed": "بارگذاری اینونتوری شما امکان‌پذیر نبود. لطفاً صفحه را بارگذاری مجدد کرده و دوباره تلاش کنید.",
+    "loading": "بارگذاری اینونتوری…",
+    "loadout": "تجهیزات شما",
+    "loadout_add": "تجهیزات جدید",
+    "loadout_applied": "تجهیزات مجهز شده {name}",
+    "loadout_category_label": "{category}: {summary}",
+    "loadout_delete_target": "حذف {name}",
+    "loadout_deleted": "تجهیزات حذف شده {name}",
+    "loadout_limit": "می‌توانید تا {count} مجموعه تجهیزات ذخیره کنید.",
+    "loadout_presets": "تجهیزات",
+    "loadout_saved": "تجهیزات ذخیره شده {name}",
+    "loadout_slot": "تجهیزات {name}",
+    "no_owned_crowns": "شما هنوز هیچ تاجی ندارید.",
+    "no_owned_effects_of_type": "شما هنوز هیچ افکت {type} ندارید.",
+    "no_owned_skins": "شما هنوز هیچ پوسته ای ندارید.",
+    "retry": "تلاش مجدد",
+    "selected_cosmetic": "انتخاب شده {name}",
+    "selected_cosmetic_variant": "{name} ({variant})",
+    "showing_effects": "افکت‌های مجهز: {count}",
+    "title": "اینونتوری",
+    "unequip": "خارج کردن از تجهیز",
+    "unequip_all": "خارج کردن همه از تجهیز",
+    "unequipped_all": "همه از تجهیز خارج شدند"
   },
   "ios_banner": {
     "got_it": "فهمیدم",
@@ -979,18 +1061,19 @@
     "win_loss_ratio": "برد/باخت",
     "win_score": "امتیاز برد",
     "win_score_tooltip": "بردهای وزن‌دار شده بر اساس مشارکت قبیله و سختی مسابقه است",
-    "your_ranking": "رتبه شما",
-    "loading": "در حال بارگذاری..."
+    "your_ranking": "رتبه شما"
   },
   "main": {
     "account": "حساب",
     "clans": "قبیله ها",
     "copyright": "© اوپن فرانت™ و مشارکت‌کنندگان",
     "create": "ساخت لابی",
+    "detailed_view": "نمای دقیق",
     "discord_avatar_alt": "آواتار پروفایل دیسکرد",
     "github": "گیت‌هاب",
     "go_to_troubleshooting": "به صفحه عیب یابی بروید",
     "help": "راهنما",
+    "inventory": "اینونتوری",
     "join": "پیوستن به لابی",
     "leaderboard": "جدول رده‌بندی",
     "login_discord": "ورود از طریق Discord",
@@ -1006,8 +1089,7 @@
     "title": "OpenFront (نسخه آلفا)",
     "troubleshooting": "عیب یابی",
     "user_avatar_alt": "آواتار {username}",
-    "wiki": "ویکی",
-    "settings": "تنظیمات"
+    "wiki": "ویکی"
   },
   "map": {
     "achiran": "آچی‌ران",
@@ -1161,10 +1243,7 @@
     "no_results": "هیچ نقشه ای یافت نشد",
     "search_maps": "جستجوی مپ ها...",
     "search_results": "نتایج جستجو",
-    "unfavorite": "حذف از علاقمندی ها",
-    "collapse_all": "جمع کردن همه",
-    "expand_all": "باز کردن همه",
-    "loading": "در حال بارگذاری..."
+    "unfavorite": "حذف از علاقمندی ها"
   },
   "map_layers": {},
   "marketing_consent": {
@@ -1202,6 +1281,24 @@
     "teams_of": "{teamCount} تیم {playersPerTeam} نفره",
     "teams_title": "تیم ها"
   },
+  "multi_tab": {
+    "detected": "چندین تب بازی باز شناسایی شد.",
+    "explanation": "برای تضمین بازی عادلانه، تنها یک زبانه (تب) فعال بازی در هر لحظه مجاز است.",
+    "please_wait": "لطفاً منتظر بمانید",
+    "seconds": "ثانیه ها",
+    "warning": "هشدار حالت هوشیاری"
+  },
+  "nav_account_menu": {
+    "account_settings": "تنظیمات اکانت",
+    "change_subscription": "تغییر اشتراک",
+    "change_username": "تغییر نام کاربری",
+    "copy_profile_url": "کپی آدرس پروفایل",
+    "game_settings": "تنظیمات بازی",
+    "log_out": "خروج از حساب",
+    "log_out_confirm": "از این حساب خارج شوید؟",
+    "title": "منوی حساب",
+    "view_account": "مشاهده حساب"
+  },
   "new_lobby_prompt": {
     "confirm": "آیا می‌خواهید یک لابی جدید ایجاد کنید؟ تمام بازیکنان برای پیوستن دعوت خواهند شد.",
     "dismiss": "نادیده گرفتن",
@@ -1220,6 +1317,11 @@
     "tournament": "تورنمنت",
     "tutorial": "آموزشی",
     "warning": "هشدار"
+  },
+  "overtime": {
+    "started": "وقت اضافه! قلمرو مورد نیاز برای پیروزی اکنون در حال کاهش است.",
+    "title": "زمان اضافه",
+    "to_win": "برای پیروزی بیش از {pct}% نگه دارید"
   },
   "performance_overlay": {
     "avg_60s": "میانگین(60ث):",
@@ -1240,9 +1342,7 @@
     "tick_layers_summary": "آخرین تیک: {count} لایه، {ms}ms",
     "tick_layers_table_header": "میانگین / حداکثر",
     "tps": "TPS:",
-    "tps_avg_60s": "میانگین:",
-    "copied": "کپی شد!",
-    "failed_copy": "کپی کردن ناموفق بود"
+    "tps_avg_60s": "میانگین:"
   },
   "player_panel": {
     "active": "فعال",
@@ -1309,17 +1409,7 @@
     "unit": {
       "mirvw": "سرجنگی MIRV",
       "trade": "کشتی تجاری",
-      "trans": "کشتی حمل‌ونقل",
-      "abomb": "بمب اتم",
-      "city": "شهر",
-      "defp": "پست دفاعی",
-      "fact": "کارخانه",
-      "hbomb": "بمب هیدروژنی",
-      "mirv": "میرووی",
-      "port": "بندر",
-      "saml": "لانچر موشک دفاعی",
-      "silo": "سیلوی موشکی",
-      "wshp": "کشتی جنگی"
+      "trans": "کشتی حمل‌ونقل"
     },
     "war": "جنگ",
     "warship_stats": "آمار کشتی‌های جنگی",
@@ -1391,7 +1481,10 @@
     "no_open_lobbies": "در حال حاضر لابی بازی‌ای موجود نیست",
     "not_found": "لابی‌ای با این شناسه وجود نداره. لطفاً دوباره بررسی کن.",
     "open_lobbies": "لابی‌های باز",
+    "play": "بازی",
     "pvp_immunity": "مدت زمان مصونیت PVP",
+    "spectate": "تماشا کردن",
+    "spectating": "در حال تماشا! در حال بارگذاری بازی...",
     "starting_gold": "طلای اولیه",
     "title": "پیوستن به لابی خصوصی",
     "version_mismatch": "این بازی با نسخه‌ای متفاوت ساخته شده است. امکان پیوستن وجود ندارد."
@@ -1417,8 +1510,7 @@
     "starting_gold": "{amount} میلیون طلایه اولیه",
     "starting_gold_label": "طلای اولیه",
     "water_nukes": "بمب‌های هسته‌ای آبی",
-    "doomsday_clock_label": "ساعت آخرالزمان",
-    "water_nukes_label": "بمب‌های هسته‌ای آبی"
+    "overtime": "زمان اضافه"
   },
   "public_lobby": {
     "connecting": "در حال اتصال به لابی...",
@@ -1460,15 +1552,13 @@
   "send_gold_modal": {
     "aria_slider": "اسلاید مقدار",
     "available_tooltip": "طلا فعلی در دسترس شما",
-    "title_with_name": "ارسال طلا به {name}",
-    "slider_tooltip": "{percent}% • {amount}"
+    "title_with_name": "ارسال طلا به {name}"
   },
   "send_troops_modal": {
     "aria_slider": "نوار نیروها",
     "available_tooltip": "نیروهای فعلی در دسترس شما",
     "capacity_note": "گیرنده فقط می‌تواند {amount} را قبول کند.",
-    "title_with_name": "ارسال نیروها به {name}",
-    "slider_tooltip": "{percent}% • {amount}"
+    "title_with_name": "ارسال نیروها به {name}"
   },
   "single_modal": {
     "max_timer_invalid": "لطفا یک مقدار تایمر حداکثر معتبر وارد کنید (۱-۱۲۰ دقیقه)",
@@ -1476,29 +1566,10 @@
     "medals_of_maps": "از {total} نقشه",
     "options_changed_no_achievements": "تنظیمات دلخواه - دستاورد ها غیرفعال هستند",
     "sign_in_for_achievements": "برای دستاوردها وارد شوید",
-    "toggle_achievements": "دستاوردها را تغییر دهید",
-    "bots": "قبیله ها: ",
-    "bots_disabled": "غیرفعال شده",
-    "compact_map": "نقشه فشرده",
-    "custom_alliances": "مدت زمان اتحاد",
-    "doomsday_clock": "ساعت آخرالزمان",
-    "enables_title": "غیرفعال کردن واحدها",
-    "gold_multiplier": "ضریب طلا",
-    "gold_multiplier_placeholder": "دو برابر",
-    "infinite_gold": "طلای نامحدود",
-    "infinite_troops": "سربازان نامحدود",
-    "instant_build": "ساخت سریع",
-    "max_timer": "مدت زمان بازی (دقیقه)",
-    "max_timer_placeholder": "دقیقه‌ها",
-    "mins_placeholder": "دقیقه‌ها",
-    "nations": "ملت ها: ",
-    "nations_disabled": "غیرفعال",
-    "options_title": "تنظیمات",
-    "random_spawn": "اسپاون تصادفی",
-    "start": "شروع بازی",
-    "starting_gold": "سرمایه اولیه طلا (میلیون)",
-    "starting_gold_placeholder": "5",
-    "water_nukes": "بمب‌های هسته‌ای آبی"
+    "toggle_achievements": "دستاوردها را تغییر دهید"
+  },
+  "spawn_timer": {
+    "team_percent_tooltip": "{team}: {percent}"
   },
   "steam_link_modal": {
     "code_placeholder": "XXXX-XXXX",
@@ -1517,9 +1588,7 @@
     "reason_steam_has_progress": "این حساب Steam دارای پیشرفت مجزا است و امکان ادغام آن وجود ندارد.",
     "reason_steam_linked_elsewhere": "این حساب Steam از قبل به یک حساب OpenFront دیگر متصل شده است.",
     "success": "حساب Steam شما متصل شد.",
-    "title": "اتصال حساب Steam",
-    "loading_placeholder": "…",
-    "reason_failed": "خطایی رخ داد. لطفاً دوباره امتحان کنید."
+    "title": "اتصال حساب Steam"
   },
   "steam_user_header": {
     "avatar_alt": "آواتار استیم",
@@ -1554,9 +1623,11 @@
     "merch": "محصولات جانبی",
     "merch_blurb": "محصولات جانبی اوپن‌فرانت را درب منزل تحویل بگیرید!",
     "merch_visit_store": "مشاهده فروشگاه",
+    "no_affiliate_items": "هیچ آیتم همکاری در دسترسی موجود نیست. بعداً برای آیتم‌های جدید سر بزنید.",
     "no_crowns": "تاجی موجود نیست. بعداً برای بررسی آیتم‌های جدید مراجعه کنید.",
     "no_effects": "هیچ افکتی موجود نیست. بعداً برای بررسی آیتم‌های جدید مراجعه کنید.",
     "no_flags": "هیچ پرچمی موجود نیست. برای موارد جدید بعداً دوباره بررسی کنید.",
+    "no_packs": "هیچ بسته‌ای موجود نیست. برای دیدن اقلام جدید بعداً مراجعه کنید.",
     "no_skins": "هیچ پوسته‌ای موجود نیست. برای موارد جدید بعداً دوباره مراجعه کنید.",
     "no_subscriptions": "هیچ اشتراکی در دسترس نیست. برای آیتم‌های جدید بعداً دوباره بررسی کنید.",
     "no_tribes": "شما هنوز هیچ نام قبیله‌ای خریداری نکرده‌اید.",
@@ -1602,16 +1673,18 @@
     "tribes_login_required": "برای خرید و مدیریت نام‌های قبیله وارد شوید.",
     "tribes_purchase_description": "نام شما به یک قبیله بات در بازی‌های آنلاین واقعی اختصاص می‌یابد و بلافاصله فعال می‌شود.",
     "tribes_purchase_heading": "خرید نام قبیله",
-    "your_tribes_heading": "نام‌های قبیله شما",
-    "tribe_purchase_failed": "خرید ناموفق بود. لطفاً دوباره تلاش کنید.",
-    "tribe_stats_reach": "دسترسی بازیکن",
-    "tribe_stats_reach_tooltip": "حضور در بازی‌های {count} نفره"
+    "your_tribes_heading": "نام‌های قبیله شما"
   },
   "streaming_now": {
     "live_count": "{count} پخش زنده",
     "title": "هم‌اکنون در حال پخش",
     "viewers": "{count} بیننده",
     "watch": "تماشای {name}"
+  },
+  "subscription_modal": {
+    "browse": "مرور اشتراک‌ها",
+    "none": "شما هیچ اشتراک فعالی ندارید.",
+    "title": "اشتراک شما"
   },
   "team_colors": {
     "blue": "آبی",
@@ -1629,13 +1702,11 @@
     "pattern": {
       "default": "پیش فرض"
     },
-    "select_skin": "انتخاب پوسته",
-    "selected": "انتخاب‌شده"
+    "select_skin": "انتخاب پوسته"
   },
   "token_login_modal": {
     "success": "با موفقیت وارد شدید به عنوان {email}!",
-    "title": "در حال ورود به حساب...",
-    "logging_in": "در حال ورود به حساب..."
+    "title": "در حال ورود به حساب..."
   },
   "troubleshooting": {
     "battery": "باتری",
@@ -1699,6 +1770,8 @@
     "background_music_volume": "مبزان موسیقی پس‌زمینه",
     "boat_attack": "حمله قایق",
     "boat_attack_desc": "یک حملهٔ قایقی به خانه‌ای که زیر مکان‌نما (ماوس) شماست ارسال کنید.",
+    "box_select_warships": "انتخاب کشتی‌های جنگی با کادر",
+    "box_select_warships_desc": "این کلید را نگه دارید و بکشید تا چندین ناو جنگی را انتخاب کنید.",
     "break_alliance": "شکستن اتحاد (خیانت)",
     "break_alliance_desc": "اتحاد خود را با بازیکنی که کاشی‌اش زیر نشانگر ماوس شماست، بشکنید.",
     "build_atom_bomb": "ساخت بمب اتم",
@@ -1751,7 +1824,7 @@
     "graphics_preset_desc": "ظاهر پیش‌فرض نقشه را انتخاب کنید. می‌توانید آن را در تنظیمات گرافیکی بازی دقیق‌تر تنظیم کنید یا حالت اختصاصی خودتان را بسازید.",
     "graphics_preset_label": "حالت گرافیکی",
     "graphics_refresh_modifier": "اصلاح‌کننده رفرش گرافیک",
-    "graphics_refresh_modifier_desc": "برای بازنشانی گرافیک، این کلید را همراه با R نگه دارید",
+    "graphics_refresh_modifier_desc": "این کلید و {key} را نگه دارید تا گرافیک به‌روزرسانی شود",
     "graphics_settings_desc": "تنظیم نحوه نمایش نقشه",
     "graphics_settings_label": "تنظیمات گرافیک",
     "ground_attack": "حمله زمینی",
@@ -1776,6 +1849,9 @@
     "move_right_desc": "دوربین را به سمت راست حرکت دهید",
     "move_up": "دوربین را به بالا حرکت بده",
     "move_up_desc": "دوربین را به سمت بالا حرکت دهید",
+    "nuke_alliance_safety_desc": "جلوگیری از حملات اتمی تصادفی بر متحدان جدید.",
+    "nuke_alliance_safety_duration": "{count, plural, one {1 تیک (0.1s)} other {{count} تیک ({seconds}s)}}",
+    "nuke_alliance_safety_label": "محافظت در برابر شلیک اشتباهی به متحد",
     "off": "خاموش",
     "on": "روشن",
     "pause_game": "توقف",
@@ -1788,8 +1864,11 @@
     "request_alliance": "درخواست اتحاد کرده است",
     "request_alliance_desc": "برای بازیکنی که کاشی‌اش زیر نشانگر ماوس شماست، درخواست اتحاد ارسال کنید.",
     "reset": "بازنشانی",
+    "reset_gfx_desc": "در صورت بروز مشکلات نمایشی، کلید را هم‌زمان با نگه داشتن کلید تغییردهنده فشار دهید تا رندرینگ بازنشانی شود.",
     "retaliate_attack": "تلافی کردن",
     "retaliate_attack_desc": "یک حمله تلافی‌جویانه برای خنثی کردن یا کاهش قدرت آخرین مهاجم فعال ارسال کنید. فقط زمانی در دسترس است که مورد حمله قرار گرفته باشید.",
+    "select_all_warships": "انتخاب همه کشتی‌های",
+    "select_all_warships_desc": "همه ناوهای جنگی خود را در نقشه انتخاب کنید.",
     "sound_effects_volume": "میزان جلوه ها صوتی",
     "special_effects_desc": "فعال/غیرفعال کردن افکت‌های ویژه. برای بهبود عملکرد، غیرفعال کنید",
     "special_effects_label": "افکت‌های ویژه",
@@ -1814,6 +1893,12 @@
   },
   "username": {
     "account_invalid_chars": "نام کاربری فقط می‌تواند شامل حروف، اعداد، خط زیر (_)، خط تیره (-) و یک فاصله بین کلمات باشد.",
+    "clan_browse": "مرور کلن‌ها",
+    "clan_clear": "بدون برچسب",
+    "clan_custom": "برچسب دیگر",
+    "clan_label": "برچسب کلن",
+    "clan_none_joined": "شما هنوز به یک کلن نپیوسته‌اید.",
+    "clan_your_clans": "کلن‌های شما",
     "enter_username": "نام کاربری خود را وارد کنید",
     "invalid_chars": "نام کاربری فقط می‌تواند شامل حروف، اعداد، فاصله و زیرخط باشد.",
     "not_string": "نام کاربری باید متن باشد.",
@@ -1824,11 +1909,14 @@
     "tag_too_short": "برچسب قبیله باید شامل ۲ تا ۵ کاراکتر الفبایی-عددی باشد.",
     "too_long": "نام کاربری نباید از {max} کاراکتر بیشتر باشد.",
     "too_short": "نام کاربری باید حداقل {min} نویسه داشته باشد.",
+    "verified_active_hint": "شما با نام حساب تأییدشده خود بازی می‌کنید.",
     "verified_heading": "نام تاییدشده",
     "verified_player": "بازیکن تاییدشده",
     "verified_sub_required": "برای بازی با نام تاییدشده خود، به یک اشتراک فعال نیاز دارید.",
     "verified_sub_required_confirm": "مشاهده فروشگاه",
-    "verified_toggle": "تایید شده"
+    "verified_use": "استفاده از تأییدشده",
+    "verified_use_custom": "بازگشت به نام سفارشی",
+    "verified_use_hint": "بازی با نام حساب تأییدشده شما"
   },
   "win_modal": {
     "died": "شما کشته شدید",
@@ -1849,10 +1937,5 @@
     "you_won": "شما بردید!",
     "your_team": "تیم شما پیروز شد!",
     "youtube_tutorial": "نیاز به کمک دارید؟"
-  },
-  "flag_input": {
-    "button_title": "یک پرچم انتخاب کن!",
-    "search_flag": "جستجو...",
-    "title": "انتخاب پرچم"
   }
 }
