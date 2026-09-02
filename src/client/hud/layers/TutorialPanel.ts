@@ -43,6 +43,14 @@ const COMPLETE_LINGER_TICKS = 50;
 /** How many of the nearest tribes get a target marker during the tribes step. */
 const NEARBY_TRIBE_MARK_COUNT = 3;
 
+/** Map-marker specs per highlight target: which player type, how many. */
+const MAP_MARKERS: Partial<
+  Record<TutorialHighlight, { type: PlayerType; count: number }>
+> = {
+  tribes: { type: PlayerType.Bot, count: NEARBY_TRIBE_MARK_COUNT },
+  nation: { type: PlayerType.Nation, count: 1 },
+};
+
 /** Defaults shown when the player hasn't rebound the action (see UnitDisplay). */
 const HOTKEY_FALLBACKS = {
   buildCity: "1",
@@ -67,7 +75,7 @@ export class TutorialPanel extends LitElement implements Controller {
   private started = false;
   private costs = new Map<UnitType, bigint>();
   private keybinds: Record<string, { key?: string }> | null = null;
-  private tribeMarksActive = false;
+  private mapMarksActive = false;
   private completeTicks: number | null = null;
   private highlight: TutorialHighlight | null = null;
 
@@ -118,17 +126,19 @@ export class TutorialPanel extends LitElement implements Controller {
     const target =
       step && !this.progress.stepDone() ? (step.highlight ?? null) : null;
     this.setHighlight(target);
-    this.syncTribeMarkers(target);
+    this.syncMapMarkers(target);
   }
 
   /**
-   * Marks the few tribes nearest the player with the target crosshair during
-   * the tribes step; as they're captured, the next nearest take their place.
+   * Marks the players nearest to us with the target crosshair while a step
+   * points at the map (tribes to capture, a nation to ally with); as they
+   * die or are captured, the next nearest take their place.
    */
-  private syncTribeMarkers(target: TutorialHighlight | null) {
-    if (target !== "tribes") {
-      if (this.tribeMarksActive) {
-        this.tribeMarksActive = false;
+  private syncMapMarkers(target: TutorialHighlight | null) {
+    const spec = target !== null ? MAP_MARKERS[target] : undefined;
+    if (spec === undefined) {
+      if (this.mapMarksActive) {
+        this.mapMarksActive = false;
         this.game.setMarkedPlayers(null);
       }
       return;
@@ -137,20 +147,20 @@ export class TutorialPanel extends LitElement implements Controller {
     // Keep the last set while ours is missing rather than flashing empty.
     const me = this.game.myPlayer()?.nameLocation();
     if (!me || (me.x === 0 && me.y === 0)) return;
-    const tribes: { id: number; distSquared: number }[] = [];
+    const candidates: { id: number; distSquared: number }[] = [];
     for (const p of this.game.playerViews()) {
-      if (p.type() !== PlayerType.Bot || !p.isAlive()) continue;
+      if (p.type() !== spec.type || !p.isAlive()) continue;
       const loc = p.nameLocation();
       if (!loc || (loc.x === 0 && loc.y === 0)) continue;
       const dx = loc.x - me.x;
       const dy = loc.y - me.y;
-      tribes.push({ id: p.smallID(), distSquared: dx * dx + dy * dy });
+      candidates.push({ id: p.smallID(), distSquared: dx * dx + dy * dy });
     }
-    tribes.sort((a, b) => a.distSquared - b.distSquared);
+    candidates.sort((a, b) => a.distSquared - b.distSquared);
     this.game.setMarkedPlayers(
-      new Set(tribes.slice(0, NEARBY_TRIBE_MARK_COUNT).map((t) => t.id)),
+      new Set(candidates.slice(0, spec.count).map((c) => c.id)),
     );
-    this.tribeMarksActive = true;
+    this.mapMarksActive = true;
   }
 
   private buildContext(player: PlayerView): TutorialContext {
@@ -161,6 +171,11 @@ export class TutorialPanel extends LitElement implements Controller {
       botsExist: this.game
         .playerViews()
         .some((p) => p.type() === PlayerType.Bot && p.isAlive()),
+      nationsExist: this.game
+        .playerViews()
+        .some((p) => p.type() === PlayerType.Nation && p.isAlive()),
+      alliancesDisabled: this.game.config().disableAlliances(),
+      allied: player.alliances().length > 0,
       gold: player.gold(),
       cityCost: this.costs.get(UnitType.City) ?? null,
       cityDisabled: this.game.config().isUnitDisabled(UnitType.City),
@@ -202,7 +217,7 @@ export class TutorialPanel extends LitElement implements Controller {
     this.classList.toggle("hidden", !active);
     if (!active) {
       this.setHighlight(null);
-      this.syncTribeMarkers(null);
+      this.syncMapMarkers(null);
     }
   }
 
