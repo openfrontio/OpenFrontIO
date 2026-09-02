@@ -201,6 +201,14 @@ export class TutorialProgress {
   private index = 0;
   /** Ticks since the current step completed, or null while it's pending. */
   private doneTicks: number | null = null;
+  /**
+   * Context snapshot used only for the step counter, taken on the first
+   * update after the player has spawned (bots and nations all exist by
+   * then). Bots/nations dying mid-game would otherwise shrink "Step n of N"
+   * while the player is parked on an unrelated step; progression (skipping,
+   * isDone) always uses the live context.
+   */
+  private countCtx: TutorialContext | null = null;
 
   constructor(
     private readonly steps: readonly TutorialStep[] = TUTORIAL_STEPS,
@@ -220,11 +228,11 @@ export class TutorialProgress {
 
   /** 1-based position of the current step among the steps that apply. */
   position(ctx: TutorialContext): number {
-    return this.applicable(ctx, this.index) + 1;
+    return this.applicable(this.countCtx ?? ctx, this.index) + 1;
   }
 
   total(ctx: TutorialContext): number {
-    return this.applicable(ctx, this.steps.length);
+    return this.applicable(this.countCtx ?? ctx, this.steps.length);
   }
 
   /** Completes the current step if it's an informational ("Got it") one. */
@@ -243,6 +251,7 @@ export class TutorialProgress {
   }
 
   update(ctx: TutorialContext): void {
+    if (this.countCtx === null && ctx.hasSpawned) this.countCtx = ctx;
     if (this.doneTicks !== null) {
       this.doneTicks++;
       if (this.doneTicks < STEP_DONE_LINGER_TICKS) return;
