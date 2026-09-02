@@ -79,8 +79,8 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   // Any attack counts so a player who hits a bot first doesn't get stuck.
   { id: "attack_wilderness", isDone: (c) => c.attacking },
   { id: "troops", highlight: "troops", manual: true },
-  // Long-running: stays up (with the nearest tribes glowing on the map)
-  // until the player has banked enough gold for the City step ahead.
+  // Long-running: stays up (with the nearest tribes marked with the target
+  // crosshair) until the player has banked enough gold for the City step.
   {
     id: "capture_tribes",
     highlight: "tribes",

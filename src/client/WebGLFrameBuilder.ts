@@ -58,10 +58,6 @@ const SMALL_PLAYER_GLOW_GRACE_SECONDS = 60;
 // The set is a visual aid, not tick-critical, so rescan ~once a second
 // (10 ticks) instead of every tick.
 const SMALL_PLAYER_GLOW_RESCAN_TICKS = 10;
-// Subtle fixed strength for the explicit (tutorial) glow set — quieter than
-// the small-player default, and independent of the user's strength slider so
-// it still shows when that's 0.
-const EXPLICIT_GLOW_STRENGTH = 0.2;
 
 // The effect-palette block order: index = block (rows block·MAX_TRAIL_COLORS …).
 // trail.frag.glsl picks its block from the trail tile's nuke bit — block 0 =
@@ -487,51 +483,41 @@ export class WebGLFrameBuilder {
    * smallIDs so the glow pass radiates around their territory. Skips the first
    * minute of play so everyone's tiny starting territory doesn't glow.
    * Client-only view — toggle it live in the settings.
-   *
-   * The view's explicit glow set (`GameView.glowingPlayers()`, e.g. the
-   * tutorial pointing at capturable tribes) is merged in and is exempt from
-   * the spawn/grace gate.
    */
   private syncSmallPlayerGlow(gameView: GameView): void {
+    // Strength (incl. off at 0) is read live in the glow pass; here we only
+    // decide who qualifies. Skip spawn + the first minute.
+    if (
+      gameView.inSpawnPhase() ||
+      gameView.elapsedGameSeconds() < SMALL_PLAYER_GLOW_GRACE_SECONDS
+    ) {
+      this.view.updateSmallPlayerGlow(null);
+      return;
+    }
     // Throttle the per-player scan + upload; the glow keeps rendering the last
-    // set between rescans, so changes take effect within a second (deferred
-    // while the game is paused, since ticks stop).
+    // set between rescans. The off/spawn/grace checks above run every tick, so
+    // toggling off takes effect on the next tick (deferred while the game is
+    // paused, since ticks stop; it clears on unpause).
     if (this.glowRescanTick++ % SMALL_PLAYER_GLOW_RESCAN_TICKS !== 0) return;
+    // "% of the map" uses the same denominator the leaderboard/win-check use.
+    const denom = gameView.numLandTiles() - gameView.numTilesWithFallout();
+    if (denom <= 0) {
+      this.view.updateSmallPlayerGlow(null);
+      return;
+    }
     const set = this.highlightSetBuf;
     set.fill(0);
     let any = false;
-    let explicitAny = false;
-    for (const id of gameView.glowingPlayers() ?? []) {
-      set[id] = 1;
-      any = true;
-      explicitAny = true;
-    }
-    // Strength (incl. off at 0) is read live in the glow pass; here we only
-    // decide who qualifies. Skip spawn + the first minute. Also skip while
-    // the explicit set is showing: the pass draws the whole set at one
-    // strength, so merging would force the fixed tutorial strength onto
-    // small players and override the user's slider for them.
-    if (
-      !explicitAny &&
-      !gameView.inSpawnPhase() &&
-      gameView.elapsedGameSeconds() >= SMALL_PLAYER_GLOW_GRACE_SECONDS
-    ) {
-      // "% of the map" uses the same denominator the leaderboard/win-check use.
-      const denom = gameView.numLandTiles() - gameView.numTilesWithFallout();
-      for (const p of denom > 0 ? gameView.players() : []) {
-        if (!p.isPlayer() || p.type() !== PlayerType.Human || !p.isAlive()) {
-          continue;
-        }
-        if (p.numTilesOwned() / denom <= SMALL_PLAYER_MAX_MAP_FRACTION) {
-          set[p.smallID()] = 1;
-          any = true;
-        }
+    for (const p of gameView.players()) {
+      if (!p.isPlayer() || p.type() !== PlayerType.Human || !p.isAlive()) {
+        continue;
+      }
+      if (p.numTilesOwned() / denom <= SMALL_PLAYER_MAX_MAP_FRACTION) {
+        set[p.smallID()] = 1;
+        any = true;
       }
     }
-    this.view.updateSmallPlayerGlow(
-      any ? set : null,
-      explicitAny ? EXPLICIT_GLOW_STRENGTH : null,
-    );
+    this.view.updateSmallPlayerGlow(any ? set : null);
   }
 
   private syncPlayers(gameView: GameView): void {
