@@ -348,7 +348,6 @@ export class MatchmakingModal extends BaseModal {
         this.close();
         return;
       }
-
       if (isTerminalClose(event.code)) {
         this.connected = false;
         this.close();

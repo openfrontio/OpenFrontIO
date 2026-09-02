@@ -408,14 +408,12 @@
     "unban": "Unban"
   },
   "close_reason": {
-    "account_lookup_failed": "Could not load your account. Please try again.",
     "banned": "This account is banned.",
     "cannot_join": "You can't join this game.",
     "cosmetics_forbidden": "One of your selected cosmetics isn't available on this account.",
     "forbidden": "You don't have access to this server.",
     "game_not_found": "Game not found.",
     "invalid_message": "The server couldn't read your join request.",
-    "invalid_token": "Your session has expired. Please reload the page.",
     "lobby_full": "The lobby is full.",
     "login_required": "You must be logged in to play on this server.",
     "not_allowlisted": "You are not on this lobby's allowlist.",
