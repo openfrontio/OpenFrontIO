@@ -52,7 +52,7 @@ import "./GameStatsModal";
 import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
-import { showInGameConfirm } from "./InGameModal";
+import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import "./InventoryModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
@@ -853,7 +853,7 @@ class Client {
       );
 
     const alertAndStrip = (message: string) => {
-      alert(message);
+      void showInGameAlert(message);
       strip();
     };
 
@@ -869,7 +869,7 @@ class Client {
       const status = params.get("status");
 
       if (status !== "true") {
-        alertAndStrip("purchase failed");
+        alertAndStrip(translateText("store.purchase_failed"));
         return;
       }
 
@@ -887,16 +887,19 @@ class Client {
       }
 
       if (type === "subscription_tier") {
-        alert(translateText("store.subscription_purchase_success"));
         strip();
         invalidateUserMe();
-        window.location.reload();
+        // Reload only once the dialog is dismissed, like the blocking alert
+        // this replaced.
+        void showInGameAlert(
+          translateText("store.subscription_purchase_success"),
+        ).then(() => window.location.reload());
         return;
       }
 
       const cosmeticName = params.get("cosmetic");
       if (!cosmeticName) {
-        alert("Something went wrong. Please contact support.");
+        void showInGameAlert(translateText("common.error_generic"));
         console.error("purchase-completed but no pattern name");
         return;
       }
@@ -914,9 +917,7 @@ class Client {
       const token = params.get("token-login");
 
       if (!token) {
-        alertAndStrip(
-          `login failed! Please try again later or contact support.`,
-        );
+        alertAndStrip(translateText("error_modal.login_failed"));
         return;
       }
 
@@ -1630,7 +1631,9 @@ async function getTurnstileToken(): Promise<{
       "error-callback": (errorCode: string) => {
         window.turnstile.remove(widgetId);
         console.error(`Turnstile error: ${errorCode}`);
-        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
+        void showInGameAlert(
+          translateText("error_modal.turnstile_error", { code: errorCode }),
+        );
         reject(new Error(`Turnstile failed: ${errorCode}`));
       },
     });
