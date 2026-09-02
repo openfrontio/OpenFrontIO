@@ -1823,6 +1823,7 @@
     "step": {
       "alliance_info": "Allies can't attack each other. You can break an alliance at any time — but doing so marks you as a traitor.",
       "atom_info": "Atom Bomb — small tactical strikes that take out structures.",
+      "attack_ratio": "The attack ratio bar sets how many of your troops are sent out with each attack. Drag the slider to adjust it.",
       "attack_wilderness": "Click on the unclaimed land next to you to attack it and expand your territory.",
       "buy_city": "You can afford a City! Press {key} (or click the City icon under the control panel), then click your territory to place it. Cities raise your max troops.",
       "buy_factory": "Now build a Factory: press {key}, then click your territory to place it.",
@@ -1838,7 +1839,9 @@
       "port_info_ships": "Ports send out trade ships, which earn you gold.",
       "port_info_warships": "Ports can also be used to construct warships.",
       "propose_alliance": "Nations make strong allies. Right-click the nation marked with a target and propose an alliance.",
+      "silo_loading": "Your Missile Silo is loading — a nuke can be launched once it's fully ready.",
       "spawn": "Click anywhere on the map to pick where you spawn.",
+      "troop_rate": "This is your troop growth rate. Growth slows down and turns orange once your army is past its peak size.",
       "troops": "Keep an eye on your troop count. Attacking with too few troops leaves you weak — let them regrow between attacks."
     },
     "step_counter": "Step {current} of {total}",

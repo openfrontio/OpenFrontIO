@@ -476,8 +476,9 @@ export class ControlPanel extends LitElement implements Controller {
       <div class="flex gap-1.5 items-center mb-1">
         <!-- Troop rate -->
         <div
-          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm py-0.5 px-1 w-[5.5rem] ${this
-            ._troopRateIsIncreasing
+          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm py-0.5 px-1 w-[5.5rem] ${this.tutorialHighlightClass(
+            "troop_rate",
+          )} ${this._troopRateIsIncreasing
             ? "border-green-400"
             : "border-orange-400"}"
           translate="no"
@@ -525,7 +526,12 @@ export class ControlPanel extends LitElement implements Controller {
         </div>
       </div>
       <!-- Row 2: attack ratio | slider -->
-      <div class="flex items-center gap-1.5" translate="no">
+      <div
+        class="flex items-center gap-1.5 ${this.tutorialHighlightClass(
+          "attack_ratio",
+        )}"
+        translate="no"
+      >
         <div
           class="flex items-center gap-1 shrink-0 border border-gray-600 rounded-md px-1 py-0.5 text-sm font-bold text-white cursor-pointer w-[8rem]"
         >
@@ -584,7 +590,7 @@ export class ControlPanel extends LitElement implements Controller {
         <div
           class="w-[40%] shrink-0 flex items-center ${this.tutorialHighlightClass(
             "troops",
-          )}"
+          )} ${this.tutorialHighlightClass("troop_rate")}"
         >
           ${this.renderMobileTroopBar()}
         </div>
@@ -606,7 +612,10 @@ export class ControlPanel extends LitElement implements Controller {
           >
         </div>
         <!-- Attack ratio slider -->
-        <div class="flex-1" translate="no">
+        <div
+          class="flex-1 ${this.tutorialHighlightClass("attack_ratio")}"
+          translate="no"
+        >
           <input
             type="range"
             min="1"

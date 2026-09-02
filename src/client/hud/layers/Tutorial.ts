@@ -4,6 +4,8 @@ import { UnitType } from "../../../core/game/Game";
 /** HUD elements the tutorial can draw attention to. */
 export type TutorialHighlight =
   | "troops"
+  | "troop_rate"
+  | "attack_ratio"
   | "gold"
   | "city"
   | "port"
@@ -45,6 +47,8 @@ export interface TutorialContext {
   siloDisabled: boolean;
   silos: number;
   atomDisabled: boolean;
+  /** A completed missile silo that isn't reloading exists. */
+  siloReady: boolean;
   /** An atom bomb of ours is (or was seen) in flight. */
   atomLaunched: boolean;
   hydrogenDisabled: boolean;
@@ -84,6 +88,8 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   // Any attack counts so a player who hits a bot first doesn't get stuck.
   { id: "attack_wilderness", isDone: (c) => c.attacking },
   { id: "troops", highlight: "troops", manual: true },
+  { id: "troop_rate", highlight: "troop_rate", manual: true },
+  { id: "attack_ratio", highlight: "attack_ratio", manual: true },
   // Long-running: stays up (with the nearest tribes marked with the target
   // crosshair) until the player has banked enough gold for the City step.
   {
