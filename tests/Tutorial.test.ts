@@ -26,6 +26,7 @@ function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
     siloDisabled: false,
     silos: 0,
     atomDisabled: false,
+    siloReady: false,
     atomLaunched: false,
     hydrogenDisabled: false,
     mirvDisabled: false,
@@ -55,6 +56,12 @@ describe("TutorialProgress", () => {
     settle(p, ctx({ hasSpawned: true, attacking: true }));
     expect(p.current()?.id).toBe("troops");
 
+    p.acknowledge();
+    settle(p, ctx({ hasSpawned: true, attacking: true }));
+    expect(p.current()?.id).toBe("troop_rate");
+    p.acknowledge();
+    settle(p, ctx({ hasSpawned: true, attacking: true }));
+    expect(p.current()?.id).toBe("attack_ratio");
     p.acknowledge();
     settle(p, ctx({ hasSpawned: true, attacking: true }));
     expect(p.current()?.id).toBe("capture_tribes");
@@ -96,7 +103,7 @@ describe("TutorialProgress", () => {
     p.acknowledge();
     expect(p.stepDone()).toBe(true);
     settle(p, c);
-    expect(p.current()?.id).toBe("capture_tribes");
+    expect(p.current()?.id).toBe("troop_rate");
   });
 
   it("ignores acknowledge on action steps", () => {
@@ -129,6 +136,12 @@ describe("TutorialProgress", () => {
     expect(p.current()?.id).toBe("troops");
     expect(p.position(c)).toBe(3);
 
+    p.acknowledge();
+    settle(p, c);
+    expect(p.current()?.id).toBe("troop_rate");
+    expect(p.position(c)).toBe(4);
+    p.acknowledge();
+    settle(p, c);
     p.acknowledge();
     settle(p, c);
     expect(p.finished()).toBe(true);
@@ -241,6 +254,8 @@ describe("TutorialProgress.skip", () => {
     p.skip();
     p.update(ctx({ botsExist: false }));
     expect(p.current()?.id).toBe("troops");
+    p.skip();
+    p.skip();
     p.skip();
     p.update(ctx({ botsExist: false, cityDisabled: true }));
     expect(p.current()?.id).toBe("propose_alliance");

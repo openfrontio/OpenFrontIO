@@ -1,7 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { PlayerType, UnitType } from "../../../core/game/Game";
+import { PlayerType, Relation, UnitType } from "../../../core/game/Game";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { renderNumber, translateText } from "../../Utils";
@@ -76,6 +76,10 @@ export class TutorialPanel extends LitElement implements Controller {
   private costs = new Map<UnitType, bigint>();
   private keybinds: Record<string, { key?: string }> | null = null;
   private mapMarksActive = false;
+  /** Latched: an atom bomb of ours was seen in flight at least once. */
+  private atomLaunchSeen = false;
+  /** Nation smallID → its attitude toward us, fetched during the ally step. */
+  private nationRelations = new Map<number, Relation>();
   private completeTicks: number | null = null;
   private highlight: TutorialHighlight | null = null;
 
@@ -157,10 +161,40 @@ export class TutorialPanel extends LitElement implements Controller {
       candidates.push({ id: p.smallID(), distSquared: dx * dx + dy * dy });
     }
     candidates.sort((a, b) => a.distSquared - b.distSquared);
+    // Only suggest allying with a nation that doesn't dislike us; unknown
+    // relations count as neutral until their profile fetch lands.
+    const picked =
+      spec.type === PlayerType.Nation
+        ? candidates.filter(
+            (c) =>
+              (this.nationRelations.get(c.id) ?? Relation.Neutral) >=
+              Relation.Neutral,
+          )
+        : candidates;
+    if (spec.type === PlayerType.Nation) {
+      this.fetchNationRelations(picked.slice(0, 5).map((c) => c.id));
+    }
     this.game.setMarkedPlayers(
-      new Set(candidates.slice(0, spec.count).map((c) => c.id)),
+      new Set(picked.slice(0, spec.count).map((c) => c.id)),
     );
     this.mapMarksActive = true;
+  }
+
+  /** Refresh (throttled) how the given nations feel about us. */
+  private fetchNationRelations(ids: number[]) {
+    if (this.game.ticks() % 20 !== 0) return;
+    const me = this.game.myPlayer();
+    if (me === null) return;
+    for (const id of ids) {
+      const nation = this.game.playerBySmallID(id);
+      if (!nation.isPlayer()) continue;
+      (nation as PlayerView).profile().then((profile) => {
+        this.nationRelations.set(
+          id,
+          profile.relations[me.smallID()] ?? Relation.Neutral,
+        );
+      });
+    }
   }
 
   private buildContext(player: PlayerView): TutorialContext {
@@ -189,7 +223,14 @@ export class TutorialPanel extends LitElement implements Controller {
       siloDisabled: this.game.config().isUnitDisabled(UnitType.MissileSilo),
       silos: player.units(UnitType.MissileSilo).length,
       atomDisabled: this.game.config().isUnitDisabled(UnitType.AtomBomb),
-      atomLaunched: player.units(UnitType.AtomBomb).length > 0,
+      // Mirrors PlayerImpl.nukeSpawn's ready-silo filter.
+      siloReady: player
+        .units(UnitType.MissileSilo)
+        .some(
+          (s) => s.isActive() && !s.isInCooldown() && !s.isUnderConstruction(),
+        ),
+      atomLaunched: (this.atomLaunchSeen ||=
+        player.units(UnitType.AtomBomb).length > 0),
       hydrogenDisabled: this.game
         .config()
         .isUnitDisabled(UnitType.HydrogenBomb),
@@ -322,6 +363,13 @@ export class TutorialPanel extends LitElement implements Controller {
       !done &&
       cost !== undefined &&
       (this.game.myPlayer()?.gold() ?? 0n) < cost;
+    // The launch step must not claim the silo is armed while it's still
+    // under construction or reloading.
+    const siloLoading =
+      !done &&
+      !needsGold &&
+      step.id === "launch_atom" &&
+      this.ctx?.siloReady === false;
     return html`
       <p class="flex gap-1.5 ${done ? "text-green-400" : ""}">
         ${step.bullets && !done
@@ -341,10 +389,12 @@ export class TutorialPanel extends LitElement implements Controller {
                     ),
                     cost: renderNumber(cost!),
                   })
-                : translateText(`tutorial.step.${step.id}`, {
-                    cost: renderNumber(this.costs.get(UnitType.City) ?? 0n),
-                    key: this.hotkeyFor(step),
-                  })}</span
+                : siloLoading
+                  ? translateText("tutorial.step.silo_loading")
+                  : translateText(`tutorial.step.${step.id}`, {
+                      cost: renderNumber(this.costs.get(UnitType.City) ?? 0n),
+                      key: this.hotkeyFor(step),
+                    })}</span
             >`}
       </p>
     `;
