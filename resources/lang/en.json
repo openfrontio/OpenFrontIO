@@ -1839,6 +1839,7 @@
       "port_info_ships": "Ports send out trade ships, which earn you gold.",
       "port_info_warships": "Ports can also be used to construct warships.",
       "propose_alliance": "Nations make strong allies. Right-click the nation marked with a target and propose an alliance.",
+      "sam_info": "SAM Launcher — defends against nuclear strikes by shooting down incoming missiles.",
       "silo_loading": "Your Missile Silo is loading — a nuke can be launched once it's fully ready.",
       "spawn": "Click anywhere on the map to pick where you spawn.",
       "troop_rate": "This is your troop growth rate. Growth slows down and turns orange once your army is past its peak size.",
