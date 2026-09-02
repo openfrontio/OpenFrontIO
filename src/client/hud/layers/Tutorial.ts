@@ -13,7 +13,8 @@ export type TutorialHighlight =
   | "atom"
   | "hydrogen"
   | "mirv"
-  | "tribes";
+  | "tribes"
+  | "nation";
 
 /** Emitted whenever the highlighted HUD element changes (null clears it). */
 export class TutorialHighlightEvent implements GameEvent {
@@ -26,6 +27,10 @@ export interface TutorialContext {
   /** Any outgoing attack, wilderness or player. */
   attacking: boolean;
   botsExist: boolean;
+  nationsExist: boolean;
+  alliancesDisabled: boolean;
+  /** The player has at least one active alliance. */
+  allied: boolean;
   gold: bigint;
   /** Null until the worker has reported it. */
   cityCost: bigint | null;
@@ -95,6 +100,19 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     hotkey: "buildCity",
     applies: (c) => !c.cityDisabled,
     isDone: (c) => c.cities > 0,
+  },
+  // Marks the nearest nation with the target crosshair; done once the
+  // nation accepts (nations may decline — Skip is the way past that).
+  {
+    id: "propose_alliance",
+    highlight: "nation",
+    applies: (c) => c.nationsExist && !c.alliancesDisabled,
+    isDone: (c) => c.allied,
+  },
+  {
+    id: "alliance_info",
+    applies: (c) => c.nationsExist && !c.alliancesDisabled,
+    manual: true,
   },
   {
     id: "buy_factory",

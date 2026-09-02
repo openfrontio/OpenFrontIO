@@ -10,6 +10,9 @@ function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
     hasSpawned: false,
     attacking: false,
     botsExist: true,
+    nationsExist: true,
+    alliancesDisabled: false,
+    allied: false,
     gold: 0n,
     cityCost: null,
     cityDisabled: false,
@@ -109,6 +112,7 @@ describe("TutorialProgress", () => {
       hasSpawned: true,
       attacking: true,
       botsExist: false,
+      nationsExist: false,
       cityDisabled: true,
       portDisabled: true,
       factoryDisabled: true,
@@ -118,7 +122,7 @@ describe("TutorialProgress", () => {
       hydrogenDisabled: true,
       mirvDisabled: true,
     });
-    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 12);
+    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 14);
 
     settle(p, c);
     settle(p, c);
@@ -129,6 +133,25 @@ describe("TutorialProgress", () => {
     settle(p, c);
     expect(p.finished()).toBe(true);
     expect(p.current()).toBeNull();
+  });
+
+  it("asks for an alliance after the city, then explains traitors", () => {
+    const first = TUTORIAL_STEPS.findIndex((s) => s.id === "propose_alliance");
+    const p = new TutorialProgress(TUTORIAL_STEPS.slice(first));
+    p.update(ctx());
+    expect(p.current()?.id).toBe("propose_alliance");
+    expect(p.current()?.highlight).toBe("nation");
+
+    settle(p, ctx({ allied: true }));
+    expect(p.current()?.id).toBe("alliance_info");
+    p.acknowledge();
+    settle(p, ctx({ allied: true }));
+    expect(p.current()?.id).toBe("buy_factory");
+
+    // Without nations (or with alliances off) both steps are skipped.
+    const q = new TutorialProgress(TUTORIAL_STEPS.slice(first));
+    q.update(ctx({ nationsExist: false }));
+    expect(q.current()?.id).toBe("buy_factory");
   });
 
   it("gates the tribes step on affordable gold, then the city step on the city existing", () => {
@@ -220,7 +243,7 @@ describe("TutorialProgress.skip", () => {
     expect(p.current()?.id).toBe("troops");
     p.skip();
     p.update(ctx({ botsExist: false, cityDisabled: true }));
-    expect(p.current()?.id).toBe("buy_factory");
+    expect(p.current()?.id).toBe("propose_alliance");
   });
 
   it("can skip through to the end", () => {
