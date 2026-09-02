@@ -31,7 +31,7 @@ export enum RailType {
   BOTTOM_RIGHT,
 }
 
-interface RailTile {
+export interface RailTile {
   ref: number;
   type: RailType;
 }
@@ -89,7 +89,7 @@ function railDirection(
   return RailType.VERTICAL;
 }
 
-function computeRailTiles(tileRefs: number[], w: number): RailTile[] {
+export function computeRailTiles(tileRefs: number[], w: number): RailTile[] {
   if (tileRefs.length === 0) return [];
   if (tileRefs.length === 1)
     return [{ ref: tileRefs[0]!, type: RailType.VERTICAL }];

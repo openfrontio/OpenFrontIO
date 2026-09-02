@@ -49,6 +49,7 @@ describe("TrainStation", () => {
 
     player = {
       addGold: vi.fn(),
+      addTrainGold: vi.fn(),
       id: 1,
       canTrade: vi.fn().mockReturnValue(true),
       isAlliedWith: vi.fn().mockReturnValue(false),
@@ -98,6 +99,7 @@ describe("TrainStation", () => {
   it("records external trade on the station owner", () => {
     const stationOwner = {
       addGold: vi.fn(),
+      addTrainGold: vi.fn(),
       id: 1,
       canTrade: vi.fn().mockReturnValue(true),
       isAlliedWith: vi.fn().mockReturnValue(false),
@@ -105,6 +107,7 @@ describe("TrainStation", () => {
     } as any;
     const trainOwner = {
       addGold: vi.fn(),
+      addTrainGold: vi.fn(),
       id: 2,
       canTrade: vi.fn().mockReturnValue(true),
       isAlliedWith: vi.fn().mockReturnValue(false),
@@ -120,6 +123,8 @@ describe("TrainStation", () => {
 
     expect(stationOwner.addGold).toHaveBeenCalledWith(500n, unit.tile());
     expect(trainOwner.addGold).toHaveBeenCalledWith(500n, unit.tile());
+    expect(stationOwner.addTrainGold).toHaveBeenCalledWith(500n);
+    expect(trainOwner.addTrainGold).toHaveBeenCalledWith(500n);
     expect(gameStats.trainExternalTrade).toHaveBeenCalledWith(
       stationOwner,
       500n,

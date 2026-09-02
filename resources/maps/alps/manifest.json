@@ -1,5 +1,6 @@
 {
   "categories": ["europe"],
+  "forced_modifiers": ["isWaterNukes:75"],
   "id": "Alps",
   "map": {
     "height": 1836,

@@ -344,6 +344,17 @@ describe("buildDescriptor", () => {
     ).rejects.toThrow(/ghost\/thing\.deadbeef\.png/);
   });
 
+  it("publishes the client capability level in the descriptor", async () => {
+    const d = await buildDescriptor(dir, {
+      clientVersion: "sha-1",
+      cdnBase: "https://cdn.example",
+      requireCdnBase: false,
+    });
+
+    expect(d.clientApi).toBe(1);
+    expect(Number.isInteger(d.clientApi)).toBe(true);
+  });
+
   it("warns but does not throw when cdnBase is empty and not required", async () => {
     const d = await buildDescriptor(dir, {
       clientVersion: "sha-1",

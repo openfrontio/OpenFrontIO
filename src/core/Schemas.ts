@@ -104,7 +104,8 @@ export type ClientMessage =
   | ClientRejoinMessage
   | ClientLogMessage
   | ClientHashMessage
-  | ClientSpectateMessage;
+  | ClientSpectateMessage
+  | ClientReportMessage;
 
 export type ServerMessage =
   | ServerTurnMessage
@@ -132,6 +133,9 @@ export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientSendLiveStatsMessage = z.infer<
   typeof ClientSendLiveStatsSchema
 >;
+export type ClientReportMessage = z.infer<typeof ClientReportMessageSchema>;
+export type ReportReason = z.infer<typeof ReportReasonSchema>;
+export type PlayerReport = z.infer<typeof PlayerReportSchema>;
 export type PlayerLiveStats = z.infer<typeof PlayerLiveStatsSchema>;
 export type LiveStats = z.infer<typeof LiveStatsSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
@@ -222,9 +226,62 @@ export type LobbyAccent = z.infer<typeof LobbyAccentSchema>;
 // included, so a verified account name is always representable on the wire —
 // verified play skips free-form validation, so an unrepresentable name would
 // reach the server and be closed with 1002.
+//
+// Letters and digits the in-game name renderer can actually draw, plus the
+// punctuation a name may carry. This is what lets José, Müller, Renée and
+// Bjørn keep their names instead of falling back to a generated one.
+//
+// The bound is U+00FF — the end of Latin-1 Supplement — and it is set by the
+// renderer twice over. Do not raise it without changing the renderer first:
+//
+//  1. The string path is 8-bit end to end. `TextLayout` writes
+//     `charCodes[i] = text.charCodeAt(i)` into a `Uint8Array`, `DataTextures`
+//     uploads it as `R8UI`/`UNSIGNED_BYTE`, and `name.vert.glsl` uses the
+//     byte directly as the glyph index. Anything above 255 silently truncates
+//     mod 256: Ł (U+0141) would draw as "A", ā (U+0101) as a code-0 slot the
+//     shader drops while still consuming a layout position.
+//  2. The atlas has no glyphs up there anyway. Of the 128 Latin Extended-A
+//     entries in `resources/atlases/msdf-atlas.json`, exactly three (Œ œ Ÿ)
+//     have a real glyph; the other 125 point at .notdef. All 64 Latin-1
+//     Supplement entries are real.
+//
+// `CHAR_RANGE = 384` in the name-pass sizes the metrics and kerning tables, so
+// it looks like the limit and is not — it is an upper bound on ids the atlas
+// file may contain, not on what the string path can carry.
+//
+// Deliberately NOT every codepoint below the bound: that would admit control
+// characters, the C1 block, and HTML-significant punctuation. The ranges skip
+// × (U+00D7) and ÷ (U+00F7), maths symbols sitting inside the Latin-1 letter
+// block, and the ordinal/micro signs.
+//
+// Emoji are excluded on purpose and stay excluded: the renderer draws them as
+// a separate icon beside the name, never inline, so an emoji in the name
+// itself has no glyph at all.
+//
+// Regex source for the character class, not a finished pattern: the wire
+// schema, the free-form form rule and the persona sanitiser all need the same
+// set in different shapes, and a single source is what keeps them from
+// drifting apart by hand (which is how the charsets got out of step before).
+export const RENDERABLE_NAME_ALNUM =
+  "a-zA-Z0-9\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF";
+export const RENDERABLE_NAME_CHARS = ` _.\\-${RENDERABLE_NAME_ALNUM}`;
+
+/** One renderable character. Used per-codepoint by the persona sanitiser. */
+export const RENDERABLE_NAME_CHAR_RE = new RegExp(
+  `^[${RENDERABLE_NAME_CHARS}]$`,
+  "u",
+);
+
+/** At least one letter or digit — punctuation alone is not a name. */
+export const RENDERABLE_NAME_HAS_ALNUM_RE = new RegExp(
+  `[${RENDERABLE_NAME_ALNUM}]`,
+  "u",
+);
+
+// Requires at least one non-space so a name is never all padding.
 export const UsernameSchema = z
   .string()
-  .regex(/^(?=.*\S)[a-zA-Z0-9_\- üÜ.]+$/u)
+  .regex(new RegExp(`^(?=.*\\S)[${RENDERABLE_NAME_CHARS}]+$`, "u"))
   .min(3)
   .max(27);
 
@@ -453,6 +510,11 @@ export const GameConfigSchema = z.object({
   maxPlayers: zb.uint().optional(),
   // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
   allowedPublicIds: z.array(z.string()).max(200).optional(),
+  // Only accounts the API reports as trusted (users/@me `trustTier`) may join.
+  // Enforced server-side at join (GameServer.joinClient); advertised in the
+  // lobby browser so a card can show a lock. No host UI yet: set through
+  // create_game / update_game_config.
+  trusted: z.boolean().optional(),
   maxTimerValue: zb.uint({ min: 1, max: 120 }).nullable().optional(), // In minutes
   customAllianceDuration: zb.uint({ max: 15 }).nullable().optional(), // In minutes; 0 disables alliances
   startDelay: zb.uint({ max: 600 }).nullable().optional(), // In seconds
@@ -964,6 +1026,31 @@ export const ClientSendLiveStatsSchema = z.object({
   stats: LiveStatsSchema,
 });
 
+// A closed enum: the API drops reports with a reason it does not know, so a
+// new value must land in infra (REPORT_REASONS) first.
+export const ReportReasonSchema = z.enum([
+  "botting",
+  "teaming",
+  "inappropriate_username",
+  "griefing",
+]);
+
+// A player reporting another player of the same game. The server keeps them
+// out of the turn log (who reported whom is staff-only) and emits them once,
+// as info.reports of the archived record.
+export const PlayerReportSchema = z.object({
+  reportedBy: ID,
+  reported: ID,
+  reason: ReportReasonSchema,
+});
+
+// Note: reportedBy is NOT sent - the server stamps it from the connection.
+export const ClientReportMessageSchema = z.object({
+  type: z.literal("report"),
+  reported: ID,
+  reason: ReportReasonSchema,
+});
+
 export const ClientHashSchema = z.object({
   type: z.literal("hash"),
   hash: zb.float(),
@@ -1026,6 +1113,7 @@ export const ClientMessageSchema = zb.discriminatedUnion("type", [
   ClientLogMessageSchema,
   ClientHashSchema,
   ClientSpectateMessageSchema,
+  ClientReportMessageSchema,
 ]);
 
 //
@@ -1046,6 +1134,9 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   num_turns: z.number(),
   winner: WinnerSchema,
   lobbyFillTime: z.number().nonnegative(),
+  // Absent on singleplayer records and on records read back from the API,
+  // which scrubs them like persistentID.
+  reports: PlayerReportSchema.array().optional(),
 });
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 

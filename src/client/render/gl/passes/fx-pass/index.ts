@@ -17,16 +17,22 @@ import type {
 } from "../../../types";
 import type { RenderSettings } from "../../RenderSettings";
 import { FxAttackRingPass } from "./FxAttackRingPass";
-import { FxShockwavePass } from "./FxShockwavePass";
-import { FxSpritePass, NUKE_EXPLOSION_RADII } from "./FxSpritePass";
+import { nukeExplosionRadius } from "./FxSettings";
+import {
+  calculateExplosionDurationMs,
+  FxShockwavePass,
+} from "./FxShockwavePass";
+import { FxSpritePass } from "./FxSpritePass";
 
 export type { AttackRingInput } from "../../../types";
+export { calculateExplosionDurationMs };
 
 export class FxPass {
   private spritePass: FxSpritePass;
   private shockwavePass: FxShockwavePass;
   private attackRingPass: FxAttackRingPass;
   private mapW: number;
+  private settings: RenderSettings;
   private timeFn: () => number = () => performance.now();
 
   constructor(
@@ -36,6 +42,7 @@ export class FxPass {
     private config: Config,
   ) {
     this.mapW = header.mapWidth;
+    this.settings = settings;
     this.spritePass = new FxSpritePass(gl, header, settings, config);
     this.shockwavePass = new FxShockwavePass(gl, settings);
     this.attackRingPass = new FxAttackRingPass(gl, settings);
@@ -58,7 +65,7 @@ export class FxPass {
     const x = unit.pos % this.mapW;
     const y = (unit.pos - x) / this.mapW;
 
-    const nukeRadius = NUKE_EXPLOSION_RADII[typeName];
+    const nukeRadius = nukeExplosionRadius(this.settings.fx, typeName);
     if (nukeRadius !== undefined) {
       if (unit.reachedTarget) {
         this.spritePass.spawnFxForUnit(unit, now);

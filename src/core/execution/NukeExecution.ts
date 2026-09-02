@@ -1,3 +1,4 @@
+import { atan2 } from "../DetMath";
 import {
   Execution,
   Game,
@@ -99,7 +100,7 @@ export class NukeExecution implements Execution {
           const d2 = dx * dx + dy * dy;
           if (d2 > outer2) continue;
           if (d2 > inner2) {
-            const angle = Math.atan2(dy, dx) + Math.PI; // [0, 2π]
+            const angle = atan2(dy, dx) + Math.PI; // [0, 2π]
             const t = (angle / (2 * Math.PI)) * NUM_SAMPLES;
             const i0 = Math.floor(t) % NUM_SAMPLES;
             const i1 = (i0 + 1) % NUM_SAMPLES;
@@ -504,6 +505,13 @@ export class NukeExecution implements Execution {
           unit.touch();
         }
       }
+    }
+  }
+
+  cancel(): void {
+    this.active = false;
+    if (this.nuke !== null && this.nuke.isActive()) {
+      this.nuke.delete(false);
     }
   }
 

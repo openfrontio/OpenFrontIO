@@ -177,6 +177,10 @@ export const UserMeResponseSchema = z.object({
     // True when the player may list a custom lobby publicly. The API decides
     // which subscriptions/grants confer this.
     canCreatePublicLobbies: z.boolean(),
+    // Account trust as computed by the API. "untrusted" means new, unlinked or
+    // banned, never an accusation. null when the API's computation failed;
+    // absent on an API that predates the field. Both read as untrusted.
+    trustTier: z.enum(["untrusted", "trusted"]).nullable().optional(),
     // Account username (custom-usernames). All optional so responses from an
     // API without the feature still parse; absent means the same as never set.
     // `username` is the server-resolved DISPLAY form — the bare base for an
@@ -268,12 +272,37 @@ export type UserSubscription = NonNullable<
 // PUT /users/@me/username success payload. `username` is the resolved display
 // form (safe for optimistic UI). The suffix is re-rolled on every rename and
 // the response carries the fresh 30-day cooldown.
+// What happened to the bare-name claim on a successful rename.
+//
+// `claimed` — premium, got the bare name ("Ninja").
+// `unavailable` — premium, someone else holds the bare name, so the suffixed
+//   form was granted instead ("Ninja.4471"). A 200, not a 409: the rename
+//   happened and the cooldown was consumed. This is the case worth telling
+//   the player about.
+// `not_eligible` — not premium, so a suffix is simply how free names work.
+//   Nothing to say.
+//
+// Three values rather than a boolean so callers don't have to re-derive
+// eligibility from usernameStatus to avoid showing a free player a "fallback"
+// message on a perfectly ordinary rename.
+export const BareClaimSchema = z.enum([
+  "claimed",
+  "unavailable",
+  "not_eligible",
+]);
+export type BareClaim = z.infer<typeof BareClaimSchema>;
+
 export const PutUsernameResponseSchema = z.object({
   username: z.string(),
   base: z.string(),
   discriminator: z.string(),
   usernameStatus: UsernameStatusSchema,
   nextUsernameChangeAt: z.iso.datetime().nullable(),
+  // Optional because this client ships BEFORE the API that sends it. The
+  // response is parsed with safeParse, so requiring the field would make every
+  // rename against the current API fail validation and surface as a generic
+  // "failed". Treat `undefined` as "the API predates this" and say nothing.
+  bareClaim: BareClaimSchema.optional(),
 });
 export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
 
@@ -344,6 +373,19 @@ export const PostTribeBoostResponseSchema = z.object({
 export type PostTribeBoostResponse = z.infer<
   typeof PostTribeBoostResponseSchema
 >;
+
+// POST /shop/purchase/pack response (200). `amount` is a stringified bigint;
+// `flareNames` are the flares granted (append them to the local flares list
+// or refetch /users/@me). currencyType is always "hard" today but stays a
+// plain string — a stricter literal would fail the parse (and show "purchase
+// failed") after the player was already charged.
+export const PurchasePackResponseSchema = z.object({
+  packName: z.string(),
+  currencyType: z.string(),
+  amount: z.string(),
+  flareNames: z.string().array(),
+});
+export type PurchasePackResponse = z.infer<typeof PurchasePackResponseSchema>;
 
 // GET /leaderboard/tribes?page=N — public, ranked by rolling 30-day player
 // reach. Pages are 1-based, 50 per page, capped at page 2 (top 100); the

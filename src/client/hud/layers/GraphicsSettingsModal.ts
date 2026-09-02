@@ -161,6 +161,9 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   public onLayerVisibilityChange:
     | ((layerId: string, visible: boolean) => void)
     | null = null;
+  /** Callback to set layer alpha on the renderer. */
+  public onLayerAlphaChange: ((layerId: string, alpha: number) => void) | null =
+    null;
 
   @state()
   private isVisible: boolean = false;
@@ -318,6 +321,15 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  private patchAltView(patch: Partial<GraphicsOverrides["altView"]>) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      altView: { ...current.altView, ...patch },
+    });
+    this.requestUpdate();
+  }
+
   private patchRailroad(patch: Partial<GraphicsOverrides["railroad"]>) {
     const current = this.userSettings.graphicsOverrides();
     this.userSettings.setGraphicsOverrides({
@@ -373,6 +385,41 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     for (const layer of this.mapLayers) {
       this.onLayerVisibilityChange?.(layer.id, this.isLayerVisible(layer.id));
     }
+    this.syncLayerAlpha();
+  }
+
+  // ---- Map-layer alpha ----
+
+  private getLayerAlpha(layerId: string, manifestDefault?: number): number {
+    const overrides = this.userSettings.graphicsOverrides();
+    const alpha = overrides.mapLayerAlpha?.[layerId];
+    if (alpha !== undefined) return alpha;
+    return manifestDefault ?? 1;
+  }
+
+  private onLayerAlphaSliderChange(layerId: string, event: Event) {
+    const alpha = parseFloat((event.target as HTMLInputElement).value);
+    const current = this.userSettings.graphicsOverrides();
+    const currentAlpha = current.mapLayerAlpha ?? {};
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      mapLayerAlpha: { ...currentAlpha, [layerId]: alpha },
+    });
+    this.onLayerAlphaChange?.(layerId, alpha);
+    this.requestUpdate();
+  }
+
+  /**
+   * Re-apply layer alpha from current overrides to the renderer.
+   * Called after reset or preset import so the WebGL passes stay in sync.
+   */
+  private syncLayerAlpha() {
+    for (const layer of this.mapLayers) {
+      this.onLayerAlphaChange?.(
+        layer.id,
+        this.getLayerAlpha(layer.id, layer.alpha),
+      );
+    }
   }
 
   private currentHighlightFill(): number {
@@ -407,6 +454,13 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     return (
       this.userSettings.graphicsOverrides().mapOverlay?.territoryAlpha ??
       renderDefaults.mapOverlay.territoryAlpha
+    );
+  }
+
+  private currentAltViewFillAlpha(): number {
+    return (
+      this.userSettings.graphicsOverrides().altView?.fillAlpha ??
+      renderDefaults.altView.fillAlpha
     );
   }
 
@@ -454,6 +508,24 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   private onTerritoryAlphaChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchMapOverlay({ territoryAlpha: value });
+  }
+
+  private currentAltViewHoverPerspective(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().altView?.hoverPerspective ??
+      renderDefaults.altView.hoverPerspective
+    );
+  }
+
+  private onToggleAltViewHoverPerspective() {
+    this.patchAltView({
+      hoverPerspective: !this.currentAltViewHoverPerspective(),
+    });
+  }
+
+  private onAltViewFillAlphaChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchAltView({ fillAlpha: value });
   }
 
   private onCoordinateGridOpacityChange(event: Event) {
@@ -969,6 +1041,8 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const highlightThicken = this.currentHighlightThicken();
     const territorySat = this.currentTerritorySat();
     const territoryAlpha = this.currentTerritoryAlpha();
+    const altViewFillAlpha = this.currentAltViewFillAlpha();
+    const altViewHoverPerspective = this.currentAltViewHoverPerspective();
     const coordinateGridOpacity = this.currentCoordinateGridOpacity();
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
     const railThickness = this.currentRailThickness();
@@ -1430,6 +1504,52 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
       >
         <div class="flex-1">
           <div class="font-medium">
+            ${translateText("graphics_setting.alt_view_fill_alpha_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.alt_view_fill_alpha_desc")}
+          </div>
+          <input
+            type="range"
+            min=${TERRITORY_ALPHA_MIN}
+            max=${TERRITORY_ALPHA_MAX}
+            step=${TERRITORY_ALPHA_STEP}
+            .value=${String(altViewFillAlpha)}
+            @input=${this.onAltViewFillAlphaChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${altViewFillAlpha.toFixed(2)}
+        </div>
+      </div>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+        @click=${this.onToggleAltViewHoverPerspective}
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText(
+              "graphics_setting.alt_view_hover_perspective_label",
+            )}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.alt_view_hover_perspective_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${altViewHoverPerspective
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
             ${translateText("graphics_setting.coordinate_grid_opacity_label")}
           </div>
           <div class="text-sm text-slate-400">
@@ -1509,29 +1629,66 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
             </div>
             ${this.mapLayers.map(
               (layer) => html`
-                <button
-                  class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-                  @click=${() => this.onToggleLayer(layer.id)}
-                >
-                  <div class="flex-1">
-                    <div class="font-medium">${this.layerName(layer.id)}</div>
-                    <div class="text-sm text-slate-400">
-                      ${layer.placement === "land"
-                        ? translateText("graphics_setting.layer_placement_land")
-                        : translateText(
-                            "graphics_setting.layer_placement_water",
-                          )}
-                      ${layer.nukeable
-                        ? ` · ${translateText("graphics_setting.layer_nukeable")}`
-                        : ""}
+                <div>
+                  <button
+                    class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+                    @click=${() => this.onToggleLayer(layer.id)}
+                  >
+                    <div class="flex-1">
+                      <div class="font-medium">${this.layerName(layer.id)}</div>
+                      <div class="text-sm text-slate-400">
+                        ${layer.placement === "land"
+                          ? translateText(
+                              "graphics_setting.layer_placement_land",
+                            )
+                          : translateText(
+                              "graphics_setting.layer_placement_water",
+                            )}
+                        ${layer.nukeable
+                          ? ` · ${translateText("graphics_setting.layer_nukeable")}`
+                          : ""}
+                      </div>
                     </div>
-                  </div>
-                  <div class="text-sm text-slate-400">
-                    ${this.isLayerVisible(layer.id)
-                      ? translateText("user_setting.on")
-                      : translateText("user_setting.off")}
-                  </div>
-                </button>
+                    <div class="text-sm text-slate-400">
+                      ${this.isLayerVisible(layer.id)
+                        ? translateText("user_setting.on")
+                        : translateText("user_setting.off")}
+                    </div>
+                  </button>
+                  ${this.isLayerVisible(layer.id)
+                    ? html`
+                        <div
+                          class="flex gap-3 items-center w-full text-left px-3 pb-2 text-white"
+                        >
+                          <div class="flex-1">
+                            <div class="text-sm text-slate-300">
+                              ${translateText(
+                                "graphics_setting.layer_alpha_label",
+                              )}
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="1"
+                              step="0.01"
+                              aria-label=${`${this.layerName(layer.id)} ${translateText("graphics_setting.layer_alpha_label")}`}
+                              .value=${String(
+                                this.getLayerAlpha(layer.id, layer.alpha),
+                              )}
+                              @input=${(e: Event) =>
+                                this.onLayerAlphaSliderChange(layer.id, e)}
+                              class="w-full border border-slate-500 rounded-lg"
+                            />
+                          </div>
+                          <div class="text-sm text-slate-400 w-12 text-right">
+                            ${this.getLayerAlpha(layer.id, layer.alpha).toFixed(
+                              2,
+                            )}
+                          </div>
+                        </div>
+                      `
+                    : ""}
+                </div>
               `,
             )}
           `

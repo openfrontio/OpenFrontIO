@@ -8,18 +8,23 @@ import {
   GameInfo,
   GameRecord,
   GameStartInfo,
+  LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
 import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import "./AccountSettingsModal";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
-import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
+import {
+  getDesktopSessionState,
+  reauthAfterCrazyGamesChange,
+  retrySteamSignIn,
+  userAuth,
+} from "./Auth";
 import "./ChangeUsernameModal";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
@@ -29,16 +34,25 @@ import {
 } from "./Cosmetics";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import { desktopUpdate, isDesktopShell } from "./DesktopShell";
+import { desktopPresence, type PresencePayload } from "./DesktopPresence";
+import {
+  desktopUpdate,
+  isDesktopShell,
+  type DesktopUpdateState,
+} from "./DesktopShell";
 import "./FeaturedStream";
 import "./GameModeSelector";
-import { GameModeSelector } from "./GameModeSelector";
+import {
+  GameModeSelector,
+  joinIsGateable,
+  shouldBlockDesktopJoin,
+} from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GameStatsModal";
 import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
-import { showInGameConfirm } from "./InGameModal";
+import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import "./InventoryModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
@@ -47,10 +61,16 @@ import { initLayout } from "./Layout";
 import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
+import {
+  hideMenuChrome,
+  menuChromeIsTornDown,
+  restoreMenuChrome,
+} from "./MenuChrome";
 import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import { fallbackPlayerName } from "./PlayerName";
 import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
@@ -71,13 +91,15 @@ import {
 } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
-import { genAnonUsername, UsernameInput } from "./UsernameInput";
-import { incrementGamesPlayed, translateText } from "./Utils";
+import { UsernameInput } from "./UsernameInput";
+import { incrementGamesPlayed, presenceMapKey, translateText } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
-import "./components/DesktopUpdateBar";
+import "./components/DesktopStatusBar";
 import "./components/MarketingConsentToast";
+import "./components/PurchaseNudgeModal";
 import {
+  installCtrlWheelZoomBlocker,
   installDoubleTapZoomBlocker,
   installSafariPinchZoomBlocker,
 } from "./utilities/DisableSafariPinchZoom";
@@ -219,6 +241,14 @@ class Client {
   private steamLinkModal: SteamLinkModal;
   private mostRecentJoinEvent: number;
 
+  // Presence inputs. A private, hosted or matchmade JoinLobbyEvent carries
+  // nothing but the game id, so the server's lobby_info is the only place the
+  // client ever learns the map, size and roster -- keep the latest view here
+  // and reuse it once the game starts, when no lobby_info arrives any more.
+  private presenceDetail: Omit<PresencePayload, "state"> = {};
+  private presenceSpectating = false;
+  private presenceInGame = false;
+
   private turnstileTokenPromise: Promise<{
     token: string;
     createdAt: number;
@@ -226,6 +256,11 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
+
+    // Every exit from a game (win screen, in-game quit, popstate) navigates to
+    // "/" and re-runs this, so announcing the menu here also covers "returned
+    // to the menu" without hooking each of those paths.
+    desktopPresence.set({ state: "menu" });
 
     // Register modals with the URL router. Lobby modals (join/host) and
     // matchmaking are intentionally omitted — they own their own URL state
@@ -358,7 +393,38 @@ class Client {
       }
     });
 
-    document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
+    // The server's lobby view is the only source for a lobby's real map, size
+    // and roster, and the only place the client learns that a play/spectate
+    // switch was accepted (the server can refuse it). Both feed presence.
+    this.eventBus.on(LobbyInfoEvent, (event) => {
+      const config = event.lobby.gameConfig;
+      this.presenceDetail = {
+        gameType: config?.gameType,
+        gameMode: config?.gameMode,
+        map: presenceMapKey(config?.gameMap),
+        // Seats, not connections: spectators are in the roster but hold none
+        // (mirrors LobbyPlayerView and the join modal's own count).
+        playerCount: event.lobby.clients?.filter((c) => !c.spectator).length,
+        maxPlayers: config?.maxPlayers,
+        lobbyId: event.lobby.gameID,
+      };
+      this.presenceSpectating =
+        event.lobby.clients?.find((c) => c.clientID === event.myClientID)
+          ?.spectator === true;
+      this.emitPresence();
+    });
+
+    document.addEventListener("join-lobby", (event) => {
+      // A rejected handshake (Turnstile alerts then rejects) never assigns
+      // lobbyHandle, so nothing downstream clears the "lobby" presence
+      // emitted at the top of the join -- friends would keep being offered a
+      // Join into a lobby the player never entered. Re-throw so the failure
+      // still surfaces exactly as it does today.
+      void this.handleJoinLobby(event).catch((error) => {
+        this.resetPresenceToMenu();
+        throw error;
+      });
+    });
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
     document.addEventListener(
@@ -578,6 +644,34 @@ class Client {
       );
     });
 
+    // The desktop status bar's Retry. Orchestrated here rather than in the
+    // bar because a successful sign-in also has to refresh userMe, the nav
+    // account button and the cached profile -- the same reason the
+    // CrazyGames listener above lives here. The authGeneration guard means a
+    // response that arrives after another auth change cannot be applied.
+    // Subscribe to the bridge directly rather than to the status bar's
+    // re-broadcast. The bar subscribes when its element upgrades and the
+    // bridge replays the current state immediately, so that event fires long
+    // before this code runs (it sits after `await userAuth()`), and a listener
+    // added here would miss it. That matters most for a `staged` update, which
+    // is persisted across restarts and then never re-emitted -- the gate would
+    // sit on a null update state forever. subscribe() replays on subscribe and
+    // the updater supports multiple subscribers, so this is safe alongside the
+    // bar's own subscription.
+    desktopUpdate()?.subscribe((state) => {
+      this.desktopUpdateState = state;
+    });
+
+    document.addEventListener("desktop-session-retry", () => {
+      invalidateUserMe();
+      const generation = authGeneration;
+      retrySteamSignIn().then((result) =>
+        result === false
+          ? applyUserMe(generation)(false)
+          : getUserMe().then(applyUserMe(generation)),
+      );
+    });
+
     const settingsModal = document.querySelector(
       "user-setting",
     ) as UserSettingModal;
@@ -616,6 +710,28 @@ class Client {
     } else {
       this.handleUrl();
     }
+
+    // An invite accepted from outside the app is parked by the shell, because
+    // it arrives before this renderer exists. Pull it now that we are alive.
+    void desktopPresence
+      .consumePendingInvite()
+      .then((gameId) => (gameId === null ? undefined : this.openInvite(gameId)))
+      .catch(() => undefined);
+
+    // Invites arriving while we are already running. The pushed id is
+    // deliberately ignored: the shell parks every invite as well as pushing
+    // it, so the push is only a nudge and the parked copy is the single
+    // source of truth. Pulling here is what clears it -- otherwise leaving a
+    // game (a full page load) would re-run the pull above and force the join
+    // modal open on a match that has already finished.
+    desktopPresence.subscribeInvites(() => {
+      void desktopPresence
+        .consumePendingInvite()
+        .then((gameId) =>
+          gameId === null ? undefined : this.openInvite(gameId),
+        )
+        .catch(() => undefined);
+    });
 
     const onHashUpdate = () => {
       // Router-managed hash changes (#modal=...) are handled by the router
@@ -737,7 +853,7 @@ class Client {
       );
 
     const alertAndStrip = (message: string) => {
-      alert(message);
+      void showInGameAlert(message);
       strip();
     };
 
@@ -753,7 +869,7 @@ class Client {
       const status = params.get("status");
 
       if (status !== "true") {
-        alertAndStrip("purchase failed");
+        alertAndStrip(translateText("store.purchase_failed"));
         return;
       }
 
@@ -771,16 +887,19 @@ class Client {
       }
 
       if (type === "subscription_tier") {
-        alert(translateText("store.subscription_purchase_success"));
         strip();
         invalidateUserMe();
-        window.location.reload();
+        // Reload only once the dialog is dismissed, like the blocking alert
+        // this replaced.
+        void showInGameAlert(
+          translateText("store.subscription_purchase_success"),
+        ).then(() => window.location.reload());
         return;
       }
 
       const cosmeticName = params.get("cosmetic");
       if (!cosmeticName) {
-        alert("Something went wrong. Please contact support.");
+        void showInGameAlert(translateText("common.error_generic"));
         console.error("purchase-completed but no pattern name");
         return;
       }
@@ -798,9 +917,7 @@ class Client {
       const token = params.get("token-login");
 
       if (!token) {
-        alertAndStrip(
-          `login failed! Please try again later or contact support.`,
-        );
+        alertAndStrip(translateText("error_modal.login_failed"));
         return;
       }
 
@@ -918,14 +1035,94 @@ class Client {
     return mode;
   }
 
+  private desktopUpdateState: DesktopUpdateState | null = null;
+
+  /**
+   * The real multiplayer gate. The entry-point components dim their own
+   * buttons, but EVERY join -- theirs, matchmaking's, a deep link, the
+   * host/join modals -- funnels through handleJoinLobby, and most of those
+   * never pass a button. Matchmaking is the sharpest case: it dispatches
+   * join-lobby itself when a match is found, with no click to intercept, so
+   * without this a signed-out player queues, matches, and is closed by the
+   * server with the Turnstile error this whole feature exists to replace.
+   *
+   * The decision itself lives in shouldBlockDesktopJoin, which is pure and
+   * unit-tested; this adds the shell check, the modal cleanup and the wiggle.
+   *
+   * Draws attention to the status bar rather than failing silently, matching
+   * what the dimmed buttons do.
+   */
+  private blockedDesktopJoin(lobby: JoinLobbyEvent): boolean {
+    if (!isDesktopShell()) return false;
+    if (
+      !shouldBlockDesktopJoin(
+        lobby,
+        this.desktopUpdateState,
+        getDesktopSessionState(),
+      )
+    ) {
+      return false;
+    }
+    // The dispatcher may already have told the player they are in a lobby:
+    // JoinLobbyModal dispatches only after it has joined and rendered
+    // "joined, waiting", and HostLobbyModal after the server lobby exists.
+    // Refusing without closing those would leave the UI claiming a lobby the
+    // client never entered, with the game starting without them.
+    this.joinModal?.close();
+    this.hostModal?.close();
+    (
+      document.querySelector("desktop-status-bar") as
+        | (HTMLElement & { wiggle?: () => void })
+        | null
+    )?.wiggle?.();
+    return true;
+  }
+
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
-    this.mostRecentJoinEvent = event.timeStamp;
     if (this.usernameInput && !this.usernameInput.canPlay()) {
       return;
     }
+    if (this.blockedDesktopJoin(lobby)) {
+      return;
+    }
+    // Only once the join is actually going ahead: a refused dispatch that
+    // bumped this would supersede a legitimate join still awaiting userAuth
+    // and cosmetics, stopping it as stale and leaving the player nowhere.
+    this.mostRecentJoinEvent = event.timeStamp;
 
     console.log(`joining lobby ${lobby.gameID}`);
+    // Entering a lobby. Singleplayer, public lobbies and replays know their
+    // config up front; everything else is filled in by the lobby_info
+    // subscription in initialize() a moment later.
+    const joinConfig =
+      lobby.gameStartInfo?.config ??
+      lobby.publicLobbyInfo?.gameConfig ??
+      lobby.gameRecord?.info.config;
+    const joinInfo = lobby.publicLobbyInfo;
+    this.presenceInGame = false;
+    this.presenceSpectating = lobby.spectator === true;
+    this.presenceDetail = {
+      gameType: joinConfig?.gameType,
+      gameMode: joinConfig?.gameMode,
+      map: presenceMapKey(joinConfig?.gameMap),
+      playerCount:
+        joinInfo === undefined
+          ? undefined
+          : "numClients" in joinInfo
+            ? joinInfo.numClients
+            : joinInfo.clients?.filter((c) => !c.spectator).length,
+      maxPlayers: joinConfig?.maxPlayers,
+      // Omitted for singleplayer and replays: no server hosts those ids, so
+      // advertising one has the shell offer friends a Join that cannot work.
+      // The optional field already means "not joinable".
+      lobbyId:
+        lobby.source === "singleplayer" || lobby.gameRecord !== undefined
+          ? undefined
+          : lobby.gameID,
+    };
+    this.emitPresence();
+
     if (this.lobbyHandle !== null) {
       console.log("joining lobby, stopping existing game");
       this.lobbyHandle.stop(true);
@@ -948,11 +1145,18 @@ class Client {
     // handshake. whenSeeded() always resolves (falling back to the generated
     // anon name on failure/timeout), so this can only delay, never block.
     await this.usernameInput?.whenSeeded();
+    // One resolution for the whole join: the name and the verified badge have
+    // to describe the same decision, so they are read together rather than
+    // asked for separately.
+    const resolvedName =
+      this.usernameInput?.resolvedName() ?? fallbackPlayerName();
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
-      cosmetics: await getPlayerCosmeticsRefs(),
+      cosmetics: await getPlayerCosmeticsRefs({
+        verified: resolvedName.verified,
+      }),
       turnstileToken: await this.getTurnstileToken(lobby),
-      playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
+      playerName: resolvedName.name,
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
       clanTagCheck: this.usernameInput?.getClanCheck(),
       playerRole,
@@ -979,6 +1183,11 @@ class Client {
       // The game is actually starting now (lobby wait is over). Let listeners that stay up
       // through the wait (e.g. the featured-stream panel) hide at this point instead of on join.
       document.dispatchEvent(new CustomEvent("game-starting"));
+      // Earliest point the lobby is provably closed: the server has stopped
+      // broadcasting lobby_info and refuses new seats, so the shell must stop
+      // advertising this as joinable even though terrain is still loading.
+      this.presenceInGame = true;
+      this.emitPresence();
       console.log("Closing modals");
       document.getElementById("settings-button")?.classList.add("hidden");
       if (this.usernameInput) {
@@ -1031,9 +1240,7 @@ class Client {
         }
       });
       this.gameModeSelector.stop();
-      document.querySelectorAll(".ad").forEach((ad) => {
-        (ad as HTMLElement).style.display = "none";
-      });
+      hideMenuChrome();
 
       crazyGamesSDK.loadingStart();
 
@@ -1051,9 +1258,7 @@ class Client {
       this.gameModeSelector.stop();
       incrementGamesPlayed();
 
-      document.querySelectorAll(".ad").forEach((ad) => {
-        (ad as HTMLElement).style.display = "none";
-      });
+      hideMenuChrome();
 
       if (window.PageOS?.session?.newPageView) {
         window.PageOS.session.newPageView();
@@ -1088,6 +1293,94 @@ class Client {
     });
   }
 
+  // State is derived rather than passed in so every caller agrees on what
+  // "spectating" outranks. Emitting is idempotent -- the shell diffs -- so
+  // callers never have to know whether anything actually changed.
+  private emitPresence() {
+    desktopPresence.set({
+      state: this.presenceSpectating
+        ? "spectating"
+        : this.presenceInGame
+          ? "game"
+          : "lobby",
+      ...this.presenceDetail,
+    });
+  }
+
+  // Back to the menu, forgetting the lobby we were describing so a later one
+  // cannot inherit its map or roster.
+  private resetPresenceToMenu() {
+    this.presenceDetail = {};
+    this.presenceSpectating = false;
+    this.presenceInGame = false;
+    desktopPresence.set({ state: "menu" });
+  }
+
+  // An invite lands the player exactly where a /game/<id> link would. The
+  // shell validated the id already; re-checking keeps the invariant next to
+  // the modal that trusts it.
+  private async openInvite(gameId: string): Promise<void> {
+    if (!GAME_ID_REGEX.test(gameId)) return;
+    // An invite can arrive mid-match, unlike the CrazyGames invite this path
+    // was modelled on, which only ever runs at cold start. Force-opening the
+    // join UI would leave it overlaying a game whose socket and render loop
+    // keep running underneath. Same rule the back-button exit uses: stop
+    // silently when the player is not active, ask first when they are, and
+    // drop the invite entirely if they decline.
+    if (this.lobbyHandle !== null) {
+      // stop() without force is the codebase's "is the player actually in
+      // this?" test: it tears the game down and returns true when they are
+      // not, and refuses (returning false) when they are.
+      if (!this.lobbyHandle.stop()) {
+        const confirmed = await showInGameConfirm(
+          translateText("help_modal.exit_confirmation"),
+        );
+        if (!confirmed) return;
+      }
+      // Navigate rather than leaving in place. handleLeaveLobby() was only
+      // ever called during the pre-start lobby wait; every exit from a
+      // STARTED game goes through a full location.href navigation, and it is
+      // that reload -- not handleLeaveLobby -- which restores the started-game
+      // teardown. Two pieces of it have no in-place restore path:
+      // gameModeSelector.stop() (line ~1139/1157) kills the public lobby
+      // socket, whose start() is only ever called from connectedCallback();
+      // and the same block hides every .ad element, which nothing ever
+      // un-hides. Leaving in place therefore stranded the player on a
+      // homepage with a frozen lobby list and no ad rails whenever the join
+      // did not complete -- modal closed, or lobby full/already started.
+      //
+      // Navigating to the lobby's own /game/<id> URL rather than "/" means
+      // the invite survives the reload without needing to be stashed: the
+      // path parser in handleUrl() opens the join modal on the way back up,
+      // which is the same route a shared lobby link takes.
+      // The /w<n>/game/<id> shape only exists on the game-server origin, so
+      // this root-relative navigation must not run on the replay shell host --
+      // it would resolve against replay.<domain>, 404, and lose the invite,
+      // which consumePendingInvite() has already taken. Same guard, for the
+      // same reason, as handleJoinLobby and updateJoinUrlForShare above.
+      //
+      // Not reachable from the desktop shell today: it classifies every
+      // https:// URL as open-externally, so redirectToVersionedShell() hands
+      // the replay host to the OS browser and this window stays on
+      // app://openfront/. That is a policy in a different repo though, and
+      // nothing here would notice if it changed -- so guard rather than depend
+      // on it. On the replay host, fall back to the in-place leave.
+      if (!isReplayShellHost(window.location.hostname)) {
+        this.resetPresenceToMenu();
+        window.location.href = `/${ClientEnv.workerPath(gameId)}/game/${gameId}`;
+        return;
+      }
+      await this.handleLeaveLobby();
+    }
+    // A cold-start invite can beat the modal's own upgrade, which would make
+    // open() a silent no-op (the CrazyGames invite path waits for the same
+    // reason).
+    await customElements.whenDefined("join-lobby-modal");
+    window.showPage?.("page-join-lobby");
+    this.joinModal?.open({ lobbyId: gameId });
+    console.log(`joining lobby ${gameId} from desktop invite`);
+  }
+
   private updateJoinUrlForShare(lobbyId: string) {
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
     let targetUrl: string;
@@ -1110,6 +1403,13 @@ class Client {
   }
 
   private async handleLeaveLobby(event?: CustomEvent) {
+    // Above the lobbyHandle guard on purpose. Presence goes to "lobby" when
+    // the join starts, but lobbyHandle is only assigned once the handshake
+    // finishes; a modal closed during that window dispatches leave-lobby and
+    // takes the early return below, stranding the shell on a lobby the player
+    // is not in. Leaving in place also means no navigation follows to reset it.
+    this.resetPresenceToMenu();
+
     if (this.lobbyHandle === null) {
       return;
     }
@@ -1125,6 +1425,22 @@ class Client {
     }
 
     setInGameSignal(false);
+
+    // The inverse of the game-start teardown. Every other exit from a started
+    // game navigates, and the reload did this implicitly; this path leaves in
+    // place, so it has to do it explicitly (OPE-255). It lives here rather
+    // than in openInvite() because handleLeaveLobby is reached from several
+    // places and any of them could be the next to hit it after a teardown.
+    //
+    // The gate asks whether the chrome is torn down, NOT whether we were
+    // in-game: the teardown happens at prestart while the in-game signal is
+    // only set at join, so gating on the signal missed a leave landing in the
+    // window between them. Because the gate no longer reads that signal, it
+    // does not matter that setInGameSignal(false) has already run above.
+    if (menuChromeIsTornDown()) {
+      this.gameModeSelector?.start();
+      restoreMenuChrome();
+    }
 
     if (this.joinModal.isOpen()) {
       this.joinModal.close();
@@ -1203,11 +1519,10 @@ class Client {
     if (
       ClientEnv.env() === GameEnv.Dev ||
       ClientEnv.instanceId() === "desktop" ||
-      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer ||
-      // Replays simulate locally from the archived record; there is no
-      // server to verify a token (and on the CDN replay shells Turnstile
-      // cannot load at all).
-      lobby.gameRecord !== undefined
+      // Single-player and replays: no server to verify a token against (and
+      // on the CDN replay shells Turnstile cannot load at all). Shared with
+      // the desktop gate so the exemption has one definition.
+      !joinIsGateable(lobby)
     ) {
       return null;
     }
@@ -1256,6 +1571,11 @@ const bootstrap = () => {
   // Same for double-tap "smart zoom", which `touch-action: manipulation`
   // alone does not reliably stop on iOS. See issue #4609.
   installDoubleTapZoomBlocker();
+
+  // Chrome and Firefox report a trackpad pinch as ctrl+wheel, which only the
+  // map canvas cancels — so pinching over a HUD panel zoomed the page instead
+  // of the map. See issue #5098.
+  installCtrlWheelZoomBlocker();
 
   initLayout();
   new Client().initialize();
@@ -1311,7 +1631,9 @@ async function getTurnstileToken(): Promise<{
       "error-callback": (errorCode: string) => {
         window.turnstile.remove(widgetId);
         console.error(`Turnstile error: ${errorCode}`);
-        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
+        void showInGameAlert(
+          translateText("error_modal.turnstile_error", { code: errorCode }),
+        );
         reject(new Error(`Turnstile failed: ${errorCode}`));
       },
     });

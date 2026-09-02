@@ -1,75 +1,46 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/core/Schemas", async () => {
-  const actual = (await vi.importActual("../../src/core/Schemas")) as any;
-  return {
-    ...actual,
-    GameStartInfoSchema: {
-      safeParse: (data: any) => ({ success: true, data }),
-    },
-    ServerPrestartMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data }),
-    },
-  };
-});
-
 import { GameType, RankedType } from "../../src/core/game/Game";
 import { ClientMessage } from "../../src/core/Schemas";
+import { createGameWireContext } from "../../src/core/ZbinWire";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
-import { clientFrame, testGameConfig } from "../util/Wire";
+import {
+  cid,
+  makeClient as harnessClient,
+  makeGame as harnessGame,
+  mockLogger,
+  mockWsOf,
+  startGame,
+} from "../util/GameServerHarness";
 
-function makeMockWs() {
-  const handlers = new Map<string, (msg: Buffer) => void>();
-  return {
-    on: (event: string, fn: (msg: Buffer) => void) => handlers.set(event, fn),
-    removeAllListeners: () => handlers.clear(),
-    send: vi.fn(),
-    close: vi.fn(),
-    readyState: 1,
-    /** Drive the socket the way a connected client would. */
-    emit: (msg: ClientMessage) => handlers.get("message")?.(clientFrame(msg)),
-  };
-}
+// The upload the game hands its finished record to.
+const archive = vi.fn(async () => {});
 
 function makeClient(
   id: string,
   spectator = false,
   friends: string[] = [],
 ): Client {
-  return new Client(
-    id,
-    `${id}-pid`,
-    null,
-    null,
-    undefined,
-    // Distinct per client: the winner vote is weighted by unique IP, so a shared
-    // one would collapse every electorate to a single voter.
-    `10.0.0.${ipOctet++}`,
-    id,
-    null,
-    makeMockWs() as any,
-    undefined,
-    `${id}-pub`,
+  // The harness hands every client a distinct IP: the winner vote is weighted
+  // by unique IP, so a shared one would collapse every electorate to a single
+  // voter.
+  return harnessClient({
+    clientID: cid(id),
+    persistentID: `${id}-pid`,
+    publicId: `${id}-pub`,
     friends,
     spectator,
-  );
+  });
 }
-
-let ipOctet = 1;
 
 describe("GameServer - spectators", () => {
   let logger: any;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    ipOctet = 1;
-    logger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    archive.mockReset();
+    logger = mockLogger();
   });
   afterEach(() => {
     vi.clearAllTimers();
@@ -77,12 +48,11 @@ describe("GameServer - spectators", () => {
   });
 
   const makeGame = (maxPlayers?: number) =>
-    new GameServer(
-      "g1",
-      logger,
-      Date.now(),
-      testGameConfig({ gameType: GameType.Private, maxPlayers }),
-    );
+    harnessGame({
+      log: logger,
+      config: { gameType: GameType.Private, maxPlayers },
+      deps: { archive },
+    });
 
   it("takes no lobby slot, so a full game is still watchable", () => {
     const game = makeGame(2);
@@ -103,25 +73,29 @@ describe("GameServer - spectators", () => {
     // Anyone in gameStartInfo.players gets spawned, so a spectator in that list
     // would be playing.
     const game = makeGame();
-    game.joinClient(makeClient("p1"));
+    const p1 = makeClient("p1");
+    game.joinClient(p1);
     game.joinClient(makeClient("cast", true));
-    game.start();
-    const info = (game as any).gameStartInfo;
-    expect(info).toBeDefined();
-    expect(info.players.map((p: any) => p.clientID)).toEqual(["p1"]);
+    startGame(game);
+    const start = mockWsOf(p1)
+      .sent()
+      .find((m) => m.type === "start");
+    expect(start?.type).toBe("start");
+    if (start?.type !== "start") return;
+    expect(start.gameStartInfo.players.map((p) => p.clientID)).toEqual([
+      cid("p1"),
+    ]);
   });
 
   it("still has to be on the allowlist when the lobby sets one", () => {
     // Taking no slot must not become a way around the allowlist.
-    const game = new GameServer(
-      "g1",
-      logger,
-      Date.now(),
-      testGameConfig({
+    const game = harnessGame({
+      log: logger,
+      config: {
         gameType: GameType.Private,
         allowedPublicIds: ["p1-pub"],
-      }),
-    );
+      },
+    });
     expect(game.joinClient(makeClient("cast", true))).toBe("not_allowlisted");
     expect(game.joinClient(makeClient("p1", true))).toBe("joined");
   });
@@ -129,30 +103,29 @@ describe("GameServer - spectators", () => {
   it("does not keep a ranked match alive on its own", () => {
     // 1v1 with one player and one spectator is a one-player game, so the
     // short-handed cancel has to see through the spectator.
-    const game = new GameServer(
-      "g1",
-      logger,
-      Date.now(),
-      testGameConfig({
+    const game = harnessGame({
+      log: logger,
+      config: {
         gameType: GameType.Private,
         maxPlayers: 2,
         rankedType: RankedType.OneVOne,
-      }),
-    );
+      },
+    });
     game.joinClient(makeClient("p1"));
     game.joinClient(makeClient("cast", true));
-    expect((game as any).cancelShortHandedMatch()).toBe(true);
+    expect(game.cancelShortHandedMatch()).toBe(true);
   });
 
-  it.each(["intent", "winner", "live_stats", "hash"])(
+  it.each(["intent", "winner", "live_stats", "hash", "report"])(
     "drops a %s sent by a spectator",
     async (type) => {
       // Taking no slot must not buy a way into the intent stream.
       const game = makeGame();
       const spies = {
-        intent: vi.spyOn(game as any, "handleIntent"),
+        intent: vi.spyOn(game, "handleIntent"),
         winner: vi.spyOn(game as any, "handleWinner"),
         live_stats: vi.spyOn(game as any, "handleLiveStats"),
+        report: vi.spyOn(game as any, "handleReport"),
       };
       const spectator = makeClient("cast", true);
       game.joinClient(spectator);
@@ -161,8 +134,9 @@ describe("GameServer - spectators", () => {
         winner: { type: "winner", winner: undefined, allPlayersStats: {} },
         live_stats: { type: "live_stats", stats: { turn: 1, players: [] } },
         hash: { type: "hash", hash: 42, turnNumber: 1 },
+        report: { type: "report", reported: cid("p1"), reason: "botting" },
       };
-      await (spectator.ws as any).emit(byType[type]);
+      await mockWsOf(spectator).emit(byType[type]);
       if (type === "hash") {
         // hash has no handler spy — it writes client.hashes, which feeds the
         // desync agreement a spectator must not vote in.
@@ -175,10 +149,10 @@ describe("GameServer - spectators", () => {
 
   it("still handles those messages from a player", async () => {
     const game = makeGame();
-    const handleIntent = vi.spyOn(game as any, "handleIntent");
+    const handleIntent = vi.spyOn(game, "handleIntent");
     const player = makeClient("p1");
     game.joinClient(player);
-    await (player.ws as any).emit({
+    await mockWsOf(player).emit({
       type: "intent",
       intent: { type: "spawn", tile: 1 },
     });
@@ -189,7 +163,7 @@ describe("GameServer - spectators", () => {
     // The player list is frozen at start; a late joiner used to be admitted as a
     // player who could never spawn.
     const game = makeGame();
-    (game as any)._hasStarted = true;
+    startGame(game);
     const late = makeClient("late");
     expect(game.joinClient(late)).toBe("joined");
     expect(late.spectator).toBe(true);
@@ -198,18 +172,26 @@ describe("GameServer - spectators", () => {
   it("does not put a spectator's disconnect into the turn log", () => {
     // mark_disconnected names a player in gameStartInfo; for a spectator it
     // refers to nobody, and it is kept in the archived record where readers take
-    // it as a player having dropped.
+    // it as a player having dropped. Joining records the (connected) status the
+    // same way, so the first turn shows who the server marks.
     const game = makeGame();
     const spectator = makeClient("cast", true);
     game.joinClient(spectator);
-    game.joinClient(makeClient("p1"));
-    (game as any).markClientDisconnected("cast", true);
-    (game as any).markClientDisconnected("p1", true);
-    const marked = (game as any).intents
-      .filter((i: any) => i.type === "mark_disconnected")
-      .map((i: any) => i.clientID);
-    expect(marked).not.toContain("cast");
-    expect(marked).toContain("p1");
+    const p1 = makeClient("p1");
+    game.joinClient(p1);
+    startGame(game);
+    vi.advanceTimersByTime(100);
+    const ctx = createGameWireContext([{ clientID: cid("p1") }]);
+    const turn = mockWsOf(p1)
+      .sent(ctx)
+      .find((m) => m.type === "turn");
+    expect(turn?.type).toBe("turn");
+    if (turn?.type !== "turn") return;
+    const marked = turn.turn.intents
+      .filter((i) => i.type === "mark_disconnected")
+      .map((i) => i.clientID);
+    expect(marked).not.toContain(cid("cast"));
+    expect(marked).toContain(cid("p1"));
   });
 
   it("keeps a spectator out of a player's friends list", () => {
@@ -221,11 +203,11 @@ describe("GameServer - spectators", () => {
     const player = makeClient("p1", false, ["cast-pub", "p2-pub"]);
     game.joinClient(player);
     game.joinClient(makeClient("p2"));
-    const friendsFor = (game as any).buildFriendsLookup();
-    expect(friendsFor(player)).toEqual(["p2"]);
+    const seen = game.gameInfo().clients?.find((c) => c.clientID === cid("p1"));
+    expect(seen?.friends).toEqual([cid("p2")]);
   });
 
-  it("does not make the winner vote unreachable", () => {
+  it("does not make the winner vote unreachable", async () => {
     // The vote needs a strict majority of the electorate's IPs. Counting
     // spectators in that total but barring them from voting means four players
     // watched by five spectators can never reach consensus — so the game never
@@ -236,93 +218,89 @@ describe("GameServer - spectators", () => {
     for (const id of ["c1", "c2", "c3", "c4", "c5"]) {
       game.joinClient(makeClient(id, true));
     }
-    // Archiving is a separate concern and needs a started game; the quorum is
-    // what's under test.
-    vi.spyOn(game as any, "archiveGame").mockImplementation(() => {});
+    startGame(game);
     for (const p of players) {
-      (game as any).handleWinner(p, {
+      await mockWsOf(p).emit({
         type: "winner",
-        winner: ["player", "p1"],
+        winner: ["player", cid("p1")],
         allPlayersStats: {},
       });
     }
-    expect((game as any).winner).not.toBeNull();
+    // Consensus archives the game.
+    expect(archive).toHaveBeenCalledOnce();
   });
 
   describe("switching between playing and watching", () => {
-    const setSpectator = (game: GameServer, c: Client, spectator: boolean) =>
-      (game as any).setSpectator(c, spectator);
+    const setSpectator = (_game: GameServer, c: Client, spectator: boolean) =>
+      mockWsOf(c).emit({ type: "spectate", spectator });
 
-    it("a spectator can take a free seat before the start", () => {
+    it("a spectator can take a free seat before the start", async () => {
       const game = makeGame(2);
       const c = makeClient("cast", true);
       game.joinClient(c);
-      setSpectator(game, c, false);
+      await setSpectator(game, c, false);
       expect(c.spectator).toBe(false);
       expect(
-        game.gameInfo().clients?.find((x) => x.clientID === "cast")?.spectator,
+        game.gameInfo().clients?.find((x) => x.clientID === cid("cast"))
+          ?.spectator,
       ).toBeUndefined();
     });
 
-    it("a player can drop back to watching, freeing the seat", () => {
+    it("a player can drop back to watching, freeing the seat", async () => {
       const game = makeGame(1);
       const p = makeClient("p1");
       game.joinClient(p);
       expect(game.joinClient(makeClient("p2"))).toBe("rejected");
-      setSpectator(game, p, true);
+      await setSpectator(game, p, true);
       expect(game.joinClient(makeClient("p2"))).toBe("joined");
     });
 
-    it("cannot take a seat that would exceed the cap", () => {
+    it("cannot take a seat that would exceed the cap", async () => {
       const game = makeGame(1);
       game.joinClient(makeClient("p1"));
       const c = makeClient("cast", true);
       game.joinClient(c);
-      setSpectator(game, c, false);
+      await setSpectator(game, c, false);
       expect(c.spectator).toBe(true);
     });
 
-    it("cannot take a seat the allowlist does not name them for", () => {
+    it("cannot take a seat the allowlist does not name them for", async () => {
       // The allowlist can gain entries AFTER someone is already in the lobby
       // (update_game_config replaces it), so being inside is not proof of a
       // seat. Without this, the toggle is a way past the allowlist the moment
       // anything admits a non-listed spectator.
-      const game = new GameServer(
-        "g1",
-        logger,
-        Date.now(),
-        testGameConfig({
+      const game = harnessGame({
+        log: logger,
+        config: {
           gameType: GameType.Private,
           allowedPublicIds: ["p1-pub"],
-        }),
-      );
+        },
+      });
       const listed = makeClient("p1", true);
       const unlisted = makeClient("cast", true);
       // Admit both while... the unlisted one cannot join an allowlisted lobby
       // today, so simulate the post-join list change: join first, then set it.
-      const open = new GameServer(
-        "g2",
-        logger,
-        Date.now(),
-        testGameConfig({ gameType: GameType.Private }),
-      );
+      const open = harnessGame({
+        log: logger,
+        config: { gameType: GameType.Private },
+      });
       open.joinClient(unlisted);
-      (open as any).gameConfig.allowedPublicIds = ["someone-else-pub"];
-      setSpectator(open, unlisted, false);
+      open.updateGameConfig({ allowedPublicIds: ["someone-else-pub"] });
+      await setSpectator(open, unlisted, false);
       expect(unlisted.spectator).toBe(true);
 
       game.joinClient(listed);
-      setSpectator(game, listed, false);
+      await setSpectator(game, listed, false);
       expect(listed.spectator).toBe(false);
     });
 
-    it("cannot become a player once the game has started", () => {
+    it("cannot become a player once the game has started", async () => {
       // gameStartInfo.players is frozen, so a new player could never spawn.
       const game = makeGame();
       const c = makeClient("cast", true);
       game.joinClient(c);
-      (game as any)._hasStarted = true;
-      setSpectator(game, c, false);
+      startGame(game);
+      await setSpectator(game, c, false);
       expect(c.spectator).toBe(true);
     });
 
@@ -333,10 +311,14 @@ describe("GameServer - spectators", () => {
       const game = makeGame();
       game.joinClient(makeClient("p1"));
       game.joinClient(makeClient("cast", true));
-      const seen = game.gameInfo("cast").clients ?? [];
-      expect(seen.map((c) => c.clientID)).toEqual(["p1", "cast"]);
-      expect(seen.find((c) => c.clientID === "p1")?.spectator).toBeUndefined();
-      expect(seen.find((c) => c.clientID === "cast")?.spectator).toBe(true);
+      const seen = game.gameInfo(cid("cast")).clients ?? [];
+      expect(seen.map((c) => c.clientID)).toEqual([cid("p1"), cid("cast")]);
+      expect(
+        seen.find((c) => c.clientID === cid("p1"))?.spectator,
+      ).toBeUndefined();
+      expect(seen.find((c) => c.clientID === cid("cast"))?.spectator).toBe(
+        true,
+      );
     });
   });
 
@@ -344,7 +326,7 @@ describe("GameServer - spectators", () => {
     // A caster arriving mid-game is the normal case; a late player already
     // gets the same treatment, so this only has to keep working.
     const game = makeGame();
-    (game as any)._hasStarted = true;
+    startGame(game);
     expect(game.joinClient(makeClient("cast", true))).toBe("joined");
   });
 });

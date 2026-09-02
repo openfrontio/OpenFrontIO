@@ -203,6 +203,9 @@ export function createRenderer(
   graphicsSettingsModal.onLayerVisibilityChange = (layerId, visible) => {
     view.setLayerVisible(layerId, visible);
   };
+  graphicsSettingsModal.onLayerAlphaChange = (layerId, alpha) => {
+    view.setLayerAlpha(layerId, alpha);
+  };
 
   const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
   if (!(unitDisplay instanceof UnitDisplay)) {

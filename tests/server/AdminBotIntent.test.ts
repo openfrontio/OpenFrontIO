@@ -1,36 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameType } from "../../src/core/game/Game";
 import { ADMIN_BOT_CLIENT_ID } from "../../src/core/Schemas";
+import { createGameWireContext } from "../../src/core/ZbinWire";
 import { GameServer } from "../../src/server/GameServer";
+import {
+  cid,
+  makeClient,
+  makeGame,
+  mockWsOf,
+  startGame,
+} from "../util/GameServerHarness";
 
 describe("GameServer.handleIntent (admin bot)", () => {
-  let mockLogger: any;
-
   beforeEach(() => {
     vi.useFakeTimers();
-    mockLogger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     vi.clearAllTimers();
   });
-
-  function makeGame(config: Record<string, unknown> = {}) {
-    return new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-      ...config,
-    } as any);
-  }
-
-  const started = (game: GameServer) => {
-    (game as any)._hasStarted = true;
-  };
 
   const ADMIN_ACTOR = {
     clientID: ADMIN_BOT_CLIENT_ID,
@@ -43,17 +32,17 @@ describe("GameServer.handleIntent (admin bot)", () => {
 
   describe("update_game_config", () => {
     it("mutates the config", () => {
-      const game = makeGame({ bots: 100 });
+      const game = makeGame({ config: { bots: 100 } });
       const result = apply(game, {
         type: "update_game_config",
         config: { bots: 42 },
       } as any);
       expect(result.status).toBe(200);
-      expect((game as any).gameConfig.bots).toBe(42);
+      expect(game.gameInfo().gameConfig?.bots).toBe(42);
     });
 
     it("rejects a public game with 403", () => {
-      const game = makeGame({ gameType: GameType.Public });
+      const game = makeGame({ config: { gameType: GameType.Public } });
       expect(
         apply(game, {
           type: "update_game_config",
@@ -74,7 +63,7 @@ describe("GameServer.handleIntent (admin bot)", () => {
 
     it("rejects updates after the game has started with 409", () => {
       const game = makeGame();
-      started(game);
+      startGame(game);
       expect(
         apply(game, {
           type: "update_game_config",
@@ -86,23 +75,23 @@ describe("GameServer.handleIntent (admin bot)", () => {
 
   describe("toggle_game_start_timer", () => {
     it("sets then clears startsAt", () => {
-      const game = makeGame({ startDelay: 0 });
-      expect((game as any).startsAt).toBeUndefined();
+      const game = makeGame({ config: { startDelay: 0 } });
+      expect(game.gameInfo().startsAt).toBeUndefined();
 
       expect(
         apply(game, { type: "toggle_game_start_timer" } as any).status,
       ).toBe(200);
-      expect((game as any).startsAt).toBeDefined();
+      expect(game.gameInfo().startsAt).toBeDefined();
 
       expect(
         apply(game, { type: "toggle_game_start_timer" } as any).status,
       ).toBe(200);
-      expect((game as any).startsAt).toBeUndefined();
+      expect(game.gameInfo().startsAt).toBeUndefined();
     });
 
     it("rejects after the game has started with 409", () => {
       const game = makeGame();
-      started(game);
+      startGame(game);
       expect(
         apply(game, { type: "toggle_game_start_timer" } as any).status,
       ).toBe(409);
@@ -122,7 +111,7 @@ describe("GameServer.handleIntent (admin bot)", () => {
     });
 
     it("rejects a public game with 403", () => {
-      const game = makeGame({ gameType: GameType.Public });
+      const game = makeGame({ config: { gameType: GameType.Public } });
       expect(
         apply(game, {
           type: "kick_player",
@@ -133,10 +122,9 @@ describe("GameServer.handleIntent (admin bot)", () => {
 
     it("resolves a publicID target to a connected client's clientID", () => {
       const game = makeGame();
-      // A connected client is in both lists; allClients is the superset we match on.
-      const connected = { clientID: "liveCID1", publicId: "pubABCD1" };
-      (game as any).activeClients.push(connected);
-      (game as any).allClients.set("liveCID1", connected);
+      game.joinClient(
+        makeClient({ clientID: "liveCID1", publicId: "pubABCD1" }),
+      );
       const spy = vi.spyOn(game, "kickClient").mockImplementation(() => {});
       const result = apply(game, {
         type: "kick_player",
@@ -146,24 +134,31 @@ describe("GameServer.handleIntent (admin bot)", () => {
       expect(spy).toHaveBeenCalledWith("liveCID1", expect.any(String));
     });
 
-    it("kicks a disconnected account by publicID via allClients (bans its persistentID)", () => {
+    it("kicks a disconnected account by publicID (bans its persistentID)", async () => {
       const game = makeGame();
-      // Disconnected: still known to the game (allClients) but already dropped
-      // from activeClients on socket close. Must stay kickable so the
-      // persistentID ban fires and blocks a rejoin/reconnect.
-      (game as any).allClients.set("goneCID1", {
+      // Disconnected: still known to the game but no longer connected after
+      // the socket close. Must stay kickable so the persistentID ban fires
+      // and blocks a rejoin/reconnect.
+      const gone = makeClient({
         clientID: "goneCID1",
         publicId: "pubGONE1",
         persistentID: "persist-gone-1",
       });
+      game.joinClient(gone);
+      await mockWsOf(gone).trigger("close");
+      expect(game.numClients()).toBe(0);
+
       const result = apply(game, {
         type: "kick_player",
         targetPublicID: "pubGONE1",
       } as any);
       expect(result.status).toBe(200);
-      expect((game as any).kickedPersistentIds.has("persist-gone-1")).toBe(
-        true,
-      );
+      expect(game.wasAdmitted("persist-gone-1")).toBe(false);
+      expect(
+        game.joinClient(
+          makeClient({ clientID: "goneCID2", persistentID: "persist-gone-1" }),
+        ),
+      ).toBe("kicked");
     });
 
     it("404s when no client matches the publicID", () => {
@@ -187,28 +182,34 @@ describe("GameServer.handleIntent (admin bot)", () => {
 
     it("pauses and resumes a started game", () => {
       const game = makeGame();
-      started(game);
+      startGame(game);
 
       expect(
         apply(game, { type: "toggle_pause", paused: true } as any).status,
       ).toBe(200);
-      expect((game as any).isPaused).toBe(true);
+      expect(game.isPaused()).toBe(true);
 
       expect(
         apply(game, { type: "toggle_pause", paused: false } as any).status,
       ).toBe(200);
-      expect((game as any).isPaused).toBe(false);
+      expect(game.isPaused()).toBe(false);
     });
 
     it("records the pause intent stamped with the placeholder clientID", () => {
+      // Read off the turn the pause was committed into, as a player sees it.
       const game = makeGame();
-      started(game);
+      const player = makeClient({ clientID: cid("p1") });
+      game.joinClient(player);
+      startGame(game);
       apply(game, { type: "toggle_pause", paused: true } as any);
 
-      const intents = (game as any).turns.flatMap((t: any) => t.intents);
-      const pause = intents.find((i: any) => i.type === "toggle_pause");
+      const ctx = createGameWireContext([{ clientID: cid("p1") }]);
+      const intents = mockWsOf(player)
+        .sent(ctx)
+        .flatMap((m) => (m.type === "turn" ? m.turn.intents : []));
+      const pause = intents.find((i) => i.type === "toggle_pause");
       expect(pause).toBeDefined();
-      expect(pause.clientID).toBe(ADMIN_BOT_CLIENT_ID);
+      expect(pause?.clientID).toBe(ADMIN_BOT_CLIENT_ID);
     });
   });
 

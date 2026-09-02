@@ -20,6 +20,8 @@ import {
   PostTribeNameResponseSchema,
   PublicPlayerGamesResponse,
   PublicPlayerGamesResponseSchema,
+  PurchasePackResponse,
+  PurchasePackResponseSchema,
   PutUsernameResponse,
   PutUsernameResponseSchema,
   RankedLeaderboardResponse,
@@ -232,6 +234,7 @@ export function invalidateUserMe() {
 }
 
 export type DeleteAccountResult =
+  // 204: deletion queued — the server deletes the account 24 hours later.
   | { ok: true }
   // 401: missing/unknown/expired refresh token — already logged out, and the
   // server cleared the cookie.
@@ -239,18 +242,19 @@ export type DeleteAccountResult =
   // 403: refused by policy. `message` is the server's player-facing reason
   // (root player / banned account), shown as-is.
   | { ok: false; code: "forbidden"; message?: string }
-  // 409: the player authored content other players depend on — deletion needs
-  // support. The body's message is for support, not end users.
-  | { ok: false; code: "blocked" }
-  // Anything else, including 429 rate limiting: the client shows a
-  // "contact support" failure.
+  // 429: the global deletion rate limit (one per 20 minutes across all
+  // players) — nothing was queued, try again later.
+  | { ok: false; code: "rate_limited" }
+  // Anything else: the client shows a "contact support" failure.
   | { ok: false; code: "failed" };
 
-// DELETE /users/@me — deletes the account immediately and irreversibly. The
-// HttpOnly refresh cookie is the credential (same as /auth/logout), so no
-// Authorization header. On 204 every session on every device is invalidated
-// and the cookie is cleared — callers drop local auth state themselves and
-// must NOT call /auth/logout afterwards.
+// DELETE /users/@me — queues the account for deletion; the server performs it
+// 24 hours later, and only support can cancel in the meantime (there is no
+// self-service cancel endpoint). The HttpOnly refresh cookie is the credential
+// (same as /auth/logout), so no Authorization header. On 204 every session on
+// every device is invalidated and the cookie is cleared — callers drop local
+// auth state themselves and must NOT call /auth/logout afterwards. Signing in
+// again during the 24 hours works but does not cancel the deletion.
 export async function deleteAccount(): Promise<DeleteAccountResult> {
   try {
     const response = await fetch(`${getApiBase()}/users/@me`, {
@@ -268,8 +272,8 @@ export async function deleteAccount(): Promise<DeleteAccountResult> {
         message: typeof body?.message === "string" ? body.message : undefined,
       };
     }
-    if (response.status === 409) {
-      return { ok: false, code: "blocked" };
+    if (response.status === 429) {
+      return { ok: false, code: "rate_limited" };
     }
     if (!response.ok) {
       console.error(
@@ -331,10 +335,16 @@ export type UpdateUsernameResult =
   | { ok: false; code: "failed" };
 
 // PUT /users/@me/username — renames the account username. Every failure is
-// atomic (no name change, no cooldown consumed). Both 409 bodies ("name
-// exclusively held" and "suffix space exhausted") map to "taken": the user
-// remedy is the same — pick another name. Invalidates the cached /users/@me
-// on success so the next read reflects the new name.
+// atomic (no name change, no cooldown consumed). The surviving 409 bodies
+// ("name equals an existing public id" and "suffix space exhausted") map to
+// "taken": the user remedy is the same — pick another name. Invalidates the
+// cached /users/@me on success so the next read reflects the new name.
+//
+// A premium player whose chosen bare name is already held no longer 409s: the
+// API grants the suffixed form and returns 200 with `bareClaim:
+// "unavailable"`. That is a real rename and it consumes the cooldown, so `ok:
+// true` alone is not enough to act on — callers must read `data.bareClaim`
+// and tell the player (see UsernamePanel).
 export async function updateUsername(
   username: string,
 ): Promise<UpdateUsernameResult> {
@@ -644,6 +654,101 @@ export async function purchaseWithCurrency(
   } catch (e) {
     console.error("purchaseWithCurrency: request failed", e);
     return false;
+  }
+}
+
+export type PurchaseCosmeticPackResult =
+  | { ok: true; data: PurchasePackResponse }
+  // 400 "Insufficient balance": the balance moved since the client's
+  // pre-check. Nothing charged.
+  | { ok: false; code: "insufficient_balance" }
+  // 400 insufficient_balance_debt: a refund/chargeback left the wallet
+  // negative; `debt` (bigint string) must be settled before anything is
+  // spendable. Nothing charged.
+  | { ok: false; code: "debt"; debt: string }
+  // 400 for a stale listing: pack not found / not for sale / zero price /
+  // all items deleted.
+  | { ok: false; code: "unavailable" }
+  // 409: the player already owns one or more items (`ownedFlareNames` says
+  // which). Also what a retry after a timed-out success returns — treat it as
+  // "already bought" and refetch /users/@me. Nothing charged.
+  | { ok: false; code: "already_owned"; ownedFlareNames: string[] }
+  | { ok: false; code: "failed" };
+
+const PACK_UNAVAILABLE_REASONS = [
+  "Pack not found",
+  "Pack is not for sale",
+  "Pack not available for hard currency",
+  "Pack has no items",
+  // A pattern item predating pack colours; an admin has to pick one.
+  "Pack item is missing its color palette",
+];
+
+// POST /shop/purchase/pack — buy a cosmetic pack (see CosmeticPackSchema) for
+// its hard-currency price, granting every item's flare in one transaction.
+// Any error means no debit and no grants.
+export async function purchaseCosmeticPack(
+  packName: string,
+): Promise<PurchaseCosmeticPackResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/shop/purchase/pack`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ packName }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 400) {
+      const body = await response.json().catch(() => null);
+      const reason = typeof body?.reason === "string" ? body.reason : "";
+      if (reason === "Insufficient balance") {
+        return { ok: false, code: "insufficient_balance" };
+      }
+      if (reason === "insufficient_balance_debt") {
+        return { ok: false, code: "debt", debt: String(body.debt ?? "") };
+      }
+      if (PACK_UNAVAILABLE_REASONS.includes(reason)) {
+        return { ok: false, code: "unavailable" };
+      }
+      console.error("purchaseCosmeticPack: bad request", body);
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 409) {
+      const body = await response.json().catch(() => null);
+      const owned: unknown = body?.ownedFlareNames;
+      return {
+        ok: false,
+        code: "already_owned",
+        ownedFlareNames: Array.isArray(owned)
+          ? owned.filter((f): f is string => typeof f === "string")
+          : [],
+      };
+    }
+    if (!response.ok) {
+      console.error(
+        "purchaseCosmeticPack: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = PurchasePackResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error(
+        "purchaseCosmeticPack: Zod validation failed",
+        parsed.error,
+      );
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (e) {
+    console.error("purchaseCosmeticPack: request failed", e);
+    return { ok: false, code: "failed" };
   }
 }
 
@@ -1031,18 +1136,6 @@ export function getAudience() {
   // Sourced from BOOTSTRAP_CONFIG (server/desktop-injected) rather than
   // window.location, so the desktop app (app://openfront) targets real infra.
   return ClientEnv.jwtAudience();
-}
-
-// Check if the user's account is linked to a Discord, Google, or email account.
-export function hasLinkedAccount(
-  userMeResponse: UserMeResponse | false,
-): boolean {
-  return (
-    userMeResponse !== false &&
-    (userMeResponse.user?.discord !== undefined ||
-      userMeResponse.user?.google !== undefined ||
-      userMeResponse.user?.email !== undefined)
-  );
 }
 
 export async function fetchGameById(

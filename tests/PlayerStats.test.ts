@@ -17,11 +17,16 @@ function player(
 ): PlayerView {
   return {
     id: () => id,
+    smallID: () => 0,
     name: () => id,
     displayName: () => (clanTag === null ? id : `[${clanTag}] ${id}`),
     clanTag: () => clanTag,
     numTilesOwned: () => tiles,
     gold: () => BigInt(tiles),
+    tradeGold: () => 0,
+    trainGold: () => 0,
+    piracyGold: () => 0,
+    goldEarned: () => 0,
     troops: () => tiles,
     totalUnitLevels: () => tiles,
     isAlive: () => true,
@@ -43,6 +48,7 @@ describe("PlayerStats", () => {
       myPlayer: () => me,
       playerViews: () => [me],
       config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -79,6 +85,7 @@ describe("PlayerStats", () => {
       myPlayer: () => players[6],
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -135,6 +142,7 @@ describe("PlayerStats", () => {
       myPlayer: () => me,
       playerViews: () => [me],
       config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -193,6 +201,7 @@ describe("PlayerStats clan column", () => {
       myPlayer: () => players[0],
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;

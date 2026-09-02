@@ -1,6 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { createCustomCurrencyCheckout } from "../Api";
+import { showInGameAlert } from "../InGameModal";
 import { translateText } from "../Utils";
 import "./PlutoniumIcon";
 import "./PurchaseButton";
@@ -39,7 +40,7 @@ export class CustomCurrencyCard extends LitElement {
   private buy = async () => {
     const url = await createCustomCurrencyCheckout(this.amount);
     if (url === false) {
-      alert(translateText("store.checkout_failed"));
+      await showInGameAlert(translateText("store.checkout_failed"));
       return;
     }
     window.location.href = url;

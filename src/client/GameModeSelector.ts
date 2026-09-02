@@ -1,18 +1,35 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
+import { UserMeResponse } from "../core/ApiSchemas";
 import {
   Duos,
   GameMapType,
   GameMode,
+  GameType,
   HumansVsNations,
   Quads,
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { getDesktopSessionState } from "./Auth";
 import "./components/IOSAddToHomeScreenBanner";
-import { lobbyCard, mapAspectRatios } from "./components/LobbyCard";
-import { multiplayerAllowed, type DesktopUpdateState } from "./DesktopShell";
+import {
+  canJoinTrustedLobby,
+  lobbyCard,
+  mapAspectRatios,
+  trustRequiredDialog,
+  viewerIsSignedIn,
+  viewerIsTrusted,
+} from "./components/LobbyCard";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
+import {
+  isDesktopShell,
+  multiplayerAllowed,
+  multiplayerAllowedForSession,
+  type DesktopSessionState,
+  type DesktopUpdateState,
+} from "./DesktopShell";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -31,13 +48,45 @@ const CARD_BG = "bg-surface";
 /**
  * Whether a multiplayer entry point should refuse to act. Exported for tests
  * and kept free of component state so the rule is checkable in isolation.
- * A null state means no desktop shell (the web build), so nothing is gated.
+ * A null state means that bridge is absent (the web build), so it gates
+ * nothing; either state alone is enough to block.
  */
 export function shouldBlockMultiplayerAction(
-  state: DesktopUpdateState | null,
+  update: DesktopUpdateState | null,
+  session: DesktopSessionState | null,
 ): boolean {
-  if (state === null) return false;
-  return !multiplayerAllowed(state);
+  if (update !== null && !multiplayerAllowed(update)) return true;
+  if (session !== null && !multiplayerAllowedForSession(session)) return true;
+  return false;
+}
+
+/**
+ * Whether the desktop gate applies to a given join at all. Single-player runs
+ * entirely in-client and a replay simulates from an archived record, so
+ * neither needs a session or an up-to-date build. getTurnstileToken in
+ * Main.ts exempts the same pair (alongside two conditions irrelevant here),
+ * and calls this so the two cannot drift. Exported for tests and kept free of
+ * component state, like shouldBlockMultiplayerAction above.
+ */
+export function joinIsGateable(lobby: JoinLobbyEvent): boolean {
+  return (
+    lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer &&
+    lobby.gameRecord === undefined
+  );
+}
+
+/**
+ * The whole gate decision for one join, as a pure function so it is testable
+ * without mounting Main's client. Main adds only the shell check and the
+ * status-bar wiggle around it.
+ */
+export function shouldBlockDesktopJoin(
+  lobby: JoinLobbyEvent,
+  update: DesktopUpdateState | null,
+  session: DesktopSessionState | null,
+): boolean {
+  if (!joinIsGateable(lobby)) return false;
+  return shouldBlockMultiplayerAction(update, session);
 }
 
 @customElement("game-mode-selector")
@@ -45,6 +94,10 @@ export class GameModeSelector extends LitElement {
   @state() private lobbies: PublicGames | null = null;
   @state() private inputValid: boolean = true;
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
+  @state() private viewerTrusted: boolean = false;
+  @state() private viewerSignedIn: boolean = false;
+  @state() private showTrustRequired: boolean = false;
+  @state() private desktopSessionState: DesktopSessionState | null = null;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
@@ -76,6 +129,14 @@ export class GameModeSelector extends LitElement {
       "desktop-update-state",
       this.onDesktopUpdateState,
     );
+    document.addEventListener("userMeResponse", this.onUserMe);
+    if (isDesktopShell()) {
+      this.desktopSessionState = getDesktopSessionState();
+    }
+    document.addEventListener(
+      "desktop-session-state",
+      this.onDesktopSessionState,
+    );
     // Pick up the current value in case username-input validated before us.
     const usernameInput = document.querySelector(
       "username-input",
@@ -95,6 +156,11 @@ export class GameModeSelector extends LitElement {
       "desktop-update-state",
       this.onDesktopUpdateState,
     );
+    document.removeEventListener("userMeResponse", this.onUserMe);
+    document.removeEventListener(
+      "desktop-session-state",
+      this.onDesktopSessionState,
+    );
     super.disconnectedCallback();
   }
 
@@ -106,8 +172,43 @@ export class GameModeSelector extends LitElement {
     this.desktopUpdateState = (e as CustomEvent<DesktopUpdateState>).detail;
   };
 
+  private onUserMe = (e: Event) => {
+    const me = (e as CustomEvent<UserMeResponse | false>).detail;
+    this.viewerSignedIn = viewerIsSignedIn(me);
+    this.viewerTrusted = viewerIsTrusted(me);
+    // A CrazyGames sign-in surfaces as a userMeResponse without a linked
+    // identity, so re-read the SDK profile alongside it.
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      void crazyGamesSDK.getUserProfile().then((user) => {
+        if (user !== null) this.viewerSignedIn = true;
+      });
+    }
+  };
+
+  private onDesktopSessionState = (e: Event) => {
+    this.desktopSessionState = (e as CustomEvent<DesktopSessionState>).detail;
+  };
+
   public stop() {
     this.lobbySocket.stop();
+  }
+
+  /**
+   * Re-open the public-lobby socket after stop().
+   *
+   * connectedCallback() used to be the only caller of lobbySocket.start(),
+   * which was fine while every exit from a started game reloaded the page. It
+   * is not fine for an exit that leaves in place (openInvite, OPE-255): this
+   * element is never disconnected, so connectedCallback never runs again and
+   * the lobby list stayed frozen on whatever it last received.
+   *
+   * Safe to call when already running -- PublicLobbySocket.start() closes any
+   * existing socket before opening a new one -- but callers should still only
+   * use it to undo a stop(), since a needless reconnect drops the cached
+   * snapshot and re-primes the list from the server.
+   */
+  public start() {
+    this.lobbySocket.start();
   }
 
   private handleLobbiesUpdate(lobbies: PublicGames) {
@@ -269,6 +370,12 @@ export class GameModeSelector extends LitElement {
             true,
           )}
         </div>
+        ${this.showTrustRequired
+          ? trustRequiredDialog(
+              this.viewerSignedIn,
+              () => (this.showTrustRequired = false),
+            )
+          : nothing}
       </div>
     `;
   }
@@ -288,13 +395,19 @@ export class GameModeSelector extends LitElement {
    * actionable.
    */
   private blockedByUpdate(): boolean {
-    if (!shouldBlockMultiplayerAction(this.desktopUpdateState)) return false;
+    if (
+      !shouldBlockMultiplayerAction(
+        this.desktopUpdateState,
+        this.desktopSessionState,
+      )
+    )
+      return false;
     // Optional-call the method rather than dispatching an event: the bar is a
     // sibling custom element that may not have upgraded yet, and `?.wiggle?.()`
     // degrades to a silent no-op in that case instead of firing an event with
     // no listener.
     (
-      document.querySelector("desktop-update-bar") as
+      document.querySelector("desktop-status-bar") as
         | (HTMLElement & { wiggle?: () => void })
         | null
     )?.wiggle?.();
@@ -348,7 +461,11 @@ export class GameModeSelector extends LitElement {
     gated: boolean = false,
   ) {
     const blocked =
-      gated && shouldBlockMultiplayerAction(this.desktopUpdateState);
+      gated &&
+      shouldBlockMultiplayerAction(
+        this.desktopUpdateState,
+        this.desktopSessionState,
+      );
     return html`
       <button
         @click=${onClick}
@@ -401,7 +518,11 @@ export class GameModeSelector extends LitElement {
       timeDisplay,
       timeDisplayUppercase,
       disabled: !this.inputValid,
-      blocked: shouldBlockMultiplayerAction(this.desktopUpdateState),
+      blocked: shouldBlockMultiplayerAction(
+        this.desktopUpdateState,
+        this.desktopSessionState,
+      ),
+      viewerTrusted: this.viewerTrusted,
       onClick: () => this.validateAndJoin(lobby),
     });
   }
@@ -409,6 +530,10 @@ export class GameModeSelector extends LitElement {
   private validateAndJoin(lobby: PublicGameInfo) {
     if (this.blockedByUpdate()) return;
     if (!this.validateUsername()) return;
+    if (!canJoinTrustedLobby(lobby, this.viewerTrusted)) {
+      this.showTrustRequired = true;
+      return;
+    }
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {

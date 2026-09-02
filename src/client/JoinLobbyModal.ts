@@ -39,6 +39,7 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
+import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
@@ -110,14 +111,26 @@ export class JoinLobbyModal extends BaseModal {
         ariaLabel: translateText("common.close"),
       });
     }
+    // Both affordances answer "get my friends into this lobby", so they sit
+    // together. Copy stays private-only (the ID is how a private lobby is
+    // shared); the Steam invite works for either, because the shell keeps a
+    // shadow lobby for any joined game.
+    const copy =
+      this.currentLobbyId && this.isPrivateLobby()
+        ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
+        : undefined;
+    const invite = inviteFriendsButton();
     return modalHeader({
       title: translateText("public_lobby.title"),
       onBack: () => this.closeAndLeave(),
       ariaLabel: translateText("common.close"),
+      // Only pair them behind a wrapper when both are present, so a browser --
+      // which never gets the invite button -- renders exactly the markup it
+      // rendered before this change.
       rightContent:
-        this.currentLobbyId && this.isPrivateLobby()
-          ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
-          : undefined,
+        copy && invite
+          ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
+          : (copy ?? invite),
     });
   }
 

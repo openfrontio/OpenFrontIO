@@ -9,10 +9,14 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { UniversalPathFinding } from "../pathfinding/PathFinder";
-import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
+import {
+  ParabolaUniversalPathFinder,
+  getParabolaControlPoints,
+} from "../pathfinding/PathFinder.Parabola";
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
+import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { NukeExecution } from "./NukeExecution";
 
 export class MirvExecution implements Execution {
@@ -26,6 +30,11 @@ export class MirvExecution implements Execution {
   private rangeSquared = this.range * this.range;
   private minimumSpread = 55;
   private warheadCount = 350;
+
+  private static readonly MATH_SCALE = 100;
+  private readonly longFlightMult = 14;
+  private readonly longFlightLinearPercent = 10;
+  private readonly shortFlightMult = 10;
 
   private baseX: number;
   private baseY: number;
@@ -45,6 +54,7 @@ export class MirvExecution implements Execution {
 
   private stagedTargets: TileRef[] = [];
   private warheadsSpawned = false;
+  private warheadExecutions: NukeExecution[] = [];
 
   constructor(
     private player: Player,
@@ -55,10 +65,6 @@ export class MirvExecution implements Execution {
     this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
     this.mg = mg;
     this.targetPlayer = this.mg.owner(this.dst);
-    this.speed = this.mg.config().nukeSpeed(UnitType.MIRV);
-    this.pathFinder = UniversalPathFinding.Parabola(mg, {
-      increment: this.speed,
-    });
     this.baseX = this.mg.x(this.dst);
     this.baseY = this.mg.y(this.dst);
     this.stagedTargets = [this.dst];
@@ -87,11 +93,20 @@ export class MirvExecution implements Execution {
       this.spawnTile = spawn;
       this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {
         targetTile: this.dst,
+        targetPlayer: this.targetPlayer,
       });
       this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
       const x = Math.floor((this.baseX + this.mg.x(this.nuke.tile())) / 2);
       const y = Math.max(0, this.baseY - 500) + 50;
       this.separateDst = this.mg.ref(x, y);
+
+      this.speed = this.calculateDeterministicSpeed(
+        this.spawnTile,
+        this.separateDst,
+      );
+      this.pathFinder = UniversalPathFinding.Parabola(this.mg, {
+        increment: this.speed,
+      });
 
       let result = this.pathFinder.next(
         this.spawnTile,
@@ -122,6 +137,16 @@ export class MirvExecution implements Execution {
       if (silo) {
         silo.launch();
       }
+    }
+
+    // make the MIRV inactive if it was destroyed or cancelled externally
+    if (this.nuke !== null && !this.nuke.isActive()) {
+      this.active = false;
+      for (const warhead of this.warheadExecutions) {
+        warhead.cancel();
+      }
+      this.warheadExecutions = [];
+      return;
     }
 
     const remainingTicks = this.fullPath.length - this.pathIndex;
@@ -186,17 +211,17 @@ export class MirvExecution implements Execution {
       else if (i < 140) speedOffset = 1;
       else if (i < 210) speedOffset = 2;
       else if (i < 280) speedOffset = 3;
-      this.mg.addExecution(
-        new NukeExecution(
-          UnitType.MIRVWarhead,
-          this.player,
-          dst,
-          this.separateDst,
-          // order of extra speed assign does not matter, they all spawn at once.
-          warheadSpeed + speedOffset,
-          waitBase + this.random.nextInt(0, 15),
-        ),
+      const execution = new NukeExecution(
+        UnitType.MIRVWarhead,
+        this.player,
+        dst,
+        this.separateDst,
+        // order of extra speed assign does not matter, they all spawn at once.
+        warheadSpeed + speedOffset,
+        waitBase + this.random.nextInt(0, 15),
       );
+      this.warheadExecutions.push(execution);
+      this.mg.addExecution(execution);
     }
   }
 
@@ -267,5 +292,79 @@ export class MirvExecution implements Execution {
 
   activeDuringSpawnPhase(): boolean {
     return false;
+  }
+
+  private calculateDeterministicSpeed(
+    spawnTile: TileRef,
+    separateDst: TileRef,
+  ): number {
+    // using base speed and uncapped curve, calculate ideal mirv flight ticks
+    // prevents top of map shenanigans
+    // Intentionally pass the clamped separateDst so timing matches the drawn physical arc exactly.
+    const [iP0, iP1, iP2, iP3] = getParabolaControlPoints(
+      this.mg,
+      spawnTile,
+      separateDst,
+      { distanceBasedHeight: true, directionUp: true, ignoreMapBounds: true },
+    );
+    const idealMirvLength = DistanceBasedBezierCurve.getLength(
+      iP0,
+      iP1,
+      iP2,
+      iP3,
+    );
+    const baseSpeed = this.mg.config().nukeSpeed(UnitType.MIRV);
+
+    // Math.sqrt and basic fractional division are IEEE-754 deterministic across all compliant JS engines.
+    // Floating point compliant, is only used in idealMirvTicksInt which floors.
+    // Kept as a const for engine optimization
+    const idealMirvTicks = idealMirvLength / baseSpeed;
+
+    const baseTicks = this.mg.config().mirvNormalizeTargetTicks();
+    const baseTicksScaled = baseTicks * MirvExecution.MATH_SCALE;
+
+    const idealMirvTicksInt = Math.floor(
+      idealMirvTicks * MirvExecution.MATH_SCALE,
+    );
+    let targetMirvTicksInt = baseTicksScaled;
+
+    // normalize towards baseTicks using sqrt heuristic to stay deterministic
+    // Approximation of Math.pow, which is not guaranteed to be deterministic across engines
+    if (idealMirvTicksInt > baseTicksScaled) {
+      const diff = idealMirvTicksInt - baseTicksScaled;
+      targetMirvTicksInt =
+        baseTicksScaled +
+        Math.floor(Math.sqrt(diff)) * this.longFlightMult +
+        Math.floor((diff * this.longFlightLinearPercent) / 100);
+    } else if (idealMirvTicksInt < baseTicksScaled) {
+      const diff = baseTicksScaled - idealMirvTicksInt;
+      targetMirvTicksInt =
+        baseTicksScaled - Math.floor(Math.sqrt(diff)) * this.shortFlightMult;
+    }
+    targetMirvTicksInt = Math.max(MirvExecution.MATH_SCALE, targetMirvTicksInt);
+
+    const [aP0, aP1, aP2, aP3] = getParabolaControlPoints(
+      this.mg,
+      spawnTile,
+      separateDst,
+    );
+    const actualMirvLength = DistanceBasedBezierCurve.getLength(
+      aP0,
+      aP1,
+      aP2,
+      aP3,
+    );
+
+    const actualMirvLengthInt = Math.round(actualMirvLength * 256);
+
+    // Pure integer division: Math.floor((num + Math.floor(den / 2)) / den)
+    // Ensures mathematically sound rounding entirely inside JS CPU integer domain
+    const num = actualMirvLengthInt * MirvExecution.MATH_SCALE;
+    const den = targetMirvTicksInt;
+    const pureIntegerSpeedScaled = Math.floor(
+      (num + Math.floor(den / 2)) / den,
+    );
+    // safe to use in Parabola since Parabola uses x256 scaled integers.
+    return Math.max(1, pureIntegerSpeedScaled / 256);
   }
 }

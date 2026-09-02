@@ -781,7 +781,18 @@ export class ClanDetailView extends LitElement {
     clan: ClanInfo,
   ) {
     const buttons: ReturnType<typeof html>[] = [];
-    if (!isMember && hasPendingRequest) {
+    if (!isMember && this.myPublicId === null) {
+      // Signed out: hand off to sign-in instead of sending a join that
+      // would only come back 401.
+      buttons.push(html`
+        <button
+          @click=${() => window.showPage?.("page-account")}
+          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all"
+        >
+          ${translateText("clan_modal.sign_in_to_join")}
+        </button>
+      `);
+    } else if (!isMember && hasPendingRequest) {
       buttons.push(html`
         <button
           disabled

@@ -35,6 +35,7 @@ import "./components/GameConfigSettings";
 import "./components/InputCard";
 import "./components/LobbyPlayerView";
 import "./components/ToggleInputCard";
+import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
@@ -143,9 +144,9 @@ export class HostLobbyModal extends BaseModal {
     if (lobby.clients) {
       this.clients = lobby.clients;
     }
-    // The server can delist on its own (join whitelist enabled, duplicate
-    // creator resolved by the master); follow its state unless our own
-    // toggle request is mid-flight.
+    // The server can delist on its own (duplicate creator / cap overflow
+    // resolved by the master); follow its state unless our own toggle
+    // request is mid-flight.
     if (!this.listingRequestInFlight && lobby.listed !== undefined) {
       this.publiclyListed = lobby.listed;
     }
@@ -220,19 +221,35 @@ export class HostLobbyModal extends BaseModal {
         this.close();
       },
       ariaLabel: translateText("common.back"),
-      rightContent: html`
-        <copy-button
+      // Both answer "get my friends into this lobby", so they sit together —
+      // the host is the player holding the code and deciding who joins, and
+      // was the one surface the invite button originally missed. Paired behind
+      // a wrapper only when the invite is present, so a browser renders exactly
+      // the markup it did before.
+      rightContent: (() => {
+        const copy = html`<copy-button
           .lobbyId=${this.lobbyId}
           .lobbySuffix=${this.lobbyUrlSuffix}
           include-lobby-query
-        ></copy-button>
-      `,
+        ></copy-button>`;
+        // Not until there is a lobby to invite anyone into. createLobby()
+        // assigns lobbyId asynchronously and the modal renders before it
+        // lands, so without this the button is live during that window with
+        // no shadow lobby behind it — the invite would silently no-op. The
+        // join modal gets this free from its own !currentLobbyId early return.
+        const invite = this.lobbyId ? inviteFriendsButton() : undefined;
+        return invite
+          ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
+          : copy;
+      })(),
     });
   }
 
   // Private/Public segmented toggle in the header. Shown to everyone;
   // non-subscribers get a subscription-required dialog instead of a listing
-  // request (the server re-checks the subscription regardless).
+  // request (the server re-checks the subscription regardless). Listing is
+  // one-way (the server rejects unlisting), so the Private segment goes away
+  // once the lobby is listed.
   private renderVisibilityToggle() {
     const segment = (labelKey: string, isPublic: boolean) => html`
       <button
@@ -249,7 +266,9 @@ export class HostLobbyModal extends BaseModal {
       <div
         class="flex items-center rounded-full border border-white/10 bg-white/5 p-0.5 shrink-0"
       >
-        ${segment("host_modal.visibility_private", false)}
+        ${this.publiclyListed
+          ? nothing
+          : segment("host_modal.visibility_private", false)}
         ${segment("host_modal.visibility_public", true)}
       </div>
       ${this.renderAutoStartTimer()}

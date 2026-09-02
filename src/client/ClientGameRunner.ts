@@ -69,6 +69,7 @@ import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
+import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import {
   applyGraphicsOverrides,
   createRenderSettings,
@@ -126,6 +127,7 @@ export function joinLobby(
 
   const userSettings: UserSettings = new UserSettings();
   themeProvider.reset(); // fresh colour allocators for this game
+  goldRateTracker.resetAll(); // drop samples from a previous in-page game
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
@@ -613,6 +615,7 @@ async function createClientGame(
     userSettings,
     lobbyConfig.gameRecord !== undefined,
     lobbyConfig.gameStartInfo.listed,
+    lobbyConfig.spectator === true,
   );
   let gameMap: TerrainMapData;
 
@@ -735,6 +738,7 @@ async function createClientGame(
     );
 
     // Loaded on demand so lil-gui and the debug GUI stay out of the main bundle.
+    // Two folders: "Effect Editor" and "Render Settings".
     let debugGui: { open(): void; destroy(): void } | null = null;
     let debugGuiLoading = false;
     eventBus.on(ToggleRenderDebugGuiEvent, () => {
@@ -745,6 +749,10 @@ async function createClientGame(
           .then(({ createDebugGui }) => {
             debugGui = createDebugGui(
               view.getSettings(),
+              {
+                setOverride: (effectType, attrs) =>
+                  webglBuilder.setEffectOverride(effectType, attrs),
+              },
               resolveRenderSettings,
               refreshDerivedGraphics,
             );

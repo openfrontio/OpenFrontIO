@@ -47,97 +47,111 @@ interface ActiveShockwave {
 //   palette color so the shader can take a max over all four.
 // ---------------------------------------------------------------------------
 
+const QUAD_VERTS = new Float32Array([0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1]);
 const SHOCKWAVE_FLOATS = 22;
 const SHOCKWAVE_STRIDE = SHOCKWAVE_FLOATS * 4; // bytes
+
+/**
+ * Calculates shockwave/sparkle explosion duration in milliseconds,
+ * clamped between 100ms and 15,000ms.
+ */
+export function calculateExplosionDurationMs(
+  params: NukeExplosionRenderParams | undefined,
+  defaultDurationMs: number,
+): number {
+  if (!params) return defaultDurationMs;
+  const widthPx = params.maxRadius * 2;
+  return Math.min(
+    Math.max((widthPx / Math.max(params.speed, 0.001)) * 1000, 100),
+    15_000,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // FxShockwavePass
 // ---------------------------------------------------------------------------
 
 export class FxShockwavePass {
-  private gl: WebGL2RenderingContext;
-  private settings: RenderSettings;
-
   private program: WebGLProgram;
   private uCamera: WebGLUniformLocation;
   private uRingWidth: WebGLUniformLocation;
   private uTime: WebGLUniformLocation;
   private vao: WebGLVertexArrayObject;
+  private quadVbo: WebGLBuffer;
   private instanceBuf: DynamicInstanceBuffer;
   private shockwaveCount = 0;
 
   private active: ActiveShockwave[] = [];
   private timeFn: () => number = () => performance.now();
 
-  constructor(gl: WebGL2RenderingContext, settings: RenderSettings) {
-    this.gl = gl;
-    this.settings = settings;
-
+  constructor(
+    private gl: WebGL2RenderingContext,
+    private settings: RenderSettings,
+  ) {
     this.program = createProgram(gl, shockwaveVertSrc, shockwaveFragSrc);
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uRingWidth = gl.getUniformLocation(this.program, "uRingWidth")!;
     this.uTime = gl.getUniformLocation(this.program, "uTime")!;
 
-    const glBuf = gl.createBuffer()!;
-    this.instanceBuf = new DynamicInstanceBuffer(
-      gl,
-      glBuf,
-      16,
-      SHOCKWAVE_FLOATS,
-    );
-
+    // Instanced geometry: 1 full-quad per shockwave ring
     this.vao = gl.createVertexArray()!;
     gl.bindVertexArray(this.vao);
 
-    const quadBuf = gl.createBuffer()!;
-    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array([0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1]),
-      gl.STATIC_DRAW,
-    );
+    // Unit quad at location 0 (stride 8, non-instanced)
+    this.quadVbo = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadVbo);
+    gl.bufferData(gl.ARRAY_BUFFER, QUAD_VERTS, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, glBuf);
-    // location 1: x, y, radius, alpha
+    const instanceGlBuf = gl.createBuffer()!;
+    this.instanceBuf = new DynamicInstanceBuffer(
+      gl,
+      instanceGlBuf,
+      64,
+      SHOCKWAVE_FLOATS,
+    );
+    gl.bindBuffer(gl.ARRAY_BUFFER, instanceGlBuf);
+
+    // Location 1..11: Per-instance shockwave attributes (divisor 1)
     gl.enableVertexAttribArray(1);
     gl.vertexAttribPointer(1, 4, gl.FLOAT, false, SHOCKWAVE_STRIDE, 0);
     gl.vertexAttribDivisor(1, 1);
-    // location 2: style (0 classic, 1 EMP, 2 sparkles)
+
     gl.enableVertexAttribArray(2);
     gl.vertexAttribPointer(2, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 16);
     gl.vertexAttribDivisor(2, 1);
-    // locations 3-6: color0..color3 rgb
-    for (let i = 0; i < MAX_NUKE_EXPLOSION_COLORS; i++) {
-      gl.enableVertexAttribArray(3 + i);
+
+    for (let c = 0; c < MAX_NUKE_EXPLOSION_COLORS; c++) {
+      const loc = 3 + c;
+      gl.enableVertexAttribArray(loc);
       gl.vertexAttribPointer(
-        3 + i,
+        loc,
         3,
         gl.FLOAT,
         false,
         SHOCKWAVE_STRIDE,
-        20 + i * 12,
+        20 + c * 12,
       );
-      gl.vertexAttribDivisor(3 + i, 1);
+      gl.vertexAttribDivisor(loc, 1);
     }
-    // location 7: colorCount
+
     gl.enableVertexAttribArray(7);
     gl.vertexAttribPointer(7, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 68);
     gl.vertexAttribDivisor(7, 1);
-    // location 8: speed
+
     gl.enableVertexAttribArray(8);
     gl.vertexAttribPointer(8, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 72);
     gl.vertexAttribDivisor(8, 1);
-    // location 9: transitionSpeed
+
     gl.enableVertexAttribArray(9);
     gl.vertexAttribPointer(9, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 76);
     gl.vertexAttribDivisor(9, 1);
-    // location 10: thickness
+
     gl.enableVertexAttribArray(10);
     gl.vertexAttribPointer(10, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 80);
     gl.vertexAttribDivisor(10, 1);
-    // location 11: cell (sparkles grid pitch)
+
     gl.enableVertexAttribArray(11);
     gl.vertexAttribPointer(11, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 84);
     gl.vertexAttribDivisor(11, 1);
@@ -158,33 +172,26 @@ export class FxShockwavePass {
     params?: NukeExplosionRenderParams,
   ): void {
     const fx = this.settings.fx;
-    // Cosmetic speed = world tiles/s the ring's WIDTH grows, so the effect
-    // lasts width / speed seconds. Clamped so a bad catalog value can't make
-    // the ring near-immortal (speed → 0) or a single-frame strobe.
-    let durationMs = fx.nukeShockwaveDurationMs;
-    if (params) {
-      const widthPx = params.maxRadius * 2;
-      durationMs = Math.min(
-        Math.max((widthPx / Math.max(params.speed, 0.001)) * 1000, 100),
-        15_000,
-      );
-    }
-    // The shader's crackle animation runs on a multiplier of real time; pace
-    // it to how fast this effect plays relative to the default duration.
+    const durationMs = calculateExplosionDurationMs(
+      params,
+      fx.nukeShockwaveDurationMs,
+    );
     const speed = fx.nukeShockwaveDurationMs / durationMs;
-    // Sparkles: density ≈ total glints in the burst. The unit disc holds
-    // π/cell² grid cells and ~2/3 survive dropout, so cell = √((2π/3)/d).
-    // Clamped so a bad catalog value can't degenerate into per-pixel noise
-    // or an empty burst.
+
     let cell = 0;
-    if (params?.type === "sparkles") {
-      const density = Math.min(Math.max(params.density, 2), 5000);
-      cell = Math.sqrt((2 * Math.PI) / 3 / density);
-    } else if (params?.type === "embers") {
-      const density = Math.min(Math.max(params.density, 2), 5000);
-      // Embers reuse `cell` as the keep-fraction: the shader lights up that
-      // share of grid cells, so a higher density gives a denser scatter.
-      cell = Math.min(Math.max(density / 500, 0.04), 0.6);
+    if (params?.type === "sparkles" || params?.type === "embers") {
+      const rawDensity = params.density ?? 50;
+      const density = Math.min(
+        Math.max(Number.isFinite(rawDensity) ? rawDensity : 50, 2),
+        5000,
+      );
+      if (params.type === "sparkles") {
+        cell = Math.sqrt((2 * Math.PI) / 3 / density);
+      } else {
+        // Embers reuse `cell` as the keep-fraction: the shader lights up that
+        // share of grid cells, so a higher density gives a denser scatter.
+        cell = Math.min(Math.max(density / 500, 0.04), 0.6);
+      }
     }
     this.active.push({
       x,
@@ -206,7 +213,8 @@ export class FxShockwavePass {
       colors: params?.colors ?? [DEFAULT_NUKE_EXPLOSION_COLOR],
       speed,
       transitionSpeed: params?.transitionSpeed ?? 0,
-      thickness: params?.thickness ?? 0,
+      // World tiles; the classic ring reads its width from uRingWidth instead.
+      thickness: params ? (params.thickness ?? 4.0) : 0,
       cell,
     });
   }
@@ -319,5 +327,6 @@ export class FxShockwavePass {
     gl.deleteProgram(this.program);
     this.instanceBuf.dispose();
     gl.deleteVertexArray(this.vao);
+    gl.deleteBuffer(this.quadVbo);
   }
 }

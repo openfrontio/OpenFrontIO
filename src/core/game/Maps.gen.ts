@@ -163,6 +163,22 @@ export const mapCategoryOrder: readonly MapCategory[] = [
   "tournament",
 ];
 
+export type SpecialModifierKey =
+  | "isRandomSpawn"
+  | "isCompact"
+  | "isCrowded"
+  | "isHardNations"
+  | "startingGold1M"
+  | "startingGold5M"
+  | "startingGold25M"
+  | "goldMultiplier"
+  | "isAlliancesDisabled"
+  | "isNukesDisabled"
+  | "isSAMsDisabled"
+  | "isPeaceTime"
+  | "isWaterNukes"
+  | "isDoomsdayClock";
+
 export interface MapInfo {
   /** GameMapType enum key — the UpperCamelCase folder name. */
   id: GameMapName;
@@ -172,12 +188,22 @@ export interface MapInfo {
   translationKey: string;
   /** Map picker categories. */
   categories: MapCategory[];
-  /** How many times the map appears in the multiplayer playlist. */
+  /** How many times the map appears in the multiplayer playlist (fallback). */
   multiplayerFrequency: number;
+  /** FFA lobby rotation weight. -1 = use multiplayerFrequency. */
+  ffaFrequency: number;
+  /** Team lobby rotation weight. -1 = use multiplayerFrequency. */
+  teamFrequency: number;
+  /** Special lobby rotation weight. -1 = use multiplayerFrequency. */
+  specialFrequency: number;
   /** Position in the featured grid (1 = first); unranked featured maps sort last. */
   featuredRank?: number;
   /** Preferred team count in team/special games (see MapPlaylist). */
   specialTeamCount?: number;
+  /** Modifiers that should never be rolled for this map in special games. */
+  disabledModifiers?: SpecialModifierKey[];
+  /** Modifiers forced on for this map. Plain key or "key:percentage" (e.g. "goldMultiplier:75"). */
+  forcedModifiers?: string[];
   /** Tribe name theme(s) (keys in tribeNameThemes.json). */
   themes?: string[];
   /** Custom tribe entry: a string (random spawn) or an object with name and coordinates. */
@@ -209,6 +235,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.achiran",
     categories: ["fictional", "europe"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe", "scary"],
   },
   {
@@ -217,6 +246,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.aegean",
     categories: ["europe", "asia"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["europe", "asia"],
   },
@@ -226,6 +258,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.africa",
     categories: ["featured", "continental", "africa"],
     multiplayerFrequency: 7,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     featuredRank: 6,
     themes: ["africa"],
   },
@@ -235,6 +270,10 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.alps",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    forcedModifiers: ["isWaterNukes:75"],
     themes: ["europe"],
   },
   {
@@ -243,6 +282,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.amazonriver",
     categories: ["south_america"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["south_america"],
   },
   {
@@ -251,6 +293,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.antarctica",
     categories: ["antarctica", "continental"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "ArchipelagoSea",
@@ -258,6 +303,10 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.archipelagosea",
     categories: ["europe"],
     multiplayerFrequency: 1,
+    ffaFrequency: 0,
+    teamFrequency: 0,
+    specialFrequency: -1,
+    forcedModifiers: ["isWaterNukes:50"],
     themes: ["europe"],
   },
   {
@@ -266,6 +315,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.arctic",
     categories: ["europe", "north_america", "asia"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe", "asia", "north_america"],
   },
   {
@@ -274,6 +326,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.asia",
     categories: ["featured", "continental", "asia"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     featuredRank: 5,
     themes: ["asia"],
   },
@@ -283,6 +338,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.australia",
     categories: ["oceania"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["oceania"],
   },
   {
@@ -291,7 +349,11 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.baikal",
     categories: ["asia"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
+    forcedModifiers: ["isWaterNukes:50"],
     themes: ["asia"],
   },
   {
@@ -300,6 +362,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.baikalnukewars",
     categories: ["fictional"],
     multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "BajaCalifornia",
@@ -307,6 +372,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.bajacalifornia",
     categories: ["north_america"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -315,6 +383,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.balkans",
     categories: ["europe"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -323,6 +394,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.balkhash",
     categories: ["asia"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
   {
@@ -331,6 +405,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.baltics",
     categories: ["europe"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -339,6 +416,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.beringsea",
     categories: ["asia", "north_america"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["asia", "north_america"],
   },
@@ -348,6 +428,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.beringstrait",
     categories: ["asia", "north_america"],
     multiplayerFrequency: 2,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["asia", "north_america"],
   },
@@ -357,6 +440,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.betweentwoseas",
     categories: ["europe", "asia"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe", "asia"],
   },
   {
@@ -365,6 +451,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.blacksea",
     categories: ["europe", "asia"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe", "asia"],
   },
   {
@@ -373,6 +462,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.bosphorusstraits",
     categories: ["europe", "asia"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["europe", "asia"],
   },
@@ -382,6 +474,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.branchingpaths",
     categories: ["arcade"],
     multiplayerFrequency: 7,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 3,
   },
   {
@@ -390,6 +485,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.britannia",
     categories: ["europe"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -398,6 +496,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.britanniaclassic",
     categories: ["europe"],
     multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -406,6 +507,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.caribbean",
     categories: ["north_america"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -414,6 +518,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.caspiansea",
     categories: ["asia"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["asia"],
   },
@@ -423,6 +530,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.caucasus",
     categories: ["europe", "asia"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe", "asia"],
   },
   {
@@ -431,6 +541,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.china",
     categories: ["asia", "countries"],
     multiplayerFrequency: 8,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
   {
@@ -439,7 +552,11 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.choppingblock",
     categories: ["arcade"],
     multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 4,
+    forcedModifiers: ["isWaterNukes:50"],
   },
   {
     id: "ClearwaterLakes",
@@ -447,6 +564,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.clearwaterlakes",
     categories: ["north_america"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -455,6 +575,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.conakry",
     categories: ["africa"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["africa"],
   },
@@ -464,6 +587,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.crimea",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -472,6 +598,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.danishstraits",
     categories: ["europe"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -480,6 +609,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.deglaciatedantarctica",
     categories: ["antarctica", "fictional"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "Didier",
@@ -487,6 +619,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.didier",
     categories: ["arcade"],
     multiplayerFrequency: 1,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "DidierFrance",
@@ -494,6 +629,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.didierfrance",
     categories: ["arcade"],
     multiplayerFrequency: 1,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "Dyslexdria",
@@ -501,6 +639,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.dyslexdria",
     categories: ["world", "fictional"],
     multiplayerFrequency: 8,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "EastAsia",
@@ -508,6 +649,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.eastasia",
     categories: ["asia"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
   {
@@ -516,6 +660,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.europe",
     categories: ["featured", "continental", "europe"],
     multiplayerFrequency: 7,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     featuredRank: 2,
     themes: ["europe"],
   },
@@ -525,6 +672,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.europeclassic",
     categories: ["europe", "continental"],
     multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -533,6 +683,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.falklandislands",
     categories: ["south_america"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["south_america"],
   },
@@ -542,6 +695,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.faroeislands",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -550,6 +706,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.fingerlakes",
     categories: ["north_america"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -558,7 +717,11 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.fourislands",
     categories: ["fictional"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 4,
+    forcedModifiers: ["isWaterNukes:50"],
   },
   {
     id: "France",
@@ -566,6 +729,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.france",
     categories: ["europe", "countries"],
     multiplayerFrequency: 8,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -574,6 +740,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.gatewaytotheatlantic",
     categories: ["europe"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -582,6 +751,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.germany",
     categories: ["europe"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
     customTribes: [
       { name: "Aachen, Städteregion" },
@@ -1000,6 +1172,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.giantworldmap",
     categories: ["world"],
     multiplayerFrequency: 10,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "GreatLakes",
@@ -1007,6 +1182,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.greatlakes",
     categories: ["north_america"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -1015,6 +1193,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.gulfofguinea",
     categories: ["africa"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["africa"],
   },
   {
@@ -1023,6 +1204,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.gulfofstlawrence",
     categories: ["north_america"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 3,
     themes: ["north_america"],
   },
@@ -1032,6 +1216,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.halkidiki",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -1040,6 +1227,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.hawaii",
     categories: ["oceania"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["oceania"],
   },
   {
@@ -1048,6 +1238,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.hecatestrait",
     categories: ["north_america"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -1056,6 +1249,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.hongkong",
     categories: ["asia"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
   {
@@ -1064,6 +1260,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.iceland",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -1072,6 +1271,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.indiansubcontinent",
     categories: ["asia"],
     multiplayerFrequency: 8,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
   {
@@ -1080,6 +1282,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.irishsea",
     categories: ["europe"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 3,
     themes: ["europe"],
   },
@@ -1089,6 +1294,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.italia",
     categories: ["europe"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -1097,6 +1305,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.japan",
     categories: ["countries", "asia"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
   {
@@ -1105,6 +1316,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.juandefucastrait",
     categories: ["north_america"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 3,
     themes: ["north_america"],
   },
@@ -1114,6 +1328,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.korea",
     categories: ["asia", "countries"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["asia"],
   },
@@ -1122,7 +1339,10 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Labyrinth,
     translationKey: "map.labyrinth",
     categories: ["arcade"],
-    multiplayerFrequency: 6,
+    multiplayerFrequency: 2,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "LasVegasStrip",
@@ -1130,6 +1350,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.lasvegasstrip",
     categories: ["north_america"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america", "western"],
   },
   {
@@ -1138,6 +1361,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.lemnos",
     categories: ["europe"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -1146,6 +1372,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.levant",
     categories: ["asia"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
   {
@@ -1154,6 +1383,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.lisbon",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -1162,6 +1394,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.losangeles",
     categories: ["north_america"],
     multiplayerFrequency: 8,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
     customTribes: [
       { name: "Arcadia", coordinates: [1524, 441] },
@@ -1309,8 +1544,12 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Luna,
     translationKey: "map.luna",
     categories: ["cosmic"],
-    multiplayerFrequency: 2,
+    multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
+    forcedModifiers: ["isWaterNukes:50"],
   },
   {
     id: "Manicouagan",
@@ -1318,6 +1557,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.manicouagan",
     categories: ["north_america"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -1326,6 +1568,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.marenostrum",
     categories: ["europe", "asia", "africa"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe", "asia", "africa"],
   },
   {
@@ -1334,6 +1579,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.mars",
     categories: ["cosmic"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "Mena",
@@ -1341,6 +1589,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.mena",
     categories: ["asia", "africa"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia", "africa"],
   },
   {
@@ -1349,6 +1600,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.middleeast",
     categories: ["asia"],
     multiplayerFrequency: 8,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
   {
@@ -1357,6 +1611,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.milkyway",
     categories: ["cosmic"],
     multiplayerFrequency: 8,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "MississippiRiver",
@@ -1364,6 +1621,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.mississippiriver",
     categories: ["north_america"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -1372,6 +1632,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.montreal",
     categories: ["north_america"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -1380,6 +1643,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.morethanluck",
     categories: ["arcade"],
     multiplayerFrequency: 7,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 5,
   },
   {
@@ -1388,6 +1654,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.newyorkcity",
     categories: ["north_america"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -1396,6 +1665,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.niledelta",
     categories: ["africa"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["africa"],
   },
   {
@@ -1404,6 +1676,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.northamerica",
     categories: ["featured", "continental", "north_america"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     featuredRank: 3,
     themes: ["north_america"],
   },
@@ -1413,6 +1688,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.northwestpassage",
     categories: ["north_america"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -1421,6 +1699,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.oceania",
     categories: ["oceania", "continental"],
     multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["oceania"],
   },
   {
@@ -1429,6 +1710,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.onion",
     categories: ["arcade"],
     multiplayerFrequency: 2,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "Pangaea",
@@ -1436,6 +1720,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.pangaea",
     categories: ["fictional"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "Passage",
@@ -1443,6 +1730,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.passage",
     categories: ["fictional"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "Pluto",
@@ -1450,6 +1740,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.pluto",
     categories: ["cosmic"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
   },
   {
@@ -1458,6 +1751,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.russia",
     categories: ["europe", "asia", "countries"],
     multiplayerFrequency: 8,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe", "asia"],
   },
   {
@@ -1466,6 +1762,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.sanfrancisco",
     categories: ["north_america"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -1474,6 +1773,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.scandinavia",
     categories: ["europe"],
     multiplayerFrequency: 7,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -1482,6 +1784,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.sierpinski",
     categories: ["arcade"],
     multiplayerFrequency: 10,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "Sol",
@@ -1489,6 +1794,10 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.sol",
     categories: ["cosmic"],
     multiplayerFrequency: 20,
+    ffaFrequency: 0,
+    teamFrequency: 0,
+    specialFrequency: -1,
+    forcedModifiers: ["isWaterNukes:50"],
     themes: ["space"],
     customTribes: [
       { name: "Actaea", coordinates: [237, 727] },
@@ -1546,6 +1855,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.southamerica",
     categories: ["featured", "continental", "south_america"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     featuredRank: 4,
     themes: ["south_america"],
   },
@@ -1555,6 +1867,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.southeastasia",
     categories: ["asia"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
   {
@@ -1563,6 +1878,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.straitofgibraltar",
     categories: ["europe", "africa"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["europe", "africa"],
   },
@@ -1572,6 +1890,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.straitofhormuz",
     categories: ["asia"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["asia"],
   },
@@ -1581,6 +1902,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.straitofmalacca",
     categories: ["asia"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
   {
@@ -1589,6 +1913,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.surrounded",
     categories: ["fictional"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 4,
   },
   {
@@ -1597,6 +1924,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.svalmel",
     categories: ["fictional", "europe", "north_america"],
     multiplayerFrequency: 8,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe", "north_america"],
   },
   {
@@ -1605,6 +1935,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.taiwanstrait",
     categories: ["asia"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["asia"],
   },
@@ -1614,6 +1947,10 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.thebox",
     categories: ["arcade"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    forcedModifiers: ["isWaterNukes:75"],
   },
   {
     id: "TierraDelFuego",
@@ -1621,6 +1958,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.tierradelfuego",
     categories: ["south_america"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["south_america"],
   },
   {
@@ -1629,6 +1969,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.titan",
     categories: ["cosmic"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "Tourney1",
@@ -1636,6 +1979,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.tourney1",
     categories: ["tournament"],
     multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "Tourney2",
@@ -1643,6 +1989,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.tourney2",
     categories: ["tournament"],
     multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "Tourney3",
@@ -1650,6 +1999,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.tourney3",
     categories: ["tournament"],
     multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "Tourney4",
@@ -1657,6 +2009,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.tourney4",
     categories: ["tournament"],
     multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "TradersDream",
@@ -1664,6 +2019,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.tradersdream",
     categories: ["fictional"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
   },
   {
@@ -1672,6 +2030,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.twolakes",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -1680,6 +2041,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.unitedstates",
     categories: ["north_america", "countries"],
     multiplayerFrequency: 9,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["north_america"],
   },
   {
@@ -1688,6 +2052,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.venice",
     categories: ["europe"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["europe"],
   },
   {
@@ -1696,6 +2063,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.vietnam",
     categories: ["countries", "asia"],
     multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     specialTeamCount: 2,
     themes: ["asia"],
   },
@@ -1705,6 +2075,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.warshipwarship",
     categories: ["arcade"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "World",
@@ -1712,6 +2085,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.world",
     categories: ["featured", "world"],
     multiplayerFrequency: 20,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     featuredRank: 1,
   },
   {
@@ -1720,6 +2096,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.worldinverted",
     categories: ["world", "fictional"],
     multiplayerFrequency: 8,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "YangtzeRiver",
@@ -1727,6 +2106,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.yangtzeriver",
     categories: ["new", "asia"],
     multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
   },
   {
     id: "YellowSea",
@@ -1734,6 +2116,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.yellowsea",
     categories: ["asia"],
     multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
   {
@@ -1742,6 +2127,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.yenisei",
     categories: ["asia"],
     multiplayerFrequency: 6,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
     themes: ["asia"],
   },
 ];

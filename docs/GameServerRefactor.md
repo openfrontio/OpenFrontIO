@@ -1,0 +1,303 @@
+# GameServer.ts — testing & refactor plan
+
+`src/server/GameServer.ts` is ~2,400 lines, changes in most feature PRs, and
+has 13 responsibilities in one class. This document is the plan for making it
+testable and then splitting it up. It is a living checklist: tick items off as
+PRs land.
+
+## Diagnosis
+
+**The class.** ~40 public methods; features land as "add a field, add a method,
+add a branch in `joinClient` / `handleIntent` / `phase()`", so those three keep
+growing.
+
+**The tests (the actual problem).** Tests could only exercise the class by
+reaching past its API:
+
+- ~150 `(game as any).x` reach-ins across 29 private members. Top offenders:
+  `gameStartInfo`, `archiveGame` (spied), `intents`, `_hasStarted = true`,
+  `winner`, `handleClientDisconnect`.
+- 6 files `vi.mock("../../src/core/Schemas")` to stub
+  `GameStartInfoSchema.safeParse` — only because fixture IDs like `"p1"` fail
+  the 8-char `ID` regex.
+- 13 files each define their own `makeMockWs` / `makeClient` / `mockLogger`.
+- Hidden dependencies force the rest: `archive()`, `fetchCustomTribes()`,
+  `ServerEnv.env()` (static), `console.error`, two internal `setInterval`s.
+
+**Coverage gaps** (no test at all): duplicate-session kick, 3-per-IP cap,
+`host_left` lobby close, `rejoinClient` identity / verified-badge update and
+`lastTurn` slicing, the "ws already closed" race in `addListeners`,
+`maxGameDuration`, 60s ping prune in `phase()`, `checkDisconnectedStatus`
+toggling, `findOutOfSyncClients` majority logic.
+
+**Structural smells.**
+
+- Seven parallel collections describe one population: `activeClients` (public
+  array), `allClients`, `websockets`, `persistentIdToClientId`,
+  `admittedPersistentIds`, `kickedPersistentIds`, `clientsDisconnectedStatus`.
+  Hand-reconciled in `joinClient`, `rejoinClient`, `kickClient`,
+  `handleClientDisconnect`, `phase()`.
+- `phase()` is a query with side effects (closes sockets, prunes clients,
+  re-tallies the winner) and `GameManager` calls it 2–3× per tick.
+- Lifecycle is four booleans (`_hasPrestarted`, `_hasStarted`, `_hasEnded`,
+  `isPaused`) plus `hasReachedMaxPlayerCount`; `hasStarted()` means
+  "prestarted OR started".
+- `updateGameConfig` is 100 lines of field-by-field copy.
+- `end()` is `async` but awaits nothing; the promise from `archive()` is not
+  awaited, so the surrounding `try/catch` only catches synchronous throws.
+
+## Principles
+
+1. **Client-visible wire behaviour must not change.** The contract is the
+   frames on the socket and the archived record.
+2. **Tests before moves.** No extraction lands without characterization tests
+   for the code being moved.
+3. **One concern per PR**, each deleting the reach-ins for that concern.
+4. **Don't fix behaviour while moving it.** Suspected bugs get a note and their
+   own PR.
+
+## Phase 0 — Test infrastructure (no production changes)
+
+- [x] `tests/util/GameServerHarness.ts`: one `mockLogger()`, `makeMockWs()`
+      (drivable: `emit(ClientMessage)`, `trigger("close")`, captured sends),
+      `makeClient(opts)`, `makeGame(opts)`, `startGame(game)` that runs real
+      `prestart()` + `start()` instead of setting `_hasStarted`.
+- [x] Schema-valid fixture IDs (`cid("p1")` → `"p1000000"`), then delete every
+      `vi.mock("../../src/core/Schemas")`.
+- [x] Golden wire transcript test: a scripted full game under fake timers;
+      snapshot the decoded server frames per client and the archived record.
+      This is the regression net for every later phase.
+- [x] Migrate the duplicated helpers onto the harness (thin local adapters are
+      fine; test bodies stay unchanged).
+
+Verify: `npm test` green; no `vi.mock` of `Schemas` under `tests/server`.
+
+Status (2026-08-25): done. `tests/util/GameServerHarness.ts`,
+`tests/server/GameServerWire.test.ts` (+ snapshot). Reach-ins 150 → 82,
+`Schemas` mocks 6 → 0, private `makeMockWs` copies 13 → 0. What is left
+reaches for `archiveGame` (10), `gameStartInfo` (9), `intents` (8), `winner`
+(6) — Phase 2's dependency injection and a `startInfo()` accessor remove most
+of it.
+
+## Phase 1 — Characterization tests for uncovered paths
+
+Written against current behaviour, using the harness:
+
+- [x] `joinClient`: dup-session kicks the _old_ client (Prod), 3-IP cap
+      (Public, non-Dev), host-left closes lobby and `phase()` → `Finished`.
+- [x] `rejoinClient`: identity update drops `verified` only when the username
+      changes; ignored after start; `lastTurn` slicing; old socket closed.
+- [x] `addListeners`: corrupt frame → `invalid_message` kick; ws
+      `readyState >= 2` race handled as a disconnect.
+- [x] `phase()`: 60s ping prune, `maxGameDuration`, the
+      `noActive && warmupOver && noRecentPings` exit.
+- [x] `findOutOfSyncClients`: majority, strict-majority flip, single client,
+      `turns[n].hash` set on agreement.
+- [x] `checkDisconnectedStatus`: only every 5 turns, flips both ways,
+      spectators emit no `mark_disconnected`.
+
+Status (2026-08-25): done — `tests/server/GameServerJoin.test.ts`,
+`GameServerRejoin.test.ts`, `GameServerPhase.test.ts`,
+`GameServerDesync.test.ts` (35 tests, all through the public API and the
+wire; no `(game as any)`). Host-left teardown was already covered by
+`HostedLobbyListing.test.ts`. Each file was checked against a hand mutation of
+the branch it covers (5-turn boundary, strict-majority flip, post-start
+identity update, dup-session kick) and failed as expected.
+
+Suspected bug pinned as current behaviour (own PR, not a refactor side
+effect): a prod duplicate-session kick calls `kickClient()` on the old
+connection, which bans the shared persistentID — so the surviving session can
+no longer be looked up (`getClientIdForPersistentId`) or reconnect.
+
+## Phase 2 — Inject the hidden dependencies
+
+- [x] Replace the 10-positional-arg constructor with `GameServerOptions` plus a
+      `GameServerDeps` object (`archive`, `fetchTribes`, `env`,
+      `turnIntervalMs`, `telemetry`, `buildHash`) defaulting to the real
+      modules. `GameManager.createGame` is the only production caller.
+- [x] Replace `console.error` in `prestart()` with `this.log.error`.
+- [x] Leave `Date.now()` alone — fake timers already cover it.
+
+Verify: golden snapshot unchanged; no `vi.mock` of server modules in
+GameServer tests; no `archiveGame` spies.
+
+Status (2026-08-25): done. `new GameServer(opts, deps?)` with
+`GameServerDeps = { archive, fetchTribes, env, turnIntervalMs, telemetry,
+telemetryBuildHash }` and `defaultGameServerDeps()`; `GameManager.createGame`
+passes only telemetry. One deviation from the plan above: `archive` takes the
+_partial_ record and the default does `archive(finalizeGameRecord(record))`,
+because `finalizeGameRecord` reads `GIT_COMMIT` and throws when it is unset —
+with the real one in the path every archive-reaching test would have had to
+spy `ServerEnv`, and a throw inside `handleWinner`'s catch silently drops the
+archive. The harness `makeGame` defaults `archive` and `fetchTribes` to inert
+spies; pass `deps: { archive }` to read the record. Golden frames unchanged
+(the snapshot lost only the three deployment stamps). No `vi.mock` of
+`Archive`/`CustomTribes` remains. (`archiveGame` stayed spied in
+`WinnerVoteRetally` and `ArchivePlayerRecord` until Phase 3's `Consensus`
+extraction rewrote them through real joins and starts.)
+
+## Phase 3 — Extract pure modules (lowest risk first)
+
+Each is a move, not a rewrite. Existing tests are re-pointed at the module.
+
+| Module                                                                    | From                                                | Existing tests to re-home                              |
+| ------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------ |
+| `ConfigPatch.ts`: `applyGameConfigPatch()`, `hostCheatsEnabled`           | `updateGameConfig`                                  | AdminBotIntent, HostedLobbyListing                     |
+| `NameVisibility.ts`: `seesReal`, `anonName`, `startInfoFor`, lobby roster | name-visibility helpers, `startInfoFor`, `gameInfo` | AnonymizeNames, AnonymizeNamesTeammates, AdminClanTags |
+| `DesyncDetector.ts`: `findOutOfSyncClients` + sent set                    | `handleSynchronization`                             | new (Phase 1)                                          |
+| `Consensus.ts`: winner vote + retally, live-stats rounds + prune          | `handleWinner`, `handleLiveStats`                   | WinnerVoteRetally, LiveStats                           |
+| `ListingState.ts`: listed/listedAt/label/accent/featured/autoStart        | scattered fields                                    | HostedLobbyListing                                     |
+| `MatchTelemetryRecorder.ts`: sequence, tick counts, finished flag         | `emitTelemetry*`                                    | MatchTelemetryIntegration                              |
+
+Notes:
+
+- `applyGameConfigPatch` must preserve `null → undefined` on nullable keys and
+  the _unconditional_ `hostCheats` assignment.
+- The `allowedPublicIds` → delist side effect stays in `GameServer`.
+
+Verify per PR: golden snapshot unchanged; module has its own unit tests; the
+corresponding `(game as any)` uses are gone.
+
+Status:
+
+- [x] `ConfigPatch.ts` (2026-08-25): `applyGameConfigPatch` + `hostCheatsEnabled`;
+      `updateGameConfig` is 12 lines, keeping only the whitelist → delist
+      side effect. Two explicit key lists, checked against `GameConfig` with
+      `satisfies`; the nullable list is exactly the schema's
+      `.nullable().optional()` keys. `tests/server/ConfigPatch.test.ts` is
+      table-driven over every key. The existing tests through `GameServer`
+      (AdminBotIntent, HostedLobbyListing) stay where they are.
+- [x] `NameVisibility.ts` (2026-08-26): `seesReal` / `seesRealBeyondTeam` /
+      `anonName`, `startInfoFor(viewer, isAdmin, real, wire)`,
+      `lobbyClients(viewer, active)` and a standalone `friendsLookup`, over a
+      `NameVisibilityView` of thunks (`config`, `clients`, `teamIndex`) so
+      lobby edits and late joins are seen. `GameServer` −180 lines; `gameInfo`
+      is a field list again. `AdminClanTags.test.ts` was absorbed into
+      `NameVisibility.test.ts`; the `startInfoFor` sections of the two
+      `AnonymizeNames*` files now drive the module with explicit real/wire
+      inputs (no `(game as any)` left in either).
+- [x] `DesyncDetector.ts` (2026-08-26): the tally moved verbatim into a pure
+      function, `findOutOfSyncClients`, taking the active clients and the
+      turn; a `DesyncDetector` holds the desynced and notified sets, with
+      `check` returning the tally when one is due and `record` returning the
+      first-time offenders — so `handleSynchronization` keeps the parse /
+      encode / send / log in the original order. `numDesyncedClients` and the
+      vote guards read the detector. The tally tests moved from
+      `GameServerDesync.test.ts` to `DesyncDetector.test.ts` (plus cadence and
+      record tests); the turn-loop tests stay through `GameServer`.
+- [x] `Consensus.ts` (2026-08-26): `WinnerVote` (`cast`, `tally`,
+      `tallyAmong`, decided once) and `LiveStatsVote` (`cast` per client per
+      turn with the twenty-round window, `latest`). `GameServer` keeps the
+      desync / kick guards, `reportedWinner`, the electorate, the logging and
+      `archiveGame`, in the original order. The last two `archiveGame` spies
+      are gone: `WinnerVoteRetally`, the `GameServer` half of `LiveStats` and
+      `ArchivePlayerRecord` now join real clients, start, vote over the wire
+      and read the record off the injected `archive`. Reach-ins 68 → 36.
+- [x] `ListingState.ts` (2026-08-27): the listed / listedAt / label / accent /
+      featured fields, the duplicate-toggle rule and the auto-start deadline.
+      `GameServer` keeps thin public delegates (Worker, AdminBotRoutes and
+      WorkerLobbyService call them) and `maybeAutoStartListed`, which is
+      lifecycle. `ListingState.test.ts` covers the deadline rules and label
+      sanitisation; `HostedLobbyListing.test.ts` is unchanged.
+- [x] `MatchTelemetryRecorder.ts` (2026-08-27): the event envelope and
+      sequence (`emit`), the per-tick intent counters (`intentObserved`,
+      `takeTickCounts`), the archive-attempted flag and the finished-once
+      `matchFinished`; `identityFor` is an exported function. `GameServer`
+      passes `turns.length` explicitly where the old default applied.
+      `MatchTelemetryRecorder.test.ts` covers the recorder; the integration
+      test is unchanged.
+
+Phase 3 complete (2026-08-27): six modules, six PRs, golden snapshot
+unchanged throughout. `GameServer.ts` is 1944 lines (from 2,365); test
+reach-ins 36 (from ~150), none of them spies on private methods. What is
+left reaches for `intents`, `isPaused`, `_hasStarted`, `websockets` and
+`startsAt` — all lifecycle and ingress state, which is Phases 5 and 6.
+
+## Phase 4 — Roster
+
+- [x] `Roster.ts` (2026-08-27) collapsing the seven collections: `add`,
+      `reconnect` (also swaps in the new socket and closes the old one),
+      `markLeft`, `forgetReconnect` (the lobby-phase seat release), `kick`,
+      `pruneStale`, `closeAll`, `active()`, `players()`, `all()`, `get()`,
+      `byPersistentId()` (raw: the kicked check is the caller's policy),
+      `votingUniqueIPs()`, `wasAdmitted()`, `isKicked()`, `isDisconnected()`
+      and `setDisconnected()`.
+- [x] `GameServer` keeps the _policy_ (allowlist, IP cap, dup-session,
+      host-left, the kicked checks on join and reconnect) and delegates the
+      bookkeeping to `this.clients` — `roster()` is already a public method.
+- [x] `activeClients` is no longer public; `GameManager.activeClients()` uses
+      `numClients()`.
+
+Only after Phases 1–3: every roster path then has a test.
+
+Status (2026-08-27): done. `Roster.test.ts` covers the bookkeeping; the
+`websockets`, `allClients`, `kickedPersistentIds` and `activeClients`
+reach-ins in `GameServerRejoin.test.ts` and `AdminBotIntent.test.ts` are
+replaced by real joins and observable outcomes. Golden snapshot unchanged.
+`GameServer.ts` is 1888 lines; reach-ins 29.
+
+## Phase 5 — Message ingress and intent dispatch
+
+- [x] `SocketIngress.ts` (2026-08-27): `attach(client)` wires the socket
+      listeners; `receive(client, frame)` is decode → validate → rate-limit →
+      spectator-block, then the game's `onMessage`. The message switch is
+      `GameServer.handleClientMessage(client, msg)`. The rate limiter is a
+      constructor parameter, so `SocketIngress.test.ts` drives the limit and
+      kick telemetry paths that `MatchTelemetryIntegration.test.ts` used to
+      reach in for; the frame-level decode / kick tests are unchanged.
+- [x] `IntentAuthorization.ts` (2026-08-27): `authorizeIntent` takes the
+      intent, the actor and the game state and is every actor / game-state
+      guard of `handleIntent`, in order, returning the first refusal or null;
+      `IntentActor` and `IntentOutcome` live there too. `handleIntent` keeps
+      what needs the roster (resolving a kick target) and the effects.
+      `IntentAuthorization.test.ts` is the table.
+
+Phase 5 complete (2026-08-27): two PRs, golden snapshot unchanged.
+`GameServer.ts` is 1663 lines (from 1,888); reach-ins 26. What is left
+reaches for `intents`, `isPaused`, `_hasStarted`, `_hasEnded`,
+`_hasPrestarted` and `startsAt` — the lifecycle state of Phase 6.
+
+## Phase 6 — Lifecycle state machine
+
+- [x] (2026-08-27) `stage`, `ended` and `paused` replace the four booleans;
+      `hasStarted()` is `stage !== "lobby"`, and `isPaused()` is public. Not
+      the single four-valued state first planned: `ended` is orthogonal to
+      the lobby → prestart → started progression. A lobby can end without
+      starting (host left, match cancelled), and a started game must still
+      count as started once ended — `end()` archives on that, and the socket
+      close events that follow `end()` still go through `hasStarted()` in
+      `handleClientDisconnect`.
+- [x] (2026-08-27) `phase()` is a pure read; the 60s ping prune (with its
+      winner re-tally) is `pruneStaleClients()`, which `GameManager.tick`
+      calls just before `phase()` and which is a no-op once the game has
+      ended, as the old early return made it. `publicLobbies()` and
+      `listedLobbies()` no longer close anyone's socket.
+- [x] (2026-08-27) `end()` keeps not awaiting the archive: `Archive.ts`
+      catches both the record validation and the upload, so awaiting could
+      only delay GameManager's prune of the game. Noted at the call.
+
+Phase 6 complete (2026-08-27): two PRs, golden snapshot unchanged. The last
+reach-ins went with it: tests now drive the real lifecycle (`startGame`,
+`prestart()`, `end()`), read `gameInfo()` and `isPaused()`, and decode the
+turn and start frames a joined client received where they used to read
+`intents`, `turns` and `gameStartInfo` off the instance. No `(game as any)`
+remains under `tests/server`. `GameServer.ts` is 1681 lines.
+
+## Out of scope
+
+Renaming intents/messages; changing the archive record shape (replays depend
+on it — `tests/replay/ReplayGame.ts`); touching `Worker.ts` / `Master.ts`
+beyond the constructor call.
+
+## Expected result
+
+`GameServer.ts` ≈ 700–900 lines of orchestration, ~6 focused modules with
+direct unit tests, and no `(game as any)` under `tests/server`.
+
+Outcome (2026-08-27): nine modules with direct unit tests (ConfigPatch,
+NameVisibility, DesyncDetector, Consensus, ListingState,
+MatchTelemetryRecorder, Roster, SocketIngress, IntentAuthorization) and no
+reach-ins, but `GameServer.ts` is 1681 lines, not 700–900: what remains is
+the join policy, the intent effects, start/end and the archive record
+builder, all of which orchestrate the modules and were never candidates for
+extraction. The estimate was optimistic; the structure is what was wanted.
