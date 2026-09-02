@@ -255,3 +255,24 @@ describe("TutorialProgress.skip", () => {
     expect(p.finished()).toBe(true);
   });
 });
+
+describe("TutorialProgress step counter", () => {
+  it("doesn't shrink when bots or nations die off mid-tutorial", () => {
+    const p = new TutorialProgress();
+    // Pre-spawn ticks (nothing spawned yet) must not freeze the counter.
+    p.update(ctx({ botsExist: false, nationsExist: false }));
+    const before = ctx({ hasSpawned: true });
+    p.update(before);
+    const total = p.total(before);
+    expect(total).toBe(TUTORIAL_STEPS.length);
+
+    const after = ctx({
+      hasSpawned: true,
+      botsExist: false,
+      nationsExist: false,
+    });
+    p.update(after);
+    expect(p.total(after)).toBe(total);
+    expect(p.position(after)).toBeGreaterThanOrEqual(1);
+  });
+});
