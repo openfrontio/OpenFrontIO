@@ -117,35 +117,35 @@ describe("Transport close handling", () => {
         code: CloseCode.ProtocolError,
         reason: "",
       });
-      vi.advanceTimersByTime(2999);
+      vi.advanceTimersByTime(4999);
       expect(FakeWebSocket.instances).toHaveLength(before);
       vi.advanceTimersByTime(1);
       expect(FakeWebSocket.instances).toHaveLength(before + 1);
     }
   });
 
-  it("gives up and tells the player after 20 attempts", () => {
+  it("gives up and tells the player after 10 attempts", () => {
     connectAndClose(CloseCode.ProtocolError, "");
-    for (let i = 1; i < 20; i++) {
+    for (let i = 1; i < 10; i++) {
       FakeWebSocket.last.onclose?.({
         code: CloseCode.ProtocolError,
         reason: "",
       });
-      vi.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(5000);
     }
-    expect(FakeWebSocket.instances).toHaveLength(21);
+    expect(FakeWebSocket.instances).toHaveLength(11);
     expect(showInGameAlert).not.toHaveBeenCalled();
 
     FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
     vi.advanceTimersByTime(60_000);
-    expect(FakeWebSocket.instances).toHaveLength(21);
+    expect(FakeWebSocket.instances).toHaveLength(11);
     expect(showInGameAlert).toHaveBeenCalledOnce();
   });
 
   it("restarts the attempt count once a connection succeeds", () => {
     connectAndClose(CloseCode.ProtocolError, "");
     FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
-    vi.advanceTimersByTime(3000);
+    vi.advanceTimersByTime(5000);
     expect(FakeWebSocket.instances).toHaveLength(3);
 
     FakeWebSocket.last.onopen?.();
