@@ -1771,6 +1771,7 @@
     "none": "You don't have an active subscription.",
     "title": "Your Subscription"
   },
+  "clan_team_label": "Clan [{clanTag}] ({team})",
   "team_colors": {
     "blue": "Blue",
     "bot": "Tribes",

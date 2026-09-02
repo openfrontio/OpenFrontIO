@@ -378,7 +378,8 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         playerType = translateText("player_type.player");
         break;
     }
-    const playerTeam = getTranslatedPlayerTeamLabel(player.team());
+    const clanTag = this.game.teamClanTag(player.team());
+    const playerTeam = getTranslatedPlayerTeamLabel(player.team(), clanTag);
 
     const { fontSize, isAllianceWrapped } = this.getNameFontSize({
       nameLength: player.displayName().length,

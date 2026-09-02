@@ -10,6 +10,7 @@ import {
   Unit,
   UnitInfo,
   UnitType,
+  Team,
 } from "../../core/game/Game";
 import { GameMap, TileRef } from "../../core/game/GameMap";
 import {
@@ -25,9 +26,15 @@ import {
 import { TerrainMapData } from "../../core/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "../../core/game/UnitGrid";
-import { ClientID, GameID, Player, PlayerCosmetics } from "../../core/Schemas";
+import {
+  ClientID,
+  GameID,
+  Player,
+  PlayerCosmetics,
+} from "../../core/Schemas";
 import { formatPlayerDisplayName } from "../../core/Util";
 import { WorkerClient } from "../../core/worker/WorkerClient";
+import { resolveTeamClanTag } from "../Utils";
 import { computeAllianceClusters } from "../render/frame/derive/AllianceClusters";
 import { extractAttackRings } from "../render/frame/derive/AttackRings";
 import { extractNukeTelegraphs } from "../render/frame/derive/NukeTelegraphs";
@@ -82,6 +89,7 @@ export class GameView implements GameMap {
   private _unitStates = new Map<number, import("../render/types").UnitState>();
   /** smallID → team, for the renderer's relation matrix (team games). */
   private _teams = new Map<number, string>();
+  private _teamClanTags: Map<Team, string | null> | null = null;
   private updatedTiles: TileRef[] = [];
   private updatedTerrainTiles: TileRef[] = [];
   private nukeImpactTiles: TileRef[] = [];
@@ -1031,6 +1039,35 @@ export class GameView implements GameMap {
 
   players(): PlayerView[] {
     return Array.from(this._players.values());
+  }
+
+  teamClanTag(team: Team | null): string | null {
+    if (!team) return null;
+    if (this._teamClanTags === null) {
+      if (this._players.size === 0) return null;
+      this._teamClanTags = this.initTeamClanTags();
+    }
+    return this._teamClanTags.get(team) ?? null;
+  }
+
+  private initTeamClanTags(): Map<Team, string | null> {
+    const teams = new Map<Team, PlayerView[]>();
+    for (const player of this._players.values()) {
+      const t = player.team();
+      if (t) {
+        let list = teams.get(t);
+        if (!list) {
+          list = [];
+          teams.set(t, list);
+        }
+        list.push(player);
+      }
+    }
+    const result = new Map<Team, string | null>();
+    for (const [t, players] of teams.entries()) {
+      result.set(t, resolveTeamClanTag(players));
+    }
+    return result;
   }
 
   /**
