@@ -600,11 +600,13 @@
     "copy_clipboard": "Copy to clipboard",
     "crashed": "Game crashed!",
     "desync_notice": "You are desynced from other players. What you see might differ from other players.",
+    "login_failed": "Login failed. Please try again later.",
     "paste_discord": "Please paste the following in your bug report in Discord:",
     "spawn_failed": {
       "description": "Automatic spawn selection failed. You can't play this game.",
       "title": "Spawn failed"
-    }
+    },
+    "turnstile_error": "Verification error: {code}. Please refresh and try again."
   },
   "events_display": {
     "about_to_expire": "Your alliance with {name} is about to expire!",

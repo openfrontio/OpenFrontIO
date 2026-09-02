@@ -30,6 +30,7 @@ import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
 import { consumeGoogleLinkResult } from "./GoogleLinkResult";
+import { showInGameAlert } from "./InGameModal";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { translateText } from "./Utils";
@@ -691,20 +692,18 @@ export class AccountModal extends BaseModal {
 
   private async handleSubmit() {
     if (!this.email) {
-      alert(translateText("account_modal.enter_email_address"));
+      await showInGameAlert(translateText("account_modal.enter_email_address"));
       return;
     }
 
     const success = await sendMagicLink(this.email);
-    if (success) {
-      alert(
-        translateText("account_modal.recovery_email_sent", {
-          email: this.email,
-        }),
-      );
-    } else {
-      alert(translateText("account_modal.failed_to_send_recovery_email"));
-    }
+    await showInGameAlert(
+      success
+        ? translateText("account_modal.recovery_email_sent", {
+            email: this.email,
+          })
+        : translateText("account_modal.failed_to_send_recovery_email"),
+    );
   }
 
   // CrazyGames sign-in: after their prompt completes, exchange the new token
@@ -735,7 +734,7 @@ export class AccountModal extends BaseModal {
     // means we couldn't start it.
     const started = await linkGoogle();
     if (!started) {
-      alert(translateText("account_modal.link_google_failed"));
+      await showInGameAlert(translateText("account_modal.link_google_failed"));
     }
   };
 

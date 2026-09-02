@@ -8,14 +8,20 @@ vi.mock("../../src/client/Api", async (importOriginal) => ({
   createCustomCurrencyCheckout: vi.fn(),
 }));
 
+vi.mock("../../src/client/InGameModal", () => ({
+  showInGameAlert: vi.fn().mockResolvedValue(true),
+  showInGameConfirm: vi.fn().mockResolvedValue(true),
+}));
+
+const { showInGameAlert } = await import("../../src/client/InGameModal");
+
 describe("CustomCurrencyCard", () => {
   let card: CustomCurrencyCard | undefined;
-  let alertSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.mocked(createCustomCurrencyCheckout).mockReset();
     vi.mocked(createCustomCurrencyCheckout).mockResolvedValue(false);
-    alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.mocked(showInGameAlert).mockClear();
     card = document.createElement("custom-currency-card") as CustomCurrencyCard;
     document.body.appendChild(card);
   });
@@ -23,7 +29,6 @@ describe("CustomCurrencyCard", () => {
   afterEach(() => {
     card?.remove();
     card = undefined;
-    alertSpy.mockRestore();
   });
 
   it("uses the shared card anatomy without obsolete wrapper ancestry", async () => {
@@ -94,6 +99,6 @@ describe("CustomCurrencyCard", () => {
     await vi.waitFor(() =>
       expect(createCustomCurrencyCheckout).toHaveBeenCalledWith(240),
     );
-    expect(alertSpy).toHaveBeenCalledWith("store.checkout_failed");
+    expect(showInGameAlert).toHaveBeenCalledWith("store.checkout_failed");
   });
 });
