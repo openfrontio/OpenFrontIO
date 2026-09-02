@@ -168,6 +168,13 @@ export class GameManager {
             // Start game on delay to allow time for clients to connect.
             setTimeout(() => {
               try {
+                // The roster can empty inside the delay, and start() does not
+                // check: it would emit a playerless match_started and run
+                // turns for nobody.
+                if (game.numClients() === 0) {
+                  game.cancelAbandonedStart();
+                  return;
+                }
                 game.start();
               } catch (error) {
                 this.log.error(`error starting game ${id}: ${error}`);

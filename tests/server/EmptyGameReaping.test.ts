@@ -1,55 +1,59 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
 import { GameManager } from "../../src/server/GameManager";
 import { GamePhase, GameServer } from "../../src/server/GameServer";
-import { testGameConfig } from "../util/Wire";
+import {
+  MatchTelemetryEmitter,
+  MatchTelemetryEvent,
+  MatchTelemetryType,
+  zeroCounters,
+} from "../../src/server/telemetry/MatchTelemetry";
+import {
+  cid,
+  makeClient,
+  makeGame,
+  mockLogger,
+  mockWsOf,
+  startGame,
+} from "../util/GameServerHarness";
 
 // An empty game must always become Finished so GameManager prunes it.
 // A game that auto-started by filling to maxPlayers (or an admin bot game)
 // never gets a startsAt, and those used to linger — still ticking turns with
 // nobody connected — until the 3 hour maxGameDuration cutoff.
 describe("empty game reaping", () => {
-  let mockLogger: any;
+  let log: any;
 
-  const newGame = (startsAt?: number) =>
-    new GameServer(
-      "testgame",
-      mockLogger,
-      Date.now(),
-      testGameConfig({ gameType: GameType.Private }),
-      undefined,
-      startsAt,
-    );
+  // Everything the game reaches for is inert in the harness; only the
+  // telemetry sink is read, to prove a playerless game never starts.
+  class RecordingEmitter implements MatchTelemetryEmitter {
+    readonly types: MatchTelemetryType[] = [];
+    emit(event: MatchTelemetryEvent) {
+      this.types.push(event.type);
+      return "enqueued" as const;
+    }
+    counters() {
+      return zeroCounters();
+    }
+    stop() {}
+  }
 
-  const newClient = () =>
-    ({
-      clientID: "client01",
-      username: "client01",
-      clanTag: null,
-      friends: [],
-      lastPing: Date.now(),
-      ws: { readyState: 3, send: vi.fn(), close: vi.fn() },
-    }) as any;
+  // One tick of GameManager's loop, plus the 2s delayed start it schedules.
+  const runManager = (ms: number) => vi.advanceTimersByTime(ms);
 
   beforeEach(() => {
     vi.useFakeTimers();
-    mockLogger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    vi.setSystemTime(1_700_000_000_000);
+    log = mockLogger();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
     vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
   it("finishes a started, client-less game that has no startsAt", () => {
-    const game = newGame(undefined);
-    game.prestart();
-    game.start();
+    const game = makeGame({ log });
+    startGame(game);
 
     expect(game.phase()).toBe(GamePhase.Active);
 
@@ -59,10 +63,9 @@ describe("empty game reaping", () => {
   });
 
   it("finishes a started, client-less game that has a startsAt", () => {
-    const game = newGame(Date.now() + 5_000);
+    const game = makeGame({ log, startsAt: Date.now() + 5_000 });
     vi.advanceTimersByTime(5_000);
-    game.prestart();
-    game.start();
+    startGame(game);
 
     vi.advanceTimersByTime(60_000);
 
@@ -70,70 +73,48 @@ describe("empty game reaping", () => {
   });
 
   it("keeps a just-started game Active through the warmup grace", () => {
-    const game = newGame(undefined);
-    game.prestart();
-    game.start();
+    const game = makeGame({ log });
+    startGame(game);
 
     vi.advanceTimersByTime(10_000);
 
     expect(game.phase()).toBe(GamePhase.Active);
   });
 
-  it("ignores pings from a socket that is off the roster", () => {
-    const game = newGame(undefined);
-    game.prestart();
-    game.start();
-    const startClock = (game as any).lastPingUpdate;
+  it("ignores pings from a socket that has left the roster", async () => {
+    const game = makeGame({ log });
+    const client = makeClient({ clientID: cid("ghost") });
+    game.joinClient(client);
+    startGame(game);
 
-    // A socket pruned or kicked out of activeClients keeps its message
-    // listener, so it can go on pinging. Those pings must not refresh the
-    // game-wide clock the reap waits on.
-    const ghost = { clientID: "ghost001", lastPing: Date.now() } as any;
+    // The socket closes but keeps its message listener, as a real one does
+    // through its close handshake, and goes on pinging.
+    const ws = mockWsOf(client);
+    await ws.trigger("close");
     vi.advanceTimersByTime(60_000);
-    (game as any).handlePing(ghost);
+    await ws.emit({ type: "ping" });
 
-    expect((game as any).lastPingUpdate).toBe(startClock);
+    // A ping that refreshed the game-wide clock would hold this at Active.
     expect(game.phase()).toBe(GamePhase.Finished);
   });
 
-  it("ends an empty game whose ping clock never goes quiet", () => {
-    const game = newGame(undefined);
-    game.prestart();
-    game.start();
-
-    // Backstop only: hold lastPingUpdate warm with nobody on the roster, so
-    // the usual reap above can never fire.
-    const keepClockWarm = () => ((game as any).lastPingUpdate = Date.now());
-
-    // The timeout runs from the first tick that saw the game empty.
-    expect(game.phase()).toBe(GamePhase.Active);
-
-    vi.advanceTimersByTime(9 * 60_000);
-    keepClockWarm();
-    expect(game.phase()).toBe(GamePhase.Active);
-
-    vi.advanceTimersByTime(2 * 60_000);
-    keepClockWarm();
-    expect(game.phase()).toBe(GamePhase.Finished);
-  });
-
-  it("keeps a game with a connected client running", () => {
-    const game = newGame(undefined);
-    const client = newClient();
-    (game as any).activeClients = [client];
-    game.prestart();
-    game.start();
+  it("keeps a game with a connected client running", async () => {
+    const game = makeGame({ log });
+    const client = makeClient({ clientID: cid("player") });
+    game.joinClient(client);
+    startGame(game);
 
     // Well past both the warmup grace and the empty-game timeout.
     for (let i = 0; i < 40; i++) {
       vi.advanceTimersByTime(30_000);
-      (game as any).handlePing(client);
+      await mockWsOf(client).emit({ type: "ping" });
+      game.pruneStaleClients();
       expect(game.phase()).toBe(GamePhase.Active);
     }
   });
 
   it("finishes a full lobby everyone left before it started", () => {
-    const game = newGame(undefined);
+    const game = makeGame({ log });
     // Reaching maxPlayers arms the auto-start without setting startsAt.
     (game as any).hasReachedMaxPlayerCount = true;
 
@@ -142,28 +123,83 @@ describe("empty game reaping", () => {
     expect(game.phase()).toBe(GamePhase.Finished);
   });
 
+  it("ends an empty game whose ping clock never goes quiet", () => {
+    const telemetry = new RecordingEmitter();
+    const manager = new GameManager(log, telemetry);
+    const game = manager.createGame(cid("warm"), undefined)!;
+    const client = makeClient();
+    game.joinClient(client);
+    (game as any).hasReachedMaxPlayerCount = true;
+
+    // Started for real by the manager, then abandoned.
+    runManager(4_000);
+    expect(game.hasStarted()).toBe(true);
+    mockWsOf(client).trigger("close");
+
+    // Something keeps the game-wide clock warm with nobody on the roster —
+    // the backstop must not depend on that clock.
+    const warm = setInterval(
+      () => ((game as any).lastPingUpdate = Date.now()),
+      1_000,
+    );
+
+    runManager(9 * 60_000);
+    expect(manager.activeGames()).toBe(1);
+
+    runManager(2 * 60_000);
+    expect(manager.activeGames()).toBe(0);
+    clearInterval(warm);
+  });
+
   it("does not start a full lobby everyone left, and prunes it", () => {
-    const manager = new GameManager(mockLogger);
-    const game = manager.createGame(
-      "testgame",
-      testGameConfig({ gameType: GameType.Private }),
-    )!;
+    const telemetry = new RecordingEmitter();
+    const manager = new GameManager(log, telemetry);
+    const game = manager.createGame(cid("empty"), undefined)!;
     (game as any).hasReachedMaxPlayerCount = true;
     // The clients who filled the lobby were pinging until the moment they
     // left, so the reap in phase() holds off while that clock is still warm.
     (game as any).lastPingUpdate = Date.now();
 
-    vi.advanceTimersByTime(5_000);
+    runManager(5_000);
 
     // Started with an empty roster, this would emit a playerless
     // match_started and run turns for nobody.
     expect(game.hasStarted()).toBe(false);
+    expect(telemetry.types).not.toContain("match_started");
     expect(manager.activeGames()).toBe(1);
 
     // Once the ping clock goes quiet it is pruned instead.
-    vi.advanceTimersByTime(30_000);
+    runManager(30_000);
 
     expect(game.hasStarted()).toBe(false);
+    expect(manager.activeGames()).toBe(0);
+  });
+
+  it("cancels the start when the roster empties during the start delay", async () => {
+    const telemetry = new RecordingEmitter();
+    const manager = new GameManager(log, telemetry);
+    const game: GameServer = manager.createGame(cid("delay"), undefined)!;
+    const client = makeClient();
+    game.joinClient(client);
+    (game as any).hasReachedMaxPlayerCount = true;
+
+    // One tick: the lobby is full, so the manager prestarts and schedules
+    // start() 2s out.
+    runManager(1_000);
+    expect(telemetry.types).toContain("player_joined");
+    expect(game.hasStarted()).toBe(true);
+    expect(telemetry.types).not.toContain("match_started");
+
+    // The last client leaves inside that window.
+    await mockWsOf(client).trigger("close");
+    runManager(3_000);
+
+    // start() must not have run for the empty roster, and the game must not
+    // be left stranded in prestart either.
+    expect(telemetry.types).not.toContain("match_started");
+    expect(game.phase()).toBe(GamePhase.Finished);
+
+    runManager(1_000);
     expect(manager.activeGames()).toBe(0);
   });
 });
