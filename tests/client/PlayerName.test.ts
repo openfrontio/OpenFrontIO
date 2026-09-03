@@ -7,6 +7,7 @@ import {
   looksGenerated,
   resolvePlayerName,
   sanitizePersona,
+  verifiedClaimGrace,
   verifiedNameOptIn,
   type PlayerNameInputs,
 } from "../../src/client/PlayerName";
@@ -392,6 +393,91 @@ describe("accountVerifiedName", () => {
     expect(
       accountVerifiedName(
         player({ username: "TEMPORARY7823", usernameBase: "TEMPORARY7823" }),
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("verifiedClaimGrace", () => {
+  const NOW = new Date("2026-09-01T00:00:00.000Z");
+  const SOON = "2026-10-01T00:00:00.000Z";
+
+  function lapsed(overrides: Record<string, unknown> = {}): UserMeResponse {
+    return {
+      player: {
+        username: "RyanTheGreat",
+        usernameBase: "RyanTheGreat",
+        usernameStatus: "claimed",
+        usernameClaimExpiresAt: SOON,
+        ...overrides,
+      },
+    } as unknown as UserMeResponse;
+  }
+
+  it("reports the reserved name and the date it stops being reserved", () => {
+    expect(verifiedClaimGrace(lapsed(), NOW)).toEqual({
+      name: "RyanTheGreat",
+      expiresAt: new Date(SOON),
+      atRisk: false,
+    });
+  });
+
+  it("says nothing while the subscription is still active", () => {
+    // Nothing at stake: premium and indefinite holders keep the claim.
+    expect(
+      verifiedClaimGrace(lapsed({ usernameStatus: "premium" }), NOW),
+    ).toBeNull();
+    expect(
+      verifiedClaimGrace(lapsed({ usernameStatus: "indefinite" }), NOW),
+    ).toBeNull();
+    expect(
+      verifiedClaimGrace(lapsed({ usernameStatus: "unclaimed" }), NOW),
+    ).toBeNull();
+  });
+
+  it("says nothing when there is no profile", () => {
+    expect(verifiedClaimGrace(null, NOW)).toBeNull();
+    expect(verifiedClaimGrace(false, NOW)).toBeNull();
+  });
+
+  // No date, nothing to say. This is the state a player is in when nothing
+  // has set usernameClaimExpiresAt — not a hypothetical: it is every lapsed
+  // player whose deadline predates infra#594.
+  it("says nothing without a deadline", () => {
+    expect(
+      verifiedClaimGrace(lapsed({ usernameClaimExpiresAt: null }), NOW),
+    ).toBeNull();
+    expect(
+      verifiedClaimGrace(lapsed({ usernameClaimExpiresAt: undefined }), NOW),
+    ).toBeNull();
+  });
+
+  // The reservation is over — a countdown to a past date is worse than
+  // silence, and the name may already belong to someone else.
+  // Inverted deliberately. usernameClaimExpiresAt's schema comment says a past
+  // date means "at risk", not "lost": the field stays set until the name is
+  // actually taken, and resubscribing still recovers it until then. Returning
+  // null here switched the warning off at the point of highest risk. What ends
+  // the notice is the `claimed` guard — a name actually taken moves the player
+  // out of that status.
+  it("flags at-risk once the deadline has passed, rather than going silent", () => {
+    expect(
+      verifiedClaimGrace(lapsed(), new Date("2026-10-01T00:00:01.000Z")),
+    ).toEqual({
+      name: "RyanTheGreat",
+      expiresAt: new Date(SOON),
+      atRisk: true,
+    });
+    // Exactly on the deadline counts as at risk: the reservation is over.
+    expect(verifiedClaimGrace(lapsed(), new Date(SOON))?.atRisk).toBe(true);
+  });
+
+  it("says nothing for a TEMPORARY#### rename", () => {
+    // Already past the point this warns about; there is no name to keep.
+    expect(
+      verifiedClaimGrace(
+        lapsed({ username: "TEMPORARY7823", usernameBase: "TEMPORARY7823" }),
+        NOW,
       ),
     ).toBeNull();
   });

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserMeResponse } from "../src/core/ApiSchemas";
 import { MAX_USERNAME_LENGTH } from "../src/core/validations/username";
 
@@ -33,15 +33,21 @@ vi.mock("../src/client/CrazyGamesSDK", () => ({
 vi.mock("../src/client/SteamSDK", () => ({
   steamSDK: { isOnSteam: () => false, getUser: async () => null },
 }));
+const { showInGameAlert } = vi.hoisted(() => ({
+  showInGameAlert: vi.fn(async (_message: string) => Promise.resolve(true)),
+}));
 vi.mock("../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(async () => false),
+  showInGameAlert: (message: string) => showInGameAlert(message),
 }));
 // Partial: only translateText is stubbed (echoing keys so assertions read as
 // i18n keys). The rest of Utils stays real, so an unrelated import added to
 // this graph later doesn't fail on a missing export.
 vi.mock("../src/client/Utils", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/client/Utils")>()),
-  translateText: (key: string) => key,
+  // Interpolations are echoed after the key so assertions can read both.
+  translateText: (key: string, vars?: Record<string, unknown>) =>
+    vars ? `${key}:${JSON.stringify(vars)}` : key,
 }));
 
 // Side-effect import registers <username-input>; vi.mock is hoisted above it.
@@ -95,6 +101,7 @@ beforeEach(() => {
     tag,
     error: null,
   }));
+  showInGameAlert.mockClear();
 });
 
 // Lets a handler's `await getUserMe()` continuation run before asserting.
@@ -749,5 +756,286 @@ describe("UsernameInput verified name", () => {
 
     expect(el.isVerified()).toBe(false);
     expect(el.getUsername()).toBe("MyCoolName");
+  });
+});
+
+describe("UsernameInput lapse notice", () => {
+  const SOON = "2026-10-01T00:00:00.000Z";
+  const GRACE = "#username-claim-grace";
+
+  // Lapsed: no longer premium, so the name reverts — but the server still
+  // reserves the bare claim until the deadline.
+  function lapsedUser(overrides: Record<string, unknown> = {}): UserMeResponse {
+    return {
+      player: {
+        username: "RyanTheGreat",
+        usernameBase: "RyanTheGreat",
+        usernameStatus: "claimed",
+        usernameClaimExpiresAt: SOON,
+        ...overrides,
+      },
+    } as unknown as UserMeResponse;
+  }
+
+  beforeEach(() => {
+    vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // The whole point: the toggle used to switch itself off and the name revert
+  // with nothing said. This is the only channel a Steam-only account has.
+  it("announces the lapse once, naming the name and the date", async () => {
+    localStorage.setItem("useVerifiedName", "true");
+    localStorage.setItem("username", "MyCoolName");
+    const el = await mount();
+    await signIn(el, lapsedUser());
+
+    expect(el.isVerified()).toBe(false);
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    const message = showInGameAlert.mock.calls[0][0];
+    expect(message).toContain("username.lapse_notice");
+    expect(message).toContain("RyanTheGreat");
+  });
+
+  it("does not announce it again on the next launch", async () => {
+    localStorage.setItem("username", "MyCoolName");
+    const first = await mount();
+    await signIn(first, lapsedUser());
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+
+    // A second launch on the same device: same reservation, nothing new.
+    showInGameAlert.mockClear();
+    document.body.innerHTML = "";
+    const second = await mount();
+    await signIn(second, lapsedUser());
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+
+  // Resubscribe clears the record, so a later lapse speaks up again. A bare
+  // "already announced" flag would stay quiet for the life of the install.
+  it("announces again after a resubscribe and a second lapse", async () => {
+    const el = await mount();
+    await signIn(el, lapsedUser());
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+
+    showInGameAlert.mockClear();
+    await signIn(el, premiumUser());
+    await signIn(el, lapsedUser());
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+  });
+
+  // Neither has a deadline attached and neither costs the player a name, so
+  // neither is worth interrupting them for.
+  it("stays silent for a sign-out or a TEMPORARY rename", async () => {
+    localStorage.setItem("useVerifiedName", "true");
+    const el = await mount();
+
+    await signIn(el, premiumUser());
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: false }),
+    );
+    await el.updateComplete;
+    expect(showInGameAlert).not.toHaveBeenCalled();
+
+    await signIn(
+      el,
+      lapsedUser({
+        username: "TEMPORARY7823",
+        usernameBase: "TEMPORARY7823",
+      }),
+    );
+    expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+
+  // Silent when the server sends no deadline. infra#594 sets
+  // usernameClaimExpiresAt, so this is not the common case any more — but a
+  // lapse recorded before that shipped still has no date on it.
+  it("stays silent while the server sends no deadline", async () => {
+    const el = await mount();
+    await signIn(el, lapsedUser({ usernameClaimExpiresAt: null }));
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(q(el, GRACE)).toBeNull();
+  });
+
+  it("keeps a standing line while the reservation lasts", async () => {
+    const el = await mount();
+    await signIn(el, lapsedUser());
+
+    const line = q(el, GRACE);
+    expect(line).not.toBeNull();
+    expect(line!.textContent).toContain("username.claim_reserved");
+    expect(line!.textContent).toContain("RyanTheGreat");
+  });
+
+  // The player dismissed the one-time notice; the standing line is what they
+  // still see every launch until they act or the name is gone.
+  it("still shows the line on a later launch, after the notice is spent", async () => {
+    const first = await mount();
+    await signIn(first, lapsedUser());
+    document.body.innerHTML = "";
+
+    const second = await mount();
+    await signIn(second, lapsedUser());
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(q(second, GRACE)).not.toBeNull();
+  });
+
+  // Inverted from "drops the line once the deadline has passed". That was
+  // wrong: usernameClaimExpiresAt's schema comment says a past date means "at
+  // risk", not "lost" — the field stays set until the name is actually taken,
+  // and resubscribing still recovers it. Going silent switched the warning off
+  // at the point of highest risk and lowest cost to act. The `claimed` guard in
+  // verifiedClaimGrace is what ends the notice, because a name actually taken
+  // moves the player out of that status.
+  it("keeps warning past the deadline, in stronger terms", async () => {
+    vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+    const el = await mount();
+    await signIn(el, lapsedUser());
+
+    expect(q(el, GRACE)!.textContent).toContain("username.claim_at_risk");
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows nothing while the subscription is still active", async () => {
+    localStorage.setItem("useVerifiedName", "true");
+    const el = await mount();
+    await signIn(el, premiumUser());
+
+    expect(el.isVerified()).toBe(true);
+    expect(q(el, GRACE)).toBeNull();
+    expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+});
+
+describe("UsernameInput claim grace, live behaviour", () => {
+  const SOON = "2026-10-01T00:00:00.000Z";
+  const GRACE = "#username-claim-grace";
+  const ERROR = "#username-validation-error";
+
+  function lapsedUser(overrides: Record<string, unknown> = {}): UserMeResponse {
+    return {
+      player: {
+        username: "RyanTheGreat",
+        usernameBase: "RyanTheGreat",
+        usernameStatus: "claimed",
+        usernameClaimExpiresAt: SOON,
+        ...overrides,
+      },
+    } as unknown as UserMeResponse;
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // The grace value is only re-derived on account events, and a client sitting
+  // on the main menu receives none. Without the timer the notice would keep
+  // saying "reserved until {date}" after that date had passed.
+  it("escalates the notice when the deadline passes while mounted", async () => {
+    vi.useFakeTimers({ now: new Date("2026-09-30T23:59:00.000Z") });
+    const el = await mount();
+    await signIn(el, lapsedUser());
+    expect(q(el, GRACE)!.textContent).toContain("username.claim_reserved");
+
+    await vi.advanceTimersByTimeAsync(61_000);
+    await el.updateComplete;
+
+    // Still shown, and now saying the name can be taken at any moment. Going
+    // silent here would switch the warning off at the point of highest risk.
+    const line = q(el, GRACE);
+    expect(line).not.toBeNull();
+    expect(line!.textContent).toContain("username.claim_at_risk");
+
+    // And the interruption actually fires. Asserting only on the banner missed
+    // that the timer updated it silently: the one player the timer exists for
+    // — sitting on the menu across their own deadline — got no alert at all.
+    expect(showInGameAlert).toHaveBeenCalledTimes(2);
+    expect(showInGameAlert.mock.calls[1][0]).toContain(
+      "username.lapse_notice_at_risk",
+    );
+  });
+
+  // Reconnecting after the deadline passed while detached. connectedCallback
+  // short-circuits the getUserMe continuation when userMe is already set, so
+  // this path never reaches applyVerifiedPreference: re-arming the timer alone
+  // left the stale "reserved until {past date}" wording in place. Unreachable
+  // in the app today — <play-page> is hidden by class toggling, not removed —
+  // but the code claims to handle it, so something should hold that.
+  it("escalates on reconnect when the deadline passed while detached", async () => {
+    vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    const el = await mount();
+    await signIn(el, lapsedUser());
+    expect(q(el, GRACE)!.textContent).toContain("username.claim_reserved");
+    showInGameAlert.mockClear();
+
+    const parent = el.parentElement!;
+    parent.removeChild(el);
+    vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+    parent.appendChild(el);
+    await el.updateComplete;
+
+    expect(q(el, GRACE)!.textContent).toContain("username.claim_at_risk");
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(showInGameAlert.mock.calls[0][0]).toContain(
+      "username.lapse_notice_at_risk",
+    );
+  });
+
+  // usernameClaimExpiresAt's schema comment: "A past date means 'at risk', not
+  // 'lost' — it stays set until the name is actually taken." The banner has to
+  // follow that, not a clock.
+  it("still warns after the deadline, while the name is takeable but not taken", async () => {
+    vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+    const el = await mount();
+    await signIn(el, lapsedUser());
+
+    expect(q(el, GRACE)!.textContent).toContain("username.claim_at_risk");
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(showInGameAlert.mock.calls[0][0]).toContain(
+      "username.lapse_notice_at_risk",
+    );
+  });
+
+  // Crossing the deadline changes what the player has to do, so it earns one
+  // more interruption — the marker is keyed on the phase, not just the name.
+  it("announces again when a warned reservation lapses into at-risk", async () => {
+    vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    const first = await mount();
+    await signIn(first, lapsedUser());
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+
+    showInGameAlert.mockClear();
+    document.body.innerHTML = "";
+    vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+    const second = await mount();
+    await signIn(second, lapsedUser());
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(showInGameAlert.mock.calls[0][0]).toContain(
+      "username.lapse_notice_at_risk",
+    );
+  });
+
+  // The error is transient and self-inflicted; the reservation is a 30-day
+  // countdown the player cannot recover. Rendering them as alternatives put
+  // the time-critical one last.
+  it("keeps the reservation notice visible alongside a validation error", async () => {
+    vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    const el = await mount();
+    await signIn(el, lapsedUser());
+    expect(q(el, GRACE)).not.toBeNull();
+
+    el.validationError = "username.invalid_chars";
+    await el.updateComplete;
+
+    expect(q(el, ERROR)).not.toBeNull();
+    expect(q(el, GRACE)).not.toBeNull();
   });
 });

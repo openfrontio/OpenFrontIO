@@ -16,6 +16,13 @@
     "claim_failed": "Impossible de récupérer la récompense. Veuillez réessayer.",
     "clear_session": "Effacer la session",
     "connected_as": "Connecté en tant que",
+    "delete_account_confirm_button": "Supprimer définitivement",
+    "delete_account_confirm_word": "SUPPRIMER",
+    "delete_account_desc": "Supprimez définitivement votre compte et toutes ses données.",
+    "delete_account_failed": "La suppression de votre compte a échoué, merci de contacter le support à support@openfront.io",
+    "delete_account_title": "Supprimer le compte",
+    "delete_account_type_to_confirm": "Écrivez \"{word}\" pour confirmer",
+    "delete_account_warning": "Votre compte sera supprimé immédiatement et définitivement. Il n'y a pas de sursis et aucun moyen de le récupérer. Vous serez déconnecté·e de tous vos appareils.",
     "email_placeholder": "Entrez votre adresse email",
     "enter_email_address": "Veuillez saisir une adresse e-mail",
     "failed_to_send_recovery_email": "Échec de l'envoi de l'e-mail de récupération",
@@ -37,6 +44,7 @@
     "linked_account": "Connecté en tant que {account_name}",
     "linked_to_google": "Lié à Google",
     "linked_to_google_email": "Lié à Google ({email})",
+    "login_email_exists": "Vous avez déjà un compte avec cet e-mail. Connectez-vous, puis liez ce compte dans les paramètres.",
     "manage_subscription": "Gérer",
     "marketing_desc": "Nouveautés occasionnelles, événements, et mises à jour. Se désabonner à tout moment.",
     "marketing_no_email": "Lier une adresse mail à votre compte pour vous abonner aux mises à jour.",
@@ -69,16 +77,20 @@
     "tab_stats": "Statistiques",
     "title": "Compte",
     "unclaimed_rewards": "Récompenses non récupérées",
+    "username_change_ready": "Changement disponible",
     "username_confirm_abandon": "Vous abandonnerez définitivement votre nom réservé \"{name}\".",
     "username_confirm_body": "Vous devrez garder votre nouveau nom pendant 30 jours.",
     "username_confirm_button": "Changer de nom",
     "username_confirm_case_only": "Votre nouveau nom ne change de l'ancien que par les majuscules — la limite de 30 jours sera quand même instaurée.",
     "username_confirm_heading": "Changer votre nom ?",
+    "username_current_label": "Nom actuel",
     "username_error_cooldown": "Vous pourrez changer à nouveau changer de nom dans {days} jour(s).",
     "username_error_failed": "Impossible de changer votre nom. Veuillez réessayer plus tard.",
     "username_error_profane": "Ce nom n'est pas autorisé.",
     "username_error_taken": "Ce nom est déjà pris — essayez-en un autre.",
     "username_grace_warning": "Vous perdrez le droit exclusif sur \"{name}\" le {date}. Prolongez votre abonnement pour le conserver.",
+    "username_locked_until": "Verrouillé jusqu'au {date}",
+    "username_new_label": "Nouveau nom",
     "username_not_set": "Revendiquez votre nom — il vous identifie à travers toutes vos parties.",
     "username_placeholder": "Entrez un nom",
     "username_save": "Sauvegarder",
@@ -86,11 +98,10 @@
     "username_temporary_prompt": "Votre nom a été pris par un autre joueur. Voulez-vous en choisir un nouveau maintenant — ce changement ne coûtera rien.",
     "username_temporary_prompt_confirm": "Choisir un nom",
     "username_title": "Nom",
-    "games_username": "Pseudo",
-    "log_out": "Se Déconnecter",
-    "tab_settings": "Paramètres",
-    "username_cooldown_until": "Vous pourrez changer à nouveau changer de nom le {date}.",
-    "your_subscription": "Votre abonnement"
+    "delete_account_blocked": "Votre compte ne peut pas être supprimé automatiquement Merci de contacter le support."
+  },
+  "account_settings_modal": {
+    "title": "Paramètres de compte"
   },
   "ban_notice": {
     "appeal": "Si vous pensez que ceci est une erreur, contactez-nous sur Discord en faisant un ticket.",
@@ -129,6 +140,10 @@
     "not_enough_money": "Pas assez d'argent",
     "upgrade_amount": "x{amount}",
     "warship_shift_hint": "Maintenir la touche Maj et glisser le curseur pour sélectionner plusieurs navires de guerre à la fois"
+  },
+  "change_username_modal": {
+    "title": "Changer le nom d'utilisateur",
+    "unavailable": "La gestion du nom d'utilisateur n'est pas encore disponible sur ce compte."
   },
   "chat": {
     "attack": {
@@ -251,6 +266,18 @@
     "discord_section_title": "Discord",
     "discord_url_hint": "Utilisez une invitation programmée pour ne jamais expirer.",
     "discord_url_label": "URL d'invitation Discord",
+    "donate": "Faire un don",
+    "donate_amount": "Montant",
+    "donate_insufficient": "Pas assez de {currency}.",
+    "donate_invalid_amount": "Entrez un nombre entier supérieur à 0.",
+    "donate_irreversible": "Les dons sont permanents et non remboursables. La monnaie donnée au clan ne pourra pas vous être rendue.",
+    "donate_irreversible_hard": "Le Plutonium est une monnaie premium. Une fois, donné, il ne peut être remboursé, retiré, ou transféré sur votre compte.",
+    "donate_not_member": "Vous devez être un membre du clan pour faire un don.",
+    "donate_submitting": "Don en cours…",
+    "donate_subtitle": "Déplacer la monnaie de votre compte vers la trésorerie du clan.",
+    "donate_success": "Vous avez donné {amount} {currency} à [{tag}] !",
+    "donate_title": "Faire un don à [{tag}]",
+    "donate_your_balance": "Vous avez {balance}",
     "error_already_member": "Déjà membre",
     "error_banned": "Vous êtes banni de ce clan.",
     "error_banned_reason": "Vous êtes banni de ce clan. {reason}",
@@ -336,7 +363,7 @@
     "role_officer": "Officier",
     "save_changes": "Sauvegarder les changements",
     "saving": "Sauvegarde...",
-    "search_members_placeholder": "Filtrer la page actuelle par ID ou par rôle...",
+    "search_members_placeholder": "Rechercher par ID de joueur, nom d'utilisateur ou par rôle",
     "search_placeholder": "Rechercher par tag de clan...",
     "search_requests_placeholder": "Rechercher un joueur par ID...",
     "select_new_leader": "Sélectionner un nouveau Chef de Clan",
@@ -372,16 +399,7 @@
     "title": "Clans",
     "transfer_leadership": "Transférer le commandement",
     "transfer_warning": "Cela donnera le commandement du clan au membre sélectionné. Vous deviendrez un membre ordinaire. Cette action ne peut pas être annulée.",
-    "unban": "Pardonner",
-    "history_filter_hvn": "HvN",
-    "history_filter_ranked": "Classé",
-    "stats_collapse_all": "Réduire tout",
-    "stats_duos": "Duos",
-    "stats_expand_all": "Montrer tout",
-    "stats_ffa": "Chacun pour soi",
-    "stats_quads": "Quatuors",
-    "stats_trios": "Trios",
-    "tab_members": "Membres"
+    "unban": "Pardonner"
   },
   "common": {
     "available": "Disponible",
@@ -391,6 +409,7 @@
     "cap_tooltip": "Capacité restante du destinataire",
     "click_to_copy": "Cliquer pour copier",
     "close": "Fermer",
+    "collapse_all": "Réduire tout",
     "confirm": "Confirmer",
     "copied": "Copié !",
     "copy": "Copier",
@@ -399,6 +418,10 @@
     "duration_minute_short": "min",
     "duration_second_short": "s",
     "enabled": "Activé",
+    "error_generic": "Une erreur s'est produite. Merci de réessayer.",
+    "expand_all": "Montrer tout",
+    "failed_copy": "Échec de la copie",
+    "loading": "Chargement...",
     "map_default": "Carte par défaut",
     "month_apr": "Avril",
     "month_aug": "Août",
@@ -417,10 +440,10 @@
     "paste": "Coller",
     "preset_max": "Max",
     "send": "Envoyer",
+    "slider_tooltip": "{percent}% • {amount}",
     "summary_keep": "Conserver",
     "target_dead": "Cible éliminée",
-    "target_dead_note": "Vous ne pouvez pas envoyer de ressources à un joueur éliminé.",
-    "summary_send": "Envoyer"
+    "target_dead_note": "Vous ne pouvez pas envoyer de ressources à un joueur éliminé."
   },
   "control_panel": {
     "allied_afk_neighbor_info": "Vous pouvez attaquer les joueurs déconnectés même lorsque vous êtes en alliance avec eux.",
@@ -450,9 +473,54 @@
     "unlimited_ranked_info": "Jouez autant de parties classées que vous le souhaitez.",
     "usd_value": "Valeur : {usd}",
     "verified_name": "Nom d’utilisateur vérifié",
-    "verified_name_info": "Votre nom d’utilisateur est réservé à votre compte et affiche un badge de vérification en jeu.",
-    "button_title": "Choisissez vos cosmétiques !",
-    "title": "Cosmétiques"
+    "verified_name_info": "Votre nom d’utilisateur est réservé à votre compte et affiche un badge de vérification en jeu."
+  },
+  "desktop_update": {
+    "blocked": "Une mise à jour de Steam est nécessaire pour accéder à la dernière version",
+    "downloading": "Téléchargement de la mise à jour… {percent}%",
+    "failed": "Impossible de télécharger la mise à jour",
+    "ready": "Mise à jour prête",
+    "reload": "Actualiser",
+    "retry": "Réessayer"
+  },
+  "detailed_view": {
+    "capacity": "Capacité",
+    "delete_profile": "Supprimer",
+    "filters": "Filtres",
+    "filters_with_count": "Filtres ({count})",
+    "hide_empty": "Masquer les salons vides",
+    "joined_players": "Joueurs présents",
+    "layout_duos": "Duos",
+    "layout_quads": "Quatuors",
+    "layout_trios": "Trios",
+    "max": "Max",
+    "min": "Min",
+    "mode": "Type de salon",
+    "mode_ffa": "Chacun pour soi",
+    "mode_hvn": "Humains vs Nations",
+    "mode_teams": "Équipes",
+    "no_lobbies": "Aucun salon ne correspond à vos filtres.",
+    "no_profile": "Aucun profil",
+    "pane_empty": "Aucun salon",
+    "pane_ffa": "Chacun pour soi",
+    "pane_heading": "{name} ({count})",
+    "pane_hosted": "Hébergé",
+    "pane_special": "Spécial",
+    "pane_team": "Équipes",
+    "per_team": "Joueurs par équipe",
+    "profile_name": "Nom du profil",
+    "profiles": "Profils",
+    "queued": "À suivre",
+    "reset": "Réinitialiser",
+    "save_profile": "Sauvegarder",
+    "source": "Source",
+    "source_hosted": "Hébergé",
+    "source_public": "Public",
+    "spawning": "Apparition de la partie…",
+    "tab_all": "Tout",
+    "team_count": "Nombre d'équipes",
+    "team_size": "Taille de l'équipe",
+    "title": "Vue détaillée"
   },
   "difficulty": {
     "difficulty": "Difficulté des nations",
@@ -508,9 +576,7 @@
     "spawn_failed": {
       "description": "La sélection automatique du spawn a échoué. Vous ne pouvez pas jouer à cette partie.",
       "title": "Échec du spawn"
-    },
-    "copied": "Copié !",
-    "failed_copy": "Échec de la copie"
+    }
   },
   "events_display": {
     "about_to_expire": "Votre alliance avec {name} est sur le point d'expirer!",
@@ -587,8 +653,7 @@
     "send_request": "Envoyer une demande d'ami",
     "team_info": "Les amis sont placés dans la même équipe.",
     "withdraw": "Retirer",
-    "your_friends": "Vos amis",
-    "error_generic": "Quelque chose s'est mal passé, merci de réessayer."
+    "your_friends": "Vos amis"
   },
   "fullscreen": {
     "enter": "Passer en mode grand écran",
@@ -628,6 +693,26 @@
     "hvn": "Humains vs Nations",
     "teams": "Équipes"
   },
+  "game_settings": {
+    "bots": "Tribus : ",
+    "compact_map": "Carte compacte",
+    "custom_alliances": "Durée des alliances",
+    "disable_units": "Désactiver les unités",
+    "doomsday_clock": "Mort subite",
+    "gold_multiplier": "Multiplicateur d'or",
+    "infinite_gold": "Or infini",
+    "infinite_troops": "Troupes infinies",
+    "instant_build": "Construction instantanée",
+    "max_timer": "Durée de jeu (minutes)",
+    "mins_placeholder": "Mins",
+    "nations": "Nations : ",
+    "options": "Options",
+    "overtime": "Blitz après (minutes)",
+    "random_spawn": "Apparition aléatoire",
+    "start": "Commencer la partie",
+    "starting_gold": "Or de départ (En millions)",
+    "water_nukes": "Bombes à eau"
+  },
   "game_starting_modal": {
     "code_license": "Code sous licence AGPL-3.0 (sans garantie)",
     "credits": "Crédits",
@@ -639,6 +724,8 @@
   "graphics_setting": {
     "advanced_desc": "Réglez individuellement chaque option graphique",
     "advanced_label": "Paramètres avancés",
+    "background_color_desc": "Couleur de l'arrière-plan et du terrain infranchissable.",
+    "background_color_label": "Couleur de l'arrière-plan",
     "black": "Noir",
     "classic_icons_desc": "Contour plus léger avec un intérieur presque noir",
     "classic_icons_label": "Icônes classiques",
@@ -727,17 +814,18 @@
     "territory_alpha_label": "Opacité du territoire d'un joueur",
     "territory_sat_desc": "Permet de changer l'éclat des couleurs du territoire possédé par un joueur (le plus bas les atténue)",
     "territory_sat_label": "Saturation du territoire d'un joueur",
-    "title": "Paramètres graphiques",
-    "copy_json_copied": "Copié !"
+    "title": "Paramètres graphiques"
   },
   "heads_up_message": {
     "catching_up": "Rattrapage...",
     "choose_spawn": "Choisissez un emplacement de départ",
+    "choose_spawn_spectator": "Les joueurs choisissent leur emplacement de départ",
     "dont_show_again": "Ne plus montrer",
     "ffa_collusion": "Rappel : Il est interdit de faire équipe avec des amis en \"Chacun pour soi\", faites preuve de fairplay",
     "multiplayer_game_paused": "Jeu mis en pause par le créateur du salon",
     "pvp_immunity_active": "Immunité des joueurs active pour {seconds}s",
     "random_spawn": "Le spawn aléatoire est activé. Sélection de l'emplacement de départ pour vous...",
+    "random_spawn_spectator": "Apparition aléatoire activée",
     "singleplayer_game_paused": "Jeu en pause"
   },
   "help_modal": {
@@ -832,19 +920,7 @@
     "ui_wilderness": "Région sauvage",
     "ui_your_team": "Votre équipe :",
     "video_tutorial": "Tutoriel vidéo",
-    "video_tutorial_title": "Tutoriel OpenFront.io",
-    "action_alt_view": "Vue alternative (terrain/pays)",
-    "action_center": "Recentrer la caméra",
-    "build_atom": "Bombe atomique",
-    "build_city": "Ville",
-    "build_defense": "Poste de défense",
-    "build_factory": "Usine",
-    "build_hydrogen": "Bombe à hydrogène",
-    "build_mirv": "MIRV",
-    "build_port": "Port",
-    "build_sam": "Lanceur SAM",
-    "build_silo": "Silo à missiles",
-    "build_warship": "Navire de guerre"
+    "video_tutorial_title": "Tutoriel OpenFront.io"
   },
   "host_modal": {
     "anonymous_players": "Joueurs anonymes",
@@ -868,6 +944,8 @@
     "player_whitelist_placeholder": "Séparez les ID avec une virgule",
     "players": "Joueurs",
     "remove_player": "Retirer {username}",
+    "spectator": "Spectateur",
+    "spectators": "Spectateurs",
     "start_delay": "Délai de démarrage (en secondes)",
     "starting_in": "Lancement dans {time}. Cliquez pour annuler",
     "subscription_required_body": "Vous avez besoin d'un abonnement de niveau 2 ou supérieur pour rendre votre salon public.",
@@ -882,29 +960,33 @@
     "view_subscriptions": "Voir les abonnements",
     "visibility_private": "Privé",
     "visibility_public": "Public",
-    "waiting": "En attente de joueurs...",
-    "bots": "Tribus",
-    "bots_disabled": "Désactivé",
-    "compact_map": "Carte compacte",
-    "custom_alliances": "Durée des alliances",
-    "doomsday_clock": "Mort subite",
-    "enables_title": "Désactiver les unités",
-    "gold_multiplier": "Multiplicateur d'or",
-    "gold_multiplier_placeholder": "2.0x",
-    "infinite_gold": "Or infini",
-    "infinite_troops": "Troupes infinies",
-    "instant_build": "Construction instantanée",
-    "max_timer": "Durée de jeu (minutes)",
-    "mins_placeholder": "Mins",
-    "nations": "Nations : ",
-    "nations_disabled": "Désactivées",
-    "options_title": "Paramètres",
-    "random_spawn": "Apparition aléatoire",
-    "start": "Commencer la partie",
-    "start_delay_placeholder": "3",
-    "starting_gold": "Or de départ (En millions)",
-    "starting_gold_placeholder": "5",
-    "water_nukes": "Bombes à eau"
+    "waiting": "En attente de joueurs..."
+  },
+  "inventory": {
+    "equipped": "Équipé",
+    "load_failed": "Impossible de charger votre inventaire. Merci d'actualiser votre page et de réessayer.",
+    "loading": "Chargement de l'inventaire…",
+    "loadout": "Votre configuration",
+    "loadout_add": "Nouvelle configuration",
+    "loadout_applied": "Configuration « {name} » équipée",
+    "loadout_category_label": "{category}: {summary}",
+    "loadout_delete_target": "Supprimer {name}",
+    "loadout_deleted": "Configuration « {name} » supprimée",
+    "loadout_limit": "Vous pouvez enregistrer jusqu’à {count} configurations.",
+    "loadout_presets": "Configurations",
+    "loadout_saved": "Configuration « {name} » enregistrée",
+    "loadout_slot": "Configuration « {name} »",
+    "no_owned_crowns": "Vous ne possédez aucune couronne pour l'instant.",
+    "no_owned_effects_of_type": "Vous ne possédez pas encore de {type}.",
+    "no_owned_skins": "Vous ne possédez pas encore de skins.",
+    "retry": "Réessayer",
+    "selected_cosmetic": "{name} sélectionné",
+    "selected_cosmetic_variant": "{name} ({variant})",
+    "showing_effects": "Effets équipés : {count}",
+    "title": "Inventaire",
+    "unequip": "Déséquiper",
+    "unequip_all": "Tout déséquiper",
+    "unequipped_all": "Vous n'avez rien d'équipé"
   },
   "ios_banner": {
     "got_it": "J'ai compris",
@@ -979,18 +1061,19 @@
     "win_loss_ratio": "Victoires/Défaites",
     "win_score": "Score de Victoire",
     "win_score_tooltip": "Gains pondérés en fonction de la participation du clan et de la difficulté du match",
-    "your_ranking": "Votre classement",
-    "loading": "Chargement..."
+    "your_ranking": "Votre classement"
   },
   "main": {
     "account": "Compte",
     "clans": "Clans",
     "copyright": "©️ OpenFront™ et Contributeurs",
     "create": "Créer un salon",
+    "detailed_view": "Vue détaillée",
     "discord_avatar_alt": "Avatar du profil Discord",
     "github": "GitHub",
     "go_to_troubleshooting": "Rendez-vous sur notre page de dépannage",
     "help": "Aide",
+    "inventory": "Inventaire",
     "join": "Rejoindre un salon",
     "leaderboard": "Classement",
     "login_discord": "Se connecter avec Discord",
@@ -1006,8 +1089,7 @@
     "title": "OpenFront (ALPHA)",
     "troubleshooting": "Dépannage",
     "user_avatar_alt": "Avatar de {username}",
-    "wiki": "Wiki",
-    "settings": "Paramètres"
+    "wiki": "Wiki"
   },
   "map": {
     "achiran": "Achiran",
@@ -1161,10 +1243,7 @@
     "no_results": "Aucune carte trouvée",
     "search_maps": "Rechercher de carte...",
     "search_results": "Résultats de la recherche",
-    "unfavorite": "Retirer des favoris",
-    "collapse_all": "Tout réduire",
-    "expand_all": "Montrer tout",
-    "loading": "Chargement..."
+    "unfavorite": "Retirer des favoris"
   },
   "map_layers": {},
   "marketing_consent": {
@@ -1202,6 +1281,24 @@
     "teams_of": " {teamCount} équipes de {playersPerTeam}",
     "teams_title": "Équipes"
   },
+  "multi_tab": {
+    "detected": "Plusieurs onglets de jeu ouverts détectés.",
+    "explanation": "Afin de garantir l’équité des parties, un seul onglet de jeu actif est autorisé à la fois.",
+    "please_wait": "Veuillez patienter",
+    "seconds": "secondes",
+    "warning": "Avertissement du mode Vigilance"
+  },
+  "nav_account_menu": {
+    "account_settings": "Paramètres du compte",
+    "change_subscription": "Changer l'abonnement",
+    "change_username": "Changer de nom d'utilisateur",
+    "copy_profile_url": "Copier l'URL du profil",
+    "game_settings": "Paramètres de jeu",
+    "log_out": "Se déconnecter",
+    "log_out_confirm": "Se déconnecter de ce compte ?",
+    "title": "Menu du compte",
+    "view_account": "Voir compte"
+  },
   "new_lobby_prompt": {
     "confirm": "Commencer un nouveau salon ? Tous les joueurs seront invités à rejoindre.",
     "dismiss": "Ignorer",
@@ -1220,6 +1317,11 @@
     "tournament": "TOURNOI",
     "tutorial": "TUTORIEL",
     "warning": "AVERTISSEMENT"
+  },
+  "overtime": {
+    "started": "Blitz ! Le territoire nécessaire pour gagner diminue de 1% toutes les 2 minutes désormais.",
+    "title": "Blitz",
+    "to_win": "Maintenez > {pct}% pour gagner"
   },
   "performance_overlay": {
     "avg_60s": "Moy. (60s):",
@@ -1240,9 +1342,7 @@
     "tick_layers_summary": "Dernier tick : calques {count}, {ms}ms",
     "tick_layers_table_header": "moy / max",
     "tps": "TPS :",
-    "tps_avg_60s": "Moy :",
-    "copied": "Copié !",
-    "failed_copy": "Copie non réussie"
+    "tps_avg_60s": "Moy :"
   },
   "player_panel": {
     "active": "Actif",
@@ -1309,17 +1409,7 @@
     "unit": {
       "mirvw": "Ogive de MIRV",
       "trade": "Bateau de commerce",
-      "trans": "Bateau de transport",
-      "abomb": "Bombe atomique",
-      "city": "Ville",
-      "defp": "Poste de défense",
-      "fact": "Usine",
-      "hbomb": "Bombe à hydrogène",
-      "mirv": "MIRV",
-      "port": "Port",
-      "saml": "Lanceur de SAM",
-      "silo": "Silo à missiles",
-      "wshp": "Navire de guerre"
+      "trans": "Bateau de transport"
     },
     "war": "Guerre",
     "warship_stats": "Statistiques des navires de guerre",
@@ -1391,7 +1481,10 @@
     "no_open_lobbies": "Aucun salon ouvert à l'heure actuelle",
     "not_found": "Salon introuvable. Veuillez vérifier l'ID et réessayer.",
     "open_lobbies": "Salons ouverts",
+    "play": "Jouer",
     "pvp_immunity": "Durée d'immunité des joueurs",
+    "spectate": "Mode spectateur",
+    "spectating": "Mode spectateur ! Chargement de la partie...",
     "starting_gold": "Or de départ",
     "title": "Rejoindre un salon privé",
     "version_mismatch": "Cette partie a été créée avec une version différente. Impossible de rejoindre."
@@ -1417,8 +1510,7 @@
     "starting_gold": "{amount}M Or de départ",
     "starting_gold_label": "Or de départ",
     "water_nukes": "Bombes à eau",
-    "doomsday_clock_label": "Mort subite",
-    "water_nukes_label": "Bombes à eau"
+    "overtime": "Blitz"
   },
   "public_lobby": {
     "connecting": "Connexion au lobby...",
@@ -1460,15 +1552,13 @@
   "send_gold_modal": {
     "aria_slider": "Curseur de quantité",
     "available_tooltip": "Votre or disponible",
-    "title_with_name": "Envoyer de l'or à {name}",
-    "slider_tooltip": "{percent} % • {amount}"
+    "title_with_name": "Envoyer de l'or à {name}"
   },
   "send_troops_modal": {
     "aria_slider": "Curseur de troupes",
     "available_tooltip": "Vos troupes actuellement disponibles",
     "capacity_note": "Le destinataire ne peut accepter que {amount} pour le moment.",
-    "title_with_name": "Envoyer des troupes à {name}",
-    "slider_tooltip": "{percent} % • {amount}"
+    "title_with_name": "Envoyer des troupes à {name}"
   },
   "single_modal": {
     "max_timer_invalid": "Veuillez entrer une valeur max valide pour le minuteur (1-120 minutes)",
@@ -1476,29 +1566,10 @@
     "medals_of_maps": "sur {total} cartes",
     "options_changed_no_achievements": "Paramètres personnalisés - succès désactivés",
     "sign_in_for_achievements": "Connectez-vous pour obtenir des succès",
-    "toggle_achievements": "Activer / Désactiver les succès",
-    "bots": "Tribus",
-    "bots_disabled": "Désactivé",
-    "compact_map": "Carte compacte",
-    "custom_alliances": "Durée des alliances",
-    "doomsday_clock": "Mort subite",
-    "enables_title": "Désactiver les Unités",
-    "gold_multiplier": "Multiplicateur d'or",
-    "gold_multiplier_placeholder": "2.0x",
-    "infinite_gold": "Or infini",
-    "infinite_troops": "Troupes infinies",
-    "instant_build": "Construction instantanée",
-    "max_timer": "Durée de jeu (minutes)",
-    "max_timer_placeholder": "Mins",
-    "mins_placeholder": "Mins",
-    "nations": "Nations",
-    "nations_disabled": "Désactivées",
-    "options_title": "Options",
-    "random_spawn": "Apparition aléatoire",
-    "start": "Commencer la partie",
-    "starting_gold": "Or de départ (En millions)",
-    "starting_gold_placeholder": "5",
-    "water_nukes": "Bombes à eau"
+    "toggle_achievements": "Activer / Désactiver les succès"
+  },
+  "spawn_timer": {
+    "team_percent_tooltip": "{team}: {percent}"
   },
   "steam_link_modal": {
     "code_placeholder": "XXXX-XXXX",
@@ -1517,9 +1588,7 @@
     "reason_steam_has_progress": "Ce compte Steam possède déjà sa propre progression et ne peut pas être fusionné.",
     "reason_steam_linked_elsewhere": "Ce compte Steam est déjà lié à un compte OpenFront différent.",
     "success": "Votre compte Steam est maintenant lié.",
-    "title": "Lier un compte Steam",
-    "loading_placeholder": "…",
-    "reason_failed": "Une erreur s'est produite. Veuillez réessayer."
+    "title": "Lier un compte Steam"
   },
   "steam_user_header": {
     "avatar_alt": "Avatar Steam",
@@ -1554,9 +1623,11 @@
     "merch": "Produits dérivés",
     "merch_blurb": "Faites-vous livrer les produits OpenFront directement chez vous !",
     "merch_visit_store": "Visiter la Boutique",
+    "no_affiliate_items": "Pas d'objets disponibles. Revenez plus tard pour de nouveaux items.",
     "no_crowns": "Pas de couronnes disponibles. Revenez plus tard pour de nouveaux items.",
     "no_effects": "Pas d'effets disponibles. Revenez plus tard pour de nouveaux items.",
     "no_flags": "Aucun drapeau disponible. Revenez plus tard.",
+    "no_packs": "Aucun pack disponible. Revenez plus tard.",
     "no_skins": "Aucun skin disponible, Revenez plus tard.",
     "no_subscriptions": "Aucun abonnement disponible. Revenez plus tard pour de nouveaux items.",
     "no_tribes": "Vous n’avez encore acheté aucun nom de tribu.",
@@ -1602,16 +1673,18 @@
     "tribes_login_required": "Connectez-vous pour acheter et gérer des noms de tribu.",
     "tribes_purchase_description": "Votre nom est attribué à une tribu contrôlée par un bot dans de vraies parties multijoueur. Il apparaît immédiatement en jeu.",
     "tribes_purchase_heading": "Acheter un nom de tribu",
-    "your_tribes_heading": "Vos noms de tribu",
-    "tribe_purchase_failed": "Échec de l’achat. Veuillez réessayer.",
-    "tribe_stats_reach": "Joueurs touchés",
-    "tribe_stats_reach_tooltip": "Apparu dans des parties regroupant {count} joueurs"
+    "your_tribes_heading": "Vos noms de tribu"
   },
   "streaming_now": {
     "live_count": "{count} en direct",
     "title": "En direct maintenant",
     "viewers": "{count} spectateurs",
     "watch": "Regarder {name}"
+  },
+  "subscription_modal": {
+    "browse": "Voir les abonnements",
+    "none": "Vous n’avez pas d'abonnement actif.",
+    "title": "Votre abonnement"
   },
   "team_colors": {
     "blue": "Bleu",
@@ -1629,13 +1702,11 @@
     "pattern": {
       "default": "Par défaut"
     },
-    "select_skin": "Sélectionnez le skin",
-    "selected": "sélectionné"
+    "select_skin": "Sélectionnez le skin"
   },
   "token_login_modal": {
     "success": "Connexion réussie en tant que {email}!",
-    "title": "Connexion en cours...",
-    "logging_in": "Connexion en cours..."
+    "title": "Connexion en cours..."
   },
   "troubleshooting": {
     "battery": "Batterie",
@@ -1699,6 +1770,8 @@
     "background_music_volume": "Volume de la musique de fond",
     "boat_attack": "Attaque navale",
     "boat_attack_desc": "Envoyer un bateau de transport au pixel sous votre curseur.",
+    "box_select_warships": "Carré de sélection pour les navires de guerre",
+    "box_select_warships_desc": "Maintenir cette touche et glisser le curseur de votre souris pour sélectionner plusieurs navires de guerre à la fois.",
     "break_alliance": "Briser une Alliance (Trahir)",
     "break_alliance_desc": "Brise l'alliance avec le joueur en dessous de votre curseur.",
     "build_atom_bomb": "Envoyer une bombe atomique",
@@ -1751,7 +1824,7 @@
     "graphics_preset_desc": "Choisissez une apparence prédéfinie pour la carte. Ajustez-la ou créez la vôtre dans les paramètres graphiques du jeu.",
     "graphics_preset_label": "Préréglage graphique",
     "graphics_refresh_modifier": "Actualisation des graphismes",
-    "graphics_refresh_modifier_desc": "Maintenez cette touche ainsi que R enfoncés pour actualiser les graphismes",
+    "graphics_refresh_modifier_desc": "Maintenez cette touche ainsi que {key} enfoncées pour actualiser les graphismes",
     "graphics_settings_desc": "Ajuster l'apparence de la carte",
     "graphics_settings_label": "Paramètres graphiques",
     "ground_attack": "Attaque au sol",
@@ -1776,6 +1849,9 @@
     "move_right_desc": "Déplacer la caméra vers la droite",
     "move_up": "Caméra Haut",
     "move_up_desc": "Déplacer la caméra vers le haut",
+    "nuke_alliance_safety_desc": "Empêche les frappes de bombes accidentelles sur les nouveaux alliés.",
+    "nuke_alliance_safety_duration": "{count, plural, one {1 tick (0.1s)} other {{count} ticks ({seconds}s)}}",
+    "nuke_alliance_safety_label": "Protection contre les tirs amis entre alliés",
     "off": "Désactivé",
     "on": "Activé",
     "pause_game": "Pause",
@@ -1788,8 +1864,11 @@
     "request_alliance": "Demander une alliance",
     "request_alliance_desc": "Envoie une demande d'alliance au joueur en dessous de votre curseur.",
     "reset": "Réinitialiser",
+    "reset_gfx_desc": "Appuyez tout en maintenant la touche de modification pour réinitialiser le rendu en cas de problème d’affichage.",
     "retaliate_attack": "Riposter",
     "retaliate_attack_desc": "Envoyez une riposte pour amortir/contrer la puissance de l'attaque la plus récente. Uniquement disponible lorsque quelqu'un vous attaque.",
+    "select_all_warships": "Sélectionne tous vos navires de guerre",
+    "select_all_warships_desc": "Sélectionne tous vos vaisseaux de guerre sur la carte.",
     "sound_effects_volume": "Volume des effets sonores",
     "special_effects_desc": "Activer/désactiver les effets spéciaux. Désactiver pour améliorer les performances",
     "special_effects_label": "Effets spéciaux",
@@ -1814,6 +1893,12 @@
   },
   "username": {
     "account_invalid_chars": "Les pseudonymes peuvent uniquement contenir des lettres, chiffres, tirets et espaces.",
+    "clan_browse": "Parcourir les clans",
+    "clan_clear": "Aucun tag",
+    "clan_custom": "Autre tag",
+    "clan_label": "Tag de Clan",
+    "clan_none_joined": "Vous n'avez pas encore rejoint de clan.",
+    "clan_your_clans": "Vos clans",
     "enter_username": "Entrez votre nom d'utilisateur",
     "invalid_chars": "Le pseudonyme peut seulement contenir des lettres, chiffres, espaces et underscores.",
     "not_string": "Le nom d'utilisateur doit être une chaîne de caractères.",
@@ -1824,11 +1909,14 @@
     "tag_too_short": "Le tag de clan doit faire 2 à 5 caractères alphanumériques.",
     "too_long": "Le nom d'utilisateur ne doit pas dépasser {max} caractères.",
     "too_short": "Le nom d'utilisateur doit comporter au moins {min} caractères.",
+    "verified_active_hint": "Vous jouez avec le pseudo vérifié de votre compte.",
     "verified_heading": "Nom vérifié",
     "verified_player": "Joueur vérifié",
     "verified_sub_required": "Vous avez besoin d'un abonnement actif pour jouer avec votre nom vérifié.",
     "verified_sub_required_confirm": "Voir la boutique",
-    "verified_toggle": "Vérifié"
+    "verified_use": "Utiliser le pseudo vérifié",
+    "verified_use_custom": "Revenir à un pseudo personnalisé",
+    "verified_use_hint": "Jouer avec votre pseudo de compte vérifié"
   },
   "win_modal": {
     "died": "Vous êtes mort·e.",
@@ -1849,10 +1937,5 @@
     "you_won": "Vous avez gagné !",
     "your_team": "Votre équipe a gagné !",
     "youtube_tutorial": "Besoin d'aide ?"
-  },
-  "flag_input": {
-    "button_title": "Choisissez un drapeau !",
-    "search_flag": "Recherche...",
-    "title": "Sélectionner un drapeau"
   }
 }
