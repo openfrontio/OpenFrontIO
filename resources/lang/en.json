@@ -1117,7 +1117,6 @@
     "clans": "Clans",
     "copyright": "© OpenFront™ and Contributors",
     "create": "Create Lobby",
-    "detailed_view": "Detailed View",
     "discord_avatar_alt": "Discord profile avatar",
     "github": "GitHub",
     "go_to_troubleshooting": "Go to our troubleshooting page",
@@ -1574,6 +1573,7 @@
     "invite_friends": "Invite Friends",
     "join_timeout": "You didn't enter the game in time.",
     "players_per_team": "of {num}",
+    "see_all": "See all {count}",
     "started": "Started",
     "starting_game": "Starting…",
     "starting_in": "Starting in {time}",
@@ -1588,6 +1588,7 @@
     "trust_required_title": "Trusted account required",
     "trusted_locked": "Trusted accounts only. Your account isn't trusted yet.",
     "trusted_unlocked": "Trusted accounts only. Your account is trusted.",
+    "upcoming": "Upcoming",
     "waiting_for_players": "Waiting for players"
   },
   "purchase_nudge": {
