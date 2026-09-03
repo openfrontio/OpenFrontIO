@@ -749,7 +749,7 @@ export const maps: readonly MapInfo[] = [
     id: "Germany",
     type: GameMapType.Germany,
     translationKey: "map.germany",
-    categories: ["europe"],
+    categories: ["europe", "countries"],
     multiplayerFrequency: 5,
     ffaFrequency: -1,
     teamFrequency: -1,
