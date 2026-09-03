@@ -20,6 +20,8 @@ type MatchmakingJoin = {
   clanTag?: string;
 };
 
+const MAX_MATCHMAKING_ATTEMPTS = 10;
+
 @customElement("matchmaking-modal")
 export class MatchmakingModal extends BaseModal {
   private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
@@ -359,6 +361,11 @@ export class MatchmakingModal extends BaseModal {
       // restart/deploy; the queue is in-memory only, so rejoin. Back off in
       // case the failure repeats.
       this.connected = false;
+      if (this.reconnectAttempts >= MAX_MATCHMAKING_ATTEMPTS) {
+        this.close();
+        this.showMatchmakingError("matchmaking_modal.rejected");
+        return;
+      }
       const delay = Math.min(1000 * 2 ** this.reconnectAttempts++, 15000);
       this.reconnectTimeout = setTimeout(() => this.connect(), delay);
     };

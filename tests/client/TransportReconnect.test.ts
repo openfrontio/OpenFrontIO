@@ -131,29 +131,30 @@ describe("Transport close handling", () => {
 
   it("gives up and tells the player after 10 attempts", () => {
     connectAndClose(CloseCode.ProtocolError, "");
-    for (let i = 1; i < 10; i++) {
+    for (let i = 0; i < 8; i++) {
       FakeWebSocket.last.onclose?.({
         code: CloseCode.ProtocolError,
         reason: "",
       });
       vi.advanceTimersByTime(5000);
     }
-    expect(FakeWebSocket.instances).toHaveLength(11);
+    expect(FakeWebSocket.instances).toHaveLength(10);
     expect(showInGameAlert).not.toHaveBeenCalled();
 
     FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
-    vi.advanceTimersByTime(60_000);
-    expect(FakeWebSocket.instances).toHaveLength(11);
+    vi.advanceTimersByTime(5000);
+    expect(FakeWebSocket.instances).toHaveLength(10);
     expect(showInGameAlert).toHaveBeenCalledOnce();
   });
 
-  it("restarts the attempt count once the server actually talks to us", () => {
+  it("restarts the budget after a connection that stayed up", () => {
     connectAndClose(CloseCode.ProtocolError, "");
     FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
     vi.advanceTimersByTime(5000);
     expect(FakeWebSocket.instances).toHaveLength(3);
 
-    FakeWebSocket.last.onmessage?.({ data: new ArrayBuffer(0) });
+    FakeWebSocket.last.onopen?.();
+    vi.advanceTimersByTime(31_000);
     FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
     vi.advanceTimersByTime(0);
     expect(FakeWebSocket.instances).toHaveLength(4);
@@ -161,7 +162,7 @@ describe("Transport close handling", () => {
 
   it("keeps counting when the socket opens but the server rejects the join", () => {
     connectAndClose(CloseCode.InternalError, CloseReason.InvalidToken);
-    for (let i = 1; i < 10; i++) {
+    for (let i = 0; i < 8; i++) {
       FakeWebSocket.last.onopen?.();
       FakeWebSocket.last.onclose?.({
         code: CloseCode.InternalError,
@@ -169,36 +170,33 @@ describe("Transport close handling", () => {
       });
       vi.advanceTimersByTime(5000);
     }
-    expect(FakeWebSocket.instances).toHaveLength(11);
-
     FakeWebSocket.last.onopen?.();
     FakeWebSocket.last.onclose?.({
       code: CloseCode.InternalError,
       reason: CloseReason.InvalidToken,
     });
-    vi.advanceTimersByTime(60_000);
-    expect(FakeWebSocket.instances).toHaveLength(11);
+    vi.advanceTimersByTime(5000);
+
+    expect(FakeWebSocket.instances).toHaveLength(10);
     expect(showInGameAlert).toHaveBeenCalledOnce();
   });
 
   it("stays shut after giving up, however it is poked", () => {
     const transport = connectAndClose(CloseCode.ProtocolError, "");
-    for (let i = 1; i < 10; i++) {
+    for (let i = 0; i < 9; i++) {
       FakeWebSocket.last.onclose?.({
         code: CloseCode.ProtocolError,
         reason: "",
       });
       vi.advanceTimersByTime(5000);
     }
-    FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
-    vi.advanceTimersByTime(5000);
     expect(showInGameAlert).toHaveBeenCalledOnce();
 
     transport.reconnect();
     transport.reconnect();
     vi.advanceTimersByTime(60_000);
 
-    expect(FakeWebSocket.instances).toHaveLength(11);
+    expect(FakeWebSocket.instances).toHaveLength(10);
     expect(showInGameAlert).toHaveBeenCalledOnce();
   });
 

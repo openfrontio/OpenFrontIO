@@ -219,6 +219,7 @@ export class SendSpectateEvent implements GameEvent {
 
 const RECONNECT_DELAY_MS = 5000;
 const MAX_RECONNECT_ATTEMPTS = 10;
+const STABLE_CONNECTION_MS = 30_000;
 
 export class Transport {
   private socket: WebSocket | null = null;
@@ -233,6 +234,7 @@ export class Transport {
   private pingInterval: number | null = null;
   private reconnectTimeout: number | null = null;
   private reconnectAttempts = 0;
+  private connectedAt: number | null = null;
   public readonly isLocal: boolean;
   // Latched by a terminal close (a rejection the server will repeat). 1xxx
   // stays retryable (mangled frames, account-API / JWKS blips). Blocks
@@ -399,6 +401,14 @@ export class Transport {
     if (this.connectionRefused) {
       return;
     }
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      this.connectionRefused = true;
+      this.stopPing();
+      showInGameAlert(translateText("error_modal.connection_lost"));
+      return;
+    }
+    this.reconnectAttempts++;
+    this.connectedAt = null;
     this.startPing();
     this.killExistingSocket();
     // WS origin comes from ClientEnv (same-origin on web, audience-derived on
@@ -411,6 +421,7 @@ export class Transport {
     this.onmessage = onmessage;
     this.socket.onopen = () => {
       console.log("Connected to game server!");
+      this.connectedAt = Date.now();
       if (this.socket === null) {
         console.error("socket is null");
         return;
@@ -434,7 +445,6 @@ export class Transport {
           new Uint8Array(event.data as ArrayBuffer),
           this.zbinCtx ?? undefined,
         );
-        this.reconnectAttempts = 0;
         if (msg.type === "start") {
           // Seed the dictionary from the same players array, in the same
           // order, that the server seeded its own from.
@@ -461,15 +471,13 @@ export class Transport {
         }
         return;
       }
-      if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.log(`giving up after ${this.reconnectAttempts} attempts`);
-        this.connectionRefused = true;
-        this.stopPing();
-        showInGameAlert(translateText("error_modal.connection_lost"));
-        return;
+      if (
+        this.connectedAt !== null &&
+        Date.now() - this.connectedAt > STABLE_CONNECTION_MS
+      ) {
+        this.reconnectAttempts = 0;
       }
-      const delay = this.reconnectAttempts === 0 ? 0 : RECONNECT_DELAY_MS;
-      this.reconnectAttempts++;
+      const delay = this.reconnectAttempts <= 1 ? 0 : RECONNECT_DELAY_MS;
       console.log(
         `received error code ${event.code}, reconnecting in ${delay}ms`,
       );
