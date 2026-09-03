@@ -38,6 +38,10 @@ describe("isTerminalClose", () => {
     expect(isTerminalClose(CloseCode.Normal)).toBe(true);
   });
 
+  it("treats a corrupted frame as terminal", () => {
+    expect(isTerminalClose(CloseCode.ProtocolError)).toBe(true);
+  });
+
   it("treats every application rejection as terminal", () => {
     for (const code of [
       CloseCode.BadRequest,
@@ -54,7 +58,6 @@ describe("isTerminalClose", () => {
 
   it("treats transport and server faults as retryable", () => {
     for (const code of [
-      CloseCode.ProtocolError,
       CloseCode.InternalError,
       CloseCode.TryAgainLater,
       1006,
@@ -91,7 +94,6 @@ describe("CloseCode", () => {
   it("keeps the registered codes out of the private range", () => {
     for (const code of [
       CloseCode.Normal,
-      CloseCode.ProtocolError,
       CloseCode.InternalError,
       CloseCode.TryAgainLater,
     ]) {

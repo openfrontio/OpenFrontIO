@@ -418,6 +418,7 @@
     "login_required": "You must be logged in to play on this server.",
     "not_allowlisted": "You are not on this lobby's allowlist.",
     "not_trusted": "This lobby is limited to trusted accounts.",
+    "protocol_error": "The connection was corrupted.",
     "turnstile_failed": "The bot check failed. Please reload the page and try again."
   },
   "common": {

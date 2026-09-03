@@ -170,7 +170,6 @@ describe("Transport terminal connection refused", () => {
 
   it.each([
     [1006, ""],
-    [CloseCode.ProtocolError, CloseReason.ProtocolError],
     [CloseCode.InternalError, CloseReason.AccountLookupFailed],
     [CloseCode.InternalError, CloseReason.InvalidToken],
   ])("still reconnects after a retryable close: %i %s", (code, reason) => {

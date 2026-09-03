@@ -23,6 +23,7 @@ export const APP_REJECTION_MAX = 4999;
 export function isTerminalClose(code: number): boolean {
   return (
     code === CloseCode.Normal ||
+    code === CloseCode.ProtocolError ||
     (code >= APP_REJECTION_MIN && code <= APP_REJECTION_MAX)
   );
 }

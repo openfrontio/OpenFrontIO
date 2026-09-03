@@ -88,6 +88,7 @@ describe("Transport close handling", () => {
 
   it.each([
     ["a full lobby", CloseCode.LobbyFull, CloseReason.LobbyFull],
+    ["a corrupted frame", CloseCode.ProtocolError, CloseReason.ProtocolError],
     ["a ban", CloseCode.Banned, CloseReason.Banned],
     [
       "a rejected bot check",
@@ -103,7 +104,6 @@ describe("Transport close handling", () => {
 
   it.each([
     ["a server fault", CloseCode.InternalError],
-    ["a protocol error", CloseCode.ProtocolError],
     ["a retry-later close", CloseCode.TryAgainLater],
     ["an abrupt drop with no close frame", 1006],
   ])("reconnects immediately after %s", (_label, code) => {
@@ -112,17 +112,17 @@ describe("Transport close handling", () => {
     expect(showInGameConfirm).not.toHaveBeenCalled();
   });
 
-  it("waits a fixed delay between every retry after the first", () => {
-    connectAndClose(CloseCode.ProtocolError, "");
+  it("escalates the delay while the close keeps repeating", () => {
+    connectAndClose(CloseCode.InternalError, "");
     expect(FakeWebSocket.instances).toHaveLength(2);
 
-    for (let i = 0; i < 5; i++) {
+    for (const delay of [1000, 2000, 4000, 8000, 15_000, 15_000]) {
       const before = FakeWebSocket.instances.length;
       FakeWebSocket.last.onclose?.({
-        code: CloseCode.ProtocolError,
+        code: CloseCode.InternalError,
         reason: "",
       });
-      vi.advanceTimersByTime(4999);
+      vi.advanceTimersByTime(delay - 1);
       expect(FakeWebSocket.instances).toHaveLength(before);
       vi.advanceTimersByTime(1);
       expect(FakeWebSocket.instances).toHaveLength(before + 1);
@@ -130,32 +130,32 @@ describe("Transport close handling", () => {
   });
 
   it("gives up and tells the player after 10 attempts", () => {
-    connectAndClose(CloseCode.ProtocolError, "");
+    connectAndClose(CloseCode.InternalError, "");
     for (let i = 0; i < 8; i++) {
       FakeWebSocket.last.onclose?.({
-        code: CloseCode.ProtocolError,
+        code: CloseCode.InternalError,
         reason: "",
       });
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(15_000);
     }
     expect(FakeWebSocket.instances).toHaveLength(10);
     expect(showInGameAlert).not.toHaveBeenCalled();
 
-    FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
-    vi.advanceTimersByTime(5000);
+    FakeWebSocket.last.onclose?.({ code: CloseCode.InternalError, reason: "" });
+    vi.advanceTimersByTime(15_000);
     expect(FakeWebSocket.instances).toHaveLength(10);
     expect(showInGameAlert).toHaveBeenCalledOnce();
   });
 
   it("restarts the budget after a connection that stayed up", () => {
-    connectAndClose(CloseCode.ProtocolError, "");
-    FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
-    vi.advanceTimersByTime(5000);
+    connectAndClose(CloseCode.InternalError, "");
+    FakeWebSocket.last.onclose?.({ code: CloseCode.InternalError, reason: "" });
+    vi.advanceTimersByTime(15_000);
     expect(FakeWebSocket.instances).toHaveLength(3);
 
     FakeWebSocket.last.onopen?.();
     vi.advanceTimersByTime(31_000);
-    FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
+    FakeWebSocket.last.onclose?.({ code: CloseCode.InternalError, reason: "" });
     vi.advanceTimersByTime(0);
     expect(FakeWebSocket.instances).toHaveLength(4);
   });
@@ -168,27 +168,27 @@ describe("Transport close handling", () => {
         code: CloseCode.InternalError,
         reason: CloseReason.InvalidToken,
       });
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(15_000);
     }
     FakeWebSocket.last.onopen?.();
     FakeWebSocket.last.onclose?.({
       code: CloseCode.InternalError,
       reason: CloseReason.InvalidToken,
     });
-    vi.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(15_000);
 
     expect(FakeWebSocket.instances).toHaveLength(10);
     expect(showInGameAlert).toHaveBeenCalledOnce();
   });
 
   it("stays shut after giving up, however it is poked", () => {
-    const transport = connectAndClose(CloseCode.ProtocolError, "");
+    const transport = connectAndClose(CloseCode.InternalError, "");
     for (let i = 0; i < 9; i++) {
       FakeWebSocket.last.onclose?.({
-        code: CloseCode.ProtocolError,
+        code: CloseCode.InternalError,
         reason: "",
       });
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(15_000);
     }
     expect(showInGameAlert).toHaveBeenCalledOnce();
 
@@ -200,9 +200,43 @@ describe("Transport close handling", () => {
     expect(showInGameAlert).toHaveBeenCalledOnce();
   });
 
+  it("does not burn the budget on watchdog reconnects of a healthy game", () => {
+    const transport = newTransport();
+    transport.connect(
+      () => {},
+      () => {},
+    );
+    for (let i = 0; i < 15; i++) {
+      FakeWebSocket.last.onopen?.();
+      vi.advanceTimersByTime(31_000);
+      transport.reconnect();
+    }
+    expect(FakeWebSocket.instances).toHaveLength(16);
+    expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+
+  it("does not count the retry delay toward the stable threshold", () => {
+    const transport = newTransport();
+    transport.connect(
+      () => {},
+      () => {},
+    );
+    for (let i = 0; i < 12; i++) {
+      FakeWebSocket.last.onopen?.();
+      vi.advanceTimersByTime(20_000);
+      FakeWebSocket.last.onclose?.({
+        code: CloseCode.InternalError,
+        reason: "",
+      });
+      vi.advanceTimersByTime(15_000);
+    }
+    expect(FakeWebSocket.instances).toHaveLength(10);
+    expect(showInGameAlert).toHaveBeenCalledOnce();
+  });
+
   it("drops a pending reconnect when the player leaves the game", () => {
-    const transport = connectAndClose(CloseCode.ProtocolError, "");
-    FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
+    const transport = connectAndClose(CloseCode.InternalError, "");
+    FakeWebSocket.last.onclose?.({ code: CloseCode.InternalError, reason: "" });
     transport.leaveGame();
     vi.advanceTimersByTime(60_000);
     expect(FakeWebSocket.instances).toHaveLength(2);

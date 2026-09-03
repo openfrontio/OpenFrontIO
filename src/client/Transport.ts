@@ -217,7 +217,8 @@ export class SendSpectateEvent implements GameEvent {
   constructor(public readonly spectator: boolean) {}
 }
 
-const RECONNECT_DELAY_MS = 5000;
+const RECONNECT_BASE_DELAY_MS = 1000;
+const RECONNECT_MAX_DELAY_MS = 15_000;
 const MAX_RECONNECT_ATTEMPTS = 10;
 const STABLE_CONNECTION_MS = 30_000;
 
@@ -236,10 +237,9 @@ export class Transport {
   private reconnectAttempts = 0;
   private connectedAt: number | null = null;
   public readonly isLocal: boolean;
-  // Latched by a terminal close (a rejection the server will repeat). 1xxx
-  // stays retryable (mangled frames, account-API / JWKS blips). Blocks
-  // connectRemote so neither the ping nor ClientGameRunner's silence check
-  // can reopen it.
+  // Latched by a terminal close (a rejection the server will repeat) and by
+  // exhausting the reconnect budget. Blocks connectRemote so neither the ping
+  // nor ClientGameRunner's silence check can reopen it.
   private connectionRefused = false;
 
   // clientID dictionary for the binary wire (see ZbinWire.ts), seeded from
@@ -401,6 +401,7 @@ export class Transport {
     if (this.connectionRefused) {
       return;
     }
+    this.resetBudgetIfStable();
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       this.connectionRefused = true;
       this.stopPing();
@@ -408,7 +409,6 @@ export class Transport {
       return;
     }
     this.reconnectAttempts++;
-    this.connectedAt = null;
     this.startPing();
     this.killExistingSocket();
     // WS origin comes from ClientEnv (same-origin on web, audience-derived on
@@ -471,13 +471,14 @@ export class Transport {
         }
         return;
       }
-      if (
-        this.connectedAt !== null &&
-        Date.now() - this.connectedAt > STABLE_CONNECTION_MS
-      ) {
-        this.reconnectAttempts = 0;
-      }
-      const delay = this.reconnectAttempts <= 1 ? 0 : RECONNECT_DELAY_MS;
+      this.resetBudgetIfStable();
+      const delay =
+        this.reconnectAttempts <= 1
+          ? 0
+          : Math.min(
+              RECONNECT_BASE_DELAY_MS * 2 ** (this.reconnectAttempts - 2),
+              RECONNECT_MAX_DELAY_MS,
+            );
       console.log(
         `received error code ${event.code}, reconnecting in ${delay}ms`,
       );
@@ -508,6 +509,16 @@ export class Transport {
         window.location.href = "/";
       }
     });
+  }
+
+  private resetBudgetIfStable(): void {
+    if (this.connectedAt === null) {
+      return;
+    }
+    if (Date.now() - this.connectedAt > STABLE_CONNECTION_MS) {
+      this.reconnectAttempts = 0;
+    }
+    this.connectedAt = null;
   }
 
   public reconnect() {
