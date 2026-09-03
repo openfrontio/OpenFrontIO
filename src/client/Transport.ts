@@ -411,7 +411,6 @@ export class Transport {
     this.onmessage = onmessage;
     this.socket.onopen = () => {
       console.log("Connected to game server!");
-      this.reconnectAttempts = 0;
       if (this.socket === null) {
         console.error("socket is null");
         return;
@@ -435,6 +434,7 @@ export class Transport {
           new Uint8Array(event.data as ArrayBuffer),
           this.zbinCtx ?? undefined,
         );
+        this.reconnectAttempts = 0;
         if (msg.type === "start") {
           // Seed the dictionary from the same players array, in the same
           // order, that the server seeded its own from.
@@ -463,6 +463,8 @@ export class Transport {
       }
       if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
         console.log(`giving up after ${this.reconnectAttempts} attempts`);
+        this.connectionRefused = true;
+        this.stopPing();
         showInGameAlert(translateText("error_modal.connection_lost"));
         return;
       }

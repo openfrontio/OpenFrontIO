@@ -11,6 +11,11 @@ vi.mock("src/client/ClientEnv", () => ({
     workerPath: (gameID: string) => `w0/${gameID}`,
   },
 }));
+vi.mock("../../src/core/ZbinWire", () => ({
+  createGameWireContext: vi.fn(),
+  decodeServerMessage: vi.fn(() => ({ type: "turn" })),
+  encodeClientMessage: vi.fn(() => new Uint8Array()),
+}));
 vi.mock("../../src/client/InGameModal", () => ({
   showInGameAlert: (...args: unknown[]) => showInGameAlert(...(args as [])),
   showInGameConfirm: (...args: unknown[]) => showInGameConfirm(...(args as [])),
@@ -142,16 +147,59 @@ describe("Transport close handling", () => {
     expect(showInGameAlert).toHaveBeenCalledOnce();
   });
 
-  it("restarts the attempt count once a connection succeeds", () => {
+  it("restarts the attempt count once the server actually talks to us", () => {
     connectAndClose(CloseCode.ProtocolError, "");
     FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
     vi.advanceTimersByTime(5000);
     expect(FakeWebSocket.instances).toHaveLength(3);
 
-    FakeWebSocket.last.onopen?.();
+    FakeWebSocket.last.onmessage?.({ data: new ArrayBuffer(0) });
     FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
     vi.advanceTimersByTime(0);
     expect(FakeWebSocket.instances).toHaveLength(4);
+  });
+
+  it("keeps counting when the socket opens but the server rejects the join", () => {
+    connectAndClose(CloseCode.InternalError, CloseReason.InvalidToken);
+    for (let i = 1; i < 10; i++) {
+      FakeWebSocket.last.onopen?.();
+      FakeWebSocket.last.onclose?.({
+        code: CloseCode.InternalError,
+        reason: CloseReason.InvalidToken,
+      });
+      vi.advanceTimersByTime(5000);
+    }
+    expect(FakeWebSocket.instances).toHaveLength(11);
+
+    FakeWebSocket.last.onopen?.();
+    FakeWebSocket.last.onclose?.({
+      code: CloseCode.InternalError,
+      reason: CloseReason.InvalidToken,
+    });
+    vi.advanceTimersByTime(60_000);
+    expect(FakeWebSocket.instances).toHaveLength(11);
+    expect(showInGameAlert).toHaveBeenCalledOnce();
+  });
+
+  it("stays shut after giving up, however it is poked", () => {
+    const transport = connectAndClose(CloseCode.ProtocolError, "");
+    for (let i = 1; i < 10; i++) {
+      FakeWebSocket.last.onclose?.({
+        code: CloseCode.ProtocolError,
+        reason: "",
+      });
+      vi.advanceTimersByTime(5000);
+    }
+    FakeWebSocket.last.onclose?.({ code: CloseCode.ProtocolError, reason: "" });
+    vi.advanceTimersByTime(5000);
+    expect(showInGameAlert).toHaveBeenCalledOnce();
+
+    transport.reconnect();
+    transport.reconnect();
+    vi.advanceTimersByTime(60_000);
+
+    expect(FakeWebSocket.instances).toHaveLength(11);
+    expect(showInGameAlert).toHaveBeenCalledOnce();
   });
 
   it("drops a pending reconnect when the player leaves the game", () => {
