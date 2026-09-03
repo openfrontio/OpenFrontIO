@@ -70,17 +70,17 @@
   "id": "UnitedStates",
   "map": {
     "height": 1548,
-    "num_land_tiles": 1868914,
+    "num_land_tiles": 1868900,
     "width": 2800
   },
   "map16x": {
     "height": 387,
-    "num_land_tiles": 110663,
+    "num_land_tiles": 110662,
     "width": 700
   },
   "map4x": {
     "height": 774,
-    "num_land_tiles": 458417,
+    "num_land_tiles": 458412,
     "width": 1400
   },
   "multiplayer_frequency": 9,
@@ -244,7 +244,7 @@
     {
       "coordinates": [2020, 1092],
       "flag": "Georgia_US",
-      "name": "Georgia (US State)"
+      "name": "Georgia"
     },
     {
       "coordinates": [1970, 646],
