@@ -6,7 +6,6 @@ import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
   Difficulty,
   Game,
-  GameMode,
   GameType,
   Gold,
   Player,
@@ -216,11 +215,14 @@ const DOOMSDAY_CLOCK_DEFAULTS = {
   warshipDrainCurveExponent: 8, // >1 = convex: stays gentle early, then spikes
 };
 
+// Share of the land a side must hold to win, in every game mode.
+const PERCENT_TILES_OWNED_TO_WIN = 80;
+
 // Overtime tunables (anti-stalemate). Off unless enabled in GameConfig.
 // After startMinutes the percentage of tiles required to win falls from the
-// base (80% FFA / 95% team) by dropPercentPerMinute, with no floor: the bar
-// keeps sinking until the leading side crosses it, so a stalled game always
-// ends. Only `enabled` and `startMinutes` are wire-configurable.
+// base by dropPercentPerMinute, with no floor: the bar keeps sinking until the
+// leading side crosses it, so a stalled game always ends. Only `enabled` and
+// `startMinutes` are wire-configurable.
 const OVERTIME_DEFAULTS = {
   enabled: false,
   startMinutes: 30,
@@ -728,7 +730,7 @@ export class Config {
   }
 
   percentageTilesOwnedToWin(elapsedGameSeconds: number): number {
-    const base = this._gameConfig.gameMode === GameMode.Team ? 95 : 80;
+    const base = PERCENT_TILES_OWNED_TO_WIN;
     const sd = this.overtimeConfig();
     if (!sd.enabled) {
       return base;

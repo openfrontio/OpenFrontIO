@@ -315,7 +315,7 @@ describe("WinCheckExecution - Nation Winners", () => {
 
     // Skip spawn phase
 
-    // Assign 96% of land to bot team (above 95% Team mode threshold)
+    // Assign 96% of land to bot team (above the 80% win threshold)
     const totalLand = game.numLandTiles();
     const botTeamTiles = Math.ceil(totalLand * 0.96);
     let bot1Assigned = 0;
@@ -336,9 +336,9 @@ describe("WinCheckExecution - Nation Winners", () => {
       }
     });
 
-    // Verify territory ownership (bot team has > 95%)
+    // Verify territory ownership (bot team is above the 80% win threshold)
     const botTeamTotal = bot1.numTilesOwned() + bot2.numTilesOwned();
-    expect(botTeamTotal / totalLand).toBeGreaterThan(0.95);
+    expect(botTeamTotal / totalLand).toBeGreaterThan(0.8);
 
     // Mock setWinner to capture calls
     const setWinnerSpy = vi.fn();
@@ -580,14 +580,43 @@ describe("WinCheckExecution - Overtime", () => {
     expect(game.config().percentageTilesOwnedToWin(10_000)).toBe(80);
   });
 
-  test("team games decay from the 95% base", async () => {
+  test("team games use the same base and decay as FFA", async () => {
     const game = await setup("big_plains", {
       gameMode: GameMode.Team,
       playerTeams: 2,
       overtime: { enabled: true, startMinutes: 1 },
     });
-    expect(game.config().percentageTilesOwnedToWin(0)).toBe(95);
-    expect(game.config().percentageTilesOwnedToWin(60 + 5 * 60)).toBe(85);
+    expect(game.config().percentageTilesOwnedToWin(0)).toBe(80);
+    expect(game.config().percentageTilesOwnedToWin(60 + 5 * 60)).toBe(70);
+  });
+
+  test("a null maxTimerValue is no timer, not a zero-minute one", async () => {
+    // Host lobbies send null when the max-timer toggle is off.
+    const game = await setup("big_plains", {
+      gameMode: GameMode.FFA,
+      maxTimerValue: null,
+    });
+    const nationInfo = new PlayerInfo(
+      "TestNation",
+      PlayerType.Nation,
+      null,
+      "nation_id",
+    );
+    game.addPlayer(nationInfo);
+    const nation = game.player("nation_id");
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (assigned >= 10) return;
+      if (!game.map().isLand(tile)) return;
+      nation.conquer(tile);
+      assigned++;
+    });
+
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    winCheck.checkWinnerFFA();
+    expect(game.getWinner()).toBeNull();
+    expect(winCheck.isActive()).toBe(true);
   });
 
   test("leader wins once the shrinking bar drops below their share", async () => {
