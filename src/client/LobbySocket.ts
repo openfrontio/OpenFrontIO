@@ -1,6 +1,8 @@
 import { ClientEnv } from "src/client/ClientEnv";
 import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
+import { showInGameAlert } from "./InGameModal";
+import { translateText } from "./Utils";
 
 interface LobbySocketOptions {
   reconnectDelay?: number;
@@ -163,7 +165,7 @@ export class PublicLobbySocket {
       this.wsConnectionAttempts++;
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
-      alert("error connecting to game service");
+      void showInGameAlert(translateText("error_modal.connection_error"));
     } else {
       this.scheduleReconnect();
     }

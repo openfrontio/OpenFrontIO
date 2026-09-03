@@ -10,14 +10,15 @@
     "claim_failed": "Failed to claim reward. Please try again.",
     "clear_session": "Clear Session",
     "connected_as": "Connected as",
-    "delete_account_blocked": "Your account can't be deleted automatically. Please contact support.",
     "delete_account_confirm_button": "Permanently Delete",
     "delete_account_confirm_word": "DELETE",
     "delete_account_desc": "Permanently delete your account and all of its data.",
     "delete_account_failed": "Delete failed, please contact support at support@openfront.io",
+    "delete_account_rate_limited": "Account deletion is temporarily unavailable, please try again later.",
+    "delete_account_scheduled": "Your account will be deleted in 24 hours. If you change your mind, please contact support to cancel.",
     "delete_account_title": "Delete account",
     "delete_account_type_to_confirm": "Type \"{word}\" to confirm",
-    "delete_account_warning": "Your account will be deleted immediately and permanently. There is no grace period and no way to recover it. You will be logged out on all devices.",
+    "delete_account_warning": "Your account will be permanently deleted 24 hours after you confirm, and you will be logged out on all devices right away. Signing in again does not cancel it; only support can, within those 24 hours.",
     "email_placeholder": "Enter your email address",
     "enter_email_address": "Please enter an email address",
     "failed_to_send_recovery_email": "Failed to send recovery email",
@@ -620,11 +621,13 @@
     "copy_clipboard": "Copy to clipboard",
     "crashed": "Game crashed!",
     "desync_notice": "You are desynced from other players. What you see might differ from other players.",
+    "login_failed": "Login failed. Please try again later.",
     "paste_discord": "Please paste the following in your bug report in Discord:",
     "spawn_failed": {
       "description": "Automatic spawn selection failed. You can't play this game.",
       "title": "Spawn failed"
-    }
+    },
+    "turnstile_error": "Verification error: {code}. Please refresh and try again."
   },
   "events_display": {
     "about_to_expire": "Your alliance with {name} is about to expire!",
@@ -1995,6 +1998,8 @@
   },
   "username": {
     "account_invalid_chars": "Username can only contain letters, numbers, underscores, hyphens, and single spaces between words.",
+    "claim_at_risk": "\"{name}\" is no longer reserved and can be taken by another player at any moment. Resubscribe now to keep it.",
+    "claim_reserved": "\"{name}\" is reserved for you until {date}. Resubscribe before then to keep it.",
     "clan_browse": "Browse clans",
     "clan_clear": "No tag",
     "clan_custom": "Other tag",
@@ -2003,6 +2008,8 @@
     "clan_your_clans": "Your clans",
     "enter_username": "Enter your username",
     "invalid_chars": "Username can only contain letters, numbers, spaces, underscores, hyphens, and periods.",
+    "lapse_notice": "Your subscription ended, so you are no longer playing as \"{name}\". It stays reserved for you until {date} — resubscribe before then to keep it. After that anyone can take it.",
+    "lapse_notice_at_risk": "You are no longer playing as \"{name}\", and it is no longer reserved. Another player can take it at any moment — resubscribe now to keep it.",
     "not_string": "Username must be a string.",
     "tag": "TAG",
     "tag_invalid_chars": "Clan tag can only contain letters and numbers.",
