@@ -35,12 +35,10 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
    `go run . --maps=northamerica,world`
 
 5. Find the output folder at `../resources/maps/<map_name>`
-6. Go back to the root directory: `cd ..`
-7. Run Prettier: `npm run format`
-   This rewrites ALL files in place. Git figures out which files are actually changed, don't worry.
-   Alternatively, you can either run Prettier per file: `npx prettier --write resources/maps/<map_name>/<file_name>` or in VSCode install the Prettier extension and per file do Show and run Commands > Format Document.
 
-Alternatively, `npm run gen-maps` (from the root directory) runs the generator for all maps and formats the output in one step.
+`go run .` formats every file it writes with Prettier as its last step (shelling out to `npx prettier --write`), so the output already matches `npm run format` — no separate formatting step needed. If `npx prettier` isn't available (e.g. `npm ci` hasn't been run), generation still succeeds but prints a warning; run `npm run format` from the root directory to format manually in that case.
+
+`npm run gen-maps` (from the root directory) is equivalent to `go run .` for all maps.
 
 ## Output Files
 
