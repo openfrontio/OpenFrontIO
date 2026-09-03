@@ -102,6 +102,13 @@ export class Roster {
     return this.connected;
   }
 
+  // Whether this client holds a connection right now. One dropped by
+  // markLeft, kick or pruneStale is gone from the connected list while its
+  // record — and its socket's listeners — can outlive it.
+  isConnected(client: Client): boolean {
+    return this.connected.includes(client);
+  }
+
   // Connected clients who will actually play. Spectators are excluded
   // everywhere a "player" is meant: the lobby cap, gameStartInfo, the votes.
   players(): Client[] {
