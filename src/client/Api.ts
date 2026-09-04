@@ -18,10 +18,12 @@ import {
   PostTribeBoostResponseSchema,
   PostTribeNameResponse,
   PostTribeNameResponseSchema,
+  PublicCreatorSchema,
   PublicPlayerGamesResponse,
   PublicPlayerGamesResponseSchema,
   PurchasePackResponse,
   PurchasePackResponseSchema,
+  PutCreatorResponseSchema,
   PutUsernameResponse,
   PutUsernameResponseSchema,
   RankedLeaderboardResponse,
@@ -401,6 +403,185 @@ export async function updateUsername(
     return { ok: true, data: parsed.data };
   } catch (e) {
     console.error("updateUsername: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+// GET /creators/code/:code — public lookup for a creator by their code
+// (Creator Code programme), e.g. to preview/prefill an openfront.io/c/CODE
+// share link before binding. No auth. 404 means the code doesn't resolve to
+// any (active) creator; folds into null along with every other failure —
+// callers can't act on the difference.
+export async function getCreatorByCode(
+  code: string,
+): Promise<{ code: string; displayName: string } | null> {
+  try {
+    const response = await fetch(
+      `${getApiBase()}/creators/code/${encodeURIComponent(code)}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      console.error(
+        "getCreatorByCode: request failed",
+        response.status,
+        response.statusText,
+      );
+      return null;
+    }
+    const parsed = PublicCreatorSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error("getCreatorByCode: Zod validation failed", parsed.error);
+      return null;
+    }
+    return { code: parsed.data.code, displayName: parsed.data.displayName };
+  } catch (e) {
+    console.error("getCreatorByCode: request failed", e);
+    return null;
+  }
+}
+
+export type SetCreatorCodeResult =
+  | { ok: true; creator: { code: string; displayName: string } }
+  | {
+      ok: false;
+      code:
+        | "invalid"
+        | "not_found"
+        | "self_referral"
+        | "failed"
+        | "rate_limited";
+    }
+  | { ok: false; code: "cooldown"; retryAfterSeconds: number | null };
+
+const SET_CREATOR_CODE_ERROR_CODES = [
+  "invalid",
+  "not_found",
+  "self_referral",
+] as const;
+type SetCreatorCodeErrorCode = (typeof SET_CREATOR_CODE_ERROR_CODES)[number];
+function isSetCreatorCodeErrorCode(
+  value: unknown,
+): value is SetCreatorCodeErrorCode {
+  return (
+    typeof value === "string" &&
+    (SET_CREATOR_CODE_ERROR_CODES as readonly string[]).includes(value)
+  );
+}
+
+// PUT /users/@me/creator {code} — binds (or switches) the caller's supported
+// creator (Creator Code programme). One bind/switch consumes a 7-day change
+// cooldown before the next one is allowed; re-confirming the SAME creator is
+// a no-op 200 that does not consume it (handled server-side).
+//
+// This endpoint answers its own failures with a body carrying `code` — a 400
+// for invalid/not_found/self_referral, and its own 429 for the cooldown
+// (with a Retry-After header). But it also sits behind a SEPARATE, shared
+// 10s debounce in front of every mutating endpoint, which can ALSO 429 —
+// and that response carries no `ok`/`code` fields at all. Only trust
+// `code === "cooldown"` to mean the real 7-day cooldown; any other 429 (the
+// debounce, or anything unrecognized) maps to "rate_limited".
+//
+// Invalidates the cached /users/@me on success so the bound creator (and the
+// fresh cooldown) show up on the next read.
+export async function setCreatorCode(
+  code: string,
+): Promise<SetCreatorCodeResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/creator`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ code }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 400) {
+      const body = await response.json().catch(() => null);
+      const bodyCode: unknown = body?.code;
+      return {
+        ok: false,
+        code: isSetCreatorCodeErrorCode(bodyCode) ? bodyCode : "failed",
+      };
+    }
+    if (response.status === 429) {
+      const body = await response.json().catch(() => null);
+      if (body?.code === "cooldown") {
+        const retryAfter = response.headers.get("Retry-After");
+        const seconds = retryAfter === null ? NaN : Number(retryAfter);
+        return {
+          ok: false,
+          code: "cooldown",
+          retryAfterSeconds: Number.isFinite(seconds) ? seconds : null,
+        };
+      }
+      return { ok: false, code: "rate_limited" };
+    }
+    if (!response.ok) {
+      console.error(
+        "setCreatorCode: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = PutCreatorResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error("setCreatorCode: Zod validation failed", parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    invalidateUserMe();
+    return { ok: true, creator: parsed.data };
+  } catch (e) {
+    console.error("setCreatorCode: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+export type ClearCreatorCodeResult =
+  | { ok: true }
+  | { ok: false; code: "rate_limited" | "failed" };
+
+// DELETE /users/@me/creator — unbinds the caller's supported creator, if any
+// (Creator Code programme). Always safe: unbinding is never gated by the
+// 7-day change cooldown (that cooldown only governs the NEXT bind, whose
+// anchor moves to "now" on unbind) — so unlike setCreatorCode's 429, a 429
+// here can only ever be the shared 10s mutation debounce, never a real
+// cooldown, and maps straight to "rate_limited". Invalidates the cached
+// /users/@me on success so the cleared binding shows up on the next read.
+export async function clearCreatorCode(): Promise<ClearCreatorCodeResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/creator`, {
+      method: "DELETE",
+      headers: {
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 429) {
+      return { ok: false, code: "rate_limited" };
+    }
+    if (!response.ok) {
+      console.error(
+        "clearCreatorCode: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    invalidateUserMe();
+    return { ok: true };
+  } catch (e) {
+    console.error("clearCreatorCode: request failed", e);
     return { ok: false, code: "failed" };
   }
 }

@@ -34,6 +34,10 @@ import {
 } from "./Cosmetics";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import {
+  consumeCreatorCodePath,
+  resumePendingCreatorCode,
+} from "./CreatorCode";
 import { desktopPresence, type PresencePayload } from "./DesktopPresence";
 import {
   desktopUpdate,
@@ -255,6 +259,21 @@ class Client {
   }> | null = null;
 
   async initialize(): Promise<void> {
+    // A store referral banner / account "copy link" hands out `/c/<code>`.
+    // There's nothing to open here yet -- the code only does anything once
+    // the player is signed in (resumePendingCreatorCode in onUserMe handles
+    // that), so this just stashes it and cleans the URL. See CreatorCode.ts
+    // for why an invalid code is silently dropped and the path is stripped
+    // either way.
+    //
+    // Must run before ANY await below (including userAuth()): onUserMe() can
+    // fire resumePendingCreatorCode() as soon as getUserMe() settles, and
+    // getUserMe() is kicked off right after userAuth() resolves -- racing
+    // this against handleUrl() (which used to stash the code) risked
+    // consuming an empty stash before the code was ever written, losing the
+    // prefill for an already-signed-in visitor hitting /c/CODE directly.
+    consumeCreatorCodePath();
+
     crazyGamesSDK.maybeInit();
 
     // Every exit from a game (win screen, in-game quit, popstate) navigates to
@@ -561,6 +580,20 @@ class Client {
           return;
         }
 
+        // Resume a creator-code binding flow interrupted by the same kind of
+        // login redirect (see CreatorCode.ts's stash comment) -- also not
+        // gated on cleanHomepage below, for the same reason as steam-link
+        // above: the /c/CODE deep link's stash routinely lands back on
+        // #modal=account (or wherever the login round-trip returns to)
+        // rather than a clean "/".
+        if (
+          resumePendingCreatorCode((code) => {
+            window.location.hash = `modal=account&creatorCode=${encodeURIComponent(code)}`;
+          })
+        ) {
+          return;
+        }
+
         // Popups below only on a clean homepage load, never over a deep link
         // (join URL, #modal=..., #purchase-completed, ...).
         const cleanHomepage =
@@ -862,6 +895,11 @@ class Client {
     // Decode the hash first to handle encoded characters
     const decodedHash = decodeURIComponent(hash);
     const params = new URLSearchParams(decodedHash.split("?")[1] || "");
+
+    // The `/c/<code>` share-link path is stashed (and stripped) by
+    // consumeCreatorCodePath() at the very start of initialize(), before this
+    // method is ever scheduled -- see the comment there for why that has to
+    // run ahead of userAuth()/getUserMe() rather than here.
 
     // Handle different hash sections
     if (decodedHash.startsWith("#purchase-completed")) {

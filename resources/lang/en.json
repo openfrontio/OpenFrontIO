@@ -487,6 +487,27 @@
     "verified_name": "Verified username",
     "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
   },
+  "creator_code": {
+    "change": "Change",
+    "confirm_lock": "Confirm — locks for 7 days",
+    "confirm_unsupport": "Confirm — no new support for 7 days",
+    "cooldown_days": "You can change again in {days} day(s).",
+    "errors": {
+      "cooldown": "You're on a change cooldown right now. Please try again later.",
+      "failed": "Something went wrong. Please try again.",
+      "invalid": "That code isn't valid.",
+      "not_found": "That creator code doesn't exist.",
+      "rate_limited": "Too many attempts — please wait a moment and try again.",
+      "self_referral": "You can't support yourself."
+    },
+    "input_label": "Creator code",
+    "input_placeholder": "Enter a creator code",
+    "since": "Since {date}",
+    "support": "Support",
+    "supporting": "Supporting {name} ({code})",
+    "title": "Support a Creator",
+    "unsupport": "Unsupport"
+  },
   "desktop_presence": {
     "in_game": "In game",
     "spectating": "Spectating"
