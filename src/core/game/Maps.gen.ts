@@ -27,6 +27,7 @@ export enum GameMapType {
   BranchingPaths = "Branching Paths", // map-generator/assets/maps/branchingpaths/info.json
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
   BritanniaClassic = "Britannia Classic", // map-generator/assets/maps/britanniaclassic/info.json
+  CapeCod = "Cape Cod", // map-generator/assets/maps/capecod/info.json
   Caribbean = "Caribbean", // map-generator/assets/maps/caribbean/info.json
   CaspianSea = "Caspian Sea", // map-generator/assets/maps/caspiansea/info.json
   Caucasus = "Caucasus", // map-generator/assets/maps/caucasus/info.json
@@ -85,6 +86,7 @@ export enum GameMapType {
   NileDelta = "Nile Delta", // map-generator/assets/maps/niledelta/info.json
   NorthAmerica = "North America", // map-generator/assets/maps/northamerica/info.json
   NorthwestPassage = "Northwest Passage", // map-generator/assets/maps/northwestpassage/info.json
+  NuttyPutty = "NuttyPutty", // map-generator/assets/maps/nuttyputty/info.json
   Oceania = "Oceania", // map-generator/assets/maps/oceania/info.json
   Onion = "Onion", // map-generator/assets/maps/onion/info.json
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
@@ -500,6 +502,13 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     themes: ["europe"],
+  },
+  {
+    id: "CapeCod",
+    type: GameMapType.CapeCod,
+    translationKey: "map.capecod",
+    categories: ["north_america"],
+    multiplayerFrequency: 4,
   },
   {
     id: "Caribbean",
@@ -1692,6 +1701,13 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     themes: ["north_america"],
+  },
+  {
+    id: "NuttyPutty",
+    type: GameMapType.NuttyPutty,
+    translationKey: "map.nuttyputty",
+    categories: ["north_america"],
+    multiplayerFrequency: 4,
   },
   {
     id: "Oceania",
