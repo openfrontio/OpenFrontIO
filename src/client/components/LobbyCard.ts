@@ -124,6 +124,8 @@ export interface LobbyCardOptions {
  */
 const PILL =
   "rounded bg-malibu-blue px-2 py-1 text-xs font-bold tracking-widest text-white";
+// No backdrop-filter anywhere in the card: under a transformed ancestor
+// Chrome clips it with a separate mask and the map leaks at the corners.
 const BADGE = "rounded bg-black/70";
 
 /** Extreme aspect ratios (Amazon River is ~20:1) show whole rather than cropped. */
@@ -180,14 +182,6 @@ export function lobbyCard({
   // the card itself rather than the viewport, so the lobby browser's narrow
   // cards keep the small title on a big screen.
   // Cover images sit at 1.05 to hide their edges, so they zoom from there.
-  //
-  // Nothing in the card uses backdrop-filter. It forces its own compositor
-  // layer, and once an ancestor is composited too (the lobby browser slides
-  // its slots with a transform) Chrome clips that layer with a separate
-  // anti-aliased mask from the card's rounded overflow clip. The two edges
-  // don't coincide, which left a bright fringe of blurred map along the
-  // bottom corners, and before that square corners. Plain translucent
-  // backgrounds paint in the card's own layer and clip exactly.
   const image = fitsByContain(mapType)
     ? "object-contain group-hover:scale-105"
     : "object-cover scale-[1.05] group-hover:scale-[1.12]";
