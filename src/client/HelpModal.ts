@@ -22,6 +22,9 @@ export class HelpModal extends BaseModal {
 
   private getKeyLabel(code: string): string {
     if (!code) return "";
+    if (code.startsWith("Shift+")) {
+      return `Shift+${this.getKeyLabel(code.slice(6))}`;
+    }
 
     const specialLabels: Record<string, string> = {
       ShiftLeft: "⇧ Shift",
