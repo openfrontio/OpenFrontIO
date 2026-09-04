@@ -302,7 +302,12 @@ export class RailNetworkImpl implements RailNetwork {
         continue;
       }
 
-      const path = this.pathService.findTilePath(tile, targetTile);
+      // Non-station structures are promoted after the factory and initiate
+      // the real connection back to it. Match that direction because rail
+      // pathfinding tie-breaking is direction-sensitive.
+      const path = neighborStation
+        ? this.pathService.findTilePath(tile, targetTile)
+        : this.pathService.findTilePath(targetTile, tile);
       if (path.length > 0 && path.length < maxPathSize) {
         paths.push(path);
         if (neighborStation) {
