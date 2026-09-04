@@ -61,17 +61,6 @@ export function trustRequiredDialog(
 }
 
 /**
- * The map-image lobby card used on the homepage and in the More Games lobby
- * browser: map art behind modifier pills, a countdown pill, the player count
- * and a bottom bar naming the map and mode.
- */
-
-/**
- * One class for both of the top row's pills so they can't drift apart. Keep
- * them direct flex children of the row: wrapped in a block, a pill picks up a
- * line box and renders 4px short and 2px low.
- */
-/**
  * Aspect ratios keyed by map, loaded lazily from each map's manifest. Shared
  * so the second component to render a map doesn't refetch it.
  */
@@ -128,9 +117,17 @@ export interface LobbyCardOptions {
   heightClass?: string;
 }
 
+/**
+ * Top-row pills. The countdown is the one thing on the card that changes, so
+ * it alone is blue; modifier tags are dark glass like the bottom bar, so they
+ * read as information rather than three more buttons. Keep pills direct flex
+ * children of the row: wrapped in a block, a pill picks up a line box and
+ * renders short and low.
+ */
 const PILL =
-  "rounded bg-malibu-blue px-2 py-1 text-xs font-bold tracking-widest text-white";
-const BADGE = "rounded bg-black/70 backdrop-blur-sm";
+  "rounded-md px-2 py-1 text-[11px] font-bold leading-tight tracking-wider text-white";
+const TIME_PILL = `${PILL} bg-malibu-blue tabular-nums`;
+const TAG_PILL = `${PILL} bg-black/60 backdrop-blur-sm`;
 
 /** Extreme aspect ratios (Amazon River is ~20:1) show whole rather than cropped. */
 function fitsByContain(mapType: GameMapType): boolean {
@@ -138,6 +135,12 @@ function fitsByContain(mapType: GameMapType): boolean {
   return ratio !== undefined && (ratio > 4 || ratio < 0.25);
 }
 
+/**
+ * The map-image lobby card used on the homepage and in the More Games lobby
+ * browser: map art behind modifier tags and a countdown pill, with a bottom
+ * bar naming the map and mode, the player count and (for trusted-only
+ * lobbies) a lock.
+ */
 export function lobbyCard({
   lobby,
   subtitle,
@@ -177,7 +180,14 @@ export function lobbyCard({
     : blocked
       ? "opacity-50 cursor-not-allowed"
       : "";
+  // The title steps up on a wide card (the homepage's featured slot), sized by
+  // the card itself rather than the viewport, so the lobby browser's narrow
+  // cards keep the small title on a big screen.
   // Cover images sit at 1.05 to hide their edges, so they zoom from there.
+  // That scale (and the blurred pills) put the image on its own compositor
+  // layer, which escapes the button's rounded overflow clip and shows square
+  // map corners unless the button is a stacking context of its own — hence
+  // `isolate` and `transform-gpu` on it.
   const image = fitsByContain(mapType)
     ? "object-contain group-hover:scale-105"
     : "object-cover scale-[1.05] group-hover:scale-[1.12]";
@@ -187,7 +197,7 @@ export function lobbyCard({
       @click=${onClick}
       ?disabled=${disabled}
       aria-disabled=${blocked}
-      class="group relative block w-full ${heightClass} overflow-hidden rounded-2xl bg-surface text-left uppercase text-white transition-shadow duration-200 hover:shadow-[var(--shadow-lobby-card-hover)] ${state}"
+      class="group @container relative isolate block w-full ${heightClass} transform-gpu overflow-hidden rounded-2xl bg-surface text-left uppercase text-white transition-shadow duration-200 hover:shadow-[var(--shadow-lobby-card-hover)] ${state}"
     >
       <img
         src=${terrainMapFileLoader.getMapData(mapType).webpPath}
@@ -199,50 +209,56 @@ export function lobbyCard({
       <div
         class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
       >
-        <div class="flex min-w-0 flex-col items-start gap-1">
-          ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
+        <div class="flex min-w-0 flex-wrap gap-1">
+          ${modifiers.map(
+            (label) => html`<span class=${TAG_PILL}>${label}</span>`,
+          )}
         </div>
         <span
-          class="${PILL} shrink-0 ${timeDisplayUppercase ? "" : "normal-case"}"
+          class="${TIME_PILL} shrink-0 ${timeDisplayUppercase
+            ? ""
+            : "normal-case"}"
           >${timeDisplay}</span
         >
       </div>
 
       <div
-        class="absolute inset-x-0 bottom-0 flex flex-col bg-black/55 px-3 py-2 backdrop-blur-sm ${trustedOnly
-          ? "pr-10"
-          : ""}"
+        class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-black/55 px-3 py-2 backdrop-blur-sm"
       >
-        <span
-          class="${BADGE} absolute bottom-full right-2 mb-1 flex items-center gap-1 px-2 py-0.5 text-xs font-bold tracking-widest"
+        <div class="flex min-w-0 flex-col">
+          ${title
+            ? html`<p
+                class="text-sm font-bold leading-tight tracking-wider @[20rem]:text-base"
+              >
+                ${title}
+              </p>`
+            : nothing}
+          <h3 class="text-xs tracking-wider text-white/70">${subtitleLine}</h3>
+        </div>
+        <div
+          class="flex shrink-0 items-center gap-2 text-xs font-bold tabular-nums tracking-wider"
         >
-          ${playerCount}
-          <svg
-            class="size-4"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
-            />
-          </svg>
-        </span>
-        ${trustedOnly ? trustLockIcon(viewerTrusted) : nothing}
-        ${title
-          ? html`<p
-              class="text-sm font-bold leading-tight tracking-wider sm:text-base"
+          <span class="flex items-center gap-1">
+            ${playerCount}
+            <svg
+              class="size-4"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
             >
-              ${title}
-            </p>`
-          : nothing}
-        <h3 class="text-xs tracking-wider text-white/70">${subtitleLine}</h3>
+              <path
+                d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+              />
+            </svg>
+          </span>
+          ${trustedOnly ? trustLockIcon(viewerTrusted) : nothing}
+        </div>
       </div>
     </button>
   `;
 }
 
-/** Bottom-right lock: red and closed when the viewer can't join, green and open when they can. */
+/** Lock beside the player count: red and closed when the viewer can't join, green and open when they can. */
 function trustLockIcon(viewerTrusted: boolean): TemplateResult {
   const label = translateText(
     viewerTrusted
@@ -250,7 +266,7 @@ function trustLockIcon(viewerTrusted: boolean): TemplateResult {
       : "public_lobby.trusted_locked",
   );
   return html`<span
-    class="${BADGE} absolute bottom-2 right-2 flex items-center px-1.5 py-1 ${viewerTrusted
+    class="flex items-center ${viewerTrusted
       ? "text-green-400"
       : "text-red-400"}"
     title=${label}
