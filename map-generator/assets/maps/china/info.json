@@ -4,6 +4,7 @@
   "translation_key": "map.china",
   "categories": ["countries", "asia"],
   "multiplayer_frequency": 8,
+  "layers": [{ "id": "label", "placement": "water", "nukeable": false }],
   "nations": [
     {
       "coordinates": [1737, 1732],

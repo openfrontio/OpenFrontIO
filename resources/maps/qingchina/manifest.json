@@ -3,17 +3,17 @@
   "id": "QingChina",
   "map": {
     "height": 2024,
-    "num_land_tiles": 1830694,
+    "num_land_tiles": 1830648,
     "width": 2248
   },
   "map16x": {
     "height": 506,
-    "num_land_tiles": 110249,
+    "num_land_tiles": 110247,
     "width": 562
   },
   "map4x": {
     "height": 1012,
-    "num_land_tiles": 451840,
+    "num_land_tiles": 451836,
     "width": 1124
   },
   "multiplayer_frequency": 6,
