@@ -178,9 +178,6 @@ export function lobbyCard({
     : blocked
       ? "opacity-50 cursor-not-allowed"
       : "";
-  // The title steps up on a wide card (the homepage's featured slot), sized by
-  // the card itself rather than the viewport, so the lobby browser's narrow
-  // cards keep the small title on a big screen.
   // Cover images sit at 1.05 to hide their edges, so they zoom from there.
   const image = fitsByContain(mapType)
     ? "object-contain group-hover:scale-105"
