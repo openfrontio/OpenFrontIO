@@ -123,8 +123,8 @@ export interface LobbyCardOptions {
  * line box and renders short and low.
  */
 const PILL =
-  "rounded-md bg-malibu-blue px-2 py-1 text-[11px] font-bold leading-tight tracking-wider text-white";
-const BADGE = "rounded-md bg-black/70 backdrop-blur-sm";
+  "rounded bg-malibu-blue px-2 py-1 text-xs font-bold tracking-widest text-white";
+const BADGE = "rounded bg-black/70";
 
 /** Extreme aspect ratios (Amazon River is ~20:1) show whole rather than cropped. */
 function fitsByContain(mapType: GameMapType): boolean {
@@ -180,6 +180,14 @@ export function lobbyCard({
   // the card itself rather than the viewport, so the lobby browser's narrow
   // cards keep the small title on a big screen.
   // Cover images sit at 1.05 to hide their edges, so they zoom from there.
+  //
+  // Nothing in the card uses backdrop-filter. It forces its own compositor
+  // layer, and once an ancestor is composited too (the lobby browser slides
+  // its slots with a transform) Chrome clips that layer with a separate
+  // anti-aliased mask from the card's rounded overflow clip. The two edges
+  // don't coincide, which left a bright fringe of blurred map along the
+  // bottom corners, and before that square corners. Plain translucent
+  // backgrounds paint in the card's own layer and clip exactly.
   const image = fitsByContain(mapType)
     ? "object-contain group-hover:scale-105"
     : "object-cover scale-[1.05] group-hover:scale-[1.12]";
@@ -201,7 +209,7 @@ export function lobbyCard({
       <div
         class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
       >
-        <div class="flex min-w-0 flex-wrap gap-1">
+        <div class="flex min-w-0 flex-col items-start gap-1">
           ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
         </div>
         <span
@@ -212,14 +220,8 @@ export function lobbyCard({
         >
       </div>
 
-      <!--
-        The bar carries the card's bottom radius itself: Chrome draws a
-        backdrop-filter's blurred backdrop without the ancestor's rounded
-        overflow clip when an ancestor is composited (the lobby browser slides
-        its slots with a transform), which showed the map in square corners.
-      -->
       <div
-        class="absolute inset-x-0 bottom-0 flex flex-col rounded-b-[inherit] bg-black/55 px-3 py-2 backdrop-blur-sm ${trustedOnly
+        class="absolute inset-x-0 bottom-0 flex flex-col bg-black/65 px-3 py-2 ${trustedOnly
           ? "pr-10"
           : ""}"
       >
