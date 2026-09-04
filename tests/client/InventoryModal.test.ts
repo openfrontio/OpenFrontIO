@@ -418,6 +418,20 @@ describe("InventoryModal", () => {
     expect(action.textContent?.trim()).toBe("Not logged in");
   });
 
+  it("deep-links to the store cosmetics tab from the header action", async () => {
+    const originalHash = window.location.hash;
+    try {
+      const action = modal.querySelector<HTMLElement>(
+        "[data-inventory-header-action]",
+      )!;
+      await (action as LitElement).updateComplete;
+      action.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      expect(window.location.hash).toBe("#modal=store&tab=cosmetics");
+    } finally {
+      window.location.hash = originalHash;
+    }
+  });
+
   it("keeps loadout, card, and swatch synchronized", async () => {
     new UserSettings().setSelectedPatternName("pattern:stripes:red");
     await showTab(modal, "skins");
