@@ -568,7 +568,8 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   private renderIdentityRow(other: PlayerView, my: PlayerView) {
-    const flagCode = other.cosmetics.flag;
+    const flagPath = other.cosmetics.flag;
+    const flagCode = flagPath?.match(/\/flags\/(.+)\.svg$/)?.[1];
     const country =
       typeof flagCode === "string"
         ? Countries.find((c) => c.code === flagCode)
@@ -581,10 +582,11 @@ export class PlayerPanel extends LitElement implements Controller {
 
     return html`
       <div class="flex items-center gap-2.5 flex-wrap">
-        ${country && typeof flagCode === "string"
+        ${flagPath
           ? html`<img
-              src=${assetUrl(`flags/${encodeURIComponent(flagCode)}.svg`)}
-              alt=${country?.name ?? "Flag"}
+              src=${assetUrl(flagPath)}
+              alt=${country?.name ?? translateText("cosmetics.type_flag")}
+              title=${country?.name ?? translateText("cosmetics.type_flag")}
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {
                 (e.target as HTMLImageElement).style.display = "none";
