@@ -94,7 +94,7 @@ RUN <<'EOF' tee /usr/local/bin/start.sh
 /usr/local/bin/generate-nginx-upstream.sh
 
 if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
-    exec timeout 200h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+    exec timeout 25h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 else
     exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 fi

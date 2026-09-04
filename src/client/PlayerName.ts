@@ -95,6 +95,82 @@ function truncateToCap(name: string): string {
   return hard.slice(0, lastSpace);
 }
 
+// Does the stored per-device preference mean "play under the verified name"?
+//
+// Tri-state, not a boolean: `"true"` is an explicit opt-in, `"false"` an
+// explicit opt-out, and *absent* is neither. The old `=== "true"` test
+// collapsed absent into opt-out, so a fresh profile — every Steam install, and
+// every new browser — silently declined the perk the subscription was sold on:
+// the player launched, got their persona, and never played under the name they
+// paid for.
+//
+// But absent does NOT mean "new". Before the default existed the toggle
+// rendered off and the only writer of this key was a click, so an existing
+// eligible subscriber who looked at the toggle and left it alone also has no
+// key. Defaulting *them* on would change the name they play under, in public,
+// with no action on their part — the opposite of what a privacy default is
+// for. `defaultAllowed` is what separates the two; see
+// resolveVerifiedDefaultCohort, which decides it once per profile.
+//
+// An explicit answer always wins, in both directions. Anything unrecognised is
+// not an answer the player gave, so it falls through to the cohort rather than
+// silently declining.
+//
+// Eligibility is the caller's business — this answers only what the player
+// asked for, not whether they may have it.
+export function verifiedNameOptIn(
+  stored: string | null,
+  defaultAllowed: boolean,
+): boolean {
+  if (stored === "true") return true;
+  if (stored === "false") return false;
+  return defaultAllowed;
+}
+
+/** A bare name a lapsed holder can still get back, and when it stops being theirs. */
+export interface ClaimGrace {
+  name: string;
+  expiresAt: Date;
+  /**
+   * The deadline has passed: the name is takeable by any other subscriber now,
+   * but nobody has taken it yet, so resubscribing still recovers it. This is
+   * the window of highest risk, not the end of one.
+   */
+  atRisk: boolean;
+}
+
+// What the player is about to lose, or null when nothing is at stake.
+//
+// `claimed` is the lapsed state: the subscription is gone, so the player no
+// longer plays under the name, but the server keeps the bare claim reserved
+// until `usernameClaimExpiresAt`. Resubscribing inside that window is safe —
+// tryClaimBareUsername sees the holder is still them and clears the deadline.
+//
+// After it expires anyone may take the name, and if they do, a later
+// resubscribe puts the original holder through ensureBareClaim's TEMPORARY####
+// rename. That is the outcome this whole notice exists to prevent, and there
+// is no out-of-game channel to warn a Steam-only account through.
+//
+// A passed deadline does NOT end this. usernameClaimExpiresAt's own schema
+// comment is explicit: "A past date means 'at risk', not 'lost' — it stays set
+// until the name is actually taken." Going quiet there would switch the warning
+// off at the exact moment the name is most likely to be lost and still cheapest
+// to save. `atRisk` marks that window; the `claimed` guard above is what ends
+// it, because a name actually taken moves the player out of that status.
+export function verifiedClaimGrace(
+  userMe: UserMeResponse | false | null,
+  now: Date = new Date(),
+): ClaimGrace | null {
+  if (userMe === null || userMe === false) return null;
+  const player = userMe.player;
+  if (player.usernameStatus !== "claimed") return null;
+  const name = player.usernameBase;
+  const at = player.usernameClaimExpiresAt;
+  if (!name || !at || isTemporaryUsername(name)) return null;
+  const expiresAt = new Date(at);
+  return { name, expiresAt, atRisk: expiresAt.getTime() <= now.getTime() };
+}
+
 // A platform persona reduced to something playable, or null when nothing
 // usable survives.
 //

@@ -520,10 +520,11 @@ func processWater(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
 			logger.Info("Searching for small water bodies for removal")
 			for w := 1; w < len(waterBodies); w++ {
 				if waterBodies[w].size < minLakeSize {
-					logger.Debug(fmt.Sprintf("Removing small lake at %d,%d (size %d)", waterBodies[w].coords[0].X, waterBodies[w].coords[0].Y, waterBodies[w].size), RemovalLogTag)
+					replacement := majorityNeighborType(waterBodies[w].coords, terrain, Water)
+					logger.Debug(fmt.Sprintf("Removing small lake at %d,%d (size %d) -> %v", waterBodies[w].coords[0].X, waterBodies[w].coords[0].Y, waterBodies[w].size, replacement), RemovalLogTag)
 					smallLakes++
 					for _, coord := range waterBodies[w].coords {
-						terrain[coord.X][coord.Y].Type = Land
+						terrain[coord.X][coord.Y].Type = replacement
 						terrain[coord.X][coord.Y].Magnitude = 0
 					}
 				}
@@ -613,10 +614,11 @@ func removeSmallIslands(ctx context.Context, terrain [][]Terrain, minSize int, r
 
 	for _, body := range landBodies {
 		if body.size < minSize {
-			logger.Debug(fmt.Sprintf("Removing small island at %d,%d (size %d)", body.coords[0].X, body.coords[0].Y, body.size), RemovalLogTag)
+			replacement := majorityNeighborType(body.coords, terrain, Land)
+			logger.Debug(fmt.Sprintf("Removing small island at %d,%d (size %d) -> %v", body.coords[0].X, body.coords[0].Y, body.size, replacement), RemovalLogTag)
 			smallIslands++
 			for _, coord := range body.coords {
-				terrain[coord.X][coord.Y].Type = Water
+				terrain[coord.X][coord.Y].Type = replacement
 				terrain[coord.X][coord.Y].Magnitude = 0
 			}
 		}
@@ -917,4 +919,51 @@ type CombinedBinaryHeader struct {
 	MapSize       uint32
 	MiniMapOffset uint32
 	MiniMapSize   uint32
+}
+
+// majorityNeighborType returns the terrain type that appears most frequently
+// among the orthogonal neighbours of the given coords, excluding the body's own
+// type.  When the body borders a mix of types (e.g. Land + Impassable), the
+// majority determines what the body should become.  Ties are broken with a
+// fixed priority: Water > Impassable > Land (water is the most common
+// surrounding type in practice, and this preserves existing behaviour for the
+// common land-locked-in-water case).
+func majorityNeighborType(coords []Coord, terrain [][]Terrain, selfType TerrainType) TerrainType {
+	width := len(terrain)
+	height := len(terrain[0])
+
+	// Mark body members so we skip them.
+	inBody := make(map[Coord]bool, len(coords))
+	for _, c := range coords {
+		inBody[c] = true
+	}
+
+	// Track seen external neighbors so each unique tile votes at most once.
+	seen := make(map[Coord]bool, len(coords)*4)
+
+	var buf [4]Coord
+	counts := [3]int{} // index = TerrainType
+
+	for _, c := range coords {
+		n := neighborCoords(c.X, c.Y, width, height, &buf)
+		for _, nb := range buf[:n] {
+			if inBody[nb] || seen[nb] {
+				continue
+			}
+			seen[nb] = true
+			counts[terrain[nb.X][nb.Y].Type]++
+		}
+	}
+
+	// Water > Impassable > Land in tie-breaking priority.
+	best := Water
+	bestCount := counts[Water]
+	if counts[Impassable] > bestCount {
+		best = Impassable
+		bestCount = counts[Impassable]
+	}
+	if counts[Land] > bestCount {
+		best = Land
+	}
+	return best
 }

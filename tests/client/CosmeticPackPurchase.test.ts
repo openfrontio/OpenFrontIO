@@ -11,8 +11,14 @@ vi.mock("../../src/client/Api", async (importOriginal) => ({
   purchaseCosmeticPack: vi.fn(),
 }));
 
+vi.mock("../../src/client/InGameModal", () => ({
+  showInGameAlert: vi.fn().mockResolvedValue(true),
+  showInGameConfirm: vi.fn().mockResolvedValue(true),
+}));
+
 const { getUserMe, invalidateUserMe, purchaseCosmeticPack } =
   await import("../../src/client/Api");
+const { showInGameAlert } = await import("../../src/client/InGameModal");
 
 const translations = {
   "cosmetics.hard": "plutonium",
@@ -52,7 +58,6 @@ function userWithHard(hard: number) {
 
 describe("purchaseCosmetic for a cosmetic pack", () => {
   let languageFixture: HTMLElement;
-  let alertMock: ReturnType<typeof vi.fn>;
   let reloadMock: ReturnType<typeof vi.fn>;
   const originalLocation = window.location;
 
@@ -64,8 +69,6 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
       currentLang: "en",
     });
     document.body.appendChild(languageFixture);
-    alertMock = vi.fn();
-    vi.stubGlobal("alert", alertMock);
     reloadMock = vi.fn();
     Object.defineProperty(window, "location", {
       configurable: true,
@@ -75,7 +78,6 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
 
   afterEach(() => {
     languageFixture.remove();
-    vi.unstubAllGlobals();
     Object.defineProperty(window, "location", {
       configurable: true,
       value: originalLocation,
@@ -83,6 +85,7 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
     vi.mocked(getUserMe).mockReset();
     vi.mocked(invalidateUserMe).mockReset();
     vi.mocked(purchaseCosmeticPack).mockReset();
+    vi.mocked(showInGameAlert).mockClear();
   });
 
   it("buys the pack by slug for plutonium and reloads to show the grants", async () => {
@@ -100,7 +103,7 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
     await expect(purchaseCosmetic(starter, "hard")).resolves.toBeUndefined();
 
     expect(purchaseCosmeticPack).toHaveBeenCalledWith("starter");
-    expect(alertMock).toHaveBeenCalledWith("bought Starter Pack");
+    expect(showInGameAlert).toHaveBeenCalledWith("bought Starter Pack");
     expect(invalidateUserMe).toHaveBeenCalled();
     expect(reloadMock).toHaveBeenCalled();
   });
@@ -147,7 +150,7 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
 
     // Translated where a name exists, title-cased otherwise; a coloured
     // pattern names its colour.
-    expect(alertMock).toHaveBeenCalledWith(
+    expect(showInGameAlert).toHaveBeenCalledWith(
       "already own Jolly Roger, Camo (Crimson)",
     );
     expect(invalidateUserMe).toHaveBeenCalled();
@@ -163,21 +166,21 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
       debt: "300",
     });
     await purchaseCosmetic(starter, "hard");
-    expect(alertMock).toHaveBeenLastCalledWith("debt 300");
+    expect(showInGameAlert).toHaveBeenLastCalledWith("debt 300");
 
     vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
       ok: false,
       code: "unavailable",
     });
     await purchaseCosmetic(starter, "hard");
-    expect(alertMock).toHaveBeenLastCalledWith("gone");
+    expect(showInGameAlert).toHaveBeenLastCalledWith("gone");
 
     vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
       ok: false,
       code: "failed",
     });
     await purchaseCosmetic(starter, "hard");
-    expect(alertMock).toHaveBeenLastCalledWith("failed");
+    expect(showInGameAlert).toHaveBeenLastCalledWith("failed");
 
     expect(reloadMock).not.toHaveBeenCalled();
   });
@@ -185,7 +188,7 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
   it("requires a signed-in player and only sells packs for plutonium", async () => {
     vi.mocked(getUserMe).mockResolvedValue(false);
     await purchaseCosmetic(starter, "hard");
-    expect(alertMock).toHaveBeenCalledWith("log in");
+    expect(showInGameAlert).toHaveBeenCalledWith("log in");
 
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));

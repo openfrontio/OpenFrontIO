@@ -444,10 +444,10 @@ export const DoomsdayClockConfigSchema = z.object({
 });
 
 // Overtime (anti-stalemate). After startMinutes of game time the tile share
-// required to win drops steadily from the base (80% FFA / 95% team) at a fixed
-// rate (see OVERTIME_DEFAULTS in Config.ts), so the leading side eventually
-// crosses the shrinking bar and a stalled game is guaranteed to end. Only
-// `enabled` and `startMinutes` are wire-configurable.
+// required to win drops steadily from the 80% base at a fixed rate (see
+// OVERTIME_DEFAULTS in Config.ts), so the leading side eventually crosses the
+// shrinking bar and a stalled game is guaranteed to end. Only `enabled` and
+// `startMinutes` are wire-configurable.
 export const OvertimeConfigSchema = z.object({
   enabled: z.boolean().optional(),
   startMinutes: zb.uint({ min: 1, max: 120 }).optional(),

@@ -16,6 +16,13 @@
     "claim_failed": "Opeisen van beloning mislukt. Probeer het opnieuw.",
     "clear_session": "Sessie Wissen",
     "connected_as": "Gekoppeld als",
+    "delete_account_confirm_button": "Permanent Verwijderen",
+    "delete_account_confirm_word": "VERWIJDEREN",
+    "delete_account_desc": "Verwijder je account en alle gegevens permanent.",
+    "delete_account_failed": "Verwijderen mislukt, neem contact op met support via support@openfront.io",
+    "delete_account_title": "Verwijder account",
+    "delete_account_type_to_confirm": "Typ \"{word}\" om te bevestigen",
+    "delete_account_warning": "Je account zal onmiddellijk en permanent worden verwijderd. Er is geen genadeperiode en geen manier om deze te herstellen. Je wordt uitgelogd op alle apparaten.",
     "email_placeholder": "Voer je e-mailadres in",
     "enter_email_address": "Voer een e-mailadres in alsjeblieft",
     "failed_to_send_recovery_email": "Verzenden herstel e-mail mislukt",
@@ -37,6 +44,7 @@
     "linked_account": "Ingelogd als {account_name}",
     "linked_to_google": "Gekoppeld aan Google",
     "linked_to_google_email": "Gekoppeld aan Google ({email})",
+    "login_email_exists": "Je hebt al een account met dit e-mailadres. Log in met dit account en koppel dit account in instellingen.",
     "manage_subscription": "Beheren",
     "marketing_desc": "Af en toe nieuwsberichten, evenementen en game-updates. Afmelden kan op ieder moment.",
     "marketing_no_email": "Koppel een email aan uw account om updates te ontvangen.",
@@ -69,28 +77,31 @@
     "tab_stats": "Statistieken",
     "title": "Account",
     "unclaimed_rewards": "Niet-verzamelde beloningen",
+    "username_change_ready": "Wijziging beschikbaar",
     "username_confirm_abandon": "Je zal je gereserveerde naam \"{name}\" permanent opgeven.",
     "username_confirm_body": "Je nieuwe naam zal voor 30 dagen vergrendeld zijn.",
     "username_confirm_button": "Verander naam",
     "username_confirm_case_only": "De nieuwe naam verschilt alleen van je huidige naam in hoofdletters - hij zal de 30-dagen vergrendeling nog steeds herstarten.",
     "username_confirm_heading": "Verander gebruikersnaam?",
+    "username_current_label": "Huidige naam",
     "username_error_cooldown": "Je kunt je gebruikersnaam opnieuw wijzigen in {days} dag(en).",
     "username_error_failed": "Je gebruikersnaam kan niet worden gewijzigd. Probeer het later opnieuw.",
     "username_error_profane": "Die gebruikersnaam is niet toegestaan.",
     "username_error_taken": "Deze gebruikersnaam is al in gebruik - probeer een andere.",
     "username_grace_warning": "Je verliest het exclusieve recht op \"{name}\" op {date}. Opnieuw abboneren om het te bewaren.",
-    "username_not_set": "Claim je gebruikersnaam - het identificeert je in al je spellen.",
+    "username_locked_until": "Vergrendeld tot {date}",
+    "username_new_label": "Nieuwe naam",
+    "username_not_set": "Claim je gebruikersnaam, gebruikt als identificator op je profiel en in elk spel.",
     "username_placeholder": "Voer een gebruikersnaam in",
     "username_save": "Opslaan",
     "username_temporary_notice": "Je naam is in gebruik door een andere speler. Kies een nieuwe - deze hernoem is gratis.",
     "username_temporary_prompt": "Je gebruikersnaam is al in gebruik door een andere speler. Kies nu een nieuwe? De hernoem is gratis.",
     "username_temporary_prompt_confirm": "Kies een naam",
     "username_title": "Gebruikersnaam",
-    "games_username": "Gebruikersnaam",
-    "log_out": "Uitloggen",
-    "tab_settings": "Instellingen",
-    "username_cooldown_until": "Je kunt je gebruikersnaam opnieuw veranderen op {date}.",
-    "your_subscription": "Jouw Abonnement"
+    "delete_account_blocked": "Uw account kan niet automatisch worden verwijderd. Neem contact op met support."
+  },
+  "account_settings_modal": {
+    "title": "Accountinstellingen"
   },
   "ban_notice": {
     "appeal": "Als je denkt dat dit een fout is, neem dan contact met ons op via Discord.",
@@ -129,6 +140,10 @@
     "not_enough_money": "Niet genoeg goud",
     "upgrade_amount": "x{amount}",
     "warship_shift_hint": "Houd Shift ingedrukt en sleep om meerdere oorlogsschepen tegelijk te selecteren"
+  },
+  "change_username_modal": {
+    "title": "Gebruikersnaam Wijzigen",
+    "unavailable": "Gebruikersnaam beheer is nog niet beschikbaar op dit account."
   },
   "chat": {
     "attack": {
@@ -251,6 +266,18 @@
     "discord_section_title": "Discord",
     "discord_url_hint": "Gebruik een uitnodiging die nooit verloopt.",
     "discord_url_label": "Discord Uitnodigings-URL",
+    "donate": "Doneer",
+    "donate_amount": "Hoeveelheid",
+    "donate_insufficient": "Niet genoeg {currency}.",
+    "donate_invalid_amount": "Voer een heel getal groter dan 0 in.",
+    "donate_irreversible": "Donaties zijn permanent en niet terugbetaalbaar. Valuta gegeven aan de clan kan nooit aan u worden teruggegeven.",
+    "donate_irreversible_hard": "Plutonium is premium valuta. Eenmaal gedoneerd kan deze niet worden terugbetaald, opgenomen of teruggebracht naar uw account.",
+    "donate_not_member": "Je moet een clan lid zijn om te kunnen doneren.",
+    "donate_submitting": "Doneren…",
+    "donate_subtitle": "Verplaats de valuta van je account naar de clan treasury.",
+    "donate_success": "{amount} {currency} gedoneerd aan [{tag}]!",
+    "donate_title": "Doneer aan [{tag}]",
+    "donate_your_balance": "Je hebt {balance}",
     "error_already_member": "Je bent al lid",
     "error_banned": "Je bent verbannen uit deze clan.",
     "error_banned_reason": "Je bent verbannen uit deze clan. Reden: {reason}",
@@ -336,7 +363,7 @@
     "role_officer": "Officier",
     "save_changes": "Wijzigingen opslaan",
     "saving": "Opslaan...",
-    "search_members_placeholder": "Filter de huidige pagina op ID of rol...",
+    "search_members_placeholder": "Zoeken op exacte ID, gebruikersnaam of rol...",
     "search_placeholder": "Zoeken op clan tag...",
     "search_requests_placeholder": "Zoek op publieke speler ID...",
     "select_new_leader": "Selecteer een nieuwe leider",
@@ -372,16 +399,7 @@
     "title": "Clans",
     "transfer_leadership": "Leiderschap Overdragen",
     "transfer_warning": "Dit maakt het geselecteerde lid tot de nieuwe leider. Jij wordt een normaal lid. Deze actie kan niet ongedaan worden gemaakt.",
-    "unban": "Verbanning opheffen",
-    "history_filter_hvn": "HvN",
-    "history_filter_ranked": "Competitief",
-    "stats_collapse_all": "Alles inklappen",
-    "stats_duos": "Tweetallen",
-    "stats_expand_all": "Alles uitklappen",
-    "stats_ffa": "Ieder voor zich",
-    "stats_quads": "Viertallen",
-    "stats_trios": "Drietallen",
-    "tab_members": "Leden"
+    "unban": "Verbanning opheffen"
   },
   "common": {
     "available": "Beschikbaar",
@@ -391,6 +409,7 @@
     "cap_tooltip": "Resterende capaciteit ontvanger",
     "click_to_copy": "Klik om te kopiëren",
     "close": "Sluiten",
+    "collapse_all": "Alles inklappen",
     "confirm": "Bevestigen",
     "copied": "Gekopieerd!",
     "copy": "Kopiëren",
@@ -399,6 +418,10 @@
     "duration_minute_short": "min",
     "duration_second_short": "s",
     "enabled": "Mogelijk maken",
+    "error_generic": "Er is iets misgegaan. Probeer het opnieuw.",
+    "expand_all": "Alles uitklappen",
+    "failed_copy": "Kopiëren mislukt",
+    "loading": "Laden...",
     "map_default": "Kaart standaard",
     "month_apr": "April",
     "month_aug": "Augustus",
@@ -417,10 +440,10 @@
     "paste": "Plakken",
     "preset_max": "Max",
     "send": "Verstuur",
+    "slider_tooltip": "{percent}% • {amount}",
     "summary_keep": "Behoud",
     "target_dead": "Doelwit uitgeschakeld",
-    "target_dead_note": "Je kunt geen middelen sturen naar een dode speler.",
-    "summary_send": "Verstuur"
+    "target_dead_note": "Je kunt geen middelen sturen naar een dode speler."
   },
   "control_panel": {
     "allied_afk_neighbor_info": "Je kan spelers waar je een alliantie mee hebt aanvallen als ze het spel hebben verlaten.",
@@ -450,9 +473,54 @@
     "unlimited_ranked_info": "Geen limiet op hoeveel competitieve spellen je kan spelen.",
     "usd_value": "Waarde: {usd}",
     "verified_name": "Geverifieerde gebruikersnaam",
-    "verified_name_info": "Je gebruikersnaam is gereserveerd voor je account en toont een geverifieerde badge in het spel.",
-    "button_title": "Kies jouw cosmetica!",
-    "title": "Cosmetica"
+    "verified_name_info": "Je gebruikersnaam is gereserveerd voor je account en toont een geverifieerde badge in het spel."
+  },
+  "desktop_update": {
+    "blocked": "Een Steam update is vereist voor de laatste versie",
+    "downloading": "Update downloaden… {percent}%",
+    "failed": "Kan de update niet downloaden",
+    "ready": "Update gereed",
+    "reload": "Vernieuwen",
+    "retry": "Probeer opnieuw"
+  },
+  "detailed_view": {
+    "capacity": "Capaciteit",
+    "delete_profile": "Verwijderen",
+    "filters": "Filters",
+    "filters_with_count": "Filters ({count})",
+    "hide_empty": "Verberg lege lobbies",
+    "joined_players": "Deelnemende spelers",
+    "layout_duos": "Tweetallen",
+    "layout_quads": "Viertallen",
+    "layout_trios": "Drietallen",
+    "max": "Max",
+    "min": "Min",
+    "mode": "Lobby type",
+    "mode_ffa": "FFA",
+    "mode_hvn": "Mensen vs Naties",
+    "mode_teams": "Teams",
+    "no_lobbies": "Geen lobbies komen overeen met je filters.",
+    "no_profile": "Geen profiel",
+    "pane_empty": "Geen lobbies",
+    "pane_ffa": "Ieder voor zich",
+    "pane_heading": "{name} ({count})",
+    "pane_hosted": "Gehost",
+    "pane_special": "Speciaal",
+    "pane_team": "Teams",
+    "per_team": "Spelers per team",
+    "profile_name": "Profiel naam",
+    "profiles": "Profielen",
+    "queued": "Volgende",
+    "reset": "Reset",
+    "save_profile": "Opslaan",
+    "source": "Bron",
+    "source_hosted": "Gehost",
+    "source_public": "Openbaar",
+    "spawning": "Spel spawnen…",
+    "tab_all": "Alle",
+    "team_count": "Aantal teams",
+    "team_size": "Teamgrootte",
+    "title": "Gedetailleerde weergave"
   },
   "difficulty": {
     "difficulty": "Natie moeilijkheidsgraad",
@@ -508,9 +576,7 @@
     "spawn_failed": {
       "description": "Automatische plaatsing startpositie is mislukt. Je kunt dit spel niet meespelen.",
       "title": "Startpositie plaatsen mislukt"
-    },
-    "copied": "Gekopiëerd!",
-    "failed_copy": "Kopiëren mislukt"
+    }
   },
   "events_display": {
     "about_to_expire": "Je alliantie met {name} verloopt bijna!",
@@ -587,8 +653,7 @@
     "send_request": "Stuur Verzoek",
     "team_info": "Vrienden worden in hetzelfde team geplaatst.",
     "withdraw": "Intrekken",
-    "your_friends": "Jouw Vrienden",
-    "error_generic": "Er is iets misgegaan. Probeer het opnieuw."
+    "your_friends": "Jouw Vrienden"
   },
   "fullscreen": {
     "enter": "Schakel volledig scherm in",
@@ -628,6 +693,26 @@
     "hvn": "Mensen vs Naties",
     "teams": "Teams"
   },
+  "game_settings": {
+    "bots": "Stammen: ",
+    "compact_map": "Compacte Kaart",
+    "custom_alliances": "Alliantie duur",
+    "disable_units": "Eenheden uitschakelen",
+    "doomsday_clock": "Doomsday Klok",
+    "gold_multiplier": "Goud Vermenigvuldiger",
+    "infinite_gold": "Oneindig goud",
+    "infinite_troops": "Oneindige troepen",
+    "instant_build": "Bouwwachttijd uitschakelen",
+    "max_timer": "Spellengte (minuten)",
+    "mins_placeholder": "Min",
+    "nations": "Naties: ",
+    "options": "Opties",
+    "overtime": "Overtijd na (minuten)",
+    "random_spawn": "Willekeurige startpositie",
+    "start": "Start Spel",
+    "starting_gold": "Start Goud (Miljoenen)",
+    "water_nukes": "Water Kernbommen"
+  },
   "game_starting_modal": {
     "code_license": "Code gelicenseerd onder AGPL-3.0 (geen garantie)",
     "credits": "Credits",
@@ -639,6 +724,8 @@
   "graphics_setting": {
     "advanced_desc": "Afzonderlijke grafische opties afstemmen",
     "advanced_label": "Geavanceerde instellingen",
+    "background_color_desc": "Kleur van het gebied buiten de kaart en onbegaanbaar terrein.",
+    "background_color_label": "Achtergrondkleur",
     "black": "Zwart",
     "classic_icons_desc": "Lichtere omlijning met bijna-zwarte binnenkant",
     "classic_icons_label": "Klassieke iconen",
@@ -727,17 +814,18 @@
     "territory_alpha_label": "Doorzichtigheid territorium",
     "territory_sat_desc": "Hoe levendig de kleuren van je territorium zijn (lager dempt ze)",
     "territory_sat_label": "Territorium verzadiging",
-    "title": "Grafische instellingen",
-    "copy_json_copied": "Gekopieerd!"
+    "title": "Grafische instellingen"
   },
   "heads_up_message": {
     "catching_up": "Inhaalslag maken...",
     "choose_spawn": "Kies een startlocatie",
+    "choose_spawn_spectator": "Spelers kiezen startlocaties",
     "dont_show_again": "Niet opnieuw weergeven",
     "ffa_collusion": "Herinnering: samenwerken voordat het spel begint is niet toegestaan in FFA",
     "multiplayer_game_paused": "Spel gepauzeerd door Lobby-maker",
     "pvp_immunity_active": "PVP-immuniteitsduur nog {seconds}s actief",
     "random_spawn": "Willekeurige startpositie is ingeschakeld. Positie wordt voor je gekozen...",
+    "random_spawn_spectator": "Willekeurige spawn is ingeschakeld",
     "singleplayer_game_paused": "Spel gepauzeerd"
   },
   "help_modal": {
@@ -832,19 +920,7 @@
     "ui_wilderness": "Wildernis",
     "ui_your_team": "Jouw team:",
     "video_tutorial": "Videohandleiding",
-    "video_tutorial_title": "Openfront-io Handleiding",
-    "action_alt_view": "Weergave wisselen (terrein/landen)",
-    "action_center": "Camera centreren op speler",
-    "build_atom": "Atoombom",
-    "build_city": "Stad",
-    "build_defense": "Verdedigingspost",
-    "build_factory": "Fabriek",
-    "build_hydrogen": "Waterstofbom",
-    "build_mirv": "MIRV",
-    "build_port": "Haven",
-    "build_sam": "Luchtdoelraket (SAM)-lanceerder",
-    "build_silo": "Raketsilo",
-    "build_warship": "Oorlogsschip"
+    "video_tutorial_title": "Openfront-io Handleiding"
   },
   "host_modal": {
     "anonymous_players": "Anonieme spelers",
@@ -868,6 +944,8 @@
     "player_whitelist_placeholder": "komma gescheiden",
     "players": "Spelers",
     "remove_player": "Verwijder {username}",
+    "spectator": "Toeschouwer",
+    "spectators": "Toeschouwers",
     "start_delay": "Start-vertraging (Seconden)",
     "starting_in": "Begint in {time}. Klik om te annuleren",
     "subscription_required_body": "Je moet geabonneerd zijn om je lobby openbaar te maken.",
@@ -882,29 +960,33 @@
     "view_subscriptions": "Bekijk abonnementen",
     "visibility_private": "Prive",
     "visibility_public": "Openbaar",
-    "waiting": "Wachten op spelers...",
-    "bots": "Stammen: ",
-    "bots_disabled": "Uitgeschakeld",
-    "compact_map": "Compacte kaart",
-    "custom_alliances": "Alliantie duur",
-    "doomsday_clock": "Doomsday Klok",
-    "enables_title": "Eenheden uitschakelen",
-    "gold_multiplier": "Goud Vermenigvuldiger",
-    "gold_multiplier_placeholder": "2.0x",
-    "infinite_gold": "Oneindig goud",
-    "infinite_troops": "Oneindige troepen",
-    "instant_build": "Bouwwachttijd uitschakelen",
-    "max_timer": "Spellengte (minuten)",
-    "mins_placeholder": "Min.",
-    "nations": "Naties: ",
-    "nations_disabled": "Uitgeschakeld",
-    "options_title": "Opties",
-    "random_spawn": "Willekeurige startpositie",
-    "start": "Start Spel",
-    "start_delay_placeholder": "3",
-    "starting_gold": "Start Goud (Miljoenen)",
-    "starting_gold_placeholder": "5",
-    "water_nukes": "Water Kernbommen"
+    "waiting": "Wachten op spelers..."
+  },
+  "inventory": {
+    "equipped": "Uitgerust",
+    "load_failed": "Kan je inventaris niet laden. Herlaad en probeer het opnieuw.",
+    "loading": "Inventaris laden…",
+    "loadout": "Je loadout",
+    "loadout_add": "Nieuwe loadout",
+    "loadout_applied": "Loadout {name} uitgerust",
+    "loadout_category_label": "{category}: {summary}",
+    "loadout_delete_target": "Verwijder {name}",
+    "loadout_deleted": "Loadout {name} verwijderd",
+    "loadout_limit": "Je kunt maximaal {count} loadouts opslaan.",
+    "loadout_presets": "Loadouts",
+    "loadout_saved": "Loadout {name} opgeslagen",
+    "loadout_slot": "Loadout {name}",
+    "no_owned_crowns": "Je bezit nog geen kronen.",
+    "no_owned_effects_of_type": "Je hebt nog geen {type} effecten.",
+    "no_owned_skins": "Je hebt nog geen skins.",
+    "retry": "Probeer opnieuw",
+    "selected_cosmetic": "{name} geselecteerd",
+    "selected_cosmetic_variant": "{name} ({variant})",
+    "showing_effects": "Effecten uitgerust: {count}",
+    "title": "Inventaris",
+    "unequip": "Uitdoen",
+    "unequip_all": "Alles Uitdoen",
+    "unequipped_all": "Alles uitgedaan"
   },
   "ios_banner": {
     "got_it": "Begrepen",
@@ -979,18 +1061,19 @@
     "win_loss_ratio": "Win/Loss",
     "win_score": "Win Score",
     "win_score_tooltip": "Gewogen overwinningen gebaseerd op clan deelname en match moeilijkheid",
-    "your_ranking": "Jou ranking",
-    "loading": "Laden..."
+    "your_ranking": "Jou ranking"
   },
   "main": {
     "account": "Account",
     "clans": "Clans",
     "copyright": "© OpenFront™ en Bijdragers",
     "create": "Lobby aanmaken",
+    "detailed_view": "Gedetailleerde weergave",
     "discord_avatar_alt": "Avatar Discord profiel",
     "github": "GitHub",
     "go_to_troubleshooting": "Ga naar onze pagina voor probleemoplossing",
     "help": "Help",
+    "inventory": "Inventaris",
     "join": "Lobby toetreden",
     "leaderboard": "Klassement",
     "login_discord": "Login met Discord",
@@ -1006,8 +1089,7 @@
     "title": "OpenFront (ALFA)",
     "troubleshooting": "Problemen oplossen",
     "user_avatar_alt": "Avatar van {username}",
-    "wiki": "Wiki",
-    "settings": "Instellingen"
+    "wiki": "Wiki"
   },
   "map": {
     "achiran": "Achiran",
@@ -1161,10 +1243,7 @@
     "no_results": "Geen kaarten gevonden",
     "search_maps": "Zoek kaarten...",
     "search_results": "Zoekresultaten",
-    "unfavorite": "Verwijder uit favorieten",
-    "collapse_all": "Alles inklappen",
-    "expand_all": "Alles uitklappen",
-    "loading": "Laden..."
+    "unfavorite": "Verwijder uit favorieten"
   },
   "map_layers": {},
   "marketing_consent": {
@@ -1202,6 +1281,24 @@
     "teams_of": "{teamCount} teams van {playersPerTeam}",
     "teams_title": "Teams"
   },
+  "multi_tab": {
+    "detected": "Meerdere geopende speltabbladen gedetecteerd.",
+    "explanation": "Om eerlijk spel te garanderen, is slechts één actieve game tab tegelijk toegestaan.",
+    "please_wait": "Even geduld",
+    "seconds": "seconden",
+    "warning": "Waarschuwing: waakmodus actief"
+  },
+  "nav_account_menu": {
+    "account_settings": "Accountinstellingen",
+    "change_subscription": "Wijzig abonnement",
+    "change_username": "Verander gebruikersnaam",
+    "copy_profile_url": "Kopieer profiel URL",
+    "game_settings": "Spelinstellingen",
+    "log_out": "Uitloggen",
+    "log_out_confirm": "Log uit bij dit account?",
+    "title": "Accountmenu",
+    "view_account": "Account bekijken"
+  },
   "new_lobby_prompt": {
     "confirm": "Start een nieuwe lobby? Alle spelers zullen worden uitgenodigd om mee te doen.",
     "dismiss": "Negeren",
@@ -1220,6 +1317,11 @@
     "tournament": "TOURNOOI",
     "tutorial": "HANDLEIDING",
     "warning": "WAARSCHUWING"
+  },
+  "overtime": {
+    "started": "Overtijd! Het gebied dat nodig is om te winnen is nu omlaag aan het gaan.",
+    "title": "Overtijd",
+    "to_win": "Houd > {pct}% om te winnen"
   },
   "performance_overlay": {
     "avg_60s": "Gem. (60s):",
@@ -1240,9 +1342,7 @@
     "tick_layers_summary": "Laatste tick: {count} lagen, {ms}ms",
     "tick_layers_table_header": "gem / max",
     "tps": "TPS:",
-    "tps_avg_60s": "Gem:",
-    "copied": "Gekopieerd!",
-    "failed_copy": "Kopiëren mislukt"
+    "tps_avg_60s": "Gem:"
   },
   "player_panel": {
     "active": "Actief",
@@ -1309,17 +1409,7 @@
     "unit": {
       "mirvw": "MIRV-kernkop",
       "trade": "Handelsschip",
-      "trans": "Transportschip",
-      "abomb": "Atoombom",
-      "city": "Stad",
-      "defp": "Verdedigingspost",
-      "fact": "Fabriek",
-      "hbomb": "Waterstofbom",
-      "mirv": "MIRV",
-      "port": "Haven",
-      "saml": "SAM-lanceerder",
-      "silo": "Raketsilo",
-      "wshp": "Oorlogsschip"
+      "trans": "Transportschip"
     },
     "war": "Oorlog",
     "warship_stats": "Oorlogsschip statistieken",
@@ -1391,7 +1481,10 @@
     "no_open_lobbies": "Geen open lobbies op dit moment",
     "not_found": "Lobby niet gevonden. Controleer het ID en probeer het opnieuw.",
     "open_lobbies": "Open Lobbies",
+    "play": "Spelen",
     "pvp_immunity": "PVP-immuniteitsduur",
+    "spectate": "Toekijken",
+    "spectating": "Toeschouwen! Het spel wordt geladen...",
     "starting_gold": "Startbedrag Goud",
     "title": "Deelnemen aan Lobby",
     "version_mismatch": "Dit spel is aangemaakt met een andere versie. Kan niet afspelen of deelnemen."
@@ -1417,8 +1510,7 @@
     "starting_gold": "{amount}M start Goud",
     "starting_gold_label": "Startbedrag Goud",
     "water_nukes": "Water Kernbommen",
-    "doomsday_clock_label": "Doomsday Klok",
-    "water_nukes_label": "Water Kernbommen"
+    "overtime": "Overtijd"
   },
   "public_lobby": {
     "connecting": "Verbinden met lobby...",
@@ -1460,15 +1552,13 @@
   "send_gold_modal": {
     "aria_slider": "Bedrag schuifbalk",
     "available_tooltip": "Jouw nu beschikbare goud",
-    "title_with_name": "Stuur Goud naar {name}",
-    "slider_tooltip": "{percent}% • {amount}"
+    "title_with_name": "Stuur Goud naar {name}"
   },
   "send_troops_modal": {
     "aria_slider": "Troepen schuifbalk",
     "available_tooltip": "Jouw nu beschikbare troepen",
     "capacity_note": "Ontvanger kan momenteel alleen {amount} accepteren.",
-    "title_with_name": "Stuur Troepen naar {name}",
-    "slider_tooltip": "{percent}% • {amount}"
+    "title_with_name": "Stuur Troepen naar {name}"
   },
   "single_modal": {
     "max_timer_invalid": "Voer een geldige max. timertijd in (1-120 minuten)",
@@ -1476,29 +1566,10 @@
     "medals_of_maps": "van {total} kaarten",
     "options_changed_no_achievements": "Aangepaste instellingen – prestaties uitgeschakeld",
     "sign_in_for_achievements": "Meld je aan voor prestaties",
-    "toggle_achievements": "Prestaties in- of uitschakelen",
-    "bots": "Stammen ",
-    "bots_disabled": "Uitgeschakeld",
-    "compact_map": "Compacte kaart",
-    "custom_alliances": "Alliantie duur",
-    "doomsday_clock": "Doomsday Klok",
-    "enables_title": "Onderdelen Uitschakelen",
-    "gold_multiplier": "Vermenigvuldig Goud",
-    "gold_multiplier_placeholder": "2.0X",
-    "infinite_gold": "Oneindig goud",
-    "infinite_troops": "Oneindige troepen",
-    "instant_build": "Bouwwachttijd uitschakelen",
-    "max_timer": "Spellengte (minuten)",
-    "max_timer_placeholder": "Min.",
-    "mins_placeholder": "Min.",
-    "nations": "Naties: ",
-    "nations_disabled": "Uitgeschakeld",
-    "options_title": "Opties",
-    "random_spawn": "Willekeurige startpositie",
-    "start": "Start Spel",
-    "starting_gold": "Start Goud (Miljoenen)",
-    "starting_gold_placeholder": "5",
-    "water_nukes": "Water kernraket"
+    "toggle_achievements": "Prestaties in- of uitschakelen"
+  },
+  "spawn_timer": {
+    "team_percent_tooltip": "{team}: {percent}"
   },
   "steam_link_modal": {
     "code_placeholder": "XXXX-XXXX",
@@ -1517,9 +1588,7 @@
     "reason_steam_has_progress": "Dit Steam account heeft al zijn eigen voortgang en kan niet worden samengevoegd.",
     "reason_steam_linked_elsewhere": "Dit Steam account is al gekoppeld aan een ander OpenFront account.",
     "success": "Je Steam account is nu gekoppeld.",
-    "title": "Koppel Steam Account",
-    "loading_placeholder": "…",
-    "reason_failed": "Er is iets misgegaan. Probeer het opnieuw."
+    "title": "Koppel Steam Account"
   },
   "steam_user_header": {
     "avatar_alt": "Steam avatar",
@@ -1554,9 +1623,11 @@
     "merch": "Merch",
     "merch_blurb": "Laat OpenFront merch naar je deur verzonden worden!",
     "merch_visit_store": "Bezoek winkel",
+    "no_affiliate_items": "Geen partneritems beschikbaar. Controleer later voor nieuwe items.",
     "no_crowns": "Geen kronen beschikbaar. Controleer later voor nieuwe items.",
     "no_effects": "Geen effecten beschikbaar. Controleer later voor nieuwe items.",
     "no_flags": "Geen vlaggen beschikbaar. Controleer later voor nieuwe items.",
+    "no_packs": "Geen pakketten beschikbaar. Controleer later voor nieuwe items.",
     "no_skins": "Geen skins beschikbaar. Controleer later voor nieuwe items.",
     "no_subscriptions": "Geen abonnementen beschikbaar. Controleer later voor nieuwe items.",
     "no_tribes": "Je hebt nog geen stam namen gekocht.",
@@ -1602,16 +1673,18 @@
     "tribes_login_required": "Log in om stamnamen te kopen en te beheren.",
     "tribes_purchase_description": "Je naam wordt toegewezen aan een bot stam in echte multiplayer games. Het gaat direct live.",
     "tribes_purchase_heading": "Koop een stam naam",
-    "your_tribes_heading": "Jou stam namen",
-    "tribe_purchase_failed": "Aankoop mislukt. Probeer het opnieuw.",
-    "tribe_stats_reach": "Speler Bereik",
-    "tribe_stats_reach_tooltip": "Verschenen in spellen met {count} spelers"
+    "your_tribes_heading": "Jou stam namen"
   },
   "streaming_now": {
     "live_count": "{count} aan het streamen",
     "title": "Nu aan het streamen",
     "viewers": "{count} aan het kijken",
     "watch": "Kijk {name}"
+  },
+  "subscription_modal": {
+    "browse": "Blader door abonnementen",
+    "none": "Je hebt geen actief abonnement.",
+    "title": "Jouw Abonnement"
   },
   "team_colors": {
     "blue": "Blauw",
@@ -1629,13 +1702,11 @@
     "pattern": {
       "default": "Standaard"
     },
-    "select_skin": "Skin",
-    "selected": "geselecteerd"
+    "select_skin": "Skin"
   },
   "token_login_modal": {
     "success": "Succesvol ingelogd als {email}!",
-    "title": "Aan het inloggen...",
-    "logging_in": "Aan het inloggen..."
+    "title": "Aan het inloggen..."
   },
   "troubleshooting": {
     "battery": "Batterij",
@@ -1699,6 +1770,8 @@
     "background_music_volume": "Volume achtergrondmuziek",
     "boat_attack": "Bootaanval",
     "boat_attack_desc": "Stuur een bootaanval naar de plek onder je cursor.",
+    "box_select_warships": "Box-Selecteer oorlogsschepen",
+    "box_select_warships_desc": "Houd deze knop ingedrukt en sleep om meerdere oorlogsschepen te selecteren.",
     "break_alliance": "Breek Alliantie (Verraad)",
     "break_alliance_desc": "Breek de alliantie met de speler wiens tegel onder uw aanwijzer staat.",
     "build_atom_bomb": "Bouw Atoombom",
@@ -1751,7 +1824,7 @@
     "graphics_preset_desc": "Kies de voorkeursinstelling voor de kaart. Fine-tunen of maak je eigen in de grafische instellingen voor het spel.",
     "graphics_preset_label": "Grafische preset",
     "graphics_refresh_modifier": "Grafische verversings modifier",
-    "graphics_refresh_modifier_desc": "Houd deze sleutel en R om de graphics te vernieuwen",
+    "graphics_refresh_modifier_desc": "Houd deze sleutel en {key} in om de graphics te vernieuwen",
     "graphics_settings_desc": "Pas aan hoe de kaart eruit ziet",
     "graphics_settings_label": "Grafische Instellingen",
     "ground_attack": "Grondaanval",
@@ -1776,6 +1849,9 @@
     "move_right_desc": "Beweeg de camera naar rechts",
     "move_up": "Camera omhoog",
     "move_up_desc": "Beweeg de camera naar boven",
+    "nuke_alliance_safety_desc": "Voorkomt dat je per ongeluk een nucleaire aanval uitvoert op nieuw gevormde bondgenoten.",
+    "nuke_alliance_safety_duration": "{count, plural, one {1 tick (0,1s)} other {{count} ticks ({seconds}s)}}",
+    "nuke_alliance_safety_label": "Bondgenoot friendly-fire beveiliging",
     "off": "Uit",
     "on": "Aan",
     "pause_game": "Pauze",
@@ -1788,8 +1864,11 @@
     "request_alliance": "Verzoek alliantie",
     "request_alliance_desc": "Stuur een alliantie verzoek naar de speler wiens tegel onder uw aanwijzer staat.",
     "reset": "Resetten",
+    "reset_gfx_desc": "Druk terwijl u de modifier ingedrukt houdt om het renderen te resetten wanneer er problemen met het scherm zijn.",
     "retaliate_attack": "Terugvechten",
     "retaliate_attack_desc": "Stuur een vergeldingsaanval om de kracht van de meest recente actieve aanvaller te neutraliseren. Alleen beschikbaar wanneer u wordt aangevallen.",
+    "select_all_warships": "Selecteer al je oorlogsschepen",
+    "select_all_warships_desc": "Selecteer al je oorlogsschepen op de kaart.",
     "sound_effects_volume": "Volume geluidseffecten",
     "special_effects_desc": "Visuele effecten aanzetten. Zet uit om de prestaties van het spel te verbeteren",
     "special_effects_label": "Visuele effecten",
@@ -1814,6 +1893,12 @@
   },
   "username": {
     "account_invalid_chars": "Gebruikersnaam mag alleen letters, cijfers, onderstrepingstekens, koppeltekens en enkele spaties tussen woorden bevatten.",
+    "clan_browse": "Bekijk clans",
+    "clan_clear": "Geen tag",
+    "clan_custom": "Andere tag",
+    "clan_label": "Clan-tag",
+    "clan_none_joined": "Je bent nog geen clan toegetreden.",
+    "clan_your_clans": "Jouw clans",
     "enter_username": "Voer je gebruikersnaam in",
     "invalid_chars": "Gebruikersnaam kan alleen letters, cijfers, spaties en underscores bevatten.",
     "not_string": "Gebruikersnaam moet een tekenreeks zijn.",
@@ -1824,11 +1909,14 @@
     "tag_too_short": "Clantag moet 2-5 alfanumerieke tekens zijn.",
     "too_long": "Gebruikersnaam mag niet langer zijn dan {max} tekens.",
     "too_short": "Gebruikersnaam moet minstens {min} tekens lang zijn.",
+    "verified_active_hint": "Je speelt onder je geverifieerde accountnaam.",
     "verified_heading": "Geverifieerde naam",
     "verified_player": "Geverifieerde speler",
     "verified_sub_required": "Je hebt een actief abonnement nodig om onder je geverifieerde naam te spelen.",
     "verified_sub_required_confirm": "Bekijk winkel",
-    "verified_toggle": "Geverifieerd"
+    "verified_use": "Gebruik geverifieerd",
+    "verified_use_custom": "Ga terug naar een aangepaste naam",
+    "verified_use_hint": "Speel onder je geverifieerde accountnaam"
   },
   "win_modal": {
     "died": "Je bent dood",
@@ -1849,10 +1937,5 @@
     "you_won": "Je hebt gewonnen!",
     "your_team": "Je team heeft gewonnen!",
     "youtube_tutorial": "Wat hulp nodig?"
-  },
-  "flag_input": {
-    "button_title": "Kies een vlag!",
-    "search_flag": "Zoeken...",
-    "title": "Vlag"
   }
 }

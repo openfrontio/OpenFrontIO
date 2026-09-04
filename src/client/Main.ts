@@ -34,6 +34,10 @@ import {
 } from "./Cosmetics";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import {
+  consumeCreatorCodePath,
+  resumePendingCreatorCode,
+} from "./CreatorCode";
 import { desktopPresence, type PresencePayload } from "./DesktopPresence";
 import {
   desktopUpdate,
@@ -52,7 +56,7 @@ import "./GameStatsModal";
 import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
-import { showInGameConfirm } from "./InGameModal";
+import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import "./InventoryModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
@@ -61,6 +65,11 @@ import { initLayout } from "./Layout";
 import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
+import {
+  hideMenuChrome,
+  menuChromeIsTornDown,
+  restoreMenuChrome,
+} from "./MenuChrome";
 import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
@@ -87,7 +96,7 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { incrementGamesPlayed, translateText } from "./Utils";
+import { incrementGamesPlayed, presenceMapKey, translateText } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
 import "./components/DesktopStatusBar";
@@ -250,6 +259,21 @@ class Client {
   }> | null = null;
 
   async initialize(): Promise<void> {
+    // A store referral banner / account "copy link" hands out `/c/<code>`.
+    // There's nothing to open here yet -- the code only does anything once
+    // the player is signed in (resumePendingCreatorCode in onUserMe handles
+    // that), so this just stashes it and cleans the URL. See CreatorCode.ts
+    // for why an invalid code is silently dropped and the path is stripped
+    // either way.
+    //
+    // Must run before ANY await below (including userAuth()): onUserMe() can
+    // fire resumePendingCreatorCode() as soon as getUserMe() settles, and
+    // getUserMe() is kicked off right after userAuth() resolves -- racing
+    // this against handleUrl() (which used to stash the code) risked
+    // consuming an empty stash before the code was ever written, losing the
+    // prefill for an already-signed-in visitor hitting /c/CODE directly.
+    consumeCreatorCodePath();
+
     crazyGamesSDK.maybeInit();
 
     // Every exit from a game (win screen, in-game quit, popstate) navigates to
@@ -396,7 +420,7 @@ class Client {
       this.presenceDetail = {
         gameType: config?.gameType,
         gameMode: config?.gameMode,
-        map: config?.gameMap,
+        map: presenceMapKey(config?.gameMap),
         // Seats, not connections: spectators are in the roster but hold none
         // (mirrors LobbyPlayerView and the join modal's own count).
         playerCount: event.lobby.clients?.filter((c) => !c.spectator).length,
@@ -553,6 +577,20 @@ class Client {
         // speculative call while logged out would burn an entry that a
         // *later* successful login should still get to resume.
         if (resumePendingSteamLink(this.steamLinkModal)) {
+          return;
+        }
+
+        // Resume a creator-code binding flow interrupted by the same kind of
+        // login redirect (see CreatorCode.ts's stash comment) -- also not
+        // gated on cleanHomepage below, for the same reason as steam-link
+        // above: the /c/CODE deep link's stash routinely lands back on
+        // #modal=account (or wherever the login round-trip returns to)
+        // rather than a clean "/".
+        if (
+          resumePendingCreatorCode((code) => {
+            window.location.hash = `modal=account&creatorCode=${encodeURIComponent(code)}`;
+          })
+        ) {
           return;
         }
 
@@ -848,7 +886,7 @@ class Client {
       );
 
     const alertAndStrip = (message: string) => {
-      alert(message);
+      void showInGameAlert(message);
       strip();
     };
 
@@ -858,13 +896,18 @@ class Client {
     const decodedHash = decodeURIComponent(hash);
     const params = new URLSearchParams(decodedHash.split("?")[1] || "");
 
+    // The `/c/<code>` share-link path is stashed (and stripped) by
+    // consumeCreatorCodePath() at the very start of initialize(), before this
+    // method is ever scheduled -- see the comment there for why that has to
+    // run ahead of userAuth()/getUserMe() rather than here.
+
     // Handle different hash sections
     if (decodedHash.startsWith("#purchase-completed")) {
       // Parse params after the ?
       const status = params.get("status");
 
       if (status !== "true") {
-        alertAndStrip("purchase failed");
+        alertAndStrip(translateText("store.purchase_failed"));
         return;
       }
 
@@ -882,16 +925,19 @@ class Client {
       }
 
       if (type === "subscription_tier") {
-        alert(translateText("store.subscription_purchase_success"));
         strip();
         invalidateUserMe();
-        window.location.reload();
+        // Reload only once the dialog is dismissed, like the blocking alert
+        // this replaced.
+        void showInGameAlert(
+          translateText("store.subscription_purchase_success"),
+        ).then(() => window.location.reload());
         return;
       }
 
       const cosmeticName = params.get("cosmetic");
       if (!cosmeticName) {
-        alert("Something went wrong. Please contact support.");
+        void showInGameAlert(translateText("common.error_generic"));
         console.error("purchase-completed but no pattern name");
         return;
       }
@@ -909,9 +955,7 @@ class Client {
       const token = params.get("token-login");
 
       if (!token) {
-        alertAndStrip(
-          `login failed! Please try again later or contact support.`,
-        );
+        alertAndStrip(translateText("error_modal.login_failed"));
         return;
       }
 
@@ -1099,7 +1143,7 @@ class Client {
     this.presenceDetail = {
       gameType: joinConfig?.gameType,
       gameMode: joinConfig?.gameMode,
-      map: joinConfig?.gameMap,
+      map: presenceMapKey(joinConfig?.gameMap),
       playerCount:
         joinInfo === undefined
           ? undefined
@@ -1234,9 +1278,7 @@ class Client {
         }
       });
       this.gameModeSelector.stop();
-      document.querySelectorAll(".ad").forEach((ad) => {
-        (ad as HTMLElement).style.display = "none";
-      });
+      hideMenuChrome();
 
       crazyGamesSDK.loadingStart();
 
@@ -1254,9 +1296,7 @@ class Client {
       this.gameModeSelector.stop();
       incrementGamesPlayed();
 
-      document.querySelectorAll(".ad").forEach((ad) => {
-        (ad as HTMLElement).style.display = "none";
-      });
+      hideMenuChrome();
 
       if (window.PageOS?.session?.newPageView) {
         window.PageOS.session.newPageView();
@@ -1423,6 +1463,22 @@ class Client {
     }
 
     setInGameSignal(false);
+
+    // The inverse of the game-start teardown. Every other exit from a started
+    // game navigates, and the reload did this implicitly; this path leaves in
+    // place, so it has to do it explicitly (OPE-255). It lives here rather
+    // than in openInvite() because handleLeaveLobby is reached from several
+    // places and any of them could be the next to hit it after a teardown.
+    //
+    // The gate asks whether the chrome is torn down, NOT whether we were
+    // in-game: the teardown happens at prestart while the in-game signal is
+    // only set at join, so gating on the signal missed a leave landing in the
+    // window between them. Because the gate no longer reads that signal, it
+    // does not matter that setInGameSignal(false) has already run above.
+    if (menuChromeIsTornDown()) {
+      this.gameModeSelector?.start();
+      restoreMenuChrome();
+    }
 
     if (this.joinModal.isOpen()) {
       this.joinModal.close();
@@ -1613,7 +1669,9 @@ async function getTurnstileToken(): Promise<{
       "error-callback": (errorCode: string) => {
         window.turnstile.remove(widgetId);
         console.error(`Turnstile error: ${errorCode}`);
-        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
+        void showInGameAlert(
+          translateText("error_modal.turnstile_error", { code: errorCode }),
+        );
         reject(new Error(`Turnstile failed: ${errorCode}`));
       },
     });

@@ -7,6 +7,8 @@ import {
   looksGenerated,
   resolvePlayerName,
   sanitizePersona,
+  verifiedClaimGrace,
+  verifiedNameOptIn,
   type PlayerNameInputs,
 } from "../../src/client/PlayerName";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
@@ -393,6 +395,128 @@ describe("accountVerifiedName", () => {
         player({ username: "TEMPORARY7823", usernameBase: "TEMPORARY7823" }),
       ),
     ).toBeNull();
+  });
+});
+
+describe("verifiedClaimGrace", () => {
+  const NOW = new Date("2026-09-01T00:00:00.000Z");
+  const SOON = "2026-10-01T00:00:00.000Z";
+
+  function lapsed(overrides: Record<string, unknown> = {}): UserMeResponse {
+    return {
+      player: {
+        username: "RyanTheGreat",
+        usernameBase: "RyanTheGreat",
+        usernameStatus: "claimed",
+        usernameClaimExpiresAt: SOON,
+        ...overrides,
+      },
+    } as unknown as UserMeResponse;
+  }
+
+  it("reports the reserved name and the date it stops being reserved", () => {
+    expect(verifiedClaimGrace(lapsed(), NOW)).toEqual({
+      name: "RyanTheGreat",
+      expiresAt: new Date(SOON),
+      atRisk: false,
+    });
+  });
+
+  it("says nothing while the subscription is still active", () => {
+    // Nothing at stake: premium and indefinite holders keep the claim.
+    expect(
+      verifiedClaimGrace(lapsed({ usernameStatus: "premium" }), NOW),
+    ).toBeNull();
+    expect(
+      verifiedClaimGrace(lapsed({ usernameStatus: "indefinite" }), NOW),
+    ).toBeNull();
+    expect(
+      verifiedClaimGrace(lapsed({ usernameStatus: "unclaimed" }), NOW),
+    ).toBeNull();
+  });
+
+  it("says nothing when there is no profile", () => {
+    expect(verifiedClaimGrace(null, NOW)).toBeNull();
+    expect(verifiedClaimGrace(false, NOW)).toBeNull();
+  });
+
+  // No date, nothing to say. This is the state a player is in when nothing
+  // has set usernameClaimExpiresAt — not a hypothetical: it is every lapsed
+  // player whose deadline predates infra#594.
+  it("says nothing without a deadline", () => {
+    expect(
+      verifiedClaimGrace(lapsed({ usernameClaimExpiresAt: null }), NOW),
+    ).toBeNull();
+    expect(
+      verifiedClaimGrace(lapsed({ usernameClaimExpiresAt: undefined }), NOW),
+    ).toBeNull();
+  });
+
+  // The reservation is over — a countdown to a past date is worse than
+  // silence, and the name may already belong to someone else.
+  // Inverted deliberately. usernameClaimExpiresAt's schema comment says a past
+  // date means "at risk", not "lost": the field stays set until the name is
+  // actually taken, and resubscribing still recovers it until then. Returning
+  // null here switched the warning off at the point of highest risk. What ends
+  // the notice is the `claimed` guard — a name actually taken moves the player
+  // out of that status.
+  it("flags at-risk once the deadline has passed, rather than going silent", () => {
+    expect(
+      verifiedClaimGrace(lapsed(), new Date("2026-10-01T00:00:01.000Z")),
+    ).toEqual({
+      name: "RyanTheGreat",
+      expiresAt: new Date(SOON),
+      atRisk: true,
+    });
+    // Exactly on the deadline counts as at risk: the reservation is over.
+    expect(verifiedClaimGrace(lapsed(), new Date(SOON))?.atRisk).toBe(true);
+  });
+
+  it("says nothing for a TEMPORARY#### rename", () => {
+    // Already past the point this warns about; there is no name to keep.
+    expect(
+      verifiedClaimGrace(
+        lapsed({ username: "TEMPORARY7823", usernameBase: "TEMPORARY7823" }),
+        NOW,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("verifiedNameOptIn", () => {
+  it("honours an explicit choice in both directions, whatever the cohort", () => {
+    expect(verifiedNameOptIn("true", false)).toBe(true);
+    expect(verifiedNameOptIn("true", true)).toBe(true);
+    expect(verifiedNameOptIn("false", true)).toBe(false);
+    expect(verifiedNameOptIn("false", false)).toBe(false);
+  });
+
+  // The gap this closes: reading the preference as `=== "true"` treated
+  // "never asked" as "declined", so a fresh profile — every Steam install —
+  // never played under the name the subscription was sold on.
+  it("defaults on for a profile that has expressed nothing and is new", () => {
+    expect(verifiedNameOptIn(null, true)).toBe(true);
+  });
+
+  // The cohort is the whole point: an existing subscriber who looked at the
+  // toggle and left it alone has no stored preference either, and flipping
+  // their public identity without them touching anything is the harm the
+  // default was supposed to avoid.
+  it("stays off for a profile with no preference that is not new", () => {
+    expect(verifiedNameOptIn(null, false)).toBe(false);
+  });
+
+  // Not an answer the player gave, so it falls through to the cohort rather
+  // than being read as either choice.
+  it("treats an unrecognised value as no preference", () => {
+    for (const stored of ["", "False", "FALSE", "0", "no", "yes"]) {
+      expect(verifiedNameOptIn(stored, true), JSON.stringify(stored)).toBe(
+        true,
+      );
+      expect(verifiedNameOptIn(stored, false), JSON.stringify(stored)).toBe(
+        false,
+      );
+    }
   });
 });
 

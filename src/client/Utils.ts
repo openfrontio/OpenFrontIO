@@ -25,6 +25,23 @@ export function normaliseMapKey(mapName: string): string {
   return (id ?? mapName).toLowerCase().replace(/[\s.]+/g, "");
 }
 
+/**
+ * The map key desktop rich presence carries.
+ *
+ * Steam's localization file composes `#Map_<key>` and resolves it in the
+ * *viewing* user's language, so presence has to send the normalised id -- the
+ * same key `map.<id>` uses in our own translations, which keeps the two from
+ * drifting apart -- rather than the display name, which would compose a token
+ * that does not exist. Steam hides the entire status line when a token fails
+ * to resolve, so getting this wrong is a total failure rather than a partial
+ * one. Absent stays absent.
+ */
+export function presenceMapKey(
+  gameMap: string | undefined,
+): string | undefined {
+  return gameMap === undefined ? undefined : normaliseMapKey(gameMap);
+}
+
 export function getMapName(mapName: string | undefined): string | null {
   if (!mapName) return null;
   const translationKey =

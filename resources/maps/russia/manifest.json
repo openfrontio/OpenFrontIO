@@ -3,17 +3,17 @@
   "id": "Russia",
   "map": {
     "height": 1688,
-    "num_land_tiles": 2540280,
+    "num_land_tiles": 2540087,
     "width": 3200
   },
   "map16x": {
     "height": 422,
-    "num_land_tiles": 149075,
+    "num_land_tiles": 149066,
     "width": 800
   },
   "map4x": {
     "height": 844,
-    "num_land_tiles": 620932,
+    "num_land_tiles": 620898,
     "width": 1600
   },
   "multiplayer_frequency": 8,
