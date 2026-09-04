@@ -118,16 +118,12 @@ export interface LobbyCardOptions {
 }
 
 /**
- * Top-row pills. The countdown is the one thing on the card that changes, so
- * it alone is blue; modifier tags are dark glass like the bottom bar, so they
- * read as information rather than three more buttons. Keep pills direct flex
- * children of the row: wrapped in a block, a pill picks up a line box and
- * renders short and low.
+ * One class for both of the top row's pills so they can't drift apart. Keep
+ * them direct flex children of the row: wrapped in a block, a pill picks up a
+ * line box and renders short and low.
  */
 const PILL =
-  "rounded-md px-2 py-1 text-[11px] font-bold leading-tight tracking-wider text-white";
-const TIME_PILL = `${PILL} bg-malibu-blue tabular-nums`;
-const TAG_PILL = `${PILL} bg-black/60 backdrop-blur-sm`;
+  "rounded-md bg-malibu-blue px-2 py-1 text-[11px] font-bold leading-tight tracking-wider text-white";
 
 /** Extreme aspect ratios (Amazon River is ~20:1) show whole rather than cropped. */
 function fitsByContain(mapType: GameMapType): boolean {
@@ -184,10 +180,6 @@ export function lobbyCard({
   // the card itself rather than the viewport, so the lobby browser's narrow
   // cards keep the small title on a big screen.
   // Cover images sit at 1.05 to hide their edges, so they zoom from there.
-  // That scale (and the blurred pills) put the image on its own compositor
-  // layer, which escapes the button's rounded overflow clip and shows square
-  // map corners unless the button is a stacking context of its own — hence
-  // `isolate` and `transform-gpu` on it.
   const image = fitsByContain(mapType)
     ? "object-contain group-hover:scale-105"
     : "object-cover scale-[1.05] group-hover:scale-[1.12]";
@@ -197,7 +189,7 @@ export function lobbyCard({
       @click=${onClick}
       ?disabled=${disabled}
       aria-disabled=${blocked}
-      class="group @container relative isolate block w-full ${heightClass} transform-gpu overflow-hidden rounded-2xl bg-surface text-left uppercase text-white transition-shadow duration-200 hover:shadow-[var(--shadow-lobby-card-hover)] ${state}"
+      class="group @container relative block w-full ${heightClass} overflow-hidden rounded-2xl bg-surface text-left uppercase text-white transition-shadow duration-200 hover:shadow-[var(--shadow-lobby-card-hover)] ${state}"
     >
       <img
         src=${terrainMapFileLoader.getMapData(mapType).webpPath}
@@ -210,20 +202,24 @@ export function lobbyCard({
         class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
       >
         <div class="flex min-w-0 flex-wrap gap-1">
-          ${modifiers.map(
-            (label) => html`<span class=${TAG_PILL}>${label}</span>`,
-          )}
+          ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
         </div>
         <span
-          class="${TIME_PILL} shrink-0 ${timeDisplayUppercase
+          class="${PILL} shrink-0 tabular-nums ${timeDisplayUppercase
             ? ""
             : "normal-case"}"
           >${timeDisplay}</span
         >
       </div>
 
+      <!--
+        The bar carries the card's bottom radius itself: Chrome draws a
+        backdrop-filter's blurred backdrop without the ancestor's rounded
+        overflow clip when an ancestor is composited (the lobby browser slides
+        its slots with a transform), which showed the map in square corners.
+      -->
       <div
-        class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-black/55 px-3 py-2 backdrop-blur-sm"
+        class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 rounded-b-[inherit] bg-black/55 px-3 py-2 backdrop-blur-sm"
       >
         <div class="flex min-w-0 flex-col">
           ${title
