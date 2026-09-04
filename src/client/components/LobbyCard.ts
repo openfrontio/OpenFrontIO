@@ -61,17 +61,6 @@ export function trustRequiredDialog(
 }
 
 /**
- * The map-image lobby card used on the homepage and in the More Games lobby
- * browser: map art behind modifier pills, a countdown pill, the player count
- * and a bottom bar naming the map and mode.
- */
-
-/**
- * One class for both of the top row's pills so they can't drift apart. Keep
- * them direct flex children of the row: wrapped in a block, a pill picks up a
- * line box and renders 4px short and 2px low.
- */
-/**
  * Aspect ratios keyed by map, loaded lazily from each map's manifest. Shared
  * so the second component to render a map doesn't refetch it.
  */
@@ -128,9 +117,16 @@ export interface LobbyCardOptions {
   heightClass?: string;
 }
 
+/**
+ * One class for both of the top row's pills so they can't drift apart. Keep
+ * them direct flex children of the row: wrapped in a block, a pill picks up a
+ * line box and renders short and low.
+ */
 const PILL =
   "rounded bg-malibu-blue px-2 py-1 text-xs font-bold tracking-widest text-white";
-const BADGE = "rounded bg-black/70 backdrop-blur-sm";
+// No backdrop-filter anywhere in the card: under a transformed ancestor
+// Chrome clips it with a separate mask and the map leaks at the corners.
+const BADGE = "rounded bg-black/70";
 
 /** Extreme aspect ratios (Amazon River is ~20:1) show whole rather than cropped. */
 function fitsByContain(mapType: GameMapType): boolean {
@@ -138,6 +134,11 @@ function fitsByContain(mapType: GameMapType): boolean {
   return ratio !== undefined && (ratio > 4 || ratio < 0.25);
 }
 
+/**
+ * The map-image lobby card used on the homepage and in the More Games lobby
+ * browser: map art behind modifier pills, a countdown pill, the player count
+ * and a bottom bar naming the map and mode.
+ */
 export function lobbyCard({
   lobby,
   subtitle,
@@ -187,7 +188,7 @@ export function lobbyCard({
       @click=${onClick}
       ?disabled=${disabled}
       aria-disabled=${blocked}
-      class="group relative block w-full ${heightClass} overflow-hidden rounded-2xl bg-surface text-left uppercase text-white transition-shadow duration-200 hover:shadow-[var(--shadow-lobby-card-hover)] ${state}"
+      class="group @container relative block w-full ${heightClass} overflow-hidden rounded-2xl bg-surface text-left uppercase text-white transition-shadow duration-200 hover:shadow-[var(--shadow-lobby-card-hover)] ${state}"
     >
       <img
         src=${terrainMapFileLoader.getMapData(mapType).webpPath}
@@ -203,18 +204,20 @@ export function lobbyCard({
           ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
         </div>
         <span
-          class="${PILL} shrink-0 ${timeDisplayUppercase ? "" : "normal-case"}"
+          class="${PILL} shrink-0 tabular-nums ${timeDisplayUppercase
+            ? ""
+            : "normal-case"}"
           >${timeDisplay}</span
         >
       </div>
 
       <div
-        class="absolute inset-x-0 bottom-0 flex flex-col bg-black/55 px-3 py-2 backdrop-blur-sm ${trustedOnly
+        class="absolute inset-x-0 bottom-0 flex flex-col bg-black/65 px-3 py-2 ${trustedOnly
           ? "pr-10"
           : ""}"
       >
         <span
-          class="${BADGE} absolute bottom-full right-2 mb-1 flex items-center gap-1 px-2 py-0.5 text-xs font-bold tracking-widest"
+          class="${BADGE} absolute bottom-full right-2 mb-1 flex items-center gap-1 px-2 py-0.5 text-xs font-bold tabular-nums tracking-widest"
         >
           ${playerCount}
           <svg
@@ -231,7 +234,7 @@ export function lobbyCard({
         ${trustedOnly ? trustLockIcon(viewerTrusted) : nothing}
         ${title
           ? html`<p
-              class="text-sm font-bold leading-tight tracking-wider sm:text-base"
+              class="text-sm font-bold leading-tight tracking-wider @[20rem]:text-base"
             >
               ${title}
             </p>`
