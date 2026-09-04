@@ -302,12 +302,13 @@ export class RailNetworkImpl implements RailNetwork {
         continue;
       }
 
-      // Non-station structures are promoted after the factory and initiate
-      // the real connection back to it. Match that direction because rail
-      // pathfinding tie-breaking is direction-sensitive.
-      const path = neighborStation
-        ? this.pathService.findTilePath(tile, targetTile)
-        : this.pathService.findTilePath(targetTile, tile);
+      // A completed city has already made its one-time station check, so the
+      // factory promotes it after creating its own station. The city then
+      // initiates the real connection back to the factory.
+      const path =
+        !neighborStation && neighbor.unit.type() === UnitType.City
+          ? this.pathService.findTilePath(targetTile, tile)
+          : this.pathService.findTilePath(tile, targetTile);
       if (path.length > 0 && path.length < maxPathSize) {
         paths.push(path);
         if (neighborStation) {
