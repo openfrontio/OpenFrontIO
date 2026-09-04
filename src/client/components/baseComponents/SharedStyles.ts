@@ -40,14 +40,19 @@ export function documentStylesSheet(): CSSStyleSheet {
     sheet = new CSSStyleSheet();
     void populate(sheet);
     // In dev this module evaluates before Vite injects the page's <style>
-    // tags, so the read above sees almost nothing — re-read once the page
-    // has fully loaded (constructed sheets are live, so components pick up
-    // the styles without re-rendering).
+    // tags (Main.ts imports the components ahead of styles.css), so the read
+    // above sees almost nothing — re-read once the module graph has finished
+    // executing (constructed sheets are live, so components pick up the
+    // styles without re-rendering). DOMContentLoaded fires right after the
+    // deferred module scripts; `load` is not usable here — the header ad's
+    // iframes can keep it from ever firing, which left modals unstyled.
     if (document.readyState !== "complete") {
       const populated = sheet;
-      window.addEventListener("load", () => void populate(populated), {
-        once: true,
-      });
+      document.addEventListener(
+        "DOMContentLoaded",
+        () => void populate(populated),
+        { once: true },
+      );
     }
   }
   return sheet;
