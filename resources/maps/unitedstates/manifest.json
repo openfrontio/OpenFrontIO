@@ -70,17 +70,17 @@
   "id": "UnitedStates",
   "map": {
     "height": 1548,
-    "num_land_tiles": 1868900,
+    "num_land_tiles": 1868818,
     "width": 2800
   },
   "map16x": {
     "height": 387,
-    "num_land_tiles": 110662,
+    "num_land_tiles": 110657,
     "width": 700
   },
   "map4x": {
     "height": 774,
-    "num_land_tiles": 458412,
+    "num_land_tiles": 458394,
     "width": 1400
   },
   "multiplayer_frequency": 9,
