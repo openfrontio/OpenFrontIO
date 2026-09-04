@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fullscreen dark splash-matching theme; no action bar. -->
+    <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0b1020</item>
+        <item name="android:statusBarColor">#0b1020</item>
+        <item name="android:navigationBarColor">#0b1020</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

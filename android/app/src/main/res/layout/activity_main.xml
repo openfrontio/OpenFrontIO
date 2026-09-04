@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Server picker (native, shown until a server is chosen) -->
+    <ScrollView
+        android:id="@+id/picker"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:background="#0b1020">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/server_picker_title"
+                android:textColor="#e8ecf4"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:paddingBottom="16dp" />
+
+            <Button
+                android:id="@+id/btn_official"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/official_label" />
+
+            <Button
+                android:id="@+id/btn_staging"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/staging_label" />
+
+            <Button
+                android:id="@+id/btn_custom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/custom_hint" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Game WebView (hidden until a server is chosen) -->
+    <WebView
+        android:id="@+id/webview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+</FrameLayout>

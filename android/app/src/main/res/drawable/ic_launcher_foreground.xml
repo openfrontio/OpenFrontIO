@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple globe mark: blue ocean circle + green landmasses. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ocean -->
+    <path
+        android:fillColor="#2b6cb0"
+        android:pathData="M54,54 m-30,0 a30,30 0 1,1 60,0 a30,30 0 1,1 -60,0" />
+
+    <!-- landmasses (abstract continents) -->
+    <path
+        android:fillColor="#48bb78"
+        android:pathData="M38,36 q10,-6 20,-2 q6,3 4,9 q-2,5 -9,5 q-6,1 -10,-2 q-7,-4 -5,-10z" />
+    <path
+        android:fillColor="#48bb78"
+        android:pathData="M60,58 q8,-2 12,3 q3,5 -1,10 q-4,5 -10,3 q-6,-2 -6,-8 q0,-7 5,-8z" />
+    <path
+        android:fillColor="#48bb78"
+        android:pathData="M36,60 q5,-2 8,2 q2,4 -1,7 q-4,3 -8,0 q-3,-4 1,-9z" />
+</vector>

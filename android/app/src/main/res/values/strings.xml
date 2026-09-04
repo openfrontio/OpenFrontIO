@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OpenFront</string>
+    <string name="server_picker_title">OpenFront — escolha o servidor</string>
+    <string name="official_label">Oficial (openfront.io)</string>
+    <string name="staging_label">Staging (main.openfront.dev)</string>
+    <string name="custom_hint">http://192.168.0.10:3000</string>
+    <string name="connect">Conectar</string>
+    <string name="back_to_servers">Voltar à lista de servidores</string>
+</resources>
