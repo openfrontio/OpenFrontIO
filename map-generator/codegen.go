@@ -41,13 +41,26 @@ type mapInfo struct {
 	DisplayName string `json:"display_name"`
 	// How many times the map appears in the multiplayer playlist.
 	// 0 (or omitted) keeps the map out of the regular rotation.
+	// Used as fallback when per-mode frequencies are not set.
 	MultiplayerFrequency int `json:"multiplayer_frequency"`
+	// Per-gamemode rotation weights. When set (>= 0), these override
+	// multiplayer_frequency for that specific lobby type. Omit to fall
+	// back to multiplayer_frequency.
+	FFAFrequency   *int `json:"ffa_frequency"`
+	TeamFrequency  *int `json:"team_frequency"`
+	SpecialFrequency *int `json:"special_frequency"`
 	// Position in the featured grid (1 = first). Featured maps without a
 	// rank sort after ranked ones, alphabetically.
 	FeaturedRank int `json:"featured_rank"`
 	// Preferred team count in team/special games (see MapPlaylist).
 	// 0 (or omitted) means no preference.
 	SpecialTeamCount int `json:"special_team_count"`
+	// Modifiers that should never be rolled for this map in special games.
+	// E.g. island maps should disable isRandomSpawn.
+	DisabledModifiers []string `json:"disabled_modifiers"`
+	// Modifiers that are always forced on for this map in special games.
+	// E.g. Sol should always have startingGold5M.
+	ForcedModifiers []string `json:"forced_modifiers"`
 	// Theme name(s) for bot tribe names (references tribeNameThemes.json).
 	// Empty or omitted uses the "default" theme.
 	Themes []string `json:"themes"`
@@ -178,6 +191,46 @@ func loadMapInfos() ([]mapInfo, error) {
 		if info.SpecialTeamCount < 0 || info.SpecialTeamCount == 1 {
 			return nil, fmt.Errorf("map %s: info.json \"special_team_count\" (%d) must be >= 2", m.Name, info.SpecialTeamCount)
 		}
+		// Validate per-mode frequencies (only when explicitly set).
+		for _, freq := range []struct {
+			name string
+			val  *int
+		}{
+			{"ffa_frequency", info.FFAFrequency},
+			{"team_frequency", info.TeamFrequency},
+			{"special_frequency", info.SpecialFrequency},
+		} {
+			if freq.val != nil && *freq.val < 0 {
+				return nil, fmt.Errorf("map %s: info.json %q (%d) must be >= 0", m.Name, freq.name, *freq.val)
+			}
+		}
+		// Validate modifier keys (plain or with percentage, e.g. "goldMultiplier:75").
+		validModifiers := map[string]bool{
+			"isRandomSpawn": true, "isCompact": true, "isCrowded": true,
+			"isHardNations": true, "startingGold1M": true, "startingGold5M": true,
+			"startingGold25M": true, "goldMultiplier": true, "isAlliancesDisabled": true,
+			"isNukesDisabled": true, "isSAMsDisabled": true, "isPeaceTime": true,
+			"isWaterNukes": true, "isDoomsdayClock": true,
+		}
+		for _, mod := range info.ForcedModifiers {
+			base := mod
+			if idx := strings.Index(mod, ":"); idx >= 0 {
+				base = mod[:idx]
+				pct := mod[idx+1:]
+				var n int
+				if _, err := fmt.Sscanf(pct, "%d", &n); err != nil || n < 1 || n > 100 {
+					return nil, fmt.Errorf("map %s: info.json forced_modifiers %q has invalid percentage (must be 1-100)", m.Name, mod)
+				}
+			}
+			if !validModifiers[base] {
+				return nil, fmt.Errorf("map %s: info.json forced_modifiers contains invalid modifier %q", m.Name, base)
+			}
+		}
+		for _, mod := range info.DisabledModifiers {
+			if !validModifiers[mod] {
+				return nil, fmt.Errorf("map %s: info.json disabled_modifiers contains invalid modifier %q", m.Name, mod)
+			}
+		}
 		if len(info.Categories) == 0 {
 			return nil, fmt.Errorf("map %s: info.json \"categories\" must list at least one category", m.Name)
 		}
@@ -254,10 +307,11 @@ func loadMapInfos() ([]mapInfo, error) {
 
 // generateMapsTS writes the GameMapType enum, the MapCategory union, the
 // MapInfo interface, and the maps list to src/core/game/Maps.gen.ts.
-func generateMapsTS(infos []mapInfo) error {
+// It returns the path written.
+func generateMapsTS(infos []mapInfo) (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory: %w", err)
+		return "", fmt.Errorf("failed to get working directory: %w", err)
 	}
 	outPath := filepath.Join(cwd, "..", "src", "core", "game", "Maps.gen.ts")
 
@@ -292,6 +346,21 @@ func generateMapsTS(infos []mapInfo) error {
 	}
 	b.WriteString("];\n\n")
 
+	b.WriteString("export type SpecialModifierKey =\n")
+	modifierKeys := []string{
+		"isRandomSpawn", "isCompact", "isCrowded", "isHardNations",
+		"startingGold1M", "startingGold5M", "startingGold25M",
+		"goldMultiplier", "isAlliancesDisabled", "isNukesDisabled",
+		"isSAMsDisabled", "isPeaceTime", "isWaterNukes", "isDoomsdayClock",
+	}
+	for i, mk := range modifierKeys {
+		sep := "\n"
+		if i == len(modifierKeys)-1 {
+			sep = ";\n\n"
+		}
+		b.WriteString(fmt.Sprintf("  | %q%s", mk, sep))
+	}
+
 	b.WriteString("export interface MapInfo {\n")
 	b.WriteString("  /** GameMapType enum key — the UpperCamelCase folder name. */\n")
 	b.WriteString("  id: GameMapName;\n")
@@ -301,12 +370,22 @@ func generateMapsTS(infos []mapInfo) error {
 	b.WriteString("  translationKey: string;\n")
 	b.WriteString("  /** Map picker categories. */\n")
 	b.WriteString("  categories: MapCategory[];\n")
-	b.WriteString("  /** How many times the map appears in the multiplayer playlist. */\n")
+	b.WriteString("  /** How many times the map appears in the multiplayer playlist (fallback). */\n")
 	b.WriteString("  multiplayerFrequency: number;\n")
+	b.WriteString("  /** FFA lobby rotation weight. -1 = use multiplayerFrequency. */\n")
+	b.WriteString("  ffaFrequency: number;\n")
+	b.WriteString("  /** Team lobby rotation weight. -1 = use multiplayerFrequency. */\n")
+	b.WriteString("  teamFrequency: number;\n")
+	b.WriteString("  /** Special lobby rotation weight. -1 = use multiplayerFrequency. */\n")
+	b.WriteString("  specialFrequency: number;\n")
 	b.WriteString("  /** Position in the featured grid (1 = first); unranked featured maps sort last. */\n")
 	b.WriteString("  featuredRank?: number;\n")
 	b.WriteString("  /** Preferred team count in team/special games (see MapPlaylist). */\n")
 	b.WriteString("  specialTeamCount?: number;\n")
+	b.WriteString("  /** Modifiers that should never be rolled for this map in special games. */\n")
+	b.WriteString("  disabledModifiers?: SpecialModifierKey[];\n")
+	b.WriteString("  /** Modifiers forced on for this map. Plain key or \"key:percentage\" (e.g. \"goldMultiplier:75\"). */\n")
+	b.WriteString("  forcedModifiers?: string[];\n")
 	b.WriteString("  /** Tribe name theme(s) (keys in tribeNameThemes.json). */\n")
 	b.WriteString("  themes?: string[];\n")
 	b.WriteString("  /** Custom tribe entry: a string (random spawn) or an object with name and coordinates. */\n")
@@ -344,11 +423,46 @@ func generateMapsTS(infos []mapInfo) error {
 		}
 		b.WriteString("],\n")
 		b.WriteString(fmt.Sprintf("    multiplayerFrequency: %d,\n", info.MultiplayerFrequency))
+		ffaFreq := -1
+		if info.FFAFrequency != nil {
+			ffaFreq = *info.FFAFrequency
+		}
+		teamFreq := -1
+		if info.TeamFrequency != nil {
+			teamFreq = *info.TeamFrequency
+		}
+		specialFreq := -1
+		if info.SpecialFrequency != nil {
+			specialFreq = *info.SpecialFrequency
+		}
+		b.WriteString(fmt.Sprintf("    ffaFrequency: %d,\n", ffaFreq))
+		b.WriteString(fmt.Sprintf("    teamFrequency: %d,\n", teamFreq))
+		b.WriteString(fmt.Sprintf("    specialFrequency: %d,\n", specialFreq))
 		if info.FeaturedRank > 0 {
 			b.WriteString(fmt.Sprintf("    featuredRank: %d,\n", info.FeaturedRank))
 		}
 		if info.SpecialTeamCount > 0 {
 			b.WriteString(fmt.Sprintf("    specialTeamCount: %d,\n", info.SpecialTeamCount))
+		}
+		if len(info.DisabledModifiers) > 0 {
+			b.WriteString("    disabledModifiers: [")
+			for i, mod := range info.DisabledModifiers {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(fmt.Sprintf("%q", mod))
+			}
+			b.WriteString("],\n")
+		}
+		if len(info.ForcedModifiers) > 0 {
+			b.WriteString("    forcedModifiers: [")
+			for i, mod := range info.ForcedModifiers {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(fmt.Sprintf("%q", mod))
+			}
+			b.WriteString("],\n")
 		}
 		if len(info.Themes) > 0 {
 			b.WriteString("    themes: [")
@@ -394,9 +508,9 @@ func generateMapsTS(infos []mapInfo) error {
 	b.WriteString("];\n")
 
 	if err := os.WriteFile(outPath, []byte(b.String()), 0644); err != nil {
-		return fmt.Errorf("failed to write %s: %w", outPath, err)
+		return "", fmt.Errorf("failed to write %s: %w", outPath, err)
 	}
-	return nil
+	return outPath, nil
 }
 
 // generateEnJSON rewrites the "map" section of resources/lang/en.json with
@@ -406,24 +520,25 @@ func generateMapsTS(infos []mapInfo) error {
 // The whole file is round-tripped through encoding/json, which marshals
 // object keys in sorted order — a no-op for everything but the map section
 // because en.json is kept sorted (see tests/EnJsonSorted.test.ts).
-func generateEnJSON(infos []mapInfo) error {
+// It returns the path written.
+func generateEnJSON(infos []mapInfo) (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory: %w", err)
+		return "", fmt.Errorf("failed to get working directory: %w", err)
 	}
 	enPath := filepath.Join(cwd, "..", "resources", "lang", "en.json")
 	content, err := os.ReadFile(enPath)
 	if err != nil {
-		return fmt.Errorf("failed to read en.json: %w", err)
+		return "", fmt.Errorf("failed to read en.json: %w", err)
 	}
 
 	var root map[string]interface{}
 	if err := json.Unmarshal(content, &root); err != nil {
-		return fmt.Errorf("failed to parse en.json: %w", err)
+		return "", fmt.Errorf("failed to parse en.json: %w", err)
 	}
 	oldSection, ok := root["map"].(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("en.json has no top-level \"map\" object")
+		return "", fmt.Errorf("en.json has no top-level \"map\" object")
 	}
 
 	mapFolders := make(map[string]bool, len(infos))
@@ -465,10 +580,10 @@ func generateEnJSON(infos []mapInfo) error {
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(root); err != nil {
-		return fmt.Errorf("failed to serialize en.json: %w", err)
+		return "", fmt.Errorf("failed to serialize en.json: %w", err)
 	}
 	if err := os.WriteFile(enPath, b.Bytes(), 0644); err != nil {
-		return fmt.Errorf("failed to write en.json: %w", err)
+		return "", fmt.Errorf("failed to write en.json: %w", err)
 	}
-	return nil
+	return enPath, nil
 }

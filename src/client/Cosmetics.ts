@@ -32,7 +32,6 @@ import {
   purchaseWithCurrency,
 } from "./Api";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
-import { isPlayingVerified } from "./UsernameInput";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -194,7 +193,7 @@ export async function purchaseCosmetic(
     method === "hard" ? (priced.priceHard ?? 0) : (priced.priceSoft ?? 0);
   const userMe = await getUserMe();
   if (userMe === false) {
-    alert(translateText("store.login_required"));
+    await showInGameAlert(translateText("store.login_required"));
     return;
   }
   const balance =
@@ -245,10 +244,12 @@ export async function purchaseCosmetic(
     colorPaletteName,
   );
   if (!success) {
-    alert(translateText("store.purchase_failed"));
+    await showInGameAlert(translateText("store.purchase_failed"));
     return;
   }
-  alert(translateText("store.purchase_success", { name: c.name }));
+  await showInGameAlert(
+    translateText("store.purchase_success", { name: c.name }),
+  );
   invalidateUserMe();
   window.location.reload();
 }
@@ -268,7 +269,7 @@ async function purchasePack(
   }
   const userMe = await getUserMe();
   if (userMe === false) {
-    alert(translateText("store.login_required"));
+    await showInGameAlert(translateText("store.login_required"));
     return;
   }
   const insufficient = (balance: number): InsufficientCurrency => ({
@@ -284,7 +285,9 @@ async function purchasePack(
 
   const result = await purchaseCosmeticPack(pack.name);
   if (result.ok) {
-    alert(translateText("store.purchase_success", { name: pack.displayName }));
+    await showInGameAlert(
+      translateText("store.purchase_success", { name: pack.displayName }),
+    );
     invalidateUserMe();
     window.location.reload();
     return;
@@ -299,12 +302,14 @@ async function purchasePack(
       );
     }
     case "debt":
-      alert(translateText("store.pack_debt", { debt: result.debt }));
+      await showInGameAlert(
+        translateText("store.pack_debt", { debt: result.debt }),
+      );
       return;
     case "already_owned":
       // Either a genuine conflict or a retry of a purchase that did go
       // through: both mean the local ownership state is stale, so refetch.
-      alert(
+      await showInGameAlert(
         translateText("store.pack_already_owned", {
           items: result.ownedFlareNames.map(flareDisplayName).join(", "),
         }),
@@ -313,10 +318,10 @@ async function purchasePack(
       window.location.reload();
       return;
     case "unavailable":
-      alert(translateText("store.pack_unavailable"));
+      await showInGameAlert(translateText("store.pack_unavailable"));
       return;
     default:
-      alert(translateText("store.purchase_failed"));
+      await showInGameAlert(translateText("store.purchase_failed"));
       return;
   }
 }
@@ -848,7 +853,13 @@ export function resolvedToPlayerPattern(
   };
 }
 
-export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
+// `verified` is passed in rather than looked up: the caller has already
+// resolved what name the player is joining under (see resolvePlayerName), and
+// the badge has to agree with that exact decision. Reading it back out of the
+// DOM here was the same missing seam.
+export async function getPlayerCosmeticsRefs(
+  opts: { verified?: boolean } = {},
+): Promise<PlayerCosmeticRefs> {
   const userSettings = new UserSettings();
   // Resolve the profile first: getUserMe activates the per-player cosmetics
   // scope (UserSettings.setPlayerId), which must happen before selections are
@@ -978,12 +989,14 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     skinName,
     crownName,
     effects: Object.keys(effects).length > 0 ? effects : undefined,
-    verified: isPlayingVerified() ? true : undefined,
+    verified: opts.verified ? true : undefined,
   };
 }
 
-export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
-  const refs = await getPlayerCosmeticsRefs();
+export async function getPlayerCosmetics(
+  opts: { verified?: boolean } = {},
+): Promise<PlayerCosmetics> {
+  const refs = await getPlayerCosmeticsRefs(opts);
   const cosmetics = await fetchCosmetics();
 
   const result: PlayerCosmetics = {};

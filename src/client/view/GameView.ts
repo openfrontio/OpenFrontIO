@@ -1201,6 +1201,9 @@ export class GameView implements GameMap {
   numLandTiles(): number {
     return this._map.numLandTiles();
   }
+  waterVersion(): number {
+    return this._map.waterVersion();
+  }
   /** Map layers defined in the map's info.json, if any. */
   layers(): import("../../core/game/TerrainMapLoader").MapLayer[] {
     return this._mapData.layers ?? [];

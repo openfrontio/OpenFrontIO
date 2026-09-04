@@ -262,6 +262,27 @@ export const UserMeResponseSchema = z.object({
         hasEmail: z.boolean(),
       })
       .optional(),
+    // The caller's ACTIVE creator-support binding (Creator Code programme), or
+    // null if unbound. Shown regardless of the creator's current status —
+    // suspending a creator doesn't un-bind their existing supporters, only
+    // blocks *new* bindings (enforced server-side at PUT /users/@me/creator).
+    // `sinceAt` is when the binding started; `canChangeAt` is null once the
+    // 7-day change cooldown has elapsed, so the client can tell "still bound,
+    // cooldown over" from "still bound, cooldown running" without hardcoding
+    // the cooldown length itself. `creator: null` does NOT by itself mean a
+    // new bind is unthrottled — a cooldown can still be running from a recent
+    // unbind; only PUT's own 429 reveals that.
+    // .optional() exists ONLY so an older API without the field is tolerated
+    // (the UI renders nothing then).
+    creator: z
+      .object({
+        code: z.string(),
+        displayName: z.string(),
+        sinceAt: z.iso.datetime(),
+        canChangeAt: z.iso.datetime().nullable(),
+      })
+      .nullable()
+      .optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
@@ -272,14 +293,62 @@ export type UserSubscription = NonNullable<
 // PUT /users/@me/username success payload. `username` is the resolved display
 // form (safe for optimistic UI). The suffix is re-rolled on every rename and
 // the response carries the fresh 30-day cooldown.
+// What happened to the bare-name claim on a successful rename.
+//
+// `claimed` — premium, got the bare name ("Ninja").
+// `unavailable` — premium, someone else holds the bare name, so the suffixed
+//   form was granted instead ("Ninja.4471"). A 200, not a 409: the rename
+//   happened and the cooldown was consumed. This is the case worth telling
+//   the player about.
+// `not_eligible` — not premium, so a suffix is simply how free names work.
+//   Nothing to say.
+//
+// Three values rather than a boolean so callers don't have to re-derive
+// eligibility from usernameStatus to avoid showing a free player a "fallback"
+// message on a perfectly ordinary rename.
+export const BareClaimSchema = z.enum([
+  "claimed",
+  "unavailable",
+  "not_eligible",
+]);
+export type BareClaim = z.infer<typeof BareClaimSchema>;
+
 export const PutUsernameResponseSchema = z.object({
   username: z.string(),
   base: z.string(),
   discriminator: z.string(),
   usernameStatus: UsernameStatusSchema,
   nextUsernameChangeAt: z.iso.datetime().nullable(),
+  // Optional because this client ships BEFORE the API that sends it. The
+  // response is parsed with safeParse, so requiring the field would make every
+  // rename against the current API fail validation and surface as a generic
+  // "failed". Treat `undefined` as "the API predates this" and say nothing.
+  bareClaim: BareClaimSchema.optional(),
 });
 export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
+
+// GET /creators/code/:code — public creator-code lookup (Creator Code
+// programme; no auth). Used to preview/validate a code before binding, e.g.
+// from an openfront.io/c/CODE share link. `status` is the creator's account
+// state; today the endpoint only ever resolves an "active" creator (a
+// suspended/terminated/unknown code 404s), but the field is kept here to
+// mirror the server's row shape rather than assume that never changes.
+export const PublicCreatorSchema = z.object({
+  code: z.string(),
+  displayName: z.string(),
+  status: z.enum(["active", "suspended", "terminated"]),
+});
+export type PublicCreator = z.infer<typeof PublicCreatorSchema>;
+
+// PUT /users/@me/creator success payload — confirms the code and display
+// name of the creator the caller is now bound to. Deliberately just the
+// public pair, not the full player.creator record (sinceAt/canChangeAt):
+// callers invalidate the cached /users/@me instead of duplicating those here.
+export const PutCreatorResponseSchema = PublicCreatorSchema.pick({
+  code: true,
+  displayName: true,
+});
+export type PutCreatorResponse = z.infer<typeof PutCreatorResponseSchema>;
 
 // Custom tribe names — text names a player buys with hard currency that get
 // assigned to bots ("tribes") in real games. Names go live right away; review

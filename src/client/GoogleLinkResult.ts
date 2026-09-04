@@ -1,3 +1,4 @@
+import { showInGameAlert } from "./InGameModal";
 import { translateText } from "./Utils";
 
 /**
@@ -23,8 +24,7 @@ export function consumeGoogleLinkResult(args?: Record<string, unknown>): void {
     rest ? `#${rest}` : window.location.pathname + window.location.search,
   );
 
-  // Defer so the modal paints before the (blocking) alert. "cancel" needs no
-  // feedback — the user chose to back out.
+  // "cancel" needs no feedback — the user chose to back out.
   const messageKey =
     link === "google"
       ? "account_modal.link_google_success"
@@ -34,5 +34,5 @@ export function consumeGoogleLinkResult(args?: Record<string, unknown>): void {
           ? "account_modal.link_google_error"
           : null;
   if (messageKey === null) return;
-  setTimeout(() => alert(translateText(messageKey)), 0);
+  void showInGameAlert(translateText(messageKey));
 }

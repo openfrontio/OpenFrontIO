@@ -131,6 +131,12 @@ export class GameServer {
 
   private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
 
+  // Backstop for reaping a started game nobody is connected to. The usual
+  // reap (see phase()) also needs the game-wide ping clock to go quiet; this
+  // one goes on the roster being empty and nothing else.
+  private emptyGameTimeout = 10 * 60 * 1000; // 10 minutes
+  private emptySince: number | null = null;
+
   private turns: Turn[] = [];
   private intents: StampedIntent[] = [];
   // Who joined, who is connected, and the per-account reconnect, admission
@@ -142,6 +148,8 @@ export class GameServer {
   // archives on that, and the socket close events that follow end() still
   // go through hasStarted() in handleClientDisconnect.
   private stage: "lobby" | "prestart" | "started" = "lobby";
+  // Set when the delayed start found an empty roster (see deferStart).
+  private startDeferred = false;
   private ended = false;
   private paused = false;
   private _startTime: number | null = null;
@@ -602,6 +610,15 @@ export class GameServer {
   // A validated message from a connected client, after SocketIngress has
   // applied the rate limit and the spectator block.
   private handleClientMessage(client: Client, clientMsg: ClientMessage) {
+    // Nothing from a socket that is no longer on the roster reaches the game.
+    // Dropping a client (a kick, the stale-ping prune, a close) leaves its
+    // listener attached and the socket able to deliver frames — close() is a
+    // handshake, and the prune only calls it on an OPEN socket at all — so
+    // without this a kicked player could still land intents and votes, and a
+    // ghost's pings could hold the empty-game reap off forever.
+    if (!this.clients.isConnected(client)) {
+      return;
+    }
     switch (clientMsg.type) {
       case "rejoin": {
         // Client is already connected, no auth required, send start game message if game has started
@@ -629,6 +646,8 @@ export class GameServer {
         break;
       }
       case "ping": {
+        // Only a roster member reaches here, so this is also the game-wide
+        // "someone is still out there" clock the empty-game reap waits on.
         this.lastPingUpdate = Date.now();
         client.lastPing = Date.now();
         break;
@@ -732,6 +751,35 @@ export class GameServer {
     }
     // phase() reports Finished once ended, so GameManager's next tick prunes.
     this.ended = true;
+    return true;
+  }
+
+  // Nobody was connected when the delayed start came due. An empty roster at
+  // that moment is not proof the game is abandoned: handleClientDisconnect
+  // drops a client the instant its socket closes, blip or not, and the client
+  // is normally reconnecting already. Ending the game there would be
+  // permanent and silent — rejoinClient refuses an ended game, the worker
+  // closes that socket with 1002, and the client treats 1002 as terminal
+  // rather than retrying. So hold the start instead of cancelling it.
+  public deferStart(): void {
+    if (this.stage !== "prestart") {
+      return;
+    }
+    this.log.info("deferring start, no clients connected", {
+      gameID: this.id,
+    });
+    this.startDeferred = true;
+  }
+
+  // Runs a held start once someone is connected again. Nobody comes back ->
+  // the game stays empty and phase() reaps it on the usual rules, so a truly
+  // abandoned game still never reaches start(). Returns whether it started.
+  public resumeDeferredStart(): boolean {
+    if (!this.startDeferred || this.ended || this.numClients() === 0) {
+      return false;
+    }
+    this.startDeferred = false;
+    this.start();
     return true;
   }
 
@@ -1229,6 +1277,13 @@ export class GameServer {
     if (stale.length > 0) {
       this.checkWinnerAfterElectorateShrink();
     }
+    // Since when has nobody been connected? Tracked here rather than in
+    // phase() so phase() stays a pure read, and so emptiness accrues on the
+    // tick loop instead of on however often the lobby browser asks.
+    this.emptySince =
+      this.clients.active().length === 0
+        ? (this.emptySince ?? Date.now())
+        : null;
   }
 
   // A pure read of the lifecycle; pruneStaleClients() is the side effect.
@@ -1248,9 +1303,6 @@ export class GameServer {
       return GamePhase.Finished;
     }
 
-    const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
-    const noActive = this.clients.active().length === 0;
-
     const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
     if (
       lessThanLifetime &&
@@ -1259,8 +1311,38 @@ export class GameServer {
     ) {
       return GamePhase.Lobby;
     }
-    const warmupOver = now > this.startsAt! + 30 * 1000;
-    if (noActive && warmupOver && noRecentPings) {
+
+    // Anyone still on the roster keeps the game running. Everything below is
+    // about reaping a game nobody is connected to.
+    if (this.clients.active().length > 0) {
+      return GamePhase.Active;
+    }
+
+    // Grace period before an empty game is reaped, measured from whenever it
+    // committed to starting. startsAt is not always set: a lobby that
+    // auto-starts by filling to maxPlayers, and admin bot games, never get one
+    // — and `undefined + 30_000` is NaN, so every comparison against it is
+    // false. Those games could never be reaped and lived on (still ticking
+    // turns, with nobody connected) until the maxGameDuration cutoff above.
+    const warmupFrom = this.startsAt ?? this._startTime ?? this.createdAt;
+    const warmupOver = now > warmupFrom + 30 * 1000;
+    const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
+    if (warmupOver && noRecentPings) {
+      return GamePhase.Finished;
+    }
+
+    // Backstop: an empty game whose ping clock never goes quiet. Only a client
+    // on the roster refreshes lastPingUpdate now, but a game that manages to
+    // keep that clock warm with nobody connected must still not outlive the
+    // players by hours — sustained emptiness is enough on its own.
+    if (
+      this.hasStarted() &&
+      this.emptySince !== null &&
+      now > this.emptySince + this.emptyGameTimeout
+    ) {
+      this.log.warn("game had no connected clients past timeout, ending", {
+        gameID: this.id,
+      });
       return GamePhase.Finished;
     }
 

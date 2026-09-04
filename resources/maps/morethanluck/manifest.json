@@ -1106,17 +1106,17 @@
   "id": "MoreThanLuck",
   "map": {
     "height": 1344,
-    "num_land_tiles": 915788,
+    "num_land_tiles": 915740,
     "width": 1348
   },
   "map16x": {
     "height": 336,
-    "num_land_tiles": 55538,
+    "num_land_tiles": 55536,
     "width": 337
   },
   "map4x": {
     "height": 672,
-    "num_land_tiles": 226662,
+    "num_land_tiles": 226651,
     "width": 674
   },
   "multiplayer_frequency": 7,

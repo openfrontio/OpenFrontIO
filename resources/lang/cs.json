@@ -16,6 +16,13 @@
     "claim_failed": "Odměnu se nepodařilo vyzvednout. Zkuste to znovu.",
     "clear_session": "Vymazat relaci",
     "connected_as": "Přihlášeno jako",
+    "delete_account_confirm_button": "Trvale smazat",
+    "delete_account_confirm_word": "SMAZAT",
+    "delete_account_desc": "Trvale smažte svůj účet a všechna jeho data.",
+    "delete_account_failed": "Smazání se nezdařilo. Kontaktujte prosím podporu na support@openfront.io",
+    "delete_account_title": "Smazat účet",
+    "delete_account_type_to_confirm": "Pro potvrzení napište \"{word}\".",
+    "delete_account_warning": "Váš účet bude okamžitě a trvale smazán. Neexistuje žádná lhůta pro obnovení ani možnost jej obnovit. Budete odhlášeni ze všech zařízení.",
     "email_placeholder": "Zadejte svou e-mailovou adresu",
     "enter_email_address": "Zadejte prosím e-mailovou adresu",
     "failed_to_send_recovery_email": "Obnovovací e-mail se nepodařilo odeslat",
@@ -37,6 +44,7 @@
     "linked_account": "Přihlášen jako {account_name}",
     "linked_to_google": "Propojeno s Googlem",
     "linked_to_google_email": "Propojeno s Googlem ({email})",
+    "login_email_exists": "Účet s tímto e-mailem již existuje. Přihlaste se k němu a poté tento účet propojte v nastavení.",
     "manage_subscription": "Spravovat",
     "marketing_desc": "Občasné novinky, události a aktualizace hry. Odběr můžete kdykoli zrušit.",
     "marketing_no_email": "Přidejte ke svému účtu e-mailovou adresu, abyste mohli odebírat novinky.",
@@ -69,28 +77,31 @@
     "tab_stats": "Statistiky",
     "title": "Účet",
     "unclaimed_rewards": "Nevyzvednuté odměny",
+    "username_change_ready": "Změna je dostupná",
     "username_confirm_abandon": "Trvale se vzdáte rezervovaného jména \"{name} \".",
     "username_confirm_body": "Nové jméno pak 30 dní nepůjde změnit.",
     "username_confirm_button": "Změnit jméno",
     "username_confirm_case_only": "Nové jméno se od současného liší pouze velikostí písmen — i tak se znovu spustí 30denní lhůta.",
     "username_confirm_heading": "Změnit uživatelské jméno?",
+    "username_current_label": "Současné jméno",
     "username_error_cooldown": "Uživatelské jméno můžete znovu změnit za {days} dní.",
     "username_error_failed": "Uživatelské jméno se nepodařilo změnit. Zkuste to znovu později.",
     "username_error_profane": "Toto uživatelské jméno není povoleno.",
     "username_error_taken": "Toto uživatelské jméno je už obsazené — zkuste jiné.",
     "username_grace_warning": "Dne {date} přijdete o výhradní právo na jméno \"{name}\". Obnovte předplatné, abyste si ho zachovali.",
-    "username_not_set": "Získejte své uživatelské jméno — bude vás identifikovat ve všech vašich hrách.",
+    "username_locked_until": "Uzamčeno do {date}",
+    "username_new_label": "Nové jméno",
+    "username_not_set": "Zvolte si uživatelské jméno, které bude sloužit jako identifikátor na vašem profilu a v každé hře.",
     "username_placeholder": "Zadejte uživatelské jméno",
     "username_save": "Uložit",
     "username_temporary_notice": "Vaše jméno si zabral jiný hráč. Vyberte si nové — tato změna je zdarma.",
     "username_temporary_prompt": "Vaše uživatelské jméno si zabral jiný hráč. Chcete si nyní vybrat nové? Změna je zdarma.",
     "username_temporary_prompt_confirm": "Vyberte si jméno",
     "username_title": "Uživatelské jméno",
-    "games_username": "Uživatelské jméno",
-    "log_out": "Odhlásit se",
-    "tab_settings": "Nastavení",
-    "username_cooldown_until": "Uživatelské jméno můžete znovu změnit dne {date}.",
-    "your_subscription": "Vaše předplatné"
+    "delete_account_blocked": "Váš účet nelze automaticky smazat. Kontaktujte prosím podporu."
+  },
+  "account_settings_modal": {
+    "title": "Nastavení účtu"
   },
   "ban_notice": {
     "appeal": "Pokud se domníváte, že jde o omyl, kontaktujte nás na Discordu.",
@@ -129,6 +140,10 @@
     "not_enough_money": "Nedostatek peněz",
     "upgrade_amount": "×{amount}",
     "warship_shift_hint": "Podrž Shift a tažením vyber více bitevních lodí najednou"
+  },
+  "change_username_modal": {
+    "title": "Změnit uživatelské jméno",
+    "unavailable": "Správa uživatelského jména zatím není pro tento účet dostupná."
   },
   "chat": {
     "attack": {
@@ -251,6 +266,18 @@
     "discord_section_title": "Discord",
     "discord_url_hint": "Použijte pozvánku bez vypršení platnosti.",
     "discord_url_label": "Odkaz na pozvánku na Discord",
+    "donate": "Darovat",
+    "donate_amount": "Částka",
+    "donate_insufficient": "Nedostatek měny {currency}.",
+    "donate_invalid_amount": "Zadejte celé číslo větší než 0.",
+    "donate_irreversible": "Dary jsou nevratné. Měnu darovanou klanu již nelze získat zpět.",
+    "donate_irreversible_hard": "Plutonium je prémiová měna. Po darování jej nelze vrátit, vybrat ani převést zpět na váš účet.",
+    "donate_not_member": "Abyste mohli darovat, musíte být členem klanu.",
+    "donate_submitting": "Darování…",
+    "donate_subtitle": "Převést měnu z vašeho účtu do klanové pokladny.",
+    "donate_success": "Darováno {amount} {currency} klanu {tag}!",
+    "donate_title": "Darovat klanu {tag}",
+    "donate_your_balance": "Máte {balance}",
     "error_already_member": "Už jste členem",
     "error_banned": "V tomto klanu máte ban.",
     "error_banned_reason": "V tomto klanu máte ban. Důvod: {reason}",
@@ -336,7 +363,7 @@
     "role_officer": "Důstojník",
     "save_changes": "Uložit změny",
     "saving": "Ukládání...",
-    "search_members_placeholder": "Filtrovat aktuální stránku podle ID nebo role...",
+    "search_members_placeholder": "Hledat podle přesného ID, uživatelského jména nebo role…",
     "search_placeholder": "Hledat podle tagu klanu...",
     "search_requests_placeholder": "Hledat podle veřejného ID hráče...",
     "select_new_leader": "Vyberte nového vůdce",
@@ -372,16 +399,7 @@
     "title": "Klany",
     "transfer_leadership": "Předat vedení",
     "transfer_warning": "Tímto se vybraný člen stane novým vůdcem. Vy se stanete běžným členem. Tuto akci nelze vrátit zpět.",
-    "unban": "Zrušit ban",
-    "history_filter_hvn": "HvN",
-    "history_filter_ranked": "Hodnocené",
-    "stats_collapse_all": "Sbalit vše",
-    "stats_duos": "Dvojice",
-    "stats_expand_all": "Rozbalit vše",
-    "stats_ffa": "FFA",
-    "stats_quads": "Čtveřice",
-    "stats_trios": "Trojice",
-    "tab_members": "Členové"
+    "unban": "Zrušit ban"
   },
   "common": {
     "available": "K dispozici",
@@ -391,6 +409,7 @@
     "cap_tooltip": "Zbývající kapacita příjemce",
     "click_to_copy": "Kliknutím zkopírujete",
     "close": "Zavřít",
+    "collapse_all": "Sbalit vše",
     "confirm": "Potvrdit",
     "copied": "Zkopírováno!",
     "copy": "Zkopírovat",
@@ -399,6 +418,10 @@
     "duration_minute_short": "min",
     "duration_second_short": "s",
     "enabled": "Povoleno",
+    "error_generic": "Něco se pokazilo. Zkuste to prosím znovu.",
+    "expand_all": "Rozbalit vše",
+    "failed_copy": "Kopírování se nezdařilo",
+    "loading": "Načítání…",
     "map_default": "Výchozí mapa",
     "month_apr": "Duben",
     "month_aug": "Srpen",
@@ -417,10 +440,10 @@
     "paste": "Vložit",
     "preset_max": "Maximum",
     "send": "Odeslat",
+    "slider_tooltip": "{percent}% · {amount}",
     "summary_keep": "Ponechat",
     "target_dead": "Cíl eliminován",
-    "target_dead_note": "Nemůžete poslat zdroje eliminovanému hráči.",
-    "summary_send": "Odeslat"
+    "target_dead_note": "Nemůžete poslat zdroje eliminovanému hráči."
   },
   "control_panel": {
     "allied_afk_neighbor_info": "Na odpojené hráče můžete útočit, i když s nimi máte spojenectví.",
@@ -450,9 +473,54 @@
     "unlimited_ranked_info": "Počet hodnocených her, které můžete hrát, není omezený.",
     "usd_value": "Hodnota: {usd}",
     "verified_name": "Ověřené uživatelské jméno",
-    "verified_name_info": "Vaše uživatelské jméno je rezervováno pro váš účet a ve hře je označeno odznakem ověření.",
-    "button_title": "Vyberte si kosmetické doplňky!",
-    "title": "Kosmetické doplňky"
+    "verified_name_info": "Vaše uživatelské jméno je rezervováno pro váš účet a ve hře je označeno odznakem ověření."
+  },
+  "desktop_update": {
+    "blocked": "Pro nejnovější verzi je nutná aktualizace přes Steam",
+    "downloading": "Stahování aktualizace… {percent}%",
+    "failed": "Aktualizaci se nepodařilo stáhnout",
+    "ready": "Aktualizace je připravena",
+    "reload": "Znovu načíst",
+    "retry": "Zkusit znovu"
+  },
+  "detailed_view": {
+    "capacity": "Kapacita",
+    "delete_profile": "Smazat",
+    "filters": "Filtry",
+    "filters_with_count": "Filtry ({count})",
+    "hide_empty": "Skrýt prázdné lobby",
+    "joined_players": "Připojení hráči",
+    "layout_duos": "Dvojice",
+    "layout_quads": "Čtveřice",
+    "layout_trios": "Trojice",
+    "max": "Maximum",
+    "min": "Minimum",
+    "mode": "Typ lobby",
+    "mode_ffa": "FFA",
+    "mode_hvn": "Lidé vs národy",
+    "mode_teams": "Týmy",
+    "no_lobbies": "Žádné lobby neodpovídá vašim filtrům.",
+    "no_profile": "Žádný profil",
+    "pane_empty": "Žádná lobby",
+    "pane_ffa": "Všichni proti všem",
+    "pane_heading": "{name} ({count})",
+    "pane_hosted": "Hostované",
+    "pane_special": "Speciální",
+    "pane_team": "Týmy",
+    "per_team": "Hráčů v týmu",
+    "profile_name": "Název profilu",
+    "profiles": "Profily",
+    "queued": "Další v pořadí",
+    "reset": "Obnovit",
+    "save_profile": "Uložit",
+    "source": "Zdroj",
+    "source_hosted": "Hostované",
+    "source_public": "Veřejné",
+    "spawning": "Spouštění hry…",
+    "tab_all": "Vše",
+    "team_count": "Počet týmů",
+    "team_size": "Velikost týmu",
+    "title": "Podrobné zobrazení"
   },
   "difficulty": {
     "difficulty": "Obtížnost národů",
@@ -508,9 +576,7 @@
     "spawn_failed": {
       "description": "Automatický výběr spawnu se nezdařil. Nemůžete hrát tuto hru.",
       "title": "Spawn selhal"
-    },
-    "copied": "Zkopírováno!",
-    "failed_copy": "Kopírování selhalo"
+    }
   },
   "events_display": {
     "about_to_expire": "Vaše spojenectví s {name} brzy vyprší!",
@@ -587,8 +653,7 @@
     "send_request": "Odeslat žádost",
     "team_info": "Přátelé budou umístěni do stejného týmu.",
     "withdraw": "Stáhnout",
-    "your_friends": "Vaši přátelé",
-    "error_generic": "Něco se pokazilo. Zkuste to prosím znovu."
+    "your_friends": "Vaši přátelé"
   },
   "fullscreen": {
     "enter": "Přejít do režimu celé obrazovky",
@@ -628,6 +693,26 @@
     "hvn": "Lidé vs. národy",
     "teams": "Týmy"
   },
+  "game_settings": {
+    "bots": "Kmeny!",
+    "compact_map": "Kompaktní mapa",
+    "custom_alliances": "Délka spojenectví",
+    "disable_units": "Zakázat jednotky",
+    "doomsday_clock": "Hodiny zkázy",
+    "gold_multiplier": "Násobitel zlata",
+    "infinite_gold": "Nekonečné zlato",
+    "infinite_troops": "Nekonečné jednotky",
+    "instant_build": "Okamžitá výstavba",
+    "max_timer": "Délka hry (minuty)",
+    "mins_placeholder": "min",
+    "nations": "Národy!",
+    "options": "Možnosti",
+    "overtime": "Prodloužení po (minutách)",
+    "random_spawn": "Náhodný spawn",
+    "start": "Spustit hru",
+    "starting_gold": "Počáteční zlato (miliony)",
+    "water_nukes": "Vodní atomovky"
+  },
   "game_starting_modal": {
     "code_license": "Kód je licencován pod AGPL-3.0 (bez záruky)",
     "credits": "Poděkování",
@@ -639,6 +724,8 @@
   "graphics_setting": {
     "advanced_desc": "Detailní nastavení grafiky",
     "advanced_label": "Rozšířené nastavení",
+    "background_color_desc": "Barva oblasti mimo mapu a neprůchodného terénu.",
+    "background_color_label": "Barva pozadí",
     "black": "Černá",
     "classic_icons_desc": "Světlejší obrys s téměř černým vnitřkem",
     "classic_icons_label": "Klasické ikony",
@@ -727,17 +814,18 @@
     "territory_alpha_label": "Neprůhlednost vybarvení území",
     "territory_sat_desc": "Jak syté jsou barvy vybarvení území (nižší hodnota je ztlumí)",
     "territory_sat_label": "Sytost vybarvení území",
-    "title": "Nastavení grafiky",
-    "copy_json_copied": "Zkopírováno!"
+    "title": "Nastavení grafiky"
   },
   "heads_up_message": {
     "catching_up": "Synchronizuji...",
     "choose_spawn": "Vyberte počáteční pozici",
+    "choose_spawn_spectator": "Hráči si vybírají počáteční pozice",
     "dont_show_again": "Znovu nezobrazovat",
     "ffa_collusion": "Připomenutí: v režimu Všichni proti všem není domlouvání týmů před hrou povoleno",
     "multiplayer_game_paused": "Hra pozastavena tvůrcem lobby",
     "pvp_immunity_active": "PVP imunita aktivní ještě {seconds}s",
     "random_spawn": "Náhodná počáteční pozice je zapnutá. Vybírám vám počáteční pozici...",
+    "random_spawn_spectator": "Náhodný spawn je zapnutý",
     "singleplayer_game_paused": "Hra pozastavena"
   },
   "help_modal": {
@@ -832,19 +920,7 @@
     "ui_wilderness": "Divočina",
     "ui_your_team": "Váš tým:",
     "video_tutorial": "Video návod",
-    "video_tutorial_title": "OpenFront.io Návod",
-    "action_alt_view": "Alternativní zobrazení (terén/státy)",
-    "action_center": "Vycentrovat kameru na hráče",
-    "build_atom": "Atomová bomba",
-    "build_city": "Město",
-    "build_defense": "Bunkr",
-    "build_factory": "Továrna",
-    "build_hydrogen": "Vodíková bomba",
-    "build_mirv": "MIRV",
-    "build_port": "Přístav",
-    "build_sam": "Protiraketový systém",
-    "build_silo": "Raketové silo",
-    "build_warship": "Bitevní loď"
+    "video_tutorial_title": "OpenFront.io Návod"
   },
   "host_modal": {
     "anonymous_players": "Anonymní hráči",
@@ -868,6 +944,8 @@
     "player_whitelist_placeholder": "oddělené čárkou",
     "players": "Hráči",
     "remove_player": "Odebrat {username}",
+    "spectator": "Divák",
+    "spectators": "Diváci",
     "start_delay": "Prodleva před startem (v sekundách)",
     "starting_in": "Hra začne za {time}. Kliknutím zrušíte",
     "subscription_required_body": "Abyste mohli svou lobby zveřejnit, musíte mít předplatné.",
@@ -882,29 +960,33 @@
     "view_subscriptions": "Zobrazit možnosti předplatného",
     "visibility_private": "Soukromá",
     "visibility_public": "Veřejná",
-    "waiting": "Čeká se na hráče...",
-    "bots": "Kmeny: ",
-    "bots_disabled": "Vypnuto",
-    "compact_map": "Kompaktní mapa",
-    "custom_alliances": "Doba trvání spojenectví",
-    "doomsday_clock": "Hodiny soudného dne",
-    "enables_title": "Zakázat jednotky",
-    "gold_multiplier": "Násobitel zlata",
-    "gold_multiplier_placeholder": "2,0x",
-    "infinite_gold": "Nekonečné zlato",
-    "infinite_troops": "Nekonečný počet jednotek",
-    "instant_build": "Okamžitá stavba",
-    "max_timer": "Délka hry (minuty)",
-    "mins_placeholder": "Minuty",
-    "nations": "Národy: ",
-    "nations_disabled": "Zakázáno",
-    "options_title": "Nastavení",
-    "random_spawn": "Náhodná počáteční pozice",
-    "start": "Začít hru",
-    "start_delay_placeholder": "3",
-    "starting_gold": "Počáteční zlato (v milionech)",
-    "starting_gold_placeholder": "5",
-    "water_nukes": "Atomovky do vody"
+    "waiting": "Čeká se na hráče..."
+  },
+  "inventory": {
+    "equipped": "Nasazeno",
+    "load_failed": "Inventář se nepodařilo načíst. Obnovte stránku a zkuste to znovu.",
+    "loading": "Načítání inventáře…",
+    "loadout": "Vaše výbava",
+    "loadout_add": "Nová výbava",
+    "loadout_applied": "Výbava {name} byla použita",
+    "loadout_category_label": "{category}: {summary}",
+    "loadout_delete_target": "Smazat {name}",
+    "loadout_deleted": "Výbava {name} byla smazána",
+    "loadout_limit": "Maximální počet uložených výbav: {count}.",
+    "loadout_presets": "Výbavy",
+    "loadout_saved": "Výbava {name} byla uložena",
+    "loadout_slot": "Výbava {name}",
+    "no_owned_crowns": "Zatím nemáte žádné koruny.",
+    "no_owned_effects_of_type": "Zatím nemáte žádné efekty typu {type}.",
+    "no_owned_skins": "Zatím nemáte žádné skiny.",
+    "retry": "Zkusit znovu",
+    "selected_cosmetic": "Vybráno: {name}",
+    "selected_cosmetic_variant": "{name} ({variant})",
+    "showing_effects": "Vybavené efekty: {count}",
+    "title": "Inventář",
+    "unequip": "Odebrat",
+    "unequip_all": "Odebrat vše",
+    "unequipped_all": "Vše bylo odebráno"
   },
   "ios_banner": {
     "got_it": "Rozumím",
@@ -979,18 +1061,19 @@
     "win_loss_ratio": "Poměr výher/proher",
     "win_score": "Skóre výher",
     "win_score_tooltip": "Vážené výhry podle zapojení klanu a obtížnosti hry",
-    "your_ranking": "Vaše umístění",
-    "loading": "Načítání..."
+    "your_ranking": "Vaše umístění"
   },
   "main": {
     "account": "Účet",
     "clans": "Klany",
     "copyright": "© OpenFront™ a přispěvatelé",
     "create": "Vytvořit lobby",
+    "detailed_view": "Podrobné zobrazení",
     "discord_avatar_alt": "Profilový obrázek na Discordu",
     "github": "GitHub",
     "go_to_troubleshooting": "Přejít na stránku pro řešení problémů",
     "help": "Nápověda",
+    "inventory": "Inventář",
     "join": "Připojit se k lobby",
     "leaderboard": "Žebříček",
     "login_discord": "Přihlásit se přes Discord",
@@ -1006,8 +1089,7 @@
     "title": "OpenFront (ALPHA)",
     "troubleshooting": "Řešení problémů",
     "user_avatar_alt": "Profilový obrázek uživatele {username}",
-    "wiki": "Wiki",
-    "settings": "Nastavení"
+    "wiki": "Wiki"
   },
   "map": {
     "achiran": "Achiran",
@@ -1161,10 +1243,7 @@
     "no_results": "Nebyly nalezeny žádné mapy",
     "search_maps": "Hledat mapy...",
     "search_results": "Výsledky hledání",
-    "unfavorite": "Odebrat z oblíbených",
-    "collapse_all": "Sbalit vše",
-    "expand_all": "Rozbalit vše",
-    "loading": "Načítání..."
+    "unfavorite": "Odebrat z oblíbených"
   },
   "map_layers": {},
   "marketing_consent": {
@@ -1202,6 +1281,24 @@
     "teams_of": "Týmy: {teamCount}, hráčů v týmu: {playersPerTeam}",
     "teams_title": "Týmy"
   },
+  "multi_tab": {
+    "detected": "Bylo zjištěno více otevřených karet se hrou.",
+    "explanation": "Pro zajištění férové hry může být současně aktivní pouze jedna karta se hrou.",
+    "please_wait": "Čekejte prosím",
+    "seconds": "Sekund",
+    "warning": "Upozornění režimu Vigilant"
+  },
+  "nav_account_menu": {
+    "account_settings": "Nastavení účtu",
+    "change_subscription": "Změnit předplatné",
+    "change_username": "Změnit uživatelské jméno",
+    "copy_profile_url": "Kopírovat URL profilu",
+    "game_settings": "Nastavení hry",
+    "log_out": "Odhlásit se",
+    "log_out_confirm": "Odhlásit se z tohoto účtu?",
+    "title": "Nabídka účtu",
+    "view_account": "Zobrazit účet"
+  },
   "new_lobby_prompt": {
     "confirm": "Vytvořit novou lobby? Všichni hráči budou pozváni.",
     "dismiss": "Zavřít",
@@ -1220,6 +1317,11 @@
     "tournament": "TURNAJ",
     "tutorial": "TUTORIÁL",
     "warning": "VAROVÁNÍ"
+  },
+  "overtime": {
+    "started": "Prodloužení! Podíl území potřebný k vítězství se nyní snižuje.",
+    "title": "Prodloužení",
+    "to_win": "Pro vítězství udržte > {pct} % území"
   },
   "performance_overlay": {
     "avg_60s": "Prům. (60s):",
@@ -1240,9 +1342,7 @@
     "tick_layers_summary": "Poslední tick: {count} vrstvy, {ms}ms",
     "tick_layers_table_header": "průměr / maximum",
     "tps": "TPS:",
-    "tps_avg_60s": "Průměr:",
-    "copied": "Zkopírováno!",
-    "failed_copy": "Kopírování selhalo"
+    "tps_avg_60s": "Průměr:"
   },
   "player_panel": {
     "active": "Aktivní",
@@ -1309,17 +1409,7 @@
     "unit": {
       "mirvw": "Hlavice MIRV",
       "trade": "Obchodní loď",
-      "trans": "Dopravní loď",
-      "abomb": "Atomová bomba",
-      "city": "Město",
-      "defp": "Bunkr",
-      "fact": "Továrna",
-      "hbomb": "Vodíková bomba",
-      "mirv": "MIRV",
-      "port": "Přístav",
-      "saml": "Protiraketový systém",
-      "silo": "Raketové silo",
-      "wshp": "Bitevní loď"
+      "trans": "Dopravní loď"
     },
     "war": "Války",
     "warship_stats": "Statistiky bitevních lodí",
@@ -1391,7 +1481,10 @@
     "no_open_lobbies": "Momentálně nejsou otevřené žádné lobby",
     "not_found": "Lobby nebyla nalezena. Zkontrolujte ID a zkuste to znovu.",
     "open_lobbies": "Otevřené lobby",
+    "play": "Hrát",
     "pvp_immunity": "Doba trvání PVP imunity",
+    "spectate": "Sledovat",
+    "spectating": "Sledování hry! Načítání…",
     "starting_gold": "Počáteční zlato",
     "title": "Připojit se k lobby",
     "version_mismatch": "Tato hra byla vytvořena v jiné verzi. Nelze se připojit."
@@ -1417,8 +1510,7 @@
     "starting_gold": "{amount} mil. počátečního zlata",
     "starting_gold_label": "Počáteční zlato",
     "water_nukes": "Atomovky do vody",
-    "doomsday_clock_label": "Hodiny soudného dne",
-    "water_nukes_label": "Atomovky do vody"
+    "overtime": "Prodloužení"
   },
   "public_lobby": {
     "connecting": "Připojování k lobby...",
@@ -1460,15 +1552,13 @@
   "send_gold_modal": {
     "aria_slider": "Posuvník množství",
     "available_tooltip": "Vaše aktuálně dostupné zlato",
-    "title_with_name": "Poslat zlato: {name}",
-    "slider_tooltip": "{percent}% • {amount}"
+    "title_with_name": "Poslat zlato: {name}"
   },
   "send_troops_modal": {
     "aria_slider": "Posuvník jednotek",
     "available_tooltip": "Vaše aktuálně dostupné jednotky",
     "capacity_note": "Nyní může přijemce přijmout pouze {amount}.",
-    "title_with_name": "Poslat jednotky: {name}",
-    "slider_tooltip": "{percent}% • {amount}"
+    "title_with_name": "Poslat jednotky: {name}"
   },
   "single_modal": {
     "max_timer_invalid": "Zadejte platnou délku hry (1–120 minut)",
@@ -1476,29 +1566,10 @@
     "medals_of_maps": "z {total} map",
     "options_changed_no_achievements": "Vlastní nastavení – úspěchy zakázány",
     "sign_in_for_achievements": "Přihlaste se pro získávání úspěchů",
-    "toggle_achievements": "Zapnout/vypnout úspěchy",
-    "bots": "Kmeny: ",
-    "bots_disabled": "Vypnuto",
-    "compact_map": "Kompaktní mapa",
-    "custom_alliances": "Doba trvání spojenectví",
-    "doomsday_clock": "Hodiny soudného dne",
-    "enables_title": "Zakázat jednotky",
-    "gold_multiplier": "Násobitel zlata",
-    "gold_multiplier_placeholder": "2,0x",
-    "infinite_gold": "Nekonečno zlata",
-    "infinite_troops": "Nekonečný počet jednotek",
-    "instant_build": "Okamžitá stavba",
-    "max_timer": "Délka hry (minuty)",
-    "max_timer_placeholder": "Min",
-    "mins_placeholder": "min",
-    "nations": "Národy: ",
-    "nations_disabled": "Vypnuto",
-    "options_title": "Možnosti",
-    "random_spawn": "Náhodná počáteční pozice",
-    "start": "Začít hru",
-    "starting_gold": "Počáteční zlato (v milionech)",
-    "starting_gold_placeholder": "5",
-    "water_nukes": "Atomovky do vody"
+    "toggle_achievements": "Zapnout/vypnout úspěchy"
+  },
+  "spawn_timer": {
+    "team_percent_tooltip": "{team}: {percent}"
   },
   "steam_link_modal": {
     "code_placeholder": "XXXX-XXXX",
@@ -1517,9 +1588,7 @@
     "reason_steam_has_progress": "Tento účet Steam již obsahuje vlastní postup ve hře a nelze ho sloučit.",
     "reason_steam_linked_elsewhere": "Tento účet Steam je již propojen s jiným účtem OpenFront.",
     "success": "Váš účet Steam je nyní propojen.",
-    "title": "Propojit účet Steam",
-    "loading_placeholder": "...",
-    "reason_failed": "Něco se pokazilo. Zkuste to prosím znovu."
+    "title": "Propojit účet Steam"
   },
   "steam_user_header": {
     "avatar_alt": "Profilový obrázek na Steamu",
@@ -1554,9 +1623,11 @@
     "merch": "Merch",
     "merch_blurb": "Nechte si merch OpenFront doručit až domů!",
     "merch_visit_store": "Navštívit obchod",
+    "no_affiliate_items": "Žádné partnerské předměty nejsou k dispozici. Podívejte se později, zda nepřibyly nové.",
     "no_crowns": "Žádné koruny nejsou momentálně v nabídce. Později se podívejte, zda nepřibyly nové položky.",
     "no_effects": "Žádné efekty nejsou momentálně v nabídce. Později se podívejte, zda nepřibyly nové položky.",
     "no_flags": "Nejsou k dispozici žádné vlajky. Vraťte se později pro nové předměty.",
+    "no_packs": "Nejsou k dispozici žádné balíčky. Vraťte se později pro nové předměty.",
     "no_skins": "Nejsou k dispozici žádné skiny. Vraťte se později pro nové předměty.",
     "no_subscriptions": "Momentálně nejsou dostupná žádná předplatná. Zkuste se vrátit později.",
     "no_tribes": "Zatím jste si nekoupili žádná jména kmenů.",
@@ -1602,16 +1673,18 @@
     "tribes_login_required": "Přihlaste se pro nákup a správu jmen kmenů.",
     "tribes_purchase_description": "Vaše jméno bude přiřazeno kmenu ovládanému botem ve skutečných multiplayerových hrách. Ve hrách se začne zobrazovat okamžitě.",
     "tribes_purchase_heading": "Koupit jméno kmene",
-    "your_tribes_heading": "Vaše jména kmenů",
-    "tribe_purchase_failed": "Nákup se nezdařil. Zkuste to prosím znovu.",
-    "tribe_stats_reach": "Dosah mezi hráči",
-    "tribe_stats_reach_tooltip": "Objevilo se ve hrách s {count} hráči"
+    "your_tribes_heading": "Vaše jména kmenů"
   },
   "streaming_now": {
     "live_count": "Živě vysílá: {count}",
     "title": "Živé přenosy",
     "viewers": "Sledujících: {count}",
     "watch": "Sledovat {name}"
+  },
+  "subscription_modal": {
+    "browse": "Procházet předplatná",
+    "none": "Nemáte aktivní předplatné.",
+    "title": "Vaše předplatné"
   },
   "team_colors": {
     "blue": "Modrá",
@@ -1629,13 +1702,11 @@
     "pattern": {
       "default": "Výchozí"
     },
-    "select_skin": "Vzhled",
-    "selected": "vybráno"
+    "select_skin": "Vzhled"
   },
   "token_login_modal": {
     "success": "Úspěšně přihlášen jako {email}!",
-    "title": "Přihlašování...",
-    "logging_in": "Přihlašování..."
+    "title": "Přihlašování..."
   },
   "troubleshooting": {
     "battery": "Baterie",
@@ -1699,6 +1770,8 @@
     "background_music_volume": "Hlasitost hudby na pozadí",
     "boat_attack": "Útok lodí",
     "boat_attack_desc": "Vyšle útok lodí na políčko pod kurzorem.",
+    "box_select_warships": "Výběr válečných lodí tažením",
+    "box_select_warships_desc": "Podržte tuto klávesu a tažením vyberte více válečných lodí.",
     "break_alliance": "Ukončit spojenectví (zrada)",
     "break_alliance_desc": "Ukončí spojenectví s hráčem, jehož políčko je pod kurzorem.",
     "build_atom_bomb": "Odpálit atomovou bombu",
@@ -1751,7 +1824,7 @@
     "graphics_preset_desc": "Vyberte předvolbu vzhledu mapy. Podrobně ji upravte nebo si vytvořte vlastní v nastavení grafiky ve hře.",
     "graphics_preset_label": "Předvolba grafiky",
     "graphics_refresh_modifier": "Modifikační klávesa pro obnovení grafiky",
-    "graphics_refresh_modifier_desc": "Pro obnovení grafiky podržte tuto klávesu a stiskněte R.",
+    "graphics_refresh_modifier_desc": "Pro obnovení grafiky podržte tuto klávesu a stiskněte {key}.",
     "graphics_settings_desc": "Upravit vzhled mapy",
     "graphics_settings_label": "Nastavení grafiky",
     "ground_attack": "Pozemní útok",
@@ -1776,6 +1849,9 @@
     "move_right_desc": "Posunout kameru doprava",
     "move_up": "Posunout kameru nahoru",
     "move_up_desc": "Posunout kameru nahoru",
+    "nuke_alliance_safety_desc": "Zabraňuje nechtěným jaderným útokům na nově vzniklé spojence.",
+    "nuke_alliance_safety_duration": "{count, plural, one {1 tik (0,1 s)} other {{count} tiků ({seconds} s)}}",
+    "nuke_alliance_safety_label": "Ochrana spojenců před přátelskou palbou",
     "off": "Vypnuto",
     "on": "Zapnuto",
     "pause_game": "Pozastavit",
@@ -1788,8 +1864,11 @@
     "request_alliance": "Požádat o spojenectví",
     "request_alliance_desc": "Pošle žádost o spojenectví hráči, jehož políčko je pod kurzorem.",
     "reset": "Resetovat",
+    "reset_gfx_desc": "Při problémech se zobrazením podržte modifikační klávesu a stisknutím obnovte vykreslování.",
     "retaliate_attack": "Protiútok",
     "retaliate_attack_desc": "Vyšle protiútok, který oslabí nebo neutralizuje útočnou sílu posledního aktivního útočníka. Dostupné pouze ve chvíli, kdy jste pod útokem.",
+    "select_all_warships": "Vybrat všechny válečné lodě",
+    "select_all_warships_desc": "Vyberte všechny své válečné lodě na mapě.",
     "sound_effects_volume": "Hlasitost zvukových efektů",
     "special_effects_desc": "Zapne/vypne speciální efekty. Vypnutím zlepšíte výkon",
     "special_effects_label": "Speciální efekty",
@@ -1814,6 +1893,12 @@
   },
   "username": {
     "account_invalid_chars": "Uživatelské jméno smí obsahovat pouze písmena, číslice, podtržítka, spojovníky a mezi slovy vždy jen jednu mezeru.",
+    "clan_browse": "Procházet klany",
+    "clan_clear": "Bez tagu",
+    "clan_custom": "Jiný tag",
+    "clan_label": "Tag klanu",
+    "clan_none_joined": "Zatím jste se nepřipojili k žádnému klanu.",
+    "clan_your_clans": "Vaše klany",
     "enter_username": "Zadejte uživatelské jméno",
     "invalid_chars": "Uživatelské jméno může obsahovat pouze písmena, číslice, mezery a podtržítka.",
     "not_string": "Uživatelské jméno musí být text.",
@@ -1824,11 +1909,14 @@
     "tag_too_short": "Tag klanu musí mít 2-5 alfanumerických znaků.",
     "too_long": "Uživatelské jméno nesmí mít více než {max} charakterů.",
     "too_short": "Uživatelské jméno musí mít alespoň {min} charakterů.",
+    "verified_active_hint": "Hrajete pod ověřeným jménem svého účtu.",
     "verified_heading": "Ověřené jméno",
     "verified_player": "Ověřený hráč",
     "verified_sub_required": "Abyste mohli hrát pod svým ověřeným jménem, potřebujete aktivní předplatné.",
     "verified_sub_required_confirm": "Zobrazit obchod",
-    "verified_toggle": "Ověřeno"
+    "verified_use": "Použít ověřené jméno",
+    "verified_use_custom": "Přepnout zpět na vlastní jméno",
+    "verified_use_hint": "Hrát pod ověřeným jménem svého účtu"
   },
   "win_modal": {
     "died": "Byli jste poraženi",
@@ -1849,10 +1937,5 @@
     "you_won": "Vítězství!",
     "your_team": "Váš tým vyhrál!",
     "youtube_tutorial": "Potřebujete pomoc?"
-  },
-  "flag_input": {
-    "button_title": "Vybrat vlajku!",
-    "search_flag": "Hledat...",
-    "title": "Vlajka"
   }
 }

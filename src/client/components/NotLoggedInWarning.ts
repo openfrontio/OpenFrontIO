@@ -1,14 +1,14 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
-import { hasLinkedAccount } from "../Api";
+import { responseHasLinkedIdentity } from "../AccountIdentity";
 
 @customElement("not-logged-in-warning")
 export class NotLoggedInWarning extends LitElement {
   @state() private linked = false;
 
   private _onUserMe = (event: CustomEvent<UserMeResponse | false>) => {
-    this.linked = hasLinkedAccount(event.detail);
+    this.linked = responseHasLinkedIdentity(event.detail);
   };
 
   createRenderRoot() {

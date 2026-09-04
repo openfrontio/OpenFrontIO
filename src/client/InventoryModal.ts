@@ -619,7 +619,7 @@ export class InventoryModal extends BaseModal {
             @click=${() => {
               if (isLoggedIn) {
                 this.close();
-                window.showPage?.("page-item-store");
+                window.location.hash = "modal=store&tab=cosmetics";
               } else {
                 window.showPage?.("page-account");
               }
