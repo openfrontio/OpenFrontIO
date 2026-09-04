@@ -546,6 +546,7 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     themes: ["asia"],
+    layers: [{ id: "label", placement: "water" }],
   },
   {
     id: "ChoppingBlock",
