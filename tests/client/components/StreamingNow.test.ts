@@ -151,6 +151,45 @@ describe("StreamingNow", () => {
       expect(el.querySelectorAll("a")).toHaveLength(0);
     });
 
+    it("subscribes when a mobile-first visit expands to desktop width", async () => {
+      const listeners = new Set<(event: MediaQueryListEvent) => void>();
+      let matches = false;
+      vi.stubGlobal("matchMedia", () => ({
+        get matches() {
+          return matches;
+        },
+        addEventListener: (
+          type: string,
+          listener: (event: MediaQueryListEvent) => void,
+        ) => {
+          if (type === "change") listeners.add(listener);
+        },
+        removeEventListener: (
+          type: string,
+          listener: (event: MediaQueryListEvent) => void,
+        ) => {
+          if (type === "change") listeners.delete(listener);
+        },
+      }));
+
+      const el = document.createElement("streaming-now") as HTMLElement & {
+        updateComplete: Promise<boolean>;
+      };
+      document.body.appendChild(el);
+      await el.updateComplete;
+      expect(getStreams).not.toHaveBeenCalled();
+
+      matches = true;
+      for (const listener of listeners) {
+        listener({ matches: true } as MediaQueryListEvent);
+      }
+
+      await vi.waitFor(() => expect(getStreams).toHaveBeenCalledTimes(1));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await el.updateComplete;
+      expect(el.style.display).not.toBe("none");
+    });
+
     it("owns no timer: disconnecting stops all polling", async () => {
       const el = await mount();
       const before = getStreams.mock.calls.length;

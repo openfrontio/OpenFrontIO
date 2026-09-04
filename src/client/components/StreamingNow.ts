@@ -25,6 +25,20 @@ export function formatViewers(n: number): string {
 export class StreamingNow extends LitElement {
   @state() private streams: LiveStream[] = [];
   private unsubscribe: (() => void) | null = null;
+  private desktopMediaQuery: MediaQueryList | null = null;
+
+  private readonly onViewportChange = (event: MediaQueryListEvent) => {
+    if (event.matches) {
+      this.subscribe();
+      return;
+    }
+
+    this.unsubscribe?.();
+    this.unsubscribe = null;
+    this.streams = [];
+    this.style.display = "none";
+    this.classList.remove("streaming-live");
+  };
 
   // Light DOM so Tailwind classes apply (matches NewsBox).
   createRenderRoot() {
@@ -34,13 +48,23 @@ export class StreamingNow extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.style.display = "none"; // hidden until the feed reports a live stream (no flash)
-    // Desktop only (host carries `hidden lg:block`); below lg, don't even subscribe.
-    if (
-      typeof window.matchMedia === "function" &&
-      !window.matchMedia("(min-width: 1024px)").matches
-    ) {
-      return;
+    // Desktop only (host carries `hidden lg:block`). Keep this responsive: the element
+    // itself stays mounted, so a mobile-first visit can later expand to desktop width.
+    if (typeof window.matchMedia === "function") {
+      this.desktopMediaQuery = window.matchMedia("(min-width: 1024px)");
+      if (typeof this.desktopMediaQuery.addEventListener === "function") {
+        this.desktopMediaQuery.addEventListener(
+          "change",
+          this.onViewportChange,
+        );
+      }
+      if (!this.desktopMediaQuery.matches) return;
     }
+    this.subscribe();
+  }
+
+  private subscribe() {
+    if (this.unsubscribe !== null) return;
     // The shared poller owns the cadence and stops itself in-game and while the tab is
     // hidden. This previously ran its own setInterval and only cleared it in
     // disconnectedCallback — which never fires, because <play-page> is never removed
@@ -57,9 +81,19 @@ export class StreamingNow extends LitElement {
   }
 
   disconnectedCallback() {
-    super.disconnectedCallback();
+    if (
+      this.desktopMediaQuery !== null &&
+      typeof this.desktopMediaQuery.removeEventListener === "function"
+    ) {
+      this.desktopMediaQuery.removeEventListener(
+        "change",
+        this.onViewportChange,
+      );
+    }
+    this.desktopMediaQuery = null;
     this.unsubscribe?.();
     this.unsubscribe = null;
+    super.disconnectedCallback();
   }
 
   render() {
