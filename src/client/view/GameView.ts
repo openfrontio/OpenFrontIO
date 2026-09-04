@@ -402,6 +402,7 @@ export class GameView implements GameMap {
         this._namesDirty = true;
         this._relationsDirty = true;
         this._clustersDirty = true;
+        this._teamClanTags = null;
       }
     });
 
@@ -1043,6 +1044,10 @@ export class GameView implements GameMap {
       this._teamClanTags = this.initTeamClanTags();
     }
     return this._teamClanTags.get(team) ?? null;
+  }
+
+  invalidateTeamClanTags(): void {
+    this._teamClanTags = null;
   }
 
   private initTeamClanTags(): Map<Team, string | null> {
