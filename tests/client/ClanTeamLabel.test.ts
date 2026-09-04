@@ -38,9 +38,9 @@ describe("resolveTeamClanTag", () => {
     });
 
     it("returns coalition when 2 players have different clans (100% >= 70%, 50% >= 30%)", () => {
-      expect(
-        resolveTeamClanTag([{ clanTag: "UN" }, { clanTag: "MARS" }]),
-      ).toBe("MARS / UN");
+      expect(resolveTeamClanTag([{ clanTag: "UN" }, { clanTag: "MARS" }])).toBe(
+        "MARS / UN",
+      );
     });
   });
 
@@ -210,11 +210,9 @@ describe("getTranslatedPlayerTeamLabel", () => {
   });
 
   it("formats clan team label when clan tag is present", () => {
-    expect(getTranslatedPlayerTeamLabel("Red", "MARS")).toBe(
-      "Clan [MARS] (Red)",
-    );
+    expect(getTranslatedPlayerTeamLabel("Red", "MARS")).toBe("[MARS]");
     expect(getTranslatedPlayerTeamLabel("Team 1", "MARS / UN")).toBe(
-      "Clan [MARS / UN] (Team 1)",
+      "[MARS / UN]",
     );
   });
 });

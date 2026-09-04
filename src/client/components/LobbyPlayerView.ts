@@ -311,14 +311,18 @@ export class LobbyTeamView extends LitElement {
         <div
           class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
         >
-          ${this.showTeamColors
-            ? html` <span
-                class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg)"
-                style="--bg:${this.teamHeaderColor(preview.team)};"
-              ></span>`
-            : null}
-          <span class="truncate">${teamLabel}</span>
-          <span class="text-white/90">${displayCount}/${maxTeamSize}</span>
+          <div class="flex items-center gap-1.5 min-w-0">
+            ${this.showTeamColors
+              ? html` <span
+                  class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg) shrink-0"
+                  style="--bg:${this.teamHeaderColor(preview.team)};"
+                ></span>`
+              : null}
+            <span class="truncate">${teamLabel}</span>
+          </div>
+          <span class="text-white/90 font-bold text-[13px] shrink-0"
+            >${displayCount}/${maxTeamSize}</span
+          >
         </div>
         <div class="p-2 ${isEmpty ? "" : "flex flex-col gap-1.5"}">
           ${isEmpty

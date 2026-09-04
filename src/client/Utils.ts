@@ -605,19 +605,12 @@ export function getTranslatedPlayerTeamLabel(
   clanTag?: string | null,
 ): string {
   if (!team) return "";
+  if (clanTag) {
+    return `[${clanTag}]`;
+  }
   const translationKey = `team_colors.${team.toLowerCase()}`;
   const translated = translateText(translationKey);
-  const baseLabel = translated === translationKey ? team : translated;
-  if (clanTag) {
-    const clanLabel = translateText("clan_team_label", {
-      clanTag,
-      team: baseLabel,
-    });
-    return clanLabel === "clan_team_label"
-      ? `Clan [${clanTag}] (${baseLabel})`
-      : clanLabel;
-  }
-  return baseLabel;
+  return translated === translationKey ? team : translated;
 }
 
 /**

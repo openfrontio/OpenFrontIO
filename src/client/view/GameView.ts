@@ -4,13 +4,13 @@ import {
   GameUpdates,
   PlayerID,
   PlayerType,
+  Team,
   TerrainType,
   TerraNullius,
   Tick,
   Unit,
   UnitInfo,
   UnitType,
-  Team,
 } from "../../core/game/Game";
 import { GameMap, TileRef } from "../../core/game/GameMap";
 import {
@@ -26,15 +26,9 @@ import {
 import { TerrainMapData } from "../../core/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "../../core/game/UnitGrid";
-import {
-  ClientID,
-  GameID,
-  Player,
-  PlayerCosmetics,
-} from "../../core/Schemas";
+import { ClientID, GameID, Player, PlayerCosmetics } from "../../core/Schemas";
 import { formatPlayerDisplayName } from "../../core/Util";
 import { WorkerClient } from "../../core/worker/WorkerClient";
-import { resolveTeamClanTag } from "../Utils";
 import { computeAllianceClusters } from "../render/frame/derive/AllianceClusters";
 import { extractAttackRings } from "../render/frame/derive/AttackRings";
 import { extractNukeTelegraphs } from "../render/frame/derive/NukeTelegraphs";
@@ -46,6 +40,7 @@ import { SpiralTrails } from "../render/frame/SpiralTrails";
 import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
+import { resolveTeamClanTag } from "../Utils";
 import { PlayerView } from "./PlayerView";
 import { UnitView } from "./UnitView";
 
