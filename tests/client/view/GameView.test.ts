@@ -170,11 +170,16 @@ describe("GameView.update — players", () => {
     );
     expect(game.teamClanTag("1")).toBe("MARS");
 
+    // Simulate the streamer mode toggle bypassing GameUpdate logic
+    // by silently mutating the static player clan tag
+    game.player("p1").static.clanTag = "EARTH";
+
     // Explicitly invalidate cache
     game.invalidateTeamClanTags();
 
     // The next lookup will lazily re-evaluate it based on current player state
-    expect(game.teamClanTag("1")).toBe("MARS");
+    // If invalidation is broken, this would incorrectly return "MARS"
+    expect(game.teamClanTag("1")).toBe("EARTH");
   });
 });
 
