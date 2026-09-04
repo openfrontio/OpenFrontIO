@@ -1,4 +1,4 @@
-import { html, svg, TemplateResult } from "lit";
+import { html, nothing, svg, TemplateResult } from "lit";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo } from "../../core/Schemas";
@@ -71,9 +71,6 @@ export function trustRequiredDialog(
  * them direct flex children of the row: wrapped in a block, a pill picks up a
  * line box and renders 4px short and 2px low.
  */
-const CARD_PILL_CLASS =
-  "inline-block px-2 py-1 rounded text-xs font-bold tracking-widest bg-malibu-blue text-white";
-
 /**
  * Aspect ratios keyed by map, loaded lazily from each map's manifest. Shared
  * so the second component to render a map doesn't refetch it.
@@ -120,21 +117,25 @@ export interface LobbyCardOptions {
   onClick: () => void;
   disabled?: boolean;
   /**
-   * Gated rather than disabled: the card dims and reports `aria-disabled`, but
-   * stays clickable, so `onClick` still runs and can refuse the action itself
-   * (the desktop update bar's attention animation is triggered from there).
-   * `disabled` would swallow the click -- it also sets pointer-events-none --
-   * leaving a gated card that looks broken instead of explaining itself.
+   * Gated rather than disabled: the card dims and reports `aria-disabled` but
+   * stays clickable, so `onClick` still runs and can refuse the action itself.
+   * `disabled` would swallow the click (it also sets pointer-events-none).
    */
   blocked?: boolean;
-  /**
-   * Whether the viewer's account is trusted (viewerIsTrusted). Only matters
-   * for a trusted-only lobby, whose card shows a closed lock when the viewer
-   * can't join it and an open one when they can.
-   */
+  /** Only matters for a trusted-only lobby, which shows an open or closed lock. */
   viewerTrusted?: boolean;
   /** Card height; defaults to the homepage's fill-the-grid-cell sizing. */
   heightClass?: string;
+}
+
+const PILL =
+  "rounded bg-malibu-blue px-2 py-1 text-xs font-bold tracking-widest text-white";
+const BADGE = "rounded bg-black/70 backdrop-blur-sm";
+
+/** Extreme aspect ratios (Amazon River is ~20:1) show whole rather than cropped. */
+function fitsByContain(mapType: GameMapType): boolean {
+  const ratio = mapAspectRatios.get(mapType);
+  return ratio !== undefined && (ratio > 4 || ratio < 0.25);
 }
 
 export function lobbyCard({
@@ -149,127 +150,99 @@ export function lobbyCard({
   heightClass = "h-44 sm:h-full",
 }: LobbyCardOptions): TemplateResult {
   const mapType = lobby.gameConfig!.gameMap as GameMapType;
-  const mapImageSrc = terrainMapFileLoader.getMapData(mapType).webpPath;
-  const aspectRatio = mapAspectRatios.get(mapType);
-  // Use object-contain for extreme aspect ratios (e.g. Amazon River ~20:1) so
-  // the full map is visible instead of being cropped by object-cover.
-  const useContain =
-    aspectRatio !== undefined && (aspectRatio > 4 || aspectRatio < 0.25);
   const mapName = getMapName(lobby.gameConfig?.gameMap);
-  // A featured lobby names itself; the map drops to the subtitle line so
-  // nothing is lost. Lit interpolates it as text, never markup.
-  const featuredLabel = lobby.featured ? lobby.label : undefined;
-  const title = featuredLabel ?? mapName;
-  const subtitleLine = featuredLabel
-    ? [mapName, subtitle].filter(Boolean).join(" · ")
-    : subtitle;
-
-  // Hosted lobbies don't always advertise a cap; showing "3/" reads as a
-  // missing number, so drop the separator when there's nothing to divide by.
+  // A featured lobby names itself; the map drops to the subtitle line.
+  const title = (lobby.featured ? lobby.label : undefined) ?? mapName;
+  const subtitleLine =
+    title === mapName || mapName === undefined
+      ? subtitle
+      : subtitle
+        ? html`${mapName} · ${subtitle}`
+        : mapName;
+  // Hosted lobbies don't always advertise a cap; "3/" reads as a missing number.
   const capacity = lobby.gameConfig?.maxPlayers;
   const playerCount =
     capacity === undefined
       ? String(lobby.numClients)
       : `${lobby.numClients}/${capacity}`;
-
-  const modifierLabels = getModifierLabels(
+  // Longest first, so on a short card the pills that say the most stay legible.
+  const modifiers = getModifierLabels(
     lobby.gameConfig?.publicGameModifiers,
     lobby.gameConfig?.doomsdayClock?.speed,
-  );
-  // Longest first: on a short card the pills that say the most stay legible.
-  if (modifierLabels.length > 1) {
-    modifierLabels.sort((a, b) => b.length - a.length);
-  }
-
+  ).sort((a, b) => b.length - a.length);
   const trustedOnly = lobby.gameConfig?.trusted === true;
+
+  const state = disabled
+    ? "opacity-50 cursor-not-allowed pointer-events-none"
+    : blocked
+      ? "opacity-50 cursor-not-allowed"
+      : "";
+  // Cover images sit at 1.05 to hide their edges, so they zoom from there.
+  const image = fitsByContain(mapType)
+    ? "object-contain group-hover:scale-105"
+    : "object-cover scale-[1.05] group-hover:scale-[1.12]";
 
   return html`
     <button
       @click=${onClick}
       ?disabled=${disabled}
       aria-disabled=${blocked}
-      class="group relative w-full ${heightClass} text-white uppercase rounded-2xl overflow-hidden transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)] ${disabled
-        ? "opacity-50 cursor-not-allowed pointer-events-none"
-        : blocked
-          ? "opacity-50 cursor-not-allowed"
-          : ""}"
+      class="group relative block w-full ${heightClass} overflow-hidden rounded-2xl bg-surface text-left uppercase text-white transition-shadow duration-200 hover:shadow-[var(--shadow-lobby-card-hover)] ${state}"
     >
-      <!-- The card is the only rounded, clipping box: a radius on this layer
-           and on the name bar too drew a rim along the corners. -->
-      <div class="absolute inset-0 pointer-events-none">
-        ${mapImageSrc
-          ? html`<img
-              src="${mapImageSrc}"
-              alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
-              draggable="false"
-              class="absolute inset-0 w-full h-full ${useContain
-                ? "object-contain"
-                : "object-cover object-center scale-[1.05]"} [image-rendering:auto]"
-            />`
-          : null}
-      </div>
-      <!-- Top row: modifiers + timer -->
+      <img
+        src=${terrainMapFileLoader.getMapData(mapType).webpPath}
+        alt=${mapName ?? mapType}
+        draggable="false"
+        class="pointer-events-none absolute inset-0 size-full select-none transition-transform duration-200 ${image}"
+      />
+
       <div
         class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
       >
-        ${modifierLabels.length > 0
-          ? html`<div class="flex flex-col items-start gap-1 min-w-0">
-              ${modifierLabels.map(
-                (label) =>
-                  html`<span class="${CARD_PILL_CLASS} uppercase"
-                    >${label}</span
-                  >`,
-              )}
-            </div>`
-          : html`<div></div>`}
+        <div class="flex min-w-0 flex-col items-start gap-1">
+          ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
+        </div>
         <span
-          class="${CARD_PILL_CLASS} shrink-0 ${timeDisplayUppercase
-            ? "uppercase"
-            : "normal-case"}"
+          class="${PILL} shrink-0 ${timeDisplayUppercase ? "" : "normal-case"}"
           >${timeDisplay}</span
         >
       </div>
-      <!-- Bottom bar: map name + mode, with player count floating above -->
+
       <div
-        class="absolute bottom-0 left-0 right-0 flex flex-col px-3 py-2 bg-black/55 backdrop-blur-sm ${trustedOnly
+        class="absolute inset-x-0 bottom-0 flex flex-col bg-black/55 px-3 py-2 backdrop-blur-sm ${trustedOnly
           ? "pr-10"
           : ""}"
-        style="overflow: visible;"
       >
-        ${trustedOnly ? trustLockIcon(viewerTrusted) : null}
         <span
-          class="absolute bottom-full right-2 mb-1 flex items-center gap-1 text-xs font-bold tracking-widest bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded"
+          class="${BADGE} absolute bottom-full right-2 mb-1 flex items-center gap-1 px-2 py-0.5 text-xs font-bold tracking-widest"
         >
           ${playerCount}
           <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4 inline-block"
+            class="size-4"
             viewBox="0 0 20 20"
             fill="currentColor"
+            aria-hidden="true"
           >
             <path
               d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
-            ></path>
+            />
           </svg>
         </span>
+        ${trustedOnly ? trustLockIcon(viewerTrusted) : nothing}
         ${title
           ? html`<p
-              class="text-sm sm:text-base font-bold uppercase tracking-wider text-left leading-tight"
+              class="text-sm font-bold leading-tight tracking-wider sm:text-base"
             >
               ${title}
             </p>`
-          : ""}
-        <h3 class="text-xs text-white/70 uppercase tracking-wider text-left">
-          ${subtitleLine}
-        </h3>
+          : nothing}
+        <h3 class="text-xs tracking-wider text-white/70">${subtitleLine}</h3>
       </div>
     </button>
   `;
 }
 
-// Bottom-right corner of the card. Red closed lock: the viewer can't join this
-// trusted-only lobby. Green open lock: they can. Heroicons mini
-// lock-closed / lock-open.
+/** Bottom-right lock: red and closed when the viewer can't join, green and open when they can. */
 function trustLockIcon(viewerTrusted: boolean): TemplateResult {
   const label = translateText(
     viewerTrusted
@@ -277,7 +250,7 @@ function trustLockIcon(viewerTrusted: boolean): TemplateResult {
       : "public_lobby.trusted_locked",
   );
   return html`<span
-    class="absolute bottom-2 right-2 flex items-center bg-black/70 backdrop-blur-sm px-1.5 py-1 rounded ${viewerTrusted
+    class="${BADGE} absolute bottom-2 right-2 flex items-center px-1.5 py-1 ${viewerTrusted
       ? "text-green-400"
       : "text-red-400"}"
     title=${label}
@@ -285,8 +258,7 @@ function trustLockIcon(viewerTrusted: boolean): TemplateResult {
     data-trust=${viewerTrusted ? "unlocked" : "locked"}
   >
     <svg
-      xmlns="http://www.w3.org/2000/svg"
-      class="h-4 w-4"
+      class="size-4"
       viewBox="0 0 20 20"
       fill="currentColor"
       aria-hidden="true"
@@ -294,12 +266,12 @@ function trustLockIcon(viewerTrusted: boolean): TemplateResult {
       ${viewerTrusted
         ? svg`<path
             d="M14.5 1A4.5 4.5 0 0 0 10 5.5V9H3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1.5V5.5a3 3 0 1 1 6 0v2.75a.75.75 0 0 0 1.5 0V5.5A4.5 4.5 0 0 0 14.5 1Z"
-          ></path>`
+          />`
         : svg`<path
             fill-rule="evenodd"
             d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z"
             clip-rule="evenodd"
-          ></path>`}
+          />`}
     </svg>
   </span>`;
 }
