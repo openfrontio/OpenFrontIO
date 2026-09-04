@@ -36,9 +36,12 @@ describe("CustomCurrencyCard", () => {
 
     expect(card!.querySelector("[data-custom-currency-card]")).toBeTruthy();
     expect(card!.querySelector("purchase-button")).toBeTruthy();
-    expect(
-      card!.querySelector("[data-custom-currency-card]")?.className,
-    ).toMatch(/w-48/);
+    // Width comes from the host element so the card shrinks with the pack
+    // grid on phones instead of overflowing it.
+    const shellClass =
+      card!.querySelector("[data-custom-currency-card]")?.className ?? "";
+    expect(shellClass).toMatch(/w-full/);
+    expect(shellClass).not.toMatch(/w-48/);
     expect(
       card!.querySelector<HTMLElement>("[data-custom-currency-card]")?.dataset
         .cosmeticShell,
@@ -53,7 +56,15 @@ describe("CustomCurrencyCard", () => {
     expect(
       card!.querySelector("[data-custom-currency-name]")?.className,
     ).not.toMatch(/pt-2/);
-    expect(card!.querySelector("[data-cosmetic-main]")).toBeTruthy();
+    // The name leads the card, as it does on cosmetic-card.
+    const main = card!.querySelector("[data-cosmetic-main]");
+    expect(main).toBeTruthy();
+    const name = card!.querySelector("[data-custom-currency-name]");
+    expect(name?.className).toMatch(/pt-3/);
+    expect(
+      name!.compareDocumentPosition(main!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(main!.contains(name)).toBe(false);
     expect(card!.querySelector("[data-cosmetic-action]")?.className).toMatch(
       /w-full/,
     );
