@@ -77,6 +77,22 @@ describe("UserSettings effect selection", () => {
   });
 });
 
+describe("UserSettings tutorial dismissal", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("defaults to not dismissed and persists dismissal", () => {
+    const s = new UserSettings();
+    expect(s.tutorialDismissed()).toBe(false);
+
+    s.setTutorialDismissed(true);
+    expect(s.tutorialDismissed()).toBe(true);
+    expect(localStorage.getItem("settings.tutorialDismissed")).toBe("true");
+
+    s.setTutorialDismissed(false);
+    expect(s.tutorialDismissed()).toBe(false);
+  });
+});
+
 describe("UserSettings cosmetic loadouts", () => {
   beforeEach(resetUserSettingsState);
 

@@ -21,6 +21,7 @@ import {
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
+import { TutorialHighlight, TutorialHighlightEvent } from "./Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
 @customElement("control-panel")
@@ -61,6 +62,9 @@ export class ControlPanel extends LitElement implements Controller {
   private _goldGainPulseId: number = 0;
   private _goldGainTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
+  @state()
+  private _tutorialHighlight: TutorialHighlight | null = null;
+
   private _troopRateIsIncreasing: boolean = true;
 
   private _lastTroopIncreaseRate: number;
@@ -77,6 +81,9 @@ export class ControlPanel extends LitElement implements Controller {
   init() {
     this.attackRatio = new UserSettings().attackRatio();
     this.uiState.attackRatio = this.attackRatio;
+    this.eventBus.on(TutorialHighlightEvent, (e) => {
+      this._tutorialHighlight = e.target;
+    });
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio = this.attackRatio + event.attackRatio / 100;
 
@@ -443,6 +450,10 @@ export class ControlPanel extends LitElement implements Controller {
     `;
   }
 
+  private tutorialHighlightClass(target: TutorialHighlight): string {
+    return this._tutorialHighlight === target ? "tutorial-highlight" : "";
+  }
+
   private renderNotification() {
     if (!this._notification) return html``;
     const isWarning = this._notification.type === "warning";
@@ -465,8 +476,9 @@ export class ControlPanel extends LitElement implements Controller {
       <div class="flex gap-1.5 items-center mb-1">
         <!-- Troop rate -->
         <div
-          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm py-0.5 px-1 w-[5.5rem] ${this
-            ._troopRateIsIncreasing
+          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm py-0.5 px-1 w-[5.5rem] ${this.tutorialHighlightClass(
+            "troop_rate",
+          )} ${this._troopRateIsIncreasing
             ? "border-green-400"
             : "border-orange-400"}"
           translate="no"
@@ -490,10 +502,14 @@ export class ControlPanel extends LitElement implements Controller {
           >
         </div>
         <!-- Troop bar -->
-        <div class="flex-1">${this.renderDesktopTroopBar()}</div>
+        <div class="flex-1 ${this.tutorialHighlightClass("troops")}">
+          ${this.renderDesktopTroopBar()}
+        </div>
         <!-- Gold -->
         <div
-          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm py-0.5 px-1 min-w-[4.5rem] relative"
+          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm py-0.5 px-1 min-w-[4.5rem] relative ${this.tutorialHighlightClass(
+            "gold",
+          )}"
           translate="no"
         >
           ${this._goldGain !== null
@@ -510,7 +526,12 @@ export class ControlPanel extends LitElement implements Controller {
         </div>
       </div>
       <!-- Row 2: attack ratio | slider -->
-      <div class="flex items-center gap-1.5" translate="no">
+      <div
+        class="flex items-center gap-1.5 ${this.tutorialHighlightClass(
+          "attack_ratio",
+        )}"
+        translate="no"
+      >
         <div
           class="flex items-center gap-1 shrink-0 border border-gray-600 rounded-md px-1 py-0.5 text-sm font-bold text-white cursor-pointer w-[8rem]"
         >
@@ -548,7 +569,9 @@ export class ControlPanel extends LitElement implements Controller {
       <div class="flex gap-2 items-center">
         <!-- Gold -->
         <div
-          class="flex items-center justify-center p-1 gap-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs w-1/5 shrink-0 relative"
+          class="flex items-center justify-center p-1 gap-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs w-1/5 shrink-0 relative ${this.tutorialHighlightClass(
+            "gold",
+          )}"
           translate="no"
         >
           ${this._goldGain !== null
@@ -564,7 +587,11 @@ export class ControlPanel extends LitElement implements Controller {
           <span class="px-0.5">${renderNumber(this._gold)}</span>
         </div>
         <!-- Troop bar -->
-        <div class="w-[40%] shrink-0 flex items-center">
+        <div
+          class="w-[40%] shrink-0 flex items-center ${this.tutorialHighlightClass(
+            "troops",
+          )} ${this.tutorialHighlightClass("troop_rate")}"
+        >
           ${this.renderMobileTroopBar()}
         </div>
         <!-- Sword + % label -->
@@ -585,7 +612,10 @@ export class ControlPanel extends LitElement implements Controller {
           >
         </div>
         <!-- Attack ratio slider -->
-        <div class="flex-1" translate="no">
+        <div
+          class="flex-1 ${this.tutorialHighlightClass("attack_ratio")}"
+          translate="no"
+        >
           <input
             type="range"
             min="1"
