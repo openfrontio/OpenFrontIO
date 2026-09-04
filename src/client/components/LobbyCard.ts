@@ -124,6 +124,7 @@ export interface LobbyCardOptions {
  */
 const PILL =
   "rounded-md bg-malibu-blue px-2 py-1 text-[11px] font-bold leading-tight tracking-wider text-white";
+const BADGE = "rounded-md bg-black/70 backdrop-blur-sm";
 
 /** Extreme aspect ratios (Amazon River is ~20:1) show whole rather than cropped. */
 function fitsByContain(mapType: GameMapType): boolean {
@@ -133,9 +134,8 @@ function fitsByContain(mapType: GameMapType): boolean {
 
 /**
  * The map-image lobby card used on the homepage and in the More Games lobby
- * browser: map art behind modifier tags and a countdown pill, with a bottom
- * bar naming the map and mode, the player count and (for trusted-only
- * lobbies) a lock.
+ * browser: map art behind modifier pills, a countdown pill, the player count
+ * and a bottom bar naming the map and mode.
  */
 export function lobbyCard({
   lobby,
@@ -219,42 +219,40 @@ export function lobbyCard({
         its slots with a transform), which showed the map in square corners.
       -->
       <div
-        class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 rounded-b-[inherit] bg-black/55 px-3 py-2 backdrop-blur-sm"
+        class="absolute inset-x-0 bottom-0 flex flex-col rounded-b-[inherit] bg-black/55 px-3 py-2 backdrop-blur-sm ${trustedOnly
+          ? "pr-10"
+          : ""}"
       >
-        <div class="flex min-w-0 flex-col">
-          ${title
-            ? html`<p
-                class="text-sm font-bold leading-tight tracking-wider @[20rem]:text-base"
-              >
-                ${title}
-              </p>`
-            : nothing}
-          <h3 class="text-xs tracking-wider text-white/70">${subtitleLine}</h3>
-        </div>
-        <div
-          class="flex shrink-0 items-center gap-2 text-xs font-bold tabular-nums tracking-wider"
+        <span
+          class="${BADGE} absolute bottom-full right-2 mb-1 flex items-center gap-1 px-2 py-0.5 text-xs font-bold tabular-nums tracking-widest"
         >
-          <span class="flex items-center gap-1">
-            ${playerCount}
-            <svg
-              class="size-4"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
+          ${playerCount}
+          <svg
+            class="size-4"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+            />
+          </svg>
+        </span>
+        ${trustedOnly ? trustLockIcon(viewerTrusted) : nothing}
+        ${title
+          ? html`<p
+              class="text-sm font-bold leading-tight tracking-wider @[20rem]:text-base"
             >
-              <path
-                d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
-              />
-            </svg>
-          </span>
-          ${trustedOnly ? trustLockIcon(viewerTrusted) : nothing}
-        </div>
+              ${title}
+            </p>`
+          : nothing}
+        <h3 class="text-xs tracking-wider text-white/70">${subtitleLine}</h3>
       </div>
     </button>
   `;
 }
 
-/** Lock beside the player count: red and closed when the viewer can't join, green and open when they can. */
+/** Bottom-right lock: red and closed when the viewer can't join, green and open when they can. */
 function trustLockIcon(viewerTrusted: boolean): TemplateResult {
   const label = translateText(
     viewerTrusted
@@ -262,7 +260,7 @@ function trustLockIcon(viewerTrusted: boolean): TemplateResult {
       : "public_lobby.trusted_locked",
   );
   return html`<span
-    class="flex items-center ${viewerTrusted
+    class="${BADGE} absolute bottom-2 right-2 flex items-center px-1.5 py-1 ${viewerTrusted
       ? "text-green-400"
       : "text-red-400"}"
     title=${label}
