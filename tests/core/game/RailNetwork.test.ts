@@ -6,8 +6,7 @@ import {
 } from "../../../src/core/game/RailNetworkImpl";
 import { Railroad } from "../../../src/core/game/Railroad";
 import { Cluster } from "../../../src/core/game/TrainStation";
-import { playerInfo } from "../../util/Setup";
-import { createGame, L } from "../pathfinding/_fixtures";
+import { playerInfo, setup } from "../../util/Setup";
 
 // Mock types
 const createMockStation = (unitId: number): any => {
@@ -414,16 +413,11 @@ describe("RailNetworkImpl", () => {
 });
 
 describe("factory rail preview path consistency", () => {
-  test("matches the railway created for a promoted non-station city", () => {
-    const width = 40;
-    const height = 40;
-    const game = createGame({
-      width,
-      height,
-      grid: new Array(width * height).fill(L),
-    });
-    const player = game.addPlayer(playerInfo("player", PlayerType.Human));
-    game.endSpawnPhase();
+  test("matches the railway created for a promoted non-station city", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
 
     const cityTile = game.ref(5, 5);
     const factoryTile = game.ref(25, 25);
