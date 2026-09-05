@@ -65,6 +65,61 @@ describe("subscription-panel", () => {
     expect(window.location.hash).toBe("#modal=store&tab=subscriptions");
   });
 
+  // OPE-314. In the packaged Steam build a Manage click cannot reach Stripe:
+  // navigationPolicy refuses payment-origin link-outs, per the rule that the
+  // desktop build must never steer to a payment page. Rendering the button
+  // anyway produces a dead control -- and once infra accepts app://openfront
+  // as a returnUrl it gets worse, because the click then raises the shell's
+  // "Purchase unavailable / nothing has been charged" modal at a player who
+  // is trying to STOP paying. Render static copy instead of a button.
+  describe("inside the desktop shell", () => {
+    beforeEach(async () => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+      el.sub = sub();
+      el.requestUpdate();
+      await el.updateComplete;
+    });
+
+    afterEach(() => {
+      delete (window as unknown as { openfrontDesktop?: unknown })
+        .openfrontDesktop;
+    });
+
+    it("offers no Manage button", async () => {
+      const keys = Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+      expect(keys).not.toContain("account_modal.manage_subscription");
+    });
+
+    it("says where billing is managed instead", async () => {
+      expect(text()).toContain("account_modal.manage_subscription_on_web");
+    });
+
+    // A link-out is the thing that is prohibited, so the replacement must not
+    // quietly become one.
+    it("renders no anchor to click", async () => {
+      expect(el.querySelector("a")).toBeNull();
+    });
+
+    it("offers no Reactivate button either, for the same reason", async () => {
+      el.sub = sub({ cancelAtPeriodEnd: true });
+      await el.updateComplete;
+      const keys = Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+      expect(keys).not.toContain("account_modal.reactivate_subscription");
+    });
+
+    // Cancel does NOT link out -- it is a fetch to our own API -- so it keeps
+    // working, and it is the control a player most needs.
+    it("keeps the Cancel control", async () => {
+      expect(text()).toContain("account_modal.cancel_subscription");
+    });
+  });
+
   it("swaps the actions for a subscription that is winding down", async () => {
     el.sub = sub({ cancelAtPeriodEnd: true });
     await el.updateComplete;
