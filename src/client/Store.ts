@@ -32,7 +32,6 @@ type StoreTab =
   | "cosmetics"
   | "bundles"
   | "effects"
-  | "merch"
   | "packs"
   | "subscriptions"
   | "tribes";
@@ -75,7 +74,6 @@ export class StoreModal extends BaseModal {
         { key: "cosmetics", label: translateText("store.cosmetics") },
         { key: "effects", label: translateText("store.effects") },
         { key: "tribes", label: translateText("store.tribes") },
-        { key: "merch", label: translateText("store.merch") },
       ],
     };
   }
@@ -476,42 +474,6 @@ export class StoreModal extends BaseModal {
     `;
   }
 
-  private renderMerchPanel(): TemplateResult {
-    return html`
-      <div
-        class="flex flex-col items-center justify-center gap-6 p-12 min-h-[300px]"
-      >
-        <p class="text-white/70 text-lg text-center">
-          ${translateText("store.merch_blurb")}
-        </p>
-        <a
-          href="https://merch.openfront.io"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex items-center justify-center gap-3 rounded-xl bg-malibu-blue hover:bg-aquarius text-white font-bold uppercase tracking-wider py-4 px-8 text-lg lg:text-xl transition-all duration-300 transform hover:-translate-y-px"
-        >
-          ${translateText("store.merch_visit_store")}
-          <svg
-            class="h-5 w-5 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path
-              d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
-            />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-        </a>
-      </div>
-    `;
-  }
-
   private renderEffectGrid(): TemplateResult {
     // A sub-tab per effectType (Boat Trail / Nuke Trail); each tab opens that
     // type's grid. Tabs are always present, even when a type has nothing to buy.
@@ -598,8 +560,6 @@ export class StoreModal extends BaseModal {
     switch (key as StoreTab) {
       case "cosmetics":
         return this.renderCosmeticsPanel();
-      case "merch":
-        return this.renderMerchPanel();
       case "bundles":
         return this.renderBundleGrid();
       case "effects":
