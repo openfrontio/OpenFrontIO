@@ -160,6 +160,14 @@ export class DoRequestAllianceEvent implements GameEvent {}
 
 export class DoBreakAllianceEvent implements GameEvent {}
 
+export class DoDonateGoldEvent implements GameEvent {
+  constructor(public readonly useAttackRatio: boolean) {}
+}
+
+export class DoDonateTroopsEvent implements GameEvent {
+  constructor(public readonly useAttackRatio: boolean) {}
+}
+
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
 }
@@ -289,6 +297,18 @@ export class InputHandler {
     });
     this.addKeybindAndEvent(this.keybinds.breakAlliance, () => {
       this.eventBus.emit(new DoBreakAllianceEvent());
+    });
+    this.addKeybindAndEvent(this.keybinds.donateGoldAttackRatio, () => {
+      this.eventBus.emit(new DoDonateGoldEvent(true));
+    });
+    this.addKeybindAndEvent(this.keybinds.donateTroopsAttackRatio, () => {
+      this.eventBus.emit(new DoDonateTroopsEvent(true));
+    });
+    this.addKeybindAndEvent(this.keybinds.donateGoldFixedAmount, () => {
+      this.eventBus.emit(new DoDonateGoldEvent(false));
+    });
+    this.addKeybindAndEvent(this.keybinds.donateTroopsFixedAmount, () => {
+      this.eventBus.emit(new DoDonateTroopsEvent(false));
     });
     this.addKeybindAndEvent(
       this.keybinds.pauseGame,

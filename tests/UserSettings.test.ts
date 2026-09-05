@@ -522,6 +522,36 @@ describe("UserSettings per-player cosmetics (#4955)", () => {
     expect(s.nukeAllianceSafetyDuration()).toBe(13);
   });
 
+  it("persists a donation keybind percentage and clamps it to 1..100", () => {
+    const s = new UserSettings();
+    expect(s.donationKeybindAmount()).toBe(10);
+
+    s.setDonationKeybindAmount(25);
+    expect(s.donationKeybindAmount()).toBe(25);
+    expect(localStorage.getItem("settings.donationKeybindAmount")).toBe("25");
+
+    s.setDonationKeybindAmount(0);
+    expect(s.donationKeybindAmount()).toBe(1);
+
+    s.setDonationKeybindAmount(101);
+    expect(s.donationKeybindAmount()).toBe(100);
+  });
+
+  it("rejects non-integer donation keybind values", () => {
+    const s = new UserSettings();
+    const invalidValues = ["10.5", "10x", "0", "101", "-1", ""];
+
+    for (const invalid of invalidValues) {
+      localStorage.setItem("settings.donationKeybindAmount", invalid);
+      const statics = UserSettings as unknown as {
+        cache: Map<string, string | null>;
+      };
+      statics.cache.clear();
+
+      expect(s.donationKeybindAmount()).toBe(10);
+    }
+  });
+
   it("falls back to default 5 for malformed or out-of-range persisted values", () => {
     const s = new UserSettings();
     const invalidValues = [
@@ -555,6 +585,12 @@ describe("getDefaultKeybinds", () => {
     expect(keybinds.resetGfx).toBe("KeyR");
     expect(keybinds.selectAllWarships).toBe("KeyF");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
+    expect(keybinds.donateGoldAttackRatio).toBe("Shift+KeyI");
+    expect(keybinds.donateTroopsAttackRatio).toBe("Shift+KeyO");
+    expect(keybinds.donateGoldFixedAmount).toBe("Shift+KeyK");
+    expect(keybinds.donateTroopsFixedAmount).toBe("Shift+KeyL");
+    expect(keybinds.requestAlliance).toBe("KeyK");
+    expect(keybinds.breakAlliance).toBe("KeyL");
   });
 
   it("handles Mac-specific modifier keys correctly", () => {

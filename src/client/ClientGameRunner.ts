@@ -40,6 +40,8 @@ import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
   DoBreakAllianceEvent,
+  DoDonateGoldEvent,
+  DoDonateTroopsEvent,
   DoGroundAttackEvent,
   DoRequestAllianceEvent,
   DoRetaliateAttackEvent,
@@ -60,6 +62,8 @@ import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendBreakAllianceIntentEvent,
+  SendDonateGoldIntentEvent,
+  SendDonateTroopsIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
   SendUpgradeStructureIntentEvent,
@@ -943,6 +947,12 @@ export class ClientGameRunner {
       DoBreakAllianceEvent,
       this.doBreakAllianceUnderCursor.bind(this),
     );
+    this.eventBus.on(DoDonateGoldEvent, (event) =>
+      this.doDonateUnderCursor("gold", event.useAttackRatio),
+    );
+    this.eventBus.on(DoDonateTroopsEvent, (event) =>
+      this.doDonateUnderCursor("troops", event.useAttackRatio),
+    );
 
     this.renderer.initialize();
     this.input.initialize();
@@ -1421,6 +1431,50 @@ export class ClientGameRunner {
       if (actions.interaction?.canBreakAlliance) {
         this.eventBus.emit(
           new SendBreakAllianceIntentEvent(myPlayer, recipient),
+        );
+      }
+    });
+  }
+
+  private doDonateUnderCursor(
+    resource: "gold" | "troops",
+    useAttackRatio: boolean,
+  ): void {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) return;
+
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    const recipient = this.gameView.owner(tile);
+    if (!recipient.isPlayer()) return;
+
+    const ratio = useAttackRatio
+      ? this.renderer.uiState.attackRatio
+      : this.userSettings.donationKeybindAmount() / 100;
+    const percentage = Math.round(ratio * 100);
+
+    this.myPlayer.actions(tile).then((actions) => {
+      if (resource === "gold") {
+        if (!actions.interaction?.canDonateGold) return;
+        const gold = (this.myPlayer!.gold() * BigInt(percentage)) / 100n;
+        if (gold > 0n) {
+          this.eventBus.emit(
+            new SendDonateGoldIntentEvent(recipient as PlayerView, gold),
+          );
+        }
+        return;
+      }
+
+      if (!actions.interaction?.canDonateTroops) return;
+      const troops = Math.floor((this.myPlayer!.troops() * percentage) / 100);
+      if (troops > 0) {
+        this.eventBus.emit(
+          new SendDonateTroopsIntentEvent(recipient as PlayerView, troops),
         );
       }
     });
