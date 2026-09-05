@@ -907,3 +907,75 @@ describe("StoreModal cosmetic browser", () => {
     expect(purchaseCosmetic).toHaveBeenCalledWith(affiliatePattern, "hard");
   });
 });
+
+// custom_currency is switched off on the Steam rail for launch: the server
+// answers kind_unavailable_on_provider, so the card must not be offered there.
+describe("StoreModal on the Steam rail", () => {
+  Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
+
+  function installSteamShell() {
+    const microTxn = {
+      subscribe: vi.fn(() => () => {}),
+      consumePending: vi.fn(
+        async (): Promise<
+          { appId: number; orderId: string | null; authorized: boolean }[]
+        > => [],
+      ),
+    };
+    (window as any).openfrontDesktop = { steam: { microTxn } };
+    return microTxn;
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    resolvedCatalog = [pack];
+    vi.mocked(fetchCosmetics).mockReset();
+    vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
+    vi.mocked(resolveCosmetics).mockReset();
+    vi.mocked(resolveCosmetics).mockImplementation(() => resolvedCatalog);
+    vi.mocked(purchaseCosmetic).mockReset();
+    vi.mocked(purchaseCosmetic).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    store?.remove();
+    store = undefined;
+    delete (window as any).openfrontDesktop;
+    localStorage.clear();
+  });
+
+  it("offers the custom-amount card on the web", async () => {
+    const modal = await openStoreOnTab("packs");
+    expect(modal.querySelector("custom-currency-card")).toBeTruthy();
+  });
+
+  it("hides the custom-amount card on Steam", async () => {
+    installSteamShell();
+    const modal = await openStoreOnTab("packs");
+    expect(modal.querySelector("custom-currency-card")).toBeNull();
+  });
+
+  // REQUIRED, not an optimisation: the main process parks authorizations and
+  // its "something arrived" nudge is contentless, so one that fires before any
+  // window exists is heard by nobody. subscribe() alone never surfaces it.
+  it("drains parked Steam authorizations every time it opens", async () => {
+    const microTxn = installSteamShell();
+    await openStoreOnTab("packs");
+    await vi.waitFor(() => expect(microTxn.consumePending).toHaveBeenCalled());
+  });
+
+  it("tells the player about an approval it can no longer finalize", async () => {
+    const microTxn = installSteamShell();
+    microTxn.consumePending.mockResolvedValueOnce([
+      { appId: 480, orderId: "77770000", authorized: true },
+    ]);
+    const seen: string[] = [];
+    const onToast = (e: Event) => seen.push((e as CustomEvent).detail.message);
+    window.addEventListener("show-message", onToast);
+
+    await openStoreOnTab("packs");
+
+    await vi.waitFor(() => expect(seen).toContain("store.purchase_pending"));
+    window.removeEventListener("show-message", onToast);
+  });
+});

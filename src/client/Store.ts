@@ -26,6 +26,10 @@ import {
   resolveCosmetics,
   ResolvedCosmetic,
 } from "./Cosmetics";
+import {
+  customCurrencyAvailable,
+  reportPendingSteamAuthorizations,
+} from "./Payments";
 import { translateText } from "./Utils";
 
 type StoreTab =
@@ -537,9 +541,12 @@ export class StoreModal extends BaseModal {
     // no catalog entry), and follows the fixed packs at the end of the grid.
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_packs",
-      trailingContent: html`<custom-currency-card
-        class="block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48"
-      ></custom-currency-card>`,
+      // Omitted entirely on the Steam rail, which cannot sell custom amounts.
+      trailingContent: customCurrencyAvailable()
+        ? html`<custom-currency-card
+            class="block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48"
+          ></custom-currency-card>`
+        : undefined,
       gridClass:
         "flex flex-wrap items-stretch justify-center content-start gap-4 p-4 sm:p-8",
       cardClass: "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
@@ -627,6 +634,12 @@ export class StoreModal extends BaseModal {
   }
 
   protected async onOpen(args?: Record<string, unknown>) {
+    // Drain any Steam overlay approval parked before this UI existed. The
+    // main process's "something arrived" nudge is contentless, so one that
+    // fired with no window listening is heard by nobody and sits parked until
+    // something drains it -- which makes this required on every open, not an
+    // optimisation.
+    void reportPendingSteamAuthorizations();
     const affiliate =
       typeof args?.affiliateCode === "string" ? args.affiliateCode : null;
     this.affiliateCode = affiliate;

@@ -28,10 +28,7 @@ import {
 import "./ChangeUsernameModal";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
-import {
-  completeCosmeticPurchaseReturn,
-  getPlayerCosmeticsRefs,
-} from "./Cosmetics";
+import { getPlayerCosmeticsRefs, handlePurchaseReturn } from "./Cosmetics";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
@@ -903,50 +900,13 @@ class Client {
 
     // Handle different hash sections
     if (decodedHash.startsWith("#purchase-completed")) {
-      // Parse params after the ?
-      const status = params.get("status");
-
-      if (status !== "true") {
-        alertAndStrip(translateText("store.purchase_failed"));
-        return;
-      }
-
-      const type = params.get("type");
-      if (type === "currency_pack") {
-        alertAndStrip(translateText("store.currency_pack_purchase_success"));
-        return;
-      }
-
-      if (type === "custom_currency") {
-        // Plutonium is credited asynchronously by the Stripe webhook; the
-        // balance refreshes from /users/@me on the next load.
-        alertAndStrip(translateText("store.custom_currency_purchase_success"));
-        return;
-      }
-
-      if (type === "subscription_tier") {
-        strip();
-        invalidateUserMe();
-        // Reload only once the dialog is dismissed, like the blocking alert
-        // this replaced.
-        void showInGameAlert(
-          translateText("store.subscription_purchase_success"),
-        ).then(() => window.location.reload());
-        return;
-      }
-
-      const cosmeticName = params.get("cosmetic");
-      if (!cosmeticName) {
-        void showInGameAlert(translateText("common.error_generic"));
-        console.error("purchase-completed but no pattern name");
-        return;
-      }
-
-      completeCosmeticPurchaseReturn(cosmeticName, params.get("login-token"), {
+      handlePurchaseReturn(params, {
         strip,
         alertAndStrip,
+        alert: (message: string) => showInGameAlert(message),
         openTokenLogin: (token) => this.tokenLoginModal.openWithToken(token),
         refreshStore: () => this.storeModal.refresh(),
+        reload: () => window.location.reload(),
       });
       return;
     }

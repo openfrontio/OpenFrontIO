@@ -32,6 +32,11 @@ import {
   purchaseWithCurrency,
 } from "./Api";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
+import {
+  classifyPurchaseReturn,
+  purchaseOutcomeMessage,
+  startPurchase,
+} from "./Payments";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -102,6 +107,100 @@ export function completeCosmeticPurchaseReturn(
   actions.refreshStore();
 }
 
+export interface PurchaseReturnActions extends CosmeticPurchaseReturnActions {
+  reload(): void;
+  /**
+   * Show a dialog and RESOLVE WHEN IT IS DISMISSED, unlike `alertAndStrip`
+   * which fires and forgets. Needed only where something must happen after
+   * the player has actually read the message -- see the reload below.
+   */
+  alert(message: string): Promise<unknown>;
+}
+
+/**
+ * Handles the #purchase-completed landing hash the payment rails send players
+ * back to.
+ *
+ * `status` has THREE values, not two. `pending` is the one that used to fall
+ * into the failure branch and it means the opposite: the order is durable and
+ * something else -- a capture still in flight, the server-side sweeper -- owns
+ * settling it. Telling a paying player their purchase failed there is the
+ * single worst thing this function can do, so pending is never reported as a
+ * failure and never given a client-side deadline of its own.
+ *
+ * `type` is the checkout's `kind`, except that a subscription arrives as
+ * `subscription_tier`. `provider`, `orderId`, `pack` and `tier` also ride
+ * along; none of them changes what is shown.
+ */
+export function handlePurchaseReturn(
+  params: URLSearchParams,
+  actions: PurchaseReturnActions,
+): void {
+  const status = classifyPurchaseReturn(params.get("status"));
+
+  if (status === "failed") {
+    actions.alertAndStrip(translateText("store.purchase_failed"));
+    return;
+  }
+
+  if (status === "pending") {
+    // The credit lands seconds later; drop the cached profile so the balance
+    // is re-read rather than served stale, and say so without claiming the
+    // purchase either succeeded or failed.
+    invalidateUserMe();
+    actions.alertAndStrip(translateText("store.purchase_pending"));
+    actions.refreshStore();
+    return;
+  }
+
+  const type = params.get("type");
+  if (type === "currency_pack") {
+    actions.alertAndStrip(
+      translateText("store.currency_pack_purchase_success"),
+    );
+    return;
+  }
+
+  if (type === "custom_currency") {
+    // Plutonium is credited asynchronously by the rail's webhook; the balance
+    // refreshes from /users/@me on the next load.
+    actions.alertAndStrip(
+      translateText("store.custom_currency_purchase_success"),
+    );
+    return;
+  }
+
+  if (type === "subscription_tier") {
+    actions.strip();
+    invalidateUserMe();
+    // Reload only once the dialog is DISMISSED, matching the blocking alert
+    // this replaced. Reloading underneath an open dialog throws the message
+    // away before the player has read it.
+    void actions
+      .alert(translateText("store.subscription_purchase_success"))
+      .then(() => actions.reload());
+    return;
+  }
+
+  const cosmeticName = params.get("cosmetic");
+  if (!cosmeticName) {
+    // A generic error rather than "purchase failed": the purchase very likely
+    // succeeded and it is our own landing URL that is malformed, so claiming
+    // failure would be the wrong end of the same mistake `pending` fixes.
+    // Deliberately does NOT strip -- there is nothing here we can act on, and
+    // the unstripped hash keeps the evidence for a bug report.
+    void actions.alert(translateText("common.error_generic"));
+    console.error("purchase-completed but no cosmetic name");
+    return;
+  }
+
+  completeCosmeticPurchaseReturn(
+    cosmeticName,
+    params.get("login-token"),
+    actions,
+  );
+}
+
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
@@ -165,6 +264,37 @@ export async function purchaseCosmetic(
   }
 
   if (method === "dollar") {
+    // Currency packs and subscription tiers go through the rail-agnostic
+    // /payments/checkout, which identifies a listing by NAME. Neither may gate
+    // on the Stripe `product` block: it is null for every Steam-only listing,
+    // and gating on it is what made those unbuyable.
+    if (resolved.type === "pack" || resolved.type === "subscription") {
+      const isPack = resolved.type === "pack";
+      const outcome = await startPurchase(
+        isPack
+          ? { kind: "currency_pack", packName: c.name }
+          : { kind: "subscription_tier", tierName: c.name },
+      );
+      if (outcome.outcome === "completed") {
+        invalidateUserMe();
+      }
+      // The catalog this store rendered from named something the rail no
+      // longer sells; drop it so the next open refetches.
+      if (outcome.outcome === "error" && outcome.refetchCatalog) {
+        invalidateCosmetics();
+      }
+      const message = purchaseOutcomeMessage(
+        outcome,
+        isPack
+          ? "store.currency_pack_purchase_success"
+          : "store.subscription_purchase_success",
+      );
+      if (message !== null) await showInGameAlert(message);
+      return;
+    }
+
+    // Legacy Stripe-only path, deliberately not ported: dollar-priced
+    // cosmetics and flares, which genuinely still need a priceId.
     const product = "product" in c ? c.product : null;
     if (!product) {
       await showInGameAlert(translateText("store.checkout_failed"));
@@ -356,6 +486,16 @@ function simpleHash(str: string): string {
     hash = hash & hash;
   }
   return hash.toString(36);
+}
+
+/**
+ * Drops the cached cosmetics.json so the next fetchCosmetics() goes to the
+ * network. The remedy for a checkout rejected with a stale listing ("Pack not
+ * available" / "Tier not available"): the catalog the store rendered from no
+ * longer matches what the rail sells.
+ */
+export function invalidateCosmetics(): void {
+  __cosmetics = null;
 }
 
 export async function fetchCosmetics(): Promise<Cosmetics | null> {
@@ -759,7 +899,12 @@ export function resolveCosmetics(
 
   // Packs
   for (const [packKey, pack] of Object.entries(cosmetics.currencyPacks ?? {})) {
-    const rel = pack.product ? "purchasable" : "blocked";
+    // NEVER gate this on `pack.product`. That block is the Stripe
+    // {productId, priceId} pair and it is null for every Steam-only listing,
+    // so gating rendered those packs as blocked and their buy button never
+    // appeared. A listed currency pack is buyable; if a rail cannot sell it,
+    // the checkout call is what says so.
+    const rel = "purchasable";
     result.push({
       type: "pack",
       cosmetic: pack,

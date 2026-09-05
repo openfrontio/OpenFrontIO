@@ -10,6 +10,11 @@ import {
   GetMyTribeNamesResponse,
   GetMyTribeNamesResponseSchema,
   NewsItemSchema,
+  PaymentsCheckoutResponse,
+  PaymentsCheckoutResponseSchema,
+  PaymentsKind,
+  PaymentsKindSchema,
+  PaymentsProvider,
   PlayerGameModeFilter,
   PlayerGameTypeFilter,
   PlayerProfile,
@@ -28,6 +33,8 @@ import {
   PutUsernameResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
+  SteamFinalizeResponseSchema,
+  SteamOrderResolution,
   StreamsFeedSchema,
   TribeLeaderboardResponse,
   TribeLeaderboardResponseSchema,
@@ -1081,6 +1088,298 @@ export async function createCustomCurrencyCheckout(
   } catch (e) {
     console.error("createCustomCurrencyCheckout: request failed", e);
     return false;
+  }
+}
+
+// What the caller wants to buy. `provider` is chosen explicitly by the client
+// (see paymentsProvider() in Payments.ts) — the server never infers the rail.
+// Exactly one identifier travels with each kind, and it is always a NAME: the
+// endpoint has no priceId, because a Steam-only listing has no Stripe price.
+export type PaymentsCheckoutRequest =
+  | { provider: PaymentsProvider; kind: "currency_pack"; packName: string }
+  | { provider: PaymentsProvider; kind: "custom_currency"; hardAmount: number }
+  | { provider: PaymentsProvider; kind: "subscription_tier"; tierName: string };
+
+export type PaymentsCheckoutResult =
+  | { ok: true; data: PaymentsCheckoutResponse }
+  // A request this client should never have sent (400 "Bad request",
+  // "Invalid hostname", soft_pack_not_purchasable) or a 200 body we could not
+  // read. Not actionable by the player; log it and show a generic failure.
+  | { ok: false; code: "client_bug" }
+  // 400 "Pack not available" / "Tier not available": the catalog this client
+  // rendered from is stale. Refetch cosmetics.json before showing the store
+  // again.
+  | { ok: false; code: "listing_stale" }
+  // 400 listing_not_synced: the listing exists but the rail has not ingested
+  // it yet. Transient — "try again later".
+  | { ok: false; code: "retry_later" }
+  // 400 kind_unavailable_on_provider: this rail does not sell this kind.
+  // custom_currency is off on Steam for launch, which is why the custom-amount
+  // card is hidden there (customCurrencyAvailable()); reaching this means the
+  // UI and the server disagree.
+  | {
+      ok: false;
+      code: "kind_unavailable_on_provider";
+      provider: PaymentsProvider;
+      kind: PaymentsKind;
+    }
+  // 400 provider_account_required: the account is not linked to that rail.
+  // The remedy is to re-authenticate against it.
+  | {
+      ok: false;
+      code: "provider_account_required";
+      provider: PaymentsProvider;
+    }
+  | { ok: false; code: "unauthorized" }
+  // 409 subscription_exclusivity: a subscription already exists on the OTHER
+  // rail. `message` is the server's player-facing text and names the rail, so
+  // show it as-is. `existingProvider` is always non-null here — a subscription
+  // GRANTED by Steam ownership does not trigger this.
+  | {
+      ok: false;
+      code: "subscription_exclusivity";
+      message: string;
+      existingProvider: PaymentsProvider;
+      existingTier: string;
+    }
+  // 409 pending_provider_transaction: an earlier order on this rail is still
+  // open. The player must finish or cancel it first.
+  | {
+      ok: false;
+      code: "pending_provider_transaction";
+      provider: PaymentsProvider;
+    }
+  // 429: one checkout per 60s per player. No order was minted.
+  | { ok: false; code: "rate_limited"; retryAfterSeconds: number | null }
+  // 501 provider_unavailable: the rail is switched off. Deliberately not a
+  // 500 — nothing is broken, so don't report it as an error.
+  | { ok: false; code: "provider_unavailable"; provider: PaymentsProvider }
+  // 502 provider_error: the rail itself failed. Honour `retryable`; a retry
+  // mints a FRESH order rather than resuming this one.
+  | {
+      ok: false;
+      code: "provider_error";
+      provider: PaymentsProvider;
+      providerCode: string | null;
+      retryable: boolean;
+    }
+  | { ok: false; code: "failed" };
+
+// 400 reasons that mean this client sent something it never should have.
+const CHECKOUT_CLIENT_BUG_REASONS = [
+  "Bad request",
+  "Invalid hostname",
+  "soft_pack_not_purchasable",
+];
+
+// 400 reasons that mean the rendered catalog is stale.
+const CHECKOUT_STALE_LISTING_REASONS = [
+  "Pack not available",
+  "Tier not available",
+];
+
+function readProvider(value: unknown): PaymentsProvider | null {
+  return value === "steam" || value === "stripe" ? value : null;
+}
+
+function readRetryAfterSeconds(response: Response): number | null {
+  const header = response.headers.get("Retry-After");
+  const seconds = header === null ? NaN : Number(header);
+  return Number.isFinite(seconds) ? seconds : null;
+}
+
+// POST /payments/checkout — mints an order on the chosen rail and says how to
+// hand the player over to it. Replaces both legacy Stripe endpoints for packs,
+// custom currency and subscription tiers.
+//
+// Unlike createCheckoutSession below, failures are NOT collapsed to `false`:
+// callers have to tell "the rail is off" from "you already have a pending
+// Steam purchase" from "try again later", and each of those is a different
+// thing to say to the player.
+export async function createPaymentsCheckout(
+  request: PaymentsCheckoutRequest,
+): Promise<PaymentsCheckoutResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/payments/checkout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({
+        ...request,
+        hostname: window.location.origin,
+      }),
+    });
+
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "unauthorized" };
+    }
+    if (response.status === 429) {
+      return {
+        ok: false,
+        code: "rate_limited",
+        retryAfterSeconds: readRetryAfterSeconds(response),
+      };
+    }
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const reason = typeof body?.reason === "string" ? body.reason : "";
+      const provider = readProvider(body?.provider);
+
+      if (response.status === 400) {
+        if (CHECKOUT_CLIENT_BUG_REASONS.includes(reason)) {
+          console.error("createPaymentsCheckout: bad request", body);
+          return { ok: false, code: "client_bug" };
+        }
+        if (CHECKOUT_STALE_LISTING_REASONS.includes(reason)) {
+          return { ok: false, code: "listing_stale" };
+        }
+        if (reason === "listing_not_synced") {
+          return { ok: false, code: "retry_later" };
+        }
+        if (reason === "kind_unavailable_on_provider") {
+          const kind = PaymentsKindSchema.safeParse(body?.kind);
+          if (provider !== null && kind.success) {
+            return {
+              ok: false,
+              code: "kind_unavailable_on_provider",
+              provider,
+              kind: kind.data,
+            };
+          }
+        }
+        if (reason === "provider_account_required" && provider !== null) {
+          return { ok: false, code: "provider_account_required", provider };
+        }
+      }
+
+      if (response.status === 409) {
+        if (reason === "subscription_exclusivity") {
+          const existingProvider = readProvider(body?.existingProvider);
+          // The 409 body always carries a non-null existingProvider; a body
+          // without one is malformed, not the "granted subscription" case
+          // (which does not 409 at all).
+          if (existingProvider !== null) {
+            return {
+              ok: false,
+              code: "subscription_exclusivity",
+              message: typeof body?.message === "string" ? body.message : "",
+              existingProvider,
+              existingTier:
+                typeof body?.existingTier === "string" ? body.existingTier : "",
+            };
+          }
+        }
+        if (reason === "pending_provider_transaction" && provider !== null) {
+          return { ok: false, code: "pending_provider_transaction", provider };
+        }
+      }
+
+      if (response.status === 501 && provider !== null) {
+        return { ok: false, code: "provider_unavailable", provider };
+      }
+
+      if (response.status === 502 && provider !== null) {
+        return {
+          ok: false,
+          code: "provider_error",
+          provider,
+          providerCode: typeof body?.code === "string" ? body.code : null,
+          // Absent means "don't retry": a retry mints a new order, so the
+          // safe default is not to spend one.
+          retryable: body?.retryable === true,
+        };
+      }
+
+      console.error(
+        "createPaymentsCheckout: request failed",
+        response.status,
+        reason,
+      );
+      return { ok: false, code: "failed" };
+    }
+
+    const parsed = PaymentsCheckoutResponseSchema.safeParse(
+      await response.json(),
+    );
+    if (!parsed.success) {
+      console.error(
+        "createPaymentsCheckout: Zod validation failed",
+        z.prettifyError(parsed.error),
+      );
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (e) {
+    console.error("createPaymentsCheckout: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+export type FinalizeSteamOrderResult =
+  // The server answered with one of four resolutions; `resolution` is passed
+  // through untouched. Only "settled" means the credit landed, and only
+  // "expired" means it definitively will not -- see SteamOrderResolutionSchema.
+  | { ok: true; resolution: SteamOrderResolution }
+  // 404: the order is unknown or belongs to someone else.
+  | { ok: false; code: "not_found" }
+  | { ok: false; code: "unauthorized" }
+  | { ok: false; code: "failed" };
+
+// POST /payments/steam/finalize — settles a Steam overlay purchase.
+//
+// `orderId` is the INTERNAL purchases id from the checkout response, not any
+// id Steam reports over the microtransaction bridge.
+//
+// SAFETY: only call this once Steam has reported the dialog was AUTHORIZED. A
+// client-channel order skips the server's abandon rule and finalizes
+// unconditionally, so finalizing a dialog the player cancelled charges someone
+// who walked away. On a cancelled or declined dialog, do nothing and let the
+// server-side sweeper resolve the order.
+export async function finalizeSteamOrder(
+  orderId: string,
+): Promise<FinalizeSteamOrderResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/payments/steam/finalize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ orderId }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "unauthorized" };
+    }
+    if (response.status === 404) {
+      return { ok: false, code: "not_found" };
+    }
+    if (!response.ok) {
+      console.error(
+        "finalizeSteamOrder: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = SteamFinalizeResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      // We cannot tell which of the four resolutions this was, so we must not
+      // guess one. Callers treat this the same as an unreachable server.
+      console.error(
+        "finalizeSteamOrder: Zod validation failed",
+        z.prettifyError(parsed.error),
+      );
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, resolution: parsed.data.resolution };
+  } catch (e) {
+    console.error("finalizeSteamOrder: request failed", e);
+    return { ok: false, code: "failed" };
   }
 }
 
