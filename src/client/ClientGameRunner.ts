@@ -701,7 +701,10 @@ async function createClientGame(
     // so they switch live, like the leaderboard.
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.anonymousNames`,
-      () => webglBuilder.refreshNames(gameView),
+      () => {
+        webglBuilder.refreshNames(gameView);
+        gameView.invalidateTeamClanTags();
+      },
       { signal: graphicsListenerAbort.signal },
     );
 

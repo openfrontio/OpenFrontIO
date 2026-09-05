@@ -17,11 +17,16 @@ import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
 import { Theme, themeProvider } from "../theme/ThemeProvider";
-import { getTranslatedPlayerTeamLabel, translateText } from "../Utils";
+import {
+  getTranslatedPlayerTeamLabel,
+  resolveTeamClanTag,
+  translateText,
+} from "../Utils";
 
 export interface TeamPreviewData {
   team: Team;
   players: ClientInfo[];
+  clanTag?: string | null;
 }
 
 @customElement("lobby-player-view")
@@ -44,6 +49,8 @@ export class LobbyTeamView extends LitElement {
     return themeProvider.current();
   }
   @state() private showTeamColors: boolean = false;
+  private _clanUpdateTimeout: number | null = null;
+  private _teamClanTags: Map<Team, string | null> = new Map();
 
   // Spectators are in the lobby roster (flagged) but hold no seat and never
   // reach the simulation — so the count header, the team preview and both
@@ -81,6 +88,14 @@ export class LobbyTeamView extends LitElement {
       const teamsList = this.getTeamList();
       this.computeTeamPreview(teamsList);
       this.showTeamColors = teamsList.length <= 7;
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this._clanUpdateTimeout !== null) {
+      window.clearTimeout(this._clanUpdateTimeout);
+      this._clanUpdateTimeout = null;
     }
   }
 
@@ -283,7 +298,8 @@ export class LobbyTeamView extends LitElement {
         ? this.effectiveNationCount
         : this.teamMaxSize;
 
-    const teamLabel = getTranslatedPlayerTeamLabel(preview.team);
+    const clanTag = this._teamClanTags.get(preview.team) ?? null;
+    const teamLabel = getTranslatedPlayerTeamLabel(preview.team, clanTag);
 
     return html`
       <div
@@ -295,14 +311,18 @@ export class LobbyTeamView extends LitElement {
         <div
           class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
         >
-          ${this.showTeamColors
-            ? html` <span
-                class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg)"
-                style="--bg:${this.teamHeaderColor(preview.team)};"
-              ></span>`
-            : null}
-          <span class="truncate">${teamLabel}</span>
-          <span class="text-white/90">${displayCount}/${maxTeamSize}</span>
+          <div class="flex items-center gap-1.5 min-w-0">
+            ${this.showTeamColors
+              ? html` <span
+                  class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg) shrink-0"
+                  style="--bg:${this.teamHeaderColor(preview.team)};"
+                ></span>`
+              : null}
+            <span class="truncate">${teamLabel}</span>
+          </div>
+          <span class="text-white/90 font-bold text-[13px] shrink-0"
+            >${displayCount}/${maxTeamSize}</span
+          >
         </div>
         <div class="p-2 ${isEmpty ? "" : "flex flex-col gap-1.5"}">
           ${isEmpty
@@ -396,6 +416,11 @@ export class LobbyTeamView extends LitElement {
     if (this.gameMode !== GameMode.Team) {
       this.teamPreview = [];
       this.teamMaxSize = 0;
+      this._teamClanTags.clear();
+      if (this._clanUpdateTimeout !== null) {
+        window.clearTimeout(this._clanUpdateTimeout);
+        this._clanUpdateTimeout = null;
+      }
       return;
     }
 
@@ -406,6 +431,7 @@ export class LobbyTeamView extends LitElement {
         { team: ColoredTeams.Humans, players: [...this.activePlayers] },
         { team: ColoredTeams.Nations, players: [] },
       ];
+      this.triggerClanUpdate();
       return;
     }
 
@@ -459,6 +485,32 @@ export class LobbyTeamView extends LitElement {
       team: t,
       players: buckets.get(t) ?? [],
     }));
+    this.triggerClanUpdate();
+  }
+
+  private triggerClanUpdate() {
+    if (this._teamClanTags.size === 0) {
+      this.updateTeamClanTags();
+    } else {
+      this.scheduleClanUpdate();
+    }
+  }
+
+  private scheduleClanUpdate() {
+    if (this._clanUpdateTimeout !== null) return;
+    this._clanUpdateTimeout = window.setTimeout(() => {
+      this.updateTeamClanTags();
+      this._clanUpdateTimeout = null;
+      this.requestUpdate();
+    }, 500);
+  }
+
+  private updateTeamClanTags() {
+    this._teamClanTags.clear();
+    for (const preview of this.teamPreview) {
+      const tag = resolveTeamClanTag(preview.players);
+      this._teamClanTags.set(preview.team, tag);
+    }
   }
 
   private isCurrentPlayer(client: ClientInfo): boolean {
