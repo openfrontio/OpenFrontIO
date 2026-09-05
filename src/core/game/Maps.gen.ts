@@ -90,6 +90,7 @@ export enum GameMapType {
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
   Passage = "Passage", // map-generator/assets/maps/passage/info.json
   Pluto = "Pluto", // map-generator/assets/maps/pluto/info.json
+  QingChina = "Qing China", // map-generator/assets/maps/qingchina/info.json
   Russia = "Russia", // map-generator/assets/maps/russia/info.json
   SanFrancisco = "San Francisco", // map-generator/assets/maps/sanfrancisco/info.json
   Scandinavia = "Scandinavia", // map-generator/assets/maps/scandinavia/info.json
@@ -539,12 +540,13 @@ export const maps: readonly MapInfo[] = [
     id: "China",
     type: GameMapType.China,
     translationKey: "map.china",
-    categories: ["asia", "countries"],
+    categories: ["countries", "asia", "new"],
     multiplayerFrequency: 8,
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
     themes: ["asia"],
+    layers: [{ id: "label", placement: "water" }],
   },
   {
     id: "ChoppingBlock",
@@ -1744,6 +1746,17 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     specialTeamCount: 2,
+  },
+  {
+    id: "QingChina",
+    type: GameMapType.QingChina,
+    translationKey: "map.qingchina",
+    categories: ["asia", "countries"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    themes: ["asia"],
   },
   {
     id: "Russia",

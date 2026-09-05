@@ -1252,6 +1252,7 @@
     "pangaea": "Pangaea",
     "passage": "Passage",
     "pluto": "Pluto",
+    "qingchina": "Qing China",
     "random": "Random",
     "russia": "Russia",
     "sanfrancisco": "San Francisco",
@@ -1314,7 +1315,9 @@
     "search_results": "Search Results",
     "unfavorite": "Remove from favourites"
   },
-  "map_layers": {},
+  "map_layers": {
+    "label": "label"
+  },
   "marketing_consent": {
     "body": "News and updates by email. Change it anytime in your account.",
     "dismiss": "Dismiss",
