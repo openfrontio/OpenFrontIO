@@ -1,5 +1,6 @@
 import http from "http";
 import { WebSocket, WebSocketServer } from "ws";
+import { CloseCode, CloseReason } from "../core/CloseCodes";
 import {
   GameConfig,
   PublicGameInfo,
@@ -288,7 +289,7 @@ export class WorkerLobbyService {
             ws.readyState === WebSocket.OPEN ||
             ws.readyState === WebSocket.CONNECTING
           ) {
-            ws.close(1011, "WebSocket internal error");
+            ws.close(CloseCode.InternalError, CloseReason.InternalError);
           }
         } catch (closeError) {
           this.log.error("Error closing lobbies WebSocket:", closeError);

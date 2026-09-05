@@ -2,6 +2,7 @@ import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { CloseCode, isTerminalClose } from "../core/CloseCodes";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
@@ -315,25 +316,24 @@ export class MatchmakingModal extends BaseModal {
       if (this.intentionalClose || this.gameID !== null) {
         return;
       }
-      // 1008 is also used for auth failures ("Invalid session"), so match on
-      // the reason. Out of free ranked plays — the server will keep refusing
-      // until the next UTC day (or a subscription), so don't reconnect.
-      if (event.code === 1008 && event.reason === "ranked_limit_reached") {
+      // Out of free ranked plays — the server will keep refusing until the
+      // next UTC day (or a subscription), so don't reconnect.
+      if (event.code === CloseCode.RankedLimitReached) {
         this.connected = false;
         this.limitReached = true;
         return;
       }
-      if (event.code === 1008 && event.reason === "invalid_clan") {
+      if (event.code === CloseCode.InvalidClan) {
         this.handleInvalidClan();
         return;
       }
-      if (event.code === 1011 && event.reason === "clan_verification_failed") {
+      if (event.code === CloseCode.ClanVerificationFailed) {
         this.connected = false;
         this.close();
         this.showMatchmakingError("matchmaking_modal.clan_verification_failed");
         return;
       }
-      if (event.code === 1000) {
+      if (event.code === CloseCode.Normal) {
         // A newer connection for this account (e.g. a second tab) took the
         // queue slot; this socket was replaced. Do not retry.
         window.dispatchEvent(
@@ -346,6 +346,12 @@ export class MatchmakingModal extends BaseModal {
           }),
         );
         this.close();
+        return;
+      }
+      if (isTerminalClose(event.code)) {
+        this.connected = false;
+        this.close();
+        this.showMatchmakingError("matchmaking_modal.rejected");
         return;
       }
       // 1008: the jwt was rejected — getPlayToken() refreshes expired tokens,

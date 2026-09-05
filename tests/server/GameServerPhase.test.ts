@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
 import { createGameWireContext } from "../../src/core/ZbinWire";
 import { GameManager } from "../../src/server/GameManager";
 import { GamePhase } from "../../src/server/GameServer";
@@ -87,8 +88,8 @@ describe("GameServer.phase()", () => {
     game.pruneStaleClients();
     expect(game.phase()).toBe(GamePhase.Active);
     expect(mockWsOf(quiet).close).toHaveBeenCalledWith(
-      1000,
-      "no heartbeats received, closing connection",
+      CloseCode.Normal,
+      CloseReason.NoHeartbeat,
     );
     expect(mockWsOf(chatty).close).not.toHaveBeenCalled();
     expect(game.numClients()).toBe(1);
@@ -164,8 +165,8 @@ describe("GameManager and the ping prune", () => {
 
     gm.tick();
     expect(mockWsOf(quiet).close).toHaveBeenCalledWith(
-      1000,
-      "no heartbeats received, closing connection",
+      CloseCode.Normal,
+      CloseReason.NoHeartbeat,
     );
     expect(game.numClients()).toBe(0);
   });

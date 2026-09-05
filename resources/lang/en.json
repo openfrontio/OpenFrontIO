@@ -407,6 +407,20 @@
     "transfer_warning": "This will make the selected member the new leader. You will become a regular member. This action cannot be undone.",
     "unban": "Unban"
   },
+  "close_reason": {
+    "banned": "This account is banned.",
+    "cannot_join": "You can't join this game.",
+    "cosmetics_forbidden": "One of your selected cosmetics isn't available on this account.",
+    "forbidden": "You don't have access to this server.",
+    "game_not_found": "Game not found.",
+    "invalid_message": "The server couldn't read your join request.",
+    "lobby_full": "The lobby is full.",
+    "login_required": "You must be logged in to play on this server.",
+    "not_allowlisted": "You are not on this lobby's allowlist.",
+    "not_trusted": "This lobby is limited to trusted accounts.",
+    "protocol_error": "The connection was corrupted.",
+    "turnstile_failed": "The bot check failed. Please reload the page and try again."
+  },
   "common": {
     "available": "Available",
     "back": "Back",
@@ -617,6 +631,7 @@
   },
   "error_modal": {
     "connection_error": "Connection error!",
+    "connection_lost": "Lost connection to the game server.",
     "connection_refused": "Connection refused: {reason}",
     "copy_clipboard": "Copy to clipboard",
     "crashed": "Game crashed!",
@@ -1334,6 +1349,7 @@
     "must_login": "You must be logged in to play ranked matchmaking.",
     "no_elo": "No ELO yet",
     "queue_size": "Players in queue: {count}",
+    "rejected": "Matchmaking is unavailable right now. Please try again later.",
     "replaced": "You joined matchmaking from another tab or window.",
     "searching": "Searching for game...",
     "title": "1v1 Ranked Matchmaking (ALPHA)",

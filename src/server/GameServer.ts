@@ -5,6 +5,7 @@ import WebSocket from "ws";
 import { z } from "zod";
 import { ZbContext } from "../../zbin";
 import { isAdminRole } from "../core/ApiSchemas";
+import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType, RankedType } from "../core/game/Game";
 import {
@@ -1202,7 +1203,7 @@ export class GameServer {
       clearInterval(this.endTurnIntervalID);
       this.endTurnIntervalID = undefined;
     }
-    this.clients.closeAll("game has ended");
+    this.clients.closeAll(CloseReason.GameEnded);
     // The lobby broadcast would stop itself on its next tick; do not leave a
     // timer holding an ended game until then.
     this.stopLobbyInfoBroadcast();
@@ -1269,7 +1270,7 @@ export class GameServer {
         persistentID: client.persistentID,
       });
       if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.close(1000, "no heartbeats received, closing connection");
+        client.ws.close(CloseCode.Normal, CloseReason.NoHeartbeat);
       }
     }
     // On an abrupt network drop the ws 'close' event can lag far behind this
@@ -1516,7 +1517,7 @@ export class GameServer {
             this.zbinCtx,
           ),
         );
-        client.ws.close(1000, reasonKey);
+        client.ws.close(CloseCode.Normal, reasonKey);
       }
     } else {
       this.log.warn(`cannot kick client, not found in game`, {

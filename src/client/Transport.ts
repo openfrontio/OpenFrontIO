@@ -1,5 +1,6 @@
 import { ClientEnv } from "src/client/ClientEnv";
 import { ZbContext } from "../../zbin";
+import { CloseCode, isTerminalClose } from "../core/CloseCodes";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
@@ -37,7 +38,7 @@ import {
 } from "../core/ZbinWire";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
-import { showInGameAlert } from "./InGameModal";
+import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
 import { translateText } from "./Utils";
 import { PlayerView } from "./view";
@@ -216,6 +217,11 @@ export class SendSpectateEvent implements GameEvent {
   constructor(public readonly spectator: boolean) {}
 }
 
+const RECONNECT_BASE_DELAY_MS = 1000;
+const RECONNECT_MAX_DELAY_MS = 15_000;
+const MAX_RECONNECT_ATTEMPTS = 10;
+const STABLE_CONNECTION_MS = 30_000;
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -227,7 +233,14 @@ export class Transport {
   private onmessage: (msg: ServerMessage) => void;
 
   private pingInterval: number | null = null;
+  private reconnectTimeout: number | null = null;
+  private reconnectAttempts = 0;
+  private connectedAt: number | null = null;
   public readonly isLocal: boolean;
+  // Latched by a terminal close (a rejection the server will repeat) and by
+  // exhausting the reconnect budget. Blocks connectRemote so neither the ping
+  // nor ClientGameRunner's silence check can reopen it.
+  private connectionRefused = false;
 
   // clientID dictionary for the binary wire (see ZbinWire.ts), seeded from
   // the roster in the start message. Null until the game starts, which is
@@ -385,6 +398,17 @@ export class Transport {
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
   ) {
+    if (this.connectionRefused) {
+      return;
+    }
+    this.resetBudgetIfStable();
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      this.connectionRefused = true;
+      this.stopPing();
+      showInGameAlert(translateText("error_modal.connection_lost"));
+      return;
+    }
+    this.reconnectAttempts++;
     this.startPing();
     this.killExistingSocket();
     // WS origin comes from ClientEnv (same-origin on web, audience-derived on
@@ -397,6 +421,7 @@ export class Transport {
     this.onmessage = onmessage;
     this.socket.onopen = () => {
       console.log("Connected to game server!");
+      this.connectedAt = Date.now();
       if (this.socket === null) {
         console.error("socket is null");
         return;
@@ -440,17 +465,60 @@ export class Transport {
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
-      if (event.code === 1002) {
-        showInGameAlert(
-          translateText("error_modal.connection_refused", {
-            reason: event.reason,
-          }),
-        );
-      } else if (event.code !== 1000) {
-        console.log(`received error code ${event.code}, reconnecting`);
-        this.reconnect();
+      if (isTerminalClose(event.code)) {
+        if (event.code !== CloseCode.Normal) {
+          this.handleConnectionRefused(event.reason);
+        }
+        return;
       }
+      this.resetBudgetIfStable();
+      const delay =
+        this.reconnectAttempts <= 1
+          ? 0
+          : Math.min(
+              RECONNECT_BASE_DELAY_MS * 2 ** (this.reconnectAttempts - 2),
+              RECONNECT_MAX_DELAY_MS,
+            );
+      console.log(
+        `received error code ${event.code}, reconnecting in ${delay}ms`,
+      );
+      this.reconnectTimeout = window.setTimeout(() => {
+        this.reconnectTimeout = null;
+        this.reconnect();
+      }, delay);
     };
+  }
+
+  private handleConnectionRefused(reason: string) {
+    if (this.connectionRefused) {
+      return;
+    }
+    this.connectionRefused = true;
+    this.stopPing();
+    void showInGameConfirm(
+      translateText("error_modal.connection_refused", {
+        reason: translateText(reason),
+      }),
+      {
+        variant: "warning",
+        confirmText: translateText("win_modal.exit"),
+        cancelText: translateText("common.close"),
+      },
+    ).then((goHome) => {
+      if (goHome) {
+        window.location.href = "/";
+      }
+    });
+  }
+
+  private resetBudgetIfStable(): void {
+    if (this.connectedAt === null) {
+      return;
+    }
+    if (Date.now() - this.connectedAt > STABLE_CONNECTION_MS) {
+      this.reconnectAttempts = 0;
+    }
+    this.connectedAt = null;
   }
 
   public reconnect() {
@@ -788,6 +856,10 @@ export class Transport {
   }
 
   private killExistingSocket(): void {
+    if (this.reconnectTimeout !== null) {
+      window.clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
     if (this.socket === null) {
       return;
     }

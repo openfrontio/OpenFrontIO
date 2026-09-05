@@ -33,6 +33,7 @@ export class ConfirmDialog extends LitElement {
   @property() variant: "danger" | "warning" = "danger";
   @property() textareaPlaceholder = "";
   @property() confirmText = "";
+  @property() cancelText = "";
   @property({ type: Boolean }) disabled = false;
   @property({ type: Boolean }) showClose = false;
   @property({ type: Boolean }) wide = false;
@@ -124,7 +125,7 @@ export class ConfirmDialog extends LitElement {
                       ?disabled=${this.disabled}
                       class="flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white/80 transition-all disabled:opacity-50 disabled:pointer-events-none"
                     >
-                      ${translateText("common.cancel")}
+                      ${this.cancelText || translateText("common.cancel")}
                     </button>`
                   : ""}
                 <button

@@ -1,4 +1,5 @@
 import WebSocket from "ws";
+import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { ClientID } from "../core/Schemas";
 import { Client } from "./Client";
 
@@ -90,10 +91,10 @@ export class Roster {
   }
 
   // Closes every socket still open.
-  closeAll(reason: string): void {
+  closeAll(reasonKey: CloseReason): void {
     this.sockets.forEach((ws) => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.close(1000, reason);
+        ws.close(CloseCode.Normal, reasonKey);
       }
     });
   }
