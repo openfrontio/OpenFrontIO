@@ -1,0 +1,148 @@
+{
+  "categories": [
+    "north_america"
+  ],
+  "id": "GulfOfAmericaandMexico",
+  "map": {
+    "height": 908,
+    "num_land_tiles": 376998,
+    "width": 1336
+  },
+  "map16x": {
+    "height": 227,
+    "num_land_tiles": 21839,
+    "width": 334
+  },
+  "map4x": {
+    "height": 454,
+    "num_land_tiles": 91427,
+    "width": 668
+  },
+  "multiplayer_frequency": 3,
+  "name": "Gulf Of America \u0026 Mexico",
+  "nations": [
+    {
+      "coordinates": [
+        1119,
+        402
+      ],
+      "name": "Miami",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1010,
+        300
+      ],
+      "name": "Tampa",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        866,
+        100
+      ],
+      "name": "Tallahassee",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        648,
+        73
+      ],
+      "name": "Mobile",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        578,
+        130
+      ],
+      "name": "New Orleans",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        310,
+        126
+      ],
+      "name": "Houston",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        109,
+        251
+      ],
+      "name": "Corpus Christi",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        80,
+        616
+      ],
+      "name": "Tampico",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        174,
+        813
+      ],
+      "name": "Veracruz",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        359,
+        874
+      ],
+      "name": "Coatzacoalcos",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        533,
+        783
+      ],
+      "name": "Campeche",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        732,
+        697
+      ],
+      "name": "Cancun",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1009,
+        572
+      ],
+      "name": "Havana",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        998,
+        80
+      ],
+      "flag": "Florida",
+      "name": "Florida",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        816,
+        54
+      ],
+      "flag": "Georgia_US",
+      "name": "Georgia (US State)",
+      "strength": 1
+    }
+  ],
+  "translation_key": "map.gulfofamericaandmexico"
+}
