@@ -3,6 +3,9 @@ import {
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
   InputHandler,
+  TouchGhostPlacementDragStartEvent,
+  TouchGhostPlacementEvent,
+  TouchGhostPlacementMoveEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
@@ -1168,6 +1171,141 @@ describe("Warship box selection (Shift+drag)", () => {
     expect(mockCanvas.style.cursor).toBe("crosshair");
     window.dispatchEvent(new Event("blur"));
     expect(mockCanvas.style.cursor).toBe("");
+  });
+});
+
+describe("mobile tap-preview placement", () => {
+  let inputHandler: InputHandler;
+  let eventBus: EventBus;
+  let uiState: UIState;
+
+  beforeEach(() => {
+    eventBus = new EventBus();
+    uiState = {
+      attackRatio: 20,
+      ghostStructure: UnitType.City,
+      rocketDirectionUp: true,
+    } as UIState;
+    inputHandler = new InputHandler(
+      { inSpawnPhase: () => false } as GameView,
+      uiState,
+      document.createElement("canvas"),
+      eventBus,
+    );
+  });
+
+  afterEach(() => {
+    inputHandler.destroy();
+  });
+
+  test("touch taps are delegated to the preview controller", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+
+    const tap = (x: number, y: number, pointerId: number) => {
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    };
+
+    tap(100, 110, 1);
+    tap(140, 150, 2);
+
+    expect(placements).toEqual([
+      expect.objectContaining({ x: 100, y: 110 }),
+      expect.objectContaining({ x: 140, y: 150 }),
+    ]);
+  });
+
+  test("movement starting on the preview drags it without a hold delay", () => {
+    const moves: TouchGhostPlacementMoveEvent[] = [];
+    eventBus.on(TouchGhostPlacementDragStartEvent, (event) => {
+      event.handled = true;
+    });
+    eventBus.on(TouchGhostPlacementMoveEvent, (event) => moves.push(event));
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 104,
+        clientY: 104,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    expect(moves).toHaveLength(0);
+
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 125,
+        clientY: 130,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(moves).toEqual([expect.objectContaining({ x: 125, y: 130 })]);
+  });
+
+  test("a touch-generated context menu does not cancel placement", () => {
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    inputHandler["onContextMenu"](
+      new MouseEvent("contextmenu", { clientX: 100, clientY: 100 }),
+    );
+
+    expect(uiState.ghostStructure).toBe(UnitType.City);
+  });
+
+  test("a mouse context menu still cancels placement", () => {
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 2,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+
+    inputHandler["onContextMenu"](
+      new MouseEvent("contextmenu", { clientX: 100, clientY: 100 }),
+    );
+
+    expect(uiState.ghostStructure).toBeNull();
   });
 });
 

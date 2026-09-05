@@ -121,7 +121,9 @@ export class UnitDisplay extends LitElement implements Controller {
 
     return html`
       <div class="border-t border-white/10 p-0.5 w-full">
-        <div class="grid grid-rows-1 grid-flow-col gap-0.5 w-fit mx-auto">
+        <div
+          class="grid grid-cols-10 gap-0.5 w-full lg:grid-rows-1 lg:grid-flow-col lg:w-fit mx-auto"
+        >
           ${this.renderUnitItem(
             cityIcon,
             this._cities,
@@ -229,7 +231,7 @@ export class UnitDisplay extends LitElement implements Controller {
         ${hovered
           ? html`
               <div
-                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
+                class="hidden lg:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
               >
                 <div class="font-bold text-sm mb-1">
                   ${translateText(
@@ -258,7 +260,7 @@ export class UnitDisplay extends LitElement implements Controller {
         <div
           class="${this.canBuild(unitType)
             ? ""
-            : "opacity-40"} border border-slate-500 rounded-sm px-0.5 pb-0.5 flex items-center gap-0.5 cursor-pointer
+            : "opacity-40"} border border-slate-500 rounded-sm min-h-11 px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:min-h-0 lg:px-0.5 lg:justify-start
              ${selected ? "hover:bg-gray-400/10" : "hover:bg-gray-800"}
              rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}"
           @click=${() => {
@@ -290,13 +292,23 @@ export class UnitDisplay extends LitElement implements Controller {
           @mouseleave=${() =>
             this.eventBus?.emit(new ToggleStructureEvent(null))}
         >
-          ${html`<div class="ml-0.5 text-[10px] relative -top-1 text-gray-400">
+          ${html`<div
+            class="hidden lg:block ml-0.5 text-[10px] relative -top-1 text-gray-400"
+          >
             ${displayHotkey}
           </div>`}
-          <div class="flex items-center gap-0.5 pt-0.5">
-            <img src=${icon} alt=${structureKey} class="align-middle size-5" />
+          <div
+            class="flex flex-col items-center gap-0 pt-0.5 lg:flex-row lg:gap-0.5"
+          >
+            <img
+              src=${icon}
+              alt=${structureKey}
+              class="align-middle size-7 lg:size-5"
+            />
             ${number !== null
-              ? html`<span class="text-xs">${renderNumber(number)}</span>`
+              ? html`<span class="text-[10px] leading-none lg:text-xs"
+                  >${renderNumber(number)}</span
+                >`
               : null}
           </div>
         </div>
