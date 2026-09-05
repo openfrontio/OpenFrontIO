@@ -803,3 +803,95 @@ export const StreamsFeedSchema = z.object({
   live: z.array(LiveStreamSchema).default([]),
 });
 export type StreamsFeed = z.infer<typeof StreamsFeedSchema>;
+
+// ---------------------------------------------------------------------------
+// POST /payments/checkout — the single, rail-agnostic checkout endpoint that
+// replaced the two legacy Stripe-only ones. It serves both the Stripe (web)
+// and Steam (desktop) rails; the client picks the rail explicitly and the
+// server never infers it.
+//
+// The listing is identified by NAME, not by a Stripe priceId: a Steam-only
+// listing has no Stripe product at all, so a priceId cannot be the identifier
+// any more.
+export const PaymentsProviderSchema = z.enum(["steam", "stripe"]);
+export type PaymentsProvider = z.infer<typeof PaymentsProviderSchema>;
+
+export const PaymentsKindSchema = z.enum([
+  "currency_pack",
+  "custom_currency",
+  "subscription_tier",
+]);
+export type PaymentsKind = z.infer<typeof PaymentsKindSchema>;
+
+// How the player is handed to the rail. This is a STRING on the wire, and it
+// is the ONLY thing callers may branch on:
+//
+//   - "redirect"       — navigate to `redirectUrl` verbatim.
+//   - "client_overlay" — Steam's overlay purchase dialog is already on screen
+//                        and `redirectUrl` is null. There is nothing to
+//                        navigate to; wait for Steam to report authorization.
+//
+// Branching on "is redirectUrl set?" instead would silently mis-handle a
+// client_overlay response, so don't.
+export const PaymentsHandoffSchema = z.enum(["redirect", "client_overlay"]);
+export type PaymentsHandoff = z.infer<typeof PaymentsHandoffSchema>;
+
+// The 200 body. Deliberately FLAT — `handoff` is a sibling of `redirectUrl`,
+// not a wrapper around it.
+//
+// `orderId` is a DECIMAL STRING and must stay one: it is a database bigint and
+// large values do not survive a round trip through a JS number. It is null for
+// a Stripe subscription_tier checkout, so nothing may require it.
+//
+// `expiresAt` is advisory only. Do not build a countdown or an auto-cancel on
+// it — the server owns the order's lifetime.
+export const PaymentsCheckoutResponseSchema = z
+  .object({
+    orderId: z.string().nullable(),
+    provider: PaymentsProviderSchema,
+    kind: PaymentsKindSchema,
+    handoff: PaymentsHandoffSchema,
+    redirectUrl: z.string().nullable(),
+    expiresAt: z.string().nullable(),
+  })
+  // A "redirect" with nowhere to redirect to is not a response we can act on;
+  // rejecting it here keeps every caller from having to re-check.
+  .refine((body) => body.handoff !== "redirect" || body.redirectUrl !== null, {
+    message: "handoff 'redirect' requires a redirectUrl",
+  });
+export type PaymentsCheckoutResponse = z.infer<
+  typeof PaymentsCheckoutResponseSchema
+>;
+
+// POST /payments/steam/finalize — settles a Steam overlay order.
+//
+// The body is a RESOLUTION, not a boolean success, and only two of its four
+// values are terminal:
+//
+//   - "settled"    — captured and fulfilled. The credit has landed. The ONLY
+//                    success value.
+//   - "expired"    — terminal, and the buyer was never charged. The ONLY
+//                    definitive failure.
+//   - "open"       — not resolved yet and correctly so; the server sweeper
+//                    owns it. This is the EXPECTED answer to a prompt finalize
+//                    on the client channel, where an order Valve still reports
+//                    as Init resolves to "open". Not a failure.
+//   - "unresolved" — transient (Steam unreachable, or the rail disabled
+//                    mid-flight). Not a failure; handled exactly like "open".
+//
+// Collapsing the last two into an error is the same mistake as reading
+// `status=pending` on the return page as "purchase failed": the order is
+// durable and something else owns settling it.
+export const SteamOrderResolutionSchema = z.enum([
+  "settled",
+  "expired",
+  "open",
+  "unresolved",
+]);
+export type SteamOrderResolution = z.infer<typeof SteamOrderResolutionSchema>;
+
+export const SteamFinalizeResponseSchema = z.object({
+  orderId: z.string(),
+  resolution: SteamOrderResolutionSchema,
+});
+export type SteamFinalizeResponse = z.infer<typeof SteamFinalizeResponseSchema>;

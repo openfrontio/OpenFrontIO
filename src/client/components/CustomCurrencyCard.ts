@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { createCustomCurrencyCheckout } from "../Api";
 import { showInGameAlert } from "../InGameModal";
+import { purchaseOutcomeMessage, startPurchase } from "../Payments";
 import { translateText } from "../Utils";
 import "./PlutoniumIcon";
 import "./PurchaseButton";
@@ -38,12 +38,17 @@ export class CustomCurrencyCard extends LitElement {
   }
 
   private buy = async () => {
-    const url = await createCustomCurrencyCheckout(this.amount);
-    if (url === false) {
-      await showInGameAlert(translateText("store.checkout_failed"));
-      return;
-    }
-    window.location.href = url;
+    // Rail-agnostic: startPurchase picks Stripe or Steam and performs the
+    // handoff itself, so there is no URL to navigate to here.
+    const outcome = await startPurchase({
+      kind: "custom_currency",
+      hardAmount: this.amount,
+    });
+    const message = purchaseOutcomeMessage(
+      outcome,
+      "store.custom_currency_purchase_success",
+    );
+    if (message !== null) await showInGameAlert(message);
   };
 
   render() {

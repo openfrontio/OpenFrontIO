@@ -8,6 +8,7 @@ import {
   openSubscriptionPortal,
 } from "../Api";
 import { translateCosmetic } from "../Cosmetics";
+import { isDesktopShell } from "../DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "../InGameModal";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
@@ -170,8 +171,36 @@ export class SubscriptionPanel extends LitElement {
     `;
   }
 
+  /**
+   * Static copy replacing the Manage/Reactivate button in the desktop build.
+   *
+   * Both of those go through the Stripe billing portal, and the packaged Steam
+   * build must never steer a player to a payment page -- `navigationPolicy.ts`
+   * refuses the link-out, so the button is dead. Worse than dead, once infra
+   * accepts `app://openfront` as a returnUrl: the click then raises the
+   * shell's "Purchase unavailable / nothing has been charged" dialog at a
+   * player who is trying to STOP paying.
+   *
+   * Deliberately NOT a link. Naming the website as a fact is not steering to a
+   * payment page; handing over a clickable route to one is exactly what the
+   * rule forbids. So: no anchor, no URL, no click handler.
+   */
+  private renderManageOnWeb(): TemplateResult {
+    return html`
+      <p class="text-[11px] text-center text-white/40 leading-snug">
+        ${translateText("account_modal.manage_subscription_on_web")}
+      </p>
+    `;
+  }
+
   private renderActions(): TemplateResult {
+    // The whole desktop build, not just a Steam-authenticated session: the
+    // guard that makes the button dead is in the shell and applies to every
+    // packaged launch.
+    const onDesktop = isDesktopShell();
+
     if (this.sub.cancelAtPeriodEnd) {
+      if (onDesktop) return this.renderManageOnWeb();
       return html`
         <o-button
           variant="primary"
@@ -193,15 +222,18 @@ export class SubscriptionPanel extends LitElement {
             translationKey="account_modal.change_tier"
             @click=${this.handleChangeTier}
           ></o-button>
-          <o-button
-            class="flex-1 min-w-[8rem]"
-            variant="secondary"
-            width="block"
-            size="md"
-            translationKey="account_modal.manage_subscription"
-            @click=${this.handleManage}
-          ></o-button>
+          ${onDesktop
+            ? nothing
+            : html`<o-button
+                class="flex-1 min-w-[8rem]"
+                variant="secondary"
+                width="block"
+                size="md"
+                translationKey="account_modal.manage_subscription"
+                @click=${this.handleManage}
+              ></o-button>`}
         </div>
+        ${onDesktop ? this.renderManageOnWeb() : nothing}
         <button
           @click=${this.handleCancel}
           class="self-center text-[11px] font-bold uppercase tracking-widest text-white/30 hover:text-red-400 transition-colors py-1 cursor-pointer"
