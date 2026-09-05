@@ -119,6 +119,16 @@ function okRedirect(url: string): PaymentsCheckoutResult {
   };
 }
 
+/**
+ * A Steam order id as infra actually mints it: `(namespace << 60) | purchases.id`.
+ *
+ * Real Steam order ids ALWAYS encode the internal order id this way, so a
+ * fixture using an arbitrary number is not a weaker test, it is an impossible
+ * one. `ns = 2` is staging.
+ */
+const steamOrderIdFor = (purchaseId: bigint, ns = 2n) =>
+  ((ns << 60n) | purchaseId).toString();
+
 function okOverlay(orderId: string | null = "1234"): PaymentsCheckoutResult {
   return {
     ok: true,
@@ -238,7 +248,11 @@ describe("drainPendingSteamAuthorizations", () => {
     expect(await drainPendingSteamAuthorizations()).toEqual([]);
     expect(shell.bridge.consumePending).not.toHaveBeenCalled();
 
-    shell.emit({ appId: 480, orderId: "7777", authorized: true });
+    shell.emit({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: true,
+    });
     expect(await promise).toEqual({ outcome: "completed" });
 
     // ...and it drains again once the wait is over.
@@ -318,7 +332,7 @@ describe("startPurchase — redirect handoff", () => {
 
     const promise = startPurchase(PACK, { navigate });
     await shell.whenListening();
-    shell.emit({ appId: 1, orderId: "s-1", authorized: true });
+    shell.emit({ appId: 1, orderId: steamOrderIdFor(1234n), authorized: true });
     await promise;
 
     expect(checkoutMock).toHaveBeenCalledWith({
@@ -338,7 +352,7 @@ describe("startPurchase — redirect handoff", () => {
 
     const promise = startPurchase(PACK, { navigate });
     await shell.whenListening();
-    shell.emit({ appId: 1, orderId: "s-1", authorized: true });
+    shell.emit({ appId: 1, orderId: steamOrderIdFor(1234n), authorized: true });
     await promise;
 
     expect(navigate).not.toHaveBeenCalled();
@@ -354,7 +368,11 @@ describe("startPurchase — Steam overlay handoff", () => {
     const promise = startPurchase(PACK, { navigate });
     await shell.whenListening();
     // Steam's own order id is deliberately different — it must not be used.
-    shell.emit({ appId: 480, orderId: "77770000", authorized: true });
+    shell.emit({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: true,
+    });
 
     expect(await promise).toEqual({ outcome: "completed" });
     expect(finalizeMock).toHaveBeenCalledWith("1234");
@@ -366,7 +384,11 @@ describe("startPurchase — Steam overlay handoff", () => {
 
     const promise = startPurchase(PACK, { navigate });
     await shell.whenListening();
-    shell.emit({ appId: 480, orderId: "77770000", authorized: false });
+    shell.emit({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: false,
+    });
 
     expect(await promise).toEqual({ outcome: "cancelled" });
     expect(finalizeMock).not.toHaveBeenCalled();
@@ -374,7 +396,11 @@ describe("startPurchase — Steam overlay handoff", () => {
 
   it("picks up an authorization that landed before it subscribed", async () => {
     const shell = installShell();
-    shell.queue({ appId: 480, orderId: "77770000", authorized: true });
+    shell.queue({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: true,
+    });
     checkoutMock.mockResolvedValue(okOverlay("1234"));
     finalizeMock.mockResolvedValue({ ok: true, resolution: "settled" });
 
@@ -469,7 +495,11 @@ describe("startPurchase — Steam overlay handoff", () => {
 
     const promise = startPurchase(PACK, { navigate });
     await shell.whenListening();
-    shell.emit({ appId: 480, orderId: "7777", authorized: true });
+    shell.emit({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: true,
+    });
 
     expect(await promise).toEqual(expected);
   });
@@ -484,13 +514,105 @@ describe("startPurchase — Steam overlay handoff", () => {
     const shell = installShell();
     checkoutMock.mockResolvedValue(okOverlay("1234"));
     finalizeMock.mockResolvedValue({ ok: true, resolution: "settled" });
-    shell.queue({ appId: 480, orderId: "aaa", authorized: false });
-    shell.queue({ appId: 480, orderId: "bbb", authorized: true });
+    shell.queue({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: false,
+    });
+    shell.queue({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: true,
+    });
 
     expect(await startPurchase(PACK, { navigate })).toEqual({
       outcome: "completed",
     });
     expect(finalizeMock).toHaveBeenCalledWith("1234");
+  });
+
+  // The queue fans an authorization out to EVERY live listener, so two overlay
+  // waits running at once both settle on whichever dialog the player answers --
+  // and each then finalizes ITS OWN order id. One of those is a finalize for an
+  // order Valve never approved. The server's QueryTxn-first guard means no
+  // double charge, but the client should not be issuing the call at all.
+  //
+  // Refusing mirrors Steam's own rule: error 107 is "user has a pending
+  // transaction that must be completed before beginning a new transaction".
+  it("refuses a second overlay purchase while one is still waiting", async () => {
+    const shell = installShell();
+    checkoutMock.mockResolvedValue(okOverlay("1234"));
+
+    const first = startPurchase(PACK, { navigate });
+    await shell.whenListening();
+
+    const second = await startPurchase(PACK, { navigate });
+    expect(second).toEqual({
+      outcome: "error",
+      // The shared translateText mock returns the key, so the interpolated
+      // provider name is asserted by the checkoutError tests rather than here.
+      message: "store.pending_provider_transaction",
+      refetchCatalog: false,
+    });
+    // The refusal must not have minted a second order either.
+    expect(checkoutMock).toHaveBeenCalledTimes(1);
+
+    // The first purchase is untouched and still settles normally.
+    finalizeMock.mockResolvedValue({ ok: true, resolution: "settled" });
+    shell.emit({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: true,
+    });
+    expect(await first).toEqual({ outcome: "completed" });
+    expect(finalizeMock).toHaveBeenCalledTimes(1);
+  });
+
+  // Serialising stops two waits existing AT ONCE, but not a STALE approval
+  // outliving the purchase it belonged to -- crash, navigate away, or simply
+  // never open the store, and it sits parked. The next purchase's drain would
+  // then settle on it and finalize an order Valve never approved.
+  //
+  it("ignores an authorization belonging to a different order", async () => {
+    const shell = installShell();
+    checkoutMock.mockResolvedValue(okOverlay("1234"));
+    finalizeMock.mockResolvedValue({ ok: true, resolution: "settled" });
+
+    const promise = startPurchase(PACK, { navigate });
+    await shell.whenListening();
+
+    // A leftover approval for some earlier purchase.
+    shell.emit({
+      appId: 480,
+      orderId: steamOrderIdFor(9999n),
+      authorized: true,
+    });
+    await tick();
+    expect(finalizeMock).not.toHaveBeenCalled();
+
+    // Ours still settles it.
+    shell.emit({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: true,
+    });
+    expect(await promise).toEqual({ outcome: "completed" });
+    expect(finalizeMock).toHaveBeenCalledExactlyOnceWith("1234");
+  });
+
+  // A null order id is the documented "could not be represented exactly" case.
+  // We cannot tell whose it is, so we accept it rather than stranding a real
+  // approval -- the in-flight guard means there is only one wait it could be.
+  it("accepts an authorization whose order id could not be recovered", async () => {
+    const shell = installShell();
+    checkoutMock.mockResolvedValue(okOverlay("1234"));
+    finalizeMock.mockResolvedValue({ ok: true, resolution: "settled" });
+
+    const promise = startPurchase(PACK, { navigate });
+    await shell.whenListening();
+    shell.emit({ appId: 480, orderId: null, authorized: true });
+
+    expect(await promise).toEqual({ outcome: "completed" });
   });
 
   // "expired" is the one resolution that means the buyer was never charged
@@ -502,7 +624,11 @@ describe("startPurchase — Steam overlay handoff", () => {
 
     const promise = startPurchase(PACK, { navigate });
     await shell.whenListening();
-    shell.emit({ appId: 480, orderId: "7777", authorized: true });
+    shell.emit({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: true,
+    });
 
     expect(await promise).toEqual({
       outcome: "error",
@@ -520,7 +646,11 @@ describe("startPurchase — Steam overlay handoff", () => {
 
     const promise = startPurchase(PACK, { navigate });
     await shell.whenListening();
-    shell.emit({ appId: 480, orderId: "7777", authorized: true });
+    shell.emit({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: true,
+    });
 
     expect(await promise).toEqual({ outcome: "pending" });
   });

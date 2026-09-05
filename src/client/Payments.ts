@@ -169,8 +169,39 @@ export async function reportPendingSteamAuthorizations(): Promise<boolean> {
  */
 export const STEAM_OVERLAY_TIMEOUT_MS = 5 * 60 * 1000;
 
+/**
+ * Whether this authorization belongs to the checkout that is waiting for it.
+ *
+ * Infra mints Steam's order id as `(namespace << 60) | purchases.id`, so the
+ * low 60 bits are exactly the internal `orderId` that
+ * `POST /payments/checkout` handed us and that we send to finalize. Masking
+ * them off identifies the owner without the client needing to know the
+ * environment namespace at all -- the high bits are simply discarded.
+ *
+ * A NULL order id is accepted rather than rejected. That is the documented
+ * "arrived as a number that could not represent it exactly" case from the
+ * shell's bridge: we cannot tell whose it is, and refusing would strand a real
+ * approval. The in-flight guard in startPurchase means there is at most one
+ * wait it could belong to, so accepting is the safe direction.
+ *
+ * This duplicates a bit layout that lives in infra, which is the one thing to
+ * watch: if the mint changes, this silently stops matching and every
+ * authorization looks like someone else's. The tests pin the round trip
+ * against ids built the same way infra builds them.
+ */
+function belongsToOrder(auth: MicroTxnAuthorization, orderId: string): boolean {
+  if (auth.orderId === null) return true;
+  try {
+    return (BigInt(auth.orderId) & ((1n << 60n) - 1n)).toString() === orderId;
+  } catch {
+    // Not a decimal integer, so it identifies nothing. Same reasoning as null.
+    return true;
+  }
+}
+
 async function awaitSteamAuthorization(
   bridge: SteamMicroTxnBridge,
+  orderId: string,
 ): Promise<MicroTxnAuthorization | "timeout"> {
   let unsubscribe: (() => void) | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -183,7 +214,13 @@ async function awaitSteamAuthorization(
         resolve(value);
       };
       try {
-        unsubscribe = bridge.subscribe(settle);
+        unsubscribe = bridge.subscribe((auth) => {
+          // A stale approval for an earlier purchase must not settle this
+          // wait -- finalizing on it would call finalize for an order Valve
+          // never approved. Keep waiting instead; the sweeper owns the other.
+          if (!belongsToOrder(auth, orderId)) return;
+          settle(auth);
+        });
       } catch (e) {
         console.error("awaitSteamAuthorization: subscribe failed", e);
       }
@@ -195,7 +232,9 @@ async function awaitSteamAuthorization(
       // the `settled` guard above is for the timeout race.
       void (async () => {
         try {
-          const pending = await bridge.consumePending();
+          const pending = (await bridge.consumePending()).filter((a) =>
+            belongsToOrder(a, orderId),
+          );
           if (pending.length === 0) return;
           // consume() is DESTRUCTIVE -- it clears everything it returns -- and
           // only one value can settle this wait, so anything not chosen here
@@ -336,6 +375,32 @@ export async function startPurchase(
   const navigate = options.navigate ?? defaultNavigate;
   const provider = paymentsProvider();
 
+  // Refuse a second overlay purchase while one is still waiting, BEFORE
+  // minting an order for it.
+  //
+  // The bridge fans an authorization out to every live listener, so two waits
+  // running at once both settle on whichever dialog the player answered, and
+  // each then finalizes ITS OWN order id -- one of which Valve never approved.
+  // The server's QueryTxn-first guard means that cannot double-charge, but the
+  // client should not be issuing the call, and the order it minted would be
+  // left open for the sweeper to tidy.
+  //
+  // Refusing mirrors the platform's own rule rather than inventing one: Steam
+  // error 107 is "user has a pending transaction that must be completed before
+  // beginning a new transaction", so a second InitTxn is very likely refused
+  // anyway. This makes the client's behaviour explicit and legible instead of
+  // depending on that.
+  //
+  // Deliberately BEFORE createPaymentsCheckout: refusing after would leave a
+  // stranded PENDING row behind every rejected click.
+  if (provider === "steam" && overlayWaitsInFlight > 0) {
+    return error(
+      translateText("store.pending_provider_transaction", {
+        provider: providerName(provider),
+      }),
+    );
+  }
+
   const result = await createPaymentsCheckout({
     provider,
     ...request,
@@ -368,7 +433,7 @@ export async function startPurchase(
   overlayWaitsInFlight++;
   let authorization: MicroTxnAuthorization | "timeout";
   try {
-    authorization = await awaitSteamAuthorization(bridge);
+    authorization = await awaitSteamAuthorization(bridge, orderId);
   } finally {
     overlayWaitsInFlight--;
   }

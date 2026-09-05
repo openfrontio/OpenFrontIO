@@ -962,6 +962,18 @@ describe("StoreModal on the Steam rail", () => {
     const microTxn = installSteamShell();
     await openStoreOnTab("packs");
     await vi.waitFor(() => expect(microTxn.consumePending).toHaveBeenCalled());
+
+    // "Every time", not "once per element". Closing and REOPENING the same
+    // modal has to drain again: an authorization parked while the player had
+    // the store shut is only surfaced by the next open, and a drain wired to
+    // first mount rather than to onOpen would strand it there.
+    const opened = store!;
+    opened.close();
+    await opened.updateComplete;
+    opened.open({ tab: "packs" });
+    await vi.waitFor(() =>
+      expect(microTxn.consumePending).toHaveBeenCalledTimes(2),
+    );
   });
 
   it("tells the player about an approval it can no longer finalize", async () => {
