@@ -66,7 +66,8 @@ class SAMTargetingSystem {
     ticks: number,
   ): InterceptionTile | undefined {
     const trajectory = unit.trajectory();
-    const maxIdx = trajectory.length - 2;
+    const maxIdx =
+      trajectory.length - (unit.type() === UnitType.MIRVWarhead ? 2 : 1);
     const finalTile = trajectory[trajectory.length - 1];
     if (!finalTile?.targetable) return undefined;
 

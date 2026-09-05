@@ -1,3 +1,4 @@
+import { Config } from "../../../src/core/configuration/Config";
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
@@ -457,6 +458,38 @@ describe("SAM", () => {
     expect(nuke.reachedTarget()).toBeFalsy();
     expect(nuke.wasDestroyedByEnemy()).toBeTruthy();
   });
+
+  test.each([
+    UnitType.AtomBomb,
+    UnitType.HydrogenBomb,
+    UnitType.MIRVWarhead,
+  ] as const)(
+    "SAM handles a short self-targeted %s at detonation",
+    (nukeType) => {
+      game.config().nukeMagnitudes = Config.prototype.nukeMagnitudes;
+      const source = game.ref(90, 0);
+      const target = game.ref(110, 0);
+      const samTile = game.ref(118, 0);
+      attacker.conquer(source);
+      attacker.conquer(target);
+      defender.conquer(samTile);
+      attacker.buildUnit(UnitType.MissileSilo, source, {});
+      const sam = defender.buildUnit(UnitType.SAMLauncher, samTile, {});
+      sam.increaseLevel();
+      executeTicks(game, game.config().SAMCooldown() + 1);
+      sam.reloadMissile();
+      game.addExecution(new SAMLauncherExecution(defender, samTile, sam));
+      const nuke = new NukeExecution(nukeType, attacker, target, source, 10);
+      game.addExecution(nuke);
+
+      executeTicks(game, 10);
+
+      const intercepted = nukeType !== UnitType.MIRVWarhead;
+      expect(nuke.getNuke()?.wasDestroyedByEnemy()).toBe(intercepted);
+      expect(nuke.getNuke()?.reachedTarget()).toBe(!intercepted);
+      expect(sam.isActive()).toBe(intercepted);
+    },
+  );
 
   test("SAM reloads all expired missile slots in a single tick when fully in cooldown", async () => {
     // Verifies the while-loop fix: previously only one slot reloaded per tick,
