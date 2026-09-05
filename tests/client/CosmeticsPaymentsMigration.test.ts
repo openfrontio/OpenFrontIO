@@ -25,7 +25,11 @@ vi.mock("../../src/client/Payments", async (importOriginal) => ({
   startPurchase: vi.fn(async () => ({ outcome: "redirecting" })),
 }));
 
-import { createCheckoutSession } from "../../src/client/Api";
+import {
+  createCheckoutSession,
+  getUserMe,
+  invalidateUserMe,
+} from "../../src/client/Api";
 import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import { purchaseCosmetic, resolveCosmetics } from "../../src/client/Cosmetics";
 import { showInGameAlert } from "../../src/client/InGameModal";
@@ -193,6 +197,39 @@ describe("purchaseCosmetic dollar path: settling a Steam overlay purchase", () =
     startPurchaseMock.mockResolvedValue({ outcome: "cancelled" });
     await purchaseCosmetic(resolved({}), "dollar");
     expect(alertMock).toHaveBeenCalledWith("store.steam_overlay_cancelled");
+  });
+
+  // invalidateUserMe() only drops the cache. On the overlay path the page
+  // never navigates, so without a fetch AND a broadcast an open StoreModal
+  // keeps rendering the balance it had before the purchase settled.
+  it("refetches and broadcasts the profile after a completed purchase", async () => {
+    const fresh = { player: { currency: { hard: 500 } } };
+    vi.mocked(getUserMe).mockResolvedValue(fresh as never);
+    startPurchaseMock.mockResolvedValue({ outcome: "completed" });
+    const seen: unknown[] = [];
+    const onEvent = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("userMeResponse", onEvent);
+
+    await purchaseCosmetic(resolved({}), "dollar");
+
+    document.removeEventListener("userMeResponse", onEvent);
+    expect(invalidateUserMe).toHaveBeenCalled();
+    expect(seen).toEqual([fresh]);
+  });
+
+  // getUserMe returns false on ANY error, not just auth. Broadcasting that
+  // would flip the app to its logged-out UI right after a purchase succeeded.
+  it("does not broadcast a failed profile read", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false as never);
+    startPurchaseMock.mockResolvedValue({ outcome: "completed" });
+    const seen: unknown[] = [];
+    const onEvent = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("userMeResponse", onEvent);
+
+    await purchaseCosmetic(resolved({}), "dollar");
+
+    document.removeEventListener("userMeResponse", onEvent);
+    expect(seen).toEqual([]);
   });
 
   it("shows a checkout error's own message", async () => {

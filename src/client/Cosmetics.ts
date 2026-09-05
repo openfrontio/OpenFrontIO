@@ -201,6 +201,32 @@ export function handlePurchaseReturn(
   );
 }
 
+/**
+ * Re-read the profile and tell the app about it.
+ *
+ * `invalidateUserMe()` alone only drops the cache; nothing refetches and
+ * nothing is notified, so a surface holding a `userMeResponse` -- an open
+ * StoreModal, the header balance -- keeps rendering the old one. This is the
+ * pair that actually refreshes them.
+ *
+ * A `false` result is deliberately NOT broadcast: getUserMe returns false on
+ * any error, not only an auth failure, and broadcasting it would flip the
+ * whole app to its logged-out UI immediately after a successful purchase. A
+ * stale balance is much the better failure.
+ */
+async function broadcastFreshUserMe(): Promise<void> {
+  invalidateUserMe();
+  const fresh = await getUserMe();
+  if (fresh === false) return;
+  document.dispatchEvent(
+    new CustomEvent("userMeResponse", {
+      detail: fresh,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+}
+
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
@@ -276,7 +302,13 @@ export async function purchaseCosmetic(
           : { kind: "subscription_tier", tierName: c.name },
       );
       if (outcome.outcome === "completed") {
-        invalidateUserMe();
+        // Not just invalidateUserMe(): that clears the cache and nothing more.
+        // On the overlay path the page never navigates, so an open StoreModal
+        // keeps the `userMeResponse` it was rendered from and shows a stale
+        // balance and subscription after a purchase that has already settled.
+        // Fetching and broadcasting is what actually updates it -- the same
+        // shape TribesPanel uses after a hard-currency purchase.
+        await broadcastFreshUserMe();
       }
       // The catalog this store rendered from named something the rail no
       // longer sells; drop it so the next open refetches.

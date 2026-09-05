@@ -107,7 +107,7 @@ export function steamMicroTxn(): SteamMicroTxnBridge | null {
  * The wait already drains for itself (see awaitSteamAuthorization), so while
  * one is running the mount drain stands down.
  */
-let overlayWaitsInFlight = 0;
+let steamPurchaseInFlight = false;
 
 /**
  * Drains the pending-authorization queue and RETURNS what was parked there.
@@ -126,7 +126,7 @@ export async function drainPendingSteamAuthorizations(): Promise<
   MicroTxnAuthorization[]
 > {
   const bridge = steamMicroTxn();
-  if (!bridge || overlayWaitsInFlight > 0) return [];
+  if (!bridge || steamPurchaseInFlight) return [];
   try {
     return await bridge.consumePending();
   } catch (e) {
@@ -393,14 +393,33 @@ export async function startPurchase(
   //
   // Deliberately BEFORE createPaymentsCheckout: refusing after would leave a
   // stranded PENDING row behind every rejected click.
-  if (provider === "steam" && overlayWaitsInFlight > 0) {
+  if (provider === "steam" && steamPurchaseInFlight) {
     return error(
       translateText("store.pending_provider_transaction", {
         provider: providerName(provider),
       }),
     );
   }
+  // RESERVE, do not merely check. Reading the flag and then awaiting the
+  // checkout would leave a window in which a second call reads the same
+  // `false`, so both mint an order and both open a wait -- the exact failure
+  // this guard exists to prevent, plus a stranded order. The reservation is
+  // taken synchronously, before the first await, and released in the `finally`
+  // below on every exit including a failed checkout.
+  const reserved = provider === "steam";
+  if (reserved) steamPurchaseInFlight = true;
+  try {
+    return await runPurchase(provider, request, navigate);
+  } finally {
+    if (reserved) steamPurchaseInFlight = false;
+  }
+}
 
+async function runPurchase(
+  provider: PaymentsProvider,
+  request: PurchaseRequest,
+  navigate: (url: string) => void,
+): Promise<PurchaseOutcome> {
   const result = await createPaymentsCheckout({
     provider,
     ...request,
@@ -430,13 +449,10 @@ export async function startPurchase(
     return { outcome: "pending" };
   }
 
-  overlayWaitsInFlight++;
-  let authorization: MicroTxnAuthorization | "timeout";
-  try {
-    authorization = await awaitSteamAuthorization(bridge, orderId);
-  } finally {
-    overlayWaitsInFlight--;
-  }
+  // No counter maintained here: the reservation taken in startPurchase covers
+  // the checkout AND the wait, so a mount-time drain stands down for the whole
+  // purchase rather than only while the listener is attached.
+  const authorization = await awaitSteamAuthorization(bridge, orderId);
 
   // SAFETY: finalize only on a reported authorization. A client-channel order
   // skips the server's abandon rule and settles unconditionally, so finalizing

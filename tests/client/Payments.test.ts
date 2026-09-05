@@ -615,6 +615,65 @@ describe("startPurchase — Steam overlay handoff", () => {
     expect(await promise).toEqual({ outcome: "completed" });
   });
 
+  // The in-flight guard has to be a RESERVATION, not a check. Reading the
+  // counter and then awaiting createPaymentsCheckout leaves a window in which
+  // a second call reads the same zero, so both mint an order and both open a
+  // wait -- which is the very thing the guard exists to prevent, and worse,
+  // because a stranded order now exists too.
+  //
+  // The second purchase is started before the first has reached its listener,
+  // which is exactly the window a check-then-await guard leaves open.
+  it("refuses a second purchase started before the first opens its wait", async () => {
+    const shell = installShell();
+    let releaseCheckout!: (r: PaymentsCheckoutResult) => void;
+    checkoutMock.mockReturnValueOnce(
+      new Promise<PaymentsCheckoutResult>((r) => {
+        releaseCheckout = r;
+      }),
+    );
+
+    const first = startPurchase(PACK, { navigate });
+    await tick();
+
+    // First is parked inside createPaymentsCheckout: no wait exists yet.
+    const second = await startPurchase(PACK, { navigate });
+    expect(second).toEqual({
+      outcome: "error",
+      message: "store.pending_provider_transaction",
+      refetchCatalog: false,
+    });
+    // The refusal must not have minted an order of its own.
+    expect(checkoutMock).toHaveBeenCalledTimes(1);
+
+    releaseCheckout(okOverlay("1234"));
+    await shell.whenListening();
+    finalizeMock.mockResolvedValue({ ok: true, resolution: "settled" });
+    shell.emit({
+      appId: 480,
+      orderId: steamOrderIdFor(1234n),
+      authorized: true,
+    });
+    expect(await first).toEqual({ outcome: "completed" });
+  });
+
+  // The reservation must be released on every exit, not just the happy one,
+  // or one failed checkout locks the player out of buying for the session.
+  it("releases the reservation when checkout itself fails", async () => {
+    installShell();
+    checkoutMock.mockResolvedValueOnce({
+      ok: false,
+      code: "failed",
+    } as PaymentsCheckoutResult);
+
+    await startPurchase(PACK, { navigate });
+
+    checkoutMock.mockResolvedValueOnce(okOverlay(null));
+    expect(await startPurchase(PACK, { navigate })).toEqual({
+      outcome: "pending",
+    });
+    expect(checkoutMock).toHaveBeenCalledTimes(2);
+  });
+
   // "expired" is the one resolution that means the buyer was never charged
   // and never will be. It is the ONLY definitive failure.
   it("reports a definitive failure for resolution expired", async () => {

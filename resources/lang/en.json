@@ -2,7 +2,7 @@
   "account_modal": {
     "cancel_subscription": "Cancel",
     "cancel_subscription_confirm": "Cancel your subscription? You may lose access immediately.",
-    "cancel_subscription_failed": "Failed to cancel subscription. Please try again or use Manage.",
+    "cancel_subscription_failed": "Failed to cancel subscription. Please try again, or manage your billing on the OpenFront website.",
     "cancel_subscription_success": "Subscription canceled. Your account now shows your current access.",
     "change_tier": "Change Tier",
     "claim": "Claim",
