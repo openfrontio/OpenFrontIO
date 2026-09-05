@@ -250,6 +250,32 @@ export const UserMeResponseSchema = z.object({
         status: z.string(),
         currentPeriodEnd: z.coerce.date().nullable(),
         cancelAtPeriodEnd: z.boolean(),
+        // Which rail is billing this subscription, and `null` means NOBODY IS:
+        // it is a grant (a free month from a Steam purchase, or an admin comp).
+        // The server branches on the same distinction — cancelling a grant has
+        // no period to run out, so it expires the subscription immediately and
+        // takes the premium username with it.
+        //
+        // Three states, and the client must keep all three apart:
+        //   "stripe" / "steam" — paid, someone is being billed.
+        //   null               — granted.
+        //   undefined          — the server predates the field (it reaches
+        //                        staging at the next deploy), so we do not
+        //                        know. Callers must fall back to the PAID
+        //                        behaviour here: on an old server a grant is
+        //                        indistinguishable from a Stripe subscription,
+        //                        and treating everyone as granted would hide
+        //                        Cancel from paying subscribers.
+        // Test `=== null` and `=== undefined`, never `!provider` — that is true
+        // for both and collapses the two states that must not collapse.
+        //
+        // Loose `z.string()` rather than z.enum(["stripe", "steam"]), matching
+        // `status` above: a parse failure here fails the WHOLE /users/@me
+        // response (Api.ts logs and returns false, and the account view goes
+        // blank), so a future third rail must not be able to brick an older
+        // client. An unrecognised value is simply not `null`, which lands on
+        // the paid behaviour — the safe side.
+        provider: z.string().nullable().optional(),
       })
       .nullable(),
     // Marketing-email consent state (client-driven consent). `consented` is the

@@ -132,4 +132,140 @@ describe("subscription-panel", () => {
     expect(text()).not.toContain("account_modal.cancel_subscription");
     expect(text()).toContain("account_modal.sub_status_canceling");
   });
+
+  // OPE-314, the blocking half. A granted month (`provider: null`) has no
+  // billing period: the server's cancel expires it on the spot and revokes the
+  // premium username with it, and the grant ledger only ever earns it once, so
+  // nothing short of an admin UPDATE brings it back. Every base-game buyer on
+  // Steam holds one of these.
+  describe("a granted subscription (provider: null)", () => {
+    const granted = () => sub({ provider: null });
+
+    const buttonKeys = () =>
+      Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+
+    beforeEach(async () => {
+      el.sub = granted();
+      await el.updateComplete;
+    });
+
+    // The one that matters: this exact click is what destroys the month.
+    it("offers no Cancel control", () => {
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+      // Cancel is a bare <button>, not an <o-button>, so check the element too
+      // rather than trusting the copy alone.
+      expect(el.querySelector("button")).toBeNull();
+    });
+
+    it("offers no Manage and no Change Tier either", () => {
+      expect(buttonKeys()).toEqual([]);
+      expect(text()).not.toContain("account_modal.manage_subscription");
+      expect(text()).not.toContain("account_modal.change_tier");
+    });
+
+    it("says the access ends instead of claiming it renews", () => {
+      expect(text()).toContain("account_modal.sub_granted_ends_on");
+      expect(text()).not.toContain("account_modal.sub_renews_on");
+    });
+
+    it("says what the subscription actually is", () => {
+      expect(text()).toContain("account_modal.sub_granted_from_purchase");
+    });
+
+    // Not a link — the desktop build must not hand over a route to a payment
+    // page, and there is no billing page to send anyone to in any case.
+    it("renders no anchor", () => {
+      expect(el.querySelector("a")).toBeNull();
+    });
+
+    // A grant is a property of the ACCOUNT, not of the shell. A Steam buyer who
+    // signs in on the website meets the same one-way Cancel, so the branch is
+    // deliberately not gated on isDesktopShell().
+    it("hides the same controls inside the desktop shell", async () => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+      try {
+        el.sub = granted();
+        el.requestUpdate();
+        await el.updateComplete;
+        expect(text()).not.toContain("account_modal.cancel_subscription");
+        expect(buttonKeys()).toEqual([]);
+      } finally {
+        delete (window as unknown as { openfrontDesktop?: unknown })
+          .openfrontDesktop;
+      }
+    });
+
+    // The other writer of a provider-null row is the admin grant endpoint,
+    // which sets no currentPeriodEnd at all. Telling that player their access
+    // came from a Steam purchase would be a new lie in place of the old one.
+    it("does not blame Steam for an open-ended grant with no end date", async () => {
+      el.sub = sub({ provider: null, currentPeriodEnd: null });
+      await el.updateComplete;
+      expect(text()).toContain("account_modal.sub_granted_indefinite");
+      expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
+      expect(text()).not.toContain("account_modal.sub_granted_ends_on");
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+    });
+  });
+
+  // The other half of the same distinction, and the reason `isGranted` tests
+  // `=== null` rather than `!provider`. `provider` is on infra `main` but not
+  // yet on staging, so an ABSENT field is the live case until the next deploy.
+  // A truthiness test would treat those subscribers as granted and take Cancel
+  // away from people who are genuinely being billed every month.
+  describe("when the server does not send provider at all", () => {
+    beforeEach(async () => {
+      el.sub = sub();
+      await el.updateComplete;
+    });
+
+    it("leaves the field undefined rather than null", () => {
+      expect(el.sub.provider).toBeUndefined();
+      expect(el.sub.provider).not.toBeNull();
+    });
+
+    // The negative prediction: this is what a `!provider` implementation
+    // breaks. Cancel is the one control a paying subscriber needs, and on an
+    // old server we cannot tell them from a grant holder — so we keep it.
+    it("keeps Cancel, because a grant is indistinguishable here", () => {
+      expect(text()).toContain("account_modal.cancel_subscription");
+    });
+
+    it("keeps the full set of billing controls", () => {
+      const keys = Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+      expect(keys).toContain("account_modal.change_tier");
+      expect(keys).toContain("account_modal.manage_subscription");
+    });
+
+    it("still renders the renews line", () => {
+      expect(text()).toContain("account_modal.sub_renews_on");
+      expect(text()).not.toContain("account_modal.sub_granted_ends_on");
+    });
+  });
+
+  // A paid rail is not a grant, however the panel is reached.
+  describe.each(["stripe", "steam"] as const)(
+    "a %s subscription",
+    (provider) => {
+      beforeEach(async () => {
+        el.sub = sub({ provider });
+        await el.updateComplete;
+      });
+
+      it("keeps Cancel", () => {
+        expect(text()).toContain("account_modal.cancel_subscription");
+      });
+
+      it("renews rather than ending", () => {
+        expect(text()).toContain("account_modal.sub_renews_on");
+        expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
+      });
+    },
+  );
 });

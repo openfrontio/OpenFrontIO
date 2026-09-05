@@ -77,6 +77,32 @@ export class SubscriptionPanel extends LitElement {
       : null;
   }
 
+  /**
+   * Is this subscription a GRANT — free access nobody is billing — rather than
+   * something the player bought?
+   *
+   * OPE-314. A grant has no billing period to run out, so the server's cancel
+   * expires it on the spot and revokes the premium username with it, and the
+   * ledger only ever earns the grant once, so it does not come back. The panel
+   * therefore must not offer Cancel (nor Manage or Change Tier, which have no
+   * billing to reach) and must not claim the month renews.
+   *
+   * `=== null`, deliberately, and never `!this.sub.provider`:
+   *
+   *   null      — granted. Hide the destructive controls.
+   *   undefined — the field is absent because the server predates it. We
+   *               CANNOT tell a grant from a Stripe subscription, so keep
+   *               today's behaviour; hiding Cancel on this path would take the
+   *               one control a paying subscriber actually needs.
+   *
+   * A truthiness test is true for both and would do the wrong thing on the
+   * second — which is the whole hazard, because `provider` is on `main` but not
+   * yet on staging, so `undefined` is the live case until the next deploy.
+   */
+  private isGranted(): boolean {
+    return this.sub.provider === null;
+  }
+
   // Status pill: amber while winding down, green while active, neutral for the
   // payment-problem states (past_due, unpaid, …).
   private renderStatusPill(): TemplateResult {
@@ -118,9 +144,19 @@ export class SubscriptionPanel extends LitElement {
   }
 
   // The one date line that matters: when it renews, or when access ends.
+  //
+  // A grant never renews — `sub_renews_on` was a straight falsehood on it — so
+  // it gets an ends-on line instead. Checked before `cancelAtPeriodEnd` because
+  // a grant is never winding down: the server has no pending-cancel state for
+  // one, it expires immediately.
   private renderPeriodLine(): TemplateResult | typeof nothing {
     const periodEnd = this.periodEnd();
     if (!periodEnd) return nothing;
+    const dateKey = this.isGranted()
+      ? "account_modal.sub_granted_ends_on"
+      : this.sub.cancelAtPeriodEnd
+        ? "account_modal.sub_status_canceling_on"
+        : "account_modal.sub_renews_on";
     return html`<div
       class="flex items-center gap-2 text-sm ${this.sub.cancelAtPeriodEnd
         ? "text-amber-200/80"
@@ -142,13 +178,7 @@ export class SubscriptionPanel extends LitElement {
         <line x1="8" y1="3" x2="8" y2="7" />
         <line x1="16" y1="3" x2="16" y2="7" />
       </svg>
-      <span>
-        ${this.sub.cancelAtPeriodEnd
-          ? translateText("account_modal.sub_status_canceling_on", {
-              date: periodEnd,
-            })
-          : translateText("account_modal.sub_renews_on", { date: periodEnd })}
-      </span>
+      <span>${translateText(dateKey, { date: periodEnd })}</span>
     </div>`;
   }
 
@@ -193,7 +223,41 @@ export class SubscriptionPanel extends LitElement {
     `;
   }
 
+  /**
+   * The actions area for a grant: no buttons at all, just what it is.
+   *
+   * Every control on this panel is about billing, and a grant has none. Manage
+   * and Change Tier reach a billing account that does not exist; Cancel does
+   * something far worse than nothing (see `isGranted`). So the whole row is
+   * replaced by static copy — no anchor, no click handler, same shape as
+   * `renderManageOnWeb`.
+   *
+   * Two variants, on a fact the client already has rather than a guess. Grants
+   * come from two writers and only one of them sets an end date: a Steam
+   * ownership grant is a fixed free month (`currentPeriodEnd = now + 30d`), an
+   * admin comp is open-ended (`currentPeriodEnd` null, so no date line renders
+   * above either). Telling an admin-comped player their access came from a
+   * Steam purchase would be a fresh instance of exactly the dishonesty this
+   * change exists to remove.
+   */
+  private renderGrantedNote(): TemplateResult {
+    return html`
+      <p class="text-[11px] text-center text-white/40 leading-snug">
+        ${translateText(
+          this.sub.currentPeriodEnd
+            ? "account_modal.sub_granted_from_purchase"
+            : "account_modal.sub_granted_indefinite",
+        )}
+      </p>
+    `;
+  }
+
   private renderActions(): TemplateResult {
+    // Before every other branch, and NOT gated on the desktop shell: a grant is
+    // a property of the account, so a Steam buyer who signs in on the website
+    // sees the same panel and would meet the same one-way Cancel there.
+    if (this.isGranted()) return this.renderGrantedNote();
+
     // The whole desktop build, not just a Steam-authenticated session: the
     // guard that makes the button dead is in the shell and applies to every
     // packaged launch.
