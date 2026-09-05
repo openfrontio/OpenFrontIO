@@ -255,8 +255,8 @@ export class ChatModal extends LitElement {
   }
 
   private getSortedFilteredPlayers(): PlayerView[] {
-    const sorted = [...this.players].sort((a, b) =>
-      a.displayName().localeCompare(b.displayName()),
+    const sorted = [...this.players].sort(
+      (a, b) => b.numTilesOwned() - a.numTilesOwned(),
     );
     const filtered = sorted.filter((p) =>
       p.displayName().toLowerCase().includes(this.playerSearchQuery),
