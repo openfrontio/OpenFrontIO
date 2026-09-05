@@ -460,7 +460,6 @@
     "#f0bef5",
     "#f5c3fa",
     "#fac8ff",
-    "#ffcdff",
     "#ffd2ff",
     "#ffd2fa",
     "#ffcdf5",
@@ -485,6 +484,8 @@
     "#fff5d2",
     "#fff0dc"
   ],
+  "observers": ["normal", "deutan", "protan"],
+  "distinctnessFloor": 5,
   "borderDarken": 0.125,
   "borderLightnessScale": 1,
   "defendedBorderDarkenLight": 0.2,
