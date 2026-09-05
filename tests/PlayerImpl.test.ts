@@ -169,4 +169,110 @@ describe("PlayerImpl", () => {
       expect(player.numTilesOwned()).toBe(0);
     });
   });
+
+  describe("allianceRequestCooldownRemaining()", () => {
+    let other: Player;
+    let friend: Player;
+
+    beforeEach(async () => {
+      game = await setup("plains", { instantBuild: true }, [
+        new PlayerInfo("player", PlayerType.Human, null, "player_id"),
+        new PlayerInfo("other", PlayerType.Human, null, "other_id"),
+        new PlayerInfo("friend", PlayerType.Human, null, "friend_id"),
+      ]);
+
+      player = game.player("player_id");
+      other = game.player("other_id");
+      friend = game.player("friend_id");
+
+      player.conquer(game.ref(0, 0));
+      other.conquer(game.ref(50, 50));
+      friend.conquer(game.ref(30, 30));
+    });
+
+    test("returns 0 when alliances are disabled", async () => {
+      const disabledGame = await setup(
+        "plains",
+        { instantBuild: true, disableAlliances: true },
+        [
+          new PlayerInfo("player", PlayerType.Human, null, "player_id"),
+          new PlayerInfo("other", PlayerType.Human, null, "other_id"),
+        ],
+      );
+      const disabledPlayer = disabledGame.player("player_id");
+      const disabledOther = disabledGame.player("other_id");
+      disabledPlayer.conquer(disabledGame.ref(0, 0));
+      disabledOther.conquer(disabledGame.ref(50, 50));
+
+      expect(
+        disabledPlayer.allianceRequestCooldownRemaining(disabledOther),
+      ).toBe(0);
+    });
+
+    test("returns 0 for self", () => {
+      expect(player.allianceRequestCooldownRemaining(player)).toBe(0);
+    });
+
+    test("returns 0 when either player is disconnected", () => {
+      player.markDisconnected(true);
+      expect(player.allianceRequestCooldownRemaining(other)).toBe(0);
+      player.markDisconnected(false);
+      other.markDisconnected(true);
+      expect(player.allianceRequestCooldownRemaining(other)).toBe(0);
+    });
+
+    test("returns 0 for friendly players", () => {
+      const request = player.createAllianceRequest(other);
+      expect(request).not.toBeNull();
+      request!.accept();
+
+      expect(player.allianceRequestCooldownRemaining(other)).toBe(0);
+    });
+
+    test("returns 0 for dead players", () => {
+      const allTiles = Array.from(player.tiles());
+      for (const tile of allTiles) {
+        player.relinquish(tile);
+      }
+      expect(player.isAlive()).toBe(false);
+      expect(player.allianceRequestCooldownRemaining(other)).toBe(0);
+    });
+
+    test("returns 0 while a request is pending", () => {
+      const request = player.createAllianceRequest(other);
+      expect(request).not.toBeNull();
+      expect(player.allianceRequestCooldownRemaining(other)).toBe(0);
+    });
+
+    test("returns 0 while an incoming request exists", () => {
+      const request = other.createAllianceRequest(player);
+      expect(request).not.toBeNull();
+      expect(player.allianceRequestCooldownRemaining(other)).toBe(0);
+    });
+
+    test("returns 0 when no recent request exists", () => {
+      expect(player.allianceRequestCooldownRemaining(other)).toBe(0);
+    });
+
+    test("rounds remaining cooldown up to whole seconds and expires", () => {
+      const request = player.createAllianceRequest(other);
+      expect(request).not.toBeNull();
+      request!.reject();
+
+      const cooldownTicks = game.config().allianceRequestCooldown();
+      const expectedSeconds = Math.floor((cooldownTicks + 9) / 10);
+      expect(player.allianceRequestCooldownRemaining(other)).toBe(
+        expectedSeconds,
+      );
+
+      const ticksUntilLastSecond = cooldownTicks - 1;
+      for (let i = 0; i < ticksUntilLastSecond; i++) {
+        game.executeNextTick();
+      }
+
+      expect(player.allianceRequestCooldownRemaining(other)).toBe(1);
+      game.executeNextTick();
+      expect(player.allianceRequestCooldownRemaining(other)).toBe(0);
+    });
+  });
 });
