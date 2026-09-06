@@ -217,6 +217,16 @@ export class SendSpectateEvent implements GameEvent {
 }
 
 export class Transport {
+  // Retry budget for a dropped game socket. Exponential from the base to the
+  // cap, +/-25% jitter, ten attempts: about 65s nominal (50-80s with jitter)
+  // — long enough to ride out a router reboot or a worker restart, short
+  // enough that a player is not left staring at a frozen map. Every
+  // requester (onclose, the silence watchdog, a send on a closed socket)
+  // goes through scheduleReconnect, so this is the only budget there is.
+  static readonly RECONNECT_MAX_ATTEMPTS = 10;
+  static readonly RECONNECT_BASE_DELAY_MS = 500;
+  static readonly RECONNECT_MAX_DELAY_MS = 10_000;
+
   private socket: WebSocket | null = null;
 
   private localServer: LocalServer;
@@ -227,6 +237,12 @@ export class Transport {
   private onmessage: (msg: ServerMessage) => void;
 
   private pingInterval: number | null = null;
+  private reconnectTimer: number | null = null;
+  // Consecutive attempts that have not yet produced a server message.
+  private reconnectAttempts = 0;
+  // Set once the budget is spent or the server refused us (1002): no more
+  // sockets get opened for this game, whoever asks.
+  private reconnectTerminal = false;
   public readonly isLocal: boolean;
 
   // clientID dictionary for the binary wire (see ZbinWire.ts), seeded from
@@ -415,6 +431,9 @@ export class Transport {
       onconnect();
     };
     this.socket.onmessage = (event: MessageEvent) => {
+      // A frame from the server is the proof the connection is real; onopen
+      // is not (a proxy can accept and drop us in a loop).
+      this.reconnectAttempts = 0;
       try {
         const msg = decodeServerMessage(
           new Uint8Array(event.data as ArrayBuffer),
@@ -441,6 +460,9 @@ export class Transport {
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
       if (event.code === 1002) {
+        // Refused (banned, game gone, bad token): retrying would only get
+        // refused again, and the watchdog used to re-show this every 5s.
+        this.enterTerminalState();
         showInGameAlert(
           translateText("error_modal.connection_refused", {
             reason: event.reason,
@@ -453,8 +475,66 @@ export class Transport {
     };
   }
 
+  // Ask for a reconnect. Callers do not decide when (or whether) it happens:
+  // one attempt is scheduled at a time, on the backoff schedule, until the
+  // budget runs out.
   public reconnect() {
-    this.connect(this.onconnect, this.onmessage);
+    if (this.isLocal) {
+      this.connect(this.onconnect, this.onmessage);
+      return;
+    }
+    this.scheduleReconnect();
+  }
+
+  private scheduleReconnect() {
+    if (this.reconnectTerminal || this.reconnectTimer !== null) {
+      return;
+    }
+    // An attempt is already in flight; let it succeed or fail on its own.
+    if (this.socket?.readyState === WebSocket.CONNECTING) {
+      return;
+    }
+    if (this.reconnectAttempts >= Transport.RECONNECT_MAX_ATTEMPTS) {
+      console.error(
+        `giving up after ${this.reconnectAttempts} reconnect attempts`,
+      );
+      this.enterTerminalState();
+      showInGameAlert(translateText("error_modal.connection_lost"));
+      return;
+    }
+    this.reconnectAttempts++;
+    const delay = Transport.reconnectDelay(this.reconnectAttempts);
+    console.log(
+      `reconnect attempt ${this.reconnectAttempts}/${Transport.RECONNECT_MAX_ATTEMPTS} in ${delay} ms`,
+    );
+    this.reconnectTimer = window.setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connectRemote(this.onconnect, this.onmessage);
+    }, delay);
+  }
+
+  // Delay before the n-th consecutive attempt (1-based).
+  static reconnectDelay(attempt: number): number {
+    const nominal = Math.min(
+      Transport.RECONNECT_MAX_DELAY_MS,
+      Transport.RECONNECT_BASE_DELAY_MS * 2 ** (attempt - 1),
+    );
+    // Jitter so a fleet of clients dropped by one worker restart does not
+    // come back in lockstep.
+    return Math.round(nominal * (0.75 + Math.random() * 0.5));
+  }
+
+  private cancelReconnect() {
+    if (this.reconnectTimer !== null) {
+      window.clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  private enterTerminalState() {
+    this.reconnectTerminal = true;
+    this.cancelReconnect();
+    this.stopPing();
   }
 
   public turnComplete() {
@@ -492,19 +572,19 @@ export class Transport {
       this.localServer.endGame();
       return;
     }
-    this.stopPing();
+    // A left game is never rejoined through this transport, whatever still
+    // asks (the watchdog, a late send).
+    this.enterTerminalState();
     if (this.socket === null) return;
     if (this.socket.readyState === WebSocket.OPEN) {
       console.log("on stop: leaving game");
-      this.killExistingSocket();
     } else {
       console.log(
         "WebSocket is not open. Current state:",
         this.socket.readyState,
       );
-      console.error("attempting reconnect");
-      this.killExistingSocket();
     }
+    this.killExistingSocket();
   }
 
   private onSendAllianceRequest(event: SendAllianceRequestIntentEvent) {
@@ -775,12 +855,10 @@ export class Transport {
       return;
     }
     if (this.socket.readyState === WebSocket.CLOSED) {
-      // Buffer message
-      console.warn("socket not ready, closing and trying later");
-      this.socket.close();
-      this.socket = null;
-      this.connectRemote(this.onconnect, this.onmessage);
+      // Buffer the message for the next successful open.
+      console.warn("socket not ready, buffering and reconnecting");
       this.buffer.push(msg);
+      this.scheduleReconnect();
     } else {
       // Send the message directly
       this.socket.send(encodeClientMessage(msg, this.zbinCtx ?? undefined));
