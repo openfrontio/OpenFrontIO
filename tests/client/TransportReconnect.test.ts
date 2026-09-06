@@ -315,6 +315,25 @@ describe("Transport reconnect policy", () => {
 
       expect(FakeWebSocket.instances.length).toBe(2);
     });
+
+    it("drops a scheduled retry when the silent socket speaks before it fires", () => {
+      // The server accepts, goes quiet long enough for the watchdog to
+      // schedule a retry, then recovers before the delay expires. The retry
+      // must not tear down the socket that just came back.
+      FakeWebSocket.script = acceptAfter(10);
+      connect();
+      vi.advanceTimersByTime(6_000);
+      expect(watchdog.fired.length).toBe(1);
+      const socket = FakeWebSocket.instances[0];
+      expect(socket.readyState).toBe(FakeWebSocket.OPEN);
+
+      socket.serverTalk();
+      vi.advanceTimersByTime(60_000);
+
+      expect(FakeWebSocket.instances.length).toBe(1);
+      expect(socket.readyState).toBe(FakeWebSocket.OPEN);
+      expect(showInGameAlert).not.toHaveBeenCalled();
+    });
   });
 
   describe("recovery", () => {

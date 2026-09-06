@@ -432,8 +432,11 @@ export class Transport {
     };
     this.socket.onmessage = (event: MessageEvent) => {
       // A frame from the server is the proof the connection is real; onopen
-      // is not (a proxy can accept and drop us in a loop).
+      // is not (a proxy can accept and drop us in a loop). It also settles
+      // any retry the watchdog scheduled while this socket was silent —
+      // left armed, it would tear down the socket that just recovered.
       this.reconnectAttempts = 0;
+      this.cancelReconnect();
       try {
         const msg = decodeServerMessage(
           new Uint8Array(event.data as ArrayBuffer),
