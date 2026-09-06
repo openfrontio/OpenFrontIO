@@ -13,7 +13,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("orders chat players by territory and preserves that order within search results", async () => {
+it("toggles chat player sorting while preserving search and selection", async () => {
   const players = [
     { displayName: "Alpha", tilesOwned: 400 },
     { displayName: "Zulu", tilesOwned: 1200 },
@@ -31,6 +31,12 @@ it("orders chat players by territory and preserves that order within search resu
     Array.from(modal.querySelectorAll(".player-scroll-area button"), (button) =>
       button.textContent?.trim(),
     );
+  const sort = modal.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+  expect(sort.checked).toBe(false);
+  expect(names()).toEqual(["Alpha", "Bravo", "Zebra", "Zulu"]);
+
+  sort.click();
+  await modal.updateComplete;
   expect(names()).toEqual(["Zulu", "Zebra", "Bravo", "Alpha"]);
 
   const search = modal.querySelector<HTMLInputElement>(".player-search-input")!;
@@ -39,8 +45,27 @@ it("orders chat players by territory and preserves that order within search resu
   await modal.updateComplete;
   expect(names()).toEqual(["Zebra", "Bravo", "Alpha", "Zulu"]);
 
+  sort.click();
+  await modal.updateComplete;
+  expect(names()).toEqual(["Alpha", "Bravo", "Zebra", "Zulu"]);
+
+  sort.click();
+  await modal.updateComplete;
+  expect(names()).toEqual(["Zebra", "Bravo", "Alpha", "Zulu"]);
+
   search.value = "";
   search.dispatchEvent(new Event("input", { bubbles: true }));
   await modal.updateComplete;
   expect(names()).toEqual(["Zulu", "Zebra", "Bravo", "Alpha"]);
+
+  modal.querySelector<HTMLButtonElement>(".player-scroll-area button")!.click();
+  await modal.updateComplete;
+  const preview = modal.querySelector(".chat-preview")!.textContent;
+  sort.click();
+  await modal.updateComplete;
+  expect(names()).toEqual(["Alpha", "Bravo", "Zebra", "Zulu"]);
+  expect(
+    modal.querySelector(".player-scroll-area .selected")?.textContent?.trim(),
+  ).toBe("Zulu");
+  expect(modal.querySelector(".chat-preview")!.textContent).toBe(preview);
 });
