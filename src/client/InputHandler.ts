@@ -1034,8 +1034,9 @@ export class InputHandler {
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null
     ) {
+      const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
       this.uiState.upgradeMultiplier =
-        this.uiState.upgradeMultiplier === 1 ? 5 : 1;
+        currentMultiplier === 1 ? 5 : currentMultiplier + 5;
     } else {
       this.uiState.upgradeMultiplier = 1;
       this.uiState.ghostStructure = ghostStructure;

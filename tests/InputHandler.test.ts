@@ -708,6 +708,20 @@ describe("InputHandler AutoUpgrade", () => {
 
       expect(inputHandler["uiState"].ghostStructure).toBeNull();
     });
+
+    test("repeated taps increase the build multiplier by 5 each time", () => {
+      const uiState = inputHandler["uiState"];
+
+      inputHandler["setGhostStructure"](UnitType.AtomBomb);
+      expect(uiState.ghostStructure).toBe(UnitType.AtomBomb);
+      expect(uiState.upgradeMultiplier).toBe(1);
+
+      inputHandler["setGhostStructure"](UnitType.AtomBomb);
+      expect(uiState.upgradeMultiplier).toBe(5);
+
+      inputHandler["setGhostStructure"](UnitType.AtomBomb);
+      expect(uiState.upgradeMultiplier).toBe(10);
+    });
   });
 
   describe("Digit keys still set ghost structure when bound to Numpad", () => {
