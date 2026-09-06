@@ -450,7 +450,9 @@ export class Config {
     }
     const distPenalty = citiesVisited * 5_000;
     let gold = Math.max(5000, baseGold - distPenalty);
-    gold *= this.factoryStackMultiplier(sourceLevel) * this.stationStackMultiplier(stationLevel);
+    gold *=
+      this.factoryStackMultiplier(sourceLevel) *
+      this.stationStackMultiplier(stationLevel);
     return toInt(gold * this.goldMultiplierFor(player));
   }
 

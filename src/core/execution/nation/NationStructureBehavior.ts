@@ -1120,7 +1120,8 @@ export class NationStructureBehavior {
         result.push({
           tile: unit.tile(),
           cluster: unitToCluster.get(unit)!,
-          weight: selfWeight * game.config().stationStackMultiplier(unit.level()),
+          weight:
+            selfWeight * game.config().stationStackMultiplier(unit.level()),
         });
       }
     }
@@ -1146,7 +1147,8 @@ export class NationStructureBehavior {
           result.push({
             tile: unit.tile(),
             cluster: unitToCluster.get(unit)!,
-            weight: baseWeight * game.config().stationStackMultiplier(unit.level()),
+            weight:
+              baseWeight * game.config().stationStackMultiplier(unit.level()),
           });
         }
       }
