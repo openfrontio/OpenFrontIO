@@ -30,8 +30,8 @@ function makeGame(stations: any[] = []): any {
   return {
     config: () => ({
       trainGold: (rel: string, _citiesVisited: number) => TRAIN_GOLD[rel] ?? 0n,
-      stationStackMultiplier: () => 1,
-      factoryStackMultiplier: () => 1,
+      stationStackMultiplier: (level: number) => level,
+      factoryStackMultiplier: (level: number) => level,
     }),
     railNetwork: () => ({
       stationManager: () => ({ getAll: () => new Set(stations) }),
@@ -166,6 +166,19 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     expect(result[0].tile).toBe(10);
     expect(result[0].cluster).toBe(cluster);
     expect(result[0].weight).toBeCloseTo(selfWeight);
+  });
+
+  it("applies the station stack multiplier to the base connectivity weight based on unit level", () => {
+    const cluster = new Cluster();
+    const unit = makeUnit(20, 2); // Level 2
+    const station = makeStation(unit, cluster);
+    const player = makePlayer([unit], []);
+    const behavior = makeBehavior(makeGame([station]), player);
+
+    const result = (behavior as any).buildReachableStations();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].weight).toBeCloseTo(selfWeight * 2);
   });
 
   it("assigns null cluster when own unit is a station with no cluster", () => {
