@@ -451,16 +451,15 @@ describe("Transport reconnect policy", () => {
       expect(showInGameConfirm).not.toHaveBeenCalled();
     });
 
-    it("restarts the budget after a connection that stayed up", () => {
+    it("resets the budget on the first server frame", () => {
       FakeWebSocket.script = flakyThenHealthy(3);
       connect();
-      vi.advanceTimersByTime(10_000);
+      vi.advanceTimersByTime(4_000);
       const healthy = FakeWebSocket.instances[3];
       expect(healthy.readyState).toBe(FakeWebSocket.OPEN);
 
-      // The next outage starts fresh: its first retry is immediate again,
-      // not where the last run left off.
-      vi.advanceTimersByTime(31_000);
+      // One frame is enough: the next outage starts fresh, its first retry
+      // immediate again rather than where the last run left off.
       const before = FakeWebSocket.instances.length;
       FakeWebSocket.script = rejectAfter(50, 1006);
       const dropAt = Date.now();

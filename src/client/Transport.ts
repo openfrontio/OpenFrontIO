@@ -222,8 +222,6 @@ export class SendSpectateEvent implements GameEvent {
   constructor(public readonly spectator: boolean) {}
 }
 
-const STABLE_CONNECTION_MS = 30_000;
-
 export class Transport {
   // Retry budget for a dropped game socket. The first retry is immediate (a
   // blip should not cost a second), then exponential from the base to the
@@ -247,10 +245,8 @@ export class Transport {
 
   private pingInterval: number | null = null;
   private reconnectTimeout: number | null = null;
-  // Consecutive retries that have not yet been followed by a stable
-  // connection.
+  // Consecutive retries that have not yet produced a server frame.
   private reconnectAttempts = 0;
-  private connectedAt: number | null = null;
   public readonly isLocal: boolean;
   // Latched by a terminal close (a rejection the server will repeat), by
   // exhausting the reconnect budget, and by leaving the game. Blocks
@@ -428,7 +424,6 @@ export class Transport {
     this.onmessage = onmessage;
     this.socket.onopen = () => {
       console.log("Connected to game server!");
-      this.connectedAt = Date.now();
       if (this.socket === null) {
         console.error("socket is null");
         return;
@@ -447,9 +442,12 @@ export class Transport {
       onconnect();
     };
     this.socket.onmessage = (event: MessageEvent) => {
-      // A frame settles any retry the watchdog scheduled while this socket
-      // was silent — left armed, it would tear down the socket that just
-      // recovered.
+      // A frame from the server is the proof the connection is real; onopen
+      // is not (a proxy can accept and drop us in a loop). It resets the
+      // budget and settles any retry the watchdog scheduled while this
+      // socket was silent — left armed, it would tear down the socket that
+      // just recovered.
+      this.reconnectAttempts = 0;
       this.cancelReconnect();
       try {
         const msg = decodeServerMessage(
@@ -524,16 +522,6 @@ export class Transport {
     });
   }
 
-  private resetBudgetIfStable(): void {
-    if (this.connectedAt === null) {
-      return;
-    }
-    if (Date.now() - this.connectedAt > STABLE_CONNECTION_MS) {
-      this.reconnectAttempts = 0;
-    }
-    this.connectedAt = null;
-  }
-
   // Ask for a reconnect. Callers do not decide when (or whether) it happens:
   // one attempt is scheduled at a time, on the backoff schedule, until the
   // budget runs out.
@@ -553,7 +541,6 @@ export class Transport {
     if (this.socket?.readyState === WebSocket.CONNECTING) {
       return;
     }
-    this.resetBudgetIfStable();
     if (this.reconnectAttempts >= Transport.RECONNECT_MAX_ATTEMPTS) {
       console.error(
         `giving up after ${this.reconnectAttempts} reconnect attempts`,
