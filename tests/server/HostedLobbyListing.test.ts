@@ -317,7 +317,7 @@ describe("host-left lobby teardown", () => {
   it("rejects joins into an ended lobby before it is pruned", async () => {
     const game = makeGame();
     await game.end();
-    expect(game.joinClient({} as any)).toBe("rejected");
+    expect(game.joinClient({} as any)).toBe("ended");
   });
 
   it("does not tear down when the host disconnects during prestart", async () => {

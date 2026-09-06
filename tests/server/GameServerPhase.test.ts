@@ -88,7 +88,7 @@ describe("GameServer.phase()", () => {
     game.pruneStaleClients();
     expect(game.phase()).toBe(GamePhase.Active);
     expect(mockWsOf(quiet).close).toHaveBeenCalledWith(
-      CloseCode.Normal,
+      CloseCode.TryAgainLater,
       CloseReason.NoHeartbeat,
     );
     expect(mockWsOf(chatty).close).not.toHaveBeenCalled();
@@ -165,7 +165,7 @@ describe("GameManager and the ping prune", () => {
 
     gm.tick();
     expect(mockWsOf(quiet).close).toHaveBeenCalledWith(
-      CloseCode.Normal,
+      CloseCode.TryAgainLater,
       CloseReason.NoHeartbeat,
     );
     expect(game.numClients()).toBe(0);

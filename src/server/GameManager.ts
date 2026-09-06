@@ -9,7 +9,7 @@ import {
 } from "../core/game/Game";
 import { GameConfig, GameID, PublicGameType } from "../core/Schemas";
 import { Client } from "./Client";
-import { GamePhase, GameServer } from "./GameServer";
+import { GamePhase, GameServer, JoinResult } from "./GameServer";
 import {
   noopMatchTelemetryEmitter,
   type MatchTelemetryEmitter,
@@ -44,16 +44,7 @@ export class GameManager {
     );
   }
 
-  joinClient(
-    client: Client,
-    gameID: GameID,
-  ):
-    | "joined"
-    | "kicked"
-    | "rejected"
-    | "not_allowlisted"
-    | "not_trusted"
-    | "not_found" {
+  joinClient(client: Client, gameID: GameID): JoinResult | "not_found" {
     const game = this.games.get(gameID);
     if (!game) return "not_found";
     return game.joinClient(client);

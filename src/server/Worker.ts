@@ -693,6 +693,12 @@ export async function startWorker() {
             workerId,
           });
           ws.close(CloseCode.Forbidden, CloseReason.NotTrusted);
+        } else if (joinResult === "ended") {
+          log.info(`client tried to join ended game ${clientMsg.gameID}`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(CloseCode.GameNotFound, CloseReason.GameEnded);
         } else if (joinResult === "rejected") {
           log.info(`client rejected from game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,

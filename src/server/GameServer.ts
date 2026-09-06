@@ -60,6 +60,16 @@ import {
   noopMatchTelemetryEmitter,
   type MatchTelemetryEmitter,
 } from "./telemetry/MatchTelemetry";
+
+// Outcome of GameServer.joinClient. The worker maps each to a close code.
+export type JoinResult =
+  | "joined"
+  | "kicked"
+  | "rejected"
+  | "ended"
+  | "not_allowlisted"
+  | "not_trusted";
+
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -417,13 +427,12 @@ export class GameServer {
     return { username: client.username, clanTag: client.clanTag };
   }
 
-  public joinClient(
-    client: Client,
-  ): "joined" | "kicked" | "rejected" | "not_allowlisted" | "not_trusted" {
+  public joinClient(client: Client): JoinResult {
     // e.g. the host left an unstarted lobby and GameManager hasn't pruned
-    // it yet.
+    // it yet. Distinct from "rejected" so the worker does not tell a player
+    // arriving after the end that the lobby is full.
     if (this.ended) {
-      return "rejected";
+      return "ended";
     }
     if (this.clients.isKicked(client.persistentID)) {
       return "kicked";
@@ -1222,7 +1231,9 @@ export class GameServer {
         persistentID: client.persistentID,
       });
       if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.close(CloseCode.Normal, CloseReason.NoHeartbeat);
+        // Not a normal close: the roster keeps the reconnect mapping, so a client
+        // whose pings were lost on a stuck link is meant to come back.
+        client.ws.close(CloseCode.TryAgainLater, CloseReason.NoHeartbeat);
       }
     }
     // On an abrupt network drop the ws 'close' event can lag far behind this
