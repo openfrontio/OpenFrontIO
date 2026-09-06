@@ -69,6 +69,7 @@ describe("TrainStation", () => {
       loadCargo: vi.fn(),
       owner: vi.fn().mockReturnValue(player),
       level: vi.fn(),
+      sourceLevel: vi.fn().mockReturnValue(1),
       tradeStopsVisited: vi.fn().mockReturnValue(0),
     } as any;
   });
@@ -147,6 +148,8 @@ describe("TrainStation", () => {
       expect.any(String),
       3,
       expect.anything(),
+      expect.any(Number),
+      expect.any(Number),
     );
   });
 

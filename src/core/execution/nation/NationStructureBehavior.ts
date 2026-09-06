@@ -1120,7 +1120,7 @@ export class NationStructureBehavior {
         result.push({
           tile: unit.tile(),
           cluster: unitToCluster.get(unit)!,
-          weight: selfWeight,
+          weight: selfWeight * game.config().stationStackMultiplier(unit.level()),
         });
       }
     }
@@ -1135,7 +1135,7 @@ export class NationStructureBehavior {
         : player.isAlliedWith(neighbor)
           ? "ally"
           : "other";
-      const weight =
+      const baseWeight =
         Number(game.config().trainGold(relType, 0, player)) / maxTradeGold;
       for (const unit of neighbor.units(
         UnitType.City,
@@ -1146,7 +1146,7 @@ export class NationStructureBehavior {
           result.push({
             tile: unit.tile(),
             cluster: unitToCluster.get(unit)!,
-            weight,
+            weight: baseWeight * game.config().stationStackMultiplier(unit.level()),
           });
         }
       }

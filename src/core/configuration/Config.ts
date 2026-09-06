@@ -231,13 +231,31 @@ const OVERTIME_DEFAULTS = {
 
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
+  private _factoryMultCache = new Float64Array(256);
+  private _stationMultCache = new Float64Array(256);
+
   constructor(
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
     public readonly listed: boolean = false,
     private _spectator: boolean = false,
-  ) {}
+  ) {
+    for (let level = 1; level < 256; level++) {
+      this._factoryMultCache[level] = 1 + 0.25 * (1 - pow(0.85, level - 1));
+      this._stationMultCache[level] = 1.0 + 0.4 * (log(level) * Math.LOG2E);
+    }
+  }
+
+  factoryStackMultiplier(level: number): number {
+    if (level < 256) return this._factoryMultCache[level];
+    return 1.25;
+  }
+
+  stationStackMultiplier(level: number): number {
+    if (level < 256) return this._stationMultCache[level];
+    return 1.0 + 0.4 * (log(level) * Math.LOG2E);
+  }
 
   isReplay(): boolean {
     return this._isReplay;
@@ -412,6 +430,8 @@ export class Config {
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
     player: Player | PlayerView,
+    sourceLevel: number = 1,
+    stationLevel: number = 1,
   ): Gold {
     // No penalty for the first 10 cities.
     citiesVisited = Math.max(0, citiesVisited - 9);
@@ -429,7 +449,8 @@ export class Config {
         break;
     }
     const distPenalty = citiesVisited * 5_000;
-    const gold = Math.max(5000, baseGold - distPenalty);
+    let gold = Math.max(5000, baseGold - distPenalty);
+    gold *= this.factoryStackMultiplier(sourceLevel) * this.stationStackMultiplier(stationLevel);
     return toInt(gold * this.goldMultiplierFor(player));
   }
 
