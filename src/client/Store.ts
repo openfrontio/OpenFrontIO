@@ -1,6 +1,6 @@
 import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
@@ -64,7 +64,10 @@ export class StoreModal extends BaseModal {
   // logged-in player for the whole window before Main's first userMeResponse
   // broadcast (a Steam ticket exchange on desktop). This distinguishes the
   // two: nothing is asserted about the session until it has actually settled.
-  private authSettled = false;
+  // Reactive on its own, unlike `userMeResponse`: onUserMe() only calls
+  // refresh() after the catalog fetch, and a settled no-session result must
+  // not wait on a slow catalog before it may say so.
+  @state() private authSettled = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
   private inspected: ResolvedCosmetic | null = null;
   private previewingCosmetic: ResolvedCosmetic | null = null;

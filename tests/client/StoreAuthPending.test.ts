@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fetchCosmetics } from "../../src/client/Cosmetics";
 import "../../src/client/Store";
 import type { StoreModal } from "../../src/client/Store";
 import type { TribesPanel } from "../../src/client/components/TribesPanel";
@@ -45,6 +46,8 @@ describe("StoreModal while auth is pending", () => {
 
   afterEach(() => {
     store.remove();
+    vi.mocked(fetchCosmetics).mockReset();
+    vi.mocked(fetchCosmetics).mockResolvedValue(null);
   });
 
   async function openTribes() {
@@ -58,6 +61,19 @@ describe("StoreModal while auth is pending", () => {
 
   function tribesPanel() {
     return store.querySelector<TribesPanel>("tribes-panel");
+  }
+
+  // The prompt's sign-in button, by label (translateText returns the key
+  // without a lang-selector). Null both when the panel is absent and when it
+  // renders the logged-in view, whose purchase card has buttons of its own;
+  // `?.` alone would yield undefined for an absent panel, which
+  // `.not.toBeNull()` accepts.
+  function signInPrompt() {
+    return (
+      [...(tribesPanel()?.querySelectorAll("button") ?? [])].find(
+        (button) => button.textContent?.trim() === "main.sign_in",
+      ) ?? null
+    );
   }
 
   async function settle() {
@@ -78,8 +94,34 @@ describe("StoreModal while auth is pending", () => {
     await vi.waitFor(async () => {
       await settle();
       expect(warningButton()).not.toBeNull();
-      expect(tribesPanel()?.querySelector("button")).not.toBeNull();
+      expect(signInPrompt()).not.toBeNull();
     });
+  });
+
+  it("shows the tribes sign-in prompt as soon as auth settles, not after the catalog", async () => {
+    // onUserMe() awaits fetchCosmetics() before it calls refresh(); a settled
+    // no-session result must schedule its own render rather than sit behind
+    // a slow (here: never-resolving) catalog request.
+    vi.mocked(fetchCosmetics).mockReturnValue(new Promise(() => {}));
+    await openTribes();
+    fireUserMe(false);
+    await vi.waitFor(async () => {
+      await settle();
+      expect(signInPrompt()).not.toBeNull();
+    });
+    expect(warningButton()).not.toBeNull();
+  });
+
+  it("shows the logged-in tribes panel as soon as auth settles, not after the catalog", async () => {
+    vi.mocked(fetchCosmetics).mockReturnValue(new Promise(() => {}));
+    await openTribes();
+    fireUserMe(steamOnly);
+    await vi.waitFor(async () => {
+      await settle();
+      expect(tribesPanel()).not.toBeNull();
+    });
+    expect(warningButton()).toBeNull();
+    expect(signInPrompt()).toBeNull();
   });
 
   it("never shows a logged-out state to a logged-in player, before or after auth settles", async () => {
@@ -95,8 +137,9 @@ describe("StoreModal while auth is pending", () => {
     });
     expect(warningButton()).toBeNull();
     // The panel's logged-in view has a purchase card, not a sign-in prompt.
-    expect(tribesPanel()?.textContent).not.toContain(
+    expect(tribesPanel()!.textContent).not.toContain(
       "store.tribes_login_required",
     );
+    expect(signInPrompt()).toBeNull();
   });
 });
