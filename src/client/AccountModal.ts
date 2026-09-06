@@ -31,31 +31,12 @@ import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
+import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
 import { consumeGoogleLinkResult } from "./GoogleLinkResult";
 import { showInGameAlert } from "./InGameModal";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { translateText } from "./Utils";
-
-// window.openfrontDesktop is declared `unknown` by DesktopShell.ts (kept loose
-// there on purpose). We know the one function we need, so narrow it locally
-// rather than re-declaring the global (a second `declare global` with a
-// different type triggers TS2717) — mirrors SteamSDK.ts's steamBridge().
-//
-// Guard on `showLinkGate` specifically, the function actually invoked below —
-// not on a sibling property like `linkGate` (a separate namespace used by the
-// gate page itself) — so a rename of one can't silently leave this button
-// wired to nothing.
-function desktopLinkGateBridge():
-  | { showLinkGate: () => Promise<void> }
-  | undefined {
-  const desktop = window.openfrontDesktop as
-    | { showLinkGate?: unknown }
-    | undefined;
-  return typeof desktop?.showLinkGate === "function"
-    ? (desktop as { showLinkGate: () => Promise<void> })
-    : undefined;
-}
 
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
@@ -281,12 +262,12 @@ export class AccountModal extends BaseModal {
   // Re-entry to the desktop shell's account-linking gate shown at first
   // launch. Absent entirely on plain web (no window.openfrontDesktop there),
   // present whenever the desktop bridge exposes a callable showLinkGate —
-  // see desktopLinkGateBridge() above for why the guard is scoped that way.
-  // Needed because the desktop app's menu bar will eventually be hidden and
-  // the game runs fullscreen borderless, so a dismissed or since-linked
-  // player needs another way back to that gate.
+  // see desktopLinkGate() in DesktopShell.ts for why the guard is scoped
+  // that way. Needed because the desktop app's menu bar will eventually be
+  // hidden and the game runs fullscreen borderless, so a dismissed or
+  // since-linked player needs another way back to that gate.
   private renderDesktopLinkGateAction(): TemplateResult | typeof nothing {
-    if (!desktopLinkGateBridge()) return nothing;
+    if (desktopLinkGate() === null) return nothing;
     return html`
       <o-button
         variant="secondary"
@@ -304,7 +285,7 @@ export class AccountModal extends BaseModal {
     // genuinely reject (no window, a main-process throw); catching keeps the
     // failure visible in the console instead of surfacing as a button that
     // silently does nothing.
-    desktopLinkGateBridge()
+    desktopLinkGate()
       ?.showLinkGate()
       .catch((err) => {
         console.error("AccountModal: showLinkGate failed", err);
@@ -545,7 +526,14 @@ export class AccountModal extends BaseModal {
   // Google to their existing account (we never auto-merge by email).
   private renderLinkGoogleButton(): TemplateResult {
     if (this.userMeResponse?.user?.google) return html``;
-    return googleLinkButton(this.handleLinkGoogle);
+    return googleLinkButton(
+      this.handleLinkGoogle,
+      // The shell sends the player to the website for this (see linkGoogle
+      // in Auth.ts); the caption has to say so.
+      isDesktopShell()
+        ? "account_modal.link_google_on_web"
+        : "account_modal.link_google",
+    );
   }
 
   private async viewGame(gameId: string): Promise<void> {
@@ -625,6 +613,13 @@ export class AccountModal extends BaseModal {
   }
 
   private renderLoginOptions() {
+    // On the desktop shell both provider buttons open the shell's browser
+    // link flow rather than an in-place OAuth redirect (see discordLogin /
+    // googleLogin in Auth.ts), and the captions say so. Keyed on the same
+    // bridge check Auth.ts routes on, so the label and the behaviour cannot
+    // disagree: a shell too old to expose showLinkGate gets the web captions
+    // AND the web behaviour.
+    const viaBrowser = desktopLinkGate() !== null;
     return html`
       <div class="flex items-center justify-center p-6 min-h-full">
         <div
@@ -652,6 +647,11 @@ export class AccountModal extends BaseModal {
             <p class="text-white/50 text-sm font-medium">
               ${translateText("account_modal.sign_in_desc")}
             </p>
+            ${viaBrowser
+              ? html`<p class="text-white/40 text-xs">
+                  ${translateText("account_modal.desktop_sign_in_desc")}
+                </p>`
+              : nothing}
             ${this.renderCurrency()}
           </div>
 
@@ -669,8 +669,10 @@ export class AccountModal extends BaseModal {
                 class="w-6 h-6 relative z-10"
               />
               <span class="font-bold relative z-10 tracking-wide"
-                >${translateText("main.login_discord") ||
-                translateText("account_modal.link_discord")}</span
+                >${viaBrowser
+                  ? translateText("account_modal.desktop_login_discord")
+                  : translateText("main.login_discord") ||
+                    translateText("account_modal.link_discord")}</span
               >
             </button>
 
@@ -686,7 +688,9 @@ export class AccountModal extends BaseModal {
                 class="w-6 h-6 relative z-10"
               />
               <span class="font-bold relative z-10 tracking-wide"
-                >${translateText("main.login_google")}</span
+                >${viaBrowser
+                  ? translateText("account_modal.desktop_login_google")
+                  : translateText("main.login_google")}</span
               >
             </button>
 

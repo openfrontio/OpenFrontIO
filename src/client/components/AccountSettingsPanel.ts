@@ -5,6 +5,7 @@ import { isSteamPrimaryUser } from "../AccountIdentity";
 import { deleteAccount, setMarketingConsent } from "../Api";
 import { clearLocalSession, linkGoogle, sendMagicLink } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { isDesktopShell } from "../DesktopShell";
 import { showInGameAlert } from "../InGameModal";
 import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
@@ -132,7 +133,16 @@ export class AccountSettingsPanel extends LitElement {
           </span>
           <div class="h-px bg-white/10 flex-1"></div>
         </div>
-        ${this.user?.google ? nothing : googleLinkButton(this.handleLinkGoogle)}
+        ${this.user?.google
+          ? nothing
+          : googleLinkButton(
+              this.handleLinkGoogle,
+              // The shell sends the player to the website for this (see
+              // linkGoogle in Auth.ts); the caption has to say so.
+              isDesktopShell()
+                ? "account_modal.link_google_on_web"
+                : "account_modal.link_google",
+            )}
       </div>
     `;
   }

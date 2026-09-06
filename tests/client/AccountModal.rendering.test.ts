@@ -53,6 +53,7 @@ vi.stubGlobal("localStorage", {
 });
 
 import { AccountModal } from "../../src/client/AccountModal";
+import { discordLogin, googleLogin, linkGoogle } from "../../src/client/Auth";
 
 function makeUserMe(
   overrides: Partial<UserMeResponse["user"]>,
@@ -281,5 +282,92 @@ describe("AccountModal — rendering", () => {
     expect(modal.textContent ?? "").not.toContain(
       "account_modal.login_email_exists",
     );
+  });
+
+  // OPE-343. On the desktop shell the provider buttons cannot run an OAuth
+  // redirect (the redirect_uri would be app://openfront), so Auth.ts routes
+  // them through the shell's browser link flow -- and the captions must say
+  // so, keyed on the same bridge check Auth.ts routes on. On the web the
+  // login screen is untouched.
+  describe("desktop login screen", () => {
+    function findButtonByText(key: string): HTMLButtonElement | undefined {
+      return Array.from(modal.querySelectorAll("button")).find(
+        (b) => b.textContent?.trim() === key,
+      );
+    }
+
+    it("captions the provider buttons as continuing in the browser when the bridge is present", async () => {
+      (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
+        showLinkGate: vi.fn(async () => undefined),
+      };
+      modal.open();
+      await flushOpen();
+
+      const text = modal.textContent ?? "";
+      expect(text).toContain("account_modal.desktop_login_discord");
+      expect(text).toContain("account_modal.desktop_login_google");
+      expect(text).toContain("account_modal.desktop_sign_in_desc");
+      expect(text).not.toContain("main.login_discord");
+      expect(text).not.toContain("main.login_google");
+
+      // Still the same handlers: the routing lives in Auth.ts, not here.
+      findButtonByText("account_modal.desktop_login_discord")!.click();
+      expect(discordLogin).toHaveBeenCalledTimes(1);
+      findButtonByText("account_modal.desktop_login_google")!.click();
+      expect(googleLogin).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the web captions on plain web", async () => {
+      modal.open();
+      await flushOpen();
+
+      const text = modal.textContent ?? "";
+      expect(text).toContain("main.login_discord");
+      expect(text).toContain("main.login_google");
+      expect(text).not.toContain("account_modal.desktop_login_discord");
+      expect(text).not.toContain("account_modal.desktop_sign_in_desc");
+    });
+
+    // Label and behaviour must agree: Auth.ts only takes the link-flow branch
+    // when showLinkGate is callable, so a bridge without it gets the web
+    // captions too.
+    it("keeps the web captions when the bridge lacks showLinkGate", async () => {
+      (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
+        linkGate: {},
+      };
+      modal.open();
+      await flushOpen();
+
+      const text = modal.textContent ?? "";
+      expect(text).toContain("main.login_discord");
+      expect(text).not.toContain("account_modal.desktop_login_discord");
+    });
+
+    // The Google LINK button (a signed-in Discord/email account attaching
+    // Google) goes to the website on desktop -- see linkGoogle in Auth.ts --
+    // and its caption says so. Matched on the whole caption, since the web
+    // key is a prefix of the desktop one.
+    it("captions the Google link button as opening the website on desktop", async () => {
+      (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
+        showLinkGate: vi.fn(async () => undefined),
+      };
+      await setLoggedInUser(
+        makeUserMe({
+          discord: {
+            id: "1",
+            avatar: null,
+            username: "player",
+            global_name: null,
+            discriminator: "0",
+          },
+        }),
+      );
+
+      expect(findButtonByText("account_modal.link_google_on_web")).toBeTruthy();
+      expect(findButtonByText("account_modal.link_google")).toBeUndefined();
+
+      findButtonByText("account_modal.link_google_on_web")!.click();
+      expect(linkGoogle).toHaveBeenCalledTimes(1);
+    });
   });
 });

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   composeVersionDisplay,
+  desktopLinkGate,
   desktopVersion,
 } from "../src/client/DesktopShell";
 
@@ -65,5 +66,34 @@ describe("desktopVersion", () => {
     const result = desktopVersion();
     await vi.advanceTimersByTimeAsync(500);
     await expect(result).resolves.toBeNull();
+  });
+});
+
+// The bridge Auth.ts routes every desktop provider login through (OPE-343).
+// Guarded on the function actually invoked, not on the shell's presence: a
+// bridge that exists but lacks a callable showLinkGate must read as "no link
+// flow", so the caller falls through rather than calling undefined.
+describe("desktopLinkGate", () => {
+  afterEach(() => {
+    window.openfrontDesktop = undefined;
+  });
+
+  it("is null in the browser, with no bridge present", () => {
+    window.openfrontDesktop = undefined;
+    expect(desktopLinkGate()).toBeNull();
+  });
+
+  it("is null when the bridge exists but showLinkGate is not a function", () => {
+    window.openfrontDesktop = { linkGate: { requestTicket: () => null } };
+    expect(desktopLinkGate()).toBeNull();
+  });
+
+  it("returns the bridge when showLinkGate is callable", async () => {
+    const showLinkGate = vi.fn(async () => undefined);
+    window.openfrontDesktop = { showLinkGate };
+    const gate = desktopLinkGate();
+    expect(gate).not.toBeNull();
+    await gate!.showLinkGate();
+    expect(showLinkGate).toHaveBeenCalledTimes(1);
   });
 });
