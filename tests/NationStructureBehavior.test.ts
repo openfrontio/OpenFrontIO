@@ -18,8 +18,8 @@ const MAX_TRADE_GOLD = Number(TRAIN_GOLD.ally); // denominator
 
 // ── Factory helpers ──────────────────────────────────────────────────────────
 
-function makeUnit(tile: number): any {
-  return { tile: () => tile };
+function makeUnit(tile: number, level: number = 1): any {
+  return { tile: () => tile, level: () => level };
 }
 
 function makeStation(unit: any, cluster: Cluster | null = null): any {
@@ -30,6 +30,8 @@ function makeGame(stations: any[] = []): any {
   return {
     config: () => ({
       trainGold: (rel: string, _citiesVisited: number) => TRAIN_GOLD[rel] ?? 0n,
+      stationStackMultiplier: () => 1,
+      factoryStackMultiplier: () => 1,
     }),
     railNetwork: () => ({
       stationManager: () => ({ getAll: () => new Set(stations) }),
