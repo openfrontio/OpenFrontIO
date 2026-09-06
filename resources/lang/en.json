@@ -619,7 +619,7 @@
   },
   "error_modal": {
     "connection_error": "Connection error!",
-    "connection_lost": "Lost connection to the game server.",
+    "connection_lost": "Lost connection to the game server and could not reconnect. Refresh the page to try rejoining.",
     "connection_refused": "Connection refused: {reason}",
     "copy_clipboard": "Copy to clipboard",
     "crashed": "Game crashed!",
