@@ -26,6 +26,7 @@ vi.mock("../../src/client/Payments", async (importOriginal) => ({
 }));
 
 import {
+  changeSubscriptionTier,
   createCheckoutSession,
   getUserMe,
   invalidateUserMe,
@@ -40,6 +41,10 @@ const startPurchaseMock = startPurchase as unknown as ReturnType<typeof vi.fn>;
 const createCheckoutSessionMock =
   createCheckoutSession as unknown as ReturnType<typeof vi.fn>;
 const alertMock = showInGameAlert as unknown as ReturnType<typeof vi.fn>;
+const getUserMeMock = getUserMe as unknown as ReturnType<typeof vi.fn>;
+const changeTierMock = changeSubscriptionTier as unknown as ReturnType<
+  typeof vi.fn
+>;
 
 // A Steam-only currency pack: it is sold on Steam, so it has no Stripe
 // product block at all. `product` is nullable in the schema precisely for it.
@@ -136,6 +141,68 @@ describe("purchaseCosmetic dollar path", () => {
     expect(startPurchaseMock).toHaveBeenCalledWith({
       kind: "subscription_tier",
       tierName: "supporter",
+    });
+  });
+
+  // Phase 9 (OPE-230). A subscriber picking a DIFFERENT tier: on Stripe the
+  // change is an in-place reprice (change-tier); on Steam there is no such
+  // thing — the change is a fresh checkout for the new tier, whose approval
+  // makes Steam disable the old agreement. Nothing is cancelled first.
+  describe("changing tier as an existing subscriber", () => {
+    const warlord = () =>
+      resolved({
+        type: "subscription",
+        cosmetic: { name: "warlord", priceMonthly: 10 } as any,
+        key: "subscription:warlord",
+      });
+
+    function subscribedOn(provider: "stripe" | "steam") {
+      getUserMeMock.mockResolvedValue({
+        player: {
+          subscription: {
+            tier: "vanguard",
+            status: "active",
+            provider,
+            cancelAtPeriodEnd: false,
+            currentPeriodEnd: null,
+          },
+        },
+      });
+    }
+
+    it("a Steam subscriber goes through a fresh checkout, never change-tier", async () => {
+      subscribedOn("steam");
+      startPurchaseMock.mockResolvedValue({ outcome: "completed" });
+      await purchaseCosmetic(warlord(), "dollar");
+      expect(startPurchaseMock).toHaveBeenCalledWith({
+        kind: "subscription_tier",
+        tierName: "warlord",
+      });
+      expect(changeTierMock).not.toHaveBeenCalled();
+      expect(alertMock).toHaveBeenCalledWith("store.change_tier_success_steam");
+    });
+
+    it("a Stripe subscriber still reprices in place", async () => {
+      subscribedOn("stripe");
+      changeTierMock.mockResolvedValue(true);
+      await purchaseCosmetic(warlord(), "dollar");
+      expect(changeTierMock).toHaveBeenCalledWith("warlord");
+      expect(startPurchaseMock).not.toHaveBeenCalled();
+    });
+
+    it("the tier already held is refused before any call, on either rail", async () => {
+      subscribedOn("steam");
+      await purchaseCosmetic(
+        resolved({
+          type: "subscription",
+          cosmetic: { name: "vanguard", priceMonthly: 5 } as any,
+          key: "subscription:vanguard",
+        }),
+        "dollar",
+      );
+      expect(startPurchaseMock).not.toHaveBeenCalled();
+      expect(changeTierMock).not.toHaveBeenCalled();
+      expect(alertMock).toHaveBeenCalledWith("store.already_subscribed");
     });
   });
 

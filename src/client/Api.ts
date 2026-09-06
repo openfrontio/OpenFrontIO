@@ -1149,6 +1149,21 @@ export type PaymentsCheckoutResult =
       code: "pending_provider_transaction";
       provider: PaymentsProvider;
     }
+  // 409 already_subscribed: the player already holds THIS tier on THIS rail
+  // (a double click, or the store offered a tier they have). Nothing was
+  // charged.
+  | { ok: false; code: "already_subscribed"; existingTier: string }
+  // 409 tier_change_unavailable_on_provider: a Steam subscriber tried to
+  // change tier and Steam refused a second agreement while one is live, or
+  // tier changes are switched off on that rail. `message` is the server's
+  // player-facing text and says what to do (cancel in the Steam account,
+  // subscribe again after it ends).
+  | {
+      ok: false;
+      code: "tier_change_unavailable_on_provider";
+      provider: PaymentsProvider;
+      message: string;
+    }
   // 429: one checkout per 60s per player. No order was minted.
   | { ok: false; code: "rate_limited"; retryAfterSeconds: number | null }
   // 501 provider_unavailable: the rail is switched off. Deliberately not a
@@ -1275,6 +1290,25 @@ export async function createPaymentsCheckout(
         }
         if (reason === "pending_provider_transaction" && provider !== null) {
           return { ok: false, code: "pending_provider_transaction", provider };
+        }
+        if (reason === "already_subscribed") {
+          return {
+            ok: false,
+            code: "already_subscribed",
+            existingTier:
+              typeof body?.existingTier === "string" ? body.existingTier : "",
+          };
+        }
+        if (
+          reason === "tier_change_unavailable_on_provider" &&
+          provider !== null
+        ) {
+          return {
+            ok: false,
+            code: "tier_change_unavailable_on_provider",
+            provider,
+            message: typeof body?.message === "string" ? body.message : "",
+          };
         }
       }
 

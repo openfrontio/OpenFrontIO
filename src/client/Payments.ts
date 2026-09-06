@@ -342,6 +342,19 @@ function checkoutError(
           provider: providerName(result.provider),
         }),
       );
+    // Nothing was charged; the store's own copy for "you have this already".
+    case "already_subscribed":
+      return error(translateText("store.already_subscribed"));
+    // The server's text says what to do (cancel in the Steam account, then
+    // subscribe again); fall back to a generic line if it sent none.
+    case "tier_change_unavailable_on_provider":
+      return error(
+        result.message !== ""
+          ? result.message
+          : translateText("store.checkout_tier_change_unavailable", {
+              provider: providerName(result.provider),
+            }),
+      );
     case "rate_limited":
       return error(translateText("store.checkout_rate_limited"));
     // Not a breakage: the rail is deliberately switched off (501, never 500).

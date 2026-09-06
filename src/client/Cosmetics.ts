@@ -268,6 +268,32 @@ export async function purchaseCosmetic(
       );
       if (!confirmed) return;
 
+      // A Steam subscription cannot be repriced in place: Steam's only
+      // mechanism is a NEW billing agreement, whose approval disables the old
+      // one (infra Phase 9, §4.4 — and the server's change-tier answers 409
+      // requires_approval for a Steam row). So the change IS a fresh checkout
+      // for the target tier, through the same overlay flow as a first
+      // purchase; the server's gate admits a same-rail different-tier
+      // incumbent and expires the old row when the new one settles. Nothing
+      // is cancelled first: a player who dismisses the dialog keeps what
+      // they had.
+      if (currentSub.provider === "steam") {
+        const outcome = await startPurchase({
+          kind: "subscription_tier",
+          tierName: sub.name,
+        });
+        if (outcome.outcome === "completed") await broadcastFreshUserMe();
+        if (outcome.outcome === "error" && outcome.refetchCatalog) {
+          invalidateCosmetics();
+        }
+        const message = purchaseOutcomeMessage(
+          outcome,
+          "store.change_tier_success_steam",
+        );
+        if (message !== null) await showInGameAlert(message);
+        return;
+      }
+
       const result = await changeSubscriptionTier(sub.name);
       if (result === "rate_limited") {
         await showInGameAlert(translateText("store.change_tier_rate_limited"));

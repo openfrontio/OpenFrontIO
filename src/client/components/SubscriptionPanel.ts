@@ -14,6 +14,18 @@ import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./PlutoniumIcon";
 
+/**
+ * S2 (OPE-230, pending Josh): does the panel offer Cancel on the Steam rail?
+ *
+ * Steam has no un-cancel and no pause (there is no API for either), so an
+ * in-app Cancel would be a one-way door with no Reactivate beside it — and
+ * the Steam account page, which Manage opens, offers cancel AND re-enable.
+ * Default: hidden, and the copy points at the Steam account page. Flip to
+ * true to render the same Cancel control a Stripe subscriber gets; the
+ * server accepts it either way.
+ */
+export const STEAM_CANCEL_IN_APP = false;
+
 @customElement("subscription-panel")
 export class SubscriptionPanel extends LitElement {
   @property({ type: Object })
@@ -101,6 +113,11 @@ export class SubscriptionPanel extends LitElement {
    */
   private isGranted(): boolean {
     return this.sub.provider === null;
+  }
+
+  /** Billed by Steam: managed on the Steam account page, on every surface. */
+  private isSteam(): boolean {
+    return this.sub.provider === "steam";
   }
 
   // Status pill: amber while winding down, green while active, neutral for the
@@ -252,11 +269,67 @@ export class SubscriptionPanel extends LitElement {
     `;
   }
 
+  /**
+   * The Steam rail (infra Phase 9, OPE-230). Manage opens the Steam account
+   * page — the server's portal route returns that static URL for a Steam
+   * row — which is not a payment origin, so the desktop shell lets it through
+   * and the button stays on EVERY surface (unlike Stripe's, which the
+   * packaged build must not offer). Change Tier goes to the store as usual:
+   * on Steam the change is a fresh checkout for the new tier. Cancel is a
+   * policy decision, STEAM_CANCEL_IN_APP; when hidden, the copy says where
+   * cancelling (and re-enabling) lives.
+   */
+  private renderSteamActions(): TemplateResult {
+    const manage = html`<o-button
+      class="flex-1 min-w-[8rem]"
+      variant="secondary"
+      width="block"
+      size="md"
+      translationKey="account_modal.manage_subscription"
+      @click=${this.handleManage}
+    ></o-button>`;
+    const note = html`<p
+      class="text-[11px] text-center text-white/40 leading-snug"
+    >
+      ${translateText("account_modal.manage_subscription_on_steam")}
+    </p>`;
+    if (this.sub.cancelAtPeriodEnd) {
+      // No Reactivate: there is no un-cancel API. The Steam account page can
+      // re-enable an agreement, which is what Manage opens.
+      return html`<div class="flex flex-col gap-2">${manage}${note}</div>`;
+    }
+    return html`
+      <div class="flex flex-col gap-2">
+        <div class="flex flex-wrap gap-2">
+          <o-button
+            class="flex-1 min-w-[8rem]"
+            variant="primary"
+            width="block"
+            size="md"
+            translationKey="account_modal.change_tier"
+            @click=${this.handleChangeTier}
+          ></o-button>
+          ${manage}
+        </div>
+        ${note}
+        ${STEAM_CANCEL_IN_APP
+          ? html`<button
+              @click=${this.handleCancel}
+              class="self-center text-[11px] font-bold uppercase tracking-widest text-white/30 hover:text-red-400 transition-colors py-1 cursor-pointer"
+            >
+              ${translateText("account_modal.cancel_subscription")}
+            </button>`
+          : nothing}
+      </div>
+    `;
+  }
+
   private renderActions(): TemplateResult {
     // Before every other branch, and NOT gated on the desktop shell: a grant is
     // a property of the account, so a Steam buyer who signs in on the website
     // sees the same panel and would meet the same one-way Cancel there.
     if (this.isGranted()) return this.renderGrantedNote();
+    if (this.isSteam()) return this.renderSteamActions();
 
     // The whole desktop build, not just a Steam-authenticated session: the
     // guard that makes the button dead is in the shell and applies to every

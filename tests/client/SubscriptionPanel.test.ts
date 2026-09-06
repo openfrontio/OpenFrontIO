@@ -250,22 +250,111 @@ describe("subscription-panel", () => {
   });
 
   // A paid rail is not a grant, however the panel is reached.
-  describe.each(["stripe", "steam"] as const)(
-    "a %s subscription",
-    (provider) => {
-      beforeEach(async () => {
-        el.sub = sub({ provider });
+  describe("a stripe subscription", () => {
+    beforeEach(async () => {
+      el.sub = sub({ provider: "stripe" });
+      await el.updateComplete;
+    });
+
+    it("keeps Cancel", () => {
+      expect(text()).toContain("account_modal.cancel_subscription");
+    });
+
+    it("renews rather than ending", () => {
+      expect(text()).toContain("account_modal.sub_renews_on");
+      expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
+    });
+  });
+
+  // Phase 9 (OPE-230). Billed by Steam and managed on the Steam account
+  // page, which the server's portal route returns as a static URL for a Steam
+  // row. That page is not a payment origin, so unlike Stripe's portal the
+  // desktop shell lets it through — Manage stays on every surface. Cancel is
+  // the S2 policy decision: hidden by default, because Steam has no un-cancel
+  // and the account page offers both cancel and re-enable.
+  describe("a steam subscription", () => {
+    const buttonKeys = () =>
+      Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+
+    beforeEach(async () => {
+      el.sub = sub({ provider: "steam" });
+      await el.updateComplete;
+    });
+
+    it("offers Manage and Change Tier", () => {
+      expect(buttonKeys()).toEqual([
+        "account_modal.change_tier",
+        "account_modal.manage_subscription",
+      ]);
+    });
+
+    it("offers no in-app Cancel, and says where cancelling lives", () => {
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+      // Cancel is a bare <button>; the o-buttons render their own inner
+      // <button>, so look only outside them.
+      expect(
+        Array.from(el.querySelectorAll("button")).filter(
+          (b) => b.closest("o-button") === null,
+        ),
+      ).toHaveLength(0);
+      expect(text()).toContain("account_modal.manage_subscription_on_steam");
+    });
+
+    it("renews rather than ending, and renders no anchor", () => {
+      expect(text()).toContain("account_modal.sub_renews_on");
+      expect(el.querySelector("a")).toBeNull();
+    });
+
+    // The Stripe rail loses Manage inside the shell; the Steam rail must not,
+    // because the whole point of Manage there is the Steam account page.
+    it("keeps Manage inside the desktop shell", async () => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+      try {
+        el.sub = sub({ provider: "steam" });
+        el.requestUpdate();
         await el.updateComplete;
-      });
+        expect(buttonKeys()).toContain("account_modal.manage_subscription");
+        expect(text()).not.toContain(
+          "account_modal.manage_subscription_on_web",
+        );
+      } finally {
+        delete (window as unknown as { openfrontDesktop?: unknown })
+          .openfrontDesktop;
+      }
+    });
 
-      it("keeps Cancel", () => {
-        expect(text()).toContain("account_modal.cancel_subscription");
-      });
+    // No un-cancel API exists, so no Reactivate; the account page re-enables.
+    it("offers Manage but no Reactivate while winding down", async () => {
+      el.sub = sub({ provider: "steam", cancelAtPeriodEnd: true });
+      await el.updateComplete;
+      expect(buttonKeys()).toEqual(["account_modal.manage_subscription"]);
+      expect(text()).not.toContain("account_modal.reactivate_subscription");
+      expect(text()).toContain("account_modal.sub_status_canceling");
+    });
 
-      it("renews rather than ending", () => {
-        expect(text()).toContain("account_modal.sub_renews_on");
-        expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
-      });
-    },
-  );
+    it("opens the URL the server returns when Manage is clicked", async () => {
+      const opened: string[] = [];
+      const original = window.open;
+      window.open = ((url: string) => {
+        opened.push(url);
+        return null;
+      }) as typeof window.open;
+      try {
+        const manage = Array.from(el.querySelectorAll("o-button")).find(
+          (b) =>
+            b.getAttribute("translationKey") ===
+            "account_modal.manage_subscription",
+        )!;
+        manage.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        await new Promise((r) => setTimeout(r, 0));
+        expect(opened).toEqual(["https://portal.example"]);
+      } finally {
+        window.open = original;
+      }
+    });
+  });
 });
