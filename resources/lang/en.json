@@ -408,19 +408,27 @@
     "unban": "Unban"
   },
   "close_reason": {
+    "account_lookup_failed": "Your account could not be looked up. Please try again.",
     "banned": "This account is banned.",
     "cannot_join": "You can't join this game.",
+    "clan_verification_failed": "Your clan membership could not be verified.",
     "cosmetics_forbidden": "One of your selected cosmetics isn't available on this account.",
     "forbidden": "You don't have access to this server.",
     "game_ended": "This game has ended.",
     "game_not_found": "Game not found.",
+    "internal_error": "The server hit an internal error.",
+    "invalid_clan": "The selected clan is no longer valid.",
     "invalid_message": "The server couldn't read your join request.",
+    "invalid_token": "Your session token was rejected.",
     "lobby_full": "The lobby is full.",
     "login_required": "You must be logged in to play on this server.",
+    "no_heartbeat": "The server stopped hearing from you.",
     "not_allowlisted": "You are not on this lobby's allowlist.",
     "not_trusted": "This lobby is limited to trusted accounts.",
     "protocol_error": "The connection was corrupted.",
-    "turnstile_failed": "The bot check failed. Please reload the page and try again."
+    "ranked_limit_reached": "You are out of free ranked matches for today.",
+    "turnstile_failed": "The bot check failed. Please reload the page and try again.",
+    "unknown": "The server closed the connection."
   },
   "common": {
     "available": "Available",

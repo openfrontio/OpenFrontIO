@@ -49,6 +49,14 @@ export const CloseReason = {
   RankedLimitReached: "close_reason.ranked_limit_reached",
   InvalidClan: "close_reason.invalid_clan",
   ClanVerificationFailed: "close_reason.clan_verification_failed",
+  // Shown for a terminal close whose reason is not one of ours.
+  Unknown: "close_reason.unknown",
 } as const;
 
 export type CloseReason = (typeof CloseReason)[keyof typeof CloseReason];
+
+const CLOSE_REASONS: ReadonlySet<string> = new Set(Object.values(CloseReason));
+
+export function isCloseReason(value: string): value is CloseReason {
+  return CLOSE_REASONS.has(value);
+}

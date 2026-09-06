@@ -6,6 +6,7 @@ import {
   APP_REJECTION_MIN,
   CloseCode,
   CloseReason,
+  isCloseReason,
   isTerminalClose,
 } from "../src/core/CloseCodes";
 
@@ -123,6 +124,31 @@ describe("CloseReason", () => {
       Object.values(CloseReason).map((k) => k.slice("close_reason.".length)),
     );
     expect(Object.keys(namespace).filter((k) => !known.has(k))).toEqual([]);
+  });
+
+  it("has an en.json entry for every key", () => {
+    // Any reason can reach the refusal dialog through a terminal code, so
+    // every one needs text — not just the ones the game server sends today.
+    const en = readEnJson();
+    const namespace = en["close_reason"] as Record<string, string>;
+    const missing = Object.values(CloseReason)
+      .map((k) => k.slice("close_reason.".length))
+      .filter((k) => !(k in namespace));
+    expect(missing).toEqual([]);
+  });
+});
+
+describe("isCloseReason", () => {
+  it("accepts every defined reason", () => {
+    for (const key of Object.values(CloseReason)) {
+      expect(isCloseReason(key)).toBe(true);
+    }
+  });
+
+  it("rejects free-form and empty reasons", () => {
+    for (const reason of ["", "Game not found", "close_reason.nope", "1006"]) {
+      expect(isCloseReason(reason)).toBe(false);
+    }
   });
 });
 

@@ -157,6 +157,29 @@ describe("Transport terminal connection refused", () => {
     expect(sockets).toHaveLength(1);
   });
 
+  it("latches silently after a normal close", () => {
+    // Game over or a kick: the server has said its piece through the game
+    // messages. No dialog, and nothing the watchdog asks for reopens it.
+    const transport = connectTransport();
+    sockets[0].serverClose(CloseCode.Normal, CloseReason.GameEnded);
+
+    transport.reconnect();
+    transport.reconnect();
+
+    expect(sockets).toHaveLength(1);
+    expect(modalMocks.showInGameConfirm).not.toHaveBeenCalled();
+  });
+
+  it("falls back to a generic reason the server did not choose", () => {
+    connectTransport();
+    sockets[0].serverClose(4999, "");
+
+    expect(modalMocks.showInGameConfirm).toHaveBeenCalledTimes(1);
+    expect(modalMocks.showInGameConfirm.mock.calls[0][0]).toContain(
+      CloseReason.Unknown,
+    );
+  });
+
   it("does not reopen the socket after Game not found", () => {
     const transport = connectTransport();
     sockets[0].serverClose(CloseCode.GameNotFound, CloseReason.GameNotFound);

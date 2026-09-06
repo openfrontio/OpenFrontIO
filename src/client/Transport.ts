@@ -1,6 +1,11 @@
 import { ClientEnv } from "src/client/ClientEnv";
 import { ZbContext } from "../../zbin";
-import { CloseCode, isTerminalClose } from "../core/CloseCodes";
+import {
+  CloseCode,
+  CloseReason,
+  isCloseReason,
+  isTerminalClose,
+} from "../core/CloseCodes";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
@@ -466,7 +471,13 @@ export class Transport {
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
       if (isTerminalClose(event.code)) {
-        if (event.code !== CloseCode.Normal) {
+        if (event.code === CloseCode.Normal) {
+          // The server ended the session (game over, kick): nothing to say
+          // and nothing to retry. Latch, or the silence watchdog would open
+          // a fresh socket 5s later only to be refused with "game not found".
+          this.connectionRefused = true;
+          this.stopPing();
+        } else {
           this.handleConnectionRefused(event.reason);
         }
         return;
@@ -495,9 +506,13 @@ export class Transport {
     }
     this.connectionRefused = true;
     this.stopPing();
+    // The reason is a close_reason.* key the server chose. Anything else (a
+    // proxy closing on its own, an empty reason) gets the generic text
+    // rather than a bare key.
+    const reasonKey = isCloseReason(reason) ? reason : CloseReason.Unknown;
     void showInGameConfirm(
       translateText("error_modal.connection_refused", {
-        reason: translateText(reason),
+        reason: translateText(reasonKey),
       }),
       {
         variant: "warning",
