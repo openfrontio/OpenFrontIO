@@ -7,6 +7,11 @@ import {
   logOut,
 } from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
+import { showInGameAlert } from "../../src/client/InGameModal";
+
+vi.mock("../../src/client/InGameModal", () => ({
+  showInGameAlert: vi.fn(async () => undefined),
+}));
 
 // The three provider call sites in Auth.ts, in both directions (OPE-343).
 //
@@ -71,6 +76,8 @@ beforeEach(async () => {
   vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
   await logOut();
   vi.restoreAllMocks();
+  // restoreAllMocks restores spies; it does not clear a module-mock vi.fn.
+  vi.mocked(showInGameAlert).mockClear();
 });
 
 afterEach(() => {
@@ -146,20 +153,35 @@ describe("provider login on the desktop shell", () => {
   });
 
   // A shell too old to expose the bridge is not "the web": the redirect
-  // still cannot work there, but that is today's behaviour, and the label the
-  // modal shows for that case is the web one -- see AccountModal's
-  // renderLoginOptions. Pinned so the routing predicate stays "the bridge is
-  // callable", not "any desktop shell".
-  it("falls through to the web redirect when the bridge lacks showLinkGate", () => {
-    (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
-      linkGate: {},
-    };
+  // cannot work there either, and this client updates at runtime while the
+  // shell updates on Steam's schedule, so a newer client on an older shell
+  // is an ordinary deployment. It must get an update prompt, never the
+  // app:// redirect that was the original bug.
+  describe("on a shell without showLinkGate", () => {
+    beforeEach(() => {
+      (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
+        linkGate: {},
+      };
+    });
 
-    discordLogin();
+    it("discordLogin shows the update prompt and never navigates", () => {
+      discordLogin();
 
-    expect(location.href).toBe(
-      `https://api.openfront.dev/auth/login/discord?redirect_uri=${encodeURIComponent(DESKTOP_HREF)}`,
-    );
+      expect(showInGameAlert).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(showInGameAlert).mock.calls[0][0]).toContain(
+        "desktop_login_needs_update",
+      );
+      expect(location.href).toBe(DESKTOP_HREF);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("googleLogin shows the update prompt and never navigates", () => {
+      googleLogin();
+
+      expect(showInGameAlert).toHaveBeenCalledTimes(1);
+      expect(location.href).toBe(DESKTOP_HREF);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
   });
 });
 

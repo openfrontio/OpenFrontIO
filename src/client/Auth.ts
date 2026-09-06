@@ -7,9 +7,10 @@ import { getApiBase, getAudience } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { DesktopSessionState, SessionFailureKind } from "./DesktopShell";
 import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import { showInGameAlert } from "./InGameModal";
 import type { SteamTicketResult } from "./SteamSDK";
 import { steamSDK } from "./SteamSDK";
-import { generateCryptoRandomUUID } from "./Utils";
+import { generateCryptoRandomUUID, translateText } from "./Utils";
 
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 
@@ -54,18 +55,34 @@ function setSessionState(state: DesktopSessionState): void {
 // server refuses that as `steam_has_progress`, and the website says so);
 // that is the same rule the first-launch gate lives under.
 //
-// Returns false on the web and on a shell too old to expose the bridge, in
-// which case callers fall through to the web redirect.
+// Returns true whenever this is the desktop shell at all -- the caller must
+// not build the redirect there under any circumstances -- and false only on
+// the web, where the redirect is the right thing.
+//
+// A shell that exists but has no callable showLinkGate is a real case, not a
+// hypothetical: this client updates at runtime while the shell ships in the
+// Steam depot and updates on Steam's schedule, so a client newer than its
+// shell is ordinary. Falling through to the redirect there would be the
+// original bug (a browser tab showing a JSON 400) on exactly the shells that
+// cannot be fixed from this side, so that case says what to do instead.
 function startDesktopLinkFlow(): boolean {
   const gate = desktopLinkGate();
-  if (gate === null) return false;
-  // An IPC round trip to the Electron main process, so it can genuinely
-  // reject (no window, a main-process throw); log rather than surface as a
-  // button that silently does nothing.
-  gate.showLinkGate().catch((err) => {
-    console.error("Failed to open the desktop link flow", err);
-  });
-  return true;
+  if (gate !== null) {
+    // An IPC round trip to the Electron main process, so it can genuinely
+    // reject (no window, a main-process throw); log rather than surface as a
+    // button that silently does nothing.
+    gate.showLinkGate().catch((err) => {
+      console.error("Failed to open the desktop link flow", err);
+    });
+    return true;
+  }
+  if (isDesktopShell()) {
+    void showInGameAlert(
+      translateText("account_modal.desktop_login_needs_update"),
+    );
+    return true;
+  }
+  return false;
 }
 
 export function discordLogin() {

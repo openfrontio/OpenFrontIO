@@ -21,6 +21,7 @@
     "delete_account_warning": "Your account will be permanently deleted 24 hours after you confirm, and you will be logged out on all devices right away. Signing in again does not cancel it; only support can, within those 24 hours.",
     "desktop_login_discord": "Continue with Discord in your browser",
     "desktop_login_google": "Continue with Google in your browser",
+    "desktop_login_needs_update": "Signing in needs a newer version of the desktop app. Restart Steam to update, then try again.",
     "desktop_sign_in_desc": "Signing in opens the OpenFront website in your browser. Sign in there, confirm the link to your Steam account, and the game will pick it up.",
     "email_placeholder": "Enter your email address",
     "enter_email_address": "Please enter an email address",

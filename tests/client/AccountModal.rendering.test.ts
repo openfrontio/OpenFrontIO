@@ -328,10 +328,11 @@ describe("AccountModal — rendering", () => {
       expect(text).not.toContain("account_modal.desktop_sign_in_desc");
     });
 
-    // Label and behaviour must agree: Auth.ts only takes the link-flow branch
-    // when showLinkGate is callable, so a bridge without it gets the web
-    // captions too.
-    it("keeps the web captions when the bridge lacks showLinkGate", async () => {
+    // Label and behaviour must agree: Auth.ts never builds the web redirect
+    // on any desktop shell (an older shell without showLinkGate gets an
+    // update prompt), so the web caption is wrong on every shell, bridge or
+    // not.
+    it("keeps the browser captions when the bridge lacks showLinkGate", async () => {
       (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
         linkGate: {},
       };
@@ -339,8 +340,8 @@ describe("AccountModal — rendering", () => {
       await flushOpen();
 
       const text = modal.textContent ?? "";
-      expect(text).toContain("main.login_discord");
-      expect(text).not.toContain("account_modal.desktop_login_discord");
+      expect(text).toContain("account_modal.desktop_login_discord");
+      expect(text).not.toContain("main.login_discord");
     });
 
     // The Google LINK button (a signed-in Discord/email account attaching

@@ -615,11 +615,12 @@ export class AccountModal extends BaseModal {
   private renderLoginOptions() {
     // On the desktop shell both provider buttons open the shell's browser
     // link flow rather than an in-place OAuth redirect (see discordLogin /
-    // googleLogin in Auth.ts), and the captions say so. Keyed on the same
-    // bridge check Auth.ts routes on, so the label and the behaviour cannot
-    // disagree: a shell too old to expose showLinkGate gets the web captions
-    // AND the web behaviour.
-    const viaBrowser = desktopLinkGate() !== null;
+    // googleLogin in Auth.ts), and the captions say so. Keyed on the shell
+    // itself, not on the link-flow bridge: Auth.ts never builds the redirect
+    // on ANY desktop shell (a shell too old to expose showLinkGate gets an
+    // update prompt instead), so the web caption would be wrong on every one
+    // of them.
+    const viaBrowser = isDesktopShell();
     return html`
       <div class="flex items-center justify-center p-6 min-h-full">
         <div
