@@ -37,18 +37,6 @@ export function paymentsProvider(): PaymentsProvider {
   return steamBridge() !== undefined ? "steam" : "stripe";
 }
 
-/**
- * Whether the custom-amount ("choose your own Plutonium") card should be
- * offered.
- *
- * custom_currency is switched off on the Steam rail for launch: the server
- * answers `kind_unavailable_on_provider` there, so offering the card would be
- * offering a button that cannot work. Hide it instead.
- */
-export function customCurrencyAvailable(): boolean {
-  return paymentsProvider() !== "steam";
-}
-
 // ---------------------------------------------------------------------------
 // The desktop shell's Steam microtransaction bridge.
 

@@ -19,7 +19,6 @@ import {
 } from "../../src/client/Api";
 import {
   classifyPurchaseReturn,
-  customCurrencyAvailable,
   drainPendingSteamAuthorizations,
   paymentsProvider,
   purchaseOutcomeMessage,
@@ -177,19 +176,6 @@ describe("paymentsProvider", () => {
   it("is stripe inside a desktop shell with no Steam bridge", () => {
     installShell({ steam: false });
     expect(paymentsProvider()).toBe("stripe");
-  });
-});
-
-describe("customCurrencyAvailable", () => {
-  it("is available on the Stripe rail", () => {
-    expect(customCurrencyAvailable()).toBe(true);
-  });
-
-  // custom_currency is off on Steam for launch; the server answers
-  // kind_unavailable_on_provider, so the card must not be offered at all.
-  it("is unavailable on the Steam rail", () => {
-    installShell();
-    expect(customCurrencyAvailable()).toBe(false);
   });
 });
 
