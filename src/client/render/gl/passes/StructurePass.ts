@@ -2,7 +2,7 @@
  * StructurePass — GPU-rendered structures with icon sprites.
  *
  * Renders a filled circle in player color with a white icon overlay,
- * sampled from a pre-built 6-column sprite atlas (generate-sprite-atlases.mjs).
+ * sampled from a normalized 7-column atlas assembled from the source SVGs.
  *
  * Two LODs based on zoom:
  *   - zoom > 0.5: full icon with circle background
@@ -21,6 +21,7 @@ import {
   UT_FACTORY,
   UT_MISSILE_SILO,
   UT_PORT,
+  UT_RESEARCH_FACILITY,
   UT_SAM_LAUNCHER,
 } from "../../types";
 import { DynamicInstanceBuffer } from "../DynamicBuffer";
@@ -35,8 +36,6 @@ import { createProgram, shaderSrc } from "../utils/GlUtils";
 import { assetUrl } from "src/core/AssetUrls";
 import structureFragSrc from "../shaders/structure/structure.frag.glsl?raw";
 import structureVertSrc from "../shaders/structure/structure.vert.glsl?raw";
-
-const iconAtlasUrl = assetUrl("atlases/icon-atlas.png");
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -53,9 +52,22 @@ const STRUCTURE_ORDER = [
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
+  UT_RESEARCH_FACILITY,
 ] as const;
 
 const ATLAS_COLS = STRUCTURE_ORDER.length;
+const ATLAS_CELL_SIZE = 64;
+
+/** Icon sources in the same order as STRUCTURE_ORDER. */
+const STRUCTURE_ICON_URLS = [
+  assetUrl("images/CityIconWhite.svg"),
+  assetUrl("images/PortIcon.svg"),
+  assetUrl("images/FactoryIconWhite.svg"),
+  assetUrl("images/ShieldIconWhite.svg"),
+  assetUrl("images/SamLauncherIconWhite.svg"),
+  assetUrl("images/MissileSiloIconWhite.svg"),
+  assetUrl("images/ResearchFacilityIconWhite.svg"),
+] as const;
 
 // ---------------------------------------------------------------------------
 // Instance data layout
@@ -115,7 +127,7 @@ export class StructurePass {
 
   private instanceCount = 0;
 
-  /** unitType string → atlas column index (0–5) */
+  /** unitType string → atlas column index (0–6) */
   private typeToAtlasCol = new Map<string, number>();
   private mapW: number;
 
@@ -278,14 +290,32 @@ export class StructurePass {
   }
 
   private async loadAtlas(): Promise<void> {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = iconAtlasUrl;
-    await img.decode();
+    const images = await Promise.all(
+      STRUCTURE_ICON_URLS.map(async (url) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = url;
+        await img.decode();
+        return img;
+      }),
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = ATLAS_CELL_SIZE * ATLAS_COLS;
+    canvas.height = ATLAS_CELL_SIZE;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Unable to create structure icon atlas");
+    images.forEach((img, index) => {
+      // The silo and atom glyphs are intentionally 25% smaller so their wide
+      // artwork stays inside the triangle and diamond markers respectively.
+      const size = index >= ATLAS_COLS - 2 ? 27 : 36;
+      const x = index * ATLAS_CELL_SIZE + (ATLAS_CELL_SIZE - size) / 2;
+      const y = (ATLAS_CELL_SIZE - size) / 2;
+      ctx.drawImage(img, x, y, size, size);
+    });
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(
       gl.TEXTURE_2D,

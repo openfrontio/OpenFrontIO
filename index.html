@@ -409,6 +409,10 @@
       </div>
     </div>
 
+    <mirv-button
+      class="fixed bottom-4 left-4 z-[201] hidden lg:block pointer-events-auto"
+    ></mirv-button>
+
     <!-- Game modals and overlays -->
     <emoji-table></emoji-table>
     <build-menu></build-menu>
@@ -418,7 +422,10 @@
     <div
       class="flex flex-col items-end fixed top-0 right-0 min-[1200px]:top-4 min-[1200px]:right-4 z-1000 gap-2"
     >
-      <game-right-sidebar></game-right-sidebar>
+      <div class="flex flex-row items-start gap-2">
+        <research-panel></research-panel>
+        <game-right-sidebar></game-right-sidebar>
+      </div>
       <replay-panel></replay-panel>
     </div>
     <settings-modal></settings-modal>

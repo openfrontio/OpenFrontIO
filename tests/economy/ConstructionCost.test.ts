@@ -4,6 +4,7 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  Structures,
   UnitType,
 } from "../../src/core/game/Game";
 import { setup } from "../util/Setup";
@@ -56,11 +57,113 @@ describe("Structure cost while under construction", () => {
     expect(built?.isUnderConstruction()).toBe(true);
   }
 
+  test("the first constructed structure is free", () => {
+    expect(game.unitInfo(UnitType.City).cost(game, player)).toBe(0n);
+    player.buildUnit(UnitType.City, game.ref(0, 10), {});
+    expect(game.unitInfo(UnitType.DefensePost).cost(game, player)).toBe(
+      50_000n,
+    );
+  });
+
+  test("losing every structure does not restore the free construction", () => {
+    const city = player.buildUnit(UnitType.City, game.ref(0, 10), {});
+    other.captureUnit(city);
+
+    expect(player.units(Structures.types)).toHaveLength(0);
+    expect(game.unitInfo(UnitType.DefensePost).cost(game, player)).toBe(
+      50_000n,
+    );
+  });
+
+  test("captured structure upgrades are paid and do not consume the entitlement", () => {
+    const captured = other.buildUnit(UnitType.City, game.ref(15, 15), {});
+    player.captureUnit(captured);
+    const goldBefore = player.gold();
+
+    player.upgradeUnit(captured);
+
+    expect(player.gold()).toBe(goldBefore - 125_000n);
+    expect(player.hasUsedFreeStructure()).toBe(false);
+    expect(game.unitInfo(UnitType.DefensePost).cost(game, player)).toBe(0n);
+  });
+
+  test("tribe bots do not receive a free structure", async () => {
+    const botInfo = new PlayerInfo("tribe", PlayerType.Bot, null, "tribe_id");
+    const botGame = await setup("plains", {}, [botInfo]);
+    const bot = botGame.player(botInfo.id);
+
+    expect(botGame.unitInfo(UnitType.City).cost(botGame, bot)).toBe(125_000n);
+  });
+
+  test("AI nations receive their own one-time free structure", async () => {
+    const nationInfo = new PlayerInfo(
+      "nation",
+      PlayerType.Nation,
+      null,
+      "nation_id",
+    );
+    const nationGame = await setup("plains", {}, [nationInfo]);
+    const nation = nationGame.player(nationInfo.id);
+
+    expect(nationGame.unitInfo(UnitType.Factory).cost(nationGame, nation)).toBe(
+      0n,
+    );
+    nation.buildUnit(UnitType.Factory, nationGame.ref(0, 10), {});
+    expect(nationGame.unitInfo(UnitType.City).cost(nationGame, nation)).toBe(
+      125_000n,
+    );
+  });
+
   test("first city under construction does not double-count itself", () => {
     buildFirstCityUnderConstruction();
     // One built city (under construction) → next city is the 2nd → 250k.
     expect(player.unitsConstructed(UnitType.City)).toBe(1);
     expect(game.unitInfo(UnitType.City).cost(game, player)).toBe(250_000n);
+  });
+
+  test("research facilities use their own capped level-based cost curve", () => {
+    player.buildUnit(UnitType.City, game.ref(0, 10), {});
+    expect(game.unitInfo(UnitType.ResearchFacility).cost(game, player)).toBe(
+      250_000n,
+    );
+
+    const facility = player.buildUnit(
+      UnitType.ResearchFacility,
+      game.ref(0, 10),
+      {},
+    );
+    expect(game.unitInfo(UnitType.ResearchFacility).cost(game, player)).toBe(
+      500_000n,
+    );
+    player.upgradeUnit(facility);
+    expect(game.unitInfo(UnitType.ResearchFacility).cost(game, player)).toBe(
+      1_000_000n,
+    );
+    player.upgradeUnit(facility);
+    expect(game.unitInfo(UnitType.ResearchFacility).cost(game, player)).toBe(
+      2_000_000n,
+    );
+    player.upgradeUnit(facility);
+    expect(game.unitInfo(UnitType.ResearchFacility).cost(game, player)).toBe(
+      2_000_000n,
+    );
+  });
+
+  test("research facilities take five seconds to construct", () => {
+    expect(game.unitInfo(UnitType.ResearchFacility).constructionDuration).toBe(
+      50,
+    );
+  });
+
+  test("SAM launcher cost caps at two million", () => {
+    player.buildUnit(UnitType.City, game.ref(0, 10), {});
+    expect(game.unitInfo(UnitType.SAMLauncher).cost(game, player)).toBe(
+      1_500_000n,
+    );
+    player.buildUnit(UnitType.SAMLauncher, game.ref(0, 10), {});
+    expect(game.unitInfo(UnitType.SAMLauncher).cost(game, player)).toBe(
+      2_000_000n,
+    );
   });
 
   test("captured city does not inflate the price of a city under construction", () => {

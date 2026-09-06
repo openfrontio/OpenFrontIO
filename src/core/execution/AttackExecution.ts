@@ -14,6 +14,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
+import { researchMultiplier, ResearchType } from "../game/Research";
 import { PseudoRandom } from "../PseudoRandom";
 import { assertNever } from "../Util";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
@@ -303,11 +304,26 @@ export class AttackExecution implements Execution {
         continue;
       }
       this.addNeighbors(tileToConquer);
-      const { attackerTroopLoss, defenderTroopLoss, tickFraction } = this.mg
+      const result = this.mg
         .config()
         .attackLogic(
           this.attackLogicInput(troopCount, tileToConquer, borderSize),
         );
+      const attackerFactor = researchMultiplier(
+        this._owner.researchLevel(ResearchType.Military),
+        2.5,
+      );
+      const defenderFactor = targetPlayer
+        ? researchMultiplier(
+            targetPlayer.researchLevel(ResearchType.Military),
+            2.5,
+          )
+        : 1;
+      const attackerTroopLoss =
+        (result.attackerTroopLoss * defenderFactor) / attackerFactor;
+      const defenderTroopLoss =
+        (result.defenderTroopLoss * attackerFactor) / defenderFactor;
+      const { tickFraction } = result;
       tickBudget -= tickFraction;
       troopCount -= attackerTroopLoss;
       this.attack.setTroops(troopCount);

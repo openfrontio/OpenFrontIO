@@ -17,6 +17,7 @@ import {
   missileSiloIcon,
   portIcon,
   profileIcon,
+  researchFacilityIcon,
   samLauncherIcon,
   soldierIcon,
   teamIcon,
@@ -276,6 +277,12 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     "leaderboard.factories",
     UnitType.Factory,
     factoryIcon,
+  ),
+  unitColumn(
+    "researchFacilities",
+    "leaderboard.research_facilities",
+    UnitType.ResearchFacility,
+    researchFacilityIcon,
   ),
   unitColumn(
     "silos",

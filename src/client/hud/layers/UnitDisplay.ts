@@ -21,9 +21,9 @@ import {
   factoryIcon,
   goldCoinIcon,
   hydrogenBombIcon,
-  mirvIcon,
   missileSiloIcon,
   portIcon,
+  researchFacilityIcon,
   samLauncherIcon,
   warshipIcon,
 } from "../HotbarIcons";
@@ -38,6 +38,7 @@ export class UnitDisplay extends LitElement implements Controller {
   private _cities = 0;
   private _warships = 0;
   private _factories = 0;
+  private _researchFacilities = 0;
   private _missileSilo = 0;
   private _port = 0;
   private _defensePost = 0;
@@ -101,6 +102,9 @@ export class UnitDisplay extends LitElement implements Controller {
     this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
     this._factories = player.totalUnitLevels(UnitType.Factory);
+    this._researchFacilities = player.totalUnitLevels(
+      UnitType.ResearchFacility,
+    );
     this._warships = player.totalUnitLevels(UnitType.Warship);
     this.requestUpdate();
   }
@@ -186,11 +190,11 @@ export class UnitDisplay extends LitElement implements Controller {
             this.keybinds["buildHydrogenBomb"]?.key ?? "9",
           )}
           ${this.renderUnitItem(
-            mirvIcon,
-            null,
-            UnitType.MIRV,
-            "mirv",
-            this.keybinds["buildMIRV"]?.key ?? "0",
+            researchFacilityIcon,
+            this._researchFacilities,
+            UnitType.ResearchFacility,
+            "research_facility",
+            this.keybinds["buildResearchFacility"]?.key ?? "0",
           )}
         </div>
       </div>
@@ -210,9 +214,8 @@ export class UnitDisplay extends LitElement implements Controller {
     const selected = this.uiState.ghostStructure === unitType;
     const hovered = this._hoveredUnit === unitType;
     const displayHotkey = hotkey
-      .replace("Digit", "")
-      .replace("Key", "")
-      .toUpperCase();
+      ? hotkey.replace("Digit", "").replace("Key", "").toUpperCase()
+      : "";
 
     return html`
       <div
@@ -232,9 +235,9 @@ export class UnitDisplay extends LitElement implements Controller {
                 class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
               >
                 <div class="font-bold text-sm mb-1">
-                  ${translateText(
-                    "unit_type." + structureKey,
-                  )}${` [${displayHotkey}]`}
+                  ${translateText("unit_type." + structureKey)}${displayHotkey
+                    ? ` [${displayHotkey}]`
+                    : ""}
                 </div>
                 <div class="p-2">
                   ${translateText("build_menu.desc." + structureKey)}
@@ -290,9 +293,13 @@ export class UnitDisplay extends LitElement implements Controller {
           @mouseleave=${() =>
             this.eventBus?.emit(new ToggleStructureEvent(null))}
         >
-          ${html`<div class="ml-0.5 text-[10px] relative -top-1 text-gray-400">
-            ${displayHotkey}
-          </div>`}
+          ${displayHotkey
+            ? html`<div
+                class="ml-0.5 text-[10px] relative -top-1 text-gray-400"
+              >
+                ${displayHotkey}
+              </div>`
+            : null}
           <div class="flex items-center gap-0.5 pt-0.5">
             <img src=${icon} alt=${structureKey} class="align-middle size-5" />
             ${number !== null

@@ -12,6 +12,12 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import {
+  BASE_RESEARCH_COST,
+  RESEARCH_TYPES,
+  researchRequirement,
+  ResearchType,
+} from "../game/Research";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { assertNever, simpleHash } from "../Util";
@@ -172,6 +178,8 @@ export class NationExecution implements Execution {
       return;
     }
 
+    if (ticks % 100 === 0) this.purchaseResearch(ticks);
+
     if (!this.behaviorsInitialized) {
       this.initializeBehaviors();
       this.attackBehavior.forceSendAttack(this.mg.terraNullius());
@@ -207,6 +215,36 @@ export class NationExecution implements Execution {
     this.attackBehavior.maybeAttack();
     this.warshipBehavior.counterWarshipInfestation();
     this.nukeBehavior.maybeSendNuke();
+  }
+
+  private purchaseResearch(ticks: number): void {
+    if (this.player === null) return;
+    const early = ticks < this.mg.config().numSpawnPhaseTurns() + 5 * 60 * 10;
+    const threatened = this.player.incomingAttacks().length > 0;
+    const weights = threatened
+      ? [15, 20, 15, 40, 10]
+      : early
+        ? [20, 30, 30, 10, 10]
+        : [25, 20, 20, 25, 10];
+    while (true) {
+      let selected: ResearchType = RESEARCH_TYPES[0];
+      for (let i = 1; i < RESEARCH_TYPES.length; i++) {
+        const candidate = RESEARCH_TYPES[i];
+        const selectedIndex = RESEARCH_TYPES.indexOf(selected);
+        const candidateScore =
+          (this.player.researchLevel(candidate) + 1) * weights[selectedIndex];
+        const selectedScore =
+          (this.player.researchLevel(selected) + 1) * weights[i];
+        if (candidateScore < selectedScore) selected = candidate;
+      }
+
+      const cost = researchRequirement(
+        BASE_RESEARCH_COST,
+        this.player.researchLevel(selected),
+      );
+      if (this.player.research().points() < cost) return;
+      if (!this.player.research().purchase(selected)) return;
+    }
   }
 
   private initializeBehaviors(): void {

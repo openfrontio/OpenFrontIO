@@ -32,12 +32,14 @@ import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
 import { InGamePromo } from "./layers/InGamePromo";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
+import { MirvButton } from "./layers/MirvButton";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NewLobbyPrompt } from "./layers/NewLobbyPrompt";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
+import { ResearchPanel } from "./layers/ResearchPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { UnitDisplay } from "./layers/UnitDisplay";
@@ -215,6 +217,22 @@ export function createRenderer(
   unitDisplay.eventBus = eventBus;
   unitDisplay.uiState = uiState;
 
+  const mirvButton = document.querySelector("mirv-button") as MirvButton;
+  if (!(mirvButton instanceof MirvButton)) {
+    console.error("MIRV button not found");
+  }
+  mirvButton.game = game;
+  mirvButton.eventBus = eventBus;
+
+  const researchPanel = document.querySelector(
+    "research-panel",
+  ) as ResearchPanel;
+  if (!(researchPanel instanceof ResearchPanel)) {
+    console.error("research panel not found");
+  }
+  researchPanel.game = game;
+  researchPanel.eventBus = eventBus;
+
   const playerPanel = document.querySelector("player-panel") as PlayerPanel;
   if (!(playerPanel instanceof PlayerPanel)) {
     console.error("player panel not found");
@@ -322,6 +340,8 @@ export function createRenderer(
     immunityTimer,
     gameLeftSidebar,
     unitDisplay,
+    mirvButton,
+    researchPanel,
     gameRightSidebar,
     controlPanel,
     playerInfo,

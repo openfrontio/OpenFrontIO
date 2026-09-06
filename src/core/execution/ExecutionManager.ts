@@ -1,4 +1,4 @@
-import { Execution, Game } from "../game/Game";
+import { Execution, Game, UnitType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, StampedIntent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -16,10 +16,12 @@ import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
+import { MissileBarrageExecution } from "./MissileBarrageExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NationExecution } from "./NationExecution";
 import { NoOpExecution } from "./NoOpExecution";
 import { PauseExecution } from "./PauseExecution";
+import { PurchaseResearchExecution } from "./PurchaseResearchExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
@@ -105,12 +107,23 @@ export class Executor {
       case "embargo_all":
         return new EmbargoAllExecution(player, intent.action);
       case "build_unit":
+        if (intent.unit === UnitType.MIRV && !this.mg.config().isReplay()) {
+          return new NoOpExecution();
+        }
         return new ConstructionExecution(
           player,
           intent.unit,
           intent.tile,
           intent.rocketDirectionUp,
           intent.amount,
+        );
+      case "missile_barrage":
+        return new MissileBarrageExecution(
+          player,
+          intent.target,
+          intent.amount,
+          intent.mode,
+          intent.targetTypes,
         );
       case "allianceExtension": {
         return new AllianceExtensionExecution(player, intent.recipient);
@@ -122,6 +135,8 @@ export class Executor {
           intent.unitId,
           intent.amount,
         );
+      case "purchase_research":
+        return new PurchaseResearchExecution(player, intent.researchType);
       case "delete_unit":
         return new DeleteUnitExecution(player, intent.unitId);
       case "quick_chat":

@@ -38,6 +38,13 @@ const SAM_RATIO_BY_DIFFICULTY: Record<Difficulty, number> = {
   [Difficulty.Impossible]: 0.3,
 };
 
+const RESEARCH_FACILITY_RATIO_BY_DIFFICULTY: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0.1,
+  [Difficulty.Medium]: 0.15,
+  [Difficulty.Hard]: 0.2,
+  [Difficulty.Impossible]: 0.25,
+};
+
 /**
  * Returns structure ratios relative to city count, adjusted by difficulty.
  * Cities are always prioritized and built first.
@@ -51,6 +58,10 @@ function getStructureRatios(
     [UnitType.Factory]: {
       ratioPerCity: 0.75,
       perceivedCostIncreasePerOwned: 1,
+    },
+    [UnitType.ResearchFacility]: {
+      ratioPerCity: RESEARCH_FACILITY_RATIO_BY_DIFFICULTY[difficulty],
+      perceivedCostIncreasePerOwned: 0.5,
     },
     [UnitType.SAMLauncher]: {
       ratioPerCity: SAM_RATIO_BY_DIFFICULTY[difficulty],
@@ -489,6 +500,7 @@ export class NationStructureBehavior {
     const buildOrder: UnitType[] = [
       UnitType.Port,
       UnitType.Factory,
+      UnitType.ResearchFacility,
       UnitType.SAMLauncher,
       UnitType.MissileSilo,
     ];
@@ -594,7 +606,10 @@ export class NationStructureBehavior {
       ratio = FIRST_MISSILE_SILO_RATIO;
     }
 
-    const targetCount = Math.floor(cityCount * ratio);
+    const targetCount =
+      type === UnitType.ResearchFacility
+        ? Math.max(1, Math.floor(cityCount * ratio))
+        : Math.floor(cityCount * ratio);
 
     return owned < targetCount;
   }
@@ -904,6 +919,8 @@ export class NationStructureBehavior {
         return this.missileSiloValue();
       case UnitType.Factory:
         return this.factoryValue();
+      case UnitType.ResearchFacility:
+        return this.researchFacilityValue();
       case UnitType.Port:
         return this.portValue();
       case UnitType.SAMLauncher:
@@ -946,6 +963,27 @@ export class NationStructureBehavior {
       if (d !== Infinity) w += Math.min(d, structureSpacing);
 
       return w;
+    };
+  }
+
+  /** Prefers safe, elevated sites spaced away from other research facilities. */
+  private researchFacilityValue(): (tile: TileRef) => number {
+    const game = this.game;
+    const borderTiles = this.player.borderTiles();
+    const facilities = this.player.units(UnitType.ResearchFacility);
+    const { borderSpacing, structureSpacing } = this.spacingConstants();
+
+    return (tile) => {
+      let value = game.magnitude(tile);
+      value += Math.min(
+        nearestTileDistCapped(game, borderTiles, tile, borderSpacing),
+        borderSpacing,
+      );
+      const facilityTiles = new Set(facilities.map((unit) => unit.tile()));
+      facilityTiles.delete(tile);
+      const distance = nearestTileDist(game, facilityTiles, tile);
+      if (distance !== Infinity) value += Math.min(distance, structureSpacing);
+      return value;
     };
   }
 
@@ -1277,6 +1315,7 @@ export class NationStructureBehavior {
       switch (unit.type()) {
         case UnitType.City:
         case UnitType.Factory:
+        case UnitType.ResearchFacility:
         case UnitType.MissileSilo:
         case UnitType.Port:
           protectEntries.push({

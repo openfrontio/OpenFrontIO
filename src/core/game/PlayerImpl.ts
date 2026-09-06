@@ -54,6 +54,7 @@ import {
   GameUpdateType,
   PlayerUpdate,
 } from "./GameUpdates";
+import { PlayerResearch, ResearchType } from "./Research";
 import { ReadonlyTileSet, TileSet } from "./TileSet";
 import {
   bumpTraversalGeneration,
@@ -116,10 +117,11 @@ export class PlayerImpl implements Player {
 
   private _gold: bigint;
   private _troops: bigint;
+  private readonly _research: PlayerResearch;
 
   /** Cumulative ship-trade revenue (arrival credit for src + dst port owners). */
   private _tradeGold: bigint = 0n;
-  /** Cumulative train revenue: own trains + others' trains stopping at own stations. */
+  /** Cumulative rail revenue: factory production plus train-stop income. */
   private _trainGold: bigint = 0n;
   /** Cumulative piracy revenue: payouts for captured trade ships. */
   private _piracyGold: bigint = 0n;
@@ -195,6 +197,7 @@ export class PlayerImpl implements Player {
     this._troops = toInt(startTroops);
     this._gold = mg.config().startingGold(playerInfo);
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
+    this._research = new PlayerResearch(this);
   }
 
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
@@ -376,6 +379,7 @@ export class PlayerImpl implements Player {
       piracyGold: this._piracyGold,
       goldEarned: this._goldEarned,
       troops: this.troops(),
+      research: this._research.snapshot(),
       allies: allies,
       embargoes: embargoes,
       isTraitor: this.isTraitor(),
@@ -488,6 +492,7 @@ export class PlayerImpl implements Player {
   }
 
   private numUnitsConstructed: Partial<Record<UnitType, number>> = {};
+  private usedFreeStructure = false;
   private recordUnitConstructed(type: UnitType): void {
     if (this.numUnitsConstructed[type] !== undefined) {
       this.numUnitsConstructed[type]++;
@@ -502,6 +507,10 @@ export class PlayerImpl implements Player {
   // already accounts for in-progress builds — don't re-count them.
   unitsConstructed(type: UnitType): number {
     return this.numUnitsConstructed[type] ?? 0;
+  }
+
+  hasUsedFreeStructure(): boolean {
+    return this.usedFreeStructure;
   }
 
   // Count of units owned by the player, not including construction
@@ -1339,6 +1348,14 @@ export class PlayerImpl implements Player {
     return Number(this._troops);
   }
 
+  research(): PlayerResearch {
+    return this._research;
+  }
+
+  researchLevel(type: ResearchType): number {
+    return this._research.level(type);
+  }
+
   addTroops(troops: number): void {
     if (troops < 0) {
       this.removeTroops(-1 * troops);
@@ -1384,6 +1401,12 @@ export class PlayerImpl implements Player {
     );
     this._units.push(b);
     this._myUnitsVersion++;
+    if (
+      Structures.has(type) &&
+      (this.type() === PlayerType.Human || this.type() === PlayerType.Nation)
+    ) {
+      this.usedFreeStructure = true;
+    }
     this.recordUnitConstructed(type);
     this.removeGold(cost);
     this.removeTroops("troops" in params ? (params.troops ?? 0) : 0);
@@ -1422,11 +1445,13 @@ export class PlayerImpl implements Player {
   private canBuildUnitType(
     unitType: UnitType,
     knownCost: Gold | null = null,
+    isUpgrade: boolean = false,
   ): boolean {
     if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
-    const cost = knownCost ?? this.mg.unitInfo(unitType).cost(this.mg, this);
+    const cost =
+      knownCost ?? this.mg.unitInfo(unitType).cost(this.mg, this, 0, isUpgrade);
     if (this._gold < cost) {
       return false;
     }
@@ -1457,7 +1482,7 @@ export class PlayerImpl implements Player {
     if (!this.canUpgradeUnitType(unit.type())) {
       return false;
     }
-    if (!this.canBuildUnitType(unit.type())) {
+    if (!this.canBuildUnitType(unit.type(), null, true)) {
       return false;
     }
     if (!this.isUnitValidToUpgrade(unit)) {
@@ -1467,7 +1492,7 @@ export class PlayerImpl implements Player {
   }
 
   upgradeUnit(unit: Unit) {
-    const cost = this.mg.unitInfo(unit.type()).cost(this.mg, this);
+    const cost = this.mg.unitInfo(unit.type()).cost(this.mg, this, 0, true);
     this.removeGold(cost);
     unit.increaseLevel();
     this.recordUnitConstructed(unit.type());
@@ -1493,7 +1518,7 @@ export class PlayerImpl implements Player {
     for (let i = 0; i < len; i++) {
       const u = units[i];
 
-      const cost = config.unitInfo(u).cost(mg, this);
+      let cost = config.unitInfo(u).cost(mg, this);
       let canUpgrade: number | false = false;
       let canBuild: TileRef | false = false;
 
@@ -1504,7 +1529,10 @@ export class PlayerImpl implements Player {
             existingUnit !== false &&
             this.isUnitValidToUpgrade(existingUnit)
           ) {
-            canUpgrade = existingUnit.id();
+            cost = config.unitInfo(u).cost(mg, this, 0, true);
+            if (this.canBuildUnitType(u, cost, true)) {
+              canUpgrade = existingUnit.id();
+            }
           }
         }
         canBuild = this.canSpawnUnitType(u, tile, validTiles);
@@ -1520,7 +1548,7 @@ export class PlayerImpl implements Player {
         upgradeCosts = new Array<Gold>(MAX_UPGRADE_AMOUNT);
         let total = 0n;
         for (let n = 0; n < MAX_UPGRADE_AMOUNT; n++) {
-          total += config.unitInfo(u).cost(mg, this, n);
+          total += config.unitInfo(u).cost(mg, this, n, true);
           upgradeCosts[n] = total;
         }
       }
@@ -1589,6 +1617,7 @@ export class PlayerImpl implements Player {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
+      case UnitType.ResearchFacility:
         return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);
@@ -1799,7 +1828,9 @@ export class PlayerImpl implements Player {
   hash(): number {
     return (
       simpleHash(this.id()) * (this.troops() + this.numTilesOwned()) +
-      this._units.reduce((acc, unit) => acc + unit.hash(), 0)
+      this._units.reduce((acc, unit) => acc + unit.hash(), 0) +
+      this._research.hash() +
+      (this.usedFreeStructure ? 1 : 0)
     );
   }
   toString(): string {
@@ -1819,6 +1850,7 @@ export class PlayerImpl implements Player {
         ]),
       ),
       alliances: this.alliances().map((a) => a.other(this).smallID()),
+      researchLevels: this._research.snapshot().levels,
     };
     return rel;
   }

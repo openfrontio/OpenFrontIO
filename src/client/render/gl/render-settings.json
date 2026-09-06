@@ -130,27 +130,31 @@
     "shapes": {
       "City": {
         "scale": 1,
-        "iconFill": 0.85
+        "iconFill": 0.95
       },
       "Port": {
-        "scale": 1.08,
-        "iconFill": 0.85
+        "scale": 1,
+        "iconFill": 0.95
       },
       "Factory": {
-        "scale": 1.08,
-        "iconFill": 0.85
+        "scale": 1,
+        "iconFill": 0.95
       },
       "Defense Post": {
         "scale": 1,
-        "iconFill": 0.8
+        "iconFill": 0.95
       },
       "SAM Launcher": {
-        "scale": 1.4,
-        "iconFill": 1
+        "scale": 1,
+        "iconFill": 0.95
       },
       "Missile Silo": {
-        "scale": 1.55,
-        "iconFill": 0.85
+        "scale": 1,
+        "iconFill": 0.95
+      },
+      "Research Facility": {
+        "scale": 1,
+        "iconFill": 0.95
       }
     },
     "highlightOutlineWidth": 0.04,
@@ -377,6 +381,10 @@
     "Missile Silo": {
       "radius": 10,
       "intensity": 0.9
+    },
+    "Research Facility": {
+      "radius": 12,
+      "intensity": 1
     },
     "Transport": {
       "radius": 6,

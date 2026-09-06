@@ -226,6 +226,16 @@ describe("Stats", () => {
     });
   });
 
+  test("tracks every research facility outcome", () => {
+    stats.unitBuild(player1, UnitType.ResearchFacility);
+    stats.unitDestroy(player1, UnitType.ResearchFacility);
+    stats.unitCapture(player1, UnitType.ResearchFacility);
+    stats.unitLose(player1, UnitType.ResearchFacility);
+    expect(stats.stats()).toStrictEqual({
+      client1: { units: { rshf: [1n, 1n, 1n, 1n] } },
+    });
+  });
+
   test("playerKilled", () => {
     stats.playerKilled(player1, 10);
     stats.playerKilled(player2, 40);

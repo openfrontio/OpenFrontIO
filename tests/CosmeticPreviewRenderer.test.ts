@@ -87,7 +87,7 @@ describe("PreviewAnimationTicker", () => {
     });
     const snapshot = ticker.sample(performance.now());
     expect(snapshot.units.length).toBe(0);
-    expect(snapshot.structures?.length).toBe(6);
+    expect(snapshot.structures?.length).toBe(7);
     const unitTypes = (snapshot.structures ?? []).map((u) => u.unitType);
     expect(unitTypes).toContain("Port");
     expect(unitTypes).toContain("City");
@@ -95,6 +95,7 @@ describe("PreviewAnimationTicker", () => {
     expect(unitTypes).toContain("Defense Post");
     expect(unitTypes).toContain("SAM Launcher");
     expect(unitTypes).toContain("Missile Silo");
+    expect(unitTypes).toContain("Research Facility");
     expect(snapshot.detonationEvents.length).toBe(0);
   });
 

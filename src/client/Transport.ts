@@ -5,11 +5,14 @@ import {
   AllPlayers,
   GameType,
   Gold,
+  MissileBarrageStructureType,
+  MissileBarrageTargetMode,
   PlayerID,
   Tick,
   UnitType,
 } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
+import { ResearchType } from "../core/game/Research";
 import {
   AllPlayersStats,
   ClientHashMessage,
@@ -44,6 +47,10 @@ import { PlayerView } from "./view";
 
 export class PauseGameIntentEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}
+}
+
+export class PurchaseResearchIntentEvent implements GameEvent {
+  constructor(public readonly researchType: ResearchType) {}
 }
 
 export class SendAllianceRequestIntentEvent implements GameEvent {
@@ -100,6 +107,15 @@ export class BuildUnitIntentEvent implements GameEvent {
     public readonly tile: TileRef,
     public readonly rocketDirectionUp?: boolean,
     public readonly amount?: number,
+  ) {}
+}
+
+export class SendMissileBarrageIntentEvent implements GameEvent {
+  constructor(
+    public readonly target: PlayerID,
+    public readonly amount: number,
+    public readonly mode: MissileBarrageTargetMode,
+    public readonly targetTypes: MissileBarrageStructureType[],
   ) {}
 }
 
@@ -284,6 +300,21 @@ export class Transport {
       this.onSendEmbargoAllIntent(e),
     );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
+    this.eventBus.on(SendMissileBarrageIntentEvent, (e) =>
+      this.sendIntent({
+        type: "missile_barrage",
+        target: e.target,
+        amount: e.amount,
+        mode: e.mode,
+        targetTypes: e.targetTypes,
+      }),
+    );
+    this.eventBus.on(PurchaseResearchIntentEvent, (e) =>
+      this.sendIntent({
+        type: "purchase_research",
+        researchType: e.researchType,
+      }),
+    );
 
     this.eventBus.on(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
     this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));

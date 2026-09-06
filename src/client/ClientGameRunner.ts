@@ -38,14 +38,17 @@ import { getPersistentID } from "./Auth";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
+  CancelMissileBarrageTargetingEvent,
   DoBoatAttackEvent,
   DoBreakAllianceEvent,
   DoGroundAttackEvent,
   DoRequestAllianceEvent,
   DoRetaliateAttackEvent,
   InputHandler,
+  MissileBarrageTargetSelectedEvent,
   MouseMoveEvent,
   MouseUpEvent,
+  OpenMissileBarrageEvent,
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
@@ -831,6 +834,7 @@ async function createClientGame(
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
+  private missileBarrageTargeting = false;
 
   private turnsSeen = 0;
   private lastMousePosition: { x: number; y: number } | null = null;
@@ -921,6 +925,12 @@ export class ClientGameRunner {
     }, 20000);
 
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
+    this.eventBus.on(OpenMissileBarrageEvent, () => {
+      this.missileBarrageTargeting = true;
+    });
+    this.eventBus.on(CancelMissileBarrageTargetingEvent, () => {
+      this.missileBarrageTargeting = false;
+    });
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
     this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
     this.eventBus.on(
@@ -1165,6 +1175,21 @@ export class ClientGameRunner {
       const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
+    }
+    if (this.missileBarrageTargeting) {
+      if (!this.gameView.hasOwner(tile)) return;
+      const target = this.gameView.owner(tile);
+      if (
+        !(target instanceof PlayerView) ||
+        target === this.myPlayer ||
+        !target.isAlive() ||
+        this.myPlayer.isOnSameTeam(target)
+      ) {
+        return;
+      }
+      this.missileBarrageTargeting = false;
+      this.eventBus.emit(new MissileBarrageTargetSelectedEvent(target.id()));
+      return;
     }
     this.myPlayer.actions(tile, [UnitType.TransportShip]).then((actions) => {
       if (actions.canAttack) {

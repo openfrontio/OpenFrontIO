@@ -202,6 +202,7 @@ describe("RailNetworkImpl", () => {
       UnitType.MissileSilo,
       UnitType.DefensePost,
       UnitType.SAMLauncher,
+      UnitType.ResearchFacility,
     ])(
       "returns empty array for %s which cannot snap to railroads",
       (unitType) => {
@@ -220,6 +221,18 @@ describe("RailNetworkImpl", () => {
   });
 
   describe("computeGhostRailPaths", () => {
+    test("does not let a Research Facility initiate rail construction", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      expect(
+        network.computeGhostRailPaths(UnitType.ResearchFacility, tile),
+      ).toEqual([]);
+      expect(railGridMock.query).not.toHaveBeenCalled();
+      expect(game.nearbyUnits).not.toHaveBeenCalled();
+    });
+
     test("returns empty when snappable rails exist nearby", () => {
       const tile = 42 as any;
       // Accessing private railGrid via any to set up mock
@@ -239,6 +252,45 @@ describe("RailNetworkImpl", () => {
 
       const result = network.computeGhostRailPaths(UnitType.City, tile);
       expect(result).toEqual([]);
+      expect(game.nearbyUnits).toHaveBeenCalledWith(tile, 80, [
+        UnitType.City,
+        UnitType.Factory,
+        UnitType.Port,
+      ]);
+    });
+
+    test("only factories consider Research Facilities as rail destinations", () => {
+      const tile = 42 as any;
+      (network as any).railGrid = { query: vi.fn(() => new Set()) };
+
+      network.computeGhostRailPaths(UnitType.Factory, tile);
+
+      expect(game.nearbyUnits).toHaveBeenCalledWith(tile, 80, [
+        UnitType.City,
+        UnitType.Factory,
+        UnitType.Port,
+        UnitType.ResearchFacility,
+      ]);
+    });
+
+    test("a City cannot connect to a passive Research Facility", () => {
+      const cityStation = createMockStation(1);
+      cityStation.unit.type.mockReturnValue(UnitType.City);
+      const researchStation = createMockStation(2);
+      researchStation.unit.type.mockReturnValue(UnitType.ResearchFacility);
+      game.nearbyUnits.mockReturnValue([
+        { unit: researchStation.unit, distSquared: 400 },
+      ]);
+      stationManager.findStation.mockReturnValue(researchStation);
+
+      network.connectStation(cityStation);
+
+      expect(pathService.findTilePath).not.toHaveBeenCalled();
+      expect(game.nearbyUnits).toHaveBeenCalledWith(undefined, 80, [
+        UnitType.City,
+        UnitType.Factory,
+        UnitType.Port,
+      ]);
     });
 
     test("returns paths to nearby stations within range", () => {
@@ -287,7 +339,12 @@ describe("RailNetworkImpl", () => {
 
       stationManager.findStation.mockReturnValue(null);
 
-      game.nearbyUnits.mockReturnValue([{ unit: { id: 1 }, distSquared: 400 }]);
+      game.nearbyUnits.mockReturnValue([
+        {
+          unit: { id: 1, type: () => UnitType.City },
+          distSquared: 400,
+        },
+      ]);
 
       const result = network.computeGhostRailPaths(UnitType.City, tile);
       expect(result).toEqual([]);
@@ -455,6 +512,38 @@ function expectSameRailGeometry(
 }
 
 describe("factory rail preview path consistency", () => {
+  test("connects a Research Facility as a factory rail node", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+
+    const researchTile = game.ref(5, 5);
+    const factoryTile = game.ref(25, 25);
+    const facility = player.buildUnit(
+      UnitType.ResearchFacility,
+      researchTile,
+      {},
+    );
+    const previewPath = game
+      .railNetwork()
+      .computeGhostRailPaths(UnitType.Factory, factoryTile)[0];
+    expect(previewPath).toBeDefined();
+
+    const factory = player.buildUnit(UnitType.Factory, factoryTile, {});
+    game.addExecution(new FactoryExecution(factory));
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+
+    const manager = game.railNetwork().stationManager();
+    const researchStation = manager.findStation(facility);
+    const factoryStation = manager.findStation(factory);
+    expect(researchStation).not.toBeNull();
+    expect(factoryStation).not.toBeNull();
+    const railroad = researchStation!.getRailroadTo(factoryStation!);
+    expect(railroad).not.toBeNull();
+    expect(railroad!.from).toBe(factoryStation);
+  });
+
   test("matches the railway created for a promoted non-station city", async () => {
     const game = await setup("plains", {}, [
       playerInfo("player", PlayerType.Human),

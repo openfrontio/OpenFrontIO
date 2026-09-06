@@ -555,6 +555,8 @@ describe("getDefaultKeybinds", () => {
     expect(keybinds.resetGfx).toBe("KeyR");
     expect(keybinds.selectAllWarships).toBe("KeyF");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
+    expect(keybinds.buildResearchFacility).toBe("Digit0");
+    expect(keybinds.buildMIRV).toBe("Null");
   });
 
   it("handles Mac-specific modifier keys correctly", () => {

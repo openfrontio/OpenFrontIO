@@ -29,8 +29,8 @@ import { GameView } from "../../view";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+const researchFacilityIcon = assetUrl("images/ResearchFacilityIconWhite.svg");
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
-const mirvIcon = assetUrl("images/MIRVIcon.svg");
 const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
 const hydrogenBombIcon = assetUrl("images/MushroomCloudIconWhite.svg");
 const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
@@ -53,13 +53,6 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: atomBombIcon,
       description: "build_menu.desc.atom_bomb",
       key: "unit_type.atom_bomb",
-      countable: false,
-    },
-    {
-      unitType: UnitType.MIRV,
-      icon: mirvIcon,
-      description: "build_menu.desc.mirv",
-      key: "unit_type.mirv",
       countable: false,
     },
     {
@@ -116,6 +109,13 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: factoryIcon,
       description: "build_menu.desc.factory",
       key: "unit_type.factory",
+      countable: true,
+    },
+    {
+      unitType: UnitType.ResearchFacility,
+      icon: researchFacilityIcon,
+      description: "build_menu.desc.research_facility",
+      key: "unit_type.research_facility",
       countable: true,
     },
   ],

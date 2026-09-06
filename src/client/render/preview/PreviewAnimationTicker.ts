@@ -25,6 +25,7 @@ import {
   UT_MIRV_WARHEAD,
   UT_MISSILE_SILO,
   UT_PORT,
+  UT_RESEARCH_FACILITY,
   UT_SAM_LAUNCHER,
   UT_TRAIN,
   UT_TRANSPORT,
@@ -206,6 +207,7 @@ export class PreviewAnimationTicker {
       { type: UT_DEFENSE_POST, ...at(COAST, -56, -20), level: 2 },
       { type: UT_SAM_LAUNCHER, ...at(COAST, 56, -20), level: 1 },
       { type: UT_MISSILE_SILO, ...at(COAST, 0, -92), level: 1 },
+      { type: UT_RESEARCH_FACILITY, ...at(COAST, 0, -20), level: 2 },
     ];
 
     const units: UnitState[] = buildingLayouts.map((b, idx) => {

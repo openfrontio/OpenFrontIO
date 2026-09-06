@@ -1,4 +1,5 @@
 import type { TileRef } from "../../../core/game/GameMap";
+import type { ResearchSnapshot } from "../../../core/game/Research";
 
 /** TrainType enum — numeric values matching UnitState.trainType. */
 export enum TrainType {
@@ -68,13 +69,14 @@ export interface PlayerState {
   gold: number;
   /** Cumulative ship-trade revenue (live, from PlayerUpdate). */
   tradeGold: number;
-  /** Cumulative train revenue: own trains + external stops (live). */
+  /** Cumulative rail revenue: factory production plus train-stop income. */
   trainGold: number;
   /** Cumulative piracy revenue: captured-ship payouts (live). */
   piracyGold: number;
   /** Cumulative gold received from all sources (live). */
   goldEarned: number;
   troops: number;
+  research?: ResearchSnapshot;
   isTraitor: boolean;
   traitorRemainingTicks: number;
   inDoomsdayClock: boolean;

@@ -17,6 +17,7 @@ import {
   WarshipState,
 } from "./Game";
 import { TileRef } from "./GameMap";
+import type { ResearchSnapshot } from "./Research";
 
 export interface GameUpdateViewData {
   tick: number;
@@ -245,13 +246,14 @@ export interface PlayerUpdate {
   gold?: Gold;
   /** Cumulative ship-trade revenue (changes only on arrivals, so it diffs). */
   tradeGold?: Gold;
-  /** Cumulative train revenue: own trains + external stops at own stations. */
+  /** Cumulative rail revenue: factory production plus train-stop income. */
   trainGold?: Gold;
   /** Cumulative piracy revenue: captured-ship payouts. */
   piracyGold?: Gold;
   /** Cumulative gold received from all sources (workers, trade, ...). */
   goldEarned?: Gold;
   troops?: number;
+  research?: ResearchSnapshot;
   allies?: number[];
   embargoes?: Set<PlayerID>;
   isTraitor?: boolean;

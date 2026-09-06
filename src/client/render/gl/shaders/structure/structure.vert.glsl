@@ -62,9 +62,9 @@ void main() {
 
   vLocalPos = aPos - 0.5;
 
-  // Atlas UV: icons stay the same world size regardless of shape scaling,
-  // and are further shrunk by per-shape iconFill (0-1) to add padding inside the frame.
-  float uvExpand = shapeScale / uIconFills[shapeIdx];
+  // Marker and glyph sizing are independent, so changing a polygon's scale
+  // cannot make its glyph spill outside the frame.
+  float uvExpand = 1.0 / uIconFills[shapeIdx];
   float scaledX = 0.5 + (aPos.x - 0.5) * uvExpand;
   float scaledY = 0.5 + (aPos.y - 0.5) * uvExpand;
   float colU = (aInst1.x + scaledX) / float(ATLAS_COLS);

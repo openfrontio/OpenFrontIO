@@ -670,6 +670,8 @@ export class NationNukeBehavior {
             return 15_000 * level;
           case UnitType.Factory:
             return 15_000 * level;
+          case UnitType.ResearchFacility:
+            return 15_000 * level;
           default:
             return 0;
         }

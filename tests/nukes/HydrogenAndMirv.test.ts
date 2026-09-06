@@ -99,7 +99,10 @@ describe("Hydrogen Bomb and MIRV flows", () => {
 
     // Capture gold after construction started
     const goldAfterConstruction = playerWithConstruction.gold();
-    expect(goldAfterConstruction).toBeLessThan(goldBeforeSilo + siloCost);
+    // The first structure is free; paid silos still deduct their quoted cost.
+    expect(goldAfterConstruction).toBeLessThanOrEqual(
+      goldBeforeSilo + siloCost,
+    );
 
     // Attempt to launch HydrogenBomb while silo is under construction
     const targetTile = gameWithConstruction.ref(10, 10);

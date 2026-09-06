@@ -7,6 +7,7 @@ import {
   GameType,
   UnitType,
 } from "../../src/core/game/Game";
+import { ResearchType } from "../../src/core/game/Research";
 import {
   ADMIN_BOT_CLIENT_ID,
   ClientMessage,
@@ -112,6 +113,19 @@ const SAMPLE_INTENTS: StampedIntent[] = [
     config: { bots: 5, instantBuild: true },
   },
   { type: "toggle_game_start_timer", clientID: P1 },
+  {
+    type: "purchase_research",
+    clientID: P1,
+    researchType: ResearchType.Scientific,
+  },
+  {
+    type: "missile_barrage",
+    clientID: P1,
+    target: P2,
+    amount: 200,
+    mode: "selected_types",
+    targetTypes: [UnitType.Factory, UnitType.MissileSilo],
+  },
 ];
 
 const SERVER_MESSAGES: ServerMessage[] = [

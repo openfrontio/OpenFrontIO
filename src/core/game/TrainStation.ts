@@ -26,6 +26,7 @@ class TradeStationStopHandler implements TrainStopHandler {
         rel(trainOwner, stationOwner),
         trainExecution.tradeStopsVisited(),
         trainOwner,
+        station.getCluster()?.totalActiveLevels() ?? 2,
       );
     // Share revenue with the station owner if it's not the current player
     if (trainOwner !== stationOwner) {
@@ -239,6 +240,14 @@ export class Cluster {
 
   size() {
     return this.stations.size;
+  }
+
+  totalActiveLevels(): number {
+    let levels = 0;
+    for (const station of this.stations) {
+      if (station.isActive()) levels += station.unit.level();
+    }
+    return levels;
   }
 
   clear() {

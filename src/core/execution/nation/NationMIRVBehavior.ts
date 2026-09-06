@@ -3,6 +3,7 @@ import {
   Difficulty,
   Game,
   Gold,
+  MAX_MISSILE_BARRAGE_ROCKETS,
   Player,
   PlayerID,
   PlayerType,
@@ -12,7 +13,7 @@ import {
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
-import { MirvExecution } from "../MIRVExecution";
+import { MissileBarrageExecution } from "../MissileBarrageExecution";
 import { calculateTerritoryCenter } from "../Util";
 import {
   EMOJI_NUKE,
@@ -108,10 +109,11 @@ export class NationMIRVBehavior {
     if (this.game.config().isUnitDisabled(UnitType.MIRV)) {
       return false;
     }
+    if (this.game.config().isUnitDisabled(UnitType.AtomBomb)) return false;
     if (this.player.units(UnitType.MissileSilo).length === 0) {
       return false;
     }
-    if (this.player.gold() < this.cost(UnitType.MIRV)) {
+    if (this.player.gold() < this.cost(UnitType.AtomBomb)) {
       return false;
     }
 
@@ -121,19 +123,19 @@ export class NationMIRVBehavior {
 
     const inboundMIRVSender = this.selectCounterMirvTarget();
     if (inboundMIRVSender && !this.wasRecentlyMirved(inboundMIRVSender)) {
-      this.maybeSendMIRV(inboundMIRVSender);
+      this.maybeSendBarrage(inboundMIRVSender);
       return true;
     }
 
     const victoryDenialTarget = this.selectVictoryDenialTarget();
     if (victoryDenialTarget && !this.wasRecentlyMirved(victoryDenialTarget)) {
-      this.maybeSendMIRV(victoryDenialTarget);
+      this.maybeSendBarrage(victoryDenialTarget);
       return true;
     }
 
     const steamrollStopTarget = this.selectSteamrollStopTarget();
     if (steamrollStopTarget && !this.wasRecentlyMirved(steamrollStopTarget)) {
-      this.maybeSendMIRV(steamrollStopTarget);
+      this.maybeSendBarrage(steamrollStopTarget);
       return true;
     }
 
@@ -253,9 +255,9 @@ export class NationMIRVBehavior {
 
   private isInboundMIRVFrom(attacker: Player): boolean {
     if (this.player === null) throw new Error("not initialized");
-    const enemyMirvs = attacker.units(UnitType.MIRV);
-    for (const mirv of enemyMirvs) {
-      const dst = mirv.targetTile();
+    const inboundMissiles = attacker.units([UnitType.AtomBomb, UnitType.MIRV]);
+    for (const missile of inboundMissiles) {
+      const dst = missile.targetTile();
       if (!dst) continue;
       if (!this.game.hasOwner(dst)) continue;
       const owner = this.game.owner(dst);
@@ -267,14 +269,36 @@ export class NationMIRVBehavior {
   }
 
   // MIRV Execution Methods
-  private maybeSendMIRV(enemy: Player): void {
+  private maybeSendBarrage(enemy: Player): void {
     if (this.player === null) throw new Error("not initialized");
 
     this.emojiBehavior.maybeSendAttackEmoji(enemy);
 
     const centerTile = this.calculateTerritoryCenter(enemy);
-    if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
-      this.game.addExecution(new MirvExecution(this.player, centerTile));
+    if (centerTile && this.player.canBuild(UnitType.AtomBomb, centerTile)) {
+      const ready = this.player
+        .units(UnitType.MissileSilo)
+        .filter((silo) => silo.isActive() && !silo.isUnderConstruction())
+        .reduce(
+          (sum, silo) =>
+            sum + Math.max(0, silo.level() - silo.missileTimerQueue().length),
+          0,
+        );
+      const rocketCost = this.cost(UnitType.AtomBomb);
+      const affordable =
+        rocketCost === 0n
+          ? MAX_MISSILE_BARRAGE_ROCKETS
+          : Number(this.player.gold() / rocketCost);
+      const amount = Math.min(ready, affordable, MAX_MISSILE_BARRAGE_ROCKETS);
+      if (amount === 0) return;
+      this.game.addExecution(
+        new MissileBarrageExecution(
+          this.player,
+          enemy.id(),
+          amount,
+          "territory",
+        ),
+      );
       this.recordMirvHit(enemy);
       this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_NUKE);
       respondToMIRV(this.game, this.random, enemy);

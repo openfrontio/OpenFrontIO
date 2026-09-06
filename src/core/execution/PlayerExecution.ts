@@ -87,6 +87,7 @@ export class PlayerExecution implements Execution {
     this.player.addTroops(troopInc);
     const goldFromWorkers = this.config.goldAdditionRate(this.player);
     this.player.addGold(goldFromWorkers);
+    this.player.research().tick();
 
     // Record stats
     this.mg.stats().goldWork(this.player, goldFromWorkers);

@@ -11,6 +11,7 @@ import {
   GameUpdateType,
   PlayerUpdate,
 } from "../src/core/game/GameUpdates";
+import { ResearchType } from "../src/core/game/Research";
 import { makePlayerUpdate } from "./util/viewStubs";
 
 function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {
@@ -48,6 +49,31 @@ function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {
 }
 
 describe("diffPlayerUpdate", () => {
+  it("diffs and clones research points and levels", () => {
+    const levels = {
+      [ResearchType.PopulationDensity]: 0,
+      [ResearchType.PopulationGrowth]: 0,
+      [ResearchType.Economy]: 0,
+      [ResearchType.Military]: 0,
+      [ResearchType.Scientific]: 0,
+    };
+    const prev = makePlayerUpdate({ research: { levels, points: 0n } });
+    const next = makePlayerUpdate({
+      research: {
+        levels: { ...levels, [ResearchType.Economy]: 1 },
+        points: 25n,
+      },
+    });
+
+    const diff = diffPlayerUpdate(prev, next)!;
+    expect(diff.research).toEqual(next.research);
+    const target = makePlayerState({ research: prev.research });
+    applyStateUpdate(target, diff);
+    expect(target.research).toEqual(next.research);
+    expect(target.research).not.toBe(diff.research);
+    expect(target.research?.levels).not.toBe(diff.research?.levels);
+  });
+
   it("returns null when prev and next are identical", () => {
     const prev = makePlayerUpdate();
     const next = makePlayerUpdate();

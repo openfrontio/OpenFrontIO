@@ -11,6 +11,7 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
+import { RESEARCH_TYPES, ResearchType } from "../../../core/game/Research";
 import { Controller } from "../../Controller";
 import {
   ContextMenuEvent,
@@ -33,6 +34,7 @@ import {
   getPlayerIcons,
   IMAGE_ICON_KIND,
 } from "../PlayerIcons";
+import { researchIcons } from "../ResearchIcons";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import "./RelationSmiley";
@@ -43,6 +45,7 @@ const traitorIcon = assetUrl("images/TraitorIcon.svg");
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+const researchFacilityIcon = assetUrl("images/ResearchFacilityIconWhite.svg");
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
 const portIcon = assetUrl("images/PortIcon.svg");
@@ -539,6 +542,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           <div class="flex gap-0.5 lg:gap-1 items-center mt-0.5">
             ${this.displayUnitCount(player, UnitType.City, cityIcon)}
             ${this.displayUnitCount(player, UnitType.Factory, factoryIcon)}
+            ${this.displayUnitCount(
+              player,
+              UnitType.ResearchFacility,
+              researchFacilityIcon,
+            )}
             ${this.displayUnitCount(player, UnitType.Port, portIcon)}
             ${this.displayUnitCount(
               player,
@@ -552,6 +560,34 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             )}
             ${this.displayUnitCount(player, UnitType.Warship, warshipIcon)}
           </div>
+          ${player.type() !== PlayerType.Bot
+            ? html`<div
+                class="mt-1 self-center w-fit max-w-full flex items-center justify-center gap-1.5 rounded-md border border-cyan-400/25 bg-cyan-950/35 px-1.5 py-1 shadow-inner"
+                title=${translateText("research.title")}
+              >
+                <img
+                  class="size-4 opacity-60"
+                  src=${researchIcons[ResearchType.Scientific]}
+                  alt=""
+                />
+                <div class="flex flex-wrap justify-center gap-1">
+                  ${RESEARCH_TYPES.map(
+                    (type) =>
+                      html`<span
+                        class="inline-flex items-center gap-1 rounded bg-black/25 px-1 py-0.5 text-[10px] font-semibold text-cyan-200"
+                        title=${`${translateText(`research.${type}`)}: ${translateText("research.level")} ${player.researchLevel(type)}`}
+                      >
+                        <img
+                          class="size-3.5"
+                          src=${researchIcons[type]}
+                          alt=""
+                        />
+                        <span>${player.researchLevel(type)}</span>
+                      </span>`,
+                  )}
+                </div>
+              </div>`
+            : null}
         </div>
       </div>
     `;

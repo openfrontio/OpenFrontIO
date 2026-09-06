@@ -12,6 +12,7 @@ import {
 } from "./GameUpdates";
 import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
+import type { PlayerResearch, ResearchType } from "./Research";
 import { Stats } from "./Stats";
 import { ReadonlyTileSet } from "./TileSet";
 import { UnitPredicate } from "./UnitGrid";
@@ -171,11 +172,25 @@ export interface PublicGameModifiers {
 // Largest bulk-purchase amount an intent may carry (mirrored by the intent
 // schemas' max). Also the length of BuildableUnit.upgradeCosts.
 export const MAX_UPGRADE_AMOUNT = 50;
+export const MAX_MISSILE_BARRAGE_ROCKETS = 1000;
+
+export const MISSILE_BARRAGE_TARGET_MODES = [
+  "selected_types",
+  "all_buildings",
+  "territory",
+] as const;
+export type MissileBarrageTargetMode =
+  (typeof MISSILE_BARRAGE_TARGET_MODES)[number];
 
 export interface UnitInfo {
   // extraUnits shifts the cost curve as if the player already had that many
   // additional units/levels — used to price the later steps of a bulk upgrade.
-  cost: (game: Game, player: Player, extraUnits?: number) => Gold;
+  cost: (
+    game: Game,
+    player: Player,
+    extraUnits?: number,
+    isUpgrade?: boolean,
+  ) => Gold;
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
@@ -208,7 +223,20 @@ export enum UnitType {
   MIRVWarhead = "MIRV Warhead",
   Train = "Train",
   Factory = "Factory",
+  ResearchFacility = "Research Facility",
 }
+
+export const MISSILE_BARRAGE_STRUCTURE_TYPES = [
+  UnitType.City,
+  UnitType.Port,
+  UnitType.Factory,
+  UnitType.DefensePost,
+  UnitType.SAMLauncher,
+  UnitType.MissileSilo,
+  UnitType.ResearchFacility,
+] as const;
+export type MissileBarrageStructureType =
+  (typeof MISSILE_BARRAGE_STRUCTURE_TYPES)[number];
 
 export enum TrainType {
   Engine = "Engine",
@@ -237,6 +265,7 @@ export const Structures = unitTypeGroup([
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
+  UnitType.ResearchFacility,
 ] as const);
 
 export const BuildMenus = unitTypeGroup([
@@ -309,6 +338,8 @@ export interface UnitParamsMap {
   };
 
   [UnitType.Factory]: Record<string, never>;
+
+  [UnitType.ResearchFacility]: Record<string, never>;
 
   [UnitType.MissileSilo]: Record<string, never>;
 
@@ -628,7 +659,7 @@ export interface Player {
   removeGold(toRemove: Gold): Gold;
 
   // Cumulative trade revenue, surfaced on the live PlayerUpdate so clients can
-  // compute per-source gold rates (leaderboard "Ship/Train Trade Gold/min").
+  // compute per-source gold rates (leaderboard "Ship Trade/Rail Gold per min").
   // Mirrors StatsSchemas GOLD_INDEX_TRADE / GOLD_INDEX_TRAIN_* semantics.
   tradeGold(): Gold;
   addTradeGold(toAdd: Gold): void;
@@ -647,6 +678,8 @@ export interface Player {
   setTroops(troops: number): void;
   addTroops(troops: number): void;
   removeTroops(troops: number): number;
+  research(): PlayerResearch;
+  researchLevel(type: ResearchType): number;
 
   // Units
   // Fixed-arity + array overloads instead of a rest parameter: the rest array
@@ -658,6 +691,7 @@ export interface Player {
   units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
+  hasUsedFreeStructure(): boolean;
   unitsOwned(type: UnitType): number;
   buildableUnits(
     tile: TileRef | null,
@@ -981,6 +1015,7 @@ export const STRUCTURE_BULK_STEPS: readonly number[] = [5, 10];
 export interface PlayerProfile {
   relations: Record<number, Relation>;
   alliances: number[];
+  researchLevels: Record<ResearchType, number>;
 }
 
 export interface PlayerBorderTiles {

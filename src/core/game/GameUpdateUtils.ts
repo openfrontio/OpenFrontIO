@@ -6,6 +6,7 @@ import {
   GameUpdateType,
   PlayerUpdate,
 } from "./GameUpdates";
+import { RESEARCH_TYPES, ResearchSnapshot } from "./Research";
 
 /**
  * Build a partial PlayerUpdate containing only fields whose value differs
@@ -61,6 +62,7 @@ export function diffPlayerUpdate(
     prev.betrayals === next.betrayals &&
     prev.lastDeleteUnitTick === next.lastDeleteUnitTick &&
     prev.isLobbyCreator === next.isLobbyCreator &&
+    researchEqual(prev.research, next.research) &&
     numberArrayEqual(prev.allies, next.allies) &&
     numberArrayEqual(prev.targets, next.targets) &&
     stringArrayEqual(
@@ -128,6 +130,7 @@ export function diffPlayerUpdate(
     prev.lastDeleteUnitTick === next.lastDeleteUnitTick,
   );
   setIfDifferent("isLobbyCreator", prev.isLobbyCreator === next.isLobbyCreator);
+  setIfDifferent("research", researchEqual(prev.research, next.research));
   setIfDifferent("allies", numberArrayEqual(prev.allies, next.allies));
   setIfDifferent("targets", numberArrayEqual(prev.targets, next.targets));
   setIfDifferent(
@@ -183,6 +186,7 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.piracyGold !== undefined) target.piracyGold = Number(pu.piracyGold);
   if (pu.goldEarned !== undefined) target.goldEarned = Number(pu.goldEarned);
   if (pu.troops !== undefined) target.troops = pu.troops;
+  if (pu.research !== undefined) target.research = cloneResearch(pu.research);
   if (pu.isTraitor !== undefined) target.isTraitor = pu.isTraitor;
   if (pu.traitorRemainingTicks !== undefined) {
     target.traitorRemainingTicks = Math.max(0, pu.traitorRemainingTicks);
@@ -215,6 +219,23 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.alliances !== undefined) target.alliances = pu.alliances;
   if (pu.outgoingEmojis !== undefined)
     target.outgoingEmojis = pu.outgoingEmojis;
+}
+
+function researchEqual(a?: ResearchSnapshot, b?: ResearchSnapshot): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.points !== b.points) return false;
+  for (const type of RESEARCH_TYPES) {
+    if (a.levels[type] !== b.levels[type]) return false;
+  }
+  return true;
+}
+
+function cloneResearch(state: ResearchSnapshot): ResearchSnapshot {
+  return {
+    levels: { ...state.levels },
+    points: state.points,
+  };
 }
 
 function numberArrayEqual(a?: number[], b?: number[]): boolean {

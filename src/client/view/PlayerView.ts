@@ -27,6 +27,7 @@ import {
   AttackUpdate,
   PlayerUpdate,
 } from "../../core/game/GameUpdates";
+import { ResearchType } from "../../core/game/Research";
 import { UserSettings } from "../../core/game/UserSettings";
 import { PlayerState, PlayerStatic, PlayerTypeEnum } from "../render/types";
 import { themeProvider } from "../theme/ThemeProvider";
@@ -86,6 +87,7 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     piracyGold: Number(pu.piracyGold ?? 0n),
     goldEarned: Number(pu.goldEarned ?? 0n),
     troops: pu.troops!,
+    research: pu.research!,
     isTraitor: pu.isTraitor!,
     traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
     inDoomsdayClock: pu.inDoomsdayClock ?? false,
@@ -518,7 +520,7 @@ export class PlayerView {
     return this.state.tradeGold;
   }
 
-  /** Cumulative train revenue: own trains + external stops at own stations. */
+  /** Cumulative rail revenue: factory production plus train-stop income. */
   trainGold(): number {
     return this.state.trainGold;
   }
@@ -535,6 +537,10 @@ export class PlayerView {
 
   troops(): number {
     return this.state.troops;
+  }
+
+  researchLevel(type: ResearchType): number {
+    return this.state.research?.levels[type] ?? 0;
   }
 
   totalUnitLevels(type: UnitType): number {

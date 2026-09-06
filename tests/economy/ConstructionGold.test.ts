@@ -37,9 +37,10 @@ describe("Construction economy", () => {
     other.conquer(game.ref(10, 10));
   });
 
-  test("City charges gold once and no refund thereafter (allow passive income)", () => {
+  test("First City is free and grants no later refund", () => {
     const target = game.ref(0, 10);
     const cost = game.unitInfo(UnitType.City).cost(game, player);
+    expect(cost).toBe(0n);
     player.addGold(cost);
     expect(player.gold()).toBe(cost);
 
@@ -52,7 +53,6 @@ describe("Construction economy", () => {
     const afterBuild = player.gold();
     const ticksAfterBuild = BigInt(game.ticks() - startTick);
     const passivePerTick = 100n; // DefaultConfig goldAdditionRate for humans
-    expect(afterBuild < cost).toBe(true); // cost was deducted
     expect(afterBuild <= ticksAfterBuild * passivePerTick).toBe(true); // only passive income allowed
 
     // Advance through construction duration
@@ -61,8 +61,7 @@ describe("Construction economy", () => {
 
     const finalGold = player.gold();
     const ticksElapsed = BigInt(game.ticks() - startTick);
-    // Ensure no refund equal to cost snuck back in; only passive income accumulated
-    expect(finalGold < cost).toBe(true);
+    // Ensure only passive income accumulated after the free construction.
     expect(finalGold <= ticksElapsed * passivePerTick).toBe(true);
 
     // Structure exists and is active

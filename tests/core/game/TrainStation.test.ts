@@ -132,7 +132,7 @@ describe("TrainStation", () => {
     expect(gameStats.trainSelfTrade).toHaveBeenCalledWith(trainOwner, 500n);
   });
 
-  it("passes tradeStopsVisited to trainGold", () => {
+  it("passes visited stops and connected-building count to trainGold", () => {
     unit.type.mockReturnValue(UnitType.City);
     const trainGoldSpy = vi.fn().mockReturnValue(500n);
     (game.config as any).mockReturnValue({
@@ -140,6 +140,10 @@ describe("TrainStation", () => {
     });
     (trainExecution as any).tradeStopsVisited = vi.fn().mockReturnValue(3);
     const station = new TrainStation(game, unit);
+    station.setCluster({
+      totalActiveLevels: () => 7,
+      removeStation: vi.fn(),
+    } as unknown as Cluster);
 
     station.onTrainStop(trainExecution);
 
@@ -147,6 +151,7 @@ describe("TrainStation", () => {
       expect.any(String),
       3,
       expect.anything(),
+      7,
     );
   });
 
@@ -203,6 +208,29 @@ describe("TrainStation", () => {
     expect(station.getCluster()).toBe(cluster);
   });
 
+  it("sums current active station levels without double-counting", () => {
+    const cluster = new Cluster();
+    unit.level.mockReturnValue(1);
+    const station = new TrainStation(game, unit);
+    const otherUnit = {
+      type: vi.fn(() => UnitType.Factory),
+      isActive: vi.fn(() => true),
+      level: vi.fn(() => 2),
+    } as unknown as Mocked<Unit>;
+    const otherStation = new TrainStation(game, otherUnit);
+
+    cluster.addStation(station);
+    cluster.addStation(station);
+    cluster.addStation(otherStation);
+    expect(cluster.totalActiveLevels()).toBe(3);
+
+    unit.level.mockReturnValue(4);
+    expect(cluster.totalActiveLevels()).toBe(6);
+
+    otherUnit.isActive.mockReturnValue(false);
+    expect(cluster.totalActiveLevels()).toBe(4);
+  });
+
   it("returns tile and active status", () => {
     const station = new TrainStation(game, unit);
     expect(station.tile()).toEqual({ x: 0, y: 0 });
@@ -237,33 +265,39 @@ describe("Config.trainGold trade stop penalty", () => {
 
   it("returns full base gold within free window (stops 0-9)", () => {
     // first 10 stops (0-9) are free — no penalty
-    expect(config.trainGold("self", 0, mockPlayer)).toBe(10_000n);
-    expect(config.trainGold("self", 9, mockPlayer)).toBe(10_000n);
+    expect(config.trainGold("self", 0, mockPlayer)).toBe(30_000n);
+    expect(config.trainGold("self", 9, mockPlayer)).toBe(30_000n);
   });
 
   it("reduces gold by 5k per stop after the free window", () => {
     // stop 10: effective = 10-9 = 1 -> 10k - 5k = 5k
-    expect(config.trainGold("self", 10, mockPlayer)).toBe(5_000n);
+    expect(config.trainGold("self", 10, mockPlayer)).toBe(15_000n);
   });
 
   it("floors at 5k when penalty exceeds base gold", () => {
     // stop 12: effective = 3 -> 10k - 15k -> floor at 5k
-    expect(config.trainGold("self", 12, mockPlayer)).toBe(5_000n);
+    expect(config.trainGold("self", 12, mockPlayer)).toBe(15_000n);
   });
 
   it("floors at 5k for ally base even with heavy penalty", () => {
     // ally base 35k, stop 20: effective = 11 -> penalty 55k -> floor at 5k
-    expect(config.trainGold("ally", 20, mockPlayer)).toBe(5_000n);
+    expect(config.trainGold("ally", 20, mockPlayer)).toBe(15_000n);
   });
 
   it("ally base gold reduces correctly after free window", () => {
     // ally base 35k, stop 11: effective = 2 -> 35k - 10k = 25k
-    expect(config.trainGold("ally", 11, mockPlayer)).toBe(25_000n);
+    expect(config.trainGold("ally", 11, mockPlayer)).toBe(75_000n);
   });
 
   it("other/team base gold reduces correctly after free window", () => {
     // other base 25k, stop 10: effective = 1 -> 25k - 5k = 20k
-    expect(config.trainGold("other", 10, mockPlayer)).toBe(20_000n);
-    expect(config.trainGold("team", 10, mockPlayer)).toBe(20_000n);
+    expect(config.trainGold("other", 10, mockPlayer)).toBe(60_000n);
+    expect(config.trainGold("team", 10, mockPlayer)).toBe(60_000n);
+  });
+
+  it("adds 1.5x of the old payout for each connected building level", () => {
+    expect(config.trainGold("self", 0, mockPlayer, 2)).toBe(30_000n);
+    expect(config.trainGold("self", 0, mockPlayer, 3)).toBe(45_000n);
+    expect(config.trainGold("self", 0, mockPlayer, 5)).toBe(75_000n);
   });
 });

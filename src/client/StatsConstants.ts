@@ -20,6 +20,7 @@ export const COLUMN_IDS = [
   "cities",
   "ports",
   "factories",
+  "researchFacilities",
   "silos",
   "sams",
   "warships",

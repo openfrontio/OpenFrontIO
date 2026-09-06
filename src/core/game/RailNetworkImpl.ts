@@ -107,6 +107,12 @@ export class RailNetworkImpl implements RailNetwork {
     }
   }
 
+  registerPassiveStation(station: TrainStation): void {
+    this._stationManager.addStation(station);
+    const cluster = new Cluster();
+    cluster.addStation(station);
+  }
+
   recomputeClusters() {
     if (this.dirtyClusters.size === 0) return;
 
@@ -253,10 +259,9 @@ export class RailNetworkImpl implements RailNetwork {
     const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
     const maxPathSize = this.game.config().railroadMaxSize();
 
-    // A City or Port only joins the rail network when a Factory is already in
-    // range (see CityExecution/PortExecution). A Factory always becomes a
-    // station and pulls nearby City/Port/Factory into the network itself, so
-    // it needs no pre-existing factory to connect to.
+    // Cities and Ports can join an existing factory network. Research
+    // Facilities are deliberately passive and are promoted only when a new
+    // Factory is built nearby.
     const buildingFactory = unitType === UnitType.Factory;
     if (
       !buildingFactory &&
@@ -265,11 +270,9 @@ export class RailNetworkImpl implements RailNetwork {
       return [];
     }
 
-    const neighbors = this.game.nearbyUnits(tile, maxRange, [
-      UnitType.City,
-      UnitType.Factory,
-      UnitType.Port,
-    ]);
+    const neighborTypes = [UnitType.City, UnitType.Factory, UnitType.Port];
+    if (buildingFactory) neighborTypes.push(UnitType.ResearchFacility);
+    const neighbors = this.game.nearbyUnits(tile, maxRange, neighborTypes);
     neighbors.sort((a, b) => a.distSquared - b.distSquared);
 
     const paths: TileRef[][] = [];
@@ -278,12 +281,20 @@ export class RailNetworkImpl implements RailNetwork {
       // Limit to the closest 5 stations to avoid running too many pathfinding calls.
       if (paths.length >= 5) break;
       if (neighbor.distSquared <= minRangeSquared) continue;
+      if (
+        !buildingFactory &&
+        neighbor.unit.type() === UnitType.ResearchFacility
+      ) {
+        continue;
+      }
 
       const neighborStation = this._stationManager.findStation(neighbor.unit);
 
       // Building a factory connects to nearby structures even if they aren't
       // stations yet — they get promoted to stations when the factory is
-      // built. For a city/port, only existing stations are relevant.
+      // built. For a city/port, only existing stations are relevant. Research
+      // Facilities never initiate this lookup because they are not accepted
+      // by computeGhostRailPaths above.
       let targetTile: TileRef;
       if (neighborStation) {
         const alreadyReachable = connectedStations.some(
@@ -306,7 +317,9 @@ export class RailNetworkImpl implements RailNetwork {
       // factory promotes it after creating its own station. The city then
       // initiates the real connection back to the factory.
       const path =
-        !neighborStation && neighbor.unit.type() === UnitType.City
+        !neighborStation &&
+        (neighbor.unit.type() === UnitType.City ||
+          neighbor.unit.type() === UnitType.ResearchFacility)
           ? this.pathService.findTilePath(targetTile, tile)
           : this.pathService.findTilePath(tile, targetTile);
       if (path.length > 0 && path.length < maxPathSize) {
@@ -321,10 +334,13 @@ export class RailNetworkImpl implements RailNetwork {
   }
 
   private connectToNearbyStations(station: TrainStation) {
+    const connectingFactory = station.unit.type() === UnitType.Factory;
+    const neighborTypes = [UnitType.City, UnitType.Factory, UnitType.Port];
+    if (connectingFactory) neighborTypes.push(UnitType.ResearchFacility);
     const neighbors = this.game.nearbyUnits(
       station.tile(),
       this.game.config().trainStationMaxRange(),
-      [UnitType.City, UnitType.Factory, UnitType.Port],
+      neighborTypes,
     );
 
     const editedClusters = new Set<Cluster>();
@@ -332,6 +348,12 @@ export class RailNetworkImpl implements RailNetwork {
 
     for (const neighbor of neighbors) {
       if (neighbor.unit === station.unit) continue;
+      if (
+        !connectingFactory &&
+        neighbor.unit.type() === UnitType.ResearchFacility
+      ) {
+        continue;
+      }
       const neighborStation = this._stationManager.findStation(neighbor.unit);
       if (!neighborStation) continue;
 

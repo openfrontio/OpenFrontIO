@@ -8,6 +8,7 @@ type PlayerSummaryMetricKey =
   | "cities"
   | "ports"
   | "factories"
+  | "researchFacilities"
   | "defensePosts"
   | "transports"
   | "landings"
@@ -40,6 +41,7 @@ const METRIC_LABELS: Record<PlayerSummaryMetricKey, string> = {
   cities: "player_stats_tree.stats_cities_per_game",
   ports: "player_stats_tree.stats_ports_per_game",
   factories: "player_stats_tree.stats_factories_per_game",
+  researchFacilities: "player_stats_tree.stats_research_facilities_per_game",
   defensePosts: "player_stats_tree.stats_defense_posts_per_game",
   transports: "player_stats_tree.stats_transports_sent_per_game",
   landings: "player_stats_tree.stats_transports_landed_per_game",
@@ -62,6 +64,7 @@ const METRIC_SHORT_LABELS: Record<PlayerSummaryMetricKey, string> = {
   cities: "player_stats_table.built",
   ports: "player_stats_table.built",
   factories: "player_stats_table.built",
+  researchFacilities: "player_stats_table.built",
   defensePosts: "player_stats_table.built",
   transports: "player_stats_tree.stats_transports_sent_short",
   landings: "player_stats_tree.stats_transports_landed_short",
@@ -80,7 +83,13 @@ const METRIC_SHORT_LABELS: Record<PlayerSummaryMetricKey, string> = {
 const METRIC_GROUPS = [
   {
     heading: "player_stats_tree.stats_group_buildings",
-    keys: ["cities", "ports", "factories", "defensePosts"],
+    keys: [
+      "cities",
+      "ports",
+      "factories",
+      "researchFacilities",
+      "defensePosts",
+    ],
   },
   {
     heading: "player_stats_tree.stats_group_naval",
@@ -103,6 +112,7 @@ const UNIT_ICONS = {
   city: "images/CityIconWhite.svg",
   port: "images/PortIcon.svg",
   factory: "images/FactoryIconWhite.svg",
+  researchFacility: "images/ResearchFacilityIconWhite.svg",
   defensePost: "images/ShieldIconWhite.svg",
   transport: "images/BoatIconWhite.svg",
   tradeShip: "images/TradeShipIconWhite.svg",
@@ -121,6 +131,7 @@ const UNIT_ICON_SCALES: Partial<Record<UnitIconName, number>> = {
   city: 1.1,
   port: 1.11,
   factory: 1.1,
+  researchFacility: 1.1,
   warship: 1.1,
   tradeShip: 0.5,
   gold: 0.9,
@@ -131,6 +142,7 @@ const METRIC_ICONS: Record<PlayerSummaryMetricKey, UnitIconName> = {
   cities: "city",
   ports: "port",
   factories: "factory",
+  researchFacilities: "researchFacility",
   defensePosts: "defensePost",
   transports: "transport",
   landings: "transport",
@@ -155,6 +167,7 @@ const METRIC_TONES: Record<PlayerSummaryMetricKey, string> = {
   cities: UNITS_TONE,
   ports: UNITS_TONE,
   factories: UNITS_TONE,
+  researchFacilities: UNITS_TONE,
   defensePosts: UNITS_TONE,
   transports: NAVAL_TONE,
   landings: NAVAL_TONE,
@@ -203,6 +216,7 @@ export function buildPlayerStatsSummary(
   const cities = stats?.units?.city?.[0] ?? 0n;
   const ports = stats?.units?.port?.[0] ?? 0n;
   const factories = stats?.units?.fact?.[0] ?? 0n;
+  const researchFacilities = stats?.units?.rshf?.[0] ?? 0n;
   const defensePosts = stats?.units?.defp?.[0] ?? 0n;
   const warships = stats?.units?.wshp?.[0] ?? 0n;
   // Warheads actually launched. mirvw is excluded: it counts the
@@ -247,6 +261,10 @@ export function buildPlayerStatsSummary(
       {
         key: "factories",
         value: formatPerGame(factories, games),
+      },
+      {
+        key: "researchFacilities",
+        value: formatPerGame(researchFacilities, games),
       },
       {
         key: "defensePosts",

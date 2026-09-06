@@ -17,12 +17,16 @@ import {
   GameMode,
   GameType,
   HumansVsNations,
+  MAX_MISSILE_BARRAGE_ROCKETS,
   MAX_UPGRADE_AMOUNT,
+  MISSILE_BARRAGE_STRUCTURE_TYPES,
+  MISSILE_BARRAGE_TARGET_MODES,
   Quads,
   RankedType,
   Trios,
   UnitType,
 } from "./game/Game";
+import { ResearchType } from "./game/Research";
 import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable, LOBBY_LABEL_MAX } from "./Util";
 
@@ -54,7 +58,9 @@ export type Intent =
   | KickPlayerIntent
   | TogglePauseIntent
   | UpdateGameConfigIntent
-  | ToggleGameStartTimer;
+  | ToggleGameStartTimer
+  | PurchaseResearchIntent
+  | MissileBarrageIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -74,6 +80,10 @@ export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type UpgradeStructureIntent = z.infer<
   typeof UpgradeStructureIntentSchema
 >;
+export type PurchaseResearchIntent = z.infer<
+  typeof PurchaseResearchIntentSchema
+>;
+export type MissileBarrageIntent = z.infer<typeof MissileBarrageIntentSchema>;
 export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
 export type MarkDisconnectedIntent = z.infer<
@@ -668,11 +678,28 @@ export const BuildUnitIntentSchema = z.object({
   amount: zb.uint({ min: 1, max: MAX_UPGRADE_AMOUNT }).optional(),
 });
 
+export const MissileBarrageIntentSchema = z.object({
+  type: z.literal("missile_barrage"),
+  target: MappedID,
+  amount: zb.uint({ min: 1, max: MAX_MISSILE_BARRAGE_ROCKETS }),
+  mode: z.enum(MISSILE_BARRAGE_TARGET_MODES),
+  targetTypes: z
+    .enum(MISSILE_BARRAGE_STRUCTURE_TYPES)
+    .array()
+    .max(7)
+    .optional(),
+});
+
 export const UpgradeStructureIntentSchema = z.object({
   type: z.literal("upgrade_structure"),
   unit: z.enum(UnitType),
   unitId: zb.uint(),
   amount: zb.uint({ min: 1, max: MAX_UPGRADE_AMOUNT }).optional(),
+});
+
+export const PurchaseResearchIntentSchema = z.object({
+  type: z.literal("purchase_research"),
+  researchType: z.enum(ResearchType),
 });
 
 export const CancelAttackIntentSchema = z.object({
@@ -763,6 +790,8 @@ export const IntentSchema = z.discriminatedUnion("type", [
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
   ToggleGameStartTimerIntentSchema,
+  PurchaseResearchIntentSchema,
+  MissileBarrageIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

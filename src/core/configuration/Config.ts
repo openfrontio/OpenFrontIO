@@ -11,6 +11,7 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  Structures,
   TerrainType,
   TerraNullius,
   Tick,
@@ -18,6 +19,7 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
+import { researchMultiplier, ResearchType } from "../game/Research";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
@@ -403,15 +405,28 @@ export class Config {
     return this.startingGoldFor(playerInfo);
   }
 
-  trainSpawnRate(numPlayerFactories: number): number {
-    // hyperbolic decay, midpoint at 10 factories
-    // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 15;
+  trainSpawnIntervalTicks(): Tick {
+    return 150;
+  }
+
+  factoryGold(
+    level: number,
+    directRailConnections: number,
+    player: Player | PlayerView,
+  ): Gold {
+    const safeLevel = Math.max(1, Math.floor(level));
+    const safeConnections = Math.max(0, Math.floor(directRailConnections));
+    // Factories provide a strong baseline, while each direct rail connection
+    // adds a larger bonus. The level curve below scales both components.
+    const base = (400 + 450 * safeConnections) * 3;
+    const levelScaled = (base * (3 * safeLevel - 1)) / 2;
+    return toInt(levelScaled * this.productiveGoldMultiplierFor(player));
   }
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
     player: Player | PlayerView,
+    connectedBuildingLevels = 2,
   ): Gold {
     // No penalty for the first 10 cities.
     citiesVisited = Math.max(0, citiesVisited - 9);
@@ -430,7 +445,17 @@ export class Config {
     }
     const distPenalty = citiesVisited * 5_000;
     const gold = Math.max(5000, baseGold - distPenalty);
-    return toInt(gold * this.goldMultiplierFor(player));
+    // A two-level route earns triple the previous payout. Every additional
+    // active building level in the connected rail network adds another 1.5x
+    // of the old payout, rewarding upgrades without exponential growth.
+    const safeConnectedLevels = Math.max(
+      2,
+      Math.floor(connectedBuildingLevels),
+    );
+    const networkMultiplier = 3 + (safeConnectedLevels - 2) * 1.5;
+    return toInt(
+      gold * networkMultiplier * this.productiveGoldMultiplierFor(player),
+    );
   }
 
   trainStationMinRange(): number {
@@ -443,11 +468,18 @@ export class Config {
     return this.trainStationMaxRange() * 1.4142;
   }
 
-  tradeShipGold(dist: number, player: Player | PlayerView): Gold {
+  tradeShipGold(
+    dist: number,
+    player: Player | PlayerView,
+    productive = true,
+  ): Gold {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
     const baseGold = 75_000 / (1 + exp(-0.03 * (dist - debuff))) + 50 * dist;
-    return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
+    const multiplier = productive
+      ? this.productiveGoldMultiplierFor(player)
+      : this.goldMultiplierFor(player);
+    return BigInt(Math.floor(baseGold * multiplier));
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
@@ -563,7 +595,7 @@ export class Config {
         info = {
           cost: this.costWrapper(
             (numUnits: number) =>
-              Math.min(3_000_000, (numUnits + 1) * 1_500_000),
+              Math.min(2_000_000, (numUnits + 1) * 1_500_000),
             UnitType.SAMLauncher,
           ),
           constructionDuration: this.instantBuild()
@@ -590,6 +622,16 @@ export class Config {
             UnitType.Port,
           ),
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          upgradable: true,
+        };
+        break;
+      case UnitType.ResearchFacility:
+        info = {
+          cost: this.costWrapper(
+            (numUnits: number) => Math.min(2_000_000, pow2(numUnits) * 250_000),
+            UnitType.ResearchFacility,
+          ),
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
           upgradable: true,
         };
         break;
@@ -637,6 +679,25 @@ export class Config {
     return base;
   }
 
+  private productiveGoldMultiplierFor(player: Player | PlayerView): number {
+    return (
+      this.goldMultiplierFor(player) *
+      researchMultiplier(
+        this.researchLevelFor(player, ResearchType.Economy),
+        2.5,
+      )
+    );
+  }
+
+  private researchLevelFor(
+    player: Player | PlayerView,
+    type: ResearchType,
+  ): number {
+    return typeof player.researchLevel === "function"
+      ? player.researchLevel(type)
+      : 0;
+  }
+
   public conquerGoldAmount(captured: Player): Gold {
     if (
       captured.type() === PlayerType.Bot ||
@@ -660,11 +721,25 @@ export class Config {
   private costWrapper(
     costFn: (units: number) => number,
     ...types: UnitType[]
-  ): (g: Game, p: Player, extraUnits?: number) => bigint {
-    return (game: Game, player: Player, extraUnits: number = 0) => {
+  ): (g: Game, p: Player, extraUnits?: number, isUpgrade?: boolean) => bigint {
+    return (
+      game: Game,
+      player: Player,
+      extraUnits: number = 0,
+      isUpgrade: boolean = false,
+    ) => {
       if (
         player.type() === PlayerType.Human &&
         this.hasInfiniteGoldFor(player)
+      ) {
+        return 0n;
+      }
+      if (
+        !isUpgrade &&
+        Structures.has(types[0]) &&
+        (player.type() === PlayerType.Human ||
+          player.type() === PlayerType.Nation) &&
+        !player.hasUsedFreeStructure()
       ) {
         return 0n;
       }
@@ -922,7 +997,7 @@ export class Config {
   }
 
   maxTroops(player: Player | PlayerView): number {
-    const maxTroops =
+    let maxTroops =
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
         : 2 * (pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
@@ -934,33 +1009,40 @@ export class Config {
             this.cityTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
-      return maxTroops / 3;
+      maxTroops /= 3;
+    } else if (player.type() === PlayerType.Nation) {
+      switch (this._gameConfig.difficulty) {
+        case Difficulty.Easy:
+          maxTroops *= 0.5;
+          break;
+        case Difficulty.Medium:
+          maxTroops *= 0.75;
+          break;
+        case Difficulty.Hard:
+          break;
+        case Difficulty.Impossible:
+          maxTroops *= 1.25;
+          break;
+        default:
+          assertNever(this._gameConfig.difficulty);
+      }
     }
-
-    if (player.type() === PlayerType.Human) {
-      return maxTroops;
-    }
-
-    switch (this._gameConfig.difficulty) {
-      case Difficulty.Easy:
-        return maxTroops * 0.5;
-      case Difficulty.Medium:
-        return maxTroops * 0.75;
-      case Difficulty.Hard:
-        return maxTroops * 1; // Like humans
-      case Difficulty.Impossible:
-        return maxTroops * 1.25;
-      default:
-        assertNever(this._gameConfig.difficulty);
-    }
+    return (
+      maxTroops *
+      researchMultiplier(
+        this.researchLevelFor(player, ResearchType.PopulationDensity),
+        5,
+      )
+    );
   }
 
   troopIncreaseRate(player: Player | PlayerView): number {
     const max = this.maxTroops(player);
+    const population = player.troops();
 
-    let toAdd = 10 + pow(player.troops(), 0.73) / 4;
+    let toAdd = 10 + pow(population, 0.73) / 4;
 
-    const ratio = 1 - player.troops() / max;
+    const ratio = 1 - population / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
@@ -986,11 +1068,18 @@ export class Config {
       }
     }
 
-    return Math.min(player.troops() + toAdd, max) - player.troops();
+    if (toAdd > 0) {
+      toAdd *= researchMultiplier(
+        this.researchLevelFor(player, ResearchType.PopulationGrowth),
+        2.5,
+      );
+    }
+
+    return Math.min(population + toAdd, max) - population;
   }
 
   goldAdditionRate(player: Player | PlayerView): Gold {
-    const multiplier = this.goldMultiplierFor(player);
+    const multiplier = this.productiveGoldMultiplierFor(player);
     let baseRate: bigint;
     if (player.type() === PlayerType.Bot) {
       baseRate = 50n;

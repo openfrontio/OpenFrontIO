@@ -1,5 +1,5 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
+import { PlayerBuildableUnitType, PlayerID, UnitType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { Platform } from "./Platform";
 import { UIState } from "./UIState";
@@ -11,6 +11,14 @@ export class MouseUpEvent implements GameEvent {
     public readonly x: number,
     public readonly y: number,
   ) {}
+}
+
+export class OpenMissileBarrageEvent implements GameEvent {}
+
+export class CancelMissileBarrageTargetingEvent implements GameEvent {}
+
+export class MissileBarrageTargetSelectedEvent implements GameEvent {
+  constructor(public readonly targetID: PlayerID) {}
 }
 
 export class MouseOverEvent implements GameEvent {
@@ -240,6 +248,7 @@ export class InputHandler {
   // True while any warship/boat is selected (single or multi) — right-click
   // cancels the selection instead of opening the context menu (#4692).
   private unitSelectionActive: boolean = false;
+  private missileBarrageTargeting = false;
 
   // Touch long-press state
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -268,6 +277,23 @@ export class InputHandler {
 
   initialize() {
     this.keybinds = this.userSettings.keybinds(Platform.isMac);
+
+    this.eventBus.on(OpenMissileBarrageEvent, () => {
+      this.missileBarrageTargeting = true;
+      this.canvas.style.cursor = "crosshair";
+    });
+    const stopMissileBarrageTargeting = () => {
+      this.missileBarrageTargeting = false;
+      this.canvas.style.cursor = "";
+    };
+    this.eventBus.on(
+      CancelMissileBarrageTargetingEvent,
+      stopMissileBarrageTargeting,
+    );
+    this.eventBus.on(
+      MissileBarrageTargetSelectedEvent,
+      stopMissileBarrageTargeting,
+    );
 
     this.addKeybindAndEvent(this.keybinds.boatAttack, () => {
       this.eventBus.emit(new DoBoatAttackEvent());
@@ -375,8 +401,13 @@ export class InputHandler {
       "buildAtomBomb",
       "buildHydrogenBomb",
       "buildWarship",
-      "buildMIRV",
+      "buildResearchFacility",
     ];
+    this.addKeybindAndEvent(
+      this.keybinds.buildMIRV,
+      () => this.eventBus.emit(new OpenMissileBarrageEvent()),
+      () => this.canUseBuildKeybinds(),
+    );
     buildKeybinds = buildKeybinds.map((i: string): string => {
       return this.keybinds[i];
     });
@@ -601,6 +632,11 @@ export class InputHandler {
       if (e.code === "Escape") {
         e.preventDefault();
         let closedUI = false;
+
+        if (this.missileBarrageTargeting) {
+          this.eventBus.emit(new CancelMissileBarrageTargetingEvent());
+          closedUI = true;
+        }
 
         if (this.uiState.ghostStructure !== null) {
           this.setGhostStructure(null);
@@ -871,6 +907,7 @@ export class InputHandler {
 
       if (
         !this.userSettings.leftClickOpensMenu() ||
+        this.missileBarrageTargeting ||
         event.shiftKey ||
         this.gameView.inSpawnPhase() || // No Radial Menu during spawn phase, only spawn point selection
         this.uiState.ghostStructure !== null // Block radial menu on left click if building
@@ -1139,7 +1176,7 @@ export class InputHandler {
       { key: "buildAtomBomb", type: UnitType.AtomBomb },
       { key: "buildHydrogenBomb", type: UnitType.HydrogenBomb },
       { key: "buildWarship", type: UnitType.Warship },
-      { key: "buildMIRV", type: UnitType.MIRV },
+      { key: "buildResearchFacility", type: UnitType.ResearchFacility },
     ];
     for (const { key, type } of buildKeybinds) {
       if (this.keybindMatchesEvent({ code, shiftKey }, this.keybinds[key]))

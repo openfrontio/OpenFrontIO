@@ -1,8 +1,11 @@
 import {
   AutoUpgradeEvent,
+  CancelMissileBarrageTargetingEvent,
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
   InputHandler,
+  MissileBarrageTargetSelectedEvent,
+  OpenMissileBarrageEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
@@ -291,6 +294,47 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Left-click menu with ghost structure (#4789)", () => {
+    test("missile barrage country selection captures the map click", () => {
+      inputHandler.initialize();
+      inputHandler["userSettings"].leftClickOpensMenu = () => true;
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      eventBus.emit(new OpenMissileBarrageEvent());
+      expect(mockCanvas.style.cursor).toBe("crosshair");
+
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+      });
+      inputHandler["lastPointerDownX"] = 149;
+      inputHandler["lastPointerDownY"] = 249;
+      inputHandler["onPointerUp"](pointerEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseUpEvent");
+      expect(emittedTypes).not.toContain("ContextMenuEvent");
+
+      eventBus.emit(new MissileBarrageTargetSelectedEvent("enemy"));
+      expect(mockCanvas.style.cursor).toBe("");
+    });
+
+    test("Escape cancels missile barrage country selection", () => {
+      inputHandler.initialize();
+      const cancellations: CancelMissileBarrageTargetingEvent[] = [];
+      eventBus.on(CancelMissileBarrageTargetingEvent, (event) =>
+        cancellations.push(event),
+      );
+      eventBus.emit(new OpenMissileBarrageEvent());
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));
+
+      expect(cancellations).toHaveLength(1);
+      expect(mockCanvas.style.cursor).toBe("");
+    });
+
     test("should emit MouseUpEvent and not ContextMenuEvent when placing a ghost structure with left-click menu enabled", () => {
       const mockEmit = vi.spyOn(eventBus, "emit");
 
@@ -691,11 +735,13 @@ describe("InputHandler AutoUpgrade", () => {
       expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.MissileSilo);
     });
 
-    test("Numpad0 sets ghost structure to MIRV when buildMIRV is Digit0", () => {
+    test("Numpad0 sets ghost structure to ResearchFacility", () => {
       window.dispatchEvent(
         new KeyboardEvent("keyup", { code: "Numpad0", key: "0" }),
       );
-      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.MIRV);
+      expect(inputHandler["uiState"].ghostStructure).toBe(
+        UnitType.ResearchFacility,
+      );
     });
 
     test("does not set ghost structure when the player is dead", () => {
@@ -715,7 +761,7 @@ describe("InputHandler AutoUpgrade", () => {
       inputHandler.destroy();
       testSettings.setKeybinds({
         buildCity: "Numpad1",
-        buildMIRV: "Numpad0",
+        buildResearchFacility: "Numpad0",
       });
       const uiState: UIState = {
         attackRatio: 20,
@@ -736,11 +782,13 @@ describe("InputHandler AutoUpgrade", () => {
       );
       expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.City);
     });
-    test("Digit0 sets ghost structrue to MIRV when buildMIRV is Numpad0", () => {
+    test("Digit0 sets ghost structure to ResearchFacility when bound to Numpad0", () => {
       window.dispatchEvent(
         new KeyboardEvent("keyup", { code: "Digit0", key: "0" }),
       );
-      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.MIRV);
+      expect(inputHandler["uiState"].ghostStructure).toBe(
+        UnitType.ResearchFacility,
+      );
     });
   });
 

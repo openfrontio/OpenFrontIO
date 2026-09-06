@@ -524,6 +524,18 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="buildResearchFacility"
+        label=${translateText("user_setting.build_research_facility")}
+        description=${translateText(
+          "user_setting.build_research_facility_desc",
+        )}
+        defaultKey=${this.defaultKeybinds.buildResearchFacility}
+        .value=${this.getKeyValue("buildResearchFacility")}
+        .display=${this.getKeyChar("buildResearchFacility")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="buildMIRV"
         label=${translateText("user_setting.build_mirv")}
         description=${translateText("user_setting.build_mirv_desc")}

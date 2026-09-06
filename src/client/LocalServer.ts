@@ -188,7 +188,17 @@ export class LocalServer {
         }
         return;
       }
-      // Don't process non-pause intents during replays or while paused
+      // Retain research purchases made while a single-player game is paused
+      // and apply them in order on the unpause turn.
+      if (
+        !this.lobbyConfig.gameRecord &&
+        this.paused &&
+        stampedIntent.type === "purchase_research"
+      ) {
+        this.intents.push(stampedIntent);
+        return;
+      }
+      // Don't process other non-pause intents during replays or while paused.
       if (this.lobbyConfig.gameRecord || this.paused) {
         return;
       }
