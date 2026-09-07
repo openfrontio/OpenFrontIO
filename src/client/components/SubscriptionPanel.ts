@@ -26,6 +26,17 @@ import "./PlutoniumIcon";
  */
 export const STEAM_CANCEL_IN_APP = false;
 
+/**
+ * S1 (OPE-230; lead decision 6 Sept 2026, pending Josh): may a Steam
+ * subscriber change tier in-app? BLOCKED at launch, and mirrored here so the
+ * panel does not offer a button whose only outcome is the server's 409 — a
+ * dead control on a billing surface is a support ticket. The copy says what
+ * to do instead (cancel in the Steam account, subscribe to the new tier after
+ * the current period). Flip alongside the server's
+ * STEAM_TIER_CHANGE_ENABLED, never on its own.
+ */
+export const STEAM_TIER_CHANGE_IN_APP = false;
+
 @customElement("subscription-panel")
 export class SubscriptionPanel extends LitElement {
   @property({ type: Object })
@@ -274,10 +285,11 @@ export class SubscriptionPanel extends LitElement {
    * page — the server's portal route returns that static URL for a Steam
    * row — which is not a payment origin, so the desktop shell lets it through
    * and the button stays on EVERY surface (unlike Stripe's, which the
-   * packaged build must not offer). Change Tier goes to the store as usual:
-   * on Steam the change is a fresh checkout for the new tier. Cancel is a
-   * policy decision, STEAM_CANCEL_IN_APP; when hidden, the copy says where
-   * cancelling (and re-enabling) lives.
+   * packaged build must not offer). Change Tier and Cancel are the two
+   * launch policies, STEAM_TIER_CHANGE_IN_APP and STEAM_CANCEL_IN_APP; when
+   * hidden, the copy says where cancelling lives and how a tier is changed.
+   * Nothing here claims an agreement can be re-enabled: un-cancel is
+   * unmeasured on Steam (design §4.6 — a re-subscribe is a new agreement).
    */
   private renderSteamActions(): TemplateResult {
     const manage = html`<o-button
@@ -288,27 +300,38 @@ export class SubscriptionPanel extends LitElement {
       translationKey="account_modal.manage_subscription"
       @click=${this.handleManage}
     ></o-button>`;
+    if (this.sub.cancelAtPeriodEnd) {
+      // No Reactivate: there is no un-cancel API. The subscription ends on
+      // the date the period line shows; Manage opens the account page.
+      return html`<div class="flex flex-col gap-2">
+        ${manage}
+        <p class="text-[11px] text-center text-white/40 leading-snug">
+          ${translateText("account_modal.manage_subscription_on_steam_ending")}
+        </p>
+      </div>`;
+    }
     const note = html`<p
       class="text-[11px] text-center text-white/40 leading-snug"
     >
-      ${translateText("account_modal.manage_subscription_on_steam")}
+      ${translateText(
+        STEAM_TIER_CHANGE_IN_APP
+          ? "account_modal.manage_subscription_on_steam"
+          : "account_modal.manage_subscription_on_steam_no_tier_change",
+      )}
     </p>`;
-    if (this.sub.cancelAtPeriodEnd) {
-      // No Reactivate: there is no un-cancel API. The Steam account page can
-      // re-enable an agreement, which is what Manage opens.
-      return html`<div class="flex flex-col gap-2">${manage}${note}</div>`;
-    }
     return html`
       <div class="flex flex-col gap-2">
         <div class="flex flex-wrap gap-2">
-          <o-button
-            class="flex-1 min-w-[8rem]"
-            variant="primary"
-            width="block"
-            size="md"
-            translationKey="account_modal.change_tier"
-            @click=${this.handleChangeTier}
-          ></o-button>
+          ${STEAM_TIER_CHANGE_IN_APP
+            ? html`<o-button
+                class="flex-1 min-w-[8rem]"
+                variant="primary"
+                width="block"
+                size="md"
+                translationKey="account_modal.change_tier"
+                @click=${this.handleChangeTier}
+              ></o-button>`
+            : nothing}
           ${manage}
         </div>
         ${note}

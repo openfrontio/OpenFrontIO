@@ -33,7 +33,10 @@ import {
 } from "../../src/client/Api";
 import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import { purchaseCosmetic, resolveCosmetics } from "../../src/client/Cosmetics";
-import { showInGameAlert } from "../../src/client/InGameModal";
+import {
+  showInGameAlert,
+  showInGameConfirm,
+} from "../../src/client/InGameModal";
 import { startPurchase } from "../../src/client/Payments";
 import type { Cosmetics, Pack, Pattern } from "../../src/core/CosmeticSchemas";
 
@@ -42,6 +45,7 @@ const createCheckoutSessionMock =
   createCheckoutSession as unknown as ReturnType<typeof vi.fn>;
 const alertMock = showInGameAlert as unknown as ReturnType<typeof vi.fn>;
 const getUserMeMock = getUserMe as unknown as ReturnType<typeof vi.fn>;
+const confirmMock = showInGameConfirm as unknown as ReturnType<typeof vi.fn>;
 const changeTierMock = changeSubscriptionTier as unknown as ReturnType<
   typeof vi.fn
 >;
@@ -174,6 +178,12 @@ describe("purchaseCosmetic dollar path", () => {
       subscribedOn("steam");
       startPurchaseMock.mockResolvedValue({ outcome: "completed" });
       await purchaseCosmetic(warlord(), "dollar");
+      // The confirm never promises proration on Steam — full price now, the
+      // rest of the month forfeited.
+      expect(confirmMock).toHaveBeenCalledWith(
+        "store.confirm_tier_change_steam",
+        expect.anything(),
+      );
       expect(startPurchaseMock).toHaveBeenCalledWith({
         kind: "subscription_tier",
         tierName: "warlord",
@@ -186,6 +196,10 @@ describe("purchaseCosmetic dollar path", () => {
       subscribedOn("stripe");
       changeTierMock.mockResolvedValue(true);
       await purchaseCosmetic(warlord(), "dollar");
+      expect(confirmMock).toHaveBeenCalledWith(
+        "store.confirm_upgrade",
+        expect.anything(),
+      );
       expect(changeTierMock).toHaveBeenCalledWith("warlord");
       expect(startPurchaseMock).not.toHaveBeenCalled();
     });

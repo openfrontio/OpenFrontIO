@@ -256,9 +256,17 @@ export async function purchaseCosmetic(
           ? sub.priceMonthly > currentCosmetic.priceMonthly
           : true;
       const targetName = translateCosmetic("subscriptions", sub.name);
-      const confirmKey = isUpgrade
-        ? "store.confirm_upgrade"
-        : "store.confirm_downgrade";
+      // The Stripe copy promises proration ("charged the prorated
+      // difference", "credit for the unused portion"). On Steam neither
+      // exists: the new tier is a NEW agreement at full price, starting now,
+      // and the rest of the old month is forfeited. Say that, not the
+      // Stripe thing.
+      const confirmKey =
+        currentSub.provider === "steam"
+          ? "store.confirm_tier_change_steam"
+          : isUpgrade
+            ? "store.confirm_upgrade"
+            : "store.confirm_downgrade";
       const confirmed = await showInGameConfirm(
         translateText(confirmKey, { tier: targetName }),
         {

@@ -283,11 +283,14 @@ describe("subscription-panel", () => {
       await el.updateComplete;
     });
 
-    it("offers Manage and Change Tier", () => {
-      expect(buttonKeys()).toEqual([
-        "account_modal.change_tier",
-        "account_modal.manage_subscription",
-      ]);
+    // S1 = block at launch: a Change Tier button whose only outcome is the
+    // server's 409 would be a dead control, so it is not rendered and the
+    // copy says how a tier is actually changed.
+    it("offers Manage but no Change Tier, and says how to switch tiers", () => {
+      expect(buttonKeys()).toEqual(["account_modal.manage_subscription"]);
+      expect(text()).toContain(
+        "account_modal.manage_subscription_on_steam_no_tier_change",
+      );
     });
 
     it("offers no in-app Cancel, and says where cancelling lives", () => {
@@ -300,6 +303,8 @@ describe("subscription-panel", () => {
         ),
       ).toHaveLength(0);
       expect(text()).toContain("account_modal.manage_subscription_on_steam");
+      // No promise of re-enabling: un-cancel is unmeasured on Steam.
+      expect(text()).not.toContain("re-enable");
     });
 
     it("renews rather than ending, and renders no anchor", () => {
@@ -327,13 +332,16 @@ describe("subscription-panel", () => {
       }
     });
 
-    // No un-cancel API exists, so no Reactivate; the account page re-enables.
-    it("offers Manage but no Reactivate while winding down", async () => {
+    // No un-cancel API exists, so no Reactivate; the note says it ends.
+    it("offers Manage but no Reactivate while winding down, and says it ends", async () => {
       el.sub = sub({ provider: "steam", cancelAtPeriodEnd: true });
       await el.updateComplete;
       expect(buttonKeys()).toEqual(["account_modal.manage_subscription"]);
       expect(text()).not.toContain("account_modal.reactivate_subscription");
       expect(text()).toContain("account_modal.sub_status_canceling");
+      expect(text()).toContain(
+        "account_modal.manage_subscription_on_steam_ending",
+      );
     });
 
     it("opens the URL the server returns when Manage is clicked", async () => {
