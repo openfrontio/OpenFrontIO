@@ -30,7 +30,7 @@ function makeGame(stations: any[] = []): any {
   return {
     config: () => ({
       trainGold: (rel: string, _citiesVisited: number) => TRAIN_GOLD[rel] ?? 0n,
-      stationStackMultiplier: (level: number) => level,
+      stationStackMultiplier: (level: number) => 5 * level,
       factoryStackMultiplier: (level: number) => level,
     }),
     railNetwork: () => ({
@@ -158,14 +158,17 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const unit = makeUnit(10);
     const station = makeStation(unit, cluster);
     const player = makePlayer([unit], []);
-    const behavior = makeBehavior(makeGame([station]), player);
+    const game = makeGame([station]);
+    const behavior = makeBehavior(game, player);
 
     const result = (behavior as any).buildReachableStations();
 
     expect(result).toHaveLength(1);
     expect(result[0].tile).toBe(10);
     expect(result[0].cluster).toBe(cluster);
-    expect(result[0].weight).toBeCloseTo(selfWeight);
+    expect(result[0].weight).toBeCloseTo(
+      selfWeight * game.config().stationStackMultiplier(unit.level()),
+    );
   });
 
   it("applies the station stack multiplier to the base connectivity weight based on unit level", () => {
@@ -173,25 +176,31 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const unit = makeUnit(20, 2); // Level 2
     const station = makeStation(unit, cluster);
     const player = makePlayer([unit], []);
-    const behavior = makeBehavior(makeGame([station]), player);
+    const game = makeGame([station]);
+    const behavior = makeBehavior(game, player);
 
     const result = (behavior as any).buildReachableStations();
 
     expect(result).toHaveLength(1);
-    expect(result[0].weight).toBeCloseTo(selfWeight * 2);
+    expect(result[0].weight).toBeCloseTo(
+      selfWeight * game.config().stationStackMultiplier(unit.level()),
+    );
   });
 
   it("assigns null cluster when own unit is a station with no cluster", () => {
     const unit = makeUnit(11);
     const station = makeStation(unit, null);
     const player = makePlayer([unit], []);
-    const behavior = makeBehavior(makeGame([station]), player);
+    const game = makeGame([station]);
+    const behavior = makeBehavior(game, player);
 
     const result = (behavior as any).buildReachableStations();
 
     expect(result).toHaveLength(1);
     expect(result[0].cluster).toBeNull();
-    expect(result[0].weight).toBeCloseTo(selfWeight);
+    expect(result[0].weight).toBeCloseTo(
+      selfWeight * game.config().stationStackMultiplier(unit.level()),
+    );
   });
 
   it("excludes own units not registered in the station manager", () => {
@@ -251,14 +260,17 @@ describe("NationStructureBehavior.buildReachableStations", () => {
       isOnSameTeam: () => false,
       isAlliedWith: () => false,
     });
-    const behavior = makeBehavior(makeGame([station]), player);
+    const game = makeGame([station]);
+    const behavior = makeBehavior(game, player);
 
     const result = (behavior as any).buildReachableStations();
 
     expect(result).toHaveLength(1);
     expect(result[0].tile).toBe(60);
     expect(result[0].cluster).toBe(cluster);
-    expect(result[0].weight).toBeCloseTo(otherWeight);
+    expect(result[0].weight).toBeCloseTo(
+      otherWeight * game.config().stationStackMultiplier(unit.level()),
+    );
   });
 
   it("uses 'ally' weight for allied neighbor", () => {
@@ -270,12 +282,15 @@ describe("NationStructureBehavior.buildReachableStations", () => {
       isOnSameTeam: () => false,
       isAlliedWith: (n) => n === neighbor,
     });
-    const behavior = makeBehavior(makeGame([station]), player);
+    const game = makeGame([station]);
+    const behavior = makeBehavior(game, player);
 
     const result = (behavior as any).buildReachableStations();
 
     expect(result).toHaveLength(1);
-    expect(result[0].weight).toBeCloseTo(allyWeight);
+    expect(result[0].weight).toBeCloseTo(
+      allyWeight * game.config().stationStackMultiplier(unit.level()),
+    );
   });
 
   it("uses 'team' weight for team neighbor (team check precedes ally)", () => {
@@ -287,12 +302,15 @@ describe("NationStructureBehavior.buildReachableStations", () => {
       isOnSameTeam: (n) => n === neighbor,
       isAlliedWith: () => false,
     });
-    const behavior = makeBehavior(makeGame([station]), player);
+    const game = makeGame([station]);
+    const behavior = makeBehavior(game, player);
 
     const result = (behavior as any).buildReachableStations();
 
     expect(result).toHaveLength(1);
-    expect(result[0].weight).toBeCloseTo(teamWeight);
+    expect(result[0].weight).toBeCloseTo(
+      teamWeight * game.config().stationStackMultiplier(unit.level()),
+    );
   });
 
   it("excludes neighbor units not registered in the station manager", () => {
