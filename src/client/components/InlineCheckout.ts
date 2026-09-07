@@ -1,5 +1,6 @@
 import type {
   StripeExpressCheckoutElement,
+  StripeExpressCheckoutElementConfirmEvent,
   StripePaymentElement,
 } from "@stripe/stripe-js";
 import type { PropertyValues, TemplateResult } from "lit";
@@ -107,6 +108,13 @@ export class InlineCheckout extends LitElement {
       this.request,
       this.amountCents,
     ).then((session) => {
+      if (session === null) {
+        // A transient Stripe.js load failure must not disable this tile for
+        // the session — drop the memo so the next interaction retries, same
+        // as getStripe() does with its own promise.
+        this.sessionPromise = null;
+        return null;
+      }
       this.session = session;
       // Props may have moved while Stripe.js loaded (the custom-amount
       // slider); sync before anything confirms against the session.
@@ -152,22 +160,40 @@ export class InlineCheckout extends LitElement {
       // the tile looks intentional rather than missing something.
       this.walletVisible = availablePaymentMethods !== undefined;
     });
-    element.on("confirm", () => void this.confirmWallet());
+    element.on("confirm", (event) => void this.confirmWallet(event));
     element.mount(container as HTMLElement);
     this.expressElement = element;
   }
 
-  private async confirmWallet(): Promise<void> {
-    if (this.session === null || this.confirming) return;
+  private async confirmWallet(
+    event: StripeExpressCheckoutElementConfirmEvent,
+  ): Promise<void> {
+    // The native wallet sheet is open and waiting: it only dismisses itself
+    // once stripe.confirmPayment runs, so EVERY path out of here that never
+    // gets there must call event.paymentFailed() or the sheet spins forever
+    // over an alert it hides.
+    if (this.session === null || this.confirming) {
+      event.paymentFailed({ reason: "fail" });
+      return;
+    }
     this.confirming = true;
     try {
       const result = await this.session.confirm();
       if (result.kind === "error") {
+        // "payment"-stage errors (a decline) already resolved the sheet.
+        if (result.stage === "checkout")
+          event.paymentFailed({ reason: "fail" });
         // The catalog this tile rendered from named something the rail no
         // longer sells; drop it so the next open refetches — same rule as
         // the redirect flow in Cosmetics.ts.
         if (result.refetchCatalog) invalidateCosmetics();
         await showInGameAlert(result.message);
+        return;
+      }
+      if (result.kind === "redirecting") {
+        // Navigation to the rail is in flight; release the sheet rather than
+        // leave it spinning for however long the navigation takes.
+        event.paymentFailed({ reason: "fail" });
         return;
       }
       await this.settle(result);
@@ -204,7 +230,14 @@ export class InlineCheckout extends LitElement {
     this.cardReady = false;
   }
 
-  private closeCardModal(): void {
+  /**
+   * Public because StoreModal.onClose() calls it: the store is an inline
+   * modal that hides via CSS rather than unmounting, so disconnectedCallback
+   * never fires and an open card modal (portaled to <body>) would outlive
+   * the store. No-op mid-confirm — the modal finishes its flow and remains
+   * interactively closable either way.
+   */
+  closeCardModal(): void {
     // Never mid-confirm: tearing the form down under an in-flight
     // confirmPayment is how "did I get charged?" emails happen. The close
     // button is disabled while confirming; this guards the backdrop too.

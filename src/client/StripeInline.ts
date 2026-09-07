@@ -75,7 +75,18 @@ export type InlineConfirmResult =
   // `message` is ready to display. `refetchCatalog` mirrors PurchaseError's:
   // the server rejected the listing as stale, so the caller must invalidate
   // the cached catalog or every retry re-sends the same dead listing.
-  | { kind: "error"; message: string; refetchCatalog?: boolean };
+  //
+  // `stage` says whether stripe.confirmPayment ran. It matters to the wallet
+  // button only: the native wallet sheet dismisses itself once confirmPayment
+  // runs (even on a decline), but a "checkout"-stage failure leaves it open
+  // and spinning, and the caller must call the confirm event's
+  // paymentFailed() to release it.
+  | {
+      kind: "error";
+      message: string;
+      refetchCatalog?: boolean;
+      stage: "checkout" | "payment";
+    };
 
 /**
  * One tile's inline checkout: a deferred-mode Elements group that hosts the
@@ -159,6 +170,7 @@ export class InlineCheckoutSession {
       return {
         kind: "error",
         message: submitError.message ?? translateText("store.checkout_failed"),
+        stage: "checkout",
       };
     }
 
@@ -169,6 +181,7 @@ export class InlineCheckoutSession {
           kind: "error",
           message: minted.error.message,
           refetchCatalog: minted.error.refetchCatalog,
+          stage: "checkout",
         };
       }
       if (minted.kind === "redirect") {
@@ -191,6 +204,7 @@ export class InlineCheckoutSession {
       return {
         kind: "error",
         message: error.message ?? translateText("store.purchase_failed"),
+        stage: "payment",
       };
     }
     // The intent is spent (succeeded) or owned by the webhook (processing)

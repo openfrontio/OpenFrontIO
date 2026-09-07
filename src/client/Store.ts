@@ -11,6 +11,7 @@ import "./components/CosmeticPreviewModal";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
+import type { InlineCheckout } from "./components/InlineCheckout";
 import "./components/NotLoggedInWarning";
 import "./components/PackContentsDialog";
 import "./components/PurchaseButton";
@@ -642,6 +643,14 @@ export class StoreModal extends BaseModal {
   }
 
   protected onClose(): void {
+    // The store hides via CSS (inline modal), so the tiles never disconnect
+    // and an open card-payment modal — portaled to <body> — would float over
+    // the play page after Escape closes the store. Close it explicitly.
+    for (const inline of this.querySelectorAll<InlineCheckout>(
+      "inline-checkout",
+    )) {
+      inline.closeCardModal();
+    }
     this.affiliateCode = null;
     this.openedPack = null;
     this.previewingCosmetic = null;

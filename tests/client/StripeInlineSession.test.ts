@@ -90,6 +90,8 @@ describe("InlineCheckoutSession secret caching", () => {
     expect(await session.confirm()).toEqual({
       kind: "error",
       message: "Your card was declined.",
+      // confirmPayment ran, so the wallet sheet has already been resolved.
+      stage: "payment",
     });
 
     // Retry: same intent, no second checkout call (rate-limited server-side).
@@ -133,6 +135,8 @@ describe("InlineCheckoutSession secret caching", () => {
       kind: "error",
       message: "store.checkout_listing_stale",
       refetchCatalog: true,
+      // confirmPayment never ran; the wallet caller must release the sheet.
+      stage: "checkout",
     });
   });
 });

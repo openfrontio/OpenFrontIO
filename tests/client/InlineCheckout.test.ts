@@ -126,7 +126,8 @@ describe("inline-checkout wallet row", () => {
     createMock.mockResolvedValue(session);
     const el = await renderComponent();
 
-    express.fire("confirm", {});
+    const paymentFailed = vi.fn();
+    express.fire("confirm", { paymentFailed });
     await vi.waitFor(() => expect(session.confirm).toHaveBeenCalled());
     await vi.waitFor(() =>
       expect(showInGameAlert).toHaveBeenCalledWith(
@@ -134,6 +135,8 @@ describe("inline-checkout wallet row", () => {
       ),
     );
     expect(broadcastFreshUserMe).toHaveBeenCalled();
+    // confirmPayment resolved the wallet sheet; failing it too would be a lie.
+    expect(paymentFailed).not.toHaveBeenCalled();
     expect(el.querySelector("button")).toBeTruthy();
   });
 
@@ -142,16 +145,41 @@ describe("inline-checkout wallet row", () => {
     session.confirm.mockResolvedValue({
       kind: "error",
       message: "Your card was declined.",
+      stage: "payment",
     } as never);
     createMock.mockResolvedValue(session);
     await renderComponent();
 
-    express.fire("confirm", {});
+    const paymentFailed = vi.fn();
+    express.fire("confirm", { paymentFailed });
     await vi.waitFor(() =>
       expect(showInGameAlert).toHaveBeenCalledWith("Your card was declined."),
     );
     expect(broadcastFreshUserMe).not.toHaveBeenCalled();
     expect(invalidateCosmetics).not.toHaveBeenCalled();
+    // A decline reached confirmPayment, which already resolved the sheet.
+    expect(paymentFailed).not.toHaveBeenCalled();
+  });
+
+  it("releases the wallet sheet on a pre-confirm failure", async () => {
+    const { session, express } = fakeSession();
+    session.confirm.mockResolvedValue({
+      kind: "error",
+      message: "store.checkout_retry_later",
+      stage: "checkout",
+    } as never);
+    createMock.mockResolvedValue(session);
+    await renderComponent();
+
+    const paymentFailed = vi.fn();
+    express.fire("confirm", { paymentFailed });
+    await vi.waitFor(() =>
+      expect(showInGameAlert).toHaveBeenCalledWith(
+        "store.checkout_retry_later",
+      ),
+    );
+    // confirmPayment never ran, so the sheet would spin forever otherwise.
+    expect(paymentFailed).toHaveBeenCalled();
   });
 
   it("invalidates the cached catalog on a stale-listing error", async () => {
@@ -160,11 +188,12 @@ describe("inline-checkout wallet row", () => {
       kind: "error",
       message: "store.checkout_listing_stale",
       refetchCatalog: true,
+      stage: "checkout",
     } as never);
     createMock.mockResolvedValue(session);
     await renderComponent();
 
-    express.fire("confirm", {});
+    express.fire("confirm", { paymentFailed: vi.fn() });
     await vi.waitFor(() =>
       expect(showInGameAlert).toHaveBeenCalledWith(
         "store.checkout_listing_stale",
@@ -232,6 +261,25 @@ describe("inline-checkout card modal", () => {
     expect(document.body.textContent).toContain("Your card was declined.");
     expect(document.body.querySelector("[data-payment-element]")).toBeTruthy();
     expect(payment.destroy).not.toHaveBeenCalled();
+  });
+});
+
+describe("inline-checkout external close", () => {
+  // The store modal hides via CSS rather than unmounting, so it closes any
+  // open card modal through this public method on its onClose path.
+  it("closeCardModal() tears the portaled modal down", async () => {
+    const { session, payment } = fakeSession();
+    createMock.mockResolvedValue(session);
+    const el = await renderComponent();
+
+    el.querySelector<HTMLButtonElement>(".purchase-sparkle-btn")!.click();
+    await vi.waitFor(() => expect(payment.mount).toHaveBeenCalled());
+    expect(document.body.querySelector("[data-payment-element]")).toBeTruthy();
+
+    el.closeCardModal();
+    await el.updateComplete;
+    expect(payment.destroy).toHaveBeenCalled();
+    expect(document.body.querySelector("[data-payment-element]")).toBeNull();
   });
 });
 
