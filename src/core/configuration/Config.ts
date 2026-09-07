@@ -258,6 +258,10 @@ export class Config {
     return 30 * 10; // 30 seconds
   }
 
+  teamLandShareWinThresholdTenths(): number {
+    return 7;
+  }
+
   // Doomsday Clock config, resolved against defaults. One read per tick.
   doomsdayClockConfig(): typeof DOOMSDAY_CLOCK_DEFAULTS {
     const c = this._gameConfig.doomsdayClock;

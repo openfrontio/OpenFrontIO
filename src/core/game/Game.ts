@@ -612,10 +612,13 @@ export interface Player {
   markDisconnected(
     isDisconnected: boolean,
     currentTick?: number,
-    teamLandShare?: number,
+    teamTiles?: number,
+    totalLand?: number,
   ): void;
   wasAliveOnDisconnect(): boolean;
-  teamLandShareOnDisconnect(): number;
+  teamTilesOnDisconnect(): number;
+  totalLandOnDisconnect(): number;
+  hasWinningLandShareOnDisconnect(): boolean;
   disconnectedAtTick(): number | null;
 
   hasSpawned(): boolean;
@@ -808,7 +811,8 @@ export interface Game extends GameMap {
   owner(ref: TileRef): Player | TerraNullius;
 
   teams(): Team[];
-  teamLandShare(team: Team): number;
+  teamTilesOwned(team: Team): number;
+  totalLandTiles(): number;
   teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances

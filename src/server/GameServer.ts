@@ -1037,14 +1037,17 @@ export class GameServer {
   private convertClanOverflowToSpectators(): void {
     if (
       this.gameConfig.gameMode !== GameMode.Team ||
-      this.gameConfig.playerTeams === HumansVsNations
+      this.gameConfig.playerTeams === HumansVsNations ||
+      this.matchmakingTeams !== undefined ||
+      this.gameConfig.rankedType !== undefined
     ) {
       return;
     }
-    const players = this.clients.players();
-    const numTeams = this.resolveNumTeams(players.length);
-    if (numTeams < 2) return;
-    const maxTeamSize = getMaxTeamSize(players.length, numTeams);
+    const players = this.clients
+      .players()
+      .filter((c) => this.matchmakingTeamIndex(c) === undefined);
+    const maxTeamSize = this.resolveMaxTeamSize(players.length);
+    if (maxTeamSize === undefined || maxTeamSize < 1) return;
 
     const clanMap = new Map<string, Client[]>();
     for (const client of players) {
@@ -1057,10 +1060,12 @@ export class GameServer {
       clanList.push(client);
     }
 
+    const convertedClientIDs = new Set<ClientID>();
     for (const members of clanMap.values()) {
       if (members.length > maxTeamSize) {
         for (let i = maxTeamSize; i < members.length; i++) {
           members[i].spectator = true;
+          convertedClientIDs.add(members[i].clientID);
           this.log.info("Converted clan overflow player to spectator", {
             clientID: members[i].clientID,
             clanTag: members[i].clanTag,
@@ -1069,21 +1074,28 @@ export class GameServer {
         }
       }
     }
+
+    if (convertedClientIDs.size > 0) {
+      this.intents = this.intents.filter(
+        (intent) => !convertedClientIDs.has(intent.clientID),
+      );
+    }
   }
 
-  private resolveNumTeams(numPlayers: number): number {
+  private resolveMaxTeamSize(numPlayers: number): number | undefined {
     const pt = this.gameConfig.playerTeams;
-    if (typeof pt === "number") return Math.max(2, pt);
-    switch (pt) {
-      case Duos:
-        return Math.max(2, Math.ceil(numPlayers / 2));
-      case Trios:
-        return Math.max(2, Math.ceil(numPlayers / 3));
-      case Quads:
-        return Math.max(2, Math.ceil(numPlayers / 4));
-      default:
-        return 2;
+    if (pt === Duos) return 2;
+    if (pt === Trios) return 3;
+    if (pt === Quads) return 4;
+    if (typeof pt === "number") {
+      const numTeams = Math.max(2, pt);
+      const nationCount =
+        typeof this.gameConfig.nations === "number"
+          ? this.gameConfig.nations
+          : 0;
+      return getMaxTeamSize(numPlayers + nationCount, numTeams);
     }
+    return undefined;
   }
 
   // ONE definition of who the allowlist admits, shared by every path that can

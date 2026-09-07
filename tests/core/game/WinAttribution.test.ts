@@ -1,6 +1,13 @@
 import { describe, expect, test } from "vitest";
 import { MarkDisconnectedExecution } from "../../../src/core/execution/MarkDisconnectedExecution";
-import { GameMode, PlayerInfo, PlayerType } from "../../../src/core/game/Game";
+import {
+  Duos,
+  GameMode,
+  PlayerInfo,
+  PlayerType,
+  Quads,
+  Trios,
+} from "../../../src/core/game/Game";
 import { GameImpl } from "../../../src/core/game/GameImpl";
 import { ServerStartGameMessage } from "../../../src/core/Schemas";
 import {
@@ -109,7 +116,7 @@ describe("Win Attribution Bug Fix", () => {
 
     // Teammate A dies first, then disconnects
     pA.relinquish(landTiles[0]);
-    pA.markDisconnected(true, 100, 0.4);
+    pA.markDisconnected(true, 100, 40, 100);
 
     expect(pA.isAlive()).toBe(false);
     expect(pA.wasAliveOnDisconnect()).toBe(false);
@@ -128,9 +135,9 @@ describe("Win Attribution Bug Fix", () => {
     pB.conquer(landTiles[1]);
 
     // Player A ragequits while alive when team has 40% land share
-    pA.markDisconnected(true, 50, 0.4);
+    pA.markDisconnected(true, 50, 40, 100);
     expect(pA.wasAliveOnDisconnect()).toBe(true);
-    expect(pA.teamLandShareOnDisconnect()).toBe(0.4);
+    expect(pA.hasWinningLandShareOnDisconnect()).toBe(false);
 
     // Later Player A's tile is eaten/conquered
     pA.relinquish(landTiles[0]);
@@ -167,9 +174,9 @@ describe("Win Attribution Bug Fix", () => {
     pB.conquer(landTiles[1]);
 
     // Player A leaves while alive after team achieved 75% land share
-    pA.markDisconnected(true, 150, 0.75);
+    pA.markDisconnected(true, 150, 75, 100);
     expect(pA.wasAliveOnDisconnect()).toBe(true);
-    expect(pA.teamLandShareOnDisconnect()).toBe(0.75);
+    expect(pA.hasWinningLandShareOnDisconnect()).toBe(true);
 
     const team = pA.team()!;
     const winner = game.makeWinner(team);
@@ -186,7 +193,7 @@ describe("Win Attribution Bug Fix", () => {
     pB.conquer(landTiles[1]);
 
     // Disconnect at 40%
-    pA.markDisconnected(true, 50, 0.4);
+    pA.markDisconnected(true, 50, 40, 100);
     expect(pA.isDisconnected()).toBe(true);
     expect(pA.wasAliveOnDisconnect()).toBe(true);
     expect(pA.disconnectedAtTick()).toBe(50);
@@ -195,7 +202,8 @@ describe("Win Attribution Bug Fix", () => {
     pA.markDisconnected(false);
     expect(pA.isDisconnected()).toBe(false);
     expect(pA.wasAliveOnDisconnect()).toBe(false);
-    expect(pA.teamLandShareOnDisconnect()).toBe(0);
+    expect(pA.teamTilesOnDisconnect()).toBe(0);
+    expect(pA.totalLandOnDisconnect()).toBe(0);
     expect(pA.disconnectedAtTick()).toBeNull();
 
     const team = pA.team()!;
@@ -213,17 +221,17 @@ describe("Win Attribution Bug Fix", () => {
     pB.conquer(landTiles[1]);
 
     // Disconnect at 40%
-    pA.markDisconnected(true, 50, 0.4);
+    pA.markDisconnected(true, 50, 40, 100);
     expect(pA.wasAliveOnDisconnect()).toBe(true);
-    expect(pA.teamLandShareOnDisconnect()).toBe(0.4);
+    expect(pA.hasWinningLandShareOnDisconnect()).toBe(false);
 
     // Reconnect
     pA.markDisconnected(false);
 
     // Disconnect again later at 75%
-    pA.markDisconnected(true, 120, 0.75);
+    pA.markDisconnected(true, 120, 75, 100);
     expect(pA.wasAliveOnDisconnect()).toBe(true);
-    expect(pA.teamLandShareOnDisconnect()).toBe(0.75);
+    expect(pA.hasWinningLandShareOnDisconnect()).toBe(true);
 
     const team = pA.team()!;
     const winner = game.makeWinner(team);
@@ -240,14 +248,16 @@ describe("Win Attribution Bug Fix", () => {
     pB.conquer(landTiles[1]);
 
     // Disconnect at 75%
-    pA.markDisconnected(true, 50, 0.75);
+    pA.markDisconnected(true, 50, 75, 100);
+    expect(pA.hasWinningLandShareOnDisconnect()).toBe(true);
 
     // Reconnect
     pA.markDisconnected(false);
+    expect(pA.wasAliveOnDisconnect()).toBe(false);
 
     // Team lost ground, disconnect again at 50%
-    pA.markDisconnected(true, 120, 0.5);
-    expect(pA.teamLandShareOnDisconnect()).toBe(0.5);
+    pA.markDisconnected(true, 120, 50, 100);
+    expect(pA.hasWinningLandShareOnDisconnect()).toBe(false);
 
     const team = pA.team()!;
     const winner = game.makeWinner(team);
@@ -255,7 +265,7 @@ describe("Win Attribution Bug Fix", () => {
     expect(winner?.slice(2)).toContain("clientB");
   });
 
-  test("MarkDisconnectedExecution integrates teamLandShare into player state", async () => {
+  test("MarkDisconnectedExecution integrates team land tiles into player state", async () => {
     const { game, pA, landTiles } = await createTeamGame();
 
     pA.setSpawnTile(landTiles[0]);
@@ -266,7 +276,7 @@ describe("Win Attribution Bug Fix", () => {
 
     expect(pA.isDisconnected()).toBe(true);
     expect(pA.wasAliveOnDisconnect()).toBe(true);
-    expect(pA.teamLandShareOnDisconnect()).toBeGreaterThan(0);
+    expect(pA.teamTilesOnDisconnect()).toBeGreaterThan(0);
   });
 
   test("Test 6: Clan members overflowing maxTeamSize are converted to spectators", () => {
@@ -308,5 +318,200 @@ describe("Win Attribution Bug Fix", () => {
     expect(clients[4].spectator).toBe(true);
     // Total players in start info is 7 (4 CLAN + 3 OTHER)
     expect(startPlayers).toHaveLength(7);
+  });
+
+  test("Test 7: Pinned / matchmade games exempt clan members from spectator conversion", () => {
+    const game = makeGame({
+      matchmakingTeams: [
+        ["p1", "p2"],
+        ["p3", "p4"],
+      ],
+      config: {
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+      },
+    });
+
+    const clients = [
+      makeClient({ clientID: cid("c1"), publicId: "p1", clanTag: "CLAN" }),
+      makeClient({ clientID: cid("c2"), publicId: "p2", clanTag: "CLAN" }),
+      makeClient({ clientID: cid("c3"), publicId: "p3", clanTag: "CLAN" }),
+      makeClient({ clientID: cid("c4"), publicId: "p4", clanTag: "CLAN" }),
+    ];
+
+    for (const c of clients) {
+      game.joinClient(c);
+    }
+
+    startGame(game);
+
+    const startMsg = mockWsOf(clients[0])
+      .sent()
+      .find((m): m is ServerStartGameMessage => m.type === "start");
+    expect(startMsg).toBeDefined();
+    const startPlayers = startMsg!.gameStartInfo.players;
+
+    // All 4 players remain active players, none demoted to spectator
+    expect(startPlayers).toHaveLength(4);
+    for (const c of clients) {
+      expect(c.spectator).toBe(false);
+    }
+  });
+
+  test("Test 8: Queued intents from converted clan overflow spectators are pruned", () => {
+    const game = makeGame({
+      config: {
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+      },
+    });
+
+    const clients = [
+      makeClient({ clientID: cid("c1"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("c2"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("c3"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("c4"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("c5"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("c6"), clanTag: "OTHER" }),
+      makeClient({ clientID: cid("c7"), clanTag: "OTHER" }),
+      makeClient({ clientID: cid("c8"), clanTag: "OTHER" }),
+    ];
+
+    for (const c of clients) {
+      game.joinClient(c);
+    }
+
+    // Queue intent from c1 (kept) and c5 (converted to spectator)
+    const serverAny = game as any;
+    serverAny.intents.push({
+      type: "chat",
+      clientID: cid("c1"),
+      text: "hello",
+    });
+    serverAny.intents.push({
+      type: "chat",
+      clientID: cid("c5"),
+      text: "overflow message",
+    });
+
+    expect(serverAny.intents.some((i: any) => i.clientID === cid("c5"))).toBe(
+      true,
+    );
+
+    startGame(game);
+
+    // c5 converted to spectator, so its intent was pruned
+    expect(clients[4].spectator).toBe(true);
+    expect(serverAny.intents.some((i: any) => i.clientID === cid("c5"))).toBe(
+      false,
+    );
+    expect(serverAny.intents.some((i: any) => i.clientID === cid("c1"))).toBe(
+      true,
+    );
+  });
+
+  test("Test 9: Integer land share precision and threshold evaluation", async () => {
+    const { game, pA } = await createTeamGame();
+
+    // 699 out of 1000 tiles (69.9%) -> not winning
+    pA.markDisconnected(true, 10, 699, 1000);
+    expect(pA.hasWinningLandShareOnDisconnect()).toBe(false);
+    expect(pA.teamTilesOnDisconnect()).toBe(699);
+    expect(pA.totalLandOnDisconnect()).toBe(1000);
+
+    // Reconnect and disconnect at exactly 700 / 1000 (70.0%) -> winning
+    pA.markDisconnected(false);
+    pA.markDisconnected(true, 20, 700, 1000);
+    expect(pA.hasWinningLandShareOnDisconnect()).toBe(true);
+    expect(pA.teamTilesOnDisconnect()).toBe(700);
+
+    // Reconnect and disconnect at 7 / 10 -> winning
+    pA.markDisconnected(false);
+    pA.markDisconnected(true, 30, 7, 10);
+    expect(pA.hasWinningLandShareOnDisconnect()).toBe(true);
+    expect(game.config().teamLandShareWinThresholdTenths()).toBe(7);
+  });
+
+  test("Test 10: Fixed team size modes (Quads, Trios, Duos) strictly cap clan sizes to 4, 3, 2", () => {
+    // Quads: 5 clan members join, 5th must become spectator
+    const quadsGame = makeGame({
+      config: {
+        gameMode: GameMode.Team,
+        playerTeams: Quads,
+      },
+    });
+    const quadsClients = [
+      makeClient({ clientID: cid("q1"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("q2"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("q3"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("q4"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("q5"), clanTag: "CLAN" }),
+    ];
+    for (const c of quadsClients) quadsGame.joinClient(c);
+    startGame(quadsGame);
+
+    expect(quadsClients.slice(0, 4).every((c) => !c.spectator)).toBe(true);
+    expect(quadsClients[4].spectator).toBe(true);
+
+    // Trios: 4 clan members join, 4th must become spectator
+    const triosGame = makeGame({
+      config: {
+        gameMode: GameMode.Team,
+        playerTeams: Trios,
+      },
+    });
+    const triosClients = [
+      makeClient({ clientID: cid("t1"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("t2"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("t3"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("t4"), clanTag: "CLAN" }),
+    ];
+    for (const c of triosClients) triosGame.joinClient(c);
+    startGame(triosGame);
+
+    expect(triosClients.slice(0, 3).every((c) => !c.spectator)).toBe(true);
+    expect(triosClients[3].spectator).toBe(true);
+
+    // Duos: 3 clan members join, 3rd must become spectator
+    const duosGame = makeGame({
+      config: {
+        gameMode: GameMode.Team,
+        playerTeams: Duos,
+      },
+    });
+    const duosClients = [
+      makeClient({ clientID: cid("d1"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("d2"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("d3"), clanTag: "CLAN" }),
+    ];
+    for (const c of duosClients) duosGame.joinClient(c);
+    startGame(duosGame);
+
+    expect(duosClients.slice(0, 2).every((c) => !c.spectator)).toBe(true);
+    expect(duosClients[2].spectator).toBe(true);
+  });
+
+  test("Test 11: Variable player size with nations accounts for nation slider count", () => {
+    // 5 clan players with 201 nations in 2 teams -> capacity ceil((5+201)/2) = 103 -> none converted
+    const game = makeGame({
+      config: {
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+        nations: 201,
+      },
+    });
+    const clients = [
+      makeClient({ clientID: cid("n1"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("n2"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("n3"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("n4"), clanTag: "CLAN" }),
+      makeClient({ clientID: cid("n5"), clanTag: "CLAN" }),
+    ];
+    for (const c of clients) game.joinClient(c);
+    startGame(game);
+
+    for (const c of clients) {
+      expect(c.spectator).toBe(false);
+    }
   });
 });

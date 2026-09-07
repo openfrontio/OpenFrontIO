@@ -179,7 +179,8 @@ export class PlayerImpl implements Player {
   private _isDisconnected = false;
   private _disconnectedAtTick: number | null = null;
   private _wasAliveOnDisconnect = false;
-  private _teamLandShareOnDisconnect = 0;
+  private _teamTilesOnDisconnect = 0;
+  private _totalLandOnDisconnect = 0;
 
   /**
    * Last PlayerUpdate emitted for this player on the worker→main channel.
@@ -1798,19 +1799,22 @@ export class PlayerImpl implements Player {
   markDisconnected(
     isDisconnected: boolean,
     currentTick?: number,
-    teamLandShare?: number,
+    teamTiles?: number,
+    totalLand?: number,
   ): void {
     this._isDisconnected = isDisconnected;
     if (isDisconnected) {
       if (this._disconnectedAtTick === null) {
         this._disconnectedAtTick = currentTick ?? 0;
         this._wasAliveOnDisconnect = this.isAlive();
-        this._teamLandShareOnDisconnect = teamLandShare ?? 0;
+        this._teamTilesOnDisconnect = teamTiles ?? 0;
+        this._totalLandOnDisconnect = totalLand ?? 0;
       }
     } else {
       this._disconnectedAtTick = null;
       this._wasAliveOnDisconnect = false;
-      this._teamLandShareOnDisconnect = 0;
+      this._teamTilesOnDisconnect = 0;
+      this._totalLandOnDisconnect = 0;
     }
   }
 
@@ -1822,8 +1826,22 @@ export class PlayerImpl implements Player {
     return this._wasAliveOnDisconnect;
   }
 
-  teamLandShareOnDisconnect(): number {
-    return this._teamLandShareOnDisconnect;
+  teamTilesOnDisconnect(): number {
+    return this._teamTilesOnDisconnect;
+  }
+
+  totalLandOnDisconnect(): number {
+    return this._totalLandOnDisconnect;
+  }
+
+  hasWinningLandShareOnDisconnect(): boolean {
+    const thresholdTenths =
+      this.mg?.config()?.teamLandShareWinThresholdTenths() ?? 7;
+    return (
+      this._totalLandOnDisconnect > 0 &&
+      10 * this._teamTilesOnDisconnect >=
+        thresholdTenths * this._totalLandOnDisconnect
+    );
   }
 
   hash(): number {

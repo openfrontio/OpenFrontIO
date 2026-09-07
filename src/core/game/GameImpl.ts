@@ -977,7 +977,7 @@ export class GameImpl implements Game {
             if (!p.hasSpawned()) return false;
             if (!p.isDisconnected()) return true;
             if (!p.wasAliveOnDisconnect()) return true;
-            return p.teamLandShareOnDisconnect() >= 0.7;
+            return p.hasWinningLandShareOnDisconnect();
           })
           .map((p) => p.clientID()!),
       ];
@@ -1001,14 +1001,16 @@ export class GameImpl implements Game {
     return [this.botTeam, ...this.playerTeams];
   }
 
-  teamLandShare(team: Team): number {
-    const totalLand = this.numLandTiles() - this.numTilesWithFallout();
-    if (totalLand <= 0) return 0;
+  teamTilesOwned(team: Team): number {
     let teamTiles = 0;
     for (const p of this.allPlayers()) {
       if (p.team() === team) teamTiles += p.numTilesOwned();
     }
-    return teamTiles / totalLand;
+    return teamTiles;
+  }
+
+  totalLandTiles(): number {
+    return Math.max(0, this.numLandTiles() - this.numTilesWithFallout());
   }
 
   teamSpawnArea(team: Team): SpawnArea | undefined {
