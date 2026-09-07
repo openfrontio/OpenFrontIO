@@ -16,6 +16,7 @@ import {
   RankedType,
   Trios,
 } from "../core/game/Game";
+import { maps } from "../core/game/Maps.gen";
 import { getMaxTeamSize } from "../core/game/TeamAssignment";
 import {
   ClientID,
@@ -1089,10 +1090,13 @@ export class GameServer {
     if (pt === Quads) return 4;
     if (typeof pt === "number") {
       const numTeams = Math.max(2, pt);
-      const nationCount =
-        typeof this.gameConfig.nations === "number"
-          ? this.gameConfig.nations
-          : 0;
+      let nationCount = 0;
+      if (typeof this.gameConfig.nations === "number") {
+        nationCount = this.gameConfig.nations;
+      } else if (this.gameConfig.nations === "default") {
+        const mapInfo = maps.find((m) => m.type === this.gameConfig.gameMap);
+        nationCount = mapInfo?.defaultNationCount ?? 0;
+      }
       return getMaxTeamSize(numPlayers + nationCount, numTeams);
     }
     return undefined;

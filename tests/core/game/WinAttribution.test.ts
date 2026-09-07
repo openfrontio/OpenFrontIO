@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { MarkDisconnectedExecution } from "../../../src/core/execution/MarkDisconnectedExecution";
 import {
   Duos,
+  GameMapType,
   GameMode,
   PlayerInfo,
   PlayerType,
@@ -284,6 +285,7 @@ describe("Win Attribution Bug Fix", () => {
       config: {
         gameMode: GameMode.Team,
         playerTeams: 2,
+        nations: "disabled",
       },
     });
 
@@ -363,6 +365,7 @@ describe("Win Attribution Bug Fix", () => {
       config: {
         gameMode: GameMode.Team,
         playerTeams: 2,
+        nations: "disabled",
       },
     });
 
@@ -513,5 +516,51 @@ describe("Win Attribution Bug Fix", () => {
     for (const c of clients) {
       expect(c.spectator).toBe(false);
     }
+  });
+
+  test("Test 12: Clan overflow accounts for default map nation count in variable team sizing", () => {
+    // World map has 72 default nations.
+    // Case A: 10 players in clan CLAN (total = 10 + 72 = 82):
+    // maxTeamSize = ceil(82 / 2) = 41.
+    // All 10 clan members should remain active players.
+    const game = makeGame({
+      config: {
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+        nations: "default",
+        gameMap: GameMapType.World,
+      },
+    });
+    const clients = Array.from({ length: 10 }, (_, i) =>
+      makeClient({ clientID: cid(`d${i}`), clanTag: "CLAN" }),
+    );
+    for (const c of clients) game.joinClient(c);
+    startGame(game);
+
+    for (const c of clients) {
+      expect(c.spectator).toBe(false);
+    }
+
+    // Case B: Map with 0 default nations (e.g. BaikalNukeWars) and 2 teams:
+    // 5 clan members on BaikalNukeWars with 2 teams -> maxTeamSize = ceil((5 + 0) / 2) = 3.
+    // First 3 fit, remaining 2 converted to spectator!
+    const zeroNationsGame = makeGame({
+      config: {
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+        nations: "default",
+        gameMap: GameMapType.BaikalNukeWars,
+      },
+    });
+    const zeroNationsClients = Array.from({ length: 5 }, (_, i) =>
+      makeClient({ clientID: cid(`z${i}`), clanTag: "CLAN" }),
+    );
+    for (const c of zeroNationsClients) zeroNationsGame.joinClient(c);
+    startGame(zeroNationsGame);
+
+    expect(zeroNationsClients.slice(0, 3).every((c) => !c.spectator)).toBe(
+      true,
+    );
+    expect(zeroNationsClients.slice(3).every((c) => c.spectator)).toBe(true);
   });
 });
