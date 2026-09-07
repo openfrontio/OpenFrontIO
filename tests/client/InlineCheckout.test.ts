@@ -302,4 +302,24 @@ describe("inline-checkout fallback", () => {
     el.querySelector<HTMLButtonElement>(".purchase-sparkle-btn")!.click();
     await vi.waitFor(() => expect(onFallback).toHaveBeenCalled());
   });
+
+  it("falls back when session creation REJECTS, and can retry later", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    // First creation throws (e.g. stripe.elements() rejecting the amount)…
+    createMock
+      .mockRejectedValueOnce(new Error("Invalid value for amount"))
+      .mockResolvedValueOnce(null);
+    const onFallback = vi.fn(async () => {});
+    const el = await renderComponent({ onFallback }); // consumes the rejection
+
+    // …the click after it must reach the fallback, not a dead cached promise.
+    el.querySelector<HTMLButtonElement>(".purchase-sparkle-btn")!.click();
+    await vi.waitFor(() => expect(onFallback).toHaveBeenCalled());
+
+    // And the memo was dropped, so a later interaction can succeed inline.
+    const { session, payment } = fakeSession();
+    createMock.mockResolvedValue(session);
+    el.querySelector<HTMLButtonElement>(".purchase-sparkle-btn")!.click();
+    await vi.waitFor(() => expect(payment.mount).toHaveBeenCalled());
+  });
 });

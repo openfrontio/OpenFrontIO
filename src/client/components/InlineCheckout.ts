@@ -107,20 +107,32 @@ export class InlineCheckout extends LitElement {
     this.sessionPromise ??= InlineCheckoutSession.create(
       this.request,
       this.amountCents,
-    ).then((session) => {
-      if (session === null) {
-        // A transient Stripe.js load failure must not disable this tile for
-        // the session — drop the memo so the next interaction retries, same
-        // as getStripe() does with its own promise.
+    )
+      .then((session) => {
+        if (session === null) {
+          // A transient Stripe.js load failure must not disable this tile for
+          // the session — drop the memo so the next interaction retries, same
+          // as getStripe() does with its own promise.
+          this.sessionPromise = null;
+          return null;
+        }
+        this.session = session;
+        // Props may have moved while Stripe.js loaded (the custom-amount
+        // slider); sync before anything confirms against the session.
+        this.syncSession();
+        return session;
+      })
+      .catch((e: unknown) => {
+        // stripe.elements() throws synchronously on inputs it rejects (a
+        // zero amount, say), which rejects create()'s promise — and a
+        // rejected memo would otherwise stick forever AND surface as an
+        // unhandled rejection in both void-ing callers. Resolve to null
+        // instead: the price button falls back to the redirect flow, and the
+        // dropped memo lets a later interaction retry.
+        console.error("inline-checkout: session creation failed", e);
         this.sessionPromise = null;
         return null;
-      }
-      this.session = session;
-      // Props may have moved while Stripe.js loaded (the custom-amount
-      // slider); sync before anything confirms against the session.
-      this.syncSession();
-      return session;
-    });
+      });
     return this.sessionPromise;
   }
 
