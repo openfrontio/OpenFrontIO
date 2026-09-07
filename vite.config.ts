@@ -327,8 +327,11 @@ export default defineConfig(({ mode }) => {
         isProduction ? "" : "localhost:3000",
       ),
       "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
+      // Empty when unset (and always empty under vitest, mirroring API_DOMAIN)
+      // so the replacement is always a string literal — an undefined define
+      // would leave a bare `process.env` reference in the browser bundle.
       "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
-        env.STRIPE_PUBLISHABLE_KEY,
+        mode === "test" ? "" : (env.STRIPE_PUBLISHABLE_KEY ?? ""),
       ),
       // Force empty under vitest (mode "test") so the getApiBase localhost-
       // fallback test is deterministic regardless of any API_DOMAIN in the

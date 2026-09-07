@@ -1,0 +1,197 @@
+import type {
+  Stripe,
+  StripeElements,
+  StripeExpressCheckoutElement,
+  StripePaymentElement,
+} from "@stripe/stripe-js";
+// The /pure entry point, deliberately: the default entry injects the Stripe.js
+// script tag as a side effect of being imported, which would put js.stripe.com
+// on the critical path of every page load. /pure defers it to the first
+// loadStripe() call, i.e. to the first time a priced store tile renders.
+import { loadStripe } from "@stripe/stripe-js/pure";
+import {
+  createInlinePaymentIntent,
+  paymentsProvider,
+  type PurchaseRequest,
+} from "./Payments";
+import { translateText } from "./Utils";
+
+/**
+ * The publishable key baked in at build time, or null when the build has none
+ * (dev without a key, tests). Null disables the inline flow entirely; tiles
+ * fall back to the redirect flow, which needs no client-side Stripe.
+ */
+export function stripePublishableKey(): string | null {
+  // The build defines this as "" when unset, so empty means "no key" too.
+  const key = process.env.STRIPE_PUBLISHABLE_KEY;
+  return key === undefined || key === "" ? null : key;
+}
+
+/**
+ * Whether the inline Stripe flow (wallet button on the tile, in-page card
+ * form) can run at all: web rail only — the desktop shell buys on Steam and
+ * must never reach Stripe — and only in a build that carries a key.
+ */
+export function stripeInlineAvailable(): boolean {
+  return paymentsProvider() === "stripe" && stripePublishableKey() !== null;
+}
+
+// One Stripe.js instance per page. A failed load resets the slot so a later
+// tile can retry, rather than caching the failure for the session.
+let stripePromise: Promise<Stripe | null> | null = null;
+
+function getStripe(): Promise<Stripe | null> {
+  const key = stripePublishableKey();
+  if (key === null) return Promise.resolve(null);
+  stripePromise ??= loadStripe(key).catch((e: unknown) => {
+    console.error("getStripe: Stripe.js failed to load", e);
+    stripePromise = null;
+    return null;
+  });
+  return stripePromise;
+}
+
+/**
+ * Where redirect-based payment methods (not wallets or cards, which never
+ * leave the page) land afterwards. No `status` param on purpose: the existing
+ * #purchase-completed handler classifies a missing status as "pending", which
+ * is the honest report — the redirect rail settles asynchronously and the
+ * webhook owns the grant.
+ */
+function inlineReturnUrl(kind: PurchaseRequest["kind"]): string {
+  return `${window.location.origin}/#purchase-completed?type=${kind}`;
+}
+
+export type InlineConfirmResult =
+  // The payment settled on Stripe's side. The entitlement is granted by the
+  // payment webhook, not by this client — treat this as "safe to thank the
+  // player and refresh the balance", nothing more.
+  | { kind: "success" }
+  // Confirmed, but the method settles asynchronously. Say "processing", never
+  // "failed".
+  | { kind: "pending" }
+  // The server answered with a redirect handoff; the page is navigating away.
+  | { kind: "redirecting" }
+  // `message` is ready to display.
+  | { kind: "error"; message: string };
+
+/**
+ * One tile's inline checkout: a deferred-mode Elements group that hosts the
+ * tile's wallet button and (behind "pay with card") a Payment Element, plus
+ * the confirm flow both share.
+ *
+ * The PaymentIntent is minted lazily on the first confirm — the server prices
+ * it from its own catalog; the amount here only seeds the payment sheet — and
+ * the client secret is cached for retries of the SAME purchase. update()
+ * drops the cache, because a changed purchase (the custom-amount slider) must
+ * never confirm an intent minted for the old one.
+ */
+export class InlineCheckoutSession {
+  private clientSecret: string | null = null;
+
+  private constructor(
+    private readonly stripe: Stripe,
+    readonly elements: StripeElements,
+    private request: PurchaseRequest,
+    private amountCents: number,
+  ) {}
+
+  /** Null when Stripe.js is unavailable (no key, blocked, offline). */
+  static async create(
+    request: PurchaseRequest,
+    amountCents: number,
+  ): Promise<InlineCheckoutSession | null> {
+    const stripe = await getStripe();
+    if (stripe === null) return null;
+    const elements = stripe.elements({
+      mode: "payment",
+      amount: amountCents,
+      currency: "usd",
+      appearance: { theme: "night" },
+    });
+    return new InlineCheckoutSession(stripe, elements, request, amountCents);
+  }
+
+  /**
+   * Wallets only. Link/PayPal/Klarna/Amazon Pay would each add a branded
+   * button to every tile; the tile design has room for exactly one wallet
+   * button, and the card form already covers everyone else.
+   */
+  createExpressCheckoutElement(): StripeExpressCheckoutElement {
+    return this.elements.create("expressCheckout", {
+      buttonHeight: 44,
+      paymentMethods: {
+        link: "never",
+        paypal: "never",
+        amazonPay: "never",
+        klarna: "never",
+      },
+    });
+  }
+
+  createPaymentElement(): StripePaymentElement {
+    return this.elements.create("payment");
+  }
+
+  update(request: PurchaseRequest, amountCents: number): void {
+    this.request = request;
+    if (amountCents !== this.amountCents) {
+      this.amountCents = amountCents;
+      this.elements.update({ amount: amountCents });
+    }
+    // Always dropped, even when only the request changed: a cached intent was
+    // minted for the OLD request and the server will not reprice it.
+    this.clientSecret = null;
+  }
+
+  /**
+   * The whole confirm, shared by the wallet button's `confirm` event and the
+   * card form's submit button: validate the collected details, mint (or
+   * reuse) the PaymentIntent, confirm it in-page.
+   */
+  async confirm(): Promise<InlineConfirmResult> {
+    const { error: submitError } = await this.elements.submit();
+    if (submitError) {
+      // Validation problems ("incomplete card number") carry a message meant
+      // for the player; show it rather than a generic failure.
+      return {
+        kind: "error",
+        message: submitError.message ?? translateText("store.checkout_failed"),
+      };
+    }
+
+    if (this.clientSecret === null) {
+      const minted = await createInlinePaymentIntent(this.request);
+      if (minted.kind === "error") {
+        return { kind: "error", message: minted.error.message };
+      }
+      if (minted.kind === "redirect") {
+        // Verbatim, same rule as startPurchase: the URL is the rail's own.
+        window.location.href = minted.redirectUrl;
+        return { kind: "redirecting" };
+      }
+      this.clientSecret = minted.clientSecret;
+    }
+
+    const { error, paymentIntent } = await this.stripe.confirmPayment({
+      elements: this.elements,
+      clientSecret: this.clientSecret,
+      confirmParams: { return_url: inlineReturnUrl(this.request.kind) },
+      redirect: "if_required",
+    });
+    if (error) {
+      // A decline leaves the PaymentIntent reusable, so the cached secret
+      // stays for the retry. Stripe's message is player-facing.
+      return {
+        kind: "error",
+        message: error.message ?? translateText("store.purchase_failed"),
+      };
+    }
+    // No redirect happened, so there is a PaymentIntent to inspect. Anything
+    // not yet "succeeded" (e.g. "processing") settles asynchronously and must
+    // be reported as pending, never as failed.
+    return paymentIntent?.status === "succeeded"
+      ? { kind: "success" }
+      : { kind: "pending" };
+  }
+}

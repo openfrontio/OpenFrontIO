@@ -178,6 +178,9 @@ describe("createPaymentsCheckout success", () => {
         kind: "currency_pack",
         handoff: "redirect",
         redirectUrl: "https://checkout.stripe.com/c/pay/cs_test_a1?x=1&y=2",
+        // Absent from the response body (an API deployed before the inline
+        // flow) and therefore defaulted, never required.
+        clientSecret: null,
         expiresAt: "2026-09-02T12:34:56.000Z",
       },
     });

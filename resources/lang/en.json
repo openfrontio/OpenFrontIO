@@ -1807,6 +1807,8 @@
     "pack_unavailable": "This bundle is no longer available.",
     "packs": "Packs",
     "patterns": "Skins",
+    "pay_amount": "Pay {amount}",
+    "pay_with_card": "Pay with card",
     "pending_provider_transaction": "You still have a {provider} purchase waiting. Finish or cancel it, then try again.",
     "plutonium_amount": "Plutonium amount",
     "preview_cosmetic": "In-Game Preview",

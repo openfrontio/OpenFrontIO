@@ -116,6 +116,15 @@ export class CustomCurrencyCard extends LitElement {
             class="block w-full"
             .dollarPrice=${price}
             .onPurchaseDollar=${this.buy}
+            .inlineCheckout=${{
+              request: {
+                kind: "custom_currency" as const,
+                hardAmount: this.amount,
+              },
+              // Same fixed rate as priceDollars: 5 cents per plutonium.
+              amountCents: this.amount * 5,
+              successMessageKey: "store.custom_currency_purchase_success",
+            }}
           ></purchase-button>
         </div>
       </article>
