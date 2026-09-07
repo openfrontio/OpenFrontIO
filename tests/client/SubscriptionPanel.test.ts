@@ -13,11 +13,28 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(async () => false),
 }));
 vi.mock("../../src/client/Utils", () => ({
-  translateText: (key: string) => key,
+  // The key, plus any interpolated values, so a test can see that the date
+  // reached the copy without asserting on English.
+  translateText: (key: string, params?: Record<string, string | number>) =>
+    params ? `${key} ${Object.values(params).join(" ")}` : key,
 }));
 
+import { cancelSubscription, invalidateUserMe } from "../../src/client/Api";
 import { SubscriptionPanel } from "../../src/client/components/SubscriptionPanel";
+import {
+  showInGameAlert,
+  showInGameConfirm,
+} from "../../src/client/InGameModal";
 import type { UserSubscription } from "../../src/core/ApiSchemas";
+
+const PERIOD_END = new Date("2026-09-01T00:00:00Z");
+// The panel's own format (toLocaleDateString, short month), evaluated here so
+// the assertion holds in whatever locale the test host runs.
+const PERIOD_END_TEXT = PERIOD_END.toLocaleDateString(undefined, {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
 
 function sub(overrides: Partial<UserSubscription> = {}): UserSubscription {
   return {
@@ -293,18 +310,62 @@ describe("subscription-panel", () => {
       );
     });
 
-    it("offers no in-app Cancel, and says where cancelling lives", () => {
-      expect(text()).not.toContain("account_modal.cancel_subscription");
-      // Cancel is a bare <button>; the o-buttons render their own inner
-      // <button>, so look only outside them.
-      expect(
-        Array.from(el.querySelectorAll("button")).filter(
-          (b) => b.closest("o-button") === null,
-        ),
-      ).toHaveLength(0);
+    // Cancel is a bare <button>; the o-buttons render their own inner
+    // <button>, so look only outside them.
+    const cancelButton = () =>
+      Array.from(el.querySelectorAll("button")).find(
+        (b) =>
+          b.closest("o-button") === null &&
+          (b.textContent ?? "").includes("account_modal.cancel_subscription"),
+      );
+
+    // S2, decided by Josh 7 Sept 2026: Cancel is shown on the Steam rail.
+    it("offers in-app Cancel, and says where Manage goes", () => {
+      expect(cancelButton()).toBeDefined();
       expect(text()).toContain("account_modal.manage_subscription_on_steam");
-      // No promise of re-enabling: un-cancel is unmeasured on Steam.
+      // No promise of re-enabling: there is no un-cancel on Steam.
       expect(text()).not.toContain("re-enable");
+    });
+
+    it("confirms with the Steam copy naming the date access ends, and does nothing when declined", async () => {
+      cancelButton()!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(showInGameConfirm).toHaveBeenCalledTimes(1);
+      const [message] = vi.mocked(showInGameConfirm).mock.calls[0];
+      expect(message).toBe(
+        `account_modal.cancel_subscription_confirm_steam ${PERIOD_END_TEXT}`,
+      );
+      expect(cancelSubscription).not.toHaveBeenCalled();
+    });
+
+    it("calls the self-cancel endpoint when confirmed, then reports cancelled-until and reloads", async () => {
+      vi.mocked(showInGameConfirm).mockResolvedValueOnce(true);
+      const reload = vi.fn();
+      (el as unknown as { reloadPage: () => void }).reloadPage = reload;
+
+      cancelButton()!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(cancelSubscription).toHaveBeenCalledTimes(1);
+      expect(showInGameAlert).toHaveBeenCalledWith(
+        `account_modal.cancel_subscription_success_steam ${PERIOD_END_TEXT}`,
+      );
+      expect(invalidateUserMe).toHaveBeenCalledTimes(1);
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports the failure and does not reload when the endpoint refuses", async () => {
+      vi.mocked(showInGameConfirm).mockResolvedValueOnce(true);
+      vi.mocked(cancelSubscription).mockResolvedValueOnce(false);
+      const reload = vi.fn();
+      (el as unknown as { reloadPage: () => void }).reloadPage = reload;
+
+      cancelButton()!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(showInGameAlert).toHaveBeenCalledWith(
+        "account_modal.cancel_subscription_failed",
+      );
+      expect(invalidateUserMe).not.toHaveBeenCalled();
+      expect(reload).not.toHaveBeenCalled();
     });
 
     it("renews rather than ending, and renders no anchor", () => {
@@ -332,16 +393,31 @@ describe("subscription-panel", () => {
       }
     });
 
-    // No un-cancel API exists, so no Reactivate; the note says it ends.
-    it("offers Manage but no Reactivate while winding down, and says it ends", async () => {
+    // No un-cancel API exists, so no Reactivate and no second Cancel; the
+    // note says cancelled, active until the date.
+    it("offers Manage only once cancelled, and says cancelled — active until the date", async () => {
       el.sub = sub({ provider: "steam", cancelAtPeriodEnd: true });
       await el.updateComplete;
       expect(buttonKeys()).toEqual(["account_modal.manage_subscription"]);
+      expect(cancelButton()).toBeUndefined();
       expect(text()).not.toContain("account_modal.reactivate_subscription");
       expect(text()).toContain("account_modal.sub_status_canceling");
       expect(text()).toContain(
-        "account_modal.manage_subscription_on_steam_ending",
+        `account_modal.manage_subscription_on_steam_ending ${PERIOD_END_TEXT}`,
       );
+    });
+
+    it("never renders a literal {date} when the row carries no period end", async () => {
+      el.sub = sub({
+        provider: "steam",
+        cancelAtPeriodEnd: true,
+        currentPeriodEnd: null,
+      } as Partial<UserSubscription>);
+      await el.updateComplete;
+      expect(text()).toContain(
+        "account_modal.manage_subscription_on_steam_ending_no_date",
+      );
+      expect(text()).not.toContain("{date}");
     });
 
     it("opens the URL the server returns when Manage is clicked", async () => {

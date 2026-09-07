@@ -32,7 +32,6 @@ vi.mock("../../src/client/SubscriptionPolicy", () => ({
   get STEAM_TIER_CHANGE_IN_APP() {
     return policy.STEAM_TIER_CHANGE_IN_APP;
   },
-  STEAM_CANCEL_IN_APP: false,
 }));
 
 import {

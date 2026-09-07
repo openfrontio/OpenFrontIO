@@ -10,10 +10,7 @@ import {
 import { translateCosmetic } from "../Cosmetics";
 import { isDesktopShell } from "../DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "../InGameModal";
-import {
-  STEAM_CANCEL_IN_APP,
-  STEAM_TIER_CHANGE_IN_APP,
-} from "../SubscriptionPolicy";
+import { STEAM_TIER_CHANGE_IN_APP } from "../SubscriptionPolicy";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./PlutoniumIcon";
@@ -56,7 +53,9 @@ export class SubscriptionPanel extends LitElement {
 
   private handleCancel = async (): Promise<void> => {
     const confirmed = await showInGameConfirm(
-      translateText("account_modal.cancel_subscription_confirm"),
+      this.isSteam()
+        ? this.steamText("account_modal.cancel_subscription_confirm_steam")
+        : translateText("account_modal.cancel_subscription_confirm"),
       { heading: translateText("account_modal.cancel_subscription") },
     );
     if (!confirmed) return;
@@ -68,11 +67,32 @@ export class SubscriptionPanel extends LitElement {
       return;
     }
     await showInGameAlert(
-      translateText("account_modal.cancel_subscription_success"),
+      this.isSteam()
+        ? this.steamText("account_modal.cancel_subscription_success_steam")
+        : translateText("account_modal.cancel_subscription_success"),
     );
     invalidateUserMe();
+    this.reloadPage();
+  };
+
+  // Own method so a test can observe the reload without jsdom navigating.
+  private reloadPage = (): void => {
     window.location.reload();
   };
+
+  /**
+   * Steam copy is honest about the one thing the Stripe copy need not be:
+   * there is no un-cancel, so every line names the date access actually ends
+   * on. `{date}` comes from `currentPeriodEnd`; a row without one (never on
+   * this rail in practice — the server stamps it at settle) gets the
+   * `_no_date` variant rather than a literal "{date}".
+   */
+  private steamText(key: string): string {
+    const date = this.periodEnd();
+    return date
+      ? translateText(key, { date })
+      : translateText(`${key}_no_date`);
+  }
 
   private periodEnd(): string | null {
     return this.sub.currentPeriodEnd
@@ -269,11 +289,13 @@ export class SubscriptionPanel extends LitElement {
    * page — the server's portal route returns that static URL for a Steam
    * row — which is not a payment origin, so the desktop shell lets it through
    * and the button stays on EVERY surface (unlike Stripe's, which the
-   * packaged build must not offer). Change Tier and Cancel are the two
-   * launch policies, STEAM_TIER_CHANGE_IN_APP and STEAM_CANCEL_IN_APP; when
-   * hidden, the copy says where cancelling lives and how a tier is changed.
-   * Nothing here claims an agreement can be re-enabled: un-cancel is
-   * unmeasured on Steam (design §4.6 — a re-subscribe is a new agreement).
+   * packaged build must not offer). Change Tier is launch policy S1
+   * (STEAM_TIER_CHANGE_IN_APP); when hidden, the copy says how a tier is
+   * changed. Cancel is shown (S2, Josh, 7 Sept 2026) and calls the same
+   * self-cancel route as Stripe's; the server cancels the agreement at Steam
+   * first. Nothing here claims an agreement can be re-enabled: there is no
+   * un-cancel on Steam (design §4.6 — a re-subscribe is a new agreement), so
+   * while winding down there is no Reactivate and the copy names the date.
    */
   private renderSteamActions(): TemplateResult {
     const manage = html`<o-button
@@ -285,12 +307,12 @@ export class SubscriptionPanel extends LitElement {
       @click=${this.handleManage}
     ></o-button>`;
     if (this.sub.cancelAtPeriodEnd) {
-      // No Reactivate: there is no un-cancel API. The subscription ends on
-      // the date the period line shows; Manage opens the account page.
+      // No Reactivate: there is no un-cancel API. Cancelled, active until
+      // the date; Manage opens the Steam subscriptions page.
       return html`<div class="flex flex-col gap-2">
         ${manage}
         <p class="text-[11px] text-center text-white/40 leading-snug">
-          ${translateText("account_modal.manage_subscription_on_steam_ending")}
+          ${this.steamText("account_modal.manage_subscription_on_steam_ending")}
         </p>
       </div>`;
     }
@@ -319,14 +341,12 @@ export class SubscriptionPanel extends LitElement {
           ${manage}
         </div>
         ${note}
-        ${STEAM_CANCEL_IN_APP
-          ? html`<button
-              @click=${this.handleCancel}
-              class="self-center text-[11px] font-bold uppercase tracking-widest text-white/30 hover:text-red-400 transition-colors py-1 cursor-pointer"
-            >
-              ${translateText("account_modal.cancel_subscription")}
-            </button>`
-          : nothing}
+        <button
+          @click=${this.handleCancel}
+          class="self-center text-[11px] font-bold uppercase tracking-widest text-white/30 hover:text-red-400 transition-colors py-1 cursor-pointer"
+        >
+          ${translateText("account_modal.cancel_subscription")}
+        </button>
       </div>
     `;
   }
