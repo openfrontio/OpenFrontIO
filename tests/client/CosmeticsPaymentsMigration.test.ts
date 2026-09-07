@@ -25,6 +25,16 @@ vi.mock("../../src/client/Payments", async (importOriginal) => ({
   startPurchase: vi.fn(async () => ({ outcome: "redirecting" })),
 }));
 
+// The S1 switch, mocked so both settings can be exercised in one run. The
+// default export value (false, blocked) is asserted separately.
+const policy = vi.hoisted(() => ({ STEAM_TIER_CHANGE_IN_APP: false }));
+vi.mock("../../src/client/SubscriptionPolicy", () => ({
+  get STEAM_TIER_CHANGE_IN_APP() {
+    return policy.STEAM_TIER_CHANGE_IN_APP;
+  },
+  STEAM_CANCEL_IN_APP: false,
+}));
+
 import {
   changeSubscriptionTier,
   createCheckoutSession,
@@ -174,7 +184,20 @@ describe("purchaseCosmetic dollar path", () => {
       });
     }
 
-    it("a Steam subscriber goes through a fresh checkout, never change-tier", async () => {
+    it("at launch (S1 blocked) a Steam subscriber is refused before any confirm or checkout", async () => {
+      policy.STEAM_TIER_CHANGE_IN_APP = false;
+      subscribedOn("steam");
+      await purchaseCosmetic(warlord(), "dollar");
+      expect(confirmMock).not.toHaveBeenCalled();
+      expect(startPurchaseMock).not.toHaveBeenCalled();
+      expect(changeTierMock).not.toHaveBeenCalled();
+      expect(alertMock).toHaveBeenCalledWith(
+        "store.tier_change_unavailable_steam",
+      );
+    });
+
+    it("with S1 enabled, a Steam subscriber goes through a fresh checkout, never change-tier", async () => {
+      policy.STEAM_TIER_CHANGE_IN_APP = true;
       subscribedOn("steam");
       startPurchaseMock.mockResolvedValue({ outcome: "completed" });
       await purchaseCosmetic(warlord(), "dollar");
@@ -205,6 +228,7 @@ describe("purchaseCosmetic dollar path", () => {
     });
 
     it("the tier already held is refused before any call, on either rail", async () => {
+      policy.STEAM_TIER_CHANGE_IN_APP = true;
       subscribedOn("steam");
       await purchaseCosmetic(
         resolved({

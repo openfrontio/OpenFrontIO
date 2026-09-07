@@ -37,6 +37,7 @@ import {
   purchaseOutcomeMessage,
   startPurchase,
 } from "./Payments";
+import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -244,6 +245,18 @@ export async function purchaseCosmetic(
     if (currentSub) {
       if (currentSub.tier === sub.name) {
         await showInGameAlert(translateText("store.already_subscribed"));
+        return;
+      }
+
+      // S1 (infra OPE-230, lead decision pending Josh): a Steam subscriber
+      // cannot change tier in-app at launch. The server would refuse the
+      // checkout with a 409 anyway; refusing HERE, before the confirm and
+      // before an order is minted, means no dialog that only ever ends in a
+      // refusal and no stranded PENDING row. Same switch the panel reads.
+      if (currentSub.provider === "steam" && !STEAM_TIER_CHANGE_IN_APP) {
+        await showInGameAlert(
+          translateText("store.tier_change_unavailable_steam"),
+        );
         return;
       }
 

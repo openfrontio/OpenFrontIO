@@ -10,32 +10,16 @@ import {
 import { translateCosmetic } from "../Cosmetics";
 import { isDesktopShell } from "../DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "../InGameModal";
+import {
+  STEAM_CANCEL_IN_APP,
+  STEAM_TIER_CHANGE_IN_APP,
+} from "../SubscriptionPolicy";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./PlutoniumIcon";
 
-/**
- * S2 (OPE-230, pending Josh): does the panel offer Cancel on the Steam rail?
- *
- * Steam has no un-cancel and no pause (there is no API for either), so an
- * in-app Cancel would be a one-way door with no Reactivate beside it — and
- * the Steam account page, which Manage opens, offers cancel AND re-enable.
- * Default: hidden, and the copy points at the Steam account page. Flip to
- * true to render the same Cancel control a Stripe subscriber gets; the
- * server accepts it either way.
- */
-export const STEAM_CANCEL_IN_APP = false;
-
-/**
- * S1 (OPE-230; lead decision 6 Sept 2026, pending Josh): may a Steam
- * subscriber change tier in-app? BLOCKED at launch, and mirrored here so the
- * panel does not offer a button whose only outcome is the server's 409 — a
- * dead control on a billing surface is a support ticket. The copy says what
- * to do instead (cancel in the Steam account, subscribe to the new tier after
- * the current period). Flip alongside the server's
- * STEAM_TIER_CHANGE_ENABLED, never on its own.
- */
-export const STEAM_TIER_CHANGE_IN_APP = false;
+// The Steam-rail launch policies (S1 tier change, S2 cancel) live in
+// SubscriptionPolicy.ts so the store reads the same switches.
 
 @customElement("subscription-panel")
 export class SubscriptionPanel extends LitElement {
