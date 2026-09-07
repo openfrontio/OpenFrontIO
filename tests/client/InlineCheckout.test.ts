@@ -7,6 +7,7 @@ vi.mock("../../src/client/StripeInline", () => ({
 
 vi.mock("../../src/client/Cosmetics", () => ({
   broadcastFreshUserMe: vi.fn(async () => {}),
+  invalidateCosmetics: vi.fn(),
 }));
 
 vi.mock("../../src/client/InGameModal", () => ({
@@ -22,7 +23,10 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
 // only used in type positions and would be elided on its own.
 import "../../src/client/components/InlineCheckout";
 import type { InlineCheckout } from "../../src/client/components/InlineCheckout";
-import { broadcastFreshUserMe } from "../../src/client/Cosmetics";
+import {
+  broadcastFreshUserMe,
+  invalidateCosmetics,
+} from "../../src/client/Cosmetics";
 import { showInGameAlert } from "../../src/client/InGameModal";
 import {
   InlineCheckoutSession,
@@ -147,6 +151,26 @@ describe("inline-checkout wallet row", () => {
       expect(showInGameAlert).toHaveBeenCalledWith("Your card was declined."),
     );
     expect(broadcastFreshUserMe).not.toHaveBeenCalled();
+    expect(invalidateCosmetics).not.toHaveBeenCalled();
+  });
+
+  it("invalidates the cached catalog on a stale-listing error", async () => {
+    const { session, express } = fakeSession();
+    session.confirm.mockResolvedValue({
+      kind: "error",
+      message: "store.checkout_listing_stale",
+      refetchCatalog: true,
+    } as never);
+    createMock.mockResolvedValue(session);
+    await renderComponent();
+
+    express.fire("confirm", {});
+    await vi.waitFor(() =>
+      expect(showInGameAlert).toHaveBeenCalledWith(
+        "store.checkout_listing_stale",
+      ),
+    );
+    expect(invalidateCosmetics).toHaveBeenCalled();
   });
 });
 

@@ -5,7 +5,7 @@ import type {
 import type { PropertyValues, TemplateResult } from "lit";
 import { html, LitElement, render as litRender, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { broadcastFreshUserMe } from "../Cosmetics";
+import { broadcastFreshUserMe, invalidateCosmetics } from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
 import type { PurchaseRequest } from "../Payments";
 import {
@@ -163,6 +163,10 @@ export class InlineCheckout extends LitElement {
     try {
       const result = await this.session.confirm();
       if (result.kind === "error") {
+        // The catalog this tile rendered from named something the rail no
+        // longer sells; drop it so the next open refetches — same rule as
+        // the redirect flow in Cosmetics.ts.
+        if (result.refetchCatalog) invalidateCosmetics();
         await showInGameAlert(result.message);
         return;
       }
@@ -217,6 +221,7 @@ export class InlineCheckout extends LitElement {
     try {
       const result = await this.session.confirm();
       if (result.kind === "error") {
+        if (result.refetchCatalog) invalidateCosmetics();
         this.modalError = result.message;
         return;
       }

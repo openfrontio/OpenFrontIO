@@ -72,8 +72,10 @@ export type InlineConfirmResult =
   | { kind: "pending" }
   // The server answered with a redirect handoff; the page is navigating away.
   | { kind: "redirecting" }
-  // `message` is ready to display.
-  | { kind: "error"; message: string };
+  // `message` is ready to display. `refetchCatalog` mirrors PurchaseError's:
+  // the server rejected the listing as stale, so the caller must invalidate
+  // the cached catalog or every retry re-sends the same dead listing.
+  | { kind: "error"; message: string; refetchCatalog?: boolean };
 
 /**
  * One tile's inline checkout: a deferred-mode Elements group that hosts the
@@ -163,7 +165,11 @@ export class InlineCheckoutSession {
     if (this.clientSecret === null) {
       const minted = await createInlinePaymentIntent(this.request);
       if (minted.kind === "error") {
-        return { kind: "error", message: minted.error.message };
+        return {
+          kind: "error",
+          message: minted.error.message,
+          refetchCatalog: minted.error.refetchCatalog,
+        };
       }
       if (minted.kind === "redirect") {
         // Verbatim, same rule as startPurchase: the URL is the rail's own.
@@ -187,6 +193,11 @@ export class InlineCheckoutSession {
         message: error.message ?? translateText("store.purchase_failed"),
       };
     }
+    // The intent is spent (succeeded) or owned by the webhook (processing)
+    // either way; the NEXT purchase on this tile must mint a fresh one.
+    // Keeping the secret here would replay a settled intent on a repeat buy —
+    // a false "purchase successful" at best, a bricked tile at worst.
+    this.clientSecret = null;
     // No redirect happened, so there is a PaymentIntent to inspect. Anything
     // not yet "succeeded" (e.g. "processing") settles asynchronously and must
     // be reported as pending, never as failed.
