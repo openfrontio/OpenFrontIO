@@ -139,19 +139,19 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
     "cast": [
       [
         1000,
-        "game has ended",
+        "close_reason.game_ended",
       ],
     ],
     "host": [
       [
         1000,
-        "game has ended",
+        "close_reason.game_ended",
       ],
     ],
     "p2": [
       [
         1000,
-        "game has ended",
+        "close_reason.game_ended",
       ],
     ],
     "p3": [
@@ -160,7 +160,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
     "p3Again": [
       [
         1000,
-        "game has ended",
+        "close_reason.game_ended",
       ],
     ],
   },

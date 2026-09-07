@@ -1,6 +1,7 @@
 import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
+import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
 
 const apiMocks = vi.hoisted(() => ({
   getUserMe: vi.fn(),
@@ -205,7 +206,7 @@ describe("MatchmakingModal clan-aware joins", () => {
     window.addEventListener("show-message", showMessage);
 
     const { modal, socket } = await openAndJoin("2v2");
-    socket.serverClose(1008, "invalid_clan");
+    socket.serverClose(CloseCode.InvalidClan, CloseReason.InvalidClan);
 
     await vi.waitFor(() => expect(apiMocks.getUserMe).toHaveBeenCalledTimes(2));
     await vi.waitFor(() =>
@@ -225,7 +226,10 @@ describe("MatchmakingModal clan-aware joins", () => {
     window.addEventListener("show-message", showMessage);
 
     const { modal, socket } = await openAndJoin("2v2");
-    socket.serverClose(1011, "clan_verification_failed");
+    socket.serverClose(
+      CloseCode.ClanVerificationFailed,
+      CloseReason.ClanVerificationFailed,
+    );
     await vi.runAllTimersAsync();
 
     expect(modal.isOpen()).toBe(false);
@@ -233,6 +237,56 @@ describe("MatchmakingModal clan-aware joins", () => {
     expect(showMessage).toHaveBeenCalledOnce();
     expect(sockets).toHaveLength(1);
     window.removeEventListener("show-message", showMessage);
+  });
+
+  // The deployed matchmaking service still closes with 1008/1011 and a bare
+  // reason. Until it ships the 41xx codes, those must land on the same
+  // branches — not on the generic rejoin-with-backoff path.
+  describe("legacy 1008/1011 rejections from the live service", () => {
+    it("still stops on ranked_limit_reached", async () => {
+      apiMocks.getUserMe.mockResolvedValue(userMe());
+      const { modal, socket } = await openAndJoin("1v1");
+      socket.serverClose(1008, "ranked_limit_reached");
+      await vi.runAllTimersAsync();
+
+      expect(modal.isOpen()).toBe(true);
+      expect((modal as unknown as { limitReached: boolean }).limitReached).toBe(
+        true,
+      );
+      expect(sockets).toHaveLength(1);
+    });
+
+    it("still clears the clan selection on invalid_clan", async () => {
+      apiMocks.getUserMe
+        .mockResolvedValueOnce(userMe(["ALLY"]))
+        .mockResolvedValueOnce(userMe());
+      const input = installClanSelection("ALLY");
+
+      const { modal, socket } = await openAndJoin("2v2");
+      socket.serverClose(1008, "invalid_clan");
+
+      await vi.waitFor(() =>
+        expect(input.clearClanTag).toHaveBeenCalledWith("ALLY"),
+      );
+      expect(modal.isOpen()).toBe(false);
+      expect(sockets).toHaveLength(1);
+    });
+
+    it("still reports clan_verification_failed without reconnecting", async () => {
+      apiMocks.getUserMe.mockResolvedValue(userMe(["ALLY"]));
+      installClanSelection("ALLY");
+      const showMessage = vi.fn();
+      window.addEventListener("show-message", showMessage);
+
+      const { modal, socket } = await openAndJoin("2v2");
+      socket.serverClose(1011, "clan_verification_failed");
+      await vi.runAllTimersAsync();
+
+      expect(modal.isOpen()).toBe(false);
+      expect(showMessage).toHaveBeenCalledOnce();
+      expect(sockets).toHaveLength(1);
+      window.removeEventListener("show-message", showMessage);
+    });
   });
 });
 
