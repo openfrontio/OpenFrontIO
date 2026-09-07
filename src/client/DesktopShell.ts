@@ -284,3 +284,38 @@ export function multiplayerAllowedForSession(
   if (state === null) return true;
   return state.status === "unknown" || state.status === "signed-in";
 }
+
+/**
+ * The shell's account-linking gate, re-openable on demand.
+ *
+ * The desktop preload exposes `showLinkGate()`: it navigates the window to
+ * the gate's re-entry variant, which mints a fresh link ticket, opens the
+ * browser at the website's `#steam-link?token=...` URL, polls the ticket and
+ * -- once the browser session has signed in and confirmed the link -- reloads
+ * the game, whose Steam sign-in then resolves to the linked account. That is
+ * the same handoff the first-launch gate uses, and it needs no return path
+ * into the shell, which is why every provider login on desktop goes through
+ * it (see Auth.ts) rather than an OAuth redirect: `window.location.href` in
+ * the shell is `app://openfront/...`, which the API's redirect_uri allowlist
+ * refuses, and the shell registers no scheme handler for a browser-completed
+ * OAuth flow to come back to anyway.
+ *
+ * Guards on `showLinkGate` specifically -- the function actually invoked --
+ * and not on a sibling like `linkGate` (the gate page's own namespace), so a
+ * rename of one cannot leave a caller wired to nothing. Null on the web and
+ * on a shell too old to expose it, for the same degrade-don't-break reason
+ * desktopUpdate() above returns null.
+ */
+export interface DesktopLinkGateBridge {
+  showLinkGate: () => Promise<void>;
+}
+
+export function desktopLinkGate(): DesktopLinkGateBridge | null {
+  if (typeof window === "undefined") return null;
+  const desktop = window.openfrontDesktop as
+    | { showLinkGate?: unknown }
+    | undefined;
+  return typeof desktop?.showLinkGate === "function"
+    ? (desktop as DesktopLinkGateBridge)
+    : null;
+}
