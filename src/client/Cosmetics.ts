@@ -34,6 +34,7 @@ import {
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
   classifyPurchaseReturn,
+  paymentsProvider,
   purchaseOutcomeMessage,
   startPurchase,
 } from "./Payments";
@@ -256,6 +257,20 @@ export async function purchaseCosmetic(
       if (currentSub.provider === "steam" && !STEAM_TIER_CHANGE_IN_APP) {
         await showInGameAlert(
           translateText("store.tier_change_unavailable_steam"),
+        );
+        return;
+      }
+
+      // Rail vs account. `currentSub.provider` is where the ACCOUNT is
+      // billed; `paymentsProvider()` is what this DEVICE can check out on
+      // (Steam only inside the desktop shell). A Steam-billed subscriber in
+      // a plain browser would otherwise see the Steam confirm and then have
+      // a Stripe checkout minted for them — which the server refuses at
+      // gate 1, leaving a stranded row. A Steam agreement can only be
+      // replaced by another Steam agreement, so say where to do it.
+      if (currentSub.provider === "steam" && paymentsProvider() !== "steam") {
+        await showInGameAlert(
+          translateText("store.tier_change_steam_needs_desktop"),
         );
         return;
       }

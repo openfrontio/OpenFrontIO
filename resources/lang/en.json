@@ -1769,6 +1769,7 @@
     "subscription_purchase_success": "Subscription activated!",
     "subscriptions": "Subscriptions",
     "switch_button": "Switch",
+    "tier_change_steam_needs_desktop": "Your subscription is billed through Steam. Change it from the OpenFront app on Steam, or manage it in your Steam account settings.",
     "tier_change_unavailable_steam": "To switch tiers on Steam, cancel your subscription in your Steam account settings and subscribe to the new tier after your current month ends.",
     "title": "Store",
     "tribe_boost_button": "Boost",

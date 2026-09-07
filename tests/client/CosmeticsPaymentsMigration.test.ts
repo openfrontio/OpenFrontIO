@@ -196,8 +196,37 @@ describe("purchaseCosmetic dollar path", () => {
       );
     });
 
-    it("with S1 enabled, a Steam subscriber goes through a fresh checkout, never change-tier", async () => {
+    /** The desktop shell with its Steam bridge: the device that can check
+     *  out on the Steam rail. */
+    function installSteamShell() {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+    }
+
+    afterEach(() => {
+      delete (window as unknown as { openfrontDesktop?: unknown })
+        .openfrontDesktop;
+    });
+
+    it("a Steam-billed subscriber in a plain browser is refused before the confirm — no Stripe checkout is minted", async () => {
+      // `provider` is an account fact; the rail is a device fact. Without
+      // the shell, startPurchase would pick Stripe and the server would 409
+      // at gate 1 with a stranded row.
       policy.STEAM_TIER_CHANGE_IN_APP = true;
+      subscribedOn("steam");
+      await purchaseCosmetic(warlord(), "dollar");
+      expect(confirmMock).not.toHaveBeenCalled();
+      expect(startPurchaseMock).not.toHaveBeenCalled();
+      expect(changeTierMock).not.toHaveBeenCalled();
+      expect(alertMock).toHaveBeenCalledWith(
+        "store.tier_change_steam_needs_desktop",
+      );
+    });
+
+    it("with S1 enabled, a Steam subscriber in the desktop shell goes through a fresh checkout, never change-tier", async () => {
+      policy.STEAM_TIER_CHANGE_IN_APP = true;
+      installSteamShell();
       subscribedOn("steam");
       startPurchaseMock.mockResolvedValue({ outcome: "completed" });
       await purchaseCosmetic(warlord(), "dollar");
@@ -215,7 +244,7 @@ describe("purchaseCosmetic dollar path", () => {
       expect(alertMock).toHaveBeenCalledWith("store.change_tier_success_steam");
     });
 
-    it("a Stripe subscriber still reprices in place", async () => {
+    it("a Stripe subscriber in a browser still reprices in place", async () => {
       subscribedOn("stripe");
       changeTierMock.mockResolvedValue(true);
       await purchaseCosmetic(warlord(), "dollar");
