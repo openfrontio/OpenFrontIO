@@ -225,7 +225,7 @@ export class SendSpectateEvent implements GameEvent {
 export class Transport {
   // Retry budget for a dropped game socket. The first retry is immediate (a
   // blip should not cost a second), then exponential from the base to the
-  // cap with +/-25% jitter: about 75s nominal over ten attempts, 56-94s with
+  // cap with +/-25% jitter: about 90s nominal over ten attempts, 68-113s with
   // jitter — enough to ride out a router reboot or a worker restart, short
   // enough not to leave a frozen map on screen for minutes. Every requester
   // (onclose, ClientGameRunner's silence watchdog, a send on a closed
