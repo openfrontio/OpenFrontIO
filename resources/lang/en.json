@@ -1913,6 +1913,7 @@
   "tutorial": {
     "close": "Close tutorial",
     "complete": "You're ready! Good luck out there.",
+    "go_to": "Go to",
     "got_it": "Got it",
     "hide_for_game": "Hide for this game",
     "never_show": "Don't show again",
@@ -1920,8 +1921,9 @@
     "step": {
       "alliance_info": "Allies can't attack each other. You can break an alliance at any time — but doing so marks you as a traitor.",
       "atom_info": "Atom Bomb — small tactical strikes that take out structures.",
+      "attack_nations": "Nations have cut you off from the tribes. Attack a neighboring nation instead — they're stronger than tribes, so bring plenty of troops. The nearest ones are marked with a target. Conquer them until you have {cost} gold for a City.",
       "attack_ratio": "The attack ratio bar sets how many of your troops are sent out with each attack. Drag the slider to adjust it.",
-      "attack_wilderness": "Click on the unclaimed land next to you to attack it and expand your territory.",
+      "attack_wilderness": "The pulsing ring marks your territory. Click on the unclaimed land next to it to attack and expand.",
       "buy_city": "You can afford a City! Press {key} (or click the City icon under the control panel), then click your territory to place it. Cities raise your max troops.",
       "buy_defense_post": "Now build a Defense Post: press {key}, then click your territory near a border. Attacks on the land around it are much slower and cost the enemy far more troops.",
       "buy_factory": "Now build a Factory: press {key}, then click your territory to place it.",
@@ -1938,6 +1940,7 @@
       "port_info_warships": "Ports can also be used to construct warships.",
       "propose_alliance": "Nations make strong allies. Right-click the nation marked with a target and propose an alliance.",
       "sam_info": "SAM Launcher — defends against nuclear strikes by shooting down incoming missiles.",
+      "send_boat": "Boats send your troops across water. Right-click an enemy coastland across the water to open the radial menu, then select the boat.",
       "silo_loading": "Your Missile Silo is loading — a nuke can be launched once it's fully ready.",
       "spawn": "Click anywhere on the map to pick where you spawn.",
       "traitor_info": "Traitors get a large defense debuff for 30 seconds, so be careful.",

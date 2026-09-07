@@ -1386,4 +1386,18 @@ export class GameView implements GameMap {
   markedPlayers(): ReadonlySet<number> | null {
     return this._markedPlayers;
   }
+
+  private _ownSpawnRing = false;
+
+  /**
+   * Keep the local player's spawn-phase ring drawn after the phase ends
+   * (the tutorial uses it to show a new player where their territory is).
+   */
+  setOwnSpawnRing(show: boolean): void {
+    this._ownSpawnRing = show;
+  }
+
+  ownSpawnRing(): boolean {
+    return this._ownSpawnRing;
+  }
 }

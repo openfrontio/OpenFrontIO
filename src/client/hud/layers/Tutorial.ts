@@ -1,8 +1,9 @@
 import { GameEvent } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 
-/** HUD elements the tutorial can draw attention to. */
+/** HUD elements (or, for "territory", the map ring) the tutorial can draw attention to. */
 export type TutorialHighlight =
+  | "territory"
   | "troops"
   | "troop_rate"
   | "attack_ratio"
@@ -32,6 +33,9 @@ export interface TutorialContext {
   attacking: boolean;
   /** The attack ratio changed this tick (slider drag or hotkey). */
   attackRatioMoved: boolean;
+  boatsDisabled: boolean;
+  /** A transport ship of ours is (or was seen) afloat. */
+  boatSent: boolean;
   botsExist: boolean;
   nationsExist: boolean;
   alliancesDisabled: boolean;
@@ -93,8 +97,13 @@ export interface TutorialStep {
 
 export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   { id: "spawn", isDone: (c) => c.hasSpawned },
+  // Keeps the spawn ring on the player's territory so they can find it.
   // Any attack counts so a player who hits a bot first doesn't get stuck.
-  { id: "attack_wilderness", isDone: (c) => c.attacking },
+  {
+    id: "attack_wilderness",
+    highlight: "territory",
+    isDone: (c) => c.attacking,
+  },
   { id: "troops", highlight: "troops", manual: true },
   { id: "troop_rate", highlight: "troop_rate", manual: true },
   {
@@ -145,6 +154,12 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     id: "factory_info",
     applies: (c) => !c.factoryDisabled,
     manual: true,
+  },
+  // Boats are free, so no earn-gold gating; done once one of ours is afloat.
+  {
+    id: "send_boat",
+    applies: (c) => !c.boatsDisabled,
+    isDone: (c) => c.boatSent,
   },
   {
     id: "buy_port",

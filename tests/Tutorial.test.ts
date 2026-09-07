@@ -10,6 +10,8 @@ function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
     hasSpawned: false,
     attacking: false,
     attackRatioMoved: false,
+    boatsDisabled: false,
+    boatSent: false,
     botsExist: true,
     nationsExist: true,
     alliancesDisabled: false,
@@ -126,6 +128,7 @@ describe("TutorialProgress", () => {
     const c = ctx({
       hasSpawned: true,
       attacking: true,
+      boatsDisabled: true,
       botsExist: false,
       nationsExist: false,
       cityDisabled: true,
@@ -139,7 +142,7 @@ describe("TutorialProgress", () => {
       mirvDisabled: true,
       samDisabled: true,
     });
-    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 16);
+    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 17);
 
     settle(p, c);
     settle(p, c);
@@ -213,6 +216,9 @@ describe("TutorialProgress", () => {
     expect(p.current()?.id).toBe("factory_info");
     p.acknowledge();
     settle(p, ctx({ factories: 1 }));
+
+    expect(p.current()?.id).toBe("send_boat");
+    settle(p, ctx({ factories: 1, boatSent: true }));
 
     expect(p.current()?.id).toBe("buy_port");
     expect(p.current()?.highlight).toBe("port");

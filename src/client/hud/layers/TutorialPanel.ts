@@ -4,6 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { PlayerType, Relation, UnitType } from "../../../core/game/Game";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
+import { GoToPlayerEvent } from "../../TransformHandler";
 import { UIState } from "../../UIState";
 import { renderNumber, translateText } from "../../Utils";
 import { GameView } from "../../view";
@@ -43,16 +44,11 @@ const UNIT_NAME_KEYS: Partial<Record<UnitType, string>> = {
 /** Ticks the "you're ready" message stays up before the panel closes. */
 const COMPLETE_LINGER_TICKS = 50;
 
-/** How many of the nearest tribes get a target marker during the tribes step. */
+/** How many of the nearest attack targets get a marker during the tribes step. */
 const NEARBY_TRIBE_MARK_COUNT = 3;
 
-/** Map-marker specs per highlight target: which player type, how many. */
-const MAP_MARKERS: Partial<
-  Record<TutorialHighlight, { type: PlayerType; count: number }>
-> = {
-  tribes: { type: PlayerType.Bot, count: NEARBY_TRIBE_MARK_COUNT },
-  nation: { type: PlayerType.Nation, count: 1 },
-};
+/** How often (in ticks) to recompute which players we share a border with. */
+const BORDER_REFRESH_TICKS = 10;
 
 /** Defaults shown when the player hasn't rebound the action (see UnitDisplay). */
 const HOTKEY_FALLBACKS = {
@@ -83,10 +79,17 @@ export class TutorialPanel extends LitElement implements Controller {
   private mapMarksActive = false;
   /** Latched: an atom bomb of ours was seen in flight at least once. */
   private atomLaunchSeen = false;
+  /** Latched: a transport ship of ours was seen afloat at least once. */
+  private boatSeen = false;
   /** Attack ratio as of the previous tick, to spot the slider moving. */
   private lastAttackRatio: number | null = null;
   /** Nation smallID → its attitude toward us, fetched during the ally step. */
   private nationRelations = new Map<number, Relation>();
+  /** smallIDs we share a border with; null until the first fetch lands. */
+  private borderingIds: Set<number> | null = null;
+  private borderFetch: Promise<void> | null = null;
+  /** Tribes step: every reachable tribe is walled off, so point at nations. */
+  @state() private attackNations = false;
   private completeTicks: number | null = null;
   private highlight: TutorialHighlight | null = null;
 
@@ -138,29 +141,41 @@ export class TutorialPanel extends LitElement implements Controller {
       step && !this.progress.stepDone() ? (step.highlight ?? null) : null;
     this.setHighlight(target);
     this.syncMapMarkers(target);
+    this.game.setOwnSpawnRing(target === "territory");
   }
 
   /**
-   * Marks the players nearest to us with the target crosshair while a step
-   * points at the map (tribes to capture, a nation to ally with); as they
-   * die or are captured, the next nearest take their place.
+   * Marks players with the target crosshair while a step points at the map
+   * (tribes to capture, a nation to ally with); as they die or are captured,
+   * the next candidates take their place.
    */
   private syncMapMarkers(target: TutorialHighlight | null) {
-    const spec = target !== null ? MAP_MARKERS[target] : undefined;
-    if (spec === undefined) {
+    if (target !== "tribes" && target !== "nation") {
       if (this.mapMarksActive) {
         this.mapMarksActive = false;
         this.game.setMarkedPlayers(null);
       }
       return;
     }
+    const player = this.game.myPlayer();
+    if (player === null) return;
     // Name locations are the position anchor; they're recomputed every ~3s.
     // Keep the last set while ours is missing rather than flashing empty.
-    const me = this.game.myPlayer()?.nameLocation();
+    const me = player.nameLocation();
     if (!me || (me.x === 0 && me.y === 0)) return;
+    const ids =
+      target === "tribes"
+        ? this.attackTargets(player, me)
+        : this.allianceTarget(me);
+    this.game.setMarkedPlayers(new Set(ids));
+    this.mapMarksActive = true;
+  }
+
+  /** Living players of `type` sorted nearest to `me` first. */
+  private nearest(type: PlayerType, me: { x: number; y: number }): number[] {
     const candidates: { id: number; distSquared: number }[] = [];
     for (const p of this.game.playerViews()) {
-      if (p.type() !== spec.type || !p.isAlive()) continue;
+      if (p.type() !== type || !p.isAlive()) continue;
       const loc = p.nameLocation();
       if (!loc || (loc.x === 0 && loc.y === 0)) continue;
       const dx = loc.x - me.x;
@@ -168,26 +183,91 @@ export class TutorialPanel extends LitElement implements Controller {
       candidates.push({ id: p.smallID(), distSquared: dx * dx + dy * dy });
     }
     candidates.sort((a, b) => a.distSquared - b.distSquared);
-    // Only suggest allying with a nation that doesn't dislike us; unknown
-    // relations count as neutral until their profile fetch lands.
-    const picked =
-      spec.type === PlayerType.Nation
-        ? candidates.filter(
-            (c) =>
-              (this.nationRelations.get(c.id) ?? Relation.Neutral) >=
-              Relation.Neutral,
-          )
-        : candidates;
-    if (spec.type === PlayerType.Nation) {
-      // Refresh from the pre-filter list: relations decay back toward
-      // neutral, so a nation that dipped hostile must stay refreshable or
-      // it would be blacklisted forever.
-      this.fetchNationRelations(candidates.slice(0, 5).map((c) => c.id));
+    return candidates.map((c) => c.id);
+  }
+
+  /**
+   * Tribes step: the tribes we share a border with, nearest first. When
+   * nations have walled every tribe off, the nations we border instead
+   * (minus allies) — and the step text switches to attacking nations.
+   */
+  private attackTargets(
+    player: PlayerView,
+    me: { x: number; y: number },
+  ): number[] {
+    this.refreshBordering(player);
+    const bordering = this.borderingIds;
+    const bots = this.nearest(PlayerType.Bot, me);
+    // Until the first border fetch lands, fall back to plain nearest.
+    if (bordering === null) {
+      this.attackNations = false;
+      return bots.slice(0, NEARBY_TRIBE_MARK_COUNT);
     }
-    this.game.setMarkedPlayers(
-      new Set(picked.slice(0, spec.count).map((c) => c.id)),
+    const borderingBots = bots.filter((id) => bordering.has(id));
+    if (borderingBots.length > 0) {
+      this.attackNations = false;
+      return borderingBots.slice(0, NEARBY_TRIBE_MARK_COUNT);
+    }
+    const nations = this.nearest(PlayerType.Nation, me).filter(
+      (id) =>
+        bordering.has(id) &&
+        !player.isFriendly(this.game.playerBySmallID(id) as PlayerView),
     );
-    this.mapMarksActive = true;
+    this.attackNations = nations.length > 0;
+    return this.attackNations
+      ? nations.slice(0, NEARBY_TRIBE_MARK_COUNT)
+      : bots.slice(0, NEARBY_TRIBE_MARK_COUNT);
+  }
+
+  /** Ally step: the nearest nation that doesn't dislike us, if any. */
+  private allianceTarget(me: { x: number; y: number }): number[] {
+    const nations = this.nearest(PlayerType.Nation, me);
+    // Refresh from the pre-filter list: relations decay back toward
+    // neutral, so a nation that dipped hostile must stay refreshable or
+    // it would be blacklisted forever.
+    this.fetchNationRelations(nations.slice(0, 5));
+    // Unknown relations count as neutral until their profile fetch lands.
+    return nations
+      .filter(
+        (id) =>
+          (this.nationRelations.get(id) ?? Relation.Neutral) >=
+          Relation.Neutral,
+      )
+      .slice(0, 1);
+  }
+
+  /** Recompute (once a second, one fetch in flight) who we share a border with. */
+  private refreshBordering(player: PlayerView) {
+    if (
+      this.game.ticks() % BORDER_REFRESH_TICKS !== 0 ||
+      this.borderFetch !== null
+    )
+      return;
+    this.borderFetch = player.borderTiles().then((bt) => {
+      this.borderFetch = null;
+      const myID = player.smallID();
+      const ids = new Set<number>();
+      for (const tile of bt.borderTiles) {
+        for (const n of this.game.neighbors(tile)) {
+          const owner = this.game.ownerID(n);
+          if (owner !== 0 && owner !== myID) ids.add(owner);
+        }
+      }
+      this.borderingIds = ids;
+    });
+  }
+
+  /**
+   * Where the Go-to button flies the camera: our own territory during the
+   * spawn-ring step, otherwise the nearest marked player (the marked set is
+   * built nearest-first). Null when the step points at nothing on the map.
+   */
+  private goToTarget(): PlayerView | null {
+    if (this.highlight === "territory") return this.game.myPlayer();
+    const id = this.game.markedPlayers()?.values().next().value;
+    if (id === undefined) return null;
+    const p = this.game.playerBySmallID(id);
+    return p.isPlayer() ? (p as PlayerView) : null;
   }
 
   /** Refresh (throttled) how the given nations feel about us. */
@@ -217,6 +297,9 @@ export class TutorialPanel extends LitElement implements Controller {
       hasSpawned: player.hasSpawned(),
       attacking: attacks.length > 0,
       attackRatioMoved,
+      boatsDisabled: this.game.config().isUnitDisabled(UnitType.TransportShip),
+      boatSent: (this.boatSeen ||=
+        player.units(UnitType.TransportShip).length > 0),
       botsExist: this.game
         .playerViews()
         .some((p) => p.type() === PlayerType.Bot && p.isAlive()),
@@ -279,6 +362,7 @@ export class TutorialPanel extends LitElement implements Controller {
     if (!active) {
       this.setHighlight(null);
       this.syncMapMarkers(null);
+      this.game.setOwnSpawnRing(false);
     }
   }
 
@@ -322,7 +406,7 @@ export class TutorialPanel extends LitElement implements Controller {
     `;
   }
 
-  /** Got it / Skip live in the header row to keep the panel short. */
+  /** Got it / Go to / Skip live in the header row to keep the panel short. */
   private renderHeaderActions() {
     const step = this.progress.current();
     if (
@@ -331,6 +415,7 @@ export class TutorialPanel extends LitElement implements Controller {
       this.progress.stepDone()
     )
       return nothing;
+    const goTo = this.goToTarget();
     return html`
       ${step.manual
         ? html`<button
@@ -338,6 +423,14 @@ export class TutorialPanel extends LitElement implements Controller {
             @click=${() => this.progress.acknowledge()}
           >
             ${translateText("tutorial.got_it")}
+          </button>`
+        : nothing}
+      ${goTo
+        ? html`<button
+            class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
+            @click=${() => this.eventBus.emit(new GoToPlayerEvent(goTo))}
+          >
+            ${translateText("tutorial.go_to")}
           </button>`
         : nothing}
       <button
@@ -375,21 +468,6 @@ export class TutorialPanel extends LitElement implements Controller {
     const step = this.progress.current();
     if (step === null) return nothing;
     const done = this.progress.stepDone();
-    // Build steps: until the unit is affordable, ask for gold instead of
-    // telling the player to build something they can't.
-    const cost =
-      step.unit !== undefined ? this.costs.get(step.unit) : undefined;
-    const needsGold =
-      !done &&
-      cost !== undefined &&
-      (this.game.myPlayer()?.gold() ?? 0n) < cost;
-    // The launch step must not claim the silo is armed while it's still
-    // under construction or reloading.
-    const siloLoading =
-      !done &&
-      !needsGold &&
-      step.id === "launch_atom" &&
-      this.ctx?.siloReady === false;
     return html`
       <p class="flex gap-1.5 ${done ? "text-green-400" : ""}">
         ${step.bullets && !done
@@ -401,22 +479,38 @@ export class TutorialPanel extends LitElement implements Controller {
                 (b) => html`<li>${translateText(`tutorial.step.${b}`)}</li>`,
               )}
             </ul>`
-          : html`<span
-              >${needsGold
-                ? translateText("tutorial.step.earn_gold", {
-                    unit: translateText(
-                      `unit_type.${UNIT_NAME_KEYS[step.unit!]}`,
-                    ),
-                    cost: renderNumber(cost!),
-                  })
-                : siloLoading
-                  ? translateText("tutorial.step.silo_loading")
-                  : translateText(`tutorial.step.${step.id}`, {
-                      cost: renderNumber(this.costs.get(UnitType.City) ?? 0n),
-                      key: this.hotkeyFor(step),
-                    })}</span
-            >`}
+          : html`<span>${this.stepText(step, done)}</span>`}
       </p>
     `;
+  }
+
+  private stepText(step: TutorialStep, done: boolean): string {
+    // Build steps: until the unit is affordable, ask for gold instead of
+    // telling the player to build something they can't.
+    const cost =
+      step.unit !== undefined ? this.costs.get(step.unit) : undefined;
+    if (
+      !done &&
+      cost !== undefined &&
+      (this.game.myPlayer()?.gold() ?? 0n) < cost
+    ) {
+      return translateText("tutorial.step.earn_gold", {
+        unit: translateText(`unit_type.${UNIT_NAME_KEYS[step.unit!]}`),
+        cost: renderNumber(cost),
+      });
+    }
+    // The launch step must not claim the silo is armed while it's still
+    // under construction or reloading.
+    if (!done && step.id === "launch_atom" && this.ctx?.siloReady === false) {
+      return translateText("tutorial.step.silo_loading");
+    }
+    const id =
+      !done && step.id === "capture_tribes" && this.attackNations
+        ? "attack_nations"
+        : step.id;
+    return translateText(`tutorial.step.${id}`, {
+      cost: renderNumber(this.costs.get(UnitType.City) ?? 0n),
+      key: this.hotkeyFor(step),
+    });
   }
 }

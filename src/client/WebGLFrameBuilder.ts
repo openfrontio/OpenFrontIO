@@ -441,7 +441,9 @@ export class WebGLFrameBuilder {
    */
   private syncSpawnOverlay(gameView: GameView): void {
     const inSpawnPhase = gameView.inSpawnPhase();
-    if (!inSpawnPhase) {
+    // Past the spawn phase only the local ring can stay up (the tutorial
+    // keeps it while a new player finds their territory).
+    if (!inSpawnPhase && !gameView.ownSpawnRing()) {
       this.view.updateSpawnOverlay(false, []);
       return;
     }
@@ -453,6 +455,7 @@ export class WebGLFrameBuilder {
       const spawnTile = p.state.spawnTile;
       if (spawnTile === undefined) continue;
       const isSelf = me !== null && p.smallID() === me.smallID();
+      if (!inSpawnPhase && !isSelf) continue;
       // myPlayer's ring pulses white→this color in SpawnOverlayPass: gold
       // when teamless, own territory tint in team games (matches teammates'
       // rings). Everyone else uses their territory tint directly.
@@ -474,7 +477,7 @@ export class WebGLFrameBuilder {
           p.smallID() !== me?.smallID(),
       });
     }
-    this.view.updateSpawnOverlay(true, centers);
+    this.view.updateSpawnOverlay(inSpawnPhase, centers);
   }
 
   /**
