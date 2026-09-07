@@ -4,6 +4,7 @@ import { z } from "zod";
 import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
 import { getApiBase, getAudience } from "./Api";
+import { ClientEnv } from "./ClientEnv";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { DesktopSessionState, SessionFailureKind } from "./DesktopShell";
 import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
@@ -98,14 +99,28 @@ export function googleLogin() {
 }
 
 // The website's account-settings page, for the desktop shell to open in the
-// browser. Built from the configured audience the same way the shell's own
-// siteUrlForAudience is (openfront-desktop's linkApi.ts), including its
-// localhost special case -- never from window.location, which is
-// app://openfront in the shell.
+// browser. Never from window.location, which is app://openfront in the shell.
+//
+// The website is the game server, so its origin is ClientEnv.serverHttpBase()
+// -- the host the shell injects as serverHost. NOT the JWT audience: that is
+// the bare host only in production (openfront.io); on a dev/staging build it
+// is a branch subdomain (main.openfront.dev, <branch>.openfront.dev) with
+// nothing deployed at the apex, which is exactly why serverHost exists (see
+// resolveServerOrigin in ClientEnv.ts). The audience-derived origin, with the
+// same localhost:9000 special case as the shell's own siteUrlForAudience
+// (openfront-desktop's linkApi.ts), is only the fallback for a shell that
+// injects no serverHost.
 function desktopWebAccountSettingsUrl(): string {
-  const audience = getAudience();
-  const origin =
-    audience === "localhost" ? "http://localhost:9000" : `https://${audience}`;
+  let origin: string;
+  if (ClientEnv.serverHost()) {
+    origin = ClientEnv.serverHttpBase();
+  } else {
+    const audience = getAudience();
+    origin =
+      audience === "localhost"
+        ? "http://localhost:9000"
+        : `https://${audience}`;
+  }
   return `${origin}/#modal=account-settings`;
 }
 

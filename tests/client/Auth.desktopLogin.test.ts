@@ -23,7 +23,12 @@ vi.mock("../../src/client/InGameModal", () => ({
 // `/auth/login/*?redirect_uri=app://...`. On the web nothing changes, and
 // that half is pinned here too so the desktop branch cannot leak.
 
-function setBootstrapConfig() {
+// serverHost is what the desktop shell injects (absent on the web): the game
+// server AND website host, which is the bare audience only in production and
+// a branch subdomain on dev/staging -- see resolveServerOrigin in ClientEnv.ts.
+function setBootstrapConfig(
+  overrides: { jwtAudience?: string; serverHost?: string } = {},
+) {
   (window as any).BOOTSTRAP_CONFIG = {
     gameEnv: "prod",
     numWorkers: 1,
@@ -31,6 +36,7 @@ function setBootstrapConfig() {
     jwtAudience: "openfront.dev",
     instanceId: "d",
     gitCommit: "t",
+    ...overrides,
   };
   ClientEnv.reset();
 }
@@ -127,15 +133,45 @@ describe("provider login on the desktop shell", () => {
   // to the website's account settings instead, where the real OAuth flow
   // runs -- and, crucially, never to /auth/link/google with an app:// URL.
   it("linkGoogle opens the website's account settings in the browser", async () => {
+    setBootstrapConfig({
+      serverHost: "openfront.io",
+      jwtAudience: "openfront.io",
+    });
+
     await expect(linkGoogle()).resolves.toBe(true);
 
     expect(openMock).toHaveBeenCalledTimes(1);
     expect(openMock.mock.calls[0][0]).toBe(
-      "https://openfront.dev/#modal=account-settings",
+      "https://openfront.io/#modal=account-settings",
     );
     expect(showLinkGate).not.toHaveBeenCalled();
     expect(location.href).toBe(DESKTOP_HREF);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // The website host is the injected serverHost, not the JWT audience: on a
+  // dev/staging build the audience is the apex (openfront.dev), where nothing
+  // is deployed, and the site lives on a branch subdomain.
+  it("linkGoogle targets the injected branch host, not the audience apex", async () => {
+    setBootstrapConfig({ serverHost: "my-feature.openfront.dev" });
+
+    await expect(linkGoogle()).resolves.toBe(true);
+
+    expect(openMock.mock.calls[0][0]).toBe(
+      "https://my-feature.openfront.dev/#modal=account-settings",
+    );
+  });
+
+  // A shell that injects no serverHost falls back to the audience-derived
+  // origin, keeping the shell's own localhost:9000 dev case.
+  it("linkGoogle falls back to the audience origin without a serverHost", async () => {
+    setBootstrapConfig({ jwtAudience: "localhost" });
+
+    await expect(linkGoogle()).resolves.toBe(true);
+
+    expect(openMock.mock.calls[0][0]).toBe(
+      "http://localhost:9000/#modal=account-settings",
+    );
   });
 
   // The failure mode this exists to log is an IPC rejection; it must not
