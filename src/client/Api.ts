@@ -1114,9 +1114,9 @@ export type PaymentsCheckoutResult =
   // it yet. Transient — "try again later".
   | { ok: false; code: "retry_later" }
   // 400 kind_unavailable_on_provider: this rail does not sell this kind.
-  // custom_currency is off on Steam for launch, which is why the custom-amount
-  // card is hidden there (customCurrencyAvailable()); reaching this means the
-  // UI and the server disagree.
+  // Today that is only a subscription on the Steam rail (Phase 9 not built);
+  // custom_currency is sold on both rails since OPE-337. Reaching this from
+  // the store means the UI and the server disagree.
   | {
       ok: false;
       code: "kind_unavailable_on_provider";
