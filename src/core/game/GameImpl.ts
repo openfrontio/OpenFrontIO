@@ -966,13 +966,19 @@ export class GameImpl implements Game {
     return this._winner;
   }
 
-  private makeWinner(winner: string | Player): Winner | undefined {
+  makeWinner(winner: string | Player): Winner | undefined {
     if (typeof winner === "string") {
       return [
         "team",
         winner,
-        ...this.players()
-          .filter((p) => p.team() === winner && p.clientID() !== null)
+        ...this.allPlayers()
+          .filter((p) => {
+            if (p.team() !== winner || p.clientID() === null) return false;
+            if (!p.hasSpawned()) return false;
+            if (!p.isDisconnected()) return true;
+            if (!p.wasAliveOnDisconnect()) return true;
+            return p.teamLandShareOnDisconnect() >= 0.7;
+          })
           .map((p) => p.clientID()!),
       ];
     } else {
@@ -993,6 +999,16 @@ export class GameImpl implements Game {
       return [];
     }
     return [this.botTeam, ...this.playerTeams];
+  }
+
+  teamLandShare(team: Team): number {
+    const totalLand = this.numLandTiles() - this.numTilesWithFallout();
+    if (totalLand <= 0) return 0;
+    let teamTiles = 0;
+    for (const p of this.allPlayers()) {
+      if (p.team() === team) teamTiles += p.numTilesOwned();
+    }
+    return teamTiles / totalLand;
   }
 
   teamSpawnArea(team: Team): SpawnArea | undefined {

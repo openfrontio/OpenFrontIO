@@ -7,7 +7,9 @@ export class MarkDisconnectedExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
-    this.player.markDisconnected(this.isDisconnected);
+    const team = this.player.team();
+    const teamLandShare = team ? mg.teamLandShare(team) : 0;
+    this.player.markDisconnected(this.isDisconnected, ticks, teamLandShare);
   }
 
   tick(ticks: number): void {

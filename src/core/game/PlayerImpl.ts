@@ -177,6 +177,9 @@ export class PlayerImpl implements Player {
 
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
+  private _disconnectedAtTick: number | null = null;
+  private _wasAliveOnDisconnect = false;
+  private _teamLandShareOnDisconnect = 0;
 
   /**
    * Last PlayerUpdate emitted for this player on the worker→main channel.
@@ -1792,8 +1795,35 @@ export class PlayerImpl implements Player {
     return this._isDisconnected;
   }
 
-  markDisconnected(isDisconnected: boolean): void {
+  markDisconnected(
+    isDisconnected: boolean,
+    currentTick?: number,
+    teamLandShare?: number,
+  ): void {
     this._isDisconnected = isDisconnected;
+    if (isDisconnected) {
+      if (this._disconnectedAtTick === null) {
+        this._disconnectedAtTick = currentTick ?? 0;
+        this._wasAliveOnDisconnect = this.isAlive();
+        this._teamLandShareOnDisconnect = teamLandShare ?? 0;
+      }
+    } else {
+      this._disconnectedAtTick = null;
+      this._wasAliveOnDisconnect = false;
+      this._teamLandShareOnDisconnect = 0;
+    }
+  }
+
+  disconnectedAtTick(): number | null {
+    return this._disconnectedAtTick;
+  }
+
+  wasAliveOnDisconnect(): boolean {
+    return this._wasAliveOnDisconnect;
+  }
+
+  teamLandShareOnDisconnect(): number {
+    return this._teamLandShareOnDisconnect;
   }
 
   hash(): number {

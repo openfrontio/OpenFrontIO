@@ -7,7 +7,16 @@ import { ZbContext } from "../../zbin";
 import { isAdminRole } from "../core/ApiSchemas";
 import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { GameEnv } from "../core/configuration/Config";
-import { GameType, RankedType } from "../core/game/Game";
+import {
+  Duos,
+  GameMode,
+  GameType,
+  HumansVsNations,
+  Quads,
+  RankedType,
+  Trios,
+} from "../core/game/Game";
+import { getMaxTeamSize } from "../core/game/TeamAssignment";
 import {
   ClientID,
   ClientMessage,
@@ -945,6 +954,8 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
+    this.convertClanOverflowToSpectators();
+
     const friendsFor = friendsLookup(this.clients.active());
 
     // allowedPublicIds / nameRevealPublicIds hold account publicIds and are
@@ -1021,6 +1032,58 @@ export class GameServer {
   // everywhere a "player" is meant: the lobby cap, and gameStartInfo.
   private playerCount(): number {
     return this.clients.players().length;
+  }
+
+  private convertClanOverflowToSpectators(): void {
+    if (
+      this.gameConfig.gameMode !== GameMode.Team ||
+      this.gameConfig.playerTeams === HumansVsNations
+    ) {
+      return;
+    }
+    const players = this.clients.players();
+    const numTeams = this.resolveNumTeams(players.length);
+    if (numTeams < 2) return;
+    const maxTeamSize = getMaxTeamSize(players.length, numTeams);
+
+    const clanMap = new Map<string, Client[]>();
+    for (const client of players) {
+      if (!client.clanTag) continue;
+      let clanList = clanMap.get(client.clanTag);
+      if (!clanList) {
+        clanList = [];
+        clanMap.set(client.clanTag, clanList);
+      }
+      clanList.push(client);
+    }
+
+    for (const members of clanMap.values()) {
+      if (members.length > maxTeamSize) {
+        for (let i = maxTeamSize; i < members.length; i++) {
+          members[i].spectator = true;
+          this.log.info("Converted clan overflow player to spectator", {
+            clientID: members[i].clientID,
+            clanTag: members[i].clanTag,
+            maxTeamSize,
+          });
+        }
+      }
+    }
+  }
+
+  private resolveNumTeams(numPlayers: number): number {
+    const pt = this.gameConfig.playerTeams;
+    if (typeof pt === "number") return Math.max(2, pt);
+    switch (pt) {
+      case Duos:
+        return Math.max(2, Math.ceil(numPlayers / 2));
+      case Trios:
+        return Math.max(2, Math.ceil(numPlayers / 3));
+      case Quads:
+        return Math.max(2, Math.ceil(numPlayers / 4));
+      default:
+        return 2;
+    }
   }
 
   // ONE definition of who the allowlist admits, shared by every path that can
