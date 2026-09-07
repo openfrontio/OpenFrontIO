@@ -34,9 +34,11 @@ import {
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
   classifyPurchaseReturn,
+  paymentsProvider,
   purchaseOutcomeMessage,
   startPurchase,
 } from "./Payments";
+import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -247,6 +249,32 @@ export async function purchaseCosmetic(
         return;
       }
 
+      // S1 (infra OPE-230, lead decision pending Josh): a Steam subscriber
+      // cannot change tier in-app at launch. The server would refuse the
+      // checkout with a 409 anyway; refusing HERE, before the confirm and
+      // before an order is minted, means no dialog that only ever ends in a
+      // refusal and no stranded PENDING row. Same switch the panel reads.
+      if (currentSub.provider === "steam" && !STEAM_TIER_CHANGE_IN_APP) {
+        await showInGameAlert(
+          translateText("store.tier_change_unavailable_steam"),
+        );
+        return;
+      }
+
+      // Rail vs account. `currentSub.provider` is where the ACCOUNT is
+      // billed; `paymentsProvider()` is what this DEVICE can check out on
+      // (Steam only inside the desktop shell). A Steam-billed subscriber in
+      // a plain browser would otherwise see the Steam confirm and then have
+      // a Stripe checkout minted for them — which the server refuses at
+      // gate 1, leaving a stranded row. A Steam agreement can only be
+      // replaced by another Steam agreement, so say where to do it.
+      if (currentSub.provider === "steam" && paymentsProvider() !== "steam") {
+        await showInGameAlert(
+          translateText("store.tier_change_steam_needs_desktop"),
+        );
+        return;
+      }
+
       // Direction-aware confirm based on priceMonthly. We don't have the
       // server's sortOrder client-side — priceMonthly is a good proxy.
       const currentCosmetic =
@@ -256,9 +284,17 @@ export async function purchaseCosmetic(
           ? sub.priceMonthly > currentCosmetic.priceMonthly
           : true;
       const targetName = translateCosmetic("subscriptions", sub.name);
-      const confirmKey = isUpgrade
-        ? "store.confirm_upgrade"
-        : "store.confirm_downgrade";
+      // The Stripe copy promises proration ("charged the prorated
+      // difference", "credit for the unused portion"). On Steam neither
+      // exists: the new tier is a NEW agreement at full price, starting now,
+      // and the rest of the old month is forfeited. Say that, not the
+      // Stripe thing.
+      const confirmKey =
+        currentSub.provider === "steam"
+          ? "store.confirm_tier_change_steam"
+          : isUpgrade
+            ? "store.confirm_upgrade"
+            : "store.confirm_downgrade";
       const confirmed = await showInGameConfirm(
         translateText(confirmKey, { tier: targetName }),
         {
@@ -267,6 +303,32 @@ export async function purchaseCosmetic(
         },
       );
       if (!confirmed) return;
+
+      // A Steam subscription cannot be repriced in place: Steam's only
+      // mechanism is a NEW billing agreement, whose approval disables the old
+      // one (infra Phase 9, §4.4 — and the server's change-tier answers 409
+      // requires_approval for a Steam row). So the change IS a fresh checkout
+      // for the target tier, through the same overlay flow as a first
+      // purchase; the server's gate admits a same-rail different-tier
+      // incumbent and expires the old row when the new one settles. Nothing
+      // is cancelled first: a player who dismisses the dialog keeps what
+      // they had.
+      if (currentSub.provider === "steam") {
+        const outcome = await startPurchase({
+          kind: "subscription_tier",
+          tierName: sub.name,
+        });
+        if (outcome.outcome === "completed") await broadcastFreshUserMe();
+        if (outcome.outcome === "error" && outcome.refetchCatalog) {
+          invalidateCosmetics();
+        }
+        const message = purchaseOutcomeMessage(
+          outcome,
+          "store.change_tier_success_steam",
+        );
+        if (message !== null) await showInGameAlert(message);
+        return;
+      }
 
       const result = await changeSubscriptionTier(sub.name);
       if (result === "rate_limited") {

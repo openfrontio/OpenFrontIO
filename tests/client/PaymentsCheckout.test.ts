@@ -355,6 +355,46 @@ describe("createPaymentsCheckout errors", () => {
     });
   });
 
+  it("maps 409 already_subscribed with the tier the player holds", async () => {
+    respond(409, {
+      reason: "already_subscribed",
+      existingProvider: "steam",
+      existingTier: "supporter",
+      message: "You already have this subscription on Steam.",
+    });
+    expect(
+      await createPaymentsCheckout({
+        provider: "steam",
+        kind: "subscription_tier",
+        tierName: "supporter",
+      }),
+    ).toEqual({
+      ok: false,
+      code: "already_subscribed",
+      existingTier: "supporter",
+    });
+  });
+
+  it("maps 409 tier_change_unavailable_on_provider with the server's message", async () => {
+    respond(409, {
+      reason: "tier_change_unavailable_on_provider",
+      provider: "steam",
+      message: "Cancel it in your Steam account first.",
+    });
+    expect(
+      await createPaymentsCheckout({
+        provider: "steam",
+        kind: "subscription_tier",
+        tierName: "patron",
+      }),
+    ).toEqual({
+      ok: false,
+      code: "tier_change_unavailable_on_provider",
+      provider: "steam",
+      message: "Cancel it in your Steam account first.",
+    });
+  });
+
   it("maps 429 to rate_limited and reads Retry-After", async () => {
     respond(429, { reason: "Too many requests" }, { "Retry-After": "42" });
     expect(await checkout()).toEqual({

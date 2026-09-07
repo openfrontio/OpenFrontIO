@@ -13,11 +13,28 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(async () => false),
 }));
 vi.mock("../../src/client/Utils", () => ({
-  translateText: (key: string) => key,
+  // The key, plus any interpolated values, so a test can see that the date
+  // reached the copy without asserting on English.
+  translateText: (key: string, params?: Record<string, string | number>) =>
+    params ? `${key} ${Object.values(params).join(" ")}` : key,
 }));
 
+import { cancelSubscription, invalidateUserMe } from "../../src/client/Api";
 import { SubscriptionPanel } from "../../src/client/components/SubscriptionPanel";
+import {
+  showInGameAlert,
+  showInGameConfirm,
+} from "../../src/client/InGameModal";
 import type { UserSubscription } from "../../src/core/ApiSchemas";
+
+const PERIOD_END = new Date("2026-09-01T00:00:00Z");
+// The panel's own format (toLocaleDateString, short month), evaluated here so
+// the assertion holds in whatever locale the test host runs.
+const PERIOD_END_TEXT = PERIOD_END.toLocaleDateString(undefined, {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
 
 function sub(overrides: Partial<UserSubscription> = {}): UserSubscription {
   return {
@@ -250,22 +267,178 @@ describe("subscription-panel", () => {
   });
 
   // A paid rail is not a grant, however the panel is reached.
-  describe.each(["stripe", "steam"] as const)(
-    "a %s subscription",
-    (provider) => {
-      beforeEach(async () => {
-        el.sub = sub({ provider });
+  describe("a stripe subscription", () => {
+    beforeEach(async () => {
+      el.sub = sub({ provider: "stripe" });
+      await el.updateComplete;
+    });
+
+    it("keeps Cancel", () => {
+      expect(text()).toContain("account_modal.cancel_subscription");
+    });
+
+    it("renews rather than ending", () => {
+      expect(text()).toContain("account_modal.sub_renews_on");
+      expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
+    });
+  });
+
+  // Phase 9 (OPE-230). Billed by Steam and managed on the Steam account
+  // page, which the server's portal route returns as a static URL for a Steam
+  // row. That page is not a payment origin, so unlike Stripe's portal the
+  // desktop shell lets it through — Manage stays on every surface. Cancel is
+  // the S2 policy decision: hidden by default, because Steam has no un-cancel
+  // and the account page offers both cancel and re-enable.
+  describe("a steam subscription", () => {
+    const buttonKeys = () =>
+      Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+
+    beforeEach(async () => {
+      el.sub = sub({ provider: "steam" });
+      await el.updateComplete;
+    });
+
+    // S1 = block at launch: a Change Tier button whose only outcome is the
+    // server's 409 would be a dead control, so it is not rendered and the
+    // copy says how a tier is actually changed.
+    it("offers Manage but no Change Tier, and says how to switch tiers", () => {
+      expect(buttonKeys()).toEqual(["account_modal.manage_subscription"]);
+      expect(text()).toContain(
+        "account_modal.manage_subscription_on_steam_no_tier_change",
+      );
+    });
+
+    // Cancel is a bare <button>; the o-buttons render their own inner
+    // <button>, so look only outside them.
+    const cancelButton = () =>
+      Array.from(el.querySelectorAll("button")).find(
+        (b) =>
+          b.closest("o-button") === null &&
+          (b.textContent ?? "").includes("account_modal.cancel_subscription"),
+      );
+
+    // S2, decided by Josh 7 Sept 2026: Cancel is shown on the Steam rail.
+    it("offers in-app Cancel, and says where Manage goes", () => {
+      expect(cancelButton()).toBeDefined();
+      expect(text()).toContain("account_modal.manage_subscription_on_steam");
+      // No promise of re-enabling: there is no un-cancel on Steam.
+      expect(text()).not.toContain("re-enable");
+    });
+
+    it("confirms with the Steam copy naming the date access ends, and does nothing when declined", async () => {
+      cancelButton()!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(showInGameConfirm).toHaveBeenCalledTimes(1);
+      const [message] = vi.mocked(showInGameConfirm).mock.calls[0];
+      expect(message).toBe(
+        `account_modal.cancel_subscription_confirm_steam ${PERIOD_END_TEXT}`,
+      );
+      expect(cancelSubscription).not.toHaveBeenCalled();
+    });
+
+    it("calls the self-cancel endpoint when confirmed, then reports cancelled-until and reloads", async () => {
+      vi.mocked(showInGameConfirm).mockResolvedValueOnce(true);
+      const reload = vi.fn();
+      (el as unknown as { reloadPage: () => void }).reloadPage = reload;
+
+      cancelButton()!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(cancelSubscription).toHaveBeenCalledTimes(1);
+      expect(showInGameAlert).toHaveBeenCalledWith(
+        `account_modal.cancel_subscription_success_steam ${PERIOD_END_TEXT}`,
+      );
+      expect(invalidateUserMe).toHaveBeenCalledTimes(1);
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports the failure and does not reload when the endpoint refuses", async () => {
+      vi.mocked(showInGameConfirm).mockResolvedValueOnce(true);
+      vi.mocked(cancelSubscription).mockResolvedValueOnce(false);
+      const reload = vi.fn();
+      (el as unknown as { reloadPage: () => void }).reloadPage = reload;
+
+      cancelButton()!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(showInGameAlert).toHaveBeenCalledWith(
+        "account_modal.cancel_subscription_failed",
+      );
+      expect(invalidateUserMe).not.toHaveBeenCalled();
+      expect(reload).not.toHaveBeenCalled();
+    });
+
+    it("renews rather than ending, and renders no anchor", () => {
+      expect(text()).toContain("account_modal.sub_renews_on");
+      expect(el.querySelector("a")).toBeNull();
+    });
+
+    // The Stripe rail loses Manage inside the shell; the Steam rail must not,
+    // because the whole point of Manage there is the Steam account page.
+    it("keeps Manage inside the desktop shell", async () => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+      try {
+        el.sub = sub({ provider: "steam" });
+        el.requestUpdate();
         await el.updateComplete;
-      });
+        expect(buttonKeys()).toContain("account_modal.manage_subscription");
+        expect(text()).not.toContain(
+          "account_modal.manage_subscription_on_web",
+        );
+      } finally {
+        delete (window as unknown as { openfrontDesktop?: unknown })
+          .openfrontDesktop;
+      }
+    });
 
-      it("keeps Cancel", () => {
-        expect(text()).toContain("account_modal.cancel_subscription");
-      });
+    // No un-cancel API exists, so no Reactivate and no second Cancel; the
+    // note says cancelled, active until the date.
+    it("offers Manage only once cancelled, and says cancelled — active until the date", async () => {
+      el.sub = sub({ provider: "steam", cancelAtPeriodEnd: true });
+      await el.updateComplete;
+      expect(buttonKeys()).toEqual(["account_modal.manage_subscription"]);
+      expect(cancelButton()).toBeUndefined();
+      expect(text()).not.toContain("account_modal.reactivate_subscription");
+      expect(text()).toContain("account_modal.sub_status_canceling");
+      expect(text()).toContain(
+        `account_modal.manage_subscription_on_steam_ending ${PERIOD_END_TEXT}`,
+      );
+    });
 
-      it("renews rather than ending", () => {
-        expect(text()).toContain("account_modal.sub_renews_on");
-        expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
-      });
-    },
-  );
+    it("never renders a literal {date} when the row carries no period end", async () => {
+      el.sub = sub({
+        provider: "steam",
+        cancelAtPeriodEnd: true,
+        currentPeriodEnd: null,
+      } as Partial<UserSubscription>);
+      await el.updateComplete;
+      expect(text()).toContain(
+        "account_modal.manage_subscription_on_steam_ending_no_date",
+      );
+      expect(text()).not.toContain("{date}");
+    });
+
+    it("opens the URL the server returns when Manage is clicked", async () => {
+      const opened: string[] = [];
+      const original = window.open;
+      window.open = ((url: string) => {
+        opened.push(url);
+        return null;
+      }) as typeof window.open;
+      try {
+        const manage = Array.from(el.querySelectorAll("o-button")).find(
+          (b) =>
+            b.getAttribute("translationKey") ===
+            "account_modal.manage_subscription",
+        )!;
+        manage.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        await new Promise((r) => setTimeout(r, 0));
+        expect(opened).toEqual(["https://portal.example"]);
+      } finally {
+        window.open = original;
+      }
+    });
+  });
 });

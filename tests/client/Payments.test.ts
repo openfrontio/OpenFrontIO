@@ -778,6 +778,47 @@ describe("startPurchase — error mapping", () => {
     });
   });
 
+  it("uses the store's own copy for a tier the player already holds", async () => {
+    expect(
+      await failWith({
+        ok: false,
+        code: "already_subscribed",
+        existingTier: "supporter",
+      }),
+    ).toEqual({
+      outcome: "error",
+      message: "store.already_subscribed",
+      refetchCatalog: false,
+    });
+  });
+
+  it("shows the server's text when the rail refuses a tier change, and names the rail without one", async () => {
+    expect(
+      await failWith({
+        ok: false,
+        code: "tier_change_unavailable_on_provider",
+        provider: "steam",
+        message: "Cancel it in your Steam account first.",
+      }),
+    ).toEqual({
+      outcome: "error",
+      message: "Cancel it in your Steam account first.",
+      refetchCatalog: false,
+    });
+    expect(
+      await failWith({
+        ok: false,
+        code: "tier_change_unavailable_on_provider",
+        provider: "steam",
+        message: "",
+      }),
+    ).toEqual({
+      outcome: "error",
+      message: "store.checkout_tier_change_unavailable",
+      refetchCatalog: false,
+    });
+  });
+
   it("names the rail when an earlier transaction is still open", async () => {
     expect(
       await failWith({
