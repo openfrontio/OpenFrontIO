@@ -574,7 +574,7 @@ export const maps: readonly MapInfo[] = [
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
-    defaultNationCount: 32,
+    defaultNationCount: 34,
     themes: ["asia"],
     layers: [{ id: "label", placement: "water" }],
   },
@@ -1845,6 +1845,7 @@ export const maps: readonly MapInfo[] = [
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
+    defaultNationCount: 32,
     themes: ["asia"],
   },
   {
