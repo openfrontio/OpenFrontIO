@@ -213,6 +213,7 @@
     "player": "Player",
     "search": "Search player...",
     "send": "Send",
+    "sort_by_territory": "Sort by territory",
     "title": "Quick Chat",
     "to": "Sent {user}: {msg}",
     "warnings": {
