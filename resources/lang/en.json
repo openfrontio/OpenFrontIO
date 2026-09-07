@@ -1923,6 +1923,7 @@
       "attack_ratio": "The attack ratio bar sets how many of your troops are sent out with each attack. Drag the slider to adjust it.",
       "attack_wilderness": "Click on the unclaimed land next to you to attack it and expand your territory.",
       "buy_city": "You can afford a City! Press {key} (or click the City icon under the control panel), then click your territory to place it. Cities raise your max troops.",
+      "buy_defense_post": "Now build a Defense Post: press {key}, then click your territory near a border. Attacks on the land around it are much slower and cost the enemy far more troops.",
       "buy_factory": "Now build a Factory: press {key}, then click your territory to place it.",
       "buy_port": "Next, build a Port: press {key}, then click your coastline to place it.",
       "buy_silo": "Finally, build a Missile Silo: press {key}, then click your territory to place it. Silos launch atom bombs, hydrogen bombs and MIRVs.",
@@ -1939,7 +1940,8 @@
       "sam_info": "SAM Launcher — defends against nuclear strikes by shooting down incoming missiles.",
       "silo_loading": "Your Missile Silo is loading — a nuke can be launched once it's fully ready.",
       "spawn": "Click anywhere on the map to pick where you spawn.",
-      "troop_rate": "This is your troop growth rate. Growth slows down and turns orange once your army is past its peak size.",
+      "traitor_info": "Traitors get a large defense debuff for 30 seconds, so be careful.",
+      "troop_rate": "This is your troop growth rate. Growth slows down and turns orange once your troops approach half of your max.",
       "troops": "Keep an eye on your troop count. Attacking with too few troops leaves you weak — let them regrow between attacks."
     },
     "step_counter": "Step {current} of {total}",

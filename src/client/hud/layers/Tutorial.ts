@@ -9,6 +9,7 @@ export type TutorialHighlight =
   | "gold"
   | "city"
   | "port"
+  | "defense_post"
   | "factory"
   | "warship"
   | "silo"
@@ -29,6 +30,8 @@ export interface TutorialContext {
   hasSpawned: boolean;
   /** Any outgoing attack, wilderness or player. */
   attacking: boolean;
+  /** The attack ratio changed this tick (slider drag or hotkey). */
+  attackRatioMoved: boolean;
   botsExist: boolean;
   nationsExist: boolean;
   alliancesDisabled: boolean;
@@ -41,6 +44,8 @@ export interface TutorialContext {
   cities: number;
   portDisabled: boolean;
   ports: number;
+  defensePostDisabled: boolean;
+  defensePosts: number;
   factoryDisabled: boolean;
   factories: number;
   warshipDisabled: boolean;
@@ -69,6 +74,7 @@ export interface TutorialStep {
   hotkey?:
     | "buildCity"
     | "buildPort"
+    | "buildDefensePost"
     | "buildFactory"
     | "buildWarship"
     | "buildMissileSilo"
@@ -91,7 +97,11 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   { id: "attack_wilderness", isDone: (c) => c.attacking },
   { id: "troops", highlight: "troops", manual: true },
   { id: "troop_rate", highlight: "troop_rate", manual: true },
-  { id: "attack_ratio", highlight: "attack_ratio", manual: true },
+  {
+    id: "attack_ratio",
+    highlight: "attack_ratio",
+    isDone: (c) => c.attackRatioMoved,
+  },
   // Long-running: stays up (with the nearest tribes marked with the target
   // crosshair) until the player has banked enough gold for the City step.
   {
@@ -119,6 +129,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   },
   {
     id: "alliance_info",
+    bullets: ["alliance_info", "traitor_info"],
     applies: (c) => c.nationsExist && !c.alliancesDisabled,
     manual: true,
   },
@@ -148,6 +159,14 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     bullets: ["port_info_ships", "port_info_warships"],
     applies: (c) => !c.portDisabled,
     manual: true,
+  },
+  {
+    id: "buy_defense_post",
+    highlight: "defense_post",
+    unit: UnitType.DefensePost,
+    hotkey: "buildDefensePost",
+    applies: (c) => !c.defensePostDisabled,
+    isDone: (c) => c.defensePosts > 0,
   },
   // Warships are built from ports, so this step needs one.
   {

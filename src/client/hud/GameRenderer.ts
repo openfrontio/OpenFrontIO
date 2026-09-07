@@ -297,6 +297,7 @@ export function createRenderer(
   tutorialPanel.game = game;
   tutorialPanel.eventBus = eventBus;
   tutorialPanel.userSettings = userSettings;
+  tutorialPanel.uiState = uiState;
 
   const layers: Controller[] = [
     new WarshipSelectionController(game, eventBus, transformHandler, view),

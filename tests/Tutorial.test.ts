@@ -9,6 +9,7 @@ function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
   return {
     hasSpawned: false,
     attacking: false,
+    attackRatioMoved: false,
     botsExist: true,
     nationsExist: true,
     alliancesDisabled: false,
@@ -19,6 +20,8 @@ function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
     cities: 0,
     portDisabled: false,
     ports: 0,
+    defensePostDisabled: false,
+    defensePosts: 0,
     factoryDisabled: false,
     factories: 0,
     warshipDisabled: false,
@@ -63,7 +66,11 @@ describe("TutorialProgress", () => {
     p.acknowledge();
     settle(p, ctx({ hasSpawned: true, attacking: true }));
     expect(p.current()?.id).toBe("attack_ratio");
-    p.acknowledge();
+    // Completed by moving the slider, which only shows up for a single tick.
+    p.update(
+      ctx({ hasSpawned: true, attacking: true, attackRatioMoved: true }),
+    );
+    expect(p.stepDone()).toBe(true);
     settle(p, ctx({ hasSpawned: true, attacking: true }));
     expect(p.current()?.id).toBe("capture_tribes");
 
@@ -123,6 +130,7 @@ describe("TutorialProgress", () => {
       nationsExist: false,
       cityDisabled: true,
       portDisabled: true,
+      defensePostDisabled: true,
       factoryDisabled: true,
       warshipDisabled: true,
       siloDisabled: true,
@@ -131,7 +139,7 @@ describe("TutorialProgress", () => {
       mirvDisabled: true,
       samDisabled: true,
     });
-    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 15);
+    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 16);
 
     settle(p, c);
     settle(p, c);
@@ -144,7 +152,8 @@ describe("TutorialProgress", () => {
     expect(p.position(c)).toBe(4);
     p.acknowledge();
     settle(p, c);
-    p.acknowledge();
+    expect(p.current()?.id).toBe("attack_ratio");
+    p.update({ ...c, attackRatioMoved: true });
     settle(p, c);
     expect(p.finished()).toBe(true);
     expect(p.current()).toBeNull();
@@ -212,6 +221,10 @@ describe("TutorialProgress", () => {
     expect(p.current()?.bullets).toHaveLength(2);
     p.acknowledge();
     settle(p, ctx({ factories: 1, ports: 1 }));
+
+    expect(p.current()?.id).toBe("buy_defense_post");
+    expect(p.current()?.highlight).toBe("defense_post");
+    settle(p, ctx({ factories: 1, ports: 1, defensePosts: 1 }));
 
     expect(p.current()?.id).toBe("buy_warship");
     expect(p.current()?.highlight).toBe("warship");

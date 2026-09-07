@@ -64,6 +64,7 @@ export class UnitDisplay extends LitElement implements Controller {
     > = {
       city: UnitType.City,
       port: UnitType.Port,
+      defense_post: UnitType.DefensePost,
       factory: UnitType.Factory,
       warship: UnitType.Warship,
       silo: UnitType.MissileSilo,

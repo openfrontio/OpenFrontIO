@@ -4,6 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { PlayerType, Relation, UnitType } from "../../../core/game/Game";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
+import { UIState } from "../../UIState";
 import { renderNumber, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
@@ -23,6 +24,7 @@ const COST_POLL_TYPES = [
   UnitType.City,
   UnitType.Factory,
   UnitType.Port,
+  UnitType.DefensePost,
   UnitType.Warship,
   UnitType.MissileSilo,
   UnitType.AtomBomb,
@@ -33,6 +35,7 @@ const UNIT_NAME_KEYS: Partial<Record<UnitType, string>> = {
   [UnitType.City]: "city",
   [UnitType.Factory]: "factory",
   [UnitType.Port]: "port",
+  [UnitType.DefensePost]: "defense_post",
   [UnitType.Warship]: "warship",
   [UnitType.MissileSilo]: "missile_silo",
   [UnitType.AtomBomb]: "atom_bomb",
@@ -56,6 +59,7 @@ const HOTKEY_FALLBACKS = {
   buildCity: "1",
   buildFactory: "2",
   buildPort: "3",
+  buildDefensePost: "4",
   buildWarship: "7",
   buildMissileSilo: "5",
   buildAtomBomb: "8",
@@ -66,6 +70,7 @@ export class TutorialPanel extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
   public userSettings: UserSettings;
+  public uiState: UIState;
 
   @state() private active = false;
   @state() private confirmingClose = false;
@@ -78,6 +83,8 @@ export class TutorialPanel extends LitElement implements Controller {
   private mapMarksActive = false;
   /** Latched: an atom bomb of ours was seen in flight at least once. */
   private atomLaunchSeen = false;
+  /** Attack ratio as of the previous tick, to spot the slider moving. */
+  private lastAttackRatio: number | null = null;
   /** Nation smallID → its attitude toward us, fetched during the ally step. */
   private nationRelations = new Map<number, Relation>();
   private completeTicks: number | null = null;
@@ -202,9 +209,14 @@ export class TutorialPanel extends LitElement implements Controller {
 
   private buildContext(player: PlayerView): TutorialContext {
     const attacks = player.outgoingAttacks();
+    const attackRatio = this.uiState.attackRatio;
+    const attackRatioMoved =
+      this.lastAttackRatio !== null && attackRatio !== this.lastAttackRatio;
+    this.lastAttackRatio = attackRatio;
     return {
       hasSpawned: player.hasSpawned(),
       attacking: attacks.length > 0,
+      attackRatioMoved,
       botsExist: this.game
         .playerViews()
         .some((p) => p.type() === PlayerType.Bot && p.isAlive()),
@@ -219,6 +231,10 @@ export class TutorialPanel extends LitElement implements Controller {
       cities: player.units(UnitType.City).length,
       portDisabled: this.game.config().isUnitDisabled(UnitType.Port),
       ports: player.units(UnitType.Port).length,
+      defensePostDisabled: this.game
+        .config()
+        .isUnitDisabled(UnitType.DefensePost),
+      defensePosts: player.units(UnitType.DefensePost).length,
       factoryDisabled: this.game.config().isUnitDisabled(UnitType.Factory),
       factories: player.units(UnitType.Factory).length,
       warshipDisabled: this.game.config().isUnitDisabled(UnitType.Warship),
@@ -275,15 +291,15 @@ export class TutorialPanel extends LitElement implements Controller {
     if (!this.active) return nothing;
     return html`
       <div
-        class="pointer-events-auto w-full rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-sm p-2 mb-1"
+        class="pointer-events-auto w-full rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-base p-2 mb-1"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div class="flex items-center justify-between gap-2 mb-1">
           <span
-            class="font-bold text-cyber-yellow uppercase tracking-wide text-xs"
+            class="font-bold text-cyber-yellow uppercase tracking-wide text-sm"
             >${translateText("tutorial.title")}</span
           >
-          <span class="flex items-center gap-2 text-xs text-gray-300">
+          <span class="flex items-center gap-2 text-sm text-gray-300">
             ${this.confirmingClose ? nothing : this.renderHeaderActions()}
             ${this.ctx && !this.progress.finished()
               ? translateText("tutorial.step_counter", {
@@ -378,7 +394,7 @@ export class TutorialPanel extends LitElement implements Controller {
       <p class="flex gap-1.5 ${done ? "text-green-400" : ""}">
         ${step.bullets && !done
           ? nothing
-          : html`<span class="shrink-0">${done ? "✓" : "▸"}</span>`}
+          : html`<span class="shrink-0">${done ? "✓" : "•"}</span>`}
         ${step.bullets
           ? html`<ul class="list-disc ml-4 flex flex-col gap-1">
               ${step.bullets.map(
