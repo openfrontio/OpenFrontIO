@@ -54,7 +54,10 @@ export class SubscriptionPanel extends LitElement {
   private handleCancel = async (): Promise<void> => {
     const confirmed = await showInGameConfirm(
       this.isSteam()
-        ? this.steamText("account_modal.cancel_subscription_confirm_steam")
+        ? this.steamText(
+            "account_modal.cancel_subscription_confirm_steam",
+            "account_modal.cancel_subscription_confirm_steam_no_date",
+          )
         : translateText("account_modal.cancel_subscription_confirm"),
       { heading: translateText("account_modal.cancel_subscription") },
     );
@@ -68,7 +71,10 @@ export class SubscriptionPanel extends LitElement {
     }
     await showInGameAlert(
       this.isSteam()
-        ? this.steamText("account_modal.cancel_subscription_success_steam")
+        ? this.steamText(
+            "account_modal.cancel_subscription_success_steam",
+            "account_modal.cancel_subscription_success_steam_no_date",
+          )
         : translateText("account_modal.cancel_subscription_success"),
     );
     invalidateUserMe();
@@ -85,13 +91,12 @@ export class SubscriptionPanel extends LitElement {
    * there is no un-cancel, so every line names the date access actually ends
    * on. `{date}` comes from `currentPeriodEnd`; a row without one (never on
    * this rail in practice — the server stamps it at settle) gets the
-   * `_no_date` variant rather than a literal "{date}".
+   * `_no_date` variant rather than a literal "{date}". Both keys are passed
+   * as literals so the en.json sync test can see them in source.
    */
-  private steamText(key: string): string {
+  private steamText(key: string, noDateKey: string): string {
     const date = this.periodEnd();
-    return date
-      ? translateText(key, { date })
-      : translateText(`${key}_no_date`);
+    return date ? translateText(key, { date }) : translateText(noDateKey);
   }
 
   private periodEnd(): string | null {
@@ -312,7 +317,10 @@ export class SubscriptionPanel extends LitElement {
       return html`<div class="flex flex-col gap-2">
         ${manage}
         <p class="text-[11px] text-center text-white/40 leading-snug">
-          ${this.steamText("account_modal.manage_subscription_on_steam_ending")}
+          ${this.steamText(
+            "account_modal.manage_subscription_on_steam_ending",
+            "account_modal.manage_subscription_on_steam_ending_no_date",
+          )}
         </p>
       </div>`;
     }
