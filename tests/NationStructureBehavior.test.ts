@@ -171,19 +171,32 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     );
   });
 
-  it("applies the station stack multiplier to the base connectivity weight based on unit level", () => {
+  it("applies the station stack multiplier to both own and neighbor units based on level", () => {
     const cluster = new Cluster();
-    const unit = makeUnit(20, 2); // Level 2
-    const station = makeStation(unit, cluster);
-    const player = makePlayer([unit], []);
-    const game = makeGame([station]);
+    const ownUnit = makeUnit(20, 2);
+    const ownStation = makeStation(ownUnit, cluster);
+
+    const neighborUnit = makeUnit(30, 2);
+    const neighborStation = makeStation(neighborUnit, cluster);
+    const neighbor = makeNeighbor({ units: [neighborUnit], isPlayer: true });
+    const player = makePlayer([ownUnit], [neighbor], {
+      isAlliedWith: () => true,
+    });
+
+    const game = makeGame([ownStation, neighborStation]);
     const behavior = makeBehavior(game, player);
 
     const result = (behavior as any).buildReachableStations();
 
-    expect(result).toHaveLength(1);
-    expect(result[0].weight).toBeCloseTo(
-      selfWeight * game.config().stationStackMultiplier(unit.level()),
+    expect(result).toHaveLength(2);
+    const ownRes = result.find((r: any) => r.tile === 20);
+    const neighborRes = result.find((r: any) => r.tile === 30);
+
+    expect(ownRes.weight).toBeCloseTo(
+      selfWeight * game.config().stationStackMultiplier(ownUnit.level()),
+    );
+    expect(neighborRes.weight).toBeCloseTo(
+      allyWeight * game.config().stationStackMultiplier(neighborUnit.level()),
     );
   });
 
