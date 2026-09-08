@@ -52,7 +52,13 @@ export function composeVersionDisplay(
   if (!shellVersion) return gameVersion;
   const trimmed = shellVersion.trim();
   if (trimmed === "") return gameVersion;
-  const withV = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
+  // Prefixed only when the value looks like a bare version. The shell reports
+  // its 7-char commit on an untagged build (OPE-358), and "va1b2c3d" reads as
+  // a version that does not exist. Conditional rather than dropped outright
+  // so an older shell -- which always answers "0.2.0" -- still renders
+  // "v0.2.0": the two repositories update on separate schedules, so both
+  // shapes are live at once.
+  const withV = /^\d+\.\d+\.\d+/.test(trimmed) ? `v${trimmed}` : trimmed;
   return `${gameVersion} (Steam ${withV})`;
 }
 

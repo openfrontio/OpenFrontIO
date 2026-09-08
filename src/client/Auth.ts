@@ -98,6 +98,19 @@ export function googleLogin() {
   window.location.href = `${getApiBase()}/auth/login/google?redirect_uri=${redirectUri}`;
 }
 
+// "Sign in through Steam" (OPE-115). The web-only way into an account whose
+// only identity is Steam, which before this had no way into the website at all.
+//
+// Deliberately NOT routed through startDesktopLinkFlow, unlike the two above.
+// Inside the shell the player is already signed in through the native Steam
+// ticket (doSteamLogin), so a Steam sign-in button there is redundant rather
+// than broken -- the caller hides it on the desktop shell instead. Keeping the
+// guard out of here means the function does exactly one thing.
+export function steamLogin() {
+  const redirectUri = encodeURIComponent(window.location.href);
+  window.location.href = `${getApiBase()}/auth/login/steam?redirect_uri=${redirectUri}`;
+}
+
 // The website's account-settings page, for the desktop shell to open in the
 // browser. Never from window.location, which is app://openfront in the shell.
 //
@@ -169,6 +182,43 @@ export async function linkGoogle(): Promise<boolean> {
     return true;
   } catch (e) {
     console.error("Failed to start Google link", e);
+    return false;
+  }
+}
+
+// Link a Steam account to the currently logged-in player (OPE-115). Same shape
+// as linkGoogle: an authenticated fetch for the authorize URL (a top-level
+// navigation can't carry the Bearer token), then navigate to it.
+//
+// THE LINK THIS STARTS IS PERMANENT. Steam recommends that users cannot
+// self-unlink Steam from an external account, so there is no unlink action
+// anywhere in the client and a mistake can only be undone by support. The
+// caller must show that warning before the click; afterwards is too late.
+//
+// No desktop branch, unlike linkGoogle. A shell player already holds the Steam
+// identity through the native ticket, so this button is not shown there.
+export async function linkSteam(): Promise<boolean> {
+  const authHeader = await getAuthHeader();
+  if (authHeader === "") return false;
+  const redirectUri = encodeURIComponent(window.location.href);
+  try {
+    const response = await fetch(
+      `${getApiBase()}/auth/link/steam?redirect_uri=${redirectUri}`,
+      {
+        headers: { Authorization: authHeader },
+        credentials: "include",
+      },
+    );
+    if (!response.ok) {
+      console.error("Failed to start Steam link", response);
+      return false;
+    }
+    const { url } = await response.json();
+    if (typeof url !== "string") return false;
+    window.location.href = url;
+    return true;
+  } catch (e) {
+    console.error("Failed to start Steam link", e);
     return false;
   }
 }

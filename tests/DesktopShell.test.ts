@@ -26,6 +26,15 @@ describe("composeVersionDisplay", () => {
   it("returns the game version unchanged for a blank shell version", () => {
     expect(composeVersionDisplay("v0.33.1", "")).toBe("v0.33.1");
   });
+
+  // An untagged shell build reports its 7-char commit rather than a version
+  // (OPE-358). Prefixing that would render "va1b2c3d", a version that does
+  // not exist.
+  it("does not prefix a shell commit with a v", () => {
+    expect(composeVersionDisplay("bf739f8", "a1b2c3d")).toBe(
+      "bf739f8 (Steam a1b2c3d)",
+    );
+  });
 });
 
 describe("desktopVersion", () => {

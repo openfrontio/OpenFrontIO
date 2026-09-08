@@ -7,7 +7,19 @@ import { ZbContext } from "../../zbin";
 import { isAdminRole } from "../core/ApiSchemas";
 import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { GameEnv } from "../core/configuration/Config";
-import { GameType, RankedType } from "../core/game/Game";
+import {
+  GameMode,
+  GameType,
+  HumansVsNations,
+  PlayerInfo,
+  PlayerType,
+  RankedType,
+} from "../core/game/Game";
+import { maps } from "../core/game/Maps.gen";
+import {
+  assignTeamsLobbyPreview,
+  resolveTeamsList,
+} from "../core/game/TeamAssignment";
 import {
   ClientID,
   ClientMessage,
@@ -34,6 +46,7 @@ import {
   ServerStartGameMessage,
   ServerTurnMessage,
   StampedIntent,
+  TeamCountConfig,
   Tribe,
   Turn,
 } from "../core/Schemas";
@@ -960,6 +973,8 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
+    this.convertClanOverflowToSpectators();
+
     const friendsFor = friendsLookup(this.clients.active());
 
     // allowedPublicIds / nameRevealPublicIds hold account publicIds and are
@@ -1036,6 +1051,91 @@ export class GameServer {
   // everywhere a "player" is meant: the lobby cap, and gameStartInfo.
   private playerCount(): number {
     return this.clients.players().length;
+  }
+
+  private convertClanOverflowToSpectators(): void {
+    if (
+      this.gameConfig.gameMode !== GameMode.Team ||
+      this.gameConfig.playerTeams === undefined ||
+      this.gameConfig.playerTeams === HumansVsNations ||
+      this.matchmakingTeams !== undefined ||
+      this.gameConfig.rankedType !== undefined ||
+      this.gameConfig.disableClanTags === true ||
+      this.gameConfig.anonymizeNames === true
+    ) {
+      return;
+    }
+    const playerTeams = this.gameConfig.playerTeams;
+    const nationCount = this.resolveDefaultNationCount();
+    const convertedClientIDs = new Set<ClientID>();
+    let kickedClients = this.findClanOverflowKicks(playerTeams, nationCount);
+    while (kickedClients.length > 0) {
+      for (const client of kickedClients) {
+        client.spectator = true;
+        convertedClientIDs.add(client.clientID);
+        this.log.info("Converted clan overflow player to spectator", {
+          clientID: client.clientID,
+          clanTag: client.clanTag,
+        });
+      }
+      kickedClients = this.findClanOverflowKicks(playerTeams, nationCount);
+    }
+    if (convertedClientIDs.size > 0) {
+      this.intents = this.intents.filter(
+        (i) => !convertedClientIDs.has(i.clientID),
+      );
+    }
+  }
+
+  private resolveDefaultNationCount(): number {
+    if (typeof this.gameConfig.nations === "number") {
+      return this.gameConfig.nations;
+    }
+    if (this.gameConfig.nations === "default") {
+      const mapInfo = maps.find((m) => m.type === this.gameConfig.gameMap);
+      return mapInfo?.defaultNationCount ?? 0;
+    }
+    return 0;
+  }
+
+  private findClanOverflowKicks(
+    playerTeams: TeamCountConfig,
+    nationCount: number,
+  ): Client[] {
+    const playingClients = this.clients
+      .players()
+      .filter((c) => this.matchmakingTeamIndex(c) === undefined);
+    const totalPlayers = playingClients.length + nationCount;
+    let teams;
+    try {
+      teams = resolveTeamsList(playerTeams, totalPlayers);
+    } catch {
+      return [];
+    }
+    const playerInfos = playingClients.map(
+      (c) =>
+        new PlayerInfo(
+          c.username,
+          PlayerType.Human,
+          c.clientID,
+          c.clientID,
+          false,
+          c.clanTag ?? null,
+        ),
+    );
+    const preview = assignTeamsLobbyPreview(
+      playerInfos,
+      teams,
+      playerTeams,
+      nationCount,
+    );
+    const kickedIDs = new Set<ClientID>();
+    for (const [info, assignment] of preview.entries()) {
+      if (assignment === "kicked" && info.clanTag && info.clientID !== null) {
+        kickedIDs.add(info.clientID);
+      }
+    }
+    return playingClients.filter((c) => kickedIDs.has(c.clientID));
   }
 
   // ONE definition of who the allowlist admits, shared by every path that can

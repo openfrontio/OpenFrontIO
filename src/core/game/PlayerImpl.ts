@@ -18,6 +18,7 @@ import {
   BuildableUnit,
   Cell,
   ColoredTeams,
+  DisconnectSnapshot,
   Embargo,
   EmojiMessage,
   GameMode,
@@ -177,6 +178,7 @@ export class PlayerImpl implements Player {
 
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
+  private _disconnectSnapshot: DisconnectSnapshot | null = null;
 
   /**
    * Last PlayerUpdate emitted for this player on the worker→main channel.
@@ -1792,8 +1794,32 @@ export class PlayerImpl implements Player {
     return this._isDisconnected;
   }
 
-  markDisconnected(isDisconnected: boolean): void {
+  markDisconnected(
+    isDisconnected: boolean,
+    snapshot?: DisconnectSnapshot,
+  ): void {
     this._isDisconnected = isDisconnected;
+    if (isDisconnected) {
+      if (this._disconnectSnapshot === null) {
+        const team = this.team();
+        this._disconnectSnapshot = snapshot ?? {
+          currentTick: this.mg.ticks(),
+          teamTiles: team ? this.mg.teamTilesOwned(team) : 0,
+          totalLand: this.mg.totalLandTiles(),
+          wasAlive: this.isAlive(),
+        };
+      }
+    } else {
+      this._disconnectSnapshot = null;
+    }
+  }
+
+  disconnectSnapshot(): DisconnectSnapshot | null {
+    return this._disconnectSnapshot;
+  }
+
+  disconnectedAtTick(): number | null {
+    return this._disconnectSnapshot?.currentTick ?? null;
   }
 
   hash(): number {

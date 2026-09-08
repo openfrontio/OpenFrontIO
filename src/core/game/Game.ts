@@ -577,6 +577,13 @@ export interface Embargo {
   target: Player;
 }
 
+export interface DisconnectSnapshot {
+  currentTick: number;
+  teamTiles: number;
+  totalLand: number;
+  wasAlive: boolean;
+}
+
 export interface Player {
   // Basic Info
   smallID(): number;
@@ -609,7 +616,12 @@ export interface Player {
   tileChangeVersion(): number;
 
   isDisconnected(): boolean;
-  markDisconnected(isDisconnected: boolean): void;
+  markDisconnected(
+    isDisconnected: boolean,
+    snapshot?: DisconnectSnapshot,
+  ): void;
+  disconnectSnapshot(): DisconnectSnapshot | null;
+  disconnectedAtTick(): number | null;
 
   hasSpawned(): boolean;
   setSpawnTile(spawnTile: TileRef): void;
@@ -801,6 +813,8 @@ export interface Game extends GameMap {
   owner(ref: TileRef): Player | TerraNullius;
 
   teams(): Team[];
+  teamTilesOwned(team: Team): number;
+  totalLandTiles(): number;
   teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances
