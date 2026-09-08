@@ -430,7 +430,7 @@ export class Transport {
       }
       while (this.buffer.length > 0) {
         console.log("sending dropped message");
-        const msg = this.buffer.pop();
+        const msg = this.buffer.shift();
         if (msg === undefined) {
           console.warn("msg is undefined");
           continue;
@@ -877,19 +877,11 @@ export class Transport {
   }
 
   private sendIntent(intent: Intent) {
-    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
-      const msg = {
-        type: "intent",
-        intent: intent,
-      } satisfies ClientIntentMessage;
-      this.sendMsg(msg);
-    } else {
-      console.log(
-        "WebSocket is not open. Current state:",
-        this.socket?.readyState,
-      );
-      console.log("attempting reconnect");
-    }
+    const msg = {
+      type: "intent",
+      intent: intent,
+    } satisfies ClientIntentMessage;
+    this.sendMsg(msg);
   }
 
   private sendMsg(msg: ClientMessage) {
@@ -901,7 +893,7 @@ export class Transport {
       // Socket missing, do nothing
       return;
     }
-    if (this.socket.readyState === WebSocket.CLOSED) {
+    if (this.socket.readyState !== WebSocket.OPEN) {
       // Buffer the message for the next successful open.
       console.warn("socket not ready, buffering and reconnecting");
       this.buffer.push(msg);
