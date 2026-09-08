@@ -29,7 +29,7 @@ const DYNAMIC_KEY_PATTERNS: RegExp[] = [
   /^news_box\.(tournament|tutorial|news|warning|firefox_warning)$/,
   // Built-in graphics preset names/descriptions are referenced from
   // src/client/render/gl/graphics-presets.json, not translateText literals.
-  /^graphics_setting\.preset_(default|night|colorblind)(_desc)?$/,
+  /^graphics_setting\.preset_(default|night|evans_pick|colorblind)(_desc)?$/,
 ];
 
 /**
@@ -37,6 +37,13 @@ const DYNAMIC_KEY_PATTERNS: RegExp[] = [
  */
 const IGNORED_UNUSED_KEY_PATTERNS: RegExp[] = [
   /^lang\./, // language metadata, not a UI translation key
+  // Steam rich presence status frames. Never rendered by the client, so there
+  // is no translateText() call to find: the Electron shell reads them out of
+  // resources/lang/*.json at build time and writes them into the localization
+  // file Steam resolves against, in the *viewing* friend's language rather
+  // than the player's. They live here so Crowdin picks them up like any other
+  // string.
+  /^desktop_presence\./,
 ];
 
 type NestedTranslations = Record<string, unknown>;

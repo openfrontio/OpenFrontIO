@@ -105,17 +105,17 @@
   "id": "Vietnam",
   "map": {
     "height": 3560,
-    "num_land_tiles": 1504070,
+    "num_land_tiles": 1504043,
     "width": 1976
   },
   "map16x": {
     "height": 890,
-    "num_land_tiles": 90607,
+    "num_land_tiles": 90606,
     "width": 494
   },
   "map4x": {
     "height": 1780,
-    "num_land_tiles": 371352,
+    "num_land_tiles": 371348,
     "width": 988
   },
   "multiplayer_frequency": 4,

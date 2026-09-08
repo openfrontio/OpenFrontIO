@@ -43,6 +43,7 @@ export class MapRenderer {
   private storedLayerImages: Map<string, ImageBitmap> = new Map();
   // Layer state that survives context loss (GPU textures do not).
   private layerVisibility = new Map<string, boolean>();
+  private layerAlpha = new Map<string, number>();
   private layerDestroyedMasks = new Map<string, Uint8Array>();
 
   /**
@@ -118,6 +119,10 @@ export class MapRenderer {
       // Re-apply visibility overrides.
       for (const [id, vis] of this.layerVisibility) {
         this.renderer?.setLayerVisible(id, vis);
+      }
+      // Re-apply alpha overrides.
+      for (const [id, alpha] of this.layerAlpha) {
+        this.renderer?.setLayerAlpha(id, alpha);
       }
       // Re-apply destroyed masks.
       for (const [id, mask] of this.layerDestroyedMasks) {
@@ -288,6 +293,12 @@ export class MapRenderer {
   setLayerVisible(layerId: string, visible: boolean): void {
     this.layerVisibility.set(layerId, visible);
     this.renderer?.setLayerVisible(layerId, visible);
+  }
+
+  /** Set the alpha multiplier for a single map layer (0–1). */
+  setLayerAlpha(layerId: string, alpha: number): void {
+    this.layerAlpha.set(layerId, alpha);
+    this.renderer?.setLayerAlpha(layerId, alpha);
   }
 
   /** Batch-mark tiles as destroyed for a nukeable layer. */

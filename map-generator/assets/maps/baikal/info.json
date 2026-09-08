@@ -5,6 +5,8 @@
   "categories": ["asia"],
   "multiplayer_frequency": 5,
   "special_team_count": 2,
+  "forced_modifiers": ["isWaterNukes:50"],
+  "themes": ["asia"],
   "nations": [
     {
       "coordinates": [695, 665],
@@ -77,6 +79,5 @@
         "y": 0
       }
     ]
-  },
-  "themes": ["asia"]
+  }
 }

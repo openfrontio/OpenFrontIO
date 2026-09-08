@@ -1,6 +1,6 @@
 import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
@@ -26,13 +26,13 @@ import {
   resolveCosmetics,
   ResolvedCosmetic,
 } from "./Cosmetics";
+import { reportPendingSteamAuthorizations } from "./Payments";
 import { translateText } from "./Utils";
 
 type StoreTab =
   | "cosmetics"
   | "bundles"
   | "effects"
-  | "merch"
   | "packs"
   | "subscriptions"
   | "tribes";
@@ -55,6 +55,15 @@ export class StoreModal extends BaseModal {
   private cosmetics: Cosmetics | null = null;
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;
+  // `userMeResponse` starts at `false`, which is also what "no session" looks
+  // like, so a tab that renders a sign-in prompt on `false` would show it to a
+  // logged-in player for the whole window before Main's first userMeResponse
+  // broadcast (a Steam ticket exchange on desktop). This distinguishes the
+  // two: nothing is asserted about the session until it has actually settled.
+  // Reactive on its own, unlike `userMeResponse`: onUserMe() only calls
+  // refresh() after the catalog fetch, and a settled no-session result must
+  // not wait on a slow catalog before it may say so.
+  @state() private authSettled = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
   private inspected: ResolvedCosmetic | null = null;
   private previewingCosmetic: ResolvedCosmetic | null = null;
@@ -75,7 +84,6 @@ export class StoreModal extends BaseModal {
         { key: "cosmetics", label: translateText("store.cosmetics") },
         { key: "effects", label: translateText("store.effects") },
         { key: "tribes", label: translateText("store.tribes") },
-        { key: "merch", label: translateText("store.merch") },
       ],
     };
   }
@@ -131,6 +139,7 @@ export class StoreModal extends BaseModal {
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
     this.userMeResponse = userMeResponse;
+    this.authSettled = true;
     this.cosmetics = await fetchCosmetics();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
@@ -476,42 +485,6 @@ export class StoreModal extends BaseModal {
     `;
   }
 
-  private renderMerchPanel(): TemplateResult {
-    return html`
-      <div
-        class="flex flex-col items-center justify-center gap-6 p-12 min-h-[300px]"
-      >
-        <p class="text-white/70 text-lg text-center">
-          ${translateText("store.merch_blurb")}
-        </p>
-        <a
-          href="https://merch.openfront.io"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex items-center justify-center gap-3 rounded-xl bg-malibu-blue hover:bg-aquarius text-white font-bold uppercase tracking-wider py-4 px-8 text-lg lg:text-xl transition-all duration-300 transform hover:-translate-y-px"
-        >
-          ${translateText("store.merch_visit_store")}
-          <svg
-            class="h-5 w-5 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path
-              d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
-            />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-        </a>
-      </div>
-    `;
-  }
-
   private renderEffectGrid(): TemplateResult {
     // A sub-tab per effectType (Boat Trail / Nuke Trail); each tab opens that
     // type's grid. Tabs are always present, even when a type has nothing to buy.
@@ -535,6 +508,8 @@ export class StoreModal extends BaseModal {
   private renderPackGrid(): TemplateResult {
     // The custom-amount card is always purchasable (priced inline server-side,
     // no catalog entry), and follows the fixed packs at the end of the grid.
+    // On BOTH rails: the Steam rail sells custom amounts since OPE-337, so
+    // there is no longer a rail on which this card is a dead button.
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_packs",
       trailingContent: html`<custom-currency-card
@@ -598,8 +573,6 @@ export class StoreModal extends BaseModal {
     switch (key as StoreTab) {
       case "cosmetics":
         return this.renderCosmeticsPanel();
-      case "merch":
-        return this.renderMerchPanel();
       case "bundles":
         return this.renderBundleGrid();
       case "effects":
@@ -615,6 +588,9 @@ export class StoreModal extends BaseModal {
   }
 
   private renderTribeGrid(): TemplateResult {
+    // The panel's `false` branch is a sign-in prompt, i.e. a logged-out
+    // state; hold it back until the session is known (see authSettled).
+    if (!this.authSettled) return html``;
     return html`<tribes-panel
       .userMeResponse=${this.userMeResponse}
     ></tribes-panel>`;
@@ -627,6 +603,12 @@ export class StoreModal extends BaseModal {
   }
 
   protected async onOpen(args?: Record<string, unknown>) {
+    // Drain any Steam overlay approval parked before this UI existed. The
+    // main process's "something arrived" nudge is contentless, so one that
+    // fired with no window listening is heard by nobody and sits parked until
+    // something drains it -- which makes this required on every open, not an
+    // optimisation.
+    void reportPendingSteamAuthorizations();
     const affiliate =
       typeof args?.affiliateCode === "string" ? args.affiliateCode : null;
     this.affiliateCode = affiliate;

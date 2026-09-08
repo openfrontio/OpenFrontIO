@@ -34,7 +34,7 @@ export class TradeShipExecution implements Execution {
     this.mg = mg;
     const stagger =
       TradeShipExecution._staggerCounter++ % WaterPathFinder.STAGGER_SPREAD;
-    this.pathFinder = new WaterPathFinder(mg, stagger);
+    this.pathFinder = new WaterPathFinder(mg, stagger, true); // memoized: port tile to port tile repeats
   }
 
   tick(ticks: number): void {

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
 import { Roster } from "../../src/server/Roster";
 import {
   cid,
@@ -58,9 +59,12 @@ describe("Roster", () => {
     // Forgotten, not just closed: even reopened it is no longer the game's
     // to close.
     oldWs.readyState = 1;
-    roster.closeAll("bye");
+    roster.closeAll(CloseReason.GameEnded);
     expect(oldWs.close).toHaveBeenCalledOnce();
-    expect(newWs.close).toHaveBeenCalledWith(1000, "bye");
+    expect(newWs.close).toHaveBeenCalledWith(
+      CloseCode.Normal,
+      CloseReason.GameEnded,
+    );
   });
 
   it("keeps the socket when a client reconnects on the one it already has", () => {
@@ -83,7 +87,7 @@ describe("Roster", () => {
     expect(roster.byPersistentId("p1-pid")).toBe(p1);
     expect(roster.wasAdmitted("p1-pid")).toBe(true);
     // Their socket is no longer the game's to close.
-    roster.closeAll("bye");
+    roster.closeAll(CloseReason.GameEnded);
     expect(mockWsOf(p1).close).not.toHaveBeenCalled();
   });
 

@@ -4,7 +4,10 @@ vi.mock("../src/core/game/UserSettings", () => ({
   UserSettings: { setPlayerId: vi.fn() },
 }));
 vi.mock("../src/client/SteamSDK", () => ({
-  steamSDK: { isOnSteam: () => false, getTicket: async () => null },
+  steamSDK: {
+    isOnSteam: () => false,
+    getTicket: async () => ({ ok: false, reason: "unavailable" }),
+  },
 }));
 vi.mock("../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: {

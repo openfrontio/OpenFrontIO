@@ -25,6 +25,8 @@ export class TrainExecution implements Execution {
   private currentRailroad: OrientedRailroad | null = null;
   private speed: number = 2;
   private _tradeStopsVisited: number = 0;
+  private pathTiles: TileRef[] = [];
+  private pathIndex: number = 0;
 
   constructor(
     private railNetwork: RailNetwork,
@@ -86,7 +88,9 @@ export class TrainExecution implements Execution {
     const startTile = this.train.tile();
     if (pathTiles.length === 0 || pathTiles[0] !== startTile) {
       pathTiles.unshift(startTile);
+      this.pathIndex = 1;
     }
+    this.pathTiles = pathTiles;
 
     const plan: MotionPlanRecord = {
       kind: "train",
@@ -224,16 +228,37 @@ export class TrainExecution implements Execution {
     }
   }
 
-  private nextStation() {
+  private nextStation(): boolean {
     if (this.stations.length > 2) {
+      this.pathIndex += this.currentRailroad?.getTiles().length ?? 0;
       this.stations.shift();
-      const railRoad = getOrientedRailroad(this.stations[0], this.stations[1]);
+      const railRoad =
+        getOrientedRailroad(this.stations[0], this.stations[1]) ??
+        this.resolveSplitRailroad();
       if (railRoad) {
         this.currentRailroad = railRoad;
         return true;
       }
     }
     return false;
+  }
+
+  private resolveSplitRailroad(): OrientedRailroad | null {
+    const [station0, station1] = this.stations;
+    const path = this.railNetwork.findStationsPath(station0, station1);
+    if (!path || path.length <= 2) return null;
+    let cursor = this.pathIndex;
+    for (let i = 0; i < path.length - 1; i++) {
+      const segment = getOrientedRailroad(path[i], path[i + 1]);
+      if (!segment) return null;
+      for (const tile of segment.getTiles()) {
+        if (this.pathTiles[cursor++] !== tile) {
+          return null;
+        }
+      }
+    }
+    this.stations.splice(0, 2, ...path);
+    return getOrientedRailroad(this.stations[0], this.stations[1]);
   }
 
   private canTradeWithDestination() {

@@ -190,6 +190,8 @@
       "name": "Deimos"
     }
   ],
+  "ffa_frequency": 0,
+  "forced_modifiers": ["isWaterNukes:50"],
   "id": "Sol",
   "map": {
     "height": 2528,
@@ -475,6 +477,7 @@
       "name": "Uranus Trojans"
     }
   ],
+  "team_frequency": 0,
   "themes": ["space"],
   "translation_key": "map.sol"
 }

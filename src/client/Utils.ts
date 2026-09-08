@@ -25,6 +25,23 @@ export function normaliseMapKey(mapName: string): string {
   return (id ?? mapName).toLowerCase().replace(/[\s.]+/g, "");
 }
 
+/**
+ * The map key desktop rich presence carries.
+ *
+ * Steam's localization file composes `#Map_<key>` and resolves it in the
+ * *viewing* user's language, so presence has to send the normalised id -- the
+ * same key `map.<id>` uses in our own translations, which keeps the two from
+ * drifting apart -- rather than the display name, which would compose a token
+ * that does not exist. Steam hides the entire status line when a token fails
+ * to resolve, so getting this wrong is a total failure rather than a partial
+ * one. Absent stays absent.
+ */
+export function presenceMapKey(
+  gameMap: string | undefined,
+): string | undefined {
+  return gameMap === undefined ? undefined : normaliseMapKey(gameMap);
+}
+
 export function getMapName(mapName: string | undefined): string | null {
   if (!mapName) return null;
   const translationKey =
@@ -514,8 +531,83 @@ export const translateText = (
   }
 };
 
-export function getTranslatedPlayerTeamLabel(team: Team | null): string {
+export interface HasClanTag {
+  clanTag?: string | null | (() => string | null);
+}
+
+type TopClans = {
+  topTag: string | null;
+  topCount: number;
+  secondTag: string | null;
+  secondCount: number;
+  thirdCount: number;
+};
+
+function getTopClans(players: readonly HasClanTag[]): TopClans {
+  const counts = new Map<string, number>();
+  for (const p of players) {
+    const tag = typeof p.clanTag === "function" ? p.clanTag() : p.clanTag;
+    if (tag && tag.trim().length > 0) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  let topTag: string | null = null,
+    topCount = 0;
+  let secondTag: string | null = null,
+    secondCount = 0;
+  let thirdCount = 0;
+
+  for (const [tag, count] of counts) {
+    if (count > topCount) {
+      thirdCount = secondCount;
+      secondTag = topTag;
+      secondCount = topCount;
+      topTag = tag;
+      topCount = count;
+    } else if (count > secondCount) {
+      thirdCount = secondCount;
+      secondTag = tag;
+      secondCount = count;
+    } else if (count > thirdCount) {
+      thirdCount = count;
+    }
+  }
+  return { topTag, topCount, secondTag, secondCount, thirdCount };
+}
+
+export function resolveTeamClanTag(
+  players: Iterable<HasClanTag>,
+): string | null {
+  const list = Array.isArray(players) ? players : Array.from(players);
+  const n = list.length;
+  if (n === 0) return null;
+
+  const { topTag, topCount, secondTag, secondCount, thirdCount } =
+    getTopClans(list);
+
+  if (topTag && topCount > n / 2) {
+    return topTag;
+  }
+  if (
+    topTag &&
+    secondTag &&
+    secondCount > thirdCount &&
+    (topCount + secondCount) / n >= 0.7 &&
+    secondCount / n >= 0.3
+  ) {
+    return [topTag, secondTag].sort().join(" / ");
+  }
+  return null;
+}
+
+export function getTranslatedPlayerTeamLabel(
+  team: Team | null,
+  clanTag?: string | null,
+): string {
   if (!team) return "";
+  if (clanTag) {
+    return `[${clanTag}]`;
+  }
   const translationKey = `team_colors.${team.toLowerCase()}`;
   const translated = translateText(translationKey);
   return translated === translationKey ? team : translated;

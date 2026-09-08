@@ -69,9 +69,10 @@ export class AiAttackBehavior {
         borderHasNonNukedTerraNullius = true;
       }
     };
-    for (const t of this.player.borderTiles()) {
+    // forEach, not for..of: TileSet.values() is a generator.
+    this.player.borderTiles().forEach((t) => {
       this.game.forEachNeighbor(t, visit);
-    }
+    });
     const playerNeighbors = this.player.nearby();
     for (const n of playerNeighbors) {
       if (n.isPlayer()) borderingPlayerSet.add(n);
@@ -126,9 +127,7 @@ export class AiAttackBehavior {
     }
 
     // Check if we have any shore tiles to launch from
-    const shore = Array.from(this.player.borderTiles()).filter((t) =>
-      this.game.isShore(t),
-    );
+    const shore = this.shoreTiles(this.player);
     if (shore.length === 0) {
       return;
     }
@@ -660,12 +659,8 @@ export class AiAttackBehavior {
     for (const entry of sortedPlayers) {
       const closest = closestTwoTiles(
         this.game,
-        Array.from(this.player.borderTiles()).filter((t) =>
-          this.game.isShore(t),
-        ),
-        Array.from(entry.player.borderTiles()).filter((t) =>
-          this.game.isShore(t),
-        ),
+        this.shoreTiles(this.player),
+        this.shoreTiles(entry.player),
       );
       if (closest === null) continue;
 
@@ -778,18 +773,38 @@ export class AiAttackBehavior {
   }
 
   private hasLandBorderWithTerraNullius(): boolean {
+    // Allocation-free (neighbors() built an array per border tile and this
+    // runs on every terra-nullius attack decision of every nation) — but
+    // through for...of, not forEach: the dominant caller path answers true,
+    // and the early exit matters more than the generator's overhead.
+    const map = this.game.map();
+    const nbuf = this.nbuf;
     for (const border of this.player.borderTiles()) {
-      for (const neighbor of this.game.neighbors(border)) {
+      const n = map.neighbors4(border, nbuf);
+      for (let i = 0; i < n; i++) {
+        const neighbor = nbuf[i];
         if (
-          this.game.isLand(neighbor) &&
-          !this.game.isImpassable(neighbor) &&
-          !this.game.hasOwner(neighbor)
+          map.isLand(neighbor) &&
+          !map.isImpassable(neighbor) &&
+          !map.hasOwner(neighbor)
         ) {
           return true;
         }
       }
     }
     return false;
+  }
+
+  private readonly nbuf: TileRef[] = [0, 0, 0, 0];
+
+  /** The player's shore border tiles, in border-set order (one pass, no copy of the whole set). */
+  private shoreTiles(player: Player): TileRef[] {
+    const game = this.game;
+    const out: TileRef[] = [];
+    player.borderTiles().forEach((t) => {
+      if (game.isShore(t)) out.push(t);
+    });
+    return out;
   }
 
   // Scans shore border tiles (every 10th) for unowned land within 5 water tiles
@@ -808,9 +823,7 @@ export class AiAttackBehavior {
       [-1, 0],
       [1, 0],
     ];
-    const shores = Array.from(this.player.borderTiles()).filter((t) =>
-      this.game.isShore(t),
-    );
+    const shores = this.shoreTiles(this.player);
 
     for (let i = 0; i < shores.length; i += 10) {
       const border = shores[i];
@@ -1025,8 +1038,8 @@ export class AiAttackBehavior {
 
     const closest = closestTwoTiles(
       this.game,
-      Array.from(this.player.borderTiles()).filter((t) => this.game.isShore(t)),
-      Array.from(target.borderTiles()).filter((t) => this.game.isShore(t)),
+      this.shoreTiles(this.player),
+      this.shoreTiles(target),
     );
     if (closest === null) {
       return false;

@@ -6,7 +6,7 @@ export class PseudoRandom {
   private s2: number;
   private s3: number;
 
-  private static readonly POW36_8 = Math.pow(36, 8); // Pre-compute 36^8
+  private static readonly POW36_8 = 2_821_109_907_456; // 36 ** 8
 
   constructor(seed: number) {
     // The seed is truncated to 32 bits: seeds congruent mod 2^32 produce

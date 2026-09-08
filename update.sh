@@ -204,11 +204,44 @@ if [ -n "$STOPPED_CONTAINER" ]; then
     echo "Container $STOPPED_CONTAINER removed."
 fi
 
-if [ "${SUBDOMAIN}" = main ] || [ "${DOMAIN}" = openfront.io ]; then
+# Docker restart policy. `always` means the daemon brings this container back
+# after a crash, and again after a host reboot; `no` means it stays down until
+# somebody deploys again.
+#
+# Which one is right depends entirely on whether the deployment is long-lived,
+# and that is what SUBDOMAIN tells us:
+#
+#   Long-lived, listed below. Something depends on these being reachable at a
+#   fixed hostname without anyone watching. `main` and `nightly` are both
+#   staging deployments people test against; `nightly` is here because a
+#   scheduled deploy is the only thing that would otherwise restart it, so a
+#   crash at 07:05 UTC is a ~24-hour outage rather than a blip (OPE-361). Any
+#   deployment on the production domain qualifies for the same reason and is
+#   matched separately, since its subdomain is not fixed.
+#
+#   Everything else: a per-branch preview. deploy.yml deploys EVERY push on
+#   EVERY branch to <branch>.openfront.dev, so these accumulate one container
+#   per branch anyone has ever pushed. `no` is what lets them die quietly --
+#   with `always` a host reboot would resurrect months of abandoned branch
+#   containers, each holding its memory and its worker processes, and nothing
+#   would ever clean them up. Their owner is present when they are deployed and
+#   can redeploy, which is exactly the case `no` is for.
+#
+# To make another fixed hostname survive a crash, add its subdomain here.
+#
+# The markers below delimit the block that tests/UpdateRestartPolicy.test.ts
+# extracts and runs against a table of subdomains -- the rest of this script
+# talks to docker and ssh and cannot be executed in a test, but this decision
+# can. Keep them in place.
+# --- BEGIN restart policy (tested) ---
+LONG_LIVED_SUBDOMAINS=" main nightly "
+
+if [[ "${LONG_LIVED_SUBDOMAINS}" == *" ${SUBDOMAIN} "* ]] || [ "${DOMAIN}" = openfront.io ]; then
     RESTART=always
 else
     RESTART=no
 fi
+# --- END restart policy (tested) ---
 
 echo "Starting new container for ${HOST} environment..."
 

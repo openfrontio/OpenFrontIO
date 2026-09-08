@@ -3,12 +3,13 @@ import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../Utils";
 
 /**
- * Hard-confirm dialog for account deletion. The API deletes the account
- * immediately and irreversibly, so the confirm button stays disabled until
- * the player types the confirmation word. Mirrors <confirm-dialog>'s danger
- * styling and body portal (escapes the account modal's stacking context);
- * kept separate so the shared dialog doesn't grow a typed-confirmation mode
- * for a single caller.
+ * Hard-confirm dialog for account deletion. Confirming logs the player out
+ * everywhere at once and schedules the account for irreversible deletion 24
+ * hours later (only support can cancel), so the confirm button stays disabled
+ * until the player types the confirmation word. Mirrors <confirm-dialog>'s
+ * danger styling and body portal (escapes the account modal's stacking
+ * context); kept separate so the shared dialog doesn't grow a
+ * typed-confirmation mode for a single caller.
  *
  * Emits `confirm` when the typed word matches and the button is pressed,
  * `cancel` on cancel / backdrop click.

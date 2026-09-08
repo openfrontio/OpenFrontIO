@@ -139,15 +139,16 @@ export class UserSettingModal extends BaseModal {
               </svg>
               <span class="font-medium">
                 ${(() => {
+                  const placeholder = "__KEY__";
                   const message = translateText(
                     "user_setting.keybind_conflict_error",
-                    { key: displayKey },
+                    { key: placeholder },
                   );
-                  const parts = message.split(displayKey);
-                  return html`${parts[0]}<span
+                  const [prefix, suffix] = message.split(placeholder);
+                  return html`${prefix}<span
                       class="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-red-200 mx-1 border border-white/10"
                       >${displayKey}</span
-                    >${parts[1] || ""}`;
+                    >${suffix || ""}`;
                 })()}
               </span>
             `,

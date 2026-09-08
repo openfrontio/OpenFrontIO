@@ -123,6 +123,7 @@ export {
   type GameMapName,
   type MapCategory,
   type MapInfo,
+  type SpecialModifierKey,
 } from "./Maps.gen";
 
 export enum GameType {
@@ -576,6 +577,13 @@ export interface Embargo {
   target: Player;
 }
 
+export interface DisconnectSnapshot {
+  currentTick: number;
+  teamTiles: number;
+  totalLand: number;
+  wasAlive: boolean;
+}
+
 export interface Player {
   // Basic Info
   smallID(): number;
@@ -604,9 +612,16 @@ export interface Player {
   clearDoomsdayClock(): void;
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
+  /** Counter bumped on every ownership change of one of this player's tiles (also when its border set can change). */
+  tileChangeVersion(): number;
 
   isDisconnected(): boolean;
-  markDisconnected(isDisconnected: boolean): void;
+  markDisconnected(
+    isDisconnected: boolean,
+    snapshot?: DisconnectSnapshot,
+  ): void;
+  disconnectSnapshot(): DisconnectSnapshot | null;
+  disconnectedAtTick(): number | null;
 
   hasSpawned(): boolean;
   setSpawnTile(spawnTile: TileRef): void;
@@ -798,6 +813,8 @@ export interface Game extends GameMap {
   owner(ref: TileRef): Player | TerraNullius;
 
   teams(): Team[];
+  teamTilesOwned(team: Team): number;
+  totalLandTiles(): number;
   teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances

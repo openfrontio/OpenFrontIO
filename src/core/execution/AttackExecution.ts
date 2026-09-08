@@ -194,9 +194,8 @@ export class AttackExecution implements Execution {
 
     this.toConquer.clear();
     this.attack.clearBorder();
-    for (const tile of this._owner.borderTiles()) {
-      this.addNeighbors(tile);
-    }
+    // forEach over the dense storage — the values() generator showed up in long-game profiles
+    this._owner.borderTiles().forEach((tile) => this.addNeighbors(tile));
   }
 
   private retreat(malusPercent = 0) {
@@ -326,19 +325,18 @@ export class AttackExecution implements Execution {
     borderSize: number,
   ): AttackLogicInput {
     const defender = this.target.isPlayer() ? this.target : null;
-    let defenderHasDefensePost = false;
-    if (defender !== null) {
-      for (const dp of this.mg.nearbyUnits(
+    // Same test as scanning nearbyUnits() for a post owned by the defender
+    // (active, not under construction, within range), without building a
+    // result array per conquered tile — this runs for every tile of every
+    // attack on the map.
+    const defenderHasDefensePost =
+      defender !== null &&
+      this.mg.hasUnitNearby(
         tile,
         this.mg.config().defensePostRange(),
         UnitType.DefensePost,
-      )) {
-        if (dp.unit.owner() === defender) {
-          defenderHasDefensePost = true;
-          break;
-        }
-      }
-    }
+        defender.id(),
+      );
     return {
       terrain: this.map.terrainType(tile),
       attackTroops,

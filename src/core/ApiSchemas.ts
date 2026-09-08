@@ -250,6 +250,32 @@ export const UserMeResponseSchema = z.object({
         status: z.string(),
         currentPeriodEnd: z.coerce.date().nullable(),
         cancelAtPeriodEnd: z.boolean(),
+        // Which rail is billing this subscription, and `null` means NOBODY IS:
+        // it is a grant (a free month from a Steam purchase, or an admin comp).
+        // The server branches on the same distinction — cancelling a grant has
+        // no period to run out, so it expires the subscription immediately and
+        // takes the premium username with it.
+        //
+        // Three states, and the client must keep all three apart:
+        //   "stripe" / "steam" — paid, someone is being billed.
+        //   null               — granted.
+        //   undefined          — the server predates the field (it reaches
+        //                        staging at the next deploy), so we do not
+        //                        know. Callers must fall back to the PAID
+        //                        behaviour here: on an old server a grant is
+        //                        indistinguishable from a Stripe subscription,
+        //                        and treating everyone as granted would hide
+        //                        Cancel from paying subscribers.
+        // Test `=== null` and `=== undefined`, never `!provider` — that is true
+        // for both and collapses the two states that must not collapse.
+        //
+        // Loose `z.string()` rather than z.enum(["stripe", "steam"]), matching
+        // `status` above: a parse failure here fails the WHOLE /users/@me
+        // response (Api.ts logs and returns false, and the account view goes
+        // blank), so a future third rail must not be able to brick an older
+        // client. An unrecognised value is simply not `null`, which lands on
+        // the paid behaviour — the safe side.
+        provider: z.string().nullable().optional(),
       })
       .nullable(),
     // Marketing-email consent state (client-driven consent). `consented` is the
@@ -262,6 +288,27 @@ export const UserMeResponseSchema = z.object({
         hasEmail: z.boolean(),
       })
       .optional(),
+    // The caller's ACTIVE creator-support binding (Creator Code programme), or
+    // null if unbound. Shown regardless of the creator's current status —
+    // suspending a creator doesn't un-bind their existing supporters, only
+    // blocks *new* bindings (enforced server-side at PUT /users/@me/creator).
+    // `sinceAt` is when the binding started; `canChangeAt` is null once the
+    // 7-day change cooldown has elapsed, so the client can tell "still bound,
+    // cooldown over" from "still bound, cooldown running" without hardcoding
+    // the cooldown length itself. `creator: null` does NOT by itself mean a
+    // new bind is unthrottled — a cooldown can still be running from a recent
+    // unbind; only PUT's own 429 reveals that.
+    // .optional() exists ONLY so an older API without the field is tolerated
+    // (the UI renders nothing then).
+    creator: z
+      .object({
+        code: z.string(),
+        displayName: z.string(),
+        sinceAt: z.iso.datetime(),
+        canChangeAt: z.iso.datetime().nullable(),
+      })
+      .nullable()
+      .optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
@@ -272,14 +319,62 @@ export type UserSubscription = NonNullable<
 // PUT /users/@me/username success payload. `username` is the resolved display
 // form (safe for optimistic UI). The suffix is re-rolled on every rename and
 // the response carries the fresh 30-day cooldown.
+// What happened to the bare-name claim on a successful rename.
+//
+// `claimed` — premium, got the bare name ("Ninja").
+// `unavailable` — premium, someone else holds the bare name, so the suffixed
+//   form was granted instead ("Ninja.4471"). A 200, not a 409: the rename
+//   happened and the cooldown was consumed. This is the case worth telling
+//   the player about.
+// `not_eligible` — not premium, so a suffix is simply how free names work.
+//   Nothing to say.
+//
+// Three values rather than a boolean so callers don't have to re-derive
+// eligibility from usernameStatus to avoid showing a free player a "fallback"
+// message on a perfectly ordinary rename.
+export const BareClaimSchema = z.enum([
+  "claimed",
+  "unavailable",
+  "not_eligible",
+]);
+export type BareClaim = z.infer<typeof BareClaimSchema>;
+
 export const PutUsernameResponseSchema = z.object({
   username: z.string(),
   base: z.string(),
   discriminator: z.string(),
   usernameStatus: UsernameStatusSchema,
   nextUsernameChangeAt: z.iso.datetime().nullable(),
+  // Optional because this client ships BEFORE the API that sends it. The
+  // response is parsed with safeParse, so requiring the field would make every
+  // rename against the current API fail validation and surface as a generic
+  // "failed". Treat `undefined` as "the API predates this" and say nothing.
+  bareClaim: BareClaimSchema.optional(),
 });
 export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
+
+// GET /creators/code/:code — public creator-code lookup (Creator Code
+// programme; no auth). Used to preview/validate a code before binding, e.g.
+// from an openfront.io/c/CODE share link. `status` is the creator's account
+// state; today the endpoint only ever resolves an "active" creator (a
+// suspended/terminated/unknown code 404s), but the field is kept here to
+// mirror the server's row shape rather than assume that never changes.
+export const PublicCreatorSchema = z.object({
+  code: z.string(),
+  displayName: z.string(),
+  status: z.enum(["active", "suspended", "terminated"]),
+});
+export type PublicCreator = z.infer<typeof PublicCreatorSchema>;
+
+// PUT /users/@me/creator success payload — confirms the code and display
+// name of the creator the caller is now bound to. Deliberately just the
+// public pair, not the full player.creator record (sinceAt/canChangeAt):
+// callers invalidate the cached /users/@me instead of duplicating those here.
+export const PutCreatorResponseSchema = PublicCreatorSchema.pick({
+  code: true,
+  displayName: true,
+});
+export type PutCreatorResponse = z.infer<typeof PutCreatorResponseSchema>;
 
 // Custom tribe names — text names a player buys with hard currency that get
 // assigned to bots ("tribes") in real games. Names go live right away; review
@@ -734,3 +829,95 @@ export const StreamsFeedSchema = z.object({
   live: z.array(LiveStreamSchema).default([]),
 });
 export type StreamsFeed = z.infer<typeof StreamsFeedSchema>;
+
+// ---------------------------------------------------------------------------
+// POST /payments/checkout — the single, rail-agnostic checkout endpoint that
+// replaced the two legacy Stripe-only ones. It serves both the Stripe (web)
+// and Steam (desktop) rails; the client picks the rail explicitly and the
+// server never infers it.
+//
+// The listing is identified by NAME, not by a Stripe priceId: a Steam-only
+// listing has no Stripe product at all, so a priceId cannot be the identifier
+// any more.
+export const PaymentsProviderSchema = z.enum(["steam", "stripe"]);
+export type PaymentsProvider = z.infer<typeof PaymentsProviderSchema>;
+
+export const PaymentsKindSchema = z.enum([
+  "currency_pack",
+  "custom_currency",
+  "subscription_tier",
+]);
+export type PaymentsKind = z.infer<typeof PaymentsKindSchema>;
+
+// How the player is handed to the rail. This is a STRING on the wire, and it
+// is the ONLY thing callers may branch on:
+//
+//   - "redirect"       — navigate to `redirectUrl` verbatim.
+//   - "client_overlay" — Steam's overlay purchase dialog is already on screen
+//                        and `redirectUrl` is null. There is nothing to
+//                        navigate to; wait for Steam to report authorization.
+//
+// Branching on "is redirectUrl set?" instead would silently mis-handle a
+// client_overlay response, so don't.
+export const PaymentsHandoffSchema = z.enum(["redirect", "client_overlay"]);
+export type PaymentsHandoff = z.infer<typeof PaymentsHandoffSchema>;
+
+// The 200 body. Deliberately FLAT — `handoff` is a sibling of `redirectUrl`,
+// not a wrapper around it.
+//
+// `orderId` is a DECIMAL STRING and must stay one: it is a database bigint and
+// large values do not survive a round trip through a JS number. It is null for
+// a Stripe subscription_tier checkout, so nothing may require it.
+//
+// `expiresAt` is advisory only. Do not build a countdown or an auto-cancel on
+// it — the server owns the order's lifetime.
+export const PaymentsCheckoutResponseSchema = z
+  .object({
+    orderId: z.string().nullable(),
+    provider: PaymentsProviderSchema,
+    kind: PaymentsKindSchema,
+    handoff: PaymentsHandoffSchema,
+    redirectUrl: z.string().nullable(),
+    expiresAt: z.string().nullable(),
+  })
+  // A "redirect" with nowhere to redirect to is not a response we can act on;
+  // rejecting it here keeps every caller from having to re-check.
+  .refine((body) => body.handoff !== "redirect" || body.redirectUrl !== null, {
+    message: "handoff 'redirect' requires a redirectUrl",
+  });
+export type PaymentsCheckoutResponse = z.infer<
+  typeof PaymentsCheckoutResponseSchema
+>;
+
+// POST /payments/steam/finalize — settles a Steam overlay order.
+//
+// The body is a RESOLUTION, not a boolean success, and only two of its four
+// values are terminal:
+//
+//   - "settled"    — captured and fulfilled. The credit has landed. The ONLY
+//                    success value.
+//   - "expired"    — terminal, and the buyer was never charged. The ONLY
+//                    definitive failure.
+//   - "open"       — not resolved yet and correctly so; the server sweeper
+//                    owns it. This is the EXPECTED answer to a prompt finalize
+//                    on the client channel, where an order Valve still reports
+//                    as Init resolves to "open". Not a failure.
+//   - "unresolved" — transient (Steam unreachable, or the rail disabled
+//                    mid-flight). Not a failure; handled exactly like "open".
+//
+// Collapsing the last two into an error is the same mistake as reading
+// `status=pending` on the return page as "purchase failed": the order is
+// durable and something else owns settling it.
+export const SteamOrderResolutionSchema = z.enum([
+  "settled",
+  "expired",
+  "open",
+  "unresolved",
+]);
+export type SteamOrderResolution = z.infer<typeof SteamOrderResolutionSchema>;
+
+export const SteamFinalizeResponseSchema = z.object({
+  orderId: z.string(),
+  resolution: SteamOrderResolutionSchema,
+});
+export type SteamFinalizeResponse = z.infer<typeof SteamFinalizeResponseSchema>;

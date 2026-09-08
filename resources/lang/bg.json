@@ -16,6 +16,13 @@
     "claim_failed": "Грешка при взимането на наградата. Моля, опитай отново.",
     "clear_session": "Изчисти сесията",
     "connected_as": "Вписан като",
+    "delete_account_confirm_button": "Изтрий перманентно",
+    "delete_account_confirm_word": "ИЗТРИЙ",
+    "delete_account_desc": "Перманентно изтрий акаунтът ти и всичката информация, обвързана с него.",
+    "delete_account_failed": "Изтриването не беше успешно, моля се свържи с екипа за поддръжка на support@openfront.io",
+    "delete_account_title": "Изтриване на акаунт",
+    "delete_account_type_to_confirm": "Напиши \"{word}\", за да потвърдиш",
+    "delete_account_warning": "Акаунтът ти ще бъде изтрит веднага и перманентно. Няма допълнително изчакване и няма начин да го възстановиш. Ще бъдеш изкаран от акаунта на всички устройства.",
     "email_placeholder": "Въведи имейл адреса си",
     "enter_email_address": "Моля, въведи имейл адрес",
     "failed_to_send_recovery_email": "Грешка при изпращането на имейл за възстановяване",
@@ -37,6 +44,7 @@
     "linked_account": "Вписан като {account_name}",
     "linked_to_google": "Свързан с Google",
     "linked_to_google_email": "Свързан с Google ({email})",
+    "login_email_exists": "Вече имаш акаунт с този имейл. Впиши се в него, а след това свържи този акаунт през настройките.",
     "manage_subscription": "Управление",
     "marketing_desc": "От време на време ще получаваш информация за новини, събития и ъпдейти. По всяко време можеш да се отпишеш.",
     "marketing_no_email": "Свържи имейл към акаунта си, за да се абонираш за информация за ъпдейти.",
@@ -69,28 +77,31 @@
     "tab_stats": "Статистики",
     "title": "Акаунт",
     "unclaimed_rewards": "Невзети награди",
+    "username_change_ready": "Можеш да се преименуваш",
     "username_confirm_abandon": "Перманентно ще се откажеш от резервираното ти име \"{name}\".",
     "username_confirm_body": "Новото ти име ще бъде заключено за 30 дена.",
     "username_confirm_button": "Промени името",
     "username_confirm_case_only": "Новото име се различава от сегашното ти само по големината на буквите - все пак ще рестартира 30-дневното заключване.",
     "username_confirm_heading": "Настина ли искаш да промениш името си?",
+    "username_current_label": "Текущо име",
     "username_error_cooldown": "Можеш да промениш името си отново след {days} ден(а).",
     "username_error_failed": "Грешка при промяната на името. Моля, опитай отново по-късно.",
     "username_error_profane": "Това име не е позволено.",
     "username_error_taken": "Това име вече е заето - опитай друго.",
     "username_grace_warning": "Ще изгубиш специалното си право върху \"{name}\" на {date}. Абонирай се отново, за да го запазиш.",
-    "username_not_set": "Запази името си - то те идентифицира из всички игри.",
+    "username_locked_until": "Заключено до {date}",
+    "username_new_label": "Ново име",
+    "username_not_set": "Запази името си, което ще служи като идентификатор за профила ти във всяка игра.",
     "username_placeholder": "Въведи име",
     "username_save": "Запази",
     "username_temporary_notice": "Името ти е заето от друг играч. Избери ново - прекръщаването е безплатно.",
     "username_temporary_prompt": "Името ти е заето от друг играч. Искаш ли да избереш ново сега? Прекръщаването е безплатно.",
     "username_temporary_prompt_confirm": "Избeри име",
     "username_title": "Име",
-    "games_username": "Име",
-    "log_out": "Излез от акаунта",
-    "tab_settings": "Настройки",
-    "username_cooldown_until": "Можеш да промениш името си отново на {date}.",
-    "your_subscription": "Твоят абонамент"
+    "delete_account_blocked": "Акаунтът ти не може да бъде изтрит автоматично. Моля, свържи се с екипа за поддръжка."
+  },
+  "account_settings_modal": {
+    "title": "Настройки на акаунта"
   },
   "ban_notice": {
     "appeal": "Ако вярваш, че това е грешка, свържи се с нас в Discord.",
@@ -129,6 +140,10 @@
     "not_enough_money": "Няма достатъчно пари",
     "upgrade_amount": "x{amount}",
     "warship_shift_hint": "Задръж Shift и плъзгай, за да избереш няколко военни кораба наведнъж"
+  },
+  "change_username_modal": {
+    "title": "Промяна на името",
+    "unavailable": "Управлението на името все още не е достъпно за този акаунт."
   },
   "chat": {
     "attack": {
@@ -251,6 +266,18 @@
     "discord_section_title": "Discord",
     "discord_url_hint": "Ползвай покана, която е настроена да не изтича никога.",
     "discord_url_label": "URL за покана към Discord",
+    "donate": "Дари",
+    "donate_amount": "Сума",
+    "donate_insufficient": "Нямаш достатъчно {currency}.",
+    "donate_invalid_amount": "Въведи цяло число, по-голямо от 0.",
+    "donate_irreversible": "Даренията са перманентни и невъзвръщаеми. Валутата, предоставена на клана, никога не може да ти бъде върната.",
+    "donate_irreversible_hard": "Плутоният е премиум валута. Когато бъде дарен, той не подлежи на възстановяване, изтегляне или връщане в акаунта ти.",
+    "donate_not_member": "Трябва да си член на клана, за да даряваш.",
+    "donate_submitting": "Изпраща се дарението…",
+    "donate_subtitle": "Премести валута от акаунта ти в хазната на клана.",
+    "donate_success": "Ти дари {amount} {currency} на [{tag}]!",
+    "donate_title": "Дари на [{tag}]",
+    "donate_your_balance": "Имаш {balance}",
     "error_already_member": "Вече си член",
     "error_banned": "Ти си баннат от този клан.",
     "error_banned_reason": "Ти си баннат от този клан. Причина: {reason}",
@@ -336,7 +363,7 @@
     "role_officer": "Офицер",
     "save_changes": "Запази промените",
     "saving": "Запазване...",
-    "search_members_placeholder": "Филтрирай текущата страница по ID или роля...",
+    "search_members_placeholder": "Търси по точно ID, име или роля...",
     "search_placeholder": "Търси по таг на клан...",
     "search_requests_placeholder": "Търси по публично ID на играча...",
     "select_new_leader": "Избери нов собственик",
@@ -372,16 +399,7 @@
     "title": "Кланове",
     "transfer_leadership": "Прехвърли собственост",
     "transfer_warning": "Това ще направи избрания член новия собственик. Ти ще станеш обикновен член. Това действие не е обратимо.",
-    "unban": "Отбанване",
-    "history_filter_hvn": "Хора срещу нации",
-    "history_filter_ranked": "Ранково",
-    "stats_collapse_all": "Свий всички",
-    "stats_duos": "Дуос",
-    "stats_expand_all": "Разшири всички",
-    "stats_ffa": "Всеки срещу всеки (FFA)",
-    "stats_quads": "Куадс",
-    "stats_trios": "Триос",
-    "tab_members": "Членове"
+    "unban": "Отбанване"
   },
   "common": {
     "available": "Наличен",
@@ -391,6 +409,7 @@
     "cap_tooltip": "Оставащ капацитет на получателя",
     "click_to_copy": "Кликни, за да копираш",
     "close": "Затвори",
+    "collapse_all": "Свий всички",
     "confirm": "Потвърди",
     "copied": "Копирано!",
     "copy": "Копиране",
@@ -399,6 +418,10 @@
     "duration_minute_short": "мин.",
     "duration_second_short": "сек.",
     "enabled": "Включено",
+    "error_generic": "Нещо се обърка. Моля, опитай отново.",
+    "expand_all": "Разшири всички",
+    "failed_copy": "Копирането не се осъществи",
+    "loading": "Зареждане...",
     "map_default": "Карта по подразбиране",
     "month_apr": "Април",
     "month_aug": "Август",
@@ -417,10 +440,10 @@
     "paste": "Поставяне",
     "preset_max": "Макс",
     "send": "Изпрати",
+    "slider_tooltip": "{percent}% • {amount}",
     "summary_keep": "Запази",
     "target_dead": "Целта бе елиминирана",
-    "target_dead_note": "Не можеш да изпращаш ресурси на елиминиран играч.",
-    "summary_send": "Изпрати"
+    "target_dead_note": "Не можеш да изпращаш ресурси на елиминиран играч."
   },
   "control_panel": {
     "allied_afk_neighbor_info": "Можеш да атакуваш несвързани играчи, дори ако си в съюз с тях.",
@@ -439,7 +462,7 @@
     "hard": "Плутоний",
     "legendary": "Легендарен",
     "per_day": "/ден",
-    "public_lobbies": "Публични лобита",
+    "public_lobbies": "Право да създаваш публични лобита",
     "public_lobbies_info": "Можеш да хостваш лобита, които са пуснати публично и всеки може да се присъедини.",
     "rare": "Рядък",
     "search": "Търси...",
@@ -450,9 +473,54 @@
     "unlimited_ranked_info": "Няма ограничение на броя на ранковите игри, които можеш да изиграеш.",
     "usd_value": "Стойност: {usd}",
     "verified_name": "Потвърдено име",
-    "verified_name_info": "Името ти е запазено за акаунта ти и се показва значка за автентичност в играта.",
-    "button_title": "Избери козметиките си!",
-    "title": "Козметики"
+    "verified_name_info": "Името ти е запазено за акаунта ти и се показва значка за автентичност в играта."
+  },
+  "desktop_update": {
+    "blocked": "За най-новата версия е необходима актуализация от Steam",
+    "downloading": "Тегли се ъпдейтът… {percent}%",
+    "failed": "Грешка при изтеглянето на ъпдейта",
+    "ready": "Има готов ъпдейт",
+    "reload": "Презареди",
+    "retry": "Опитай отново"
+  },
+  "detailed_view": {
+    "capacity": "Капацитет",
+    "delete_profile": "Изтрий",
+    "filters": "Филтри",
+    "filters_with_count": "Филтри ({count})",
+    "hide_empty": "Скрий празните лобита",
+    "joined_players": "Присъединили се играчи",
+    "layout_duos": "Дуос",
+    "layout_quads": "Куадс",
+    "layout_trios": "Триос",
+    "max": "Макс.",
+    "min": "Мин.",
+    "mode": "Вид на лобито",
+    "mode_ffa": "Всеки срещу всеки (FFA)",
+    "mode_hvn": "Хора срещу Нации",
+    "mode_teams": "Отбори",
+    "no_lobbies": "Няма лобита, които да съответстват на филтрите ти.",
+    "no_profile": "Няма профил",
+    "pane_empty": "Няма лобита",
+    "pane_ffa": "Всеки срещу всеки (FFA)",
+    "pane_heading": "{name} ({count})",
+    "pane_hosted": "Хоствана",
+    "pane_special": "Специална",
+    "pane_team": "Отбори",
+    "per_team": "Брой играчи на отбор",
+    "profile_name": "Име на профила",
+    "profiles": "Профили",
+    "queued": "Следват",
+    "reset": "Нулирай",
+    "save_profile": "Запази",
+    "source": "Източник",
+    "source_hosted": "Хоствана",
+    "source_public": "Публична",
+    "spawning": "Играта се появява…",
+    "tab_all": "Всички",
+    "team_count": "Брой отбори",
+    "team_size": "Размер на отборите",
+    "title": "Подробен поглед"
   },
   "difficulty": {
     "difficulty": "Трудност на нациите",
@@ -508,9 +576,7 @@
     "spawn_failed": {
       "description": "Автоматичното появяване се провали. Не можете да играете тази игра.",
       "title": "Появяването се провали"
-    },
-    "copied": "Копирано!",
-    "failed_copy": "Копирането не се осъществи"
+    }
   },
   "events_display": {
     "about_to_expire": "Съюзът ти с {name} е на път да изтече!",
@@ -587,8 +653,7 @@
     "send_request": "Изпрати заявка",
     "team_info": "Приятелите се слагат в един отбор.",
     "withdraw": "Оттегли",
-    "your_friends": "Твоите приятели",
-    "error_generic": "Нещо се обърка. Опитай отново."
+    "your_friends": "Твоите приятели"
   },
   "fullscreen": {
     "enter": "Влез в цял екран",
@@ -628,6 +693,26 @@
     "hvn": "Хора срещу Нации",
     "teams": "Отбори"
   },
+  "game_settings": {
+    "bots": "Племена: ",
+    "compact_map": "Компактна карта",
+    "custom_alliances": "Продължителност на съюза",
+    "disable_units": "Изключване на военни единици",
+    "doomsday_clock": "Часовник на страшния съд",
+    "gold_multiplier": "Златен множител",
+    "infinite_gold": "Безкрайно злато",
+    "infinite_troops": "Безкрайна популация",
+    "instant_build": "Незабавно построяване",
+    "max_timer": "Продължителност на играта (в минути)",
+    "mins_placeholder": "Минути",
+    "nations": "Нации: ",
+    "options": "Опции",
+    "overtime": "Допълнително време (в минути)",
+    "random_spawn": "Случайно появяване",
+    "start": "Започване на игра",
+    "starting_gold": "Начално злато (милиони)",
+    "water_nukes": "Водни бомби"
+  },
   "game_starting_modal": {
     "code_license": "Кодът е лицензиран съгласно AGPL-3.0 (без гаранция)",
     "credits": "Заслуги",
@@ -639,6 +724,8 @@
   "graphics_setting": {
     "advanced_desc": "Фина настройка на отделните графични опции",
     "advanced_label": "Разширени настройки",
+    "background_color_desc": "Цвят на района извън картата и непроходимия терен.",
+    "background_color_label": "Цвят на фона",
     "black": "Черно",
     "classic_icons_desc": "По-светло очертание с почти черен интериор",
     "classic_icons_label": "Класически иконки",
@@ -701,7 +788,7 @@
     "preset_delete_confirm": "Искаш ли да изтриеш предварителната настройка „{name}“?",
     "preset_migrated_name": "Моите настройки",
     "preset_name_placeholder": "Име на предварителната настройка",
-    "preset_night": "Нощ",
+    "preset_night": "Нощно",
     "preset_night_desc": "Затъмнена карта със светещи постройки и единици",
     "rail_distance_desc": "До каква степен на отдалечаване на мащаба железопътните линии остават видими",
     "rail_distance_label": "Разстояние на изобразяване на железопътните линии",
@@ -727,17 +814,18 @@
     "territory_alpha_label": "Прозрачност на територията",
     "territory_sat_desc": "Колко ярки да са запълващите територията цветове (по-ниските стойности осначават по-бледи цветове)",
     "territory_sat_label": "Насищане на територията",
-    "title": "Графични настройки",
-    "copy_json_copied": "Копирано!"
+    "title": "Графични настройки"
   },
   "heads_up_message": {
     "catching_up": "Наваксва се...",
     "choose_spawn": "Избери начална локация",
+    "choose_spawn_spectator": "Играчите избират начални локации",
     "dont_show_again": "Да не се показва отново",
     "ffa_collusion": "Напомняне: предварително наговаряне за съюз не е разрешено във Всеки срещу всеки (FFA)",
     "multiplayer_game_paused": "Играта е паузирана от създателя на лобито",
     "pvp_immunity_active": "Бойният имунитет е активен за {seconds} секунди",
     "random_spawn": "Случайното появяване е активирано. Избира се начална локация за теб...",
+    "random_spawn_spectator": "Случайното появяване е включено",
     "singleplayer_game_paused": "Играта е на пауза"
   },
   "help_modal": {
@@ -832,19 +920,7 @@
     "ui_wilderness": "Пустош",
     "ui_your_team": "Твоят отбор:",
     "video_tutorial": "Видео урок за игра",
-    "video_tutorial_title": "Урок за игра на OpenFront.io",
-    "action_alt_view": "Алтернативен изглед (терен/държави)",
-    "action_center": "Центриране на камерата върху играч",
-    "build_atom": "Атомна бомба",
-    "build_city": "Град",
-    "build_defense": "Отбранителен пост",
-    "build_factory": "Фабрика",
-    "build_hydrogen": "Водородна бомба",
-    "build_mirv": "МИРВ",
-    "build_port": "Пристанище",
-    "build_sam": "Противоракетна установка земя-въздух SAM",
-    "build_silo": "Ракетен силоз",
-    "build_warship": "Военен кораб"
+    "video_tutorial_title": "Урок за игра на OpenFront.io"
   },
   "host_modal": {
     "anonymous_players": "Анонимни играчи",
@@ -868,6 +944,8 @@
     "player_whitelist_placeholder": "разделени със запетая",
     "players": "Играчи",
     "remove_player": "Премахване на {username}",
+    "spectator": "Наблюдател",
+    "spectators": "Наблюдатели",
     "start_delay": "Забавяне в старта (в секунди)",
     "starting_in": "Започване след {time}. Кликни, за да отмениш",
     "subscription_required_body": "Трябва да си абонат, за да направиш лобито си публично.",
@@ -882,29 +960,33 @@
     "view_subscriptions": "Преглед на абонаменти",
     "visibility_private": "Частна",
     "visibility_public": "Публична",
-    "waiting": "Изчакване на играчи...",
-    "bots": "Племена: ",
-    "bots_disabled": "Изключени",
-    "compact_map": "Компактна карта",
-    "custom_alliances": "Продължителност на съюза",
-    "doomsday_clock": "Часовник на страшния съд",
-    "enables_title": "Изключване на военни единици",
-    "gold_multiplier": "Златен множител",
-    "gold_multiplier_placeholder": "2.0x",
-    "infinite_gold": "Безкрайно злато",
-    "infinite_troops": "Безкрайна популация",
-    "instant_build": "Незабавно построяване",
-    "max_timer": "Продължителност на играта (в минути)",
-    "mins_placeholder": "Минути",
-    "nations": "Нации: ",
-    "nations_disabled": "Изключени",
-    "options_title": "Опции",
-    "random_spawn": "Случайно появяване",
-    "start": "Започване на игра",
-    "start_delay_placeholder": "3",
-    "starting_gold": "Начално злато (Милиони)",
-    "starting_gold_placeholder": "5",
-    "water_nukes": "Водни бомби"
+    "waiting": "Изчакване на играчи..."
+  },
+  "inventory": {
+    "equipped": "Сложено",
+    "load_failed": "Грешка при зареждането на инвентара ти. Моля, презареди и опитай отново.",
+    "loading": "Зарежда се инвентарът…",
+    "loadout": "Твоята комбинация",
+    "loadout_add": "Нова комбинация",
+    "loadout_applied": "Ти си сложи комбинацията {name}",
+    "loadout_category_label": "{category}: {summary}",
+    "loadout_delete_target": "Изтрий {name}",
+    "loadout_deleted": "Ти си изтри комбинацията {name}",
+    "loadout_limit": "Можеш да запазиш до {count} комбинации.",
+    "loadout_presets": "Комбинации",
+    "loadout_saved": "Ти запази комбинацията {name}",
+    "loadout_slot": "Комбинация {name}",
+    "no_owned_crowns": "Все още не притежаваш никакви коронки.",
+    "no_owned_effects_of_type": "Все още не притежаваш никакви {type} ефекти.",
+    "no_owned_skins": "Все още не притежаваш никакви териториални шаблони.",
+    "retry": "Опитай отново",
+    "selected_cosmetic": "Избрано: {name}",
+    "selected_cosmetic_variant": "{name} ({variant})",
+    "showing_effects": "Сложени ефекти: {count}",
+    "title": "Инвентар",
+    "unequip": "Махни",
+    "unequip_all": "Махни всички",
+    "unequipped_all": "Ти махна всичко"
   },
   "ios_banner": {
     "got_it": "Разбрано",
@@ -979,18 +1061,19 @@
     "win_loss_ratio": "П/З",
     "win_score": "Резултат на победи",
     "win_score_tooltip": "Претеглени победи въз основа на участието на клана и трудността на мача",
-    "your_ranking": "Твоето класиране",
-    "loading": "Зареждане..."
+    "your_ranking": "Твоето класиране"
   },
   "main": {
     "account": "Акаунт",
     "clans": "Кланове",
     "copyright": "© OpenFront™ and Contributors",
     "create": "Създай частно лоби",
+    "detailed_view": "Подробен поглед",
     "discord_avatar_alt": "Discord профилна снимка",
     "github": "GitHub",
     "go_to_troubleshooting": "Отиди на страницата ни за отстраняване на проблеми",
     "help": "Помощ",
+    "inventory": "Инвентар",
     "join": "Присъедини се към частно лоби",
     "leaderboard": "Класация",
     "login_discord": "Влез с Discord",
@@ -1006,8 +1089,7 @@
     "title": "OpenFront (АЛФА)",
     "troubleshooting": "Отстраняване на проблеми",
     "user_avatar_alt": "Профилната снимка на {username}",
-    "wiki": "Wiki",
-    "settings": "Настройки"
+    "wiki": "Wiki"
   },
   "map": {
     "achiran": "Ахиран",
@@ -1161,10 +1243,7 @@
     "no_results": "Не бяха намерени карти",
     "search_maps": "Търси карти...",
     "search_results": "Резултати от търсенето",
-    "unfavorite": "Премахни от любими",
-    "collapse_all": "Свий всички",
-    "expand_all": "Разшири всички",
-    "loading": "Зареждане..."
+    "unfavorite": "Премахни от любими"
   },
   "map_layers": {},
   "marketing_consent": {
@@ -1202,6 +1281,24 @@
     "teams_of": "{teamCount} отбора по {playersPerTeam}",
     "teams_title": "Отбори"
   },
+  "multi_tab": {
+    "detected": "Засечени са няколко отворени таба с играта.",
+    "explanation": "Позволен е само по един активен таб с играта, за да се осигури честна игра.",
+    "please_wait": "Моля, изчакай",
+    "seconds": "секунди",
+    "warning": "Предупреждение за режим на бдителност"
+  },
+  "nav_account_menu": {
+    "account_settings": "Настройки на акаунта",
+    "change_subscription": "Промяна на абонамента",
+    "change_username": "Промяна на името",
+    "copy_profile_url": "Копирай URL на профила",
+    "game_settings": "Настройки на играта",
+    "log_out": "Излез от профила",
+    "log_out_confirm": "Наистина ли искаш да излезеш от акаунта?",
+    "title": "Меню на акаунта",
+    "view_account": "Преглед на акаунта"
+  },
   "new_lobby_prompt": {
     "confirm": "Искаш ли да създадеш ново лоби? Всички играчи ще бъдат поканени да играят пак.",
     "dismiss": "Отхвърли",
@@ -1220,6 +1317,11 @@
     "tournament": "ТУРНИР",
     "tutorial": "НАРЪЧНИК",
     "warning": "ВНИМАНИЕ"
+  },
+  "overtime": {
+    "started": "Допълнително време! Необходимата за победа територия вече намалява.",
+    "title": "Допълнително време",
+    "to_win": "Дръж > {pct}%, за да спечелиш"
   },
   "performance_overlay": {
     "avg_60s": "Средно (60сек.):",
@@ -1240,9 +1342,7 @@
     "tick_layers_summary": "Последен тик: {count} слоя, {ms}ms",
     "tick_layers_table_header": "ср. / макс",
     "tps": "TPS:",
-    "tps_avg_60s": "Средно:",
-    "copied": "Копирано!",
-    "failed_copy": "Копирането не се осъществи"
+    "tps_avg_60s": "Средно:"
   },
   "player_panel": {
     "active": "Активна",
@@ -1309,17 +1409,7 @@
     "unit": {
       "mirvw": "MIRV бойна глава",
       "trade": "Търговска лодка",
-      "trans": "Транспортна лодка",
-      "abomb": "Атомна бомба",
-      "city": "Град",
-      "defp": "Отбранителен пост",
-      "fact": "Фабрика",
-      "hbomb": "Водородна бомба",
-      "mirv": "МИРВ",
-      "port": "Пристанище",
-      "saml": "Противоракетна установка земя-въздух SAM",
-      "silo": "Ракетен силоз",
-      "wshp": "Военен кораб"
+      "trans": "Транспортна лодка"
     },
     "war": "Война",
     "warship_stats": "Статистики за военните кораби",
@@ -1391,7 +1481,10 @@
     "no_open_lobbies": "Няма отворени лобита",
     "not_found": "Не е намерено частното лоби. Моля, провери ID-то и опитай отново.",
     "open_lobbies": "Отворени лобита",
+    "play": "Играй",
     "pvp_immunity": "Продължителност на военния имунитет",
+    "spectate": "Наблюдавай",
+    "spectating": "Наблюдател си! Играта се зарежда...",
     "starting_gold": "Начално злато",
     "title": "Присъедини се към частно лоби",
     "version_mismatch": "Тази игра е създадена на различна версия. Не можеш да бъдеш присъединен."
@@ -1417,8 +1510,7 @@
     "starting_gold": "{amount}М начално злато",
     "starting_gold_label": "Начално злато",
     "water_nukes": "Водни бомби",
-    "doomsday_clock_label": "Часовник на страшния съд",
-    "water_nukes_label": "Водни бомби"
+    "overtime": "Допълнително време"
   },
   "public_lobby": {
     "connecting": "Свързване с лобито...",
@@ -1460,15 +1552,13 @@
   "send_gold_modal": {
     "aria_slider": "Количествен плъзгач",
     "available_tooltip": "Текущото ти злато на разположение",
-    "title_with_name": "Изпрати злато на {name}",
-    "slider_tooltip": "{percent}% • {amount}"
+    "title_with_name": "Изпрати злато на {name}"
   },
   "send_troops_modal": {
     "aria_slider": "Плъзгач за войници",
     "available_tooltip": "Текущите ти войници на разположение",
     "capacity_note": "Получателят може да приеме само {amount} в момента.",
-    "title_with_name": "Изпрати войници на {name}",
-    "slider_tooltip": "{percent}% • {amount}"
+    "title_with_name": "Изпрати войници на {name}"
   },
   "single_modal": {
     "max_timer_invalid": "Моля, въведи валидна максимална стойност на таймера (1-120 минути)",
@@ -1476,29 +1566,10 @@
     "medals_of_maps": "от {total} карти",
     "options_changed_no_achievements": "Персонализирани настройки – постиженията са деактивирани",
     "sign_in_for_achievements": "Впиши се, за да получаваш постижения",
-    "toggle_achievements": "Превключване на постижения",
-    "bots": "Племена: ",
-    "bots_disabled": "Изключени",
-    "compact_map": "Компактна карта",
-    "custom_alliances": "Продължителност на съюза",
-    "doomsday_clock": "Часовник на страшния съд",
-    "enables_title": "Изключване на военни единици",
-    "gold_multiplier": "Златен множител",
-    "gold_multiplier_placeholder": "2.0x",
-    "infinite_gold": "Безкрайно злато",
-    "infinite_troops": "Безкрайна популация",
-    "instant_build": "Незабавно построяване",
-    "max_timer": "Продължителност на играта (в минути)",
-    "max_timer_placeholder": "Минути",
-    "mins_placeholder": "Минути",
-    "nations": "Нации: ",
-    "nations_disabled": "Изключени",
-    "options_title": "Опции",
-    "random_spawn": "Случайно появяване",
-    "start": "Започване на игра",
-    "starting_gold": "Начално злато (Милиони)",
-    "starting_gold_placeholder": "5",
-    "water_nukes": "Водни бомби"
+    "toggle_achievements": "Превключване на постижения"
+  },
+  "spawn_timer": {
+    "team_percent_tooltip": "{team}: {percent}"
   },
   "steam_link_modal": {
     "code_placeholder": "XXXX-XXXX",
@@ -1517,9 +1588,7 @@
     "reason_steam_has_progress": "Този акаунт в Steam вече си има собствен напредък и не може да бъде свързан.",
     "reason_steam_linked_elsewhere": "Този акаунт вече е вързан за друг акаунт в OpenFront.",
     "success": "Акаунтът ти в Steam вече е свързан.",
-    "title": "Свържи акаунт в Steam",
-    "loading_placeholder": "…",
-    "reason_failed": "Нещо се обърка. Моля, опитай отново."
+    "title": "Свържи акаунт в Steam"
   },
   "steam_user_header": {
     "avatar_alt": "Steam профилна снимка",
@@ -1554,9 +1623,11 @@
     "merch": "Мърч",
     "merch_blurb": "Поръчай морч на OpenFront с доставка до прага ти!",
     "merch_visit_store": "Посети магазина",
+    "no_affiliate_items": "Няма налични партньорски артикули. Провери отново по-късно за нови предложения.",
     "no_crowns": "Няма налични коронки. Провери по-късно за нови артикули.",
     "no_effects": "Няма налични ефекти. Провери по-късно за нови артикули.",
     "no_flags": "Няма налични знамена. Провери по-късно за нови артикули.",
+    "no_packs": "Няма налични пакети. Провери по-късно за нови артикули.",
     "no_skins": "Няма налични шаблони. Провери по-късно за нови артикули.",
     "no_subscriptions": "Няма налични абонаменти. Провери по-късно за нови артикули.",
     "no_tribes": "Още не си купувал имена на племена.",
@@ -1602,16 +1673,18 @@
     "tribes_login_required": "Впиши се в акаунт, за да купуваш и управляваш имена на племена.",
     "tribes_purchase_description": "Името ти се дава на племе в реални игри с други играчи. Влиза в употреба незабавно, след като го купиш.",
     "tribes_purchase_heading": "Купи име на племе",
-    "your_tribes_heading": "Твоите имена на племена",
-    "tribe_purchase_failed": "Покупката бе неуспешна. Моля, опитай отново.",
-    "tribe_stats_reach": "Аудитория от играчи",
-    "tribe_stats_reach_tooltip": "Фигурирало в игри с {count} играчи"
+    "your_tribes_heading": "Твоите имена на племена"
   },
   "streaming_now": {
     "live_count": "{count} са на живо",
     "title": "На живо сега",
     "viewers": "{count} зрители",
     "watch": "Гледай {name}"
+  },
+  "subscription_modal": {
+    "browse": "Преглед на абонаментите",
+    "none": "Нямаш активен абонамент.",
+    "title": "Твоят абонамент"
   },
   "team_colors": {
     "blue": "Син",
@@ -1629,13 +1702,11 @@
     "pattern": {
       "default": "Стандартен"
     },
-    "select_skin": "Шаблон",
-    "selected": "е избран"
+    "select_skin": "Шаблон"
   },
   "token_login_modal": {
     "success": "Успешно се вписа като {email}!",
-    "title": "Вписване...",
-    "logging_in": "Вписване..."
+    "title": "Вписване..."
   },
   "troubleshooting": {
     "battery": "Батерия",
@@ -1699,6 +1770,8 @@
     "background_music_volume": "Сила на фоновата музика",
     "boat_attack": "Атака с лодка",
     "boat_attack_desc": "Изпраща атака с лодка към плочката под курсора ви.",
+    "box_select_warships": "Избиране на военните кораби в кутия",
+    "box_select_warships_desc": "Задръж този клавиш и плъзгай, за да избереш няколко военни кораба.",
     "break_alliance": "Разбиване на съюза (Предателство)",
     "break_alliance_desc": "Прекъсва съюза с играча, чиято плочка е под курсора ти.",
     "build_atom_bomb": "Пускане на атомна бомба",
@@ -1751,7 +1824,7 @@
     "graphics_preset_desc": "Избери предварително зададен визуален стил за картата. Направи фини настройки или създай собствен такъв в графичните настройки на играта.",
     "graphics_preset_label": "Предварителна графична настройка",
     "graphics_refresh_modifier": "Модификатор за опресняване на графиките",
-    "graphics_refresh_modifier_desc": "Задръж този бутон и R, за да опресниш графиките",
+    "graphics_refresh_modifier_desc": "Задръж този бутон и {key}, за да опресниш графиките",
     "graphics_settings_desc": "Настройва външния вид на картата",
     "graphics_settings_label": "Графични настройки",
     "ground_attack": "Земна атака",
@@ -1776,6 +1849,9 @@
     "move_right_desc": "Придвижване на камерата надясно",
     "move_up": "Придвижване на камерата нагоре",
     "move_up_desc": "Придвижване на камерата нагоре",
+    "nuke_alliance_safety_desc": "Предотвратява случайни ядрени удари по новопридобити съюзници.",
+    "nuke_alliance_safety_duration": "{count, plural, one {1 такт (0.1сек.)} other {{count} такта ({seconds}сек.)}}",
+    "nuke_alliance_safety_label": "Безопасност срещу приятелски огън",
     "off": "Изключено",
     "on": "Включено",
     "pause_game": "Пауза",
@@ -1788,8 +1864,11 @@
     "request_alliance": "Искане на съюз",
     "request_alliance_desc": "Изпраща заявка за съюз до играча, чиято плочка е под курсора ти.",
     "reset": "Нулиране",
+    "reset_gfx_desc": "Натисни, докато държиш натиснат модифициращия клавиш, за да нулираш визуализацията при проблеми с дисплея.",
     "retaliate_attack": "Отвръщане на удара",
     "retaliate_attack_desc": "Изпращане на ответна атака, за да притъпиш/негираш силата на последния активен нападател. Достъпно само когато биваш атакуван.",
+    "select_all_warships": "Избиране на всичките военни кораби",
+    "select_all_warships_desc": "Избери всичките си военни кораби на картата.",
     "sound_effects_volume": "Сила на звука на звуковите ефекти",
     "special_effects_desc": "Превключване на специалните ефекти. Деактивиране, за да се увеличи производителността",
     "special_effects_label": "Специални ефекти",
@@ -1814,6 +1893,12 @@
   },
   "username": {
     "account_invalid_chars": "Името може да съдържа само букви, цифри, долни черти, тирета и единични резстояния между думите.",
+    "clan_browse": "Разгледай клановете",
+    "clan_clear": "Няма таг",
+    "clan_custom": "Друг таг",
+    "clan_label": "Кланов таг",
+    "clan_none_joined": "Все още не си се присъединил към клан.",
+    "clan_your_clans": "Твоите кланове",
     "enter_username": "Въведи име",
     "invalid_chars": "Името може да съдържа само букви, цифри, интервали и долни черти.",
     "not_string": "Името трябва да е символен низ.",
@@ -1824,11 +1909,14 @@
     "tag_too_short": "Клановият таг трябва да съдържа от 2 до 5 буквено-цифрови знака.",
     "too_long": "Името не трябва да надвишава {max} символа.",
     "too_short": "Името трябва да е дълго поне {min} символа.",
+    "verified_active_hint": "Играеш с потвърденото си име.",
     "verified_heading": "Потвърдено име",
     "verified_player": "Потвърден играч",
     "verified_sub_required": "Трябва ти активен абонамент, за да играеш с потвърденото си име.",
     "verified_sub_required_confirm": "Виж магазина",
-    "verified_toggle": "Потвърдено"
+    "verified_use": "Използвай потвърдено",
+    "verified_use_custom": "Превключи обратно към персонализирано име",
+    "verified_use_hint": "Играй с потвърденото си име"
   },
   "win_modal": {
     "died": "Ти умря",
@@ -1849,10 +1937,5 @@
     "you_won": "Ти спечели!",
     "your_team": "Твоят отбор спечели!",
     "youtube_tutorial": "Нужда от помощ?"
-  },
-  "flag_input": {
-    "button_title": "Избери знаме!",
-    "search_flag": "Търси...",
-    "title": "Знаме"
   }
 }

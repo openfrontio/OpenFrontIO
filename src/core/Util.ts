@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
+import { exp } from "./DetMath";
 import { Cell, GameType, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import { TileSet } from "./game/TileSet";
@@ -447,7 +448,7 @@ export function sigmoid(
   decayRate: number,
   midpoint: number,
 ): number {
-  return 1 / (1 + Math.exp(-decayRate * (value - midpoint)));
+  return 1 / (1 + exp(-decayRate * (value - midpoint)));
 }
 
 export function formatPlayerDisplayName(

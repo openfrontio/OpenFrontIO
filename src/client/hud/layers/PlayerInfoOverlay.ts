@@ -265,7 +265,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     hasFlag: boolean;
     hasBetrayal: boolean;
     hasAlliance: boolean;
-    hasTeam: boolean;
+    typeAndTeamLen: number;
   }): { fontSize: string; isAllianceWrapped: boolean } {
     const {
       nameLength,
@@ -273,30 +273,26 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       hasFlag,
       hasBetrayal,
       hasAlliance,
-      hasTeam,
+      typeAndTeamLen,
     } = params;
 
     // Approximate char-widths each element occupies at --text-lg.
     const DESKTOP_PRESSURE = {
-      playerType: 3.5,
       perIcon: 2.0,
       icon: 0.5,
       flag: 3.5,
       betrayal: 4.2,
       alliance: 6.7,
       allianceWrapped: 3.9,
-      team: 1.0,
     } as const;
 
     const MOBILE_PRESSURE = {
-      playerType: 3.5,
       perIcon: 2.2,
       icon: 0.5,
       flag: 4.2,
       betrayal: 4.6,
       alliance: 8.6,
       allianceWrapped: 4.8,
-      team: 1.0,
     } as const;
 
     const width = window.innerWidth;
@@ -304,13 +300,19 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
     const PRESSURE = isDesktop ? DESKTOP_PRESSURE : MOBILE_PRESSURE;
 
+    // Convert text-xs (12px) mono chars to name font mono chars:
+    // Desktop (text-lg = 18px): ratio is 12/18 = 0.666 + gap(8px/10.8px = 0.74)
+    // Mobile (text-sm = 14px): ratio is 12/14 = 0.857 + gap(4px/8.4px = 0.47)
+    const typeAndTeamPressure = isDesktop
+      ? typeAndTeamLen * (12 / 18) + 8 / 10.8
+      : typeAndTeamLen * (12 / 14) + 4 / 8.4;
+
     const basePressure =
-      PRESSURE.playerType +
+      typeAndTeamPressure +
       iconCount * PRESSURE.perIcon +
       (iconCount ? PRESSURE.icon : 0) +
       (hasFlag ? PRESSURE.flag : 0) +
-      (hasBetrayal ? PRESSURE.betrayal : 0) +
-      (hasTeam ? PRESSURE.team : 0);
+      (hasBetrayal ? PRESSURE.betrayal : 0);
 
     let capacity: number;
 
@@ -378,7 +380,16 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         playerType = translateText("player_type.player");
         break;
     }
-    const playerTeam = getTranslatedPlayerTeamLabel(player.team());
+    const clanTag = this.game.teamClanTag(player.team());
+    const playerTeam = getTranslatedPlayerTeamLabel(player.team(), clanTag);
+
+    const typeLen = playerType.length;
+    const hasTeam = playerTeam !== "" && player.type() !== PlayerType.Bot;
+    const teamStr = clanTag ?? playerTeam;
+    const teamLen = hasTeam ? teamStr.length + 2 : 0; // +2 for brackets
+
+    // The column width is determined by the longest string in the flex-col
+    const typeAndTeamLen = Math.max(typeLen, teamLen);
 
     const { fontSize, isAllianceWrapped } = this.getNameFontSize({
       nameLength: player.displayName().length,
@@ -386,7 +397,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       hasFlag: !!player.cosmetics.flag,
       hasBetrayal: traitorTicks > 0,
       hasAlliance: isAllied ?? false,
-      hasTeam: playerTeam !== "" && player.type() !== PlayerType.Bot,
+      typeAndTeamLen,
     });
 
     if (isAllied) {
@@ -500,21 +511,26 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             </div>
             ${this.getRelationSmiley(player, myPlayer)}
             ${playerTeam !== "" && player.type() !== PlayerType.Bot
-              ? html`<div class="flex flex-col leading-tight">
-                  <span class="text-gray-400 text-xs font-normal"
+              ? html`<div
+                  class="flex flex-col items-center leading-tight shrink-0"
+                >
+                  <span
+                    class="text-gray-400 text-xs font-mono font-normal whitespace-nowrap"
                     >${playerType}</span
                   >
-                  <span class="text-xs font-normal text-gray-400"
+                  <span
+                    class="text-xs font-mono font-normal text-gray-400 whitespace-nowrap"
                     >[<span
                       style="color: ${themeProvider
                         .current()
                         .teamColor(player.team()!)
                         .toHex()}"
-                      >${playerTeam}</span
+                      >${clanTag ?? playerTeam}</span
                     >]</span
                   >
                 </div>`
-              : html`<span class="text-gray-400 text-xs font-normal"
+              : html`<span
+                  class="text-gray-400 text-xs font-mono font-normal shrink-0 whitespace-nowrap"
                   >${playerType}</span
                 >`}
             ${this.renderPlayerNameIcons(playerIcons)} ${betrayalHtml ?? ""}

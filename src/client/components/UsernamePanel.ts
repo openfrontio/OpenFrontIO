@@ -1,13 +1,17 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { isTemporaryUsername, UserMeResponse } from "../../core/ApiSchemas";
+import {
+  isTemporaryUsername,
+  PutUsernameResponse,
+  UserMeResponse,
+} from "../../core/ApiSchemas";
 import {
   MAX_ACCOUNT_USERNAME_LENGTH,
   MIN_ACCOUNT_USERNAME_LENGTH,
   validateAccountUsername,
 } from "../../core/validations/username";
 import { updateUsername, UpdateUsernameResult } from "../Api";
-import { showInGameConfirm } from "../InGameModal";
+import { showInGameAlert, showInGameConfirm } from "../InGameModal";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import { usernameText } from "./ui/UsernameText";
@@ -120,6 +124,12 @@ export class UsernamePanel extends LitElement {
     const result = await updateUsername(name);
 
     if (result.ok) {
+      // A premium player whose bare name is held gets the suffixed form
+      // instead — a 200, not a 409. Say so before the reload: otherwise the
+      // modal simply reopens showing a name they never chose, with nothing to
+      // explain it and their 30-day rename already spent. Awaited so the
+      // reload cannot race the dialog away.
+      await this.warnBareClaimUnavailable(name, result.data);
       // Reload so every consumer starts from a fresh /users/@me; this modal
       // reopens via #modal=change-username showing the new name. Keep the
       // form locked (busy) while the reload happens.
@@ -128,6 +138,30 @@ export class UsernamePanel extends LitElement {
     }
     this.busy = false;
     this.error = this.errorMessage(result);
+  }
+
+  // Nothing to say for `claimed` (they got what they asked for) or
+  // `not_eligible` (a suffix is just how free names work — a message there
+  // would be noise on an ordinary rename). `undefined` means the API predates
+  // the field, so behaviour is unchanged.
+  private async warnBareClaimUnavailable(
+    requested: string,
+    data: PutUsernameResponse,
+  ): Promise<void> {
+    if (data.bareClaim !== "unavailable") return;
+    const next = data.nextUsernameChangeAt;
+    await showInGameAlert(
+      next === null
+        ? translateText("account_modal.username_bare_unavailable_no_date", {
+            requested,
+            name: data.username,
+          })
+        : translateText("account_modal.username_bare_unavailable", {
+            requested,
+            name: data.username,
+            date: this.formatDate(new Date(next)),
+          }),
+    );
   }
 
   private errorMessage(

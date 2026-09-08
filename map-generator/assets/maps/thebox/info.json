@@ -4,6 +4,7 @@
   "translation_key": "map.thebox",
   "categories": ["arcade"],
   "multiplayer_frequency": 3,
+  "forced_modifiers": ["isWaterNukes:75"],
   "nations": [
     {
       "coordinates": [10, 10],

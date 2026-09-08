@@ -1,5 +1,9 @@
-import { cosmeticRelationship } from "../src/client/Cosmetics";
+import {
+  cosmeticRelationship,
+  crownRelationship,
+} from "../src/client/Cosmetics";
 import { UserMeResponse } from "../src/core/ApiSchemas";
+import { Crown } from "../src/core/CosmeticSchemas";
 
 function makeUserMe(flares: string[]): UserMeResponse {
   return {
@@ -181,5 +185,43 @@ describe("cosmeticRelationship", () => {
         makeUserMe(["pattern:*"]),
       ),
     ).toBe("owned");
+  });
+
+  it("returns owned when user has wildcard flare for crowns", () => {
+    expect(
+      cosmeticRelationship(
+        {
+          wildcardFlare: "crown:*",
+          requiredFlare: "crown:gold",
+          priceSoft: undefined,
+          priceHard: undefined,
+          affiliateCode: null,
+          itemAffiliateCode: null,
+        },
+        makeUserMe(["crown:*"]),
+      ),
+    ).toBe("owned");
+  });
+});
+
+describe("crownRelationship", () => {
+  const crown = { name: "gold", url: "/crowns/gold.png" } as Crown;
+
+  it("returns owned when user has the crown:* wildcard flare", () => {
+    expect(crownRelationship(crown, makeUserMe(["crown:*"]), null)).toBe(
+      "owned",
+    );
+  });
+
+  it("returns owned when user has the specific crown flare", () => {
+    expect(crownRelationship(crown, makeUserMe(["crown:gold"]), null)).toBe(
+      "owned",
+    );
+  });
+
+  it("does not treat other type wildcards as owning a crown", () => {
+    expect(
+      crownRelationship(crown, makeUserMe(["pattern:*", "flag:*"]), null),
+    ).toBe("blocked");
   });
 });

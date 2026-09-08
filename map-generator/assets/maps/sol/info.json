@@ -4,6 +4,10 @@
   "translation_key": "map.sol",
   "categories": ["cosmic"],
   "multiplayer_frequency": 20,
+  "ffa_frequency": 0,
+  "team_frequency": 0,
+  "forced_modifiers": ["isWaterNukes:50"],
+  "themes": ["space"],
   "nations": [
     {
       "coordinates": [2419, 1241],
@@ -271,7 +275,6 @@
       "flag": "uranus"
     }
   ],
-  "themes": ["space"],
   "custom_tribes": [
     {
       "coordinates": [237, 727],

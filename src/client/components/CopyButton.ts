@@ -82,7 +82,7 @@ export class CopyButton extends LitElement {
   async handleCopy() {
     const text = await this.resolveCopyText();
     if (!text) {
-      alert("Error copying game id");
+      showToast(translateText("common.failed_copy"), "red");
       return;
     }
 

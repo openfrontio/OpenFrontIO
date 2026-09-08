@@ -2,7 +2,9 @@ import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { getUserMe, hasLinkedAccount, invalidateUserMe } from "./Api";
+import { CloseCode, isTerminalClose } from "../core/CloseCodes";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
+import { getUserMe, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
@@ -314,25 +316,39 @@ export class MatchmakingModal extends BaseModal {
       if (this.intentionalClose || this.gameID !== null) {
         return;
       }
-      // 1008 is also used for auth failures ("Invalid session"), so match on
-      // the reason. Out of free ranked plays — the server will keep refusing
-      // until the next UTC day (or a subscription), so don't reconnect.
-      if (event.code === 1008 && event.reason === "ranked_limit_reached") {
+      // The live matchmaking service still sends these rejections as
+      // 1008/1011 with a bare reason; it is moving to the 41xx codes. Accept
+      // both until that has shipped, or a player out of free ranked matches
+      // would be re-queued by the retry path below instead of told.
+      const legacyReason =
+        event.code === 1008 || event.code === 1011 ? event.reason : null;
+      // Out of free ranked plays — the server will keep refusing until the
+      // next UTC day (or a subscription), so don't reconnect.
+      if (
+        event.code === CloseCode.RankedLimitReached ||
+        legacyReason === "ranked_limit_reached"
+      ) {
         this.connected = false;
         this.limitReached = true;
         return;
       }
-      if (event.code === 1008 && event.reason === "invalid_clan") {
+      if (
+        event.code === CloseCode.InvalidClan ||
+        legacyReason === "invalid_clan"
+      ) {
         this.handleInvalidClan();
         return;
       }
-      if (event.code === 1011 && event.reason === "clan_verification_failed") {
+      if (
+        event.code === CloseCode.ClanVerificationFailed ||
+        legacyReason === "clan_verification_failed"
+      ) {
         this.connected = false;
         this.close();
         this.showMatchmakingError("matchmaking_modal.clan_verification_failed");
         return;
       }
-      if (event.code === 1000) {
+      if (event.code === CloseCode.Normal) {
         // A newer connection for this account (e.g. a second tab) took the
         // queue slot; this socket was replaced. Do not retry.
         window.dispatchEvent(
@@ -345,6 +361,12 @@ export class MatchmakingModal extends BaseModal {
           }),
         );
         this.close();
+        return;
+      }
+      if (isTerminalClose(event.code)) {
+        this.connected = false;
+        this.close();
+        this.showMatchmakingError("matchmaking_modal.rejected");
         return;
       }
       // 1008: the jwt was rejected — getPlayToken() refreshes expired tokens,
@@ -365,8 +387,7 @@ export class MatchmakingModal extends BaseModal {
     }
 
     // CrazyGames players authenticate through the SDK rather than a linked
-    // Discord/Google/email account, so a signed-in CrazyGames user counts as
-    // logged in for ranked.
+    // account, so a signed-in CrazyGames user counts as logged in for ranked.
     const crazyGamesSignedIn =
       crazyGamesSDK.isOnCrazyGames() &&
       (await crazyGamesSDK.getUserProfile()) !== null;
@@ -374,9 +395,14 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
+    // The `userMe === false` term is not redundant with the predicate below,
+    // which also returns false for `false`: it is what stops a signed-in
+    // CrazyGames player with no /users/@me from falling through to the
+    // leaderboard read, which would dereference `false`. It also narrows the
+    // type for that read.
     if (
       userMe === false ||
-      (!hasLinkedAccount(userMe) && !crazyGamesSignedIn)
+      (!responseHasLinkedIdentity(userMe) && !crazyGamesSignedIn)
     ) {
       window.dispatchEvent(
         new CustomEvent("show-message", {

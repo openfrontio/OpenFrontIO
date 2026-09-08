@@ -5,8 +5,21 @@ import WebSocket from "ws";
 import { z } from "zod";
 import { ZbContext } from "../../zbin";
 import { isAdminRole } from "../core/ApiSchemas";
+import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { GameEnv } from "../core/configuration/Config";
-import { GameType, RankedType } from "../core/game/Game";
+import {
+  GameMode,
+  GameType,
+  HumansVsNations,
+  PlayerInfo,
+  PlayerType,
+  RankedType,
+} from "../core/game/Game";
+import { maps } from "../core/game/Maps.gen";
+import {
+  assignTeamsLobbyPreview,
+  resolveTeamsList,
+} from "../core/game/TeamAssignment";
 import {
   ClientID,
   ClientMessage,
@@ -33,6 +46,7 @@ import {
   ServerStartGameMessage,
   ServerTurnMessage,
   StampedIntent,
+  TeamCountConfig,
   Tribe,
   Turn,
 } from "../core/Schemas";
@@ -59,6 +73,16 @@ import {
   noopMatchTelemetryEmitter,
   type MatchTelemetryEmitter,
 } from "./telemetry/MatchTelemetry";
+
+// Outcome of GameServer.joinClient. The worker maps each to a close code.
+export type JoinResult =
+  | "joined"
+  | "kicked"
+  | "rejected"
+  | "ended"
+  | "not_allowlisted"
+  | "not_trusted";
+
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -131,6 +155,12 @@ export class GameServer {
 
   private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
 
+  // Backstop for reaping a started game nobody is connected to. The usual
+  // reap (see phase()) also needs the game-wide ping clock to go quiet; this
+  // one goes on the roster being empty and nothing else.
+  private emptyGameTimeout = 10 * 60 * 1000; // 10 minutes
+  private emptySince: number | null = null;
+
   private turns: Turn[] = [];
   private intents: StampedIntent[] = [];
   // Who joined, who is connected, and the per-account reconnect, admission
@@ -142,6 +172,8 @@ export class GameServer {
   // archives on that, and the socket close events that follow end() still
   // go through hasStarted() in handleClientDisconnect.
   private stage: "lobby" | "prestart" | "started" = "lobby";
+  // Set when the delayed start found an empty roster (see deferStart).
+  private startDeferred = false;
   private ended = false;
   private paused = false;
   private _startTime: number | null = null;
@@ -416,13 +448,12 @@ export class GameServer {
     return { username: client.username, clanTag: client.clanTag };
   }
 
-  public joinClient(
-    client: Client,
-  ): "joined" | "kicked" | "rejected" | "not_allowlisted" | "not_trusted" {
+  public joinClient(client: Client): JoinResult {
     // e.g. the host left an unstarted lobby and GameManager hasn't pruned
-    // it yet.
+    // it yet. Distinct from "rejected" so the worker does not tell a player
+    // arriving after the end that the lobby is full.
     if (this.ended) {
-      return "rejected";
+      return "ended";
     }
     if (this.clients.isKicked(client.persistentID)) {
       return "kicked";
@@ -602,6 +633,15 @@ export class GameServer {
   // A validated message from a connected client, after SocketIngress has
   // applied the rate limit and the spectator block.
   private handleClientMessage(client: Client, clientMsg: ClientMessage) {
+    // Nothing from a socket that is no longer on the roster reaches the game.
+    // Dropping a client (a kick, the stale-ping prune, a close) leaves its
+    // listener attached and the socket able to deliver frames — close() is a
+    // handshake, and the prune only calls it on an OPEN socket at all — so
+    // without this a kicked player could still land intents and votes, and a
+    // ghost's pings could hold the empty-game reap off forever.
+    if (!this.clients.isConnected(client)) {
+      return;
+    }
     switch (clientMsg.type) {
       case "rejoin": {
         // Client is already connected, no auth required, send start game message if game has started
@@ -629,6 +669,8 @@ export class GameServer {
         break;
       }
       case "ping": {
+        // Only a roster member reaches here, so this is also the game-wide
+        // "someone is still out there" clock the empty-game reap waits on.
         this.lastPingUpdate = Date.now();
         client.lastPing = Date.now();
         break;
@@ -732,6 +774,35 @@ export class GameServer {
     }
     // phase() reports Finished once ended, so GameManager's next tick prunes.
     this.ended = true;
+    return true;
+  }
+
+  // Nobody was connected when the delayed start came due. An empty roster at
+  // that moment is not proof the game is abandoned: handleClientDisconnect
+  // drops a client the instant its socket closes, blip or not, and the client
+  // is normally reconnecting already. Ending the game there would be
+  // permanent and silent — rejoinClient refuses an ended game, the worker
+  // closes that socket with 1002, and the client treats 1002 as terminal
+  // rather than retrying. So hold the start instead of cancelling it.
+  public deferStart(): void {
+    if (this.stage !== "prestart") {
+      return;
+    }
+    this.log.info("deferring start, no clients connected", {
+      gameID: this.id,
+    });
+    this.startDeferred = true;
+  }
+
+  // Runs a held start once someone is connected again. Nobody comes back ->
+  // the game stays empty and phase() reaps it on the usual rules, so a truly
+  // abandoned game still never reaches start(). Returns whether it started.
+  public resumeDeferredStart(): boolean {
+    if (!this.startDeferred || this.ended || this.numClients() === 0) {
+      return false;
+    }
+    this.startDeferred = false;
+    this.start();
     return true;
   }
 
@@ -887,6 +958,8 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
+    this.convertClanOverflowToSpectators();
+
     const friendsFor = friendsLookup(this.clients.active());
 
     // allowedPublicIds / nameRevealPublicIds hold account publicIds and are
@@ -963,6 +1036,91 @@ export class GameServer {
   // everywhere a "player" is meant: the lobby cap, and gameStartInfo.
   private playerCount(): number {
     return this.clients.players().length;
+  }
+
+  private convertClanOverflowToSpectators(): void {
+    if (
+      this.gameConfig.gameMode !== GameMode.Team ||
+      this.gameConfig.playerTeams === undefined ||
+      this.gameConfig.playerTeams === HumansVsNations ||
+      this.matchmakingTeams !== undefined ||
+      this.gameConfig.rankedType !== undefined ||
+      this.gameConfig.disableClanTags === true ||
+      this.gameConfig.anonymizeNames === true
+    ) {
+      return;
+    }
+    const playerTeams = this.gameConfig.playerTeams;
+    const nationCount = this.resolveDefaultNationCount();
+    const convertedClientIDs = new Set<ClientID>();
+    let kickedClients = this.findClanOverflowKicks(playerTeams, nationCount);
+    while (kickedClients.length > 0) {
+      for (const client of kickedClients) {
+        client.spectator = true;
+        convertedClientIDs.add(client.clientID);
+        this.log.info("Converted clan overflow player to spectator", {
+          clientID: client.clientID,
+          clanTag: client.clanTag,
+        });
+      }
+      kickedClients = this.findClanOverflowKicks(playerTeams, nationCount);
+    }
+    if (convertedClientIDs.size > 0) {
+      this.intents = this.intents.filter(
+        (i) => !convertedClientIDs.has(i.clientID),
+      );
+    }
+  }
+
+  private resolveDefaultNationCount(): number {
+    if (typeof this.gameConfig.nations === "number") {
+      return this.gameConfig.nations;
+    }
+    if (this.gameConfig.nations === "default") {
+      const mapInfo = maps.find((m) => m.type === this.gameConfig.gameMap);
+      return mapInfo?.defaultNationCount ?? 0;
+    }
+    return 0;
+  }
+
+  private findClanOverflowKicks(
+    playerTeams: TeamCountConfig,
+    nationCount: number,
+  ): Client[] {
+    const playingClients = this.clients
+      .players()
+      .filter((c) => this.matchmakingTeamIndex(c) === undefined);
+    const totalPlayers = playingClients.length + nationCount;
+    let teams;
+    try {
+      teams = resolveTeamsList(playerTeams, totalPlayers);
+    } catch {
+      return [];
+    }
+    const playerInfos = playingClients.map(
+      (c) =>
+        new PlayerInfo(
+          c.username,
+          PlayerType.Human,
+          c.clientID,
+          c.clientID,
+          false,
+          c.clanTag ?? null,
+        ),
+    );
+    const preview = assignTeamsLobbyPreview(
+      playerInfos,
+      teams,
+      playerTeams,
+      nationCount,
+    );
+    const kickedIDs = new Set<ClientID>();
+    for (const [info, assignment] of preview.entries()) {
+      if (assignment === "kicked" && info.clanTag && info.clientID !== null) {
+        kickedIDs.add(info.clientID);
+      }
+    }
+    return playingClients.filter((c) => kickedIDs.has(c.clientID));
   }
 
   // ONE definition of who the allowlist admits, shared by every path that can
@@ -1154,7 +1312,7 @@ export class GameServer {
       clearInterval(this.endTurnIntervalID);
       this.endTurnIntervalID = undefined;
     }
-    this.clients.closeAll("game has ended");
+    this.clients.closeAll(CloseReason.GameEnded);
     // The lobby broadcast would stop itself on its next tick; do not leave a
     // timer holding an ended game until then.
     this.stopLobbyInfoBroadcast();
@@ -1221,7 +1379,9 @@ export class GameServer {
         persistentID: client.persistentID,
       });
       if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.close(1000, "no heartbeats received, closing connection");
+        // Not a normal close: the roster keeps the reconnect mapping, so a client
+        // whose pings were lost on a stuck link is meant to come back.
+        client.ws.close(CloseCode.TryAgainLater, CloseReason.NoHeartbeat);
       }
     }
     // On an abrupt network drop the ws 'close' event can lag far behind this
@@ -1229,6 +1389,13 @@ export class GameServer {
     if (stale.length > 0) {
       this.checkWinnerAfterElectorateShrink();
     }
+    // Since when has nobody been connected? Tracked here rather than in
+    // phase() so phase() stays a pure read, and so emptiness accrues on the
+    // tick loop instead of on however often the lobby browser asks.
+    this.emptySince =
+      this.clients.active().length === 0
+        ? (this.emptySince ?? Date.now())
+        : null;
   }
 
   // A pure read of the lifecycle; pruneStaleClients() is the side effect.
@@ -1248,9 +1415,6 @@ export class GameServer {
       return GamePhase.Finished;
     }
 
-    const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
-    const noActive = this.clients.active().length === 0;
-
     const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
     if (
       lessThanLifetime &&
@@ -1259,8 +1423,38 @@ export class GameServer {
     ) {
       return GamePhase.Lobby;
     }
-    const warmupOver = now > this.startsAt! + 30 * 1000;
-    if (noActive && warmupOver && noRecentPings) {
+
+    // Anyone still on the roster keeps the game running. Everything below is
+    // about reaping a game nobody is connected to.
+    if (this.clients.active().length > 0) {
+      return GamePhase.Active;
+    }
+
+    // Grace period before an empty game is reaped, measured from whenever it
+    // committed to starting. startsAt is not always set: a lobby that
+    // auto-starts by filling to maxPlayers, and admin bot games, never get one
+    // — and `undefined + 30_000` is NaN, so every comparison against it is
+    // false. Those games could never be reaped and lived on (still ticking
+    // turns, with nobody connected) until the maxGameDuration cutoff above.
+    const warmupFrom = this.startsAt ?? this._startTime ?? this.createdAt;
+    const warmupOver = now > warmupFrom + 30 * 1000;
+    const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
+    if (warmupOver && noRecentPings) {
+      return GamePhase.Finished;
+    }
+
+    // Backstop: an empty game whose ping clock never goes quiet. Only a client
+    // on the roster refreshes lastPingUpdate now, but a game that manages to
+    // keep that clock warm with nobody connected must still not outlive the
+    // players by hours — sustained emptiness is enough on its own.
+    if (
+      this.hasStarted() &&
+      this.emptySince !== null &&
+      now > this.emptySince + this.emptyGameTimeout
+    ) {
+      this.log.warn("game had no connected clients past timeout, ending", {
+        gameID: this.id,
+      });
       return GamePhase.Finished;
     }
 
@@ -1434,7 +1628,7 @@ export class GameServer {
             this.zbinCtx,
           ),
         );
-        client.ws.close(1000, reasonKey);
+        client.ws.close(CloseCode.Normal, reasonKey);
       }
     } else {
       this.log.warn(`cannot kick client, not found in game`, {

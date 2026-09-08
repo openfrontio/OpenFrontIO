@@ -5,6 +5,7 @@ import { isSteamPrimaryUser } from "../AccountIdentity";
 import { deleteAccount, setMarketingConsent } from "../Api";
 import { clearLocalSession, linkGoogle, sendMagicLink } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { isDesktopShell } from "../DesktopShell";
 import { showInGameAlert } from "../InGameModal";
 import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
@@ -132,7 +133,16 @@ export class AccountSettingsPanel extends LitElement {
           </span>
           <div class="h-px bg-white/10 flex-1"></div>
         </div>
-        ${this.user?.google ? nothing : googleLinkButton(this.handleLinkGoogle)}
+        ${this.user?.google
+          ? nothing
+          : googleLinkButton(
+              this.handleLinkGoogle,
+              // The shell sends the player to the website for this (see
+              // linkGoogle in Auth.ts); the caption has to say so.
+              isDesktopShell()
+                ? "account_modal.link_google_on_web"
+                : "account_modal.link_google",
+            )}
       </div>
     `;
   }
@@ -156,11 +166,11 @@ export class AccountSettingsPanel extends LitElement {
     `;
   }
 
-  // Self-service account deletion (DELETE /users/@me). The API deletes
-  // immediately on a valid request, so the button opens a hard confirm (typed
-  // confirmation). Hidden on CrazyGames and Steam: the endpoint's credential
-  // is the refresh cookie, which isn't usable there (cross-site — see
-  // Auth.ts), so the request could never succeed.
+  // Self-service account deletion (DELETE /users/@me). A valid request queues
+  // the deletion for 24 hours later and logs the player out everywhere, so the
+  // button opens a hard confirm (typed confirmation). Hidden on CrazyGames and
+  // Steam: the endpoint's credential is the refresh cookie, which isn't usable
+  // there (cross-site — see Auth.ts), so the request could never succeed.
   private renderDeleteAccountCard(): TemplateResult | typeof nothing {
     if (crazyGamesSDK.isOnCrazyGames() || steamSDK.isOnSteam()) return nothing;
     return html`
@@ -206,21 +216,38 @@ export class AccountSettingsPanel extends LitElement {
     const result = await deleteAccount();
     this.deleteBusy = false;
 
-    if (result.ok || result.code === "logged_out") {
-      // 204: deleted — every session is revoked and the refresh cookie is
-      // cleared. 401: the session was already gone and the cookie is cleared
-      // too. Either way only local state is left to drop; calling
+    if (result.ok) {
+      // 204: the deletion is queued for 24 hours from now, not done — say so,
+      // and point at support since cancelling is a support action (there is
+      // no self-service cancel). Every session is already revoked and the
+      // refresh cookie cleared, so only local state is left to drop; calling
       // /auth/logout here would be wrong (the credential no longer exists).
+      // Drop local state before the alert: it resolves only when the player
+      // clicks Close, and closing the tab instead must not leave the revoked
+      // session looking signed in on the next launch.
       clearLocalSession();
-      window.location.reload();
+      await showInGameAlert(
+        translateText("account_modal.delete_account_scheduled"),
+      );
+      // Navigate to the homepage rather than reloading in place: reloading
+      // keeps the #modal=account-settings hash, which reopens a login-gated
+      // modal for a now-logged-out player.
+      window.location.replace("/");
+      return;
+    }
+    if (result.code === "logged_out") {
+      // 401: the session was already gone and the cookie is cleared. Nothing
+      // was queued; drop local state so the player can sign in and retry.
+      clearLocalSession();
+      window.location.replace("/");
       return;
     }
     if (result.code === "forbidden" && result.message !== undefined) {
       // Server's player-facing refusal (root player / banned account).
       await showInGameAlert(result.message);
-    } else if (result.code === "blocked") {
+    } else if (result.code === "rate_limited") {
       await showInGameAlert(
-        translateText("account_modal.delete_account_blocked"),
+        translateText("account_modal.delete_account_rate_limited"),
       );
     } else {
       await showInGameAlert(

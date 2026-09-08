@@ -1,4 +1,7 @@
-import { colord, Colord } from "colord";
+import { colord, Colord, extend } from "colord";
+import labPlugin from "colord/plugins/lab";
+import lchPlugin from "colord/plugins/lch";
+import colorblindTheme from "../src/client/render/gl/colorblind-theme.json";
 import defaultTheme from "../src/client/render/gl/default-theme.json";
 import { createThemeSettings } from "../src/client/render/gl/RenderSettings";
 import {
@@ -6,7 +9,10 @@ import {
   selectDistinctColorIndex,
 } from "../src/client/theme/ColorAllocator";
 import { SettingsTheme } from "../src/client/theme/ThemeProvider";
-import { ColoredTeams } from "../src/core/game/Game";
+import type { PlayerView } from "../src/client/view/PlayerView";
+import { ColoredTeams, PlayerType } from "../src/core/game/Game";
+
+extend([labPlugin, lchPlugin]);
 
 const mockColors: Colord[] = [
   colord({ r: 255, g: 0, b: 0 }),
@@ -136,6 +142,72 @@ describe("colorblind theme", () => {
     const fill = colord("#0072b2");
     const border = colorblind.borderColor(fill);
     expect(border.toHsl().l).toBeCloseTo(fill.toHsl().l * 0.6, 0);
+  });
+});
+
+// Tribes (bots) must be tellable from nations by territory color alone
+// (#4845). Colors are allocated through the runtime path
+// (SettingsTheme.territoryColor -> per-type allocator) rather than read off
+// the theme JSON, so the type dispatch is covered too. Drawing more players
+// than any pool holds exercises the full pool plus the recycling path.
+describe.each(["default", "colorblind"] as const)(
+  "tribe vs nation territory colors — %s theme",
+  (themeName) => {
+    // territoryColor() only reads team/type/id from the player.
+    const player = (type: PlayerType, id: string) =>
+      ({
+        team: () => null,
+        type: () => type,
+        id: () => id,
+      }) as unknown as PlayerView;
+
+    const assignedColors = (type: PlayerType): Colord[] => {
+      const theme = new SettingsTheme(createThemeSettings(themeName));
+      return Array.from({ length: 64 }, (_, i) =>
+        theme.territoryColor(player(type, `${type}-${i}`)),
+      );
+    };
+
+    test("bot territory colors are near-neutral so tribes read as gray", () => {
+      const chromatic = assignedColors(PlayerType.Bot)
+        .filter((c) => c.toLch().c >= 12)
+        .map((c) => c.toHex());
+      expect(chromatic).toEqual([]);
+    });
+
+    test("every nation color is perceptually far from every bot color", () => {
+      const bots = assignedColors(PlayerType.Bot);
+      const confusable = assignedColors(PlayerType.Nation).flatMap((nation) =>
+        bots
+          .filter((bot) => nation.delta(bot) <= 0.1)
+          .map((bot) => `${nation.toHex()} vs ${bot.toHex()}`),
+      );
+      expect(confusable).toEqual([]);
+    });
+  },
+);
+
+// Compressing botColors into a narrow near-neutral band (previous test)
+// risks reintroducing the same tell-them-apart problem *within* the tribe
+// pool. Checked against the raw theme-JSON pool, not the 64-draw runtime
+// sample above: past pool exhaustion, ColorAllocator intentionally repeats
+// colors (see fallbackColors / >50 random fallback in ColorAllocator.ts),
+// so duplicates there are by design, not a palette defect.
+describe.each([
+  ["default", defaultTheme],
+  ["colorblind", colorblindTheme],
+] as const)("bot color pool separation — %s theme", (_themeName, theme) => {
+  test("every bot color is perceptually distinct from every other bot color", () => {
+    const hexes = theme.botColors;
+    const confusable: string[] = [];
+    for (let i = 0; i < hexes.length; i++) {
+      for (let j = i + 1; j < hexes.length; j++) {
+        if (colord(hexes[i]).delta(colord(hexes[j])) <= 0.025) {
+          confusable.push(`${hexes[i]} vs ${hexes[j]}`);
+        }
+      }
+    }
+    expect(confusable).toEqual([]);
   });
 });
 

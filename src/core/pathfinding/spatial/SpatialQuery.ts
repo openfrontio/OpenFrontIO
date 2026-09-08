@@ -12,6 +12,17 @@ type Owner = Player | TerraNullius;
 
 const REFINE_MAX_SEARCH_AREA = 100 * 100;
 
+// Water components touching a player's shoreline, memoised per player. Valid
+// while neither the player's tiles (hence border) nor the map's water changed.
+// Rebuilding it scanned every border tile on every transport-ship query, which
+// nations issue many times per tick.
+interface ReachableCache {
+  tileVersion: number;
+  waterVersion: number;
+  components: Set<number>;
+}
+const reachableComponents = new WeakMap<Player, ReachableCache>();
+
 export class SpatialQuery {
   private boundedAStar: AStarWaterBounded | null = null;
 
@@ -122,12 +133,7 @@ export class SpatialQuery {
     const targetId = targetOwner.smallID();
 
     // Water components adjacent to the attacker's own shoreline.
-    const reachable = new Set<number>();
-    for (const t of attacker.borderTiles()) {
-      if (!gm.isShore(t) || !gm.isLand(t)) continue;
-      const component = gm.getWaterComponent(t);
-      if (component !== null) reachable.add(component);
-    }
+    const reachable = this.reachableComponents(attacker);
     if (reachable.size === 0) return null;
 
     const isValidTile = (t: TileRef) => {
@@ -137,7 +143,41 @@ export class SpatialQuery {
       return component !== null && reachable.has(component);
     };
 
+    // The start tile is at distance 0, so when it qualifies no BFS can beat
+    // it (bfsNearest keeps the first candidate at the minimum distance, and
+    // marks `tile` first). This is the common case when a caller re-checks a
+    // landing tile it already found.
+    if (maxDist >= 0 && gm.map().isValidRef(tile) && isValidTile(tile)) {
+      return tile;
+    }
+
     return this.bfsNearest(tile, maxDist, isValidTile);
+  }
+
+  private reachableComponents(attacker: Player): Set<number> {
+    const gm = this.game;
+    const tileVersion = attacker.tileChangeVersion();
+    const waterVersion = gm.map().waterVersion();
+    const cached = reachableComponents.get(attacker);
+    if (
+      cached !== undefined &&
+      cached.tileVersion === tileVersion &&
+      cached.waterVersion === waterVersion
+    ) {
+      return cached.components;
+    }
+    const components = new Set<number>();
+    attacker.borderTiles().forEach((t) => {
+      if (!gm.isShore(t) || !gm.isLand(t)) return;
+      const component = gm.getWaterComponent(t);
+      if (component !== null) components.add(component);
+    });
+    reachableComponents.set(attacker, {
+      tileVersion,
+      waterVersion,
+      components,
+    });
+    return components;
   }
 
   /**
@@ -163,7 +203,12 @@ export class SpatialQuery {
         return tComponent === targetComponent;
       };
 
-      const shores = Array.from(player.borderTiles()).filter(isValidTile);
+      // Single pass over the border set (Array.from + filter walked it twice
+      // and allocated a full copy).
+      const shores: TileRef[] = [];
+      player.borderTiles().forEach((t) => {
+        if (isValidTile(t)) shores.push(t);
+      });
       if (shores.length === 0) return null;
 
       const path = PathFinding.Water(gm).findPath(shores, target);

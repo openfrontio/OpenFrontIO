@@ -170,13 +170,17 @@ export class HomepagePromos extends LitElement {
   public close(): void {
     this.adLoaded = false;
     try {
-      // Destroy gutter rails; bottom_rail persists into spawn phase. Rails are
-      // no-selector units, registered under pw-oop- ids (see destroyBottomRail).
+      // Destroy gutter rails and the header ad; bottom_rail persists into
+      // spawn phase. These are no-selector units, registered under pw-oop-
+      // ids (see destroyBottomRail). The header ad must go too: nothing hides
+      // #pw-oop-flex_container in-game and its docked state is fixed at the
+      // viewport top, so it would sit over the map.
       window.ramp.destroyUnits("pw-oop-left_rail");
       window.ramp.destroyUnits("pw-oop-right_rail");
-      console.log("successfully destroyed gutter rails");
+      window.ramp.destroyUnits("pw-oop-flex");
+      console.log("successfully destroyed gutter rails and header ad");
     } catch (e) {
-      console.error("error destroying gutter rails", e);
+      console.error("error destroying gutter rails and header ad", e);
     }
     // Adblock-detected users get NO in-game ads (the AdGatekeeper latch is
     // permanent, surviving the blocker being disabled), so the corner video
@@ -225,7 +229,7 @@ export class HomepagePromos extends LitElement {
   }
 
   private loadGutterAds(): void {
-    console.log("loading ramp gutter rails");
+    console.log("loading ramp gutter rails and header ad");
     if (!window.ramp) {
       console.warn("Playwire RAMP not available");
       return;
@@ -242,15 +246,18 @@ export class HomepagePromos extends LitElement {
           window.ramp.spaAddAds([
             { type: "left_rail" },
             { type: "right_rail" },
+            // Header ad (GumGum flex leaderboard); the page shifts below it
+            // via --top-ad-height / --top-ad-pad (see syncTopAd).
+            { type: "flex" },
           ]);
           this.adLoaded = true;
-          console.log("Gutter rails loaded");
+          console.log("Gutter rails and header ad loaded");
         } catch (e) {
           console.log(e);
         }
       });
     } catch (error) {
-      console.error("Failed to load gutter rails:", error);
+      console.error("Failed to load gutter rails and header ad:", error);
     }
   }
 

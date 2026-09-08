@@ -50,10 +50,12 @@ export { bigint_ as bigint };
 export interface Codec<T = any> {
   enc(w: ByteWriter, v: T, ctx: ZbContext | undefined): void;
   dec(r: ByteReader, ctx: ZbContext | undefined): T;
-  // Smallest number of bytes a value of this codec can occupy. Used to bound
-  // attacker-supplied collection counts against the remaining input. Zero is
-  // legitimate (literals, all-literal objects) and is what makes the separate
-  // per-message element budget necessary.
+  // Whether a value of this codec can occupy zero bytes, carried as a byte
+  // count for convenience when composing (an object sums its fields'). readCount
+  // uses only whether this is NONZERO — to bound attacker-supplied collection
+  // counts against the remaining input — so it need not be a tight lower bound;
+  // OVER-stating it is harmless. Zero is legitimate (literals, all-literal
+  // objects) and is what makes the separate per-message element budget necessary.
   minBytes: number;
 }
 
@@ -609,13 +611,19 @@ function writeCount(w: ByteWriter, n: number, path: string): void {
   w.uint(n);
 }
 
-// A corrupt varint can claim up to 2^53 elements. Bounding by the input that
-// actually remains kills every case where an element costs at least one byte;
-// zero-width elements (literals, all-literal objects) advance the reader not at
-// all, so those are caught by the reader's per-message element budget instead.
+// A corrupt varint can claim up to 2^53 elements. Any element that costs at
+// least one byte needs >= n bytes for n of them, so a claimed count above the
+// input that actually remains cannot fit. Only whether minElemBytes is nonzero
+// is used, NOT its exact value: an element's declared minimum can legitimately
+// OVER-state its smallest real encoding (a nullable/optional field writes zero
+// body bytes; a union's smallest variant may not be the one present), and
+// multiplying by that inflated per-element minimum would false-reject a valid
+// compact array as a malformed frame. Zero-width elements (literals,
+// all-literal objects) advance the reader not at all, so those are caught by
+// the reader's per-message element budget instead.
 function readCount(r: ByteReader, path: string, minElemBytes: number): number {
   const n = r.uint();
-  if (minElemBytes > 0 && n * minElemBytes > r.remaining) {
+  if (minElemBytes > 0 && n > r.remaining) {
     throw new ZbDecodeError(
       `${path}: ${n} elements exceeds the remaining ${r.remaining} byte(s)`,
     );

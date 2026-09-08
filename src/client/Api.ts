@@ -10,6 +10,11 @@ import {
   GetMyTribeNamesResponse,
   GetMyTribeNamesResponseSchema,
   NewsItemSchema,
+  PaymentsCheckoutResponse,
+  PaymentsCheckoutResponseSchema,
+  PaymentsKind,
+  PaymentsKindSchema,
+  PaymentsProvider,
   PlayerGameModeFilter,
   PlayerGameTypeFilter,
   PlayerProfile,
@@ -18,14 +23,18 @@ import {
   PostTribeBoostResponseSchema,
   PostTribeNameResponse,
   PostTribeNameResponseSchema,
+  PublicCreatorSchema,
   PublicPlayerGamesResponse,
   PublicPlayerGamesResponseSchema,
   PurchasePackResponse,
   PurchasePackResponseSchema,
+  PutCreatorResponseSchema,
   PutUsernameResponse,
   PutUsernameResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
+  SteamFinalizeResponseSchema,
+  SteamOrderResolution,
   StreamsFeedSchema,
   TribeLeaderboardResponse,
   TribeLeaderboardResponseSchema,
@@ -234,6 +243,7 @@ export function invalidateUserMe() {
 }
 
 export type DeleteAccountResult =
+  // 204: deletion queued — the server deletes the account 24 hours later.
   | { ok: true }
   // 401: missing/unknown/expired refresh token — already logged out, and the
   // server cleared the cookie.
@@ -241,18 +251,19 @@ export type DeleteAccountResult =
   // 403: refused by policy. `message` is the server's player-facing reason
   // (root player / banned account), shown as-is.
   | { ok: false; code: "forbidden"; message?: string }
-  // 409: the player authored content other players depend on — deletion needs
-  // support. The body's message is for support, not end users.
-  | { ok: false; code: "blocked" }
-  // Anything else, including 429 rate limiting: the client shows a
-  // "contact support" failure.
+  // 429: the global deletion rate limit (one per 20 minutes across all
+  // players) — nothing was queued, try again later.
+  | { ok: false; code: "rate_limited" }
+  // Anything else: the client shows a "contact support" failure.
   | { ok: false; code: "failed" };
 
-// DELETE /users/@me — deletes the account immediately and irreversibly. The
-// HttpOnly refresh cookie is the credential (same as /auth/logout), so no
-// Authorization header. On 204 every session on every device is invalidated
-// and the cookie is cleared — callers drop local auth state themselves and
-// must NOT call /auth/logout afterwards.
+// DELETE /users/@me — queues the account for deletion; the server performs it
+// 24 hours later, and only support can cancel in the meantime (there is no
+// self-service cancel endpoint). The HttpOnly refresh cookie is the credential
+// (same as /auth/logout), so no Authorization header. On 204 every session on
+// every device is invalidated and the cookie is cleared — callers drop local
+// auth state themselves and must NOT call /auth/logout afterwards. Signing in
+// again during the 24 hours works but does not cancel the deletion.
 export async function deleteAccount(): Promise<DeleteAccountResult> {
   try {
     const response = await fetch(`${getApiBase()}/users/@me`, {
@@ -270,8 +281,8 @@ export async function deleteAccount(): Promise<DeleteAccountResult> {
         message: typeof body?.message === "string" ? body.message : undefined,
       };
     }
-    if (response.status === 409) {
-      return { ok: false, code: "blocked" };
+    if (response.status === 429) {
+      return { ok: false, code: "rate_limited" };
     }
     if (!response.ok) {
       console.error(
@@ -333,10 +344,16 @@ export type UpdateUsernameResult =
   | { ok: false; code: "failed" };
 
 // PUT /users/@me/username — renames the account username. Every failure is
-// atomic (no name change, no cooldown consumed). Both 409 bodies ("name
-// exclusively held" and "suffix space exhausted") map to "taken": the user
-// remedy is the same — pick another name. Invalidates the cached /users/@me
-// on success so the next read reflects the new name.
+// atomic (no name change, no cooldown consumed). The surviving 409 bodies
+// ("name equals an existing public id" and "suffix space exhausted") map to
+// "taken": the user remedy is the same — pick another name. Invalidates the
+// cached /users/@me on success so the next read reflects the new name.
+//
+// A premium player whose chosen bare name is already held no longer 409s: the
+// API grants the suffixed form and returns 200 with `bareClaim:
+// "unavailable"`. That is a real rename and it consumes the cooldown, so `ok:
+// true` alone is not enough to act on — callers must read `data.bareClaim`
+// and tell the player (see UsernamePanel).
 export async function updateUsername(
   username: string,
 ): Promise<UpdateUsernameResult> {
@@ -393,6 +410,185 @@ export async function updateUsername(
     return { ok: true, data: parsed.data };
   } catch (e) {
     console.error("updateUsername: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+// GET /creators/code/:code — public lookup for a creator by their code
+// (Creator Code programme), e.g. to preview/prefill an openfront.io/c/CODE
+// share link before binding. No auth. 404 means the code doesn't resolve to
+// any (active) creator; folds into null along with every other failure —
+// callers can't act on the difference.
+export async function getCreatorByCode(
+  code: string,
+): Promise<{ code: string; displayName: string } | null> {
+  try {
+    const response = await fetch(
+      `${getApiBase()}/creators/code/${encodeURIComponent(code)}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      console.error(
+        "getCreatorByCode: request failed",
+        response.status,
+        response.statusText,
+      );
+      return null;
+    }
+    const parsed = PublicCreatorSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error("getCreatorByCode: Zod validation failed", parsed.error);
+      return null;
+    }
+    return { code: parsed.data.code, displayName: parsed.data.displayName };
+  } catch (e) {
+    console.error("getCreatorByCode: request failed", e);
+    return null;
+  }
+}
+
+export type SetCreatorCodeResult =
+  | { ok: true; creator: { code: string; displayName: string } }
+  | {
+      ok: false;
+      code:
+        | "invalid"
+        | "not_found"
+        | "self_referral"
+        | "failed"
+        | "rate_limited";
+    }
+  | { ok: false; code: "cooldown"; retryAfterSeconds: number | null };
+
+const SET_CREATOR_CODE_ERROR_CODES = [
+  "invalid",
+  "not_found",
+  "self_referral",
+] as const;
+type SetCreatorCodeErrorCode = (typeof SET_CREATOR_CODE_ERROR_CODES)[number];
+function isSetCreatorCodeErrorCode(
+  value: unknown,
+): value is SetCreatorCodeErrorCode {
+  return (
+    typeof value === "string" &&
+    (SET_CREATOR_CODE_ERROR_CODES as readonly string[]).includes(value)
+  );
+}
+
+// PUT /users/@me/creator {code} — binds (or switches) the caller's supported
+// creator (Creator Code programme). One bind/switch consumes a 7-day change
+// cooldown before the next one is allowed; re-confirming the SAME creator is
+// a no-op 200 that does not consume it (handled server-side).
+//
+// This endpoint answers its own failures with a body carrying `code` — a 400
+// for invalid/not_found/self_referral, and its own 429 for the cooldown
+// (with a Retry-After header). But it also sits behind a SEPARATE, shared
+// 10s debounce in front of every mutating endpoint, which can ALSO 429 —
+// and that response carries no `ok`/`code` fields at all. Only trust
+// `code === "cooldown"` to mean the real 7-day cooldown; any other 429 (the
+// debounce, or anything unrecognized) maps to "rate_limited".
+//
+// Invalidates the cached /users/@me on success so the bound creator (and the
+// fresh cooldown) show up on the next read.
+export async function setCreatorCode(
+  code: string,
+): Promise<SetCreatorCodeResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/creator`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ code }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 400) {
+      const body = await response.json().catch(() => null);
+      const bodyCode: unknown = body?.code;
+      return {
+        ok: false,
+        code: isSetCreatorCodeErrorCode(bodyCode) ? bodyCode : "failed",
+      };
+    }
+    if (response.status === 429) {
+      const body = await response.json().catch(() => null);
+      if (body?.code === "cooldown") {
+        const retryAfter = response.headers.get("Retry-After");
+        const seconds = retryAfter === null ? NaN : Number(retryAfter);
+        return {
+          ok: false,
+          code: "cooldown",
+          retryAfterSeconds: Number.isFinite(seconds) ? seconds : null,
+        };
+      }
+      return { ok: false, code: "rate_limited" };
+    }
+    if (!response.ok) {
+      console.error(
+        "setCreatorCode: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = PutCreatorResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error("setCreatorCode: Zod validation failed", parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    invalidateUserMe();
+    return { ok: true, creator: parsed.data };
+  } catch (e) {
+    console.error("setCreatorCode: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+export type ClearCreatorCodeResult =
+  | { ok: true }
+  | { ok: false; code: "rate_limited" | "failed" };
+
+// DELETE /users/@me/creator — unbinds the caller's supported creator, if any
+// (Creator Code programme). Always safe: unbinding is never gated by the
+// 7-day change cooldown (that cooldown only governs the NEXT bind, whose
+// anchor moves to "now" on unbind) — so unlike setCreatorCode's 429, a 429
+// here can only ever be the shared 10s mutation debounce, never a real
+// cooldown, and maps straight to "rate_limited". Invalidates the cached
+// /users/@me on success so the cleared binding shows up on the next read.
+export async function clearCreatorCode(): Promise<ClearCreatorCodeResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/creator`, {
+      method: "DELETE",
+      headers: {
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 429) {
+      return { ok: false, code: "rate_limited" };
+    }
+    if (!response.ok) {
+      console.error(
+        "clearCreatorCode: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    invalidateUserMe();
+    return { ok: true };
+  } catch (e) {
+    console.error("clearCreatorCode: request failed", e);
     return { ok: false, code: "failed" };
   }
 }
@@ -895,6 +1091,332 @@ export async function createCustomCurrencyCheckout(
   }
 }
 
+// What the caller wants to buy. `provider` is chosen explicitly by the client
+// (see paymentsProvider() in Payments.ts) — the server never infers the rail.
+// Exactly one identifier travels with each kind, and it is always a NAME: the
+// endpoint has no priceId, because a Steam-only listing has no Stripe price.
+export type PaymentsCheckoutRequest =
+  | { provider: PaymentsProvider; kind: "currency_pack"; packName: string }
+  | { provider: PaymentsProvider; kind: "custom_currency"; hardAmount: number }
+  | { provider: PaymentsProvider; kind: "subscription_tier"; tierName: string };
+
+export type PaymentsCheckoutResult =
+  | { ok: true; data: PaymentsCheckoutResponse }
+  // A request this client should never have sent (400 "Bad request",
+  // "Invalid hostname", soft_pack_not_purchasable) or a 200 body we could not
+  // read. Not actionable by the player; log it and show a generic failure.
+  | { ok: false; code: "client_bug" }
+  // 400 "Pack not available" / "Tier not available": the catalog this client
+  // rendered from is stale. Refetch cosmetics.json before showing the store
+  // again.
+  | { ok: false; code: "listing_stale" }
+  // 400 listing_not_synced: the listing exists but the rail has not ingested
+  // it yet. Transient — "try again later".
+  | { ok: false; code: "retry_later" }
+  // 400 kind_unavailable_on_provider: this rail does not sell this kind.
+  // Today that is only a subscription on the Steam rail (Phase 9 not built);
+  // custom_currency is sold on both rails since OPE-337. Reaching this from
+  // the store means the UI and the server disagree.
+  | {
+      ok: false;
+      code: "kind_unavailable_on_provider";
+      provider: PaymentsProvider;
+      kind: PaymentsKind;
+    }
+  // 400 provider_account_required: the account is not linked to that rail.
+  // The remedy is to re-authenticate against it.
+  | {
+      ok: false;
+      code: "provider_account_required";
+      provider: PaymentsProvider;
+    }
+  | { ok: false; code: "unauthorized" }
+  // 409 subscription_exclusivity: a subscription already exists on the OTHER
+  // rail. `message` is the server's player-facing text and names the rail, so
+  // show it as-is. `existingProvider` is always non-null here — a subscription
+  // GRANTED by Steam ownership does not trigger this.
+  | {
+      ok: false;
+      code: "subscription_exclusivity";
+      message: string;
+      existingProvider: PaymentsProvider;
+      existingTier: string;
+    }
+  // 409 pending_provider_transaction: an earlier order on this rail is still
+  // open. The player must finish or cancel it first.
+  | {
+      ok: false;
+      code: "pending_provider_transaction";
+      provider: PaymentsProvider;
+    }
+  // 409 already_subscribed: the player already holds THIS tier on THIS rail
+  // (a double click, or the store offered a tier they have). Nothing was
+  // charged.
+  | { ok: false; code: "already_subscribed"; existingTier: string }
+  // 409 tier_change_unavailable_on_provider: a Steam subscriber tried to
+  // change tier and Steam refused a second agreement while one is live, or
+  // tier changes are switched off on that rail. `message` is the server's
+  // player-facing text and says what to do (cancel in the Steam account,
+  // subscribe again after it ends).
+  | {
+      ok: false;
+      code: "tier_change_unavailable_on_provider";
+      provider: PaymentsProvider;
+      message: string;
+    }
+  // 429: one checkout per 60s per player. No order was minted.
+  | { ok: false; code: "rate_limited"; retryAfterSeconds: number | null }
+  // 501 provider_unavailable: the rail is switched off. Deliberately not a
+  // 500 — nothing is broken, so don't report it as an error.
+  | { ok: false; code: "provider_unavailable"; provider: PaymentsProvider }
+  // 502 provider_error: the rail itself failed. Honour `retryable`; a retry
+  // mints a FRESH order rather than resuming this one.
+  | {
+      ok: false;
+      code: "provider_error";
+      provider: PaymentsProvider;
+      providerCode: string | null;
+      retryable: boolean;
+    }
+  | { ok: false; code: "failed" };
+
+// 400 reasons that mean this client sent something it never should have.
+const CHECKOUT_CLIENT_BUG_REASONS = [
+  "Bad request",
+  "Invalid hostname",
+  "soft_pack_not_purchasable",
+];
+
+// 400 reasons that mean the rendered catalog is stale.
+const CHECKOUT_STALE_LISTING_REASONS = [
+  "Pack not available",
+  "Tier not available",
+];
+
+function readProvider(value: unknown): PaymentsProvider | null {
+  return value === "steam" || value === "stripe" ? value : null;
+}
+
+function readRetryAfterSeconds(response: Response): number | null {
+  const header = response.headers.get("Retry-After");
+  const seconds = header === null ? NaN : Number(header);
+  return Number.isFinite(seconds) ? seconds : null;
+}
+
+// POST /payments/checkout — mints an order on the chosen rail and says how to
+// hand the player over to it. Replaces both legacy Stripe endpoints for packs,
+// custom currency and subscription tiers.
+//
+// Unlike createCheckoutSession below, failures are NOT collapsed to `false`:
+// callers have to tell "the rail is off" from "you already have a pending
+// Steam purchase" from "try again later", and each of those is a different
+// thing to say to the player.
+export async function createPaymentsCheckout(
+  request: PaymentsCheckoutRequest,
+): Promise<PaymentsCheckoutResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/payments/checkout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({
+        ...request,
+        hostname: window.location.origin,
+      }),
+    });
+
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "unauthorized" };
+    }
+    if (response.status === 429) {
+      return {
+        ok: false,
+        code: "rate_limited",
+        retryAfterSeconds: readRetryAfterSeconds(response),
+      };
+    }
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const reason = typeof body?.reason === "string" ? body.reason : "";
+      const provider = readProvider(body?.provider);
+
+      if (response.status === 400) {
+        if (CHECKOUT_CLIENT_BUG_REASONS.includes(reason)) {
+          console.error("createPaymentsCheckout: bad request", body);
+          return { ok: false, code: "client_bug" };
+        }
+        if (CHECKOUT_STALE_LISTING_REASONS.includes(reason)) {
+          return { ok: false, code: "listing_stale" };
+        }
+        if (reason === "listing_not_synced") {
+          return { ok: false, code: "retry_later" };
+        }
+        if (reason === "kind_unavailable_on_provider") {
+          const kind = PaymentsKindSchema.safeParse(body?.kind);
+          if (provider !== null && kind.success) {
+            return {
+              ok: false,
+              code: "kind_unavailable_on_provider",
+              provider,
+              kind: kind.data,
+            };
+          }
+        }
+        if (reason === "provider_account_required" && provider !== null) {
+          return { ok: false, code: "provider_account_required", provider };
+        }
+      }
+
+      if (response.status === 409) {
+        if (reason === "subscription_exclusivity") {
+          const existingProvider = readProvider(body?.existingProvider);
+          // The 409 body always carries a non-null existingProvider; a body
+          // without one is malformed, not the "granted subscription" case
+          // (which does not 409 at all).
+          if (existingProvider !== null) {
+            return {
+              ok: false,
+              code: "subscription_exclusivity",
+              message: typeof body?.message === "string" ? body.message : "",
+              existingProvider,
+              existingTier:
+                typeof body?.existingTier === "string" ? body.existingTier : "",
+            };
+          }
+        }
+        if (reason === "pending_provider_transaction" && provider !== null) {
+          return { ok: false, code: "pending_provider_transaction", provider };
+        }
+        if (reason === "already_subscribed") {
+          return {
+            ok: false,
+            code: "already_subscribed",
+            existingTier:
+              typeof body?.existingTier === "string" ? body.existingTier : "",
+          };
+        }
+        if (
+          reason === "tier_change_unavailable_on_provider" &&
+          provider !== null
+        ) {
+          return {
+            ok: false,
+            code: "tier_change_unavailable_on_provider",
+            provider,
+            message: typeof body?.message === "string" ? body.message : "",
+          };
+        }
+      }
+
+      if (response.status === 501 && provider !== null) {
+        return { ok: false, code: "provider_unavailable", provider };
+      }
+
+      if (response.status === 502 && provider !== null) {
+        return {
+          ok: false,
+          code: "provider_error",
+          provider,
+          providerCode: typeof body?.code === "string" ? body.code : null,
+          // Absent means "don't retry": a retry mints a new order, so the
+          // safe default is not to spend one.
+          retryable: body?.retryable === true,
+        };
+      }
+
+      console.error(
+        "createPaymentsCheckout: request failed",
+        response.status,
+        reason,
+      );
+      return { ok: false, code: "failed" };
+    }
+
+    const parsed = PaymentsCheckoutResponseSchema.safeParse(
+      await response.json(),
+    );
+    if (!parsed.success) {
+      console.error(
+        "createPaymentsCheckout: Zod validation failed",
+        z.prettifyError(parsed.error),
+      );
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (e) {
+    console.error("createPaymentsCheckout: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+export type FinalizeSteamOrderResult =
+  // The server answered with one of four resolutions; `resolution` is passed
+  // through untouched. Only "settled" means the credit landed, and only
+  // "expired" means it definitively will not -- see SteamOrderResolutionSchema.
+  | { ok: true; resolution: SteamOrderResolution }
+  // 404: the order is unknown or belongs to someone else.
+  | { ok: false; code: "not_found" }
+  | { ok: false; code: "unauthorized" }
+  | { ok: false; code: "failed" };
+
+// POST /payments/steam/finalize — settles a Steam overlay purchase.
+//
+// `orderId` is the INTERNAL purchases id from the checkout response, not any
+// id Steam reports over the microtransaction bridge.
+//
+// SAFETY: only call this once Steam has reported the dialog was AUTHORIZED. A
+// client-channel order skips the server's abandon rule and finalizes
+// unconditionally, so finalizing a dialog the player cancelled charges someone
+// who walked away. On a cancelled or declined dialog, do nothing and let the
+// server-side sweeper resolve the order.
+export async function finalizeSteamOrder(
+  orderId: string,
+): Promise<FinalizeSteamOrderResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/payments/steam/finalize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ orderId }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "unauthorized" };
+    }
+    if (response.status === 404) {
+      return { ok: false, code: "not_found" };
+    }
+    if (!response.ok) {
+      console.error(
+        "finalizeSteamOrder: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = SteamFinalizeResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      // We cannot tell which of the four resolutions this was, so we must not
+      // guess one. Callers treat this the same as an unreachable server.
+      console.error(
+        "finalizeSteamOrder: Zod validation failed",
+        z.prettifyError(parsed.error),
+      );
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, resolution: parsed.data.resolution };
+  } catch (e) {
+    console.error("finalizeSteamOrder: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
 export async function cancelSubscription(): Promise<boolean> {
   try {
     const response = await fetch(`${getApiBase()}/subscriptions/@me/cancel`, {
@@ -1128,18 +1650,6 @@ export function getAudience() {
   // Sourced from BOOTSTRAP_CONFIG (server/desktop-injected) rather than
   // window.location, so the desktop app (app://openfront) targets real infra.
   return ClientEnv.jwtAudience();
-}
-
-// Check if the user's account is linked to a Discord, Google, or email account.
-export function hasLinkedAccount(
-  userMeResponse: UserMeResponse | false,
-): boolean {
-  return (
-    userMeResponse !== false &&
-    (userMeResponse.user?.discord !== undefined ||
-      userMeResponse.user?.google !== undefined ||
-      userMeResponse.user?.email !== undefined)
-  );
 }
 
 export async function fetchGameById(

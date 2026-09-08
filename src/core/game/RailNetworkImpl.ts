@@ -302,7 +302,13 @@ export class RailNetworkImpl implements RailNetwork {
         continue;
       }
 
-      const path = this.pathService.findTilePath(tile, targetTile);
+      // A completed city has already made its one-time station check, so the
+      // factory promotes it after creating its own station. The city then
+      // initiates the real connection back to the factory.
+      const path =
+        !neighborStation && neighbor.unit.type() === UnitType.City
+          ? this.pathService.findTilePath(targetTile, tile)
+          : this.pathService.findTilePath(tile, targetTile);
       if (path.length > 0 && path.length < maxPathSize) {
         paths.push(path);
         if (neighborStation) {

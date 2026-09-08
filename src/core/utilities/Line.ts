@@ -4,10 +4,12 @@ type Point = { x: number; y: number };
  *  Precomputes regular curve step points along a cubic Bezier curve.
  */
 export class DistanceBasedBezierCurve {
+  private static readonly SUB_SCALE = 256;
+
   private cachedPoints: Point[] = [];
   private currentIndex: number = 0;
-  private pixelSpacing: number = 1;
-  private accumulatedDistance: number = 0;
+  private pixelSpacingScaled: number = 1;
+  private accumulatedDistanceScaled: number = 0;
 
   constructor(
     private p0: Point,
@@ -19,6 +21,38 @@ export class DistanceBasedBezierCurve {
     this.computeAllPoints(distanceIncrement);
   }
 
+  /**
+   * Statically compute the full length of a bezier curve without allocating any points.
+   */
+  static getLength(p0: Point, p1: Point, p2: Point, p3: Point): number {
+    const scale = 256;
+    const p0x = Math.round(p0.x) * scale;
+    const p0y = Math.round(p0.y) * scale;
+    const p3x = Math.round(p3.x) * scale;
+    const p3y = Math.round(p3.y) * scale;
+
+    const st = { lastX: p0x, lastY: p0y, accumDist: 0 };
+
+    DistanceBasedBezierCurve.sharedSubdivide(
+      p0x,
+      p0y,
+      Math.round(p1.x) * scale,
+      Math.round(p1.y) * scale,
+      Math.round(p2.x) * scale,
+      Math.round(p2.y) * scale,
+      p3x,
+      p3y,
+      0,
+      st,
+    );
+
+    const edx = p3x - st.lastX;
+    const edy = p3y - st.lastY;
+    st.accumDist += Math.floor(Math.sqrt(edx * edx + edy * edy));
+
+    return st.accumDist / scale;
+  }
+
   getAllPoints(): Point[] {
     return this.cachedPoints;
   }
@@ -28,14 +62,17 @@ export class DistanceBasedBezierCurve {
    * Returns the next cached point, or null if at the end.
    */
   increment(distance: number = 1): Point | null {
-    this.accumulatedDistance += Math.max(1, Math.round(distance));
+    this.accumulatedDistanceScaled += Math.max(
+      1,
+      Math.round(distance * DistanceBasedBezierCurve.SUB_SCALE),
+    );
 
     while (
       this.currentIndex < this.cachedPoints.length - 1 &&
-      this.accumulatedDistance >= this.pixelSpacing
+      this.accumulatedDistanceScaled >= this.pixelSpacingScaled
     ) {
       this.currentIndex++;
-      this.accumulatedDistance -= this.pixelSpacing;
+      this.accumulatedDistanceScaled -= this.pixelSpacingScaled;
     }
 
     if (this.currentIndex >= this.cachedPoints.length - 1) {
@@ -55,25 +92,34 @@ export class DistanceBasedBezierCurve {
   computeAllPoints(pixelSpacing: number): void {
     this.cachedPoints = [];
     this.currentIndex = 0;
-    this.accumulatedDistance = 0;
-    this.pixelSpacing = Math.max(1, Math.round(pixelSpacing));
+    this.accumulatedDistanceScaled = 0;
+    this.pixelSpacingScaled = Math.max(
+      DistanceBasedBezierCurve.SUB_SCALE,
+      Math.round(pixelSpacing * DistanceBasedBezierCurve.SUB_SCALE),
+    );
 
-    const scale = 256; // 8-bit fixed-point precision
-    const stepThreshold = this.pixelSpacing * scale;
+    const scale = DistanceBasedBezierCurve.SUB_SCALE; // 8-bit fixed-point precision
+    const stepThreshold = this.pixelSpacingScaled;
 
     const p0x = Math.round(this.p0.x) * scale;
     const p0y = Math.round(this.p0.y) * scale;
     const p3x = Math.round(this.p3.x) * scale;
     const p3y = Math.round(this.p3.y) * scale;
 
-    const st = { lastX: p0x, lastY: p0y, accumDist: 0 };
+    const st = {
+      lastX: p0x,
+      lastY: p0y,
+      accumDist: 0,
+      stepThreshold,
+      cachedPoints: this.cachedPoints,
+    };
     this.cachedPoints.push({
       x: (p0x + 128) >> 8,
       y: (p0y + 128) >> 8,
     });
 
     // Single-pass recursive midpoint subdivision and inline spatial filtering
-    this.subdivide(
+    DistanceBasedBezierCurve.sharedSubdivide(
       p0x,
       p0y,
       Math.round(this.p1.x) * scale,
@@ -83,7 +129,6 @@ export class DistanceBasedBezierCurve {
       p3x,
       p3y,
       0,
-      stepThreshold,
       st,
     );
 
@@ -103,7 +148,7 @@ export class DistanceBasedBezierCurve {
     }
   }
 
-  private subdivide(
+  private static sharedSubdivide(
     ax: number,
     ay: number,
     bx: number,
@@ -113,8 +158,13 @@ export class DistanceBasedBezierCurve {
     dx: number,
     dy: number,
     depth: number,
-    stepThreshold: number,
-    st: { lastX: number; lastY: number; accumDist: number },
+    st: {
+      lastX: number;
+      lastY: number;
+      accumDist: number;
+      stepThreshold?: number;
+      cachedPoints?: Point[];
+    },
   ): void {
     const dist =
       Math.abs(bx - ax) +
@@ -131,12 +181,14 @@ export class DistanceBasedBezierCurve {
       st.lastX = ax;
       st.lastY = ay;
 
-      while (st.accumDist >= stepThreshold) {
-        this.cachedPoints.push({
-          x: (ax + 128) >> 8,
-          y: (ay + 128) >> 8,
-        });
-        st.accumDist -= stepThreshold;
+      if (st.stepThreshold !== undefined && st.cachedPoints !== undefined) {
+        while (st.accumDist >= st.stepThreshold) {
+          st.cachedPoints.push({
+            x: (ax + 128) >> 8,
+            y: (ay + 128) >> 8,
+          });
+          st.accumDist -= st.stepThreshold;
+        }
       }
       return;
     }
@@ -158,7 +210,7 @@ export class DistanceBasedBezierCurve {
     const my = (m012_y + m123_y) >> 1;
 
     // IN-ORDER RECURSION: Left segment first, then Right segment
-    this.subdivide(
+    DistanceBasedBezierCurve.sharedSubdivide(
       ax,
       ay,
       m01_x,
@@ -168,10 +220,9 @@ export class DistanceBasedBezierCurve {
       mx,
       my,
       depth + 1,
-      stepThreshold,
       st,
     );
-    this.subdivide(
+    DistanceBasedBezierCurve.sharedSubdivide(
       mx,
       my,
       m123_x,
@@ -181,7 +232,6 @@ export class DistanceBasedBezierCurve {
       dx,
       dy,
       depth + 1,
-      stepThreshold,
       st,
     );
   }

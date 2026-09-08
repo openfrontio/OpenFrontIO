@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { translateText } from "../../client/Utils";
-import { ClanTagSchema, UsernameSchema } from "../Schemas";
+import {
+  ClanTagSchema,
+  RENDERABLE_NAME_CHARS,
+  UsernameSchema,
+} from "../Schemas";
 
 export const MIN_USERNAME_LENGTH = 3;
 // Matches MAX_ACCOUNT_USERNAME_LENGTH so a free-form name can't outgrow the
@@ -15,12 +19,21 @@ export const MAX_CLAN_TAG_LENGTH = 5;
 export const MIN_ACCOUNT_USERNAME_LENGTH = 3;
 export const MAX_ACCOUNT_USERNAME_LENGTH = 20;
 
-// Characters a player may type for themselves. Narrower than UsernameSchema,
-// which additionally carries hyphens so that account names — issued under the
-// separate AccountUsernameSchema rules — stay representable on the wire.
-// Widening the wire schema for those must not quietly widen this form, whose
-// error message names exactly these characters.
-const FREE_FORM_USERNAME_PATTERN = /^[a-zA-Z0-9_ üÜ.]+$/u;
+// Characters a player may type for themselves: everything the in-game name
+// renderer can draw (see RENDERABLE_NAME_CHARS). Equal to the wire schema's
+// charset today — a name a player types has to reach the server, and a name
+// seeded from a Steam persona has to pass this form rule or it would be
+// sanitised into something the field then rejects.
+//
+// Kept as its own pattern rather than folded into UsernameSchema because the
+// two have different licence to change: the wire schema reads archived records
+// so it may only ever widen, while this one may narrow. Both are built from
+// the one source so they cannot drift by hand, which is how they got out of
+// step before.
+const FREE_FORM_USERNAME_PATTERN = new RegExp(
+  `^[${RENDERABLE_NAME_CHARS}]+$`,
+  "u",
+);
 
 // Mirrors the API's account-username rules (infra src/api/lib/Usernames.ts)
 // for instant form feedback; profanity and uniqueness stay server-side. No

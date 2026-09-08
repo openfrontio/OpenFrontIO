@@ -78,7 +78,43 @@ export class TileSet implements ReadonlyTileSet {
   }
 
   add(value: TileRef): this {
-    if (this.has(value)) return this;
+    // One probe does both jobs: detect an existing entry, and remember the
+    // first non-live slot (DELETED or EMPTY) on the chain — exactly the slot
+    // the old separate insert probe would have stopped at. Skipping the
+    // second probe matters because every conquered tile costs several adds
+    // (owner set + border bookkeeping).
+    {
+      const table = this.table;
+      const dense = this.dense;
+      const mask = table.length - 1;
+      let slot = TileSet.hash(value) & mask;
+      let insertAt = -1;
+      for (;;) {
+        const di = table[slot];
+        if (di === EMPTY) {
+          if (insertAt === -1) insertAt = slot;
+          break;
+        }
+        if (di === DELETED) {
+          if (insertAt === -1) insertAt = slot;
+        } else if (dense[di] === value) {
+          return this;
+        }
+        slot = (slot + 1) & mask;
+      }
+      if (
+        this.denseLen < this.dense.length &&
+        (this.tableUsed + 1) * 4 <= this.table.length * 3
+      ) {
+        // Fast path: no growth or rehash needed, insert at the slot found.
+        const di = this.denseLen++;
+        dense[di] = value;
+        this.size_++;
+        if (table[insertAt] === EMPTY) this.tableUsed++;
+        table[insertAt] = di;
+        return this;
+      }
+    }
 
     if (this.denseLen === this.dense.length) {
       // Prefer reclaiming tombstones over growing, unless an iterator is

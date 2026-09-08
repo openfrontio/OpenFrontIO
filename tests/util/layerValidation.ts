@@ -9,6 +9,7 @@ export interface LayerDefinition {
   id: unknown;
   placement: unknown;
   nukeable?: unknown;
+  alpha?: unknown;
 }
 
 /**
@@ -53,6 +54,15 @@ export function validateLayer(
     errors.push(
       `${prefix} "nukeable" must be a boolean if present, got ${typeof layer.nukeable}`,
     );
+  }
+  if (layer.alpha !== undefined) {
+    if (typeof layer.alpha !== "number" || !Number.isFinite(layer.alpha)) {
+      errors.push(
+        `${prefix} "alpha" must be a finite number if present, got ${layer.alpha}`,
+      );
+    } else if (layer.alpha < 0 || layer.alpha > 1) {
+      errors.push(`${prefix} "alpha" (${layer.alpha}) must be between 0 and 1`);
+    }
   }
 
   return errors;

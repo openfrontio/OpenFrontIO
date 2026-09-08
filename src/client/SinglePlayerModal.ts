@@ -15,7 +15,7 @@ import {
 } from "../core/game/Game";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { hasLinkedAccount } from "./Api";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -25,7 +25,9 @@ import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
+import { fallbackPlayerName } from "./PlayerName";
 import { UsernameInput } from "./UsernameInput";
 import {
   getBotsForCompactMap,
@@ -264,7 +266,7 @@ export class SinglePlayerModal extends BaseModal {
       title: translateText("main.solo") || "Solo",
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
-      rightContent: hasLinkedAccount(this.userMeResponse)
+      rightContent: responseHasLinkedIdentity(this.userMeResponse)
         ? html`<button
               @click=${this.toggleAchievements}
               class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
@@ -508,7 +510,8 @@ export class SinglePlayerModal extends BaseModal {
 
         <!-- Footer Action -->
         <div class="p-6 border-t border-white/10 bg-black/20 shrink-0">
-          ${hasLinkedAccount(this.userMeResponse) && this.hasOptionsChanged()
+          ${responseHasLinkedIdentity(this.userMeResponse) &&
+          this.hasOptionsChanged()
             ? html`<div
                 class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
               >
@@ -848,7 +851,7 @@ export class SinglePlayerModal extends BaseModal {
     if (this.maxTimer) {
       if (!this.maxTimerValue || this.maxTimerValue <= 0) {
         console.error("Max timer is enabled but no valid value is set");
-        alert(
+        await showInGameAlert(
           translateText("single_modal.max_timer_invalid") ||
             "Please enter a valid max timer value (1-120 minutes)",
         );
@@ -878,6 +881,8 @@ export class SinglePlayerModal extends BaseModal {
     // getUsername(), so a fast single-player start uses the Steam persona
     // rather than the interim generated anon name. Always resolves.
     await usernameInput?.whenSeeded();
+    // Name and badge from one resolution, as on the multiplayer join path.
+    const resolvedName = usernameInput?.resolvedName() ?? fallbackPlayerName();
 
     await crazyGamesSDK.requestMidgameAd();
 
@@ -890,9 +895,11 @@ export class SinglePlayerModal extends BaseModal {
             players: [
               {
                 clientID,
-                username: usernameInput.getUsername(),
-                clanTag: usernameInput.getClanTag() ?? null,
-                cosmetics: await getPlayerCosmetics(),
+                username: resolvedName.name,
+                clanTag: usernameInput?.getClanTag() ?? null,
+                cosmetics: await getPlayerCosmetics({
+                  verified: resolvedName.verified,
+                }),
               },
             ],
             config: {

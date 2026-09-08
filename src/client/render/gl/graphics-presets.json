@@ -10,6 +10,38 @@
     "overrides": { "lighting": { "ambient": 0.36 } }
   },
   {
+    "nameKey": "graphics_setting.preset_evans_pick",
+    "descKey": "graphics_setting.preset_evans_pick_desc",
+    "overrides": {
+      "name": {
+        "hoverFadeAlpha": 0.4,
+        "hoverGlowWidth": 8
+      },
+      "structure": {
+        "classicIcons": false
+      },
+      "mapOverlay": {
+        "navalHighlight": true,
+        "highlightFillBrighten": 0.68,
+        "highlightBrighten": 0.17,
+        "highlightThicken": 3,
+        "territorySaturation": 1,
+        "territoryAlpha": 0.54
+      },
+      "terrain": {
+        "backgroundColor": "#131b25",
+        "oceanColor": "#274963",
+        "plainsColor": "#b3d080",
+        "highlandColor": "#d6c69a",
+        "mountainColor": "#fff5f5"
+      },
+      "lighting": {
+        "ambient": 0.76,
+        "falloffPower": 1
+      }
+    }
+  },
+  {
     "nameKey": "graphics_setting.preset_colorblind",
     "descKey": "graphics_setting.preset_colorblind_desc",
     "overrides": {

@@ -399,8 +399,17 @@ export class PlayerExecution implements Execution {
     if (borderTiles.size === 0) return [];
 
     const state = this.traversalState();
-    const currentGen = this.bumpGeneration();
     const visited = state.visited;
+    // Two generation stamps on the one scratch array: first stamp every
+    // border tile with `borderGen`, then flood with `currentGen`. Membership
+    // becomes a single typed-array read instead of a hash probe for each of
+    // the 8 neighbours of every border tile (this fill was ~15 % of a
+    // headless game's CPU).
+    const borderGen = this.bumpGeneration();
+    borderTiles.forEach((tile) => {
+      visited[tile] = borderGen;
+    });
+    const currentGen = this.bumpGeneration();
 
     const clusters: TileRef[][] = [];
 
@@ -408,7 +417,7 @@ export class PlayerExecution implements Execution {
     // iterator-result object per element, and border sets can be huge.
     const neighborFn = (tile: TileRef, cb: (neighbor: TileRef) => void) =>
       this.mg.forEachNeighborWithDiag(tile, cb);
-    const includeFn = (tile: TileRef) => borderTiles.has(tile);
+    const includeFn = (tile: TileRef) => visited[tile] === borderGen;
     borderTiles.forEach((startTile) => {
       if (visited[startTile] === currentGen) return;
 

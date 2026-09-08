@@ -1427,6 +1427,11 @@ export class GPURenderer {
     this.mapLayerPasses.get(layerId)?.setVisible(visible);
   }
 
+  /** Set the alpha multiplier for a single layer (0–1). */
+  setLayerAlpha(layerId: string, alpha: number): void {
+    this.mapLayerPasses.get(layerId)?.setAlpha(alpha);
+  }
+
   /**
    * Mark tiles as destroyed for a nukeable layer.  Called when a nuke
    * detonates; batches all tile updates into a single GPU upload.
