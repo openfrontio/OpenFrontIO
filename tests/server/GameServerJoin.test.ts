@@ -50,6 +50,7 @@ describe("GameServer.joinClient — environment guards", () => {
         1000,
         "kick_reason.duplicate_session",
       );
+      expect(mockWsOf(first).removeAllListeners).toHaveBeenCalled();
       expect(mockWsOf(second).close).not.toHaveBeenCalled();
       expect(game.numClients()).toBe(1);
       expect(game.gameInfo().clients?.map((c) => c.clientID)).toEqual([

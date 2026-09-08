@@ -253,6 +253,10 @@ export class Transport {
   // scheduleReconnect and connectRemote so nothing reopens the socket.
   private connectionRefused = false;
 
+  // True once the server has responded to join/rejoin (via start or lobby_info),
+  // proving the session is admitted and ready to accept gameplay intents.
+  private isSessionReady = false;
+
   // clientID dictionary for the binary wire (see ZbinWire.ts), seeded from
   // the roster in the start message. Null until the game starts, which is
   // also the last moment a peer can send a dictionary-encoded field.
@@ -412,6 +416,7 @@ export class Transport {
     if (this.connectionRefused) {
       return;
     }
+    this.isSessionReady = false;
     this.startPing();
     this.killExistingSocket();
     // WS origin comes from ClientEnv (same-origin on web, audience-derived on
@@ -448,8 +453,9 @@ export class Transport {
           // order, that the server seeded its own from.
           this.zbinCtx = createGameWireContext(msg.gameStartInfo.players);
         }
-        this.onmessage(msg);
+        this.isSessionReady = true;
         this.flushBuffer();
+        this.onmessage(msg);
       } catch (e) {
         console.error("Error in onmessage handler:", e, event.data);
         return;
@@ -461,6 +467,7 @@ export class Transport {
       this.socket.close();
     };
     this.socket.onclose = (event: CloseEvent) => {
+      this.isSessionReady = false;
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
@@ -901,11 +908,22 @@ export class Transport {
       // Socket missing, do nothing
       return;
     }
+
+    const isHandshakeMsg =
+      msg.type === "join" || msg.type === "rejoin" || msg.type === "ping";
+
     if (this.socket.readyState !== WebSocket.OPEN) {
       // Buffer the message for the next successful open.
       console.warn("socket not ready, buffering and reconnecting");
       this.buffer.push(msg);
       this.scheduleReconnect();
+    } else if (
+      !isHandshakeMsg &&
+      (!this.isSessionReady || this.buffer.length > 0)
+    ) {
+      // Hold non-handshake messages until the session handshake is complete,
+      // and keep them queued behind any previously buffered messages.
+      this.buffer.push(msg);
     } else {
       // Send the message directly
       this.socket.send(encodeClientMessage(msg, this.zbinCtx ?? undefined));
@@ -913,6 +931,7 @@ export class Transport {
   }
 
   private killExistingSocket(): void {
+    this.isSessionReady = false;
     if (this.socket === null) {
       return;
     }
