@@ -21,7 +21,7 @@ describe("GAME_ID_REGEX", () => {
     "", // empty
     "AbCd 234", // space
     "AbCd-234", // punctuation
-    "AbCd123\n", // trailing newline (regex must be anchored)
+    "AbCd1234\n", // valid 8-char body + newline (regex must be anchored)
   ])("rejects %j", (id) => {
     expect(GAME_ID_REGEX.test(id)).toBe(false);
     expect(isValidGameID(id)).toBe(false);
