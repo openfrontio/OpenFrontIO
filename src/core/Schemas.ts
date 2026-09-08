@@ -368,6 +368,13 @@ export const PublicLobbyFullSchema = z.object({
   // bundle built before this field cannot decode the frame at all (zbin
   // presence header shifts), which is the usual ship-together tradeoff.
   gitCommit: z.string().max(64).optional(),
+  // False when the serving deployment is draining: the load balancer routes
+  // elsewhere and this one has stopped queueing public lobbies, so a pinned
+  // tab would watch the list empty out. Clients respond with the same reload
+  // prompt as a commit mismatch — which cannot catch this case by itself,
+  // because the pinned server reports its own commit and a same-commit
+  // blue/green flip keeps them equal. Absent means active.
+  active: z.boolean().optional(),
 });
 
 export const PublicLobbyCountsSchema = z.object({

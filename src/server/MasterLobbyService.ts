@@ -243,6 +243,7 @@ export class MasterLobbyService {
         games,
       },
       delistGameIDs: delist.length > 0 ? delist : undefined,
+      active: this.active,
     } satisfies MasterLobbiesBroadcast;
     for (const [workerId, worker] of this.workers.entries()) {
       worker.send(msg, (e) => {

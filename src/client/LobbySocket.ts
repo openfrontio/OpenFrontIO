@@ -101,6 +101,7 @@ export class PublicLobbySocket {
       );
       if (message.type === "full") {
         this.checkServerCommit(message.gitCommit);
+        this.checkDeploymentActive(message.active);
         this.lastFull = {
           serverTime: message.serverTime,
           games: message.games,
@@ -154,6 +155,21 @@ export class PublicLobbySocket {
     if (serverCommit === undefined) return;
     const ownCommit = ClientEnv.gitCommit();
     if (ownCommit === "DEV" || serverCommit === ownCommit) return;
+    this.updateAvailableFired = true;
+    this.onUpdateAvailable();
+  }
+
+  // The deployment serving this feed says the load balancer routes elsewhere.
+  // It has stopped queueing public lobbies, so without a reload this tab
+  // would watch the list drain empty: the commit compare above can't catch
+  // it, since this (pinned) server reports its own commit — equal to this
+  // bundle's on a same-commit flip. A reload re-fetches the shell from the
+  // site host, which repins to the active deployment.
+  private checkDeploymentActive(active: boolean | undefined) {
+    if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
+      return;
+    }
+    if (active !== false) return;
     this.updateAvailableFired = true;
     this.onUpdateAvailable();
   }

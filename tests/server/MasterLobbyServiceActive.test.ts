@@ -40,6 +40,13 @@ function createGameMessages(worker: ReturnType<typeof createMockWorker>) {
   return worker.send.mock.calls.filter(([msg]) => msg.type === "createGame");
 }
 
+function broadcastTask(): () => Promise<void> {
+  const calls = vi.mocked(startPolling).mock.calls;
+  const call = calls.find(([, intervalMs]) => intervalMs === 500);
+  if (call === undefined) throw new Error("broadcast loop was not started");
+  return call[0];
+}
+
 describe("MasterLobbyService active/inactive deployment", () => {
   let worker: ReturnType<typeof createMockWorker>;
   let service: MasterLobbyService;
@@ -78,6 +85,24 @@ describe("MasterLobbyService active/inactive deployment", () => {
     service.setActive(true);
     await schedulerTask()();
     expect(createGameMessages(worker).length).toBeGreaterThan(0);
+  });
+
+  // Workers stamp this flag onto the public-lobby feed so pinned tabs on a
+  // draining deployment get told to reload instead of watching the lobby
+  // list empty out.
+  it("tells workers whether the deployment is active in every broadcast", async () => {
+    await broadcastTask()();
+    let broadcasts = worker.send.mock.calls.filter(
+      ([msg]) => msg.type === "lobbiesBroadcast",
+    );
+    expect(broadcasts.at(-1)?.[0].active).toBe(true);
+
+    service.setActive(false);
+    await broadcastTask()();
+    broadcasts = worker.send.mock.calls.filter(
+      ([msg]) => msg.type === "lobbiesBroadcast",
+    );
+    expect(broadcasts.at(-1)?.[0].active).toBe(false);
   });
 });
 

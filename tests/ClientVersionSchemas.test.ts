@@ -99,4 +99,13 @@ describe("gitCommit on the public lobby feed", () => {
       expect(withCommit.data.gitCommit).toBe(COMMIT);
     }
   });
+
+  test("full message parses with the deployment-active flag", () => {
+    const full = { type: "full", serverTime: 123, games: {}, active: false };
+    const parsed = PublicLobbyMessageSchema.safeParse(full);
+    expect(parsed.success).toBe(true);
+    if (parsed.success && parsed.data.type === "full") {
+      expect(parsed.data.active).toBe(false);
+    }
+  });
 });
