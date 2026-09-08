@@ -840,6 +840,14 @@ export class InputHandler {
       pointerDist < this.DRAG_THRESHOLD_PX &&
       this.isNukeGhostActive()
     ) {
+      // Ensure any pending touch long-press is cleared before returning
+      if (this.longPressTimer !== null) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+      this.longPressActive = false;
+      this.canvas.style.cursor = "";
+
       this.stopNukeHoldDeployment();
       this.eventBus.emit(new MouseUpEvent(event.x, event.y));
       return;
@@ -849,6 +857,15 @@ export class InputHandler {
       this.nukeHoldTimer !== null ||
       this.nukeHoldInitialDelayTimer !== null
     ) {
+      // Clear long-press state as above so touch devices don't fire the
+      // long-press after we've stopped nuke deployment and returned early.
+      if (this.longPressTimer !== null) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+      this.longPressActive = false;
+      this.canvas.style.cursor = "";
+
       this.stopNukeHoldDeployment();
       return;
     }
