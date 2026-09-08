@@ -1399,6 +1399,8 @@ export class InputHandler {
     }
     this.activeKeys.clear();
     this.lastGestureScale = null;
+    // destroy nuke hold timers if they are active, to prevent them from firing after the InputHandler is destroyed
+    this.stopNukeHoldDeployment();
     this.keybindAndEvent = [];
   }
 }
