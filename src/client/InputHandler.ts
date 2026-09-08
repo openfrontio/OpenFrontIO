@@ -913,12 +913,14 @@ export class InputHandler {
     }
     if (this.activeKeys.has(this.keybinds.emojiMenuModifier)) {
       this.suppressNextTap = false;
+      // If no ghost structure is active, show the emoji menu and return.
+      // else, fall through to normal build/launch handling
       if (this.uiState.ghostStructure === null) {
         this.eventBus.emit(
           new ShowEmojiMenuEvent(event.clientX, event.clientY),
         );
+        return;
       }
-      return;
     }
 
     const dist =
