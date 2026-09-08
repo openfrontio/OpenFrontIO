@@ -52,6 +52,7 @@ describe("isTerminalClose", () => {
       CloseCode.GameNotFound,
       CloseCode.GameClosed,
       CloseCode.LobbyFull,
+      CloseCode.WrongWorker,
     ]) {
       expect(isTerminalClose(code)).toBe(true);
     }

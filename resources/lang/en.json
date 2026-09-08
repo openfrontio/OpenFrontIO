@@ -455,7 +455,8 @@
     "protocol_error": "The connection was corrupted.",
     "ranked_limit_reached": "You are out of free ranked matches for today.",
     "turnstile_failed": "The bot check failed. Please reload the page and try again.",
-    "unknown": "The server closed the connection."
+    "unknown": "The server closed the connection.",
+    "wrong_worker": "This connection reached the wrong server process. Please reload the page and try again."
   },
   "common": {
     "available": "Available",
