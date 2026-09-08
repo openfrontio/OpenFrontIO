@@ -17,6 +17,7 @@
  * delta comes from the trade or train economy alone. All randomness is
  * PseudoRandom seeded from game ticks, so runs are deterministic.
  */
+import { Config } from "../src/core/configuration/Config";
 import { FactoryExecution } from "../src/core/execution/FactoryExecution";
 import { PortExecution } from "../src/core/execution/PortExecution";
 import {
@@ -80,6 +81,8 @@ interface TradeSide {
    * structureMinDist spacing).
    */
   numPorts?: number;
+  /** How far around the anchor to conquer and scan for port spots (default 80). */
+  scanRadius?: number;
 }
 
 interface TradeScenario {
@@ -123,11 +126,11 @@ function tradeSideMetrics(
  * scan order. canBuild itself rejects tiles within structureMinDist of an
  * existing port, so the fleet spreads out along the coastline.
  */
-function buildPorts(game: Game, player: Player, side: TradeSide): void {
+function buildPorts(game: Game, player: Player, side: TradeSide): Unit[] {
   const [cx, cy] = side.port;
   const count = side.numPorts ?? 1;
   const map = game.map();
-  const r = count === 1 ? 5 : 80;
+  const r = side.scanRadius ?? (count === 1 ? 5 : 80);
   conquerDisc(game, player, cx, cy, r);
 
   const oceanOf = (t: number): number | null => {
@@ -142,27 +145,29 @@ function buildPorts(game: Game, player: Player, side: TradeSide): void {
 
   const port = build(game, player, UnitType.Port, cx, cy);
   for (let l = 1; l < (side.portLevel ?? 1); l++) port.increaseLevel();
-  game.addExecution(new PortExecution(port));
-  let built = 1;
+  const ports = [port];
 
-  for (let y = Math.max(0, cy - r); y <= cy + r && built < count; y++) {
-    for (let x = Math.max(0, cx - r); x <= cx + r && built < count; x++) {
+  for (let y = Math.max(0, cy - r); y <= cy + r && ports.length < count; y++) {
+    for (
+      let x = Math.max(0, cx - r);
+      x <= cx + r && ports.length < count;
+      x++
+    ) {
       if (x >= map.width() || y >= map.height()) continue;
       const t = map.ref(x, y);
       if (!map.isLand(t) || !map.isShore(t)) continue;
       if (oceanOf(t) !== ocean) continue;
       const spawn = player.canBuild(UnitType.Port, t);
       if (spawn === false) continue;
-      const extra = player.buildUnit(UnitType.Port, spawn, {});
-      game.addExecution(new PortExecution(extra));
-      built++;
+      ports.push(player.buildUnit(UnitType.Port, spawn, {}));
     }
   }
-  if (built < count) {
+  if (ports.length < count) {
     throw new Error(
-      `only found room for ${built}/${count} ports near (${cx}, ${cy})`,
+      `only found room for ${ports.length}/${count} ports near (${cx}, ${cy})`,
     );
   }
+  return ports;
 }
 
 async function runTradeScenario(s: TradeScenario): Promise<{
@@ -181,12 +186,26 @@ async function runTradeScenario(s: TradeScenario): Promise<{
   );
   const a = game.player("a");
   const b = game.player("b");
-  for (const [player, side] of [
-    [a, s.a],
-    [b, s.b],
-  ] as const) {
-    player.addGold(10_000_000n);
-    buildPorts(game, player, side);
+  // TestConfig stubs proximityBonusPortsNb to 0; restore the real weighting
+  // so destination picks favor closer ports like they do in production.
+  game.config().proximityBonusPortsNb = (totalPorts: number) =>
+    Config.prototype.proximityBonusPortsNb.call(game.config(), totalPorts);
+  // Port cost doubles per port up to 1M each; enough for any fleet size.
+  a.addGold(10_000_000_000n);
+  b.addGold(10_000_000_000n);
+  const portsA = buildPorts(game, a, s.a);
+  const portsB = buildPorts(game, b, s.b);
+  // Register the spawners one tick apart: PortExecution seeds its
+  // PseudoRandom from the tick it initializes on, so same-tick registration
+  // would give every port an identical RNG stream and lock-step spawn rolls.
+  const spawners: Unit[] = [];
+  for (let i = 0; i < Math.max(portsA.length, portsB.length); i++) {
+    if (i < portsA.length) spawners.push(portsA[i]);
+    if (i < portsB.length) spawners.push(portsB[i]);
+  }
+  for (const port of spawners) {
+    game.addExecution(new PortExecution(port));
+    game.executeNextTick();
   }
   const goldA = a.gold();
   const goldB = b.gold();
@@ -261,10 +280,11 @@ describe("trade ship scenarios", () => {
   }, 120_000);
 
   // A real port economy: ten ports per side spread along each coastline.
-  // Every port rolls its own spawn chance and picks a destination weighted
-  // by proximity, and the growing trade-ship count feeds back into
-  // tradeShipSpawnRate — goldPerMinute here is the fleet's steady-state
-  // income, not a single route.
+  // Every port rolls its own spawn chance (spawners are registered a tick
+  // apart, so each seeds its own RNG stream) and picks a destination with
+  // the real proximity weighting, and the growing trade-ship count feeds
+  // back into tradeShipSpawnRate — goldPerMinute here is the fleet's
+  // steady-state income, not a single route.
   test("ten ports each across the ocean", async () => {
     expect(
       await runTradeScenario({
@@ -276,6 +296,55 @@ describe("trade ship scenarios", () => {
       }),
     ).toMatchSnapshot();
   }, 120_000);
+
+  // The big-fleet end of the port-count sweep ("long haul" above is the
+  // 1-port point on this route). The global trade-ship count feeds back
+  // into tradeShipSpawnRate, so income per port falls as the fleet grows.
+  // Physically capped well short of 1000 ports — structureMinDist spacing
+  // only fits so many on a coastline (the ~330-tile route's coast tops out
+  // at ~12 a side), and spawn suppression flattens income long before that.
+  test("fifty ports each, long route", async () => {
+    expect(
+      await runTradeScenario({
+        map: "world",
+        disableNavMesh: false,
+        a: { port: [700, 527], numPorts: 50, scanRadius: 300 },
+        b: { port: [1491, 451], numPorts: 50, scanRadius: 300 },
+        ticks: 4_000,
+      }),
+    ).toMatchSnapshot();
+  }, 240_000);
+
+  // Distance sweep at a fixed ten-port fleet: ~330 tiles ("ten ports each
+  // across the ocean"), ~500 tiles here, ~1800 tiles below. Longer routes
+  // pay more per trade but keep ships at sea longer, which suppresses
+  // spawning fleet-wide.
+  test("ten ports, ~500-tile route", async () => {
+    expect(
+      await runTradeScenario({
+        map: "world",
+        disableNavMesh: false,
+        a: { port: [539, 380], numPorts: 10 },
+        b: { port: [892, 243], numPorts: 10 },
+        ticks: 3_000,
+      }),
+    ).toMatchSnapshot();
+  }, 120_000);
+
+  // (539,380) to (1910,765) is ~1800 tiles as the crow flies and further by
+  // sea; trips outlive most of the run, so this pins the far end of the
+  // distance curve. More ticks so a meaningful number of trips complete.
+  test("ten ports, ~1800-tile route", async () => {
+    expect(
+      await runTradeScenario({
+        map: "world",
+        disableNavMesh: false,
+        a: { port: [539, 380], numPorts: 10 },
+        b: { port: [1910, 765], numPorts: 10 },
+        ticks: 6_000,
+      }),
+    ).toMatchSnapshot();
+  }, 240_000);
 });
 
 interface TrainScenario {
