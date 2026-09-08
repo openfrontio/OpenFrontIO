@@ -287,8 +287,9 @@ describe("GameServer - Clan Overflow Spectator Conversion", () => {
     }
 
     // Case B: Map with 0 default nations (e.g. BaikalNukeWars) and 2 teams:
-    // 5 clan members on BaikalNukeWars with 2 teams -> maxTeamSize = ceil((5 + 0) / 2) = 3.
-    // First 3 fit, remaining 2 converted to spectator!
+    // 5 clan members and 3 opposing players on BaikalNukeWars with 2 teams ->
+    // total = 8. maxTeamSize = ceil(8 / 2) = 4.
+    // First 4 fit, 5th is converted to spectator!
     const zeroNationsGame = makeGame({
       config: {
         gameMode: GameMode.Team,
@@ -297,15 +298,87 @@ describe("GameServer - Clan Overflow Spectator Conversion", () => {
         gameMap: GameMapType.BaikalNukeWars,
       },
     });
-    const zeroNationsClients = Array.from({ length: 5 }, (_, i) =>
+    const clanClients = Array.from({ length: 5 }, (_, i) =>
       makeClient({ clientID: cid(`z${i}`), clanTag: "CLAN" }),
     );
-    for (const c of zeroNationsClients) zeroNationsGame.joinClient(c);
+    const otherClients = Array.from({ length: 3 }, (_, i) =>
+      makeClient({ clientID: cid(`o${i}`), clanTag: "OTHER" }),
+    );
+    for (const c of [...clanClients, ...otherClients]) {
+      zeroNationsGame.joinClient(c);
+    }
     startGame(zeroNationsGame);
 
-    expect(zeroNationsClients.slice(0, 3).every((c) => !c.spectator)).toBe(
-      true,
+    expect(clanClients.slice(0, 4).every((c) => !c.spectator)).toBe(true);
+    expect(clanClients[4].spectator).toBe(true);
+    expect(otherClients.every((c) => !c.spectator)).toBe(true);
+  });
+
+  test("disableClanTags and anonymizeNames exempt clan members from conversion", () => {
+    const disabledClanTagsGame = makeGame({
+      config: {
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+        nations: "disabled",
+        disableClanTags: true,
+      },
+    });
+    const clientsA = Array.from({ length: 5 }, (_, i) =>
+      makeClient({ clientID: cid(`a${i}`), clanTag: "CLAN" }),
     );
-    expect(zeroNationsClients.slice(3).every((c) => c.spectator)).toBe(true);
+    const opponentsA = Array.from({ length: 3 }, (_, i) =>
+      makeClient({ clientID: cid(`oa${i}`), clanTag: "OTHER" }),
+    );
+    for (const c of [...clientsA, ...opponentsA]) {
+      disabledClanTagsGame.joinClient(c);
+    }
+    startGame(disabledClanTagsGame);
+    expect(clientsA.every((c) => !c.spectator)).toBe(true);
+
+    const anonymizeGame = makeGame({
+      config: {
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+        nations: "disabled",
+        anonymizeNames: true,
+      },
+    });
+    const clientsB = Array.from({ length: 5 }, (_, i) =>
+      makeClient({ clientID: cid(`b${i}`), clanTag: "CLAN" }),
+    );
+    const opponentsB = Array.from({ length: 3 }, (_, i) =>
+      makeClient({ clientID: cid(`ob${i}`), clanTag: "OTHER" }),
+    );
+    for (const c of [...clientsB, ...opponentsB]) {
+      anonymizeGame.joinClient(c);
+    }
+    startGame(anonymizeGame);
+    expect(clientsB.every((c) => !c.spectator)).toBe(true);
+  });
+
+  test("Small roster Quads dynamically caps team size below 4", () => {
+    // 9 players on BaikalNukeWars (0 nations) with Quads:
+    // Math.ceil(9 / 4) = 3 teams. maxTeamSize = Math.ceil(9 / 3) = 3 (< 4).
+    // Clan of 4 gets 1 member benched to spectator.
+    const game = makeGame({
+      config: {
+        gameMode: GameMode.Team,
+        playerTeams: Quads,
+        nations: "default",
+        gameMap: GameMapType.BaikalNukeWars,
+      },
+    });
+    const clanClients = Array.from({ length: 4 }, (_, i) =>
+      makeClient({ clientID: cid(`q${i}`), clanTag: "CLAN" }),
+    );
+    const soloClients = Array.from({ length: 5 }, (_, i) =>
+      makeClient({ clientID: cid(`s${i}`) }),
+    );
+    for (const c of [...clanClients, ...soloClients]) game.joinClient(c);
+    startGame(game);
+
+    expect(clanClients.slice(0, 3).every((c) => !c.spectator)).toBe(true);
+    expect(clanClients[3].spectator).toBe(true);
+    expect(soloClients.every((c) => !c.spectator)).toBe(true);
   });
 });

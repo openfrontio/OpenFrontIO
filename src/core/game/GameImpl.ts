@@ -47,7 +47,7 @@ import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
-import { assignTeams } from "./TeamAssignment";
+import { assignTeams, resolveTeamsList } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
 import { WaterManager } from "./WaterManager";
@@ -153,45 +153,11 @@ export class GameImpl implements Game {
   }
 
   private populateTeams() {
-    let numPlayerTeams = this._config.playerTeams();
-
-    // HumansVsNations mode always has exactly 2 teams
-    if (numPlayerTeams === HumansVsNations) {
-      this.playerTeams = [ColoredTeams.Humans, ColoredTeams.Nations];
-      return;
-    }
-
-    if (typeof numPlayerTeams !== "number") {
-      const players = this._humans.length + this._nations.length;
-      switch (numPlayerTeams) {
-        case Duos:
-          numPlayerTeams = Math.ceil(players / 2);
-          break;
-        case Trios:
-          numPlayerTeams = Math.ceil(players / 3);
-          break;
-        case Quads:
-          numPlayerTeams = Math.ceil(players / 4);
-          break;
-        default:
-          throw new Error(`Unknown TeamCountConfig ${numPlayerTeams}`);
-      }
-    }
-    if (numPlayerTeams < 2) {
-      throw new Error(`Too few teams: ${numPlayerTeams}`);
-    } else if (numPlayerTeams < 8) {
-      this.playerTeams = [ColoredTeams.Red, ColoredTeams.Blue];
-      if (numPlayerTeams >= 3) this.playerTeams.push(ColoredTeams.Yellow);
-      if (numPlayerTeams >= 4) this.playerTeams.push(ColoredTeams.Green);
-      if (numPlayerTeams >= 5) this.playerTeams.push(ColoredTeams.Purple);
-      if (numPlayerTeams >= 6) this.playerTeams.push(ColoredTeams.Orange);
-      if (numPlayerTeams >= 7) this.playerTeams.push(ColoredTeams.Teal);
-    } else {
-      this.playerTeams = [];
-      for (let i = 1; i <= numPlayerTeams; i++) {
-        this.playerTeams.push(`Team ${i}`);
-      }
-    }
+    const totalPlayers = this._humans.length + this._nations.length;
+    this.playerTeams = resolveTeamsList(
+      this._config.playerTeams(),
+      totalPlayers,
+    );
   }
 
   private addPlayers() {

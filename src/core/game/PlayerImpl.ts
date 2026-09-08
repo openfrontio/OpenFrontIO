@@ -1835,8 +1835,7 @@ export class PlayerImpl implements Player {
   }
 
   hasWinningLandShareOnDisconnect(): boolean {
-    const thresholdTenths =
-      this.mg?.config()?.teamLandShareWinThresholdTenths() ?? 7;
+    const thresholdTenths = this.mg.config().teamLandShareWinThresholdTenths();
     return (
       this._totalLandOnDisconnect > 0 &&
       10 * this._teamTilesOnDisconnect >=

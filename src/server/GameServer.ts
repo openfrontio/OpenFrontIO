@@ -8,16 +8,18 @@ import { isAdminRole } from "../core/ApiSchemas";
 import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { GameEnv } from "../core/configuration/Config";
 import {
-  Duos,
   GameMode,
   GameType,
   HumansVsNations,
-  Quads,
+  PlayerInfo,
+  PlayerType,
   RankedType,
-  Trios,
 } from "../core/game/Game";
 import { maps } from "../core/game/Maps.gen";
-import { getMaxTeamSize } from "../core/game/TeamAssignment";
+import {
+  assignTeamsLobbyPreview,
+  resolveTeamsList,
+} from "../core/game/TeamAssignment";
 import {
   ClientID,
   ClientMessage,
@@ -44,6 +46,7 @@ import {
   ServerStartGameMessage,
   ServerTurnMessage,
   StampedIntent,
+  TeamCountConfig,
   Tribe,
   Turn,
 } from "../core/Schemas";
@@ -1038,68 +1041,86 @@ export class GameServer {
   private convertClanOverflowToSpectators(): void {
     if (
       this.gameConfig.gameMode !== GameMode.Team ||
+      this.gameConfig.playerTeams === undefined ||
       this.gameConfig.playerTeams === HumansVsNations ||
       this.matchmakingTeams !== undefined ||
-      this.gameConfig.rankedType !== undefined
+      this.gameConfig.rankedType !== undefined ||
+      this.gameConfig.disableClanTags === true ||
+      this.gameConfig.anonymizeNames === true
     ) {
       return;
     }
-    const players = this.clients
-      .players()
-      .filter((c) => this.matchmakingTeamIndex(c) === undefined);
-    const maxTeamSize = this.resolveMaxTeamSize(players.length);
-    if (maxTeamSize === undefined || maxTeamSize < 1) return;
-
-    const clanMap = new Map<string, Client[]>();
-    for (const client of players) {
-      if (!client.clanTag) continue;
-      let clanList = clanMap.get(client.clanTag);
-      if (!clanList) {
-        clanList = [];
-        clanMap.set(client.clanTag, clanList);
-      }
-      clanList.push(client);
-    }
-
+    const playerTeams = this.gameConfig.playerTeams;
+    const nationCount = this.resolveDefaultNationCount();
     const convertedClientIDs = new Set<ClientID>();
-    for (const members of clanMap.values()) {
-      if (members.length > maxTeamSize) {
-        for (let i = maxTeamSize; i < members.length; i++) {
-          members[i].spectator = true;
-          convertedClientIDs.add(members[i].clientID);
-          this.log.info("Converted clan overflow player to spectator", {
-            clientID: members[i].clientID,
-            clanTag: members[i].clanTag,
-            maxTeamSize,
-          });
-        }
+    let kickedClients = this.findClanOverflowKicks(playerTeams, nationCount);
+    while (kickedClients.length > 0) {
+      for (const client of kickedClients) {
+        client.spectator = true;
+        convertedClientIDs.add(client.clientID);
+        this.log.info("Converted clan overflow player to spectator", {
+          clientID: client.clientID,
+          clanTag: client.clanTag,
+        });
       }
+      kickedClients = this.findClanOverflowKicks(playerTeams, nationCount);
     }
-
     if (convertedClientIDs.size > 0) {
       this.intents = this.intents.filter(
-        (intent) => !convertedClientIDs.has(intent.clientID),
+        (i) => !convertedClientIDs.has(i.clientID),
       );
     }
   }
 
-  private resolveMaxTeamSize(numPlayers: number): number | undefined {
-    const pt = this.gameConfig.playerTeams;
-    if (pt === Duos) return 2;
-    if (pt === Trios) return 3;
-    if (pt === Quads) return 4;
-    if (typeof pt === "number") {
-      const numTeams = Math.max(2, pt);
-      let nationCount = 0;
-      if (typeof this.gameConfig.nations === "number") {
-        nationCount = this.gameConfig.nations;
-      } else if (this.gameConfig.nations === "default") {
-        const mapInfo = maps.find((m) => m.type === this.gameConfig.gameMap);
-        nationCount = mapInfo?.defaultNationCount ?? 0;
-      }
-      return getMaxTeamSize(numPlayers + nationCount, numTeams);
+  private resolveDefaultNationCount(): number {
+    if (typeof this.gameConfig.nations === "number") {
+      return this.gameConfig.nations;
     }
-    return undefined;
+    if (this.gameConfig.nations === "default") {
+      const mapInfo = maps.find((m) => m.type === this.gameConfig.gameMap);
+      return mapInfo?.defaultNationCount ?? 0;
+    }
+    return 0;
+  }
+
+  private findClanOverflowKicks(
+    playerTeams: TeamCountConfig,
+    nationCount: number,
+  ): Client[] {
+    const playingClients = this.clients
+      .players()
+      .filter((c) => this.matchmakingTeamIndex(c) === undefined);
+    const totalPlayers = playingClients.length + nationCount;
+    let teams;
+    try {
+      teams = resolveTeamsList(playerTeams, totalPlayers);
+    } catch {
+      return [];
+    }
+    const playerInfos = playingClients.map(
+      (c) =>
+        new PlayerInfo(
+          c.username,
+          PlayerType.Human,
+          c.clientID,
+          c.clientID,
+          false,
+          c.clanTag ?? null,
+        ),
+    );
+    const preview = assignTeamsLobbyPreview(
+      playerInfos,
+      teams,
+      playerTeams,
+      nationCount,
+    );
+    const kickedIDs = new Set<ClientID>();
+    for (const [info, assignment] of preview.entries()) {
+      if (assignment === "kicked" && info.clanTag && info.clientID !== null) {
+        kickedIDs.add(info.clientID);
+      }
+    }
+    return playingClients.filter((c) => kickedIDs.has(c.clientID));
   }
 
   // ONE definition of who the allowlist admits, shared by every path that can

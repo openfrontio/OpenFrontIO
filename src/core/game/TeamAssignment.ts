@@ -1,7 +1,16 @@
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, TeamCountConfig } from "../Schemas";
 import { simpleHash } from "../Util";
-import { Duos, PlayerInfo, PlayerType, Quads, Team, Trios } from "./Game";
+import {
+  ColoredTeams,
+  Duos,
+  HumansVsNations,
+  PlayerInfo,
+  PlayerType,
+  Quads,
+  Team,
+  Trios,
+} from "./Game";
 
 export function assignTeams(
   players: PlayerInfo[],
@@ -171,4 +180,37 @@ export function assignTeamsLobbyPreview(
 
 export function getMaxTeamSize(numPlayers: number, numTeams: number): number {
   return Math.ceil(numPlayers / numTeams);
+}
+
+export function resolveTeamsList(
+  config: TeamCountConfig,
+  totalPlayers: number,
+): Team[] {
+  if (config === HumansVsNations) {
+    return [ColoredTeams.Humans, ColoredTeams.Nations];
+  }
+  let numTeams: number;
+  if (typeof config !== "number") {
+    const divisor =
+      config === Duos ? 2 : config === Trios ? 3 : config === Quads ? 4 : 0;
+    if (divisor === 0) {
+      throw new Error(`Unknown TeamCountConfig ${config}`);
+    }
+    numTeams = Math.ceil(totalPlayers / divisor);
+  } else {
+    numTeams = config;
+  }
+  if (numTeams < 2) {
+    throw new Error(`Too few teams: ${numTeams}`);
+  }
+  if (numTeams < 8) {
+    const teams = [ColoredTeams.Red, ColoredTeams.Blue];
+    if (numTeams >= 3) teams.push(ColoredTeams.Yellow);
+    if (numTeams >= 4) teams.push(ColoredTeams.Green);
+    if (numTeams >= 5) teams.push(ColoredTeams.Purple);
+    if (numTeams >= 6) teams.push(ColoredTeams.Orange);
+    if (numTeams >= 7) teams.push(ColoredTeams.Teal);
+    return teams;
+  }
+  return Array.from({ length: numTeams }, (_, i) => `Team ${i + 1}`);
 }
