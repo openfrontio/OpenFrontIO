@@ -19,7 +19,6 @@ export interface ThemeSettings {
   teamColors: Record<string, string>;
   humanColors: string[];
   nationColors: string[];
-  botColors: string[];
   /** Used when the primary palettes are exhausted. */
   fallbackColors: string[];
   /** Border = territory color darkened by this absolute amount. */
