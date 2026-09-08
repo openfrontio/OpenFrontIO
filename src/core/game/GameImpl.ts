@@ -932,32 +932,35 @@ export class GameImpl implements Game {
     return this._winner;
   }
 
+  private isEligibleForTeamWin(
+    p: Player,
+    team: string,
+    threshold: number,
+  ): boolean {
+    if (p.team() !== team || p.clientID() === null || !p.hasSpawned()) {
+      return false;
+    }
+    if (!p.isDisconnected()) return true;
+    const snap = p.disconnectSnapshot();
+    if (!snap || !snap.wasAlive) return true;
+    return (
+      snap.totalLand > 0 && 10 * snap.teamTiles >= threshold * snap.totalLand
+    );
+  }
+
   makeWinner(winner: string | Player): Winner | undefined {
     if (typeof winner === "string") {
+      const threshold = this._config.teamLandShareWinThresholdTenths();
       return [
         "team",
         winner,
         ...this.allPlayers()
-          .filter((p) => {
-            if (p.team() !== winner || p.clientID() === null) return false;
-            if (!p.hasSpawned()) return false;
-            if (!p.isDisconnected()) return true;
-            if (!p.wasAliveOnDisconnect()) return true;
-            return p.hasWinningLandShareOnDisconnect();
-          })
+          .filter((p) => this.isEligibleForTeamWin(p, winner, threshold))
           .map((p) => p.clientID()!),
       ];
-    } else {
-      const clientId = winner.clientID();
-      if (clientId === null) {
-        return ["nation", winner.name()];
-      }
-      return [
-        "player",
-        clientId,
-        // TODO: Assists (vote for peace)
-      ];
     }
+    const clientId = winner.clientID();
+    return clientId === null ? ["nation", winner.name()] : ["player", clientId];
   }
 
   teams(): Team[] {

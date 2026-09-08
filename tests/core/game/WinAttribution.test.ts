@@ -101,10 +101,15 @@ describe("Win Attribution Bug Fix", () => {
 
     // Teammate A dies first, then disconnects
     pA.relinquish(landTiles[0]);
-    pA.markDisconnected(true, 100, 40, 100);
+    pA.markDisconnected(true, {
+      currentTick: 100,
+      teamTiles: 40,
+      totalLand: 100,
+      wasAlive: false,
+    });
 
     expect(pA.isAlive()).toBe(false);
-    expect(pA.wasAliveOnDisconnect()).toBe(false);
+    expect(pA.disconnectSnapshot()?.wasAlive).toBe(false);
 
     const team = pA.team()!;
     const winner = game.makeWinner(team);
@@ -120,14 +125,18 @@ describe("Win Attribution Bug Fix", () => {
     pB.conquer(landTiles[1]);
 
     // Player A ragequits while alive when team has 40% land share
-    pA.markDisconnected(true, 50, 40, 100);
-    expect(pA.wasAliveOnDisconnect()).toBe(true);
-    expect(pA.hasWinningLandShareOnDisconnect()).toBe(false);
+    pA.markDisconnected(true, {
+      currentTick: 50,
+      teamTiles: 40,
+      totalLand: 100,
+      wasAlive: true,
+    });
+    expect(pA.disconnectSnapshot()?.wasAlive).toBe(true);
 
     // Later Player A's tile is eaten/conquered
     pA.relinquish(landTiles[0]);
     expect(pA.isAlive()).toBe(false);
-    expect(pA.wasAliveOnDisconnect()).toBe(true);
+    expect(pA.disconnectSnapshot()?.wasAlive).toBe(true);
 
     const team = pA.team()!;
     const winner = game.makeWinner(team);
@@ -159,9 +168,13 @@ describe("Win Attribution Bug Fix", () => {
     pB.conquer(landTiles[1]);
 
     // Player A leaves while alive after team achieved 75% land share
-    pA.markDisconnected(true, 150, 75, 100);
-    expect(pA.wasAliveOnDisconnect()).toBe(true);
-    expect(pA.hasWinningLandShareOnDisconnect()).toBe(true);
+    pA.markDisconnected(true, {
+      currentTick: 150,
+      teamTiles: 75,
+      totalLand: 100,
+      wasAlive: true,
+    });
+    expect(pA.disconnectSnapshot()?.wasAlive).toBe(true);
 
     const team = pA.team()!;
     const winner = game.makeWinner(team);
@@ -178,17 +191,20 @@ describe("Win Attribution Bug Fix", () => {
     pB.conquer(landTiles[1]);
 
     // Disconnect at 40%
-    pA.markDisconnected(true, 50, 40, 100);
+    pA.markDisconnected(true, {
+      currentTick: 50,
+      teamTiles: 40,
+      totalLand: 100,
+      wasAlive: true,
+    });
     expect(pA.isDisconnected()).toBe(true);
-    expect(pA.wasAliveOnDisconnect()).toBe(true);
+    expect(pA.disconnectSnapshot()?.wasAlive).toBe(true);
     expect(pA.disconnectedAtTick()).toBe(50);
 
     // Reconnect
     pA.markDisconnected(false);
     expect(pA.isDisconnected()).toBe(false);
-    expect(pA.wasAliveOnDisconnect()).toBe(false);
-    expect(pA.teamTilesOnDisconnect()).toBe(0);
-    expect(pA.totalLandOnDisconnect()).toBe(0);
+    expect(pA.disconnectSnapshot()).toBeNull();
     expect(pA.disconnectedAtTick()).toBeNull();
 
     const team = pA.team()!;
@@ -206,17 +222,25 @@ describe("Win Attribution Bug Fix", () => {
     pB.conquer(landTiles[1]);
 
     // Disconnect at 40%
-    pA.markDisconnected(true, 50, 40, 100);
-    expect(pA.wasAliveOnDisconnect()).toBe(true);
-    expect(pA.hasWinningLandShareOnDisconnect()).toBe(false);
+    pA.markDisconnected(true, {
+      currentTick: 50,
+      teamTiles: 40,
+      totalLand: 100,
+      wasAlive: true,
+    });
+    expect(pA.disconnectSnapshot()?.wasAlive).toBe(true);
 
     // Reconnect
     pA.markDisconnected(false);
 
     // Disconnect again later at 75%
-    pA.markDisconnected(true, 120, 75, 100);
-    expect(pA.wasAliveOnDisconnect()).toBe(true);
-    expect(pA.hasWinningLandShareOnDisconnect()).toBe(true);
+    pA.markDisconnected(true, {
+      currentTick: 120,
+      teamTiles: 75,
+      totalLand: 100,
+      wasAlive: true,
+    });
+    expect(pA.disconnectSnapshot()?.wasAlive).toBe(true);
 
     const team = pA.team()!;
     const winner = game.makeWinner(team);
@@ -233,16 +257,24 @@ describe("Win Attribution Bug Fix", () => {
     pB.conquer(landTiles[1]);
 
     // Disconnect at 75%
-    pA.markDisconnected(true, 50, 75, 100);
-    expect(pA.hasWinningLandShareOnDisconnect()).toBe(true);
+    pA.markDisconnected(true, {
+      currentTick: 50,
+      teamTiles: 75,
+      totalLand: 100,
+      wasAlive: true,
+    });
 
     // Reconnect
     pA.markDisconnected(false);
-    expect(pA.wasAliveOnDisconnect()).toBe(false);
+    expect(pA.disconnectSnapshot()).toBeNull();
 
     // Team lost ground, disconnect again at 50%
-    pA.markDisconnected(true, 120, 50, 100);
-    expect(pA.hasWinningLandShareOnDisconnect()).toBe(false);
+    pA.markDisconnected(true, {
+      currentTick: 120,
+      teamTiles: 50,
+      totalLand: 100,
+      wasAlive: true,
+    });
 
     const team = pA.team()!;
     const winner = game.makeWinner(team);
@@ -260,29 +292,52 @@ describe("Win Attribution Bug Fix", () => {
     exec.init(game, 42);
 
     expect(pA.isDisconnected()).toBe(true);
-    expect(pA.wasAliveOnDisconnect()).toBe(true);
-    expect(pA.teamTilesOnDisconnect()).toBeGreaterThan(0);
+    const snap = pA.disconnectSnapshot();
+    expect(snap).not.toBeNull();
+    expect(snap?.wasAlive).toBe(true);
+    expect(snap?.teamTiles).toBeGreaterThan(0);
   });
 
   test("Test 9: Integer land share precision and threshold evaluation", async () => {
-    const { game, pA } = await createTeamGame();
+    const { game, pA, pB, landTiles } = await createTeamGame();
+
+    pA.setSpawnTile(landTiles[0]);
+    pA.conquer(landTiles[0]);
+    pB.setSpawnTile(landTiles[1]);
+    pB.conquer(landTiles[1]);
+    const team = pA.team()!;
 
     // 699 out of 1000 tiles (69.9%) -> not winning
-    pA.markDisconnected(true, 10, 699, 1000);
-    expect(pA.hasWinningLandShareOnDisconnect()).toBe(false);
-    expect(pA.teamTilesOnDisconnect()).toBe(699);
-    expect(pA.totalLandOnDisconnect()).toBe(1000);
+    pA.markDisconnected(true, {
+      currentTick: 10,
+      teamTiles: 699,
+      totalLand: 1000,
+      wasAlive: true,
+    });
+    expect(pA.disconnectSnapshot()?.teamTiles).toBe(699);
+    expect(pA.disconnectSnapshot()?.totalLand).toBe(1000);
+    expect(game.makeWinner(team)?.slice(2)).not.toContain("clientA");
 
     // Reconnect and disconnect at exactly 700 / 1000 (70.0%) -> winning
     pA.markDisconnected(false);
-    pA.markDisconnected(true, 20, 700, 1000);
-    expect(pA.hasWinningLandShareOnDisconnect()).toBe(true);
-    expect(pA.teamTilesOnDisconnect()).toBe(700);
+    pA.markDisconnected(true, {
+      currentTick: 20,
+      teamTiles: 700,
+      totalLand: 1000,
+      wasAlive: true,
+    });
+    expect(pA.disconnectSnapshot()?.teamTiles).toBe(700);
+    expect(game.makeWinner(team)?.slice(2)).toContain("clientA");
 
     // Reconnect and disconnect at 7 / 10 -> winning
     pA.markDisconnected(false);
-    pA.markDisconnected(true, 30, 7, 10);
-    expect(pA.hasWinningLandShareOnDisconnect()).toBe(true);
+    pA.markDisconnected(true, {
+      currentTick: 30,
+      teamTiles: 7,
+      totalLand: 10,
+      wasAlive: true,
+    });
+    expect(game.makeWinner(team)?.slice(2)).toContain("clientA");
     expect(game.config().teamLandShareWinThresholdTenths()).toBe(7);
   });
 });

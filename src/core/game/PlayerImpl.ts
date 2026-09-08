@@ -18,6 +18,7 @@ import {
   BuildableUnit,
   Cell,
   ColoredTeams,
+  DisconnectSnapshot,
   Embargo,
   EmojiMessage,
   GameMode,
@@ -177,10 +178,7 @@ export class PlayerImpl implements Player {
 
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
-  private _disconnectedAtTick: number | null = null;
-  private _wasAliveOnDisconnect = false;
-  private _teamTilesOnDisconnect = 0;
-  private _totalLandOnDisconnect = 0;
+  private _disconnectSnapshot: DisconnectSnapshot | null = null;
 
   /**
    * Last PlayerUpdate emitted for this player on the worker→main channel.
@@ -1798,49 +1796,30 @@ export class PlayerImpl implements Player {
 
   markDisconnected(
     isDisconnected: boolean,
-    currentTick?: number,
-    teamTiles?: number,
-    totalLand?: number,
+    snapshot?: DisconnectSnapshot,
   ): void {
     this._isDisconnected = isDisconnected;
     if (isDisconnected) {
-      if (this._disconnectedAtTick === null) {
-        this._disconnectedAtTick = currentTick ?? 0;
-        this._wasAliveOnDisconnect = this.isAlive();
-        this._teamTilesOnDisconnect = teamTiles ?? 0;
-        this._totalLandOnDisconnect = totalLand ?? 0;
+      if (this._disconnectSnapshot === null) {
+        const team = this.team();
+        this._disconnectSnapshot = snapshot ?? {
+          currentTick: this.mg.ticks(),
+          teamTiles: team ? this.mg.teamTilesOwned(team) : 0,
+          totalLand: this.mg.totalLandTiles(),
+          wasAlive: this.isAlive(),
+        };
       }
     } else {
-      this._disconnectedAtTick = null;
-      this._wasAliveOnDisconnect = false;
-      this._teamTilesOnDisconnect = 0;
-      this._totalLandOnDisconnect = 0;
+      this._disconnectSnapshot = null;
     }
   }
 
+  disconnectSnapshot(): DisconnectSnapshot | null {
+    return this._disconnectSnapshot;
+  }
+
   disconnectedAtTick(): number | null {
-    return this._disconnectedAtTick;
-  }
-
-  wasAliveOnDisconnect(): boolean {
-    return this._wasAliveOnDisconnect;
-  }
-
-  teamTilesOnDisconnect(): number {
-    return this._teamTilesOnDisconnect;
-  }
-
-  totalLandOnDisconnect(): number {
-    return this._totalLandOnDisconnect;
-  }
-
-  hasWinningLandShareOnDisconnect(): boolean {
-    const thresholdTenths = this.mg.config().teamLandShareWinThresholdTenths();
-    return (
-      this._totalLandOnDisconnect > 0 &&
-      10 * this._teamTilesOnDisconnect >=
-        thresholdTenths * this._totalLandOnDisconnect
-    );
+    return this._disconnectSnapshot?.currentTick ?? null;
   }
 
   hash(): number {

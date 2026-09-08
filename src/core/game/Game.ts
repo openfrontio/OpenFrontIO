@@ -577,6 +577,13 @@ export interface Embargo {
   target: Player;
 }
 
+export interface DisconnectSnapshot {
+  currentTick: number;
+  teamTiles: number;
+  totalLand: number;
+  wasAlive: boolean;
+}
+
 export interface Player {
   // Basic Info
   smallID(): number;
@@ -611,14 +618,9 @@ export interface Player {
   isDisconnected(): boolean;
   markDisconnected(
     isDisconnected: boolean,
-    currentTick?: number,
-    teamTiles?: number,
-    totalLand?: number,
+    snapshot?: DisconnectSnapshot,
   ): void;
-  wasAliveOnDisconnect(): boolean;
-  teamTilesOnDisconnect(): number;
-  totalLandOnDisconnect(): number;
-  hasWinningLandShareOnDisconnect(): boolean;
+  disconnectSnapshot(): DisconnectSnapshot | null;
   disconnectedAtTick(): number | null;
 
   hasSpawned(): boolean;
