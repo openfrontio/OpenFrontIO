@@ -17,6 +17,7 @@ import {
   LobbyAccentSchema,
   LobbyLabelSchema,
 } from "../core/Schemas";
+import { readGameRecord } from "./Archive";
 import type { GameManager } from "./GameManager";
 import { ServerEnv } from "./ServerEnv";
 
@@ -272,6 +273,28 @@ export function registerAdminBotRoutes(opts: {
       liveStats: game.liveStats(),
     });
   });
+
+  // The FINAL archived game record (placements, tiles, kills, winner) — the
+  // authoritative post-game scoring input. Unlike /roster and /stats, which read
+  // the live in-memory game and 404 once it ends, this reads the archive, so it
+  // resolves after the game is over (which is exactly when a scoring caller needs
+  // it). Key-gated like every route here: it is the authenticated equivalent of
+  // the unauthenticated public /public/game/:id record, for callers that cannot
+  // take the public path.
+  app.get(
+    "/api/adminbot/game/:id/record",
+    requireAdminBotKey,
+    async (req, res) => {
+      const id = req.params.id as string;
+      if (!ownsGame(id, res)) return;
+
+      const record = await readGameRecord(id);
+      if (record === null) {
+        return res.status(404).json({ error: "Game record not found" });
+      }
+      res.json(record);
+    },
+  );
 
   // Send an intent. Honors the lobby-management intents; everything else 400.
   // Returns the resulting team list so the caller can assert what landed: a
