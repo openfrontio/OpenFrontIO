@@ -465,10 +465,11 @@ class Client {
         }
       });
     }
-    // Help page's "In-game tutorial" button: back to the play page (so a
-    // username problem is visible), then a default solo game with the guide on.
+    // Tutorial entry points (play-page card, help page): back to the play page
+    // if needed (so a username problem is visible), then a default solo game
+    // with the guide on.
     document.addEventListener("start-tutorial", () => {
-      hlpModal?.close();
+      if (hlpModal?.isOpen()) hlpModal.close();
       if (this.usernameInput && !this.usernameInput.canPlay()) return;
       void (
         document.querySelector("single-player-modal") as SinglePlayerModal

@@ -399,11 +399,10 @@ export class GameModeSelector extends LitElement {
     )?.open();
   };
 
+  // Handled in Main, which also serves the help page's tutorial button.
   private startTutorial = () => {
     if (!this.validateUsername()) return;
-    void (
-      document.querySelector("single-player-modal") as SinglePlayerModal
-    )?.startTutorial();
+    document.dispatchEvent(new CustomEvent("start-tutorial"));
   };
 
   private openHostLobby = () => {
