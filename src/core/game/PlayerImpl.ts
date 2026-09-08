@@ -1426,7 +1426,7 @@ export class PlayerImpl implements Player {
     if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
-    if (unitType === UnitType.MIRV && this.mg.mirvCooldownRemaining() > 0) {
+    if (unitType === UnitType.MIRV && this.mg.mirvCooldownRemaining(this) > 0) {
       return false;
     }
     const cost = knownCost ?? this.mg.unitInfo(unitType).cost(this.mg, this);
@@ -1528,7 +1528,8 @@ export class PlayerImpl implements Player {
         }
       }
 
-      const mirvCooldown = u === UnitType.MIRV ? mg.mirvCooldownRemaining() : 0;
+      const mirvCooldown =
+        u === UnitType.MIRV ? mg.mirvCooldownRemaining(this) : 0;
 
       result[i] = {
         type: u,

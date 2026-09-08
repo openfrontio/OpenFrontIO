@@ -120,6 +120,7 @@ export class GameImpl implements Game {
   /** Tiles from nuke blast radii this tick, drained by the renderer. */
   private _nukeImpactQueue: TileRef[] = [];
   private _lastMirvLaunchTick: Tick | null = null;
+  private _lastMirvLauncher: Player | null = null;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -1310,11 +1311,15 @@ export class GameImpl implements Game {
   stats(): Stats {
     return this._stats;
   }
-  recordMirvLaunch(): void {
+  recordMirvLaunch(launcher: Player): void {
     this._lastMirvLaunchTick = this._ticks;
+    this._lastMirvLauncher = launcher;
   }
-  mirvCooldownRemaining(): Tick {
-    if (this._lastMirvLaunchTick === null) {
+  mirvCooldownRemaining(player: Player): Tick {
+    if (
+      this._lastMirvLaunchTick === null ||
+      this._lastMirvLauncher === player
+    ) {
       return 0;
     }
     return Math.max(

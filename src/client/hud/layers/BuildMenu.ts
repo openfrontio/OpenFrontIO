@@ -24,7 +24,7 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
-import { renderNumber } from "../../Utils";
+import { renderDuration, renderNumber } from "../../Utils";
 import { GameView } from "../../view";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
@@ -473,7 +473,7 @@ export class BuildMenu extends LitElement implements Controller {
                     ${cooldownSeconds > 0
                       ? html`<div class="build-count-chip" translate="no">
                           <span class="build-count build-cooldown"
-                            >🕐 ${cooldownSeconds}s</span
+                            >🕐 ${renderDuration(cooldownSeconds)}</span
                           >
                         </div>`
                       : ""}

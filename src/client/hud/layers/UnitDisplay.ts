@@ -12,7 +12,7 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
-import { renderNumber, translateText } from "../../Utils";
+import { renderDuration, renderNumber, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
   atomBombIcon,
@@ -323,7 +323,7 @@ export class UnitDisplay extends LitElement implements Controller {
                 style="background: conic-gradient(rgba(15, 23, 42, 0.8) ${cooldownPercent}%, rgba(15, 23, 42, 0.2) 0)"
                 translate="no"
               >
-                ${Math.ceil(cooldown / 10)}s
+                ${renderDuration(Math.ceil(cooldown / 10))}
               </div>`
             : null}
         </div>

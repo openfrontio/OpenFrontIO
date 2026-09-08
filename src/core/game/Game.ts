@@ -895,10 +895,11 @@ export interface Game extends GameMap {
   numTilesWithFallout(): number;
   stats(): Stats;
 
-  // MIRV launches share a global cooldown: after any player launches one, no
-  // player can launch another until it expires.
-  recordMirvLaunch(): void;
-  mirvCooldownRemaining(): Tick;
+  // MIRV launches share a global cooldown: after a player launches one, no
+  // OTHER player can launch until it expires. The last launcher is exempt
+  // and each of their launches restarts the timer for everyone else.
+  recordMirvLaunch(launcher: Player): void;
+  mirvCooldownRemaining(player: Player): Tick;
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
