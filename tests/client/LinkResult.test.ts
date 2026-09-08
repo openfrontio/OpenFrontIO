@@ -39,6 +39,7 @@ describe("consumeLinkResult", () => {
     ],
     ["steam_has_progress", "steam_link_modal.reason_steam_has_progress"],
     ["error", "account_modal.link_google_error"],
+    ["steam_error", "account_modal.link_steam_error"],
   ])("surfaces %s", (link, expectedKey) => {
     setHash(`#modal=account&link=${link}`);
 
@@ -58,6 +59,20 @@ describe("consumeLinkResult", () => {
 
     expect(alertMock).toHaveBeenCalledWith(
       "steam_link_modal.reason_steam_has_progress",
+    );
+  });
+
+  // The handler cannot tell which provider a returning redirect came from, so
+  // the generic failure has to be two values. Sharing one would tell a player
+  // whose Steam link failed that their GOOGLE account could not be linked.
+  it("reports a Steam failure as Steam, not as Google", () => {
+    setHash("#modal=account&link=steam_error");
+
+    consumeLinkResult({ modal: "account", link: "steam_error" });
+
+    expect(alertMock).toHaveBeenCalledWith("account_modal.link_steam_error");
+    expect(alertMock).not.toHaveBeenCalledWith(
+      "account_modal.link_google_error",
     );
   });
 

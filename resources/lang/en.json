@@ -47,6 +47,7 @@
     "link_google_on_web": "Link Google on the OpenFront website",
     "link_google_success": "Google account linked.",
     "link_steam": "Link Steam Account",
+    "link_steam_error": "Couldn't link your Steam account. Please make sure you're signed in and try again.",
     "link_steam_failed": "Couldn't start Steam linking. Please try again.",
     "link_steam_permanent": "Linking Steam is permanent. Contact support to change it.",
     "link_steam_success": "Your Steam account is now linked.",
