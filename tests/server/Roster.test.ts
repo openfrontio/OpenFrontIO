@@ -103,6 +103,25 @@ describe("Roster", () => {
     expect(roster.get(cid("p1"))).toBe(p1);
   });
 
+  it("does not delete reconnectable mapping if it belongs to a newer client session", () => {
+    const roster = new Roster();
+    const oldSession = makeClient({
+      clientID: cid("old"),
+      persistentID: "p1-pid",
+    });
+    roster.add(oldSession);
+    const newSession = makeClient({
+      clientID: cid("new"),
+      persistentID: "p1-pid",
+    });
+    roster.add(newSession);
+
+    // Stale disconnect from old session
+    roster.forgetReconnect(oldSession);
+
+    expect(roster.byPersistentId("p1-pid")).toBe(newSession);
+  });
+
   it("bans a kicked account whether or not it is connected", () => {
     const roster = new Roster();
     const p1 = makeClient({ clientID: cid("p1"), persistentID: "p1-pid" });

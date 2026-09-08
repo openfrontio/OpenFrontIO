@@ -6,6 +6,7 @@ import {
   decodeClientMessage,
   encodeServerMessage,
 } from "../../src/core/ZbinWire";
+import { testGameConfig } from "../util/Wire";
 
 // Transport's reconnect policy against a scripted WebSocket: which close
 // codes retry and which end the session, how many sockets get opened, how
@@ -553,6 +554,68 @@ describe("Transport reconnect policy", () => {
 
       expect(FakeWebSocket.instances).toHaveLength(2);
       expect(showInGameConfirm).not.toHaveBeenCalled();
+    });
+
+    it("preserves FIFO intent ordering across connection and does not send intents before handshake", async () => {
+      const { transport, eventBus } = makeTransport();
+      (transport as any).lobbyConfig.turnstileToken = "dummy-turnstile";
+      let onconnectCalled = false;
+      transport.connect(
+        () => {
+          onconnectCalled = true;
+          void transport.joinGame();
+        },
+        () => {},
+      );
+
+      const ws = FakeWebSocket.instances[0];
+      expect(ws.readyState).toBe(FakeWebSocket.CONNECTING);
+
+      // Intent A sent while CONNECTING
+      eventBus.emit(new SendSpectateEvent(true));
+
+      // Socket opens, onconnect runs (sends join)
+      ws.serverOpen();
+      expect(onconnectCalled).toBe(true);
+
+      // Await token fetch promise so join message is sent
+      await Promise.resolve();
+
+      // Intent B sent while socket is OPEN, but before server handshake frame
+      eventBus.emit(new SendSpectateEvent(false));
+
+      // Before handshake, only join message should have been sent
+      const sentBeforeHandshake = ws.sent.map((f) =>
+        decodeClientMessage(f, undefined),
+      );
+      expect(sentBeforeHandshake.map((m) => m.type)).toEqual(["join"]);
+
+      // Server acknowledges with start
+      ws.serverSend({
+        type: "start",
+        turns: [],
+        lobbyCreatedAt: 1_700_000_000_000,
+        myClientID: "c0000001",
+        gameStartInfo: {
+          gameID: "game1234",
+          lobbyCreatedAt: 1_700_000_000_000,
+          config: testGameConfig(),
+          players: [],
+          tribes: [],
+        },
+      });
+
+      // After handshake, intent A and intent B are flushed in strict FIFO order
+      const sentAfterHandshake = ws.sent.map((f) =>
+        decodeClientMessage(f, undefined),
+      );
+      expect(sentAfterHandshake.map((m) => m.type)).toEqual([
+        "join",
+        "spectate",
+        "spectate",
+      ]);
+      expect((sentAfterHandshake[1] as any).spectator).toBe(true);
+      expect((sentAfterHandshake[2] as any).spectator).toBe(false);
     });
   });
 });
