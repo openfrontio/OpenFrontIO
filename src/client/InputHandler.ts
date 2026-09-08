@@ -883,7 +883,9 @@ export class InputHandler {
   }
 
   private onScroll(event: WheelEvent) {
-    if (!event.shiftKey) {
+    if (event.shiftKey || event.altKey){
+      return; // Shift/Alt scroll is handled separately
+    }
       const realCtrl =
         this.activeKeys.has("ControlLeft") ||
         this.activeKeys.has("ControlRight");
@@ -909,7 +911,6 @@ export class InputHandler {
       if (Math.abs(event.deltaY) < 2) return;
       this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
     }
-  }
 
   /**
    * `scale` is cumulative since gesturestart, so the per-event ratio is
