@@ -14,7 +14,7 @@ import {
 } from "../../core/game/Game";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
-import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
+import { ClientID, ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
 import { Theme, themeProvider } from "../theme/ThemeProvider";
 import {
@@ -51,6 +51,7 @@ export class LobbyTeamView extends LitElement {
   @state() private showTeamColors: boolean = false;
   private _clanUpdateTimeout: number | null = null;
   private _teamClanTags: Map<Team, string | null> = new Map();
+  private _viewerFriends: ReadonlySet<ClientID> = new Set();
 
   // Spectators are in the lobby roster (flagged) but hold no seat and never
   // reach the simulation — so the count header, the team preview and both
@@ -76,6 +77,15 @@ export class LobbyTeamView extends LitElement {
   }
 
   willUpdate(changedProperties: Map<string, any>) {
+    if (
+      changedProperties.has("clients") ||
+      changedProperties.has("currentClientID")
+    ) {
+      const self = this.currentClientID
+        ? this.clients.find((c) => c.clientID === this.currentClientID)
+        : undefined;
+      this._viewerFriends = new Set(self?.friends ?? []);
+    }
     // Recompute team preview when relevant properties change
     // clients is updated from WebSocket lobby_info events
     if (
@@ -202,6 +212,7 @@ export class LobbyTeamView extends LitElement {
                 : "bg-gray-700/70 border-transparent"}"
             >
               ${displayName} ${this.renderVerifiedBadge(client)}
+              ${this.renderFriendBadge(client)}
             </div>`;
           },
         )}
@@ -264,7 +275,8 @@ export class LobbyTeamView extends LitElement {
             : ""}"
         >
           <span class="text-white"
-            >${displayName} ${this.renderVerifiedBadge(client)}</span
+            >${displayName} ${this.renderVerifiedBadge(client)}
+            ${this.renderFriendBadge(client)}</span
           >
           ${this.renderRevealToggle(client.clientID)}
           ${client.clientID === this.lobbyCreatorClientID
@@ -341,7 +353,8 @@ export class LobbyTeamView extends LitElement {
                       : "bg-gray-700/70 border-transparent"}"
                   >
                     <span class="truncate text-white"
-                      >${displayName} ${this.renderVerifiedBadge(p)}</span
+                      >${displayName} ${this.renderVerifiedBadge(p)}
+                      ${this.renderFriendBadge(p)}</span
                     >
                     ${this.renderRevealToggle(p.clientID)}
                     ${p.clientID === this.lobbyCreatorClientID
@@ -555,6 +568,29 @@ export class LobbyTeamView extends LitElement {
         fill="none"
         stroke-linecap="round"
         stroke-linejoin="round"
+      ></path>
+    </svg>`;
+  }
+
+  // A mark for players on the viewer's friends list
+  private renderFriendBadge(client: ClientInfo) {
+    if (!this._viewerFriends.has(client.clientID)) return html``;
+    if (this.isCurrentPlayer(client)) return html``;
+    if (this.userSettings.anonymousNames()) return html``;
+    return html`<svg
+      viewBox="0 0 24 24"
+      class="lobby-friend-badge inline-block w-4 h-4 align-[-3px] text-emerald-400 shrink-0"
+      fill="currentColor"
+      aria-label=${translateText("friends.lobby_marker")}
+    >
+      <title>${translateText("friends.lobby_marker")}</title>
+      <circle cx="9" cy="8" r="3.6"></circle>
+      <path
+        d="M9 13.2c-3.4 0-6.3 1.7-6.3 3.9V20h12.6v-2.9c0-2.2-2.9-3.9-6.3-3.9z"
+      ></path>
+      <circle cx="17.4" cy="8.6" r="2.9"></circle>
+      <path
+        d="M17.4 13.4c-.7 0-1.3.06-1.9.18 1.2 1 1.9 2.24 1.9 3.52V20h5.4v-2.6c0-1.9-2.4-4-5.4-4z"
       ></path>
     </svg>`;
   }

@@ -695,6 +695,7 @@
     "incoming": "Incoming",
     "load_failed": "Failed to load friends",
     "load_more": "Load More",
+    "lobby_marker": "On your friends list",
     "no_friends": "You haven't added any friends yet.",
     "outgoing": "Outgoing",
     "pending_requests": "Pending Requests",
