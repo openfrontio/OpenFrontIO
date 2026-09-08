@@ -13,6 +13,7 @@ import {
   maps,
   UnitType,
 } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
@@ -557,7 +558,24 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   protected onClose(): void {
-    // Reset all transient form state to ensure clean slate
+    this.resetOptions();
+  }
+
+  /**
+   * Starts a solo game on the default settings without opening the modal,
+   * with the in-game tutorial switched back on (the play page's Tutorial
+   * card for new players).
+   */
+  public async startTutorial(): Promise<void> {
+    this.resetOptions();
+    // A nation count of 0 means "nations disabled"; wait for the real one.
+    await this.loadNationCount();
+    new UserSettings().setTutorialDismissed(false);
+    await this.startGame();
+  }
+
+  // Reset all transient form state to ensure clean slate
+  private resetOptions(): void {
     this.selectedMap = DEFAULT_OPTIONS.selectedMap;
     this.selectedDifficulty = DEFAULT_OPTIONS.selectedDifficulty;
     this.gameMode = DEFAULT_OPTIONS.gameMode;

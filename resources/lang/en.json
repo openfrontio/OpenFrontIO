@@ -984,6 +984,9 @@
     "icon_embargo": "Dollar stop sign - Embargo. This player has stopped trading with you automatically or manually.",
     "icon_request": "Envelope - Alliance request. This player has sent you an alliance request.",
     "icon_traitor": "Broken shield - Traitor. This player attacked an ally.",
+    "in_game_tutorial": "In-Game Tutorial",
+    "in_game_tutorial_desc": "Learn by playing: a solo game with a step-by-step guide that walks you through spawning, attacking, building and nukes.",
+    "in_game_tutorial_start": "Start tutorial",
     "info_alliance": "Send an alliance request to the player. Allies can share resources and troops, but can't attack each other.",
     "info_ally_desc": "When you ally with a player, the following new icons become available:",
     "info_ally_panel": "Ally info panel",
@@ -1209,6 +1212,7 @@
     "terms_of_service": "Terms of Service",
     "title": "OpenFront (ALPHA)",
     "troubleshooting": "Troubleshooting",
+    "tutorial": "Tutorial",
     "user_avatar_alt": "{username}'s avatar",
     "wiki": "Wiki"
   },

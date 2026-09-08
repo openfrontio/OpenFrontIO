@@ -376,24 +376,30 @@ export class ControlPanel extends LitElement implements Controller {
           >
         </div>
         <div
-          class="absolute inset-0 flex items-center justify-center gap-0.5 pointer-events-none"
+          class="absolute inset-0 flex items-center justify-center pointer-events-none"
           translate="no"
         >
-          <img
-            src=${soldierIcon}
-            alt=""
-            aria-hidden="true"
-            width="12"
-            height="12"
-            class="brightness-0 invert drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-          />
-          <span
-            class="text-[10px] font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${this
-              ._troopRateIsIncreasing
-              ? "text-green-400"
-              : "text-orange-400"}"
-            >+${renderTroops(this.troopRate)}/s</span
+          <div
+            class="flex items-center gap-0.5 px-1 ${this.tutorialHighlightClass(
+              "troop_rate",
+            )}"
           >
+            <img
+              src=${soldierIcon}
+              alt=""
+              aria-hidden="true"
+              width="12"
+              height="12"
+              class="brightness-0 invert drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+            />
+            <span
+              class="text-[10px] font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${this
+                ._troopRateIsIncreasing
+                ? "text-green-400"
+                : "text-orange-400"}"
+              >+${renderTroops(this.troopRate)}/s</span
+            >
+          </div>
         </div>
       </div>
     `;
@@ -590,7 +596,7 @@ export class ControlPanel extends LitElement implements Controller {
         <div
           class="w-[40%] shrink-0 flex items-center ${this.tutorialHighlightClass(
             "troops",
-          )} ${this.tutorialHighlightClass("troop_rate")}"
+          )}"
         >
           ${this.renderMobileTroopBar()}
         </div>
