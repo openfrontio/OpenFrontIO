@@ -392,6 +392,8 @@ func generateMapsTS(infos []mapInfo) (string, error) {
 	b.WriteString("  customTribes?: CustomTribe[];\n")
 	b.WriteString("  /** Map layers rendered between terrain and territory. */\n")
 	b.WriteString("  layers?: MapLayer[];\n")
+	b.WriteString("  /** Default nation count defined in the map's manifest/info. */\n")
+	b.WriteString("  defaultNationCount: number;\n")
 	b.WriteString("}\n\n")
 	b.WriteString("export interface CustomTribe {\n")
 	b.WriteString("  name: string;\n")
@@ -438,6 +440,7 @@ func generateMapsTS(infos []mapInfo) (string, error) {
 		b.WriteString(fmt.Sprintf("    ffaFrequency: %d,\n", ffaFreq))
 		b.WriteString(fmt.Sprintf("    teamFrequency: %d,\n", teamFreq))
 		b.WriteString(fmt.Sprintf("    specialFrequency: %d,\n", specialFreq))
+		b.WriteString(fmt.Sprintf("    defaultNationCount: %d,\n", len(info.Nations)))
 		if info.FeaturedRank > 0 {
 			b.WriteString(fmt.Sprintf("    featuredRank: %d,\n", info.FeaturedRank))
 		}
