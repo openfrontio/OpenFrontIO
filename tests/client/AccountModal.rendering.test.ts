@@ -423,8 +423,11 @@ describe("AccountModal — rendering", () => {
 
     const text = modal.textContent ?? "";
     // The linked state, not the CTA.
-    expect(text).toContain("account_modal.linked_to_steam_persona");
-    expect(text).not.toContain("account_modal.link_steam_failed");
+    expect(text).toContain("account_modal.linked_to_steam");
+    // The attached account is NAMED, not just reported as linked: a wrong link
+    // cannot be undone by the player, so noticing it immediately is what makes
+    // a support fix possible.
+    expect(modal.querySelector("steam-user-header")).toBeTruthy();
     // The explanation for why there is no unlink button stays visible.
     expect(text).toContain("account_modal.link_steam_permanent");
     // There is no unlink affordance anywhere, by key or by label.
@@ -488,5 +491,19 @@ describe("AccountModal — rendering", () => {
     const text = modal.textContent ?? "";
     expect(text).toContain("main.login_steam");
     expect(text).toContain("main.login_discord");
+  });
+
+  // Web sign-in never creates an account, so this is an ordinary outcome and
+  // the message has to name the two routes that do work.
+  it("explains that no account uses this Steam account yet", async () => {
+    (modal as unknown as { userMeResponse: unknown }).userMeResponse = null;
+    (modal as unknown as { isLoadingUser: boolean }).isLoadingUser = false;
+    (modal as unknown as { loginError: string }).loginError = "no_account";
+    modal.requestUpdate();
+    await modal.updateComplete;
+
+    const text = modal.textContent ?? "";
+    expect(text).toContain("account_modal.login_no_account");
+    expect(text).not.toContain("account_modal.login_email_exists");
   });
 });

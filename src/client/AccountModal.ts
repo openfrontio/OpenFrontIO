@@ -49,6 +49,7 @@ const LOGIN_ERROR_KEYS: Record<LoginResult, string> = {
   email_exists: "account_modal.login_email_exists",
   deleted: "account_modal.login_deleted",
   error: "account_modal.login_error",
+  no_account: "account_modal.login_no_account",
 };
 
 @customElement("account-modal")
@@ -566,18 +567,19 @@ export class AccountModal extends BaseModal {
     if (isDesktopShell()) return html``;
     const steam = this.userMeResponse?.user?.steam;
     if (steam) {
+      // Name and show the Steam account that is actually attached, not just
+      // "linked". A wrong link — the player's browser was signed into someone
+      // else's Steam when they clicked — cannot be undone by them, so noticing
+      // it immediately is the difference between a quick support fix and a
+      // permanent one. Steam's own consent page is the first defence; this is
+      // the second.
       return html`
         <div class="flex flex-col items-center gap-1">
           <div class="flex items-center gap-2 text-white/70 text-sm">
             ${steamGlyph("w-4 h-4 shrink-0")}
-            <span
-              >${steam.personaName
-                ? translateText("account_modal.linked_to_steam_persona", {
-                    persona: steam.personaName,
-                  })
-                : translateText("account_modal.linked_to_steam")}</span
-            >
+            <span>${translateText("account_modal.linked_to_steam")}</span>
           </div>
+          <steam-user-header .data=${steam}></steam-user-header>
           <span class="text-white/40 text-xs text-center">
             ${translateText("account_modal.link_steam_permanent")}
           </span>
