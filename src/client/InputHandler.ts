@@ -1,5 +1,9 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
+import {
+  MAX_UPGRADE_AMOUNT,
+  PlayerBuildableUnitType,
+  UnitType,
+} from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { Platform } from "./Platform";
 import { UIState } from "./UIState";
@@ -1058,14 +1062,26 @@ export class InputHandler {
       ghostStructure !== null
     ) {
       const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
-      if (source === "hotkey") {
-        this.uiState.upgradeMultiplier =
-        currentMultiplier === 1 ? 5 : currentMultiplier + 5;
-        return;
+      switch (source) {
+        case "hotkey":
+          this.uiState.upgradeMultiplier =
+            currentMultiplier === 1 ? 5 : currentMultiplier + 5;
+          break;
+        case "increase":
+          this.uiState.upgradeMultiplier = currentMultiplier + 1;
+          break;
+        case "decrease":
+          this.uiState.upgradeMultiplier =
+            currentMultiplier > 1 ? currentMultiplier - 1 : 1;
+          break;
       }
-      if (source === "increase"){
-        this.uiState.upgradeMultiplier =
-        currentMultiplier + 1;
+      if (this.uiState.upgradeMultiplier > MAX_UPGRADE_AMOUNT) {
+        if (source === "hotkey") {
+          // Reset to 1 if hotkey was used to exceed max, otherwise clamp to max
+          this.uiState.upgradeMultiplier = 1;
+        } else {
+          this.uiState.upgradeMultiplier = MAX_UPGRADE_AMOUNT;
+        }
       }
       if (source === "decrease"){
         this.uiState.upgradeMultiplier =
