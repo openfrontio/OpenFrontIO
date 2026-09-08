@@ -660,6 +660,20 @@ describe("InputHandler AutoUpgrade", () => {
     });
   });
 
+  describe("Alt key default prevention", () => {
+    test("prevents the browser's default action when Alt is pressed", () => {
+      const preventDefaultSpy = vi.spyOn(
+        KeyboardEvent.prototype,
+        "preventDefault",
+      );
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "AltLeft" }));
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+      preventDefaultSpy.mockRestore();
+    });
+  });
+
   describe("Numpad number keys for build keybinds", () => {
     beforeEach(() => {
       inputHandler.destroy();
