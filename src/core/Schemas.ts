@@ -557,7 +557,11 @@ const TokenSchema = z
 
 const EmojiSchema = zb.uint({ max: flattenedEmojiTable.length - 1 });
 
-export const GAME_ID_REGEX = /^[A-Za-z0-9]{8}$/;
+// 8–10: today's ids are 8 chars; multi-server ids (docs/MultiServer.md) will
+// be 10 (instance letter + 9 random). The range ships ahead of the new format
+// so every deployed client/server validates the longer ids before any are
+// minted — old bundles reject unknown id lengths at the Zod layer.
+export const GAME_ID_REGEX = /^[A-Za-z0-9]{8,10}$/;
 
 export const isValidGameID = (value: string): boolean =>
   GAME_ID_REGEX.test(value);
