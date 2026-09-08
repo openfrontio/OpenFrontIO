@@ -145,7 +145,10 @@ export class AiAttackBehavior {
     }
 
     const owner = this.game.owner(dst);
-    const troops = Math.min(this.player.troops() / 5, this.troopSendCap());
+    const cap = owner.isPlayer()
+      ? this.troopSendCap()
+      : this.troopSendCapForExpansion();
+    const troops = Math.min(this.player.troops() / 5, cap);
     if (troops < 1) return;
 
     // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
@@ -846,7 +849,10 @@ export class AiAttackBehavior {
         if (this.game.hasFallout(tile)) continue;
         if (!canBuildTransportShip(this.game, this.player, tile)) continue;
 
-        const troops = this.player.troops() / 5;
+        const troops = Math.min(
+          this.player.troops() / 5,
+          this.troopSendCapForExpansion(),
+        );
         if (troops < 1) return false;
 
         this.game.addExecution(
@@ -960,6 +966,13 @@ export class AiAttackBehavior {
     return cap;
   }
 
+  // Like troopSendCap(), but floored above 0 — TerraNullius can't fight back, so it's throttled, not frozen.
+  private troopSendCapForExpansion(): number {
+    const cap = this.troopSendCap();
+    if (cap > 0) return cap;
+    return Math.ceil(this.player.troops() * 0.05);
+  }
+
   private calculateAttackTroops(
     target: Player | TerraNullius,
     nonBotTroops: (targetTroops: number) => number,
@@ -976,11 +989,11 @@ export class AiAttackBehavior {
     const targetTroops = maxTroops * reserveRatio;
 
     let troops;
-    if (
+    const isBotAttack =
       target.isPlayer() &&
       target.type() === PlayerType.Bot &&
-      this.player.type() !== PlayerType.Bot
-    ) {
+      this.player.type() !== PlayerType.Bot;
+    if (isBotAttack) {
       troops = this.calculateBotAttackTroops(
         target,
         this.player.troops() - targetTroops - this.botAttackTroopsSent,
@@ -989,10 +1002,11 @@ export class AiAttackBehavior {
       troops = nonBotTroops(targetTroops);
     }
 
-    // Hard & Impossible: don't drop below neighbor troop threshold. Applies
-    // to TerraNullius (incl. fallout reclaim) too — troopSendCap() only
-    // depends on hostile neighbors, not the attack's target.
-    troops = Math.min(troops, this.troopSendCap());
+    // Hard & Impossible: don't drop below neighbor troop threshold (also applies to TerraNullius/fallout).
+    troops = Math.min(
+      troops,
+      target.isPlayer() ? this.troopSendCap() : this.troopSendCapForExpansion(),
+    );
 
     if (troops < 1) {
       return null;
@@ -1006,6 +1020,11 @@ export class AiAttackBehavior {
     if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
       if (this.emojiBehavior === undefined) throw new Error("not initialized");
       this.emojiBehavior.maybeSendAttackEmoji(target);
+    }
+
+    // Only count troops that will actually be sent, post-cap.
+    if (isBotAttack) {
+      this.botAttackTroopsSent += troops;
     }
 
     return troops;
@@ -1065,7 +1084,6 @@ export class AiAttackBehavior {
   private calculateBotAttackTroops(target: Player, maxTroops: number): number {
     const { difficulty } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Easy) {
-      this.botAttackTroopsSent += maxTroops;
       return maxTroops;
     }
     let troops = target.troops() * 4;
@@ -1079,7 +1097,6 @@ export class AiAttackBehavior {
         troops = maxTroops;
       }
     }
-    this.botAttackTroopsSent += troops;
     return troops;
   }
 

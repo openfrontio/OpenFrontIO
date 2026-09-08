@@ -369,5 +369,40 @@ describe("AiAttackBehavior - nuked territory early-out", () => {
       // Allow for a sliver of combat loss from the one executed tick.
       expect(totalSent).toBeGreaterThan(cap * 0.99);
     });
+
+    test("`nuked` strategy still trickles in when the neighbor cap would otherwise hit 0", async () => {
+      // With an overwhelmingly stronger neighbor, troopSendCap() resolves to
+      // exactly 0 (nationTroops - neighborTroops*0.9 < 0, floored at 0). A
+      // naive uncapped-at-0 fix would then permanently block ALL expansion,
+      // including into fallout/TerraNullius, since taking free land is the
+      // nation's only way to grow its own troop ceiling back up. The fix
+      // floors TerraNullius attacks to a small fraction of current troops
+      // instead of letting the cap freeze expansion entirely.
+      const { game, nation, enemy, attackBehavior } = await setupBehavior(
+        Difficulty.Impossible,
+        { withEnemy: true, nationTroops: 10_000, enemyTroops: 5_000_000 },
+      );
+      const nationTroops = nation.troops();
+      const enemyTroops = enemy.troops();
+      // Sanity: this scenario really does drive the plain cap to 0.
+      expect(nationTroops - Math.ceil(enemyTroops * 0.9)).toBeLessThanOrEqual(
+        0,
+      );
+
+      const before = nation.outgoingAttacks().length;
+      attackBehavior.maybeAttack();
+      executeTicks(game, 1);
+
+      const attacks = newAttacks(nation, before);
+      expect(attacks.length).toBeGreaterThan(0);
+      for (const attack of attacks) {
+        expect(attack.target().isPlayer()).toBe(false);
+      }
+
+      const totalSent = attacks.reduce((sum, a) => sum + a.troops(), 0);
+      expect(totalSent).toBeGreaterThan(0);
+      // Floored to ~5% of current troops rather than the full army.
+      expect(totalSent).toBeLessThanOrEqual(Math.ceil(nationTroops * 0.05));
+    });
   });
 });
