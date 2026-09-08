@@ -428,17 +428,6 @@ export class Transport {
         console.error("socket is null");
         return;
       }
-      while (this.buffer.length > 0) {
-        console.log("sending dropped message");
-        const msg = this.buffer.shift();
-        if (msg === undefined) {
-          console.warn("msg is undefined");
-          continue;
-        }
-        // Encoded at flush time, not at buffer time: the dictionary may have
-        // been seeded (or reseeded) while the message sat in the buffer.
-        this.socket.send(encodeClientMessage(msg, this.zbinCtx ?? undefined));
-      }
       onconnect();
     };
     this.socket.onmessage = (event: MessageEvent) => {
@@ -460,6 +449,7 @@ export class Transport {
           this.zbinCtx = createGameWireContext(msg.gameStartInfo.players);
         }
         this.onmessage(msg);
+        this.flushBuffer();
       } catch (e) {
         console.error("Error in onmessage handler:", e, event.data);
         return;
@@ -884,7 +874,25 @@ export class Transport {
     this.sendMsg(msg);
   }
 
+  private flushBuffer(): void {
+    if (this.socket === null || this.socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    while (this.buffer.length > 0) {
+      console.log("sending dropped message");
+      const msg = this.buffer.shift();
+      if (msg === undefined) {
+        console.warn("msg is undefined");
+        continue;
+      }
+      this.socket.send(encodeClientMessage(msg, this.zbinCtx ?? undefined));
+    }
+  }
+
   private sendMsg(msg: ClientMessage) {
+    if (this.connectionRefused) {
+      return;
+    }
     if (this.isLocal) {
       // Forward message to local server
       this.localServer.onMessage(msg);

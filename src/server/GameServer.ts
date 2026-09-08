@@ -536,8 +536,7 @@ export class GameServer {
           existingIP: ipAnonymize(conflicting.ip),
           existingPersistentID: conflicting.persistentID,
         });
-        // Kick the existing client instead of the new one, because this was causing issues when
-        // a client wanted to replay the game afterwards.
+        // Evict the conflicting socket without permanently banning the persistentID
         if (conflicting.ws.readyState === WebSocket.OPEN) {
           conflicting.ws.send(
             encodeServerMessage(
@@ -548,8 +547,9 @@ export class GameServer {
               this.zbinCtx,
             ),
           );
-          conflicting.ws.close(CloseCode.Normal, KICK_REASON_DUPLICATE_SESSION);
         }
+        conflicting.ws.removeAllListeners();
+        conflicting.ws.close(CloseCode.Normal, KICK_REASON_DUPLICATE_SESSION);
         this.clients.markLeft(conflicting);
       }
     }

@@ -61,7 +61,9 @@ export class Roster {
   // Drops the reconnect mapping, so the persistentID comes back through the
   // full join path and its seat counts as free. Admission is kept.
   forgetReconnect(client: Client): void {
-    this.reconnectable.delete(client.persistentID);
+    if (this.reconnectable.get(client.persistentID) === client.clientID) {
+      this.reconnectable.delete(client.persistentID);
+    }
   }
 
   // Bans the persistentID (no rejoin, no reconnect, no admission) whether or
