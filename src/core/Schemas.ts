@@ -963,6 +963,12 @@ export const ServerErrorSchema = z.object({
   type: z.literal("error"),
   error: z.string(),
   message: z.string().optional(),
+  // Build commit of the rejecting server, sent with version_mismatch so the
+  // client can log which build it must update to. Rides the same flip as
+  // ClientJoinMessageSchema.gitCommit: optional only so other errors can omit
+  // it — a pre-field bundle cannot decode the frame (zbin presence header
+  // shifts), the same ship-together tradeoff as PublicLobbyFullSchema.
+  gitCommit: z.string().max(64).optional(),
 });
 
 export const ServerLobbyInfoMessageSchema = z.object({

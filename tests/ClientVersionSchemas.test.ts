@@ -2,6 +2,8 @@ import {
   ClientJoinMessageSchema,
   ClientRejoinMessageSchema,
   PublicLobbyMessageSchema,
+  ServerErrorSchema,
+  ServerMessageSchema,
 } from "../src/core/Schemas";
 
 const COMMIT = "a".repeat(40);
@@ -52,6 +54,35 @@ describe("gitCommit on join/rejoin messages", () => {
         .success,
     ).toBe(true);
     expect(ClientRejoinMessageSchema.safeParse(baseRejoin).success).toBe(true);
+  });
+});
+
+describe("gitCommit on version_mismatch errors", () => {
+  const mismatch = {
+    type: "error",
+    error: "version_mismatch",
+    gitCommit: COMMIT,
+  };
+
+  test("error parses with and without gitCommit", () => {
+    const withCommit = ServerErrorSchema.safeParse(mismatch);
+    expect(withCommit.success).toBe(true);
+    expect(withCommit.data?.gitCommit).toBe(COMMIT);
+    expect(
+      ServerErrorSchema.safeParse({ type: "error", error: "banned" }).success,
+    ).toBe(true);
+  });
+
+  test("error rejects an oversized gitCommit", () => {
+    expect(
+      ServerErrorSchema.safeParse({ ...mismatch, gitCommit: "a".repeat(65) })
+        .success,
+    ).toBe(false);
+  });
+
+  test("error round-trips the binary wire with gitCommit", () => {
+    const bytes = ServerMessageSchema.serialize(mismatch);
+    expect(ServerMessageSchema.parseBytes(bytes)).toEqual(mismatch);
   });
 });
 

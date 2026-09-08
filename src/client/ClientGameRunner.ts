@@ -1,4 +1,5 @@
 import { Config } from "src/core/configuration/Config";
+import { ClientEnv } from "../client/ClientEnv";
 import { reloadForUpdate, translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
@@ -341,6 +342,9 @@ export function joinLobby(
           }),
         );
       } else if (message.error === "version_mismatch") {
+        console.info(
+          `version mismatch: bundle ${ClientEnv.gitCommit()}, server ${message.gitCommit}`,
+        );
         // The server runs a newer build than this bundle (tab left open
         // across a deploy). On the web a reload picks up the new version. The
         // desktop shell updates its local overlay itself and reloading would
