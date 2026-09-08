@@ -78,6 +78,35 @@ open ws to sub, path /w{hash(id) % N}
 The `version_mismatch` payload carries the server's commit so the client can
 tell "I'm stale, reload" from "that game is on another build, redirect".
 
+### Why the deployment is a letter but the worker is a hash
+
+Hash-routing is only sound where the modulus is frozen for the lifetime of
+everything minted under it. A letter's worker count has exactly that
+lifecycle: its colour drains on every promotion, so the rule "change a
+letter's `numWorkers` only on a deploy after its colour has fully drained"
+comes free with the blue/green cadence. Routing only matters while a game is
+alive (archived IDs resolve via the API, not workers), so a drained colour's
+count is safe to change.
+
+The fleet has no such freeze. A fleet redeploy synchronizes the *servers*
+onto a new map, but not the two things that actually hold routing state:
+live games straddle the flip on the draining colour for hours, and open
+tabs / desktop apps keep their map for their own lifetime — there is always
+a mixed-map population. Under `hash(id) % numDeployments`, adding a machine
+re-routes existing live games' IDs (shared lobby links and rejoins break at
+every fleet change), and removal is worse: shrink N and everything
+reshuffles, or keep N and 1/(old N) of the keyspace — including new mints —
+points at a dead server forever, compounding with every retirement. Both
+failures are silent: every ID hashes to *somewhere*, and a misroute answers
+"game not found" on a healthy server.
+
+The letter is the minimum stable token that lets an ID survive map changes:
+resolution is append-only (a letter never re-resolves; a removed one goes
+*unknown*, which is loud and falls back to the apex), mixed maps are safe in
+both directions, retirement is just drain-then-delete, and any ID names its
+server on sight. It costs one character; any scheme that patches the hash's
+instability (epoch markers, bucket maps) ends up re-inventing it.
+
 ---
 
 ## PR list
