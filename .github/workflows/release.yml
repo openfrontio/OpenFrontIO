@@ -38,7 +38,15 @@ jobs:
           Changelog:
           ${RELEASE_BODY}
           EOF
-          ./build.sh prod "${RELEASE_TAG_NAME}" "${RELEASE_NAME}" "${RELEASE_BODY}" /tmp/build-metadata.json
+          # Third argument is VERSION_TXT, which build.sh writes to
+          # resources/version.txt and the client bakes into the bundle as the
+          # version the footer and nav bar show. It used to be RELEASE_NAME --
+          # free text typed into the GitHub Release UI, so the shipped version
+          # label was whatever someone happened to title the release. The TAG
+          # is the build's actual identity and is already validated as the
+          # image tag on the line's second argument, so use it. RELEASE_NAME
+          # stays in the job summary above, where free text belongs.
+          ./build.sh prod "${RELEASE_TAG_NAME}" "${RELEASE_TAG_NAME}" "${RELEASE_BODY}" /tmp/build-metadata.json
           IMAGE_ID=$(jq -r '."containerimage.digest"' /tmp/build-metadata.json)
           echo "IMAGE_ID=${IMAGE_ID}" >> $GITHUB_OUTPUT
           echo "Image ID: \`${IMAGE_ID}\`" >> $GITHUB_STEP_SUMMARY
