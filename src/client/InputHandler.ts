@@ -247,6 +247,12 @@ export class InputHandler {
   private suppressNextTap: boolean = false;
   private readonly LONG_PRESS_MS = 800;
 
+  // Nuke hold-to-deploy parameters
+  private readonly NUKE_INITIAL_DELAY_MS = 150;  // Delay before hold-to-deploy
+  private readonly NUKE_LAUNCH_DELAY_MS = 90;  // hold-to-deploy firerate (multiplier affects this)
+  private nukeHoldTimer: ReturnType<typeof setInterval> | null = null;
+  private nukeHoldInitialDelayTimer: ReturnType<typeof setTimeout> | null = null;
+
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
@@ -511,6 +517,7 @@ export class InputHandler {
       }
       this.longPressActive = false;
       this.suppressNextTap = false;
+      this.stopNukeHoldDeployment();
       if (this.selectionBoxActive || this.multiSelectionActive) {
         this.selectionBoxActive = false;
         this.multiSelectionActive = false;
@@ -760,6 +767,9 @@ export class InputHandler {
       this.lastPointerDownY = event.clientY;
 
       this.eventBus.emit(new MouseDownEvent(event.clientX, event.clientY));
+      if (this.isNukeGhostActive()) {
+        this.startNukeHoldDeployment();
+      }
 
       // Start long-press timer for touch devices
       if (event.pointerType === "touch") {
@@ -806,6 +816,11 @@ export class InputHandler {
     }
     this.pointerDown = false;
     this.pointers.clear();
+
+    if (this.nukeHoldTimer !== null || this.nukeHoldInitialDelayTimer !== null) {
+      this.stopNukeHoldDeployment();
+      return;
+    }
 
     // Clean up long-press state
     if (this.longPressTimer !== null) {
@@ -1029,7 +1044,50 @@ export class InputHandler {
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
+  private isNukeGhostActive(): boolean {
+    return (
+      this.uiState.ghostStructure === UnitType.AtomBomb);
+  }
+
+  private startNukeHoldDeployment() {
+    if (!this.isNukeGhostActive()) return;
+    if (this.nukeHoldTimer !== null || this.nukeHoldInitialDelayTimer !== null) {
+      return;
+    }
+
+    const emit = () => {
+      if (!this.pointerDown || !this.isNukeGhostActive()) {
+        this.stopNukeHoldDeployment();
+        return;
+      }
+      this.eventBus.emit(new MouseUpEvent(this.lastPointerX, this.lastPointerY));
+    };
+
+    emit();
+
+    this.nukeHoldInitialDelayTimer = setTimeout(() => {
+      this.nukeHoldInitialDelayTimer = null;
+      if (!this.pointerDown || !this.isNukeGhostActive()) {
+        this.stopNukeHoldDeployment();
+        return;
+      }
+      this.nukeHoldTimer = setInterval(emit, this.NUKE_LAUNCH_DELAY_MS);
+    }, this.NUKE_INITIAL_DELAY_MS);
+  }
+
+  private stopNukeHoldDeployment() {
+    if (this.nukeHoldInitialDelayTimer !== null) {
+      clearTimeout(this.nukeHoldInitialDelayTimer);
+      this.nukeHoldInitialDelayTimer = null;
+    }
+    if (this.nukeHoldTimer !== null) {
+      clearInterval(this.nukeHoldTimer);
+      this.nukeHoldTimer = null;
+    }
+  }
+
   private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
+    this.stopNukeHoldDeployment();
     if (
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null

@@ -3,6 +3,7 @@ import {
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
   InputHandler,
+  MouseUpEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
@@ -657,6 +658,91 @@ describe("InputHandler AutoUpgrade", () => {
         (call) => call[0] instanceof ConfirmGhostStructureEvent,
       );
       expect(confirmCalls).toHaveLength(0);
+    });
+  });
+
+  describe("Nuke click-and-hold deployment", () => {
+    test("fires an immediate launch, then waits 125 ms before repeating every 90 ms while held", () => {
+      vi.useFakeTimers();
+      try {
+        const mockEmit = vi.spyOn(eventBus, "emit");
+        inputHandler["uiState"].ghostStructure = UnitType.AtomBomb;
+
+        inputHandler["onPointerDown"](
+          new PointerEvent("pointerdown", {
+            button: 0,
+            clientX: 100,
+            clientY: 200,
+            pointerId: 1,
+          }),
+        );
+        inputHandler["onPointerMove"](
+          new PointerEvent("pointermove", {
+            button: 0,
+            clientX: 150,
+            clientY: 250,
+            pointerId: 1,
+          }),
+        );
+
+        let mouseUpCalls = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(mouseUpCalls).toHaveLength(1);
+
+        vi.advanceTimersByTime(124);
+        mouseUpCalls = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(mouseUpCalls).toHaveLength(1);
+
+        vi.advanceTimersByTime(1);
+        mouseUpCalls = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(mouseUpCalls).toHaveLength(1);
+
+        vi.advanceTimersByTime(89);
+        mouseUpCalls = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(mouseUpCalls).toHaveLength(1);
+
+        vi.advanceTimersByTime(1);
+        mouseUpCalls = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(mouseUpCalls).toHaveLength(2);
+
+        vi.advanceTimersByTime(89);
+        mouseUpCalls = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(mouseUpCalls).toHaveLength(2);
+
+        vi.advanceTimersByTime(1);
+        mouseUpCalls = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(mouseUpCalls).toHaveLength(3);
+
+        inputHandler["onPointerUp"](
+          new PointerEvent("pointerup", {
+            button: 0,
+            clientX: 150,
+            clientY: 250,
+            pointerId: 1,
+          }),
+        );
+
+        vi.advanceTimersByTime(500);
+        const afterRelease = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(afterRelease).toHaveLength(mouseUpCalls.length);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
