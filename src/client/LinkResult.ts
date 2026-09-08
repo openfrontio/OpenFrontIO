@@ -57,7 +57,18 @@ export function consumeLinkResult(args?: Record<string, unknown>): void {
     rest ? `#${rest}` : window.location.pathname + window.location.search,
   );
 
-  const messageKey = LINK_RESULT_KEYS[link];
-  if (messageKey === undefined) return;
+  // An own-property check, not an `=== undefined` check on the lookup. `link`
+  // comes straight off the URL hash, so it is fully attacker-chosen, and a
+  // plain object literal inherits from Object.prototype: `link=toString`
+  // resolves to the inherited function rather than undefined, sails past an
+  // undefined guard, and translateText hands it back unchanged for the alert
+  // to display. Cosmetic only — lit renders the alert as an escaped text node,
+  // so there is no injection — but the deleted GoogleLinkResult used an
+  // explicit === ladder and had no such hole, so this would be a regression.
+  //
+  // hasOwnProperty.call rather than Object.hasOwn: the latter needs an es2022
+  // lib target and this project builds below that.
+  if (!Object.prototype.hasOwnProperty.call(LINK_RESULT_KEYS, link)) return;
+  const messageKey = LINK_RESULT_KEYS[link]!;
   void showInGameAlert(translateText(messageKey));
 }

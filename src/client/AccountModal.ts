@@ -567,19 +567,23 @@ export class AccountModal extends BaseModal {
     if (isDesktopShell()) return html``;
     const steam = this.userMeResponse?.user?.steam;
     if (steam) {
-      // Name and show the Steam account that is actually attached, not just
-      // "linked". A wrong link — the player's browser was signed into someone
-      // else's Steam when they clicked — cannot be undone by them, so noticing
-      // it immediately is the difference between a quick support fix and a
-      // permanent one. Steam's own consent page is the first defence; this is
-      // the second.
+      // The attached account is NAMED, not merely reported as linked: a wrong
+      // link — the player's browser was signed into someone else's Steam when
+      // they clicked — cannot be undone by them, so noticing it immediately is
+      // the difference between a quick support fix and a permanent one.
+      // Steam's own consent page is the first defence; this is the second.
+      //
+      // The persona and avatar come from the <steam-user-header> that
+      // renderAccountTab already renders whenever user.steam is set, for every
+      // branch including Steam-primary. Rendering a second one here showed it
+      // TWICE to exactly the players this row is for — anyone Discord-,
+      // Google- or email-primary with Steam linked.
       return html`
         <div class="flex flex-col items-center gap-1">
           <div class="flex items-center gap-2 text-white/70 text-sm">
             ${steamGlyph("w-4 h-4 shrink-0")}
             <span>${translateText("account_modal.linked_to_steam")}</span>
           </div>
-          <steam-user-header .data=${steam}></steam-user-header>
           <span class="text-white/40 text-xs text-center">
             ${translateText("account_modal.link_steam_permanent")}
           </span>

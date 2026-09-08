@@ -84,6 +84,23 @@ describe("consumeLinkResult", () => {
     expect(alertMock).not.toHaveBeenCalled();
   });
 
+  // `link` is read straight off the URL hash, so it is attacker-chosen. A
+  // plain object lookup inherits from Object.prototype, so these names resolve
+  // to inherited members rather than undefined and would be shown to the user.
+  it.each([
+    "toString",
+    "constructor",
+    "__proto__",
+    "valueOf",
+    "hasOwnProperty",
+  ])("says nothing for the inherited property %s", (link) => {
+    setHash(`#modal=account&link=${link}`);
+
+    consumeLinkResult({ modal: "account", link });
+
+    expect(alertMock).not.toHaveBeenCalled();
+  });
+
   it("says nothing for an unrecognised result", () => {
     setHash("#modal=account&link=something-new");
 

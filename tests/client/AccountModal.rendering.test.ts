@@ -427,7 +427,12 @@ describe("AccountModal — rendering", () => {
     // The attached account is NAMED, not just reported as linked: a wrong link
     // cannot be undone by the player, so noticing it immediately is what makes
     // a support fix possible.
-    expect(modal.querySelector("steam-user-header")).toBeTruthy();
+    //
+    // querySelectorAll with a length, NOT querySelector: the singular form is
+    // true for one header OR two, which is exactly how a duplicate render got
+    // past this test. renderAccountTab already renders the header for every
+    // branch, so the Steam row must not render its own.
+    expect(modal.querySelectorAll("steam-user-header")).toHaveLength(1);
     // The explanation for why there is no unlink button stays visible.
     expect(text).toContain("account_modal.link_steam_permanent");
     // There is no unlink affordance anywhere, by key or by label.
