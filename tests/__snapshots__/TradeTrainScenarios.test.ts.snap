@@ -1,5 +1,25 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`trade ship scenarios > a thousand ports each, giant map 1`] = `
+{
+  "a": {
+    "arrivalsPerMinute": 94.6,
+    "goldPerMinute": 38620000,
+    "shipsArrived": 946,
+    "shipsSent": 1418,
+    "tradeGold": 386226223n,
+  },
+  "b": {
+    "arrivalsPerMinute": 91.8,
+    "goldPerMinute": 38620000,
+    "shipsArrived": 918,
+    "shipsSent": 1406,
+    "tradeGold": 386226223n,
+  },
+  "goldPerTrade": 207200,
+}
+`;
+
 exports[`trade ship scenarios > across the ocean 1`] = `
 {
   "a": {

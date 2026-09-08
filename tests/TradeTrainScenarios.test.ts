@@ -315,6 +315,23 @@ describe("trade ship scenarios", () => {
     ).toMatchSnapshot();
   }, 240_000);
 
+  // The absurd end of the port-count sweep, on giantworldmap (4108x1948)
+  // because the world map's coastlines only fit ~320 ports a side. The
+  // spawn-suppression midpoint sits at 400 global trade ships regardless of
+  // port count, so two thousand ports earn barely more than a hundred — the
+  // pinned number is how flat the curve has gone.
+  test("a thousand ports each, giant map", async () => {
+    expect(
+      await runTradeScenario({
+        map: "giantworldmap",
+        disableNavMesh: false,
+        a: { port: [1400, 1018], numPorts: 1_000, scanRadius: 800 },
+        b: { port: [3000, 920], numPorts: 1_000, scanRadius: 700 },
+        ticks: 6_000,
+      }),
+    ).toMatchSnapshot();
+  }, 600_000);
+
   // Distance sweep at a fixed ten-port fleet: ~330 tiles ("ten ports each
   // across the ocean"), ~500 tiles here, ~1800 tiles below. Longer routes
   // pay more per trade but keep ships at sea longer, which suppresses
