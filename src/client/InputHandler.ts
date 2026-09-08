@@ -248,11 +248,14 @@ export class InputHandler {
   private readonly LONG_PRESS_MS = 800;
 
   // Nuke hold-to-deploy parameters
-  private readonly NUKE_INITIAL_DELAY_MS = 150; // Delay before hold-to-deploy
-  private readonly NUKE_LAUNCH_DELAY_MS = 90; // hold-to-deploy firerate (multiplier affects this)
+  private readonly NUKE_POINTER_WAIT_MS = 100; // First shot stays near-instant when stationary.
+  private readonly NUKE_SECOND_LAUNCH_DELAY_MS = 150; // Delay before continuous repeats after the first shot.
+  private readonly NUKE_HOLD_FIRE_RATE = 90; // hold-to-deploy firerate (multiplier affects this)
   private nukeHoldTimer: ReturnType<typeof setInterval> | null = null;
   private nukeHoldInitialDelayTimer: ReturnType<typeof setTimeout> | null =
     null;
+  private nukeHoldWasDragged: boolean = false;
+  private nukeHoldHasFired: boolean = false;
 
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
@@ -827,6 +830,21 @@ export class InputHandler {
     this.pointerDown = false;
     this.pointers.clear();
 
+    const pointerDist =
+      Math.abs(event.x - this.lastPointerDownX) +
+      Math.abs(event.y - this.lastPointerDownY);
+
+    if (
+      this.nukeHoldInitialDelayTimer !== null &&
+      !this.nukeHoldHasFired &&
+      pointerDist < this.DRAG_THRESHOLD_PX &&
+      this.isNukeGhostActive()
+    ) {
+      this.stopNukeHoldDeployment();
+      this.eventBus.emit(new MouseUpEvent(event.x, event.y));
+      return;
+    }
+
     if (
       this.nukeHoldTimer !== null ||
       this.nukeHoldInitialDelayTimer !== null
@@ -1017,6 +1035,19 @@ export class InputHandler {
         }
       }
 
+      if (
+        this.nukeHoldTimer !== null ||
+        this.nukeHoldInitialDelayTimer !== null
+      ) {
+        const dragDistance =
+          Math.abs(event.clientX - this.lastPointerDownX) +
+          Math.abs(event.clientY - this.lastPointerDownY);
+        if (dragDistance >= this.DRAG_THRESHOLD_PX) {
+          this.nukeHoldWasDragged = true;
+          this.stopNukeHoldDeployment();
+        }
+      }
+
       // If shift is held OR touch long-press is active OR selection box already
       // started, continue emitting selection box updates
       if (
@@ -1084,26 +1115,63 @@ export class InputHandler {
       return;
     }
 
+    this.nukeHoldWasDragged = false;
+    this.nukeHoldHasFired = false;
+
     const emit = () => {
-      if (!this.pointerDown || !this.isNukeGhostActive()) {
+      if (
+        !this.pointerDown ||
+        this.nukeHoldWasDragged ||
+        !this.isNukeGhostActive()
+      ) {
         this.stopNukeHoldDeployment();
         return;
       }
+      this.nukeHoldHasFired = true;
       this.eventBus.emit(
         new MouseUpEvent(this.lastPointerX, this.lastPointerY),
       );
     };
 
-    emit();
+    const startRepeatLoop = () => {
+      this.nukeHoldInitialDelayTimer = setTimeout(() => {
+        this.nukeHoldInitialDelayTimer = null;
+        if (
+          !this.pointerDown ||
+          !this.isNukeGhostActive() ||
+          this.nukeHoldWasDragged
+        ) {
+          this.stopNukeHoldDeployment();
+          return;
+        }
+        emit();
+        this.nukeHoldTimer = setInterval(() => {
+          if (
+            !this.pointerDown ||
+            !this.isNukeGhostActive() ||
+            this.nukeHoldWasDragged
+          ) {
+            this.stopNukeHoldDeployment();
+            return;
+          }
+          emit();
+        }, this.NUKE_HOLD_FIRE_RATE);
+      }, this.NUKE_SECOND_LAUNCH_DELAY_MS);
+    };
 
     this.nukeHoldInitialDelayTimer = setTimeout(() => {
       this.nukeHoldInitialDelayTimer = null;
-      if (!this.pointerDown || !this.isNukeGhostActive()) {
+      if (
+        !this.pointerDown ||
+        !this.isNukeGhostActive() ||
+        this.nukeHoldWasDragged
+      ) {
         this.stopNukeHoldDeployment();
         return;
       }
-      this.nukeHoldTimer = setInterval(emit, this.NUKE_LAUNCH_DELAY_MS);
-    }, this.NUKE_INITIAL_DELAY_MS);
+      emit();
+      startRepeatLoop();
+    }, this.NUKE_POINTER_WAIT_MS);
   }
 
   private stopNukeHoldDeployment() {
@@ -1115,6 +1183,8 @@ export class InputHandler {
       clearInterval(this.nukeHoldTimer);
       this.nukeHoldTimer = null;
     }
+    this.nukeHoldWasDragged = false;
+    this.nukeHoldHasFired = false;
   }
 
   private setGhostStructure(

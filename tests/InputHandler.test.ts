@@ -676,7 +676,160 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Nuke click-and-hold deployment", () => {
-    test("fires repeated MouseUpEvents while a nuke ghost is held and suppresses the release repeat", () => {
+    test("waits for the initial hold delay before firing the first launch", () => {
+      vi.useFakeTimers();
+      try {
+        const mockEmit = vi.spyOn(eventBus, "emit");
+        const pointerWaitMs = inputHandler["NUKE_POINTER_WAIT_MS"] as number;
+        const secondLaunchDelayMs = inputHandler[
+          "NUKE_SECOND_LAUNCH_DELAY_MS"
+        ] as number;
+
+        inputHandler["uiState"].ghostStructure = UnitType.AtomBomb;
+
+        inputHandler["onPointerDown"](
+          new PointerEvent("pointerdown", {
+            button: 0,
+            clientX: 100,
+            clientY: 200,
+            pointerId: 1,
+          }),
+        );
+
+        expect(
+          mockEmit.mock.calls.filter(
+            ([event]) => event instanceof MouseUpEvent,
+          ),
+        ).toHaveLength(0);
+
+        vi.advanceTimersByTime(pointerWaitMs - 1);
+        expect(
+          mockEmit.mock.calls.filter(
+            ([event]) => event instanceof MouseUpEvent,
+          ),
+        ).toHaveLength(0);
+
+        vi.advanceTimersByTime(1);
+        expect(
+          mockEmit.mock.calls.filter(
+            ([event]) => event instanceof MouseUpEvent,
+          ),
+        ).toHaveLength(1);
+
+        vi.advanceTimersByTime(secondLaunchDelayMs - 1);
+        expect(
+          mockEmit.mock.calls.filter(([event]) => event instanceof MouseUpEvent)
+            .length,
+        ).toBe(1);
+
+        vi.advanceTimersByTime(1);
+        expect(
+          mockEmit.mock.calls.filter(([event]) => event instanceof MouseUpEvent)
+            .length,
+        ).toBeGreaterThanOrEqual(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test("fires repeated MouseUpEvents while a stationary nuke ghost is held and suppresses the release repeat", () => {
+      vi.useFakeTimers();
+      try {
+        const mockEmit = vi.spyOn(eventBus, "emit");
+        const pointerWaitMs = inputHandler["NUKE_POINTER_WAIT_MS"] as number;
+        const secondLaunchDelayMs = inputHandler[
+          "NUKE_SECOND_LAUNCH_DELAY_MS"
+        ] as number;
+
+        inputHandler["uiState"].ghostStructure = UnitType.AtomBomb;
+
+        inputHandler["onPointerDown"](
+          new PointerEvent("pointerdown", {
+            button: 0,
+            clientX: 100,
+            clientY: 200,
+            pointerId: 1,
+          }),
+        );
+        inputHandler["onPointerMove"](
+          new PointerEvent("pointermove", {
+            button: 0,
+            clientX: 102,
+            clientY: 202,
+            pointerId: 1,
+          }),
+        );
+
+        vi.advanceTimersByTime(pointerWaitMs);
+        expect(
+          mockEmit.mock.calls.filter(
+            ([event]) => event instanceof MouseUpEvent,
+          ),
+        ).toHaveLength(1);
+
+        vi.advanceTimersByTime(secondLaunchDelayMs);
+
+        const mouseUpCalls = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(mouseUpCalls.length).toBeGreaterThanOrEqual(2);
+
+        inputHandler["onPointerUp"](
+          new PointerEvent("pointerup", {
+            button: 0,
+            clientX: 102,
+            clientY: 202,
+            pointerId: 1,
+          }),
+        );
+
+        const afterRelease = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(afterRelease).toHaveLength(mouseUpCalls.length);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test("launches on release when a stationary nuke click has not fired yet", () => {
+      vi.useFakeTimers();
+      try {
+        const mockEmit = vi.spyOn(eventBus, "emit");
+        const pointerWaitMs = inputHandler["NUKE_POINTER_WAIT_MS"] as number;
+
+        inputHandler["uiState"].ghostStructure = UnitType.AtomBomb;
+
+        inputHandler["onPointerDown"](
+          new PointerEvent("pointerdown", {
+            button: 0,
+            clientX: 100,
+            clientY: 200,
+            pointerId: 1,
+          }),
+        );
+
+        vi.advanceTimersByTime(pointerWaitMs - 1);
+        inputHandler["onPointerUp"](
+          new PointerEvent("pointerup", {
+            button: 0,
+            clientX: 100,
+            clientY: 200,
+            pointerId: 1,
+          }),
+        );
+
+        expect(
+          mockEmit.mock.calls.filter(
+            ([event]) => event instanceof MouseUpEvent,
+          ),
+        ).toHaveLength(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test("cancels hold-to-deploy when the pointer drifts beyond the drag threshold", () => {
       vi.useFakeTimers();
       try {
         const mockEmit = vi.spyOn(eventBus, "emit");
@@ -693,8 +846,8 @@ describe("InputHandler AutoUpgrade", () => {
         inputHandler["onPointerMove"](
           new PointerEvent("pointermove", {
             button: 0,
-            clientX: 150,
-            clientY: 250,
+            clientX: 220,
+            clientY: 320,
             pointerId: 1,
           }),
         );
@@ -704,21 +857,7 @@ describe("InputHandler AutoUpgrade", () => {
         const mouseUpCalls = mockEmit.mock.calls.filter(
           ([event]) => event instanceof MouseUpEvent,
         );
-        expect(mouseUpCalls.length).toBeGreaterThanOrEqual(2);
-
-        inputHandler["onPointerUp"](
-          new PointerEvent("pointerup", {
-            button: 0,
-            clientX: 150,
-            clientY: 250,
-            pointerId: 1,
-          }),
-        );
-
-        const afterRelease = mockEmit.mock.calls.filter(
-          ([event]) => event instanceof MouseUpEvent,
-        );
-        expect(afterRelease).toHaveLength(mouseUpCalls.length);
+        expect(mouseUpCalls).toHaveLength(0);
       } finally {
         vi.useRealTimers();
       }
