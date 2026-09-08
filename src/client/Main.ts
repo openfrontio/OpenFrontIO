@@ -1,5 +1,5 @@
-import version from "resources/version.txt?raw";
 import { ClientEnv } from "src/client/ClientEnv";
+import { renderNavVersion } from "src/client/GameVersion";
 import { isTemporaryUsername, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
@@ -360,20 +360,12 @@ class Client {
     document.fonts.add(openFrontFont);
     openFrontFont.load().catch(() => {});
 
-    const versionElements = document.querySelectorAll(
-      "#game-version, .game-version-display",
-    );
-    if (versionElements.length === 0) {
+    // Game version only, so a player's version reads the same across web and
+    // Steam. The full string, shell version included, is in page-footer --
+    // and both go through the same helper, so the two cannot disagree. See
+    // renderNavVersion / composeGameVersion (OPE-358).
+    if (renderNavVersion() === 0) {
       console.warn("Game version element not found");
-    } else {
-      // Game version only, so a player's version reads the same across web and
-      // Steam. The full string, shell version included, is in page-footer.
-      const trimmed = version.trim();
-      const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
-      versionElements.forEach((el) => {
-        (el as HTMLElement).style.fontFamily = '"OpenFront", Inter, sans-serif';
-        el.textContent = displayVersion;
-      });
     }
 
     const langSelector = document.querySelector(
