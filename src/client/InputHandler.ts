@@ -248,10 +248,11 @@ export class InputHandler {
   private readonly LONG_PRESS_MS = 800;
 
   // Nuke hold-to-deploy parameters
-  private readonly NUKE_INITIAL_DELAY_MS = 150;  // Delay before hold-to-deploy
-  private readonly NUKE_LAUNCH_DELAY_MS = 90;  // hold-to-deploy firerate (multiplier affects this)
+  private readonly NUKE_INITIAL_DELAY_MS = 150; // Delay before hold-to-deploy
+  private readonly NUKE_LAUNCH_DELAY_MS = 90; // hold-to-deploy firerate (multiplier affects this)
   private nukeHoldTimer: ReturnType<typeof setInterval> | null = null;
-  private nukeHoldInitialDelayTimer: ReturnType<typeof setTimeout> | null = null;
+  private nukeHoldInitialDelayTimer: ReturnType<typeof setTimeout> | null =
+    null;
 
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
@@ -826,7 +827,10 @@ export class InputHandler {
     this.pointerDown = false;
     this.pointers.clear();
 
-    if (this.nukeHoldTimer !== null || this.nukeHoldInitialDelayTimer !== null) {
+    if (
+      this.nukeHoldTimer !== null ||
+      this.nukeHoldInitialDelayTimer !== null
+    ) {
       this.stopNukeHoldDeployment();
       return;
     }
@@ -875,7 +879,9 @@ export class InputHandler {
     if (this.activeKeys.has(this.keybinds.emojiMenuModifier)) {
       this.suppressNextTap = false;
       if (this.uiState.ghostStructure === null) {
-      this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
+        this.eventBus.emit(
+          new ShowEmojiMenuEvent(event.clientX, event.clientY),
+        );
       }
       return;
     }
@@ -909,12 +915,11 @@ export class InputHandler {
   }
 
   private onScroll(event: WheelEvent) {
-    if (event.shiftKey || event.altKey){
+    if (event.shiftKey || event.altKey) {
       return; // Shift/Alt scroll is handled separately
     }
     const realCtrl =
-      this.activeKeys.has("ControlLeft") ||
-      this.activeKeys.has("ControlRight");
+      this.activeKeys.has("ControlLeft") || this.activeKeys.has("ControlRight");
     if (event.ctrlKey) {
       if (!realCtrl) {
         // Pinch-to-zoom gesture (trackpad): small deltas, amplify.
@@ -973,11 +978,12 @@ export class InputHandler {
   private onAltScroll(event: WheelEvent) {
     if (event.altKey) {
       const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
-      this.setGhostStructure(this.uiState.ghostStructure,
-      scrollValue > 0 ? "decrease" : "increase");
+      this.setGhostStructure(
+        this.uiState.ghostStructure,
+        scrollValue > 0 ? "decrease" : "increase",
+      );
     }
   }
-
 
   private onPointerMove(event: PointerEvent) {
     if (event.button === 1) {
@@ -1066,13 +1072,15 @@ export class InputHandler {
   }
 
   private isNukeGhostActive(): boolean {
-    return (
-      this.uiState.ghostStructure === UnitType.AtomBomb);
+    return this.uiState.ghostStructure === UnitType.AtomBomb;
   }
 
   private startNukeHoldDeployment() {
     if (!this.isNukeGhostActive()) return;
-    if (this.nukeHoldTimer !== null || this.nukeHoldInitialDelayTimer !== null) {
+    if (
+      this.nukeHoldTimer !== null ||
+      this.nukeHoldInitialDelayTimer !== null
+    ) {
       return;
     }
 
@@ -1081,7 +1089,9 @@ export class InputHandler {
         this.stopNukeHoldDeployment();
         return;
       }
-      this.eventBus.emit(new MouseUpEvent(this.lastPointerX, this.lastPointerY));
+      this.eventBus.emit(
+        new MouseUpEvent(this.lastPointerX, this.lastPointerY),
+      );
     };
 
     emit();
@@ -1107,7 +1117,10 @@ export class InputHandler {
     }
   }
 
-  private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null, source: "increase" | "decrease" | "hotkey" = "hotkey") {
+  private setGhostStructure(
+    ghostStructure: PlayerBuildableUnitType | null,
+    source: "increase" | "decrease" | "hotkey" = "hotkey",
+  ) {
     this.stopNukeHoldDeployment();
     if (
       this.uiState.ghostStructure === ghostStructure &&
@@ -1116,18 +1129,16 @@ export class InputHandler {
       const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
       if (source === "hotkey") {
         this.uiState.upgradeMultiplier =
-        currentMultiplier === 1 ? 5 : currentMultiplier + 5;
+          currentMultiplier === 1 ? 5 : currentMultiplier + 5;
         return;
       }
-      if (source === "increase"){
-        this.uiState.upgradeMultiplier =
-        currentMultiplier + 1;
+      if (source === "increase") {
+        this.uiState.upgradeMultiplier = currentMultiplier + 1;
       }
-      if (source === "decrease"){
+      if (source === "decrease") {
         this.uiState.upgradeMultiplier =
-        currentMultiplier > 1 ? currentMultiplier - 1 : 1;
+          currentMultiplier > 1 ? currentMultiplier - 1 : 1;
       }
-
     } else {
       this.uiState.upgradeMultiplier = 1;
       this.uiState.ghostStructure = ghostStructure;
