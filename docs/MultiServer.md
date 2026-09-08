@@ -36,18 +36,18 @@ behavior except the bugs it fixes.
 
 ## Decisions (settled 2026-09-08)
 
-| Question | Decision |
-| --- | --- |
-| Relationship to open PR #5164 | **Absorb it.** Fold `t3code/preserve-websocket-old-deployment` (ActiveDeployment, serverHost pinning, drain, version-mismatch join gate) into this work as PR 2 and supersede that PR. |
-| New game ID size | **10 chars total** — instance letter + 9 random from the existing 58-symbol alphabet. `GAME_ID_REGEX` widens to a `{8,10}` length range so archived 8-char IDs stay valid. (~0.8 expected archive-key collisions at 200M lifetime games; today's 8-char IDs are already near their first expected collision at ~20M.) |
-| Deployment colour source | **Explicit `colour` field in cluster.json** — read by boot validation, `/api/health`, and the drain check. Subdomain naming is not load-bearing. |
-| Matchmaking DO re-key (`mode` instead of `instanceId:mode`) | **API-side only.** This repo keeps sending `instance_id` (client join param, worker checkin body); the API just stops keying on it. Zero-coordination rollout. |
+| Question                                                    | Decision                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Relationship to open PR #5164                               | **Absorb it.** Fold `t3code/preserve-websocket-old-deployment` (ActiveDeployment, serverHost pinning, drain, version-mismatch join gate) into this work as PR 2 and supersede that PR.                                                                                                                                |
+| New game ID size                                            | **10 chars total** — instance letter + 9 random from the existing 58-symbol alphabet. `GAME_ID_REGEX` widens to a `{8,10}` length range so archived 8-char IDs stay valid. (~0.8 expected archive-key collisions at 200M lifetime games; today's 8-char IDs are already near their first expected collision at ~20M.) |
+| Deployment colour source                                    | **Explicit `colour` field in cluster.json** — read by boot validation, `/api/health`, and the drain check. Subdomain naming is not load-bearing.                                                                                                                                                                      |
+| Matchmaking DO re-key (`mode` instead of `instanceId:mode`) | **API-side only.** This repo keeps sending `instance_id` (client join param, worker checkin body); the API just stops keying on it. Zero-coordination rollout.                                                                                                                                                        |
 
 ## cluster.json
 
 ```json
 {
-  "a": { "host": "blue.openfront.io",  "colour": "blue",  "numWorkers": 16 },
+  "a": { "host": "blue.openfront.io", "colour": "blue", "numWorkers": 16 },
   "b": { "host": "green.openfront.io", "colour": "green", "numWorkers": 16 }
 }
 ```
@@ -88,7 +88,7 @@ comes free with the blue/green cadence. Routing only matters while a game is
 alive (archived IDs resolve via the API, not workers), so a drained colour's
 count is safe to change.
 
-The fleet has no such freeze. A fleet redeploy synchronizes the *servers*
+The fleet has no such freeze. A fleet redeploy synchronizes the _servers_
 onto a new map, but not the two things that actually hold routing state:
 live games straddle the flip on the draining colour for hours, and open
 tabs / desktop apps keep their map for their own lifetime — there is always
@@ -97,12 +97,12 @@ re-routes existing live games' IDs (shared lobby links and rejoins break at
 every fleet change), and removal is worse: shrink N and everything
 reshuffles, or keep N and 1/(old N) of the keyspace — including new mints —
 points at a dead server forever, compounding with every retirement. Both
-failures are silent: every ID hashes to *somewhere*, and a misroute answers
+failures are silent: every ID hashes to _somewhere_, and a misroute answers
 "game not found" on a healthy server.
 
 The letter is the minimum stable token that lets an ID survive map changes:
 resolution is append-only (a letter never re-resolves; a removed one goes
-*unknown*, which is loud and falls back to the apex), mixed maps are safe in
+_unknown_, which is loud and falls back to the apex), mixed maps are safe in
 both directions, retirement is just drain-then-delete, and any ID names its
 server on sight. It costs one character; any scheme that patches the hash's
 instability (epoch markers, bucket maps) ends up re-inventing it.
@@ -208,8 +208,8 @@ except for the new ID format.
     `tests/matchmaking/e2e.mjs`.
 - `GET /cluster.json` on the master (desktop server discovery).
 - Minting: `generateID()` grows a variant for game IDs — own instance letter
-  + 9 random chars; `generateGameIdForWorker` keeps hash-to-self rejection
-  sampling over the full 10-char ID. Client IDs stay 8-char.
+  - 9 random chars; `generateGameIdForWorker` keeps hash-to-self rejection
+    sampling over the full 10-char ID. Client IDs stay 8-char.
 - Tests: config validation (dup letters/hosts, bad colour, missing self),
   self-entry resolution incl. dev, minted IDs match `^<letter>[alphabet]{9}$`
   and hash to the requested worker, RenderHtml injection shape.
@@ -239,7 +239,7 @@ except for the new ID format.
 
 Fixes the false-drain PR 2's mechanism would develop with multiple active
 origins behind the apex: an active server polling the apex often gets a
-*sibling's* `instanceId` and wrongly concludes it is inactive. Colour is
+_sibling's_ `instanceId` and wrongly concludes it is inactive. Colour is
 deployment-wide; instanceId is per-machine.
 
 - `/api/health` reports the deployment `colour` (from the server's own
