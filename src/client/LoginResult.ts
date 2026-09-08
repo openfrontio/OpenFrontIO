@@ -7,12 +7,21 @@
  * so the user has to sign into the account they have and link this provider
  * from settings.
  *
+ * `deleted` means the account has a queued self-service deletion. To the player
+ * it reads as already deleted, so saying nothing would look like the sign-in
+ * silently failed.
+ *
+ * `error` means the provider's response could not be verified — the Steam
+ * OpenID callback's refusal, and any future provider's. Deliberately says no
+ * more than that: the callback cannot explain why without leaking whether a
+ * given account exists.
+ *
  * `cancel` is also sent (the user backed out at the provider) but needs no
  * feedback, so it is deliberately not a recognised result here.
  */
-export type LoginResult = "email_exists";
+export type LoginResult = "email_exists" | "deleted" | "error";
 
-const KNOWN_RESULTS: readonly string[] = ["email_exists"];
+const KNOWN_RESULTS: readonly string[] = ["email_exists", "deleted", "error"];
 
 /**
  * Read the one-shot `login=<result>` router arg and strip it from the URL so a
