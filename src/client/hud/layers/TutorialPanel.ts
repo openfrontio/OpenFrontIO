@@ -48,8 +48,11 @@ const COMPLETE_LINGER_TICKS = 50;
 /** How many of the nearest attack targets get a marker during the tribes step. */
 const NEARBY_TRIBE_MARK_COUNT = 3;
 
-/** How often (in ticks) to recompute which players we share a border with. */
+/** How often (in ticks) to recompute what we share a border with. */
 const BORDER_REFRESH_TICKS = 10;
+
+/** Steps that need a coast: until we own one, they ask the player to expand to it. */
+const COAST_STEPS = new Set(["send_boat", "buy_port"]);
 
 /**
  * Steps with a `tutorial.step_touch.*` variant: their desktop text leans on
@@ -107,6 +110,12 @@ export class TutorialPanel extends LitElement implements Controller {
   private nationRelations = new Map<number, Relation>();
   /** smallIDs we share a border with; null until the first fetch lands. */
   private borderingIds: Set<number> | null = null;
+  /**
+   * Whether we own a shore tile; null until the first fetch lands. Any water
+   * counts: ports and boats work on lakes too, and the map generator drops
+   * bodies under 200 tiles, so there are no ponds to exclude.
+   */
+  @state() private hasCoast: boolean | null = null;
   private borderFetch: Promise<void> | null = null;
   /** Tribes step: every reachable tribe is walled off, so point at nations. */
   @state() private attackNations = false;
@@ -157,6 +166,9 @@ export class TutorialPanel extends LitElement implements Controller {
       return;
     }
     const step = this.progress.current();
+    if (step && (step.id === "capture_tribes" || COAST_STEPS.has(step.id))) {
+      this.refreshBordering(player);
+    }
     const target =
       step && !this.progress.stepDone() ? (step.highlight ?? null) : null;
     this.setHighlight(target);
@@ -215,7 +227,6 @@ export class TutorialPanel extends LitElement implements Controller {
     player: PlayerView,
     me: { x: number; y: number },
   ): number[] {
-    this.refreshBordering(player);
     const bordering = this.borderingIds;
     const bots = this.nearest(PlayerType.Bot, me);
     // Until the first border fetch lands, fall back to plain nearest.
@@ -256,7 +267,10 @@ export class TutorialPanel extends LitElement implements Controller {
       .slice(0, 1);
   }
 
-  /** Recompute (once a second, one fetch in flight) who we share a border with. */
+  /**
+   * Recompute (once a second, one fetch in flight) who we share a border
+   * with and whether any of it is coast.
+   */
   private refreshBordering(player: PlayerView) {
     if (
       this.game.ticks() % BORDER_REFRESH_TICKS !== 0 ||
@@ -267,13 +281,16 @@ export class TutorialPanel extends LitElement implements Controller {
       this.borderFetch = null;
       const myID = player.smallID();
       const ids = new Set<number>();
+      let coast = false;
       for (const tile of bt.borderTiles) {
+        if (this.game.isShore(tile)) coast = true;
         for (const n of this.game.neighbors(tile)) {
           const owner = this.game.ownerID(n);
           if (owner !== 0 && owner !== myID) ids.add(owner);
         }
       }
       this.borderingIds = ids;
+      this.hasCoast = coast;
     });
   }
 
@@ -505,6 +522,10 @@ export class TutorialPanel extends LitElement implements Controller {
   }
 
   private stepText(step: TutorialStep, done: boolean): string {
+    // Boats and ports need shore; landlocked players are sent to get some.
+    if (!done && COAST_STEPS.has(step.id) && this.hasCoast === false) {
+      return translateText("tutorial.step.no_coast");
+    }
     // Build steps: until the unit is affordable, ask for gold instead of
     // telling the player to build something they can't.
     const cost =

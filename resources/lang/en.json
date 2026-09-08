@@ -1936,6 +1936,7 @@
       "hydrogen_info": "Hydrogen Bomb — large strategic strikes that weaken the enemy.",
       "launch_atom": "Your silo is armed! Press {key}, then click a neighbor's territory to launch an Atom Bomb.",
       "mirv_info": "MIRV — a massive missile attack to cripple your enemy.",
+      "no_coast": "You have no coastline yet. Water access is very important — it lets you send boats, build ports and trade by sea. Expand your territory until it reaches the coast.",
       "port_info_ships": "Ports send out trade ships, which earn you gold.",
       "port_info_warships": "Ports can also be used to construct warships.",
       "propose_alliance": "Nations make strong allies. Right-click the nation marked with a target and propose an alliance.",
