@@ -81,7 +81,10 @@ interface TradeSide {
    * structureMinDist spacing).
    */
   numPorts?: number;
-  /** How far around the anchor to conquer and scan for port spots (default 80). */
+  /**
+   * How far around the anchor to conquer and scan for port spots
+   * (default 5 for a single port, otherwise 80).
+   */
   scanRadius?: number;
 }
 
@@ -101,18 +104,32 @@ interface TradeSideMetrics {
   goldPerMinute: number;
 }
 
+interface TradeSideBaseline {
+  gold: bigint;
+  shipsSent: number;
+  shipsArrived: number;
+}
+
+function tradeSideBaseline(game: Game, player: Player): TradeSideBaseline {
+  const trade = game.stats().getPlayerStats(player)?.boats?.trade ?? [];
+  return {
+    gold: player.gold(),
+    shipsSent: Number(trade[0] ?? 0n),
+    shipsArrived: Number(trade[1] ?? 0n),
+  };
+}
+
 function tradeSideMetrics(
   game: Game,
   player: Player,
-  goldBefore: bigint,
+  base: TradeSideBaseline,
   ticks: number,
 ): TradeSideMetrics {
-  const stats = game.stats().getPlayerStats(player);
-  const trade = stats?.boats?.trade ?? [];
-  const arrived = Number(trade[1] ?? 0n);
-  const tradeGold = player.gold() - goldBefore;
+  const after = tradeSideBaseline(game, player);
+  const arrived = after.shipsArrived - base.shipsArrived;
+  const tradeGold = after.gold - base.gold;
   return {
-    shipsSent: Number(trade[0] ?? 0n),
+    shipsSent: after.shipsSent - base.shipsSent,
     shipsArrived: arrived,
     tradeGold,
     arrivalsPerMinute: sig(arrived / (ticks / 600)),
@@ -207,13 +224,16 @@ async function runTradeScenario(s: TradeScenario): Promise<{
     game.addExecution(new PortExecution(port));
     game.executeNextTick();
   }
-  const goldA = a.gold();
-  const goldB = b.gold();
+  // The stagger above is warm-up: earlier spawners have already run for up
+  // to 2·numPorts ticks (and may have sent ships), so baseline the trade
+  // stats together with gold and measure only the s.ticks window.
+  const baseA = tradeSideBaseline(game, a);
+  const baseB = tradeSideBaseline(game, b);
   for (let i = 0; i < s.ticks; i++) {
     game.executeNextTick();
   }
-  const mA = tradeSideMetrics(game, a, goldA, s.ticks);
-  const mB = tradeSideMetrics(game, b, goldB, s.ticks);
+  const mA = tradeSideMetrics(game, a, baseA, s.ticks);
+  const mB = tradeSideMetrics(game, b, baseB, s.ticks);
   const arrivals = mA.shipsArrived + mB.shipsArrived;
   return {
     a: mA,
@@ -315,11 +335,12 @@ describe("trade ship scenarios", () => {
     ).toMatchSnapshot();
   }, 240_000);
 
-  // The absurd end of the port-count sweep, on giantworldmap (4108x1948)
-  // because the world map's coastlines only fit ~320 ports a side. The
-  // spawn-suppression midpoint sits at 400 global trade ships regardless of
-  // port count, so two thousand ports earn barely more than a hundred — the
-  // pinned number is how flat the curve has gone.
+  // The absurd end of the port-count sweep. It runs on giantworldmap
+  // (4108x1948, whose coasts fit 1000+ ocean-facing ports a side around
+  // these anchors) because the world map tops out around ~320 a side. The
+  // spawn-suppression midpoint sits at 400 global trade ships regardless
+  // of port count, so income has long since flattened — the pinned number
+  // is how little a thousand ports a side add over fifty.
   test("a thousand ports each, giant map", async () => {
     expect(
       await runTradeScenario({
