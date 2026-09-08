@@ -334,4 +334,40 @@ describe("AiAttackBehavior - nuked territory early-out", () => {
       expect(attacks).toHaveLength(0);
     });
   });
+
+  describe("regression: troopSendCap applies to TerraNullius/fallout reclaim", () => {
+    test("`nuked` strategy respects the neighbor troop cap instead of sending the whole army", async () => {
+      // Before the fix, troopSendCap() was only applied when the attack's
+      // target was a Player, so reclaiming nuked TerraNullius (the `nuked`
+      // strategy) ignored the cap entirely and could send the nation's whole
+      // army even with a much stronger hostile neighbor next door.
+      const { game, nation, enemy, attackBehavior } = await setupBehavior(
+        Difficulty.Impossible,
+        { withEnemy: true, nationTroops: 5_000_000, enemyTroops: 4_000_000 },
+      );
+      // Starting troops (Impossible nation / infinite-troops human baseline)
+      // are added on top of the requested amounts, so read the real totals
+      // back rather than assuming the opts values.
+      const nationTroops = nation.troops();
+      const enemyTroops = enemy.troops();
+
+      const before = nation.outgoingAttacks().length;
+      attackBehavior.maybeAttack();
+      executeTicks(game, 1);
+
+      const attacks = newAttacks(nation, before);
+      expect(attacks.length).toBeGreaterThan(0);
+      for (const attack of attacks) {
+        // Confirms the `nuked` strategy (not retaliation) dispatched this.
+        expect(attack.target().isPlayer()).toBe(false);
+      }
+
+      // Impossible retains 90% of the strongest hostile neighbor's troops.
+      const cap = nationTroops - Math.ceil(enemyTroops * 0.9);
+      const totalSent = attacks.reduce((sum, a) => sum + a.troops(), 0);
+      expect(totalSent).toBeLessThanOrEqual(cap);
+      // Allow for a sliver of combat loss from the one executed tick.
+      expect(totalSent).toBeGreaterThan(cap * 0.99);
+    });
+  });
 });

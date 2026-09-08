@@ -145,8 +145,7 @@ export class AiAttackBehavior {
     }
 
     const owner = this.game.owner(dst);
-    const cap = owner.isPlayer() ? this.troopSendCap() : Infinity;
-    const troops = Math.min(this.player.troops() / 5, cap);
+    const troops = Math.min(this.player.troops() / 5, this.troopSendCap());
     if (troops < 1) return;
 
     // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
@@ -990,10 +989,10 @@ export class AiAttackBehavior {
       troops = nonBotTroops(targetTroops);
     }
 
-    // Hard & Impossible: don't drop below neighbor troop threshold (players only)
-    if (target.isPlayer()) {
-      troops = Math.min(troops, this.troopSendCap());
-    }
+    // Hard & Impossible: don't drop below neighbor troop threshold. Applies
+    // to TerraNullius (incl. fallout reclaim) too — troopSendCap() only
+    // depends on hostile neighbors, not the attack's target.
+    troops = Math.min(troops, this.troopSendCap());
 
     if (troops < 1) {
       return null;
