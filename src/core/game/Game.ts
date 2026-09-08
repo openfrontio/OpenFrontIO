@@ -895,6 +895,11 @@ export interface Game extends GameMap {
   numTilesWithFallout(): number;
   stats(): Stats;
 
+  // MIRV launches share a global cooldown: after any player launches one, no
+  // player can launch another until it expires.
+  recordMirvLaunch(): void;
+  mirvCooldownRemaining(): Tick;
+
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
@@ -945,6 +950,9 @@ export interface BuildableUnit {
   // escalate per level, so a bulk total is NOT cost * amount). Only set when
   // canUpgrade is not false.
   upgradeCosts?: Gold[];
+  // Remaining ticks of the global MIRV launch cooldown. Only set for MIRV
+  // while the cooldown is active.
+  cooldown?: Tick;
   overlappingRailroads: TileRef[];
   ghostRailPaths: TileRef[][];
 }

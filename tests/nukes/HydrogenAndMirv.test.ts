@@ -379,6 +379,9 @@ describe("Hydrogen Bomb and MIRV flows", () => {
       { infiniteGold: true, instantBuild: true },
       [info],
     );
+    // Disable the global MIRV launch cooldown — this test launches two MIRVs
+    // back-to-back to compare their flight paths.
+    (edgeGame.config() as TestConfig).setMirvLaunchCooldown(0);
     const edgePlayer = edgeGame.player(info.id);
 
     edgePlayer.conquer(edgeGame.ref(10, 1));

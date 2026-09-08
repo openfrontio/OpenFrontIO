@@ -96,6 +96,7 @@ export class MirvExecution implements Execution {
         targetPlayer: this.targetPlayer,
       });
       this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
+      this.mg.recordMirvLaunch();
       const x = Math.floor((this.baseX + this.mg.x(this.nuke.tile())) / 2);
       const y = Math.max(0, this.baseY - 500) + 50;
       this.separateDst = this.mg.ref(x, y);

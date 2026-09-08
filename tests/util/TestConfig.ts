@@ -11,6 +11,7 @@ export class TestConfig extends Config {
   private _defaultNukeSpeed: number = 4;
   private _spawnImmunityDuration: number = 0;
   private _nationSpawnImmunityDuration: number = 0;
+  private _mirvLaunchCooldown: Tick | null = null;
 
   disableNavMesh(): boolean {
     return this.gameConfig().disableNavMesh ?? true;
@@ -68,6 +69,14 @@ export class TestConfig extends Config {
 
   setNationSpawnImmunityDuration(duration: Tick) {
     this._nationSpawnImmunityDuration = duration;
+  }
+
+  setMirvLaunchCooldown(cooldown: Tick) {
+    this._mirvLaunchCooldown = cooldown;
+  }
+
+  mirvLaunchCooldown(): Tick {
+    return this._mirvLaunchCooldown ?? super.mirvLaunchCooldown();
   }
 
   nationSpawnImmunityDuration(): Tick {

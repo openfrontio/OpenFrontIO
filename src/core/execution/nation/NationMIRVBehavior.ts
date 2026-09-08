@@ -108,6 +108,9 @@ export class NationMIRVBehavior {
     if (this.game.config().isUnitDisabled(UnitType.MIRV)) {
       return false;
     }
+    if (this.game.mirvCooldownRemaining() > 0) {
+      return false;
+    }
     if (this.player.units(UnitType.MissileSilo).length === 0) {
       return false;
     }
