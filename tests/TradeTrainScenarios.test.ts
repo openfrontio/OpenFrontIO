@@ -74,6 +74,12 @@ interface TradeSide {
   /** Shore tile the port is built on; a disc around it is conquered. */
   port: [number, number];
   portLevel?: number;
+  /**
+   * Build this many ports (default 1): the first on the anchor tile, the
+   * rest on nearby shore tiles facing the same ocean (canBuild enforces
+   * structureMinDist spacing).
+   */
+  numPorts?: number;
 }
 
 interface TradeScenario {
@@ -89,6 +95,7 @@ interface TradeSideMetrics {
   shipsArrived: number;
   tradeGold: bigint;
   arrivalsPerMinute: number;
+  goldPerMinute: number;
 }
 
 function tradeSideMetrics(
@@ -100,12 +107,62 @@ function tradeSideMetrics(
   const stats = game.stats().getPlayerStats(player);
   const trade = stats?.boats?.trade ?? [];
   const arrived = Number(trade[1] ?? 0n);
+  const tradeGold = player.gold() - goldBefore;
   return {
     shipsSent: Number(trade[0] ?? 0n),
     shipsArrived: arrived,
-    tradeGold: player.gold() - goldBefore,
+    tradeGold,
     arrivalsPerMinute: sig(arrived / (ticks / 600)),
+    goldPerMinute: sig(Number(tradeGold) / (ticks / 600)),
   };
+}
+
+/**
+ * Build `side.numPorts` ports for `player`: the first on the anchor shore
+ * tile, the rest on surrounding shore tiles that face the same ocean, in
+ * scan order. canBuild itself rejects tiles within structureMinDist of an
+ * existing port, so the fleet spreads out along the coastline.
+ */
+function buildPorts(game: Game, player: Player, side: TradeSide): void {
+  const [cx, cy] = side.port;
+  const count = side.numPorts ?? 1;
+  const map = game.map();
+  const r = count === 1 ? 5 : 80;
+  conquerDisc(game, player, cx, cy, r);
+
+  const oceanOf = (t: number): number | null => {
+    for (const n of game.neighbors(t)) {
+      if (!map.isWater(n)) continue;
+      const comp = game.getWaterComponent(n);
+      if (comp !== null) return comp;
+    }
+    return null;
+  };
+  const ocean = oceanOf(map.ref(cx, cy));
+
+  const port = build(game, player, UnitType.Port, cx, cy);
+  for (let l = 1; l < (side.portLevel ?? 1); l++) port.increaseLevel();
+  game.addExecution(new PortExecution(port));
+  let built = 1;
+
+  for (let y = Math.max(0, cy - r); y <= cy + r && built < count; y++) {
+    for (let x = Math.max(0, cx - r); x <= cx + r && built < count; x++) {
+      if (x >= map.width() || y >= map.height()) continue;
+      const t = map.ref(x, y);
+      if (!map.isLand(t) || !map.isShore(t)) continue;
+      if (oceanOf(t) !== ocean) continue;
+      const spawn = player.canBuild(UnitType.Port, t);
+      if (spawn === false) continue;
+      const extra = player.buildUnit(UnitType.Port, spawn, {});
+      game.addExecution(new PortExecution(extra));
+      built++;
+    }
+  }
+  if (built < count) {
+    throw new Error(
+      `only found room for ${built}/${count} ports near (${cx}, ${cy})`,
+    );
+  }
 }
 
 async function runTradeScenario(s: TradeScenario): Promise<{
@@ -129,10 +186,7 @@ async function runTradeScenario(s: TradeScenario): Promise<{
     [b, s.b],
   ] as const) {
     player.addGold(10_000_000n);
-    conquerDisc(game, player, side.port[0], side.port[1], 5);
-    const port = build(game, player, UnitType.Port, side.port[0], side.port[1]);
-    for (let l = 1; l < (side.portLevel ?? 1); l++) port.increaseLevel();
-    game.addExecution(new PortExecution(port));
+    buildPorts(game, player, side);
   }
   const goldA = a.gold();
   const goldB = b.gold();
@@ -201,6 +255,23 @@ describe("trade ship scenarios", () => {
         disableNavMesh: false,
         a: { port: [539, 380], portLevel: 3 },
         b: { port: [832, 341] },
+        ticks: 3_000,
+      }),
+    ).toMatchSnapshot();
+  }, 120_000);
+
+  // A real port economy: ten ports per side spread along each coastline.
+  // Every port rolls its own spawn chance and picks a destination weighted
+  // by proximity, and the growing trade-ship count feeds back into
+  // tradeShipSpawnRate — goldPerMinute here is the fleet's steady-state
+  // income, not a single route.
+  test("ten ports each across the ocean", async () => {
+    expect(
+      await runTradeScenario({
+        map: "world",
+        disableNavMesh: false,
+        a: { port: [539, 380], numPorts: 10 },
+        b: { port: [832, 341], numPorts: 10 },
         ticks: 3_000,
       }),
     ).toMatchSnapshot();
