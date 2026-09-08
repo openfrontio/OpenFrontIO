@@ -428,14 +428,16 @@ export async function startWorker() {
               {
                 type: "error",
                 error: "version_mismatch",
+                gitCommit: ServerEnv.gitCommit(),
               } satisfies ServerErrorMessage,
               undefined,
             ),
           );
-          // Normal closure: the typed error above is the whole message. 1002
-          // would make the client stack a generic "connection refused" alert
-          // on top of it, and any other code makes it reconnect and loop.
-          ws.close(1000, "Version mismatch");
+          // Normal closure: the typed error above is the whole message. The
+          // client latches Normal silently, so nothing stacks on the alert; a
+          // 4xxx rejection would pop a generic "connection refused" dialog on
+          // top of it, and a retryable code makes it reconnect and loop.
+          ws.close(CloseCode.Normal, "Version mismatch");
           return;
         }
 
