@@ -75,6 +75,7 @@ import { fallbackPlayerName } from "./PlayerName";
 import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
+import { SinglePlayerModal } from "./SinglePlayerModal";
 import {
   isSteamLinkHash,
   parseSteamLinkToken,
@@ -464,6 +465,16 @@ class Client {
         }
       });
     }
+    // Tutorial entry points (play-page card, help page): back to the play page
+    // if needed (so a username problem is visible), then a default solo game
+    // with the guide on.
+    document.addEventListener("start-tutorial", () => {
+      if (hlpModal?.isOpen()) hlpModal.close();
+      if (this.usernameInput && !this.usernameInput.canPlay()) return;
+      void (
+        document.querySelector("single-player-modal") as SinglePlayerModal
+      )?.startTutorial();
+    });
 
     this.storeModal = document.getElementById("page-item-store") as StoreModal;
     if (!this.storeModal || !(this.storeModal instanceof StoreModal)) {

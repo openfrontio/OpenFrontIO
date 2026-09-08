@@ -38,6 +38,7 @@ import { SinglePlayerModal } from "./SinglePlayerModal";
 import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
+  getGamesPlayed,
   getSecondsUntilServerTimestamp,
   renderDuration,
   translateText,
@@ -48,6 +49,12 @@ const PRIMARY_ACTION =
 const SECONDARY_ACTION =
   "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]";
 const DISABLED = "opacity-50 cursor-not-allowed pointer-events-none";
+/** Tutorial card: the panel's gold, dark text for contrast. */
+const TUTORIAL_ACTION =
+  "bg-cyber-yellow hover:bg-yellow-300 active:bg-cyber-yellow/80 !text-gray-900 hover:scale-y-105 hover:scale-x-[1.01]";
+
+/** The Tutorial card shows beside Solo until the player has played this many games. */
+const TUTORIAL_CARD_MAX_GAMES = 5;
 
 /**
  * Whether a multiplayer entry point should refuse to act. Exported for tests
@@ -259,12 +266,23 @@ export class GameModeSelector extends LitElement {
           class="no-crazygames [&:empty]:hidden sm:col-span-2 sm:row-start-1"
         ></ios-add-to-home-screen-banner>
 
-        <div class="h-14 sm:col-span-2 sm:row-start-3">
-          ${this.renderSmallActionCard(
-            translateText("main.solo"),
-            this.openSinglePlayerModal,
-            PRIMARY_ACTION,
-          )}
+        <div class="flex gap-4 h-14 sm:col-span-2 sm:row-start-3">
+          <div class="flex-[2]">
+            ${this.renderSmallActionCard(
+              translateText("main.solo"),
+              this.openSinglePlayerModal,
+              PRIMARY_ACTION,
+            )}
+          </div>
+          ${getGamesPlayed() < TUTORIAL_CARD_MAX_GAMES
+            ? html`<div class="flex-1">
+                ${this.renderSmallActionCard(
+                  translateText("main.tutorial"),
+                  this.startTutorial,
+                  TUTORIAL_ACTION,
+                )}
+              </div>`
+            : nothing}
         </div>
         <div class="grid grid-cols-3 gap-4 h-14 sm:col-span-2 sm:row-start-4">
           ${this.renderSmallActionCard(
@@ -379,6 +397,12 @@ export class GameModeSelector extends LitElement {
     (
       document.querySelector("single-player-modal") as SinglePlayerModal
     )?.open();
+  };
+
+  // Handled in Main, which also serves the help page's tutorial button.
+  private startTutorial = () => {
+    if (!this.validateUsername()) return;
+    document.dispatchEvent(new CustomEvent("start-tutorial"));
   };
 
   private openHostLobby = () => {

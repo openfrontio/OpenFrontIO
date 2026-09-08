@@ -108,5 +108,14 @@ export const Platform = (() => {
     get isDesktopWidth(): boolean {
       return isBrowser ? window.innerWidth >= 1024 : false;
     },
+
+    /** Touch devices (phones, tablets) report a coarse primary pointer. */
+    get isTouch(): boolean {
+      return (
+        isBrowser &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches
+      );
+    },
   };
 })();
