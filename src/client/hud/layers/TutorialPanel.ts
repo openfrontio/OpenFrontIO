@@ -4,6 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { PlayerType, Relation, UnitType } from "../../../core/game/Game";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
+import { Platform } from "../../Platform";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import { UIState } from "../../UIState";
 import { renderNumber, translateText } from "../../Utils";
@@ -15,7 +16,7 @@ import {
   TutorialHighlightEvent,
   TutorialProgress,
   TutorialStep,
-} from "./Tutorial";
+} from "../Tutorial";
 
 /** How often (in ticks) to ask the worker for current build costs. */
 const COST_POLL_TICKS = 10;
@@ -49,6 +50,25 @@ const NEARBY_TRIBE_MARK_COUNT = 3;
 
 /** How often (in ticks) to recompute which players we share a border with. */
 const BORDER_REFRESH_TICKS = 10;
+
+/**
+ * Steps with a `tutorial.step_touch.*` variant: their desktop text leans on
+ * hotkeys, clicks and the hotbar (hidden below lg), so touch devices get the
+ * tap → radial menu route instead.
+ */
+const TOUCH_TEXT_STEPS = new Set([
+  "spawn",
+  "attack_wilderness",
+  "buy_city",
+  "propose_alliance",
+  "buy_factory",
+  "send_boat",
+  "buy_port",
+  "buy_defense_post",
+  "buy_warship",
+  "buy_silo",
+  "launch_atom",
+]);
 
 /** Defaults shown when the player hasn't rebound the action (see UnitDisplay). */
 const HOTKEY_FALLBACKS = {
@@ -375,7 +395,7 @@ export class TutorialPanel extends LitElement implements Controller {
     if (!this.active) return nothing;
     return html`
       <div
-        class="pointer-events-auto w-full rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-base p-2 mb-1"
+        class="pointer-events-auto w-full sm:rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-base p-2 sm:mb-1"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div class="flex items-center justify-between gap-2 mb-1">
@@ -508,7 +528,9 @@ export class TutorialPanel extends LitElement implements Controller {
       !done && step.id === "capture_tribes" && this.attackNations
         ? "attack_nations"
         : step.id;
-    return translateText(`tutorial.step.${id}`, {
+    const block =
+      Platform.isTouch && TOUCH_TEXT_STEPS.has(id) ? "step_touch" : "step";
+    return translateText(`tutorial.${block}.${id}`, {
       cost: renderNumber(this.costs.get(UnitType.City) ?? 0n),
       key: this.hotkeyFor(step),
     });

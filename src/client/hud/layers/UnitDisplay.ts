@@ -27,7 +27,7 @@ import {
   samLauncherIcon,
   warshipIcon,
 } from "../HotbarIcons";
-import { TutorialHighlight, TutorialHighlightEvent } from "./Tutorial";
+import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Controller {

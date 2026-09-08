@@ -1,5 +1,5 @@
-import { GameEvent } from "../../../core/EventBus";
-import { UnitType } from "../../../core/game/Game";
+import { GameEvent } from "../../core/EventBus";
+import { UnitType } from "../../core/game/Game";
 
 /** HUD elements (or, for "territory", the map ring) the tutorial can draw attention to. */
 export type TutorialHighlight =

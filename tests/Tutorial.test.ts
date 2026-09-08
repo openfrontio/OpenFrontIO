@@ -3,7 +3,7 @@ import {
   TUTORIAL_STEPS,
   TutorialContext,
   TutorialProgress,
-} from "../src/client/hud/layers/Tutorial";
+} from "../src/client/hud/Tutorial";
 
 function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
   return {

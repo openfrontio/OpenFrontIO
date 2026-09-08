@@ -21,7 +21,7 @@ import {
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
-import { TutorialHighlight, TutorialHighlightEvent } from "./Tutorial";
+import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
 @customElement("control-panel")
