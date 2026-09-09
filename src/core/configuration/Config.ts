@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
+import { ClusterConfig } from "../ClusterConfig";
 import { exp, log, pow, pow2 } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
@@ -19,7 +20,6 @@ import {
   UnitType,
 } from "../game/Game";
 import { UserSettings } from "../game/UserSettings";
-import { ClusterConfig } from "../ClusterConfig";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, toInt, within } from "../Util";

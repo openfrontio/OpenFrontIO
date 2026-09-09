@@ -1,9 +1,9 @@
 import { JWK } from "jose";
 import { z } from "zod";
 import {
+  ClusterColour,
   ClusterConfig,
   ClusterConfigSchema,
-  ClusterColour,
   ClusterEntry,
 } from "../core/ClusterConfig";
 import { GameEnv, parseGameEnv } from "../core/configuration/Config";
@@ -191,10 +191,13 @@ export class ServerEnv {
     try {
       parsed = JSON.parse(raw);
     } catch (e) {
-      throw new Error(
+      // Manual cause assignment: target ES2020's Error constructor predates
+      // the options bag (same pattern as zbin/bytes.ts).
+      const error = new Error(
         `CLUSTER_JSON is not valid JSON: ${e instanceof Error ? e.message : e}`,
-        { cause: e },
       );
+      (error as { cause?: unknown }).cause = e;
+      throw error;
     }
     const result = ClusterConfigSchema.safeParse(parsed);
     if (!result.success) {
