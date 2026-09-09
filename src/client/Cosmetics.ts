@@ -424,7 +424,9 @@ export async function purchaseCosmetic(
     method === "hard"
       ? (userMe.player.currency?.hard ?? 0)
       : (userMe.player.currency?.soft ?? 0);
-  if (balance < price) {
+  // Built for the pre-check below and reused when the server refuses for the
+  // same reason, so both routes describe the same item the same way.
+  const insufficient = (available: number): InsufficientCurrency => {
     const currencyName = translateText(
       method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
     );
@@ -448,11 +450,17 @@ export async function purchaseCosmetic(
     }
     return {
       currency: currencyName,
-      shortfall: price - balance,
+      // Clamped: the server can refuse on a balance the client still reads as
+      // sufficient, and a zero or negative shortfall reads as "you have
+      // enough", which is the one thing we know is untrue.
+      shortfall: Math.max(1, price - available),
       item: itemName,
       // Only plutonium can be topped up; caps are dismiss-only.
       canTopUp: method === "hard",
     };
+  };
+  if (balance < price) {
+    return insufficient(balance);
   }
 
   const cosmeticType = resolved.type as
@@ -461,15 +469,40 @@ export async function purchaseCosmetic(
     | "flag"
     | "crown"
     | "effect";
-  const success = await purchaseWithCurrency(
+  const result = await purchaseWithCurrency(
     cosmeticType,
     c.name,
     method,
     colorPaletteName,
   );
-  if (!success) {
-    await showInGameAlert(translateText("store.purchase_failed"));
-    return;
+  if (!result.ok) {
+    switch (result.code) {
+      case "insufficient_balance": {
+        // The balance moved since the pre-check: re-read it for the shortfall,
+        // the same way the pack path does.
+        invalidateUserMe();
+        const fresh = await getUserMe();
+        const available =
+          fresh === false
+            ? 0
+            : method === "hard"
+              ? (fresh.player.currency?.hard ?? 0)
+              : (fresh.player.currency?.soft ?? 0);
+        return insufficient(available);
+      }
+      case "debt":
+        // A refund or chargeback left the wallet negative. Topping up does not
+        // unblock it, so this gets a plain explanation rather than the
+        // insufficient-currency dialog — the debt settles out of the next
+        // credit.
+        await showInGameAlert(
+          translateText("store.pack_debt", { debt: result.debt }),
+        );
+        return;
+      default:
+        await showInGameAlert(translateText("store.purchase_failed"));
+        return;
+    }
   }
   await showInGameAlert(
     translateText("store.purchase_success", { name: c.name }),

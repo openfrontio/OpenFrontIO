@@ -6,7 +6,10 @@ vi.mock("../../src/client/Auth", async (importOriginal) => ({
   logOut: vi.fn(async () => true),
 }));
 
-import { purchaseCosmeticPack } from "../../src/client/Api";
+import {
+  purchaseCosmeticPack,
+  purchaseWithCurrency,
+} from "../../src/client/Api";
 import { ClientEnv } from "../../src/client/ClientEnv";
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -136,6 +139,88 @@ describe("purchaseCosmeticPack", () => {
 
     fetchMock.mockRejectedValueOnce(new Error("offline"));
     expect(await purchaseCosmeticPack("starter")).toEqual({
+      ok: false,
+      code: "failed",
+    });
+  });
+});
+
+// POST /shop/purchase — the single-cosmetic sibling of the pack endpoint
+// above, routed through the same spend helper, so it surfaces the same two
+// balance reasons. It used to ignore the body entirely and answer with a bare
+// boolean.
+describe("purchaseWithCurrency", () => {
+  it("posts the cosmetic and reports success", async () => {
+    respond(200, {
+      flareName: "flag:pirate",
+      currencyType: "hard",
+      amount: "100",
+    });
+
+    const result = await purchaseWithCurrency("flag", "pirate", "hard");
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/shop\/purchase$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({
+      cosmeticType: "flag",
+      cosmeticName: "pirate",
+      currencyType: "hard",
+    });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("reports the debt and its amount", async () => {
+    respond(400, { reason: "insufficient_balance_debt", debt: "150" });
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: false,
+      code: "debt",
+      debt: "150",
+    });
+  });
+
+  // The reason is the branch key; the amount is only quoted back. A body
+  // missing it must still take the debt branch.
+  it("still reports a debt whose amount is missing", async () => {
+    respond(400, { reason: "insufficient_balance_debt" });
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: false,
+      code: "debt",
+      debt: "",
+    });
+  });
+
+  it("distinguishes being short from being in debt", async () => {
+    respond(400, { reason: "Insufficient balance" });
+    expect(await purchaseWithCurrency("flag", "pirate", "soft")).toEqual({
+      ok: false,
+      code: "insufficient_balance",
+    });
+  });
+
+  it("fails closed on an unrecognised 400, a 500 and a network error", async () => {
+    respond(400, { reason: "Invalid request body" });
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: false,
+      code: "failed",
+    });
+
+    fetchMock.mockResolvedValueOnce(
+      new Response("<html>gateway</html>", { status: 400 }),
+    );
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: false,
+      code: "failed",
+    });
+
+    respond(500, {});
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: false,
+      code: "failed",
+    });
+
+    fetchMock.mockRejectedValueOnce(new Error("offline"));
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
       ok: false,
       code: "failed",
     });

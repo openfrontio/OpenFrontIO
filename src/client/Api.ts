@@ -806,12 +806,27 @@ export async function fetchTribeStats(
   }
 }
 
+export type PurchaseWithCurrencyResult =
+  | { ok: true }
+  // 400 "Insufficient balance": the balance moved since the client's
+  // pre-check. Nothing charged.
+  | { ok: false; code: "insufficient_balance" }
+  // 400 insufficient_balance_debt: a refund/chargeback left the wallet
+  // negative; `debt` (bigint string) must be settled before anything is
+  // spendable. Nothing charged. Distinct from the above because buying more
+  // currency is not the remedy.
+  | { ok: false; code: "debt"; debt: string }
+  | { ok: false; code: "failed" };
+
+// POST /shop/purchase — buy a single cosmetic for hard or soft currency. The
+// only spend path that takes soft currency. Any error means no debit and no
+// grant. Callers invalidate the cached /users/@me on success.
 export async function purchaseWithCurrency(
   cosmeticType: "pattern" | "skin" | "flag" | "crown" | "effect",
   cosmeticName: string,
   currencyType: "hard" | "soft",
   colorPaletteName?: string,
-): Promise<boolean> {
+): Promise<PurchaseWithCurrencyResult> {
   try {
     const response = await fetch(`${getApiBase()}/shop/purchase`, {
       method: "POST",
@@ -828,7 +843,21 @@ export async function purchaseWithCurrency(
     });
     if (response.status === 401) {
       await logOut();
-      return false;
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 400) {
+      const body = await response.json().catch(() => null);
+      const reason = typeof body?.reason === "string" ? body.reason : "";
+      if (reason === "insufficient_balance_debt") {
+        return { ok: false, code: "debt", debt: String(body.debt ?? "") };
+      }
+      if (reason === "Insufficient balance") {
+        return { ok: false, code: "insufficient_balance" };
+      }
+      // Not logging the body: an unrecognised reason is exactly the case
+      // where we don't know what it contains.
+      console.warn("purchaseWithCurrency: unrecognised 400 reason");
+      return { ok: false, code: "failed" };
     }
     if (!response.ok) {
       console.error(
@@ -836,12 +865,12 @@ export async function purchaseWithCurrency(
         response.status,
         response.statusText,
       );
-      return false;
+      return { ok: false, code: "failed" };
     }
-    return true;
+    return { ok: true };
   } catch (e) {
     console.error("purchaseWithCurrency: request failed", e);
-    return false;
+    return { ok: false, code: "failed" };
   }
 }
 
