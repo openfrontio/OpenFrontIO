@@ -157,6 +157,81 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
     expect(reloadMock).toHaveBeenCalled();
   });
 
+  // The API serves a charged-back wallet as a negative balance, so the
+  // pre-check is where a player in debt normally meets this — the server
+  // refusal below only fires when the chargeback lands mid-session. Without
+  // it, -50 against a 250 pack reads as "you need 300 more" with a top-up
+  // button that cannot clear a debt.
+  it("explains the debt from a negative cached balance, before any request", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(-50));
+
+    const result = await purchaseCosmetic(starter, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith("debt 50");
+    expect(purchaseCosmeticPack).not.toHaveBeenCalled();
+    expect(result).toBeUndefined();
+  });
+
+  // An empty wallet is not a debt; a `<= 0` slip would tell every broke
+  // player they are "0 in debt" instead of offering the top-up they need.
+  it("offers the shortfall, not a debt message, on an empty wallet", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(0));
+
+    const result = await purchaseCosmetic(starter, "hard");
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ shortfall: 250, canTopUp: true });
+  });
+
+  it("explains the debt when the re-read comes back negative", async () => {
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(userWithHard(300))
+      .mockResolvedValueOnce(userWithHard(-100));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "insufficient_balance",
+    });
+
+    const result = await purchaseCosmetic(starter, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith("debt 100");
+    // Not a shortfall with a top-up button: it cannot clear a debt.
+    expect(result).toBeUndefined();
+  });
+
+  it("does not invent a shortfall when the re-read covers the price", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "insufficient_balance",
+    });
+
+    const result = await purchaseCosmetic(starter, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith("failed");
+    expect(result).toBeUndefined();
+  });
+
+  // Dropping the cache is not enough on its own: the Store renders from the
+  // userMeResponse broadcast, so without a re-read and re-dispatch it keeps
+  // showing the pre-chargeback balance.
+  it("re-broadcasts the profile after a debt refusal", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "debt",
+      debt: "300",
+    });
+    const broadcast = vi.fn();
+    document.addEventListener("userMeResponse", broadcast);
+
+    await purchaseCosmetic(starter, "hard");
+
+    expect(invalidateUserMe).toHaveBeenCalled();
+    expect(broadcast).toHaveBeenCalled();
+    document.removeEventListener("userMeResponse", broadcast);
+  });
+
   it("explains debt and stale listings without reloading", async () => {
     vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
 
