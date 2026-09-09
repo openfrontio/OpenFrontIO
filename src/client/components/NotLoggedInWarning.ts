@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
+import { translateText } from "../Utils";
 
 @customElement("not-logged-in-warning")
 export class NotLoggedInWarning extends LitElement {
@@ -51,7 +52,7 @@ export class NotLoggedInWarning extends LitElement {
           window.showPage?.("page-account");
         }}
       >
-        Not logged in
+         ${translateText("common.not_logged_in")}
       </button>
     </div>`;
   }
