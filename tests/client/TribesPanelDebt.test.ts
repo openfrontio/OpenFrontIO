@@ -201,6 +201,37 @@ describe("TribesPanel when the wallet is in debt", () => {
     });
   });
 
+  // The API serves a charged-back wallet as a negative balance, so the panel
+  // can see the debt before it spends a request. This is the ordinary route
+  // for a player in debt; the 400 branches above only fire when the
+  // chargeback lands mid-session against a stale bound balance.
+  describe("with a negative balance already bound", () => {
+    it("explains the debt instead of buying a name", async () => {
+      const el = await mount();
+      el.userMeResponse = userWithHard(-150);
+      await el.updateComplete;
+
+      await buy(el, "Ninja");
+
+      expect(el.textContent).toContain('store.pack_debt:{"debt":"150"}');
+      expect(purchaseTribeName).not.toHaveBeenCalled();
+      expect(dialog(el).info).toBeNull();
+    });
+
+    it("explains the debt instead of boosting", async () => {
+      const el = await mount();
+      el.userMeResponse = userWithHard(-150);
+      await el.updateComplete;
+
+      await boost(el);
+
+      expect(el.textContent).toContain('store.pack_debt:{"debt":"150"}');
+      expect(boostTribeName).not.toHaveBeenCalled();
+      // Not the top-up dialog: buying plutonium does not clear a debt.
+      expect(dialog(el).info).toBeNull();
+    });
+  });
+
   describe("boosting a name", () => {
     it("explains the debt instead of offering a top-up", async () => {
       boostTribeName.mockResolvedValue({

@@ -128,6 +128,21 @@ export class TribesPanel extends LitElement {
       return;
     }
 
+    // A charged-back wallet is served as a NEGATIVE balance (the API derives
+    // its own `debt` field as exactly `-hard`), so this is how a player in
+    // debt normally gets here — the 400 branch below only fires when the
+    // chargeback lands mid-session against a stale balance. Catch it before
+    // spending a request on a guaranteed refusal.
+    if (this.hardBalance < 0) {
+      this.notice = {
+        kind: "error",
+        text: translateText("store.pack_debt", {
+          debt: String(-this.hardBalance),
+        }),
+      };
+      return;
+    }
+
     this.purchasing = true;
     this.notice = null;
     const result = await purchaseTribeName(name);
@@ -251,6 +266,18 @@ export class TribesPanel extends LitElement {
     if (cfg === null || this.boostingId !== null) return;
     const price = cfg.boostPriceHard;
 
+    // Debt first: a negative balance also fails the shortfall check below,
+    // but topping up cannot clear it, so the top-up dialog would be the wrong
+    // remedy dressed up as the right one.
+    if (this.hardBalance < 0) {
+      this.boostNotice = {
+        kind: "error",
+        text: translateText("store.pack_debt", {
+          debt: String(-this.hardBalance),
+        }),
+      };
+      return;
+    }
     // Don't let the player submit into a guaranteed 400 — offer top-up.
     // Nothing has been refetched yet, so the bound balance is the right one.
     if (this.hardBalance < price) {

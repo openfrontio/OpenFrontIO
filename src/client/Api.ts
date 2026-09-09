@@ -665,12 +665,14 @@ const TRIBE_NAME_INVALID_REASONS = [
   "This name is not allowed",
 ];
 // The length rule interpolates its bounds ("Name must be 3-24 characters"), so
-// it is matched by prefix rather than listed.
-const TRIBE_NAME_LENGTH_REASON_PREFIX = "Name must be ";
+// it is matched by shape rather than listed. Anchored and digit-specific: a
+// bare "Name must be " prefix would pass through anything the API ever chose
+// to start that way, which is the denylist failure this is meant to avoid.
+const TRIBE_NAME_LENGTH_REASON_RE = /^Name must be \d+-\d+ characters$/;
 
 function tribeNameInvalidMessage(reason: string): string | undefined {
   if (TRIBE_NAME_INVALID_REASONS.includes(reason)) return reason;
-  if (reason.startsWith(TRIBE_NAME_LENGTH_REASON_PREFIX)) return reason;
+  if (TRIBE_NAME_LENGTH_REASON_RE.test(reason)) return reason;
   return undefined;
 }
 

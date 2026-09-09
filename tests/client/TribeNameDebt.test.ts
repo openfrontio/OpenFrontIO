@@ -46,6 +46,8 @@ describe("tribe-name spend paths map the debt reason", () => {
     fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "error").mockImplementation(() => {});
+    // The unrecognised-reason cases warn by design; keep the run quiet.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -110,10 +112,11 @@ describe("tribe-name spend paths map the debt reason", () => {
     // the way "insufficient_balance_debt" did.
     it("does not echo a reason it does not recognise", async () => {
       respond(400, { reason: "some_future_machine_key" });
-      expect(await purchaseTribeName("Ninja")).toEqual({
-        ok: false,
-        code: "failed",
-      });
+      const result = await purchaseTribeName("Ninja");
+      expect(result).toEqual({ ok: false, code: "failed" });
+      // Otherwise an early throw would satisfy this just as well.
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(Object.values(result)).not.toContain("some_future_machine_key");
     });
 
     // Client-bug reasons are not written for players either.

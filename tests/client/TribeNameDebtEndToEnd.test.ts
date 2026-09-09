@@ -1,15 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // The one test that spans the whole path: the real panel over the real
-// Api.ts, with only the network faked. TribeNameDebt.test.ts covers the
-// reason mapping and TribesPanelDebt.test.ts covers the panel's branches, but
-// both stub the seam between them — so neither would notice if the mapping
-// and the branch stopped agreeing.
+// Api.ts. TribeNameDebt.test.ts covers the reason mapping and
+// TribesPanelDebt.test.ts covers the panel's branches, but both stub the seam
+// between them — so neither would notice if the mapping and the branch
+// stopped agreeing.
 //
-// Specifically: it is only here that the raw string "insufficient_balance_debt"
-// exists in the fixture at all. That string used to reach the screen verbatim,
-// because purchaseTribeName folded every 400 into `invalid` and the panel
-// prints an `invalid` message as-is.
+// TribeNameDebt.test.ts sends the same "insufficient_balance_debt" body, but
+// only as far as the wrapper's return value. This is the only test where that
+// string could reach rendered text, which is what actually used to happen:
+// purchaseTribeName folded every 400 into `invalid` and the panel prints an
+// `invalid` message as-is.
+//
+// Stubbed here: fetch, Auth, the list/profile reads and the cosmetics
+// catalogue (all incidental to the purchase), the in-game modal, and
+// translateText. NOT stubbed: purchaseTribeName and the panel itself.
 
 vi.mock("../../src/client/Auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Auth")>()),
@@ -141,6 +146,8 @@ describe("buying a tribe name in debt, panel through Api", () => {
 
     expect(el.textContent).toContain("store.purchase_failed");
     expect(el.textContent).not.toContain("some_future_machine_key");
+    // Otherwise this passes just as well when the request never happens.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("still shows a real name rejection verbatim", async () => {
