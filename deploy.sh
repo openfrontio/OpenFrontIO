@@ -85,6 +85,28 @@ if [ -z "$DOMAIN" ]; then
     exit 1
 fi
 
+# Cluster map (docs/MultiServer.md). Two jobs here:
+#   1. jq -c compacts whatever formatting the CI variable carries into one
+#      unspaced line — the remote env file is loaded word-split (update.sh's
+#      `export $(... | xargs)`), so any internal whitespace would shatter the
+#      assignment and abort the deploy. This also fails fast on invalid JSON.
+#   2. Ad-hoc non-prod deploys (feature branches at <branch>.openfront.dev)
+#      can't be enumerated in any shared map, so when no map is provided
+#      outside prod, synthesize the single-entry map for this deployment's
+#      own host. Prod always requires an explicit map: a synthesized one
+#      would silently mint game ids under a letter the real fleet map does
+#      not own.
+if [ -n "${CLUSTER_JSON:-}" ]; then
+    CLUSTER_JSON=$(printf '%s' "$CLUSTER_JSON" | jq -c .)
+elif [ "$ENV" != "prod" ]; then
+    CLUSTER_JSON=$(jq -nc --arg host "${SUBDOMAIN}.${DOMAIN}" \
+        '{a: {host: $host, colour: "blue", numWorkers: 2}}')
+    echo "CLUSTER_JSON not set; synthesized single-entry map for ${SUBDOMAIN}.${DOMAIN}"
+else
+    echo "Error: CLUSTER_JSON must be set for prod deploys"
+    exit 1
+fi
+
 if [ "$HOST" == "staging" ]; then
     print_header "DEPLOYING TO STAGING HOST"
     SERVER_HOST=$SERVER_HOST_STAGING
