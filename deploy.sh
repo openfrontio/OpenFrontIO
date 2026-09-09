@@ -85,26 +85,46 @@ if [ -z "$DOMAIN" ]; then
     exit 1
 fi
 
-# Cluster map (docs/MultiServer.md). Two jobs here:
+# Cluster map (docs/MultiServer.md). Three jobs here:
 #   1. jq -c compacts whatever formatting the CI variable carries into one
 #      unspaced line — the remote env file is loaded word-split (update.sh's
 #      `export $(... | xargs)`), so any internal whitespace would shatter the
 #      assignment and abort the deploy. This also fails fast on invalid JSON.
-#   2. Ad-hoc non-prod deploys (feature branches at <branch>.openfront.dev)
-#      can't be enumerated in any shared map, so when no map is provided
-#      outside prod, synthesize the single-entry map for this deployment's
-#      own host. Prod always requires an explicit map: a synthesized one
-#      would silently mint game ids under a letter the real fleet map does
-#      not own.
+#   2. A shared map applies only to the deployments it names. Outside prod, a
+#      host with no entry (feature branches, nightly) falls back to the
+#      synthesized single-entry map below instead of failing the server's
+#      boot self-match — so one repo-level CLUSTER_JSON can describe the
+#      load-balanced blue/green .dev pair while every other deploy stays
+#      standalone. Prod is strict both ways: it always requires an explicit
+#      map that names this host, because a synthesized entry would mint game
+#      ids under a letter the real fleet map does not own.
+#   3. Being in the map means being behind the load balancer, so map
+#      membership also switches on the drain poll: SITE_HOST defaults to the
+#      apex ($DOMAIN) for in-map deployments (release.yml sets it explicitly
+#      for prod; this covers the .dev pair). Synthesized deployments keep
+#      SITE_HOST empty and stay permanently active.
+FQDN="${SUBDOMAIN}.${DOMAIN}"
 if [ -n "${CLUSTER_JSON:-}" ]; then
     CLUSTER_JSON=$(printf '%s' "$CLUSTER_JSON" | jq -c .)
-elif [ "$ENV" != "prod" ]; then
-    CLUSTER_JSON=$(jq -nc --arg host "${SUBDOMAIN}.${DOMAIN}" \
-        '{a: {host: $host, color: "blue", numWorkers: 2}}')
-    echo "CLUSTER_JSON not set; synthesized single-entry map for ${SUBDOMAIN}.${DOMAIN}"
-else
-    echo "Error: CLUSTER_JSON must be set for prod deploys"
-    exit 1
+    if printf '%s' "$CLUSTER_JSON" | jq -e --arg host "$FQDN" 'any(.[]; .host == $host)' > /dev/null; then
+        SITE_HOST="${SITE_HOST:-$DOMAIN}"
+    elif [ "$ENV" != "prod" ]; then
+        echo "Host ${FQDN} not in provided CLUSTER_JSON; ignoring the shared map"
+        CLUSTER_JSON=""
+    else
+        echo "Error: prod host ${FQDN} has no entry in CLUSTER_JSON"
+        exit 1
+    fi
+fi
+if [ -z "${CLUSTER_JSON:-}" ]; then
+    if [ "$ENV" != "prod" ]; then
+        CLUSTER_JSON=$(jq -nc --arg host "$FQDN" \
+            '{a: {host: $host, color: "blue", numWorkers: 2}}')
+        echo "CLUSTER_JSON not set; synthesized single-entry map for ${FQDN}"
+    else
+        echo "Error: CLUSTER_JSON must be set for prod deploys"
+        exit 1
+    fi
 fi
 
 if [ "$HOST" == "staging" ]; then
