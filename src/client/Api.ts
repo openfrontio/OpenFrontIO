@@ -640,18 +640,39 @@ export type PurchaseTribeNameResult =
   // negative; `debt` (bigint string) must be settled before anything is
   // spendable. Nothing charged.
   | { ok: false; code: "debt"; debt: string }
-  // 400: the name itself was invalid or disallowed. `message` is the server's
-  // player-facing reason (already English, shown as-is) — which is why the
-  // two balance reasons above have to be pulled out first: they are branch
-  // keys, not prose, and "insufficient_balance_debt" is not something to show
-  // a player.
-  | { ok: false; code: "invalid"; message?: string }
+  // 400: the name itself was invalid or disallowed. `message` is one of the
+  // server's player-facing reasons, already English and shown as-is — see
+  // TRIBE_NAME_INVALID_REASONS for why that set is an allowlist.
+  | { ok: false; code: "invalid"; message: string }
   // 409: the name is already taken (names are globally unique).
   | { ok: false; code: "duplicate" }
   // 429: buying names too fast. `retryAfterSeconds` from the Retry-After
   // header (null when absent/unparseable).
   | { ok: false; code: "rate_limited"; retryAfterSeconds: number | null }
   | { ok: false; code: "failed" };
+
+// The endpoint's name-validation and moderation messages: prose, written to be
+// read by the player, and the only 400 reasons this client shows verbatim.
+//
+// An allowlist rather than a denylist of the machine keys, because the failure
+// mode is asymmetric. Anything unrecognised is shown as a generic failure —
+// mildly unhelpful if it was prose. Echoing anything unrecognised puts the
+// next machine branch key the API adds straight on the player's screen, which
+// is how "insufficient_balance_debt" came to be displayed as an error message.
+const TRIBE_NAME_INVALID_REASONS = [
+  "Name may only contain letters, numbers, spaces, and ' - . _ ! ?",
+  "Name must contain a letter",
+  "This name is not allowed",
+];
+// The length rule interpolates its bounds ("Name must be 3-24 characters"), so
+// it is matched by prefix rather than listed.
+const TRIBE_NAME_LENGTH_REASON_PREFIX = "Name must be ";
+
+function tribeNameInvalidMessage(reason: string): string | undefined {
+  if (TRIBE_NAME_INVALID_REASONS.includes(reason)) return reason;
+  if (reason.startsWith(TRIBE_NAME_LENGTH_REASON_PREFIX)) return reason;
+  return undefined;
+}
 
 // POST /users/@me/tribe_names — buy a custom tribe name (200 plutonium). The
 // name is screened, charged, and goes live right away as `pending`; review is
@@ -684,11 +705,14 @@ export async function purchaseTribeName(
       if (reason === "Insufficient balance") {
         return { ok: false, code: "insufficient_balance" };
       }
-      return {
-        ok: false,
-        code: "invalid",
-        message: reason === "" ? undefined : reason,
-      };
+      const message = tribeNameInvalidMessage(reason);
+      if (message !== undefined) {
+        return { ok: false, code: "invalid", message };
+      }
+      // Not logging the body: an unrecognised reason is exactly the case where
+      // we don't know what it contains.
+      console.warn("purchaseTribeName: unrecognised 400 reason");
+      return { ok: false, code: "failed" };
     }
     if (response.status === 409) {
       return { ok: false, code: "duplicate" };

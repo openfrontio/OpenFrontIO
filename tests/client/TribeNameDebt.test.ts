@@ -88,23 +88,50 @@ describe("tribe-name spend paths map the debt reason", () => {
       });
     });
 
-    it("still passes a genuine name rejection through as prose", async () => {
-      respond(400, { reason: "Name is not allowed" });
+    // The endpoint's own player-facing refusals, which are prose and are
+    // shown as-is. The length rule interpolates its bounds, so it is matched
+    // by prefix.
+    it.each([
+      "Name must be 3-24 characters",
+      "Name may only contain letters, numbers, spaces, and ' - . _ ! ?",
+      "Name must contain a letter",
+      "This name is not allowed",
+    ])("passes the name rejection %s through as prose", async (reason) => {
+      respond(400, { reason });
       expect(await purchaseTribeName("Ninja")).toEqual({
         ok: false,
         code: "invalid",
-        message: "Name is not allowed",
+        message: reason,
       });
     });
 
-    it("degrades a 400 with no readable body to a bare invalid", async () => {
+    // The reasons are allowlisted rather than the machine keys denylisted, so
+    // the next branch key the API grows does not land on the player's screen
+    // the way "insufficient_balance_debt" did.
+    it("does not echo a reason it does not recognise", async () => {
+      respond(400, { reason: "some_future_machine_key" });
+      expect(await purchaseTribeName("Ninja")).toEqual({
+        ok: false,
+        code: "failed",
+      });
+    });
+
+    // Client-bug reasons are not written for players either.
+    it("does not echo the malformed-request reasons", async () => {
+      respond(400, { reason: "Invalid request body" });
+      expect(await purchaseTribeName("Ninja")).toEqual({
+        ok: false,
+        code: "failed",
+      });
+    });
+
+    it("degrades a 400 with no readable body to a generic failure", async () => {
       fetchMock.mockResolvedValueOnce(
         new Response("<html>gateway</html>", { status: 400 }),
       );
       expect(await purchaseTribeName("Ninja")).toEqual({
         ok: false,
-        code: "invalid",
-        message: undefined,
+        code: "failed",
       });
     });
   });

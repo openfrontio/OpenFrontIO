@@ -158,7 +158,7 @@ export class TribesPanel extends LitElement {
     if (result.code === "insufficient_balance") {
       // The balance moved under us (another tab, another purchase) — refresh
       // it and offer the top-up path, as the boost handler does.
-      await this.refreshAfterPurchase();
+      const fresh = await this.refreshAfterPurchase();
       const price = this.price;
       // No price means cosmetics.json has no tribeNames block, so there is no
       // shortfall to quote — the generic failure is all we can honestly say.
@@ -169,7 +169,7 @@ export class TribesPanel extends LitElement {
         };
         return;
       }
-      this.showInsufficient(name, price);
+      this.showInsufficient(name, price, TribesPanel.hardBalanceOf(fresh));
       return;
     }
     if (result.code === "duplicate") {
@@ -192,27 +192,33 @@ export class TribesPanel extends LitElement {
       };
       return;
     }
-    // "invalid" carries the server's player-facing reason (a bad or
-    // disallowed name); fall back to a generic message. The balance reasons
-    // are handled above and never reach here — they are machine branch keys,
-    // not prose.
-    let text = translateText("store.purchase_failed");
-    if (result.code === "invalid" && result.message) {
-      text = result.message;
-    }
-    this.notice = { kind: "error", text };
+    // "invalid" carries one of the server's player-facing reasons for
+    // refusing the name itself. Everything else — including the balance
+    // reasons handled above, and any reason Api.ts did not recognise — is a
+    // generic failure rather than a string echoed at the player.
+    this.notice = {
+      kind: "error",
+      text:
+        result.code === "invalid"
+          ? result.message
+          : translateText("store.purchase_failed"),
+    };
   };
 
   // A purchase spends plutonium and adds a pending name, so refresh both the
   // list and the store header's balance (re-broadcast /users/@me like Main.ts).
-  private async refreshAfterPurchase() {
+  // Returns the fresh profile so callers can read the new balance directly:
+  // the broadcast only reaches `this.userMeResponse` once the Store re-renders
+  // and re-binds it, which is not guaranteed to have happened by the time this
+  // resolves.
+  private async refreshAfterPurchase(): Promise<UserMeResponse | false> {
     await this.load();
     invalidateUserMe();
     const fresh = await getUserMe();
     // getUserMe returns false on any error, not just auth — broadcasting
     // that would flip the whole app to its logged-out UI right after a
     // successful purchase. A stale header balance is the better failure.
-    if (fresh === false) return;
+    if (fresh === false) return false;
     document.dispatchEvent(
       new CustomEvent("userMeResponse", {
         detail: fresh,
@@ -220,14 +226,21 @@ export class TribesPanel extends LitElement {
         cancelable: true,
       }),
     );
+    return fresh;
+  }
+
+  private static hardBalanceOf(res: UserMeResponse | false): number {
+    return res === false ? 0 : (res.player.currency?.hard ?? 0);
   }
 
   // `item` is what the player was trying to buy — a name they typed, or the
-  // name they were boosting.
-  private showInsufficient(item: string, price: number) {
+  // name they were boosting. `balance` is passed rather than read off
+  // `this.userMeResponse` so a caller that has just refetched quotes the
+  // shortfall against the balance the server actually refused on.
+  private showInsufficient(item: string, price: number, balance: number) {
     this.insufficientInfo = {
       currency: translateText("cosmetics.hard"),
-      shortfall: Math.max(1, price - this.hardBalance),
+      shortfall: Math.max(1, price - balance),
       item,
       canTopUp: true,
     };
@@ -239,8 +252,9 @@ export class TribesPanel extends LitElement {
     const price = cfg.boostPriceHard;
 
     // Don't let the player submit into a guaranteed 400 — offer top-up.
+    // Nothing has been refetched yet, so the bound balance is the right one.
     if (this.hardBalance < price) {
-      this.showInsufficient(tribe.displayName, price);
+      this.showInsufficient(tribe.displayName, price, this.hardBalance);
       return;
     }
 
@@ -289,8 +303,12 @@ export class TribesPanel extends LitElement {
     if (result.code === "insufficient_balance") {
       // The balance moved under us (another tab, another purchase) —
       // refresh it and show the top-up path.
-      await this.refreshAfterPurchase();
-      this.showInsufficient(tribe.displayName, price);
+      const fresh = await this.refreshAfterPurchase();
+      this.showInsufficient(
+        tribe.displayName,
+        price,
+        TribesPanel.hardBalanceOf(fresh),
+      );
       return;
     }
     if (result.code === "not_found") {

@@ -56,10 +56,16 @@ import type { UserMeResponse } from "../../src/core/ApiSchemas";
 const PRICE_HARD = 200;
 const BOOST_PRICE_HARD = 50;
 
-const userMe = {
-  user: {},
-  player: { publicId: "p", flares: [], currency: { hard: 500, soft: 0 } },
-} as unknown as UserMeResponse;
+function userWithHard(hard: number): UserMeResponse {
+  return {
+    user: {},
+    player: { publicId: "p", flares: [], currency: { hard, soft: 0 } },
+  } as unknown as UserMeResponse;
+}
+
+// Comfortably above both prices, so the client-side pre-checks pass and the
+// request is actually made — the refusals under test all come from the server.
+const userMe = userWithHard(500);
 
 const tribe = {
   id: "7",
@@ -138,61 +144,46 @@ describe("TribesPanel when the wallet is in debt", () => {
 
       await buy(el, "Ninja");
 
-      expect(el.textContent).toContain("store.pack_debt");
-      expect(el.textContent).toContain("250");
-    });
-
-    // The whole point: the reason is a machine branch key, and the panel
-    // prints an `invalid` message verbatim. Before this it went straight to
-    // the screen.
-    it("never shows the raw server reason", async () => {
-      purchaseTribeName.mockResolvedValue({
-        ok: false,
-        code: "debt",
-        debt: "250",
-      });
-      const el = await mount();
-
-      await buy(el, "Ninja");
-
-      expect(el.textContent).not.toContain("insufficient_balance_debt");
-    });
-
-    // Buying more plutonium does not clear a negative wallet, so offering
-    // the top-up dialog would send the player somewhere that cannot help.
-    it("does not offer the top-up dialog", async () => {
-      purchaseTribeName.mockResolvedValue({
-        ok: false,
-        code: "debt",
-        debt: "250",
-      });
-      const el = await mount();
-
-      await buy(el, "Ninja");
-
-      expect(dialog(el).info).toBeNull();
+      expect(el.textContent).toContain('store.pack_debt:{"debt":"250"}');
     });
 
     // Being short is the other half of the same 400 and DOES want the
     // top-up path, the way the boost handler has always done it.
-    it("offers the top-up dialog when merely short", async () => {
+    it("quotes the shortfall against the refetched balance", async () => {
       purchaseTribeName.mockResolvedValue({
         ok: false,
         code: "insufficient_balance",
       });
+      // The pre-check passed on the bound balance (500) and the server
+      // refused anyway, so the real balance is whatever the refetch returns.
+      // Quoting the stale one would say "you need 1 more" when they need 180.
+      getUserMe.mockResolvedValue(userWithHard(20));
       const el = await mount();
 
       await buy(el, "Ninja");
 
       expect(dialog(el).info).toMatchObject({
-        // The balance moved under us after a pre-check that passed, so the
-        // cached balance still covers the price and the shortfall clamps to
-        // 1 rather than going negative.
-        shortfall: 1,
+        shortfall: PRICE_HARD - 20,
         item: "Ninja",
         canTopUp: true,
       });
       expect(el.textContent).not.toContain("Insufficient balance");
+    });
+
+    // The refetch can fail (offline, a 500). Falling back to a zero balance
+    // overstates the shortfall, but never understates it to a reassuring
+    // "1 more" on a purchase the server just refused.
+    it("still quotes a shortfall when the refetch fails", async () => {
+      purchaseTribeName.mockResolvedValue({
+        ok: false,
+        code: "insufficient_balance",
+      });
+      getUserMe.mockResolvedValue(false);
+      const el = await mount();
+
+      await buy(el, "Ninja");
+
+      expect(dialog(el).info).toMatchObject({ shortfall: PRICE_HARD });
     });
 
     it("still shows a genuine name rejection as prose", async () => {
@@ -221,9 +212,7 @@ describe("TribesPanel when the wallet is in debt", () => {
 
       await boost(el);
 
-      expect(el.textContent).toContain("store.pack_debt");
-      expect(el.textContent).toContain("80");
-      expect(el.textContent).not.toContain("insufficient_balance_debt");
+      expect(el.textContent).toContain('store.pack_debt:{"debt":"80"}');
       expect(dialog(el).info).toBeNull();
     });
 
@@ -232,11 +221,13 @@ describe("TribesPanel when the wallet is in debt", () => {
         ok: false,
         code: "insufficient_balance",
       });
+      getUserMe.mockResolvedValue(userWithHard(20));
       const el = await mount();
 
       await boost(el);
 
       expect(dialog(el).info).toMatchObject({
+        shortfall: BOOST_PRICE_HARD - 20,
         item: "Ronin",
         canTopUp: true,
       });
