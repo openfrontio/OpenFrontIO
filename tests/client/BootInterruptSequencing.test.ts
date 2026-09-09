@@ -41,11 +41,12 @@ vi.mock("../../src/client/SteamSDK", () => ({
 }));
 
 import {
+  lapseShownAfterDispatch,
   nextBootInterrupt,
   runBootInterrupt,
   type BootInterruptPorts,
 } from "../../src/client/BootInterrupts";
-import { LAPSE_NOTICE_KEY, lapseNoticeDue } from "../../src/client/PlayerName";
+import { LAPSE_NOTICE_KEY } from "../../src/client/PlayerName";
 import { UsernameInput } from "../../src/client/UsernameInput";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
@@ -72,20 +73,22 @@ describe("boot sequencing against a real <username-input>", () => {
   // Main's onUserMe, reduced to the parts that decide which interrupt wins.
   // Kept in the same order as Main.ts: snapshot, dispatch, compare, sequence.
   async function boot(userMe: UserMeResponse) {
-    // 1. Snapshot BEFORE the dispatch — announceLapse writes its marker before
-    //    opening its alert, so afterwards the answer is always "already shown".
-    const snapshot = localStorage.getItem(LAPSE_NOTICE_KEY);
-    const wasDue = lapseNoticeDue(userMe, snapshot);
-
-    // 2. The dispatch. <username-input> announces the lapse from here.
-    document.dispatchEvent(
-      new CustomEvent("userMeResponse", { detail: userMe, bubbles: true }),
+    // The snapshot is the caller's job and has to predate the getUserMe()
+    // await; everything after it — dispatch, then compare — belongs to
+    // lapseShownAfterDispatch, which is the same function Main calls. Calling
+    // it here rather than re-implementing the sequence is the point: a change
+    // to the order inside it fails these tests instead of passing them.
+    const shown = lapseShownAfterDispatch(
+      userMe,
+      localStorage.getItem(LAPSE_NOTICE_KEY),
+      () => {
+        document.dispatchEvent(
+          new CustomEvent("userMeResponse", { detail: userMe, bubbles: true }),
+        );
+      },
+      () => localStorage.getItem(LAPSE_NOTICE_KEY),
     );
     await el.updateComplete;
-
-    // 3. Shown is decided by the WRITE, not by the prediction in step 1.
-    const shown =
-      wasDue && !lapseNoticeDue(userMe, localStorage.getItem(LAPSE_NOTICE_KEY));
 
     const calls = { navigated: [] as string[], rewardsOpened: 0 };
     const ports: BootInterruptPorts = {

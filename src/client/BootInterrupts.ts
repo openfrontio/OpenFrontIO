@@ -13,7 +13,8 @@
 // on the answer, which makes the ordering testable without a DOM and leaves one
 // place to add the fifth contender.
 
-import { isTemporaryUsername } from "../core/ApiSchemas";
+import { isTemporaryUsername, type UserMeResponse } from "../core/ApiSchemas";
+import { lapseNoticeDue } from "./PlayerName";
 
 /** Every boot-time interrupt, in the order they win. */
 export type BootInterrupt =
@@ -100,25 +101,56 @@ export function bootInterruptsAllowed(
 }
 
 /**
- * A join failed before it ever reached a lobby handle. Should it clear the
- * in-flight flag it set?
+ * Did the lapse notice actually SPEAK on this boot?
  *
- * Only when it is still the current join. `handleJoinLobby` awaits several
- * things before assigning a handle, so a second join can start and set the
- * flag again while the first is still unwinding; letting the older failure
- * clear it would re-open the boot interrupts over a join that is very much
- * still going. The timestamp is the same identity `handleJoinLobby` already
- * supersedes stale joins by.
+ * Owns the whole dispatch-and-compare sequence so Main and its tests cannot
+ * drift apart on it. Three things have to be true together and none of them is
+ * obvious from the call site:
  *
- * Without any clear at all the flag sticks true for the rest of the session
- * and silences every boot interrupt — the same shape as the presence bug the
- * `join-lobby` catch was already written to handle.
+ * 1. `markerBefore` is a snapshot taken before the getUserMe() await, NOT read
+ *    here. <username-input> calls getUserMe() from connectedCallback ahead of
+ *    Main’s auth-gated call and both share the one in-flight promise, so its
+ *    .then — and the marker write inside announceLapse — can already have run
+ *    by the time this is called. Reading it here would always answer "already
+ *    shown". That is why it is a parameter and not a `readMarker()` call.
+ * 2. The comparison happens AFTER the dispatch, which is what gives
+ *    <username-input> the chance to announce.
+ * 3. Still due afterwards means nothing was written, so nothing was said.
+ *    announceLapse bails without writing on CrazyGames and when the
+ *    translation files have not landed, and a notice that never opened must
+ *    not make the sequencer stand aside for it.
  */
-export function failedJoinClearsFlag(
-  mostRecentJoinEvent: number,
-  failedJoinEvent: number,
+export function lapseShownAfterDispatch(
+  userMe: UserMeResponse | false | null,
+  markerBefore: string | null,
+  dispatch: () => void,
+  readMarker: () => string | null,
 ): boolean {
-  return mostRecentJoinEvent === failedJoinEvent;
+  const wasDue = lapseNoticeDue(userMe, markerBefore);
+  dispatch();
+  return wasDue && !lapseNoticeDue(userMe, readMarker());
+}
+
+/**
+ * Does this join still own the in-flight flag — i.e. may it clear it?
+ *
+ * Only the current join does. `handleJoinLobby` awaits userAuth(),
+ * whenSeeded(), cosmetics and a Turnstile token before assigning a handle, so
+ * a second join can start and set the flag again while the first is still
+ * unwinding. Whichever way the older one then ends — rejecting, or reaching
+ * the superseded branch — clearing the flag would re-open the boot interrupts
+ * over a join the player has committed to and that has no handle yet.
+ *
+ * Not clearing at all is the opposite failure: the flag sticks true for the
+ * rest of the session and silences every interrupt. So the rule is ownership,
+ * not "always" or "never", and it is the same timestamp identity
+ * `handleJoinLobby` already supersedes stale joins by.
+ */
+export function joinOwnsInFlightFlag(
+  mostRecentJoinEvent: number,
+  joinEvent: number,
+): boolean {
+  return mostRecentJoinEvent === joinEvent;
 }
 
 // An entitled status: subscribed, or admin-locked to the same perk. Both
@@ -299,11 +331,17 @@ export function claimPromptShown(
   };
   const ids = Object.keys(next);
   if (ids.length <= CLAIM_PROMPT_MAX_ACCOUNTS) return next;
-  // Drop the least recently prompted, never the one just recorded.
+  // The account just recorded is pinned OUT of the sort, not merely expected to
+  // win it. Sorting everything by lastShownAt and keeping the top N looks
+  // equivalent, but a store holding future timestamps — a clock corrected
+  // backwards, a profile copied from a machine set ahead — sorts the current
+  // account last and prunes the very record just written, so `shows` could
+  // never accumulate and the prompt would repeat forever.
   const keep = ids
+    .filter((id) => id !== publicId)
     .sort((a, b) => next[b].lastShownAt - next[a].lastShownAt)
-    .slice(0, CLAIM_PROMPT_MAX_ACCOUNTS);
-  const pruned: ClaimPromptStore = {};
+    .slice(0, CLAIM_PROMPT_MAX_ACCOUNTS - 1);
+  const pruned: ClaimPromptStore = { [publicId]: next[publicId] };
   for (const id of keep) pruned[id] = next[id];
   return pruned;
 }

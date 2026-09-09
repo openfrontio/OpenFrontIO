@@ -29,7 +29,8 @@ import {
   bootInterruptsAllowed,
   CLAIM_PROMPT_KEY,
   claimPromptDue,
-  failedJoinClearsFlag,
+  joinOwnsInFlightFlag,
+  lapseShownAfterDispatch,
   nextBootInterrupt,
   parseClaimPromptStore,
   runBootInterrupt,
@@ -80,11 +81,7 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
-import {
-  fallbackPlayerName,
-  LAPSE_NOTICE_KEY,
-  lapseNoticeDue,
-} from "./PlayerName";
+import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
@@ -474,7 +471,7 @@ class Client {
         // Left set it would silence every boot interrupt for the rest of the
         // session. Guarded on the timestamp so a join that failed after being
         // superseded cannot clear the flag its successor is relying on.
-        if (failedJoinClearsFlag(this.mostRecentJoinEvent, event.timeStamp)) {
+        if (joinOwnsInFlightFlag(this.mostRecentJoinEvent, event.timeStamp)) {
           this.joinInFlight = false;
         }
         throw error;
@@ -598,28 +595,21 @@ class Client {
         });
         adGatekeeper.start();
       }
-      // Against the pre-await snapshot, never a fresh read — see lapseMarker.
-      const lapseWasDue = lapseNoticeDue(userMeResponse, lapseMarker);
-
-      document.dispatchEvent(
-        new CustomEvent("userMeResponse", {
-          detail: userMeResponse,
-          bubbles: true,
-          cancelable: true,
-        }),
+      // Snapshot in, dispatch and comparison inside — see
+      // lapseShownAfterDispatch for why the snapshot cannot be read there.
+      const lapseShown = lapseShownAfterDispatch(
+        userMeResponse,
+        lapseMarker,
+        () =>
+          document.dispatchEvent(
+            new CustomEvent("userMeResponse", {
+              detail: userMeResponse,
+              bubbles: true,
+              cancelable: true,
+            }),
+          ),
+        () => localStorage.getItem(LAPSE_NOTICE_KEY),
       );
-
-      // Whether the notice was actually SPOKEN, not whether one was owed.
-      // announceLapse bails without writing its marker on CrazyGames and when
-      // the translation files have not landed, so a player who is owed one and
-      // did not get it would otherwise have the sequencer stand aside for a
-      // dialog that never opened — suppressing the rewards popup on every boot
-      // for the whole grace period. Comparing the pre-dispatch snapshot with
-      // what is stored now answers from the write itself: still due means
-      // nothing was said, so the boot falls through exactly as it does on main.
-      const lapseShown =
-        lapseWasDue &&
-        !lapseNoticeDue(userMeResponse, localStorage.getItem(LAPSE_NOTICE_KEY));
 
       if (userMeResponse !== false) {
         // Authorized
@@ -1257,7 +1247,12 @@ class Client {
     if (this.mostRecentJoinEvent !== event.timeStamp) {
       newLobbyHandle.stop(true);
       console.warn("Join requested, but was superseded");
-      this.joinInFlight = false;
+      // Deliberately NOT clearing joinInFlight. Being here means a newer join
+      // has already set it, after this one did, so the flag is that join's and
+      // clearing it would re-open the boot interrupts over a lobby the player
+      // has committed to. The newer join clears it on its own exits, and if it
+      // has already finished, lobbyHandle is the guard. Same ownership rule as
+      // joinOwnsInFlightFlag, which is false by construction on this branch.
       return;
     }
 
@@ -1499,6 +1494,14 @@ class Client {
     // closed during the pre-handle window dispatches leave-lobby and returns
     // early, which would otherwise strand the flag set forever.
     this.joinInFlight = false;
+    // And supersede whatever join is still in flight. Clearing the flag alone
+    // says the player is not joining while the join carries on to assign a
+    // handle and start the game they just left; bumping the timestamp makes
+    // that join take the superseded branch above and stop itself. Pre-existing
+    // on main -- the flag only made it visible. performance.now() is the same
+    // clock Event.timeStamp comes from, so this is always newer than any join
+    // already under way and older than any dispatched after it.
+    this.mostRecentJoinEvent = performance.now();
 
     if (this.lobbyHandle === null) {
       return;

@@ -7,8 +7,8 @@ import {
   CLAIM_PROMPT_MAX_SHOWS,
   claimPromptDue,
   claimPromptShown,
-  failedJoinClearsFlag,
   isCleanHomepage,
+  joinOwnsInFlightFlag,
   nextBootInterrupt,
   parseClaimPromptStore,
   runBootInterrupt,
@@ -267,6 +267,26 @@ describe("claim prompt decay is per account, not per device", () => {
     expect(shown[OTHER]).toBe(CLAIM_PROMPT_MAX_SHOWS);
     expect(current[ME].shows).toBe(CLAIM_PROMPT_MAX_SHOWS);
     expect(current[OTHER].shows).toBe(CLAIM_PROMPT_MAX_SHOWS);
+  });
+
+  // A clock corrected backwards, or a profile copied from a machine set ahead,
+  // leaves other accounts stamped in the future. Sorting everything by
+  // lastShownAt and keeping the top N would then prune the record just
+  // written, so `shows` could never accumulate and the prompt would repeat
+  // forever — for the one account actually using the machine.
+  it("never prunes the account it just recorded, even against future stamps", () => {
+    const now = Date.UTC(2026, 8, 9, 12, 0, 0);
+    const future: ClaimPromptStore = {};
+    for (let i = 0; i < CLAIM_PROMPT_MAX_ACCOUNTS; i++) {
+      future[`ahead-${i}`] = { shows: 1, lastShownAt: now + 86_400_000 * 365 };
+    }
+    let current = claimPromptShown(future, now, ME);
+    expect(Object.keys(current).length).toBe(CLAIM_PROMPT_MAX_ACCOUNTS);
+    expect(current[ME]).toEqual({ shows: 1, lastShownAt: now });
+
+    // And the count keeps accumulating across boots rather than resetting.
+    current = claimPromptShown(current, now + CLAIM_PROMPT_INTERVAL_MS, ME);
+    expect(current[ME].shows).toBe(2);
   });
 
   // Storage is shared by every account that ever signs in here, so the map is
@@ -574,7 +594,7 @@ describe("a join that fails before reaching a handle", () => {
 
     // It rejects. Same event, so it still owns the flag.
     const joinEvent = 1234;
-    if (failedJoinClearsFlag(joinEvent, joinEvent)) joinInFlight = false;
+    if (joinOwnsInFlightFlag(joinEvent, joinEvent)) joinInFlight = false;
 
     expect(
       bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
@@ -583,16 +603,54 @@ describe("a join that fails before reaching a handle", () => {
 
   // handleJoinLobby awaits userAuth(), cosmetics and a Turnstile token before
   // assigning a handle, so a second join can start while the first is still
-  // unwinding. The older failure must not re-open the interrupts over it.
+  // unwinding. The older join must not re-open the interrupts over it —
+  // whichever way it ends.
   it("does not clear the flag a newer join is relying on", () => {
     let joinInFlight = true;
     const supersededJoin = 1234;
     const currentJoin = 5678;
-    if (failedJoinClearsFlag(currentJoin, supersededJoin)) joinInFlight = false;
+    if (joinOwnsInFlightFlag(currentJoin, supersededJoin)) joinInFlight = false;
 
     expect(joinInFlight).toBe(true);
     expect(
       bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
     ).toBe(false);
+  });
+
+  // The same hazard on the SUCCESS path, which is the likelier one: click
+  // lobby A, then lobby B before A's handshake resolves. A's awaits settle
+  // first, A reaches the superseded branch, and B is still awaiting cosmetics
+  // and a Turnstile token with no handle yet. If A cleared the flag there, a
+  // /users/@me landing in that window would open the confirm over B.
+  it("does not clear the flag when a superseded join completes", () => {
+    const joinA = 1000;
+    const joinB = 2000;
+
+    // A commits and sets the flag.
+    let joinInFlight = true;
+    let mostRecentJoinEvent = joinA;
+    expect(
+      bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
+    ).toBe(false);
+
+    // While A is still the current join, A does own the flag.
+    expect(joinOwnsInFlightFlag(mostRecentJoinEvent, joinA)).toBe(true);
+
+    // B commits before A's handshake resolves. It sets the flag after A did,
+    // so from here the flag is B's.
+    mostRecentJoinEvent = joinB;
+
+    // A's awaits settle and it reaches the superseded branch. Not the owner,
+    // so it leaves the flag alone — B is still awaiting cosmetics and a
+    // Turnstile token with no handle yet.
+    if (joinOwnsInFlightFlag(mostRecentJoinEvent, joinA)) joinInFlight = false;
+    expect(joinInFlight).toBe(true);
+    expect(
+      bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
+    ).toBe(false);
+
+    // B then reaches its own handle and clears it.
+    if (joinOwnsInFlightFlag(mostRecentJoinEvent, joinB)) joinInFlight = false;
+    expect(joinInFlight).toBe(false);
   });
 });
