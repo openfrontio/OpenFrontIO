@@ -11,8 +11,8 @@ import {
 // Covers both hosts the tests below boot as: the pinned blue deployment and
 // the bare-domain dev box.
 const TEST_CLUSTER = JSON.stringify({
-  a: { host: "blue.openfront.io", colour: "blue", numWorkers: 1 },
-  b: { host: "localhost", colour: "blue", numWorkers: 1 },
+  a: { host: "blue.openfront.io", color: "blue", numWorkers: 1 },
+  b: { host: "localhost", color: "blue", numWorkers: 1 },
 });
 
 describe("RenderHtml", () => {

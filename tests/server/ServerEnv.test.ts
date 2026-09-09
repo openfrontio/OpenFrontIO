@@ -4,9 +4,9 @@ import { ServerEnv } from "../../src/server/ServerEnv";
 
 // A two-deployment prod-shaped map plus a bare-domain dev box.
 const CLUSTER = JSON.stringify({
-  a: { host: "blue.openfront.io", colour: "blue", numWorkers: 4 },
-  b: { host: "green.openfront.io", colour: "green", numWorkers: 2 },
-  c: { host: "openfront.example", colour: "blue", numWorkers: 1 },
+  a: { host: "blue.openfront.io", color: "blue", numWorkers: 4 },
+  b: { host: "green.openfront.io", color: "green", numWorkers: 2 },
+  c: { host: "openfront.example", color: "blue", numWorkers: 1 },
 });
 
 function stubCluster(subdomain: string, domain: string, json = CLUSTER) {
@@ -23,7 +23,7 @@ describe("ServerEnv.cluster", () => {
   test("parses a valid map", () => {
     vi.stubEnv("CLUSTER_JSON", CLUSTER);
     expect(ServerEnv.cluster().a.numWorkers).toBe(4);
-    expect(ServerEnv.cluster().b.colour).toBe("green");
+    expect(ServerEnv.cluster().b.color).toBe("green");
   });
 
   test("falls back to the single-entry localhost map in dev when unset", () => {
@@ -42,18 +42,18 @@ describe("ServerEnv.cluster", () => {
     vi.stubEnv(
       "CLUSTER_JSON",
       JSON.stringify({
-        a: { host: "same.io", colour: "blue", numWorkers: 1 },
-        b: { host: "same.io", colour: "green", numWorkers: 1 },
+        a: { host: "same.io", color: "blue", numWorkers: 1 },
+        b: { host: "same.io", color: "green", numWorkers: 1 },
       }),
     );
     expect(() => ServerEnv.cluster()).toThrow(/Invalid CLUSTER_JSON/);
   });
 
-  test("throws on a bad colour or letter", () => {
+  test("throws on a bad color or letter", () => {
     vi.stubEnv(
       "CLUSTER_JSON",
       JSON.stringify({
-        a: { host: "x.io", colour: "purple", numWorkers: 1 },
+        a: { host: "x.io", color: "purple", numWorkers: 1 },
       }),
     );
     expect(() => ServerEnv.cluster()).toThrow(/Invalid CLUSTER_JSON/);
@@ -61,7 +61,7 @@ describe("ServerEnv.cluster", () => {
     vi.stubEnv(
       "CLUSTER_JSON",
       JSON.stringify({
-        ab: { host: "x.io", colour: "blue", numWorkers: 1 },
+        ab: { host: "x.io", color: "blue", numWorkers: 1 },
       }),
     );
     expect(() => ServerEnv.cluster()).toThrow(/Invalid CLUSTER_JSON/);
@@ -77,7 +77,7 @@ describe("ServerEnv.clusterSelf", () => {
     stubCluster("green", "openfront.io");
     expect(ServerEnv.instanceLetter()).toBe("b");
     expect(ServerEnv.numWorkers()).toBe(2);
-    expect(ServerEnv.colour()).toBe("green");
+    expect(ServerEnv.color()).toBe("green");
   });
 
   test("resolves by bare DOMAIN when SUBDOMAIN is empty", () => {

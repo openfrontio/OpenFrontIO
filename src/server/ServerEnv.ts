@@ -1,7 +1,7 @@
 import { JWK } from "jose";
 import { z } from "zod";
 import {
-  ClusterColour,
+  ClusterColor,
   ClusterConfig,
   ClusterConfigSchema,
   ClusterEntry,
@@ -170,7 +170,7 @@ export class ServerEnv {
   // repeated reads don't re-parse but tests that stub the env still see
   // their value.
   static readonly DEV_DEFAULT_CLUSTER_JSON =
-    '{"a":{"host":"localhost","colour":"blue","numWorkers":2}}';
+    '{"a":{"host":"localhost","color":"blue","numWorkers":2}}';
   private static cachedClusterRaw: string | null = null;
   private static cachedCluster: ClusterConfig | null = null;
   static cluster(): ClusterConfig {
@@ -232,8 +232,8 @@ export class ServerEnv {
   }
 
   // Which blue/green pool this deployment belongs to (drain checks, PR 6).
-  static colour(): ClusterColour {
-    return ServerEnv.clusterSelf().entry.colour;
+  static color(): ClusterColor {
+    return ServerEnv.clusterSelf().entry.color;
   }
 
   // Host players load the page from when it is a load balancer in front of

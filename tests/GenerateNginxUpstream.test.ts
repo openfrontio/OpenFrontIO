@@ -33,8 +33,8 @@ function generate(env: {
 }
 
 const CLUSTER = JSON.stringify({
-  a: { host: "blue.openfront.io", colour: "blue", numWorkers: 3 },
-  b: { host: "green.openfront.io", colour: "green", numWorkers: 1 },
+  a: { host: "blue.openfront.io", color: "blue", numWorkers: 3 },
+  b: { host: "green.openfront.io", color: "green", numWorkers: 1 },
 });
 
 describe("generate-nginx-upstream.sh", () => {
@@ -66,7 +66,7 @@ map $worker $worker_port {
   it("matches by bare DOMAIN when SUBDOMAIN is empty", () => {
     const conf = generate({
       clusterJson: JSON.stringify({
-        a: { host: "openfront.example", colour: "blue", numWorkers: 2 },
+        a: { host: "openfront.example", color: "blue", numWorkers: 2 },
       }),
       domain: "openfront.example",
     });

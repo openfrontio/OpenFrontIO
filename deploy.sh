@@ -100,7 +100,7 @@ if [ -n "${CLUSTER_JSON:-}" ]; then
     CLUSTER_JSON=$(printf '%s' "$CLUSTER_JSON" | jq -c .)
 elif [ "$ENV" != "prod" ]; then
     CLUSTER_JSON=$(jq -nc --arg host "${SUBDOMAIN}.${DOMAIN}" \
-        '{a: {host: $host, colour: "blue", numWorkers: 2}}')
+        '{a: {host: $host, color: "blue", numWorkers: 2}}')
     echo "CLUSTER_JSON not set; synthesized single-entry map for ${SUBDOMAIN}.${DOMAIN}"
 else
     echo "Error: CLUSTER_JSON must be set for prod deploys"

@@ -12,19 +12,19 @@ import { z } from "zod";
 // GET /cluster.json. Every server carries the whole map and finds itself by
 // host (SUBDOMAIN.DOMAIN, bare DOMAIN in dev).
 
-export const ClusterColourSchema = z.enum(["blue", "green"]);
-export type ClusterColour = z.infer<typeof ClusterColourSchema>;
+export const ClusterColorSchema = z.enum(["blue", "green"]);
+export type ClusterColor = z.infer<typeof ClusterColorSchema>;
 
 export const ClusterEntrySchema = z.object({
   // Host the deployment is reachable on directly (e.g. "blue.openfront.io"),
   // bypassing any load balancer. Also the self-match key at boot.
   host: z.string().min(1),
   // Which blue/green pool the deployment belongs to. Deployment-wide, unlike
-  // the per-machine instanceId — the drain check compares colours (PR 6).
-  colour: ClusterColourSchema,
+  // the per-machine instanceId — the drain check compares colors (PR 6).
+  color: ClusterColorSchema,
   // Worker processes behind this host. Frozen for the lifetime of every game
   // id minted under it: ids route to workers by hash % numWorkers, so change
-  // it only on a deploy after the colour has fully drained.
+  // it only on a deploy after the color has fully drained.
   numWorkers: z.number().int().min(1),
 });
 export type ClusterEntry = z.infer<typeof ClusterEntrySchema>;

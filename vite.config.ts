@@ -158,7 +158,7 @@ export default defineConfig(({ mode }) => {
   // worker count to know how many /wN paths to forward.
   const devClusterJson =
     env.CLUSTER_JSON ??
-    '{"a":{"host":"localhost","colour":"blue","numWorkers":2}}';
+    '{"a":{"host":"localhost","color":"blue","numWorkers":2}}';
   const devCluster = JSON.parse(devClusterJson) as Record<
     string,
     { numWorkers: number }

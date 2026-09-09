@@ -3,9 +3,9 @@ import { ClusterConfigSchema } from "../../src/core/ClusterConfig";
 import { GAME_ID_REGEX } from "../../src/core/Schemas";
 import { generateGameID } from "../../src/core/Util";
 
-const entry = (host: string, colour = "blue", numWorkers = 2) => ({
+const entry = (host: string, color = "blue", numWorkers = 2) => ({
   host,
-  colour,
+  color,
   numWorkers,
 });
 
@@ -36,7 +36,7 @@ describe("ClusterConfigSchema", () => {
     ).toBe(false);
   });
 
-  it("rejects an unknown colour", () => {
+  it("rejects an unknown color", () => {
     expect(
       ClusterConfigSchema.safeParse({ a: entry("x.io", "purple") }).success,
     ).toBe(false);
