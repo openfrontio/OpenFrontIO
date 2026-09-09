@@ -179,16 +179,25 @@ describe("purchaseWithCurrency", () => {
     });
   });
 
-  // The reason is the branch key; the amount is only quoted back. A body
-  // missing it must still take the debt branch.
-  it("still reports a debt whose amount is missing", async () => {
-    respond(400, { reason: "insufficient_balance_debt" });
-    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
-      ok: false,
-      code: "debt",
-      debt: "",
-    });
-  });
+  // The amount IS the message ("your balance is X in debt"), so a debt we
+  // cannot state is worse than a generic failure — it would render a blank,
+  // or "[object Object]", at the player.
+  it.each([
+    ["missing", {}],
+    ["empty", { debt: "" }],
+    ["not a number", { debt: "lots" }],
+    ["an object", { debt: { amount: 150 } }],
+    ["negative", { debt: "-150" }],
+  ])(
+    "falls back to a generic failure when the amount is %s",
+    async (_l, extra) => {
+      respond(400, { reason: "insufficient_balance_debt", ...extra });
+      expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+        ok: false,
+        code: "failed",
+      });
+    },
+  );
 
   it("distinguishes being short from being in debt", async () => {
     respond(400, { reason: "Insufficient balance" });
@@ -198,7 +207,25 @@ describe("purchaseWithCurrency", () => {
     });
   });
 
+  // The result must not carry the server's reason onward: everything that
+  // reads this object is one step from rendering what it finds.
+  it("does not pass an unrecognised reason back to the caller", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    respond(400, { reason: "some_future_machine_key" });
+
+    const result = await purchaseWithCurrency("flag", "pirate", "hard");
+
+    expect(result).toEqual({ ok: false, code: "failed" });
+    expect(result).not.toHaveProperty("reason");
+    expect(Object.values(result)).not.toContain("some_future_machine_key");
+    // One argument: the body is deliberately not logged, because an
+    // unrecognised reason is exactly the case where we don't know what is in it.
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]).toHaveLength(1);
+  });
+
   it("fails closed on an unrecognised 400, a 500 and a network error", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     respond(400, { reason: "Invalid request body" });
     expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
       ok: false,

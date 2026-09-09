@@ -849,7 +849,18 @@ export async function purchaseWithCurrency(
       const body = await response.json().catch(() => null);
       const reason = typeof body?.reason === "string" ? body.reason : "";
       if (reason === "insufficient_balance_debt") {
-        return { ok: false, code: "debt", debt: String(body.debt ?? "") };
+        // The amount is the whole message ("your balance is X in debt"), so a
+        // debt we can't state is worse than a generic failure: it would render
+        // a blank or "[object Object]" at the player. Digits only — the API
+        // sends a stringified positive bigint.
+        const debt = String(body?.debt ?? "");
+        if (!/^\d+$/.test(debt)) {
+          console.warn(
+            "purchaseWithCurrency: debt refusal with no usable amount",
+          );
+          return { ok: false, code: "failed" };
+        }
+        return { ok: false, code: "debt", debt };
       }
       if (reason === "Insufficient balance") {
         return { ok: false, code: "insufficient_balance" };

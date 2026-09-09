@@ -157,6 +157,35 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
     expect(reloadMock).toHaveBeenCalled();
   });
 
+  // The API serves a charged-back wallet as a negative balance, so the
+  // pre-check is where a player in debt normally meets this — the server
+  // refusal below only fires when the chargeback lands mid-session. Without
+  // it, -50 against a 250 pack reads as "you need 300 more" with a top-up
+  // button that cannot clear a debt.
+  it("explains the debt from a negative cached balance, before any request", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(-50));
+
+    const result = await purchaseCosmetic(starter, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith("debt 50");
+    expect(purchaseCosmeticPack).not.toHaveBeenCalled();
+    expect(result).toBeUndefined();
+  });
+
+  it("drops the cached profile after a debt refusal", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "debt",
+      debt: "300",
+    });
+
+    await purchaseCosmetic(starter, "hard");
+
+    // Otherwise the store keeps rendering the pre-chargeback balance.
+    expect(invalidateUserMe).toHaveBeenCalled();
+  });
+
   it("explains debt and stale listings without reloading", async () => {
     vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
 

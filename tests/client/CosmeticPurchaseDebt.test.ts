@@ -102,20 +102,24 @@ describe("purchaseCosmetic when the wallet is in debt", () => {
     expect(result).toBeUndefined();
     // Nothing was granted, so the page must not reload as if it had been.
     expect(reloadMock).not.toHaveBeenCalled();
+    // The cached profile still holds the pre-chargeback balance, which the
+    // store would otherwise keep rendering.
+    expect(invalidateUserMe).toHaveBeenCalled();
   });
 
-  it("never leaks the machine reason into the message", async () => {
-    vi.mocked(purchaseWithCurrency).mockResolvedValue({
-      ok: false,
-      code: "debt",
-      debt: "150",
-    });
+  // Finding 1: this is the COMMON way a player in debt arrives. The API
+  // serves a charged-back wallet as a negative balance, so the pre-check sees
+  // it before any request is made — the server refusal above only happens
+  // when the chargeback lands mid-session against a stale cache.
+  it("explains the debt from a negative cached balance, before any request", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWith(-150, 5000));
 
-    await purchaseCosmetic(pirateFlag, "hard");
+    const result = await purchaseCosmetic(pirateFlag, "hard");
 
-    expect(vi.mocked(showInGameAlert).mock.calls[0][0]).not.toContain(
-      "insufficient_balance_debt",
-    );
+    expect(showInGameAlert).toHaveBeenCalledWith("debt 150");
+    // Never reaches the network, and never offers a top-up that cannot help.
+    expect(purchaseWithCurrency).not.toHaveBeenCalled();
+    expect(result).toBeUndefined();
   });
 
   // The other half of the same 400. Being short IS fixed by topping up, so it
@@ -161,10 +165,10 @@ describe("purchaseCosmetic when the wallet is in debt", () => {
     });
   });
 
-  // The server can refuse on a balance this client still reads as sufficient.
-  // A zero or negative shortfall would render as "you have enough", which is
-  // the one thing we know is false.
-  it("never reports a non-positive shortfall", async () => {
+  // The server refused on a balance the re-read still says covers the price.
+  // There is no shortfall to quote, and "you need 1 more" would send them to
+  // buy currency they already have for a purchase that would now succeed.
+  it("does not invent a shortfall when the re-read covers the price", async () => {
     vi.mocked(purchaseWithCurrency).mockResolvedValue({
       ok: false,
       code: "insufficient_balance",
@@ -172,7 +176,25 @@ describe("purchaseCosmetic when the wallet is in debt", () => {
 
     const result = await purchaseCosmetic(pirateFlag, "hard");
 
-    expect(result).toMatchObject({ shortfall: 1 });
+    expect(result).toBeUndefined();
+    expect(showInGameAlert).toHaveBeenCalledWith("failed");
+  });
+
+  // Finding 1's other half: the chargeback landed mid-session, so the
+  // pre-check ran on a cache that still showed a positive balance.
+  it("explains the debt when the re-read comes back negative", async () => {
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "insufficient_balance",
+    });
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(userWith(500, 5000))
+      .mockResolvedValueOnce(userWith(-150, 5000));
+
+    const result = await purchaseCosmetic(pirateFlag, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith("debt 150");
+    expect(result).toBeUndefined();
   });
 
   it("still reports an unexplained failure generically", async () => {

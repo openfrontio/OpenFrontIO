@@ -424,6 +424,18 @@ export async function purchaseCosmetic(
     method === "hard"
       ? (userMe.player.currency?.hard ?? 0)
       : (userMe.player.currency?.soft ?? 0);
+  // A charged-back wallet is served as a NEGATIVE balance (the API derives its
+  // own `debt` field as exactly `-hard`), so this — not the server refusal
+  // below — is how a player in debt normally gets here. Without this branch
+  // the negative balance just fails the shortfall check underneath and they
+  // are told "you need 400 more" with a top-up button that cannot clear a
+  // debt. Soft currency can never go negative, so this only fires for hard.
+  if (balance < 0) {
+    await showInGameAlert(
+      translateText("store.pack_debt", { debt: String(-balance) }),
+    );
+    return;
+  }
   // Built for the pre-check below and reused when the server refuses for the
   // same reason, so both routes describe the same item the same way.
   const insufficient = (available: number): InsufficientCurrency => {
@@ -488,13 +500,30 @@ export async function purchaseCosmetic(
             : method === "hard"
               ? (fresh.player.currency?.hard ?? 0)
               : (fresh.player.currency?.soft ?? 0);
+        // The chargeback landed mid-session, so the pre-check above ran on a
+        // cache that still showed a positive balance.
+        if (available < 0) {
+          await showInGameAlert(
+            translateText("store.pack_debt", { debt: String(-available) }),
+          );
+          return;
+        }
+        // The re-read says they can afford it. We have no shortfall to quote,
+        // and inventing one would tell them to buy currency they already have
+        // for a purchase that would now succeed.
+        if (price - available <= 0) {
+          await showInGameAlert(translateText("store.purchase_failed"));
+          return;
+        }
         return insufficient(available);
       }
       case "debt":
         // A refund or chargeback left the wallet negative. Topping up does not
         // unblock it, so this gets a plain explanation rather than the
         // insufficient-currency dialog — the debt settles out of the next
-        // credit.
+        // credit. Drop the cached profile: it still shows the pre-chargeback
+        // balance, which the store would otherwise keep rendering.
+        invalidateUserMe();
         await showInGameAlert(
           translateText("store.pack_debt", { debt: result.debt }),
         );
@@ -536,6 +565,15 @@ async function purchasePack(
     canTopUp: true,
   });
   const balance = userMe.player.currency?.hard ?? 0;
+  // Same as the single-cosmetic path: a charged-back wallet arrives here as a
+  // negative balance, and without this it reads as a very large shortfall
+  // with a top-up button that cannot clear a debt.
+  if (balance < 0) {
+    await showInGameAlert(
+      translateText("store.pack_debt", { debt: String(-balance) }),
+    );
+    return;
+  }
   if (balance < pack.priceHard) {
     return insufficient(balance);
   }
@@ -559,6 +597,9 @@ async function purchasePack(
       );
     }
     case "debt":
+      // The cached profile still shows the pre-chargeback balance; drop it so
+      // the store stops rendering a balance the player does not have.
+      invalidateUserMe();
       await showInGameAlert(
         translateText("store.pack_debt", { debt: result.debt }),
       );
