@@ -5,6 +5,7 @@ import {
   composeGameVersion,
   currentGameVersion,
   renderNavVersion,
+  taggedGameVersion,
 } from "../../src/client/GameVersion";
 
 const SHA = "bf739f86c4e1d2a3b5c6d7e8f90123456789abcd";
@@ -88,6 +89,34 @@ describe("currentGameVersion", () => {
   });
 });
 
+// The nav bar under the logo shows the version and never a commit (OPE-387).
+// This is the pre-OPE-358 rendering, restored: a sha under the logo reads as a
+// broken label on the main menu, which is the front door rather than somewhere
+// anyone is asked to quote a build from.
+describe("taggedGameVersion", () => {
+  it("shows the version when the build was tagged", () => {
+    expect(taggedGameVersion("v0.33.18")).toBe("v0.33.18");
+  });
+
+  it("adds the v when the tag was written without one", () => {
+    expect(taggedGameVersion("0.33.18")).toBe("v0.33.18");
+  });
+
+  it("tolerates surrounding whitespace, as the raw file import carries", () => {
+    expect(taggedGameVersion("  v0.33.18\n")).toBe("v0.33.18");
+  });
+
+  // The original untagged rendering, kept deliberately. The footer is the half
+  // that names the commit instead -- see composeGameVersion above, which turns
+  // this same input into "bf739f8".
+  it("renders the placeholder as-is on an untagged build", () => {
+    expect(taggedGameVersion("x.xx.xx")).toBe("vx.xx.xx");
+    expect(composeGameVersion("x.xx.xx", SHA)).not.toBe(
+      taggedGameVersion("x.xx.xx"),
+    );
+  });
+});
+
 describe("renderNavVersion", () => {
   beforeEach(() => {
     ClientEnv.reset();
@@ -111,8 +140,10 @@ describe("renderNavVersion", () => {
     };
   };
 
-  // The nav bar must not read "vx.xx.xx" while the footer reads the commit.
-  it("stamps the same label the footer uses onto both nav bars", () => {
+  // The regression this pins: with a real commit sitting in BOOTSTRAP_CONFIG
+  // and version.txt still the placeholder, the nav bar shows the version
+  // anyway. Swapping the helper back to currentGameVersion turns this red.
+  it("stamps the version, not the commit, onto both nav bars", () => {
     setBootstrap();
     document.body.innerHTML = `
       <span id="game-version"></span>
@@ -120,12 +151,13 @@ describe("renderNavVersion", () => {
     `;
 
     expect(renderNavVersion()).toBe(2);
-    const expected = composeGameVersion(version, SHA);
     for (const el of document.querySelectorAll(
       "#game-version, .game-version-display",
     )) {
-      expect(el.textContent).toBe(expected);
-      expect(el.textContent).not.toContain("x.xx.xx");
+      expect(el.textContent).toBe(taggedGameVersion(version));
+      // Always a version, whatever version.txt holds when this runs: the
+      // commit form has no leading v and this one always does.
+      expect(el.textContent).toMatch(/^v/);
     }
   });
 
