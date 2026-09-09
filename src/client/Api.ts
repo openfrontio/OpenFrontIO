@@ -897,6 +897,11 @@ export type PurchaseWithCurrencyResult =
   // spendable. Nothing charged. Distinct from the above because buying more
   // currency is not the remedy.
   | { ok: false; code: "debt"; debt: string }
+  // 409 "Already owned": the player already holds this cosmetic. Also what a
+  // retry after a timed-out success returns — treat it as "already bought"
+  // and refetch. Nothing charged. No payload: unlike the pack's 409 the body
+  // carries no item list, only {error, message}.
+  | { ok: false; code: "already_owned" }
   | { ok: false; code: "failed" };
 
 // POST /shop/purchase — buy a single cosmetic for hard or soft currency. The
@@ -950,6 +955,12 @@ export async function purchaseWithCurrency(
       // where we don't know what it contains.
       console.warn("purchaseWithCurrency: unrecognised 400 reason");
       return { ok: false, code: "failed" };
+    }
+    if (response.status === 409) {
+      // The body is deliberately not read: it carries no item list, so there
+      // is nothing to extract, and not touching it is the cheapest way to
+      // keep a server body away from a log line.
+      return { ok: false, code: "already_owned" };
     }
     if (!response.ok) {
       console.error(

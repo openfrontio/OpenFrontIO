@@ -1795,6 +1795,7 @@
     "no_skins": "No skins available. Check back later for new items.",
     "no_subscriptions": "No subscriptions available. Check back later for new items.",
     "no_tribes": "You haven't bought any tribe names yet.",
+    "already_owned": "You already own this item. Nothing was charged.",
     "pack_already_owned": "You already own {items}. Nothing was charged.",
     "pack_debt": "Your Plutonium balance is {debt} in debt. Settle it before buying.",
     "pack_no_items": "None of this bundle's items are available right now.",

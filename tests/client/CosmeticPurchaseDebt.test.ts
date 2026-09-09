@@ -35,6 +35,7 @@ const translations = {
   "flags.pirate": "Jolly Roger",
   "store.login_required": "log in",
   "store.pack_debt": "debt {debt}",
+  "store.already_owned": "already owned",
   "store.purchase_failed": "failed",
   "store.purchase_success": "bought {name}",
 };
@@ -105,6 +106,35 @@ describe("purchaseCosmetic when the wallet is in debt", () => {
     // The cached profile still holds the pre-chargeback balance, which the
     // store would otherwise keep rendering.
     expect(invalidateUserMe).toHaveBeenCalled();
+  });
+
+  // The debt case above asserts reload is NOT called, because nothing was
+  // granted. This is the deliberate contrast: the grant already happened
+  // server-side, so the stale ownership state must be reloaded.
+  it("reloads on an already-owned refusal, unlike the debt case", async () => {
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "already_owned",
+    });
+
+    const result = await purchaseCosmetic(pirateFlag, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith("already owned");
+    // The bug: this refusal used to be told as "try again", which loops
+    // forever because the retry 409s again.
+    expect(showInGameAlert).not.toHaveBeenCalledWith("failed");
+    expect(result).toBeUndefined();
+    expect(invalidateUserMe).toHaveBeenCalled();
+    expect(reloadMock).toHaveBeenCalledTimes(1);
+    // The player must read the message before the page goes away, and the
+    // cache must be dropped before the reload refills it.
+    const alertOrder = vi.mocked(showInGameAlert).mock
+      .invocationCallOrder[0] as number;
+    const invalidateOrder = vi.mocked(invalidateUserMe).mock
+      .invocationCallOrder[0] as number;
+    const reloadOrder = reloadMock.mock.invocationCallOrder[0] as number;
+    expect(alertOrder).toBeLessThan(invalidateOrder);
+    expect(invalidateOrder).toBeLessThan(reloadOrder);
   });
 
   // Finding 1: this is the COMMON way a player in debt arrives. The API

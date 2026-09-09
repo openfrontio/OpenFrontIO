@@ -549,6 +549,16 @@ export async function purchaseCosmetic(
           translateText("store.pack_debt", { debt: result.debt }),
         );
         return;
+      case "already_owned":
+        // Either a genuine double-buy or a retry of a purchase that did go
+        // through (the success response was lost): both mean the local
+        // ownership state is stale, so refetch. Mirrors the pack path. No
+        // broadcastFreshUserMe() here — the reload below tears the page down,
+        // so re-dispatching the profile first would be dead work.
+        await showInGameAlert(translateText("store.already_owned"));
+        invalidateUserMe();
+        window.location.reload();
+        return;
       default:
         await showInGameAlert(translateText("store.purchase_failed"));
         return;
