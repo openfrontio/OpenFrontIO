@@ -108,6 +108,7 @@ describe("boot sequencing against a real <username-input>", () => {
       lapseNoticeDue: shown,
       rewardCount: (player.rewards ?? []).length,
       claimPromptDue: true,
+      claimStringsReady: true,
     });
     await runBootInterrupt(interrupt, { claimStore: {}, publicId: "p" }, ports);
     return { interrupt, ...calls };

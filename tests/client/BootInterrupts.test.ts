@@ -7,6 +7,7 @@ import {
   CLAIM_PROMPT_MAX_SHOWS,
   claimPromptDue,
   claimPromptShown,
+  claimPromptStringsReady,
   isCleanHomepage,
   joinOwnsInFlightFlag,
   nextBootInterrupt,
@@ -34,6 +35,7 @@ function boot(
     lapseNoticeDue: false,
     rewardCount: 0,
     claimPromptDue: true,
+    claimStringsReady: true,
     ...overrides,
   };
 }
@@ -470,29 +472,6 @@ describe("runBootInterrupt", () => {
     }
   });
 
-  // translateText echoes the key back until <lang-selector> has fetched its
-  // files, and auth can resolve first. Showing the raw key is bad enough;
-  // spending one of three chances to explain the perk while doing it would
-  // leave a non-English player with two, then none, having never seen a
-  // sentence.
-  it("says nothing and spends nothing before the strings land", async () => {
-    for (const key of Object.values(BOOT_INTERRUPT_KEYS)) {
-      const calls = await run("username-claim", {
-        // Only this one key is unresolved — enough to bail.
-        translate: (k) => (k === key ? k : `t(${k})`),
-      });
-      const claimKey = (
-        [
-          BOOT_INTERRUPT_KEYS.claimBody,
-          BOOT_INTERRUPT_KEYS.claimHeading,
-          BOOT_INTERRUPT_KEYS.claimConfirm,
-        ] as string[]
-      ).includes(key);
-      expect(calls.stored.length, key).toBe(claimKey ? 0 : 1);
-      expect(calls.confirmed.length, key).toBe(claimKey ? 0 : 1);
-    }
-  });
-
   it("opens the rewards popup, and only for rewards", async () => {
     expect((await run("rewards")).rewardsOpened).toBe(1);
     for (const interrupt of [
@@ -652,5 +631,105 @@ describe("a join that fails before reaching a handle", () => {
     // B then reaches its own handle and clears it.
     if (joinOwnsInFlightFlag(mostRecentJoinEvent, joinB)) joinInFlight = false;
     expect(joinInFlight).toBe(false);
+  });
+});
+
+describe("claimPromptStringsReady", () => {
+  const loaded = (key: string) => `t(${key})`;
+
+  it("is ready when every string resolves", () => {
+    expect(claimPromptStringsReady(loaded)).toBe(true);
+  });
+
+  // Any one of the three echoing its key is enough: a dialog with a real body
+  // and a raw key for a button is no better than one raw all through.
+  it("is not ready when any one string still echoes its key", () => {
+    for (const key of [
+      BOOT_INTERRUPT_KEYS.claimBody,
+      BOOT_INTERRUPT_KEYS.claimHeading,
+      BOOT_INTERRUPT_KEYS.claimConfirm,
+    ]) {
+      expect(
+        claimPromptStringsReady((k: string) => (k === key ? k : `t(${k})`)),
+        key,
+      ).toBe(false);
+    }
+  });
+
+  // The keys the other interrupts use are none of its business.
+  it("ignores the strings it does not own", () => {
+    expect(
+      claimPromptStringsReady((k: string) =>
+        k === BOOT_INTERRUPT_KEYS.temporaryBody ? k : `t(${k})`,
+      ),
+    ).toBe(true);
+  });
+});
+
+// The gap: bailing inside runBootInterrupt consumed the boot, so an entitled
+// non-English player holding unclaimed rewards saw neither the prompt nor the
+// rewards popup that main would have opened. Readiness is a precondition on
+// the interrupt, so failing it lets the next-ranked one take the boot.
+describe("an unready claim prompt yields the boot rather than eating it", () => {
+  const unready = (key: string) =>
+    (
+      [
+        BOOT_INTERRUPT_KEYS.claimBody,
+        BOOT_INTERRUPT_KEYS.claimHeading,
+        BOOT_INTERRUPT_KEYS.claimConfirm,
+      ] as string[]
+    ).includes(key)
+      ? key
+      : `t(${key})`;
+
+  const inputs = {
+    cleanHomepage: true,
+    usernameStatus: "premium",
+    username: null,
+    usernameBase: null,
+    lapseNoticeDue: false,
+    rewardCount: 2,
+    claimPromptDue: true,
+    claimStringsReady: claimPromptStringsReady(unready),
+  };
+
+  it("does not choose the claim prompt", () => {
+    expect(inputs.claimStringsReady).toBe(false);
+    expect(nextBootInterrupt(inputs)).toBe("rewards");
+  });
+
+  it("opens rewards and writes no claim record", async () => {
+    const calls = {
+      confirmed: [] as string[],
+      navigated: [] as string[],
+      stored: [] as ClaimPromptStore[],
+      rewardsOpened: 0,
+    };
+    await runBootInterrupt(
+      nextBootInterrupt(inputs),
+      { claimStore: {}, publicId: ME },
+      {
+        translate: unready,
+        confirm: async (body) => {
+          calls.confirmed.push(body);
+          return true;
+        },
+        navigate: (hash) => calls.navigated.push(hash),
+        openRewards: () => calls.rewardsOpened++,
+        storeClaimPrompt: (store) => calls.stored.push(store),
+        now: () => 1_757_000_000_000,
+      },
+    );
+    expect(calls.rewardsOpened).toBe(1);
+    expect(calls.stored).toEqual([]);
+    expect(calls.confirmed).toEqual([]);
+    expect(calls.navigated).toEqual([]);
+  });
+
+  // With nothing else pending the boot is simply quiet, and the allowance is
+  // still intact for the next launch.
+  it("stays quiet, and unspent, when rewards are not waiting either", async () => {
+    const alone = { ...inputs, rewardCount: 0 };
+    expect(nextBootInterrupt(alone)).toBeNull();
   });
 });

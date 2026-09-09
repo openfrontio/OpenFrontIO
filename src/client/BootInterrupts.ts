@@ -43,6 +43,13 @@ export interface BootInterruptInputs {
   rewardCount: number;
   /** claimPromptDue(...) — the decay rule below. */
   claimPromptDue: boolean;
+  /**
+   * claimPromptStringsReady(...) — whether the prompt has anything to SAY.
+   * A precondition on the claim prompt like any other, and it lives here
+   * rather than in runBootInterrupt so that failing it lets the next-ranked
+   * interrupt take the boot instead of losing it.
+   */
+  claimStringsReady: boolean;
 }
 
 /**
@@ -204,7 +211,8 @@ export function nextBootInterrupt(
   if (
     entitled(inputs.usernameStatus) &&
     !inputs.username &&
-    inputs.claimPromptDue
+    inputs.claimPromptDue &&
+    inputs.claimStringsReady
   )
     return "username-claim";
 
@@ -364,6 +372,37 @@ export const BOOT_INTERRUPT_KEYS = {
 export const USERNAME_FORM_HASH = "modal=change-username";
 
 /**
+ * Has the claim prompt got anything to say yet?
+ *
+ * translateText echoes the key back until <lang-selector> has fetched its
+ * files, and auth can resolve first. Showing a player the literal string
+ * "account_modal.username_claim_prompt" would be bad enough; doing it AND
+ * spending one of three chances to explain the perk would leave a non-English
+ * player with two, then none, having never seen a sentence.
+ *
+ * A precondition on the interrupt, not a bail inside it. Answering "not yet"
+ * from inside runBootInterrupt would silently cost the boot: the claim prompt
+ * has already won the ranking by then, so nothing else gets a turn and an
+ * entitled player holding unclaimed rewards would see neither — where main
+ * would simply have opened the rewards popup. Asked here, the claim prompt is
+ * never chosen and rewards takes the boot by the ordinary ordering.
+ *
+ * Only ever false off English, which is a static import.
+ */
+export function claimPromptStringsReady(
+  translate: (key: string) => string,
+): boolean {
+  return (
+    translate(BOOT_INTERRUPT_KEYS.claimBody) !==
+      BOOT_INTERRUPT_KEYS.claimBody &&
+    translate(BOOT_INTERRUPT_KEYS.claimHeading) !==
+      BOOT_INTERRUPT_KEYS.claimHeading &&
+    translate(BOOT_INTERRUPT_KEYS.claimConfirm) !==
+      BOOT_INTERRUPT_KEYS.claimConfirm
+  );
+}
+
+/**
  * Everything acting on an interrupt has to reach outside itself for. Passed in
  * rather than imported so the wiring below is exercised by tests instead of
  * being trusted — the ordering was already pure, but which dialog opens, what
@@ -412,22 +451,13 @@ export async function runBootInterrupt(
       return;
     }
     case "username-claim": {
+      // Readiness of these strings is a precondition on the interrupt, checked
+      // by claimPromptStringsReady before the ranking picks it — not a bail
+      // here. Bailing here would consume the boot and leave an entitled player
+      // with unclaimed rewards seeing neither.
       const body = ports.translate(BOOT_INTERRUPT_KEYS.claimBody);
       const heading = ports.translate(BOOT_INTERRUPT_KEYS.claimHeading);
       const confirmText = ports.translate(BOOT_INTERRUPT_KEYS.claimConfirm);
-      // translateText echoes the key back until <lang-selector> has fetched
-      // its files, and auth can resolve first. Showing the raw key would be
-      // bad enough; doing it AND spending one of three chances to explain the
-      // perk would leave a non-English player with two, then none, having
-      // never seen a sentence. Same bail announceLapse makes, for the same
-      // reason — the record is left unwritten, so the next launch asks
-      // properly. Only reachable off English, which is a static import.
-      if (
-        body === BOOT_INTERRUPT_KEYS.claimBody ||
-        heading === BOOT_INTERRUPT_KEYS.claimHeading ||
-        confirmText === BOOT_INTERRUPT_KEYS.claimConfirm
-      )
-        return;
       // Recorded before the dialog opens, and whichever way they answer:
       // declining is an answer, and re-asking someone who said no is the
       // nagging the decay rule exists to prevent. Before rather than after

@@ -29,6 +29,7 @@ import {
   bootInterruptsAllowed,
   CLAIM_PROMPT_KEY,
   claimPromptDue,
+  claimPromptStringsReady,
   joinOwnsInFlightFlag,
   lapseShownAfterDispatch,
   nextBootInterrupt,
@@ -675,6 +676,7 @@ class Client {
             lapseNoticeDue: lapseShown,
             rewardCount: rewards.length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
+            claimStringsReady: claimPromptStringsReady(translateText),
           }),
           { claimStore, publicId },
           {
