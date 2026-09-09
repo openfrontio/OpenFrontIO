@@ -52,7 +52,7 @@ export class NotLoggedInWarning extends LitElement {
           window.showPage?.("page-account");
         }}
       >
-         ${translateText("common.not_logged_in")}
+        ${translateText("common.not_logged_in")}
       </button>
     </div>`;
   }
