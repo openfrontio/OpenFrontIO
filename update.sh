@@ -215,9 +215,13 @@ fi
 #   fixed hostname without anyone watching. `main` and `nightly` are both
 #   staging deployments people test against; `nightly` is here because a
 #   scheduled deploy is the only thing that would otherwise restart it, so a
-#   crash at 07:05 UTC is a ~24-hour outage rather than a blip (OPE-361). Any
-#   deployment on the production domain qualifies for the same reason and is
-#   matched separately, since its subdomain is not fixed.
+#   crash at 07:05 UTC is a ~24-hour outage rather than a blip (OPE-361).
+#   `green` and `blue` are the dev pools the same schedule fans out to, with
+#   the exact same exposure -- worse, actually, since start.sh caps every
+#   non-main dev container at 25h, so without `always` a single missed nightly
+#   would leave them dead until the next successful one. Any deployment on the
+#   production domain qualifies for the same reason and is matched separately,
+#   since its subdomain is not fixed.
 #
 #   Everything else: a per-branch preview. deploy.yml deploys EVERY push on
 #   EVERY branch to <branch>.openfront.dev, so these accumulate one container
@@ -234,7 +238,7 @@ fi
 # talks to docker and ssh and cannot be executed in a test, but this decision
 # can. Keep them in place.
 # --- BEGIN restart policy (tested) ---
-LONG_LIVED_SUBDOMAINS=" main nightly "
+LONG_LIVED_SUBDOMAINS=" main nightly green blue "
 
 if [[ "${LONG_LIVED_SUBDOMAINS}" == *" ${SUBDOMAIN} "* ]] || [ "${DOMAIN}" = openfront.io ]; then
     RESTART=always

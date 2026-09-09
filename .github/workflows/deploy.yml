@@ -59,13 +59,20 @@ jobs:
     # Deploy on push/schedule/workflow_dispatch (see "on:") unless this is a fork
     if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
     # Use different logic based on event type
-    name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}${{ matrix.subdomain && format(' ({0})', matrix.subdomain) || '' }}
+    name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}${{ matrix.subdomain && format(' ({0})', matrix.subdomain) }}
     runs-on: ubuntu-latest
     # The schedule fans out to all three dev pools; every other event deploys a
     # single subdomain, expressed as a one-element matrix with an empty string
     # so RAW_SUBDOMAIN below falls through to the per-event logic.
     strategy:
       fail-fast: false
+      # One leg at a time: parallel legs would race three concurrent pushes of
+      # the shared :latest/:buildcache tags (build.sh tags both on every build)
+      # and pile all three deploys onto deploy.sh's 15-minute host-side flock.
+      # Sequential legs have one writer at a time and no lock contention, and
+      # legs 2 and 3 rebuild from the registry cache leg 1 just pushed, so they
+      # are cheap.
+      max-parallel: 1
       matrix:
         subdomain: ${{ github.event_name == 'schedule' && fromJSON('["nightly", "green", "blue"]') || fromJSON('[""]') }}
     timeout-minutes: 30
