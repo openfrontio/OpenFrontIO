@@ -59,3 +59,33 @@ describe("GameModeSelector lobby-socket lifecycle", () => {
     expect(socketCalls.started).toBe(2);
   });
 });
+
+// The socket is NOT scoped to the homepage: Main.ts only stops it when a game
+// actually starts, so it is still listening while the player waits in a
+// lobby. An update/drain prompt firing there would reload the player out of
+// a lobby the draining deployment deliberately lets finish — it must be
+// deferred until they leave.
+describe("GameModeSelector update prompt deferral", () => {
+  it("defers the prompt while the player is in a lobby", () => {
+    const selector = new GameModeSelector() as any;
+
+    selector.onJoinLobby();
+    selector.handleUpdateAvailable();
+
+    expect(selector.updateDeferred).toBe(true);
+  });
+
+  it("re-fires the prompt when the player leaves the lobby", () => {
+    const selector = new GameModeSelector() as any;
+    selector.onJoinLobby();
+    selector.handleUpdateAvailable();
+
+    const prompt = vi
+      .spyOn(selector, "handleUpdateAvailable")
+      .mockImplementation(() => {});
+    selector.onLeaveLobby();
+
+    expect(prompt).toHaveBeenCalledTimes(1);
+    expect(selector.updateDeferred).toBe(false);
+  });
+});

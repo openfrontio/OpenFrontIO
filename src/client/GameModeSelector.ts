@@ -114,10 +114,16 @@ export class GameModeSelector extends LitElement {
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
+  // True from join-lobby until leave-lobby: the player is waiting in (or
+  // loading into) a lobby. This socket is NOT scoped to the homepage — Main.ts
+  // only stops it when a game actually starts (prestart/join), so it is still
+  // listening during the whole lobby wait.
+  private inLobby = false;
+  // An update/drain signal arrived during a lobby wait; prompt on leave-lobby.
+  private updateDeferred = false;
+
   private lobbySocket = new PublicLobbySocket(
     (lobbies) => this.handleLobbiesUpdate(lobbies),
-    // This socket only runs while the player is on the homepage (Main.ts
-    // stops it when a game is joined), so it's always safe to reload here.
     { onUpdateAvailable: () => this.handleUpdateAvailable() },
   );
 
@@ -127,6 +133,17 @@ export class GameModeSelector extends LitElement {
     // DesktopUpdateBar). Reloading here would only re-run the old overlay,
     // reconnect, and trigger this again until the download finishes.
     if (isDesktopShell()) return;
+    // A blocking reload prompt during a lobby wait would eject the player
+    // from a lobby the draining deployment deliberately lets finish — and a
+    // private lobby's members are all pinned to the same deployment, so they
+    // would all be prompted out at once. Defer until they leave the lobby;
+    // if the game starts instead, Main.ts stops this socket, and every exit
+    // from a started game is a full navigation that picks up the new shell
+    // anyway.
+    if (this.inLobby) {
+      this.updateDeferred = true;
+      return;
+    }
     showInGameAlert(translateText("update_available.message")).then(() => {
       reloadForUpdate();
     });
@@ -164,6 +181,8 @@ export class GameModeSelector extends LitElement {
       "desktop-session-state",
       this.onDesktopSessionState,
     );
+    document.addEventListener("join-lobby", this.onJoinLobby);
+    document.addEventListener("leave-lobby", this.onLeaveLobby);
     // Pick up the current value in case username-input validated before us.
     const usernameInput = document.querySelector(
       "username-input",
@@ -188,8 +207,22 @@ export class GameModeSelector extends LitElement {
       "desktop-session-state",
       this.onDesktopSessionState,
     );
+    document.removeEventListener("join-lobby", this.onJoinLobby);
+    document.removeEventListener("leave-lobby", this.onLeaveLobby);
     super.disconnectedCallback();
   }
+
+  private onJoinLobby = () => {
+    this.inLobby = true;
+  };
+
+  private onLeaveLobby = () => {
+    this.inLobby = false;
+    if (this.updateDeferred) {
+      this.updateDeferred = false;
+      this.handleUpdateAvailable();
+    }
+  };
 
   private handleValidityChange = (e: Event) => {
     this.inputValid = (e as CustomEvent).detail?.isValid ?? true;
