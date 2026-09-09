@@ -404,12 +404,16 @@ export async function startWorker() {
           return;
         }
 
-        // Verify this worker should handle this game
+        // Verify this worker should handle this game. Close loudly: the bare
+        // return this replaces left the socket open with no reply, so a
+        // misrouted client (stale bundle computing a worker index from an old
+        // numWorkers) hung forever instead of being told to reload.
         const expectedWorkerId = ServerEnv.workerIndex(clientMsg.gameID);
         if (expectedWorkerId !== workerId) {
           log.warn(
             `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
           );
+          ws.close(CloseCode.WrongWorker, CloseReason.WrongWorker);
           return;
         }
 
