@@ -100,12 +100,14 @@ fi
 #      ids under a letter the real fleet map does not own.
 #   3. Sharing a multi-entry map means being behind the load balancer, so
 #      that also switches on the drain poll: SITE_HOST defaults to the apex
-#      ($DOMAIN) for deployments in a map with siblings (release.yml sets it
-#      explicitly for prod; this covers the .dev pair). A single-entry
-#      explicit map (beta) is a standalone deployment — like synthesized
-#      ones, it keeps SITE_HOST empty and stays permanently active, rather
-#      than polling an apex that answers with some other fleet's identity
-#      and wrongly draining itself.
+#      ($DOMAIN) for deployments in a map with siblings (release.yml also
+#      sets it explicitly, but only for the prod blue/green jobs; this
+#      covers the .dev pair). One map = one balanced fleet, so a standalone
+#      prod deployment (beta) gets its OWN single-entry map, never an entry
+#      in the fleet's — and a single-entry map keeps SITE_HOST empty, like
+#      synthesized ones, staying permanently active rather than polling an
+#      apex that answers with some other fleet's identity and wrongly
+#      draining itself.
 FQDN="${SUBDOMAIN}.${DOMAIN}"
 if [ -n "${CLUSTER_JSON:-}" ]; then
     CLUSTER_JSON=$(printf '%s' "$CLUSTER_JSON" | jq -c .)
