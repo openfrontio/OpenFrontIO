@@ -29,6 +29,7 @@ import {
   bootInterruptsAllowed,
   CLAIM_PROMPT_KEY,
   claimPromptDue,
+  failedJoinClearsFlag,
   nextBootInterrupt,
   parseClaimPromptStore,
   runBootInterrupt,
@@ -468,6 +469,14 @@ class Client {
       // still surfaces exactly as it does today.
       void this.handleJoinLobby(event).catch((error) => {
         this.resetPresenceToMenu();
+        // joinInFlight has exactly the same problem: set when the join
+        // committed, and cleared only on the two paths that reach a handle.
+        // Left set it would silence every boot interrupt for the rest of the
+        // session. Guarded on the timestamp so a join that failed after being
+        // superseded cannot clear the flag its successor is relying on.
+        if (failedJoinClearsFlag(this.mostRecentJoinEvent, event.timeStamp)) {
+          this.joinInFlight = false;
+        }
         throw error;
       });
     });

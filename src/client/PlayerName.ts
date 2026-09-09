@@ -227,6 +227,10 @@ export function sanitizePersona(
 // from the table below instead, which is why "Łukasz" gives "Lukasz" rather
 // than "ukasz".
 //
+// The table runs AFTER the decomposition, not before, so it also catches
+// letters that only become foldable once NFKD has been applied: "Ǽ" arrives
+// there as "Æ" and leaves as "AE".
+//
 // What remains disallowed after that becomes a space, same as sanitizePersona
 // and for the same reason: throwing a decorated persona away wholesale is what
 // sent Steam buyers to Anon… names in the first place, and a decorative
@@ -268,9 +272,11 @@ const FOLD_UNDECOMPOSABLE: Record<string, string> = {
   // name loses a letter per syllable — "Yıldırım" spaces out to "Y ld r m".
   ı: "i",
   ĸ: "k",
-  // NFKD turns these into "L" plus a middle dot, which then becomes a space.
-  Ŀ: "L",
-  ŀ: "l",
+  // No entry for Ŀ/ŀ (L with middle dot). NFKD DOES decompose those — to
+  // "L" plus U+00B7 MIDDLE DOT, which is punctuation rather than a combining
+  // mark, so it survives the mark strip and becomes a space like any other
+  // separator. The letter is already recovered by the time this table runs, so
+  // an entry here could never match.
 };
 
 export function sanitizeAccountPersona(

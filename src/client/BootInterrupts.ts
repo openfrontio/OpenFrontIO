@@ -99,6 +99,28 @@ export function bootInterruptsAllowed(
   );
 }
 
+/**
+ * A join failed before it ever reached a lobby handle. Should it clear the
+ * in-flight flag it set?
+ *
+ * Only when it is still the current join. `handleJoinLobby` awaits several
+ * things before assigning a handle, so a second join can start and set the
+ * flag again while the first is still unwinding; letting the older failure
+ * clear it would re-open the boot interrupts over a join that is very much
+ * still going. The timestamp is the same identity `handleJoinLobby` already
+ * supersedes stale joins by.
+ *
+ * Without any clear at all the flag sticks true for the rest of the session
+ * and silences every boot interrupt — the same shape as the presence bug the
+ * `join-lobby` catch was already written to handle.
+ */
+export function failedJoinClearsFlag(
+  mostRecentJoinEvent: number,
+  failedJoinEvent: number,
+): boolean {
+  return mostRecentJoinEvent === failedJoinEvent;
+}
+
 // An entitled status: subscribed, or admin-locked to the same perk. Both
 // statuses buy the bare-name claim, so both belong in every question about it —
 // including the claim prompt below. The ticket words its condition as

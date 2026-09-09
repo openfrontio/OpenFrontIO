@@ -588,6 +588,19 @@ describe("sanitizeAccountPersona", () => {
     expect(sanitizeAccountPersona("Straße")).toBe("Strasse");
     expect(sanitizeAccountPersona("Øystein")).toBe("Oystein");
     expect(sanitizeAccountPersona("Ælfred")).toBe("AElfred");
+    // Foldable only AFTER decomposition: NFKD gives "Æ" + an acute, the mark
+    // is stripped, and the table then catches it. Pins that the table runs
+    // after the decomposition rather than before.
+    expect(sanitizeAccountPersona("Ǽlfred")).toBe("AElfred");
+  });
+
+  // L-with-middle-dot is the one letter here NFKD does decompose — into "L"
+  // plus U+00B7, which is punctuation rather than a combining mark, so it
+  // survives the mark strip and becomes a space like any other separator. No
+  // fold-table entry could ever match it; this pins what actually happens.
+  it("recovers the letter from an L-with-middle-dot and spaces the dot", () => {
+    expect(sanitizeAccountPersona("Ŀanfair")).toBe("L anfair");
+    expect(sanitizeAccountPersona("Coŀlegi")).toBe("Col legi");
   });
 
   it("returns null when nothing usable survives", () => {

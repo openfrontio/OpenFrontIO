@@ -7,6 +7,7 @@ import {
   CLAIM_PROMPT_MAX_SHOWS,
   claimPromptDue,
   claimPromptShown,
+  failedJoinClearsFlag,
   isCleanHomepage,
   nextBootInterrupt,
   parseClaimPromptStore,
@@ -554,5 +555,44 @@ describe("bootInterruptsAllowed", () => {
         false,
       );
     }
+  });
+});
+
+// A join can fail before it ever reaches a lobby handle — getTurnstileToken()
+// throwing is the live example — and the only thing that runs then is the
+// `join-lobby` catch. Nothing else clears the flag, so without this every boot
+// interrupt is silenced for the rest of the session.
+describe("a join that fails before reaching a handle", () => {
+  const home = { pathname: "/", hash: "" };
+
+  it("re-enables the interrupts it suppressed", () => {
+    // The join commits and sets the flag.
+    let joinInFlight = true;
+    expect(
+      bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
+    ).toBe(false);
+
+    // It rejects. Same event, so it still owns the flag.
+    const joinEvent = 1234;
+    if (failedJoinClearsFlag(joinEvent, joinEvent)) joinInFlight = false;
+
+    expect(
+      bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
+    ).toBe(true);
+  });
+
+  // handleJoinLobby awaits userAuth(), cosmetics and a Turnstile token before
+  // assigning a handle, so a second join can start while the first is still
+  // unwinding. The older failure must not re-open the interrupts over it.
+  it("does not clear the flag a newer join is relying on", () => {
+    let joinInFlight = true;
+    const supersededJoin = 1234;
+    const currentJoin = 5678;
+    if (failedJoinClearsFlag(currentJoin, supersededJoin)) joinInFlight = false;
+
+    expect(joinInFlight).toBe(true);
+    expect(
+      bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
+    ).toBe(false);
   });
 });
