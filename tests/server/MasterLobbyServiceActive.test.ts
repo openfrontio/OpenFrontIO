@@ -95,14 +95,14 @@ describe("MasterLobbyService active/inactive deployment", () => {
     let broadcasts = worker.send.mock.calls.filter(
       ([msg]) => msg.type === "lobbiesBroadcast",
     );
-    expect(broadcasts.at(-1)?.[0].active).toBe(true);
+    expect(broadcasts[broadcasts.length - 1]?.[0].active).toBe(true);
 
     service.setActive(false);
     await broadcastTask()();
     broadcasts = worker.send.mock.calls.filter(
       ([msg]) => msg.type === "lobbiesBroadcast",
     );
-    expect(broadcasts.at(-1)?.[0].active).toBe(false);
+    expect(broadcasts[broadcasts.length - 1]?.[0].active).toBe(false);
   });
 });
 

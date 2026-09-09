@@ -59,7 +59,7 @@ describe("gitCommit on join/rejoin messages", () => {
 
 describe("gitCommit on version_mismatch errors", () => {
   const mismatch = {
-    type: "error",
+    type: "error" as const,
     error: "version_mismatch",
     gitCommit: COMMIT,
   };

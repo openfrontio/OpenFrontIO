@@ -1,6 +1,7 @@
 import EventEmitter from "events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
+import { PublicLobbyMessage } from "../../src/core/Schemas";
 import { WorkerLobbyService } from "../../src/server/WorkerLobbyService";
 import { mockLogger } from "../util/GameServerHarness";
 import { decodeSentLobbyMessage } from "../util/Wire";
@@ -53,13 +54,21 @@ describe("WorkerLobbyService deployment drain flag", () => {
   function fullsSent(ws: { send: ReturnType<typeof vi.fn> }) {
     return ws.send.mock.calls
       .map((c) => decodeSentLobbyMessage(c[0]))
-      .filter((m) => m.type === "full");
+      .filter(
+        (m): m is Extract<PublicLobbyMessage, { type: "full" }> =>
+          m.type === "full",
+      );
+  }
+
+  function lastFull(ws: { send: ReturnType<typeof vi.fn> }) {
+    const fulls = fullsSent(ws);
+    return fulls[fulls.length - 1];
   }
 
   it("stamps active onto broadcast fulls and the connect-time priming send", () => {
     const ws = connectClient();
     emitBroadcast(true);
-    expect(fullsSent(ws).at(-1)?.active).toBe(true);
+    expect(lastFull(ws)?.active).toBe(true);
 
     const late = connectClient();
     expect(fullsSent(late)).toHaveLength(1);
@@ -74,14 +83,13 @@ describe("WorkerLobbyService deployment drain flag", () => {
     expect(fullsSent(ws)).toHaveLength(1);
 
     emitBroadcast(false, 1002);
-    const fulls = fullsSent(ws);
-    expect(fulls).toHaveLength(2);
-    expect(fulls.at(-1)?.active).toBe(false);
+    expect(fullsSent(ws)).toHaveLength(2);
+    expect(lastFull(ws)?.active).toBe(false);
   });
 
   it("treats an absent flag as active (old master)", () => {
     const ws = connectClient();
     emitBroadcast(undefined);
-    expect(fullsSent(ws).at(-1)?.active).toBe(true);
+    expect(lastFull(ws)?.active).toBe(true);
   });
 });
