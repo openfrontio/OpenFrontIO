@@ -98,16 +98,21 @@ fi
 #      standalone. Prod is strict both ways: it always requires an explicit
 #      map that names this host, because a synthesized entry would mint game
 #      ids under a letter the real fleet map does not own.
-#   3. Being in the map means being behind the load balancer, so map
-#      membership also switches on the drain poll: SITE_HOST defaults to the
-#      apex ($DOMAIN) for in-map deployments (release.yml sets it explicitly
-#      for prod; this covers the .dev pair). Synthesized deployments keep
-#      SITE_HOST empty and stay permanently active.
+#   3. Sharing a multi-entry map means being behind the load balancer, so
+#      that also switches on the drain poll: SITE_HOST defaults to the apex
+#      ($DOMAIN) for deployments in a map with siblings (release.yml sets it
+#      explicitly for prod; this covers the .dev pair). A single-entry
+#      explicit map (beta) is a standalone deployment — like synthesized
+#      ones, it keeps SITE_HOST empty and stays permanently active, rather
+#      than polling an apex that answers with some other fleet's identity
+#      and wrongly draining itself.
 FQDN="${SUBDOMAIN}.${DOMAIN}"
 if [ -n "${CLUSTER_JSON:-}" ]; then
     CLUSTER_JSON=$(printf '%s' "$CLUSTER_JSON" | jq -c .)
     if printf '%s' "$CLUSTER_JSON" | jq -e --arg host "$FQDN" 'any(.[]; .host == $host)' > /dev/null; then
-        SITE_HOST="${SITE_HOST:-$DOMAIN}"
+        if printf '%s' "$CLUSTER_JSON" | jq -e 'length > 1' > /dev/null; then
+            SITE_HOST="${SITE_HOST:-$DOMAIN}"
+        fi
     elif [ "$ENV" != "prod" ]; then
         echo "Host ${FQDN} not in provided CLUSTER_JSON; ignoring the shared map"
         CLUSTER_JSON=""
