@@ -46,7 +46,8 @@ export class UsernamePanel extends LitElement {
       // Prefill with the base only — never put ".suffix" in the input.
       this.draft = this.player?.usernameBase ?? "";
       this.error = "";
-      if (this.draft === "") void this.seedFromPersona();
+      if (this.draft === "" && !this.player?.username)
+        void this.seedFromPersona();
     }
   }
 
@@ -55,8 +56,11 @@ export class UsernamePanel extends LitElement {
   // already answer to, and the one the claim prompt just told them they could
   // have.
   //
-  // Only when there is no base: a name they have already chosen is never
-  // overwritten, however it is spelled.
+  // Only when the account has no name at all — neither a base NOR a resolved
+  // display name. Both are checked because they can disagree: a response
+  // carrying `username` without `usernameBase` (an older API, a partial
+  // payload) would otherwise read as nameless and seed a persona into the
+  // rename box of a player who already has a name.
   //
   // Reduced through sanitizeAccountPersona, not sanitizePersona — the account
   // charset is narrower than the in-game one, so "Zoë" would otherwise be
@@ -79,7 +83,7 @@ export class UsernamePanel extends LitElement {
     // The player may have started typing, or a fresh profile may have landed,
     // while getUser() was in flight. Either way the field is no longer ours.
     if (this.draft !== "") return;
-    if (this.player?.usernameBase) return;
+    if (this.player?.usernameBase || this.player?.username) return;
     this.draft = seed;
   }
 

@@ -3,14 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // Same boundary stubs as UsernameBareClaim.test.ts — the panel reaches the
 // API, the in-game dialog and the Steam bridge, and none of the three is what
 // these exercise.
-const { getUser } = vi.hoisted(() => ({
+const { getUser, updateUsername } = vi.hoisted(() => ({
   getUser: vi.fn(
     async (): Promise<{ steamId: string; name: string } | null> =>
       Promise.resolve(null),
   ),
+  updateUsername: vi.fn(),
 }));
 vi.mock("../../src/client/Api", () => ({
-  updateUsername: vi.fn(),
+  updateUsername: (name: string) => updateUsername(name),
 }));
 vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(async () => true),
@@ -71,6 +72,7 @@ describe("claim form prefill", () => {
     localStorage.clear();
     getUser.mockReset();
     getUser.mockResolvedValue(null);
+    updateUsername.mockReset();
   });
 
   afterEach(() => {
@@ -144,16 +146,59 @@ describe("claim form prefill", () => {
     expect(fieldValue(el)).toBe("MyOwnName");
   });
 
-  // The join-name guard. The prefill is a suggestion in a text box: it must
-  // not become the name the player plays under, and the only way it could is
-  // by reaching the keys <username-input> resolves from. After a successful
-  // claim the panel reloads, so the join name comes from a fresh /users/@me —
-  // see "a claimed name, not the seed" in PlayerName.test.ts.
-  it("writes nothing to the stored in-game name", async () => {
+  // A player who already has a name must never be re-seeded, and `username`
+  // alone is enough to say so: a response carrying it without `usernameBase`
+  // (an older API, a partial payload) would otherwise read as nameless and
+  // seed a persona into a named player's rename box.
+  it("does not seed a named player whose base is missing", async () => {
     getUser.mockResolvedValue({ steamId: "x", name: "Ada Lovelace" });
-    await mount();
-    expect(localStorage.getItem("username")).toBeNull();
-    expect(localStorage.getItem("usernameIsGenerated")).toBeNull();
-    expect(localStorage.length).toBe(0);
+    expect(
+      fieldValue(await mount({ username: "Ninja", usernameBase: undefined })),
+    ).toBe("");
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  // The join-name guard, at the seam rather than by construction. The seed is
+  // a suggestion in a text box: the only thing it may become is the CLAIM sent
+  // to the API, after which the panel reloads so every consumer — including
+  // the name the player joins under — starts from a fresh /users/@me. It must
+  // never become the in-game name directly.
+  it("sends the seed as the claim and then reloads, storing nothing", async () => {
+    const reload = vi.fn();
+    const realDescriptor = Object.getOwnPropertyDescriptor(window, "location")!;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...window.location, reload, hash: "" },
+    });
+    try {
+      getUser.mockResolvedValue({ steamId: "x", name: "Ada.Lovelace" });
+      updateUsername.mockResolvedValue({
+        ok: true,
+        data: {
+          username: "Ada Lovelace",
+          base: "Ada Lovelace",
+          discriminator: "0001",
+          usernameStatus: "premium",
+          nextUsernameChangeAt: null,
+          bareClaim: "claimed",
+        },
+      });
+      const el = await mount();
+      expect(fieldValue(el)).toBe("Ada Lovelace");
+
+      field(el).dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+      );
+      for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+
+      expect(updateUsername).toHaveBeenCalledWith("Ada Lovelace");
+      expect(reload).toHaveBeenCalled();
+      // Nothing the join path resolves from was touched.
+      expect(localStorage.getItem("username")).toBeNull();
+      expect(localStorage.getItem("usernameIsGenerated")).toBeNull();
+      expect(localStorage.length).toBe(0);
+    } finally {
+      Object.defineProperty(window, "location", realDescriptor);
+    }
   });
 });

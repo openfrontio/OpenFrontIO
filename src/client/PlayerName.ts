@@ -217,19 +217,64 @@ export function sanitizePersona(
 // prefilling the claim form with either would seed a draft that the very form
 // showing it rejects on save.
 //
-// Same strip-and-keep shape as sanitizePersona for the same reason: throwing a
-// decorated persona away wholesale is what sent Steam buyers to Anon… names in
-// the first place. Disallowed characters become a space so words either side of
-// a separator survive as words ("Ada.Lovelace" -> "Ada Lovelace").
+// Accents are FOLDED, not dropped. "Müller" is a Latin name written in a
+// charset this form does not take, and spacing the diacritic out gives
+// "M ller" — a mangling of the player's own name, offered back to them as a
+// suggestion. NFKD splits each accented letter into its base plus a combining
+// mark and the marks are stripped, so "Müller" gives "Muller" and "Zoë" gives
+// "Zoe". A stroked or ligature letter has no decomposition to strip — NFKD
+// leaves "Ł", "Ø", "æ" and "ß" exactly as they were — so those are folded
+// from the table below instead, which is why "Łukasz" gives "Lukasz" rather
+// than "ukasz".
+//
+// What remains disallowed after that becomes a space, same as sanitizePersona
+// and for the same reason: throwing a decorated persona away wholesale is what
+// sent Steam buyers to Anon… names in the first place, and a decorative
+// separator divides words rather than joining them ("Ada.Lovelace" and
+// "Ada🔥Lovelace" both give "Ada Lovelace").
 //
 // Returns only names that validateAccountUsername accepts, so a caller may
 // place the result straight into the field. Anything else is null — an empty
 // field the player fills in themselves beats a prefilled error.
+// Latin letters NFKD cannot decompose, because the mark is part of the glyph
+// rather than a combining character: strokes, bars and ligatures. Confined to
+// Latin-1 Supplement and Latin Extended-A, which is what the in-game name
+// atlas covers (see OPE-221) and therefore the whole range a persona can
+// reach this function in.
+const FOLD_UNDECOMPOSABLE: Record<string, string> = {
+  Ł: "L",
+  ł: "l",
+  Ø: "O",
+  ø: "o",
+  Æ: "AE",
+  æ: "ae",
+  Œ: "OE",
+  œ: "oe",
+  Ð: "D",
+  ð: "d",
+  Þ: "TH",
+  þ: "th",
+  ß: "ss",
+  Đ: "D",
+  đ: "d",
+  Ħ: "H",
+  ħ: "h",
+  Ŋ: "N",
+  ŋ: "n",
+  Ŧ: "T",
+  ŧ: "t",
+};
+
 export function sanitizeAccountPersona(
   persona: string | null | undefined,
 ): string | null {
   if (!persona) return null;
-  const kept = Array.from(persona, (ch) =>
+  // Decompose, then drop the combining marks NFKD just separated out. Done
+  // before the charset filter so a folded letter is judged on its base form.
+  const folded = Array.from(persona.normalize("NFKD").replace(/\p{M}+/gu, ""))
+    .map((ch) => FOLD_UNDECOMPOSABLE[ch] ?? ch)
+    .join("");
+  const kept = Array.from(folded, (ch) =>
     ACCOUNT_NAME_CHAR_RE.test(ch) ? ch : " ",
   ).join("");
   const collapsed = kept.replace(/\s+/g, " ").trim();

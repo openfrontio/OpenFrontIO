@@ -561,12 +561,30 @@ describe("sanitizeAccountPersona", () => {
   // form does not, so seeding one into the other prefills a draft the very
   // form showing it refuses to save.
   it("keeps the parts of a persona the account form accepts", () => {
-    expect(sanitizeAccountPersona("Zoë Smith")).toBe("Zo Smith");
     expect(sanitizeAccountPersona("Ada.Lovelace")).toBe("Ada Lovelace");
     expect(sanitizeAccountPersona("Ada🔥Lovelace")).toBe("Ada Lovelace");
-    expect(sanitizeAccountPersona("[CLAN] Müller")).toBe("CLAN M ller");
     expect(sanitizeAccountPersona("  Ada   Lovelace  ")).toBe("Ada Lovelace");
     expect(sanitizeAccountPersona("Ada_Lovelace-7")).toBe("Ada_Lovelace-7");
+  });
+
+  // Folded, not spaced out. Spacing the diacritic gives "M ller" and "Zo
+  // Smith" — the player's own name mangled and handed back as a suggestion,
+  // which is worse than the empty field it replaces.
+  it("folds a Latin name into the ASCII the account form takes", () => {
+    expect(sanitizeAccountPersona("Müller")).toBe("Muller");
+    expect(sanitizeAccountPersona("Zoë Smith")).toBe("Zoe Smith");
+    expect(sanitizeAccountPersona("José")).toBe("Jose");
+    expect(sanitizeAccountPersona("[CLAN] Müller")).toBe("CLAN Muller");
+  });
+
+  // NFKD has nothing to strip from a stroked or ligature letter — the mark is
+  // part of the glyph — so these need the explicit table, and without it
+  // "Łukasz" loses its first letter entirely.
+  it("folds the Latin letters NFKD cannot decompose", () => {
+    expect(sanitizeAccountPersona("Łukasz")).toBe("Lukasz");
+    expect(sanitizeAccountPersona("Straße")).toBe("Strasse");
+    expect(sanitizeAccountPersona("Øystein")).toBe("Oystein");
+    expect(sanitizeAccountPersona("Ælfred")).toBe("AElfred");
   });
 
   it("returns null when nothing usable survives", () => {
@@ -581,8 +599,7 @@ describe("sanitizeAccountPersona", () => {
       "...",
       "-----",
       "___",
-      // Two characters left after sanitising is under the minimum.
-      "Zoë",
+      // Under the minimum once folded and filtered.
       "é",
       "日本語のなまえ",
     ]) {
@@ -606,6 +623,10 @@ describe("sanitizeAccountPersona", () => {
   it("never returns a name the account form would reject", () => {
     for (const persona of [
       "Zoë",
+      "Zoë Smith",
+      "Müller",
+      "Straße",
+      "Ælfred",
       "Ada.Lovelace",
       "Ada🔥Lovelace",
       "[CLAN] Müller",
@@ -695,29 +716,32 @@ describe("lapseNoticeDue", () => {
   });
 });
 
-// The join name after a claim comes from the refetched profile, never from the
-// string the form was seeded with. UsernamePanel reloads on success, so this is
-// what the next boot resolves.
-describe("a claimed name, not the seed, is what the player joins under", () => {
-  it("resolves to the account name once the claim lands", () => {
-    const seed = sanitizeAccountPersona("Ada.Lovelace");
-    expect(seed).toBe("Ada Lovelace");
-    const claimed = {
-      player: {
-        username: "AdaTheFirst",
-        usernameBase: "AdaTheFirst",
-        usernameStatus: "premium",
-      },
-    } as unknown as UserMeResponse;
-    const resolved = resolvePlayerName(
-      inputs({
-        verifiedName: accountVerifiedName(claimed),
-        verifiedOptIn: true,
-        persona: "Ada.Lovelace",
-      }),
-    );
-    expect(resolved.name).toBe("AdaTheFirst");
-    expect(resolved.name).not.toBe(seed);
-    expect(resolved.verified).toBe(true);
+// The ordering hazard Main.ts's pre-await snapshot exists for.
+//
+// <username-input> calls getUserMe() from connectedCallback, ahead of Main's
+// auth-gated call, and both share the one in-flight promise — so announceLapse
+// runs first and writes the marker BEFORE its alert opens. Whether Main can
+// still see that a notice was owed comes down entirely to when it read the
+// key, and the difference is the rewards popup stacking on the lapse alert.
+describe("lapse notice: reading the marker before vs after it is written", () => {
+  const NOW = new Date("2026-09-01T00:00:00.000Z");
+  const lapsed = {
+    player: {
+      username: "RyanTheGreat",
+      usernameBase: "RyanTheGreat",
+      usernameStatus: "claimed",
+      usernameClaimExpiresAt: "2026-10-01T00:00:00.000Z",
+    },
+  } as unknown as UserMeResponse;
+
+  it("sees the notice with a marker snapshotted before announceLapse writes", () => {
+    const beforeDispatch = null; // nothing written yet
+    expect(lapseNoticeDue(lapsed, beforeDispatch, NOW)).toBe(true);
+  });
+
+  it("misses it entirely when read after the write", () => {
+    // What announceLapse stores, the moment before it opens its alert.
+    const afterWrite = lapseNoticeMarker(verifiedClaimGrace(lapsed, NOW)!);
+    expect(lapseNoticeDue(lapsed, afterWrite, NOW)).toBe(false);
   });
 });

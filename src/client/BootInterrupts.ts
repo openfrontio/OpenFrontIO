@@ -24,9 +24,10 @@ export type BootInterrupt =
 
 export interface BootInterruptInputs {
   /**
-   * A clean homepage load — not a join URL, `#modal=…` or a purchase return.
-   * Nothing here may interrupt a deep link: the player asked for something
-   * specific and an overlay on top of it is a bug, not a nudge.
+   * A clean homepage load — not a join URL, `#modal=…` or a purchase return,
+   * and no lobby already in flight. Nothing here may interrupt a deep link:
+   * the player asked for something specific and an overlay on top of it is a
+   * bug, not a nudge. Build it with isCleanHomepage.
    */
   cleanHomepage: boolean;
   /** `usernameStatus` from /users/@me. */
@@ -41,6 +42,32 @@ export interface BootInterruptInputs {
   rewardCount: number;
   /** claimPromptDue(...) — the decay rule below. */
   claimPromptDue: boolean;
+}
+
+/**
+ * Is this a clean homepage load — the only thing any of the interrupts below
+ * may appear over?
+ *
+ * `pathname === "/"` alone is wrong in the Steam build, and silently so. The
+ * desktop shell serves the renderer from its own privileged scheme at
+ * `app://openfront/index.html` (openfront-desktop src/main/protocol.ts,
+ * GAME_URL), so the pathname there is ALWAYS "/index.html" and a bare "/" test
+ * is never true. That is not new — the TEMPORARY#### rename prompt and the
+ * unclaimed-rewards popup have both been dead on Steam for the same reason —
+ * but the claim prompt is aimed squarely at Steam buyers, so it would have
+ * shipped never having fired for the population it exists for.
+ *
+ * Gated on the shell rather than accepted everywhere: on the web "/index.html"
+ * is reachable directly and is not the homepage, and widening the rule there
+ * would put an overlay somewhere it has never appeared.
+ */
+export function isCleanHomepage(
+  location: { pathname: string; hash: string },
+  desktopShell: boolean,
+): boolean {
+  if (location.hash !== "") return false;
+  if (location.pathname === "/") return true;
+  return desktopShell && location.pathname === "/index.html";
 }
 
 // An entitled status: subscribed, or admin-locked to the same perk. Both
@@ -122,8 +149,18 @@ export const CLAIM_PROMPT_MAX_SHOWS = 3;
  */
 export const CLAIM_PROMPT_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
-/** What we remember about a profile's claim prompts. */
+/**
+ * What we remember about a profile's claim prompts.
+ *
+ * `publicId` is what makes this per-ACCOUNT rather than per-device. Storage is
+ * shared by every account that signs in on this machine, so without it a
+ * household's second player — or anyone who signs out and back in as someone
+ * else — inherits a spent allowance and is never told about a grant that is
+ * genuinely theirs. Three dismissals by one person would silence the prompt on
+ * that machine forever.
+ */
 export interface ClaimPromptRecord {
+  publicId: string;
   shows: number;
   lastShownAt: number;
 }
@@ -142,11 +179,12 @@ export function parseClaimPromptRecord(
   try {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
-    const { shows, lastShownAt } = parsed as Record<string, unknown>;
+    const { publicId, shows, lastShownAt } = parsed as Record<string, unknown>;
+    if (typeof publicId !== "string" || publicId === "") return null;
     if (typeof shows !== "number" || !Number.isFinite(shows)) return null;
     if (typeof lastShownAt !== "number" || !Number.isFinite(lastShownAt))
       return null;
-    return { shows, lastShownAt };
+    return { publicId, shows, lastShownAt };
   } catch {
     return null;
   }
@@ -163,18 +201,133 @@ export function parseClaimPromptRecord(
 export function claimPromptDue(
   record: ClaimPromptRecord | null,
   now: number,
+  publicId: string,
 ): boolean {
   if (record === null) return true;
+  // A different account on the same machine has its own allowance — see
+  // ClaimPromptRecord. Reads as never shown, which is exactly what it is.
+  if (record.publicId !== publicId) return true;
   if (record.shows >= CLAIM_PROMPT_MAX_SHOWS) return false;
   const elapsed = now - record.lastShownAt;
   if (elapsed < 0) return false;
   return elapsed >= CLAIM_PROMPT_INTERVAL_MS;
 }
 
-/** The record to store once the prompt has been shown. */
+/**
+ * The record to store once the prompt has been shown.
+ *
+ * A record belonging to someone else starts this account's count at one rather
+ * than continuing theirs — the same rule claimPromptDue reads it by.
+ */
 export function claimPromptShown(
   record: ClaimPromptRecord | null,
   now: number,
+  publicId: string,
 ): ClaimPromptRecord {
-  return { shows: (record?.shows ?? 0) + 1, lastShownAt: now };
+  const mine = record !== null && record.publicId === publicId ? record : null;
+  return { publicId, shows: (mine?.shows ?? 0) + 1, lastShownAt: now };
+}
+
+// ---------------------------------------------------------------------------
+// Acting on the answer
+// ---------------------------------------------------------------------------
+
+/** Translation keys the interrupts above render through. */
+export const BOOT_INTERRUPT_KEYS = {
+  temporaryBody: "account_modal.username_temporary_prompt",
+  temporaryHeading: "account_modal.username_title",
+  temporaryConfirm: "account_modal.username_temporary_prompt_confirm",
+  claimBody: "account_modal.username_claim_prompt",
+  claimHeading: "account_modal.username_claim_heading",
+  claimConfirm: "account_modal.username_claim_prompt_confirm",
+} as const;
+
+/** Where the username form lives. */
+export const USERNAME_FORM_HASH = "modal=change-username";
+
+/**
+ * Everything acting on an interrupt has to reach outside itself for. Passed in
+ * rather than imported so the wiring below is exercised by tests instead of
+ * being trusted — the ordering was already pure, but which dialog opens, what
+ * gets written and where the player lands were not, and a wrong answer there
+ * is just as silent.
+ */
+export interface BootInterruptPorts {
+  /** translateText. Echoes the key back until the language files land. */
+  translate(key: string): string;
+  /** Opens a confirm dialog; resolves true when the player accepts. */
+  confirm(body: string, heading: string, confirmText: string): Promise<boolean>;
+  /** Sets window.location.hash. */
+  navigate(hash: string): void;
+  /** Opens the unclaimed-rewards popup. */
+  openRewards(): void;
+  /** Persists the claim-prompt record. */
+  storeClaimPrompt(record: ClaimPromptRecord): void;
+  now(): number;
+}
+
+export interface BootInterruptContext {
+  claimRecord: ClaimPromptRecord | null;
+  publicId: string;
+}
+
+/**
+ * Do whatever the chosen interrupt requires. One per boot; `null` does nothing.
+ *
+ * `lapse-notice` is deliberately a no-op: <username-input> owns that alert and
+ * has already shown it. It appears in the ordering so that naming it here is
+ * what stops anything else opening on the same boot.
+ */
+export async function runBootInterrupt(
+  interrupt: BootInterrupt | null,
+  context: BootInterruptContext,
+  ports: BootInterruptPorts,
+): Promise<void> {
+  switch (interrupt) {
+    case "username-temporary": {
+      const accepted = await ports.confirm(
+        ports.translate(BOOT_INTERRUPT_KEYS.temporaryBody),
+        ports.translate(BOOT_INTERRUPT_KEYS.temporaryHeading),
+        ports.translate(BOOT_INTERRUPT_KEYS.temporaryConfirm),
+      );
+      if (accepted) ports.navigate(USERNAME_FORM_HASH);
+      return;
+    }
+    case "username-claim": {
+      const body = ports.translate(BOOT_INTERRUPT_KEYS.claimBody);
+      const heading = ports.translate(BOOT_INTERRUPT_KEYS.claimHeading);
+      const confirmText = ports.translate(BOOT_INTERRUPT_KEYS.claimConfirm);
+      // translateText echoes the key back until <lang-selector> has fetched
+      // its files, and auth can resolve first. Showing the raw key would be
+      // bad enough; doing it AND spending one of three chances to explain the
+      // perk would leave a non-English player with two, then none, having
+      // never seen a sentence. Same bail announceLapse makes, for the same
+      // reason — the record is left unwritten, so the next launch asks
+      // properly. Only reachable off English, which is a static import.
+      if (
+        body === BOOT_INTERRUPT_KEYS.claimBody ||
+        heading === BOOT_INTERRUPT_KEYS.claimHeading ||
+        confirmText === BOOT_INTERRUPT_KEYS.claimConfirm
+      )
+        return;
+      // Recorded before the dialog opens, and whichever way they answer:
+      // declining is an answer, and re-asking someone who said no is the
+      // nagging the decay rule exists to prevent. Before rather than after
+      // because the promise only settles on dismissal, and a second boot in
+      // the meantime would otherwise ask again.
+      ports.storeClaimPrompt(
+        claimPromptShown(context.claimRecord, ports.now(), context.publicId),
+      );
+      const accepted = await ports.confirm(body, heading, confirmText);
+      if (accepted) ports.navigate(USERNAME_FORM_HASH);
+      return;
+    }
+    case "lapse-notice":
+      return;
+    case "rewards":
+      ports.openRewards();
+      return;
+    case null:
+      return;
+  }
 }

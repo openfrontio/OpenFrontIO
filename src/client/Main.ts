@@ -28,9 +28,10 @@ import {
 import {
   CLAIM_PROMPT_KEY,
   claimPromptDue,
-  claimPromptShown,
+  isCleanHomepage,
   nextBootInterrupt,
   parseClaimPromptRecord,
+  runBootInterrupt,
 } from "./BootInterrupts";
 import "./ChangeUsernameModal";
 import "./ClanModal";
@@ -282,6 +283,23 @@ class Client {
     // consuming an empty stash before the code was ever written, losing the
     // prefill for an already-signed-in visitor hitting /c/CODE directly.
     consumeCreatorCodePath();
+
+    // Snapshot the lapse-notice marker SYNCHRONOUSLY, before the first await.
+    //
+    // Reading it inside onUserMe is too late, and not by a little.
+    // <username-input> calls getUserMe() from connectedCallback, ahead of the
+    // auth-gated call below, and both share the one in-flight promise — so its
+    // .then runs first, announceLapse writes the marker and opens its alert,
+    // and by the time onUserMe looks the answer is always "already shown". The
+    // rewards popup would then stack on top of the lapse alert, which is the
+    // exact collision the sequencer exists to prevent.
+    //
+    // Re-taken by snapshotLapseMarker() at the top of every path that can
+    // re-run onUserMe, again before that path's own await.
+    let lapseMarker = localStorage.getItem(LAPSE_NOTICE_KEY);
+    const snapshotLapseMarker = () => {
+      lapseMarker = localStorage.getItem(LAPSE_NOTICE_KEY);
+    };
 
     crazyGamesSDK.maybeInit();
 
@@ -563,15 +581,8 @@ class Client {
         });
         adGatekeeper.start();
       }
-      // Read BEFORE the dispatch, which is what fires the notice.
-      // <username-input> handles the lapse notice itself and records its
-      // marker before opening the dialog, so asking afterwards would always
-      // answer "already shown" and the rewards popup would stack on top of it.
-      // See lapseNoticeDue.
-      const lapseDue = lapseNoticeDue(
-        userMeResponse,
-        localStorage.getItem(LAPSE_NOTICE_KEY),
-      );
+      // Against the pre-await snapshot, never a fresh read — see lapseMarker.
+      const lapseDue = lapseNoticeDue(userMeResponse, lapseMarker);
 
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
@@ -616,19 +627,25 @@ class Client {
         }
 
         // Popups below only on a clean homepage load, never over a deep link
-        // (join URL, #modal=..., #purchase-completed, ...).
+        // (join URL, #modal=..., #purchase-completed, ...) and never over a
+        // lobby the player has already committed to. The lobby guard matters
+        // because a /users/@me landing between the click and the handshake
+        // still sees a pristine URL — the join only rewrites it once
+        // lobbyHandle.join resolves — so without it the confirm opens on top
+        // of a game that is starting.
         const cleanHomepage =
-          window.location.pathname === "/" && window.location.hash === "";
+          isCleanHomepage(window.location, isDesktopShell()) &&
+          this.lobbyHandle === null;
 
         // One interrupt per boot, chosen by the ordering in BootInterrupts —
         // not by which branch happens to be written first here.
-        const { usernameStatus, username, usernameBase } =
+        const { usernameStatus, username, usernameBase, publicId } =
           userMeResponse.player;
         const rewards = userMeResponse.player.rewards ?? [];
         const claimRecord = parseClaimPromptRecord(
           localStorage.getItem(CLAIM_PROMPT_KEY),
         );
-        switch (
+        await runBootInterrupt(
           nextBootInterrupt({
             cleanHomepage,
             usernameStatus,
@@ -636,66 +653,28 @@ class Client {
             usernameBase,
             lapseNoticeDue: lapseDue,
             rewardCount: rewards.length,
-            claimPromptDue: claimPromptDue(claimRecord, Date.now()),
-          })
-        ) {
-          // The server renamed this subscriber to TEMPORARY#### because their
-          // bare name was exclusively taken while they were unentitled; the
-          // rename is free (cooldown cleared). Prompt for a real name.
-          case "username-temporary": {
-            const goRename = await showInGameConfirm(
-              translateText("account_modal.username_temporary_prompt"),
-              {
-                heading: translateText("account_modal.username_title"),
+            claimPromptDue: claimPromptDue(claimRecord, Date.now(), publicId),
+          }),
+          { claimRecord, publicId },
+          {
+            translate: translateText,
+            confirm: (body, heading, confirmText) =>
+              showInGameConfirm(body, {
+                heading,
+                // The dialog offers "danger" and "warning" only, and neither
+                // of these is a danger.
                 variant: "warning",
-                confirmText: translateText(
-                  "account_modal.username_temporary_prompt_confirm",
-                ),
-              },
-            );
-            if (goRename) {
-              window.location.hash = "modal=change-username";
-            }
-            break;
-          }
-          // Entitled and has never claimed a name. Nothing else in the client
-          // mentions the perk, and the account modal — the only place to claim
-          // one — is somewhere they have no reason to open, so the month runs
-          // out unused. Recorded as shown whichever way they answer: declining
-          // is an answer, and re-asking a player who said no is the nagging the
-          // decay rule exists to prevent.
-          case "username-claim": {
-            localStorage.setItem(
-              CLAIM_PROMPT_KEY,
-              JSON.stringify(claimPromptShown(claimRecord, Date.now())),
-            );
-            const goClaim = await showInGameConfirm(
-              translateText("account_modal.username_claim_prompt"),
-              {
-                heading: translateText("account_modal.username_claim_heading"),
-                // The dialog offers "danger" and "warning" only, and this is
-                // not a danger. Same presentation as the TEMPORARY#### prompt
-                // it sits beside.
-                variant: "warning",
-                confirmText: translateText(
-                  "account_modal.username_claim_prompt_confirm",
-                ),
-              },
-            );
-            if (goClaim) {
-              window.location.hash = "modal=change-username";
-            }
-            break;
-          }
-          // Owned by <username-input>, which has already fired it off the
-          // dispatch above. Named here so it takes its turn in the ordering
-          // rather than landing on top of whatever else this boot chose.
-          case "lapse-notice":
-            break;
-          case "rewards":
-            this.rewardsModal?.openWithRewards(rewards);
-            break;
-        }
+                confirmText,
+              }),
+            navigate: (hash) => {
+              window.location.hash = hash;
+            },
+            openRewards: () => this.rewardsModal?.openWithRewards(rewards),
+            storeClaimPrompt: (record) =>
+              localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(record)),
+            now: () => Date.now(),
+          },
+        );
       }
     };
 
@@ -718,6 +697,7 @@ class Client {
     // components listening for userMeResponse.
     document.addEventListener("session-cleared", () => {
       authGeneration++;
+      snapshotLapseMarker();
       void onUserMe(false);
     });
 
@@ -734,6 +714,7 @@ class Client {
     // reloads the page, so only login needs handling here.
     crazyGamesSDK.addAuthListener(() => {
       invalidateUserMe();
+      snapshotLapseMarker();
       const generation = authGeneration;
       reauthAfterCrazyGamesChange().then((result) =>
         result === false
@@ -762,6 +743,7 @@ class Client {
 
     document.addEventListener("desktop-session-retry", () => {
       invalidateUserMe();
+      snapshotLapseMarker();
       const generation = authGeneration;
       retrySteamSignIn().then((result) =>
         result === false
