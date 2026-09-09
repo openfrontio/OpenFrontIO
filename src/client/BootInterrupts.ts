@@ -70,6 +70,35 @@ export function isCleanHomepage(
   return desktopShell && location.pathname === "/index.html";
 }
 
+/**
+ * May anything interrupt this boot at all?
+ *
+ * The whole gate, in one place, because none of its three parts is sufficient
+ * alone and Main had no way to be tested on the composition:
+ *
+ * - a clean homepage URL (isCleanHomepage above), and
+ * - no join the player has already committed to, and
+ * - no lobby handle.
+ *
+ * The middle one is not covered by the last. A public-lobby join awaits
+ * userAuth(), whenSeeded(), cosmetics and a Turnstile token before
+ * `lobbyHandle` is assigned, and rewrites the URL only once the handshake
+ * resolves — so for that whole window the page still looks like a pristine
+ * homepage with no lobby, and a /users/@me landing in it would put a confirm
+ * over a game that is starting.
+ */
+export function bootInterruptsAllowed(
+  location: { pathname: string; hash: string },
+  desktopShell: boolean,
+  lobby: { joinInFlight: boolean; lobbyHandle: unknown },
+): boolean {
+  return (
+    isCleanHomepage(location, desktopShell) &&
+    !lobby.joinInFlight &&
+    lobby.lobbyHandle === null
+  );
+}
+
 // An entitled status: subscribed, or admin-locked to the same perk. Both
 // statuses buy the bare-name claim, so both belong in every question about it —
 // including the claim prompt below. The ticket words its condition as

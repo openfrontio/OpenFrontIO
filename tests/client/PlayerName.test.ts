@@ -581,6 +581,9 @@ describe("sanitizeAccountPersona", () => {
   // part of the glyph — so these need the explicit table, and without it
   // "Łukasz" loses its first letter entirely.
   it("folds the Latin letters NFKD cannot decompose", () => {
+    // A Turkish name loses a letter per syllable without the dotless i:
+    // "Yıldırım" spaces out to "Y ld r m".
+    expect(sanitizeAccountPersona("Yıldırım")).toBe("Yildirim");
     expect(sanitizeAccountPersona("Łukasz")).toBe("Lukasz");
     expect(sanitizeAccountPersona("Straße")).toBe("Strasse");
     expect(sanitizeAccountPersona("Øystein")).toBe("Oystein");
@@ -627,6 +630,7 @@ describe("sanitizeAccountPersona", () => {
       "Müller",
       "Straße",
       "Ælfred",
+      "Yıldırım",
       "Ada.Lovelace",
       "Ada🔥Lovelace",
       "[CLAN] Müller",
@@ -716,14 +720,12 @@ describe("lapseNoticeDue", () => {
   });
 });
 
-// The ordering hazard Main.ts's pre-await snapshot exists for.
-//
-// <username-input> calls getUserMe() from connectedCallback, ahead of Main's
-// auth-gated call, and both share the one in-flight promise — so announceLapse
-// runs first and writes the marker BEFORE its alert opens. Whether Main can
-// still see that a notice was owed comes down entirely to when it read the
-// key, and the difference is the rewards popup stacking on the lapse alert.
-describe("lapse notice: reading the marker before vs after it is written", () => {
+// What the predicate answers for the two marker values Main can hold. This is
+// the unit half only — it does not exercise any ordering, because nothing here
+// runs <username-input> or Main. The ordering itself, and the fact that a
+// notice which BAILED must not count as shown, are driven end to end against a
+// real component in tests/client/BootInterruptSequencing.test.ts.
+describe("lapseNoticeDue against a marker from before and after the write", () => {
   const NOW = new Date("2026-09-01T00:00:00.000Z");
   const lapsed = {
     player: {
@@ -734,12 +736,12 @@ describe("lapse notice: reading the marker before vs after it is written", () =>
     },
   } as unknown as UserMeResponse;
 
-  it("sees the notice with a marker snapshotted before announceLapse writes", () => {
+  it("reports due for a marker snapshotted before announceLapse writes", () => {
     const beforeDispatch = null; // nothing written yet
     expect(lapseNoticeDue(lapsed, beforeDispatch, NOW)).toBe(true);
   });
 
-  it("misses it entirely when read after the write", () => {
+  it("reports not due for the marker announceLapse stores", () => {
     // What announceLapse stores, the moment before it opens its alert.
     const afterWrite = lapseNoticeMarker(verifiedClaimGrace(lapsed, NOW)!);
     expect(lapseNoticeDue(lapsed, afterWrite, NOW)).toBe(false);

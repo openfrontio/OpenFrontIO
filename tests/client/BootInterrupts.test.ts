@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BOOT_INTERRUPT_KEYS,
+  bootInterruptsAllowed,
   CLAIM_PROMPT_INTERVAL_MS,
   CLAIM_PROMPT_MAX_SHOWS,
   claimPromptDue,
@@ -475,5 +476,55 @@ describe("runBootInterrupt", () => {
       stored: [],
       rewardsOpened: 0,
     });
+  });
+});
+
+describe("bootInterruptsAllowed", () => {
+  const home = { pathname: "/", hash: "" };
+  const idle = { joinInFlight: false, lobbyHandle: null };
+
+  it("allows an idle clean homepage", () => {
+    expect(bootInterruptsAllowed(home, false, idle)).toBe(true);
+    expect(
+      bootInterruptsAllowed({ pathname: "/index.html", hash: "" }, true, idle),
+    ).toBe(true);
+  });
+
+  // The window `lobbyHandle` does not cover. A public-lobby join awaits
+  // userAuth(), whenSeeded(), cosmetics and a Turnstile token before the
+  // handle is assigned, and rewrites the URL only once the handshake resolves
+  // — so a /users/@me landing in it sees "/", an empty hash and a null handle,
+  // and the confirm opens over a game the player has already committed to.
+  it("refuses a join that has not reached a handle yet", () => {
+    expect(
+      bootInterruptsAllowed(home, false, {
+        joinInFlight: true,
+        lobbyHandle: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("refuses once a lobby handle exists", () => {
+    expect(
+      bootInterruptsAllowed(home, false, {
+        joinInFlight: false,
+        lobbyHandle: {},
+      }),
+    ).toBe(false);
+  });
+
+  // Each part is necessary on its own: no single one of the three can carry
+  // the gate, which is why they are composed here rather than in Main.
+  it("refuses when any one part says no", () => {
+    for (const [label, location, desktop, lobby] of [
+      ["deep link", { pathname: "/", hash: "#modal=account" }, false, idle],
+      ["web index.html", { pathname: "/index.html", hash: "" }, false, idle],
+      ["joining", home, false, { joinInFlight: true, lobbyHandle: null }],
+      ["in lobby", home, false, { joinInFlight: false, lobbyHandle: {} }],
+    ] as const) {
+      expect(bootInterruptsAllowed(location, desktop, lobby), label).toBe(
+        false,
+      );
+    }
   });
 });

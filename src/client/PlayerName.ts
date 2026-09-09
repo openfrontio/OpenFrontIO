@@ -263,6 +263,14 @@ const FOLD_UNDECOMPOSABLE: Record<string, string> = {
   ŋ: "n",
   Ŧ: "T",
   ŧ: "t",
+  // Dotless i and kra: letters in their own right, not an "i"/"k" with
+  // something added, so NFKD has nothing to take off. Without these a Turkish
+  // name loses a letter per syllable — "Yıldırım" spaces out to "Y ld r m".
+  ı: "i",
+  ĸ: "k",
+  // NFKD turns these into "L" plus a middle dot, which then becomes a space.
+  Ŀ: "L",
+  ŀ: "l",
 };
 
 export function sanitizeAccountPersona(

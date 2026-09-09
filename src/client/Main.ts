@@ -26,9 +26,9 @@ import {
   userAuth,
 } from "./Auth";
 import {
+  bootInterruptsAllowed,
   CLAIM_PROMPT_KEY,
   claimPromptDue,
-  isCleanHomepage,
   nextBootInterrupt,
   parseClaimPromptRecord,
   runBootInterrupt,
@@ -254,6 +254,14 @@ class Client {
   private rewardsModal: RewardsModal;
   private steamLinkModal: SteamLinkModal;
   private mostRecentJoinEvent: number;
+  // A join the player has committed to but that has not reached a lobbyHandle
+  // yet. `lobbyHandle` alone does not cover this: a public-lobby join awaits
+  // userAuth(), whenSeeded(), getPlayerCosmeticsRefs() and
+  // getTurnstileToken() before the handle is assigned, and rewrites the URL
+  // only once `join` resolves — so throughout that window the page still looks
+  // like a pristine homepage and a /users/@me landing in it would open a
+  // confirm over a game that is starting.
+  private joinInFlight = false;
 
   // Presence inputs. A private, hosted or matchmade JoinLobbyEvent carries
   // nothing but the game id, so the server's lobby_info is the only place the
@@ -582,7 +590,7 @@ class Client {
         adGatekeeper.start();
       }
       // Against the pre-await snapshot, never a fresh read — see lapseMarker.
-      const lapseDue = lapseNoticeDue(userMeResponse, lapseMarker);
+      const lapseWasDue = lapseNoticeDue(userMeResponse, lapseMarker);
 
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
@@ -591,6 +599,18 @@ class Client {
           cancelable: true,
         }),
       );
+
+      // Whether the notice was actually SPOKEN, not whether one was owed.
+      // announceLapse bails without writing its marker on CrazyGames and when
+      // the translation files have not landed, so a player who is owed one and
+      // did not get it would otherwise have the sequencer stand aside for a
+      // dialog that never opened — suppressing the rewards popup on every boot
+      // for the whole grace period. Comparing the pre-dispatch snapshot with
+      // what is stored now answers from the write itself: still due means
+      // nothing was said, so the boot falls through exactly as it does on main.
+      const lapseShown =
+        lapseWasDue &&
+        !lapseNoticeDue(userMeResponse, localStorage.getItem(LAPSE_NOTICE_KEY));
 
       if (userMeResponse !== false) {
         // Authorized
@@ -633,9 +653,11 @@ class Client {
         // still sees a pristine URL — the join only rewrites it once
         // lobbyHandle.join resolves — so without it the confirm opens on top
         // of a game that is starting.
-        const cleanHomepage =
-          isCleanHomepage(window.location, isDesktopShell()) &&
-          this.lobbyHandle === null;
+        const cleanHomepage = bootInterruptsAllowed(
+          window.location,
+          isDesktopShell(),
+          { joinInFlight: this.joinInFlight, lobbyHandle: this.lobbyHandle },
+        );
 
         // One interrupt per boot, chosen by the ordering in BootInterrupts —
         // not by which branch happens to be written first here.
@@ -651,7 +673,7 @@ class Client {
             usernameStatus,
             username,
             usernameBase,
-            lapseNoticeDue: lapseDue,
+            lapseNoticeDue: lapseShown,
             rewardCount: rewards.length,
             claimPromptDue: claimPromptDue(claimRecord, Date.now(), publicId),
           }),
@@ -1138,6 +1160,10 @@ class Client {
     // bumped this would supersede a legitimate join still awaiting userAuth
     // and cosmetics, stopping it as stale and leaving the player nowhere.
     this.mostRecentJoinEvent = event.timeStamp;
+    // Cleared on both ways out of the pre-handle window (superseded, or the
+    // handle being assigned) and by handleLeaveLobby, which runs its reset
+    // above its own lobbyHandle guard precisely because this window exists.
+    this.joinInFlight = true;
 
     console.log(`joining lobby ${lobby.gameID}`);
     // Entering a lobby. Singleplayer, public lobbies and replays know their
@@ -1222,10 +1248,13 @@ class Client {
     if (this.mostRecentJoinEvent !== event.timeStamp) {
       newLobbyHandle.stop(true);
       console.warn("Join requested, but was superseded");
+      this.joinInFlight = false;
       return;
     }
 
     this.lobbyHandle = newLobbyHandle;
+    // From here lobbyHandle is the guard.
+    this.joinInFlight = false;
 
     this.lobbyHandle.prestart.then(() => {
       // The game is actually starting now (lobby wait is over). Let listeners that stay up
@@ -1457,6 +1486,10 @@ class Client {
     // takes the early return below, stranding the shell on a lobby the player
     // is not in. Leaving in place also means no navigation follows to reset it.
     this.resetPresenceToMenu();
+    // Above the guard for the same reason resetPresenceToMenu is: a modal
+    // closed during the pre-handle window dispatches leave-lobby and returns
+    // early, which would otherwise strand the flag set forever.
+    this.joinInFlight = false;
 
     if (this.lobbyHandle === null) {
       return;
