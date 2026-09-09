@@ -20,6 +20,7 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: vi.fn((key: string, vars?: { reason?: string }) =>
     vars?.reason !== undefined ? `${key}:${vars.reason}` : key,
   ),
+  homeHref: vi.fn(() => "/"),
 }));
 
 vi.mock("src/client/ClientEnv", () => ({

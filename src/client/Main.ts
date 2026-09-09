@@ -94,7 +94,12 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { incrementGamesPlayed, presenceMapKey, translateText } from "./Utils";
+import {
+  homeHref,
+  incrementGamesPlayed,
+  presenceMapKey,
+  translateText,
+} from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
 import "./components/DesktopStatusBar";
@@ -783,7 +788,7 @@ class Client {
     const leaveGame = () => {
       crazyGamesSDK.gameplayStop().then(() => {
         // redirect to the home page
-        window.location.href = "/";
+        window.location.href = homeHref();
       });
     };
 
@@ -1011,7 +1016,7 @@ class Client {
       }
     }
     if (decodedHash.startsWith("#refresh")) {
-      window.location.href = "/";
+      window.location.href = homeHref();
     }
 
     const requeueMode = this.consumeRequeueUrl();

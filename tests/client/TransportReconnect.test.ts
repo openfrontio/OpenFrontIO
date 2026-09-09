@@ -39,6 +39,7 @@ vi.mock("../../src/client/InGameModal", () => ({
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, unknown>) =>
     params === undefined ? key : `${key} ${JSON.stringify(params)}`,
+  homeHref: () => "/",
 }));
 
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";

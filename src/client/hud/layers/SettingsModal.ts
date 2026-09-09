@@ -10,7 +10,7 @@ import {
   AlternateViewEvent,
   ToggleRenderDebugGuiEvent,
 } from "../../InputHandler";
-import { translateText } from "../../Utils";
+import { homeHref, translateText } from "../../Utils";
 import {
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
@@ -196,7 +196,7 @@ export class SettingsModal extends LitElement implements Controller {
 
   private onExitButtonClick() {
     // redirect to the home page
-    window.location.href = "/";
+    window.location.href = homeHref();
   }
 
   private onVolumeChange(event: Event) {

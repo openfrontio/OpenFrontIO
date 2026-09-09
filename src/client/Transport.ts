@@ -46,7 +46,7 @@ import { LobbyConfig } from "./ClientGameRunner";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
-import { translateText } from "./Utils";
+import { homeHref, translateText } from "./Utils";
 import { PlayerView } from "./view";
 
 export class PauseGameIntentEvent implements GameEvent {
@@ -534,7 +534,7 @@ export class Transport {
       cancelText: translateText("common.close"),
     }).then((goHome) => {
       if (goHome) {
-        window.location.href = "/";
+        window.location.href = homeHref();
       }
     });
   }

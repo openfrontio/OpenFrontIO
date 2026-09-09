@@ -12,6 +12,7 @@ import {
   Trios,
 } from "../core/game/Game";
 import { GameConfig } from "../core/Schemas";
+import { ClientEnv } from "./ClientEnv";
 import type { LangSelector } from "./LangSelector";
 import { Platform } from "./Platform";
 
@@ -842,9 +843,37 @@ export function getSecondsUntilServerTimestamp(
  * stale HTML — with the old gitCommit baked in — for minutes after a deploy,
  * and a version check that reloads on mismatch would loop. A unique query
  * string misses the shared cache, so the origin renders the current shell.
+ *
+ * On a deployment host (the document landed there for a cross-host game, or
+ * via a stale bookmark) a same-origin reload re-fetches that SAME
+ * deployment's shell — for a drained or outdated deployment that can never
+ * help, and the drain prompt would loop forever. The apex serves the active
+ * deployment's shell, so go there instead, keeping the path (letter routing
+ * re-resolves a /game/<id>) minus the origin-specific worker prefix.
  */
 export function reloadForUpdate(): void {
   const url = new URL(window.location.href);
+  const siteHost = ClientEnv.siteHost();
+  if (siteHost !== undefined && url.host !== siteHost) {
+    url.protocol = "https:";
+    url.host = siteHost;
+    url.pathname = url.pathname.replace(/^\/w\d+\//, "/");
+  }
   url.searchParams.set("v", Date.now().toString(36));
   window.location.replace(url.toString());
+}
+
+/**
+ * Where "leave to the menu" navigations should land. On a deployment host
+ * the local homepage may belong to a drained deployment whose public lobby
+ * list is empty; the apex always fronts the active one. Same-host,
+ * standalone deployments (no siteHost injected), dev, and desktop keep the
+ * plain root.
+ */
+export function homeHref(): string {
+  const siteHost = ClientEnv.siteHost();
+  if (siteHost !== undefined && window.location.host !== siteHost) {
+    return `https://${siteHost}/`;
+  }
+  return "/";
 }
