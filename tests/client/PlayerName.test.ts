@@ -4,8 +4,11 @@ import {
   clampUsername,
   fallbackPlayerName,
   genAnonUsername,
+  lapseNoticeDue,
+  lapseNoticeMarker,
   looksGenerated,
   resolvePlayerName,
+  sanitizeAccountPersona,
   sanitizePersona,
   verifiedClaimGrace,
   verifiedNameOptIn,
@@ -15,6 +18,7 @@ import type { UserMeResponse } from "../../src/core/ApiSchemas";
 import { UsernameSchema } from "../../src/core/Schemas";
 import {
   MAX_USERNAME_LENGTH,
+  validateAccountUsername,
   validateUsername,
 } from "../../src/core/validations/username";
 
@@ -549,5 +553,171 @@ describe("genAnonUsername", () => {
       expect(name.startsWith("Anon")).toBe(true);
       expect(UsernameSchema.safeParse(name).success, name).toBe(true);
     }
+  });
+});
+
+describe("sanitizeAccountPersona", () => {
+  // The bug this exists to prevent: sanitizePersona keeps these, the account
+  // form does not, so seeding one into the other prefills a draft the very
+  // form showing it refuses to save.
+  it("keeps the parts of a persona the account form accepts", () => {
+    expect(sanitizeAccountPersona("Zoë Smith")).toBe("Zo Smith");
+    expect(sanitizeAccountPersona("Ada.Lovelace")).toBe("Ada Lovelace");
+    expect(sanitizeAccountPersona("Ada🔥Lovelace")).toBe("Ada Lovelace");
+    expect(sanitizeAccountPersona("[CLAN] Müller")).toBe("CLAN M ller");
+    expect(sanitizeAccountPersona("  Ada   Lovelace  ")).toBe("Ada Lovelace");
+    expect(sanitizeAccountPersona("Ada_Lovelace-7")).toBe("Ada_Lovelace-7");
+  });
+
+  it("returns null when nothing usable survives", () => {
+    for (const persona of [
+      null,
+      undefined,
+      "",
+      // Punctuation the account charset happens to allow is still not a name:
+      // a row of dashes is worse for the player than the empty field they
+      // would otherwise type into.
+      "★★★",
+      "...",
+      "-----",
+      "___",
+      // Two characters left after sanitising is under the minimum.
+      "Zoë",
+      "é",
+      "日本語のなまえ",
+    ]) {
+      expect(sanitizeAccountPersona(persona), String(persona)).toBeNull();
+    }
+  });
+
+  it("cuts an over-long persona at a word boundary", () => {
+    // 25 characters: over the 20-char account cap.
+    expect(sanitizeAccountPersona("Ada Lovelace the Countess")).toBe(
+      "Ada Lovelace the",
+    );
+    // A single long word has no boundary worth cutting back to.
+    expect(sanitizeAccountPersona("AdaLovelaceTheCountessOfLovelace")).toBe(
+      "AdaLovelaceTheCounte",
+    );
+  });
+
+  // The property that matters: the caller puts this straight into the field,
+  // so anything non-null has to be something the field will save.
+  it("never returns a name the account form would reject", () => {
+    for (const persona of [
+      "Zoë",
+      "Ada.Lovelace",
+      "Ada🔥Lovelace",
+      "[CLAN] Müller",
+      "  Ada   Lovelace  ",
+      "Ada Lovelace the Countess",
+      "AdaLovelaceTheCountessOfLovelace",
+      "Łukasz",
+      "★★★",
+      "a",
+      "-".repeat(30),
+      "_",
+      "Ada  Lovelace",
+      "日本語のなまえ",
+      "ﾊﾝｶｸ",
+    ]) {
+      const seed = sanitizeAccountPersona(persona);
+      if (seed === null) continue;
+      expect(
+        validateAccountUsername(seed).isValid,
+        `${persona} -> ${seed}`,
+      ).toBe(true);
+    }
+  });
+});
+
+describe("lapseNoticeDue", () => {
+  const NOW = new Date("2026-09-01T00:00:00.000Z");
+  const SOON = "2026-10-01T00:00:00.000Z";
+  const PAST = "2026-08-01T00:00:00.000Z";
+
+  function lapsed(overrides: Record<string, unknown> = {}): UserMeResponse {
+    return {
+      player: {
+        username: "RyanTheGreat",
+        usernameBase: "RyanTheGreat",
+        usernameStatus: "claimed",
+        usernameClaimExpiresAt: SOON,
+        ...overrides,
+      },
+    } as unknown as UserMeResponse;
+  }
+
+  it("is due when a reservation is running and nothing has been said", () => {
+    expect(lapseNoticeDue(lapsed(), null, NOW)).toBe(true);
+  });
+
+  it("is not due once the matching marker is stored", () => {
+    const grace = verifiedClaimGrace(lapsed(), NOW)!;
+    expect(lapseNoticeDue(lapsed(), lapseNoticeMarker(grace), NOW)).toBe(false);
+  });
+
+  // Crossing the deadline changes what the player must do, so it earns one
+  // more interruption — and boot sequencing has to agree that one is owed.
+  it("is due again when the reservation crosses into at-risk", () => {
+    const beforeGrace = verifiedClaimGrace(lapsed(), NOW)!;
+    const stale = lapseNoticeMarker(beforeGrace);
+    expect(
+      lapseNoticeDue(lapsed({ usernameClaimExpiresAt: PAST }), stale, NOW),
+    ).toBe(true);
+  });
+
+  it("is not due for an eligible subscriber, or with nothing at stake", () => {
+    expect(
+      lapseNoticeDue(lapsed({ usernameStatus: "premium" }), null, NOW),
+    ).toBe(false);
+    expect(
+      lapseNoticeDue(lapsed({ usernameClaimExpiresAt: null }), null, NOW),
+    ).toBe(false);
+    expect(lapseNoticeDue(null, null, NOW)).toBe(false);
+    expect(lapseNoticeDue(false, null, NOW)).toBe(false);
+  });
+
+  // The two states the boot sequencer relies on being disjoint: a player
+  // cannot owe a lapse notice and be waiting to claim a first name.
+  it("is never due for a player who has no name at all", () => {
+    expect(
+      lapseNoticeDue(
+        lapsed({
+          usernameStatus: "premium",
+          username: null,
+          usernameBase: null,
+        }),
+        null,
+        NOW,
+      ),
+    ).toBe(false);
+  });
+});
+
+// The join name after a claim comes from the refetched profile, never from the
+// string the form was seeded with. UsernamePanel reloads on success, so this is
+// what the next boot resolves.
+describe("a claimed name, not the seed, is what the player joins under", () => {
+  it("resolves to the account name once the claim lands", () => {
+    const seed = sanitizeAccountPersona("Ada.Lovelace");
+    expect(seed).toBe("Ada Lovelace");
+    const claimed = {
+      player: {
+        username: "AdaTheFirst",
+        usernameBase: "AdaTheFirst",
+        usernameStatus: "premium",
+      },
+    } as unknown as UserMeResponse;
+    const resolved = resolvePlayerName(
+      inputs({
+        verifiedName: accountVerifiedName(claimed),
+        verifiedOptIn: true,
+        persona: "Ada.Lovelace",
+      }),
+    );
+    expect(resolved.name).toBe("AdaTheFirst");
+    expect(resolved.name).not.toBe(seed);
+    expect(resolved.verified).toBe(true);
   });
 });

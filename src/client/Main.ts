@@ -1,6 +1,6 @@
 import { ClientEnv } from "src/client/ClientEnv";
 import { renderNavVersion } from "src/client/GameVersion";
-import { isTemporaryUsername, UserMeResponse } from "../core/ApiSchemas";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
 import {
@@ -25,6 +25,13 @@ import {
   retrySteamSignIn,
   userAuth,
 } from "./Auth";
+import {
+  CLAIM_PROMPT_KEY,
+  claimPromptDue,
+  claimPromptShown,
+  nextBootInterrupt,
+  parseClaimPromptRecord,
+} from "./BootInterrupts";
 import "./ChangeUsernameModal";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
@@ -71,7 +78,11 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
-import { fallbackPlayerName } from "./PlayerName";
+import {
+  fallbackPlayerName,
+  LAPSE_NOTICE_KEY,
+  lapseNoticeDue,
+} from "./PlayerName";
 import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
@@ -552,6 +563,16 @@ class Client {
         });
         adGatekeeper.start();
       }
+      // Read BEFORE the dispatch, which is what fires the notice.
+      // <username-input> handles the lapse notice itself and records its
+      // marker before opening the dialog, so asking afterwards would always
+      // answer "already shown" and the rewards popup would stack on top of it.
+      // See lapseNoticeDue.
+      const lapseDue = lapseNoticeDue(
+        userMeResponse,
+        localStorage.getItem(LAPSE_NOTICE_KEY),
+      );
+
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,
@@ -599,37 +620,81 @@ class Client {
         const cleanHomepage =
           window.location.pathname === "/" && window.location.hash === "";
 
-        // The server renamed this subscriber to TEMPORARY#### because their
-        // bare name was exclusively taken while they were unentitled; the
-        // rename is free (cooldown cleared). Prompt for a real name; takes
-        // priority over the rewards popup, which waits for the next load
-        // rather than stacking a second overlay on the rename form.
-        const { usernameStatus, usernameBase } = userMeResponse.player;
-        if (
-          cleanHomepage &&
-          (usernameStatus === "premium" || usernameStatus === "indefinite") &&
-          isTemporaryUsername(usernameBase)
-        ) {
-          const goRename = await showInGameConfirm(
-            translateText("account_modal.username_temporary_prompt"),
-            {
-              heading: translateText("account_modal.username_title"),
-              variant: "warning",
-              confirmText: translateText(
-                "account_modal.username_temporary_prompt_confirm",
-              ),
-            },
-          );
-          if (goRename) {
-            window.location.hash = "modal=change-username";
-          }
-          return;
-        }
-
-        // Unclaimed-rewards popup.
+        // One interrupt per boot, chosen by the ordering in BootInterrupts —
+        // not by which branch happens to be written first here.
+        const { usernameStatus, username, usernameBase } =
+          userMeResponse.player;
         const rewards = userMeResponse.player.rewards ?? [];
-        if (rewards.length > 0 && cleanHomepage) {
-          this.rewardsModal?.openWithRewards(rewards);
+        const claimRecord = parseClaimPromptRecord(
+          localStorage.getItem(CLAIM_PROMPT_KEY),
+        );
+        switch (
+          nextBootInterrupt({
+            cleanHomepage,
+            usernameStatus,
+            username,
+            usernameBase,
+            lapseNoticeDue: lapseDue,
+            rewardCount: rewards.length,
+            claimPromptDue: claimPromptDue(claimRecord, Date.now()),
+          })
+        ) {
+          // The server renamed this subscriber to TEMPORARY#### because their
+          // bare name was exclusively taken while they were unentitled; the
+          // rename is free (cooldown cleared). Prompt for a real name.
+          case "username-temporary": {
+            const goRename = await showInGameConfirm(
+              translateText("account_modal.username_temporary_prompt"),
+              {
+                heading: translateText("account_modal.username_title"),
+                variant: "warning",
+                confirmText: translateText(
+                  "account_modal.username_temporary_prompt_confirm",
+                ),
+              },
+            );
+            if (goRename) {
+              window.location.hash = "modal=change-username";
+            }
+            break;
+          }
+          // Entitled and has never claimed a name. Nothing else in the client
+          // mentions the perk, and the account modal — the only place to claim
+          // one — is somewhere they have no reason to open, so the month runs
+          // out unused. Recorded as shown whichever way they answer: declining
+          // is an answer, and re-asking a player who said no is the nagging the
+          // decay rule exists to prevent.
+          case "username-claim": {
+            localStorage.setItem(
+              CLAIM_PROMPT_KEY,
+              JSON.stringify(claimPromptShown(claimRecord, Date.now())),
+            );
+            const goClaim = await showInGameConfirm(
+              translateText("account_modal.username_claim_prompt"),
+              {
+                heading: translateText("account_modal.username_claim_heading"),
+                // The dialog offers "danger" and "warning" only, and this is
+                // not a danger. Same presentation as the TEMPORARY#### prompt
+                // it sits beside.
+                variant: "warning",
+                confirmText: translateText(
+                  "account_modal.username_claim_prompt_confirm",
+                ),
+              },
+            );
+            if (goClaim) {
+              window.location.hash = "modal=change-username";
+            }
+            break;
+          }
+          // Owned by <username-input>, which has already fired it off the
+          // dispatch above. Named here so it takes its turn in the ordering
+          // rather than landing on top of whatever else this boot chose.
+          case "lapse-notice":
+            break;
+          case "rewards":
+            this.rewardsModal?.openWithRewards(rewards);
+            break;
         }
       }
     };

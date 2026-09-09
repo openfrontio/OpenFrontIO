@@ -5,8 +5,12 @@ import {
   RENDERABLE_NAME_HAS_ALNUM_RE,
 } from "../core/Schemas";
 import {
+  ACCOUNT_NAME_CHAR_RE,
+  MAX_ACCOUNT_USERNAME_LENGTH,
   MAX_USERNAME_LENGTH,
+  MIN_ACCOUNT_USERNAME_LENGTH,
   MIN_USERNAME_LENGTH,
+  validateAccountUsername,
 } from "../core/validations/username";
 
 // What name a player plays under, resolved in one place.
@@ -199,6 +203,109 @@ export function sanitizePersona(
   // at least reads as a placeholder.
   if (!RENDERABLE_NAME_HAS_ALNUM_RE.test(name)) return null;
   return name;
+}
+
+// The same persona reduced to something the ACCOUNT username form will accept,
+// or null when nothing usable survives.
+//
+// Not the same rule as sanitizePersona, and the difference is load-bearing.
+// The in-game name may be anything the renderer can draw — accents, dots — but
+// an account username is ASCII word characters with single interior spaces
+// (AccountUsernameSchema), because the dot separates a base from its
+// discriminator and two bases must never render alike. So "Zoë" and
+// "Ada.Lovelace" are perfectly good in-game names and are not account names;
+// prefilling the claim form with either would seed a draft that the very form
+// showing it rejects on save.
+//
+// Same strip-and-keep shape as sanitizePersona for the same reason: throwing a
+// decorated persona away wholesale is what sent Steam buyers to Anon… names in
+// the first place. Disallowed characters become a space so words either side of
+// a separator survive as words ("Ada.Lovelace" -> "Ada Lovelace").
+//
+// Returns only names that validateAccountUsername accepts, so a caller may
+// place the result straight into the field. Anything else is null — an empty
+// field the player fills in themselves beats a prefilled error.
+export function sanitizeAccountPersona(
+  persona: string | null | undefined,
+): string | null {
+  if (!persona) return null;
+  const kept = Array.from(persona, (ch) =>
+    ACCOUNT_NAME_CHAR_RE.test(ch) ? ch : " ",
+  ).join("");
+  const collapsed = kept.replace(/\s+/g, " ").trim();
+  // Cut at the account cap rather than the free-form one. They are equal today
+  // and are separate constants precisely because they need not stay equal.
+  const name =
+    collapsed.length > MAX_ACCOUNT_USERNAME_LENGTH
+      ? trimAtBoundary(collapsed, MAX_ACCOUNT_USERNAME_LENGTH)
+      : collapsed;
+  // Punctuation alone is not a name, exactly as in sanitizePersona: a persona
+  // of "-----" passes the account charset and would seed a row of dashes,
+  // which is worse for the player than the empty field they would otherwise
+  // type into.
+  if (!/[a-zA-Z0-9]/.test(name)) return null;
+  // The single authority on whether this is usable — length, charset and the
+  // no-double-space rule all come back from the form's own validator rather
+  // than being re-derived here, so the two cannot drift.
+  return validateAccountUsername(name).isValid ? name : null;
+}
+
+// Cut to `cap`, preferring a word boundary, exactly as truncateToCap does for
+// the free-form name — a truncated name should read as a shorter name, not as
+// a word chopped in half. Falls back to a hard cut when no boundary leaves
+// enough behind.
+function trimAtBoundary(name: string, cap: number): string {
+  const hard = name.slice(0, cap).trim();
+  if (hard.length < cap) return hard;
+  if (name[cap] === " ") return hard;
+  const lastSpace = hard.lastIndexOf(" ");
+  if (lastSpace < MIN_ACCOUNT_USERNAME_LENGTH) return hard;
+  return hard.slice(0, lastSpace);
+}
+
+// The one-per-lapse marker for a reservation notice: the name AND the phase.
+//
+// Crossing the deadline changes what the player must do — "resubscribe before
+// then" becomes "now, before someone takes it" — so it earns one more
+// interruption, and a marker keyed on the name alone would swallow it. Keyed on
+// the name rather than a bare "already announced" flag so a
+// resubscribe-then-lapse cycle announces the second lapse too.
+//
+// Exported so the notice's owner (UsernameInput.announceLapse) and boot
+// sequencing (lapseNoticeDue) build the string in one place. They ran on
+// separate copies of this rule before, which is how a notice could be counted
+// as pending by one and already-shown by the other.
+/**
+ * localStorage key holding the marker above. Lives here beside the two
+ * functions that give it meaning, because boot sequencing has to read it
+ * before <username-input> writes it.
+ */
+export const LAPSE_NOTICE_KEY = "verifiedLapseNotice";
+
+export function lapseNoticeMarker(grace: ClaimGrace): string {
+  return `${grace.name}:${grace.atRisk ? "atrisk" : "reserved"}`;
+}
+
+// Does this profile still owe the player a lapse notice?
+//
+// The predicate behind UsernameInput.announceLapse, extracted so boot
+// sequencing can ask the same question without firing the notice. It has to be
+// asked BEFORE the userMeResponse dispatch: announceLapse writes the marker
+// before opening its dialog (an unawaited alert would otherwise let a second
+// announcement through), so by the time the dispatch returns the notice looks
+// already-shown and nothing downstream could tell it was about to interrupt.
+//
+// Eligibility first, because being eligible again clears the marker outright:
+// there is nothing at stake, so nothing to announce.
+export function lapseNoticeDue(
+  userMe: UserMeResponse | false | null,
+  storedMarker: string | null,
+  now: Date = new Date(),
+): boolean {
+  if (accountVerifiedName(userMe) !== null) return false;
+  const grace = verifiedClaimGrace(userMe, now);
+  if (grace === null) return false;
+  return storedMarker !== lapseNoticeMarker(grace);
 }
 
 // Whether a stored name has the exact shape genAnonUsername produces:
