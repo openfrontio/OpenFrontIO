@@ -878,6 +878,19 @@ describe("PutUsernameResponseSchema", () => {
     delete rest.base;
     expect(PutUsernameResponseSchema.safeParse(rest).success).toBe(false);
   });
+
+  // Deliberately lenient, unlike every other field here: this is a 200, so
+  // the rename has already committed server-side. Rejecting an unknown
+  // bareClaim would report failure for a rename that succeeded and burn the
+  // player's 30-day cooldown. Dropping it degrades to "say nothing".
+  it("drops an unknown bareClaim instead of failing the parse", () => {
+    const result = PutUsernameResponseSchema.safeParse({
+      ...base,
+      bareClaim: "nope",
+    });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.bareClaim).toBeUndefined();
+  });
 });
 
 describe("UserMeResponseSchema creator", () => {

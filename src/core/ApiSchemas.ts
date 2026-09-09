@@ -356,9 +356,15 @@ export const PutUsernameResponseSchema = z.object({
   // un-updated client — and this is a 200, so the rename has already
   // committed. Rejecting would report failure for a rename that succeeded,
   // spend the player's 30-day cooldown and reopen the modal on a name they
-  // never chose. Degrading an unknown value to `undefined` degrades to "say
-  // nothing", which is the intended behaviour for a client that predates the
-  // value (warnBareClaimUnavailable only acts on "unavailable").
+  // never chose. An unknown value is therefore treated as absent, which means
+  // "say nothing".
+  //
+  // The contract that keeps this safe: "unavailable" is the only value that
+  // obliges a client to say anything, so it must remain the value sent
+  // whenever a premium player is given a suffixed name. New values may be
+  // added only for outcomes where saying nothing is correct — splitting
+  // "unavailable" into narrower values would silence this message on clients
+  // that predate the split.
   bareClaim: BareClaimSchema.optional().catch(undefined),
 });
 export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
