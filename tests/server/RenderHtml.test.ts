@@ -132,3 +132,45 @@ describe("RenderHtml serverHost pinning", () => {
     expect(await render()).toBe("");
   });
 });
+
+describe("RenderHtml siteHost injection", () => {
+  let tempDir: string | null = null;
+
+  beforeEach(() => {
+    vi.stubEnv("CLUSTER_JSON", TEST_CLUSTER);
+    vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
+    vi.stubEnv("GIT_COMMIT", "abc");
+    vi.stubEnv("DOMAIN", "openfront.io");
+    vi.stubEnv("SUBDOMAIN", "blue");
+  });
+
+  afterEach(async () => {
+    vi.unstubAllEnvs();
+    clearAppShellContentCache();
+    if (tempDir) {
+      await fs.rm(tempDir, { recursive: true, force: true });
+      tempDir = null;
+    }
+  });
+
+  // Same expression index.html uses to emit the optional siteHost line.
+  const TEMPLATE =
+    '<%- typeof siteHost !== "undefined" && siteHost ? "siteHost: " + siteHost + "," : "" %>';
+
+  async function render(): Promise<string> {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "render-html-"));
+    const htmlPath = path.join(tempDir, "index.html");
+    await fs.writeFile(htmlPath, TEMPLATE, "utf8");
+    return getAppShellContent(htmlPath);
+  }
+
+  test("advertises the apex behind a load balancer (unknown-letter redirect target)", async () => {
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    expect(await render()).toBe('siteHost: "openfront.io",');
+  });
+
+  test("omits siteHost for a standalone deployment", async () => {
+    vi.stubEnv("SITE_HOST", "");
+    expect(await render()).toBe("");
+  });
+});

@@ -358,7 +358,7 @@ export function joinLobby(
         } else {
           const r = ClientEnv.resolveGame(lobbyConfig.gameID);
           if (r.kind === "cross") {
-            window.location.href = `https://${r.host}/game/${lobbyConfig.gameID}`;
+            window.location.href = `https://${r.host}/game/${lobbyConfig.gameID}${window.location.search}`;
           } else {
             showInGameAlert(translateText("update_available.message")).then(
               () => {

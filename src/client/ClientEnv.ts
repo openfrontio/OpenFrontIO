@@ -57,6 +57,7 @@ export class ClientEnv {
       // Optional: only the desktop app injects an explicit game-server host.
       // Absent on the web build (falls back to same-origin window.location).
       serverHost: bc.serverHost,
+      siteHost: bc.siteHost,
     };
     return ClientEnv.values;
   }
@@ -182,6 +183,12 @@ export class ClientEnv {
   // Explicit game-server host, injected by the desktop app (absent on web).
   static serverHost(): string | undefined {
     return ClientEnv.get().serverHost;
+  }
+  // The load-balancer apex this deployment sits behind — the unknown-letter
+  // redirect target, whose shell always carries the freshest cluster map.
+  // Absent for standalone deployments and desktop: no apex to bounce to.
+  static siteHost(): string | undefined {
+    return ClientEnv.get().siteHost;
   }
   // Origin (scheme + host, no trailing slash) of the game server that hosts the
   // public-lobby and in-game WebSockets. The lobby-list and game sockets append
@@ -319,4 +326,5 @@ export interface ClientEnvValues {
   instanceId: string;
   gitCommit: string;
   serverHost?: string;
+  siteHost?: string;
 }

@@ -510,7 +510,7 @@ export class Transport {
       const latch = `wrong-worker-redirect:${gameID}`;
       if (sessionStorage.getItem(latch) === null) {
         sessionStorage.setItem(latch, "1");
-        window.location.href = `${ClientEnv.gameHttpBase(gameID)}/game/${gameID}`;
+        window.location.href = `${ClientEnv.gameHttpBase(gameID)}/game/${gameID}${window.location.search}`;
         return;
       }
     }

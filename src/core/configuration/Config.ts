@@ -43,6 +43,9 @@ declare global {
       // Desktop-only: explicit game-server host for the WebSocket origin.
       // Absent on the web build (client falls back to same-origin location).
       serverHost?: string;
+      // The load-balancer apex this deployment sits behind; absent for
+      // standalone deployments (beta, branch previews, dev) and desktop.
+      siteHost?: string;
     };
   }
 }

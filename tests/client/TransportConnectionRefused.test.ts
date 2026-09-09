@@ -104,6 +104,8 @@ describe("Transport terminal connection refused", () => {
         set href(value: string) {
           mockLocationHref = value;
         },
+        // Cross-host redirects carry the query string along (?spectate).
+        search: "",
       },
       writable: true,
       configurable: true,
