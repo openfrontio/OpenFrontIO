@@ -746,7 +746,9 @@ export async function boostTribeName(
       if (typeof body?.reason === "string") {
         return { ok: false, code: "insufficient_balance" };
       }
-      console.error("boostTribeName: bad request", body);
+      // Body-free on purpose: an unrecognised 400 is exactly the case where we
+      // do not know what the body contains, so it must not reach a log line.
+      console.warn("boostTribeName: unrecognised 400 response");
       return { ok: false, code: "failed" };
     }
     if (response.status === 404) {
@@ -903,7 +905,9 @@ export async function purchaseCosmeticPack(
       if (PACK_UNAVAILABLE_REASONS.includes(reason)) {
         return { ok: false, code: "unavailable" };
       }
-      console.error("purchaseCosmeticPack: bad request", body);
+      // Body-free on purpose: an unrecognised 400 is exactly the case where we
+      // do not know what the body contains, so it must not reach a log line.
+      console.warn("purchaseCosmeticPack: unrecognised 400 response");
       return { ok: false, code: "failed" };
     }
     if (response.status === 409) {

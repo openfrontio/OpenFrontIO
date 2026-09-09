@@ -20,6 +20,21 @@ function respond(status: number, body: unknown) {
   );
 }
 
+// Planted in the server body so the assertion tests the actual rule — that no
+// part of the body is logged — rather than the spelling of one warn call.
+const CANARY = "CANARY-7f3a";
+
+function expectNoConsoleCallContains(needle: string) {
+  for (const spy of [console.error, console.warn]) {
+    for (const call of vi.mocked(spy).mock.calls) {
+      for (const arg of call) {
+        expect(String(arg)).not.toContain(needle);
+        expect(String(JSON.stringify(arg))).not.toContain(needle);
+      }
+    }
+  }
+}
+
 beforeEach(() => {
   (window as any).BOOTSTRAP_CONFIG = {
     gameEnv: "prod",
@@ -34,6 +49,7 @@ beforeEach(() => {
   fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -101,11 +117,21 @@ describe("purchaseCosmeticPack", () => {
     }
 
     // A malformed body is a client bug, not a player error.
-    respond(400, { error: "Bad request", reason: "Invalid request body" });
+    respond(400, {
+      error: "Bad request",
+      reason: "Invalid request body",
+      canary: CANARY,
+    });
     expect(await purchaseCosmeticPack("starter")).toEqual({
       ok: false,
       code: "failed",
     });
+    // The rule is that no part of the server body reaches a log line, so the
+    // canary is what is asserted on, not the current wording of the warning.
+    expectNoConsoleCallContains(CANARY);
+    expect(console.error).not.toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(console.warn).mock.calls[0]).toHaveLength(1);
   });
 
   it("reports which items are already owned on 409", async () => {
