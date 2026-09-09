@@ -184,11 +184,15 @@ export async function startMaster() {
   const siteHost = ServerEnv.siteHost();
   if (siteHost !== undefined && siteHost !== ServerEnv.publicHost()) {
     log.info(`Polling https://${siteHost}/api/health for active deployment`);
+    // 5s: this latency is the window after a flip where the newly-active
+    // deployment isn't creating public lobbies yet (and the draining one
+    // still is). startPolling serializes runs, so the fetch's 10s timeout
+    // can't pile requests up.
     startPolling(async () => {
       const siteInstanceId = await fetchSiteInstanceId(siteHost);
       if (siteInstanceId === null) return;
       lobbyService.setActive(siteInstanceId === INSTANCE_ID);
-    }, 30 * 1000);
+    }, 5 * 1000);
   }
 }
 
