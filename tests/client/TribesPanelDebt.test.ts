@@ -170,10 +170,10 @@ describe("TribesPanel when the wallet is in debt", () => {
       expect(el.textContent).not.toContain("Insufficient balance");
     });
 
-    // The refetch can fail (offline, a 500). Falling back to a zero balance
-    // overstates the shortfall, but never understates it to a reassuring
-    // "1 more" on a purchase the server just refused.
-    it("still quotes a shortfall when the refetch fails", async () => {
+    // The refetch can fail (offline, a 500), which leaves the real balance
+    // unknown. Quoting the full price as the shortfall would be a guess
+    // presented as a fact, with a top-up button sized to it.
+    it("reports a generic failure rather than a guessed shortfall", async () => {
       purchaseTribeName.mockResolvedValue({
         ok: false,
         code: "insufficient_balance",
@@ -183,7 +183,8 @@ describe("TribesPanel when the wallet is in debt", () => {
 
       await buy(el, "Ninja");
 
-      expect(dialog(el).info).toMatchObject({ shortfall: PRICE_HARD });
+      expect(dialog(el).info).toBeNull();
+      expect(el.textContent).toContain("store.purchase_failed");
     });
 
     it("still shows a genuine name rejection as prose", async () => {
@@ -228,6 +229,97 @@ describe("TribesPanel when the wallet is in debt", () => {
       expect(el.textContent).toContain('store.pack_debt:{"debt":"150"}');
       expect(boostTribeName).not.toHaveBeenCalled();
       // Not the top-up dialog: buying plutonium does not clear a debt.
+      expect(dialog(el).info).toBeNull();
+    });
+  });
+
+  // The boundary the debt pre-check must not swallow: an empty wallet is not
+  // a debt. A `<= 0` slip here would tell every broke player they are
+  // "0 in debt" instead of offering the top-up they actually need.
+  describe("with an empty wallet", () => {
+    it("offers the top-up dialog rather than a debt message when buying", async () => {
+      purchaseTribeName.mockResolvedValue({
+        ok: false,
+        code: "insufficient_balance",
+      });
+      getUserMe.mockResolvedValue(userWithHard(0));
+      const el = await mount();
+      el.userMeResponse = userWithHard(0);
+      await el.updateComplete;
+
+      await buy(el, "Ninja");
+
+      expect(el.textContent).not.toContain("store.pack_debt");
+      expect(dialog(el).info).toMatchObject({ shortfall: PRICE_HARD });
+    });
+
+    it("offers the top-up dialog rather than a debt message when boosting", async () => {
+      const el = await mount();
+      el.userMeResponse = userWithHard(0);
+      await el.updateComplete;
+
+      await boost(el);
+
+      expect(el.textContent).not.toContain("store.pack_debt");
+      expect(dialog(el).info).toMatchObject({ shortfall: BOOST_PRICE_HARD });
+    });
+  });
+
+  // Item 3: "insufficient balance" means three different things once the
+  // refetched balance is known.
+  describe("when the refetched balance explains the refusal differently", () => {
+    beforeEach(() => {
+      purchaseTribeName.mockResolvedValue({
+        ok: false,
+        code: "insufficient_balance",
+      });
+      boostTribeName.mockResolvedValue({
+        ok: false,
+        code: "insufficient_balance",
+      });
+    });
+
+    it("explains the debt when the refetch comes back negative", async () => {
+      getUserMe.mockResolvedValue(userWithHard(-150));
+      const el = await mount();
+
+      await buy(el, "Ninja");
+
+      expect(el.textContent).toContain('store.pack_debt:{"debt":"150"}');
+      expect(dialog(el).info).toBeNull();
+    });
+
+    // Quoting "you need 1 more" here would send them to buy currency they
+    // already have, for a purchase that would now succeed.
+    it("does not invent a shortfall when the refetch covers the price", async () => {
+      getUserMe.mockResolvedValue(userWithHard(500));
+      const el = await mount();
+
+      await buy(el, "Ninja");
+
+      expect(el.textContent).toContain("store.purchase_failed");
+      expect(dialog(el).info).toBeNull();
+    });
+
+    // A failed refetch leaves the real balance unknown, so there is no
+    // honest number to put in front of the player.
+    it("reports a generic failure when the refetch fails", async () => {
+      getUserMe.mockResolvedValue(false);
+      const el = await mount();
+
+      await buy(el, "Ninja");
+
+      expect(el.textContent).toContain("store.purchase_failed");
+      expect(dialog(el).info).toBeNull();
+    });
+
+    it("explains the debt on the boost path too", async () => {
+      getUserMe.mockResolvedValue(userWithHard(-80));
+      const el = await mount();
+
+      await boost(el);
+
+      expect(el.textContent).toContain('store.pack_debt:{"debt":"80"}');
       expect(dialog(el).info).toBeNull();
     });
   });

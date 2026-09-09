@@ -90,11 +90,9 @@ describe("tribe-name spend paths map the debt reason", () => {
       });
     });
 
-    // The endpoint's own player-facing refusals, which are prose and are
-    // shown as-is. The length rule interpolates its bounds, so it is matched
-    // by prefix.
+    // The endpoint's own player-facing refusals. These carry no parameters,
+    // so there is nothing to interpolate and they pass through as prose.
     it.each([
-      "Name must be 3-24 characters",
       "Name may only contain letters, numbers, spaces, and ' - . _ ! ?",
       "Name must contain a letter",
       "This name is not allowed",
@@ -104,6 +102,34 @@ describe("tribe-name spend paths map the debt reason", () => {
         ok: false,
         code: "invalid",
         message: reason,
+      });
+    });
+
+    // The length rule is the one refusal whose content is data — the bounds
+    // ARE the message — so it comes back structured for the caller to
+    // translate rather than as the server's English.
+    it("returns the length bounds structured rather than as prose", async () => {
+      respond(400, { reason: "Name must be 3-24 characters" });
+      expect(await purchaseTribeName("Ninja")).toEqual({
+        ok: false,
+        code: "length",
+        min: 3,
+        max: 24,
+      });
+    });
+
+    // The pattern is anchored and digit-specific on purpose: a bare
+    // "Name must be " prefix would pass through anything the API ever chose
+    // to start that way, which is the denylist failure the allowlist avoids.
+    it.each([
+      "Name must be unique",
+      "Name must be 3- characters",
+      "Name must be 3-24 characters long",
+    ])("does not treat %s as the length rule", async (reason) => {
+      respond(400, { reason });
+      expect(await purchaseTribeName("Ninja")).toEqual({
+        ok: false,
+        code: "failed",
       });
     });
 

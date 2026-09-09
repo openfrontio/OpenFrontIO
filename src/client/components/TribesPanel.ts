@@ -136,9 +136,7 @@ export class TribesPanel extends LitElement {
     if (this.hardBalance < 0) {
       this.notice = {
         kind: "error",
-        text: translateText("store.pack_debt", {
-          debt: String(-this.hardBalance),
-        }),
+        text: this.debtText(-this.hardBalance),
       };
       return;
     }
@@ -175,16 +173,30 @@ export class TribesPanel extends LitElement {
       // it and offer the top-up path, as the boost handler does.
       const fresh = await this.refreshAfterPurchase();
       const price = this.price;
-      // No price means cosmetics.json has no tribeNames block, so there is no
-      // shortfall to quote — the generic failure is all we can honestly say.
-      if (price === null) {
+      // Two ways to have no honest shortfall to quote: no price (cosmetics.json
+      // has no tribeNames block) and no refreshed balance (the refetch failed,
+      // so the real balance is unknown — quoting the full price as the
+      // shortfall would be a guess wearing a number).
+      if (price === null || fresh === false) {
         this.notice = {
           kind: "error",
           text: translateText("store.purchase_failed"),
         };
         return;
       }
-      this.showInsufficient(name, price, TribesPanel.hardBalanceOf(fresh));
+      const balance = TribesPanel.hardBalanceOf(fresh);
+      const outcome = TribesPanel.balanceOutcome(balance, price);
+      if (outcome !== "shortfall") {
+        this.notice = {
+          kind: "error",
+          text:
+            outcome === "debt"
+              ? this.debtText(-balance)
+              : translateText("store.purchase_failed"),
+        };
+        return;
+      }
+      this.showInsufficient(name, price, balance);
       return;
     }
     if (result.code === "duplicate") {
@@ -214,9 +226,14 @@ export class TribesPanel extends LitElement {
     this.notice = {
       kind: "error",
       text:
-        result.code === "invalid"
-          ? result.message
-          : translateText("store.purchase_failed"),
+        result.code === "length"
+          ? translateText("store.tribe_name_length", {
+              min: result.min,
+              max: result.max,
+            })
+          : result.code === "invalid"
+            ? result.message
+            : translateText("store.purchase_failed"),
     };
   };
 
@@ -248,6 +265,25 @@ export class TribesPanel extends LitElement {
     return res === false ? 0 : (res.player.currency?.hard ?? 0);
   }
 
+  // "Insufficient balance" covers three different situations once the real
+  // balance is known, and they need three different messages. Shared by the
+  // purchase and boost handlers so they cannot drift apart.
+  private static balanceOutcome(
+    balance: number,
+    price: number,
+  ): "debt" | "shortfall" | "unexplained" {
+    // A chargeback landed since the pre-check: topping up cannot clear it.
+    if (balance < 0) return "debt";
+    // The re-read says they can afford it, so there is no shortfall to quote
+    // and inventing one would send them to buy currency they already have.
+    if (price - balance <= 0) return "unexplained";
+    return "shortfall";
+  }
+
+  private debtText(debt: number): string {
+    return translateText("store.pack_debt", { debt: String(debt) });
+  }
+
   // `item` is what the player was trying to buy — a name they typed, or the
   // name they were boosting. `balance` is passed rather than read off
   // `this.userMeResponse` so a caller that has just refetched quotes the
@@ -272,9 +308,7 @@ export class TribesPanel extends LitElement {
     if (this.hardBalance < 0) {
       this.boostNotice = {
         kind: "error",
-        text: translateText("store.pack_debt", {
-          debt: String(-this.hardBalance),
-        }),
+        text: this.debtText(-this.hardBalance),
       };
       return;
     }
@@ -331,11 +365,28 @@ export class TribesPanel extends LitElement {
       // The balance moved under us (another tab, another purchase) —
       // refresh it and show the top-up path.
       const fresh = await this.refreshAfterPurchase();
-      this.showInsufficient(
-        tribe.displayName,
-        price,
-        TribesPanel.hardBalanceOf(fresh),
-      );
+      // A failed refetch leaves the real balance unknown; a shortfall of the
+      // full price would be a guess presented as a fact.
+      if (fresh === false) {
+        this.boostNotice = {
+          kind: "error",
+          text: translateText("store.tribe_boost_failed"),
+        };
+        return;
+      }
+      const balance = TribesPanel.hardBalanceOf(fresh);
+      const outcome = TribesPanel.balanceOutcome(balance, price);
+      if (outcome !== "shortfall") {
+        this.boostNotice = {
+          kind: "error",
+          text:
+            outcome === "debt"
+              ? this.debtText(-balance)
+              : translateText("store.tribe_boost_failed"),
+        };
+        return;
+      }
+      this.showInsufficient(tribe.displayName, price, balance);
       return;
     }
     if (result.code === "not_found") {

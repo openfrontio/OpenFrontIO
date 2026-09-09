@@ -1832,6 +1832,7 @@
     "tribe_boost_next_expiry": "next boost expires {date}",
     "tribe_boost_success": "Boosted \"{name}\".",
     "tribe_duplicate": "Name already taken.",
+    "tribe_name_length": "Name must be {min}-{max} characters.",
     "tribe_name_placeholder": "Enter a tribe name",
     "tribe_name_required": "Enter a name first.",
     "tribe_purchase_live": "\"{name}\" is now live in games.",

@@ -644,6 +644,9 @@ export type PurchaseTribeNameResult =
   // server's player-facing reasons, already English and shown as-is — see
   // TRIBE_NAME_INVALID_REASONS for why that set is an allowlist.
   | { ok: false; code: "invalid"; message: string }
+  // 400 for the length rule specifically. Returned structured rather than as
+  // prose because the bounds ARE the message, so the caller can translate it.
+  | { ok: false; code: "length"; min: number; max: number }
   // 409: the name is already taken (names are globally unique).
   | { ok: false; code: "duplicate" }
   // 429: buying names too fast. `retryAfterSeconds` from the Retry-After
@@ -668,11 +671,27 @@ const TRIBE_NAME_INVALID_REASONS = [
 // it is matched by shape rather than listed. Anchored and digit-specific: a
 // bare "Name must be " prefix would pass through anything the API ever chose
 // to start that way, which is the denylist failure this is meant to avoid.
-const TRIBE_NAME_LENGTH_REASON_RE = /^Name must be \d+-\d+ characters$/;
+// The bounds are captured so the caller can translate the message instead of
+// rendering the server's English.
+const TRIBE_NAME_LENGTH_REASON_RE = /^Name must be (\d+)-(\d+) characters$/;
 
-function tribeNameInvalidMessage(reason: string): string | undefined {
-  if (TRIBE_NAME_INVALID_REASONS.includes(reason)) return reason;
-  if (TRIBE_NAME_LENGTH_REASON_RE.test(reason)) return reason;
+function tribeNameInvalidResult(
+  reason: string,
+): PurchaseTribeNameResult | undefined {
+  const length = TRIBE_NAME_LENGTH_REASON_RE.exec(reason);
+  if (length !== null) {
+    return {
+      ok: false,
+      code: "length",
+      min: Number(length[1]),
+      max: Number(length[2]),
+    };
+  }
+  // The rest carry no parameters, so there is nothing to interpolate and they
+  // stay as server prose for now (tracked separately).
+  if (TRIBE_NAME_INVALID_REASONS.includes(reason)) {
+    return { ok: false, code: "invalid", message: reason };
+  }
   return undefined;
 }
 
@@ -707,10 +726,8 @@ export async function purchaseTribeName(
       if (reason === "Insufficient balance") {
         return { ok: false, code: "insufficient_balance" };
       }
-      const message = tribeNameInvalidMessage(reason);
-      if (message !== undefined) {
-        return { ok: false, code: "invalid", message };
-      }
+      const invalid = tribeNameInvalidResult(reason);
+      if (invalid !== undefined) return invalid;
       // Not logging the body: an unrecognised reason is exactly the case where
       // we don't know what it contains.
       console.warn("purchaseTribeName: unrecognised 400 reason");
