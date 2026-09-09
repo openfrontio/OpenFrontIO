@@ -107,11 +107,7 @@ describe("boot sequencing on CrazyGames", () => {
       rewardCount: (player.rewards ?? []).length,
       claimPromptDue: true,
     });
-    await runBootInterrupt(
-      interrupt,
-      { claimRecord: null, publicId: "p" },
-      ports,
-    );
+    await runBootInterrupt(interrupt, { claimStore: {}, publicId: "p" }, ports);
     return { interrupt, ...calls };
   }
 

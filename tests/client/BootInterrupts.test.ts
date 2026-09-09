@@ -3,18 +3,19 @@ import {
   BOOT_INTERRUPT_KEYS,
   bootInterruptsAllowed,
   CLAIM_PROMPT_INTERVAL_MS,
+  CLAIM_PROMPT_MAX_ACCOUNTS,
   CLAIM_PROMPT_MAX_SHOWS,
   claimPromptDue,
   claimPromptShown,
   isCleanHomepage,
   nextBootInterrupt,
-  parseClaimPromptRecord,
+  parseClaimPromptStore,
   runBootInterrupt,
   USERNAME_FORM_HASH,
   type BootInterrupt,
   type BootInterruptInputs,
   type BootInterruptPorts,
-  type ClaimPromptRecord,
+  type ClaimPromptStore,
 } from "../../src/client/BootInterrupts";
 
 const ME = "player-public-id";
@@ -153,66 +154,56 @@ describe("nextBootInterrupt", () => {
 
 describe("claim prompt decay", () => {
   const now = Date.UTC(2026, 8, 9, 12, 0, 0);
+  const store = (shows: number, lastShownAt: number): ClaimPromptStore => ({
+    [ME]: { shows, lastShownAt },
+  });
 
-  it("fires for a profile that has never seen it", () => {
-    expect(claimPromptDue(null, now, ME)).toBe(true);
+  it("fires for an account that has never seen it", () => {
+    expect(claimPromptDue({}, now, ME)).toBe(true);
   });
 
   it("stays quiet inside the interval", () => {
-    const record: ClaimPromptRecord = {
-      publicId: ME,
-      shows: 1,
-      lastShownAt: now - 1000,
-    };
-    expect(claimPromptDue(record, now, ME)).toBe(false);
+    expect(claimPromptDue(store(1, now - 1000), now, ME)).toBe(false);
   });
 
   it("fires again once the interval has passed", () => {
-    const record: ClaimPromptRecord = {
-      publicId: ME,
-      shows: 1,
-      lastShownAt: now - CLAIM_PROMPT_INTERVAL_MS,
-    };
-    expect(claimPromptDue(record, now, ME)).toBe(true);
+    expect(
+      claimPromptDue(store(1, now - CLAIM_PROMPT_INTERVAL_MS), now, ME),
+    ).toBe(true);
   });
 
   it("stops for good after the allowance", () => {
-    const record: ClaimPromptRecord = {
-      publicId: ME,
-      shows: CLAIM_PROMPT_MAX_SHOWS,
-      lastShownAt: now - CLAIM_PROMPT_INTERVAL_MS * 365,
-    };
-    expect(claimPromptDue(record, now, ME)).toBe(false);
+    expect(
+      claimPromptDue(
+        store(CLAIM_PROMPT_MAX_SHOWS, now - CLAIM_PROMPT_INTERVAL_MS * 365),
+        now,
+        ME,
+      ),
+    ).toBe(false);
   });
 
   // A clock correction, or a profile copied from a machine set to the future.
   // Treating a negative elapsed time as "long enough ago" would hand back the
   // entire allowance to a player whose clock is simply wrong.
   it("treats a backwards clock as not yet, rather than long ago", () => {
-    const record: ClaimPromptRecord = {
-      publicId: ME,
-      shows: 1,
-      lastShownAt: now + 86_400_000,
-    };
-    expect(claimPromptDue(record, now, ME)).toBe(false);
+    expect(claimPromptDue(store(1, now + 86_400_000), now, ME)).toBe(false);
   });
 
   // The whole allowance, walked end to end: three showings a day apart, then
   // silence forever.
   it("spends exactly the allowance and then stops", () => {
-    let record: ClaimPromptRecord | null = null;
+    let current: ClaimPromptStore = {};
     let clock = now;
     let shown = 0;
     for (let boot = 0; boot < 20; boot++) {
-      if (claimPromptDue(record, clock, ME)) {
-        record = claimPromptShown(record, clock, ME);
+      if (claimPromptDue(current, clock, ME)) {
+        current = claimPromptShown(current, clock, ME);
         shown++;
       }
       clock += CLAIM_PROMPT_INTERVAL_MS;
     }
     expect(shown).toBe(CLAIM_PROMPT_MAX_SHOWS);
-    expect(record).toEqual({
-      publicId: ME,
+    expect(current[ME]).toEqual({
       shows: CLAIM_PROMPT_MAX_SHOWS,
       lastShownAt:
         now + CLAIM_PROMPT_INTERVAL_MS * (CLAIM_PROMPT_MAX_SHOWS - 1),
@@ -220,12 +211,12 @@ describe("claim prompt decay", () => {
   });
 
   it("does not spend the allowance on one sitting", () => {
-    let record: ClaimPromptRecord | null = null;
+    let current: ClaimPromptStore = {};
     let shown = 0;
     // Five launches in an evening.
     for (let boot = 0; boot < 5; boot++) {
-      if (claimPromptDue(record, now + boot * 60_000, ME)) {
-        record = claimPromptShown(record, now + boot * 60_000, ME);
+      if (claimPromptDue(current, now + boot * 60_000, ME)) {
+        current = claimPromptShown(current, now + boot * 60_000, ME);
         shown++;
       }
     }
@@ -233,10 +224,70 @@ describe("claim prompt decay", () => {
   });
 });
 
-describe("parseClaimPromptRecord", () => {
+describe("claim prompt decay is per account, not per device", () => {
+  const now = Date.UTC(2026, 8, 9, 12, 0, 0);
+  const OTHER = "someone-else";
+
+  it("gives a different account its own allowance", () => {
+    const spent: ClaimPromptStore = {
+      [OTHER]: { shows: CLAIM_PROMPT_MAX_SHOWS, lastShownAt: now - 1000 },
+    };
+    expect(claimPromptDue(spent, now, OTHER)).toBe(false);
+    expect(claimPromptDue(spent, now, ME)).toBe(true);
+  });
+
+  it("carries every other account's record through untouched", () => {
+    const theirs: ClaimPromptStore = {
+      [OTHER]: { shows: 2, lastShownAt: now - 1000 },
+    };
+    expect(claimPromptShown(theirs, now, ME)).toEqual({
+      [OTHER]: { shows: 2, lastShownAt: now - 1000 },
+      [ME]: { shows: 1, lastShownAt: now },
+    });
+  });
+
+  // The eviction bug. With a single unkeyed slot each account overwrote the
+  // other's record on every boot, so `shows` never passed one and BOTH were
+  // prompted forever — the exact opposite of a decay rule.
+  it("honours each cap independently when two accounts alternate", () => {
+    let current: ClaimPromptStore = {};
+    let clock = now;
+    const shown: Record<string, number> = { [ME]: 0, [OTHER]: 0 };
+    // 40 boots, alternating sign-ins, a day apart so the interval never gates.
+    for (let boot = 0; boot < 40; boot++) {
+      const who = boot % 2 === 0 ? ME : OTHER;
+      if (claimPromptDue(current, clock, who)) {
+        current = claimPromptShown(current, clock, who);
+        shown[who]++;
+      }
+      clock += CLAIM_PROMPT_INTERVAL_MS;
+    }
+    expect(shown[ME]).toBe(CLAIM_PROMPT_MAX_SHOWS);
+    expect(shown[OTHER]).toBe(CLAIM_PROMPT_MAX_SHOWS);
+    expect(current[ME].shows).toBe(CLAIM_PROMPT_MAX_SHOWS);
+    expect(current[OTHER].shows).toBe(CLAIM_PROMPT_MAX_SHOWS);
+  });
+
+  // Storage is shared by every account that ever signs in here, so the map is
+  // bounded. The account being recorded is never the one dropped.
+  it("prunes the least recently prompted account past the cap", () => {
+    let current: ClaimPromptStore = {};
+    let clock = now;
+    for (let i = 0; i < CLAIM_PROMPT_MAX_ACCOUNTS + 3; i++) {
+      current = claimPromptShown(current, clock, `account-${i}`);
+      clock += 1000;
+    }
+    const ids = Object.keys(current);
+    expect(ids.length).toBe(CLAIM_PROMPT_MAX_ACCOUNTS);
+    expect(ids).toContain(`account-${CLAIM_PROMPT_MAX_ACCOUNTS + 2}`);
+    expect(ids).not.toContain("account-0");
+  });
+});
+
+describe("parseClaimPromptStore", () => {
   it("round-trips what claimPromptShown writes", () => {
-    const record = claimPromptShown(null, 1_757_000_000_000, ME);
-    expect(parseClaimPromptRecord(JSON.stringify(record))).toEqual(record);
+    const written = claimPromptShown({}, 1_757_000_000_000, ME);
+    expect(parseClaimPromptStore(JSON.stringify(written))).toEqual(written);
   });
 
   // Corrupt storage costs the player at most one extra prompt. Reading it as
@@ -250,21 +301,29 @@ describe("parseClaimPromptRecord", () => {
       "null",
       "42",
       '"a string"',
+      "[]",
       "{}",
-      '{"publicId":"p1","shows":"3","lastShownAt":1}',
-      '{"publicId":"p1","shows":3}',
-      '{"publicId":"p1","shows":3,"lastShownAt":null}',
-      '{"publicId":"p1","shows":null,"lastShownAt":1}',
-      // No publicId at all: cannot be shown to be this account's, so it is
-      // not treated as this account's.
-      '{"shows":3,"lastShownAt":1}',
-      '{"publicId":"","shows":3,"lastShownAt":1}',
+      '{"p1":{"shows":"3","lastShownAt":1}}',
+      '{"p1":{"shows":3}}',
+      '{"p1":{"shows":3,"lastShownAt":null}}',
+      '{"p1":null}',
+      '{"":{"shows":3,"lastShownAt":1}}',
+      // The pre-map shape, which carried publicId inside the record.
+      '{"publicId":"p1","shows":3,"lastShownAt":1}',
     ]) {
-      expect(parseClaimPromptRecord(raw), String(raw)).toBeNull();
-      expect(claimPromptDue(parseClaimPromptRecord(raw), Date.now(), ME)).toBe(
-        true,
-      );
+      expect(
+        claimPromptDue(parseClaimPromptStore(raw), Date.now(), "p1"),
+        String(raw),
+      ).toBe(true);
     }
+  });
+
+  // One bad entry must not discard the good ones alongside it.
+  it("keeps the usable entries beside a malformed one", () => {
+    const parsed = parseClaimPromptStore(
+      '{"good":{"shows":3,"lastShownAt":1},"bad":{"shows":"x"}}',
+    );
+    expect(parsed).toEqual({ good: { shows: 3, lastShownAt: 1 } });
   });
 });
 
@@ -313,37 +372,6 @@ describe("isCleanHomepage", () => {
   });
 });
 
-describe("claim prompt decay is per account, not per device", () => {
-  const now = Date.UTC(2026, 8, 9, 12, 0, 0);
-  const OTHER = "someone-else";
-
-  // Storage is shared by every account that signs in on this machine. Without
-  // the publicId a household's second player inherits a spent allowance and is
-  // never told about a grant that is genuinely theirs.
-  it("gives a different account its own allowance", () => {
-    const spent: ClaimPromptRecord = {
-      publicId: OTHER,
-      shows: CLAIM_PROMPT_MAX_SHOWS,
-      lastShownAt: now - 1000,
-    };
-    expect(claimPromptDue(spent, now, OTHER)).toBe(false);
-    expect(claimPromptDue(spent, now, ME)).toBe(true);
-  });
-
-  it("starts a new account's count at one rather than continuing another's", () => {
-    const theirs: ClaimPromptRecord = {
-      publicId: OTHER,
-      shows: 2,
-      lastShownAt: now - 1000,
-    };
-    expect(claimPromptShown(theirs, now, ME)).toEqual({
-      publicId: ME,
-      shows: 1,
-      lastShownAt: now,
-    });
-  });
-});
-
 describe("runBootInterrupt", () => {
   const now = 1_757_000_000_000;
 
@@ -351,7 +379,7 @@ describe("runBootInterrupt", () => {
     const calls = {
       confirmed: [] as string[],
       navigated: [] as string[],
-      stored: [] as ClaimPromptRecord[],
+      stored: [] as ClaimPromptStore[],
       rewardsOpened: 0,
     };
     const base: BootInterruptPorts = {
@@ -364,14 +392,14 @@ describe("runBootInterrupt", () => {
       },
       navigate: (hash) => calls.navigated.push(hash),
       openRewards: () => calls.rewardsOpened++,
-      storeClaimPrompt: (record) => calls.stored.push(record),
+      storeClaimPrompt: (store) => calls.stored.push(store),
       now: () => now,
       ...overrides,
     };
     return { base, calls };
   }
 
-  const context = { claimRecord: null, publicId: ME };
+  const context = { claimStore: {}, publicId: ME };
 
   async function run(
     interrupt: BootInterrupt | null,
@@ -404,7 +432,7 @@ describe("runBootInterrupt", () => {
         confirm: async () => answer,
       });
       expect(calls.stored, String(answer)).toEqual([
-        { publicId: ME, shows: 1, lastShownAt: now },
+        { [ME]: { shows: 1, lastShownAt: now } },
       ]);
     }
   });

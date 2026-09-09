@@ -165,10 +165,10 @@ export function nextBootInterrupt(
 // Claim-prompt decay
 // ---------------------------------------------------------------------------
 
-/** localStorage key holding the ClaimPromptRecord below. */
+/** localStorage key holding the ClaimPromptStore below. */
 export const CLAIM_PROMPT_KEY = "usernameClaimPrompt";
 
-/** How many times the claim prompt may ever interrupt one profile. */
+/** How many times the claim prompt may ever interrupt one account. */
 export const CLAIM_PROMPT_MAX_SHOWS = 3;
 
 /**
@@ -179,48 +179,67 @@ export const CLAIM_PROMPT_MAX_SHOWS = 3;
 export const CLAIM_PROMPT_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 /**
- * What we remember about a profile's claim prompts.
- *
- * `publicId` is what makes this per-ACCOUNT rather than per-device. Storage is
- * shared by every account that signs in on this machine, so without it a
- * household's second player — or anyone who signs out and back in as someone
- * else — inherits a spent allowance and is never told about a grant that is
- * genuinely theirs. Three dismissals by one person would silence the prompt on
- * that machine forever.
+ * How many accounts' records to keep. Storage is shared by every account that
+ * ever signs in here, so without a bound a shared machine grows this blob
+ * without limit. The cap is generous enough that no household reaches it and
+ * the least recently prompted account is the one dropped.
  */
+export const CLAIM_PROMPT_MAX_ACCOUNTS = 8;
+
+/** What we remember about one account's claim prompts. */
 export interface ClaimPromptRecord {
-  publicId: string;
   shows: number;
   lastShownAt: number;
 }
 
 /**
- * Read the stored record, or null when there is nothing usable.
+ * Records for every account seen on this device, keyed by publicId.
  *
- * Anything unparseable reads as "never shown" rather than "already spent":
+ * A map rather than one record, because storage is per DEVICE and the
+ * allowance is per ACCOUNT. A single slot cannot hold both: whichever account
+ * signed in last would own it, so two entitled players alternating on one
+ * machine would evict each other every boot, `shows` would never pass one, and
+ * both would be prompted forever — the opposite of a decay rule. Keying also
+ * stops a household's second player inheriting a spent allowance and never
+ * being told about a grant that is genuinely theirs.
+ */
+export type ClaimPromptStore = Record<string, ClaimPromptRecord>;
+
+/**
+ * Read the stored map, dropping anything unusable.
+ *
+ * A malformed entry reads as "never shown" rather than "already spent":
  * corrupt storage should cost the player at most one extra prompt, not the
  * only notice they will ever get that they are paying for something unused.
+ * One bad entry never discards the others.
  */
-export function parseClaimPromptRecord(
-  raw: string | null,
-): ClaimPromptRecord | null {
-  if (raw === null) return null;
+export function parseClaimPromptStore(raw: string | null): ClaimPromptStore {
+  if (raw === null) return {};
+  let parsed: unknown;
   try {
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== "object" || parsed === null) return null;
-    const { publicId, shows, lastShownAt } = parsed as Record<string, unknown>;
-    if (typeof publicId !== "string" || publicId === "") return null;
-    if (typeof shows !== "number" || !Number.isFinite(shows)) return null;
-    if (typeof lastShownAt !== "number" || !Number.isFinite(lastShownAt))
-      return null;
-    return { publicId, shows, lastShownAt };
+    parsed = JSON.parse(raw);
   } catch {
-    return null;
+    return {};
   }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
+    return {};
+  const store: ClaimPromptStore = {};
+  for (const [publicId, value] of Object.entries(
+    parsed as Record<string, unknown>,
+  )) {
+    if (publicId === "") continue;
+    if (typeof value !== "object" || value === null) continue;
+    const { shows, lastShownAt } = value as Record<string, unknown>;
+    if (typeof shows !== "number" || !Number.isFinite(shows)) continue;
+    if (typeof lastShownAt !== "number" || !Number.isFinite(lastShownAt))
+      continue;
+    store[publicId] = { shows, lastShownAt };
+  }
+  return store;
 }
 
 /**
- * May the claim prompt fire now?
+ * May the claim prompt fire now, for this account?
  *
  * A clock that has run backwards (a system clock correction, a profile copied
  * between machines) makes the elapsed time negative. That is treated as "not
@@ -228,14 +247,12 @@ export function parseClaimPromptRecord(
  * on a machine whose clock is simply wrong.
  */
 export function claimPromptDue(
-  record: ClaimPromptRecord | null,
+  store: ClaimPromptStore,
   now: number,
   publicId: string,
 ): boolean {
-  if (record === null) return true;
-  // A different account on the same machine has its own allowance — see
-  // ClaimPromptRecord. Reads as never shown, which is exactly what it is.
-  if (record.publicId !== publicId) return true;
+  const record = store[publicId];
+  if (record === undefined) return true;
   if (record.shows >= CLAIM_PROMPT_MAX_SHOWS) return false;
   const elapsed = now - record.lastShownAt;
   if (elapsed < 0) return false;
@@ -243,18 +260,30 @@ export function claimPromptDue(
 }
 
 /**
- * The record to store once the prompt has been shown.
+ * The store to write once the prompt has been shown to this account.
  *
- * A record belonging to someone else starts this account's count at one rather
- * than continuing theirs — the same rule claimPromptDue reads it by.
+ * Every other account's record is carried through untouched — that is the
+ * whole point of the map — and the oldest are pruned only once the cap is
+ * exceeded, never the account being recorded.
  */
 export function claimPromptShown(
-  record: ClaimPromptRecord | null,
+  store: ClaimPromptStore,
   now: number,
   publicId: string,
-): ClaimPromptRecord {
-  const mine = record !== null && record.publicId === publicId ? record : null;
-  return { publicId, shows: (mine?.shows ?? 0) + 1, lastShownAt: now };
+): ClaimPromptStore {
+  const next: ClaimPromptStore = {
+    ...store,
+    [publicId]: { shows: (store[publicId]?.shows ?? 0) + 1, lastShownAt: now },
+  };
+  const ids = Object.keys(next);
+  if (ids.length <= CLAIM_PROMPT_MAX_ACCOUNTS) return next;
+  // Drop the least recently prompted, never the one just recorded.
+  const keep = ids
+    .sort((a, b) => next[b].lastShownAt - next[a].lastShownAt)
+    .slice(0, CLAIM_PROMPT_MAX_ACCOUNTS);
+  const pruned: ClaimPromptStore = {};
+  for (const id of keep) pruned[id] = next[id];
+  return pruned;
 }
 
 // ---------------------------------------------------------------------------
@@ -290,13 +319,13 @@ export interface BootInterruptPorts {
   navigate(hash: string): void;
   /** Opens the unclaimed-rewards popup. */
   openRewards(): void;
-  /** Persists the claim-prompt record. */
-  storeClaimPrompt(record: ClaimPromptRecord): void;
+  /** Persists the whole claim-prompt map. */
+  storeClaimPrompt(store: ClaimPromptStore): void;
   now(): number;
 }
 
 export interface BootInterruptContext {
-  claimRecord: ClaimPromptRecord | null;
+  claimStore: ClaimPromptStore;
   publicId: string;
 }
 
@@ -345,7 +374,7 @@ export async function runBootInterrupt(
       // because the promise only settles on dismissal, and a second boot in
       // the meantime would otherwise ask again.
       ports.storeClaimPrompt(
-        claimPromptShown(context.claimRecord, ports.now(), context.publicId),
+        claimPromptShown(context.claimStore, ports.now(), context.publicId),
       );
       const accepted = await ports.confirm(body, heading, confirmText);
       if (accepted) ports.navigate(USERNAME_FORM_HASH);

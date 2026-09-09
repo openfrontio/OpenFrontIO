@@ -30,7 +30,7 @@ import {
   CLAIM_PROMPT_KEY,
   claimPromptDue,
   nextBootInterrupt,
-  parseClaimPromptRecord,
+  parseClaimPromptStore,
   runBootInterrupt,
 } from "./BootInterrupts";
 import "./ChangeUsernameModal";
@@ -664,7 +664,7 @@ class Client {
         const { usernameStatus, username, usernameBase, publicId } =
           userMeResponse.player;
         const rewards = userMeResponse.player.rewards ?? [];
-        const claimRecord = parseClaimPromptRecord(
+        const claimStore = parseClaimPromptStore(
           localStorage.getItem(CLAIM_PROMPT_KEY),
         );
         await runBootInterrupt(
@@ -675,9 +675,9 @@ class Client {
             usernameBase,
             lapseNoticeDue: lapseShown,
             rewardCount: rewards.length,
-            claimPromptDue: claimPromptDue(claimRecord, Date.now(), publicId),
+            claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
           }),
-          { claimRecord, publicId },
+          { claimStore, publicId },
           {
             translate: translateText,
             confirm: (body, heading, confirmText) =>
@@ -692,8 +692,8 @@ class Client {
               window.location.hash = hash;
             },
             openRewards: () => this.rewardsModal?.openWithRewards(rewards),
-            storeClaimPrompt: (record) =>
-              localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(record)),
+            storeClaimPrompt: (store) =>
+              localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(store)),
             now: () => Date.now(),
           },
         );
