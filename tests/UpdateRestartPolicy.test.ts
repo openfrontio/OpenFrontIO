@@ -42,6 +42,8 @@ describe("update.sh restart policy", () => {
   it.each([
     ["main", "openfront.dev"],
     ["nightly", "openfront.dev"],
+    ["green", "openfront.dev"],
+    ["blue", "openfront.dev"],
   ])("restarts the long-lived %s.%s deployment after a crash", (sub, dom) => {
     expect(restartPolicyFor(sub, dom)).toBe("always");
   });
