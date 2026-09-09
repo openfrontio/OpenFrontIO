@@ -864,7 +864,9 @@ export class InputHandler {
     if (this.activeKeys.has(this.keybinds.emojiMenuModifier)) {
       this.suppressNextTap = false;
       if (this.uiState.ghostStructure === null) {
-      this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
+        this.eventBus.emit(
+          new ShowEmojiMenuEvent(event.clientX, event.clientY),
+        );
       }
       return;
     }
@@ -898,12 +900,11 @@ export class InputHandler {
   }
 
   private onScroll(event: WheelEvent) {
-    if (event.shiftKey || event.altKey){
+    if (event.shiftKey || event.altKey) {
       return; // Shift/Alt scroll is handled separately
     }
     const realCtrl =
-      this.activeKeys.has("ControlLeft") ||
-      this.activeKeys.has("ControlRight");
+      this.activeKeys.has("ControlLeft") || this.activeKeys.has("ControlRight");
     if (event.ctrlKey) {
       if (!realCtrl) {
         // Pinch-to-zoom gesture (trackpad): small deltas, amplify.
@@ -962,11 +963,12 @@ export class InputHandler {
   private onAltScroll(event: WheelEvent) {
     if (event.altKey) {
       const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
-      this.setGhostStructure(this.uiState.ghostStructure,
-      scrollValue > 0 ? "decrease" : "increase");
+      this.setGhostStructure(
+        this.uiState.ghostStructure,
+        scrollValue > 0 ? "decrease" : "increase",
+      );
     }
   }
-
 
   private onPointerMove(event: PointerEvent) {
     if (event.button === 1) {
@@ -1057,7 +1059,8 @@ export class InputHandler {
   private setGhostStructure(
     ghostStructure: PlayerBuildableUnitType | null,
     source: "increase" | "decrease" | "hotkey" = "hotkey",
-    ) { if (
+  ) {
+    if (
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null
     ) {
@@ -1083,11 +1086,10 @@ export class InputHandler {
           this.uiState.upgradeMultiplier = MAX_UPGRADE_AMOUNT;
         }
       }
-      if (source === "decrease"){
+      if (source === "decrease") {
         this.uiState.upgradeMultiplier =
-        currentMultiplier > 1 ? currentMultiplier - 1 : 1;
+          currentMultiplier > 1 ? currentMultiplier - 1 : 1;
       }
-
     } else {
       this.uiState.upgradeMultiplier = 1;
       this.uiState.ghostStructure = ghostStructure;
