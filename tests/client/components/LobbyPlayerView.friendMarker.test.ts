@@ -109,6 +109,16 @@ describe("lobby friend marker", () => {
     expect(markedPlayers(view)).toEqual([]);
   });
 
+  it("withholds the marker when the lobby anonymizes names", async () => {
+    const view = await mount({
+      currentClientID: "me",
+      anonymizeNames: true,
+      clients: [client("me", { friends: ["pal"] }), client("pal")],
+    });
+
+    expect(markedPlayers(view)).toEqual([]);
+  });
+
   it("recomputes when the roster changes", async () => {
     const view = await mount({
       currentClientID: "me",

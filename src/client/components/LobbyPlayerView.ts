@@ -576,7 +576,8 @@ export class LobbyTeamView extends LitElement {
   private renderFriendBadge(client: ClientInfo) {
     if (!this._viewerFriends.has(client.clientID)) return html``;
     if (this.isCurrentPlayer(client)) return html``;
-    if (this.userSettings.anonymousNames()) return html``;
+    if (this.anonymizeNames || this.userSettings.anonymousNames())
+      return html``;
     return html`<svg
       viewBox="0 0 24 24"
       class="lobby-friend-badge inline-block w-4 h-4 align-[-3px] text-emerald-400 shrink-0"
