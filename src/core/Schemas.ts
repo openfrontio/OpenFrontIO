@@ -362,6 +362,19 @@ export const PublicLobbyFullSchema = z.object({
   type: z.literal("full"),
   serverTime: zb.uint(),
   games: z.partialRecord(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+  // Build commit of the serving deployment. Clients on the homepage compare
+  // it to their own bundle's commit to detect that a new version deployed
+  // and prompt a refresh. Optional only so a server can omit it in tests; a
+  // bundle built before this field cannot decode the frame at all (zbin
+  // presence header shifts), which is the usual ship-together tradeoff.
+  gitCommit: z.string().max(64).optional(),
+  // False when the serving deployment is draining: the load balancer routes
+  // elsewhere and this one has stopped queueing public lobbies, so a pinned
+  // tab would watch the list empty out. Clients respond with the same reload
+  // prompt as a commit mismatch — which cannot catch this case by itself,
+  // because the pinned server reports its own commit and a same-commit
+  // blue/green flip keeps them equal. Absent means active.
+  active: z.boolean().optional(),
 });
 
 export const PublicLobbyCountsSchema = z.object({
@@ -961,6 +974,12 @@ export const ServerErrorSchema = z.object({
   type: z.literal("error"),
   error: z.string(),
   message: z.string().optional(),
+  // Build commit of the rejecting server, sent with version_mismatch so the
+  // client can log which build it must update to. Rides the same flip as
+  // ClientJoinMessageSchema.gitCommit: optional only so other errors can omit
+  // it — a pre-field bundle cannot decode the frame (zbin presence header
+  // shifts), the same ship-together tradeoff as PublicLobbyFullSchema.
+  gitCommit: z.string().max(64).optional(),
 });
 
 export const ServerLobbyInfoMessageSchema = z.object({
@@ -1089,6 +1108,11 @@ export const ClientJoinMessageSchema = z.object({
   turnstileToken: z.string().nullable(),
   // Watch without playing: no spawn, no team, no lobby slot.
   spectator: z.boolean().optional(),
+  // Build commit of the client bundle. The sim only stays deterministic when
+  // every client in a game runs identical code, so the server rejects joins
+  // whose commit doesn't match its own (missing counts as a mismatch —
+  // pre-feature bundles are by definition stale).
+  gitCommit: z.string().max(64).optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
@@ -1097,6 +1121,8 @@ export const ClientRejoinMessageSchema = z.object({
   // Note: clientID is NOT sent - server looks it up from persistentID in token
   lastTurn: zb.uint(),
   token: TokenSchema,
+  // See ClientJoinMessageSchema.gitCommit.
+  gitCommit: z.string().max(64).optional(),
 });
 
 // Switch between playing and watching from the lobby screen. Lobby-phase only:

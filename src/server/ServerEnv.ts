@@ -146,6 +146,25 @@ export class ServerEnv {
   static subdomain(): string {
     return process.env.SUBDOMAIN ?? "";
   }
+  // Host this deployment is reachable on directly (`blue.openfront.io`),
+  // bypassing the load balancer. Injected into index.html as `serverHost` so
+  // a tab keeps talking to the deployment that served it — including
+  // reconnects mid-game — after the load balancer flips to the other
+  // deployment. Undefined in dev (no SUBDOMAIN): the client falls back to
+  // same-origin.
+  static publicHost(): string | undefined {
+    const subdomain = ServerEnv.subdomain();
+    const domain = ServerEnv.domain();
+    if (!subdomain || !domain) return undefined;
+    return `${subdomain}.${domain}`;
+  }
+  // Host players load the page from when it is a load balancer in front of
+  // several deployments (`openfront.io` for blue/green). Unset for standalone
+  // deployments (beta, staging branches), where the page host is publicHost.
+  static siteHost(): string | undefined {
+    const v = process.env.SITE_HOST;
+    return v && v.length > 0 ? v : undefined;
+  }
   static otelEnabled(): boolean {
     return (
       ServerEnv.gameEnv !== GameEnv.Dev &&

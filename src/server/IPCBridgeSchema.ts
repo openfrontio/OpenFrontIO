@@ -77,6 +77,11 @@ const MasterLobbiesBroadcastSchema = z.object({
   // stay advertised. The owning worker clears the loser's listed flag so
   // worker state, host UI, and the broadcast agree.
   delistGameIDs: z.array(z.string()).optional(),
+  // Whether this deployment is the one the load balancer routes to. Workers
+  // stamp it onto the public-lobby feed so pinned homepage tabs on a draining
+  // deployment learn to reload (see PublicLobbyFullSchema.active). Optional
+  // only for old fixtures; the master always sends it, absent means active.
+  active: z.boolean().optional(),
 });
 
 // Master sends a message to worker to schedule a new public game/lobby.

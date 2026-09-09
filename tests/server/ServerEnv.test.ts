@@ -107,3 +107,37 @@ describe("ServerEnv.allowedFlares", () => {
     expect(ServerEnv.allowedFlares()).toEqual(["admin", "beta"]);
   });
 });
+
+describe("ServerEnv.publicHost", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test("is the deployment's own host, subdomain.domain", () => {
+    vi.stubEnv("SUBDOMAIN", "blue");
+    vi.stubEnv("DOMAIN", "openfront.io");
+    expect(ServerEnv.publicHost()).toBe("blue.openfront.io");
+  });
+
+  test("is undefined without a subdomain (dev)", () => {
+    vi.stubEnv("SUBDOMAIN", "");
+    vi.stubEnv("DOMAIN", "localhost");
+    expect(ServerEnv.publicHost()).toBeUndefined();
+  });
+});
+
+describe("ServerEnv.siteHost", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test("returns the configured load balancer host", () => {
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    expect(ServerEnv.siteHost()).toBe("openfront.io");
+  });
+
+  test("is undefined when unset or empty (standalone deployment)", () => {
+    vi.stubEnv("SITE_HOST", "");
+    expect(ServerEnv.siteHost()).toBeUndefined();
+  });
+});

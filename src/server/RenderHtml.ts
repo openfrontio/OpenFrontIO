@@ -29,6 +29,10 @@ export async function renderHtmlContent(htmlPath: string): Promise<string> {
     turnstileSiteKey: JSON.stringify(ServerEnv.turnstileSiteKey()),
     jwtAudience: JSON.stringify(ServerEnv.jwtAudience()),
     instanceId: JSON.stringify(ServerEnv.instanceId()),
+    serverHost:
+      ServerEnv.publicHost() === undefined
+        ? undefined
+        : JSON.stringify(ServerEnv.publicHost()),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(

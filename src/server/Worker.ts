@@ -413,6 +413,43 @@ export async function startWorker() {
           return;
         }
 
+        // The sim is deterministic only when every client in a game runs
+        // identical code, so a client built from a different commit (e.g. a
+        // tab left open across a deploy) would desync the game. Reject it
+        // with a typed error the client answers by refreshing. A missing
+        // commit means a pre-feature bundle, which is stale by definition.
+        // The "desktop" placeholder is exempt: an Electron shell predating
+        // OPE-358 injects it no matter how fresh its self-updating bundle is
+        // (GameVersion.ts documents the shape as live), so treating it as a
+        // mismatch would lock those players out permanently — and the
+        // desktop error path is a terminal alert with no retry. The grace
+        // dies with the last pre-OPE-358 shell.
+        if (
+          clientMsg.gitCommit !== ServerEnv.gitCommit() &&
+          clientMsg.gitCommit !== "desktop"
+        ) {
+          log.info("rejecting version-mismatched client", {
+            gameID: clientMsg.gameID,
+            clientCommit: clientMsg.gitCommit,
+          });
+          ws.send(
+            encodeServerMessage(
+              {
+                type: "error",
+                error: "version_mismatch",
+                gitCommit: ServerEnv.gitCommit(),
+              } satisfies ServerErrorMessage,
+              undefined,
+            ),
+          );
+          // Normal closure: the typed error above is the whole message. The
+          // client latches Normal silently, so nothing stacks on the alert; a
+          // 4xxx rejection would pop a generic "connection refused" dialog on
+          // top of it, and a retryable code makes it reconnect and loop.
+          ws.close(CloseCode.Normal, "Version mismatch");
+          return;
+        }
+
         // Verify token signature
         const result = await verifyClientToken(clientMsg.token);
         if (result.type === "error") {
