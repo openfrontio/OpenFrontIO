@@ -43,6 +43,7 @@ import {
 } from "../core/ZbinWire";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
+import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
 import { translateText } from "./Utils";
@@ -419,10 +420,14 @@ export class Transport {
     this.isSessionReady = false;
     this.startPing();
     this.killExistingSocket();
-    // WS origin comes from ClientEnv (same-origin on web, audience-derived on
-    // the desktop app://openfront origin), not window.location.host.
-    const workerPath = ClientEnv.workerPath(this.lobbyConfig.gameID);
-    this.socket = new WebSocket(`${ClientEnv.serverWsBase()}/${workerPath}`);
+    // WS origin comes from ClientEnv, resolved per game: the id's letter
+    // names the hosting deployment, so a shared lobby link or rejoin works
+    // from any shell in the fleet. Own/legacy ids keep the historical
+    // behavior (same-origin on web, serverHost on the desktop app).
+    const workerPath = ClientEnv.gameWorkerPath(this.lobbyConfig.gameID);
+    this.socket = new WebSocket(
+      `${ClientEnv.gameWsBase(this.lobbyConfig.gameID)}/${workerPath}`,
+    );
     // Every frame is a zbin payload; without this they would arrive as Blobs.
     this.socket.binaryType = "arraybuffer";
     this.onconnect = onconnect;
@@ -494,6 +499,21 @@ export class Transport {
     }
     this.connectionRefused = true;
     this.stopPing();
+    // WrongWorker: the worker says it doesn't own this game, which means
+    // this bundle routed with a stale worker count. One full navigation to
+    // the game's own host re-fetches shell + cluster map and re-resolves;
+    // the sessionStorage latch stops a loop if the fresh map still
+    // misroutes (a real bug), falling through to the dialog instead. Not on
+    // desktop: its shell owns navigation and updates its map at boot.
+    if (reason === CloseReason.WrongWorker && !isDesktopShell()) {
+      const gameID = this.lobbyConfig.gameID;
+      const latch = `wrong-worker-redirect:${gameID}`;
+      if (sessionStorage.getItem(latch) === null) {
+        sessionStorage.setItem(latch, "1");
+        window.location.href = `${ClientEnv.gameHttpBase(gameID)}/game/${gameID}`;
+        return;
+      }
+    }
     // The reason is a close_reason.* key the server chose. Anything else (a
     // proxy closing on its own, an empty reason) gets the generic text
     // rather than a bare key.

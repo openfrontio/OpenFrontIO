@@ -143,6 +143,42 @@ export class ClientEnv {
   static workerPath(gameID: GameID): string {
     return `w${ClientEnv.workerIndex(gameID)}`;
   }
+  // Which deployment hosts this game (docs/MultiServer.md): a 10-char id's
+  // leading letter names its server in the cluster map.
+  static resolveGame(gameID: GameID): GameResolution {
+    const v = ClientEnv.get();
+    return resolveGameHost(gameID, v.cluster, v.instanceLetter);
+  }
+  // True when the id carries a letter this bundle's map doesn't know: the
+  // map predates the letter's deployment. Join flows answer by redirecting
+  // to the apex, whose shell carries the freshest map.
+  static gameLetterUnknown(gameID: GameID): boolean {
+    return ClientEnv.resolveGame(gameID).kind === "unknown-letter";
+  }
+  // Per-game WS/HTTP bases and worker path: same-origin (or the desktop
+  // serverHost) for own and legacy games, the owning deployment's host —
+  // always TLS, cross-host maps only exist deployed — for foreign letters.
+  // An unknown letter resolves like "own" so plain fetches 404 into the
+  // existing not-found paths; flows that can redirect check
+  // gameLetterUnknown first.
+  static gameWsBase(gameID: GameID): string {
+    const r = ClientEnv.resolveGame(gameID);
+    return r.kind === "cross" ? `wss://${r.host}` : ClientEnv.serverWsBase();
+  }
+  static gameHttpBase(gameID: GameID): string {
+    const r = ClientEnv.resolveGame(gameID);
+    return r.kind === "cross"
+      ? `https://${r.host}`
+      : ClientEnv.serverHttpBase();
+  }
+  // The worker path on the game's own server: a foreign deployment's worker
+  // count comes from its cluster entry, not this server's.
+  static gameWorkerPath(gameID: GameID): string {
+    const r = ClientEnv.resolveGame(gameID);
+    return r.kind === "cross"
+      ? `w${simpleHash(gameID) % r.numWorkers}`
+      : ClientEnv.workerPath(gameID);
+  }
   // Explicit game-server host, injected by the desktop app (absent on web).
   static serverHost(): string | undefined {
     return ClientEnv.get().serverHost;
@@ -204,6 +240,38 @@ function resolveServerOrigin(
     return { secure: true, host: serverHost };
   }
   return { secure: locationProtocol === "https:", host: locationHost };
+}
+
+export type GameResolution =
+  | { kind: "own" }
+  | { kind: "cross"; host: string; numWorkers: number }
+  | { kind: "unknown-letter" };
+
+/**
+ * Which deployment hosts a game. Pure and exported for tests.
+ *
+ * - Legacy 8-char ids (and the never-minted 9-char length) carry no letter:
+ *   they were minted by whichever server this page already talks to, so they
+ *   stay on the own server.
+ * - No cluster map means an old desktop shell that predates it: everything
+ *   keeps routing to its configured serverHost, as before.
+ * - A 10-char id's leading letter is looked up in the map. Own letter (or a
+ *   letter the map doesn't know) is not a cross-host target; unknown letters
+ *   get their own kind so join flows can redirect to the apex for a fresher
+ *   map instead of silently 404ing.
+ */
+export function resolveGameHost(
+  gameID: string,
+  cluster: ClusterConfig | undefined,
+  instanceLetter: string | undefined,
+): GameResolution {
+  if (gameID.length < 10) return { kind: "own" };
+  if (cluster === undefined) return { kind: "own" };
+  const letter = gameID[0];
+  const entry = cluster[letter];
+  if (entry === undefined) return { kind: "unknown-letter" };
+  if (letter === instanceLetter) return { kind: "own" };
+  return { kind: "cross", host: entry.host, numWorkers: entry.numWorkers };
 }
 
 /** Game-server WebSocket origin: see resolveServerOrigin. */

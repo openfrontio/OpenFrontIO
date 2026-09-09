@@ -16,6 +16,9 @@ vi.mock("../../src/client/ClientEnv", () => ({
   ClientEnv: {
     workerPath: () => "w0",
     serverWsBase: () => "ws://game.test",
+    gameWorkerPath: () => "w0",
+    gameWsBase: () => "ws://game.test",
+    gameHttpBase: () => "http://game.test",
     gitCommit: () => "test-commit",
   },
 }));

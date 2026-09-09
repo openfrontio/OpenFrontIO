@@ -26,6 +26,9 @@ vi.mock("src/client/ClientEnv", () => ({
   ClientEnv: {
     workerPath: vi.fn(() => "w0"),
     serverWsBase: vi.fn(() => "ws://game.test"),
+    gameWorkerPath: vi.fn(() => "w0"),
+    gameWsBase: vi.fn(() => "ws://game.test"),
+    gameHttpBase: vi.fn(() => "http://game.test"),
   },
 }));
 
@@ -203,5 +206,31 @@ describe("Transport terminal connection refused", () => {
 
     expect(sockets).toHaveLength(2);
     expect(modalMocks.showInGameConfirm).not.toHaveBeenCalled();
+  });
+
+  // WrongWorker means this bundle routed with a stale worker count: one full
+  // navigation to the game's own host re-fetches shell + cluster map. The
+  // sessionStorage latch keeps a still-wrong fresh map from looping — the
+  // second refusal falls through to the regular dialog.
+  it("navigates to the game's host on a wrong-worker close, once", () => {
+    sessionStorage.clear();
+    connectTransport();
+    sockets[0].serverClose(CloseCode.WrongWorker, CloseReason.WrongWorker);
+
+    expect(window.location.href).toBe("http://game.test/game/abcd1234");
+    expect(modalMocks.showInGameConfirm).not.toHaveBeenCalled();
+  });
+
+  it("shows the dialog instead of looping on a second wrong-worker close", () => {
+    sessionStorage.clear();
+    sessionStorage.setItem("wrong-worker-redirect:abcd1234", "1");
+    connectTransport();
+    sockets[0].serverClose(CloseCode.WrongWorker, CloseReason.WrongWorker);
+
+    expect(window.location.href).toBe("http://localhost:9000/w1/game/abcd1234");
+    expect(modalMocks.showInGameConfirm).toHaveBeenCalledTimes(1);
+    expect(modalMocks.showInGameConfirm.mock.calls[0][0]).toContain(
+      CloseReason.WrongWorker,
+    );
   });
 });

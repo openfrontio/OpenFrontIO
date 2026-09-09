@@ -1521,7 +1521,7 @@ export async function openSubscriptionPortal(): Promise<string | false> {
 export async function fetchLobbyListed(gameID: string): Promise<boolean> {
   try {
     const res = await fetch(
-      `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(gameID)}/api/game/${gameID}`,
+      `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}`,
       { headers: { Accept: "application/json" } },
     );
     if (!res.ok) return false;
@@ -1545,7 +1545,7 @@ export async function setLobbyListed(
   try {
     const token = await getPlayToken();
     const response = await fetch(
-      `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(gameID)}/api/game/${gameID}/listing`,
+      `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}/listing`,
       {
         method: "POST",
         headers: {
@@ -1615,7 +1615,7 @@ export async function createNextLobby(
 ): Promise<GameInfo> {
   const token = await getPlayToken();
   const response = await fetch(
-    `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
+    `${ClientEnv.gameHttpBase(previousGameID)}/${ClientEnv.gameWorkerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
     {
       method: "POST",
       headers: {
