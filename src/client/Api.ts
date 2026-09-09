@@ -633,15 +633,75 @@ export async function getMyTribeNames(): Promise<
 
 export type PurchaseTribeNameResult =
   | { ok: true; data: PostTribeNameResponse }
-  // 400: invalid, disallowed, or insufficient balance. `message` is the
-  // server's player-facing reason (already English, shown as-is).
-  | { ok: false; code: "invalid"; message?: string }
+  // 400 "Insufficient balance": the balance moved since the client's
+  // pre-check. Nothing charged.
+  | { ok: false; code: "insufficient_balance" }
+  // 400 insufficient_balance_debt: a refund/chargeback left the wallet
+  // negative; `debt` (bigint string) must be settled before anything is
+  // spendable. Nothing charged.
+  | { ok: false; code: "debt"; debt: string }
+  // 400: the name itself was refused. Each of the server's player-facing
+  // reasons maps to a code the caller translates — none of them reach the
+  // player as the server's English. See TRIBE_NAME_REFUSAL_CODES for why the
+  // set is an allowlist.
+  | { ok: false; code: "invalid_charset" }
+  | { ok: false; code: "invalid_no_letter" }
+  | { ok: false; code: "not_allowed" }
+  // The length rule carries its bounds, so the caller interpolates them.
+  | { ok: false; code: "length"; min: number; max: number }
   // 409: the name is already taken (names are globally unique).
   | { ok: false; code: "duplicate" }
   // 429: buying names too fast. `retryAfterSeconds` from the Retry-After
   // header (null when absent/unparseable).
   | { ok: false; code: "rate_limited"; retryAfterSeconds: number | null }
   | { ok: false; code: "failed" };
+
+// The endpoint's name-validation and moderation reasons, mapped to codes the
+// caller translates. Recognising a reason is what turns it into a localized
+// message; nothing is ever rendered from the server's English.
+//
+// An allowlist rather than a denylist of the machine keys, because the failure
+// mode is asymmetric. Anything unrecognised becomes a generic failure — mildly
+// unhelpful if it was prose. Echoing anything unrecognised puts the next
+// machine branch key the API adds straight on the player's screen, which is
+// how "insufficient_balance_debt" came to be displayed as an error message.
+//
+// Matched on the exact English because that is what the endpoint sends and
+// there is no code in the body to key off. If the API ever rewords one, the
+// player gets the generic failure until this is updated — the safe direction.
+const TRIBE_NAME_REFUSAL_CODES: Record<
+  string,
+  "invalid_charset" | "invalid_no_letter" | "not_allowed"
+> = {
+  "Name may only contain letters, numbers, spaces, and ' - . _ ! ?":
+    "invalid_charset",
+  "Name must contain a letter": "invalid_no_letter",
+  "This name is not allowed": "not_allowed",
+};
+// The length rule interpolates its bounds ("Name must be 3-24 characters"), so
+// it is matched by shape rather than listed. Anchored and digit-specific: a
+// bare "Name must be " prefix would pass through anything the API ever chose
+// to start that way, which is the denylist failure this is meant to avoid.
+// The bounds are captured so the caller can translate the message instead of
+// rendering the server's English.
+const TRIBE_NAME_LENGTH_REASON_RE = /^Name must be (\d+)-(\d+) characters$/;
+
+function tribeNameInvalidResult(
+  reason: string,
+): PurchaseTribeNameResult | undefined {
+  const length = TRIBE_NAME_LENGTH_REASON_RE.exec(reason);
+  if (length !== null) {
+    return {
+      ok: false,
+      code: "length",
+      min: Number(length[1]),
+      max: Number(length[2]),
+    };
+  }
+  const code = TRIBE_NAME_REFUSAL_CODES[reason];
+  if (code !== undefined) return { ok: false, code };
+  return undefined;
+}
 
 // POST /users/@me/tribe_names — buy a custom tribe name (200 plutonium). The
 // name is screened, charged, and goes live right away as `pending`; review is
@@ -665,11 +725,21 @@ export async function purchaseTribeName(
     }
     if (response.status === 400) {
       const body = await response.json().catch(() => null);
-      return {
-        ok: false,
-        code: "invalid",
-        message: typeof body?.reason === "string" ? body.reason : undefined,
-      };
+      const reason = typeof body?.reason === "string" ? body.reason : "";
+      // Balance reasons first: both are branch keys the shared spend helper
+      // emits, not prose to echo at the player.
+      if (reason === "insufficient_balance_debt") {
+        return { ok: false, code: "debt", debt: String(body.debt ?? "") };
+      }
+      if (reason === "Insufficient balance") {
+        return { ok: false, code: "insufficient_balance" };
+      }
+      const invalid = tribeNameInvalidResult(reason);
+      if (invalid !== undefined) return invalid;
+      // Not logging the body: an unrecognised reason is exactly the case where
+      // we don't know what it contains.
+      console.warn("purchaseTribeName: unrecognised 400 reason");
+      return { ok: false, code: "failed" };
     }
     if (response.status === 409) {
       return { ok: false, code: "duplicate" };
@@ -705,9 +775,13 @@ export async function purchaseTribeName(
 
 export type BoostTribeNameResult =
   | { ok: true; data: PostTribeBoostResponse }
-  // 400 with a player-facing reason — today that's only "Insufficient
-  // balance" (the balance moved since the client's pre-check).
+  // 400 "Insufficient balance": the balance moved since the client's
+  // pre-check. Nothing charged.
   | { ok: false; code: "insufficient_balance" }
+  // 400 insufficient_balance_debt: a refund/chargeback left the wallet
+  // negative; `debt` (bigint string) must be settled before anything is
+  // spendable. Distinct from the above because topping up is not the remedy.
+  | { ok: false; code: "debt"; debt: string }
   // 404: not the caller's name, or it's no longer active (rejected/revoked).
   // Deliberately indistinguishable server-side — refresh the list.
   | { ok: false; code: "not_found" }
@@ -740,10 +814,17 @@ export async function boostTribeName(
     }
     if (response.status === 400) {
       const body = await response.json().catch(() => null);
-      // {"reason": "..."} is the player-facing 400 (insufficient balance);
-      // {"resource": "id"} means a malformed id — a client bug, not a
-      // player error, so it falls through to the generic failure.
+      // {"reason": "..."} is the player-facing 400 (insufficient balance, or
+      // a wallet left negative by a refund/chargeback); {"resource": "id"}
+      // means a malformed id — a client bug, not a player error, so it falls
+      // through to the generic failure.
       if (typeof body?.reason === "string") {
+        // Checked before the catch-all: collapsing debt into
+        // insufficient_balance sends a player with a negative wallet to the
+        // top-up dialog, which does not clear the debt.
+        if (body.reason === "insufficient_balance_debt") {
+          return { ok: false, code: "debt", debt: String(body.debt ?? "") };
+        }
         return { ok: false, code: "insufficient_balance" };
       }
       console.error("boostTribeName: bad request", body);
