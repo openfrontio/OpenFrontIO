@@ -633,8 +633,18 @@ export async function getMyTribeNames(): Promise<
 
 export type PurchaseTribeNameResult =
   | { ok: true; data: PostTribeNameResponse }
-  // 400: invalid, disallowed, or insufficient balance. `message` is the
-  // server's player-facing reason (already English, shown as-is).
+  // 400 "Insufficient balance": the balance moved since the client's
+  // pre-check. Nothing charged.
+  | { ok: false; code: "insufficient_balance" }
+  // 400 insufficient_balance_debt: a refund/chargeback left the wallet
+  // negative; `debt` (bigint string) must be settled before anything is
+  // spendable. Nothing charged.
+  | { ok: false; code: "debt"; debt: string }
+  // 400: the name itself was invalid or disallowed. `message` is the server's
+  // player-facing reason (already English, shown as-is) — which is why the
+  // two balance reasons above have to be pulled out first: they are branch
+  // keys, not prose, and "insufficient_balance_debt" is not something to show
+  // a player.
   | { ok: false; code: "invalid"; message?: string }
   // 409: the name is already taken (names are globally unique).
   | { ok: false; code: "duplicate" }
@@ -665,10 +675,19 @@ export async function purchaseTribeName(
     }
     if (response.status === 400) {
       const body = await response.json().catch(() => null);
+      const reason = typeof body?.reason === "string" ? body.reason : "";
+      // Balance reasons first: both are branch keys the shared spend helper
+      // emits, not prose to echo at the player.
+      if (reason === "insufficient_balance_debt") {
+        return { ok: false, code: "debt", debt: String(body.debt ?? "") };
+      }
+      if (reason === "Insufficient balance") {
+        return { ok: false, code: "insufficient_balance" };
+      }
       return {
         ok: false,
         code: "invalid",
-        message: typeof body?.reason === "string" ? body.reason : undefined,
+        message: reason === "" ? undefined : reason,
       };
     }
     if (response.status === 409) {
@@ -705,9 +724,13 @@ export async function purchaseTribeName(
 
 export type BoostTribeNameResult =
   | { ok: true; data: PostTribeBoostResponse }
-  // 400 with a player-facing reason — today that's only "Insufficient
-  // balance" (the balance moved since the client's pre-check).
+  // 400 "Insufficient balance": the balance moved since the client's
+  // pre-check. Nothing charged.
   | { ok: false; code: "insufficient_balance" }
+  // 400 insufficient_balance_debt: a refund/chargeback left the wallet
+  // negative; `debt` (bigint string) must be settled before anything is
+  // spendable. Distinct from the above because topping up is not the remedy.
+  | { ok: false; code: "debt"; debt: string }
   // 404: not the caller's name, or it's no longer active (rejected/revoked).
   // Deliberately indistinguishable server-side — refresh the list.
   | { ok: false; code: "not_found" }
@@ -740,10 +763,17 @@ export async function boostTribeName(
     }
     if (response.status === 400) {
       const body = await response.json().catch(() => null);
-      // {"reason": "..."} is the player-facing 400 (insufficient balance);
-      // {"resource": "id"} means a malformed id — a client bug, not a
-      // player error, so it falls through to the generic failure.
+      // {"reason": "..."} is the player-facing 400 (insufficient balance, or
+      // a wallet left negative by a refund/chargeback); {"resource": "id"}
+      // means a malformed id — a client bug, not a player error, so it falls
+      // through to the generic failure.
       if (typeof body?.reason === "string") {
+        // Checked before the catch-all: collapsing debt into
+        // insufficient_balance sends a player with a negative wallet to the
+        // top-up dialog, which does not clear the debt.
+        if (body.reason === "insufficient_balance_debt") {
+          return { ok: false, code: "debt", debt: String(body.debt ?? "") };
+        }
         return { ok: false, code: "insufficient_balance" };
       }
       console.error("boostTribeName: bad request", body);

@@ -144,6 +144,34 @@ export class TribesPanel extends LitElement {
       await this.refreshAfterPurchase();
       return;
     }
+    if (result.code === "debt") {
+      // A refund or chargeback left the wallet negative. Topping up is not
+      // the remedy and the top-up dialog would say the wrong thing, so state
+      // the debt instead — it settles automatically out of the next credit.
+      this.notice = {
+        kind: "error",
+        text: translateText("store.pack_debt", { debt: result.debt }),
+      };
+      await this.refreshAfterPurchase();
+      return;
+    }
+    if (result.code === "insufficient_balance") {
+      // The balance moved under us (another tab, another purchase) — refresh
+      // it and offer the top-up path, as the boost handler does.
+      await this.refreshAfterPurchase();
+      const price = this.price;
+      // No price means cosmetics.json has no tribeNames block, so there is no
+      // shortfall to quote — the generic failure is all we can honestly say.
+      if (price === null) {
+        this.notice = {
+          kind: "error",
+          text: translateText("store.purchase_failed"),
+        };
+        return;
+      }
+      this.showInsufficient(name, price);
+      return;
+    }
     if (result.code === "duplicate") {
       this.notice = {
         kind: "error",
@@ -164,8 +192,10 @@ export class TribesPanel extends LitElement {
       };
       return;
     }
-    // "invalid" carries the server's player-facing reason (bad name,
-    // disallowed, or insufficient balance); fall back to a generic message.
+    // "invalid" carries the server's player-facing reason (a bad or
+    // disallowed name); fall back to a generic message. The balance reasons
+    // are handled above and never reach here — they are machine branch keys,
+    // not prose.
     let text = translateText("store.purchase_failed");
     if (result.code === "invalid" && result.message) {
       text = result.message;
@@ -192,11 +222,13 @@ export class TribesPanel extends LitElement {
     );
   }
 
-  private showInsufficient(tribe: TribeName, price: number) {
+  // `item` is what the player was trying to buy — a name they typed, or the
+  // name they were boosting.
+  private showInsufficient(item: string, price: number) {
     this.insufficientInfo = {
       currency: translateText("cosmetics.hard"),
       shortfall: Math.max(1, price - this.hardBalance),
-      item: tribe.displayName,
+      item,
       canTopUp: true,
     };
   }
@@ -208,7 +240,7 @@ export class TribesPanel extends LitElement {
 
     // Don't let the player submit into a guaranteed 400 — offer top-up.
     if (this.hardBalance < price) {
-      this.showInsufficient(tribe, price);
+      this.showInsufficient(tribe.displayName, price);
       return;
     }
 
@@ -243,11 +275,22 @@ export class TribesPanel extends LitElement {
       await this.refreshAfterPurchase();
       return;
     }
+    if (result.code === "debt") {
+      // Negative wallet after a refund/chargeback. Not the same as being
+      // short: buying more plutonium does not unblock this, so don't offer
+      // the top-up dialog — the debt clears out of the next credit.
+      this.boostNotice = {
+        kind: "error",
+        text: translateText("store.pack_debt", { debt: result.debt }),
+      };
+      await this.refreshAfterPurchase();
+      return;
+    }
     if (result.code === "insufficient_balance") {
       // The balance moved under us (another tab, another purchase) —
       // refresh it and show the top-up path.
       await this.refreshAfterPurchase();
-      this.showInsufficient(tribe, price);
+      this.showInsufficient(tribe.displayName, price);
       return;
     }
     if (result.code === "not_found") {
