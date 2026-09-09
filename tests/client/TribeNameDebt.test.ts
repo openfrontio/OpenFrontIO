@@ -90,19 +90,29 @@ describe("tribe-name spend paths map the debt reason", () => {
       });
     });
 
-    // The endpoint's own player-facing refusals. These carry no parameters,
-    // so there is nothing to interpolate and they pass through as prose.
+    // Each of the endpoint's refusals maps to a code the panel translates.
+    // Nothing reaches the player as the server's English, so a non-English
+    // locale gets a localized reason rather than a localized shell around an
+    // English sentence.
     it.each([
-      "Name may only contain letters, numbers, spaces, and ' - . _ ! ?",
-      "Name must contain a letter",
-      "This name is not allowed",
-    ])("passes the name rejection %s through as prose", async (reason) => {
+      [
+        "Name may only contain letters, numbers, spaces, and ' - . _ ! ?",
+        "invalid_charset",
+      ],
+      ["Name must contain a letter", "invalid_no_letter"],
+      ["This name is not allowed", "not_allowed"],
+    ])("maps the refusal %s to a code", async (reason, code) => {
       respond(400, { reason });
-      expect(await purchaseTribeName("Ninja")).toEqual({
-        ok: false,
-        code: "invalid",
-        message: reason,
-      });
+      expect(await purchaseTribeName("Ninja")).toEqual({ ok: false, code });
+    });
+
+    // The reasons are matched on their exact English, so a reworded one is
+    // unrecognised — the generic failure, never the raw server text.
+    it("does not echo a reworded refusal", async () => {
+      respond(400, { reason: "This name is not permitted" });
+      const result = await purchaseTribeName("Ninja");
+      expect(result).toEqual({ ok: false, code: "failed" });
+      expect(Object.values(result)).not.toContain("This name is not permitted");
     });
 
     // The length rule is the one refusal whose content is data — the bounds

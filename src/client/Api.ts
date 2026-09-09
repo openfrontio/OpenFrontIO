@@ -640,12 +640,14 @@ export type PurchaseTribeNameResult =
   // negative; `debt` (bigint string) must be settled before anything is
   // spendable. Nothing charged.
   | { ok: false; code: "debt"; debt: string }
-  // 400: the name itself was invalid or disallowed. `message` is one of the
-  // server's player-facing reasons, already English and shown as-is — see
-  // TRIBE_NAME_INVALID_REASONS for why that set is an allowlist.
-  | { ok: false; code: "invalid"; message: string }
-  // 400 for the length rule specifically. Returned structured rather than as
-  // prose because the bounds ARE the message, so the caller can translate it.
+  // 400: the name itself was refused. Each of the server's player-facing
+  // reasons maps to a code the caller translates — none of them reach the
+  // player as the server's English. See TRIBE_NAME_REFUSAL_CODES for why the
+  // set is an allowlist.
+  | { ok: false; code: "invalid_charset" }
+  | { ok: false; code: "invalid_no_letter" }
+  | { ok: false; code: "not_allowed" }
+  // The length rule carries its bounds, so the caller interpolates them.
   | { ok: false; code: "length"; min: number; max: number }
   // 409: the name is already taken (names are globally unique).
   | { ok: false; code: "duplicate" }
@@ -654,19 +656,28 @@ export type PurchaseTribeNameResult =
   | { ok: false; code: "rate_limited"; retryAfterSeconds: number | null }
   | { ok: false; code: "failed" };
 
-// The endpoint's name-validation and moderation messages: prose, written to be
-// read by the player, and the only 400 reasons this client shows verbatim.
+// The endpoint's name-validation and moderation reasons, mapped to codes the
+// caller translates. Recognising a reason is what turns it into a localized
+// message; nothing is ever rendered from the server's English.
 //
 // An allowlist rather than a denylist of the machine keys, because the failure
-// mode is asymmetric. Anything unrecognised is shown as a generic failure —
-// mildly unhelpful if it was prose. Echoing anything unrecognised puts the
-// next machine branch key the API adds straight on the player's screen, which
-// is how "insufficient_balance_debt" came to be displayed as an error message.
-const TRIBE_NAME_INVALID_REASONS = [
-  "Name may only contain letters, numbers, spaces, and ' - . _ ! ?",
-  "Name must contain a letter",
-  "This name is not allowed",
-];
+// mode is asymmetric. Anything unrecognised becomes a generic failure — mildly
+// unhelpful if it was prose. Echoing anything unrecognised puts the next
+// machine branch key the API adds straight on the player's screen, which is
+// how "insufficient_balance_debt" came to be displayed as an error message.
+//
+// Matched on the exact English because that is what the endpoint sends and
+// there is no code in the body to key off. If the API ever rewords one, the
+// player gets the generic failure until this is updated — the safe direction.
+const TRIBE_NAME_REFUSAL_CODES: Record<
+  string,
+  "invalid_charset" | "invalid_no_letter" | "not_allowed"
+> = {
+  "Name may only contain letters, numbers, spaces, and ' - . _ ! ?":
+    "invalid_charset",
+  "Name must contain a letter": "invalid_no_letter",
+  "This name is not allowed": "not_allowed",
+};
 // The length rule interpolates its bounds ("Name must be 3-24 characters"), so
 // it is matched by shape rather than listed. Anchored and digit-specific: a
 // bare "Name must be " prefix would pass through anything the API ever chose
@@ -687,11 +698,8 @@ function tribeNameInvalidResult(
       max: Number(length[2]),
     };
   }
-  // The rest carry no parameters, so there is nothing to interpolate and they
-  // stay as server prose for now (tracked separately).
-  if (TRIBE_NAME_INVALID_REASONS.includes(reason)) {
-    return { ok: false, code: "invalid", message: reason };
-  }
+  const code = TRIBE_NAME_REFUSAL_CODES[reason];
+  if (code !== undefined) return { ok: false, code };
   return undefined;
 }
 

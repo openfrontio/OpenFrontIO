@@ -13,6 +13,7 @@ import {
   getUserMe,
   invalidateUserMe,
   purchaseTribeName,
+  type PurchaseTribeNameResult,
 } from "../Api";
 import { fetchCosmetics, InsufficientCurrency } from "../Cosmetics";
 import { showInGameConfirm } from "../InGameModal";
@@ -219,22 +220,7 @@ export class TribesPanel extends LitElement {
       };
       return;
     }
-    // "invalid" carries one of the server's player-facing reasons for
-    // refusing the name itself. Everything else — including the balance
-    // reasons handled above, and any reason Api.ts did not recognise — is a
-    // generic failure rather than a string echoed at the player.
-    this.notice = {
-      kind: "error",
-      text:
-        result.code === "length"
-          ? translateText("store.tribe_name_length", {
-              min: result.min,
-              max: result.max,
-            })
-          : result.code === "invalid"
-            ? result.message
-            : translateText("store.purchase_failed"),
-    };
+    this.notice = { kind: "error", text: TribesPanel.refusalText(result) };
   };
 
   // A purchase spends plutonium and adds a pending name, so refresh both the
@@ -278,6 +264,29 @@ export class TribesPanel extends LitElement {
     // and inventing one would send them to buy currency they already have.
     if (price - balance <= 0) return "unexplained";
     return "shortfall";
+  }
+
+  // Why the name itself was refused. Api.ts recognises each of the endpoint's
+  // reasons and returns a code, so nothing here renders the server's English;
+  // anything it did not recognise lands on the generic failure.
+  private static refusalText(
+    result: Exclude<PurchaseTribeNameResult, { ok: true }>,
+  ): string {
+    switch (result.code) {
+      case "length":
+        return translateText("store.tribe_name_length", {
+          min: result.min,
+          max: result.max,
+        });
+      case "invalid_charset":
+        return translateText("store.tribe_name_charset");
+      case "invalid_no_letter":
+        return translateText("store.tribe_name_no_letter");
+      case "not_allowed":
+        return translateText("store.tribe_name_not_allowed");
+      default:
+        return translateText("store.purchase_failed");
+    }
   }
 
   private debtText(debt: number): string {

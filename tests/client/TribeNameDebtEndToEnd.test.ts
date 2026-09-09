@@ -150,9 +150,22 @@ describe("buying a tribe name in debt, panel through Api", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("still shows a real name rejection verbatim", async () => {
+  // The refusal still reaches the player — as a translated key, not as the
+  // server's English sentence.
+  it("shows a real name refusal as a translated message", async () => {
     const el = await mountAndBuy(400, { reason: "This name is not allowed" });
 
-    expect(el.textContent).toContain("This name is not allowed");
+    expect(el.textContent).toContain("store.tribe_name_not_allowed");
+    expect(el.textContent).not.toContain("This name is not allowed");
+  });
+
+  it("interpolates the bounds of the length rule", async () => {
+    const el = await mountAndBuy(400, {
+      reason: "Name must be 3-24 characters",
+    });
+
+    expect(el.textContent).toContain(
+      'store.tribe_name_length:{"min":3,"max":24}',
+    );
   });
 });

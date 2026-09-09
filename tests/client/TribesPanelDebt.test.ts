@@ -187,18 +187,34 @@ describe("TribesPanel when the wallet is in debt", () => {
       expect(el.textContent).toContain("store.purchase_failed");
     });
 
-    it("still shows a genuine name rejection as prose", async () => {
+    it.each([
+      ["invalid_charset", "store.tribe_name_charset"],
+      ["invalid_no_letter", "store.tribe_name_no_letter"],
+      ["not_allowed", "store.tribe_name_not_allowed"],
+    ])("translates the %s refusal", async (code, key) => {
+      purchaseTribeName.mockResolvedValue({ ok: false, code });
+      const el = await mount();
+
+      await buy(el, "Ninja");
+
+      expect(el.textContent).toContain(key);
+      expect(dialog(el).info).toBeNull();
+    });
+
+    it("interpolates the length bounds", async () => {
       purchaseTribeName.mockResolvedValue({
         ok: false,
-        code: "invalid",
-        message: "Name is not allowed",
+        code: "length",
+        min: 3,
+        max: 24,
       });
       const el = await mount();
 
       await buy(el, "Ninja");
 
-      expect(el.textContent).toContain("Name is not allowed");
-      expect(dialog(el).info).toBeNull();
+      expect(el.textContent).toContain(
+        'store.tribe_name_length:{"min":3,"max":24}',
+      );
     });
   });
 
