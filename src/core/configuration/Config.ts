@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
+import { ClusterConfig } from "../ClusterConfig";
 import { exp, log, pow, pow2 } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
@@ -30,6 +31,11 @@ declare global {
       assetManifest?: AssetManifest;
       cdnBase?: string;
       gameEnv?: string;
+      // The fleet map + which entry served this page (docs/MultiServer.md).
+      cluster?: ClusterConfig;
+      instanceLetter?: string;
+      // Legacy scalar, still injected by desktop shells that predate the
+      // cluster map. Web shells send cluster/instanceLetter instead.
       numWorkers?: number;
       turnstileSiteKey?: string;
       jwtAudience?: string;

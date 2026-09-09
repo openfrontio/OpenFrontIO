@@ -5,7 +5,6 @@ import {
   PublicGameType,
   SCHEDULED_PUBLIC_GAME_TYPES,
 } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import {
   InternalGameInfo,
   InternalGameInfoSchema,
@@ -287,7 +286,7 @@ export class MasterLobbyService {
 
       this.sendMessageToWorker({
         type: "createGame",
-        gameID: generateID(),
+        gameID: ServerEnv.generateGameId(),
         gameConfig: await this.playlist.gameConfig(type),
         publicGameType: type,
       } satisfies MasterCreateGame);

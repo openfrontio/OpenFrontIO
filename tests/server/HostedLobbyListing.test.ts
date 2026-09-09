@@ -489,6 +489,9 @@ function hostedLobby(
 
 describe("MasterLobbyService hosted lobbies", () => {
   function createService() {
+    // Scheduling mints game ids under the own instance letter, which resolves
+    // through DOMAIN against the dev-default cluster map.
+    vi.stubEnv("DOMAIN", "localhost");
     vi.spyOn(ServerEnv, "numWorkers").mockReturnValue(2);
     vi.spyOn(ServerEnv, "workerIndex").mockReturnValue(1);
     vi.spyOn(ServerEnv, "gameCreationRate").mockReturnValue(60_000);
