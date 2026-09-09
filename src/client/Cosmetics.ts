@@ -216,10 +216,10 @@ export function handlePurchaseReturn(
  * whole app to its logged-out UI immediately after a successful purchase. A
  * stale balance is much the better failure.
  */
-async function broadcastFreshUserMe(): Promise<void> {
+async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
   invalidateUserMe();
   const fresh = await getUserMe();
-  if (fresh === false) return;
+  if (fresh === false) return false;
   document.dispatchEvent(
     new CustomEvent("userMeResponse", {
       detail: fresh,
@@ -227,6 +227,28 @@ async function broadcastFreshUserMe(): Promise<void> {
       cancelable: true,
     }),
   );
+  // Returned so a caller that also needs the new balance reads the same
+  // profile it just broadcast, rather than re-fetching it separately.
+  return fresh;
+}
+
+// "Insufficient balance" means three different things once the real balance is
+// known, and each needs a different message. Shared by the single-cosmetic and
+// pack paths so they cannot drift apart.
+function balanceOutcome(
+  balance: number,
+  price: number,
+): "debt" | "shortfall" | "unexplained" {
+  // A chargeback landed since the pre-check; topping up cannot clear it.
+  if (balance < 0) return "debt";
+  // The re-read says they can afford it, so there is no shortfall to quote and
+  // inventing one sends them to buy currency they already have.
+  if (price - balance <= 0) return "unexplained";
+  return "shortfall";
+}
+
+function debtMessage(debt: number): string {
+  return translateText("store.pack_debt", { debt: String(debt) });
 }
 
 export async function purchaseCosmetic(
@@ -431,9 +453,7 @@ export async function purchaseCosmetic(
   // are told "you need 400 more" with a top-up button that cannot clear a
   // debt. Soft currency can never go negative, so this only fires for hard.
   if (balance < 0) {
-    await showInGameAlert(
-      translateText("store.pack_debt", { debt: String(-balance) }),
-    );
+    await showInGameAlert(debtMessage(-balance));
     return;
   }
   // Built for the pre-check below and reused when the server refuses for the
@@ -491,27 +511,27 @@ export async function purchaseCosmetic(
     switch (result.code) {
       case "insufficient_balance": {
         // The balance moved since the pre-check: re-read it for the shortfall,
-        // the same way the pack path does.
-        invalidateUserMe();
-        const fresh = await getUserMe();
-        const available =
-          fresh === false
-            ? 0
-            : method === "hard"
-              ? (fresh.player.currency?.hard ?? 0)
-              : (fresh.player.currency?.soft ?? 0);
-        // The chargeback landed mid-session, so the pre-check above ran on a
-        // cache that still showed a positive balance.
-        if (available < 0) {
-          await showInGameAlert(
-            translateText("store.pack_debt", { debt: String(-available) }),
-          );
+        // the same way the pack path does. Broadcast as well as re-read —
+        // dropping the cache alone leaves the open Store rendering the old
+        // balance, since it renders from the userMeResponse event.
+        const fresh = await broadcastFreshUserMe();
+        // A failed re-read leaves the real balance unknown. Treating it as
+        // zero would quote the full price as the shortfall — a guess wearing
+        // a number, with a top-up button sized to it.
+        if (fresh === false) {
+          await showInGameAlert(translateText("store.purchase_failed"));
           return;
         }
-        // The re-read says they can afford it. We have no shortfall to quote,
-        // and inventing one would tell them to buy currency they already have
-        // for a purchase that would now succeed.
-        if (price - available <= 0) {
+        const available =
+          method === "hard"
+            ? (fresh.player.currency?.hard ?? 0)
+            : (fresh.player.currency?.soft ?? 0);
+        const outcome = balanceOutcome(available, price);
+        if (outcome === "debt") {
+          await showInGameAlert(debtMessage(-available));
+          return;
+        }
+        if (outcome === "unexplained") {
           await showInGameAlert(translateText("store.purchase_failed"));
           return;
         }
@@ -521,9 +541,10 @@ export async function purchaseCosmetic(
         // A refund or chargeback left the wallet negative. Topping up does not
         // unblock it, so this gets a plain explanation rather than the
         // insufficient-currency dialog — the debt settles out of the next
-        // credit. Drop the cached profile: it still shows the pre-chargeback
-        // balance, which the store would otherwise keep rendering.
-        invalidateUserMe();
+        // credit. Re-read and re-broadcast so the store stops showing the
+        // pre-chargeback balance: dropping the cache alone would not do it,
+        // since the Store renders from the userMeResponse broadcast.
+        await broadcastFreshUserMe();
         await showInGameAlert(
           translateText("store.pack_debt", { debt: result.debt }),
         );
@@ -569,9 +590,7 @@ async function purchasePack(
   // negative balance, and without this it reads as a very large shortfall
   // with a top-up button that cannot clear a debt.
   if (balance < 0) {
-    await showInGameAlert(
-      translateText("store.pack_debt", { debt: String(-balance) }),
-    );
+    await showInGameAlert(debtMessage(-balance));
     return;
   }
   if (balance < pack.priceHard) {
@@ -589,17 +608,31 @@ async function purchasePack(
   }
   switch (result.code) {
     case "insufficient_balance": {
-      // The balance moved since the pre-check: re-read it for the shortfall.
-      invalidateUserMe();
-      const fresh = await getUserMe();
-      return insufficient(
-        fresh === false ? 0 : (fresh.player.currency?.hard ?? 0),
-      );
+      // The balance moved since the pre-check: re-read it for the shortfall,
+      // and re-broadcast so the open Store stops showing the old balance.
+      const fresh = await broadcastFreshUserMe();
+      // Unknown balance — no honest number to quote.
+      if (fresh === false) {
+        await showInGameAlert(translateText("store.purchase_failed"));
+        return;
+      }
+      const available = fresh.player.currency?.hard ?? 0;
+      const outcome = balanceOutcome(available, pack.priceHard);
+      if (outcome === "debt") {
+        await showInGameAlert(debtMessage(-available));
+        return;
+      }
+      if (outcome === "unexplained") {
+        await showInGameAlert(translateText("store.purchase_failed"));
+        return;
+      }
+      return insufficient(available);
     }
     case "debt":
-      // The cached profile still shows the pre-chargeback balance; drop it so
-      // the store stops rendering a balance the player does not have.
-      invalidateUserMe();
+      // Re-read and re-broadcast, not just invalidate: the Store renders from
+      // the userMeResponse broadcast, so dropping the cache alone would leave
+      // it showing the pre-chargeback balance.
+      await broadcastFreshUserMe();
       await showInGameAlert(
         translateText("store.pack_debt", { debt: result.debt }),
       );

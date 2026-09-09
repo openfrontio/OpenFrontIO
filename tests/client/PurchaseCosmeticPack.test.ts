@@ -191,6 +191,7 @@ describe("purchaseWithCurrency", () => {
   ])(
     "falls back to a generic failure when the amount is %s",
     async (_l, extra) => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
       respond(400, { reason: "insufficient_balance_debt", ...extra });
       expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
         ok: false,

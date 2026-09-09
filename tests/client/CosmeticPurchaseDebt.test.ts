@@ -122,6 +122,41 @@ describe("purchaseCosmetic when the wallet is in debt", () => {
     expect(result).toBeUndefined();
   });
 
+  // Dropping the cache is not enough: the Store renders from the
+  // userMeResponse broadcast, so without a re-dispatch it keeps showing the
+  // balance the purchase was refused on.
+  it("re-broadcasts the profile after a shortfall refusal", async () => {
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "insufficient_balance",
+    });
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(userWith(500, 5000))
+      .mockResolvedValueOnce(userWith(40, 5000));
+    const broadcast = vi.fn();
+    document.addEventListener("userMeResponse", broadcast);
+
+    await purchaseCosmetic(pirateFlag, "hard");
+
+    expect(broadcast).toHaveBeenCalled();
+    document.removeEventListener("userMeResponse", broadcast);
+  });
+
+  it("re-broadcasts the profile after a debt refusal", async () => {
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "debt",
+      debt: "150",
+    });
+    const broadcast = vi.fn();
+    document.addEventListener("userMeResponse", broadcast);
+
+    await purchaseCosmetic(pirateFlag, "hard");
+
+    expect(broadcast).toHaveBeenCalled();
+    document.removeEventListener("userMeResponse", broadcast);
+  });
+
   // The other half of the same 400. Being short IS fixed by topping up, so it
   // keeps the shortfall dialog — re-read after the refusal, since the balance
   // moved under a pre-check that passed.
@@ -195,6 +230,34 @@ describe("purchaseCosmetic when the wallet is in debt", () => {
 
     expect(showInGameAlert).toHaveBeenCalledWith("debt 150");
     expect(result).toBeUndefined();
+  });
+
+  // The boundary the debt pre-check must not swallow: an empty wallet is not
+  // a debt. A `<= 0` slip would tell every broke player they are "0 in debt".
+  it("offers the shortfall, not a debt message, on an empty wallet", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWith(0, 0));
+
+    const result = await purchaseCosmetic(pirateFlag, "hard");
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ shortfall: 100, canTopUp: true });
+  });
+
+  // A failed re-read leaves the real balance unknown; quoting the full price
+  // would be a guess with a top-up button sized to it.
+  it("reports a generic failure when the re-read fails", async () => {
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "insufficient_balance",
+    });
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(userWith(500, 5000))
+      .mockResolvedValueOnce(false as never);
+
+    const result = await purchaseCosmetic(pirateFlag, "hard");
+
+    expect(result).toBeUndefined();
+    expect(showInGameAlert).toHaveBeenCalledWith("failed");
   });
 
   it("still reports an unexplained failure generically", async () => {
