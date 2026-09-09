@@ -21,6 +21,7 @@ import {
   calculateBoundingBoxCenter,
 } from "../../Util";
 import { AttackExecution } from "../AttackExecution";
+import { BountyExecution } from "../BountyExecution";
 import { DonateTroopsExecution } from "../DonateTroopExecution";
 import { NationAllianceBehavior } from "../nation/NationAllianceBehavior";
 import {
@@ -85,6 +86,12 @@ export class AiAttackBehavior {
     const borderingEnemies = borderingPlayers.filter(
       (o) => this.player?.isFriendly(o) === false,
     );
+
+    // Bounty market: an overwhelming pile of gold redirects the bot from
+    // whatever it was about to do (including neutral expansion below) to
+    // an assassination run. Ordinary profitable bounties are handled in the
+    // normal strategy list; only a jackpot interrupts everything.
+    if (this.maybeHuntJackpot(borderingEnemies)) return;
 
     // Attack TerraNullius but not nuked territory (direct border or across a river)
     const hasNonNukedTerraNullius =
@@ -284,6 +291,14 @@ export class AiAttackBehavior {
       return false;
     };
 
+    const bounty = (): boolean => {
+      const best = this.findBestBountyDeal(borderingEnemies);
+      if (best) {
+        return this.sendAttack(best.target);
+      }
+      return false;
+    };
+
     const afk = (): boolean => {
       // borderingEnemies is already sorted by troops (ascending), so first match is weakest afk enemy
       const afk = borderingEnemies.find(
@@ -363,16 +378,16 @@ export class AiAttackBehavior {
     switch (difficulty) {
       case Difficulty.Easy:
         // prettier-ignore
-        return [nuked, bots, retaliate, assist, betray, hated, weakest];
+        return [nuked, bots, retaliate, assist, betray, hated, bounty, weakest];
       case Difficulty.Medium:
         // prettier-ignore
-        return [bots, nuked, retaliate, assist, betray, hated, afk, traitor, weakest, island, donate];
+        return [bots, nuked, retaliate, assist, betray, hated, afk, traitor, bounty, weakest, island, donate];
       case Difficulty.Hard:
         // prettier-ignore
-        return [bots, retaliate, assist, betray, nuked, traitor, afk, hated, veryWeak, victim, weakest, island, donate];
+        return [bots, retaliate, assist, betray, nuked, traitor, afk, bounty, hated, veryWeak, victim, weakest, island, donate];
       case Difficulty.Impossible:
         // prettier-ignore
-        return [retaliate, bots, veryWeak, assist, traitor, afk, betray, victim, nuked, hated, weakest, island, donate];
+        return [retaliate, bots, veryWeak, assist, traitor, bounty, afk, betray, victim, nuked, hated, weakest, island, donate];
       default:
         assertNever(difficulty);
     }
@@ -524,6 +539,163 @@ export class AiAttackBehavior {
           enemy.isTraitor() &&
           (!this.isFFA() || enemy.troops() < this.player.troops() * 1.2),
       ) ?? null
+    );
+  }
+
+  // Bounty market: hunt the highest-pool bordering enemy we can realistically
+  // take. Same strength gate as findTraitor so a bounty doesn't bait a bot
+  // into suiciding at a giant. Requires bounties to be enabled in this game.
+  //
+  // Cost/benefit, in gold: killing a defender means grinding through their
+  // standing army (the attack math in Config.attackLogic bleeds the attacker
+  // per tile in proportion to the defender's density, plus the army itself
+  // must be overcome) and mopping up one garrison per tile:
+  //   killCostTroops = enemy.troops * 1.5 + enemy.tiles * 2
+  // Troops are priced at BOUNTY_TROOP_GOLD_VALUE gold each. Calibration: a
+  // 1k minimum bounty ~ 200 troops (a border skirmish any mid-size bot can
+  // afford to chase), a 50k pool ~ 10k troops (a serious campaign), a 1M
+  // pool ~ 200k troops (endgame shark bait). The attack only happens when
+  // the pool covers that cost times the difficulty's profit multiple, with
+  // a flank penalty for every OTHER bordering enemy (attacking one neighbor
+  // exposes your flank to the rest).
+  //
+  // Everything below is deterministic game state — same board, same
+  // decision, on every client. No RNG is consumed here.
+  private static readonly BOUNTY_TROOP_GOLD_VALUE = 5;
+
+  private bountyKillCostTroops(enemy: Player): number {
+    return enemy.troops() * 1.5 + enemy.numTilesOwned() * 2;
+  }
+
+  // Required profit multiple on the kill cost. Easy bots need an obvious
+  // fortune to bother; Impossible bots snipe anything marginally profitable.
+  private bountyProfitMargin(): number {
+    const { difficulty } = this.game.config().gameConfig();
+    switch (difficulty) {
+      case Difficulty.Easy:
+        return 2.0;
+      case Difficulty.Medium:
+        return 1.6;
+      case Difficulty.Hard:
+        return 1.3;
+      case Difficulty.Impossible:
+        return 1.05;
+      default:
+        assertNever(difficulty);
+    }
+  }
+
+  private bountyRequiredGold(enemy: Player, flankCount: number): number {
+    return (
+      this.bountyKillCostTroops(enemy) *
+      AiAttackBehavior.BOUNTY_TROOP_GOLD_VALUE *
+      this.bountyProfitMargin() *
+      (1 + 0.25 * Math.min(flankCount, 4))
+    );
+  }
+
+  private findBestBountyDeal(
+    borderingEnemies: Player[],
+  ): { target: Player; pool: number; required: number } | null {
+    if (!this.game.config().bountiesEnabled()) return null;
+
+    let best: { target: Player; pool: number; required: number } | null = null;
+    for (const enemy of borderingEnemies) {
+      const pool = Number(this.game.bountyTotal(enemy));
+      if (pool <= 0) continue;
+      // Hard veto: never suicide into a much bigger army (FFA caution; in
+      // team games the team absorbs the risk).
+      if (this.isFFA() && enemy.troops() > this.player.troops() * 1.2) {
+        continue;
+      }
+      const killCost = this.bountyKillCostTroops(enemy);
+      // Can't collect what we can't afford to kill: the kill must fit in
+      // what we can actually SEND — total troops minus the reserve hold
+      // the attack itself keeps back — with headroom. (The jackpot path's
+      // reserve gate is checked separately by its caller.)
+      const maxTroops = this.game.config().maxTroops(this.player);
+      const spendable = this.player.troops() - maxTroops * this.reserveRatio;
+      if (spendable < killCost * 1.25) continue;
+      const flankCount = borderingEnemies.length - 1;
+      const required = this.bountyRequiredGold(enemy, flankCount);
+      const profit = pool - required;
+      if (profit <= 0) continue;
+      if (!best || profit > best.pool - best.required) {
+        best = { target: enemy, pool, required };
+      }
+    }
+    return best;
+  }
+
+  // Jackpot override: a pile of gold so overwhelming that the bot drops
+  // whatever it was doing — neutral expansion, retaliation prep, assists —
+  // and goes for the kill immediately. Runs before everything else in
+  // maybeAttack (including the TerraNullius expansion). Gold this big
+  // overcomes caution, so the attack goes in hot (force skips shouldAttack's
+  // difficulty dice-roll); the reserve gate still applies so the bot never
+  // bankrupts itself chasing money.
+  private maybeHuntJackpot(borderingEnemies: Player[]): boolean {
+    if (!this.hasReserveRatioTroops()) return false;
+    const best = this.findBestBountyDeal(borderingEnemies);
+    if (!best) return false;
+    if (best.pool < best.required * 2) return false;
+    return this.sendAttack(best.target, true);
+  }
+
+  // Bounty market, placer side: rich bots put prices on heads too.
+  //
+  // Two motives, in order. Revenge: someone stronger is hitting us and we
+  // can't take them ourselves — pay someone else to do it. Warlord: drown
+  // the strongest threatening neighbor in gold so the lobby does our work.
+  //
+  // Pricing: 10% of the surplus above a war-chest reserve the bot never
+  // touches (structures and emergencies come first). The pair cooldown in
+  // canPlaceBounty rate-limits placements; the reserve keeps the treasury
+  // from draining across many targets. Deterministic: thresholds only, the
+  // seeded RNG is never consumed here.
+  private static readonly BOUNTY_KEEP_RESERVE: bigint = 50_000n;
+
+  maybePlaceBounty(): void {
+    if (!this.game.config().bountiesEnabled()) return;
+    if (!this.player.isAlive()) return;
+    const minAmount = this.game.config().bountyMinAmount();
+    const surplus =
+      this.player.gold() - AiAttackBehavior.BOUNTY_KEEP_RESERVE;
+    if (surplus < minAmount) return;
+
+    // Revenge: the strongest enemy currently hitting us, but only if they're
+    // stronger than us — otherwise the retaliate strategy handles them free.
+    const attacker = this.findIncomingAttackPlayer();
+    if (
+      attacker &&
+      attacker.troops() > this.player.troops() &&
+      this.game.canPlaceBounty(this.player, attacker)
+    ) {
+      this.placeBountyOn(attacker, surplus);
+      return;
+    }
+
+    // Warlord: the strongest threatening neighbor we share a hostile
+    // border with. Threat = strictly stronger than us.
+    const enemies = this.player
+      .nearby()
+      .filter(
+        (n): n is Player => n.isPlayer() && this.player.isFriendly(n) === false,
+      );
+    let threat: Player | null = null;
+    for (const enemy of enemies) {
+      if (enemy.troops() <= this.player.troops()) continue;
+      if (!this.game.canPlaceBounty(this.player, enemy)) continue;
+      if (!threat || enemy.troops() > threat.troops()) threat = enemy;
+    }
+    if (threat) this.placeBountyOn(threat, surplus);
+  }
+
+  private placeBountyOn(target: Player, surplus: bigint): void {
+    const amount = surplus / 10n;
+    if (amount < this.game.config().bountyMinAmount()) return;
+    this.game.addExecution(
+      new BountyExecution(this.player, target.id(), Number(amount)),
     );
   }
 
@@ -708,6 +880,21 @@ export class AiAttackBehavior {
     const incomingAttackPlayer = this.findIncomingAttackPlayer();
     if (incomingAttackPlayer) {
       if (this.sendAttack(incomingAttackPlayer, true)) return;
+    }
+
+    // Bounty market: tribes are greedy but simple — an overwhelming pool on
+    // a nearby enemy diverts them from random targets. Same EV deal
+    // evaluation as nations, jackpot bar only (mid-list bounty hunting stays
+    // a nation behavior). Non-jackpot pools fall through to the random flow.
+    const nearbyEnemies = this.player
+      .nearby()
+      .filter(
+        (n): n is Player =>
+          n.isPlayer() && this.player.isFriendly(n) === false,
+      );
+    const deal = this.findBestBountyDeal(nearbyEnemies);
+    if (deal && deal.pool >= deal.required * 2) {
+      if (this.sendAttack(deal.target)) return;
     }
 
     // Select a traitor as an enemy

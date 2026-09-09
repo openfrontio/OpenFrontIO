@@ -128,6 +128,13 @@ export class SendDonateTroopsIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendPlaceBountyIntentEvent implements GameEvent {
+  constructor(
+    public readonly recipient: PlayerView,
+    public readonly gold: Gold | null,
+  ) {}
+}
+
 export class SendQuickChatEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView,
@@ -275,6 +282,9 @@ export class Transport {
     );
     this.eventBus.on(SendDonateTroopsIntentEvent, (e) =>
       this.onSendDonateTroopIntent(e),
+    );
+    this.eventBus.on(SendPlaceBountyIntentEvent, (e) =>
+      this.onSendPlaceBountyIntent(e),
     );
     this.eventBus.on(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
@@ -598,6 +608,14 @@ export class Transport {
       type: "donate_troops",
       recipient: event.recipient.id(),
       troops: event.troops,
+    });
+  }
+
+  private onSendPlaceBountyIntent(event: SendPlaceBountyIntentEvent) {
+    this.sendIntent({
+      type: "place_bounty",
+      recipient: event.recipient.id(),
+      gold: event.gold ? Number(event.gold) : null,
     });
   }
 

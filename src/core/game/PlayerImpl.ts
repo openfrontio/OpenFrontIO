@@ -358,6 +358,7 @@ export class PlayerImpl implements Player {
       embargoes: embargoes,
       isTraitor: this.isTraitor(),
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
+      bountyTotal: this.mg.bountyTotal(this),
       inDoomsdayClock: this.inDoomsdayClock(),
       isDecaying: this.isDecaying(),
       markedDoomsdayClockTick: this.markedDoomsdayClockTick,

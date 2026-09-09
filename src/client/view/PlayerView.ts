@@ -88,6 +88,7 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     troops: pu.troops!,
     isTraitor: pu.isTraitor!,
     traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
+    bountyTotal: Number(pu.bountyTotal ?? 0n),
     inDoomsdayClock: pu.inDoomsdayClock ?? false,
     isDecaying: pu.isDecaying ?? false,
     markedDoomsdayClockTick: pu.markedDoomsdayClockTick ?? -1,
@@ -650,6 +651,10 @@ export class PlayerView {
   }
   getTraitorRemainingTicks(): number {
     return this.state.traitorRemainingTicks;
+  }
+  /** Total gold pooled on this player's head (bounty market), 0 when none. */
+  bountyTotal(): number {
+    return this.state.bountyTotal;
   }
   inDoomsdayClock(): boolean {
     return this.state.inDoomsdayClock;

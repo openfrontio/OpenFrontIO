@@ -491,6 +491,11 @@ export class PlayerExecution implements Execution {
     const gold = this.player.gold();
     this.player.removeGold(gold);
 
+    // Death without a conqueror (fallout, encirclement-by-neutral, quit):
+    // nobody landed the killing blow, so pending bounty stakes go back to
+    // their contributors. Conquest deaths pay out in conquerPlayer instead.
+    this.mg.refundBounties(this.player);
+
     this.player.units().forEach((u) => {
       if (
         u.type() !== UnitType.AtomBomb &&

@@ -20,6 +20,7 @@ import {
   Game,
   GameMode,
   GameUpdates,
+  Gold,
   HumansVsNations,
   MessageType,
   MutableAlliance,
@@ -34,6 +35,7 @@ import {
   TeamGameSpawnAreas,
   TerrainType,
   TerraNullius,
+  Tick,
   Trios,
   Unit,
   UnitInfo,
@@ -110,6 +112,15 @@ export class GameImpl implements Game {
 
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
+
+  /**
+   * Bounty market pools: target player -> (contributor -> gold contributed).
+   * Map-of-maps so a payout can refund-or-award per contributor and so the
+   * same player can top up an existing pool. Empty targets are deleted.
+   */
+  private bountyPools = new Map<PlayerID, Map<PlayerID, Gold>>();
+  /** Last tick each placer pooled onto each target, for the placement cooldown. */
+  private lastBountyTick = new Map<string, Tick>();
 
   private _isPaused: boolean = false;
   private _winner: Player | Team | null = null;
@@ -1269,6 +1280,95 @@ export class GameImpl implements Game {
   sharedWaterComponents(player: Player): Set<number> | null {
     return this._sharedWaterCache.get(player);
   }
+  canPlaceBounty(placer: Player, target: Player): boolean {
+    if (!this._config.bountiesEnabled()) return false;
+    if (placer === target) return false;
+    if (!placer.isAlive() || !target.isAlive()) return false;
+    // No bounties on the disconnected: they can't fight back, so the pool
+    // would be free money for whoever reaches them first.
+    if (target.isDisconnected()) return false;
+    if (placer.isOnSameTeam(target)) return false;
+    const last = this.lastBountyTick.get(`${placer.id()}:${target.id()}`);
+    if (
+      last !== undefined &&
+      this._ticks - last < this._config.bountyCooldown()
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  placeBounty(placer: Player, target: Player, gold: Gold): Gold {
+    // Clamp to what the placer can actually pay; removeGold does the same
+    // clamping, but we need the real amount for the pool bookkeeping.
+    const amount = gold <= 0n ? 0n : placer.removeGold(gold);
+    if (amount === 0n) return 0n;
+
+    let pool = this.bountyPools.get(target.id());
+    if (!pool) {
+      pool = new Map<PlayerID, Gold>();
+      this.bountyPools.set(target.id(), pool);
+    }
+    pool.set(placer.id(), (pool.get(placer.id()) ?? 0n) + amount);
+    this.lastBountyTick.set(`${placer.id()}:${target.id()}`, this._ticks);
+
+    const total = this.bountyPoolTotal(target.id());
+    this.addUpdate({
+      type: GameUpdateType.BountyPlacedEvent,
+      placerId: placer.id(),
+      targetId: target.id(),
+      amount,
+      totalPool: total,
+    });
+    return amount;
+  }
+
+  bountyTotal(player: Player): Gold {
+    return this.bountyPoolTotal(player.id());
+  }
+
+  private bountyPoolTotal(targetID: PlayerID): Gold {
+    const pool = this.bountyPools.get(targetID);
+    if (!pool) return 0n;
+    let total = 0n;
+    for (const amount of pool.values()) total += amount;
+    return total;
+  }
+
+  resolveBounty(collector: Player, conquered: Player): void {
+    const pool = this.bountyPools.get(conquered.id());
+    if (!pool) return;
+    this.bountyPools.delete(conquered.id());
+
+    let total = 0n;
+    for (const amount of pool.values()) total += amount;
+    if (total === 0n) return;
+
+    collector.addGold(total);
+    this.addUpdate({
+      type: GameUpdateType.BountyCollectedEvent,
+      collectorId: collector.id(),
+      targetId: conquered.id(),
+      amount: total,
+    });
+  }
+
+  refundBounties(conquered: Player): void {
+    const pool = this.bountyPools.get(conquered.id());
+    if (!pool) return;
+    this.bountyPools.delete(conquered.id());
+
+    for (const [contributorID, amount] of pool) {
+      if (amount === 0n) continue;
+      const contributor = this._players.get(contributorID);
+      // The contributor may have died themselves in the interim — drop
+      // their stake rather than gold-ghosting a dead player.
+      if (contributor && contributor.isAlive()) {
+        contributor.addGold(amount);
+      }
+    }
+  }
+
   conquerPlayer(conqueror: Player, conquered: Player) {
     if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {
       const ships = conquered
@@ -1326,6 +1426,11 @@ export class GameImpl implements Game {
       // Record stats
       this.stats().goldWar(conqueror, conquered, goldCaptured);
     }
+
+    // Bounty market: the killing blow collects the target's pool. Runs even
+    // when gold transfer was skipped (bounties are staked by third parties,
+    // not the conquered player's balance).
+    this.resolveBounty(conqueror, conquered);
 
     // OFM: per-kill log for standings (humans-only filtered in recordKill).
     this.stats().recordKill(conqueror, conquered, this.ticks());

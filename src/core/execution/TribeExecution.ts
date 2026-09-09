@@ -62,6 +62,9 @@ export class TribeExecution implements Execution {
     this.acceptAllAllianceRequests();
     this.deleteNextStructure();
     this.maybeAttack();
+    // Bounty market, placer side: rich tribes put revenge/warlord bounties
+    // on threats (gated inside by treasury reserve + pair cooldown).
+    this.attackBehavior?.maybePlaceBounty();
   }
 
   private acceptAllAllianceRequests() {

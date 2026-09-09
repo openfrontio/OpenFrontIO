@@ -5,6 +5,7 @@ import { within } from "../../../core/Util";
 import {
   SendDonateGoldIntentEvent,
   SendDonateTroopsIntentEvent,
+  SendPlaceBountyIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
 import { renderTroops, translateText } from "../../Utils";
@@ -15,7 +16,10 @@ export class SendResourceModal extends LitElement {
   @property({ attribute: false }) eventBus: EventBus | null = null;
 
   @property({ type: Boolean }) open: boolean = false;
-  @property({ type: String }) mode: "troops" | "gold" = "troops";
+  // "bounty" shares gold's slider behavior (percent of my gold, no
+  // recipient capacity) but emits a place-bounty intent and wears a
+  // hostile red color so it reads as a hit, not a gift.
+  @property({ type: String }) mode: "troops" | "gold" | "bounty" = "troops";
 
   @property({ type: Object }) total: number | bigint = 0;
   @property({ type: Object }) uiState: UIState | null = null; // to seed initial %
@@ -98,6 +102,10 @@ export class SendResourceModal extends LitElement {
       const myTroops = Number(myPlayer.troops());
       if (amount > myTroops) return;
       this.eventBus.emit(new SendDonateTroopsIntentEvent(target, amount));
+    } else if (this.mode === "bounty") {
+      const myGold = Number(myPlayer.gold());
+      if (amount > myGold) return;
+      this.eventBus.emit(new SendPlaceBountyIntentEvent(target, BigInt(amount)));
     } else {
       const myGold = Number(myPlayer.gold());
       if (amount > myGold) return;
@@ -178,7 +186,9 @@ export class SendResourceModal extends LitElement {
   private getFillColor(): string {
     return this.mode === "troops"
       ? "rgb(168 85 247)" /* purple */
-      : "rgb(234 179 8)" /* amber */;
+      : this.mode === "bounty"
+        ? "rgb(239 68 68)" /* red */
+        : "rgb(234 179 8)" /* amber */;
   }
 
   private getMinKeepRatio(): number {

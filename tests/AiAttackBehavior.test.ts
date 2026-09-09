@@ -1,4 +1,4 @@
-import { AttackExecution } from "../src/core/execution/AttackExecution";
+﻿import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import {
@@ -307,7 +307,7 @@ describe("Hard/Impossible troop floor", () => {
     target.addTroops(300_000);
     // troopSendCap = 100_000 - ceil(100_000 * 0.75) = 25_000
     // 20% of target = 300_000 * 0.2 = 60_000
-    // 25_000 < 60_000 → attack should be blocked
+    // 25_000 < 60_000 â†’ attack should be blocked
 
     const addExecSpy = vi.spyOn(testGame, "addExecution");
     const result = behavior.sendAttack(target);
@@ -338,13 +338,13 @@ describe("Hard/Impossible troop floor", () => {
     expect(exec.startTroops).toBeLessThanOrEqual(expectedCap);
   });
 
-  it("Easy: no troop floor — sends based on reserve only", async () => {
+  it("Easy: no troop floor â€” sends based on reserve only", async () => {
     const { testGame, attacker, neighbor, bot, behavior } =
       await setupTroopFloorTest(Difficulty.Easy);
 
     attacker.addTroops(100_000);
     neighbor.addTroops(90_000);
-    // No cap on Easy — sends full reserve amount
+    // No cap on Easy â€” sends full reserve amount
 
     const addExecSpy = vi.spyOn(testGame, "addExecution");
     const result = behavior.sendAttack(bot);
@@ -354,7 +354,7 @@ describe("Hard/Impossible troop floor", () => {
       (c) => c[0].constructor.name === "AttackExecution",
     )?.[0] as any;
     expect(exec).toBeDefined();
-    // On Easy, no troop floor applies — troops are only limited by the reserve ratio
+    // On Easy, no troop floor applies â€” troops are only limited by the reserve ratio
     expect(exec.startTroops).toBeGreaterThan(0);
     // Verify the troops exceed what the Hard cap would have been
     const hardCap = Math.max(
@@ -383,7 +383,7 @@ describe("Hard/Impossible troop floor", () => {
     });
     bot.addTroops(100_000);
 
-    // No player neighbors — troopSendCap should return Infinity
+    // No player neighbors â€” troopSendCap should return Infinity
     expect(bot.nearby().filter((n) => n.isPlayer()).length).toBe(0);
 
     const behavior = new AiAttackBehavior(
@@ -409,7 +409,7 @@ describe("Hard/Impossible troop floor", () => {
     expect(exec.startTroops).toBeGreaterThan(40_000);
   });
 
-  it("Team: troopSendCap returns Infinity — no cap in team games", async () => {
+  it("Team: troopSendCap returns Infinity â€” no cap in team games", async () => {
     // Same setup as Hard cap test but with GameMode.Team
     const testGame = await setup("big_plains", {
       difficulty: Difficulty.Hard,
@@ -488,7 +488,7 @@ describe("Hard/Impossible troop floor", () => {
     expect(exec.startTroops).toBeGreaterThan(32_500);
   });
 
-  it("Team: isAttackTooWeak returns false — weak attacks allowed in team games", async () => {
+  it("Team: isAttackTooWeak returns false â€” weak attacks allowed in team games", async () => {
     // Same setup as the FFA "skips attack when capped troops are < 20%" test
     // but with GameMode.Team. In FFA Hard, the attack would be blocked.
     const testGame = await setup("big_plains", {
@@ -554,7 +554,7 @@ describe("Hard/Impossible troop floor", () => {
     attacker.addTroops(100_000);
     neighbor.addTroops(100_000);
     target.addTroops(300_000);
-    // In FFA Hard: troopSendCap = 25k, 20% of target = 60k → blocked.
+    // In FFA Hard: troopSendCap = 25k, 20% of target = 60k â†’ blocked.
     // In Team mode: isAttackTooWeak returns false, so the attack proceeds
     // even though troops would be below 20% of the target.
 
@@ -602,3 +602,4 @@ describe("Hard/Impossible troop floor", () => {
     expect(exec.startTroops).toBeGreaterThanOrEqual(50_000);
   });
 });
+

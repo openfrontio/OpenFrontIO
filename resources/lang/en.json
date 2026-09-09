@@ -606,6 +606,10 @@
     "betrayal_debuff_ends": "{time} seconds left until betrayal debuff ends",
     "betrayal_description": "You broke your alliance with {name}, making you a TRAITOR ({malusPercent}% defense debuff for {durationText})",
     "betrayed_you": "{name} broke their alliance with you",
+    "bounty_collected": "{name} collected the {gold} gold bounty on {target}'s head!",
+    "bounty_collected_you": "You collected the {gold} gold bounty on {target}'s head!",
+    "bounty_on_you": "{name} put a {gold} gold bounty on your head!",
+    "bounty_placed": "{placer} put a {gold} gold bounty on {target}'s head (pool: {total})",
     "conquered_no_gold": "Conquered {name} (didn't play, no gold awarded)",
     "duration_second": "1 second",
     "duration_seconds_plural": "{seconds} seconds",
@@ -722,7 +726,8 @@
     "random_spawn": "Random spawn",
     "start": "Start Game",
     "starting_gold": "Starting Gold (Millions)",
-    "water_nukes": "Water nukes"
+    "water_nukes": "Water nukes",
+    "bounties": "Bounty Market"
   },
   "game_starting_modal": {
     "code_license": "Code licensed under AGPL-3.0 (no warranty)",
@@ -1998,5 +2003,11 @@
     "you_won": "You Won!",
     "your_team": "Your team won!",
     "youtube_tutorial": "Need some help?"
+  },
+  "bounty": {
+    "place_bounty": "Place Bounty",
+    "modal_title_with_name": "Place a bounty on {name}",
+    "badge_label": "Bounty: {gold} gold",
+    "badge_title": "Gold pooled on this player’s head — whoever lands the killing blow collects it"
   }
 }

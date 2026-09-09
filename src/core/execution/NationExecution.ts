@@ -205,6 +205,7 @@ export class NationExecution implements Execution {
     this.warshipBehavior.maybeSpawnWarship();
     this.handleEmbargoesToHostileNations();
     this.attackBehavior.maybeAttack();
+    this.attackBehavior.maybePlaceBounty();
     this.warshipBehavior.counterWarshipInfestation();
     this.nukeBehavior.maybeSendNuke();
   }

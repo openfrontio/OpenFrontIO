@@ -1,4 +1,4 @@
-/**
+﻿/**
  * extractNukeTelegraphs colors each telegraph by who launched the nuke:
  *
  *   - relation 0 (self): the local player owns the nuke
@@ -42,6 +42,7 @@ function ps(overrides: Partial<PlayerState> = {}): PlayerState {
     troops: 0,
     isTraitor: false,
     traitorRemainingTicks: 0,
+    bountyTotal: 0,
     inDoomsdayClock: false,
     isDecaying: false,
     markedDoomsdayClockTick: -1,

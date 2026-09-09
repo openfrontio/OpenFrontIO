@@ -682,6 +682,17 @@ export class Config {
   donateCooldown(): Tick {
     return 10 * 10;
   }
+  bountiesEnabled(): boolean {
+    return this._gameConfig.bountiesEnabled ?? false;
+  }
+  /** Min ticks between two bounty placements by the same player. */
+  bountyCooldown(): Tick {
+    return 50 * 10;
+  }
+  /** Minimum gold a single bounty placement may carry. */
+  bountyMinAmount(): Gold {
+    return 1_000n;
+  }
   embargoAllCooldown(): Tick {
     return 10 * 10;
   }

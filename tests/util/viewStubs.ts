@@ -135,6 +135,9 @@ export function makePlayerUpdate(
     allies: [],
     embargoes: new Set(),
     isTraitor: false,
+    // Bounty market pool on this player's head. Present so the
+    // diffPlayerUpdate field-coverage walk can reach it.
+    bountyTotal: 0n,
     // Doomsday-clock state. Present here so the diffPlayerUpdate field-coverage
     // walk in GameUpdateUtils.test.ts reaches these: a field missing from this
     // stub is a field that walk cannot check.

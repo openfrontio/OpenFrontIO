@@ -71,7 +71,7 @@ export class PlayerPanel extends LitElement implements Controller {
   private kickedPlayerIDs = new Set<string>();
 
   @state() private sendTarget: PlayerView | null = null;
-  @state() private sendMode: "troops" | "gold" | "none" = "none";
+  @state() private sendMode: "troops" | "gold" | "bounty" | "none" = "none";
   @state() public isVisible: boolean = false;
   @state() private allianceExpiryText: string | null = null;
   @state() private allianceExpirySeconds: number | null = null;
@@ -199,6 +199,22 @@ export class PlayerPanel extends LitElement implements Controller {
     this.tile = tile;
     this.sendTarget = target;
     this.sendMode = "gold";
+    this.moderationTarget = null;
+    this.reportTarget = null;
+    this.isVisible = true;
+    this.requestUpdate();
+  }
+
+  public openPlaceBountyModal(
+    actions: PlayerActions,
+    tile: TileRef,
+    target: PlayerView,
+  ) {
+    this.suppressNextHide = true;
+    this.actions = actions;
+    this.tile = tile;
+    this.sendTarget = target;
+    this.sendMode = "bounty";
     this.moderationTarget = null;
     this.reportTarget = null;
     this.isVisible = true;
@@ -615,7 +631,33 @@ export class PlayerPanel extends LitElement implements Controller {
           : html``}
       </div>
       ${this.renderTraitorBadge(other)}
+      ${this.renderBountyBadge(other)}
       ${this.renderRelationPillIfNation(other, my)}
+    `;
+  }
+
+  // Bounty market: a gold badge under the traitor badge showing the current
+  // pooled bounty on this player's head. Renders nothing when the pool is
+  // empty — reachability comes from PlayerView.bountyTotal (PlayerUpdate).
+  private renderBountyBadge(other: PlayerView) {
+    const total = other.bountyTotal();
+    if (!total || total <= 0) return html``;
+
+    return html`
+      <div class="mt-1" role="status" aria-live="polite" aria-atomic="true">
+        <span
+          class="inline-flex items-center gap-2 rounded-full border border-amber-400/30
+            bg-amber-500/10 px-2.5 py-0.5 text-sm font-semibold text-amber-200
+            shadow-[inset_0_0_8px_rgba(245,158,11,0.12)]"
+          title=${translateText("bounty.badge_title")}
+        >
+          <span class="tracking-tight"
+            >${translateText("bounty.badge_label", {
+              gold: renderNumber(total),
+            })}</span
+          >
+        </span>
+      </div>
     `;
   }
 
@@ -1054,6 +1096,11 @@ export class PlayerPanel extends LitElement implements Controller {
                           <send-resource-modal
                             .open=${this.sendMode !== "none"}
                             .mode=${this.sendMode}
+                            .heading=${this.sendMode === "bounty" && this.sendTarget
+                              ? translateText("bounty.modal_title_with_name", {
+                                  name: this.sendTarget.displayName(),
+                                })
+                              : null}
                             .total=${this.sendMode === "troops"
                               ? myTroopsNum
                               : myGoldNum}

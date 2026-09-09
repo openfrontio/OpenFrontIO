@@ -78,6 +78,7 @@ const SAMPLE_INTENTS: StampedIntent[] = [
   { type: "emoji", clientID: P1, recipient: "AllPlayers", emoji: 3 },
   { type: "emoji", clientID: P1, recipient: P2, emoji: 0 },
   { type: "donate_gold", clientID: P1, recipient: P2, gold: 1000000 },
+  { type: "place_bounty", clientID: P1, recipient: P2, gold: 25000 },
   { type: "donate_troops", clientID: P1, recipient: P2, troops: null },
   {
     type: "build_unit",

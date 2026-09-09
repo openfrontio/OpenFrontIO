@@ -29,6 +29,7 @@ function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {
     troops: 100,
     isTraitor: false,
     traitorRemainingTicks: 0,
+    bountyTotal: 0,
     inDoomsdayClock: false,
     isDecaying: false,
     markedDoomsdayClockTick: -1,

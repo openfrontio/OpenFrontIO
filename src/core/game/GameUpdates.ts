@@ -106,6 +106,8 @@ export enum GameUpdateType {
   SpawnPhaseEnd,
   GamePaused,
   DonateEvent,
+  BountyPlacedEvent,
+  BountyCollectedEvent,
 }
 
 export type GameUpdate =
@@ -131,7 +133,9 @@ export type GameUpdate =
   | EmbargoUpdate
   | SpawnPhaseEndUpdate
   | GamePausedUpdate
-  | DonateEventUpdate;
+  | DonateEventUpdate
+  | BountyPlacedUpdate
+  | BountyCollectedUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -173,6 +177,22 @@ export interface DonateEventUpdate {
   donationType: "troops" | "gold";
   senderId: PlayerID;
   recipientId: PlayerID;
+  amount: bigint;
+}
+
+export interface BountyPlacedUpdate {
+  type: GameUpdateType.BountyPlacedEvent;
+  placerId: PlayerID;
+  targetId: PlayerID;
+  amount: bigint;
+  /** Total pool on the target after this placement. */
+  totalPool: bigint;
+}
+
+export interface BountyCollectedUpdate {
+  type: GameUpdateType.BountyCollectedEvent;
+  collectorId: PlayerID;
+  targetId: PlayerID;
   amount: bigint;
 }
 
@@ -256,6 +276,8 @@ export interface PlayerUpdate {
   embargoes?: Set<PlayerID>;
   isTraitor?: boolean;
   traitorRemainingTicks?: number;
+  /** Total gold currently pooled on this player's head (bounty market). */
+  bountyTotal?: Gold;
   inDoomsdayClock?: boolean;
   isDecaying?: boolean;
   markedDoomsdayClockTick?: number;

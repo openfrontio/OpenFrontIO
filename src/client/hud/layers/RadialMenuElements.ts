@@ -620,6 +620,28 @@ const donateGoldRadialElement: MenuElement = {
   },
 };
 
+// Bounty market: pool gold on the selected player's head. Opens the shared
+// SendResourceModal in "bounty" mode (percent-of-my-gold presets, hostile-red
+// styling); the core gates real validity (cooldown, self/team, config flag).
+const placeBountyElement: MenuElement = {
+  id: "place_bounty",
+  name: "place_bounty",
+  text: translateText("bounty.place_bounty"),
+  disabled: (params: MenuElementParams) =>
+    params.game.inSpawnPhase() ||
+    !params.playerActions?.interaction?.canPlaceBounty,
+  icon: traitorIcon,
+  color: "#ef4444",
+  action: (params: MenuElementParams) => {
+    if (!params.selected) return;
+    params.playerPanel.openPlaceBountyModal(
+      params.playerActions,
+      params.tile,
+      params.selected,
+    );
+  },
+};
+
 export const deleteUnitElement: MenuElement = {
   id: Slot.Delete,
   name: "delete",
@@ -810,6 +832,9 @@ export const rootMenuElement: MenuElement = {
             showDonateInsteadOfAttack
               ? donateGoldRadialElement
               : attackMenuElement,
+            // Bounty menu is only available on enemy territory: the disabled
+            // gate also enforces the core rules (config, cooldown, teams).
+            placeBountyElement,
           ]),
     ];
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * computePlayerStatus has two modes:
  *
  *   - Replay mode (no localPlayerSmallID): only crown / traitor / disconnected /
@@ -38,6 +38,7 @@ function ps(overrides: Partial<PlayerState> = {}): PlayerState {
     troops: 0,
     isTraitor: false,
     traitorRemainingTicks: 0,
+    bountyTotal: 0,
     inDoomsdayClock: false,
     isDecaying: false,
     markedDoomsdayClockTick: -1,
@@ -98,7 +99,7 @@ function unitsMap(...us: UnitState[]): Map<number, UnitState> {
   return new Map(us.map((u) => [u.id, u]));
 }
 
-describe("computePlayerStatus — replay mode (no localPlayerSmallID)", () => {
+describe("computePlayerStatus â€” replay mode (no localPlayerSmallID)", () => {
   it("returns empty map when no flags are set", () => {
     const players = playersMap(ps({ smallID: 1 }));
     const status = computePlayerStatus(players, unitsMap());
@@ -113,7 +114,7 @@ describe("computePlayerStatus — replay mode (no localPlayerSmallID)", () => {
     );
     const status = computePlayerStatus(players, unitsMap());
     expect(status.get(2)?.crown).toBe(true);
-    // Players 1 and 3 don't have crown and no other flags → no entry emitted.
+    // Players 1 and 3 don't have crown and no other flags â†’ no entry emitted.
     expect(status.has(1)).toBe(false);
     expect(status.has(3)).toBe(false);
   });
@@ -175,8 +176,8 @@ describe("computePlayerStatus — replay mode (no localPlayerSmallID)", () => {
   });
 });
 
-describe("computePlayerStatus — live mode (localPlayerSmallID set)", () => {
-  it("alliance: local has them as ally → alliance true", () => {
+describe("computePlayerStatus â€” live mode (localPlayerSmallID set)", () => {
+  it("alliance: local has them as ally â†’ alliance true", () => {
     const players = playersMap(
       ps({ smallID: 1, allies: [2] }), // me
       ps({ smallID: 2 }),
@@ -187,7 +188,7 @@ describe("computePlayerStatus — live mode (localPlayerSmallID set)", () => {
     expect(status.get(2)?.alliance).toBe(true);
   });
 
-  it("target: local has them in targets → target true", () => {
+  it("target: local has them in targets â†’ target true", () => {
     const players = playersMap(
       ps({ smallID: 1, targets: [2] }), // me
       ps({ smallID: 2 }),
@@ -221,7 +222,7 @@ describe("computePlayerStatus — live mode (localPlayerSmallID set)", () => {
       unitsMap(),
       { localPlayerSmallID: 1 },
     );
-    // Player 2 only has crown — embargo should be false.
+    // Player 2 only has crown â€” embargo should be false.
     expect(status.get(2)?.embargo).toBe(false);
   });
 
@@ -246,7 +247,7 @@ describe("computePlayerStatus — live mode (localPlayerSmallID set)", () => {
     expect(status.get(1)?.embargo).toBe(false);
   });
 
-  it("nukeTargetsMe: requires tileState — without it, stays false", () => {
+  it("nukeTargetsMe: requires tileState â€” without it, stays false", () => {
     const players = playersMap(ps({ smallID: 1 }), ps({ smallID: 2 }));
     const units = unitsMap(
       unit({
@@ -320,7 +321,7 @@ describe("computePlayerStatus — live mode (localPlayerSmallID set)", () => {
     const status = computePlayerStatus(players, unitsMap(), {
       localPlayerSmallID: 1,
     });
-    // Without local-mode, player 2 wouldn't get an entry — alliance is the
+    // Without local-mode, player 2 wouldn't get an entry â€” alliance is the
     // only reason it shows up here.
     expect(status.get(2)).toBeDefined();
     expect(status.get(2)?.alliance).toBe(true);
@@ -376,7 +377,7 @@ describe("computePlayerStatus — live mode (localPlayerSmallID set)", () => {
   });
 });
 
-describe("computePlayerStatus — doomsday clock phases", () => {
+describe("computePlayerStatus â€” doomsday clock phases", () => {
   // Three phases drive three different skulls: blinking (warn), steady white
   // (draining), steady RED (decaying). The last one comes straight from the sim.
   const WARN = 300; // 30s
@@ -423,7 +424,7 @@ describe("computePlayerStatus — doomsday clock phases", () => {
 
   it("never decays a side that is not flagged at all", () => {
     // Defensive: a stale isDecaying must not paint a skull on a recovered side.
-    // An unflagged player may get no status entry at all, which is equally fine —
+    // An unflagged player may get no status entry at all, which is equally fine â€”
     // what matters is that nothing reports a decaying skull.
     const out = computePlayerStatus(
       new Map([

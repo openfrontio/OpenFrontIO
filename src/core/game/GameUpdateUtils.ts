@@ -53,6 +53,7 @@ export function diffPlayerUpdate(
     prev.piracyGold === next.piracyGold &&
     prev.isTraitor === next.isTraitor &&
     prev.traitorRemainingTicks === next.traitorRemainingTicks &&
+    prev.bountyTotal === next.bountyTotal &&
     prev.inDoomsdayClock === next.inDoomsdayClock &&
     prev.markedDoomsdayClockTick === next.markedDoomsdayClockTick &&
     prev.isDecaying === next.isDecaying &&
@@ -111,6 +112,7 @@ export function diffPlayerUpdate(
     "traitorRemainingTicks",
     prev.traitorRemainingTicks === next.traitorRemainingTicks,
   );
+  setIfDifferent("bountyTotal", prev.bountyTotal === next.bountyTotal);
   setIfDifferent(
     "inDoomsdayClock",
     prev.inDoomsdayClock === next.inDoomsdayClock,
@@ -187,6 +189,7 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.traitorRemainingTicks !== undefined) {
     target.traitorRemainingTicks = Math.max(0, pu.traitorRemainingTicks);
   }
+  if (pu.bountyTotal !== undefined) target.bountyTotal = Number(pu.bountyTotal);
   if (pu.inDoomsdayClock !== undefined)
     target.inDoomsdayClock = pu.inDoomsdayClock;
   if (pu.markedDoomsdayClockTick !== undefined) {

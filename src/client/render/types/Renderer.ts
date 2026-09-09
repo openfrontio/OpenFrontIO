@@ -77,6 +77,8 @@ export interface PlayerState {
   troops: number;
   isTraitor: boolean;
   traitorRemainingTicks: number;
+  /** Total gold pooled on this player's head (bounty market). */
+  bountyTotal: number;
   inDoomsdayClock: boolean;
   isDecaying: boolean;
   markedDoomsdayClockTick: number;
