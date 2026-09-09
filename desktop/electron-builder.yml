@@ -1,0 +1,24 @@
+appId: io.openfront.desktopoffline
+productName: OpenFront Offline
+directories:
+  output: release
+files:
+  - dist/**
+  - package.json
+  - "!node_modules/**/electron/**"
+extraResources:
+  # The production client build the protocol handler serves.
+  - from: ../static
+    to: static
+win:
+  target:
+    - target: portable
+      arch:
+        - x64
+  artifactName: OpenFront-Offline-${version}.exe
+  # Unsigned personal build. CSC_IDENTITY_AUTO_DISCOVERY=false (set in
+  # package.json) prevents winCodeSign toolcache extraction, which needs
+  # symlink privileges on Windows and fails without Developer Mode.
+  signAndEditExecutable: false
+electronDownload:
+  cache: .electron-cache

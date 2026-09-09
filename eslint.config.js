@@ -18,6 +18,9 @@ export default [
       "src/server/gatekeeper/**",
       "tests/pathfinding/playground/**",
       ".claude/**",
+      // The offline desktop shell is a separate npm package with its own
+      // tsconfig/lint posture; the root projectService can't type it.
+      "desktop/**",
     ],
   },
   { files: ["**/*.{js,mjs,cjs,ts}"] },

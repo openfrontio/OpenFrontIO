@@ -1,0 +1,23 @@
+{
+  "name": "openfront-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Offline solo-mode desktop shell for OpenFront",
+  "type": "commonjs",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "electron .",
+    "smoke": "node dist/offlineSmoke.js",
+    "package": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --config electron-builder.yml"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10"
+  }
+}

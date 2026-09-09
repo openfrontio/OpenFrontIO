@@ -26,3 +26,12 @@ tests/perf/output/
 # Locally built Go binary (gen-maps uses `go run .`)
 map-generator/map-generator
 map-generator/map-generator.exe
+
+# Desktop offline shell (Electron)
+desktop/dist/
+desktop/release/
+desktop/node_modules/
+desktop/.electron-cache/
+
+# Packaged offline game folder (1GB+ binaries live here, never commit)
+openfront game/

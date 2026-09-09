@@ -34,7 +34,11 @@
     "lint:eslint:fix": "eslint --fix",
     "prepare": "husky",
     "gen-maps": "cd map-generator && go run . && npm run format",
-    "inst": "npm ci --ignore-scripts"
+    "inst": "npm ci --ignore-scripts",
+    "desktop:build": "npm run build-prod && cd desktop && npm ci && npm run build",
+    "desktop:start": "cd desktop && npm start",
+    "desktop:smoke": "cd desktop && npm run smoke",
+    "desktop:package": "cd desktop && npm run package"
   },
   "lint-staged": {
     "**/*.{js,mjs,cjs,ts,jsx,tsx}": [
