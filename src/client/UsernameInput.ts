@@ -20,6 +20,8 @@ import {
   accountVerifiedName,
   clampUsername,
   genAnonUsername,
+  LAPSE_NOTICE_KEY,
+  lapseNoticeMarker,
   looksGenerated,
   resolvePlayerName,
   verifiedClaimGrace,
@@ -47,7 +49,9 @@ const usernameIsGeneratedKey: string = "usernameIsGenerated";
 const verifiedDefaultAllowedKey: string = "verifiedNameDefaultAllowed";
 // The reserved name we have already warned this device about; see
 // announceLapse. Holds a name, not a boolean, so a later lapse still speaks up.
-const lapseNoticeKey: string = "verifiedLapseNotice";
+// Defined in PlayerName so boot sequencing can read the same key — it has to
+// ask whether a notice is owed before this component writes it.
+const lapseNoticeKey: string = LAPSE_NOTICE_KEY;
 // setTimeout stores its delay in a 32-bit signed int. Anything larger does not
 // saturate — Node warns and fires after 1ms.
 const MAX_TIMEOUT_MS = 2_147_483_647;
@@ -396,12 +400,11 @@ export class UsernameInput extends LitElement {
     }
     const grace = this.claimGrace;
     if (grace === null) return;
-    // Keyed on the phase as well as the name: crossing the deadline is a
-    // material change to what the player must do (resubscribe "before then"
-    // becomes "now, before someone takes it"), so it earns one more
-    // interruption. Without the phase a player warned while it was still
-    // reserved would never hear that it no longer is.
-    const marker = `${grace.name}:${grace.atRisk ? "atrisk" : "reserved"}`;
+    // Keyed on the phase as well as the name; lapseNoticeMarker owns that rule
+    // now, because boot sequencing has to reach the same verdict from the same
+    // inputs (see lapseNoticeDue) and two copies of the format would let one
+    // side think a notice is pending while the other thinks it is spent.
+    const marker = lapseNoticeMarker(grace);
     if (localStorage.getItem(lapseNoticeKey) === marker) return;
     const key = grace.atRisk
       ? "username.lapse_notice_at_risk"

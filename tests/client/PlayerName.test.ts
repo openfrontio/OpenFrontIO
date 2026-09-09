@@ -4,8 +4,11 @@ import {
   clampUsername,
   fallbackPlayerName,
   genAnonUsername,
+  lapseNoticeDue,
+  lapseNoticeMarker,
   looksGenerated,
   resolvePlayerName,
+  sanitizeAccountPersona,
   sanitizePersona,
   verifiedClaimGrace,
   verifiedNameOptIn,
@@ -15,6 +18,7 @@ import type { UserMeResponse } from "../../src/core/ApiSchemas";
 import { UsernameSchema } from "../../src/core/Schemas";
 import {
   MAX_USERNAME_LENGTH,
+  validateAccountUsername,
   validateUsername,
 } from "../../src/core/validations/username";
 
@@ -549,5 +553,210 @@ describe("genAnonUsername", () => {
       expect(name.startsWith("Anon")).toBe(true);
       expect(UsernameSchema.safeParse(name).success, name).toBe(true);
     }
+  });
+});
+
+describe("sanitizeAccountPersona", () => {
+  // The bug this exists to prevent: sanitizePersona keeps these, the account
+  // form does not, so seeding one into the other prefills a draft the very
+  // form showing it refuses to save.
+  it("keeps the parts of a persona the account form accepts", () => {
+    expect(sanitizeAccountPersona("Ada.Lovelace")).toBe("Ada Lovelace");
+    expect(sanitizeAccountPersona("Ada🔥Lovelace")).toBe("Ada Lovelace");
+    expect(sanitizeAccountPersona("  Ada   Lovelace  ")).toBe("Ada Lovelace");
+    expect(sanitizeAccountPersona("Ada_Lovelace-7")).toBe("Ada_Lovelace-7");
+  });
+
+  // Folded, not spaced out. Spacing the diacritic gives "M ller" and "Zo
+  // Smith" — the player's own name mangled and handed back as a suggestion,
+  // which is worse than the empty field it replaces.
+  it("folds a Latin name into the ASCII the account form takes", () => {
+    expect(sanitizeAccountPersona("Müller")).toBe("Muller");
+    expect(sanitizeAccountPersona("Zoë Smith")).toBe("Zoe Smith");
+    expect(sanitizeAccountPersona("José")).toBe("Jose");
+    expect(sanitizeAccountPersona("[CLAN] Müller")).toBe("CLAN Muller");
+  });
+
+  // NFKD has nothing to strip from a stroked or ligature letter — the mark is
+  // part of the glyph — so these need the explicit table, and without it
+  // "Łukasz" loses its first letter entirely.
+  it("folds the Latin letters NFKD cannot decompose", () => {
+    // A Turkish name loses a letter per syllable without the dotless i:
+    // "Yıldırım" spaces out to "Y ld r m".
+    expect(sanitizeAccountPersona("Yıldırım")).toBe("Yildirim");
+    expect(sanitizeAccountPersona("Łukasz")).toBe("Lukasz");
+    expect(sanitizeAccountPersona("Straße")).toBe("Strasse");
+    expect(sanitizeAccountPersona("Øystein")).toBe("Oystein");
+    expect(sanitizeAccountPersona("Ælfred")).toBe("AElfred");
+    // Foldable only AFTER decomposition: NFKD gives "Æ" + an acute, the mark
+    // is stripped, and the table then catches it. Pins that the table runs
+    // after the decomposition rather than before.
+    expect(sanitizeAccountPersona("Ǽlfred")).toBe("AElfred");
+  });
+
+  // L-with-middle-dot is the one letter here NFKD does decompose — into "L"
+  // plus U+00B7, which is punctuation rather than a combining mark, so it
+  // survives the mark strip and becomes a space like any other separator. No
+  // fold-table entry could ever match it; this pins what actually happens.
+  it("recovers the letter from an L-with-middle-dot and spaces the dot", () => {
+    expect(sanitizeAccountPersona("Ŀanfair")).toBe("L anfair");
+    expect(sanitizeAccountPersona("Coŀlegi")).toBe("Col legi");
+  });
+
+  it("returns null when nothing usable survives", () => {
+    for (const persona of [
+      null,
+      undefined,
+      "",
+      // Punctuation the account charset happens to allow is still not a name:
+      // a row of dashes is worse for the player than the empty field they
+      // would otherwise type into.
+      "★★★",
+      "...",
+      "-----",
+      "___",
+      // Under the minimum once folded and filtered.
+      "é",
+      "日本語のなまえ",
+    ]) {
+      expect(sanitizeAccountPersona(persona), String(persona)).toBeNull();
+    }
+  });
+
+  it("cuts an over-long persona at a word boundary", () => {
+    // 25 characters: over the 20-char account cap.
+    expect(sanitizeAccountPersona("Ada Lovelace the Countess")).toBe(
+      "Ada Lovelace the",
+    );
+    // A single long word has no boundary worth cutting back to.
+    expect(sanitizeAccountPersona("AdaLovelaceTheCountessOfLovelace")).toBe(
+      "AdaLovelaceTheCounte",
+    );
+  });
+
+  // The property that matters: the caller puts this straight into the field,
+  // so anything non-null has to be something the field will save.
+  it("never returns a name the account form would reject", () => {
+    for (const persona of [
+      "Zoë",
+      "Zoë Smith",
+      "Müller",
+      "Straße",
+      "Ælfred",
+      "Yıldırım",
+      "Ada.Lovelace",
+      "Ada🔥Lovelace",
+      "[CLAN] Müller",
+      "  Ada   Lovelace  ",
+      "Ada Lovelace the Countess",
+      "AdaLovelaceTheCountessOfLovelace",
+      "Łukasz",
+      "★★★",
+      "a",
+      "-".repeat(30),
+      "_",
+      "Ada  Lovelace",
+      "日本語のなまえ",
+      "ﾊﾝｶｸ",
+    ]) {
+      const seed = sanitizeAccountPersona(persona);
+      if (seed === null) continue;
+      expect(
+        validateAccountUsername(seed).isValid,
+        `${persona} -> ${seed}`,
+      ).toBe(true);
+    }
+  });
+});
+
+describe("lapseNoticeDue", () => {
+  const NOW = new Date("2026-09-01T00:00:00.000Z");
+  const SOON = "2026-10-01T00:00:00.000Z";
+  const PAST = "2026-08-01T00:00:00.000Z";
+
+  function lapsed(overrides: Record<string, unknown> = {}): UserMeResponse {
+    return {
+      player: {
+        username: "RyanTheGreat",
+        usernameBase: "RyanTheGreat",
+        usernameStatus: "claimed",
+        usernameClaimExpiresAt: SOON,
+        ...overrides,
+      },
+    } as unknown as UserMeResponse;
+  }
+
+  it("is due when a reservation is running and nothing has been said", () => {
+    expect(lapseNoticeDue(lapsed(), null, NOW)).toBe(true);
+  });
+
+  it("is not due once the matching marker is stored", () => {
+    const grace = verifiedClaimGrace(lapsed(), NOW)!;
+    expect(lapseNoticeDue(lapsed(), lapseNoticeMarker(grace), NOW)).toBe(false);
+  });
+
+  // Crossing the deadline changes what the player must do, so it earns one
+  // more interruption — and boot sequencing has to agree that one is owed.
+  it("is due again when the reservation crosses into at-risk", () => {
+    const beforeGrace = verifiedClaimGrace(lapsed(), NOW)!;
+    const stale = lapseNoticeMarker(beforeGrace);
+    expect(
+      lapseNoticeDue(lapsed({ usernameClaimExpiresAt: PAST }), stale, NOW),
+    ).toBe(true);
+  });
+
+  it("is not due for an eligible subscriber, or with nothing at stake", () => {
+    expect(
+      lapseNoticeDue(lapsed({ usernameStatus: "premium" }), null, NOW),
+    ).toBe(false);
+    expect(
+      lapseNoticeDue(lapsed({ usernameClaimExpiresAt: null }), null, NOW),
+    ).toBe(false);
+    expect(lapseNoticeDue(null, null, NOW)).toBe(false);
+    expect(lapseNoticeDue(false, null, NOW)).toBe(false);
+  });
+
+  // The two states the boot sequencer relies on being disjoint: a player
+  // cannot owe a lapse notice and be waiting to claim a first name.
+  it("is never due for a player who has no name at all", () => {
+    expect(
+      lapseNoticeDue(
+        lapsed({
+          usernameStatus: "premium",
+          username: null,
+          usernameBase: null,
+        }),
+        null,
+        NOW,
+      ),
+    ).toBe(false);
+  });
+});
+
+// What the predicate answers for the two marker values Main can hold. This is
+// the unit half only — it does not exercise any ordering, because nothing here
+// runs <username-input> or Main. The ordering itself, and the fact that a
+// notice which BAILED must not count as shown, are driven end to end against a
+// real component in tests/client/BootInterruptSequencing.test.ts.
+describe("lapseNoticeDue against a marker from before and after the write", () => {
+  const NOW = new Date("2026-09-01T00:00:00.000Z");
+  const lapsed = {
+    player: {
+      username: "RyanTheGreat",
+      usernameBase: "RyanTheGreat",
+      usernameStatus: "claimed",
+      usernameClaimExpiresAt: "2026-10-01T00:00:00.000Z",
+    },
+  } as unknown as UserMeResponse;
+
+  it("reports due for a marker snapshotted before announceLapse writes", () => {
+    const beforeDispatch = null; // nothing written yet
+    expect(lapseNoticeDue(lapsed, beforeDispatch, NOW)).toBe(true);
+  });
+
+  it("reports not due for the marker announceLapse stores", () => {
+    // What announceLapse stores, the moment before it opens its alert.
+    const afterWrite = lapseNoticeMarker(verifiedClaimGrace(lapsed, NOW)!);
+    expect(lapseNoticeDue(lapsed, afterWrite, NOW)).toBe(false);
   });
 });

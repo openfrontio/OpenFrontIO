@@ -5,8 +5,12 @@ import {
   RENDERABLE_NAME_HAS_ALNUM_RE,
 } from "../core/Schemas";
 import {
+  ACCOUNT_NAME_CHAR_RE,
+  MAX_ACCOUNT_USERNAME_LENGTH,
   MAX_USERNAME_LENGTH,
+  MIN_ACCOUNT_USERNAME_LENGTH,
   MIN_USERNAME_LENGTH,
+  validateAccountUsername,
 } from "../core/validations/username";
 
 // What name a player plays under, resolved in one place.
@@ -199,6 +203,168 @@ export function sanitizePersona(
   // at least reads as a placeholder.
   if (!RENDERABLE_NAME_HAS_ALNUM_RE.test(name)) return null;
   return name;
+}
+
+// The same persona reduced to something the ACCOUNT username form will accept,
+// or null when nothing usable survives.
+//
+// Not the same rule as sanitizePersona, and the difference is load-bearing.
+// The in-game name may be anything the renderer can draw — accents, dots — but
+// an account username is ASCII word characters with single interior spaces
+// (AccountUsernameSchema), because the dot separates a base from its
+// discriminator and two bases must never render alike. So "Zoë" and
+// "Ada.Lovelace" are perfectly good in-game names and are not account names;
+// prefilling the claim form with either would seed a draft that the very form
+// showing it rejects on save.
+//
+// Accents are FOLDED, not dropped. "Müller" is a Latin name written in a
+// charset this form does not take, and spacing the diacritic out gives
+// "M ller" — a mangling of the player's own name, offered back to them as a
+// suggestion. NFKD splits each accented letter into its base plus a combining
+// mark and the marks are stripped, so "Müller" gives "Muller" and "Zoë" gives
+// "Zoe". A stroked or ligature letter has no decomposition to strip — NFKD
+// leaves "Ł", "Ø", "æ" and "ß" exactly as they were — so those are folded
+// from the table below instead, which is why "Łukasz" gives "Lukasz" rather
+// than "ukasz".
+//
+// The table runs AFTER the decomposition, not before, so it also catches
+// letters that only become foldable once NFKD has been applied: "Ǽ" arrives
+// there as "Æ" and leaves as "AE".
+//
+// What remains disallowed after that becomes a space, same as sanitizePersona
+// and for the same reason: throwing a decorated persona away wholesale is what
+// sent Steam buyers to Anon… names in the first place, and a decorative
+// separator divides words rather than joining them ("Ada.Lovelace" and
+// "Ada🔥Lovelace" both give "Ada Lovelace").
+//
+// Returns only names that validateAccountUsername accepts, so a caller may
+// place the result straight into the field. Anything else is null — an empty
+// field the player fills in themselves beats a prefilled error.
+// Latin letters NFKD cannot decompose, because the mark is part of the glyph
+// rather than a combining character: strokes, bars and ligatures. Confined to
+// Latin-1 Supplement and Latin Extended-A, which is what the in-game name
+// atlas covers (see OPE-221) and therefore the whole range a persona can
+// reach this function in.
+const FOLD_UNDECOMPOSABLE: Record<string, string> = {
+  Ł: "L",
+  ł: "l",
+  Ø: "O",
+  ø: "o",
+  Æ: "AE",
+  æ: "ae",
+  Œ: "OE",
+  œ: "oe",
+  Ð: "D",
+  ð: "d",
+  Þ: "TH",
+  þ: "th",
+  ß: "ss",
+  Đ: "D",
+  đ: "d",
+  Ħ: "H",
+  ħ: "h",
+  Ŋ: "N",
+  ŋ: "n",
+  Ŧ: "T",
+  ŧ: "t",
+  // Dotless i and kra: letters in their own right, not an "i"/"k" with
+  // something added, so NFKD has nothing to take off. Without these a Turkish
+  // name loses a letter per syllable — "Yıldırım" spaces out to "Y ld r m".
+  ı: "i",
+  ĸ: "k",
+  // No entry for Ŀ/ŀ (L with middle dot). NFKD DOES decompose those — to
+  // "L" plus U+00B7 MIDDLE DOT, which is punctuation rather than a combining
+  // mark, so it survives the mark strip and becomes a space like any other
+  // separator. The letter is already recovered by the time this table runs, so
+  // an entry here could never match.
+};
+
+export function sanitizeAccountPersona(
+  persona: string | null | undefined,
+): string | null {
+  if (!persona) return null;
+  // Decompose, then drop the combining marks NFKD just separated out. Done
+  // before the charset filter so a folded letter is judged on its base form.
+  const folded = Array.from(persona.normalize("NFKD").replace(/\p{M}+/gu, ""))
+    .map((ch) => FOLD_UNDECOMPOSABLE[ch] ?? ch)
+    .join("");
+  const kept = Array.from(folded, (ch) =>
+    ACCOUNT_NAME_CHAR_RE.test(ch) ? ch : " ",
+  ).join("");
+  const collapsed = kept.replace(/\s+/g, " ").trim();
+  // Cut at the account cap rather than the free-form one. They are equal today
+  // and are separate constants precisely because they need not stay equal.
+  const name =
+    collapsed.length > MAX_ACCOUNT_USERNAME_LENGTH
+      ? trimAtBoundary(collapsed, MAX_ACCOUNT_USERNAME_LENGTH)
+      : collapsed;
+  // Punctuation alone is not a name, exactly as in sanitizePersona: a persona
+  // of "-----" passes the account charset and would seed a row of dashes,
+  // which is worse for the player than the empty field they would otherwise
+  // type into.
+  if (!/[a-zA-Z0-9]/.test(name)) return null;
+  // The single authority on whether this is usable — length, charset and the
+  // no-double-space rule all come back from the form's own validator rather
+  // than being re-derived here, so the two cannot drift.
+  return validateAccountUsername(name).isValid ? name : null;
+}
+
+// Cut to `cap`, preferring a word boundary, exactly as truncateToCap does for
+// the free-form name — a truncated name should read as a shorter name, not as
+// a word chopped in half. Falls back to a hard cut when no boundary leaves
+// enough behind.
+function trimAtBoundary(name: string, cap: number): string {
+  const hard = name.slice(0, cap).trim();
+  if (hard.length < cap) return hard;
+  if (name[cap] === " ") return hard;
+  const lastSpace = hard.lastIndexOf(" ");
+  if (lastSpace < MIN_ACCOUNT_USERNAME_LENGTH) return hard;
+  return hard.slice(0, lastSpace);
+}
+
+// The one-per-lapse marker for a reservation notice: the name AND the phase.
+//
+// Crossing the deadline changes what the player must do — "resubscribe before
+// then" becomes "now, before someone takes it" — so it earns one more
+// interruption, and a marker keyed on the name alone would swallow it. Keyed on
+// the name rather than a bare "already announced" flag so a
+// resubscribe-then-lapse cycle announces the second lapse too.
+//
+// Exported so the notice's owner (UsernameInput.announceLapse) and boot
+// sequencing (lapseNoticeDue) build the string in one place. They ran on
+// separate copies of this rule before, which is how a notice could be counted
+// as pending by one and already-shown by the other.
+/**
+ * localStorage key holding the marker above. Lives here beside the two
+ * functions that give it meaning, because boot sequencing has to read it
+ * before <username-input> writes it.
+ */
+export const LAPSE_NOTICE_KEY = "verifiedLapseNotice";
+
+export function lapseNoticeMarker(grace: ClaimGrace): string {
+  return `${grace.name}:${grace.atRisk ? "atrisk" : "reserved"}`;
+}
+
+// Does this profile still owe the player a lapse notice?
+//
+// The predicate behind UsernameInput.announceLapse, extracted so boot
+// sequencing can ask the same question without firing the notice. It has to be
+// asked BEFORE the userMeResponse dispatch: announceLapse writes the marker
+// before opening its dialog (an unawaited alert would otherwise let a second
+// announcement through), so by the time the dispatch returns the notice looks
+// already-shown and nothing downstream could tell it was about to interrupt.
+//
+// Eligibility first, because being eligible again clears the marker outright:
+// there is nothing at stake, so nothing to announce.
+export function lapseNoticeDue(
+  userMe: UserMeResponse | false | null,
+  storedMarker: string | null,
+  now: Date = new Date(),
+): boolean {
+  if (accountVerifiedName(userMe) !== null) return false;
+  const grace = verifiedClaimGrace(userMe, now);
+  if (grace === null) return false;
+  return storedMarker !== lapseNoticeMarker(grace);
 }
 
 // Whether a stored name has the exact shape genAnonUsername produces:

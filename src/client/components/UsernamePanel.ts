@@ -12,6 +12,8 @@ import {
 } from "../../core/validations/username";
 import { updateUsername, UpdateUsernameResult } from "../Api";
 import { showInGameAlert, showInGameConfirm } from "../InGameModal";
+import { sanitizeAccountPersona } from "../PlayerName";
+import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import { usernameText } from "./ui/UsernameText";
@@ -44,7 +46,45 @@ export class UsernamePanel extends LitElement {
       // Prefill with the base only — never put ".suffix" in the input.
       this.draft = this.player?.usernameBase ?? "";
       this.error = "";
+      if (this.draft === "" && !this.player?.username)
+        void this.seedFromPersona();
     }
+  }
+
+  // A player with no account name at all arrives at an empty form and has to
+  // invent something. Seed it with their Steam persona instead — the name they
+  // already answer to, and the one the claim prompt just told them they could
+  // have.
+  //
+  // Only when the account has no name at all — neither a base NOR a resolved
+  // display name. Both are checked because they can disagree: a response
+  // carrying `username` without `usernameBase` (an older API, a partial
+  // payload) would otherwise read as nameless and seed a persona into the
+  // rename box of a player who already has a name.
+  //
+  // Reduced through sanitizeAccountPersona, not sanitizePersona — the account
+  // charset is narrower than the in-game one, so "Zoë" would otherwise be
+  // seeded into a field that then refuses to save it. A persona with nothing
+  // usable left leaves the field empty; an empty field beats a prefilled error.
+  //
+  // This is a suggestion in a text box and nothing more. It writes no storage
+  // and does not touch the in-game name, so the name the player joins under is
+  // still whatever /users/@me returns after they save (the panel reloads on
+  // success) — never this string.
+  private async seedFromPersona(): Promise<void> {
+    // Only the persona name is read. Nothing else from the Steam identity is
+    // touched here, and none of it is logged.
+    const persona = await steamSDK
+      .getUser()
+      .then((user) => user?.name ?? null)
+      .catch(() => null);
+    const seed = sanitizeAccountPersona(persona);
+    if (seed === null) return;
+    // The player may have started typing, or a fresh profile may have landed,
+    // while getUser() was in flight. Either way the field is no longer ours.
+    if (this.draft !== "") return;
+    if (this.player?.usernameBase || this.player?.username) return;
+    this.draft = seed;
   }
 
   // The date the player may next self-rename, or null when a rename is
