@@ -52,6 +52,9 @@ describe("MasterLobbyService active/inactive deployment", () => {
   let service: MasterLobbyService;
 
   beforeEach(() => {
+    // Scheduling mints game ids under the own instance letter, which resolves
+    // through DOMAIN against the dev-default cluster map.
+    vi.stubEnv("DOMAIN", "localhost");
     vi.spyOn(ServerEnv, "numWorkers").mockReturnValue(1);
     const playlist = { gameConfig: vi.fn(async () => ({})) };
     const log = { info: vi.fn(), error: vi.fn() } as any;
@@ -63,6 +66,7 @@ describe("MasterLobbyService active/inactive deployment", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     vi.mocked(startPolling).mockClear();
   });
 
@@ -108,6 +112,7 @@ describe("MasterLobbyService active/inactive deployment", () => {
 
 describe("MasterLobbyService inactive deployment still starts queued lobbies", () => {
   it("assigns a countdown to a lobby that was queued before going inactive", async () => {
+    vi.stubEnv("DOMAIN", "localhost");
     vi.spyOn(ServerEnv, "numWorkers").mockReturnValue(1);
     const playlist = { gameConfig: vi.fn(async () => ({})) };
     const log = { info: vi.fn(), error: vi.fn() } as any;

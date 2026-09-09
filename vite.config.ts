@@ -152,7 +152,19 @@ function randomWorkerCreateProxy(numWorkers: number): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
-  const devNumWorkers = parseInt(env.NUM_WORKERS ?? "2", 10);
+  // Dev cluster map: mirrors the CLUSTER_JSON the dev server boots with
+  // (package.json start:server-dev), so the dev-served index.html carries the
+  // same shape production RenderHtml injects. The proxy below needs the
+  // worker count to know how many /wN paths to forward.
+  const devClusterJson =
+    env.CLUSTER_JSON ??
+    '{"a":{"host":"localhost","colour":"blue","numWorkers":2}}';
+  const devCluster = JSON.parse(devClusterJson) as Record<
+    string,
+    { numWorkers: number }
+  >;
+  const devInstanceLetter = Object.keys(devCluster)[0];
+  const devNumWorkers = devCluster[devInstanceLetter].numWorkers;
   const resourcesDir = getResourcesDir(__dirname);
   const proprietaryDir = getProprietaryDir(__dirname);
   const sourceDirs = [resourcesDir, proprietaryDir];
@@ -164,7 +176,8 @@ export default defineConfig(({ mode }) => {
     assetManifest: JSON.stringify(assetManifest),
     cdnBase: JSON.stringify(cdnBase),
     gameEnv: JSON.stringify(env.GAME_ENV ?? "dev"),
-    numWorkers: JSON.stringify(parseInt(env.NUM_WORKERS ?? "2", 10)),
+    cluster: devClusterJson,
+    instanceLetter: JSON.stringify(devInstanceLetter),
     turnstileSiteKey: JSON.stringify(
       env.TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
     ),

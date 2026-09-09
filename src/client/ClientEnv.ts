@@ -1,5 +1,6 @@
 import { JWK } from "jose";
 import { z } from "zod";
+import { ClusterConfig } from "../core/ClusterConfig";
 import { GameID } from "../core/Schemas";
 import { simpleHash } from "../core/Util";
 import {
@@ -24,10 +25,19 @@ export class ClientEnv {
       throw new Error("ClientEnv is only available on the browser main thread");
     }
     const bc = window.BOOTSTRAP_CONFIG;
+    // Worker-count source: web shells inject the cluster map + own letter;
+    // desktop shells predating the map still inject the numWorkers scalar.
+    // Either shape must hydrate — the shell binary and the bundle it runs
+    // update on separate schedules, so a new bundle under an old shell is a
+    // live combination (PR 5 moves desktop to /cluster.json discovery).
+    const hasWorkerSource =
+      bc !== undefined &&
+      ((bc.cluster !== undefined && bc.instanceLetter !== undefined) ||
+        bc.numWorkers !== undefined);
     if (
       !bc ||
       bc.gameEnv === undefined ||
-      bc.numWorkers === undefined ||
+      !hasWorkerSource ||
       bc.turnstileSiteKey === undefined ||
       bc.jwtAudience === undefined ||
       bc.instanceId === undefined ||
@@ -37,6 +47,8 @@ export class ClientEnv {
     }
     ClientEnv.values = {
       gameEnv: parseGameEnv(bc.gameEnv),
+      cluster: bc.cluster,
+      instanceLetter: bc.instanceLetter,
       numWorkers: bc.numWorkers,
       turnstileSiteKey: bc.turnstileSiteKey,
       jwtAudience: bc.jwtAudience,
@@ -56,8 +68,32 @@ export class ClientEnv {
   static env(): GameEnv {
     return ClientEnv.get().gameEnv;
   }
+  // Worker count of the server this page talks to: own cluster entry when
+  // the map was injected, the legacy scalar otherwise (old desktop shells).
   static numWorkers(): number {
-    return ClientEnv.get().numWorkers;
+    const v = ClientEnv.get();
+    if (v.cluster !== undefined && v.instanceLetter !== undefined) {
+      const own = v.cluster[v.instanceLetter];
+      if (own === undefined) {
+        throw new Error(
+          `BOOTSTRAP_CONFIG instanceLetter ${v.instanceLetter} not in cluster map`,
+        );
+      }
+      return own.numWorkers;
+    }
+    if (v.numWorkers === undefined) {
+      // Unreachable: get() requires one of the two shapes.
+      throw new Error("BOOTSTRAP_CONFIG has no worker-count source");
+    }
+    return v.numWorkers;
+  }
+  // The fleet map and this page's own letter; undefined under an old desktop
+  // shell that predates the map. PR 5 routes foreign game ids with these.
+  static cluster(): ClusterConfig | undefined {
+    return ClientEnv.get().cluster;
+  }
+  static instanceLetter(): string | undefined {
+    return ClientEnv.get().instanceLetter;
   }
   static turnstileSiteKey(): string {
     return ClientEnv.get().turnstileSiteKey;
@@ -204,7 +240,12 @@ export function deriveServerHttpBase(
 
 export interface ClientEnvValues {
   gameEnv: GameEnv;
-  numWorkers: number;
+  // One of the two worker-count sources is always present: cluster +
+  // instanceLetter from a web shell, or the legacy numWorkers scalar from a
+  // desktop shell that predates the cluster map.
+  cluster?: ClusterConfig;
+  instanceLetter?: string;
+  numWorkers?: number;
   turnstileSiteKey: string;
   jwtAudience: string;
   instanceId: string;

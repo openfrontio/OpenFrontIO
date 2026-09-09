@@ -8,12 +8,19 @@ import {
   setAppShellCacheHeaders,
 } from "../../src/server/RenderHtml";
 
+// Covers both hosts the tests below boot as: the pinned blue deployment and
+// the bare-domain dev box.
+const TEST_CLUSTER = JSON.stringify({
+  a: { host: "blue.openfront.io", colour: "blue", numWorkers: 1 },
+  b: { host: "localhost", colour: "blue", numWorkers: 1 },
+});
+
 describe("RenderHtml", () => {
   const originalGitCommit = process.env.GIT_COMMIT;
   let tempDir: string | null = null;
 
   beforeEach(() => {
-    vi.stubEnv("NUM_WORKERS", "1");
+    vi.stubEnv("CLUSTER_JSON", TEST_CLUSTER);
     vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
     vi.stubEnv("DOMAIN", "localhost");
   });
@@ -49,6 +56,24 @@ describe("RenderHtml", () => {
     expect(second).not.toContain('"second"');
   });
 
+  test("injects the cluster map and own instance letter", async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "render-html-"));
+    const htmlPath = path.join(tempDir, "index.html");
+    await fs.writeFile(
+      htmlPath,
+      "cluster: <%- cluster %>, instanceLetter: <%- instanceLetter %>",
+      "utf8",
+    );
+    process.env.GIT_COMMIT = "abc";
+
+    const rendered = await getAppShellContent(htmlPath);
+
+    // DOMAIN=localhost with no SUBDOMAIN resolves to entry "b".
+    expect(rendered).toContain('instanceLetter: "b"');
+    expect(rendered).toContain('"host":"blue.openfront.io"');
+    expect(rendered).toContain('"numWorkers":1');
+  });
+
   test("sets shared-cache headers for the app shell", () => {
     const headers = new Map<string, string>();
     const response = {
@@ -70,7 +95,7 @@ describe("RenderHtml serverHost pinning", () => {
   let tempDir: string | null = null;
 
   beforeEach(() => {
-    vi.stubEnv("NUM_WORKERS", "1");
+    vi.stubEnv("CLUSTER_JSON", TEST_CLUSTER);
     vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
     vi.stubEnv("GIT_COMMIT", "abc");
   });

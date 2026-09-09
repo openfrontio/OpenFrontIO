@@ -196,6 +196,15 @@ export async function startMaster() {
   }
 }
 
+// The fleet topology map, verbatim from this server's own config. Web
+// clients get it baked into BOOTSTRAP_CONFIG; this endpoint is for the
+// desktop shell, which loads its renderer from app:// and discovers the
+// cluster from its configured serverHost at boot instead.
+app.get("/cluster.json", (_req, res) => {
+  setNoStoreHeaders(res);
+  res.json(ServerEnv.cluster());
+});
+
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;
   const instanceId = ServerEnv.instanceId();

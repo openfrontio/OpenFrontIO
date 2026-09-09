@@ -19,6 +19,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { UserSettings } from "../game/UserSettings";
+import { ClusterConfig } from "../ClusterConfig";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, toInt, within } from "../Util";
@@ -30,6 +31,11 @@ declare global {
       assetManifest?: AssetManifest;
       cdnBase?: string;
       gameEnv?: string;
+      // The fleet map + which entry served this page (docs/MultiServer.md).
+      cluster?: ClusterConfig;
+      instanceLetter?: string;
+      // Legacy scalar, still injected by desktop shells that predate the
+      // cluster map. Web shells send cluster/instanceLetter instead.
       numWorkers?: number;
       turnstileSiteKey?: string;
       jwtAudience?: string;

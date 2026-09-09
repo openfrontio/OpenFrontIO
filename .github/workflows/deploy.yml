@@ -191,7 +191,7 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
+          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
