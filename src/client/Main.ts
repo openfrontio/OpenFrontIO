@@ -397,10 +397,11 @@ class Client {
     document.fonts.add(openFrontFont);
     openFrontFont.load().catch(() => {});
 
-    // Game version only, so a player's version reads the same across web and
-    // Steam. The full string, shell version included, is in page-footer --
-    // and both go through the same helper, so the two cannot disagree. See
-    // renderNavVersion / composeGameVersion (OPE-358).
+    // The tagged version only, so a player's version reads the same across web
+    // and Steam. The build's full identity -- the commit on an untagged build,
+    // and the shell version on Steam -- is in page-footer instead, where it
+    // can be quoted in a bug report without a sha sitting under the logo on
+    // the main menu. See renderNavVersion / taggedGameVersion (OPE-387).
     if (renderNavVersion() === 0) {
       console.warn("Game version element not found");
     }
