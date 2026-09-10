@@ -1283,10 +1283,18 @@ export async function getPlayerCosmeticsRefs(
         flag = null;
       }
     } else {
+      // Only validate against a profile we actually got. getUserMe() returns
+      // the same `false` for "signed out" and "couldn't ask" — a refused
+      // connection, a timed-out request, an expired session — so treating a
+      // falsy profile as "not entitled" clears a flag over a network failure
+      // and the clear below persists. This deliberately keeps the selection
+      // instead, matching the pattern, skin, crown and effect branches around
+      // it: a selection survives an unknown profile and the server validates
+      // the refs on the online join path. Not an oversight — the flag branch
+      // used to be the one that erased, which cost players their saved flag
+      // whenever the catalog loaded but the profile didn't.
       const userMe = await getUserMe();
-      if (!userMe) {
-        flag = null;
-      } else {
+      if (userMe) {
         const flares = userMe.player.flares ?? [];
         const hasWildcard = flares.includes("flag:*");
         if (!hasWildcard && !flares.includes(`flag:${flagData.name}`)) {
