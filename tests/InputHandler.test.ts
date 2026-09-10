@@ -661,16 +661,25 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Alt key default prevention", () => {
-    test("prevents the browser's default action when Alt is pressed", () => {
-      const preventDefaultSpy = vi.spyOn(
-        KeyboardEvent.prototype,
-        "preventDefault",
-      );
+    test("prevents the browser's default action when leftAlt is pressed", () => {
+      const event = new KeyboardEvent("keydown", {
+        code: "AltLeft",
+        cancelable: true,
+      });
 
-      window.dispatchEvent(new KeyboardEvent("keydown", { code: "AltLeft" }));
+      window.dispatchEvent(event);
 
-      expect(preventDefaultSpy).toHaveBeenCalled();
-      preventDefaultSpy.mockRestore();
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    test("does not prevent the browser's default action when rightAlt is pressed", () => {
+      const event = new KeyboardEvent("keydown", {
+        code: "AltRight",
+        cancelable: true,
+      });
+
+      window.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
     });
   });
 
