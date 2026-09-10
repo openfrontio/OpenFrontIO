@@ -13,7 +13,9 @@ vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   prewarmCosmetics: cosmeticsMocks.prewarmCosmetics,
 }));
 
+import { crazyGamesSDK } from "../../src/client/CrazyGamesSDK";
 import {
+  MIDGAME_AD_DEADLINE_MS,
   SinglePlayerModal,
   START_PREPARE_DEADLINE_MS,
 } from "../../src/client/SinglePlayerModal";
@@ -282,10 +284,55 @@ describe("SinglePlayerModal start feedback", () => {
     expect(internals(modal).starting).toBe(true);
   });
 
-  // The deadline must never pre-empt a resolution that is merely slow: every
-  // fetch beneath it is bounded at 10s, so it has to sit above that.
-  it("keeps the deadline above the fetch bounds beneath it", () => {
-    expect(START_PREPARE_DEADLINE_MS).toBeGreaterThan(10_000);
+  // An ad routinely outruns the preparation deadline, so its own bound has to
+  // sit well above it — otherwise the ad bound would be the thing cutting
+  // real creatives short.
+  it("bounds the ad well above the preparation deadline", () => {
+    expect(MIDGAME_AD_DEADLINE_MS).toBeGreaterThan(START_PREPARE_DEADLINE_MS);
+  });
+
+  // Regression: the ad used to be raced against the preparation deadline, so
+  // a normal 15-30s creative was cut off at 15s and the game was dispatched
+  // underneath it — the player landing in spawn selection behind a live ad
+  // overlay. The ad has to gate the start.
+  it("does not cut a midgame ad short at the preparation deadline", async () => {
+    vi.useFakeTimers();
+    let finishAd: () => void = () => {};
+    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishAd = resolve;
+      }),
+    );
+
+    const started = internals(modal).startGame();
+    await vi.advanceTimersByTimeAsync(START_PREPARE_DEADLINE_MS + 5_000);
+
+    // Still watching the ad — nothing may have started.
+    expect(joins).toHaveLength(0);
+
+    finishAd();
+    await started;
+
+    expect(joins).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
+  // The ad still cannot pin the button forever: an SDK that fires neither
+  // adFinished nor adError has to be given up on eventually.
+  it("gives up on an ad that never signals completion", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+      new Promise<void>(() => {}),
+    );
+
+    const started = internals(modal).startGame();
+    await vi.advanceTimersByTimeAsync(MIDGAME_AD_DEADLINE_MS);
+    await started;
+
+    expect(joins).toHaveLength(1);
+    expect(internals(modal).starting).toBe(false);
+    vi.useRealTimers();
   });
 
   // The prewarm is what keeps the click off the network in the first place:

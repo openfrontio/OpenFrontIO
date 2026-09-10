@@ -45,12 +45,46 @@ import {
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
 /**
- * Ceiling on how long a Start Game click will wait before it gives up and
- * starts on defaults. Deliberately above the 10s bound each fetch beneath it
- * carries, so it never pre-empts a wait that is merely slow — it only catches
- * one that would otherwise never settle.
+ * Ceiling on how long a Start Game click will wait for the player's name and
+ * cosmetics before starting on defaults.
+ *
+ * A backstop for a wait that never settles, but not only that: the bounds
+ * beneath it chain rather than sit in parallel — getPlayerCosmetics reaches
+ * getUserMe, which awaits userAuth's 10s-bounded /auth/refresh before issuing
+ * its own 10s-bounded /users/@me — so a genuinely slow leg can exceed this and
+ * be pre-empted. That is accepted: the cost is one single-player game on
+ * default cosmetics, against a Start button that would otherwise sit at
+ * "Starting…" for however long the chain takes. prewarmCosmetics() spends
+ * that time while the player is still choosing, which is what keeps the case
+ * rare rather than routine.
  */
 export const START_PREPARE_DEADLINE_MS = 15_000;
+
+/**
+ * Ceiling on the CrazyGames midgame ad, deliberately far above
+ * START_PREPARE_DEADLINE_MS: an ad creative routinely runs 15-30s and it has
+ * to gate the start, because dispatching behind one puts gameplay — spawn
+ * selection included — under a still-visible overlay. This exists only for an
+ * SDK that never calls adFinished or adError at all. Off CrazyGames,
+ * requestMidgameAd() resolves immediately and none of this is reached.
+ */
+export const MIDGAME_AD_DEADLINE_MS = 60_000;
+
+/**
+ * `work`, or `onDeadline()` if it has not settled within `ms`. The timer is
+ * always cleared, so the fast path costs nothing.
+ */
+function withDeadline<T>(
+  work: Promise<T>,
+  ms: number,
+  onDeadline: () => T,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(onDeadline()), ms);
+  });
+  return Promise.race([work, deadline]).finally(() => clearTimeout(timer));
+}
 
 /** What a start has to wait for before it can dispatch join-lobby. */
 type StartPreparation = {
@@ -909,67 +943,75 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   /**
-   * Everything the dispatch has to wait for, under a single deadline.
+   * Everything the dispatch has to wait for, each wait bounded so none of them
+   * can outlive the button waiting on it.
    *
-   * The deadline sits here rather than on each call because the guarantee is
-   * about the button, not about any one request: whatever else gets added to
-   * this sequence later, a Start click cannot outlive
-   * START_PREPARE_DEADLINE_MS. All three waits can reach code with no bound
-   * of its own — the Steam name seed is a bare IPC call, the CrazyGames
-   * midgame ad resolves only from SDK callbacks that may never fire, and
-   * cosmetics reach the network. Each degrades to something playable: the
-   * interim generated name, no ad, default cosmetics.
+   * Every wait here can reach code with no bound of its own: the Steam name
+   * seed is a bare IPC call, cosmetics reach the network, and the CrazyGames
+   * midgame ad resolves only from SDK callbacks that may never fire. Each
+   * degrades to something playable — the interim generated name, default
+   * cosmetics, no ad.
    *
-   * It is a backstop, not a policy. It sits above the 10s bound every fetch
-   * beneath it already carries, so on any reachable network the real values
-   * win the race and nothing is lost. It exists for the case those bounds
-   * don't cover — a promise that never settles at all — where the cost of
-   * firing is one single-player game on defaults, and the cost of not having
-   * it is a Start button pinned at "Starting…" for the rest of the session,
-   * taking startTutorial() down with it on the re-entrancy guard.
+   * Two deadlines rather than one, because the ad is not the same kind of
+   * wait. A slow name or cosmetics resolution is a cost with nothing to show
+   * for it, so it is cut short at START_PREPARE_DEADLINE_MS. An ad is the
+   * player watching something, legitimately for longer than that, and it has
+   * to finish before gameplay appears underneath it — so it gets
+   * MIDGAME_AD_DEADLINE_MS, sized to catch only an SDK that has stopped
+   * answering. The button staying busy during an ad is correct, not a hang.
+   *
+   * Without any of this a never-settling await pins Start at "Starting…" for
+   * the rest of the session, taking startTutorial() down with it on the
+   * re-entrancy guard.
    */
   private async prepareStart(
     usernameInput: UsernameInput | null,
   ): Promise<StartPreparation> {
     const nameNow = () => usernameInput?.resolvedName() ?? fallbackPlayerName();
 
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const deadline = new Promise<StartPreparation>((resolve) => {
-      timer = setTimeout(() => {
+    const prepared = await withDeadline(
+      (async (): Promise<StartPreparation> => {
+        // Wait for the one-shot Steam name-seed to settle before reading
+        // getUsername(), so a fast single-player start uses the Steam persona
+        // rather than the interim generated anon name.
+        await usernameInput?.whenSeeded();
+        // Name and badge from one resolution, as on the multiplayer join path.
+        const resolvedName = nameNow();
+        // onOpen() prewarmed the caches this reads, so it normally resolves
+        // without touching the network at all.
+        return {
+          resolvedName,
+          cosmetics: await getPlayerCosmetics({
+            verified: resolvedName.verified,
+          }),
+        };
+      })(),
+      START_PREPARE_DEADLINE_MS,
+      () => {
         console.warn(
           "Start preparation exceeded its deadline; starting on defaults",
         );
         const resolvedName = nameNow();
-        resolve({
+        return {
           resolvedName,
           cosmetics: resolvedName.verified ? { verified: true } : {},
-        });
-      }, START_PREPARE_DEADLINE_MS);
-    });
+        };
+      },
+    );
 
-    const prepared = (async (): Promise<StartPreparation> => {
-      // Wait for the one-shot Steam name-seed to settle before reading
-      // getUsername(), so a fast single-player start uses the Steam persona
-      // rather than the interim generated anon name.
-      await usernameInput?.whenSeeded();
-      // Name and badge from one resolution, as on the multiplayer join path.
-      const resolvedName = nameNow();
-      await crazyGamesSDK.requestMidgameAd();
-      // onOpen() prewarmed the caches this reads, so it normally resolves
-      // without touching the network at all.
-      return {
-        resolvedName,
-        cosmetics: await getPlayerCosmetics({
-          verified: resolvedName.verified,
-        }),
-      };
-    })();
+    // Deliberately outside the deadline above and on a bound of its own. The
+    // ad gates the start, and a normal creative outruns
+    // START_PREPARE_DEADLINE_MS — racing it there would cut real ads short on
+    // CrazyGames and drop the player into spawn selection underneath one.
+    await withDeadline(
+      crazyGamesSDK.requestMidgameAd(),
+      MIDGAME_AD_DEADLINE_MS,
+      () => {
+        console.warn("Midgame ad never signalled completion; starting anyway");
+      },
+    );
 
-    try {
-      return await Promise.race([prepared, deadline]);
-    } finally {
-      clearTimeout(timer);
-    }
+    return prepared;
   }
 
   private async startGame() {
