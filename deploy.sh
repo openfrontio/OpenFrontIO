@@ -16,23 +16,26 @@ print_header() {
 # Check command line arguments
 if [ $# -ne 4 ]; then
     echo "Error: Please specify environment, host, version tag, and subdomain"
-    echo "Usage: $0 [prod|staging] [nbg1|staging|masters|falk2] [version_tag] [subdomain]"
+    echo "Usage: $0 [prod|staging] [machine_name] [version_tag] [subdomain]"
     exit 1
 fi
 
 # Validate first argument (environment)
 if [ "$1" != "prod" ] && [ "$1" != "staging" ]; then
     echo "Error: First argument must be either 'prod' or 'staging'"
-    echo "Usage: $0 [prod|staging] [nbg1|staging|masters|falk2] [version_tag] [subdomain]"
+    echo "Usage: $0 [prod|staging] [machine_name] [version_tag] [subdomain]"
     exit 1
 fi
 
-# Validate second argument (host)
-if [ "$2" != "falk2" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" != "masters" ]; then
-    echo "Error: Second argument must be either 'falk2', 'nbg1', 'staging', or 'masters'"
-    echo "Usage: $0 [prod|staging] [nbg1|staging|masters|falk2] [version_tag] [subdomain]"
-    exit 1
-fi
+# The machine name is resolved to an SSH target below (SERVER_HOSTS_JSON or
+# a legacy SERVER_HOST_<NAME> variable), so any label-shaped name is valid —
+# adding a machine must not require editing this script.
+case "$2" in
+    "" | *[!a-zA-Z0-9-]*)
+        echo "Error: machine name must be letters, digits and hyphens, got: '$2'"
+        exit 1
+        ;;
+esac
 
 ENV=$1
 HOST=$2
@@ -134,23 +137,25 @@ if [ -z "${CLUSTER_JSON:-}" ]; then
     fi
 fi
 
-if [ "$HOST" == "staging" ]; then
-    print_header "DEPLOYING TO STAGING HOST"
-    SERVER_HOST=$SERVER_HOST_STAGING
-elif [ "$HOST" == "nbg1" ]; then
-    print_header "DEPLOYING TO NBG1 HOST"
-    SERVER_HOST=$SERVER_HOST_NBG1
-elif [ "$HOST" == "masters" ]; then
-    print_header "DEPLOYING TO MASTERS HOST"
-    SERVER_HOST=$SERVER_HOST_MASTERS
-elif [ "$HOST" == "falk2" ]; then
-    print_header "DEPLOYING TO FALK2 HOST"
-    SERVER_HOST=$SERVER_HOST_FALK2
+# Resolve the machine name to its SSH target. Two sources, directory first:
+#   1. SERVER_HOSTS_JSON — a machine directory, {"falk2":"1.2.3.4",...}.
+#      Adding a machine to the fleet is one edit to that secret; no workflow
+#      or script changes (same spirit as CLUSTER_JSON for topology).
+#   2. Legacy SERVER_HOST_<NAME> variables (SERVER_HOST_FALK2, ...), kept so
+#      existing setups and .env files work unchanged.
+print_header "DEPLOYING TO ${HOST} HOST"
+SERVER_HOST=""
+if [ -n "${SERVER_HOSTS_JSON:-}" ]; then
+    SERVER_HOST=$(printf '%s' "$SERVER_HOSTS_JSON" | jq -r --arg h "$HOST" '.[$h] // empty')
+fi
+if [ -z "$SERVER_HOST" ]; then
+    LEGACY_VAR="SERVER_HOST_$(printf '%s' "$HOST" | tr '[:lower:]-' '[:upper:]_')"
+    SERVER_HOST="${!LEGACY_VAR:-}"
 fi
 
 # Check required environment variables
 if [ -z "$SERVER_HOST" ]; then
-    echo "Error: ${HOST} not defined in .env file or environment"
+    echo "Error: machine '${HOST}' not found in SERVER_HOSTS_JSON and \$${LEGACY_VAR} is unset"
     exit 1
 fi
 
