@@ -43,10 +43,6 @@ import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
-// Not a UserSettings key: those are player-scoped, and wanting a desktop
-// alert when the game starts is a property of this browser, not the account.
-const NOTIFY_ON_START_KEY = "joinLobby.notifyOnStart";
-
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
   @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
@@ -67,12 +63,9 @@ export class JoinLobbyModal extends BaseModal {
   // the pre-join form.
   @state() private hostedLobbies: PublicGameInfo[] = [];
   @state() private hostedLobbiesLoaded = false;
-  // Armed only while permission is granted, so a revoke in browser settings
-  // shows the bell as off instead of silently doing nothing.
-  @state() private notifyOnStart =
-    typeof Notification !== "undefined" &&
-    Notification.permission === "granted" &&
-    localStorage.getItem(NOTIFY_ON_START_KEY) === "true";
+  // Deliberately not persisted: the bell starts off and is re-armed by hand
+  // for each game (reset in startTrackingLobby).
+  @state() private notifyOnStart = false;
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
@@ -187,7 +180,6 @@ export class JoinLobbyModal extends BaseModal {
   private async toggleNotifyOnStart(): Promise<void> {
     if (this.notifyOnStart) {
       this.notifyOnStart = false;
-      localStorage.setItem(NOTIFY_ON_START_KEY, "false");
       return;
     }
     const permission =
@@ -199,15 +191,16 @@ export class JoinLobbyModal extends BaseModal {
       return;
     }
     this.notifyOnStart = true;
-    localStorage.setItem(NOTIFY_ON_START_KEY, "true");
   }
 
   // Main.ts dispatches "game-starting" at prestart, before it closes this
   // modal — so the listener lives on the element, not the open/close cycle.
-  // Skipped while the window has focus: the game-start transition is already
-  // in front of the player, so the alert would be noise.
+  // Deliberately NOT gated on document focus: an armed bell always alerts.
+  // The redundant banner when the player is already watching is cheaper than
+  // a "sometimes it doesn't fire" rule nobody can predict (and the OS may
+  // suppress it for a focused app anyway).
   private readonly handleGameStarting = () => {
-    if (!this.notifyOnStart || !this.currentLobbyId || document.hasFocus()) {
+    if (!this.notifyOnStart || !this.currentLobbyId) {
       return;
     }
     if (Notification.permission !== "granted") return;
@@ -631,6 +624,7 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyStartAt = null;
     this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
+    this.notifyOnStart = false;
     this.isConnecting = true;
     this.handledJoinTimeout = false;
     this.startLobbyUpdates();
@@ -689,6 +683,7 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyStartAt = null;
     this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
+    this.notifyOnStart = false;
     this.isConnecting = true;
   }
 
