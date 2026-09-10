@@ -784,38 +784,45 @@ const TRIBE_NAME_LENGTH_REASON_RE = /^Name must be (\d+)-(\d+) characters$/;
 function legacyTribeNameInvalidResult(
   reason: string,
 ): PurchaseTribeNameResult | undefined {
-  const length = TRIBE_NAME_LENGTH_REASON_RE.exec(reason);
-  if (length !== null) {
-    return {
-      ok: false,
-      code: "length",
-      min: Number(length[1]),
-      max: Number(length[2]),
-    };
-  }
+  const bounds = proseBounds(reason);
+  if (bounds !== undefined) return { ok: false, code: "length", ...bounds };
   const code = LEGACY_TRIBE_NAME_REFUSAL_REASONS.get(reason);
   return code === undefined ? undefined : { ok: false, code };
 }
 
-// A `length` bound off the body. The bounds are what the message says, so an
+// A single `length` bound. The bounds are what the message says, so an
 // unusable one is not usable at all: a positive safe integer or nothing.
-function refusalBound(body: unknown, field: "min" | "max"): number | undefined {
-  const value = (body as Record<string, unknown> | null | undefined)?.[field];
-  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
-    ? value
-    : undefined;
+function isUsableBound(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 
-// The `length` bounds as a range, or nothing. Checked as a pair rather than
+// The `length` bounds as a range, or nothing. Validated as a pair rather than
 // one at a time: `{min: 24, max: 3}` is two individually plausible numbers
 // and one impossible range, and it would render as "24-3" at the player.
-function refusalBounds(
-  body: unknown,
+//
+// Every source of bounds goes through here, including the ones scraped out of
+// the prose. Digits in a sentence are not more trustworthy than numbers in a
+// field — "Name must be 24-3 characters" and a 30-digit bound both parse.
+function usableBounds(
+  min: unknown,
+  max: unknown,
 ): { min: number; max: number } | undefined {
-  const min = refusalBound(body, "min");
-  const max = refusalBound(body, "max");
-  if (min === undefined || max === undefined || min > max) return undefined;
+  if (!isUsableBound(min) || !isUsableBound(max) || min > max) return undefined;
   return { min, max };
+}
+
+// The bounds the API sends as fields (OPE-389).
+function bodyBounds(body: unknown): { min: number; max: number } | undefined {
+  const record = body as Record<string, unknown> | null | undefined;
+  return usableBounds(record?.min, record?.max);
+}
+
+// The bounds a pre-OPE-389 server only puts in the sentence.
+function proseBounds(reason: string): { min: number; max: number } | undefined {
+  const parsed = TRIBE_NAME_LENGTH_REASON_RE.exec(reason);
+  return parsed === null
+    ? undefined
+    : usableBounds(Number(parsed[1]), Number(parsed[2]));
 }
 
 // Why the name was refused, keyed on the server's machine `code` (OPE-389).
@@ -826,24 +833,24 @@ function tribeNameInvalidResult(
   body: unknown,
 ): PurchaseTribeNameResult | undefined {
   if (code === "length") {
-    const bounds = refusalBounds(body);
-    if (bounds !== undefined) return { ok: false, code: "length", ...bounds };
+    const fromBody = bodyBounds(body);
+    if (fromBody !== undefined) {
+      return { ok: false, code: "length", ...fromBody };
+    }
     // The bounds ARE the message, so there is nothing to render without
     // them. The prose still carries them on every server that sends this
-    // code, so read them out of it rather than showing a blank range. Only
-    // the length pattern is tried here: a `length` code sitting next to some
-    // other refusal's prose is a body we do not understand.
+    // code, so read them out of it rather than showing a blank range — and
+    // hold them to the same standard, since a sentence can carry an
+    // impossible range as easily as a field can. Only the length pattern is
+    // tried here: a `length` code sitting next to some other refusal's prose
+    // is a body we do not understand. Nothing usable either way is the
+    // caller's generic failure.
     const reason = (body as { reason?: unknown } | null | undefined)?.reason;
     if (typeof reason !== "string") return undefined;
-    const parsed = TRIBE_NAME_LENGTH_REASON_RE.exec(reason);
-    return parsed === null
+    const fromProse = proseBounds(reason);
+    return fromProse === undefined
       ? undefined
-      : {
-          ok: false,
-          code: "length",
-          min: Number(parsed[1]),
-          max: Number(parsed[2]),
-        };
+      : { ok: false, code: "length", ...fromProse };
   }
   const mapped = TRIBE_NAME_REFUSAL_CODES.get(code);
   return mapped === undefined ? undefined : { ok: false, code: mapped };

@@ -182,6 +182,25 @@ describe("tribe-name spend paths map the debt reason", () => {
       });
     });
 
+    // Matching the shape is not the same as the numbers being a range. The
+    // prose bounds are held to the same standard as the body's: digits in a
+    // sentence are not more trustworthy than numbers in a field.
+    it.each([
+      ["reversed", "Name must be 24-3 characters"],
+      ["zero", "Name must be 0-24 characters"],
+      // Beyond Number.MAX_SAFE_INTEGER, so Number() has already lost it.
+      ["unsafe", "Name must be 3-9007199254740993 characters"],
+    ])(
+      "gives a generic failure when the prose bounds are %s",
+      async (_label, reason) => {
+        respond(400, { reason });
+        expect(await purchaseTribeName("Ninja")).toEqual({
+          ok: false,
+          code: "failed",
+        });
+      },
+    );
+
     // The reasons are allowlisted rather than the machine keys denylisted, so
     // the next branch key the API grows does not land on the player's screen
     // the way "insufficient_balance_debt" did.
@@ -278,6 +297,20 @@ describe("tribe-name spend paths map the debt reason", () => {
 
       it("gives a generic failure when neither bounds nor prose parse", async () => {
         respond(400, { code: "length", reason: UNMATCHED_PROSE });
+        expect(await purchaseTribeName("Ninja")).toEqual({
+          ok: false,
+          code: "failed",
+        });
+      });
+
+      // The prose fallback is a second source of bounds, not a way around
+      // checking them: with no usable body bounds and a reversed range in the
+      // sentence, there is no message to render.
+      it("gives a generic failure when the prose bounds are reversed", async () => {
+        respond(400, {
+          code: "length",
+          reason: "Name must be 24-3 characters",
+        });
         expect(await purchaseTribeName("Ninja")).toEqual({
           ok: false,
           code: "failed",
