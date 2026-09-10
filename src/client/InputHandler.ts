@@ -1066,28 +1066,26 @@ export class InputHandler {
       const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
       switch (source) {
         case "hotkey":
+          // first jump goes 1 -> 5 as before
           this.uiState.upgradeMultiplier =
             currentMultiplier === 1 ? 5 : currentMultiplier + 5;
+            // allow keyboard-only users to loop back to 1
+          if (this.uiState.upgradeMultiplier > MAX_UPGRADE_AMOUNT) {
+            this.uiState.upgradeMultiplier = 1;
+          }
           break;
         case "increase":
           this.uiState.upgradeMultiplier = currentMultiplier + 1;
+          // clamp mouse wheel users to max
+          if (this.uiState.upgradeMultiplier > MAX_UPGRADE_AMOUNT) {
+            this.uiState.upgradeMultiplier = MAX_UPGRADE_AMOUNT;
+          }
           break;
         case "decrease":
+          // decrease only if above 1, we do not clear ghosts with scrollDown
           this.uiState.upgradeMultiplier =
             currentMultiplier > 1 ? currentMultiplier - 1 : 1;
           break;
-      }
-      if (this.uiState.upgradeMultiplier > MAX_UPGRADE_AMOUNT) {
-        if (source === "hotkey") {
-          // Reset to 1 if hotkey was used to exceed max, otherwise clamp to max
-          this.uiState.upgradeMultiplier = 1;
-        } else {
-          this.uiState.upgradeMultiplier = MAX_UPGRADE_AMOUNT;
-        }
-      }
-      if (source === "decrease") {
-        this.uiState.upgradeMultiplier =
-          currentMultiplier > 1 ? currentMultiplier - 1 : 1;
       }
     } else {
       this.uiState.upgradeMultiplier = 1;
