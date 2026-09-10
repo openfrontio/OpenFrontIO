@@ -248,14 +248,14 @@ export class InputHandler {
   private readonly LONG_PRESS_MS = 800;
 
   // Wait in MS before assuming mouse stationary.
-  private readonly HOLD_POINTER_WAIT_MS = 100;
-  private clickHoldPastGrace = false;
+  public readonly HOLD_POINTER_WAIT_MS = 100;
+  private isClickHoldPastGrace = false;
   private clickHoldGrace: ReturnType<typeof setTimeout> | null = null;
   // Wait in MS before starting repeat
-  private readonly HOLD_SECOND_ACTION_DELAY_MS = 150;
+  public readonly HOLD_SECOND_ACTION_DELAY_MS = 1500;
   private clickHoldEnsureIntent: ReturnType<typeof setTimeout> | null = null;
   // Repeated trigger behavior
-  private readonly HOLD_REPEATED_ACTION_TRIGGER_RATE = 90; // hold-to-deploy firerate (multiplier affects this)
+  public readonly HOLD_REPEATED_ACTION_TRIGGER_RATE = 90; // hold-to-deploy firerate (multiplier affects this)
   private clickHoldRepeat: ReturnType<typeof setInterval> | null = null;
 
   private moveInterval: NodeJS.Timeout | null = null;
@@ -987,7 +987,7 @@ export class InputHandler {
           this.longPressTimer = null;
         }
         // Cancel clickHold if dragged quickly
-        if (!this.clickHoldPastGrace) {
+        if (!this.isClickHoldPastGrace) {
           this.clickHoldCleanup();
         }
       }
@@ -1206,33 +1206,41 @@ export class InputHandler {
   }
 
   private clickHold() {
-    if (this.uiState.ghostStructure === null) {
-      this.clickHoldCleanup();
-      return;
-    }
+    // for redefining valid ghosts
+    const isValidTarget = () => {
+      if (this.uiState.ghostStructure === null) {
+        return false;
+      } else {
+        return true;
+      }
+    };
+
     const repeatBehavior = () => {
-      this.eventBus.emit(new ConfirmGhostStructureEvent());
+      isValidTarget()
+        ? this.eventBus.emit(new ConfirmGhostStructureEvent())
+        : this.clickHoldCleanup();
     };
 
     // first: ensure grace period for click+drag has passed
-    if (!this.clickHoldPastGrace) {
-      this.clickHoldGrace = setTimeout(() => {
-        // if nothing stopped this externally
-        this.clickHoldPastGrace = true;
-      }, this.HOLD_POINTER_WAIT_MS);
-    }
-    // second: launch first event, and wait before repeating
-    repeatBehavior();
-    this.clickHoldEnsureIntent = setTimeout(() => {
-      // if mouse still held down, begin repeated events
-      this.clickHoldRepeat = setInterval(() => {
+    this.clickHoldGrace = setTimeout(() => {
+      this.isClickHoldPastGrace = true;
+      // second: launch first event, and wait before repeating
+      repeatBehavior();
+      // finally, we are past initial hold delay
+      // and have launched the first event.
+      this.clickHoldEnsureIntent = setTimeout(() => {
+        // if mouse still held down, begin repeated events
+        // HOWEVER: we do not need to delay the first repeat behavior
         repeatBehavior();
-      }, this.HOLD_REPEATED_ACTION_TRIGGER_RATE);
-    }, this.HOLD_SECOND_ACTION_DELAY_MS);
+        this.clickHoldRepeat = setInterval(() => {
+          repeatBehavior();
+        }, this.HOLD_REPEATED_ACTION_TRIGGER_RATE);
+      }, this.HOLD_SECOND_ACTION_DELAY_MS);
+    }, this.HOLD_POINTER_WAIT_MS);
   }
 
   private clickHoldCleanup() {
-    this.clickHoldPastGrace = false;
+    this.isClickHoldPastGrace = false;
     if (this.clickHoldGrace !== null) {
       clearTimeout(this.clickHoldGrace);
     }
@@ -1248,6 +1256,7 @@ export class InputHandler {
     if (this.moveInterval !== null) {
       clearInterval(this.moveInterval);
     }
+    this.clickHoldCleanup();
     this.activeKeys.clear();
     this.lastGestureScale = null;
     this.keybindAndEvent = [];
