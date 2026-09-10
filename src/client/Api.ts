@@ -827,7 +827,9 @@ export async function boostTribeName(
         }
         return { ok: false, code: "insufficient_balance" };
       }
-      console.error("boostTribeName: bad request", body);
+      // Body-free on purpose: an unrecognised 400 is exactly the case where we
+      // do not know what the body contains, so it must not reach a log line.
+      console.warn("boostTribeName: unrecognised 400 response");
       return { ok: false, code: "failed" };
     }
     if (response.status === 404) {
@@ -1024,7 +1026,9 @@ export async function purchaseCosmeticPack(
       if (PACK_UNAVAILABLE_REASONS.includes(reason)) {
         return { ok: false, code: "unavailable" };
       }
-      console.error("purchaseCosmeticPack: bad request", body);
+      // Body-free on purpose: an unrecognised 400 is exactly the case where we
+      // do not know what the body contains, so it must not reach a log line.
+      console.warn("purchaseCosmeticPack: unrecognised 400 response");
       return { ok: false, code: "failed" };
     }
     if (response.status === 409) {
@@ -1367,7 +1371,12 @@ export async function createPaymentsCheckout(
 
       if (response.status === 400) {
         if (CHECKOUT_CLIENT_BUG_REASONS.includes(reason)) {
-          console.error("createPaymentsCheckout: bad request", body);
+          // Body-free, like the other refusal logs. Kept at error (rather
+          // than the warn the two unrecognised-400 paths use) because the
+          // reason here is one we recognise and it means this client sent
+          // something it never should have -- a real bug, not a refusal we
+          // simply cannot classify.
+          console.error("createPaymentsCheckout: client-bug 400 response");
           return { ok: false, code: "client_bug" };
         }
         if (CHECKOUT_STALE_LISTING_REASONS.includes(reason)) {

@@ -29,6 +29,21 @@ function respond(
   );
 }
 
+// Planted in the server body so the assertion tests the actual rule -- that no
+// part of the body is logged -- rather than the spelling of one log call.
+const CANARY = "CANARY-7f3a";
+
+function expectNoConsoleCallContains(needle: string) {
+  for (const spy of [console.error, console.warn]) {
+    for (const call of vi.mocked(spy).mock.calls) {
+      for (const arg of call) {
+        expect(String(arg)).not.toContain(needle);
+        expect(String(JSON.stringify(arg))).not.toContain(needle);
+      }
+    }
+  }
+}
+
 function lastBody(): any {
   const calls = fetchMock.mock.calls;
   const [, init] = calls[calls.length - 1] as [string, RequestInit];
@@ -50,6 +65,7 @@ beforeEach(() => {
   logOutMock.mockClear();
   vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -260,6 +276,21 @@ describe("createPaymentsCheckout errors", () => {
   it("maps 400 Bad request to client_bug", async () => {
     respond(400, { reason: "Bad request", errors: ["provider: required"] });
     expect(await checkout()).toEqual({ ok: false, code: "client_bug" });
+  });
+
+  it("logs the client-bug 400 without any part of the server body", async () => {
+    respond(400, {
+      reason: "Bad request",
+      errors: [`provider: required ${CANARY}`],
+      canary: CANARY,
+    });
+    expect(await checkout()).toEqual({ ok: false, code: "client_bug" });
+    expectNoConsoleCallContains(CANARY);
+    // Still an error: a recognised client-bug reason is a real bug, unlike
+    // the unrecognised-400 paths that only warn.
+    expect(console.error).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(console.error).mock.calls[0]).toHaveLength(1);
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it("maps 400 Invalid hostname to client_bug", async () => {
