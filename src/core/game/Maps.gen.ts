@@ -92,6 +92,7 @@ export enum GameMapType {
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
   Passage = "Passage", // map-generator/assets/maps/passage/info.json
   Pluto = "Pluto", // map-generator/assets/maps/pluto/info.json
+  PulicatLake = "Pulicat Lake", // map-generator/assets/maps/pulicatlake/info.json
   QingChina = "Qing China", // map-generator/assets/maps/qingchina/info.json
   Russia = "Russia", // map-generator/assets/maps/russia/info.json
   SanFrancisco = "San Francisco", // map-generator/assets/maps/sanfrancisco/info.json
@@ -1863,6 +1864,19 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 16,
     specialTeamCount: 2,
+  },
+  {
+    id: "PulicatLake",
+    type: GameMapType.PulicatLake,
+    translationKey: "map.pulicatlake",
+    categories: ["asia", "new"],
+    multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 12,
+    specialTeamCount: 2,
+    themes: ["asia"],
   },
   {
     id: "QingChina",
