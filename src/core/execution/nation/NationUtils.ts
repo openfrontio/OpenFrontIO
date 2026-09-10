@@ -1,4 +1,4 @@
-import { Cell, Game, Player } from "../../game/Game";
+import { Cell, Game, Player, Structures, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
 import { calculateBoundingBox } from "../../Util";
@@ -46,4 +46,59 @@ function randTerritoryTile(
   }
 
   return null;
+}
+
+// Ranks candidates by structures, troop-cap headroom, and tiles (normalized), returning the juiciest
+export function findJuiciestTarget(
+  game: Game,
+  candidates: Player[],
+): Player | null {
+  if (candidates.length === 0) return null;
+
+  const stats = candidates.map((p) => {
+    // Defense posts and missile silos are defensive, not a prize worth
+    // capturing - only count the rest of the structures.
+    const structureCount = p
+      .units()
+      .reduce(
+        (sum, u) =>
+          Structures.has(u.type()) &&
+          u.type() !== UnitType.DefensePost &&
+          u.type() !== UnitType.MissileSilo
+            ? sum + u.level()
+            : sum,
+        0,
+      );
+    const maxTroops = game.config().maxTroops(p);
+    const troopGapRatio = maxTroops > 0 ? 1 - p.troops() / maxTroops : 0;
+    return {
+      player: p,
+      structureCount,
+      troopGapRatio,
+      tiles: p.numTilesOwned(),
+    };
+  });
+
+  const normalize = (value: number, values: number[]): number => {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    return max > min ? (value - min) / (max - min) : 0;
+  };
+  const structureCounts = stats.map((s) => s.structureCount);
+  const troopGapRatios = stats.map((s) => s.troopGapRatio);
+  const tileCounts = stats.map((s) => s.tiles);
+
+  let best: Player | null = null;
+  let bestScore = -Infinity;
+  for (const s of stats) {
+    const juiciness =
+      normalize(s.structureCount, structureCounts) +
+      normalize(s.troopGapRatio, troopGapRatios) +
+      normalize(s.tiles, tileCounts);
+    if (juiciness > bestScore) {
+      bestScore = juiciness;
+      best = s.player;
+    }
+  }
+  return best;
 }
