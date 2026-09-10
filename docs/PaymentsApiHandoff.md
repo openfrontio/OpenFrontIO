@@ -130,9 +130,11 @@ Two client behaviours matter here:
    This is the most common silent Apple Pay failure — check it before
    debugging anything else.
 
-4. `STRIPE_PUBLISHABLE_KEY` must be set in the game client's build
-   environment (game repo's concern, listed here for completeness — a
-   keyless build keeps the inline flow off).
+4. The game repo's deploy needs the repo-level GitHub Actions variables
+   `STRIPE_PUBLISHABLE_KEY_PROD` / `STRIPE_PUBLISHABLE_KEY_STAGING` set
+   (game repo's concern, listed here for completeness — a keyless build
+   keeps the inline flow off). Use the publishable key from the same
+   Stripe mode the API mints intents in for that environment.
 
 ## Rollout order
 
