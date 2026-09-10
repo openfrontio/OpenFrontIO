@@ -247,6 +247,17 @@ export class InputHandler {
   private suppressNextTap: boolean = false;
   private readonly LONG_PRESS_MS = 800;
 
+  // Wait in MS before assuming mouse stationary.
+  private readonly HOLD_POINTER_WAIT_MS = 100;
+  private clickHoldPastGrace = false;
+  private clickHoldGrace: ReturnType<typeof setTimeout> | null = null;
+  // Wait in MS before starting repeat
+  private readonly HOLD_SECOND_ACTION_DELAY_MS = 150;
+  private clickHoldEnsureIntent: ReturnType<typeof setTimeout> | null = null;
+  // Repeated trigger behavior
+  private readonly HOLD_REPEATED_ACTION_TRIGGER_RATE = 90; // hold-to-deploy firerate (multiplier affects this)
+  private clickHoldRepeat: ReturnType<typeof setInterval> | null = null;
+
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
@@ -760,6 +771,7 @@ export class InputHandler {
       this.lastPointerDownY = event.clientY;
 
       this.eventBus.emit(new MouseDownEvent(event.clientX, event.clientY));
+      this.clickHold();
 
       // Start long-press timer for touch devices
       if (event.pointerType === "touch") {
@@ -806,6 +818,7 @@ export class InputHandler {
     }
     this.pointerDown = false;
     this.pointers.clear();
+    this.clickHoldCleanup();
 
     // Clean up long-press state
     if (this.longPressTimer !== null) {
@@ -963,15 +976,19 @@ export class InputHandler {
     if (this.pointers.size === 1) {
       const deltaX = event.clientX - this.lastPointerX;
       const deltaY = event.clientY - this.lastPointerY;
+      const moveDist =
+        Math.abs(event.clientX - this.lastPointerDownX) +
+        Math.abs(event.clientY - this.lastPointerDownY);
 
-      // Cancel long-press if finger moved significantly before timer fires
-      if (this.longPressTimer !== null) {
-        const moveDist =
-          Math.abs(event.clientX - this.lastPointerDownX) +
-          Math.abs(event.clientY - this.lastPointerDownY);
-        if (moveDist >= this.DRAG_THRESHOLD_PX) {
+      if (moveDist >= this.DRAG_THRESHOLD_PX) {
+        // Cancel long-press if finger moved significantly before timer fires
+        if (this.longPressTimer !== null) {
           clearTimeout(this.longPressTimer);
           this.longPressTimer = null;
+        }
+        // Cancel clickHold if dragged quickly
+        if (!this.clickHoldPastGrace) {
+          this.clickHoldCleanup();
         }
       }
 
@@ -1186,6 +1203,45 @@ export class InputHandler {
       return true;
     }
     return false;
+  }
+
+  private clickHold() {
+    if (this.uiState.ghostStructure === null) {
+      this.clickHoldCleanup();
+      return;
+    }
+    const repeatBehavior = () => {
+      this.eventBus.emit(new ConfirmGhostStructureEvent());
+    };
+
+    // first: ensure grace period for click+drag has passed
+    if (!this.clickHoldPastGrace) {
+      this.clickHoldGrace = setTimeout(() => {
+        // if nothing stopped this externally
+        this.clickHoldPastGrace = true;
+      }, this.HOLD_POINTER_WAIT_MS);
+    }
+    // second: launch first event, and wait before repeating
+    repeatBehavior();
+    this.clickHoldEnsureIntent = setTimeout(() => {
+      // if mouse still held down, begin repeated events
+      this.clickHoldRepeat = setInterval(() => {
+        repeatBehavior();
+      }, this.HOLD_REPEATED_ACTION_TRIGGER_RATE);
+    }, this.HOLD_SECOND_ACTION_DELAY_MS);
+  }
+
+  private clickHoldCleanup() {
+    this.clickHoldPastGrace = false;
+    if (this.clickHoldGrace !== null) {
+      clearTimeout(this.clickHoldGrace);
+    }
+    if (this.clickHoldEnsureIntent !== null) {
+      clearTimeout(this.clickHoldEnsureIntent);
+    }
+    if (this.clickHoldRepeat !== null) {
+      clearInterval(this.clickHoldRepeat);
+    }
   }
 
   destroy() {
