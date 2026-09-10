@@ -117,12 +117,14 @@ Server-side requirements for the PaymentIntent:
    silently). Check this against the deployed domain before debugging
    anything else.
 
-4. Set the repo-level GitHub Actions variables
-   `STRIPE_PUBLISHABLE_KEY_PROD` / `STRIPE_PUBLISHABLE_KEY_STAGING`
-   (deploy.yml picks one per target and bakes it into the client bundle via
-   build.sh → Dockerfile → the Vite define). Per-env because test-mode
-   client secrets can't be confirmed with a live-mode key. A build without
-   one disables the inline flow entirely (redirect fallback).
+4. Set the `STRIPE_PUBLISHABLE_KEY` Actions variable twice: at repo level
+   with the test-mode key (staging deploys attach no GitHub environment, so
+   they only see repo-level vars), and in the `prod` environment with the
+   live-mode key (prod dispatches attach that environment, and its value
+   wins). deploy.yml bakes it into the client bundle via build.sh →
+   Dockerfile → the Vite define. The key's mode must match the mode the API
+   mints intents in. A build without one disables the inline flow entirely
+   (redirect fallback).
 
 ## Testing
 
