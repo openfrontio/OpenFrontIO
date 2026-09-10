@@ -40,7 +40,10 @@ import "./components/CopyButton";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
-import { modalHeader } from "./components/ui/ModalHeader";
+import {
+  DEFAULT_TITLE_CLASS,
+  modalHeader,
+} from "./components/ui/ModalHeader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
 // Not a UserSettings key: those are player-scoped, and wanting a desktop
@@ -131,8 +134,12 @@ export class JoinLobbyModal extends BaseModal {
         : undefined;
     const invite = inviteFriendsButton();
     return modalHeader({
-      title: html`${translateText("public_lobby.title")}
-      ${this.renderNotifyBell()}`,
+      // titleContent (not title) so the bell can sit at the right edge of the
+      // title row via ml-auto, next to the copy/invite cluster.
+      titleContent: html`<span class="${DEFAULT_TITLE_CLASS}"
+          >${translateText("public_lobby.title")}</span
+        >
+        ${this.renderNotifyBell()}`,
       onBack: () => this.closeAndLeave(),
       ariaLabel: translateText("common.close"),
       // Only pair them behind a wrapper when both are present, so a browser --
@@ -155,7 +162,7 @@ export class JoinLobbyModal extends BaseModal {
     );
     return html`<button
       type="button"
-      class="inline-flex align-middle p-1 rounded-lg transition-colors ${on
+      class="inline-flex ml-auto p-1 rounded-lg transition-colors ${on
         ? "text-amber-300 hover:text-amber-200"
         : "text-white/40 hover:text-white"}"
       title=${label}
@@ -171,7 +178,7 @@ export class JoinLobbyModal extends BaseModal {
         stroke-width="1.8"
         stroke-linecap="round"
         stroke-linejoin="round"
-        class="w-5 h-5"
+        class="w-7 h-7"
         aria-hidden="true"
       >
         <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
