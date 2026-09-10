@@ -1193,7 +1193,7 @@ export class JoinLobbyModal extends BaseModal {
     lobbyId: string,
     spectator = false,
   ): Promise<boolean> {
-    const url = `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
+    const url = `${ClientEnv.gameHttpBase(lobbyId)}/${ClientEnv.gameWorkerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {
       method: "GET",

@@ -105,7 +105,12 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { incrementGamesPlayed, presenceMapKey, translateText } from "./Utils";
+import {
+  homeHref,
+  incrementGamesPlayed,
+  presenceMapKey,
+  translateText,
+} from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
 import "./components/DesktopStatusBar";
@@ -854,7 +859,7 @@ class Client {
     const leaveGame = () => {
       crazyGamesSDK.gameplayStop().then(() => {
         // redirect to the home page
-        window.location.href = "/";
+        window.location.href = homeHref();
       });
     };
 
@@ -1040,6 +1045,12 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      // A letter this shell's cluster map doesn't know means the map
+      // predates the game's deployment (stale CDN shell, or a link into a
+      // newer fleet). The apex always serves the freshest map, so re-enter
+      // through it; on the apex itself (and dev/desktop) fall through to
+      // the join flow's normal not-found handling.
+      if (this.redirectUnknownLetterToApex(lobbyId)) return;
       // ?host means the lobby creator is returning to a successor lobby they
       // reused from the win screen: reopen the host view bound to the existing
       // lobby instead of the join flow. Non-creators who hit this URL still get
@@ -1076,7 +1087,7 @@ class Client {
       }
     }
     if (decodedHash.startsWith("#refresh")) {
-      window.location.href = "/";
+      window.location.href = homeHref();
     }
 
     const requeueMode = this.consumeRequeueUrl();
@@ -1124,6 +1135,20 @@ class Client {
    * Draws attention to the status bar rather than failing silently, matching
    * what the dimmed buttons do.
    */
+  // See the call site in handleUrl. True when a navigation was issued.
+  private redirectUnknownLetterToApex(gameID: string): boolean {
+    if (!ClientEnv.gameLetterUnknown(gameID)) return false;
+    if (isDesktopShell()) return false;
+    // Only load-balanced deployments have an apex to bounce to; standalone
+    // ones (beta, branch previews, dev) have no siteHost injected and fall
+    // through to the normal not-found flow, as does the apex shell itself
+    // (its map is already the freshest; CDN staleness ages out in minutes).
+    const apex = ClientEnv.siteHost();
+    if (apex === undefined || window.location.host === apex) return false;
+    window.location.href = `https://${apex}${window.location.pathname.replace(/^\/w\d+\//, "/")}${window.location.search}`;
+    return true;
+  }
+
   private blockedDesktopJoin(lobby: JoinLobbyEvent): boolean {
     if (!isDesktopShell()) return false;
     if (

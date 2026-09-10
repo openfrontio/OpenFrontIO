@@ -11,7 +11,15 @@ export const DESKTOP_APP_ORIGIN = "app://openfront";
 function isAllowedOrigin(origin: string): boolean {
   if (origin === DESKTOP_APP_ORIGIN) return true;
   const siteHost = ServerEnv.siteHost();
-  return siteHost !== undefined && origin === `https://${siteHost}`;
+  if (siteHost !== undefined && origin === `https://${siteHost}`) return true;
+  // Every deployment host in the fleet: a tab pinned to one deployment
+  // reaches a game on another cross-origin (per-game routing by id letter,
+  // docs/MultiServer.md), so each sibling's origin must be allowed. Own host
+  // included — harmless (same-origin requests skip CORS) and keeps the rule
+  // uniform.
+  return Object.values(ServerEnv.cluster()).some(
+    (entry) => origin === `https://${entry.host}`,
+  );
 }
 
 /**
