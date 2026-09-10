@@ -429,13 +429,13 @@ export class Config {
 
   /**
    * Global spawn throttle for the train economy, counted in Train *units*
-   * (~7 per train: engine, tail, 5 cars). Up to 2x spawns while the
-   * world's rail traffic is light, ~1x around 120 units (~17 trains), then
+   * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns while the
+   * world's rail traffic is light, ~1x around 90 units (~13 trains), then
    * a capacity sigmoid collapses it toward 0 past ~400 units so total
    * train income saturates instead of running away.
    */
   trainSaturation(numTrainUnits: number): number {
-    const boost = 1 + exp(-numTrainUnits / 60);
+    const boost = 1 + 0.5 * exp(-numTrainUnits / 60);
     const capacity = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 400);
     return boost * capacity;
   }
@@ -490,15 +490,15 @@ export class Config {
   }
 
   /**
-   * Global spawn throttle for the trade-ship economy. Up to 4x while the
-   * world fleet is small (the pity timer square-roots the realized effect,
-   * so ~2x actual spawns), crossing the old un-boosted curve around 200
-   * ships — a busy lobby reaches that near minute 8 — then a capacity
-   * sigmoid collapses it toward 0 past ~300 ships so total trade income
-   * saturates instead of running away.
+   * Global spawn throttle for the trade-ship economy. Up to ~2.25x odds
+   * while the world fleet is small (the pity timer square-roots the
+   * realized effect, so ~1.5x actual spawns), crossing the old un-boosted
+   * curve around 200 ships — a busy lobby reaches that near minute 8 —
+   * then a capacity sigmoid collapses it toward 0 past ~300 ships so
+   * total trade income saturates instead of running away.
    */
   tradeShipSaturation(numTradeShips: number): number {
-    const boost = 1 + 3 * exp(-numTradeShips / 55);
+    const boost = 1 + 1.25 * exp(-numTradeShips / 100);
     const capacity = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 300);
     return boost * capacity;
   }

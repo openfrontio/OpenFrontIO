@@ -134,7 +134,7 @@ describe("train golden values", () => {
 
   test("trainSaturation: global train sweep", () => {
     // Counted in Train units (~7 per train). >1 boosts spawning while the
-    // world's rail traffic is light, ~1 around 120 units (~17 trains),
+    // world's rail traffic is light, ~1 around 90 units (~13 trains),
     // collapsing toward 0 past the ~400-unit capacity midpoint.
     const table: Record<string, number> = {};
     for (const units of [0, 7, 35, 70, 140, 250, 400, 600, 800, 1_200]) {
