@@ -78,11 +78,22 @@ describe("flag validation against an unknown profile", () => {
     selectFlag();
     vi.mocked(getUserMe).mockResolvedValue(false);
 
+    await getPlayerCosmeticsRefs();
+
+    expect(new UserSettings().getFlag()).toBe("flag:donator");
+  });
+
+  // The other half of the same decision: keeping the selection must not mean
+  // claiming it. The server does not strip an unverifiable cosmetic ref — it
+  // closes the socket with CosmeticsForbidden — so sending a flag we could
+  // not verify would trade a lost flag for an unjoinable multiplayer.
+  it("does not send a flag it could not verify", async () => {
+    selectFlag();
+    vi.mocked(getUserMe).mockResolvedValue(false);
+
     const refs = await getPlayerCosmeticsRefs();
 
-    expect(refs.flag).toBe("flag:donator");
-    // The selection must survive in storage, not just in this one join.
-    expect(new UserSettings().getFlag()).toBe("flag:donator");
+    expect(refs.flag).toBeUndefined();
   });
 
   // The narrow case that actually loses data. A flag written before per-player

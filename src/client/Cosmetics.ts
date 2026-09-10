@@ -1274,6 +1274,14 @@ export async function getPlayerCosmeticsRefs(
   }
 
   let flag = userSettings.getFlag();
+  // Dropping a flag from this join and erasing the player's saved selection
+  // are two different decisions, and only one of them is reversible. Erase
+  // only on a definite answer — the catalog no longer lists the flag, or the
+  // profile says the player is not entitled. "We could not ask" is not an
+  // answer: getUserMe() returns the same `false` for "signed out" and for a
+  // refused connection, a timed-out request or an expired session, so
+  // treating it as "not entitled" erased saved flags over network failures.
+  let flagDenied = false;
   if (flag?.startsWith("flag:")) {
     const key = flag.slice("flag:".length);
     const flagData = cosmetics?.flags?.[key];
@@ -1281,29 +1289,31 @@ export async function getPlayerCosmeticsRefs(
       // Only clear if cosmetics loaded successfully but the key is missing
       if (cosmetics) {
         flag = null;
+        flagDenied = true;
       }
     } else {
-      // Only validate against a profile we actually got. getUserMe() returns
-      // the same `false` for "signed out" and "couldn't ask" — a refused
-      // connection, a timed-out request, an expired session — so treating a
-      // falsy profile as "not entitled" clears a flag over a network failure
-      // and the clear below persists. This deliberately keeps the selection
-      // instead, matching the pattern, skin, crown and effect branches around
-      // it: a selection survives an unknown profile and the server validates
-      // the refs on the online join path. Not an oversight — the flag branch
-      // used to be the one that erased, which cost players their saved flag
-      // whenever the catalog loaded but the profile didn't.
       const userMe = await getUserMe();
       if (userMe) {
         const flares = userMe.player.flares ?? [];
         const hasWildcard = flares.includes("flag:*");
         if (!hasWildcard && !flares.includes(`flag:${flagData.name}`)) {
           flag = null;
+          flagDenied = true;
         }
+      } else {
+        // Unknown profile: keep the selection, but do not send it. An
+        // entitlement we cannot verify is not one to claim — the server does
+        // not strip an unowned cosmetic ref, it refuses the connection
+        // (Privilege returns "forbidden", Worker.ts closes the socket with
+        // CosmeticsForbidden), so sending it would trade a lost flag for an
+        // unjoinable multiplayer. The pattern, skin and crown branches nearby
+        // do send theirs on an unknown profile and carry that exposure; this
+        // one deliberately does not.
+        flag = null;
       }
     }
   }
-  if (flag === null) {
+  if (flagDenied) {
     userSettings.clearFlag();
   }
 
