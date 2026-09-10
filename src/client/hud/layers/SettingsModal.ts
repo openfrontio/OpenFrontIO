@@ -190,7 +190,7 @@ export class SettingsModal extends LitElement implements Controller {
             <div class="flex items-center gap-2">
               <img
                 src=${settingsIcon}
-                alt="settings"
+                alt=""
                 width="24"
                 height="24"
                 class="align-middle"
@@ -213,7 +213,7 @@ export class SettingsModal extends LitElement implements Controller {
               data-open-settings
               @click="${this.onOpenSettingsButtonClick}"
             >
-              <img src=${settingsIcon} alt="settings" width="20" height="20" />
+              <img src=${settingsIcon} alt="" width="20" height="20" />
               <div class="flex-1">
                 <div class="font-medium">
                   ${translateText("user_setting.open_settings_label")}
@@ -228,12 +228,7 @@ export class SettingsModal extends LitElement implements Controller {
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
               @click="${this.onGraphicsSettingsButtonClick}"
             >
-              <img
-                src=${settingsIcon}
-                alt="graphicsSettings"
-                width="20"
-                height="20"
-              />
+              <img src=${settingsIcon} alt="" width="20" height="20" />
               <div class="flex-1">
                 <div class="font-medium">
                   ${translateText("user_setting.graphics_settings_label")}
@@ -248,7 +243,7 @@ export class SettingsModal extends LitElement implements Controller {
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
               @click="${this.onTerrainButtonClick}"
             >
-              <img src=${treeIcon} alt="treeIcon" width="20" height="20" />
+              <img src=${treeIcon} alt="" width="20" height="20" />
               <div class="flex-1">
                 <div class="font-medium">
                   ${translateText("user_setting.toggle_terrain")}
@@ -275,12 +270,7 @@ export class SettingsModal extends LitElement implements Controller {
                 class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
                 @click="${this.onRenderDebugGuiButtonClick}"
               >
-                <img
-                  src=${settingsIcon}
-                  alt="renderDebugGui"
-                  width="20"
-                  height="20"
-                />
+                <img src=${settingsIcon} alt="" width="20" height="20" />
                 <div class="flex-1">
                   <div class="font-medium">
                     ${translateText("user_setting.render_debug_gui")}
@@ -297,7 +287,7 @@ export class SettingsModal extends LitElement implements Controller {
                 class="flex gap-3 items-center w-full text-left p-3 hover:bg-red-600/20 rounded-sm text-red-400 transition-colors"
                 @click="${this.onExitButtonClick}"
               >
-                <img src=${exitIcon} alt="exitIcon" width="20" height="20" />
+                <img src=${exitIcon} alt="" width="20" height="20" />
                 <div class="flex-1">
                   <div class="font-medium">
                     ${translateText("user_setting.exit_game_label")}

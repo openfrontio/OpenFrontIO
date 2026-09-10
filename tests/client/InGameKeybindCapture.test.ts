@@ -48,17 +48,18 @@ describe("keybind capture over a live game", () => {
 
   afterEach(() => {
     inputHandler.destroy();
+    new UserSettings().removeCached(KEYBINDS_KEY, false);
     vi.restoreAllMocks();
   });
 
-  function pressToggleView(target: EventTarget) {
+  function press(target: EventTarget, code: string) {
     target.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        code: "Space",
-        key: " ",
-        bubbles: true,
-      }),
+      new KeyboardEvent("keydown", { code, key: code, bubbles: true }),
     );
+  }
+
+  function pressToggleView(target: EventTarget) {
+    press(target, "Space");
   }
 
   const alternateViewEvents = () =>
@@ -83,5 +84,33 @@ describe("keybind capture over a live game", () => {
     pressToggleView(other);
 
     expect(alternateViewEvents()).toHaveLength(1);
+  });
+
+  it("picks up a keybind rebound mid-match", () => {
+    // The dispatch table is built once per game, so without a listener a key
+    // rebound from the in-game Keybinds tab would not take effect until the
+    // next game.
+    const other = document.createElement("div");
+    document.body.appendChild(other);
+
+    new UserSettings().setKeybinds({ toggleView: { value: "KeyV", key: "V" } });
+
+    press(other, "KeyV");
+    expect(alternateViewEvents()).toHaveLength(1);
+
+    // ...and the old binding stops acting.
+    pressToggleView(other);
+    expect(alternateViewEvents()).toHaveLength(1);
+  });
+
+  it("stops following rebinds once the handler is destroyed", () => {
+    const other = document.createElement("div");
+    document.body.appendChild(other);
+    inputHandler.destroy();
+
+    new UserSettings().setKeybinds({ toggleView: { value: "KeyV", key: "V" } });
+
+    press(other, "KeyV");
+    expect(alternateViewEvents()).toEqual([]);
   });
 });

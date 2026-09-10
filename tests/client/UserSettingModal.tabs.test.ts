@@ -99,14 +99,17 @@ describe("user-setting tabs", () => {
     // would open Settings on the stored 20% and silently reset themselves.
     new UserSettings().setAttackRatio(0.2);
     const el = await mount(false);
-    el.uiState = { attackRatio: 0.5 } as UIState;
+    // A float the HUD slider can actually produce: attackRatio is nudged by
+    // AttackRatioEvent deltas, so it accumulates representation noise and
+    // would render as "30.000000000000004%" unrounded.
+    el.uiState = { attackRatio: 0.30000000000000004 } as UIState;
     el.open({ tab: "gameplay" });
     await el.updateComplete;
 
     const slider = el.querySelector("#attack-ratio-slider") as HTMLElement & {
       value: number;
     };
-    expect(slider.value).toBeCloseTo(50);
+    expect(slider.value).toBe(30);
     expect(new UserSettings().attackRatio()).toBeCloseTo(0.2);
   });
 
@@ -120,7 +123,7 @@ describe("user-setting tabs", () => {
       value: number;
     };
     expect(el.uiState).toBeUndefined();
-    expect(slider.value).toBeCloseTo(35);
+    expect(slider.value).toBe(35);
   });
 
   it("keeps the URL out of it on the non-inline in-game instance", async () => {

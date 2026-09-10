@@ -1045,7 +1045,7 @@ export class UserSettingModal extends BaseModal {
         id="attack-ratio-slider"
         min="1"
         max="100"
-        .value=${this.currentAttackRatio() * 100}
+        .value=${Math.round(this.currentAttackRatio() * 100)}
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 

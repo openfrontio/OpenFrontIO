@@ -1,6 +1,10 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
+import {
+  KEYBINDS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import { Platform } from "./Platform";
 import { UIState } from "./UIState";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
@@ -267,7 +271,47 @@ export class InputHandler {
   ) {}
 
   initialize() {
+    this.buildKeybindTable();
+    // Keybinds are editable mid-match now (the in-game settings modal has a
+    // Keybinds tab), and this table is otherwise built once per game, so a
+    // rebind would not take effect until the next one.
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${KEYBINDS_KEY}`,
+      this.onKeybindsChanged,
+    );
+
+    // Listen for warship selection to change cursor
+    this.eventBus.on(UnitSelectionEvent, (e) => {
+      this.unitSelectionActive =
+        e.isSelected && (e.unit !== null || (e.units ?? []).length > 0);
+      if (e.isSelected && (e.units ?? []).length > 0) {
+        // Multi-selection active
+        this.multiSelectionActive = true;
+        this.canvas.style.cursor = "crosshair";
+      } else if (e.isSelected) {
+        // Single warship selected — cursor crosshair, but not multi
+        this.multiSelectionActive = false;
+        this.canvas.style.cursor = "crosshair";
+      } else {
+        // Deselected
+        this.multiSelectionActive = false;
+        if (!this.selectionBoxActive) {
+          this.canvas.style.cursor = "";
+        }
+      }
+    });
+
+    this.initializePointerAndKeyboardEvents();
+  }
+
+  private onKeybindsChanged = () => {
+    this.buildKeybindTable();
+  };
+
+  /** Re-read the player's keybinds and rebuild the key dispatch table. */
+  private buildKeybindTable() {
     this.keybinds = this.userSettings.keybinds(Platform.isMac);
+    this.keybindAndEvent = [];
 
     this.addKeybindAndEvent(this.keybinds.boatAttack, () => {
       this.eventBus.emit(new DoBoatAttackEvent());
@@ -427,27 +471,9 @@ export class InputHandler {
           this.resolveBuildKeybind(e.code, e.shiftKey) !== null,
       );
     }
-    // Listen for warship selection to change cursor
-    this.eventBus.on(UnitSelectionEvent, (e) => {
-      this.unitSelectionActive =
-        e.isSelected && (e.unit !== null || (e.units ?? []).length > 0);
-      if (e.isSelected && (e.units ?? []).length > 0) {
-        // Multi-selection active
-        this.multiSelectionActive = true;
-        this.canvas.style.cursor = "crosshair";
-      } else if (e.isSelected) {
-        // Single warship selected — cursor crosshair, but not multi
-        this.multiSelectionActive = false;
-        this.canvas.style.cursor = "crosshair";
-      } else {
-        // Deselected
-        this.multiSelectionActive = false;
-        if (!this.selectionBoxActive) {
-          this.canvas.style.cursor = "";
-        }
-      }
-    });
+  }
 
+  private initializePointerAndKeyboardEvents() {
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
     window.addEventListener("pointercancel", (e) => this.onPointerUp(e));
@@ -1201,6 +1227,10 @@ export class InputHandler {
     if (this.moveInterval !== null) {
       clearInterval(this.moveInterval);
     }
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${KEYBINDS_KEY}`,
+      this.onKeybindsChanged,
+    );
     this.activeKeys.clear();
     this.lastGestureScale = null;
     this.keybindAndEvent = [];

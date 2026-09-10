@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import "../../src/client/components/DesktopNavBar";
 import "../../src/client/components/NavUtilityIcons";
 import "../../src/client/components/PlayPage";
+import { initNavigation } from "../../src/client/Navigation";
 
 // jsdom has no ResizeObserver, and the mobile top bar shares a subtree with
 // <steam-wishlist>, which constructs one on first update.
@@ -84,10 +85,10 @@ describe("nav-utility-icons settings cogwheel", () => {
   it("marks the button active once the settings page is shown", async () => {
     expect(settingsButton(icons)!.classList.contains("active")).toBe(false);
 
-    window.currentPageId = "page-settings";
-    window.dispatchEvent(
-      new CustomEvent("showPage", { detail: "page-settings" }),
-    );
+    // Drive the real caller: initNavigation installs the showPage that sets
+    // currentPageId and dispatches the event this component listens for.
+    initNavigation();
+    window.showPage!("page-settings");
     await icons.updateComplete;
 
     expect(settingsButton(icons)!.classList.contains("active")).toBe(true);
