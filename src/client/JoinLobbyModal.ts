@@ -43,6 +43,10 @@ import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
+// Not a UserSettings key: those are player-scoped, and wanting a desktop
+// alert when the game starts is a property of this browser, not the account.
+const NOTIFY_ON_START_KEY = "joinLobby.notifyOnStart";
+
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
   @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
@@ -63,6 +67,12 @@ export class JoinLobbyModal extends BaseModal {
   // the pre-join form.
   @state() private hostedLobbies: PublicGameInfo[] = [];
   @state() private hostedLobbiesLoaded = false;
+  // Armed only while permission is granted, so a revoke in browser settings
+  // shows the bell as off instead of silently doing nothing.
+  @state() private notifyOnStart =
+    typeof Notification !== "undefined" &&
+    Notification.permission === "granted" &&
+    localStorage.getItem(NOTIFY_ON_START_KEY) === "true";
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
@@ -121,7 +131,8 @@ export class JoinLobbyModal extends BaseModal {
         : undefined;
     const invite = inviteFriendsButton();
     return modalHeader({
-      title: translateText("public_lobby.title"),
+      title: html`${translateText("public_lobby.title")}
+      ${this.renderNotifyBell()}`,
       onBack: () => this.closeAndLeave(),
       ariaLabel: translateText("common.close"),
       // Only pair them behind a wrapper when both are present, so a browser --
@@ -133,6 +144,82 @@ export class JoinLobbyModal extends BaseModal {
           : (copy ?? invite),
     });
   }
+
+  // Bell in the post-join title: opt into a desktop notification for when the
+  // wait is over and the game actually starts.
+  private renderNotifyBell(): TemplateResult {
+    if (typeof Notification === "undefined") return html``;
+    const on = this.notifyOnStart;
+    const label = translateText(
+      on ? "public_lobby.notify_on" : "public_lobby.notify_off",
+    );
+    return html`<button
+      type="button"
+      class="inline-flex align-middle p-1 rounded-lg transition-colors ${on
+        ? "text-amber-300 hover:text-amber-200"
+        : "text-white/40 hover:text-white"}"
+      title=${label}
+      aria-label=${label}
+      aria-pressed=${on}
+      @click=${() => this.toggleNotifyOnStart()}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill=${on ? "currentColor" : "none"}
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="w-5 h-5"
+        aria-hidden="true"
+      >
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+    </button>`;
+  }
+
+  private async toggleNotifyOnStart(): Promise<void> {
+    if (this.notifyOnStart) {
+      this.notifyOnStart = false;
+      localStorage.setItem(NOTIFY_ON_START_KEY, "false");
+      return;
+    }
+    const permission =
+      Notification.permission === "default"
+        ? await Notification.requestPermission()
+        : Notification.permission;
+    if (permission !== "granted") {
+      this.showMessage(translateText("public_lobby.notify_blocked"), "red");
+      return;
+    }
+    this.notifyOnStart = true;
+    localStorage.setItem(NOTIFY_ON_START_KEY, "true");
+  }
+
+  // Main.ts dispatches "game-starting" at prestart, before it closes this
+  // modal — so the listener lives on the element, not the open/close cycle.
+  // Skipped while the window has focus: the game-start transition is already
+  // in front of the player, so the alert would be noise.
+  private readonly handleGameStarting = () => {
+    if (!this.notifyOnStart || !this.currentLobbyId || document.hasFocus()) {
+      return;
+    }
+    if (Notification.permission !== "granted") return;
+    try {
+      const notification = new Notification(
+        translateText("public_lobby.notify_started"),
+      );
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    } catch (error) {
+      // Some mobile browsers only allow notifications via a service worker.
+      console.warn("Failed to show game-start notification", error);
+    }
+  };
 
   // Play/Spectate switch. Hidden once the game is running: the player list is
   // frozen at start, so the server would refuse to seat anyone new and the
@@ -601,7 +688,13 @@ export class JoinLobbyModal extends BaseModal {
     this.isConnecting = true;
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener("game-starting", this.handleGameStarting);
+  }
+
   disconnectedCallback() {
+    document.removeEventListener("game-starting", this.handleGameStarting);
     this.hostedLobbySocket.stop();
     this.clearCountdownTimer();
     this.stopLobbyUpdates();
