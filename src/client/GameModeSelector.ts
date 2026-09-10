@@ -24,6 +24,7 @@ import {
 } from "./components/LobbyCard";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
+  getDesktopUpdateState,
   isDesktopShell,
   multiplayerAllowed,
   multiplayerAllowedForSession,
@@ -175,6 +176,12 @@ export class GameModeSelector extends LitElement {
     );
     document.addEventListener("userMeResponse", this.onUserMe);
     if (isDesktopShell()) {
+      // Seed BOTH from their current values. This element is rendered by
+      // <play-page> on a Lit microtask, so it cannot exist yet when the status
+      // bar dispatches the update bridge's synchronous replay -- without the
+      // seed the update half of the gate stays null and silently never
+      // applies (OPE-396).
+      this.desktopUpdateState = getDesktopUpdateState();
       this.desktopSessionState = getDesktopSessionState();
     }
     document.addEventListener(
