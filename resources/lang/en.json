@@ -67,6 +67,7 @@
     "manage_subscription_on_web": "Manage or change your billing on the OpenFront website.",
     "marketing_desc": "Occasional news, events, and game updates. Unsubscribe anytime.",
     "marketing_no_email": "Link an email to your account to subscribe to updates.",
+    "marketing_no_email_steam": "Steam accounts don't have an email on file, so there's nothing to send updates to yet.",
     "marketing_title": "Email updates",
     "no_games": "No games played yet.",
     "no_stats": "No stats available yet. Play some games to start tracking.",
