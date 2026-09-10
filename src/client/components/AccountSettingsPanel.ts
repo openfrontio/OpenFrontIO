@@ -76,6 +76,12 @@ export class AccountSettingsPanel extends LitElement {
     if (!consent) return nothing;
     const hasEmail = consent.hasEmail;
     const on = consent.consented === "approved";
+    // Steam is primary and there's no email on the account: renderEmailBinding()
+    // is suppressed below (no linking UI for Steam in v1), so this is the one
+    // combination with no route to ever get an email. The toggle still renders
+    // — disabled, not omitted — so the card isn't just a heading and a
+    // description with nothing where the control belongs (OPE-397).
+    const steamNoEmail = !hasEmail && this.isSteamPrimary();
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
         <!-- Centred against the title+description block, like the delete card. -->
@@ -87,15 +93,17 @@ export class AccountSettingsPanel extends LitElement {
             <div class="text-white/50 text-sm mt-1">
               ${hasEmail
                 ? translateText("account_modal.marketing_desc")
-                : translateText("account_modal.marketing_no_email")}
+                : steamNoEmail
+                  ? translateText("account_modal.marketing_no_email_steam")
+                  : translateText("account_modal.marketing_no_email")}
             </div>
           </div>
-          ${hasEmail
+          ${hasEmail || steamNoEmail
             ? html`<button
                 role="switch"
                 aria-checked=${on ? "true" : "false"}
                 aria-label=${translateText("account_modal.marketing_title")}
-                ?disabled=${this.consentBusy}
+                ?disabled=${this.consentBusy || steamNoEmail}
                 @click=${() => this.setConsent(!on)}
                 class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${on
                   ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
@@ -258,7 +266,9 @@ export class AccountSettingsPanel extends LitElement {
 
   private async setConsent(consented: boolean): Promise<void> {
     const consent = this.player?.marketingConsent;
-    if (!consent || this.consentBusy) return;
+    // No email to subscribe means no consent request to make — belt-and-
+    // braces alongside the `disabled` attribute on the Steam-no-email toggle.
+    if (!consent || !consent.hasEmail || this.consentBusy) return;
     const previous = consent.consented;
     const next = consented ? "approved" : "denied";
     if (previous === next) return;
