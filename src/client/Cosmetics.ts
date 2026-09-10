@@ -43,6 +43,17 @@ import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
 
+/**
+ * Ceiling on the cosmetics catalog request. Matches the bound the auth calls
+ * already use (Auth.ts, Api.ts) rather than something tighter: when the
+ * catalog fails to load, getPlayerCosmeticsRefs cannot expand the saved
+ * `pattern:<name>` selection into pattern data, so an online player who is
+ * merely slow rather than offline would join without their territory
+ * pattern. A connection that has not answered in ten seconds is down; one
+ * that answers in eight is not, and should keep its cosmetics.
+ */
+export const COSMETICS_FETCH_TIMEOUT_MS = 10_000;
+
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsCache: Cosmetics | null = null;
@@ -715,7 +726,9 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
   }
   const request = (async () => {
     try {
-      const response = await fetch(`${getApiBase()}/cosmetics.json`);
+      const response = await fetch(`${getApiBase()}/cosmetics.json`, {
+        signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
+      });
       if (!response.ok) {
         console.error(`HTTP error! status: ${response.status}`);
         return null;
@@ -742,6 +755,23 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
     }
   });
   return request;
+}
+
+/**
+ * Warms the two caches every cosmetics resolution reads — the profile and the
+ * catalog — so a later getPlayerCosmetics()/getPlayerCosmeticsRefs() answers
+ * from memory instead of the network.
+ *
+ * Called from paths that are about to need cosmetics but are not ready to wait
+ * for them, so the network time is spent while the player is still choosing
+ * rather than after they commit. Never rejects: both calls already resolve to
+ * a falsy value on failure, and callers fire and forget.
+ */
+export function prewarmCosmetics(): Promise<void> {
+  return Promise.all([getUserMe(), fetchCosmetics()]).then(
+    () => undefined,
+    () => undefined,
+  );
 }
 
 export async function resolveFlagUrl(

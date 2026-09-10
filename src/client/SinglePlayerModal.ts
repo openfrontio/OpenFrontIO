@@ -24,7 +24,7 @@ import "./components/GameConfigSettings";
 import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { getPlayerCosmetics } from "./Cosmetics";
+import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
@@ -161,6 +161,10 @@ export class SinglePlayerModal extends BaseModal {
   @state() private overtime: boolean = DEFAULT_OPTIONS.overtime;
   @state() private overtimeStartMinutes: number | undefined =
     DEFAULT_OPTIONS.overtimeStartMinutes;
+  // Drives the Start Game button's busy state. Without it the click produces
+  // nothing visible until every await in startGame() settles, which reads as
+  // a hang rather than as loading whenever the network is slow or absent.
+  @state() private starting: boolean = false;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -523,7 +527,10 @@ export class SinglePlayerModal extends BaseModal {
             variant="primary"
             width="block"
             size="lg"
-            translationKey="game_settings.start"
+            translationKey=${this.starting
+              ? "game_settings.starting"
+              : "game_settings.start"}
+            .disable=${this.starting}
             @click=${this.startGame}
           ></o-button>
         </div>
@@ -567,6 +574,9 @@ export class SinglePlayerModal extends BaseModal {
    * card for new players).
    */
   public async startTutorial(): Promise<void> {
+    // The modal never opens on this path, so onOpen's prewarm never runs.
+    // Overlap it with the manifest load below.
+    void prewarmCosmetics();
     this.resetOptions();
     // A nation count of 0 means "nations disabled"; wait for the real one.
     await this.loadNationCount();
@@ -607,6 +617,13 @@ export class SinglePlayerModal extends BaseModal {
 
   protected onOpen(): void {
     void this.loadNationCount();
+    // Spend the cosmetics round trip while the player is picking a map, not
+    // after they commit. startGame() still resolves cosmetics properly; this
+    // only moves the network time off the click, for the slow-but-reachable
+    // case. It does not help when the backend is unreachable: fetchCosmetics
+    // deliberately does not cache a failure, so the click re-pays one bounded
+    // attempt. Remembering an unreachable backend is OPE-403.
+    void prewarmCosmetics();
   }
 
   private handleSelectRandomMap() {
@@ -864,6 +881,9 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   private async startGame() {
+    // A second click while the first is still resolving would dispatch a
+    // second join-lobby for a different gameID.
+    if (this.starting) return;
     // Validate and clamp maxTimer setting before starting
     let finalMaxTimerValue: number | undefined = undefined;
     if (this.maxTimer) {
@@ -885,105 +905,121 @@ export class SinglePlayerModal extends BaseModal {
       finalMaxTimerValue = Math.max(1, Math.min(120, this.maxTimerValue));
     }
 
-    console.log(
-      `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
-    );
-    const clientID = generateID();
-    const gameID = generateID();
+    // Everything past this point awaits something, some of it network-bound.
+    // Hold the button in its busy state until join-lobby is away so the wait
+    // reads as loading rather than as a dead click.
+    this.starting = true;
+    try {
+      console.log(
+        `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      );
+      const clientID = generateID();
+      const gameID = generateID();
 
-    const usernameInput = document.querySelector(
-      "username-input",
-    ) as UsernameInput;
+      const usernameInput = document.querySelector(
+        "username-input",
+      ) as UsernameInput;
 
-    // Wait for the one-shot Steam name-seed to settle before reading
-    // getUsername(), so a fast single-player start uses the Steam persona
-    // rather than the interim generated anon name. Always resolves.
-    await usernameInput?.whenSeeded();
-    // Name and badge from one resolution, as on the multiplayer join path.
-    const resolvedName = usernameInput?.resolvedName() ?? fallbackPlayerName();
+      // Wait for the one-shot Steam name-seed to settle before reading
+      // getUsername(), so a fast single-player start uses the Steam persona
+      // rather than the interim generated anon name. Always resolves.
+      await usernameInput?.whenSeeded();
+      // Name and badge from one resolution, as on the multiplayer join path.
+      const resolvedName =
+        usernameInput?.resolvedName() ?? fallbackPlayerName();
 
-    await crazyGamesSDK.requestMidgameAd();
+      await crazyGamesSDK.requestMidgameAd();
 
-    this.dispatchEvent(
-      new CustomEvent("join-lobby", {
-        detail: {
-          gameID: gameID,
-          gameStartInfo: {
+      // Resolved before the dispatch rather than inside it, so the wait is
+      // visibly attributable to the busy button above. onOpen() prewarmed the
+      // caches this reads, so it normally resolves without touching the
+      // network; when it does have to, fetchCosmetics is now bounded and
+      // getPlayerCosmetics degrades to defaults rather than failing the start.
+      const cosmetics = await getPlayerCosmetics({
+        verified: resolvedName.verified,
+      });
+
+      this.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: {
             gameID: gameID,
-            players: [
-              {
-                clientID,
-                username: resolvedName.name,
-                clanTag: usernameInput?.getClanTag() ?? null,
-                cosmetics: await getPlayerCosmetics({
-                  verified: resolvedName.verified,
-                }),
+            gameStartInfo: {
+              gameID: gameID,
+              players: [
+                {
+                  clientID,
+                  username: resolvedName.name,
+                  clanTag: usernameInput?.getClanTag() ?? null,
+                  cosmetics,
+                },
+              ],
+              config: {
+                gameMap: this.selectedMap,
+                gameMapSize: this.compactMap
+                  ? GameMapSize.Compact
+                  : GameMapSize.Normal,
+                gameType: GameType.Singleplayer,
+                gameMode: this.gameMode,
+                playerTeams: this.teamCount,
+                difficulty: this.selectedDifficulty,
+                maxTimerValue: finalMaxTimerValue,
+                bots: this.bots,
+                infiniteGold: this.infiniteGold,
+                donateGold: this.gameMode === GameMode.Team,
+                donateTroops: this.gameMode === GameMode.Team,
+                infiniteTroops: this.infiniteTroops,
+                instantBuild: this.instantBuild,
+                randomSpawn: this.randomSpawn,
+                disabledUnits: this.disabledUnits
+                  .map((u) => Object.values(UnitType).find((ut) => ut === u))
+                  .filter((ut): ut is UnitType => ut !== undefined),
+                nations: sliderToNationsConfig(
+                  this.nations,
+                  this.defaultNationCount,
+                ),
+                ...(this.goldMultiplier && this.goldMultiplierValue
+                  ? { goldMultiplier: this.goldMultiplierValue }
+                  : {}),
+                ...(this.startingGold && this.startingGoldValue !== undefined
+                  ? {
+                      startingGold: Math.round(
+                        this.startingGoldValue * 1_000_000,
+                      ),
+                    }
+                  : {}),
+                ...(this.customAlliances
+                  ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
+                  : {}),
+                ...(this.waterNukes ? { waterNukes: true } : {}),
+                ...(this.doomsdayClock
+                  ? {
+                      doomsdayClock: {
+                        enabled: true,
+                        speed: this.doomsdayClockSpeed,
+                      },
+                    }
+                  : {}),
+                ...(this.overtime
+                  ? {
+                      overtime: {
+                        enabled: true,
+                        startMinutes: this.overtimeStartMinutes ?? 30,
+                      },
+                    }
+                  : {}),
               },
-            ],
-            config: {
-              gameMap: this.selectedMap,
-              gameMapSize: this.compactMap
-                ? GameMapSize.Compact
-                : GameMapSize.Normal,
-              gameType: GameType.Singleplayer,
-              gameMode: this.gameMode,
-              playerTeams: this.teamCount,
-              difficulty: this.selectedDifficulty,
-              maxTimerValue: finalMaxTimerValue,
-              bots: this.bots,
-              infiniteGold: this.infiniteGold,
-              donateGold: this.gameMode === GameMode.Team,
-              donateTroops: this.gameMode === GameMode.Team,
-              infiniteTroops: this.infiniteTroops,
-              instantBuild: this.instantBuild,
-              randomSpawn: this.randomSpawn,
-              disabledUnits: this.disabledUnits
-                .map((u) => Object.values(UnitType).find((ut) => ut === u))
-                .filter((ut): ut is UnitType => ut !== undefined),
-              nations: sliderToNationsConfig(
-                this.nations,
-                this.defaultNationCount,
-              ),
-              ...(this.goldMultiplier && this.goldMultiplierValue
-                ? { goldMultiplier: this.goldMultiplierValue }
-                : {}),
-              ...(this.startingGold && this.startingGoldValue !== undefined
-                ? {
-                    startingGold: Math.round(
-                      this.startingGoldValue * 1_000_000,
-                    ),
-                  }
-                : {}),
-              ...(this.customAlliances
-                ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
-                : {}),
-              ...(this.waterNukes ? { waterNukes: true } : {}),
-              ...(this.doomsdayClock
-                ? {
-                    doomsdayClock: {
-                      enabled: true,
-                      speed: this.doomsdayClockSpeed,
-                    },
-                  }
-                : {}),
-              ...(this.overtime
-                ? {
-                    overtime: {
-                      enabled: true,
-                      startMinutes: this.overtimeStartMinutes ?? 30,
-                    },
-                  }
-                : {}),
+              lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
             },
-            lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
-          },
-          source: "singleplayer",
-        } satisfies JoinLobbyEvent,
-        bubbles: true,
-        composed: true,
-      }),
-    );
-    this.close();
+            source: "singleplayer",
+          } satisfies JoinLobbyEvent,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      this.close();
+    } finally {
+      this.starting = false;
+    }
   }
 
   private async loadNationCount() {
