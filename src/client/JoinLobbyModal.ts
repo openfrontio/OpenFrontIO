@@ -1,3 +1,4 @@
+import { Howl } from "howler";
 import { html, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
@@ -66,6 +67,11 @@ export class JoinLobbyModal extends BaseModal {
   // Deliberately not persisted: the bell starts off and is re-armed by hand
   // for each game (reset in startTrackingLobby).
   @state() private notifyOnStart = false;
+  // Own Howl rather than SoundManager: that only exists once the game is
+  // running, and this has to play during the lobby wait. Fixed volume on
+  // purpose -- the SFX slider defaults to 0, and an alert the player asked
+  // for must not be silenced by it.
+  private startAlertSound: Howl | null = null;
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
@@ -142,10 +148,10 @@ export class JoinLobbyModal extends BaseModal {
     });
   }
 
-  // Bell in the post-join title: opt into a desktop notification for when the
-  // wait is over and the game actually starts.
+  // Bell in the post-join title: opt into an alert for when the wait is over
+  // and the game actually starts -- a chime, plus a desktop notification
+  // where the browser allows one.
   private renderNotifyBell(): TemplateResult {
-    if (typeof Notification === "undefined") return html``;
     const on = this.notifyOnStart;
     const label = translateText(
       on ? "public_lobby.notify_on" : "public_lobby.notify_off",
@@ -177,20 +183,39 @@ export class JoinLobbyModal extends BaseModal {
     </button>`;
   }
 
-  private async toggleNotifyOnStart(): Promise<void> {
+  private toggleNotifyOnStart(): void {
     if (this.notifyOnStart) {
       this.notifyOnStart = false;
       return;
     }
-    const permission =
-      Notification.permission === "default"
-        ? await Notification.requestPermission()
-        : Notification.permission;
-    if (permission !== "granted") {
-      this.showMessage(translateText("public_lobby.notify_blocked"), "red");
-      return;
-    }
     this.notifyOnStart = true;
+    // Both stay synchronous inside the click. Safari only shows the
+    // permission prompt from inside a user gesture, and creating (not
+    // playing) the Howl here opens Howler's AudioContext under that gesture,
+    // which is what lets the chime start later from a background tab with no
+    // gesture of its own.
+    if (
+      typeof Notification !== "undefined" &&
+      Notification.permission === "default"
+    ) {
+      void Notification.requestPermission();
+    }
+    this.loadStartAlertSound();
+  }
+
+  private loadStartAlertSound(): Howl {
+    this.startAlertSound ??= new Howl({
+      src: [assetUrl("sounds/effects/game-start-alert.mp3")],
+    });
+    return this.startAlertSound;
+  }
+
+  private playStartAlertSound(): void {
+    try {
+      this.loadStartAlertSound().play();
+    } catch (error) {
+      console.warn("Failed to play game-start alert sound", error);
+    }
   }
 
   // Main.ts dispatches "game-starting" at prestart, before it closes this
@@ -199,11 +224,21 @@ export class JoinLobbyModal extends BaseModal {
   // The redundant banner when the player is already watching is cheaper than
   // a "sometimes it doesn't fire" rule nobody can predict (and the OS may
   // suppress it for a focused app anyway).
+  // The chime is unconditional and the notification is on top of it, not a
+  // fallback path: `new Notification()` succeeds even when the OS drops the
+  // banner (Focus mode, browser lacking system-level permission), so there
+  // is no failure signal to fall back from.
   private readonly handleGameStarting = () => {
     if (!this.notifyOnStart || !this.currentLobbyId) {
       return;
     }
-    if (Notification.permission !== "granted") return;
+    this.playStartAlertSound();
+    if (
+      typeof Notification === "undefined" ||
+      Notification.permission !== "granted"
+    ) {
+      return;
+    }
     try {
       const notification = new Notification(
         translateText("public_lobby.notify_started"),

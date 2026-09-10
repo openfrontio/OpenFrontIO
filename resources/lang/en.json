@@ -1657,7 +1657,6 @@
     "connecting": "Connecting to lobby...",
     "invite_friends": "Invite Friends",
     "join_timeout": "You didn't enter the game in time.",
-    "notify_blocked": "Notifications are blocked in your browser settings",
     "notify_off": "Alert me when the game starts",
     "notify_on": "Game start alert is on",
     "notify_started": "Your game is starting!",
