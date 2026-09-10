@@ -69,8 +69,9 @@ function loadWorldNations(): Nation[] {
 
 /** Cumulative gold by source, across all players. */
 interface GoldTally {
-  trade: bigint; // trade-ship arrivals (both port owners' shares)
-  steal: bigint; // captured trade ships arriving home
+  // Trade-ship gold: arrivals (both port owners' shares) plus captured
+  // ships arriving home — total production, whoever ends up paid.
+  trade: bigint;
   trainSelf: bigint;
   trainOther: bigint;
   shipsArrived: number;
@@ -89,7 +90,6 @@ function toBigint(g: number | bigint): bigint {
 function instrumentStats(game: Game): GoldTally {
   const tally: GoldTally = {
     trade: 0n,
-    steal: 0n,
     trainSelf: 0n,
     trainOther: 0n,
     shipsArrived: 0,
@@ -105,7 +105,7 @@ function instrumentStats(game: Game): GoldTally {
   };
   const boatCapturedTrade = stats.boatCapturedTrade.bind(stats);
   stats.boatCapturedTrade = (player: Player, target: Player, gold) => {
-    tally.steal += toBigint(gold);
+    tally.trade += toBigint(gold);
     boatCapturedTrade(player, target, gold);
   };
   const trainSelfTrade = stats.trainSelfTrade.bind(stats);
@@ -126,7 +126,6 @@ interface MinuteRow {
   minute: number;
   /** Gold earned this minute, 4 significant digits. */
   tradeGold: number;
-  stealGold: number;
   trainGold: number;
   shipsArrived: number;
   trainStops: number;
@@ -143,7 +142,6 @@ async function runNationGame(minutes: number): Promise<{
   aliveNations: number;
   totals: {
     tradeGold: number;
-    stealGold: number;
     trainGold: number;
     shipsArrived: number;
     trainStops: number;
@@ -191,7 +189,6 @@ async function runNationGame(minutes: number): Promise<{
     perMinute.push({
       minute,
       tradeGold: sig(tally.trade - prev.trade),
-      stealGold: sig(tally.steal - prev.steal),
       trainGold: sig(
         tally.trainSelf + tally.trainOther - prev.trainSelf - prev.trainOther,
       ),
@@ -210,7 +207,6 @@ async function runNationGame(minutes: number): Promise<{
     aliveNations: game.players().length,
     totals: {
       tradeGold: sig(tally.trade),
-      stealGold: sig(tally.steal),
       trainGold: sig(tally.trainSelf + tally.trainOther),
       shipsArrived: tally.shipsArrived,
       trainStops: tally.trainStops,
