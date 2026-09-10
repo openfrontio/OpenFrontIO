@@ -469,13 +469,9 @@ export class NationStructureBehavior {
     // On crowded maps the first structure is a port (or factory if landlocked)
     // instead of a city, so nations can get income earlier.
     // Mainly intended for private 200+ nation HvN games.
-    // Uses its own one-shot flag (not unitsOwned(City) or placementsCount):
-    // this branch never builds a city itself, so gating on city count would
-    // re-fire it forever and starve the nation of cities; gating on
-    // placementsCount would let the high-gold SAM-first branch above consume
-    // its only chance. The flag is set only on success, so it keeps retrying
-    // across calls (e.g. while unaffordable) until it places one structure,
-    // then never fires again.
+    // Own one-shot flag, set only on success: unitsOwned(City) never clears
+    // (starves cities forever) and placementsCount can get consumed by the
+    // SAM-first branch above.
     if (
       !citiesDisabled &&
       !this.builtCrowdedMapFirstStructure &&
