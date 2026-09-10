@@ -6,7 +6,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameEnv } from "../core/configuration/Config";
-import { fetchSiteInstanceId } from "./ActiveDeployment";
+import { fetchSiteColor } from "./ActiveDeployment";
 import { getDescriptor } from "./DesktopRelease";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
@@ -176,11 +176,13 @@ export async function startMaster() {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
 
-  // Behind a load balancer (blue/green), only the deployment the balancer
+  // Behind a load balancer (blue/green), only the color the balancer
   // currently routes to should schedule public lobbies. The balancer's
-  // /api/health reports the instanceId of whichever deployment answered, so
-  // comparing it to our own tells us if that's us. A standalone deployment
-  // (no SITE_HOST, or SITE_HOST is our own host) is always active.
+  // /api/health reports the COLOR of whichever deployment answered; colors
+  // are deployment-wide, so with several machines per color the poll
+  // reaching a sibling — same color, different instanceId — still counts as
+  // "the live color is mine". A standalone deployment (no SITE_HOST, or
+  // SITE_HOST is our own host) is always active.
   const siteHost = ServerEnv.siteHost();
   if (siteHost !== undefined && siteHost !== ServerEnv.publicHost()) {
     log.info(`Polling https://${siteHost}/api/health for active deployment`);
@@ -189,9 +191,9 @@ export async function startMaster() {
     // still is). startPolling serializes runs, so the fetch's 10s timeout
     // can't pile requests up.
     startPolling(async () => {
-      const siteInstanceId = await fetchSiteInstanceId(siteHost);
-      if (siteInstanceId === null) return;
-      lobbyService.setActive(siteInstanceId === INSTANCE_ID);
+      const siteColor = await fetchSiteColor(siteHost);
+      if (siteColor === null) return;
+      lobbyService.setActive(siteColor === ServerEnv.color());
     }, 5 * 1000);
   }
 }
@@ -208,10 +210,14 @@ app.get("/cluster.json", (_req, res) => {
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;
   const instanceId = ServerEnv.instanceId();
+  // The drain check (ActiveDeployment) compares colors: deployment-wide,
+  // where instanceId is per-machine and would false-drain siblings behind
+  // the same apex. instanceId stays for diagnostics.
+  const color = ServerEnv.color();
   if (ready) {
-    res.json({ status: "ok", instanceId });
+    res.json({ status: "ok", instanceId, color });
   } else {
-    res.status(503).json({ status: "unavailable", instanceId });
+    res.status(503).json({ status: "unavailable", instanceId, color });
   }
 });
 
