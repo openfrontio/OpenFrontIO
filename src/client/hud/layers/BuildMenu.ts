@@ -24,7 +24,7 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
-import { renderNumber } from "../../Utils";
+import { renderDuration, renderNumber } from "../../Utils";
 import { GameView } from "../../view";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
@@ -280,6 +280,9 @@ export class BuildMenu extends LitElement implements Controller {
       font-weight: bold;
       font-size: 14px;
     }
+    .build-cooldown {
+      color: #ffd700;
+    }
 
     @media (max-width: 768px) {
       .build-menu {
@@ -422,6 +425,9 @@ export class BuildMenu extends LitElement implements Controller {
                 const enabled =
                   buildableUnit.canBuild !== false ||
                   buildableUnit.canUpgrade !== false;
+                const cooldownSeconds = buildableUnit.cooldown
+                  ? Math.ceil(buildableUnit.cooldown / 10)
+                  : 0;
                 return html`
                   <button
                     class="build-button"
@@ -429,7 +435,9 @@ export class BuildMenu extends LitElement implements Controller {
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
                     title=${!enabled
-                      ? translateText("build_menu.not_enough_money")
+                      ? cooldownSeconds > 0
+                        ? translateText("build_menu.on_cooldown")
+                        : translateText("build_menu.not_enough_money")
                       : ""}
                   >
                     <img
@@ -460,6 +468,13 @@ export class BuildMenu extends LitElement implements Controller {
                     ${item.countable
                       ? html`<div class="build-count-chip">
                           <span class="build-count">${this.count(item)}</span>
+                        </div>`
+                      : ""}
+                    ${cooldownSeconds > 0
+                      ? html`<div class="build-count-chip" translate="no">
+                          <span class="build-count build-cooldown"
+                            >🕐 ${renderDuration(cooldownSeconds)}</span
+                          >
                         </div>`
                       : ""}
                   </button>

@@ -59,6 +59,9 @@ export class MirvExecution implements Execution {
   constructor(
     private player: Player,
     private dst: TileRef,
+    // Invoked once the launch actually spawns a missile — side effects that
+    // must not fire for a launch blocked by the global MIRV cooldown.
+    private onLaunch?: () => void,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -68,18 +71,6 @@ export class MirvExecution implements Execution {
     this.baseX = this.mg.x(this.dst);
     this.baseY = this.mg.y(this.dst);
     this.stagedTargets = [this.dst];
-
-    // Betrayal on launch
-    if (this.targetPlayer.isPlayer()) {
-      const alliance = this.player.allianceWith(this.targetPlayer);
-      if (alliance !== null) {
-        this.player.breakAlliance(alliance);
-      }
-      if (this.targetPlayer !== this.player) {
-        this.targetPlayer.updateRelation(this.player, -100);
-        this.player.updateRelation(this.targetPlayer, -100);
-      }
-    }
   }
 
   tick(ticks: number): void {
@@ -96,6 +87,21 @@ export class MirvExecution implements Execution {
         targetPlayer: this.targetPlayer,
       });
       this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
+      this.mg.recordMirvLaunch(this.player);
+
+      // Betrayal on launch. Applied only once the missile actually spawns, so
+      // a launch blocked by the global cooldown pays no diplomatic cost.
+      if (this.targetPlayer.isPlayer()) {
+        const alliance = this.player.allianceWith(this.targetPlayer);
+        if (alliance !== null) {
+          this.player.breakAlliance(alliance);
+        }
+        if (this.targetPlayer !== this.player) {
+          this.targetPlayer.updateRelation(this.player, -100);
+          this.player.updateRelation(this.targetPlayer, -100);
+        }
+      }
+      this.onLaunch?.();
       const x = Math.floor((this.baseX + this.mg.x(this.nuke.tile())) / 2);
       const y = Math.max(0, this.baseY - 500) + 50;
       this.separateDst = this.mg.ref(x, y);

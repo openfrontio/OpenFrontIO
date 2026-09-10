@@ -1428,6 +1428,9 @@ export class PlayerImpl implements Player {
     if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
+    if (unitType === UnitType.MIRV && this.mg.mirvCooldownRemaining(this) > 0) {
+      return false;
+    }
     const cost = knownCost ?? this.mg.unitInfo(unitType).cost(this.mg, this);
     if (this._gold < cost) {
       return false;
@@ -1527,12 +1530,16 @@ export class PlayerImpl implements Player {
         }
       }
 
+      const mirvCooldown =
+        u === UnitType.MIRV ? mg.mirvCooldownRemaining(this) : 0;
+
       result[i] = {
         type: u,
         canBuild,
         canUpgrade,
         cost,
         upgradeCosts,
+        cooldown: mirvCooldown > 0 ? mirvCooldown : undefined,
         overlappingRailroads: buildNew
           ? rail.overlappingRailroads(u, canBuild as TileRef)
           : [],
