@@ -280,3 +280,53 @@ cannot route it.
 Adding the second machine later is not a code change: DNS records, add the
 machine's blue/green origins to both CF pools, two new cluster.json entries,
 fleet redeploy.
+
+## Runbook: adding a machine (implemented by the multi-host deploy jobs)
+
+All of these are config edits; no code changes.
+
+1. Provision the box; install docker/traefik per the existing host setup.
+2. DNS: `blue2.openfront.io` and `green2.openfront.io` → the new machine.
+3. Secrets: add the machine to `SERVER_HOSTS_JSON`
+   (`{"falk2":"<ip>","nbg2":"<ip>"}`, lowercase keys) — deploy.sh resolves
+   machine names from this directory and keyscans only the machine it is
+   deploying to. Legacy `SERVER_HOST_<NAME>` secrets remain a fallback for
+   local runs, but in CI only `SERVER_HOST_FALK2` is wired through — every
+   other machine must be in the directory.
+4. Vars: append the new letters to every prod `CLUSTER_JSON`
+   (append-only — never reuse a letter), and add the machine to the
+   `DEPLOY_TARGETS_BLUE` and `DEPLOY_TARGETS_GREEN` **repository** vars:
+   `[{"host":"falk2","subdomain":"blue"},{"host":"nbg2","subdomain":"blue2"}]`.
+   Repository-level, not environment-level: GitHub expands a job's matrix
+   before its environment exists, so an environment-scoped var would be
+   invisible there and the jobs would silently deploy only the single-box
+   default. The deploy jobs run one sequential matrix leg per entry, stop
+   the rollout at the first failing machine, and refuse a subdomain whose
+   cluster entry carries the other color.
+5. Cloudflare: add the new blue/green origins to their pools.
+6. Deploy (fleet redeploy so every server sees the new map).
+
+Removal is the reverse, drain-first: drop the machine from the
+`DEPLOY_TARGETS_*` vars and the CF pools, let its letters drain (flip away,
+wait for games to end), then delete its cluster entries and its
+`SERVER_HOSTS_JSON` entry. The letters stay retired forever.
+
+## Future (discussed, not built)
+
+- **Merged public lobby feeds (PR 7, wanted once a color spans 2+
+  machines):** public pools are per-deployment by design, so N machines
+  split the fill funnel N ways. Fix without a coordinator: each master
+  serves `GET /lobbies.json` with ONLY its first-hand sanitized lobbies
+  (loop-proof by construction; `s-maxage=1` so it doubles as a CDN-absorbed
+  client endpoint), and each master polls its same-color siblings (from its
+  own cluster map + color) and folds their lobbies into its broadcast.
+  Zero client changes — the merged list arrives through the existing feed,
+  and joining a foreign lobby already routes by its letter. Null-tolerant
+  like the drain poll: an unreachable sibling just contributes nothing.
+- **Cluster registry:** serve cluster.json from the API/DB (`CLUSTER_URL`),
+  then periodic refresh, then authenticated self-registration on boot. Safe
+  precisely because clients already tolerate stale maps (unknown letter →
+  apex). The registry's job is enforcing the invariants: letters
+  append-only forever, numWorkers immutable while a letter has live games,
+  and membership ≠ liveness (a flapping health check must never shrink the
+  map — removal stays drain-then-delete).
