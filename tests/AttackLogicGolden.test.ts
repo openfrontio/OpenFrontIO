@@ -135,6 +135,23 @@ describe("attackLogic golden values", () => {
     expect(table).toMatchSnapshot();
   });
 
+  test("player vs player: large attacker overwhelming-push speed floor", () => {
+    // Speed-only bonus: the ratio curve's parity floor eases from 1 down to
+    // 0.8 with the attacker territory sigmoid, so a huge attacker's stacks
+    // that outnumber the defender's army land up to ~20% faster. Losses are
+    // pinned too, to show they are NOT affected by the floor.
+    const table: Record<string, ReturnType<typeof run>> = {};
+    for (const at of [20_000, 300_000, 2_000_000])
+      for (const r of [0.5, 0.8, 0.9, 1, 1.5]) {
+        table[`attackerTiles=${at} defenderTroops/attackTroops=${r}`] = run({
+          attackTroops: 100_000 / r,
+          attacker: { type: PlayerType.Human, numTiles: at },
+          defender: defender({ numTiles: 20_000, troops: 100_000 }),
+        });
+      }
+    expect(table).toMatchSnapshot();
+  });
+
   test("player vs player: large-territory curves", () => {
     // Sweep territory size on each side independently to pin the sigmoid
     // defender debuff and the >100k attacker bonus.

@@ -38,19 +38,19 @@ exports[`attack scenarios > big_plains equal 20k tiles each, 200k vs 200k, attac
 
 exports[`attack scenarios > giant 1M vs 600k tiles, 8M troops all-in vs 1M defender 1`] = `
 {
-  "attackerLossPerSecond": 48950,
+  "attackerLossPerSecond": 67560,
   "attackerLossPerTile": 8.125,
   "attackerTiles": 1010406,
-  "attackerTroopsLost": 3749625,
+  "attackerTroopsLost": 3749343,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 9656,
+  "defenderLossPerSecond": 13330,
   "defenderLossPerTile": 1.603,
   "defenderTiles": 591663,
   "defenderTroopsLost": 739638,
   "finished": true,
-  "ticks": 766,
+  "ticks": 555,
   "tilesConquered": 461482,
-  "tilesPerSecond": 6025,
+  "tilesPerSecond": 8315,
 }
 `;
 

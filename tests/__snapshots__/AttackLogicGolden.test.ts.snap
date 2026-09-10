@@ -25,42 +25,42 @@ exports[`attackLogic golden values > border size 1`] = `
   "dTroops=1000 attack=100000 border=1": {
     "attackerLoss": 22.2079,
     "defenderLoss": 0.05,
-    "tickFraction": 2.12112,
+    "tickFraction": 2.12063,
   },
   "dTroops=1000 attack=100000 border=10": {
     "attackerLoss": 22.2079,
     "defenderLoss": 0.05,
-    "tickFraction": 0.212112,
+    "tickFraction": 0.212063,
   },
   "dTroops=1000 attack=100000 border=100": {
     "attackerLoss": 22.2079,
     "defenderLoss": 0.05,
-    "tickFraction": 0.0212112,
+    "tickFraction": 0.0212063,
   },
   "dTroops=1000 attack=100000 border=1000": {
     "attackerLoss": 22.2079,
     "defenderLoss": 0.05,
-    "tickFraction": 0.00212112,
+    "tickFraction": 0.00212063,
   },
   "dTroops=1000 attack=10000000 border=1": {
     "attackerLoss": 22.2079,
     "defenderLoss": 0.05,
-    "tickFraction": 2.12112,
+    "tickFraction": 2.12063,
   },
   "dTroops=1000 attack=10000000 border=10": {
     "attackerLoss": 22.2079,
     "defenderLoss": 0.05,
-    "tickFraction": 0.212112,
+    "tickFraction": 0.212063,
   },
   "dTroops=1000 attack=10000000 border=100": {
     "attackerLoss": 22.2079,
     "defenderLoss": 0.05,
-    "tickFraction": 0.0212112,
+    "tickFraction": 0.0212063,
   },
   "dTroops=1000 attack=10000000 border=1000": {
     "attackerLoss": 22.2079,
     "defenderLoss": 0.05,
-    "tickFraction": 0.00212112,
+    "tickFraction": 0.00212063,
   },
   "dTroops=100000 attack=1000 border=1": {
     "attackerLoss": 77.1151,
@@ -105,22 +105,22 @@ exports[`attackLogic golden values > border size 1`] = `
   "dTroops=100000 attack=10000000 border=1": {
     "attackerLoss": 23.1345,
     "defenderLoss": 5,
-    "tickFraction": 2.12112,
+    "tickFraction": 2.12063,
   },
   "dTroops=100000 attack=10000000 border=10": {
     "attackerLoss": 23.1345,
     "defenderLoss": 5,
-    "tickFraction": 0.212112,
+    "tickFraction": 0.212063,
   },
   "dTroops=100000 attack=10000000 border=100": {
     "attackerLoss": 23.1345,
     "defenderLoss": 5,
-    "tickFraction": 0.0212112,
+    "tickFraction": 0.0212063,
   },
   "dTroops=100000 attack=10000000 border=1000": {
     "attackerLoss": 23.1345,
     "defenderLoss": 5,
-    "tickFraction": 0.00212112,
+    "tickFraction": 0.00212063,
   },
   "dTroops=10000000 attack=1000 border=1": {
     "attackerLoss": 385.995,
@@ -435,22 +435,22 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=1000000 dTiles=100 dTroops=0 attack=1": {
     "attackerLoss": 11.0971,
     "defenderLoss": 0,
-    "tickFraction": 0.0107106,
+    "tickFraction": 0.00866911,
   },
   "Mountain aTiles=1000000 dTiles=100 dTroops=0 attack=1000": {
     "attackerLoss": 11.0971,
     "defenderLoss": 0,
-    "tickFraction": 0.0107106,
+    "tickFraction": 0.00866911,
   },
   "Mountain aTiles=1000000 dTiles=100 dTroops=0 attack=1000000": {
     "attackerLoss": 11.0971,
     "defenderLoss": 0,
-    "tickFraction": 0.0107106,
+    "tickFraction": 0.00866911,
   },
   "Mountain aTiles=1000000 dTiles=100 dTroops=0 attack=10000000": {
     "attackerLoss": 11.0971,
     "defenderLoss": 0,
-    "tickFraction": 0.0107106,
+    "tickFraction": 0.00866911,
   },
   "Mountain aTiles=1000000 dTiles=100 dTroops=1 attack=1": {
     "attackerLoss": 18.4998,
@@ -460,17 +460,17 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=1000000 dTiles=100 dTroops=1 attack=1000": {
     "attackerLoss": 11.0999,
     "defenderLoss": 0.01,
-    "tickFraction": 0.0107106,
+    "tickFraction": 0.00866911,
   },
   "Mountain aTiles=1000000 dTiles=100 dTroops=1 attack=1000000": {
     "attackerLoss": 11.0999,
     "defenderLoss": 0.01,
-    "tickFraction": 0.0107106,
+    "tickFraction": 0.00866911,
   },
   "Mountain aTiles=1000000 dTiles=100 dTroops=1 attack=10000000": {
     "attackerLoss": 11.0999,
     "defenderLoss": 0.01,
-    "tickFraction": 0.0107106,
+    "tickFraction": 0.00866911,
   },
   "Mountain aTiles=1000000 dTiles=100 dTroops=1000 attack=1": {
     "attackerLoss": 46.3502,
@@ -485,12 +485,12 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=1000000 dTiles=100 dTroops=1000 attack=1000000": {
     "attackerLoss": 13.9051,
     "defenderLoss": 10,
-    "tickFraction": 0.0107106,
+    "tickFraction": 0.00866911,
   },
   "Mountain aTiles=1000000 dTiles=100 dTroops=1000 attack=10000000": {
     "attackerLoss": 13.9051,
     "defenderLoss": 10,
-    "tickFraction": 0.0107106,
+    "tickFraction": 0.00866911,
   },
   "Mountain aTiles=1000000 dTiles=100 dTroops=1000000 attack=1": {
     "attackerLoss": 9396.99,
@@ -510,7 +510,7 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=1000000 dTiles=100 dTroops=1000000 attack=10000000": {
     "attackerLoss": 2819.1,
     "defenderLoss": 10000,
-    "tickFraction": 0.0107106,
+    "tickFraction": 0.00866911,
   },
   "Mountain aTiles=1000000 dTiles=100 dTroops=10000000 attack=1": {
     "attackerLoss": 93637,
@@ -535,22 +535,22 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=0 attack=1": {
     "attackerLoss": 7.92435,
     "defenderLoss": 0,
-    "tickFraction": 0.00764837,
+    "tickFraction": 0.00619056,
   },
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=0 attack=1000": {
     "attackerLoss": 7.92435,
     "defenderLoss": 0,
-    "tickFraction": 0.00764837,
+    "tickFraction": 0.00619056,
   },
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=0 attack=1000000": {
     "attackerLoss": 7.92435,
     "defenderLoss": 0,
-    "tickFraction": 0.00764837,
+    "tickFraction": 0.00619056,
   },
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=0 attack=10000000": {
     "attackerLoss": 7.92435,
     "defenderLoss": 0,
-    "tickFraction": 0.00764837,
+    "tickFraction": 0.00619056,
   },
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=1 attack=1": {
     "attackerLoss": 13.2072,
@@ -560,17 +560,17 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=1 attack=1000": {
     "attackerLoss": 7.92435,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.00764837,
+    "tickFraction": 0.00619056,
   },
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=1 attack=1000000": {
     "attackerLoss": 7.92435,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.00764837,
+    "tickFraction": 0.00619056,
   },
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=1 attack=10000000": {
     "attackerLoss": 7.92435,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.00764837,
+    "tickFraction": 0.00619056,
   },
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000 attack=1": {
     "attackerLoss": 26.4154,
@@ -585,12 +585,12 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000 attack=1000000": {
     "attackerLoss": 7.92463,
     "defenderLoss": 0.001,
-    "tickFraction": 0.00764837,
+    "tickFraction": 0.00619056,
   },
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000 attack=10000000": {
     "attackerLoss": 7.92463,
     "defenderLoss": 0.001,
-    "tickFraction": 0.00764837,
+    "tickFraction": 0.00619056,
   },
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=1": {
     "attackerLoss": 27.3505,
@@ -610,7 +610,7 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=10000000": {
     "attackerLoss": 8.20515,
     "defenderLoss": 1,
-    "tickFraction": 0.00764837,
+    "tickFraction": 0.00619056,
   },
   "Mountain aTiles=1000000 dTiles=1000000 dTroops=10000000 attack=1": {
     "attackerLoss": 35.7745,
@@ -635,22 +635,22 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=5000000 dTiles=100 dTroops=0 attack=1": {
     "attackerLoss": 10.0214,
     "defenderLoss": 0,
-    "tickFraction": 0.00967235,
+    "tickFraction": 0.00773959,
   },
   "Mountain aTiles=5000000 dTiles=100 dTroops=0 attack=1000": {
     "attackerLoss": 10.0214,
     "defenderLoss": 0,
-    "tickFraction": 0.00967235,
+    "tickFraction": 0.00773959,
   },
   "Mountain aTiles=5000000 dTiles=100 dTroops=0 attack=1000000": {
     "attackerLoss": 10.0214,
     "defenderLoss": 0,
-    "tickFraction": 0.00967235,
+    "tickFraction": 0.00773959,
   },
   "Mountain aTiles=5000000 dTiles=100 dTroops=0 attack=10000000": {
     "attackerLoss": 10.0214,
     "defenderLoss": 0,
-    "tickFraction": 0.00967235,
+    "tickFraction": 0.00773959,
   },
   "Mountain aTiles=5000000 dTiles=100 dTroops=1 attack=1": {
     "attackerLoss": 16.7069,
@@ -660,17 +660,17 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=5000000 dTiles=100 dTroops=1 attack=1000": {
     "attackerLoss": 10.0242,
     "defenderLoss": 0.01,
-    "tickFraction": 0.00967235,
+    "tickFraction": 0.00773959,
   },
   "Mountain aTiles=5000000 dTiles=100 dTroops=1 attack=1000000": {
     "attackerLoss": 10.0242,
     "defenderLoss": 0.01,
-    "tickFraction": 0.00967235,
+    "tickFraction": 0.00773959,
   },
   "Mountain aTiles=5000000 dTiles=100 dTroops=1 attack=10000000": {
     "attackerLoss": 10.0242,
     "defenderLoss": 0.01,
-    "tickFraction": 0.00967235,
+    "tickFraction": 0.00773959,
   },
   "Mountain aTiles=5000000 dTiles=100 dTroops=1000 attack=1": {
     "attackerLoss": 42.7645,
@@ -685,12 +685,12 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=5000000 dTiles=100 dTroops=1000 attack=1000000": {
     "attackerLoss": 12.8294,
     "defenderLoss": 10,
-    "tickFraction": 0.00967235,
+    "tickFraction": 0.00773959,
   },
   "Mountain aTiles=5000000 dTiles=100 dTroops=1000 attack=10000000": {
     "attackerLoss": 12.8294,
     "defenderLoss": 10,
-    "tickFraction": 0.00967235,
+    "tickFraction": 0.00773959,
   },
   "Mountain aTiles=5000000 dTiles=100 dTroops=1000000 attack=1": {
     "attackerLoss": 9393.4,
@@ -710,7 +710,7 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=5000000 dTiles=100 dTroops=1000000 attack=10000000": {
     "attackerLoss": 2818.02,
     "defenderLoss": 10000,
-    "tickFraction": 0.00967235,
+    "tickFraction": 0.00773959,
   },
   "Mountain aTiles=5000000 dTiles=100 dTroops=10000000 attack=1": {
     "attackerLoss": 93633.4,
@@ -735,22 +735,22 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=0 attack=1": {
     "attackerLoss": 7.15619,
     "defenderLoss": 0,
-    "tickFraction": 0.00690697,
+    "tickFraction": 0.00552679,
   },
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=0 attack=1000": {
     "attackerLoss": 7.15619,
     "defenderLoss": 0,
-    "tickFraction": 0.00690697,
+    "tickFraction": 0.00552679,
   },
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=0 attack=1000000": {
     "attackerLoss": 7.15619,
     "defenderLoss": 0,
-    "tickFraction": 0.00690697,
+    "tickFraction": 0.00552679,
   },
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=0 attack=10000000": {
     "attackerLoss": 7.15619,
     "defenderLoss": 0,
-    "tickFraction": 0.00690697,
+    "tickFraction": 0.00552679,
   },
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=1 attack=1": {
     "attackerLoss": 11.927,
@@ -760,17 +760,17 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=1 attack=1000": {
     "attackerLoss": 7.15619,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.00690697,
+    "tickFraction": 0.00552679,
   },
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=1 attack=1000000": {
     "attackerLoss": 7.15619,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.00690697,
+    "tickFraction": 0.00552679,
   },
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=1 attack=10000000": {
     "attackerLoss": 7.15619,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.00690697,
+    "tickFraction": 0.00552679,
   },
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000 attack=1": {
     "attackerLoss": 23.8549,
@@ -785,12 +785,12 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000 attack=1000000": {
     "attackerLoss": 7.15647,
     "defenderLoss": 0.001,
-    "tickFraction": 0.00690697,
+    "tickFraction": 0.00552679,
   },
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000 attack=10000000": {
     "attackerLoss": 7.15647,
     "defenderLoss": 0.001,
-    "tickFraction": 0.00690697,
+    "tickFraction": 0.00552679,
   },
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=1": {
     "attackerLoss": 24.79,
@@ -810,7 +810,7 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=10000000": {
     "attackerLoss": 7.43699,
     "defenderLoss": 1,
-    "tickFraction": 0.00690697,
+    "tickFraction": 0.00552679,
   },
   "Mountain aTiles=5000000 dTiles=1000000 dTroops=10000000 attack=1": {
     "attackerLoss": 33.214,
@@ -1035,22 +1035,22 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=1000000 dTiles=100 dTroops=0 attack=1": {
     "attackerLoss": 7.39805,
     "defenderLoss": 0,
-    "tickFraction": 0.007069,
+    "tickFraction": 0.00572162,
   },
   "Plains aTiles=1000000 dTiles=100 dTroops=0 attack=1000": {
     "attackerLoss": 7.39805,
     "defenderLoss": 0,
-    "tickFraction": 0.007069,
+    "tickFraction": 0.00572162,
   },
   "Plains aTiles=1000000 dTiles=100 dTroops=0 attack=1000000": {
     "attackerLoss": 7.39805,
     "defenderLoss": 0,
-    "tickFraction": 0.007069,
+    "tickFraction": 0.00572162,
   },
   "Plains aTiles=1000000 dTiles=100 dTroops=0 attack=10000000": {
     "attackerLoss": 7.39805,
     "defenderLoss": 0,
-    "tickFraction": 0.007069,
+    "tickFraction": 0.00572162,
   },
   "Plains aTiles=1000000 dTiles=100 dTroops=1 attack=1": {
     "attackerLoss": 12.3332,
@@ -1060,17 +1060,17 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=1000000 dTiles=100 dTroops=1 attack=1000": {
     "attackerLoss": 7.39992,
     "defenderLoss": 0.01,
-    "tickFraction": 0.007069,
+    "tickFraction": 0.00572162,
   },
   "Plains aTiles=1000000 dTiles=100 dTroops=1 attack=1000000": {
     "attackerLoss": 7.39992,
     "defenderLoss": 0.01,
-    "tickFraction": 0.007069,
+    "tickFraction": 0.00572162,
   },
   "Plains aTiles=1000000 dTiles=100 dTroops=1 attack=10000000": {
     "attackerLoss": 7.39992,
     "defenderLoss": 0.01,
-    "tickFraction": 0.007069,
+    "tickFraction": 0.00572162,
   },
   "Plains aTiles=1000000 dTiles=100 dTroops=1000 attack=1": {
     "attackerLoss": 30.9002,
@@ -1085,12 +1085,12 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=1000000 dTiles=100 dTroops=1000 attack=1000000": {
     "attackerLoss": 9.27005,
     "defenderLoss": 10,
-    "tickFraction": 0.007069,
+    "tickFraction": 0.00572162,
   },
   "Plains aTiles=1000000 dTiles=100 dTroops=1000 attack=10000000": {
     "attackerLoss": 9.27005,
     "defenderLoss": 10,
-    "tickFraction": 0.007069,
+    "tickFraction": 0.00572162,
   },
   "Plains aTiles=1000000 dTiles=100 dTroops=1000000 attack=1": {
     "attackerLoss": 6264.66,
@@ -1110,7 +1110,7 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=1000000 dTiles=100 dTroops=1000000 attack=10000000": {
     "attackerLoss": 1879.4,
     "defenderLoss": 10000,
-    "tickFraction": 0.007069,
+    "tickFraction": 0.00572162,
   },
   "Plains aTiles=1000000 dTiles=100 dTroops=10000000 attack=1": {
     "attackerLoss": 62424.7,
@@ -1135,22 +1135,22 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=1000000 dTiles=1000000 dTroops=0 attack=1": {
     "attackerLoss": 5.2829,
     "defenderLoss": 0,
-    "tickFraction": 0.00504793,
+    "tickFraction": 0.00408577,
   },
   "Plains aTiles=1000000 dTiles=1000000 dTroops=0 attack=1000": {
     "attackerLoss": 5.2829,
     "defenderLoss": 0,
-    "tickFraction": 0.00504793,
+    "tickFraction": 0.00408577,
   },
   "Plains aTiles=1000000 dTiles=1000000 dTroops=0 attack=1000000": {
     "attackerLoss": 5.2829,
     "defenderLoss": 0,
-    "tickFraction": 0.00504793,
+    "tickFraction": 0.00408577,
   },
   "Plains aTiles=1000000 dTiles=1000000 dTroops=0 attack=10000000": {
     "attackerLoss": 5.2829,
     "defenderLoss": 0,
-    "tickFraction": 0.00504793,
+    "tickFraction": 0.00408577,
   },
   "Plains aTiles=1000000 dTiles=1000000 dTroops=1 attack=1": {
     "attackerLoss": 8.80483,
@@ -1160,17 +1160,17 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=1000000 dTiles=1000000 dTroops=1 attack=1000": {
     "attackerLoss": 5.2829,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.00504793,
+    "tickFraction": 0.00408577,
   },
   "Plains aTiles=1000000 dTiles=1000000 dTroops=1 attack=1000000": {
     "attackerLoss": 5.2829,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.00504793,
+    "tickFraction": 0.00408577,
   },
   "Plains aTiles=1000000 dTiles=1000000 dTroops=1 attack=10000000": {
     "attackerLoss": 5.2829,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.00504793,
+    "tickFraction": 0.00408577,
   },
   "Plains aTiles=1000000 dTiles=1000000 dTroops=1000 attack=1": {
     "attackerLoss": 17.6103,
@@ -1185,12 +1185,12 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=1000000 dTiles=1000000 dTroops=1000 attack=1000000": {
     "attackerLoss": 5.28309,
     "defenderLoss": 0.001,
-    "tickFraction": 0.00504793,
+    "tickFraction": 0.00408577,
   },
   "Plains aTiles=1000000 dTiles=1000000 dTroops=1000 attack=10000000": {
     "attackerLoss": 5.28309,
     "defenderLoss": 0.001,
-    "tickFraction": 0.00504793,
+    "tickFraction": 0.00408577,
   },
   "Plains aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=1": {
     "attackerLoss": 18.2337,
@@ -1210,7 +1210,7 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=1000000 dTiles=1000000 dTroops=1000000 attack=10000000": {
     "attackerLoss": 5.4701,
     "defenderLoss": 1,
-    "tickFraction": 0.00504793,
+    "tickFraction": 0.00408577,
   },
   "Plains aTiles=1000000 dTiles=1000000 dTroops=10000000 attack=1": {
     "attackerLoss": 23.8497,
@@ -1235,22 +1235,22 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=5000000 dTiles=100 dTroops=0 attack=1": {
     "attackerLoss": 6.68091,
     "defenderLoss": 0,
-    "tickFraction": 0.00638375,
+    "tickFraction": 0.00510813,
   },
   "Plains aTiles=5000000 dTiles=100 dTroops=0 attack=1000": {
     "attackerLoss": 6.68091,
     "defenderLoss": 0,
-    "tickFraction": 0.00638375,
+    "tickFraction": 0.00510813,
   },
   "Plains aTiles=5000000 dTiles=100 dTroops=0 attack=1000000": {
     "attackerLoss": 6.68091,
     "defenderLoss": 0,
-    "tickFraction": 0.00638375,
+    "tickFraction": 0.00510813,
   },
   "Plains aTiles=5000000 dTiles=100 dTroops=0 attack=10000000": {
     "attackerLoss": 6.68091,
     "defenderLoss": 0,
-    "tickFraction": 0.00638375,
+    "tickFraction": 0.00510813,
   },
   "Plains aTiles=5000000 dTiles=100 dTroops=1 attack=1": {
     "attackerLoss": 11.138,
@@ -1260,17 +1260,17 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=5000000 dTiles=100 dTroops=1 attack=1000": {
     "attackerLoss": 6.68278,
     "defenderLoss": 0.01,
-    "tickFraction": 0.00638375,
+    "tickFraction": 0.00510813,
   },
   "Plains aTiles=5000000 dTiles=100 dTroops=1 attack=1000000": {
     "attackerLoss": 6.68278,
     "defenderLoss": 0.01,
-    "tickFraction": 0.00638375,
+    "tickFraction": 0.00510813,
   },
   "Plains aTiles=5000000 dTiles=100 dTroops=1 attack=10000000": {
     "attackerLoss": 6.68278,
     "defenderLoss": 0.01,
-    "tickFraction": 0.00638375,
+    "tickFraction": 0.00510813,
   },
   "Plains aTiles=5000000 dTiles=100 dTroops=1000 attack=1": {
     "attackerLoss": 28.5097,
@@ -1285,12 +1285,12 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=5000000 dTiles=100 dTroops=1000 attack=1000000": {
     "attackerLoss": 8.55291,
     "defenderLoss": 10,
-    "tickFraction": 0.00638375,
+    "tickFraction": 0.00510813,
   },
   "Plains aTiles=5000000 dTiles=100 dTroops=1000 attack=10000000": {
     "attackerLoss": 8.55291,
     "defenderLoss": 10,
-    "tickFraction": 0.00638375,
+    "tickFraction": 0.00510813,
   },
   "Plains aTiles=5000000 dTiles=100 dTroops=1000000 attack=1": {
     "attackerLoss": 6262.27,
@@ -1310,7 +1310,7 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=5000000 dTiles=100 dTroops=1000000 attack=10000000": {
     "attackerLoss": 1878.68,
     "defenderLoss": 10000,
-    "tickFraction": 0.00638375,
+    "tickFraction": 0.00510813,
   },
   "Plains aTiles=5000000 dTiles=100 dTroops=10000000 attack=1": {
     "attackerLoss": 62422.3,
@@ -1335,22 +1335,22 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=5000000 dTiles=1000000 dTroops=0 attack=1": {
     "attackerLoss": 4.77079,
     "defenderLoss": 0,
-    "tickFraction": 0.0045586,
+    "tickFraction": 0.00364768,
   },
   "Plains aTiles=5000000 dTiles=1000000 dTroops=0 attack=1000": {
     "attackerLoss": 4.77079,
     "defenderLoss": 0,
-    "tickFraction": 0.0045586,
+    "tickFraction": 0.00364768,
   },
   "Plains aTiles=5000000 dTiles=1000000 dTroops=0 attack=1000000": {
     "attackerLoss": 4.77079,
     "defenderLoss": 0,
-    "tickFraction": 0.0045586,
+    "tickFraction": 0.00364768,
   },
   "Plains aTiles=5000000 dTiles=1000000 dTroops=0 attack=10000000": {
     "attackerLoss": 4.77079,
     "defenderLoss": 0,
-    "tickFraction": 0.0045586,
+    "tickFraction": 0.00364768,
   },
   "Plains aTiles=5000000 dTiles=1000000 dTroops=1 attack=1": {
     "attackerLoss": 7.95132,
@@ -1360,17 +1360,17 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=5000000 dTiles=1000000 dTroops=1 attack=1000": {
     "attackerLoss": 4.77079,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.0045586,
+    "tickFraction": 0.00364768,
   },
   "Plains aTiles=5000000 dTiles=1000000 dTroops=1 attack=1000000": {
     "attackerLoss": 4.77079,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.0045586,
+    "tickFraction": 0.00364768,
   },
   "Plains aTiles=5000000 dTiles=1000000 dTroops=1 attack=10000000": {
     "attackerLoss": 4.77079,
     "defenderLoss": 0.000001,
-    "tickFraction": 0.0045586,
+    "tickFraction": 0.00364768,
   },
   "Plains aTiles=5000000 dTiles=1000000 dTroops=1000 attack=1": {
     "attackerLoss": 15.9033,
@@ -1385,12 +1385,12 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=5000000 dTiles=1000000 dTroops=1000 attack=1000000": {
     "attackerLoss": 4.77098,
     "defenderLoss": 0.001,
-    "tickFraction": 0.0045586,
+    "tickFraction": 0.00364768,
   },
   "Plains aTiles=5000000 dTiles=1000000 dTroops=1000 attack=10000000": {
     "attackerLoss": 4.77098,
     "defenderLoss": 0.001,
-    "tickFraction": 0.0045586,
+    "tickFraction": 0.00364768,
   },
   "Plains aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=1": {
     "attackerLoss": 16.5266,
@@ -1410,7 +1410,7 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
   "Plains aTiles=5000000 dTiles=1000000 dTroops=1000000 attack=10000000": {
     "attackerLoss": 4.95799,
     "defenderLoss": 1,
-    "tickFraction": 0.0045586,
+    "tickFraction": 0.00364768,
   },
   "Plains aTiles=5000000 dTiles=1000000 dTroops=10000000 attack=1": {
     "attackerLoss": 22.1426,
@@ -1431,6 +1431,86 @@ exports[`attackLogic golden values > extremes: territory and troop counts 1`] = 
     "attackerLoss": 11.0713,
     "defenderLoss": 10,
     "tickFraction": 0.0045586,
+  },
+}
+`;
+
+exports[`attackLogic golden values > player vs player: large attacker overwhelming-push speed floor 1`] = `
+{
+  "attackerTiles=20000 defenderTroops/attackTroops=0.5": {
+    "attackerLoss": 23.1345,
+    "defenderLoss": 5,
+    "tickFraction": 0.0212063,
+  },
+  "attackerTiles=20000 defenderTroops/attackTroops=0.8": {
+    "attackerLoss": 30.846,
+    "defenderLoss": 5,
+    "tickFraction": 0.0212063,
+  },
+  "attackerTiles=20000 defenderTroops/attackTroops=0.9": {
+    "attackerLoss": 34.7018,
+    "defenderLoss": 5,
+    "tickFraction": 0.0212063,
+  },
+  "attackerTiles=20000 defenderTroops/attackTroops=1": {
+    "attackerLoss": 38.5576,
+    "defenderLoss": 5,
+    "tickFraction": 0.0212112,
+  },
+  "attackerTiles=20000 defenderTroops/attackTroops=1.5": {
+    "attackerLoss": 57.8363,
+    "defenderLoss": 5,
+    "tickFraction": 0.0318168,
+  },
+  "attackerTiles=2000000 defenderTroops/attackTroops=0.5": {
+    "attackerLoss": 7.73526,
+    "defenderLoss": 5,
+    "tickFraction": 0.0052087,
+  },
+  "attackerTiles=2000000 defenderTroops/attackTroops=0.8": {
+    "attackerLoss": 10.3137,
+    "defenderLoss": 5,
+    "tickFraction": 0.0052087,
+  },
+  "attackerTiles=2000000 defenderTroops/attackTroops=0.9": {
+    "attackerLoss": 11.6029,
+    "defenderLoss": 5,
+    "tickFraction": 0.00584715,
+  },
+  "attackerTiles=2000000 defenderTroops/attackTroops=1": {
+    "attackerLoss": 12.8921,
+    "defenderLoss": 5,
+    "tickFraction": 0.00649684,
+  },
+  "attackerTiles=2000000 defenderTroops/attackTroops=1.5": {
+    "attackerLoss": 19.3381,
+    "defenderLoss": 5,
+    "tickFraction": 0.00974526,
+  },
+  "attackerTiles=300000 defenderTroops/attackTroops=0.5": {
+    "attackerLoss": 15.3766,
+    "defenderLoss": 5,
+    "tickFraction": 0.0124185,
+  },
+  "attackerTiles=300000 defenderTroops/attackTroops=0.8": {
+    "attackerLoss": 20.5022,
+    "defenderLoss": 5,
+    "tickFraction": 0.0124185,
+  },
+  "attackerTiles=300000 defenderTroops/attackTroops=0.9": {
+    "attackerLoss": 23.0649,
+    "defenderLoss": 5,
+    "tickFraction": 0.0124185,
+  },
+  "attackerTiles=300000 defenderTroops/attackTroops=1": {
+    "attackerLoss": 25.6277,
+    "defenderLoss": 5,
+    "tickFraction": 0.0137983,
+  },
+  "attackerTiles=300000 defenderTroops/attackTroops=1.5": {
+    "attackerLoss": 38.4416,
+    "defenderLoss": 5,
+    "tickFraction": 0.0206975,
   },
 }
 `;
@@ -1795,12 +1875,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=200000 dTiles=1000 dTroops=10000 attack=100000": {
     "attackerLoss": 24.9422,
     "defenderLoss": 10,
-    "tickFraction": 0.0209425,
+    "tickFraction": 0.0198272,
   },
   "Highland aTiles=200000 dTiles=1000 dTroops=10000 attack=1000000": {
     "attackerLoss": 24.9422,
     "defenderLoss": 10,
-    "tickFraction": 0.0209425,
+    "tickFraction": 0.0198272,
   },
   "Highland aTiles=200000 dTiles=1000 dTroops=100000 attack=10000": {
     "attackerLoss": 153.341,
@@ -1815,7 +1895,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=200000 dTiles=1000 dTroops=100000 attack=1000000": {
     "attackerLoss": 46.0022,
     "defenderLoss": 100,
-    "tickFraction": 0.0209425,
+    "tickFraction": 0.0198272,
   },
   "Highland aTiles=200000 dTiles=1000 dTroops=1000000 attack=10000": {
     "attackerLoss": 855.341,
@@ -1840,12 +1920,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=200000 dTiles=150000 dTroops=10000 attack=100000": {
     "attackerLoss": 21.5992,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0199987,
+    "tickFraction": 0.0189337,
   },
   "Highland aTiles=200000 dTiles=150000 dTroops=10000 attack=1000000": {
     "attackerLoss": 21.5992,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0199987,
+    "tickFraction": 0.0189337,
   },
   "Highland aTiles=200000 dTiles=150000 dTroops=100000 attack=10000": {
     "attackerLoss": 72.4655,
@@ -1860,7 +1940,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=200000 dTiles=150000 dTroops=100000 attack=1000000": {
     "attackerLoss": 21.7396,
     "defenderLoss": 0.666667,
-    "tickFraction": 0.0199987,
+    "tickFraction": 0.0189337,
   },
   "Highland aTiles=200000 dTiles=150000 dTroops=1000000 attack=10000": {
     "attackerLoss": 77.1455,
@@ -1885,12 +1965,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=200000 dTiles=400000 dTroops=10000 attack=100000": {
     "attackerLoss": 18.0485,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0167178,
+    "tickFraction": 0.0158275,
   },
   "Highland aTiles=200000 dTiles=400000 dTroops=10000 attack=1000000": {
     "attackerLoss": 18.0485,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0167178,
+    "tickFraction": 0.0158275,
   },
   "Highland aTiles=200000 dTiles=400000 dTroops=100000 attack=10000": {
     "attackerLoss": 60.3373,
@@ -1905,7 +1985,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=200000 dTiles=400000 dTroops=100000 attack=1000000": {
     "attackerLoss": 18.1012,
     "defenderLoss": 0.25,
-    "tickFraction": 0.0167178,
+    "tickFraction": 0.0158275,
   },
   "Highland aTiles=200000 dTiles=400000 dTroops=1000000 attack=10000": {
     "attackerLoss": 62.0923,
@@ -1930,12 +2010,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=200000 dTiles=50000 dTroops=10000 attack=100000": {
     "attackerLoss": 22.573,
     "defenderLoss": 0.2,
-    "tickFraction": 0.020872,
+    "tickFraction": 0.0197605,
   },
   "Highland aTiles=200000 dTiles=50000 dTroops=10000 attack=1000000": {
     "attackerLoss": 22.573,
     "defenderLoss": 0.2,
-    "tickFraction": 0.020872,
+    "tickFraction": 0.0197605,
   },
   "Highland aTiles=200000 dTiles=50000 dTroops=100000 attack=10000": {
     "attackerLoss": 76.6473,
@@ -1950,7 +2030,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=200000 dTiles=50000 dTroops=100000 attack=1000000": {
     "attackerLoss": 22.9942,
     "defenderLoss": 2,
-    "tickFraction": 0.020872,
+    "tickFraction": 0.0197605,
   },
   "Highland aTiles=200000 dTiles=50000 dTroops=1000000 attack=10000": {
     "attackerLoss": 90.6873,
@@ -1975,12 +2055,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=50000 dTiles=1000 dTroops=10000 attack=100000": {
     "attackerLoss": 29.9019,
     "defenderLoss": 10,
-    "tickFraction": 0.025538,
+    "tickFraction": 0.0254807,
   },
   "Highland aTiles=50000 dTiles=1000 dTroops=10000 attack=1000000": {
     "attackerLoss": 29.9019,
     "defenderLoss": 10,
-    "tickFraction": 0.025538,
+    "tickFraction": 0.0254807,
   },
   "Highland aTiles=50000 dTiles=1000 dTroops=100000 attack=10000": {
     "attackerLoss": 169.873,
@@ -1995,7 +2075,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=50000 dTiles=1000 dTroops=100000 attack=1000000": {
     "attackerLoss": 50.9619,
     "defenderLoss": 100,
-    "tickFraction": 0.025538,
+    "tickFraction": 0.0254807,
   },
   "Highland aTiles=50000 dTiles=1000 dTroops=1000000 attack=10000": {
     "attackerLoss": 871.873,
@@ -2020,12 +2100,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=50000 dTiles=150000 dTroops=10000 attack=100000": {
     "attackerLoss": 26.3354,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0243871,
+    "tickFraction": 0.0243324,
   },
   "Highland aTiles=50000 dTiles=150000 dTroops=10000 attack=1000000": {
     "attackerLoss": 26.3354,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0243871,
+    "tickFraction": 0.0243324,
   },
   "Highland aTiles=50000 dTiles=150000 dTroops=100000 attack=10000": {
     "attackerLoss": 88.2528,
@@ -2040,7 +2120,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=50000 dTiles=150000 dTroops=100000 attack=1000000": {
     "attackerLoss": 26.4758,
     "defenderLoss": 0.666667,
-    "tickFraction": 0.0243871,
+    "tickFraction": 0.0243324,
   },
   "Highland aTiles=50000 dTiles=150000 dTroops=1000000 attack=10000": {
     "attackerLoss": 92.9328,
@@ -2065,12 +2145,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=50000 dTiles=400000 dTroops=10000 attack=100000": {
     "attackerLoss": 22.0077,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0203862,
+    "tickFraction": 0.0203405,
   },
   "Highland aTiles=50000 dTiles=400000 dTroops=10000 attack=1000000": {
     "attackerLoss": 22.0077,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0203862,
+    "tickFraction": 0.0203405,
   },
   "Highland aTiles=50000 dTiles=400000 dTroops=100000 attack=10000": {
     "attackerLoss": 73.5346,
@@ -2085,7 +2165,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=50000 dTiles=400000 dTroops=100000 attack=1000000": {
     "attackerLoss": 22.0604,
     "defenderLoss": 0.25,
-    "tickFraction": 0.0203862,
+    "tickFraction": 0.0203405,
   },
   "Highland aTiles=50000 dTiles=400000 dTroops=1000000 attack=10000": {
     "attackerLoss": 75.2896,
@@ -2110,12 +2190,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=50000 dTiles=50000 dTroops=10000 attack=100000": {
     "attackerLoss": 27.516,
     "defenderLoss": 0.2,
-    "tickFraction": 0.0254521,
+    "tickFraction": 0.025395,
   },
   "Highland aTiles=50000 dTiles=50000 dTroops=10000 attack=1000000": {
     "attackerLoss": 27.516,
     "defenderLoss": 0.2,
-    "tickFraction": 0.0254521,
+    "tickFraction": 0.025395,
   },
   "Highland aTiles=50000 dTiles=50000 dTroops=100000 attack=10000": {
     "attackerLoss": 93.1241,
@@ -2130,7 +2210,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Highland aTiles=50000 dTiles=50000 dTroops=100000 attack=1000000": {
     "attackerLoss": 27.9372,
     "defenderLoss": 2,
-    "tickFraction": 0.0254521,
+    "tickFraction": 0.025395,
   },
   "Highland aTiles=50000 dTiles=50000 dTroops=1000000 attack=10000": {
     "attackerLoss": 107.164,
@@ -2335,12 +2415,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=200000 dTiles=1000 dTroops=10000 attack=100000": {
     "attackerLoss": 29.9307,
     "defenderLoss": 10,
-    "tickFraction": 0.0261781,
+    "tickFraction": 0.024784,
   },
   "Mountain aTiles=200000 dTiles=1000 dTroops=10000 attack=1000000": {
     "attackerLoss": 29.9307,
     "defenderLoss": 10,
-    "tickFraction": 0.0261781,
+    "tickFraction": 0.024784,
   },
   "Mountain aTiles=200000 dTiles=1000 dTroops=100000 attack=10000": {
     "attackerLoss": 184.009,
@@ -2355,7 +2435,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=200000 dTiles=1000 dTroops=100000 attack=1000000": {
     "attackerLoss": 55.2027,
     "defenderLoss": 100,
-    "tickFraction": 0.0261781,
+    "tickFraction": 0.024784,
   },
   "Mountain aTiles=200000 dTiles=1000 dTroops=1000000 attack=10000": {
     "attackerLoss": 1026.41,
@@ -2380,12 +2460,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=200000 dTiles=150000 dTroops=10000 attack=100000": {
     "attackerLoss": 25.9191,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0249984,
+    "tickFraction": 0.0236671,
   },
   "Mountain aTiles=200000 dTiles=150000 dTroops=10000 attack=1000000": {
     "attackerLoss": 25.9191,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0249984,
+    "tickFraction": 0.0236671,
   },
   "Mountain aTiles=200000 dTiles=150000 dTroops=100000 attack=10000": {
     "attackerLoss": 86.9585,
@@ -2400,7 +2480,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=200000 dTiles=150000 dTroops=100000 attack=1000000": {
     "attackerLoss": 26.0876,
     "defenderLoss": 0.666667,
-    "tickFraction": 0.0249984,
+    "tickFraction": 0.0236671,
   },
   "Mountain aTiles=200000 dTiles=150000 dTroops=1000000 attack=10000": {
     "attackerLoss": 92.5745,
@@ -2425,12 +2505,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=200000 dTiles=400000 dTroops=10000 attack=100000": {
     "attackerLoss": 21.6583,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0208972,
+    "tickFraction": 0.0197844,
   },
   "Mountain aTiles=200000 dTiles=400000 dTroops=10000 attack=1000000": {
     "attackerLoss": 21.6583,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0208972,
+    "tickFraction": 0.0197844,
   },
   "Mountain aTiles=200000 dTiles=400000 dTroops=100000 attack=10000": {
     "attackerLoss": 72.4048,
@@ -2445,7 +2525,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=200000 dTiles=400000 dTroops=100000 attack=1000000": {
     "attackerLoss": 21.7214,
     "defenderLoss": 0.25,
-    "tickFraction": 0.0208972,
+    "tickFraction": 0.0197844,
   },
   "Mountain aTiles=200000 dTiles=400000 dTroops=1000000 attack=10000": {
     "attackerLoss": 74.5108,
@@ -2470,12 +2550,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=200000 dTiles=50000 dTroops=10000 attack=100000": {
     "attackerLoss": 27.0876,
     "defenderLoss": 0.2,
-    "tickFraction": 0.02609,
+    "tickFraction": 0.0247007,
   },
   "Mountain aTiles=200000 dTiles=50000 dTroops=10000 attack=1000000": {
     "attackerLoss": 27.0876,
     "defenderLoss": 0.2,
-    "tickFraction": 0.02609,
+    "tickFraction": 0.0247007,
   },
   "Mountain aTiles=200000 dTiles=50000 dTroops=100000 attack=10000": {
     "attackerLoss": 91.9768,
@@ -2490,7 +2570,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=200000 dTiles=50000 dTroops=100000 attack=1000000": {
     "attackerLoss": 27.593,
     "defenderLoss": 2,
-    "tickFraction": 0.02609,
+    "tickFraction": 0.0247007,
   },
   "Mountain aTiles=200000 dTiles=50000 dTroops=1000000 attack=10000": {
     "attackerLoss": 108.825,
@@ -2515,12 +2595,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=50000 dTiles=1000 dTroops=10000 attack=100000": {
     "attackerLoss": 35.8823,
     "defenderLoss": 10,
-    "tickFraction": 0.0319225,
+    "tickFraction": 0.0318509,
   },
   "Mountain aTiles=50000 dTiles=1000 dTroops=10000 attack=1000000": {
     "attackerLoss": 35.8823,
     "defenderLoss": 10,
-    "tickFraction": 0.0319225,
+    "tickFraction": 0.0318509,
   },
   "Mountain aTiles=50000 dTiles=1000 dTroops=100000 attack=10000": {
     "attackerLoss": 203.848,
@@ -2535,7 +2615,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=50000 dTiles=1000 dTroops=100000 attack=1000000": {
     "attackerLoss": 61.1543,
     "defenderLoss": 100,
-    "tickFraction": 0.0319225,
+    "tickFraction": 0.0318509,
   },
   "Mountain aTiles=50000 dTiles=1000 dTroops=1000000 attack=10000": {
     "attackerLoss": 1046.25,
@@ -2560,12 +2640,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=50000 dTiles=150000 dTroops=10000 attack=100000": {
     "attackerLoss": 31.6025,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0304839,
+    "tickFraction": 0.0304155,
   },
   "Mountain aTiles=50000 dTiles=150000 dTroops=10000 attack=1000000": {
     "attackerLoss": 31.6025,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0304839,
+    "tickFraction": 0.0304155,
   },
   "Mountain aTiles=50000 dTiles=150000 dTroops=100000 attack=10000": {
     "attackerLoss": 105.903,
@@ -2580,7 +2660,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=50000 dTiles=150000 dTroops=100000 attack=1000000": {
     "attackerLoss": 31.771,
     "defenderLoss": 0.666667,
-    "tickFraction": 0.0304839,
+    "tickFraction": 0.0304155,
   },
   "Mountain aTiles=50000 dTiles=150000 dTroops=1000000 attack=10000": {
     "attackerLoss": 111.519,
@@ -2605,12 +2685,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=50000 dTiles=400000 dTroops=10000 attack=100000": {
     "attackerLoss": 26.4093,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0254828,
+    "tickFraction": 0.0254256,
   },
   "Mountain aTiles=50000 dTiles=400000 dTroops=10000 attack=1000000": {
     "attackerLoss": 26.4093,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0254828,
+    "tickFraction": 0.0254256,
   },
   "Mountain aTiles=50000 dTiles=400000 dTroops=100000 attack=10000": {
     "attackerLoss": 88.2416,
@@ -2625,7 +2705,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=50000 dTiles=400000 dTroops=100000 attack=1000000": {
     "attackerLoss": 26.4725,
     "defenderLoss": 0.25,
-    "tickFraction": 0.0254828,
+    "tickFraction": 0.0254256,
   },
   "Mountain aTiles=50000 dTiles=400000 dTroops=1000000 attack=10000": {
     "attackerLoss": 90.3476,
@@ -2650,12 +2730,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=50000 dTiles=50000 dTroops=10000 attack=100000": {
     "attackerLoss": 33.0192,
     "defenderLoss": 0.2,
-    "tickFraction": 0.0318151,
+    "tickFraction": 0.0317438,
   },
   "Mountain aTiles=50000 dTiles=50000 dTroops=10000 attack=1000000": {
     "attackerLoss": 33.0192,
     "defenderLoss": 0.2,
-    "tickFraction": 0.0318151,
+    "tickFraction": 0.0317438,
   },
   "Mountain aTiles=50000 dTiles=50000 dTroops=100000 attack=10000": {
     "attackerLoss": 111.749,
@@ -2670,7 +2750,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Mountain aTiles=50000 dTiles=50000 dTroops=100000 attack=1000000": {
     "attackerLoss": 33.5247,
     "defenderLoss": 2,
-    "tickFraction": 0.0318151,
+    "tickFraction": 0.0317438,
   },
   "Mountain aTiles=50000 dTiles=50000 dTroops=1000000 attack=10000": {
     "attackerLoss": 128.597,
@@ -2875,12 +2955,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=200000 dTiles=1000 dTroops=10000 attack=100000": {
     "attackerLoss": 19.9538,
     "defenderLoss": 10,
-    "tickFraction": 0.0172775,
+    "tickFraction": 0.0163575,
   },
   "Plains aTiles=200000 dTiles=1000 dTroops=10000 attack=1000000": {
     "attackerLoss": 19.9538,
     "defenderLoss": 10,
-    "tickFraction": 0.0172775,
+    "tickFraction": 0.0163575,
   },
   "Plains aTiles=200000 dTiles=1000 dTroops=100000 attack=10000": {
     "attackerLoss": 122.673,
@@ -2895,7 +2975,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=200000 dTiles=1000 dTroops=100000 attack=1000000": {
     "attackerLoss": 36.8018,
     "defenderLoss": 100,
-    "tickFraction": 0.0172775,
+    "tickFraction": 0.0163575,
   },
   "Plains aTiles=200000 dTiles=1000 dTroops=1000000 attack=10000": {
     "attackerLoss": 684.273,
@@ -2920,12 +3000,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=200000 dTiles=150000 dTroops=10000 attack=100000": {
     "attackerLoss": 17.2794,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0164989,
+    "tickFraction": 0.0156203,
   },
   "Plains aTiles=200000 dTiles=150000 dTroops=10000 attack=1000000": {
     "attackerLoss": 17.2794,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0164989,
+    "tickFraction": 0.0156203,
   },
   "Plains aTiles=200000 dTiles=150000 dTroops=100000 attack=10000": {
     "attackerLoss": 57.9724,
@@ -2940,7 +3020,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=200000 dTiles=150000 dTroops=100000 attack=1000000": {
     "attackerLoss": 17.3917,
     "defenderLoss": 0.666667,
-    "tickFraction": 0.0164989,
+    "tickFraction": 0.0156203,
   },
   "Plains aTiles=200000 dTiles=150000 dTroops=1000000 attack=10000": {
     "attackerLoss": 61.7164,
@@ -2965,12 +3045,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=200000 dTiles=400000 dTroops=10000 attack=100000": {
     "attackerLoss": 14.4388,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0137922,
+    "tickFraction": 0.0130577,
   },
   "Plains aTiles=200000 dTiles=400000 dTroops=10000 attack=1000000": {
     "attackerLoss": 14.4388,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0137922,
+    "tickFraction": 0.0130577,
   },
   "Plains aTiles=200000 dTiles=400000 dTroops=100000 attack=10000": {
     "attackerLoss": 48.2699,
@@ -2985,7 +3065,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=200000 dTiles=400000 dTroops=100000 attack=1000000": {
     "attackerLoss": 14.481,
     "defenderLoss": 0.25,
-    "tickFraction": 0.0137922,
+    "tickFraction": 0.0130577,
   },
   "Plains aTiles=200000 dTiles=400000 dTroops=1000000 attack=10000": {
     "attackerLoss": 49.6739,
@@ -3010,12 +3090,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=200000 dTiles=50000 dTroops=10000 attack=100000": {
     "attackerLoss": 18.0584,
     "defenderLoss": 0.2,
-    "tickFraction": 0.0172194,
+    "tickFraction": 0.0163024,
   },
   "Plains aTiles=200000 dTiles=50000 dTroops=10000 attack=1000000": {
     "attackerLoss": 18.0584,
     "defenderLoss": 0.2,
-    "tickFraction": 0.0172194,
+    "tickFraction": 0.0163024,
   },
   "Plains aTiles=200000 dTiles=50000 dTroops=100000 attack=10000": {
     "attackerLoss": 61.3179,
@@ -3030,7 +3110,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=200000 dTiles=50000 dTroops=100000 attack=1000000": {
     "attackerLoss": 18.3954,
     "defenderLoss": 2,
-    "tickFraction": 0.0172194,
+    "tickFraction": 0.0163024,
   },
   "Plains aTiles=200000 dTiles=50000 dTroops=1000000 attack=10000": {
     "attackerLoss": 72.5499,
@@ -3055,12 +3135,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=50000 dTiles=1000 dTroops=10000 attack=100000": {
     "attackerLoss": 23.9216,
     "defenderLoss": 10,
-    "tickFraction": 0.0210688,
+    "tickFraction": 0.0210216,
   },
   "Plains aTiles=50000 dTiles=1000 dTroops=10000 attack=1000000": {
     "attackerLoss": 23.9216,
     "defenderLoss": 10,
-    "tickFraction": 0.0210688,
+    "tickFraction": 0.0210216,
   },
   "Plains aTiles=50000 dTiles=1000 dTroops=100000 attack=10000": {
     "attackerLoss": 135.899,
@@ -3075,7 +3155,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=50000 dTiles=1000 dTroops=100000 attack=1000000": {
     "attackerLoss": 40.7696,
     "defenderLoss": 100,
-    "tickFraction": 0.0210688,
+    "tickFraction": 0.0210216,
   },
   "Plains aTiles=50000 dTiles=1000 dTroops=1000000 attack=10000": {
     "attackerLoss": 697.499,
@@ -3100,12 +3180,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=50000 dTiles=150000 dTroops=10000 attack=100000": {
     "attackerLoss": 21.0683,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0201193,
+    "tickFraction": 0.0200742,
   },
   "Plains aTiles=50000 dTiles=150000 dTroops=10000 attack=1000000": {
     "attackerLoss": 21.0683,
     "defenderLoss": 0.0666667,
-    "tickFraction": 0.0201193,
+    "tickFraction": 0.0200742,
   },
   "Plains aTiles=50000 dTiles=150000 dTroops=100000 attack=10000": {
     "attackerLoss": 70.6022,
@@ -3120,7 +3200,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=50000 dTiles=150000 dTroops=100000 attack=1000000": {
     "attackerLoss": 21.1807,
     "defenderLoss": 0.666667,
-    "tickFraction": 0.0201193,
+    "tickFraction": 0.0200742,
   },
   "Plains aTiles=50000 dTiles=150000 dTroops=1000000 attack=10000": {
     "attackerLoss": 74.3462,
@@ -3145,12 +3225,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=50000 dTiles=400000 dTroops=10000 attack=100000": {
     "attackerLoss": 17.6062,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0168186,
+    "tickFraction": 0.0167809,
   },
   "Plains aTiles=50000 dTiles=400000 dTroops=10000 attack=1000000": {
     "attackerLoss": 17.6062,
     "defenderLoss": 0.025,
-    "tickFraction": 0.0168186,
+    "tickFraction": 0.0167809,
   },
   "Plains aTiles=50000 dTiles=400000 dTroops=100000 attack=10000": {
     "attackerLoss": 58.8277,
@@ -3165,7 +3245,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=50000 dTiles=400000 dTroops=100000 attack=1000000": {
     "attackerLoss": 17.6483,
     "defenderLoss": 0.25,
-    "tickFraction": 0.0168186,
+    "tickFraction": 0.0167809,
   },
   "Plains aTiles=50000 dTiles=400000 dTroops=1000000 attack=10000": {
     "attackerLoss": 60.2317,
@@ -3190,12 +3270,12 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=50000 dTiles=50000 dTroops=10000 attack=100000": {
     "attackerLoss": 22.0128,
     "defenderLoss": 0.2,
-    "tickFraction": 0.020998,
+    "tickFraction": 0.0209509,
   },
   "Plains aTiles=50000 dTiles=50000 dTroops=10000 attack=1000000": {
     "attackerLoss": 22.0128,
     "defenderLoss": 0.2,
-    "tickFraction": 0.020998,
+    "tickFraction": 0.0209509,
   },
   "Plains aTiles=50000 dTiles=50000 dTroops=100000 attack=10000": {
     "attackerLoss": 74.4993,
@@ -3210,7 +3290,7 @@ exports[`attackLogic golden values > player vs player: terrain × territory × t
   "Plains aTiles=50000 dTiles=50000 dTroops=100000 attack=1000000": {
     "attackerLoss": 22.3498,
     "defenderLoss": 2,
-    "tickFraction": 0.020998,
+    "tickFraction": 0.0209509,
   },
   "Plains aTiles=50000 dTiles=50000 dTroops=1000000 attack=10000": {
     "attackerLoss": 85.7313,
@@ -3235,22 +3315,22 @@ exports[`attackLogic golden values > player vs player: troop ratio clamps 1`] = 
   "defenderTroops/attackTroops=0.01": {
     "attackerLoss": 23.1345,
     "defenderLoss": 5,
-    "tickFraction": 0.0212112,
+    "tickFraction": 0.0212063,
   },
   "defenderTroops/attackTroops=0.1": {
     "attackerLoss": 23.1345,
     "defenderLoss": 5,
-    "tickFraction": 0.0212112,
+    "tickFraction": 0.0212063,
   },
   "defenderTroops/attackTroops=0.5": {
     "attackerLoss": 23.1345,
     "defenderLoss": 5,
-    "tickFraction": 0.0212112,
+    "tickFraction": 0.0212063,
   },
   "defenderTroops/attackTroops=0.6": {
     "attackerLoss": 23.1345,
     "defenderLoss": 5,
-    "tickFraction": 0.0212112,
+    "tickFraction": 0.0212063,
   },
   "defenderTroops/attackTroops=1": {
     "attackerLoss": 38.5576,

@@ -125,6 +125,9 @@ const ATTACKER_LOSS_BASE = 0.463;
 const ATTACKER_LOSS_PER_DENSITY = 0.0039;
 // Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
 const SPEED_COST_DIVISOR = 7.77;
+// Speed-only: a huge attacker's parity floor on the ratio curve eases down
+// to 0.8x, so its overwhelming stacks land ~20% faster. Losses unchanged.
+const LARGE_ATTACK_SPEED_DEPTH = 0.2;
 
 /**
  * Logistic in log(tiles): ~1 for small territories, easing down to
@@ -865,9 +868,15 @@ export class Config {
 
     // Speed: a tile's cost in tick-fractions grows with how outnumbered the
     // attack is. Flat at 1/5 up to parity, then rising linearly (saturating
-    // at 7.5x), with a second ramp for hopeless attacks past 20x.
+    // at 7.5x), with a second ramp for hopeless attacks past 20x. Large
+    // attackers push the parity floor down (to 0.8x for huge ones), so their
+    // stacks that outnumber the defender's whole army land faster.
+    const speedFloor = largeTerritoryBonus(
+      attacker.numTiles,
+      LARGE_ATTACK_SPEED_DEPTH,
+    );
     const speedCost =
-      (within(troopRatio, 1, 7.5) * within(troopRatio / 20, 1, 50)) /
+      (within(troopRatio, speedFloor, 7.5) * within(troopRatio / 20, 1, 50)) /
       SPEED_COST_DIVISOR;
     return {
       attackerTroopLoss,
