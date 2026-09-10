@@ -92,6 +92,9 @@ describe("tribe-name spend paths map the debt reason", () => {
       ["not a number", { debt: "lots" }],
       ["an object", { debt: { amount: 250 } }],
       ["negative", { debt: "-250" }],
+      // String() would launder both of these into a valid-looking "250".
+      ["a number", { debt: 250 }],
+      ["a one-element array", { debt: ["250"] }],
     ])(
       "falls back to a generic failure when the amount is %s",
       async (_label, extra) => {
@@ -224,6 +227,8 @@ describe("tribe-name spend paths map the debt reason", () => {
       ["not a number", { debt: "lots" }],
       ["an object", { debt: { amount: 80 } }],
       ["negative", { debt: "-80" }],
+      ["a number", { debt: 80 }],
+      ["a one-element array", { debt: ["80"] }],
     ])(
       "falls back to a generic failure when the amount is %s",
       async (_label, extra) => {

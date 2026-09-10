@@ -147,6 +147,8 @@ describe("purchaseCosmeticPack", () => {
     ["not a number", { debt: "lots" }],
     ["an object", { debt: { amount: 300 } }],
     ["negative", { debt: "-300" }],
+    ["a number", { debt: 300 }],
+    ["a one-element array", { debt: ["300"] }],
   ])(
     "falls back to a generic failure when the amount is %s",
     async (_label, extra) => {
@@ -243,6 +245,9 @@ describe("purchaseWithCurrency", () => {
     ["not a number", { debt: "lots" }],
     ["an object", { debt: { amount: 150 } }],
     ["negative", { debt: "-150" }],
+    // String() would launder both of these into a valid-looking "150".
+    ["a number", { debt: 150 }],
+    ["a one-element array", { debt: ["150"] }],
   ])(
     "falls back to a generic failure when the amount is %s",
     async (_l, extra) => {

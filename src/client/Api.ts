@@ -642,9 +642,14 @@ const DEBT_REFUSAL_REASON = "insufficient_balance_debt";
 //
 // The amount IS the message ("your balance is X in debt"), so a debt we
 // cannot state is worse than a generic failure — it would render a blank, or
-// "[object Object]", at the player. Digits only: the API sends a stringified
-// positive bigint, so anything else (missing, empty, negative, an object)
-// fails closed.
+// "[object Object]", at the player. A string of digits only: the API sends a
+// stringified positive bigint, so everything else (missing, empty, negative,
+// an object) fails closed.
+//
+// Type-checked before the pattern rather than stringified into it, because
+// String() launders things that are not amounts into ones that look like
+// amounts: String(300) and String([300]) are both "300". Whatever the API
+// starts sending, it has to be the string it promises.
 //
 // `context` is the calling function's name as a literal at each call site.
 // Nothing from the body reaches the warn: an amount we rejected is by
@@ -658,10 +663,8 @@ function parseDebtRefusal(
   | undefined {
   const reason = (body as { reason?: unknown } | null | undefined)?.reason;
   if (reason !== DEBT_REFUSAL_REASON) return undefined;
-  const debt = String(
-    (body as { debt?: unknown } | null | undefined)?.debt ?? "",
-  );
-  if (!/^\d+$/.test(debt)) {
+  const debt = (body as { debt?: unknown } | null | undefined)?.debt;
+  if (typeof debt !== "string" || !/^\d+$/.test(debt)) {
     console.warn(`${context}: debt refusal with no usable amount`);
     return { ok: false, code: "failed" };
   }
