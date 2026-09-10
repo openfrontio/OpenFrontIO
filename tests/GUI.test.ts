@@ -1,11 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { AttacksDisplay } from "../src/client/hud/layers/AttacksDisplay";
 import { translateText } from "../src/client/Utils";
 
 // Simple mock game view that can return a configurable owner ID and a mock player.
 class MockGameView {
   constructor(private readonly ownerId: number = 0) {}
-  ownerID() { return this.ownerId; }
+  ownerID() {
+    return this.ownerId;
+  }
   playerBySmallID(id: number) {
     return id === this.ownerId && this.ownerId !== 0
       ? { displayName: () => `MockPlayer${id}` }
