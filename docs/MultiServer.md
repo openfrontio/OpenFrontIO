@@ -288,20 +288,28 @@ All of these are config edits; no code changes.
 1. Provision the box; install docker/traefik per the existing host setup.
 2. DNS: `blue2.openfront.io` and `green2.openfront.io` → the new machine.
 3. Secrets: add the machine to `SERVER_HOSTS_JSON`
-   (`{"falk2":"<ip>","nbg2":"<ip>"}`) — deploy.sh resolves machine names
-   from this directory, falling back to legacy `SERVER_HOST_<NAME>` secrets.
+   (`{"falk2":"<ip>","nbg2":"<ip>"}`, lowercase keys) — deploy.sh resolves
+   machine names from this directory and keyscans only the machine it is
+   deploying to. Legacy `SERVER_HOST_<NAME>` secrets remain a fallback for
+   local runs, but in CI only `SERVER_HOST_FALK2` is wired through — every
+   other machine must be in the directory.
 4. Vars: append the new letters to every prod `CLUSTER_JSON`
    (append-only — never reuse a letter), and add the machine to the
-   `DEPLOY_TARGETS` var in the `prod-blue` and `prod-green` environments:
+   `DEPLOY_TARGETS_BLUE` and `DEPLOY_TARGETS_GREEN` **repository** vars:
    `[{"host":"falk2","subdomain":"blue"},{"host":"nbg2","subdomain":"blue2"}]`.
-   The deploy jobs run one sequential matrix leg per entry and stop the
-   rollout at the first failing machine.
+   Repository-level, not environment-level: GitHub expands a job's matrix
+   before its environment exists, so an environment-scoped var would be
+   invisible there and the jobs would silently deploy only the single-box
+   default. The deploy jobs run one sequential matrix leg per entry, stop
+   the rollout at the first failing machine, and refuse a subdomain whose
+   cluster entry carries the other color.
 5. Cloudflare: add the new blue/green origins to their pools.
 6. Deploy (fleet redeploy so every server sees the new map).
 
-Removal is the reverse, drain-first: drop the machine from `DEPLOY_TARGETS`
-and the CF pools, let its letters drain (flip away, wait for games to end),
-then delete its cluster entries. The letters stay retired forever.
+Removal is the reverse, drain-first: drop the machine from the
+`DEPLOY_TARGETS_*` vars and the CF pools, let its letters drain (flip away,
+wait for games to end), then delete its cluster entries and its
+`SERVER_HOSTS_JSON` entry. The letters stay retired forever.
 
 ## Future (discussed, not built)
 

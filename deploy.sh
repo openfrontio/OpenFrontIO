@@ -38,7 +38,10 @@ case "$2" in
 esac
 
 ENV=$1
-HOST=$2
+# Lowercased so the byte-exact SERVER_HOSTS_JSON lookup and the case-folded
+# legacy SERVER_HOST_<NAME> lookup below cannot resolve the same name to two
+# different machines (directory keys are lowercase by convention).
+HOST=$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')
 VERSION_TAG=$3
 SUBDOMAIN=$4
 
@@ -115,6 +118,13 @@ FQDN="${SUBDOMAIN}.${DOMAIN}"
 if [ -n "${CLUSTER_JSON:-}" ]; then
     CLUSTER_JSON=$(printf '%s' "$CLUSTER_JSON" | jq -c .)
     if printf '%s' "$CLUSTER_JSON" | jq -e --arg host "$FQDN" 'any(.[]; .host == $host)' > /dev/null; then
+        # Presence alone can't catch a mistyped DEPLOY_TARGETS entry that
+        # points a blue leg at a green cluster host, so the color jobs pass
+        # the color they are rolling out and we require the entry to match.
+        if [ -n "${EXPECTED_COLOR:-}" ] && ! printf '%s' "$CLUSTER_JSON" | jq -e --arg host "$FQDN" --arg color "$EXPECTED_COLOR" 'any(.[]; .host == $host and .color == $color)' > /dev/null; then
+            echo "Error: ${FQDN} is in CLUSTER_JSON but not with color '${EXPECTED_COLOR}' - refusing to deploy onto another color's host"
+            exit 1
+        fi
         if printf '%s' "$CLUSTER_JSON" | jq -e 'length > 1' > /dev/null; then
             SITE_HOST="${SITE_HOST:-$DOMAIN}"
         fi
@@ -138,14 +148,22 @@ if [ -z "${CLUSTER_JSON:-}" ]; then
 fi
 
 # Resolve the machine name to its SSH target. Two sources, directory first:
-#   1. SERVER_HOSTS_JSON — a machine directory, {"falk2":"1.2.3.4",...}.
-#      Adding a machine to the fleet is one edit to that secret; no workflow
-#      or script changes (same spirit as CLUSTER_JSON for topology).
+#   1. SERVER_HOSTS_JSON — a machine directory, {"falk2":"1.2.3.4",...},
+#      lowercase keys. Adding a machine to the fleet is one edit to that
+#      secret; no workflow or script changes (same spirit as CLUSTER_JSON
+#      for topology).
 #   2. Legacy SERVER_HOST_<NAME> variables (SERVER_HOST_FALK2, ...), kept so
 #      existing setups and .env files work unchanged.
 print_header "DEPLOYING TO ${HOST} HOST"
 SERVER_HOST=""
 if [ -n "${SERVER_HOSTS_JSON:-}" ]; then
+    # Validate the shape first: a malformed directory would otherwise die in
+    # the lookup below with a bare jq error, taking down every deploy —
+    # including machines the legacy variables still cover.
+    if ! printf '%s' "$SERVER_HOSTS_JSON" | jq -e 'type == "object"' > /dev/null 2>&1; then
+        echo "Error: SERVER_HOSTS_JSON must be a JSON object like {\"falk2\":\"1.2.3.4\"}"
+        exit 1
+    fi
     SERVER_HOST=$(printf '%s' "$SERVER_HOSTS_JSON" | jq -r --arg h "$HOST" '.[$h] // empty')
 fi
 if [ -z "$SERVER_HOST" ]; then
@@ -157,6 +175,20 @@ fi
 if [ -z "$SERVER_HOST" ]; then
     echo "Error: machine '${HOST}' not found in SERVER_HOSTS_JSON and \$${LEGACY_VAR} is unset"
     exit 1
+fi
+
+# Trust the target's host key here, next to the resolution that picked it —
+# the CI runner's known_hosts starts empty, and scanning only the resolved
+# target means an unreachable machine fails its own leg, never anyone
+# else's. Skipped when the key is already known (local runs).
+mkdir -p ~/.ssh
+# -f explicitly: without it ssh-keygen resolves ~ via the passwd database,
+# which can disagree with $HOME (the file the keyscan below appends to).
+if [ ! -f ~/.ssh/known_hosts ] || ! ssh-keygen -F "$SERVER_HOST" -f ~/.ssh/known_hosts > /dev/null 2>&1; then
+    if ! ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts; then
+        echo "Error: ssh-keyscan could not reach ${HOST} (${SERVER_HOST})"
+        exit 1
+    fi
 fi
 
 # Configuration
