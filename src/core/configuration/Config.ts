@@ -109,7 +109,8 @@ export interface NukeMagnitude {
 // attackLogic tunables
 const LARGE_TERRITORY_MIDPOINT = 300_000;
 const LARGE_TERRITORY_STEEPNESS = 2.5;
-// Floors: a huge attacker's tiles cost 0.3x, a huge defender's 0.7x.
+// Floors: a huge attacker's bonus bottoms at 0.3x (losses; speed uses the
+// deeper LARGE_ATTACKER_SPEED_DEPTH below), a huge defender's at 0.7x.
 const LARGE_ATTACKER_DEPTH = 0.7;
 const LARGE_DEFENDER_DEPTH = 0.3;
 const BOT_DEFENDER_LOSS_MULT = 0.7;
