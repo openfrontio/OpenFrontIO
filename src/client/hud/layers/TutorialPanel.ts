@@ -332,6 +332,7 @@ export class TutorialPanel extends LitElement implements Controller {
     this.lastAttackRatio = attackRatio;
     return {
       hasSpawned: player.hasSpawned(),
+      inSpawnPhase: this.game.inSpawnPhase(),
       attacking: attacks.length > 0,
       attackRatioMoved,
       boatsDisabled: this.game.config().isUnitDisabled(UnitType.TransportShip),
@@ -522,6 +523,11 @@ export class TutorialPanel extends LitElement implements Controller {
   }
 
   private stepText(step: TutorialStep, done: boolean): string {
+    // Multiplayer: the spot is picked but the spawn timer is still running,
+    // so don't keep asking the player to pick one.
+    if (!done && step.id === "spawn" && this.ctx?.hasSpawned) {
+      return translateText("tutorial.step.spawn_wait");
+    }
     // Boats and ports need shore; landlocked players are sent to get some.
     if (!done && COAST_STEPS.has(step.id) && this.hasCoast === false) {
       return translateText("tutorial.step.no_coast");

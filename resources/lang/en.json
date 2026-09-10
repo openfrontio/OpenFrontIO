@@ -1959,6 +1959,7 @@
       "send_boat": "Boats send your troops across water. Right-click an enemy coastline across the water to open the radial menu, then select the boat.",
       "silo_loading": "Your Missile Silo is loading — a nuke can be launched once it's fully ready.",
       "spawn": "Click anywhere on the map to pick where you spawn.",
+      "spawn_wait": "Spot picked! You can still move it until the timer runs out — the game starts then.",
       "traitor_info": "Traitors get a large defense debuff for 30 seconds, so be careful.",
       "troop_rate": "This is your troop growth rate. Growth slows down and turns orange once your troops approach half of your max.",
       "troops": "Keep an eye on your troop count. Attacking with too few troops leaves you weak — let them regrow between attacks."
