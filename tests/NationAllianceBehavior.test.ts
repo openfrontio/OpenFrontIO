@@ -400,4 +400,28 @@ describe("AllianceBehavior.maybeBetray - juicy ally strategy", () => {
       expect(player.isAlliedWith(allyJuicy)).toBe(false);
     },
   );
+
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s: does not count a friendly-but-not-allied bordering player (e.g. a teammate) as a betrayal threat",
+    async (difficulty) => {
+      const { allyJuicy, allianceBehavior } = await setupBetrayTest(difficulty);
+
+      // borderingFriends can hold teammates too (isFriendly() = isOnSameTeam()
+      // || isAlliedWith()), but a teammate is never actually allied with us
+      // and can never attack us - it must not count as a threat.
+      const teammate = {
+        isTraitor: () => false,
+        troops: () => 200_000,
+        outgoingAttacks: () => [],
+      } as unknown as Player;
+
+      const result = (allianceBehavior as any).isSafeToBetray(
+        allyJuicy,
+        [allyJuicy, teammate],
+        [],
+      );
+
+      expect(result).toBe(true);
+    },
+  );
 });

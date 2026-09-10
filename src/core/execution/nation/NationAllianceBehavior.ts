@@ -447,7 +447,9 @@ export class NationAllianceBehavior {
   ): boolean {
     const otherAllies = target.isTraitor()
       ? []
-      : borderingFriends.filter((f) => f !== target);
+      : borderingFriends.filter(
+          (f) => f !== target && this.player.isAlliedWith(f),
+        );
     const threats = [target, ...borderingEnemies, ...otherAllies];
     const nearbyThreatTroops = threats.reduce((sum, threat) => {
       const outgoing = threat
