@@ -40,10 +40,7 @@ import "./components/CopyButton";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
-import {
-  DEFAULT_TITLE_CLASS,
-  modalHeader,
-} from "./components/ui/ModalHeader";
+import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
 // Not a UserSettings key: those are player-scoped, and wanting a desktop
