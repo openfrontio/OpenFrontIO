@@ -12,11 +12,6 @@ describe.each([
   let el: HTMLElement & { updateComplete: Promise<unknown> };
 
   beforeEach(async () => {
-    // The @customElement decorator's define() side-effect doesn't run under the
-    // test transform, so register the element explicitly.
-    if (!customElements.get(tag)) {
-      customElements.define(tag, ctor as CustomElementConstructor);
-    }
     window.currentPageId = "page-play";
     el = document.createElement(tag) as typeof el;
     document.body.appendChild(el);

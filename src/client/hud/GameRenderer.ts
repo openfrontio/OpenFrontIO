@@ -193,7 +193,8 @@ export function createRenderer(
   settingsModal.eventBus = eventBus;
 
   // The in-game settings instance needs the bus so the Audio sliders reach
-  // SoundManager, which caches its volumes at construction.
+  // SoundManager, which caches its volumes at construction, and UIState so the
+  // attack ratio slider shows the session value the HUD slider may have set.
   const gameSettingsModal = document.getElementById(
     "game-settings",
   ) as UserSettingModal | null;
@@ -201,6 +202,7 @@ export function createRenderer(
     console.warn("In-game settings modal (#game-settings) not found");
   } else {
     gameSettingsModal.eventBus = eventBus;
+    gameSettingsModal.uiState = uiState;
   }
 
   const graphicsSettingsModal = document.querySelector(

@@ -17,6 +17,7 @@ import {
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
 } from "./sound/Sounds";
+import type { UIState } from "./UIState";
 
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
@@ -28,6 +29,13 @@ export class UserSettingModal extends BaseModal {
    * UserSettings once at construction and follows the bus after that.
    */
   public eventBus?: EventBus;
+
+  /**
+   * Also set on the in-game instance by GameRenderer. The HUD's own attack
+   * ratio slider is session-only — it never writes UserSettings — so in a
+   * running game the live ratio is the one in UIState, not the stored one.
+   */
+  public uiState?: UIState;
 
   private userSettings: UserSettings = new UserSettings();
   private readonly defaultKeybinds = getDefaultKeybinds(Platform.isMac);
@@ -296,11 +304,19 @@ export class UserSettingModal extends BaseModal {
     this.requestUpdate();
   }
 
+  /** The ratio the player is actually attacking with right now. */
+  private currentAttackRatio(): number {
+    return this.uiState?.attackRatio ?? this.userSettings.attackRatio();
+  }
+
   private sliderAttackRatio(e: CustomEvent<{ value: number }>) {
     const value = e.detail?.value;
     if (typeof value === "number") {
       const ratio = value / 100;
+      // ControlPanel listens for this and updates both its cached ratio and
+      // UIState, so the running game follows the slider.
       this.userSettings.setAttackRatio(ratio);
+      this.requestUpdate();
     } else {
       console.warn("Slider event missing detail.value", e);
     }
@@ -1026,9 +1042,10 @@ export class UserSettingModal extends BaseModal {
       <setting-slider
         label="${translateText("user_setting.attack_ratio_label")}"
         description="${translateText("user_setting.attack_ratio_desc")}"
+        id="attack-ratio-slider"
         min="1"
         max="100"
-        .value=${this.userSettings.attackRatio() * 100}
+        .value=${this.currentAttackRatio() * 100}
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 

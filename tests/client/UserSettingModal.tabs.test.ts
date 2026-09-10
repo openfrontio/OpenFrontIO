@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { modalRouter } from "../../src/client/ModalRouter";
+import type { UIState } from "../../src/client/UIState";
 import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
 import { UserSettings } from "../../src/core/game/UserSettings";
@@ -90,6 +91,36 @@ describe("user-setting tabs", () => {
     expect(keybind).not.toBeNull();
     expect(keybind!.value).toBe("KeyJ");
     expect(keybind!.value).not.toBe(before);
+  });
+
+  it("shows the ratio the player is attacking with, not the stored one", async () => {
+    // The HUD's own attack ratio slider is session-only: it never writes
+    // UserSettings. Without this, a player who nudged it to 50% mid-match
+    // would open Settings on the stored 20% and silently reset themselves.
+    new UserSettings().setAttackRatio(0.2);
+    const el = await mount(false);
+    el.uiState = { attackRatio: 0.5 } as UIState;
+    el.open({ tab: "gameplay" });
+    await el.updateComplete;
+
+    const slider = el.querySelector("#attack-ratio-slider") as HTMLElement & {
+      value: number;
+    };
+    expect(slider.value).toBeCloseTo(50);
+    expect(new UserSettings().attackRatio()).toBeCloseTo(0.2);
+  });
+
+  it("falls back to the stored ratio on the page instance", async () => {
+    new UserSettings().setAttackRatio(0.35);
+    const el = await mount(true);
+    el.open({ tab: "gameplay" });
+    await el.updateComplete;
+
+    const slider = el.querySelector("#attack-ratio-slider") as HTMLElement & {
+      value: number;
+    };
+    expect(el.uiState).toBeUndefined();
+    expect(slider.value).toBeCloseTo(35);
   });
 
   it("keeps the URL out of it on the non-inline in-game instance", async () => {

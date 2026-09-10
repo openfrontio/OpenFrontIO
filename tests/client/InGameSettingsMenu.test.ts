@@ -32,12 +32,6 @@ describe("in-game menu opens the shared settings modal", () => {
   beforeEach(async () => {
     document.body.innerHTML = "";
     localStorage.clear();
-    // The @customElement decorator's define() side-effect doesn't run under the
-    // test transform, so register the element explicitly.
-    if (!customElements.get("settings-modal")) {
-      customElements.define("settings-modal", SettingsModal);
-    }
-
     gameplayStop = vi
       .spyOn(crazyGamesSDK, "gameplayStop")
       .mockImplementation(async () => {});

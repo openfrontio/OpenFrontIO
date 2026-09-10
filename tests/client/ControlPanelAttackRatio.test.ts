@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { ControlPanel } from "../../src/client/hud/layers/ControlPanel";
+// Side-effect import: the @customElement decorator registers <control-panel>
+// when the module is evaluated, and a type-only reference would not evaluate it.
+import "../../src/client/hud/layers/ControlPanel";
+import type { ControlPanel } from "../../src/client/hud/layers/ControlPanel";
 import type { UIState } from "../../src/client/UIState";
 import type { GameView } from "../../src/client/view";
 import { EventBus } from "../../src/core/EventBus";
@@ -18,9 +21,6 @@ describe("control-panel attack ratio", () => {
     localStorage.clear();
     // UserSettings' cache is static and survives localStorage.clear().
     new UserSettings().setAttackRatio(0.2);
-    if (!customElements.get("control-panel")) {
-      customElements.define("control-panel", ControlPanel);
-    }
 
     panel = document.createElement("control-panel") as ControlPanel;
     uiState = { attackRatio: 0 } as UIState;
