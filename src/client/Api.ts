@@ -631,6 +631,43 @@ export async function getMyTribeNames(): Promise<
   }
 }
 
+// The branch key the shared spend helper returns when a refund or chargeback
+// has left the wallet negative. A machine key, never prose: it must not reach
+// the player, which is what happened before the debt paths were handled.
+const DEBT_REFUSAL_REASON = "insufficient_balance_debt";
+
+// Reads the debt refusal off a 400 body for every spend path. Returns
+// undefined when this is not that refusal, so the caller carries on matching
+// its own reasons; otherwise it returns the result the caller should return.
+//
+// The amount IS the message ("your balance is X in debt"), so a debt we
+// cannot state is worse than a generic failure — it would render a blank, or
+// "[object Object]", at the player. Digits only: the API sends a stringified
+// positive bigint, so anything else (missing, empty, negative, an object)
+// fails closed.
+//
+// `context` is the calling function's name as a literal at each call site.
+// Nothing from the body reaches the warn: an amount we rejected is by
+// definition one we do not understand.
+function parseDebtRefusal(
+  body: unknown,
+  context: string,
+):
+  | { ok: false; code: "debt"; debt: string }
+  | { ok: false; code: "failed" }
+  | undefined {
+  const reason = (body as { reason?: unknown } | null | undefined)?.reason;
+  if (reason !== DEBT_REFUSAL_REASON) return undefined;
+  const debt = String(
+    (body as { debt?: unknown } | null | undefined)?.debt ?? "",
+  );
+  if (!/^\d+$/.test(debt)) {
+    console.warn(`${context}: debt refusal with no usable amount`);
+    return { ok: false, code: "failed" };
+  }
+  return { ok: false, code: "debt", debt };
+}
+
 export type PurchaseTribeNameResult =
   | { ok: true; data: PostTribeNameResponse }
   // 400 "Insufficient balance": the balance moved since the client's
@@ -728,9 +765,8 @@ export async function purchaseTribeName(
       const reason = typeof body?.reason === "string" ? body.reason : "";
       // Balance reasons first: both are branch keys the shared spend helper
       // emits, not prose to echo at the player.
-      if (reason === "insufficient_balance_debt") {
-        return { ok: false, code: "debt", debt: String(body.debt ?? "") };
-      }
+      const debt = parseDebtRefusal(body, "purchaseTribeName");
+      if (debt !== undefined) return debt;
       if (reason === "Insufficient balance") {
         return { ok: false, code: "insufficient_balance" };
       }
@@ -814,17 +850,16 @@ export async function boostTribeName(
     }
     if (response.status === 400) {
       const body = await response.json().catch(() => null);
-      // {"reason": "..."} is the player-facing 400 (insufficient balance, or
-      // a wallet left negative by a refund/chargeback); {"resource": "id"}
-      // means a malformed id — a client bug, not a player error, so it falls
-      // through to the generic failure.
+      // Debt first, ahead of the catch-all below: collapsing it into
+      // insufficient_balance sends a player with a negative wallet to the
+      // top-up dialog, which cannot clear it. Safe above the string-reason
+      // check — a body without a string reason is never the debt refusal.
+      const debt = parseDebtRefusal(body, "boostTribeName");
+      if (debt !== undefined) return debt;
+      // Any other {"reason": "..."} is the player-facing 400 (a shortfall);
+      // {"resource": "id"} means a malformed id — a client bug, not a player
+      // error, so it falls through to the generic failure.
       if (typeof body?.reason === "string") {
-        // Checked before the catch-all: collapsing debt into
-        // insufficient_balance sends a player with a negative wallet to the
-        // top-up dialog, which does not clear the debt.
-        if (body.reason === "insufficient_balance_debt") {
-          return { ok: false, code: "debt", debt: String(body.debt ?? "") };
-        }
         return { ok: false, code: "insufficient_balance" };
       }
       // Body-free on purpose: an unrecognised 400 is exactly the case where we
@@ -936,20 +971,8 @@ export async function purchaseWithCurrency(
     if (response.status === 400) {
       const body = await response.json().catch(() => null);
       const reason = typeof body?.reason === "string" ? body.reason : "";
-      if (reason === "insufficient_balance_debt") {
-        // The amount is the whole message ("your balance is X in debt"), so a
-        // debt we can't state is worse than a generic failure: it would render
-        // a blank or "[object Object]" at the player. Digits only — the API
-        // sends a stringified positive bigint.
-        const debt = String(body?.debt ?? "");
-        if (!/^\d+$/.test(debt)) {
-          console.warn(
-            "purchaseWithCurrency: debt refusal with no usable amount",
-          );
-          return { ok: false, code: "failed" };
-        }
-        return { ok: false, code: "debt", debt };
-      }
+      const debt = parseDebtRefusal(body, "purchaseWithCurrency");
+      if (debt !== undefined) return debt;
       if (reason === "Insufficient balance") {
         return { ok: false, code: "insufficient_balance" };
       }
@@ -1028,11 +1051,12 @@ export async function purchaseCosmeticPack(
     if (response.status === 400) {
       const body = await response.json().catch(() => null);
       const reason = typeof body?.reason === "string" ? body.reason : "";
+      // Hoisted above the shortfall match: the two reasons are distinct exact
+      // strings, so the order between them makes no difference.
+      const debt = parseDebtRefusal(body, "purchaseCosmeticPack");
+      if (debt !== undefined) return debt;
       if (reason === "Insufficient balance") {
         return { ok: false, code: "insufficient_balance" };
-      }
-      if (reason === "insufficient_balance_debt") {
-        return { ok: false, code: "debt", debt: String(body.debt ?? "") };
       }
       if (PACK_UNAVAILABLE_REASONS.includes(reason)) {
         return { ok: false, code: "unavailable" };

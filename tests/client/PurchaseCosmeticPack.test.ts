@@ -137,6 +137,35 @@ describe("purchaseCosmeticPack", () => {
     expect(vi.mocked(console.warn).mock.calls[0]).toHaveLength(1);
   });
 
+  // The amount IS the message ("your balance is X in debt"), so a debt we
+  // cannot state is worse than a generic failure — it would render a blank,
+  // or "[object Object]", at the player. Same rule as the single-cosmetic
+  // path, which is the point of the shared parser.
+  it.each([
+    ["missing", {}],
+    ["empty", { debt: "" }],
+    ["not a number", { debt: "lots" }],
+    ["an object", { debt: { amount: 300 } }],
+    ["negative", { debt: "-300" }],
+  ])(
+    "falls back to a generic failure when the amount is %s",
+    async (_label, extra) => {
+      respond(400, {
+        reason: "insufficient_balance_debt",
+        canary: CANARY,
+        ...extra,
+      });
+      expect(await purchaseCosmeticPack("starter")).toEqual({
+        ok: false,
+        code: "failed",
+      });
+      expectNoConsoleCallContains(CANARY);
+      expect(console.error).not.toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(console.warn).mock.calls[0]).toHaveLength(1);
+    },
+  );
+
   it("reports which items are already owned on 409", async () => {
     respond(409, {
       error: "Conflict",
