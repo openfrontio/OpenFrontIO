@@ -1,6 +1,7 @@
 /**
  * Golden-value tests for the trade-ship and train economy formulas:
- * `Config.tradeShipGold`, `Config.tradeShipSpawnRate`, `Config.trainGold`
+ * `Config.tradeShipGold`, `Config.tradeShipSaturation`,
+ * `Config.tradeShipSpawnRate`, `Config.trainGold`, `Config.trainSaturation`
  * and `Config.trainSpawnRate`.
  *
  * These pin the *exact* numeric output of each formula across a grid of
@@ -33,36 +34,15 @@ const DISTANCES = [
   5_000,
 ];
 
-// Global-count pacing midpoint: economyPacing(count, 250) is ~1x here, so
-// sweeps over the other inputs stay readable at their unpaced values.
-const NEUTRAL_SHIPS = 250;
-const NEUTRAL_TRAIN_UNITS = 250;
+function sig(x: number): number {
+  return Number(x.toPrecision(4));
+}
 
 describe("trade ship golden values", () => {
   test("tradeShipGold: distance sweep", () => {
     const table: Record<string, bigint> = {};
     for (const dist of DISTANCES) {
-      table[`dist=${dist}`] = config.tradeShipGold(
-        dist,
-        NEUTRAL_SHIPS,
-        player(),
-      );
-    }
-    expect(table).toMatchSnapshot();
-  });
-
-  test("tradeShipGold: global fleet pacing", () => {
-    // Fewer trade ships game-wide pay up to 2x; a mature fleet tapers
-    // toward the 0.5x floor.
-    const table: Record<string, bigint> = {};
-    for (const ships of [0, 25, 50, 100, 150, 250, 400, 600, 1_000]) {
-      for (const dist of [100, 500]) {
-        table[`ships=${ships} dist=${dist}`] = config.tradeShipGold(
-          dist,
-          ships,
-          player(),
-        );
-      }
+      table[`dist=${dist}`] = config.tradeShipGold(dist, player());
     }
     expect(table).toMatchSnapshot();
   });
@@ -72,24 +52,29 @@ describe("trade ship golden values", () => {
     for (const mult of [0.5, 2, 10]) {
       const c = makeConfig({ goldMultiplier: mult });
       for (const dist of [100, 500, 2_000]) {
-        table[`mult=${mult} dist=${dist}`] = c.tradeShipGold(
-          dist,
-          NEUTRAL_SHIPS,
-          player(),
-        );
+        table[`mult=${mult} dist=${dist}`] = c.tradeShipGold(dist, player());
       }
     }
     const hostCheat = makeConfig({ hostCheats: { goldMultiplier: 5 } });
     table["hostCheat=5 creator dist=500"] = hostCheat.tradeShipGold(
       500,
-      NEUTRAL_SHIPS,
       player(true),
     );
     table["hostCheat=5 non-creator dist=500"] = hostCheat.tradeShipGold(
       500,
-      NEUTRAL_SHIPS,
       player(false),
     );
+    expect(table).toMatchSnapshot();
+  });
+
+  test("tradeShipSaturation: fleet-size sweep", () => {
+    // >1 boosts spawning while the world fleet is small, ~1 around 250
+    // ships, collapsing toward 0 past the ~300-ship capacity midpoint. The
+    // pity timer square-roots the realized spawn-frequency effect.
+    const table: Record<string, number> = {};
+    for (const ships of [0, 25, 50, 100, 150, 200, 250, 300, 400, 500, 700]) {
+      table[`ships=${ships}`] = sig(config.tradeShipSaturation(ships));
+    }
     expect(table).toMatchSnapshot();
   });
 
@@ -119,27 +104,9 @@ describe("train golden values", () => {
         table[`rel=${rel} stops=${visited}`] = config.trainGold(
           rel,
           visited,
-          NEUTRAL_TRAIN_UNITS,
           player(),
         );
       }
-    expect(table).toMatchSnapshot();
-  });
-
-  test("trainGold: global train pacing", () => {
-    // Each train is ~7 Train units; fewer trains game-wide pay up to 2x,
-    // tapering toward the 0.5x floor as the world fills with rail traffic.
-    const table: Record<string, bigint> = {};
-    for (const units of [0, 7, 21, 70, 140, 250, 420, 700, 1_400]) {
-      for (const rel of ["self", "other"] as const) {
-        table[`trainUnits=${units} rel=${rel}`] = config.trainGold(
-          rel,
-          0,
-          units,
-          player(),
-        );
-      }
-    }
     expect(table).toMatchSnapshot();
   });
 
@@ -148,36 +115,43 @@ describe("train golden values", () => {
     for (const mult of [0.5, 2, 10]) {
       const c = makeConfig({ goldMultiplier: mult });
       for (const rel of ["self", "other"] as const) {
-        table[`mult=${mult} rel=${rel}`] = c.trainGold(
-          rel,
-          0,
-          NEUTRAL_TRAIN_UNITS,
-          player(),
-        );
+        table[`mult=${mult} rel=${rel}`] = c.trainGold(rel, 0, player());
       }
     }
     const hostCheat = makeConfig({ hostCheats: { goldMultiplier: 5 } });
     table["hostCheat=5 creator rel=self"] = hostCheat.trainGold(
       "self",
       0,
-      NEUTRAL_TRAIN_UNITS,
       player(true),
     );
     table["hostCheat=5 non-creator rel=self"] = hostCheat.trainGold(
       "self",
       0,
-      NEUTRAL_TRAIN_UNITS,
       player(false),
     );
     expect(table).toMatchSnapshot();
   });
 
-  test("trainSpawnRate: factory count sweep", () => {
+  test("trainSaturation: global train sweep", () => {
+    // Counted in Train units (~7 per train). >1 boosts spawning while the
+    // world's rail traffic is light, ~1 around 250 units (~35 trains),
+    // collapsing toward 0 past the ~600-unit capacity midpoint.
+    const table: Record<string, number> = {};
+    for (const units of [0, 7, 35, 70, 140, 250, 400, 600, 800, 1_200]) {
+      table[`trainUnits=${units}`] = sig(config.trainSaturation(units));
+    }
+    expect(table).toMatchSnapshot();
+  });
+
+  test("trainSpawnRate: factory count × global trains grid", () => {
     // Probability of a spawn per check is 1 / trainSpawnRate, per station
     // level. Expected trains ≈ numFactories / trainSpawnRate(numFactories).
     const table: Record<string, number> = {};
     for (const factories of [0, 1, 2, 5, 10, 20, 50, 100, 500]) {
-      table[`factories=${factories}`] = config.trainSpawnRate(factories);
+      for (const trainUnits of [0, 250, 600]) {
+        table[`factories=${factories} trainUnits=${trainUnits}`] =
+          config.trainSpawnRate(factories, trainUnits);
+      }
     }
     expect(table).toMatchSnapshot();
   });

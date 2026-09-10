@@ -427,25 +427,29 @@ export class Config {
     return this.startingGoldFor(playerInfo);
   }
 
-  trainSpawnRate(numPlayerFactories: number): number {
+  /**
+   * Global spawn throttle for the train economy, counted in Train *units*
+   * (~7 per train: engine, tail, 5 cars). Up to 2x spawns while the
+   * world's rail traffic is light, ~1x around 250 units (~35 trains), then
+   * a capacity sigmoid collapses it toward 0 past ~600 units so total
+   * train income saturates instead of running away.
+   */
+  trainSaturation(numTrainUnits: number): number {
+    const boost = 1 + exp(-numTrainUnits / 120);
+    const capacity = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 600);
+    return boost * capacity;
+  }
+
+  trainSpawnRate(numPlayerFactories: number, numTrainUnits: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 15;
-  }
-  /**
-   * Pacing for the trade-ship and train economies: payouts are worth 2x
-   * while few of the units exist game-wide, 1x at `midpoint` of them, and
-   * decay toward a 0.5x floor as the global count grows.
-   */
-  private economyPacing(count: number, midpoint: number): number {
-    const LN3 = 1.0986122886681098;
-    return 0.5 + 1.5 * exp((-LN3 * count) / midpoint);
+    const rate = (numPlayerFactories + 10) * 15;
+    return Math.max(1, Math.floor(rate / this.trainSaturation(numTrainUnits)));
   }
 
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
-    numTrainUnits: number,
     player: Player | PlayerView,
   ): Gold {
     // No penalty for the first 10 cities.
@@ -465,10 +469,7 @@ export class Config {
     }
     const distPenalty = citiesVisited * 5_000;
     const gold = Math.max(5000, baseGold - distPenalty);
-    // Each train is ~7 Train units (engine, tail, 5 cars), so the 1x
-    // midpoint sits at ~35 trains game-wide.
-    const pacing = this.economyPacing(numTrainUnits, 250);
-    return toInt(gold * pacing * this.goldMultiplierFor(player));
+    return toInt(gold * this.goldMultiplierFor(player));
   }
 
   trainStationMinRange(): number {
@@ -481,18 +482,24 @@ export class Config {
     return this.trainStationMaxRange() * 1.4142;
   }
 
-  tradeShipGold(
-    dist: number,
-    numTradeShips: number,
-    player: Player | PlayerView,
-  ): Gold {
+  tradeShipGold(dist: number, player: Player | PlayerView): Gold {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
     const baseGold = 75_000 / (1 + exp(-0.03 * (dist - debuff))) + 50 * dist;
-    const pacing = this.economyPacing(numTradeShips, 250);
-    return BigInt(
-      Math.floor(baseGold * pacing * this.goldMultiplierFor(player)),
-    );
+    return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
+  }
+
+  /**
+   * Global spawn throttle for the trade-ship economy. Up to 4x while the
+   * world fleet is small (the pity timer square-roots the realized effect,
+   * so ~2x actual spawns), ~1x around 250 ships, then a capacity sigmoid
+   * collapses it toward 0 past ~300 ships so total trade income saturates
+   * instead of running away.
+   */
+  tradeShipSaturation(numTradeShips: number): number {
+    const boost = 1 + 3 * exp(-numTradeShips / 120);
+    const capacity = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 300);
+    return boost * capacity;
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
@@ -500,15 +507,15 @@ export class Config {
     tradeShipSpawnRejections: number,
     numTradeShips: number,
   ): number {
-    const decayRate = Math.LN2 / 50;
-
-    // Approaches 0 as numTradeShips increase
-    const baseSpawnRate = 1 - sigmoid(numTradeShips, decayRate, 400);
-
     // Pity timer: increases spawn chance after consecutive rejections
     const rejectionModifier = 1 / (tradeShipSpawnRejections + 1);
 
-    return Math.floor((100 * rejectionModifier) / baseSpawnRate);
+    return Math.max(
+      1,
+      Math.floor(
+        (100 * rejectionModifier) / this.tradeShipSaturation(numTradeShips),
+      ),
+    );
   }
 
   unitInfo(type: UnitType): UnitInfo {

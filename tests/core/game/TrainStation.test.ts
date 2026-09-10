@@ -44,7 +44,6 @@ describe("TrainStation", () => {
       }),
       addUpdate: vi.fn(),
       addExecution: vi.fn(),
-      unitCount: vi.fn().mockReturnValue(0),
       stats: vi.fn().mockReturnValue(gameStats),
     } as any;
 
@@ -147,7 +146,6 @@ describe("TrainStation", () => {
     expect(trainGoldSpy).toHaveBeenCalledWith(
       expect.any(String),
       3,
-      0,
       expect.anything(),
     );
   });
@@ -237,37 +235,35 @@ describe("Config.trainGold trade stop penalty", () => {
     mockPlayer = { isLobbyCreator: () => false } as unknown as Player;
   });
 
-  // numTrainUnits=0 everywhere: zero trains game-wide gives an exact 2x
-  // economy pacing bonus, so every expected value below is doubled.
   it("returns full base gold within free window (stops 0-9)", () => {
     // first 10 stops (0-9) are free — no penalty
-    expect(config.trainGold("self", 0, 0, mockPlayer)).toBe(20_000n);
-    expect(config.trainGold("self", 9, 0, mockPlayer)).toBe(20_000n);
+    expect(config.trainGold("self", 0, mockPlayer)).toBe(10_000n);
+    expect(config.trainGold("self", 9, mockPlayer)).toBe(10_000n);
   });
 
   it("reduces gold by 5k per stop after the free window", () => {
     // stop 10: effective = 10-9 = 1 -> 10k - 5k = 5k
-    expect(config.trainGold("self", 10, 0, mockPlayer)).toBe(10_000n);
+    expect(config.trainGold("self", 10, mockPlayer)).toBe(5_000n);
   });
 
   it("floors at 5k when penalty exceeds base gold", () => {
     // stop 12: effective = 3 -> 10k - 15k -> floor at 5k
-    expect(config.trainGold("self", 12, 0, mockPlayer)).toBe(10_000n);
+    expect(config.trainGold("self", 12, mockPlayer)).toBe(5_000n);
   });
 
   it("floors at 5k for ally base even with heavy penalty", () => {
     // ally base 35k, stop 20: effective = 11 -> penalty 55k -> floor at 5k
-    expect(config.trainGold("ally", 20, 0, mockPlayer)).toBe(10_000n);
+    expect(config.trainGold("ally", 20, mockPlayer)).toBe(5_000n);
   });
 
   it("ally base gold reduces correctly after free window", () => {
     // ally base 35k, stop 11: effective = 2 -> 35k - 10k = 25k
-    expect(config.trainGold("ally", 11, 0, mockPlayer)).toBe(50_000n);
+    expect(config.trainGold("ally", 11, mockPlayer)).toBe(25_000n);
   });
 
   it("other/team base gold reduces correctly after free window", () => {
     // other base 25k, stop 10: effective = 1 -> 25k - 5k = 20k
-    expect(config.trainGold("other", 10, 0, mockPlayer)).toBe(40_000n);
-    expect(config.trainGold("team", 10, 0, mockPlayer)).toBe(40_000n);
+    expect(config.trainGold("other", 10, mockPlayer)).toBe(20_000n);
+    expect(config.trainGold("team", 10, mockPlayer)).toBe(20_000n);
   });
 });

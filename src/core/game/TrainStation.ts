@@ -25,7 +25,6 @@ class TradeStationStopHandler implements TrainStopHandler {
       .trainGold(
         rel(trainOwner, stationOwner),
         trainExecution.tradeStopsVisited(),
-        mg.unitCount(UnitType.Train),
         trainOwner,
       );
     // Share revenue with the station owner if it's not the current player
