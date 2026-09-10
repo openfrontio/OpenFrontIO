@@ -214,15 +214,21 @@ describe("buying a tribe name in debt, panel through Api", () => {
 
     // A code this client has never heard of must not reach the screen either
     // — that is the whole point of allowlisting them.
+    //
+    // Deliberately paired with a reason the legacy path DOES match: the code
+    // is the branch key, so reinstating the string matching would render
+    // store.tribe_name_no_letter here and fail this test. With unmatched
+    // prose it would pass either way and prove nothing.
     it("an unknown code renders the generic purchase failure", async () => {
       const el = await mountAndBuy(400, {
         code: "some_future_code",
-        reason: UNMATCHED_PROSE,
+        reason: "Name must contain a letter",
       });
 
       expect(el.textContent).toContain("store.purchase_failed");
+      expect(el.textContent).not.toContain("store.tribe_name_no_letter");
       expect(el.textContent).not.toContain("some_future_code");
-      expect(el.textContent).not.toContain(UNMATCHED_PROSE);
+      expect(el.textContent).not.toContain("Name must contain a letter");
       // Otherwise this passes just as well when the request never happens.
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });

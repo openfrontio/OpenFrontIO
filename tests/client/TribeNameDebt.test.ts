@@ -256,6 +256,9 @@ describe("tribe-name spend paths map the debt reason", () => {
         ["a string", { min: "3", max: "24" }],
         ["zero", { min: 0, max: 24 }],
         ["fractional", { min: 3.5, max: 24 }],
+        // Two plausible numbers and one impossible range: it would render
+        // "24-3" at the player.
+        ["inverted", { min: 24, max: 3 }],
       ])(
         "falls back to the prose bounds when min/max are %s",
         async (_label, bounds) => {
@@ -293,6 +296,28 @@ describe("tribe-name spend paths map the debt reason", () => {
         expect(result).toEqual({ ok: false, code: "failed" });
         expect(Object.values(result)).not.toContain("some_future_code");
       });
+
+      // A `code` key that is present but unusable is not the same as an
+      // absent one: the server meant to send a code, so reading its English
+      // instead would be interpreting a body we have established we do not
+      // understand. Each row pairs it with a reason the legacy path matches,
+      // so a fall-through to that path returns invalid_no_letter here.
+      it.each([
+        ["empty", ""],
+        ["a number", 42],
+        ["null", null],
+        // A bare map lookup would return Object.prototype.constructor.
+        ["constructor", "constructor"],
+      ])(
+        "treats a code that is %s as unknown, not absent",
+        async (_l, code) => {
+          respond(400, { code, reason: "Name must contain a letter" });
+          expect(await purchaseTribeName("Ninja")).toEqual({
+            ok: false,
+            code: "failed",
+          });
+        },
+      );
 
       it("maps the shortfall code past a reworded reason", async () => {
         respond(400, {

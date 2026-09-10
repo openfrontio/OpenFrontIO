@@ -640,14 +640,26 @@ export async function getMyTribeNames(): Promise<
 // because the token is the same either way.
 const DEBT_REFUSAL_CODE = "insufficient_balance_debt";
 
+// Stands in for a `code` key that is present but is not a usable machine key
+// (42, "", null). That is not the same as absent: the server did mean to send
+// a code, so falling back to matching its English would be reading a body we
+// have already established we do not understand. Nothing maps this, so every
+// caller lands on its generic failure. Not a valid identifier, so no code the
+// API could ever add collides with it.
+const UNUSABLE_REFUSAL_CODE = " unusable";
+
 // The stable machine key the API puts beside the prose `reason` in a 400
-// (OPE-389). `undefined` means either an older server that predates the
-// codes or a body that is not a refusal at all; both leave the caller on its
-// pre-OPE-389 string matching. Nothing but the presence and identity of this
-// key is trusted — it is never rendered or logged.
+// (OPE-389). `undefined` means the key is absent — an older server that
+// predates the codes, or a body that is not a refusal at all — and only that
+// leaves the caller on its pre-OPE-389 string matching. Nothing but the
+// presence and identity of this key is trusted: it is never rendered or
+// logged.
 function refusalCode(body: unknown): string | undefined {
-  const code = (body as { code?: unknown } | null | undefined)?.code;
-  return typeof code === "string" && code !== "" ? code : undefined;
+  if (body === null || typeof body !== "object" || !("code" in body)) {
+    return undefined;
+  }
+  const code = (body as { code?: unknown }).code;
+  return typeof code === "string" && code !== "" ? code : UNUSABLE_REFUSAL_CODE;
 }
 
 // Reads the debt refusal off a 400 body for every spend path. Returns
@@ -731,29 +743,35 @@ export type PurchaseTribeNameResult =
 // `no_letter` is renamed on the way in: the caller's `invalid_no_letter` is
 // pre-existing public API of this module, so the two vocabularies are mapped
 // here rather than one being churned to match the other.
-const TRIBE_NAME_REFUSAL_CODES: Record<
+//
+// A Map rather than an object literal because the key comes off the wire:
+// a plain lookup of "constructor" or "toString" returns something from
+// Object.prototype instead of undefined, and that is not a refusal code.
+const TRIBE_NAME_REFUSAL_CODES = new Map<
   string,
   "invalid_charset" | "invalid_no_letter" | "not_allowed"
-> = {
-  invalid_charset: "invalid_charset",
-  no_letter: "invalid_no_letter",
-  not_allowed: "not_allowed",
-};
+>([
+  ["invalid_charset", "invalid_charset"],
+  ["no_letter", "invalid_no_letter"],
+  ["not_allowed", "not_allowed"],
+]);
 
 // The same refusals keyed on the server's exact English, for a server that
 // predates OPE-389 and sends no `code`. Production can lag the API, so this
 // stays — but only as the fallback. If the API rewords one of these on an
 // older deployment the player gets the generic failure, which is the safe
 // direction.
-const LEGACY_TRIBE_NAME_REFUSAL_REASONS: Record<
+const LEGACY_TRIBE_NAME_REFUSAL_REASONS = new Map<
   string,
   "invalid_charset" | "invalid_no_letter" | "not_allowed"
-> = {
-  "Name may only contain letters, numbers, spaces, and ' - . _ ! ?":
+>([
+  [
+    "Name may only contain letters, numbers, spaces, and ' - . _ ! ?",
     "invalid_charset",
-  "Name must contain a letter": "invalid_no_letter",
-  "This name is not allowed": "not_allowed",
-};
+  ],
+  ["Name must contain a letter", "invalid_no_letter"],
+  ["This name is not allowed", "not_allowed"],
+]);
 // The length rule interpolates its bounds ("Name must be 3-24 characters"),
 // so on a pre-OPE-389 server — where the numbers are only in the prose — it
 // is matched by shape rather than listed. Anchored and digit-specific: a
@@ -775,9 +793,8 @@ function legacyTribeNameInvalidResult(
       max: Number(length[2]),
     };
   }
-  const code = LEGACY_TRIBE_NAME_REFUSAL_REASONS[reason];
-  if (code !== undefined) return { ok: false, code };
-  return undefined;
+  const code = LEGACY_TRIBE_NAME_REFUSAL_REASONS.get(reason);
+  return code === undefined ? undefined : { ok: false, code };
 }
 
 // A `length` bound off the body. The bounds are what the message says, so an
@@ -789,6 +806,18 @@ function refusalBound(body: unknown, field: "min" | "max"): number | undefined {
     : undefined;
 }
 
+// The `length` bounds as a range, or nothing. Checked as a pair rather than
+// one at a time: `{min: 24, max: 3}` is two individually plausible numbers
+// and one impossible range, and it would render as "24-3" at the player.
+function refusalBounds(
+  body: unknown,
+): { min: number; max: number } | undefined {
+  const min = refusalBound(body, "min");
+  const max = refusalBound(body, "max");
+  if (min === undefined || max === undefined || min > max) return undefined;
+  return { min, max };
+}
+
 // Why the name was refused, keyed on the server's machine `code` (OPE-389).
 // Returns undefined for a code this client does not know, which the caller
 // turns into a generic failure — the code is never rendered.
@@ -797,11 +826,8 @@ function tribeNameInvalidResult(
   body: unknown,
 ): PurchaseTribeNameResult | undefined {
   if (code === "length") {
-    const min = refusalBound(body, "min");
-    const max = refusalBound(body, "max");
-    if (min !== undefined && max !== undefined) {
-      return { ok: false, code: "length", min, max };
-    }
+    const bounds = refusalBounds(body);
+    if (bounds !== undefined) return { ok: false, code: "length", ...bounds };
     // The bounds ARE the message, so there is nothing to render without
     // them. The prose still carries them on every server that sends this
     // code, so read them out of it rather than showing a blank range. Only
@@ -819,7 +845,7 @@ function tribeNameInvalidResult(
           max: Number(parsed[2]),
         };
   }
-  const mapped = TRIBE_NAME_REFUSAL_CODES[code];
+  const mapped = TRIBE_NAME_REFUSAL_CODES.get(code);
   return mapped === undefined ? undefined : { ok: false, code: mapped };
 }
 
