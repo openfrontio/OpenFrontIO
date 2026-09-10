@@ -11,7 +11,7 @@ import {
 import { UIState } from "../src/client/UIState";
 import { GameView, PlayerView, UnitView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
-import { UnitType } from "../src/core/game/Game";
+import { MAX_UPGRADE_AMOUNT, UnitType } from "../src/core/game/Game";
 import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
 
 class MockPointerEvent {
@@ -731,19 +731,145 @@ describe("InputHandler AutoUpgrade", () => {
 
       expect(inputHandler["uiState"].ghostStructure).toBeNull();
     });
+  });
 
-    test("repeated taps increase the build multiplier by 5 each time", () => {
-      const uiState = inputHandler["uiState"];
+  describe("GhostStructure Hotkey Changes", () => {
+    test("repeated hotkey taps increase the build multiplier by 5 each time within limits", () => {
+      testSettings.setKeybinds({
+        buildAtomBomb: "Digit8",
+      });
+      inputHandler.destroy();
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+      } as UIState;
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
 
-      inputHandler["setGhostStructure"](UnitType.AtomBomb);
+      // Single tap
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit8", key: "8" }),
+      );
       expect(uiState.ghostStructure).toBe(UnitType.AtomBomb);
       expect(uiState.upgradeMultiplier).toBe(1);
-
-      inputHandler["setGhostStructure"](UnitType.AtomBomb);
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit8", key: "8" }),
+      );
       expect(uiState.upgradeMultiplier).toBe(5);
-
-      inputHandler["setGhostStructure"](UnitType.AtomBomb);
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit8", key: "8" }),
+      );
       expect(uiState.upgradeMultiplier).toBe(10);
+
+      for (let i = 0; i < 12; i++) {
+        window.dispatchEvent(
+          new KeyboardEvent("keyup", { code: "Digit8", key: "8" }),
+        );
+      }
+      // Ensure it doesn't go too far
+      expect(uiState.upgradeMultiplier).toBeLessThanOrEqual(MAX_UPGRADE_AMOUNT);
+      // Ensure it doesn't go below one
+      expect(uiState.upgradeMultiplier).toBeGreaterThanOrEqual(1);
+    });
+
+    test("scroll wheel modifier increases multiplier", () => {
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: UnitType.City,
+        rocketDirectionUp: true,
+        upgradeMultiplier: 1,
+      } as UIState;
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+
+      // Alt + scroll up (deltaY < 0) -> increase
+      const event = new WheelEvent("wheel", {
+        deltaY: -100,
+        altKey: true,
+      });
+      mockCanvas.dispatchEvent(event);
+      expect(uiState.upgradeMultiplier).toBe(2);
+    });
+
+    test("scroll wheel modifier decreases multiplier", () => {
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: UnitType.City,
+        rocketDirectionUp: true,
+        upgradeMultiplier: 5,
+      } as UIState;
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+
+      // Alt + scroll down (deltaY > 0) -> decrease
+      const event = new WheelEvent("wheel", {
+        deltaY: 100,
+        altKey: true,
+      });
+      mockCanvas.dispatchEvent(event);
+      expect(uiState.upgradeMultiplier).toBe(4);
+    });
+
+    test("scroll wheel modifier doesn't go below 1", () => {
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: UnitType.City,
+        rocketDirectionUp: true,
+        upgradeMultiplier: 1,
+      } as UIState;
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+
+      const event = new WheelEvent("wheel", {
+        deltaY: 100,
+        altKey: true,
+      });
+      mockCanvas.dispatchEvent(event);
+      expect(uiState.upgradeMultiplier).toBe(1);
+    });
+
+    test("scroll wheel modifier doesn't exceed MAX_UPGRADE_AMOUNT", () => {
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: UnitType.City,
+        rocketDirectionUp: true,
+        upgradeMultiplier: MAX_UPGRADE_AMOUNT,
+      } as UIState;
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+
+      const event = new WheelEvent("wheel", {
+        deltaY: -100,
+        altKey: true,
+      });
+      mockCanvas.dispatchEvent(event);
+      expect(uiState.upgradeMultiplier).toBe(MAX_UPGRADE_AMOUNT);
     });
   });
 
