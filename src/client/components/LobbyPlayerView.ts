@@ -206,7 +206,7 @@ export class LobbyTeamView extends LitElement {
           (client) => {
             const displayName = this.getClientDisplayName(client);
             return html`<div
-              class="px-2 py-1 rounded-sm mb-1 text-xs text-white border
+              class="px-2 py-1 rounded-sm mb-1 text-xs text-white border break-words
                 ${this.isCurrentPlayer(client)
                 ? "bg-malibu-blue/20 border-sky-500/40"
                 : "bg-gray-700/70 border-transparent"}"
@@ -352,10 +352,11 @@ export class LobbyTeamView extends LitElement {
                       ? "bg-malibu-blue/20 border-sky-500/40"
                       : "bg-gray-700/70 border-transparent"}"
                   >
-                    <span class="truncate text-white"
-                      >${displayName} ${this.renderVerifiedBadge(p)}
-                      ${this.renderFriendBadge(p)}</span
-                    >
+                    <span class="flex items-center gap-1 min-w-0">
+                      <span class="truncate text-white">${displayName}</span>
+                      ${this.renderVerifiedBadge(p)}
+                      ${this.renderFriendBadge(p)}
+                    </span>
                     ${this.renderRevealToggle(p.clientID)}
                     ${p.clientID === this.lobbyCreatorClientID
                       ? html`<span class="ml-2 text-[11px] text-green-300"
