@@ -67,6 +67,7 @@
     "manage_subscription_on_web": "Manage or change your billing on the OpenFront website.",
     "marketing_desc": "Occasional news, events, and game updates. Unsubscribe anytime.",
     "marketing_no_email": "Link an email to your account to subscribe to updates.",
+    "marketing_no_email_steam": "Steam doesn't share your email address with us, so there's nothing to send updates to.",
     "marketing_title": "Email updates",
     "no_games": "No games played yet.",
     "no_stats": "No stats available yet. Play some games to start tracking.",
@@ -164,6 +165,7 @@
       "warship": "Captures trade ships, destroys ships and boats"
     },
     "not_enough_money": "Not enough money",
+    "on_cooldown": "On cooldown",
     "upgrade_amount": "x{amount}",
     "warship_shift_hint": "Hold Shift and drag to select multiple warships at once"
   },
@@ -832,8 +834,6 @@
     "advanced_label": "Advanced settings",
     "alt_view_fill_alpha_desc": "How opaque the relation-colored territory fill is while holding the alt-view key (Space)",
     "alt_view_fill_alpha_label": "Alt-view fill opacity",
-    "alt_view_hover_perspective_desc": "In alt-view (Space), hovering another player shows their allies and embargoes instead of yours",
-    "alt_view_hover_perspective_label": "Alt-view hover perspective",
     "background_color_desc": "Color of the area outside the map and impassable terrain.",
     "background_color_label": "Background color",
     "black": "Black",
@@ -1957,6 +1957,7 @@
       "send_boat": "Boats send your troops across water. Right-click an enemy coastline across the water to open the radial menu, then select the boat.",
       "silo_loading": "Your Missile Silo is loading — a nuke can be launched once it's fully ready.",
       "spawn": "Click anywhere on the map to pick where you spawn.",
+      "spawn_wait": "Spot picked! You can still move it until the timer runs out — the game starts then.",
       "traitor_info": "Traitors get a large defense debuff for 30 seconds, so be careful.",
       "troop_rate": "This is your troop growth rate. Growth slows down and turns orange once your troops approach half of your max.",
       "troops": "Keep an eye on your troop count. Attacking with too few troops leaves you weak — let them regrow between attacks."

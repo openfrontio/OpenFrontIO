@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
+import { TestConfig } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";
 
 describe("Nation MIRV Retaliation", () => {
@@ -18,6 +19,10 @@ describe("Nation MIRV Retaliation", () => {
       infiniteGold: true,
       instantBuild: true,
     });
+    // The global MIRV launch cooldown would block a counter-launch while the
+    // attacker's MIRV is in flight; disable it here since this test exercises
+    // the nation's counter-MIRV targeting logic.
+    (game.config() as TestConfig).setMirvLaunchCooldown(0);
 
     // Create two players
     const attackerInfo = new PlayerInfo(
