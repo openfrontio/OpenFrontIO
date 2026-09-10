@@ -1175,6 +1175,15 @@ export class InputHandler {
   private isTextInputTarget(target: EventTarget | null): boolean {
     const element = target as HTMLElement | null;
     if (!element) return false;
+    // The keybind editor captures a raw key press on its own button and only
+    // calls preventDefault(). Now that keybinds are editable in-game, binding
+    // e.g. KeyG would otherwise also fire the ground attack behind the modal.
+    if (
+      typeof element.closest === "function" &&
+      element.closest("setting-keybind") !== null
+    ) {
+      return true;
+    }
     if (element.tagName === "TEXTAREA" || element.isContentEditable) {
       return true;
     }

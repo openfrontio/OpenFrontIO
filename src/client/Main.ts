@@ -102,7 +102,7 @@ import {
   SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
-import { UserSettingModal } from "./UserSettingModal";
+import "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import {
@@ -781,20 +781,6 @@ class Client {
       );
     });
 
-    const settingsModal = document.querySelector(
-      "user-setting",
-    ) as UserSettingModal;
-    if (!settingsModal || !(settingsModal instanceof UserSettingModal)) {
-      console.warn("User settings modal element not found");
-    }
-    document
-      .getElementById("settings-button")
-      ?.addEventListener("click", () => {
-        if (settingsModal && settingsModal instanceof UserSettingModal) {
-          settingsModal.open();
-        }
-      });
-
     this.hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
@@ -1298,7 +1284,6 @@ class Client {
       this.presenceInGame = true;
       this.emitPresence();
       console.log("Closing modals");
-      document.getElementById("settings-button")?.classList.add("hidden");
       if (this.usernameInput) {
         // fix edge case where username-validation-error is re-rendered and hidden tag removed
         this.usernameInput.validationError = "";
@@ -1321,6 +1306,9 @@ class Client {
         "game-top-bar",
         "help-modal",
         "user-setting",
+        // The in-game instance is addressed by id: querySelector("user-setting")
+        // above only ever reaches the page's inline one.
+        "#game-settings",
         "troubleshooting-modal",
         "inventory-modal",
         "store-modal",

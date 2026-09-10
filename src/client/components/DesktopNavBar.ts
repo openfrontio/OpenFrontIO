@@ -112,6 +112,13 @@ export class DesktopNavBar extends LitElement {
           data-page="page-clan"
           data-i18n="main.clans"
         ></button>
+        <button
+          class="nav-menu-item ${currentPage === "page-settings"
+            ? "active"
+            : ""} text-white/70 hover:text-malibu-blue font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue"
+          data-page="page-settings"
+          data-i18n="main.settings"
+        ></button>
         <!-- Utility cluster: bell, help and the profile control are account
              /notification affordances, not page links, so they sit tight
              together behind a divider instead of in the nav item list. -->

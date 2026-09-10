@@ -14,6 +14,7 @@ import { GameStartingModal } from "../GameStartingModal";
 import { MapRenderer } from "../render/gl";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
+import type { UserSettingModal } from "../UserSettingModal";
 import { GameView } from "../view";
 import { FrameProfiler } from "./FrameProfiler";
 import { ActionableEvents } from "./layers/ActionableEvents";
@@ -189,8 +190,18 @@ export function createRenderer(
   if (!(settingsModal instanceof SettingsModal)) {
     console.error("settings modal not found");
   }
-  settingsModal.userSettings = userSettings;
   settingsModal.eventBus = eventBus;
+
+  // The in-game settings instance needs the bus so the Audio sliders reach
+  // SoundManager, which caches its volumes at construction.
+  const gameSettingsModal = document.getElementById(
+    "game-settings",
+  ) as UserSettingModal | null;
+  if (gameSettingsModal === null) {
+    console.warn("In-game settings modal (#game-settings) not found");
+  } else {
+    gameSettingsModal.eventBus = eventBus;
+  }
 
   const graphicsSettingsModal = document.querySelector(
     "graphics-settings-modal",

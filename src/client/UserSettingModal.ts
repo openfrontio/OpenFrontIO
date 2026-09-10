@@ -1,6 +1,7 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
+import { EventBus } from "../core/EventBus";
 import { getDefaultKeybinds, UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
@@ -12,12 +13,28 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/GraphicsPresetSelector";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { Platform } from "./Platform";
+import {
+  SetBackgroundMusicVolumeEvent,
+  SetSoundEffectsVolumeEvent,
+} from "./sound/Sounds";
 
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
-  protected routerName = "settings";
+  protected routerName: string | undefined = "settings";
+
+  /**
+   * Set on the in-game instance (#game-settings) by GameRenderer. When present,
+   * the Audio sliders also emit the matching sound events: SoundManager reads
+   * UserSettings once at construction and follows the bus after that.
+   */
+  public eventBus?: EventBus;
+
   private userSettings: UserSettings = new UserSettings();
   private readonly defaultKeybinds = getDefaultKeybinds(Platform.isMac);
+
+  // Optional "return to where you came from" callback, supplied by the caller
+  // of open() and invoked once on close. The in-game menu uses it to reappear.
+  private onReturn?: () => void;
 
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
@@ -29,6 +46,12 @@ export class UserSettingModal extends BaseModal {
 
   connectedCallback() {
     super.connectedCallback();
+    // Only the inline page instance owns the #modal=settings URL state. The
+    // in-game instance must not touch the hash: Main's popstate handler treats
+    // a hash change during a match as a request to leave the game.
+    if (!this.inline) {
+      this.routerName = undefined;
+    }
     this.loadKeybindsFromStorage();
   }
 
@@ -324,10 +347,83 @@ export class UserSettingModal extends BaseModal {
     this.userSettings.togglePerformanceOverlay();
   }
 
+  private toggleHelpMessages() {
+    this.userSettings.toggleHelpMessages();
+
+    console.log(
+      "Help messages:",
+      this.userSettings.helpMessages() ? "ON" : "OFF",
+    );
+  }
+
+  private toggleAttackingTroopsOverlay() {
+    this.userSettings.toggleAttackingTroopsOverlay();
+
+    console.log(
+      "Attacking troops overlay:",
+      this.userSettings.attackingTroopsOverlay() ? "ON" : "OFF",
+    );
+  }
+
+  private sliderBackgroundMusicVolume(e: CustomEvent<{ value: number }>) {
+    const value = e.detail?.value;
+    if (typeof value !== "number") {
+      console.warn("Slider event missing detail.value", e);
+      return;
+    }
+    const volume = value / 100;
+    this.userSettings.setBackgroundMusicVolume(volume);
+    // SoundManager reads UserSettings once at construction, so a running game
+    // only follows the slider through the bus. The page instance has no bus
+    // and nothing playing, where storing the value is the whole job.
+    this.eventBus?.emit(new SetBackgroundMusicVolumeEvent(volume));
+    this.requestUpdate();
+  }
+
+  private sliderSoundEffectsVolume(e: CustomEvent<{ value: number }>) {
+    const value = e.detail?.value;
+    if (typeof value !== "number") {
+      console.warn("Slider event missing detail.value", e);
+      return;
+    }
+    const volume = value / 100;
+    this.userSettings.setSoundEffectsVolume(volume);
+    this.eventBus?.emit(new SetSoundEffectsVolumeEvent(volume));
+    this.requestUpdate();
+  }
+
+  private renderAudioSettings() {
+    return html`
+      <setting-slider
+        label="${translateText("user_setting.background_music_volume")}"
+        description="${translateText(
+          "user_setting.background_music_volume_desc",
+        )}"
+        id="background-music-volume-slider"
+        min="0"
+        max="100"
+        .value=${Math.round(this.userSettings.backgroundMusicVolume() * 100)}
+        @change=${this.sliderBackgroundMusicVolume}
+      ></setting-slider>
+
+      <setting-slider
+        label="${translateText("user_setting.sound_effects_volume")}"
+        description="${translateText("user_setting.sound_effects_volume_desc")}"
+        id="sound-effects-volume-slider"
+        min="0"
+        max="100"
+        .value=${Math.round(this.userSettings.soundEffectsVolume() * 100)}
+        @change=${this.sliderSoundEffectsVolume}
+      ></setting-slider>
+    `;
+  }
+
   protected modalConfig() {
     return {
       tabs: [
-        { key: "basic", label: translateText("user_setting.tab_basic") },
+        { key: "gameplay", label: translateText("user_setting.tab_gameplay") },
+        // PR B inserts { key: "display", ... } here, gated on desktopDisplay().
+        { key: "audio", label: translateText("user_setting.tab_audio") },
         { key: "keybinds", label: translateText("user_setting.tab_keybinds") },
       ],
     };
@@ -343,10 +439,18 @@ export class UserSettingModal extends BaseModal {
   }
 
   protected renderBody(tab: string) {
-    const body =
-      tab === "keybinds"
-        ? this.renderKeybindSettings()
-        : this.renderBasicSettings();
+    let body;
+    switch (tab) {
+      case "keybinds":
+        body = this.renderKeybindSettings();
+        break;
+      case "audio":
+        body = this.renderAudioSettings();
+        break;
+      // PR B: case "display": body = this.renderDisplaySettings(); break;
+      default:
+        body = this.renderGameplaySettings();
+    }
     return html`
       <div class="flex flex-col gap-2 p-4 lg:p-[1.4rem]">${body}</div>
     `;
@@ -354,6 +458,11 @@ export class UserSettingModal extends BaseModal {
 
   protected onClose(): void {
     window.removeEventListener("keydown", this.handleEasterEggKey);
+    // Fire once: a caller that reopens us on return would otherwise inherit
+    // the previous caller's callback.
+    const onReturn = this.onReturn;
+    this.onReturn = undefined;
+    onReturn?.();
   }
 
   private renderKeybindSettings() {
@@ -795,7 +904,7 @@ export class UserSettingModal extends BaseModal {
     `;
   }
 
-  private renderBasicSettings() {
+  private renderGameplaySettings() {
     return html`
       <!-- 🎨 Graphics preset -->
       <div
@@ -885,6 +994,26 @@ export class UserSettingModal extends BaseModal {
       ></setting-toggle>
 
       <!-- 📱 Performance Overlay -->
+      <!-- Help messages (moved here from the in-game menu) -->
+      <setting-toggle
+        label="${translateText("user_setting.help_messages_label")}"
+        description="${translateText("user_setting.help_messages_desc")}"
+        id="help-messages-toggle"
+        .checked=${this.userSettings.helpMessages()}
+        @change=${this.toggleHelpMessages}
+      ></setting-toggle>
+
+      <!-- Attacking troops overlay (moved here from the in-game menu) -->
+      <setting-toggle
+        label="${translateText("user_setting.attacking_troops_overlay_label")}"
+        description="${translateText(
+          "user_setting.attacking_troops_overlay_desc",
+        )}"
+        id="attacking-troops-overlay-toggle"
+        .checked=${this.userSettings.attackingTroopsOverlay()}
+        @change=${this.toggleAttackingTroopsOverlay}
+      ></setting-toggle>
+
       <setting-toggle
         label="${translateText("user_setting.performance_overlay_label")}"
         description="${translateText("user_setting.performance_overlay_desc")}"
@@ -980,8 +1109,13 @@ export class UserSettingModal extends BaseModal {
     `;
   }
 
-  protected onOpen(): void {
+  protected onOpen(args?: Record<string, unknown>): void {
     window.addEventListener("keydown", this.handleEasterEggKey);
+    // Keybinds are editable from either instance and were only read in
+    // connectedCallback, so re-read them or the other one renders stale.
     this.loadKeybindsFromStorage();
+    if (typeof args?.onReturn === "function") {
+      this.onReturn = args.onReturn as () => void;
+    }
   }
 }

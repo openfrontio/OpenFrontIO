@@ -426,6 +426,13 @@
       <replay-panel></replay-panel>
     </div>
     <settings-modal></settings-modal>
+    <!-- The in-game settings modal: the same component as #page-settings, but
+         non-inline, and mounted out here because the page's copy sits in a
+         subtree that is hidden during a match. It must stay AFTER
+         #page-settings in document order: ModalRouter.routeFromHash and
+         Main.ts both resolve this component with
+         document.querySelector("user-setting"), which takes the first match. -->
+    <user-setting id="game-settings"></user-setting>
     <graphics-settings-modal></graphics-settings-modal>
     <player-panel></player-panel>
     <spawn-timer></spawn-timer>
