@@ -943,28 +943,20 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   /**
-   * Everything the dispatch has to wait for, each wait bounded so none of them
-   * can outlive the button waiting on it.
+   * The name and cosmetics the dispatch needs, bounded so neither can outlive
+   * the button waiting on them.
    *
-   * Every wait here can reach code with no bound of its own: the Steam name
-   * seed is a bare IPC call, cosmetics reach the network, and the CrazyGames
-   * midgame ad resolves only from SDK callbacks that may never fire. Each
-   * degrades to something playable — the interim generated name, default
-   * cosmetics, no ad.
+   * Both waits can reach code with no bound of its own — the Steam name seed
+   * is a bare IPC call, cosmetics reach the network — and both degrade to
+   * something playable: the interim generated name, default cosmetics. A slow
+   * resolution here is a cost with nothing to show for it, so
+   * START_PREPARE_DEADLINE_MS cuts it short rather than pinning Start at
+   * "Starting…" for the rest of the session, which would take startTutorial()
+   * down with it on the re-entrancy guard.
    *
-   * Two deadlines rather than one, because the ad is not the same kind of
-   * wait. A slow name or cosmetics resolution is a cost with nothing to show
-   * for it, so it is cut short at START_PREPARE_DEADLINE_MS. An ad is the
-   * player watching something, legitimately for longer than that, and it has
-   * to finish before gameplay appears underneath it — so it gets
-   * MIDGAME_AD_DEADLINE_MS, sized to catch only an SDK that has stopped
-   * answering. The button staying busy during an ad is correct, not a hang.
-   *
-   * Without any of this a never-settling await pins Start at "Starting…" for
-   * the rest of the session, taking startTutorial() down with it on the
-   * re-entrancy guard.
+   * The midgame ad is deliberately not part of this — see awaitMidgameAd.
    */
-  private async prepareStart(
+  private async resolveNameAndCosmetics(
     usernameInput: UsernameInput | null,
   ): Promise<StartPreparation> {
     const nameNow = () => usernameInput?.resolvedName() ?? fallbackPlayerName();
@@ -999,19 +991,33 @@ export class SinglePlayerModal extends BaseModal {
       },
     );
 
-    // Deliberately outside the deadline above and on a bound of its own. The
-    // ad gates the start, and a normal creative outruns
-    // START_PREPARE_DEADLINE_MS — racing it there would cut real ads short on
-    // CrazyGames and drop the player into spawn selection underneath one.
-    await withDeadline(
+    return prepared;
+  }
+
+  /**
+   * The CrazyGames midgame ad, on a bound of its own.
+   *
+   * Separate from resolveNameAndCosmetics because an ad is not the same kind
+   * of wait. It is the player watching something, legitimately for longer than
+   * START_PREPARE_DEADLINE_MS — racing it there cut real creatives short and
+   * dropped the player into spawn selection underneath a live overlay. So the
+   * ad gates the start, the button staying busy while it plays is correct
+   * rather than a hang, and MIDGAME_AD_DEADLINE_MS is sized only to catch an
+   * SDK that has stopped answering (requestMidgameAd resolves solely from its
+   * adFinished/adError callbacks).
+   *
+   * Only ever called for a start that is still live — an ad shown for a game
+   * that will not start is worse than no ad. Off CrazyGames this resolves
+   * immediately.
+   */
+  private awaitMidgameAd(): Promise<void> {
+    return withDeadline(
       crazyGamesSDK.requestMidgameAd(),
       MIDGAME_AD_DEADLINE_MS,
       () => {
         console.warn("Midgame ad never signalled completion; starting anyway");
       },
     );
-
-    return prepared;
   }
 
   private async startGame() {
@@ -1059,11 +1065,21 @@ export class SinglePlayerModal extends BaseModal {
       // attributable to the busy button above, and bounded so none of them
       // can outlive it.
       const { resolvedName, cosmetics } =
-        await this.prepareStart(usernameInput);
+        await this.resolveNameAndCosmetics(usernameInput);
 
       // Retired while this was resolving — the modal was closed, and possibly
       // reopened and started again. The live attempt owns the start; this one
       // would otherwise race it into join-lobby with stale settings.
+      //
+      // Checked here, before the ad rather than only after it: an abandoned
+      // attempt that went on to request one would show the player an ad for a
+      // game that is never going to start, and a reopened modal could put a
+      // second ad request in flight alongside it.
+      if (attempt !== this.startAttempt) return;
+
+      await this.awaitMidgameAd();
+
+      // The ad is long enough that the modal can be closed while it runs.
       if (attempt !== this.startAttempt) return;
 
       this.dispatchEvent(

@@ -317,6 +317,49 @@ describe("SinglePlayerModal start feedback", () => {
     vi.useRealTimers();
   });
 
+  // An ad shown for a game that will never start is worse than no ad: the
+  // player watches it, and nothing happens. The liveness check has to sit
+  // before the ad request, not only after it.
+  it("does not request an ad for a start abandoned by closing the modal", async () => {
+    let releaseCosmetics: (c: PlayerCosmetics) => void = () => {};
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise<PlayerCosmetics>((resolve) => {
+        releaseCosmetics = resolve;
+      }),
+    );
+    const requestAd = vi
+      .spyOn(crazyGamesSDK, "requestMidgameAd")
+      .mockResolvedValue(undefined);
+
+    const started = internals(modal).startGame();
+    await flush();
+    internals(modal).onClose();
+    releaseCosmetics({});
+    await started;
+
+    expect(requestAd).not.toHaveBeenCalled();
+    expect(joins).toHaveLength(0);
+  });
+
+  // And it has to sit after the ad too: an ad runs long enough that the modal
+  // can be closed while it plays.
+  it("does not start a game abandoned while the ad was playing", async () => {
+    let finishAd: () => void = () => {};
+    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishAd = resolve;
+      }),
+    );
+
+    const started = internals(modal).startGame();
+    await flush();
+    internals(modal).onClose();
+    finishAd();
+    await started;
+
+    expect(joins).toHaveLength(0);
+  });
+
   // The ad still cannot pin the button forever: an SDK that fires neither
   // adFinished nor adError has to be given up on eventually.
   it("gives up on an ad that never signals completion", async () => {
