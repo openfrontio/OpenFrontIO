@@ -1659,6 +1659,7 @@
     "join_timeout": "You didn't enter the game in time.",
     "notify_off": "Alert me when the game starts",
     "notify_on": "Game start alert is on",
+    "notify_sound_notice": "This will play a sound when your game starts, even if you're on another tab. Your browser may also ask to show notifications.",
     "notify_started": "Your game is starting!",
     "players_per_team": "of {num}",
     "see_all": "See all {count}",

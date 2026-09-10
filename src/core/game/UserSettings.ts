@@ -354,6 +354,15 @@ export class UserSettings {
     this.setBool("settings.tutorialDismissed", value);
   }
 
+  // One-time heads-up that the lobby's game-start bell plays a sound.
+  gameStartAlertNoticeSeen() {
+    return this.getBool("settings.gameStartAlertNoticeSeen", false);
+  }
+
+  setGameStartAlertNoticeSeen(value: boolean) {
+    this.setBool("settings.gameStartAlertNoticeSeen", value);
+  }
+
   toggleRandomName() {
     this.setBool("settings.anonymousNames", !this.anonymousNames());
   }

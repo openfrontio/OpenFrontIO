@@ -28,8 +28,10 @@ import {
   GameType,
   HumansVsNations,
 } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { showInGameConfirm } from "./InGameModal";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -72,6 +74,7 @@ export class JoinLobbyModal extends BaseModal {
   // purpose -- the SFX slider defaults to 0, and an alert the player asked
   // for must not be silenced by it.
   private startAlertSound: Howl | null = null;
+  private userSettings = new UserSettings();
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
@@ -183,17 +186,28 @@ export class JoinLobbyModal extends BaseModal {
     </button>`;
   }
 
-  private toggleNotifyOnStart(): void {
+  private async toggleNotifyOnStart(): Promise<void> {
     if (this.notifyOnStart) {
       this.notifyOnStart = false;
       return;
     }
+    // One-time heads-up: nothing about a bell says "sound". Shown before the
+    // browser's own permission prompt so that prompt arrives explained.
+    if (!this.userSettings.gameStartAlertNoticeSeen()) {
+      const confirmed = await showInGameConfirm(
+        translateText("public_lobby.notify_sound_notice"),
+        { variant: "warning" },
+      );
+      if (!confirmed) return;
+      this.userSettings.setGameStartAlertNoticeSeen(true);
+    }
     this.notifyOnStart = true;
-    // Both stay synchronous inside the click. Safari only shows the
-    // permission prompt from inside a user gesture, and creating (not
-    // playing) the Howl here opens Howler's AudioContext under that gesture,
-    // which is what lets the chime start later from a background tab with no
-    // gesture of its own.
+    // Both run synchronously off a click (the bell's, or the dialog's
+    // Confirm -- the await above resumes inside that click's activation).
+    // Safari only shows the permission prompt from inside a user gesture,
+    // and creating (not playing) the Howl here opens Howler's AudioContext
+    // under that gesture, which is what lets the chime start later from a
+    // background tab with no gesture of its own.
     if (
       typeof Notification !== "undefined" &&
       Notification.permission === "default"
