@@ -125,9 +125,11 @@ const ATTACKER_LOSS_BASE = 0.463;
 const ATTACKER_LOSS_PER_DENSITY = 0.0039;
 // Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
 const SPEED_COST_DIVISOR = 7.77;
-// Speed-only: a huge attacker's parity floor on the ratio curve eases down
-// to 0.8x, so its overwhelming stacks land ~20% faster. Losses unchanged.
-const LARGE_ATTACK_SPEED_DEPTH = 0.2;
+// Speed-only: the attacker's territory bonus runs a touch deeper for speed
+// than the 0.7 loss depth above (floor 0.27x vs 0.3x). Paired with the 0.9
+// sub-parity floor on the ratio curve, a huge player's overwhelming push
+// lands ~20% faster; each piece alone is ~10%.
+const LARGE_ATTACKER_SPEED_DEPTH = 0.73;
 
 /**
  * Logistic in log(tiles): ~1 for small territories, easing down to
@@ -867,24 +869,23 @@ export class Config {
         ATTACKER_LOSS_PER_DENSITY * defenderTroopLoss);
 
     // Speed: a tile's cost in tick-fractions grows with how outnumbered the
-    // attack is. Flat at 1/5 up to parity, then rising linearly (saturating
-    // at 7.5x), with a second ramp for hopeless attacks past 20x. Large
-    // attackers push the parity floor down (to 0.8x for huge ones), so their
-    // stacks that outnumber the defender's whole army land faster.
-    const speedFloor = largeTerritoryBonus(
-      attacker.numTiles,
-      LARGE_ATTACK_SPEED_DEPTH,
-    );
+    // attack is. Floored at 0.9 below parity (overwhelming stacks land ~10%
+    // faster), then rising linearly (saturating at 7.5x), with a second ramp
+    // for hopeless attacks past 20x.
     const speedCost =
-      (within(troopRatio, speedFloor, 7.5) * within(troopRatio / 20, 1, 50)) /
+      (within(troopRatio, 0.9, 7.5) * within(troopRatio / 20, 1, 50)) /
       SPEED_COST_DIVISOR;
+    const largeAttackerSpeedBonus = largeTerritoryBonus(
+      attacker.numTiles,
+      LARGE_ATTACKER_SPEED_DEPTH,
+    );
     return {
       attackerTroopLoss,
       defenderTroopLoss,
       tickFraction:
         (speedCost *
           tileCost *
-          largeAttackerBonus *
+          largeAttackerSpeedBonus *
           largeDefenderBonus *
           traitorCostMod) /
         input.borderSize,
