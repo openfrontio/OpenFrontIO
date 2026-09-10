@@ -13,11 +13,15 @@ vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   prewarmCosmetics: cosmeticsMocks.prewarmCosmetics,
 }));
 
-import { SinglePlayerModal } from "../../src/client/SinglePlayerModal";
+import {
+  SinglePlayerModal,
+  START_COSMETICS_DEADLINE_MS,
+} from "../../src/client/SinglePlayerModal";
 
 type Internals = {
   startGame(): Promise<void>;
   onOpen(): void;
+  onClose(): void;
   starting: boolean;
   close(): void;
 };
@@ -132,6 +136,67 @@ describe("SinglePlayerModal start feedback", () => {
 
     // Otherwise the button stays disabled and the player cannot retry.
     expect(internals(modal).starting).toBe(false);
+  });
+
+  // Regression: the busy flag is cleared in a finally, and a finally never
+  // runs if the promise it is waiting on never settles. A stalled connection
+  // (captive portal, DNS blackhole) reaching any unbounded fetch beneath
+  // getPlayerCosmetics used to pin the button at "Starting…" for the rest of
+  // the session — surviving close and reopen, and silently no-opping the
+  // Tutorial entry point on the re-entrancy guard.
+  it("does not stay busy when cosmetics never settle", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise(() => {}),
+    );
+
+    const started = internals(modal).startGame();
+    await vi.advanceTimersByTimeAsync(START_COSMETICS_DEADLINE_MS);
+    await started;
+
+    expect(internals(modal).starting).toBe(false);
+    // The match still starts, on defaults — the point of the deadline.
+    expect(joins).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
+  it("accepts a second Start click after a stalled attempt", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise(() => {}),
+    );
+
+    const started = internals(modal).startGame();
+    await vi.advanceTimersByTimeAsync(START_COSMETICS_DEADLINE_MS);
+    await started;
+
+    cosmeticsMocks.getPlayerCosmetics.mockResolvedValueOnce({});
+    await internals(modal).startGame();
+
+    expect(joins).toHaveLength(2);
+    vi.useRealTimers();
+  });
+
+  // Belt and braces: whatever left an attempt in flight, closing and
+  // reopening the modal hands back a live button.
+  it("clears the busy state on close", async () => {
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValue(new Promise(() => {}));
+
+    void internals(modal).startGame();
+    await flush();
+    expect(internals(modal).starting).toBe(true);
+
+    internals(modal).onClose();
+
+    expect(internals(modal).starting).toBe(false);
+  });
+
+  // The deadline must never pre-empt a resolution that is merely slow: every
+  // fetch beneath it is bounded at 10s, so it has to sit above that.
+  it("keeps the deadline above the fetch bounds beneath it", () => {
+    expect(START_COSMETICS_DEADLINE_MS).toBeGreaterThan(10_000);
   });
 
   // The prewarm is what keeps the click off the network in the first place:

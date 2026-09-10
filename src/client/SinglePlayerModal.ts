@@ -14,7 +14,7 @@ import {
   UnitType,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
-import { TeamCountConfig } from "../core/Schemas";
+import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
@@ -43,6 +43,14 @@ import {
 } from "./utilities/GameConfigHelpers";
 
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+
+/**
+ * Ceiling on how long a Start Game click will wait for cosmetics before it
+ * gives up and starts on defaults. Deliberately above the 10s bound each fetch
+ * beneath it carries, so it never pre-empts a resolution that is merely slow —
+ * it only catches an await that would otherwise never settle.
+ */
+export const START_COSMETICS_DEADLINE_MS = 15_000;
 
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.World,
@@ -586,6 +594,10 @@ export class SinglePlayerModal extends BaseModal {
 
   // Reset all transient form state to ensure clean slate
   private resetOptions(): void {
+    // Belt and braces with the finally in startGame(): closing and reopening
+    // the modal must always give the player a live Start button back, whatever
+    // left the previous attempt in flight.
+    this.starting = false;
     this.selectedMap = DEFAULT_OPTIONS.selectedMap;
     this.selectedDifficulty = DEFAULT_OPTIONS.selectedDifficulty;
     this.gameMode = DEFAULT_OPTIONS.gameMode;
@@ -880,6 +892,38 @@ export class SinglePlayerModal extends BaseModal {
     this.teamCount = value;
   }
 
+  /**
+   * getPlayerCosmetics() with a deadline, so no await inside startGame() can
+   * outlive the button that is waiting on it.
+   *
+   * This is a backstop, not a policy. Every fetch beneath it is bounded well
+   * inside START_COSMETICS_DEADLINE_MS, so on any reachable-but-slow network
+   * the real resolution always wins the race and the player keeps their
+   * cosmetics. It exists for the case those bounds don't cover — a promise
+   * that never settles at all — where the cost of losing the race is one
+   * single-player game started on default cosmetics, and the cost of not
+   * having it is a Start button pinned at "Starting…" for the rest of the
+   * session, taking startTutorial() down with it on the re-entrancy guard.
+   */
+  private async resolveCosmeticsForStart(
+    verified: boolean | undefined,
+  ): Promise<PlayerCosmetics> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<PlayerCosmetics>((resolve) => {
+      timer = setTimeout(() => {
+        console.warn(
+          "Cosmetics did not resolve before the start deadline; starting on defaults",
+        );
+        resolve(verified ? { verified: true } : {});
+      }, START_COSMETICS_DEADLINE_MS);
+    });
+    try {
+      return await Promise.race([getPlayerCosmetics({ verified }), deadline]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   private async startGame() {
     // A second click while the first is still resolving would dispatch a
     // second join-lobby for a different gameID.
@@ -933,11 +977,11 @@ export class SinglePlayerModal extends BaseModal {
       // Resolved before the dispatch rather than inside it, so the wait is
       // visibly attributable to the busy button above. onOpen() prewarmed the
       // caches this reads, so it normally resolves without touching the
-      // network; when it does have to, fetchCosmetics is now bounded and
+      // network; when it does have to, every fetch beneath it is bounded and
       // getPlayerCosmetics degrades to defaults rather than failing the start.
-      const cosmetics = await getPlayerCosmetics({
-        verified: resolvedName.verified,
-      });
+      const cosmetics = await this.resolveCosmeticsForStart(
+        resolvedName.verified,
+      );
 
       this.dispatchEvent(
         new CustomEvent("join-lobby", {

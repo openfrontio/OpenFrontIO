@@ -202,11 +202,18 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
       if (!userAuthResult) return false;
       const { jwt, claims } = userAuthResult;
 
-      // Get the user object
+      // Get the user object. Bounded like the other auth calls (see
+      // Auth.ts doSteamLogin) because the promise above is memoised: a
+      // response that never settles is not one slow call, it pins __userMe
+      // on a forever-pending promise and every later getUserMe() in the
+      // session — cosmetics, store, inventory, the multiplayer join path —
+      // awaits that same promise. An abort lands in the catch below, which
+      // returns false, the same answer a signed-out player already gets.
       const response = await fetch(getApiBase() + "/users/@me", {
         headers: {
           authorization: `Bearer ${jwt}`,
         },
+        signal: AbortSignal.timeout(10_000),
       });
       if (response.status === 401) {
         // Clearing the session announces itself (see clearLocalSession), so
