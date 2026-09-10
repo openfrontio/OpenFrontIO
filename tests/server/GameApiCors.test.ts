@@ -266,3 +266,42 @@ describe("applyGameApiCorsHeaders with a load balancer site host", () => {
     expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
   });
 });
+
+describe("applyGameApiCorsHeaders across the cluster", () => {
+  // Per-game routing (docs/MultiServer.md): a tab pinned to one deployment
+  // reaches a game on a sibling deployment cross-origin, so every host in
+  // the fleet map must be allowed — and nothing else.
+  const CLUSTER = JSON.stringify({
+    a: { host: "blue.openfront.io", color: "blue", numWorkers: 2 },
+    b: { host: "green.openfront.io", color: "green", numWorkers: 2 },
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test("allows a sibling deployment's origin", () => {
+    vi.stubEnv("CLUSTER_JSON", CLUSTER);
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("https://blue.openfront.io", setHeader);
+    expect(headers.get("Access-Control-Allow-Origin")).toBe(
+      "https://blue.openfront.io",
+    );
+  });
+
+  test("only allows cluster hosts over https", () => {
+    vi.stubEnv("CLUSTER_JSON", CLUSTER);
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("http://green.openfront.io", setHeader);
+    expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+
+  test("rejects a host outside the map", () => {
+    vi.stubEnv("CLUSTER_JSON", CLUSTER);
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("https://evil.openfront.io", setHeader);
+    expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+});

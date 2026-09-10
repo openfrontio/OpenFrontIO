@@ -12,7 +12,7 @@ import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
-import { showToast, translateText } from "../../Utils";
+import { homeHref, showToast, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -274,7 +274,7 @@ export class GameRightSidebar extends LitElement implements Controller {
     await crazyGamesSDK.requestMidgameAd();
     await crazyGamesSDK.gameplayStop();
     // redirect to the home page
-    window.location.href = "/";
+    window.location.href = homeHref();
   }
 
   private onSettingsButtonClick() {

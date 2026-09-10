@@ -1757,6 +1757,7 @@
     "title": "Wishlist OpenFront on Steam!"
   },
   "store": {
+    "already_owned": "You already own this item. Nothing was charged.",
     "already_subscribed": "Already subscribed.",
     "bundles": "Bundles",
     "change_tier_failed": "Couldn't update your subscription. Please try again.",

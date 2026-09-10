@@ -38,6 +38,15 @@ export async function renderHtmlContent(htmlPath: string): Promise<string> {
       ServerEnv.publicHost() === undefined
         ? undefined
         : JSON.stringify(ServerEnv.publicHost()),
+    // The load-balancer apex, when this deployment sits behind one. The
+    // client uses it as the unknown-letter redirect target — the apex shell
+    // always carries the freshest cluster map. Absent for standalone
+    // deployments (beta, branch previews, dev), which have no apex to
+    // bounce to and fall through to their normal not-found flow.
+    siteHost:
+      ServerEnv.siteHost() === undefined
+        ? undefined
+        : JSON.stringify(ServerEnv.siteHost()),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(

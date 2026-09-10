@@ -345,19 +345,27 @@ export function joinLobby(
         console.info(
           `version mismatch: bundle ${ClientEnv.gitCommit()}, server ${message.gitCommit}`,
         );
-        // The server runs a newer build than this bundle (tab left open
-        // across a deploy). On the web a reload picks up the new version. The
-        // desktop shell updates its local overlay itself and reloading would
-        // only re-run the old bundle, so there we just say what's happening
-        // and let the shell's update bar take it from here.
+        // The game's server runs a different build than this bundle. On the
+        // desktop the shell updates its local overlay itself, so just say
+        // what's happening and let its update bar take it from there. On the
+        // web, fork on where the game lives: a cross-host game means OUR
+        // shell is simply a different deployment's — reloading would fetch
+        // the same wrong build, so navigate to the game's own host, whose
+        // shell serves the matching bundle (and map). An own-host game means
+        // this tab is stale (left open across a deploy): reload.
         if (isDesktopShell()) {
           void showInGameAlert(translateText("update_available.desktop"));
         } else {
-          showInGameAlert(translateText("update_available.message")).then(
-            () => {
-              reloadForUpdate();
-            },
-          );
+          const r = ClientEnv.resolveGame(lobbyConfig.gameID);
+          if (r.kind === "cross") {
+            window.location.href = `https://${r.host}/game/${lobbyConfig.gameID}${window.location.search}`;
+          } else {
+            showInGameAlert(translateText("update_available.message")).then(
+              () => {
+                reloadForUpdate();
+              },
+            );
+          }
         }
       } else {
         showErrorModal(

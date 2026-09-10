@@ -827,7 +827,9 @@ export async function boostTribeName(
         }
         return { ok: false, code: "insufficient_balance" };
       }
-      console.error("boostTribeName: bad request", body);
+      // Body-free on purpose: an unrecognised 400 is exactly the case where we
+      // do not know what the body contains, so it must not reach a log line.
+      console.warn("boostTribeName: unrecognised 400 response");
       return { ok: false, code: "failed" };
     }
     if (response.status === 404) {
@@ -897,6 +899,11 @@ export type PurchaseWithCurrencyResult =
   // spendable. Nothing charged. Distinct from the above because buying more
   // currency is not the remedy.
   | { ok: false; code: "debt"; debt: string }
+  // 409 "Already owned": the player already holds this cosmetic. Also what a
+  // retry after a timed-out success returns — treat it as "already bought"
+  // and refetch. Nothing charged. No payload: unlike the pack's 409 the body
+  // carries no item list, only {error, message}.
+  | { ok: false; code: "already_owned" }
   | { ok: false; code: "failed" };
 
 // POST /shop/purchase — buy a single cosmetic for hard or soft currency. The
@@ -950,6 +957,12 @@ export async function purchaseWithCurrency(
       // where we don't know what it contains.
       console.warn("purchaseWithCurrency: unrecognised 400 reason");
       return { ok: false, code: "failed" };
+    }
+    if (response.status === 409) {
+      // The body is deliberately not read: it carries no item list, so there
+      // is nothing to extract, and not touching it is the cheapest way to
+      // keep a server body away from a log line.
+      return { ok: false, code: "already_owned" };
     }
     if (!response.ok) {
       console.error(
@@ -1024,7 +1037,9 @@ export async function purchaseCosmeticPack(
       if (PACK_UNAVAILABLE_REASONS.includes(reason)) {
         return { ok: false, code: "unavailable" };
       }
-      console.error("purchaseCosmeticPack: bad request", body);
+      // Body-free on purpose: an unrecognised 400 is exactly the case where we
+      // do not know what the body contains, so it must not reach a log line.
+      console.warn("purchaseCosmeticPack: unrecognised 400 response");
       return { ok: false, code: "failed" };
     }
     if (response.status === 409) {
@@ -1367,7 +1382,12 @@ export async function createPaymentsCheckout(
 
       if (response.status === 400) {
         if (CHECKOUT_CLIENT_BUG_REASONS.includes(reason)) {
-          console.error("createPaymentsCheckout: bad request", body);
+          // Body-free, like the other refusal logs. Kept at error (rather
+          // than the warn the two unrecognised-400 paths use) because the
+          // reason here is one we recognise and it means this client sent
+          // something it never should have -- a real bug, not a refusal we
+          // simply cannot classify.
+          console.error("createPaymentsCheckout: client-bug 400 response");
           return { ok: false, code: "client_bug" };
         }
         if (CHECKOUT_STALE_LISTING_REASONS.includes(reason)) {
@@ -1642,7 +1662,7 @@ export async function openSubscriptionPortal(): Promise<string | false> {
 export async function fetchLobbyListed(gameID: string): Promise<boolean> {
   try {
     const res = await fetch(
-      `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(gameID)}/api/game/${gameID}`,
+      `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}`,
       { headers: { Accept: "application/json" } },
     );
     if (!res.ok) return false;
@@ -1666,7 +1686,7 @@ export async function setLobbyListed(
   try {
     const token = await getPlayToken();
     const response = await fetch(
-      `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(gameID)}/api/game/${gameID}/listing`,
+      `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}/listing`,
       {
         method: "POST",
         headers: {
@@ -1736,7 +1756,7 @@ export async function createNextLobby(
 ): Promise<GameInfo> {
   const token = await getPlayToken();
   const response = await fetch(
-    `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
+    `${ClientEnv.gameHttpBase(previousGameID)}/${ClientEnv.gameWorkerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
     {
       method: "POST",
       headers: {
