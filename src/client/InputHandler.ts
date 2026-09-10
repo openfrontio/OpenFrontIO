@@ -583,7 +583,8 @@ export class InputHandler {
       if (isTextInput && e.code !== "Escape") {
         return;
       }
-
+      // for hotkey usage, mostly an issue on Firefox.
+      // we do not prevent rightAlt in case the user desires the default browser behavior.
       if (e.altKey || e.code === this.keybinds.altKey) {
         e.preventDefault();
       }
@@ -863,7 +864,7 @@ export class InputHandler {
     }
     if (this.activeKeys.has(this.keybinds.emojiMenuModifier)) {
       this.suppressNextTap = false;
-        this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
+      this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
       return;
     }
 
@@ -956,6 +957,7 @@ export class InputHandler {
     }
   }
 
+  // note: this does not distinguish between left alt and right alt
   private onAltScroll(event: WheelEvent) {
     if (event.altKey) {
       const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
