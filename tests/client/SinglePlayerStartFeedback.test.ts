@@ -15,7 +15,7 @@ vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
 
 import {
   SinglePlayerModal,
-  START_COSMETICS_DEADLINE_MS,
+  START_PREPARE_DEADLINE_MS,
 } from "../../src/client/SinglePlayerModal";
 
 type Internals = {
@@ -152,12 +152,46 @@ describe("SinglePlayerModal start feedback", () => {
     );
 
     const started = internals(modal).startGame();
-    await vi.advanceTimersByTimeAsync(START_COSMETICS_DEADLINE_MS);
+    await vi.advanceTimersByTimeAsync(START_PREPARE_DEADLINE_MS);
     await started;
 
     expect(internals(modal).starting).toBe(false);
     // The match still starts, on defaults — the point of the deadline.
     expect(joins).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
+  // Cosmetics are not the only unbounded wait in the block the busy flag
+  // guards. The Steam name seed is a bare IPC call with no watchdog of its
+  // own, so a wedged bridge would pin the button exactly the same way. The
+  // deadline covers the whole preparation, not just the cosmetics call,
+  // precisely so this class of gap stays closed as the sequence grows.
+  it("does not stay busy when the Steam name seed never settles", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const seedStub = {
+      whenSeeded: () => new Promise<void>(() => {}),
+      resolvedName: () => ({
+        name: "AnonBadger",
+        source: "generated",
+        verified: false,
+      }),
+      getClanTag: () => null,
+    };
+    vi.spyOn(document, "querySelector").mockImplementation((selector) =>
+      selector === "username-input" ? (seedStub as unknown as Element) : null,
+    );
+
+    const started = internals(modal).startGame();
+    await vi.advanceTimersByTimeAsync(START_PREPARE_DEADLINE_MS);
+    await started;
+
+    expect(internals(modal).starting).toBe(false);
+    expect(joins).toHaveLength(1);
+    // The interim generated name is what the seed would have replaced.
+    expect(joins[0].detail.gameStartInfo.players[0].username).toBe(
+      "AnonBadger",
+    );
     vi.useRealTimers();
   });
 
@@ -169,7 +203,7 @@ describe("SinglePlayerModal start feedback", () => {
     );
 
     const started = internals(modal).startGame();
-    await vi.advanceTimersByTimeAsync(START_COSMETICS_DEADLINE_MS);
+    await vi.advanceTimersByTimeAsync(START_PREPARE_DEADLINE_MS);
     await started;
 
     cosmeticsMocks.getPlayerCosmetics.mockResolvedValueOnce({});
@@ -251,7 +285,7 @@ describe("SinglePlayerModal start feedback", () => {
   // The deadline must never pre-empt a resolution that is merely slow: every
   // fetch beneath it is bounded at 10s, so it has to sit above that.
   it("keeps the deadline above the fetch bounds beneath it", () => {
-    expect(START_COSMETICS_DEADLINE_MS).toBeGreaterThan(10_000);
+    expect(START_PREPARE_DEADLINE_MS).toBeGreaterThan(10_000);
   });
 
   // The prewarm is what keeps the click off the network in the first place:

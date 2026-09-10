@@ -28,7 +28,7 @@ import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
-import { fallbackPlayerName } from "./PlayerName";
+import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
 import { UsernameInput } from "./UsernameInput";
 import {
   getBotsForCompactMap,
@@ -45,12 +45,18 @@ import {
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
 /**
- * Ceiling on how long a Start Game click will wait for cosmetics before it
- * gives up and starts on defaults. Deliberately above the 10s bound each fetch
- * beneath it carries, so it never pre-empts a resolution that is merely slow —
- * it only catches an await that would otherwise never settle.
+ * Ceiling on how long a Start Game click will wait before it gives up and
+ * starts on defaults. Deliberately above the 10s bound each fetch beneath it
+ * carries, so it never pre-empts a wait that is merely slow — it only catches
+ * one that would otherwise never settle.
  */
-export const START_COSMETICS_DEADLINE_MS = 15_000;
+export const START_PREPARE_DEADLINE_MS = 15_000;
+
+/** What a start has to wait for before it can dispatch join-lobby. */
+type StartPreparation = {
+  resolvedName: ResolvedPlayerName;
+  cosmetics: PlayerCosmetics;
+};
 
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.World,
@@ -903,32 +909,64 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   /**
-   * getPlayerCosmetics() with a deadline, so no await inside startGame() can
-   * outlive the button that is waiting on it.
+   * Everything the dispatch has to wait for, under a single deadline.
    *
-   * This is a backstop, not a policy. Every fetch beneath it is bounded well
-   * inside START_COSMETICS_DEADLINE_MS, so on any reachable-but-slow network
-   * the real resolution always wins the race and the player keeps their
-   * cosmetics. It exists for the case those bounds don't cover — a promise
-   * that never settles at all — where the cost of losing the race is one
-   * single-player game started on default cosmetics, and the cost of not
-   * having it is a Start button pinned at "Starting…" for the rest of the
-   * session, taking startTutorial() down with it on the re-entrancy guard.
+   * The deadline sits here rather than on each call because the guarantee is
+   * about the button, not about any one request: whatever else gets added to
+   * this sequence later, a Start click cannot outlive
+   * START_PREPARE_DEADLINE_MS. All three waits can reach code with no bound
+   * of its own — the Steam name seed is a bare IPC call, the CrazyGames
+   * midgame ad resolves only from SDK callbacks that may never fire, and
+   * cosmetics reach the network. Each degrades to something playable: the
+   * interim generated name, no ad, default cosmetics.
+   *
+   * It is a backstop, not a policy. It sits above the 10s bound every fetch
+   * beneath it already carries, so on any reachable network the real values
+   * win the race and nothing is lost. It exists for the case those bounds
+   * don't cover — a promise that never settles at all — where the cost of
+   * firing is one single-player game on defaults, and the cost of not having
+   * it is a Start button pinned at "Starting…" for the rest of the session,
+   * taking startTutorial() down with it on the re-entrancy guard.
    */
-  private async resolveCosmeticsForStart(
-    verified: boolean | undefined,
-  ): Promise<PlayerCosmetics> {
+  private async prepareStart(
+    usernameInput: UsernameInput | null,
+  ): Promise<StartPreparation> {
+    const nameNow = () => usernameInput?.resolvedName() ?? fallbackPlayerName();
+
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const deadline = new Promise<PlayerCosmetics>((resolve) => {
+    const deadline = new Promise<StartPreparation>((resolve) => {
       timer = setTimeout(() => {
         console.warn(
-          "Cosmetics did not resolve before the start deadline; starting on defaults",
+          "Start preparation exceeded its deadline; starting on defaults",
         );
-        resolve(verified ? { verified: true } : {});
-      }, START_COSMETICS_DEADLINE_MS);
+        const resolvedName = nameNow();
+        resolve({
+          resolvedName,
+          cosmetics: resolvedName.verified ? { verified: true } : {},
+        });
+      }, START_PREPARE_DEADLINE_MS);
     });
+
+    const prepared = (async (): Promise<StartPreparation> => {
+      // Wait for the one-shot Steam name-seed to settle before reading
+      // getUsername(), so a fast single-player start uses the Steam persona
+      // rather than the interim generated anon name.
+      await usernameInput?.whenSeeded();
+      // Name and badge from one resolution, as on the multiplayer join path.
+      const resolvedName = nameNow();
+      await crazyGamesSDK.requestMidgameAd();
+      // onOpen() prewarmed the caches this reads, so it normally resolves
+      // without touching the network at all.
+      return {
+        resolvedName,
+        cosmetics: await getPlayerCosmetics({
+          verified: resolvedName.verified,
+        }),
+      };
+    })();
+
     try {
-      return await Promise.race([getPlayerCosmetics({ verified }), deadline]);
+      return await Promise.race([prepared, deadline]);
     } finally {
       clearTimeout(timer);
     }
@@ -973,26 +1011,13 @@ export class SinglePlayerModal extends BaseModal {
 
       const usernameInput = document.querySelector(
         "username-input",
-      ) as UsernameInput;
+      ) as UsernameInput | null;
 
-      // Wait for the one-shot Steam name-seed to settle before reading
-      // getUsername(), so a fast single-player start uses the Steam persona
-      // rather than the interim generated anon name. Always resolves.
-      await usernameInput?.whenSeeded();
-      // Name and badge from one resolution, as on the multiplayer join path.
-      const resolvedName =
-        usernameInput?.resolvedName() ?? fallbackPlayerName();
-
-      await crazyGamesSDK.requestMidgameAd();
-
-      // Resolved before the dispatch rather than inside it, so the wait is
-      // visibly attributable to the busy button above. onOpen() prewarmed the
-      // caches this reads, so it normally resolves without touching the
-      // network; when it does have to, every fetch beneath it is bounded and
-      // getPlayerCosmetics degrades to defaults rather than failing the start.
-      const cosmetics = await this.resolveCosmeticsForStart(
-        resolvedName.verified,
-      );
+      // Resolved before the dispatch rather than inside it, so every wait is
+      // attributable to the busy button above, and bounded so none of them
+      // can outlive it.
+      const { resolvedName, cosmetics } =
+        await this.prepareStart(usernameInput);
 
       // Retired while this was resolving — the modal was closed, and possibly
       // reopened and started again. The live attempt owns the start; this one
