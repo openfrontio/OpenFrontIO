@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   Duos,
   GameMapType,
@@ -7,6 +7,7 @@ import {
   Trios,
 } from "../../src/core/game/Game";
 import { ServerStartGameMessage } from "../../src/core/Schemas";
+import { createGameWireContext } from "../../src/core/ZbinWire";
 import {
   cid,
   makeClient,
@@ -15,7 +16,25 @@ import {
   startGame,
 } from "../util/GameServerHarness";
 
+// One turn of the server clock; ServerEnv.turnIntervalMs().
+const TURN_MS = 100;
+
 describe("GameServer - Clan Overflow Spectator Conversion", () => {
+  // start() schedules a 100 ms turn interval that only end() clears, and no
+  // test here ends its game -- every one of them used to leave a live timer
+  // behind. When one fired after the run it encoded a turn against gone
+  // fixtures and failed the whole job from outside any test. Faking the clock
+  // makes the leak structurally impossible rather than something each test has
+  // to remember to clean up.
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
   test("Clan members overflowing maxTeamSize are converted to spectators", () => {
     const game = makeGame({
       config: {
@@ -98,7 +117,7 @@ describe("GameServer - Clan Overflow Spectator Conversion", () => {
     expect(clients.every((c) => !c.spectator)).toBe(true);
   });
 
-  test("Queued intents from converted clan overflow spectators are pruned", () => {
+  test("Queued intents from converted clan overflow spectators are pruned", async () => {
     const game = makeGame({
       config: {
         gameMode: GameMode.Team,
@@ -122,34 +141,45 @@ describe("GameServer - Clan Overflow Spectator Conversion", () => {
       game.joinClient(c);
     }
 
-    // Queue intent from c1 (kept) and c5 (converted to spectator)
-    const serverAny = game as any;
-    serverAny.intents.push({
-      type: "chat",
-      clientID: cid("c1"),
-      text: "hello",
+    // Queue an intent from c1 (kept) and c5 (converted to spectator) through
+    // the socket a real client uses, rather than pushing onto the private
+    // queue: gameplay intents are queued regardless of stage (the default
+    // branch of handleIntent), so this works before the start.
+    await mockWsOf(clients[0]).emit({
+      type: "intent",
+      intent: { type: "spawn", tile: 1 },
     });
-    serverAny.intents.push({
-      type: "chat",
-      clientID: cid("c5"),
-      text: "overflow message",
+    await mockWsOf(clients[4]).emit({
+      type: "intent",
+      intent: { type: "spawn", tile: 2 },
     });
-
-    expect(serverAny.intents.some((i: any) => i.clientID === cid("c5"))).toBe(
-      true,
-    );
 
     startGame(game);
 
-    // c5 converted to spectator, so its intent was pruned
+    // c5 is over the clan cap, so it is converted to a spectator.
     expect(clients[4].spectator).toBe(true);
-    expect(serverAny.intents.some((i: any) => i.clientID === cid("c5"))).toBe(
-      false,
-    );
-    // c1 intent retained
-    expect(serverAny.intents.some((i: any) => i.clientID === cid("c1"))).toBe(
-      true,
-    );
+
+    // Assert on what actually reaches the wire, not on the private array: the
+    // first turn frame is the observable consequence of the pruning.
+    const startMsg = mockWsOf(clients[0])
+      .sent()
+      .find((m): m is ServerStartGameMessage => m.type === "start");
+    expect(startMsg).toBeDefined();
+    const ctx = createGameWireContext(startMsg!.gameStartInfo.players);
+
+    vi.advanceTimersByTime(TURN_MS);
+
+    const turn = mockWsOf(clients[0])
+      .sent(ctx)
+      .find((m) => m.type === "turn");
+    expect(turn?.type).toBe("turn");
+    if (turn?.type !== "turn") return;
+
+    const intentClientIDs = turn.turn.intents.map((i) => i.clientID);
+    // The converted spectator's queued intent never reaches a turn...
+    expect(intentClientIDs).not.toContain(cid("c5"));
+    // ...while the kept player's does.
+    expect(intentClientIDs).toContain(cid("c1"));
   });
 
   test("Pinned matchmaking players seeded by index are exempt from conversion", () => {
