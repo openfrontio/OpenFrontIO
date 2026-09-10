@@ -46,6 +46,7 @@ import {
   renderDuration,
   translateText,
 } from "./Utils";
+import { isReplayShellHost } from "./VersionedReplay";
 
 const PRIMARY_ACTION =
   "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]";
@@ -134,6 +135,13 @@ export class GameModeSelector extends LitElement {
     // DesktopUpdateBar). Reloading here would only re-run the old overlay,
     // reconnect, and trigger this again until the download finishes.
     if (isDesktopShell()) return;
+    // A versioned replay shell is pinned to the archived game's build on
+    // purpose (VersionedReplay.ts), but its baked-in serverHost points at a
+    // live deployment running a newer build — so the lobby socket's commit
+    // compare (or a drain signal) fires on every load. "Update" is
+    // meaningless here, and reloading re-serves the same immutable shell,
+    // which would loop the prompt forever.
+    if (isReplayShellHost(window.location.hostname)) return;
     // A blocking reload prompt during a lobby wait would eject the player
     // from a lobby the draining deployment deliberately lets finish — and a
     // private lobby's members are all pinned to the same deployment, so they
