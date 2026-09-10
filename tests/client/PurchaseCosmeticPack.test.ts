@@ -226,6 +226,34 @@ describe("purchaseWithCurrency", () => {
     },
   );
 
+  // A retry after a success whose response was lost gets this. Folding it
+  // into the generic failure told the player to try again, forever, while the
+  // store still showed the item as purchasable.
+  it("reports a 409 as already owned, silently and without retrying", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const response = new Response(
+      JSON.stringify({ error: "Conflict", message: "CANARY-a1b2" }),
+      { status: 409, headers: { "content-type": "application/json" } },
+    );
+    fetchMock.mockResolvedValueOnce(response);
+
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: false,
+      code: "already_owned",
+    });
+    // The body is never read: a regression that calls response.json() and
+    // discards the result would leave bodyUsed true and fail here, which no
+    // assertion on the returned value could catch.
+    expect(response.bodyUsed).toBe(false);
+    // Not an error condition: on main this fell into the !response.ok branch
+    // and logged the status. Nothing is read from the body, so nothing from
+    // it can reach a log line.
+    expect(console.error).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+    // One request: guards against a retry loop creeping back in.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("distinguishes being short from being in debt", async () => {
     respond(400, { reason: "Insufficient balance" });
     expect(await purchaseWithCurrency("flag", "pirate", "soft")).toEqual({
