@@ -5,6 +5,7 @@ import {
   AllianceRequest,
   Difficulty,
   Game,
+  GameMode,
   Player,
   PlayerInfo,
   PlayerType,
@@ -404,20 +405,90 @@ describe("AllianceBehavior.maybeBetray - juicy ally strategy", () => {
   it.each([Difficulty.Hard, Difficulty.Impossible])(
     "%s: does not count a friendly-but-not-allied bordering player (e.g. a teammate) as a betrayal threat",
     async (difficulty) => {
-      const { allyJuicy, allianceBehavior } = await setupBetrayTest(difficulty);
-
       // borderingFriends can hold teammates too (isFriendly() = isOnSameTeam()
       // || isAlliedWith()), but a teammate is never actually allied with us
       // and can never attack us - it must not count as a threat.
-      const teammate = {
-        isTraitor: () => false,
-        troops: () => 200_000,
-        outgoingAttacks: () => [],
-      } as unknown as Player;
+      const testGame = await setup(
+        "big_plains",
+        {
+          infiniteGold: true,
+          difficulty,
+          gameMode: GameMode.Team,
+          playerTeams: 2,
+        },
+        [
+          // Pinned team slots: player+teammate share team 0, ally sits on
+          // team 1, so ally can still form a real alliance with player.
+          new PlayerInfo(
+            "player",
+            PlayerType.Nation,
+            null,
+            "player_id",
+            false,
+            null,
+            [],
+            0,
+          ),
+          new PlayerInfo(
+            "teammate",
+            PlayerType.Nation,
+            null,
+            "teammate_id",
+            false,
+            null,
+            [],
+            0,
+          ),
+          new PlayerInfo(
+            "ally",
+            PlayerType.Human,
+            null,
+            "ally_id",
+            false,
+            null,
+            [],
+            1,
+          ),
+        ],
+      );
+
+      const player = testGame.player("player_id");
+      const teammate = testGame.player("teammate_id");
+      const ally = testGame.player("ally_id");
+
+      let assigned = 0;
+      const owners = [player, teammate, ally];
+      testGame.map().forEachTile((tile) => {
+        if (assigned >= 60) return;
+        if (!testGame.map().isLand(tile)) return;
+        owners[assigned % 3].conquer(tile);
+        assigned++;
+      });
+
+      expect(player.isOnSameTeam(teammate)).toBe(true);
+      expect(player.isAlliedWith(teammate)).toBe(false);
+
+      player.setTroops(1_000_000);
+      teammate.setTroops(600_000); // would blow the 33% threshold if wrongly counted
+      ally.setTroops(10_000);
+
+      testGame.addExecution(new AllianceRequestExecution(player, ally.id()));
+      testGame.executeNextTick();
+      testGame.addExecution(new AllianceRequestExecution(ally, player.id()));
+      testGame.executeNextTick();
+      expect(player.isAlliedWith(ally)).toBe(true);
+
+      const random = new PseudoRandom(42);
+      const allianceBehavior = new NationAllianceBehavior(
+        random,
+        testGame,
+        player,
+        new NationEmojiBehavior(random, testGame, player),
+      );
 
       const result = (allianceBehavior as any).isSafeToBetray(
-        allyJuicy,
-        [allyJuicy, teammate],
+        ally,
+        [ally, teammate],
         [],
       );
 
