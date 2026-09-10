@@ -193,6 +193,61 @@ describe("SinglePlayerModal start feedback", () => {
     expect(internals(modal).starting).toBe(false);
   });
 
+  // Closing the modal hands back a live button, so the player can reopen and
+  // start again while the first attempt is still resolving. That first
+  // attempt describes settings the modal no longer holds — if it still
+  // dispatched, two join-lobby events with different gameIDs would race and
+  // the abandoned one could win.
+  it("drops an attempt retired by closing the modal", async () => {
+    let releaseFirst: (c: PlayerCosmetics) => void = () => {};
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise<PlayerCosmetics>((resolve) => {
+        releaseFirst = resolve;
+      }),
+    );
+
+    const first = internals(modal).startGame();
+    await flush();
+
+    internals(modal).onClose();
+
+    cosmeticsMocks.getPlayerCosmetics.mockResolvedValueOnce({});
+    await internals(modal).startGame();
+    expect(joins).toHaveLength(1);
+
+    // The abandoned attempt now completes, after the live one already did.
+    releaseFirst({});
+    await first;
+
+    expect(joins).toHaveLength(1);
+  });
+
+  it("keeps the live attempt busy when a retired one settles", async () => {
+    let releaseFirst: (c: PlayerCosmetics) => void = () => {};
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise<PlayerCosmetics>((resolve) => {
+        releaseFirst = resolve;
+      }),
+    );
+
+    const first = internals(modal).startGame();
+    await flush();
+    internals(modal).onClose();
+
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise(() => {}),
+    );
+    void internals(modal).startGame();
+    await flush();
+    expect(internals(modal).starting).toBe(true);
+
+    releaseFirst({});
+    await first;
+
+    // The retired attempt must not clear the live attempt's busy state.
+    expect(internals(modal).starting).toBe(true);
+  });
+
   // The deadline must never pre-empt a resolution that is merely slow: every
   // fetch beneath it is bounded at 10s, so it has to sit above that.
   it("keeps the deadline above the fetch bounds beneath it", () => {

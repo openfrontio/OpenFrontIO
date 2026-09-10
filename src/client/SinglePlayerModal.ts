@@ -173,6 +173,9 @@ export class SinglePlayerModal extends BaseModal {
   // nothing visible until every await in startGame() settles, which reads as
   // a hang rather than as loading whenever the network is slow or absent.
   @state() private starting: boolean = false;
+  // Identifies the current start attempt. Bumped on every start and on every
+  // close, so an attempt that outlives its modal can tell it has been retired.
+  private startAttempt: number = 0;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -573,6 +576,13 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   protected onClose(): void {
+    // Retires whatever start is still in flight. resetOptions() below hands
+    // back a live button, so the player can close, reopen and start again
+    // while the previous attempt is still resolving — and that attempt is
+    // now describing settings the modal no longer holds. Without this, both
+    // attempts dispatch join-lobby with different gameIDs and whichever
+    // resolves last wins, which can be the one the player abandoned.
+    this.startAttempt++;
     this.resetOptions();
   }
 
@@ -953,6 +963,7 @@ export class SinglePlayerModal extends BaseModal {
     // Hold the button in its busy state until join-lobby is away so the wait
     // reads as loading rather than as a dead click.
     this.starting = true;
+    const attempt = ++this.startAttempt;
     try {
       console.log(
         `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
@@ -982,6 +993,11 @@ export class SinglePlayerModal extends BaseModal {
       const cosmetics = await this.resolveCosmeticsForStart(
         resolvedName.verified,
       );
+
+      // Retired while this was resolving — the modal was closed, and possibly
+      // reopened and started again. The live attempt owns the start; this one
+      // would otherwise race it into join-lobby with stale settings.
+      if (attempt !== this.startAttempt) return;
 
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
@@ -1062,7 +1078,10 @@ export class SinglePlayerModal extends BaseModal {
       );
       this.close();
     } finally {
-      this.starting = false;
+      // Only if this attempt is still the live one: a retired attempt
+      // settling later must not clear the busy state of the one that
+      // replaced it.
+      if (attempt === this.startAttempt) this.starting = false;
     }
   }
 
