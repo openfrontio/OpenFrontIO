@@ -192,11 +192,25 @@ let __userMe: Promise<UserMeResponse | false> | null = null;
 // account straight back. Handled here rather than in Auth, which cannot
 // import this module — the dependency runs the other way.
 document.addEventListener("session-cleared", () => invalidateUserMe());
+/**
+ * True for the rejection AbortSignal.timeout (or an explicit abort) produces.
+ * Deliberately narrow: a client-imposed deadline is the one failure that says
+ * nothing at all about the account, so it is the one worth retrying.
+ */
+function isAbortError(e: unknown): boolean {
+  const name = (e as { name?: unknown } | null)?.name;
+  return name === "TimeoutError" || name === "AbortError";
+}
+
 export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
     return __userMe;
   }
-  __userMe = (async () => {
+  // A holder rather than a plain local so the catch below can recognise its
+  // own promise as the cached one. Filled in immediately after, which is
+  // always before any await inside can resume.
+  const attempt: { request?: Promise<UserMeResponse | false> } = {};
+  attempt.request = (async () => {
     try {
       const userAuthResult = await userAuth();
       if (!userAuthResult) return false;
@@ -239,10 +253,30 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
       }
       return result.data;
     } catch (e) {
+      // Un-cache a timeout, and ONLY a timeout. Every other falsy answer is
+      // a conclusion about the account — signed out, a 401, a rejected token
+      // — and stays remembered; re-deriving those would put an /auth/refresh
+      // behind every getUserMe() call for every logged-out player, which is
+      // the storm, not the fix. A deadline we imposed ourselves concluded
+      // nothing, so leaving it cached would strand a merely-slow connection
+      // as "signed out" for the rest of the session: no player-scoped
+      // settings, no cosmetics, no verified badge, recoverable only by
+      // reloading. Same shape as fetchCosmetics, for the same reason.
+      // Remembering an unreachable backend so the retry is not paid at full
+      // price is OPE-403.
+      //
+      // Cleared here rather than from a .then on the request: this runs
+      // before the promise resolves, so a caller awaiting it cannot observe
+      // the timed-out answer still cached. attempt.request is always set by
+      // now — the catch can only be reached after an await.
+      if (isAbortError(e) && __userMe === attempt.request) {
+        __userMe = null;
+      }
       return false;
     }
   })();
-  return __userMe;
+  __userMe = attempt.request;
+  return attempt.request;
 }
 
 export function invalidateUserMe() {

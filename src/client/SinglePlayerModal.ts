@@ -1071,10 +1071,19 @@ export class SinglePlayerModal extends BaseModal {
       // reopened and started again. The live attempt owns the start; this one
       // would otherwise race it into join-lobby with stale settings.
       //
-      // Checked here, before the ad rather than only after it: an abandoned
-      // attempt that went on to request one would show the player an ad for a
-      // game that is never going to start, and a reopened modal could put a
-      // second ad request in flight alongside it.
+      // A start has exactly two side effects that leave this component, and
+      // BOTH must sit behind this check. Anything added here that escapes the
+      // component needs the same gate:
+      //   1. awaitMidgameAd() — shows the player a real ad, so an abandoned
+      //      attempt reaching it advertises a game that never starts, and a
+      //      reopened modal can put a second request in flight beside it.
+      //   2. the join-lobby dispatch — and everything downstream of it,
+      //      including Main's gameplayStart() and incrementGamesPlayed().
+      // resolveNameAndCosmetics() above is deliberately NOT gated: its only
+      // writes are validating stored cosmetic selections against the catalog
+      // and profile, which happens on any cosmetics resolution (menu
+      // background, store, inventory) rather than as a consequence of this
+      // start.
       if (attempt !== this.startAttempt) return;
 
       await this.awaitMidgameAd();
