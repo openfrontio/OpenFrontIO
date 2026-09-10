@@ -863,11 +863,7 @@ export class InputHandler {
     }
     if (this.activeKeys.has(this.keybinds.emojiMenuModifier)) {
       this.suppressNextTap = false;
-      if (this.uiState.ghostStructure === null) {
-        this.eventBus.emit(
-          new ShowEmojiMenuEvent(event.clientX, event.clientY),
-        );
-      }
+        this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
       return;
     }
 
