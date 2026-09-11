@@ -9,6 +9,12 @@ import "../../components/DoomsdayClockPanel";
 import "../../components/OvertimePanel";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import {
+  desktopDisplay,
+  isDisplaySnapshot,
+  type DesktopDisplayBridge,
+  type DesktopDisplayMode,
+} from "../../DesktopDisplay";
 import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
@@ -51,6 +57,18 @@ export class GameRightSidebar extends LitElement implements Controller {
 
   @state()
   private isFullscreen: boolean = false;
+
+  // The desktop shell's window mode, or null when there is no shell to ask.
+  // On the desktop this REPLACES `isFullscreen` as the button's truth: the
+  // shell owns the window, and HTML fullscreen is not what the button does
+  // there any more.
+  @state()
+  private displayMode: DesktopDisplayMode | null = null;
+
+  // Captured once per mount rather than read per click, so one mount cannot
+  // answer "desktop" to the click and "web" to the icon.
+  private displayBridge: DesktopDisplayBridge | null = null;
+  private displayUnsubscribe: (() => void) | null = null;
 
   @state()
   private timer: number = 0;
@@ -121,12 +139,70 @@ export class GameRightSidebar extends LitElement implements Controller {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("fullscreenchange", this.onFullscreenChange);
+    this.connectDisplayBridge();
     this.onFullscreenChange();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener("fullscreenchange", this.onFullscreenChange);
+    this.disconnectDisplayBridge();
+  }
+
+  // ---- Desktop shell window mode ----
+  //
+  // Feature-detected, never version-parsed: desktopDisplay() is null on the
+  // web and on any shell older than the display bridge, and both of those
+  // keep the HTML-fullscreen behaviour below completely unchanged.
+
+  private connectDisplayBridge(): void {
+    const bridge = desktopDisplay();
+    this.displayBridge = bridge;
+    if (bridge === null) return;
+    void bridge.getPrefs().then(
+      (snapshot) => this.adoptDisplaySnapshot(snapshot),
+      // No state change: the icon keeps whatever it had until a snapshot we
+      // can actually read turns up. A dead read must not take the HUD down.
+      () => undefined,
+    );
+    if (typeof bridge.subscribe !== "function") return;
+    try {
+      this.displayUnsubscribe = bridge.subscribe((snapshot) =>
+        this.adoptDisplaySnapshot(snapshot),
+      );
+    } catch {
+      this.displayUnsubscribe = null;
+    }
+  }
+
+  private disconnectDisplayBridge(): void {
+    const unsubscribe = this.displayUnsubscribe;
+    this.displayUnsubscribe = null;
+    this.displayBridge = null;
+    try {
+      unsubscribe?.();
+    } catch {
+      // Leaving a match must not fail because the shell's unsubscribe did.
+    }
+  }
+
+  private adoptDisplaySnapshot(snapshot: unknown): void {
+    if (!isDisplaySnapshot(snapshot)) return;
+    this.displayMode = snapshot.prefs.mode;
+  }
+
+  /**
+   * What the button is offering: true when it would LEAVE a filled screen.
+   *
+   * On the desktop that is the SHELL's window mode, and `isFullscreen` is
+   * deliberately not consulted. The clan map and anything else that calls
+   * requestFullscreen still fires `fullscreenchange` there, and repainting
+   * this icon from it would report a mode the window is not in.
+   */
+  private get showingFilledScreen(): boolean {
+    return this.displayBridge !== null
+      ? this.displayMode === "borderless"
+      : this.isFullscreen;
   }
 
   getTickIntervalMs() {
@@ -284,6 +360,25 @@ export class GameRightSidebar extends LitElement implements Controller {
   }
 
   private onFullscreenButtonClick() {
+    const bridge = this.displayBridge;
+    if (bridge !== null) {
+      // Toggling the SHELL's window mode rather than the document's
+      // fullscreen state. Calling requestFullscreen here would put the
+      // Electron window into a fullscreen state the shell's stored preference
+      // knows nothing about -- the last remaining way this client could
+      // desync it, and the reason the shell carries a
+      // leave-html-full-screen backstop at all.
+      const next: DesktopDisplayMode =
+        this.displayMode === "borderless" ? "windowed" : "borderless";
+      void bridge.setPrefs({ mode: next }).then(
+        (snapshot) => this.adoptDisplaySnapshot(snapshot),
+        // The icon keeps showing the mode the window is really in. The shell
+        // answers a patch it refuses with the current state rather than a
+        // rejection, so this is a broken bridge, not a refusal.
+        () => undefined,
+      );
+      return;
+    }
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
         console.warn("Failed to enter fullscreen:", err);
@@ -375,14 +470,17 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${settingsIcon} alt="settings" width="20" height="20" />
         </div>
 
-        ${document.fullscreenEnabled && !this.onCrazyGames
+        ${(document.fullscreenEnabled || this.displayBridge !== null) &&
+        !this.onCrazyGames
           ? html`<div
               class="cursor-pointer"
               @click=${this.onFullscreenButtonClick}
             >
               <img
-                src=${this.isFullscreen ? exitFullscreenIcon : fullscreenIcon}
-                alt=${this.isFullscreen
+                src=${this.showingFilledScreen
+                  ? exitFullscreenIcon
+                  : fullscreenIcon}
+                alt=${this.showingFilledScreen
                   ? translateText("fullscreen.exit")
                   : translateText("fullscreen.enter")}
                 width="20"
