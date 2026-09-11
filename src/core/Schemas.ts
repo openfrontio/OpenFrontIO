@@ -397,6 +397,15 @@ export class LobbyInfoEvent implements GameEvent {
   ) {}
 }
 
+// This game's opaque grouping token arrived (see GroupToken in the server
+// message schemas). One event for both carriers — lobby_info for anyone who
+// sat in the lobby, the start message for a late joiner who never saw one —
+// so a listener does not have to know which message it came from. Never
+// emitted for singleplayer or a replay: there is no server game to group.
+export class GroupTokenEvent implements GameEvent {
+  constructor(public groupToken: string) {}
+}
+
 export interface ClientInfo {
   clientID: ClientID;
   username: string;
@@ -948,6 +957,18 @@ export const ServerPrestartMessageSchema = z.object({
   gameMapSize: z.enum(GameMapSize),
 });
 
+// An opaque, server-minted, per-game token. It identifies "everyone in this
+// game" to something outside the game — the desktop shell publishes it as the
+// Steam player group — without handing that something the game id, which is a
+// private lobby's join secret. Random, never a function of the id, and never
+// accepted back: the server reads it from nowhere, so it grants nothing.
+//
+// Not part of GameStartInfoSchema on purpose. That object is archived into the
+// publicly downloadable game record and emitted to telemetry; a token sitting
+// next to the game id in a public record is exactly the derivation this exists
+// to prevent. It rides the two server->client messages instead.
+const GroupToken = z.string().min(1).max(64);
+
 export const ServerStartGameMessageSchema = z.object({
   type: z.literal("start"),
   // Turns the client missed if they are late to the game.
@@ -957,6 +978,11 @@ export const ServerStartGameMessageSchema = z.object({
   // The clientID assigned to this connection by the server.
   // Absent for replays where the viewer has no player identity.
   myClientID: ID.optional(),
+  // The same token the lobby_info broadcasts carried, repeated here because a
+  // late joiner connects after the lobby phase and never sees one. Optional
+  // because singleplayer and replays synthesize this message locally with no
+  // server game behind it, so they have no token and must send none.
+  groupToken: GroupToken.optional(),
 });
 
 export const ServerDesyncSchema = z.object({
@@ -987,6 +1013,13 @@ export const ServerLobbyInfoMessageSchema = z.object({
   lobby: GameInfoSchema,
   // The clientID assigned to this connection by the server
   myClientID: ID,
+  // See GroupToken below. Deliberately a sibling of `lobby` rather than a
+  // field of GameInfoSchema: gameInfo() is also the body of several HTTP
+  // routes (Worker's /api/game/:id, the admin-bot routes, the lobby
+  // preview), and a token anyone can GET by game id is a token derived from
+  // the game id. On this message it only ever reaches a connected
+  // participant of this game.
+  groupToken: GroupToken.optional(),
 });
 
 // Broadcast by a finished private game's server to every still-connected client

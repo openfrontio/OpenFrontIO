@@ -7,6 +7,7 @@ import {
   GameID,
   GameRecord,
   GameStartInfo,
+  GroupTokenEvent,
   LobbyInfoEvent,
   PlayerCosmeticRefs,
   ServerMessage,
@@ -48,6 +49,7 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
+import { groupTokenOf } from "./PresenceGroup";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
@@ -201,6 +203,12 @@ export function joinLobby(
   };
 
   const onmessage = (message: ServerMessage) => {
+    // Before the per-type handling below: the token rides two different
+    // messages and the listener does not care which one delivered it.
+    const groupToken = groupTokenOf(message);
+    if (groupToken !== undefined) {
+      eventBus.emit(new GroupTokenEvent(groupToken));
+    }
     if (message.type === "lobby_info") {
       // Server tells us our assigned clientID
       clientID = message.myClientID;
@@ -243,8 +251,13 @@ export function joinLobby(
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
       resolvePrestart();
+      // Everything in the start message EXCEPT the group token. This log is
+      // the whole message verbatim and players paste it into bug reports;
+      // the token is the one field in it that must not travel that way.
+      const loggable: Record<string, unknown> = { ...message };
+      delete loggable.groupToken;
       console.log(
-        `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
+        `lobby: game started: ${JSON.stringify(loggable, replacer, 2)}`,
       );
       // Server tells us our assigned clientID (also sent on start for late joins)
       clientID = message.myClientID;
