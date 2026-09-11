@@ -378,8 +378,10 @@ export class WinModal extends LitElement implements Controller {
   private playEndOfGameSound(): void {
     if (this.isWin) {
       this.eventBus.emit(new PlaySoundEffectEvent("victory"));
-    } else if (!this.hasShownDeathModal) {
-      // The defeat cue already played when the player died.
+    } else if (!this.hasShownDeathModal && this.game.myPlayer()?.hasSpawned()) {
+      // Spawned check: spectators and replay viewers shouldn't get a
+      // personal defeat sting. The cue also already played if the player
+      // died earlier (hasShownDeathModal).
       this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
     }
   }

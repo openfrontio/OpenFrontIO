@@ -203,8 +203,14 @@ export class SoundManager {
       if (this.currentAmbience !== null) {
         const current = this.ambienceTracks.get(this.currentAmbience);
         if (current) {
-          current.fade(this.soundEffectsVolume, 0, AMBIENCE_FADE_MS);
-          current.once("fade", () => current.stop());
+          if (this.soundEffectsVolume === 0) {
+            // fade(0, 0, …) never completes in Howler (its done check needs
+            // from !== to), so the stop scheduled on "fade" would never run.
+            current.stop();
+          } else {
+            current.fade(this.soundEffectsVolume, 0, AMBIENCE_FADE_MS);
+            current.once("fade", () => current.stop());
+          }
         }
       }
       this.currentAmbience = track;
