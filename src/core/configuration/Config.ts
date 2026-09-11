@@ -429,14 +429,14 @@ export class Config {
 
   /**
    * Global spawn throttle for the train economy, counted in Train *units*
-   * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns while the
-   * world's rail traffic is light, ~1x around 90 units (~13 trains), then
-   * a capacity sigmoid collapses it toward 0 past ~400 units so total
-   * train income saturates instead of running away.
+   * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns for the very
+   * first trains, ~1x around 35 units (~5 trains), then a capacity
+   * sigmoid collapses it toward 0 past ~300 units so total train income
+   * saturates instead of running away.
    */
   trainSaturation(numTrainUnits: number): number {
-    const boost = 1 + 0.5 * exp(-numTrainUnits / 60);
-    const capacity = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 400);
+    const boost = 1 + 0.5 * exp(-numTrainUnits / 30);
+    const capacity = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 300);
     return boost * capacity;
   }
 
@@ -491,15 +491,15 @@ export class Config {
 
   /**
    * Global spawn throttle for the trade-ship economy. Up to ~2.25x odds
-   * while the world fleet is small (the pity timer square-roots the
+   * while the world fleet is tiny (the pity timer square-roots the
    * realized effect, so ~1.5x actual spawns), crossing the old un-boosted
-   * curve around 200 ships — a busy lobby reaches that near minute 8 —
-   * then a capacity sigmoid collapses it toward 0 past ~300 ships so
-   * total trade income saturates instead of running away.
+   * curve around 75 ships — a busy lobby passes that near minute 6 — and
+   * staying below it after: the capacity sigmoid collapses toward 0 past
+   * ~250 ships so total trade income saturates instead of running away.
    */
   tradeShipSaturation(numTradeShips: number): number {
-    const boost = 1 + 1.25 * exp(-numTradeShips / 100);
-    const capacity = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 300);
+    const boost = 1 + 1.25 * exp(-numTradeShips / 30);
+    const capacity = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 250);
     return boost * capacity;
   }
 
