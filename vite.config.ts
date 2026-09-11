@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
+import { configDefaults } from "vitest/config";
 import {
   type AssetManifest,
   buildAssetUrl,
@@ -270,9 +271,12 @@ export default defineConfig(({ mode }) => {
       // glob and run against that worktree's own (often stale) source and
       // node_modules. Anyone with a worktree checked out sees failures that
       // have nothing to do with their branch.
+      // Spread the defaults rather than restating them: setting `exclude`
+      // replaces vitest's built-in list, and hand-copying a subset silently
+      // drops the dot-directory pattern (.git, .cache, .output, ...) --
+      // reintroducing the same stray-file problem this is here to fix.
       exclude: [
-        "**/node_modules/**",
-        "**/dist/**",
+        ...configDefaults.exclude,
         "**/.worktrees/**",
         "**/.claude/worktrees/**",
       ],
