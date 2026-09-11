@@ -8,6 +8,7 @@ vi.mock("howler", () => {
   class MockHowl {
     src: string;
     loop: boolean;
+    html5: boolean;
     volumes: number[] = [];
     play = vi.fn(() => nextPlayId++);
     stop = vi.fn((id?: number) => this._fire("stop", id ?? -1));
@@ -40,6 +41,7 @@ vi.mock("howler", () => {
     constructor(opts: any) {
       this.src = opts.src[0];
       this.loop = opts.loop ?? false;
+      this.html5 = opts.html5 ?? false;
       howlInstances.push(this);
     }
   }
@@ -110,6 +112,14 @@ describe("background music", () => {
     expect(howlInstances.filter((h) => h.src.includes("music/")).length).toBe(
       1,
     );
+  });
+
+  it("streams instead of waiting for the whole file to decode", () => {
+    // Howler's default Web Audio path downloads and decodes the entire track
+    // before the first note. gameplay.mp3 is 4.6 MB, which was tens of seconds
+    // of silence at game start. Ambience and cues stay on Web Audio, so this
+    // has to stay specific to the music track.
+    expect(find("gameplay.mp3").html5).toBe(true);
   });
 
   it("follows the music slider through the mixer", () => {
@@ -205,6 +215,11 @@ describe("ambience", () => {
     expect(to).toBe(0);
     expect(ms).toBeGreaterThan(0);
     expect(city.stop).not.toHaveBeenCalled();
+  });
+
+  it("stays on web audio, which loops without a seam", () => {
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    expect(find("city.mp3").html5).toBe(false);
   });
 
   it("follows the ambience slider while a loop is running", () => {

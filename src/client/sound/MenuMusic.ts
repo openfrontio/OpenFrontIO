@@ -27,6 +27,10 @@ export function startMenuMusic(mixer: AudioMixer): void {
         src: [assetUrl("sounds/music/menu-theme.mp3")],
         loop: true,
         volume: 0,
+        // Stream rather than decode 2.2 MB up front -- see the gameplay track
+        // in SoundManager. This one starts on the player's first click, so the
+        // wait would land right when they are trying to use the page.
+        html5: true,
       });
       mixer.register(theme, "music");
       theme.play();

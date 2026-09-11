@@ -9,6 +9,7 @@ const { howlerVolume } = vi.hoisted(() => ({ howlerVolume: vi.fn() }));
 vi.mock("howler", () => {
   class MockHowl {
     src: string;
+    html5: boolean;
     volumes: number[] = [];
     play = vi.fn(() => nextPlayId++);
     stop = vi.fn((id?: number) => this._fire("stop", id ?? -1));
@@ -48,6 +49,7 @@ vi.mock("howler", () => {
     }
     constructor(opts: any) {
       this.src = opts.src[0];
+      this.html5 = opts.html5 ?? false;
       howlInstances.push(this);
     }
   }
@@ -233,6 +235,19 @@ describe("per-channel budgets", () => {
     const howl = howlInstances.find((h) => h.src.includes("slider"));
     expect(howl.play).toHaveBeenCalledTimes(4);
     expect(howl.fade).not.toHaveBeenCalled();
+  });
+});
+
+describe("cue loading", () => {
+  it("keeps cues on web audio rather than streaming them", () => {
+    // Only the two music tracks stream (see SoundManager/MenuMusic). Cues are
+    // small, need the Web Audio graph, and would pick up HTML5 Audio's start
+    // latency on every click if this ever got applied across the board.
+    build({ effects: 1, interface: 1 });
+    mixer.play("build-city");
+    mixer.play("click");
+    expect(howlInstances.length).toBeGreaterThan(0);
+    for (const howl of howlInstances) expect(howl.html5).toBe(false);
   });
 });
 
