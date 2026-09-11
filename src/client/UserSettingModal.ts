@@ -24,7 +24,7 @@ import {
 } from "./DesktopDisplay";
 import { isDesktopShell } from "./DesktopShell";
 import { Platform } from "./Platform";
-import { audioMixer } from "./sound/AudioMixer";
+import { playCue } from "./sound/CuePlayer";
 import {
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
@@ -475,8 +475,9 @@ export class UserSettingModal extends BaseModal {
     this.lastSliderTickMs = now;
     // Through the mixer, not the bus: this component is mounted twice, and
     // the page instance has no bus, so a bus hop is silent exactly where the
-    // player is most likely to be dragging a slider.
-    audioMixer()?.play("slider");
+    // player is most likely to be dragging a slider. Via CuePlayer so the
+    // modal does not drag howler into every test that mounts it.
+    playCue("slider");
   }
 
   private renderAudioSettings() {
