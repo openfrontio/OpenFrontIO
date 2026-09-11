@@ -22,6 +22,7 @@ export class SoundManager {
   private ambienceTracks = new Map<AmbienceTrack, Howl>();
   private currentAmbience: AmbienceTrack | null = null;
   private fadingOut = new Set<Howl>();
+  private fadingIn = new Set<Howl>();
   private onPlaySoundEffect: (e: PlaySoundEffectEvent) => void;
   private onSetAmbience: (e: SetAmbienceEvent) => void;
   private stopFollowingVolume: () => void;
@@ -76,6 +77,7 @@ export class SoundManager {
     });
     this.ambienceTracks.clear();
     this.fadingOut.clear();
+    this.fadingIn.clear();
     this.currentAmbience = null;
   }
 
@@ -139,31 +141,67 @@ export class SoundManager {
       // at a constant zoom can also re-enter with the loop already at target.
       const from = howl.volume() as number;
       if (target === 0 || from === target) {
+        this.fadingIn.delete(howl);
         howl.volume(target);
       } else {
-        howl.fade(from, target, AMBIENCE_FADE_MS);
+        this.fadeInTo(howl, from, target);
       }
     });
   }
 
   /**
+   * Ramps a loop up to `target` and remembers that it is moving, so a volume
+   * change arriving mid-ramp can re-aim it instead of cutting it short.
+   */
+  private fadeInTo(howl: Howl, from: number, target: number): void {
+    this.fadingIn.add(howl);
+    howl.fade(from, target, AMBIENCE_FADE_MS);
+    howl.once("fade", () => this.fadingIn.delete(howl));
+  }
+
+  /**
    * Follows the ambience channel while a loop is already running: the zoom
-   * envelope moves every tick, and the slider can move at any time. Skips
-   * anything mid fade-out, which is on its way to silence regardless.
+   * envelope moves every tick, and the slider can move at any time.
+   *
+   * Neither direction of an in-flight fade may be cut short by this. Howler's
+   * volume() setter calls _stopFade internally, so a plain write lands the
+   * loop on the new level instantly -- which is the abruptness the fades are
+   * here to avoid. A fade-out is left alone; it is on its way to silence
+   * whatever the envelope now says. A fade-in is re-aimed from wherever the
+   * ramp has actually reached, so it stays smooth and still ends up at the
+   * level the envelope is asking for.
    */
   private retargetAmbience(): void {
     if (this.currentAmbience === null) return;
     const howl = this.ambienceTracks.get(this.currentAmbience);
     if (howl === undefined || this.fadingOut.has(howl)) return;
-    this.safely("retarget ambience", () =>
-      howl.volume(this.mixer.volumeFor("ambience")),
-    );
+    this.safely("retarget ambience", () => {
+      const target = this.mixer.volumeFor("ambience");
+      if (!this.fadingIn.has(howl)) {
+        howl.volume(target);
+        return;
+      }
+      const live = howl.volume() as number;
+      // Drop the old ramp's completion handler before starting another, or it
+      // would clear the fading-in flag out from under the new one.
+      howl.off("fade");
+      this.fadingIn.delete(howl);
+      // Same trap as everywhere else: a fade from a value to itself never
+      // completes in Howler. Landing on the target is all that is left to do.
+      if (live === target) {
+        howl.volume(target);
+        return;
+      }
+      this.fadeInTo(howl, live, target);
+    });
   }
 
   private fadeOutCurrent(): void {
     if (this.currentAmbience === null) return;
     const current = this.ambienceTracks.get(this.currentAmbience);
     if (current === undefined) return;
+    // Whatever it was doing, it is leaving now.
+    this.fadingIn.delete(current);
     const from = current.volume() as number;
     if (from === 0) {
       current.stop();
