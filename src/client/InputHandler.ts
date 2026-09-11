@@ -858,10 +858,12 @@ export class InputHandler {
     }
 
     // macOS treats Ctrl+Left as secondary-click (context menu). Skip the
-    // primary-click path so we don't also fire an attack (#4918). The
-    // contextmenu listener opens the radial. After the modifier checks this
-    // is safe on Win/Linux too (those already returned with the build menu).
-    if (event.ctrlKey) {
+    // primary-click path so we don't also fire an attack (#4918). Mac-only:
+    // on Win/Linux event.ctrlKey is also true for Right Ctrl, which is not
+    // the default build-menu bind and must still attack. Spawn-phase
+    // Ctrl+click still needs MouseUpEvent — contextmenu is ignored then.
+    if (Platform.isMac && event.ctrlKey && !this.gameView.inSpawnPhase()) {
+      this.suppressNextTap = false;
       return;
     }
 
