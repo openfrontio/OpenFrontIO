@@ -12,6 +12,7 @@ import {
   Trios,
 } from "../core/game/Game";
 import { GameConfig } from "../core/Schemas";
+import { stripVersionPrefix } from "../core/ServerList";
 import { ClientEnv } from "./ClientEnv";
 import type { LangSelector } from "./LangSelector";
 import { Platform } from "./Platform";
@@ -871,6 +872,19 @@ export function reloadForUpdate(): void {
   }
   url.searchParams.set("v", Date.now().toString(36));
   window.location.replace(url.toString());
+}
+
+/**
+ * The path to ask the apex for when re-entering through it. Both prefixes a
+ * path can carry are specific to where the page came from, and the apex
+ * re-resolves what they encoded: `/w<n>/` is one deployment's worker (letter
+ * routing picks the worker again), and `/v/<commit>/` pins the version whose
+ * staleness is the reason for going to the apex in the first place. Pure so
+ * the rule is testable without booting Main.
+ */
+export function apexPathFor(pathname: string): string {
+  const { path } = stripVersionPrefix(pathname);
+  return path.replace(/^\/w\d+\//, "/");
 }
 
 /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   commitsMatch,
+  isCommitLike,
   pickOpenServer,
   ServerList,
   ServerListSchema,
@@ -45,6 +46,28 @@ describe("ServerListSchema", () => {
     expect(ServerListSchema.safeParse({ servers: LIST.servers }).success).toBe(
       true,
     );
+  });
+
+  // latest and version are interpolated into /v/<x>/ by versionedPath, and
+  // the loop guard can only compare commit-shaped values. A list naming
+  // anything else is rejected whole, so the client keeps its own values
+  // instead of navigating to a path nothing serves.
+  it("rejects a latest or a version that is not commit-shaped", () => {
+    for (const latest of ["", "latest", "DEV", "../../evil", "deadbee"]) {
+      expect(ServerListSchema.safeParse({ ...LIST, latest }).success).toBe(
+        isCommitLike(latest),
+      );
+    }
+    expect(
+      ServerListSchema.safeParse({
+        servers: { d: { ...LIST.servers.d, version: "DEV" } },
+      }).success,
+    ).toBe(false);
+    expect(
+      ServerListSchema.safeParse({
+        servers: { d: { ...LIST.servers.d, version: "" } },
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects an unknown state and a non-letter key", () => {

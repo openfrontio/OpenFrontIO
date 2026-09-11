@@ -109,6 +109,7 @@ import "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import {
+  apexPathFor,
   homeHref,
   incrementGamesPlayed,
   presenceMapKey,
@@ -1060,9 +1061,10 @@ class Client {
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
       // Joining needs the API's server list (multi-server v2): the id's
-      // letter names the game's server there. A page found out of date is
-      // already navigating to the current version, which re-runs this.
-      if ((await ensureServerList()) === "redirecting") return;
+      // letter names the game's server there. No version check: joining an
+      // existing game is not starting something new, and the id's letter
+      // names its server whatever version that server runs.
+      await ensureServerList();
       // A letter this shell's cluster map doesn't know means the map
       // predates the game's deployment (stale CDN shell, or a link into a
       // newer fleet). The apex always serves the freshest map, so re-enter
@@ -1166,7 +1168,7 @@ class Client {
     // (its map is already the freshest; CDN staleness ages out in minutes).
     const apex = ClientEnv.siteHost();
     if (apex === undefined || window.location.host === apex) return false;
-    window.location.href = `https://${apex}${window.location.pathname.replace(/^\/w\d+\//, "/")}${window.location.search}`;
+    window.location.href = `https://${apex}${apexPathFor(window.location.pathname)}${window.location.search}`;
     return true;
   }
 

@@ -1,11 +1,11 @@
 import { z } from "zod";
 import {
-  commitsMatch,
   openLettersFor,
   pickOpenServer,
   ServerList,
   ServerListSchema,
   versionedPath,
+  versionMatches,
 } from "../core/ServerList";
 import { getApiBase } from "./ApiBase";
 import { ClientEnv } from "./ClientEnv";
@@ -51,10 +51,16 @@ export type ServerListStatus =
   // so multiplayer fails as it does today when the server is gone.
   | "no-server"
   // This page is out of date and a navigation to latest's page was issued.
+  // Only ever returned to a caller that asked for it (see ensureServerList's
+  // redirectIfOutOfDate).
   | "redirecting";
 
 let cached: { list: ServerList; fetchedAt: number } | null = null;
 let inflight: Promise<ServerList | null> | null = null;
+// When the last attempt settled, and whether it came back empty-handed. A
+// page with no list at all uses this to stay off the network between
+// heartbeats: see ensureServerList.
+let lastAttempt: { at: number; failed: boolean } | null = null;
 let pickedLetter: string | null = null;
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let polling = false;
@@ -66,6 +72,7 @@ export function resetServerList(): void {
   stopServerListPolling();
   cached = null;
   inflight = null;
+  lastAttempt = null;
   pickedLetter = null;
   reachable = null;
   warnedMalformed = false;
@@ -171,9 +178,13 @@ function fetchOnce(): Promise<ServerList | null> {
   inflight = fetchServerList(site)
     .then((list) => {
       if (list !== null) cached = { list, fetchedAt: Date.now() };
+      lastAttempt = { at: Date.now(), failed: list === null };
       return list;
     })
-    .catch(() => null)
+    .catch(() => {
+      lastAttempt = { at: Date.now(), failed: true };
+      return null;
+    })
     .finally(() => {
       inflight = null;
     });
@@ -235,16 +246,36 @@ function scheduleNextPoll(gotList: boolean): void {
  * A known list answers immediately whatever its age — a click must never
  * wait on the network — and a stale one is revalidated in the background.
  * Only a page that has never got a list waits: for the fetch already in
- * flight (the page-load one, usually), or for one started here.
+ * flight (the page-load one, usually), or for one started here. A page that
+ * has no list and whose last attempt just failed does not start another:
+ * the heartbeat retries on its own schedule, so a per-second caller (the
+ * matchmaking poll) cannot hammer a down API.
  *
  * The pick is sticky for the page's lifetime while its server stays open,
  * so the lobby list and the games created from it land on one server. It
  * moves only when that server stops taking new games.
+ *
+ * `redirectIfOutOfDate` navigates the page to `/v/<latest>/…` when the list
+ * says a newer version exists and nothing open runs this build. This is a
+ * version check before starting anything NEW: the public lobby list
+ * (LobbySocket.start) and Create (Api.createLobby). Joining or rejoining an
+ * existing game, and every in-game request, must leave it off — during a
+ * rolling deploy a player's own server is `draining` with no open sibling
+ * on their build, and redirecting would navigate a live match away. A
+ * version mismatch on join is handled at join time instead
+ * (`version_mismatch`). Only a caller that passes it can see
+ * "redirecting".
  */
-export async function ensureServerList(): Promise<ServerListStatus> {
+export async function ensureServerList(opts?: {
+  redirectIfOutOfDate?: boolean;
+}): Promise<ServerListStatus> {
   try {
     if (cached === null) {
-      await fetchOnce();
+      // Join the attempt in flight (the page-load one, usually); otherwise
+      // start one, unless the last one failed less than a retry interval
+      // ago. With the API down, callers that run on a timer would otherwise
+      // start a fetch every time they fire.
+      if (inflight !== null || retryDue()) await fetchOnce();
     } else if (
       Date.now() - cached.fetchedAt >= REFRESH_INTERVAL_MS &&
       inflight === null
@@ -252,7 +283,7 @@ export async function ensureServerList(): Promise<ServerListStatus> {
       // Stale-while-revalidate: answer now, refresh behind the answer.
       void fetchOnce();
     }
-    return apply();
+    return apply(opts?.redirectIfOutOfDate === true);
   } catch (e) {
     // The contract is "never throws": whatever went wrong, the page's own
     // values are still a complete answer.
@@ -261,7 +292,14 @@ export async function ensureServerList(): Promise<ServerListStatus> {
   }
 }
 
-function apply(): ServerListStatus {
+// Whether a page with no list may start a fresh attempt, or must wait for
+// the heartbeat's next beat.
+function retryDue(): boolean {
+  if (lastAttempt === null || !lastAttempt.failed) return true;
+  return Date.now() - lastAttempt.at >= RETRY_INTERVAL_MS;
+}
+
+function apply(redirectIfOutOfDate: boolean): ServerListStatus {
   const list = cached?.list ?? null;
   if (list === null) {
     pickedLetter = null;
@@ -282,7 +320,7 @@ function apply(): ServerListStatus {
   // No open server runs this build. Existing games still resolve by letter
   // from the list; own-server calls fall back to the page's own values.
   ClientEnv.applyServerList(list, null);
-  if (isOutOfDate(list, own)) {
+  if (redirectIfOutOfDate && isOutOfDate(list, own)) {
     const target = versionedPath(
       list.latest!,
       window.location.pathname,
@@ -300,10 +338,29 @@ function apply(): ServerListStatus {
 // latest, or the list names no latest, no server is running at all: there is
 // nothing to redirect to, and redirecting would only loop back here. The
 // desktop shell is never redirected: its updater owns which version it runs.
+//
+// versionMatches, not commitsMatch: a build label that names no commit
+// ("DEV" from the dev server, "desktop" from an old shell, "" when
+// BOOTSTRAP_CONFIG is unreadable) matches any version and is never out of
+// date — sending a dev build to /v/<sha>/ would take it off its own server.
+//
+// A replay shell is pinned on purpose: replay.<domain> serves the build a
+// record was made on, so being behind latest is the point. It is skipped
+// here as well as in startServerListPolling, because the lobby socket (the
+// one flow that does ask for the version check) runs there too.
 function isOutOfDate(list: ServerList, own: string): boolean {
   if (isDesktopShell()) return false;
+  if (isOnReplayShell()) return false;
   if (list.latest === undefined) return false;
-  return !commitsMatch(own, list.latest);
+  return !versionMatches(own, list.latest);
+}
+
+function isOnReplayShell(): boolean {
+  try {
+    return isReplayShellHost(window.location.hostname);
+  } catch {
+    return false;
+  }
 }
 
 // ClientEnv.get() throws without a BOOTSTRAP_CONFIG (and tests mock it

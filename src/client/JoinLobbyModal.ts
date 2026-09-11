@@ -1326,9 +1326,11 @@ export class JoinLobbyModal extends BaseModal {
     spectator = false,
   ): Promise<boolean> {
     // The id's letter names the game's server in the API's list
-    // (multi-server v2); load it before resolving. A page found out of date
-    // is already navigating to the current version, which re-runs this join.
-    if ((await ensureServerList()) === "redirecting") return true;
+    // (multi-server v2); load it before resolving. No version check here:
+    // the letter names the server whatever version it runs, and a mismatch
+    // is answered at join time (version_mismatch), never by navigating a
+    // page that may be mid-game.
+    await ensureServerList();
     const url = `${ClientEnv.gameHttpBase(lobbyId)}/${ClientEnv.gameWorkerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {
