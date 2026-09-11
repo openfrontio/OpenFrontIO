@@ -284,8 +284,7 @@ export class AudioMixer {
       const id = howl.play();
       howl.volume(this.volumeFor(category), id);
       this.active.push({ howl, id, category });
-      howl.once("end", () => this.forget(id), id);
-      howl.once("stop", () => this.forget(id), id);
+      this.releaseOnce(howl, id, () => this.forget(id));
     });
   }
 
@@ -311,13 +310,32 @@ export class AudioMixer {
       const id = howl.play();
       howl.volume(this.volumeFor(category), id);
       this.active.push({ howl, id, category });
-      const done = () => {
+      this.releaseOnce(howl, id, () => {
         this.forget(id);
         resolve();
-      };
-      howl.once("end", done, id);
-      howl.once("stop", done, id);
+      });
     });
+  }
+
+  /**
+   * Runs `done` on whichever of "end"/"stop" reaches this playback id first.
+   *
+   * Both have to be watched: a cue that runs out fires only "end", while one
+   * stopped early (budget eviction, dispose) fires only "stop". Howler's
+   * once() drops only the listener for the event that actually fired, so the
+   * unfired sibling would otherwise sit on the Howl forever -- and these Howls
+   * are cached per cue on a mixer that lives as long as the page, so a cue
+   * like "click" would grow its listener list for the whole session. Clearing
+   * the sibling here keeps exactly one registration per play.
+   */
+  private releaseOnce(howl: Howl, id: number, done: () => void): void {
+    const release = () => {
+      howl.off("end", release, id);
+      howl.off("stop", release, id);
+      done();
+    };
+    howl.once("end", release, id);
+    howl.once("stop", release, id);
   }
 
   private load(name: SoundEffect): Howl | null {

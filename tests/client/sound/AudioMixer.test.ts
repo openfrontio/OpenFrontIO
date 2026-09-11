@@ -29,7 +29,15 @@ vi.mock("howler", () => {
       if (!this._listeners.has(event)) this._listeners.set(event, new Map());
       this._listeners.get(event)!.set(id ?? -1, cb);
     });
-    off = vi.fn();
+    // Howler's off() narrows by event and id, and clears the whole event when
+    // given neither; once() only strips the listener for the event that
+    // actually fired, so the sibling survives unless it is taken off here.
+    off = vi.fn((event: string, fn?: () => void, id?: number) => {
+      const forEvent = this._listeners.get(event);
+      if (forEvent === undefined) return;
+      if (fn === undefined && id === undefined) forEvent.clear();
+      else forEvent.delete(id ?? -1);
+    });
     _listeners = new Map<string, Map<number, () => void>>();
     _fire(event: string, id: number) {
       const cb = this._listeners.get(event)?.get(id);
@@ -225,6 +233,48 @@ describe("per-channel budgets", () => {
     const howl = howlInstances.find((h) => h.src.includes("slider"));
     expect(howl.play).toHaveBeenCalledTimes(4);
     expect(howl.fade).not.toHaveBeenCalled();
+  });
+});
+
+describe("playback bookkeeping", () => {
+  // The mixer is a page-level singleton and its Howls are cached per cue, so
+  // a listener left registered by one play is never collected. A cue like
+  // "click" plays thousands of times a session.
+  const listenerCount = (howl: any) =>
+    (howl._listeners.get("end")?.size ?? 0) +
+    (howl._listeners.get("stop")?.size ?? 0);
+
+  it("leaves no listener behind when a cue plays out", () => {
+    build({ effects: 1 });
+    mixer.play("build-city");
+    const howl = howlInstances.find((h) => h.src.includes("build-city"));
+    const id = howl.play.mock.results[0].value;
+
+    howl._fire("end", id);
+
+    expect(listenerCount(howl)).toBe(0);
+  });
+
+  it("leaves no listener behind when a cue is stopped early", () => {
+    build({ effects: 1 });
+    mixer.play("build-city");
+    const howl = howlInstances.find((h) => h.src.includes("build-city"));
+    const id = howl.play.mock.results[0].value;
+
+    howl.stop(id);
+
+    expect(listenerCount(howl)).toBe(0);
+  });
+
+  it("does not accumulate listeners across repeated plays of one cue", () => {
+    build({ effects: 4 });
+    for (let i = 0; i < 6; i++) {
+      mixer.play("build-city");
+      const howl = howlInstances.find((h) => h.src.includes("build-city"));
+      howl._fire("end", howl.play.mock.results[i].value);
+    }
+    const howl = howlInstances.find((h) => h.src.includes("build-city"));
+    expect(listenerCount(howl)).toBe(0);
   });
 });
 
