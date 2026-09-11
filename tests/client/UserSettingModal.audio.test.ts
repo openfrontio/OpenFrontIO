@@ -301,28 +301,32 @@ describe("user-setting audio tab", () => {
 
   it("stores both blur toggles", async () => {
     const el = await mountAudioTab();
-    expect(new UserSettings().muteOnBlur()).toBe(true);
+    expect(new UserSettings().muteOnBlur()).toBe(false);
     expect(new UserSettings().alertsWhenUnfocused()).toBe(true);
+
+    // Mute-on-blur is off by default, so keep-alerts starts disabled: turn the
+    // parent on before touching it, as a player would have to.
+    toggle(el, "audio-mute-on-blur-toggle", true);
+    await el.updateComplete;
+    expect(new UserSettings().muteOnBlur()).toBe(true);
 
     toggle(el, "audio-alerts-when-unfocused-toggle", false);
     expect(new UserSettings().alertsWhenUnfocused()).toBe(false);
-
-    toggle(el, "audio-mute-on-blur-toggle", false);
-    expect(new UserSettings().muteOnBlur()).toBe(false);
   });
 
   it("disables keep-alerts while mute-on-blur is off", async () => {
     const el = await mountAudioTab();
     const dependent = () => checkbox(el, "audio-alerts-when-unfocused-toggle");
-    expect(dependent().disabled).toBe(false);
-
-    toggle(el, "audio-mute-on-blur-toggle", false);
-    await el.updateComplete;
+    // Off is the default, so the dependent row starts disabled.
     expect(dependent().disabled).toBe(true);
 
     toggle(el, "audio-mute-on-blur-toggle", true);
     await el.updateComplete;
     expect(dependent().disabled).toBe(false);
+
+    toggle(el, "audio-mute-on-blur-toggle", false);
+    await el.updateComplete;
+    expect(dependent().disabled).toBe(true);
   });
 
   it("renders the same tab on the in-game instance", async () => {

@@ -768,7 +768,10 @@ export class UserSettings {
   }
 
   muteOnBlur(): boolean {
-    return this.getBool("settings.audio.muteOnBlur", true);
+    // Off by default (Josh, 11 Sept 2026): the game keeps playing when the
+    // window loses focus unless the player asks otherwise. alertsWhenUnfocused
+    // stays on, since it only applies once this is turned on.
+    return this.getBool("settings.audio.muteOnBlur", false);
   }
 
   setMuteOnBlur(value: boolean): void {
