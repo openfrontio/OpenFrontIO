@@ -624,16 +624,19 @@ export class MapPlaylist {
         case "special":
           // Special games are rolled as ffa or team (see getSpecialConfig), so
           // fall back to the matching per-mode frequency before multiplayerFrequency.
+          // The per-mode frequency only counts here when it's a deliberate positive
+          // weight - a map opted out of ffa/team entirely (frequency 0, e.g. Sol,
+          // ArchipelagoSea) should still reach special via multiplayerFrequency.
           if (mapInfo.specialFrequency >= 0) {
             freq = mapInfo.specialFrequency;
           } else if (mode === GameMode.Team) {
             freq =
-              mapInfo.teamFrequency >= 0
+              mapInfo.teamFrequency > 0
                 ? mapInfo.teamFrequency
                 : mapInfo.multiplayerFrequency;
           } else {
             freq =
-              mapInfo.ffaFrequency >= 0
+              mapInfo.ffaFrequency > 0
                 ? mapInfo.ffaFrequency
                 : mapInfo.multiplayerFrequency;
           }
