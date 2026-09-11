@@ -906,12 +906,12 @@ export class InputHandler {
     }
     // Alt also blocks zooming, to match behavior of Ctrl / Shift
     if (event.altKey) {
-      if (Math.abs(event.deltaY) > 2){
+      if (Math.abs(event.deltaY) > 2) {
         this.setGhostStructure(
           this.uiState.ghostStructure,
           scrollValue > 0 ? "decrease" : "increase",
         );
-      return;
+        return;
       }
     }
 
