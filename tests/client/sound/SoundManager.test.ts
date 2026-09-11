@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock howler before importing SoundManager
 const howlCtor = vi.fn();
@@ -13,6 +13,7 @@ vi.mock("howler", () => {
       }
     });
     volume = vi.fn();
+    fade = vi.fn();
     playing = vi.fn().mockReturnValue(false);
     unload = vi.fn();
     once = vi.fn((event: string, callback: () => void, id?: number) => {
@@ -47,6 +48,9 @@ vi.mock("../../../src/client/sound/Sounds", async (importOriginal) => {
     ...actual,
     soundEffectUrls: new Map([
       ["click", "mock/click.mp3"],
+      ["click-1", "mock/click-1.mp3"],
+      ["click-2", "mock/click-2.mp3"],
+      ["click-3", "mock/click-3.mp3"],
       ["atom-hit", "mock/atom-hit.mp3"],
       ["atom-launch", "mock/atom-launch.mp3"],
       ["hydrogen-hit", "mock/hydrogen-hit.mp3"],
@@ -60,11 +64,13 @@ vi.mock("../../../src/client/sound/Sounds", async (importOriginal) => {
 });
 
 import {
+  EFFECTS_MASTER_GAIN,
   MAX_CONCURRENT_SOUNDS,
   SoundManager,
 } from "../../../src/client/sound/SoundManager";
 import {
   PlaySoundEffectEvent,
+  SetAmbienceEvent,
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
 } from "../../../src/client/sound/Sounds";
@@ -87,16 +93,31 @@ describe("SoundManager", () => {
     howlCtor.mockClear();
     howlInstances.length = 0;
     nextPlayId = 1;
+    // Pin the click-variant randomization to variant 0 ("click").
+    vi.spyOn(Math, "random").mockReturnValue(0);
     eventBus = new EventBus();
     userSettings = createUserSettings();
     soundManager = new SoundManager(eventBus, userSettings);
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("lazy-loads a sound effect once and reuses it", () => {
     eventBus.emit(new PlaySoundEffectEvent("click"));
     eventBus.emit(new PlaySoundEffectEvent("click"));
-    // 3 background music Howls + 1 Click Howl = 4
-    expect(howlCtor).toHaveBeenCalledTimes(4);
+    // 1 background music Howl + 1 Click Howl = 2
+    expect(howlCtor).toHaveBeenCalledTimes(2);
+  });
+
+  it("fans 'click' out to a random variant", () => {
+    // floor(0.9 * 4 variants) = variant 3.
+    vi.spyOn(Math, "random").mockReturnValue(0.9);
+    eventBus.emit(new PlaySoundEffectEvent("click"));
+    expect(howlCtor).toHaveBeenLastCalledWith(
+      expect.objectContaining({ src: ["mock/click-3.mp3"] }),
+    );
   });
 
   it("plays a sound effect when PlaySoundEffectEvent is emitted", () => {
@@ -111,7 +132,7 @@ describe("SoundManager", () => {
     howlCtor.mockClear();
     howlInstances.length = 0;
     new SoundManager(bus, settings);
-    const bgHowls = howlInstances.slice(0, 3);
+    const bgHowls = howlInstances.slice(0, 1);
     bgHowls.forEach((h) => {
       // Slider position is curved (squared) into perceptual gain: 0.5² = 0.25.
       expect(h.volume).toHaveBeenCalledWith(0.25);
@@ -125,17 +146,18 @@ describe("SoundManager", () => {
     howlInstances.length = 0;
     new SoundManager(bus, settings);
     bus.emit(new PlaySoundEffectEvent("click"));
-    // Slider position 0.3 is curved (squared) into perceptual gain: 0.3² = 0.09.
+    // Slider position 0.3 is curved (squared) into perceptual gain (0.3² =
+    // 0.09), then trimmed by the -5 dB effects master gain.
     expect(howlCtor).toHaveBeenLastCalledWith(
-      expect.objectContaining({ volume: 0.09 }),
+      expect.objectContaining({ volume: 0.3 * 0.3 * EFFECTS_MASTER_GAIN }),
     );
   });
 
   it("responds to SetBackgroundMusicVolumeEvent", () => {
     eventBus.emit(new SetBackgroundMusicVolumeEvent(0.7));
-    const bgHowls = howlInstances.slice(0, 3);
+    const bgHowls = howlInstances.slice(0, 1);
     bgHowls.forEach((h) => {
-      // 0.7² = 0.49 perceptual gain.
+      // 0.7² = 0.49 perceptual gain (no master trim on music).
       expect(h.volume).toHaveBeenCalledWith(0.7 * 0.7);
     });
   });
@@ -145,13 +167,15 @@ describe("SoundManager", () => {
     const clickHowl = howlInstances[howlInstances.length - 1];
     clickHowl.volume.mockClear();
     eventBus.emit(new SetSoundEffectsVolumeEvent(0.4));
-    // 0.4² = 0.16 perceptual gain.
-    expect(clickHowl.volume).toHaveBeenCalledWith(0.4 * 0.4);
+    // 0.4² = 0.16 perceptual gain, trimmed by the effects master gain.
+    expect(clickHowl.volume).toHaveBeenCalledWith(
+      0.4 * 0.4 * EFFECTS_MASTER_GAIN,
+    );
   });
 
   it("clamps volume values between 0 and 1", () => {
     eventBus.emit(new SetBackgroundMusicVolumeEvent(2));
-    const bgHowls = howlInstances.slice(0, 3);
+    const bgHowls = howlInstances.slice(0, 1);
     bgHowls.forEach((h) => {
       expect(h.volume).toHaveBeenCalledWith(1);
     });
@@ -164,7 +188,7 @@ describe("SoundManager", () => {
   });
 
   it("curves the slider position into perceptual gain so the top of the range is audibly distinct", () => {
-    const bgHowls = howlInstances.slice(0, 3);
+    const bgHowls = howlInstances.slice(0, 1);
     // Linear gain would make 0.9 and 1.0 nearly indistinguishable; squaring
     // spreads the top end (0.9 → 0.81) so reductions are noticeable sooner.
     eventBus.emit(new SetBackgroundMusicVolumeEvent(0.9));
@@ -195,7 +219,7 @@ describe("SoundManager", () => {
   });
 
   it("dispose() stops and unloads background music", () => {
-    const bgHowls = howlInstances.slice(0, 3);
+    const bgHowls = howlInstances.slice(0, 1);
 
     soundManager.dispose();
 
@@ -203,6 +227,44 @@ describe("SoundManager", () => {
       expect(h.stop).toHaveBeenCalled();
       expect(h.unload).toHaveBeenCalled();
     });
+  });
+
+  it("plays a looping ambience on SetAmbienceEvent and stops it when cleared", () => {
+    eventBus.emit(new SetAmbienceEvent("city"));
+    const ambienceHowl = howlInstances[howlInstances.length - 1];
+    expect(howlCtor).toHaveBeenLastCalledWith(
+      expect.objectContaining({ loop: true }),
+    );
+    expect(ambienceHowl.play).toHaveBeenCalledTimes(1);
+
+    eventBus.emit(new SetAmbienceEvent(null));
+    expect(ambienceHowl.stop).toHaveBeenCalled();
+  });
+
+  it("switching ambience stops the previous loop and starts the new one", () => {
+    eventBus.emit(new SetAmbienceEvent("city"));
+    const cityHowl = howlInstances[howlInstances.length - 1];
+    eventBus.emit(new SetAmbienceEvent("factory"));
+    const factoryHowl = howlInstances[howlInstances.length - 1];
+    expect(cityHowl.stop).toHaveBeenCalled();
+    expect(factoryHowl.play).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-emitting the current ambience does not restart it", () => {
+    eventBus.emit(new SetAmbienceEvent("city"));
+    const ambienceHowl = howlInstances[howlInstances.length - 1];
+    eventBus.emit(new SetAmbienceEvent("city"));
+    expect(ambienceHowl.play).toHaveBeenCalledTimes(1);
+  });
+
+  it("sfx volume changes apply to loaded ambience loops", () => {
+    eventBus.emit(new SetAmbienceEvent("city"));
+    const ambienceHowl = howlInstances[howlInstances.length - 1];
+    ambienceHowl.volume.mockClear();
+    eventBus.emit(new SetSoundEffectsVolumeEvent(0.4));
+    expect(ambienceHowl.volume).toHaveBeenCalledWith(
+      0.4 * 0.4 * EFFECTS_MASTER_GAIN,
+    );
   });
 
   it("does not throw when playSoundEffect is called directly", () => {
@@ -254,8 +316,14 @@ describe("Sound channel management", () => {
     howlCtor.mockClear();
     howlInstances.length = 0;
     nextPlayId = 1;
+    // Pin the click-variant randomization to variant 0 ("click").
+    vi.spyOn(Math, "random").mockReturnValue(0);
     eventBus = new EventBus();
     new SoundManager(eventBus, createUserSettings());
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("new sound always plays even when at channel cap", () => {

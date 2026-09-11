@@ -236,16 +236,20 @@ export class ActionableEvents extends LitElement implements Controller {
         {
           text: translateText("events_display.accept_alliance"),
           className: "btn",
-          action: () =>
+          action: () => {
+            this.eventBus.emit(new PlaySoundEffectEvent("alliance-accepted"));
             this.eventBus.emit(
               new SendAllianceRequestIntentEvent(recipient, requestor),
-            ),
+            );
+          },
         },
         {
           text: translateText("events_display.reject_alliance"),
           className: "btn-info",
-          action: () =>
-            this.eventBus.emit(new SendAllianceRejectIntentEvent(requestor)),
+          action: () => {
+            this.eventBus.emit(new PlaySoundEffectEvent("alliance-declined"));
+            this.eventBus.emit(new SendAllianceRejectIntentEvent(requestor));
+          },
         },
       ],
       type: MessageType.ALLIANCE_REQUEST,

@@ -116,6 +116,7 @@ import "./components/BannedModal";
 import "./components/DesktopStatusBar";
 import "./components/MarketingConsentToast";
 import "./components/PurchaseNudgeModal";
+import { startMenuMusic } from "./sound/MenuMusic";
 import {
   installCtrlWheelZoomBlocker,
   installDoubleTapZoomBlocker,
@@ -295,6 +296,8 @@ class Client {
     // consuming an empty stash before the code was ever written, losing the
     // prefill for an already-signed-in visitor hitting /c/CODE directly.
     consumeCreatorCodePath();
+
+    startMenuMusic(this.userSettings);
 
     // Snapshot the lapse-notice marker SYNCHRONOUSLY, before the first await.
     //
