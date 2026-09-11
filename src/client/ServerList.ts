@@ -278,9 +278,13 @@ export async function ensureServerList(opts?: {
       if (inflight !== null || retryDue()) await fetchOnce();
     } else if (
       Date.now() - cached.fetchedAt >= REFRESH_INTERVAL_MS &&
-      inflight === null
+      inflight === null &&
+      retryDue()
     ) {
-      // Stale-while-revalidate: answer now, refresh behind the answer.
+      // Stale-while-revalidate: answer now, refresh behind the answer. Once
+      // the list is stale it stays stale until an attempt succeeds, so
+      // without retryDue() a failing API would get one background refresh
+      // per caller here too — the list keeps serving either way.
       void fetchOnce();
     }
     return apply(opts?.redirectIfOutOfDate === true);
@@ -292,8 +296,9 @@ export async function ensureServerList(opts?: {
   }
 }
 
-// Whether a page with no list may start a fresh attempt, or must wait for
-// the heartbeat's next beat.
+// Whether a caller may start a fresh attempt, or must leave it to the
+// heartbeat's next beat. Only a failed attempt holds anything back, and only
+// for the retry interval; the cached list (if any) keeps serving meanwhile.
 function retryDue(): boolean {
   if (lastAttempt === null || !lastAttempt.failed) return true;
   return Date.now() - lastAttempt.at >= RETRY_INTERVAL_MS;
