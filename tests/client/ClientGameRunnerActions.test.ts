@@ -176,15 +176,23 @@ describe("left click", () => {
   });
 
   it("does nothing when the player is not in the view yet", async () => {
-    const { eventBus, myPlayer } = makeRunner({
+    const { eventBus, gameView } = makeRunner({
       hasOwner: true,
       playerByClientID: () => null,
     });
+    const attacks: SendAttackIntentEvent[] = [];
+    eventBus.on(SendAttackIntentEvent, (e) => attacks.push(e));
+    const boats: SendBoatAttackIntentEvent[] = [];
+    eventBus.on(SendBoatAttackIntentEvent, (e) => boats.push(e));
 
     eventBus.emit(new MouseUpEvent(CLICK.x, CLICK.y));
     await flushPromises();
 
-    expect(myPlayer.actions).not.toHaveBeenCalled();
+    // The lazy-lookup branch was reached and returned early: no intent of
+    // either kind went out.
+    expect(gameView.playerByClientID).toHaveBeenCalledWith("c0000001");
+    expect(attacks).toHaveLength(0);
+    expect(boats).toHaveLength(0);
   });
 });
 
