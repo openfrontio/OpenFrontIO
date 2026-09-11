@@ -266,6 +266,16 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: "jsdom",
       setupFiles: "./tests/setup.ts",
+      // Git worktrees live inside the repo, so their tests match the default
+      // glob and run against that worktree's own (often stale) source and
+      // node_modules. Anyone with a worktree checked out sees failures that
+      // have nothing to do with their branch.
+      exclude: [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/.worktrees/**",
+        "**/.claude/worktrees/**",
+      ],
     },
     root: "./",
     base: "/",
