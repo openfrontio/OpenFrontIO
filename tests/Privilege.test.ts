@@ -1,7 +1,7 @@
 import {
-  enforceVerifiedBadge,
   FailOpenPrivilegeChecker,
   PrivilegeCheckerImpl,
+  resolveVerifiedJoin,
 } from "../src/server/Privilege";
 
 const mockCosmetics = { patterns: {}, colorPalettes: {}, flags: {} };
@@ -226,81 +226,108 @@ describe("Verified badge in isAllowed", () => {
   });
 });
 
-describe("enforceVerifiedBadge", () => {
-  test("keeps the badge for an entitled player joining under their exact bare name", () => {
+// Spec (10 Sept 2026): `cosmetics.verified` on a join is INTENT, not a claim
+// the server verifies. The check stays only when the account renders bare
+// and the screened join name is exactly that bare name; the name is never
+// replaced, so the censor and join_verify pipeline stays in front of
+// everything the lobby shows. Nothing on the wire can mint a badge.
+describe("resolveVerifiedJoin", () => {
+  test("an account holding its bare name, joined under it, keeps the check", () => {
     for (const usernameStatus of ["premium", "indefinite"]) {
       const cosmetics = { verified: true };
       expect(
-        enforceVerifiedBadge(cosmetics, "Bob", {
+        resolveVerifiedJoin(cosmetics, "Bob", {
           username: "Bob",
+          usernameBase: "Bob",
           usernameStatus,
         }),
-      ).toBe(false);
+      ).toBe("verified");
       expect(cosmetics.verified).toBe(true);
     }
   });
 
-  test("strips on a case-different join name (exact match only)", () => {
-    const cosmetics = { verified: true };
-    expect(
-      enforceVerifiedBadge(cosmetics, "bob", {
-        username: "Bob",
-        usernameStatus: "premium",
-      }),
-    ).toBe(true);
-    expect(cosmetics.verified).toBeUndefined();
-  });
-
-  test("strips on a different name entirely", () => {
-    const cosmetics = { verified: true };
-    expect(
-      enforceVerifiedBadge(cosmetics, "Alice", {
-        username: "Bob",
-        usernameStatus: "premium",
-      }),
-    ).toBe(true);
-    expect(cosmetics.verified).toBeUndefined();
-  });
-
-  test("strips unentitled statuses even on an exact match", () => {
-    for (const usernameStatus of ["unclaimed", "claimed", undefined]) {
+  test("a join name that differs from the account name drops the check and stands", () => {
+    // A hand-crafted join, and a name the screening pipeline rewrote, look
+    // the same from here: the screened name is what plays, unverified.
+    for (const joinName of ["Whatever", "bob", "Bob.4821"]) {
       const cosmetics = { verified: true };
       expect(
-        enforceVerifiedBadge(cosmetics, "Bob.4821", {
-          username: "Bob.4821",
+        resolveVerifiedJoin(cosmetics, joinName, {
+          username: "Bob",
+          usernameBase: "Bob",
+          usernameStatus: "premium",
+        }),
+      ).toBe("custom");
+      expect(cosmetics.verified).toBeUndefined();
+    }
+  });
+
+  test("a subscriber whose bare name is held plays under the sent name, unchecked", () => {
+    const cosmetics = { verified: true };
+    expect(
+      resolveVerifiedJoin(cosmetics, "Bob.4821", {
+        username: "Bob.4821",
+        usernameBase: "Bob",
+        usernameStatus: "premium",
+      }),
+    ).toBe("custom");
+    expect(cosmetics.verified).toBeUndefined();
+  });
+
+  test("unentitled statuses never get the check, even on a bare display", () => {
+    for (const usernameStatus of ["claimed", "unclaimed", "none", undefined]) {
+      const cosmetics = { verified: true };
+      expect(
+        resolveVerifiedJoin(cosmetics, "Bob", {
+          username: "Bob",
+          usernameBase: "Bob",
           usernameStatus,
         }),
-      ).toBe(true);
+      ).toBe("custom");
       expect(cosmetics.verified).toBeUndefined();
     }
   });
 
-  test("strips when the account has no username set", () => {
-    for (const account of [
-      { username: null, usernameStatus: "premium" },
-      { usernameStatus: "premium" },
-    ]) {
-      const cosmetics = { verified: true };
-      expect(enforceVerifiedBadge(cosmetics, "Bob", account)).toBe(true);
-      expect(cosmetics.verified).toBeUndefined();
-    }
-  });
-
-  test("keeps the badge on an anonymous join (null account, Dev-only)", () => {
+  test("a TEMPORARY#### placeholder never gets the check, even entitled and bare", () => {
     const cosmetics = { verified: true };
-    expect(enforceVerifiedBadge(cosmetics, "Whatever", null)).toBe(false);
+    expect(
+      resolveVerifiedJoin(cosmetics, "TEMPORARY7823", {
+        username: "TEMPORARY7823",
+        usernameBase: "TEMPORARY7823",
+        usernameStatus: "premium",
+      }),
+    ).toBe("custom");
+    expect(cosmetics.verified).toBeUndefined();
+  });
+
+  test("an account with no username set is custom", () => {
+    const cosmetics = { verified: true };
+    expect(
+      resolveVerifiedJoin(cosmetics, "Bob", {
+        username: null,
+        usernameBase: null,
+        usernameStatus: "premium",
+      }),
+    ).toBe("custom");
+    expect(cosmetics.verified).toBeUndefined();
+  });
+
+  test("an anonymous join (null account, Dev-only) keeps intent", () => {
+    const cosmetics = { verified: true };
+    expect(resolveVerifiedJoin(cosmetics, "Whatever", null)).toBe("dev");
     expect(cosmetics.verified).toBe(true);
   });
 
-  test("no-op without a claim", () => {
-    for (const cosmetics of [{}, { verified: false }]) {
-      expect(
-        enforceVerifiedBadge(cosmetics, "Bob", {
-          username: "Other",
-          usernameStatus: "unclaimed",
-        }),
-      ).toBe(false);
-    }
+  test("no intent means nothing changes, whatever the account holds", () => {
+    const cosmetics = {};
+    expect(
+      resolveVerifiedJoin(cosmetics, "Casual", {
+        username: "Bob",
+        usernameBase: "Bob",
+        usernameStatus: "premium",
+      }),
+    ).toBe("custom");
+    expect((cosmetics as { verified?: boolean }).verified).toBeUndefined();
   });
 });
 
