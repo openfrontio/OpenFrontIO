@@ -8,157 +8,158 @@
     {
       "coordinates": [417, 227],
       "name": "Plymouth",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [508, 746],
       "name": "Falmouth",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [494, 982],
       "name": "Martha's Vineyard",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [1200, 1141],
       "name": "Nantucket",
-      "flag": "us"
+      "flag": "Nantucket"
     },
     {
       "coordinates": [1077, 60],
       "name": "Provincetown",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [154, 200],
       "name": "Bridgewater",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [104, 67],
       "name": "Brockton",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [341, 490],
       "name": "Wareham",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [524, 488],
       "name": "Bourne",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [676, 482],
       "name": "Sandwich",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [666, 644],
       "name": "Mashpee",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [942, 606],
       "name": "Barnstable",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [1098, 524],
       "name": "Dennis",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [1373, 572],
       "name": "Chatham",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [1353, 460],
       "name": "Orleans",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [1363, 340],
       "name": "Eastham",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [1303, 207],
       "name": "Wellfleet",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [59, 648],
       "name": "New Bedford",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [222, 601],
       "name": "Mattapoisett",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [432, 33],
       "name": "Marshfield",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [27, 347],
       "name": "Taunton",
-      "flag": "us"
+      "flag": "Taunton"
     },
     {
       "coordinates": [281, 883],
       "name": "Naushon Island",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [156, 933],
       "name": "Nashawena Island",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [597, 986],
       "name": "Edgartown",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [562, 912],
       "name": "Oak Bluffs",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [171, 471],
       "name": "Rochester",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [295, 348],
       "name": "South Carver",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [572, 287],
       "name": "Manomet",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [231, 1175],
       "name": "Nomans Land",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [1388, 1161],
       "name": "Siasconset",
-      "flag": "us"
+      "flag": "Massachusetts"
     },
     {
       "coordinates": [997, 1114],
       "name": "Tuckernuck Island",
-      "flag": "us"
+      "flag": "Massachusetts"
     }
-  ]
+  ],
+  "themes": ["north_america"]
 }

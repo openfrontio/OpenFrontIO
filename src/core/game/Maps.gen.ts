@@ -540,6 +540,7 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 31,
+    themes: ["north_america"],
   },
   {
     id: "Caribbean",
