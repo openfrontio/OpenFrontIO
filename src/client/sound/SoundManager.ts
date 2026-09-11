@@ -102,10 +102,20 @@ export class SoundManager {
   // ------------------------------------------------------------- ambience
 
   public setAmbience(track: AmbienceTrack | null, gain: number = 1): void {
-    this.mixer.setAmbienceEnvelope(gain);
-    if (track === this.currentAmbience) return;
+    // Same track, so there is nothing to cross over: the gain is the whole
+    // update and the mixer's change listener retargets the running loop.
+    if (track === this.currentAmbience) {
+      this.mixer.setAmbienceEnvelope(gain);
+      return;
+    }
     this.safely("set ambience", () => {
+      // The outgoing loop has to start fading from the level it is audibly at,
+      // so the new envelope lands *after* it. Leaving ambience range always
+      // arrives as (null, 0); pushing that gain in first would run the mixer's
+      // change listener back through retargetAmbience(), snap the outgoing
+      // loop to silence, and turn the fade below into a hard cut.
       this.fadeOutCurrent();
+      this.mixer.setAmbienceEnvelope(gain);
       this.currentAmbience = track;
       if (track === null) return;
 

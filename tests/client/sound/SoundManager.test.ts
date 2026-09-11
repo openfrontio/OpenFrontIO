@@ -189,10 +189,22 @@ describe("ambience", () => {
     expect(city.fade).not.toHaveBeenCalled();
   });
 
-  it("silences the loop when the player zooms out", () => {
+  it("fades the loop out rather than cutting it when the player zooms out", () => {
     eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    const city = find("city.mp3");
+    city.fade.mockClear();
+
+    // Leaving ambience range always arrives as (null, 0). The zero envelope
+    // must not reach the mixer before the fade-out starts, or the change
+    // listener snaps this loop to silence and the fade turns into a hard cut.
     eventBus.emit(new SetAmbienceEvent(null, 0));
-    expect(find("city.mp3").fade).toHaveBeenCalled();
+
+    expect(city.fade).toHaveBeenCalledTimes(1);
+    const [from, to, ms] = city.fade.mock.calls[0];
+    expect(from).toBeGreaterThan(0);
+    expect(to).toBe(0);
+    expect(ms).toBeGreaterThan(0);
+    expect(city.stop).not.toHaveBeenCalled();
   });
 
   it("follows the ambience slider while a loop is running", () => {
