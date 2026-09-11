@@ -69,8 +69,9 @@ describe("trade ship golden values", () => {
 
   test("tradeShipSaturation: fleet-size sweep", () => {
     // >1 boosts spawning while the world fleet is tiny, ~1 around 75
-    // ships, collapsing toward 0 past the ~250-ship capacity midpoint. The
-    // pity timer square-roots the realized spawn-frequency effect.
+    // ships, damping past the ~250-ship capacity midpoint and flattening
+    // at the 0.25 floor past ~340 ships. The pity timer square-roots the
+    // realized spawn-frequency effect.
     const table: Record<string, number> = {};
     for (const ships of [0, 25, 50, 100, 150, 200, 250, 300, 400, 500, 700]) {
       table[`ships=${ships}`] = sig(config.tradeShipSaturation(ships));
@@ -134,8 +135,9 @@ describe("train golden values", () => {
 
   test("trainSaturation: global train sweep", () => {
     // Counted in Train units (~7 per train). >1 boosts spawning only for
-    // the very first trains, ~1 around 35 units (~5 trains), collapsing
-    // toward 0 past the ~300-unit capacity midpoint.
+    // the very first trains, ~1 around 35 units (~5 trains), damping past
+    // the ~300-unit capacity midpoint and flattening at the 0.25 floor
+    // past ~460 units.
     const table: Record<string, number> = {};
     for (const units of [0, 7, 35, 70, 140, 250, 400, 600, 800, 1_200]) {
       table[`trainUnits=${units}`] = sig(config.trainSaturation(units));

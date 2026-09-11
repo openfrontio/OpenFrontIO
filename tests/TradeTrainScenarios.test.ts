@@ -319,10 +319,10 @@ describe("trade ship scenarios", () => {
 
   // The big-fleet end of the port-count sweep ("long haul" above is the
   // 1-port point on this route). The global trade-ship count feeds back
-  // into tradeShipSpawnRate, so income per port falls as the fleet grows.
-  // Physically capped well short of 1000 ports — structureMinDist spacing
-  // only fits so many on a coastline (the ~330-tile route's coast tops out
-  // at ~12 a side), and spawn suppression flattens income long before that.
+  // into tradeShipSaturation, damping income per port as the fleet grows
+  // toward the 0.25 capacity floor. Physically capped well short of 1000
+  // ports — structureMinDist spacing only fits so many on a coastline
+  // (the ~330-tile route's coast tops out at ~12 a side).
   test("fifty ports each, long route", async () => {
     expect(
       await runTradeScenario({
@@ -337,10 +337,10 @@ describe("trade ship scenarios", () => {
 
   // The absurd end of the port-count sweep. It runs on giantworldmap
   // (4108x1948, whose coasts fit 1000+ ocean-facing ports a side around
-  // these anchors) because the world map tops out around ~320 a side. The
-  // spawn-suppression midpoint sits at 400 global trade ships regardless
-  // of port count, so income has long since flattened — the pinned number
-  // is how little a thousand ports a side add over fifty.
+  // these anchors) because the world map tops out around ~320 a side.
+  // Past the sigmoid the capacity floor (0.25) takes over, so unlike the
+  // pre-floor meta income keeps scaling ~linearly with port count — the
+  // pinned number is the floor's linear regime at 20x fifty-port scale.
   test("a thousand ports each, giant map", async () => {
     expect(
       await runTradeScenario({

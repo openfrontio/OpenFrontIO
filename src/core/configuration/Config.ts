@@ -431,12 +431,17 @@ export class Config {
    * Global spawn throttle for the train economy, counted in Train *units*
    * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns for the very
    * first trains, ~1x around 35 units (~5 trains), then a capacity
-   * sigmoid collapses it toward 0 past ~300 units so total train income
-   * saturates instead of running away.
+   * sigmoid damps spawning past the ~300-unit midpoint. The damping
+   * flattens out at 0.25 past ~460 units (~65 trains) instead of
+   * collapsing to 0, so a big enough rail economy still scales — at a
+   * quarter of the un-damped rate.
    */
   trainSaturation(numTrainUnits: number): number {
     const boost = 1 + 0.5 * exp(-numTrainUnits / 30);
-    const capacity = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 300);
+    const capacity = Math.max(
+      0.25,
+      1 - sigmoid(numTrainUnits, Math.LN2 / 100, 300),
+    );
     return boost * capacity;
   }
 
@@ -494,12 +499,18 @@ export class Config {
    * while the world fleet is tiny (the pity timer square-roots the
    * realized effect, so ~1.5x actual spawns), crossing the old un-boosted
    * curve around 75 ships — a busy lobby passes that near minute 6 — and
-   * staying below it after: the capacity sigmoid collapses toward 0 past
-   * ~250 ships so total trade income saturates instead of running away.
+   * staying below it after: a capacity sigmoid damps spawning past the
+   * ~250-ship midpoint. The damping flattens out at 0.25 (~half cadence
+   * per port after the pity timer) instead of collapsing to 0, so beyond
+   * ~340 ships income scales linearly with ports again: enough ports can
+   * still make a lot of gold, just at a damped rate.
    */
   tradeShipSaturation(numTradeShips: number): number {
     const boost = 1 + 1.25 * exp(-numTradeShips / 30);
-    const capacity = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 250);
+    const capacity = Math.max(
+      0.25,
+      1 - sigmoid(numTradeShips, Math.LN2 / 50, 250),
+    );
     return boost * capacity;
   }
 
