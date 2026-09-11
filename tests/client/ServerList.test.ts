@@ -227,6 +227,30 @@ describe("ensureServerList", () => {
     expect(ClientEnv.serverWsBase()).toBe("wss://blue.openfront.io");
   });
 
+  // With the API 404ing (its rollout has not happened yet) every page is a
+  // page with no list, and Matchmaking's checkGame asks once a second. A
+  // fetch per ask is a self-inflicted DDoS; the heartbeat is the only thing
+  // that should retry, on its own 10s cadence.
+  it("does not re-fetch for every caller while it has no list", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ error: "unknown site" }, 404),
+    );
+    expect(await ensureServerList()).toBe("fallback");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    for (let i = 0; i < 20; i++) {
+      await vi.advanceTimersByTimeAsync(400);
+      expect(await ensureServerList()).toBe("fallback");
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Once the retry interval is up, the next ask may try again.
+    await vi.advanceTimersByTimeAsync(RETRY_MS);
+    expect(await ensureServerList()).toBe("fallback");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("bounds the fetch so an unreachable API cannot hang a join", async () => {
     // A server that accepts the connection and never answers. The fetch
     // must carry a timeout signal of a few seconds, and an abort must land
@@ -332,6 +356,9 @@ describe("backend reachability", () => {
     const seen: unknown[] = [];
     const listener = (e: Event) => seen.push((e as CustomEvent).detail);
     document.addEventListener("backend-reachability", listener);
+    // A page with no list only attempts once per retry interval, so each
+    // phase below has to wait the interval out to get a fresh attempt.
+    vi.useFakeTimers();
     try {
       // Nothing has been tried yet.
       expect(backendReachable()).toBe(null);
@@ -346,18 +373,21 @@ describe("backend reachability", () => {
       expect(seen).toEqual([{ reachable: true }]);
 
       // Unchanged: no second announcement.
+      await vi.advanceTimersByTimeAsync(RETRY_MS);
       expect(await ensureServerList()).toBe("fallback");
       expect(backendReachable()).toBe(true);
       expect(seen).toEqual([{ reachable: true }]);
 
       // A network error is not an answer.
       fetchMock.mockRejectedValue(new TypeError("network down"));
+      await vi.advanceTimersByTimeAsync(RETRY_MS);
       expect(await ensureServerList()).toBe("fallback");
       expect(backendReachable()).toBe(false);
       expect(seen).toEqual([{ reachable: true }, { reachable: false }]);
 
       // Back up again.
       fetchMock.mockImplementation(async () => jsonResponse(API_LIST));
+      await vi.advanceTimersByTimeAsync(RETRY_MS);
       expect(await ensureServerList()).toBe("api");
       expect(backendReachable()).toBe(true);
       expect(seen).toEqual([
@@ -372,11 +402,49 @@ describe("backend reachability", () => {
 });
 
 describe("when no open server runs the client's version", () => {
+  const REDIRECT = { redirectIfOutOfDate: true } as const;
+
   it("sends an out-of-date web client to /v/<latest>/, keeping the game path", async () => {
     setBootstrap({ gitCommit: OLD });
     const loc = stubLocation("openfront.io", "/w1/game/cAbCd12345", "?lobby");
-    expect(await ensureServerList()).toBe("redirecting");
+    expect(await ensureServerList(REDIRECT)).toBe("redirecting");
     expect(loc.href).toBe("/v/" + OWN + "/game/cAbCd12345?lobby");
+  });
+
+  // The redirect is a version check before starting something NEW (the
+  // lobby list, Create). Every other caller — joining an existing game, and
+  // every in-game request — must never navigate the page: mid rolling
+  // deploy a player's own server is draining with no open sibling on their
+  // build, and a redirect there would take a live match off the page.
+  it("never navigates a caller that did not ask for the version check", async () => {
+    setBootstrap({ gitCommit: OLD });
+    const loc = stubLocation("openfront.io", "/w1/game/cAbCd12345", "?lobby");
+    expect(await ensureServerList()).toBe("no-server");
+    expect(loc.href).toBe("https://openfront.io/w1/game/cAbCd12345?lobby");
+    // ...and the list is still applied, so the game's own letter routes.
+    expect(ClientEnv.resolveGame("cAbCd12345")).toEqual({
+      kind: "cross",
+      host: "falk2-a.openfront.io",
+      numWorkers: 16,
+    });
+  });
+
+  // A build label that names no commit matches any server version, so it is
+  // never "behind" latest. Sending the dev server's bundle to /v/<sha>/ —
+  // a path it does not serve — would take it off its own page.
+  it("never redirects a build whose version names no commit", async () => {
+    for (const label of ["DEV", "desktop", ""]) {
+      setBootstrap({ gitCommit: label });
+      const loc = stubLocation("openfront.io", "/");
+      fetchMock.mockImplementation(async () =>
+        jsonResponse({
+          latest: OWN,
+          servers: { c: { ...API_LIST.servers.c } },
+        }),
+      );
+      expect(await ensureServerList(REDIRECT)).toBe("no-server");
+      expect(loc.href).toBe("https://openfront.io/");
+    }
   });
 
   it("never redirects when the client is latest, or the list has no latest", async () => {
@@ -389,7 +457,7 @@ describe("when no open server runs the client's version", () => {
       }),
     );
     const loc = stubLocation("openfront.io");
-    expect(await ensureServerList()).toBe("no-server");
+    expect(await ensureServerList(REDIRECT)).toBe("no-server");
     expect(loc.href).toBe("https://openfront.io/");
     // Own-server calls fall back to the page's own values, as today.
     expect(ClientEnv.serverWsBase()).toBe("wss://blue.openfront.io");
@@ -404,22 +472,39 @@ describe("when no open server runs the client's version", () => {
     fetchMock.mockImplementation(async () =>
       jsonResponse({ servers: { c: { ...API_LIST.servers.c } } }),
     );
-    expect(await ensureServerList()).toBe("no-server");
+    expect(await ensureServerList(REDIRECT)).toBe("no-server");
     expect(loc.href).toBe("https://openfront.io/");
   });
 
   it("never redirects a page already under /v/<latest>/", async () => {
     setBootstrap({ gitCommit: OLD });
     const loc = stubLocation("openfront.io", `/v/${OWN}/`);
-    expect(await ensureServerList()).toBe("no-server");
+    expect(await ensureServerList(REDIRECT)).toBe("no-server");
     expect(loc.href).toBe(`https://openfront.io/v/${OWN}/`);
+  });
+
+  // replay.<domain> serves the build a record was made on: being behind
+  // latest is the whole point of the page. The lobby socket does ask for the
+  // version check and does run there, so the guard has to live in the check
+  // itself, not only in the heartbeat.
+  it("leaves a replay shell on its pinned build", async () => {
+    setBootstrap({ gitCommit: OLD });
+    const loc = stubLocation("replay.openfront.io", "/dAbCd12345");
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({
+        latest: OWN,
+        servers: { c: { ...API_LIST.servers.c } },
+      }),
+    );
+    expect(await ensureServerList(REDIRECT)).toBe("no-server");
+    expect(loc.href).toBe("https://replay.openfront.io/dAbCd12345");
   });
 
   it("leaves the desktop shell to its updater", async () => {
     (window as any).openfrontDesktop = {};
     setBootstrap({ gitCommit: OLD, serverHost: "openfront.io" });
     const loc = stubLocation("openfront");
-    expect(await ensureServerList()).toBe("no-server");
+    expect(await ensureServerList(REDIRECT)).toBe("no-server");
     expect(loc.href).toBe("https://openfront/");
     expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
   });

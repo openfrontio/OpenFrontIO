@@ -10,6 +10,21 @@ import { z } from "zod";
 // Pure: no window, no fetch. The client runtime lives in
 // src/client/ServerList.ts.
 
+// A commit identifier: a 7+ character hex prefix of a sha, or the full 40.
+// Declared before the schemas because they validate with it.
+const COMMIT_RE = /^[0-9a-f]{7,40}$/i;
+
+export function isCommitLike(value: string): boolean {
+  return COMMIT_RE.test(value);
+}
+
+// Every commit the list names is validated on the way in. A value that is
+// not commit-shaped is interpolated into `/v/<x>/` by versionedPath, where
+// it would sit outside what the loop guard can compare — so a list carrying
+// one is rejected whole and the client falls back to its own values, rather
+// than navigating somewhere nothing serves.
+const CommitSchema = z.string().regex(COMMIT_RE);
+
 export const ServerStateSchema = z.enum(["open", "draining"]);
 export type ServerState = z.infer<typeof ServerStateSchema>;
 
@@ -19,7 +34,7 @@ export const ServerEntrySchema = z.object({
   // Frozen while the letter has live games: ids route to workers by hash.
   numWorkers: z.number().int().min(1),
   // The commit this server runs, as its GIT_COMMIT reports it.
-  version: z.string().min(1),
+  version: CommitSchema,
   // open: runs `latest` and isn't fenced, so it takes new games. draining:
   // anything else; existing games and rejoins still work.
   state: ServerStateSchema,
@@ -32,18 +47,13 @@ const LetterSchema = z.string().regex(/^[a-z]$/);
 export const ServerListSchema = z.object({
   // The commit new players should be on. Absent when the site has no
   // version flagged (e.g. a preview whose server expired).
-  latest: z.string().min(1).optional(),
+  latest: CommitSchema.optional(),
   servers: z.record(LetterSchema, ServerEntrySchema),
 });
 export type ServerList = z.infer<typeof ServerListSchema>;
 
-const COMMIT_RE = /^[0-9a-f]{7,40}$/i;
 const VERSION_PREFIX_RE = /^\/v\/([^/]+)(\/|$)/;
 const WORKER_PREFIX_RE = /^\/w\d+\//;
-
-export function isCommitLike(value: string): boolean {
-  return COMMIT_RE.test(value);
-}
 
 /**
  * Whether two commit identifiers name the same commit. Servers report the

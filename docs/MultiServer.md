@@ -389,6 +389,10 @@ stay in the API but are not sent to clients. Everyone gets the same
 response and the client filters it by version, so the API can cache it
 for a few seconds. Commits are compared prefix-tolerantly (a 7+ char
 prefix of a sha matches it), so short and full forms interoperate.
+`latest` and `version` must both be commit-shaped (`/^[0-9a-f]{7,40}$/i`):
+`latest` is interpolated into `/v/<commit>/`, where a value the loop guard
+cannot compare would send the page somewhere nothing serves, so a list
+carrying one is rejected whole and the client keeps its own values.
 
 ## What the client does (`src/client/ServerList.ts`, `src/core/ServerList.ts`)
 
@@ -400,7 +404,10 @@ prefix of a sha matches it), so short and full forms interoperate.
 - **A click never waits when a list is known.** `ensureServerList()`
   answers from the cached list whatever its age and revalidates behind the
   answer (stale-while-revalidate); only a page that has never got a list
-  waits for a fetch — the one in flight, or one it starts.
+  waits for a fetch — the one in flight, or one it starts. A page with no
+  list whose last attempt failed under 10s ago starts none: it answers
+  `fallback` and leaves retrying to the heartbeat, so a caller on a timer
+  (the matchmaking poll, every second) cannot hammer a down API.
 - **A failed refresh keeps the last good list.** Network error, timeout,
   non-OK, malformed or empty: the previous list keeps serving. The API
   caches its answer for seconds anyway, so a blip must not flip a working
@@ -435,7 +442,16 @@ prefix of a sha matches it), so short and full forms interoperate.
     `/v/<latest>/…` keeping the game path (a plain reload could be served
     a cached older page). It never navigates a page already under
     `/v/<latest>/` — the loop guard lives in `versionedPath`. The Steam
-    build leaves it to its updater.
+    build leaves it to its updater, and a build whose `gitCommit` names no
+    commit (`DEV`, `desktop`) is never out of date.
+  - the navigation happens only where the caller asks for it
+    (`ensureServerList({ redirectIfOutOfDate: true })`). **This is a version
+    check before starting anything new: the lobby list and Create. Joining
+    or rejoining an existing game, and every in-game request, never
+    navigates the page.** During a rolling deploy a player's own server is
+    `draining` with no `open` sibling on their build, so an unconditional
+    redirect would take a live match off the page. A version mismatch on
+    join is answered at join time (`version_mismatch`) instead.
 
 ## `latest`: the one switch
 

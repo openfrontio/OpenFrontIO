@@ -459,7 +459,8 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
     // The matched game may carry any server's letter: resolve it through
-    // the API's list (multi-server v2) rather than this page's own map.
+    // the API's list (multi-server v2) rather than this page's own map. No
+    // version check: this runs on a timer and must never navigate the page.
     await ensureServerList();
     const url = `${ClientEnv.gameHttpBase(this.gameID)}/${ClientEnv.gameWorkerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 

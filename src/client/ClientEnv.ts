@@ -223,6 +223,22 @@ export class ClientEnv {
   static siteHost(): string | undefined {
     return ClientEnv.get().siteHost;
   }
+  // Origin of the WEBSITE this page belongs to (scheme + host, no trailing
+  // slash), for links that must leave the game and land on the site — the
+  // desktop shell opening account settings in a browser, say.
+  //
+  // NOT serverHttpBase(): that is a game server, and once the API's list has
+  // picked one it is a deployment host (falk2-b.openfront.io) with no site
+  // on it. This reads only the page's own injected values, which name sites:
+  // the shell's serverHost (openfront.io, nightly.openfront.dev,
+  // main.openfront.dev), else the apex a web page was rendered behind.
+  // Undefined when neither was injected; callers fall back themselves.
+  static siteOrigin(): string | undefined {
+    const v = ClientEnv.get();
+    if (v.serverHost) return `https://${v.serverHost}`;
+    if (v.siteHost) return `https://${v.siteHost}`;
+    return undefined;
+  }
   // Origin (scheme + host, no trailing slash) of the game server that hosts the
   // public-lobby and in-game WebSockets. The lobby-list and game sockets append
   // their own worker path (e.g. `/w0/lobbies`, `/w0`).

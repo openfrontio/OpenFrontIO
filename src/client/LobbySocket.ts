@@ -47,9 +47,12 @@ export class PublicLobbySocket {
     this.stopped = false;
     this.wsConnectionAttempts = 0;
     // The lobby list needs a server: ask the API which one (multi-server
-    // v2), falling back to the page's own values. A page found out of date
-    // is being navigated to the current version; nothing to connect to.
-    if ((await ensureServerList()) === "redirecting") return;
+    // v2), falling back to the page's own values. This and Create are the
+    // only flows that start something new, so they are the only ones that
+    // check the version: a page found out of date is being navigated to the
+    // current version, and there is nothing to connect to.
+    const listStatus = await ensureServerList({ redirectIfOutOfDate: true });
+    if (listStatus === "redirecting") return;
     if (this.stopped) return;
     // Get config to determine number of workers, then pick a random one
     this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
