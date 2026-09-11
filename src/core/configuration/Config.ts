@@ -494,19 +494,18 @@ export class Config {
   }
 
   /**
-   * Global spawn throttle for the trade-ship economy. Up to ~2.25x odds
-   * while the world fleet is tiny (the pity timer square-roots the
-   * realized effect, so ~1.5x actual spawns), crossing the old un-boosted
-   * curve around 50 ships — a busy lobby passes that during its first
-   * trading minute or two — and staying below it after: a capacity
-   * sigmoid damps spawning past the ~230-ship midpoint. The damping
-   * flattens onto a 0.25 plateau past ~310 ships (~half cadence per port
-   * after the pity timer), so heavy port investment keeps scaling income
-   * linearly, until a global hard cap far beyond any normal game
-   * collapses the plateau past ~800 at sea.
+   * Global spawn throttle for the trade-ship economy. A mild ~1.45x odds
+   * boost while the world fleet is small (the pity timer square-roots the
+   * realized effect, so ~1.2x actual spawns), held through the opening
+   * trading minutes and crossing the old un-boosted curve around 110
+   * ships, then a capacity sigmoid damps spawning past the ~230-ship
+   * midpoint. The damping flattens onto a 0.25 plateau past ~310 ships
+   * (~half cadence per port after the pity timer), so heavy port
+   * investment keeps scaling income linearly, until a global hard cap far
+   * beyond any normal game collapses the plateau past ~800 at sea.
    */
   tradeShipSaturation(numTradeShips: number): number {
-    const boost = 1 + 1.25 * exp(-numTradeShips / 18);
+    const boost = 1 + 0.45 * exp(-numTradeShips / 120);
     const damping = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 230);
     const plateau = 0.25 * (1 - sigmoid(numTradeShips, Math.LN2 / 100, 800));
     return boost * Math.max(damping, plateau);
