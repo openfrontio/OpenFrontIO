@@ -634,7 +634,33 @@ export async function getMyTribeNames(): Promise<
 // The branch key the shared spend helper returns when a refund or chargeback
 // has left the wallet negative. A machine key, never prose: it must not reach
 // the player, which is what happened before the debt paths were handled.
-const DEBT_REFUSAL_REASON = "insufficient_balance_debt";
+//
+// Since OPE-389 the API sends it as `code`; before that the same token was
+// the `reason`, which is exactly why it used to be rendered. One constant
+// because the token is the same either way.
+const DEBT_REFUSAL_CODE = "insufficient_balance_debt";
+
+// Stands in for a `code` key that is present but is not a usable machine key
+// (42, "", null). That is not the same as absent: the server did mean to send
+// a code, so falling back to matching its English would be reading a body we
+// have already established we do not understand. Nothing maps this, so every
+// caller lands on its generic failure. Not a valid identifier, so no code the
+// API could ever add collides with it.
+const UNUSABLE_REFUSAL_CODE = " unusable";
+
+// The stable machine key the API puts beside the prose `reason` in a 400
+// (OPE-389). `undefined` means the key is absent — an older server that
+// predates the codes, or a body that is not a refusal at all — and only that
+// leaves the caller on its pre-OPE-389 string matching. Nothing but the
+// presence and identity of this key is trusted: it is never rendered or
+// logged.
+function refusalCode(body: unknown): string | undefined {
+  if (body === null || typeof body !== "object" || !("code" in body)) {
+    return undefined;
+  }
+  const code = (body as { code?: unknown }).code;
+  return typeof code === "string" && code !== "" ? code : UNUSABLE_REFUSAL_CODE;
+}
 
 // Reads the debt refusal off a 400 body for every spend path. Returns
 // undefined when this is not that refusal, so the caller carries on matching
@@ -661,8 +687,16 @@ function parseDebtRefusal(
   | { ok: false; code: "debt"; debt: string }
   | { ok: false; code: "failed" }
   | undefined {
-  const reason = (body as { reason?: unknown } | null | undefined)?.reason;
-  if (reason !== DEBT_REFUSAL_REASON) return undefined;
+  const code = refusalCode(body);
+  // `code` when the server sends one, the old prose token only when it does
+  // not: production can lag the API, so the string match stays as a fallback
+  // and never as an override.
+  const isDebt =
+    code !== undefined
+      ? code === DEBT_REFUSAL_CODE
+      : (body as { reason?: unknown } | null | undefined)?.reason ===
+        DEBT_REFUSAL_CODE;
+  if (!isDebt) return undefined;
   const debt = (body as { debt?: unknown } | null | undefined)?.debt;
   if (typeof debt !== "string" || !/^\d+$/.test(debt)) {
     console.warn(`${context}: debt refusal with no usable amount`);
@@ -680,10 +714,10 @@ export type PurchaseTribeNameResult =
   // negative; `debt` (bigint string) must be settled before anything is
   // spendable. Nothing charged.
   | { ok: false; code: "debt"; debt: string }
-  // 400: the name itself was refused. Each of the server's player-facing
-  // reasons maps to a code the caller translates — none of them reach the
-  // player as the server's English. See TRIBE_NAME_REFUSAL_CODES for why the
-  // set is an allowlist.
+  // 400: the name itself was refused. Each of the server's refusal codes
+  // maps to a code the caller translates — none of them reach the player as
+  // the server's English. See TRIBE_NAME_REFUSAL_CODES for why the set is an
+  // allowlist.
   | { ok: false; code: "invalid_charset" }
   | { ok: false; code: "invalid_no_letter" }
   | { ok: false; code: "not_allowed" }
@@ -696,51 +730,130 @@ export type PurchaseTribeNameResult =
   | { ok: false; code: "rate_limited"; retryAfterSeconds: number | null }
   | { ok: false; code: "failed" };
 
-// The endpoint's name-validation and moderation reasons, mapped to codes the
-// caller translates. Recognising a reason is what turns it into a localized
-// message; nothing is ever rendered from the server's English.
+// The endpoint's refusal codes, mapped to the codes the caller translates
+// (OPE-389). The server's `code` is the branch key; its `reason` is English
+// documentation and is never read for meaning and never rendered.
 //
-// An allowlist rather than a denylist of the machine keys, because the failure
-// mode is asymmetric. Anything unrecognised becomes a generic failure — mildly
-// unhelpful if it was prose. Echoing anything unrecognised puts the next
-// machine branch key the API adds straight on the player's screen, which is
-// how "insufficient_balance_debt" came to be displayed as an error message.
+// An allowlist rather than a denylist, because the failure mode is
+// asymmetric. Anything unrecognised becomes a generic failure — mildly
+// unhelpful. Echoing anything unrecognised puts the next machine branch key
+// the API adds straight on the player's screen, which is how
+// "insufficient_balance_debt" came to be displayed as an error message.
 //
-// Matched on the exact English because that is what the endpoint sends and
-// there is no code in the body to key off. If the API ever rewords one, the
-// player gets the generic failure until this is updated — the safe direction.
-const TRIBE_NAME_REFUSAL_CODES: Record<
+// `no_letter` is renamed on the way in: the caller's `invalid_no_letter` is
+// pre-existing public API of this module, so the two vocabularies are mapped
+// here rather than one being churned to match the other.
+//
+// A Map rather than an object literal because the key comes off the wire:
+// a plain lookup of "constructor" or "toString" returns something from
+// Object.prototype instead of undefined, and that is not a refusal code.
+const TRIBE_NAME_REFUSAL_CODES = new Map<
   string,
   "invalid_charset" | "invalid_no_letter" | "not_allowed"
-> = {
-  "Name may only contain letters, numbers, spaces, and ' - . _ ! ?":
+>([
+  ["invalid_charset", "invalid_charset"],
+  ["no_letter", "invalid_no_letter"],
+  ["not_allowed", "not_allowed"],
+]);
+
+// The same refusals keyed on the server's exact English, for a server that
+// predates OPE-389 and sends no `code`. Production can lag the API, so this
+// stays — but only as the fallback. If the API rewords one of these on an
+// older deployment the player gets the generic failure, which is the safe
+// direction.
+const LEGACY_TRIBE_NAME_REFUSAL_REASONS = new Map<
+  string,
+  "invalid_charset" | "invalid_no_letter" | "not_allowed"
+>([
+  [
+    "Name may only contain letters, numbers, spaces, and ' - . _ ! ?",
     "invalid_charset",
-  "Name must contain a letter": "invalid_no_letter",
-  "This name is not allowed": "not_allowed",
-};
-// The length rule interpolates its bounds ("Name must be 3-24 characters"), so
-// it is matched by shape rather than listed. Anchored and digit-specific: a
+  ],
+  ["Name must contain a letter", "invalid_no_letter"],
+  ["This name is not allowed", "not_allowed"],
+]);
+// The length rule interpolates its bounds ("Name must be 3-24 characters"),
+// so on a pre-OPE-389 server — where the numbers are only in the prose — it
+// is matched by shape rather than listed. Anchored and digit-specific: a
 // bare "Name must be " prefix would pass through anything the API ever chose
 // to start that way, which is the denylist failure this is meant to avoid.
 // The bounds are captured so the caller can translate the message instead of
 // rendering the server's English.
 const TRIBE_NAME_LENGTH_REASON_RE = /^Name must be (\d+)-(\d+) characters$/;
 
-function tribeNameInvalidResult(
+function legacyTribeNameInvalidResult(
   reason: string,
 ): PurchaseTribeNameResult | undefined {
-  const length = TRIBE_NAME_LENGTH_REASON_RE.exec(reason);
-  if (length !== null) {
-    return {
-      ok: false,
-      code: "length",
-      min: Number(length[1]),
-      max: Number(length[2]),
-    };
+  const bounds = proseBounds(reason);
+  if (bounds !== undefined) return { ok: false, code: "length", ...bounds };
+  const code = LEGACY_TRIBE_NAME_REFUSAL_REASONS.get(reason);
+  return code === undefined ? undefined : { ok: false, code };
+}
+
+// A single `length` bound. The bounds are what the message says, so an
+// unusable one is not usable at all: a positive safe integer or nothing.
+function isUsableBound(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+// The `length` bounds as a range, or nothing. Validated as a pair rather than
+// one at a time: `{min: 24, max: 3}` is two individually plausible numbers
+// and one impossible range, and it would render as "24-3" at the player.
+//
+// Every source of bounds goes through here, including the ones scraped out of
+// the prose. Digits in a sentence are not more trustworthy than numbers in a
+// field — "Name must be 24-3 characters" and a 30-digit bound both parse.
+function usableBounds(
+  min: unknown,
+  max: unknown,
+): { min: number; max: number } | undefined {
+  if (!isUsableBound(min) || !isUsableBound(max) || min > max) return undefined;
+  return { min, max };
+}
+
+// The bounds the API sends as fields (OPE-389).
+function bodyBounds(body: unknown): { min: number; max: number } | undefined {
+  const record = body as Record<string, unknown> | null | undefined;
+  return usableBounds(record?.min, record?.max);
+}
+
+// The bounds a pre-OPE-389 server only puts in the sentence.
+function proseBounds(reason: string): { min: number; max: number } | undefined {
+  const parsed = TRIBE_NAME_LENGTH_REASON_RE.exec(reason);
+  return parsed === null
+    ? undefined
+    : usableBounds(Number(parsed[1]), Number(parsed[2]));
+}
+
+// Why the name was refused, keyed on the server's machine `code` (OPE-389).
+// Returns undefined for a code this client does not know, which the caller
+// turns into a generic failure — the code is never rendered.
+function tribeNameInvalidResult(
+  code: string,
+  body: unknown,
+): PurchaseTribeNameResult | undefined {
+  if (code === "length") {
+    const fromBody = bodyBounds(body);
+    if (fromBody !== undefined) {
+      return { ok: false, code: "length", ...fromBody };
+    }
+    // The bounds ARE the message, so there is nothing to render without
+    // them. The prose still carries them on every server that sends this
+    // code, so read them out of it rather than showing a blank range — and
+    // hold them to the same standard, since a sentence can carry an
+    // impossible range as easily as a field can. Only the length pattern is
+    // tried here: a `length` code sitting next to some other refusal's prose
+    // is a body we do not understand. Nothing usable either way is the
+    // caller's generic failure.
+    const reason = (body as { reason?: unknown } | null | undefined)?.reason;
+    if (typeof reason !== "string") return undefined;
+    const fromProse = proseBounds(reason);
+    return fromProse === undefined
+      ? undefined
+      : { ok: false, code: "length", ...fromProse };
   }
-  const code = TRIBE_NAME_REFUSAL_CODES[reason];
-  if (code !== undefined) return { ok: false, code };
-  return undefined;
+  const mapped = TRIBE_NAME_REFUSAL_CODES.get(code);
+  return mapped === undefined ? undefined : { ok: false, code: mapped };
 }
 
 // POST /users/@me/tribe_names — buy a custom tribe name (200 plutonium). The
@@ -766,17 +879,27 @@ export async function purchaseTribeName(
     if (response.status === 400) {
       const body = await response.json().catch(() => null);
       const reason = typeof body?.reason === "string" ? body.reason : "";
-      // Balance reasons first: both are branch keys the shared spend helper
+      const code = refusalCode(body);
+      // Balance refusals first: both are branch keys the shared spend helper
       // emits, not prose to echo at the player.
       const debt = parseDebtRefusal(body, "purchaseTribeName");
       if (debt !== undefined) return debt;
-      if (reason === "Insufficient balance") {
+      if (
+        code === undefined
+          ? reason === "Insufficient balance"
+          : code === "insufficient_balance"
+      ) {
         return { ok: false, code: "insufficient_balance" };
       }
-      const invalid = tribeNameInvalidResult(reason);
+      // `code` when the server sends one (OPE-389), the English only when it
+      // does not — production can lag the API.
+      const invalid =
+        code === undefined
+          ? legacyTribeNameInvalidResult(reason)
+          : tribeNameInvalidResult(code, body);
       if (invalid !== undefined) return invalid;
-      // Not logging the body: an unrecognised reason is exactly the case where
-      // we don't know what it contains.
+      // Not logging the body: an unrecognised refusal is exactly the case
+      // where we don't know what it contains.
       console.warn("purchaseTribeName: unrecognised 400 reason");
       return { ok: false, code: "failed" };
     }
@@ -859,9 +982,21 @@ export async function boostTribeName(
       // check — a body without a string reason is never the debt refusal.
       const debt = parseDebtRefusal(body, "boostTribeName");
       if (debt !== undefined) return debt;
-      // Any other {"reason": "..."} is the player-facing 400 (a shortfall);
-      // {"resource": "id"} means a malformed id — a client bug, not a player
-      // error, so it falls through to the generic failure.
+      const code = refusalCode(body);
+      if (code !== undefined) {
+        // OPE-389: the only other refusal this endpoint has is the plain
+        // shortfall. Anything else is a code this client has never heard of,
+        // and guessing it is a shortfall would send the player to a top-up
+        // that cannot help — the bug the debt branch was added to fix.
+        if (code === "insufficient_balance") {
+          return { ok: false, code: "insufficient_balance" };
+        }
+        console.warn("boostTribeName: unrecognised 400 code");
+        return { ok: false, code: "failed" };
+      }
+      // Pre-OPE-389 server: any {"reason": "..."} is the player-facing 400
+      // (a shortfall); {"resource": "id"} means a malformed id — a client
+      // bug, not a player error, so it falls through to the generic failure.
       if (typeof body?.reason === "string") {
         return { ok: false, code: "insufficient_balance" };
       }

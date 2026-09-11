@@ -464,6 +464,16 @@ function getCachedLangSelector(): LangSelector | null {
   const cached = self.langSelector as LangSelector | null | undefined;
   if (cached && cached.isConnected) return cached;
 
+  // A lit update is scheduled on a microtask, so a component can render once
+  // more after its environment has gone -- which in tests means `document` is
+  // no longer defined by the time this runs. Returning null makes
+  // translateText fall back to the key instead of throwing an unhandled
+  // rejection that fails the whole run.
+  if (typeof document === "undefined") {
+    self.langSelector = null;
+    return null;
+  }
+
   const found = document.querySelector("lang-selector") as LangSelector | null;
   self.langSelector = found ?? null;
   return found;

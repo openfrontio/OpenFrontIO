@@ -9,10 +9,9 @@ import {
   GameStartInfo,
   LobbyInfoEvent,
   PlayerCosmeticRefs,
-  PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
-import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
+import { findClosestBy, replacer } from "../core/Util";
 import {
   BuildableUnit,
   PlayerType,
@@ -26,7 +25,6 @@ import {
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-  WinUpdate,
 } from "../core/game/GameUpdates";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
@@ -35,7 +33,6 @@ import {
   UserSettings,
 } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
-import { getPersistentID } from "./Auth";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameAlert } from "./InGameModal";
 import {
@@ -51,7 +48,6 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
-import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
@@ -130,7 +126,6 @@ export function joinLobby(
   const userSettings: UserSettings = new UserSettings();
   themeProvider.reset(); // fresh colour allocators for this game
   goldRateTracker.resetAll(); // drop samples from a previous in-page game
-  startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
 
@@ -903,38 +898,6 @@ export class ClientGameRunner {
     return !!this.myPlayer?.isAlive();
   }
 
-  private async saveGame(update: WinUpdate) {
-    if (!this.clientID) {
-      return;
-    }
-    const players: PlayerRecord[] = [
-      {
-        persistentID: getPersistentID(),
-        username: this.lobby.playerName,
-        clanTag: this.lobby.playerClanTag ?? null,
-        clientID: this.clientID,
-        stats: update.allPlayersStats[this.clientID],
-      },
-    ];
-
-    if (this.lobby.gameStartInfo === undefined) {
-      throw new Error("missing gameStartInfo");
-    }
-    const record = createPartialGameRecord(
-      this.lobby.gameStartInfo.gameID,
-      this.lobby.gameStartInfo.config,
-      players,
-      // Not saving turns locally
-      [],
-      startTime(),
-      Date.now(),
-      update.winner,
-      this.lobby.gameStartInfo.lobbyCreatedAt,
-      this.lobby.gameStartInfo.visibleAt,
-    );
-    endGame(record);
-  }
-
   public start() {
     this.soundManager.playBackgroundMusic();
     console.log("starting client game");
@@ -1004,10 +967,6 @@ export class ClientGameRunner {
 
       // Reset tick delay for next measurement
       this.currentTickDelay = undefined;
-
-      if (gu.updates[GameUpdateType.Win].length > 0) {
-        this.saveGame(gu.updates[GameUpdateType.Win][0]);
-      }
     });
 
     const onconnect = () => {

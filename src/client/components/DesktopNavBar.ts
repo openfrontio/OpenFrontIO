@@ -112,9 +112,10 @@ export class DesktopNavBar extends LitElement {
           data-page="page-clan"
           data-i18n="main.clans"
         ></button>
-        <!-- Utility cluster: bell, help and the profile control are account
-             /notification affordances, not page links, so they sit tight
-             together behind a divider instead of in the nav item list. -->
+        <!-- Utility cluster: bell, help, settings and the profile control are
+             account/notification/utility affordances rather than page links,
+             so they sit tight together behind a divider instead of in the nav
+             item list. -->
         <div class="flex items-center gap-1 pl-5 ml-1 border-l border-white/10">
           <nav-utility-icons size="desktop"></nav-utility-icons>
           <nav-account-menu variant="desktop"></nav-account-menu>

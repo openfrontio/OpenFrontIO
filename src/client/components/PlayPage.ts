@@ -65,7 +65,7 @@ export class PlayPage extends LitElement {
               />
             </div>
 
-            <!-- Right slot: bell, help and the profile control. The menu is
+            <!-- Right slot: bell, help, settings and the profile control. The menu is
                  the account affordance on every platform now — on CrazyGames
                  its "Sign in" item hands off to their SDK prompt. -->
             <div
