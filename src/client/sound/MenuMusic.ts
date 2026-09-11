@@ -8,10 +8,41 @@ const MENU_FADE_MS = 700;
 
 // An ease-in, not a swell. Long enough that the theme arrives rather than
 // lands, short enough that the page is not still getting louder while the
-// player reads it. Howler steps html5 fades on a timer in 0.01 increments, so
-// at the default music level (~0.89) this is ~89 steps about 22ms apart --
-// fine-grained enough not to audibly staircase.
+// player reads it.
 const MENU_FADE_IN_MS = 2000;
+
+/**
+ * Where the ramp starts, in dB below its target.
+ *
+ * This is driven here rather than through Howler's fade() because fade() is
+ * linear in AMPLITUDE, and loudness is roughly linear in dB -- so a linear
+ * ramp is heavily front-loaded and does not sound like a fade at all. At the
+ * real defaults (music slider 0.5, squared by perceptualGain, times the -1 dB
+ * trim, so a target of 0.2225) Howler's 0.01 quantisation gives 22 steps, and
+ * the first two of them cover the bottom 21 dB:
+ *
+ *     90ms  0.01  -26.9 dB      989ms  0.11   -6.1 dB
+ *    180ms  0.02  -20.9 dB     1438ms  0.16   -2.9 dB
+ *    449ms  0.05  -13.0 dB     1978ms  0.22   -0.1 dB
+ *
+ * Within 6 dB of final at one second and 3 dB at 1.4s: the last 600ms are
+ * inaudible and the track has perceptually arrived in about 300ms. Stepping
+ * linearly in dB instead spends equal time on equal perceived change.
+ *
+ * -48 dB is low enough to start from true silence to the ear without wasting
+ * the front of the ramp somewhere nothing is audible.
+ */
+const MENU_FADE_IN_FLOOR_DB = -48;
+
+// ~0.6 dB a step across the ramp: continuous to the ear, and cheap. Writing
+// the volume directly also dodges the 0.01 quantisation Howler's own fade
+// applies, which at this target would be 6 dB on the very first step.
+const MENU_FADE_IN_STEP_MS = 25;
+
+/** Gain `t` of the way through the ramp, linear in dB from the floor to 0. */
+function rampGain(target: number, t: number): number {
+  return target * 10 ** ((MENU_FADE_IN_FLOOR_DB * (1 - t)) / 20);
+}
 
 /**
  * Loops the menu theme on the home page. Browsers block audio until a user
@@ -27,39 +58,51 @@ const MENU_FADE_IN_MS = 2000;
  * the rest of the session. Re-arming rather than replaying is deliberate: the
  * autoplay rule applies just as much to the second start as the first.
  *
- * Every start ramps up from silence rather than arriving at full level. The
- * Howl is registered with the mixer once that ramp lands, so the music slider
- * reaches it live from then on. It used to read the volume once at creation,
+ * Every start ramps up from silence rather than arriving at full level, in
+ * even dB steps rather than Howler's linear-amplitude fade(). The Howl is
+ * registered with the mixer once that ramp lands, so the music slider reaches
+ * it live from then on. The 700ms fade-OUT is left on Howler's own fade(): it
+ * is short, it happens under a scene change, and a linear fade-out errs by
+ * dropping away late rather than by arriving instantly, which is far less
+ * noticeable than the same curve going the other way. It used to read the volume once at creation,
  * which was invisible while the home page had no volume UI and became a real
  * bug the moment it got one.
  */
 export function startMenuMusic(mixer: AudioMixer): void {
   let theme: Howl | null = null;
   let stopFollowingFadeIn: (() => void) | null = null;
+  let rampTimer: ReturnType<typeof setInterval> | null = null;
+
+  /** Stops the ramp wherever it is, leaving the volume untouched. */
+  const cancelFadeIn = () => {
+    if (rampTimer !== null) {
+      clearInterval(rampTimer);
+      rampTimer = null;
+    }
+    stopFollowingFadeIn?.();
+    stopFollowingFadeIn = null;
+  };
 
   /**
    * Hands the level back to the mixer once the ramp is done with it.
    *
-   * Registering writes the channel volume straight onto the Howl, and Howler's
-   * volume() setter calls _stopFade internally -- so the mixer can only take
-   * this one on after the ramp, never during it. That leaves a two-second
-   * window where the theme would not follow the music slider, which is why a
-   * change on the channel settles it early: moving a slider is a deliberate
-   * act and should take effect now, not once the fade happens to finish.
+   * Registering writes the channel volume straight onto the Howl, so it also
+   * lands the ramp exactly on target. The mixer can only take this one on
+   * after the ramp, never during it, or every slider write would fight the
+   * ramp -- which leaves a two-second window where the theme does not follow
+   * the music slider. Hence settling early on a change: moving a slider is a
+   * deliberate act and should take effect now, not once the ramp finishes.
    */
   const settle = (howl: Howl) => {
-    stopFollowingFadeIn?.();
-    stopFollowingFadeIn = null;
-    howl.off("fade");
+    cancelFadeIn();
     mixer.register(howl, "music");
   };
 
   const fadeIn = (howl: Howl) => {
     const target = mixer.volumeFor("music");
-    // A fade whose start equals its end never completes in Howler, so the
-    // settle scheduled on "fade" would never run and the theme would stay
-    // unregistered for the rest of the session. On a silent channel there is
-    // nothing to hear and nothing to ramp, so hand it over directly.
+    // Nothing to hear and nothing to ramp on a silent channel, and a ramp
+    // toward zero would never reach a level worth registering at. Hand it
+    // straight over, or the theme stays unregistered for the session.
     if (target === 0) {
       mixer.register(howl, "music");
       return;
@@ -67,8 +110,19 @@ export function startMenuMusic(mixer: AudioMixer): void {
     stopFollowingFadeIn = mixer.onChange((category) => {
       if (category === "music") settle(howl);
     });
-    howl.fade(0, target, MENU_FADE_IN_MS);
-    howl.once("fade", () => settle(howl));
+    const startedAt = performance.now();
+    howl.volume(rampGain(target, 0));
+    rampTimer = setInterval(() => {
+      // Driven off elapsed time rather than a tick count: a backgrounded tab
+      // throttles timers hard, and the ramp should still finish on schedule
+      // with coarser steps rather than stretch out to minutes.
+      const t = Math.min(1, (performance.now() - startedAt) / MENU_FADE_IN_MS);
+      if (t >= 1) {
+        settle(howl);
+        return;
+      }
+      howl.volume(rampGain(target, t));
+    }, MENU_FADE_IN_STEP_MS);
   };
 
   const start = () => {
@@ -116,13 +170,11 @@ export function startMenuMusic(mixer: AudioMixer): void {
     if (theme === null) return;
     const ending = theme;
     theme = null;
-    // Drop the fade-in bookkeeping before anything else. Its "fade" handler is
-    // still on the Howl, and the fade-out below would otherwise trigger it --
-    // re-registering a theme on its way out, so the mixer would go on writing
-    // volumes to an unloaded Howl and hold it alive for the session.
-    stopFollowingFadeIn?.();
-    stopFollowingFadeIn = null;
-    ending.off("fade");
+    // Stop the ramp before anything else: it would otherwise keep writing
+    // volumes over the fade-out below, and its settle would hand a theme on
+    // its way out back to the mixer, which would then go on writing to an
+    // unloaded Howl and hold it alive for the session.
+    cancelFadeIn();
     // Unregister too: a slider move mid-fade would otherwise pull the volume
     // back up as the theme is leaving.
     mixer.unregister(ending);
