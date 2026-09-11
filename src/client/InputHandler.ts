@@ -459,8 +459,6 @@ export class InputHandler {
       "wheel",
       (e) => {
         this.onScroll(e);
-        this.onShiftScroll(e);
-        this.onAltScroll(e);
         e.preventDefault();
       },
       { passive: false },
@@ -898,9 +896,25 @@ export class InputHandler {
   }
 
   private onScroll(event: WheelEvent) {
-    if (event.shiftKey || event.altKey) {
-      return; // Shift/Alt scroll is handled separately
+    const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
+    // Shift takes priority unconditionally
+    if (event.shiftKey) {
+      const increment = this.userSettings.attackRatioIncrement();
+      const ratio = scrollValue > 0 ? -increment : increment;
+      this.eventBus.emit(new AttackRatioEvent(ratio));
+      return;
     }
+    // Alt also blocks zooming, to match behavior of Ctrl / Shift
+    if (event.altKey) {
+      if (Math.abs(event.deltaY) > 2){
+        this.setGhostStructure(
+          this.uiState.ghostStructure,
+          scrollValue > 0 ? "decrease" : "increase",
+        );
+      return;
+      }
+    }
+
     const realCtrl =
       this.activeKeys.has("ControlLeft") || this.activeKeys.has("ControlRight");
     if (event.ctrlKey) {
@@ -947,26 +961,6 @@ export class InputHandler {
     const delta = ZOOM_DELTA_DIVISOR * (1 / ratio - 1);
     if (delta === 0) return;
     this.eventBus.emit(new ZoomEvent(event.clientX, event.clientY, delta));
-  }
-
-  private onShiftScroll(event: WheelEvent) {
-    if (event.shiftKey) {
-      const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
-      const increment = this.userSettings.attackRatioIncrement();
-      const ratio = scrollValue > 0 ? -increment : increment;
-      this.eventBus.emit(new AttackRatioEvent(ratio));
-    }
-  }
-
-  // note: this does not distinguish between left alt and right alt
-  private onAltScroll(event: WheelEvent) {
-    if (event.altKey) {
-      const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
-      this.setGhostStructure(
-        this.uiState.ghostStructure,
-        scrollValue > 0 ? "decrease" : "increase",
-      );
-    }
   }
 
   private onPointerMove(event: PointerEvent) {
@@ -1069,7 +1063,7 @@ export class InputHandler {
           // first jump goes 1 -> 5 as before
           this.uiState.upgradeMultiplier =
             currentMultiplier === 1 ? 5 : currentMultiplier + 5;
-            // allow keyboard-only users to loop back to 1
+          // allow keyboard-only users to loop back to 1
           if (this.uiState.upgradeMultiplier > MAX_UPGRADE_AMOUNT) {
             this.uiState.upgradeMultiplier = 1;
           }
