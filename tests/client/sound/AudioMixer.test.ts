@@ -242,6 +242,23 @@ describe("per-channel budgets", () => {
   });
 });
 
+describe("registered loops", () => {
+  it("keeps following a howl registered while its channel was silent", () => {
+    // MenuMusic hands the theme straight over rather than ramping when music
+    // is already down, so the mixer is what has to bring it back up. Verified
+    // here rather than reasoned about, since that path never ramps at all.
+    build({ music: 0 });
+    const howl = { volume: vi.fn() } as any;
+
+    mixer.register(howl, "music");
+    expect(howl.volume).toHaveBeenLastCalledWith(0);
+
+    settings.setAudioVolume("music", 1);
+
+    expect(howl.volume).toHaveBeenLastCalledWith(0.89);
+  });
+});
+
 describe("output limiter", () => {
   const audioParam = () => ({ setValueAtTime: vi.fn() });
 
