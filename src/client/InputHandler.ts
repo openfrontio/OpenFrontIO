@@ -911,8 +911,8 @@ export class InputHandler {
           this.uiState.ghostStructure,
           scrollValue > 0 ? "decrease" : "increase",
         );
-        return;
       }
+      return;
     }
 
     const realCtrl =
