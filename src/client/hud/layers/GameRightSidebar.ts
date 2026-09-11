@@ -186,9 +186,20 @@ export class GameRightSidebar extends LitElement implements Controller {
       );
     if (typeof bridge.subscribe !== "function") return;
     try {
-      this.displayUnsubscribe = bridge.subscribe((snapshot) =>
-        this.adoptDisplaySnapshot(snapshot),
-      );
+      this.displayUnsubscribe = bridge.subscribe((snapshot) => {
+        // A push settles a pending write, the same way it does in the Display
+        // tab. The shell emits it as part of applying a change, so by the time
+        // one arrives the transition has happened whether or not the invoke
+        // ever answers -- and waiting out the ceiling after that would leave
+        // the button disabled for up to two seconds with nothing left to wait
+        // for. Guarded on a READABLE snapshot: adoptDisplaySnapshot drops what
+        // it cannot parse, and an unparseable push is not evidence of
+        // anything.
+        if (!isDisplaySnapshot(snapshot)) return;
+        this.adoptDisplaySnapshot(snapshot);
+        this.clearDisplayCeiling();
+        this.displayBusy = false;
+      });
     } catch {
       this.displayUnsubscribe = null;
     }

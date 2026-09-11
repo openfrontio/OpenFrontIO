@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { DesktopDisplaySnapshot } from "../../src/client/DesktopDisplay";
+import {
+  DISPLAY_SETTLE_TIMEOUT_MS,
+  type DesktopDisplaySnapshot,
+} from "../../src/client/DesktopDisplay";
 import "../../src/client/hud/layers/GameRightSidebar";
 import type { GameRightSidebar } from "../../src/client/hud/layers/GameRightSidebar";
 import type { GameView } from "../../src/client/view";
@@ -361,6 +364,65 @@ describe("GameRightSidebar fullscreen button", () => {
     clickFullscreen(el);
     await flush(el);
     expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(2);
+  });
+
+  // The shell emits the push as part of applying the change, so by the time
+  // one arrives the transition has happened whether or not the invoke ever
+  // answers. Waiting out the ceiling after that would disable the button for
+  // up to two seconds with nothing left to wait for.
+  it("lets a push settle a write the invoke never answers", async () => {
+    vi.useFakeTimers();
+    const fake = fakeBridge(snapshot("borderless"));
+    fake.bridge.setPrefs.mockImplementation(
+      () => new Promise<DesktopDisplaySnapshot>(() => undefined),
+    );
+    fake.install();
+    const el = await mount();
+
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(1);
+
+    fake.push(snapshot("windowed"));
+    await flush(el);
+    // Showing the mode the shell reported.
+    expect(fullscreenButton(el).src).not.toContain("ExitFullscreen");
+
+    // The ceiling was CLEARED, not merely beaten: firing it after the write
+    // has already settled would send a pointless re-read, and would do it
+    // while the player may have a fresh change in flight.
+    const readsAfterMount = fake.bridge.getPrefs.mock.calls.length;
+    vi.advanceTimersByTime(DISPLAY_SETTLE_TIMEOUT_MS);
+    await flush(el);
+    expect(fake.bridge.getPrefs).toHaveBeenCalledTimes(readsAfterMount);
+
+    // And the button is usable again -- without having waited out the ceiling.
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(2);
+  });
+
+  // An unparseable push is not evidence that anything happened, so it must
+  // not settle a pending write.
+  it("does not let an unreadable push settle a write", async () => {
+    vi.useFakeTimers();
+    const fake = fakeBridge(snapshot("borderless"));
+    fake.bridge.setPrefs.mockImplementation(
+      () => new Promise<DesktopDisplaySnapshot>(() => undefined),
+    );
+    fake.install();
+    const el = await mount();
+
+    clickFullscreen(el);
+    await flush(el);
+    fake.push({
+      prefs: { mode: "nonsense" },
+    } as unknown as DesktopDisplaySnapshot);
+    await flush(el);
+
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(1);
   });
 
   it("does not throw when the bridge rejects", async () => {
