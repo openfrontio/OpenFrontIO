@@ -137,6 +137,13 @@ Two client behaviours matter here:
 
 ## Stripe dashboard / domain setup
 
+0. Add the PaymentIntent events to the webhook endpoint's **enabled events**
+   (Developers → Webhooks, per environment): `payment_intent.succeeded`,
+   `payment_intent.payment_failed`, `payment_intent.canceled`. The redirect
+   flow only ever needed `checkout.session.*`, so an existing endpoint will
+   not receive the inline events until these are added — the symptom is a
+   payment that succeeds on Stripe but never credits (this exact miss cost a
+   debugging session on staging, Sep 2026).
 1. Enable Apple Pay and Google Pay under Settings → Payment methods.
 2. Register the production and staging **game** domains for Apple Pay — the
    payment now happens on the game origin, not checkout.stripe.com.

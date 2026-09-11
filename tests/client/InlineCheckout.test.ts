@@ -9,6 +9,7 @@ vi.mock("../../src/client/Api", () => ({
   // Linked email by default, so ordinary tests exercise the no-email-field
   // modal; guest-path tests override per-test.
   getUserMe: vi.fn(async () => ({ user: { email: "linked@example.com" } })),
+  invalidateUserMe: vi.fn(),
 }));
 
 vi.mock("../../src/client/Cosmetics", () => ({
@@ -27,7 +28,7 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
 
 // The side-effect import is what registers the element; the named import is
 // only used in type positions and would be elided on its own.
-import { getUserMe } from "../../src/client/Api";
+import { getUserMe, invalidateUserMe } from "../../src/client/Api";
 import "../../src/client/components/InlineCheckout";
 import type { InlineCheckout } from "../../src/client/components/InlineCheckout";
 import {
@@ -93,6 +94,11 @@ async function renderComponent(
   return el;
 }
 
+// jsdom's location.reload is unforgeable, so replace window.location the way
+// CosmeticPackPurchase.test.ts does — several success paths reload now.
+let reloadMock: ReturnType<typeof vi.fn>;
+const originalLocation = window.location;
+
 beforeEach(() => {
   vi.clearAllMocks();
   availableMock.mockReturnValue(true);
@@ -101,10 +107,19 @@ beforeEach(() => {
   (getUserMe as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
     user: { email: "linked@example.com" },
   });
+  reloadMock = vi.fn();
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    value: { ...originalLocation, reload: reloadMock },
+  });
 });
 
 afterEach(() => {
   document.body.innerHTML = "";
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    value: originalLocation,
+  });
 });
 
 describe("inline-checkout wallet row", () => {
@@ -133,7 +148,7 @@ describe("inline-checkout wallet row", () => {
     );
   });
 
-  it("confirms through the session and reports success", async () => {
+  it("confirms through the session, reports success, and reloads", async () => {
     const { session, express } = fakeSession();
     createMock.mockResolvedValue(session);
     const el = await renderComponent();
@@ -146,7 +161,10 @@ describe("inline-checkout wallet row", () => {
         "store.currency_pack_purchase_success",
       ),
     );
-    expect(broadcastFreshUserMe).toHaveBeenCalled();
+    // Success reloads (after the alert) so the granted balance — and, for a
+    // guest, the freshly attached login email — shows up everywhere.
+    await vi.waitFor(() => expect(reloadMock).toHaveBeenCalled());
+    expect(invalidateUserMe).toHaveBeenCalled();
     // confirmPayment resolved the wallet sheet; failing it too would be a lie.
     expect(paymentFailed).not.toHaveBeenCalled();
     expect(el.querySelector("button")).toBeTruthy();

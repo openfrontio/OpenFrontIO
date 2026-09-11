@@ -39,8 +39,11 @@ Flow (deferred-intent, per current Stripe docs for `@stripe/stripe-js` v9):
    the intent reusable, and checkout is rate-limited). Changing the purchase —
    the custom-amount slider — drops the cache.
 4. The browser success callback is UI only: close the modal, thank the player,
-   re-read `/users/@me` (immediately and once again ~2.5s later for webhook
-   lag). **The webhook grants the entitlement, never the client.**
+   and reload the page (after the alert, which also gives the webhook a
+   head start) so the granted balance — and, for a guest, the freshly
+   attached login email — shows everywhere. A `pending` result soft-refreshes
+   `/users/@me` instead (immediately and once again ~2.5s later).
+   **The webhook grants the entitlement, never the client.**
 
 Buyer email: when the account has no login email, the wallet sheet requires
 one (`emailRequired` — wallets don't share it by default) and the card modal

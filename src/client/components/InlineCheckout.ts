@@ -6,7 +6,7 @@ import type {
 import type { PropertyValues, TemplateResult } from "lit";
 import { html, LitElement, render as litRender, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { getUserMe } from "../Api";
+import { getUserMe, invalidateUserMe } from "../Api";
 import { broadcastFreshUserMe, invalidateCosmetics } from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
 import type { PurchaseRequest } from "../Payments";
@@ -325,15 +325,23 @@ export class InlineCheckout extends LitElement {
     result: Exclude<InlineConfirmResult, { kind: "error" }>,
   ): Promise<void> {
     if (result.kind === "redirecting") return; // page is navigating away
+    if (result.kind === "success") {
+      // Reload, same as the plutonium purchases in Cosmetics.ts: the grant —
+      // and, for a guest, the login email the webhook just attached — touches
+      // state all over the page (balance, account button, store tiles), and a
+      // fresh load picks all of it up rather than chasing every consumer. The
+      // alert is awaited first, which also gives the webhook a human-scale
+      // head start.
+      await showInGameAlert(translateText(this.successMessageKey));
+      invalidateUserMe();
+      window.location.reload();
+      return;
+    }
+    // Pending: the webhook hasn't settled yet, so a reload would show nothing
+    // new — soft-refresh the profile now and again shortly.
     void broadcastFreshUserMe();
     setTimeout(() => void broadcastFreshUserMe(), BALANCE_RECHECK_MS);
-    await showInGameAlert(
-      translateText(
-        result.kind === "success"
-          ? this.successMessageKey
-          : "store.purchase_pending",
-      ),
-    );
+    await showInGameAlert(translateText("store.purchase_pending"));
   }
 
   private async runFallback(): Promise<void> {
