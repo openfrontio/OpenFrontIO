@@ -161,19 +161,53 @@ export class UsernamePanel extends LitElement {
     if (!confirmed) return;
 
     this.busy = true;
-    const result = await updateUsername(name);
+    await this.finishSave(name, await updateUsername(name), false);
+  }
 
+  // The second half of a save. `chosenSuffix` is true when the player has
+  // already said yes to the numbered form in this very flow, so the post-save
+  // explanation is not repeated at them.
+  private async finishSave(
+    name: string,
+    result: UpdateUsernameResult,
+    chosenSuffix: boolean,
+  ): Promise<void> {
     if (result.ok) {
-      // A premium player whose bare name is held gets the suffixed form
-      // instead — a 200, not a 409. Say so before the reload: otherwise the
-      // modal simply reopens showing a name they never chose, with nothing to
-      // explain it and their 30-day rename already spent. Awaited so the
-      // reload cannot race the dialog away.
-      await this.warnBareClaimUnavailable(name, result.data);
+      // Against an API that predates the strict rule, a held bare name still
+      // arrives as a 200 that already spent the rename. Say so before the
+      // reload; otherwise the modal reopens on a name they never chose.
+      if (!chosenSuffix) {
+        await this.warnBareClaimUnavailable(name, result.data);
+      }
       // Reload so every consumer starts from a fresh /users/@me; this modal
       // reopens via #modal=change-username showing the new name. Keep the
       // form locked (busy) while the reload happens.
       window.location.reload();
+      return;
+    }
+    if (result.code === "bare_taken") {
+      // Nothing was written. Offer the numbered form as a choice; "no" leaves
+      // them at the box with their rename unspent (spec, 10 Sept 2026).
+      this.busy = false;
+      const takeSuffixed = await showInGameConfirm(
+        translateText("account_modal.username_bare_taken_body", {
+          requested: result.base,
+        }),
+        {
+          heading: translateText("account_modal.username_bare_taken_heading"),
+          variant: "warning",
+          confirmText: translateText(
+            "account_modal.username_bare_taken_confirm",
+          ),
+        },
+      );
+      if (!takeSuffixed) return;
+      this.busy = true;
+      await this.finishSave(
+        name,
+        await updateUsername(name, { acceptSuffixed: true }),
+        true,
+      );
       return;
     }
     this.busy = false;

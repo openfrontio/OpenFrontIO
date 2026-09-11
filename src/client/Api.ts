@@ -340,22 +340,28 @@ export type UpdateUsernameResult =
   | { ok: false; code: "invalid"; message?: string }
   | { ok: false; code: "profane" }
   | { ok: false; code: "taken" }
+  // A subscriber asked for a bare name another subscriber holds. Nothing was
+  // written and no cooldown was spent; resubmit with acceptSuffixed to take
+  // the numbered form (spec, 10 Sept 2026).
+  | { ok: false; code: "bare_taken"; base: string }
   | { ok: false; code: "cooldown"; retryAfterSeconds: number | null }
   | { ok: false; code: "failed" };
 
 // PUT /users/@me/username — renames the account username. Every failure is
-// atomic (no name change, no cooldown consumed). The surviving 409 bodies
-// ("name equals an existing public id" and "suffix space exhausted") map to
-// "taken": the user remedy is the same — pick another name. Invalidates the
-// cached /users/@me on success so the next read reflects the new name.
+// atomic (no name change, no cooldown consumed). The surviving plain 409
+// bodies ("name equals an existing public id" and "suffix space exhausted")
+// map to "taken": the user remedy is the same — pick another name. A 409
+// carrying code BARE_NAME_TAKEN maps to "bare_taken": the caller offers the
+// numbered form and, on yes, calls again with `acceptSuffixed`. Invalidates
+// the cached /users/@me on success so the next read reflects the new name.
 //
-// A premium player whose chosen bare name is already held no longer 409s: the
-// API grants the suffixed form and returns 200 with `bareClaim:
-// "unavailable"`. That is a real rename and it consumes the cooldown, so `ok:
-// true` alone is not enough to act on — callers must read `data.bareClaim`
-// and tell the player (see UsernamePanel).
+// Against an API that predates the strict rule, a held bare name still comes
+// back as a 200 with `bareClaim: "unavailable"` — a real rename that consumed
+// the cooldown — so `ok: true` callers must still read `data.bareClaim` and
+// say so (see UsernamePanel.warnBareClaimUnavailable).
 export async function updateUsername(
   username: string,
+  opts: { acceptSuffixed?: boolean } = {},
 ): Promise<UpdateUsernameResult> {
   try {
     const response = await fetch(`${getApiBase()}/users/@me/username`, {
@@ -364,7 +370,9 @@ export async function updateUsername(
         "Content-Type": "application/json",
         Authorization: await getAuthHeader(),
       },
-      body: JSON.stringify({ username }),
+      body: JSON.stringify(
+        opts.acceptSuffixed ? { username, acceptSuffixed: true } : { username },
+      ),
     });
     if (response.status === 401) {
       await logOut();
@@ -382,6 +390,14 @@ export async function updateUsername(
       };
     }
     if (response.status === 409) {
+      const body = await response.json().catch(() => null);
+      if (body?.code === "BARE_NAME_TAKEN") {
+        return {
+          ok: false,
+          code: "bare_taken",
+          base: typeof body.base === "string" ? body.base : username,
+        };
+      }
       return { ok: false, code: "taken" };
     }
     if (response.status === 429) {
