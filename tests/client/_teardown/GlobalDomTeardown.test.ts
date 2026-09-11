@@ -1,9 +1,11 @@
 import { setTimeout as nodeDelay } from "node:timers/promises";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { removeAndSettle } from "../../domTeardown";
 import {
-  LEAK_DELAY_MS,
+  disconnects,
   lateUpdates,
+  LEAK_DELAY_MS,
   type TeardownLeaker,
 } from "./LeakyElement";
 
@@ -13,24 +15,19 @@ import {
  * cleaned up after it. Disable the afterEach in tests/domTeardown.ts and this
  * file fails.
  *
- * WHAT A LEAK ACTUALLY COSTS, MEASURED
+ * A leaked timer really can outlive the environment: `globalThis.setTimeout` is
+ * Node's, not jsdom's, so `dom.window.close()` does not cancel it, and the
+ * worker keeps running timers for a while after the teardown has deleted
+ * `document`. The mechanism, and how it was measured, is written up in
+ * tests/domTeardown.ts.
  *
- * The escape route these leaks are usually described as taking -- work landing
- * after the file's jsdom is gone -- could not be reproduced on Vitest 4.1.5.
- * Two things close it: the jsdom teardown calls `dom.window.close()`, and jsdom
- * stops every timer it owns, so a leaked setTimeout is cancelled outright; and
- * with the default forks pool each file gets its own child process, which exits
- * at the end of the file, so a promise settled by Node cannot reach it either.
- * Removing #5357's guard and running the whole suite with this hook disabled
- * produced no unhandled rejection at all.
- *
- * What is reproducible, and what these tests pin, is the leak WITHIN the file:
- * the element outlives the test that mounted it, so the next test starts with
- * someone else's DOM and someone else's timer armed against it. That is a real
- * cost -- removing the ad-hoc cleanup from
- * tests/client/UserSettingModal.graphics.test.ts fails 18 of its tests without
- * this hook -- and it is the same disconnectedCallback that never runs in
- * either story, so fixing it closes both.
+ * That window is ~10 ms here and only wide enough to catch a timer that happens
+ * to land inside it, which is why the CI failure was intermittent and why these
+ * tests do not try to reproduce it directly. They pin the deterministic half:
+ * the element and its timer are gone as soon as the test that mounted them
+ * ends. Disable the afterEach in tests/domTeardown.ts and this file fails --
+ * and so do 18 tests in tests/client/UserSettingModal.graphics.test.ts, which
+ * had grown its own copy of this cleanup.
  */
 
 let leaked: TeardownLeaker | null = null;
@@ -86,5 +83,44 @@ describe("global DOM teardown", () => {
     expect(vi.isFakeTimers()).toBe(false);
     // Would hang if fake timers were still installed.
     await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+});
+
+/**
+ * The afterAll sweep is what gives a beforeAll fixture its disconnectedCallback.
+ * It cannot be asserted from inside a test file -- running last is the point, so
+ * nothing here runs after it to look -- so the two halves are covered
+ * separately: that the per-test hook SPARES such a fixture, which is observable,
+ * and that removeAndSettle (all the sweep does) disconnects it, which is
+ * testable directly.
+ */
+describe("what the afterAll sweep is left holding", () => {
+  let fixture: TeardownLeaker;
+
+  beforeAll(() => {
+    fixture = document.createElement("teardown-leaker") as TeardownLeaker;
+    document.body.appendChild(fixture);
+  });
+
+  it("mounts a transient element alongside the fixture", async () => {
+    const transient = document.createElement("teardown-leaker");
+    document.body.appendChild(transient);
+    await (transient as TeardownLeaker).updateComplete;
+
+    expect(document.body.children.length).toBe(2);
+  });
+
+  it("took the transient element and spared the fixture", () => {
+    expect([...document.body.children]).toEqual([fixture]);
+  });
+
+  it("removeAndSettle disconnects what is left", async () => {
+    const before = disconnects.count;
+
+    await removeAndSettle([...document.body.children]);
+
+    expect(disconnects.count).toBe(before + 1);
+    expect(fixture.isConnected).toBe(false);
+    expect(document.body.children.length).toBe(0);
   });
 });

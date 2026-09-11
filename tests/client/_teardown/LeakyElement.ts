@@ -21,6 +21,9 @@ export const LEAK_DELAY_MS = 25;
 /** How many late updates actually reached the component, across the file. */
 export const lateUpdates = { count: 0 };
 
+/** How many times disconnectedCallback has run, across the file. */
+export const disconnects = { count: 0 };
+
 @customElement("teardown-leaker")
 export class TeardownLeaker extends LitElement {
   @state() private ticks = 0;
@@ -37,6 +40,7 @@ export class TeardownLeaker extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    disconnects.count++;
     clearTimeout(this.timer);
     this.timer = undefined;
   }
