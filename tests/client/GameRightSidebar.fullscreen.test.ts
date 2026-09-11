@@ -265,6 +265,71 @@ describe("GameRightSidebar fullscreen button", () => {
     expect(fake.bridge.setPrefs).toHaveBeenCalledWith({ mode: "windowed" });
   });
 
+  // The bridge lives in another repository on its own release schedule, so
+  // "it returns a promise" is a claim about it rather than a guarantee. A
+  // synchronous throw out of connectedCallback would abort the HUD mount.
+  it("finishes mounting when getPrefs throws synchronously", async () => {
+    const fake = fakeBridge();
+    fake.bridge.getPrefs.mockImplementation(() => {
+      throw new Error("bridge exploded");
+    });
+    fake.install();
+
+    const el = await mount();
+    expect(el.isConnected).toBe(true);
+    // The throw escaping connectedCallback would abandon the rest of it --
+    // asserted on the subscribe, which comes after the read, because a
+    // half-mounted sidebar is deaf to F11 and to the Display tab rather than
+    // visibly broken. jsdom swallows a throw out of a custom-element
+    // callback, so "it still mounted" alone would prove nothing.
+    expect(fake.listenerCount()).toBe(1);
+    expect(fullscreenButton(el).src).not.toContain("ExitFullscreen");
+  });
+
+  it("does not wedge the button when setPrefs throws synchronously", async () => {
+    const fake = fakeBridge();
+    fake.install();
+    const el = await mount();
+    fake.bridge.setPrefs.mockImplementationOnce(() => {
+      throw new Error("bridge exploded");
+    });
+
+    clickFullscreen(el);
+    await flush(el);
+    // A throw that escapes leaves the in-flight guard latched and the button
+    // dead for the rest of the match. The next click has to still work.
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(2);
+  });
+
+  // A mode change is a window transition and there is no control to disable
+  // here -- the guard is the whole of the protection against a second click.
+  it("sends one patch for two rapid clicks", async () => {
+    const fake = fakeBridge(snapshot("borderless"));
+    let settle: ((s: DesktopDisplaySnapshot) => void) | null = null;
+    fake.bridge.setPrefs.mockImplementation(
+      () =>
+        new Promise<DesktopDisplaySnapshot>((resolve) => {
+          settle = resolve;
+        }),
+    );
+    fake.install();
+    const el = await mount();
+
+    clickFullscreen(el);
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(1);
+
+    // ...and the button works again once the shell has answered.
+    settle!(snapshot("windowed"));
+    await flush(el);
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(2);
+  });
+
   it("does not throw when the bridge rejects", async () => {
     const fake = fakeBridge(snapshot("borderless"));
     fake.install();

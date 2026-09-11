@@ -70,6 +70,11 @@ export class GameRightSidebar extends LitElement implements Controller {
   private displayBridge: DesktopDisplayBridge | null = null;
   private displayUnsubscribe: (() => void) | null = null;
 
+  // True between sending a mode change and the shell answering. A mode change
+  // is a window transition, so a double-click would otherwise queue a second
+  // one that lands mid-flight and leaves the window where it started.
+  private displayBusy = false;
+
   @state()
   private timer: number = 0;
 
@@ -159,12 +164,20 @@ export class GameRightSidebar extends LitElement implements Controller {
     const bridge = desktopDisplay();
     this.displayBridge = bridge;
     if (bridge === null) return;
-    void bridge.getPrefs().then(
-      (snapshot) => this.adoptDisplaySnapshot(snapshot),
-      // No state change: the icon keeps whatever it had until a snapshot we
-      // can actually read turns up. A dead read must not take the HUD down.
-      () => undefined,
-    );
+    // Called through Promise.resolve() so that a bridge which THROWS rather
+    // than rejecting cannot escape connectedCallback and abort the whole HUD
+    // mount. The bridge is implemented in a separate repository on its own
+    // release schedule, so "it returns a promise" is a claim about it, not a
+    // guarantee -- and the failure mode has to be a dead button, never a
+    // missing sidebar.
+    void Promise.resolve()
+      .then(() => bridge.getPrefs())
+      .then(
+        (snapshot) => this.adoptDisplaySnapshot(snapshot),
+        // No state change: the icon keeps whatever it had until a snapshot we
+        // can actually read turns up.
+        () => undefined,
+      );
     if (typeof bridge.subscribe !== "function") return;
     try {
       this.displayUnsubscribe = bridge.subscribe((snapshot) =>
@@ -179,6 +192,7 @@ export class GameRightSidebar extends LitElement implements Controller {
     const unsubscribe = this.displayUnsubscribe;
     this.displayUnsubscribe = null;
     this.displayBridge = null;
+    this.displayBusy = false;
     try {
       unsubscribe?.();
     } catch {
@@ -368,15 +382,28 @@ export class GameRightSidebar extends LitElement implements Controller {
       // knows nothing about -- the last remaining way this client could
       // desync it, and the reason the shell carries a
       // leave-html-full-screen backstop at all.
+      // One transition at a time. Unlike the Display tab there is no control
+      // to disable here -- it is a single icon -- so the guard is the whole
+      // of the protection against an impatient second click.
+      if (this.displayBusy) return;
+      this.displayBusy = true;
       const next: DesktopDisplayMode =
         this.displayMode === "borderless" ? "windowed" : "borderless";
-      void bridge.setPrefs({ mode: next }).then(
-        (snapshot) => this.adoptDisplaySnapshot(snapshot),
-        // The icon keeps showing the mode the window is really in. The shell
-        // answers a patch it refuses with the current state rather than a
-        // rejection, so this is a broken bridge, not a refusal.
-        () => undefined,
-      );
+      // Promise.resolve() for the same reason as the read above: a bridge
+      // that throws synchronously must degrade the button, not blow up a
+      // click handler in the middle of a match.
+      void Promise.resolve()
+        .then(() => bridge.setPrefs({ mode: next }))
+        .then(
+          (snapshot) => this.adoptDisplaySnapshot(snapshot),
+          // The icon keeps showing the mode the window is really in. The
+          // shell answers a patch it refuses with the current state rather
+          // than a rejection, so this is a broken bridge, not a refusal.
+          () => undefined,
+        )
+        .finally(() => {
+          this.displayBusy = false;
+        });
       return;
     }
     if (!document.fullscreenElement) {

@@ -622,11 +622,17 @@ describe("Display tab subscription lifecycle", () => {
     el.close();
     await flush(el);
 
-    fake.settle(snapshot({ prefs: { mode: "windowed", displayId: null } }));
+    // The reopen's own read is left hanging deliberately. If it answered, it
+    // would overwrite the stale value with the truth and this test would pass
+    // whether or not the guard exists -- the stale "windowed" has to be the
+    // ONLY thing that could move the control.
+    fake.bridge.getPrefs.mockImplementation(
+      () => new Promise<DesktopDisplaySnapshot>(() => undefined),
+    );
+    el.open({ tab: "display" });
     await flush(el);
 
-    // Reopening reads afresh; the stale answer must not be what is shown.
-    el.open({ tab: "display" });
+    fake.settle(snapshot({ prefs: { mode: "windowed", displayId: null } }));
     await flush(el);
     expect(modeSelect(el)?.value).toBe("borderless");
   });
