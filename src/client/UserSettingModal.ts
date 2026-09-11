@@ -1,8 +1,11 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
-import { EventBus } from "../core/EventBus";
-import { getDefaultKeybinds, UserSettings } from "../core/game/UserSettings";
+import {
+  AudioCategory,
+  getDefaultKeybinds,
+  UserSettings,
+} from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
@@ -24,11 +27,9 @@ import {
 } from "./DesktopDisplay";
 import { isDesktopShell } from "./DesktopShell";
 import { Platform } from "./Platform";
-import { playCue } from "./sound/CuePlayer";
-import {
-  SetBackgroundMusicVolumeEvent,
-  SetSoundEffectsVolumeEvent,
-} from "./sound/Sounds";
+import type { AudioControls } from "./sound/CuePlayer";
+import { audioControls, playCue } from "./sound/CuePlayer";
+import type { CueCategory } from "./sound/Sounds";
 import type { UIState } from "./UIState";
 
 /**
@@ -44,16 +45,27 @@ function warnDisplayBridgeFailure(): void {
   console.warn("[display] bridge call failed");
 }
 
+/** Mixer channels in the order the Audio tab shows them. */
+const AUDIO_TAB_ORDER: readonly AudioCategory[] = [
+  "master",
+  "music",
+  "effects",
+  "alerts",
+  "ambience",
+  "interface",
+];
+
+/**
+ * Rows that get a Test button. Master is tested by every other button and
+ * music is already playing, so neither is previewable. Ambience is previewable
+ * in principle but AudioMixer.previewCue("ambience") resolves without playing
+ * — an ambience loop has no natural end — so a button there would do nothing.
+ */
+const PREVIEWABLE: readonly CueCategory[] = ["effects", "alerts", "interface"];
+
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
   protected routerName: string | undefined = "settings";
-
-  /**
-   * Set on the in-game instance (#game-settings) by GameRenderer. When present,
-   * the Audio sliders also emit the matching sound events: SoundManager reads
-   * UserSettings once at construction and follows the bus after that.
-   */
-  public eventBus?: EventBus;
 
   /**
    * Also set on the in-game instance by GameRenderer. The HUD's own attack
@@ -434,75 +446,146 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
-  private sliderBackgroundMusicVolume(e: CustomEvent<{ value: number }>) {
+  // A slider handler writes the setting and stops. AudioMixer follows
+  // USER_SETTINGS_CHANGED_EVENT for that key, which reaches the menu theme on
+  // this page and a running game's music alike — no volume event, no bus, and
+  // so no second EventBus for the home page to be missing.
+  private sliderAudio(
+    category: AudioCategory,
+    e: CustomEvent<{ value: number }>,
+  ) {
     const value = e.detail?.value;
     if (typeof value !== "number") {
       console.warn("Slider event missing detail.value", e);
       return;
     }
-    const volume = value / 100;
-    // Writing the setting is the whole job: AudioMixer follows
-    // USER_SETTINGS_CHANGED_EVENT, which reaches the menu theme on this page
-    // and a running game's music alike. The bus emit is kept only until the
-    // Audio tab lands and the legacy events are removed.
-    this.userSettings.setBackgroundMusicVolume(volume);
-    this.eventBus?.emit(new SetBackgroundMusicVolumeEvent(volume));
+    this.userSettings.setAudioVolume(category, value / 100);
     this.playSliderTick();
     this.requestUpdate();
   }
 
-  private sliderSoundEffectsVolume(e: CustomEvent<{ value: number }>) {
-    const value = e.detail?.value;
-    if (typeof value !== "number") {
-      console.warn("Slider event missing detail.value", e);
-      return;
-    }
-    const volume = value / 100;
-    this.userSettings.setSoundEffectsVolume(volume);
-    this.eventBus?.emit(new SetSoundEffectsVolumeEvent(volume));
-    this.playSliderTick();
+  private toggleMuteOnBlur(e: Event) {
+    this.userSettings.setMuteOnBlur((e.target as HTMLInputElement).checked);
+    // Re-render so the dependent "keep alerts audible" row follows.
+    this.requestUpdate();
+  }
+
+  private toggleAlertsWhenUnfocused(e: Event) {
+    this.userSettings.setAlertsWhenUnfocused(
+      (e.target as HTMLInputElement).checked,
+    );
     this.requestUpdate();
   }
 
   // @change fires throughout a drag; rate-limit the tick so dragging sounds
-  // like a ratchet rather than a buzz. Re-homed from SettingsModal, which no
-  // longer owns the sliders.
+  // like a ratchet rather than a buzz.
   private lastSliderTickMs = 0;
 
+  /**
+   * Only ever reached from a slider's `change` handler, which `setting-slider`
+   * dispatches from its `@input` — a user drag. Setting `.value`
+   * programmatically never routes through here, so the tick cannot fire on a
+   * re-render. Via CuePlayer so this modal does not drag howler into every
+   * test that mounts it.
+   */
   private playSliderTick() {
     const now = Date.now();
     if (now - this.lastSliderTickMs < 150) return;
     this.lastSliderTickMs = now;
-    // Through the mixer, not the bus: this component is mounted twice, and
-    // the page instance has no bus, so a bus hop is silent exactly where the
-    // player is most likely to be dragging a slider. Via CuePlayer so the
-    // modal does not drag howler into every test that mounts it.
     playCue("slider");
   }
 
-  private renderAudioSettings() {
-    return html`
-      <setting-slider
-        label="${translateText("user_setting.background_music_volume")}"
-        description="${translateText(
-          "user_setting.background_music_volume_desc",
-        )}"
-        id="background-music-volume-slider"
-        min="0"
-        max="100"
-        .value=${Math.round(this.userSettings.backgroundMusicVolume() * 100)}
-        @change=${this.sliderBackgroundMusicVolume}
-      ></setting-slider>
+  /**
+   * Channels with a preview cue in flight. A button stays disabled until its
+   * own cue finishes, so a player cannot stack copies of it.
+   */
+  @state() private previewing: ReadonlySet<CueCategory> = new Set();
 
-      <setting-slider
-        label="${translateText("user_setting.sound_effects_volume")}"
-        description="${translateText("user_setting.sound_effects_volume_desc")}"
-        id="sound-effects-volume-slider"
-        min="0"
-        max="100"
-        .value=${Math.round(this.userSettings.soundEffectsVolume() * 100)}
-        @change=${this.sliderSoundEffectsVolume}
-      ></setting-slider>
+  private async playTestCue(category: CueCategory) {
+    const controls = audioControls();
+    if (controls === null || this.previewing.has(category)) return;
+    this.previewing = new Set([...this.previewing, category]);
+    try {
+      await controls.previewCue(category);
+    } catch (error) {
+      // The cue is a convenience; a failed preview must not break the tab.
+      console.warn("Failed to play audio preview", error);
+    } finally {
+      const remaining = new Set(this.previewing);
+      remaining.delete(category);
+      this.previewing = remaining;
+    }
+  }
+
+  private renderTestButton(controls: AudioControls, category: CueCategory) {
+    const muted = !controls.isAudible(category);
+    const pending = this.previewing.has(category);
+    return html`
+      <button
+        id="audio-${category}-test"
+        class="self-end px-3 py-1 text-sm font-medium rounded-lg border border-white/10 text-white transition-colors ${muted ||
+        pending
+          ? "opacity-40 cursor-not-allowed"
+          : "bg-white/5 hover:bg-white/15"}"
+        ?disabled=${muted || pending}
+        title=${muted ? translateText("user_setting.audio_test_muted") : ""}
+        @click=${() => this.playTestCue(category)}
+      >
+        ${translateText("user_setting.audio_test")}
+      </button>
+    `;
+  }
+
+  private renderVolumeSlider(category: AudioCategory) {
+    const controls = audioControls();
+    return html`
+      <div class="flex flex-col gap-2">
+        <setting-slider
+          label="${translateText(`user_setting.audio_${category}`)}"
+          description="${translateText(`user_setting.audio_${category}_desc`)}"
+          id="audio-${category}-slider"
+          min="0"
+          max="100"
+          unit=""
+          .value=${Math.round(this.userSettings.audioVolume(category) * 100)}
+          @change=${(e: CustomEvent<{ value: number }>) =>
+            this.sliderAudio(category, e)}
+        ></setting-slider>
+        ${controls !== null && PREVIEWABLE.includes(category as CueCategory)
+          ? html`<div class="flex justify-end">
+              ${this.renderTestButton(controls, category as CueCategory)}
+            </div>`
+          : ""}
+      </div>
+    `;
+  }
+
+  private renderAudioSettings() {
+    const muteOnBlur = this.userSettings.muteOnBlur();
+    return html`
+      ${AUDIO_TAB_ORDER.map((category) => this.renderVolumeSlider(category))}
+
+      <setting-toggle
+        label="${translateText("user_setting.audio_mute_on_blur")}"
+        description="${translateText("user_setting.audio_mute_on_blur_desc")}"
+        id="audio-mute-on-blur-toggle"
+        .checked=${muteOnBlur}
+        @change=${this.toggleMuteOnBlur}
+      ></setting-toggle>
+
+      <!-- Dependent on the row above: meaningless when nothing is muted. -->
+      <div class="pl-6">
+        <setting-toggle
+          label="${translateText("user_setting.audio_alerts_when_unfocused")}"
+          description="${translateText(
+            "user_setting.audio_alerts_when_unfocused_desc",
+          )}"
+          id="audio-alerts-when-unfocused-toggle"
+          .checked=${this.userSettings.alertsWhenUnfocused()}
+          ?disabled=${!muteOnBlur}
+          @change=${this.toggleAlertsWhenUnfocused}
+        ></setting-toggle>
+      </div>
     `;
   }
 
