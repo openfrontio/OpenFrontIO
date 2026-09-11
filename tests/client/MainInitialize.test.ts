@@ -200,9 +200,9 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       path.resolve(__dirname, "../../index.html"),
       "utf8",
     );
-    const bodyInner = html
-      .match(/<body[^>]*>([\s\S]*)<\/body>/)![1]
-      .replace(/<script[\s\S]*?<\/script>/g, "");
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    parsed.querySelectorAll("script").forEach((s) => s.remove());
+    const bodyInner = parsed.body.innerHTML;
     // A guaranteed-first <username-input> so Client.initialize() captures an
     // element we can stub canPlay() on (play-page renders its own copy async,
     // maybe, later — document order keeps ours the querySelector result).
