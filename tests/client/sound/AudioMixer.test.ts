@@ -208,6 +208,17 @@ describe("per-channel budgets", () => {
     expect(ms).toBeGreaterThan(0);
   });
 
+  it("stops an evicted cue outright when the channel is silent", () => {
+    // fade(0, 0, ...) never completes in Howler, so fading here would leave
+    // the cue playing outside its budget with the interval and listener
+    // leaked for the rest of the session.
+    build({ effects: 0 });
+    for (let i = 0; i < 7; i++) mixer.play("build-city");
+    const howl = howlInstances.find((h) => h.src.includes("build-city"));
+    expect(howl.fade).not.toHaveBeenCalled();
+    expect(howl.stop).toHaveBeenCalled();
+  });
+
   it("drops the newest interface tick rather than stuttering the ratchet", () => {
     build({ interface: 1 });
     for (let i = 0; i < 5; i++) mixer.play("slider");

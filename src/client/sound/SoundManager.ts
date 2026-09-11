@@ -118,12 +118,15 @@ export class SoundManager {
       howl.off("fade");
       this.fadingOut.delete(howl);
       if (!howl.playing()) howl.play();
-      if (target === 0) {
-        // fade(0, 0, ...) never completes in Howler — its done check needs
-        // from !== to — so a zero-target fade would hang the callback.
-        howl.volume(0);
+      // Howler's fade only completes while the volume is moving toward the
+      // target, so any fade whose start equals its end hangs and leaks its
+      // interval. Zero is the common case, but panning between two structures
+      // at a constant zoom can also re-enter with the loop already at target.
+      const from = howl.volume() as number;
+      if (target === 0 || from === target) {
+        howl.volume(target);
       } else {
-        howl.fade(howl.volume() as number, target, AMBIENCE_FADE_MS);
+        howl.fade(from, target, AMBIENCE_FADE_MS);
       }
     });
   }

@@ -173,6 +173,22 @@ describe("ambience", () => {
     expect(city.volumes[city.volumes.length - 1]).toBeCloseTo(0.05);
   });
 
+  it("does not fade a loop that is already at its target", () => {
+    // Panning between two structures at a constant zoom can re-enter with the
+    // loop still sitting at the target; fade(V, V, ...) never completes in
+    // Howler and leaks its interval.
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    const city = find("city.mp3");
+    eventBus.emit(new SetAmbienceEvent("factory", 0.1));
+    // The fade-out has been issued but has not stepped the volume yet.
+    city.volume(mixer.volumeFor("ambience"));
+    city.fade.mockClear();
+
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+
+    expect(city.fade).not.toHaveBeenCalled();
+  });
+
   it("silences the loop when the player zooms out", () => {
     eventBus.emit(new SetAmbienceEvent("city", 0.1));
     eventBus.emit(new SetAmbienceEvent(null, 0));
