@@ -3,6 +3,7 @@ import { MessageType, UnitType } from "../../core/game/Game";
 import { GameUpdateType } from "../../core/game/GameUpdates";
 import { Controller } from "../Controller";
 import { PlaySoundEffectEvent, SoundEffect } from "../sound/Sounds";
+import { SendSpawnIntentEvent } from "../Transport";
 import { GameView, UnitView } from "../view";
 
 // A MIRV rains hundreds of warheads over a few seconds; playing a boom per
@@ -24,7 +25,6 @@ const NUKE_INBOUND_MESSAGES = new Set<MessageType>([
 
 export class SoundEffectController implements Controller {
   private lastMirvHitSoundTick = -Infinity;
-  private spawnSoundPlayed = false;
   // A train station is a flag on an existing structure, not a unit — play the
   // build sound on the false→true edge only, so structures that already have
   // one when first seen (e.g. joining mid-game) stay silent.
@@ -34,6 +34,16 @@ export class SoundEffectController implements Controller {
     private readonly game: GameView,
     private readonly eventBus: EventBus,
   ) {}
+
+  init(): void {
+    // On the intent, not the sim confirmation: the cue answers the player's
+    // click, and re-placing the spawn should sound every time.
+    this.eventBus.on(SendSpawnIntentEvent, this.onSpawnIntent);
+  }
+
+  private onSpawnIntent = (): void => {
+    this.emit("spawn");
+  };
 
   tick(): void {
     const updates = this.game.updatesSinceLastTick();
@@ -55,15 +65,6 @@ export class SoundEffectController implements Controller {
       if (c.conquerorId === myPlayer.id()) {
         this.emit("ka-ching");
       }
-    }
-
-    if (
-      !this.spawnSoundPlayed &&
-      this.game.inSpawnPhase() &&
-      myPlayer.hasSpawned()
-    ) {
-      this.spawnSoundPlayed = true;
-      this.emit("spawn");
     }
 
     for (const u of updates[GameUpdateType.UnitIncoming] ?? []) {
