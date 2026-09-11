@@ -93,21 +93,6 @@ describe("UserSettings tutorial dismissal", () => {
   });
 });
 
-describe("UserSettings game-start alert notice", () => {
-  beforeEach(resetUserSettingsState);
-
-  it("defaults to unseen and persists once seen", () => {
-    const s = new UserSettings();
-    expect(s.gameStartAlertNoticeSeen()).toBe(false);
-
-    s.setGameStartAlertNoticeSeen(true);
-    expect(s.gameStartAlertNoticeSeen()).toBe(true);
-    expect(localStorage.getItem("settings.gameStartAlertNoticeSeen")).toBe(
-      "true",
-    );
-  });
-});
-
 describe("UserSettings cosmetic loadouts", () => {
   beforeEach(resetUserSettingsState);
 
