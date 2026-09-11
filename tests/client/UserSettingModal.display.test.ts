@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type {
-  DesktopDisplayPrefsPatch,
-  DesktopDisplaySnapshot,
+import {
+  DISPLAY_SETTLE_TIMEOUT_MS,
+  type DesktopDisplayPrefsPatch,
+  type DesktopDisplaySnapshot,
 } from "../../src/client/DesktopDisplay";
 import { modalRouter } from "../../src/client/ModalRouter";
+import { Platform } from "../../src/client/Platform";
 import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
 
@@ -216,6 +218,53 @@ describe("Display tab visibility", () => {
     expect(keys).toContain("display");
     expect(keys.indexOf("display")).toBeGreaterThan(keys.indexOf("gameplay"));
     expect(keys.indexOf("display")).toBeLessThan(keys.indexOf("audio"));
+  });
+});
+
+// Keybinds is about having keys, not about screen size, so this is gated on
+// the primary pointer rather than a breakpoint.
+describe("Keybinds tab on touch devices", () => {
+  beforeEach(resetDom);
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is present with a fine pointer", async () => {
+    vi.spyOn(Platform, "isTouch", "get").mockReturnValue(false);
+    const el = await mount();
+    expect(tabKeys(el)).toContain("keybinds");
+  });
+
+  it("is absent on a touch device", async () => {
+    vi.spyOn(Platform, "isTouch", "get").mockReturnValue(true);
+    const el = await mount();
+    expect(tabKeys(el)).not.toContain("keybinds");
+  });
+
+  // Removed from the list, not merely hidden -- so a deep link or a bookmark
+  // lands on Gameplay rather than selecting a tab with nothing behind it.
+  it("cannot be opened by name on a touch device", async () => {
+    vi.spyOn(Platform, "isTouch", "get").mockReturnValue(true);
+    const el = await mount();
+    el.open({ tab: "keybinds" });
+    await flush(el);
+    expect(el.activeTab).toBe("gameplay");
+  });
+
+  it("leaves the order of the remaining tabs alone", async () => {
+    vi.spyOn(Platform, "isTouch", "get").mockReturnValue(true);
+    const el = await mount();
+    expect(tabKeys(el)).toEqual(["gameplay", "graphics", "audio"]);
+  });
+
+  // The Display tab is orthogonal: a touch device with a desktop shell is not
+  // a real combination, but the two gates must not interfere.
+  it("still hides only Keybinds when the display bridge is present", async () => {
+    vi.spyOn(Platform, "isTouch", "get").mockReturnValue(true);
+    fakeBridge().install();
+    const el = await mount();
+    expect(tabKeys(el)).toEqual(["gameplay", "graphics", "display", "audio"]);
   });
 });
 
@@ -595,6 +644,43 @@ describe("Display tab writes", () => {
     } as unknown as DesktopDisplaySnapshot);
     await flush(el);
     expect(modeSelect(el)?.value).toBe("borderless");
+  });
+
+  // ...and it must not RETIRE a write either. Dropping the snapshot is only
+  // half of it: bumping the request id and settling on an unreadable push
+  // would discard the real answer still in flight, so the player's change
+  // would read as reverted even though the shell had applied it.
+  it("does not let an unreadable push settle a write", async () => {
+    vi.useFakeTimers();
+    const fake = fakeBridge();
+    fake.install();
+    const el = await mount();
+    el.open({ tab: "display" });
+    await flush(el);
+
+    choose(modeSelect(el)!, "windowed");
+    await flush(el);
+    expect(modeSelect(el)?.disabled).toBe(true);
+
+    fake.push({
+      ...snapshot(),
+      prefs: { mode: "exclusive-fullscreen", displayId: null },
+    } as unknown as DesktopDisplaySnapshot);
+    await flush(el);
+    // Still waiting: the unreadable push settled nothing.
+    expect(modeSelect(el)?.disabled).toBe(true);
+
+    // The real answer is still adopted when it arrives...
+    fake.settle(snapshot({ prefs: { mode: "windowed", displayId: null } }));
+    await flush(el);
+    expect(modeSelect(el)?.value).toBe("windowed");
+    expect(modeSelect(el)?.disabled).toBe(false);
+
+    // ...and the ceiling was cleared by that real settle, not left armed.
+    const readsSoFar = fake.bridge.getPrefs.mock.calls.length;
+    vi.advanceTimersByTime(DISPLAY_SETTLE_TIMEOUT_MS);
+    await flush(el);
+    expect(fake.bridge.getPrefs).toHaveBeenCalledTimes(readsSoFar);
   });
 });
 

@@ -574,6 +574,56 @@ describe("GameRightSidebar fullscreen button", () => {
     expect(fullscreenButton(el).src).not.toContain("ExitFullscreen");
   });
 
+  // The mount read is the slowest async path here and the easiest to miss.
+  // A toggle that lands while it is still in flight sets the new mode; the
+  // read then resolves describing the world before it.
+  it("drops the mount read when a toggle beats it home", async () => {
+    const fake = fakeBridge(snapshot("borderless"));
+    let resolveRead: ((s: DesktopDisplaySnapshot) => void) | null = null;
+    fake.bridge.getPrefs.mockImplementation(
+      () =>
+        new Promise<DesktopDisplaySnapshot>((resolve) => {
+          resolveRead = resolve;
+        }),
+    );
+    fake.bridge.setPrefs.mockImplementation(async () => snapshot("windowed"));
+    fake.install();
+    const el = await mount();
+    expect(resolveRead).not.toBeNull();
+
+    // The player toggles before the mount read has answered.
+    clickFullscreen(el);
+    await flush(el);
+    expect(fullscreenButton(el).src).not.toContain("ExitFullscreen");
+
+    // The mount read now answers with the pre-toggle world.
+    resolveRead!(snapshot("borderless"));
+    await flush(el);
+    expect(fullscreenButton(el).src).not.toContain("ExitFullscreen");
+  });
+
+  // The same read outliving the element entirely.
+  it("does not write from the mount read after disconnect", async () => {
+    const fake = fakeBridge(snapshot("borderless"));
+    let resolveRead: ((s: DesktopDisplaySnapshot) => void) | null = null;
+    fake.bridge.getPrefs.mockImplementation(
+      () =>
+        new Promise<DesktopDisplaySnapshot>((resolve) => {
+          resolveRead = resolve;
+        }),
+    );
+    fake.install();
+    const el = await mount();
+
+    el.remove();
+    await flush(el);
+    resolveRead!(snapshot("borderless"));
+    await flush(el);
+
+    const probe = el as unknown as { displayMode: unknown };
+    expect(probe.displayMode).toBeNull();
+  });
+
   it("does not throw when the bridge rejects", async () => {
     const fake = fakeBridge(snapshot("borderless"));
     fake.install();

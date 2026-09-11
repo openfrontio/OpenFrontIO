@@ -183,6 +183,13 @@ export class GameRightSidebar extends LitElement implements Controller {
     const bridge = desktopDisplay();
     this.displayBridge = bridge;
     if (bridge === null) return;
+    // Guarded like every other async path here. This one is the slowest to
+    // matter and the easiest to miss: if the player toggles (or F11 pushes)
+    // while the mount read is still in flight, the toggle updates displayMode
+    // and then this read resolves and puts the PRE-toggle value back, leaving
+    // the icon wrong until something else arrives. The same check stops a slow
+    // read writing to an element disconnectDisplayBridge has already torn down.
+    const operation = this.displayOperation;
     // Called through Promise.resolve() so that a bridge which THROWS rather
     // than rejecting cannot escape connectedCallback and abort the whole HUD
     // mount. The bridge is implemented in a separate repository on its own
@@ -192,7 +199,10 @@ export class GameRightSidebar extends LitElement implements Controller {
     void Promise.resolve()
       .then(() => bridge.getPrefs())
       .then(
-        (snapshot) => this.adoptDisplaySnapshot(snapshot),
+        (snapshot) => {
+          if (operation !== this.displayOperation) return;
+          this.adoptDisplaySnapshot(snapshot);
+        },
         // No state change: the icon keeps whatever it had until a snapshot we
         // can actually read turns up.
         () => undefined,

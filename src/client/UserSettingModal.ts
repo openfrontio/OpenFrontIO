@@ -505,7 +505,26 @@ export class UserSettingModal extends BaseModal {
             ]
           : []),
         { key: "audio", label: translateText("user_setting.tab_audio") },
-        { key: "keybinds", label: translateText("user_setting.tab_keybinds") },
+        // Keybinds is about having keys. A touch device has none, so the tab
+        // is a list of rebind controls the player can neither use nor trigger.
+        //
+        // Platform.isTouch tests the PRIMARY pointer (`pointer: coarse`), not
+        // the viewport, which is the distinction that matters here: a laptop
+        // with a touchscreen and a mouse keeps the tab, and a tablet loses it
+        // at any width. A CSS breakpoint would get both backwards.
+        //
+        // Removed from tabs[] rather than hidden, so BaseModal -- which
+        // validates a requested tab against this list -- lands
+        // open({ tab: "keybinds" }) on Gameplay instead of selecting a tab
+        // with nothing behind it.
+        ...(Platform.isTouch
+          ? []
+          : [
+              {
+                key: "keybinds",
+                label: translateText("user_setting.tab_keybinds"),
+              },
+            ]),
       ],
     };
   }
@@ -593,6 +612,13 @@ export class UserSettingModal extends BaseModal {
         // writes — so it is applied unconditionally, and it is what normally
         // settles a pending write.
         //
+        // Nothing below happens for a push we cannot read. adoptDisplaySnapshot
+        // would drop it anyway, but the bump and the settle would still run --
+        // retiring the real setPrefs answer, cancelling the ceiling's recovery
+        // read, and re-enabling the controls on state we never updated. The
+        // player's change would silently read as reverted while the shell had
+        // in fact applied it. An unreadable push is not evidence of anything.
+        if (!isDisplaySnapshot(snapshot)) return;
         // Bumped BEFORE adopting, which invalidates whatever was in flight:
         // a push is strictly newer than any request that has not answered
         // yet, so letting the initial read (or the ceiling's re-read) land
