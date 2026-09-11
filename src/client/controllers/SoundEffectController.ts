@@ -1,5 +1,5 @@
 import { EventBus } from "../../core/EventBus";
-import { UnitType } from "../../core/game/Game";
+import { MessageType, UnitType } from "../../core/game/Game";
 import { GameUpdateType } from "../../core/game/GameUpdates";
 import { Controller } from "../Controller";
 import { PlaySoundEffectEvent, SoundEffect } from "../sound/Sounds";
@@ -9,8 +9,26 @@ import { GameView, UnitView } from "../view";
 // warhead churns the audio pipeline. Play at most one warhead boom per interval.
 const MIRV_HIT_SOUND_INTERVAL_TICKS = 5;
 
+// Structures a train station can be attached to (see TrainStationExecution).
+const STATION_CAPABLE_TYPES = new Set<UnitType>([
+  UnitType.City,
+  UnitType.Factory,
+  UnitType.Port,
+]);
+
+const NUKE_INBOUND_MESSAGES = new Set<MessageType>([
+  MessageType.NUKE_INBOUND,
+  MessageType.HYDROGEN_BOMB_INBOUND,
+  MessageType.MIRV_INBOUND,
+]);
+
 export class SoundEffectController implements Controller {
   private lastMirvHitSoundTick = -Infinity;
+  private spawnSoundPlayed = false;
+  // A train station is a flag on an existing structure, not a unit — play the
+  // build sound on the false→true edge only, so structures that already have
+  // one when first seen (e.g. joining mid-game) stay silent.
+  private hadTrainStation = new Map<number, boolean>();
 
   constructor(
     private readonly game: GameView,
@@ -27,6 +45,10 @@ export class SoundEffectController implements Controller {
       this.handleUnit(unit);
     }
 
+    if ((updates[GameUpdateType.SpawnPhaseEnd] ?? []).length > 0) {
+      this.emit("game-start");
+    }
+
     const myPlayer = this.game.myPlayer();
     if (myPlayer === null) return;
     for (const c of updates[GameUpdateType.ConquestEvent] ?? []) {
@@ -34,11 +56,30 @@ export class SoundEffectController implements Controller {
         this.emit("ka-ching");
       }
     }
+
+    if (
+      !this.spawnSoundPlayed &&
+      this.game.inSpawnPhase() &&
+      myPlayer.hasSpawned()
+    ) {
+      this.spawnSoundPlayed = true;
+      this.emit("spawn");
+    }
+
+    for (const u of updates[GameUpdateType.UnitIncoming] ?? []) {
+      if (u.playerID !== myPlayer.smallID()) continue;
+      if (NUKE_INBOUND_MESSAGES.has(u.messageType)) {
+        this.emit("nuke-warning");
+      }
+    }
   }
 
   private handleUnit(unit: UnitView): void {
     if (unit.isActive() && unit.createdAt() === this.game.ticks()) {
       this.onCreated(unit);
+    }
+    if (STATION_CAPABLE_TYPES.has(unit.type())) {
+      this.handleTrainStation(unit);
     }
     switch (unit.type()) {
       case UnitType.AtomBomb:
@@ -94,7 +135,26 @@ export class SoundEffectController implements Controller {
       case UnitType.MissileSilo:
         if (unit.owner() === myPlayer) this.emit("silo-built");
         break;
+      case UnitType.Factory:
+        if (unit.owner() === myPlayer) this.emit("build-factory");
+        break;
+      case UnitType.TransportShip:
+        if (unit.owner() === myPlayer) this.emit("transport-ship");
+        break;
     }
+  }
+
+  private handleTrainStation(unit: UnitView): void {
+    if (!unit.isActive()) {
+      this.hadTrainStation.delete(unit.id());
+      return;
+    }
+    const hasStation = unit.hasTrainStation();
+    const prev = this.hadTrainStation.get(unit.id());
+    if (prev === false && hasStation && unit.owner() === this.game.myPlayer()) {
+      this.emit("build-train-station");
+    }
+    this.hadTrainStation.set(unit.id(), hasStation);
   }
 
   private onNukeDetonation(unit: UnitView, sound: SoundEffect): void {

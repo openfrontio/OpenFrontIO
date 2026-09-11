@@ -1,7 +1,7 @@
 import { SoundEffectController } from "../../../src/client/controllers/SoundEffectController";
 import { PlaySoundEffectEvent } from "../../../src/client/sound/Sounds";
 import { EventBus } from "../../../src/core/EventBus";
-import { UnitType } from "../../../src/core/game/Game";
+import { MessageType, UnitType } from "../../../src/core/game/Game";
 import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 
 describe("SoundEffectController", () => {
@@ -74,6 +74,108 @@ describe("SoundEffectController", () => {
       owner: () => ({}),
     };
     tickWithUnits(intercepted);
+    expect(played).toEqual([]);
+  });
+
+  // createdAt reads `tick` lazily, so the unit counts as created on whichever
+  // tick tickWithUnits delivers it.
+  function makeCreatedUnit(id: number, type: UnitType, owner: object) {
+    return {
+      id: () => id,
+      type: () => type,
+      isActive: () => true,
+      reachedTarget: () => false,
+      createdAt: () => tick,
+      owner: () => owner,
+      hasTrainStation: () => false,
+    };
+  }
+
+  it("plays game-start when the spawn phase ends", () => {
+    game.updatesSinceLastTick = () => ({
+      [GameUpdateType.SpawnPhaseEnd]: [{ startTick: 10 }],
+    });
+    controller.tick();
+    expect(played).toEqual(["game-start"]);
+  });
+
+  it("plays spawn once when my player spawns during the spawn phase", () => {
+    let hasSpawned = false;
+    game.myPlayer = () => ({ hasSpawned: () => hasSpawned });
+    game.inSpawnPhase = () => true;
+    game.updatesSinceLastTick = () => ({});
+    controller.tick();
+    expect(played).toEqual([]);
+    hasSpawned = true;
+    controller.tick();
+    controller.tick();
+    expect(played).toEqual(["spawn"]);
+  });
+
+  it("plays nuke-warning only for nukes inbound to my player", () => {
+    game.myPlayer = () => ({ smallID: () => 7 });
+    game.inSpawnPhase = () => false;
+    game.updatesSinceLastTick = () => ({
+      [GameUpdateType.UnitIncoming]: [
+        { playerID: 7, messageType: MessageType.NUKE_INBOUND },
+        { playerID: 8, messageType: MessageType.HYDROGEN_BOMB_INBOUND },
+        { playerID: 7, messageType: MessageType.NAVAL_INVASION_INBOUND },
+      ],
+    });
+    controller.tick();
+    expect(played).toEqual(["nuke-warning"]);
+  });
+
+  it("plays build sounds only for my own factory and transport ship", () => {
+    const me = {};
+    game.myPlayer = () => me;
+    game.inSpawnPhase = () => false;
+    tickWithUnits(
+      makeCreatedUnit(1, UnitType.Factory, me),
+      makeCreatedUnit(2, UnitType.TransportShip, me),
+      makeCreatedUnit(3, UnitType.Factory, {}),
+      makeCreatedUnit(4, UnitType.TransportShip, {}),
+    );
+    expect(played).toEqual(["build-factory", "transport-ship"]);
+  });
+
+  it("plays build-train-station when my structure gains a station", () => {
+    const me = {};
+    game.myPlayer = () => me;
+    game.inSpawnPhase = () => false;
+    let hasStation = false;
+    const city = {
+      id: () => 1,
+      type: () => UnitType.City,
+      isActive: () => true,
+      reachedTarget: () => false,
+      createdAt: () => 0,
+      owner: () => me,
+      hasTrainStation: () => hasStation,
+    };
+    tickWithUnits(city);
+    expect(played).toEqual([]);
+    hasStation = true;
+    tickWithUnits(city);
+    expect(played).toEqual(["build-train-station"]);
+    tickWithUnits(city);
+    expect(played).toEqual(["build-train-station"]);
+  });
+
+  it("stays silent for a structure first seen with a station already", () => {
+    const me = {};
+    game.myPlayer = () => me;
+    game.inSpawnPhase = () => false;
+    const city = {
+      id: () => 1,
+      type: () => UnitType.City,
+      isActive: () => true,
+      reachedTarget: () => false,
+      createdAt: () => 0,
+      owner: () => me,
+      hasTrainStation: () => true,
+    };
+    tickWithUnits(city);
     expect(played).toEqual([]);
   });
 });

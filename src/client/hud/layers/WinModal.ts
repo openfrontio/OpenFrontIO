@@ -23,6 +23,7 @@ import {
   resolveCosmetics,
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
 import { GameView } from "../../view";
@@ -307,6 +308,7 @@ export class WinModal extends LitElement implements Controller {
     ) {
       this.hasShownDeathModal = true;
       this._title = translateText("win_modal.died");
+      this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
       this.show();
     }
     const updates = this.game.updatesSinceLastTick();
@@ -333,6 +335,7 @@ export class WinModal extends LitElement implements Controller {
           });
           this.isWin = false;
         }
+        this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       } else if (wu.winner[0] === "nation") {
@@ -341,6 +344,7 @@ export class WinModal extends LitElement implements Controller {
           nation: wu.winner[1],
         });
         this.isWin = false;
+        this.playEndOfGameSound();
         this.show();
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);
@@ -364,9 +368,19 @@ export class WinModal extends LitElement implements Controller {
           });
           this.isWin = false;
         }
+        this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       }
     });
+  }
+
+  private playEndOfGameSound(): void {
+    if (this.isWin) {
+      this.eventBus.emit(new PlaySoundEffectEvent("victory"));
+    } else if (!this.hasShownDeathModal) {
+      // The defeat cue already played when the player died.
+      this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
+    }
   }
 }
