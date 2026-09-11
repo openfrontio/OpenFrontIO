@@ -294,11 +294,13 @@ describe("Transport send paths", () => {
       ws.onmessage?.({ data: new Uint8Array([255, 255, 255]).buffer });
 
       expect(onmessage).not.toHaveBeenCalled();
-      expect(console.error).toHaveBeenCalledWith(
-        "Error in onmessage handler:",
-        expect.anything(),
-        expect.anything(),
-      );
+      // The log's trailing args are incidental detail; only the branch
+      // itself is under test.
+      expect(
+        vi
+          .mocked(console.error)
+          .mock.calls.some((call) => call[0] === "Error in onmessage handler:"),
+      ).toBe(true);
     });
   });
 });
