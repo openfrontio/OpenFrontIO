@@ -46,13 +46,11 @@ export class AmbienceController implements Controller {
 
   private desiredTrack(): AmbienceTrack | null {
     if (this.transformHandler.scale < AMBIENCE_ZOOM_SCALE) return null;
+    // Despite the field names, screenCenter() returns world coordinates
+    // (see TransformHandler.goTo(), which compares it to a world Cell).
     const { screenX, screenY } = this.transformHandler.screenCenter();
-    const cell = this.transformHandler.screenToWorldCoordinates(
-      screenX,
-      screenY,
-    );
-    if (!this.game.isValidCoord(cell.x, cell.y)) return null;
-    const tile = this.game.ref(cell.x, cell.y);
+    if (!this.game.isValidCoord(screenX, screenY)) return null;
+    const tile = this.game.ref(screenX, screenY);
     let closest: { type: UnitType; distSquared: number } | null = null;
     for (const nearby of this.game.nearbyUnits(
       tile,
