@@ -149,4 +149,16 @@ describe("Transport frame-handling errors", () => {
     expect(rendered).toMatch(/frame: \d+ bytes/);
     expect(rendered).toContain("downstream handler blew up");
   });
+
+  // console.* reads argument one as a format string (%s, %d, %o). Anything
+  // derived from the frame must therefore ride in a LATER argument, or a
+  // crafted frame could steer the formatting of the log line.
+  it("keeps frame-derived text out of the format-string argument", () => {
+    connectAndFailOn(lobbyInfoFrame());
+
+    for (const call of errorSpy.mock.calls) {
+      expect(typeof call[0]).toBe("string");
+      expect(call[0]).toBe("Error in onmessage handler:");
+    }
+  });
 });

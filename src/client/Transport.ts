@@ -468,11 +468,17 @@ export class Transport {
         // console.error by default, while a lobby_info or start frame
         // carries the game's group token in the clear. For a decode failure
         // the size is the part that actually helps.
+        //
+        // The size goes in its own argument rather than interpolated into
+        // the first one: console.* treats argument one as a format string
+        // (%s, %d, %o), so building it from anything that came off the wire
+        // is a format-string sink even when the value can only ever be
+        // digits (CodeQL js/tainted-format-string).
         const frame =
           event.data instanceof ArrayBuffer
             ? `${event.data.byteLength} bytes`
             : typeof event.data;
-        console.error(`Error in onmessage handler (frame: ${frame}):`, e);
+        console.error("Error in onmessage handler:", e, "frame:", frame);
         return;
       }
     };
