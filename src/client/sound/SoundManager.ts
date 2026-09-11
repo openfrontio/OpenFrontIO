@@ -38,6 +38,11 @@ export class SoundManager {
         src: [assetUrl("sounds/music/gameplay.mp3")],
         loop: true,
         volume: 0,
+        // Stream it. Howler's default Web Audio path XHRs the whole file and
+        // decodes it to PCM before the first note, and this track is 4.6 MB,
+        // so play() queued behind tens of seconds of silence at game start on
+        // a slow connection. Cues and ambience stay on Web Audio.
+        html5: true,
       });
       this.mixer.register(this.backgroundMusic, "music");
     });
