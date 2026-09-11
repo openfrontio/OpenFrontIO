@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import en from "../../resources/lang/en.json";
 import { crazyGamesSDK } from "../../src/client/CrazyGamesSDK";
 import {
   SettingsModal,
@@ -154,6 +155,35 @@ describe("in-game menu opens the shared settings modal", () => {
     expect(settings.isOpen()).toBe(false);
     expect(openSettingsRow()).not.toBeNull();
     expect(pauses).toEqual([true]);
+  });
+
+  it("offers one way into graphics, not a second advanced-graphics row", async () => {
+    // The in-game-only advanced graphics modal used to sit here as its own
+    // row, duplicating the settings modal's Graphics tab.
+    await openMenu();
+
+    expect(menu.querySelectorAll("[data-open-settings]")).toHaveLength(1);
+    const strings = en.user_setting as Record<string, string | undefined>;
+    expect(strings.graphics_settings_label).toBeUndefined();
+    expect(menu.textContent).not.toContain("Graphics Settings");
+  });
+
+  it("reaches the advanced graphics options through the shared modal", async () => {
+    await openMenu();
+    openSettingsRow()!.click();
+    await settle();
+
+    settings.setActiveTab("graphics");
+    await settle();
+    settings
+      .querySelector("#graphics-advanced-toggle")!
+      .dispatchEvent(new Event("change", { bubbles: true }));
+    await settle();
+
+    // A sample from each storage section the old modal wrote.
+    expect(settings.querySelector("#territory-alpha-slider")).not.toBeNull();
+    expect(settings.querySelector("#ocean-color-picker")).not.toBeNull();
+    expect(settings.querySelector("#classic-icons-toggle")).not.toBeNull();
   });
 
   it("keeps the menu open when #game-settings is missing", async () => {

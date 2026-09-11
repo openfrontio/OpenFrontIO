@@ -1,7 +1,8 @@
-import { html } from "lit";
+import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
+import type { MapLayer } from "../core/game/TerrainMapLoader";
 import { getDefaultKeybinds, UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
@@ -11,6 +12,8 @@ import { SettingSelect } from "./components/baseComponents/setting/SettingSelect
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
+import "./components/GraphicsAdvancedSettings";
+import type { GraphicsAdvancedSettings } from "./components/GraphicsAdvancedSettings";
 import "./components/GraphicsPresetSelector";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
@@ -61,6 +64,28 @@ export class UserSettingModal extends BaseModal {
    */
   public uiState?: UIState;
 
+  // ---- Graphics: the running game's map layers ----
+  //
+  // Also set on the in-game instance by GameRenderer. Every other graphics
+  // option is stored under one settings key that ClientGameRunner watches, so
+  // a running game follows it with no reference here; map layers are the
+  // exception. Their control set comes from the current map, and the renderer
+  // does not re-read their visibility or alpha from settings after startup —
+  // so the layer rows exist only where a game hands them over, and reach the
+  // renderer through these callbacks.
+
+  /** Map layers for the current game. Empty on the page instance. */
+  public mapLayers: MapLayer[] = [];
+
+  /** Callback to toggle layer visibility on the renderer. */
+  public onLayerVisibilityChange:
+    | ((layerId: string, visible: boolean) => void)
+    | null = null;
+
+  /** Callback to set layer alpha on the renderer. */
+  public onLayerAlphaChange: ((layerId: string, alpha: number) => void) | null =
+    null;
+
   private userSettings: UserSettings = new UserSettings();
   private readonly defaultKeybinds = getDefaultKeybinds(Platform.isMac);
 
@@ -69,6 +94,7 @@ export class UserSettingModal extends BaseModal {
   private onReturn?: () => void;
 
   @state() private keySequence: string[] = [];
+  @state() private graphicsAdvancedOpen = false;
   @state() private showEasterEggSettings = false;
 
   @state() private userKeybinds: Record<
@@ -563,6 +589,27 @@ export class UserSettingModal extends BaseModal {
 
   protected updated(): void {
     this.syncDisplayControls();
+    this.syncGraphicsLayerWiring();
+  }
+
+  /**
+   * Hand the advanced graphics body the current game's layers. It only exists
+   * while the Graphics tab is open and Advanced is expanded, so this runs on
+   * every update rather than once: the element is created and destroyed as the
+   * player moves between tabs.
+   */
+  private syncGraphicsLayerWiring(): void {
+    const advanced = this.querySelector<GraphicsAdvancedSettings>(
+      "graphics-advanced-settings",
+    );
+    if (advanced === null) return;
+    advanced.mapLayers = this.mapLayers;
+    advanced.onLayerVisibilityChange = this.onLayerVisibilityChange;
+    advanced.onLayerAlphaChange = this.onLayerAlphaChange;
+  }
+
+  private toggleGraphicsAdvanced() {
+    this.graphicsAdvancedOpen = !this.graphicsAdvancedOpen;
   }
 
   protected onTabEnter(key: string): void {
@@ -1386,6 +1433,19 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.performanceOverlay()}
         @change=${this.togglePerformanceOverlay}
       ></setting-toggle>
+
+      <!-- 🔧 Advanced -->
+      <setting-toggle
+        label="${translateText("graphics_setting.advanced_label")}"
+        description="${translateText("graphics_setting.advanced_desc")}"
+        id="graphics-advanced-toggle"
+        .checked=${this.graphicsAdvancedOpen}
+        @change=${this.toggleGraphicsAdvanced}
+      ></setting-toggle>
+
+      ${this.graphicsAdvancedOpen
+        ? html`<graphics-advanced-settings></graphics-advanced-settings>`
+        : nothing}
     `;
   }
 
