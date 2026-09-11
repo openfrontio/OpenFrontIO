@@ -24,8 +24,8 @@ import {
 } from "./DesktopDisplay";
 import { isDesktopShell } from "./DesktopShell";
 import { Platform } from "./Platform";
+import { audioMixer } from "./sound/AudioMixer";
 import {
-  PlaySoundEffectEvent,
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
 } from "./sound/Sounds";
@@ -441,10 +441,11 @@ export class UserSettingModal extends BaseModal {
       return;
     }
     const volume = value / 100;
+    // Writing the setting is the whole job: AudioMixer follows
+    // USER_SETTINGS_CHANGED_EVENT, which reaches the menu theme on this page
+    // and a running game's music alike. The bus emit is kept only until the
+    // Audio tab lands and the legacy events are removed.
     this.userSettings.setBackgroundMusicVolume(volume);
-    // SoundManager reads UserSettings once at construction, so a running game
-    // only follows the slider through the bus. The page instance has no bus
-    // and nothing playing, where storing the value is the whole job.
     this.eventBus?.emit(new SetBackgroundMusicVolumeEvent(volume));
     this.playSliderTick();
     this.requestUpdate();
@@ -472,7 +473,10 @@ export class UserSettingModal extends BaseModal {
     const now = Date.now();
     if (now - this.lastSliderTickMs < 150) return;
     this.lastSliderTickMs = now;
-    this.eventBus?.emit(new PlaySoundEffectEvent("slider"));
+    // Through the mixer, not the bus: this component is mounted twice, and
+    // the page instance has no bus, so a bus hop is silent exactly where the
+    // player is most likely to be dragging a slider.
+    audioMixer()?.play("slider");
   }
 
   private renderAudioSettings() {
