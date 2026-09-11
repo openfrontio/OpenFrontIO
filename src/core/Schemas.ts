@@ -842,10 +842,9 @@ export const PlayerCosmeticRefsSchema = z.object({
   // One selected effect per slot: key = slot (effectType for trails, nukeType for
   // nuke explosions — see effectTypeForSlot), value = effect name.
   effects: z.record(z.string(), CosmeticNameSchema).optional(),
-  // The player claims to be playing under their verified account username
-  // (renders the blue check next to the name). The game server keeps the
-  // claim only when the join name exactly matches the account's resolved
-  // display name from /users/@me (Worker join → verifiedBadgeAllowed).
+  // Intent to play under the account name. The game server decides the name
+  // and the check from the account at join (resolveVerifiedJoin in
+  // src/server/Privilege.ts); nothing sent here can mint a badge.
   verified: z.boolean().optional(),
 });
 

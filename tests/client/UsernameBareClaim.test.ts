@@ -366,5 +366,29 @@ describe("UsernamePanel bare-claim fallback", () => {
       )!;
       expect(input.disabled).toBe(false);
     });
+
+    it("does not ask twice: a second refusal after yes becomes an inline error", async () => {
+      updateUsername
+        .mockResolvedValueOnce({ ok: false, code: "bare_taken", base: "Ninja" })
+        .mockResolvedValueOnce({
+          ok: false,
+          code: "bare_taken",
+          base: "Ninja",
+        });
+      showInGameConfirm.mockResolvedValue(true);
+      const el = await mount();
+
+      await submit(el, "Ninja");
+
+      expect(updateUsername).toHaveBeenCalledTimes(2);
+      // The ordinary "change username?" confirm plus ONE choice dialog.
+      expect(showInGameConfirm).toHaveBeenCalledTimes(2);
+      expect(reload).not.toHaveBeenCalled();
+      expect(el.textContent).toContain("username_error_taken");
+      const input = el.querySelector<HTMLInputElement>(
+        "#username-panel-input",
+      )!;
+      expect(input.disabled).toBe(false);
+    });
   });
 });

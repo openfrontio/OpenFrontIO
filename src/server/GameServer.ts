@@ -621,9 +621,10 @@ export class GameServer {
     // Also closes the old WebSocket, to prevent resource leaks.
     this.clients.reconnect(client, ws);
     if (identityUpdate && !this.hasStarted()) {
-      // The verified badge vouches for the exact join name — a pre-start
-      // identity change under it must drop the badge (the rejoin path skips
-      // the Worker's join-time badge validation).
+      // A pre-start identity change to a different name means the player
+      // switched to a custom name, so the check is dropped. The server only
+      // resolves the check from the account at first join
+      // (resolveVerifiedJoin); this rejoin path never re-derives it.
       if (
         identityUpdate.username !== client.username &&
         client.cosmetics?.verified

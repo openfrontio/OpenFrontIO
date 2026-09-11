@@ -185,10 +185,11 @@ export class UsernamePanel extends LitElement {
       window.location.reload();
       return;
     }
-    if (result.code === "bare_taken") {
+    if (result.code === "bare_taken" && !chosenSuffix) {
       // Nothing was written. Offer the numbered form as a choice; "no" leaves
-      // them at the box with their rename unspent (spec, 10 Sept 2026).
-      this.busy = false;
+      // them at the box with their rename unspent (spec, 10 Sept 2026). Keep
+      // the form locked (busy) while the dialog is up so a second Enter
+      // can't start another save underneath it.
       const takeSuffixed = await showInGameConfirm(
         translateText("account_modal.username_bare_taken_body", {
           requested: result.base,
@@ -201,8 +202,10 @@ export class UsernamePanel extends LitElement {
           ),
         },
       );
-      if (!takeSuffixed) return;
-      this.busy = true;
+      if (!takeSuffixed) {
+        this.busy = false;
+        return;
+      }
       await this.finishSave(
         name,
         await updateUsername(name, { acceptSuffixed: true }),
@@ -245,6 +248,8 @@ export class UsernamePanel extends LitElement {
       case "profane":
         return translateText("account_modal.username_error_profane");
       case "taken":
+        return translateText("account_modal.username_error_taken");
+      case "bare_taken":
         return translateText("account_modal.username_error_taken");
       case "cooldown": {
         // Only reachable via a race (e.g. a rename on another device) — the
