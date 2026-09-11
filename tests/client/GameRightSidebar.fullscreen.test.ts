@@ -125,6 +125,7 @@ describe("GameRightSidebar fullscreen button", () => {
 
   afterEach(() => {
     window.openfrontDesktop = undefined;
+    vi.useRealTimers();
   });
 
   // The web build, and any shell older than the display bridge. Unchanged.
@@ -325,6 +326,38 @@ describe("GameRightSidebar fullscreen button", () => {
     // ...and the button works again once the shell has answered.
     settle!(snapshot("windowed"));
     await flush(el);
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(2);
+  });
+
+  // In borderless the button is one of the few ways back to a titled window,
+  // so a bridge that answers neither the invoke nor the push must not disable
+  // it for the rest of the match.
+  it("re-enables the button when the shell never answers", async () => {
+    vi.useFakeTimers();
+    const fake = fakeBridge(snapshot("borderless"));
+    fake.bridge.setPrefs.mockImplementation(
+      () => new Promise<DesktopDisplaySnapshot>(() => undefined),
+    );
+    fake.install();
+    const el = await mount();
+
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(1);
+
+    // Still waiting just short of the ceiling.
+    vi.advanceTimersByTime(1999);
+    await flush(el);
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(1);
+    await flush(el);
+    // Re-read on the way out, so the icon ends on the shell's state.
+    expect(fake.bridge.getPrefs).toHaveBeenCalledTimes(2);
     clickFullscreen(el);
     await flush(el);
     expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(2);

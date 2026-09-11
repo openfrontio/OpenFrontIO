@@ -15,7 +15,9 @@ import "./components/GraphicsPresetSelector";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   desktopDisplay,
+  DISPLAY_SETTLE_TIMEOUT_MS,
   isDisplaySnapshot,
+  selectedDisplayId,
   type DesktopDisplayInfo,
   type DesktopDisplayPrefsPatch,
   type DesktopDisplaySnapshot,
@@ -27,20 +29,6 @@ import {
   SetSoundEffectsVolumeEvent,
 } from "./sound/Sounds";
 import type { UIState } from "./UIState";
-
-/**
- * How long a display change may leave the Display tab's controls disabled
- * before the tab stops waiting for the shell to report back.
- *
- * The shell pushes `display:changed` as part of applying a change AND answers
- * the `setPrefs` invoke, so under any working shell this never fires. It is
- * the ceiling for the case where neither arrives — a shell wedged mid
- * window-transition — so that "waiting" can never become "permanently
- * disabled". Long enough to cover a real transition (the shell's own fallback
- * for a window manager that never reports leaving fullscreen is 500ms), short
- * enough that a wedged bridge does not read as a frozen settings page.
- */
-const DISPLAY_SETTLE_TIMEOUT_MS = 2000;
 
 /**
  * Logged with no payload, ever.
@@ -604,6 +592,12 @@ export class UserSettingModal extends BaseModal {
         // it is emitted for monitors being plugged in as well as for our own
         // writes — so it is applied unconditionally, and it is what normally
         // settles a pending write.
+        //
+        // Bumped BEFORE adopting, which invalidates whatever was in flight:
+        // a push is strictly newer than any request that has not answered
+        // yet, so letting the initial read (or the ceiling's re-read) land
+        // afterwards would overwrite fresher truth with staler truth.
+        this.displayRequestId++;
         this.adoptDisplaySnapshot(snapshot);
         this.settleDisplayWrite();
       });
@@ -745,11 +739,7 @@ export class UserSettingModal extends BaseModal {
       "#display-monitor-select",
     );
     if (monitor === null) return;
-    const expected = String(
-      snapshot.displays.some((d) => d.id === snapshot.prefs.displayId)
-        ? snapshot.prefs.displayId
-        : snapshot.activeDisplayId,
-    );
+    const expected = String(selectedDisplayId(snapshot));
     if (monitor.value !== expected) {
       monitor.value = expected;
     }
@@ -825,11 +815,7 @@ export class UserSettingModal extends BaseModal {
     if (snapshot === null) return html`${f11Hint}`;
 
     const displays = snapshot.displays;
-    const selectedDisplayId = displays.some(
-      (d) => d.id === snapshot.prefs.displayId,
-    )
-      ? snapshot.prefs.displayId
-      : snapshot.activeDisplayId;
+    const selectedId = selectedDisplayId(snapshot);
 
     // Rendered as its own row rather than as the spec's extra option inside
     // the picker: losing the remembered monitor usually drops the count to
@@ -874,7 +860,7 @@ export class UserSettingModal extends BaseModal {
               id="display-monitor-select"
               label=${translateText("user_setting.display_monitor_label")}
               description=${translateText("user_setting.display_monitor_desc")}
-              .value=${String(selectedDisplayId)}
+              .value=${String(selectedId)}
               ?disabled=${this.displayBusy}
               .options=${displays.map((d, i) => ({
                 value: d.id,

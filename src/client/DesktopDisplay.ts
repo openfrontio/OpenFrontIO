@@ -151,3 +151,45 @@ export function isDisplaySnapshot(
   if (prefs.mode !== "windowed" && prefs.mode !== "borderless") return false;
   return prefs.displayId === null || typeof prefs.displayId === "number";
 }
+
+/**
+ * How long a display change may leave a control disabled before the client
+ * stops waiting for the shell to report back.
+ *
+ * The shell pushes `display:changed` as part of applying a change AND answers
+ * the `setPrefs` invoke, so under any working shell this never fires. It is
+ * the ceiling for the case where neither arrives -- a shell wedged mid
+ * window-transition -- so that "waiting" can never become "permanently
+ * disabled". Long enough to cover a real transition (the shell's own fallback
+ * for a window manager that never reports leaving fullscreen is 500ms), short
+ * enough that a wedged bridge does not read as a frozen UI.
+ *
+ * Shared by the Display tab and the in-game fullscreen button so the two
+ * cannot drift apart.
+ */
+export const DISPLAY_SETTLE_TIMEOUT_MS = 2000;
+
+/**
+ * Which display a monitor picker should show as selected.
+ *
+ * `prefs.displayId === null` means "whichever display the OS calls primary",
+ * so it has to be RESOLVED to the primary's id before asking whether the
+ * preference is still present. Asking first is the bug this exists to stop:
+ * `displays.some((d) => d.id === null)` is false for every display, so a null
+ * preference looked absent and fell back to `activeDisplayId`. With the window
+ * on a secondary display that showed the wrong monitor, and it made "Primary"
+ * impossible to select at all -- picking it sends null, the snapshot comes
+ * back with null, and the control snapped straight back to the secondary.
+ *
+ * Falls back to `activeDisplayId` only when the preference genuinely names a
+ * display that is not connected, so the control always agrees with what the
+ * player can see. The stored choice is left alone; the shell keeps it so
+ * replugging the monitor restores it without re-selecting.
+ */
+export function selectedDisplayId(snapshot: DesktopDisplaySnapshot): number {
+  const { displays, prefs } = snapshot;
+  const wanted = prefs.displayId ?? displays.find((d) => d.primary)?.id ?? null;
+  return wanted !== null && displays.some((d) => d.id === wanted)
+    ? wanted
+    : snapshot.activeDisplayId;
+}

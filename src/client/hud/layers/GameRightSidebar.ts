@@ -11,6 +11,7 @@ import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import {
   desktopDisplay,
+  DISPLAY_SETTLE_TIMEOUT_MS,
   isDisplaySnapshot,
   type DesktopDisplayBridge,
   type DesktopDisplayMode,
@@ -74,6 +75,11 @@ export class GameRightSidebar extends LitElement implements Controller {
   // is a window transition, so a double-click would otherwise queue a second
   // one that lands mid-flight and leaves the window where it started.
   private displayBusy = false;
+
+  // The ceiling on that guard. Without it a bridge that answers neither the
+  // invoke nor the push disables the button for the rest of the match, and in
+  // borderless the button is one of the few ways back to a titled window.
+  private displayCeilingTimer: ReturnType<typeof setTimeout> | undefined;
 
   @state()
   private timer: number = 0;
@@ -193,6 +199,7 @@ export class GameRightSidebar extends LitElement implements Controller {
     this.displayUnsubscribe = null;
     this.displayBridge = null;
     this.displayBusy = false;
+    this.clearDisplayCeiling();
     try {
       unsubscribe?.();
     } catch {
@@ -203,6 +210,36 @@ export class GameRightSidebar extends LitElement implements Controller {
   private adoptDisplaySnapshot(snapshot: unknown): void {
     if (!isDisplaySnapshot(snapshot)) return;
     this.displayMode = snapshot.prefs.mode;
+  }
+
+  /**
+   * Bounds how long a click may leave the button disabled -- the same
+   * treatment the Display tab gives its selects, and for the same reason: the
+   * shell answers both the invoke and the push, so this only fires when
+   * neither arrived, and "waiting" must never become "dead for the match".
+   */
+  private armDisplayCeiling(): void {
+    this.clearDisplayCeiling();
+    this.displayCeilingTimer = setTimeout(() => {
+      this.displayCeilingTimer = undefined;
+      // Re-enabled BEFORE the re-read, not after it: the ceiling has to hold
+      // even when getPrefs never answers either.
+      this.displayBusy = false;
+      const bridge = this.displayBridge;
+      if (bridge === null) return;
+      void Promise.resolve()
+        .then(() => bridge.getPrefs())
+        .then(
+          (snapshot) => this.adoptDisplaySnapshot(snapshot),
+          () => undefined,
+        );
+    }, DISPLAY_SETTLE_TIMEOUT_MS);
+  }
+
+  private clearDisplayCeiling(): void {
+    if (this.displayCeilingTimer === undefined) return;
+    clearTimeout(this.displayCeilingTimer);
+    this.displayCeilingTimer = undefined;
   }
 
   /**
@@ -387,6 +424,7 @@ export class GameRightSidebar extends LitElement implements Controller {
       // of the protection against an impatient second click.
       if (this.displayBusy) return;
       this.displayBusy = true;
+      this.armDisplayCeiling();
       const next: DesktopDisplayMode =
         this.displayMode === "borderless" ? "windowed" : "borderless";
       // Promise.resolve() for the same reason as the read above: a bridge
@@ -402,6 +440,7 @@ export class GameRightSidebar extends LitElement implements Controller {
           () => undefined,
         )
         .finally(() => {
+          this.clearDisplayCeiling();
           this.displayBusy = false;
         });
       return;

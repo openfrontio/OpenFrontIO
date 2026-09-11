@@ -290,6 +290,55 @@ describe("Display tab contents", () => {
     expect(el.querySelector("#display-f11-hint")).not.toBeNull();
   });
 
+  // null means "the OS primary", so it has to be resolved to the primary's id
+  // before asking whether the preference is still present -- no display has
+  // id null, so asking first made every null preference look absent.
+  it("shows the primary when the preference is null and the window is not there", async () => {
+    fakeBridge(
+      snapshot({
+        prefs: { mode: "borderless", displayId: null },
+        displays: [PRIMARY, SECOND],
+        activeDisplayId: 2,
+      }),
+    ).install();
+    const el = await mount();
+    el.open({ tab: "display" });
+    await flush(el);
+    expect(monitorSelect(el)?.value).toBe("1");
+  });
+
+  // The same bug's other half: picking Primary sends null, the snapshot comes
+  // back with null, and the control used to snap straight back to the
+  // secondary -- making "Primary" impossible to select at all.
+  it("keeps Primary selected after the shell echoes a null preference", async () => {
+    const fake = fakeBridge(
+      snapshot({
+        prefs: { mode: "borderless", displayId: 2 },
+        displays: [PRIMARY, SECOND],
+        activeDisplayId: 2,
+      }),
+    );
+    fake.install();
+    const el = await mount();
+    el.open({ tab: "display" });
+    await flush(el);
+
+    choose(monitorSelect(el)!, "1");
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledWith({ displayId: null });
+
+    // The window has not moved yet, so activeDisplayId is still the secondary.
+    fake.settle(
+      snapshot({
+        prefs: { mode: "borderless", displayId: null },
+        displays: [PRIMARY, SECOND],
+        activeDisplayId: 2,
+      }),
+    );
+    await flush(el);
+    expect(monitorSelect(el)?.value).toBe("1");
+  });
+
   it("falls back to the active display when the remembered one is gone", async () => {
     fakeBridge(
       snapshot({
@@ -635,6 +684,34 @@ describe("Display tab subscription lifecycle", () => {
     fake.settle(snapshot({ prefs: { mode: "windowed", displayId: null } }));
     await flush(el);
     expect(modeSelect(el)?.value).toBe("borderless");
+  });
+
+  // A push is strictly newer than any request that has not answered yet, so
+  // it has to invalidate them. Otherwise a slow initial read lands after a
+  // monitor-unplugged push and overwrites fresher truth with staler truth.
+  it("drops a read that answers after a push", async () => {
+    const fake = fakeBridge();
+    let resolveRead: ((s: DesktopDisplaySnapshot) => void) | null = null;
+    fake.bridge.getPrefs.mockImplementation(
+      () =>
+        new Promise<DesktopDisplaySnapshot>((resolve) => {
+          resolveRead = resolve;
+        }),
+    );
+    fake.install();
+    const el = await mount();
+    el.open({ tab: "display" });
+    await flush(el);
+
+    // The push wins the race.
+    fake.push(snapshot({ prefs: { mode: "windowed", displayId: null } }));
+    await flush(el);
+    expect(modeSelect(el)?.value).toBe("windowed");
+
+    // ...and the read it overtook must not undo it.
+    resolveRead!(snapshot({ prefs: { mode: "borderless", displayId: null } }));
+    await flush(el);
+    expect(modeSelect(el)?.value).toBe("windowed");
   });
 
   // A shell that exposes getPrefs/setPrefs but no push. The tab must still
