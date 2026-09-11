@@ -261,8 +261,21 @@ export class AudioMixer {
         // Fade from the channel's current level rather than reading it back:
         // Howler's single-argument volume() is a getter only when the value
         // happens to match a sound id, so volume(id) is ambiguous by design.
-        oldest.howl.fade(this.volumeFor(category), 0, EVICT_FADE_MS, oldest.id);
-        oldest.howl.once("fade", () => oldest.howl.stop(oldest.id), oldest.id);
+        const from = this.volumeFor(category);
+        if (from === 0) {
+          // fade(0, 0, ...) never completes in Howler -- its done check needs
+          // from !== to -- so the stop scheduled on "fade" would never run,
+          // leaving the cue playing outside its budget with Howler's interval
+          // and the listener leaked. A silent channel has nothing to fade.
+          oldest.howl.stop(oldest.id);
+        } else {
+          oldest.howl.fade(from, 0, EVICT_FADE_MS, oldest.id);
+          oldest.howl.once(
+            "fade",
+            () => oldest.howl.stop(oldest.id),
+            oldest.id,
+          );
+        }
         this.forget(oldest.id);
       }
 
