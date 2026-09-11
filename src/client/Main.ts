@@ -417,7 +417,6 @@ class Client {
     if (renderNavVersion() === 0) {
       console.warn("Game version element not found");
     }
-
     const langSelector = document.querySelector(
       "lang-selector",
     ) as LangSelector;
@@ -636,10 +635,8 @@ class Client {
       );
 
       if (userMeResponse !== false) {
-        // Authorized
         console.log(
-          `Your player ID is ${userMeResponse.player.publicId}\n` +
-            "Sharing this ID will allow others to view your game history and stats.",
+          `Your player ID is ${userMeResponse.player.publicId}\nSharing this ID will allow others to view your game history and stats.`,
         );
 
         // Resume a Steam-link flow that was interrupted by a login redirect
@@ -723,7 +720,6 @@ class Client {
         );
       }
     };
-
     // A profile request issued before a logout can still be in flight when the
     // session goes, and its 200 was fetched with a JWT that was valid at the
     // time. Applying it afterwards would put the expired account back in the
@@ -748,14 +744,12 @@ class Client {
     });
 
     if ((await userAuth()) === false) {
-      // Not logged in
-      onUserMe(false);
+      // Not signed in: nothing to fetch, apply the signed-out state directly.
+      void onUserMe(false);
     } else {
-      // JWT appears to be valid
-      // TODO: Add caching
+      // The stored JWT looks valid, so fetch the profile.
       getUserMe().then(applyUserMe(authGeneration));
     }
-
     // Re-run auth when the player signs into CrazyGames mid-session. Logout
     // reloads the page, so only login needs handling here.
     crazyGamesSDK.addAuthListener(() => {
@@ -816,7 +810,7 @@ class Client {
       this.joinModal.eventBus = this.eventBus;
     }
 
-    // Attempt to join lobby
+    // Join the lobby named by the URL once the document is ready.
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => this.handleUrl());
     } else {
@@ -853,7 +847,7 @@ class Client {
         return;
       }
 
-      // Reset the UI to its initial state
+      // Reset the lobby UI to its initial state.
       this.joinModal?.close();
 
       onJoinChanged();
@@ -903,7 +897,7 @@ class Client {
       this.handleUrl();
     };
 
-    // Handle browser navigation & manual hash edits
+    // Browser navigation (back/forward) and manual hash edits.
     window.addEventListener("popstate", onPopState);
     window.addEventListener("hashchange", onHashUpdate);
     window.addEventListener("join-changed", onJoinChanged);
@@ -1120,7 +1114,6 @@ class Client {
     history.replaceState(null, "", newUrl);
     return mode;
   }
-
   private desktopUpdateState: DesktopUpdateState | null = null;
 
   /**

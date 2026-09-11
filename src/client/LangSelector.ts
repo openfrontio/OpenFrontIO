@@ -381,22 +381,24 @@ export class LangSelector extends LitElement {
 }
 
 function flattenTranslations(
-  obj: Record<string, any>,
+  obj: Record<string, unknown>,
   parentKey = "",
   result: Record<string, string> = {},
 ): Record<string, string> {
-  for (const key in obj) {
+  for (const key of Object.keys(obj)) {
     const value = obj[key];
     const fullKey = parentKey ? `${parentKey}.${key}` : key;
-
     if (typeof value === "string") {
       result[fullKey] = value;
-    } else if (value && typeof value === "object" && !Array.isArray(value)) {
-      flattenTranslations(value, fullKey, result);
+    } else if (
+      typeof value === "object" &&
+      value !== null &&
+      !Array.isArray(value)
+    ) {
+      flattenTranslations(value as Record<string, unknown>, fullKey, result);
     } else {
       console.warn("Unknown type", typeof value, value);
     }
   }
-
   return result;
 }

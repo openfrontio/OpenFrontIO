@@ -1330,7 +1330,6 @@ export class HostLobbyModal extends BaseModal {
     this.teamCount = value;
     this.putGameConfig();
   }
-
   private handleWhitelistToggle = (checked: boolean) => {
     this.whitelistEnabled = checked;
     this.putGameConfig();
