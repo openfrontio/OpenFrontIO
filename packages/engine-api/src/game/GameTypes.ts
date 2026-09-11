@@ -34,8 +34,8 @@ export type TransportShipState = {
 };
 
 export type NukeState = {
-  trajectory: TrajectoryTile[];
-  trajectoryIndex: number;
+  trajectory?: TileRef[];
+  trajectoryIndex?: number;
   targetedBySam: boolean;
   waitTicks: number;
 };
@@ -249,11 +249,6 @@ export const PlayerBuildable = unitTypeGroup([
 ] as const);
 
 export type PlayerBuildableUnitType = (typeof PlayerBuildable.types)[number];
-
-export type TrajectoryTile = {
-  tile: TileRef;
-  targetable: boolean;
-};
 
 export enum Relation {
   Hostile = 0,

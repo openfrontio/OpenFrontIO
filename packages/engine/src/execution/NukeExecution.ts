@@ -3,7 +3,6 @@ import {
   MessageType,
   Structures,
   TerraNullius,
-  TrajectoryTile,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { NukeType } from "@openfront/engine-api/StatsSchemas";
@@ -324,16 +323,7 @@ export class NukeExecution implements Execution {
     if (this.nuke === null || this.src === undefined || this.src === null) {
       return;
     }
-    const pathFinder = UniversalPathFinding.Parabola(this.mg, {
-      increment: this.speed,
-      directionUp: this.rocketDirectionUp,
-    });
-    const path: TileRef[] = [this.src];
-    let result = pathFinder.next(this.src, this.dst, this.speed);
-    while (result.status === PathStatus.NEXT) {
-      path.push(result.node);
-      result = pathFinder.next(this.src, this.dst, this.speed);
-    }
+    const path: TileRef[] = this.nuke.trajectory();
     this.mg.recordMotionPlan({
       kind: "grid",
       unitId: this.nuke.id(),
@@ -344,19 +334,8 @@ export class NukeExecution implements Execution {
     });
   }
 
-  private getTrajectory(target: TileRef): TrajectoryTile[] {
-    const trajectoryTiles: TrajectoryTile[] = [];
-    const targetRangeSquared =
-      this.mg.config().defaultNukeTargetableRange() ** 2;
-    const allTiles = this.pathFinder.findPath(this.src!, target) ?? [];
-    for (const tile of allTiles) {
-      trajectoryTiles.push({
-        tile,
-        targetable: this.isTargetable(target, tile, targetRangeSquared),
-      });
-    }
-
-    return trajectoryTiles;
+  private getTrajectory(target: TileRef): TileRef[] {
+    return this.pathFinder.findPath(this.src!, target) ?? [];
   }
 
   private isTargetable(
