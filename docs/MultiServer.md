@@ -392,9 +392,24 @@ prefix of a sha matches it), so short and full forms interoperate.
 
 ## What the client does (`src/client/ServerList.ts`, `src/core/ServerList.ts`)
 
-- **Lazy, never at page load.** The list is fetched only when a server is
-  needed: the public lobby list, creating a game, joining or rejoining
-  one. Offline singleplayer never waits on it. The fetch is bounded (5s).
+- **Fetched at page load, then a heartbeat.** `startServerListPolling()`
+  runs early in `Client.initialize()`: the first fetch overlaps with the
+  rest of boot, and the list is refreshed every 30s, retried every 10s
+  after a failed attempt. Each fetch is bounded (4s), so offline
+  singleplayer waits seconds at worst and never hangs.
+- **A click never waits when a list is known.** `ensureServerList()`
+  answers from the cached list whatever its age and revalidates behind the
+  answer (stale-while-revalidate); only a page that has never got a list
+  waits for a fetch — the one in flight, or one it starts.
+- **A failed refresh keeps the last good list.** Network error, timeout,
+  non-OK, malformed or empty: the previous list keeps serving. The API
+  caches its answer for seconds anyway, so a blip must not flip a working
+  page into fallback. Only a client that never got a list falls back.
+- **Reachability:** `backendReachable()` is null until the first attempt
+  settles, true when the API answered at all (a 404 included — reachable,
+  but no list for this site), false on a timeout or network error. Every
+  change is announced on the document as `backend-reachability` with
+  `{ reachable }` for UI to consume.
 - **Which list:** the desktop shell asks for its injected `serverHost`
   (its values are exactly the sites); a web page asks for its `siteHost`
   when rendered behind an apex, else `window.location.host`. Decided with
@@ -408,9 +423,10 @@ prefix of a sha matches it), so short and full forms interoperate.
   the server in the list, whatever its state. `ClientEnv.resolveGame()`
   answers from the list; an unknown letter means the game doesn't exist
   (no apex redirect: the list is the freshest there is).
-- **Fallback:** when the list is missing, unreachable, malformed or empty,
-  every accessor answers from `BOOTSTRAP_CONFIG` exactly as before, so
-  production behaves as today until the API serves a list.
+- **Fallback:** while no list has ever loaded — missing, unreachable,
+  malformed or empty — every accessor answers from `BOOTSTRAP_CONFIG`
+  exactly as before, so production behaves as today until the API serves a
+  list.
 - **No `open` server for my version:**
   - if the client _is_ `latest`, or the list has no `latest`, no server is
     running at all. Own-server calls fall back to the page's values and
