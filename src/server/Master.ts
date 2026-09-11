@@ -7,6 +7,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { GameEnv } from "../core/configuration/Config";
 import { fetchSiteColor } from "./ActiveDeployment";
+import {
+  applyCheckinState,
+  CHECKIN_INTERVAL_MS,
+  checkinBody,
+  sendCheckin,
+} from "./ClusterCheckin";
 import { getDescriptor } from "./DesktopRelease";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
@@ -176,15 +182,41 @@ export async function startMaster() {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
 
+  // Register with the API and keep checking in (docs/MultiServer.md,
+  // "Server list v2"): the API's list is what clients read to find a
+  // server, so a server that isn't checking in isn't offered to anyone.
+  // The reply carries this server's state; it is obeyed only when
+  // CLUSTER_STATE_SOURCE=api, otherwise the apex colour poll below still
+  // decides. Dev has no public host and registers nowhere.
+  const stateSource = ServerEnv.clusterStateSource();
+  if (checkinBody(0) !== null) {
+    log.info(
+      `Checking in with ${ServerEnv.jwtIssuer()}/cluster/checkin every ${CHECKIN_INTERVAL_MS / 1000}s (state source: ${stateSource})`,
+    );
+    startPolling(async () => {
+      const body = checkinBody(lobbyService.liveGames());
+      if (body === null) return;
+      const state = await sendCheckin(body);
+      applyCheckinState(state, stateSource, (active) =>
+        lobbyService.setActive(active),
+      );
+    }, CHECKIN_INTERVAL_MS);
+  }
+
   // Behind a load balancer (blue/green), only the color the balancer
   // currently routes to should schedule public lobbies. The balancer's
   // /api/health reports the COLOR of whichever deployment answered; colors
   // are deployment-wide, so with several machines per color the poll
   // reaching a sibling — same color, different instanceId — still counts as
   // "the live color is mine". A standalone deployment (no SITE_HOST, or
-  // SITE_HOST is our own host) is always active.
+  // SITE_HOST is our own host) is always active. Not started when the API
+  // is the state source: two deciders would fight over setActive.
   const siteHost = ServerEnv.siteHost();
-  if (siteHost !== undefined && siteHost !== ServerEnv.publicHost()) {
+  if (
+    stateSource === "apex" &&
+    siteHost !== undefined &&
+    siteHost !== ServerEnv.publicHost()
+  ) {
     log.info(`Polling https://${siteHost}/api/health for active deployment`);
     // 5s: this latency is the window after a flip where the newly-active
     // deployment isn't creating public lobbies yet (and the draining one

@@ -102,6 +102,7 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
@@ -163,6 +164,7 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
@@ -238,6 +240,7 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
@@ -308,6 +311,7 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}

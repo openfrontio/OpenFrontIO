@@ -188,6 +188,10 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          # "api" makes servers take their drain state from the API's
+          # registry (docs/MultiServer.md, "Server list v2"); unset keeps
+          # today's apex colour poll.
+          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
