@@ -383,6 +383,21 @@ describe("InputHandler AutoUpgrade", () => {
       expect(emittedTypes).not.toContain("ShowBuildMenuEvent");
     });
 
+    test("Mac: ctrl+left does not open build menu even if rebound to ControlLeft", () => {
+      setIsMac(true);
+      inputHandler["keybinds"].buildMenuModifier = "ControlLeft";
+      inputHandler["activeKeys"].add("ControlLeft");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      fireLeftPointerUp(true);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).not.toContain("ShowBuildMenuEvent");
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+    });
+
     test("Mac: cmd+left still opens the build menu", () => {
       setIsMac(true);
       inputHandler["keybinds"].buildMenuModifier = "MetaLeft";
