@@ -36,6 +36,15 @@ export interface GameUpdateViewData {
    */
   packedMotionPlans?: Uint32Array;
   /**
+   * Packed unit updates (stride of 20 floats per unit).
+   */
+  packedUnitUpdates?: Float64Array;
+  /**
+   * Packed missile timer queues.
+   * Format: `[unitId, queueLength, timer1, timer2, ...]`.
+   */
+  packedMissileTimers?: Uint32Array;
+  /**
    * Packed per-player numeric stats as
    * `[smallID, tilesOwned, gold, troops, goldEarned]`
    * float64 quints — the fields that change for nearly every alive player
