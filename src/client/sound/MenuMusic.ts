@@ -59,14 +59,15 @@ function rampGain(target: number, t: number): number {
  * autoplay rule applies just as much to the second start as the first.
  *
  * Every start ramps up from silence rather than arriving at full level, in
- * even dB steps rather than Howler's linear-amplitude fade(). The Howl is
- * registered with the mixer once that ramp lands, so the music slider reaches
- * it live from then on. The 700ms fade-OUT is left on Howler's own fade(): it
- * is short, it happens under a scene change, and a linear fade-out errs by
- * dropping away late rather than by arriving instantly, which is far less
- * noticeable than the same curve going the other way. It used to read the volume once at creation,
- * which was invisible while the home page had no volume UI and became a real
- * bug the moment it got one.
+ * even dB steps rather than Howler's linear-amplitude fade(). The ramp reads
+ * the music channel on every step, so the slider and the focus duck both
+ * reach the theme while it is still coming up; the Howl is handed to the
+ * mixer when the ramp lands, which is the only place it is registered.
+ *
+ * The 700ms fade-OUT is left on Howler's own fade(): it is short, it happens
+ * under a scene change, and a linear fade-out errs by dropping away late
+ * rather than by arriving instantly, which is far less noticeable than the
+ * same curve going the other way.
  */
 export function startMenuMusic(mixer: AudioMixer): void {
   let theme: Howl | null = null;
@@ -89,11 +90,9 @@ export function startMenuMusic(mixer: AudioMixer): void {
    * Hands the level back to the mixer once the ramp is done with it.
    *
    * Registering writes the channel volume straight onto the Howl, so it also
-   * lands the ramp exactly on target. The mixer can only take this one on
-   * after the ramp, never during it, or every slider write would fight the
-   * ramp -- which leaves a two-second window where the theme does not follow
-   * the music slider. Hence settling early on a change: moving a slider is a
-   * deliberate act and should take effect now, not once the ramp finishes.
+   * lands the ramp exactly on target. The mixer cannot take this one on
+   * during the ramp, or its writes and the ramp's would fight; the ramp reads
+   * the channel itself in the meantime, so nothing is lost by waiting.
    */
   const settle = (howl: Howl) => {
     cancelFadeIn();
@@ -118,18 +117,15 @@ export function startMenuMusic(mixer: AudioMixer): void {
     let rampTimer: ReturnType<typeof setInterval> | null = null;
 
     const beginRamp = () => {
-      // Read the target here rather than when the Howl was built: a slow load
-      // gives the player seconds in which to move the slider.
-      const target = mixer.volumeFor("music");
-      // Nothing to hear and nothing to ramp on a silent channel, and a ramp
-      // toward zero would never reach a level worth registering at. Hand it
-      // straight over, or the theme stays unregistered for the session.
-      if (target === 0) {
+      // Nothing to hear and nothing to ramp on a channel that is already
+      // silent, so hand it over rather than run an interval writing zero
+      // eighty times. Registered, the mixer brings it up if music comes back.
+      if (mixer.volumeFor("music") === 0) {
         settle(howl);
         return;
       }
       const startedAt = performance.now();
-      howl.volume(rampGain(target, 0));
+      howl.volume(rampGain(mixer.volumeFor("music"), 0));
       rampTimer = setInterval(() => {
         // Driven off elapsed time rather than a tick count: a backgrounded tab
         // throttles timers hard, and the ramp should still finish on schedule
@@ -142,27 +138,28 @@ export function startMenuMusic(mixer: AudioMixer): void {
           settle(howl);
           return;
         }
-        howl.volume(rampGain(target, t));
+        // The target is read every tick, so `t` is only ever the ramp's own
+        // position in dB and the level it scales is always the current one.
+        // A mute lands within a tick; the focus duck takes the theme to
+        // silence and gives it back at the position the ramp has meanwhile
+        // reached rather than at full; a slider tracks continuously. None of
+        // them restarts the ramp or moves its clock, so there is no lag
+        // behind the handle, and no need to tell a deliberate change apart
+        // from an incidental one.
+        howl.volume(rampGain(mixer.volumeFor("music"), t));
       }, MENU_FADE_IN_STEP_MS);
     };
 
     const onPlay = () => beginRamp();
     // Playback never started, so there is nothing to ramp. Hand it over
-    // anyway, so the mixer owns the Howl and the subscription below goes.
+    // anyway, rather than leave a Howl that nothing owns.
     const onPlayError = () => settle(howl);
-
-    // Subscribed now rather than at ramp start: the load can take seconds and
-    // a mute during it still has to be honoured.
-    const stopFollowing = mixer.onChange((category) => {
-      if (category === "music") settle(howl);
-    });
 
     teardownFadeIn = () => {
       if (rampTimer !== null) {
         clearInterval(rampTimer);
         rampTimer = null;
       }
-      stopFollowing();
       howl.off("play", onPlay);
       howl.off("playerror", onPlayError);
     };

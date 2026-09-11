@@ -54,23 +54,15 @@ import { startMenuMusic } from "../../../src/client/sound/MenuMusic";
 // restoreAllMocks would not.
 let mixer: any;
 let musicLevel: number;
-let onChangeCallbacks: Array<(category: string) => void>;
-let unsubscribed: number;
 
 const buildMixer = () => {
   // Real defaults: slider 0.5, squared by perceptualGain, times the -1 dB
   // music trim.
   musicLevel = 0.5 * 0.5 * 0.89;
-  onChangeCallbacks = [];
-  unsubscribed = 0;
   mixer = {
     register: vi.fn(),
     unregister: vi.fn(),
     volumeFor: vi.fn(() => musicLevel),
-    onChange: vi.fn((cb: (category: string) => void) => {
-      onChangeCallbacks.push(cb);
-      return () => unsubscribed++;
-    }),
   };
 };
 
@@ -143,7 +135,6 @@ describe("menu music", () => {
     vi.advanceTimersByTime(2100);
 
     expect(mixer.register).toHaveBeenCalledWith(theme, "music");
-    expect(unsubscribed).toBe(1);
   });
 
   it("spreads the ramp evenly in dB, not in amplitude", () => {
@@ -255,7 +246,6 @@ describe("menu music", () => {
     vi.advanceTimersByTime(2100);
 
     expect(mixer.register).not.toHaveBeenCalled();
-    expect(unsubscribed).toBe(1);
   });
 
   it("hands over when playback fails outright", () => {
@@ -268,7 +258,75 @@ describe("menu music", () => {
     // No audio to ramp, but the mixer should still own it and the channel
     // subscription must not leak.
     expect(mixer.register).toHaveBeenCalledWith(theme, "music");
-    expect(unsubscribed).toBe(1);
+  });
+
+  it("keeps its place through a blur and back rather than jumping to full", () => {
+    // The focus duck takes volumeFor("music") to zero and back. Reading the
+    // target every tick means the ramp writes silence and goes on counting,
+    // so refocusing resumes at the dB position it had reached.
+    vi.useFakeTimers();
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+    const theme = themes()[0];
+    theme.begin();
+
+    vi.advanceTimersByTime(1000);
+    const level = musicLevel;
+    const beforeBlur = 20 * Math.log10(lastVolume(theme) / level);
+
+    musicLevel = 0;
+    vi.advanceTimersByTime(100);
+    expect(lastVolume(theme)).toBe(0);
+
+    musicLevel = level;
+    vi.advanceTimersByTime(100);
+    const afterFocus = 20 * Math.log10(lastVolume(theme) / level);
+
+    // Carried on from where it was, not restarted and not slammed to full.
+    expect(afterFocus).toBeGreaterThan(beforeBlur);
+    expect(afterFocus).toBeLessThan(beforeBlur + 6);
+  });
+
+  it("silences within a tick when the music is muted mid-ramp", () => {
+    // The whole point of the subscription this replaced: a mute has to be
+    // audible at once, not when the ramp happens to finish.
+    vi.useFakeTimers();
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+    const theme = themes()[0];
+    theme.begin();
+
+    vi.advanceTimersByTime(1000);
+    expect(lastVolume(theme)).toBeGreaterThan(0);
+
+    musicLevel = 0;
+    vi.advanceTimersByTime(50);
+
+    expect(lastVolume(theme)).toBe(0);
+  });
+
+  it("tracks the slider mid-ramp without restarting or lagging it", () => {
+    vi.useFakeTimers();
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+    const theme = themes()[0];
+    theme.begin();
+
+    vi.advanceTimersByTime(1000);
+    const before = 20 * Math.log10(lastVolume(theme) / musicLevel);
+
+    musicLevel = musicLevel / 4;
+    vi.advanceTimersByTime(50);
+    const after = 20 * Math.log10(lastVolume(theme) / musicLevel);
+
+    // Same position in the ramp, against the new target: nothing re-issued a
+    // ramp or moved its clock, so it neither restarts nor lags the handle.
+    expect(after).toBeGreaterThan(before);
+    expect(after).toBeLessThan(before + 3);
+
+    // And it still lands on schedule.
+    vi.advanceTimersByTime(1000);
+    expect(mixer.register).toHaveBeenCalledWith(theme, "music");
   });
 
   it("does not attempt a hanging fade when the channel is silent", () => {
@@ -283,20 +341,6 @@ describe("menu music", () => {
     // theme would otherwise stay unregistered for the session.
     expect(theme.fade).not.toHaveBeenCalled();
     expect(mixer.register).toHaveBeenCalledWith(theme, "music");
-  });
-
-  it("hands over at once when the player moves the music slider mid-ramp", () => {
-    startMenuMusic(mixer);
-    document.dispatchEvent(new Event("pointerdown"));
-    const theme = themes()[0];
-    expect(mixer.register).not.toHaveBeenCalled();
-
-    // Muting during the ramp must be audible now, not in two seconds.
-    musicLevel = 0;
-    onChangeCallbacks.forEach((cb) => cb("music"));
-
-    expect(mixer.register).toHaveBeenCalledWith(theme, "music");
-    expect(unsubscribed).toBe(1);
   });
 
   it("ramps again on the start after a menu restore", () => {
@@ -336,7 +380,6 @@ describe("menu music", () => {
     expect(volumeWrites(theme).length).toBe(writes);
     expect(mixer.register).not.toHaveBeenCalled();
     expect(mixer.unregister).toHaveBeenCalledWith(theme);
-    expect(unsubscribed).toBe(1);
   });
 
   it("starts once however many gestures arrive", () => {
