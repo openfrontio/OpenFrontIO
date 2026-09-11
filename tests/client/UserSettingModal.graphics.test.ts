@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
@@ -13,21 +13,6 @@ type TestModal = UserSettingModal & {
   updateComplete: Promise<unknown>;
   activeTab: string;
 };
-
-/**
- * Everything mounted this test. A Lit element left connected when the file
- * ends can schedule an update after jsdom is gone, which surfaces as an
- * unhandled "document is not defined" and fails the run even though every
- * test passed.
- */
-const mounted: TestModal[] = [];
-
-async function unmountAll() {
-  for (const el of mounted.splice(0)) {
-    el.remove();
-    await el.updateComplete;
-  }
-}
 
 const LAYERS: MapLayer[] = [
   { id: "forest", placement: "land", nukeable: true, alpha: 0.8 },
@@ -56,7 +41,6 @@ async function mountGraphics(
     el.onLayerAlphaChange = wire.onLayerAlphaChange;
   }
   document.body.appendChild(el);
-  mounted.push(el);
   el.open({ tab: "graphics" });
   await el.updateComplete;
   if (wire?.advanced !== false) {
@@ -113,7 +97,6 @@ function resetGraphicsSettings() {
 
 describe("Graphics tab: advanced options folded in from the in-game modal", () => {
   beforeEach(resetGraphicsSettings);
-  afterEach(unmountAll);
 
   it("renders every folded control", async () => {
     const el = await mountGraphics();
@@ -280,7 +263,6 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
 
 describe("Graphics tab: preset tools sit outside the Advanced fold", () => {
   beforeEach(resetGraphicsSettings);
-  afterEach(unmountAll);
 
   function typeInto(el: TestModal, id: string, value: string) {
     const field = el.querySelector<HTMLInputElement | HTMLTextAreaElement>(
@@ -362,7 +344,6 @@ describe("Graphics tab: preset tools sit outside the Advanced fold", () => {
 
 describe("Graphics tab: live apply from the in-game instance", () => {
   beforeEach(resetGraphicsSettings);
-  afterEach(unmountAll);
 
   it("fires the settings.graphics change event a running game listens for", async () => {
     // ClientGameRunner re-resolves the render settings and rebuilds the
@@ -493,7 +474,6 @@ describe("Graphics tab: live apply from the in-game instance", () => {
 
 describe("Graphics tab: layer state reaches the renderer with Advanced collapsed", () => {
   beforeEach(resetGraphicsSettings);
-  afterEach(unmountAll);
 
   /** Everything the renderer was told, in order. */
   function wire() {
@@ -599,7 +579,6 @@ describe("Graphics tab: layer state reaches the renderer with Advanced collapsed
 
 describe("Graphics tab: the page instance has no game", () => {
   beforeEach(resetGraphicsSettings);
-  afterEach(unmountAll);
 
   it("hides the map-layer section, because the rows come from the running map", async () => {
     const el = await mountGraphics();
