@@ -2,6 +2,7 @@ import { ClientEnv } from "src/client/ClientEnv";
 import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { showInGameAlert } from "./InGameModal";
+import { ensureServerList } from "./ServerList";
 import { translateText } from "./Utils";
 
 interface LobbySocketOptions {
@@ -45,6 +46,11 @@ export class PublicLobbySocket {
   async start() {
     this.stopped = false;
     this.wsConnectionAttempts = 0;
+    // The lobby list needs a server: ask the API which one (multi-server
+    // v2), falling back to the page's own values. A page found out of date
+    // is being navigated to the current version; nothing to connect to.
+    if ((await ensureServerList()) === "redirecting") return;
+    if (this.stopped) return;
     // Get config to determine number of workers, then pick a random one
     this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
     this.connectWebSocket();

@@ -2,6 +2,7 @@ import { JWK } from "jose";
 import { z } from "zod";
 import { ClusterConfig } from "../core/ClusterConfig";
 import { GameID } from "../core/Schemas";
+import { ServerList } from "../core/ServerList";
 import { simpleHash } from "../core/Util";
 import {
   GameEnv,
@@ -12,11 +13,37 @@ import {
 export class ClientEnv {
   private static values: ClientEnvValues | null = null;
   private static publicKey: JWK | null = null;
+  // The API-served server list (src/client/ServerList.ts), once fetched, and
+  // the letter picked for new games from it. Null until a server was needed
+  // and the list loaded; every accessor below then prefers it over the
+  // page's own values, and falls back to them when it is absent, so the
+  // client behaves exactly as today until the API serves a list.
+  private static apiList: {
+    list: ServerList;
+    picked: string | null;
+  } | null = null;
 
   /** Test-only. */
   static reset(): void {
     ClientEnv.values = null;
     ClientEnv.publicKey = null;
+    ClientEnv.apiList = null;
+  }
+
+  // Called by src/client/ServerList.ts only. `picked` is the letter of the
+  // open server chosen for this page's new games, or null when none runs
+  // this build (existing games still resolve by letter; own-server calls
+  // fall back to the page's values).
+  static applyServerList(list: ServerList | null, picked: string | null) {
+    ClientEnv.apiList = list === null ? null : { list, picked };
+  }
+  static serverListLoaded(): boolean {
+    return ClientEnv.apiList !== null;
+  }
+  private static pickedServer(): { host: string; numWorkers: number } | null {
+    const a = ClientEnv.apiList;
+    if (a === null || a.picked === null) return null;
+    return a.list.servers[a.picked] ?? null;
   }
 
   private static get(): ClientEnvValues {
@@ -72,6 +99,8 @@ export class ClientEnv {
   // Worker count of the server this page talks to: own cluster entry when
   // the map was injected, the legacy scalar otherwise (old desktop shells).
   static numWorkers(): number {
+    const picked = ClientEnv.pickedServer();
+    if (picked !== null) return picked.numWorkers;
     const v = ClientEnv.get();
     if (v.cluster !== undefined && v.instanceLetter !== undefined) {
       const own = v.cluster[v.instanceLetter];
@@ -147,6 +176,10 @@ export class ClientEnv {
   // Which deployment hosts this game (docs/MultiServer.md): a 10-char id's
   // leading letter names its server in the cluster map.
   static resolveGame(gameID: GameID): GameResolution {
+    const a = ClientEnv.apiList;
+    if (a !== null) {
+      return resolveGameHost(gameID, a.list.servers, a.picked ?? undefined);
+    }
     const v = ClientEnv.get();
     return resolveGameHost(gameID, v.cluster, v.instanceLetter);
   }
@@ -194,6 +227,8 @@ export class ClientEnv {
   // public-lobby and in-game WebSockets. The lobby-list and game sockets append
   // their own worker path (e.g. `/w0/lobbies`, `/w0`).
   static serverWsBase(): string {
+    const picked = ClientEnv.pickedServer();
+    if (picked !== null) return `wss://${picked.host}`;
     return deriveServerWsBase(
       ClientEnv.serverHost(),
       window.location.protocol,
@@ -208,6 +243,8 @@ export class ClientEnv {
   // NOT the account/shop API: that is a separate service on api.<audience>,
   // reached via getApiBase().
   static serverHttpBase(): string {
+    const picked = ClientEnv.pickedServer();
+    if (picked !== null) return `https://${picked.host}`;
     return deriveServerHttpBase(
       ClientEnv.serverHost(),
       window.location.protocol,
@@ -269,7 +306,7 @@ export type GameResolution =
  */
 export function resolveGameHost(
   gameID: string,
-  cluster: ClusterConfig | undefined,
+  cluster: Record<string, { host: string; numWorkers: number }> | undefined,
   instanceLetter: string | undefined,
 ): GameResolution {
   if (gameID.length < 10) return { kind: "own" };

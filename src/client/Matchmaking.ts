@@ -11,6 +11,7 @@ import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { JoinLobbyEvent } from "./Main";
+import { ensureServerList } from "./ServerList";
 import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
 
@@ -457,6 +458,9 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameID === null) {
       return;
     }
+    // The matched game may carry any server's letter: resolve it through
+    // the API's list (multi-server v2) rather than this page's own map.
+    await ensureServerList();
     const url = `${ClientEnv.gameHttpBase(this.gameID)}/${ClientEnv.gameWorkerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
     const response = await fetch(url, {
