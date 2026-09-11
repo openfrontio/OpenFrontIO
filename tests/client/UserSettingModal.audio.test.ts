@@ -62,8 +62,13 @@ function slide(el: TestModal, category: string, value: number) {
   );
 }
 
+/** The host and its inner checkbox share an id; the checkbox is the control. */
+function checkbox(el: TestModal, id: string): HTMLInputElement {
+  return el.querySelector(`#${id} input[type="checkbox"]`) as HTMLInputElement;
+}
+
 function toggle(el: TestModal, id: string, checked: boolean) {
-  const input = el.querySelector(`#${id}`) as HTMLInputElement;
+  const input = checkbox(el, id);
   input.checked = checked;
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
@@ -252,6 +257,31 @@ describe("user-setting audio tab", () => {
     warn.mockRestore();
   });
 
+  it("re-enables the button if the preview never settles", async () => {
+    // Howler fires neither `end` nor `stop` on loaderror/playerror, so a cue
+    // whose asset fails leaves previewCue pending forever.
+    setAudioControls({
+      previewCue: () => new Promise<void>(() => {}),
+      isAudible: () => true,
+    });
+    const el = await mountAudioTab();
+
+    // Fake timers must be in place before the click, or the ceiling's
+    // setTimeout is scheduled on the real clock and never advanced.
+    vi.useFakeTimers();
+    try {
+      testButton(el, "effects")!.click();
+      await el.updateComplete;
+      expect(testButton(el, "effects")!.disabled).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      await el.updateComplete;
+      expect(testButton(el, "effects")!.disabled).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("disables the button with a hint when the channel is silent", async () => {
     setAudioControls(stubControls({ audible: false }));
     const el = await mountAudioTab();
@@ -283,10 +313,7 @@ describe("user-setting audio tab", () => {
 
   it("disables keep-alerts while mute-on-blur is off", async () => {
     const el = await mountAudioTab();
-    const dependent = () =>
-      el.querySelector(
-        "#audio-alerts-when-unfocused-toggle",
-      ) as HTMLInputElement;
+    const dependent = () => checkbox(el, "audio-alerts-when-unfocused-toggle");
     expect(dependent().disabled).toBe(false);
 
     toggle(el, "audio-mute-on-blur-toggle", false);
