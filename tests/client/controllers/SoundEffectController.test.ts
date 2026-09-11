@@ -1,5 +1,6 @@
 import { SoundEffectController } from "../../../src/client/controllers/SoundEffectController";
 import { PlaySoundEffectEvent } from "../../../src/client/sound/Sounds";
+import { SendSpawnIntentEvent } from "../../../src/client/Transport";
 import { EventBus } from "../../../src/core/EventBus";
 import { MessageType, UnitType } from "../../../src/core/game/Game";
 import { GameUpdateType } from "../../../src/core/game/GameUpdates";
@@ -99,17 +100,11 @@ describe("SoundEffectController", () => {
     expect(played).toEqual(["game-start"]);
   });
 
-  it("plays spawn once when my player spawns during the spawn phase", () => {
-    let hasSpawned = false;
-    game.myPlayer = () => ({ hasSpawned: () => hasSpawned });
-    game.inSpawnPhase = () => true;
-    game.updatesSinceLastTick = () => ({});
-    controller.tick();
-    expect(played).toEqual([]);
-    hasSpawned = true;
-    controller.tick();
-    controller.tick();
-    expect(played).toEqual(["spawn"]);
+  it("plays spawn on every spawn placement", () => {
+    controller.init();
+    eventBus.emit(new SendSpawnIntentEvent(0 as never));
+    eventBus.emit(new SendSpawnIntentEvent(1 as never));
+    expect(played).toEqual(["spawn", "spawn"]);
   });
 
   it("plays nuke-warning only for nukes inbound to my player", () => {
