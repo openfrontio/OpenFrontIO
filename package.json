@@ -31,6 +31,7 @@
     "perf:client": "npx tsx tests/perf/client/ClientUpdatePerf.ts",
     "perf:client-mem": "npx tsx tests/perf/client/ClientMemoryPerf.ts",
     "perf:client-tick": "npx tsx tests/perf/client/ClientTickPerf.ts",
+    "perf:endgame": "npx tsx tests/perf/client/EndGameUpdatePerf.ts",
     "test:coverage": "vitest run --coverage",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
