@@ -50,15 +50,33 @@ describe("ClientEnv", () => {
     expect(() => ClientEnv.env()).toThrow(/Missing BOOTSTRAP_CONFIG/);
   });
 
-  test("throws when a required field is missing", () => {
+  test("throws when a required environment field is missing", () => {
+    // The four required values all describe the ENVIRONMENT; a page without
+    // one of them has no environment to run in. Values that name a SERVER
+    // are not required -- see the next test.
     window.BOOTSTRAP_CONFIG = {
       gameEnv: "dev",
       numWorkers: 1,
       turnstileSiteKey: "k",
       jwtAudience: "localhost",
-      // instanceId missing
+      instanceId: "x",
+      // gitCommit missing
     };
     expect(() => ClientEnv.instanceId()).toThrow(/Missing BOOTSTRAP_CONFIG/);
+  });
+
+  test("boots without the values that name a server", () => {
+    // A static page (multi-server v2) carries none of them; the API's
+    // server list answers instead. instanceId, which only a rendering
+    // server knows, reads as "".
+    window.BOOTSTRAP_CONFIG = {
+      gameEnv: "dev",
+      turnstileSiteKey: "k",
+      jwtAudience: "localhost",
+      gitCommit: "abc123",
+    };
+    expect(ClientEnv.env()).toBe(GameEnv.Dev);
+    expect(ClientEnv.instanceId()).toBe("");
   });
 
   test("jwtIssuer maps 'localhost' to http://localhost:8787", () => {

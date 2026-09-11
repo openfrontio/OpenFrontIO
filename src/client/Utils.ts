@@ -868,7 +868,14 @@ export function reloadForUpdate(): void {
   if (siteHost !== undefined && url.host !== siteHost) {
     url.protocol = "https:";
     url.host = siteHost;
-    url.pathname = url.pathname.replace(/^\/w\d+\//, "/");
+    url.pathname = apexPathFor(url.pathname);
+  } else {
+    // A `/v/<commit>/` page is immutable by design (multi-server v2): the
+    // prefix pins the bundle, so reloading it as-is re-serves the very
+    // version this update is leaving behind, forever. Ask for the
+    // version-free path, which the site answers with `latest`. The
+    // cache-buster below then only has to beat the CDN, not the prefix.
+    url.pathname = stripVersionPrefix(url.pathname).path;
   }
   url.searchParams.set("v", Date.now().toString(36));
   window.location.replace(url.toString());
@@ -893,6 +900,10 @@ export function apexPathFor(pathname: string): string {
  * list is empty; the apex always fronts the active one. Same-host,
  * standalone deployments (no siteHost injected), dev, and desktop keep the
  * plain root.
+ *
+ * The plain root is also the right answer on a `/v/<commit>/` page, and for
+ * the same reason: "/" is version-free, so a player leaving to the menu
+ * lands on `latest` rather than back on the build they were leaving.
  */
 export function homeHref(): string {
   const siteHost = ClientEnv.siteHost();

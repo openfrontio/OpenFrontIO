@@ -613,7 +613,7 @@ export class AccountModal extends BaseModal {
   private async viewGame(gameId: string): Promise<void> {
     this.close();
     const encodedGameId = encodeURIComponent(gameId);
-    const newUrl = `/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
+    const newUrl = ClientEnv.gamePath(gameId);
 
     history.pushState({ join: gameId }, "", newUrl);
     window.dispatchEvent(

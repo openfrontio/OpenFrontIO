@@ -124,14 +124,15 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
 
-    // ClientEnv.get() throws without this (initialize reads instanceId()
-    // before the Turnstile prefetch).
+    // ClientEnv.get() throws without the four environment values. Nothing
+    // here names a server beyond the worker count, and no instanceId at all:
+    // a static page carries none (multi-server v2), and initialize() must
+    // boot from one that does not.
     (window as any).BOOTSTRAP_CONFIG = {
       gameEnv: "dev",
       numWorkers: 2,
       turnstileSiteKey: "test-site-key",
       jwtAudience: "localhost",
-      instanceId: "dev-instance",
       gitCommit: "DEV",
     };
 

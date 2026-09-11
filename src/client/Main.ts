@@ -12,6 +12,7 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
+import { versionedPathForGame } from "../core/ServerList";
 import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
 import { UserSettings } from "../core/game/UserSettings";
@@ -403,8 +404,7 @@ class Client {
     // so rendering the widget there alerts and rejects — and replays never
     // send a token anyway (see getTurnstileToken below).
     this.turnstileTokenPromise =
-      ClientEnv.instanceId() === "desktop" ||
-      isReplayShellHost(window.location.hostname)
+      isDesktopShell() || isReplayShellHost(window.location.hostname)
         ? null
         : getTurnstileToken();
 
@@ -1071,6 +1071,12 @@ class Client {
       // through it; on the apex itself (and dev/desktop) fall through to
       // the join flow's normal not-found handling.
       if (this.redirectUnknownLetterToApex(lobbyId)) return;
+      // The game's server may run a different build than this page (a link
+      // into a version still draining, or a page served as `latest` after a
+      // deploy). Open it at that version's page rather than trying to play
+      // it with the wrong bundle; the loop guard and the desktop exemption
+      // live in versionedPathForGame.
+      if (this.redirectToGameVersion(lobbyId)) return;
       // ?host means the lobby creator is returning to a successor lobby they
       // reused from the win screen: reopen the host view bound to the existing
       // lobby instead of the join flow. Non-creators who hit this URL still get
@@ -1169,6 +1175,23 @@ class Client {
     const apex = ClientEnv.siteHost();
     if (apex === undefined || window.location.host === apex) return false;
     window.location.href = `https://${apex}${apexPathFor(window.location.pathname)}${window.location.search}`;
+    return true;
+  }
+
+  // The web half of "a game on a server running another version". True when
+  // a navigation was issued. Desktop never navigates: its updater owns which
+  // version it runs, and a mismatch there surfaces as update_available.desktop
+  // at join time (ClientGameRunner).
+  private redirectToGameVersion(gameID: string): boolean {
+    if (isDesktopShell()) return false;
+    const target = versionedPathForGame(
+      ClientEnv.gitCommit(),
+      ClientEnv.gameVersion(gameID),
+      window.location.pathname,
+      window.location.search,
+    );
+    if (target === null) return false;
+    window.location.href = target;
     return true;
   }
 
@@ -1421,7 +1444,7 @@ class Client {
           "",
           lobbyIdHidden
             ? "/streamer-mode"
-            : `/${ClientEnv.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+            : `${ClientEnv.gamePath(lobby.gameID)}?live`,
         );
       }
 
@@ -1510,7 +1533,7 @@ class Client {
       // on it. On the replay host, fall back to the in-place leave.
       if (!isReplayShellHost(window.location.hostname)) {
         this.resetPresenceToMenu();
-        window.location.href = `/${ClientEnv.workerPath(gameId)}/game/${gameId}`;
+        window.location.href = ClientEnv.gamePath(gameId);
         return;
       }
       await this.handleLeaveLobby();
@@ -1536,7 +1559,7 @@ class Client {
     } else if (lobbyIdHidden) {
       targetUrl = "/streamer-mode";
     } else {
-      targetUrl = `/${ClientEnv.workerPath(lobbyId)}/game/${lobbyId}`;
+      targetUrl = ClientEnv.gamePath(lobbyId);
     }
     const currentUrl = window.location.pathname;
 
@@ -1673,7 +1696,7 @@ class Client {
   ): Promise<string | null> {
     if (
       ClientEnv.env() === GameEnv.Dev ||
-      ClientEnv.instanceId() === "desktop" ||
+      isDesktopShell() ||
       // Single-player and replays: no server to verify a token against (and
       // on the CDN replay shells Turnstile cannot load at all). Shared with
       // the desktop gate so the exemption has one definition.
