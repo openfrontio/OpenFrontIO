@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
+import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
@@ -28,7 +29,7 @@ import type { GameServer } from "./GameServer";
 import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
-import { enforceVerifiedBadge } from "./Privilege";
+import { resolveVerifiedJoin } from "./Privilege";
 
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
@@ -389,7 +390,7 @@ export async function startWorker() {
               undefined,
             ),
           );
-          ws.close(1002, "ClientJoinMessageSchema");
+          ws.close(CloseCode.BadRequest, CloseReason.InvalidMessage);
           return;
         }
 
@@ -403,12 +404,53 @@ export async function startWorker() {
           return;
         }
 
-        // Verify this worker should handle this game
+        // Verify this worker should handle this game. Close loudly: the bare
+        // return this replaces left the socket open with no reply, so a
+        // misrouted client (stale bundle computing a worker index from an old
+        // numWorkers) hung forever instead of being told to reload.
         const expectedWorkerId = ServerEnv.workerIndex(clientMsg.gameID);
         if (expectedWorkerId !== workerId) {
           log.warn(
             `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
           );
+          ws.close(CloseCode.WrongWorker, CloseReason.WrongWorker);
+          return;
+        }
+
+        // The sim is deterministic only when every client in a game runs
+        // identical code, so a client built from a different commit (e.g. a
+        // tab left open across a deploy) would desync the game. Reject it
+        // with a typed error the client answers by refreshing. A missing
+        // commit means a pre-feature bundle, which is stale by definition.
+        // The "desktop" placeholder is exempt: an Electron shell predating
+        // OPE-358 injects it no matter how fresh its self-updating bundle is
+        // (GameVersion.ts documents the shape as live), so treating it as a
+        // mismatch would lock those players out permanently — and the
+        // desktop error path is a terminal alert with no retry. The grace
+        // dies with the last pre-OPE-358 shell.
+        if (
+          clientMsg.gitCommit !== ServerEnv.gitCommit() &&
+          clientMsg.gitCommit !== "desktop"
+        ) {
+          log.info("rejecting version-mismatched client", {
+            gameID: clientMsg.gameID,
+            clientCommit: clientMsg.gitCommit,
+          });
+          ws.send(
+            encodeServerMessage(
+              {
+                type: "error",
+                error: "version_mismatch",
+                gitCommit: ServerEnv.gitCommit(),
+              } satisfies ServerErrorMessage,
+              undefined,
+            ),
+          );
+          // Normal closure: the typed error above is the whole message. The
+          // client latches Normal silently, so nothing stacks on the alert; a
+          // 4xxx rejection would pop a generic "connection refused" dialog on
+          // top of it, and a retryable code makes it reconnect and loop.
+          ws.close(CloseCode.Normal, "Version mismatch");
           return;
         }
 
@@ -418,13 +460,13 @@ export async function startWorker() {
           log.warn(`Invalid token: ${result.message}`, {
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, `Unauthorized: invalid token`);
+          ws.close(CloseCode.InternalError, CloseReason.InvalidToken);
           return;
         }
         const { persistentId, claims } = result;
 
         if (claims?.role === "banned") {
-          ws.close(1002, "Account Banned");
+          ws.close(CloseCode.Banned, CloseReason.Banned);
           return;
         }
 
@@ -443,7 +485,7 @@ export async function startWorker() {
             log.warn(
               `game ${clientMsg.gameID} not found on worker ${workerId}`,
             );
-            ws.close(1002, "Game not found");
+            ws.close(CloseCode.GameNotFound, CloseReason.GameNotFound);
           }
           return;
         }
@@ -503,7 +545,7 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(1002, "Unauthorized: Turnstile token rejected");
+            ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
             return;
           }
           if (plan.action === "verify") {
@@ -526,7 +568,7 @@ export async function startWorker() {
                   gameID: clientMsg.gameID,
                   reason: verdict.reason,
                 });
-                ws.close(1002, "Unauthorized: Turnstile token rejected");
+                ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
                 return;
               case "error":
                 // Fail open: the locally screened name stands.
@@ -566,14 +608,18 @@ export async function startWorker() {
         let ownedClanTags: string[] = [];
         let trusted = false;
         let accountUsername:
-          | { username?: string | null; usernameStatus?: string }
+          | {
+              username?: string | null;
+              usernameBase?: string | null;
+              usernameStatus?: string;
+            }
           | undefined;
 
         const allowedFlares = ServerEnv.allowedFlares();
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
-            ws.close(1002, "Unauthorized");
+            ws.close(CloseCode.Unauthorized, CloseReason.LoginRequired);
             return;
           }
         } else {
@@ -584,7 +630,7 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(1002, "Unauthorized: user me fetch failed");
+            ws.close(CloseCode.InternalError, CloseReason.AccountLookupFailed);
             return;
           }
           flares = result.response.player.flares;
@@ -602,7 +648,7 @@ export async function startWorker() {
               log.warn(
                 "Forbidden: player without an allowed flare attempted to join game",
               );
-              ws.close(1002, "Forbidden");
+              ws.close(CloseCode.Forbidden, CloseReason.Forbidden);
               return;
             }
           }
@@ -632,23 +678,32 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, cosmeticResult.reason);
+          ws.close(CloseCode.Forbidden, CloseReason.CosmeticsForbidden);
           return;
         }
 
-        // An undefined account means an anonymous persistent-ID join (no
-        // /users/@me fetch) — enforceVerifiedBadge treats that as Dev-only.
+        // Verified intent, not a claim to verify: the check stays only when
+        // the account renders bare and the screened join name is that bare
+        // name. The name itself is never replaced, so everything shown in the
+        // lobby has been through censorPlayer and join_verify. An undefined
+        // account is an anonymous persistent-ID join, which
+        // resolveVerifiedJoin treats as Dev-only.
+        const verifiedOutcome = resolveVerifiedJoin(
+          cosmeticResult.cosmetics,
+          username,
+          accountUsername ?? null,
+        );
         if (
-          enforceVerifiedBadge(
-            cosmeticResult.cosmetics,
-            username,
-            accountUsername ?? null,
-          )
+          verifiedOutcome === "custom" &&
+          clientMsg.cosmetics?.verified === true
         ) {
-          log.info("Stripped unvouched verified-badge claim", {
-            persistentID: persistentId,
-            gameID: clientMsg.gameID,
-          });
+          log.info(
+            "Verified intent not honoured: join name is not the account bare name",
+            {
+              persistentID: persistentId,
+              gameID: clientMsg.gameID,
+            },
+          );
         }
 
         // Create client and add to game
@@ -673,36 +728,42 @@ export async function startWorker() {
 
         if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          ws.close(1002, "Game not found");
+          ws.close(CloseCode.GameNotFound, CloseReason.GameNotFound);
         } else if (joinResult === "kicked") {
           log.warn(`kicked client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Cannot join game");
+          ws.close(CloseCode.GameClosed, CloseReason.CannotJoin);
         } else if (joinResult === "not_allowlisted") {
           log.info(`client not whitelisted for game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "You are not whitelisted");
+          ws.close(CloseCode.Forbidden, CloseReason.NotAllowlisted);
         } else if (joinResult === "not_trusted") {
           log.info(`untrusted client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Trusted account required");
+          ws.close(CloseCode.Forbidden, CloseReason.NotTrusted);
+        } else if (joinResult === "ended") {
+          log.info(`client tried to join ended game ${clientMsg.gameID}`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(CloseCode.GameNotFound, CloseReason.GameEnded);
         } else if (joinResult === "rejected") {
           log.info(`client rejected from game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Lobby full");
+          ws.close(CloseCode.LobbyFull, CloseReason.LobbyFull);
         }
 
         // Handle other message types
       } catch (error) {
-        ws.close(1011, "Internal server error");
+        ws.close(CloseCode.InternalError, CloseReason.InternalError);
         log.warn(
           `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
             0,
@@ -714,7 +775,7 @@ export async function startWorker() {
 
     ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
+        ws.close(CloseCode.ProtocolError, CloseReason.ProtocolError);
       }
     });
     ws.on("close", () => {

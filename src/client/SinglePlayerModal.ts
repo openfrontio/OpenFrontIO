@@ -13,7 +13,8 @@ import {
   maps,
   UnitType,
 } from "../core/game/Game";
-import { TeamCountConfig } from "../core/Schemas";
+import { UserSettings } from "../core/game/UserSettings";
+import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
@@ -23,11 +24,11 @@ import "./components/GameConfigSettings";
 import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { getPlayerCosmetics } from "./Cosmetics";
+import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
-import { fallbackPlayerName } from "./PlayerName";
+import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
 import { UsernameInput } from "./UsernameInput";
 import {
   getBotsForCompactMap,
@@ -42,6 +43,54 @@ import {
 } from "./utilities/GameConfigHelpers";
 
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+
+/**
+ * Ceiling on how long a Start Game click will wait for the player's name and
+ * cosmetics before starting on defaults.
+ *
+ * A backstop for a wait that never settles, but not only that: the bounds
+ * beneath it chain rather than sit in parallel — getPlayerCosmetics reaches
+ * getUserMe, which awaits userAuth's 10s-bounded /auth/refresh before issuing
+ * its own 10s-bounded /users/@me — so a genuinely slow leg can exceed this and
+ * be pre-empted. That is accepted: the cost is one single-player game on
+ * default cosmetics, against a Start button that would otherwise sit at
+ * "Starting…" for however long the chain takes. prewarmCosmetics() spends
+ * that time while the player is still choosing, which is what keeps the case
+ * rare rather than routine.
+ */
+export const START_PREPARE_DEADLINE_MS = 15_000;
+
+/**
+ * Ceiling on the CrazyGames midgame ad, deliberately far above
+ * START_PREPARE_DEADLINE_MS: an ad creative routinely runs 15-30s and it has
+ * to gate the start, because dispatching behind one puts gameplay — spawn
+ * selection included — under a still-visible overlay. This exists only for an
+ * SDK that never calls adFinished or adError at all. Off CrazyGames,
+ * requestMidgameAd() resolves immediately and none of this is reached.
+ */
+export const MIDGAME_AD_DEADLINE_MS = 60_000;
+
+/**
+ * `work`, or `onDeadline()` if it has not settled within `ms`. The timer is
+ * always cleared, so the fast path costs nothing.
+ */
+function withDeadline<T>(
+  work: Promise<T>,
+  ms: number,
+  onDeadline: () => T,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(onDeadline()), ms);
+  });
+  return Promise.race([work, deadline]).finally(() => clearTimeout(timer));
+}
+
+/** What a start has to wait for before it can dispatch join-lobby. */
+type StartPreparation = {
+  resolvedName: ResolvedPlayerName;
+  cosmetics: PlayerCosmetics;
+};
 
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.World,
@@ -160,6 +209,13 @@ export class SinglePlayerModal extends BaseModal {
   @state() private overtime: boolean = DEFAULT_OPTIONS.overtime;
   @state() private overtimeStartMinutes: number | undefined =
     DEFAULT_OPTIONS.overtimeStartMinutes;
+  // Drives the Start Game button's busy state. Without it the click produces
+  // nothing visible until every await in startGame() settles, which reads as
+  // a hang rather than as loading whenever the network is slow or absent.
+  @state() private starting: boolean = false;
+  // Identifies the current start attempt. Bumped on every start and on every
+  // close, so an attempt that outlives its modal can tell it has been retired.
+  private startAttempt: number = 0;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -522,7 +578,10 @@ export class SinglePlayerModal extends BaseModal {
             variant="primary"
             width="block"
             size="lg"
-            translationKey="game_settings.start"
+            translationKey=${this.starting
+              ? "game_settings.starting"
+              : "game_settings.start"}
+            .disable=${this.starting}
             @click=${this.startGame}
           ></o-button>
         </div>
@@ -557,7 +616,38 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   protected onClose(): void {
-    // Reset all transient form state to ensure clean slate
+    // Retires whatever start is still in flight. resetOptions() below hands
+    // back a live button, so the player can close, reopen and start again
+    // while the previous attempt is still resolving — and that attempt is
+    // now describing settings the modal no longer holds. Without this, both
+    // attempts dispatch join-lobby with different gameIDs and whichever
+    // resolves last wins, which can be the one the player abandoned.
+    this.startAttempt++;
+    this.resetOptions();
+  }
+
+  /**
+   * Starts a solo game on the default settings without opening the modal,
+   * with the in-game tutorial switched back on (the play page's Tutorial
+   * card for new players).
+   */
+  public async startTutorial(): Promise<void> {
+    // The modal never opens on this path, so onOpen's prewarm never runs.
+    // Overlap it with the manifest load below.
+    void prewarmCosmetics();
+    this.resetOptions();
+    // A nation count of 0 means "nations disabled"; wait for the real one.
+    await this.loadNationCount();
+    new UserSettings().setTutorialDismissed(false);
+    await this.startGame();
+  }
+
+  // Reset all transient form state to ensure clean slate
+  private resetOptions(): void {
+    // Belt and braces with the finally in startGame(): closing and reopening
+    // the modal must always give the player a live Start button back, whatever
+    // left the previous attempt in flight.
+    this.starting = false;
     this.selectedMap = DEFAULT_OPTIONS.selectedMap;
     this.selectedDifficulty = DEFAULT_OPTIONS.selectedDifficulty;
     this.gameMode = DEFAULT_OPTIONS.gameMode;
@@ -589,6 +679,13 @@ export class SinglePlayerModal extends BaseModal {
 
   protected onOpen(): void {
     void this.loadNationCount();
+    // Spend the cosmetics round trip while the player is picking a map, not
+    // after they commit. startGame() still resolves cosmetics properly; this
+    // only moves the network time off the click, for the slow-but-reachable
+    // case. It does not help when the backend is unreachable: fetchCosmetics
+    // deliberately does not cache a failure, so the click re-pays one bounded
+    // attempt. Remembering an unreachable backend is OPE-403.
+    void prewarmCosmetics();
   }
 
   private handleSelectRandomMap() {
@@ -845,7 +942,88 @@ export class SinglePlayerModal extends BaseModal {
     this.teamCount = value;
   }
 
+  /**
+   * The name and cosmetics the dispatch needs, bounded so neither can outlive
+   * the button waiting on them.
+   *
+   * Both waits can reach code with no bound of its own — the Steam name seed
+   * is a bare IPC call, cosmetics reach the network — and both degrade to
+   * something playable: the interim generated name, default cosmetics. A slow
+   * resolution here is a cost with nothing to show for it, so
+   * START_PREPARE_DEADLINE_MS cuts it short rather than pinning Start at
+   * "Starting…" for the rest of the session, which would take startTutorial()
+   * down with it on the re-entrancy guard.
+   *
+   * The midgame ad is deliberately not part of this — see awaitMidgameAd.
+   */
+  private async resolveNameAndCosmetics(
+    usernameInput: UsernameInput | null,
+  ): Promise<StartPreparation> {
+    const nameNow = () => usernameInput?.resolvedName() ?? fallbackPlayerName();
+
+    const prepared = await withDeadline(
+      (async (): Promise<StartPreparation> => {
+        // Wait for the one-shot Steam name-seed to settle before reading
+        // getUsername(), so a fast single-player start uses the Steam persona
+        // rather than the interim generated anon name.
+        await usernameInput?.whenSeeded();
+        // Name and badge from one resolution, as on the multiplayer join path.
+        const resolvedName = nameNow();
+        // onOpen() prewarmed the caches this reads, so it normally resolves
+        // without touching the network at all.
+        return {
+          resolvedName,
+          cosmetics: await getPlayerCosmetics({
+            verified: resolvedName.verified,
+          }),
+        };
+      })(),
+      START_PREPARE_DEADLINE_MS,
+      () => {
+        console.warn(
+          "Start preparation exceeded its deadline; starting on defaults",
+        );
+        const resolvedName = nameNow();
+        return {
+          resolvedName,
+          cosmetics: resolvedName.verified ? { verified: true } : {},
+        };
+      },
+    );
+
+    return prepared;
+  }
+
+  /**
+   * The CrazyGames midgame ad, on a bound of its own.
+   *
+   * Separate from resolveNameAndCosmetics because an ad is not the same kind
+   * of wait. It is the player watching something, legitimately for longer than
+   * START_PREPARE_DEADLINE_MS — racing it there cut real creatives short and
+   * dropped the player into spawn selection underneath a live overlay. So the
+   * ad gates the start, the button staying busy while it plays is correct
+   * rather than a hang, and MIDGAME_AD_DEADLINE_MS is sized only to catch an
+   * SDK that has stopped answering (requestMidgameAd resolves solely from its
+   * adFinished/adError callbacks).
+   *
+   * Only ever called for a start that is still live — an ad shown for a game
+   * that will not start is worse than no ad. Off CrazyGames this resolves
+   * immediately.
+   */
+  private awaitMidgameAd(): Promise<void> {
+    return withDeadline(
+      crazyGamesSDK.requestMidgameAd(),
+      MIDGAME_AD_DEADLINE_MS,
+      () => {
+        console.warn("Midgame ad never signalled completion; starting anyway");
+      },
+    );
+  }
+
   private async startGame() {
+    // A second click while the first is still resolving would dispatch a
+    // second join-lobby for a different gameID.
+    if (this.starting) return;
     // Validate and clamp maxTimer setting before starting
     let finalMaxTimerValue: number | undefined = undefined;
     if (this.maxTimer) {
@@ -867,105 +1045,136 @@ export class SinglePlayerModal extends BaseModal {
       finalMaxTimerValue = Math.max(1, Math.min(120, this.maxTimerValue));
     }
 
-    console.log(
-      `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
-    );
-    const clientID = generateID();
-    const gameID = generateID();
+    // Everything past this point awaits something, some of it network-bound.
+    // Hold the button in its busy state until join-lobby is away so the wait
+    // reads as loading rather than as a dead click.
+    this.starting = true;
+    const attempt = ++this.startAttempt;
+    try {
+      console.log(
+        `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      );
+      const clientID = generateID();
+      const gameID = generateID();
 
-    const usernameInput = document.querySelector(
-      "username-input",
-    ) as UsernameInput;
+      const usernameInput = document.querySelector(
+        "username-input",
+      ) as UsernameInput | null;
 
-    // Wait for the one-shot Steam name-seed to settle before reading
-    // getUsername(), so a fast single-player start uses the Steam persona
-    // rather than the interim generated anon name. Always resolves.
-    await usernameInput?.whenSeeded();
-    // Name and badge from one resolution, as on the multiplayer join path.
-    const resolvedName = usernameInput?.resolvedName() ?? fallbackPlayerName();
+      // Resolved before the dispatch rather than inside it, so every wait is
+      // attributable to the busy button above, and bounded so none of them
+      // can outlive it.
+      const { resolvedName, cosmetics } =
+        await this.resolveNameAndCosmetics(usernameInput);
 
-    await crazyGamesSDK.requestMidgameAd();
+      // Retired while this was resolving — the modal was closed, and possibly
+      // reopened and started again. The live attempt owns the start; this one
+      // would otherwise race it into join-lobby with stale settings.
+      //
+      // A start has exactly two side effects that leave this component, and
+      // BOTH must sit behind this check. Anything added here that escapes the
+      // component needs the same gate:
+      //   1. awaitMidgameAd() — shows the player a real ad, so an abandoned
+      //      attempt reaching it advertises a game that never starts, and a
+      //      reopened modal can put a second request in flight beside it.
+      //   2. the join-lobby dispatch — and everything downstream of it,
+      //      including Main's gameplayStart() and incrementGamesPlayed().
+      // resolveNameAndCosmetics() above is deliberately NOT gated: its only
+      // writes are validating stored cosmetic selections against the catalog
+      // and profile, which happens on any cosmetics resolution (menu
+      // background, store, inventory) rather than as a consequence of this
+      // start.
+      if (attempt !== this.startAttempt) return;
 
-    this.dispatchEvent(
-      new CustomEvent("join-lobby", {
-        detail: {
-          gameID: gameID,
-          gameStartInfo: {
+      await this.awaitMidgameAd();
+
+      // The ad is long enough that the modal can be closed while it runs.
+      if (attempt !== this.startAttempt) return;
+
+      this.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: {
             gameID: gameID,
-            players: [
-              {
-                clientID,
-                username: resolvedName.name,
-                clanTag: usernameInput?.getClanTag() ?? null,
-                cosmetics: await getPlayerCosmetics({
-                  verified: resolvedName.verified,
-                }),
+            gameStartInfo: {
+              gameID: gameID,
+              players: [
+                {
+                  clientID,
+                  username: resolvedName.name,
+                  clanTag: usernameInput?.getClanTag() ?? null,
+                  cosmetics,
+                },
+              ],
+              config: {
+                gameMap: this.selectedMap,
+                gameMapSize: this.compactMap
+                  ? GameMapSize.Compact
+                  : GameMapSize.Normal,
+                gameType: GameType.Singleplayer,
+                gameMode: this.gameMode,
+                playerTeams: this.teamCount,
+                difficulty: this.selectedDifficulty,
+                maxTimerValue: finalMaxTimerValue,
+                bots: this.bots,
+                infiniteGold: this.infiniteGold,
+                donateGold: this.gameMode === GameMode.Team,
+                donateTroops: this.gameMode === GameMode.Team,
+                infiniteTroops: this.infiniteTroops,
+                instantBuild: this.instantBuild,
+                randomSpawn: this.randomSpawn,
+                disabledUnits: this.disabledUnits
+                  .map((u) => Object.values(UnitType).find((ut) => ut === u))
+                  .filter((ut): ut is UnitType => ut !== undefined),
+                nations: sliderToNationsConfig(
+                  this.nations,
+                  this.defaultNationCount,
+                ),
+                ...(this.goldMultiplier && this.goldMultiplierValue
+                  ? { goldMultiplier: this.goldMultiplierValue }
+                  : {}),
+                ...(this.startingGold && this.startingGoldValue !== undefined
+                  ? {
+                      startingGold: Math.round(
+                        this.startingGoldValue * 1_000_000,
+                      ),
+                    }
+                  : {}),
+                ...(this.customAlliances
+                  ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
+                  : {}),
+                ...(this.waterNukes ? { waterNukes: true } : {}),
+                ...(this.doomsdayClock
+                  ? {
+                      doomsdayClock: {
+                        enabled: true,
+                        speed: this.doomsdayClockSpeed,
+                      },
+                    }
+                  : {}),
+                ...(this.overtime
+                  ? {
+                      overtime: {
+                        enabled: true,
+                        startMinutes: this.overtimeStartMinutes ?? 30,
+                      },
+                    }
+                  : {}),
               },
-            ],
-            config: {
-              gameMap: this.selectedMap,
-              gameMapSize: this.compactMap
-                ? GameMapSize.Compact
-                : GameMapSize.Normal,
-              gameType: GameType.Singleplayer,
-              gameMode: this.gameMode,
-              playerTeams: this.teamCount,
-              difficulty: this.selectedDifficulty,
-              maxTimerValue: finalMaxTimerValue,
-              bots: this.bots,
-              infiniteGold: this.infiniteGold,
-              donateGold: this.gameMode === GameMode.Team,
-              donateTroops: this.gameMode === GameMode.Team,
-              infiniteTroops: this.infiniteTroops,
-              instantBuild: this.instantBuild,
-              randomSpawn: this.randomSpawn,
-              disabledUnits: this.disabledUnits
-                .map((u) => Object.values(UnitType).find((ut) => ut === u))
-                .filter((ut): ut is UnitType => ut !== undefined),
-              nations: sliderToNationsConfig(
-                this.nations,
-                this.defaultNationCount,
-              ),
-              ...(this.goldMultiplier && this.goldMultiplierValue
-                ? { goldMultiplier: this.goldMultiplierValue }
-                : {}),
-              ...(this.startingGold && this.startingGoldValue !== undefined
-                ? {
-                    startingGold: Math.round(
-                      this.startingGoldValue * 1_000_000,
-                    ),
-                  }
-                : {}),
-              ...(this.customAlliances
-                ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
-                : {}),
-              ...(this.waterNukes ? { waterNukes: true } : {}),
-              ...(this.doomsdayClock
-                ? {
-                    doomsdayClock: {
-                      enabled: true,
-                      speed: this.doomsdayClockSpeed,
-                    },
-                  }
-                : {}),
-              ...(this.overtime
-                ? {
-                    overtime: {
-                      enabled: true,
-                      startMinutes: this.overtimeStartMinutes ?? 30,
-                    },
-                  }
-                : {}),
+              lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
             },
-            lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
-          },
-          source: "singleplayer",
-        } satisfies JoinLobbyEvent,
-        bubbles: true,
-        composed: true,
-      }),
-    );
-    this.close();
+            source: "singleplayer",
+          } satisfies JoinLobbyEvent,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      this.close();
+    } finally {
+      // Only if this attempt is still the live one: a retired attempt
+      // settling later must not clear the busy state of the one that
+      // replaced it.
+      if (attempt === this.startAttempt) this.starting = false;
+    }
   }
 
   private async loadNationCount() {

@@ -192,21 +192,42 @@ let __userMe: Promise<UserMeResponse | false> | null = null;
 // account straight back. Handled here rather than in Auth, which cannot
 // import this module — the dependency runs the other way.
 document.addEventListener("session-cleared", () => invalidateUserMe());
+/**
+ * True for the rejection AbortSignal.timeout (or an explicit abort) produces.
+ * Deliberately narrow: a client-imposed deadline is the one failure that says
+ * nothing at all about the account, so it is the one worth retrying.
+ */
+function isAbortError(e: unknown): boolean {
+  const name = (e as { name?: unknown } | null)?.name;
+  return name === "TimeoutError" || name === "AbortError";
+}
+
 export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
     return __userMe;
   }
-  __userMe = (async () => {
+  // A holder rather than a plain local so the catch below can recognise its
+  // own promise as the cached one. Filled in immediately after, which is
+  // always before any await inside can resume.
+  const attempt: { request?: Promise<UserMeResponse | false> } = {};
+  attempt.request = (async () => {
     try {
       const userAuthResult = await userAuth();
       if (!userAuthResult) return false;
       const { jwt, claims } = userAuthResult;
 
-      // Get the user object
+      // Get the user object. Bounded like the other auth calls (see
+      // Auth.ts doSteamLogin) because the promise above is memoised: a
+      // response that never settles is not one slow call, it pins __userMe
+      // on a forever-pending promise and every later getUserMe() in the
+      // session — cosmetics, store, inventory, the multiplayer join path —
+      // awaits that same promise. An abort lands in the catch below, which
+      // returns false, the same answer a signed-out player already gets.
       const response = await fetch(getApiBase() + "/users/@me", {
         headers: {
           authorization: `Bearer ${jwt}`,
         },
+        signal: AbortSignal.timeout(10_000),
       });
       if (response.status === 401) {
         // Clearing the session announces itself (see clearLocalSession), so
@@ -232,10 +253,30 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
       }
       return result.data;
     } catch (e) {
+      // Un-cache a timeout, and ONLY a timeout. Every other falsy answer is
+      // a conclusion about the account — signed out, a 401, a rejected token
+      // — and stays remembered; re-deriving those would put an /auth/refresh
+      // behind every getUserMe() call for every logged-out player, which is
+      // the storm, not the fix. A deadline we imposed ourselves concluded
+      // nothing, so leaving it cached would strand a merely-slow connection
+      // as "signed out" for the rest of the session: no player-scoped
+      // settings, no cosmetics, no verified badge, recoverable only by
+      // reloading. Same shape as fetchCosmetics, for the same reason.
+      // Remembering an unreachable backend so the retry is not paid at full
+      // price is OPE-403.
+      //
+      // Cleared here rather than from a .then on the request: this runs
+      // before the promise resolves, so a caller awaiting it cannot observe
+      // the timed-out answer still cached. attempt.request is always set by
+      // now — the catch can only be reached after an await.
+      if (isAbortError(e) && __userMe === attempt.request) {
+        __userMe = null;
+      }
       return false;
     }
   })();
-  return __userMe;
+  __userMe = attempt.request;
+  return attempt.request;
 }
 
 export function invalidateUserMe() {
@@ -340,22 +381,28 @@ export type UpdateUsernameResult =
   | { ok: false; code: "invalid"; message?: string }
   | { ok: false; code: "profane" }
   | { ok: false; code: "taken" }
+  // A subscriber asked for a bare name another subscriber holds. Nothing was
+  // written and no cooldown was spent; resubmit with acceptSuffixed to take
+  // the numbered form (spec, 10 Sept 2026).
+  | { ok: false; code: "bare_taken"; base: string }
   | { ok: false; code: "cooldown"; retryAfterSeconds: number | null }
   | { ok: false; code: "failed" };
 
 // PUT /users/@me/username — renames the account username. Every failure is
-// atomic (no name change, no cooldown consumed). The surviving 409 bodies
-// ("name equals an existing public id" and "suffix space exhausted") map to
-// "taken": the user remedy is the same — pick another name. Invalidates the
-// cached /users/@me on success so the next read reflects the new name.
+// atomic (no name change, no cooldown consumed). The surviving plain 409
+// bodies ("name equals an existing public id" and "suffix space exhausted")
+// map to "taken": the user remedy is the same — pick another name. A 409
+// carrying code BARE_NAME_TAKEN maps to "bare_taken": the caller offers the
+// numbered form and, on yes, calls again with `acceptSuffixed`. Invalidates
+// the cached /users/@me on success so the next read reflects the new name.
 //
-// A premium player whose chosen bare name is already held no longer 409s: the
-// API grants the suffixed form and returns 200 with `bareClaim:
-// "unavailable"`. That is a real rename and it consumes the cooldown, so `ok:
-// true` alone is not enough to act on — callers must read `data.bareClaim`
-// and tell the player (see UsernamePanel).
+// Against an API that predates the strict rule, a held bare name still comes
+// back as a 200 with `bareClaim: "unavailable"` — a real rename that consumed
+// the cooldown — so `ok: true` callers must still read `data.bareClaim` and
+// say so (see UsernamePanel.warnBareClaimUnavailable).
 export async function updateUsername(
   username: string,
+  opts: { acceptSuffixed?: boolean } = {},
 ): Promise<UpdateUsernameResult> {
   try {
     const response = await fetch(`${getApiBase()}/users/@me/username`, {
@@ -364,7 +411,9 @@ export async function updateUsername(
         "Content-Type": "application/json",
         Authorization: await getAuthHeader(),
       },
-      body: JSON.stringify({ username }),
+      body: JSON.stringify(
+        opts.acceptSuffixed ? { username, acceptSuffixed: true } : { username },
+      ),
     });
     if (response.status === 401) {
       await logOut();
@@ -382,6 +431,14 @@ export async function updateUsername(
       };
     }
     if (response.status === 409) {
+      const body = await response.json().catch(() => null);
+      if (body?.code === "BARE_NAME_TAKEN") {
+        return {
+          ok: false,
+          code: "bare_taken",
+          base: typeof body.base === "string" ? body.base : username,
+        };
+      }
       return { ok: false, code: "taken" };
     }
     if (response.status === 429) {
@@ -631,17 +688,230 @@ export async function getMyTribeNames(): Promise<
   }
 }
 
+// The branch key the shared spend helper returns when a refund or chargeback
+// has left the wallet negative. A machine key, never prose: it must not reach
+// the player, which is what happened before the debt paths were handled.
+//
+// Since OPE-389 the API sends it as `code`; before that the same token was
+// the `reason`, which is exactly why it used to be rendered. One constant
+// because the token is the same either way.
+const DEBT_REFUSAL_CODE = "insufficient_balance_debt";
+
+// Stands in for a `code` key that is present but is not a usable machine key
+// (42, "", null). That is not the same as absent: the server did mean to send
+// a code, so falling back to matching its English would be reading a body we
+// have already established we do not understand. Nothing maps this, so every
+// caller lands on its generic failure. Not a valid identifier, so no code the
+// API could ever add collides with it.
+const UNUSABLE_REFUSAL_CODE = " unusable";
+
+// The stable machine key the API puts beside the prose `reason` in a 400
+// (OPE-389). `undefined` means the key is absent — an older server that
+// predates the codes, or a body that is not a refusal at all — and only that
+// leaves the caller on its pre-OPE-389 string matching. Nothing but the
+// presence and identity of this key is trusted: it is never rendered or
+// logged.
+function refusalCode(body: unknown): string | undefined {
+  if (body === null || typeof body !== "object" || !("code" in body)) {
+    return undefined;
+  }
+  const code = (body as { code?: unknown }).code;
+  return typeof code === "string" && code !== "" ? code : UNUSABLE_REFUSAL_CODE;
+}
+
+// Reads the debt refusal off a 400 body for every spend path. Returns
+// undefined when this is not that refusal, so the caller carries on matching
+// its own reasons; otherwise it returns the result the caller should return.
+//
+// The amount IS the message ("your balance is X in debt"), so a debt we
+// cannot state is worse than a generic failure — it would render a blank, or
+// "[object Object]", at the player. A string of digits only: the API sends a
+// stringified positive bigint, so everything else (missing, empty, negative,
+// an object) fails closed.
+//
+// Type-checked before the pattern rather than stringified into it, because
+// String() launders things that are not amounts into ones that look like
+// amounts: String(300) and String([300]) are both "300". Whatever the API
+// starts sending, it has to be the string it promises.
+//
+// `context` is the calling function's name as a literal at each call site.
+// Nothing from the body reaches the warn: an amount we rejected is by
+// definition one we do not understand.
+function parseDebtRefusal(
+  body: unknown,
+  context: string,
+):
+  | { ok: false; code: "debt"; debt: string }
+  | { ok: false; code: "failed" }
+  | undefined {
+  const code = refusalCode(body);
+  // `code` when the server sends one, the old prose token only when it does
+  // not: production can lag the API, so the string match stays as a fallback
+  // and never as an override.
+  const isDebt =
+    code !== undefined
+      ? code === DEBT_REFUSAL_CODE
+      : (body as { reason?: unknown } | null | undefined)?.reason ===
+        DEBT_REFUSAL_CODE;
+  if (!isDebt) return undefined;
+  const debt = (body as { debt?: unknown } | null | undefined)?.debt;
+  if (typeof debt !== "string" || !/^\d+$/.test(debt)) {
+    console.warn(`${context}: debt refusal with no usable amount`);
+    return { ok: false, code: "failed" };
+  }
+  return { ok: false, code: "debt", debt };
+}
+
 export type PurchaseTribeNameResult =
   | { ok: true; data: PostTribeNameResponse }
-  // 400: invalid, disallowed, or insufficient balance. `message` is the
-  // server's player-facing reason (already English, shown as-is).
-  | { ok: false; code: "invalid"; message?: string }
+  // 400 "Insufficient balance": the balance moved since the client's
+  // pre-check. Nothing charged.
+  | { ok: false; code: "insufficient_balance" }
+  // 400 insufficient_balance_debt: a refund/chargeback left the wallet
+  // negative; `debt` (bigint string) must be settled before anything is
+  // spendable. Nothing charged.
+  | { ok: false; code: "debt"; debt: string }
+  // 400: the name itself was refused. Each of the server's refusal codes
+  // maps to a code the caller translates — none of them reach the player as
+  // the server's English. See TRIBE_NAME_REFUSAL_CODES for why the set is an
+  // allowlist.
+  | { ok: false; code: "invalid_charset" }
+  | { ok: false; code: "invalid_no_letter" }
+  | { ok: false; code: "not_allowed" }
+  // The length rule carries its bounds, so the caller interpolates them.
+  | { ok: false; code: "length"; min: number; max: number }
   // 409: the name is already taken (names are globally unique).
   | { ok: false; code: "duplicate" }
   // 429: buying names too fast. `retryAfterSeconds` from the Retry-After
   // header (null when absent/unparseable).
   | { ok: false; code: "rate_limited"; retryAfterSeconds: number | null }
   | { ok: false; code: "failed" };
+
+// The endpoint's refusal codes, mapped to the codes the caller translates
+// (OPE-389). The server's `code` is the branch key; its `reason` is English
+// documentation and is never read for meaning and never rendered.
+//
+// An allowlist rather than a denylist, because the failure mode is
+// asymmetric. Anything unrecognised becomes a generic failure — mildly
+// unhelpful. Echoing anything unrecognised puts the next machine branch key
+// the API adds straight on the player's screen, which is how
+// "insufficient_balance_debt" came to be displayed as an error message.
+//
+// `no_letter` is renamed on the way in: the caller's `invalid_no_letter` is
+// pre-existing public API of this module, so the two vocabularies are mapped
+// here rather than one being churned to match the other.
+//
+// A Map rather than an object literal because the key comes off the wire:
+// a plain lookup of "constructor" or "toString" returns something from
+// Object.prototype instead of undefined, and that is not a refusal code.
+const TRIBE_NAME_REFUSAL_CODES = new Map<
+  string,
+  "invalid_charset" | "invalid_no_letter" | "not_allowed"
+>([
+  ["invalid_charset", "invalid_charset"],
+  ["no_letter", "invalid_no_letter"],
+  ["not_allowed", "not_allowed"],
+]);
+
+// The same refusals keyed on the server's exact English, for a server that
+// predates OPE-389 and sends no `code`. Production can lag the API, so this
+// stays — but only as the fallback. If the API rewords one of these on an
+// older deployment the player gets the generic failure, which is the safe
+// direction.
+const LEGACY_TRIBE_NAME_REFUSAL_REASONS = new Map<
+  string,
+  "invalid_charset" | "invalid_no_letter" | "not_allowed"
+>([
+  [
+    "Name may only contain letters, numbers, spaces, and ' - . _ ! ?",
+    "invalid_charset",
+  ],
+  ["Name must contain a letter", "invalid_no_letter"],
+  ["This name is not allowed", "not_allowed"],
+]);
+// The length rule interpolates its bounds ("Name must be 3-24 characters"),
+// so on a pre-OPE-389 server — where the numbers are only in the prose — it
+// is matched by shape rather than listed. Anchored and digit-specific: a
+// bare "Name must be " prefix would pass through anything the API ever chose
+// to start that way, which is the denylist failure this is meant to avoid.
+// The bounds are captured so the caller can translate the message instead of
+// rendering the server's English.
+const TRIBE_NAME_LENGTH_REASON_RE = /^Name must be (\d+)-(\d+) characters$/;
+
+function legacyTribeNameInvalidResult(
+  reason: string,
+): PurchaseTribeNameResult | undefined {
+  const bounds = proseBounds(reason);
+  if (bounds !== undefined) return { ok: false, code: "length", ...bounds };
+  const code = LEGACY_TRIBE_NAME_REFUSAL_REASONS.get(reason);
+  return code === undefined ? undefined : { ok: false, code };
+}
+
+// A single `length` bound. The bounds are what the message says, so an
+// unusable one is not usable at all: a positive safe integer or nothing.
+function isUsableBound(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+// The `length` bounds as a range, or nothing. Validated as a pair rather than
+// one at a time: `{min: 24, max: 3}` is two individually plausible numbers
+// and one impossible range, and it would render as "24-3" at the player.
+//
+// Every source of bounds goes through here, including the ones scraped out of
+// the prose. Digits in a sentence are not more trustworthy than numbers in a
+// field — "Name must be 24-3 characters" and a 30-digit bound both parse.
+function usableBounds(
+  min: unknown,
+  max: unknown,
+): { min: number; max: number } | undefined {
+  if (!isUsableBound(min) || !isUsableBound(max) || min > max) return undefined;
+  return { min, max };
+}
+
+// The bounds the API sends as fields (OPE-389).
+function bodyBounds(body: unknown): { min: number; max: number } | undefined {
+  const record = body as Record<string, unknown> | null | undefined;
+  return usableBounds(record?.min, record?.max);
+}
+
+// The bounds a pre-OPE-389 server only puts in the sentence.
+function proseBounds(reason: string): { min: number; max: number } | undefined {
+  const parsed = TRIBE_NAME_LENGTH_REASON_RE.exec(reason);
+  return parsed === null
+    ? undefined
+    : usableBounds(Number(parsed[1]), Number(parsed[2]));
+}
+
+// Why the name was refused, keyed on the server's machine `code` (OPE-389).
+// Returns undefined for a code this client does not know, which the caller
+// turns into a generic failure — the code is never rendered.
+function tribeNameInvalidResult(
+  code: string,
+  body: unknown,
+): PurchaseTribeNameResult | undefined {
+  if (code === "length") {
+    const fromBody = bodyBounds(body);
+    if (fromBody !== undefined) {
+      return { ok: false, code: "length", ...fromBody };
+    }
+    // The bounds ARE the message, so there is nothing to render without
+    // them. The prose still carries them on every server that sends this
+    // code, so read them out of it rather than showing a blank range — and
+    // hold them to the same standard, since a sentence can carry an
+    // impossible range as easily as a field can. Only the length pattern is
+    // tried here: a `length` code sitting next to some other refusal's prose
+    // is a body we do not understand. Nothing usable either way is the
+    // caller's generic failure.
+    const reason = (body as { reason?: unknown } | null | undefined)?.reason;
+    if (typeof reason !== "string") return undefined;
+    const fromProse = proseBounds(reason);
+    return fromProse === undefined
+      ? undefined
+      : { ok: false, code: "length", ...fromProse };
+  }
+  const mapped = TRIBE_NAME_REFUSAL_CODES.get(code);
+  return mapped === undefined ? undefined : { ok: false, code: mapped };
+}
 
 // POST /users/@me/tribe_names — buy a custom tribe name (200 plutonium). The
 // name is screened, charged, and goes live right away as `pending`; review is
@@ -665,11 +935,30 @@ export async function purchaseTribeName(
     }
     if (response.status === 400) {
       const body = await response.json().catch(() => null);
-      return {
-        ok: false,
-        code: "invalid",
-        message: typeof body?.reason === "string" ? body.reason : undefined,
-      };
+      const reason = typeof body?.reason === "string" ? body.reason : "";
+      const code = refusalCode(body);
+      // Balance refusals first: both are branch keys the shared spend helper
+      // emits, not prose to echo at the player.
+      const debt = parseDebtRefusal(body, "purchaseTribeName");
+      if (debt !== undefined) return debt;
+      if (
+        code === undefined
+          ? reason === "Insufficient balance"
+          : code === "insufficient_balance"
+      ) {
+        return { ok: false, code: "insufficient_balance" };
+      }
+      // `code` when the server sends one (OPE-389), the English only when it
+      // does not — production can lag the API.
+      const invalid =
+        code === undefined
+          ? legacyTribeNameInvalidResult(reason)
+          : tribeNameInvalidResult(code, body);
+      if (invalid !== undefined) return invalid;
+      // Not logging the body: an unrecognised refusal is exactly the case
+      // where we don't know what it contains.
+      console.warn("purchaseTribeName: unrecognised 400 reason");
+      return { ok: false, code: "failed" };
     }
     if (response.status === 409) {
       return { ok: false, code: "duplicate" };
@@ -705,9 +994,13 @@ export async function purchaseTribeName(
 
 export type BoostTribeNameResult =
   | { ok: true; data: PostTribeBoostResponse }
-  // 400 with a player-facing reason — today that's only "Insufficient
-  // balance" (the balance moved since the client's pre-check).
+  // 400 "Insufficient balance": the balance moved since the client's
+  // pre-check. Nothing charged.
   | { ok: false; code: "insufficient_balance" }
+  // 400 insufficient_balance_debt: a refund/chargeback left the wallet
+  // negative; `debt` (bigint string) must be settled before anything is
+  // spendable. Distinct from the above because topping up is not the remedy.
+  | { ok: false; code: "debt"; debt: string }
   // 404: not the caller's name, or it's no longer active (rejected/revoked).
   // Deliberately indistinguishable server-side — refresh the list.
   | { ok: false; code: "not_found" }
@@ -740,13 +1033,33 @@ export async function boostTribeName(
     }
     if (response.status === 400) {
       const body = await response.json().catch(() => null);
-      // {"reason": "..."} is the player-facing 400 (insufficient balance);
-      // {"resource": "id"} means a malformed id — a client bug, not a
-      // player error, so it falls through to the generic failure.
+      // Debt first, ahead of the catch-all below: collapsing it into
+      // insufficient_balance sends a player with a negative wallet to the
+      // top-up dialog, which cannot clear it. Safe above the string-reason
+      // check — a body without a string reason is never the debt refusal.
+      const debt = parseDebtRefusal(body, "boostTribeName");
+      if (debt !== undefined) return debt;
+      const code = refusalCode(body);
+      if (code !== undefined) {
+        // OPE-389: the only other refusal this endpoint has is the plain
+        // shortfall. Anything else is a code this client has never heard of,
+        // and guessing it is a shortfall would send the player to a top-up
+        // that cannot help — the bug the debt branch was added to fix.
+        if (code === "insufficient_balance") {
+          return { ok: false, code: "insufficient_balance" };
+        }
+        console.warn("boostTribeName: unrecognised 400 code");
+        return { ok: false, code: "failed" };
+      }
+      // Pre-OPE-389 server: any {"reason": "..."} is the player-facing 400
+      // (a shortfall); {"resource": "id"} means a malformed id — a client
+      // bug, not a player error, so it falls through to the generic failure.
       if (typeof body?.reason === "string") {
         return { ok: false, code: "insufficient_balance" };
       }
-      console.error("boostTribeName: bad request", body);
+      // Body-free on purpose: an unrecognised 400 is exactly the case where we
+      // do not know what the body contains, so it must not reach a log line.
+      console.warn("boostTribeName: unrecognised 400 response");
       return { ok: false, code: "failed" };
     }
     if (response.status === 404) {
@@ -806,12 +1119,32 @@ export async function fetchTribeStats(
   }
 }
 
+export type PurchaseWithCurrencyResult =
+  | { ok: true }
+  // 400 "Insufficient balance": the balance moved since the client's
+  // pre-check. Nothing charged.
+  | { ok: false; code: "insufficient_balance" }
+  // 400 insufficient_balance_debt: a refund/chargeback left the wallet
+  // negative; `debt` (bigint string) must be settled before anything is
+  // spendable. Nothing charged. Distinct from the above because buying more
+  // currency is not the remedy.
+  | { ok: false; code: "debt"; debt: string }
+  // 409 "Already owned": the player already holds this cosmetic. Also what a
+  // retry after a timed-out success returns — treat it as "already bought"
+  // and refetch. Nothing charged. No payload: unlike the pack's 409 the body
+  // carries no item list, only {error, message}.
+  | { ok: false; code: "already_owned" }
+  | { ok: false; code: "failed" };
+
+// POST /shop/purchase — buy a single cosmetic for hard or soft currency. The
+// only spend path that takes soft currency. Any error means no debit and no
+// grant. Callers invalidate the cached /users/@me on success.
 export async function purchaseWithCurrency(
   cosmeticType: "pattern" | "skin" | "flag" | "crown" | "effect",
   cosmeticName: string,
   currencyType: "hard" | "soft",
   colorPaletteName?: string,
-): Promise<boolean> {
+): Promise<PurchaseWithCurrencyResult> {
   try {
     const response = await fetch(`${getApiBase()}/shop/purchase`, {
       method: "POST",
@@ -828,7 +1161,26 @@ export async function purchaseWithCurrency(
     });
     if (response.status === 401) {
       await logOut();
-      return false;
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 400) {
+      const body = await response.json().catch(() => null);
+      const reason = typeof body?.reason === "string" ? body.reason : "";
+      const debt = parseDebtRefusal(body, "purchaseWithCurrency");
+      if (debt !== undefined) return debt;
+      if (reason === "Insufficient balance") {
+        return { ok: false, code: "insufficient_balance" };
+      }
+      // Not logging the body: an unrecognised reason is exactly the case
+      // where we don't know what it contains.
+      console.warn("purchaseWithCurrency: unrecognised 400 reason");
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 409) {
+      // The body is deliberately not read: it carries no item list, so there
+      // is nothing to extract, and not touching it is the cheapest way to
+      // keep a server body away from a log line.
+      return { ok: false, code: "already_owned" };
     }
     if (!response.ok) {
       console.error(
@@ -836,12 +1188,12 @@ export async function purchaseWithCurrency(
         response.status,
         response.statusText,
       );
-      return false;
+      return { ok: false, code: "failed" };
     }
-    return true;
+    return { ok: true };
   } catch (e) {
     console.error("purchaseWithCurrency: request failed", e);
-    return false;
+    return { ok: false, code: "failed" };
   }
 }
 
@@ -894,16 +1246,19 @@ export async function purchaseCosmeticPack(
     if (response.status === 400) {
       const body = await response.json().catch(() => null);
       const reason = typeof body?.reason === "string" ? body.reason : "";
+      // Hoisted above the shortfall match: the two reasons are distinct exact
+      // strings, so the order between them makes no difference.
+      const debt = parseDebtRefusal(body, "purchaseCosmeticPack");
+      if (debt !== undefined) return debt;
       if (reason === "Insufficient balance") {
         return { ok: false, code: "insufficient_balance" };
-      }
-      if (reason === "insufficient_balance_debt") {
-        return { ok: false, code: "debt", debt: String(body.debt ?? "") };
       }
       if (PACK_UNAVAILABLE_REASONS.includes(reason)) {
         return { ok: false, code: "unavailable" };
       }
-      console.error("purchaseCosmeticPack: bad request", body);
+      // Body-free on purpose: an unrecognised 400 is exactly the case where we
+      // do not know what the body contains, so it must not reach a log line.
+      console.warn("purchaseCosmeticPack: unrecognised 400 response");
       return { ok: false, code: "failed" };
     }
     if (response.status === 409) {
@@ -1114,9 +1469,9 @@ export type PaymentsCheckoutResult =
   // it yet. Transient — "try again later".
   | { ok: false; code: "retry_later" }
   // 400 kind_unavailable_on_provider: this rail does not sell this kind.
-  // custom_currency is off on Steam for launch, which is why the custom-amount
-  // card is hidden there (customCurrencyAvailable()); reaching this means the
-  // UI and the server disagree.
+  // Today that is only a subscription on the Steam rail (Phase 9 not built);
+  // custom_currency is sold on both rails since OPE-337. Reaching this from
+  // the store means the UI and the server disagree.
   | {
       ok: false;
       code: "kind_unavailable_on_provider";
@@ -1148,6 +1503,21 @@ export type PaymentsCheckoutResult =
       ok: false;
       code: "pending_provider_transaction";
       provider: PaymentsProvider;
+    }
+  // 409 already_subscribed: the player already holds THIS tier on THIS rail
+  // (a double click, or the store offered a tier they have). Nothing was
+  // charged.
+  | { ok: false; code: "already_subscribed"; existingTier: string }
+  // 409 tier_change_unavailable_on_provider: a Steam subscriber tried to
+  // change tier and Steam refused a second agreement while one is live, or
+  // tier changes are switched off on that rail. `message` is the server's
+  // player-facing text and says what to do (cancel in the Steam account,
+  // subscribe again after it ends).
+  | {
+      ok: false;
+      code: "tier_change_unavailable_on_provider";
+      provider: PaymentsProvider;
+      message: string;
     }
   // 429: one checkout per 60s per player. No order was minted.
   | { ok: false; code: "rate_limited"; retryAfterSeconds: number | null }
@@ -1231,7 +1601,12 @@ export async function createPaymentsCheckout(
 
       if (response.status === 400) {
         if (CHECKOUT_CLIENT_BUG_REASONS.includes(reason)) {
-          console.error("createPaymentsCheckout: bad request", body);
+          // Body-free, like the other refusal logs. Kept at error (rather
+          // than the warn the two unrecognised-400 paths use) because the
+          // reason here is one we recognise and it means this client sent
+          // something it never should have -- a real bug, not a refusal we
+          // simply cannot classify.
+          console.error("createPaymentsCheckout: client-bug 400 response");
           return { ok: false, code: "client_bug" };
         }
         if (CHECKOUT_STALE_LISTING_REASONS.includes(reason)) {
@@ -1275,6 +1650,25 @@ export async function createPaymentsCheckout(
         }
         if (reason === "pending_provider_transaction" && provider !== null) {
           return { ok: false, code: "pending_provider_transaction", provider };
+        }
+        if (reason === "already_subscribed") {
+          return {
+            ok: false,
+            code: "already_subscribed",
+            existingTier:
+              typeof body?.existingTier === "string" ? body.existingTier : "",
+          };
+        }
+        if (
+          reason === "tier_change_unavailable_on_provider" &&
+          provider !== null
+        ) {
+          return {
+            ok: false,
+            code: "tier_change_unavailable_on_provider",
+            provider,
+            message: typeof body?.message === "string" ? body.message : "",
+          };
         }
       }
 
@@ -1487,7 +1881,7 @@ export async function openSubscriptionPortal(): Promise<string | false> {
 export async function fetchLobbyListed(gameID: string): Promise<boolean> {
   try {
     const res = await fetch(
-      `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(gameID)}/api/game/${gameID}`,
+      `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}`,
       { headers: { Accept: "application/json" } },
     );
     if (!res.ok) return false;
@@ -1511,7 +1905,7 @@ export async function setLobbyListed(
   try {
     const token = await getPlayToken();
     const response = await fetch(
-      `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(gameID)}/api/game/${gameID}/listing`,
+      `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}/listing`,
       {
         method: "POST",
         headers: {
@@ -1581,7 +1975,7 @@ export async function createNextLobby(
 ): Promise<GameInfo> {
   const token = await getPlayToken();
   const response = await fetch(
-    `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
+    `${ClientEnv.gameHttpBase(previousGameID)}/${ClientEnv.gameWorkerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
     {
       method: "POST",
       headers: {

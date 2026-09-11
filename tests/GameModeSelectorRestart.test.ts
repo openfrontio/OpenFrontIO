@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PublicGames } from "../src/core/Schemas";
 
 // OPE-255. The component stops its public-lobby socket when a game starts
@@ -26,7 +26,21 @@ vi.mock("../src/client/LobbySocket", () => ({
   },
 }));
 
+// The suppression tests below need to see whether the prompt actually fired;
+// everything else in InGameModal stays real.
+vi.mock("../src/client/InGameModal", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../src/client/InGameModal")>();
+  return {
+    ...actual,
+    // Never resolves: the real flow reloads the page after the alert, which
+    // has no business running under jsdom.
+    showInGameAlert: vi.fn(() => new Promise<void>(() => {})),
+  };
+});
+
 import { GameModeSelector } from "../src/client/GameModeSelector";
+import { showInGameAlert } from "../src/client/InGameModal";
 
 describe("GameModeSelector lobby-socket lifecycle", () => {
   beforeEach(() => {
@@ -57,5 +71,66 @@ describe("GameModeSelector lobby-socket lifecycle", () => {
 
     expect(socketCalls.stopped).toBe(2);
     expect(socketCalls.started).toBe(2);
+  });
+});
+
+// The socket is NOT scoped to the homepage: Main.ts only stops it when a game
+// actually starts, so it is still listening while the player waits in a
+// lobby. An update/drain prompt firing there would reload the player out of
+// a lobby the draining deployment deliberately lets finish — it must be
+// deferred until they leave.
+describe("GameModeSelector update prompt deferral", () => {
+  it("defers the prompt while the player is in a lobby", () => {
+    const selector = new GameModeSelector() as any;
+
+    selector.onJoinLobby();
+    selector.handleUpdateAvailable();
+
+    expect(selector.updateDeferred).toBe(true);
+  });
+
+  it("re-fires the prompt when the player leaves the lobby", () => {
+    const selector = new GameModeSelector() as any;
+    selector.onJoinLobby();
+    selector.handleUpdateAvailable();
+
+    const prompt = vi
+      .spyOn(selector, "handleUpdateAvailable")
+      .mockImplementation(() => {});
+    selector.onLeaveLobby();
+
+    expect(prompt).toHaveBeenCalledTimes(1);
+    expect(selector.updateDeferred).toBe(false);
+  });
+});
+
+// A versioned replay shell (replay.<domain>/<gameId>) is pinned to the
+// archived game's build on purpose, but its baked-in serverHost points at a
+// live deployment running a newer build — so the lobby socket's commit
+// compare fires on every load, and reloading re-serves the same immutable
+// shell: the prompt would loop forever.
+describe("GameModeSelector update prompt on the replay shell host", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.mocked(showInGameAlert).mockClear();
+  });
+
+  it("suppresses the prompt on replay.<domain>", () => {
+    vi.stubGlobal("location", { hostname: "replay.openfront.io" });
+    const selector = new GameModeSelector() as any;
+
+    selector.handleUpdateAvailable();
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(selector.updateDeferred).toBe(false);
+  });
+
+  it("still prompts on ordinary hosts", () => {
+    vi.stubGlobal("location", { hostname: "openfront.io" });
+    const selector = new GameModeSelector() as any;
+
+    selector.handleUpdateAvailable();
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
   });
 });

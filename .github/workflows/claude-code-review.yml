@@ -47,10 +47,26 @@ jobs:
           submodules: false
           persist-credentials: false
 
+      # The action's native installer intermittently exits 0 while never
+      # placing a working launcher at ~/.local/bin/claude; the action trusts
+      # the exit code and then dies spawning the missing binary at the
+      # plugin-marketplace step (anthropics/claude-code-action#1290; every
+      # review run here since 2026-09-08 22:31 UTC failed this way). Install
+      # the same version from npm instead and hand the action the path, which
+      # skips the native installer entirely. The pin matches the version the
+      # action itself installs (its bundled agent SDK 0.3.x maps to CLI 2.1.x);
+      # bump it when bumping the action.
+      - name: Install Claude Code from npm
+        id: install-claude
+        run: |
+          npm install -g @anthropic-ai/claude-code@2.1.265
+          echo "path=$(command -v claude)" >> "$GITHUB_OUTPUT"
+
       - name: Claude multi-agent review
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          path_to_claude_code_executable: ${{ steps.install-claude.outputs.path }}
 
           # The action refuses to run for an actor without write access to the
           # repo (src/github/validation/permissions.ts), and on a fork PR the

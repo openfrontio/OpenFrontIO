@@ -159,6 +159,13 @@ void main() {
   // Zoom-based culling (same as name shader)
   float cameraScale = length(vec2(uCamera[0][0], uCamera[1][0]));
   float screenSize  = nameWorldScale * uFontBase * cameraScale;
+  // Targeted players' icons (incl. the crosshair) stay visible at any zoom,
+  // boosted in lockstep with name.vert.glsl so the layout stays aligned.
+  if (statusFlag[5] > 0.5 && screenSize < uCullThreshold) {
+    float boost = uCullThreshold / screenSize;
+    nameWorldScale *= boost;
+    screenSize = uCullThreshold;
+  }
   if (screenSize < uCullThreshold) {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);

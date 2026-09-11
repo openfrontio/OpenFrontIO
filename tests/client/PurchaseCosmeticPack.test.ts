@@ -6,7 +6,10 @@ vi.mock("../../src/client/Auth", async (importOriginal) => ({
   logOut: vi.fn(async () => true),
 }));
 
-import { purchaseCosmeticPack } from "../../src/client/Api";
+import {
+  purchaseCosmeticPack,
+  purchaseWithCurrency,
+} from "../../src/client/Api";
 import { ClientEnv } from "../../src/client/ClientEnv";
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -18,6 +21,21 @@ function respond(status: number, body: unknown) {
       headers: { "content-type": "application/json" },
     }),
   );
+}
+
+// Planted in the server body so the assertion tests the actual rule — that no
+// part of the body is logged — rather than the spelling of one warn call.
+const CANARY = "CANARY-7f3a";
+
+function expectNoConsoleCallContains(needle: string) {
+  for (const spy of [console.error, console.warn]) {
+    for (const call of vi.mocked(spy).mock.calls) {
+      for (const arg of call) {
+        expect(String(arg)).not.toContain(needle);
+        expect(String(JSON.stringify(arg))).not.toContain(needle);
+      }
+    }
+  }
 }
 
 beforeEach(() => {
@@ -34,6 +52,7 @@ beforeEach(() => {
   fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -101,12 +120,53 @@ describe("purchaseCosmeticPack", () => {
     }
 
     // A malformed body is a client bug, not a player error.
-    respond(400, { error: "Bad request", reason: "Invalid request body" });
+    respond(400, {
+      error: "Bad request",
+      reason: "Invalid request body",
+      canary: CANARY,
+    });
     expect(await purchaseCosmeticPack("starter")).toEqual({
       ok: false,
       code: "failed",
     });
+    // The rule is that no part of the server body reaches a log line, so the
+    // canary is what is asserted on, not the current wording of the warning.
+    expectNoConsoleCallContains(CANARY);
+    expect(console.error).not.toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(console.warn).mock.calls[0]).toHaveLength(1);
   });
+
+  // The amount IS the message ("your balance is X in debt"), so a debt we
+  // cannot state is worse than a generic failure — it would render a blank,
+  // or "[object Object]", at the player. Same rule as the single-cosmetic
+  // path, which is the point of the shared parser.
+  it.each([
+    ["missing", {}],
+    ["empty", { debt: "" }],
+    ["not a number", { debt: "lots" }],
+    ["an object", { debt: { amount: 300 } }],
+    ["negative", { debt: "-300" }],
+    ["a number", { debt: 300 }],
+    ["a one-element array", { debt: ["300"] }],
+  ])(
+    "falls back to a generic failure when the amount is %s",
+    async (_label, extra) => {
+      respond(400, {
+        reason: "insufficient_balance_debt",
+        canary: CANARY,
+        ...extra,
+      });
+      expect(await purchaseCosmeticPack("starter")).toEqual({
+        ok: false,
+        code: "failed",
+      });
+      expectNoConsoleCallContains(CANARY);
+      expect(console.error).not.toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(console.warn).mock.calls[0]).toHaveLength(1);
+    },
+  );
 
   it("reports which items are already owned on 409", async () => {
     respond(409, {
@@ -136,6 +196,147 @@ describe("purchaseCosmeticPack", () => {
 
     fetchMock.mockRejectedValueOnce(new Error("offline"));
     expect(await purchaseCosmeticPack("starter")).toEqual({
+      ok: false,
+      code: "failed",
+    });
+  });
+});
+
+// POST /shop/purchase — the single-cosmetic sibling of the pack endpoint
+// above, routed through the same spend helper, so it surfaces the same two
+// balance reasons. It used to ignore the body entirely and answer with a bare
+// boolean.
+describe("purchaseWithCurrency", () => {
+  it("posts the cosmetic and reports success", async () => {
+    respond(200, {
+      flareName: "flag:pirate",
+      currencyType: "hard",
+      amount: "100",
+    });
+
+    const result = await purchaseWithCurrency("flag", "pirate", "hard");
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/shop\/purchase$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({
+      cosmeticType: "flag",
+      cosmeticName: "pirate",
+      currencyType: "hard",
+    });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("reports the debt and its amount", async () => {
+    respond(400, { reason: "insufficient_balance_debt", debt: "150" });
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: false,
+      code: "debt",
+      debt: "150",
+    });
+  });
+
+  // The amount IS the message ("your balance is X in debt"), so a debt we
+  // cannot state is worse than a generic failure — it would render a blank,
+  // or "[object Object]", at the player.
+  it.each([
+    ["missing", {}],
+    ["empty", { debt: "" }],
+    ["not a number", { debt: "lots" }],
+    ["an object", { debt: { amount: 150 } }],
+    ["negative", { debt: "-150" }],
+    // String() would launder both of these into a valid-looking "150".
+    ["a number", { debt: 150 }],
+    ["a one-element array", { debt: ["150"] }],
+  ])(
+    "falls back to a generic failure when the amount is %s",
+    async (_l, extra) => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      respond(400, { reason: "insufficient_balance_debt", ...extra });
+      expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+        ok: false,
+        code: "failed",
+      });
+    },
+  );
+
+  // A retry after a success whose response was lost gets this. Folding it
+  // into the generic failure told the player to try again, forever, while the
+  // store still showed the item as purchasable.
+  it("reports a 409 as already owned, silently and without retrying", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const response = new Response(
+      JSON.stringify({ error: "Conflict", message: "CANARY-a1b2" }),
+      { status: 409, headers: { "content-type": "application/json" } },
+    );
+    fetchMock.mockResolvedValueOnce(response);
+
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: false,
+      code: "already_owned",
+    });
+    // The body is never read: a regression that calls response.json() and
+    // discards the result would leave bodyUsed true and fail here, which no
+    // assertion on the returned value could catch.
+    expect(response.bodyUsed).toBe(false);
+    // Not an error condition: on main this fell into the !response.ok branch
+    // and logged the status. Nothing is read from the body, so nothing from
+    // it can reach a log line.
+    expect(console.error).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+    // One request: guards against a retry loop creeping back in.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("distinguishes being short from being in debt", async () => {
+    respond(400, { reason: "Insufficient balance" });
+    expect(await purchaseWithCurrency("flag", "pirate", "soft")).toEqual({
+      ok: false,
+      code: "insufficient_balance",
+    });
+  });
+
+  // The result must not carry the server's reason onward: everything that
+  // reads this object is one step from rendering what it finds.
+  it("does not pass an unrecognised reason back to the caller", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    respond(400, { reason: "some_future_machine_key" });
+
+    const result = await purchaseWithCurrency("flag", "pirate", "hard");
+
+    expect(result).toEqual({ ok: false, code: "failed" });
+    expect(result).not.toHaveProperty("reason");
+    expect(Object.values(result)).not.toContain("some_future_machine_key");
+    // One argument: the body is deliberately not logged, because an
+    // unrecognised reason is exactly the case where we don't know what is in it.
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]).toHaveLength(1);
+  });
+
+  it("fails closed on an unrecognised 400, a 500 and a network error", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    respond(400, { reason: "Invalid request body" });
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: false,
+      code: "failed",
+    });
+
+    fetchMock.mockResolvedValueOnce(
+      new Response("<html>gateway</html>", { status: 400 }),
+    );
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: false,
+      code: "failed",
+    });
+
+    respond(500, {});
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: false,
+      code: "failed",
+    });
+
+    fetchMock.mockRejectedValueOnce(new Error("offline"));
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
       ok: false,
       code: "failed",
     });

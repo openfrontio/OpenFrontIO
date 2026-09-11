@@ -317,7 +317,7 @@ describe("host-left lobby teardown", () => {
   it("rejects joins into an ended lobby before it is pruned", async () => {
     const game = makeGame();
     await game.end();
-    expect(game.joinClient({} as any)).toBe("rejected");
+    expect(game.joinClient({} as any)).toBe("ended");
   });
 
   it("does not tear down when the host disconnects during prestart", async () => {
@@ -489,6 +489,9 @@ function hostedLobby(
 
 describe("MasterLobbyService hosted lobbies", () => {
   function createService() {
+    // Scheduling mints game ids under the own instance letter, which resolves
+    // through DOMAIN against the dev-default cluster map.
+    vi.stubEnv("DOMAIN", "localhost");
     vi.spyOn(ServerEnv, "numWorkers").mockReturnValue(2);
     vi.spyOn(ServerEnv, "workerIndex").mockReturnValue(1);
     vi.spyOn(ServerEnv, "gameCreationRate").mockReturnValue(60_000);

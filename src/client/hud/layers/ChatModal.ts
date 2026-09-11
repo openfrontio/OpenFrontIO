@@ -33,6 +33,7 @@ export class ChatModal extends LitElement {
   private players: PlayerView[] = [];
 
   private playerSearchQuery: string = "";
+  private sortByTerritory = false;
   private previewText: string | null = null;
   private requiresPlayerSelection: boolean = false;
   private selectedCategory: string | null = null;
@@ -125,6 +126,15 @@ export class ChatModal extends LitElement {
                   <div class="column-title">
                     ${translateText("chat.player")}
                   </div>
+
+                  <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      .checked=${this.sortByTerritory}
+                      @change=${this.onPlayerSortChange}
+                    />
+                    ${translateText("chat.sort_by_territory")}
+                  </label>
 
                   <input
                     class="player-search-input"
@@ -254,9 +264,16 @@ export class ChatModal extends LitElement {
     this.requestUpdate();
   }
 
+  private onPlayerSortChange(e: Event) {
+    this.sortByTerritory = (e.target as HTMLInputElement).checked;
+    this.requestUpdate();
+  }
+
   private getSortedFilteredPlayers(): PlayerView[] {
     const sorted = [...this.players].sort((a, b) =>
-      a.displayName().localeCompare(b.displayName()),
+      this.sortByTerritory
+        ? b.numTilesOwned() - a.numTilesOwned()
+        : a.displayName().localeCompare(b.displayName()),
     );
     const filtered = sorted.filter((p) =>
       p.displayName().toLowerCase().includes(this.playerSearchQuery),

@@ -4,11 +4,14 @@ import { z } from "zod";
 import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
 import { getApiBase, getAudience } from "./Api";
+import { ClientEnv } from "./ClientEnv";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { DesktopSessionState, SessionFailureKind } from "./DesktopShell";
+import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import { showInGameAlert } from "./InGameModal";
 import type { SteamTicketResult } from "./SteamSDK";
 import { steamSDK } from "./SteamSDK";
-import { generateCryptoRandomUUID } from "./Utils";
+import { generateCryptoRandomUUID, translateText } from "./Utils";
 
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 
@@ -37,21 +40,127 @@ function setSessionState(state: DesktopSessionState): void {
   );
 }
 
+// On the desktop shell a provider login cannot be an OAuth redirect: the
+// redirect_uri would be this window's own `app://openfront/...` URL, which
+// the API's allowlist refuses (rightly -- the shell registers no scheme
+// handler, so a browser-completed OAuth flow would have nowhere to return
+// to). The player used to get a browser tab showing a bare JSON 400.
+//
+// Instead the shell's account-linking gate is re-opened (see
+// DesktopShell.ts's desktopLinkGate): it sends the browser to the website
+// with a link ticket, the player signs in THERE -- with Discord, Google or
+// email, the choice is made on the website, not by which button was clicked
+// here -- and confirms linking that account to their Steam account, and the
+// shell reloads the game into it. The one thing this cannot do is merge a
+// Steam account that already has its own progress into a web account (the
+// server refuses that as `steam_has_progress`, and the website says so);
+// that is the same rule the first-launch gate lives under.
+//
+// Returns true whenever this is the desktop shell at all -- the caller must
+// not build the redirect there under any circumstances -- and false only on
+// the web, where the redirect is the right thing.
+//
+// A shell that exists but has no callable showLinkGate is a real case, not a
+// hypothetical: this client updates at runtime while the shell ships in the
+// Steam depot and updates on Steam's schedule, so a client newer than its
+// shell is ordinary. Falling through to the redirect there would be the
+// original bug (a browser tab showing a JSON 400) on exactly the shells that
+// cannot be fixed from this side, so that case says what to do instead.
+function startDesktopLinkFlow(): boolean {
+  const gate = desktopLinkGate();
+  if (gate !== null) {
+    // An IPC round trip to the Electron main process, so it can genuinely
+    // reject (no window, a main-process throw); log rather than surface as a
+    // button that silently does nothing.
+    gate.showLinkGate().catch((err) => {
+      console.error("Failed to open the desktop link flow", err);
+    });
+    return true;
+  }
+  if (isDesktopShell()) {
+    void showInGameAlert(
+      translateText("account_modal.desktop_login_needs_update"),
+    );
+    return true;
+  }
+  return false;
+}
+
 export function discordLogin() {
+  if (startDesktopLinkFlow()) return;
   const redirectUri = encodeURIComponent(window.location.href);
   window.location.href = `${getApiBase()}/auth/login/discord?redirect_uri=${redirectUri}`;
 }
 
 export function googleLogin() {
+  if (startDesktopLinkFlow()) return;
   const redirectUri = encodeURIComponent(window.location.href);
   window.location.href = `${getApiBase()}/auth/login/google?redirect_uri=${redirectUri}`;
+}
+
+// "Sign in through Steam" (OPE-115). The web-only way into an account whose
+// only identity is Steam, which before this had no way into the website at all.
+//
+// Deliberately NOT routed through startDesktopLinkFlow, unlike the two above.
+// Inside the shell the player is already signed in through the native Steam
+// ticket (doSteamLogin), so a Steam sign-in button there is redundant rather
+// than broken -- the caller hides it on the desktop shell instead. Keeping the
+// guard out of here means the function does exactly one thing.
+export function steamLogin() {
+  const redirectUri = encodeURIComponent(window.location.href);
+  window.location.href = `${getApiBase()}/auth/login/steam?redirect_uri=${redirectUri}`;
+}
+
+// The website's account-settings page, for the desktop shell to open in the
+// browser. Never from window.location, which is app://openfront in the shell.
+//
+// The website is the game server, so its origin is ClientEnv.serverHttpBase()
+// -- the host the shell injects as serverHost. NOT the JWT audience: that is
+// the bare host only in production (openfront.io); on a dev/staging build it
+// is a branch subdomain (main.openfront.dev, <branch>.openfront.dev) with
+// nothing deployed at the apex, which is exactly why serverHost exists (see
+// resolveServerOrigin in ClientEnv.ts). The audience-derived origin, with the
+// same localhost:9000 special case as the shell's own siteUrlForAudience
+// (openfront-desktop's linkApi.ts), is only the fallback for a shell that
+// injects no serverHost.
+function desktopWebAccountSettingsUrl(): string {
+  let origin: string;
+  if (ClientEnv.serverHost()) {
+    origin = ClientEnv.serverHttpBase();
+  } else {
+    const audience = getAudience();
+    origin =
+      audience === "localhost"
+        ? "http://localhost:9000"
+        : `https://${audience}`;
+  }
+  return `${origin}/#modal=account-settings`;
 }
 
 // Link a Google account to the currently logged-in player. Unlike login this is
 // an authenticated request, so we fetch the Google authorize URL with the
 // Bearer token (a top-level navigation can't carry it) and then navigate to it.
 // Returns false if the user isn't logged in or the request fails.
+//
+// On the desktop shell the OAuth redirect is impossible for the reason
+// startDesktopLinkFlow gives, and the link flow is no substitute here: the
+// button is only ever shown to an account that is already linked (Discord or
+// email primary), and redeeming a link ticket against an account that already
+// holds this Steam identity is an idempotent no-op -- it attaches nothing. So
+// the shell opens the website's account settings in the browser instead, where
+// the same button runs the real OAuth flow. The player signs in there with the
+// account they use here; the copy on the button says as much.
 export async function linkGoogle(): Promise<boolean> {
+  if (isDesktopShell()) {
+    // Routed to the system browser by the shell's window-open policy
+    // (openfront-desktop's navigationPolicy.ts), like every https link.
+    window.open(
+      desktopWebAccountSettingsUrl(),
+      "_blank",
+      "noopener,noreferrer",
+    );
+    return true;
+  }
   const authHeader = await getAuthHeader();
   if (authHeader === "") return false;
   const redirectUri = encodeURIComponent(window.location.href);
@@ -73,6 +182,43 @@ export async function linkGoogle(): Promise<boolean> {
     return true;
   } catch (e) {
     console.error("Failed to start Google link", e);
+    return false;
+  }
+}
+
+// Link a Steam account to the currently logged-in player (OPE-115). Same shape
+// as linkGoogle: an authenticated fetch for the authorize URL (a top-level
+// navigation can't carry the Bearer token), then navigate to it.
+//
+// THE LINK THIS STARTS IS PERMANENT. Steam recommends that users cannot
+// self-unlink Steam from an external account, so there is no unlink action
+// anywhere in the client and a mistake can only be undone by support. The
+// caller must show that warning before the click; afterwards is too late.
+//
+// No desktop branch, unlike linkGoogle. A shell player already holds the Steam
+// identity through the native ticket, so this button is not shown there.
+export async function linkSteam(): Promise<boolean> {
+  const authHeader = await getAuthHeader();
+  if (authHeader === "") return false;
+  const redirectUri = encodeURIComponent(window.location.href);
+  try {
+    const response = await fetch(
+      `${getApiBase()}/auth/link/steam?redirect_uri=${redirectUri}`,
+      {
+        headers: { Authorization: authHeader },
+        credentials: "include",
+      },
+    );
+    if (!response.ok) {
+      console.error("Failed to start Steam link", response);
+      return false;
+    }
+    const { url } = await response.json();
+    if (typeof url !== "string") return false;
+    window.location.href = url;
+    return true;
+  } catch (e) {
+    console.error("Failed to start Steam link", e);
     return false;
   }
 }
@@ -329,9 +475,15 @@ async function doRefreshJwt(): Promise<void> {
   }
   try {
     console.log("Refreshing jwt");
+    // Bounded like doSteamLogin below: userAuth() awaits this, and every
+    // authenticated path awaits userAuth(), so a response that never settles
+    // stops the client joining anything at all. An abort lands in the catch
+    // below, which already treats an unreachable server as "clear the jwt" —
+    // the same outcome, now reached in bounded time.
     const response = await fetch(getApiBase() + "/auth/refresh", {
       method: "POST",
       credentials: "include",
+      signal: AbortSignal.timeout(10_000),
     });
     if (response.status !== 200) {
       console.error("Refresh failed", response);

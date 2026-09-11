@@ -9,9 +9,11 @@ import {
   discordLogin,
   googleLogin,
   linkGoogle,
+  linkSteam,
   logOut,
   reauthAfterCrazyGamesChange,
   sendMagicLink,
+  steamLogin,
 } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
@@ -30,32 +32,25 @@ import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
-import { consumeGoogleLinkResult } from "./GoogleLinkResult";
+import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
 import { showInGameAlert } from "./InGameModal";
+import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { translateText } from "./Utils";
 
-// window.openfrontDesktop is declared `unknown` by DesktopShell.ts (kept loose
-// there on purpose). We know the one function we need, so narrow it locally
-// rather than re-declaring the global (a second `declare global` with a
-// different type triggers TS2717) — mirrors SteamSDK.ts's steamBridge().
-//
-// Guard on `showLinkGate` specifically, the function actually invoked below —
-// not on a sibling property like `linkGate` (a separate namespace used by the
-// gate page itself) — so a rename of one can't silently leave this button
-// wired to nothing.
-function desktopLinkGateBridge():
-  | { showLinkGate: () => Promise<void> }
-  | undefined {
-  const desktop = window.openfrontDesktop as
-    | { showLinkGate?: unknown }
-    | undefined;
-  return typeof desktop?.showLinkGate === "function"
-    ? (desktop as { showLinkGate: () => Promise<void> })
-    : undefined;
-}
+// Each login refusal says its own thing. Sharing one string was fine while
+// email_exists was the only recognised result; a player refused because their
+// account is pending deletion, or because a Steam OpenID response did not
+// verify, must not be told their email is already in use.
+const LOGIN_ERROR_KEYS: Record<LoginResult, string> = {
+  email_exists: "account_modal.login_email_exists",
+  deleted: "account_modal.login_deleted",
+  error: "account_modal.login_error",
+  no_account: "account_modal.login_no_account",
+};
 
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
@@ -281,12 +276,12 @@ export class AccountModal extends BaseModal {
   // Re-entry to the desktop shell's account-linking gate shown at first
   // launch. Absent entirely on plain web (no window.openfrontDesktop there),
   // present whenever the desktop bridge exposes a callable showLinkGate —
-  // see desktopLinkGateBridge() above for why the guard is scoped that way.
-  // Needed because the desktop app's menu bar will eventually be hidden and
-  // the game runs fullscreen borderless, so a dismissed or since-linked
-  // player needs another way back to that gate.
+  // see desktopLinkGate() in DesktopShell.ts for why the guard is scoped
+  // that way. Needed because the desktop app's menu bar will eventually be
+  // hidden and the game runs fullscreen borderless, so a dismissed or
+  // since-linked player needs another way back to that gate.
   private renderDesktopLinkGateAction(): TemplateResult | typeof nothing {
-    if (!desktopLinkGateBridge()) return nothing;
+    if (desktopLinkGate() === null) return nothing;
     return html`
       <o-button
         variant="secondary"
@@ -304,7 +299,7 @@ export class AccountModal extends BaseModal {
     // genuinely reject (no window, a main-process throw); catching keeps the
     // failure visible in the console instead of surfacing as a button that
     // silently does nothing.
-    desktopLinkGateBridge()
+    desktopLinkGate()
       ?.showLinkGate()
       .catch((err) => {
         console.error("AccountModal: showLinkGate failed", err);
@@ -480,6 +475,7 @@ export class AccountModal extends BaseModal {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
           ${this.renderCurrency()} ${this.renderGoogleLink()}
+          ${this.renderSteamLink()}
         </div>
       `;
     } else if (me?.google) {
@@ -490,7 +486,7 @@ export class AccountModal extends BaseModal {
               account_name: me.google.email,
             })}
           </div>
-          ${this.renderCurrency()}
+          ${this.renderCurrency()} ${this.renderSteamLink()}
         </div>
       `;
     } else if (me?.email) {
@@ -502,6 +498,7 @@ export class AccountModal extends BaseModal {
             })}
           </div>
           ${this.renderCurrency()} ${this.renderGoogleLink()}
+          ${this.renderSteamLink()}
         </div>
       `;
     } else if (me?.steam) {
@@ -545,8 +542,73 @@ export class AccountModal extends BaseModal {
   // Google to their existing account (we never auto-merge by email).
   private renderLinkGoogleButton(): TemplateResult {
     if (this.userMeResponse?.user?.google) return html``;
-    return googleLinkButton(this.handleLinkGoogle);
+    return googleLinkButton(
+      this.handleLinkGoogle,
+      // The shell sends the player to the website for this (see linkGoogle
+      // in Auth.ts); the caption has to say so.
+      isDesktopShell()
+        ? "account_modal.link_google_on_web"
+        : "account_modal.link_google",
+    );
   }
+
+  // Steam link state (OPE-115): the linked account when there is one,
+  // otherwise the button to link one.
+  //
+  // NOTE THE ASYMMETRY WITH GOOGLE, WHICH IS DELIBERATE: there is no unlink
+  // control here, and there is a permanence warning on the button. Steam
+  // recommends that users cannot self-unlink Steam from an external account,
+  // so this is a one-way change that only support can reverse — the warning
+  // has to be readable BEFORE the click, because afterwards the link exists.
+  //
+  // Not shown inside the desktop shell: a shell player already holds this
+  // identity through the native Steam ticket.
+  private renderSteamLink(): TemplateResult {
+    if (isDesktopShell()) return html``;
+    const steam = this.userMeResponse?.user?.steam;
+    if (steam) {
+      // The attached account is NAMED, not merely reported as linked: a wrong
+      // link — the player's browser was signed into someone else's Steam when
+      // they clicked — cannot be undone by them, so noticing it immediately is
+      // the difference between a quick support fix and a permanent one.
+      // Steam's own consent page is the first defence; this is the second.
+      //
+      // The persona and avatar come from the <steam-user-header> that
+      // renderAccountTab already renders whenever user.steam is set, for every
+      // branch including Steam-primary. Rendering a second one here showed it
+      // TWICE to exactly the players this row is for — anyone Discord-,
+      // Google- or email-primary with Steam linked.
+      return html`
+        <div class="flex flex-col items-center gap-1">
+          <div class="flex items-center gap-2 text-white/70 text-sm">
+            ${steamGlyph("w-4 h-4 shrink-0")}
+            <span>${translateText("account_modal.linked_to_steam")}</span>
+          </div>
+          <span class="text-white/40 text-xs text-center">
+            ${translateText("account_modal.link_steam_permanent")}
+          </span>
+        </div>
+      `;
+    }
+    return html`
+      <div class="w-full flex flex-col gap-1">
+        ${steamLinkButton(this.handleLinkSteam)}
+        <span class="text-white/40 text-xs text-center">
+          ${translateText("account_modal.link_steam_permanent")}
+        </span>
+      </div>
+    `;
+  }
+
+  private handleLinkSteam = async (): Promise<void> => {
+    // On success linkSteam navigates to Steam; the result comes back as a
+    // `link=...` router arg handled by consumeLinkResult. A false return means
+    // we couldn't start it.
+    const started = await linkSteam();
+    if (!started) {
+      await showInGameAlert(translateText("account_modal.link_steam_failed"));
+    }
+  };
 
   private async viewGame(gameId: string): Promise<void> {
     this.close();
@@ -611,7 +673,7 @@ export class AccountModal extends BaseModal {
           &#9888;
         </span>
         <p class="flex-1 text-sm text-red-200">
-          ${translateText("account_modal.login_email_exists")}
+          ${translateText(LOGIN_ERROR_KEYS[this.loginError])}
         </p>
         <button
           class="text-red-200/60 hover:text-red-200 text-lg leading-none"
@@ -625,6 +687,14 @@ export class AccountModal extends BaseModal {
   }
 
   private renderLoginOptions() {
+    // On the desktop shell both provider buttons open the shell's browser
+    // link flow rather than an in-place OAuth redirect (see discordLogin /
+    // googleLogin in Auth.ts), and the captions say so. Keyed on the shell
+    // itself, not on the link-flow bridge: Auth.ts never builds the redirect
+    // on ANY desktop shell (a shell too old to expose showLinkGate gets an
+    // update prompt instead), so the web caption would be wrong on every one
+    // of them.
+    const viaBrowser = isDesktopShell();
     return html`
       <div class="flex items-center justify-center p-6 min-h-full">
         <div
@@ -652,6 +722,11 @@ export class AccountModal extends BaseModal {
             <p class="text-white/50 text-sm font-medium">
               ${translateText("account_modal.sign_in_desc")}
             </p>
+            ${viaBrowser
+              ? html`<p class="text-white/40 text-xs">
+                  ${translateText("account_modal.desktop_sign_in_desc")}
+                </p>`
+              : nothing}
             ${this.renderCurrency()}
           </div>
 
@@ -669,8 +744,10 @@ export class AccountModal extends BaseModal {
                 class="w-6 h-6 relative z-10"
               />
               <span class="font-bold relative z-10 tracking-wide"
-                >${translateText("main.login_discord") ||
-                translateText("account_modal.link_discord")}</span
+                >${viaBrowser
+                  ? translateText("account_modal.desktop_login_discord")
+                  : translateText("main.login_discord") ||
+                    translateText("account_modal.link_discord")}</span
               >
             </button>
 
@@ -686,9 +763,27 @@ export class AccountModal extends BaseModal {
                 class="w-6 h-6 relative z-10"
               />
               <span class="font-bold relative z-10 tracking-wide"
-                >${translateText("main.login_google")}</span
+                >${viaBrowser
+                  ? translateText("account_modal.desktop_login_google")
+                  : translateText("main.login_google")}</span
               >
             </button>
+
+            <!-- Sign in through Steam. Hidden inside the desktop shell: the
+                 player is already signed in there through the native Steam
+                 ticket, so the button would be a no-op that looks like an
+                 option. -->
+            ${viaBrowser
+              ? nothing
+              : html`<button
+                  @click="${this.handleSteamLogin}"
+                  class="w-full px-6 py-4 text-white bg-[#1b2838] hover:bg-[#2a475e] border border-[#66c0f4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#66c0f4] transition-colors duration-200 flex items-center justify-center gap-3 shadow-lg"
+                >
+                  ${steamGlyph("w-6 h-6 shrink-0")}
+                  <span class="font-bold tracking-wide"
+                    >${translateText("main.login_steam")}</span
+                  >
+                </button>`}
 
             <!-- Divider -->
             <div class="flex items-center gap-4 py-2">
@@ -761,9 +856,13 @@ export class AccountModal extends BaseModal {
     googleLogin();
   }
 
+  private handleSteamLogin() {
+    steamLogin();
+  }
+
   private handleLinkGoogle = async (): Promise<void> => {
     // On success linkGoogle navigates to Google; the result comes back as a
-    // `link=...` router arg handled by consumeGoogleLinkResult. A false return
+    // `link=...` router arg handled by consumeLinkResult. A false return
     // means we couldn't start it.
     const started = await linkGoogle();
     if (!started) {
@@ -800,7 +899,7 @@ export class AccountModal extends BaseModal {
 
   protected onOpen(args?: Record<string, unknown>): void {
     this.isLoadingUser = true;
-    consumeGoogleLinkResult(args);
+    consumeLinkResult(args);
     this.loginError = consumeLoginResult(args);
     this.prefillCreatorCode = this.consumeCreatorCodeArg(args);
 

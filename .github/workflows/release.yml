@@ -16,6 +16,26 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      # Fail the release before anything deploys: a malformed targets var
+      # would otherwise only surface when a color job's matrix expands,
+      # after alpha and beta already shipped the new image. length > 0 also
+      # rejects "[]", which is truthy so the matrix defaults below would not
+      # catch it and the color would silently get zero deploy legs.
+      - name: 🔍 Validate deploy targets
+        env:
+          DEPLOY_TARGETS_BETA: ${{ vars.DEPLOY_TARGETS_BETA }}
+          DEPLOY_TARGETS_BLUE: ${{ vars.DEPLOY_TARGETS_BLUE }}
+          DEPLOY_TARGETS_GREEN: ${{ vars.DEPLOY_TARGETS_GREEN }}
+        run: |
+          set -euo pipefail
+          for name in DEPLOY_TARGETS_BETA DEPLOY_TARGETS_BLUE DEPLOY_TARGETS_GREEN; do
+            value="${!name}"
+            [ -z "$value" ] && continue
+            if ! printf '%s' "$value" | jq -e 'type == "array" and length > 0 and all(.[]; (.host | type == "string") and (.subdomain | type == "string"))' > /dev/null; then
+              echo "Error: repository var ${name} must be a non-empty JSON array of {host, subdomain} objects, got: ${value}"
+              exit 1
+            fi
+          done
       - name: 🔗 Log in to Docker Hub
         uses: docker/login-action@v4
         with:
@@ -38,7 +58,15 @@ jobs:
           Changelog:
           ${RELEASE_BODY}
           EOF
-          ./build.sh prod "${RELEASE_TAG_NAME}" "${RELEASE_NAME}" "${RELEASE_BODY}" /tmp/build-metadata.json
+          # Third argument is VERSION_TXT, which build.sh writes to
+          # resources/version.txt and the client bakes into the bundle as the
+          # version the footer and nav bar show. It used to be RELEASE_NAME --
+          # free text typed into the GitHub Release UI, so the shipped version
+          # label was whatever someone happened to title the release. The TAG
+          # is the build's actual identity and is already validated as the
+          # image tag on the line's second argument, so use it. RELEASE_NAME
+          # stays in the job summary above, where free text belongs.
+          ./build.sh prod "${RELEASE_TAG_NAME}" "${RELEASE_TAG_NAME}" "${RELEASE_BODY}" /tmp/build-metadata.json
           IMAGE_ID=$(jq -r '."containerimage.digest"' /tmp/build-metadata.json)
           echo "IMAGE_ID=${IMAGE_ID}" >> $GITHUB_OUTPUT
           echo "Image ID: \`${IMAGE_ID}\`" >> $GITHUB_STEP_SUMMARY
@@ -52,15 +80,15 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v7
+      # deploy.sh keyscans the target it resolves, so this step only
+      # installs the key.
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
@@ -73,9 +101,10 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
+          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
+          SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
@@ -98,22 +127,29 @@ jobs:
           echo "::endgroup::"
 
   deploy-beta:
-    name: 🐞 Deploy to beta
+    name: 🐞 Deploy to beta (${{ matrix.target.host }})
     runs-on: ubuntu-latest
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-beta
+    # One leg per machine, from the DEPLOY_TARGETS_BETA REPOSITORY var (see
+    # deploy-blue for the format and why it must be repository-level).
+    # Defaults to today's single box.
+    strategy:
+      max-parallel: 1
+      matrix:
+        target: ${{ fromJSON(vars.DEPLOY_TARGETS_BETA || '[{"host":"falk2","subdomain":"beta"}]') }}
     steps:
       - uses: actions/checkout@v7
+      # deploy.sh keyscans the target it resolves, so this step only
+      # installs the key.
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_FALK2" && ssh-keyscan -H "$SERVER_HOST_FALK2" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
@@ -126,16 +162,19 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
+          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
+          SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
+          TARGET_HOST: ${{ matrix.target.host }}
+          TARGET_SUBDOMAIN: ${{ matrix.target.subdomain }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
-          ./deploy.sh prod falk2 "${IMAGE_ID}" beta
+          ./deploy.sh prod "${TARGET_HOST}" "${IMAGE_ID}" "${TARGET_SUBDOMAIN}"
       - name: ⏳ Wait for deployment to start
         env:
-          FQDN: beta.${{ vars.DOMAIN }}
+          FQDN: ${{ matrix.target.subdomain }}.${{ vars.DOMAIN }}
           API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
@@ -151,44 +190,67 @@ jobs:
           echo "::endgroup::"
 
   deploy-blue:
-    name: 🔵 Deploy to blue
+    name: 🔵 Deploy to blue (${{ matrix.target.host }})
     runs-on: ubuntu-latest
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-blue
+    # One leg per machine in the blue fleet, from the DEPLOY_TARGETS_BLUE
+    # REPOSITORY var:
+    #   [{"host":"falk2","subdomain":"blue"}, {"host":"nbg2","subdomain":"blue2"}]
+    # Repository-level and per-color on purpose: GitHub expands
+    # strategy.matrix before the job's environment exists, so an
+    # environment-scoped var is invisible here and would silently fall back
+    # to the single-box default — and one shared name would feed the same
+    # list to both colors. host is a machine name deploy.sh resolves via the
+    # SERVER_HOSTS_JSON secret (lowercase keys; SERVER_HOST_FALK2 is the
+    # only legacy secret wired through in CI); subdomain is that machine's
+    # cluster entry. Defaults to today's single box. Sequential (and
+    # stopping on the first failure) so a bad image or a dead machine halts
+    # the rollout after one leg instead of taking the whole color down.
+    strategy:
+      max-parallel: 1
+      matrix:
+        target: ${{ fromJSON(vars.DEPLOY_TARGETS_BLUE || '[{"host":"falk2","subdomain":"blue"}]') }}
     steps:
       - uses: actions/checkout@v7
+      # deploy.sh keyscans the target it resolves, so this step only
+      # installs the key.
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_FALK2" && ssh-keyscan -H "$SERVER_HOST_FALK2" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
+          # Blue/green sit behind the openfront.io load balancer: see ServerEnv.siteHost.
+          SITE_HOST: ${{ vars.DOMAIN }}
           CDN_BASE: ${{ vars.CDN_BASE }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
+          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
+          SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
+          TARGET_HOST: ${{ matrix.target.host }}
+          TARGET_SUBDOMAIN: ${{ matrix.target.subdomain }}
+          EXPECTED_COLOR: blue
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
-          ./deploy.sh prod falk2 "${IMAGE_ID}" blue
+          ./deploy.sh prod "${TARGET_HOST}" "${IMAGE_ID}" "${TARGET_SUBDOMAIN}"
       - name: ⏳ Wait for deployment to start
         env:
-          FQDN: blue.${{ vars.DOMAIN }}
+          FQDN: ${{ matrix.target.subdomain }}.${{ vars.DOMAIN }}
           API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
@@ -204,44 +266,61 @@ jobs:
           echo "::endgroup::"
 
   deploy-green:
-    name: 🟢 Deploy to green
+    name: 🟢 Deploy to green (${{ matrix.target.host }})
     runs-on: ubuntu-latest
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-green
+    # One leg per machine in the green fleet, from the DEPLOY_TARGETS_GREEN
+    # REPOSITORY var (see deploy-blue for the format and why it must be
+    # repository-level and per-color):
+    #   [{"host":"falk2","subdomain":"green"}, {"host":"nbg2","subdomain":"green2"}]
+    # Defaults to today's single box. Sequential (and stopping on the first
+    # failure) so a bad image or a dead machine halts the rollout after one
+    # leg instead of taking the whole color down.
+    strategy:
+      max-parallel: 1
+      matrix:
+        target: ${{ fromJSON(vars.DEPLOY_TARGETS_GREEN || '[{"host":"falk2","subdomain":"green"}]') }}
     steps:
       - uses: actions/checkout@v7
+      # deploy.sh keyscans the target it resolves, so this step only
+      # installs the key.
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_FALK2" && ssh-keyscan -H "$SERVER_HOST_FALK2" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
+          # Blue/green sit behind the openfront.io load balancer: see ServerEnv.siteHost.
+          SITE_HOST: ${{ vars.DOMAIN }}
           CDN_BASE: ${{ vars.CDN_BASE }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
+          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
+          SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
+          TARGET_HOST: ${{ matrix.target.host }}
+          TARGET_SUBDOMAIN: ${{ matrix.target.subdomain }}
+          EXPECTED_COLOR: green
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
-          ./deploy.sh prod falk2 "${IMAGE_ID}" green
+          ./deploy.sh prod "${TARGET_HOST}" "${IMAGE_ID}" "${TARGET_SUBDOMAIN}"
       - name: ⏳ Wait for deployment to start
         env:
-          FQDN: green.${{ vars.DOMAIN }}
+          FQDN: ${{ matrix.target.subdomain }}.${{ vars.DOMAIN }}
           API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"

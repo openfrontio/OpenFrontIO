@@ -47,7 +47,7 @@ import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
-import { assignTeams } from "./TeamAssignment";
+import { assignTeams, resolveTeamsList } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
 import { WaterManager } from "./WaterManager";
@@ -153,45 +153,11 @@ export class GameImpl implements Game {
   }
 
   private populateTeams() {
-    let numPlayerTeams = this._config.playerTeams();
-
-    // HumansVsNations mode always has exactly 2 teams
-    if (numPlayerTeams === HumansVsNations) {
-      this.playerTeams = [ColoredTeams.Humans, ColoredTeams.Nations];
-      return;
-    }
-
-    if (typeof numPlayerTeams !== "number") {
-      const players = this._humans.length + this._nations.length;
-      switch (numPlayerTeams) {
-        case Duos:
-          numPlayerTeams = Math.ceil(players / 2);
-          break;
-        case Trios:
-          numPlayerTeams = Math.ceil(players / 3);
-          break;
-        case Quads:
-          numPlayerTeams = Math.ceil(players / 4);
-          break;
-        default:
-          throw new Error(`Unknown TeamCountConfig ${numPlayerTeams}`);
-      }
-    }
-    if (numPlayerTeams < 2) {
-      throw new Error(`Too few teams: ${numPlayerTeams}`);
-    } else if (numPlayerTeams < 8) {
-      this.playerTeams = [ColoredTeams.Red, ColoredTeams.Blue];
-      if (numPlayerTeams >= 3) this.playerTeams.push(ColoredTeams.Yellow);
-      if (numPlayerTeams >= 4) this.playerTeams.push(ColoredTeams.Green);
-      if (numPlayerTeams >= 5) this.playerTeams.push(ColoredTeams.Purple);
-      if (numPlayerTeams >= 6) this.playerTeams.push(ColoredTeams.Orange);
-      if (numPlayerTeams >= 7) this.playerTeams.push(ColoredTeams.Teal);
-    } else {
-      this.playerTeams = [];
-      for (let i = 1; i <= numPlayerTeams; i++) {
-        this.playerTeams.push(`Team ${i}`);
-      }
-    }
+    const totalPlayers = this._humans.length + this._nations.length;
+    this.playerTeams = resolveTeamsList(
+      this._config.playerTeams(),
+      totalPlayers,
+    );
   }
 
   private addPlayers() {
@@ -966,26 +932,35 @@ export class GameImpl implements Game {
     return this._winner;
   }
 
-  private makeWinner(winner: string | Player): Winner | undefined {
+  private isEligibleForTeamWin(
+    p: Player,
+    team: string,
+    threshold: number,
+  ): boolean {
+    if (p.team() !== team || p.clientID() === null || !p.hasSpawned()) {
+      return false;
+    }
+    if (!p.isDisconnected()) return true;
+    const snap = p.disconnectSnapshot();
+    if (!snap || !snap.wasAlive) return true;
+    return (
+      snap.totalLand > 0 && 10 * snap.teamTiles >= threshold * snap.totalLand
+    );
+  }
+
+  makeWinner(winner: string | Player): Winner | undefined {
     if (typeof winner === "string") {
+      const threshold = this._config.teamLandShareWinThresholdTenths();
       return [
         "team",
         winner,
-        ...this.players()
-          .filter((p) => p.team() === winner && p.clientID() !== null)
+        ...this.allPlayers()
+          .filter((p) => this.isEligibleForTeamWin(p, winner, threshold))
           .map((p) => p.clientID()!),
       ];
-    } else {
-      const clientId = winner.clientID();
-      if (clientId === null) {
-        return ["nation", winner.name()];
-      }
-      return [
-        "player",
-        clientId,
-        // TODO: Assists (vote for peace)
-      ];
     }
+    const clientId = winner.clientID();
+    return clientId === null ? ["nation", winner.name()] : ["player", clientId];
   }
 
   teams(): Team[] {
@@ -993,6 +968,18 @@ export class GameImpl implements Game {
       return [];
     }
     return [this.botTeam, ...this.playerTeams];
+  }
+
+  teamTilesOwned(team: Team): number {
+    let teamTiles = 0;
+    for (const p of this.allPlayers()) {
+      if (p.team() === team) teamTiles += p.numTilesOwned();
+    }
+    return teamTiles;
+  }
+
+  totalLandTiles(): number {
+    return Math.max(0, this.numLandTiles() - this.numTilesWithFallout());
   }
 
   teamSpawnArea(team: Team): SpawnArea | undefined {

@@ -568,7 +568,8 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   private renderIdentityRow(other: PlayerView, my: PlayerView) {
-    const flagCode = other.cosmetics.flag;
+    const flagPath = other.cosmetics.flag;
+    const flagCode = flagPath?.match(/\/flags\/(.+)\.svg$/)?.[1];
     const country =
       typeof flagCode === "string"
         ? Countries.find((c) => c.code === flagCode)
@@ -581,10 +582,11 @@ export class PlayerPanel extends LitElement implements Controller {
 
     return html`
       <div class="flex items-center gap-2.5 flex-wrap">
-        ${country && typeof flagCode === "string"
+        ${flagPath
           ? html`<img
-              src=${assetUrl(`flags/${encodeURIComponent(flagCode)}.svg`)}
-              alt=${country?.name ?? "Flag"}
+              src=${assetUrl(flagPath)}
+              alt=${country?.name ?? translateText("cosmetics.type_flag")}
+              title=${country?.name ?? translateText("cosmetics.type_flag")}
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {
                 (e.target as HTMLImageElement).style.display = "none";
@@ -714,11 +716,6 @@ export class PlayerPanel extends LitElement implements Controller {
   private renderAlliances(other: PlayerView) {
     const allies = other.allies();
 
-    const nameCollator = new Intl.Collator(undefined, { sensitivity: "base" });
-    const alliesSorted = [...allies].sort((a, b) =>
-      nameCollator.compare(a.displayName(), b.displayName()),
-    );
-
     // Map ally PlayerID → expiry tick so each ally shows its own remaining time.
     const expiryByAlly = new Map<string, number>();
     for (const alliance of other.alliances()) {
@@ -730,6 +727,15 @@ export class PlayerPanel extends LitElement implements Controller {
       const remainingTicks = expiresAt - this.g.ticks();
       return Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
     };
+
+    // Soonest-expiring alliances first; ties (and no-expiry allies) by name.
+    const nameCollator = new Intl.Collator(undefined, { sensitivity: "base" });
+    const alliesSorted = [...allies].sort((a, b) => {
+      const remainingA = remainingSecondsFor(a) ?? Infinity;
+      const remainingB = remainingSecondsFor(b) ?? Infinity;
+      if (remainingA !== remainingB) return remainingA - remainingB;
+      return nameCollator.compare(a.displayName(), b.displayName());
+    });
 
     return html`
       <div class="select-none">
@@ -753,7 +759,7 @@ export class PlayerPanel extends LitElement implements Controller {
           class="rounded-lg bg-zinc-800/70 ring-1 ring-zinc-700/60 w-full min-w-0"
         >
           <ul
-            class="max-h-30 overflow-y-auto p-2
+            class="max-h-48 overflow-y-auto p-2
                  flex flex-wrap gap-1.5
                  scrollbar-thin scrollbar-thumb-zinc-600 hover:scrollbar-thumb-zinc-500 scrollbar-track-zinc-800"
             role="list"

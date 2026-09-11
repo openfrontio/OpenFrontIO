@@ -1,0 +1,327 @@
+{
+  "id": "CentralAmerica",
+  "name": "Central America",
+  "translation_key": "map.centralamerica",
+  "categories": ["new", "north_america"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [518, 141],
+      "name": "Yucatan",
+      "flag": "Yucatan"
+    },
+    {
+      "coordinates": [584, 345],
+      "name": "Quintana Roo",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [328, 294],
+      "name": "Campeche",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [429, 858],
+      "name": "Guatemala",
+      "flag": "gt"
+    },
+    {
+      "coordinates": [601, 484],
+      "name": "Belize",
+      "flag": "bz"
+    },
+    {
+      "coordinates": [660, 948],
+      "name": "El Salvador",
+      "flag": "sv"
+    },
+    {
+      "coordinates": [1005, 755],
+      "name": "Honduras",
+      "flag": "hn"
+    },
+    {
+      "coordinates": [1112, 983],
+      "name": "Nicaragua",
+      "flag": "ni"
+    },
+    {
+      "coordinates": [1292, 1334],
+      "name": "Costa Rica",
+      "flag": "cr"
+    },
+    {
+      "coordinates": [1868, 1396],
+      "name": "Panama",
+      "flag": "pa"
+    },
+    {
+      "coordinates": [1920, 205],
+      "name": "Jamaica",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [1430, 158],
+      "name": "Cayman Islands",
+      "flag": "ky"
+    },
+    {
+      "coordinates": [2467, 1088],
+      "name": "Magdalena",
+      "flag": "co"
+    },
+    {
+      "coordinates": [2361, 1162],
+      "name": "Sucre",
+      "flag": "co"
+    },
+    {
+      "coordinates": [2481, 1250],
+      "name": "Bolivar",
+      "flag": "co"
+    },
+    {
+      "coordinates": [2221, 1596],
+      "name": "Choco",
+      "flag": "co"
+    },
+    {
+      "coordinates": [2451, 1615],
+      "name": "Antioquia",
+      "flag": "co"
+    },
+    {
+      "coordinates": [2319, 1301],
+      "name": "Cordoba",
+      "flag": "co"
+    },
+    {
+      "coordinates": [1566, 903],
+      "name": "San Andres y Providencia",
+      "flag": "co"
+    },
+    {
+      "coordinates": [2313, 1899],
+      "name": "Valle Del Cauca",
+      "flag": "co"
+    },
+    {
+      "coordinates": [68, 578],
+      "name": "Tabasco",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [121, 709],
+      "name": "Chiapas",
+      "flag": "mx"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [1700, 558],
+      "name": "Seranilla Bank",
+      "flag": "co"
+    },
+    {
+      "coordinates": [1832, 534],
+      "name": "Bajo Nuevo Bank",
+      "flag": "co"
+    },
+    {
+      "coordinates": [460, 331],
+      "name": "X'Box",
+      "flag": "Yucatan"
+    },
+    {
+      "coordinates": [408, 224],
+      "name": "Merida",
+      "flag": "Yucatan"
+    },
+    {
+      "coordinates": [598, 149],
+      "name": "Valladolid",
+      "flag": "Yucatan"
+    },
+    {
+      "coordinates": [560, 240],
+      "name": "Chichen Itza",
+      "flag": "Yucatan"
+    },
+    {
+      "coordinates": [695, 45],
+      "name": "Cancun",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [675, 143],
+      "name": "Playa Del Carmen",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [724, 154],
+      "name": "Cozumel",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [421, 106],
+      "name": "Chicxulub",
+      "flag": "Yucatan"
+    },
+    {
+      "coordinates": [362, 118],
+      "name": "Progreso",
+      "flag": "Yucatan"
+    },
+    {
+      "coordinates": [566, 38],
+      "name": "Rio Lagartos",
+      "flag": "Yucatan"
+    },
+    {
+      "coordinates": [664, 236],
+      "name": "Tulum",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [644, 369],
+      "name": "Bacalar",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [299, 419],
+      "name": "Champoton",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [242, 515],
+      "name": "Ciudad Del Carmen",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [55, 885],
+      "name": "Soconusco",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [313, 828],
+      "name": "Los Altos",
+      "flag": "Los Altos"
+    },
+    {
+      "coordinates": [613, 583],
+      "name": "Belmopan",
+      "flag": "bz"
+    },
+    {
+      "coordinates": [447, 503],
+      "name": "Peten",
+      "flag": "gt"
+    },
+    {
+      "coordinates": [482, 683],
+      "name": "Coban",
+      "flag": "gt"
+    },
+    {
+      "coordinates": [622, 798],
+      "name": "Puerto Barrios",
+      "flag": "gt"
+    },
+    {
+      "coordinates": [537, 1026],
+      "name": "San Salvador",
+      "flag": "sv"
+    },
+    {
+      "coordinates": [862, 1057],
+      "name": "Choluteca",
+      "flag": "hn"
+    },
+    {
+      "coordinates": [838, 962],
+      "name": "Tegucigalpa",
+      "flag": "hn"
+    },
+    {
+      "coordinates": [799, 884],
+      "name": "Comayagua",
+      "flag": "hn"
+    },
+    {
+      "coordinates": [732, 798],
+      "name": "San Pedro Sula",
+      "flag": "hn"
+    },
+    {
+      "coordinates": [877, 754],
+      "name": "La Ceiba",
+      "flag": "hn"
+    },
+    {
+      "coordinates": [1033, 1168],
+      "name": "Managua",
+      "flag": "ni"
+    },
+    {
+      "coordinates": [931, 1140],
+      "name": "Leon",
+      "flag": "ni"
+    },
+    {
+      "coordinates": [1017, 1025],
+      "name": "Matagalpa",
+      "flag": "ni"
+    },
+    {
+      "coordinates": [1286, 1155],
+      "name": "Bluefields",
+      "flag": "ni"
+    },
+    {
+      "coordinates": [1292, 847],
+      "name": "Puerto Cabezas",
+      "flag": "ni"
+    },
+    {
+      "coordinates": [1277, 1027],
+      "name": "Mosquito Coast",
+      "flag": "Mosquito Kingdom"
+    },
+    {
+      "coordinates": [1143, 1315],
+      "name": "Liberia",
+      "flag": "cr"
+    },
+    {
+      "coordinates": [1206, 1427],
+      "name": "Puntarenas",
+      "flag": "cr"
+    },
+    {
+      "coordinates": [1441, 1382],
+      "name": "Limon",
+      "flag": "cr"
+    },
+    {
+      "coordinates": [1345, 1414],
+      "name": "San Jose",
+      "flag": "cr"
+    },
+    {
+      "coordinates": [1532, 1417],
+      "name": "Bocas Del Toro",
+      "flag": "pa"
+    },
+    {
+      "coordinates": [1538, 1531],
+      "name": "David",
+      "flag": "pa"
+    },
+    {
+      "coordinates": [1828, 1371],
+      "name": "Colon",
+      "flag": "pa"
+    }
+  ],
+  "themes": ["north_america", "south_america"]
+}

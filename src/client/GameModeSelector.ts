@@ -24,6 +24,7 @@ import {
 } from "./components/LobbyCard";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
+  getDesktopUpdateState,
   isDesktopShell,
   multiplayerAllowed,
   multiplayerAllowedForSession,
@@ -31,6 +32,7 @@ import {
   type DesktopUpdateState,
 } from "./DesktopShell";
 import { HostLobbyModal } from "./HostLobbyModal";
+import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
@@ -38,16 +40,25 @@ import { SinglePlayerModal } from "./SinglePlayerModal";
 import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
+  getGamesPlayed,
   getSecondsUntilServerTimestamp,
+  reloadForUpdate,
   renderDuration,
   translateText,
 } from "./Utils";
+import { isReplayShellHost } from "./VersionedReplay";
 
 const PRIMARY_ACTION =
   "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]";
 const SECONDARY_ACTION =
   "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]";
 const DISABLED = "opacity-50 cursor-not-allowed pointer-events-none";
+/** Tutorial card: the panel's gold, dark text for contrast. */
+const TUTORIAL_ACTION =
+  "bg-cyber-yellow hover:bg-yellow-300 active:bg-cyber-yellow/80 !text-gray-900 hover:scale-y-105 hover:scale-x-[1.01]";
+
+/** The Tutorial card shows beside Solo until the player has played this many games. */
+const TUTORIAL_CARD_MAX_GAMES = 5;
 
 /**
  * Whether a multiplayer entry point should refuse to act. Exported for tests
@@ -105,9 +116,47 @@ export class GameModeSelector extends LitElement {
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
-  private lobbySocket = new PublicLobbySocket((lobbies) =>
-    this.handleLobbiesUpdate(lobbies),
+  // True from join-lobby until leave-lobby: the player is waiting in (or
+  // loading into) a lobby. This socket is NOT scoped to the homepage — Main.ts
+  // only stops it when a game actually starts (prestart/join), so it is still
+  // listening during the whole lobby wait.
+  private inLobby = false;
+  // An update/drain signal arrived during a lobby wait; prompt on leave-lobby.
+  private updateDeferred = false;
+
+  private lobbySocket = new PublicLobbySocket(
+    (lobbies) => this.handleLobbiesUpdate(lobbies),
+    { onUpdateAvailable: () => this.handleUpdateAvailable() },
   );
+
+  private handleUpdateAvailable() {
+    // The desktop shell runs the bundle from a local overlay and updates it
+    // itself (download, stage, then its own reload button, see
+    // DesktopUpdateBar). Reloading here would only re-run the old overlay,
+    // reconnect, and trigger this again until the download finishes.
+    if (isDesktopShell()) return;
+    // A versioned replay shell is pinned to the archived game's build on
+    // purpose (VersionedReplay.ts), but its baked-in serverHost points at a
+    // live deployment running a newer build — so the lobby socket's commit
+    // compare (or a drain signal) fires on every load. "Update" is
+    // meaningless here, and reloading re-serves the same immutable shell,
+    // which would loop the prompt forever.
+    if (isReplayShellHost(window.location.hostname)) return;
+    // A blocking reload prompt during a lobby wait would eject the player
+    // from a lobby the draining deployment deliberately lets finish — and a
+    // private lobby's members are all pinned to the same deployment, so they
+    // would all be prompted out at once. Defer until they leave the lobby;
+    // if the game starts instead, Main.ts stops this socket, and every exit
+    // from a started game is a full navigation that picks up the new shell
+    // anyway.
+    if (this.inLobby) {
+      this.updateDeferred = true;
+      return;
+    }
+    showInGameAlert(translateText("update_available.message")).then(() => {
+      reloadForUpdate();
+    });
+  }
 
   createRenderRoot() {
     return this;
@@ -135,12 +184,20 @@ export class GameModeSelector extends LitElement {
     );
     document.addEventListener("userMeResponse", this.onUserMe);
     if (isDesktopShell()) {
+      // Seed BOTH from their current values. This element is rendered by
+      // <play-page> on a Lit microtask, so it cannot exist yet when the status
+      // bar dispatches the update bridge's synchronous replay -- without the
+      // seed the update half of the gate stays null and silently never
+      // applies (OPE-396).
+      this.desktopUpdateState = getDesktopUpdateState();
       this.desktopSessionState = getDesktopSessionState();
     }
     document.addEventListener(
       "desktop-session-state",
       this.onDesktopSessionState,
     );
+    document.addEventListener("join-lobby", this.onJoinLobby);
+    document.addEventListener("leave-lobby", this.onLeaveLobby);
     // Pick up the current value in case username-input validated before us.
     const usernameInput = document.querySelector(
       "username-input",
@@ -165,8 +222,22 @@ export class GameModeSelector extends LitElement {
       "desktop-session-state",
       this.onDesktopSessionState,
     );
+    document.removeEventListener("join-lobby", this.onJoinLobby);
+    document.removeEventListener("leave-lobby", this.onLeaveLobby);
     super.disconnectedCallback();
   }
+
+  private onJoinLobby = () => {
+    this.inLobby = true;
+  };
+
+  private onLeaveLobby = () => {
+    this.inLobby = false;
+    if (this.updateDeferred) {
+      this.updateDeferred = false;
+      this.handleUpdateAvailable();
+    }
+  };
 
   private handleValidityChange = (e: Event) => {
     this.inputValid = (e as CustomEvent).detail?.isValid ?? true;
@@ -259,12 +330,23 @@ export class GameModeSelector extends LitElement {
           class="no-crazygames [&:empty]:hidden sm:col-span-2 sm:row-start-1"
         ></ios-add-to-home-screen-banner>
 
-        <div class="h-14 sm:col-span-2 sm:row-start-3">
-          ${this.renderSmallActionCard(
-            translateText("main.solo"),
-            this.openSinglePlayerModal,
-            PRIMARY_ACTION,
-          )}
+        <div class="flex gap-4 h-14 sm:col-span-2 sm:row-start-3">
+          <div class="flex-[2]">
+            ${this.renderSmallActionCard(
+              translateText("main.solo"),
+              this.openSinglePlayerModal,
+              PRIMARY_ACTION,
+            )}
+          </div>
+          ${getGamesPlayed() < TUTORIAL_CARD_MAX_GAMES
+            ? html`<div class="flex-1">
+                ${this.renderSmallActionCard(
+                  translateText("main.tutorial"),
+                  this.startTutorial,
+                  TUTORIAL_ACTION,
+                )}
+              </div>`
+            : nothing}
         </div>
         <div class="grid grid-cols-3 gap-4 h-14 sm:col-span-2 sm:row-start-4">
           ${this.renderSmallActionCard(
@@ -379,6 +461,12 @@ export class GameModeSelector extends LitElement {
     (
       document.querySelector("single-player-modal") as SinglePlayerModal
     )?.open();
+  };
+
+  // Handled in Main, which also serves the help page's tutorial button.
+  private startTutorial = () => {
+    if (!this.validateUsername()) return;
+    document.dispatchEvent(new CustomEvent("start-tutorial"));
   };
 
   private openHostLobby = () => {

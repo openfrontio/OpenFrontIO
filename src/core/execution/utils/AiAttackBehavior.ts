@@ -145,7 +145,9 @@ export class AiAttackBehavior {
     }
 
     const owner = this.game.owner(dst);
-    const cap = owner.isPlayer() ? this.troopSendCap() : Infinity;
+    const cap = owner.isPlayer()
+      ? this.troopSendCap()
+      : this.troopSendCapForExpansion();
     const troops = Math.min(this.player.troops() / 5, cap);
     if (troops < 1) return;
 
@@ -314,6 +316,11 @@ export class AiAttackBehavior {
       return false;
     };
 
+    const juicy = (): boolean => {
+      const target = this.findJuicyTarget(borderingEnemies);
+      return target !== null ? this.sendAttack(target) : false;
+    };
+
     const hated = (): boolean => {
       for (const relation of this.player.allRelationsSorted()) {
         if (relation.relation !== Relation.Hostile) continue;
@@ -361,17 +368,19 @@ export class AiAttackBehavior {
     // Easy nations get the dumbest order, impossible nations get the smartest order
     switch (difficulty) {
       case Difficulty.Easy:
+        // So dumb, they cant even find islanders
         // prettier-ignore
         return [nuked, bots, retaliate, assist, betray, hated, weakest];
       case Difficulty.Medium:
         // prettier-ignore
         return [bots, nuked, retaliate, assist, betray, hated, afk, traitor, weakest, island, donate];
       case Difficulty.Hard:
+        // Strong veryWeak and juicy strats after the distracting hated strat, to make the nations weaker than impossible
         // prettier-ignore
-        return [bots, retaliate, assist, betray, nuked, traitor, afk, hated, veryWeak, victim, weakest, island, donate];
+        return [bots, retaliate, assist, betray, nuked, traitor, afk, hated, veryWeak, juicy, victim, weakest, island, donate];
       case Difficulty.Impossible:
         // prettier-ignore
-        return [retaliate, bots, veryWeak, assist, traitor, afk, betray, victim, nuked, hated, weakest, island, donate];
+        return [retaliate, bots, veryWeak, betray, assist, victim, traitor, juicy, afk, hated, nuked, weakest, island, donate];
       default:
         assertNever(difficulty);
     }
@@ -604,6 +613,63 @@ export class AiAttackBehavior {
 
     // borderingEnemies is already sorted by troops (ascending), so first match is weakest very weak enemy
     return veryWeakEnemies.length > 0 ? veryWeakEnemies[0] : null;
+  }
+
+  // Juiciest bordering enemy (Hard & Impossible only): requires troops <= 75%
+  // of ours, then ranks by structures (including levels), troop-cap
+  // headroom, and tiles — each min-max normalized so no metric dominates by scale.
+  private findJuicyTarget(borderingEnemies: Player[]): Player | null {
+    const candidates = borderingEnemies.filter(
+      (enemy) => enemy.troops() <= this.player.troops() * 0.75,
+    );
+    if (candidates.length === 0) return null;
+
+    const stats = candidates.map((enemy) => {
+      // Defense posts and missile silos are defensive, not a prize worth
+      // capturing - only count the rest of the structures.
+      const structureCount = enemy
+        .units()
+        .reduce(
+          (sum, u) =>
+            Structures.has(u.type()) &&
+            u.type() !== UnitType.DefensePost &&
+            u.type() !== UnitType.MissileSilo
+              ? sum + u.level()
+              : sum,
+          0,
+        );
+      const maxTroops = this.game.config().maxTroops(enemy);
+      const troopGapRatio = maxTroops > 0 ? 1 - enemy.troops() / maxTroops : 0;
+      return {
+        enemy,
+        structureCount,
+        troopGapRatio,
+        tiles: enemy.numTilesOwned(),
+      };
+    });
+
+    const normalize = (value: number, values: number[]): number => {
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      return max > min ? (value - min) / (max - min) : 0;
+    };
+    const structureCounts = stats.map((s) => s.structureCount);
+    const troopGapRatios = stats.map((s) => s.troopGapRatio);
+    const tileCounts = stats.map((s) => s.tiles);
+
+    let best: Player | null = null;
+    let bestScore = -Infinity;
+    for (const s of stats) {
+      const juiciness =
+        normalize(s.structureCount, structureCounts) +
+        normalize(s.troopGapRatio, troopGapRatios) +
+        normalize(s.tiles, tileCounts);
+      if (juiciness > bestScore) {
+        bestScore = juiciness;
+        best = s.enemy;
+      }
+    }
+    return best;
   }
 
   private findNearestIslandEnemy(): Player | null {
@@ -847,7 +913,10 @@ export class AiAttackBehavior {
         if (this.game.hasFallout(tile)) continue;
         if (!canBuildTransportShip(this.game, this.player, tile)) continue;
 
-        const troops = this.player.troops() / 5;
+        const troops = Math.min(
+          this.player.troops() / 5,
+          this.troopSendCapForExpansion(),
+        );
         if (troops < 1) return false;
 
         this.game.addExecution(
@@ -961,6 +1030,13 @@ export class AiAttackBehavior {
     return cap;
   }
 
+  // Like troopSendCap(), but floored above 0 — TerraNullius can't fight back, so it's throttled, not frozen.
+  private troopSendCapForExpansion(): number {
+    const cap = this.troopSendCap();
+    if (cap > 0) return cap;
+    return Math.ceil(this.player.troops() * 0.05);
+  }
+
   private calculateAttackTroops(
     target: Player | TerraNullius,
     nonBotTroops: (targetTroops: number) => number,
@@ -977,11 +1053,11 @@ export class AiAttackBehavior {
     const targetTroops = maxTroops * reserveRatio;
 
     let troops;
-    if (
+    const isBotAttack =
       target.isPlayer() &&
       target.type() === PlayerType.Bot &&
-      this.player.type() !== PlayerType.Bot
-    ) {
+      this.player.type() !== PlayerType.Bot;
+    if (isBotAttack) {
       troops = this.calculateBotAttackTroops(
         target,
         this.player.troops() - targetTroops - this.botAttackTroopsSent,
@@ -990,10 +1066,11 @@ export class AiAttackBehavior {
       troops = nonBotTroops(targetTroops);
     }
 
-    // Hard & Impossible: don't drop below neighbor troop threshold (players only)
-    if (target.isPlayer()) {
-      troops = Math.min(troops, this.troopSendCap());
-    }
+    // Hard & Impossible: don't drop below neighbor troop threshold (also applies to TerraNullius/fallout).
+    troops = Math.min(
+      troops,
+      target.isPlayer() ? this.troopSendCap() : this.troopSendCapForExpansion(),
+    );
 
     if (troops < 1) {
       return null;
@@ -1007,6 +1084,11 @@ export class AiAttackBehavior {
     if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
       if (this.emojiBehavior === undefined) throw new Error("not initialized");
       this.emojiBehavior.maybeSendAttackEmoji(target);
+    }
+
+    // Only count troops that will actually be sent, post-cap.
+    if (isBotAttack) {
+      this.botAttackTroopsSent += troops;
     }
 
     return troops;
@@ -1066,7 +1148,6 @@ export class AiAttackBehavior {
   private calculateBotAttackTroops(target: Player, maxTroops: number): number {
     const { difficulty } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Easy) {
-      this.botAttackTroopsSent += maxTroops;
       return maxTroops;
     }
     let troops = target.troops() * 4;
@@ -1080,7 +1161,6 @@ export class AiAttackBehavior {
         troops = maxTroops;
       }
     }
-    this.botAttackTroopsSent += troops;
     return troops;
   }
 

@@ -18,9 +18,11 @@ import {
   BuildableUnit,
   Cell,
   ColoredTeams,
+  DisconnectSnapshot,
   Embargo,
   EmojiMessage,
   GameMode,
+  GameType,
   Gold,
   MAX_UPGRADE_AMOUNT,
   MutableAlliance,
@@ -177,6 +179,7 @@ export class PlayerImpl implements Player {
 
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
+  private _disconnectSnapshot: DisconnectSnapshot | null = null;
 
   /**
    * Last PlayerUpdate emitted for this player on the worker→main channel.
@@ -1605,8 +1608,10 @@ export class PlayerImpl implements Player {
       return false;
     }
     const owner = this.mg.owner(tile);
-    // Allow nuking teammates after the game is over (aftergame fun)
-    const gameOver = mg.getWinner() !== null;
+    // Allow nuking teammates after the game is over (aftergame fun), but not in singleplayer.
+    const gameOver =
+      mg.getWinner() !== null &&
+      mg.config().gameConfig().gameType !== GameType.Singleplayer;
     if (owner.isPlayer()) {
       if (this.isOnSameTeam(owner) && !gameOver) {
         return false;
@@ -1792,8 +1797,32 @@ export class PlayerImpl implements Player {
     return this._isDisconnected;
   }
 
-  markDisconnected(isDisconnected: boolean): void {
+  markDisconnected(
+    isDisconnected: boolean,
+    snapshot?: DisconnectSnapshot,
+  ): void {
     this._isDisconnected = isDisconnected;
+    if (isDisconnected) {
+      if (this._disconnectSnapshot === null) {
+        const team = this.team();
+        this._disconnectSnapshot = snapshot ?? {
+          currentTick: this.mg.ticks(),
+          teamTiles: team ? this.mg.teamTilesOwned(team) : 0,
+          totalLand: this.mg.totalLandTiles(),
+          wasAlive: this.isAlive(),
+        };
+      }
+    } else {
+      this._disconnectSnapshot = null;
+    }
+  }
+
+  disconnectSnapshot(): DisconnectSnapshot | null {
+    return this._disconnectSnapshot;
+  }
+
+  disconnectedAtTick(): number | null {
+    return this._disconnectSnapshot?.currentTick ?? null;
   }
 
   hash(): number {

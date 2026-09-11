@@ -908,8 +908,8 @@ describe("StoreModal cosmetic browser", () => {
   });
 });
 
-// custom_currency is switched off on the Steam rail for launch: the server
-// answers kind_unavailable_on_provider, so the card must not be offered there.
+// The custom-amount card is sold on both rails since OPE-337: the server
+// accepts custom_currency on Steam, so the card is offered there too.
 describe("StoreModal on the Steam rail", () => {
   Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
 
@@ -949,10 +949,10 @@ describe("StoreModal on the Steam rail", () => {
     expect(modal.querySelector("custom-currency-card")).toBeTruthy();
   });
 
-  it("hides the custom-amount card on Steam", async () => {
+  it("offers the custom-amount card on Steam too", async () => {
     installSteamShell();
     const modal = await openStoreOnTab("packs");
-    expect(modal.querySelector("custom-currency-card")).toBeNull();
+    expect(modal.querySelector("custom-currency-card")).toBeTruthy();
   });
 
   // REQUIRED, not an optimisation: the main process parks authorizations and

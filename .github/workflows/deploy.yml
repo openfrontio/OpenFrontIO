@@ -35,7 +35,7 @@ on:
       # "**" rather than "*" so branches with a slash (fix/foo, feat/bar) match too
       - "**"
 
-  # Nightly build: rebuild and deploy main to nightly.openfront.dev
+  # Nightly build: rebuild and deploy main to nightly/green/blue .openfront.dev
   # 07:00 UTC = 11:00 PM PST (midnight PDT during summer)
   schedule:
     - cron: "0 7 * * *"
@@ -59,14 +59,28 @@ jobs:
     # Deploy on push/schedule/workflow_dispatch (see "on:") unless this is a fork
     if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
     # Use different logic based on event type
-    name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}
+    name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}${{ matrix.subdomain && format(' ({0})', matrix.subdomain) }}
     runs-on: ubuntu-latest
+    # The schedule fans out to all three dev pools; every other event deploys a
+    # single subdomain, expressed as a one-element matrix with an empty string
+    # so RAW_SUBDOMAIN below falls through to the per-event logic.
+    strategy:
+      fail-fast: false
+      # One leg at a time: parallel legs would race three concurrent pushes of
+      # the shared :latest/:buildcache tags (build.sh tags both on every build)
+      # and pile all three deploys onto deploy.sh's 15-minute host-side flock.
+      # Sequential legs have one writer at a time and no lock contention, and
+      # legs 2 and 3 rebuild from the registry cache leg 1 just pushed, so they
+      # are cheap.
+      max-parallel: 1
+      matrix:
+        subdomain: ${{ github.event_name == 'schedule' && fromJSON('["nightly", "green", "blue"]') || fromJSON('[""]') }}
     timeout-minutes: 30
     environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
       # Sanitized into SUBDOMAIN by the first step below - do not use directly.
-      RAW_SUBDOMAIN: ${{ github.event_name == 'schedule' && 'nightly' || github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
+      RAW_SUBDOMAIN: ${{ matrix.subdomain || github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
     steps:
       - uses: actions/checkout@v7
       - name: 📝 Update job summary
@@ -152,19 +166,15 @@ jobs:
           registry: ghcr.io
           username: ${{ vars.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
+      # deploy.sh keyscans the target it resolves, so this step only
+      # installs the key.
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
-          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
-          SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_MASTERS" && ssh-keyscan -H "$SERVER_HOST_MASTERS" >> ~/.ssh/known_hosts
-          test -n "$SERVER_HOST_FALK2" && ssh-keyscan -H "$SERVER_HOST_FALK2" >> ~/.ssh/known_hosts
-          test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚢 Deploy
         env:
@@ -177,11 +187,12 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
+          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
+          SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           SSH_KEY: ~/.ssh/id_rsa
           VERSION_TAG: latest
         run: |

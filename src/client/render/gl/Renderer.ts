@@ -1078,7 +1078,7 @@ export class GPURenderer {
 
   updateSpawnOverlay(inSpawnPhase: boolean, centers: SpawnCenter[]): void {
     this.inSpawnPhase = inSpawnPhase;
-    this.spawnOverlayPass.update(inSpawnPhase, centers);
+    this.spawnOverlayPass.update(centers);
   }
 
   updateSmallPlayerGlow(set: Uint8Array | null): void {
@@ -1095,7 +1095,6 @@ export class GPURenderer {
     this.namePass.setHighlightOwner(ownerID);
     this.structurePass.setHighlightOwner(ownerID);
     this.railroadPass.setHighlightOwner(ownerID);
-    this.affiliationPalette.setHoveredOwner(ownerID);
   }
   setMouseWorldPos(x: number, y: number): void {
     this.namePass.setMouseWorldPos(x, y);

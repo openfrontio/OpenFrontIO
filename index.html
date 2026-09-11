@@ -120,10 +120,11 @@
         assetManifest: <%- assetManifest %>,
         cdnBase: <%- cdnBase %>,
         gameEnv: <%- gameEnv %>,
-        numWorkers: <%- numWorkers %>,
+        cluster: <%- cluster %>,
+        instanceLetter: <%- instanceLetter %>,
         turnstileSiteKey: <%- turnstileSiteKey %>,
         jwtAudience: <%- jwtAudience %>,
-        instanceId: <%- instanceId %>,<%- typeof serverHost !== "undefined" && serverHost ? "\n        serverHost: " + serverHost + "," : "" %>
+        instanceId: <%- instanceId %>,<%- typeof serverHost !== "undefined" && serverHost ? "\n        serverHost: " + serverHost + "," : "" %><%- typeof siteHost !== "undefined" && siteHost ? "\n        siteHost: " + siteHost + "," : "" %>
       };
       document.documentElement.style.setProperty(
         "--background-image-url",
@@ -385,6 +386,9 @@
         <attacks-display
           class="w-full pointer-events-auto order-1 sm:order-none"
         ></attacks-display>
+        <tutorial-panel
+          class="hidden w-full order-3 sm:order-none"
+        ></tutorial-panel>
         <div
           class="pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none"
         >
@@ -422,7 +426,13 @@
       <replay-panel></replay-panel>
     </div>
     <settings-modal></settings-modal>
-    <graphics-settings-modal></graphics-settings-modal>
+    <!-- The in-game settings modal: the same component as #page-settings, but
+         non-inline, and mounted out here because the page's copy sits in a
+         subtree that is hidden during a match. It must stay AFTER
+         #page-settings in document order: ModalRouter.routeFromHash and
+         Main.ts both resolve this component with
+         document.querySelector("user-setting"), which takes the first match. -->
+    <user-setting id="game-settings"></user-setting>
     <player-panel></player-panel>
     <spawn-timer></spawn-timer>
     <immunity-timer></immunity-timer>

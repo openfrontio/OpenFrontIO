@@ -10,9 +10,13 @@ import {
 import { translateCosmetic } from "../Cosmetics";
 import { isDesktopShell } from "../DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "../InGameModal";
+import { STEAM_TIER_CHANGE_IN_APP } from "../SubscriptionPolicy";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./PlutoniumIcon";
+
+// The Steam-rail launch policies (S1 tier change, S2 cancel) live in
+// SubscriptionPolicy.ts so the store reads the same switches.
 
 @customElement("subscription-panel")
 export class SubscriptionPanel extends LitElement {
@@ -49,7 +53,12 @@ export class SubscriptionPanel extends LitElement {
 
   private handleCancel = async (): Promise<void> => {
     const confirmed = await showInGameConfirm(
-      translateText("account_modal.cancel_subscription_confirm"),
+      this.isSteam()
+        ? this.steamText(
+            "account_modal.cancel_subscription_confirm_steam",
+            "account_modal.cancel_subscription_confirm_steam_no_date",
+          )
+        : translateText("account_modal.cancel_subscription_confirm"),
       { heading: translateText("account_modal.cancel_subscription") },
     );
     if (!confirmed) return;
@@ -61,11 +70,34 @@ export class SubscriptionPanel extends LitElement {
       return;
     }
     await showInGameAlert(
-      translateText("account_modal.cancel_subscription_success"),
+      this.isSteam()
+        ? this.steamText(
+            "account_modal.cancel_subscription_success_steam",
+            "account_modal.cancel_subscription_success_steam_no_date",
+          )
+        : translateText("account_modal.cancel_subscription_success"),
     );
     invalidateUserMe();
+    this.reloadPage();
+  };
+
+  // Own method so a test can observe the reload without jsdom navigating.
+  private reloadPage = (): void => {
     window.location.reload();
   };
+
+  /**
+   * Steam copy is honest about the one thing the Stripe copy need not be:
+   * there is no un-cancel, so every line names the date access actually ends
+   * on. `{date}` comes from `currentPeriodEnd`; a row without one (never on
+   * this rail in practice — the server stamps it at settle) gets the
+   * `_no_date` variant rather than a literal "{date}". Both keys are passed
+   * as literals so the en.json sync test can see them in source.
+   */
+  private steamText(key: string, noDateKey: string): string {
+    const date = this.periodEnd();
+    return date ? translateText(key, { date }) : translateText(noDateKey);
+  }
 
   private periodEnd(): string | null {
     return this.sub.currentPeriodEnd
@@ -75,6 +107,37 @@ export class SubscriptionPanel extends LitElement {
           day: "numeric",
         })
       : null;
+  }
+
+  /**
+   * Is this subscription a GRANT — free access nobody is billing — rather than
+   * something the player bought?
+   *
+   * OPE-314. A grant has no billing period to run out, so the server's cancel
+   * expires it on the spot and revokes the premium username with it, and the
+   * ledger only ever earns the grant once, so it does not come back. The panel
+   * therefore must not offer Cancel (nor Manage or Change Tier, which have no
+   * billing to reach) and must not claim the month renews.
+   *
+   * `=== null`, deliberately, and never `!this.sub.provider`:
+   *
+   *   null      — granted. Hide the destructive controls.
+   *   undefined — the field is absent because the server predates it. We
+   *               CANNOT tell a grant from a Stripe subscription, so keep
+   *               today's behaviour; hiding Cancel on this path would take the
+   *               one control a paying subscriber actually needs.
+   *
+   * A truthiness test is true for both and would do the wrong thing on the
+   * second — which is the whole hazard, because `provider` is on `main` but not
+   * yet on staging, so `undefined` is the live case until the next deploy.
+   */
+  private isGranted(): boolean {
+    return this.sub.provider === null;
+  }
+
+  /** Billed by Steam: managed on the Steam account page, on every surface. */
+  private isSteam(): boolean {
+    return this.sub.provider === "steam";
   }
 
   // Status pill: amber while winding down, green while active, neutral for the
@@ -118,9 +181,19 @@ export class SubscriptionPanel extends LitElement {
   }
 
   // The one date line that matters: when it renews, or when access ends.
+  //
+  // A grant never renews — `sub_renews_on` was a straight falsehood on it — so
+  // it gets an ends-on line instead. Checked before `cancelAtPeriodEnd` because
+  // a grant is never winding down: the server has no pending-cancel state for
+  // one, it expires immediately.
   private renderPeriodLine(): TemplateResult | typeof nothing {
     const periodEnd = this.periodEnd();
     if (!periodEnd) return nothing;
+    const dateKey = this.isGranted()
+      ? "account_modal.sub_granted_ends_on"
+      : this.sub.cancelAtPeriodEnd
+        ? "account_modal.sub_status_canceling_on"
+        : "account_modal.sub_renews_on";
     return html`<div
       class="flex items-center gap-2 text-sm ${this.sub.cancelAtPeriodEnd
         ? "text-amber-200/80"
@@ -142,13 +215,7 @@ export class SubscriptionPanel extends LitElement {
         <line x1="8" y1="3" x2="8" y2="7" />
         <line x1="16" y1="3" x2="16" y2="7" />
       </svg>
-      <span>
-        ${this.sub.cancelAtPeriodEnd
-          ? translateText("account_modal.sub_status_canceling_on", {
-              date: periodEnd,
-            })
-          : translateText("account_modal.sub_renews_on", { date: periodEnd })}
-      </span>
+      <span>${translateText(dateKey, { date: periodEnd })}</span>
     </div>`;
   }
 
@@ -193,7 +260,112 @@ export class SubscriptionPanel extends LitElement {
     `;
   }
 
+  /**
+   * The actions area for a grant: no buttons at all, just what it is.
+   *
+   * Every control on this panel is about billing, and a grant has none. Manage
+   * and Change Tier reach a billing account that does not exist; Cancel does
+   * something far worse than nothing (see `isGranted`). So the whole row is
+   * replaced by static copy — no anchor, no click handler, same shape as
+   * `renderManageOnWeb`.
+   *
+   * Two variants, on a fact the client already has rather than a guess. Grants
+   * come from two writers and only one of them sets an end date: a Steam
+   * ownership grant is a fixed free month (`currentPeriodEnd = now + 30d`), an
+   * admin comp is open-ended (`currentPeriodEnd` null, so no date line renders
+   * above either). Telling an admin-comped player their access came from a
+   * Steam purchase would be a fresh instance of exactly the dishonesty this
+   * change exists to remove.
+   */
+  private renderGrantedNote(): TemplateResult {
+    return html`
+      <p class="text-[11px] text-center text-white/40 leading-snug">
+        ${translateText(
+          this.sub.currentPeriodEnd
+            ? "account_modal.sub_granted_from_purchase"
+            : "account_modal.sub_granted_indefinite",
+        )}
+      </p>
+    `;
+  }
+
+  /**
+   * The Steam rail (infra Phase 9, OPE-230). Manage opens the Steam account
+   * page — the server's portal route returns that static URL for a Steam
+   * row — which is not a payment origin, so the desktop shell lets it through
+   * and the button stays on EVERY surface (unlike Stripe's, which the
+   * packaged build must not offer). Change Tier is launch policy S1
+   * (STEAM_TIER_CHANGE_IN_APP); when hidden, the copy says how a tier is
+   * changed. Cancel is shown (S2, Josh, 7 Sept 2026) and calls the same
+   * self-cancel route as Stripe's; the server cancels the agreement at Steam
+   * first. Nothing here claims an agreement can be re-enabled: there is no
+   * un-cancel on Steam (design §4.6 — a re-subscribe is a new agreement), so
+   * while winding down there is no Reactivate and the copy names the date.
+   */
+  private renderSteamActions(): TemplateResult {
+    const manage = html`<o-button
+      class="flex-1 min-w-[8rem]"
+      variant="secondary"
+      width="block"
+      size="md"
+      translationKey="account_modal.manage_subscription"
+      @click=${this.handleManage}
+    ></o-button>`;
+    if (this.sub.cancelAtPeriodEnd) {
+      // No Reactivate: there is no un-cancel API. Cancelled, active until
+      // the date; Manage opens the Steam subscriptions page.
+      return html`<div class="flex flex-col gap-2">
+        ${manage}
+        <p class="text-[11px] text-center text-white/40 leading-snug">
+          ${this.steamText(
+            "account_modal.manage_subscription_on_steam_ending",
+            "account_modal.manage_subscription_on_steam_ending_no_date",
+          )}
+        </p>
+      </div>`;
+    }
+    const note = html`<p
+      class="text-[11px] text-center text-white/40 leading-snug"
+    >
+      ${translateText(
+        STEAM_TIER_CHANGE_IN_APP
+          ? "account_modal.manage_subscription_on_steam"
+          : "account_modal.manage_subscription_on_steam_no_tier_change",
+      )}
+    </p>`;
+    return html`
+      <div class="flex flex-col gap-2">
+        <div class="flex flex-wrap gap-2">
+          ${STEAM_TIER_CHANGE_IN_APP
+            ? html`<o-button
+                class="flex-1 min-w-[8rem]"
+                variant="primary"
+                width="block"
+                size="md"
+                translationKey="account_modal.change_tier"
+                @click=${this.handleChangeTier}
+              ></o-button>`
+            : nothing}
+          ${manage}
+        </div>
+        ${note}
+        <button
+          @click=${this.handleCancel}
+          class="self-center text-[11px] font-bold uppercase tracking-widest text-white/30 hover:text-red-400 transition-colors py-1 cursor-pointer"
+        >
+          ${translateText("account_modal.cancel_subscription")}
+        </button>
+      </div>
+    `;
+  }
+
   private renderActions(): TemplateResult {
+    // Before every other branch, and NOT gated on the desktop shell: a grant is
+    // a property of the account, so a Steam buyer who signs in on the website
+    // sees the same panel and would meet the same one-way Cancel there.
+    if (this.isGranted()) return this.renderGrantedNote();
+    if (this.isSteam()) return this.renderSteamActions();
+
     // The whole desktop build, not just a Steam-authenticated session: the
     // guard that makes the button dead is in the shell and applies to every
     // packaged launch.

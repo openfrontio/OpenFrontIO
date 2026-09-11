@@ -19,7 +19,6 @@ export interface ThemeSettings {
   teamColors: Record<string, string>;
   humanColors: string[];
   nationColors: string[];
-  botColors: string[];
   /** Used when the primary palettes are exhausted. */
   fallbackColors: string[];
   /** Border = territory color darkened by this absolute amount. */
@@ -410,11 +409,6 @@ export interface RenderSettings {
     recolorStructures: boolean;
     /** Opacity of the translucent affiliation-colored territory fill. */
     fillAlpha: number;
-    /**
-     * When true, hovering another player's territory recolors alt-view from
-     * that player's diplomacy; when false, always use the local player's.
-     */
-    hoverPerspective: boolean;
   };
   tileDrip: {
     /**

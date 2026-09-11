@@ -90,7 +90,7 @@ ENV GIT_COMMIT="$GIT_COMMIT"
 
 RUN <<'EOF' tee /usr/local/bin/start.sh
 #!/bin/sh
-# Generate the create-game nginx upstream from NUM_WORKERS before nginx starts.
+# Generate the create-game nginx upstream from CLUSTER_JSON before nginx starts.
 /usr/local/bin/generate-nginx-upstream.sh
 
 if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
