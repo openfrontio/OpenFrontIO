@@ -578,3 +578,50 @@ describe("getDefaultKeybinds", () => {
     expect(macKeybinds.buildMenuModifier).toBe("MetaLeft");
   });
 });
+
+describe("UserSettings audio volumes", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("clamps an out-of-range legacy value on read", () => {
+    // The old two sliders wrote unbounded values; the tab renders 0-100.
+    localStorage.setItem("settings.soundEffectsVolume", "1.5");
+    expect(new UserSettings().audioVolume("effects")).toBe(1);
+
+    localStorage.setItem("settings.backgroundMusicVolume", "-1");
+    expect(new UserSettings().audioVolume("music")).toBe(0);
+  });
+
+  it("clamps on write too", () => {
+    const s = new UserSettings();
+    s.setAudioVolume("master", 1.7);
+    expect(s.audioVolume("master")).toBe(1);
+    s.setAudioVolume("master", -0.4);
+    expect(s.audioVolume("master")).toBe(0);
+  });
+
+  it("reads the legacy sfx key through to all four split channels", () => {
+    localStorage.setItem("settings.soundEffectsVolume", "0.65");
+    const s = new UserSettings();
+    expect(s.audioVolume("effects")).toBeCloseTo(0.65);
+    expect(s.audioVolume("alerts")).toBeCloseTo(0.65);
+    expect(s.audioVolume("ambience")).toBeCloseTo(0.65);
+    expect(s.audioVolume("interface")).toBeCloseTo(0.65);
+    expect(s.audioVolume("music")).toBeCloseTo(0.5);
+  });
+
+  it("respects a legacy 0 rather than falling back to the default", () => {
+    // Someone who muted the old slider stays muted, on every channel it fed.
+    localStorage.setItem("settings.soundEffectsVolume", "0");
+    const s = new UserSettings();
+    expect(s.audioVolume("effects")).toBe(0);
+    expect(s.audioVolume("alerts")).toBe(0);
+    expect(s.audioVolume("ambience")).toBe(0);
+    expect(s.audioVolume("interface")).toBe(0);
+  });
+
+  it("prefers a channel's own key over the legacy one", () => {
+    localStorage.setItem("settings.soundEffectsVolume", "0.65");
+    localStorage.setItem("settings.audio.effects", "0.2");
+    expect(new UserSettings().audioVolume("effects")).toBeCloseTo(0.2);
+  });
+});
