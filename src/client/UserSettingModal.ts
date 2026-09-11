@@ -25,6 +25,7 @@ import {
 import { isDesktopShell } from "./DesktopShell";
 import { Platform } from "./Platform";
 import {
+  PlaySoundEffectEvent,
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
 } from "./sound/Sounds";
@@ -445,6 +446,7 @@ export class UserSettingModal extends BaseModal {
     // only follows the slider through the bus. The page instance has no bus
     // and nothing playing, where storing the value is the whole job.
     this.eventBus?.emit(new SetBackgroundMusicVolumeEvent(volume));
+    this.playSliderTick();
     this.requestUpdate();
   }
 
@@ -457,7 +459,20 @@ export class UserSettingModal extends BaseModal {
     const volume = value / 100;
     this.userSettings.setSoundEffectsVolume(volume);
     this.eventBus?.emit(new SetSoundEffectsVolumeEvent(volume));
+    this.playSliderTick();
     this.requestUpdate();
+  }
+
+  // @change fires throughout a drag; rate-limit the tick so dragging sounds
+  // like a ratchet rather than a buzz. Re-homed from SettingsModal, which no
+  // longer owns the sliders.
+  private lastSliderTickMs = 0;
+
+  private playSliderTick() {
+    const now = Date.now();
+    if (now - this.lastSliderTickMs < 150) return;
+    this.lastSliderTickMs = now;
+    this.eventBus?.emit(new PlaySoundEffectEvent("slider"));
   }
 
   private renderAudioSettings() {
