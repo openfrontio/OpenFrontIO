@@ -9,6 +9,13 @@ import { GameView } from "../view";
 // a meaningful part of the view (scale is pixels per tile; default is 1.8,
 // clamped to [0.2, 20]).
 const AMBIENCE_ZOOM_SCALE = 8;
+const MAX_VIEW_SCALE = 20;
+// The sound designer's spec: -20 dB below the channel at the deepest zoom,
+// fading to silence as the player pulls back out. 10^(-20/20) = 0.1.
+const AMBIENCE_PEAK_GAIN = 0.1;
+// Re-emitting on every sub-perceptible step would put an event on the bus
+// each tick of a slow zoom; a step is roughly a quarter of a dB here.
+const GAIN_EPSILON = 0.003;
 // The structure must be this close (in tiles) to the center of the view.
 const AMBIENCE_RANGE_TILES = 20;
 
@@ -30,6 +37,7 @@ const AMBIENT_STRUCTURE_TYPES: readonly UnitType[] = [
  */
 export class AmbienceController implements Controller {
   private current: AmbienceTrack | null = null;
+  private currentGain = 0;
 
   constructor(
     private readonly game: GameView,
@@ -39,9 +47,27 @@ export class AmbienceController implements Controller {
 
   tick(): void {
     const next = this.desiredTrack();
-    if (next === this.current) return;
+    const gain = next === null ? 0 : this.zoomGain();
+    if (
+      next === this.current &&
+      Math.abs(gain - this.currentGain) < GAIN_EPSILON
+    ) {
+      return;
+    }
     this.current = next;
-    this.eventBus.emit(new SetAmbienceEvent(next));
+    this.currentGain = gain;
+    this.eventBus.emit(new SetAmbienceEvent(next, gain));
+  }
+
+  /**
+   * Zoom envelope, 0 at the threshold rising to the designer's -20 dB ceiling
+   * at maximum zoom, so a structure fades up as the player leans into it
+   * rather than snapping on.
+   */
+  private zoomGain(): number {
+    const span = MAX_VIEW_SCALE - AMBIENCE_ZOOM_SCALE;
+    const t = (this.transformHandler.scale - AMBIENCE_ZOOM_SCALE) / span;
+    return AMBIENCE_PEAK_GAIN * Math.max(0, Math.min(1, t));
   }
 
   private desiredTrack(): AmbienceTrack | null {

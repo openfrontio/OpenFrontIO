@@ -1,5 +1,6 @@
 import { assetUrl } from "../../core/AssetUrls";
 import { GameEvent } from "../../core/EventBus";
+import { AudioCategory } from "../../core/game/UserSettings";
 
 export type SoundEffect =
   | "ka-ching"
@@ -50,7 +51,9 @@ export const soundEffectUrls: ReadonlyMap<SoundEffect, string> = new Map([
   ["build-warship", assetUrl("sounds/effects/build-warship.mp3")],
   ["sam-built", assetUrl("sounds/effects/sam-built.mp3")],
   ["silo-built", assetUrl("sounds/effects/silo-built.mp3")],
-  ["message", assetUrl("sounds/effects/message.mp3")],
+  // Same morse-code cue as the alliance request, per the designer's notes.
+  // One asset, two registry entries, rather than two identical files.
+  ["message", assetUrl("sounds/effects/alliance-suggested.mp3")],
   ["click", assetUrl("sounds/effects/click.mp3")],
   ["click-1", assetUrl("sounds/effects/click-1.mp3")],
   ["click-2", assetUrl("sounds/effects/click-2.mp3")],
@@ -81,8 +84,70 @@ export class PlaySoundEffectEvent implements GameEvent {
   constructor(public readonly effect: SoundEffect) {}
 }
 
+/**
+ * Mixer channel a cue plays on. "master" is the global trim and "music" is
+ * owned by the two looping tracks, so neither is ever a cue's channel.
+ */
+export type CueCategory = Exclude<AudioCategory, "master" | "music">;
+
+// Exhaustive by type: adding a SoundEffect without a channel fails to compile.
+const CUE_CATEGORY: Record<SoundEffect, Exclude<CueCategory, "ambience">> = {
+  // Interface — frequent, information-free, first thing people turn off.
+  click: "interface",
+  "click-1": "interface",
+  "click-2": "interface",
+  "click-3": "interface",
+  slider: "interface",
+
+  // Alerts — things the player needs to know, which is why they stay audible
+  // when the window is unfocused unless that is turned off.
+  "nuke-warning": "alerts",
+  "alliance-suggested": "alerts",
+  "alliance-accepted": "alerts",
+  "alliance-declined": "alerts",
+  "alliance-broken": "alerts",
+  message: "alerts",
+
+  // Effects — the world and the player's own actions.
+  "atom-launch": "effects",
+  "atom-hit": "effects",
+  "hydrogen-launch": "effects",
+  "hydrogen-hit": "effects",
+  "mirv-launch": "effects",
+  "ka-ching": "effects",
+  conquered: "effects",
+  "build-port": "effects",
+  "build-city": "effects",
+  "build-defense-post": "effects",
+  "build-warship": "effects",
+  "build-factory": "effects",
+  "build-train-station": "effects",
+  "sam-built": "effects",
+  "silo-built": "effects",
+  "transport-ship": "effects",
+  spawn: "effects",
+  "game-start": "effects",
+  victory: "effects",
+  defeat: "effects",
+};
+
+/** Channel of a cue. A pure function of the name — call sites never choose. */
+export function categoryOf(name: SoundEffect | AmbienceTrack): CueCategory {
+  return ambienceUrls.has(name as AmbienceTrack)
+    ? "ambience"
+    : CUE_CATEGORY[name as SoundEffect];
+}
+
 export class SetAmbienceEvent implements GameEvent {
-  constructor(public readonly track: AmbienceTrack | null) {}
+  /**
+   * @param gain 0-1 zoom envelope from AmbienceController, multiplied by the
+   *   ambience channel volume. Aiden's spec is -20 dB at the deepest zoom
+   *   fading to silence as the player pulls back, so this peaks at 0.1.
+   */
+  constructor(
+    public readonly track: AmbienceTrack | null,
+    public readonly gain: number = 1,
+  ) {}
 }
 
 export class SetSoundEffectsVolumeEvent implements GameEvent {

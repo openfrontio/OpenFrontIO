@@ -82,6 +82,14 @@ const AUDIO_DEFAULTS: Record<AudioCategory, number> = {
 // inherits the value the player had already chosen under the old two-slider
 // scheme, so splitting effects into four channels doesn't reset three of them.
 // The legacy keys are left in place and simply stop being written.
+// Channels the single old "sound effects" slider used to cover.
+const SPLIT_FROM_SOUND_EFFECTS: readonly AudioCategory[] = [
+  "effects",
+  "alerts",
+  "ambience",
+  "interface",
+];
+
 const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
   music: "settings.backgroundMusicVolume",
   effects: "settings.soundEffectsVolume",
@@ -920,8 +928,18 @@ export class UserSettings {
     return this.audioVolume("effects");
   }
 
-  /** @deprecated use setAudioVolume("effects", v). */
+  /**
+   * @deprecated use setAudioVolume("effects", v).
+   *
+   * Writes every channel that split out of the old "sound effects" slider,
+   * not just effects. Until the Audio tab ships there is one slider for all
+   * four, and writing only effects would leave clicks, alerts and ambience
+   * stuck at the inherited value with no control that moves them — a player
+   * muting sound effects would still hear them.
+   */
   setSoundEffectsVolume(volume: number): void {
-    this.setAudioVolume("effects", volume);
+    for (const category of SPLIT_FROM_SOUND_EFFECTS) {
+      this.setAudioVolume(category, volume);
+    }
   }
 }

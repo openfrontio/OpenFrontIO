@@ -124,6 +124,16 @@ describe("legacy volume accessors", () => {
     expect(s.soundEffectsVolume()).toBeCloseTo(0.7);
   });
 
+  it("move every channel the single old effects slider covered", () => {
+    // Until the Audio tab ships there is one slider for all four; writing
+    // only effects would leave clicks, alerts and ambience uncontrollable.
+    const s = new UserSettings();
+    s.setSoundEffectsVolume(0.3);
+    for (const category of INHERITS_EFFECTS) {
+      expect(s.audioVolume(category)).toBeCloseTo(0.3);
+    }
+  });
+
   it("write to the channel key, so old and new sliders agree", () => {
     const s = new UserSettings();
     s.setBackgroundMusicVolume(0.4);
