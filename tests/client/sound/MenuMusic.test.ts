@@ -34,7 +34,9 @@ let onChangeCallbacks: Array<(category: string) => void>;
 let unsubscribed: number;
 
 const buildMixer = () => {
-  musicLevel = 0.89;
+  // Real defaults: slider 0.5, squared by perceptualGain, times the -1 dB
+  // music trim.
+  musicLevel = 0.5 * 0.5 * 0.89;
   onChangeCallbacks = [];
   unsubscribed = 0;
   mixer = {
@@ -68,11 +70,24 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   for (const [type, fn] of registered) document.removeEventListener(type, fn);
 });
 
 const themes = () => howlInstances.filter((h) => h.src.includes("menu-theme"));
+
+/** Most recent volume the ramp wrote at this Howl. */
+const volumeWrites = (howl: any): number[] =>
+  howl.volume.mock.calls
+    .filter((c: unknown[]) => c.length > 0)
+    .map((c: unknown[]) => c[0] as number);
+
+/** Most recent volume the ramp wrote at this Howl. */
+const lastVolume = (howl: any) => {
+  const writes = volumeWrites(howl);
+  return writes[writes.length - 1];
+};
 
 describe("menu music", () => {
   it("streams the theme rather than decoding it up front", () => {
@@ -90,6 +105,7 @@ describe("menu music", () => {
   });
 
   it("ramps up from silence instead of arriving at full level", () => {
+    vi.useFakeTimers();
     startMenuMusic(mixer);
     document.dispatchEvent(new Event("pointerdown"));
 
@@ -97,16 +113,49 @@ describe("menu music", () => {
     // Registering writes the channel volume straight onto the Howl, which is
     // what made the theme snap in at full level. It has to wait for the ramp.
     expect(mixer.register).not.toHaveBeenCalled();
-    expect(theme.fade).toHaveBeenCalledTimes(1);
-    const [from, to, ms] = theme.fade.mock.calls[0];
-    expect(from).toBe(0);
-    expect(to).toBeCloseTo(0.89);
-    expect(ms).toBeGreaterThanOrEqual(1000);
+    expect(lastVolume(theme)).toBeLessThan(musicLevel * 0.01);
 
-    // Howler fires "fade" when the ramp lands; the mixer takes it on there.
-    theme.once.mock.calls.find((c: any[]) => c[0] === "fade")[1]();
+    vi.advanceTimersByTime(2100);
+
     expect(mixer.register).toHaveBeenCalledWith(theme, "music");
     expect(unsubscribed).toBe(1);
+  });
+
+  it("spreads the ramp evenly in dB, not in amplitude", () => {
+    // The mechanism was never the problem; the curve was. Howler's fade() is
+    // linear in amplitude, so at the halfway mark it is already 6 dB below
+    // target -- perceptually arrived, with a second of inaudible creep left.
+    // An even dB ramp is around 24 dB down at the same point.
+    vi.useFakeTimers();
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+    const theme = themes()[0];
+    // Not Howler's fade at all any more: it quantises to 0.01, which at this
+    // target makes the very first step a 6 dB jump.
+    expect(theme.fade).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1000);
+    const halfway = 20 * Math.log10(lastVolume(theme) / musicLevel);
+
+    expect(halfway).toBeLessThan(-18);
+    expect(halfway).toBeGreaterThan(-30);
+  });
+
+  it("keeps climbing through the second half, where linear gives up", () => {
+    vi.useFakeTimers();
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+    const theme = themes()[0];
+
+    vi.advanceTimersByTime(1000);
+    const half = lastVolume(theme);
+    vi.advanceTimersByTime(500);
+    const threeQuarters = lastVolume(theme);
+
+    // Same dB gain per unit time throughout: the step from half to three
+    // quarters is a real, audible climb rather than a fraction of a dB.
+    const climb = 20 * Math.log10(threeQuarters / half);
+    expect(climb).toBeGreaterThan(6);
   });
 
   it("does not attempt a hanging fade when the channel is silent", () => {
@@ -137,28 +186,38 @@ describe("menu music", () => {
   });
 
   it("ramps again on the start after a menu restore", () => {
+    vi.useFakeTimers();
     startMenuMusic(mixer);
     document.dispatchEvent(new Event("pointerdown"));
     document.dispatchEvent(new Event("game-starting"));
     document.dispatchEvent(new Event("menu-restored"));
     document.dispatchEvent(new Event("pointerdown"));
 
+    // Coming back to the home page is the same moment on a page that is
+    // already open, so it ramps rather than slamming in.
     const second = themes()[1];
-    expect(second.fade).toHaveBeenCalledTimes(1);
-    expect(second.fade.mock.calls[0][0]).toBe(0);
+    expect(lastVolume(second)).toBeLessThan(musicLevel * 0.01);
+    vi.advanceTimersByTime(1000);
+    const halfway = 20 * Math.log10(lastVolume(second) / musicLevel);
+    expect(halfway).toBeLessThan(-18);
+    expect(halfway).toBeGreaterThan(-30);
   });
 
-  it("drops the fade-in settle when a game starts mid-ramp", () => {
+  it("stops the ramp when a game starts mid-ramp", () => {
+    vi.useFakeTimers();
     startMenuMusic(mixer);
     document.dispatchEvent(new Event("pointerdown"));
     const theme = themes()[0];
+    vi.advanceTimersByTime(200);
+    const writes = volumeWrites(theme).length;
 
     document.dispatchEvent(new Event("game-starting"));
+    vi.advanceTimersByTime(3000);
 
-    // The pending settle would otherwise fire off the fade-OUT and hand a
-    // departing theme back to the mixer, which would then keep writing volume
-    // to an unloaded Howl forever.
-    expect(theme.off).toHaveBeenCalledWith("fade");
+    // Left running, the ramp would write over the fade-out and then hand a
+    // departing theme back to the mixer, which would go on writing volume to
+    // an unloaded Howl for the session.
+    expect(volumeWrites(theme).length).toBe(writes);
     expect(mixer.register).not.toHaveBeenCalled();
     expect(mixer.unregister).toHaveBeenCalledWith(theme);
     expect(unsubscribed).toBe(1);
