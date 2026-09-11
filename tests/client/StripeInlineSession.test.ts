@@ -121,6 +121,29 @@ describe("InlineCheckoutSession secret caching", () => {
     );
   });
 
+  it("rides receiptEmail on the intent as receipt_email", async () => {
+    const { session, stripe } = makeSession();
+    mintSecret("pi_1_secret_1");
+    await session.confirm({ receiptEmail: "buyer@example.com" });
+    expect(stripe.confirmPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        confirmParams: expect.objectContaining({
+          receipt_email: "buyer@example.com",
+        }),
+      }),
+    );
+
+    // No email (linked account) → no receipt_email key at all: an empty
+    // string would CLEAR the field on the intent.
+    mintSecret("pi_2_secret_2");
+    await session.confirm({ receiptEmail: null });
+    const calls = stripe.confirmPayment.mock.calls as unknown as {
+      confirmParams: Record<string, unknown>;
+    }[][];
+    const params = calls[calls.length - 1][0];
+    expect("receipt_email" in params.confirmParams).toBe(false);
+  });
+
   it("carries refetchCatalog through a minting error", async () => {
     const { session } = makeSession();
     mintMock.mockResolvedValueOnce({

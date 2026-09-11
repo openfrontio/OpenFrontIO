@@ -96,6 +96,27 @@ them to player-facing messages.
   `/users/@me` immediately after the confirm and once more ~2.5s later, and
   its "purchase pending" messaging covers anything slower.
 
+## Buyer email (guest account recovery)
+
+The redirect flow attached the Stripe-Checkout-collected email to the
+purchasing player's account post-fulfillment (`handlePlayerAccount`), which
+is what made a guest's purchase recoverable. The inline path currently skips
+this — `applyInlineIntentSettled` passes `buyerEmail: undefined` and runs no
+after-commit side effects.
+
+The client now closes the collection half: when the account has **no login
+email**, the wallet sheet requires one (`emailRequired`) and the card modal
+shows an email field, and either way the address rides on the PaymentIntent
+as **`receipt_email`** at confirm time. Accounts that already have a login
+email are not asked, and no `receipt_email` is set.
+
+API side: in the `payment_intent.succeeded` fulfillment, read
+`pi.receipt_email` and, when present, run the same post-fulfillment as the
+session path — `handlePlayerAccount` (same conflict rules), confirmation
+email, marketing-consent write. Absent `receipt_email` means the buyer
+already had a linked email; no attach needed. No extra Stripe fetch is
+required — the field is first-class on the intent object in the event.
+
 ## Intent lifecycle and the rate limit
 
 Two client behaviours matter here:

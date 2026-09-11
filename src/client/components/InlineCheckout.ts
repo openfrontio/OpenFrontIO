@@ -6,6 +6,7 @@ import type {
 import type { PropertyValues, TemplateResult } from "lit";
 import { html, LitElement, render as litRender, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { getUserMe } from "../Api";
 import { broadcastFreshUserMe, invalidateCosmetics } from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
 import type { PurchaseRequest } from "../Payments";
@@ -65,6 +66,9 @@ export class InlineCheckout extends LitElement {
   @state() private cardReady = false;
   @state() private modalError: string | null = null;
   @state() private fallbackBusy = false;
+  /** Whether the card modal must collect a buyer email (guest account). */
+  @state() private emailRequired = false;
+  @state() private emailValue = "";
 
   private session: InlineCheckoutSession | null = null;
   private sessionPromise: Promise<InlineCheckoutSession | null> | null = null;
@@ -161,12 +165,28 @@ export class InlineCheckout extends LitElement {
     }
   }
 
+  /**
+   * Whether this purchase must collect a buyer email: the account has no
+   * login email, so the purchase email is the only thing that makes the
+   * purchase recoverable (the API attaches it post-fulfillment, exactly as
+   * the redirect flow did via Stripe Checkout's email field). Accounts that
+   * already have one are never asked again — re-collecting risks attaching
+   * a second, different address.
+   */
+  private async needsEmail(): Promise<boolean> {
+    const me = await getUserMe();
+    return me === false || !me.user.email;
+  }
+
   private async initWallet(): Promise<void> {
-    const session = await this.ensureSession();
+    const [session, emailRequired] = await Promise.all([
+      this.ensureSession(),
+      this.needsEmail(),
+    ]);
     if (session === null || this.expressElement !== null) return;
     const container = this.querySelector("[data-express-checkout]");
     if (container === null || !this.isConnected) return;
-    const element = session.createExpressCheckoutElement();
+    const element = session.createExpressCheckoutElement({ emailRequired });
     element.on("ready", ({ availablePaymentMethods }) => {
       // undefined means no wallet button rendered; keep the row collapsed so
       // the tile looks intentional rather than missing something.
@@ -190,7 +210,12 @@ export class InlineCheckout extends LitElement {
     }
     this.confirming = true;
     try {
-      const result = await this.session.confirm();
+      // The wallet sheet's email field (present when the account has none)
+      // arrives on the confirm event; ride it on the intent so the webhook
+      // can attach it to the account.
+      const result = await this.session.confirm({
+        receiptEmail: event.billingDetails?.email ?? null,
+      });
       if (result.kind === "error") {
         // "payment"-stage errors (a decline) already resolved the sheet.
         if (result.stage === "checkout")
@@ -215,13 +240,17 @@ export class InlineCheckout extends LitElement {
   }
 
   private async openCardModal(): Promise<void> {
-    const session = await this.ensureSession();
+    const [session, emailRequired] = await Promise.all([
+      this.ensureSession(),
+      this.needsEmail(),
+    ]);
     if (session === null) {
       // Stripe.js became unavailable between render and click (blocked,
       // offline). The redirect flow still works; use it.
       await this.runFallback();
       return;
     }
+    this.emailRequired = emailRequired;
     this.modalOpen = true;
     this.modalError = null;
     this.cardReady = false;
@@ -259,12 +288,21 @@ export class InlineCheckout extends LitElement {
     this.destroyPaymentElement();
   }
 
+  /** Loose on purpose — Stripe and the server both validate; this only
+   * gates the pay button so a guest can't submit with no address at all. */
+  private emailLooksValid(): boolean {
+    return /^\S+@\S+\.\S+$/.test(this.emailValue.trim());
+  }
+
   private async confirmCard(): Promise<void> {
     if (this.session === null || this.confirming || !this.cardReady) return;
+    if (this.emailRequired && !this.emailLooksValid()) return;
     this.confirming = true;
     this.modalError = null;
     try {
-      const result = await this.session.confirm();
+      const result = await this.session.confirm({
+        receiptEmail: this.emailRequired ? this.emailValue.trim() : null,
+      });
       if (result.kind === "error") {
         if (result.refetchCatalog) invalidateCosmetics();
         this.modalError = result.message;
@@ -364,6 +402,28 @@ export class InlineCheckout extends LitElement {
           <h2 class="text-lg font-bold text-white mb-4 pr-8">
             ${translateText("store.pay_with_card")}
           </h2>
+          ${this.emailRequired
+            ? html`<label
+                  class="mb-1 block text-xs font-medium text-white/70"
+                  for="inline-checkout-email"
+                  >${translateText("store.card_email_label")}</label
+                >
+                <input
+                  id="inline-checkout-email"
+                  data-checkout-email
+                  type="email"
+                  autocomplete="email"
+                  .value=${this.emailValue}
+                  ?disabled=${this.confirming}
+                  @input=${(e: Event) => {
+                    this.emailValue = (e.target as HTMLInputElement).value;
+                  }}
+                  class="mb-1 w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                />
+                <p class="mb-3 text-xs text-white/50">
+                  ${translateText("store.card_email_hint")}
+                </p>`
+            : nothing}
           <div data-payment-element class="mb-4 min-h-[6rem]"></div>
           ${this.modalError !== null
             ? html`<p class="mb-4 text-sm font-medium text-red-300">
@@ -372,7 +432,9 @@ export class InlineCheckout extends LitElement {
             : nothing}
           <button
             @click=${() => void this.confirmCard()}
-            ?disabled=${this.confirming || !this.cardReady}
+            ?disabled=${this.confirming ||
+            !this.cardReady ||
+            (this.emailRequired && !this.emailLooksValid())}
             class="w-full min-h-11 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-base font-bold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
           >
             ${this.confirming

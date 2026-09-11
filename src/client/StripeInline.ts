@@ -129,10 +129,18 @@ export class InlineCheckoutSession {
    * Wallets only. Link/PayPal/Klarna/Amazon Pay would each add a branded
    * button to every tile; the tile design has room for exactly one wallet
    * button, and the card form already covers everyone else.
+   *
+   * `emailRequired` makes the wallet sheet expose an email field — wallets
+   * do NOT share the buyer's email by default. Set it for accounts with no
+   * login email: the purchase email is what lets a guest recover the account
+   * (the API attaches it post-fulfillment, as on the redirect flow).
    */
-  createExpressCheckoutElement(): StripeExpressCheckoutElement {
+  createExpressCheckoutElement(options: {
+    emailRequired: boolean;
+  }): StripeExpressCheckoutElement {
     return this.elements.create("expressCheckout", {
       buttonHeight: 44,
+      emailRequired: options.emailRequired,
       paymentMethods: {
         link: "never",
         paypal: "never",
@@ -161,8 +169,17 @@ export class InlineCheckoutSession {
    * The whole confirm, shared by the wallet button's `confirm` event and the
    * card form's submit button: validate the collected details, mint (or
    * reuse) the PaymentIntent, confirm it in-page.
+   *
+   * `receiptEmail` is the buyer email collected inline (the wallet sheet's
+   * email field, or the card modal's input) and it rides on the intent as
+   * `receipt_email` — first-class on the PaymentIntent so the settlement
+   * webhook can attach it to the account without fetching anything extra.
+   * The redirect flow got this from Stripe Checkout for free; inline has to
+   * carry it explicitly, or a guest's purchase is unrecoverable.
    */
-  async confirm(): Promise<InlineConfirmResult> {
+  async confirm(
+    options: { receiptEmail?: string | null } = {},
+  ): Promise<InlineConfirmResult> {
     const { error: submitError } = await this.elements.submit();
     if (submitError) {
       // Validation problems ("incomplete card number") carry a message meant
@@ -195,7 +212,12 @@ export class InlineCheckoutSession {
     const { error, paymentIntent } = await this.stripe.confirmPayment({
       elements: this.elements,
       clientSecret: this.clientSecret,
-      confirmParams: { return_url: inlineReturnUrl(this.request.kind) },
+      confirmParams: {
+        return_url: inlineReturnUrl(this.request.kind),
+        ...(options.receiptEmail
+          ? { receipt_email: options.receiptEmail }
+          : {}),
+      },
       redirect: "if_required",
     });
     if (error) {

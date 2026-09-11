@@ -5,6 +5,12 @@ vi.mock("../../src/client/StripeInline", () => ({
   InlineCheckoutSession: { create: vi.fn() },
 }));
 
+vi.mock("../../src/client/Api", () => ({
+  // Linked email by default, so ordinary tests exercise the no-email-field
+  // modal; guest-path tests override per-test.
+  getUserMe: vi.fn(async () => ({ user: { email: "linked@example.com" } })),
+}));
+
 vi.mock("../../src/client/Cosmetics", () => ({
   broadcastFreshUserMe: vi.fn(async () => {}),
   invalidateCosmetics: vi.fn(),
@@ -21,6 +27,7 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
 
 // The side-effect import is what registers the element; the named import is
 // only used in type positions and would be elided on its own.
+import { getUserMe } from "../../src/client/Api";
 import "../../src/client/components/InlineCheckout";
 import type { InlineCheckout } from "../../src/client/components/InlineCheckout";
 import {
@@ -89,6 +96,11 @@ async function renderComponent(
 beforeEach(() => {
   vi.clearAllMocks();
   availableMock.mockReturnValue(true);
+  // mockResolvedValue persists across tests (clearAllMocks keeps
+  // implementations), so pin the default back each time.
+  (getUserMe as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    user: { email: "linked@example.com" },
+  });
 });
 
 afterEach(() => {
@@ -261,6 +273,99 @@ describe("inline-checkout card modal", () => {
     expect(document.body.textContent).toContain("Your card was declined.");
     expect(document.body.querySelector("[data-payment-element]")).toBeTruthy();
     expect(payment.destroy).not.toHaveBeenCalled();
+  });
+});
+
+describe("inline-checkout buyer email", () => {
+  const userMeMock = getUserMe as unknown as ReturnType<typeof vi.fn>;
+
+  it("asks the wallet sheet for an email only when the account has none", async () => {
+    const guest = fakeSession();
+    createMock.mockResolvedValue(guest.session);
+    userMeMock.mockResolvedValue(false);
+    await renderComponent();
+    expect(guest.session.createExpressCheckoutElement).toHaveBeenCalledWith({
+      emailRequired: true,
+    });
+
+    document.body.innerHTML = "";
+    const linked = fakeSession();
+    createMock.mockResolvedValue(linked.session);
+    userMeMock.mockResolvedValue({ user: { email: "linked@example.com" } });
+    await renderComponent();
+    expect(linked.session.createExpressCheckoutElement).toHaveBeenCalledWith({
+      emailRequired: false,
+    });
+  });
+
+  it("rides the wallet-collected email on the confirm", async () => {
+    const { session, express } = fakeSession();
+    createMock.mockResolvedValue(session);
+    await renderComponent();
+
+    express.fire("confirm", {
+      paymentFailed: vi.fn(),
+      billingDetails: { email: "buyer@example.com" },
+    });
+    await vi.waitFor(() =>
+      expect(session.confirm).toHaveBeenCalledWith({
+        receiptEmail: "buyer@example.com",
+      }),
+    );
+  });
+
+  it("collects an email in the card modal for guests, and gates pay on it", async () => {
+    const { session, payment } = fakeSession();
+    createMock.mockResolvedValue(session);
+    userMeMock.mockResolvedValue(false);
+    const el = await renderComponent();
+
+    el.querySelector<HTMLButtonElement>(".purchase-sparkle-btn")!.click();
+    await vi.waitFor(() => expect(payment.mount).toHaveBeenCalled());
+    payment.fire("ready", {});
+    await el.updateComplete;
+
+    const input = document.body.querySelector<HTMLInputElement>(
+      "[data-checkout-email]",
+    )!;
+    expect(input).toBeTruthy();
+    const pay = Array.from(document.body.querySelectorAll("button")).find((b) =>
+      b.textContent!.includes("store.pay_amount"),
+    )!;
+    // Card form is ready but no email yet: the button must hold.
+    expect(pay.disabled).toBe(true);
+
+    input.value = "guest@example.com";
+    input.dispatchEvent(new Event("input"));
+    await el.updateComplete;
+    expect(pay.disabled).toBe(false);
+
+    pay.click();
+    await vi.waitFor(() =>
+      expect(session.confirm).toHaveBeenCalledWith({
+        receiptEmail: "guest@example.com",
+      }),
+    );
+  });
+
+  it("shows no email field when the account already has one", async () => {
+    const { session, payment } = fakeSession();
+    createMock.mockResolvedValue(session);
+    const el = await renderComponent();
+
+    el.querySelector<HTMLButtonElement>(".purchase-sparkle-btn")!.click();
+    await vi.waitFor(() => expect(payment.mount).toHaveBeenCalled());
+    payment.fire("ready", {});
+    await el.updateComplete;
+
+    expect(document.body.querySelector("[data-checkout-email]")).toBeNull();
+    const pay = Array.from(document.body.querySelectorAll("button")).find((b) =>
+      b.textContent!.includes("store.pay_amount"),
+    )!;
+    pay.click();
+    await vi.waitFor(() =>
+      expect(session.confirm).toHaveBeenCalledWith({ receiptEmail: null }),
+    );
   });
 });
 

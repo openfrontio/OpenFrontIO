@@ -42,6 +42,13 @@ Flow (deferred-intent, per current Stripe docs for `@stripe/stripe-js` v9):
    re-read `/users/@me` (immediately and once again ~2.5s later for webhook
    lag). **The webhook grants the entitlement, never the client.**
 
+Buyer email: when the account has no login email, the wallet sheet requires
+one (`emailRequired` — wallets don't share it by default) and the card modal
+shows an email field; the address rides on the PaymentIntent as
+`receipt_email` so the API's settlement webhook can attach it to the account
+(guest purchase recovery, mirroring what Stripe Checkout's email field did on
+the redirect flow). Linked accounts are never re-asked.
+
 What checks out inline: currency packs and the custom plutonium amount.
 Subscriptions are recurring — not a PaymentIntent — and keep the redirect
 flow, as do dollar-priced tiles whose display price the client can't parse
