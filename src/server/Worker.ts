@@ -702,7 +702,31 @@ export async function startWorker() {
             },
           );
         }
-        username = resolvedJoin.username;
+        if (resolvedJoin.outcome === "verified") {
+          // The account name was screened when it was set, but the blocklist
+          // can move after that and nothing re-screens on read. Run it
+          // through the same censor the client-sent name went through, with
+          // the resolved clan tag so the cross-boundary check applies. A
+          // rewrite means the account name is no longer displayable: keep
+          // the already-screened join name and drop the check rather than
+          // put a banned name in the lobby with a badge on it.
+          const screened = censorPlayer(resolvedJoin.username, resolvedClanTag);
+          if (
+            screened.username === resolvedJoin.username &&
+            screened.clanTag === resolvedClanTag
+          ) {
+            username = resolvedJoin.username;
+          } else {
+            delete cosmeticResult.cosmetics.verified;
+            log.warn(
+              "Verified account name rewritten by the censor; joining unverified",
+              {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+              },
+            );
+          }
+        }
 
         // Create client and add to game
         const client = new Client(
