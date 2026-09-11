@@ -204,6 +204,35 @@ describe("ensureServerList", () => {
     expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
   });
 
+  // The same rule as the no-list case, on the other branch: once the list is
+  // stale it STAYS stale until an attempt succeeds, so a failing API would
+  // otherwise get one background refresh per caller — and the matchmaking
+  // poll is a caller every second. The list keeps serving throughout.
+  it("does not re-refresh for every caller while a stale refresh keeps failing", async () => {
+    vi.useFakeTimers();
+    expect(await ensureServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Stale now, and the refresh behind the answer fails.
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    await vi.advanceTimersByTimeAsync(REFRESH_MS + 1);
+    expect(await ensureServerList()).toBe("api");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    for (let i = 0; i < 20; i++) {
+      await vi.advanceTimersByTimeAsync(400);
+      expect(await ensureServerList()).toBe("api");
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+
+    // Once the retry interval is up, the next ask may refresh again.
+    await vi.advanceTimersByTimeAsync(RETRY_MS);
+    expect(await ensureServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it("falls back to BOOTSTRAP_CONFIG when the API is unreachable", async () => {
     fetchMock.mockRejectedValue(new TypeError("network down"));
     expect(await ensureServerList()).toBe("fallback");
