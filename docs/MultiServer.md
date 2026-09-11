@@ -330,3 +330,63 @@ wait for games to end), then delete its cluster entries and its
   append-only forever, numWorkers immutable while a letter has live games,
   and membership ≠ liveness (a flapping health check must never shrink the
   map — removal stays drain-then-delete).
+
+## Publish pipeline (v2)
+
+Written while PR #5365 ("Server list v2") was still open; fold this into
+roadmap item 4 of that section once it merges.
+
+Every deploy already uploads the build's hashed assets to R2 and a
+fully-rendered `index-<short>.html` replay shell next to them. `update.sh`
+now also publishes, per **site** and per **version**, the three objects the
+static Worker will serve. The site is `SITE_HOST` when the deployment sits
+behind a load balancer, else `<subdomain>.<domain>`; the version is the
+7-character prefix of `static/commit.txt`. All four uploads go through
+`PUT $R2_ENDPOINT/game_assets/upload/<urlencoded key>`, which prefixes
+`game_assets/`:
+
+| Object                                        | Rendered by                                    |
+| --------------------------------------------- | ---------------------------------------------- |
+| `sites/<site>/v/<short>/index.html`           | `RenderStaticIndex.ts --environment-only`      |
+| `sites/<site>/v/<short>/desktop/release.json` | `RenderDesktopDescriptor.ts`                   |
+| `sites/<site>/v/<short>/desktop/version.json` | `RenderDesktopDescriptor.ts --version-pointer` |
+
+Both renderers run inside the freshly built image with the live container's
+env file, exactly as the replay shell already does, so what is published is
+what that build's server would itself have produced.
+
+**The page carries no server.** `renderHtmlContent(path, { perServer: false })`
+omits `cluster`, `instanceLetter`, `instanceId`, `serverHost` and `siteHost`;
+`index.html` guards those lines the way it already guarded `serverHost`, so a
+render that supplies them is byte-for-byte what it always was. That is what
+lets one page be cached and served to every player of a version — the client
+asks the API which server to use. The legacy `index-<short>.html` upload keeps
+the server values until OPE-431 lands, because today's client throws without a
+worker-count source.
+
+**The descriptors move earlier, not elsewhere.** `release.json` and
+`version.json` are the same objects `/desktop/*.json` serves today, from the
+same `buildDescriptor`; publishing them per version lets the Worker answer for
+a site with no game server reachable, and makes a rollback a pointer flip.
+`release.json`'s `template.html` is the raw EJS template by design: the Steam
+shell renders it itself.
+
+**Flagging `latest`.** After the new container is running, `update.sh` calls
+`POST $R2_ENDPOINT/cluster/latest` with `{ site, version }` (version is the
+full sha). The API refuses a version no server has checked in for, so a `409`
+right after `docker run` is expected and is retried every 5s for up to 90s —
+servers register within ~10s of boot. Outcomes:
+
+- `200` — logged, done.
+- `404` — the API predates the registry; warn and continue.
+- `409` (or an unreachable API) after the retries — warn and continue, because
+  the page and its servers still come from `BOOTSTRAP_CONFIG` and nothing a
+  player sees has changed. **Unless** `CLUSTER_STATE_SOURCE=api` is in the
+  site's env file, which says its clients take the server list from the API: an
+  unflagged version then means no server is `open` and nobody can start a game,
+  so the deploy fails rather than reporting a success it did not achieve.
+
+Until the Worker exists nothing reads any of this, so the uploads are additive
+and prod is unaffected. The decision table above is unit-tested in
+`tests/UpdateFlagLatest.test.ts`, which extracts the real function out of
+`update.sh` and drives it with a scripted `curl`.

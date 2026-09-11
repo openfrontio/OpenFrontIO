@@ -236,6 +236,11 @@ fi
 # when multiple deployments are happening at the same time.
 ENV_FILE="${REMOTE_UPDATE_PATH}/${SUBDOMAIN}-${RANDOM}.env"
 
+# CLUSTER_STATE_SOURCE is passed through unset (empty) until the API's server
+# registry is live. Setting it to "api" for a site says its clients get their
+# server list from the API rather than from the page, which is what makes
+# update.sh treat a failure to flag this version as `latest` as a failed deploy
+# rather than a warning — see flag_latest there and docs/MultiServer.md.
 print_header "EXECUTING UPDATE SCRIPT ON SERVER"
 
 ssh -i $SSH_KEY $REMOTE_USER@$SERVER_HOST "chmod +x $REMOTE_UPDATE_SCRIPT && \
@@ -250,6 +255,7 @@ ADMIN_BOT_API_KEY=$ADMIN_BOT_API_KEY
 DOMAIN=$DOMAIN
 SUBDOMAIN=$SUBDOMAIN
 SITE_HOST=$SITE_HOST
+CLUSTER_STATE_SOURCE=$CLUSTER_STATE_SOURCE
 CDN_BASE=$CDN_BASE
 CLUSTER_JSON=$CLUSTER_JSON
 TURNSTILE_SITE_KEY=$TURNSTILE_SITE_KEY

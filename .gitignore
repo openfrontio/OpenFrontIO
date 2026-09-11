@@ -26,3 +26,8 @@ tests/perf/output/
 # Locally built Go binary (gen-maps uses `go run .`)
 map-generator/map-generator
 map-generator/map-generator.exe
+
+# Staging dir tests/RenderDesktopDescriptor.test.ts creates in the repo root
+# (it needs the CLI copy at the same relative depth as the real one). Cleaned
+# up after each case; ignored so a crashed run cannot dirty the tree.
+.tmp-desktop-cli-*
