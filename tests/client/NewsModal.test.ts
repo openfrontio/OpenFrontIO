@@ -19,7 +19,7 @@ describe("NewsModal", () => {
   });
 
   it("fetches the changelog on first open only", async () => {
-    const fetchMock = vi.fn(async () => ({
+    const fetchMock = vi.fn(async (_input: unknown) => ({
       ok: true,
       text: async () => "changelog body text",
     }));

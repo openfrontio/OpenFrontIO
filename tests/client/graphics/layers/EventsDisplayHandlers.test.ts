@@ -73,7 +73,7 @@ describe("EventsDisplay handlers", () => {
   const byID: Record<number, unknown> = { 1: myPlayer, 2: friend, 3: stranger };
 
   const events = () => (ed as unknown as Ed).events;
-  let game: { updatesSinceLastTick: () => unknown };
+  let game: Record<string, unknown>;
 
   beforeEach(() => {
     ed = new EventsDisplay();

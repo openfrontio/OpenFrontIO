@@ -120,7 +120,7 @@ function handshake(transport: Transport): FakeWebSocket {
     () => {},
     () => {},
   );
-  const ws = FakeWebSocket.instances.at(-1)!;
+  const ws = FakeWebSocket.instances[FakeWebSocket.instances.length - 1];
   ws.serverOpen();
   ws.serverSend({
     type: "start",
