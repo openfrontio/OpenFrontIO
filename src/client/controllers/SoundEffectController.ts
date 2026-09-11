@@ -1,5 +1,5 @@
 import { EventBus } from "../../core/EventBus";
-import { MessageType, UnitType } from "../../core/game/Game";
+import { MessageType, PlayerType, UnitType } from "../../core/game/Game";
 import { GameUpdateType } from "../../core/game/GameUpdates";
 import { Controller } from "../Controller";
 import { PlaySoundEffectEvent, SoundEffect } from "../sound/Sounds";
@@ -76,7 +76,12 @@ export class SoundEffectController implements Controller {
     if (myPlayer === null) return;
     for (const c of updates[GameUpdateType.ConquestEvent] ?? []) {
       if (c.conquerorId === myPlayer.id()) {
-        this.emit("ka-ching");
+        // Battle cue for conquering a real player; the ka-ching payout
+        // stays for bots and nations.
+        const conquered = this.game.player(c.conqueredId);
+        this.emit(
+          conquered.type() === PlayerType.Human ? "conquered" : "ka-ching",
+        );
       }
     }
 
