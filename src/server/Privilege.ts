@@ -1,5 +1,6 @@
 import countries from "resources/countries.json";
 
+import { isTemporaryUsername } from "../core/ApiSchemas";
 import { Cosmetics, findEffectForSlot } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
@@ -309,10 +310,16 @@ export function resolveVerifiedJoin(
   const entitled =
     account.usernameStatus === "premium" ||
     account.usernameStatus === "indefinite";
+  // Bare means the display form equals the base, which is what holding the
+  // bare claim looks like from /users/@me. A TEMPORARY#### placeholder is
+  // minted with its claim and so renders bare too, but it is not a name the
+  // player chose; the client refuses to offer it (accountVerifiedName) and
+  // the server refuses to honour it for the same reason.
   const bare =
     typeof account.username === "string" &&
     account.username.length > 0 &&
-    account.username === account.usernameBase;
+    account.username === account.usernameBase &&
+    !isTemporaryUsername(account.usernameBase);
   if (entitled && bare) {
     return { username: account.username as string, outcome: "verified" };
   }

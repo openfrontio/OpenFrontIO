@@ -280,6 +280,17 @@ describe("resolveVerifiedJoin", () => {
     }
   });
 
+  test("a TEMPORARY#### placeholder never gets the check, even entitled and bare", () => {
+    const cosmetics = { verified: true };
+    const r = resolveVerifiedJoin(cosmetics, "TEMPORARY7823", {
+      username: "TEMPORARY7823",
+      usernameBase: "TEMPORARY7823",
+      usernameStatus: "premium",
+    });
+    expect(r).toEqual({ username: "TEMPORARY7823", outcome: "custom" });
+    expect(cosmetics.verified).toBeUndefined();
+  });
+
   test("an account with no username set is custom", () => {
     const cosmetics = { verified: true };
     const r = resolveVerifiedJoin(cosmetics, "Bob", {
