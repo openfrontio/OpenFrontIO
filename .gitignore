@@ -26,3 +26,12 @@ tests/perf/output/
 # Locally built Go binary (gen-maps uses `go run .`)
 map-generator/map-generator
 map-generator/map-generator.exe
+
+node_modules/
+.DS_Store
+
+node_modules/
+.DS_Store
+
+node_modules/
+.DS_Store

@@ -91,6 +91,11 @@
     "vitest-canvas-mock": "^1.1.4"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/cli": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/ios": "^8.5.1",
+    "@capacitor/screen-orientation": "^8.0.1",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/api-logs": "^0.216.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.219.0",
