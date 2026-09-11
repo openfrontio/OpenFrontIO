@@ -87,6 +87,7 @@ import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import "./PlayerProfileModal";
 import { GroupTokenTracker, withGroupToken } from "./PresenceGroup";
 import { RewardsModal } from "./RewardsModal";
+import { ensureServerList } from "./ServerList";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import {
@@ -1042,12 +1043,18 @@ class Client {
       }
     }
 
+    // Every version's page is also served under /v/<commit>/ (multi-server
+    // v2), so the game path may sit behind that prefix.
     const pathMatch = window.location.pathname.match(
-      /^\/(?:w\d+\/)?game\/([^/]+)/,
+      /^(?:\/v\/[^/]+)?\/(?:w\d+\/)?game\/([^/]+)/,
     );
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      // Joining needs the API's server list (multi-server v2): the id's
+      // letter names the game's server there. A page found out of date is
+      // already navigating to the current version, which re-runs this.
+      if ((await ensureServerList()) === "redirecting") return;
       // A letter this shell's cluster map doesn't know means the map
       // predates the game's deployment (stale CDN shell, or a link into a
       // newer fleet). The apex always serves the freshest map, so re-enter
@@ -1142,6 +1149,9 @@ class Client {
   private redirectUnknownLetterToApex(gameID: string): boolean {
     if (!ClientEnv.gameLetterUnknown(gameID)) return false;
     if (isDesktopShell()) return false;
+    // With the API's list loaded there is nothing fresher to bounce to: an
+    // unknown letter means the game does not exist.
+    if (ClientEnv.serverListLoaded()) return false;
     // Only load-balanced deployments have an apex to bounce to; standalone
     // ones (beta, branch previews, dev) have no siteHost injected and fall
     // through to the normal not-found flow, as does the apex shell itself

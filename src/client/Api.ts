@@ -1880,6 +1880,7 @@ export async function openSubscriptionPortal(): Promise<string | false> {
 // default is to change nothing.
 export async function fetchLobbyListed(gameID: string): Promise<boolean> {
   try {
+    await ensureServerList();
     const res = await fetch(
       `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}`,
       { headers: { Accept: "application/json" } },
@@ -1903,6 +1904,7 @@ export async function setLobbyListed(
   listed: boolean,
 ): Promise<{ ok: true; listed: boolean } | { ok: false; error?: string }> {
   try {
+    await ensureServerList();
     const token = await getPlayToken();
     const response = await fetch(
       `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}/listing`,
@@ -1934,6 +1936,9 @@ export async function setLobbyListed(
 // (nginx in prod, the vite dev proxy locally) picks a worker, which mints a
 // self-owned id and returns it.
 export async function createLobby(): Promise<GameInfo> {
+  // A new game needs a server that takes new games on this build: ask the
+  // API (multi-server v2), falling back to the page's own server.
+  await ensureServerList();
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();
@@ -1973,6 +1978,7 @@ export async function createLobby(): Promise<GameInfo> {
 export async function createNextLobby(
   previousGameID: string,
 ): Promise<GameInfo> {
+  await ensureServerList();
   const token = await getPlayToken();
   const response = await fetch(
     `${ClientEnv.gameHttpBase(previousGameID)}/${ClientEnv.gameWorkerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
@@ -1992,25 +1998,11 @@ export async function createNextLobby(
   return (await response.json()) as GameInfo;
 }
 
-export function getApiBase() {
-  const domainname = getAudience();
-
-  if (domainname === "localhost") {
-    const apiDomain = process.env.API_DOMAIN;
-    if (apiDomain) {
-      return `https://${apiDomain}`;
-    }
-    return localStorage.getItem("apiHost") ?? "http://localhost:8787";
-  }
-
-  return `https://api.${domainname}`;
-}
-
-export function getAudience() {
-  // Sourced from BOOTSTRAP_CONFIG (server/desktop-injected) rather than
-  // window.location, so the desktop app (app://openfront) targets real infra.
-  return ClientEnv.jwtAudience();
-}
+// Moved to ApiBase.ts so ServerList.ts (which this module imports) can use
+// them without a cycle; re-exported here for every existing importer.
+import { getApiBase, getAudience } from "./ApiBase";
+import { ensureServerList } from "./ServerList";
+export { getApiBase, getAudience };
 
 export async function fetchGameById(
   gameId: string,

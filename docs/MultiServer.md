@@ -323,10 +323,135 @@ wait for games to end), then delete its cluster entries and its
   Zero client changes — the merged list arrives through the existing feed,
   and joining a foreign lobby already routes by its letter. Null-tolerant
   like the drain poll: an unreachable sibling just contributes nothing.
-- **Cluster registry:** serve cluster.json from the API/DB (`CLUSTER_URL`),
-  then periodic refresh, then authenticated self-registration on boot. Safe
-  precisely because clients already tolerate stale maps (unknown letter →
-  apex). The registry's job is enforcing the invariants: letters
-  append-only forever, numWorkers immutable while a letter has live games,
-  and membership ≠ liveness (a flapping health check must never shrink the
-  map — removal stays drain-then-delete).
+- **Cluster registry:** pulled forward as "Server list v2" below.
+
+---
+
+# Server list v2: the API picks the server, the page comes from the CDN
+
+Status: in progress (Sept 2026). Everything above stays: letter-prefixed
+ids, per-game routing, draining, `numWorkers` frozen per letter. What
+changes is **where the server list lives** and **how a player reaches a
+server**. The pieces land dormant, behind fallbacks, before the v34 cut;
+the switch-overs are API and infrastructure operations afterwards.
+
+## Why
+
+Today two things decide where players go and must agree: the Cloudflare
+load balancer (which color serves the page) and `CLUSTER_JSON` baked into
+that page (where its games go). Switching colors is a load-balancer change
+that servers learn about by polling the apex; adding a host means editing
+`CLUSTER_JSON` and redeploying every server. And because a game server
+renders the page, every value it writes in must also be supplied by the
+Steam build, which renders the same template itself (#5310 blanked it,
+patched in openfront-desktop #55).
+
+Goal: one place decides where players go (the API), and nothing else (DNS,
+a load balancer, the page) has to change at the same moment.
+
+## The server list
+
+`GET https://api.<audience>/cluster.json?site=<host>` — `site` is the
+hostname players load the page from (`openfront.io`, `main.openfront.dev`,
+`<branch>.openfront.dev`). Every site has its own list and its own
+`latest`; previews never appear in main's list.
+
+```json
+{
+  "latest": "bfd5563a…",
+  "servers": {
+    "c": {
+      "host": "falk2-a.openfront.io",
+      "numWorkers": 16,
+      "version": "5ccc50a7…",
+      "state": "draining"
+    },
+    "d": {
+      "host": "falk2-b.openfront.io",
+      "numWorkers": 16,
+      "version": "bfd5563a…",
+      "state": "open"
+    }
+  }
+}
+```
+
+| Field        | Meaning                                                                                                                          |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `latest`     | The commit new players should be on. The one switch (see below). Absent if none is flagged.                                      |
+| `host`       | As today: where the server is reached directly.                                                                                  |
+| `numWorkers` | As today: frozen while the letter has live games.                                                                                |
+| `version`    | The commit the server runs, as its `GIT_COMMIT` reports it (full sha).                                                           |
+| `state`      | `open`: runs `latest` and isn't fenced, so it takes new games. `draining`: anything else; existing games and rejoins still work. |
+
+`color` is gone. Letters are append-only and never reused; retired letters
+stay in the API but are not sent to clients. Everyone gets the same
+response and the client filters it by version, so the API can cache it
+for a few seconds. Commits are compared prefix-tolerantly (a 7+ char
+prefix of a sha matches it), so short and full forms interoperate.
+
+## What the client does (`src/client/ServerList.ts`, `src/core/ServerList.ts`)
+
+- **Lazy, never at page load.** The list is fetched only when a server is
+  needed: the public lobby list, creating a game, joining or rejoining
+  one. Offline singleplayer never waits on it. The fetch is bounded (5s).
+- **Which list:** the desktop shell asks for its injected `serverHost`
+  (its values are exactly the sites); a web page asks for its `siteHost`
+  when rendered behind an apex, else `window.location.host`. Decided with
+  `isDesktopShell()`, not by whether `serverHost` is present — game
+  servers inject `serverHost` as their own host, which is not a site.
+- **New game or lobby list:** a random `open` server whose `version`
+  matches the client's `gitCommit`. The pick is sticky for the page while
+  that server stays open. `ClientEnv.serverWsBase()` / `serverHttpBase()`
+  / `numWorkers()` answer from it.
+- **Existing game** (link, rejoin, matchmade id): the id's letter names
+  the server in the list, whatever its state. `ClientEnv.resolveGame()`
+  answers from the list; an unknown letter means the game doesn't exist
+  (no apex redirect: the list is the freshest there is).
+- **Fallback:** when the list is missing, unreachable, malformed or empty,
+  every accessor answers from `BOOTSTRAP_CONFIG` exactly as before, so
+  production behaves as today until the API serves a list.
+- **No `open` server for my version:**
+  - if the client _is_ `latest`, or the list has no `latest`, no server is
+    running at all. Own-server calls fall back to the page's values and
+    multiplayer fails as it does today. Never redirect: it would loop.
+  - otherwise the client is out of date. The web client navigates to
+    `/v/<latest>/…` keeping the game path (a plain reload could be served
+    a cached older page). It never navigates a page already under
+    `/v/<latest>/` — the loop guard lives in `versionedPath`. The Steam
+    build leaves it to its updater.
+
+## `latest`: the one switch
+
+Each site has one `latest` commit. The build pipeline sets it once the new
+version's servers have registered; rollback is an admin-panel action that
+flags an older commit. The API refuses to flag a commit with no servers
+checked in. Everything follows from it: servers on `latest` are `open`,
+everything else drains; `<site>/` (any path without `/v/<commit>/`) serves
+its page; `/desktop/*.json` points the Steam build at it. One value, not
+two, so the default page and the servers' states can never disagree.
+
+## Roadmap (what lands where)
+
+1. **Client reads the list** (this repo, above). Dormant until the API
+   serves a list.
+2. **Client tolerates a static page:** boots without per-server values
+   (`cluster`, `instanceLetter`, `serverHost`, `siteHost`, `instanceId`),
+   and a game on a server running another version is opened at
+   `/v/<version>/…`.
+3. **Servers register and check in** with the API (letter, host, version,
+   worker count, live games) every ~10s; a `draining` reply stops public
+   lobby scheduling — only when enabled, otherwise today's apex colour
+   poll stays.
+4. **Pipeline:** `RenderStaticIndex` renders an environment-only page per
+   site and uploads it with the desktop descriptor; a final step flags the
+   version as `latest` once its servers have registered.
+5. **API (not bound by the cut):** the registry, check-in, `GET
+/cluster.json`, set-latest, admin rollback, and a static-page Worker on
+   the site hostname reading only the public bucket (`/v/<commit>/…`
+   immutable, everything else `latest`'s page, `/desktop/*.json`).
+
+Previews keep parity: every push deploys the branch's own server (same
+container, same 25h cap) and the branch's page talks only to it, under its
+own site. Matching is on the exact commit, never on core version: a branch
+can change server code without touching `src/core`.
