@@ -18,7 +18,9 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import {
   ErrorUpdate,
+  GameUpdateType,
   GameUpdateViewData,
+  UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
@@ -36,6 +38,7 @@ import { createGame } from "./game/GameImpl";
 import { humanDisconnects, humanStatsSnapshot } from "./game/HumanStats";
 import { placeName, placeSpawnName } from "./game/NameBoxCalculator";
 import { createNationsForGame } from "./game/NationCreation";
+import { packUnitUpdates } from "./game/PackedUnitUpdates";
 import {
   readSnapshotHeader,
   restoreGame,
@@ -279,6 +282,20 @@ export class GameRunner {
     const packedNukeImpacts =
       nukeImpactTiles.length > 0 ? new Uint32Array(nukeImpactTiles) : undefined;
 
+    let packedUnitUpdates: Float64Array | undefined;
+    let packedMissileTimers: Uint32Array | undefined;
+
+    const unitUpdates = updates[GameUpdateType.Unit] as UnitUpdate[];
+    if (unitUpdates && unitUpdates.length > 0) {
+      const packed = packUnitUpdates(unitUpdates);
+      packedUnitUpdates = packed.packedUnitUpdates;
+      if (packed.packedMissileTimers.length > 0) {
+        packedMissileTimers = packed.packedMissileTimers;
+      }
+      // Clear the original array so it's not structured-cloned
+      updates[GameUpdateType.Unit] = [];
+    }
+
     this.callBack({
       tick: this.game.ticks(),
       packedTileUpdates,
@@ -286,6 +303,8 @@ export class GameRunner {
       ...(packedPlayerUpdates ? { packedPlayerUpdates } : {}),
       ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
       ...(packedNukeImpacts ? { packedNukeImpacts } : {}),
+      ...(packedUnitUpdates ? { packedUnitUpdates } : {}),
+      ...(packedMissileTimers ? { packedMissileTimers } : {}),
       updates: updates,
       // A copy: hosts hold several ticks' updates before reading them, and
       // the record changes in place on later ticks.
