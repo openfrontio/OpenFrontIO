@@ -715,6 +715,7 @@ export interface Player {
   allianceWith(other: Player): MutableAlliance | null;
   allianceInfo(other: Player): AllianceInfo | null;
   canSendAllianceRequest(other: Player): boolean;
+  allianceRequestCooldownRemaining(other: Player): number;
   breakAlliance(alliance: Alliance): void;
   removeAllAlliances(): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
@@ -1013,6 +1014,7 @@ export interface PlayerInteraction {
   sharedBorder: boolean;
   canSendEmoji: boolean;
   canSendAllianceRequest: boolean;
+  allianceRequestCooldownRemaining?: number;
   canBreakAlliance: boolean;
   canTarget: boolean;
   canDonateGold: boolean;
