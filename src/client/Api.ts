@@ -50,6 +50,7 @@ import {
   GameInfo,
 } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
+import { getApiBase, getAudience } from "./ApiBase";
 import {
   getAuthHeader,
   getPlayToken,
@@ -58,6 +59,7 @@ import {
   userAuth,
 } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
+import { ensureServerList } from "./ServerList";
 
 export async function fetchPlayerById(
   playerId: string,
@@ -1972,10 +1974,9 @@ export async function createNextLobby(
   return (await response.json()) as GameInfo;
 }
 
-// Moved to ApiBase.ts so ServerList.ts (which this module imports) can use
-// them without a cycle; re-exported here for every existing importer.
-import { getApiBase, getAudience } from "./ApiBase";
-import { ensureServerList } from "./ServerList";
+// getApiBase/getAudience moved to ApiBase.ts so ServerList.ts (which this
+// module imports) can use them without a cycle; re-exported here for every
+// existing importer.
 export { getApiBase, getAudience };
 
 export async function fetchGameById(

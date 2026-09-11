@@ -107,9 +107,16 @@ async function fetchServerList(site: string): Promise<ServerList | null> {
  */
 export async function ensureServerList(): Promise<ServerListStatus> {
   if (inflight !== null) return inflight;
-  inflight = refresh().finally(() => {
-    inflight = null;
-  });
+  inflight = refresh()
+    .catch((e: unknown) => {
+      // The contract is "never throws": whatever went wrong, the page's
+      // own values are still a complete answer.
+      console.warn("Server list refresh failed, using page values", e);
+      return "fallback" as const;
+    })
+    .finally(() => {
+      inflight = null;
+    });
   return inflight;
 }
 
