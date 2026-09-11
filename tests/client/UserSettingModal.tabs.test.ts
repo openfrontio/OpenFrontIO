@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import en from "../../resources/lang/en.json";
 import { modalRouter } from "../../src/client/ModalRouter";
 import type { UIState } from "../../src/client/UIState";
 import "../../src/client/UserSettingModal";
@@ -32,13 +33,23 @@ describe("user-setting tabs", () => {
     });
   });
 
-  it("groups the settings as Gameplay, Audio and Keybinds", async () => {
+  it("groups the settings as Gameplay, Graphics, Audio and Keybinds, in that order", async () => {
     const el = await mount(false);
     expect(el.modalConfig().tabs?.map((t) => t.key)).toEqual([
       "gameplay",
+      "graphics",
       "audio",
       "keybinds",
     ]);
+  });
+
+  it("has an en.json label for every tab, so none renders as a raw key", async () => {
+    const el = await mount(false);
+    const strings = en.user_setting as Record<string, string | undefined>;
+    for (const tab of el.modalConfig().tabs ?? []) {
+      expect(strings[`tab_${tab.key}`]).toBeTruthy();
+    }
+    expect(strings.tab_graphics).toBe("Graphics");
   });
 
   it("opens on the requested tab", async () => {
@@ -63,9 +74,71 @@ describe("user-setting tabs", () => {
     await el.updateComplete;
     expect(el.querySelector("#help-messages-toggle")).not.toBeNull();
     expect(el.querySelector("#attacking-troops-overlay-toggle")).not.toBeNull();
-    // The graphics preset stays at the top of Gameplay rather than getting a
-    // tab of its own.
-    expect(el.querySelector("graphics-preset-selector")).not.toBeNull();
+  });
+
+  // The visual switches live on Graphics and nowhere else. Each selector is
+  // asserted on both tabs, so moving one back to Gameplay fails the second
+  // half of the pair rather than silently passing.
+  const GRAPHICS_CONTROLS = [
+    "graphics-preset-selector",
+    "#territory-patterns-toggle",
+    "#emoji-toggle",
+    "#performance-overlay-toggle",
+  ];
+
+  // Everything that changes how the game is played, or what the game tells
+  // you, stays on Gameplay.
+  const GAMEPLAY_CONTROLS = [
+    "#alert-frame-toggle",
+    "#cursor_cost_label-toggle",
+    "#left-click-toggle",
+    "#anonymous-names-toggle",
+    "#lobby-id-visibility-toggle",
+    "#go-to-player-toggle",
+    "#help-messages-toggle",
+    "#attacking-troops-overlay-toggle",
+    "#attack-ratio-slider",
+  ];
+
+  it.each(GRAPHICS_CONTROLS)("renders %s on Graphics", async (selector) => {
+    const el = await mount(false);
+    el.open({ tab: "graphics" });
+    await el.updateComplete;
+    expect(el.querySelector(selector)).not.toBeNull();
+  });
+
+  it.each(GRAPHICS_CONTROLS)(
+    "does not render %s on Gameplay",
+    async (selector) => {
+      const el = await mount(false);
+      el.open({ tab: "gameplay" });
+      await el.updateComplete;
+      expect(el.querySelector(selector)).toBeNull();
+    },
+  );
+
+  it.each(GAMEPLAY_CONTROLS)("keeps %s on Gameplay", async (selector) => {
+    const el = await mount(false);
+    el.open({ tab: "gameplay" });
+    await el.updateComplete;
+    expect(el.querySelector(selector)).not.toBeNull();
+  });
+
+  it.each(GAMEPLAY_CONTROLS)(
+    "does not render %s on Graphics",
+    async (selector) => {
+      const el = await mount(false);
+      el.open({ tab: "graphics" });
+      await el.updateComplete;
+      expect(el.querySelector(selector)).toBeNull();
+    },
+  );
+
+  it("opens on Graphics when asked", async () => {
+    const el = await mount(false);
+    el.open({ tab: "graphics" });
+    await el.updateComplete;
+    expect(el.activeTab).toBe("graphics");
   });
 
   it("re-reads keybinds on every open, so two instances never diverge", async () => {

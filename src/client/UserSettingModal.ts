@@ -438,6 +438,7 @@ export class UserSettingModal extends BaseModal {
     return {
       tabs: [
         { key: "gameplay", label: translateText("user_setting.tab_gameplay") },
+        { key: "graphics", label: translateText("user_setting.tab_graphics") },
         // PR B inserts { key: "display", ... } here, gated on desktopDisplay().
         { key: "audio", label: translateText("user_setting.tab_audio") },
         { key: "keybinds", label: translateText("user_setting.tab_keybinds") },
@@ -462,6 +463,9 @@ export class UserSettingModal extends BaseModal {
         break;
       case "audio":
         body = this.renderAudioSettings();
+        break;
+      case "graphics":
+        body = this.renderGraphicsSettings();
         break;
       // PR B: case "display": body = this.renderDisplaySettings(); break;
       default:
@@ -920,7 +924,12 @@ export class UserSettingModal extends BaseModal {
     `;
   }
 
-  private renderGameplaySettings() {
+  /**
+   * Purely visual switches — how the map and HUD are drawn. Anything that
+   * changes how the game is played, or what the game tells you, belongs in
+   * renderGameplaySettings() instead.
+   */
+  private renderGraphicsSettings() {
     return html`
       <!-- 🎨 Graphics preset -->
       <div
@@ -937,6 +946,15 @@ export class UserSettingModal extends BaseModal {
         <graphics-preset-selector></graphics-preset-selector>
       </div>
 
+      <!-- 🏳️ Territory Patterns -->
+      <setting-toggle
+        label="${translateText("user_setting.territory_patterns_label")}"
+        description="${translateText("user_setting.territory_patterns_desc")}"
+        id="territory-patterns-toggle"
+        .checked=${this.userSettings.territoryPatterns()}
+        @change=${this.toggleTerritoryPatterns}
+      ></setting-toggle>
+
       <!-- 😊 Emojis -->
       <setting-toggle
         label="${translateText("user_setting.emojis_label")}"
@@ -946,6 +964,19 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleEmojis}
       ></setting-toggle>
 
+      <!-- 📱 Performance Overlay -->
+      <setting-toggle
+        label="${translateText("user_setting.performance_overlay_label")}"
+        description="${translateText("user_setting.performance_overlay_desc")}"
+        id="performance-overlay-toggle"
+        .checked=${this.userSettings.performanceOverlay()}
+        @change=${this.togglePerformanceOverlay}
+      ></setting-toggle>
+    `;
+  }
+
+  private renderGameplaySettings() {
+    return html`
       <!-- 🚨 Alert frame -->
       <setting-toggle
         label="${translateText("user_setting.alert_frame_label")}"
@@ -991,15 +1022,6 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleLobbyIdVisibility}
       ></setting-toggle>
 
-      <!-- 🏳️ Territory Patterns -->
-      <setting-toggle
-        label="${translateText("user_setting.territory_patterns_label")}"
-        description="${translateText("user_setting.territory_patterns_desc")}"
-        id="territory-patterns-toggle"
-        .checked=${this.userSettings.territoryPatterns()}
-        @change=${this.toggleTerritoryPatterns}
-      ></setting-toggle>
-
       <!-- 🔍 Go to player -->
       <setting-toggle
         label="${translateText("user_setting.go_to_player_label")}"
@@ -1009,7 +1031,6 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleGoToPlayer}
       ></setting-toggle>
 
-      <!-- 📱 Performance Overlay -->
       <!-- Help messages (moved here from the in-game menu) -->
       <setting-toggle
         label="${translateText("user_setting.help_messages_label")}"
@@ -1028,14 +1049,6 @@ export class UserSettingModal extends BaseModal {
         id="attacking-troops-overlay-toggle"
         .checked=${this.userSettings.attackingTroopsOverlay()}
         @change=${this.toggleAttackingTroopsOverlay}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.performance_overlay_label")}"
-        description="${translateText("user_setting.performance_overlay_desc")}"
-        id="performance-overlay-toggle"
-        .checked=${this.userSettings.performanceOverlay()}
-        @change=${this.togglePerformanceOverlay}
       ></setting-toggle>
 
       <!-- ⚔️ Attack Ratio -->

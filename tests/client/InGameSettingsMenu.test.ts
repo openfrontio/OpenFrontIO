@@ -14,6 +14,8 @@ type TestMenu = SettingsModal & { updateComplete: Promise<unknown> };
 type TestSettings = UserSettingModal & {
   updateComplete: Promise<unknown>;
   activeTab: string;
+  setActiveTab(key: string): void;
+  modalConfig(): { tabs?: { key: string; label: string }[] };
 };
 
 describe("in-game menu opens the shared settings modal", () => {
@@ -82,6 +84,29 @@ describe("in-game menu opens the shared settings modal", () => {
     expect(settings.isOpen()).toBe(true);
     expect(settings.activeTab).toBe("gameplay");
     expect(pauses).toEqual([true]);
+  });
+
+  it("reaches Graphics from the in-game instance, without changing the landing tab", async () => {
+    await openMenu();
+    openSettingsRow()!.click();
+    await settle();
+
+    // The in-game entry point still lands on Gameplay...
+    expect(settings.activeTab).toBe("gameplay");
+    expect(settings.querySelector("graphics-preset-selector")).toBeNull();
+
+    // ...and Graphics is a tab the player can reach from there.
+    expect(settings.modalConfig().tabs?.map((t) => t.key)).toContain(
+      "graphics",
+    );
+    settings.setActiveTab("graphics");
+    await settle();
+
+    expect(settings.activeTab).toBe("graphics");
+    expect(settings.querySelector("graphics-preset-selector")).not.toBeNull();
+    expect(
+      settings.querySelector("#performance-overlay-toggle"),
+    ).not.toBeNull();
   });
 
   it("reopens the menu when the settings modal closes", async () => {
