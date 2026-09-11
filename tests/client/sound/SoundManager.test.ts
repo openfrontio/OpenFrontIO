@@ -20,7 +20,7 @@ vi.mock("howler", () => {
     playing = vi.fn().mockReturnValue(false);
     unload = vi.fn();
     volume = vi.fn((v?: number) => {
-      if (v === undefined) return this.volumes.at(-1) ?? 0;
+      if (v === undefined) return this.volumes[this.volumes.length - 1] ?? 0;
       this.volumes.push(v);
       return this;
     });
@@ -115,7 +115,9 @@ describe("background music", () => {
   it("follows the music slider through the mixer", () => {
     settings.setAudioVolume("music", 0.5);
     // 0.5 squared for the audio taper, then the -1 dB music trim.
-    expect(find("gameplay.mp3").volumes.at(-1)).toBeCloseTo(0.25 * 0.89);
+    expect(
+      find("gameplay.mp3").volumes[find("gameplay.mp3").volumes.length - 1],
+    ).toBeCloseTo(0.25 * 0.89);
   });
 
   it("only starts once", () => {
@@ -168,7 +170,7 @@ describe("ambience", () => {
 
     expect(city.play.mock.calls.length).toBe(plays);
     // ambience slider 1 -> taper 1, times the 0.05 envelope.
-    expect(city.volumes.at(-1)).toBeCloseTo(0.05);
+    expect(city.volumes[city.volumes.length - 1]).toBeCloseTo(0.05);
   });
 
   it("silences the loop when the player zooms out", () => {
@@ -181,7 +183,9 @@ describe("ambience", () => {
     eventBus.emit(new SetAmbienceEvent("city", 0.1));
     settings.setAudioVolume("ambience", 0.5);
     // slider 0.5 squared, times the 0.1 envelope.
-    expect(find("city.mp3").volumes.at(-1)).toBeCloseTo(0.25 * 0.1);
+    expect(
+      find("city.mp3").volumes[find("city.mp3").volumes.length - 1],
+    ).toBeCloseTo(0.25 * 0.1);
   });
 });
 
