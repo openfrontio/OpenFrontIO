@@ -1,7 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { PresencePayload } from "../../src/client/DesktopPresence";
-import { groupTokenOf, withGroupToken } from "../../src/client/PresenceGroup";
-import type { ServerMessage } from "../../src/core/Schemas";
+import {
+  GroupTokenTracker,
+  groupTokenOf,
+  loggableStartMessage,
+  withGroupToken,
+} from "../../src/client/PresenceGroup";
+import { EventBus } from "../../src/core/EventBus";
+import {
+  GroupTokenEvent,
+  type ServerMessage,
+  type ServerStartGameMessage,
+} from "../../src/core/Schemas";
 import { testGameConfig } from "../util/Wire";
 
 // OPE-423, client half. Two rules, both of which Main and ClientGameRunner
@@ -104,5 +114,97 @@ describe("withGroupToken", () => {
 
   it("returns the payload untouched when there is no token", () => {
     expect(withGroupToken(game, undefined)).toBe(game);
+  });
+});
+
+describe("loggableStartMessage", () => {
+  const withToken = startGame(TOKEN) as ServerStartGameMessage;
+
+  // The console dump of the start message is what players paste into bug
+  // reports. Everything in it is already theirs to see except this.
+  it("drops the group token", () => {
+    const logged = loggableStartMessage(withToken);
+    expect("groupToken" in logged).toBe(false);
+    expect(JSON.stringify(logged)).not.toContain(TOKEN);
+  });
+
+  it("keeps every other field, so the dump stays useful", () => {
+    const logged = loggableStartMessage(withToken);
+    expect(logged).toEqual({
+      type: "start",
+      turns: [],
+      gameStartInfo: withToken.gameStartInfo,
+      lobbyCreatedAt: withToken.lobbyCreatedAt,
+      myClientID: CLIENT,
+    });
+  });
+
+  it("does not mutate the message the caller is still using", () => {
+    loggableStartMessage(withToken);
+    expect(withToken.groupToken).toBe(TOKEN);
+  });
+
+  it("is a no-op for a singleplayer start message, which has no token", () => {
+    const local = startGame() as ServerStartGameMessage;
+    expect(loggableStartMessage(local)).toEqual(local);
+  });
+});
+
+describe("GroupTokenTracker", () => {
+  it("accepts the first token", () => {
+    expect(new GroupTokenTracker().accept(TOKEN)).toBe(true);
+  });
+
+  it("rejects a repeat of the token it already holds", () => {
+    const tracker = new GroupTokenTracker();
+    tracker.accept(TOKEN);
+    expect(tracker.accept(TOKEN)).toBe(false);
+    expect(tracker.current()).toBe(TOKEN);
+  });
+
+  it("accepts a different token", () => {
+    const tracker = new GroupTokenTracker();
+    tracker.accept(TOKEN);
+    expect(tracker.accept("T3RmaXJzdGdhbWU0")).toBe(true);
+    expect(tracker.current()).toBe("T3RmaXJzdGdhbWU0");
+  });
+
+  it("holds nothing until a token arrives, and nothing after a clear", () => {
+    const tracker = new GroupTokenTracker();
+    expect(tracker.current()).toBeUndefined();
+    tracker.accept(TOKEN);
+    tracker.clear();
+    expect(tracker.current()).toBeUndefined();
+  });
+
+  // Rejoining the same game after a trip through the menu must re-publish
+  // the group, so a cleared tracker cannot treat the old token as a repeat.
+  it("accepts the same token again after a clear", () => {
+    const tracker = new GroupTokenTracker();
+    tracker.accept(TOKEN);
+    tracker.clear();
+    expect(tracker.accept(TOKEN)).toBe(true);
+  });
+
+  // Mirrors Main's subscription exactly: lobby_info carries the token once a
+  // second for the whole lobby phase, and each redundant emit is an IPC to
+  // the shell carrying the roster from BEFORE this frame's LobbyInfoEvent.
+  it("emits presence once across a second of identical lobby_info tokens", () => {
+    const eventBus = new EventBus();
+    const tracker = new GroupTokenTracker();
+    const emitPresence = vi.fn();
+    eventBus.on(GroupTokenEvent, (event) => {
+      if (tracker.accept(event.groupToken)) emitPresence();
+    });
+
+    for (let i = 0; i < 5; i++) {
+      eventBus.emit(new GroupTokenEvent(TOKEN));
+    }
+
+    expect(emitPresence).toHaveBeenCalledOnce();
+
+    // A real change still gets through.
+    eventBus.emit(new GroupTokenEvent("T3RmaXJzdGdhbWU0"));
+    expect(emitPresence).toHaveBeenCalledTimes(2);
   });
 });

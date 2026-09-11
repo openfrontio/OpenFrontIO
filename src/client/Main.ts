@@ -85,7 +85,7 @@ import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import "./PlayerProfileModal";
-import { withGroupToken } from "./PresenceGroup";
+import { GroupTokenTracker, withGroupToken } from "./PresenceGroup";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -277,10 +277,10 @@ class Client {
   private presenceSpectating = false;
   private presenceInGame = false;
   // Held apart from presenceDetail because that object is REPLACED wholesale
-  // on every lobby_info, and the token arrives on its own schedule (once,
-  // from whichever of lobby_info / start got here first). Merged back in at
-  // emit time.
-  private presenceGroupToken: string | undefined;
+  // on every lobby_info, and the token rides every one of those (once a
+  // second) as well as the start message. Merged back in at emit time; see
+  // GroupTokenTracker for why a repeat must not re-emit.
+  private readonly presenceGroup = new GroupTokenTracker();
 
   private turnstileTokenPromise: Promise<{
     token: string;
@@ -477,8 +477,9 @@ class Client {
     // they are in the same group, and it is the shell that decides what a
     // spectator does to the group's size.
     this.eventBus.on(GroupTokenEvent, (event) => {
-      this.presenceGroupToken = event.groupToken;
-      this.emitPresence();
+      if (this.presenceGroup.accept(event.groupToken)) {
+        this.emitPresence();
+      }
     });
 
     document.addEventListener("join-lobby", (event) => {
@@ -1207,7 +1208,7 @@ class Client {
     this.presenceSpectating = lobby.spectator === true;
     // Dropped here, not on leaving: a game we are joining must never inherit
     // the previous one's group, and singleplayer must carry none at all.
-    this.presenceGroupToken = undefined;
+    this.presenceGroup.clear();
     this.presenceDetail = {
       gameType: joinConfig?.gameType,
       gameMode: joinConfig?.gameMode,
@@ -1423,7 +1424,7 @@ class Client {
               : "lobby",
           ...this.presenceDetail,
         },
-        this.presenceGroupToken,
+        this.presenceGroup.current(),
       ),
     );
   }
@@ -1434,7 +1435,7 @@ class Client {
     this.presenceDetail = {};
     this.presenceSpectating = false;
     this.presenceInGame = false;
-    this.presenceGroupToken = undefined;
+    this.presenceGroup.clear();
     desktopPresence.set({ state: "menu" });
   }
 

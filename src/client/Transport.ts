@@ -462,7 +462,17 @@ export class Transport {
         this.flushBuffer();
         this.onmessage(msg);
       } catch (e) {
-        console.error("Error in onmessage handler:", e, event.data);
+        // Deliberately NOT the frame. This catch wraps the downstream
+        // handler as well as the decode, so it fires on ordinary
+        // application errors too — and the desktop shell persists
+        // console.error by default, while a lobby_info or start frame
+        // carries the game's group token in the clear. For a decode failure
+        // the size is the part that actually helps.
+        const frame =
+          event.data instanceof ArrayBuffer
+            ? `${event.data.byteLength} bytes`
+            : typeof event.data;
+        console.error(`Error in onmessage handler (frame: ${frame}):`, e);
         return;
       }
     };

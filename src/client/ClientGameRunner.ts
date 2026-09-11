@@ -49,7 +49,7 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
-import { groupTokenOf } from "./PresenceGroup";
+import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
@@ -254,10 +254,12 @@ export function joinLobby(
       // Everything in the start message EXCEPT the group token. This log is
       // the whole message verbatim and players paste it into bug reports;
       // the token is the one field in it that must not travel that way.
-      const loggable: Record<string, unknown> = { ...message };
-      delete loggable.groupToken;
       console.log(
-        `lobby: game started: ${JSON.stringify(loggable, replacer, 2)}`,
+        `lobby: game started: ${JSON.stringify(
+          loggableStartMessage(message),
+          replacer,
+          2,
+        )}`,
       );
       // Server tells us our assigned clientID (also sent on start for late joins)
       clientID = message.myClientID;
