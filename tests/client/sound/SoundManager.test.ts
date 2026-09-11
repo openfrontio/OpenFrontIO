@@ -1,419 +1,208 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock howler before importing SoundManager
-const howlCtor = vi.fn();
 const howlInstances: any[] = [];
 let nextPlayId = 1;
+const { howlerVolume } = vi.hoisted(() => ({ howlerVolume: vi.fn() }));
+
 vi.mock("howler", () => {
   class MockHowl {
+    src: string;
+    loop: boolean;
+    volumes: number[] = [];
     play = vi.fn(() => nextPlayId++);
-    stop = vi.fn((id?: number) => {
-      if (id !== undefined) {
-        this._fireEvent("stop", id);
-      }
+    stop = vi.fn((id?: number) => this._fire("stop", id ?? -1));
+    // Howler's volume() reports the live value during a fade and the target
+    // once it lands; model the landed state so a crossfade reads a real level.
+    fade = vi.fn((_from: number, to: number) => {
+      this.volumes.push(to);
+      return this;
     });
-    volume = vi.fn();
-    fade = vi.fn();
     playing = vi.fn().mockReturnValue(false);
     unload = vi.fn();
-    once = vi.fn((event: string, callback: () => void, id?: number) => {
-      if (!this._listeners.has(event)) {
-        this._listeners.set(event, new Map());
-      }
-      // Listeners registered without a play id are keyed under -1.
-      this._listeners.get(event)!.set(id ?? -1, callback);
+    volume = vi.fn((v?: number) => {
+      if (v === undefined) return this.volumes.at(-1) ?? 0;
+      this.volumes.push(v);
+      return this;
     });
-    off = vi.fn((event?: string) => {
-      if (event === undefined) {
-        this._listeners.clear();
-      } else {
-        this._listeners.delete(event);
-      }
+    once = vi.fn((event: string, cb: () => void, id?: number) => {
+      if (!this._listeners.has(event)) this._listeners.set(event, new Map());
+      this._listeners.get(event)!.set(id ?? -1, cb);
     });
-    _listeners: Map<string, Map<number, () => void>> = new Map();
-    _fireEvent(event: string, id: number) {
+    off = vi.fn();
+    _listeners = new Map<string, Map<number, () => void>>();
+    _fire(event: string, id: number) {
       const cb = this._listeners.get(event)?.get(id);
       if (cb) {
+        this._listeners.get(event)!.delete(id);
         cb();
-        this._listeners.get(event)?.delete(id);
       }
     }
-    constructor(_opts: any) {
-      howlCtor(_opts);
+    constructor(opts: any) {
+      this.src = opts.src[0];
+      this.loop = opts.loop ?? false;
       howlInstances.push(this);
     }
   }
-  return { Howl: MockHowl };
-});
-
-// Mock the Sounds module so tests don't depend on actual asset paths
-vi.mock("../../../src/client/sound/Sounds", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../../src/client/sound/Sounds")>();
-  return {
-    ...actual,
-    soundEffectUrls: new Map([
-      ["click", "mock/click.mp3"],
-      ["click-1", "mock/click-1.mp3"],
-      ["click-2", "mock/click-2.mp3"],
-      ["click-3", "mock/click-3.mp3"],
-      ["atom-hit", "mock/atom-hit.mp3"],
-      ["atom-launch", "mock/atom-launch.mp3"],
-      ["hydrogen-hit", "mock/hydrogen-hit.mp3"],
-      ["hydrogen-launch", "mock/hydrogen-launch.mp3"],
-      ["mirv-launch", "mock/mirv-launch.mp3"],
-      ["ka-ching", "mock/ka-ching.mp3"],
-      ["message", "mock/message.mp3"],
-      ["build-city", "mock/build-city.mp3"],
-    ]),
-  };
+  return { Howl: MockHowl, Howler: { volume: howlerVolume } };
 });
 
 import {
-  EFFECTS_MASTER_GAIN,
-  MAX_CONCURRENT_SOUNDS,
-  SoundManager,
-} from "../../../src/client/sound/SoundManager";
+  AudioMixer,
+  resetAudioMixerForTest,
+} from "../../../src/client/sound/AudioMixer";
+import { SoundManager } from "../../../src/client/sound/SoundManager";
 import {
   PlaySoundEffectEvent,
   SetAmbienceEvent,
-  SetBackgroundMusicVolumeEvent,
-  SetSoundEffectsVolumeEvent,
 } from "../../../src/client/sound/Sounds";
 import { EventBus } from "../../../src/core/EventBus";
 import { UserSettings } from "../../../src/core/game/UserSettings";
 
-function createUserSettings(musicVolume = 0, sfxVolume = 1): UserSettings {
-  const settings = new UserSettings();
-  settings.setBackgroundMusicVolume(musicVolume);
-  settings.setSoundEffectsVolume(sfxVolume);
-  return settings;
+function resetSettings() {
+  localStorage.clear();
+  const statics = UserSettings as unknown as {
+    cache: Map<string, string | null>;
+    playerId: string | null;
+  };
+  statics.cache.clear();
+  statics.playerId = null;
 }
 
-describe("SoundManager", () => {
-  let eventBus: EventBus;
-  let userSettings: UserSettings;
-  let soundManager: SoundManager;
+const find = (fragment: string) =>
+  howlInstances.find((h) => h.src.includes(fragment));
 
-  beforeEach(() => {
-    howlCtor.mockClear();
-    howlInstances.length = 0;
-    nextPlayId = 1;
-    // Pin the click-variant randomization to variant 0 ("click").
-    vi.spyOn(Math, "random").mockReturnValue(0);
-    eventBus = new EventBus();
-    userSettings = createUserSettings();
-    soundManager = new SoundManager(eventBus, userSettings);
-  });
+let eventBus: EventBus;
+let settings: UserSettings;
+let mixer: AudioMixer;
+let soundManager: SoundManager;
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+function build({ ambience = 1, music = 1 } = {}) {
+  settings = new UserSettings();
+  settings.setAudioVolume("ambience", ambience);
+  settings.setAudioVolume("music", music);
+  settings.setAudioVolume("effects", 1);
+  mixer = new AudioMixer(settings);
+  eventBus = new EventBus();
+  soundManager = new SoundManager(eventBus, mixer);
+}
 
-  it("lazy-loads a sound effect once and reuses it", () => {
-    eventBus.emit(new PlaySoundEffectEvent("click"));
-    eventBus.emit(new PlaySoundEffectEvent("click"));
-    // 1 background music Howl + 1 Click Howl = 2
-    expect(howlCtor).toHaveBeenCalledTimes(2);
-  });
+beforeEach(() => {
+  howlInstances.length = 0;
+  nextPlayId = 1;
+  howlerVolume.mockClear();
+  resetSettings();
+  vi.spyOn(document, "hasFocus").mockReturnValue(true);
+  build();
+});
 
-  it("fans 'click' out to a random variant", () => {
-    // floor(0.9 * 4 variants) = variant 3.
-    vi.spyOn(Math, "random").mockReturnValue(0.9);
-    eventBus.emit(new PlaySoundEffectEvent("click"));
-    expect(howlCtor).toHaveBeenLastCalledWith(
-      expect.objectContaining({ src: ["mock/click-3.mp3"] }),
+afterEach(() => {
+  soundManager?.dispose();
+  mixer?.dispose();
+  resetAudioMixerForTest();
+  vi.restoreAllMocks();
+});
+
+describe("background music", () => {
+  it("is a single looping track, not a playlist", () => {
+    const music = find("gameplay.mp3");
+    expect(music).toBeDefined();
+    expect(music.loop).toBe(true);
+    expect(howlInstances.filter((h) => h.src.includes("music/")).length).toBe(
+      1,
     );
   });
 
-  it("plays a sound effect when PlaySoundEffectEvent is emitted", () => {
-    eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
-    const effectHowl = howlInstances[howlInstances.length - 1];
-    expect(effectHowl.play).toHaveBeenCalledTimes(1);
+  it("follows the music slider through the mixer", () => {
+    settings.setAudioVolume("music", 0.5);
+    // 0.5 squared for the audio taper, then the -1 dB music trim.
+    expect(find("gameplay.mp3").volumes.at(-1)).toBeCloseTo(0.25 * 0.89);
   });
 
-  it("applies bootstrap volume from UserSettings to background music", () => {
-    const settings = createUserSettings(0.5, 1);
-    const bus = new EventBus();
-    howlCtor.mockClear();
-    howlInstances.length = 0;
-    new SoundManager(bus, settings);
-    const bgHowls = howlInstances.slice(0, 1);
-    bgHowls.forEach((h) => {
-      // Slider position is curved (squared) into perceptual gain: 0.5² = 0.25.
-      expect(h.volume).toHaveBeenCalledWith(0.25);
-    });
-  });
-
-  it("applies current sfx volume to lazily-loaded sounds", () => {
-    const settings = createUserSettings(0, 0.3);
-    const bus = new EventBus();
-    howlCtor.mockClear();
-    howlInstances.length = 0;
-    new SoundManager(bus, settings);
-    bus.emit(new PlaySoundEffectEvent("click"));
-    // Slider position 0.3 is curved (squared) into perceptual gain (0.3² =
-    // 0.09), then trimmed by the -5 dB effects master gain.
-    expect(howlCtor).toHaveBeenLastCalledWith(
-      expect.objectContaining({ volume: 0.3 * 0.3 * EFFECTS_MASTER_GAIN }),
-    );
-  });
-
-  it("responds to SetBackgroundMusicVolumeEvent", () => {
-    eventBus.emit(new SetBackgroundMusicVolumeEvent(0.7));
-    const bgHowls = howlInstances.slice(0, 1);
-    bgHowls.forEach((h) => {
-      // 0.7² = 0.49 perceptual gain (no master trim on music).
-      expect(h.volume).toHaveBeenCalledWith(0.7 * 0.7);
-    });
-  });
-
-  it("responds to SetSoundEffectsVolumeEvent", () => {
-    eventBus.emit(new PlaySoundEffectEvent("click"));
-    const clickHowl = howlInstances[howlInstances.length - 1];
-    clickHowl.volume.mockClear();
-    eventBus.emit(new SetSoundEffectsVolumeEvent(0.4));
-    // 0.4² = 0.16 perceptual gain, trimmed by the effects master gain.
-    expect(clickHowl.volume).toHaveBeenCalledWith(
-      0.4 * 0.4 * EFFECTS_MASTER_GAIN,
-    );
-  });
-
-  it("clamps volume values between 0 and 1", () => {
-    eventBus.emit(new SetBackgroundMusicVolumeEvent(2));
-    const bgHowls = howlInstances.slice(0, 1);
-    bgHowls.forEach((h) => {
-      expect(h.volume).toHaveBeenCalledWith(1);
-    });
-
-    bgHowls.forEach((h) => h.volume.mockClear());
-    eventBus.emit(new SetBackgroundMusicVolumeEvent(-0.5));
-    bgHowls.forEach((h) => {
-      expect(h.volume).toHaveBeenCalledWith(0);
-    });
-  });
-
-  it("curves the slider position into perceptual gain so the top of the range is audibly distinct", () => {
-    const bgHowls = howlInstances.slice(0, 1);
-    // Linear gain would make 0.9 and 1.0 nearly indistinguishable; squaring
-    // spreads the top end (0.9 → 0.81) so reductions are noticeable sooner.
-    eventBus.emit(new SetBackgroundMusicVolumeEvent(0.9));
-    bgHowls.forEach((h) => {
-      expect(h.volume).toHaveBeenLastCalledWith(0.81);
-    });
-  });
-
-  it("dispose() unsubscribes from EventBus so events no longer play sounds", () => {
-    eventBus.emit(new PlaySoundEffectEvent("click"));
-    const clickHowl = howlInstances[howlInstances.length - 1];
-    expect(clickHowl.play).toHaveBeenCalledTimes(1);
-
-    soundManager.dispose();
-
-    eventBus.emit(new PlaySoundEffectEvent("click"));
-    expect(clickHowl.play).toHaveBeenCalledTimes(1);
-  });
-
-  it("dispose() stops and unloads all loaded sound effects", () => {
-    eventBus.emit(new PlaySoundEffectEvent("click"));
-    const clickHowl = howlInstances[howlInstances.length - 1];
-
-    soundManager.dispose();
-
-    expect(clickHowl.stop).toHaveBeenCalled();
-    expect(clickHowl.unload).toHaveBeenCalled();
-  });
-
-  it("dispose() stops and unloads background music", () => {
-    const bgHowls = howlInstances.slice(0, 1);
-
-    soundManager.dispose();
-
-    bgHowls.forEach((h) => {
-      expect(h.stop).toHaveBeenCalled();
-      expect(h.unload).toHaveBeenCalled();
-    });
-  });
-
-  it("plays a looping ambience on SetAmbienceEvent and fades it out when cleared", () => {
-    eventBus.emit(new SetAmbienceEvent("city"));
-    const ambienceHowl = howlInstances[howlInstances.length - 1];
-    expect(howlCtor).toHaveBeenLastCalledWith(
-      expect.objectContaining({ loop: true }),
-    );
-    expect(ambienceHowl.play).toHaveBeenCalledTimes(1);
-
-    eventBus.emit(new SetAmbienceEvent(null));
-    expect(ambienceHowl.fade).toHaveBeenLastCalledWith(
-      expect.anything(),
-      0,
-      expect.anything(),
-    );
-    expect(ambienceHowl.stop).not.toHaveBeenCalled();
-    ambienceHowl._fireEvent("fade", -1);
-    expect(ambienceHowl.stop).toHaveBeenCalled();
-  });
-
-  it("switching ambience fades the previous loop out and starts the new one", () => {
-    eventBus.emit(new SetAmbienceEvent("city"));
-    const cityHowl = howlInstances[howlInstances.length - 1];
-    eventBus.emit(new SetAmbienceEvent("factory"));
-    const factoryHowl = howlInstances[howlInstances.length - 1];
-    cityHowl._fireEvent("fade", -1);
-    expect(cityHowl.stop).toHaveBeenCalled();
-    expect(factoryHowl.play).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not load ambience while the sfx volume is 0", () => {
-    const bus = new EventBus();
-    howlCtor.mockClear();
-    howlInstances.length = 0;
-    new SoundManager(bus, createUserSettings(0, 0));
-    const loadedBefore = howlCtor.mock.calls.length;
-    bus.emit(new SetAmbienceEvent("city"));
-    expect(howlCtor).toHaveBeenCalledTimes(loadedBefore);
-  });
-
-  it("stops the ambience directly when cleared while muted", () => {
-    // fade(0, 0, …) never completes in Howler, so a loop cleared while the
-    // player is muted must be stopped directly instead of after a fade.
-    eventBus.emit(new SetAmbienceEvent("city"));
-    const ambienceHowl = howlInstances[howlInstances.length - 1];
-    eventBus.emit(new SetSoundEffectsVolumeEvent(0));
-    eventBus.emit(new SetAmbienceEvent(null));
-    expect(ambienceHowl.stop).toHaveBeenCalled();
-  });
-
-  it("re-selecting a track mid-fade-out cancels the pending stop", () => {
-    eventBus.emit(new SetAmbienceEvent("city"));
-    const cityHowl = howlInstances[howlInstances.length - 1];
-    eventBus.emit(new SetAmbienceEvent(null));
-    eventBus.emit(new SetAmbienceEvent("city"));
-    // The fade-out listener was cancelled by off("fade"), so firing the fade
-    // completion must not stop the loop.
-    cityHowl._fireEvent("fade", -1);
-    expect(cityHowl.stop).not.toHaveBeenCalled();
-  });
-
-  it("re-emitting the current ambience does not restart it", () => {
-    eventBus.emit(new SetAmbienceEvent("city"));
-    const ambienceHowl = howlInstances[howlInstances.length - 1];
-    eventBus.emit(new SetAmbienceEvent("city"));
-    expect(ambienceHowl.play).toHaveBeenCalledTimes(1);
-  });
-
-  it("sfx volume changes apply to loaded ambience loops", () => {
-    eventBus.emit(new SetAmbienceEvent("city"));
-    const ambienceHowl = howlInstances[howlInstances.length - 1];
-    ambienceHowl.volume.mockClear();
-    eventBus.emit(new SetSoundEffectsVolumeEvent(0.4));
-    expect(ambienceHowl.volume).toHaveBeenCalledWith(
-      0.4 * 0.4 * EFFECTS_MASTER_GAIN,
-    );
-  });
-
-  it("does not throw when playSoundEffect is called directly", () => {
-    expect(() => soundManager.playSoundEffect("click")).not.toThrow();
-  });
-
-  it("does not throw when playBackgroundMusic and stopBackgroundMusic are called", () => {
-    expect(() => soundManager.playBackgroundMusic()).not.toThrow();
-    expect(() => soundManager.stopBackgroundMusic()).not.toThrow();
-  });
-
-  it("swallows errors from Howler and does not propagate", () => {
-    howlInstances.forEach((h) => {
-      h.play.mockImplementation(() => {
-        throw new Error("audio backend failure");
-      });
-      h.stop.mockImplementation(() => {
-        throw new Error("audio backend failure");
-      });
-      h.volume.mockImplementation(() => {
-        throw new Error("audio backend failure");
-      });
-    });
-    eventBus.emit(new PlaySoundEffectEvent("click"));
-    const clickHowl = howlInstances[howlInstances.length - 1];
-    clickHowl.play.mockImplementation(() => {
-      throw new Error("audio backend failure");
-    });
-    clickHowl.stop.mockImplementation(() => {
-      throw new Error("audio backend failure");
-    });
-    clickHowl.volume.mockImplementation(() => {
-      throw new Error("audio backend failure");
-    });
-
-    expect(() => soundManager.playBackgroundMusic()).not.toThrow();
-    expect(() => soundManager.stopBackgroundMusic()).not.toThrow();
-    expect(() => soundManager.setBackgroundMusicVolume(0.5)).not.toThrow();
-    expect(() => soundManager.setSoundEffectsVolume(0.5)).not.toThrow();
-    expect(() => soundManager.playSoundEffect("click")).not.toThrow();
-    expect(() => soundManager.stopSoundEffect("click")).not.toThrow();
+  it("only starts once", () => {
+    soundManager.playBackgroundMusic();
+    const music = find("gameplay.mp3");
+    music.playing.mockReturnValue(true);
+    soundManager.playBackgroundMusic();
+    expect(music.play).toHaveBeenCalledTimes(1);
   });
 });
 
-describe("Sound channel management", () => {
-  let eventBus: EventBus;
+describe("cue playback", () => {
+  it("hands cues to the mixer, which routes them by channel", () => {
+    const play = vi.spyOn(mixer, "play");
+    eventBus.emit(new PlaySoundEffectEvent("build-city"));
+    expect(play).toHaveBeenCalledWith("build-city");
+  });
+});
 
-  beforeEach(() => {
-    howlCtor.mockClear();
-    howlInstances.length = 0;
-    nextPlayId = 1;
-    // Pin the click-variant randomization to variant 0 ("click").
-    vi.spyOn(Math, "random").mockReturnValue(0);
-    eventBus = new EventBus();
-    new SoundManager(eventBus, createUserSettings());
+describe("ambience", () => {
+  it("starts the requested loop and fades it up", () => {
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    const city = find("city.mp3");
+    expect(city.loop).toBe(true);
+    expect(city.play).toHaveBeenCalled();
+    expect(city.fade).toHaveBeenCalled();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it("crossfades when the nearest structure changes", () => {
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    eventBus.emit(new SetAmbienceEvent("factory", 0.1));
+    expect(find("city.mp3").fade).toHaveBeenCalledTimes(2); // up, then down
+    expect(find("factory.mp3").play).toHaveBeenCalled();
   });
 
-  it("new sound always plays even when at channel cap", () => {
-    for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
-      eventBus.emit(new PlaySoundEffectEvent("click"));
-    }
-
-    eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
-    const atomHowl = howlInstances[howlInstances.length - 1];
-    expect(atomHowl.play).toHaveBeenCalled();
+  it("does not restart the loop that is already playing", () => {
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    const city = find("city.mp3");
+    city.playing.mockReturnValue(true);
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    expect(city.play).toHaveBeenCalledTimes(1);
   });
 
-  it("stops the oldest sound when at channel cap", () => {
-    for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
-      eventBus.emit(new PlaySoundEffectEvent("click"));
-    }
-    const clickHowl = howlInstances[howlInstances.length - 1];
+  it("tracks the zoom envelope without restarting the loop", () => {
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    const city = find("city.mp3");
+    const plays = city.play.mock.calls.length;
 
-    // The first play had id=1. Playing one more should stop id=1.
-    eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
-    expect(clickHowl.stop).toHaveBeenCalledWith(1);
+    eventBus.emit(new SetAmbienceEvent("city", 0.05));
+
+    expect(city.play.mock.calls.length).toBe(plays);
+    // ambience slider 1 -> taper 1, times the 0.05 envelope.
+    expect(city.volumes.at(-1)).toBeCloseTo(0.05);
   });
 
-  it("frees a channel when a sound ends naturally", () => {
-    for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
-      eventBus.emit(new PlaySoundEffectEvent("click"));
-    }
-    const clickHowl = howlInstances[howlInstances.length - 1];
-
-    // Simulate first sound ending naturally
-    clickHowl._fireEvent("end", 1);
-
-    // Next sound should play without stopping anything
-    clickHowl.stop.mockClear();
-    eventBus.emit(new PlaySoundEffectEvent("click"));
-    expect(clickHowl.stop).not.toHaveBeenCalled();
+  it("silences the loop when the player zooms out", () => {
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    eventBus.emit(new SetAmbienceEvent(null, 0));
+    expect(find("city.mp3").fade).toHaveBeenCalled();
   });
 
-  it("allows up to MAX_CONCURRENT_SOUNDS without stopping any", () => {
-    for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
-      eventBus.emit(new PlaySoundEffectEvent("click"));
-    }
-    const clickHowl = howlInstances[howlInstances.length - 1];
-    expect(clickHowl.play).toHaveBeenCalledTimes(8);
-    // No stop calls with specific IDs (only general stop might be called)
-    expect(clickHowl.stop).not.toHaveBeenCalled();
+  it("follows the ambience slider while a loop is running", () => {
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    settings.setAudioVolume("ambience", 0.5);
+    // slider 0.5 squared, times the 0.1 envelope.
+    expect(find("city.mp3").volumes.at(-1)).toBeCloseTo(0.25 * 0.1);
+  });
+});
+
+describe("teardown", () => {
+  it("stops and unloads everything it owns", () => {
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    const music = find("gameplay.mp3");
+    const city = find("city.mp3");
+
+    soundManager.dispose();
+
+    expect(music.stop).toHaveBeenCalled();
+    expect(music.unload).toHaveBeenCalled();
+    expect(city.stop).toHaveBeenCalled();
+    expect(city.unload).toHaveBeenCalled();
+  });
+
+  it("stops following the bus", () => {
+    const play = vi.spyOn(mixer, "play");
+    soundManager.dispose();
+    eventBus.emit(new PlaySoundEffectEvent("build-city"));
+    expect(play).not.toHaveBeenCalled();
   });
 });
