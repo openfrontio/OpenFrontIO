@@ -31,6 +31,7 @@ export enum GameMapType {
   Caribbean = "Caribbean", // map-generator/assets/maps/caribbean/info.json
   CaspianSea = "Caspian Sea", // map-generator/assets/maps/caspiansea/info.json
   Caucasus = "Caucasus", // map-generator/assets/maps/caucasus/info.json
+  CentralAmerica = "Central America", // map-generator/assets/maps/centralamerica/info.json
   China = "China", // map-generator/assets/maps/china/info.json
   ChoppingBlock = "Chopping Block", // map-generator/assets/maps/choppingblock/info.json
   ClearwaterLakes = "Clearwater Lakes", // map-generator/assets/maps/clearwaterlakes/info.json
@@ -576,6 +577,18 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 21,
     themes: ["europe", "asia"],
+  },
+  {
+    id: "CentralAmerica",
+    type: GameMapType.CentralAmerica,
+    translationKey: "map.centralamerica",
+    categories: ["new", "north_america"],
+    multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 22,
+    themes: ["north_america", "south_america"],
   },
   {
     id: "China",

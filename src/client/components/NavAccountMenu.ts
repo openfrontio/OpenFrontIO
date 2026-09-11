@@ -24,8 +24,9 @@ type MenuItem = {
 
 /**
  * The nav profile control: the account avatar/sign-in trigger plus, once signed
- * in, a chevron that opens the account menu (settings, game settings, username,
- * subscription, log out).
+ * in, a chevron that opens the account menu (account settings, username,
+ * subscription, log out). Game settings are a top-level nav item, not a menu
+ * entry.
  *
  * The trigger keeps `nav-menu-item[data-page="page-account"]`, so the signed-out
  * state still falls through to Navigation's delegated router and opens the
@@ -179,17 +180,8 @@ export class NavAccountMenu extends LitElement {
   };
 
   private items(): MenuItem[] {
-    const gameSettings: MenuItem = {
-      key: "game-settings",
-      labelKey: "nav_account_menu.game_settings",
-      icon: iconSliders,
-      onSelect: () => {
-        window.showPage?.("page-settings");
-      },
-    };
-
-    // Signed out the menu is still the way to the settings page — it's the
-    // only nav entry point now — plus the sign-in route for this platform.
+    // Signed out there is only the sign-in route for this platform: settings
+    // are reached from the navbar, in every signed-in state and out of it.
     if (!this.isSignedIn()) {
       return [
         {
@@ -198,7 +190,6 @@ export class NavAccountMenu extends LitElement {
           icon: iconUser,
           onSelect: () => this.signIn(),
         },
-        gameSettings,
       ];
     }
 
@@ -236,7 +227,6 @@ export class NavAccountMenu extends LitElement {
         icon: iconGear,
         onSelect: () => this.openModal("account-settings"),
       },
-      gameSettings,
       {
         key: "change-username",
         labelKey: "nav_account_menu.change_username",
@@ -556,28 +546,6 @@ const iconGear = html`<svg
   <path
     d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
   />
-</svg>`;
-
-const iconSliders = html`<svg
-  xmlns="http://www.w3.org/2000/svg"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="1.8"
-  stroke-linecap="round"
-  stroke-linejoin="round"
-  class="w-full h-full"
-  aria-hidden="true"
->
-  <line x1="4" y1="21" x2="4" y2="14" />
-  <line x1="4" y1="10" x2="4" y2="3" />
-  <line x1="12" y1="21" x2="12" y2="12" />
-  <line x1="12" y1="8" x2="12" y2="3" />
-  <line x1="20" y1="21" x2="20" y2="16" />
-  <line x1="20" y1="12" x2="20" y2="3" />
-  <line x1="1" y1="14" x2="7" y2="14" />
-  <line x1="9" y1="8" x2="15" y2="8" />
-  <line x1="17" y1="16" x2="23" y2="16" />
 </svg>`;
 
 const iconTag = html`<svg
