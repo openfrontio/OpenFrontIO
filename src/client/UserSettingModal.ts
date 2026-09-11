@@ -63,6 +63,12 @@ const AUDIO_TAB_ORDER: readonly AudioCategory[] = [
  */
 const PREVIEWABLE: readonly CueCategory[] = ["effects", "alerts", "interface"];
 
+/**
+ * Longest a Test button stays disabled waiting for its cue. Comfortably past
+ * the longest preview cue; it only ever fires when a preview cannot settle.
+ */
+const PREVIEW_CEILING_MS = 10_000;
+
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
   protected routerName: string | undefined = "settings";
@@ -505,12 +511,23 @@ export class UserSettingModal extends BaseModal {
     const controls = audioControls();
     if (controls === null || this.previewing.has(category)) return;
     this.previewing = new Set([...this.previewing, category]);
+    let ceiling: ReturnType<typeof setTimeout> | undefined;
     try {
-      await controls.previewCue(category);
+      // A cue whose asset fails to load or play settles neither `end` nor
+      // `stop` in Howler, so previewCue would never resolve and the button
+      // would stay disabled for the life of the page. Race a ceiling so the
+      // worst case is one dead press, not a permanently dead button.
+      await Promise.race([
+        controls.previewCue(category),
+        new Promise<void>((resolve) => {
+          ceiling = setTimeout(resolve, PREVIEW_CEILING_MS);
+        }),
+      ]);
     } catch (error) {
       // The cue is a convenience; a failed preview must not break the tab.
       console.warn("Failed to play audio preview", error);
     } finally {
+      if (ceiling !== undefined) clearTimeout(ceiling);
       const remaining = new Set(this.previewing);
       remaining.delete(category);
       this.previewing = remaining;
