@@ -6,6 +6,7 @@ import {
   desktopUpdate,
   isDesktopShell,
   multiplayerAllowedForSession,
+  publishDesktopUpdateState,
   type DesktopSessionState,
   type DesktopUpdateState,
 } from "../DesktopShell";
@@ -79,10 +80,12 @@ export class DesktopStatusBar extends LitElement {
       this.unsubscribe = bridge.subscribe((state) => {
         this.updateState = state;
         // Broadcast so entry-point components can gate without each opening
-        // its own subscription to the bridge.
-        document.dispatchEvent(
-          new CustomEvent("desktop-update-state", { detail: state }),
-        );
+        // its own subscription to the bridge. Routed through DesktopShell so
+        // the value is also CACHED: the bridge replays synchronously during
+        // this element's upgrade, long before <game-mode-selector> exists,
+        // and a component that mounts afterwards has nothing but the cache to
+        // read (OPE-396).
+        publishDesktopUpdateState(state);
       });
     }
 

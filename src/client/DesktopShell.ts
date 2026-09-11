@@ -131,6 +131,50 @@ export function desktopUpdate(): DesktopUpdateBridge | null {
   return desktop?.update ?? null;
 }
 
+let __updateState: DesktopUpdateState | null = null;
+
+/**
+ * The shell's current update state, or null before the first one has been
+ * published -- always the case on the web, where there is no bridge at all.
+ *
+ * This exists for the same reason getDesktopSessionState() does in Auth.ts,
+ * and it fixes the mirror-image bug (OPE-396). The bridge replays its current
+ * state to every new subscriber SYNCHRONOUSLY, so DesktopStatusBar -- the one
+ * subscriber, and therefore the one publisher of `desktop-update-state` --
+ * dispatches during its own upgrade. <game-mode-selector> cannot exist yet at
+ * that moment: it is rendered by <play-page> on a Lit microtask, which cannot
+ * run until module evaluation has already finished. The dispatch is one-shot,
+ * so a component that mounts afterwards never hears it and gates on null.
+ *
+ * That costs nothing on a cold launch (the updater is still `checking`, and
+ * every later state arrives as an ordinary change event), and everything when
+ * the renderer loads a document while the updater ALREADY holds `staged` --
+ * the host navigating to the next lobby, a post-purchase refresh, a failed
+ * apply(). There the replay was the only delivery, so the bar correctly reads
+ * "Update ready" while the gate silently never applies.
+ *
+ * Seeding at the consumer rather than re-dispatching later at the publisher:
+ * a second dispatch would only move the race to whoever mounts after IT.
+ */
+export function getDesktopUpdateState(): DesktopUpdateState | null {
+  return __updateState;
+}
+
+/**
+ * Caches `state` and broadcasts it, so entry-point components can gate
+ * without each opening its own subscription to the bridge. Mirrors Auth.ts's
+ * setSessionState: cache first, then dispatch, so a listener that reads the
+ * accessor during the event sees the value it was just handed.
+ *
+ * Only DesktopStatusBar calls this -- it owns the bridge subscription.
+ */
+export function publishDesktopUpdateState(state: DesktopUpdateState): void {
+  __updateState = state;
+  document.dispatchEvent(
+    new CustomEvent("desktop-update-state", { detail: state }),
+  );
+}
+
 /**
  * Whether multiplayer should be available in a given update state.
  *

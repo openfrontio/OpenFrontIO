@@ -109,7 +109,8 @@ export interface NukeMagnitude {
 // attackLogic tunables
 const LARGE_TERRITORY_MIDPOINT = 300_000;
 const LARGE_TERRITORY_STEEPNESS = 2.5;
-// Floors: a huge attacker's tiles cost 0.3x, a huge defender's 0.7x.
+// Floors: a huge attacker's bonus bottoms at 0.3x (losses; speed uses the
+// deeper LARGE_ATTACKER_SPEED_DEPTH below), a huge defender's at 0.7x.
 const LARGE_ATTACKER_DEPTH = 0.7;
 const LARGE_DEFENDER_DEPTH = 0.3;
 const BOT_DEFENDER_LOSS_MULT = 0.7;
@@ -125,6 +126,11 @@ const ATTACKER_LOSS_BASE = 0.463;
 const ATTACKER_LOSS_PER_DENSITY = 0.0039;
 // Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
 const SPEED_COST_DIVISOR = 7.77;
+// Speed-only: the attacker's territory bonus runs a touch deeper for speed
+// than the 0.7 loss depth above (floor 0.27x vs 0.3x). Paired with the 0.82
+// sub-parity floor on the ratio curve, an overwhelming push lands ~18%
+// faster for a small attacker, ~20% at the 300k midpoint, ~25% for giants.
+const LARGE_ATTACKER_SPEED_DEPTH = 0.73;
 
 /**
  * Logistic in log(tiles): ~1 for small territories, easing down to
@@ -778,7 +784,7 @@ export class Config {
     if (this.isRandomSpawn()) {
       return 150;
     }
-    return 300;
+    return 200;
   }
   numBots(): number {
     return this.bots();
@@ -867,18 +873,23 @@ export class Config {
         ATTACKER_LOSS_PER_DENSITY * defenderTroopLoss);
 
     // Speed: a tile's cost in tick-fractions grows with how outnumbered the
-    // attack is. Flat at 1/5 up to parity, then rising linearly (saturating
-    // at 7.5x), with a second ramp for hopeless attacks past 20x.
+    // attack is. Floored at 0.82 below parity (overwhelming stacks land ~18%
+    // faster), then rising linearly (saturating at 7.5x), with a second ramp
+    // for hopeless attacks past 20x.
     const speedCost =
-      (within(troopRatio, 1, 7.5) * within(troopRatio / 20, 1, 50)) /
+      (within(troopRatio, 0.82, 7.5) * within(troopRatio / 20, 1, 50)) /
       SPEED_COST_DIVISOR;
+    const largeAttackerSpeedBonus = largeTerritoryBonus(
+      attacker.numTiles,
+      LARGE_ATTACKER_SPEED_DEPTH,
+    );
     return {
       attackerTroopLoss,
       defenderTroopLoss,
       tickFraction:
         (speedCost *
           tileCost *
-          largeAttackerBonus *
+          largeAttackerSpeedBonus *
           largeDefenderBonus *
           traitorCostMod) /
         input.borderSize,

@@ -7,6 +7,7 @@ import { PublicGameInfo, PublicGames } from "../../core/Schemas";
 import { getDesktopSessionState } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import {
+  getDesktopUpdateState,
   isDesktopShell,
   type DesktopSessionState,
   type DesktopUpdateState,
@@ -179,6 +180,10 @@ export class DetailedGameViewModal extends BaseModal {
     );
     document.addEventListener("userMeResponse", this.onUserMe);
     if (isDesktopShell()) {
+      // Seed BOTH from their current values -- this modal mounts well after
+      // the update bridge's synchronous replay has already been dispatched
+      // and lost, so without the seed its join() gate sees null (OPE-396).
+      this.desktopUpdateState = getDesktopUpdateState();
       this.desktopSessionState = getDesktopSessionState();
     }
     document.addEventListener(
