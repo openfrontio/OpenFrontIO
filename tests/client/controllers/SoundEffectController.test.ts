@@ -184,6 +184,27 @@ describe("SoundEffectController", () => {
     expect(played).toEqual(["build-train-station"]);
   });
 
+  it("plays one train-station cue when several structures gain stations at once", () => {
+    const me = {};
+    game.myPlayer = () => me;
+    game.inSpawnPhase = () => false;
+    let hasStation = false;
+    const makeStructure = (id: number) => ({
+      id: () => id,
+      type: () => UnitType.City,
+      isActive: () => true,
+      reachedTarget: () => false,
+      createdAt: () => 0,
+      owner: () => me,
+      hasTrainStation: () => hasStation,
+    });
+    const structures = [makeStructure(1), makeStructure(2), makeStructure(3)];
+    tickWithUnits(...structures);
+    hasStation = true;
+    tickWithUnits(...structures);
+    expect(played).toEqual(["build-train-station"]);
+  });
+
   it("stays silent for a structure first seen with a station already", () => {
     const me = {};
     game.myPlayer = () => me;

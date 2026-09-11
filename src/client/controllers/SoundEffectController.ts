@@ -14,6 +14,10 @@ const MIRV_HIT_SOUND_INTERVAL_TICKS = 5;
 // multiple attackers); don't stack the alarm and evict other cues.
 const NUKE_WARNING_SOUND_INTERVAL_TICKS = 10;
 
+// A new factory stations every owned City/Port/Factory within range on the
+// same tick (FactoryExecution.createStation); play the cue once, not N times.
+const TRAIN_STATION_SOUND_INTERVAL_TICKS = 10;
+
 // Structures a train station can be attached to (see TrainStationExecution).
 const STATION_CAPABLE_TYPES = new Set<UnitType>([
   UnitType.City,
@@ -30,6 +34,7 @@ const NUKE_INBOUND_MESSAGES = new Set<MessageType>([
 export class SoundEffectController implements Controller {
   private lastMirvHitSoundTick = -Infinity;
   private lastNukeWarningSoundTick = -Infinity;
+  private lastTrainStationSoundTick = -Infinity;
   // A train station is a flag on an existing structure, not a unit — play the
   // build sound on the false→true edge only, so structures that already have
   // one when first seen (e.g. joining mid-game) stay silent.
@@ -168,7 +173,14 @@ export class SoundEffectController implements Controller {
     const hasStation = unit.hasTrainStation();
     const prev = this.hadTrainStation.get(unit.id());
     if (prev === false && hasStation && unit.owner() === this.game.myPlayer()) {
-      this.emit("build-train-station");
+      const tick = this.game.ticks();
+      if (
+        tick - this.lastTrainStationSoundTick >=
+        TRAIN_STATION_SOUND_INTERVAL_TICKS
+      ) {
+        this.lastTrainStationSoundTick = tick;
+        this.emit("build-train-station");
+      }
     }
     this.hadTrainStation.set(unit.id(), hasStation);
   }
