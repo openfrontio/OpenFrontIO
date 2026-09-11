@@ -385,6 +385,8 @@ servers register within ~10s of boot. Outcomes:
   site's env file, which says its clients take the server list from the API: an
   unflagged version then means no server is `open` and nobody can start a game,
   so the deploy fails rather than reporting a success it did not achieve.
+  `deploy.sh` gains the passthrough for that variable separately (roadmap item
+  3); until it does, it is always absent, which is the lenient path above.
 
 Until the Worker exists nothing reads any of this, so the uploads are additive
 and prod is unaffected. The decision table above is unit-tested in
