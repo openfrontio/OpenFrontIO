@@ -829,6 +829,12 @@ describe("Display tab subscription lifecycle", () => {
   // the answer is useless and because touching @state on a detached element
   // schedules a Lit update against a document that may be gone.
   it("goes quiet when disconnected with a write in flight", async () => {
+    // Fake timers BEFORE the click, so the settle ceiling is armed on the
+    // clock this test can advance. Installing them afterwards leaves the
+    // ceiling on the real clock, where advanceTimersByTime cannot reach it --
+    // and the final assertion then holds whether or not leaveDisplayTab()
+    // cleared anything.
+    vi.useFakeTimers();
     const fake = fakeBridge();
     fake.install();
     const el = await mount();
@@ -847,8 +853,7 @@ describe("Display tab subscription lifecycle", () => {
     fake.settle(snapshot({ prefs: { mode: "windowed", displayId: null } }));
     await flush(el);
     // ...and the ceiling does not fire a re-read at a dead element.
-    vi.useFakeTimers();
-    vi.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(DISPLAY_SETTLE_TIMEOUT_MS * 2);
     await Promise.resolve();
     expect(fake.bridge.getPrefs).toHaveBeenCalledTimes(readsBeforeTeardown);
   });
