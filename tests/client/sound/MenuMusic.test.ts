@@ -54,15 +54,20 @@ import { startMenuMusic } from "../../../src/client/sound/MenuMusic";
 // restoreAllMocks would not.
 let mixer: any;
 let musicLevel: number;
+// The channel as the sliders have it, ignoring the focus duck -- which is
+// exactly the distinction isAudible draws and volumeFor does not.
+let musicAudible: boolean;
 
 const buildMixer = () => {
   // Real defaults: slider 0.5, squared by perceptualGain, times the -1 dB
   // music trim.
   musicLevel = 0.5 * 0.5 * 0.89;
+  musicAudible = true;
   mixer = {
     register: vi.fn(),
     unregister: vi.fn(),
     volumeFor: vi.fn(() => musicLevel),
+    isAudible: vi.fn(() => musicAudible),
   };
 };
 
@@ -222,7 +227,9 @@ describe("menu music", () => {
     // The floor write already went out at the level from load time. It is
     // 48 dB down, so inaudible either way; what matters is the ramp.
     const beforeStart = volumeWrites(theme).length;
+    // Muted outright during the load, not merely ducked.
     musicLevel = 0;
+    musicAudible = false;
     theme.begin();
 
     // Muted by the time it starts, so there is no ramp at all -- the mixer
@@ -329,9 +336,38 @@ describe("menu music", () => {
     expect(mixer.register).toHaveBeenCalledWith(theme, "music");
   });
 
+  it("still ramps when playback starts while the page is unfocused", () => {
+    // The gesture arms it, then the player alt-tabs while the stream is still
+    // loading, so "play" lands ducked. Deciding the skip on volumeFor would
+    // read that duck as silence, register at once, and hand the theme back at
+    // full level on refocus -- the very defect the per-tick read removes.
+    vi.useFakeTimers();
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+    const theme = themes()[0];
+
+    const level = musicLevel;
+    musicLevel = 0; // ducked by muteOnBlur; the slider itself is untouched
+    theme.begin();
+
+    // Ramping, not registered: silent for now, but on its way up.
+    expect(mixer.register).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1000);
+    expect(lastVolume(theme)).toBe(0);
+
+    musicLevel = level;
+    vi.advanceTimersByTime(100);
+
+    // Picks up at the ramp's own position rather than arriving at full.
+    const db = 20 * Math.log10(lastVolume(theme) / level);
+    expect(db).toBeLessThan(-18);
+    expect(db).toBeGreaterThan(-30);
+  });
+
   it("does not attempt a hanging fade when the channel is silent", () => {
     buildMixer();
     musicLevel = 0;
+    musicAudible = false;
     startMenuMusic(mixer);
     document.dispatchEvent(new Event("pointerdown"));
 
