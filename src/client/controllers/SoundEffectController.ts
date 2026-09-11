@@ -10,6 +10,10 @@ import { GameView, UnitView } from "../view";
 // warhead churns the audio pipeline. Play at most one warhead boom per interval.
 const MIRV_HIT_SOUND_INTERVAL_TICKS = 5;
 
+// Several nukes can be announced inbound on the same tick (multiple silos,
+// multiple attackers); don't stack the alarm and evict other cues.
+const NUKE_WARNING_SOUND_INTERVAL_TICKS = 10;
+
 // Structures a train station can be attached to (see TrainStationExecution).
 const STATION_CAPABLE_TYPES = new Set<UnitType>([
   UnitType.City,
@@ -25,6 +29,7 @@ const NUKE_INBOUND_MESSAGES = new Set<MessageType>([
 
 export class SoundEffectController implements Controller {
   private lastMirvHitSoundTick = -Infinity;
+  private lastNukeWarningSoundTick = -Infinity;
   // A train station is a flag on an existing structure, not a unit — play the
   // build sound on the false→true edge only, so structures that already have
   // one when first seen (e.g. joining mid-game) stay silent.
@@ -42,6 +47,9 @@ export class SoundEffectController implements Controller {
   }
 
   private onSpawnIntent = (): void => {
+    // Spectators can click unowned land too, but their intent is dropped
+    // server-side — no false confirmation cue.
+    if (this.game.myPlayer() === null) return;
     this.emit("spawn");
   };
 
@@ -69,9 +77,16 @@ export class SoundEffectController implements Controller {
 
     for (const u of updates[GameUpdateType.UnitIncoming] ?? []) {
       if (u.playerID !== myPlayer.smallID()) continue;
-      if (NUKE_INBOUND_MESSAGES.has(u.messageType)) {
-        this.emit("nuke-warning");
+      if (!NUKE_INBOUND_MESSAGES.has(u.messageType)) continue;
+      const tick = this.game.ticks();
+      if (
+        tick - this.lastNukeWarningSoundTick <
+        NUKE_WARNING_SOUND_INTERVAL_TICKS
+      ) {
+        continue;
       }
+      this.lastNukeWarningSoundTick = tick;
+      this.emit("nuke-warning");
     }
   }
 

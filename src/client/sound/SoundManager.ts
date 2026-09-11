@@ -215,6 +215,9 @@ export class SoundManager {
       }
       this.currentAmbience = track;
       if (track === null) return;
+      // Muted: don't download/decode/loop audio nobody can hear. The loop
+      // starts on the next track change after the volume is raised.
+      if (this.soundEffectsVolume === 0) return;
       const howl = this.getOrLoadAmbience(track);
       if (howl === null) return;
       // Cancel a pending fade-out stop in case this track is coming right
