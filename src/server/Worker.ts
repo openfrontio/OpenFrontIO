@@ -682,50 +682,28 @@ export async function startWorker() {
           return;
         }
 
-        // Verified intent, not a claim to verify: the account decides the
-        // in-game name and the check. An undefined account is an anonymous
-        // persistent-ID join, which resolveVerifiedJoin treats as Dev-only.
-        const resolvedJoin = resolveVerifiedJoin(
+        // Verified intent, not a claim to verify: the check stays only when
+        // the account renders bare and the screened join name is that bare
+        // name. The name itself is never replaced, so everything shown in the
+        // lobby has been through censorPlayer and join_verify. An undefined
+        // account is an anonymous persistent-ID join, which
+        // resolveVerifiedJoin treats as Dev-only.
+        const verifiedOutcome = resolveVerifiedJoin(
           cosmeticResult.cosmetics,
           username,
           accountUsername ?? null,
         );
         if (
-          resolvedJoin.outcome === "custom" &&
+          verifiedOutcome === "custom" &&
           clientMsg.cosmetics?.verified === true
         ) {
           log.info(
-            "Verified intent not honoured: account does not render bare",
+            "Verified intent not honoured: join name is not the account bare name",
             {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             },
           );
-        }
-        if (resolvedJoin.outcome === "verified") {
-          // The account name was screened when it was set, but the blocklist
-          // can move after that and nothing re-screens on read. Run it
-          // through the same censor the client-sent name went through, with
-          // the resolved clan tag so the cross-boundary check applies. A
-          // rewrite means the account name is no longer displayable: keep
-          // the already-screened join name and drop the check rather than
-          // put a banned name in the lobby with a badge on it.
-          const screened = censorPlayer(resolvedJoin.username, resolvedClanTag);
-          if (
-            screened.username === resolvedJoin.username &&
-            screened.clanTag === resolvedClanTag
-          ) {
-            username = resolvedJoin.username;
-          } else {
-            delete cosmeticResult.cosmetics.verified;
-            log.warn(
-              "Verified account name rewritten by the censor; joining unverified",
-              {
-                persistentID: persistentId,
-                gameID: clientMsg.gameID,
-              },
-            );
-          }
         }
 
         // Create client and add to game

@@ -132,8 +132,8 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       }
     }
     // Entitlement-blind pass-through: isAllowed has no user identity. The
-    // account decides the name and the check at join in Worker.ts using the
-    // /users/@me response (resolveVerifiedJoin below).
+    // account decides the check at join in Worker.ts using the /users/@me
+    // response (resolveVerifiedJoin below).
     if (refs.verified === true) {
       cosmetics.verified = true;
     }
@@ -276,18 +276,28 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
 }
 
 /**
- * Decide the in-game name and the verified check for a join.
+ * Decide whether a join keeps the verified check.
  *
  * `cosmetics.verified` on the join message is INTENT ("play under my account
- * name"), never a claim the server checks the client's name against. The
- * account the Worker already fetched decides both halves (spec, 10 Sept 2026):
+ * name"), never a claim the server takes on trust. The check is kept only
+ * when the account vouches for the name the player is actually joining under
+ * (spec, 10 Sept 2026):
  *
- *   - the account renders bare (entitled AND display name equals base, which
- *     is what holding the bare claim looks like from /users/@me): the name
- *     becomes the account base and the check is set, whatever the client sent;
- *   - otherwise the sent name stands and the check is removed. A subscriber
- *     whose bare name someone else holds lands here, as does any hand-crafted
- *     join.
+ *   - the account is entitled (premium or indefinite);
+ *   - it renders bare: display name equals base, which is what holding the
+ *     bare claim looks like from /users/@me, and the base is not a
+ *     TEMPORARY#### placeholder, which is minted with its claim but is not a
+ *     name the player chose (the client refuses to offer it for the same
+ *     reason, see accountVerifiedName);
+ *   - the join name is exactly that bare name.
+ *
+ * The join name is never replaced. It has already been through censorPlayer
+ * and join_verify, and that pipeline is the only thing standing between an
+ * account name that was blocklisted after it was set and the lobby; a name
+ * substituted here would skip it. So a subscriber whose bare name someone
+ * else holds, a hand-crafted join under some other name, and a join whose
+ * name the screening rewrote all land the same way: the screened name stands
+ * and the check is removed.
  *
  * `account` null is an anonymous persistent-ID join, which only exists in
  * Dev; intent is kept there so the badge stays locally testable.
@@ -300,29 +310,20 @@ export function resolveVerifiedJoin(
     usernameBase?: string | null;
     usernameStatus?: string;
   } | null,
-): { username: string; outcome: "verified" | "custom" | "dev" } {
-  if (cosmetics.verified !== true) {
-    return { username: joinUsername, outcome: "custom" };
-  }
-  if (account === null) {
-    return { username: joinUsername, outcome: "dev" };
-  }
+): "verified" | "custom" | "dev" {
+  if (cosmetics.verified !== true) return "custom";
+  if (account === null) return "dev";
   const entitled =
     account.usernameStatus === "premium" ||
     account.usernameStatus === "indefinite";
-  // Bare means the display form equals the base, which is what holding the
-  // bare claim looks like from /users/@me. A TEMPORARY#### placeholder is
-  // minted with its claim and so renders bare too, but it is not a name the
-  // player chose; the client refuses to offer it (accountVerifiedName) and
-  // the server refuses to honour it for the same reason.
   const bare =
     typeof account.username === "string" &&
     account.username.length > 0 &&
     account.username === account.usernameBase &&
     !isTemporaryUsername(account.usernameBase);
-  if (entitled && bare) {
-    return { username: account.username as string, outcome: "verified" };
+  if (entitled && bare && joinUsername === account.username) {
+    return "verified";
   }
   delete cosmetics.verified;
-  return { username: joinUsername, outcome: "custom" };
+  return "custom";
 }
