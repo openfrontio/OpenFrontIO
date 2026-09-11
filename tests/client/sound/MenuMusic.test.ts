@@ -12,6 +12,7 @@ vi.mock("howler", () => {
     unload = vi.fn();
     fade = vi.fn();
     once = vi.fn();
+    off = vi.fn();
     volume = vi.fn(() => 0);
     constructor(opts: any) {
       this.src = opts.src[0];
@@ -25,10 +26,27 @@ vi.mock("howler", () => {
 
 import { startMenuMusic } from "../../../src/client/sound/MenuMusic";
 
-const mixer = {
-  register: vi.fn(),
-  unregister: vi.fn(),
-} as any;
+// Rebuilt per test: these carry implementations, which clearAllMocks keeps but
+// restoreAllMocks would not.
+let mixer: any;
+let musicLevel: number;
+let onChangeCallbacks: Array<(category: string) => void>;
+let unsubscribed: number;
+
+const buildMixer = () => {
+  musicLevel = 0.89;
+  onChangeCallbacks = [];
+  unsubscribed = 0;
+  mixer = {
+    register: vi.fn(),
+    unregister: vi.fn(),
+    volumeFor: vi.fn(() => musicLevel),
+    onChange: vi.fn((cb: (category: string) => void) => {
+      onChangeCallbacks.push(cb);
+      return () => unsubscribed++;
+    }),
+  };
+};
 
 // startMenuMusic listens on the document and has no disposer, so without this
 // every test would still be running the previous tests' copies and the Howl
@@ -40,6 +58,7 @@ beforeEach(() => {
   howlInstances.length = 0;
   registered.length = 0;
   vi.clearAllMocks();
+  buildMixer();
   vi.spyOn(document, "addEventListener").mockImplementation(
     (type: any, fn: any, opts?: any) => {
       registered.push([type, fn]);
@@ -68,7 +87,81 @@ describe("menu music", () => {
     // just clicked something, so this one streams like the gameplay track.
     expect(theme.html5).toBe(true);
     expect(theme.play).toHaveBeenCalled();
+  });
+
+  it("ramps up from silence instead of arriving at full level", () => {
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+
+    const theme = themes()[0];
+    // Registering writes the channel volume straight onto the Howl, which is
+    // what made the theme snap in at full level. It has to wait for the ramp.
+    expect(mixer.register).not.toHaveBeenCalled();
+    expect(theme.fade).toHaveBeenCalledTimes(1);
+    const [from, to, ms] = theme.fade.mock.calls[0];
+    expect(from).toBe(0);
+    expect(to).toBeCloseTo(0.89);
+    expect(ms).toBeGreaterThanOrEqual(1000);
+
+    // Howler fires "fade" when the ramp lands; the mixer takes it on there.
+    theme.once.mock.calls.find((c: any[]) => c[0] === "fade")[1]();
     expect(mixer.register).toHaveBeenCalledWith(theme, "music");
+    expect(unsubscribed).toBe(1);
+  });
+
+  it("does not attempt a hanging fade when the channel is silent", () => {
+    buildMixer();
+    musicLevel = 0;
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+
+    const theme = themes()[0];
+    // fade(0, 0) never completes in Howler, so a settle scheduled on "fade"
+    // would never run and the theme would stay unregistered for the session.
+    expect(theme.fade).not.toHaveBeenCalled();
+    expect(mixer.register).toHaveBeenCalledWith(theme, "music");
+  });
+
+  it("hands over at once when the player moves the music slider mid-ramp", () => {
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+    const theme = themes()[0];
+    expect(mixer.register).not.toHaveBeenCalled();
+
+    // Muting during the ramp must be audible now, not in two seconds.
+    musicLevel = 0;
+    onChangeCallbacks.forEach((cb) => cb("music"));
+
+    expect(mixer.register).toHaveBeenCalledWith(theme, "music");
+    expect(unsubscribed).toBe(1);
+  });
+
+  it("ramps again on the start after a menu restore", () => {
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+    document.dispatchEvent(new Event("game-starting"));
+    document.dispatchEvent(new Event("menu-restored"));
+    document.dispatchEvent(new Event("pointerdown"));
+
+    const second = themes()[1];
+    expect(second.fade).toHaveBeenCalledTimes(1);
+    expect(second.fade.mock.calls[0][0]).toBe(0);
+  });
+
+  it("drops the fade-in settle when a game starts mid-ramp", () => {
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+    const theme = themes()[0];
+
+    document.dispatchEvent(new Event("game-starting"));
+
+    // The pending settle would otherwise fire off the fade-OUT and hand a
+    // departing theme back to the mixer, which would then keep writing volume
+    // to an unloaded Howl forever.
+    expect(theme.off).toHaveBeenCalledWith("fade");
+    expect(mixer.register).not.toHaveBeenCalled();
+    expect(mixer.unregister).toHaveBeenCalledWith(theme);
+    expect(unsubscribed).toBe(1);
   });
 
   it("starts once however many gestures arrive", () => {
