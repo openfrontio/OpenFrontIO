@@ -86,31 +86,6 @@ app.get("/desktop/release.json", async (_req, res) => {
   }
 });
 
-// Apple Pay domain verification (Stripe's universal association file,
-// vendored in resources/). Apple fetches this exact path over HTTPS when the
-// domain is registered in the Stripe dashboard, and it must get the raw file:
-// express.static ignores dotfile paths and the SPA fallback below would
-// answer with the app shell, which makes registration fail with no error
-// anywhere we can see. Verify with
-// `curl https://<domain>/.well-known/apple-developer-merchantid-domain-association`.
-app.get(
-  "/.well-known/apple-developer-merchantid-domain-association",
-  (_req, res) => {
-    res.type("text/plain");
-    res.sendFile(
-      path.join(
-        __dirname,
-        "../../resources/.well-known/apple-developer-merchantid-domain-association",
-      ),
-      // sendFile refuses dotfile path segments (".well-known") by default.
-      { dotfiles: "allow" },
-      (err) => {
-        if (err && !res.headersSent) res.status(404).end();
-      },
-    );
-  },
-);
-
 app.use(
   express.static(path.join(__dirname, "../../static"), {
     maxAge: "1y", // Set max-age to 1 year for all static assets
@@ -129,6 +104,32 @@ app.use(
     windowMs: 1000, // 1 second
     max: 20, // 20 requests per IP per second
   }),
+);
+
+// Apple Pay domain verification (Stripe's universal association file,
+// vendored in resources/). Apple fetches this exact path over HTTPS when the
+// domain is registered in the Stripe dashboard, and it must get the raw file:
+// express.static above ignores dotfile paths (so it falls through to here)
+// and the SPA fallback below would answer with the app shell, which makes
+// registration fail with no error anywhere we can see. Registered after the
+// rate limiter so the file read is covered by it. Verify with
+// `curl https://<domain>/.well-known/apple-developer-merchantid-domain-association`.
+app.get(
+  "/.well-known/apple-developer-merchantid-domain-association",
+  (_req, res) => {
+    res.type("text/plain");
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../resources/.well-known/apple-developer-merchantid-domain-association",
+      ),
+      // sendFile refuses dotfile path segments (".well-known") by default.
+      { dotfiles: "allow" },
+      (err) => {
+        if (err && !res.headersSent) res.status(404).end();
+      },
+    );
+  },
 );
 
 app.use("/api", (_req, res, next) => {

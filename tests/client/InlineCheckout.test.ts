@@ -296,6 +296,19 @@ describe("inline-checkout buyer email", () => {
     expect(linked.session.createExpressCheckoutElement).toHaveBeenCalledWith({
       emailRequired: false,
     });
+
+    // A Google login carries its email at user.google.email, never the
+    // top-level field — it must count as "has an email" too.
+    document.body.innerHTML = "";
+    const google = fakeSession();
+    createMock.mockResolvedValue(google.session);
+    userMeMock.mockResolvedValue({
+      user: { google: { email: "g@example.com" } },
+    });
+    await renderComponent();
+    expect(google.session.createExpressCheckoutElement).toHaveBeenCalledWith({
+      emailRequired: false,
+    });
   });
 
   it("rides the wallet-collected email on the confirm", async () => {

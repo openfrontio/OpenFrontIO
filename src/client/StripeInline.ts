@@ -180,6 +180,30 @@ export class InlineCheckoutSession {
   async confirm(
     options: { receiptEmail?: string | null } = {},
   ): Promise<InlineConfirmResult> {
+    // Never throws: both callers route error RESULTS into UI (the wallet
+    // sheet's paymentFailed, the card modal's error line) but have no catch —
+    // a rejection here would strand a spinning wallet sheet or a silently
+    // dead pay button. Stripe.js rejects (rather than resolving {error}) on
+    // integration-level failures, e.g. the Elements amount disagreeing with
+    // the intent, and the fetch inside minting can reject outright.
+    try {
+      return await this.confirmInner(options);
+    } catch (error) {
+      console.error("inline checkout confirm failed", error);
+      return {
+        kind: "error",
+        message: translateText("store.purchase_failed"),
+        // "checkout": the payment was never processed, so the wallet sheet
+        // is still open and must be failed (a "payment"-stage decline is the
+        // one case where Stripe already resolved the sheet itself).
+        stage: "checkout",
+      };
+    }
+  }
+
+  private async confirmInner(options: {
+    receiptEmail?: string | null;
+  }): Promise<InlineConfirmResult> {
     const { error: submitError } = await this.elements.submit();
     if (submitError) {
       // Validation problems ("incomplete card number") carry a message meant

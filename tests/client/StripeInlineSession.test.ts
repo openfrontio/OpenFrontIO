@@ -144,6 +144,27 @@ describe("InlineCheckoutSession secret caching", () => {
     expect("receipt_email" in params.confirmParams).toBe(false);
   });
 
+  it("returns a checkout-stage error instead of throwing when Stripe.js rejects", async () => {
+    // Stripe.js rejects (rather than resolving { error }) on integration
+    // failures, e.g. the Elements amount disagreeing with the intent. The
+    // callers have no catch — a rejection would strand a spinning wallet
+    // sheet — so confirm() must convert it into an error result.
+    const { session, stripe } = makeSession();
+    mintSecret("pi_1_secret_1");
+    stripe.confirmPayment.mockRejectedValueOnce(
+      new Error("Invalid value for amount"),
+    );
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await session.confirm()).toEqual({
+      kind: "error",
+      message: "store.purchase_failed",
+      // The payment was never processed, so the sheet is still open and the
+      // wallet caller must release it.
+      stage: "checkout",
+    });
+    errorSpy.mockRestore();
+  });
+
   it("carries refetchCatalog through a minting error", async () => {
     const { session } = makeSession();
     mintMock.mockResolvedValueOnce({

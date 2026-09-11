@@ -175,7 +175,10 @@ export class InlineCheckout extends LitElement {
    */
   private async needsEmail(): Promise<boolean> {
     const me = await getUserMe();
-    return me === false || !me.user.email;
+    // A Google login carries its own email (user.google.email, never the
+    // top-level field) and already makes the account recoverable — asking
+    // again would collect a second, different address on every purchase.
+    return me === false || (!me.user.email && !me.user.google);
   }
 
   private async initWallet(): Promise<void> {
