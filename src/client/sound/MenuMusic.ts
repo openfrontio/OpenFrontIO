@@ -117,10 +117,18 @@ export function startMenuMusic(mixer: AudioMixer): void {
     let rampTimer: ReturnType<typeof setInterval> | null = null;
 
     const beginRamp = () => {
-      // Nothing to hear and nothing to ramp on a channel that is already
-      // silent, so hand it over rather than run an interval writing zero
+      // Nothing to hear and nothing to ramp on a channel the player has
+      // turned off, so hand it over rather than run an interval writing zero
       // eighty times. Registered, the mixer brings it up if music comes back.
-      if (mixer.volumeFor("music") === 0) {
+      //
+      // isAudible, not volumeFor: the question is whether the channel is
+      // genuinely silent, not whether it happens to be silent this instant.
+      // volumeFor folds in the focus duck, so asking it here would skip the
+      // ramp for a play that landed while the page was unfocused -- the theme
+      // would then arrive at full level on refocus, which is the whole defect
+      // the per-tick read exists to prevent. A ducked channel still ramps;
+      // the tick already writes it silent and hands it back in position.
+      if (!mixer.isAudible("music")) {
         settle(howl);
         return;
       }
