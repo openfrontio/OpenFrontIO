@@ -1,8 +1,14 @@
-import { html } from "lit";
+import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
-import { getDefaultKeybinds, UserSettings } from "../core/game/UserSettings";
+import type { MapLayer } from "../core/game/TerrainMapLoader";
+import {
+  getDefaultKeybinds,
+  GRAPHICS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
@@ -11,7 +17,10 @@ import { SettingSelect } from "./components/baseComponents/setting/SettingSelect
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
+import "./components/GraphicsAdvancedSettings";
+import type { GraphicsAdvancedSettings } from "./components/GraphicsAdvancedSettings";
 import "./components/GraphicsPresetSelector";
+import "./components/GraphicsPresetTools";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   desktopDisplay,
@@ -23,6 +32,7 @@ import {
   type DesktopDisplaySnapshot,
 } from "./DesktopDisplay";
 import { isDesktopShell } from "./DesktopShell";
+import { pushMapLayerState } from "./MapLayerSettings";
 import { Platform } from "./Platform";
 import {
   SetBackgroundMusicVolumeEvent,
@@ -61,6 +71,28 @@ export class UserSettingModal extends BaseModal {
    */
   public uiState?: UIState;
 
+  // ---- Graphics: the running game's map layers ----
+  //
+  // Also set on the in-game instance by GameRenderer. Every other graphics
+  // option is stored under one settings key that ClientGameRunner watches, so
+  // a running game follows it with no reference here; map layers are the
+  // exception. Their control set comes from the current map, and the renderer
+  // does not re-read their visibility or alpha from settings after startup —
+  // so the layer rows exist only where a game hands them over, and every
+  // change to the graphics key re-pushes them through these callbacks.
+
+  /** Map layers for the current game. Empty on the page instance. */
+  public mapLayers: MapLayer[] = [];
+
+  /** Callback to toggle layer visibility on the renderer. */
+  public onLayerVisibilityChange:
+    | ((layerId: string, visible: boolean) => void)
+    | null = null;
+
+  /** Callback to set layer alpha on the renderer. */
+  public onLayerAlphaChange: ((layerId: string, alpha: number) => void) | null =
+    null;
+
   private userSettings: UserSettings = new UserSettings();
   private readonly defaultKeybinds = getDefaultKeybinds(Platform.isMac);
 
@@ -69,6 +101,7 @@ export class UserSettingModal extends BaseModal {
   private onReturn?: () => void;
 
   @state() private keySequence: string[] = [];
+  @state() private graphicsAdvancedOpen = false;
   @state() private showEasterEggSettings = false;
 
   @state() private userKeybinds: Record<
@@ -109,9 +142,17 @@ export class UserSettingModal extends BaseModal {
       this.routerName = undefined;
     }
     this.loadKeybindsFromStorage();
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      this.onGraphicsChanged,
+    );
   }
 
   disconnectedCallback() {
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      this.onGraphicsChanged,
+    );
     window.removeEventListener("keydown", this.handleEasterEggKey);
     // An element torn down without close() being called (the in-game instance
     // when the match ends) would otherwise leave the bridge holding a
@@ -119,6 +160,23 @@ export class UserSettingModal extends BaseModal {
     this.leaveDisplayTab();
     super.disconnectedCallback();
   }
+
+  /**
+   * The single place layer state reaches the renderer.
+   *
+   * It belongs here rather than in the advanced graphics body because that
+   * body only exists while the Advanced fold is open, and a preset picked or a
+   * configuration imported with the fold collapsed changes layers just the
+   * same. Off a game the callbacks are null and this is a no-op.
+   */
+  private readonly onGraphicsChanged = () => {
+    pushMapLayerState(
+      this.userSettings.graphicsOverrides(),
+      this.mapLayers,
+      this.onLayerVisibilityChange,
+      this.onLayerAlphaChange,
+    );
+  };
 
   private loadKeybindsFromStorage() {
     const parsed = this.userSettings.parsedUserKeybinds();
@@ -563,6 +621,25 @@ export class UserSettingModal extends BaseModal {
 
   protected updated(): void {
     this.syncDisplayControls();
+    this.syncGraphicsLayerWiring();
+  }
+
+  /**
+   * Hand the advanced graphics body the current game's layers, so it can draw
+   * a row per layer. It only exists while the Graphics tab is open and
+   * Advanced is expanded, so this runs on every update rather than once: the
+   * element is created and destroyed as the player moves between tabs.
+   */
+  private syncGraphicsLayerWiring(): void {
+    const advanced = this.querySelector<GraphicsAdvancedSettings>(
+      "graphics-advanced-settings",
+    );
+    if (advanced === null) return;
+    advanced.mapLayers = this.mapLayers;
+  }
+
+  private toggleGraphicsAdvanced() {
+    this.graphicsAdvancedOpen = !this.graphicsAdvancedOpen;
   }
 
   protected onTabEnter(key: string): void {
@@ -1360,6 +1437,10 @@ export class UserSettingModal extends BaseModal {
         <graphics-preset-selector></graphics-preset-selector>
       </div>
 
+      <!-- 💾 Save / share the whole configuration. Top level, not inside
+           Advanced: a player who never expands the fold should still find it. -->
+      <graphics-preset-tools></graphics-preset-tools>
+
       <!-- 🏳️ Territory Patterns -->
       <setting-toggle
         label="${translateText("user_setting.territory_patterns_label")}"
@@ -1386,6 +1467,19 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.performanceOverlay()}
         @change=${this.togglePerformanceOverlay}
       ></setting-toggle>
+
+      <!-- 🔧 Advanced -->
+      <setting-toggle
+        label="${translateText("graphics_setting.advanced_label")}"
+        description="${translateText("graphics_setting.advanced_desc")}"
+        id="graphics-advanced-toggle"
+        .checked=${this.graphicsAdvancedOpen}
+        @change=${this.toggleGraphicsAdvanced}
+      ></setting-toggle>
+
+      ${this.graphicsAdvancedOpen
+        ? html`<graphics-advanced-settings></graphics-advanced-settings>`
+        : nothing}
     `;
   }
 

@@ -11,7 +11,6 @@ import {
 } from "../../InputHandler";
 import type { UserSettingModal } from "../../UserSettingModal";
 import { homeHref, translateText } from "../../Utils";
-import { ShowGraphicsSettingsModalEvent } from "./GraphicsSettingsModal";
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const treeIcon = assetUrl("images/TreeIconWhite.svg");
@@ -27,11 +26,12 @@ export class ShowSettingsModalEvent {
 /**
  * The in-game menu.
  *
- * It holds what is session state or a game action — the graphics modal, the
- * alternate (terrain) view, the debug GUI, exiting — plus a link into the
- * settings modal. Every `UserSettings`-backed row it used to duplicate now
- * lives in `UserSettingModal`, which this opens through the non-inline
- * `#game-settings` instance so both entry points render the same UI.
+ * It holds what is session state or a game action — the alternate (terrain)
+ * view, the debug GUI, exiting — plus a link into the settings modal. Every
+ * `UserSettings`-backed row it used to duplicate, the advanced graphics
+ * options included, now lives in `UserSettingModal`, which this opens through
+ * the non-inline `#game-settings` instance so both entry points render the
+ * same UI.
  */
 @customElement("settings-modal")
 export class SettingsModal extends LitElement implements Controller {
@@ -155,17 +155,6 @@ export class SettingsModal extends LitElement implements Controller {
     this.closeModal();
   }
 
-  private onGraphicsSettingsButtonClick() {
-    this.eventBus.emit(
-      new ShowGraphicsSettingsModalEvent(
-        true,
-        this.shouldPause,
-        this.wasPausedWhenOpened,
-      ),
-    );
-    this.closeModal({ keepPause: true });
-  }
-
   private onExitButtonClick() {
     // redirect to the home page
     window.location.href = homeHref();
@@ -220,21 +209,6 @@ export class SettingsModal extends LitElement implements Controller {
                 </div>
                 <div class="text-sm text-slate-400">
                   ${translateText("user_setting.open_settings_desc")}
-                </div>
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onGraphicsSettingsButtonClick}"
-            >
-              <img src=${settingsIcon} alt="" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.graphics_settings_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.graphics_settings_desc")}
                 </div>
               </div>
             </button>
