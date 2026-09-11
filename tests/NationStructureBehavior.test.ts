@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
-import { Difficulty, PlayerType } from "../src/core/game/Game";
+import { Difficulty, PlayerType, UnitType } from "../src/core/game/Game";
 import { Cluster } from "../src/core/game/TrainStation";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 
@@ -852,6 +852,88 @@ describe("NationStructureBehavior.countDefensePostsNearFront", () => {
   it("sums posts near different sections of the front", () => {
     const threshold = (OUTER_RANGE * 1.5) ** 2;
     expect(count([10, 20], [1, 2], () => threshold - 1)).toBe(2);
+  });
+});
+
+// ── doHandleStructures — crowded-map first-structure exception ──────────────
+// Regression tests for a bug where the "first structure is a port/factory on
+// crowded maps" exception was gated on unitsOwned(City) === 0. Since that
+// branch never builds a city itself, unitsOwned(City) stayed 0 forever, so
+// the exception kept re-firing on every call and the nation could never
+// reach the actual city-building code. It now uses its own one-shot flag,
+// consumed only on success, so it neither loops forever nor loses its only
+// chance to the unrelated high-gold SAM-first branch.
+
+describe("NationStructureBehavior.doHandleStructures — crowded-map exception", () => {
+  function makeCrowdedGame(opts: { difficulty?: Difficulty } = {}): any {
+    return {
+      config: () => ({
+        isUnitDisabled: () => false,
+        gameConfig: () => ({
+          difficulty: opts.difficulty ?? Difficulty.Medium,
+        }),
+        startingGold: () => 0n,
+      }),
+      sharedWaterComponents: () => null, // landlocked -> Factory preferred
+      nations: () => Array(400).fill({}),
+      numLandTiles: () => 1_000_000, // 400 / 1_000_000 > 1/7500 -> high density
+    };
+  }
+
+  function makeCrowdedPlayer(): any {
+    return {
+      unitsOwned: () => 0, // never owns a city
+      numTilesOwned: () => 100_000,
+      info: () => ({}),
+    };
+  }
+
+  it("builds a Factory (not a City) on the very first structure decision", () => {
+    const behavior = makeBehavior(makeCrowdedGame(), makeCrowdedPlayer());
+    const spy = vi
+      .spyOn(behavior as any, "maybeSpawnStructure")
+      .mockReturnValue(true);
+
+    expect((behavior as any).doHandleStructures()).toBe(true);
+    expect(spy).toHaveBeenCalledWith(UnitType.Factory);
+    expect(spy).not.toHaveBeenCalledWith(UnitType.City);
+  });
+
+  it("does not re-fire once it has already succeeded, even though the player still owns no cities", () => {
+    const behavior = makeBehavior(makeCrowdedGame(), makeCrowdedPlayer());
+    (behavior as any).builtCrowdedMapFirstStructure = true; // already succeeded once
+    const spy = vi
+      .spyOn(behavior as any, "maybeSpawnStructure")
+      .mockReturnValue(true);
+
+    expect((behavior as any).doHandleStructures()).toBe(true);
+    expect(spy).toHaveBeenCalledWith(UnitType.City);
+    expect(spy).not.toHaveBeenCalledWith(UnitType.Factory);
+  });
+
+  it("still gets its chance after the high-gold SAM-first branch has already placed the nation's literal first structure", () => {
+    const game = makeCrowdedGame({ difficulty: Difficulty.Impossible });
+    game.config = () => ({
+      isUnitDisabled: () => false,
+      gameConfig: () => ({ difficulty: Difficulty.Impossible }),
+      startingGold: () => 10_000_000n, // above HIGH_STARTING_GOLD_THRESHOLD
+    });
+    const behavior = makeBehavior(game, makeCrowdedPlayer());
+    const spy = vi
+      .spyOn(behavior as any, "maybeSpawnStructure")
+      .mockReturnValue(true);
+
+    // Structure #1: the unrelated high-gold SAM-first branch fires.
+    expect((behavior as any).doHandleStructures()).toBe(true);
+    expect(spy).toHaveBeenLastCalledWith(UnitType.SAMLauncher);
+    expect((behavior as any).builtCrowdedMapFirstStructure).toBe(false);
+    (behavior as any).placementsCount = 1; // what handleStructures() would do
+
+    // Structure #2: the crowded-map branch must still fire here, not be
+    // skipped just because placementsCount is no longer 0.
+    expect((behavior as any).doHandleStructures()).toBe(true);
+    expect(spy).toHaveBeenLastCalledWith(UnitType.Factory);
+    expect((behavior as any).builtCrowdedMapFirstStructure).toBe(true);
   });
 });
 
