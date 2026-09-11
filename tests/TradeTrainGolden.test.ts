@@ -68,9 +68,9 @@ describe("trade ship golden values", () => {
   });
 
   test("tradeShipSaturation: fleet-size sweep", () => {
-    // >1 boosts spawning while the world fleet is tiny, ~1 around 75
-    // ships, damping past the ~250-ship capacity midpoint onto the 0.25
-    // plateau (~340+ ships), which the ~800-ship hard cap collapses. The
+    // >1 boosts spawning while the world fleet is tiny, ~1 around 50
+    // ships, damping past the ~230-ship capacity midpoint onto the 0.25
+    // plateau (~310+ ships), which the ~800-ship hard cap collapses. The
     // pity timer square-roots the realized spawn-frequency effect.
     const table: Record<string, number> = {};
     for (const ships of [
