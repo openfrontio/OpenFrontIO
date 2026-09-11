@@ -1,4 +1,5 @@
 import {
+  AttackRatioEvent,
   AutoUpgradeEvent,
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
@@ -870,6 +871,33 @@ describe("InputHandler AutoUpgrade", () => {
       });
       mockCanvas.dispatchEvent(event);
       expect(uiState.upgradeMultiplier).toBe(MAX_UPGRADE_AMOUNT);
+    });
+
+    test("shift + scroll wheel changes attack ratio", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      inputHandler.initialize();
+
+      // Shift + scroll up (deltaY < 0) -> increase
+      const eventUp = new WheelEvent("wheel", {
+        deltaY: -100,
+        shiftKey: true,
+      });
+      mockCanvas.dispatchEvent(eventUp);
+
+      // Shift + scroll down (deltaY > 0) -> decrease
+      const eventDown = new WheelEvent("wheel", {
+        deltaY: 100,
+        shiftKey: true,
+      });
+      mockCanvas.dispatchEvent(eventDown);
+      const emittedEvents = mockEmit.mock.calls.map((call) => call[0]);
+      const ratioEvents = emittedEvents.filter(
+        (e) => e instanceof AttackRatioEvent,
+      ) as AttackRatioEvent[];
+
+      expect(ratioEvents.length).toBe(2);
+      expect(ratioEvents[0].attackRatio).toBeGreaterThan(0);
+      expect(ratioEvents[1].attackRatio).toBeLessThan(0);
     });
   });
 
