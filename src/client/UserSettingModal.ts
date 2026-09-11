@@ -15,6 +15,7 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/GraphicsAdvancedSettings";
 import type { GraphicsAdvancedSettings } from "./components/GraphicsAdvancedSettings";
 import "./components/GraphicsPresetSelector";
+import "./components/GraphicsPresetTools";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   desktopDisplay,
@@ -1406,6 +1407,10 @@ export class UserSettingModal extends BaseModal {
         </div>
         <graphics-preset-selector></graphics-preset-selector>
       </div>
+
+      <!-- 💾 Save / share the whole configuration. Top level, not inside
+           Advanced: a player who never expands the fold should still find it. -->
+      <graphics-preset-tools></graphics-preset-tools>
 
       <!-- 🏳️ Territory Patterns -->
       <setting-toggle

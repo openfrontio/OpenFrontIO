@@ -1,11 +1,12 @@
 import { html, LitElement, nothing } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property } from "lit/decorators.js";
 import type { MapLayer } from "../../core/game/TerrainMapLoader";
-import { UserSettings } from "../../core/game/UserSettings";
 import {
-  migrateLegacyGraphicsSettings,
-  parseGraphicsOverridesJson,
-} from "../GraphicsPresets";
+  GRAPHICS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../../core/game/UserSettings";
+import { migrateLegacyGraphicsSettings } from "../GraphicsPresets";
 import { type GraphicsOverrides } from "../render/gl";
 import renderDefaults from "../render/gl/render-settings.json";
 import { translateText } from "../Utils";
@@ -191,34 +192,61 @@ export class GraphicsAdvancedSettings extends LitElement {
     | ((layerId: string, alpha: number) => void)
     | null = null;
 
-  @state() private presetName = "";
-  @state() private importText = "";
-  @state() private importError = false;
-  @state() private copiedJson = false;
-
-  private copyResetTimer: ReturnType<typeof setTimeout> | undefined;
-
   createRenderRoot() {
     return this;
   }
 
+  // True only for the duration of this component's own write. Every write
+  // below dispatches the change event this component also listens for, and a
+  // self-triggered resync would re-push all layers on every slider drag.
+  private writingOwnChange = false;
+
   connectedCallback() {
     super.connectedCallback();
-    // Snapshot pre-preset custom settings before any wholesale overwrite the
-    // preset tools below can perform. Idempotent, and a no-op once done.
+    // Snapshot pre-preset custom settings before a preset or an import can
+    // overwrite them wholesale. Idempotent, and a no-op once done.
     migrateLegacyGraphicsSettings(this.userSettings);
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      this.onExternalGraphicsChange,
+    );
   }
 
   disconnectedCallback() {
-    clearTimeout(this.copyResetTimer);
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      this.onExternalGraphicsChange,
+    );
     super.disconnectedCallback();
   }
 
+  /**
+   * Something else replaced the configuration — the preset dropdown, or an
+   * import. Redraw so every control shows the new value, and re-push the map
+   * layers: unlike the rest, the renderer does not re-read those from settings,
+   * so a preset that changes them is otherwise applied everywhere but there.
+   */
+  private readonly onExternalGraphicsChange = () => {
+    if (this.writingOwnChange) return;
+    this.requestUpdate();
+    this.syncLayerVisibility();
+  };
+
   // ---- Override patching ----
+
+  /** Write the graphics key, marking the change event it emits as our own. */
+  private writeOverrides(value: GraphicsOverrides) {
+    this.writingOwnChange = true;
+    try {
+      this.userSettings.setGraphicsOverrides(value);
+    } finally {
+      this.writingOwnChange = false;
+    }
+  }
 
   private patchName(patch: Partial<GraphicsOverrides["name"]>) {
     const current = this.userSettings.graphicsOverrides();
-    this.userSettings.setGraphicsOverrides({
+    this.writeOverrides({
       ...current,
       name: { ...current.name, ...patch },
     });
@@ -227,7 +255,7 @@ export class GraphicsAdvancedSettings extends LitElement {
 
   private patchStructure(patch: Partial<GraphicsOverrides["structure"]>) {
     const current = this.userSettings.graphicsOverrides();
-    this.userSettings.setGraphicsOverrides({
+    this.writeOverrides({
       ...current,
       structure: { ...current.structure, ...patch },
     });
@@ -236,7 +264,7 @@ export class GraphicsAdvancedSettings extends LitElement {
 
   private patchMapOverlay(patch: Partial<GraphicsOverrides["mapOverlay"]>) {
     const current = this.userSettings.graphicsOverrides();
-    this.userSettings.setGraphicsOverrides({
+    this.writeOverrides({
       ...current,
       mapOverlay: { ...current.mapOverlay, ...patch },
     });
@@ -245,7 +273,7 @@ export class GraphicsAdvancedSettings extends LitElement {
 
   private patchAltView(patch: Partial<GraphicsOverrides["altView"]>) {
     const current = this.userSettings.graphicsOverrides();
-    this.userSettings.setGraphicsOverrides({
+    this.writeOverrides({
       ...current,
       altView: { ...current.altView, ...patch },
     });
@@ -254,7 +282,7 @@ export class GraphicsAdvancedSettings extends LitElement {
 
   private patchRailroad(patch: Partial<GraphicsOverrides["railroad"]>) {
     const current = this.userSettings.graphicsOverrides();
-    this.userSettings.setGraphicsOverrides({
+    this.writeOverrides({
       ...current,
       railroad: { ...current.railroad, ...patch },
     });
@@ -263,7 +291,7 @@ export class GraphicsAdvancedSettings extends LitElement {
 
   private patchTerrain(patch: Partial<GraphicsOverrides["terrain"]>) {
     const current = this.userSettings.graphicsOverrides();
-    this.userSettings.setGraphicsOverrides({
+    this.writeOverrides({
       ...current,
       terrain: { ...current.terrain, ...patch },
     });
@@ -272,7 +300,7 @@ export class GraphicsAdvancedSettings extends LitElement {
 
   private patchLighting(patch: Partial<GraphicsOverrides["lighting"]>) {
     const current = this.userSettings.graphicsOverrides();
-    this.userSettings.setGraphicsOverrides({
+    this.writeOverrides({
       ...current,
       lighting: { ...current.lighting, ...patch },
     });
@@ -281,7 +309,7 @@ export class GraphicsAdvancedSettings extends LitElement {
 
   private patchPassEnabled(patch: Partial<GraphicsOverrides["passEnabled"]>) {
     const current = this.userSettings.graphicsOverrides();
-    this.userSettings.setGraphicsOverrides({
+    this.writeOverrides({
       ...current,
       passEnabled: { ...current.passEnabled, ...patch },
     });
@@ -292,7 +320,7 @@ export class GraphicsAdvancedSettings extends LitElement {
     patch: Partial<GraphicsOverrides["smallPlayerGlow"]>,
   ) {
     const current = this.userSettings.graphicsOverrides();
-    this.userSettings.setGraphicsOverrides({
+    this.writeOverrides({
       ...current,
       smallPlayerGlow: { ...current.smallPlayerGlow, ...patch },
     });
@@ -598,7 +626,7 @@ export class GraphicsAdvancedSettings extends LitElement {
     const current = this.userSettings.graphicsOverrides();
     const currentVis = current.mapLayerVisibility ?? {};
     const newVis = { ...currentVis, [layerId]: !this.isLayerVisible(layerId) };
-    this.userSettings.setGraphicsOverrides({
+    this.writeOverrides({
       ...current,
       mapLayerVisibility: newVis,
     });
@@ -631,7 +659,7 @@ export class GraphicsAdvancedSettings extends LitElement {
     if (alpha === null) return;
     const current = this.userSettings.graphicsOverrides();
     const currentAlpha = current.mapLayerAlpha ?? {};
-    this.userSettings.setGraphicsOverrides({
+    this.writeOverrides({
       ...current,
       mapLayerAlpha: { ...currentAlpha, [layerId]: alpha },
     });
@@ -791,59 +819,12 @@ export class GraphicsAdvancedSettings extends LitElement {
     this.patchSmallPlayerGlow({ strength: value / 100 });
   }
 
-  // ---- Presets, import/export, reset ----
-
-  private applyPreset(overrides: GraphicsOverrides) {
-    this.userSettings.setGraphicsOverrides(overrides);
-    this.syncLayerVisibility();
-    this.requestUpdate();
-  }
+  // ---- Reset ----
 
   private onResetClick() {
-    this.userSettings.setGraphicsOverrides({});
+    this.writeOverrides({});
     this.syncLayerVisibility();
     this.requestUpdate();
-  }
-
-  private onPresetNameInput(event: Event) {
-    this.presetName = (event.target as HTMLInputElement).value;
-  }
-
-  private onSavePreset() {
-    const name = this.presetName.trim();
-    if (!name) return;
-    this.userSettings.setGraphicsPresets({
-      ...this.userSettings.graphicsPresets(),
-      [name]: this.userSettings.graphicsOverrides(),
-    });
-    this.presetName = "";
-  }
-
-  private async onCopyJson() {
-    const json = JSON.stringify(this.userSettings.graphicsOverrides(), null, 2);
-    try {
-      await navigator.clipboard.writeText(json);
-    } catch {
-      return; // clipboard unavailable (permissions / insecure context)
-    }
-    this.copiedJson = true;
-    clearTimeout(this.copyResetTimer);
-    this.copyResetTimer = setTimeout(() => (this.copiedJson = false), 1500);
-  }
-
-  private onImportTextInput(event: Event) {
-    this.importText = (event.target as HTMLTextAreaElement).value;
-    this.importError = false;
-  }
-
-  private onImportApply() {
-    const parsed = parseGraphicsOverridesJson(this.importText);
-    if (parsed === null) {
-      this.importError = true;
-      return;
-    }
-    this.applyPreset(parsed);
-    this.importText = "";
   }
 
   // ---- Rendering ----
@@ -854,93 +835,6 @@ export class GraphicsAdvancedSettings extends LitElement {
     >
       ${translateText(labelKey)}
     </div>`;
-  }
-
-  private renderPresetTools() {
-    return html`
-      ${GraphicsAdvancedSettings.section(
-        "graphics_setting.section_custom_presets",
-      )}
-
-      <div
-        class="flex flex-col w-full p-4 bg-white/5 border border-white/10 rounded-xl gap-3"
-      >
-        <div class="flex gap-3 items-center w-full">
-          <input
-            type="text"
-            id="graphics-preset-name"
-            .value=${this.presetName}
-            placeholder=${translateText(
-              "graphics_setting.preset_name_placeholder",
-            )}
-            spellcheck="false"
-            maxlength="40"
-            @input=${this.onPresetNameInput}
-            class="flex-1 min-w-0 px-2 py-1.5 bg-black/40 border border-white/20 rounded-lg text-sm text-white"
-          />
-          <button
-            id="graphics-save-preset"
-            class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white disabled:opacity-50"
-            ?disabled=${this.presetName.trim() === ""}
-            @click=${this.onSavePreset}
-          >
-            ${translateText("graphics_setting.save_preset_label")}
-          </button>
-        </div>
-      </div>
-
-      <button
-        id="graphics-copy-json"
-        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 text-left"
-        @click=${this.onCopyJson}
-      >
-        <div class="flex flex-col flex-1 min-w-0 mr-4">
-          <div class="text-white font-bold text-base block mb-1">
-            ${translateText("graphics_setting.copy_json_label")}
-          </div>
-          <div class="text-white/50 text-sm leading-snug">
-            ${translateText("graphics_setting.copy_json_desc")}
-          </div>
-        </div>
-        <div class="text-white/50 text-sm shrink-0">
-          ${this.copiedJson ? translateText("common.copied") : ""}
-        </div>
-      </button>
-
-      <div
-        class="flex flex-col w-full p-4 bg-white/5 border border-white/10 rounded-xl gap-2"
-      >
-        <div class="text-white font-bold text-base">
-          ${translateText("graphics_setting.import_json_label")}
-        </div>
-        <div class="text-white/50 text-sm leading-snug">
-          ${translateText("graphics_setting.import_json_desc")}
-        </div>
-        <textarea
-          id="graphics-import-json"
-          rows="3"
-          .value=${this.importText}
-          spellcheck="false"
-          @input=${this.onImportTextInput}
-          class="w-full px-2 py-1.5 bg-black/40 border ${this.importError
-            ? "border-red-500"
-            : "border-white/20"} rounded-lg text-sm text-white font-mono"
-        ></textarea>
-        ${this.importError
-          ? html`<div id="graphics-import-error" class="text-sm text-red-400">
-              ${translateText("graphics_setting.import_json_invalid")}
-            </div>`
-          : nothing}
-        <button
-          id="graphics-import-apply"
-          class="self-start px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white disabled:opacity-50"
-          ?disabled=${this.importText.trim() === ""}
-          @click=${this.onImportApply}
-        >
-          ${translateText("graphics_setting.import_json_apply")}
-        </button>
-      </div>
-    `;
   }
 
   /**
@@ -1005,8 +899,6 @@ export class GraphicsAdvancedSettings extends LitElement {
     const whole = (v: number) => String(Math.round(v));
 
     return html`
-      ${this.renderPresetTools()}
-
       <!-- 💡 Lighting -->
       ${GraphicsAdvancedSettings.section("graphics_setting.section_lighting")}
       <setting-slider

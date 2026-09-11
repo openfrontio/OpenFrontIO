@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
@@ -14,14 +14,30 @@ type TestModal = UserSettingModal & {
   activeTab: string;
 };
 
+/**
+ * Everything mounted this test. A Lit element left connected when the file
+ * ends can schedule an update after jsdom is gone, which surfaces as an
+ * unhandled "document is not defined" and fails the run even though every
+ * test passed.
+ */
+const mounted: TestModal[] = [];
+
+async function unmountAll() {
+  for (const el of mounted.splice(0)) {
+    el.remove();
+    await el.updateComplete;
+  }
+}
+
 const LAYERS: MapLayer[] = [
   { id: "forest", placement: "land", nukeable: true, alpha: 0.8 },
   { id: "reef", placement: "water" },
 ];
 
 /**
- * Open the Graphics tab with Advanced expanded, which is where every option
- * folded in from the old in-game graphics modal now lives.
+ * Open the Graphics tab. The tuning controls folded in from the old in-game
+ * graphics modal sit behind the Advanced fold; the preset tools do not, so
+ * pass `advanced: false` to assert what a player sees without expanding it.
  */
 async function mountGraphics(
   wire?: Partial<
@@ -29,7 +45,7 @@ async function mountGraphics(
       UserSettingModal,
       "mapLayers" | "onLayerVisibilityChange" | "onLayerAlphaChange"
     >
-  >,
+  > & { advanced?: boolean },
 ): Promise<TestModal> {
   const el = document.createElement("user-setting") as TestModal;
   if (wire?.mapLayers) el.mapLayers = wire.mapLayers;
@@ -40,11 +56,14 @@ async function mountGraphics(
     el.onLayerAlphaChange = wire.onLayerAlphaChange;
   }
   document.body.appendChild(el);
+  mounted.push(el);
   el.open({ tab: "graphics" });
   await el.updateComplete;
-  el.querySelector("#graphics-advanced-toggle")!.dispatchEvent(
-    new Event("change", { bubbles: true }),
-  );
+  if (wire?.advanced !== false) {
+    el.querySelector("#graphics-advanced-toggle")!.dispatchEvent(
+      new Event("change", { bubbles: true }),
+    );
+  }
   await el.updateComplete;
   // The advanced body is a child component with its own update cycle, and the
   // modal only hands it the map layers once it exists.
@@ -86,7 +105,6 @@ function overrides() {
  * the legacy migration as done, so it cannot fire mid-test.
  */
 function resetGraphicsSettings() {
-  document.body.innerHTML = "";
   localStorage.clear();
   const settings = new UserSettings();
   settings.setGraphicsOverrides({});
@@ -95,6 +113,7 @@ function resetGraphicsSettings() {
 
 describe("Graphics tab: advanced options folded in from the in-game modal", () => {
   beforeEach(resetGraphicsSettings);
+  afterEach(unmountAll);
 
   it("renders every folded control", async () => {
     const el = await mountGraphics();
@@ -131,11 +150,6 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
       "special-effects-toggle",
       "fallout-toggle",
       "glow-strength-slider",
-      "graphics-preset-name",
-      "graphics-save-preset",
-      "graphics-copy-json",
-      "graphics-import-json",
-      "graphics-import-apply",
       "graphics-reset",
     ]) {
       expect(
@@ -254,41 +268,91 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
     expect(overrides().terrain?.oceanColor).toBeUndefined();
   });
 
-  it("saves, copies and imports presets, and resets everything", async () => {
+  it("resets every override from the Advanced fold", async () => {
     const el = await mountGraphics();
     slide(el, "territory-alpha-slider", 0.5);
-
-    const name = el.querySelector<HTMLInputElement>("#graphics-preset-name")!;
-    name.value = "Mine";
-    name.dispatchEvent(new Event("input", { bubbles: true }));
-    await el.updateComplete;
-    el.querySelector<HTMLButtonElement>("#graphics-save-preset")!.click();
-    expect(new UserSettings().graphicsPresets().Mine).toMatchObject({
-      mapOverlay: { territoryAlpha: 0.5 },
-    });
-
-    const importBox = el.querySelector<HTMLTextAreaElement>(
-      "#graphics-import-json",
-    )!;
-    importBox.value = '{"name":{"nameScaleFactor":1.1}}';
-    importBox.dispatchEvent(new Event("input", { bubbles: true }));
-    await el.updateComplete;
-    el.querySelector<HTMLButtonElement>("#graphics-import-apply")!.click();
-    expect(overrides()).toEqual({ name: { nameScaleFactor: 1.1 } });
+    expect(overrides()).not.toEqual({});
 
     el.querySelector<HTMLButtonElement>("#graphics-reset")!.click();
     expect(overrides()).toEqual({});
   });
+});
 
-  it("flags an unparseable import instead of applying it", async () => {
-    const el = await mountGraphics();
-    const importBox = el.querySelector<HTMLTextAreaElement>(
-      "#graphics-import-json",
+describe("Graphics tab: preset tools sit outside the Advanced fold", () => {
+  beforeEach(resetGraphicsSettings);
+  afterEach(unmountAll);
+
+  function typeInto(el: TestModal, id: string, value: string) {
+    const field = el.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+      `#${id}`,
     )!;
-    importBox.value = "not json";
-    importBox.dispatchEvent(new Event("input", { bubbles: true }));
+    field.value = value;
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  it("offers save, copy and import without expanding Advanced", async () => {
+    // Hiding "save the look you just built" behind a disclosure is the kind of
+    // control players never find.
+    const el = await mountGraphics({ advanced: false });
+
+    expect(el.querySelector("#graphics-preset-name")).not.toBeNull();
+    expect(el.querySelector("#graphics-save-preset")).not.toBeNull();
+    expect(el.querySelector("#graphics-copy-json")).not.toBeNull();
+    expect(el.querySelector("#graphics-import-json")).not.toBeNull();
+    expect(el.querySelector("#graphics-import-apply")).not.toBeNull();
+    // The tuning controls are still behind it.
+    expect(el.querySelector("#territory-alpha-slider")).toBeNull();
+  });
+
+  it("saves the current configuration under a name", async () => {
+    const el = await mountGraphics();
+    slide(el, "territory-alpha-slider", 0.5);
+
+    typeInto(el, "graphics-preset-name", "Mine");
+    await el.updateComplete;
+    el.querySelector<HTMLButtonElement>("#graphics-save-preset")!.click();
+
+    expect(new UserSettings().graphicsPresets().Mine).toMatchObject({
+      mapOverlay: { territoryAlpha: 0.5 },
+    });
+  });
+
+  it("applies an imported configuration", async () => {
+    const el = await mountGraphics({ advanced: false });
+    typeInto(el, "graphics-import-json", '{"name":{"nameScaleFactor":1.1}}');
     await el.updateComplete;
     el.querySelector<HTMLButtonElement>("#graphics-import-apply")!.click();
+
+    expect(overrides()).toEqual({ name: { nameScaleFactor: 1.1 } });
+  });
+
+  it("flags an unparseable import instead of applying it", async () => {
+    const el = await mountGraphics({ advanced: false });
+    typeInto(el, "graphics-import-json", "not json");
+    await el.updateComplete;
+    el.querySelector<HTMLButtonElement>("#graphics-import-apply")!.click();
+    await el.updateComplete;
+
+    expect(el.querySelector("#graphics-import-error")).not.toBeNull();
+    expect(overrides()).toEqual({});
+  });
+
+  it("flags a pathologically nested import instead of throwing", async () => {
+    // Deep enough to survive JSON.parse and the schema — which strips what it
+    // does not know — and blow the stack in the structural comparison behind
+    // them. A RangeError, not a parse failure, but the same answer is owed.
+    const depth = 40000;
+    const el = await mountGraphics({ advanced: false });
+    typeInto(
+      el,
+      "graphics-import-json",
+      `${'{"a":'.repeat(depth)}1${"}".repeat(depth)}`,
+    );
+    await el.updateComplete;
+
+    expect(() =>
+      el.querySelector<HTMLButtonElement>("#graphics-import-apply")!.click(),
+    ).not.toThrow();
     await el.updateComplete;
 
     expect(el.querySelector("#graphics-import-error")).not.toBeNull();
@@ -298,6 +362,7 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
 
 describe("Graphics tab: live apply from the in-game instance", () => {
   beforeEach(resetGraphicsSettings);
+  afterEach(unmountAll);
 
   it("fires the settings.graphics change event a running game listens for", async () => {
     // ClientGameRunner re-resolves the render settings and rebuilds the
@@ -322,6 +387,47 @@ describe("Graphics tab: live apply from the in-game instance", () => {
       );
     }
     expect(seen).toHaveLength(3);
+  });
+
+  it("follows a preset applied from the dropdown, and re-pushes the layers", async () => {
+    // The preset selector writes the graphics key itself. Nothing tells this
+    // component, so it listens: without that, the sliders would keep showing
+    // the old values and the renderer would never learn the preset's layer
+    // state, which it does not re-read from settings.
+    const visibility: [string, boolean][] = [];
+    const alphas: [string, number][] = [];
+    const el = await mountGraphics({
+      mapLayers: LAYERS,
+      onLayerVisibilityChange: (id, visible) => visibility.push([id, visible]),
+      onLayerAlphaChange: (id, alpha) => alphas.push([id, alpha]),
+    });
+    flip(el, "map-layer-forest-toggle");
+    visibility.length = 0;
+    alphas.length = 0;
+
+    const dropdown = el.querySelector<HTMLSelectElement>(
+      "graphics-preset-selector select",
+    )!;
+    dropdown.value = "builtin:graphics_setting.preset_night";
+    dropdown.dispatchEvent(new Event("change", { bubbles: true }));
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Night is ambient 0.36, which is level 8 on the slider.
+    const ambient = el.querySelector("#ambient-light-slider") as HTMLElement & {
+      value: number;
+    };
+    expect(ambient.value).toBe(8);
+    // Night carries no layer overrides, so every layer goes back to visible at
+    // its manifest opacity.
+    expect(visibility).toEqual([
+      ["forest", true],
+      ["reef", true],
+    ]);
+    expect(alphas).toEqual([
+      ["forest", 0.8],
+      ["reef", 1],
+    ]);
   });
 
   it("applies a map-layer toggle to the renderer, and stores it", async () => {
@@ -379,6 +485,7 @@ describe("Graphics tab: live apply from the in-game instance", () => {
 
 describe("Graphics tab: the page instance has no game", () => {
   beforeEach(resetGraphicsSettings);
+  afterEach(unmountAll);
 
   it("hides the map-layer section, because the rows come from the running map", async () => {
     const el = await mountGraphics();
