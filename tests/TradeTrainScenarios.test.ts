@@ -338,9 +338,9 @@ describe("trade ship scenarios", () => {
   // The absurd end of the port-count sweep. It runs on giantworldmap
   // (4108x1948, whose coasts fit 1000+ ocean-facing ports a side around
   // these anchors) because the world map tops out around ~320 a side.
-  // Past the sigmoid the capacity floor (0.25) takes over, so unlike the
-  // pre-floor meta income keeps scaling ~linearly with port count — the
-  // pinned number is the floor's linear regime at 20x fifty-port scale.
+  // Past the sigmoid the 0.25 capacity plateau lets income keep scaling
+  // with port count until the ~800-ship hard cap collapses it — the
+  // pinned number is the fleet pushed into that cap.
   test("a thousand ports each, giant map", async () => {
     expect(
       await runTradeScenario({

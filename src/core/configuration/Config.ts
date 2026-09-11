@@ -432,17 +432,16 @@ export class Config {
    * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns for the very
    * first trains, ~1x around 35 units (~5 trains), then a capacity
    * sigmoid damps spawning past the ~300-unit midpoint. The damping
-   * flattens out at 0.25 past ~460 units (~65 trains) instead of
-   * collapsing to 0, so a big enough rail economy still scales — at a
-   * quarter of the un-damped rate.
+   * flattens onto a ~0.25 plateau past ~460 units (~65 trains), so a big
+   * enough rail economy still scales at a quarter of the un-damped rate,
+   * until a global hard cap far beyond any normal game collapses the
+   * plateau past ~900 units (~130 trains).
    */
   trainSaturation(numTrainUnits: number): number {
     const boost = 1 + 0.5 * exp(-numTrainUnits / 30);
-    const capacity = Math.max(
-      0.25,
-      1 - sigmoid(numTrainUnits, Math.LN2 / 100, 300),
-    );
-    return boost * capacity;
+    const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 300);
+    const plateau = 0.25 * (1 - sigmoid(numTrainUnits, Math.LN2 / 150, 900));
+    return boost * Math.max(damping, plateau);
   }
 
   trainSpawnRate(numPlayerFactories: number, numTrainUnits: number): number {
@@ -500,18 +499,17 @@ export class Config {
    * realized effect, so ~1.5x actual spawns), crossing the old un-boosted
    * curve around 75 ships — a busy lobby passes that near minute 6 — and
    * staying below it after: a capacity sigmoid damps spawning past the
-   * ~250-ship midpoint. The damping flattens out at 0.25 (~half cadence
-   * per port after the pity timer) instead of collapsing to 0, so beyond
-   * ~340 ships income scales linearly with ports again: enough ports can
-   * still make a lot of gold, just at a damped rate.
+   * ~250-ship midpoint. The damping flattens onto a 0.25 plateau past
+   * ~340 ships (~half cadence per port after the pity timer), so heavy
+   * port investment keeps scaling income linearly, until a global hard
+   * cap far beyond any normal game collapses the plateau past ~800 at
+   * sea.
    */
   tradeShipSaturation(numTradeShips: number): number {
     const boost = 1 + 1.25 * exp(-numTradeShips / 30);
-    const capacity = Math.max(
-      0.25,
-      1 - sigmoid(numTradeShips, Math.LN2 / 50, 250),
-    );
-    return boost * capacity;
+    const damping = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 250);
+    const plateau = 0.25 * (1 - sigmoid(numTradeShips, Math.LN2 / 100, 800));
+    return boost * Math.max(damping, plateau);
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
