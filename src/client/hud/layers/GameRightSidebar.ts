@@ -81,6 +81,19 @@ export class GameRightSidebar extends LitElement implements Controller {
   // borderless the button is one of the few ways back to a titled window.
   private displayCeilingTimer: ReturnType<typeof setTimeout> | undefined;
 
+  // Which write is the live one. Bumped on every click, on every push that
+  // settles a write, and on teardown; mirrors displayRequestId in the Display
+  // tab.
+  //
+  // A boolean alone is not enough once the ceiling exists. When a write
+  // outlives its ceiling the button is handed back, so a SECOND write can
+  // start while the first is still pending -- and when the first finally
+  // answers it would otherwise adopt its now-stale snapshot, clear the second
+  // write's timer, and release the guard on the second write's behalf,
+  // letting a third click overlap it. Everything below no-ops unless it owns
+  // the current operation.
+  private displayOperation = 0;
+
   @state()
   private timer: number = 0;
 
@@ -196,6 +209,9 @@ export class GameRightSidebar extends LitElement implements Controller {
         // it cannot parse, and an unparseable push is not evidence of
         // anything.
         if (!isDisplaySnapshot(snapshot)) return;
+        // Settling retires the write, so anything it still had in flight is
+        // answering a question already resolved.
+        this.displayOperation++;
         this.adoptDisplaySnapshot(snapshot);
         this.clearDisplayCeiling();
         this.displayBusy = false;
@@ -210,6 +226,7 @@ export class GameRightSidebar extends LitElement implements Controller {
     this.displayUnsubscribe = null;
     this.displayBridge = null;
     this.displayBusy = false;
+    this.displayOperation++;
     this.clearDisplayCeiling();
     try {
       unsubscribe?.();
@@ -229,8 +246,12 @@ export class GameRightSidebar extends LitElement implements Controller {
    * shell answers both the invoke and the push, so this only fires when
    * neither arrived, and "waiting" must never become "dead for the match".
    */
-  private armDisplayCeiling(): void {
+  private armDisplayCeiling(operation: number): void {
     this.clearDisplayCeiling();
+    // No ownership check on the callback itself: every path that starts a new
+    // operation clears this timer first, so a stale one cannot fire. The check
+    // belongs on the re-read below, which CAN outlive the operation that asked
+    // for it.
     this.displayCeilingTimer = setTimeout(() => {
       this.displayCeilingTimer = undefined;
       // Re-enabled BEFORE the re-read, not after it: the ceiling has to hold
@@ -241,7 +262,10 @@ export class GameRightSidebar extends LitElement implements Controller {
       void Promise.resolve()
         .then(() => bridge.getPrefs())
         .then(
-          (snapshot) => this.adoptDisplaySnapshot(snapshot),
+          (snapshot) => {
+            if (operation !== this.displayOperation) return;
+            this.adoptDisplaySnapshot(snapshot);
+          },
           () => undefined,
         );
     }, DISPLAY_SETTLE_TIMEOUT_MS);
@@ -435,7 +459,9 @@ export class GameRightSidebar extends LitElement implements Controller {
       // of the protection against an impatient second click.
       if (this.displayBusy) return;
       this.displayBusy = true;
-      this.armDisplayCeiling();
+      this.displayOperation++;
+      const operation = this.displayOperation;
+      this.armDisplayCeiling(operation);
       const next: DesktopDisplayMode =
         this.displayMode === "borderless" ? "windowed" : "borderless";
       // Promise.resolve() for the same reason as the read above: a bridge
@@ -444,13 +470,17 @@ export class GameRightSidebar extends LitElement implements Controller {
       void Promise.resolve()
         .then(() => bridge.setPrefs({ mode: next }))
         .then(
-          (snapshot) => this.adoptDisplaySnapshot(snapshot),
+          (snapshot) => {
+            if (operation !== this.displayOperation) return;
+            this.adoptDisplaySnapshot(snapshot);
+          },
           // The icon keeps showing the mode the window is really in. The
           // shell answers a patch it refuses with the current state rather
           // than a rejection, so this is a broken bridge, not a refusal.
           () => undefined,
         )
         .finally(() => {
+          if (operation !== this.displayOperation) return;
           this.clearDisplayCeiling();
           this.displayBusy = false;
         });

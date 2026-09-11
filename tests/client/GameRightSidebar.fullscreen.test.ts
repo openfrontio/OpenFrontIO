@@ -448,6 +448,132 @@ describe("GameRightSidebar fullscreen button", () => {
     expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(1);
   });
 
+  // Once the ceiling can hand the button back, two writes can be in flight at
+  // once -- so the guard has to know WHICH write it belongs to. Otherwise the
+  // overtaken one adopts its stale snapshot, clears the live one's timer and
+  // releases the guard on its behalf, letting a third click overlap it.
+  it("does not let an overtaken write settle the one that replaced it", async () => {
+    vi.useFakeTimers();
+    const fake = fakeBridge(snapshot("borderless"));
+    const pending: Array<(s: DesktopDisplaySnapshot) => void> = [];
+    fake.bridge.setPrefs.mockImplementation(
+      () =>
+        new Promise<DesktopDisplaySnapshot>((resolve) => {
+          pending.push(resolve);
+        }),
+    );
+    fake.install();
+    const el = await mount();
+
+    // A goes out and is left unanswered past its ceiling, which hands the
+    // button back.
+    clickFullscreen(el);
+    await flush(el);
+    vi.advanceTimersByTime(DISPLAY_SETTLE_TIMEOUT_MS);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(1);
+
+    // B goes out on the recovered button.
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(2);
+
+    // A finally answers, late and stale.
+    pending[0](snapshot("windowed"));
+    await flush(el);
+
+    // Its snapshot is not adopted -- the window is still borderless, so the
+    // button still offers the way out of it.
+    expect(fullscreenButton(el).src).toContain("ExitFullscreen");
+
+    // ...and it did not release B's guard: a third click is refused.
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(2);
+
+    // B's own ceiling is intact and still owns the recovery. If A's finally
+    // had cleared it, nothing would ever hand the button back and this last
+    // click could not happen.
+    vi.advanceTimersByTime(DISPLAY_SETTLE_TIMEOUT_MS);
+    await flush(el);
+    clickFullscreen(el);
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledTimes(3);
+  });
+
+  // The ceiling's own recovery read can outlive the operation that asked for
+  // it, and it describes the world BEFORE the write that overtook it.
+  it("drops a ceiling re-read that answers after a newer write", async () => {
+    vi.useFakeTimers();
+    const fake = fakeBridge(snapshot("borderless"));
+    fake.bridge.setPrefs.mockImplementation(
+      () => new Promise<DesktopDisplaySnapshot>(() => undefined),
+    );
+    fake.install();
+    const el = await mount();
+
+    let resolveRead: ((s: DesktopDisplaySnapshot) => void) | null = null;
+    fake.bridge.getPrefs.mockImplementation(
+      () =>
+        new Promise<DesktopDisplaySnapshot>((resolve) => {
+          resolveRead = resolve;
+        }),
+    );
+
+    // A times out; its recovery read is left hanging.
+    clickFullscreen(el);
+    await flush(el);
+    vi.advanceTimersByTime(DISPLAY_SETTLE_TIMEOUT_MS);
+    await flush(el);
+    expect(resolveRead).not.toBeNull();
+
+    // B goes out on the recovered button.
+    clickFullscreen(el);
+    await flush(el);
+
+    // A's recovery read answers late, describing the pre-B world.
+    resolveRead!(snapshot("windowed"));
+    await flush(el);
+    expect(fullscreenButton(el).src).toContain("ExitFullscreen");
+  });
+
+  // The same race against a push rather than against a newer click: settling
+  // retires the write, so its recovery read is answering a question that has
+  // already been answered better.
+  it("drops a ceiling re-read that answers after a push", async () => {
+    vi.useFakeTimers();
+    const fake = fakeBridge(snapshot("borderless"));
+    fake.bridge.setPrefs.mockImplementation(
+      () => new Promise<DesktopDisplaySnapshot>(() => undefined),
+    );
+    fake.install();
+    const el = await mount();
+
+    let resolveRead: ((s: DesktopDisplaySnapshot) => void) | null = null;
+    fake.bridge.getPrefs.mockImplementation(
+      () =>
+        new Promise<DesktopDisplaySnapshot>((resolve) => {
+          resolveRead = resolve;
+        }),
+    );
+
+    clickFullscreen(el);
+    await flush(el);
+    vi.advanceTimersByTime(DISPLAY_SETTLE_TIMEOUT_MS);
+    await flush(el);
+    expect(resolveRead).not.toBeNull();
+
+    // The shell reports the truth before the recovery read comes back.
+    fake.push(snapshot("windowed"));
+    await flush(el);
+    expect(fullscreenButton(el).src).not.toContain("ExitFullscreen");
+
+    // The stale read must not undo it.
+    resolveRead!(snapshot("borderless"));
+    await flush(el);
+    expect(fullscreenButton(el).src).not.toContain("ExitFullscreen");
+  });
+
   it("does not throw when the bridge rejects", async () => {
     const fake = fakeBridge(snapshot("borderless"));
     fake.install();
