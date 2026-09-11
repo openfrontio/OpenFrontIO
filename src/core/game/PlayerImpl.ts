@@ -737,6 +737,8 @@ export class PlayerImpl implements Player {
   }
 
   allianceRequestCooldownRemaining(other: Player): number {
+  //return ticks remaining
+
     if (this.mg.config().disableAlliances()) {
       return 0;
     }
@@ -782,7 +784,7 @@ export class PlayerImpl implements Player {
 
     const remainingTicks = this.mg.config().allianceRequestCooldown() - delta;
 
-    return Math.max(Math.floor((remainingTicks + 9) / 10), 0);
+    return Math.max(0, remainingTicks);
   }
 
   breakAlliance(alliance: MutableAlliance): void {

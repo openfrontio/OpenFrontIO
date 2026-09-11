@@ -219,12 +219,21 @@ const allyRequestElement: MenuElement = {
   name: "request",
   disabled: (params: MenuElementParams) =>
     !params.playerActions?.interaction?.canSendAllianceRequest,
-  cooldown: (params: MenuElementParams) =>
-    params.playerActions?.interaction?.allianceRequestCooldownRemaining ?? 0,
   displayed: (params: MenuElementParams) =>
     !params.playerActions?.interaction?.canBreakAlliance,
-  color: COLORS.ally,
+  color: (params: MenuElementParams) =>
+    (params.playerActions?.interaction?.allianceRequestCooldownRemaining ?? 0) > 0 //check this 
+      ? COLORS.allianceTimeLeft
+      : COLORS.ally,
   icon: allianceIcon,
+  timerFraction: (params: MenuElementParams): number => {
+    const remaining = Math.max( //in ticks
+      0,
+      params.playerActions?.interaction?.allianceRequestCooldownRemaining ?? 0, 
+    );
+    const cooldown = Math.max(1, params.game.config().allianceRequestCooldown()); //in ticks
+    return Math.max(0, Math.min(1, remaining / cooldown));
+  },
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleAllianceRequest(
       params.myPlayer,

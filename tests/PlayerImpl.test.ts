@@ -254,25 +254,27 @@ describe("PlayerImpl", () => {
       expect(player.allianceRequestCooldownRemaining(other)).toBe(0);
     });
 
-    test("rounds remaining cooldown up to whole seconds and expires", () => {
+    test("returns remaining cooldown in ticks and expires", () => {
       const request = player.createAllianceRequest(other);
-      expect(request).not.toBeNull();
-      request!.reject();
+  expect(request).not.toBeNull();
+  request!.reject();
 
-      const cooldownTicks = game.config().allianceRequestCooldown();
-      const expectedSeconds = Math.floor((cooldownTicks + 9) / 10);
-      expect(player.allianceRequestCooldownRemaining(other)).toBe(
-        expectedSeconds,
-      );
+  const cooldownTicks = game.config().allianceRequestCooldown();
 
-      const ticksUntilLastSecond = cooldownTicks - 1;
-      for (let i = 0; i < ticksUntilLastSecond; i++) {
-        game.executeNextTick();
-      }
+  expect(player.allianceRequestCooldownRemaining(other)).toBe(
+    cooldownTicks,
+  );
 
-      expect(player.allianceRequestCooldownRemaining(other)).toBe(1);
-      game.executeNextTick();
-      expect(player.allianceRequestCooldownRemaining(other)).toBe(0);
+  const ticksUntilLastTick = cooldownTicks - 1;
+  for (let i = 0; i < ticksUntilLastTick; i++) {
+    game.executeNextTick();
+  }
+
+  expect(player.allianceRequestCooldownRemaining(other)).toBe(1);
+
+  game.executeNextTick();
+
+  expect(player.allianceRequestCooldownRemaining(other)).toBe(0);
     });
   });
 });
