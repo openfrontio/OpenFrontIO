@@ -138,6 +138,29 @@ function choose(select: HTMLSelectElement, value: string): void {
   select.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+// Vitest tears down this file's jsdom when the file ends, but it does NOT
+// remove elements from document.body first -- so a component still connected
+// at that point never gets disconnectedCallback, and anything it has armed
+// outlives the document.
+//
+// That is not hypothetical here: three of the tests below deliberately leave a
+// write in flight, which leaves the 2s settle ceiling armed. When it fired
+// after teardown it set a @state field, Lit scheduled an update, and
+// modalConfig() -> translateText() -> getCachedLangSelector() reached for a
+// `document` that no longer existed. Vitest reports that as an unhandled
+// rejection against whichever FILE happened to be running at the time, which
+// is why it read as an unrelated flake.
+//
+// Removing every element here runs disconnectedCallback, which clears the
+// timer and the subscription.
+afterEach(async () => {
+  for (const el of [...document.body.children]) el.remove();
+  // Let any update already scheduled run while the document still exists.
+  await Promise.resolve();
+  window.openfrontDesktop = undefined;
+  vi.useRealTimers();
+});
+
 function resetDom(): void {
   document.body.innerHTML = "";
   localStorage.clear();
@@ -712,6 +735,36 @@ describe("Display tab subscription lifecycle", () => {
     resolveRead!(snapshot({ prefs: { mode: "borderless", displayId: null } }));
     await flush(el);
     expect(modeSelect(el)?.value).toBe("windowed");
+  });
+
+  // Disconnecting is the one teardown path the modal does not control: the
+  // in-game instance goes away with the match, with no close() first. Nothing
+  // it had in flight may keep talking to the bridge afterwards -- both because
+  // the answer is useless and because touching @state on a detached element
+  // schedules a Lit update against a document that may be gone.
+  it("goes quiet when disconnected with a write in flight", async () => {
+    const fake = fakeBridge();
+    fake.install();
+    const el = await mount();
+    el.open({ tab: "display" });
+    await flush(el);
+    const readsBeforeTeardown = fake.bridge.getPrefs.mock.calls.length;
+
+    choose(modeSelect(el)!, "windowed");
+    await flush(el);
+    el.remove();
+    await flush(el);
+
+    // The subscription is gone...
+    expect(fake.listenerCount()).toBe(0);
+    // ...the in-flight write's answer is ignored...
+    fake.settle(snapshot({ prefs: { mode: "windowed", displayId: null } }));
+    await flush(el);
+    // ...and the ceiling does not fire a re-read at a dead element.
+    vi.useFakeTimers();
+    vi.advanceTimersByTime(5000);
+    await Promise.resolve();
+    expect(fake.bridge.getPrefs).toHaveBeenCalledTimes(readsBeforeTeardown);
   });
 
   // A shell that exposes getPrefs/setPrefs but no push. The tab must still
