@@ -21,7 +21,7 @@ vi.mock("howler", () => {
     playing = vi.fn().mockReturnValue(false);
     unload = vi.fn();
     volume = vi.fn((v?: number) => {
-      if (v === undefined) return this.volumes.at(-1) ?? 0;
+      if (v === undefined) return this.volumes[this.volumes.length - 1] ?? 0;
       this.volumes.push(v);
       return this;
     });
@@ -58,7 +58,10 @@ import {
   SoundEffect,
   soundEffectUrls,
 } from "../../../src/client/sound/Sounds";
-import { UserSettings } from "../../../src/core/game/UserSettings";
+import {
+  AudioCategory,
+  UserSettings,
+} from "../../../src/core/game/UserSettings";
 
 function resetSettings() {
   localStorage.clear();
@@ -73,20 +76,20 @@ function resetSettings() {
 /** Last volume the mixer pushed at the Howl created for this cue. */
 function volumeOf(name: string): number | undefined {
   const howl = howlInstances.find((h) => h.src.includes(name));
-  return howl?.volumes.at(-1);
+  return howl?.volumes[howl.volumes.length - 1];
 }
 
 let mixer: AudioMixer;
 let settings: UserSettings;
 
-function build(overrides: Partial<Record<string, number | boolean>> = {}) {
+function build(overrides: Record<string, number | boolean> = {}) {
   settings = new UserSettings();
   for (const [key, value] of Object.entries(overrides)) {
     if (typeof value === "boolean") {
       if (key === "muteOnBlur") settings.setMuteOnBlur(value);
       if (key === "alertsWhenUnfocused") settings.setAlertsWhenUnfocused(value);
-    } else {
-      settings.setAudioVolume(key as any, value);
+    } else if (typeof value === "number") {
+      settings.setAudioVolume(key as AudioCategory, value);
     }
   }
   mixer = new AudioMixer(settings);
