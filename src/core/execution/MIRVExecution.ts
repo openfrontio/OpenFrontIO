@@ -68,18 +68,6 @@ export class MirvExecution implements Execution {
     this.baseX = this.mg.x(this.dst);
     this.baseY = this.mg.y(this.dst);
     this.stagedTargets = [this.dst];
-
-    // Betrayal on launch
-    if (this.targetPlayer.isPlayer()) {
-      const alliance = this.player.allianceWith(this.targetPlayer);
-      if (alliance !== null) {
-        this.player.breakAlliance(alliance);
-      }
-      if (this.targetPlayer !== this.player) {
-        this.targetPlayer.updateRelation(this.player, -100);
-        this.player.updateRelation(this.targetPlayer, -100);
-      }
-    }
   }
 
   tick(ticks: number): void {
@@ -96,6 +84,19 @@ export class MirvExecution implements Execution {
         targetPlayer: this.targetPlayer,
       });
       this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
+
+      // Betrayal on launch — only once the missile has actually spawned, so
+      // a fizzled launch pays no diplomatic cost.
+      if (this.targetPlayer.isPlayer()) {
+        const alliance = this.player.allianceWith(this.targetPlayer);
+        if (alliance !== null) {
+          this.player.breakAlliance(alliance);
+        }
+        if (this.targetPlayer !== this.player) {
+          this.targetPlayer.updateRelation(this.player, -100);
+          this.player.updateRelation(this.targetPlayer, -100);
+        }
+      }
       const x = Math.floor((this.baseX + this.mg.x(this.nuke.tile())) / 2);
       const y = Math.max(0, this.baseY - 500) + 50;
       this.separateDst = this.mg.ref(x, y);
