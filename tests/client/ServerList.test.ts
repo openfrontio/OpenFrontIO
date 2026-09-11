@@ -1,17 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import {
+  backendReachable,
   ensureServerList,
   resetServerList,
   serverListSite,
   serverListUrl,
+  startServerListPolling,
+  stopServerListPolling,
 } from "../../src/client/ServerList";
 
 // Priority 1 of the multi-server v2 handoff: the client fetches the server
-// list from the API only when it needs a server, filters it by its own
-// version, and falls back to BOOTSTRAP_CONFIG whenever the list is missing
-// or unreachable so that production behaves exactly as today until the API
-// serves it.
+// list from the API at page load and keeps it warm with a heartbeat, filters
+// it by its own version, and falls back to BOOTSTRAP_CONFIG whenever the
+// list is missing or unreachable so that production behaves exactly as today
+// until the API serves it. A click never waits on a fetch once a list is
+// known, and a failed refresh never throws the last good list away.
+
+const REFRESH_MS = 30_000;
+const RETRY_MS = 10_000;
 
 const OWN = "bfd5563a11111111111111111111111111111111";
 const OLD = "5ccc50a722222222222222222222222222222222";
@@ -90,6 +97,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  stopServerListPolling();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   delete (window as any).BOOTSTRAP_CONFIG;
@@ -157,10 +166,42 @@ describe("ensureServerList", () => {
     });
   });
 
-  it("reuses a fresh list instead of fetching again", async () => {
-    await ensureServerList();
-    await ensureServerList();
+  it("answers from the cached list without waiting, and refreshes behind it", async () => {
+    vi.useFakeTimers();
+    expect(await ensureServerList()).toBe("api");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // A second click reuses what is already known.
+    expect(await ensureServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Past the refresh interval the list is stale, but a click STILL must
+    // not wait on the network: a fetch that never answers cannot stop this
+    // call from resolving from the cached list. It only kicks off one
+    // background refresh, however many times it is asked.
+    fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
+    await vi.advanceTimersByTimeAsync(REFRESH_MS + 1);
+    expect(await ensureServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(await ensureServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+  });
+
+  it("keeps the last good list when a refresh fails", async () => {
+    // The API caches for seconds and a blip is common; losing the list would
+    // flip a working page into BOOTSTRAP_CONFIG for no reason.
+    vi.useFakeTimers();
+    expect(await ensureServerList()).toBe("api");
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    await vi.advanceTimersByTimeAsync(REFRESH_MS + 1);
+    expect(await ensureServerList()).toBe("api");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverListLoaded()).toBe(true);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+    expect(await ensureServerList()).toBe("api");
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
   });
 
   it("falls back to BOOTSTRAP_CONFIG when the API is unreachable", async () => {
@@ -241,6 +282,92 @@ describe("ensureServerList", () => {
       expect(ClientEnv.serverHttpBase()).toBe(first);
     }
     vi.useRealTimers();
+  });
+});
+
+describe("startServerListPolling", () => {
+  it("fetches at page load and keeps a heartbeat, retrying sooner after a failure", async () => {
+    vi.useFakeTimers();
+    startServerListPolling();
+    // The first attempt goes out immediately, so the list is already known
+    // by the time a player clicks anything.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    // Starting twice is a no-op: one heartbeat, not two.
+    startServerListPolling();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Next beat is REFRESH_MS after the attempt settled.
+    await vi.advanceTimersByTimeAsync(REFRESH_MS - 10_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // That one failed, so the next beat comes at RETRY_MS instead.
+    await vi.advanceTimersByTimeAsync(RETRY_MS - 1_000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    stopServerListPolling();
+    await vi.advanceTimersByTimeAsync(REFRESH_MS * 2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not poll on a replay shell host", async () => {
+    // Replay shells talk to the archive, not to a live server list.
+    stubLocation("replay.openfront.io");
+    vi.useFakeTimers();
+    startServerListPolling();
+    await vi.advanceTimersByTimeAsync(REFRESH_MS * 2);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("backend reachability", () => {
+  it("reports whether the API answered at all, and announces every change", async () => {
+    const seen: unknown[] = [];
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("backend-reachability", listener);
+    try {
+      // Nothing has been tried yet.
+      expect(backendReachable()).toBe(null);
+      expect(seen).toEqual([]);
+
+      // A 404 is an answer: the backend is up, this site just has no list.
+      fetchMock.mockImplementation(async () =>
+        jsonResponse({ error: "unknown site" }, 404),
+      );
+      expect(await ensureServerList()).toBe("fallback");
+      expect(backendReachable()).toBe(true);
+      expect(seen).toEqual([{ reachable: true }]);
+
+      // Unchanged: no second announcement.
+      expect(await ensureServerList()).toBe("fallback");
+      expect(backendReachable()).toBe(true);
+      expect(seen).toEqual([{ reachable: true }]);
+
+      // A network error is not an answer.
+      fetchMock.mockRejectedValue(new TypeError("network down"));
+      expect(await ensureServerList()).toBe("fallback");
+      expect(backendReachable()).toBe(false);
+      expect(seen).toEqual([{ reachable: true }, { reachable: false }]);
+
+      // Back up again.
+      fetchMock.mockImplementation(async () => jsonResponse(API_LIST));
+      expect(await ensureServerList()).toBe("api");
+      expect(backendReachable()).toBe(true);
+      expect(seen).toEqual([
+        { reachable: true },
+        { reachable: false },
+        { reachable: true },
+      ]);
+    } finally {
+      document.removeEventListener("backend-reachability", listener);
+    }
   });
 });
 
