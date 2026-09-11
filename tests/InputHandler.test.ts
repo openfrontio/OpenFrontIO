@@ -23,6 +23,8 @@ class MockPointerEvent {
   pointerId: number;
   type: string;
   pointerType: string;
+  ctrlKey: boolean;
+  shiftKey: boolean;
   preventDefault: () => void;
 
   constructor(type: string, init: any) {
@@ -34,6 +36,8 @@ class MockPointerEvent {
     this.y = init.y ?? init.clientY;
     this.pointerId = init.pointerId;
     this.pointerType = init.pointerType ?? "mouse";
+    this.ctrlKey = init.ctrlKey ?? false;
+    this.shiftKey = init.shiftKey ?? false;
     this.preventDefault = vi.fn();
   }
 }
@@ -287,6 +291,117 @@ describe("InputHandler AutoUpgrade", () => {
         (call) => call[0].constructor.name,
       );
       expect(emittedTypes).not.toContain("ContextMenuEvent");
+    });
+  });
+
+  describe("Ctrl+left click (#4918)", () => {
+    test("should not emit MouseUpEvent on ctrl+left release (Mac secondary-click)", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+        ctrlKey: true,
+      });
+      inputHandler["lastPointerDownX"] = 149;
+      inputHandler["lastPointerDownY"] = 249;
+
+      inputHandler["onPointerUp"](pointerEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+      expect(emittedTypes).not.toContain("ContextMenuEvent");
+      expect(emittedTypes).not.toContain("ShowBuildMenuEvent");
+    });
+
+    test("should still emit MouseUpEvent on plain left release", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+        ctrlKey: false,
+      });
+      inputHandler["lastPointerDownX"] = 149;
+      inputHandler["lastPointerDownY"] = 249;
+
+      inputHandler["onPointerUp"](pointerEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseUpEvent");
+    });
+
+    test("Win/Linux: ctrl+left still opens the build menu when Control is held", () => {
+      inputHandler["keybinds"].buildMenuModifier = "ControlLeft";
+      inputHandler["activeKeys"].add("ControlLeft");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+        ctrlKey: true,
+      });
+      inputHandler["lastPointerDownX"] = 149;
+      inputHandler["lastPointerDownY"] = 249;
+
+      inputHandler["onPointerUp"](pointerEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("ShowBuildMenuEvent");
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+    });
+
+    test("Mac: cmd+left still opens the build menu", () => {
+      inputHandler["keybinds"].buildMenuModifier = "MetaLeft";
+      inputHandler["activeKeys"].add("MetaLeft");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+        ctrlKey: false,
+      });
+      inputHandler["lastPointerDownX"] = 149;
+      inputHandler["lastPointerDownY"] = 249;
+
+      inputHandler["onPointerUp"](pointerEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("ShowBuildMenuEvent");
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+    });
+
+    test("onContextMenu still opens the radial after ctrl+left", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      const mouseEvent = new MouseEvent("contextmenu", {
+        clientX: 150,
+        clientY: 250,
+      });
+      inputHandler["onContextMenu"](mouseEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("ContextMenuEvent");
     });
   });
 

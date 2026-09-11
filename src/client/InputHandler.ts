@@ -843,6 +843,9 @@ export class InputHandler {
         this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
       }
     }
+
+    // Modifier menus first: on Win/Linux Ctrl is the default build-menu
+    // key, so a ctrl+left must still reach ShowBuildMenuEvent.
     if (this.activeKeys.has(this.keybinds.buildMenuModifier)) {
       this.suppressNextTap = false;
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
@@ -851,6 +854,14 @@ export class InputHandler {
     if (this.activeKeys.has(this.keybinds.emojiMenuModifier)) {
       this.suppressNextTap = false;
       this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
+      return;
+    }
+
+    // macOS treats Ctrl+Left as secondary-click (context menu). Skip the
+    // primary-click path so we don't also fire an attack (#4918). The
+    // contextmenu listener opens the radial. After the modifier checks this
+    // is safe on Win/Linux too (those already returned with the build menu).
+    if (event.ctrlKey) {
       return;
     }
 
