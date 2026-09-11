@@ -1,4 +1,4 @@
-import { ClientEnv } from "src/client/ClientEnv";
+import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { showInGameAlert } from "./InGameModal";
@@ -58,8 +58,18 @@ export class PublicLobbySocket {
     const listStatus = await ensureServerList();
     if (this.stopped) return;
     if (listStatus === "outdated") this.fireUpdateAvailable();
-    // Get config to determine number of workers, then pick a random one
-    this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
+    // Get config to determine number of workers, then pick a random one.
+    // With no list and nothing injected there is no server to ask (a static
+    // page while the API is unreachable), which is a connection failure like
+    // any other: take the same path a refused socket does rather than
+    // rejecting a promise most callers never await.
+    try {
+      this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
+    } catch (e) {
+      if (!(e instanceof NoServerError)) throw e;
+      this.handleConnectError(e);
+      return;
+    }
     this.connectWebSocket();
   }
 

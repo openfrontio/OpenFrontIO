@@ -10,10 +10,16 @@ import { lobbyFrame } from "./util/Wire";
 
 const mocks = vi.hoisted(() => ({
   ensureServerList: vi.fn(async (): Promise<string> => "api"),
+  showInGameAlert: vi.fn(async (_message: string) => {}),
 }));
 
 // start() asks the server list which server to use; the answer is what is
-// under test here, so nothing reaches the network.
+// under test here, so nothing reaches the network. The alert is the
+// connection-error surface the no-server case is expected to reach.
+vi.mock("../src/client/InGameModal", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, showInGameAlert: mocks.showInGameAlert };
+});
 vi.mock("../src/client/ServerList", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, ensureServerList: mocks.ensureServerList };
@@ -333,5 +339,41 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
       socket.stop();
       expect(onUpdateAvailable).not.toHaveBeenCalled();
     }
+  });
+});
+
+// A static page knows no server of its own, so when the API's list is
+// unreachable there is no worker count anywhere and ClientEnv throws
+// NoServerError. The lobby list is the first thing every homepage starts, so
+// that throw must arrive as the connection error the player already
+// understands -- not as a rejected promise from an un-awaited start().
+describe("PublicLobbySocket.start with no server known", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.showInGameAlert.mockClear();
+    mocks.ensureServerList.mockReset();
+    mocks.ensureServerList.mockResolvedValue("fallback");
+    ClientEnv.reset();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      turnstileSiteKey: "k",
+      jwtAudience: "openfront.io",
+      gitCommit: "bfd5563a11111111111111111111111111111111",
+    };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    ClientEnv.reset();
+    delete (window as any).BOOTSTRAP_CONFIG;
+  });
+
+  it("reports a connection error instead of rejecting", async () => {
+    const socket = new PublicLobbySocket(vi.fn(), { maxWsAttempts: 1 });
+
+    await expect(socket.start()).resolves.toBeUndefined();
+
+    expect(mocks.showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(mocks.showInGameAlert.mock.calls[0][0]).toContain("connection");
   });
 });

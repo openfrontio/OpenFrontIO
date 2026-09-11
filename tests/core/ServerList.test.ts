@@ -8,6 +8,7 @@ import {
   servesBuild,
   stripVersionPrefix,
   versionedPath,
+  versionedPathForGame,
   versionMatches,
 } from "../../src/core/ServerList";
 
@@ -265,5 +266,49 @@ describe("versionedPath", () => {
     // a page already under /v/<commit>/ must never be navigated to itself.
     expect(versionedPath("bfd5563a", "/v/bfd5563a/", "")).toBeNull();
     expect(versionedPath(LIST.latest!, "/v/bfd5563a/game/x", "")).toBeNull();
+  });
+});
+
+describe("versionedPathForGame", () => {
+  const OWN = "bfd5563a11111111111111111111111111111111";
+  const OTHER = "5ccc50a722222222222222222222222222222222";
+
+  it("returns null when the game's server runs this build", () => {
+    // Prefix-tolerant, like every other commit compare: the list carries the
+    // full sha while the page's own value may be short.
+    expect(versionedPathForGame(OWN, OWN, "/game/dAbCd12345", "")).toBeNull();
+    expect(
+      versionedPathForGame("bfd5563a", OWN, "/game/dAbCd12345", ""),
+    ).toBeNull();
+  });
+
+  it("returns the game's version page when the builds differ", () => {
+    expect(
+      versionedPathForGame(OWN, OTHER, "/w3/game/cAbCd12345", "?lobby"),
+    ).toBe(`/v/${OTHER}/game/cAbCd12345?lobby`);
+  });
+
+  it("returns null when the page already lives under the game's version", () => {
+    // The loop guard: /v/<x>/ is already being served something, and if it
+    // is not x's bundle there is nothing this navigation can fix. Falling
+    // through hands the mismatch to join-time version_mismatch.
+    expect(
+      versionedPathForGame(OWN, OTHER, `/v/${OTHER}/game/cAbCd12345`, ""),
+    ).toBeNull();
+  });
+
+  it("returns null when this build names no commit", () => {
+    // "DEV" from the dev server, "desktop" from an old shell: they match any
+    // version, so they are never sent off their own server.
+    expect(
+      versionedPathForGame("DEV", OTHER, "/game/cAbCd12345", ""),
+    ).toBeNull();
+  });
+
+  it("returns null when the game's version is unknown", () => {
+    // No list loaded, or a letter the list does not carry.
+    expect(
+      versionedPathForGame(OWN, undefined, "/game/cAbCd12345", ""),
+    ).toBeNull();
   });
 });

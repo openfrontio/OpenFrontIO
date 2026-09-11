@@ -197,7 +197,7 @@ export class ClanGameHistoryView extends LitElement {
   private async watchReplay(gameId: string) {
     try {
       const encoded = encodeURIComponent(gameId);
-      const url = `/${ClientEnv.workerPath(gameId)}/game/${encoded}`;
+      const url = ClientEnv.gamePath(gameId);
       history.pushState({ join: gameId }, "", url);
       window.dispatchEvent(
         new CustomEvent("join-changed", { detail: { gameId: encoded } }),
@@ -221,8 +221,7 @@ export class ClanGameHistoryView extends LitElement {
   }
 
   private async copyGameLink(gameId: string) {
-    const encodedGameId = encodeURIComponent(gameId);
-    const url = `${window.location.origin}/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
+    const url = `${window.location.origin}${ClientEnv.gamePath(gameId)}`;
 
     try {
       await void copyToClipboard(url);

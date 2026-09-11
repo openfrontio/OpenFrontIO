@@ -81,6 +81,50 @@ describe("apex-aware navigation", () => {
     }
   });
 
+  // Multi-server v2: every version's page is also served at /v/<commit>/,
+  // immutably. Reloading such a page as-is re-serves the very bundle the
+  // reload is meant to leave behind -- forever, since the version prefix
+  // pins it. The update prompt has to ask for the version-free path, which
+  // the site answers with `latest`.
+  it("reloadForUpdate leaves a /v/<commit>/ page for the version-free path", () => {
+    stubPage("openfront.io", "/v/5ccc50a7/game/dAbCd12345", "openfront.io");
+    reloadForUpdate();
+    expect(replace).toHaveBeenCalledTimes(1);
+    const url = new URL(replace.mock.calls[0][0]);
+    expect(url.host).toBe("openfront.io");
+    expect(url.pathname).toBe("/game/dAbCd12345");
+    expect(url.searchParams.has("v")).toBe(true);
+  });
+
+  it("reloadForUpdate drops the version prefix on a standalone host too", () => {
+    // No siteHost injected: the reload stays on this host, but still must
+    // not ask for the pinned version again.
+    stubPage("beta.openfront.io", "/v/5ccc50a7/");
+    reloadForUpdate();
+    const url = new URL(replace.mock.calls[0][0]);
+    expect(url.host).toBe("beta.openfront.io");
+    expect(url.pathname).toBe("/");
+  });
+
+  it("reloadForUpdate drops both prefixes when re-entering through the apex", () => {
+    stubPage(
+      "green.openfront.io",
+      "/v/5ccc50a7/w1/game/dAbCd12345",
+      "openfront.io",
+    );
+    reloadForUpdate();
+    const url = new URL(replace.mock.calls[0][0]);
+    expect(url.host).toBe("openfront.io");
+    expect(url.pathname).toBe("/game/dAbCd12345");
+  });
+
+  it("homeHref leaves a versioned page for the version-free root", () => {
+    // "Leave to the menu" should land the player on `latest`, not back on
+    // the build they were told to leave.
+    stubPage("openfront.io", "/v/5ccc50a7/game/dAbCd12345", "openfront.io");
+    expect(homeHref()).toBe("/");
+  });
+
   // The unknown-letter bounce (Main.redirectUnknownLetterToApex) goes to the
   // apex precisely because this page's routing knowledge is stale. Both
   // prefixes encode that stale knowledge: the worker is one deployment's,

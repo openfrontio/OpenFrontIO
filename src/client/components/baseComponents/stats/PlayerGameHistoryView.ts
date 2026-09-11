@@ -266,8 +266,7 @@ export class PlayerGameHistoryView extends LitElement {
   }
 
   private async copyGameLink(gameId: string) {
-    const encodedGameId = encodeURIComponent(gameId);
-    const url = `${window.location.origin}/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
+    const url = `${window.location.origin}${ClientEnv.gamePath(gameId)}`;
 
     try {
       await void copyToClipboard(url);

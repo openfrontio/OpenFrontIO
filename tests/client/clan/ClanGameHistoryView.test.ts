@@ -30,7 +30,7 @@ vi.mock("../../../src/client/TerrainMapFileLoader", () => ({
 
 vi.mock("../../../src/client/ClientEnv", () => ({
   ClientEnv: {
-    workerPath: vi.fn(() => "w0"),
+    gamePath: vi.fn((id: string) => `/w0/game/${encodeURIComponent(id)}`),
   },
 }));
 

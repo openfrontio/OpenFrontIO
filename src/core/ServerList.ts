@@ -182,3 +182,35 @@ export function versionedPath(
   const bare = path.replace(WORKER_PREFIX_RE, "/");
   return `/v/${commit}${bare}${search}`;
 }
+
+/**
+ * Where to send a page that is opening a game whose server runs a different
+ * build, or null to stay put and open it here.
+ *
+ * The decision, shared by the two places a game is opened from a URL
+ * (Main.handleUrl's `/game/<id>` branch and JoinLobbyModal.checkActiveLobby),
+ * so they cannot drift apart:
+ *
+ * - `gameVersion` undefined — no list loaded, or a letter it doesn't carry:
+ *   nothing is known about the game's server, and a navigation on a guess
+ *   would be worse than joining and finding out.
+ * - the versions match — including a build whose own label names no commit
+ *   ("DEV", "desktop"), which matches anything and must never be sent off
+ *   its own server. See versionMatches.
+ * - versionedPath returns null — the page already lives under
+ *   `/v/<gameVersion>/` yet still isn't that build (the version's page isn't
+ *   being served). That is the loop guard, and falling through hands the
+ *   mismatch to join-time `version_mismatch`, which redirects cross-host.
+ *
+ * Desktop never calls this: its updater owns which version it runs.
+ */
+export function versionedPathForGame(
+  ownCommit: string,
+  gameVersion: string | undefined,
+  pathname: string,
+  search: string,
+): string | null {
+  if (gameVersion === undefined) return null;
+  if (versionMatches(ownCommit, gameVersion)) return null;
+  return versionedPath(gameVersion, pathname, search);
+}
