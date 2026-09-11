@@ -434,14 +434,20 @@ flag_latest() {
 
     while :; do
         # No -f: the status code IS the answer here, so it must be read rather
-        # than collapsed into a non-zero exit. A curl that cannot run at all
-        # (DNS, TLS) yields 000 and is treated as a retryable outage.
-        code="$(curl -sS --connect-timeout 10 --max-time 30 \
+        # than collapsed into a non-zero exit. A curl that cannot reach the API
+        # at all (DNS, TLS, connect timeout) exits non-zero AND prints 000, so
+        # the fallback must only fill in for a curl that printed nothing —
+        # `|| echo 000` would append to curl's own 000 and yield "000000",
+        # which falls through to the decide-now arm and kills the retry loop
+        # on the one failure it exists to survive.
+        if ! code="$(curl -sS --connect-timeout 10 --max-time 30 \
             -o "$body" -w "%{http_code}" \
             -X POST "${endpoint}/cluster/latest" \
             -H "X-API-Key: ${api_key}" \
             -H "Content-Type: application/json" \
-            -d "{\"site\": \"${site}\", \"version\": \"${version}\"}" || echo "000")"
+            -d "{\"site\": \"${site}\", \"version\": \"${version}\"}")"; then
+            code="${code:-000}"
+        fi
 
         case "$code" in
             200 | 204)

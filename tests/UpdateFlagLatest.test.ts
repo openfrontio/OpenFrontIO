@@ -49,6 +49,14 @@ interface Result {
  * Run the real flag_latest against a fake curl that hands back `codes` in
  * order, repeating the last one forever once they run out (which is how a
  * genuinely-stuck API behaves, and what the retry deadline has to end).
+ *
+ * Two entries model a curl that never got a status, and both EXIT NON-ZERO the
+ * way the real one does — a stub that always exits 0 cannot see how the caller
+ * fills in a fallback code, which is where the interesting bug lives:
+ *
+ *   "000"      — reached nothing (DNS, TLS, connect timeout). curl still
+ *                prints 000 via -w, then exits 6/7/28.
+ *   "nostatus" — died before writing anything at all.
  */
 function runFlagLatest(
   codes: string[],
@@ -82,8 +90,20 @@ while [ $# -gt 0 ]; do
   esac
 done
 echo "\${URL} \${DATA}" >> '${logFile}'
-printf 'scripted body for %s' "\${CODES[$idx]}" > "$OUT"
-printf '%s' "\${CODES[$idx]}"
+CODE="\${CODES[$idx]}"
+case "$CODE" in
+  nostatus)
+    # curl died before it could write a status or a body.
+    exit 7
+    ;;
+  000)
+    # curl reached nothing: -w still prints 000, and the exit is non-zero.
+    printf '000'
+    exit 7
+    ;;
+esac
+printf 'scripted body for %s' "$CODE" > "$OUT"
+printf '%s' "$CODE"
 `;
   const curlPath = path.join(binDir, "curl");
   fs.writeFileSync(curlPath, fakeCurl);
@@ -142,15 +162,38 @@ describe("update.sh flag_latest", () => {
     expect(result.output).toContain("Flagged abc123 as latest");
   });
 
-  it.each([["000"], ["500"], ["502"], ["503"]])(
-    "retries an unreachable or broken API (%s)",
-    (code) => {
-      const result = runFlagLatest([code, "200"]);
+  it.each([["500"], ["502"], ["503"]])("retries a broken API (%s)", (code) => {
+    const result = runFlagLatest([code, "200"]);
+
+    expect(result.status).toBe(0);
+    expect(result.requests).toHaveLength(2);
+  });
+
+  // The case the retry loop most needs to survive, and the one a stub that
+  // always exits 0 cannot reach. curl prints its own 000 AND exits non-zero,
+  // so a fallback that appends (`|| echo 000`) produces "000000" — not a code
+  // the loop recognises, which drops it into the decide-now arm and abandons
+  // the deploy after a single attempt.
+  it.each([["000"], ["nostatus"]])(
+    "retries when curl itself fails (%s) instead of deciding on one attempt",
+    (failure) => {
+      const result = runFlagLatest([failure, failure, "200"]);
 
       expect(result.status).toBe(0);
-      expect(result.requests).toHaveLength(2);
+      expect(result.requests).toHaveLength(3);
+      expect(result.output).toContain("Flagged abc123 as latest");
+      expect(result.output).not.toContain("000000");
     },
   );
+
+  // And it must still give up eventually rather than loop forever.
+  it("stops retrying an unreachable API once the deadline passes", () => {
+    const result = runFlagLatest(["000"], { timeout: 0 });
+
+    expect(result.status).toBe(0);
+    expect(result.requests).toHaveLength(1);
+    expect(result.output).toContain("HTTP 000");
+  });
 
   // Every deploy hits this until the registry ships, so it must be quiet and
   // must not retry: there is no route to come back.

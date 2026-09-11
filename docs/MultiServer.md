@@ -377,8 +377,11 @@ full sha). The API refuses a version no server has checked in for, so a `409`
 right after `docker run` is expected and is retried every 5s for up to 90s —
 servers register within ~10s of boot. Outcomes:
 
-- `200` — logged, done.
+- `200` / `204` — logged, done.
 - `404` — the API predates the registry; warn and continue.
+- `400` / `401` / `403` — a bad key or a malformed request. No retry can fix
+  it, so it is decided at once on the same terms as the row below: warn and
+  continue, or fail under `CLUSTER_STATE_SOURCE=api`.
 - `409` (or an unreachable API) after the retries — warn and continue, because
   the page and its servers still come from `BOOTSTRAP_CONFIG` and nothing a
   player sees has changed. **Unless** `CLUSTER_STATE_SOURCE=api` is in the
