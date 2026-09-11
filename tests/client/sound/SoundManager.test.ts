@@ -264,6 +264,17 @@ describe("SoundManager", () => {
     expect(factoryHowl.play).toHaveBeenCalledTimes(1);
   });
 
+  it("stops the ambience immediately when the sfx volume is 0", () => {
+    // fade(0, 0, …) never completes in Howler, so a muted player's loop
+    // must be stopped directly instead of after a fade.
+    const bus = new EventBus();
+    new SoundManager(bus, createUserSettings(0, 0));
+    bus.emit(new SetAmbienceEvent("city"));
+    const ambienceHowl = howlInstances[howlInstances.length - 1];
+    bus.emit(new SetAmbienceEvent(null));
+    expect(ambienceHowl.stop).toHaveBeenCalled();
+  });
+
   it("re-selecting a track mid-fade-out cancels the pending stop", () => {
     eventBus.emit(new SetAmbienceEvent("city"));
     const cityHowl = howlInstances[howlInstances.length - 1];
