@@ -17,11 +17,17 @@ vi.mock("howler", () => {
     playing = vi.fn().mockReturnValue(false);
     unload = vi.fn();
     once = vi.fn((event: string, callback: () => void, id?: number) => {
-      if (id !== undefined) {
-        if (!this._listeners.has(event)) {
-          this._listeners.set(event, new Map());
-        }
-        this._listeners.get(event)!.set(id, callback);
+      if (!this._listeners.has(event)) {
+        this._listeners.set(event, new Map());
+      }
+      // Listeners registered without a play id are keyed under -1.
+      this._listeners.get(event)!.set(id ?? -1, callback);
+    });
+    off = vi.fn((event?: string) => {
+      if (event === undefined) {
+        this._listeners.clear();
+      } else {
+        this._listeners.delete(event);
       }
     });
     _listeners: Map<string, Map<number, () => void>> = new Map();
@@ -229,7 +235,7 @@ describe("SoundManager", () => {
     });
   });
 
-  it("plays a looping ambience on SetAmbienceEvent and stops it when cleared", () => {
+  it("plays a looping ambience on SetAmbienceEvent and fades it out when cleared", () => {
     eventBus.emit(new SetAmbienceEvent("city"));
     const ambienceHowl = howlInstances[howlInstances.length - 1];
     expect(howlCtor).toHaveBeenLastCalledWith(
@@ -238,16 +244,35 @@ describe("SoundManager", () => {
     expect(ambienceHowl.play).toHaveBeenCalledTimes(1);
 
     eventBus.emit(new SetAmbienceEvent(null));
+    expect(ambienceHowl.fade).toHaveBeenLastCalledWith(
+      expect.anything(),
+      0,
+      expect.anything(),
+    );
+    expect(ambienceHowl.stop).not.toHaveBeenCalled();
+    ambienceHowl._fireEvent("fade", -1);
     expect(ambienceHowl.stop).toHaveBeenCalled();
   });
 
-  it("switching ambience stops the previous loop and starts the new one", () => {
+  it("switching ambience fades the previous loop out and starts the new one", () => {
     eventBus.emit(new SetAmbienceEvent("city"));
     const cityHowl = howlInstances[howlInstances.length - 1];
     eventBus.emit(new SetAmbienceEvent("factory"));
     const factoryHowl = howlInstances[howlInstances.length - 1];
+    cityHowl._fireEvent("fade", -1);
     expect(cityHowl.stop).toHaveBeenCalled();
     expect(factoryHowl.play).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-selecting a track mid-fade-out cancels the pending stop", () => {
+    eventBus.emit(new SetAmbienceEvent("city"));
+    const cityHowl = howlInstances[howlInstances.length - 1];
+    eventBus.emit(new SetAmbienceEvent(null));
+    eventBus.emit(new SetAmbienceEvent("city"));
+    // The fade-out listener was cancelled by off("fade"), so firing the fade
+    // completion must not stop the loop.
+    cityHowl._fireEvent("fade", -1);
+    expect(cityHowl.stop).not.toHaveBeenCalled();
   });
 
   it("re-emitting the current ambience does not restart it", () => {

@@ -201,13 +201,21 @@ export class SoundManager {
     if (track === this.currentAmbience) return;
     this.safely("set ambience", () => {
       if (this.currentAmbience !== null) {
-        this.ambienceTracks.get(this.currentAmbience)?.stop();
+        const current = this.ambienceTracks.get(this.currentAmbience);
+        if (current) {
+          current.fade(this.soundEffectsVolume, 0, AMBIENCE_FADE_MS);
+          current.once("fade", () => current.stop());
+        }
       }
       this.currentAmbience = track;
       if (track === null) return;
       const howl = this.getOrLoadAmbience(track);
       if (howl === null) return;
-      howl.play();
+      // Cancel a pending fade-out stop in case this track is coming right
+      // back; if it is still audibly fading, keep the running instance
+      // rather than layering a second one.
+      howl.off("fade");
+      if (!howl.playing()) howl.play();
       howl.fade(0, this.soundEffectsVolume, AMBIENCE_FADE_MS);
     });
   }
