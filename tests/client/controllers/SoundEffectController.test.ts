@@ -2,7 +2,7 @@ import { SoundEffectController } from "../../../src/client/controllers/SoundEffe
 import { PlaySoundEffectEvent } from "../../../src/client/sound/Sounds";
 import { SendSpawnIntentEvent } from "../../../src/client/Transport";
 import { EventBus } from "../../../src/core/EventBus";
-import { MessageType, UnitType } from "../../../src/core/game/Game";
+import { MessageType, PlayerType, UnitType } from "../../../src/core/game/Game";
 import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 
 describe("SoundEffectController", () => {
@@ -91,6 +91,27 @@ describe("SoundEffectController", () => {
       hasTrainStation: () => false,
     };
   }
+
+  it("plays the battle cue for conquering a player, ka-ching for tribes", () => {
+    game.myPlayer = () => ({ id: () => "me" });
+    game.inSpawnPhase = () => false;
+    const types: Record<string, PlayerType> = {
+      human: PlayerType.Human,
+      bot: PlayerType.Bot,
+      nation: PlayerType.Nation,
+    };
+    game.player = (id: string) => ({ type: () => types[id] });
+    game.updatesSinceLastTick = () => ({
+      [GameUpdateType.ConquestEvent]: [
+        { conquerorId: "me", conqueredId: "human" },
+        { conquerorId: "me", conqueredId: "bot" },
+        { conquerorId: "me", conqueredId: "nation" },
+        { conquerorId: "other", conqueredId: "human" },
+      ],
+    });
+    controller.tick();
+    expect(played).toEqual(["conquered", "ka-ching", "ka-ching"]);
+  });
 
   it("plays game-start when the spawn phase ends", () => {
     game.updatesSinceLastTick = () => ({

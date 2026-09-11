@@ -3,6 +3,7 @@ import { GameEvent } from "../../core/EventBus";
 
 export type SoundEffect =
   | "ka-ching"
+  | "conquered"
   | "atom-hit"
   | "atom-launch"
   | "hydrogen-hit"
@@ -35,6 +36,7 @@ export type SoundEffect =
 
 export const soundEffectUrls: ReadonlyMap<SoundEffect, string> = new Map([
   ["ka-ching", assetUrl("sounds/effects/ka-ching.mp3")],
+  ["conquered", assetUrl("sounds/effects/conquered.mp3")],
   ["atom-hit", assetUrl("sounds/effects/atom-hit.mp3")],
   ["atom-launch", assetUrl("sounds/effects/atom-launch.mp3")],
   ["hydrogen-hit", assetUrl("sounds/effects/hydrogen-hit.mp3")],
