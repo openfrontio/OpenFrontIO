@@ -10,8 +10,15 @@ const MENU_FADE_MS = 700;
  * Loops the menu theme on the home page. Browsers block audio until a user
  * gesture, so the Howl is created and started inside the first
  * pointerdown/keydown. It fades out for good when a game starts
- * ("game-starting", like JoinLobbyModal's chime); returning to the home page
- * is a full page load, which starts the theme fresh.
+ * ("game-starting", like JoinLobbyModal's chime).
+ *
+ * It then re-arms on "menu-restored". "game-starting" fires at lobby PRESTART
+ * (Main.ts, inside lobbyHandle.prestart.then), and a player who leaves in the
+ * window between that and the game actually starting gets the home page put
+ * back in place rather than reloaded (handleLeaveLobby, OPE-255). Tearing the
+ * gesture listeners down for good would leave that live home page silent for
+ * the rest of the session. Re-arming rather than replaying is deliberate: the
+ * autoplay rule applies just as much to the second start as the first.
  *
  * The Howl is registered with the mixer, so the music slider reaches it live.
  * It used to read the volume once at creation, which was invisible while the
@@ -39,11 +46,26 @@ export function startMenuMusic(mixer: AudioMixer): void {
     }
   };
 
-  document.addEventListener("pointerdown", start, { once: true });
-  document.addEventListener("keydown", start, { once: true });
-  document.addEventListener("game-starting", () => {
+  // Removing first keeps arm() idempotent, so a second "menu-restored" -- or
+  // one arriving while the listeners are still up -- cannot stack a duplicate.
+  const arm = () => {
+    disarm();
+    document.addEventListener("pointerdown", start, { once: true });
+    document.addEventListener("keydown", start, { once: true });
+  };
+
+  // Both come off together. `once` only removes the listener that fired, so
+  // after a pointerdown the keydown one is still live and would otherwise
+  // start the menu theme over the top of a game.
+  const disarm = () => {
     document.removeEventListener("pointerdown", start);
     document.removeEventListener("keydown", start);
+  };
+
+  arm();
+
+  document.addEventListener("game-starting", () => {
+    disarm();
     if (theme === null) return;
     const ending = theme;
     theme = null;
@@ -62,4 +84,6 @@ export function startMenuMusic(mixer: AudioMixer): void {
       ending.unload();
     });
   });
+
+  document.addEventListener("menu-restored", arm);
 }

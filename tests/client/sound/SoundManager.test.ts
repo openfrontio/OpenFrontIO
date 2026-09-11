@@ -222,6 +222,45 @@ describe("ambience", () => {
     expect(find("city.mp3").html5).toBe(false);
   });
 
+  it("re-aims a fade-in instead of snapping it to the new level", () => {
+    // AmbienceController re-emits for the same track whenever the zoom gain
+    // moves past its epsilon, which lands inside the 500ms fade-in. Howler's
+    // volume() setter calls _stopFade, so writing the volume there killed the
+    // ramp and jumped the loop straight to full -- the exact abruptness the
+    // fade exists to prevent.
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    const city = find("city.mp3");
+    expect(city.fade).toHaveBeenCalledTimes(1);
+    const volumeWrites = city.volume.mock.calls.filter(
+      (c: unknown[]) => c.length > 0,
+    ).length;
+
+    eventBus.emit(new SetAmbienceEvent("city", 0.05));
+
+    // Still a ramp, not a write, and aimed at the level the envelope now asks
+    // for rather than stalling wherever the first ramp had reached.
+    expect(city.fade).toHaveBeenCalledTimes(2);
+    expect(
+      city.volume.mock.calls.filter((c: unknown[]) => c.length > 0).length,
+    ).toBe(volumeWrites);
+    const [, to] = city.fade.mock.calls[1];
+    expect(to).toBeCloseTo(0.05);
+  });
+
+  it("lands on the target when a retarget arrives after the fade-in ends", () => {
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    const city = find("city.mp3");
+    // Howler fires "fade" when the ramp completes; the manager clears its
+    // fading-in flag there, so later changes are plain writes again.
+    city._fire("fade", -1);
+    city.fade.mockClear();
+
+    settings.setAudioVolume("ambience", 0.5);
+
+    expect(city.fade).not.toHaveBeenCalled();
+    expect(city.volumes[city.volumes.length - 1]).toBeCloseTo(0.25 * 0.1);
+  });
+
   it("follows the ambience slider while a loop is running", () => {
     eventBus.emit(new SetAmbienceEvent("city", 0.1));
     settings.setAudioVolume("ambience", 0.5);

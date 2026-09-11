@@ -199,6 +199,7 @@ declare global {
     "session-cleared": CustomEvent;
     "leave-lobby": CustomEvent;
     "game-starting": CustomEvent;
+    "menu-restored": CustomEvent;
     "update-game-config": CustomEvent;
   }
 }
@@ -1555,6 +1556,11 @@ class Client {
     if (menuChromeIsTornDown()) {
       this.gameModeSelector?.start();
       restoreMenuChrome();
+      // The counterpart to "game-starting", and the only signal that the home
+      // page is live again without a navigation. MenuMusic tore its gesture
+      // listeners down at prestart and needs them back, or the menu theme is
+      // silent for the rest of the session.
+      document.dispatchEvent(new CustomEvent("menu-restored"));
     }
 
     if (this.joinModal.isOpen()) {
