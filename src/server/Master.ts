@@ -187,7 +187,9 @@ export async function startMaster() {
   // server, so a server that isn't checking in isn't offered to anyone.
   // The reply carries this server's state; it is obeyed only when
   // CLUSTER_STATE_SOURCE=api, otherwise the apex colour poll below still
-  // decides. Dev has no public host and registers nowhere.
+  // decides. Local development (`npm run dev`, no SUBDOMAIN) has no public
+  // host and registers nowhere; every deployed host registers under its own
+  // site.
   const stateSource = ServerEnv.clusterStateSource();
   if (checkinBody(0) !== null) {
     log.info(

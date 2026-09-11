@@ -25,7 +25,11 @@ export type ClusterStateSource = "apex" | "api";
 
 export interface CheckinBody {
   // The hostname players load the page from: the apex behind a load
-  // balancer, else this deployment's own host. Lists are keyed by it.
+  // balancer (SITE_HOST), else this deployment's own host, so beta,
+  // nightly, alpha and branch previews each register under themselves.
+  // Lists are keyed by it. Mirrors, such as the openfront.dev apex
+  // serving nightly, are an alias table in the API, never something a
+  // server reports about itself.
   site: string;
   letter: string;
   host: string;
@@ -38,8 +42,9 @@ export interface CheckinBody {
 const CheckinReplySchema = z.object({ state: ServerStateSchema });
 
 /**
- * What this server reports, or null when it has no public host (dev), in
- * which case there is nothing to register.
+ * What this server reports, or null under local development (`npm run dev`:
+ * no SUBDOMAIN, so no public host), where there is nothing to register.
+ * Every deployed host has one and registers under its own site.
  */
 export function checkinBody(liveGames: number): CheckinBody | null {
   const host = ServerEnv.publicHost();

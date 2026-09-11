@@ -41,25 +41,44 @@ describe("checkinBody", () => {
     });
   });
 
-  test("registers under its own host when standalone (a branch preview)", () => {
-    vi.stubEnv("SITE_HOST", "");
-    vi.stubEnv("DOMAIN", "openfront.dev");
-    vi.stubEnv("SUBDOMAIN", "my-branch");
-    vi.stubEnv(
-      "CLUSTER_JSON",
-      JSON.stringify({
-        a: { host: "my-branch.openfront.dev", color: "blue", numWorkers: 2 },
-      }),
-    );
-    expect(checkinBody(0)).toMatchObject({
-      site: "my-branch.openfront.dev",
-      host: "my-branch.openfront.dev",
-      letter: "a",
+  // Every deployed host that isn't behind the apex load balancer is its own
+  // site. Mirrors (the openfront.dev apex serving nightly) are aliased in
+  // the API, so nothing here reports them.
+  test.each([
+    {
+      what: "a branch preview",
+      domain: "openfront.dev",
+      subdomain: "my-branch",
       numWorkers: 2,
-    });
-  });
+    },
+    { what: "beta", domain: "openfront.io", subdomain: "beta", numWorkers: 4 },
+    {
+      what: "nightly",
+      domain: "openfront.dev",
+      subdomain: "nightly",
+      numWorkers: 3,
+    },
+  ])(
+    "registers under its own host when standalone ($what)",
+    ({ domain, subdomain, numWorkers }) => {
+      const host = `${subdomain}.${domain}`;
+      vi.stubEnv("SITE_HOST", "");
+      vi.stubEnv("DOMAIN", domain);
+      vi.stubEnv("SUBDOMAIN", subdomain);
+      vi.stubEnv(
+        "CLUSTER_JSON",
+        JSON.stringify({ a: { host, color: "blue", numWorkers } }),
+      );
+      expect(checkinBody(0)).toMatchObject({
+        site: host,
+        host,
+        letter: "a",
+        numWorkers,
+      });
+    },
+  );
 
-  test("does not check in from dev, which has no public host", () => {
+  test("does not check in from local development (npm run dev, no SUBDOMAIN)", () => {
     vi.stubEnv("SITE_HOST", "");
     vi.stubEnv("SUBDOMAIN", "");
     vi.stubEnv("DOMAIN", "localhost");
