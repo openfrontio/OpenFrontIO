@@ -53,9 +53,13 @@ vi.mock("howler", () => {
       howlInstances.push(this);
     }
   }
-  return { Howl: MockHowl, Howler: { volume: howlerVolume } };
+  return {
+    Howl: MockHowl,
+    Howler: { volume: howlerVolume, ctx: undefined, masterGain: undefined },
+  };
 });
 
+import { Howler } from "howler";
 import {
   AudioMixer,
   perceptualGain,
@@ -235,6 +239,81 @@ describe("per-channel budgets", () => {
     const howl = howlInstances.find((h) => h.src.includes("slider"));
     expect(howl.play).toHaveBeenCalledTimes(4);
     expect(howl.fade).not.toHaveBeenCalled();
+  });
+});
+
+describe("output limiter", () => {
+  const audioParam = () => ({ setValueAtTime: vi.fn() });
+
+  const fakeGraph = () => {
+    const limiter = {
+      threshold: audioParam(),
+      knee: audioParam(),
+      ratio: audioParam(),
+      attack: audioParam(),
+      release: audioParam(),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    const destination = { id: "destination" };
+    const masterGain = { connect: vi.fn(), disconnect: vi.fn() };
+    const ctx = {
+      currentTime: 0,
+      destination,
+      createDynamicsCompressor: vi.fn(() => limiter),
+    };
+    (Howler as any).ctx = ctx;
+    (Howler as any).masterGain = masterGain;
+    return { limiter, masterGain, ctx, destination };
+  };
+
+  afterEach(() => {
+    (Howler as any).ctx = undefined;
+    (Howler as any).masterGain = undefined;
+  });
+
+  it("sits between Howler's master gain and the speakers", () => {
+    const { limiter, masterGain, destination } = fakeGraph();
+    build();
+
+    // Howler wires masterGain straight to the destination; the limiter has to
+    // replace that connection rather than hang off the side of it.
+    expect(masterGain.disconnect).toHaveBeenCalled();
+    expect(masterGain.connect).toHaveBeenCalledWith(limiter);
+    expect(limiter.connect).toHaveBeenCalledWith(destination);
+  });
+
+  it("is set as a limiter rather than a compressor", () => {
+    const { limiter } = fakeGraph();
+    build();
+
+    // Hard knee and a high ratio: everything under the threshold passes
+    // untouched, and peaks are held just under 0 dBFS.
+    expect(limiter.knee.setValueAtTime).toHaveBeenCalledWith(0, 0);
+    expect(
+      limiter.ratio.setValueAtTime.mock.calls[0][0],
+    ).toBeGreaterThanOrEqual(12);
+    const threshold = limiter.threshold.setValueAtTime.mock.calls[0][0];
+    expect(threshold).toBeLessThan(0);
+    expect(threshold).toBeGreaterThan(-12);
+    // Fast enough to catch a cue transient.
+    expect(limiter.attack.setValueAtTime.mock.calls[0][0]).toBeLessThan(0.02);
+  });
+
+  it("puts the graph back on dispose rather than chaining a second one", () => {
+    const { limiter, masterGain, destination } = fakeGraph();
+    const mixer = build();
+    masterGain.connect.mockClear();
+
+    mixer.dispose();
+
+    expect(limiter.disconnect).toHaveBeenCalled();
+    expect(masterGain.connect).toHaveBeenCalledWith(destination);
+  });
+
+  it("does nothing when there is no web audio to splice into", () => {
+    // html5-only fallback: no graph, and this must not throw on the way past.
+    expect(() => build()).not.toThrow();
   });
 });
 

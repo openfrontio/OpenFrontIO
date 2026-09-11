@@ -53,6 +53,18 @@ const CATEGORY_TRIM: Record<PlayableCategory, number> = {
 };
 
 /**
+ * Limiter, not compressor: a hard knee leaves everything below the threshold
+ * completely untouched and holds the peaks just under 0 dBFS, rather than
+ * shaping the whole signal. 20:1 is the Web Audio maximum ratio. The attack
+ * is fast enough to catch a cue transient without being so instant that it
+ * distorts low frequencies.
+ */
+const LIMITER_THRESHOLD_DB = -3;
+const LIMITER_RATIO = 20;
+const LIMITER_ATTACK_S = 0.003;
+const LIMITER_RELEASE_S = 0.25;
+
+/**
  * Concurrent one-shots per channel, replacing a single global cap. Budgets
  * never cross channels, so a burst of combat cannot silence an alert.
  */
@@ -106,6 +118,7 @@ export class AudioMixer {
   private active: ActiveSound[] = [];
   private disposers: (() => void)[] = [];
   private changeListeners = new Set<(category: PlayableCategory) => void>();
+  private limiter: DynamicsCompressorNode | null = null;
 
   constructor(private readonly userSettings: UserSettings) {
     for (const category of [...PLAYABLE, "master" as const]) {
@@ -114,9 +127,66 @@ export class AudioMixer {
     }
     this.followFocus();
     this.applyAll();
+    // After applyAll on purpose: Howler builds its AudioContext lazily, and
+    // the Howler.volume() write in there is what forces it into existence.
+    this.safely("install limiter", () => this.installLimiter());
+  }
+
+  /**
+   * Splices a limiter between Howler's master gain and the speakers, so a
+   * burst of concurrent cues cannot clip.
+   *
+   * It covers the cue channels and ambience, and NOT the music. Howler has no
+   * createMediaElementSource anywhere in it -- the only connection into the
+   * graph is the Web Audio path -- so an html5 Howl plays straight out of its
+   * media element and past all of this. Both music tracks are html5 now, by
+   * design, so that they stream instead of decoding megabytes up front.
+   *
+   * That gap is acceptable and worth being explicit about rather than letting
+   * the name imply otherwise. The music is a mastered stereo bounce already
+   * carrying a -1 dB trim and only ever one track plays at a time; the summing
+   * risk was always the cue layer, where the per-channel budgets allow up to
+   * 16 voices at once with nothing holding the sum down.
+   *
+   * This is not a level control. No make-up gain, and no reduction: headroom
+   * is the -2 dB re-bounce's job, this is only for concurrency.
+   */
+  private installLimiter(): void {
+    // Typed non-nullable by @types/howler, but genuinely absent until the
+    // context is built and on any device falling back to html5-only audio --
+    // no graph to splice into, and nothing to do.
+    const ctx = Howler.ctx as AudioContext | undefined;
+    const master = Howler.masterGain as GainNode | undefined;
+    if (!ctx || !master) return;
+    const limiter = ctx.createDynamicsCompressor();
+    const now = ctx.currentTime;
+    limiter.threshold.setValueAtTime(LIMITER_THRESHOLD_DB, now);
+    limiter.knee.setValueAtTime(0, now);
+    limiter.ratio.setValueAtTime(LIMITER_RATIO, now);
+    limiter.attack.setValueAtTime(LIMITER_ATTACK_S, now);
+    limiter.release.setValueAtTime(LIMITER_RELEASE_S, now);
+    master.disconnect();
+    master.connect(limiter);
+    limiter.connect(ctx.destination);
+    this.limiter = limiter;
+  }
+
+  /** Puts the graph back the way Howler had it, so a later mixer can splice
+   * its own limiter in rather than chaining a second one behind this. */
+  private removeLimiter(): void {
+    const limiter = this.limiter;
+    this.limiter = null;
+    if (limiter === null) return;
+    const ctx = Howler.ctx as AudioContext | undefined;
+    const master = Howler.masterGain as GainNode | undefined;
+    limiter.disconnect();
+    if (!ctx || !master) return;
+    master.disconnect();
+    master.connect(ctx.destination);
   }
 
   dispose(): void {
+    this.safely("remove limiter", () => this.removeLimiter());
     this.disposers.forEach((off) => off());
     this.disposers = [];
     this.cache.forEach((howl) =>
