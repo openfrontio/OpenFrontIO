@@ -781,7 +781,7 @@ export class Config {
     if (this.isRandomSpawn()) {
       return 150;
     }
-    return 300;
+    return 200;
   }
   numBots(): number {
     return this.bots();
