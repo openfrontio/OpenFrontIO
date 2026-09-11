@@ -100,9 +100,9 @@ describe("audio channel volumes", () => {
 describe("audio focus settings", () => {
   beforeEach(resetUserSettingsState);
 
-  it("defaults both focus options on", () => {
+  it("defaults mute-on-blur off, and keep-alerts on for when it is turned on", () => {
     const s = new UserSettings();
-    expect(s.muteOnBlur()).toBe(true);
+    expect(s.muteOnBlur()).toBe(false);
     expect(s.alertsWhenUnfocused()).toBe(true);
   });
 
