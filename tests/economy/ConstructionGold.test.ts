@@ -72,7 +72,7 @@ describe("Construction economy", () => {
     ).toBe(false);
   });
 
-  test("MIRV price stays flat at 25M after a launch", () => {
+  test("MIRV gets more expensive with each launch", () => {
     expect(game.config().unitInfo(UnitType.MIRV).cost(game, other)).toBe(
       25_000_000n,
     );
@@ -92,10 +92,9 @@ describe("Construction economy", () => {
 
     expect(player.units(UnitType.MIRV)).toHaveLength(1);
 
-    // The MIRV price no longer escalates with launches; instead launches
-    // trigger a global cooldown (see MirvCooldown.test.ts).
+    // Price of the MIRV increases for everyone with each launch.
     expect(game.config().unitInfo(UnitType.MIRV).cost(game, other)).toBe(
-      25_000_000n,
+      40_000_000n,
     );
   });
 });

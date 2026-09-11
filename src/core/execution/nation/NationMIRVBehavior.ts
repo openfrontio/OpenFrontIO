@@ -108,9 +108,6 @@ export class NationMIRVBehavior {
     if (this.game.config().isUnitDisabled(UnitType.MIRV)) {
       return false;
     }
-    if (this.game.mirvCooldownRemaining(this.player) > 0) {
-      return false;
-    }
     if (this.player.units(UnitType.MissileSilo).length === 0) {
       return false;
     }
@@ -277,16 +274,10 @@ export class NationMIRVBehavior {
 
     const centerTile = this.calculateTerritoryCenter(enemy);
     if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
-      // Defer the hit-record/emoji/response until the missile actually
-      // spawns — a same-tick launch elsewhere can start the global cooldown
-      // and fizzle this one.
-      this.game.addExecution(
-        new MirvExecution(this.player, centerTile, () => {
-          this.recordMirvHit(enemy);
-          this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_NUKE);
-          respondToMIRV(this.game, this.random, enemy);
-        }),
-      );
+      this.game.addExecution(new MirvExecution(this.player, centerTile));
+      this.recordMirvHit(enemy);
+      this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_NUKE);
+      respondToMIRV(this.game, this.random, enemy);
     }
   }
 

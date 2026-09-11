@@ -352,11 +352,6 @@ export class Config {
   SiloCooldown(): number {
     return 90;
   }
-  // Global cooldown after any MIRV launch during which no player can launch
-  // another MIRV.
-  mirvLaunchCooldown(): Tick {
-    return 60 * 10;
-  }
 
   defensePostRange(): number {
     return 30;
@@ -546,7 +541,15 @@ export class Config {
         break;
       case UnitType.MIRV:
         info = {
-          cost: this.costWrapper(() => 25_000_000, UnitType.MIRV),
+          cost: (game: Game, player: Player) => {
+            if (
+              player.type() === PlayerType.Human &&
+              this.hasInfiniteGoldFor(player)
+            ) {
+              return 0n;
+            }
+            return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
+          },
         };
         break;
       case UnitType.MIRVWarhead:
