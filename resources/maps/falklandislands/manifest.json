@@ -97,6 +97,7 @@
       }
     ]
   },
+  "team_frequency": 8,
   "themes": ["south_america"],
   "translation_key": "map.falklandislands"
 }

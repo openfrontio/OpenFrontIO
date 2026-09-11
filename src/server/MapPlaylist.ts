@@ -113,11 +113,17 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["isNukesDisabled", "isWaterNukes"],
 ];
 
+// Special games roll ffa/team per-game (see getSpecialConfig), so their
+// playlist is split in two rather than sharing one "special" queue -
+// each half can then fall back to the matching ffaFrequency/teamFrequency.
+type PlaylistKey = "ffa" | "team" | "specialFfa" | "specialTeam";
+
 export class MapPlaylist {
-  private playlists: Record<ScheduledPublicGameType, GameMapType[]> = {
+  private playlists: Record<PlaylistKey, GameMapType[]> = {
     ffa: [],
-    special: [],
     team: [],
+    specialFfa: [],
+    specialTeam: [],
   };
 
   // Scheduled public games handed out so far, across all types.
@@ -198,7 +204,7 @@ export class MapPlaylist {
 
   private async getSpecialConfig(): Promise<GameConfig> {
     const mode = Math.random() < 0.5 ? GameMode.FFA : GameMode.Team;
-    const map = this.getNextMap("special");
+    const map = this.getNextMap("special", mode);
     let playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
@@ -519,16 +525,33 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private getNextMap(type: ScheduledPublicGameType): GameMapType {
-    const playlist = this.playlists[type];
+  private getNextMap(
+    type: ScheduledPublicGameType,
+    mode?: GameMode,
+  ): GameMapType {
+    const key = this.playlistKey(type, mode);
+    const playlist = this.playlists[key];
     if (playlist.length === 0) {
-      playlist.push(...this.generateNewPlaylist(type));
+      playlist.push(...this.generateNewPlaylist(type, mode));
     }
     return playlist.shift()!;
   }
 
-  private generateNewPlaylist(type: ScheduledPublicGameType): GameMapType[] {
-    const maps = this.buildMapsList(type);
+  private playlistKey(
+    type: ScheduledPublicGameType,
+    mode?: GameMode,
+  ): PlaylistKey {
+    if (type === "special") {
+      return mode === GameMode.Team ? "specialTeam" : "specialFfa";
+    }
+    return type;
+  }
+
+  private generateNewPlaylist(
+    type: ScheduledPublicGameType,
+    mode?: GameMode,
+  ): GameMapType[] {
+    const maps = this.buildMapsList(type, mode);
     const rand = new PseudoRandom(Date.now());
     const playlist: GameMapType[] = [];
 
@@ -576,7 +599,10 @@ export class MapPlaylist {
     return false;
   }
 
-  private buildMapsList(type: ScheduledPublicGameType): GameMapType[] {
+  private buildMapsList(
+    type: ScheduledPublicGameType,
+    mode?: GameMode,
+  ): GameMapType[] {
     const maps: GameMapType[] = [];
     allMaps.forEach((mapInfo) => {
       const map = mapInfo.type;
@@ -596,10 +622,21 @@ export class MapPlaylist {
               : mapInfo.multiplayerFrequency;
           break;
         case "special":
-          freq =
-            mapInfo.specialFrequency >= 0
-              ? mapInfo.specialFrequency
-              : mapInfo.multiplayerFrequency;
+          // Special games are rolled as ffa or team (see getSpecialConfig), so
+          // fall back to the matching per-mode frequency before multiplayerFrequency.
+          if (mapInfo.specialFrequency >= 0) {
+            freq = mapInfo.specialFrequency;
+          } else if (mode === GameMode.Team) {
+            freq =
+              mapInfo.teamFrequency >= 0
+                ? mapInfo.teamFrequency
+                : mapInfo.multiplayerFrequency;
+          } else {
+            freq =
+              mapInfo.ffaFrequency >= 0
+                ? mapInfo.ffaFrequency
+                : mapInfo.multiplayerFrequency;
+          }
           break;
       }
       for (let i = 0; i < freq; i++) {
