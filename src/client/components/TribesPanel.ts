@@ -13,6 +13,7 @@ import {
   getUserMe,
   invalidateUserMe,
   purchaseTribeName,
+  type PurchaseTribeNameResult,
 } from "../Api";
 import { fetchCosmetics, InsufficientCurrency } from "../Cosmetics";
 import { showInGameConfirm } from "../InGameModal";
@@ -128,6 +129,19 @@ export class TribesPanel extends LitElement {
       return;
     }
 
+    // A charged-back wallet is served as a NEGATIVE balance (the API derives
+    // its own `debt` field as exactly `-hard`), so this is how a player in
+    // debt normally gets here — the 400 branch below only fires when the
+    // chargeback lands mid-session against a stale balance. Catch it before
+    // spending a request on a guaranteed refusal.
+    if (this.hardBalance < 0) {
+      this.notice = {
+        kind: "error",
+        text: this.debtText(-this.hardBalance),
+      };
+      return;
+    }
+
     this.purchasing = true;
     this.notice = null;
     const result = await purchaseTribeName(name);
@@ -142,6 +156,48 @@ export class TribesPanel extends LitElement {
         }),
       };
       await this.refreshAfterPurchase();
+      return;
+    }
+    if (result.code === "debt") {
+      // A refund or chargeback left the wallet negative. Topping up is not
+      // the remedy and the top-up dialog would say the wrong thing, so state
+      // the debt instead — it settles automatically out of the next credit.
+      this.notice = {
+        kind: "error",
+        text: translateText("store.pack_debt", { debt: result.debt }),
+      };
+      await this.refreshAfterPurchase();
+      return;
+    }
+    if (result.code === "insufficient_balance") {
+      // The balance moved under us (another tab, another purchase) — refresh
+      // it and offer the top-up path, as the boost handler does.
+      const fresh = await this.refreshAfterPurchase();
+      const price = this.price;
+      // Two ways to have no honest shortfall to quote: no price (cosmetics.json
+      // has no tribeNames block) and no refreshed balance (the refetch failed,
+      // so the real balance is unknown — quoting the full price as the
+      // shortfall would be a guess wearing a number).
+      if (price === null || fresh === false) {
+        this.notice = {
+          kind: "error",
+          text: translateText("store.purchase_failed"),
+        };
+        return;
+      }
+      const balance = TribesPanel.hardBalanceOf(fresh);
+      const outcome = TribesPanel.balanceOutcome(balance, price);
+      if (outcome !== "shortfall") {
+        this.notice = {
+          kind: "error",
+          text:
+            outcome === "debt"
+              ? this.debtText(-balance)
+              : translateText("store.purchase_failed"),
+        };
+        return;
+      }
+      this.showInsufficient(name, price, balance);
       return;
     }
     if (result.code === "duplicate") {
@@ -164,25 +220,23 @@ export class TribesPanel extends LitElement {
       };
       return;
     }
-    // "invalid" carries the server's player-facing reason (bad name,
-    // disallowed, or insufficient balance); fall back to a generic message.
-    let text = translateText("store.purchase_failed");
-    if (result.code === "invalid" && result.message) {
-      text = result.message;
-    }
-    this.notice = { kind: "error", text };
+    this.notice = { kind: "error", text: TribesPanel.refusalText(result) };
   };
 
   // A purchase spends plutonium and adds a pending name, so refresh both the
   // list and the store header's balance (re-broadcast /users/@me like Main.ts).
-  private async refreshAfterPurchase() {
+  // Returns the fresh profile so callers can read the new balance directly:
+  // the broadcast only reaches `this.userMeResponse` once the Store re-renders
+  // and re-binds it, which is not guaranteed to have happened by the time this
+  // resolves.
+  private async refreshAfterPurchase(): Promise<UserMeResponse | false> {
     await this.load();
     invalidateUserMe();
     const fresh = await getUserMe();
     // getUserMe returns false on any error, not just auth — broadcasting
     // that would flip the whole app to its logged-out UI right after a
     // successful purchase. A stale header balance is the better failure.
-    if (fresh === false) return;
+    if (fresh === false) return false;
     document.dispatchEvent(
       new CustomEvent("userMeResponse", {
         detail: fresh,
@@ -190,13 +244,64 @@ export class TribesPanel extends LitElement {
         cancelable: true,
       }),
     );
+    return fresh;
   }
 
-  private showInsufficient(tribe: TribeName, price: number) {
+  private static hardBalanceOf(res: UserMeResponse | false): number {
+    return res === false ? 0 : (res.player.currency?.hard ?? 0);
+  }
+
+  // "Insufficient balance" covers three different situations once the real
+  // balance is known, and they need three different messages. Shared by the
+  // purchase and boost handlers so they cannot drift apart.
+  private static balanceOutcome(
+    balance: number,
+    price: number,
+  ): "debt" | "shortfall" | "unexplained" {
+    // A chargeback landed since the pre-check: topping up cannot clear it.
+    if (balance < 0) return "debt";
+    // The re-read says they can afford it, so there is no shortfall to quote
+    // and inventing one would send them to buy currency they already have.
+    if (price - balance <= 0) return "unexplained";
+    return "shortfall";
+  }
+
+  // Why the name itself was refused. Api.ts recognises each of the endpoint's
+  // reasons and returns a code, so nothing here renders the server's English;
+  // anything it did not recognise lands on the generic failure.
+  private static refusalText(
+    result: Exclude<PurchaseTribeNameResult, { ok: true }>,
+  ): string {
+    switch (result.code) {
+      case "length":
+        return translateText("store.tribe_name_length", {
+          min: result.min,
+          max: result.max,
+        });
+      case "invalid_charset":
+        return translateText("store.tribe_name_charset");
+      case "invalid_no_letter":
+        return translateText("store.tribe_name_no_letter");
+      case "not_allowed":
+        return translateText("store.tribe_name_not_allowed");
+      default:
+        return translateText("store.purchase_failed");
+    }
+  }
+
+  private debtText(debt: number): string {
+    return translateText("store.pack_debt", { debt: String(debt) });
+  }
+
+  // `item` is what the player was trying to buy — a name they typed, or the
+  // name they were boosting. `balance` is passed rather than read off
+  // `this.userMeResponse` so a caller that has just refetched quotes the
+  // shortfall against the balance the server actually refused on.
+  private showInsufficient(item: string, price: number, balance: number) {
     this.insufficientInfo = {
       currency: translateText("cosmetics.hard"),
-      shortfall: Math.max(1, price - this.hardBalance),
-      item: tribe.displayName,
+      shortfall: Math.max(1, price - balance),
+      item,
       canTopUp: true,
     };
   }
@@ -206,9 +311,20 @@ export class TribesPanel extends LitElement {
     if (cfg === null || this.boostingId !== null) return;
     const price = cfg.boostPriceHard;
 
+    // Debt first: a negative balance also fails the shortfall check below,
+    // but topping up cannot clear it, so the top-up dialog would be the wrong
+    // remedy dressed up as the right one.
+    if (this.hardBalance < 0) {
+      this.boostNotice = {
+        kind: "error",
+        text: this.debtText(-this.hardBalance),
+      };
+      return;
+    }
     // Don't let the player submit into a guaranteed 400 — offer top-up.
+    // Nothing has been refetched yet, so the bound balance is the right one.
     if (this.hardBalance < price) {
-      this.showInsufficient(tribe, price);
+      this.showInsufficient(tribe.displayName, price, this.hardBalance);
       return;
     }
 
@@ -243,11 +359,43 @@ export class TribesPanel extends LitElement {
       await this.refreshAfterPurchase();
       return;
     }
+    if (result.code === "debt") {
+      // Negative wallet after a refund/chargeback. Not the same as being
+      // short: buying more plutonium does not unblock this, so don't offer
+      // the top-up dialog — the debt clears out of the next credit.
+      this.boostNotice = {
+        kind: "error",
+        text: translateText("store.pack_debt", { debt: result.debt }),
+      };
+      await this.refreshAfterPurchase();
+      return;
+    }
     if (result.code === "insufficient_balance") {
       // The balance moved under us (another tab, another purchase) —
       // refresh it and show the top-up path.
-      await this.refreshAfterPurchase();
-      this.showInsufficient(tribe, price);
+      const fresh = await this.refreshAfterPurchase();
+      // A failed refetch leaves the real balance unknown; a shortfall of the
+      // full price would be a guess presented as a fact.
+      if (fresh === false) {
+        this.boostNotice = {
+          kind: "error",
+          text: translateText("store.tribe_boost_failed"),
+        };
+        return;
+      }
+      const balance = TribesPanel.hardBalanceOf(fresh);
+      const outcome = TribesPanel.balanceOutcome(balance, price);
+      if (outcome !== "shortfall") {
+        this.boostNotice = {
+          kind: "error",
+          text:
+            outcome === "debt"
+              ? this.debtText(-balance)
+              : translateText("store.tribe_boost_failed"),
+        };
+        return;
+      }
+      this.showInsufficient(tribe.displayName, price, balance);
       return;
     }
     if (result.code === "not_found") {

@@ -349,7 +349,23 @@ export const PutUsernameResponseSchema = z.object({
   // response is parsed with safeParse, so requiring the field would make every
   // rename against the current API fail validation and surface as a generic
   // "failed". Treat `undefined` as "the API predates this" and say nothing.
-  bareClaim: BareClaimSchema.optional(),
+  //
+  // `.catch(undefined)` for the mirror image of the same skew: the client also
+  // ships BEHIND the API, on every API change, not just this one. A fourth
+  // value added server-side would otherwise fail safeParse on every
+  // un-updated client — and this is a 200, so the rename has already
+  // committed. Rejecting would report failure for a rename that succeeded,
+  // spend the player's 30-day cooldown and reopen the modal on a name they
+  // never chose. An unknown value is therefore treated as absent, which means
+  // "say nothing".
+  //
+  // The contract that keeps this safe: "unavailable" is the only value that
+  // obliges a client to say anything, so it must remain the value sent
+  // whenever a premium player is given a suffixed name. New values may be
+  // added only for outcomes where saying nothing is correct — splitting
+  // "unavailable" into narrower values would silence this message on clients
+  // that predate the split.
+  bareClaim: BareClaimSchema.optional().catch(undefined),
 });
 export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
 

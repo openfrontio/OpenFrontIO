@@ -1,8 +1,14 @@
 import { JWK } from "jose";
 import { z } from "zod";
+import {
+  ClusterColor,
+  ClusterConfig,
+  ClusterConfigSchema,
+  ClusterEntry,
+} from "../core/ClusterConfig";
 import { GameEnv, parseGameEnv } from "../core/configuration/Config";
 import { GameID } from "../core/Schemas";
-import { generateID, simpleHash } from "../core/Util";
+import { generateGameID, simpleHash } from "../core/Util";
 
 const JwksSchema = z.object({
   keys: z
@@ -42,15 +48,7 @@ export class ServerEnv {
     }
   }
   static numWorkers(): number {
-    const raw = process.env.NUM_WORKERS;
-    if (!raw) {
-      throw new Error("NUM_WORKERS not set");
-    }
-    const n = parseInt(raw, 10);
-    if (!Number.isFinite(n) || n <= 0) {
-      throw new Error(`Invalid NUM_WORKERS: ${raw}`);
-    }
-    return n;
+    return ServerEnv.clusterSelf().entry.numWorkers;
   }
   static turnstileSiteKey(): string {
     const v = process.env.TURNSTILE_SITE_KEY;
@@ -125,6 +123,11 @@ export class ServerEnv {
   static workerPortByIndex(index: number): number {
     return 3001 + index;
   }
+  // Mint a game id under this deployment's instance letter.
+  static generateGameId(): GameID {
+    return generateGameID(ServerEnv.clusterSelf().letter);
+  }
+
   // Generate a game id that hashes to `workerId`, so requests for the game route
   // back to this worker. Rejection sampling: each id lands on a uniformly-random
   // worker, so the expected number of tries is numWorkers; the cap scales with
@@ -133,7 +136,7 @@ export class ServerEnv {
   static generateGameIdForWorker(workerId: number): GameID | null {
     const maxAttempts = ServerEnv.numWorkers() * 100;
     for (let i = 0; i < maxAttempts; i++) {
-      const id = generateID();
+      const id = ServerEnv.generateGameId();
       if (ServerEnv.workerIndex(id) === workerId) return id;
     }
     return null;
@@ -158,6 +161,81 @@ export class ServerEnv {
     if (!subdomain || !domain) return undefined;
     return `${subdomain}.${domain}`;
   }
+  // Cluster topology (docs/MultiServer.md): parsed from the CLUSTER_JSON env,
+  // which replaced NUM_WORKERS. Absent or malformed refuses boot — a server
+  // that doesn't know the fleet map can't mint ids or route games. Dev is the
+  // exception: it defaults to a single-entry localhost map (kept in sync with
+  // vite.config.ts's dev fallback) rather than making every dev script carry
+  // JSON through cross-platform shell quoting. Cached by the raw string so
+  // repeated reads don't re-parse but tests that stub the env still see
+  // their value.
+  static readonly DEV_DEFAULT_CLUSTER_JSON =
+    '{"a":{"host":"localhost","color":"blue","numWorkers":2}}';
+  private static cachedClusterRaw: string | null = null;
+  private static cachedCluster: ClusterConfig | null = null;
+  static cluster(): ClusterConfig {
+    const fromEnv = process.env.CLUSTER_JSON;
+    const raw =
+      fromEnv !== undefined && fromEnv.length > 0
+        ? fromEnv
+        : ServerEnv.gameEnv === GameEnv.Dev
+          ? ServerEnv.DEV_DEFAULT_CLUSTER_JSON
+          : undefined;
+    if (raw === undefined) {
+      throw new Error("CLUSTER_JSON not set");
+    }
+    if (raw === ServerEnv.cachedClusterRaw && ServerEnv.cachedCluster) {
+      return ServerEnv.cachedCluster;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      // Manual cause assignment: target ES2020's Error constructor predates
+      // the options bag (same pattern as zbin/bytes.ts).
+      const error = new Error(
+        `CLUSTER_JSON is not valid JSON: ${e instanceof Error ? e.message : e}`,
+      );
+      (error as { cause?: unknown }).cause = e;
+      throw error;
+    }
+    const result = ClusterConfigSchema.safeParse(parsed);
+    if (!result.success) {
+      throw new Error(`Invalid CLUSTER_JSON: ${z.prettifyError(result.error)}`);
+    }
+    ServerEnv.cachedClusterRaw = raw;
+    ServerEnv.cachedCluster = result.data;
+    return result.data;
+  }
+
+  // This deployment's own cluster entry, found by host: SUBDOMAIN.DOMAIN, or
+  // bare DOMAIN when SUBDOMAIN is empty (dev, standalone boxes). A server
+  // whose host is not in the map refuses boot — it has no letter to mint
+  // under.
+  static clusterSelf(): { letter: string; entry: ClusterEntry } {
+    const selfHost = ServerEnv.publicHost() ?? ServerEnv.domain();
+    if (!selfHost) {
+      throw new Error("DOMAIN not set, cannot resolve own cluster entry");
+    }
+    const cluster = ServerEnv.cluster();
+    for (const [letter, entry] of Object.entries(cluster)) {
+      if (entry.host === selfHost) return { letter, entry };
+    }
+    throw new Error(
+      `Host ${selfHost} has no entry in CLUSTER_JSON (letters: ${Object.keys(cluster).join(", ")})`,
+    );
+  }
+
+  // The first character of every game id this deployment mints.
+  static instanceLetter(): string {
+    return ServerEnv.clusterSelf().letter;
+  }
+
+  // Which blue/green pool this deployment belongs to (drain checks, PR 6).
+  static color(): ClusterColor {
+    return ServerEnv.clusterSelf().entry.color;
+  }
+
   // Host players load the page from when it is a load balancer in front of
   // several deployments (`openfront.io` for blue/green). Unset for standalone
   // deployments (beta, staging branches), where the page host is publicHost.

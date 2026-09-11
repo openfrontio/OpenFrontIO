@@ -131,6 +131,50 @@ export function desktopUpdate(): DesktopUpdateBridge | null {
   return desktop?.update ?? null;
 }
 
+let __updateState: DesktopUpdateState | null = null;
+
+/**
+ * The shell's current update state, or null before the first one has been
+ * published -- always the case on the web, where there is no bridge at all.
+ *
+ * This exists for the same reason getDesktopSessionState() does in Auth.ts,
+ * and it fixes the mirror-image bug (OPE-396). The bridge replays its current
+ * state to every new subscriber SYNCHRONOUSLY, so DesktopStatusBar -- the one
+ * subscriber, and therefore the one publisher of `desktop-update-state` --
+ * dispatches during its own upgrade. <game-mode-selector> cannot exist yet at
+ * that moment: it is rendered by <play-page> on a Lit microtask, which cannot
+ * run until module evaluation has already finished. The dispatch is one-shot,
+ * so a component that mounts afterwards never hears it and gates on null.
+ *
+ * That costs nothing on a cold launch (the updater is still `checking`, and
+ * every later state arrives as an ordinary change event), and everything when
+ * the renderer loads a document while the updater ALREADY holds `staged` --
+ * the host navigating to the next lobby, a post-purchase refresh, a failed
+ * apply(). There the replay was the only delivery, so the bar correctly reads
+ * "Update ready" while the gate silently never applies.
+ *
+ * Seeding at the consumer rather than re-dispatching later at the publisher:
+ * a second dispatch would only move the race to whoever mounts after IT.
+ */
+export function getDesktopUpdateState(): DesktopUpdateState | null {
+  return __updateState;
+}
+
+/**
+ * Caches `state` and broadcasts it, so entry-point components can gate
+ * without each opening its own subscription to the bridge. Mirrors Auth.ts's
+ * setSessionState: cache first, then dispatch, so a listener that reads the
+ * accessor during the event sees the value it was just handed.
+ *
+ * Only DesktopStatusBar calls this -- it owns the bridge subscription.
+ */
+export function publishDesktopUpdateState(state: DesktopUpdateState): void {
+  __updateState = state;
+  document.dispatchEvent(
+    new CustomEvent("desktop-update-state", { detail: state }),
+  );
+}
+
 /**
  * Whether multiplayer should be available in a given update state.
  *
@@ -324,4 +368,58 @@ export function desktopLinkGate(): DesktopLinkGateBridge | null {
   return typeof desktop?.showLinkGate === "function"
     ? (desktop as DesktopLinkGateBridge)
     : null;
+}
+
+/**
+ * The shell's in-app exit (OPE-402).
+ *
+ * The desktop window opens borderless by default since OPE-173, which removes
+ * the title bar, and the menu bar is hidden — so the OS offers the player no
+ * visible way out. F11 back to windowed and Alt+F4 both still work, but
+ * neither is discoverable, and Steam players expect a Quit item in the game's
+ * own UI regardless.
+ *
+ * Null on the web, on CrazyGames and on any shell older than the one that
+ * introduced `quit()` (`shell.api` 4) — the same degrade-don't-break contract
+ * desktopUpdate() and desktopDisplay() keep, and for the same reason: the
+ * shell ships in the Steam depot on Steam's schedule while this client updates
+ * at runtime, so a client newer than its shell is ordinary.
+ *
+ * FEATURE DETECTION ON THE METHOD, not on `shell.api` — the rule
+ * desktopLinkGate() and desktopDisplay() already apply. A rename on the shell
+ * side then hides the control rather than wiring a button to nothing.
+ */
+export interface DesktopQuitBridge {
+  quit: () => Promise<void>;
+}
+
+export function desktopQuit(): DesktopQuitBridge | null {
+  if (typeof window === "undefined") return null;
+  const desktop = window.openfrontDesktop as { quit?: unknown } | undefined;
+  return typeof desktop?.quit === "function"
+    ? (desktop as DesktopQuitBridge)
+    : null;
+}
+
+/**
+ * Asks the shell to quit, and swallows everything.
+ *
+ * The invoke MAY NEVER SETTLE: the main process begins shutting down inside
+ * its handler, so this renderer is usually destroyed before a reply can come
+ * back. Awaiting it in a click handler would leave the caller hanging forever
+ * on the success path, and an unhandled rejection on the failure one.
+ *
+ * There is deliberately nothing to report back. A shell that refuses to quit
+ * leaves the player exactly where they were, with the window they can still
+ * close by every other means; a spinner or an error toast for it would be a
+ * UI for a state that has no remedy.
+ */
+export function requestDesktopQuit(): void {
+  const bridge = desktopQuit();
+  if (bridge === null) return;
+  try {
+    void bridge.quit().catch(() => {});
+  } catch {
+    // A bridge that throws synchronously rather than rejecting.
+  }
 }

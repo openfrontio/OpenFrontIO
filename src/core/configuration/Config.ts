@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
+import { ClusterConfig } from "../ClusterConfig";
 import { exp, log, pow, pow2 } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
@@ -30,6 +31,11 @@ declare global {
       assetManifest?: AssetManifest;
       cdnBase?: string;
       gameEnv?: string;
+      // The fleet map + which entry served this page (docs/MultiServer.md).
+      cluster?: ClusterConfig;
+      instanceLetter?: string;
+      // Legacy scalar, still injected by desktop shells that predate the
+      // cluster map. Web shells send cluster/instanceLetter instead.
       numWorkers?: number;
       turnstileSiteKey?: string;
       jwtAudience?: string;
@@ -37,6 +43,9 @@ declare global {
       // Desktop-only: explicit game-server host for the WebSocket origin.
       // Absent on the web build (client falls back to same-origin location).
       serverHost?: string;
+      // The load-balancer apex this deployment sits behind; absent for
+      // standalone deployments (beta, branch previews, dev) and desktop.
+      siteHost?: string;
     };
   }
 }
@@ -100,7 +109,8 @@ export interface NukeMagnitude {
 // attackLogic tunables
 const LARGE_TERRITORY_MIDPOINT = 300_000;
 const LARGE_TERRITORY_STEEPNESS = 2.5;
-// Floors: a huge attacker's tiles cost 0.3x, a huge defender's 0.7x.
+// Floors: a huge attacker's bonus bottoms at 0.3x (losses; speed uses the
+// deeper LARGE_ATTACKER_SPEED_DEPTH below), a huge defender's at 0.7x.
 const LARGE_ATTACKER_DEPTH = 0.7;
 const LARGE_DEFENDER_DEPTH = 0.3;
 const BOT_DEFENDER_LOSS_MULT = 0.7;
@@ -116,6 +126,11 @@ const ATTACKER_LOSS_BASE = 0.463;
 const ATTACKER_LOSS_PER_DENSITY = 0.0039;
 // Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
 const SPEED_COST_DIVISOR = 7.77;
+// Speed-only: the attacker's territory bonus runs a touch deeper for speed
+// than the 0.7 loss depth above (floor 0.27x vs 0.3x). Paired with the 0.82
+// sub-parity floor on the ratio curve, an overwhelming push lands ~18%
+// faster for a small attacker, ~20% at the 300k midpoint, ~25% for giants.
+const LARGE_ATTACKER_SPEED_DEPTH = 0.73;
 
 /**
  * Logistic in log(tiles): ~1 for small territories, easing down to
@@ -407,11 +422,30 @@ export class Config {
     return this.startingGoldFor(playerInfo);
   }
 
-  trainSpawnRate(numPlayerFactories: number): number {
+  /**
+   * Global spawn throttle for the train economy, counted in Train *units*
+   * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns for the very
+   * first trains, ~1x around 35 units (~5 trains), then a capacity
+   * sigmoid damps spawning past the ~300-unit midpoint. The damping
+   * flattens onto a ~0.25 plateau past ~460 units (~65 trains), so a big
+   * enough rail economy still scales at a quarter of the un-damped rate,
+   * until a global hard cap far beyond any normal game collapses the
+   * plateau past ~900 units (~130 trains).
+   */
+  trainSaturation(numTrainUnits: number): number {
+    const boost = 1 + 0.5 * exp(-numTrainUnits / 30);
+    const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 300);
+    const plateau = 0.25 * (1 - sigmoid(numTrainUnits, Math.LN2 / 150, 900));
+    return boost * Math.max(damping, plateau);
+  }
+
+  trainSpawnRate(numPlayerFactories: number, numTrainUnits: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 15;
+    const rate = (numPlayerFactories + 10) * 15;
+    return Math.max(1, Math.floor(rate / this.trainSaturation(numTrainUnits)));
   }
+
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
@@ -454,20 +488,38 @@ export class Config {
     return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
   }
 
+  /**
+   * Global spawn throttle for the trade-ship economy. A mild ~1.45x odds
+   * boost while the world fleet is small (the pity timer square-roots the
+   * realized effect, so ~1.2x actual spawns), held through the opening
+   * trading minutes and crossing the old un-boosted curve around 110
+   * ships, then a capacity sigmoid damps spawning past the ~230-ship
+   * midpoint. The damping flattens onto a 0.25 plateau past ~310 ships
+   * (~half cadence per port after the pity timer), so heavy port
+   * investment keeps scaling income linearly, until a global hard cap far
+   * beyond any normal game collapses the plateau past ~800 at sea.
+   */
+  tradeShipSaturation(numTradeShips: number): number {
+    const boost = 1 + 0.45 * exp(-numTradeShips / 120);
+    const damping = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 230);
+    const plateau = 0.25 * (1 - sigmoid(numTradeShips, Math.LN2 / 100, 800));
+    return boost * Math.max(damping, plateau);
+  }
+
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
   tradeShipSpawnRate(
     tradeShipSpawnRejections: number,
     numTradeShips: number,
   ): number {
-    const decayRate = Math.LN2 / 50;
-
-    // Approaches 0 as numTradeShips increase
-    const baseSpawnRate = 1 - sigmoid(numTradeShips, decayRate, 400);
-
     // Pity timer: increases spawn chance after consecutive rejections
     const rejectionModifier = 1 / (tradeShipSpawnRejections + 1);
 
-    return Math.floor((100 * rejectionModifier) / baseSpawnRate);
+    return Math.max(
+      1,
+      Math.floor(
+        (100 * rejectionModifier) / this.tradeShipSaturation(numTradeShips),
+      ),
+    );
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -769,7 +821,7 @@ export class Config {
     if (this.isRandomSpawn()) {
       return 150;
     }
-    return 300;
+    return 200;
   }
   numBots(): number {
     return this.bots();
@@ -858,18 +910,23 @@ export class Config {
         ATTACKER_LOSS_PER_DENSITY * defenderTroopLoss);
 
     // Speed: a tile's cost in tick-fractions grows with how outnumbered the
-    // attack is. Flat at 1/5 up to parity, then rising linearly (saturating
-    // at 7.5x), with a second ramp for hopeless attacks past 20x.
+    // attack is. Floored at 0.82 below parity (overwhelming stacks land ~18%
+    // faster), then rising linearly (saturating at 7.5x), with a second ramp
+    // for hopeless attacks past 20x.
     const speedCost =
-      (within(troopRatio, 1, 7.5) * within(troopRatio / 20, 1, 50)) /
+      (within(troopRatio, 0.82, 7.5) * within(troopRatio / 20, 1, 50)) /
       SPEED_COST_DIVISOR;
+    const largeAttackerSpeedBonus = largeTerritoryBonus(
+      attacker.numTiles,
+      LARGE_ATTACKER_SPEED_DEPTH,
+    );
     return {
       attackerTroopLoss,
       defenderTroopLoss,
       tickFraction:
         (speedCost *
           tileCost *
-          largeAttackerBonus *
+          largeAttackerSpeedBonus *
           largeDefenderBonus *
           traitorCostMod) /
         input.borderSize,

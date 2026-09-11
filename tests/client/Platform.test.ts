@@ -131,4 +131,25 @@ describe("Platform", () => {
     expect(platform.isTabletWidth).toBe(false);
     expect(platform.isDesktopWidth).toBe(true);
   });
+
+  it("re-checks for browser globals instead of trusting a load-time flag", async () => {
+    const platform = await loadPlatform({
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15",
+    });
+
+    setInnerWidth(1280);
+    expect(platform.isDesktopWidth).toBe(true);
+
+    // A queued lit update can run after the test environment is torn down, so
+    // every accessor has to survive the browser globals disappearing.
+    vi.stubGlobal("window", undefined);
+    vi.stubGlobal("navigator", undefined);
+
+    expect(() => platform.isTouch).not.toThrow();
+    expect(platform.isTouch).toBe(false);
+    expect(platform.isMobileWidth).toBe(false);
+    expect(platform.isTabletWidth).toBe(false);
+    expect(platform.isDesktopWidth).toBe(false);
+  });
 });

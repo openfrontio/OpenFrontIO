@@ -379,6 +379,21 @@ export function generateID(): GameID {
   return nanoid();
 }
 
+// Multi-server game id (docs/MultiServer.md): the minting deployment's
+// instance letter + 9 random chars. The 9 random chars carry uniqueness
+// (game ids are permanent archive keys, sized against every game ever
+// minted) and private-lobby unguessability; worker routing hashes the full
+// id, extracting the worker index from entropy that must exist anyway.
+// generateID() stays 8 chars for the ids that never leave one server or one
+// client: client ids, singleplayer games, worker message ids.
+export function generateGameID(instanceLetter: string): GameID {
+  const nanoid = customAlphabet(
+    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
+    9,
+  );
+  return instanceLetter + nanoid();
+}
+
 export function toInt(num: number): bigint {
   if (num === Infinity) {
     return BigInt(Number.MAX_SAFE_INTEGER);

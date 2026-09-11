@@ -17,9 +17,12 @@ import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
+  accountNameHeld,
   accountVerifiedName,
   clampUsername,
   genAnonUsername,
+  LAPSE_NOTICE_KEY,
+  lapseNoticeMarker,
   looksGenerated,
   resolvePlayerName,
   verifiedClaimGrace,
@@ -47,7 +50,9 @@ const usernameIsGeneratedKey: string = "usernameIsGenerated";
 const verifiedDefaultAllowedKey: string = "verifiedNameDefaultAllowed";
 // The reserved name we have already warned this device about; see
 // announceLapse. Holds a name, not a boolean, so a later lapse still speaks up.
-const lapseNoticeKey: string = "verifiedLapseNotice";
+// Defined in PlayerName so boot sequencing can read the same key — it has to
+// ask whether a notice is owed before this component writes it.
+const lapseNoticeKey: string = LAPSE_NOTICE_KEY;
 // setTimeout stores its delay in a 32-bit signed int. Anything larger does not
 // saturate — Node warns and fires after 1ms.
 const MAX_TIMEOUT_MS = 2_147_483_647;
@@ -396,12 +401,11 @@ export class UsernameInput extends LitElement {
     }
     const grace = this.claimGrace;
     if (grace === null) return;
-    // Keyed on the phase as well as the name: crossing the deadline is a
-    // material change to what the player must do (resubscribe "before then"
-    // becomes "now, before someone takes it"), so it earns one more
-    // interruption. Without the phase a player warned while it was still
-    // reserved would never hear that it no longer is.
-    const marker = `${grace.name}:${grace.atRisk ? "atrisk" : "reserved"}`;
+    // Keyed on the phase as well as the name; lapseNoticeMarker owns that rule
+    // now, because boot sequencing has to reach the same verdict from the same
+    // inputs (see lapseNoticeDue) and two copies of the format would let one
+    // side think a notice is pending while the other thinks it is spent.
+    const marker = lapseNoticeMarker(grace);
     if (localStorage.getItem(lapseNoticeKey) === marker) return;
     const key = grace.atRisk
       ? "username.lapse_notice_at_risk"
@@ -442,6 +446,23 @@ export class UsernameInput extends LitElement {
     // Ineligible — the toggle can't turn on.
     const player = this.userMe === false ? undefined : this.userMe?.player;
     const status = player?.usernameStatus;
+    if (accountNameHeld(this.userMe)) {
+      // Subscribed, but someone else holds the bare name: they display as
+      // base.disc and cannot play with the check until they rename. Say so,
+      // then offer the form (spec, 10 Sept 2026).
+      const rename = await showInGameConfirm(
+        translateText("username.verified_held_body", {
+          name: player?.usernameBase ?? "",
+        }),
+        {
+          heading: translateText("username.verified_heading"),
+          variant: "warning",
+          confirmText: translateText("username.verified_held_confirm"),
+        },
+      );
+      if (rename) window.location.hash = "modal=change-username";
+      return;
+    }
     if (status === "premium" || status === "indefinite") {
       // Subscribed but no usable name yet (never set, or TEMPORARY####):
       // send them straight to the username form.
@@ -1032,13 +1053,21 @@ export class UsernameInput extends LitElement {
 
   private renderUseVerifiedButton() {
     const eligible = this.verifiedName() !== null;
+    const held = accountNameHeld(this.userMe);
+    const hint = held
+      ? translateText("username.verified_held_hint", {
+          name:
+            (this.userMe === false ? undefined : this.userMe?.player)
+              ?.usernameBase ?? "",
+        })
+      : translateText("username.verified_use_hint");
     return html`
       <button
         type="button"
         class="group flex h-full w-full items-center justify-center gap-1.5 rounded-lg border px-2 transition-colors cursor-pointer select-none ${eligible
           ? "border-malibu-blue/50 bg-malibu-blue/10 hover:border-malibu-blue/80 hover:bg-malibu-blue/20"
           : "border-white/10 bg-black/20 hover:border-white/25 hover:bg-black/35"}"
-        title=${translateText("username.verified_use_hint")}
+        title=${hint}
         aria-pressed="false"
         @click=${this.handleVerifiedToggle}
       >

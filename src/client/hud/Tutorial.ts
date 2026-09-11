@@ -29,6 +29,8 @@ export class TutorialHighlightEvent implements GameEvent {
 /** Snapshot of the player's state that the steps are evaluated against. */
 export interface TutorialContext {
   hasSpawned: boolean;
+  /** Multiplayer: the spawn timer is still running, so attacking is blocked. */
+  inSpawnPhase: boolean;
   /** Any outgoing attack, wilderness or player. */
   attacking: boolean;
   /** The attack ratio changed this tick (slider drag or hotkey). */
@@ -96,7 +98,9 @@ export interface TutorialStep {
 }
 
 export const TUTORIAL_STEPS: readonly TutorialStep[] = [
-  { id: "spawn", isDone: (c) => c.hasSpawned },
+  // Waits out the multiplayer spawn timer too: the next step asks the
+  // player to expand, which is impossible until the game actually starts.
+  { id: "spawn", isDone: (c) => c.hasSpawned && !c.inSpawnPhase },
   // Keeps the spawn ring on the player's territory so they can find it.
   // Any attack counts so a player who hits a bot first doesn't get stuck.
   {

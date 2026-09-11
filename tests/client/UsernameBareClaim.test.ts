@@ -17,7 +17,11 @@ const { updateUsername, showInGameConfirm, showInGameAlert } = vi.hoisted(
   }),
 );
 vi.mock("../../src/client/Api", () => ({
-  updateUsername: (name: string) => updateUsername(name),
+  // Forward opts only when the caller actually passed it, so the spy's
+  // recorded call arity matches what the panel really sent (mock.calls[0]
+  // must read as a one-element array, not ["Ninja", undefined]).
+  updateUsername: (name: string, opts?: unknown) =>
+    opts === undefined ? updateUsername(name) : updateUsername(name, opts),
 }));
 vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: (message: string, options?: unknown) =>
@@ -66,10 +70,27 @@ describe("PutUsernameResponseSchema bareClaim", () => {
     }
   });
 
-  it("rejects a value outside the enum rather than passing it through", () => {
+  // The same skew in the other direction: the client ships BEHIND the API
+  // too, on every API change. This is a 200 — the rename has committed — so
+  // failing the parse would report failure for a rename that succeeded and
+  // burn the 30-day cooldown. Dropping the value degrades to "say nothing",
+  // which is exactly how a client that predates the value should behave.
+  it("drops a value outside the enum rather than failing the parse", () => {
+    const parsed = PutUsernameResponseSchema.safeParse(
+      okBody({ bareClaim: "nope" }),
+    );
+    expect(parsed.success).toBe(true);
+    // Specifically `undefined`, not the raw string and not some substituted
+    // enum member: `.catch("claimed")` would silently make a future
+    // "unavailable"-like value say nothing AND claim it succeeded outright.
+    expect(parsed.success && parsed.data.bareClaim).toBeUndefined();
+  });
+
+  // The rest of the body still has to be right — tolerating an unknown
+  // bareClaim must not turn into tolerating a malformed response.
+  it("still rejects a response whose other fields are wrong", () => {
     expect(
-      PutUsernameResponseSchema.safeParse(okBody({ bareClaim: "nope" }))
-        .success,
+      PutUsernameResponseSchema.safeParse(okBody({ username: 42 })).success,
     ).toBe(false);
   });
 });
@@ -164,6 +185,42 @@ describe("UsernamePanel bare-claim fallback", () => {
     expect(reload).toHaveBeenCalled();
   });
 
+  // The `await` on the dialog is load-bearing: without it the reload races
+  // the dialog away and the player never reads why their name changed.
+  //
+  // Note what does NOT hold it: `showInGameAlert` is *invoked* synchronously
+  // either way (an async function runs to its first await), so
+  // invocationCallOrder alone still passes when the `await` is replaced with
+  // `void`. What distinguishes them is whether the reload waits for the
+  // dialog to be dismissed, so the alert is left pending here.
+  it("does not reload until the player has dismissed the dialog", async () => {
+    let dismiss!: () => void;
+    showInGameAlert.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          dismiss = () => resolve(true);
+        }),
+    );
+    updateUsername.mockResolvedValue({
+      ok: true,
+      data: okBody({ bareClaim: "unavailable" }),
+    });
+    const el = await mount();
+
+    await submit(el, "Ninja");
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(reload).not.toHaveBeenCalled();
+
+    dismiss();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(showInGameAlert.mock.invocationCallOrder[0]).toBeLessThan(
+      reload.mock.invocationCallOrder[0],
+    );
+  });
+
   it("names the date they can change again when the API supplies one", async () => {
     updateUsername.mockResolvedValue({
       ok: true,
@@ -223,6 +280,28 @@ describe("UsernamePanel bare-claim fallback", () => {
     expect(reload).toHaveBeenCalled();
   });
 
+  // The tests above hand the panel a hand-built body, so they never reach
+  // safeParse and would not notice the schema rejecting a value. This one
+  // runs the real schema over a value no client knows yet — what a client
+  // sees the day infra adds a fourth one. The rename is a 200 and has
+  // already committed, so the only correct outcome is "success, say
+  // nothing": no dialog, no inline error, and a reload onto the new name.
+  it("treats an unknown bareClaim as a success with nothing to say", async () => {
+    updateUsername.mockResolvedValue({
+      ok: true,
+      data: PutUsernameResponseSchema.parse(
+        okBody({ bareClaim: "some_future_value" }),
+      ),
+    });
+    const el = await mount();
+
+    await submit(el, "Ninja");
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(el.textContent).not.toContain("username_error");
+    expect(reload).toHaveBeenCalled();
+  });
+
   it("still surfaces the 409s that survive as an inline error", async () => {
     updateUsername.mockResolvedValue({ ok: false, code: "taken" });
     const el = await mount();
@@ -232,5 +311,84 @@ describe("UsernamePanel bare-claim fallback", () => {
     expect(showInGameAlert).not.toHaveBeenCalled();
     expect(reload).not.toHaveBeenCalled();
     expect(el.textContent).toContain("username_error_taken");
+  });
+
+  // Spec (10 Sept 2026): a held bare name is refused with nothing written.
+  // The player then chooses: the numbered form (one more request, with
+  // acceptSuffixed) or another name (nothing happens).
+  describe("held bare name (409 BARE_NAME_TAKEN)", () => {
+    it("asks before taking the numbered form, then resubmits with acceptSuffixed", async () => {
+      updateUsername
+        .mockResolvedValueOnce({ ok: false, code: "bare_taken", base: "Ninja" })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: okBody({ bareClaim: "unavailable" }),
+        });
+      // First confirm is the ordinary "change username?"; second is the choice.
+      showInGameConfirm.mockResolvedValue(true);
+      const el = await mount();
+
+      await submit(el, "Ninja");
+
+      expect(updateUsername).toHaveBeenCalledTimes(2);
+      expect(updateUsername.mock.calls[0]).toEqual(["Ninja"]);
+      expect(updateUsername.mock.calls[1]).toEqual([
+        "Ninja",
+        { acceptSuffixed: true },
+      ]);
+      expect(showInGameConfirm).toHaveBeenCalledTimes(2);
+      expect(showInGameConfirm.mock.calls[1][0]).toContain(
+        'account_modal.username_bare_taken_body:{"requested":"Ninja"}',
+      );
+      // They chose it knowingly: no second dialog after the fact.
+      expect(showInGameAlert).not.toHaveBeenCalled();
+      expect(reload).toHaveBeenCalled();
+    });
+
+    it("writes nothing and re-enables the form when they choose another name", async () => {
+      updateUsername.mockResolvedValueOnce({
+        ok: false,
+        code: "bare_taken",
+        base: "Ninja",
+      });
+      showInGameConfirm
+        .mockResolvedValueOnce(true) // change username?
+        .mockResolvedValueOnce(false); // take the numbered form? no
+      const el = await mount();
+
+      await submit(el, "Ninja");
+
+      expect(updateUsername).toHaveBeenCalledTimes(1);
+      expect(reload).not.toHaveBeenCalled();
+      expect(showInGameAlert).not.toHaveBeenCalled();
+      const input = el.querySelector<HTMLInputElement>(
+        "#username-panel-input",
+      )!;
+      expect(input.disabled).toBe(false);
+    });
+
+    it("does not ask twice: a second refusal after yes becomes an inline error", async () => {
+      updateUsername
+        .mockResolvedValueOnce({ ok: false, code: "bare_taken", base: "Ninja" })
+        .mockResolvedValueOnce({
+          ok: false,
+          code: "bare_taken",
+          base: "Ninja",
+        });
+      showInGameConfirm.mockResolvedValue(true);
+      const el = await mount();
+
+      await submit(el, "Ninja");
+
+      expect(updateUsername).toHaveBeenCalledTimes(2);
+      // The ordinary "change username?" confirm plus ONE choice dialog.
+      expect(showInGameConfirm).toHaveBeenCalledTimes(2);
+      expect(reload).not.toHaveBeenCalled();
+      expect(el.textContent).toContain("username_error_taken");
+      const input = el.querySelector<HTMLInputElement>(
+        "#username-panel-input",
+      )!;
+      expect(input.disabled).toBe(false);
+    });
   });
 });
