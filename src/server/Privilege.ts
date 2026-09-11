@@ -131,9 +131,8 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       }
     }
     // Entitlement-blind pass-through: isAllowed has no user identity. The
-    // authoritative check — join name must exactly match the account's
-    // resolved display name — runs at join in Worker.ts using the /users/@me
-    // response (enforceVerifiedBadge below).
+    // account decides the name and the check at join in Worker.ts using the
+    // /users/@me response (resolveVerifiedJoin below).
     if (refs.verified === true) {
       cosmetics.verified = true;
     }
@@ -256,8 +255,8 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
     // Catalog cosmetics can't be resolved without the cosmetics data, but the
-    // verified claim isn't a catalog item — pass it through; the Worker's
-    // enforceVerifiedBadge still validates it against the account at join.
+    // verified intent isn't a catalog item — pass it through; the Worker's
+    // resolveVerifiedJoin decides it against the account at join.
     return {
       type: "allowed",
       cosmetics: refs.verified === true ? { verified: true } : {},
@@ -276,32 +275,47 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
 }
 
 /**
- * Enforce the client-claimed verified badge on resolved cosmetics. The claim
- * is kept only when the account vouches for it: an entitled bare-name status
- * (premium/indefinite) AND a join name EXACTLY matching the account's
- * server-resolved display name — the client locks the input to that form, so
- * any drift (a rename race, a censor rewrite, a hand-crafted join message)
- * drops the badge. Strips, never rejects.
+ * Decide the in-game name and the verified check for a join.
  *
- * `account` is the /users/@me player the Worker already fetches for flares;
- * null means an anonymous persistent-ID join — those only exist in Dev, where
- * the claim is kept so the badge stays locally testable.
+ * `cosmetics.verified` on the join message is INTENT ("play under my account
+ * name"), never a claim the server checks the client's name against. The
+ * account the Worker already fetched decides both halves (spec, 10 Sept 2026):
  *
- * Returns true when an unvouched claim was stripped (for logging).
+ *   - the account renders bare (entitled AND display name equals base, which
+ *     is what holding the bare claim looks like from /users/@me): the name
+ *     becomes the account base and the check is set, whatever the client sent;
+ *   - otherwise the sent name stands and the check is removed. A subscriber
+ *     whose bare name someone else holds lands here, as does any hand-crafted
+ *     join.
+ *
+ * `account` null is an anonymous persistent-ID join, which only exists in
+ * Dev; intent is kept there so the badge stays locally testable.
  */
-export function enforceVerifiedBadge(
+export function resolveVerifiedJoin(
   cosmetics: PlayerCosmetics,
   joinUsername: string,
-  account: { username?: string | null; usernameStatus?: string } | null,
-): boolean {
-  if (cosmetics.verified !== true) return false;
-  const vouched =
-    account === null ||
-    ((account.usernameStatus === "premium" ||
-      account.usernameStatus === "indefinite") &&
-      typeof account.username === "string" &&
-      account.username === joinUsername);
-  if (vouched) return false;
+  account: {
+    username?: string | null;
+    usernameBase?: string | null;
+    usernameStatus?: string;
+  } | null,
+): { username: string; outcome: "verified" | "custom" | "dev" } {
+  if (cosmetics.verified !== true) {
+    return { username: joinUsername, outcome: "custom" };
+  }
+  if (account === null) {
+    return { username: joinUsername, outcome: "dev" };
+  }
+  const entitled =
+    account.usernameStatus === "premium" ||
+    account.usernameStatus === "indefinite";
+  const bare =
+    typeof account.username === "string" &&
+    account.username.length > 0 &&
+    account.username === account.usernameBase;
+  if (entitled && bare) {
+    return { username: account.username as string, outcome: "verified" };
+  }
   delete cosmetics.verified;
-  return true;
+  return { username: joinUsername, outcome: "custom" };
 }
