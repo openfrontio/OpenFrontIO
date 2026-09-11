@@ -439,7 +439,12 @@ describe("Graphics tab: live apply from the in-game instance", () => {
 
     flip(el, "map-layer-forest-toggle");
 
-    expect(visibility).toEqual([["forest", false]]);
+    // One owner pushes the whole layer set on any graphics change, rather than
+    // each control pushing the layer it happens to know about.
+    expect(visibility).toEqual([
+      ["forest", false],
+      ["reef", true],
+    ]);
     expect(overrides().mapLayerVisibility).toEqual({ forest: false });
   });
 
@@ -452,7 +457,10 @@ describe("Graphics tab: live apply from the in-game instance", () => {
 
     slide(el, "map-layer-reef-alpha-slider", 0.4);
 
-    expect(alphas).toEqual([["reef", 0.4]]);
+    expect(alphas).toEqual([
+      ["forest", 0.8],
+      ["reef", 0.4],
+    ]);
     expect(overrides().mapLayerAlpha).toEqual({ reef: 0.4 });
   });
 
@@ -480,6 +488,112 @@ describe("Graphics tab: live apply from the in-game instance", () => {
       ["forest", 0.8],
       ["reef", 1],
     ]);
+  });
+});
+
+describe("Graphics tab: layer state reaches the renderer with Advanced collapsed", () => {
+  beforeEach(resetGraphicsSettings);
+  afterEach(unmountAll);
+
+  /** Everything the renderer was told, in order. */
+  function wire() {
+    const visibility: [string, boolean][] = [];
+    const alphas: [string, number][] = [];
+    return {
+      visibility,
+      alphas,
+      mapLayers: LAYERS,
+      onLayerVisibilityChange: (id: string, visible: boolean) =>
+        visibility.push([id, visible]),
+      onLayerAlphaChange: (id: string, alpha: number) =>
+        alphas.push([id, alpha]),
+    };
+  }
+
+  it("pushes an imported configuration's layer state", async () => {
+    // The advanced body is the only thing that draws layer rows, and it does
+    // not exist while the fold is collapsed. Nothing else about an import
+    // changes, so the layers would be stored and never applied.
+    const w = wire();
+    const el = await mountGraphics({ ...w, advanced: false });
+    w.visibility.length = 0;
+    w.alphas.length = 0;
+
+    const box = el.querySelector<HTMLTextAreaElement>("#graphics-import-json")!;
+    box.value =
+      '{"mapLayerVisibility":{"forest":false},"mapLayerAlpha":{"reef":0.25}}';
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    await el.updateComplete;
+    el.querySelector<HTMLButtonElement>("#graphics-import-apply")!.click();
+
+    expect(w.visibility).toEqual([
+      ["forest", false],
+      ["reef", true],
+    ]);
+    expect(w.alphas).toEqual([
+      ["forest", 0.8],
+      ["reef", 0.25],
+    ]);
+  });
+
+  it("pushes a preset's layer state when picked from the dropdown", async () => {
+    const w = wire();
+    const el = await mountGraphics({ ...w, advanced: false });
+    // Hide a layer first, so the preset has something to undo.
+    new UserSettings().setGraphicsOverrides({
+      mapLayerVisibility: { forest: false },
+    });
+    w.visibility.length = 0;
+    w.alphas.length = 0;
+
+    const dropdown = el.querySelector<HTMLSelectElement>(
+      "graphics-preset-selector select",
+    )!;
+    dropdown.value = "builtin:graphics_setting.preset_night";
+    dropdown.dispatchEvent(new Event("change", { bubbles: true }));
+
+    // Night carries no layer overrides, so every layer returns to visible at
+    // its manifest opacity.
+    expect(w.visibility).toEqual([
+      ["forest", true],
+      ["reef", true],
+    ]);
+    expect(w.alphas).toEqual([
+      ["forest", 0.8],
+      ["reef", 1],
+    ]);
+  });
+
+  it("stops pushing once the modal is torn down", async () => {
+    // The in-game instance is destroyed when the match ends. A listener left
+    // on globalThis would keep calling back into a dead component, holding the
+    // renderer it closed over alive with it.
+    const w = wire();
+    const el = await mountGraphics({ ...w, advanced: false });
+    el.remove();
+    await el.updateComplete;
+    w.visibility.length = 0;
+    w.alphas.length = 0;
+
+    new UserSettings().setGraphicsOverrides({
+      mapLayerVisibility: { forest: false },
+    });
+
+    expect(w.visibility).toEqual([]);
+    expect(w.alphas).toEqual([]);
+  });
+
+  it("does not throw on the page instance, which has no renderer to push to", async () => {
+    const el = await mountGraphics({ advanced: false });
+    const box = el.querySelector<HTMLTextAreaElement>("#graphics-import-json")!;
+    box.value = '{"mapLayerVisibility":{"forest":false}}';
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    await el.updateComplete;
+
+    expect(() =>
+      el.querySelector<HTMLButtonElement>("#graphics-import-apply")!.click(),
+    ).not.toThrow();
+    expect(overrides().mapLayerVisibility).toEqual({ forest: false });
   });
 });
 

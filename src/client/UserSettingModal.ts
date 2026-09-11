@@ -3,7 +3,12 @@ import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import type { MapLayer } from "../core/game/TerrainMapLoader";
-import { getDefaultKeybinds, UserSettings } from "../core/game/UserSettings";
+import {
+  getDefaultKeybinds,
+  GRAPHICS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
@@ -27,6 +32,7 @@ import {
   type DesktopDisplaySnapshot,
 } from "./DesktopDisplay";
 import { isDesktopShell } from "./DesktopShell";
+import { pushMapLayerState } from "./MapLayerSettings";
 import { Platform } from "./Platform";
 import {
   SetBackgroundMusicVolumeEvent,
@@ -72,8 +78,8 @@ export class UserSettingModal extends BaseModal {
   // a running game follows it with no reference here; map layers are the
   // exception. Their control set comes from the current map, and the renderer
   // does not re-read their visibility or alpha from settings after startup —
-  // so the layer rows exist only where a game hands them over, and reach the
-  // renderer through these callbacks.
+  // so the layer rows exist only where a game hands them over, and every
+  // change to the graphics key re-pushes them through these callbacks.
 
   /** Map layers for the current game. Empty on the page instance. */
   public mapLayers: MapLayer[] = [];
@@ -136,9 +142,17 @@ export class UserSettingModal extends BaseModal {
       this.routerName = undefined;
     }
     this.loadKeybindsFromStorage();
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      this.onGraphicsChanged,
+    );
   }
 
   disconnectedCallback() {
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      this.onGraphicsChanged,
+    );
     window.removeEventListener("keydown", this.handleEasterEggKey);
     // An element torn down without close() being called (the in-game instance
     // when the match ends) would otherwise leave the bridge holding a
@@ -146,6 +160,23 @@ export class UserSettingModal extends BaseModal {
     this.leaveDisplayTab();
     super.disconnectedCallback();
   }
+
+  /**
+   * The single place layer state reaches the renderer.
+   *
+   * It belongs here rather than in the advanced graphics body because that
+   * body only exists while the Advanced fold is open, and a preset picked or a
+   * configuration imported with the fold collapsed changes layers just the
+   * same. Off a game the callbacks are null and this is a no-op.
+   */
+  private readonly onGraphicsChanged = () => {
+    pushMapLayerState(
+      this.userSettings.graphicsOverrides(),
+      this.mapLayers,
+      this.onLayerVisibilityChange,
+      this.onLayerAlphaChange,
+    );
+  };
 
   private loadKeybindsFromStorage() {
     const parsed = this.userSettings.parsedUserKeybinds();
@@ -594,10 +625,10 @@ export class UserSettingModal extends BaseModal {
   }
 
   /**
-   * Hand the advanced graphics body the current game's layers. It only exists
-   * while the Graphics tab is open and Advanced is expanded, so this runs on
-   * every update rather than once: the element is created and destroyed as the
-   * player moves between tabs.
+   * Hand the advanced graphics body the current game's layers, so it can draw
+   * a row per layer. It only exists while the Graphics tab is open and
+   * Advanced is expanded, so this runs on every update rather than once: the
+   * element is created and destroyed as the player moves between tabs.
    */
   private syncGraphicsLayerWiring(): void {
     const advanced = this.querySelector<GraphicsAdvancedSettings>(
@@ -605,8 +636,6 @@ export class UserSettingModal extends BaseModal {
     );
     if (advanced === null) return;
     advanced.mapLayers = this.mapLayers;
-    advanced.onLayerVisibilityChange = this.onLayerVisibilityChange;
-    advanced.onLayerAlphaChange = this.onLayerAlphaChange;
   }
 
   private toggleGraphicsAdvanced() {

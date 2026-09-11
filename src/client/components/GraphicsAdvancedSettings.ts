@@ -7,6 +7,7 @@ import {
   UserSettings,
 } from "../../core/game/UserSettings";
 import { migrateLegacyGraphicsSettings } from "../GraphicsPresets";
+import { isLayerVisible, layerAlpha } from "../MapLayerSettings";
 import { type GraphicsOverrides } from "../render/gl";
 import renderDefaults from "../render/gl/render-settings.json";
 import { translateText } from "../Utils";
@@ -172,8 +173,10 @@ function sliderValue(event: Event): number | null {
  *
  * The exception is map layers, whose control set comes from the running game's
  * map and whose visibility/alpha the renderer does not re-read from settings
- * after startup. Those arrive as `mapLayers` plus the two callbacks, set by
- * `GameRenderer` on the in-game instance only.
+ * after startup. `mapLayers` is handed down so the rows can be drawn, but the
+ * push to the renderer belongs to `UserSettingModal`: this component only
+ * exists while the Advanced fold is open, and a preset applied with the fold
+ * collapsed has to reach the renderer just the same.
  */
 @customElement("graphics-advanced-settings")
 export class GraphicsAdvancedSettings extends LitElement {
@@ -182,24 +185,9 @@ export class GraphicsAdvancedSettings extends LitElement {
   /** Map layers for the current game. Empty on the page instance. */
   @property({ attribute: false }) mapLayers: MapLayer[] = [];
 
-  /** Callback to toggle layer visibility on the renderer. */
-  @property({ attribute: false }) onLayerVisibilityChange:
-    | ((layerId: string, visible: boolean) => void)
-    | null = null;
-
-  /** Callback to set layer alpha on the renderer. */
-  @property({ attribute: false }) onLayerAlphaChange:
-    | ((layerId: string, alpha: number) => void)
-    | null = null;
-
   createRenderRoot() {
     return this;
   }
-
-  // True only for the duration of this component's own write. Every write
-  // below dispatches the change event this component also listens for, and a
-  // self-triggered resync would re-push all layers on every slider drag.
-  private writingOwnChange = false;
 
   connectedCallback() {
     super.connectedCallback();
@@ -208,40 +196,34 @@ export class GraphicsAdvancedSettings extends LitElement {
     migrateLegacyGraphicsSettings(this.userSettings);
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
-      this.onExternalGraphicsChange,
+      this.onGraphicsChange,
     );
   }
 
   disconnectedCallback() {
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
-      this.onExternalGraphicsChange,
+      this.onGraphicsChange,
     );
     super.disconnectedCallback();
   }
 
   /**
-   * Something else replaced the configuration — the preset dropdown, or an
-   * import. Redraw so every control shows the new value, and re-push the map
-   * layers: unlike the rest, the renderer does not re-read those from settings,
-   * so a preset that changes them is otherwise applied everywhere but there.
+   * The configuration changed under us — a preset from the dropdown, an
+   * import, or one of our own controls. Redraw so every control shows the
+   * stored value.
+   *
+   * Pushing the map layers to the renderer is deliberately not done here.
+   * This component only exists while the Advanced fold is open, and a preset
+   * applied with the fold collapsed has to reach the renderer just the same,
+   * so `UserSettingModal` owns that push for both.
    */
-  private readonly onExternalGraphicsChange = () => {
-    if (this.writingOwnChange) return;
-    this.requestUpdate();
-    this.syncLayerVisibility();
-  };
+  private readonly onGraphicsChange = () => this.requestUpdate();
 
   // ---- Override patching ----
 
-  /** Write the graphics key, marking the change event it emits as our own. */
   private writeOverrides(value: GraphicsOverrides) {
-    this.writingOwnChange = true;
-    try {
-      this.userSettings.setGraphicsOverrides(value);
-    } finally {
-      this.writingOwnChange = false;
-    }
+    this.userSettings.setGraphicsOverrides(value);
   }
 
   private patchName(patch: Partial<GraphicsOverrides["name"]>) {
@@ -610,9 +592,7 @@ export class GraphicsAdvancedSettings extends LitElement {
   // ---- Map-layer visibility ----
 
   private isLayerVisible(layerId: string): boolean {
-    const overrides = this.userSettings.graphicsOverrides();
-    // Default to visible if no override is set.
-    return overrides.mapLayerVisibility?.[layerId] ?? true;
+    return isLayerVisible(this.userSettings.graphicsOverrides(), layerId);
   }
 
   private layerName(layerId: string): string {
@@ -630,28 +610,17 @@ export class GraphicsAdvancedSettings extends LitElement {
       ...current,
       mapLayerVisibility: newVis,
     });
-    this.onLayerVisibilityChange?.(layerId, newVis[layerId]);
     this.requestUpdate();
-  }
-
-  /**
-   * Re-apply layer visibility from current overrides to the renderer.
-   * Called after reset or preset import so the WebGL passes stay in sync.
-   */
-  private syncLayerVisibility() {
-    for (const layer of this.mapLayers) {
-      this.onLayerVisibilityChange?.(layer.id, this.isLayerVisible(layer.id));
-    }
-    this.syncLayerAlpha();
   }
 
   // ---- Map-layer alpha ----
 
   private getLayerAlpha(layerId: string, manifestDefault?: number): number {
-    const overrides = this.userSettings.graphicsOverrides();
-    const alpha = overrides.mapLayerAlpha?.[layerId];
-    if (alpha !== undefined) return alpha;
-    return manifestDefault ?? 1;
+    return layerAlpha(
+      this.userSettings.graphicsOverrides(),
+      layerId,
+      manifestDefault,
+    );
   }
 
   private onLayerAlphaSliderChange(layerId: string, event: Event) {
@@ -663,21 +632,7 @@ export class GraphicsAdvancedSettings extends LitElement {
       ...current,
       mapLayerAlpha: { ...currentAlpha, [layerId]: alpha },
     });
-    this.onLayerAlphaChange?.(layerId, alpha);
     this.requestUpdate();
-  }
-
-  /**
-   * Re-apply layer alpha from current overrides to the renderer.
-   * Called after reset or preset import so the WebGL passes stay in sync.
-   */
-  private syncLayerAlpha() {
-    for (const layer of this.mapLayers) {
-      this.onLayerAlphaChange?.(
-        layer.id,
-        this.getLayerAlpha(layer.id, layer.alpha),
-      );
-    }
   }
 
   // ---- Terrain colors ----
@@ -823,7 +778,6 @@ export class GraphicsAdvancedSettings extends LitElement {
 
   private onResetClick() {
     this.writeOverrides({});
-    this.syncLayerVisibility();
     this.requestUpdate();
   }
 
