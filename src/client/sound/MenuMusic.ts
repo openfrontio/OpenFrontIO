@@ -70,17 +70,19 @@ function rampGain(target: number, t: number): number {
  */
 export function startMenuMusic(mixer: AudioMixer): void {
   let theme: Howl | null = null;
-  let stopFollowingFadeIn: (() => void) | null = null;
-  let rampTimer: ReturnType<typeof setInterval> | null = null;
+  let teardownFadeIn: (() => void) | null = null;
 
-  /** Stops the ramp wherever it is, leaving the volume untouched. */
+  /**
+   * Stops the ramp wherever it is, leaving the volume untouched.
+   *
+   * This has to cover the ramp that has not started yet as well as one in
+   * flight: while the stream is still loading all that exists is a pending
+   * "play" handler, and a departing theme that starts ramping after it has
+   * been unregistered would write over its own fade-out.
+   */
   const cancelFadeIn = () => {
-    if (rampTimer !== null) {
-      clearInterval(rampTimer);
-      rampTimer = null;
-    }
-    stopFollowingFadeIn?.();
-    stopFollowingFadeIn = null;
+    teardownFadeIn?.();
+    teardownFadeIn = null;
   };
 
   /**
@@ -98,31 +100,78 @@ export function startMenuMusic(mixer: AudioMixer): void {
     mixer.register(howl, "music");
   };
 
+  /**
+   * Arms the ramp. Must be called before play(), and the ramp itself does not
+   * start until the Howl says playback actually began.
+   *
+   * play() on a Howl that has not loaded yet queues itself and returns at
+   * once, so the call tells us nothing about when the first sample lands. For
+   * an html5 stream the gap is a network fetch: a few hundred ms warm, and on
+   * a slow connection longer than the whole ramp -- in which case timing from
+   * the call meant the theme arrived at full level with no fade at all, on
+   * exactly the connections least likely to be tested. Howler emits "play"
+   * when the media element's own play() promise resolves, which is playback
+   * actually starting, and it releases _playLock before that emit, so the
+   * event is the right signal whether the play was deferred or immediate.
+   */
   const fadeIn = (howl: Howl) => {
-    const target = mixer.volumeFor("music");
-    // Nothing to hear and nothing to ramp on a silent channel, and a ramp
-    // toward zero would never reach a level worth registering at. Hand it
-    // straight over, or the theme stays unregistered for the session.
-    if (target === 0) {
-      mixer.register(howl, "music");
-      return;
-    }
-    stopFollowingFadeIn = mixer.onChange((category) => {
-      if (category === "music") settle(howl);
-    });
-    const startedAt = performance.now();
-    howl.volume(rampGain(target, 0));
-    rampTimer = setInterval(() => {
-      // Driven off elapsed time rather than a tick count: a backgrounded tab
-      // throttles timers hard, and the ramp should still finish on schedule
-      // with coarser steps rather than stretch out to minutes.
-      const t = Math.min(1, (performance.now() - startedAt) / MENU_FADE_IN_MS);
-      if (t >= 1) {
+    let rampTimer: ReturnType<typeof setInterval> | null = null;
+
+    const beginRamp = () => {
+      // Read the target here rather than when the Howl was built: a slow load
+      // gives the player seconds in which to move the slider.
+      const target = mixer.volumeFor("music");
+      // Nothing to hear and nothing to ramp on a silent channel, and a ramp
+      // toward zero would never reach a level worth registering at. Hand it
+      // straight over, or the theme stays unregistered for the session.
+      if (target === 0) {
         settle(howl);
         return;
       }
-      howl.volume(rampGain(target, t));
-    }, MENU_FADE_IN_STEP_MS);
+      const startedAt = performance.now();
+      howl.volume(rampGain(target, 0));
+      rampTimer = setInterval(() => {
+        // Driven off elapsed time rather than a tick count: a backgrounded tab
+        // throttles timers hard, and the ramp should still finish on schedule
+        // with coarser steps rather than stretch out to minutes.
+        const t = Math.min(
+          1,
+          (performance.now() - startedAt) / MENU_FADE_IN_MS,
+        );
+        if (t >= 1) {
+          settle(howl);
+          return;
+        }
+        howl.volume(rampGain(target, t));
+      }, MENU_FADE_IN_STEP_MS);
+    };
+
+    const onPlay = () => beginRamp();
+    // Playback never started, so there is nothing to ramp. Hand it over
+    // anyway, so the mixer owns the Howl and the subscription below goes.
+    const onPlayError = () => settle(howl);
+
+    // Subscribed now rather than at ramp start: the load can take seconds and
+    // a mute during it still has to be honoured.
+    const stopFollowing = mixer.onChange((category) => {
+      if (category === "music") settle(howl);
+    });
+
+    teardownFadeIn = () => {
+      if (rampTimer !== null) {
+        clearInterval(rampTimer);
+        rampTimer = null;
+      }
+      stopFollowing();
+      howl.off("play", onPlay);
+      howl.off("playerror", onPlayError);
+    };
+
+    // Hold the floor before anything can be heard, so no sample can escape
+    // above it however the load and the first write interleave.
+    howl.volume(rampGain(mixer.volumeFor("music"), 0));
+    howl.once("play", onPlay);
+    howl.once("playerror", onPlayError);
   };
 
   const start = () => {
@@ -137,11 +186,12 @@ export function startMenuMusic(mixer: AudioMixer): void {
         // wait would land right when they are trying to use the page.
         html5: true,
       });
-      theme.play();
-      // Every start, including the re-arm after "menu-restored" -- music
-      // slamming in on the way back from a lobby is just as abrupt as it is
-      // on load.
+      // Armed before play(), so the "play" handler is on the Howl no matter
+      // how quickly playback starts. Every start, including the re-arm after
+      // "menu-restored" -- music slamming in on the way back from a lobby is
+      // just as abrupt as it is on load.
       fadeIn(theme);
+      theme.play();
     } catch (error) {
       console.warn("Failed to play menu theme", error);
     }
