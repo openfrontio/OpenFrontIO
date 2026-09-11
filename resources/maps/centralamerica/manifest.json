@@ -337,6 +337,6 @@
       "name": "Chiapas"
     }
   ],
-  "themes": ["north_america, south_america"],
+  "themes": ["north_america", "south_america"],
   "translation_key": "map.centralamerica"
 }
