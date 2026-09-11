@@ -12,7 +12,7 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
-import { renderDuration, renderNumber, translateText } from "../../Utils";
+import { renderNumber, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
   atomBombIcon,
@@ -89,27 +89,13 @@ export class UnitDisplay extends LitElement implements Controller {
     return 0n;
   }
 
-  private mirvCooldown(): number {
-    for (const bu of this.playerBuildables ?? []) {
-      if (bu.type === UnitType.MIRV) {
-        return bu.cooldown ?? 0;
-      }
-    }
-    return 0;
-  }
-
   private canBuild(item: UnitType): boolean {
     if (this.game?.config().isUnitDisabled(item)) return false;
     const player = this.game?.myPlayer();
     switch (item) {
-      case UnitType.MIRV:
-        return (
-          this.mirvCooldown() === 0 &&
-          this.cost(item) <= (player?.gold() ?? 0n) &&
-          (player?.units(UnitType.MissileSilo).length ?? 0) > 0
-        );
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
+      case UnitType.MIRV:
         return (
           this.cost(item) <= (player?.gold() ?? 0n) &&
           (player?.units(UnitType.MissileSilo).length ?? 0) > 0
@@ -244,10 +230,6 @@ export class UnitDisplay extends LitElement implements Controller {
     }
     const selected = this.uiState.ghostStructure === unitType;
     const hovered = this._hoveredUnit === unitType;
-    const cooldown = unitType === UnitType.MIRV ? this.mirvCooldown() : 0;
-    // Radial sweep that empties clockwise as the cooldown runs out.
-    const cooldownPercent =
-      (cooldown / (this.game.config().mirvLaunchCooldown() || 1)) * 100;
     const displayHotkey = hotkey
       .replace("Digit", "")
       .replace("Key", "")
@@ -297,7 +279,7 @@ export class UnitDisplay extends LitElement implements Controller {
         <div
           class="${this.canBuild(unitType)
             ? ""
-            : "opacity-40"} relative border border-slate-500 rounded-sm px-0.5 pb-0.5 flex items-center gap-0.5 cursor-pointer
+            : "opacity-40"} border border-slate-500 rounded-sm px-0.5 pb-0.5 flex items-center gap-0.5 cursor-pointer
              ${selected ? "hover:bg-gray-400/10" : "hover:bg-gray-800"}
              rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}
              ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
@@ -339,15 +321,6 @@ export class UnitDisplay extends LitElement implements Controller {
               ? html`<span class="text-xs">${renderNumber(number)}</span>`
               : null}
           </div>
-          ${cooldown > 0
-            ? html`<div
-                class="absolute inset-0 rounded-sm flex items-center justify-center text-[10px] font-bold text-white pointer-events-none"
-                style="background: conic-gradient(rgba(15, 23, 42, 0.8) ${cooldownPercent}%, rgba(15, 23, 42, 0.2) 0)"
-                translate="no"
-              >
-                ${renderDuration(Math.ceil(cooldown / 10))}
-              </div>`
-            : null}
         </div>
       </div>
     `;
