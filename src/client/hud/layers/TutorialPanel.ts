@@ -7,7 +7,7 @@ import { Controller } from "../../Controller";
 import { Platform } from "../../Platform";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import { UIState } from "../../UIState";
-import { renderNumber, translateText } from "../../Utils";
+import { renderNumber, textDirection, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import {
@@ -332,6 +332,7 @@ export class TutorialPanel extends LitElement implements Controller {
     this.lastAttackRatio = attackRatio;
     return {
       hasSpawned: player.hasSpawned(),
+      inSpawnPhase: this.game.inSpawnPhase(),
       attacking: attacks.length > 0,
       attackRatioMoved,
       boatsDisabled: this.game.config().isUnitDisabled(UnitType.TransportShip),
@@ -412,6 +413,7 @@ export class TutorialPanel extends LitElement implements Controller {
     if (!this.active) return nothing;
     return html`
       <div
+        dir=${textDirection()}
         class="pointer-events-auto w-full sm:rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-base p-2 sm:mb-1"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
@@ -511,17 +513,28 @@ export class TutorialPanel extends LitElement implements Controller {
           ? nothing
           : html`<span class="shrink-0">${done ? "✓" : "•"}</span>`}
         ${step.bullets
-          ? html`<ul class="list-disc ml-4 flex flex-col gap-1">
+          ? html`<ul class="list-disc ms-4 flex flex-col gap-1">
               ${step.bullets.map(
-                (b) => html`<li>${translateText(`tutorial.step.${b}`)}</li>`,
+                // dir=auto keeps step text on its content's side while the
+                // panel chrome mirrors — untranslated steps (English fallback)
+                // then keep their punctuation on the correct end.
+                (b) =>
+                  html`<li dir="auto">
+                    ${translateText(`tutorial.step.${b}`)}
+                  </li>`,
               )}
             </ul>`
-          : html`<span>${this.stepText(step, done)}</span>`}
+          : html`<span dir="auto">${this.stepText(step, done)}</span>`}
       </p>
     `;
   }
 
   private stepText(step: TutorialStep, done: boolean): string {
+    // Multiplayer: the spot is picked but the spawn timer is still running,
+    // so don't keep asking the player to pick one.
+    if (!done && step.id === "spawn" && this.ctx?.hasSpawned) {
+      return translateText("tutorial.step.spawn_wait");
+    }
     // Boats and ports need shore; landlocked players are sent to get some.
     if (!done && COAST_STEPS.has(step.id) && this.hasCoast === false) {
       return translateText("tutorial.step.no_coast");

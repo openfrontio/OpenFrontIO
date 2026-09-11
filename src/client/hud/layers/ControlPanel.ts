@@ -8,7 +8,10 @@ import { Config } from "../../../core/configuration/Config";
 import { GameMode, GameType, Gold } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { UserSettings } from "../../../core/game/UserSettings";
+import {
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
@@ -77,6 +80,18 @@ export class ControlPanel extends LitElement implements Controller {
   private _lastAttackTickByTarget: Map<number, number> = new Map();
   private static readonly BORDER_REFRESH_INTERVAL = 10; // recompute every 1s
   private static readonly ATTACK_THRESHOLD_TICKS = 15 * 10; // 15 seconds
+
+  connectedCallback() {
+    super.connectedCallback();
+    // The attack ratio is cached below for the lifetime of the game, but the
+    // settings modal is now reachable mid-match, so follow the stored value
+    // when it changes there. (This panel's own slider is session-only: it
+    // never writes UserSettings, so there is no loop.)
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.attackRatio`,
+      this.onAttackRatioSettingChanged,
+    );
+  }
 
   init() {
     this.attackRatio = new UserSettings().attackRatio();
@@ -298,6 +313,10 @@ export class ControlPanel extends LitElement implements Controller {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.attackRatio`,
+      this.onAttackRatioSettingChanged,
+    );
     if (this._goldGainTimeoutId !== null) {
       clearTimeout(this._goldGainTimeoutId);
       this._goldGainTimeoutId = null;
@@ -316,6 +335,14 @@ export class ControlPanel extends LitElement implements Controller {
   onAttackRatioChange(newRatio: number) {
     this.uiState.attackRatio = newRatio;
   }
+
+  private onAttackRatioSettingChanged = () => {
+    // The element outlives any one game; uiState only exists once init() ran.
+    if (this.uiState === undefined) return;
+    this.attackRatio = new UserSettings().attackRatio();
+    this.onAttackRatioChange(this.attackRatio);
+    this.requestUpdate();
+  };
 
   setVisibile(visible: boolean) {
     this._isVisible = visible;

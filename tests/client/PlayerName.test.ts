@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  accountNameHeld,
   accountVerifiedName,
   clampUsername,
   fallbackPlayerName,
@@ -399,6 +400,69 @@ describe("accountVerifiedName", () => {
         player({ username: "TEMPORARY7823", usernameBase: "TEMPORARY7823" }),
       ),
     ).toBeNull();
+  });
+
+  it("returns null for a subscriber whose bare name is held (suffixed display)", () => {
+    expect(
+      accountVerifiedName(
+        player({ username: "RyanTheGreat.2222", usernameBase: "RyanTheGreat" }),
+      ),
+    ).toBeNull();
+    expect(
+      accountVerifiedName(
+        player({
+          username: "RyanTheGreat.2222",
+          usernameBase: "RyanTheGreat",
+          usernameStatus: "indefinite",
+        }),
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("accountNameHeld", () => {
+  it("is true only for an entitled player on a suffixed display name", () => {
+    expect(
+      accountNameHeld(
+        player({ username: "RyanTheGreat.2222", usernameBase: "RyanTheGreat" }),
+      ),
+    ).toBe(true);
+    expect(
+      accountNameHeld(
+        player({
+          username: "RyanTheGreat.2222",
+          usernameBase: "RyanTheGreat",
+          usernameStatus: "indefinite",
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("is false for a bare holder, a free player, a lapsed holder, and no profile", () => {
+    expect(accountNameHeld(player())).toBe(false);
+    expect(
+      accountNameHeld(
+        player({
+          username: "RyanTheGreat.2222",
+          usernameBase: "RyanTheGreat",
+          usernameStatus: "none",
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      accountNameHeld(
+        player({
+          username: "RyanTheGreat.2222",
+          usernameBase: "RyanTheGreat",
+          usernameStatus: "claimed",
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      accountNameHeld(player({ username: null, usernameBase: null })),
+    ).toBe(false);
+    expect(accountNameHeld(null)).toBe(false);
+    expect(accountNameHeld(false)).toBe(false);
   });
 });
 

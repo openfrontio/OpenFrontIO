@@ -1,4 +1,12 @@
-import { Execution, Game, isUnit, Player, Unit, UnitType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  GameType,
+  isUnit,
+  Player,
+  Unit,
+  UnitType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
@@ -165,7 +173,11 @@ class SAMTargetingSystem {
     const samOwner = this.sam.owner();
     const nukeOwner = unit.owner();
     if (samOwner.isFriendly(nukeOwner)) {
-      return this.mg.getWinner() !== null && samOwner.isOnSameTeam(nukeOwner);
+      // Aftergame fun (nuking teammates once the game is over) is disabled in singleplayer.
+      const gameOver =
+        this.mg.getWinner() !== null &&
+        this.mg.config().gameConfig().gameType !== GameType.Singleplayer;
+      return gameOver && samOwner.isOnSameTeam(nukeOwner);
     }
     return true;
   }

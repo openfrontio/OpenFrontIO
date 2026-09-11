@@ -16,6 +16,12 @@ export interface PresencePayload {
   lobbyId?: string;
   teamId?: string;
   teamSize?: number;
+  // Opaque server-minted token identifying this game, for grouping players
+  // outside the game (the shell publishes it as Steam's player group). Absent
+  // for singleplayer and replays, which have no server game to group, and for
+  // the menu. NOT the lobby id and not derived from it — see GroupToken in
+  // src/core/Schemas.ts for why those must stay separable.
+  groupToken?: string;
 }
 
 interface PresenceBridge {

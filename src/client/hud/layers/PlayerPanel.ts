@@ -716,11 +716,6 @@ export class PlayerPanel extends LitElement implements Controller {
   private renderAlliances(other: PlayerView) {
     const allies = other.allies();
 
-    const nameCollator = new Intl.Collator(undefined, { sensitivity: "base" });
-    const alliesSorted = [...allies].sort((a, b) =>
-      nameCollator.compare(a.displayName(), b.displayName()),
-    );
-
     // Map ally PlayerID → expiry tick so each ally shows its own remaining time.
     const expiryByAlly = new Map<string, number>();
     for (const alliance of other.alliances()) {
@@ -732,6 +727,15 @@ export class PlayerPanel extends LitElement implements Controller {
       const remainingTicks = expiresAt - this.g.ticks();
       return Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
     };
+
+    // Soonest-expiring alliances first; ties (and no-expiry allies) by name.
+    const nameCollator = new Intl.Collator(undefined, { sensitivity: "base" });
+    const alliesSorted = [...allies].sort((a, b) => {
+      const remainingA = remainingSecondsFor(a) ?? Infinity;
+      const remainingB = remainingSecondsFor(b) ?? Infinity;
+      if (remainingA !== remainingB) return remainingA - remainingB;
+      return nameCollator.compare(a.displayName(), b.displayName());
+    });
 
     return html`
       <div class="select-none">
@@ -755,7 +759,7 @@ export class PlayerPanel extends LitElement implements Controller {
           class="rounded-lg bg-zinc-800/70 ring-1 ring-zinc-700/60 w-full min-w-0"
         >
           <ul
-            class="max-h-30 overflow-y-auto p-2
+            class="max-h-48 overflow-y-auto p-2
                  flex flex-wrap gap-1.5
                  scrollbar-thin scrollbar-thumb-zinc-600 hover:scrollbar-thumb-zinc-500 scrollbar-track-zinc-800"
             role="list"

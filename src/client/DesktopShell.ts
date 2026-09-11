@@ -369,3 +369,57 @@ export function desktopLinkGate(): DesktopLinkGateBridge | null {
     ? (desktop as DesktopLinkGateBridge)
     : null;
 }
+
+/**
+ * The shell's in-app exit (OPE-402).
+ *
+ * The desktop window opens borderless by default since OPE-173, which removes
+ * the title bar, and the menu bar is hidden — so the OS offers the player no
+ * visible way out. F11 back to windowed and Alt+F4 both still work, but
+ * neither is discoverable, and Steam players expect a Quit item in the game's
+ * own UI regardless.
+ *
+ * Null on the web, on CrazyGames and on any shell older than the one that
+ * introduced `quit()` (`shell.api` 4) — the same degrade-don't-break contract
+ * desktopUpdate() and desktopDisplay() keep, and for the same reason: the
+ * shell ships in the Steam depot on Steam's schedule while this client updates
+ * at runtime, so a client newer than its shell is ordinary.
+ *
+ * FEATURE DETECTION ON THE METHOD, not on `shell.api` — the rule
+ * desktopLinkGate() and desktopDisplay() already apply. A rename on the shell
+ * side then hides the control rather than wiring a button to nothing.
+ */
+export interface DesktopQuitBridge {
+  quit: () => Promise<void>;
+}
+
+export function desktopQuit(): DesktopQuitBridge | null {
+  if (typeof window === "undefined") return null;
+  const desktop = window.openfrontDesktop as { quit?: unknown } | undefined;
+  return typeof desktop?.quit === "function"
+    ? (desktop as DesktopQuitBridge)
+    : null;
+}
+
+/**
+ * Asks the shell to quit, and swallows everything.
+ *
+ * The invoke MAY NEVER SETTLE: the main process begins shutting down inside
+ * its handler, so this renderer is usually destroyed before a reply can come
+ * back. Awaiting it in a click handler would leave the caller hanging forever
+ * on the success path, and an unhandled rejection on the failure one.
+ *
+ * There is deliberately nothing to report back. A shell that refuses to quit
+ * leaves the player exactly where they were, with the window they can still
+ * close by every other means; a spinner or an error toast for it would be a
+ * UI for a state that has no remedy.
+ */
+export function requestDesktopQuit(): void {
+  const bridge = desktopQuit();
+  if (bridge === null) return;
+  try {
+    void bridge.quit().catch(() => {});
+  } catch {
+    // A bridge that throws synchronously rather than rejecting.
+  }
+}

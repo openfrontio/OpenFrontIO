@@ -34,7 +34,6 @@ import {
   TeamGameSpawnAreas,
   TerrainType,
   TerraNullius,
-  Tick,
   Trios,
   Unit,
   UnitInfo,
@@ -119,8 +118,6 @@ export class GameImpl implements Game {
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
   /** Tiles from nuke blast radii this tick, drained by the renderer. */
   private _nukeImpactQueue: TileRef[] = [];
-  private _lastMirvLaunchTick: Tick | null = null;
-  private _lastMirvLauncher: Player | null = null;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -1297,23 +1294,6 @@ export class GameImpl implements Game {
   }
   stats(): Stats {
     return this._stats;
-  }
-  recordMirvLaunch(launcher: Player): void {
-    this._lastMirvLaunchTick = this._ticks;
-    this._lastMirvLauncher = launcher;
-  }
-  mirvCooldownRemaining(player: Player): Tick {
-    if (
-      this._lastMirvLaunchTick === null ||
-      this._lastMirvLauncher === player
-    ) {
-      return 0;
-    }
-    return Math.max(
-      0,
-      this._config.mirvLaunchCooldown() -
-        (this._ticks - this._lastMirvLaunchTick),
-    );
   }
   railNetwork(): RailNetwork {
     return this._railNetwork;

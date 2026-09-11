@@ -22,6 +22,7 @@ import {
   Embargo,
   EmojiMessage,
   GameMode,
+  GameType,
   Gold,
   MAX_UPGRADE_AMOUNT,
   MutableAlliance,
@@ -1428,9 +1429,6 @@ export class PlayerImpl implements Player {
     if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
-    if (unitType === UnitType.MIRV && this.mg.mirvCooldownRemaining(this) > 0) {
-      return false;
-    }
     const cost = knownCost ?? this.mg.unitInfo(unitType).cost(this.mg, this);
     if (this._gold < cost) {
       return false;
@@ -1530,16 +1528,12 @@ export class PlayerImpl implements Player {
         }
       }
 
-      const mirvCooldown =
-        u === UnitType.MIRV ? mg.mirvCooldownRemaining(this) : 0;
-
       result[i] = {
         type: u,
         canBuild,
         canUpgrade,
         cost,
         upgradeCosts,
-        cooldown: mirvCooldown > 0 ? mirvCooldown : undefined,
         overlappingRailroads: buildNew
           ? rail.overlappingRailroads(u, canBuild as TileRef)
           : [],
@@ -1614,8 +1608,10 @@ export class PlayerImpl implements Player {
       return false;
     }
     const owner = this.mg.owner(tile);
-    // Allow nuking teammates after the game is over (aftergame fun)
-    const gameOver = mg.getWinner() !== null;
+    // Allow nuking teammates after the game is over (aftergame fun), but not in singleplayer.
+    const gameOver =
+      mg.getWinner() !== null &&
+      mg.config().gameConfig().gameType !== GameType.Singleplayer;
     if (owner.isPlayer()) {
       if (this.isOnSameTeam(owner) && !gameOver) {
         return false;

@@ -3,38 +3,38 @@
 exports[`trade ship scenarios > a thousand ports each, giant map 1`] = `
 {
   "a": {
-    "arrivalsPerMinute": 89.3,
-    "goldPerMinute": 38620000,
-    "shipsArrived": 893,
-    "shipsSent": 918,
-    "tradeGold": 386226223n,
+    "arrivalsPerMinute": 145.7,
+    "goldPerMinute": 62880000,
+    "shipsArrived": 1457,
+    "shipsSent": 1505,
+    "tradeGold": 628784302n,
   },
   "b": {
-    "arrivalsPerMinute": 84.6,
-    "goldPerMinute": 38620000,
-    "shipsArrived": 846,
-    "shipsSent": 915,
-    "tradeGold": 386226223n,
+    "arrivalsPerMinute": 135.6,
+    "goldPerMinute": 62880000,
+    "shipsArrived": 1356,
+    "shipsSent": 1454,
+    "tradeGold": 628784302n,
   },
-  "goldPerTrade": 222100,
+  "goldPerTrade": 223500,
 }
 `;
 
 exports[`trade ship scenarios > across the ocean 1`] = `
 {
   "a": {
-    "arrivalsPerMinute": 4.4,
-    "goldPerMinute": 640500,
-    "shipsArrived": 22,
-    "shipsSent": 26,
-    "tradeGold": 3202628n,
+    "arrivalsPerMinute": 4.8,
+    "goldPerMinute": 771500,
+    "shipsArrived": 24,
+    "shipsSent": 28,
+    "tradeGold": 3857711n,
   },
   "b": {
-    "arrivalsPerMinute": 4.4,
-    "goldPerMinute": 640500,
-    "shipsArrived": 22,
-    "shipsSent": 28,
-    "tradeGold": 3202628n,
+    "arrivalsPerMinute": 5.8,
+    "goldPerMinute": 771500,
+    "shipsArrived": 29,
+    "shipsSent": 35,
+    "tradeGold": 3857711n,
   },
   "goldPerTrade": 72790,
 }
@@ -43,18 +43,18 @@ exports[`trade ship scenarios > across the ocean 1`] = `
 exports[`trade ship scenarios > across the ocean, level-3 port 1`] = `
 {
   "a": {
-    "arrivalsPerMinute": 13,
-    "goldPerMinute": 1266000,
-    "shipsArrived": 65,
-    "shipsSent": 71,
-    "tradeGold": 6332469n,
+    "arrivalsPerMinute": 14.2,
+    "goldPerMinute": 1456000,
+    "shipsArrived": 71,
+    "shipsSent": 79,
+    "tradeGold": 7278700n,
   },
   "b": {
-    "arrivalsPerMinute": 4.4,
-    "goldPerMinute": 1266000,
-    "shipsArrived": 22,
-    "shipsSent": 28,
-    "tradeGold": 6332469n,
+    "arrivalsPerMinute": 5.8,
+    "goldPerMinute": 1456000,
+    "shipsArrived": 29,
+    "shipsSent": 35,
+    "tradeGold": 7278700n,
   },
   "goldPerTrade": 72790,
 }
@@ -63,38 +63,38 @@ exports[`trade ship scenarios > across the ocean, level-3 port 1`] = `
 exports[`trade ship scenarios > fifty ports each, long route 1`] = `
 {
   "a": {
-    "arrivalsPerMinute": 75.45,
-    "goldPerMinute": 22760000,
-    "shipsArrived": 503,
-    "shipsSent": 746,
-    "tradeGold": 151702065n,
+    "arrivalsPerMinute": 76.35,
+    "goldPerMinute": 23200000,
+    "shipsArrived": 509,
+    "shipsSent": 780,
+    "tradeGold": 154640736n,
   },
   "b": {
-    "arrivalsPerMinute": 79.05,
-    "goldPerMinute": 22760000,
-    "shipsArrived": 527,
-    "shipsSent": 775,
-    "tradeGold": 151702065n,
+    "arrivalsPerMinute": 81.3,
+    "goldPerMinute": 23200000,
+    "shipsArrived": 542,
+    "shipsSent": 825,
+    "tradeGold": 154640736n,
   },
-  "goldPerTrade": 147300,
+  "goldPerTrade": 147100,
 }
 `;
 
 exports[`trade ship scenarios > long haul 1`] = `
 {
   "a": {
-    "arrivalsPerMinute": 3.3,
-    "goldPerMinute": 943100,
-    "shipsArrived": 22,
-    "shipsSent": 35,
-    "tradeGold": 6287556n,
+    "arrivalsPerMinute": 3.6,
+    "goldPerMinute": 1115000,
+    "shipsArrived": 24,
+    "shipsSent": 38,
+    "tradeGold": 7430348n,
   },
   "b": {
-    "arrivalsPerMinute": 3.3,
-    "goldPerMinute": 943100,
-    "shipsArrived": 22,
-    "shipsSent": 36,
-    "tradeGold": 6287556n,
+    "arrivalsPerMinute": 4.2,
+    "goldPerMinute": 1115000,
+    "shipsArrived": 28,
+    "shipsSent": 44,
+    "tradeGold": 7430348n,
   },
   "goldPerTrade": 142900,
 }
@@ -103,58 +103,58 @@ exports[`trade ship scenarios > long haul 1`] = `
 exports[`trade ship scenarios > short coastal hop 1`] = `
 {
   "a": {
-    "arrivalsPerMinute": 5,
-    "goldPerMinute": 51230,
-    "shipsArrived": 25,
-    "shipsSent": 26,
-    "tradeGold": 256160n,
+    "arrivalsPerMinute": 5.6,
+    "goldPerMinute": 61400,
+    "shipsArrived": 28,
+    "shipsSent": 28,
+    "tradeGold": 307017n,
   },
   "b": {
-    "arrivalsPerMinute": 5.2,
-    "goldPerMinute": 51230,
-    "shipsArrived": 26,
-    "shipsSent": 28,
-    "tradeGold": 256160n,
+    "arrivalsPerMinute": 6.6,
+    "goldPerMinute": 61400,
+    "shipsArrived": 33,
+    "shipsSent": 35,
+    "tradeGold": 307017n,
   },
-  "goldPerTrade": 5023,
+  "goldPerTrade": 5033,
 }
 `;
 
 exports[`trade ship scenarios > ten ports each across the ocean 1`] = `
 {
   "a": {
-    "arrivalsPerMinute": 43.6,
-    "goldPerMinute": 8087000,
-    "shipsArrived": 218,
-    "shipsSent": 256,
-    "tradeGold": 40436605n,
+    "arrivalsPerMinute": 47.2,
+    "goldPerMinute": 8603000,
+    "shipsArrived": 236,
+    "shipsSent": 276,
+    "tradeGold": 43014010n,
   },
   "b": {
-    "arrivalsPerMinute": 43.2,
-    "goldPerMinute": 8087000,
-    "shipsArrived": 216,
-    "shipsSent": 255,
-    "tradeGold": 40436605n,
+    "arrivalsPerMinute": 45.2,
+    "goldPerMinute": 8603000,
+    "shipsArrived": 226,
+    "shipsSent": 266,
+    "tradeGold": 43014010n,
   },
-  "goldPerTrade": 93170,
+  "goldPerTrade": 93100,
 }
 `;
 
 exports[`trade ship scenarios > ten ports, ~500-tile route 1`] = `
 {
   "a": {
-    "arrivalsPerMinute": 40.6,
-    "goldPerMinute": 8492000,
-    "shipsArrived": 203,
-    "shipsSent": 256,
-    "tradeGold": 42461027n,
+    "arrivalsPerMinute": 42.8,
+    "goldPerMinute": 8827000,
+    "shipsArrived": 214,
+    "shipsSent": 263,
+    "tradeGold": 44135905n,
   },
   "b": {
-    "arrivalsPerMinute": 40.8,
-    "goldPerMinute": 8492000,
-    "shipsArrived": 204,
-    "shipsSent": 255,
-    "tradeGold": 42461027n,
+    "arrivalsPerMinute": 41.8,
+    "goldPerMinute": 8827000,
+    "shipsArrived": 209,
+    "shipsSent": 259,
+    "tradeGold": 44135905n,
   },
   "goldPerTrade": 104300,
 }
@@ -163,60 +163,48 @@ exports[`trade ship scenarios > ten ports, ~500-tile route 1`] = `
 exports[`trade ship scenarios > ten ports, ~1800-tile route 1`] = `
 {
   "a": {
-    "arrivalsPerMinute": 33.5,
-    "goldPerMinute": 11060000,
-    "shipsArrived": 335,
-    "shipsSent": 479,
-    "tradeGold": 110612150n,
+    "arrivalsPerMinute": 27.2,
+    "goldPerMinute": 9266000,
+    "shipsArrived": 272,
+    "shipsSent": 380,
+    "tradeGold": 92660300n,
   },
   "b": {
-    "arrivalsPerMinute": 32.3,
-    "goldPerMinute": 11060000,
-    "shipsArrived": 323,
-    "shipsSent": 467,
-    "tradeGold": 110612150n,
+    "arrivalsPerMinute": 27.9,
+    "goldPerMinute": 9266000,
+    "shipsArrived": 279,
+    "shipsSent": 396,
+    "tradeGold": 92660300n,
   },
-  "goldPerTrade": 168100,
+  "goldPerTrade": 168200,
 }
 `;
 
 exports[`train scenarios > external city in the cluster 1`] = `
 {
   "aExternalTradeGold": 0n,
-  "aGoldDelta": 260000n,
-  "aGoldPerMinute": 52000,
-  "aSelfTradeGold": 260000n,
-  "bExternalTradeGold": 200000n,
-  "bGoldDelta": 200000n,
-  "trainUnitsSeen": 98,
+  "aGoldDelta": 335000n,
+  "aGoldPerMinute": 67000,
+  "aSelfTradeGold": 335000n,
+  "bExternalTradeGold": 225000n,
+  "bGoldDelta": 225000n,
+  "trainUnitsSeen": 140,
 }
 `;
 
 exports[`train scenarios > factory and four cities 1`] = `
 {
   "aExternalTradeGold": 0n,
-  "aGoldDelta": 140000n,
-  "aGoldPerMinute": 28000,
-  "aSelfTradeGold": 140000n,
+  "aGoldDelta": 190000n,
+  "aGoldPerMinute": 38000,
+  "aSelfTradeGold": 190000n,
   "bExternalTradeGold": 0n,
   "bGoldDelta": 0n,
-  "trainUnitsSeen": 98,
+  "trainUnitsSeen": 133,
 }
 `;
 
 exports[`train scenarios > factory and one city 1`] = `
-{
-  "aExternalTradeGold": 0n,
-  "aGoldDelta": 140000n,
-  "aGoldPerMinute": 28000,
-  "aSelfTradeGold": 140000n,
-  "bExternalTradeGold": 0n,
-  "bGoldDelta": 0n,
-  "trainUnitsSeen": 98,
-}
-`;
-
-exports[`train scenarios > two factories and two cities 1`] = `
 {
   "aExternalTradeGold": 0n,
   "aGoldDelta": 200000n,
@@ -224,6 +212,18 @@ exports[`train scenarios > two factories and two cities 1`] = `
   "aSelfTradeGold": 200000n,
   "bExternalTradeGold": 0n,
   "bGoldDelta": 0n,
-  "trainUnitsSeen": 182,
+  "trainUnitsSeen": 140,
+}
+`;
+
+exports[`train scenarios > two factories and two cities 1`] = `
+{
+  "aExternalTradeGold": 0n,
+  "aGoldDelta": 260000n,
+  "aGoldPerMinute": 52000,
+  "aSelfTradeGold": 260000n,
+  "bExternalTradeGold": 0n,
+  "bGoldDelta": 0n,
+  "trainUnitsSeen": 238,
 }
 `;

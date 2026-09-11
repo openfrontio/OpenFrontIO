@@ -790,8 +790,9 @@ export const rootMenuElement: MenuElement = {
     const inExtensionWindow =
       params.playerActions.interaction?.allianceInfo?.inExtensionWindow;
 
-    // After game-over, nukes can target teammates (nukeSpawn allows it).
-    // Show the attack submenu so mobile users can access nukes in the aftergame.
+    // After game-over, nukes can target teammates in multiplayer (nukeSpawn allows it,
+    // but not in singleplayer). Show the attack submenu so mobile users can access
+    // nukes in the aftergame.
     const hasBuildableAttacks =
       params.playerActions.buildableUnits?.some(
         (bu) => BuildableAttacks.has(bu.type) && bu.canBuild !== false,

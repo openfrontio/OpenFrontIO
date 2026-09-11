@@ -3,11 +3,14 @@ import { customElement, property } from "lit/decorators.js";
 import { NavNotificationsController } from "./NavNotificationsController";
 
 /**
- * The news bell and help "?" as icon buttons, with their notification dots.
+ * The news bell, help "?" and settings cogwheel as icon buttons, with the
+ * notification dots the first two carry.
  *
  * Shared by the desktop nav bar and the mobile top bar so both read as the same
- * cluster next to the profile control — they're notification affordances, not
- * page links, which is why they've left the nav item lists.
+ * cluster next to the profile control — they're utility affordances rather than
+ * page links, which is why they've left the nav item lists. The cogwheel sits
+ * last, immediately left of the profile control, and is a plain page link with
+ * no auth dependency: it looks and behaves the same signed in or out.
  */
 @customElement("nav-utility-icons")
 export class NavUtilityIcons extends LitElement {
@@ -117,6 +120,31 @@ export class NavUtilityIcons extends LitElement {
             ? this.renderDot("bg-yellow-400")
             : ""}
         </div>
+        <button
+          class="${this.buttonClass()} ${currentPage === "page-settings"
+            ? "active"
+            : ""}"
+          data-page="page-settings"
+          data-i18n-aria-label="main.settings"
+          data-i18n-title="main.settings"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="w-6 h-6 pointer-events-none"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+            />
+          </svg>
+        </button>
       </div>
     `;
   }

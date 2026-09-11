@@ -168,4 +168,83 @@ describe("buying a tribe name in debt, panel through Api", () => {
       'store.tribe_name_length:{"min":3,"max":24}',
     );
   });
+
+  // OPE-389: the API sends a stable machine `code`, so this is the table that
+  // matters — server code in, translation key out. Every body pairs its code
+  // with prose this client does not recognise, so a row that still passed by
+  // matching the English would fail here.
+  describe("each refusal code reaches its translation key", () => {
+    const UNMATCHED_PROSE = "Refusal prose this client never matched";
+
+    it.each([
+      ["invalid_charset", "store.tribe_name_charset"],
+      ["no_letter", "store.tribe_name_no_letter"],
+      ["not_allowed", "store.tribe_name_not_allowed"],
+    ])("%s renders %s", async (code, key) => {
+      const el = await mountAndBuy(400, { code, reason: UNMATCHED_PROSE });
+
+      expect(el.textContent).toContain(key);
+      expect(el.textContent).not.toContain(UNMATCHED_PROSE);
+    });
+
+    it("length renders the key with the bounds from the body", async () => {
+      const el = await mountAndBuy(400, {
+        code: "length",
+        reason: UNMATCHED_PROSE,
+        min: 5,
+        max: 30,
+      });
+
+      expect(el.textContent).toContain(
+        'store.tribe_name_length:{"min":5,"max":30}',
+      );
+      expect(el.textContent).not.toContain(UNMATCHED_PROSE);
+    });
+
+    // The prose is the fallback source of bounds, not a way around checking
+    // them: no usable min/max and a reversed range in the sentence leaves
+    // nothing to render, and "24-3" must not be what the player sees.
+    it("length with reversed prose bounds renders the generic failure", async () => {
+      const el = await mountAndBuy(400, {
+        code: "length",
+        reason: "Name must be 24-3 characters",
+      });
+
+      expect(el.textContent).toContain("store.purchase_failed");
+      expect(el.textContent).not.toContain("store.tribe_name_length");
+      expect(el.textContent).not.toContain("24-3");
+    });
+
+    it("insufficient_balance_debt renders the debt message", async () => {
+      const el = await mountAndBuy(400, {
+        code: "insufficient_balance_debt",
+        reason: UNMATCHED_PROSE,
+        debt: "250",
+      });
+
+      expect(el.textContent).toContain('store.pack_debt:{"debt":"250"}');
+      expect(el.textContent).not.toContain("insufficient_balance_debt");
+    });
+
+    // A code this client has never heard of must not reach the screen either
+    // — that is the whole point of allowlisting them.
+    //
+    // Deliberately paired with a reason the legacy path DOES match: the code
+    // is the branch key, so reinstating the string matching would render
+    // store.tribe_name_no_letter here and fail this test. With unmatched
+    // prose it would pass either way and prove nothing.
+    it("an unknown code renders the generic purchase failure", async () => {
+      const el = await mountAndBuy(400, {
+        code: "some_future_code",
+        reason: "Name must contain a letter",
+      });
+
+      expect(el.textContent).toContain("store.purchase_failed");
+      expect(el.textContent).not.toContain("store.tribe_name_no_letter");
+      expect(el.textContent).not.toContain("some_future_code");
+      expect(el.textContent).not.toContain("Name must contain a letter");
+      // Otherwise this passes just as well when the request never happens.
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
 });

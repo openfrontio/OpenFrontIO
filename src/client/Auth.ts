@@ -475,9 +475,15 @@ async function doRefreshJwt(): Promise<void> {
   }
   try {
     console.log("Refreshing jwt");
+    // Bounded like doSteamLogin below: userAuth() awaits this, and every
+    // authenticated path awaits userAuth(), so a response that never settles
+    // stops the client joining anything at all. An abort lands in the catch
+    // below, which already treats an unreachable server as "clear the jwt" —
+    // the same outcome, now reached in bounded time.
     const response = await fetch(getApiBase() + "/auth/refresh", {
       method: "POST",
       credentials: "include",
+      signal: AbortSignal.timeout(10_000),
     });
     if (response.status !== 200) {
       console.error("Refresh failed", response);

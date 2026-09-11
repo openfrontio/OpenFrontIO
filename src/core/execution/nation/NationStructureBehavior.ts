@@ -141,6 +141,7 @@ export class NationStructureBehavior {
   private _sharedWaterComponents: Set<number> | null = null;
   private lastStructureTick: number | null = null;
   private placementsCount = 0;
+  private builtCrowdedMapFirstStructure = false;
   private _hasHighStartingGold: boolean | null = null;
   private _postSaveUpStartTick: number | null = null;
 
@@ -468,19 +469,22 @@ export class NationStructureBehavior {
     // On crowded maps the first structure is a port (or factory if landlocked)
     // instead of a city, so nations can get income earlier.
     // Mainly intended for private 200+ nation HvN games.
+    // Own one-shot flag, set only on success: unitsOwned(City) never clears
+    // (starves cities forever) and placementsCount can get consumed by the
+    // SAM-first branch above.
     if (
       !citiesDisabled &&
-      this.player.unitsOwned(UnitType.City) === 0 &&
+      !this.builtCrowdedMapFirstStructure &&
       this.isHighNationDensity()
     ) {
       const preferredFirst =
         hasCoastalTiles && !config.isUnitDisabled(UnitType.Port)
           ? UnitType.Port
           : UnitType.Factory;
-      if (
-        !config.isUnitDisabled(preferredFirst) &&
-        this.maybeSpawnStructure(preferredFirst)
-      ) {
+      if (config.isUnitDisabled(preferredFirst)) {
+        this.builtCrowdedMapFirstStructure = true;
+      } else if (this.maybeSpawnStructure(preferredFirst)) {
+        this.builtCrowdedMapFirstStructure = true;
         return true;
       }
     }

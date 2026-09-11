@@ -8,6 +8,7 @@ import {
 function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
   return {
     hasSpawned: false,
+    inSpawnPhase: false,
     attacking: false,
     attackRatioMoved: false,
     boatsDisabled: false,
@@ -86,6 +87,19 @@ describe("TutorialProgress", () => {
       }),
     );
     expect(p.current()?.id).toBe("buy_city");
+  });
+
+  it("holds the spawn step until the multiplayer spawn timer ends", () => {
+    const p = new TutorialProgress();
+    // Spot picked, but the spawn phase is still running: stay put.
+    for (let i = 0; i < 100; i++) {
+      p.update(ctx({ hasSpawned: true, inSpawnPhase: true }));
+    }
+    expect(p.current()?.id).toBe("spawn");
+    expect(p.stepDone()).toBe(false);
+
+    settle(p, ctx({ hasSpawned: true }));
+    expect(p.current()?.id).toBe("attack_wilderness");
   });
 
   it("lingers on a completed step before advancing", () => {

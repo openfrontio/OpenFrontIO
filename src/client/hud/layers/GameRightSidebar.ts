@@ -9,6 +9,13 @@ import "../../components/DoomsdayClockPanel";
 import "../../components/OvertimePanel";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import {
+  desktopDisplay,
+  DISPLAY_SETTLE_TIMEOUT_MS,
+  isDisplaySnapshot,
+  type DesktopDisplayBridge,
+  type DesktopDisplayMode,
+} from "../../DesktopDisplay";
 import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
@@ -51,6 +58,41 @@ export class GameRightSidebar extends LitElement implements Controller {
 
   @state()
   private isFullscreen: boolean = false;
+
+  // The desktop shell's window mode, or null when there is no shell to ask.
+  // On the desktop this REPLACES `isFullscreen` as the button's truth: the
+  // shell owns the window, and HTML fullscreen is not what the button does
+  // there any more.
+  @state()
+  private displayMode: DesktopDisplayMode | null = null;
+
+  // Captured once per mount rather than read per click, so one mount cannot
+  // answer "desktop" to the click and "web" to the icon.
+  private displayBridge: DesktopDisplayBridge | null = null;
+  private displayUnsubscribe: (() => void) | null = null;
+
+  // True between sending a mode change and the shell answering. A mode change
+  // is a window transition, so a double-click would otherwise queue a second
+  // one that lands mid-flight and leaves the window where it started.
+  private displayBusy = false;
+
+  // The ceiling on that guard. Without it a bridge that answers neither the
+  // invoke nor the push disables the button for the rest of the match, and in
+  // borderless the button is one of the few ways back to a titled window.
+  private displayCeilingTimer: ReturnType<typeof setTimeout> | undefined;
+
+  // Which write is the live one. Bumped on every click, on every push that
+  // settles a write, and on teardown; mirrors displayRequestId in the Display
+  // tab.
+  //
+  // A boolean alone is not enough once the ceiling exists. When a write
+  // outlives its ceiling the button is handed back, so a SECOND write can
+  // start while the first is still pending -- and when the first finally
+  // answers it would otherwise adopt its now-stale snapshot, clear the second
+  // write's timer, and release the guard on the second write's behalf,
+  // letting a third click overlap it. Everything below no-ops unless it owns
+  // the current operation.
+  private displayOperation = 0;
 
   @state()
   private timer: number = 0;
@@ -121,12 +163,142 @@ export class GameRightSidebar extends LitElement implements Controller {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("fullscreenchange", this.onFullscreenChange);
+    this.connectDisplayBridge();
     this.onFullscreenChange();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener("fullscreenchange", this.onFullscreenChange);
+    this.disconnectDisplayBridge();
+  }
+
+  // ---- Desktop shell window mode ----
+  //
+  // Feature-detected, never version-parsed: desktopDisplay() is null on the
+  // web and on any shell older than the display bridge, and both of those
+  // keep the HTML-fullscreen behaviour below completely unchanged.
+
+  private connectDisplayBridge(): void {
+    const bridge = desktopDisplay();
+    this.displayBridge = bridge;
+    if (bridge === null) return;
+    // Guarded like every other async path here. This one is the slowest to
+    // matter and the easiest to miss: if the player toggles (or F11 pushes)
+    // while the mount read is still in flight, the toggle updates displayMode
+    // and then this read resolves and puts the PRE-toggle value back, leaving
+    // the icon wrong until something else arrives. The same check stops a slow
+    // read writing to an element disconnectDisplayBridge has already torn down.
+    const operation = this.displayOperation;
+    // Called through Promise.resolve() so that a bridge which THROWS rather
+    // than rejecting cannot escape connectedCallback and abort the whole HUD
+    // mount. The bridge is implemented in a separate repository on its own
+    // release schedule, so "it returns a promise" is a claim about it, not a
+    // guarantee -- and the failure mode has to be a dead button, never a
+    // missing sidebar.
+    void Promise.resolve()
+      .then(() => bridge.getPrefs())
+      .then(
+        (snapshot) => {
+          if (operation !== this.displayOperation) return;
+          this.adoptDisplaySnapshot(snapshot);
+        },
+        // No state change: the icon keeps whatever it had until a snapshot we
+        // can actually read turns up.
+        () => undefined,
+      );
+    if (typeof bridge.subscribe !== "function") return;
+    try {
+      this.displayUnsubscribe = bridge.subscribe((snapshot) => {
+        // A push settles a pending write, the same way it does in the Display
+        // tab. The shell emits it as part of applying a change, so by the time
+        // one arrives the transition has happened whether or not the invoke
+        // ever answers -- and waiting out the ceiling after that would leave
+        // the button disabled for up to two seconds with nothing left to wait
+        // for. Guarded on a READABLE snapshot: adoptDisplaySnapshot drops what
+        // it cannot parse, and an unparseable push is not evidence of
+        // anything.
+        if (!isDisplaySnapshot(snapshot)) return;
+        // Settling retires the write, so anything it still had in flight is
+        // answering a question already resolved.
+        this.displayOperation++;
+        this.adoptDisplaySnapshot(snapshot);
+        this.clearDisplayCeiling();
+        this.displayBusy = false;
+      });
+    } catch {
+      this.displayUnsubscribe = null;
+    }
+  }
+
+  private disconnectDisplayBridge(): void {
+    const unsubscribe = this.displayUnsubscribe;
+    this.displayUnsubscribe = null;
+    this.displayBridge = null;
+    this.displayBusy = false;
+    this.displayOperation++;
+    this.clearDisplayCeiling();
+    try {
+      unsubscribe?.();
+    } catch {
+      // Leaving a match must not fail because the shell's unsubscribe did.
+    }
+  }
+
+  private adoptDisplaySnapshot(snapshot: unknown): void {
+    if (!isDisplaySnapshot(snapshot)) return;
+    this.displayMode = snapshot.prefs.mode;
+  }
+
+  /**
+   * Bounds how long a click may leave the button disabled -- the same
+   * treatment the Display tab gives its selects, and for the same reason: the
+   * shell answers both the invoke and the push, so this only fires when
+   * neither arrived, and "waiting" must never become "dead for the match".
+   */
+  private armDisplayCeiling(operation: number): void {
+    this.clearDisplayCeiling();
+    // No ownership check on the callback itself: every path that starts a new
+    // operation clears this timer first, so a stale one cannot fire. The check
+    // belongs on the re-read below, which CAN outlive the operation that asked
+    // for it.
+    this.displayCeilingTimer = setTimeout(() => {
+      this.displayCeilingTimer = undefined;
+      // Re-enabled BEFORE the re-read, not after it: the ceiling has to hold
+      // even when getPrefs never answers either.
+      this.displayBusy = false;
+      const bridge = this.displayBridge;
+      if (bridge === null) return;
+      void Promise.resolve()
+        .then(() => bridge.getPrefs())
+        .then(
+          (snapshot) => {
+            if (operation !== this.displayOperation) return;
+            this.adoptDisplaySnapshot(snapshot);
+          },
+          () => undefined,
+        );
+    }, DISPLAY_SETTLE_TIMEOUT_MS);
+  }
+
+  private clearDisplayCeiling(): void {
+    if (this.displayCeilingTimer === undefined) return;
+    clearTimeout(this.displayCeilingTimer);
+    this.displayCeilingTimer = undefined;
+  }
+
+  /**
+   * What the button is offering: true when it would LEAVE a filled screen.
+   *
+   * On the desktop that is the SHELL's window mode, and `isFullscreen` is
+   * deliberately not consulted. The clan map and anything else that calls
+   * requestFullscreen still fires `fullscreenchange` there, and repainting
+   * this icon from it would report a mode the window is not in.
+   */
+  private get showingFilledScreen(): boolean {
+    return this.displayBridge !== null
+      ? this.displayMode === "borderless"
+      : this.isFullscreen;
   }
 
   getTickIntervalMs() {
@@ -284,6 +456,46 @@ export class GameRightSidebar extends LitElement implements Controller {
   }
 
   private onFullscreenButtonClick() {
+    const bridge = this.displayBridge;
+    if (bridge !== null) {
+      // Toggling the SHELL's window mode rather than the document's
+      // fullscreen state. Calling requestFullscreen here would put the
+      // Electron window into a fullscreen state the shell's stored preference
+      // knows nothing about -- the last remaining way this client could
+      // desync it, and the reason the shell carries a
+      // leave-html-full-screen backstop at all.
+      // One transition at a time. Unlike the Display tab there is no control
+      // to disable here -- it is a single icon -- so the guard is the whole
+      // of the protection against an impatient second click.
+      if (this.displayBusy) return;
+      this.displayBusy = true;
+      this.displayOperation++;
+      const operation = this.displayOperation;
+      this.armDisplayCeiling(operation);
+      const next: DesktopDisplayMode =
+        this.displayMode === "borderless" ? "windowed" : "borderless";
+      // Promise.resolve() for the same reason as the read above: a bridge
+      // that throws synchronously must degrade the button, not blow up a
+      // click handler in the middle of a match.
+      void Promise.resolve()
+        .then(() => bridge.setPrefs({ mode: next }))
+        .then(
+          (snapshot) => {
+            if (operation !== this.displayOperation) return;
+            this.adoptDisplaySnapshot(snapshot);
+          },
+          // The icon keeps showing the mode the window is really in. The
+          // shell answers a patch it refuses with the current state rather
+          // than a rejection, so this is a broken bridge, not a refusal.
+          () => undefined,
+        )
+        .finally(() => {
+          if (operation !== this.displayOperation) return;
+          this.clearDisplayCeiling();
+          this.displayBusy = false;
+        });
+      return;
+    }
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
         console.warn("Failed to enter fullscreen:", err);
@@ -375,14 +587,17 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${settingsIcon} alt="settings" width="20" height="20" />
         </div>
 
-        ${document.fullscreenEnabled && !this.onCrazyGames
+        ${(document.fullscreenEnabled || this.displayBridge !== null) &&
+        !this.onCrazyGames
           ? html`<div
               class="cursor-pointer"
               @click=${this.onFullscreenButtonClick}
             >
               <img
-                src=${this.isFullscreen ? exitFullscreenIcon : fullscreenIcon}
-                alt=${this.isFullscreen
+                src=${this.showingFilledScreen
+                  ? exitFullscreenIcon
+                  : fullscreenIcon}
+                alt=${this.showingFilledScreen
                   ? translateText("fullscreen.exit")
                   : translateText("fullscreen.enter")}
                 width="20"

@@ -33,11 +33,15 @@ vi.mock("../src/client/CrazyGamesSDK", () => ({
 vi.mock("../src/client/SteamSDK", () => ({
   steamSDK: { isOnSteam: () => false, getUser: async () => null },
 }));
-const { showInGameAlert } = vi.hoisted(() => ({
+const { showInGameAlert, showInGameConfirm } = vi.hoisted(() => ({
   showInGameAlert: vi.fn(async (_message: string) => Promise.resolve(true)),
+  showInGameConfirm: vi.fn(async (_message: string, _options?: unknown) =>
+    Promise.resolve(false),
+  ),
 }));
 vi.mock("../src/client/InGameModal", () => ({
-  showInGameConfirm: vi.fn(async () => false),
+  showInGameConfirm: (message: string, options?: unknown) =>
+    showInGameConfirm(message, options),
   showInGameAlert: (message: string) => showInGameAlert(message),
 }));
 // Partial: only translateText is stubbed (echoing keys so assertions read as
@@ -72,6 +76,17 @@ function premiumUser(
   } as unknown as UserMeResponse;
 }
 
+function heldNameUser(): UserMeResponse {
+  return {
+    player: {
+      username: "RyanTheGreat.2222",
+      usernameBase: "RyanTheGreat",
+      usernameStatus: "premium",
+      clans: [],
+    },
+  } as unknown as UserMeResponse;
+}
+
 async function mount(): Promise<UsernameInputEl> {
   const el = document.createElement("username-input") as UsernameInputEl;
   document.body.appendChild(el);
@@ -102,6 +117,8 @@ beforeEach(() => {
     error: null,
   }));
   showInGameAlert.mockClear();
+  showInGameConfirm.mockClear();
+  showInGameConfirm.mockResolvedValue(false);
 });
 
 // Lets a handler's `await getUserMe()` continuation run before asserting.
@@ -1037,5 +1054,47 @@ describe("UsernameInput claim grace, live behaviour", () => {
 
     expect(q(el, ERROR)).not.toBeNull();
     expect(q(el, GRACE)).not.toBeNull();
+  });
+});
+
+// Spec (10 Sept 2026): a subscriber whose bare name someone else holds is not
+// eligible, and the button says why instead of silently doing nothing.
+describe("UsernameInput held bare name", () => {
+  it("does not lock the box to a suffixed account name", async () => {
+    localStorage.setItem("username", "MyCoolName");
+    const el = await mount();
+    await signIn(el, heldNameUser());
+    expect(el.isVerified()).toBe(false);
+    expect(el.getUsername()).toBe("MyCoolName");
+    expect(q(el, TOGGLE)).not.toBeNull();
+  });
+
+  it("explains the held name and offers the rename form", async () => {
+    const el = await mount();
+    await signIn(el, heldNameUser());
+    expect(q(el, TOGGLE)!.getAttribute("title")).toContain(
+      "username.verified_held_hint",
+    );
+
+    showInGameConfirm.mockResolvedValueOnce(true);
+    q(el, TOGGLE)!.click();
+    await settle();
+
+    expect(showInGameConfirm).toHaveBeenCalledTimes(1);
+    expect(showInGameConfirm.mock.calls[0][0]).toContain(
+      'username.verified_held_body:{"name":"RyanTheGreat"}',
+    );
+    expect(window.location.hash).toBe("#modal=change-username");
+    expect(el.isVerified()).toBe(false);
+  });
+
+  it("stays put when the player declines the rename", async () => {
+    const el = await mount();
+    await signIn(el, heldNameUser());
+    window.location.hash = "";
+    q(el, TOGGLE)!.click();
+    await settle();
+    expect(window.location.hash).toBe("");
+    expect(el.isVerified()).toBe(false);
   });
 });
