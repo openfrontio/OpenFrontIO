@@ -584,7 +584,10 @@ export class InputHandler {
       // for hotkey usage, mostly an issue on Firefox.
       // we specifically prevent the Left Alt key to avoid browser menu triggers,
       // but allow Right Alt (often AltGr) to preserve international character input.
-      if (e.code === "AltLeft" || e.code === this.keybinds.altKey) {
+      if (e.altKey ||
+        e.code === this.keybinds.altKey ||
+        e.code === "AltLeft"
+      ) {
         e.preventDefault();
       }
 
@@ -704,8 +707,13 @@ export class InputHandler {
       if (isTextInput && !this.activeKeys.has(e.code)) {
         return;
       }
-
-      if (e.altKey || e.code === this.keybinds.altKey) {
+      // for hotkey usage, mostly an issue on Firefox.
+      // we specifically prevent the Left Alt key to avoid browser menu triggers,
+      // but allow Right Alt (often AltGr) to preserve international character input.
+      if (e.altKey ||
+        e.code === this.keybinds.altKey ||
+        e.code === "AltLeft"
+      ) {
         e.preventDefault();
       }
 
