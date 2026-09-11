@@ -22,6 +22,11 @@ import { ClientEnv } from "../../src/client/ClientEnv";
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
+// Planted in the bodies of the rejected-amount cases: an amount we refused to
+// use is by definition one we did not understand, so none of it may reach a
+// log line.
+const CANARY = "CANARY-9f3c1d";
+
 function respond(status: number, body: unknown) {
   fetchMock.mockResolvedValueOnce(
     new Response(JSON.stringify(body), {
@@ -29,6 +34,16 @@ function respond(status: number, body: unknown) {
       headers: { "content-type": "application/json" },
     }),
   );
+}
+
+// A rejected debt amount warns exactly once, with exactly one argument, and
+// says nothing about the body. The single-argument shape is the OPE-376 rule.
+function expectRejectedAmountWarn() {
+  expect(console.error).not.toHaveBeenCalled();
+  expect(console.warn).toHaveBeenCalledTimes(1);
+  const call = vi.mocked(console.warn).mock.calls[0];
+  expect(call).toHaveLength(1);
+  expect(String(call[0])).not.toContain(CANARY);
 }
 
 describe("tribe-name spend paths map the debt reason", () => {
@@ -67,17 +82,34 @@ describe("tribe-name spend paths map the debt reason", () => {
       });
     });
 
-    // The reason is the branch key; the amount is only there to quote back.
-    // A body without it must still take the debt branch rather than falling
-    // through to a generic failure.
-    it("still reports a debt whose amount is missing", async () => {
-      respond(400, { reason: "insufficient_balance_debt" });
-      expect(await purchaseTribeName("Ninja")).toEqual({
-        ok: false,
-        code: "debt",
-        debt: "",
-      });
-    });
+    // The amount IS the message ("your balance is X in debt"), so a debt we
+    // cannot state is worse than a generic failure — it would render "your
+    // balance is  in debt" at the player. Digits only: the API sends a
+    // stringified positive bigint, so everything else fails closed.
+    it.each([
+      ["missing", {}],
+      ["empty", { debt: "" }],
+      ["not a number", { debt: "lots" }],
+      ["an object", { debt: { amount: 250 } }],
+      ["negative", { debt: "-250" }],
+      // String() would launder both of these into a valid-looking "250".
+      ["a number", { debt: 250 }],
+      ["a one-element array", { debt: ["250"] }],
+    ])(
+      "falls back to a generic failure when the amount is %s",
+      async (_label, extra) => {
+        respond(400, {
+          reason: "insufficient_balance_debt",
+          canary: CANARY,
+          ...extra,
+        });
+        expect(await purchaseTribeName("Ninja")).toEqual({
+          ok: false,
+          code: "failed",
+        });
+        expectRejectedAmountWarn();
+      },
+    );
 
     // Previously this fell into "invalid", which the panel prints verbatim —
     // so the English server string was shown where a shortfall and a top-up
@@ -184,6 +216,34 @@ describe("tribe-name spend paths map the debt reason", () => {
         debt: "80",
       });
     });
+
+    // Same rule as the purchase path. These rows also pin the branch order:
+    // the debt reason is read before the catch-all that turns any other
+    // string reason into insufficient_balance, so a regression that
+    // re-collapsed the two would return insufficient_balance here.
+    it.each([
+      ["missing", {}],
+      ["empty", { debt: "" }],
+      ["not a number", { debt: "lots" }],
+      ["an object", { debt: { amount: 80 } }],
+      ["negative", { debt: "-80" }],
+      ["a number", { debt: 80 }],
+      ["a one-element array", { debt: ["80"] }],
+    ])(
+      "falls back to a generic failure when the amount is %s",
+      async (_label, extra) => {
+        respond(400, {
+          reason: "insufficient_balance_debt",
+          canary: CANARY,
+          ...extra,
+        });
+        expect(await boostTribeName("7", "key")).toEqual({
+          ok: false,
+          code: "failed",
+        });
+        expectRejectedAmountWarn();
+      },
+    );
 
     // This path collapsed every reason string into insufficient_balance,
     // which sends a player with a negative wallet to a top-up dialog that
