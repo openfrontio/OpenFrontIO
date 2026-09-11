@@ -264,14 +264,23 @@ describe("SoundManager", () => {
     expect(factoryHowl.play).toHaveBeenCalledTimes(1);
   });
 
-  it("stops the ambience immediately when the sfx volume is 0", () => {
-    // fade(0, 0, …) never completes in Howler, so a muted player's loop
-    // must be stopped directly instead of after a fade.
+  it("does not load ambience while the sfx volume is 0", () => {
     const bus = new EventBus();
+    howlCtor.mockClear();
+    howlInstances.length = 0;
     new SoundManager(bus, createUserSettings(0, 0));
+    const loadedBefore = howlCtor.mock.calls.length;
     bus.emit(new SetAmbienceEvent("city"));
+    expect(howlCtor).toHaveBeenCalledTimes(loadedBefore);
+  });
+
+  it("stops the ambience directly when cleared while muted", () => {
+    // fade(0, 0, …) never completes in Howler, so a loop cleared while the
+    // player is muted must be stopped directly instead of after a fade.
+    eventBus.emit(new SetAmbienceEvent("city"));
     const ambienceHowl = howlInstances[howlInstances.length - 1];
-    bus.emit(new SetAmbienceEvent(null));
+    eventBus.emit(new SetSoundEffectsVolumeEvent(0));
+    eventBus.emit(new SetAmbienceEvent(null));
     expect(ambienceHowl.stop).toHaveBeenCalled();
   });
 

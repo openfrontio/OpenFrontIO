@@ -101,10 +101,17 @@ describe("SoundEffectController", () => {
   });
 
   it("plays spawn on every spawn placement", () => {
+    game.myPlayer = () => ({});
     controller.init();
     eventBus.emit(new SendSpawnIntentEvent(0 as never));
     eventBus.emit(new SendSpawnIntentEvent(1 as never));
     expect(played).toEqual(["spawn", "spawn"]);
+  });
+
+  it("does not play spawn for spectators", () => {
+    controller.init();
+    eventBus.emit(new SendSpawnIntentEvent(0 as never));
+    expect(played).toEqual([]);
   });
 
   it("plays nuke-warning only for nukes inbound to my player", () => {
@@ -119,6 +126,26 @@ describe("SoundEffectController", () => {
     });
     controller.tick();
     expect(played).toEqual(["nuke-warning"]);
+  });
+
+  it("does not stack nuke warnings within the throttle interval", () => {
+    game.myPlayer = () => ({ smallID: () => 7 });
+    game.inSpawnPhase = () => false;
+    game.updatesSinceLastTick = () => ({
+      [GameUpdateType.UnitIncoming]: [
+        { playerID: 7, messageType: MessageType.NUKE_INBOUND },
+        { playerID: 7, messageType: MessageType.MIRV_INBOUND },
+      ],
+    });
+    controller.tick();
+    tick += 1;
+    controller.tick();
+    expect(played).toEqual(["nuke-warning"]);
+
+    // Once the interval has passed, the next inbound nuke warns again.
+    tick += 10;
+    controller.tick();
+    expect(played).toEqual(["nuke-warning", "nuke-warning"]);
   });
 
   it("plays build sounds only for my own factory and transport ship", () => {
