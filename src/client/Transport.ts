@@ -43,9 +43,10 @@ import {
 } from "../core/ZbinWire";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
+import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
-import { translateText } from "./Utils";
+import { homeHref, translateText } from "./Utils";
 import { PlayerView } from "./view";
 
 export class PauseGameIntentEvent implements GameEvent {
@@ -419,10 +420,14 @@ export class Transport {
     this.isSessionReady = false;
     this.startPing();
     this.killExistingSocket();
-    // WS origin comes from ClientEnv (same-origin on web, audience-derived on
-    // the desktop app://openfront origin), not window.location.host.
-    const workerPath = ClientEnv.workerPath(this.lobbyConfig.gameID);
-    this.socket = new WebSocket(`${ClientEnv.serverWsBase()}/${workerPath}`);
+    // WS origin comes from ClientEnv, resolved per game: the id's letter
+    // names the hosting deployment, so a shared lobby link or rejoin works
+    // from any shell in the fleet. Own/legacy ids keep the historical
+    // behavior (same-origin on web, serverHost on the desktop app).
+    const workerPath = ClientEnv.gameWorkerPath(this.lobbyConfig.gameID);
+    this.socket = new WebSocket(
+      `${ClientEnv.gameWsBase(this.lobbyConfig.gameID)}/${workerPath}`,
+    );
     // Every frame is a zbin payload; without this they would arrive as Blobs.
     this.socket.binaryType = "arraybuffer";
     this.onconnect = onconnect;
@@ -457,7 +462,23 @@ export class Transport {
         this.flushBuffer();
         this.onmessage(msg);
       } catch (e) {
-        console.error("Error in onmessage handler:", e, event.data);
+        // Deliberately NOT the frame. This catch wraps the downstream
+        // handler as well as the decode, so it fires on ordinary
+        // application errors too — and the desktop shell persists
+        // console.error by default, while a lobby_info or start frame
+        // carries the game's group token in the clear. For a decode failure
+        // the size is the part that actually helps.
+        //
+        // The size goes in its own argument rather than interpolated into
+        // the first one: console.* treats argument one as a format string
+        // (%s, %d, %o), so building it from anything that came off the wire
+        // is a format-string sink even when the value can only ever be
+        // digits (CodeQL js/tainted-format-string).
+        const frame =
+          event.data instanceof ArrayBuffer
+            ? `${event.data.byteLength} bytes`
+            : typeof event.data;
+        console.error("Error in onmessage handler:", e, "frame:", frame);
         return;
       }
     };
@@ -494,6 +515,21 @@ export class Transport {
     }
     this.connectionRefused = true;
     this.stopPing();
+    // WrongWorker: the worker says it doesn't own this game, which means
+    // this bundle routed with a stale worker count. One full navigation to
+    // the game's own host re-fetches shell + cluster map and re-resolves;
+    // the sessionStorage latch stops a loop if the fresh map still
+    // misroutes (a real bug), falling through to the dialog instead. Not on
+    // desktop: its shell owns navigation and updates its map at boot.
+    if (reason === CloseReason.WrongWorker && !isDesktopShell()) {
+      const gameID = this.lobbyConfig.gameID;
+      const latch = `wrong-worker-redirect:${gameID}`;
+      if (sessionStorage.getItem(latch) === null) {
+        sessionStorage.setItem(latch, "1");
+        window.location.href = `${ClientEnv.gameHttpBase(gameID)}/game/${gameID}${window.location.search}`;
+        return;
+      }
+    }
     // The reason is a close_reason.* key the server chose. Anything else (a
     // proxy closing on its own, an empty reason) gets the generic text
     // rather than a bare key.
@@ -514,7 +550,7 @@ export class Transport {
       cancelText: translateText("common.close"),
     }).then((goHome) => {
       if (goHome) {
-        window.location.href = "/";
+        window.location.href = homeHref();
       }
     });
   }
@@ -596,6 +632,7 @@ export class Transport {
       turnstileToken: this.lobbyConfig.turnstileToken,
       token: await getPlayToken(),
       spectator: this.lobbyConfig.spectator,
+      gitCommit: ClientEnv.gitCommit(),
     } satisfies ClientJoinMessage);
   }
 
@@ -606,6 +643,7 @@ export class Transport {
       // Note: clientID is not sent - server looks it up from persistentID in token
       lastTurn: lastTurn,
       token: await getPlayToken(),
+      gitCommit: ClientEnv.gitCommit(),
     } satisfies ClientRejoinMessage);
   }
 

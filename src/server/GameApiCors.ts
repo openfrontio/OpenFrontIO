@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { ServerEnv } from "./ServerEnv";
 
 /**
  * Origin the desktop app's renderer runs from. It loads from a privileged
@@ -7,16 +8,31 @@ import type { NextFunction, Request, Response } from "express";
  */
 export const DESKTOP_APP_ORIGIN = "app://openfront";
 
-const ALLOWED_ORIGINS: ReadonlySet<string> = new Set([DESKTOP_APP_ORIGIN]);
+function isAllowedOrigin(origin: string): boolean {
+  if (origin === DESKTOP_APP_ORIGIN) return true;
+  const siteHost = ServerEnv.siteHost();
+  if (siteHost !== undefined && origin === `https://${siteHost}`) return true;
+  // Every deployment host in the fleet: a tab pinned to one deployment
+  // reaches a game on another cross-origin (per-game routing by id letter,
+  // docs/MultiServer.md), so each sibling's origin must be allowed. Own host
+  // included — harmless (same-origin requests skip CORS) and keeps the rule
+  // uniform.
+  return Object.values(ServerEnv.cluster()).some(
+    (entry) => origin === `https://${entry.host}`,
+  );
+}
 
 /**
- * Grant the game server's `/api` routes to the desktop app.
+ * Grant the game server's `/api` routes to the desktop app and to the site
+ * behind the load balancer.
  *
- * The web client is same-origin with the game server and never sends an
- * `Origin` we need to answer. The desktop client is not: its renderer lives on
- * `app://openfront` while the game server is `openfront.io` (or a branch host
- * on dev), so every `/api` call is cross-origin. The POSTs send Authorization
- * and Content-Type, which makes them non-simple, so the browser preflights.
+ * The desktop client's renderer lives on `app://openfront` while the game
+ * server is `openfront.io` (or a branch host on dev), so every `/api` call is
+ * cross-origin. The web client is cross-origin too when the page came from a
+ * load balancer host (`openfront.io`) but the page pins its game server to the
+ * deployment that served it (`blue.openfront.io`, see ServerEnv.publicHost).
+ * The POSTs send Authorization and Content-Type, which makes them non-simple,
+ * so the browser preflights.
  *
  * Deliberately no `Access-Control-Allow-Credentials`: the play token travels
  * in the Authorization header, so nothing here needs cookies, and granting
@@ -30,7 +46,7 @@ export function applyGameApiCorsHeaders(
   // serve one origin's response to another.
   setHeader("Vary", "Origin");
 
-  if (requestOrigin === undefined || !ALLOWED_ORIGINS.has(requestOrigin)) {
+  if (requestOrigin === undefined || !isAllowedOrigin(requestOrigin)) {
     return;
   }
 

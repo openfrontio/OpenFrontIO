@@ -16,6 +16,10 @@ vi.mock("../../src/client/ClientEnv", () => ({
   ClientEnv: {
     workerPath: () => "w0",
     serverWsBase: () => "ws://game.test",
+    gameWorkerPath: () => "w0",
+    gameWsBase: () => "ws://game.test",
+    gameHttpBase: () => "http://game.test",
+    gitCommit: () => "test-commit",
   },
 }));
 vi.mock("../../src/client/Auth", () => ({
@@ -35,6 +39,7 @@ vi.mock("../../src/client/InGameModal", () => ({
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, unknown>) =>
     params === undefined ? key : `${key} ${JSON.stringify(params)}`,
+  homeHref: () => "/",
 }));
 
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";

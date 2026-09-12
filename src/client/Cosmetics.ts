@@ -43,6 +43,17 @@ import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
 
+/**
+ * Ceiling on the cosmetics catalog request. Matches the bound the auth calls
+ * already use (Auth.ts, Api.ts) rather than something tighter: when the
+ * catalog fails to load, getPlayerCosmeticsRefs cannot expand the saved
+ * `pattern:<name>` selection into pattern data, so an online player who is
+ * merely slow rather than offline would join without their territory
+ * pattern. A connection that has not answered in ten seconds is down; one
+ * that answers in eight is not, and should keep its cosmetics.
+ */
+export const COSMETICS_FETCH_TIMEOUT_MS = 10_000;
+
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsCache: Cosmetics | null = null;
@@ -216,10 +227,10 @@ export function handlePurchaseReturn(
  * whole app to its logged-out UI immediately after a successful purchase. A
  * stale balance is much the better failure.
  */
-async function broadcastFreshUserMe(): Promise<void> {
+async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
   invalidateUserMe();
   const fresh = await getUserMe();
-  if (fresh === false) return;
+  if (fresh === false) return false;
   document.dispatchEvent(
     new CustomEvent("userMeResponse", {
       detail: fresh,
@@ -227,6 +238,28 @@ async function broadcastFreshUserMe(): Promise<void> {
       cancelable: true,
     }),
   );
+  // Returned so a caller that also needs the new balance reads the same
+  // profile it just broadcast, rather than re-fetching it separately.
+  return fresh;
+}
+
+// "Insufficient balance" means three different things once the real balance is
+// known, and each needs a different message. Shared by the single-cosmetic and
+// pack paths so they cannot drift apart.
+function balanceOutcome(
+  balance: number,
+  price: number,
+): "debt" | "shortfall" | "unexplained" {
+  // A chargeback landed since the pre-check; topping up cannot clear it.
+  if (balance < 0) return "debt";
+  // The re-read says they can afford it, so there is no shortfall to quote and
+  // inventing one sends them to buy currency they already have.
+  if (price - balance <= 0) return "unexplained";
+  return "shortfall";
+}
+
+function debtMessage(debt: number): string {
+  return translateText("store.pack_debt", { debt: String(debt) });
 }
 
 export async function purchaseCosmetic(
@@ -424,7 +457,19 @@ export async function purchaseCosmetic(
     method === "hard"
       ? (userMe.player.currency?.hard ?? 0)
       : (userMe.player.currency?.soft ?? 0);
-  if (balance < price) {
+  // A charged-back wallet is served as a NEGATIVE balance (the API derives its
+  // own `debt` field as exactly `-hard`), so this — not the server refusal
+  // below — is how a player in debt normally gets here. Without this branch
+  // the negative balance just fails the shortfall check underneath and they
+  // are told "you need 400 more" with a top-up button that cannot clear a
+  // debt. Soft currency can never go negative, so this only fires for hard.
+  if (balance < 0) {
+    await showInGameAlert(debtMessage(-balance));
+    return;
+  }
+  // Built for the pre-check below and reused when the server refuses for the
+  // same reason, so both routes describe the same item the same way.
+  const insufficient = (available: number): InsufficientCurrency => {
     const currencyName = translateText(
       method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
     );
@@ -448,11 +493,17 @@ export async function purchaseCosmetic(
     }
     return {
       currency: currencyName,
-      shortfall: price - balance,
+      // Clamped: the server can refuse on a balance the client still reads as
+      // sufficient, and a zero or negative shortfall reads as "you have
+      // enough", which is the one thing we know is untrue.
+      shortfall: Math.max(1, price - available),
       item: itemName,
       // Only plutonium can be topped up; caps are dismiss-only.
       canTopUp: method === "hard",
     };
+  };
+  if (balance < price) {
+    return insufficient(balance);
   }
 
   const cosmeticType = resolved.type as
@@ -461,15 +512,68 @@ export async function purchaseCosmetic(
     | "flag"
     | "crown"
     | "effect";
-  const success = await purchaseWithCurrency(
+  const result = await purchaseWithCurrency(
     cosmeticType,
     c.name,
     method,
     colorPaletteName,
   );
-  if (!success) {
-    await showInGameAlert(translateText("store.purchase_failed"));
-    return;
+  if (!result.ok) {
+    switch (result.code) {
+      case "insufficient_balance": {
+        // The balance moved since the pre-check: re-read it for the shortfall,
+        // the same way the pack path does. Broadcast as well as re-read —
+        // dropping the cache alone leaves the open Store rendering the old
+        // balance, since it renders from the userMeResponse event.
+        const fresh = await broadcastFreshUserMe();
+        // A failed re-read leaves the real balance unknown. Treating it as
+        // zero would quote the full price as the shortfall — a guess wearing
+        // a number, with a top-up button sized to it.
+        if (fresh === false) {
+          await showInGameAlert(translateText("store.purchase_failed"));
+          return;
+        }
+        const available =
+          method === "hard"
+            ? (fresh.player.currency?.hard ?? 0)
+            : (fresh.player.currency?.soft ?? 0);
+        const outcome = balanceOutcome(available, price);
+        if (outcome === "debt") {
+          await showInGameAlert(debtMessage(-available));
+          return;
+        }
+        if (outcome === "unexplained") {
+          await showInGameAlert(translateText("store.purchase_failed"));
+          return;
+        }
+        return insufficient(available);
+      }
+      case "debt":
+        // A refund or chargeback left the wallet negative. Topping up does not
+        // unblock it, so this gets a plain explanation rather than the
+        // insufficient-currency dialog — the debt settles out of the next
+        // credit. Re-read and re-broadcast so the store stops showing the
+        // pre-chargeback balance: dropping the cache alone would not do it,
+        // since the Store renders from the userMeResponse broadcast.
+        await broadcastFreshUserMe();
+        await showInGameAlert(
+          translateText("store.pack_debt", { debt: result.debt }),
+        );
+        return;
+      case "already_owned":
+        // Either a genuine double-buy or a retry of a purchase that did go
+        // through (the success response was lost): both mean the local
+        // ownership state is stale, so refetch. Mirrors the pack path. No
+        // broadcastFreshUserMe() here — the reload below tears the page down,
+        // so re-dispatching the profile first would be dead work.
+        await showInGameAlert(translateText("store.already_owned"));
+        invalidateUserMe();
+        window.location.reload();
+        return;
+      default:
+        await showInGameAlert(translateText("store.purchase_failed"));
+        return;
+    }
   }
   await showInGameAlert(
     translateText("store.purchase_success", { name: c.name }),
@@ -503,6 +607,13 @@ async function purchasePack(
     canTopUp: true,
   });
   const balance = userMe.player.currency?.hard ?? 0;
+  // Same as the single-cosmetic path: a charged-back wallet arrives here as a
+  // negative balance, and without this it reads as a very large shortfall
+  // with a top-up button that cannot clear a debt.
+  if (balance < 0) {
+    await showInGameAlert(debtMessage(-balance));
+    return;
+  }
   if (balance < pack.priceHard) {
     return insufficient(balance);
   }
@@ -518,14 +629,31 @@ async function purchasePack(
   }
   switch (result.code) {
     case "insufficient_balance": {
-      // The balance moved since the pre-check: re-read it for the shortfall.
-      invalidateUserMe();
-      const fresh = await getUserMe();
-      return insufficient(
-        fresh === false ? 0 : (fresh.player.currency?.hard ?? 0),
-      );
+      // The balance moved since the pre-check: re-read it for the shortfall,
+      // and re-broadcast so the open Store stops showing the old balance.
+      const fresh = await broadcastFreshUserMe();
+      // Unknown balance — no honest number to quote.
+      if (fresh === false) {
+        await showInGameAlert(translateText("store.purchase_failed"));
+        return;
+      }
+      const available = fresh.player.currency?.hard ?? 0;
+      const outcome = balanceOutcome(available, pack.priceHard);
+      if (outcome === "debt") {
+        await showInGameAlert(debtMessage(-available));
+        return;
+      }
+      if (outcome === "unexplained") {
+        await showInGameAlert(translateText("store.purchase_failed"));
+        return;
+      }
+      return insufficient(available);
     }
     case "debt":
+      // Re-read and re-broadcast, not just invalidate: the Store renders from
+      // the userMeResponse broadcast, so dropping the cache alone would leave
+      // it showing the pre-chargeback balance.
+      await broadcastFreshUserMe();
       await showInGameAlert(
         translateText("store.pack_debt", { debt: result.debt }),
       );
@@ -598,7 +726,9 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
   }
   const request = (async () => {
     try {
-      const response = await fetch(`${getApiBase()}/cosmetics.json`);
+      const response = await fetch(`${getApiBase()}/cosmetics.json`, {
+        signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
+      });
       if (!response.ok) {
         console.error(`HTTP error! status: ${response.status}`);
         return null;
@@ -625,6 +755,23 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
     }
   });
   return request;
+}
+
+/**
+ * Warms the two caches every cosmetics resolution reads — the profile and the
+ * catalog — so a later getPlayerCosmetics()/getPlayerCosmeticsRefs() answers
+ * from memory instead of the network.
+ *
+ * Called from paths that are about to need cosmetics but are not ready to wait
+ * for them, so the network time is spent while the player is still choosing
+ * rather than after they commit. Never rejects: both calls already resolve to
+ * a falsy value on failure, and callers fire and forget.
+ */
+export function prewarmCosmetics(): Promise<void> {
+  return Promise.all([getUserMe(), fetchCosmetics()]).then(
+    () => undefined,
+    () => undefined,
+  );
 }
 
 export async function resolveFlagUrl(
@@ -1127,6 +1274,14 @@ export async function getPlayerCosmeticsRefs(
   }
 
   let flag = userSettings.getFlag();
+  // Dropping a flag from this join and erasing the player's saved selection
+  // are two different decisions, and only one of them is reversible. Erase
+  // only on a definite answer — the catalog no longer lists the flag, or the
+  // profile says the player is not entitled. "We could not ask" is not an
+  // answer: getUserMe() returns the same `false` for "signed out" and for a
+  // refused connection, a timed-out request or an expired session, so
+  // treating it as "not entitled" erased saved flags over network failures.
+  let flagDenied = false;
   if (flag?.startsWith("flag:")) {
     const key = flag.slice("flag:".length);
     const flagData = cosmetics?.flags?.[key];
@@ -1134,21 +1289,31 @@ export async function getPlayerCosmeticsRefs(
       // Only clear if cosmetics loaded successfully but the key is missing
       if (cosmetics) {
         flag = null;
+        flagDenied = true;
       }
     } else {
       const userMe = await getUserMe();
-      if (!userMe) {
-        flag = null;
-      } else {
+      if (userMe) {
         const flares = userMe.player.flares ?? [];
         const hasWildcard = flares.includes("flag:*");
         if (!hasWildcard && !flares.includes(`flag:${flagData.name}`)) {
           flag = null;
+          flagDenied = true;
         }
+      } else {
+        // Unknown profile: keep the selection, but do not send it. An
+        // entitlement we cannot verify is not one to claim — the server does
+        // not strip an unowned cosmetic ref, it refuses the connection
+        // (Privilege returns "forbidden", Worker.ts closes the socket with
+        // CosmeticsForbidden), so sending it would trade a lost flag for an
+        // unjoinable multiplayer. The pattern, skin and crown branches nearby
+        // do send theirs on an unknown profile and carry that exposure; this
+        // one deliberately does not.
+        flag = null;
       }
     }
   }
-  if (flag === null) {
+  if (flagDenied) {
     userSettings.clearFlag();
   }
 

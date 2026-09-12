@@ -17,6 +17,7 @@ import {
   WorkerReady,
 } from "./IPCBridgeSchema";
 import { logger } from "./Logger";
+import { ServerEnv } from "./ServerEnv";
 
 // The game config advertised for a listed private lobby: everything the
 // host configured minus host-only fields. The server already rejects
@@ -44,6 +45,10 @@ export class WorkerLobbyService {
   // counts-only delta is enough. Null (not "") is used so that an
   // empty-lobby first broadcast still emits a full.
   private lastFullGameIds: string | null = null;
+  // Deployment-active flag from the master's broadcast (see
+  // MasterLobbiesBroadcastSchema.active). Stamped onto every full snapshot so
+  // pinned tabs on a draining deployment get told to reload.
+  private deploymentActive = true;
 
   constructor(
     private readonly server: http.Server,
@@ -85,6 +90,13 @@ export class WorkerLobbyService {
             game.setListed(false);
             this.log.info(`delisted by master: duplicate creator`, { gameID });
           }
+        }
+        // Flag flips force a full broadcast (by busting the fingerprint):
+        // already-connected clients must hear about a drain promptly, not at
+        // the next structural lobby change.
+        if ((msg.active ?? true) !== this.deploymentActive) {
+          this.deploymentActive = msg.active ?? true;
+          this.lastFullGameIds = null;
         }
         this.lastPublicGames = msg.publicGames;
         // Forward message to all clients
@@ -271,6 +283,8 @@ export class WorkerLobbyService {
             type: "full",
             serverTime: this.lastPublicGames.serverTime,
             games: this.sanitizeGames(this.lastPublicGames.games),
+            gitCommit: ServerEnv.gitCommit(),
+            active: this.deploymentActive,
           } satisfies PublicLobbyMessage),
         );
       }
@@ -322,6 +336,8 @@ export class WorkerLobbyService {
         type: "full",
         serverTime: publicGames.serverTime,
         games: sanitizedGames,
+        gitCommit: ServerEnv.gitCommit(),
+        active: this.deploymentActive,
       };
       this.lastFullGameIds = fingerprint;
     } else {

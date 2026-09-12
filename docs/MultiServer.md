@@ -18,7 +18,7 @@ behavior except the bugs it fixes.
 - **One global pool, no regions.** Demand is diurnally correlated; latency is
   fine for a lockstep RTS behind Argo.
 - **Topology is config.** `cluster.json` maps an instance letter to
-  `{ host, colour, numWorkers }`. Adding a machine = DNS + pool origins + one
+  `{ host, color, numWorkers }`. Adding a machine = DNS + pool origins + one
   config entry + fleet redeploy.
 - **Game IDs route themselves.** Char 0 of a game ID is the minting server's
   instance letter; the rest is random. Any client can resolve any game ID to a
@@ -27,9 +27,9 @@ behavior except the bugs it fixes.
   always serves its own build and its own config, so any misroute
   self-corrects.
 - **Cloudflare:** two LB pools, blue and green, each containing every server
-  as an origin (colour Host header, e.g. `falk2-blue.openfront.io`; Traefik
+  as an origin (color Host header, e.g. `falk2-blue.openfront.io`; Traefik
   routes by Host). Promotion = reorder pools + purge, regardless of fleet
-  size. Colour subdomains are plain proxied DNS records; the LB only matters
+  size. Color subdomains are plain proxied DNS records; the LB only matters
   for fresh page loads — after that the page is pinned via `serverHost`.
 - **Not doing:** coordinator DO / shared roster, geo steering, L7 game proxy,
   relay-in-DO, autoscaling.
@@ -40,26 +40,26 @@ behavior except the bugs it fixes.
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Relationship to open PR #5164                               | **Absorb it.** Fold `t3code/preserve-websocket-old-deployment` (ActiveDeployment, serverHost pinning, drain, version-mismatch join gate) into this work as PR 2 and supersede that PR.                                                                                                                                |
 | New game ID size                                            | **10 chars total** — instance letter + 9 random from the existing 58-symbol alphabet. `GAME_ID_REGEX` widens to a `{8,10}` length range so archived 8-char IDs stay valid. (~0.8 expected archive-key collisions at 200M lifetime games; today's 8-char IDs are already near their first expected collision at ~20M.) |
-| Deployment colour source                                    | **Explicit `colour` field in cluster.json** — read by boot validation, `/api/health`, and the drain check. Subdomain naming is not load-bearing.                                                                                                                                                                      |
+| Deployment color source                                     | **Explicit `color` field in cluster.json** — read by boot validation, `/api/health`, and the drain check. Subdomain naming is not load-bearing.                                                                                                                                                                       |
 | Matchmaking DO re-key (`mode` instead of `instanceId:mode`) | **API-side only.** This repo keeps sending `instance_id` (client join param, worker checkin body); the API just stops keying on it. Zero-coordination rollout.                                                                                                                                                        |
 
 ## cluster.json
 
 ```json
 {
-  "a": { "host": "blue.openfront.io", "colour": "blue", "numWorkers": 16 },
-  "b": { "host": "green.openfront.io", "colour": "green", "numWorkers": 16 }
+  "a": { "host": "blue.openfront.io", "color": "blue", "numWorkers": 16 },
+  "b": { "host": "green.openfront.io", "color": "green", "numWorkers": 16 }
 }
 ```
 
 - Stored in a GitHub Actions var per environment (`CLUSTER_JSON`, replacing
   `NUM_WORKERS`), injected as env at deploy. The build stays
   environment-agnostic.
-- Zod-validated at boot: unique letters, unique hosts, colour ∈
+- Zod-validated at boot: unique letters, unique hosts, color ∈
   {blue, green}. Malformed config refuses to start.
 - A server finds its own entry by matching `SUBDOMAIN.DOMAIN` (when
   `SUBDOMAIN` is empty — dev — the self host is just `DOMAIN`, i.e.
-  `localhost`). That yields its letter (minting), colour (drain), and worker
+  `localhost`). That yields its letter (minting), color (drain), and worker
   count (forking). Refuse boot if absent. No second knob to drift.
 - Delivered to web clients via the RenderHtml bootstrap injection, and served
   at `GET /cluster.json` for the desktop app — which is also the desktop
@@ -82,15 +82,15 @@ tell "I'm stale, reload" from "that game is on another build, redirect".
 
 Hash-routing is only sound where the modulus is frozen for the lifetime of
 everything minted under it. A letter's worker count has exactly that
-lifecycle: its colour drains on every promotion, so the rule "change a
-letter's `numWorkers` only on a deploy after its colour has fully drained"
+lifecycle: its color drains on every promotion, so the rule "change a
+letter's `numWorkers` only on a deploy after its color has fully drained"
 comes free with the blue/green cadence. Routing only matters while a game is
-alive (archived IDs resolve via the API, not workers), so a drained colour's
+alive (archived IDs resolve via the API, not workers), so a drained color's
 count is safe to change.
 
 The fleet has no such freeze. A fleet redeploy synchronizes the _servers_
 onto a new map, but not the two things that actually hold routing state:
-live games straddle the flip on the draining colour for hours, and open
+live games straddle the flip on the draining color for hours, and open
 tabs / desktop apps keep their map for their own lifetime — there is always
 a mixed-map population. Under `hash(id) % numDeployments`, adding a machine
 re-routes existing live games' IDs (shared lobby links and rejoins break at
@@ -116,7 +116,7 @@ Dependency graph (PRs 1–3 are independent of each other):
 ```
 PR 1 (ID widening, soak) ─────────────┐
 PR 2 (absorb #5164) ──┬── PR 4 (cluster.json) ──┬── PR 5 (client routing)
-PR 3 (loud close)     └────────────── PR 6 (colour drain)
+PR 3 (loud close)     └────────────── PR 6 (color drain)
                                        API-side: matchmaking re-key (after PR 5 is broadly deployed)
 ```
 
@@ -190,7 +190,7 @@ returns, leaving the socket open — the client hangs silently.
 The core of the design. On today's two-entry map this is a production no-op
 except for the new ID format.
 
-- `CLUSTER_JSON` env → `ServerEnv`: Zod schema (unique letters/hosts, colour
+- `CLUSTER_JSON` env → `ServerEnv`: Zod schema (unique letters/hosts, color
   enum), self-entry lookup by `SUBDOMAIN.DOMAIN` (bare `DOMAIN` when
   `SUBDOMAIN` is empty), refuse boot when malformed or absent.
 - Delete `NUM_WORKERS` everywhere it lives:
@@ -210,7 +210,7 @@ except for the new ID format.
 - Minting: `generateID()` grows a variant for game IDs — own instance letter
   - 9 random chars; `generateGameIdForWorker` keeps hash-to-self rejection
     sampling over the full 10-char ID. Client IDs stay 8-char.
-- Tests: config validation (dup letters/hosts, bad colour, missing self),
+- Tests: config validation (dup letters/hosts, bad color, missing self),
   self-entry resolution incl. dev, minted IDs match `^<letter>[alphabet]{9}$`
   and hash to the requested worker, RenderHtml injection shape.
 
@@ -235,24 +235,24 @@ except for the new ID format.
   shell repo consumes this separately.
 - Tests: origin resolution per letter, fallback paths, mismatch fork.
 
-### PR 6 — Colour-compare drain check
+### PR 6 — Color-compare drain check
 
 Fixes the false-drain PR 2's mechanism would develop with multiple active
 origins behind the apex: an active server polling the apex often gets a
-_sibling's_ `instanceId` and wrongly concludes it is inactive. Colour is
+_sibling's_ `instanceId` and wrongly concludes it is inactive. Color is
 deployment-wide; instanceId is per-machine.
 
-- `/api/health` reports the deployment `colour` (from the server's own
+- `/api/health` reports the deployment `color` (from the server's own
   cluster entry) alongside `instanceId`.
-- `src/server/ActiveDeployment.ts`: compare colours, not instanceIds — "is
-  the live colour mine?". Null-tolerance semantics unchanged.
-- Draining colours keep their games, stop scheduling public lobbies, and stay
+- `src/server/ActiveDeployment.ts`: compare colors, not instanceIds — "is
+  the live color mine?". Null-tolerance semantics unchanged.
+- Draining colors keep their games, stop scheduling public lobbies, and stay
   addressable forever via the ID letter — which is what fixes shared lobby
   links and mid-match rejoins across a cutover, on one machine or ten.
-- Tests: sibling-same-colour answer does not drain; other-colour answer
+- Tests: sibling-same-color answer does not drain; other-color answer
   drains; null answers never drain.
 
-Depends on PR 2 (ActiveDeployment exists) and PR 4 (colour comes from the
+Depends on PR 2 (ActiveDeployment exists) and PR 4 (color comes from the
 cluster entry).
 
 ### API-side (closed source, not a PR here) — matchmaking DO key
@@ -280,3 +280,53 @@ cannot route it.
 Adding the second machine later is not a code change: DNS records, add the
 machine's blue/green origins to both CF pools, two new cluster.json entries,
 fleet redeploy.
+
+## Runbook: adding a machine (implemented by the multi-host deploy jobs)
+
+All of these are config edits; no code changes.
+
+1. Provision the box; install docker/traefik per the existing host setup.
+2. DNS: `blue2.openfront.io` and `green2.openfront.io` → the new machine.
+3. Secrets: add the machine to `SERVER_HOSTS_JSON`
+   (`{"falk2":"<ip>","nbg2":"<ip>"}`, lowercase keys) — deploy.sh resolves
+   machine names from this directory and keyscans only the machine it is
+   deploying to. Legacy `SERVER_HOST_<NAME>` secrets remain a fallback for
+   local runs, but in CI only `SERVER_HOST_FALK2` is wired through — every
+   other machine must be in the directory.
+4. Vars: append the new letters to every prod `CLUSTER_JSON`
+   (append-only — never reuse a letter), and add the machine to the
+   `DEPLOY_TARGETS_BLUE` and `DEPLOY_TARGETS_GREEN` **repository** vars:
+   `[{"host":"falk2","subdomain":"blue"},{"host":"nbg2","subdomain":"blue2"}]`.
+   Repository-level, not environment-level: GitHub expands a job's matrix
+   before its environment exists, so an environment-scoped var would be
+   invisible there and the jobs would silently deploy only the single-box
+   default. The deploy jobs run one sequential matrix leg per entry, stop
+   the rollout at the first failing machine, and refuse a subdomain whose
+   cluster entry carries the other color.
+5. Cloudflare: add the new blue/green origins to their pools.
+6. Deploy (fleet redeploy so every server sees the new map).
+
+Removal is the reverse, drain-first: drop the machine from the
+`DEPLOY_TARGETS_*` vars and the CF pools, let its letters drain (flip away,
+wait for games to end), then delete its cluster entries and its
+`SERVER_HOSTS_JSON` entry. The letters stay retired forever.
+
+## Future (discussed, not built)
+
+- **Merged public lobby feeds (PR 7, wanted once a color spans 2+
+  machines):** public pools are per-deployment by design, so N machines
+  split the fill funnel N ways. Fix without a coordinator: each master
+  serves `GET /lobbies.json` with ONLY its first-hand sanitized lobbies
+  (loop-proof by construction; `s-maxage=1` so it doubles as a CDN-absorbed
+  client endpoint), and each master polls its same-color siblings (from its
+  own cluster map + color) and folds their lobbies into its broadcast.
+  Zero client changes — the merged list arrives through the existing feed,
+  and joining a foreign lobby already routes by its letter. Null-tolerant
+  like the drain poll: an unreachable sibling just contributes nothing.
+- **Cluster registry:** serve cluster.json from the API/DB (`CLUSTER_URL`),
+  then periodic refresh, then authenticated self-registration on boot. Safe
+  precisely because clients already tolerate stale maps (unknown letter →
+  apex). The registry's job is enforcing the invariants: letters
+  append-only forever, numWorkers immutable while a letter has live games,
+  and membership ≠ liveness (a flapping health check must never shrink the
+  map — removal stays drain-then-delete).

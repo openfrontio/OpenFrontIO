@@ -12,6 +12,8 @@ import {
 } from "../../core/validations/username";
 import { updateUsername, UpdateUsernameResult } from "../Api";
 import { showInGameAlert, showInGameConfirm } from "../InGameModal";
+import { sanitizeAccountPersona } from "../PlayerName";
+import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import { usernameText } from "./ui/UsernameText";
@@ -44,7 +46,45 @@ export class UsernamePanel extends LitElement {
       // Prefill with the base only — never put ".suffix" in the input.
       this.draft = this.player?.usernameBase ?? "";
       this.error = "";
+      if (this.draft === "" && !this.player?.username)
+        void this.seedFromPersona();
     }
+  }
+
+  // A player with no account name at all arrives at an empty form and has to
+  // invent something. Seed it with their Steam persona instead — the name they
+  // already answer to, and the one the claim prompt just told them they could
+  // have.
+  //
+  // Only when the account has no name at all — neither a base NOR a resolved
+  // display name. Both are checked because they can disagree: a response
+  // carrying `username` without `usernameBase` (an older API, a partial
+  // payload) would otherwise read as nameless and seed a persona into the
+  // rename box of a player who already has a name.
+  //
+  // Reduced through sanitizeAccountPersona, not sanitizePersona — the account
+  // charset is narrower than the in-game one, so "Zoë" would otherwise be
+  // seeded into a field that then refuses to save it. A persona with nothing
+  // usable left leaves the field empty; an empty field beats a prefilled error.
+  //
+  // This is a suggestion in a text box and nothing more. It writes no storage
+  // and does not touch the in-game name, so the name the player joins under is
+  // still whatever /users/@me returns after they save (the panel reloads on
+  // success) — never this string.
+  private async seedFromPersona(): Promise<void> {
+    // Only the persona name is read. Nothing else from the Steam identity is
+    // touched here, and none of it is logged.
+    const persona = await steamSDK
+      .getUser()
+      .then((user) => user?.name ?? null)
+      .catch(() => null);
+    const seed = sanitizeAccountPersona(persona);
+    if (seed === null) return;
+    // The player may have started typing, or a fresh profile may have landed,
+    // while getUser() was in flight. Either way the field is no longer ours.
+    if (this.draft !== "") return;
+    if (this.player?.usernameBase || this.player?.username) return;
+    this.draft = seed;
   }
 
   // The date the player may next self-rename, or null when a rename is
@@ -121,19 +161,56 @@ export class UsernamePanel extends LitElement {
     if (!confirmed) return;
 
     this.busy = true;
-    const result = await updateUsername(name);
+    await this.finishSave(name, await updateUsername(name), false);
+  }
 
+  // The second half of a save. `chosenSuffix` is true when the player has
+  // already said yes to the numbered form in this very flow, so the post-save
+  // explanation is not repeated at them.
+  private async finishSave(
+    name: string,
+    result: UpdateUsernameResult,
+    chosenSuffix: boolean,
+  ): Promise<void> {
     if (result.ok) {
-      // A premium player whose bare name is held gets the suffixed form
-      // instead — a 200, not a 409. Say so before the reload: otherwise the
-      // modal simply reopens showing a name they never chose, with nothing to
-      // explain it and their 30-day rename already spent. Awaited so the
-      // reload cannot race the dialog away.
-      await this.warnBareClaimUnavailable(name, result.data);
+      // Against an API that predates the strict rule, a held bare name still
+      // arrives as a 200 that already spent the rename. Say so before the
+      // reload; otherwise the modal reopens on a name they never chose.
+      if (!chosenSuffix) {
+        await this.warnBareClaimUnavailable(name, result.data);
+      }
       // Reload so every consumer starts from a fresh /users/@me; this modal
       // reopens via #modal=change-username showing the new name. Keep the
       // form locked (busy) while the reload happens.
       window.location.reload();
+      return;
+    }
+    if (result.code === "bare_taken" && !chosenSuffix) {
+      // Nothing was written. Offer the numbered form as a choice; "no" leaves
+      // them at the box with their rename unspent (spec, 10 Sept 2026). Keep
+      // the form locked (busy) while the dialog is up so a second Enter
+      // can't start another save underneath it.
+      const takeSuffixed = await showInGameConfirm(
+        translateText("account_modal.username_bare_taken_body", {
+          requested: result.base,
+        }),
+        {
+          heading: translateText("account_modal.username_bare_taken_heading"),
+          variant: "warning",
+          confirmText: translateText(
+            "account_modal.username_bare_taken_confirm",
+          ),
+        },
+      );
+      if (!takeSuffixed) {
+        this.busy = false;
+        return;
+      }
+      await this.finishSave(
+        name,
+        await updateUsername(name, { acceptSuffixed: true }),
+        true,
+      );
       return;
     }
     this.busy = false;
@@ -171,6 +248,8 @@ export class UsernamePanel extends LitElement {
       case "profane":
         return translateText("account_modal.username_error_profane");
       case "taken":
+        return translateText("account_modal.username_error_taken");
+      case "bare_taken":
         return translateText("account_modal.username_error_taken");
       case "cooldown": {
         // Only reachable via a race (e.g. a rename on another device) — the

@@ -12,6 +12,11 @@ export class SettingSelect extends LitElement {
   @property() description = "";
   @property({ type: Array }) options: SelectOption[] = [];
   @property({ type: String }) value = "";
+  // Set while the value is owned by something the page has to wait for — the
+  // Display tab uses it between sending a change to the desktop shell and the
+  // shell reporting back, so a second change cannot be queued against a value
+  // that is still settling.
+  @property({ type: Boolean }) disabled = false;
 
   createRenderRoot() {
     return this;
@@ -52,8 +57,9 @@ export class SettingSelect extends LitElement {
         <div class="relative w-full">
           <select
             id="setting-select-input"
-            class="w-full appearance-none py-2 pl-3 pr-9 border border-white/20 rounded-lg bg-black/40 text-white font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+            class="w-full appearance-none py-2 pl-3 pr-9 border border-white/20 rounded-lg bg-black/40 text-white font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             .value=${String(this.value)}
+            ?disabled=${this.disabled}
             @change=${this.handleChange}
           >
             ${this.options.map(

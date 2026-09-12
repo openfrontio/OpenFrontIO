@@ -25,10 +25,28 @@ export async function renderHtmlContent(htmlPath: string): Promise<string> {
     // refs to use this placeholder.
     cdnBaseRaw: cdnBase,
     gameEnv: JSON.stringify(ServerEnv.gameEnvName()),
-    numWorkers: JSON.stringify(ServerEnv.numWorkers()),
+    // The fleet map plus which entry is this server. Replaces the old
+    // numWorkers scalar: the client derives its own-server worker count from
+    // cluster[instanceLetter], and (PR 5) routes foreign game ids by their
+    // leading letter.
+    cluster: JSON.stringify(ServerEnv.cluster()),
+    instanceLetter: JSON.stringify(ServerEnv.instanceLetter()),
     turnstileSiteKey: JSON.stringify(ServerEnv.turnstileSiteKey()),
     jwtAudience: JSON.stringify(ServerEnv.jwtAudience()),
     instanceId: JSON.stringify(ServerEnv.instanceId()),
+    serverHost:
+      ServerEnv.publicHost() === undefined
+        ? undefined
+        : JSON.stringify(ServerEnv.publicHost()),
+    // The load-balancer apex, when this deployment sits behind one. The
+    // client uses it as the unknown-letter redirect target — the apex shell
+    // always carries the freshest cluster map. Absent for standalone
+    // deployments (beta, branch previews, dev), which have no apex to
+    // bounce to and fall through to their normal not-found flow.
+    siteHost:
+      ServerEnv.siteHost() === undefined
+        ? undefined
+        : JSON.stringify(ServerEnv.siteHost()),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(

@@ -101,8 +101,8 @@ const dumpConsoles = () => {
   );
 };
 
-// The dev game server runs NUM_WORKERS=2; the worker path is derived from
-// the gameId, so just probe both.
+// The dev game server runs 2 workers (ServerEnv's dev-default cluster map);
+// the worker path is derived from the gameId, so just probe both.
 const fetchGameInfo = async (gameId) => {
   for (const worker of ["w0", "w1"]) {
     const res = await fetch(

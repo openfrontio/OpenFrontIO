@@ -5,7 +5,6 @@ import {
   PublicGameType,
   SCHEDULED_PUBLIC_GAME_TYPES,
 } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import {
   InternalGameInfo,
   InternalGameInfoSchema,
@@ -43,6 +42,10 @@ export class MasterLobbyService {
   // delisted.
   private readonly loserStreaks = new Map<string, number>();
   private started = false;
+  // False once the load balancer points at another deployment: this one only
+  // finishes the games it has and stops scheduling public lobbies, so nobody
+  // can farm empty games on the deployment that's being retired.
+  private active = true;
 
   constructor(
     private playlist: MapPlaylist,
@@ -100,6 +103,16 @@ export class MasterLobbyService {
     // This allows for some leeway if a worker crashes.
     const minWorkers = Math.max(ServerEnv.numWorkers() / 2, 1);
     return this.started && this.readyWorkers.size >= minWorkers;
+  }
+
+  setActive(active: boolean) {
+    if (active === this.active) return;
+    this.active = active;
+    this.log.info(
+      active
+        ? "deployment is active again, resuming public lobby scheduling"
+        : "deployment is no longer active, stopping public lobby scheduling",
+    );
   }
 
   private handleWorkerReady(workerId: number) {
@@ -229,6 +242,7 @@ export class MasterLobbyService {
         games,
       },
       delistGameIDs: delist.length > 0 ? delist : undefined,
+      active: this.active,
     } satisfies MasterLobbiesBroadcast;
     for (const [workerId, worker] of this.workers.entries()) {
       worker.send(msg, (e) => {
@@ -264,13 +278,15 @@ export class MasterLobbyService {
         });
       }
 
-      if (lobbies.length >= QUEUED_LOBBIES_PER_TYPE) {
+      // An inactive deployment still starts what it already queued (the
+      // countdown above), it just stops adding to the queue.
+      if (!this.active || lobbies.length >= QUEUED_LOBBIES_PER_TYPE) {
         continue;
       }
 
       this.sendMessageToWorker({
         type: "createGame",
-        gameID: generateID(),
+        gameID: ServerEnv.generateGameId(),
         gameConfig: await this.playlist.gameConfig(type),
         publicGameType: type,
       } satisfies MasterCreateGame);
