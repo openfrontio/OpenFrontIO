@@ -347,6 +347,8 @@ export class JoinLobbyModal extends BaseModal {
                         .clients=${this.players}
                         .lobbyCreatorClientID=${hostClientID}
                         .currentClientID=${this.currentClientID}
+                        .anonymizeNames=${this.gameConfig?.anonymizeNames ??
+                        false}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
                         .isPublicGame=${this.gameConfig?.gameType ===
                         GameType.Public}
