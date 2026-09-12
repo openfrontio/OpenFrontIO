@@ -178,7 +178,18 @@ export class InlineCheckout extends LitElement {
     // A Google login carries its own email (user.google.email, never the
     // top-level field) and already makes the account recoverable — asking
     // again would collect a second, different address on every purchase.
-    return me === false || (!me.user.email && !me.user.google);
+    //
+    // `me === false` is NOT "guest": getUserMe collapses signed-out and any
+    // transient /users/@me failure into the same false (memoized for the
+    // session, except timeouts), and a signed-in buyer can still purchase
+    // through it — checkout auth rides the JWT, not this call. An actual
+    // guest session gets a 200 with an empty user object. So only a real
+    // response saying "no login email" may ask; on "couldn't tell", don't
+    // collect — asking a linked account for an email is the failure mode
+    // this function exists to prevent (and the API refuses that attach
+    // anyway), while a guest purchase without receipt_email merely skips
+    // the recovery attach for that one purchase.
+    return me !== false && !me.user.email && !me.user.google;
   }
 
   private async initWallet(): Promise<void> {

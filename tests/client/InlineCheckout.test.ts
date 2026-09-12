@@ -313,12 +313,25 @@ describe("inline-checkout buyer email", () => {
   const userMeMock = getUserMe as unknown as ReturnType<typeof vi.fn>;
 
   it("asks the wallet sheet for an email only when the account has none", async () => {
+    // A real guest session answers 200 with an empty user object.
     const guest = fakeSession();
     createMock.mockResolvedValue(guest.session);
-    userMeMock.mockResolvedValue(false);
+    userMeMock.mockResolvedValue({ user: {} });
     await renderComponent();
     expect(guest.session.createExpressCheckoutElement).toHaveBeenCalledWith({
       emailRequired: true,
+    });
+
+    // getUserMe() collapses "signed out" and any transient failure into
+    // false, and a signed-in buyer can still purchase through it — never
+    // ask on "couldn't tell", or a linked account gets re-asked.
+    document.body.innerHTML = "";
+    const unknown = fakeSession();
+    createMock.mockResolvedValue(unknown.session);
+    userMeMock.mockResolvedValue(false);
+    await renderComponent();
+    expect(unknown.session.createExpressCheckoutElement).toHaveBeenCalledWith({
+      emailRequired: false,
     });
 
     document.body.innerHTML = "";
@@ -363,7 +376,7 @@ describe("inline-checkout buyer email", () => {
   it("collects an email in the card modal for guests, and gates pay on it", async () => {
     const { session, payment } = fakeSession();
     createMock.mockResolvedValue(session);
-    userMeMock.mockResolvedValue(false);
+    userMeMock.mockResolvedValue({ user: {} });
     const el = await renderComponent();
 
     el.querySelector<HTMLButtonElement>(".purchase-sparkle-btn")!.click();
