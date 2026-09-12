@@ -546,6 +546,7 @@ export class InputHandler {
         clearTimeout(this.longPressTimer);
         this.longPressTimer = null;
       }
+      this.clickHoldCleanup();
       this.longPressActive = false;
       this.suppressNextTap = false;
       if (this.selectionBoxActive || this.multiSelectionActive) {
