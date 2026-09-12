@@ -1,1 +1,1864 @@
+{
+  "id": "world10k",
+  "name": "World 10000",
+  "translation_key": "map.world10k",
+  "categories": ["new", "world"],
+  "nations": [
+    {
+      "coordinates": [6518, 1576],
+      "name": "Kabul",
+      "flag": "af"
+    },
+    {
+      "coordinates": [4764, 1515],
+      "name": "Algiers",
+      "flag": "dz"
+    },
+    {
+      "coordinates": [4658, 1560],
+      "name": "Oran",
+      "flag": "dz"
+    },
+    {
+      "coordinates": [4884, 1524],
+      "name": "Annaba",
+      "flag": "dz"
+    },
+    {
+      "coordinates": [5048, 2830],
+      "name": "Luanda",
+      "flag": "ao"
+    },
+    {
+      "coordinates": [5080, 3000],
+      "name": "Lubango",
+      "flag": "ao"
+    },
+    {
+      "coordinates": [5120, 2930],
+      "name": "Huambo",
+      "flag": "ao"
+    },
+    {
+      "coordinates": [5100, 2794],
+      "name": "Uige",
+      "flag": "ao"
+    },
+    {
+      "coordinates": [3054, 3568],
+      "name": "Buenos Aires",
+      "flag": "ar"
+    },
+    {
+      "coordinates": [2980, 3478],
+      "name": "Cordoba",
+      "flag": "ar"
+    },
+    {
+      "coordinates": [2797, 3897],
+      "name": "Comodoro Rivadavia",
+      "flag": "ar"
+    },
+    {
+      "coordinates": [5912, 1422],
+      "name": "Yerevan",
+      "flag": "am"
+    },
+    {
+      "coordinates": [8682, 3652],
+      "name": "Melbourne",
+      "flag": "au"
+    },
+    {
+      "coordinates": [8856, 3520],
+      "name": "Sydney",
+      "flag": "au"
+    },
+    {
+      "coordinates": [8906, 3379],
+      "name": "Brisbane",
+      "flag": "au"
+    },
+    {
+      "coordinates": [7879, 3500],
+      "name": "Perth",
+      "flag": "au"
+    },
+    {
+      "coordinates": [8505, 3562],
+      "name": "Adelaide",
+      "flag": "au"
+    },
+    {
+      "coordinates": [8733, 3805],
+      "name": "Hobart",
+      "flag": "au"
+    },
+    {
+      "coordinates": [8293, 2939],
+      "name": "Darwin",
+      "flag": "au"
+    },
+    {
+      "coordinates": [8713, 3127],
+      "name": "Townsville",
+      "flag": "au"
+    },
+    {
+      "coordinates": [5125, 1194],
+      "name": "Vienna",
+      "flag": "at"
+    },
+    {
+      "coordinates": [6036, 1416],
+      "name": "Baku",
+      "flag": "az"
+    },
+    {
+      "coordinates": [7140, 1842],
+      "name": "Dhaka",
+      "flag": "bd"
+    },
+    {
+      "coordinates": [7230, 1960],
+      "name": "Chittagong",
+      "flag": "bd"
+    },
+    {
+      "coordinates": [5422, 1032],
+      "name": "Minsk",
+      "flag": "by"
+    },
+    {
+      "coordinates": [4800, 1132],
+      "name": "Brussels",
+      "flag": "be"
+    },
+    {
+      "coordinates": [4760, 2367],
+      "name": "Abomey-calavi",
+      "flag": "bj"
+    },
+    {
+      "coordinates": [2938, 3072],
+      "name": "Santa Cruz de la Sierra",
+      "flag": "bo"
+    },
+    {
+      "coordinates": [2810, 3053],
+      "name": "El Alto",
+      "flag": "bo"
+    },
+    {
+      "coordinates": [3380, 3254],
+      "name": "São Paulo",
+      "flag": "br"
+    },
+    {
+      "coordinates": [3476, 3152],
+      "name": "Belo Horizonte",
+      "flag": "br"
+    },
+    {
+      "coordinates": [3333, 3010],
+      "name": "Brasilia",
+      "flag": "br"
+    },
+    {
+      "coordinates": [3615, 2701],
+      "name": "Fortaleza",
+      "flag": "br"
+    },
+    {
+      "coordinates": [2935, 2676],
+      "name": "Manaus",
+      "flag": "br"
+    },
+    {
+      "coordinates": [3302, 3316],
+      "name": "Curitiba",
+      "flag": "br"
+    },
+    {
+      "coordinates": [3707, 2804],
+      "name": "Recife",
+      "flag": "br"
+    },
+    {
+      "coordinates": [3475, 3233],
+      "name": "Rio de Janeiro",
+      "flag": "br"
+    },
+    {
+      "coordinates": [5322, 1345],
+      "name": "Sofia",
+      "flag": "bg"
+    },
+    {
+      "coordinates": [4615, 2260],
+      "name": "Ouagadougou",
+      "flag": "bf"
+    },
+    {
+      "coordinates": [5500, 2622],
+      "name": "Bujumbura",
+      "flag": "bi"
+    },
+    {
+      "coordinates": [7585, 2216],
+      "name": "Phnom Penh",
+      "flag": "kh"
+    },
+    {
+      "coordinates": [4954, 2550],
+      "name": "Douala",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [5350, 2445],
+      "name": "Yaounde",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2480, 1317],
+      "name": "Toronto",
+      "flag": "ca"
+    },
+    {
+      "coordinates": [2637, 1257],
+      "name": "Montréal",
+      "flag": "ca"
+    },
+    {
+      "coordinates": [1540, 1098],
+      "name": "Calgary",
+      "flag": "ca"
+    },
+    {
+      "coordinates": [1494, 1007],
+      "name": "Edmonton",
+      "flag": "ca"
+    },
+    {
+      "coordinates": [2593, 1277],
+      "name": "Ottawa",
+      "flag": "ca"
+    },
+    {
+      "coordinates": [2760, 745],
+      "name": "Iqaluit",
+      "flag": "ca"
+    },
+    {
+      "coordinates": [5182, 2442],
+      "name": "Bangui",
+      "flag": "cf"
+    },
+    {
+      "coordinates": [5153, 2262],
+      "name": "N'Djamena",
+      "flag": "td"
+    },
+    {
+      "coordinates": [2736, 3536],
+      "name": "Santiago",
+      "flag": "cl"
+    },
+    {
+      "coordinates": [8030, 1690],
+      "name": "Shanghai",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7573, 1686],
+      "name": "Chengdu",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7892, 1428],
+      "name": "Beijing",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7655, 1696],
+      "name": "Chongqing",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7953, 1691],
+      "name": "Nanjing",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7696, 1592],
+      "name": "Xi'an",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7819, 1900],
+      "name": "Hong Kong",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7802, 1711],
+      "name": "Wuhan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [8074, 1361],
+      "name": "Shenyang",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7770, 1781],
+      "name": "Changsha",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7511, 1850],
+      "name": "Kunming",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [8259, 1265],
+      "name": "Harbin",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [8055, 1433],
+      "name": "Dalian",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7942, 1855],
+      "name": "Xiamen",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7686, 1937],
+      "name": "Nanning",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7996, 1526],
+      "name": "Qingdao",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7765, 1497],
+      "name": "Taiyuan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7875, 1573],
+      "name": "Jinan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7652, 1847],
+      "name": "Guiyang",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7754, 1598],
+      "name": "Zhengzhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7974, 1818],
+      "name": "Fuzhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7834, 1790],
+      "name": "Nanchang",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7555, 1438],
+      "name": "Lanzhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [7722, 2013],
+      "name": "Haikou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [2665, 2432],
+      "name": "Bogotá",
+      "flag": "co"
+    },
+    {
+      "coordinates": [2581, 2386],
+      "name": "Medellin",
+      "flag": "co"
+    },
+    {
+      "coordinates": [2560, 2464],
+      "name": "Cali",
+      "flag": "co"
+    },
+    {
+      "coordinates": [2602, 2280],
+      "name": "Barranquilla",
+      "flag": "co"
+    },
+    {
+      "coordinates": [5118, 1252],
+      "name": "Zagreb",
+      "flag": "hr"
+    },
+    {
+      "coordinates": [2444, 1926],
+      "name": "Havana",
+      "flag": "cu"
+    },
+    {
+      "coordinates": [5061, 1150],
+      "name": "Prague",
+      "flag": "cz"
+    },
+    {
+      "coordinates": [5842, 2242],
+      "name": "Djibouti",
+      "flag": "dj"
+    },
+    {
+      "coordinates": [2741, 2039],
+      "name": "Santo Domingo",
+      "flag": "do"
+    },
+    {
+      "coordinates": [5111, 2700],
+      "name": "Kinshasa",
+      "flag": "cd"
+    },
+    {
+      "coordinates": [5313, 2728],
+      "name": "Mbuji-Mayi",
+      "flag": "cd"
+    },
+    {
+      "coordinates": [5450, 2913],
+      "name": "Lubumbashi",
+      "flag": "cd"
+    },
+    {
+      "coordinates": [5391, 2500],
+      "name": "Kisangani",
+      "flag": "cd"
+    },
+    {
+      "coordinates": [5471, 2657],
+      "name": "Bukavu",
+      "flag": "cd"
+    },
+    {
+      "coordinates": [2461, 2629],
+      "name": "Guayaquil",
+      "flag": "ec"
+    },
+    {
+      "coordinates": [2513, 2606],
+      "name": "Quito",
+      "flag": "ec"
+    },
+    {
+      "coordinates": [5552, 1770],
+      "name": "Al-Qahirah",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [5619, 1784],
+      "name": "Sharm el-Sheikh",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [5566, 1691],
+      "name": "Port Said",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [5746, 2144],
+      "name": "Asmara",
+      "flag": "er"
+    },
+    {
+      "coordinates": [5797, 2331],
+      "name": "Addis Ababa",
+      "flag": "et"
+    },
+    {
+      "coordinates": [4741, 1182],
+      "name": "Paris",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [4820, 1326],
+      "name": "Marseille",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [5360, 846],
+      "name": "Helsinki",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [4948, 2577],
+      "name": "Libreville",
+      "flag": "ga"
+    },
+    {
+      "coordinates": [5901, 1384],
+      "name": "Tbilisi",
+      "flag": "ge"
+    },
+    {
+      "coordinates": [5061, 1076],
+      "name": "Berlin",
+      "flag": "de"
+    },
+    {
+      "coordinates": [4960, 1052],
+      "name": "Hamburg",
+      "flag": "de"
+    },
+    {
+      "coordinates": [5002, 1200],
+      "name": "Munich",
+      "flag": "de"
+    },
+    {
+      "coordinates": [4862, 1117],
+      "name": "Cologne",
+      "flag": "de"
+    },
+    {
+      "coordinates": [9588, 3085],
+      "name": "Nadi",
+      "flag": "fj"
+    },
+    {
+      "coordinates": [9588, 3085],
+      "name": "Nadi",
+      "flag": "fj"
+    },
+    {
+      "coordinates": [3277, 732],
+      "name": "Nuuk",
+      "flag": "gl"
+    },
+    {
+      "coordinates": [4654, 2406],
+      "name": "Accra",
+      "flag": "gh"
+    },
+    {
+      "coordinates": [5324, 1478],
+      "name": "Athens",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [5317, 1404],
+      "name": "Thessaloniki",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [2187, 2168],
+      "name": "Guatemala City",
+      "flag": "gt"
+    },
+    {
+      "coordinates": [4307, 2307],
+      "name": "Conakry",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [2684, 2042],
+      "name": "Carrefour",
+      "flag": "ht"
+    },
+    {
+      "coordinates": [2288, 2169],
+      "name": "Tegucigalpa",
+      "flag": "hn"
+    },
+    {
+      "coordinates": [5217, 1212],
+      "name": "Budapest",
+      "flag": "hu"
+    },
+    {
+      "coordinates": [6804, 1760],
+      "name": "New Delhi",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6704, 2030],
+      "name": "Mumbai",
+      "flag": "in"
+    },
+    {
+      "coordinates": [7127, 1898],
+      "name": "Kolkata",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6818, 2200],
+      "name": "Bengaluru",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6886, 2197],
+      "name": "Chennai",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6845, 2070],
+      "name": "Hyderabad",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6682, 1915],
+      "name": "Ahmedabad",
+      "flag": "in"
+    },
+    {
+      "coordinates": [7043, 1832],
+      "name": "Hajipur",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6703, 1980],
+      "name": "Surat",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6769, 1780],
+      "name": "Jaipur",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6785, 2262],
+      "name": "Kozhikode",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6895, 1785],
+      "name": "Lucknow",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6818, 2254],
+      "name": "Coimbatore",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6812, 1920],
+      "name": "Indore",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6877, 1923],
+      "name": "Nagpur",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6787, 1887],
+      "name": "Bhopal",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6962, 2066],
+      "name": "Visakhapatnam",
+      "flag": "in"
+    },
+    {
+      "coordinates": [6897, 2113],
+      "name": "Vijayawada",
+      "flag": "in"
+    },
+    {
+      "coordinates": [7633, 2766],
+      "name": "Jakarta",
+      "flag": "id"
+    },
+    {
+      "coordinates": [7673, 2785],
+      "name": "Bandung",
+      "flag": "id"
+    },
+    {
+      "coordinates": [7777, 2787],
+      "name": "Surabaya",
+      "flag": "id"
+    },
+    {
+      "coordinates": [7389, 2474],
+      "name": "Medan",
+      "flag": "id"
+    },
+    {
+      "coordinates": [7987, 2710],
+      "name": "Makassar",
+      "flag": "id"
+    },
+    {
+      "coordinates": [7578, 2681],
+      "name": "Palembang",
+      "flag": "id"
+    },
+    {
+      "coordinates": [7452, 2546],
+      "name": "Pekanbaru",
+      "flag": "id"
+    },
+    {
+      "coordinates": [7859, 2816],
+      "name": "Denpasar",
+      "flag": "id"
+    },
+    {
+      "coordinates": [7897, 2600],
+      "name": "Samarinda",
+      "flag": "id"
+    },
+    {
+      "coordinates": [7834, 2665],
+      "name": "Banjarmasin",
+      "flag": "id"
+    },
+    {
+      "coordinates": [8481, 2711],
+      "name": "Timika",
+      "flag": "id"
+    },
+    {
+      "coordinates": [4080, 739],
+      "name": "Reykjavik",
+      "flag": "is"
+    },
+    {
+      "coordinates": [6091, 1569],
+      "name": "Tehran",
+      "flag": "ir"
+    },
+    {
+      "coordinates": [6347, 1542],
+      "name": "Mashhad",
+      "flag": "ir"
+    },
+    {
+      "coordinates": [6124, 1665],
+      "name": "Isfahan",
+      "flag": "ir"
+    },
+    {
+      "coordinates": [6031, 1536],
+      "name": "Tabriz",
+      "flag": "ir"
+    },
+    {
+      "coordinates": [6057, 1598],
+      "name": "Qom",
+      "flag": "ir"
+    },
+    {
+      "coordinates": [6047, 1690],
+      "name": "Ahvaz",
+      "flag": "ir"
+    },
+    {
+      "coordinates": [5895, 1612],
+      "name": "Baghdad",
+      "flag": "iq"
+    },
+    {
+      "coordinates": [5973, 1678],
+      "name": "Basra",
+      "flag": "iq"
+    },
+    {
+      "coordinates": [5828, 1504],
+      "name": "Mosul",
+      "flag": "iq"
+    },
+    {
+      "coordinates": [4487, 1046],
+      "name": "Dublin",
+      "flag": "ie"
+    },
+    {
+      "coordinates": [5653, 1660],
+      "name": "Jerusalem",
+      "flag": "il"
+    },
+    {
+      "coordinates": [5035, 1375],
+      "name": "Rome",
+      "flag": "it"
+    },
+    {
+      "coordinates": [4930, 1267],
+      "name": "Milan",
+      "flag": "it"
+    },
+    {
+      "coordinates": [5070, 1401],
+      "name": "Naples",
+      "flag": "it"
+    },
+    {
+      "coordinates": [4562, 2411],
+      "name": "Abidjan",
+      "flag": "ci"
+    },
+    {
+      "coordinates": [8527, 1551],
+      "name": "Tokyo",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [8421, 1577],
+      "name": "Osaka",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [8456, 1562],
+      "name": "Nagoya",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [8286, 1623],
+      "name": "Fukuoka",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [8585, 1348],
+      "name": "Sapporo",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [8339, 1584],
+      "name": "Hiroshima",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [5678, 1650],
+      "name": "Amman",
+      "flag": "jo"
+    },
+    {
+      "coordinates": [6798, 1342],
+      "name": "Almaty",
+      "flag": "kz"
+    },
+    {
+      "coordinates": [6710, 1132],
+      "name": "Astana",
+      "flag": "kz"
+    },
+    {
+      "coordinates": [6643, 1354],
+      "name": "Shymkent",
+      "flag": "kz"
+    },
+    {
+      "coordinates": [5722, 2619],
+      "name": "Nairobi",
+      "flag": "ke"
+    },
+    {
+      "coordinates": [5751, 2699],
+      "name": "Mombasa",
+      "flag": "ke"
+    },
+    {
+      "coordinates": [5669, 2568],
+      "name": "Nakuru",
+      "flag": "ke"
+    },
+    {
+      "coordinates": [5984, 1745],
+      "name": "Hawally",
+      "flag": "kw"
+    },
+    {
+      "coordinates": [6677, 1345],
+      "name": "Bishkek",
+      "flag": "kg"
+    },
+    {
+      "coordinates": [5666, 1596],
+      "name": "Beirut",
+      "flag": "lb"
+    },
+    {
+      "coordinates": [6892, 2370],
+      "name": "Colombo",
+      "flag": "lk"
+    },
+    {
+      "coordinates": [4375, 2378],
+      "name": "Monrovia",
+      "flag": "lr"
+    },
+    {
+      "coordinates": [5046, 1646],
+      "name": "Tripoli",
+      "flag": "ly"
+    },
+    {
+      "coordinates": [5244, 1668],
+      "name": "Benghazi",
+      "flag": "ly"
+    },
+    {
+      "coordinates": [6000, 3107],
+      "name": "Antananarivo",
+      "flag": "mg"
+    },
+    {
+      "coordinates": [5973, 3025],
+      "name": "Mahajanga",
+      "flag": "mg"
+    },
+    {
+      "coordinates": [5891, 3239],
+      "name": "Toliara",
+      "flag": "mg"
+    },
+    {
+      "coordinates": [6039, 2950],
+      "name": "Antsiranana",
+      "flag": "mg"
+    },
+    {
+      "coordinates": [5602, 2991],
+      "name": "Lilongwe",
+      "flag": "mw"
+    },
+    {
+      "coordinates": [7482, 2472],
+      "name": "Kuala Lumpur",
+      "flag": "my"
+    },
+    {
+      "coordinates": [7514, 2501],
+      "name": "Johor Bahru",
+      "flag": "my"
+    },
+    {
+      "coordinates": [7736, 2546],
+      "name": "Kuching",
+      "flag": "my"
+    },
+    {
+      "coordinates": [4491, 2181],
+      "name": "Bamako",
+      "flag": "ml"
+    },
+    {
+      "coordinates": [4248, 2063],
+      "name": "Nouakchott",
+      "flag": "mr"
+    },
+    {
+      "coordinates": [1950, 2015],
+      "name": "Ciudad de México",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1462, 1652],
+      "name": "Tijuana",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1873, 1973],
+      "name": "Leon",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1715, 1657],
+      "name": "Juarez",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1809, 1987],
+      "name": "Guadalajara",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [7564, 1234],
+      "name": "Ulaanbaatar",
+      "flag": "mn"
+    },
+    {
+      "coordinates": [4440, 1648],
+      "name": "Casablanca",
+      "flag": "ma"
+    },
+    {
+      "coordinates": [4520, 1560],
+      "name": "Tangier",
+      "flag": "ma"
+    },
+    {
+      "coordinates": [5559, 3326],
+      "name": "Matola",
+      "flag": "mz"
+    },
+    {
+      "coordinates": [5771, 3020],
+      "name": "Nampula",
+      "flag": "mz"
+    },
+    {
+      "coordinates": [5645, 3129],
+      "name": "Beira",
+      "flag": "mz"
+    },
+    {
+      "coordinates": [7344, 2087],
+      "name": "Yangon",
+      "flag": "mm"
+    },
+    {
+      "coordinates": [7341, 1941],
+      "name": "Mandalay",
+      "flag": "mm"
+    },
+    {
+      "coordinates": [9248, 3189],
+      "name": "Nouméa",
+      "flag": "nc"
+    },
+    {
+      "coordinates": [7034, 1809],
+      "name": "Kathmandu",
+      "flag": "np"
+    },
+    {
+      "coordinates": [4811, 1076],
+      "name": "Amsterdam",
+      "flag": "nl"
+    },
+    {
+      "coordinates": [9514, 3639],
+      "name": "Auckland",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [2284, 2210],
+      "name": "Managua",
+      "flag": "ni"
+    },
+    {
+      "coordinates": [4771, 2185],
+      "name": "Niamey",
+      "flag": "ne"
+    },
+    {
+      "coordinates": [4917, 2260],
+      "name": "Kano",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [4793, 2382],
+      "name": "Lagos",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [4850, 2345],
+      "name": "Ibadan",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [8160, 1450],
+      "name": "Pyongyang",
+      "flag": "kp"
+    },
+    {
+      "coordinates": [4959, 839],
+      "name": "Oslo",
+      "flag": "no"
+    },
+    {
+      "coordinates": [5129, 338],
+      "name": "Longyearbyen",
+      "flag": "no"
+    },
+    {
+      "coordinates": [6287, 1915],
+      "name": "Greater Muscat",
+      "flag": "om"
+    },
+    {
+      "coordinates": [8737, 2827],
+      "name": "Port Moresby",
+      "flag": "pg"
+    },
+    {
+      "coordinates": [8730, 2754],
+      "name": "Lae",
+      "flag": "pg"
+    },
+    {
+      "coordinates": [8969, 2756],
+      "name": "Arawa",
+      "flag": "pg"
+    },
+    {
+      "coordinates": [6545, 1859],
+      "name": "Karachi",
+      "flag": "pk"
+    },
+    {
+      "coordinates": [6667, 1592],
+      "name": "Rawalpindi",
+      "flag": "pk"
+    },
+    {
+      "coordinates": [6656, 1721],
+      "name": "Multan",
+      "flag": "pk"
+    },
+    {
+      "coordinates": [6541, 1700],
+      "name": "Quetta",
+      "flag": "pk"
+    },
+    {
+      "coordinates": [5633, 1681],
+      "name": "Gaza",
+      "flag": "ps"
+    },
+    {
+      "coordinates": [2488, 2311],
+      "name": "Panama City",
+      "flag": "pa"
+    },
+    {
+      "coordinates": [2552, 2902],
+      "name": "Lima",
+      "flag": "pe"
+    },
+    {
+      "coordinates": [2693, 3052],
+      "name": "Arequipa",
+      "flag": "pe"
+    },
+    {
+      "coordinates": [2485, 2785],
+      "name": "Trujillo",
+      "flag": "pe"
+    },
+    {
+      "coordinates": [8023, 2149],
+      "name": "Manila",
+      "flag": "ph"
+    },
+    {
+      "coordinates": [8140, 2373],
+      "name": "Davao",
+      "flag": "ph"
+    },
+    {
+      "coordinates": [5216, 1085],
+      "name": "Warsaw",
+      "flag": "pl"
+    },
+    {
+      "coordinates": [5222, 1155],
+      "name": "Krakow",
+      "flag": "pl"
+    },
+    {
+      "coordinates": [6096, 1858],
+      "name": "Doha",
+      "flag": "qa"
+    },
+    {
+      "coordinates": [5104, 2686],
+      "name": "Brazzaville",
+      "flag": "cg"
+    },
+    {
+      "coordinates": [4962, 2653],
+      "name": "Pointe-Noire",
+      "flag": "cg"
+    },
+    {
+      "coordinates": [5391, 1283],
+      "name": "Bucharest",
+      "flag": "ro"
+    },
+    {
+      "coordinates": [5532, 868],
+      "name": "Saint Petersburg",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [6970, 958],
+      "name": "Novosibirsk",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [6318, 981],
+      "name": "Yekaterinburg",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [5988, 993],
+      "name": "Kazan",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [7380, 998],
+      "name": "Krasnoyarsk",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [5810, 956],
+      "name": "Nizhny Novgorod",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [5766, 1301],
+      "name": "Krasnodar",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [6047, 1096],
+      "name": "Samara",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [5775, 1209],
+      "name": "Rostov-na-Donu",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [6637, 1054],
+      "name": "Omsk",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [5903, 1173],
+      "name": "Volgograd",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [5684, 969],
+      "name": "Moskva",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [8330, 1332],
+      "name": "Vladivostok",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [7830, 1076],
+      "name": "Chita",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [8306, 843],
+      "name": "Yakutsk",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [8611, 1225],
+      "name": "Yuzhno-Sakhalinsk",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [9042, 1053],
+      "name": "Petropavlovsk",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [6554, 944],
+      "name": "Tyumen",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [7067, 576],
+      "name": "Norilsk",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [5508, 2618],
+      "name": "Kigali",
+      "flag": "rw"
+    },
+    {
+      "coordinates": [5977, 1897],
+      "name": "Riyadh",
+      "flag": "sa"
+    },
+    {
+      "coordinates": [5776, 1973],
+      "name": "Mecca",
+      "flag": "sa"
+    },
+    {
+      "coordinates": [6053, 1819],
+      "name": "Dammam",
+      "flag": "sa"
+    },
+    {
+      "coordinates": [5766, 1866],
+      "name": "Medina",
+      "flag": "sa"
+    },
+    {
+      "coordinates": [4239, 2148],
+      "name": "Dakar",
+      "flag": "sn"
+    },
+    {
+      "coordinates": [5245, 1277],
+      "name": "Belgrade",
+      "flag": "rs"
+    },
+    {
+      "coordinates": [4362, 2357],
+      "name": "Kenema",
+      "flag": "sl"
+    },
+    {
+      "coordinates": [7545, 2530],
+      "name": "Singapore",
+      "flag": "sg"
+    },
+    {
+      "coordinates": [5940, 2492],
+      "name": "Mogadishu",
+      "flag": "so"
+    },
+    {
+      "coordinates": [5447, 3310],
+      "name": "Johannesburg",
+      "flag": "za"
+    },
+    {
+      "coordinates": [5203, 3539],
+      "name": "Cape Town",
+      "flag": "za"
+    },
+    {
+      "coordinates": [5514, 3427],
+      "name": "Durban",
+      "flag": "za"
+    },
+    {
+      "coordinates": [5377, 3537],
+      "name": "Port Elizabeth",
+      "flag": "za"
+    },
+    {
+      "coordinates": [8190, 1492],
+      "name": "Seoul",
+      "flag": "kr"
+    },
+    {
+      "coordinates": [8244, 1555],
+      "name": "Busan",
+      "flag": "kr"
+    },
+    {
+      "coordinates": [4577, 1400],
+      "name": "Madrid",
+      "flag": "es"
+    },
+    {
+      "coordinates": [4721, 1380],
+      "name": "Barcelona",
+      "flag": "es"
+    },
+    {
+      "coordinates": [4658, 1458],
+      "name": "Valencia",
+      "flag": "es"
+    },
+    {
+      "coordinates": [4219, 1766],
+      "name": "Las Palmas",
+      "flag": "es"
+    },
+    {
+      "coordinates": [5588, 2122],
+      "name": "Omdurman",
+      "flag": "sd"
+    },
+    {
+      "coordinates": [5371, 2300],
+      "name": "Nyala",
+      "flag": "sd"
+    },
+    {
+      "coordinates": [5154, 885],
+      "name": "Stockholm",
+      "flag": "se"
+    },
+    {
+      "coordinates": [5698, 1592],
+      "name": "Damascus",
+      "flag": "sy"
+    },
+    {
+      "coordinates": [8016, 1881],
+      "name": "Taichung",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [8004, 1931],
+      "name": "Kaohsiung",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [6583, 1473],
+      "name": "Dushanbe",
+      "flag": "tj"
+    },
+    {
+      "coordinates": [5611, 2662],
+      "name": "Mwanza",
+      "flag": "tz"
+    },
+    {
+      "coordinates": [5683, 2713],
+      "name": "Dodoma",
+      "flag": "tz"
+    },
+    {
+      "coordinates": [5763, 2752],
+      "name": "Zanzibar",
+      "flag": "tz"
+    },
+    {
+      "coordinates": [7472, 2170],
+      "name": "Bangkok",
+      "flag": "th"
+    },
+    {
+      "coordinates": [7568, 2115],
+      "name": "Ubon Ratchathani",
+      "flag": "th"
+    },
+    {
+      "coordinates": [7514, 2103],
+      "name": "Khon Kaen",
+      "flag": "th"
+    },
+    {
+      "coordinates": [7444, 2106],
+      "name": "Chiang Mai",
+      "flag": "th"
+    },
+    {
+      "coordinates": [7428, 2332],
+      "name": "Nakhon Si Thammarat",
+      "flag": "th"
+    },
+    {
+      "coordinates": [7452, 2383],
+      "name": "Songkhla",
+      "flag": "th"
+    },
+    {
+      "coordinates": [4521, 2420],
+      "name": "Lome",
+      "flag": "tg"
+    },
+    {
+      "coordinates": [5485, 1400],
+      "name": "Istanbul",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [5576, 1438],
+      "name": "Ankara",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [5430, 1472],
+      "name": "Izmir",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [5527, 1509],
+      "name": "Antalya",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [5777, 1488],
+      "name": "Sanliurfa",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [5652, 1512],
+      "name": "Adana",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [6244, 1472],
+      "name": "Ashgabat",
+      "flag": "tm"
+    },
+    {
+      "coordinates": [5582, 2559],
+      "name": "Kampala",
+      "flag": "ug"
+    },
+    {
+      "coordinates": [5518, 1091],
+      "name": "Kiev",
+      "flag": "ua"
+    },
+    {
+      "coordinates": [5714, 1156],
+      "name": "Kharkiv",
+      "flag": "ua"
+    },
+    {
+      "coordinates": [5528, 1227],
+      "name": "Odessa",
+      "flag": "ua"
+    },
+    {
+      "coordinates": [6222, 1860],
+      "name": "Dubai",
+      "flag": "ae"
+    },
+    {
+      "coordinates": [6165, 1887],
+      "name": "Abu Dhabi",
+      "flag": "ae"
+    },
+    {
+      "coordinates": [4662, 1087],
+      "name": "London",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [4607, 1049],
+      "name": "Birmingham",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [4618, 998],
+      "name": "Leeds",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [2242, 1374],
+      "name": "Chicago",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2055, 1705],
+      "name": "Houston",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1960, 1616],
+      "name": "Dallas",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2452, 1829],
+      "name": "Miami",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2588, 1421],
+      "name": "Philadelphia",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2365, 1617],
+      "name": "Atlanta",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2550, 1427],
+      "name": "Washington DC",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1400, 1581],
+      "name": "Los Angeles",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2648, 1388],
+      "name": "New York",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1567, 1556],
+      "name": "Phoenix",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1924, 1695],
+      "name": "San Antonio",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1297, 1241],
+      "name": "Seatle",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2412, 1718],
+      "name": "Jacksonville",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2428, 1560],
+      "name": "Charlotte",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2398, 1448],
+      "name": "Columbus",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2291, 1464],
+      "name": "Indianapolis",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1305, 1507],
+      "name": "San Francisco",
+      "flag": "us"
+    },
+    {
+      "coordinates": [554, 821],
+      "name": "Anchorage",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1786, 1461],
+      "name": "Denver",
+      "flag": "us"
+    },
+    {
+      "coordinates": [383, 2013],
+      "name": "Hawaii",
+      "flag": "us"
+    },
+    {
+      "coordinates": [3130, 3559],
+      "name": "Montevideo",
+      "flag": "uy"
+    },
+    {
+      "coordinates": [6634, 1425],
+      "name": "Tashkent",
+      "flag": "uz"
+    },
+    {
+      "coordinates": [2688, 2273],
+      "name": "Maracaibo",
+      "flag": "ve"
+    },
+    {
+      "coordinates": [2842, 2283],
+      "name": "Caracas",
+      "flag": "ve"
+    },
+    {
+      "coordinates": [2788, 2339],
+      "name": "Barquisimeto",
+      "flag": "ve"
+    },
+    {
+      "coordinates": [2905, 2359],
+      "name": "Ciudad Guayana",
+      "flag": "ve"
+    },
+    {
+      "coordinates": [7619, 2270],
+      "name": "Ho Chi Minh City",
+      "flag": "vn"
+    },
+    {
+      "coordinates": [7616, 1962],
+      "name": "Hanoi",
+      "flag": "vn"
+    },
+    {
+      "coordinates": [5903, 2176],
+      "name": "Taiz",
+      "flag": "ye"
+    },
+    {
+      "coordinates": [5949, 2108],
+      "name": "Al Hudaydah",
+      "flag": "ye"
+    },
+    {
+      "coordinates": [5460, 3016],
+      "name": "Lusaka",
+      "flag": "zm"
+    },
+    {
+      "coordinates": [5522, 3089],
+      "name": "Harare",
+      "flag": "zw"
+    },
 
+    { "coordinates": [5594, 1573], "name": "Aepeia" },
+    { "coordinates": [5855, 1571], "name": "Akkad" },
+    { "coordinates": [5281, 1455], "name": "Apeitheion" },
+    { "coordinates": [5507, 1744], "name": "Arsinoe" },
+    { "coordinates": [5606, 1381], "name": "Boryza" },
+    { "coordinates": [7583, 2281], "name": "Cattigara" },
+    { "coordinates": [6091, 1546], "name": "Charax" },
+    { "coordinates": [6428, 1432], "name": "Cyropolis" },
+    { "coordinates": [6743, 1989], "name": "Ellora Caves" },
+    { "coordinates": [5071, 1501], "name": "Imachara" },
+    { "coordinates": [4530, 1511], "name": "Lastigi" },
+    { "coordinates": [6785, 2279], "name": "Muziris" },
+    { "coordinates": [6738, 1618], "name": "Boukephala" },
+    { "coordinates": [6759, 1637], "name": "Nikaia" },
+    { "coordinates": [5151, 1225], "name": "Noreia" },
+    { "coordinates": [2237, 2020], "name": "Ocomtún" },
+    { "coordinates": [5859, 1356], "name": "Onoguris" },
+    { "coordinates": [7891, 2821], "name": "Pamatan" },
+    { "coordinates": [2600, 2889], "name": "Peñico" },
+    { "coordinates": [6107, 1702], "name": "Persepolis" },
+    { "coordinates": [2695, 2949], "name": "Sacsayhuamán" },
+    { "coordinates": [4698, 1069], "name": "Sitomagus" },
+    { "coordinates": [1973, 2062], "name": "Teotihuacan" },
+    { "coordinates": [5600, 2072], "name": "Thinis" },
+    { "coordinates": [4928, 1428], "name": "Tibula" },
+    { "coordinates": [5783, 1508], "name": "Waššukanni" },
+
+    {
+      "coordinates": [4964, 5000],
+      "name": "Amundsen–Scott",
+      "flag": "us"
+    },
+    {
+      "coordinates": [3064, 4352],
+      "name": "Villa Las Estrellas",
+      "flag": "cl"
+    },
+    {
+      "coordinates": [5721, 4611],
+      "name": "Showa",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [7542, 4509],
+      "name": "Casey",
+      "flag": "au"
+    },
+    {
+      "coordinates": [1407, 4743],
+      "name": "Rothera",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [8483, 4500],
+      "name": "Dumont d'Urville",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [8113, 4904],
+      "name": "Concordia",
+      "flag": "it"
+    },
+    {
+      "coordinates": [6640, 4891],
+      "name": "Qinling",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [9193, 4820],
+      "name": "Scott Base",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [5117, 4669],
+      "name": "Novolazarevskaya",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [3086, 4393],
+      "name": "Comandante Ferraz",
+      "flag": "br"
+    },
+    {
+      "coordinates": [9270, 4674],
+      "name": "Jang Bogo",
+      "flag": "kr"
+    },
+    {
+      "coordinates": [4588, 4789],
+      "name": "Maitri",
+      "flag": "id"
+    },
+    {
+      "coordinates": [4351, 4624],
+      "name": "Neumayer III",
+      "flag": "de"
+    },
+    {
+      "coordinates": [571, 4826],
+      "name": "Arctowski",
+      "flag": "pl"
+    },
+    {
+      "coordinates": [2897, 4471],
+      "name": "Vernadsky",
+      "flag": "ua"
+    }
+  ],
+
+  "additionalNations": [
+    {
+      "name": "Patrick Plays Badly",
+      "flag": ""
+    },
+    {
+      "name": "TriStar",
+      "flag": ""
+    },
+    {
+      "name": "Crunchyb",
+      "flag": ""
+    },
+    {
+      "name": "FloPinguin",
+      "flag": ""
+    },
+    {
+      "name": "Nikola123",
+      "flag": ""
+    }
+  ],
+
+  "layers": [
+    {
+      "id": "w10kland",
+      "placement": "land",
+      "alpha": 0.75,
+      "nukeable": true
+    },
+    {
+      "id": "w10kwater",
+      "placement": "water",
+      "alpha": 0.3,
+      "nukeable": false
+    }
+  ]
+}
