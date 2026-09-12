@@ -148,6 +148,21 @@ describe("inline-checkout wallet row", () => {
     );
   });
 
+  it("swaps the buy button for a small pay-with-card link once a wallet renders", async () => {
+    const { session, express } = fakeSession();
+    createMock.mockResolvedValue(session);
+    const el = await renderComponent();
+
+    // No wallet yet: the card path is the buy button.
+    expect(el.querySelector(".purchase-sparkle-btn")).toBeTruthy();
+    expect(el.querySelector("[data-pay-with-card]")).toBeNull();
+
+    express.fire("ready", { availablePaymentMethods: { googlePay: true } });
+    await el.updateComplete;
+    expect(el.querySelector(".purchase-sparkle-btn")).toBeNull();
+    expect(el.querySelector("[data-pay-with-card]")).toBeTruthy();
+  });
+
   it("confirms through the session, reports success, and reloads", async () => {
     const { session, express } = fakeSession();
     createMock.mockResolvedValue(session);

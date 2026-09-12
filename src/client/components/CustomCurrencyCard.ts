@@ -97,6 +97,11 @@ export class CustomCurrencyCard extends LitElement {
               class="text-[10px] font-bold leading-none text-white/50 uppercase"
               >${translateText("cosmetics.hard")}</span
             >
+            <span
+              data-custom-currency-price
+              class="pt-0.5 text-sm font-bold leading-none text-blue-300"
+              >${price}</span
+            >
           </div>
 
           <input

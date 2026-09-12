@@ -370,23 +370,39 @@ export class InlineCheckout extends LitElement {
     if (this.portal) {
       litRender(this.modalOpen ? this.renderModal() : html``, this.portal);
     }
-    // The wallet row is collapsed, not reserved: where no wallet exists the
-    // price button alone is the whole dollar line, exactly as before.
+    // The price lives in the tile itself (under the plutonium label), so the
+    // controls here only say HOW to pay. With a wallet button rendered, the
+    // card path shrinks to a small link beneath it; without one, the card
+    // path IS the buy button. The keyless/blocked fallback keeps the price
+    // on the button — it redirects to hosted Checkout, where the payment
+    // method is Stripe's business, not "card".
+    const label = stripeInlineAvailable()
+      ? translateText("store.pay_with_card")
+      : this.priceLabel;
     return html`
       <div class="flex w-full flex-col gap-1">
         <div
           data-express-checkout
           class=${this.walletVisible ? "w-full" : "hidden"}
         ></div>
-        <button
-          class="purchase-sparkle-btn relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center
-           hover:bg-blue-600 hover:border-blue-400 hover:text-white hover:shadow-[0_0_20px_rgba(96,165,250,0.6)] disabled:opacity-50"
-          ?disabled=${this.fallbackBusy || this.confirming}
-          @click=${(e: Event) => this.onPriceClick(e)}
-        >
-          <span class="purchase-sparkle-streak"></span>
-          ${this.priceLabel}
-        </button>
+        ${this.walletVisible
+          ? html`<button
+              data-pay-with-card
+              class="w-full border-0 bg-transparent py-1 text-center text-xs font-semibold text-blue-300 underline underline-offset-2 cursor-pointer transition-colors duration-200 hover:text-white disabled:opacity-50"
+              ?disabled=${this.fallbackBusy || this.confirming}
+              @click=${(e: Event) => this.onPriceClick(e)}
+            >
+              ${translateText("store.pay_with_card")}
+            </button>`
+          : html`<button
+              class="purchase-sparkle-btn relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center
+               hover:bg-blue-600 hover:border-blue-400 hover:text-white hover:shadow-[0_0_20px_rgba(96,165,250,0.6)] disabled:opacity-50"
+              ?disabled=${this.fallbackBusy || this.confirming}
+              @click=${(e: Event) => this.onPriceClick(e)}
+            >
+              <span class="purchase-sparkle-streak"></span>
+              ${label}
+            </button>`}
       </div>
     `;
   }
