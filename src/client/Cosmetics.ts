@@ -24,7 +24,6 @@ import {
 } from "../core/Schemas";
 import {
   changeSubscriptionTier,
-  createCheckoutSession,
   getApiBase,
   getUserMe,
   invalidateUserMe,
@@ -420,19 +419,11 @@ export async function purchaseCosmetic(
       return;
     }
 
-    // Legacy Stripe-only path, deliberately not ported: dollar-priced
-    // cosmetics and flares, which genuinely still need a priceId.
-    const product = "product" in c ? c.product : null;
-    if (!product) {
-      await showInGameAlert(translateText("store.checkout_failed"));
-      return;
-    }
-    const url = await createCheckoutSession(product.priceId, colorPaletteName);
-    if (url === false) {
-      await showInGameAlert(translateText("store.checkout_failed"));
-      return;
-    }
-    window.location.href = url;
+    // Real money only buys plutonium (packs above) or a subscription;
+    // dollar-priced cosmetics/flares and their legacy create-checkout-session
+    // endpoint are gone. Only a stale cached cosmetics.json that still
+    // carries a product block can land here.
+    await showInGameAlert(translateText("store.checkout_failed"));
     return;
   }
 
