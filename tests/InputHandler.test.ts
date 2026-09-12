@@ -1059,7 +1059,7 @@ describe("Click and hold when ghost is bomb", () => {
   test("triggers events on expected timeline when fully stationary", () => {
     vi.useFakeTimers();
     const mockEmit = vi.spyOn(eventBus, "emit");
-    let el = 0;
+    let el = 0; // expected launches
     let multi = 15;
 
     const downEvent = new PointerEvent("pointerdown", {
@@ -1079,7 +1079,7 @@ describe("Click and hold when ghost is bomb", () => {
     ).toHaveLength(el);
 
     vi.advanceTimersByTime(2);
-    el = el + 1;
+    el++;
     expect(
       mockEmit.mock.calls.filter(
         ([event]) => event instanceof ConfirmGhostStructureEvent,
@@ -1087,7 +1087,7 @@ describe("Click and hold when ghost is bomb", () => {
     ).toHaveLength(el);
 
     vi.advanceTimersByTime(inputHandler.HOLD_SECOND_ACTION_DELAY_MS);
-    el = el + 1;
+    el++;
     expect(
       mockEmit.mock.calls.filter(
         ([event]) => event instanceof ConfirmGhostStructureEvent,
@@ -1095,7 +1095,7 @@ describe("Click and hold when ghost is bomb", () => {
     ).toHaveLength(el);
 
     vi.advanceTimersByTime(inputHandler.HOLD_REPEATED_ACTION_TRIGGER_RATE);
-    el = el + 1;
+    el++;
 
     expect(
       mockEmit.mock.calls.filter(
@@ -1125,7 +1125,7 @@ describe("Click and hold when ghost is bomb", () => {
   test("triggers event on expected timeline when drag started after grace period", () => {
     vi.useFakeTimers();
     const mockEmit = vi.spyOn(eventBus, "emit");
-    let el = 0;
+    let el = 0; // expected launches
     let multi = 15;
 
     const downEvent = new PointerEvent("pointerdown", {
@@ -1144,7 +1144,8 @@ describe("Click and hold when ghost is bomb", () => {
 
     inputHandler["onPointerDown"](downEvent);
 
-    vi.advanceTimersByTime(inputHandler.HOLD_POINTER_WAIT_MS - 1);
+    vi.advanceTimersByTime(inputHandler.HOLD_POINTER_WAIT_MS - 2);
+    // right before grace period
     expect(
       mockEmit.mock.calls.filter(
         ([event]) => event instanceof ConfirmGhostStructureEvent,
@@ -1152,8 +1153,9 @@ describe("Click and hold when ghost is bomb", () => {
     ).toHaveLength(el);
 
     vi.advanceTimersByTime(2);
+    // right after grace period, move the mouse
     inputHandler["onPointerMove"](moveEvent);
-    el = el + 1;
+    el++;
     expect(
       mockEmit.mock.calls.filter(
         ([event]) => event instanceof ConfirmGhostStructureEvent,
@@ -1161,7 +1163,7 @@ describe("Click and hold when ghost is bomb", () => {
     ).toHaveLength(el);
 
     vi.advanceTimersByTime(inputHandler.HOLD_SECOND_ACTION_DELAY_MS);
-    el = el + 1;
+    el++;
     expect(
       mockEmit.mock.calls.filter(
         ([event]) => event instanceof ConfirmGhostStructureEvent,
@@ -1169,7 +1171,7 @@ describe("Click and hold when ghost is bomb", () => {
     ).toHaveLength(el);
 
     vi.advanceTimersByTime(inputHandler.HOLD_REPEATED_ACTION_TRIGGER_RATE);
-    el = el + 1;
+    el++;
 
     expect(
       mockEmit.mock.calls.filter(
@@ -1215,9 +1217,11 @@ describe("Click and hold when ghost is bomb", () => {
     });
 
     inputHandler["onPointerDown"](downEvent);
+    vi.advanceTimersByTime(1);
     inputHandler["onPointerMove"](moveEvent);
 
-    vi.advanceTimersByTime(inputHandler.HOLD_POINTER_WAIT_MS - 1);
+    vi.advanceTimersByTime(inputHandler.HOLD_POINTER_WAIT_MS - 2);
+    // still within grace period
     inputHandler["onPointerMove"](moveEvent);
 
     vi.advanceTimersByTime(
