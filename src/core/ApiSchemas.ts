@@ -316,6 +316,40 @@ export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
 
+/**
+ * Is this subscription a GRANT — free access nobody is billing — rather than
+ * something the player bought?
+ *
+ * The one definition, shared by every surface that has to tell the two apart
+ * (OPE-314 hid the account panel's destructive controls on it; OPE-440 turned
+ * the store's dead "Subscribed" tile back into a buy action). It applies the
+ * exact three-state rule documented on `provider` above, so a caller cannot
+ * re-derive a fourth:
+ *
+ *   null      — granted.
+ *   "stripe" / "steam" (or any future rail) — paid.
+ *   undefined — the server predates the field, so we CANNOT tell. Falls back
+ *               to the PAID behaviour, which is the safe side on every
+ *               caller: it keeps Cancel in front of a paying subscriber, and
+ *               it never sends one to a second checkout.
+ *
+ * Spelled out rather than `!sub.provider`, which is true for `undefined` too
+ * and so collapses the two states that must not collapse.
+ *
+ * The explicit null/undefined guard is for the THIRD case — no subscription at
+ * all. `sub?.provider === null` would in fact answer this predicate correctly
+ * (`undefined === null` is false), but it answers by accident: it returns the
+ * same `false` for "pays us" and "has nothing", and those have separate
+ * branches in every caller. The guard names the case instead of relying on two
+ * unrelated states landing on one value.
+ */
+export function isGrantedSubscription(
+  sub: UserSubscription | null | undefined,
+): boolean {
+  if (sub === null || sub === undefined) return false;
+  return sub.provider === null;
+}
+
 // PUT /users/@me/username success payload. `username` is the resolved display
 // form (safe for optimistic UI). The suffix is re-rolled on every rename and
 // the response carries the fresh 30-day cooldown.
