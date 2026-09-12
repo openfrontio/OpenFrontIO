@@ -256,7 +256,7 @@ export class InputHandler {
   private isClickHoldPastGrace = false;
   private clickHoldGrace: ReturnType<typeof setTimeout> | null = null;
   // Wait in MS before starting repeat
-  public readonly HOLD_SECOND_ACTION_DELAY_MS = 1500;
+  public readonly HOLD_SECOND_ACTION_DELAY_MS = 500;
   private clickHoldEnsureIntent: ReturnType<typeof setTimeout> | null = null;
   // Repeated trigger behavior
   public readonly HOLD_REPEATED_ACTION_TRIGGER_RATE = 90; // hold-to-deploy firerate (multiplier affects this)
