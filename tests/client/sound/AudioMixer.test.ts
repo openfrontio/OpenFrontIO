@@ -442,8 +442,8 @@ describe("focus duck", () => {
     globalThis.dispatchEvent(new Event("blur"));
   }
 
-  it("silences flavour but keeps alerts by default", () => {
-    build({ effects: 1, alerts: 1, music: 1 });
+  it("silences flavour but keeps alerts once mute-on-blur is on", () => {
+    build({ effects: 1, alerts: 1, music: 1, muteOnBlur: true });
     blur();
     expect(mixer.volumeFor("effects")).toBe(0);
     expect(mixer.volumeFor("music")).toBe(0);
@@ -451,19 +451,19 @@ describe("focus duck", () => {
   });
 
   it("silences alerts too when the player turns that off", () => {
-    build({ alerts: 1, alertsWhenUnfocused: false });
+    build({ alerts: 1, muteOnBlur: true, alertsWhenUnfocused: false });
     blur();
     expect(mixer.volumeFor("alerts")).toBe(0);
   });
 
-  it("changes nothing when mute-on-blur is off", () => {
+  it("changes nothing when mute-on-blur is off, which is the default", () => {
     build({ effects: 1, muteOnBlur: false });
     blur();
     expect(mixer.volumeFor("effects")).toBeCloseTo(1);
   });
 
   it("restores on refocus", () => {
-    build({ effects: 1 });
+    build({ effects: 1, muteOnBlur: true });
     blur();
     expect(mixer.volumeFor("effects")).toBe(0);
     vi.spyOn(document, "hasFocus").mockReturnValue(true);

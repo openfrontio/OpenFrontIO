@@ -90,6 +90,11 @@ const SPLIT_FROM_SOUND_EFFECTS: readonly AudioCategory[] = [
   "interface",
 ];
 
+function clampVolume(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
 const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
   music: "settings.backgroundMusicVolume",
   effects: "settings.soundEffectsVolume",
@@ -753,16 +758,20 @@ export class UserSettings {
       legacyKey === undefined
         ? AUDIO_DEFAULTS[category]
         : this.getFloat(legacyKey, AUDIO_DEFAULTS[category]);
-    return this.getFloat(`settings.audio.${category}`, fallback);
+    // Clamp on read as well as on write: the legacy keys were never bounded,
+    // so a stored "1.5" would otherwise reach the slider as 150.
+    return clampVolume(this.getFloat(`settings.audio.${category}`, fallback));
   }
 
   setAudioVolume(category: AudioCategory, volume: number): void {
-    const clamped = Math.max(0, Math.min(1, volume));
-    this.setFloat(`settings.audio.${category}`, clamped);
+    this.setFloat(`settings.audio.${category}`, clampVolume(volume));
   }
 
   muteOnBlur(): boolean {
-    return this.getBool("settings.audio.muteOnBlur", true);
+    // Off by default (Josh, 11 Sept 2026): the game keeps playing when the
+    // window loses focus unless the player asks otherwise. alertsWhenUnfocused
+    // stays on, since it only applies once this is turned on.
+    return this.getBool("settings.audio.muteOnBlur", false);
   }
 
   setMuteOnBlur(value: boolean): void {

@@ -578,3 +578,19 @@ describe("getDefaultKeybinds", () => {
     expect(macKeybinds.buildMenuModifier).toBe("MetaLeft");
   });
 });
+
+describe("UserSettings audio volumes", () => {
+  beforeEach(resetUserSettingsState);
+
+  // The rest of the audio settings surface is covered by the branch's own
+  // tests/UserSettings.audio.test.ts; only clamping on read is new here.
+  it("clamps an out-of-range legacy value on read", () => {
+    // setAudioVolume clamps, but the legacy keys it reads through to were
+    // never bounded, and the tab renders 0-100.
+    localStorage.setItem("settings.soundEffectsVolume", "1.5");
+    expect(new UserSettings().audioVolume("effects")).toBe(1);
+
+    localStorage.setItem("settings.backgroundMusicVolume", "-1");
+    expect(new UserSettings().audioVolume("music")).toBe(0);
+  });
+});

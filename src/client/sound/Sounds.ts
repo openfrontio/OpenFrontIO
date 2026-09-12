@@ -149,11 +149,3 @@ export class SetAmbienceEvent implements GameEvent {
     public readonly gain: number = 1,
   ) {}
 }
-
-export class SetSoundEffectsVolumeEvent implements GameEvent {
-  constructor(public readonly volume: number) {}
-}
-
-export class SetBackgroundMusicVolumeEvent implements GameEvent {
-  constructor(public readonly volume: number) {}
-}

@@ -53,7 +53,6 @@ describe("in-game menu opens the shared settings modal", () => {
     pauses = [];
     eventBus.on(PauseGameIntentEvent, (e) => pauses.push(e.paused));
     menu.eventBus = eventBus;
-    settings.eventBus = eventBus;
     menu.init();
     await settle();
   });
