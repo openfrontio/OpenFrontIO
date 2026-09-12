@@ -847,6 +847,11 @@ export class InputHandler {
     }
     this.pointerDown = false;
     this.pointers.clear();
+
+    // prevents double firing from BuildPreviewController if click released previous to intent confirmation
+    if (this.isClickHoldPastGrace && this.isValidGhost()) {
+      this.setGhostStructure(null);
+    }
     this.clickHoldCleanup();
 
     // Clean up long-press state
@@ -1243,26 +1248,25 @@ export class InputHandler {
     return false;
   }
 
-  private clickHold() {
-    // for redefining valid ghosts
-    const isValidTarget = () => {
-      switch (this.uiState.ghostStructure) {
-        case UnitType.AtomBomb:
-        case UnitType.HydrogenBomb:
-          // MIRV seemed excessive to click hold.
-          return true;
-        default:
-          return false;
-      }
-    };
+  private isValidGhost = () => {
+    switch (this.uiState.ghostStructure) {
+      case UnitType.AtomBomb:
+      case UnitType.HydrogenBomb:
+        // MIRV seemed excessive to click hold.
+        return true;
+      default:
+        return false;
+    }
+  };
 
+  private clickHold() {
     // Saves performance via guard clause and prevents some potential bugs
-    if (!isValidTarget()) {
+    if (!this.isValidGhost()) {
       return;
     }
 
     const repeatBehavior = () => {
-      if (isValidTarget()) {
+      if (this.isValidGhost()) {
         this.eventBus.emit(new ConfirmGhostStructureEvent());
       } else {
         this.clickHoldCleanup();

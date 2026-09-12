@@ -1235,6 +1235,46 @@ describe("Click and hold when ghost is bomb", () => {
     expect(confirmCalls).toHaveLength(0);
     vi.useRealTimers();
   });
+
+  test("does not double fire when HOLD_POINTER_WAIT_MS < onPointerUp < HOLD_SECOND_ACTION_DELAY_MS", () => {
+    vi.useFakeTimers();
+    const mockEmit = vi.spyOn(eventBus, "emit");
+    let el = 1; // expected launches
+
+    const downEvent = new PointerEvent("pointerdown", {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    const upEvent = new PointerEvent("pointerup", {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    inputHandler["onPointerDown"](downEvent);
+    vi.advanceTimersByTime(inputHandler.HOLD_POINTER_WAIT_MS + 1);
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.advanceTimersByTime(1);
+    inputHandler["onPointerUp"](upEvent);
+    vi.advanceTimersByTime(inputHandler.HOLD_REPEATED_ACTION_TRIGGER_RATE - 3);
+
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.useRealTimers();
+  });
 });
 
 describe("Warship box selection (Shift+drag)", () => {
