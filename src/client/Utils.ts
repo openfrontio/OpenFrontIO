@@ -479,6 +479,27 @@ function getCachedLangSelector(): LangSelector | null {
   return found;
 }
 
+/** Language codes whose script reads right-to-left (resources/lang/metadata.json). */
+const RTL_LANGUAGES = new Set(["ar", "fa", "he"]);
+
+/**
+ * True when the given language renders right-to-left. Defaults to the
+ * currently selected UI language, so callers can simply write `isRTL()`.
+ */
+export const isRTL = (lang?: string): boolean => {
+  const code = (lang ?? getCachedLangSelector()?.currentLang ?? "en").split(
+    "-",
+  )[0];
+  return RTL_LANGUAGES.has(code);
+};
+
+/**
+ * Value for the HTML `dir` attribute matching the current UI language.
+ * Apply it to containers whose text comes from translateText() so Persian,
+ * Arabic and Hebrew render right-to-left with correct mixed-content ordering.
+ */
+export const textDirection = (): "rtl" | "ltr" => (isRTL() ? "rtl" : "ltr");
+
 export const translateText = (
   key: string,
   params?: Record<string, string | number>,

@@ -31,7 +31,11 @@ import {
   type DesktopDisplayPrefsPatch,
   type DesktopDisplaySnapshot,
 } from "./DesktopDisplay";
-import { isDesktopShell } from "./DesktopShell";
+import {
+  desktopQuit,
+  isDesktopShell,
+  requestDesktopQuit,
+} from "./DesktopShell";
 import { pushMapLayerState } from "./MapLayerSettings";
 import { Platform } from "./Platform";
 import {
@@ -913,9 +917,11 @@ export class UserSettingModal extends BaseModal {
         `;
 
     // Before the first snapshot arrives there is nothing truthful to select,
-    // so the controls are withheld rather than rendered empty. The hint is
-    // true either way.
-    if (snapshot === null) return html`${f11Hint}`;
+    // so the controls are withheld rather than rendered empty. The hint and
+    // the Quit button are true either way -- neither reads the snapshot, and
+    // withholding the way out while waiting on an unrelated IPC read would be
+    // exactly backwards.
+    if (snapshot === null) return html`${f11Hint}${this.renderQuitControl()}`;
 
     const displays = snapshot.displays;
     const selectedId = selectedDisplayId(snapshot);
@@ -973,8 +979,61 @@ export class UserSettingModal extends BaseModal {
             ></setting-select>
           `
         : null}
+      ${this.renderQuitControl()}
     `;
   }
+
+  /**
+   * The in-app way out (OPE-402).
+   *
+   * On the Display tab because that is where the window itself is controlled,
+   * and because the player this exists for is already here: borderless is the
+   * default, it removes the title bar, and switching back to Windowed is the
+   * other thing they came to this tab to do. Nothing else in the settings
+   * modal is about the window.
+   *
+   * DELIBERATELY NO CONFIRMATION. The action is identical to closing the
+   * window, which has never asked — and a confirm on one and not the other
+   * makes two spellings of the same thing behave differently. A single-player
+   * match is lost either way, and leaving a multiplayer game is already
+   * ordinary. What a confirm actually guards against is an accidental click,
+   * and there is no accidental path to a button three levels in (cog →
+   * settings → Display); the separator and the destructive colouring below do
+   * that job without putting a dialog between the player and the exit they
+   * went looking for.
+   *
+   * Renders nothing on the web, on CrazyGames and on a shell too old to
+   * expose quit() — desktopQuit() is already null in all three, which is the
+   * same feature-detection rule the Display tab applies to desktopDisplay().
+   * Checked here rather than folded into the tab's own gate on purpose: the
+   * two detect different bridge methods, and the shell currently in the depot
+   * has display.* without quit().
+   */
+  private renderQuitControl() {
+    if (desktopQuit() === null) return nothing;
+    return html`
+      <div class="mt-4 pt-4 border-t border-white/10">
+        <button
+          id="desktop-quit-button"
+          class="flex flex-row items-center justify-between w-full p-4 bg-red-500/10 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-all gap-4 text-left"
+          @click=${this.handleQuit}
+        >
+          <div class="flex flex-col flex-1 min-w-0">
+            <div class="text-red-200 font-bold text-base block mb-1">
+              ${translateText("user_setting.quit_label")}
+            </div>
+            <div class="text-white/50 text-sm leading-snug">
+              ${translateText("user_setting.quit_desc")}
+            </div>
+          </div>
+        </button>
+      </div>
+    `;
+  }
+
+  private handleQuit = () => {
+    requestDesktopQuit();
+  };
 
   private renderKeybindSettings() {
     return html`

@@ -44,7 +44,7 @@ function roster(): Client[] {
       null,
       "alice-pub",
       ["bob-pub"],
-      // Join-time validated cosmetics (enforceVerifiedBadge already ran).
+      // Join-time resolved cosmetics (resolveVerifiedJoin already ran).
       { verified: true },
     ),
     makeClient("bob", "bob-pid", "BobReal", "BBB", null, "bob-pub"),

@@ -1,6 +1,7 @@
 /**
  * Golden-value tests for the trade-ship and train economy formulas:
- * `Config.tradeShipGold`, `Config.tradeShipSpawnRate`, `Config.trainGold`
+ * `Config.tradeShipGold`, `Config.tradeShipSaturation`,
+ * `Config.tradeShipSpawnRate`, `Config.trainGold`, `Config.trainSaturation`
  * and `Config.trainSpawnRate`.
  *
  * These pin the *exact* numeric output of each formula across a grid of
@@ -33,6 +34,10 @@ const DISTANCES = [
   5_000,
 ];
 
+function sig(x: number): number {
+  return Number(x.toPrecision(4));
+}
+
 describe("trade ship golden values", () => {
   test("tradeShipGold: distance sweep", () => {
     const table: Record<string, bigint> = {};
@@ -59,6 +64,20 @@ describe("trade ship golden values", () => {
       500,
       player(false),
     );
+    expect(table).toMatchSnapshot();
+  });
+
+  test("tradeShipSaturation: fleet-size sweep", () => {
+    // >1 boosts spawning while the world fleet is tiny, ~1 around 50
+    // ships, damping past the ~230-ship capacity midpoint onto the 0.25
+    // plateau (~310+ ships), which the ~800-ship hard cap collapses. The
+    // pity timer square-roots the realized spawn-frequency effect.
+    const table: Record<string, number> = {};
+    for (const ships of [
+      0, 25, 50, 100, 150, 200, 250, 300, 400, 500, 700, 800, 1_000, 1_500,
+    ]) {
+      table[`ships=${ships}`] = sig(config.tradeShipSaturation(ships));
+    }
     expect(table).toMatchSnapshot();
   });
 
@@ -116,12 +135,29 @@ describe("train golden values", () => {
     expect(table).toMatchSnapshot();
   });
 
-  test("trainSpawnRate: factory count sweep", () => {
+  test("trainSaturation: global train sweep", () => {
+    // Counted in Train units (~7 per train). >1 boosts spawning only for
+    // the very first trains, ~1 around 35 units (~5 trains), damping past
+    // the ~300-unit capacity midpoint onto the ~0.25 plateau (~460+
+    // units), which the ~900-unit hard cap collapses.
+    const table: Record<string, number> = {};
+    for (const units of [
+      0, 7, 35, 70, 140, 250, 400, 600, 800, 900, 1_200, 1_600,
+    ]) {
+      table[`trainUnits=${units}`] = sig(config.trainSaturation(units));
+    }
+    expect(table).toMatchSnapshot();
+  });
+
+  test("trainSpawnRate: factory count × global trains grid", () => {
     // Probability of a spawn per check is 1 / trainSpawnRate, per station
     // level. Expected trains ≈ numFactories / trainSpawnRate(numFactories).
     const table: Record<string, number> = {};
     for (const factories of [0, 1, 2, 5, 10, 20, 50, 100, 500]) {
-      table[`factories=${factories}`] = config.trainSpawnRate(factories);
+      for (const trainUnits of [0, 35, 300]) {
+        table[`factories=${factories} trainUnits=${trainUnits}`] =
+          config.trainSpawnRate(factories, trainUnits);
+      }
     }
     expect(table).toMatchSnapshot();
   });
