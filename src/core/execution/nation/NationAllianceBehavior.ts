@@ -17,6 +17,7 @@ import {
   EMOJI_SCARED_OF_THREAT,
   NationEmojiBehavior,
 } from "./NationEmojiBehavior";
+import { findJuiciestTarget } from "./NationUtils";
 
 export class NationAllianceBehavior {
   constructor(
@@ -368,25 +369,27 @@ export class NationAllianceBehavior {
     return hasComparableTroops || hasComparableTiles;
   }
 
-  maybeBetray(otherPlayer: Player, borderingPlayerCount: number): boolean {
+  // juiciestAlly comes from findJuiciestAlly(borderingFriends) - callers looping
+  // over borderingFriends should compute it once, not on every call
+  maybeBetray(
+    otherPlayer: Player,
+    juiciestAlly: Player | null,
+    borderingFriends: Player[],
+    borderingEnemies: Player[],
+  ): boolean {
     if (!this.player.isAlliedWith(otherPlayer)) return false;
 
     const { difficulty } = this.game.config().gameConfig();
 
-    // Betray very weak players (For example MIRVed ones)
-    if (difficulty !== Difficulty.Easy && difficulty !== Difficulty.Medium) {
-      const otherPlayerMaxTroops = this.game.config().maxTroops(otherPlayer);
-      const otherPlayerOutgoingTroops = otherPlayer
-        .outgoingAttacks()
-        .reduce((sum, attack) => sum + attack.troops(), 0);
-      if (
-        otherPlayer.troops() + otherPlayerOutgoingTroops <
-          otherPlayerMaxTroops * 0.2 &&
-        otherPlayer.troops() < this.player.troops()
-      ) {
-        this.betray(otherPlayer);
-        return true;
-      }
+    // Betray our juiciest ally (e.g. a MIRVed one), if it's safe to do so (everybody around us is weak)
+    if (
+      (difficulty === Difficulty.Hard ||
+        difficulty === Difficulty.Impossible) &&
+      juiciestAlly === otherPlayer &&
+      this.isSafeToBetray(otherPlayer, borderingFriends, borderingEnemies)
+    ) {
+      this.betray(otherPlayer);
+      return true;
     }
 
     // Betray very weak players (similar check as above but for the easier difficulties)
@@ -417,7 +420,7 @@ export class NationAllianceBehavior {
     // Betray our only bordering player if we are much stronger than them
     if (
       difficulty !== Difficulty.Easy &&
-      borderingPlayerCount === 1 &&
+      borderingFriends.length + borderingEnemies.length === 1 &&
       otherPlayer.troops() * 3 < this.player.troops()
     ) {
       this.betray(otherPlayer);
@@ -425,6 +428,36 @@ export class NationAllianceBehavior {
     }
 
     return false;
+  }
+
+  // Juiciest ally regardless of strength; isSafeToBetray() rejects the too-strong ones
+  findJuiciestAlly(borderingFriends: Player[]): Player | null {
+    const candidates = borderingFriends.filter((friend) =>
+      this.player.isAlliedWith(friend),
+    );
+    return findJuiciestTarget(this.game, candidates);
+  }
+
+  // Safe if target + non-allied neighbors + (unless target's already a traitor,
+  // since betraying them wouldn't make us one) our other allies stay under a third of our troops
+  private isSafeToBetray(
+    target: Player,
+    borderingFriends: Player[],
+    borderingEnemies: Player[],
+  ): boolean {
+    const otherAllies = target.isTraitor()
+      ? []
+      : borderingFriends.filter(
+          (f) => f !== target && this.player.isAlliedWith(f),
+        );
+    const threats = [target, ...borderingEnemies, ...otherAllies];
+    const nearbyThreatTroops = threats.reduce((sum, threat) => {
+      const outgoing = threat
+        .outgoingAttacks()
+        .reduce((s, attack) => s + attack.troops(), 0);
+      return sum + threat.troops() + outgoing;
+    }, 0);
+    return nearbyThreatTroops < this.player.troops() * 0.33;
   }
 
   private betray(target: Player): void {
