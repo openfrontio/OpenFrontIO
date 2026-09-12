@@ -367,3 +367,65 @@ describe("MatchmakingModal identity gate", () => {
     expect(modal.isOpen()).toBe(false);
   });
 });
+
+/**
+ * What close() actually does, as opposed to who calls it.
+ *
+ * Main.blockedJoin calls this modal's close() when it refuses a matchmade
+ * join (OPE-439), and the test for that spies on close() because its claim is
+ * which joins reach it. That spy is only worth anything if the real close()
+ * genuinely takes the player out of the queue -- so that half is pinned here,
+ * against a real modal and its real socket, where it belongs.
+ *
+ * The queue is in-memory on the server and keyed to the socket, so "left the
+ * queue" IS "the socket is shut". The timers matter just as much: the
+ * watchdog exists to reconnect through a dropped connection, and a watchdog
+ * left running after a close would put the player straight back in the queue
+ * they just left.
+ */
+describe("MatchmakingModal.close() teardown", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    sockets.length = 0;
+    apiMocks.getUserMe.mockReset();
+    apiMocks.invalidateUserMe.mockReset();
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("shuts the queue socket and cancels the watchdog", async () => {
+    apiMocks.getUserMe.mockResolvedValue(userMe());
+    const { modal, socket } = await openAndJoin("1v1");
+    expect(socket.readyState).toBe(FakeWebSocket.OPEN);
+
+    modal.close();
+
+    expect(socket.readyState).toBe(FakeWebSocket.CLOSED);
+    // The watchdog fires after 15s of server silence and reconnects, which
+    // would open a second socket and re-queue the player. Well past that and
+    // past every reconnect backoff, there is still only the one.
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("does not reconnect when the server's close frame lands afterwards", async () => {
+    // Shutting a socket produces a close frame, and the ordinary handling of
+    // one is "the service restarted, rejoin". After a deliberate close that
+    // would silently put the player back in the queue they were just taken
+    // out of, which is the failure mode intentionalClose exists to prevent.
+    apiMocks.getUserMe.mockResolvedValue(userMe());
+    const { modal, socket } = await openAndJoin("1v1");
+
+    modal.close();
+    socket.serverClose(1011, "");
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(sockets).toHaveLength(1);
+  });
+});
