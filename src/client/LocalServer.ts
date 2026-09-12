@@ -102,7 +102,7 @@ export class LocalServer {
         Date.now() > this.turnStartTime + turnIntervalMs
       ) {
         this.turnStartTime = Date.now();
-        // End turn on the server means the client will start processing the turn.
+        // "Ending" the turn hands it to the client, which starts processing it.
         this.endTurn();
       }
     }, 5);

@@ -645,9 +645,6 @@ export function getTranslatedPlayerTeamLabel(
   return translated === translationKey ? team : translated;
 }
 
-/**
- * Severity colors mapping for message types
- */
 export const severityColors: Record<string, string> = {
   fail: "text-red-400",
   warn: "text-yellow-400",
@@ -658,9 +655,7 @@ export const severityColors: Record<string, string> = {
 };
 
 /**
- * Gets the CSS classes for styling message types based on their severity
- * @param type The message type to get styling for
- * @returns CSS class string for the message type
+ * Maps a message type to the Tailwind text-color class of its severity.
  */
 export function getMessageTypeClasses(type: MessageType): string {
   switch (type) {
