@@ -39,7 +39,7 @@ import { showInGameAlert } from "./InGameModal";
 import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
-import { translateText } from "./Utils";
+import { currentPagePath, translateText } from "./Utils";
 
 // Each login refusal says its own thing. Sharing one string was fine while
 // email_exists was the only recognised result; a player refused because their
@@ -613,7 +613,7 @@ export class AccountModal extends BaseModal {
   private async viewGame(gameId: string): Promise<void> {
     this.close();
     const encodedGameId = encodeURIComponent(gameId);
-    const newUrl = ClientEnv.gamePath(gameId);
+    const newUrl = currentPagePath(ClientEnv.gamePath(gameId));
 
     history.pushState({ join: gameId }, "", newUrl);
     window.dispatchEvent(

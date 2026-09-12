@@ -581,11 +581,18 @@ parses has to account for it.
 - **Staying put:** every `history.pushState` / `replaceState` builds from
   `window.location.pathname` (`ModalRouter`, `consumeRequeueUrl`), or from
   `currentPagePath()` (`src/client/Utils.ts`), which re-applies the page's own
-  `/v/<commit>/` to a path built from scratch — the in-game `?live` entry,
-  the share-URL rewrite, the invite navigation. A history entry is this tab's
+  `/v/<commit>/` to a path built from scratch. A history entry is this tab's
   own URL, so F5 on it must reload THE BUNDLE THIS PAGE IS RUNNING; a
-  version-free entry would hand a pinned player `latest` mid-game. That is
-  the opposite of what a share link wants, hence two rules.
+  version-free entry would hand a pinned player `latest` mid-game. Six places
+  build a game path from scratch; five of them use it: the in-game `?live`
+  entry, the invite navigation, `AccountModal.viewGame`,
+  `PlayerProfileModal.viewGame` and `ClanGameHistoryView.watchReplay`. The
+  sixth, `updateJoinUrlForShare`, is the deliberate exception below.
+- **Share links stay version-free**, including the address-bar URL
+  `updateJoinUrlForShare` writes, which is exactly what people copy to
+  invite someone. The recipient must be routed to the version the GAME'S
+  server runs when they open it, which `handleUrl` → `redirectToGameVersion`
+  does. Pinning that URL would hand them the inviter's build instead.
 - **`homeHref()`** returns the version-free `/`. "Leave to the menu" should
   land the player on `latest`, not back on the build they were leaving.
 - **`reloadForUpdate()`** strips the prefix (`stripVersionPrefix`, or
