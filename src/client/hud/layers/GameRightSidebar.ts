@@ -426,7 +426,7 @@ export class GameRightSidebar extends LitElement implements Controller {
       const lobby = await createNextLobby(this.game.gameID());
       const id = lobby.gameID;
       // ?host routes the creator back into the host view on load.
-      window.location.href = `${window.location.origin}/${ClientEnv.workerPath(id)}/game/${id}?host`;
+      window.location.href = `${window.location.origin}${ClientEnv.gamePath(id)}?host`;
     } catch (error) {
       console.error("Failed to create successor lobby", error);
       this.newLobbyRequested = false;

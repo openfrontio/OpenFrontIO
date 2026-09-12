@@ -87,7 +87,11 @@ import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import "./PlayerProfileModal";
 import { GroupTokenTracker, withGroupToken } from "./PresenceGroup";
 import { RewardsModal } from "./RewardsModal";
-import { ensureServerList, startServerListPolling } from "./ServerList";
+import {
+  ensureServerList,
+  redirectToGameVersion,
+  startServerListPolling,
+} from "./ServerList";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import {
@@ -110,6 +114,7 @@ import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import {
   apexPathFor,
+  currentPagePath,
   homeHref,
   incrementGamesPlayed,
   presenceMapKey,
@@ -403,8 +408,7 @@ class Client {
     // so rendering the widget there alerts and rejects — and replays never
     // send a token anyway (see getTurnstileToken below).
     this.turnstileTokenPromise =
-      ClientEnv.instanceId() === "desktop" ||
-      isReplayShellHost(window.location.hostname)
+      isDesktopShell() || isReplayShellHost(window.location.hostname)
         ? null
         : getTurnstileToken();
 
@@ -1071,6 +1075,13 @@ class Client {
       // through it; on the apex itself (and dev/desktop) fall through to
       // the join flow's normal not-found handling.
       if (this.redirectUnknownLetterToApex(lobbyId)) return;
+      // The game's server may run a different build than this page (a link
+      // into a version still draining, or a page served as `latest` after a
+      // deploy). Open it at that version's page rather than trying to play
+      // it with the wrong bundle. The whole rule -- the loop guard, and the
+      // desktop and replay shells that must never be navigated -- lives in
+      // redirectToGameVersion.
+      if (redirectToGameVersion(lobbyId)) return;
       // ?host means the lobby creator is returning to a successor lobby they
       // reused from the win screen: reopen the host view bound to the existing
       // lobby instead of the join flow. Non-creators who hit this URL still get
@@ -1419,9 +1430,11 @@ class Client {
         history.pushState(
           null,
           "",
-          lobbyIdHidden
-            ? "/streamer-mode"
-            : `/${ClientEnv.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+          currentPagePath(
+            lobbyIdHidden
+              ? "/streamer-mode"
+              : `${ClientEnv.gamePath(lobby.gameID)}?live`,
+          ),
         );
       }
 
@@ -1510,7 +1523,7 @@ class Client {
       // on it. On the replay host, fall back to the in-place leave.
       if (!isReplayShellHost(window.location.hostname)) {
         this.resetPresenceToMenu();
-        window.location.href = `/${ClientEnv.workerPath(gameId)}/game/${gameId}`;
+        window.location.href = currentPagePath(ClientEnv.gamePath(gameId));
         return;
       }
       await this.handleLeaveLobby();
@@ -1533,10 +1546,15 @@ class Client {
       // here would leave a URL that 404s when reloaded or shared (see
       // VersionedReplay.ts).
       targetUrl = window.location.pathname;
-    } else if (lobbyIdHidden) {
-      targetUrl = "/streamer-mode";
     } else {
-      targetUrl = `/${ClientEnv.workerPath(lobbyId)}/game/${lobbyId}`;
+      // Version-free on purpose, unlike the in-game entry below: this is the
+      // URL people copy out of the address bar to invite someone, and a
+      // recipient must be routed to the version the GAME'S server runs
+      // (handleUrl -> redirectToGameVersion), not pinned to whatever this
+      // page happens to be serving.
+      targetUrl = lobbyIdHidden
+        ? "/streamer-mode"
+        : ClientEnv.gamePath(lobbyId);
     }
     const currentUrl = window.location.pathname;
 
@@ -1673,7 +1691,7 @@ class Client {
   ): Promise<string | null> {
     if (
       ClientEnv.env() === GameEnv.Dev ||
-      ClientEnv.instanceId() === "desktop" ||
+      isDesktopShell() ||
       // Single-player and replays: no server to verify a token against (and
       // on the CDN replay shells Turnstile cannot load at all). Shared with
       // the desktop gate so the exemption has one definition.

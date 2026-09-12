@@ -10,10 +10,16 @@ import { lobbyFrame } from "./util/Wire";
 
 const mocks = vi.hoisted(() => ({
   ensureServerList: vi.fn(async (): Promise<string> => "api"),
+  showInGameAlert: vi.fn(async (_message: string) => {}),
 }));
 
 // start() asks the server list which server to use; the answer is what is
-// under test here, so nothing reaches the network.
+// under test here, so nothing reaches the network. The alert is the
+// connection-error surface the no-server case is expected to reach.
+vi.mock("../src/client/InGameModal", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, showInGameAlert: mocks.showInGameAlert };
+});
 vi.mock("../src/client/ServerList", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, ensureServerList: mocks.ensureServerList };
@@ -332,6 +338,126 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
       await socket.start();
       socket.stop();
       expect(onUpdateAvailable).not.toHaveBeenCalled();
+    }
+  });
+});
+
+const OWN = "bfd5563a11111111111111111111111111111111";
+
+const LIST = {
+  latest: OWN,
+  servers: {
+    d: {
+      host: "falk2-b.openfront.io",
+      numWorkers: 8,
+      version: OWN,
+      state: "open" as const,
+    },
+  },
+};
+
+// A static page knows no server of its own, so when the API's list is
+// unreachable there is no worker count anywhere and ClientEnv throws
+// NoServerError. The lobby list is the first thing every homepage starts, so
+// that throw must arrive as the connection error the player already
+// understands -- not as a rejected promise from an un-awaited start().
+describe("PublicLobbySocket.start with no server known", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.showInGameAlert.mockClear();
+    mocks.ensureServerList.mockReset();
+    mocks.ensureServerList.mockResolvedValue("fallback");
+    ClientEnv.reset();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      turnstileSiteKey: "k",
+      jwtAudience: "openfront.io",
+      gitCommit: OWN,
+    };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    ClientEnv.reset();
+    delete (window as any).BOOTSTRAP_CONFIG;
+  });
+
+  it("reports a connection error instead of rejecting", async () => {
+    const socket = new PublicLobbySocket(vi.fn(), { maxWsAttempts: 1 });
+
+    await expect(socket.start()).resolves.toBeUndefined();
+
+    expect(mocks.showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(mocks.showInGameAlert.mock.calls[0][0]).toContain("connection");
+  });
+
+  it("re-runs discovery on the retry and connects once a server is known", async () => {
+    // The retry must not go straight back to connectWebSocket: there was no
+    // worker path to build a URL with, so every remaining attempt would be
+    // spent re-dialling the same empty one. The list arriving between
+    // attempts is exactly the case this has to recover from.
+    const urls: string[] = [];
+    class FakeWebSocket {
+      binaryType = "";
+      constructor(url: string) {
+        urls.push(url);
+      }
+      addEventListener() {}
+      close() {}
+    }
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    vi.useFakeTimers();
+    try {
+      const socket = new PublicLobbySocket(vi.fn(), {
+        maxWsAttempts: 2,
+        reconnectDelay: 1000,
+      });
+
+      await socket.start();
+      expect(urls).toHaveLength(0);
+      // One attempt of two is spent, so nothing is reported to the player
+      // yet -- a retry is pending.
+      expect(mocks.showInGameAlert).not.toHaveBeenCalled();
+
+      ClientEnv.applyServerList(LIST, "d");
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(urls).toHaveLength(1);
+      expect(urls[0]).toMatch(
+        /^wss:\/\/falk2-b\.openfront\.io\/w\d+\/lobbies$/,
+      );
+      expect(mocks.showInGameAlert).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("gives up after maxWsAttempts when no server ever appears", async () => {
+    // Each discovery attempt has to COUNT. The socket path clears
+    // wsAttemptCounted inside connectWebSocket, which discovery never
+    // reaches, so without clearing it per attempt the counter freezes at one
+    // and this retries every reconnectDelay forever, silently.
+    vi.useFakeTimers();
+    try {
+      const socket = new PublicLobbySocket(vi.fn(), {
+        maxWsAttempts: 2,
+        reconnectDelay: 1000,
+      });
+
+      await socket.start();
+      expect(mocks.showInGameAlert).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(mocks.showInGameAlert).toHaveBeenCalledTimes(1);
+      expect(mocks.showInGameAlert.mock.calls[0][0]).toContain("connection");
+
+      // And it stops: no third attempt, no second alert.
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(mocks.showInGameAlert).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
     }
   });
 });

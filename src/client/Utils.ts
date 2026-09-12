@@ -868,8 +868,15 @@ export function reloadForUpdate(): void {
   if (siteHost !== undefined && url.host !== siteHost) {
     url.protocol = "https:";
     url.host = siteHost;
-    url.pathname = url.pathname.replace(/^\/w\d+\//, "/");
   }
+  // Both prefixes encode what this reload exists to leave behind, whichever
+  // host answers it. `/v/<commit>/` is immutable by design (multi-server
+  // v2): it pins the bundle, so reloading it as-is re-serves the very
+  // version being updated away from, forever, cache-buster or not. And
+  // `/w<n>/` was resolved against the old worker count, which a new version
+  // may have changed — letter routing picks the worker again on the way
+  // back in. apexPathFor drops exactly these two, in either order.
+  url.pathname = apexPathFor(url.pathname);
   url.searchParams.set("v", Date.now().toString(36));
   window.location.replace(url.toString());
 }
@@ -888,11 +895,34 @@ export function apexPathFor(pathname: string): string {
 }
 
 /**
+ * A same-origin path as THIS document should write it into its own history:
+ * re-prefixed with the page's `/v/<commit>/` when it has one, unchanged
+ * otherwise.
+ *
+ * History entries are not share links, and the two want opposite things. A
+ * share link is version-free on purpose — the recipient should be routed by
+ * whatever version the game's server runs when they open it. A history entry
+ * is this tab's own URL: pressing F5 on it must reload THE BUNDLE THIS PAGE
+ * IS RUNNING, and on a pinned page a version-free path would silently hand
+ * the player `latest` instead, mid-game.
+ *
+ * Pure apart from reading location, so the rule is testable without Main.
+ */
+export function currentPagePath(path: string): string {
+  const { commit } = stripVersionPrefix(window.location.pathname);
+  return commit === null ? path : `/v/${commit}${path}`;
+}
+
+/**
  * Where "leave to the menu" navigations should land. On a deployment host
  * the local homepage may belong to a drained deployment whose public lobby
  * list is empty; the apex always fronts the active one. Same-host,
  * standalone deployments (no siteHost injected), dev, and desktop keep the
  * plain root.
+ *
+ * The plain root is also the right answer on a `/v/<commit>/` page, and for
+ * the same reason: "/" is version-free, so a player leaving to the menu
+ * lands on `latest` rather than back on the build they were leaving.
  */
 export function homeHref(): string {
   const siteHost = ClientEnv.siteHost();

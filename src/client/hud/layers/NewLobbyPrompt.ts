@@ -45,7 +45,7 @@ export class NewLobbyPrompt extends LitElement implements Controller {
 
   private lobbyUrl(asHost: boolean): string {
     const id = this.gameID ?? "";
-    const url = `${window.location.origin}/${ClientEnv.workerPath(id)}/game/${id}`;
+    const url = `${window.location.origin}${ClientEnv.gamePath(id)}`;
     return asHost ? `${url}?host` : url;
   }
 

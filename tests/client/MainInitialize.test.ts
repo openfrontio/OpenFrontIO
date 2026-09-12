@@ -124,14 +124,15 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
 
-    // ClientEnv.get() throws without this (initialize reads instanceId()
-    // before the Turnstile prefetch).
+    // ClientEnv.get() throws without the four environment values. Nothing
+    // here names a server beyond the worker count, and no instanceId at all:
+    // a static page carries none (multi-server v2), and initialize() must
+    // boot from one that does not.
     (window as any).BOOTSTRAP_CONFIG = {
       gameEnv: "dev",
       numWorkers: 2,
       turnstileSiteKey: "test-site-key",
       jwtAudience: "localhost",
-      instanceId: "dev-instance",
       gitCommit: "DEV",
     };
 
@@ -261,6 +262,91 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     );
     expect(mocks.joinLobby).not.toHaveBeenCalled();
   });
+
+  // Multi-server v2, and the two halves of the rule in one test. The in-game
+  // `?live` entry is this tab's OWN URL, so on a page pinned under
+  // /v/<commit>/ it carries that prefix: an F5 must reload the bundle this
+  // page is running, not hand a mid-game player `latest`. The share rewrite
+  // is the opposite -- it is what people copy out of the address bar, so it
+  // stays version-free and the recipient is routed by the game's own server.
+  //
+  // Driven end-to-end through the real join path: the share rewrite
+  // (updateJoinUrlForShare) runs before userAuth(), the `?live` entry when
+  // the join handle resolves.
+  it("pins the in-game URL but not the share URL on a /v/<commit>/ page", async () => {
+    const realLocation = window.location;
+    Object.defineProperty(window, "location", {
+      value: {
+        href: "http://localhost:3000/v/5ccc50a7/",
+        origin: "http://localhost:3000",
+        host: "localhost:3000",
+        hostname: "localhost",
+        pathname: "/v/5ccc50a7/",
+        search: "",
+        hash: "",
+      },
+      writable: true,
+      configurable: true,
+    });
+    const replaceSpy = vi
+      .spyOn(history, "replaceState")
+      .mockImplementation(() => {});
+    const pushSpy = vi.spyOn(history, "pushState").mockImplementation(() => {});
+    let resolveJoin: () => void = () => {};
+    mocks.joinLobby.mockReturnValueOnce({
+      // Never resolves: the prestart branch is a different story, and this
+      // test is about the two URL writes.
+      prestart: new Promise<void>(() => {}),
+      join: new Promise<void>((resolve) => {
+        resolveJoin = resolve;
+      }),
+      stop: () => true,
+    });
+    const input = document.querySelector("username-input") as unknown as {
+      canPlay: () => boolean;
+    };
+    input.canPlay = () => true;
+
+    try {
+      document.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: { gameID: "dAbCd12345", source: "private" },
+          bubbles: true,
+        }),
+      );
+
+      // The share-URL rewrite is deliberately NOT pinned: it is the URL
+      // people copy out of the address bar, and a recipient must be routed
+      // to the game's own version when they open it, not to this page's.
+      await vi.waitFor(() => expect(replaceSpy).toHaveBeenCalled());
+      const calls = replaceSpy.mock.calls;
+      const rewritten = calls[calls.length - 1][2] as string;
+      // Shape-matched rather than just "not pinned", so this cannot pass by
+      // catching some other replaceState.
+      expect(rewritten).toMatch(
+        /^(\/streamer-mode|\/(w\d+\/)?game\/dAbCd12345)$/,
+      );
+
+      // And the in-game entry once the join lands.
+      await vi.waitFor(() => expect(mocks.joinLobby).toHaveBeenCalled());
+      resolveJoin();
+      await vi.waitFor(() =>
+        expect(
+          pushSpy.mock.calls.some((c) =>
+            (c[2] as string)?.startsWith("/v/5ccc50a7/"),
+          ),
+        ).toBe(true),
+      );
+    } finally {
+      replaceSpy.mockRestore();
+      pushSpy.mockRestore();
+      Object.defineProperty(window, "location", {
+        value: realLocation,
+        writable: true,
+        configurable: true,
+      });
+    }
+  }, 15_000);
 
   it("logs the player id when a retry lands a signed-in userMe", async () => {
     mocks.retrySteamSignIn.mockResolvedValueOnce({

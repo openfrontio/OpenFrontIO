@@ -10,6 +10,35 @@ import {
   parseGameEnv,
 } from "../core/configuration/Config";
 
+/**
+ * No server is known: the API's list has not loaded (or carries none for
+ * this build) and the page itself names none either.
+ *
+ * Raised by numWorkers() and propagated by every accessor that derives a
+ * worker route from it — workerIndex(), workerPath(), and gameWorkerPath()
+ * on its own-server branch. Those have no truthful answer without a server:
+ * a worker count belongs to ONE server, so any number routes to a worker
+ * that does not own the game. (gamePath() is the deliberate exception: it
+ * catches this and falls back to the worker-free `/game/<id>` shape.)
+ *
+ * serverWsBase() / serverHttpBase() deliberately do NOT throw: the
+ * document's own origin is a real game server on a dev box and on a
+ * standalone deployment, which is what they answered before any of this
+ * existed, and a static page served from the site host fails at connect time
+ * rather than at URL-build time.
+ *
+ * Typed so callers can tell "there is no server" from a programming error and
+ * route it into the connection-failed path they already have
+ * (LobbySocket.handleConnectError, createLobby's callers) rather than letting
+ * it surface as an uncaught exception.
+ */
+export class NoServerError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NoServerError";
+  }
+}
+
 export class ClientEnv {
   private static values: ClientEnvValues | null = null;
   private static publicKey: JWK | null = null;
@@ -53,34 +82,42 @@ export class ClientEnv {
       throw new Error("ClientEnv is only available on the browser main thread");
     }
     const bc = window.BOOTSTRAP_CONFIG;
-    // Worker-count source: web shells inject the cluster map + own letter;
-    // desktop shells predating the map still inject the numWorkers scalar.
-    // Either shape must hydrate — the shell binary and the bundle it runs
-    // update on separate schedules, so a new bundle under an old shell is a
-    // live combination (PR 5 moves desktop to /cluster.json discovery).
-    const hasWorkerSource =
-      bc !== undefined &&
-      ((bc.cluster !== undefined && bc.instanceLetter !== undefined) ||
-        bc.numWorkers !== undefined);
+    // Only the values that are the same for every player are required.
+    //
+    // Multi-server v2 (docs/MultiServer.md, roadmap item 2): the page becomes
+    // a static file built once per version, so nothing in it can name a
+    // server — no cluster map, no instanceLetter, no numWorkers, no
+    // serverHost, no siteHost, no instanceId. Which server to talk to is what
+    // the API's list answers (src/client/ServerList.ts), and until it does,
+    // whatever a server that rendered the page injected still answers.
+    //
+    // A page missing one of these four is broken rather than server-less:
+    // there is no environment to run in at all, so it still throws.
     if (
       !bc ||
       bc.gameEnv === undefined ||
-      !hasWorkerSource ||
       bc.turnstileSiteKey === undefined ||
       bc.jwtAudience === undefined ||
-      bc.instanceId === undefined ||
       bc.gitCommit === undefined
     ) {
       throw new Error("Missing BOOTSTRAP_CONFIG");
     }
     ClientEnv.values = {
       gameEnv: parseGameEnv(bc.gameEnv),
+      // Worker-count source, when the page carries one: web shells inject
+      // the cluster map + own letter; desktop shells predating the map
+      // inject the numWorkers scalar. Either shape hydrates — the shell
+      // binary and the bundle it runs update on separate schedules, so a new
+      // bundle under an old shell is a live combination.
       cluster: bc.cluster,
       instanceLetter: bc.instanceLetter,
       numWorkers: bc.numWorkers,
       turnstileSiteKey: bc.turnstileSiteKey,
       jwtAudience: bc.jwtAudience,
-      instanceId: bc.instanceId,
+      // Absent on a static page: only a server that renders the page knows
+      // its own instance id. Empty means "none", and callers send it only
+      // when it is there (the API ignores it either way).
+      instanceId: bc.instanceId ?? "",
       gitCommit: bc.gitCommit,
       // Optional: only the desktop app injects an explicit game-server host.
       // Absent on the web build (falls back to same-origin window.location).
@@ -97,8 +134,14 @@ export class ClientEnv {
   static env(): GameEnv {
     return ClientEnv.get().gameEnv;
   }
-  // Worker count of the server this page talks to: own cluster entry when
-  // the map was injected, the legacy scalar otherwise (old desktop shells).
+  // Worker count of the server this page talks to: the server the API's list
+  // picked, else the own cluster entry when the map was injected, else the
+  // legacy scalar (old desktop shells).
+  //
+  // Throws NoServerError when there is none of the three — a static page
+  // whose list never loaded. A worker count is a property of ONE server, so
+  // unlike the origin bases below there is no same-origin answer to fall back
+  // on: any number would route to a worker that does not own the game.
   static numWorkers(): number {
     const picked = ClientEnv.pickedServer();
     if (picked !== null) return picked.numWorkers;
@@ -113,8 +156,7 @@ export class ClientEnv {
       return own.numWorkers;
     }
     if (v.numWorkers === undefined) {
-      // Unreachable: get() requires one of the two shapes.
-      throw new Error("BOOTSTRAP_CONFIG has no worker-count source");
+      throw new NoServerError("no worker count: no server list, none injected");
     }
     return v.numWorkers;
   }
@@ -206,6 +248,47 @@ export class ClientEnv {
       ? `https://${r.host}`
       : ClientEnv.serverHttpBase();
   }
+  /**
+   * The same-origin path that opens a game: `/w<n>/game/<id>` when a worker
+   * count for that id is known, plain `/game/<id>` when none is.
+   *
+   * For share links, history entries and "open this game" navigations — NOT
+   * for API calls, which must hit the owning server's worker and use
+   * gameWorkerPath against gameHttpBase instead.
+   *
+   * Both shapes are served: the game server's SPA fallback and the static
+   * Worker each answer `/game/<id>`, and the join flow re-resolves the
+   * worker from the id anyway. So a page that cannot know a worker count —
+   * a static page whose list never loaded — still hands out a link that
+   * works, instead of throwing while building a URL.
+   *
+   * Deliberately version-free (no `/v/<commit>/`): a recipient should be
+   * routed to whatever version the game's server actually runs, which is
+   * decided when they open it, not when the link was copied.
+   */
+  static gamePath(gameID: GameID): string {
+    const id = encodeURIComponent(gameID);
+    try {
+      return `/${ClientEnv.gameWorkerPath(gameID)}/game/${id}`;
+    } catch (e) {
+      if (e instanceof NoServerError) return `/game/${id}`;
+      throw e;
+    }
+  }
+  /**
+   * The commit the game's server runs, from the API's list, or undefined
+   * when no list is loaded or it carries no entry for the id's letter.
+   *
+   * The web client opens a game at its server's version rather than trying
+   * to play it with the wrong bundle (docs/MultiServer.md, roadmap item 2);
+   * see versionedPathForGame for the decision this feeds.
+   */
+  static gameVersion(gameID: GameID): string | undefined {
+    const a = ClientEnv.apiList;
+    // Legacy ids carry no letter, so nothing names their server's version.
+    if (a === null || gameID.length < 10) return undefined;
+    return a.list.servers[gameID[0]]?.version;
+  }
   // The worker path on the game's own server: a foreign deployment's worker
   // count comes from its cluster entry, not this server's.
   static gameWorkerPath(gameID: GameID): string {
@@ -243,6 +326,13 @@ export class ClientEnv {
   // Origin (scheme + host, no trailing slash) of the game server that hosts the
   // public-lobby and in-game WebSockets. The lobby-list and game sockets append
   // their own worker path (e.g. `/w0/lobbies`, `/w0`).
+  //
+  // Never throws NoServerError, unlike numWorkers() above: with no list and
+  // no injected serverHost the document's own origin is the answer, and on a
+  // dev box or a standalone deployment it is the CORRECT one — the game
+  // server is the thing that served the page. On a static page it is wrong,
+  // but wrong in the way that surfaces as a connection failure the client
+  // already handles, which beats refusing to build a URL at all.
   static serverWsBase(): string {
     const picked = ClientEnv.pickedServer();
     if (picked !== null) return `wss://${picked.host}`;
@@ -258,7 +348,7 @@ export class ClientEnv {
   // the route needs one (e.g. `/w0/api/game/<id>`).
   //
   // NOT the account/shop API: that is a separate service on api.<audience>,
-  // reached via getApiBase().
+  // reached via getApiBase(). Same same-origin fallback as serverWsBase.
   static serverHttpBase(): string {
     const picked = ClientEnv.pickedServer();
     if (picked !== null) return `https://${picked.host}`;
@@ -369,14 +459,16 @@ export function deriveServerHttpBase(
 
 export interface ClientEnvValues {
   gameEnv: GameEnv;
-  // One of the two worker-count sources is always present: cluster +
+  // A worker-count source, when the page names a server at all: cluster +
   // instanceLetter from a web shell, or the legacy numWorkers scalar from a
-  // desktop shell that predates the cluster map.
+  // desktop shell that predates the cluster map. A static page carries
+  // neither, and the API's list answers instead (NoServerError until it has).
   cluster?: ClusterConfig;
   instanceLetter?: string;
   numWorkers?: number;
   turnstileSiteKey: string;
   jwtAudience: string;
+  // "" on a static page, which no server rendered.
   instanceId: string;
   gitCommit: string;
   serverHost?: string;
