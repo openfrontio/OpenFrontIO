@@ -47,13 +47,17 @@ export class PublicLobbySocket {
     this.stopped = false;
     this.wsConnectionAttempts = 0;
     // The lobby list needs a server: ask the API which one (multi-server
-    // v2), falling back to the page's own values. This and Create are the
-    // only flows that start something new, so they are the only ones that
-    // check the version: a page found out of date is being navigated to the
-    // current version, and there is nothing to connect to.
-    const listStatus = await ensureServerList({ redirectIfOutOfDate: true });
-    if (listStatus === "redirecting") return;
+    // v2), falling back to the page's own values. It answers "outdated"
+    // when no server takes new games from this build any more and a newer
+    // version exists — the rollover has moved on without this tab. The
+    // lobby list is the first thing every homepage starts, so this is where
+    // the player finds out: the same one-shot "update available" prompt a
+    // newer commit in the feed raises. The connection goes ahead either
+    // way, so a shell that never prompts (desktop, whose updater owns
+    // updates) still gets its lobby list from the fallback values.
+    const listStatus = await ensureServerList();
     if (this.stopped) return;
+    if (listStatus === "outdated") this.fireUpdateAvailable();
     // Get config to determine number of workers, then pick a random one
     this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
     this.connectWebSocket();
@@ -157,6 +161,17 @@ export class PublicLobbySocket {
     }
   }
 
+  // The one gate for the "update available" prompt: however this tab found
+  // out (the server list at start, a newer commit in the feed, a drained
+  // deployment), the player is asked at most once.
+  private fireUpdateAvailable() {
+    if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
+      return;
+    }
+    this.updateAvailableFired = true;
+    this.onUpdateAvailable();
+  }
+
   private checkServerCommit(serverCommit: string | undefined) {
     if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
       return;
@@ -164,8 +179,7 @@ export class PublicLobbySocket {
     if (serverCommit === undefined) return;
     const ownCommit = ClientEnv.gitCommit();
     if (ownCommit === "DEV" || serverCommit === ownCommit) return;
-    this.updateAvailableFired = true;
-    this.onUpdateAvailable();
+    this.fireUpdateAvailable();
   }
 
   // The deployment serving this feed says the load balancer routes elsewhere.
@@ -179,8 +193,7 @@ export class PublicLobbySocket {
       return;
     }
     if (active !== false) return;
-    this.updateAvailableFired = true;
-    this.onUpdateAvailable();
+    this.fireUpdateAvailable();
   }
 
   private handleClose() {

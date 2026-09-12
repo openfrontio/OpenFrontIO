@@ -18,14 +18,14 @@ export function isCommitLike(value: string): boolean {
   return COMMIT_RE.test(value);
 }
 
-// Every commit the list names is validated on the way in. A value that is
-// not commit-shaped is interpolated into `/v/<x>/` by versionedPath, where
-// it would sit outside what the loop guard can compare — so a list carrying
-// one is rejected whole and the client falls back to its own values, rather
-// than navigating somewhere nothing serves.
+// Every commit the list names is validated on the way in. Commits decide
+// which server a build may use, and a commit-shaped value is the only thing
+// those compares — and `/v/<commit>/`, which pins a page to a version — can
+// work with. A list carrying anything else is rejected whole and the client
+// falls back to its own values.
 const CommitSchema = z.string().regex(COMMIT_RE);
 
-export const ServerStateSchema = z.enum(["open", "draining"]);
+export const ServerStateSchema = z.enum(["open", "draining", "fenced"]);
 export type ServerState = z.infer<typeof ServerStateSchema>;
 
 export const ServerEntrySchema = z.object({
@@ -35,8 +35,11 @@ export const ServerEntrySchema = z.object({
   numWorkers: z.number().int().min(1),
   // The commit this server runs, as its GIT_COMMIT reports it.
   version: CommitSchema,
-  // open: runs `latest` and isn't fenced, so it takes new games. draining:
-  // anything else; existing games and rejoins still work.
+  // open: runs `latest`, so it takes new games from clients on that build.
+  // draining: runs an older build, and still takes new games from clients
+  // on THAT build — a player who loaded before the deploy keeps playing
+  // where they are until they refresh. fenced: takes nothing new (the
+  // server is on its way out); its live games and rejoins still work.
   state: ServerStateSchema,
 });
 export type ServerEntry = z.infer<typeof ServerEntrySchema>;
@@ -83,34 +86,66 @@ export function versionMatches(
 }
 
 /**
- * The letters of servers that take new games for this client's build.
+ * The letters that can take a new game from this client's build, split by
+ * state. A fenced server takes nothing new whatever it runs, and a server
+ * on another build cannot host this one's games at all.
  */
-export function openLettersFor(list: ServerList, ownCommit: string): string[] {
-  return Object.entries(list.servers)
-    .filter(
-      ([, entry]) =>
-        entry.state === "open" && versionMatches(ownCommit, entry.version),
-    )
-    .map(([letter]) => letter);
+function lettersForBuild(
+  list: ServerList,
+  ownCommit: string,
+): { open: string[]; draining: string[] } {
+  const open: string[] = [];
+  const draining: string[] = [];
+  for (const [letter, entry] of Object.entries(list.servers)) {
+    if (!versionMatches(ownCommit, entry.version)) continue;
+    if (entry.state === "open") open.push(letter);
+    else if (entry.state === "draining") draining.push(letter);
+  }
+  return { open, draining };
 }
 
 /**
- * Pick the server a new game or the public lobby list should use: random
- * among the open servers running the client's build, or null when there is
- * none. `random` is injected so tests can pin the draw.
+ * Whether `letter`'s server can still take a new game from this build —
+ * the condition the client's sticky pick holds on. A pick survives its
+ * server flipping from open to draining: that server still runs this
+ * build, and moving the page off it mid-session is exactly the rollover
+ * today's players don't get.
  */
-export function pickOpenServer(
+export function servesBuild(
+  list: ServerList,
+  letter: string,
+  ownCommit: string,
+): boolean {
+  const entry = list.servers[letter];
+  if (entry === undefined) return false;
+  if (entry.state === "fenced") return false;
+  return versionMatches(ownCommit, entry.version);
+}
+
+/**
+ * Pick the server a new game or the public lobby list should use: an open
+ * server on this client's build, else a draining one on this client's
+ * build, else null. Never a fenced server.
+ *
+ * `pickIndex` chooses among the candidates and is given their count; it is
+ * injected both so tests can pin the draw and because src/core carries no
+ * floating-point math — the client passes
+ * `(n) => Math.floor(Math.random() * n)`. An index outside the range is
+ * clamped, so a miscounting caller still lands on a server.
+ */
+export function pickServerForBuild(
   list: ServerList,
   ownCommit: string,
-  random: () => number,
+  pickIndex: (count: number) => number,
 ): string | null {
-  const letters = openLettersFor(list, ownCommit);
-  if (letters.length === 0) return null;
-  const index = Math.min(
-    letters.length - 1,
-    Math.max(0, Math.floor(random() * letters.length)),
-  );
-  return letters[index];
+  const { open, draining } = lettersForBuild(list, ownCommit);
+  const candidates = open.length > 0 ? open : draining;
+  if (candidates.length === 0) return null;
+  const chosen = pickIndex(candidates.length);
+  const index = Number.isInteger(chosen)
+    ? Math.min(candidates.length - 1, Math.max(0, chosen))
+    : 0;
+  return candidates[index];
 }
 
 /**
@@ -134,8 +169,8 @@ export function stripVersionPrefix(pathname: string): {
  * document, keeping the game path. Worker prefixes are origin-specific
  * and letter routing re-resolves them, so they are dropped. Returns null
  * when the page is already under `/v/<commit>/`: that is the one loop guard
- * for every version redirect, and it must stay here so no caller can
- * navigate a page to itself.
+ * shared by every caller that pins a page to a version, and it must stay
+ * here so no caller can navigate a page to itself.
  */
 export function versionedPath(
   commit: string,

@@ -1,10 +1,9 @@
 import { z } from "zod";
 import {
-  openLettersFor,
-  pickOpenServer,
+  pickServerForBuild,
   ServerList,
   ServerListSchema,
-  versionedPath,
+  servesBuild,
   versionMatches,
 } from "../core/ServerList";
 import { getApiBase } from "./ApiBase";
@@ -42,18 +41,20 @@ const REFRESH_INTERVAL_MS = 30_000;
 const RETRY_INTERVAL_MS = 10_000;
 
 export type ServerListStatus =
-  // The list is loaded and an open server on this build was picked.
+  // The list is loaded and a server for this build was picked.
   | "api"
   // The list is missing or unreachable; BOOTSTRAP_CONFIG is in charge.
   | "fallback"
-  // The list is loaded but no open server runs this build, and there is
-  // nothing to redirect to: own-server calls fall back to BOOTSTRAP_CONFIG,
-  // so multiplayer fails as it does today when the server is gone.
-  | "no-server"
-  // This page is out of date and a navigation to latest's page was issued.
-  // Only ever returned to a caller that asked for it (see ensureServerList's
-  // redirectIfOutOfDate).
-  | "redirecting";
+  // The list is loaded, no server takes new games from this build, and
+  // `latest` says a newer version exists — this page is behind. The caller
+  // that starts something new (the lobby list) turns this into the existing
+  // "update available" prompt; nothing here navigates the page.
+  | "outdated"
+  // The list is loaded but no server takes new games from this build and
+  // there is no newer version either: nothing is running. Own-server calls
+  // fall back to BOOTSTRAP_CONFIG, so multiplayer fails as it does today
+  // when the server is gone.
+  | "no-server";
 
 let cached: { list: ServerList; fetchedAt: number } | null = null;
 let inflight: Promise<ServerList | null> | null = null;
@@ -251,24 +252,21 @@ function scheduleNextPoll(gotList: boolean): void {
  * the heartbeat retries on its own schedule, so a per-second caller (the
  * matchmaking poll) cannot hammer a down API.
  *
- * The pick is sticky for the page's lifetime while its server stays open,
- * so the lobby list and the games created from it land on one server. It
- * moves only when that server stops taking new games.
+ * The pick prefers an `open` server on this build and falls back to a
+ * `draining` one on this build (never a `fenced` one): a player who loaded
+ * before a deploy keeps playing on their own build's server until they
+ * refresh, which is how rollovers feel today. It is sticky for the page's
+ * lifetime while that server still takes this build's games, so the lobby
+ * list and the games created from it land together.
  *
- * `redirectIfOutOfDate` navigates the page to `/v/<latest>/…` when the list
- * says a newer version exists and nothing open runs this build. This is a
- * version check before starting anything NEW: the public lobby list
- * (LobbySocket.start) and Create (Api.createLobby). Joining or rejoining an
- * existing game, and every in-game request, must leave it off — during a
- * rolling deploy a player's own server is `draining` with no open sibling
- * on their build, and redirecting would navigate a live match away. A
- * version mismatch on join is handled at join time instead
- * (`version_mismatch`). Only a caller that passes it can see
- * "redirecting".
+ * Nothing here ever navigates the page. When no server takes this build's
+ * games but `latest` names a newer one, the answer is "outdated" and the
+ * caller that starts something new (PublicLobbySocket.start) raises the
+ * existing "update available" prompt. Joining or rejoining an existing
+ * game, and every in-game request, can ignore it: they get the list applied
+ * either way, so a game's own letter still routes.
  */
-export async function ensureServerList(opts?: {
-  redirectIfOutOfDate?: boolean;
-}): Promise<ServerListStatus> {
+export async function ensureServerList(): Promise<ServerListStatus> {
   try {
     if (cached === null) {
       // Join the attempt in flight (the page-load one, usually); otherwise
@@ -287,7 +285,7 @@ export async function ensureServerList(opts?: {
       // per caller here too — the list keeps serving either way.
       void fetchOnce();
     }
-    return apply(opts?.redirectIfOutOfDate === true);
+    return apply();
   } catch (e) {
     // The contract is "never throws": whatever went wrong, the page's own
     // values are still a complete answer.
@@ -304,7 +302,7 @@ function retryDue(): boolean {
   return Date.now() - lastAttempt.at >= RETRY_INTERVAL_MS;
 }
 
-function apply(redirectIfOutOfDate: boolean): ServerListStatus {
+function apply(): ServerListStatus {
   const list = cached?.list ?? null;
   if (list === null) {
     pickedLetter = null;
@@ -313,47 +311,49 @@ function apply(redirectIfOutOfDate: boolean): ServerListStatus {
   }
 
   const own = safeOwnCommit();
-  const open = openLettersFor(list, own);
-  if (pickedLetter === null || !open.includes(pickedLetter)) {
-    pickedLetter = pickOpenServer(list, own, Math.random);
+  // Sticky while the picked server still takes this build's games — a flip
+  // from open to draining does not move the page, only fencing (or the
+  // letter going away) does.
+  if (pickedLetter === null || !servesBuild(list, pickedLetter, own)) {
+    pickedLetter = pickServerForBuild(list, own, randomIndex);
   }
   if (pickedLetter !== null) {
     ClientEnv.applyServerList(list, pickedLetter);
     return "api";
   }
 
-  // No open server runs this build. Existing games still resolve by letter
-  // from the list; own-server calls fall back to the page's own values.
+  // No server takes new games from this build. Existing games still resolve
+  // by letter from the list; own-server calls fall back to the page's own
+  // values. If a newer version exists, say so and let the caller prompt.
   ClientEnv.applyServerList(list, null);
-  if (redirectIfOutOfDate && isOutOfDate(list, own)) {
-    const target = versionedPath(
-      list.latest!,
-      window.location.pathname,
-      window.location.search,
-    );
-    if (target !== null) {
-      window.location.href = target;
-      return "redirecting";
-    }
-  }
-  return "no-server";
+  return isOutdated(list, own) ? "outdated" : "no-server";
 }
 
-// Out of date means a newer version exists to go to. When this page IS
-// latest, or the list names no latest, no server is running at all: there is
-// nothing to redirect to, and redirecting would only loop back here. The
-// desktop shell is never redirected: its updater owns which version it runs.
+// The one place the client's randomness lives: src/core carries no
+// floating-point math, so it takes an index rather than a draw.
+function randomIndex(count: number): number {
+  return Math.floor(Math.random() * count);
+}
+
+// Outdated means a newer version exists for this page to move to. When this
+// page IS latest, or the list names no latest, no server is running at all:
+// there is nothing to update to, and prompting would only loop.
 //
 // versionMatches, not commitsMatch: a build label that names no commit
 // ("DEV" from the dev server, "desktop" from an old shell, "" when
-// BOOTSTRAP_CONFIG is unreadable) matches any version and is never out of
-// date — sending a dev build to /v/<sha>/ would take it off its own server.
+// BOOTSTRAP_CONFIG is unreadable) matches any version and is never behind —
+// telling the dev server's bundle to reload for an update it cannot fetch
+// would loop forever.
+//
+// The desktop shell is never outdated from here: its updater owns which
+// version it runs, and reloading would only re-run the same local overlay
+// (GameModeSelector.handleUpdateAvailable refuses it too).
 //
 // A replay shell is pinned on purpose: replay.<domain> serves the build a
 // record was made on, so being behind latest is the point. It is skipped
 // here as well as in startServerListPolling, because the lobby socket (the
-// one flow that does ask for the version check) runs there too.
-function isOutOfDate(list: ServerList, own: string): boolean {
+// one flow that prompts) runs there too.
+function isOutdated(list: ServerList, own: string): boolean {
   if (isDesktopShell()) return false;
   if (isOnReplayShell()) return false;
   if (list.latest === undefined) return false;

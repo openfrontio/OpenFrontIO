@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ClientEnv } from "../src/client/ClientEnv";
 import { PublicLobbySocket } from "../src/client/LobbySocket";
 import {
   PublicGameInfo,
@@ -6,6 +7,17 @@ import {
   PublicGameType,
 } from "../src/core/Schemas";
 import { lobbyFrame } from "./util/Wire";
+
+const mocks = vi.hoisted(() => ({
+  ensureServerList: vi.fn(async (): Promise<string> => "api"),
+}));
+
+// start() asks the server list which server to use; the answer is what is
+// under test here, so nothing reaches the network.
+vi.mock("../src/client/ServerList", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, ensureServerList: mocks.ensureServerList };
+});
 
 function lobby(
   gameID: string,
@@ -188,5 +200,81 @@ describe("PublicLobbySocket deployment drain", () => {
     dispatch(drainedMessage(1001, undefined));
 
     expect(onUpdateAvailable).not.toHaveBeenCalled();
+  });
+});
+
+// Multi-server v2 (docs/MultiServer.md, "Server list v2"): when no server
+// takes new games from this build any more and the list names a newer
+// version, the player finds out here — the lobby list is the first thing
+// every homepage starts. It raises the same "update available" prompt a
+// newer commit in the feed does, and the page is never navigated by the
+// list itself.
+describe("PublicLobbySocket.start when this build is outdated", () => {
+  class FakeWebSocket {
+    static OPEN = 1;
+    readyState = 0;
+    binaryType = "";
+    constructor(public url: string) {}
+    addEventListener() {}
+    close() {}
+  }
+
+  beforeEach(() => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    mocks.ensureServerList.mockReset();
+    mocks.ensureServerList.mockResolvedValue("api");
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    ClientEnv.reset();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      numWorkers: 2,
+      turnstileSiteKey: "k",
+      jwtAudience: "openfront.io",
+      instanceId: "test",
+      gitCommit: "5ccc50a722222222222222222222222222222222",
+      serverHost: "blue.openfront.io",
+    };
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    ClientEnv.reset();
+    delete (window as any).BOOTSTRAP_CONFIG;
+  });
+
+  it("prompts once when the list says this build is outdated", async () => {
+    mocks.ensureServerList.mockResolvedValue("outdated");
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), { onUpdateAvailable });
+
+    await socket.start();
+    expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
+
+    // Reconnecting (the player left a lobby, the list refreshed) must not
+    // stack a second prompt on the first.
+    socket.stop();
+    await socket.start();
+    socket.stop();
+    expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
+  });
+
+  it("still connects, so the desktop shell and a fallback page keep their lobby list", async () => {
+    mocks.ensureServerList.mockResolvedValue("outdated");
+    const socket = new PublicLobbySocket(vi.fn(), {});
+    await socket.start();
+    expect((socket as any).ws).not.toBeNull();
+    socket.stop();
+  });
+
+  it("does not prompt when a server was picked, or when nothing newer exists", async () => {
+    for (const status of ["api", "fallback", "no-server"]) {
+      mocks.ensureServerList.mockResolvedValue(status);
+      const onUpdateAvailable = vi.fn();
+      const socket = new PublicLobbySocket(vi.fn(), { onUpdateAvailable });
+      await socket.start();
+      socket.stop();
+      expect(onUpdateAvailable).not.toHaveBeenCalled();
+    }
   });
 });
