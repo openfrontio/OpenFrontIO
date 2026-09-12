@@ -1239,7 +1239,7 @@ describe("Click and hold when ghost is bomb", () => {
   test("does not double fire when HOLD_POINTER_WAIT_MS < onPointerUp < HOLD_SECOND_ACTION_DELAY_MS", () => {
     vi.useFakeTimers();
     const mockEmit = vi.spyOn(eventBus, "emit");
-    let el = 1; // expected launches
+    const el = 1; // expected launches
 
     const downEvent = new PointerEvent("pointerdown", {
       button: 0,
