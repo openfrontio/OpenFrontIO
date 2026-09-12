@@ -242,6 +242,53 @@ describe("per-channel budgets", () => {
   });
 });
 
+describe("failed cues", () => {
+  const builtCity = () =>
+    howlInstances.filter((h) => h.src.includes("build-city"));
+
+  // effects holds 6 concurrent voices, so filling it is what makes a lost
+  // slot observable: the next play has to steal one.
+  const fillEffectsChannel = () => {
+    for (let i = 0; i < 6; i++) mixer.play("build-city");
+  };
+
+  it("gives the channel slot back when a cue fails to play", () => {
+    // Neither "end" nor "stop" fires for a cue that never started, so without
+    // playerror its entry sits in `active` for the session and the channel is
+    // a voice poorer. alerts holds only 3, so it does not take many before a
+    // channel stops playing at all -- silently, which is the bad kind.
+    build({ effects: 1 });
+    fillEffectsChannel();
+    const howl = builtCity()[0];
+    expect(howl.fade).not.toHaveBeenCalled();
+
+    howl._fire("playerror", howl.play.mock.results[0].value);
+    mixer.play("build-city");
+
+    // The freed slot took the seventh play, so nothing had to be evicted.
+    expect(howl.fade).not.toHaveBeenCalled();
+  });
+
+  it("gives back every slot a cue held when its file will not load", () => {
+    build({ effects: 1 });
+    fillEffectsChannel();
+    const howl = builtCity()[0];
+    expect(builtCity().length).toBe(1);
+
+    // Howler emits loaderror with a null id, so there is nothing to match one
+    // playback against -- every entry for this Howl has to go together.
+    howl._fire("loaderror", -1);
+    mixer.play("build-city");
+
+    // All six slots came back, so nothing was evicted...
+    expect(howl.fade).not.toHaveBeenCalled();
+    expect(howl.stop).not.toHaveBeenCalled();
+    // ...and the dead Howl left the cache, so this is a fresh one rather than
+    // the same corpse handing out entries nothing can ever release.
+    expect(builtCity().length).toBe(2);
+  });
+});
+
 describe("registered loops", () => {
   it("keeps following a howl registered while its channel was silent", () => {
     // MenuMusic hands the theme straight over rather than ramping when music
