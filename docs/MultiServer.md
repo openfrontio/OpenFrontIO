@@ -547,28 +547,37 @@ when:
   mismatch to join-time `version_mismatch`, whose cross-host redirect
   already answers it.
 
-### A pinned page is never "out of date"
+### A pinned page is never "outdated"
 
-`/v/<X>/` is where this redirect PUTS a player, and X is draining by
-definition — that is why it is not `latest`. So the out-of-date check
-(`ensureServerList({ redirectIfOutOfDate: true })`, which the lobby list and
-Create ask for) would fire the moment they arrived, send them to
-`/v/<latest>/`, whose `handleUrl` sees the same game on the same older server
-and sends them back: an infinite hard-navigation loop. `versionedPath`'s own
-guard cannot catch it, because the two hops have different targets and
-neither is ever "already there".
+A document under `/v/<commit>/` is pinned ON PURPOSE, so it is never reported
+`outdated` however far behind `latest` it is — decided in `isOutdated`
+(`src/client/ServerList.ts`) rather than at the call sites, so no future
+caller of `ensureServerList` can get it wrong.
 
-So a document under `/v/<commit>/` is never out of date, decided inside
-`isOutOfDate` in `src/client/ServerList.ts` rather than at the call sites, so
-no future caller can get it wrong. Being behind is the point of being pinned.
+Being behind is the point. The one flow that puts a player on a pinned page
+is opening a game whose server runs an older build, so the page is behind by
+construction and _permanently_ — unlike an ordinary tab, where being behind
+is news ("a deploy happened while you were here") and the prompt is a
+one-shot. Prompting here would fire on every visit, and its remedy
+(`reloadForUpdate`, which strips the prefix) would silently undo the pin the
+player asked for. Leaving is already one click away: "leave to the menu" goes
+to the version-free root. Same exemption, and the same reason, as the desktop
+and replay shells.
 
-The same loop has a click-per-lap variant through join-time
-`version_mismatch` (`ClientGameRunner`): `reloadForUpdate` strips the pin —
-right for an ordinary stale tab, fatal on a pinned page, which lands back on
-`latest`. A pinned page therefore takes the game's own host when the id
-resolves cross-host, and otherwise says `update_available.message` and stops:
-nothing it can fetch is the build it needs, which is what a mismatch on a
-pinned page means.
+A pinned page needs no special treatment beyond that: its build's servers are
+`draining`, not `fenced`, so the ordinary "an open server on my build, else a
+draining one" pick already routes it to one, and Create and the lobby feed
+work there like anywhere else.
+
+The one loop it must not enter runs through join-time `version_mismatch`
+(`ClientGameRunner`). `reloadForUpdate` strips the pin — right for an
+ordinary stale tab, wrong here: the reload lands on `latest`, whose
+`handleUrl` sees the same game on the same older server and pins the page
+straight back, one lap per click. So a pinned page takes the game's own host
+when the id resolves cross-host, and otherwise says `update_available.message`
+and stops. Nothing it can fetch is the build it needs — that is precisely
+what a mismatch on a pinned page means: the version's page is not being
+served.
 
 ## Paths on a `/v/<commit>/` page
 
@@ -599,9 +608,6 @@ parses has to account for it.
   `apexPathFor` when it also leaves for the apex). `/v/<commit>/` pins the
   bundle, so reloading it as-is re-serves the very version the update is
   leaving behind — forever, cache-buster or not.
-- **Share links** (`gamePath`) are deliberately version-free: the recipient
-  should be routed to whatever version the game's server actually runs, which
-  is decided when they open it, not when the link was copied.
 
 ## `latest`: the one switch
 
