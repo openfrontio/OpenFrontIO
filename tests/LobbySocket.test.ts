@@ -267,6 +267,63 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     socket.stop();
   });
 
+  // The tab that was already here when the rollover happened: its server
+  // drained, then fenced, and the socket just fails. No feed arrives to
+  // carry a commit or a drain flag, so the list is the only thing left that
+  // can tell the player to reload.
+  it("asks the list again once reconnecting has given up, and prompts if this build is outdated", async () => {
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onUpdateAvailable,
+      maxWsAttempts: 1,
+    });
+    await socket.start();
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+
+    mocks.ensureServerList.mockResolvedValue("outdated");
+    (socket as any).handleClose();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
+
+    // Every further failure re-asks at most a prompt already given.
+    (socket as any).handleClose();
+    (socket as any).handleConnectError(new Error("refused"));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
+    socket.stop();
+  });
+
+  it("does not prompt when the socket fails but a server is still there", async () => {
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onUpdateAvailable,
+      maxWsAttempts: 1,
+    });
+    await socket.start();
+    (socket as any).handleClose();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+    socket.stop();
+  });
+
+  it("does not prompt after the socket was stopped", async () => {
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onUpdateAvailable,
+      maxWsAttempts: 1,
+    });
+    await socket.start();
+    mocks.ensureServerList.mockResolvedValue("outdated");
+    (socket as any).promptIfOutdated();
+    socket.stop();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+  });
+
   it("does not prompt when a server was picked, or when nothing newer exists", async () => {
     for (const status of ["api", "fallback", "no-server"]) {
       mocks.ensureServerList.mockResolvedValue(status);

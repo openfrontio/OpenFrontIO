@@ -205,9 +205,26 @@ export class PublicLobbySocket {
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
       console.error("Max WebSocket attempts reached");
+      void this.promptIfOutdated();
     } else {
       this.scheduleReconnect();
     }
+  }
+
+  // Reconnecting has given up. A tab that was already sitting on the
+  // homepage when its server left the list (drained, then fenced or
+  // removed) never gets a feed to learn from — it just watches the socket
+  // fail — so ask the list again here. If nothing runs this build any more
+  // and a newer version exists, this is the same one-shot prompt start()
+  // raises. ensureServerList never throws and answers from the cached list,
+  // so this costs nothing when the failure was only the network.
+  private async promptIfOutdated(): Promise<void> {
+    if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
+      return;
+    }
+    const listStatus = await ensureServerList();
+    if (this.stopped) return;
+    if (listStatus === "outdated") this.fireUpdateAvailable();
   }
 
   private handleError(error: Event) {
@@ -222,6 +239,7 @@ export class PublicLobbySocket {
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
       void showInGameAlert(translateText("error_modal.connection_error"));
+      void this.promptIfOutdated();
     } else {
       this.scheduleReconnect();
     }

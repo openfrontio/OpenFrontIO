@@ -568,6 +568,72 @@ describe("picking between open, draining and fenced", () => {
     expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
   });
 
+  // The sticky pick, end to end: the page holds the server it picked while
+  // that server still takes its games, so the lobby list and the games
+  // created from it land together. Each of these refreshes the list under a
+  // page that has already picked `d`.
+  describe("the sticky pick across refreshes", () => {
+    const START = listOf({
+      c: server(OLD, "draining"),
+      d: server(OWN, "open", "falk2-b.openfront.io"),
+    });
+
+    async function refreshWith(body: unknown): Promise<string> {
+      fetchMock.mockImplementation(async () => jsonResponse(body));
+      // Stale the cache, answer from it (which kicks the refresh), then let
+      // that refresh land before asking again.
+      await vi.advanceTimersByTimeAsync(REFRESH_MS + 1);
+      await ensureServerList();
+      await vi.advanceTimersByTimeAsync(1);
+      return ensureServerList();
+    }
+
+    beforeEach(async () => {
+      vi.useFakeTimers();
+      fetchMock.mockImplementation(async () => jsonResponse(START));
+      expect(await ensureServerList()).toBe("api");
+      expect(ClientEnv.serverHttpBase()).toBe("https://falk2-b.openfront.io");
+    });
+
+    it("holds the pick when its server flips to draining on my build", async () => {
+      // d still runs my build, so my games still belong there — even though
+      // e is open and would win a fresh draw. Moving the page mid-session
+      // is exactly the rollover players don't get today.
+      expect(
+        await refreshWith(
+          listOf({
+            c: server(OLD, "draining"),
+            d: server(OWN, "draining", "falk2-b.openfront.io"),
+            e: server(OWN, "open", "nbg2-a.openfront.io"),
+          }),
+        ),
+      ).toBe("api");
+      expect(ClientEnv.serverHttpBase()).toBe("https://falk2-b.openfront.io");
+    });
+
+    it("re-picks when its server is fenced", async () => {
+      // Fenced takes nothing new, not even from the build it runs.
+      expect(
+        await refreshWith(
+          listOf({
+            d: server(OWN, "fenced", "falk2-b.openfront.io"),
+            e: server(OWN, "open", "nbg2-a.openfront.io"),
+          }),
+        ),
+      ).toBe("api");
+      expect(ClientEnv.serverHttpBase()).toBe("https://nbg2-a.openfront.io");
+    });
+
+    it("re-picks when its letter leaves the list", async () => {
+      expect(
+        await refreshWith(
+          listOf({ e: server(OWN, "open", "nbg2-a.openfront.io") }),
+        ),
+      ).toBe("api");
+      expect(ClientEnv.serverHttpBase()).toBe("https://nbg2-a.openfront.io");
+    });
+  });
+
   // Whatever the answer, and whoever asked: joining an existing game and
   // every in-game request run through here too, and a navigation would take
   // a live match off the page.
