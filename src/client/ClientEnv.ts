@@ -14,12 +14,18 @@ import {
  * No server is known: the API's list has not loaded (or carries none for
  * this build) and the page itself names none either.
  *
- * Only ever thrown by the accessors that have no truthful answer without a
- * server — numWorkers() and workerPath(). serverWsBase() / serverHttpBase()
- * deliberately do NOT throw: the document's own origin is a real game server
- * on a dev box and on a standalone deployment, which is what they answered
- * before any of this existed, and a static page served from the site host
- * fails at connect time rather than at URL-build time.
+ * Raised by numWorkers() and propagated by every accessor that derives a
+ * worker route from it — workerIndex(), workerPath(), and gameWorkerPath()
+ * on its own-server branch. Those have no truthful answer without a server:
+ * a worker count belongs to ONE server, so any number routes to a worker
+ * that does not own the game. (gamePath() is the deliberate exception: it
+ * catches this and falls back to the worker-free `/game/<id>` shape.)
+ *
+ * serverWsBase() / serverHttpBase() deliberately do NOT throw: the
+ * document's own origin is a real game server on a dev box and on a
+ * standalone deployment, which is what they answered before any of this
+ * existed, and a static page served from the site host fails at connect time
+ * rather than at URL-build time.
  *
  * Typed so callers can tell "there is no server" from a programming error and
  * route it into the connection-failed path they already have

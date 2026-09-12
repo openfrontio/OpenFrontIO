@@ -342,6 +342,20 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
   });
 });
 
+const OWN = "bfd5563a11111111111111111111111111111111";
+
+const LIST = {
+  latest: OWN,
+  servers: {
+    d: {
+      host: "falk2-b.openfront.io",
+      numWorkers: 8,
+      version: OWN,
+      state: "open" as const,
+    },
+  },
+};
+
 // A static page knows no server of its own, so when the API's list is
 // unreachable there is no worker count anywhere and ClientEnv throws
 // NoServerError. The lobby list is the first thing every homepage starts, so
@@ -358,7 +372,7 @@ describe("PublicLobbySocket.start with no server known", () => {
       gameEnv: "prod",
       turnstileSiteKey: "k",
       jwtAudience: "openfront.io",
-      gitCommit: "bfd5563a11111111111111111111111111111111",
+      gitCommit: OWN,
     };
   });
 
@@ -375,5 +389,47 @@ describe("PublicLobbySocket.start with no server known", () => {
 
     expect(mocks.showInGameAlert).toHaveBeenCalledTimes(1);
     expect(mocks.showInGameAlert.mock.calls[0][0]).toContain("connection");
+  });
+
+  it("re-runs discovery on the retry and connects once a server is known", async () => {
+    // The retry must not go straight back to connectWebSocket: there was no
+    // worker path to build a URL with, so every remaining attempt would be
+    // spent re-dialling the same empty one. The list arriving between
+    // attempts is exactly the case this has to recover from.
+    const urls: string[] = [];
+    class FakeWebSocket {
+      binaryType = "";
+      constructor(url: string) {
+        urls.push(url);
+      }
+      addEventListener() {}
+      close() {}
+    }
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    vi.useFakeTimers();
+    try {
+      const socket = new PublicLobbySocket(vi.fn(), {
+        maxWsAttempts: 3,
+        reconnectDelay: 1000,
+      });
+
+      await socket.start();
+      expect(urls).toHaveLength(0);
+      // One attempt of three is spent, so nothing is reported to the player
+      // yet -- a retry is pending.
+      expect(mocks.showInGameAlert).not.toHaveBeenCalled();
+
+      ClientEnv.applyServerList(LIST, "d");
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(urls).toHaveLength(1);
+      expect(urls[0]).toMatch(
+        /^wss:\/\/falk2-b\.openfront\.io\/w\d+\/lobbies$/,
+      );
+      expect(mocks.showInGameAlert).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
   });
 });
