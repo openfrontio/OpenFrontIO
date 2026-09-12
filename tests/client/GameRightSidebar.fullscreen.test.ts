@@ -101,25 +101,10 @@ function clickFullscreen(el: TestSidebar): void {
   );
 }
 
-// Vitest tears down this file's jsdom when the file ends, but it does NOT
-// remove elements from document.body first -- so a component still connected
-// at that point never gets disconnectedCallback, and anything it has armed
-// outlives the document.
-//
-// That is not hypothetical here: three of the tests below deliberately leave a
-// write in flight, which leaves the 2s settle ceiling armed. When it fired
-// after teardown it set a @state field, Lit scheduled an update, and
-// modalConfig() -> translateText() -> getCachedLangSelector() reached for a
-// `document` that no longer existed. Vitest reports that as an unhandled
-// rejection against whichever FILE happened to be running at the time, which
-// is why it read as an unrelated flake.
-//
-// Removing every element here runs disconnectedCallback, which clears the
-// timer and the subscription.
-afterEach(async () => {
-  for (const el of [...document.body.children]) el.remove();
-  // Let any update already scheduled run while the document still exists.
-  await Promise.resolve();
+// Elements mounted by a test are removed by the global DOM teardown in
+// tests/domTeardown.ts, which runs after this file's own hooks. Only the
+// globals this file installs need undoing here.
+afterEach(() => {
   window.openfrontDesktop = undefined;
   vi.useRealTimers();
 });
