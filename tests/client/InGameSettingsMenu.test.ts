@@ -59,15 +59,10 @@ describe("in-game menu opens the shared settings modal", () => {
     await settle();
   });
 
-  afterEach(async () => {
+  // Both elements are removed by the global DOM teardown in
+  // tests/domTeardown.ts, which runs after this hook.
+  afterEach(() => {
     vi.restoreAllMocks();
-    // A Lit element left connected when the file ends can schedule an update
-    // after jsdom is gone, which surfaces as an unhandled "document is not
-    // defined" and fails the run even though every test passed.
-    menu.remove();
-    settings.remove();
-    await menu.updateComplete;
-    await settings.updateComplete;
   });
 
   /** Open the menu the way GameRightSidebar does in a single-player game. */
