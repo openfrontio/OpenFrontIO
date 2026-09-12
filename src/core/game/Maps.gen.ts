@@ -27,6 +27,7 @@ export enum GameMapType {
   BranchingPaths = "Branching Paths", // map-generator/assets/maps/branchingpaths/info.json
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
   BritanniaClassic = "Britannia Classic", // map-generator/assets/maps/britanniaclassic/info.json
+  CapeCod = "Cape Cod", // map-generator/assets/maps/capecod/info.json
   Caribbean = "Caribbean", // map-generator/assets/maps/caribbean/info.json
   CaspianSea = "Caspian Sea", // map-generator/assets/maps/caspiansea/info.json
   Caucasus = "Caucasus", // map-generator/assets/maps/caucasus/info.json
@@ -530,6 +531,18 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 23,
     themes: ["europe"],
+  },
+  {
+    id: "CapeCod",
+    type: GameMapType.CapeCod,
+    translationKey: "map.capecod",
+    categories: ["north_america", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 31,
+    themes: ["north_america"],
   },
   {
     id: "Caribbean",
