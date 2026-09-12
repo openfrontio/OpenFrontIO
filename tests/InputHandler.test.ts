@@ -1,8 +1,11 @@
 import {
+  AlternateViewEvent,
   AutoUpgradeEvent,
+  CloseViewEvent,
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
   InputHandler,
+  TouchLongPressStartEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
@@ -1292,5 +1295,258 @@ describe("InputHandler right-click cancels unit selection (#4692)", () => {
     expect(
       emitted.some((e) => e instanceof WarshipSelectionBoxCancelEvent),
     ).toBe(true);
+  });
+});
+
+describe("InputHandler teardown (OPE-411)", () => {
+  const makeHandler = (canvas: HTMLElement, eventBus: EventBus) =>
+    new InputHandler(
+      {
+        inSpawnPhase: () => false,
+        myPlayer: () => ({ isAlive: () => true }),
+      } as unknown as GameView,
+      {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        upgradeMultiplier: 1,
+      },
+      canvas,
+      eventBus,
+    );
+
+  let inputHandler: InputHandler;
+  let eventBus: EventBus;
+  let canvas: HTMLCanvasElement;
+
+  beforeEach(() => {
+    new UserSettings().removeCached(KEYBINDS_KEY, false);
+    canvas = document.createElement("canvas");
+    canvas.width = 800;
+    canvas.height = 600;
+    eventBus = new EventBus();
+    inputHandler = makeHandler(canvas, eventBus);
+    inputHandler.initialize();
+  });
+
+  afterEach(() => inputHandler.destroy());
+
+  it("emits AlternateViewEvent on Space while alive", () => {
+    const emit = vi.spyOn(eventBus, "emit");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
+    expect(
+      emit.mock.calls.some(
+        (c: unknown[]) => c[0] instanceof AlternateViewEvent,
+      ),
+    ).toBe(true);
+  });
+
+  it("emits CloseViewEvent on Escape while alive", () => {
+    const emit = vi.spyOn(eventBus, "emit");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));
+    expect(
+      emit.mock.calls.some((c: unknown[]) => c[0] instanceof CloseViewEvent),
+    ).toBe(true);
+  });
+
+  it("emits nothing on a window keydown after destroy()", () => {
+    inputHandler.destroy();
+    const emit = vi.spyOn(eventBus, "emit");
+    // Escape is the load-bearing probe: its CloseViewEvent is emitted
+    // unconditionally, so it still fires if the keydown listener survives
+    // destroy(). Space goes through this.keybinds, which destroy() also
+    // clears, so a Space-only probe would pass even with the abort reverted.
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "Space" }));
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("emits nothing on a canvas event after destroy()", () => {
+    inputHandler.destroy();
+    const emit = vi.spyOn(eventBus, "emit");
+    canvas.dispatchEvent(
+      new MouseEvent("contextmenu", { clientX: 100, clientY: 100 }),
+    );
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("clears keybinds and the keybind dispatch table on destroy()", () => {
+    expect(Object.keys(inputHandler["keybinds"]).length).toBeGreaterThan(0);
+    expect(inputHandler["keybindAndEvent"].length).toBeGreaterThan(0);
+
+    inputHandler.destroy();
+    expect(inputHandler["keybinds"]).toEqual({});
+    expect(inputHandler["keybindAndEvent"]).toEqual([]);
+  });
+
+  it("is safe to destroy twice", () => {
+    inputHandler.destroy();
+    expect(() => inputHandler.destroy()).not.toThrow();
+
+    const emit = vi.spyOn(eventBus, "emit");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("destroying one handler leaves a later handler working", () => {
+    const secondBus = new EventBus();
+    const secondCanvas = document.createElement("canvas");
+    const second = makeHandler(secondCanvas, secondBus);
+    second.initialize();
+
+    try {
+      inputHandler.destroy();
+
+      const deadEmit = vi.spyOn(eventBus, "emit");
+      const liveEmit = vi.spyOn(secondBus, "emit");
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));
+
+      expect(deadEmit).not.toHaveBeenCalled();
+      expect(
+        liveEmit.mock.calls.some(
+          (c: unknown[]) => c[0] instanceof CloseViewEvent,
+        ),
+      ).toBe(true);
+    } finally {
+      // Must run even if an expectation throws, or a live window listener
+      // leaks into every later test in this file.
+      second.destroy();
+    }
+  });
+
+  it("cancels a pending long-press timer on destroy()", () => {
+    vi.useFakeTimers();
+    const bus = new EventBus();
+    const handler = makeHandler(document.createElement("canvas"), bus);
+    try {
+      handler.initialize();
+      handler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: 10,
+          clientY: 20,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+      expect(handler["longPressTimer"]).not.toBeNull();
+
+      handler.destroy();
+      const emit = vi.spyOn(bus, "emit");
+      vi.advanceTimersByTime(2000);
+
+      expect(emit).not.toHaveBeenCalled();
+      expect(handler["longPressActive"]).toBe(false);
+    } finally {
+      handler.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it("cancels a pending long-press timer on re-initialize", () => {
+    vi.useFakeTimers();
+    const bus = new EventBus();
+    const handler = makeHandler(document.createElement("canvas"), bus);
+    try {
+      handler.initialize();
+      handler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: 10,
+          clientY: 20,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+
+      handler.initialize();
+      const emit = vi.spyOn(bus, "emit");
+      vi.advanceTimersByTime(2000);
+
+      expect(
+        emit.mock.calls.some(
+          (c: unknown[]) => c[0] instanceof TouchLongPressStartEvent,
+        ),
+      ).toBe(false);
+    } finally {
+      handler.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it("releases its EventBus subscription on destroy()", () => {
+    const unit = { id: () => 1 } as unknown as UnitView;
+
+    // Control: while alive the subscription drives the cursor.
+    eventBus.emit(new UnitSelectionEvent(unit, true));
+    expect(canvas.style.cursor).toBe("crosshair");
+    canvas.style.cursor = "";
+
+    inputHandler.destroy();
+
+    // The EventBus is page-global, so a subscription left behind would keep
+    // this handler alive and run it against the next game's events. Both
+    // probes are discriminating: a live subscription would set the crosshair
+    // on the first, and clear unitSelectionActive on the second.
+    eventBus.emit(new UnitSelectionEvent(unit, true));
+    expect(canvas.style.cursor).toBe("");
+
+    eventBus.emit(new UnitSelectionEvent(null, false));
+    expect(inputHandler["unitSelectionActive"]).toBe(true);
+  });
+
+  it("clears the pan/zoom interval on destroy()", () => {
+    vi.useFakeTimers();
+    const handler = makeHandler(
+      document.createElement("canvas"),
+      new EventBus(),
+    );
+    try {
+      handler.initialize();
+      expect(vi.getTimerCount()).toBe(1);
+
+      handler.destroy();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      handler.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it("a second initialize() does not orphan the first listeners or interval", () => {
+    vi.useFakeTimers();
+    const bus = new EventBus();
+    const handler = makeHandler(document.createElement("canvas"), bus);
+    // The bus captures this field's value at initialize() time, so swapping
+    // it first lets us count how many times the subscription is registered.
+    const onUnitSelection = vi.fn();
+    handler["onUnitSelection"] = onUnitSelection;
+    try {
+      handler.initialize();
+      handler.initialize();
+      expect(vi.getTimerCount()).toBe(1);
+
+      bus.emit(
+        new UnitSelectionEvent({ id: () => 1 } as unknown as UnitView, true),
+      );
+      expect(onUnitSelection).toHaveBeenCalledTimes(1);
+
+      handler.destroy();
+      expect(vi.getTimerCount()).toBe(0);
+
+      onUnitSelection.mockClear();
+      bus.emit(
+        new UnitSelectionEvent({ id: () => 1 } as unknown as UnitView, true),
+      );
+      expect(onUnitSelection).not.toHaveBeenCalled();
+
+      const emit = vi.spyOn(bus, "emit");
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));
+      expect(emit).not.toHaveBeenCalled();
+    } finally {
+      handler.destroy();
+      vi.useRealTimers();
+    }
   });
 });
