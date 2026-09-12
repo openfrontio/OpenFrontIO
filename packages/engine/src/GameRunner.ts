@@ -153,9 +153,12 @@ export class GameRunner {
   private isExecuting = false;
 
   private playerViewData: Record<PlayerID, NameViewData> = {};
+
   // Name placements are recomputed periodically; a runner that starts
   // mid-game (restored from a snapshot) computes them on its first tick.
   private viewDataStale = true;
+
+  private lastSpawnTiles = new Map<PlayerID, TileRef>();
 
   constructor(
     public game: Game,
@@ -250,29 +253,42 @@ export class GameRunner {
     // every other tick.
     let viewDataChanged = false;
     if (this.game.inSpawnPhase()) {
-      for (const p of this.game.players()) {
+      for (const p of this.game.allPlayers()) {
         if (p.type() !== PlayerType.Human && p.type() !== PlayerType.Nation) {
           continue;
         }
-        if (p.spawnTile() === undefined) continue;
-        this.playerViewData[p.id()] = placeSpawnName(this.game, p);
-        viewDataChanged = true;
+        const spawnTile = p.spawnTile();
+        if (spawnTile === undefined) continue;
+        if (this.lastSpawnTiles.get(p.id()) !== spawnTile) {
+          this.lastSpawnTiles.set(p.id(), spawnTile);
+          this.playerViewData[p.id()] = placeSpawnName(this.game, p);
+          viewDataChanged = true;
+        }
       }
     }
 
     const spawnJustEnded = wasInSpawnPhase && !this.game.inSpawnPhase();
     if (
       spawnJustEnded ||
-      this.viewDataStale ||
-      this.game.ticks() < 3 ||
-      this.game.ticks() % 30 === 0
+      (!this.game.inSpawnPhase() && this.lastSpawnTiles.size > 0)
+    ) {
+      this.lastSpawnTiles.clear();
+    }
+    if (
+      spawnJustEnded ||
+      (!this.game.inSpawnPhase() &&
+        (this.viewDataStale ||
+          this.game.ticks() < 3 ||
+          this.game.ticks() % 30 === 0))
     ) {
       this.viewDataStale = false;
+      this.playerViewData = {};
       for (const p of this.game.players()) {
         this.playerViewData[p.id()] = placeName(this.game, p);
       }
       viewDataChanged = true;
     }
+
 
     const packedTileUpdates = this.game.drainPackedTileUpdates();
     const packedMotionPlans = this.game.drainPackedMotionPlans();
