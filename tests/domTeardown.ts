@@ -117,6 +117,33 @@ export async function removeAndSettle(
   await settle(elements);
 }
 
+/**
+ * Run whatever the test armed on the fake clock and hand control back to real
+ * timers. A no-op unless fake timers are STILL installed -- a test that already
+ * called vi.useRealTimers() is left exactly as it left things.
+ *
+ * Draining matters because vi.useRealTimers() discards the fake clock: a timer
+ * the test armed and never ran would otherwise vanish without ever running. By
+ * this point the elements are disconnected, so anything THEY armed has been
+ * cleared and what is left belongs to the test.
+ *
+ * A callback that throws propagates, after real timers are restored. It is the
+ * test's own code failing, and afterEach runs per test, so it fails the test
+ * that armed it rather than leaking into the next one -- swallowing it here
+ * would turn a genuine failure into a pass.
+ *
+ * Exported so that can be asserted directly: a hook that throws fails its test
+ * by design, which is not something a passing test can observe from the inside.
+ */
+export function drainFakeTimers(): void {
+  if (!vi.isFakeTimers()) return;
+  try {
+    vi.runOnlyPendingTimers();
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
 async function settle(elements: readonly Element[]): Promise<void> {
   for (const element of elements) {
     const pending = (element as MaybeUpdating).updateComplete;
@@ -139,27 +166,17 @@ afterEach(async () => {
 
   await removeAndSettle(added);
 
-  // Fake timers are only touched when they are STILL installed -- a test that
-  // already called vi.useRealTimers() is left exactly as it left things.
-  //
-  // Draining first matters: vi.useRealTimers() discards the fake clock, so a
-  // timer the test armed and never ran would vanish without ever running. The
-  // elements are already disconnected at this point, so anything they armed
-  // has been cleared and what is left belongs to the test itself. Running it
-  // here keeps that work inside the test's own document.
-  if (vi.isFakeTimers()) {
-    try {
-      vi.runOnlyPendingTimers();
-    } catch {
-      // A pending callback that throws belongs to the test that armed it.
-      // Rethrowing from a global afterEach would pin it on whichever test
-      // happened to run last -- the exact misattribution this file exists to
-      // remove. Draining is the goal here, not asserting.
-    }
-    vi.useRealTimers();
-    // The drain can have scheduled one more update on a disconnected element.
-    await settle(added);
+  let drainFailure: { error: unknown } | null = null;
+  try {
+    drainFakeTimers();
+  } catch (error) {
+    drainFailure = { error };
   }
+  // The drain can have scheduled one more update on a disconnected element.
+  await settle(added);
+  // Held until the cleanup above has finished, then surfaced. afterEach runs
+  // per test, so this lands on the test that armed the timer.
+  if (drainFailure) throw drainFailure.error;
 });
 
 // The afterEach deliberately spares anything mounted before the test started,

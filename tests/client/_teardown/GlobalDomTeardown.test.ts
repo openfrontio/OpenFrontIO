@@ -1,7 +1,7 @@
 import { setTimeout as nodeDelay } from "node:timers/promises";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { removeAndSettle } from "../../domTeardown";
+import { drainFakeTimers, removeAndSettle } from "../../domTeardown";
 import {
   disconnects,
   lateUpdates,
@@ -83,6 +83,27 @@ describe("global DOM teardown", () => {
     expect(vi.isFakeTimers()).toBe(false);
     // Would hang if fake timers were still installed.
     await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  // The drain is deliberately not error-swallowing: a pending callback that
+  // throws is the test's own code failing, and afterEach runs per test, so
+  // letting it propagate fails the test that armed it. Catching it would turn
+  // that failure into a pass. Asserted against the helper rather than the hook,
+  // because a hook that throws fails its test by design -- there is no vantage
+  // point inside a passing test from which to watch it happen.
+  it("surfaces an error thrown by a drained timer, real timers restored", () => {
+    vi.useFakeTimers();
+    setTimeout(() => {
+      throw new Error("armed and dangerous");
+    }, 1_000);
+
+    expect(() => drainFakeTimers()).toThrow("armed and dangerous");
+    expect(vi.isFakeTimers()).toBe(false);
+  });
+
+  it("is a no-op when the test already restored real timers", () => {
+    expect(vi.isFakeTimers()).toBe(false);
+    expect(() => drainFakeTimers()).not.toThrow();
   });
 });
 
