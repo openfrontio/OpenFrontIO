@@ -31,9 +31,10 @@ export class ClientEnv {
   }
 
   // Called by src/client/ServerList.ts only. `picked` is the letter of the
-  // open server chosen for this page's new games, or null when none runs
-  // this build (existing games still resolve by letter; own-server calls
-  // fall back to the page's values).
+  // server chosen for this page's new games — open on this build, else
+  // draining on this build — or null when none takes them (existing games
+  // still resolve by letter; own-server calls fall back to the page's
+  // values).
   static applyServerList(list: ServerList | null, picked: string | null) {
     ClientEnv.apiList = list === null ? null : { list, picked };
   }

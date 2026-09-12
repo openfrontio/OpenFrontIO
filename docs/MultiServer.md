@@ -371,18 +371,24 @@ hostname players load the page from (`openfront.io`, `main.openfront.dev`,
       "numWorkers": 16,
       "version": "bfd5563a…",
       "state": "open"
+    },
+    "e": {
+      "host": "nbg2-a.openfront.io",
+      "numWorkers": 8,
+      "version": "3a1f90bb…",
+      "state": "fenced"
     }
   }
 }
 ```
 
-| Field        | Meaning                                                                                                                          |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| `latest`     | The commit new players should be on. The one switch (see below). Absent if none is flagged.                                      |
-| `host`       | As today: where the server is reached directly.                                                                                  |
-| `numWorkers` | As today: frozen while the letter has live games.                                                                                |
-| `version`    | The commit the server runs, as its `GIT_COMMIT` reports it (full sha).                                                           |
-| `state`      | `open`: runs `latest` and isn't fenced, so it takes new games. `draining`: anything else; existing games and rejoins still work. |
+| Field        | Meaning                                                                                                                                                                                                                             |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `latest`     | The commit new players should be on. The one switch (see below). Absent if none is flagged.                                                                                                                                         |
+| `host`       | As today: where the server is reached directly.                                                                                                                                                                                     |
+| `numWorkers` | As today: frozen while the letter has live games.                                                                                                                                                                                   |
+| `version`    | The commit the server runs, as its `GIT_COMMIT` reports it (full sha).                                                                                                                                                              |
+| `state`      | `open`: runs `latest`, so it takes new games from clients on that build. `draining`: runs an older build, and still takes new games from clients on **that** build. `fenced`: takes nothing new; live games and rejoins still work. |
 
 `color` is gone. Letters are append-only and never reused; retired letters
 stay in the API but are not sent to clients. Everyone gets the same
@@ -390,9 +396,10 @@ response and the client filters it by version, so the API can cache it
 for a few seconds. Commits are compared prefix-tolerantly (a 7+ char
 prefix of a sha matches it), so short and full forms interoperate.
 `latest` and `version` must both be commit-shaped (`/^[0-9a-f]{7,40}$/i`):
-`latest` is interpolated into `/v/<commit>/`, where a value the loop guard
-cannot compare would send the page somewhere nothing serves, so a list
-carrying one is rejected whole and the client keeps its own values.
+they decide which server a build may use, and (for a pinned game page) go
+into `/v/<commit>/`. Both compares only work on commit-shaped values, so a
+list carrying anything else is rejected whole and the client keeps its own
+values.
 
 ## What the client does (`src/client/ServerList.ts`, `src/core/ServerList.ts`)
 
@@ -423,9 +430,11 @@ carrying one is rejected whole and the client keeps its own values.
   `isDesktopShell()`, not by whether `serverHost` is present — game
   servers inject `serverHost` as their own host, which is not a site.
 - **New game or lobby list:** a random `open` server whose `version`
-  matches the client's `gitCommit`. The pick is sticky for the page while
-  that server stays open. `ClientEnv.serverWsBase()` / `serverHttpBase()`
-  / `numWorkers()` answer from it.
+  matches the client's `gitCommit`; if none does, a random `draining`
+  server on that same build. Never a `fenced` one. The pick is sticky for
+  the page while that server still takes this build's games — a flip from
+  `open` to `draining` does not move it. `ClientEnv.serverWsBase()` /
+  `serverHttpBase()` / `numWorkers()` answer from it.
 - **Existing game** (link, rejoin, matchmade id): the id's letter names
   the server in the list, whatever its state. `ClientEnv.resolveGame()`
   answers from the list; an unknown letter means the game doesn't exist
@@ -434,24 +443,31 @@ carrying one is rejected whole and the client keeps its own values.
   malformed or empty — every accessor answers from `BOOTSTRAP_CONFIG`
   exactly as before, so production behaves as today until the API serves a
   list.
-- **No `open` server for my version:**
+- **No server for my build** (nothing `open` and nothing `draining` on it;
+  a `fenced` server does not count):
   - if the client _is_ `latest`, or the list has no `latest`, no server is
     running at all. Own-server calls fall back to the page's values and
-    multiplayer fails as it does today. Never redirect: it would loop.
-  - otherwise the client is out of date. The web client navigates to
-    `/v/<latest>/…` keeping the game path (a plain reload could be served
-    a cached older page). It never navigates a page already under
-    `/v/<latest>/` — the loop guard lives in `versionedPath`. The Steam
-    build leaves it to its updater, and a build whose `gitCommit` names no
-    commit (`DEV`, `desktop`) is never out of date.
-  - the navigation happens only where the caller asks for it
-    (`ensureServerList({ redirectIfOutOfDate: true })`). **This is a version
-    check before starting anything new: the lobby list and Create. Joining
-    or rejoining an existing game, and every in-game request, never
-    navigates the page.** During a rolling deploy a player's own server is
-    `draining` with no `open` sibling on their build, so an unconditional
-    redirect would take a live match off the page. A version mismatch on
-    join is answered at join time (`version_mismatch`) instead.
+    multiplayer fails as it does today (`ensureServerList()` answers
+    `no-server`).
+  - otherwise the client is behind: `ensureServerList()` answers
+    `outdated`. **Nothing navigates the page.** `PublicLobbySocket.start`
+    fires its existing `onUpdateAvailable` once — the same callback a
+    differing `gitCommit` in the lobby feed uses — so
+    `GameModeSelector.handleUpdateAvailable` shows the existing "update
+    available" prompt and `reloadForUpdate()` reloads (a plain reload: by
+    the time a build has no server left, the edge cache has long moved
+    on). It connects anyway, so a shell that never prompts still gets its
+    lobby list from the fallback values.
+  - never prompted: the desktop shell, whose updater owns which version it
+    runs; a replay shell, pinned to the archived game's build on purpose;
+    and a build whose `gitCommit` names no commit (`DEV`, `desktop`),
+    which matches every version and so is never behind.
+  - this replaces the `/v/<latest>/` redirect an earlier draft had.
+    Rollover keeps today's feel instead: a player on build X keeps playing
+    on X's `draining` server after Y is released, until they refresh. A
+    version mismatch on join is still answered at join time
+    (`version_mismatch`). `/v/<commit>/` is now used only for pinned pages
+    of existing games and replays — roadmap item 2.
 
 ## `latest`: the one switch
 
@@ -459,9 +475,17 @@ Each site has one `latest` commit. The build pipeline sets it once the new
 version's servers have registered; rollback is an admin-panel action that
 flags an older commit. The API refuses to flag a commit with no servers
 checked in. Everything follows from it: servers on `latest` are `open`,
-everything else drains; `<site>/` (any path without `/v/<commit>/`) serves
-its page; `/desktop/*.json` points the Steam build at it. One value, not
-two, so the default page and the servers' states can never disagree.
+older ones `draining` (still serving their own build's clients) until they
+are `fenced` and their games run out; `<site>/` (any path without
+`/v/<commit>/`) serves its page; `/desktop/*.json` points the Steam build
+at it. One value, not two, so the default page and the servers' states can
+never disagree.
+
+For a client, `latest` is only ever a comparison — it is never navigated
+to. A page whose build still has an `open` or `draining` server keeps
+using it and ignores `latest` entirely; only a page with no server left at
+all looks at `latest`, and a value differing from its own build is what
+turns into the "update available" prompt.
 
 ## Roadmap (what lands where)
 

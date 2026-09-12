@@ -1882,8 +1882,6 @@ export async function openSubscriptionPortal(): Promise<string | false> {
 // default is to change nothing.
 export async function fetchLobbyListed(gameID: string): Promise<boolean> {
   try {
-    // No redirectIfOutOfDate: this runs from the in-game HUD, where
-    // navigating the page away would end a live match.
     await ensureServerList();
     const res = await fetch(
       `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}`,
@@ -1941,17 +1939,11 @@ export async function setLobbyListed(
 // self-owned id and returns it.
 export async function createLobby(): Promise<GameInfo> {
   // A new game needs a server that takes new games on this build: ask the
-  // API (multi-server v2), falling back to the page's own server. Creating
-  // is one of the two "starting something new" flows, so a page the list
-  // says is out of date is navigated to the current version's page rather
-  // than creating a lobby no running server can host. The caller's own
-  // failure path (clearing the share link) runs while that navigation
-  // happens.
-  if (
-    (await ensureServerList({ redirectIfOutOfDate: true })) === "redirecting"
-  ) {
-    throw new Error("createLobby: navigating to the current version");
-  }
+  // API (multi-server v2), falling back to the page's own server. A page
+  // whose build no longer has one creates against its own values and fails
+  // as it does today; the "update available" prompt the lobby list raises
+  // is what moves the player forward.
+  await ensureServerList();
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();

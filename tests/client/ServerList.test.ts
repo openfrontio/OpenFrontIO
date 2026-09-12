@@ -430,27 +430,75 @@ describe("backend reachability", () => {
   });
 });
 
-describe("when no open server runs the client's version", () => {
-  const REDIRECT = { redirectIfOutOfDate: true } as const;
-
-  it("sends an out-of-date web client to /v/<latest>/, keeping the game path", async () => {
-    setBootstrap({ gitCommit: OLD });
-    const loc = stubLocation("openfront.io", "/w1/game/cAbCd12345", "?lobby");
-    expect(await ensureServerList(REDIRECT)).toBe("redirecting");
-    expect(loc.href).toBe("/v/" + OWN + "/game/cAbCd12345?lobby");
+// Today's rollover feel, kept: a player on build X keeps playing on X's
+// server after Y is released, until they refresh. So the pick prefers an
+// `open` server on this build, falls back to a `draining` one on this
+// build, and never takes a `fenced` one. When neither state runs this
+// build the page is told a newer version exists ("outdated") and the
+// update prompt handles it — nothing here ever navigates the page.
+describe("picking between open, draining and fenced", () => {
+  // `latest: null` is a list with no latest flagged at all (a preview
+  // whose server expired), which is not the same as leaving it out here.
+  function listOf(
+    servers: Record<string, unknown>,
+    latest: string | null = OWN,
+  ) {
+    return latest === null ? { servers } : { latest, servers };
+  }
+  const server = (
+    version: string,
+    state: string,
+    host = "falk2-a.openfront.io",
+  ) => ({
+    host,
+    numWorkers: 16,
+    version,
+    state,
   });
 
-  // The redirect is a version check before starting something NEW (the
-  // lobby list, Create). Every other caller — joining an existing game, and
-  // every in-game request — must never navigate the page: mid rolling
-  // deploy a player's own server is draining with no open sibling on their
-  // build, and a redirect there would take a live match off the page.
-  it("never navigates a caller that did not ask for the version check", async () => {
+  it("routes to a draining server on my build when nothing open runs it", async () => {
+    // Mid-rollover: the new build's server is open, mine is draining. I
+    // stay on mine — my games and the lobbies I see all live there.
+    setBootstrap({ gitCommit: OLD });
+    const loc = stubLocation("openfront.io");
+    expect(await ensureServerList()).toBe("api");
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-a.openfront.io");
+    expect(ClientEnv.serverHttpBase()).toBe("https://falk2-a.openfront.io");
+    expect(loc.href).toBe("https://openfront.io/");
+  });
+
+  it("prefers an open server over a draining one on my build", async () => {
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(
+        listOf({
+          c: server(OWN, "draining"),
+          d: server(OWN, "open", "falk2-b.openfront.io"),
+        }),
+      ),
+    );
+    expect(await ensureServerList()).toBe("api");
+    expect(ClientEnv.serverHttpBase()).toBe("https://falk2-b.openfront.io");
+  });
+
+  it("never picks a fenced server, and says so when it is the only one on my build", async () => {
+    // Fenced takes nothing new even from the build it runs, so there is no
+    // server for this page; latest names a build it could move to.
     setBootstrap({ gitCommit: OLD });
     const loc = stubLocation("openfront.io", "/w1/game/cAbCd12345", "?lobby");
-    expect(await ensureServerList()).toBe("no-server");
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(
+        listOf({
+          c: server(OLD, "fenced"),
+          d: server(OWN, "open", "falk2-b.openfront.io"),
+        }),
+      ),
+    );
+    expect(await ensureServerList()).toBe("outdated");
+    // The prompt navigates, not this: the page is left exactly where it is.
     expect(loc.href).toBe("https://openfront.io/w1/game/cAbCd12345?lobby");
-    // ...and the list is still applied, so the game's own letter routes.
+    // Own-server calls fall back to the page's own values...
+    expect(ClientEnv.serverWsBase()).toBe("wss://blue.openfront.io");
+    // ...and existing games still resolve by letter from the list.
     expect(ClientEnv.resolveGame("cAbCd12345")).toEqual({
       kind: "cross",
       host: "falk2-a.openfront.io",
@@ -458,83 +506,86 @@ describe("when no open server runs the client's version", () => {
     });
   });
 
+  it("reports no-server when I am latest, or the list names no latest", async () => {
+    // Nothing my build can use and I AM latest: nothing is running.
+    // Multiplayer fails as it does today; there is no newer version to
+    // prompt for.
+    const loc = stubLocation("openfront.io");
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(listOf({ c: server(OWN, "fenced") })),
+    );
+    expect(await ensureServerList()).toBe("no-server");
+    expect(loc.href).toBe("https://openfront.io/");
+    expect(ClientEnv.serverWsBase()).toBe("wss://blue.openfront.io");
+
+    setBootstrap({ gitCommit: OLD });
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(listOf({ c: server(OLD, "fenced") }, null)),
+    );
+    expect(await ensureServerList()).toBe("no-server");
+    expect(loc.href).toBe("https://openfront.io/");
+  });
+
   // A build label that names no commit matches any server version, so it is
-  // never "behind" latest. Sending the dev server's bundle to /v/<sha>/ —
-  // a path it does not serve — would take it off its own page.
-  it("never redirects a build whose version names no commit", async () => {
+  // never behind latest: prompting the dev server's bundle to reload for an
+  // update it has no way to fetch would only loop.
+  it("is never outdated on a build whose version names no commit", async () => {
     for (const label of ["DEV", "desktop", ""]) {
       setBootstrap({ gitCommit: label });
-      const loc = stubLocation("openfront.io", "/");
+      const loc = stubLocation("openfront.io");
       fetchMock.mockImplementation(async () =>
-        jsonResponse({
-          latest: OWN,
-          servers: { c: { ...API_LIST.servers.c } },
-        }),
+        jsonResponse(listOf({ c: server(OLD, "fenced") })),
       );
-      expect(await ensureServerList(REDIRECT)).toBe("no-server");
+      expect(await ensureServerList()).toBe("no-server");
       expect(loc.href).toBe("https://openfront.io/");
     }
   });
 
-  it("never redirects when the client is latest, or the list has no latest", async () => {
-    // Nothing open for our version and we ARE latest: no server is running
-    // at all. Multiplayer fails as it does today; a redirect would loop.
-    fetchMock.mockImplementation(async () =>
-      jsonResponse({
-        latest: OWN,
-        servers: { c: { ...API_LIST.servers.c } },
-      }),
-    );
-    const loc = stubLocation("openfront.io");
-    expect(await ensureServerList(REDIRECT)).toBe("no-server");
-    expect(loc.href).toBe("https://openfront.io/");
-    // Own-server calls fall back to the page's own values, as today.
-    expect(ClientEnv.serverWsBase()).toBe("wss://blue.openfront.io");
-    // ...but existing games still resolve from the list.
-    expect(ClientEnv.resolveGame("cAbCd12345")).toEqual({
-      kind: "cross",
-      host: "falk2-a.openfront.io",
-      numWorkers: 16,
-    });
-
-    setBootstrap({ gitCommit: OLD });
-    fetchMock.mockImplementation(async () =>
-      jsonResponse({ servers: { c: { ...API_LIST.servers.c } } }),
-    );
-    expect(await ensureServerList(REDIRECT)).toBe("no-server");
-    expect(loc.href).toBe("https://openfront.io/");
-  });
-
-  it("never redirects a page already under /v/<latest>/", async () => {
-    setBootstrap({ gitCommit: OLD });
-    const loc = stubLocation("openfront.io", `/v/${OWN}/`);
-    expect(await ensureServerList(REDIRECT)).toBe("no-server");
-    expect(loc.href).toBe(`https://openfront.io/v/${OWN}/`);
-  });
-
   // replay.<domain> serves the build a record was made on: being behind
-  // latest is the whole point of the page. The lobby socket does ask for the
-  // version check and does run there, so the guard has to live in the check
-  // itself, not only in the heartbeat.
+  // latest is the whole point of the page, and re-serving the same
+  // immutable shell would prompt forever.
   it("leaves a replay shell on its pinned build", async () => {
     setBootstrap({ gitCommit: OLD });
     const loc = stubLocation("replay.openfront.io", "/dAbCd12345");
     fetchMock.mockImplementation(async () =>
-      jsonResponse({
-        latest: OWN,
-        servers: { c: { ...API_LIST.servers.c } },
-      }),
+      jsonResponse(listOf({ c: server(OLD, "fenced") })),
     );
-    expect(await ensureServerList(REDIRECT)).toBe("no-server");
+    expect(await ensureServerList()).toBe("no-server");
     expect(loc.href).toBe("https://replay.openfront.io/dAbCd12345");
   });
 
+  // The desktop shell updates itself (download, stage, its own reload
+  // button): a web-style update prompt there would re-run the same overlay.
   it("leaves the desktop shell to its updater", async () => {
     (window as any).openfrontDesktop = {};
     setBootstrap({ gitCommit: OLD, serverHost: "openfront.io" });
     const loc = stubLocation("openfront");
-    expect(await ensureServerList(REDIRECT)).toBe("no-server");
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(listOf({ c: server(OLD, "fenced") })),
+    );
+    expect(await ensureServerList()).toBe("no-server");
     expect(loc.href).toBe("https://openfront/");
     expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
+  });
+
+  // Whatever the answer, and whoever asked: joining an existing game and
+  // every in-game request run through here too, and a navigation would take
+  // a live match off the page.
+  it("never navigates the page, on any path", async () => {
+    const cases: unknown[] = [
+      listOf({ c: server(OLD, "fenced") }),
+      listOf({ c: server(OLD, "draining") }),
+      listOf({ c: server(OWN, "open") }),
+      listOf({}, null),
+    ];
+    for (const body of cases) {
+      for (const commit of [OWN, OLD, "DEV"]) {
+        setBootstrap({ gitCommit: commit });
+        const loc = stubLocation("openfront.io", `/v/${OWN}/game/cAbCd12345`);
+        fetchMock.mockImplementation(async () => jsonResponse(body));
+        await ensureServerList();
+        expect(loc.href).toBe(`https://openfront.io/v/${OWN}/game/cAbCd12345`);
+      }
+    }
   });
 });
