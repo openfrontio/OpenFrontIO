@@ -1,6 +1,7 @@
 import {
   AlternateViewEvent,
   AutoUpgradeEvent,
+  CloseViewEvent,
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
   InputHandler,
@@ -1339,9 +1340,22 @@ describe("InputHandler teardown (OPE-411)", () => {
     ).toBe(true);
   });
 
+  it("emits CloseViewEvent on Escape while alive", () => {
+    const emit = vi.spyOn(eventBus, "emit");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));
+    expect(
+      emit.mock.calls.some((c: unknown[]) => c[0] instanceof CloseViewEvent),
+    ).toBe(true);
+  });
+
   it("emits nothing on a window keydown after destroy()", () => {
     inputHandler.destroy();
     const emit = vi.spyOn(eventBus, "emit");
+    // Escape is the load-bearing probe: its CloseViewEvent is emitted
+    // unconditionally, so it still fires if the keydown listener survives
+    // destroy(). Space goes through this.keybinds, which destroy() also
+    // clears, so a Space-only probe would pass even with the abort reverted.
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));
     window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "Space" }));
     expect(emit).not.toHaveBeenCalled();
@@ -1357,6 +1371,9 @@ describe("InputHandler teardown (OPE-411)", () => {
   });
 
   it("clears keybinds and the keybind dispatch table on destroy()", () => {
+    expect(Object.keys(inputHandler["keybinds"]).length).toBeGreaterThan(0);
+    expect(inputHandler["keybindAndEvent"].length).toBeGreaterThan(0);
+
     inputHandler.destroy();
     expect(inputHandler["keybinds"]).toEqual({});
     expect(inputHandler["keybindAndEvent"]).toEqual([]);
@@ -1377,19 +1394,62 @@ describe("InputHandler teardown (OPE-411)", () => {
     const second = makeHandler(secondCanvas, secondBus);
     second.initialize();
 
-    inputHandler.destroy();
+    try {
+      inputHandler.destroy();
 
-    const deadEmit = vi.spyOn(eventBus, "emit");
-    const liveEmit = vi.spyOn(secondBus, "emit");
-    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
+      const deadEmit = vi.spyOn(eventBus, "emit");
+      const liveEmit = vi.spyOn(secondBus, "emit");
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));
 
-    expect(deadEmit).not.toHaveBeenCalled();
-    expect(
-      liveEmit.mock.calls.some(
-        (c: unknown[]) => c[0] instanceof AlternateViewEvent,
-      ),
-    ).toBe(true);
+      expect(deadEmit).not.toHaveBeenCalled();
+      expect(
+        liveEmit.mock.calls.some(
+          (c: unknown[]) => c[0] instanceof CloseViewEvent,
+        ),
+      ).toBe(true);
+    } finally {
+      // Must run even if an expectation throws, or a live window listener
+      // leaks into every later test in this file.
+      second.destroy();
+    }
+  });
 
-    second.destroy();
+  it("clears the pan/zoom interval on destroy()", () => {
+    vi.useFakeTimers();
+    const handler = makeHandler(
+      document.createElement("canvas"),
+      new EventBus(),
+    );
+    try {
+      handler.initialize();
+      expect(vi.getTimerCount()).toBe(1);
+
+      handler.destroy();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      handler.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it("a second initialize() does not orphan the first listeners or interval", () => {
+    vi.useFakeTimers();
+    const bus = new EventBus();
+    const handler = makeHandler(document.createElement("canvas"), bus);
+    try {
+      handler.initialize();
+      handler.initialize();
+      expect(vi.getTimerCount()).toBe(1);
+
+      handler.destroy();
+      expect(vi.getTimerCount()).toBe(0);
+
+      const emit = vi.spyOn(bus, "emit");
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));
+      expect(emit).not.toHaveBeenCalled();
+    } finally {
+      handler.destroy();
+      vi.useRealTimers();
+    }
   });
 });

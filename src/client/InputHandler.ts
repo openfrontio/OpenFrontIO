@@ -252,7 +252,7 @@ export class InputHandler {
   private readonly LONG_PRESS_MS = 800;
 
   private moveInterval: NodeJS.Timeout | null = null;
-  /** Aborts every window/document/canvas listener added in
+  /** Aborts every window/canvas listener added in
    * `initializePointerAndKeyboardEvents()`. */
   private listenerAbort: AbortController | null = null;
   private activeKeys = new Set<string>();
@@ -477,6 +477,15 @@ export class InputHandler {
   }
 
   private initializePointerAndKeyboardEvents() {
+    // A second initialize() would otherwise orphan the first listener set and
+    // interval: nothing else holds the old controller, so they could never be
+    // removed. Production only initializes once, but this keeps that from
+    // being load-bearing.
+    this.listenerAbort?.abort();
+    if (this.moveInterval !== null) {
+      clearInterval(this.moveInterval);
+      this.moveInterval = null;
+    }
     this.listenerAbort = new AbortController();
     const { signal } = this.listenerAbort;
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e), {
