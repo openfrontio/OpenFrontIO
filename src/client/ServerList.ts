@@ -367,20 +367,19 @@ function isOutdated(list: ServerList, own: string): boolean {
 /**
  * Whether this document was deliberately served a specific version.
  *
- * A page under `/v/<commit>/` is pinned ON PURPOSE and must never be sent to
- * `latest`, however out of date it is. Being behind is the point: the one
- * flow that puts a player there is opening a game whose server runs an older
- * build, and that build has no `open` server by definition — it is draining,
- * which is why it is not `latest`. So the out-of-date check would fire on
- * every pinned page, send it to `/v/<latest>/`, whose handleUrl sees the same
- * game on the same older server and sends it back. An infinite hard-
- * navigation loop, for exactly the case pinning exists to serve.
+ * A page under `/v/<commit>/` is pinned ON PURPOSE and is never "outdated",
+ * however far behind `latest` it is: being behind is the whole point. The
+ * one flow that puts a player there is opening a game whose server runs an
+ * older build, so the page is behind by construction and permanently —
+ * unlike an ordinary tab, where being behind is news ("a deploy happened
+ * while you were here") and the prompt is a one-shot. Prompting here would
+ * fire on every visit, and its remedy (reloadForUpdate, which strips the
+ * prefix) would silently undo the pin the player asked for. Leaving is
+ * already one click away: "leave to the menu" goes to the version-free root.
  *
- * versionedPath's own loop guard cannot catch this: the two hops have
- * different targets, so neither is ever "already there".
- *
- * This lives here, not at the call sites, so no future caller of
- * ensureServerList({ redirectIfOutOfDate: true }) can get it wrong.
+ * The same exemption as the desktop shell and the replay shells above, for
+ * the same reason: a page whose version someone else owns must not be told
+ * to update itself.
  */
 function isPinnedToAVersion(): boolean {
   try {
