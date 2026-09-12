@@ -374,6 +374,11 @@ export class EventsDisplay extends LitElement implements Controller {
       createdAt: this.game.ticks(),
       focusID: update.request.recipientID,
     });
+    this.eventBus.emit(
+      new PlaySoundEffectEvent(
+        update.accepted ? "alliance-accepted" : "alliance-declined",
+      ),
+    );
   }
 
   onBrokeAllianceEvent(update: BrokeAllianceUpdate) {

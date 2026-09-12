@@ -38,6 +38,7 @@ import {
 } from "./DesktopShell";
 import { pushMapLayerState } from "./MapLayerSettings";
 import { Platform } from "./Platform";
+import { playCue } from "./sound/CuePlayer";
 import {
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
@@ -502,11 +503,13 @@ export class UserSettingModal extends BaseModal {
       return;
     }
     const volume = value / 100;
+    // Writing the setting is the whole job: AudioMixer follows
+    // USER_SETTINGS_CHANGED_EVENT, which reaches the menu theme on this page
+    // and a running game's music alike. The bus emit is kept only until the
+    // Audio tab lands and the legacy events are removed.
     this.userSettings.setBackgroundMusicVolume(volume);
-    // SoundManager reads UserSettings once at construction, so a running game
-    // only follows the slider through the bus. The page instance has no bus
-    // and nothing playing, where storing the value is the whole job.
     this.eventBus?.emit(new SetBackgroundMusicVolumeEvent(volume));
+    this.playSliderTick();
     this.requestUpdate();
   }
 
@@ -519,7 +522,24 @@ export class UserSettingModal extends BaseModal {
     const volume = value / 100;
     this.userSettings.setSoundEffectsVolume(volume);
     this.eventBus?.emit(new SetSoundEffectsVolumeEvent(volume));
+    this.playSliderTick();
     this.requestUpdate();
+  }
+
+  // @change fires throughout a drag; rate-limit the tick so dragging sounds
+  // like a ratchet rather than a buzz. Re-homed from SettingsModal, which no
+  // longer owns the sliders.
+  private lastSliderTickMs = 0;
+
+  private playSliderTick() {
+    const now = Date.now();
+    if (now - this.lastSliderTickMs < 150) return;
+    this.lastSliderTickMs = now;
+    // Through the mixer, not the bus: this component is mounted twice, and
+    // the page instance has no bus, so a bus hop is silent exactly where the
+    // player is most likely to be dragging a slider. Via CuePlayer so the
+    // modal does not drag howler into every test that mounts it.
+    playCue("slider");
   }
 
   private renderAudioSettings() {
