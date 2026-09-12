@@ -114,20 +114,20 @@ export function steamLogin() {
 // The website's account-settings page, for the desktop shell to open in the
 // browser. Never from window.location, which is app://openfront in the shell.
 //
-// The website is the game server, so its origin is ClientEnv.serverHttpBase()
-// -- the host the shell injects as serverHost. NOT the JWT audience: that is
+// ClientEnv.siteOrigin() -- the host the shell injects as serverHost, whose
+// values are exactly the sites. NOT serverHttpBase(): that answers with
+// whichever game server the API's server list picked (multi-server v2), a
+// deployment host with no website on it. And NOT the JWT audience: that is
 // the bare host only in production (openfront.io); on a dev/staging build it
 // is a branch subdomain (main.openfront.dev, <branch>.openfront.dev) with
 // nothing deployed at the apex, which is exactly why serverHost exists (see
 // resolveServerOrigin in ClientEnv.ts). The audience-derived origin, with the
 // same localhost:9000 special case as the shell's own siteUrlForAudience
 // (openfront-desktop's linkApi.ts), is only the fallback for a shell that
-// injects no serverHost.
+// injects no site host at all.
 function desktopWebAccountSettingsUrl(): string {
-  let origin: string;
-  if (ClientEnv.serverHost()) {
-    origin = ClientEnv.serverHttpBase();
-  } else {
+  let origin: string | undefined = ClientEnv.siteOrigin();
+  if (origin === undefined) {
     const audience = getAudience();
     origin =
       audience === "localhost"
