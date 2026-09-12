@@ -238,6 +238,15 @@ export class InlineCheckout extends LitElement {
         // longer sells; drop it so the next open refetches — same rule as
         // the redirect flow in Cosmetics.ts.
         if (result.refetchCatalog) invalidateCosmetics();
+        // Server priced the intent differently than this tile displayed:
+        // the redirect flow still works (hosted Checkout shows the server's
+        // price), so hand over instead of dead-ending on a message. The
+        // sheet was already released above — useFallback is always
+        // checkout-stage.
+        if (result.useFallback && this.onFallback) {
+          await this.runFallback();
+          return;
+        }
         await showInGameAlert(result.message);
         return;
       }
@@ -319,6 +328,15 @@ export class InlineCheckout extends LitElement {
       });
       if (result.kind === "error") {
         if (result.refetchCatalog) invalidateCosmetics();
+        // Same handover as the wallet path: a server/client price mismatch
+        // is not retryable here, but the redirect flow prices from the
+        // server and still works.
+        if (result.useFallback && this.onFallback) {
+          this.modalOpen = false;
+          this.destroyPaymentElement();
+          await this.runFallback();
+          return;
+        }
         this.modalError = result.message;
         return;
       }

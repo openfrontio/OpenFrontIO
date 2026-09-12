@@ -7,7 +7,11 @@ import "./PlutoniumIcon";
 import "./PurchaseButton";
 
 // Fixed rate: 20 plutonium = $1.00 (5 cents each). Bounds and rate are
-// enforced server-side; these are for UX only.
+// enforced server-side. For the redirect flow these are display-only, but
+// the inline flow seeds Stripe Elements with the client-computed amount —
+// a server rate that diverges from this one trips the amount guard in
+// InlineCheckoutSession.confirmInner, which hands the purchase back to the
+// redirect flow rather than confirming a price the tile never displayed.
 const MIN_PLUTONIUM = 20;
 const MAX_PLUTONIUM = 2000;
 

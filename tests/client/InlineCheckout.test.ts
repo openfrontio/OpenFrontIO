@@ -227,6 +227,27 @@ describe("inline-checkout wallet row", () => {
     expect(paymentFailed).toHaveBeenCalled();
   });
 
+  it("hands a price-mismatch error to the redirect fallback", async () => {
+    const { session, express } = fakeSession();
+    session.confirm.mockResolvedValue({
+      kind: "error",
+      message: "store.checkout_failed",
+      stage: "checkout",
+      useFallback: true,
+    } as never);
+    createMock.mockResolvedValue(session);
+    const onFallback = vi.fn(async () => {});
+    await renderComponent({ onFallback });
+
+    const paymentFailed = vi.fn();
+    express.fire("confirm", { paymentFailed });
+    await vi.waitFor(() => expect(onFallback).toHaveBeenCalled());
+    // The sheet is released (checkout stage), and the player is handed to
+    // the still-working redirect flow instead of a dead-end message.
+    expect(paymentFailed).toHaveBeenCalled();
+    expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+
   it("invalidates the cached catalog on a stale-listing error", async () => {
     const { session, express } = fakeSession();
     session.confirm.mockResolvedValue({

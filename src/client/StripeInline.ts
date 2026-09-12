@@ -81,10 +81,16 @@ export type InlineConfirmResult =
   // runs (even on a decline), but a "checkout"-stage failure leaves it open
   // and spinning, and the caller must call the confirm event's
   // paymentFailed() to release it.
+  // `useFallback` marks an error the redirect flow would NOT hit — the
+  // server priced the intent differently than this UI displayed (see the
+  // amount guard in confirmInner). The caller should hand the purchase to
+  // its fallback (hosted Checkout, which shows the server's price) rather
+  // than dead-end on a message.
   | {
       kind: "error";
       message: string;
       refetchCatalog?: boolean;
+      useFallback?: boolean;
       stage: "checkout" | "payment";
     };
 
@@ -229,6 +235,33 @@ export class InlineCheckoutSession {
         // Verbatim, same rule as startPurchase: the URL is the rail's own.
         window.location.href = minted.redirectUrl;
         return { kind: "redirecting" };
+      }
+      // Amount guard, BEFORE confirmPayment and before caching: the intent's
+      // amount is the server's price; the Elements amount is what THIS UI
+      // showed the player. Packs derive theirs from the catalog price so
+      // they cannot drift, but the custom-amount tile computes it from a
+      // client-side rate — if the server's rate ever diverges, confirmPayment
+      // would reject with an integration error after the player authorized
+      // the displayed amount. Catch it while nothing has been charged and
+      // route to the redirect flow, where hosted Checkout shows the server's
+      // price. Best-effort: a failed retrieve falls through to confirmPayment,
+      // which enforces the same match itself.
+      const retrieved = await this.stripe
+        .retrievePaymentIntent(minted.clientSecret)
+        .catch(() => null);
+      const serverAmount = retrieved?.paymentIntent?.amount;
+      if (serverAmount !== undefined && serverAmount !== this.amountCents) {
+        console.error(
+          `inline checkout amount mismatch: intent ${serverAmount}, elements ${this.amountCents}`,
+        );
+        // Deliberately not cached: the next attempt should re-mint (the
+        // caller is being sent to the redirect flow anyway).
+        return {
+          kind: "error",
+          message: translateText("store.checkout_failed"),
+          stage: "checkout",
+          useFallback: true,
+        };
       }
       this.clientSecret = minted.clientSecret;
     }

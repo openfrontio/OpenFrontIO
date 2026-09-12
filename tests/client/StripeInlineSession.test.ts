@@ -37,6 +37,14 @@ function makeSession() {
         error?: { message: string };
       }> => ({ paymentIntent: { status: "succeeded" } }),
     ),
+    // The amount guard retrieves the intent after minting; by default the
+    // server's amount matches what the session was built with (499).
+    retrievePaymentIntent: vi.fn(
+      async (): Promise<{
+        paymentIntent?: { amount: number };
+        error?: { message: string };
+      }> => ({ paymentIntent: { amount: 499 } }),
+    ),
   };
   const session = new (InlineCheckoutSession as unknown as new (
     ...args: unknown[]
@@ -114,6 +122,10 @@ describe("InlineCheckoutSession secret caching", () => {
     // A changed purchase must never confirm the old intent.
     session.update({ kind: "custom_currency", hardAmount: 200 }, 1000);
     mintSecret("pi_2_secret_2");
+    // The fresh intent is priced for the NEW purchase.
+    stripe.retrievePaymentIntent.mockResolvedValueOnce({
+      paymentIntent: { amount: 1000 },
+    });
     await session.confirm();
     expect(mintMock).toHaveBeenCalledTimes(2);
     expect(stripe.confirmPayment).toHaveBeenLastCalledWith(
@@ -142,6 +154,42 @@ describe("InlineCheckoutSession secret caching", () => {
     }[][];
     const params = calls[calls.length - 1][0];
     expect("receipt_email" in params.confirmParams).toBe(false);
+  });
+
+  it("hands over to the fallback when the server priced the intent differently", async () => {
+    // The custom-amount tile computes its Elements amount from a client-side
+    // rate; if the server's rate diverges, confirming would either reject or
+    // charge a price the tile never displayed. The guard fires BEFORE
+    // confirmPayment and does not cache the secret — the caller is being
+    // sent to the redirect flow, and a retry must re-mint.
+    const { session, stripe } = makeSession();
+    mintSecret("pi_1_secret_1");
+    stripe.retrievePaymentIntent.mockResolvedValueOnce({
+      paymentIntent: { amount: 750 },
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await session.confirm()).toEqual({
+      kind: "error",
+      message: "store.checkout_failed",
+      stage: "checkout",
+      useFallback: true,
+    });
+    errorSpy.mockRestore();
+    expect(stripe.confirmPayment).not.toHaveBeenCalled();
+
+    mintSecret("pi_2_secret_2");
+    expect(await session.confirm()).toEqual({ kind: "success" });
+    expect(mintMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("confirms anyway when the amount guard's retrieve fails", async () => {
+    // Best-effort guard: an unreachable retrieve must not block the purchase;
+    // confirmPayment enforces the same amount match itself.
+    const { session, stripe } = makeSession();
+    mintSecret("pi_1_secret_1");
+    stripe.retrievePaymentIntent.mockRejectedValueOnce(new Error("offline"));
+    expect(await session.confirm()).toEqual({ kind: "success" });
+    expect(stripe.confirmPayment).toHaveBeenCalled();
   });
 
   it("returns a checkout-stage error instead of throwing when Stripe.js rejects", async () => {
