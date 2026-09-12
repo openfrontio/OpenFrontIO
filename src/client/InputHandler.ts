@@ -797,8 +797,10 @@ export class InputHandler {
       this.lastPointerDownY = event.clientY;
 
       this.eventBus.emit(new MouseDownEvent(event.clientX, event.clientY));
-      this.clickHold();
-
+      // clickHold only for real mouse
+      if (event.pointerType === "mouse") {
+        this.clickHold();
+      }
       // Start long-press timer for touch devices
       if (event.pointerType === "touch") {
         this.longPressActive = false;
