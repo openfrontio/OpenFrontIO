@@ -1261,11 +1261,12 @@ export class InputHandler {
     }
 
     const repeatBehavior = () => {
-      isValidTarget()
-        ? this.eventBus.emit(new ConfirmGhostStructureEvent())
-        : this.clickHoldCleanup();
+      if (isValidTarget()) {
+        this.eventBus.emit(new ConfirmGhostStructureEvent());
+      } else {
+        this.clickHoldCleanup();
+      }
     };
-
     // first: ensure grace period for click+drag has passed
     this.clickHoldGrace = setTimeout(() => {
       this.isClickHoldPastGrace = true;

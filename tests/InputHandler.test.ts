@@ -1060,7 +1060,7 @@ describe("Click and hold when ghost is bomb", () => {
     vi.useFakeTimers();
     const mockEmit = vi.spyOn(eventBus, "emit");
     let el = 0; // expected launches
-    let multi = 15;
+    const multi = 15;
 
     const downEvent = new PointerEvent("pointerdown", {
       button: 0,
@@ -1126,7 +1126,7 @@ describe("Click and hold when ghost is bomb", () => {
     vi.useFakeTimers();
     const mockEmit = vi.spyOn(eventBus, "emit");
     let el = 0; // expected launches
-    let multi = 15;
+    const multi = 15;
 
     const downEvent = new PointerEvent("pointerdown", {
       button: 0,
