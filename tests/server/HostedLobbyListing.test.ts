@@ -712,6 +712,7 @@ describe("WorkerLobbyService hosted lobbies", () => {
       publicLobbies: vi.fn().mockReturnValue([]),
       listedLobbies: vi.fn().mockReturnValue([]),
       game: vi.fn().mockReturnValue(null),
+      activeGames: vi.fn().mockReturnValue(0),
     };
     const server = new EventEmitter();
     service = new WorkerLobbyService(
@@ -803,6 +804,32 @@ describe("WorkerLobbyService hosted lobbies", () => {
       .map((c: any[]) => c[0])
       .find((m: any) => m.type === "lobbyList");
     expect(lobbyList.lobbies.map((l: any) => l.gameID)).toEqual(["ffa-g1"]);
+  });
+
+  it("reports the game manager's live game count to the master", () => {
+    gm.activeGames.mockReturnValue(7);
+    // Drop the stub so the real sendToMaster runs: assert on the message that
+    // actually leaves the worker. Anything that is not ours is forwarded
+    // untouched, since vitest's fork pool talks to its parent on this channel.
+    delete (service as any).sendToMaster;
+    const realSend = process.send;
+    const sent: any[] = [];
+    process.send = ((msg: any, ...rest: any[]) => {
+      if (msg?.type === "lobbyList" || msg?.type === "workerReady") {
+        sent.push(msg);
+        return true;
+      }
+      return (realSend as any)?.apply(process, [msg, ...rest]) ?? true;
+    }) as any;
+    try {
+      emitBroadcast({ ffa: [], team: [], special: [], hosted: [] });
+    } finally {
+      process.send = realSend;
+    }
+
+    const lobbyList = sent.find((m) => m.type === "lobbyList");
+    expect(lobbyList).toBeDefined();
+    expect(lobbyList.liveGames).toBe(7);
   });
 
   it("strips creatorID from broadcasts and primed snapshots sent to clients", () => {
