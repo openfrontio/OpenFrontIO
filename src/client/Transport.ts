@@ -270,8 +270,8 @@ export class Transport {
     // If gameRecord is not null, we are replaying an archived game.
     // For multiplayer games, GameConfig is not known until game starts.
     this.isLocal =
-      lobbyConfig.gameRecord !== undefined ||
-      lobbyConfig.gameStartInfo?.config.gameType === GameType.Singleplayer;
+      this.lobbyConfig.gameRecord !== undefined ||
+      this.lobbyConfig.gameStartInfo?.config.gameType === GameType.Singleplayer;
 
     this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),
@@ -484,7 +484,9 @@ export class Transport {
     };
     this.socket.onerror = (err) => {
       console.error("Socket encountered error: ", err, "Closing socket");
-      if (this.socket === null) return;
+      if (this.socket === null) {
+        return;
+      }
       this.socket.close();
     };
     this.socket.onclose = (event: CloseEvent) => {
@@ -657,7 +659,9 @@ export class Transport {
     this.connectionRefused = true;
     this.stopPing();
     this.cancelReconnect();
-    if (this.socket === null) return;
+    if (this.socket === null) {
+      return;
+    }
     if (this.socket.readyState === WebSocket.OPEN) {
       console.log("on stop: leaving game");
     } else {
@@ -934,16 +938,15 @@ export class Transport {
     }
   }
 
-  private sendMsg(msg: ClientMessage) {
+  private sendMsg(msg: ClientMessage): void {
     if (this.connectionRefused) {
       return;
     }
     if (this.isLocal) {
-      // Forward message to local server
+      // Route to the in-process server; nothing goes over the wire.
       this.localServer.onMessage(msg);
       return;
     } else if (this.socket === null) {
-      // Socket missing, do nothing
       return;
     }
 
@@ -963,7 +966,7 @@ export class Transport {
       // and keep them queued behind any previously buffered messages.
       this.buffer.push(msg);
     } else {
-      // Send the message directly
+      // Session is ready and nothing is queued ahead: send directly.
       this.socket.send(encodeClientMessage(msg, this.zbinCtx ?? undefined));
     }
   }

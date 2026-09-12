@@ -636,7 +636,6 @@ class Client {
       );
 
       if (userMeResponse !== false) {
-        // Authorized
         console.log(
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
@@ -748,11 +747,10 @@ class Client {
     });
 
     if ((await userAuth()) === false) {
-      // Not logged in
+      // Not logged in: apply the signed-out profile directly.
       onUserMe(false);
     } else {
-      // JWT appears to be valid
-      // TODO: Add caching
+      // JWT appears valid: fetch the profile and apply it if still current.
       getUserMe().then(applyUserMe(authGeneration));
     }
 
@@ -816,7 +814,7 @@ class Client {
       this.joinModal.eventBus = this.eventBus;
     }
 
-    // Attempt to join lobby
+    // Attempt to join lobby from the current URL once the document is ready.
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => this.handleUrl());
     } else {
@@ -853,7 +851,7 @@ class Client {
         return;
       }
 
-      // Reset the UI to its initial state
+      // Reset the UI to its initial state.
       this.joinModal?.close();
 
       onJoinChanged();
@@ -903,7 +901,7 @@ class Client {
       this.handleUrl();
     };
 
-    // Handle browser navigation & manual hash edits
+    // Handle browser navigation (back/forward) and manual hash edits.
     window.addEventListener("popstate", onPopState);
     window.addEventListener("hashchange", onHashUpdate);
     window.addEventListener("join-changed", onJoinChanged);
