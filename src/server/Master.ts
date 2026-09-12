@@ -124,7 +124,10 @@ app.get(
         "../../resources/.well-known/apple-developer-merchantid-domain-association",
       ),
       // sendFile refuses dotfile path segments (".well-known") by default.
-      { dotfiles: "allow" },
+      // maxAge matters beyond browsers: nginx's proxy cache honours the
+      // upstream Cache-Control, and sendFile's default max-age=0 would veto
+      // the nginx.conf location block that shields this route.
+      { dotfiles: "allow", maxAge: "1d" },
       (err) => {
         if (err && !res.headersSent) res.status(404).end();
       },
