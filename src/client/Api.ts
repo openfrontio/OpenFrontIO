@@ -192,21 +192,42 @@ let __userMe: Promise<UserMeResponse | false> | null = null;
 // account straight back. Handled here rather than in Auth, which cannot
 // import this module — the dependency runs the other way.
 document.addEventListener("session-cleared", () => invalidateUserMe());
+/**
+ * True for the rejection AbortSignal.timeout (or an explicit abort) produces.
+ * Deliberately narrow: a client-imposed deadline is the one failure that says
+ * nothing at all about the account, so it is the one worth retrying.
+ */
+function isAbortError(e: unknown): boolean {
+  const name = (e as { name?: unknown } | null)?.name;
+  return name === "TimeoutError" || name === "AbortError";
+}
+
 export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
     return __userMe;
   }
-  __userMe = (async () => {
+  // A holder rather than a plain local so the catch below can recognise its
+  // own promise as the cached one. Filled in immediately after, which is
+  // always before any await inside can resume.
+  const attempt: { request?: Promise<UserMeResponse | false> } = {};
+  attempt.request = (async () => {
     try {
       const userAuthResult = await userAuth();
       if (!userAuthResult) return false;
       const { jwt, claims } = userAuthResult;
 
-      // Get the user object
+      // Get the user object. Bounded like the other auth calls (see
+      // Auth.ts doSteamLogin) because the promise above is memoised: a
+      // response that never settles is not one slow call, it pins __userMe
+      // on a forever-pending promise and every later getUserMe() in the
+      // session — cosmetics, store, inventory, the multiplayer join path —
+      // awaits that same promise. An abort lands in the catch below, which
+      // returns false, the same answer a signed-out player already gets.
       const response = await fetch(getApiBase() + "/users/@me", {
         headers: {
           authorization: `Bearer ${jwt}`,
         },
+        signal: AbortSignal.timeout(10_000),
       });
       if (response.status === 401) {
         // Clearing the session announces itself (see clearLocalSession), so
@@ -232,10 +253,30 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
       }
       return result.data;
     } catch (e) {
+      // Un-cache a timeout, and ONLY a timeout. Every other falsy answer is
+      // a conclusion about the account — signed out, a 401, a rejected token
+      // — and stays remembered; re-deriving those would put an /auth/refresh
+      // behind every getUserMe() call for every logged-out player, which is
+      // the storm, not the fix. A deadline we imposed ourselves concluded
+      // nothing, so leaving it cached would strand a merely-slow connection
+      // as "signed out" for the rest of the session: no player-scoped
+      // settings, no cosmetics, no verified badge, recoverable only by
+      // reloading. Same shape as fetchCosmetics, for the same reason.
+      // Remembering an unreachable backend so the retry is not paid at full
+      // price is OPE-403.
+      //
+      // Cleared here rather than from a .then on the request: this runs
+      // before the promise resolves, so a caller awaiting it cannot observe
+      // the timed-out answer still cached. attempt.request is always set by
+      // now — the catch can only be reached after an await.
+      if (isAbortError(e) && __userMe === attempt.request) {
+        __userMe = null;
+      }
       return false;
     }
   })();
-  return __userMe;
+  __userMe = attempt.request;
+  return attempt.request;
 }
 
 export function invalidateUserMe() {
@@ -340,22 +381,28 @@ export type UpdateUsernameResult =
   | { ok: false; code: "invalid"; message?: string }
   | { ok: false; code: "profane" }
   | { ok: false; code: "taken" }
+  // A subscriber asked for a bare name another subscriber holds. Nothing was
+  // written and no cooldown was spent; resubmit with acceptSuffixed to take
+  // the numbered form (spec, 10 Sept 2026).
+  | { ok: false; code: "bare_taken"; base: string }
   | { ok: false; code: "cooldown"; retryAfterSeconds: number | null }
   | { ok: false; code: "failed" };
 
 // PUT /users/@me/username — renames the account username. Every failure is
-// atomic (no name change, no cooldown consumed). The surviving 409 bodies
-// ("name equals an existing public id" and "suffix space exhausted") map to
-// "taken": the user remedy is the same — pick another name. Invalidates the
-// cached /users/@me on success so the next read reflects the new name.
+// atomic (no name change, no cooldown consumed). The surviving plain 409
+// bodies ("name equals an existing public id" and "suffix space exhausted")
+// map to "taken": the user remedy is the same — pick another name. A 409
+// carrying code BARE_NAME_TAKEN maps to "bare_taken": the caller offers the
+// numbered form and, on yes, calls again with `acceptSuffixed`. Invalidates
+// the cached /users/@me on success so the next read reflects the new name.
 //
-// A premium player whose chosen bare name is already held no longer 409s: the
-// API grants the suffixed form and returns 200 with `bareClaim:
-// "unavailable"`. That is a real rename and it consumes the cooldown, so `ok:
-// true` alone is not enough to act on — callers must read `data.bareClaim`
-// and tell the player (see UsernamePanel).
+// Against an API that predates the strict rule, a held bare name still comes
+// back as a 200 with `bareClaim: "unavailable"` — a real rename that consumed
+// the cooldown — so `ok: true` callers must still read `data.bareClaim` and
+// say so (see UsernamePanel.warnBareClaimUnavailable).
 export async function updateUsername(
   username: string,
+  opts: { acceptSuffixed?: boolean } = {},
 ): Promise<UpdateUsernameResult> {
   try {
     const response = await fetch(`${getApiBase()}/users/@me/username`, {
@@ -364,7 +411,9 @@ export async function updateUsername(
         "Content-Type": "application/json",
         Authorization: await getAuthHeader(),
       },
-      body: JSON.stringify({ username }),
+      body: JSON.stringify(
+        opts.acceptSuffixed ? { username, acceptSuffixed: true } : { username },
+      ),
     });
     if (response.status === 401) {
       await logOut();
@@ -382,6 +431,14 @@ export async function updateUsername(
       };
     }
     if (response.status === 409) {
+      const body = await response.json().catch(() => null);
+      if (body?.code === "BARE_NAME_TAKEN") {
+        return {
+          ok: false,
+          code: "bare_taken",
+          base: typeof body.base === "string" ? body.base : username,
+        };
+      }
       return { ok: false, code: "taken" };
     }
     if (response.status === 429) {

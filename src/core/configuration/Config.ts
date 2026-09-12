@@ -422,11 +422,30 @@ export class Config {
     return this.startingGoldFor(playerInfo);
   }
 
-  trainSpawnRate(numPlayerFactories: number): number {
+  /**
+   * Global spawn throttle for the train economy, counted in Train *units*
+   * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns for the very
+   * first trains, ~1x around 35 units (~5 trains), then a capacity
+   * sigmoid damps spawning past the ~300-unit midpoint. The damping
+   * flattens onto a ~0.25 plateau past ~460 units (~65 trains), so a big
+   * enough rail economy still scales at a quarter of the un-damped rate,
+   * until a global hard cap far beyond any normal game collapses the
+   * plateau past ~900 units (~130 trains).
+   */
+  trainSaturation(numTrainUnits: number): number {
+    const boost = 1 + 0.5 * exp(-numTrainUnits / 30);
+    const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 300);
+    const plateau = 0.25 * (1 - sigmoid(numTrainUnits, Math.LN2 / 150, 900));
+    return boost * Math.max(damping, plateau);
+  }
+
+  trainSpawnRate(numPlayerFactories: number, numTrainUnits: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 15;
+    const rate = (numPlayerFactories + 10) * 15;
+    return Math.max(1, Math.floor(rate / this.trainSaturation(numTrainUnits)));
   }
+
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
@@ -469,20 +488,38 @@ export class Config {
     return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
   }
 
+  /**
+   * Global spawn throttle for the trade-ship economy. A mild ~1.45x odds
+   * boost while the world fleet is small (the pity timer square-roots the
+   * realized effect, so ~1.2x actual spawns), held through the opening
+   * trading minutes and crossing the old un-boosted curve around 110
+   * ships, then a capacity sigmoid damps spawning past the ~230-ship
+   * midpoint. The damping flattens onto a 0.25 plateau past ~310 ships
+   * (~half cadence per port after the pity timer), so heavy port
+   * investment keeps scaling income linearly, until a global hard cap far
+   * beyond any normal game collapses the plateau past ~800 at sea.
+   */
+  tradeShipSaturation(numTradeShips: number): number {
+    const boost = 1 + 0.45 * exp(-numTradeShips / 120);
+    const damping = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 230);
+    const plateau = 0.25 * (1 - sigmoid(numTradeShips, Math.LN2 / 100, 800));
+    return boost * Math.max(damping, plateau);
+  }
+
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
   tradeShipSpawnRate(
     tradeShipSpawnRejections: number,
     numTradeShips: number,
   ): number {
-    const decayRate = Math.LN2 / 50;
-
-    // Approaches 0 as numTradeShips increase
-    const baseSpawnRate = 1 - sigmoid(numTradeShips, decayRate, 400);
-
     // Pity timer: increases spawn chance after consecutive rejections
     const rejectionModifier = 1 / (tradeShipSpawnRejections + 1);
 
-    return Math.floor((100 * rejectionModifier) / baseSpawnRate);
+    return Math.max(
+      1,
+      Math.floor(
+        (100 * rejectionModifier) / this.tradeShipSaturation(numTradeShips),
+      ),
+    );
   }
 
   unitInfo(type: UnitType): UnitInfo {

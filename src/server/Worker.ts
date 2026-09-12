@@ -29,7 +29,7 @@ import type { GameServer } from "./GameServer";
 import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
-import { enforceVerifiedBadge } from "./Privilege";
+import { resolveVerifiedJoin } from "./Privilege";
 
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
@@ -608,7 +608,11 @@ export async function startWorker() {
         let ownedClanTags: string[] = [];
         let trusted = false;
         let accountUsername:
-          | { username?: string | null; usernameStatus?: string }
+          | {
+              username?: string | null;
+              usernameBase?: string | null;
+              usernameStatus?: string;
+            }
           | undefined;
 
         const allowedFlares = ServerEnv.allowedFlares();
@@ -678,19 +682,28 @@ export async function startWorker() {
           return;
         }
 
-        // An undefined account means an anonymous persistent-ID join (no
-        // /users/@me fetch) — enforceVerifiedBadge treats that as Dev-only.
+        // Verified intent, not a claim to verify: the check stays only when
+        // the account renders bare and the screened join name is that bare
+        // name. The name itself is never replaced, so everything shown in the
+        // lobby has been through censorPlayer and join_verify. An undefined
+        // account is an anonymous persistent-ID join, which
+        // resolveVerifiedJoin treats as Dev-only.
+        const verifiedOutcome = resolveVerifiedJoin(
+          cosmeticResult.cosmetics,
+          username,
+          accountUsername ?? null,
+        );
         if (
-          enforceVerifiedBadge(
-            cosmeticResult.cosmetics,
-            username,
-            accountUsername ?? null,
-          )
+          verifiedOutcome === "custom" &&
+          clientMsg.cosmetics?.verified === true
         ) {
-          log.info("Stripped unvouched verified-badge claim", {
-            persistentID: persistentId,
-            gameID: clientMsg.gameID,
-          });
+          log.info(
+            "Verified intent not honoured: join name is not the account bare name",
+            {
+              persistentID: persistentId,
+              gameID: clientMsg.gameID,
+            },
+          );
         }
 
         // Create client and add to game

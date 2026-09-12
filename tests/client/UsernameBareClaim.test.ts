@@ -17,7 +17,11 @@ const { updateUsername, showInGameConfirm, showInGameAlert } = vi.hoisted(
   }),
 );
 vi.mock("../../src/client/Api", () => ({
-  updateUsername: (name: string) => updateUsername(name),
+  // Forward opts only when the caller actually passed it, so the spy's
+  // recorded call arity matches what the panel really sent (mock.calls[0]
+  // must read as a one-element array, not ["Ninja", undefined]).
+  updateUsername: (name: string, opts?: unknown) =>
+    opts === undefined ? updateUsername(name) : updateUsername(name, opts),
 }));
 vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: (message: string, options?: unknown) =>
@@ -307,5 +311,84 @@ describe("UsernamePanel bare-claim fallback", () => {
     expect(showInGameAlert).not.toHaveBeenCalled();
     expect(reload).not.toHaveBeenCalled();
     expect(el.textContent).toContain("username_error_taken");
+  });
+
+  // Spec (10 Sept 2026): a held bare name is refused with nothing written.
+  // The player then chooses: the numbered form (one more request, with
+  // acceptSuffixed) or another name (nothing happens).
+  describe("held bare name (409 BARE_NAME_TAKEN)", () => {
+    it("asks before taking the numbered form, then resubmits with acceptSuffixed", async () => {
+      updateUsername
+        .mockResolvedValueOnce({ ok: false, code: "bare_taken", base: "Ninja" })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: okBody({ bareClaim: "unavailable" }),
+        });
+      // First confirm is the ordinary "change username?"; second is the choice.
+      showInGameConfirm.mockResolvedValue(true);
+      const el = await mount();
+
+      await submit(el, "Ninja");
+
+      expect(updateUsername).toHaveBeenCalledTimes(2);
+      expect(updateUsername.mock.calls[0]).toEqual(["Ninja"]);
+      expect(updateUsername.mock.calls[1]).toEqual([
+        "Ninja",
+        { acceptSuffixed: true },
+      ]);
+      expect(showInGameConfirm).toHaveBeenCalledTimes(2);
+      expect(showInGameConfirm.mock.calls[1][0]).toContain(
+        'account_modal.username_bare_taken_body:{"requested":"Ninja"}',
+      );
+      // They chose it knowingly: no second dialog after the fact.
+      expect(showInGameAlert).not.toHaveBeenCalled();
+      expect(reload).toHaveBeenCalled();
+    });
+
+    it("writes nothing and re-enables the form when they choose another name", async () => {
+      updateUsername.mockResolvedValueOnce({
+        ok: false,
+        code: "bare_taken",
+        base: "Ninja",
+      });
+      showInGameConfirm
+        .mockResolvedValueOnce(true) // change username?
+        .mockResolvedValueOnce(false); // take the numbered form? no
+      const el = await mount();
+
+      await submit(el, "Ninja");
+
+      expect(updateUsername).toHaveBeenCalledTimes(1);
+      expect(reload).not.toHaveBeenCalled();
+      expect(showInGameAlert).not.toHaveBeenCalled();
+      const input = el.querySelector<HTMLInputElement>(
+        "#username-panel-input",
+      )!;
+      expect(input.disabled).toBe(false);
+    });
+
+    it("does not ask twice: a second refusal after yes becomes an inline error", async () => {
+      updateUsername
+        .mockResolvedValueOnce({ ok: false, code: "bare_taken", base: "Ninja" })
+        .mockResolvedValueOnce({
+          ok: false,
+          code: "bare_taken",
+          base: "Ninja",
+        });
+      showInGameConfirm.mockResolvedValue(true);
+      const el = await mount();
+
+      await submit(el, "Ninja");
+
+      expect(updateUsername).toHaveBeenCalledTimes(2);
+      // The ordinary "change username?" confirm plus ONE choice dialog.
+      expect(showInGameConfirm).toHaveBeenCalledTimes(2);
+      expect(reload).not.toHaveBeenCalled();
+      expect(el.textContent).toContain("username_error_taken");
+      const input = el.querySelector<HTMLInputElement>(
+        "#username-panel-input",
+      )!;
+      expect(input.disabled).toBe(false);
+    });
   });
 });

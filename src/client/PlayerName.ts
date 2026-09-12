@@ -62,8 +62,11 @@ export function clampUsername(name: string): string {
 }
 
 // The server-resolved bare name this player may play verified under, or null
-// when ineligible. Sub-only by design: `claimed` (lapsed) holders and
-// TEMPORARY####-renamed players don't qualify.
+// when ineligible. Eligible means "holds the bare claim": entitled AND the
+// display name equals the base (a held bare name renders as base.disc). The
+// game server applies the same rule at join (resolveVerifiedJoin), so this is
+// presentation; the server is the rule. `claimed` (lapsed) holders and
+// TEMPORARY####-renamed players don't qualify either.
 export function accountVerifiedName(
   userMe: UserMeResponse | false | null,
 ): string | null {
@@ -72,7 +75,22 @@ export function accountVerifiedName(
   const status = player.usernameStatus;
   if (status !== "premium" && status !== "indefinite") return null;
   if (!player.username || isTemporaryUsername(player.usernameBase)) return null;
+  if (player.username !== player.usernameBase) return null;
   return player.username;
+}
+
+// An entitled player whose bare name someone else holds: they display as
+// base.disc and cannot play verified until they rename. The identity bar
+// explains this instead of hiding the button (spec, 10 Sept 2026).
+export function accountNameHeld(
+  userMe: UserMeResponse | false | null,
+): boolean {
+  if (userMe === null || userMe === false) return false;
+  const player = userMe.player;
+  const status = player.usernameStatus;
+  if (status !== "premium" && status !== "indefinite") return false;
+  if (!player.username || !player.usernameBase) return false;
+  return player.username !== player.usernameBase;
 }
 
 // Cut to the free-form cap, not the wire cap: the result becomes the name in

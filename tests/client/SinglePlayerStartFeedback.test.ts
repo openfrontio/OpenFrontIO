@@ -1,0 +1,395 @@
+import { render } from "lit";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { PlayerCosmetics } from "../../src/core/Schemas";
+
+const cosmeticsMocks = vi.hoisted(() => ({
+  getPlayerCosmetics: vi.fn(),
+  prewarmCosmetics: vi.fn(),
+}));
+
+vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
+  getPlayerCosmetics: cosmeticsMocks.getPlayerCosmetics,
+  prewarmCosmetics: cosmeticsMocks.prewarmCosmetics,
+}));
+
+import { crazyGamesSDK } from "../../src/client/CrazyGamesSDK";
+import {
+  MIDGAME_AD_DEADLINE_MS,
+  SinglePlayerModal,
+  START_PREPARE_DEADLINE_MS,
+} from "../../src/client/SinglePlayerModal";
+
+type Internals = {
+  startGame(): Promise<void>;
+  onOpen(): void;
+  onClose(): void;
+  starting: boolean;
+  close(): void;
+};
+
+function internals(modal: SinglePlayerModal): Internals {
+  return modal as unknown as Internals;
+}
+
+// Lets the pending awaits in startGame() run without letting the cosmetics
+// promise settle — the state the button has to describe.
+async function flush(): Promise<void> {
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+}
+
+function startButton(modal: SinglePlayerModal): Element {
+  const container = document.createElement("div");
+  render(
+    (modal as unknown as { render(): unknown }).render() as never,
+    container,
+  );
+  const button = Array.from(container.querySelectorAll("o-button")).find((b) =>
+    (b.getAttribute("translationKey") ?? "").startsWith("game_settings.start"),
+  );
+  if (button === undefined) throw new Error("no start button rendered");
+  return button;
+}
+
+describe("SinglePlayerModal start feedback", () => {
+  let modal: SinglePlayerModal;
+  let joins: CustomEvent[];
+
+  beforeEach(() => {
+    cosmeticsMocks.getPlayerCosmetics.mockResolvedValue({});
+    cosmeticsMocks.prewarmCosmetics.mockResolvedValue(undefined);
+    modal = new SinglePlayerModal();
+    // close() walks the modal shell and the router, neither of which exists
+    // for a bare instance; the dispatch above it is what these tests read.
+    vi.spyOn(internals(modal), "close").mockImplementation(() => undefined);
+    joins = [];
+    modal.addEventListener("join-lobby", (e) => joins.push(e as CustomEvent));
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
+  // The whole complaint from the playtest was that the click did nothing
+  // visible while the network calls ran. The busy flag has to be set before
+  // the first await, not after them.
+  it("marks itself busy before cosmetics resolve", async () => {
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValue(new Promise(() => {}));
+
+    const started = internals(modal).startGame();
+    await flush();
+
+    expect(internals(modal).starting).toBe(true);
+    expect(joins).toHaveLength(0);
+    void started;
+  });
+
+  it("renders the button disabled and relabelled while busy", async () => {
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValue(new Promise(() => {}));
+
+    expect(startButton(modal).getAttribute("translationKey")).toBe(
+      "game_settings.start",
+    );
+
+    void internals(modal).startGame();
+    await flush();
+
+    const button = startButton(modal);
+    expect(button.getAttribute("translationKey")).toBe(
+      "game_settings.starting",
+    );
+    expect((button as unknown as { disable: boolean }).disable).toBe(true);
+  });
+
+  // A second click during the wait would dispatch a second join-lobby for a
+  // different gameID — two games racing to start.
+  it("ignores a second click while the first is still resolving", async () => {
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValue(new Promise(() => {}));
+
+    void internals(modal).startGame();
+    await flush();
+    await internals(modal).startGame();
+
+    expect(cosmeticsMocks.getPlayerCosmetics).toHaveBeenCalledTimes(1);
+    expect(joins).toHaveLength(0);
+  });
+
+  // Offline, the bounded catalog fetch fails and getPlayerCosmetics degrades
+  // to defaults. The match still has to start: nothing about the result
+  // decides whether a bot game can run.
+  it("starts the match when cosmetics degrade to defaults", async () => {
+    const defaults: PlayerCosmetics = {};
+    cosmeticsMocks.getPlayerCosmetics.mockResolvedValue(defaults);
+
+    await internals(modal).startGame();
+
+    expect(joins).toHaveLength(1);
+    expect(joins[0].detail.gameStartInfo.players[0].cosmetics).toEqual(
+      defaults,
+    );
+    expect(internals(modal).starting).toBe(false);
+  });
+
+  it("clears the busy state when the start path throws", async () => {
+    cosmeticsMocks.getPlayerCosmetics.mockRejectedValue(new Error("boom"));
+
+    await expect(internals(modal).startGame()).rejects.toThrow("boom");
+
+    // Otherwise the button stays disabled and the player cannot retry.
+    expect(internals(modal).starting).toBe(false);
+  });
+
+  // Regression: the busy flag is cleared in a finally, and a finally never
+  // runs if the promise it is waiting on never settles. A stalled connection
+  // (captive portal, DNS blackhole) reaching any unbounded fetch beneath
+  // getPlayerCosmetics used to pin the button at "Starting…" for the rest of
+  // the session — surviving close and reopen, and silently no-opping the
+  // Tutorial entry point on the re-entrancy guard.
+  it("does not stay busy when cosmetics never settle", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise(() => {}),
+    );
+
+    const started = internals(modal).startGame();
+    await vi.advanceTimersByTimeAsync(START_PREPARE_DEADLINE_MS);
+    await started;
+
+    expect(internals(modal).starting).toBe(false);
+    // The match still starts, on defaults — the point of the deadline.
+    expect(joins).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
+  // Cosmetics are not the only unbounded wait in the block the busy flag
+  // guards. The Steam name seed is a bare IPC call with no watchdog of its
+  // own, so a wedged bridge would pin the button exactly the same way. The
+  // deadline covers the whole preparation, not just the cosmetics call,
+  // precisely so this class of gap stays closed as the sequence grows.
+  it("does not stay busy when the Steam name seed never settles", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const seedStub = {
+      whenSeeded: () => new Promise<void>(() => {}),
+      resolvedName: () => ({
+        name: "AnonBadger",
+        source: "generated",
+        verified: false,
+      }),
+      getClanTag: () => null,
+    };
+    vi.spyOn(document, "querySelector").mockImplementation((selector) =>
+      selector === "username-input" ? (seedStub as unknown as Element) : null,
+    );
+
+    const started = internals(modal).startGame();
+    await vi.advanceTimersByTimeAsync(START_PREPARE_DEADLINE_MS);
+    await started;
+
+    expect(internals(modal).starting).toBe(false);
+    expect(joins).toHaveLength(1);
+    // The interim generated name is what the seed would have replaced.
+    expect(joins[0].detail.gameStartInfo.players[0].username).toBe(
+      "AnonBadger",
+    );
+    vi.useRealTimers();
+  });
+
+  it("accepts a second Start click after a stalled attempt", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise(() => {}),
+    );
+
+    const started = internals(modal).startGame();
+    await vi.advanceTimersByTimeAsync(START_PREPARE_DEADLINE_MS);
+    await started;
+
+    cosmeticsMocks.getPlayerCosmetics.mockResolvedValueOnce({});
+    await internals(modal).startGame();
+
+    expect(joins).toHaveLength(2);
+    vi.useRealTimers();
+  });
+
+  // Belt and braces: whatever left an attempt in flight, closing and
+  // reopening the modal hands back a live button.
+  it("clears the busy state on close", async () => {
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValue(new Promise(() => {}));
+
+    void internals(modal).startGame();
+    await flush();
+    expect(internals(modal).starting).toBe(true);
+
+    internals(modal).onClose();
+
+    expect(internals(modal).starting).toBe(false);
+  });
+
+  // Closing the modal hands back a live button, so the player can reopen and
+  // start again while the first attempt is still resolving. That first
+  // attempt describes settings the modal no longer holds — if it still
+  // dispatched, two join-lobby events with different gameIDs would race and
+  // the abandoned one could win.
+  it("drops an attempt retired by closing the modal", async () => {
+    let releaseFirst: (c: PlayerCosmetics) => void = () => {};
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise<PlayerCosmetics>((resolve) => {
+        releaseFirst = resolve;
+      }),
+    );
+
+    const first = internals(modal).startGame();
+    await flush();
+
+    internals(modal).onClose();
+
+    cosmeticsMocks.getPlayerCosmetics.mockResolvedValueOnce({});
+    await internals(modal).startGame();
+    expect(joins).toHaveLength(1);
+
+    // The abandoned attempt now completes, after the live one already did.
+    releaseFirst({});
+    await first;
+
+    expect(joins).toHaveLength(1);
+  });
+
+  it("keeps the live attempt busy when a retired one settles", async () => {
+    let releaseFirst: (c: PlayerCosmetics) => void = () => {};
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise<PlayerCosmetics>((resolve) => {
+        releaseFirst = resolve;
+      }),
+    );
+
+    const first = internals(modal).startGame();
+    await flush();
+    internals(modal).onClose();
+
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise(() => {}),
+    );
+    void internals(modal).startGame();
+    await flush();
+    expect(internals(modal).starting).toBe(true);
+
+    releaseFirst({});
+    await first;
+
+    // The retired attempt must not clear the live attempt's busy state.
+    expect(internals(modal).starting).toBe(true);
+  });
+
+  // An ad routinely outruns the preparation deadline, so its own bound has to
+  // sit well above it — otherwise the ad bound would be the thing cutting
+  // real creatives short.
+  it("bounds the ad well above the preparation deadline", () => {
+    expect(MIDGAME_AD_DEADLINE_MS).toBeGreaterThan(START_PREPARE_DEADLINE_MS);
+  });
+
+  // Regression: the ad used to be raced against the preparation deadline, so
+  // a normal 15-30s creative was cut off at 15s and the game was dispatched
+  // underneath it — the player landing in spawn selection behind a live ad
+  // overlay. The ad has to gate the start.
+  it("does not cut a midgame ad short at the preparation deadline", async () => {
+    vi.useFakeTimers();
+    let finishAd: () => void = () => {};
+    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishAd = resolve;
+      }),
+    );
+
+    const started = internals(modal).startGame();
+    await vi.advanceTimersByTimeAsync(START_PREPARE_DEADLINE_MS + 5_000);
+
+    // Still watching the ad — nothing may have started.
+    expect(joins).toHaveLength(0);
+
+    finishAd();
+    await started;
+
+    expect(joins).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
+  // An ad shown for a game that will never start is worse than no ad: the
+  // player watches it, and nothing happens. The liveness check has to sit
+  // before the ad request, not only after it.
+  it("does not request an ad for a start abandoned by closing the modal", async () => {
+    let releaseCosmetics: (c: PlayerCosmetics) => void = () => {};
+    cosmeticsMocks.getPlayerCosmetics.mockReturnValueOnce(
+      new Promise<PlayerCosmetics>((resolve) => {
+        releaseCosmetics = resolve;
+      }),
+    );
+    const requestAd = vi
+      .spyOn(crazyGamesSDK, "requestMidgameAd")
+      .mockResolvedValue(undefined);
+
+    const started = internals(modal).startGame();
+    await flush();
+    internals(modal).onClose();
+    releaseCosmetics({});
+    await started;
+
+    expect(requestAd).not.toHaveBeenCalled();
+    expect(joins).toHaveLength(0);
+  });
+
+  // And it has to sit after the ad too: an ad runs long enough that the modal
+  // can be closed while it plays.
+  it("does not start a game abandoned while the ad was playing", async () => {
+    let finishAd: () => void = () => {};
+    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishAd = resolve;
+      }),
+    );
+
+    const started = internals(modal).startGame();
+    await flush();
+    internals(modal).onClose();
+    finishAd();
+    await started;
+
+    expect(joins).toHaveLength(0);
+  });
+
+  // The ad still cannot pin the button forever: an SDK that fires neither
+  // adFinished nor adError has to be given up on eventually.
+  it("gives up on an ad that never signals completion", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+      new Promise<void>(() => {}),
+    );
+
+    const started = internals(modal).startGame();
+    await vi.advanceTimersByTimeAsync(MIDGAME_AD_DEADLINE_MS);
+    await started;
+
+    expect(joins).toHaveLength(1);
+    expect(internals(modal).starting).toBe(false);
+    vi.useRealTimers();
+  });
+
+  // The prewarm is what keeps the click off the network in the first place:
+  // the round trip is spent while the player picks a map.
+  it("prewarms cosmetics when the modal opens", () => {
+    internals(modal).onOpen();
+
+    expect(cosmeticsMocks.prewarmCosmetics).toHaveBeenCalledTimes(1);
+  });
+
+  it("prewarms cosmetics on the tutorial path, which never opens the modal", async () => {
+    await modal.startTutorial();
+
+    expect(cosmeticsMocks.prewarmCosmetics).toHaveBeenCalled();
+    expect(joins).toHaveLength(1);
+  });
+});
