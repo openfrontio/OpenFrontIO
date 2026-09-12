@@ -1495,7 +1495,6 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private kickPlayer(clientID: string) {
-    // Dispatch event to be handled by WebSocket instead of HTTP
     this.dispatchEvent(
       new CustomEvent("kick-player", {
         detail: { target: clientID },
