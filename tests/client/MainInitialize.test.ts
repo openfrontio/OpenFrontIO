@@ -9,6 +9,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { SendKickPlayerIntentEvent } from "../../src/client/Transport";
+import { EventBus } from "../../src/core/EventBus";
 
 const mocks = vi.hoisted(() => ({
   userAuth: vi.fn(async (): Promise<unknown> => false),
@@ -260,6 +262,23 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       expect.stringContaining("joining lobby"),
     );
     expect(mocks.joinLobby).not.toHaveBeenCalled();
+  });
+
+  it("forwards a kick-player DOM event to the game event bus", () => {
+    const emitSpy = vi.spyOn(EventBus.prototype, "emit");
+    document.dispatchEvent(
+      new CustomEvent("kick-player", {
+        detail: { target: "c0000002" },
+        bubbles: true,
+      }),
+    );
+    expect(
+      emitSpy.mock.calls.some(
+        ([e]) =>
+          e instanceof SendKickPlayerIntentEvent && e.target === "c0000002",
+      ),
+    ).toBe(true);
+    emitSpy.mockRestore();
   });
 
   it("logs the player id when a retry lands a signed-in userMe", async () => {
