@@ -1248,7 +1248,7 @@ export class InputHandler {
       switch (this.uiState.ghostStructure) {
         case UnitType.AtomBomb:
         case UnitType.HydrogenBomb:
-        // MIRV seemed excessive to click hold.
+          // MIRV seemed excessive to click hold.
           return true;
         default:
           return false;
