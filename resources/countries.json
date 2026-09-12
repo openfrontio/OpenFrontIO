@@ -397,6 +397,11 @@
     "name": "Bavaria (Lozenges)"
   },
   {
+    "code": "Bedford",
+    "continent": "North America",
+    "name": "Bedford"
+  },
+  {
     "code": "by",
     "continent": "Europe",
     "name": "Belarus"
@@ -2336,6 +2341,11 @@
     "name": "Namibia"
   },
   {
+    "code": "Nantucket",
+    "continent": "North America",
+    "name": "Nantucket"
+  },
+  {
     "code": "Napoleon",
     "continent": "Europe",
     "name": "Napoleon"
@@ -3851,6 +3861,11 @@
     "code": "aus_tas",
     "continent": "Oceania",
     "name": "Tasmania"
+  },
+  {
+    "code": "Taunton",
+    "continent": "North America",
+    "name": "Taunton"
   },
   {
     "code": "Tennessee",
