@@ -48,7 +48,7 @@ export class EmojiTable extends LitElement {
         this.hideTable();
       });
     });
-    eventBus.on(CloseViewEvent, (e) => {
+    eventBus.on(CloseViewEvent, () => {
       if (!this.hidden) {
         this.hideTable();
       }
