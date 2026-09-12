@@ -1376,42 +1376,6 @@ export async function claimAllRewards(): Promise<
   }
 }
 
-export async function createCheckoutSession(
-  priceId: string,
-  colorPaletteName?: string,
-): Promise<string | false> {
-  try {
-    const response = await fetch(
-      `${getApiBase()}/stripe/create-checkout-session`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: await getAuthHeader(),
-        },
-        body: JSON.stringify({
-          priceId: priceId,
-          hostname: window.location.origin,
-          colorPaletteName: colorPaletteName,
-        }),
-      },
-    );
-    if (!response.ok) {
-      console.error(
-        "createCheckoutSession: request failed",
-        response.status,
-        response.statusText,
-      );
-      return false;
-    }
-    const json = await response.json();
-    return json.url;
-  } catch (e) {
-    console.error("createCheckoutSession: request failed", e);
-    return false;
-  }
-}
-
 export async function createCustomCurrencyCheckout(
   hardAmount: number,
 ): Promise<string | false> {
@@ -1562,7 +1526,8 @@ function readRetryAfterSeconds(response: Response): number | null {
 // hand the player over to it. Replaces both legacy Stripe endpoints for packs,
 // custom currency and subscription tiers.
 //
-// Unlike createCheckoutSession below, failures are NOT collapsed to `false`:
+// Unlike the legacy checkout helpers it replaced, failures are NOT collapsed
+// to `false`:
 // callers have to tell "the rail is off" from "you already have a pending
 // Steam purchase" from "try again later", and each of those is a different
 // thing to say to the player.
