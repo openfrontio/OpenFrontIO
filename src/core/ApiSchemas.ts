@@ -872,10 +872,19 @@ export type PaymentsKind = z.infer<typeof PaymentsKindSchema>;
 //   - "client_overlay" — Steam's overlay purchase dialog is already on screen
 //                        and `redirectUrl` is null. There is nothing to
 //                        navigate to; wait for Steam to report authorization.
+//   - "client_secret"  — a Stripe PaymentIntent was minted and `clientSecret`
+//                        carries its client secret. The client confirms it
+//                        in-page (wallet button or card form); nothing
+//                        navigates. Only returned when the request listed it
+//                        in `handoffs`, so an older client never sees it.
 //
 // Branching on "is redirectUrl set?" instead would silently mis-handle a
 // client_overlay response, so don't.
-export const PaymentsHandoffSchema = z.enum(["redirect", "client_overlay"]);
+export const PaymentsHandoffSchema = z.enum([
+  "redirect",
+  "client_overlay",
+  "client_secret",
+]);
 export type PaymentsHandoff = z.infer<typeof PaymentsHandoffSchema>;
 
 // The 200 body. Deliberately FLAT — `handoff` is a sibling of `redirectUrl`,
@@ -887,6 +896,9 @@ export type PaymentsHandoff = z.infer<typeof PaymentsHandoffSchema>;
 //
 // `expiresAt` is advisory only. Do not build a countdown or an auto-cancel on
 // it — the server owns the order's lifetime.
+//
+// `clientSecret` defaults to null rather than being required so responses from
+// an API deployed before the inline flow still parse.
 export const PaymentsCheckoutResponseSchema = z
   .object({
     orderId: z.string().nullable(),
@@ -894,13 +906,19 @@ export const PaymentsCheckoutResponseSchema = z
     kind: PaymentsKindSchema,
     handoff: PaymentsHandoffSchema,
     redirectUrl: z.string().nullable(),
+    clientSecret: z.string().nullable().default(null),
     expiresAt: z.string().nullable(),
   })
   // A "redirect" with nowhere to redirect to is not a response we can act on;
-  // rejecting it here keeps every caller from having to re-check.
+  // rejecting it here keeps every caller from having to re-check. Same for a
+  // "client_secret" without a secret.
   .refine((body) => body.handoff !== "redirect" || body.redirectUrl !== null, {
     message: "handoff 'redirect' requires a redirectUrl",
-  });
+  })
+  .refine(
+    (body) => body.handoff !== "client_secret" || body.clientSecret !== null,
+    { message: "handoff 'client_secret' requires a clientSecret" },
+  );
 export type PaymentsCheckoutResponse = z.infer<
   typeof PaymentsCheckoutResponseSchema
 >;

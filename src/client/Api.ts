@@ -12,6 +12,7 @@ import {
   NewsItemSchema,
   PaymentsCheckoutResponse,
   PaymentsCheckoutResponseSchema,
+  PaymentsHandoff,
   PaymentsKind,
   PaymentsKindSchema,
   PaymentsProvider,
@@ -1414,10 +1415,18 @@ export async function createCustomCurrencyCheckout(
 // (see paymentsProvider() in Payments.ts) — the server never infers the rail.
 // Exactly one identifier travels with each kind, and it is always a NAME: the
 // endpoint has no priceId, because a Steam-only listing has no Stripe price.
-export type PaymentsCheckoutRequest =
-  | { provider: PaymentsProvider; kind: "currency_pack"; packName: string }
-  | { provider: PaymentsProvider; kind: "custom_currency"; hardAmount: number }
-  | { provider: PaymentsProvider; kind: "subscription_tier"; tierName: string };
+//
+// `handoffs` lists the handoffs this client can perform, so the server may
+// answer with any of them. Omitted means the pre-inline set ("redirect" /
+// "client_overlay") — and a server that predates the field ignores it and
+// answers "redirect", which every caller must still handle. That is the
+// upgrade path: the inline flow degrades to the redirect flow, never to a
+// dead button.
+export type PaymentsCheckoutRequest = (
+  | { kind: "currency_pack"; packName: string }
+  | { kind: "custom_currency"; hardAmount: number }
+  | { kind: "subscription_tier"; tierName: string }
+) & { provider: PaymentsProvider; handoffs?: PaymentsHandoff[] };
 
 export type PaymentsCheckoutResult =
   | { ok: true; data: PaymentsCheckoutResponse }

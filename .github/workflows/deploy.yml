@@ -183,6 +183,14 @@ jobs:
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
           HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }} # schedule and push both use staging
           CDN_BASE: ${{ vars.CDN_BASE }}
+          # Baked into the client bundle at image-build time (build.sh
+          # --build-arg → Dockerfile → Vite define). Repo-level var holds the
+          # test-mode key; the `prod` environment (attached above for prod
+          # dispatches only) overrides it with the live-mode one — the key's
+          # mode must match the mode the API mints intents in, or every
+          # confirm fails. Unset/empty keeps the inline payment flow off (the
+          # store falls back to redirect checkout).
+          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
