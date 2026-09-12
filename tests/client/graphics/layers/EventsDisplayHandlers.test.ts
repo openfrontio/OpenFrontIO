@@ -128,6 +128,56 @@ describe("EventsDisplay handlers", () => {
       ed.tick();
       expect(events()).toHaveLength(0);
     });
+
+    it("shows the panel after spawn and hides it when the player dies", () => {
+      ed.tick();
+      expect((ed as unknown as { _isVisible: boolean })._isVisible).toBe(true);
+
+      game.myPlayer = () => ({ ...myPlayer, isAlive: () => false });
+      ed.tick();
+      expect((ed as unknown as { _isVisible: boolean })._isVisible).toBe(false);
+      // render() must short-circuit to an empty template while hidden.
+      const rendered = (
+        ed as unknown as { render: () => { values: unknown[] } }
+      ).render();
+      expect(rendered.values).toHaveLength(0);
+    });
+  });
+
+  describe("renderButton", () => {
+    const renderButton = (options: Record<string, unknown>) =>
+      (
+        ed as unknown as {
+          renderButton: (o: unknown) => {
+            strings: string[];
+            values: unknown[];
+          };
+        }
+      ).renderButton(options);
+
+    it("renders a button wired to the given click handler", () => {
+      const onClick = vi.fn();
+      const button = renderButton({
+        content: "jump to player",
+        onClick,
+        className: "text-left",
+        disabled: true,
+      });
+
+      expect(button.strings.join("")).toContain("<button");
+      expect(button.values).toContain("jump to player");
+      expect(button.values).toContain("text-left");
+      const handler = button.values.find((v) => typeof v === "function") as
+        | (() => void)
+        | undefined;
+      expect(handler).toBe(onClick);
+    });
+
+    it("renders nothing when hidden", () => {
+      const button = renderButton({ content: "invisible", hidden: true });
+      expect(button.values).toHaveLength(0);
+      expect(button.strings.join("")).toBe("");
+    });
   });
 
   describe("onAllianceRequestReplyEvent", () => {

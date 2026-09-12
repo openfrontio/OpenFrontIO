@@ -53,6 +53,7 @@ import {
   SendAttackIntentEvent,
   SendDonateGoldIntentEvent,
   SendHashEvent,
+  SendKickPlayerIntentEvent,
   SendSpawnIntentEvent,
   SendWinnerEvent,
   Transport,
@@ -197,6 +198,16 @@ describe("Transport send paths", () => {
           intent: { type: "cancel_attack", attackID: "atk-1" },
         },
       ]);
+    });
+
+    it("turns a kick-player event into a kick_player intent frame", () => {
+      const { eventBus, ws } = connected();
+      eventBus.emit(new SendKickPlayerIntentEvent("player01"));
+
+      expect(decodeFrames(ws)).toContainEqual({
+        type: "intent",
+        intent: { type: "kick_player", targetClientID: "player01" },
+      });
     });
 
     it("does nothing when an intent arrives before any socket exists", () => {
