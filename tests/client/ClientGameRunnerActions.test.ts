@@ -237,7 +237,7 @@ describe("auto boat", () => {
 });
 
 describe("stop() (OPE-411)", () => {
-  it("destroys the input handler so its listeners stop firing", () => {
+  it("calls input.destroy()", () => {
     const { runner, input } = makeRunner({});
 
     runner.stop();

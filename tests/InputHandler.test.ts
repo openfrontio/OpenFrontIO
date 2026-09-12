@@ -1475,6 +1475,27 @@ describe("InputHandler teardown (OPE-411)", () => {
     }
   });
 
+  it("releases its EventBus subscription on destroy()", () => {
+    const unit = { id: () => 1 } as unknown as UnitView;
+
+    // Control: while alive the subscription drives the cursor.
+    eventBus.emit(new UnitSelectionEvent(unit, true));
+    expect(canvas.style.cursor).toBe("crosshair");
+    canvas.style.cursor = "";
+
+    inputHandler.destroy();
+
+    // The EventBus is page-global, so a subscription left behind would keep
+    // this handler alive and run it against the next game's events. Both
+    // probes are discriminating: a live subscription would set the crosshair
+    // on the first, and clear unitSelectionActive on the second.
+    eventBus.emit(new UnitSelectionEvent(unit, true));
+    expect(canvas.style.cursor).toBe("");
+
+    eventBus.emit(new UnitSelectionEvent(null, false));
+    expect(inputHandler["unitSelectionActive"]).toBe(true);
+  });
+
   it("clears the pan/zoom interval on destroy()", () => {
     vi.useFakeTimers();
     const handler = makeHandler(
@@ -1497,13 +1518,28 @@ describe("InputHandler teardown (OPE-411)", () => {
     vi.useFakeTimers();
     const bus = new EventBus();
     const handler = makeHandler(document.createElement("canvas"), bus);
+    // The bus captures this field's value at initialize() time, so swapping
+    // it first lets us count how many times the subscription is registered.
+    const onUnitSelection = vi.fn();
+    handler["onUnitSelection"] = onUnitSelection;
     try {
       handler.initialize();
       handler.initialize();
       expect(vi.getTimerCount()).toBe(1);
 
+      bus.emit(
+        new UnitSelectionEvent({ id: () => 1 } as unknown as UnitView, true),
+      );
+      expect(onUnitSelection).toHaveBeenCalledTimes(1);
+
       handler.destroy();
       expect(vi.getTimerCount()).toBe(0);
+
+      onUnitSelection.mockClear();
+      bus.emit(
+        new UnitSelectionEvent({ id: () => 1 } as unknown as UnitView, true),
+      );
+      expect(onUnitSelection).not.toHaveBeenCalled();
 
       const emit = vi.spyOn(bus, "emit");
       window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));

@@ -283,29 +283,37 @@ export class InputHandler {
       this.onKeybindsChanged,
     );
 
-    // Listen for warship selection to change cursor
-    this.eventBus.on(UnitSelectionEvent, (e) => {
-      this.unitSelectionActive =
-        e.isSelected && (e.unit !== null || (e.units ?? []).length > 0);
-      if (e.isSelected && (e.units ?? []).length > 0) {
-        // Multi-selection active
-        this.multiSelectionActive = true;
-        this.canvas.style.cursor = "crosshair";
-      } else if (e.isSelected) {
-        // Single warship selected — cursor crosshair, but not multi
-        this.multiSelectionActive = false;
-        this.canvas.style.cursor = "crosshair";
-      } else {
-        // Deselected
-        this.multiSelectionActive = false;
-        if (!this.selectionBoxActive) {
-          this.canvas.style.cursor = "";
-        }
-      }
-    });
+    // Listen for warship selection to change cursor. Held in a field so
+    // destroy() can release it: the EventBus is created once per page in
+    // Main.ts and handed to every joinLobby(), so a subscription left behind
+    // keeps this handler -- and the GameView, uiState and overlay it closes
+    // over -- alive for the rest of the session, and runs against the next
+    // game's events. off() first so a second initialize() cannot double it.
+    this.eventBus.off(UnitSelectionEvent, this.onUnitSelection);
+    this.eventBus.on(UnitSelectionEvent, this.onUnitSelection);
 
     this.initializePointerAndKeyboardEvents();
   }
+
+  private onUnitSelection = (e: UnitSelectionEvent) => {
+    this.unitSelectionActive =
+      e.isSelected && (e.unit !== null || (e.units ?? []).length > 0);
+    if (e.isSelected && (e.units ?? []).length > 0) {
+      // Multi-selection active
+      this.multiSelectionActive = true;
+      this.canvas.style.cursor = "crosshair";
+    } else if (e.isSelected) {
+      // Single warship selected — cursor crosshair, but not multi
+      this.multiSelectionActive = false;
+      this.canvas.style.cursor = "crosshair";
+    } else {
+      // Deselected
+      this.multiSelectionActive = false;
+      if (!this.selectionBoxActive) {
+        this.canvas.style.cursor = "";
+      }
+    }
+  };
 
   private onKeybindsChanged = () => {
     this.buildKeybindTable();
@@ -1280,10 +1288,12 @@ export class InputHandler {
     );
     this.listenerAbort?.abort();
     this.listenerAbort = null;
+    this.eventBus.off(UnitSelectionEvent, this.onUnitSelection);
     // A touch pointerdown arms an 800ms long-press timer. Aborting the
     // listeners does not cancel it, so without this it can still fire after
-    // teardown: emitting TouchLongPressStartEvent on a dead bus and setting
-    // the cursor on a canvas the renderer has already removed.
+    // teardown: emitting TouchLongPressStartEvent on the page-global bus,
+    // into the next game, and setting the cursor on a canvas the renderer
+    // has already removed.
     if (this.longPressTimer !== null) {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
