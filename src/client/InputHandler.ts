@@ -849,8 +849,9 @@ export class InputHandler {
     this.pointers.clear();
 
     // prevents double firing from BuildPreviewController if click released previous to intent confirmation
+    // preserves the ghost intentionally.
     if (this.isClickHoldPastGrace && this.isValidGhost()) {
-      this.setGhostStructure(null);
+      this.suppressNextTap = true;
     }
     this.clickHoldCleanup();
 
