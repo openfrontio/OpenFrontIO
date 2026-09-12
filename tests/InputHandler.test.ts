@@ -5,6 +5,7 @@ import {
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
   InputHandler,
+  TouchLongPressStartEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
@@ -1411,6 +1412,66 @@ describe("InputHandler teardown (OPE-411)", () => {
       // Must run even if an expectation throws, or a live window listener
       // leaks into every later test in this file.
       second.destroy();
+    }
+  });
+
+  it("cancels a pending long-press timer on destroy()", () => {
+    vi.useFakeTimers();
+    const bus = new EventBus();
+    const handler = makeHandler(document.createElement("canvas"), bus);
+    try {
+      handler.initialize();
+      handler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: 10,
+          clientY: 20,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+      expect(handler["longPressTimer"]).not.toBeNull();
+
+      handler.destroy();
+      const emit = vi.spyOn(bus, "emit");
+      vi.advanceTimersByTime(2000);
+
+      expect(emit).not.toHaveBeenCalled();
+      expect(handler["longPressActive"]).toBe(false);
+    } finally {
+      handler.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it("cancels a pending long-press timer on re-initialize", () => {
+    vi.useFakeTimers();
+    const bus = new EventBus();
+    const handler = makeHandler(document.createElement("canvas"), bus);
+    try {
+      handler.initialize();
+      handler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: 10,
+          clientY: 20,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+
+      handler.initialize();
+      const emit = vi.spyOn(bus, "emit");
+      vi.advanceTimersByTime(2000);
+
+      expect(
+        emit.mock.calls.some(
+          (c: unknown[]) => c[0] instanceof TouchLongPressStartEvent,
+        ),
+      ).toBe(false);
+    } finally {
+      handler.destroy();
+      vi.useRealTimers();
     }
   });
 

@@ -486,6 +486,12 @@ export class InputHandler {
       clearInterval(this.moveInterval);
       this.moveInterval = null;
     }
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    this.longPressActive = false;
+    this.suppressNextTap = false;
     this.listenerAbort = new AbortController();
     const { signal } = this.listenerAbort;
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e), {
@@ -1274,6 +1280,16 @@ export class InputHandler {
     );
     this.listenerAbort?.abort();
     this.listenerAbort = null;
+    // A touch pointerdown arms an 800ms long-press timer. Aborting the
+    // listeners does not cancel it, so without this it can still fire after
+    // teardown: emitting TouchLongPressStartEvent on a dead bus and setting
+    // the cursor on a canvas the renderer has already removed.
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    this.longPressActive = false;
+    this.suppressNextTap = false;
     this.activeKeys.clear();
     this.lastGestureScale = null;
     this.keybindAndEvent = [];
