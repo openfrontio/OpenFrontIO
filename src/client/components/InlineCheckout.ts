@@ -416,7 +416,7 @@ export class InlineCheckout extends LitElement {
         }}
       >
         <div
-          class="relative mx-4 w-full max-w-sm p-6 rounded-2xl border border-white/15 bg-surface shadow-2xl"
+          class="relative mx-4 max-h-[85vh] w-full max-w-sm overflow-y-auto p-6 rounded-2xl border border-white/15 bg-surface shadow-2xl"
         >
           <button
             @click=${() => this.closeCardModal()}
