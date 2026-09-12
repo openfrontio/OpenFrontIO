@@ -1121,6 +1121,11 @@ export class ClientGameRunner {
   public stop() {
     this.soundManager.dispose();
     this.graphicsListenerAbort?.abort();
+    // Detach the input handler's window/canvas listeners. Nothing else ever
+    // did, so a handler from a finished game kept translating keys into events
+    // on a dead bus, and joining another game without a page reload stacked a
+    // second live handler on top. Idempotent, like the disposals around it.
+    this.input.destroy();
     this.disposeRenderer?.();
     if (!this.isActive) return;
 

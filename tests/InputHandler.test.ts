@@ -1362,6 +1362,15 @@ describe("InputHandler teardown (OPE-411)", () => {
     expect(inputHandler["keybindAndEvent"]).toEqual([]);
   });
 
+  it("is safe to destroy twice", () => {
+    inputHandler.destroy();
+    expect(() => inputHandler.destroy()).not.toThrow();
+
+    const emit = vi.spyOn(eventBus, "emit");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
+    expect(emit).not.toHaveBeenCalled();
+  });
+
   it("destroying one handler leaves a later handler working", () => {
     const secondBus = new EventBus();
     const secondCanvas = document.createElement("canvas");
