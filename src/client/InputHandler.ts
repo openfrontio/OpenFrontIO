@@ -1250,6 +1250,11 @@ export class InputHandler {
       }
     };
 
+    // Saves performance via guard clause and prevents some potential bugs
+    if (!isValidTarget()) {
+      return;
+    }
+
     const repeatBehavior = () => {
       isValidTarget()
         ? this.eventBus.emit(new ConfirmGhostStructureEvent())
