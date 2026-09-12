@@ -364,6 +364,90 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       expect(mocks.joinLobby).not.toHaveBeenCalled();
     });
 
+    /**
+     * The matchmaking modal dispatches its OWN join once the server matches
+     * it, so a refusal at the funnel leaves that modal sitting on "waiting
+     * for a game" over a match the player will never enter -- and, worse,
+     * holding a queue slot from a screen that is lying to them.
+     *
+     * Spied rather than driven for real: opening the modal for real would
+     * open a queue WebSocket, and the claim under test is only which joins
+     * reach close().
+     */
+    function spyOnMatchmakingModal(): {
+      close: ReturnType<typeof vi.spyOn>;
+      restore: () => void;
+    } {
+      const modal = document.querySelector("matchmaking-modal") as unknown as {
+        isOpen: () => boolean;
+        close: () => void;
+      };
+      expect(modal).not.toBeNull();
+      const isOpen = vi.spyOn(modal, "isOpen").mockReturnValue(true);
+      const close = vi.spyOn(modal, "close").mockImplementation(() => {});
+      return {
+        close,
+        restore: () => {
+          close.mockRestore();
+          isOpen.mockRestore();
+        },
+      };
+    }
+
+    it("takes a refused matchmade join out of the queue", async () => {
+      await settleReachability(false);
+      messages.length = 0;
+      const matchmaking = spyOnMatchmakingModal();
+
+      try {
+        document.dispatchEvent(
+          new CustomEvent("join-lobby", {
+            detail: { gameID: "AbCd1234", source: "matchmaking" },
+            bubbles: true,
+          }),
+        );
+
+        // close() is the same teardown its Back button uses: it shuts the
+        // queue socket and clears the watchdog, so the player actually
+        // leaves the queue rather than staring at a stale "waiting" screen.
+        await vi.waitFor(() => expect(matchmaking.close).toHaveBeenCalled());
+        expect(mocks.joinLobby).not.toHaveBeenCalled();
+      } finally {
+        matchmaking.restore();
+      }
+    });
+
+    it("leaves a live queue alone when the refused join came from elsewhere", async () => {
+      // The other half of the scoping, and the reason it is not just
+      // "always close it": someone can be legitimately queued while a deep
+      // link or a lobby click is refused, and cancelling their queue over
+      // an unrelated refusal would be its own bug.
+      await settleReachability(false);
+      messages.length = 0;
+      const matchmaking = spyOnMatchmakingModal();
+
+      try {
+        document.dispatchEvent(
+          new CustomEvent("join-lobby", {
+            detail: { gameID: "AbCd1234", source: "private" },
+            bubbles: true,
+          }),
+        );
+
+        // Wait for the refusal itself to land, so "close was not called" is
+        // about the scoping rather than about nothing having happened yet.
+        await vi.waitFor(() =>
+          expect(messages).toContain(
+            translateText("common.backend_unreachable"),
+          ),
+        );
+        expect(matchmaking.close).not.toHaveBeenCalled();
+        expect(mocks.joinLobby).not.toHaveBeenCalled();
+      } finally {
+        matchmaking.restore();
+      }
+    });
+
     it("lets the same join through once the backend answers", async () => {
       // The control. Without it a join refused for any unrelated reason --
       // the username gate, a listener that never ran -- would pass above.
