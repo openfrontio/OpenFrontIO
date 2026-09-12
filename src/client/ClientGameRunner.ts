@@ -1467,10 +1467,10 @@ export class ClientGameRunner {
     const canBuild = this.canBoatAttack(buildables);
     if (canBuild === false) return false;
 
-    // TODO: Global enable flag
-    // TODO: Global limit autoboat to nearby shore flag
-    // if (!enableAutoBoat) return false;
-    // if (!limitAutoBoatNear) return true;
+    // TODO: honor a global auto-boat enable flag once it exists.
+    // if (!this.userSettings.autoBoat()) return false;
+    // TODO: honor a global "limit auto-boat to nearby shore" flag once it exists.
+    // if (!this.userSettings.autoBoatNearbyOnly()) return true;
     const distanceSquared = this.gameView.euclideanDistSquared(tile, canBuild);
     const limit = 100;
     const limitSquared = limit * limit;
