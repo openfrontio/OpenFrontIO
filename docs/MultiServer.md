@@ -520,11 +520,22 @@ as `latest` after a deploy.
 
 `ClientEnv.gameVersion(gameID)` reads that commit (undefined with no list, or
 for a letter the list doesn't carry, or for a legacy id with no letter), and
-`versionedPathForGame(ownCommit, gameVersion, pathname, search)` in
-`src/core/ServerList.ts` decides where to go. Both places a game is opened
-from a URL use it — `Main.handleUrl`'s `/game/<id>` branch and
-`JoinLobbyModal.checkActiveLobby`, each after `ensureServerList()` — so they
-cannot drift apart. It answers null (stay here, join as today) when:
+`redirectToGameVersion(gameID)` in `src/client/ServerList.ts` is the whole
+decision, exported so the two places a game is opened from a URL —
+`Main.handleUrl`'s `/game/<id>` branch and `JoinLobbyModal.checkActiveLobby`,
+each after `ensureServerList()` — cannot drift apart. It never navigates the
+two shells that have no `/v/<commit>/` routes to go to:
+
+- **desktop**, whose updater owns which version it runs (a mismatch there
+  stays `update_available.desktop`);
+- **a replay shell**, where `replay.<domain>/<gameId>` serves the build a
+  record was made on. It does load the site's list — `siteHost` is injected
+  there — so nothing else would stop it, and a navigation would 404 and lose
+  an archived replay.
+
+The rest is `versionedPathForGame(ownCommit, gameVersion, pathname, search)`
+in `src/core/ServerList.ts`, which answers null (stay here, join as today)
+when:
 
 - the version is unknown — a navigation on a guess is worse than joining and
   finding out;
@@ -536,8 +547,28 @@ cannot drift apart. It answers null (stay here, join as today) when:
   mismatch to join-time `version_mismatch`, whose cross-host redirect
   already answers it.
 
-The desktop shell never navigates: its updater owns which version it runs,
-and a mismatch there stays `update_available.desktop`.
+### A pinned page is never "out of date"
+
+`/v/<X>/` is where this redirect PUTS a player, and X is draining by
+definition — that is why it is not `latest`. So the out-of-date check
+(`ensureServerList({ redirectIfOutOfDate: true })`, which the lobby list and
+Create ask for) would fire the moment they arrived, send them to
+`/v/<latest>/`, whose `handleUrl` sees the same game on the same older server
+and sends them back: an infinite hard-navigation loop. `versionedPath`'s own
+guard cannot catch it, because the two hops have different targets and
+neither is ever "already there".
+
+So a document under `/v/<commit>/` is never out of date, decided inside
+`isOutOfDate` in `src/client/ServerList.ts` rather than at the call sites, so
+no future caller can get it wrong. Being behind is the point of being pinned.
+
+The same loop has a click-per-lap variant through join-time
+`version_mismatch` (`ClientGameRunner`): `reloadForUpdate` strips the pin —
+right for an ordinary stale tab, fatal on a pinned page, which lands back on
+`latest`. A pinned page therefore takes the game's own host when the id
+resolves cross-host, and otherwise says `update_available.message` and stops:
+nothing it can fetch is the build it needs, which is what a mismatch on a
+pinned page means.
 
 ## Paths on a `/v/<commit>/` page
 
@@ -548,8 +579,13 @@ parses has to account for it.
 - **Parsing:** `Main.handleUrl`'s game-id match accepts an optional
   `/v/<commit>` prefix ahead of the optional `/w<n>` one.
 - **Staying put:** every `history.pushState` / `replaceState` builds from
-  `window.location.pathname` (`Main.ts`, `ModalRouter`, `consumeRequeueUrl`),
-  so the current prefix survives.
+  `window.location.pathname` (`ModalRouter`, `consumeRequeueUrl`), or from
+  `currentPagePath()` (`src/client/Utils.ts`), which re-applies the page's own
+  `/v/<commit>/` to a path built from scratch — the in-game `?live` entry,
+  the share-URL rewrite, the invite navigation. A history entry is this tab's
+  own URL, so F5 on it must reload THE BUNDLE THIS PAGE IS RUNNING; a
+  version-free entry would hand a pinned player `latest` mid-game. That is
+  the opposite of what a share link wants, hence two rules.
 - **`homeHref()`** returns the version-free `/`. "Leave to the menu" should
   land the player on `latest`, not back on the build they were leaving.
 - **`reloadForUpdate()`** strips the prefix (`stripVersionPrefix`, or

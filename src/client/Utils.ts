@@ -895,6 +895,25 @@ export function apexPathFor(pathname: string): string {
 }
 
 /**
+ * A same-origin path as THIS document should write it into its own history:
+ * re-prefixed with the page's `/v/<commit>/` when it has one, unchanged
+ * otherwise.
+ *
+ * History entries are not share links, and the two want opposite things. A
+ * share link is version-free on purpose — the recipient should be routed by
+ * whatever version the game's server runs when they open it. A history entry
+ * is this tab's own URL: pressing F5 on it must reload THE BUNDLE THIS PAGE
+ * IS RUNNING, and on a pinned page a version-free path would silently hand
+ * the player `latest` instead, mid-game.
+ *
+ * Pure apart from reading location, so the rule is testable without Main.
+ */
+export function currentPagePath(path: string): string {
+  const { commit } = stripVersionPrefix(window.location.pathname);
+  return commit === null ? path : `/v/${commit}${path}`;
+}
+
+/**
  * Where "leave to the menu" navigations should land. On a deployment host
  * the local homepage may belong to a drained deployment whose public lobby
  * list is empty; the apex always fronts the active one. Same-host,

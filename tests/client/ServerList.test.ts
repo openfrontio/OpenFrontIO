@@ -3,6 +3,7 @@ import { ClientEnv } from "../../src/client/ClientEnv";
 import {
   backendReachable,
   ensureServerList,
+  redirectToGameVersion,
   resetServerList,
   serverListSite,
   serverListUrl,
@@ -653,5 +654,55 @@ describe("picking between open, draining and fenced", () => {
         expect(loc.href).toBe(`https://openfront.io/v/${OWN}/game/cAbCd12345`);
       }
     }
+  });
+});
+
+// Opening a game whose server runs another build. One exported decision for
+// both call sites (Main.handleUrl, JoinLobbyModal.checkActiveLobby) so the
+// shells that must not be navigated cannot be remembered in one and
+// forgotten in the other.
+describe("redirectToGameVersion", () => {
+  // Letter c runs OLD in API_LIST; the page is built from OWN.
+  async function withList() {
+    expect(await ensureServerList()).toBe("api");
+  }
+
+  it("navigates to the page of the version the game's server runs", async () => {
+    const loc = stubLocation("openfront.io", "/game/cAbCd12345", "?lobby");
+    await withList();
+    expect(redirectToGameVersion("cAbCd12345")).toBe(true);
+    expect(loc.href).toBe(`/v/${OLD}/game/cAbCd12345?lobby`);
+  });
+
+  it("stays put when the game's server runs this build", async () => {
+    const loc = stubLocation("openfront.io", "/game/dAbCd12345");
+    await withList();
+    expect(redirectToGameVersion("dAbCd12345")).toBe(false);
+    expect(loc.href).toBe("https://openfront.io/game/dAbCd12345");
+  });
+
+  it("stays put with no list loaded", async () => {
+    const loc = stubLocation("openfront.io", "/game/cAbCd12345");
+    expect(redirectToGameVersion("cAbCd12345")).toBe(false);
+    expect(loc.href).toBe("https://openfront.io/game/cAbCd12345");
+  });
+
+  it("never navigates the desktop shell", async () => {
+    const loc = stubLocation("openfront.io", "/game/cAbCd12345");
+    await withList();
+    (window as any).openfrontDesktop = {};
+    expect(redirectToGameVersion("cAbCd12345")).toBe(false);
+    expect(loc.href).toBe("https://openfront.io/game/cAbCd12345");
+  });
+
+  // replay.<domain> serves the build a record was made on and has no
+  // /v/<commit>/ routes at all, so navigating there would 404 and lose an
+  // archived replay. It does load the site's list (siteHost is injected),
+  // so nothing else would stop it.
+  it("never navigates a replay shell", async () => {
+    const loc = stubLocation("replay.openfront.io", "/cAbCd12345");
+    await withList();
+    expect(redirectToGameVersion("cAbCd12345")).toBe(false);
+    expect(loc.href).toBe("https://replay.openfront.io/cAbCd12345");
   });
 });

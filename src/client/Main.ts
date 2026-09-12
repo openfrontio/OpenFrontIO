@@ -12,7 +12,6 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
-import { versionedPathForGame } from "../core/ServerList";
 import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
 import { UserSettings } from "../core/game/UserSettings";
@@ -88,7 +87,11 @@ import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import "./PlayerProfileModal";
 import { GroupTokenTracker, withGroupToken } from "./PresenceGroup";
 import { RewardsModal } from "./RewardsModal";
-import { ensureServerList, startServerListPolling } from "./ServerList";
+import {
+  ensureServerList,
+  redirectToGameVersion,
+  startServerListPolling,
+} from "./ServerList";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import {
@@ -111,6 +114,7 @@ import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import {
   apexPathFor,
+  currentPagePath,
   homeHref,
   incrementGamesPlayed,
   presenceMapKey,
@@ -1074,9 +1078,10 @@ class Client {
       // The game's server may run a different build than this page (a link
       // into a version still draining, or a page served as `latest` after a
       // deploy). Open it at that version's page rather than trying to play
-      // it with the wrong bundle; the loop guard and the desktop exemption
-      // live in versionedPathForGame.
-      if (this.redirectToGameVersion(lobbyId)) return;
+      // it with the wrong bundle. The whole rule -- the loop guard, and the
+      // desktop and replay shells that must never be navigated -- lives in
+      // redirectToGameVersion.
+      if (redirectToGameVersion(lobbyId)) return;
       // ?host means the lobby creator is returning to a successor lobby they
       // reused from the win screen: reopen the host view bound to the existing
       // lobby instead of the join flow. Non-creators who hit this URL still get
@@ -1175,23 +1180,6 @@ class Client {
     const apex = ClientEnv.siteHost();
     if (apex === undefined || window.location.host === apex) return false;
     window.location.href = `https://${apex}${apexPathFor(window.location.pathname)}${window.location.search}`;
-    return true;
-  }
-
-  // The web half of "a game on a server running another version". True when
-  // a navigation was issued. Desktop never navigates: its updater owns which
-  // version it runs, and a mismatch there surfaces as update_available.desktop
-  // at join time (ClientGameRunner).
-  private redirectToGameVersion(gameID: string): boolean {
-    if (isDesktopShell()) return false;
-    const target = versionedPathForGame(
-      ClientEnv.gitCommit(),
-      ClientEnv.gameVersion(gameID),
-      window.location.pathname,
-      window.location.search,
-    );
-    if (target === null) return false;
-    window.location.href = target;
     return true;
   }
 
@@ -1442,9 +1430,11 @@ class Client {
         history.pushState(
           null,
           "",
-          lobbyIdHidden
-            ? "/streamer-mode"
-            : `${ClientEnv.gamePath(lobby.gameID)}?live`,
+          currentPagePath(
+            lobbyIdHidden
+              ? "/streamer-mode"
+              : `${ClientEnv.gamePath(lobby.gameID)}?live`,
+          ),
         );
       }
 
@@ -1533,7 +1523,7 @@ class Client {
       // on it. On the replay host, fall back to the in-place leave.
       if (!isReplayShellHost(window.location.hostname)) {
         this.resetPresenceToMenu();
-        window.location.href = ClientEnv.gamePath(gameId);
+        window.location.href = currentPagePath(ClientEnv.gamePath(gameId));
         return;
       }
       await this.handleLeaveLobby();
@@ -1556,10 +1546,12 @@ class Client {
       // here would leave a URL that 404s when reloaded or shared (see
       // VersionedReplay.ts).
       targetUrl = window.location.pathname;
-    } else if (lobbyIdHidden) {
-      targetUrl = "/streamer-mode";
     } else {
-      targetUrl = ClientEnv.gamePath(lobbyId);
+      // Both shapes are history entries for THIS tab, so both keep the
+      // page's own version prefix: an F5 must reload this bundle.
+      targetUrl = currentPagePath(
+        lobbyIdHidden ? "/streamer-mode" : ClientEnv.gamePath(lobbyId),
+      );
     }
     const currentUrl = window.location.pathname;
 

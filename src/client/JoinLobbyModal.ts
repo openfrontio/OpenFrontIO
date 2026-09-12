@@ -21,7 +21,6 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
-import { versionedPathForGame } from "../core/ServerList";
 import {
   Difficulty,
   GameMapSize,
@@ -31,10 +30,9 @@ import {
 } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import { isDesktopShell } from "./DesktopShell";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
-import { ensureServerList } from "./ServerList";
+import { ensureServerList, redirectToGameVersion } from "./ServerList";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { SendSpectateEvent } from "./Transport";
 import { normaliseMapKey } from "./Utils";
@@ -1336,9 +1334,10 @@ export class JoinLobbyModal extends BaseModal {
     // The list also says which build the game's server runs. On the web,
     // open the game at THAT version's page rather than probing it with the
     // wrong bundle: true here means a navigation is under way, and the
-    // caller should stop as it does for a game it joined. Desktop and the
-    // loop-guarded cases fall through -- see versionedPathForGame.
-    if (this.redirectToGameVersion(lobbyId)) return true;
+    // caller should stop as it does for a game it joined. The desktop and
+    // replay shells, and the loop-guarded cases, fall through -- the whole
+    // rule lives in redirectToGameVersion.
+    if (redirectToGameVersion(lobbyId)) return true;
     const url = `${ClientEnv.gameHttpBase(lobbyId)}/${ClientEnv.gameWorkerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {
@@ -1392,21 +1391,6 @@ export class JoinLobbyModal extends BaseModal {
     }
 
     return false;
-  }
-
-  // See checkActiveLobby. Pure decision in versionedPathForGame; this adds
-  // the shell check and the navigation.
-  private redirectToGameVersion(gameID: string): boolean {
-    if (isDesktopShell()) return false;
-    const target = versionedPathForGame(
-      ClientEnv.gitCommit(),
-      ClientEnv.gameVersion(gameID),
-      window.location.pathname,
-      window.location.search,
-    );
-    if (target === null) return false;
-    window.location.href = target;
-    return true;
   }
 
   private async checkArchivedGame(

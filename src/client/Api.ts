@@ -1991,6 +1991,10 @@ export async function createLobby(): Promise<GameInfo> {
 export async function createNextLobby(
   previousGameID: string,
 ): Promise<GameInfo> {
+  // Like createLobby, this lets a NoServerError from gameWorkerPath below
+  // propagate: its only caller (GameRightSidebar's successor-lobby button)
+  // already catches, logs and re-enables the button, which is the right
+  // answer for "there is no server to create it on".
   await ensureServerList();
   const token = await getPlayToken();
   const response = await fetch(
