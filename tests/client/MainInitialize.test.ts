@@ -365,8 +365,9 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       logSpy.mockClear();
       messages.length = 0;
       mocks.joinLobby.mockReturnValue({
-        // Neither settles: the assertion is that the join was ATTEMPTED, and
-        // the in-game path beyond it is not what this file boots.
+        // Neither settles: the join is complete once joinLobby has been
+        // handed the lobby, and the in-game path beyond that is not what
+        // this file boots.
         prestart: new Promise(() => {}),
         join: new Promise(() => {}),
         stop: vi.fn(),
@@ -379,10 +380,18 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
         }),
       );
 
-      await vi.waitFor(() =>
-        expect(logSpy).toHaveBeenCalledWith(
-          expect.stringContaining("joining lobby"),
-        ),
+      // The far edge of the funnel, not the "joining lobby" log: that log is
+      // written BEFORE handleJoinLobby awaits userAuth, the username seed and
+      // the cosmetics refs, so a regression anywhere in that tail would leave
+      // the log assertion passing over a join that never happened. joinLobby
+      // is the call that actually starts one, and the refusal test above
+      // asserts the same mock was never reached -- so the count being exactly
+      // one here is the pair of that claim.
+      await vi.waitFor(() => expect(mocks.joinLobby).toHaveBeenCalledTimes(1));
+      // ...and with the lobby that was dispatched, not some other one.
+      expect(mocks.joinLobby.mock.calls[0][1].gameID).toBe("AbCd1234");
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining("joining lobby"),
       );
       expect(messages).not.toContain(
         translateText("error_modal.backend_unreachable"),
