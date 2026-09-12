@@ -1,5 +1,5 @@
 import { GameUpdateType } from "src/core/game/GameUpdates";
-import { vi, type Mocked } from "vitest";
+import { vi } from "vitest";
 import { Config } from "../../../src/core/configuration/Config";
 import { TrainExecution } from "../../../src/core/execution/TrainExecution";
 import {
@@ -10,154 +10,154 @@ import {
   GameMode,
   GameType,
   Player,
+  PlayerType,
   Unit,
   UnitType,
 } from "../../../src/core/game/Game";
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 import { UserSettings } from "../../../src/core/game/UserSettings";
 import { GameConfig } from "../../../src/core/Schemas";
+import { playerInfo, setup } from "../../util/Setup";
+import { TestConfig } from "../../util/TestConfig";
 
-vi.mock("../../../src/core/game/Game");
-vi.mock("../../../src/core/execution/TrainExecution");
-vi.mock("../../../src/core/PseudoRandom");
+class WiringTestConfig extends TestConfig {
+  factoryStackMultiplier(level: number) {
+    return level;
+  }
+  stationStackMultiplier(level: number) {
+    return level;
+  }
+}
 
 describe("TrainStation", () => {
-  let game: Mocked<Game>;
-  let gameStats: {
-    trainExternalTrade: ReturnType<typeof vi.fn>;
-    trainSelfTrade: ReturnType<typeof vi.fn>;
-  };
-  let unit: Mocked<Unit>;
-  let player: Mocked<Player>;
-  let trainExecution: Mocked<TrainExecution>;
+  let game: Game;
+  let unit: Unit;
+  let player: Player;
+  let trainExecution: TrainExecution;
 
-  beforeEach(() => {
-    gameStats = {
-      trainExternalTrade: vi.fn(),
-      trainSelfTrade: vi.fn(),
-    };
-    game = {
-      ticks: vi.fn().mockReturnValue(123),
-      config: vi.fn().mockReturnValue({
-        trainGold: (rel: string, _tradeStopsVisited: number) =>
-          rel !== "other" ? BigInt(1000) : BigInt(500),
-      }),
-      addUpdate: vi.fn(),
-      addExecution: vi.fn(),
-      stats: vi.fn().mockReturnValue(gameStats),
-    } as any;
+  beforeEach(async () => {
+    game = await setup(
+      "plains",
+      {},
+      [
+        playerInfo("one", PlayerType.Human),
+        playerInfo("two", PlayerType.Human),
+      ],
+      undefined,
+      WiringTestConfig,
+    );
 
-    player = {
-      addGold: vi.fn(),
-      addTrainGold: vi.fn(),
-      id: 1,
-      canTrade: vi.fn().mockReturnValue(true),
-      isAlliedWith: vi.fn().mockReturnValue(false),
-      isOnSameTeam: vi.fn().mockReturnValue(false),
-      isFriendly: vi.fn().mockReturnValue(false),
-    } as any;
+    player = game.player("one")!;
+    const tile = game.ref(5, 5);
+    unit = player.buildUnit(UnitType.City, tile, {});
 
-    unit = {
-      owner: vi.fn().mockReturnValue(player),
-      level: vi.fn().mockReturnValue(1),
-      tile: vi.fn().mockReturnValue({ x: 0, y: 0 }),
-      type: vi.fn(),
-      isActive: vi.fn().mockReturnValue(true),
-    } as any;
+    const destTile = game.ref(10, 10);
+    const destUnit = player.buildUnit(UnitType.City, destTile, {});
 
-    trainExecution = {
-      loadCargo: vi.fn(),
-      owner: vi.fn().mockReturnValue(player),
-      level: vi.fn(),
-      tradeStopsVisited: vi.fn().mockReturnValue(0),
-    } as any;
+    const sourceStation = new TrainStation(game, unit);
+    const destStation = new TrainStation(game, destUnit);
+    trainExecution = new TrainExecution(
+      game.railNetwork(),
+      player,
+      sourceStation,
+      destStation,
+      1,
+    );
   });
 
   it("handles City stop", () => {
-    unit.type.mockReturnValue(UnitType.City);
     const station = new TrainStation(game, unit);
+    const goldBefore = player.gold();
 
     station.onTrainStop(trainExecution);
 
-    expect(unit.owner().addGold).toHaveBeenCalledWith(1000n, unit.tile());
+    // baseGold for self is 10_000n. Stack multiplier is 1 * 1 = 1.
+    expect(player.gold() - goldBefore).toBe(10_000n);
   });
 
   it("handles allied trade", () => {
-    unit.type.mockReturnValue(UnitType.City);
-    player.isFriendly.mockReturnValue(true);
+    const ally = game.player("two")!;
+    vi.spyOn(player, "isFriendly").mockReturnValue(true);
+    vi.spyOn(player, "isAlliedWith").mockReturnValue(true);
+
+    vi.spyOn(unit, "owner").mockReturnValue(ally);
+
     const station = new TrainStation(game, unit);
+    const allyGoldBefore = ally.gold();
+    const playerGoldBefore = player.gold();
 
     station.onTrainStop(trainExecution);
 
-    expect(unit.owner().addGold).toHaveBeenCalledWith(1000n, unit.tile());
-    expect(trainExecution.owner().addGold).toHaveBeenCalledWith(
-      1000n,
-      unit.tile(),
-    );
+    // baseGold for ally is 35_000n.
+    expect(ally.gold() - allyGoldBefore).toBe(35_000n);
+    expect(player.gold() - playerGoldBefore).toBe(35_000n);
   });
 
   it("records external trade on the station owner", () => {
-    const stationOwner = {
-      addGold: vi.fn(),
-      addTrainGold: vi.fn(),
-      id: 1,
-      canTrade: vi.fn().mockReturnValue(true),
-      isAlliedWith: vi.fn().mockReturnValue(false),
-      isOnSameTeam: vi.fn().mockReturnValue(false),
-    } as any;
-    const trainOwner = {
-      addGold: vi.fn(),
-      addTrainGold: vi.fn(),
-      id: 2,
-      canTrade: vi.fn().mockReturnValue(true),
-      isAlliedWith: vi.fn().mockReturnValue(false),
-      isOnSameTeam: vi.fn().mockReturnValue(false),
-    } as any;
+    const stationOwner = game.player("two")!;
+    vi.spyOn(unit, "owner").mockReturnValue(stationOwner);
 
-    unit.type.mockReturnValue(UnitType.City);
-    unit.owner.mockReturnValue(stationOwner);
-    trainExecution.owner.mockReturnValue(trainOwner);
+    const trainExternalTradeSpy = vi.spyOn(game.stats(), "trainExternalTrade");
+    const trainSelfTradeSpy = vi.spyOn(game.stats(), "trainSelfTrade");
+
     const station = new TrainStation(game, unit);
-
     station.onTrainStop(trainExecution);
 
-    expect(stationOwner.addGold).toHaveBeenCalledWith(500n, unit.tile());
-    expect(trainOwner.addGold).toHaveBeenCalledWith(500n, unit.tile());
-    expect(stationOwner.addTrainGold).toHaveBeenCalledWith(500n);
-    expect(trainOwner.addTrainGold).toHaveBeenCalledWith(500n);
-    expect(gameStats.trainExternalTrade).toHaveBeenCalledWith(
-      stationOwner,
-      500n,
-    );
-    expect(gameStats.trainSelfTrade).toHaveBeenCalledWith(trainOwner, 500n);
+    // baseGold for other/team is 25_000n.
+    expect(trainExternalTradeSpy).toHaveBeenCalledWith(stationOwner, 25_000n);
+    expect(trainSelfTradeSpy).toHaveBeenCalledWith(player, 25_000n);
   });
 
-  it("passes tradeStopsVisited to trainGold", () => {
-    unit.type.mockReturnValue(UnitType.City);
-    const trainGoldSpy = vi.fn().mockReturnValue(500n);
-    (game.config as any).mockReturnValue({
-      trainGold: trainGoldSpy,
-    });
-    (trainExecution as any).tradeStopsVisited = vi.fn().mockReturnValue(3);
+  it("passes exact source and station levels through the simulation to trainGold", () => {
+    // 1. Create a Level 2 Factory (Source)
+    const factoryTile = game.ref(15, 15);
+    const factory = player.buildUnit(UnitType.Factory, factoryTile, {});
+    factory.increaseLevel();
+    expect(factory.level()).toBe(2);
+
+    // 2. Create a Level 3 City (Destination)
+    const cityTile = game.ref(25, 25);
+    const city = player.buildUnit(UnitType.City, cityTile, {});
+    city.increaseLevel();
+    city.increaseLevel();
+    expect(city.level()).toBe(3);
+
+    // 3. Instantiate true TrainStations and TrainExecution
+    const factoryStation = new TrainStation(game, factory);
+    const cityStation = new TrainStation(game, city);
+
+    const trainExec = new TrainExecution(
+      game.railNetwork(),
+      player,
+      factoryStation,
+      cityStation,
+      1,
+    );
+
+    // 4. Trigger the stop and measure exact gold output
+    const goldBefore = player.gold();
+    cityStation.onTrainStop(trainExec);
+    const goldEarned = player.gold() - goldBefore;
+
+    // Wiring Verification: base 10k * factoryLevel(2) * cityLevel(3)
+    expect(goldEarned).toBe(60_000n);
+  });
+
+  it("passes tradeStopsVisited to trainGold through distance penalty", () => {
+    vi.spyOn(trainExecution, "tradeStopsVisited").mockReturnValue(10); // 10 cities visited = penalty of 5k (1 stop over free window)
+
     const station = new TrainStation(game, unit);
+    const goldBefore = player.gold();
 
     station.onTrainStop(trainExecution);
 
-    expect(trainGoldSpy).toHaveBeenCalledWith(
-      expect.any(String),
-      3,
-      expect.anything(),
-    );
+    // baseGold 10k - 5k penalty = 5k.
+    expect(player.gold() - goldBefore).toBe(5_000n);
   });
 
   it("checks trade availability (same owner)", () => {
-    const otherUnit = {
-      owner: vi.fn().mockReturnValue(unit.owner()),
-    } as any;
-
     const station = new TrainStation(game, unit);
-    const otherStation = new TrainStation(game, otherUnit);
-
+    const otherStation = new TrainStation(game, unit);
     expect(station.tradeAvailable(otherStation.unit.owner())).toBe(true);
   });
 
@@ -168,14 +168,12 @@ describe("TrainStation", () => {
 
     stationA.addRailroad(railRoad);
 
-    const neighbors = stationA.neighbors();
-    expect(neighbors).toContain(stationB);
+    expect(stationA.neighbors()).toContain(stationB);
   });
 
   it("removes neighboring rail", () => {
     const stationA = new TrainStation(game, unit);
     const stationB = new TrainStation(game, unit);
-
     const railRoad = {
       from: stationA,
       to: stationB,
@@ -185,9 +183,10 @@ describe("TrainStation", () => {
     stationA.addRailroad(railRoad);
     expect(stationA.getRailroads().size).toBe(1);
 
+    const addUpdateSpy = vi.spyOn(game, "addUpdate");
     stationA.removeNeighboringRails(stationB);
 
-    expect(game.addUpdate).toHaveBeenCalledWith(
+    expect(addUpdateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         type: GameUpdateType.RailroadDestructionEvent,
       }),
@@ -196,7 +195,7 @@ describe("TrainStation", () => {
   });
 
   it("assigns and retrieves cluster", () => {
-    const cluster: Cluster = {} as Cluster;
+    const cluster = {} as Cluster;
     const station = new TrainStation(game, unit);
 
     station.setCluster(cluster);
@@ -205,7 +204,7 @@ describe("TrainStation", () => {
 
   it("returns tile and active status", () => {
     const station = new TrainStation(game, unit);
-    expect(station.tile()).toEqual({ x: 0, y: 0 });
+    expect(station.tile()).toEqual(unit.tile());
     expect(station.isActive()).toBe(true);
   });
 });
@@ -236,33 +235,27 @@ describe("Config.trainGold trade stop penalty", () => {
   });
 
   it("returns full base gold within free window (stops 0-9)", () => {
-    // first 10 stops (0-9) are free — no penalty
     expect(config.trainGold("self", 0, mockPlayer)).toBe(10_000n);
     expect(config.trainGold("self", 9, mockPlayer)).toBe(10_000n);
   });
 
   it("reduces gold by 5k per stop after the free window", () => {
-    // stop 10: effective = 10-9 = 1 -> 10k - 5k = 5k
     expect(config.trainGold("self", 10, mockPlayer)).toBe(5_000n);
   });
 
   it("floors at 5k when penalty exceeds base gold", () => {
-    // stop 12: effective = 3 -> 10k - 15k -> floor at 5k
     expect(config.trainGold("self", 12, mockPlayer)).toBe(5_000n);
   });
 
   it("floors at 5k for ally base even with heavy penalty", () => {
-    // ally base 35k, stop 20: effective = 11 -> penalty 55k -> floor at 5k
     expect(config.trainGold("ally", 20, mockPlayer)).toBe(5_000n);
   });
 
   it("ally base gold reduces correctly after free window", () => {
-    // ally base 35k, stop 11: effective = 2 -> 35k - 10k = 25k
     expect(config.trainGold("ally", 11, mockPlayer)).toBe(25_000n);
   });
 
   it("other/team base gold reduces correctly after free window", () => {
-    // other base 25k, stop 10: effective = 1 -> 25k - 5k = 20k
     expect(config.trainGold("other", 10, mockPlayer)).toBe(20_000n);
     expect(config.trainGold("team", 10, mockPlayer)).toBe(20_000n);
   });
