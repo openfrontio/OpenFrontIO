@@ -29,6 +29,11 @@ COPY scripts ./scripts
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT="$GIT_COMMIT"
+# Baked into the client bundle by a Vite define at build time (see
+# vite.config.ts). Empty is valid: it disables the inline wallet/card flow
+# and every purchase degrades to the redirect flow.
+ARG STRIPE_PUBLISHABLE_KEY=""
+ENV STRIPE_PUBLISHABLE_KEY="$STRIPE_PUBLISHABLE_KEY"
 RUN npm run build-prod
 
 # Production dependencies stage - separate from build

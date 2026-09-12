@@ -143,6 +143,13 @@ export class CosmeticPreview extends LitElement {
         <span class="text-[10px] font-bold leading-none text-white/50 uppercase"
           >${translateText(currencyKey)}</span
         >
+        ${pack.product?.price
+          ? html`<span
+              data-pack-price
+              class="pt-0.5 text-sm font-bold leading-none text-blue-300"
+              >${pack.product.price}</span
+            >`
+          : nothing}
         ${pack.bonusAmount > 0
           ? html`<div
               class="absolute top-8 -right-10 w-40 bg-green-500 text-white text-[10px] font-black py-0.5 rotate-45 shadow-md uppercase tracking-wide pointer-events-none"
