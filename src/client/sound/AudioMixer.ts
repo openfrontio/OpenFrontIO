@@ -402,10 +402,16 @@ export class AudioMixer {
     const release = () => {
       howl.off("end", release, id);
       howl.off("stop", release, id);
+      howl.off("playerror", release, id);
       done();
     };
     howl.once("end", release, id);
     howl.once("stop", release, id);
+    // A cue that never starts fires neither "end" nor "stop", so without this
+    // its entry sits in `active` for the rest of the session and the channel
+    // is permanently a voice poorer. Howler emits playerror with the sound's
+    // own id, so it matches an id-bound listener like the other two.
+    howl.once("playerror", release, id);
   }
 
   private load(name: SoundEffect): Howl | null {
@@ -416,6 +422,12 @@ export class AudioMixer {
     try {
       const howl = new Howl({ src: [src] });
       this.cache.set(name, howl);
+      // Bound without an id on purpose. Howler emits loaderror with a null id
+      // for everything except a media-element error -- no codec, a failed
+      // fetch, a failed decode -- and _emit only dispatches to an id-bound
+      // listener when the ids match, so an id-bound one would be dead code
+      // for exactly the cases that matter.
+      howl.once("loaderror", () => this.discard(name, howl));
       return howl;
     } catch (err) {
       console.error(`AudioMixer: failed to load sound ${name}`, err);
@@ -425,6 +437,30 @@ export class AudioMixer {
 
   private forget(id: number): void {
     this.active = this.active.filter((s) => s.id !== id);
+  }
+
+  /**
+   * Writes off a cue whose file would not load.
+   *
+   * Every entry for the Howl goes at once, because loaderror arrives with no
+   * id to match a single playback against, and because none of them can ever
+   * fire end or stop to release themselves.
+   *
+   * It leaves the cache too. Cached, the next play() of this cue would hand
+   * back the same dead Howl -- play() on something unloaded queues and
+   * returns an id, so it would push another entry nothing can release, and
+   * the channel would bleed a voice per attempt until it fell silent.
+   *
+   * Dropping it means the next play builds a fresh Howl and tries the fetch
+   * again. That is deliberate: a blip on the CDN should not silence a cue for
+   * the rest of the session, and these files are small. The cost is that a
+   * genuinely missing file is re-fetched once per play instead of once, which
+   * is wasted work but bounded by how often the cue fires and self-cleaning
+   * each time.
+   */
+  private discard(name: SoundEffect, howl: Howl): void {
+    this.active = this.active.filter((sound) => sound.howl !== howl);
+    if (this.cache.get(name) === howl) this.cache.delete(name);
   }
 
   private safely(action: string, fn: () => void): void {
