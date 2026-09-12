@@ -251,6 +251,12 @@ export class InputHandler {
   private suppressNextTap: boolean = false;
   private readonly LONG_PRESS_MS = 800;
 
+  // Nuke hold-to-deploy parameters
+  private readonly NUKE_INITIAL_DELAY_MS = 150;  // Delay before hold-to-deploy
+  private readonly NUKE_LAUNCH_DELAY_MS = 90;  // hold-to-deploy firerate (multiplier affects this)
+  private nukeHoldTimer: ReturnType<typeof setInterval> | null = null;
+  private nukeHoldInitialDelayTimer: ReturnType<typeof setTimeout> | null = null;
+
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
@@ -482,6 +488,7 @@ export class InputHandler {
       (e) => {
         this.onScroll(e);
         this.onShiftScroll(e);
+        this.onAltScroll(e);
         e.preventDefault();
       },
       { passive: false },
@@ -537,6 +544,7 @@ export class InputHandler {
       }
       this.longPressActive = false;
       this.suppressNextTap = false;
+      this.stopNukeHoldDeployment();
       if (this.selectionBoxActive || this.multiSelectionActive) {
         this.selectionBoxActive = false;
         this.multiSelectionActive = false;
@@ -603,6 +611,10 @@ export class InputHandler {
       const isTextInput = this.isTextInputTarget(e.target);
       if (isTextInput && e.code !== "Escape") {
         return;
+      }
+
+      if (e.altKey || e.code === this.keybinds.altKey) {
+        e.preventDefault();
       }
 
       if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
@@ -722,6 +734,10 @@ export class InputHandler {
         return;
       }
 
+      if (e.altKey || e.code === this.keybinds.altKey) {
+        e.preventDefault();
+      }
+
       // When the meta (cmd) or ctrl key is released, any keys that were held
       // simultaneously will have had their keyup swallowed by the browser
       // (e.g. cmd+Plus for browser zoom). Clear zoom-related keys to
@@ -786,6 +802,9 @@ export class InputHandler {
       this.lastPointerDownY = event.clientY;
 
       this.eventBus.emit(new MouseDownEvent(event.clientX, event.clientY));
+      if (this.isNukeGhostActive()) {
+        this.startNukeHoldDeployment();
+      }
 
       // Start long-press timer for touch devices
       if (event.pointerType === "touch") {
@@ -833,6 +852,11 @@ export class InputHandler {
     this.pointerDown = false;
     this.pointers.clear();
 
+    if (this.nukeHoldTimer !== null || this.nukeHoldInitialDelayTimer !== null) {
+      this.stopNukeHoldDeployment();
+      return;
+    }
+
     // Clean up long-press state
     if (this.longPressTimer !== null) {
       clearTimeout(this.longPressTimer);
@@ -876,7 +900,9 @@ export class InputHandler {
     }
     if (this.activeKeys.has(this.keybinds.emojiMenuModifier)) {
       this.suppressNextTap = false;
+      if (this.uiState.ghostStructure === null) {
       this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
+      }
       return;
     }
 
@@ -909,32 +935,33 @@ export class InputHandler {
   }
 
   private onScroll(event: WheelEvent) {
-    if (!event.shiftKey) {
-      const realCtrl =
-        this.activeKeys.has("ControlLeft") ||
-        this.activeKeys.has("ControlRight");
-      if (event.ctrlKey) {
-        if (!realCtrl) {
-          // Pinch-to-zoom gesture (trackpad): small deltas, amplify.
-          // Ignore large deltas — those are browser zoom shortcuts (cmd+/cmd-)
-          // which fire synthetic wheel events we don't want to handle.
-          if (Math.abs(event.deltaY) <= 10) {
-            this.eventBus.emit(
-              new ZoomEvent(event.x, event.y, event.deltaY * 10),
-            );
-          }
-        }
-        // Always return when ctrlKey is set — whether it's a real ctrl scroll,
-        // a pinch gesture, or a browser zoom event, none should reach the
-        // regular scroll path below.
-        return;
-      }
-      // Regular scroll wheel: ignore tiny residual momentum events that macOS
-      // keeps sending after a gesture ends (especially after browser zoom changes
-      // devicePixelRatio, which can cause these to accumulate into runaway zoom).
-      if (Math.abs(event.deltaY) < 2) return;
-      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
+    if (event.shiftKey || event.altKey){
+      return; // Shift/Alt scroll is handled separately
     }
+    const realCtrl =
+      this.activeKeys.has("ControlLeft") ||
+      this.activeKeys.has("ControlRight");
+    if (event.ctrlKey) {
+      if (!realCtrl) {
+        // Pinch-to-zoom gesture (trackpad): small deltas, amplify.
+        // Ignore large deltas — those are browser zoom shortcuts (cmd+/cmd-)
+        // which fire synthetic wheel events we don't want to handle.
+        if (Math.abs(event.deltaY) <= 10) {
+          this.eventBus.emit(
+            new ZoomEvent(event.x, event.y, event.deltaY * 10),
+          );
+        }
+      }
+      // Always return when ctrlKey is set — whether it's a real ctrl scroll,
+      // a pinch gesture, or a browser zoom event, none should reach the
+      // regular scroll path below.
+      return;
+    }
+    // Regular scroll wheel: ignore tiny residual momentum events that macOS
+    // keeps sending after a gesture ends (especially after browser zoom changes
+    // devicePixelRatio, which can cause these to accumulate into runaway zoom).
+    if (Math.abs(event.deltaY) < 2) return;
+    this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
   }
 
   /**
@@ -968,6 +995,15 @@ export class InputHandler {
       this.eventBus.emit(new AttackRatioEvent(ratio));
     }
   }
+
+  private onAltScroll(event: WheelEvent) {
+    if (event.altKey) {
+      const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
+      this.setGhostStructure(this.uiState.ghostStructure,
+      scrollValue > 0 ? "decrease" : "increase");
+    }
+  }
+
 
   private onPointerMove(event: PointerEvent) {
     if (event.button === 1) {
@@ -1055,13 +1091,69 @@ export class InputHandler {
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
-  private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
+  private isNukeGhostActive(): boolean {
+    return (
+      this.uiState.ghostStructure === UnitType.AtomBomb);
+  }
+
+  private startNukeHoldDeployment() {
+    if (!this.isNukeGhostActive()) return;
+    if (this.nukeHoldTimer !== null || this.nukeHoldInitialDelayTimer !== null) {
+      return;
+    }
+
+    const emit = () => {
+      if (!this.pointerDown || !this.isNukeGhostActive()) {
+        this.stopNukeHoldDeployment();
+        return;
+      }
+      this.eventBus.emit(new MouseUpEvent(this.lastPointerX, this.lastPointerY));
+    };
+
+    emit();
+
+    this.nukeHoldInitialDelayTimer = setTimeout(() => {
+      this.nukeHoldInitialDelayTimer = null;
+      if (!this.pointerDown || !this.isNukeGhostActive()) {
+        this.stopNukeHoldDeployment();
+        return;
+      }
+      this.nukeHoldTimer = setInterval(emit, this.NUKE_LAUNCH_DELAY_MS);
+    }, this.NUKE_INITIAL_DELAY_MS);
+  }
+
+  private stopNukeHoldDeployment() {
+    if (this.nukeHoldInitialDelayTimer !== null) {
+      clearTimeout(this.nukeHoldInitialDelayTimer);
+      this.nukeHoldInitialDelayTimer = null;
+    }
+    if (this.nukeHoldTimer !== null) {
+      clearInterval(this.nukeHoldTimer);
+      this.nukeHoldTimer = null;
+    }
+  }
+
+  private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null, source: "increase" | "decrease" | "hotkey" = "hotkey") {
+    this.stopNukeHoldDeployment();
     if (
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null
     ) {
-      this.uiState.upgradeMultiplier =
-        this.uiState.upgradeMultiplier === 1 ? 5 : 1;
+      const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
+      if (source === "hotkey") {
+        this.uiState.upgradeMultiplier =
+        currentMultiplier === 1 ? 5 : currentMultiplier + 5;
+        return;
+      }
+      if (source === "increase"){
+        this.uiState.upgradeMultiplier =
+        currentMultiplier + 1;
+      }
+      if (source === "decrease"){
+        this.uiState.upgradeMultiplier =
+        currentMultiplier > 1 ? currentMultiplier - 1 : 1;
+      }
+
     } else {
       this.uiState.upgradeMultiplier = 1;
       this.uiState.ghostStructure = ghostStructure;

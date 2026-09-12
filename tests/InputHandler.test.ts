@@ -3,6 +3,7 @@ import {
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
   InputHandler,
+  MouseUpEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
@@ -660,6 +661,70 @@ describe("InputHandler AutoUpgrade", () => {
     });
   });
 
+  describe("Alt key default prevention", () => {
+    test("prevents the browser's default action when Alt is pressed", () => {
+      const preventDefaultSpy = vi.spyOn(
+        KeyboardEvent.prototype,
+        "preventDefault",
+      );
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "AltLeft" }));
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+      preventDefaultSpy.mockRestore();
+    });
+  });
+
+  describe("Nuke click-and-hold deployment", () => {
+    test("fires repeated MouseUpEvents while a nuke ghost is held and suppresses the release repeat", () => {
+      vi.useFakeTimers();
+      try {
+        const mockEmit = vi.spyOn(eventBus, "emit");
+        inputHandler["uiState"].ghostStructure = UnitType.AtomBomb;
+
+        inputHandler["onPointerDown"](
+          new PointerEvent("pointerdown", {
+            button: 0,
+            clientX: 100,
+            clientY: 200,
+            pointerId: 1,
+          }),
+        );
+        inputHandler["onPointerMove"](
+          new PointerEvent("pointermove", {
+            button: 0,
+            clientX: 150,
+            clientY: 250,
+            pointerId: 1,
+          }),
+        );
+
+        vi.advanceTimersByTime(250);
+
+        const mouseUpCalls = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(mouseUpCalls.length).toBeGreaterThanOrEqual(2);
+
+        inputHandler["onPointerUp"](
+          new PointerEvent("pointerup", {
+            button: 0,
+            clientX: 150,
+            clientY: 250,
+            pointerId: 1,
+          }),
+        );
+
+        const afterRelease = mockEmit.mock.calls.filter(
+          ([event]) => event instanceof MouseUpEvent,
+        );
+        expect(afterRelease).toHaveLength(mouseUpCalls.length);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
   describe("Numpad number keys for build keybinds", () => {
     beforeEach(() => {
       inputHandler.destroy();
@@ -707,6 +772,20 @@ describe("InputHandler AutoUpgrade", () => {
       );
 
       expect(inputHandler["uiState"].ghostStructure).toBeNull();
+    });
+
+    test("repeated taps increase the build multiplier by 5 each time", () => {
+      const uiState = inputHandler["uiState"];
+
+      inputHandler["setGhostStructure"](UnitType.AtomBomb);
+      expect(uiState.ghostStructure).toBe(UnitType.AtomBomb);
+      expect(uiState.upgradeMultiplier).toBe(1);
+
+      inputHandler["setGhostStructure"](UnitType.AtomBomb);
+      expect(uiState.upgradeMultiplier).toBe(5);
+
+      inputHandler["setGhostStructure"](UnitType.AtomBomb);
+      expect(uiState.upgradeMultiplier).toBe(10);
     });
   });
 
