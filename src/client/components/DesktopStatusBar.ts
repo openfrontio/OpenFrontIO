@@ -11,7 +11,7 @@ import {
   type DesktopUpdateState,
 } from "../DesktopShell";
 import {
-  backendReachable,
+  backendUnreachableConfirmed,
   retryServerList,
   type BackendReachabilityDetail,
 } from "../ServerList";
@@ -32,22 +32,23 @@ const WIGGLE_CLASS = "animate-bounce";
  * update -- Retry" points at a button that provably cannot work until the
  * network comes back, while "Offline" names the actual cause.
  *
- * `reachable` is only ever non-null on desktop -- the bar renders nothing on
- * the web, so the component never tracks it there. `null` (the heartbeat's
- * first attempt has not settled) shows nothing: there is no neutral state in
- * this bar to hang a "Checking…" on, and inventing one would put a permanent
- * strip across the bottom of a perfectly healthy game for the sake of its
- * first few hundred milliseconds.
+ * `backendOutage` is the DEBOUNCED signal
+ * (ServerList.backendUnreachableConfirmed()), and it is only ever true on
+ * desktop -- the bar renders nothing on the web, so the component never
+ * tracks it there. Nothing is shown while the heartbeat is merely unsettled
+ * or has missed once: there is no neutral state in this bar to hang a
+ * "Checking…" on, and inventing one would put a strip across the bottom of a
+ * perfectly healthy game every time a single request timed out.
  */
 export function barSource(
   update: DesktopUpdateState | null,
   session: DesktopSessionState | null,
-  reachable: boolean | null,
+  backendOutage: boolean,
 ): "session" | "reachability" | "update" | "none" {
   if (session !== null && !multiplayerAllowedForSession(session)) {
     return "session";
   }
-  if (reachable === false) return "reachability";
+  if (backendOutage) return "reachability";
   if (update === null) return "none";
   if (update.status === "current" || update.status === "checking") {
     return "none";
@@ -57,16 +58,19 @@ export function barSource(
 
 /**
  * Bottom-of-screen status bar for the Steam shell: runtime-update
- * progress/action, or a missing session and its remedy, whichever applies.
- * One bottom slot, two kinds of status, so the two can never stack.
+ * progress/action, a missing session and its remedy, or a confirmed backend
+ * outage and its Retry, whichever applies. One bottom slot, three kinds of
+ * status, so they can never stack -- barSource above picks exactly one.
  *
  * Mounted in index.html as a direct <body> child with `in-[.in-game]:hidden`,
  * so "we do not update mid-game" is a property of the markup rather than of
  * logic here: the bar is simply off-screen during a match and reappears at the
  * menu in whatever state it reached.
  *
- * Renders nothing on the web, and nothing on a desktop shell too old to expose
- * the update bridge.
+ * Renders nothing on the web. On a desktop shell too old to expose the update
+ * bridge it still renders the session and outage states, both of which are
+ * the client's own signals and need no bridge; only the update half goes
+ * quiet there.
  */
 @customElement("desktop-status-bar")
 export class DesktopStatusBar extends LitElement {
@@ -78,7 +82,12 @@ export class DesktopStatusBar extends LitElement {
 
   @state() private updateState: DesktopUpdateState | null = null;
   @state() private sessionState: DesktopSessionState | null = null;
-  @state() private backendReachableState: boolean | null = null;
+  @state() private backendOutage = false;
+  // True from a Retry press until that attempt settles, so the button cannot
+  // be pressed again while its own request is still out. ServerList throttles
+  // and dedupes underneath, but a button that keeps accepting clicks and
+  // visibly does nothing reads as broken.
+  @state() private retrying = false;
 
   private unsubscribe: (() => void) | null = null;
 
@@ -87,9 +96,9 @@ export class DesktopStatusBar extends LitElement {
   };
 
   private onBackendReachability = (e: Event) => {
-    this.backendReachableState = (
+    this.backendOutage = (
       e as CustomEvent<BackendReachabilityDetail>
-    ).detail.reachable;
+    ).detail.confirmed;
   };
 
   // The bar's own element, so wiggle() can restart the animation with a real
@@ -130,7 +139,7 @@ export class DesktopStatusBar extends LitElement {
     // heartbeat starts in Main's initialize and may well have settled before
     // this element upgrades.
     if (isDesktopShell()) {
-      this.backendReachableState = backendReachable();
+      this.backendOutage = backendUnreachableConfirmed();
       document.addEventListener(
         "backend-reachability",
         this.onBackendReachability,
@@ -174,7 +183,7 @@ export class DesktopStatusBar extends LitElement {
     const source = barSource(
       this.updateState,
       this.sessionState,
-      this.backendReachableState,
+      this.backendOutage,
     );
     if (source === "none") return nothing;
     const update = this.updateState;
@@ -245,17 +254,28 @@ export class DesktopStatusBar extends LitElement {
   private reachabilityAction() {
     return html`<button
       class="shrink-0 px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius
-             text-sm font-medium uppercase tracking-wider"
-      @click=${() => {
-        retryServerList().catch((err: unknown) => {
-          // retryServerList never rejects; belt and braces, so a change there
-          // cannot surface as an unhandled rejection from a click handler.
-          console.error("desktop-status-bar: server list retry failed", err);
-        });
-      }}
+             text-sm font-medium uppercase tracking-wider
+             disabled:opacity-50 disabled:cursor-not-allowed
+             disabled:hover:bg-malibu-blue"
+      ?disabled=${this.retrying}
+      @click=${() => this.onRetryClick()}
     >
       ${translateText("desktop_status.retry")}
     </button>`;
+  }
+
+  private onRetryClick(): void {
+    if (this.retrying) return;
+    this.retrying = true;
+    retryServerList()
+      .catch((err: unknown) => {
+        // retryServerList never rejects; belt and braces, so a change there
+        // cannot surface as an unhandled rejection from a click handler.
+        console.error("desktop-status-bar: server list retry failed", err);
+      })
+      .finally(() => {
+        this.retrying = false;
+      });
   }
 
   private label(s: DesktopUpdateState) {

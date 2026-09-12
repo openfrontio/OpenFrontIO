@@ -292,7 +292,14 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     let messages: string[];
     let onMessage: EventListener;
 
-    /** Replaces the fetch stub and re-settles the heartbeat's first attempt. */
+    /**
+     * Replaces the fetch stub and drives the module to the state named.
+     *
+     * An outage takes TWO unanswered attempts to confirm, and only the
+     * confirmed signal gates -- so reaching the state under test means making
+     * both, which the manual retry does without waiting out the heartbeat's
+     * retry interval.
+     */
     async function settleReachability(reachable: boolean): Promise<void> {
       vi.stubGlobal(
         "fetch",
@@ -311,7 +318,8 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       );
       ServerList.resetServerList();
       await ServerList.ensureServerList();
-      expect(ServerList.backendReachable()).toBe(reachable);
+      if (!reachable) await ServerList.retryServerList();
+      expect(ServerList.backendUnreachableConfirmed()).toBe(!reachable);
     }
 
     beforeAll(async () => {
@@ -334,7 +342,7 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       ServerList.resetServerList();
     });
 
-    it("refuses a join and says why", async () => {
+    it("refuses a join and says why once the outage is confirmed", async () => {
       await settleReachability(false);
       logSpy.mockClear();
       messages.length = 0;
@@ -347,9 +355,7 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       );
 
       await vi.waitFor(() =>
-        expect(messages).toContain(
-          translateText("error_modal.backend_unreachable"),
-        ),
+        expect(messages).toContain(translateText("common.backend_unreachable")),
       );
       // Refused before anything was joined -- not merely reported after.
       expect(logSpy).not.toHaveBeenCalledWith(
@@ -394,7 +400,7 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
         expect.stringContaining("joining lobby"),
       );
       expect(messages).not.toContain(
-        translateText("error_modal.backend_unreachable"),
+        translateText("common.backend_unreachable"),
       );
     });
   });

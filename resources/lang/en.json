@@ -468,6 +468,7 @@
   "common": {
     "available": "Available",
     "back": "Back",
+    "backend_unreachable": "Can't reach the OpenFront servers. Check your connection and try again.",
     "cancel": "Cancel",
     "cap_label": "Cap",
     "cap_tooltip": "Recipient’s remaining capacity",
@@ -678,7 +679,6 @@
     }
   },
   "error_modal": {
-    "backend_unreachable": "Can't reach the OpenFront servers. Check your connection and try again.",
     "connection_error": "Connection error!",
     "connection_lost": "Lost connection to the game server and could not reconnect. Refresh the page to try rejoining.",
     "connection_refused": "Connection refused: {reason}",

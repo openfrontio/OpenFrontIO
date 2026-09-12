@@ -89,7 +89,7 @@ import "./PlayerProfileModal";
 import { GroupTokenTracker, withGroupToken } from "./PresenceGroup";
 import { RewardsModal } from "./RewardsModal";
 import {
-  backendReachable,
+  backendUnreachableConfirmed,
   ensureServerList,
   startServerListPolling,
 } from "./ServerList";
@@ -1176,9 +1176,9 @@ class Client {
    * feedback.
    *
    * Two of the three inputs are desktop-only and are read only there. The
-   * third, backend reachability, applies to the web too (OPE-439): a join
-   * that would open a socket to a backend we just failed to reach is refused
-   * rather than left to time out in the lobby.
+   * third, a confirmed backend outage, applies to the web too (OPE-439): a
+   * join that would open a socket to a backend we have repeatedly failed to
+   * reach is refused rather than left to time out in the lobby.
    *
    * Says why rather than failing silently, matching what the dimmed buttons
    * do.
@@ -1188,13 +1188,13 @@ class Client {
     // Read straight from the module rather than kept in a field: it is a
     // synchronous accessor over the heartbeat's own state, so there is no
     // event to miss and nothing to seed.
-    const reachable = backendReachable();
+    const backendOutage = backendUnreachableConfirmed();
     if (
       !shouldBlockJoin(
         lobby,
         desktop ? this.desktopUpdateState : null,
         desktop ? getDesktopSessionState() : null,
-        reachable,
+        backendOutage,
       )
     ) {
       return false;
@@ -1206,7 +1206,18 @@ class Client {
     // client never entered, with the game starting without them.
     this.joinModal?.close();
     this.hostModal?.close();
-    reportMultiplayerRefusal(reachable);
+    // Matchmaking dispatches its own join once the server matches it, so a
+    // refusal here leaves its modal sitting on "waiting for a game" over a
+    // match that will never be entered. close() is the same teardown its Back
+    // button uses -- it shuts the queue socket and clears the watchdog -- so
+    // the player leaves the queue rather than holding a slot from a screen
+    // that is lying to them. Scoped to the source that owns that modal: a
+    // deep link refused while someone is legitimately queued must not cancel
+    // their queue.
+    if (lobby.source === "matchmaking" && this.matchmakingModal?.isOpen()) {
+      this.matchmakingModal.close();
+    }
+    reportMultiplayerRefusal(backendOutage);
     return true;
   }
 

@@ -36,7 +36,10 @@ import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
-import { backendReachable, type BackendReachabilityDetail } from "./ServerList";
+import {
+  backendUnreachableConfirmed,
+  type BackendReachabilityDetail,
+} from "./ServerList";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { UsernameInput } from "./UsernameInput";
 import {
@@ -66,20 +69,22 @@ const TUTORIAL_CARD_MAX_GAMES = 5;
  * Whether multiplayer should be available given what we know about the
  * backend (OPE-439).
  *
- * ONLY a settled `false` gates. `null` means the server-list heartbeat's
- * first attempt has not landed yet -- a page is in that state for its first
- * few hundred milliseconds, and blocking there would mean every player is
- * briefly locked out of multiplayer on every load, on a suspicion we have not
- * even tested. Unknown is not unreachable.
+ * The parameter is ServerList.backendUnreachableConfirmed(), NOT the raw
+ * backendReachable(), and the difference is load-bearing. That accessor is
+ * already false for the two states this must never gate:
  *
- * `true` is "the API answered at all", not "the API served a usable list": a
- * site with no list is a reachable backend and must not gate. See
- * ServerList.backendReachable().
+ *   - before the first attempt settles. A page is in that state for its first
+ *     few hundred milliseconds, and gating there would lock every player out
+ *     of multiplayer on every load over a suspicion we have not tested yet.
+ *   - after a single missed heartbeat. The cached list is still serving and
+ *     the next request would very likely have worked; taking the game away
+ *     for a retry interval over one blip is worse than the blip.
+ *
+ * It is also false when the API answered at all -- a 404 for a site with no
+ * list is a reachable backend.
  */
-export function multiplayerAllowedForBackend(
-  reachable: boolean | null,
-): boolean {
-  return reachable !== false;
+export function multiplayerAllowedForBackend(backendOutage: boolean): boolean {
+  return !backendOutage;
 }
 
 /**
@@ -88,7 +93,7 @@ export function multiplayerAllowedForBackend(
  * A null update/session means that bridge is absent (the web build), so it
  * gates nothing; any one of the three alone is enough to block.
  *
- * `reachable` is the only one of the three that also applies on the web,
+ * `backendOutage` is the only one of the three that also applies on the web,
  * which is why it is a required parameter rather than an optional one: an
  * entry point that forgets to pass it would silently stay ungated, and a
  * compile error is the cheapest way to notice.
@@ -96,11 +101,11 @@ export function multiplayerAllowedForBackend(
 export function shouldBlockMultiplayerAction(
   update: DesktopUpdateState | null,
   session: DesktopSessionState | null,
-  reachable: boolean | null,
+  backendOutage: boolean,
 ): boolean {
   if (update !== null && !multiplayerAllowed(update)) return true;
   if (session !== null && !multiplayerAllowedForSession(session)) return true;
-  if (!multiplayerAllowedForBackend(reachable)) return true;
+  if (!multiplayerAllowedForBackend(backendOutage)) return true;
   return false;
 }
 
@@ -116,7 +121,7 @@ export function shouldBlockMultiplayerAction(
  * Only reachability needs the web half: every other reason to refuse here is
  * desktop-only, and on desktop the bar always carries it.
  */
-export function reportMultiplayerRefusal(reachable: boolean | null): void {
+export function reportMultiplayerRefusal(backendOutage: boolean): void {
   // Optional-call the method rather than dispatching an event: the bar is a
   // sibling custom element that may not have upgraded yet, and `?.wiggle?.()`
   // degrades to a silent no-op in that case instead of firing an event with
@@ -129,8 +134,8 @@ export function reportMultiplayerRefusal(reachable: boolean | null): void {
   // Keyed on the shell, not on the element: <desktop-status-bar> is in
   // index.html on every build and simply renders nothing on the web, so its
   // presence proves nothing about whether the player can see a reason.
-  if (!isDesktopShell() && reachable === false) {
-    showToast(translateText("error_modal.backend_unreachable"), "red");
+  if (!isDesktopShell() && backendOutage) {
+    showToast(translateText("common.backend_unreachable"), "red");
   }
 }
 
@@ -164,10 +169,10 @@ export function shouldBlockJoin(
   lobby: JoinLobbyEvent,
   update: DesktopUpdateState | null,
   session: DesktopSessionState | null,
-  reachable: boolean | null,
+  backendOutage: boolean,
 ): boolean {
   if (!joinIsGateable(lobby)) return false;
-  return shouldBlockMultiplayerAction(update, session, reachable);
+  return shouldBlockMultiplayerAction(update, session, backendOutage);
 }
 
 @customElement("game-mode-selector")
@@ -179,9 +184,10 @@ export class GameModeSelector extends LitElement {
   @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
   @state() private desktopSessionState: DesktopSessionState | null = null;
-  // Null until the server-list heartbeat's first attempt settles; see
-  // multiplayerAllowedForBackend for why null never gates.
-  @state() private backendReachableState: boolean | null = null;
+  // The DEBOUNCED outage signal, not the raw per-attempt one: see
+  // multiplayerAllowedForBackend for why one missed heartbeat must not dim
+  // these buttons.
+  @state() private backendOutage = false;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
@@ -266,10 +272,10 @@ export class GameModeSelector extends LitElement {
       this.onDesktopSessionState,
     );
     // Seeded unconditionally, unlike the two above: the backend is just as
-    // unreachable on the web, and the heartbeat's first attempt often settles
+    // unreachable on the web, and the heartbeat's first attempts often settle
     // before this element exists (it is started in Main's initialize, we are
-    // rendered by <play-page> later), so the event alone would miss it.
-    this.backendReachableState = backendReachable();
+    // rendered by <play-page> later), so the event alone would miss them.
+    this.backendOutage = backendUnreachableConfirmed();
     document.addEventListener(
       "backend-reachability",
       this.onBackendReachability,
@@ -347,9 +353,9 @@ export class GameModeSelector extends LitElement {
   };
 
   private onBackendReachability = (e: Event) => {
-    this.backendReachableState = (
+    this.backendOutage = (
       e as CustomEvent<BackendReachabilityDetail>
-    ).detail.reachable;
+    ).detail.confirmed;
   };
 
   public stop() {
@@ -518,11 +524,11 @@ export class GameModeSelector extends LitElement {
       !shouldBlockMultiplayerAction(
         this.desktopUpdateState,
         this.desktopSessionState,
-        this.backendReachableState,
+        this.backendOutage,
       )
     )
       return false;
-    reportMultiplayerRefusal(this.backendReachableState);
+    reportMultiplayerRefusal(this.backendOutage);
     return true;
   }
 
@@ -640,7 +646,7 @@ export class GameModeSelector extends LitElement {
       shouldBlockMultiplayerAction(
         this.desktopUpdateState,
         this.desktopSessionState,
-        this.backendReachableState,
+        this.backendOutage,
       );
     return html`
       <button
@@ -697,7 +703,7 @@ export class GameModeSelector extends LitElement {
       blocked: shouldBlockMultiplayerAction(
         this.desktopUpdateState,
         this.desktopSessionState,
-        this.backendReachableState,
+        this.backendOutage,
       ),
       viewerTrusted: this.viewerTrusted,
       onClick: () => this.validateAndJoin(lobby),

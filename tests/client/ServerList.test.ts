@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import {
   backendReachable,
+  backendUnreachableConfirmed,
   ensureServerList,
   resetServerList,
   retryServerList,
@@ -381,6 +382,83 @@ describe("startServerListPolling", () => {
   });
 });
 
+describe("a confirmed outage, as opposed to one missed beat", () => {
+  // The gates read backendUnreachableConfirmed(), never the raw signal: the
+  // heartbeat is expected to miss occasionally while the cached list carries
+  // on serving, and dimming every multiplayer button for a retry interval
+  // over one 4s timeout is worse than the timeout.
+  it("takes two consecutive failures, and any answer resets the count", async () => {
+    vi.useFakeTimers();
+    const seen: unknown[] = [];
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("backend-reachability", listener);
+    try {
+      expect(backendUnreachableConfirmed()).toBe(false);
+
+      // One failure: reachable flips, but nothing is confirmed yet.
+      fetchMock.mockRejectedValue(new TypeError("network down"));
+      await ensureServerList();
+      expect(backendReachable()).toBe(false);
+      expect(backendUnreachableConfirmed()).toBe(false);
+      expect(seen).toEqual([{ reachable: false, confirmed: false }]);
+
+      // The second one confirms it. `reachable` did not change, so this
+      // announcement exists only because `confirmed` did -- which is the
+      // transition every gate acts on.
+      await vi.advanceTimersByTimeAsync(RETRY_MS);
+      await ensureServerList();
+      expect(backendUnreachableConfirmed()).toBe(true);
+      expect(seen).toEqual([
+        { reachable: false, confirmed: false },
+        { reachable: false, confirmed: true },
+      ]);
+
+      // A third changes nothing, so it is not announced.
+      await vi.advanceTimersByTimeAsync(RETRY_MS);
+      await ensureServerList();
+      expect(seen).toHaveLength(2);
+
+      // One answer clears it outright -- no gradual recovery.
+      fetchMock.mockImplementation(async () => jsonResponse(API_LIST));
+      await vi.advanceTimersByTimeAsync(RETRY_MS);
+      expect(await ensureServerList()).toBe("api");
+      expect(backendUnreachableConfirmed()).toBe(false);
+      expect(seen).toEqual([
+        { reachable: false, confirmed: false },
+        { reachable: false, confirmed: true },
+        { reachable: true, confirmed: false },
+      ]);
+
+      // ...and the count restarts: one failure after a success is a blip
+      // again, not a resumption of the old outage.
+      fetchMock.mockRejectedValue(new TypeError("network down"));
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+      await ensureServerList();
+      expect(backendUnreachableConfirmed()).toBe(false);
+    } finally {
+      document.removeEventListener("backend-reachability", listener);
+    }
+  });
+
+  it("counts a failed manual retry towards the confirmation", async () => {
+    // Pressing Retry against a backend that is genuinely down should settle
+    // the question sooner, not reset it.
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    await ensureServerList();
+    expect(backendUnreachableConfirmed()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1_500);
+    await retryServerList();
+    expect(backendUnreachableConfirmed()).toBe(true);
+  });
+
+  it("is never confirmed before the first attempt settles", async () => {
+    expect(backendReachable()).toBe(null);
+    expect(backendUnreachableConfirmed()).toBe(false);
+  });
+});
+
 describe("backend reachability", () => {
   it("reports whether the API answered at all, and announces every change", async () => {
     const seen: unknown[] = [];
@@ -400,20 +478,23 @@ describe("backend reachability", () => {
       );
       expect(await ensureServerList()).toBe("fallback");
       expect(backendReachable()).toBe(true);
-      expect(seen).toEqual([{ reachable: true }]);
+      expect(seen).toEqual([{ reachable: true, confirmed: false }]);
 
       // Unchanged: no second announcement.
       await vi.advanceTimersByTimeAsync(RETRY_MS);
       expect(await ensureServerList()).toBe("fallback");
       expect(backendReachable()).toBe(true);
-      expect(seen).toEqual([{ reachable: true }]);
+      expect(seen).toEqual([{ reachable: true, confirmed: false }]);
 
       // A network error is not an answer.
       fetchMock.mockRejectedValue(new TypeError("network down"));
       await vi.advanceTimersByTimeAsync(RETRY_MS);
       expect(await ensureServerList()).toBe("fallback");
       expect(backendReachable()).toBe(false);
-      expect(seen).toEqual([{ reachable: true }, { reachable: false }]);
+      expect(seen).toEqual([
+        { reachable: true, confirmed: false },
+        { reachable: false, confirmed: false },
+      ]);
 
       // Back up again.
       fetchMock.mockImplementation(async () => jsonResponse(API_LIST));
@@ -421,9 +502,9 @@ describe("backend reachability", () => {
       expect(await ensureServerList()).toBe("api");
       expect(backendReachable()).toBe(true);
       expect(seen).toEqual([
-        { reachable: true },
-        { reachable: false },
-        { reachable: true },
+        { reachable: true, confirmed: false },
+        { reachable: false, confirmed: false },
+        { reachable: true, confirmed: false },
       ]);
     } finally {
       document.removeEventListener("backend-reachability", listener);
@@ -443,17 +524,40 @@ describe("retryServerList", () => {
     expect(await ensureServerList()).toBe("fallback");
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    // The control: an ordinary caller in the same moment is held back.
+    // The control: an ordinary caller in the same moment is held back for a
+    // full RETRY_MS. The manual retry is not.
     expect(await ensureServerList()).toBe("fallback");
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     expect(await retryServerList()).toBe("fallback");
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    // And again, still well inside the interval.
-    await vi.advanceTimersByTimeAsync(100);
+    // Past its own 1s floor, and still far inside RETRY_MS.
+    await vi.advanceTimersByTimeAsync(1_500);
     await retryServerList();
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  // A player leaning on the button must not outpace the request it starts.
+  it("throttles a second press inside its floor to the same attempt", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    const first = retryServerList();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await first;
+
+    // Settled, but still inside the floor: the press is a no-op that hands
+    // back the same promise rather than starting a second request.
+    await vi.advanceTimersByTimeAsync(300);
+    const second = retryServerList();
+    expect(second).toBe(first);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(800);
+    const third = retryServerList();
+    expect(third).not.toBe(first);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await third;
   });
 
   it("applies a list that the retry brings back, and clears the offline state", async () => {
@@ -469,12 +573,16 @@ describe("retryServerList", () => {
       expect(ClientEnv.serverWsBase()).toBe("wss://blue.openfront.io");
 
       fetchMock.mockImplementation(async () => jsonResponse(API_LIST));
+      await vi.advanceTimersByTimeAsync(1_500);
       expect(await retryServerList()).toBe("api");
       expect(backendReachable()).toBe(true);
       // Not just the flag: the list the retry fetched is applied, which is
       // what makes the bar disappear AND what the next join will use.
       expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
-      expect(seen).toEqual([{ reachable: false }, { reachable: true }]);
+      expect(seen).toEqual([
+        { reachable: false, confirmed: false },
+        { reachable: true, confirmed: false },
+      ]);
     } finally {
       document.removeEventListener("backend-reachability", listener);
     }
