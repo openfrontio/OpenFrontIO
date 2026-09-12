@@ -3,17 +3,17 @@
   "id": "CapeCod",
   "map": {
     "height": 1240,
-    "num_land_tiles": 594504,
+    "num_land_tiles": 594679,
     "width": 1500
   },
   "map16x": {
     "height": 310,
-    "num_land_tiles": 34081,
+    "num_land_tiles": 34096,
     "width": 375
   },
   "map4x": {
     "height": 620,
-    "num_land_tiles": 143291,
+    "num_land_tiles": 143346,
     "width": 750
   },
   "multiplayer_frequency": 4,
