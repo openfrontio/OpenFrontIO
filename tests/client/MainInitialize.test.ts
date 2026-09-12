@@ -8,7 +8,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { translateText } from "../../src/client/Utils";
 
 const mocks = vi.hoisted(() => ({
   userAuth: vi.fn(async (): Promise<unknown> => false),
@@ -274,5 +275,118 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
         expect.stringContaining("Your player ID is public-id-1"),
       ),
     );
+  });
+
+  /**
+   * OPE-439. The entry-point components dim their own buttons, but every join
+   * -- matchmaking's, a deep link, the host/join modals -- funnels through
+   * handleJoinLobby without passing one, so the funnel gate is the only thing
+   * that covers them. This is a WEB boot (no openfrontDesktop), which is
+   * precisely what the pre-existing desktop gate could not cover.
+   *
+   * Driven through the real ServerList module: the reachability the funnel
+   * reads has to be the one the heartbeat actually produces.
+   */
+  describe("the join funnel while the backend is unreachable", () => {
+    let ServerList: typeof import("../../src/client/ServerList");
+    let messages: string[];
+    let onMessage: EventListener;
+
+    /** Replaces the fetch stub and re-settles the heartbeat's first attempt. */
+    async function settleReachability(reachable: boolean): Promise<void> {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => {
+          if (!reachable) throw new TypeError("network down");
+          return {
+            ok: false,
+            status: 404,
+            statusText: "Not Found",
+            headers: new Map<string, string>(),
+            json: async () => ({}),
+            text: async () => "",
+            arrayBuffer: async () => new ArrayBuffer(0),
+          };
+        }),
+      );
+      ServerList.resetServerList();
+      await ServerList.ensureServerList();
+      expect(ServerList.backendReachable()).toBe(reachable);
+    }
+
+    beforeAll(async () => {
+      ServerList = await import("../../src/client/ServerList");
+      // Test 3 above left the username gate closed; every join below has to
+      // get past it to reach the gate under test.
+      const input = document.querySelector("username-input") as unknown as {
+        canPlay: () => boolean;
+      };
+      input.canPlay = () => true;
+      messages = [];
+      onMessage = (e: Event) => {
+        messages.push((e as CustomEvent).detail?.message);
+      };
+      window.addEventListener("show-message", onMessage);
+    });
+
+    afterAll(() => {
+      window.removeEventListener("show-message", onMessage);
+      ServerList.resetServerList();
+    });
+
+    it("refuses a join and says why", async () => {
+      await settleReachability(false);
+      logSpy.mockClear();
+      messages.length = 0;
+
+      document.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: { gameID: "AbCd1234", source: "matchmaking" },
+          bubbles: true,
+        }),
+      );
+
+      await vi.waitFor(() =>
+        expect(messages).toContain(
+          translateText("error_modal.backend_unreachable"),
+        ),
+      );
+      // Refused before anything was joined -- not merely reported after.
+      expect(logSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("joining lobby"),
+      );
+      expect(mocks.joinLobby).not.toHaveBeenCalled();
+    });
+
+    it("lets the same join through once the backend answers", async () => {
+      // The control. Without it a join refused for any unrelated reason --
+      // the username gate, a listener that never ran -- would pass above.
+      await settleReachability(true);
+      logSpy.mockClear();
+      messages.length = 0;
+      mocks.joinLobby.mockReturnValue({
+        // Neither settles: the assertion is that the join was ATTEMPTED, and
+        // the in-game path beyond it is not what this file boots.
+        prestart: new Promise(() => {}),
+        join: new Promise(() => {}),
+        stop: vi.fn(),
+      });
+
+      document.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: { gameID: "AbCd1234", source: "matchmaking" },
+          bubbles: true,
+        }),
+      );
+
+      await vi.waitFor(() =>
+        expect(logSpy).toHaveBeenCalledWith(
+          expect.stringContaining("joining lobby"),
+        ),
+      );
+      expect(messages).not.toContain(
+        translateText("error_modal.backend_unreachable"),
+      );
+    });
   });
 });

@@ -115,6 +115,19 @@ export function backendReachable(): boolean | null {
   return reachable;
 }
 
+/**
+ * The detail carried by the "backend-reachability" document event.
+ *
+ * A consumer needs BOTH this and backendReachable(): the event is one-shot,
+ * so a component that mounts after the first attempt settles would otherwise
+ * never learn the current value and would gate on null forever. That is
+ * OPE-396's bug, and the seed-then-subscribe pattern getDesktopUpdateState()
+ * exists for -- the accessor above is the seed half.
+ */
+export interface BackendReachabilityDetail {
+  reachable: boolean;
+}
+
 function setReachable(next: boolean, cause?: unknown): void {
   if (next === reachable) return;
   const first = reachable === null;
@@ -127,7 +140,9 @@ function setReachable(next: boolean, cause?: unknown): void {
     console.info("Server list API reachable again");
   }
   document.dispatchEvent(
-    new CustomEvent("backend-reachability", { detail: { reachable: next } }),
+    new CustomEvent<BackendReachabilityDetail>("backend-reachability", {
+      detail: { reachable: next },
+    }),
   );
 }
 
@@ -290,6 +305,35 @@ export async function ensureServerList(): Promise<ServerListStatus> {
     // The contract is "never throws": whatever went wrong, the page's own
     // values are still a complete answer.
     console.warn("Server list refresh failed, using page values", e);
+    return "fallback";
+  }
+}
+
+/**
+ * Try the API again right now, at the player's request: the Retry on the
+ * desktop status bar's offline state (OPE-439).
+ *
+ * Deliberately ignores the retry interval. That interval exists to stop
+ * TIMER-driven callers hammering a down API between heartbeats, and a person
+ * pressing a button is not one of those -- holding their click for up to
+ * RETRY_INTERVAL_MS would make the button look broken in exactly the
+ * situation it exists for.
+ *
+ * Still deduped: fetchOnce() joins the attempt already in flight rather than
+ * starting a second one, so a repeat-clicker (or a click landing on top of a
+ * heartbeat beat) costs one request. The result reaches the UI the same way
+ * every other attempt does -- through ClientEnv and the "backend-reachability"
+ * event -- so callers that only want the side effect can ignore what this
+ * resolves with.
+ *
+ * Never throws, for the same reason ensureServerList does not.
+ */
+export async function retryServerList(): Promise<ServerListStatus> {
+  try {
+    await fetchOnce();
+    return apply();
+  } catch (e) {
+    console.warn("Server list retry failed, using page values", e);
     return "fallback";
   }
 }
