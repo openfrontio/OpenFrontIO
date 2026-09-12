@@ -868,15 +868,15 @@ export function reloadForUpdate(): void {
   if (siteHost !== undefined && url.host !== siteHost) {
     url.protocol = "https:";
     url.host = siteHost;
-    url.pathname = apexPathFor(url.pathname);
-  } else {
-    // A `/v/<commit>/` page is immutable by design (multi-server v2): the
-    // prefix pins the bundle, so reloading it as-is re-serves the very
-    // version this update is leaving behind, forever. Ask for the
-    // version-free path, which the site answers with `latest`. The
-    // cache-buster below then only has to beat the CDN, not the prefix.
-    url.pathname = stripVersionPrefix(url.pathname).path;
   }
+  // Both prefixes encode what this reload exists to leave behind, whichever
+  // host answers it. `/v/<commit>/` is immutable by design (multi-server
+  // v2): it pins the bundle, so reloading it as-is re-serves the very
+  // version being updated away from, forever, cache-buster or not. And
+  // `/w<n>/` was resolved against the old worker count, which a new version
+  // may have changed — letter routing picks the worker again on the way
+  // back in. apexPathFor drops exactly these two, in either order.
+  url.pathname = apexPathFor(url.pathname);
   url.searchParams.set("v", Date.now().toString(36));
   window.location.replace(url.toString());
 }

@@ -96,6 +96,17 @@ describe("apex-aware navigation", () => {
     expect(url.searchParams.has("v")).toBe(true);
   });
 
+  it("reloadForUpdate drops the worker prefix under a version prefix", () => {
+    // Both prefixes go, in either order and on either branch: /w1/ was
+    // resolved against the old worker count, which the new version may have
+    // changed.
+    stubPage("openfront.io", "/v/5ccc50a7/w1/game/dAbCd12345", "openfront.io");
+    reloadForUpdate();
+    const url = new URL(replace.mock.calls[0][0]);
+    expect(url.host).toBe("openfront.io");
+    expect(url.pathname).toBe("/game/dAbCd12345");
+  });
+
   it("reloadForUpdate drops the version prefix on a standalone host too", () => {
     // No siteHost injected: the reload stays on this host, but still must
     // not ask for the pinned version again.

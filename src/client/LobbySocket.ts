@@ -46,15 +46,36 @@ export class PublicLobbySocket {
   async start() {
     this.stopped = false;
     this.wsConnectionAttempts = 0;
-    // The lobby list needs a server: ask the API which one (multi-server
-    // v2), falling back to the page's own values. It answers "outdated"
-    // when no server takes new games from this build any more and a newer
-    // version exists — the rollover has moved on without this tab. The
-    // lobby list is the first thing every homepage starts, so this is where
-    // the player finds out: the same one-shot "update available" prompt a
-    // newer commit in the feed raises. The connection goes ahead either
-    // way, so a shell that never prompts (desktop, whose updater owns
-    // updates) still gets its lobby list from the fallback values.
+    await this.discoverAndConnect();
+  }
+
+  /**
+   * Find a server, pick one of its workers, and connect.
+   *
+   * The lobby list needs a server: ask the API which one (multi-server v2),
+   * falling back to the page's own values. It answers "outdated" when no
+   * server takes new games from this build any more and a newer version
+   * exists — the rollover has moved on without this tab. The lobby list is
+   * the first thing every homepage starts, so this is where the player
+   * finds out: the same one-shot "update available" prompt a newer commit
+   * in the feed raises. The connection goes ahead either way, so a shell
+   * that never prompts (desktop, whose updater owns updates) still gets its
+   * lobby list from the fallback values.
+   *
+   * Retried through here rather than through connectWebSocket when no
+   * server was known: the list may arrive between attempts, and until it
+   * does there is no worker path to build a URL with, so a plain reconnect
+   * would burn every remaining attempt on the same empty path. The attempt
+   * counter is deliberately NOT reset (start() owns that), so the retries
+   * still give up after maxWsAttempts.
+   */
+  private async discoverAndConnect(): Promise<void> {
+    // Each discovery attempt counts, the way each socket attempt does.
+    // connectWebSocket clears this after it builds a socket; the discovery
+    // path never gets that far, so without clearing it here the counter
+    // would freeze at one and the retry would run every reconnectDelay
+    // forever, never reaching maxWsAttempts and never telling the player.
+    this.wsAttemptCounted = false;
     const listStatus = await ensureServerList();
     if (this.stopped) return;
     if (listStatus === "outdated") this.fireUpdateAvailable();
@@ -67,7 +88,7 @@ export class PublicLobbySocket {
       this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
     } catch (e) {
       if (!(e instanceof NoServerError)) throw e;
-      this.handleConnectError(e);
+      this.handleConnectError(e, () => void this.discoverAndConnect());
       return;
     }
     this.connectWebSocket();
@@ -241,7 +262,10 @@ export class PublicLobbySocket {
     console.error("WebSocket error:", error);
   }
 
-  private handleConnectError(error: unknown) {
+  // `retry` is what the next attempt should run, for a failure a plain
+  // reconnect cannot fix: with no server known it has to re-run discovery,
+  // not re-dial an empty worker path. Defaults to reconnecting the socket.
+  private handleConnectError(error: unknown, retry?: () => void) {
     console.error("Error connecting WebSocket:", error);
     if (!this.wsAttemptCounted) {
       this.wsAttemptCounted = true;
@@ -251,14 +275,18 @@ export class PublicLobbySocket {
       void showInGameAlert(translateText("error_modal.connection_error"));
       void this.promptIfOutdated();
     } else {
-      this.scheduleReconnect();
+      this.scheduleReconnect(retry);
     }
   }
 
-  private scheduleReconnect() {
+  private scheduleReconnect(retry?: () => void) {
     if (this.wsReconnectTimeout !== null) return;
     this.wsReconnectTimeout = window.setTimeout(() => {
       this.wsReconnectTimeout = null;
+      if (retry !== undefined) {
+        retry();
+        return;
+      }
       this.connectWebSocket();
     }, this.reconnectDelay);
   }
