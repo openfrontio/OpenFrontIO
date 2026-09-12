@@ -3,9 +3,10 @@ import { ClientEnv } from "../src/client/ClientEnv";
 import "../src/client/components/DesktopStatusBar";
 import { barSource } from "../src/client/components/DesktopStatusBar";
 import {
-  backendReachable,
+  backendUnreachableConfirmed,
   ensureServerList,
   resetServerList,
+  retryServerList,
 } from "../src/client/ServerList";
 
 describe("barSource", () => {
@@ -14,7 +15,7 @@ describe("barSource", () => {
       barSource(
         { status: "current", bytes: 0, total: 0 },
         { status: "signed-in" },
-        true,
+        false,
       ),
     ).toBe("none");
   });
@@ -24,7 +25,7 @@ describe("barSource", () => {
       barSource(
         { status: "downloading", bytes: 1, total: 2 },
         { status: "signed-in" },
-        true,
+        false,
       ),
     ).toBe("update");
   });
@@ -47,7 +48,7 @@ describe("barSource", () => {
           status: "signed-out",
           reason: "steam-wedged",
         },
-        true,
+        false,
       ),
     ).toBe("session");
   });
@@ -68,13 +69,13 @@ describe("barSource", () => {
           error: { kind: "quota-exceeded", message: "from a newer shell" },
         },
         { status: "signed-in" },
-        true,
+        false,
       ),
     ).toBe("update");
   });
 
   it("shows nothing on the web, where neither bridge exists", () => {
-    expect(barSource(null, null, null)).toBe("none");
+    expect(barSource(null, null, false)).toBe("none");
   });
 
   // OPE-439. Reachability sits between the two: below the session, because a
@@ -84,7 +85,7 @@ describe("barSource", () => {
   // provably cannot work until the network is back.
   it("shows the offline state over any update state", () => {
     expect(
-      barSource({ status: "current", bytes: 0, total: 0 }, null, false),
+      barSource({ status: "current", bytes: 0, total: 0 }, null, true),
     ).toBe("reachability");
     expect(
       barSource(
@@ -95,24 +96,25 @@ describe("barSource", () => {
           error: { kind: "network", message: "offline" },
         },
         { status: "signed-in" },
-        false,
+        true,
       ),
     ).toBe("reachability");
   });
 
   it("still shows the session over the offline state", () => {
     expect(
-      barSource(null, { status: "signed-out", reason: "network" }, false),
+      barSource(null, { status: "signed-out", reason: "network" }, true),
     ).toBe("session");
   });
 
-  // No neutral state exists in this bar to hang a "Checking…" on, and
-  // inventing one would put a permanent strip across the bottom of a healthy
-  // game for the sake of its first few hundred milliseconds.
-  it("shows nothing while the first attempt has not settled", () => {
-    expect(barSource(null, { status: "signed-in" }, null)).toBe("none");
+  // The argument is the CONFIRMED outage, so "unsettled" and "missed once"
+  // both arrive here as false and show nothing. There is no neutral state in
+  // this bar to hang a "Checking…" on, and inventing one would put a strip
+  // across the bottom of a healthy game every time one request timed out.
+  it("shows nothing until an outage is confirmed", () => {
+    expect(barSource(null, { status: "signed-in" }, false)).toBe("none");
     expect(
-      barSource({ status: "current", bytes: 0, total: 0 }, null, null),
+      barSource({ status: "current", bytes: 0, total: 0 }, null, false),
     ).toBe("none");
   });
 });
@@ -162,6 +164,10 @@ describe("the rendered offline state", () => {
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "info").mockImplementation(() => {});
+    // Fake the clock only so the tests can step past the manual-retry floor
+    // and the heartbeat's retry interval; shouldAdvanceTime keeps real time
+    // flowing underneath, so vi.waitFor and Lit's microtasks behave normally.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
   afterEach(() => {
@@ -170,9 +176,23 @@ describe("the rendered offline state", () => {
     window.BOOTSTRAP_CONFIG = undefined;
     ClientEnv.reset();
     resetServerList();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
+
+  /**
+   * Drives enough failed attempts that the outage is confirmed, then steps
+   * past the manual-retry floor so a click in the test starts an attempt of
+   * its own rather than joining this one.
+   */
+  async function confirmOutage(): Promise<void> {
+    await ensureServerList();
+    vi.advanceTimersByTime(2_000);
+    await retryServerList();
+    expect(backendUnreachableConfirmed()).toBe(true);
+    vi.advanceTimersByTime(2_000);
+  }
 
   it("shows nothing while the backend is fine", async () => {
     // The control: the bar must not become a permanent fixture just because
@@ -181,16 +201,27 @@ describe("the rendered offline state", () => {
       async () => new Response("{}", { status: 404 }),
     );
     await ensureServerList();
-    expect(backendReachable()).toBe(true);
+    expect(backendUnreachableConfirmed()).toBe(false);
 
     const bar = mountBar();
     await bar.updateComplete;
     expect(bar.textContent?.trim()).toBe("");
   });
 
-  it("seeds the offline state from an attempt that failed before it mounted", async () => {
+  it("shows nothing after a single missed attempt", async () => {
+    // One timed-out heartbeat is a blip, not an outage. Showing an offline
+    // bar for it -- while the cached list is still serving perfectly well --
+    // would make the bar appear and vanish on any flaky connection.
     await ensureServerList();
-    expect(backendReachable()).toBe(false);
+    expect(backendUnreachableConfirmed()).toBe(false);
+
+    const bar = mountBar();
+    await bar.updateComplete;
+    expect(bar.textContent?.trim()).toBe("");
+  });
+
+  it("seeds the offline state from failures that happened before it mounted", async () => {
+    await confirmOutage();
 
     // Mounted AFTER the announcement it would have needed. The accessor is
     // the only path left, exactly as in OPE-396.
@@ -206,17 +237,17 @@ describe("the rendered offline state", () => {
     await bar.updateComplete;
     expect(bar.textContent?.trim()).toBe("");
 
-    await ensureServerList();
+    await confirmOutage();
     await bar.updateComplete;
 
     expect(bar.textContent).toContain("desktop_status.offline");
   });
 
   it("Retry attempts again immediately, and the bar clears when the API answers", async () => {
-    await ensureServerList();
+    await confirmOutage();
     const bar = mountBar();
     await bar.updateComplete;
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const attemptsSoFar = fetchMock.mock.calls.length;
 
     // A 404 is an answer: this site has no list, but the backend is up. That
     // is the boundary the bar keys on, so it is the one worth clearing on.
@@ -227,9 +258,37 @@ describe("the rendered offline state", () => {
 
     // Immediately, without waiting out the heartbeat's retry interval -- the
     // whole point of the button.
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    await vi.waitFor(() => expect(backendReachable()).toBe(true));
+    expect(fetchMock).toHaveBeenCalledTimes(attemptsSoFar + 1);
+    await vi.waitFor(() => expect(backendUnreachableConfirmed()).toBe(false));
     await bar.updateComplete;
     expect(bar.textContent?.trim()).toBe("");
+  });
+
+  it("disables Retry while its own attempt is still out", async () => {
+    await confirmOutage();
+    const bar = mountBar();
+    await bar.updateComplete;
+
+    // A request that never answers, so the in-flight window stays open.
+    let release: (r: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      async () =>
+        await new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    const button = retryButton(bar)!;
+    button.click();
+    await bar.updateComplete;
+
+    // A button that keeps accepting clicks while visibly doing nothing reads
+    // as broken, whatever the throttle underneath is doing.
+    expect(button.disabled).toBe(true);
+    const attempts = fetchMock.mock.calls.length;
+    button.click();
+    expect(fetchMock).toHaveBeenCalledTimes(attempts);
+
+    release(new Response("{}", { status: 404 }));
+    await vi.waitFor(() => expect(backendUnreachableConfirmed()).toBe(false));
   });
 });

@@ -419,11 +419,34 @@ values.
   non-OK, malformed or empty: the previous list keeps serving. The API
   caches its answer for seconds anyway, so a blip must not flip a working
   page into fallback. Only a client that never got a list falls back.
-- **Reachability:** `backendReachable()` is null until the first attempt
-  settles, true when the API answered at all (a 404 included — reachable,
-  but no list for this site), false on a timeout or network error. Every
-  change is announced on the document as `backend-reachability` with
-  `{ reachable }` for UI to consume.
+- **Reachability (two signals, OPE-439):** `backendReachable()` is the raw
+  per-attempt answer — null until the first attempt settles, true when the
+  API answered at all (a 404 included: reachable, but no list for this
+  site), false on a timeout or network error. It is deliberately twitchy,
+  so nothing player-facing gates on it.
+  `backendUnreachableConfirmed()` is the debounced one the UI uses: true
+  only once **two** attempts in a row have gone unanswered, which takes a
+  retry interval to accumulate. One missed beat is a blip the cached list
+  serves straight through, and dimming multiplayer for 10s over it would be
+  worse than the blip; any answer resets the count. Every change to either
+  value is announced on the document as `backend-reachability` with
+  `{ reachable, confirmed }`. Consumers seed from the accessor and then
+  subscribe — the event is one-shot, so a component mounting afterwards
+  would otherwise never learn the state (OPE-396).
+- **Retry:** `retryServerList()` is the player-initiated attempt behind the
+  desktop status bar's offline Retry. It ignores the heartbeat's retry
+  interval (a person pressing a button is not a timer) but has a 1s floor
+  of its own, inside which a second press hands back the same promise; past
+  that, `fetchOnce()` still dedupes against an attempt already in flight. A
+  retry that fails counts towards the outage confirmation like any other
+  attempt.
+
+  What consumes the confirmed signal: the desktop status bar's offline
+  state (ranked below a session failure, above any update state), and the
+  multiplayer gates in `GameModeSelector`, `DetailedGameViewModal` and
+  `Main`'s join funnel — on the web as well as on desktop. Single-player is
+  never gated, and nothing here touches a game already in progress.
+
 - **Which list:** the desktop shell asks for its injected `serverHost`
   (its values are exactly the sites); a web page asks for its `siteHost`
   when rendered behind an apex, else `window.location.host`. Decided with

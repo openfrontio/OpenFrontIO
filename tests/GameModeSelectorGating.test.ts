@@ -9,7 +9,7 @@ import { GameType } from "../src/core/game/Game";
 
 describe("shouldBlockMultiplayerAction", () => {
   it("allows everything when no desktop update state has arrived", () => {
-    expect(shouldBlockMultiplayerAction(null, null, null)).toBe(false);
+    expect(shouldBlockMultiplayerAction(null, null, false)).toBe(false);
   });
 
   it("allows multiplayer when the client is current", () => {
@@ -17,7 +17,7 @@ describe("shouldBlockMultiplayerAction", () => {
       shouldBlockMultiplayerAction(
         { status: "current", bytes: 0, total: 0 },
         null,
-        null,
+        false,
       ),
     ).toBe(false);
   });
@@ -31,14 +31,14 @@ describe("shouldBlockMultiplayerAction", () => {
           total: 2,
         },
         null,
-        null,
+        false,
       ),
     ).toBe(true);
     expect(
       shouldBlockMultiplayerAction(
         { status: "staged", bytes: 2, total: 2 },
         null,
-        null,
+        false,
       ),
     ).toBe(true);
   });
@@ -48,7 +48,7 @@ describe("shouldBlockMultiplayerAction", () => {
       shouldBlockMultiplayerAction(
         { status: "blocked", bytes: 0, total: 0 },
         null,
-        null,
+        false,
       ),
     ).toBe(false);
   });
@@ -63,19 +63,19 @@ describe("shouldBlockMultiplayerAction", () => {
   });
 
   it("blocks a failed check when Retry is a real remedy", () => {
-    expect(shouldBlockMultiplayerAction(failed("network"), null, null)).toBe(
+    expect(shouldBlockMultiplayerAction(failed("network"), null, false)).toBe(
       true,
     );
-    expect(shouldBlockMultiplayerAction(failed("verify"), null, null)).toBe(
+    expect(shouldBlockMultiplayerAction(failed("verify"), null, false)).toBe(
       true,
     );
   });
 
   it("does not block failures no player-side action can change", () => {
-    expect(shouldBlockMultiplayerAction(failed("refused"), null, null)).toBe(
+    expect(shouldBlockMultiplayerAction(failed("refused"), null, false)).toBe(
       false,
     );
-    expect(shouldBlockMultiplayerAction(failed("parse"), null, null)).toBe(
+    expect(shouldBlockMultiplayerAction(failed("parse"), null, false)).toBe(
       false,
     );
   });
@@ -89,7 +89,7 @@ describe("shouldBlockMultiplayerAction with a session", () => {
       shouldBlockMultiplayerAction(
         healthyUpdate,
         { status: "signed-in" },
-        null,
+        false,
       ),
     ).toBe(false);
   });
@@ -102,7 +102,7 @@ describe("shouldBlockMultiplayerAction with a session", () => {
           status: "signed-out",
           reason: "steam-wedged",
         },
-        null,
+        false,
       ),
     ).toBe(true);
   });
@@ -114,43 +114,38 @@ describe("shouldBlockMultiplayerAction with a session", () => {
         {
           status: "signed-in",
         },
-        null,
+        false,
       ),
     ).toBe(true);
   });
 
   it("does not block on the web, where neither state exists", () => {
-    expect(shouldBlockMultiplayerAction(null, null, null)).toBe(false);
+    expect(shouldBlockMultiplayerAction(null, null, false)).toBe(false);
   });
 });
 
+// The parameter is ServerList.backendUnreachableConfirmed(), not the raw
+// backendReachable(): the states this rule must NOT gate -- nothing tried
+// yet, and one missed heartbeat over a still-serving cached list -- are
+// already false by the time they reach here. Those are pinned against the
+// real module in tests/client/ServerList.test.ts.
 describe("multiplayerAllowedForBackend", () => {
-  it("allows multiplayer before the first attempt has settled", () => {
-    // OPE-439's central rule: unknown is not unreachable. Every page is in
-    // this state for its first few hundred milliseconds, and gating there
-    // would lock every player out of multiplayer on every load.
-    expect(multiplayerAllowedForBackend(null)).toBe(true);
+  it("allows multiplayer unless an outage is confirmed", () => {
+    expect(multiplayerAllowedForBackend(false)).toBe(true);
   });
 
-  it("allows multiplayer when the API answered", () => {
-    // "Answered" and not "served a usable list": a site with no list at all
-    // still proves the backend is up.
-    expect(multiplayerAllowedForBackend(true)).toBe(true);
-  });
-
-  it("blocks multiplayer once an attempt has failed outright", () => {
-    expect(multiplayerAllowedForBackend(false)).toBe(false);
+  it("blocks multiplayer on a confirmed outage", () => {
+    expect(multiplayerAllowedForBackend(true)).toBe(false);
   });
 });
 
-describe("shouldBlockMultiplayerAction with backend reachability", () => {
+describe("shouldBlockMultiplayerAction with a backend outage", () => {
   it("blocks on the web, where both desktop states are absent", () => {
-    expect(shouldBlockMultiplayerAction(null, null, false)).toBe(true);
+    expect(shouldBlockMultiplayerAction(null, null, true)).toBe(true);
   });
 
-  it("does not block on an unknown or reachable backend", () => {
-    expect(shouldBlockMultiplayerAction(null, null, null)).toBe(false);
-    expect(shouldBlockMultiplayerAction(null, null, true)).toBe(false);
+  it("does not block while the backend is fine", () => {
+    expect(shouldBlockMultiplayerAction(null, null, false)).toBe(false);
   });
 
   it("still blocks on a desktop reason while the backend is fine", () => {
@@ -158,7 +153,7 @@ describe("shouldBlockMultiplayerAction with backend reachability", () => {
       shouldBlockMultiplayerAction(
         { status: "staged", bytes: 0, total: 0 },
         { status: "signed-in" },
-        true,
+        false,
       ),
     ).toBe(true);
   });
@@ -213,7 +208,7 @@ describe("shouldBlockJoin", () => {
   const healthy = { status: "current", bytes: 0, total: 0 } as const;
 
   it("allows a multiplayer join when both states are healthy", () => {
-    expect(shouldBlockJoin(mp, healthy, { status: "signed-in" }, true)).toBe(
+    expect(shouldBlockJoin(mp, healthy, { status: "signed-in" }, false)).toBe(
       false,
     );
   });
@@ -227,7 +222,7 @@ describe("shouldBlockJoin", () => {
           status: "signed-out",
           reason: "steam-wedged",
         },
-        true,
+        false,
       ),
     ).toBe(true);
   });
@@ -239,7 +234,7 @@ describe("shouldBlockJoin", () => {
         mp,
         { status: "staged", bytes: 0, total: 0 },
         { status: "signed-in" },
-        true,
+        false,
       ),
     ).toBe(true);
   });
@@ -250,28 +245,26 @@ describe("shouldBlockJoin", () => {
         solo,
         { status: "staged", bytes: 0, total: 0 },
         { status: "signed-out", reason: "steam-wedged" },
-        false,
+        true,
       ),
     ).toBe(false);
   });
 
   it("does not block on the web, where neither desktop state exists", () => {
-    expect(shouldBlockJoin(mp, null, null, true)).toBe(false);
-    // Nor before the heartbeat's first attempt has settled.
-    expect(shouldBlockJoin(mp, null, null, null)).toBe(false);
+    expect(shouldBlockJoin(mp, null, null, false)).toBe(false);
   });
 
   // OPE-439. The one input that gates on the web as well as on desktop.
-  it("blocks a multiplayer join while the backend is unreachable", () => {
-    expect(shouldBlockJoin(mp, null, null, false)).toBe(true);
-    expect(shouldBlockJoin(mp, healthy, { status: "signed-in" }, false)).toBe(
+  it("blocks a multiplayer join on a confirmed backend outage", () => {
+    expect(shouldBlockJoin(mp, null, null, true)).toBe(true);
+    expect(shouldBlockJoin(mp, healthy, { status: "signed-in" }, true)).toBe(
       true,
     );
   });
 
-  it("never blocks single-player on an unreachable backend", () => {
+  it("never blocks single-player on a backend outage", () => {
     // The desktop build's core offline promise: bot games run entirely
     // in-client, so an unreachable backend is no reason to refuse one.
-    expect(shouldBlockJoin(solo, null, null, false)).toBe(false);
+    expect(shouldBlockJoin(solo, null, null, true)).toBe(false);
   });
 });

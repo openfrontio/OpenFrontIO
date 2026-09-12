@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../src/client/ClientEnv";
 import {
-  backendReachable,
+  backendUnreachableConfirmed,
   ensureServerList,
   resetServerList,
+  retryServerList,
 } from "../src/client/ServerList";
 import { GameMapType, GameMode } from "../src/core/game/Game";
 import type {
@@ -98,11 +99,27 @@ function clickEveryButton(): number {
 }
 
 /** Announces a reachability change the way the heartbeat does. */
-async function announce(reachable: boolean): Promise<void> {
+async function announce(reachable: boolean, confirmed = false): Promise<void> {
   document.dispatchEvent(
-    new CustomEvent("backend-reachability", { detail: { reachable } }),
+    new CustomEvent("backend-reachability", {
+      detail: { reachable, confirmed },
+    }),
   );
   await selector.updateComplete;
+}
+
+/**
+ * Drives the real module through enough failed attempts that the outage is
+ * confirmed. Uses the manual retry for the second one so the test does not
+ * have to wait out the heartbeat's retry interval.
+ */
+async function confirmOutage(): Promise<void> {
+  fetchMock.mockImplementation(async () => {
+    throw new TypeError("network down");
+  });
+  await ensureServerList();
+  await retryServerList();
+  expect(backendUnreachableConfirmed()).toBe(true);
 }
 
 beforeEach(() => {
@@ -164,7 +181,7 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
     // multiplayer on a suspicion we have not even tested yet. Every page is
     // in this state for its first few hundred milliseconds.
     selector = await mountSelector();
-    expect(backendReachable()).toBe(null);
+    expect(backendUnreachableConfirmed()).toBe(false);
 
     expect(clickEveryButton()).toBeGreaterThan(0);
 
@@ -176,9 +193,26 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
     expect(messages).toEqual([]);
   });
 
-  it("dims and refuses every entry point once an attempt fails", async () => {
+  it("lets everything through after a SINGLE missed attempt", async () => {
+    // One timed-out heartbeat is a blip. The cached list is still serving,
+    // the next request would very likely work, and dimming every button for
+    // a retry interval over it -- with no Retry on the web to escape with --
+    // takes the game away for no good reason.
     selector = await mountSelector();
-    await announce(false);
+    await announce(false, false);
+
+    expect(
+      selector.querySelectorAll('button[aria-disabled="true"]').length,
+    ).toBe(0);
+    expect(clickEveryButton()).toBeGreaterThan(0);
+    expect(joinOpen).toHaveBeenCalled();
+    expect(hostOpen).toHaveBeenCalled();
+    expect(messages).toEqual([]);
+  });
+
+  it("dims and refuses every entry point once the outage is confirmed", async () => {
+    selector = await mountSelector();
+    await announce(false, true);
 
     expect(
       selector.querySelectorAll('button[aria-disabled="true"]').length,
@@ -192,18 +226,18 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
 
   it("says why, on the web, where there is no status bar to read", async () => {
     selector = await mountSelector();
-    await announce(false);
+    await announce(false, true);
 
     clickEveryButton();
 
     // Refusing silently would look like a broken button, and unlike the
     // desktop gates there is nothing else on screen naming the reason.
-    expect(messages).toContain("error_modal.backend_unreachable");
+    expect(messages).toContain("common.backend_unreachable");
   });
 
   it("re-enables everything when the backend comes back", async () => {
     selector = await mountSelector();
-    await announce(false);
+    await announce(false, true);
     clickEveryButton();
     expect(joinOpen).not.toHaveBeenCalled();
 
@@ -225,7 +259,7 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
         open: () => void;
       }
     ).open = soloOpen;
-    await announce(false);
+    await announce(false, true);
 
     clickEveryButton();
 
@@ -235,16 +269,12 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
     expect(soloOpen).toHaveBeenCalled();
   });
 
-  it("gates a selector that mounted after the attempt had already failed", async () => {
+  it("gates a selector that mounted after the outage was already confirmed", async () => {
     // The seed half. No "backend-reachability" event is dispatched anywhere
-    // below: the only one this document will ever see fired while nothing
+    // below: the only ones this document will ever see fired while nothing
     // was listening, so the accessor is the sole path by which the selector
     // can know. This is OPE-396's bug, on a new signal.
-    fetchMock.mockImplementation(async () => {
-      throw new TypeError("network down");
-    });
-    await ensureServerList();
-    expect(backendReachable()).toBe(false);
+    await confirmOutage();
 
     selector = await mountSelector();
 
@@ -260,7 +290,7 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
     // The control for the seed: a 404 is an answer, so a site with no list
     // at all is still a reachable backend.
     await ensureServerList();
-    expect(backendReachable()).toBe(true);
+    expect(backendUnreachableConfirmed()).toBe(false);
 
     selector = await mountSelector();
 
