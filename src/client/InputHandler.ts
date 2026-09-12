@@ -1243,10 +1243,13 @@ export class InputHandler {
   private clickHold() {
     // for redefining valid ghosts
     const isValidTarget = () => {
-      if (this.uiState.ghostStructure === null) {
-        return false;
-      } else {
-        return true;
+      switch (this.uiState.ghostStructure) {
+        case UnitType.AtomBomb:
+        case UnitType.HydrogenBomb:
+        // MIRV seemed excessive to click hold.
+          return true;
+        default:
+          return false;
       }
     };
 
