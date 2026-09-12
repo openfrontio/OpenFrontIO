@@ -1939,11 +1939,19 @@ export async function setLobbyListed(
 // self-owned id and returns it.
 export async function createLobby(): Promise<GameInfo> {
   // A new game needs a server that takes new games on this build: ask the
-  // API (multi-server v2), falling back to the page's own server. A page
-  // whose build no longer has one creates against its own values and fails
-  // as it does today; the "update available" prompt the lobby list raises
-  // is what moves the player forward.
-  await ensureServerList();
+  // API (multi-server v2), falling back to the page's own server. When the
+  // list says nothing runs this build any more, creating against the page's
+  // own (by then stale) host would at best mint a lobby on a server that is
+  // going away, so stop here instead. By the time Create is clicked the
+  // lobby socket has almost always raised the "update available" prompt
+  // already; a Create that gets there first fails like any other failed
+  // request, and the caller's own failure path (re-enabling the button,
+  // clearing the share link) runs as usual.
+  if ((await ensureServerList()) === "outdated") {
+    throw new Error(
+      "createLobby: this build has no server; a newer version is available",
+    );
+  }
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();
