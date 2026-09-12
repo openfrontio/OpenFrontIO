@@ -226,6 +226,56 @@ describe("SoundEffectController", () => {
     expect(played).toEqual(["build-train-station"]);
   });
 
+  it("forgets structures that vanish without going inactive", () => {
+    const me = {};
+    game.myPlayer = () => me;
+    game.inSpawnPhase = () => false;
+    const city = {
+      id: () => 1,
+      type: () => UnitType.City,
+      isActive: () => true,
+      reachedTarget: () => false,
+      createdAt: () => 0,
+      owner: () => me,
+      hasTrainStation: () => false,
+    };
+    tickWithUnits(city);
+    const tracked = (controller as any).hadTrainStation as Map<number, boolean>;
+    expect(tracked.size).toBe(1);
+
+    // Out of view, and no inactive update ever arrives for it.
+    for (let i = 0; i < 120; i++) tickWithUnits();
+
+    expect(tracked.size).toBe(0);
+  });
+
+  it("does not replay the cue for a structure that comes back with a station", () => {
+    // The reason handleTrainStation tests `prev === false` and not a falsy
+    // value: a pruned structure reads as undefined when it returns, which has
+    // to mean "first seen" and stay silent, not "was false" and fire.
+    const me = {};
+    game.myPlayer = () => me;
+    game.inSpawnPhase = () => false;
+    let hasStation = false;
+    const city = {
+      id: () => 1,
+      type: () => UnitType.City,
+      isActive: () => true,
+      reachedTarget: () => false,
+      createdAt: () => 0,
+      owner: () => me,
+      hasTrainStation: () => hasStation,
+    };
+    tickWithUnits(city);
+    for (let i = 0; i < 120; i++) tickWithUnits();
+    expect((controller as any).hadTrainStation.size).toBe(0);
+
+    hasStation = true;
+    tickWithUnits(city);
+
+    expect(played).toEqual([]);
+  });
+
   it("stays silent for a structure first seen with a station already", () => {
     const me = {};
     game.myPlayer = () => me;
