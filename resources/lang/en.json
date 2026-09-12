@@ -468,6 +468,7 @@
   "common": {
     "available": "Available",
     "back": "Back",
+    "backend_unreachable": "Can't reach the OpenFront servers. Check your connection and try again.",
     "cancel": "Cancel",
     "cap_label": "Cap",
     "cap_tooltip": "Recipient’s remaining capacity",
@@ -579,6 +580,10 @@
     "steam_rejected": "Steam couldn't confirm your account. Restarting Steam usually fixes this.",
     "steam_unavailable": "Steam isn't running. Start Steam to play online.",
     "steam_wedged": "Steam couldn't verify your session. Restarting Steam usually fixes this."
+  },
+  "desktop_status": {
+    "offline": "Offline: can't reach the OpenFront servers",
+    "retry": "Retry"
   },
   "desktop_update": {
     "blocked": "A Steam update is required for the latest version",

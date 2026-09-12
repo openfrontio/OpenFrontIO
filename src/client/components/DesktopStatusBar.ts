@@ -10,23 +10,45 @@ import {
   type DesktopSessionState,
   type DesktopUpdateState,
 } from "../DesktopShell";
+import {
+  backendUnreachableConfirmed,
+  retryServerList,
+  type BackendReachabilityDetail,
+} from "../ServerList";
 import { translateText } from "../Utils";
 
 const WIGGLE_CLASS = "animate-bounce";
 
 /**
- * Which state the single bottom slot shows. Session takes precedence over
- * every update state -- the update's remedy is a reload, which leads straight
- * back to the same wall, and a reload re-runs the update flow anyway. One
- * rule, deliberately, rather than a precedence matrix.
+ * Which state the single bottom slot shows, in one fixed order rather than a
+ * precedence matrix:
+ *
+ *   session > reachability > update
+ *
+ * Session outranks everything because the update's remedy is a reload, which
+ * leads straight back to the same wall, and a reload re-runs the update flow
+ * anyway. Reachability outranks the update because an update failure while
+ * the backend is unreachable is a SYMPTOM of it: "Couldn't download the
+ * update -- Retry" points at a button that provably cannot work until the
+ * network comes back, while "Offline" names the actual cause.
+ *
+ * `backendOutage` is the DEBOUNCED signal
+ * (ServerList.backendUnreachableConfirmed()), and it is only ever true on
+ * desktop -- the bar renders nothing on the web, so the component never
+ * tracks it there. Nothing is shown while the heartbeat is merely unsettled
+ * or has missed once: there is no neutral state in this bar to hang a
+ * "Checking…" on, and inventing one would put a strip across the bottom of a
+ * perfectly healthy game every time a single request timed out.
  */
 export function barSource(
   update: DesktopUpdateState | null,
   session: DesktopSessionState | null,
-): "session" | "update" | "none" {
+  backendOutage: boolean,
+): "session" | "reachability" | "update" | "none" {
   if (session !== null && !multiplayerAllowedForSession(session)) {
     return "session";
   }
+  if (backendOutage) return "reachability";
   if (update === null) return "none";
   if (update.status === "current" || update.status === "checking") {
     return "none";
@@ -36,16 +58,19 @@ export function barSource(
 
 /**
  * Bottom-of-screen status bar for the Steam shell: runtime-update
- * progress/action, or a missing session and its remedy, whichever applies.
- * One bottom slot, two kinds of status, so the two can never stack.
+ * progress/action, a missing session and its remedy, or a confirmed backend
+ * outage and its Retry, whichever applies. One bottom slot, three kinds of
+ * status, so they can never stack -- barSource above picks exactly one.
  *
  * Mounted in index.html as a direct <body> child with `in-[.in-game]:hidden`,
  * so "we do not update mid-game" is a property of the markup rather than of
  * logic here: the bar is simply off-screen during a match and reappears at the
  * menu in whatever state it reached.
  *
- * Renders nothing on the web, and nothing on a desktop shell too old to expose
- * the update bridge.
+ * Renders nothing on the web. On a desktop shell too old to expose the update
+ * bridge it still renders the session and outage states, both of which are
+ * the client's own signals and need no bridge; only the update half goes
+ * quiet there.
  */
 @customElement("desktop-status-bar")
 export class DesktopStatusBar extends LitElement {
@@ -57,11 +82,23 @@ export class DesktopStatusBar extends LitElement {
 
   @state() private updateState: DesktopUpdateState | null = null;
   @state() private sessionState: DesktopSessionState | null = null;
+  @state() private backendOutage = false;
+  // True from a Retry press until that attempt settles, so the button cannot
+  // be pressed again while its own request is still out. ServerList throttles
+  // and dedupes underneath, but a button that keeps accepting clicks and
+  // visibly does nothing reads as broken.
+  @state() private retrying = false;
 
   private unsubscribe: (() => void) | null = null;
 
   private onSessionState = (e: Event) => {
     this.sessionState = (e as CustomEvent<DesktopSessionState>).detail;
+  };
+
+  private onBackendReachability = (e: Event) => {
+    this.backendOutage = (
+      e as CustomEvent<BackendReachabilityDetail>
+    ).detail.confirmed;
   };
 
   // The bar's own element, so wiggle() can restart the animation with a real
@@ -93,6 +130,21 @@ export class DesktopStatusBar extends LitElement {
     // startup, quite possibly before this element upgrades.
     if (isDesktopShell()) this.sessionState = getDesktopSessionState();
     document.addEventListener("desktop-session-state", this.onSessionState);
+
+    // Reachability is subscribed ONLY on desktop, unlike the entry-point
+    // components that gate on it. The heartbeat runs on the web too and
+    // dispatches the same event, but this bar renders nothing there -- a web
+    // player has the page's own chrome and no status bar to put an offline
+    // strip in. Seeded first, for the same reason as the session above: the
+    // heartbeat starts in Main's initialize and may well have settled before
+    // this element upgrades.
+    if (isDesktopShell()) {
+      this.backendOutage = backendUnreachableConfirmed();
+      document.addEventListener(
+        "backend-reachability",
+        this.onBackendReachability,
+      );
+    }
   }
 
   disconnectedCallback(): void {
@@ -100,6 +152,10 @@ export class DesktopStatusBar extends LitElement {
     this.unsubscribe?.();
     this.unsubscribe = null;
     document.removeEventListener("desktop-session-state", this.onSessionState);
+    document.removeEventListener(
+      "backend-reachability",
+      this.onBackendReachability,
+    );
     window.clearTimeout(this.wiggleTimer);
   }
 
@@ -124,10 +180,13 @@ export class DesktopStatusBar extends LitElement {
   }
 
   render() {
-    const source = barSource(this.updateState, this.sessionState);
+    const source = barSource(
+      this.updateState,
+      this.sessionState,
+      this.backendOutage,
+    );
     if (source === "none") return nothing;
     const update = this.updateState;
-    const session = this.sessionState;
 
     return html`
       <div
@@ -140,11 +199,7 @@ export class DesktopStatusBar extends LitElement {
       >
         <div class="flex-1 min-w-0">
           <div class="text-sm font-medium truncate">
-            ${source === "session" && session !== null
-              ? this.sessionLabel(session)
-              : update !== null
-                ? this.label(update)
-                : ""}
+            ${this.slotLabel(source)}
           </div>
           ${source === "update" && update?.status === "downloading"
             ? html`<div
@@ -157,13 +212,70 @@ export class DesktopStatusBar extends LitElement {
               </div>`
             : nothing}
         </div>
-        ${source === "session" && session !== null
-          ? this.sessionAction(session)
-          : update !== null
-            ? this.action(update)
-            : nothing}
+        ${this.slotAction(source)}
       </div>
     `;
+  }
+
+  /** The one line of text for whichever source won barSource. */
+  private slotLabel(source: "session" | "reachability" | "update"): string {
+    if (source === "session") {
+      return this.sessionState === null
+        ? ""
+        : this.sessionLabel(this.sessionState);
+    }
+    if (source === "reachability") {
+      return translateText("desktop_status.offline");
+    }
+    return this.updateState === null ? "" : this.label(this.updateState);
+  }
+
+  /** That source's remedy, if it has one. */
+  private slotAction(source: "session" | "reachability" | "update") {
+    if (source === "session") {
+      return this.sessionState === null
+        ? nothing
+        : this.sessionAction(this.sessionState);
+    }
+    if (source === "reachability") return this.reachabilityAction();
+    return this.updateState === null ? nothing : this.action(this.updateState);
+  }
+
+  /**
+   * Retry for the offline state: ask the server list to try the API again
+   * right now rather than waiting out the heartbeat's retry interval.
+   *
+   * Nothing is rendered from the result. A successful attempt flips
+   * backendReachable() to true, which dispatches "backend-reachability",
+   * which is what makes this whole bar disappear -- so the button's own
+   * feedback is the bar going away. A failed one leaves the bar as it is,
+   * which is also correct.
+   */
+  private reachabilityAction() {
+    return html`<button
+      class="shrink-0 px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius
+             text-sm font-medium uppercase tracking-wider
+             disabled:opacity-50 disabled:cursor-not-allowed
+             disabled:hover:bg-malibu-blue"
+      ?disabled=${this.retrying}
+      @click=${() => this.onRetryClick()}
+    >
+      ${translateText("desktop_status.retry")}
+    </button>`;
+  }
+
+  private onRetryClick(): void {
+    if (this.retrying) return;
+    this.retrying = true;
+    retryServerList()
+      .catch((err: unknown) => {
+        // retryServerList never rejects; belt and braces, so a change there
+        // cannot surface as an unhandled rejection from a click handler.
+        console.error("desktop-status-bar: server list retry failed", err);
+      })
+      .finally(() => {
+        this.retrying = false;
+      });
   }
 
   private label(s: DesktopUpdateState) {

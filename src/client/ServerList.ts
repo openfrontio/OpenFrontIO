@@ -30,7 +30,9 @@ import { isReplayShellHost } from "./VersionedReplay";
 // the client behaves exactly as it does today until the API serves a list.
 //
 // The heartbeat doubles as the client's backend-reachability probe
-// (backendReachable(), the "backend-reachability" document event).
+// (backendReachable() for the raw per-attempt answer,
+// backendUnreachableConfirmed() for the debounced one the UI gates on, and
+// the "backend-reachability" document event carrying both).
 
 // Bounded so an unreachable API costs one short wait, after which the
 // bootstrap values take over.
@@ -39,6 +41,17 @@ const FETCH_TIMEOUT_MS = 4_000;
 // background, and how soon a failed attempt is retried.
 const REFRESH_INTERVAL_MS = 30_000;
 const RETRY_INTERVAL_MS = 10_000;
+// How many attempts in a row must go unanswered before the UI calls it an
+// outage. One failure is a blip -- a 4s timeout on a flaky connection, a
+// worker restart mid-beat, a proxy hiccup -- and the cached list keeps
+// serving straight through it, so gating multiplayer on the first one would
+// take the game away from a player whose next request would have worked. Two
+// in a row, which take a retry interval to accumulate, is evidence.
+const CONFIRM_OUTAGE_AFTER_FAILURES = 2;
+// Floor between player-initiated retries, so someone leaning on the button
+// cannot outpace the request it started. Short enough that a deliberate
+// second press still works, which is the whole point of a manual retry.
+const MANUAL_RETRY_MIN_INTERVAL_MS = 1_000;
 
 export type ServerListStatus =
   // The list is loaded and a server for this build was picked.
@@ -66,6 +79,14 @@ let pickedLetter: string | null = null;
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let polling = false;
 let reachable: boolean | null = null;
+// Consecutive unanswered attempts, reset by any answer. Only this, and not
+// `reachable` alone, decides backendUnreachableConfirmed().
+let consecutiveFailures = 0;
+// The most recent player-initiated retry, for the throttle in
+// retryServerList(). Holds the promise so a press inside the window can hand
+// back the same attempt rather than start or skip one.
+let lastManualRetry: { at: number; result: Promise<ServerListStatus> } | null =
+  null;
 let warnedMalformed = false;
 
 /** Test-only. */
@@ -76,6 +97,8 @@ export function resetServerList(): void {
   lastAttempt = null;
   pickedLetter = null;
   reachable = null;
+  consecutiveFailures = 0;
+  lastManualRetry = null;
   warnedMalformed = false;
   ClientEnv.applyServerList(null, null);
 }
@@ -104,30 +127,85 @@ export function serverListUrl(site: string): string {
 }
 
 /**
- * Whether the API answered our last attempt at all — any HTTP status, a 404
+ * Whether the API answered our LAST attempt at all — any HTTP status, a 404
  * included. Null until the first attempt settles, false on a timeout or a
  * network error. "Answered" is not "served a usable list": a site with no
- * list is a reachable backend. Changes are announced on the document as
- * "backend-reachability" with `{ reachable }`, so UI can subscribe without
- * polling this.
+ * list is a reachable backend.
+ *
+ * This is the raw signal, and it is deliberately twitchy: one timed-out
+ * heartbeat flips it. Anything that takes something AWAY from the player
+ * should read backendUnreachableConfirmed() instead.
  */
 export function backendReachable(): boolean | null {
   return reachable;
 }
 
-function setReachable(next: boolean, cause?: unknown): void {
-  if (next === reachable) return;
-  const first = reachable === null;
-  reachable = next;
+/**
+ * Whether the backend is confirmed down, rather than having merely missed
+ * once.
+ *
+ * The distinction is the whole reason this exists. The heartbeat's job is to
+ * keep a list warm, and it is expected to miss occasionally — a 4s timeout on
+ * a flaky connection, a worker restart mid-beat, a proxy hiccup — while the
+ * cached list carries on serving and nothing about the player's session is
+ * actually broken. Gating multiplayer on the first miss would dim every
+ * button and refuse every join for at least a retry interval over a blip
+ * whose next request would have succeeded, and on the web there is not even
+ * a Retry to escape it with.
+ *
+ * So: false until CONFIRM_OUTAGE_AFTER_FAILURES attempts in a row have gone
+ * unanswered, which takes a retry interval to accumulate. Any answer at all
+ * resets the count, a player-initiated retry counts like any other attempt,
+ * and this is never true before the first attempt settles — unknown is not
+ * unreachable.
+ *
+ * Changes to either value are announced on the document as
+ * "backend-reachability" with `{ reachable, confirmed }`, so UI can subscribe
+ * rather than poll. A consumer needs BOTH the event and the accessor: the
+ * event is one-shot, so a component mounting after the state settles would
+ * otherwise never learn it and would gate on its default forever — OPE-396's
+ * bug, and the reason getDesktopUpdateState() exists in the same shape.
+ */
+export function backendUnreachableConfirmed(): boolean {
+  return (
+    reachable === false && consecutiveFailures >= CONFIRM_OUTAGE_AFTER_FAILURES
+  );
+}
+
+/** The detail carried by the "backend-reachability" document event. */
+export interface BackendReachabilityDetail {
+  reachable: boolean;
+  confirmed: boolean;
+}
+
+/**
+ * Records how one attempt ended, and announces it if anything a consumer can
+ * see has changed.
+ *
+ * Both fields are compared, not just `reachable`: the second failure in a row
+ * leaves `reachable` false exactly as the first did while flipping
+ * `confirmed`, and that transition is the one every gate acts on.
+ */
+function recordAttempt(answered: boolean, cause?: unknown): void {
+  const wasReachable = reachable;
+  const wasConfirmed = backendUnreachableConfirmed();
+  consecutiveFailures = answered ? 0 : consecutiveFailures + 1;
+  reachable = answered;
+  const confirmed = backendUnreachableConfirmed();
+  if (wasReachable === answered && wasConfirmed === confirmed) return;
   // Only transitions are logged: the heartbeat runs forever and an offline
   // player must not get a console line every RETRY_INTERVAL_MS.
-  if (!next) {
+  if (!answered && wasReachable !== false) {
     console.warn("Server list API unreachable, using known values", cause);
-  } else if (!first) {
+  } else if (!answered && confirmed && !wasConfirmed) {
+    console.warn("Server list API still unreachable, treating as offline");
+  } else if (answered && wasReachable === false) {
     console.info("Server list API reachable again");
   }
   document.dispatchEvent(
-    new CustomEvent("backend-reachability", { detail: { reachable: next } }),
+    new CustomEvent<BackendReachabilityDetail>("backend-reachability", {
+      detail: { reachable: answered, confirmed },
+    }),
   );
 }
 
@@ -140,10 +218,10 @@ async function fetchServerList(site: string): Promise<ServerList | null> {
     });
   } catch (e) {
     // Timed out, offline, DNS, TLS: nothing answered.
-    setReachable(false, e);
+    recordAttempt(false, e);
     return null;
   }
-  setReachable(true);
+  recordAttempt(true);
   // A site nobody has registered under answers 404: reachable, no list.
   if (!res.ok) return null;
   try {
@@ -290,6 +368,51 @@ export async function ensureServerList(): Promise<ServerListStatus> {
     // The contract is "never throws": whatever went wrong, the page's own
     // values are still a complete answer.
     console.warn("Server list refresh failed, using page values", e);
+    return "fallback";
+  }
+}
+
+/**
+ * Try the API again right now, at the player's request: the Retry on the
+ * desktop status bar's offline state (OPE-439).
+ *
+ * Deliberately ignores the heartbeat's retry interval. That interval exists
+ * to stop TIMER-driven callers hammering a down API between beats, and a
+ * person pressing a button is not one of those -- holding their click for up
+ * to RETRY_INTERVAL_MS would make the button look broken in exactly the
+ * situation it exists for.
+ *
+ * It does have a floor of its own, MANUAL_RETRY_MIN_INTERVAL_MS. Inside that
+ * window a second press is a no-op that hands back the same promise, so a
+ * player leaning on the button cannot outpace the request it started. Past
+ * the throttle, fetchOnce() still dedupes: a press landing on top of a
+ * heartbeat beat joins that attempt rather than starting a second.
+ *
+ * A retry that fails counts towards the outage confirmation like any other
+ * attempt -- pressing Retry against a backend that is genuinely down should
+ * settle the question sooner, not reset it.
+ *
+ * Never throws, for the same reason ensureServerList does not.
+ */
+export function retryServerList(): Promise<ServerListStatus> {
+  const now = Date.now();
+  if (
+    lastManualRetry !== null &&
+    now - lastManualRetry.at < MANUAL_RETRY_MIN_INTERVAL_MS
+  ) {
+    return lastManualRetry.result;
+  }
+  const result = runManualRetry();
+  lastManualRetry = { at: now, result };
+  return result;
+}
+
+async function runManualRetry(): Promise<ServerListStatus> {
+  try {
+    await fetchOnce();
+    return apply();
+  } catch (e) {
+    console.warn("Server list retry failed, using page values", e);
     return "fallback";
   }
 }

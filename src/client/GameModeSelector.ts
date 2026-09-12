@@ -36,6 +36,10 @@ import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
+import {
+  backendUnreachableConfirmed,
+  type BackendReachabilityDetail,
+} from "./ServerList";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { UsernameInput } from "./UsernameInput";
 import {
@@ -44,6 +48,7 @@ import {
   getSecondsUntilServerTimestamp,
   reloadForUpdate,
   renderDuration,
+  showToast,
   translateText,
 } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
@@ -61,27 +66,87 @@ const TUTORIAL_ACTION =
 const TUTORIAL_CARD_MAX_GAMES = 5;
 
 /**
+ * Whether multiplayer should be available given what we know about the
+ * backend (OPE-439).
+ *
+ * The parameter is ServerList.backendUnreachableConfirmed(), NOT the raw
+ * backendReachable(), and the difference is load-bearing. That accessor is
+ * already false for the two states this must never gate:
+ *
+ *   - before the first attempt settles. A page is in that state for its first
+ *     few hundred milliseconds, and gating there would lock every player out
+ *     of multiplayer on every load over a suspicion we have not tested yet.
+ *   - after a single missed heartbeat. The cached list is still serving and
+ *     the next request would very likely have worked; taking the game away
+ *     for a retry interval over one blip is worse than the blip.
+ *
+ * It is also false when the API answered at all -- a 404 for a site with no
+ * list is a reachable backend.
+ */
+export function multiplayerAllowedForBackend(backendOutage: boolean): boolean {
+  return !backendOutage;
+}
+
+/**
  * Whether a multiplayer entry point should refuse to act. Exported for tests
  * and kept free of component state so the rule is checkable in isolation.
- * A null state means that bridge is absent (the web build), so it gates
- * nothing; either state alone is enough to block.
+ * A null update/session means that bridge is absent (the web build), so it
+ * gates nothing; any one of the three alone is enough to block.
+ *
+ * `backendOutage` is the only one of the three that also applies on the web,
+ * which is why it is a required parameter rather than an optional one: an
+ * entry point that forgets to pass it would silently stay ungated, and a
+ * compile error is the cheapest way to notice.
  */
 export function shouldBlockMultiplayerAction(
   update: DesktopUpdateState | null,
   session: DesktopSessionState | null,
+  backendOutage: boolean,
 ): boolean {
   if (update !== null && !multiplayerAllowed(update)) return true;
   if (session !== null && !multiplayerAllowedForSession(session)) return true;
+  if (!multiplayerAllowedForBackend(backendOutage)) return true;
   return false;
 }
 
 /**
- * Whether the desktop gate applies to a given join at all. Single-player runs
- * entirely in-client and a replay simulates from an archived record, so
- * neither needs a session or an up-to-date build. getTurnstileToken in
- * Main.ts exempts the same pair (alongside two conditions irrelevant here),
- * and calls this so the two cannot drift. Exported for tests and kept free of
- * component state, like shouldBlockMultiplayerAction above.
+ * Tells the player why a multiplayer action was refused.
+ *
+ * On desktop the status bar is already showing the reason and its remedy, so
+ * the click lands there as a wiggle rather than as a message that would say
+ * the same thing twice. The web has no status bar, so an unreachable backend
+ * would refuse in complete silence -- which reads as a broken button -- and
+ * gets a transient message instead.
+ *
+ * Only reachability needs the web half: every other reason to refuse here is
+ * desktop-only, and on desktop the bar always carries it.
+ */
+export function reportMultiplayerRefusal(backendOutage: boolean): void {
+  // Optional-call the method rather than dispatching an event: the bar is a
+  // sibling custom element that may not have upgraded yet, and `?.wiggle?.()`
+  // degrades to a silent no-op in that case instead of firing an event with
+  // no listener.
+  (
+    document.querySelector("desktop-status-bar") as
+      | (HTMLElement & { wiggle?: () => void })
+      | null
+  )?.wiggle?.();
+  // Keyed on the shell, not on the element: <desktop-status-bar> is in
+  // index.html on every build and simply renders nothing on the web, so its
+  // presence proves nothing about whether the player can see a reason.
+  if (!isDesktopShell() && backendOutage) {
+    showToast(translateText("common.backend_unreachable"), "red");
+  }
+}
+
+/**
+ * Whether the multiplayer gate applies to a given join at all. Single-player
+ * runs entirely in-client and a replay simulates from an archived record, so
+ * neither needs a session, an up-to-date build, or a backend that is up.
+ * getTurnstileToken in Main.ts exempts the same pair (alongside two
+ * conditions irrelevant here), and calls this so the two cannot drift.
+ * Exported for tests and kept free of component state, like
+ * shouldBlockMultiplayerAction above.
  */
 export function joinIsGateable(lobby: JoinLobbyEvent): boolean {
   return (
@@ -92,16 +157,22 @@ export function joinIsGateable(lobby: JoinLobbyEvent): boolean {
 
 /**
  * The whole gate decision for one join, as a pure function so it is testable
- * without mounting Main's client. Main adds only the shell check and the
- * status-bar wiggle around it.
+ * without mounting Main's client. Main adds only the shell check (which
+ * decides whether the two desktop states are even read) and the refusal
+ * feedback around it.
+ *
+ * Named for the join rather than for the desktop since OPE-439: the update
+ * and session halves are still desktop-only, but an unreachable backend
+ * refuses a join on the web too.
  */
-export function shouldBlockDesktopJoin(
+export function shouldBlockJoin(
   lobby: JoinLobbyEvent,
   update: DesktopUpdateState | null,
   session: DesktopSessionState | null,
+  backendOutage: boolean,
 ): boolean {
   if (!joinIsGateable(lobby)) return false;
-  return shouldBlockMultiplayerAction(update, session);
+  return shouldBlockMultiplayerAction(update, session, backendOutage);
 }
 
 @customElement("game-mode-selector")
@@ -113,6 +184,10 @@ export class GameModeSelector extends LitElement {
   @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
   @state() private desktopSessionState: DesktopSessionState | null = null;
+  // The DEBOUNCED outage signal, not the raw per-attempt one: see
+  // multiplayerAllowedForBackend for why one missed heartbeat must not dim
+  // these buttons.
+  @state() private backendOutage = false;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
@@ -196,6 +271,15 @@ export class GameModeSelector extends LitElement {
       "desktop-session-state",
       this.onDesktopSessionState,
     );
+    // Seeded unconditionally, unlike the two above: the backend is just as
+    // unreachable on the web, and the heartbeat's first attempts often settle
+    // before this element exists (it is started in Main's initialize, we are
+    // rendered by <play-page> later), so the event alone would miss them.
+    this.backendOutage = backendUnreachableConfirmed();
+    document.addEventListener(
+      "backend-reachability",
+      this.onBackendReachability,
+    );
     document.addEventListener("join-lobby", this.onJoinLobby);
     document.addEventListener("leave-lobby", this.onLeaveLobby);
     // Pick up the current value in case username-input validated before us.
@@ -221,6 +305,10 @@ export class GameModeSelector extends LitElement {
     document.removeEventListener(
       "desktop-session-state",
       this.onDesktopSessionState,
+    );
+    document.removeEventListener(
+      "backend-reachability",
+      this.onBackendReachability,
     );
     document.removeEventListener("join-lobby", this.onJoinLobby);
     document.removeEventListener("leave-lobby", this.onLeaveLobby);
@@ -262,6 +350,12 @@ export class GameModeSelector extends LitElement {
 
   private onDesktopSessionState = (e: Event) => {
     this.desktopSessionState = (e as CustomEvent<DesktopSessionState>).detail;
+  };
+
+  private onBackendReachability = (e: Event) => {
+    this.backendOutage = (
+      e as CustomEvent<BackendReachabilityDetail>
+    ).detail.confirmed;
   };
 
   public stop() {
@@ -416,8 +510,8 @@ export class GameModeSelector extends LitElement {
   }
 
   /**
-   * Refuses the action and draws attention to the update bar. Returns true when
-   * the caller should stop.
+   * Refuses the action and tells the player why. Returns true when the caller
+   * should stop.
    *
    * Deliberately NOT implemented with the `disabled` attribute the way
    * renderSmallActionCard handles invalid input: a disabled control (and
@@ -425,28 +519,21 @@ export class GameModeSelector extends LitElement {
    * trigger the wiggle. The button stays clickable and merely stops being
    * actionable.
    */
-  private blockedByUpdate(): boolean {
+  private blockedFromMultiplayer(): boolean {
     if (
       !shouldBlockMultiplayerAction(
         this.desktopUpdateState,
         this.desktopSessionState,
+        this.backendOutage,
       )
     )
       return false;
-    // Optional-call the method rather than dispatching an event: the bar is a
-    // sibling custom element that may not have upgraded yet, and `?.wiggle?.()`
-    // degrades to a silent no-op in that case instead of firing an event with
-    // no listener.
-    (
-      document.querySelector("desktop-status-bar") as
-        | (HTMLElement & { wiggle?: () => void })
-        | null
-    )?.wiggle?.();
+    reportMultiplayerRefusal(this.backendOutage);
     return true;
   }
 
   private openRankedMenu = () => {
-    if (this.blockedByUpdate()) return;
+    if (this.blockedFromMultiplayer()) return;
     if (!this.validateUsername()) return;
     window.showPage?.("page-ranked");
   };
@@ -470,13 +557,13 @@ export class GameModeSelector extends LitElement {
   };
 
   private openHostLobby = () => {
-    if (this.blockedByUpdate()) return;
+    if (this.blockedFromMultiplayer()) return;
     if (!this.validateUsername()) return;
     (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
   };
 
   private openJoinLobby = () => {
-    if (this.blockedByUpdate()) return;
+    if (this.blockedFromMultiplayer()) return;
     if (!this.validateUsername()) return;
     (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
   };
@@ -559,6 +646,7 @@ export class GameModeSelector extends LitElement {
       shouldBlockMultiplayerAction(
         this.desktopUpdateState,
         this.desktopSessionState,
+        this.backendOutage,
       );
     return html`
       <button
@@ -615,6 +703,7 @@ export class GameModeSelector extends LitElement {
       blocked: shouldBlockMultiplayerAction(
         this.desktopUpdateState,
         this.desktopSessionState,
+        this.backendOutage,
       ),
       viewerTrusted: this.viewerTrusted,
       onClick: () => this.validateAndJoin(lobby),
@@ -622,7 +711,7 @@ export class GameModeSelector extends LitElement {
   }
 
   private validateAndJoin(lobby: PublicGameInfo) {
-    if (this.blockedByUpdate()) return;
+    if (this.blockedFromMultiplayer()) return;
     if (!this.validateUsername()) return;
     if (!canJoinTrustedLobby(lobby, this.viewerTrusted)) {
       this.showTrustRequired = true;

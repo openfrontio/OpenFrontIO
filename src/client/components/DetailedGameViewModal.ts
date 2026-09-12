@@ -12,10 +12,17 @@ import {
   type DesktopSessionState,
   type DesktopUpdateState,
 } from "../DesktopShell";
-import { shouldBlockMultiplayerAction } from "../GameModeSelector";
+import {
+  reportMultiplayerRefusal,
+  shouldBlockMultiplayerAction,
+} from "../GameModeSelector";
 import { JoinLobbyModal } from "../JoinLobbyModal";
 import { PublicLobbySocket } from "../LobbySocket";
 import { JoinLobbyEvent } from "../Main";
+import {
+  backendUnreachableConfirmed,
+  type BackendReachabilityDetail,
+} from "../ServerList";
 import { UsernameInput } from "../UsernameInput";
 import {
   calculateServerTimeOffset,
@@ -119,6 +126,10 @@ export class DetailedGameViewModal extends BaseModal {
   @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
   @state() private desktopSessionState: DesktopSessionState | null = null;
+  // The DEBOUNCED outage signal, not the raw per-attempt one: see
+  // multiplayerAllowedForBackend for why one missed heartbeat must not gate
+  // this browser's join.
+  @state() private backendOutage = false;
 
   private serverTimeOffset = 0;
   private countdownTimer: number | null = null;
@@ -190,6 +201,13 @@ export class DetailedGameViewModal extends BaseModal {
       "desktop-session-state",
       this.onDesktopSessionState,
     );
+    // Seeded unconditionally, unlike the two above: an unreachable backend
+    // refuses a join on the web as well as on desktop (OPE-439).
+    this.backendOutage = backendUnreachableConfirmed();
+    document.addEventListener(
+      "backend-reachability",
+      this.onBackendReachability,
+    );
   }
 
   disconnectedCallback() {
@@ -201,6 +219,10 @@ export class DetailedGameViewModal extends BaseModal {
     document.removeEventListener(
       "desktop-session-state",
       this.onDesktopSessionState,
+    );
+    document.removeEventListener(
+      "backend-reachability",
+      this.onBackendReachability,
     );
     this.onClose();
     super.disconnectedCallback();
@@ -225,6 +247,12 @@ export class DetailedGameViewModal extends BaseModal {
 
   private onDesktopSessionState = (e: Event) => {
     this.desktopSessionState = (e as CustomEvent<DesktopSessionState>).detail;
+  };
+
+  private onBackendReachability = (e: Event) => {
+    this.backendOutage = (
+      e as CustomEvent<BackendReachabilityDetail>
+    ).detail.confirmed;
   };
 
   // ---- Slot animation ----
@@ -456,6 +484,7 @@ export class DetailedGameViewModal extends BaseModal {
       blocked: shouldBlockMultiplayerAction(
         this.desktopUpdateState,
         this.desktopSessionState,
+        this.backendOutage,
       ),
       viewerTrusted: this.viewerTrusted,
       onClick: () => this.join(lobby),
@@ -778,19 +807,16 @@ export class DetailedGameViewModal extends BaseModal {
    * nudges the bar instead of relying on `disabled`, which would swallow the
    * click.
    */
-  private blockedByUpdate(): boolean {
+  private blockedFromMultiplayer(): boolean {
     if (
       !shouldBlockMultiplayerAction(
         this.desktopUpdateState,
         this.desktopSessionState,
+        this.backendOutage,
       )
     )
       return false;
-    (
-      document.querySelector("desktop-status-bar") as
-        | (HTMLElement & { wiggle?: () => void })
-        | null
-    )?.wiggle?.();
+    reportMultiplayerRefusal(this.backendOutage);
     return true;
   }
 
@@ -799,7 +825,7 @@ export class DetailedGameViewModal extends BaseModal {
     // Checked -- and the bar nudged -- before close(): a blocked attempt must
     // leave the modal open and tell the player why, not vanish silently. This
     // sits above the hosted/public branch below so both paths are covered.
-    if (this.blockedByUpdate()) return;
+    if (this.blockedFromMultiplayer()) return;
     // Also before close(): the popup explains how to become trusted, so it
     // must stay on screen with the browser rather than vanish with it.
     if (!canJoinTrustedLobby(lobby, this.viewerTrusted)) {
