@@ -120,9 +120,15 @@ describe("sendCheckin", () => {
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
+  test("parses a fenced reply instead of discarding it as unknown", async () => {
+    await expect(
+      sendCheckin(body, fetchReturning({ state: "fenced" })),
+    ).resolves.toBe("fenced");
+  });
+
   test.each([
     ["a 404 (API without the registry yet)", fetchReturning({}, 404)],
-    ["an unknown state", fetchReturning({ state: "fenced" })],
+    ["a state outside the vocabulary", fetchReturning({ state: "retired" })],
     [
       "a non-JSON body",
       vi.fn(
@@ -147,6 +153,14 @@ describe("applyCheckinState", () => {
     expect(setActive).toHaveBeenLastCalledWith(false);
     applyCheckinState("open", "api", setActive);
     expect(setActive).toHaveBeenLastCalledWith(true);
+  });
+
+  // A fence is an operator holding this server out of rotation. It has to
+  // stop new games like a drain does; only "open" is active.
+  test("a fenced server takes no new games", () => {
+    const setActive = vi.fn();
+    applyCheckinState("fenced", "api", setActive);
+    expect(setActive).toHaveBeenLastCalledWith(false);
   });
 
   test("records but never applies the state under the apex source", () => {

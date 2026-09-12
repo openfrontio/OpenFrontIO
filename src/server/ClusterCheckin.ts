@@ -15,10 +15,16 @@ import { ServerEnv } from "./ServerEnv";
 export const CHECKIN_INTERVAL_MS = 10_000;
 const CHECKIN_TIMEOUT_MS = 8_000;
 
-// open: runs the site's `latest` and isn't fenced, so it takes new games.
-// draining: anything else; existing games and rejoins still work. The same
-// vocabulary the client reads from GET /cluster.json.
-export const ServerStateSchema = z.enum(["open", "draining"]);
+// The states the API assigns (infra #700), the same vocabulary the client
+// reads from GET /cluster.json:
+//   open: runs the site's `latest` and isn't fenced, so it takes new games.
+//   draining: on its way out (an older version, a deploy moving off it);
+//     existing games and rejoins still work, it just gets no new ones.
+//   fenced: deliberately held out of rotation by an operator. Same effect
+//     here as draining, but the API keeps them apart so the list can say
+//     why. Only "open" takes new games, so a state we fail to recognise
+//     must never be read as open (see sendCheckin: it returns null).
+export const ServerStateSchema = z.enum(["open", "draining", "fenced"]);
 export type ServerState = z.infer<typeof ServerStateSchema>;
 
 export type ClusterStateSource = "apex" | "api";
@@ -90,8 +96,9 @@ export async function sendCheckin(
 
 /**
  * Turn a check-in reply into the lobby service's active flag, but only when
- * the API is the configured source of that decision. Pure, so the switch is
- * testable without booting the master.
+ * the API is the configured source of that decision. Active means "open";
+ * draining and fenced both stop new games. Pure, so the switch is testable
+ * without booting the master.
  */
 export function applyCheckinState(
   state: ServerState | null,
