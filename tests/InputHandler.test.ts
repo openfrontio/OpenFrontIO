@@ -1142,7 +1142,6 @@ describe("Click and hold when ghost is bomb", () => {
       pointerId: 1,
     });
 
-    inputHandler["onPointerMove"](moveEvent);
     inputHandler["onPointerDown"](downEvent);
 
     vi.advanceTimersByTime(inputHandler.HOLD_POINTER_WAIT_MS - 1);
