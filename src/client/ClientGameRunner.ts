@@ -12,6 +12,7 @@ import {
   PlayerCosmeticRefs,
   ServerMessage,
 } from "../core/Schemas";
+import { stripVersionPrefix } from "../core/ServerList";
 import { findClosestBy, replacer } from "../core/Util";
 import {
   BuildableUnit,
@@ -369,6 +370,17 @@ export function joinLobby(
           const r = ClientEnv.resolveGame(lobbyConfig.gameID);
           if (r.kind === "cross") {
             window.location.href = `https://${r.host}/game/${lobbyConfig.gameID}${window.location.search}`;
+          } else if (
+            stripVersionPrefix(window.location.pathname).commit !== null
+          ) {
+            // A pinned `/v/<commit>/` page must not reload. reloadForUpdate
+            // strips the pin — right for an ordinary stale tab, fatal here:
+            // it lands on `latest`, whose handleUrl sees this same game on
+            // this same older server and pins the page straight back, one
+            // lap per click. Nothing this page can fetch is the build it
+            // needs (that is what a mismatch on a pinned page MEANS: the
+            // version's page is not being served), so say so and stop.
+            void showInGameAlert(translateText("update_available.message"));
           } else {
             showInGameAlert(translateText("update_available.message")).then(
               () => {

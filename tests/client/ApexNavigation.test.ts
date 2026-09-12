@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
-import { apexPathFor, homeHref, reloadForUpdate } from "../../src/client/Utils";
+import {
+  apexPathFor,
+  currentPagePath,
+  homeHref,
+  reloadForUpdate,
+} from "../../src/client/Utils";
 
 // A document can sit on a deployment host (cross-host game visit, stale
 // bookmark). There, a same-origin reload or a "/" exit re-enters the SAME
@@ -29,6 +34,7 @@ describe("apex-aware navigation", () => {
       value: {
         href: `https://${host}${path}`,
         host,
+        pathname: path,
         search: "",
         replace,
       },
@@ -134,6 +140,22 @@ describe("apex-aware navigation", () => {
     // the build they were told to leave.
     stubPage("openfront.io", "/v/5ccc50a7/game/dAbCd12345", "openfront.io");
     expect(homeHref()).toBe("/");
+  });
+
+  // History entries are this tab's own URL, not a share link: pressing F5 on
+  // one must reload THE BUNDLE THIS PAGE IS RUNNING. A version-free path in
+  // history would hand a pinned player `latest` instead, mid-game.
+  it("currentPagePath re-applies the page's own version prefix", () => {
+    stubPage("openfront.io", "/v/5ccc50a7/game/dAbCd12345", "openfront.io");
+    expect(currentPagePath("/w1/game/dAbCd12345?live")).toBe(
+      "/v/5ccc50a7/w1/game/dAbCd12345?live",
+    );
+    expect(currentPagePath("/streamer-mode")).toBe("/v/5ccc50a7/streamer-mode");
+  });
+
+  it("currentPagePath leaves a version-free page alone", () => {
+    stubPage("openfront.io", "/w1/game/dAbCd12345", "openfront.io");
+    expect(currentPagePath("/game/dAbCd12345")).toBe("/game/dAbCd12345");
   });
 
   // The unknown-letter bounce (Main.redirectUnknownLetterToApex) goes to the

@@ -1,9 +1,12 @@
 import { z } from "zod";
+import { GameID } from "../core/Schemas";
 import {
   pickServerForBuild,
   ServerList,
   ServerListSchema,
   servesBuild,
+  stripVersionPrefix,
+  versionedPathForGame,
   versionMatches,
 } from "../core/ServerList";
 import { getApiBase } from "./ApiBase";
@@ -356,8 +359,67 @@ function randomIndex(count: number): number {
 function isOutdated(list: ServerList, own: string): boolean {
   if (isDesktopShell()) return false;
   if (isOnReplayShell()) return false;
+  if (isPinnedToAVersion()) return false;
   if (list.latest === undefined) return false;
   return !versionMatches(own, list.latest);
+}
+
+/**
+ * Whether this document was deliberately served a specific version.
+ *
+ * A page under `/v/<commit>/` is pinned ON PURPOSE and must never be sent to
+ * `latest`, however out of date it is. Being behind is the point: the one
+ * flow that puts a player there is opening a game whose server runs an older
+ * build, and that build has no `open` server by definition — it is draining,
+ * which is why it is not `latest`. So the out-of-date check would fire on
+ * every pinned page, send it to `/v/<latest>/`, whose handleUrl sees the same
+ * game on the same older server and sends it back. An infinite hard-
+ * navigation loop, for exactly the case pinning exists to serve.
+ *
+ * versionedPath's own loop guard cannot catch this: the two hops have
+ * different targets, so neither is ever "already there".
+ *
+ * This lives here, not at the call sites, so no future caller of
+ * ensureServerList({ redirectIfOutOfDate: true }) can get it wrong.
+ */
+function isPinnedToAVersion(): boolean {
+  try {
+    return stripVersionPrefix(window.location.pathname).commit !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Navigate to the page of the version the game's server runs, if that is a
+ * different build than this one. True when a navigation was issued.
+ *
+ * The single home of that decision for every caller (Main.handleUrl's
+ * `/game/<id>` branch, JoinLobbyModal.checkActiveLobby), so the two shells
+ * that must NOT be navigated cannot be remembered in one place and forgotten
+ * in the other:
+ *
+ * - **Desktop:** its updater owns which version it runs; a mismatch there is
+ *   `update_available.desktop` at join time.
+ * - **A replay shell:** `replay.<domain>/<gameId>` serves the build a record
+ *   was made on and has no `/v/<commit>/` routes at all, so navigating there
+ *   would 404 and lose an archived replay. (It DOES load the site's list —
+ *   siteHost is injected — so nothing else would stop it.)
+ *
+ * The rest of the rule, including the loop guard, is versionedPathForGame.
+ */
+export function redirectToGameVersion(gameID: GameID): boolean {
+  if (isDesktopShell()) return false;
+  if (isOnReplayShell()) return false;
+  const target = versionedPathForGame(
+    safeOwnCommit(),
+    ClientEnv.gameVersion(gameID),
+    window.location.pathname,
+    window.location.search,
+  );
+  if (target === null) return false;
+  window.location.href = target;
+  return true;
 }
 
 function isOnReplayShell(): boolean {
