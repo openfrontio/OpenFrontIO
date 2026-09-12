@@ -636,7 +636,7 @@ label.option-card:hover {
   justify-content: center;
 }
 
-/* News Button Notification */
+/* News button glows blue while there is unread news. */
 news-button .active button {
   position: relative;
   border-color: var(--color-malibu-blue) !important;
@@ -646,16 +646,17 @@ news-button .active button {
     0 0 8px rgba(37, 99, 235, 0.4);
 }
 
+/* Amber notification dot pinned to the news button's top-right corner. */
 news-button .active button::after {
   content: "";
   position: absolute;
-  top: -2px;
-  right: -2px;
+  top: -4px;
+  right: -4px;
   width: 12px;
   height: 12px;
-  background: #f59e0b;
-  border: 2px solid white;
   border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid #fff;
   animation: newsPulse 1.5s ease-in-out infinite;
 }
 
@@ -721,7 +722,6 @@ unit-display .tutorial-highlight::after {
   100% {
     transform: scale(1);
   }
-
   50% {
     transform: scale(1.4);
   }
@@ -729,25 +729,24 @@ unit-display .tutorial-highlight::after {
 
 .host-badge {
   font-size: 11px;
-  color: #4caf50;
   font-weight: bold;
+  color: #4caf50;
 }
 
 .remove-player-btn {
-  width: 16px;
-  height: 16px;
-  border: none;
-  background: #ff4444;
-  color: white;
-  border-radius: 50%;
-  font-size: 11px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 16px;
+  height: 16px;
   margin-left: 4px;
+  border: none;
+  border-radius: 50%;
+  background: #dc2626;
+  color: #fff;
+  cursor: pointer;
 }
 
 .remove-player-btn:hover {
-  background: #ff6666;
+  background: #ef4444;
 }

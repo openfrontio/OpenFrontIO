@@ -19,8 +19,8 @@ export class ShowReplayPanelEvent {
 
 @customElement("replay-panel")
 export class ReplayPanel extends LitElement implements Controller {
-  public game: GameView | undefined;
-  public eventBus: EventBus | undefined;
+  public game: GameView;
+  public eventBus: EventBus;
 
   @property({ type: Boolean })
   visible: boolean = false;
