@@ -23,16 +23,25 @@ vi.mock("../../src/client/Utils", () => ({
   homeHref: vi.fn(() => "/"),
 }));
 
-vi.mock("src/client/ClientEnv", () => ({
-  ClientEnv: {
-    workerPath: vi.fn(() => "w0"),
-    serverWsBase: vi.fn(() => "ws://game.test"),
-    gameWorkerPath: vi.fn(() => "w0"),
-    gameWsBase: vi.fn(() => "ws://game.test"),
-    gameHttpBase: vi.fn(() => "http://game.test"),
-  },
-}));
+// NoServerError comes from the real module: Transport narrows on it with
+// `instanceof`, so a stand-in class here would make that check silently
+// false and the test would prove the opposite of what it claims.
+vi.mock("src/client/ClientEnv", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/client/ClientEnv")>();
+  return {
+    NoServerError: actual.NoServerError,
+    ClientEnv: {
+      workerPath: vi.fn(() => "w0"),
+      serverWsBase: vi.fn(() => "ws://game.test"),
+      gameWorkerPath: vi.fn(() => "w0"),
+      gameWsBase: vi.fn(() => "ws://game.test"),
+      gameHttpBase: vi.fn(() => "http://game.test"),
+    },
+  };
+});
 
+import { ClientEnv, NoServerError } from "../../src/client/ClientEnv";
 import { Transport } from "../../src/client/Transport";
 import { EventBus } from "../../src/core/EventBus";
 
@@ -184,6 +193,32 @@ describe("Transport terminal connection refused", () => {
     expect(modalMocks.showInGameConfirm.mock.calls[0][0]).toContain(
       CloseReason.Unknown,
     );
+  });
+
+  // Multi-server v2: a static page whose list never loaded knows no worker
+  // count, so an id it cannot route has no socket to dial. That is a
+  // connection that cannot be made, not a bug -- it must land where a refused
+  // one does, not escape the join as an unhandled exception.
+  it("shows the terminal dialog when no server is known, and dials nothing", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(ClientEnv.gameWorkerPath).mockImplementationOnce(() => {
+      throw new NoServerError("no worker count: no server list, none injected");
+    });
+
+    const transport = connectTransport();
+
+    expect(sockets).toHaveLength(0);
+    expect(modalMocks.showInGameConfirm).toHaveBeenCalledTimes(1);
+    expect(modalMocks.showInGameConfirm.mock.calls[0][0]).toContain(
+      CloseReason.Unknown,
+    );
+
+    // And it is terminal: the watchdog cannot reopen it, and no timer does.
+    transport.reconnect();
+    vi.advanceTimersByTime(60_000);
+    expect(sockets).toHaveLength(0);
+    expect(modalMocks.showInGameConfirm).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
   });
 
   it("does not reopen the socket after Game not found", () => {

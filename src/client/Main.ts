@@ -1547,11 +1547,14 @@ class Client {
       // VersionedReplay.ts).
       targetUrl = window.location.pathname;
     } else {
-      // Both shapes are history entries for THIS tab, so both keep the
-      // page's own version prefix: an F5 must reload this bundle.
-      targetUrl = currentPagePath(
-        lobbyIdHidden ? "/streamer-mode" : ClientEnv.gamePath(lobbyId),
-      );
+      // Version-free on purpose, unlike the in-game entry below: this is the
+      // URL people copy out of the address bar to invite someone, and a
+      // recipient must be routed to the version the GAME'S server runs
+      // (handleUrl -> redirectToGameVersion), not pinned to whatever this
+      // page happens to be serving.
+      targetUrl = lobbyIdHidden
+        ? "/streamer-mode"
+        : ClientEnv.gamePath(lobbyId);
     }
     const currentUrl = window.location.pathname;
 

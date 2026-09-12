@@ -17,7 +17,7 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
-import { translateText } from "./Utils";
+import { currentPagePath, translateText } from "./Utils";
 
 export { playerProfileUrl };
 
@@ -306,7 +306,7 @@ export class PlayerProfileModal extends BaseModal {
   private viewGame(gameId: string): void {
     this.close();
     const encodedGameId = encodeURIComponent(gameId);
-    const newUrl = ClientEnv.gamePath(gameId);
+    const newUrl = currentPagePath(ClientEnv.gamePath(gameId));
 
     history.pushState({ join: gameId }, "", newUrl);
     window.dispatchEvent(

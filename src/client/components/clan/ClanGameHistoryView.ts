@@ -11,6 +11,7 @@ import { ClientEnv } from "../../ClientEnv";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import {
   copyToClipboard,
+  currentPagePath,
   getMapName,
   renderDuration,
   showToast,
@@ -197,7 +198,7 @@ export class ClanGameHistoryView extends LitElement {
   private async watchReplay(gameId: string) {
     try {
       const encoded = encodeURIComponent(gameId);
-      const url = ClientEnv.gamePath(gameId);
+      const url = currentPagePath(ClientEnv.gamePath(gameId));
       history.pushState({ join: gameId }, "", url);
       window.dispatchEvent(
         new CustomEvent("join-changed", { detail: { gameId: encoded } }),
