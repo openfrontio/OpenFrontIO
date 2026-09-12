@@ -1,4 +1,5 @@
 import {
+  AlternateViewEvent,
   AutoUpgradeEvent,
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
@@ -1292,5 +1293,94 @@ describe("InputHandler right-click cancels unit selection (#4692)", () => {
     expect(
       emitted.some((e) => e instanceof WarshipSelectionBoxCancelEvent),
     ).toBe(true);
+  });
+});
+
+describe("InputHandler teardown (OPE-411)", () => {
+  const makeHandler = (canvas: HTMLElement, eventBus: EventBus) =>
+    new InputHandler(
+      {
+        inSpawnPhase: () => false,
+        myPlayer: () => ({ isAlive: () => true }),
+      } as unknown as GameView,
+      {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        upgradeMultiplier: 1,
+      },
+      canvas,
+      eventBus,
+    );
+
+  let inputHandler: InputHandler;
+  let eventBus: EventBus;
+  let canvas: HTMLCanvasElement;
+
+  beforeEach(() => {
+    new UserSettings().removeCached(KEYBINDS_KEY, false);
+    canvas = document.createElement("canvas");
+    canvas.width = 800;
+    canvas.height = 600;
+    eventBus = new EventBus();
+    inputHandler = makeHandler(canvas, eventBus);
+    inputHandler.initialize();
+  });
+
+  afterEach(() => inputHandler.destroy());
+
+  it("emits AlternateViewEvent on Space while alive", () => {
+    const emit = vi.spyOn(eventBus, "emit");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
+    expect(
+      emit.mock.calls.some(
+        (c: unknown[]) => c[0] instanceof AlternateViewEvent,
+      ),
+    ).toBe(true);
+  });
+
+  it("emits nothing on a window keydown after destroy()", () => {
+    inputHandler.destroy();
+    const emit = vi.spyOn(eventBus, "emit");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "Space" }));
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("emits nothing on a canvas event after destroy()", () => {
+    inputHandler.destroy();
+    const emit = vi.spyOn(eventBus, "emit");
+    canvas.dispatchEvent(
+      new MouseEvent("contextmenu", { clientX: 100, clientY: 100 }),
+    );
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("clears keybinds and the keybind dispatch table on destroy()", () => {
+    inputHandler.destroy();
+    expect(inputHandler["keybinds"]).toEqual({});
+    expect(inputHandler["keybindAndEvent"]).toEqual([]);
+  });
+
+  it("destroying one handler leaves a later handler working", () => {
+    const secondBus = new EventBus();
+    const secondCanvas = document.createElement("canvas");
+    const second = makeHandler(secondCanvas, secondBus);
+    second.initialize();
+
+    inputHandler.destroy();
+
+    const deadEmit = vi.spyOn(eventBus, "emit");
+    const liveEmit = vi.spyOn(secondBus, "emit");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
+
+    expect(deadEmit).not.toHaveBeenCalled();
+    expect(
+      liveEmit.mock.calls.some(
+        (c: unknown[]) => c[0] instanceof AlternateViewEvent,
+      ),
+    ).toBe(true);
+
+    second.destroy();
   });
 });
