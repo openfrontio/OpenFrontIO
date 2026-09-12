@@ -18,6 +18,13 @@ const NUKE_WARNING_SOUND_INTERVAL_TICKS = 10;
 // same tick (FactoryExecution.createStation); play the cue once, not N times.
 const TRAIN_STATION_SOUND_INTERVAL_TICKS = 10;
 
+// hadTrainStation is keyed by unit id and normally cleared when the unit goes
+// inactive, but one that leaves view without ever delivering that update would
+// sit there for the rest of the session. Sweep it occasionally instead. 100
+// ticks is ten seconds or so: far more often than the leak could matter, and
+// rare enough that the scan costs nothing.
+const TRAIN_STATION_SWEEP_INTERVAL_TICKS = 100;
+
 // Structures a train station can be attached to (see TrainStationExecution).
 const STATION_CAPABLE_TYPES = new Set<UnitType>([
   UnitType.City,
@@ -39,6 +46,7 @@ export class SoundEffectController implements Controller {
   // build sound on the false→true edge only, so structures that already have
   // one when first seen (e.g. joining mid-game) stay silent.
   private hadTrainStation = new Map<number, boolean>();
+  private lastTrainStationSweepTick = -Infinity;
 
   constructor(
     private readonly game: GameView,
@@ -61,6 +69,8 @@ export class SoundEffectController implements Controller {
   tick(): void {
     const updates = this.game.updatesSinceLastTick();
     if (!updates) return;
+
+    this.pruneTrainStations();
 
     for (const u of updates[GameUpdateType.Unit] ?? []) {
       const unit = this.game.unit(u.id);
@@ -167,6 +177,38 @@ export class SoundEffectController implements Controller {
       case UnitType.TransportShip:
         if (unit.owner() === myPlayer) this.emit("transport-ship");
         break;
+    }
+  }
+
+  /**
+   * Drops entries for structures that are gone.
+   *
+   * No cue can be lost to this. GameView only removes a unit once it is
+   * inactive (it queues the id on the tick isActive() goes false), so both
+   * arms of the test below mean destroyed, and a destroyed structure never
+   * comes back to gain a station. The sweep is the same condition
+   * handleTrainStation already applies, catching the units whose final update
+   * never reached it.
+   *
+   * Nor can one be replayed, which is what the `prev === false` check in
+   * handleTrainStation is for rather than a plain falsy test: a structure
+   * whose entry has gone reads as undefined, not false, so it is treated like
+   * one first seen with a station already and stays silent.
+   */
+  private pruneTrainStations(): void {
+    const tick = this.game.ticks();
+    if (
+      tick - this.lastTrainStationSweepTick <
+      TRAIN_STATION_SWEEP_INTERVAL_TICKS
+    ) {
+      return;
+    }
+    this.lastTrainStationSweepTick = tick;
+    for (const id of this.hadTrainStation.keys()) {
+      const unit = this.game.unit(id);
+      if (unit === undefined || !unit.isActive()) {
+        this.hadTrainStation.delete(id);
+      }
     }
   }
 
