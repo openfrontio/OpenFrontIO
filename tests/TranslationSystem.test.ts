@@ -370,7 +370,9 @@ function scanTsFile(
     filePath,
     content,
     ts.ScriptTarget.Latest,
-    true,
+    // setParentNodes: nothing in this file reads node.parent, and building the
+    // parent pointers is about 15% of the parse cost across 566 files.
+    false,
     filePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
 
@@ -630,5 +632,17 @@ describe("Translation System", () => {
 
     expect(missingKeys).toEqual([]);
     expect(unusedKeys).toEqual([]);
-  }, 30000);
+    // 60s, raised from the 30s added in #3861 (May 2026). This is starvation
+    // headroom, not a budget. Measured over 566 source files (5.0MB): ~1.7s
+    // locally, split read 0.28s / TS parse 0.68s / AST walk 0.70s, and ~4.0s
+    // under the v8 coverage CI actually runs (`npm run test:coverage`,
+    // ci.yml:47) -- down from ~5.0s before the setParentNodes change above.
+    // That 20% is the whole of what optimisation can buy: parse and walk are
+    // 82% of the cost and are inherent to reading every source file with the
+    // TypeScript compiler. What exhausted the old 30s on 1 Sept 2026 was
+    // >12x starvation from concurrent suites on one machine, which no
+    // speedup of this size survives. A timeout here reads exactly like the
+    // i18n regression this test exists to catch, and costs an investigation
+    // every time, so the margin is deliberately generous.
+  }, 60000);
 });

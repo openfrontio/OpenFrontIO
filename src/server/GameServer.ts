@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
@@ -129,6 +129,19 @@ export interface GameServerDeps {
   turnIntervalMs: () => number;
   telemetry: MatchTelemetryEmitter;
   telemetryBuildHash: string;
+  // This game's opaque grouping token (see mintGroupToken). Injectable only
+  // so a test can pin a value it can assert on; production always takes the
+  // random default.
+  mintGroupToken: () => string;
+}
+
+// 16 URL-safe characters of CSPRNG output — 12 bytes is exactly 16 base64url
+// characters, so there is no padding to strip and no truncation to reason
+// about. Deliberately NOT a hash or any other function of the game id: the id
+// is a private lobby's join secret, and anything derived from it hands a
+// holder of the token a head start on the id.
+function mintGroupToken(): string {
+  return randomBytes(12).toString("base64url");
 }
 
 export function defaultGameServerDeps(): GameServerDeps {
@@ -139,6 +152,7 @@ export function defaultGameServerDeps(): GameServerDeps {
     turnIntervalMs: () => ServerEnv.turnIntervalMs(),
     telemetry: noopMatchTelemetryEmitter,
     telemetryBuildHash: "DEV",
+    mintGroupToken,
   };
 }
 
@@ -229,6 +243,13 @@ export class GameServer {
   // counters, finished-once (see MatchTelemetryRecorder.ts).
   private readonly telemetry: MatchTelemetryRecorder;
 
+  // Opaque per-game grouping token, minted once here and sent to every
+  // participant (see mintGroupToken and the GroupToken comment in Schemas).
+  // Private, and it stays private: nothing reads it back off the wire, no
+  // route returns it, and it must never reach a log line or an error message
+  // — a token in a log is a token in whatever the log is shipped to.
+  private readonly groupToken: string;
+
   public readonly id: string;
   public readonly createdAt: number;
   public gameConfig: GameConfig;
@@ -252,6 +273,7 @@ export class GameServer {
     this.publicGameType = opts.publicGameType;
     this.matchmakingTeams = opts.matchmakingTeams;
     this.deps = { ...defaultGameServerDeps(), ...deps };
+    this.groupToken = this.deps.mintGroupToken();
     this.telemetry = new MatchTelemetryRecorder(
       this.deps.telemetry,
       opts.id,
@@ -621,9 +643,10 @@ export class GameServer {
     // Also closes the old WebSocket, to prevent resource leaks.
     this.clients.reconnect(client, ws);
     if (identityUpdate && !this.hasStarted()) {
-      // The verified badge vouches for the exact join name — a pre-start
-      // identity change under it must drop the badge (the rejoin path skips
-      // the Worker's join-time badge validation).
+      // A pre-start identity change to a different name means the player
+      // switched to a custom name, so the check is dropped. The server only
+      // resolves the check from the account at first join
+      // (resolveVerifiedJoin); this rejoin path never re-derives it.
       if (
         identityUpdate.username !== client.username &&
         client.cosmetics?.verified
@@ -923,6 +946,9 @@ export class GameServer {
             type: "lobby_info",
             lobby: shared ?? this.gameInfo(c.clientID),
             myClientID: c.clientID,
+            // Same value for every recipient, including spectators: the
+            // point of the token is that one game is one group.
+            groupToken: this.groupToken,
           } satisfies ServerLobbyInfoMessage,
           this.zbinCtx,
         );
@@ -1268,6 +1294,9 @@ export class GameServer {
             ),
             lobbyCreatedAt: this.createdAt,
             myClientID: client.clientID,
+            // Repeated here for the late joiner, who connects after the
+            // lobby broadcasts stopped and would otherwise never see it.
+            groupToken: this.groupToken,
           } satisfies ServerStartGameMessage,
           this.zbinCtx,
         ),

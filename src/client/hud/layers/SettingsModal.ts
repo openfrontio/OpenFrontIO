@@ -4,29 +4,16 @@ import { crazyGamesSDK } from "src/client/CrazyGamesSDK";
 import { PauseGameIntentEvent } from "src/client/Transport";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
-import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import {
   AlternateViewEvent,
   ToggleRenderDebugGuiEvent,
 } from "../../InputHandler";
+import type { UserSettingModal } from "../../UserSettingModal";
 import { homeHref, translateText } from "../../Utils";
-import {
-  SetBackgroundMusicVolumeEvent,
-  SetSoundEffectsVolumeEvent,
-} from "../../sound/Sounds";
-import { ShowGraphicsSettingsModalEvent } from "./GraphicsSettingsModal";
-const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
-const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
-const mouseIcon = assetUrl("images/MouseIconWhite.svg");
-const ninjaIcon = assetUrl("images/NinjaIconWhite.svg");
-const nukeIcon = assetUrl("images/NukeIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
-const sirenIcon = assetUrl("images/SirenIconWhite.svg");
-const swordIcon = assetUrl("images/SwordIconWhite.svg");
 const treeIcon = assetUrl("images/TreeIconWhite.svg");
-const musicIcon = assetUrl("images/music.svg");
 
 export class ShowSettingsModalEvent {
   constructor(
@@ -36,10 +23,19 @@ export class ShowSettingsModalEvent {
   ) {}
 }
 
+/**
+ * The in-game menu.
+ *
+ * It holds what is session state or a game action — the alternate (terrain)
+ * view, the debug GUI, exiting — plus a link into the settings modal. Every
+ * `UserSettings`-backed row it used to duplicate, the advanced graphics
+ * options included, now lives in `UserSettingModal`, which this opens through
+ * the non-inline `#game-settings` instance so both entry points render the
+ * same UI.
+ */
 @customElement("settings-modal")
 export class SettingsModal extends LitElement implements Controller {
   public eventBus: EventBus;
-  public userSettings: UserSettings;
 
   @state()
   private isVisible: boolean = false;
@@ -130,52 +126,28 @@ export class SettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  private onToggleEmojisButtonClick() {
-    this.userSettings.toggleEmojis();
-    this.requestUpdate();
-  }
-
-  private onToggleAlertFrameButtonClick() {
-    this.userSettings.toggleAlertFrame();
-    this.requestUpdate();
-  }
-
-  private onToggleHelpMessagesButtonClick() {
-    this.userSettings.toggleHelpMessages();
-    this.requestUpdate();
-  }
-
-  private onToggleRandomNameModeButtonClick() {
-    this.userSettings.toggleRandomName();
-    this.requestUpdate();
-  }
-
-  private onToggleLeftClickOpensMenu() {
-    this.userSettings.toggleLeftClickOpenMenu();
-    this.requestUpdate();
-  }
-
-  private onToggleCursorCostLabelButtonClick() {
-    this.userSettings.toggleCursorCostLabel();
-    this.requestUpdate();
-  }
-
-  private onNukeAllianceSafetyDurationChange(event: Event) {
-    const duration = parseInt((event.target as HTMLInputElement).value, 10);
-    this.userSettings.setNukeAllianceSafetyDuration(
-      isNaN(duration) ? 0 : duration,
-    );
-    this.requestUpdate();
-  }
-
-  private onToggleAttackingTroopsOverlayButtonClick() {
-    this.userSettings.toggleAttackingTroopsOverlay();
-    this.requestUpdate();
-  }
-
-  private onTogglePerformanceOverlayButtonClick() {
-    this.userSettings.togglePerformanceOverlay();
-    this.requestUpdate();
+  private onOpenSettingsButtonClick() {
+    // index.html hides the page's inline <user-setting id="page-settings">
+    // during a match, so the HUD addresses its own non-inline instance by id.
+    const gameSettings = document.getElementById(
+      "game-settings",
+    ) as UserSettingModal | null;
+    if (gameSettings === null || typeof gameSettings.open !== "function") {
+      // Leave this menu open: closing it would strand the player with neither
+      // the settings modal nor a menu.
+      console.warn("In-game settings modal (#game-settings) not found");
+      return;
+    }
+    // Keep the pause. Nothing releases it until this menu itself closes, and
+    // UserSettingModal knows nothing about pausing — it only calls onReturn.
+    this.closeModal({ keepPause: true });
+    gameSettings.open({
+      tab: "gameplay",
+      // Reopen directly rather than re-emitting ShowSettingsModalEvent: init()
+      // runs pauseGame(true) on every event, which would emit a second
+      // PauseGameIntentEvent(true).
+      onReturn: () => this.openModal(),
+    });
   }
 
   private onRenderDebugGuiButtonClick() {
@@ -183,34 +155,9 @@ export class SettingsModal extends LitElement implements Controller {
     this.closeModal();
   }
 
-  private onGraphicsSettingsButtonClick() {
-    this.eventBus.emit(
-      new ShowGraphicsSettingsModalEvent(
-        true,
-        this.shouldPause,
-        this.wasPausedWhenOpened,
-      ),
-    );
-    this.closeModal({ keepPause: true });
-  }
-
   private onExitButtonClick() {
     // redirect to the home page
     window.location.href = homeHref();
-  }
-
-  private onVolumeChange(event: Event) {
-    const volume = parseFloat((event.target as HTMLInputElement).value) / 100;
-    this.userSettings.setBackgroundMusicVolume(volume);
-    this.eventBus.emit(new SetBackgroundMusicVolumeEvent(volume));
-    this.requestUpdate();
-  }
-
-  private onSoundEffectsVolumeChange(event: Event) {
-    const volume = parseFloat((event.target as HTMLInputElement).value) / 100;
-    this.userSettings.setSoundEffectsVolume(volume);
-    this.eventBus.emit(new SetSoundEffectsVolumeEvent(volume));
-    this.requestUpdate();
   }
 
   render() {
@@ -232,13 +179,13 @@ export class SettingsModal extends LitElement implements Controller {
             <div class="flex items-center gap-2">
               <img
                 src=${settingsIcon}
-                alt="settings"
+                alt=""
                 width="24"
                 height="24"
                 class="align-middle"
               />
               <h2 class="text-xl font-semibold text-white">
-                ${translateText("user_setting.tab_basic")}
+                ${translateText("user_setting.game_menu_title")}
               </h2>
             </div>
             <button
@@ -252,78 +199,25 @@ export class SettingsModal extends LitElement implements Controller {
           <div class="p-4 flex flex-col gap-3">
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onGraphicsSettingsButtonClick}"
+              data-open-settings
+              @click="${this.onOpenSettingsButtonClick}"
             >
-              <img
-                src=${settingsIcon}
-                alt="graphicsSettings"
-                width="20"
-                height="20"
-              />
+              <img src=${settingsIcon} alt="" width="20" height="20" />
               <div class="flex-1">
                 <div class="font-medium">
-                  ${translateText("user_setting.graphics_settings_label")}
+                  ${translateText("user_setting.open_settings_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.graphics_settings_desc")}
+                  ${translateText("user_setting.open_settings_desc")}
                 </div>
               </div>
             </button>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <img src=${musicIcon} alt="musicIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.background_music_volume")}
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  .value=${this.userSettings.backgroundMusicVolume() * 100}
-                  @input=${this.onVolumeChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400">
-                ${Math.round(this.userSettings.backgroundMusicVolume() * 100)}%
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <img
-                src=${musicIcon}
-                alt="soundEffectsIcon"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.sound_effects_volume")}
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  .value=${this.userSettings.soundEffectsVolume() * 100}
-                  @input=${this.onSoundEffectsVolumeChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400">
-                ${Math.round(this.userSettings.soundEffectsVolume() * 100)}%
-              </div>
-            </div>
 
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
               @click="${this.onTerrainButtonClick}"
             >
-              <img src=${treeIcon} alt="treeIcon" width="20" height="20" />
+              <img src=${treeIcon} alt="" width="20" height="20" />
               <div class="flex-1">
                 <div class="font-medium">
                   ${translateText("user_setting.toggle_terrain")}
@@ -339,210 +233,6 @@ export class SettingsModal extends LitElement implements Controller {
               </div>
             </button>
 
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleEmojisButtonClick}"
-            >
-              <img src=${emojiIcon} alt="emojiIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.emojis_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.emojis_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.emojis()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleAlertFrameButtonClick}"
-            >
-              <img src=${sirenIcon} alt="alertFrame" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.alert_frame_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.alert_frame_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.alertFrame()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleHelpMessagesButtonClick}"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <circle
-                  cx="10"
-                  cy="10"
-                  r="9"
-                  stroke="white"
-                  stroke-width="1.5"
-                />
-                <path
-                  d="M10 9V14"
-                  stroke="white"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                />
-                <circle cx="10" cy="6.5" r="1" fill="white" />
-              </svg>
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.help_messages_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.help_messages_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.helpMessages()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleAttackingTroopsOverlayButtonClick}"
-            >
-              <img src=${swordIcon} alt="swordIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText(
-                    "user_setting.attacking_troops_overlay_label",
-                  )}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.attacking_troops_overlay_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.attackingTroopsOverlay()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleCursorCostLabelButtonClick}"
-            >
-              <img
-                src=${cursorPriceIcon}
-                alt="cursorCostLabel"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.cursor_cost_label_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.cursor_cost_label_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.cursorCostLabel()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <img src=${nukeIcon} alt="" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.nuke_alliance_safety_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.nuke_alliance_safety_desc")}
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="30"
-                  step="1"
-                  .value=${this.userSettings.nukeAllianceSafetyDuration()}
-                  @input=${this.onNukeAllianceSafetyDurationChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.nukeAllianceSafetyDuration() > 0
-                  ? translateText(
-                      "user_setting.nuke_alliance_safety_duration",
-                      {
-                        count: this.userSettings.nukeAllianceSafetyDuration(),
-                        seconds: (
-                          this.userSettings.nukeAllianceSafetyDuration() / 10
-                        ).toFixed(1),
-                      },
-                    )
-                  : translateText("user_setting.off")}
-              </div>
-            </div>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleRandomNameModeButtonClick}"
-            >
-              <img src=${ninjaIcon} alt="ninjaIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.anonymous_names_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.anonymous_names_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.anonymousNames()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleLeftClickOpensMenu}"
-            >
-              <img src=${mouseIcon} alt="mouseIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.left_click_menu")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.left_click_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.leftClickOpensMenu()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
             <div class="border-t border-slate-600 pt-3 mt-4">
               <div
                 class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
@@ -552,39 +242,9 @@ export class SettingsModal extends LitElement implements Controller {
 
               <button
                 class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-                @click="${this.onTogglePerformanceOverlayButtonClick}"
-              >
-                <img
-                  src=${settingsIcon}
-                  alt="performanceIcon"
-                  width="20"
-                  height="20"
-                />
-                <div class="flex-1">
-                  <div class="font-medium">
-                    ${translateText("user_setting.performance_overlay_label")}
-                  </div>
-                  <div class="text-sm text-slate-400">
-                    ${translateText("user_setting.performance_overlay_desc")}
-                  </div>
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${this.userSettings.performanceOverlay()
-                    ? translateText("user_setting.on")
-                    : translateText("user_setting.off")}
-                </div>
-              </button>
-
-              <button
-                class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
                 @click="${this.onRenderDebugGuiButtonClick}"
               >
-                <img
-                  src=${settingsIcon}
-                  alt="renderDebugGui"
-                  width="20"
-                  height="20"
-                />
+                <img src=${settingsIcon} alt="" width="20" height="20" />
                 <div class="flex-1">
                   <div class="font-medium">
                     ${translateText("user_setting.render_debug_gui")}
@@ -601,7 +261,7 @@ export class SettingsModal extends LitElement implements Controller {
                 class="flex gap-3 items-center w-full text-left p-3 hover:bg-red-600/20 rounded-sm text-red-400 transition-colors"
                 @click="${this.onExitButtonClick}"
               >
-                <img src=${exitIcon} alt="exitIcon" width="20" height="20" />
+                <img src=${exitIcon} alt="" width="20" height="20" />
                 <div class="flex-1">
                   <div class="font-medium">
                     ${translateText("user_setting.exit_game_label")}

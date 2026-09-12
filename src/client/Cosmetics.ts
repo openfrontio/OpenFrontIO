@@ -24,7 +24,6 @@ import {
 } from "../core/Schemas";
 import {
   changeSubscriptionTier,
-  createCheckoutSession,
   getApiBase,
   getUserMe,
   invalidateUserMe,
@@ -42,6 +41,17 @@ import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
+
+/**
+ * Ceiling on the cosmetics catalog request. Matches the bound the auth calls
+ * already use (Auth.ts, Api.ts) rather than something tighter: when the
+ * catalog fails to load, getPlayerCosmeticsRefs cannot expand the saved
+ * `pattern:<name>` selection into pattern data, so an online player who is
+ * merely slow rather than offline would join without their territory
+ * pattern. A connection that has not answered in ten seconds is down; one
+ * that answers in eight is not, and should keep its cosmetics.
+ */
+export const COSMETICS_FETCH_TIMEOUT_MS = 10_000;
 
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
@@ -216,7 +226,7 @@ export function handlePurchaseReturn(
  * whole app to its logged-out UI immediately after a successful purchase. A
  * stale balance is much the better failure.
  */
-async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
+export async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
   invalidateUserMe();
   const fresh = await getUserMe();
   if (fresh === false) return false;
@@ -409,19 +419,11 @@ export async function purchaseCosmetic(
       return;
     }
 
-    // Legacy Stripe-only path, deliberately not ported: dollar-priced
-    // cosmetics and flares, which genuinely still need a priceId.
-    const product = "product" in c ? c.product : null;
-    if (!product) {
-      await showInGameAlert(translateText("store.checkout_failed"));
-      return;
-    }
-    const url = await createCheckoutSession(product.priceId, colorPaletteName);
-    if (url === false) {
-      await showInGameAlert(translateText("store.checkout_failed"));
-      return;
-    }
-    window.location.href = url;
+    // Real money only buys plutonium (packs above) or a subscription;
+    // dollar-priced cosmetics/flares and their legacy create-checkout-session
+    // endpoint are gone. Only a stale cached cosmetics.json that still
+    // carries a product block can land here.
+    await showInGameAlert(translateText("store.checkout_failed"));
     return;
   }
 
@@ -715,7 +717,9 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
   }
   const request = (async () => {
     try {
-      const response = await fetch(`${getApiBase()}/cosmetics.json`);
+      const response = await fetch(`${getApiBase()}/cosmetics.json`, {
+        signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
+      });
       if (!response.ok) {
         console.error(`HTTP error! status: ${response.status}`);
         return null;
@@ -742,6 +746,23 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
     }
   });
   return request;
+}
+
+/**
+ * Warms the two caches every cosmetics resolution reads — the profile and the
+ * catalog — so a later getPlayerCosmetics()/getPlayerCosmeticsRefs() answers
+ * from memory instead of the network.
+ *
+ * Called from paths that are about to need cosmetics but are not ready to wait
+ * for them, so the network time is spent while the player is still choosing
+ * rather than after they commit. Never rejects: both calls already resolve to
+ * a falsy value on failure, and callers fire and forget.
+ */
+export function prewarmCosmetics(): Promise<void> {
+  return Promise.all([getUserMe(), fetchCosmetics()]).then(
+    () => undefined,
+    () => undefined,
+  );
 }
 
 export async function resolveFlagUrl(
@@ -1244,6 +1265,14 @@ export async function getPlayerCosmeticsRefs(
   }
 
   let flag = userSettings.getFlag();
+  // Dropping a flag from this join and erasing the player's saved selection
+  // are two different decisions, and only one of them is reversible. Erase
+  // only on a definite answer — the catalog no longer lists the flag, or the
+  // profile says the player is not entitled. "We could not ask" is not an
+  // answer: getUserMe() returns the same `false` for "signed out" and for a
+  // refused connection, a timed-out request or an expired session, so
+  // treating it as "not entitled" erased saved flags over network failures.
+  let flagDenied = false;
   if (flag?.startsWith("flag:")) {
     const key = flag.slice("flag:".length);
     const flagData = cosmetics?.flags?.[key];
@@ -1251,21 +1280,31 @@ export async function getPlayerCosmeticsRefs(
       // Only clear if cosmetics loaded successfully but the key is missing
       if (cosmetics) {
         flag = null;
+        flagDenied = true;
       }
     } else {
       const userMe = await getUserMe();
-      if (!userMe) {
-        flag = null;
-      } else {
+      if (userMe) {
         const flares = userMe.player.flares ?? [];
         const hasWildcard = flares.includes("flag:*");
         if (!hasWildcard && !flares.includes(`flag:${flagData.name}`)) {
           flag = null;
+          flagDenied = true;
         }
+      } else {
+        // Unknown profile: keep the selection, but do not send it. An
+        // entitlement we cannot verify is not one to claim — the server does
+        // not strip an unowned cosmetic ref, it refuses the connection
+        // (Privilege returns "forbidden", Worker.ts closes the socket with
+        // CosmeticsForbidden), so sending it would trade a lost flag for an
+        // unjoinable multiplayer. The pattern, skin and crown branches nearby
+        // do send theirs on an unknown profile and carry that exposure; this
+        // one deliberately does not.
+        flag = null;
       }
     }
   }
-  if (flag === null) {
+  if (flagDenied) {
     userSettings.clearFlag();
   }
 

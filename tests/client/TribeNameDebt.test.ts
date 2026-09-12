@@ -22,6 +22,11 @@ import { ClientEnv } from "../../src/client/ClientEnv";
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
+// Planted in the bodies of the rejected-amount cases: an amount we refused to
+// use is by definition one we did not understand, so none of it may reach a
+// log line.
+const CANARY = "CANARY-9f3c1d";
+
 function respond(status: number, body: unknown) {
   fetchMock.mockResolvedValueOnce(
     new Response(JSON.stringify(body), {
@@ -29,6 +34,16 @@ function respond(status: number, body: unknown) {
       headers: { "content-type": "application/json" },
     }),
   );
+}
+
+// A rejected debt amount warns exactly once, with exactly one argument, and
+// says nothing about the body. The single-argument shape is the OPE-376 rule.
+function expectRejectedAmountWarn() {
+  expect(console.error).not.toHaveBeenCalled();
+  expect(console.warn).toHaveBeenCalledTimes(1);
+  const call = vi.mocked(console.warn).mock.calls[0];
+  expect(call).toHaveLength(1);
+  expect(String(call[0])).not.toContain(CANARY);
 }
 
 describe("tribe-name spend paths map the debt reason", () => {
@@ -67,17 +82,34 @@ describe("tribe-name spend paths map the debt reason", () => {
       });
     });
 
-    // The reason is the branch key; the amount is only there to quote back.
-    // A body without it must still take the debt branch rather than falling
-    // through to a generic failure.
-    it("still reports a debt whose amount is missing", async () => {
-      respond(400, { reason: "insufficient_balance_debt" });
-      expect(await purchaseTribeName("Ninja")).toEqual({
-        ok: false,
-        code: "debt",
-        debt: "",
-      });
-    });
+    // The amount IS the message ("your balance is X in debt"), so a debt we
+    // cannot state is worse than a generic failure — it would render "your
+    // balance is  in debt" at the player. Digits only: the API sends a
+    // stringified positive bigint, so everything else fails closed.
+    it.each([
+      ["missing", {}],
+      ["empty", { debt: "" }],
+      ["not a number", { debt: "lots" }],
+      ["an object", { debt: { amount: 250 } }],
+      ["negative", { debt: "-250" }],
+      // String() would launder both of these into a valid-looking "250".
+      ["a number", { debt: 250 }],
+      ["a one-element array", { debt: ["250"] }],
+    ])(
+      "falls back to a generic failure when the amount is %s",
+      async (_label, extra) => {
+        respond(400, {
+          reason: "insufficient_balance_debt",
+          canary: CANARY,
+          ...extra,
+        });
+        expect(await purchaseTribeName("Ninja")).toEqual({
+          ok: false,
+          code: "failed",
+        });
+        expectRejectedAmountWarn();
+      },
+    );
 
     // Previously this fell into "invalid", which the panel prints verbatim —
     // so the English server string was shown where a shortfall and a top-up
@@ -94,6 +126,10 @@ describe("tribe-name spend paths map the debt reason", () => {
     // Nothing reaches the player as the server's English, so a non-English
     // locale gets a localized reason rather than a localized shell around an
     // English sentence.
+    //
+    // These bodies carry no `code`, so they are the pre-OPE-389 fallback:
+    // production can lag the API, and a server that has not shipped the codes
+    // yet must still produce a translated refusal.
     it.each([
       [
         "Name may only contain letters, numbers, spaces, and ' - . _ ! ?",
@@ -101,10 +137,13 @@ describe("tribe-name spend paths map the debt reason", () => {
       ],
       ["Name must contain a letter", "invalid_no_letter"],
       ["This name is not allowed", "not_allowed"],
-    ])("maps the refusal %s to a code", async (reason, code) => {
-      respond(400, { reason });
-      expect(await purchaseTribeName("Ninja")).toEqual({ ok: false, code });
-    });
+    ])(
+      "falls back to the reason %s when the body has no code",
+      async (reason, code) => {
+        respond(400, { reason });
+        expect(await purchaseTribeName("Ninja")).toEqual({ ok: false, code });
+      },
+    );
 
     // The reasons are matched on their exact English, so a reworded one is
     // unrecognised — the generic failure, never the raw server text.
@@ -143,6 +182,25 @@ describe("tribe-name spend paths map the debt reason", () => {
       });
     });
 
+    // Matching the shape is not the same as the numbers being a range. The
+    // prose bounds are held to the same standard as the body's: digits in a
+    // sentence are not more trustworthy than numbers in a field.
+    it.each([
+      ["reversed", "Name must be 24-3 characters"],
+      ["zero", "Name must be 0-24 characters"],
+      // Beyond Number.MAX_SAFE_INTEGER, so Number() has already lost it.
+      ["unsafe", "Name must be 3-9007199254740993 characters"],
+    ])(
+      "gives a generic failure when the prose bounds are %s",
+      async (_label, reason) => {
+        respond(400, { reason });
+        expect(await purchaseTribeName("Ninja")).toEqual({
+          ok: false,
+          code: "failed",
+        });
+      },
+    );
+
     // The reasons are allowlisted rather than the machine keys denylisted, so
     // the next branch key the API grows does not land on the player's screen
     // the way "insufficient_balance_debt" did.
@@ -173,6 +231,151 @@ describe("tribe-name spend paths map the debt reason", () => {
         code: "failed",
       });
     });
+
+    // OPE-389: the API now sends a stable machine `code` beside the prose.
+    // Every body below pairs a real code with prose this client does not
+    // recognise, which is the whole point — `reason` is documentation, and a
+    // reworded or localized one must not change what the player is told.
+    describe("branches on the machine code", () => {
+      const UNMATCHED_PROSE = "Refusal prose this client never matched";
+
+      it.each([
+        ["invalid_charset", "invalid_charset"],
+        ["no_letter", "invalid_no_letter"],
+        ["not_allowed", "not_allowed"],
+      ])("maps code %s regardless of the reason", async (sent, code) => {
+        respond(400, { code: sent, reason: UNMATCHED_PROSE });
+        const result = await purchaseTribeName("Ninja");
+        expect(result).toEqual({ ok: false, code });
+        expect(Object.values(result)).not.toContain(UNMATCHED_PROSE);
+      });
+
+      // The bounds come off the body rather than out of the sentence, so the
+      // client stops depending on the server's number formatting — and on
+      // the server writing them in English at all.
+      it("takes the length bounds from min/max, not the prose", async () => {
+        respond(400, {
+          code: "length",
+          reason: UNMATCHED_PROSE,
+          min: 5,
+          max: 30,
+        });
+        expect(await purchaseTribeName("Ninja")).toEqual({
+          ok: false,
+          code: "length",
+          min: 5,
+          max: 30,
+        });
+      });
+
+      // The bounds ARE the message. An unusable pair is not a message, so it
+      // falls back to the prose the same server still sends.
+      it.each([
+        ["missing", {}],
+        ["a string", { min: "3", max: "24" }],
+        ["zero", { min: 0, max: 24 }],
+        ["fractional", { min: 3.5, max: 24 }],
+        // Two plausible numbers and one impossible range: it would render
+        // "24-3" at the player.
+        ["inverted", { min: 24, max: 3 }],
+      ])(
+        "falls back to the prose bounds when min/max are %s",
+        async (_label, bounds) => {
+          respond(400, {
+            code: "length",
+            reason: "Name must be 3-24 characters",
+            ...bounds,
+          });
+          expect(await purchaseTribeName("Ninja")).toEqual({
+            ok: false,
+            code: "length",
+            min: 3,
+            max: 24,
+          });
+        },
+      );
+
+      it("gives a generic failure when neither bounds nor prose parse", async () => {
+        respond(400, { code: "length", reason: UNMATCHED_PROSE });
+        expect(await purchaseTribeName("Ninja")).toEqual({
+          ok: false,
+          code: "failed",
+        });
+      });
+
+      // The prose fallback is a second source of bounds, not a way around
+      // checking them: with no usable body bounds and a reversed range in the
+      // sentence, there is no message to render.
+      it("gives a generic failure when the prose bounds are reversed", async () => {
+        respond(400, {
+          code: "length",
+          reason: "Name must be 24-3 characters",
+        });
+        expect(await purchaseTribeName("Ninja")).toEqual({
+          ok: false,
+          code: "failed",
+        });
+      });
+
+      // The code wins over the reason, so a code this client does not know is
+      // a generic failure even when a recognised English sentence sits beside
+      // it — the API is telling us it means something we have not handled.
+      it("gives a generic failure for a code it does not know", async () => {
+        respond(400, {
+          code: "some_future_code",
+          reason: "Name must contain a letter",
+        });
+        const result = await purchaseTribeName("Ninja");
+        expect(result).toEqual({ ok: false, code: "failed" });
+        expect(Object.values(result)).not.toContain("some_future_code");
+      });
+
+      // A `code` key that is present but unusable is not the same as an
+      // absent one: the server meant to send a code, so reading its English
+      // instead would be interpreting a body we have established we do not
+      // understand. Each row pairs it with a reason the legacy path matches,
+      // so a fall-through to that path returns invalid_no_letter here.
+      it.each([
+        ["empty", ""],
+        ["a number", 42],
+        ["null", null],
+        // A bare map lookup would return Object.prototype.constructor.
+        ["constructor", "constructor"],
+      ])(
+        "treats a code that is %s as unknown, not absent",
+        async (_l, code) => {
+          respond(400, { code, reason: "Name must contain a letter" });
+          expect(await purchaseTribeName("Ninja")).toEqual({
+            ok: false,
+            code: "failed",
+          });
+        },
+      );
+
+      it("maps the shortfall code past a reworded reason", async () => {
+        respond(400, {
+          code: "insufficient_balance",
+          reason: UNMATCHED_PROSE,
+        });
+        expect(await purchaseTribeName("Ninja")).toEqual({
+          ok: false,
+          code: "insufficient_balance",
+        });
+      });
+
+      it("maps the debt code past a reworded reason", async () => {
+        respond(400, {
+          code: "insufficient_balance_debt",
+          reason: UNMATCHED_PROSE,
+          debt: "250",
+        });
+        expect(await purchaseTribeName("Ninja")).toEqual({
+          ok: false,
+          code: "debt",
+          debt: "250",
+        });
+      });
+    });
   });
 
   describe("boostTribeName", () => {
@@ -184,6 +387,34 @@ describe("tribe-name spend paths map the debt reason", () => {
         debt: "80",
       });
     });
+
+    // Same rule as the purchase path. These rows also pin the branch order:
+    // the debt reason is read before the catch-all that turns any other
+    // string reason into insufficient_balance, so a regression that
+    // re-collapsed the two would return insufficient_balance here.
+    it.each([
+      ["missing", {}],
+      ["empty", { debt: "" }],
+      ["not a number", { debt: "lots" }],
+      ["an object", { debt: { amount: 80 } }],
+      ["negative", { debt: "-80" }],
+      ["a number", { debt: 80 }],
+      ["a one-element array", { debt: ["80"] }],
+    ])(
+      "falls back to a generic failure when the amount is %s",
+      async (_label, extra) => {
+        respond(400, {
+          reason: "insufficient_balance_debt",
+          canary: CANARY,
+          ...extra,
+        });
+        expect(await boostTribeName("7", "key")).toEqual({
+          ok: false,
+          code: "failed",
+        });
+        expectRejectedAmountWarn();
+      },
+    );
 
     // This path collapsed every reason string into insufficient_balance,
     // which sends a player with a negative wallet to a top-up dialog that
@@ -201,6 +432,47 @@ describe("tribe-name spend paths map the debt reason", () => {
       expect(await boostTribeName("nope", "key")).toEqual({
         ok: false,
         code: "failed",
+      });
+    });
+
+    // OPE-389. This path used to treat any string reason as a shortfall,
+    // which is only safe while balance is the endpoint's only refusal. With
+    // a code in the body it no longer has to assume.
+    describe("branches on the machine code", () => {
+      const UNMATCHED_PROSE = "Refusal prose this client never matched";
+
+      it("maps the shortfall code past a reworded reason", async () => {
+        respond(400, {
+          code: "insufficient_balance",
+          reason: UNMATCHED_PROSE,
+        });
+        expect(await boostTribeName("7", "key")).toEqual({
+          ok: false,
+          code: "insufficient_balance",
+        });
+      });
+
+      it("maps the debt code past a reworded reason", async () => {
+        respond(400, {
+          code: "insufficient_balance_debt",
+          reason: UNMATCHED_PROSE,
+          debt: "80",
+        });
+        expect(await boostTribeName("7", "key")).toEqual({
+          ok: false,
+          code: "debt",
+          debt: "80",
+        });
+      });
+
+      // Guessing a shortfall here would offer a top-up for a refusal that a
+      // top-up may not clear — the same mistake the debt branch exists to
+      // undo.
+      it("does not guess a shortfall for a code it does not know", async () => {
+        respond(400, { code: "some_future_code", reason: UNMATCHED_PROSE });
+        const result = await boostTribeName("7", "key");
+        expect(result).toEqual({ ok: false, code: "failed" });
+        expect(Object.values(result)).not.toContain("some_future_code");
       });
     });
   });

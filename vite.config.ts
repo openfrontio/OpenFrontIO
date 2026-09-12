@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
+import { configDefaults } from "vitest/config";
 import {
   type AssetManifest,
   buildAssetUrl,
@@ -266,6 +267,19 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: "jsdom",
       setupFiles: "./tests/setup.ts",
+      // Git worktrees live inside the repo, so their tests match the default
+      // glob and run against that worktree's own (often stale) source and
+      // node_modules. Anyone with a worktree checked out sees failures that
+      // have nothing to do with their branch.
+      // Spread the defaults rather than restating them: setting `exclude`
+      // replaces vitest's built-in list, and hand-copying a subset silently
+      // drops the dot-directory pattern (.git, .cache, .output, ...) --
+      // reintroducing the same stray-file problem this is here to fix.
+      exclude: [
+        ...configDefaults.exclude,
+        "**/.worktrees/**",
+        "**/.claude/worktrees/**",
+      ],
     },
     root: "./",
     base: "/",
@@ -313,8 +327,11 @@ export default defineConfig(({ mode }) => {
         isProduction ? "" : "localhost:3000",
       ),
       "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
+      // Empty when unset (and always empty under vitest, mirroring API_DOMAIN)
+      // so the replacement is always a string literal — an undefined define
+      // would leave a bare `process.env` reference in the browser bundle.
       "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
-        env.STRIPE_PUBLISHABLE_KEY,
+        mode === "test" ? "" : (env.STRIPE_PUBLISHABLE_KEY ?? ""),
       ),
       // Force empty under vitest (mode "test") so the getApiBase localhost-
       // fallback test is deterministic regardless of any API_DOMAIN in the

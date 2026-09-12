@@ -100,6 +100,7 @@
     "@opentelemetry/sdk-metrics": "^2.8.0",
     "@opentelemetry/semantic-conventions": "^1.40.0",
     "@opentelemetry/winston-transport": "^0.26.0",
+    "@stripe/stripe-js": "9.15.0",
     "@types/compression": "^1.8.1",
     "colord": "^2.9.3",
     "compression": "^1.8.1",

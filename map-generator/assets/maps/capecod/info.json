@@ -1,0 +1,165 @@
+{
+  "id": "CapeCod",
+  "name": "Cape Cod",
+  "translation_key": "map.capecod",
+  "categories": ["north_america", "new"],
+  "multiplayer_frequency": 4,
+  "nations": [
+    {
+      "coordinates": [417, 227],
+      "name": "Plymouth",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [508, 746],
+      "name": "Falmouth",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [494, 982],
+      "name": "Martha's Vineyard",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [1200, 1141],
+      "name": "Nantucket",
+      "flag": "Nantucket"
+    },
+    {
+      "coordinates": [1077, 60],
+      "name": "Provincetown",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [154, 200],
+      "name": "Bridgewater",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [104, 67],
+      "name": "Brockton",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [341, 490],
+      "name": "Wareham",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [524, 488],
+      "name": "Bourne",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [676, 482],
+      "name": "Sandwich",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [666, 644],
+      "name": "Mashpee",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [942, 606],
+      "name": "Barnstable",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [1098, 524],
+      "name": "Dennis",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [1373, 572],
+      "name": "Chatham",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [1353, 460],
+      "name": "Orleans",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [1363, 340],
+      "name": "Eastham",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [1303, 207],
+      "name": "Wellfleet",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [59, 648],
+      "name": "New Bedford",
+      "flag": "Bedford"
+    },
+    {
+      "coordinates": [222, 601],
+      "name": "Mattapoisett",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [432, 33],
+      "name": "Marshfield",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [27, 347],
+      "name": "Taunton",
+      "flag": "Taunton"
+    },
+    {
+      "coordinates": [281, 883],
+      "name": "Naushon Island",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [156, 933],
+      "name": "Nashawena Island",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [597, 986],
+      "name": "Edgartown",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [562, 912],
+      "name": "Oak Bluffs",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [171, 471],
+      "name": "Rochester",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [295, 348],
+      "name": "South Carver",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [572, 287],
+      "name": "Manomet",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [231, 1175],
+      "name": "Nomans Land",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [1388, 1161],
+      "name": "Siasconset",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [997, 1114],
+      "name": "Tuckernuck Island",
+      "flag": "Massachusetts"
+    }
+  ],
+  "themes": ["north_america"]
+}

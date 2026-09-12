@@ -417,12 +417,12 @@ export function createCanvas(): HTMLCanvasElement {
  */
 export function generateCryptoRandomUUID(): string {
   // Type guard to check if randomUUID is available
-  if (crypto !== undefined && "randomUUID" in crypto) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
 
   // Fallback using crypto.getRandomValues
-  if (crypto !== undefined && "getRandomValues" in crypto) {
+  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
     return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(
       /[018]/g,
       (c: number): string =>
@@ -464,10 +464,41 @@ function getCachedLangSelector(): LangSelector | null {
   const cached = self.langSelector as LangSelector | null | undefined;
   if (cached && cached.isConnected) return cached;
 
+  // A lit update is scheduled on a microtask, so a component can render once
+  // more after its environment has gone -- which in tests means `document` is
+  // no longer defined by the time this runs. Returning null makes
+  // translateText fall back to the key instead of throwing an unhandled
+  // rejection that fails the whole run.
+  if (typeof document === "undefined") {
+    self.langSelector = null;
+    return null;
+  }
+
   const found = document.querySelector("lang-selector") as LangSelector | null;
   self.langSelector = found ?? null;
   return found;
 }
+
+/** Language codes whose script reads right-to-left (resources/lang/metadata.json). */
+const RTL_LANGUAGES = new Set(["ar", "fa", "he"]);
+
+/**
+ * True when the given language renders right-to-left. Defaults to the
+ * currently selected UI language, so callers can simply write `isRTL()`.
+ */
+export const isRTL = (lang?: string): boolean => {
+  const code = (lang ?? getCachedLangSelector()?.currentLang ?? "en").split(
+    "-",
+  )[0];
+  return RTL_LANGUAGES.has(code);
+};
+
+/**
+ * Value for the HTML `dir` attribute matching the current UI language.
+ * Apply it to containers whose text comes from translateText() so Persian,
+ * Arabic and Hebrew render right-to-left with correct mixed-content ordering.
+ */
+export const textDirection = (): "rtl" | "ltr" => (isRTL() ? "rtl" : "ltr");
 
 export const translateText = (
   key: string,

@@ -8,6 +8,7 @@ import {
   GameInfo,
   GameRecord,
   GameStartInfo,
+  GroupTokenEvent,
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
@@ -84,6 +85,7 @@ import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import "./PlayerProfileModal";
+import { GroupTokenTracker, withGroupToken } from "./PresenceGroup";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -102,7 +104,7 @@ import {
   SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
-import { UserSettingModal } from "./UserSettingModal";
+import "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import {
@@ -274,6 +276,11 @@ class Client {
   private presenceDetail: Omit<PresencePayload, "state"> = {};
   private presenceSpectating = false;
   private presenceInGame = false;
+  // Held apart from presenceDetail because that object is REPLACED wholesale
+  // on every lobby_info, and the token rides every one of those (once a
+  // second) as well as the start message. Merged back in at emit time; see
+  // GroupTokenTracker for why a repeat must not re-emit.
+  private readonly presenceGroup = new GroupTokenTracker();
 
   private turnstileTokenPromise: Promise<{
     token: string;
@@ -465,6 +472,16 @@ class Client {
       this.emitPresence();
     });
 
+    // The game's grouping token, from lobby_info in the lobby or from the
+    // start message for someone who joined after it. Spectators get it too:
+    // they are in the same group, and it is the shell that decides what a
+    // spectator does to the group's size.
+    this.eventBus.on(GroupTokenEvent, (event) => {
+      if (this.presenceGroup.accept(event.groupToken)) {
+        this.emitPresence();
+      }
+    });
+
     document.addEventListener("join-lobby", (event) => {
       // A rejected handshake (Turnstile alerts then rejects) never assigns
       // lobbyHandle, so nothing downstream clears the "lobby" presence
@@ -619,7 +636,6 @@ class Client {
       );
 
       if (userMeResponse !== false) {
-        // Authorized
         console.log(
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
@@ -731,11 +747,10 @@ class Client {
     });
 
     if ((await userAuth()) === false) {
-      // Not logged in
+      // Not logged in: apply the signed-out profile directly.
       onUserMe(false);
     } else {
-      // JWT appears to be valid
-      // TODO: Add caching
+      // JWT appears valid: fetch the profile and apply it if still current.
       getUserMe().then(applyUserMe(authGeneration));
     }
 
@@ -781,20 +796,6 @@ class Client {
       );
     });
 
-    const settingsModal = document.querySelector(
-      "user-setting",
-    ) as UserSettingModal;
-    if (!settingsModal || !(settingsModal instanceof UserSettingModal)) {
-      console.warn("User settings modal element not found");
-    }
-    document
-      .getElementById("settings-button")
-      ?.addEventListener("click", () => {
-        if (settingsModal && settingsModal instanceof UserSettingModal) {
-          settingsModal.open();
-        }
-      });
-
     this.hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
@@ -813,7 +814,7 @@ class Client {
       this.joinModal.eventBus = this.eventBus;
     }
 
-    // Attempt to join lobby
+    // Attempt to join lobby from the current URL once the document is ready.
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => this.handleUrl());
     } else {
@@ -850,7 +851,7 @@ class Client {
         return;
       }
 
-      // Reset the UI to its initial state
+      // Reset the UI to its initial state.
       this.joinModal?.close();
 
       onJoinChanged();
@@ -900,7 +901,7 @@ class Client {
       this.handleUrl();
     };
 
-    // Handle browser navigation & manual hash edits
+    // Handle browser navigation (back/forward) and manual hash edits.
     window.addEventListener("popstate", onPopState);
     window.addEventListener("hashchange", onHashUpdate);
     window.addEventListener("join-changed", onJoinChanged);
@@ -1203,6 +1204,9 @@ class Client {
     const joinInfo = lobby.publicLobbyInfo;
     this.presenceInGame = false;
     this.presenceSpectating = lobby.spectator === true;
+    // Dropped here, not on leaving: a game we are joining must never inherit
+    // the previous one's group, and singleplayer must carry none at all.
+    this.presenceGroup.clear();
     this.presenceDetail = {
       gameType: joinConfig?.gameType,
       gameMode: joinConfig?.gameMode,
@@ -1298,7 +1302,6 @@ class Client {
       this.presenceInGame = true;
       this.emitPresence();
       console.log("Closing modals");
-      document.getElementById("settings-button")?.classList.add("hidden");
       if (this.usernameInput) {
         // fix edge case where username-validation-error is re-rendered and hidden tag removed
         this.usernameInput.validationError = "";
@@ -1321,6 +1324,9 @@ class Client {
         "game-top-bar",
         "help-modal",
         "user-setting",
+        // The in-game instance is addressed by id: querySelector("user-setting")
+        // above only ever reaches the page's inline one.
+        "#game-settings",
         "troubleshooting-modal",
         "inventory-modal",
         "store-modal",
@@ -1406,14 +1412,19 @@ class Client {
   // "spectating" outranks. Emitting is idempotent -- the shell diffs -- so
   // callers never have to know whether anything actually changed.
   private emitPresence() {
-    desktopPresence.set({
-      state: this.presenceSpectating
-        ? "spectating"
-        : this.presenceInGame
-          ? "game"
-          : "lobby",
-      ...this.presenceDetail,
-    });
+    desktopPresence.set(
+      withGroupToken(
+        {
+          state: this.presenceSpectating
+            ? "spectating"
+            : this.presenceInGame
+              ? "game"
+              : "lobby",
+          ...this.presenceDetail,
+        },
+        this.presenceGroup.current(),
+      ),
+    );
   }
 
   // Back to the menu, forgetting the lobby we were describing so a later one
@@ -1422,6 +1433,7 @@ class Client {
     this.presenceDetail = {};
     this.presenceSpectating = false;
     this.presenceInGame = false;
+    this.presenceGroup.clear();
     desktopPresence.set({ state: "menu" });
   }
 

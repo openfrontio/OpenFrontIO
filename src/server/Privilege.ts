@@ -1,5 +1,6 @@
 import countries from "resources/countries.json";
 
+import { isTemporaryUsername } from "../core/ApiSchemas";
 import { Cosmetics, findEffectForSlot } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
@@ -131,9 +132,8 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       }
     }
     // Entitlement-blind pass-through: isAllowed has no user identity. The
-    // authoritative check — join name must exactly match the account's
-    // resolved display name — runs at join in Worker.ts using the /users/@me
-    // response (enforceVerifiedBadge below).
+    // account decides the check at join in Worker.ts using the /users/@me
+    // response (resolveVerifiedJoin below).
     if (refs.verified === true) {
       cosmetics.verified = true;
     }
@@ -256,8 +256,8 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
     // Catalog cosmetics can't be resolved without the cosmetics data, but the
-    // verified claim isn't a catalog item — pass it through; the Worker's
-    // enforceVerifiedBadge still validates it against the account at join.
+    // verified intent isn't a catalog item — pass it through; the Worker's
+    // resolveVerifiedJoin decides it against the account at join.
     return {
       type: "allowed",
       cosmetics: refs.verified === true ? { verified: true } : {},
@@ -276,32 +276,54 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
 }
 
 /**
- * Enforce the client-claimed verified badge on resolved cosmetics. The claim
- * is kept only when the account vouches for it: an entitled bare-name status
- * (premium/indefinite) AND a join name EXACTLY matching the account's
- * server-resolved display name — the client locks the input to that form, so
- * any drift (a rename race, a censor rewrite, a hand-crafted join message)
- * drops the badge. Strips, never rejects.
+ * Decide whether a join keeps the verified check.
  *
- * `account` is the /users/@me player the Worker already fetches for flares;
- * null means an anonymous persistent-ID join — those only exist in Dev, where
- * the claim is kept so the badge stays locally testable.
+ * `cosmetics.verified` on the join message is INTENT ("play under my account
+ * name"), never a claim the server takes on trust. The check is kept only
+ * when the account vouches for the name the player is actually joining under
+ * (spec, 10 Sept 2026):
  *
- * Returns true when an unvouched claim was stripped (for logging).
+ *   - the account is entitled (premium or indefinite);
+ *   - it renders bare: display name equals base, which is what holding the
+ *     bare claim looks like from /users/@me, and the base is not a
+ *     TEMPORARY#### placeholder, which is minted with its claim but is not a
+ *     name the player chose (the client refuses to offer it for the same
+ *     reason, see accountVerifiedName);
+ *   - the join name is exactly that bare name.
+ *
+ * The join name is never replaced. It has already been through censorPlayer
+ * and join_verify, and that pipeline is the only thing standing between an
+ * account name that was blocklisted after it was set and the lobby; a name
+ * substituted here would skip it. So a subscriber whose bare name someone
+ * else holds, a hand-crafted join under some other name, and a join whose
+ * name the screening rewrote all land the same way: the screened name stands
+ * and the check is removed.
+ *
+ * `account` null is an anonymous persistent-ID join, which only exists in
+ * Dev; intent is kept there so the badge stays locally testable.
  */
-export function enforceVerifiedBadge(
+export function resolveVerifiedJoin(
   cosmetics: PlayerCosmetics,
   joinUsername: string,
-  account: { username?: string | null; usernameStatus?: string } | null,
-): boolean {
-  if (cosmetics.verified !== true) return false;
-  const vouched =
-    account === null ||
-    ((account.usernameStatus === "premium" ||
-      account.usernameStatus === "indefinite") &&
-      typeof account.username === "string" &&
-      account.username === joinUsername);
-  if (vouched) return false;
+  account: {
+    username?: string | null;
+    usernameBase?: string | null;
+    usernameStatus?: string;
+  } | null,
+): "verified" | "custom" | "dev" {
+  if (cosmetics.verified !== true) return "custom";
+  if (account === null) return "dev";
+  const entitled =
+    account.usernameStatus === "premium" ||
+    account.usernameStatus === "indefinite";
+  const bare =
+    typeof account.username === "string" &&
+    account.username.length > 0 &&
+    account.username === account.usernameBase &&
+    !isTemporaryUsername(account.usernameBase);
+  if (entitled && bare && joinUsername === account.username) {
+    return "verified";
+  }
   delete cosmetics.verified;
-  return true;
+  return "custom";
 }

@@ -166,19 +166,15 @@ jobs:
           registry: ghcr.io
           username: ${{ vars.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
+      # deploy.sh keyscans the target it resolves, so this step only
+      # installs the key.
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
-          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
-          SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_MASTERS" && ssh-keyscan -H "$SERVER_HOST_MASTERS" >> ~/.ssh/known_hosts
-          test -n "$SERVER_HOST_FALK2" && ssh-keyscan -H "$SERVER_HOST_FALK2" >> ~/.ssh/known_hosts
-          test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚢 Deploy
         env:
@@ -187,6 +183,14 @@ jobs:
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
           HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }} # schedule and push both use staging
           CDN_BASE: ${{ vars.CDN_BASE }}
+          # Baked into the client bundle at image-build time (build.sh
+          # --build-arg → Dockerfile → Vite define). Repo-level var holds the
+          # test-mode key; the `prod` environment (attached above for prod
+          # dispatches only) overrides it with the live-mode one — the key's
+          # mode must match the mode the API mints intents in, or every
+          # confirm fails. Unset/empty keeps the inline payment flow off (the
+          # store falls back to redirect checkout).
+          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
@@ -196,6 +200,7 @@ jobs:
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
+          SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           SSH_KEY: ~/.ssh/id_rsa
           VERSION_TAG: latest
         run: |
