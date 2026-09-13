@@ -4,6 +4,7 @@ import { resetPagePinForTests } from "../../src/client/PagePin";
 import {
   backendReachable,
   ensureServerList,
+  newerVersionAvailable,
   redirectToGameVersion,
   resetServerList,
   serverListSite,
@@ -828,6 +829,76 @@ describe("picking between open, draining and fenced", () => {
 // both call sites (Main.handleUrl, JoinLobbyModal.checkActiveLobby) so the
 // shells that must not be navigated cannot be remembered in one and
 // forgotten in the other.
+// The POST-FAILURE question, asked by PublicLobbySocket.promptIfOutdated
+// once reconnecting has given up: "my server is gone — is there a newer
+// build a reload would fetch?". It deliberately differs from the page-load
+// status: a server-rendered page is never "outdated" while its own server
+// serves it (a reload would come back identical and prompt forever), but a
+// socket that has failed maxWsAttempts times is that server proving it is
+// gone, and reloadForUpdate re-enters through the page host, which the load
+// balancer answers from a live deployment.
+describe("newerVersionAvailable", () => {
+  const NEWER = {
+    latest: OWN,
+    servers: {
+      d: {
+        host: "falk2-b.openfront.io",
+        numWorkers: 16,
+        version: OWN,
+        state: "open",
+      },
+    },
+  };
+
+  it("is false before any list has loaded", () => {
+    // Nothing is known to update to, so there is nothing to promise a
+    // reload would fix.
+    expect(newerVersionAvailable()).toBe(false);
+  });
+
+  it("is true on a server-rendered page whose build is behind latest", async () => {
+    // The page-load status for this very page and list is "fallback" — the
+    // two questions differ, and this is the pair that shows it.
+    setBootstrap({ gitCommit: OLD });
+    fetchMock.mockImplementation(async () => jsonResponse(NEWER));
+    expect(await ensureServerList()).toBe("fallback");
+    expect(newerVersionAvailable()).toBe(true);
+  });
+
+  it("is false when this page already runs latest", async () => {
+    setBootstrap({ gitCommit: OWN });
+    fetchMock.mockImplementation(async () => jsonResponse(NEWER));
+    await ensureServerList();
+    expect(newerVersionAvailable()).toBe(false);
+  });
+
+  it("is false when the list names no latest", async () => {
+    setBootstrap({ gitCommit: OLD });
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ servers: NEWER.servers }),
+    );
+    await ensureServerList();
+    expect(newerVersionAvailable()).toBe(false);
+  });
+
+  it("keeps the exemptions of the shells that must never reload", async () => {
+    // A pinned page is behind on purpose, and the desktop shell's updater
+    // owns its version: a dead socket is no reason to tell either to
+    // reload. Only the served-by-game-server guard is dropped here.
+    setBootstrap({ gitCommit: OLD });
+    stubLocation("openfront.io", `/v/${OLD}/game/dAbCd12345`);
+    fetchMock.mockImplementation(async () => jsonResponse(NEWER));
+    await ensureServerList();
+    expect(newerVersionAvailable()).toBe(false);
+
+    (window as any).openfrontDesktop = {};
+    setBootstrap({ gitCommit: OLD, serverHost: "openfront.io" });
+    stubLocation("openfront");
+    await ensureServerList();
+    expect(newerVersionAvailable()).toBe(false);
+  });
+});
+
 describe("redirectToGameVersion", () => {
   // Letter c runs OLD in API_LIST; the page is built from OWN.
   async function withList() {

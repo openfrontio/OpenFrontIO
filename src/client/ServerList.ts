@@ -382,12 +382,51 @@ function randomIndex(count: number): number {
 // one flow that prompts) runs there too.
 function isOutdated(list: ServerList, own: string): boolean {
   // A page that carries its own server was served by a game server running
-  // this build, and reloading re-fetches it from that same server: there is
-  // nothing to update to, so the list can never make it outdated. apply()
-  // already answers "fallback" for such a page; the guard is repeated here
-  // so no future caller of isOutdated can reach the prompt-and-reload loop
-  // by another route.
+  // this build, and while that server is up a reload re-fetches the same
+  // page from it: there is nothing to update to, so the list must not make
+  // it outdated. apply() already answers "fallback" for such a page; the
+  // guard is repeated here so no future caller of isOutdated can reach the
+  // prompt-and-reload loop by another route. Once that server has proven
+  // unreachable the question changes — see newerVersionAvailable.
   if (servedByGameServer()) return false;
+  return behindLatest(list, own);
+}
+
+/**
+ * Is there a newer build than this page's, that a reload could land on?
+ *
+ * The POST-FAILURE question, asked by PublicLobbySocket.promptIfOutdated
+ * after reconnecting has given up: "my server is gone — is there a newer
+ * build out there?". Deliberately NOT the page-load status: it honours the
+ * desktop, replay-shell and pinned-page exemptions (those pages must never
+ * be told to reload at all) but not the served-by-game-server guard.
+ *
+ * The two differ because the reload loop only exists while the page's own
+ * server is alive and serving it: there, a reload comes back from the same
+ * server on the same build, so "outdated" would prompt forever (OPE-430).
+ * A tab whose socket has failed maxWsAttempts times has the opposite
+ * problem — its deployment was drained then fenced or removed, no feed is
+ * left to carry the `active:false` signal, and a reload goes through the
+ * page host (reloadForUpdate re-enters via siteHost), which the load
+ * balancer answers from a LIVE deployment. Prompting there is the rescue.
+ *
+ * False when no list has ever loaded: nothing is known to update to.
+ */
+export function newerVersionAvailable(): boolean {
+  const list = cached?.list ?? null;
+  if (list === null) return false;
+  try {
+    return behindLatest(list, safeOwnCommit());
+  } catch {
+    return false;
+  }
+}
+
+// Behind the list's `latest`, for the shells that may be told to reload at
+// all. Everything isOutdated tests except the served-by-game-server guard,
+// which is the one difference between the page-load and post-failure
+// questions above.
+function behindLatest(list: ServerList, own: string): boolean {
   if (isDesktopShell()) return false;
   if (isOnReplayShell()) return false;
   if (isPinnedToAVersion()) return false;

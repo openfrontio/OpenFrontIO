@@ -488,8 +488,20 @@ Without the gate a registry that misses a deploy strands every visitor:
 `main.openfront.dev` served pages from a game server whose build the list
 never listed, the lobby socket raised "a new version is available", the
 reload re-served the same page from the same server, and it prompted again,
-forever. Rollover still reaches these pages through the signal that does
-know: the lobby feed's drain flag (`active: false`), unchanged.
+forever.
+
+The gate holds only while that server is actually serving the page. Two
+things still reach a server-rendered page: the lobby feed's drain flag
+(`active: false`), unchanged; and, once its socket has failed
+`maxWsAttempts` times, `newerVersionAvailable()` — a separate, exported
+question that `PublicLobbySocket.promptIfOutdated` asks on that path only.
+It is `isOutdated` without the served-by-game-server guard (the desktop,
+replay-shell and pinned-page exemptions all still apply): a dead socket is
+the page's own server proving it is gone — drained, then fenced or removed,
+with no feed left to say so — and `reloadForUpdate` re-enters through the
+page host, which the load balancer answers from a LIVE deployment. So the
+same fact that would loop at page load is the rescue after the socket has
+given up.
 
 ## The static page: booting with no server of its own
 

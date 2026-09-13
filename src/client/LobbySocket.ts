@@ -2,7 +2,7 @@ import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { showInGameAlert } from "./InGameModal";
-import { ensureServerList } from "./ServerList";
+import { ensureServerList, newerVersionAvailable } from "./ServerList";
 import { translateText } from "./Utils";
 
 interface LobbySocketOptions {
@@ -249,13 +249,24 @@ export class PublicLobbySocket {
   // and a newer version exists, this is the same one-shot prompt start()
   // raises. ensureServerList never throws and answers from the cached list,
   // so this costs nothing when the failure was only the network.
+  //
+  // newerVersionAvailable as well as the status, because a page a game
+  // server rendered is never "outdated" (OPE-430: while its own server
+  // serves it, a reload re-serves the same build, so the prompt would
+  // loop). This tab's socket has failed maxWsAttempts times, which is that
+  // server proving it is gone: the reload goes through the page host, which
+  // the load balancer answers from a live deployment, so the prompt is a
+  // rescue here rather than a loop. start()'s page-load path deliberately
+  // does NOT ask this question.
   private async promptIfOutdated(): Promise<void> {
     if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
       return;
     }
     const listStatus = await ensureServerList();
     if (this.stopped) return;
-    if (listStatus === "outdated") this.fireUpdateAvailable();
+    if (listStatus === "outdated" || newerVersionAvailable()) {
+      this.fireUpdateAvailable();
+    }
   }
 
   private handleError(error: Event) {
