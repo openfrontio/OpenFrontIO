@@ -9,6 +9,11 @@
     "name": "Abbasid Caliphate"
   },
   {
+    "code": "Acadiana",
+    "continent": "North America",
+    "name": "Acadiana"
+  },
+  {
     "code": "Achaemenid Empire",
     "continent": "Asia",
     "name": "Achaemenid Empire"
@@ -263,6 +268,16 @@
     "name": "Athens"
   },
   {
+    "code": "Atlanta",
+    "continent": "North America",
+    "name": "Atlanta"
+  },
+  {
+    "code": "Austin",
+    "continent": "North America",
+    "name": "Austin"
+  },
+  {
     "code": "at",
     "continent": "Europe",
     "name": "Austria"
@@ -385,6 +400,11 @@
     "code": "es-pv",
     "continent": "Europe",
     "name": "Basque Country"
+  },
+  {
+    "code": "Baton Rogue",
+    "continent": "North America",
+    "name": "Baton Rogue"
   },
   {
     "code": "DE-BY",
@@ -823,6 +843,11 @@
     "name": "Cordoba"
   },
   {
+    "code": "Corpus Christi",
+    "continent": "North America",
+    "name": "Corpus Christi"
+  },
+  {
     "code": "Corrientes",
     "continent": "South America",
     "name": "Corrientes"
@@ -910,6 +935,11 @@
     "code": "1_Dalriata",
     "continent": "Europe",
     "name": "Dál Riata"
+  },
+  {
+    "code": "Dallas",
+    "continent": "North America",
+    "name": "Dallas"
   },
   {
     "code": "Delaware",
@@ -1019,6 +1049,11 @@
     "code": "Elam",
     "continent": "Asia",
     "name": "Elam"
+  },
+  {
+    "code": "El Paso",
+    "continent": "North America",
+    "name": "El Paso"
   },
   {
     "code": "sv",
@@ -1456,6 +1491,11 @@
     "name": "Hong Kong"
   },
   {
+    "code": "Houston",
+    "continent": "North America",
+    "name": "Houston"
+  },
+  {
     "code": "hu",
     "continent": "Europe",
     "name": "Hungary"
@@ -1554,6 +1594,11 @@
     "code": "it",
     "continent": "Europe",
     "name": "Italy"
+  },
+  {
+    "code": "Jacksonville",
+    "continent": "North America",
+    "name": "Jacksonville"
   },
   {
     "code": "jm",
@@ -1674,6 +1719,11 @@
     "code": "Kentucky",
     "continent": "North America",
     "name": "Kentucky"
+  },
+  {
+    "code": "Key West",
+    "continent": "North America",
+    "name": "Key West"
   },
   {
     "code": "Khemet",
@@ -1878,6 +1928,11 @@
     "code": "la",
     "continent": "Asia",
     "name": "Laos"
+  },
+  {
+    "code": "Laredo",
+    "continent": "North America",
+    "name": "Laredo"
   },
   {
     "code": "lv",
@@ -2206,6 +2261,11 @@
     "name": "Mexico"
   },
   {
+    "code": "Miami",
+    "continent": "North America",
+    "name": "Miami"
+  },
+  {
     "code": "Miccosukee",
     "continent": "North America",
     "name": "Miccosukee"
@@ -2244,6 +2304,11 @@
     "code": "Missouri",
     "continent": "North America",
     "name": "Missouri"
+  },
+  {
+    "code": "Mobile",
+    "continent": "North America",
+    "name": "Mobile"
   },
   {
     "code": "Moldavian SSR",
@@ -2454,6 +2519,11 @@
     "name": "New Mexico"
   },
   {
+    "code": "New Orleans",
+    "continent": "North America",
+    "name": "New Orleans"
+  },
+  {
     "code": "aus_nsw",
     "continent": "Oceania",
     "name": "New South Wales"
@@ -2642,6 +2712,11 @@
     "code": "Organization of American States",
     "continent": "North America",
     "name": "Organization of American States"
+  },
+  {
+    "code": "Orlando",
+    "continent": "North America",
+    "name": "Orlando"
   },
   {
     "code": "Ottoman Empire",
@@ -2950,6 +3025,11 @@
     "code": "rio_de_janeiro",
     "continent": "South America",
     "name": "Rio de Janeiro"
+  },
+  {
+    "code": "Rio Grande",
+    "continent": "North America",
+    "name": "Rio Grande Republic"
   },
   {
     "code": "Rio Negro",
@@ -3476,6 +3556,11 @@
     "name": "Samoa"
   },
   {
+    "code": "San Antonio",
+    "continent": "North America",
+    "name": "San Antonio"
+  },
+  {
     "code": "San Juan",
     "continent": "South America",
     "name": "San Juan"
@@ -3753,6 +3838,11 @@
     "name": "Sri Lanka"
   },
   {
+    "code": "St Petersburg (US)",
+    "continent": "North America",
+    "name": "St Petersburg (US)"
+  },
+  {
     "code": "ps",
     "continent": "Asia",
     "name": "State of Palestine"
@@ -3841,6 +3931,11 @@
     "code": "tj",
     "continent": "Asia",
     "name": "Tajikistan"
+  },
+  {
+    "code": "Tampa",
+    "continent": "North America",
+    "name": "Tampa"
   },
   {
     "code": "Tanintharyi",
