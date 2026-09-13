@@ -15,6 +15,10 @@ export class SettingToggle extends LitElement {
     return this;
   }
 
+  // `.checked` is a property binding, not `?checked`: once the player has
+  // clicked the box, its dirty checkedness flag makes the attribute inert, so
+  // an attribute binding could never un-check it again — "Reset to defaults"
+  // would leave the box showing the old state.
   private handleChange(e: Event) {
     const input = e.target as HTMLInputElement;
     this.checked = input.checked;
@@ -46,7 +50,7 @@ export class SettingToggle extends LitElement {
             type="checkbox"
             class="opacity-0 w-0 h-0 peer"
             id=${this.id}
-            ?checked=${this.checked}
+            .checked=${this.checked}
             ?disabled=${this.disabled}
             @change=${this.handleChange}
           />

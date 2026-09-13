@@ -819,7 +819,19 @@ export class UserSettings {
   }
 
   setAudioVolume(category: AudioCategory, volume: number): void {
+    // Writing any channel can flip the web master carve-out from 0 to 1.0
+    // (see defaultMasterVolume): the player now has a stored audio value.
+    // Nothing else would announce that, so the mixer would sit at master 0 —
+    // a silent game — while the tab showed master at 100.
+    const masterBefore = this.audioVolume("master");
     this.setFloat(`settings.audio.${category}`, clampVolume(volume));
+    if (category === "master") return;
+    // A stored master is authoritative; the carve-out cannot apply.
+    if (this.getCached("settings.audio.master") !== null) return;
+    const masterAfter = this.audioVolume("master");
+    if (masterAfter !== masterBefore) {
+      this.emitChange("settings.audio.master", String(masterAfter));
+    }
   }
 
   muteOnBlur(): boolean {

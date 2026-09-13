@@ -199,6 +199,78 @@ describe("master volume default", () => {
     expect(s.audioVolume("effects")).toBe(0);
   });
 
+  it("announces master when the first write flips the carve-out", () => {
+    // Otherwise the mixer stays at master 0 — a silent game — while the tab
+    // shows master at 100.
+    const seen: unknown[] = [];
+    const type = `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.master`;
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    globalThis.addEventListener(type, listener);
+
+    const s = new UserSettings();
+    expect(s.audioVolume("master")).toBe(0);
+    s.setAudioVolume("effects", 0.7);
+
+    globalThis.removeEventListener(type, listener);
+    expect(s.audioVolume("master")).toBeCloseTo(1);
+    expect(seen).toEqual(["1"]);
+  });
+
+  it("announces the flip through the legacy setters too", () => {
+    const seen: unknown[] = [];
+    const type = `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.master`;
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    globalThis.addEventListener(type, listener);
+
+    new UserSettings().setBackgroundMusicVolume(0.5);
+
+    globalThis.removeEventListener(type, listener);
+    expect(seen).toEqual(["1"]);
+  });
+
+  it("announces the flip only once, not on every later write", () => {
+    const seen: unknown[] = [];
+    const type = `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.master`;
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    globalThis.addEventListener(type, listener);
+
+    const s = new UserSettings();
+    s.setAudioVolume("effects", 0.7);
+    s.setAudioVolume("music", 0.3);
+    s.setAudioVolume("alerts", 0.2);
+
+    globalThis.removeEventListener(type, listener);
+    expect(seen).toEqual(["1"]);
+  });
+
+  it("does not announce a flip when master is stored", () => {
+    const s = new UserSettings();
+    s.setAudioVolume("master", 0.3);
+    const seen: unknown[] = [];
+    const type = `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.master`;
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    globalThis.addEventListener(type, listener);
+
+    s.setAudioVolume("effects", 0.7);
+
+    globalThis.removeEventListener(type, listener);
+    expect(seen).toEqual([]);
+    expect(s.audioVolume("master")).toBeCloseTo(0.3);
+  });
+
+  it("trips the carve-out on a legacy effects value alone", () => {
+    localStorage.setItem("settings.soundEffectsVolume", "0.65");
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(1.0);
+  });
+
+  it("does not trip the carve-out on the blur toggles alone", () => {
+    // Those are not a volume choice, so they must not unmute a web player.
+    const s = new UserSettings();
+    s.setMuteOnBlur(true);
+    s.setAlertsWhenUnfocused(false);
+    expect(new UserSettings().audioVolume("master")).toBe(0);
+  });
+
   it("lets a stored master value win on either platform", () => {
     localStorage.setItem("settings.audio.master", "0.3");
     expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.3);
@@ -275,6 +347,48 @@ describe("resetAudio", () => {
     s.setAudioVolume("master", 0.2);
     s.resetAudio();
     expect(new UserSettings().audioVolume("master")).toBeCloseTo(1.0);
+  });
+
+  it("is safe to call twice, and on empty storage", () => {
+    const s = new UserSettings();
+    expect(() => s.resetAudio()).not.toThrow();
+    s.setAudioVolume("music", 0.9);
+    expect(() => {
+      s.resetAudio();
+      s.resetAudio();
+    }).not.toThrow();
+    expect(new UserSettings().audioVolume("music")).toBeCloseTo(0.5);
+  });
+
+  it("announces resolved values for a channel and for the blur toggles", () => {
+    const seen: Record<string, unknown[]> = {
+      effects: [],
+      muteOnBlur: [],
+      alertsWhenUnfocused: [],
+    };
+    const types = Object.keys(seen).map((k) => [
+      k,
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.${k}`,
+    ]);
+    const listeners = types.map(([k, type]) => {
+      const l = (e: Event) => seen[k].push((e as CustomEvent).detail);
+      globalThis.addEventListener(type, l);
+      return [type, l] as const;
+    });
+
+    const s = new UserSettings();
+    s.setAudioVolume("effects", 0.1);
+    s.setMuteOnBlur(true);
+    s.setAlertsWhenUnfocused(false);
+    for (const key of Object.keys(seen)) seen[key].length = 0;
+    s.resetAudio();
+
+    for (const [type, l] of listeners) {
+      globalThis.removeEventListener(type, l);
+    }
+    expect(seen.effects).toEqual(["0.7"]);
+    expect(seen.muteOnBlur).toEqual(["false"]);
+    expect(seen.alertsWhenUnfocused).toEqual(["true"]);
   });
 
   it("announces the value each channel now resolves to, not null", () => {

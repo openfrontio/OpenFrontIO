@@ -358,6 +358,23 @@ describe("user-setting audio tab", () => {
     expect(checkbox(el, "audio-mute-on-blur-toggle").checked).toBe(false);
   });
 
+  it("un-checks a toggle the player has clicked when reset", async () => {
+    // The checkbox's dirty checkedness flag makes an attribute binding inert
+    // after the first click, so `?checked` could not put it back.
+    const el = await mountAudioTab();
+    const box = () => checkbox(el, "audio-mute-on-blur-toggle");
+    box().click();
+    await el.updateComplete;
+    expect(box().checked).toBe(true);
+    expect(new UserSettings().muteOnBlur()).toBe(true);
+
+    (el.querySelector("#audio-reset") as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    expect(new UserSettings().muteOnBlur()).toBe(false);
+    expect(box().checked).toBe(false);
+  });
+
   it("renders the same tab on the in-game instance", async () => {
     setAudioControls(stubControls());
     const el = await mountAudioTab({ inGame: true });
@@ -397,6 +414,7 @@ describe("user-setting audio tab", () => {
       "audio_alerts_when_unfocused_desc",
       "audio_test",
       "audio_test_muted",
+      "audio_reset",
     ];
     expect(required.filter((k) => !(k in en.user_setting))).toEqual([]);
 
