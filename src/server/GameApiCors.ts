@@ -17,9 +17,16 @@ function isAllowedOrigin(origin: string): boolean {
   // docs/MultiServer.md), so each sibling's origin must be allowed. Own host
   // included — harmless (same-origin requests skip CORS) and keeps the rule
   // uniform.
-  return Object.values(ServerEnv.cluster()).some(
-    (entry) => origin === `https://${entry.host}`,
-  );
+  // And each member's PAGE host when GAME_DOMAIN splits the two names
+  // (`blue.openfront.dev` for game host `blue.server.openfront.dev`): a
+  // player who loads a colour's page directly rather than through the apex
+  // arrives from that origin, and before the split it was the same name as
+  // the game host and so already on this list.
+  return Object.values(ServerEnv.cluster()).some((entry) => {
+    if (origin === `https://${entry.host}`) return true;
+    const pageHost = ServerEnv.pageHostFor(entry.host);
+    return pageHost !== undefined && origin === `https://${pageHost}`;
+  });
 }
 
 /**

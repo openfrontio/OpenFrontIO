@@ -158,6 +158,21 @@ export class ServerEnv {
     const v = process.env.GAME_DOMAIN;
     return v && v.length > 0 ? v : undefined;
   }
+  // The PAGE host that pairs with a game host under GAME_DOMAIN:
+  // `blue.server.openfront.dev` -> `blue.openfront.dev`. Undefined when
+  // GAME_DOMAIN is unset (page and game host are one name) or the host is
+  // not under it. A player who loads a colour's page directly, bypassing the
+  // apex, arrives from exactly this origin, so CORS must know it.
+  static pageHostFor(gameHost: string): string | undefined {
+    const gameDomain = ServerEnv.gameDomain();
+    const domain = ServerEnv.domain();
+    if (gameDomain === undefined || !domain) return undefined;
+    const suffix = `.${gameDomain}`;
+    if (!gameHost.endsWith(suffix)) return undefined;
+    const label = gameHost.slice(0, -suffix.length);
+    if (!label || label.includes(".")) return undefined;
+    return `${label}.${domain}`;
+  }
   // The GAME host: the name this deployment is reachable on directly
   // (`blue.openfront.io`, or `main.server.openfront.dev` with GAME_DOMAIN),
   // bypassing the load balancer and the static Worker. Injected into
