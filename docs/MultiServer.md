@@ -466,6 +466,12 @@ What follows from it:
   `/api/health` through to a server until `CLUSTER_STATE_SOURCE=api` is turned
   on for the pair and the API owns that decision instead.
 
-`GAME_DOMAIN` unset collapses both names back onto `$DOMAIN`, which is exactly
-today's behaviour: prod never sets it, and dev does not until the DNS wildcard
-and certificate for the game domain exist.
+With `GAME_DOMAIN` unset the game host falls back to `<subdomain>.<DOMAIN>`,
+which is exactly today's behaviour. That does not mean one hostname: a
+deployment behind an apex still has two, because `SITE_HOST` is set
+independently — prod's `blue` pages at `openfront.io` and games at
+`blue.openfront.io` today, without `GAME_DOMAIN` existing at all. It is the
+standalone deployments with no `SITE_HOST` — `main` and the branch previews —
+where page and game really are the same name, and that is what this variable
+changes. `deploy.sh` ignores it on prod outright, and dev leaves it unset until
+the DNS wildcard and certificate for the game domain exist.
