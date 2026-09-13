@@ -1921,6 +1921,11 @@ export async function createLobby(): Promise<GameInfo> {
   // already; a Create that gets there first fails like any other failed
   // request, and the caller's own failure path (re-enabling the button,
   // clearing the share link) runs as usual.
+  //
+  // Only a page the static Worker served is ever told "outdated". A page a
+  // game server rendered answers "fallback" even when the list carries no
+  // server for its build, and creating against its own host is right: that
+  // host is running this build — it served this page.
   if ((await ensureServerList()) === "outdated") {
     throw new Error(
       "createLobby: this build has no server; a newer version is available",

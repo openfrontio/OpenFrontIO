@@ -458,16 +458,38 @@ values.
     the time a build has no server left, the edge cache has long moved
     on). It connects anyway, so a shell that never prompts still gets its
     lobby list from the fallback values.
-  - never prompted: the desktop shell, whose updater owns which version it
-    runs; a replay shell, pinned to the archived game's build on purpose;
-    and a build whose `gitCommit` names no commit (`DEV`, `desktop`),
-    which matches every version and so is never behind.
+  - never prompted: a page a game server rendered (see below); the desktop
+    shell, whose updater owns which version it runs; a replay shell, pinned
+    to the archived game's build on purpose; and a build whose `gitCommit`
+    names no commit (`DEV`, `desktop`), which matches every version and so
+    is never behind.
   - this replaces the `/v/<latest>/` redirect an earlier draft had.
     Rollover keeps today's feel instead: a player on build X keeps playing
     on X's `draining` server after Y is released, until they refresh. A
     version mismatch on join is still answered at join time
     (`version_mismatch`). `/v/<commit>/` is now used only for pinned pages
     of existing games and replays — roadmap item 2.
+
+### A server-rendered page is never "outdated" by the list
+
+`outdated` is a statement about what a RELOAD would fetch, so it only
+applies to a page that names no server of its own — one the static Worker
+served, where a reload fetches `latest`. A page that carries `serverHost`,
+or `cluster` + `instanceLetter`, came from a game server that is running
+exactly this build (it rendered the page), and a reload re-fetches the same
+page from that same server. So the list can never make such a page
+`outdated`: `ClientEnv.servedByGameServer()` gates it, in `apply()` (which
+answers `fallback`, the page's own values, exactly as when the API is
+unreachable) and again as the first line of `isOutdated`, so no caller can
+reach it by another route. When the list carries no server on the page's
+build, that page's own injected server IS the server for its build.
+
+Without the gate a registry that misses a deploy strands every visitor:
+`main.openfront.dev` served pages from a game server whose build the list
+never listed, the lobby socket raised "a new version is available", the
+reload re-served the same page from the same server, and it prompted again,
+forever. Rollover still reaches these pages through the signal that does
+know: the lobby feed's drain flag (`active: false`), unchanged.
 
 ## The static page: booting with no server of its own
 

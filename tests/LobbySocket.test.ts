@@ -461,3 +461,119 @@ describe("PublicLobbySocket.start with no server known", () => {
     }
   });
 });
+
+// OPE-430, end to end through the real server list: the one flow that
+// prompts, on the kind of page that must never be prompted.
+//
+// Live on main.openfront.dev, where the page is still rendered by a game
+// server: a deploy failed to register the new build in the API's registry,
+// so the list carried no server on the page's build and a `latest` that was
+// a different commit. This socket raised "a new version of OpenFront is
+// available", the reload re-fetched the same page from the same server, and
+// it prompted again — forever.
+describe("PublicLobbySocket.start on a page its own game server rendered", () => {
+  const OLD = "5ccc50a722222222222222222222222222222222";
+  // No server on the old build, latest is a different commit: the list that
+  // used to answer "outdated".
+  const NOTHING_ON_MY_BUILD = {
+    latest: OWN,
+    servers: {
+      d: {
+        host: "falk2-b.openfront.io",
+        numWorkers: 8,
+        version: OWN,
+        state: "open" as const,
+      },
+    },
+  };
+
+  class FakeWebSocket {
+    static OPEN = 1;
+    readyState = 0;
+    binaryType = "";
+    constructor(public url: string) {}
+    addEventListener() {}
+    close() {}
+  }
+
+  let serverList: typeof import("../src/client/ServerList");
+
+  function bootstrap(extra: Record<string, unknown>) {
+    ClientEnv.reset();
+    serverList.resetServerList();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      turnstileSiteKey: "k",
+      jwtAudience: "openfront.io",
+      gitCommit: OLD,
+      ...extra,
+    };
+  }
+
+  beforeEach(async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.showInGameAlert.mockClear();
+    // The status is what is under test here, so the real implementation
+    // runs — against a stubbed fetch, not the network.
+    serverList = await vi.importActual<
+      typeof import("../src/client/ServerList")
+    >("../src/client/ServerList");
+    mocks.ensureServerList.mockReset();
+    mocks.ensureServerList.mockImplementation(serverList.ensureServerList);
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    vi.stubGlobal(
+      "fetch",
+      async () =>
+        new Response(JSON.stringify(NOTHING_ON_MY_BUILD), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+  });
+
+  afterEach(() => {
+    serverList.resetServerList();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    ClientEnv.reset();
+    delete (window as any).BOOTSTRAP_CONFIG;
+  });
+
+  it("does not prompt: a reload would re-serve the same page from the same server", async () => {
+    bootstrap({
+      cluster: { a: { host: "blue.openfront.io", numWorkers: 2 } },
+      instanceLetter: "a",
+      serverHost: "blue.openfront.io",
+    });
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), { onUpdateAvailable });
+
+    await socket.start();
+
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+    // And the lobby list still connects, on the page's own server.
+    expect((socket as any).ws.url).toMatch(
+      /^wss:\/\/blue\.openfront\.io\/w\d+\/lobbies$/,
+    );
+    socket.stop();
+  });
+
+  it("still prompts a Worker-served page on the very same list", async () => {
+    // The control: nothing about the list changed, only whether the page
+    // names a server. A page that names none reloads into `latest`, so
+    // "outdated" is true news there.
+    bootstrap({});
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onUpdateAvailable,
+      maxWsAttempts: 1,
+    });
+
+    await socket.start();
+    socket.stop();
+
+    expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
+  });
+});

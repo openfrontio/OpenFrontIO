@@ -163,3 +163,64 @@ describe("a page carrying only environment values", () => {
     expect(ClientEnv.gameVersion("abcd1234")).toBeUndefined();
   });
 });
+
+// OPE-430. Which kind of page this is decides whether the API's list may
+// ever call it "outdated": a page that names a server of its own was
+// rendered BY a game server running this build, and a reload re-fetches the
+// same page from it, so there is nothing to update to. Only a page that
+// names none — the static Worker's — reloads into `latest`.
+describe("servedByGameServer", () => {
+  afterEach(() => {
+    ClientEnv.reset();
+    delete (window as any).BOOTSTRAP_CONFIG;
+  });
+
+  function bootstrap(overrides: Record<string, unknown>) {
+    ClientEnv.reset();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      turnstileSiteKey: "site-key",
+      jwtAudience: "openfront.io",
+      gitCommit: OWN,
+      ...overrides,
+    };
+  }
+
+  it("is false on a page that names no server", () => {
+    staticPage();
+    expect(ClientEnv.servedByGameServer()).toBe(false);
+  });
+
+  it("is true when a serverHost was injected", () => {
+    // The desktop shell, and any page a server rendered with an explicit
+    // host.
+    bootstrap({ serverHost: "blue.openfront.io" });
+    expect(ClientEnv.servedByGameServer()).toBe(true);
+  });
+
+  it("is true when the cluster map and this page's letter were injected", () => {
+    // What a web page a game server rendered carries instead of a host.
+    bootstrap({
+      cluster: { a: { host: "blue.openfront.io", numWorkers: 2 } },
+      instanceLetter: "a",
+    });
+    expect(ClientEnv.servedByGameServer()).toBe(true);
+  });
+
+  it("is false when only half of the map pair is there", () => {
+    // Neither half names a server on its own: a map with no own letter says
+    // where other deployments are, not which one served this page, and a
+    // letter with no map resolves to nothing.
+    bootstrap({ cluster: { a: { host: "blue.openfront.io", numWorkers: 2 } } });
+    expect(ClientEnv.servedByGameServer()).toBe(false);
+    bootstrap({ instanceLetter: "a" });
+    expect(ClientEnv.servedByGameServer()).toBe(false);
+  });
+
+  it("is false for a siteHost or a legacy numWorkers alone", () => {
+    // A site is not a server (the apex a static page was served behind),
+    // and a bare worker count names no host to reach.
+    bootstrap({ siteHost: "openfront.io", numWorkers: 4 });
+    expect(ClientEnv.servedByGameServer()).toBe(false);
+  });
+});

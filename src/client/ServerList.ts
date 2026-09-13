@@ -47,11 +47,20 @@ export type ServerListStatus =
   // The list is loaded and a server for this build was picked.
   | "api"
   // The list is missing or unreachable; BOOTSTRAP_CONFIG is in charge.
+  // Also the answer for a page a game server rendered whose build the list
+  // carries no server for: that page's own injected server is the server
+  // for its build (ClientEnv.servedByGameServer), so own-server calls use
+  // the page's values exactly as they do when the API is down.
   | "fallback"
   // The list is loaded, no server takes new games from this build, and
   // `latest` says a newer version exists — this page is behind. The caller
   // that starts something new (the lobby list) turns this into the existing
   // "update available" prompt; nothing here navigates the page.
+  //
+  // Only ever answered to a page that names no server of its own, i.e. one
+  // the static Worker served, where reloading really does fetch `latest`. A
+  // server-rendered page is re-served by the same server on the same build,
+  // so telling it to reload would only loop.
   | "outdated"
   // The list is loaded but no server takes new games from this build and
   // there is no newer version either: nothing is running. Own-server calls
@@ -265,9 +274,12 @@ function scheduleNextPoll(gotList: boolean): void {
  * Nothing here ever navigates the page. When no server takes this build's
  * games but `latest` names a newer one, the answer is "outdated" and the
  * caller that starts something new (PublicLobbySocket.start) raises the
- * existing "update available" prompt. Joining or rejoining an existing
- * game, and every in-game request, can ignore it: they get the list applied
- * either way, so a game's own letter still routes.
+ * existing "update available" prompt — but only on a page that names no
+ * server of its own. A page a game server rendered gets "fallback" instead:
+ * that server runs this build, and a reload re-serves the same page from
+ * it, so an update prompt there would loop forever. Joining or rejoining
+ * an existing game, and every in-game request, can ignore it: they get the
+ * list applied either way, so a game's own letter still routes.
  */
 export async function ensureServerList(): Promise<ServerListStatus> {
   try {
@@ -326,9 +338,21 @@ function apply(): ServerListStatus {
   }
 
   // No server takes new games from this build. Existing games still resolve
-  // by letter from the list; own-server calls fall back to the page's own
-  // values. If a newer version exists, say so and let the caller prompt.
+  // by letter from the list — that is why the list is applied either way —
+  // and own-server calls fall back to the page's own values.
   ClientEnv.applyServerList(list, null);
+  // A page a game server rendered is a page that server is running this
+  // build to serve, and a reload comes back from the same server with the
+  // same build. So the list has nothing to move it to: whatever the list
+  // says (a deploy the registry never recorded, most often), the page's own
+  // injected server is the server for its build. Answer "fallback" — own
+  // server, page values, exactly as when the API is unreachable — rather
+  // than "outdated", which would prompt a reload that changes nothing and
+  // prompts again. Rollover still reaches these pages the way it does
+  // today: the lobby feed's drain/`active:false` signal.
+  if (servedByGameServer()) return "fallback";
+  // A Worker-served page names no server, so a reload really does fetch
+  // `latest`. If a newer version exists, say so and let the caller prompt.
   return isOutdated(list, own) ? "outdated" : "no-server";
 }
 
@@ -357,6 +381,13 @@ function randomIndex(count: number): number {
 // here as well as in startServerListPolling, because the lobby socket (the
 // one flow that prompts) runs there too.
 function isOutdated(list: ServerList, own: string): boolean {
+  // A page that carries its own server was served by a game server running
+  // this build, and reloading re-fetches it from that same server: there is
+  // nothing to update to, so the list can never make it outdated. apply()
+  // already answers "fallback" for such a page; the guard is repeated here
+  // so no future caller of isOutdated can reach the prompt-and-reload loop
+  // by another route.
+  if (servedByGameServer()) return false;
   if (isDesktopShell()) return false;
   if (isOnReplayShell()) return false;
   if (isPinnedToAVersion()) return false;
@@ -466,5 +497,17 @@ function safeOwnCommit(): string {
     return ClientEnv.gitCommit();
   } catch {
     return "";
+  }
+}
+
+// Whether the page names a server of its own (ClientEnv.servedByGameServer).
+// Degrades like the two above: an unreadable BOOTSTRAP_CONFIG names no
+// server, and a page with no environment at all is answered by the fallback
+// path rather than by a throw from the middle of a status decision.
+function servedByGameServer(): boolean {
+  try {
+    return ClientEnv.servedByGameServer();
+  } catch {
+    return false;
   }
 }
