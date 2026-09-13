@@ -5,6 +5,7 @@ import {
   backendReachable,
   ensureServerList,
   newerVersionAvailable,
+  ownServerReachable,
   redirectToGameVersion,
   resetServerList,
   serverListSite,
@@ -837,6 +838,31 @@ describe("picking between open, draining and fenced", () => {
 // socket that has failed maxWsAttempts times is that server proving it is
 // gone, and reloadForUpdate re-enters through the page host, which the load
 // balancer answers from a live deployment.
+describe("ownServerReachable", () => {
+  it("is true on any HTTP answer, a 503 included", async () => {
+    setBootstrap({ gitCommit: OLD });
+    const probe = vi.fn(
+      async (_input: RequestInfo | URL) => new Response("", { status: 503 }),
+    );
+    expect(await ownServerReachable(probe as unknown as typeof fetch)).toBe(
+      true,
+    );
+    expect(probe.mock.calls[0][0]).toBe(
+      `${ClientEnv.serverHttpBase()}/api/health`,
+    );
+  });
+
+  it("is false on a network error", async () => {
+    setBootstrap({ gitCommit: OLD });
+    const probe = vi.fn(async () => {
+      throw new TypeError("network down");
+    });
+    expect(await ownServerReachable(probe as unknown as typeof fetch)).toBe(
+      false,
+    );
+  });
+});
+
 describe("newerVersionAvailable", () => {
   const NEWER = {
     latest: OWN,

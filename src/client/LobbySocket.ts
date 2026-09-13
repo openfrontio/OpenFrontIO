@@ -2,7 +2,11 @@ import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { showInGameAlert } from "./InGameModal";
-import { ensureServerList, newerVersionAvailable } from "./ServerList";
+import {
+  ensureServerList,
+  newerVersionAvailable,
+  ownServerReachable,
+} from "./ServerList";
 import { translateText } from "./Utils";
 
 interface LobbySocketOptions {
@@ -267,18 +271,25 @@ export class PublicLobbySocket {
   // hiccup in that window into a reload, and where the reload lands back
   // on the same server (a proxy blocking WebSockets while HTTP still works)
   // it would loop just as OPE-430 did.
+  //
+  // And the premise itself is checked before the rescue fires: a dead
+  // socket is only proof the server is gone if plain HTTP to it fails too
+  // (ownServerReachable). A server that still answers HTTP has a WebSocket
+  // problem, and a reload would come back to it and fail the same way.
   private async promptIfOutdated(): Promise<void> {
     if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
       return;
     }
     const listStatus = await ensureServerList();
     if (this.stopped) return;
-    if (
-      listStatus === "outdated" ||
-      (listStatus !== "api" && newerVersionAvailable())
-    ) {
+    if (listStatus === "outdated") {
       this.fireUpdateAvailable();
+      return;
     }
+    if (listStatus === "api" || !newerVersionAvailable()) return;
+    if (await ownServerReachable()) return;
+    if (this.stopped) return;
+    this.fireUpdateAvailable();
   }
 
   private handleError(error: Event) {

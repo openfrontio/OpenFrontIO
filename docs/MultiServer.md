@@ -503,6 +503,16 @@ page host, which the load balancer answers from a LIVE deployment. So the
 same fact that would loop at page load is the rescue after the socket has
 given up.
 
+Two guards keep the rescue from becoming the loop by another route. It
+never runs while the list still has a server for this build (status
+`"api"`): a failed socket there is a network blip, and being behind
+`latest` is every tab's normal state for the length of a rollout. And it
+checks its own premise first: `ownServerReachable()` makes one plain GET of
+the page's server's `/api/health`, and a server that still answers, with
+any status, has a WebSocket problem rather than being gone -- a reload
+would land back on it and fail the same way. Only a network error or a
+timeout there lets the prompt fire.
+
 ## The static page: booting with no server of its own
 
 Roadmap item 2. A page built once per version and served to everyone can

@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
   // The post-failure question (ServerList.newerVersionAvailable): asked only
   // once reconnecting has given up, never at page load.
   newerVersionAvailable: vi.fn((): boolean => false),
+  // The rescue's premise check (ServerList.ownServerReachable): false means
+  // the page's own server no longer answers HTTP either.
+  ownServerReachable: vi.fn(async (): Promise<boolean> => false),
   showInGameAlert: vi.fn(async (_message: string) => {}),
 }));
 
@@ -29,6 +32,7 @@ vi.mock("../src/client/ServerList", async (importOriginal) => {
     ...actual,
     ensureServerList: mocks.ensureServerList,
     newerVersionAvailable: mocks.newerVersionAvailable,
+    ownServerReachable: mocks.ownServerReachable,
   };
 });
 
@@ -238,6 +242,8 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     mocks.ensureServerList.mockResolvedValue("api");
     mocks.newerVersionAvailable.mockReset();
     mocks.newerVersionAvailable.mockReturnValue(false);
+    mocks.ownServerReachable.mockReset();
+    mocks.ownServerReachable.mockResolvedValue(false);
     vi.stubGlobal("WebSocket", FakeWebSocket);
     ClientEnv.reset();
     (window as any).BOOTSTRAP_CONFIG = {
@@ -329,6 +335,33 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     (socket as any).handleClose();
     await Promise.resolve();
     await Promise.resolve();
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+    socket.stop();
+  });
+
+  // The rescue checks its premise. A dead socket only proves the server is
+  // gone if plain HTTP to it fails too; a server that still answers has a
+  // WebSocket problem (a proxy blocking upgrades, say), and a reload would
+  // come back to it and fail the same way -- the OPE-430 loop, paced by
+  // maxWsAttempts instead of page loads.
+  it("does not prompt when the page's own server still answers HTTP", async () => {
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onUpdateAvailable,
+      maxWsAttempts: 1,
+    });
+    await socket.start();
+
+    mocks.ensureServerList.mockResolvedValue("fallback");
+    mocks.newerVersionAvailable.mockReturnValue(true);
+    mocks.ownServerReachable.mockResolvedValue(true);
+    (socket as any).handleClose();
+    await vi.waitFor(() =>
+      expect(mocks.ownServerReachable).toHaveBeenCalledTimes(1),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+
     expect(onUpdateAvailable).not.toHaveBeenCalled();
     socket.stop();
   });

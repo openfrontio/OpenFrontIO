@@ -422,6 +422,34 @@ export function newerVersionAvailable(): boolean {
   }
 }
 
+const OWN_SERVER_PROBE_TIMEOUT_MS = 5_000;
+
+/**
+ * Whether the page's own game server still answers plain HTTP.
+ *
+ * The post-failure rescue (PublicLobbySocket.promptIfOutdated) rests on a
+ * dead socket meaning the server is gone. A socket can also die while the
+ * server is fine -- a proxy that blocks WebSocket upgrades but passes HTTP,
+ * a WebSocket-only outage -- and then a reload lands back on the same live
+ * server, the socket fails the same way, and the prompt loops (OPE-430's
+ * shape again, paced by maxWsAttempts). So the rescue checks its premise:
+ * one GET of the server's health route. Any HTTP answer, a 503 included,
+ * is the server being there; only a network error or a timeout is not.
+ */
+export async function ownServerReachable(
+  fetchFn: typeof fetch = fetch,
+): Promise<boolean> {
+  try {
+    await fetchFn(`${ClientEnv.serverHttpBase()}/api/health`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(OWN_SERVER_PROBE_TIMEOUT_MS),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Behind the list's `latest`, for the shells that may be told to reload at
 // all. Everything isOutdated tests except the served-by-game-server guard,
 // which is the one difference between the page-load and post-failure
