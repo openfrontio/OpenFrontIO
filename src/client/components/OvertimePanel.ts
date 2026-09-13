@@ -56,15 +56,19 @@ export class OvertimePanel extends LitElement {
     const teamTiles = new Map<Team, number>();
     for (const p of alive) {
       const team = p.team();
-      // The bot team can never be declared winner (WinCheckExecution bails
-      // out for it), so it is never "first place" here either.
-      if (team === null || team === ColoredTeams.Bot) continue;
+      if (team === null) continue;
       teamTiles.set(team, (teamTiles.get(team) ?? 0) + p.numTilesOwned());
     }
     let topTeam: [Team, number] | null = null;
     for (const entry of teamTiles) {
       if (topTeam === null || entry[1] > topTeam[1]) topTeam = entry;
     }
+    // While the bot team holds the most tiles nobody can win on tiles: the
+    // sim's win check only ever evaluates the overall max and bails out for
+    // bots, never falling through to the runner-up. So there is no first
+    // place to show — not the bot team (it can't win) and not the runner-up
+    // (its bar crossing the threshold wouldn't end the game).
+    if (topTeam !== null && topTeam[0] === ColoredTeams.Bot) return null;
     return topTeam !== null
       ? {
           name: this.teamDisplayName(topTeam[0]),

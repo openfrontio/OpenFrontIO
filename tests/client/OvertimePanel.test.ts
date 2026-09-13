@@ -146,7 +146,10 @@ describe("OvertimePanel", () => {
     expect(panel.textContent).toContain("overtime.first_place|Red,50");
   });
 
-  it("never shows the bot team as first place, matching the sim's win rule", async () => {
+  it("shows no first place while the bot team holds the most tiles", async () => {
+    // The sim's win check evaluates only the overall max and bails out for
+    // bots, so in this state nobody can win on tiles — showing the runner-up
+    // as "1st" would imply a win that cannot happen.
     const panel = createPanel({
       gameMode: GameMode.Team,
       players: [
@@ -157,7 +160,8 @@ describe("OvertimePanel", () => {
     });
     await panel.updateComplete;
 
-    expect(panel.textContent).toContain("overtime.first_place|Red,30");
+    expect(panel.style.display).toBe("block");
+    expect(panel.textContent).not.toContain("overtime.first_place");
   });
 
   it("stays hidden before the start minute", async () => {
