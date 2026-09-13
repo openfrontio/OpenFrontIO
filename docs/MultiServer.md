@@ -521,20 +521,25 @@ asks:
   own server? A question about TOPOLOGY, not liveness: probing the server
   cannot tell a dead origin from the proxy in front of it answering 5xx,
   since an opaque cross-origin response carries no status at all.
-  - Behind an apex (`siteHost` defined and not the page's own server —
-    prod: page `openfront.io`, server `blue.openfront.io`):
-    `reloadForUpdate` re-enters through the site host, which the load
-    balancer answers from a live deployment. The rescue cannot loop on a
-    dead server, so it prompts. (A proxy that passes HTTP while blocking
-    WebSockets could still send a tab around that circle; that is
-    pre-existing behaviour, and the reload does land on a healthy
-    deployment.)
-  - Standalone (no `siteHost`, or `siteHost` IS the page's own server — dev
-    `main.openfront.dev` today, previews, beta): the reload re-serves the
-    same page from the same server. If it is gone the reload fails too; if
-    it is alive with a WebSocket problem, the prompt loops. Nothing a
-    prompt can do helps, so the rescue never fires — which is what makes
-    OPE-430 impossible by construction on those pages.
+  - Behind an apex (`siteHost` defined and not the page's own server, AND
+    the page's cluster map has siblings — prod: page `openfront.io`,
+    servers `blue` and `green.openfront.io`): `reloadForUpdate` re-enters
+    through the site host, which the load balancer answers from a live
+    deployment. The rescue cannot loop on a dead server, so it prompts. (A
+    proxy that passes HTTP while blocking WebSockets could still send a
+    tab around that circle; that is pre-existing behaviour, and the reload
+    does land on a healthy deployment.)
+  - Standalone (no `siteHost`, or `siteHost` IS the page's own server, or
+    the map names only this server — dev `main.openfront.dev`, previews,
+    beta): the reload re-serves the same page from the same server. If it
+    is gone the reload fails too; if it is alive with a WebSocket problem,
+    the prompt loops. Nothing a prompt can do helps, so the rescue never
+    fires — which is what makes OPE-430 impossible by construction on
+    those pages. The siblings check is what catches a standalone deployment
+    with `GAME_DOMAIN` set: its page host and game host differ
+    (`main.openfront.dev`, `main.server.openfront.dev`) but both reach the
+    one container, so a differing `siteHost` alone proves nothing — the
+    same rule the server's apex poll uses (`shouldPollApex`).
   - A Worker-served page names no server: its reload fetches `latest`.
 
 ## The static page: booting with no server of its own

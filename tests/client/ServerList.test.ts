@@ -908,6 +908,22 @@ describe("reloadCanLandElsewhere", () => {
     expect(reloadCanLandElsewhere()).toBe(false);
   });
 
+  // A standalone deployment with GAME_DOMAIN set: the page host and the
+  // game host differ, but both names reach the one container behind
+  // Traefik, so a reload comes straight back. The map having no siblings is
+  // what tells this apart from prod's apex — the same rule the server's own
+  // apex poll uses (ActiveDeployment.shouldPollApex).
+  it("is false for a single-server deployment whose page and game hosts differ", () => {
+    setBootstrap({
+      siteHost: "main.openfront.dev",
+      serverHost: "main.server.openfront.dev",
+      cluster: {
+        a: { host: "main.server.openfront.dev", color: "blue", numWorkers: 2 },
+      },
+    });
+    expect(reloadCanLandElsewhere()).toBe(false);
+  });
+
   it("is true for a Worker-served page, which names no server at all", () => {
     // A reload fetches `latest` from the static Worker, which is by
     // definition somewhere other than one deployment.

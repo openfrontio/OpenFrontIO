@@ -465,19 +465,25 @@ export function newerVersionAvailable(): boolean {
  * at all), so the rule reads what the page itself says about where a reload
  * goes.
  *
- * - Behind an apex (siteHost defined and not the page's own server —
- *   prod: page openfront.io, server blue.openfront.io): reloadForUpdate
- *   re-enters through the site host, which the load balancer answers from a
- *   live deployment. The prompt cannot loop on a dead server, so it fires
- *   with no probe. A proxy that passes HTTP but blocks WebSockets could
- *   still send a tab around that circle; that is pre-existing behaviour,
- *   and the reload does at least land on a healthy deployment.
- * - Standalone (no siteHost, or siteHost IS the page's own server — dev's
- *   main.openfront.dev today, previews, beta): the reload re-serves the
- *   same page from the same server. If that server is gone the reload fails
- *   too; if it is alive with a WebSocket problem, the prompt loops. Nothing
- *   a prompt can do helps, so the rescue never fires — which is what makes
- *   OPE-430 impossible by construction on these pages.
+ * - Behind an apex (siteHost defined and not the page's own server, AND
+ *   the page's cluster map has siblings — prod: page openfront.io, servers
+ *   blue and green.openfront.io): reloadForUpdate re-enters through the
+ *   site host, which the load balancer answers from a live deployment. The
+ *   prompt cannot loop on a dead server, so it fires with no probe. A proxy
+ *   that passes HTTP but blocks WebSockets could still send a tab around
+ *   that circle; that is pre-existing behaviour, and the reload does at
+ *   least land on a healthy deployment.
+ * - Standalone (no siteHost, or siteHost IS the page's own server, or the
+ *   map names only this server — dev's main.openfront.dev, previews, beta):
+ *   the reload re-serves the same page from the same server. If that server
+ *   is gone the reload fails too; if it is alive with a WebSocket problem,
+ *   the prompt loops. Nothing a prompt can do helps, so the rescue never
+ *   fires — which is what makes OPE-430 impossible by construction on these
+ *   pages. The siblings check is what catches a standalone deployment with
+ *   GAME_DOMAIN set: its page host (main.openfront.dev) and game host
+ *   (main.server.openfront.dev) differ, but both are one container behind
+ *   Traefik, so a differing siteHost alone proves nothing. Same rule as the
+ *   server's own apex poll (ActiveDeployment.shouldPollApex).
  * - A Worker-served page names no server: a reload fetches `latest` from
  *   the static Worker, which is by definition somewhere else.
  */
@@ -486,7 +492,9 @@ export function reloadCanLandElsewhere(): boolean {
     if (!ClientEnv.servedByGameServer()) return true;
     const site = ClientEnv.siteHost();
     if (site === undefined) return false;
-    return site !== ClientEnv.serverHost();
+    if (site === ClientEnv.serverHost()) return false;
+    const cluster = ClientEnv.cluster();
+    return cluster !== undefined && Object.keys(cluster).length > 1;
   } catch {
     return false;
   }
