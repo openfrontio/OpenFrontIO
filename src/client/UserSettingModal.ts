@@ -248,6 +248,7 @@ export class UserSettingModal extends BaseModal {
       keyPrefix: string;
     }> = [
       { actions: ["emojiMenuModifier", "altKey"], keyPrefix: "Alt" },
+      { actions: ["buildScrollModifier", "altKey"], keyPrefix: "Alt" },
       { actions: ["boxSelectWarships", "shiftKey"], keyPrefix: "Shift" },
     ];
 
@@ -1225,6 +1226,16 @@ export class UserSettingModal extends BaseModal {
         .defaultKey=${this.defaultKeybinds.buildMenuModifier}
         .value=${this.getKeyValue("buildMenuModifier")}
         .display=${this.getKeyChar("buildMenuModifier")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildScrollModifier"
+        label=${translateText("user_setting.build_scroll_modifier")}
+        description=${translateText("user_setting.build_scroll_modifier_desc")}
+        .defaultKey=${this.defaultKeybinds.buildScrollModifier}
+        .value=${this.getKeyValue("buildScrollModifier")}
+        .display=${this.getKeyChar("buildScrollModifier")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
