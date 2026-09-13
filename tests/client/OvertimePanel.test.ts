@@ -16,6 +16,7 @@ function player(
   { alive = true, team = null as Team | null } = {},
 ): PlayerView {
   return {
+    id: () => name,
     displayName: () => name,
     numTilesOwned: () => tiles,
     isAlive: () => alive,
@@ -26,19 +27,23 @@ function player(
 interface PanelOptions {
   gameMode?: GameMode;
   players?: PlayerView[];
+  myPlayer?: PlayerView | null;
   elapsedSeconds?: number;
   enabled?: boolean;
 }
 
-// Deliberately no myPlayer(): the readout is about first place, so it must
-// render identically for spectators, who have no player at all.
+// myPlayer defaults to null (a spectator): the readout is about first place,
+// so it must render fully without a local player — only the bar color may
+// consult it.
 function createPanel({
   gameMode = GameMode.FFA,
   players = [],
+  myPlayer = null,
   elapsedSeconds = 31 * 60,
   enabled = true,
 }: PanelOptions = {}) {
   const game = {
+    myPlayer: () => myPlayer,
     config: () => ({
       overtimeConfig: () => ({
         enabled,
@@ -73,6 +78,49 @@ describe("OvertimePanel", () => {
 
     expect(panel.style.display).toBe("block");
     expect(panel.textContent).toContain("overtime.first_place|Alice,42");
+    // A spectator has no side to root for, so the bar stays green.
+    expect(panel.querySelector(".bg-green-400")).not.toBeNull();
+    expect(panel.querySelector(".bg-red-400")).toBeNull();
+  });
+
+  it("colors the bar green when you lead and red when an opponent does", async () => {
+    const alice = player("Alice", 425);
+    const bob = player("Bob", 300);
+
+    const leading = createPanel({ players: [alice, bob], myPlayer: alice });
+    await leading.updateComplete;
+    expect(leading.querySelector(".bg-green-400")).not.toBeNull();
+    expect(leading.querySelector(".bg-red-400")).toBeNull();
+    document.body.innerHTML = "";
+
+    const trailing = createPanel({ players: [alice, bob], myPlayer: bob });
+    await trailing.updateComplete;
+    expect(trailing.querySelector(".bg-red-400")).not.toBeNull();
+    expect(trailing.querySelector(".bg-green-400")).toBeNull();
+  });
+
+  it("colors the bar by whether your team leads in team games", async () => {
+    const mine = player("A", 200, { team: "Red" });
+    const players = [mine, player("C", 400, { team: "Blue" })];
+
+    const trailing = createPanel({
+      gameMode: GameMode.Team,
+      players,
+      myPlayer: mine,
+    });
+    await trailing.updateComplete;
+    expect(trailing.textContent).toContain("overtime.first_place|Blue,40");
+    expect(trailing.querySelector(".bg-red-400")).not.toBeNull();
+    document.body.innerHTML = "";
+
+    const leading = createPanel({
+      gameMode: GameMode.Team,
+      players,
+      myPlayer: player("D", 0, { team: "Blue" }),
+    });
+    await leading.updateComplete;
+    expect(leading.querySelector(".bg-green-400")).not.toBeNull();
+    expect(leading.querySelector(".bg-red-400")).toBeNull();
   });
 
   it("ignores eliminated players when picking first place", async () => {

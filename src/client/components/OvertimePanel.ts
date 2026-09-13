@@ -31,8 +31,14 @@ export class OvertimePanel extends LitElement {
 
   // The side closest to winning, judged the way WinCheckExecution judges it:
   // the top alive player in FFA, the top team by combined alive tiles
-  // otherwise.
-  private firstPlace(): { name: string; tiles: number } | null {
+  // otherwise. `isMine` says whether that side is the viewer's own (always
+  // false for spectators and replay viewers, who have no side).
+  private firstPlace(): {
+    name: string;
+    tiles: number;
+    isMine: boolean;
+  } | null {
+    const me = this.game.myPlayer();
     const alive = this.game.playerViews().filter((p) => p.isAlive());
     if (!this.isTeamGame()) {
       let top: PlayerView | null = null;
@@ -40,7 +46,11 @@ export class OvertimePanel extends LitElement {
         if (top === null || p.numTilesOwned() > top.numTilesOwned()) top = p;
       }
       return top !== null
-        ? { name: top.displayName(), tiles: top.numTilesOwned() }
+        ? {
+            name: top.displayName(),
+            tiles: top.numTilesOwned(),
+            isMine: me !== null && top.id() === me.id(),
+          }
         : null;
     }
     const teamTiles = new Map<Team, number>();
@@ -56,7 +66,11 @@ export class OvertimePanel extends LitElement {
       if (topTeam === null || entry[1] > topTeam[1]) topTeam = entry;
     }
     return topTeam !== null
-      ? { name: this.teamDisplayName(topTeam[0]), tiles: topTeam[1] }
+      ? {
+          name: this.teamDisplayName(topTeam[0]),
+          tiles: topTeam[1],
+          isMine: me !== null && me.team() === topTeam[0],
+        }
       : null;
   }
 
@@ -85,6 +99,13 @@ export class OvertimePanel extends LitElement {
     // Whole percentages only in the readout; floored, so we never overstate
     // the leader's share against the "hold more than X%" bar.
     const leaderPctShown = Math.floor(leaderPct);
+    // Green when your own side is in front — or when you have no side to
+    // root for (spectators, replays) — red when another side is closest to
+    // winning.
+    const barClass =
+      leader !== null && this.game.myPlayer() !== null && !leader.isMine
+        ? "bg-red-400"
+        : "bg-green-400";
 
     const panel =
       "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg text-white text-sm";
@@ -100,11 +121,11 @@ export class OvertimePanel extends LitElement {
           </span>
         </div>
         <div class="relative h-2.5 w-52 overflow-hidden rounded bg-gray-600/60">
-          <!-- first place's held share (green) vs the shrinking win threshold
-               (orange bar): the gap between them is how close the game is to
-               ending. -->
+          <!-- first place's held share (green when that's your side, red when
+               an opponent leads) vs the shrinking win threshold (orange bar):
+               the gap between them is how close the game is to ending. -->
           <div
-            class="absolute inset-y-0 left-0 bg-green-400"
+            class="absolute inset-y-0 left-0 ${barClass}"
             style="width:${Math.min(100, leaderPct)}%"
           ></div>
           <div
