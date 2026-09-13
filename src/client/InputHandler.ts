@@ -712,6 +712,7 @@ export class InputHandler {
           this.keybinds.boxSelectWarships,
           this.keybinds.emojiMenuModifier,
           this.keybinds.buildMenuModifier,
+          this.keybinds.buildScrollModifier,
           this.keybinds.altKey,
         ].includes(e.code)
       ) {
@@ -934,14 +935,18 @@ export class InputHandler {
       this.eventBus.emit(new AttackRatioEvent(ratio));
       return;
     }
-    // Alt also blocks zooming, to match behavior of Ctrl / Shift
-    if (event.altKey) {
+
+    if (this.activeKeys.has(this.keybinds.buildScrollModifier)) {
       if (Math.abs(scrollValue) > 2) {
         this.setGhostStructure(
           this.uiState.ghostStructure,
           scrollValue > 0 ? "decrease" : "increase",
         );
       }
+    }
+
+    // Alt also blocks zooming, to match behavior of Ctrl / Shift
+    if (event.altKey) {
       return;
     }
 
