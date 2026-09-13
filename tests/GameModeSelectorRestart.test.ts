@@ -134,3 +134,40 @@ describe("GameModeSelector update prompt on the replay shell host", () => {
     expect(showInGameAlert).toHaveBeenCalledTimes(1);
   });
 });
+
+// A page pinned under /v/<commit>/ sits on a draining build on purpose, so
+// the lobby feed's drain signal fires on every load. Prompting would strip
+// the pin, reload at latest, and be re-pinned straight back -- the loop the
+// pinned-page work exists to prevent (see isOutdated and ClientGameRunner's
+// version_mismatch handler for the other two exits).
+describe("GameModeSelector update prompt on a pinned /v/<commit>/ page", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.mocked(showInGameAlert).mockClear();
+  });
+
+  it("suppresses the prompt when the page is pinned to a version", () => {
+    vi.stubGlobal("location", {
+      hostname: "openfront.io",
+      pathname: "/v/5ccc50a7/game/dAbCd12345",
+    });
+    const selector = new GameModeSelector() as any;
+
+    selector.handleUpdateAvailable();
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(selector.updateDeferred).toBe(false);
+  });
+
+  it("still prompts at a version-free path", () => {
+    vi.stubGlobal("location", {
+      hostname: "openfront.io",
+      pathname: "/game/dAbCd12345",
+    });
+    const selector = new GameModeSelector() as any;
+
+    selector.handleUpdateAvailable();
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+  });
+});

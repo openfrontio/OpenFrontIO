@@ -381,7 +381,7 @@ function isOutdated(list: ServerList, own: string): boolean {
  * the same reason: a page whose version someone else owns must not be told
  * to update itself.
  */
-function isPinnedToAVersion(): boolean {
+export function isPinnedToAVersion(): boolean {
   try {
     return stripVersionPrefix(window.location.pathname).commit !== null;
   } catch {
