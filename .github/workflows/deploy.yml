@@ -198,8 +198,10 @@ jobs:
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
           # Separate domain for GAME hostnames, so the static Worker can own
           # the page host (docs/MultiServer.md, "Two hostnames per
-          # deployment"). Unset is today's behaviour.
-          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
+          # deployment"). Unset is today's behaviour. Blanked for a prod
+          # dispatch, mirroring the ENV gating above and the guard in
+          # deploy.sh: it is a repo-level variable prod must never inherit.
+          GAME_DOMAIN: ${{ inputs.target_domain == 'openfront.io' && '' || vars.GAME_DOMAIN }}
           # "api" makes servers take their drain state from the API's
           # registry (docs/MultiServer.md, "Server list v2"); unset keeps
           # today's apex colour poll.
@@ -219,8 +221,12 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           API_KEY: ${{ secrets.API_KEY }}
-          # DOMAIN and SUBDOMAIN are already job-level env.
-          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
+          # DOMAIN and SUBDOMAIN are already job-level env. Blanked for a prod
+          # dispatch, mirroring the ENV gating above and the guard in
+          # deploy.sh — prod discards GAME_DOMAIN, so polling a game host
+          # built from it would wait out 300s on a name that does not exist
+          # and fail a deploy that actually succeeded.
+          GAME_DOMAIN: ${{ inputs.target_domain == 'openfront.io' && '' || vars.GAME_DOMAIN }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
