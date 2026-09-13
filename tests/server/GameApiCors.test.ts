@@ -127,6 +127,74 @@ describe("applyGameApiCorsHeaders", () => {
       expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
     });
   });
+
+  // The dev blue/green pair with GAME_DOMAIN set: SITE_HOST is the apex, the
+  // map holds the game hosts, and a player who loads a colour's page
+  // directly (blue.openfront.dev, bypassing the apex) arrives from an origin
+  // that is on neither list. Before the split that name WAS the game host,
+  // so it was allowed; the pairing must survive the split.
+  describe("a blue/green pair whose game hosts live under GAME_DOMAIN", () => {
+    beforeEach(() => {
+      vi.stubEnv("DOMAIN", "openfront.dev");
+      vi.stubEnv("GAME_DOMAIN", "server.openfront.dev");
+      vi.stubEnv("SUBDOMAIN", "blue");
+      vi.stubEnv("SITE_HOST", "openfront.dev");
+      vi.stubEnv(
+        "CLUSTER_JSON",
+        JSON.stringify({
+          a: {
+            host: "blue.server.openfront.dev",
+            color: "blue",
+            numWorkers: 2,
+          },
+          b: {
+            host: "green.server.openfront.dev",
+            color: "green",
+            numWorkers: 2,
+          },
+        }),
+      );
+    });
+    afterEach(() => vi.unstubAllEnvs());
+
+    test("allows each member's page host, own and sibling", () => {
+      for (const origin of [
+        "https://blue.openfront.dev",
+        "https://green.openfront.dev",
+      ]) {
+        const { headers, setHeader } = collect();
+        applyGameApiCorsHeaders(origin, setHeader);
+        expect(headers.get("Access-Control-Allow-Origin")).toBe(origin);
+      }
+    });
+
+    test("still allows the apex and the game hosts", () => {
+      for (const origin of [
+        "https://openfront.dev",
+        "https://blue.server.openfront.dev",
+        "https://green.server.openfront.dev",
+      ]) {
+        const { headers, setHeader } = collect();
+        applyGameApiCorsHeaders(origin, setHeader);
+        expect(headers.get("Access-Control-Allow-Origin")).toBe(origin);
+      }
+    });
+
+    test("refuses a page host that pairs with no member", () => {
+      const { headers, setHeader } = collect();
+      applyGameApiCorsHeaders("https://main.openfront.dev", setHeader);
+      expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+    });
+
+    test("grants nothing from the pairing when GAME_DOMAIN is unset", () => {
+      // The map names blue.server.openfront.dev; with no GAME_DOMAIN there is
+      // no page host to derive, and blue.openfront.dev is just another name.
+      vi.stubEnv("GAME_DOMAIN", "");
+      const { headers, setHeader } = collect();
+      applyGameApiCorsHeaders("https://blue.openfront.dev", setHeader);
+      expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+    });
+  });
 });
 
 describe("gameApiCors middleware, mounted on a real Express app", () => {
