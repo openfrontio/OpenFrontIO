@@ -6,8 +6,10 @@ import {
   ServerList,
   ServerListSchema,
   servesBuild,
+  shortCommit,
   stripVersionPrefix,
   versionedPath,
+  versionedPathForGame,
   versionMatches,
 } from "../../src/core/ServerList";
 
@@ -248,15 +250,31 @@ describe("stripVersionPrefix", () => {
 
 describe("versionedPath", () => {
   it("prefixes the current path with the target version, dropping the worker prefix", () => {
-    expect(versionedPath("bfd5563a", "/w3/game/dAbCd12345", "?lobby")).toBe(
-      "/v/bfd5563a/game/dAbCd12345?lobby",
+    expect(versionedPath("bfd5563", "/w3/game/dAbCd12345", "?lobby")).toBe(
+      "/v/bfd5563/game/dAbCd12345?lobby",
     );
-    expect(versionedPath("bfd5563a", "/", "")).toBe("/v/bfd5563a/");
+    expect(versionedPath("bfd5563", "/", "")).toBe("/v/bfd5563/");
   });
 
   it("swaps an existing version prefix for the target", () => {
-    expect(versionedPath("bfd5563a", "/v/5ccc50a7/game/dAbCd12345", "")).toBe(
-      "/v/bfd5563a/game/dAbCd12345",
+    expect(versionedPath("bfd5563", "/v/5ccc50a7/game/dAbCd12345", "")).toBe(
+      "/v/bfd5563/game/dAbCd12345",
+    );
+  });
+
+  // The bucket layout is `sites/<site>/v/<short7>/index.html` and the static
+  // Worker keys on the same 7 characters, but callers hand us whatever the
+  // server list carries -- which is the full 40-char GIT_COMMIT.
+  it("emits the 7-character short form of a full sha", () => {
+    expect(versionedPath(OWN, "/game/dAbCd12345", "")).toBe(
+      "/v/bfd5563/game/dAbCd12345",
+    );
+    expect(versionedPath(OWN.toUpperCase(), "/", "")).toBe("/v/bfd5563/");
+  });
+
+  it("passes a short commit through unchanged", () => {
+    expect(versionedPath("5ccc50a", "/game/dAbCd12345", "")).toBe(
+      "/v/5ccc50a/game/dAbCd12345",
     );
   });
 
@@ -265,5 +283,152 @@ describe("versionedPath", () => {
     // a page already under /v/<commit>/ must never be navigated to itself.
     expect(versionedPath("bfd5563a", "/v/bfd5563a/", "")).toBeNull();
     expect(versionedPath(LIST.latest!, "/v/bfd5563a/game/x", "")).toBeNull();
+    // And still when the page's prefix is the short form of the full sha
+    // the caller passes -- which is now the only form this emits.
+    expect(versionedPath(OWN, "/v/bfd5563/game/x", "")).toBeNull();
+  });
+});
+
+describe("shortCommit", () => {
+  it("narrows a sha to the 7 lowercase characters URLs use", () => {
+    expect(shortCommit(OWN)).toBe("bfd5563");
+    expect(shortCommit(OWN.toUpperCase())).toBe("bfd5563");
+    expect(shortCommit("5ccc50a")).toBe("5ccc50a");
+  });
+
+  it("leaves a value that names no commit alone", () => {
+    // "DEV" and "desktop" would truncate into something meaningless, and
+    // commitsMatch only ever matches them against themselves.
+    expect(shortCommit("DEV")).toBe("DEV");
+    expect(shortCommit("desktop")).toBe("desktop");
+  });
+});
+
+// The path a version redirect navigates to is decided by the GAME, not by
+// the address bar: checkActiveLobby also runs from the homepage (a typed or
+// pasted code, a click in the lobby list) and from a page showing a
+// different game.
+describe("versionedPathForGame", () => {
+  const OTHER = "5ccc50a722222222222222222222222222222222";
+  const SHORT_OTHER = "5ccc50a";
+  const ID = "cAbCd12345";
+  // What ClientEnv.gamePath(ID) hands over: version-free, worker-prefixed.
+  const GAME_PATH = `/w3/game/${ID}`;
+
+  it("returns null when the game's server runs this build", () => {
+    // Prefix-tolerant, like every other commit compare: the list carries the
+    // full sha while the page's own value may be short.
+    expect(
+      versionedPathForGame(OWN, OWN, ID, GAME_PATH, `/game/${ID}`, ""),
+    ).toBeNull();
+    expect(
+      versionedPathForGame("bfd5563a", OWN, ID, GAME_PATH, `/game/${ID}`, ""),
+    ).toBeNull();
+  });
+
+  it("keeps the current path, and its search, when it names this game", () => {
+    expect(
+      versionedPathForGame(
+        OWN,
+        OTHER,
+        ID,
+        GAME_PATH,
+        `/w3/game/${ID}`,
+        "?lobby",
+      ),
+    ).toBe(`/v/${SHORT_OTHER}/game/${ID}?lobby`);
+  });
+
+  // The homepage case: checkActiveLobby is reached from enterLobbyFromInput
+  // and joinHostedLobby, where the pathname is "/". Versioning THAT would
+  // send the player to the other build's home page and silently drop the
+  // code they just typed.
+  it("builds the game's own path from the homepage", () => {
+    expect(versionedPathForGame(OWN, OTHER, ID, GAME_PATH, "/", "")).toBe(
+      `/v/${SHORT_OTHER}/game/${ID}`,
+    );
+  });
+
+  // Spectate from the homepage lives only in memory until this navigation,
+  // and Main.handleUrl reads it from the search: the rebuilt URL must carry
+  // it, or the spectator lands as a player and takes a seat.
+  it("carries a spectate intent onto the rebuilt path", () => {
+    expect(versionedPathForGame(OWN, OTHER, ID, GAME_PATH, "/", "", true)).toBe(
+      `/v/${SHORT_OTHER}/game/${ID}?spectate`,
+    );
+    // The page's own search already says it, or deliberately does not.
+    expect(
+      versionedPathForGame(
+        OWN,
+        OTHER,
+        ID,
+        GAME_PATH,
+        `/w3/game/${ID}`,
+        "?spectate",
+        false,
+      ),
+    ).toBe(`/v/${SHORT_OTHER}/game/${ID}?spectate`);
+    expect(
+      versionedPathForGame(
+        OWN,
+        OTHER,
+        ID,
+        GAME_PATH,
+        `/w3/game/${ID}`,
+        "",
+        true,
+      ),
+    ).toBe(`/v/${SHORT_OTHER}/game/${ID}`);
+  });
+
+  // The sharper case: versioning the ambient path would route the player
+  // into a DIFFERENT game than the one they asked to join.
+  it("ignores another game's path, and its search", () => {
+    expect(
+      versionedPathForGame(
+        OWN,
+        OTHER,
+        ID,
+        GAME_PATH,
+        "/game/dAbCd12345",
+        "?spectate",
+      ),
+    ).toBe(`/v/${SHORT_OTHER}/game/${ID}`);
+  });
+
+  it("returns null when the page already lives under the game's version", () => {
+    // The loop guard: /v/<x>/ is already being served something, and if it
+    // is not x's bundle there is nothing this navigation can fix. Falling
+    // through hands the mismatch to join-time version_mismatch. It holds
+    // wherever the page is, not just on the game's own path -- otherwise
+    // rebuilding the path would step straight over it.
+    expect(
+      versionedPathForGame(
+        OWN,
+        OTHER,
+        ID,
+        GAME_PATH,
+        `/v/${SHORT_OTHER}/game/${ID}`,
+        "",
+      ),
+    ).toBeNull();
+    expect(
+      versionedPathForGame(OWN, OTHER, ID, GAME_PATH, `/v/${SHORT_OTHER}/`, ""),
+    ).toBeNull();
+  });
+
+  it("returns null when this build names no commit", () => {
+    // "DEV" from the dev server, "desktop" from an old shell: they match any
+    // version, so they are never sent off their own server.
+    expect(
+      versionedPathForGame("DEV", OTHER, ID, GAME_PATH, `/game/${ID}`, ""),
+    ).toBeNull();
+  });
+
+  it("returns null when the game's version is unknown", () => {
+    // No list loaded, or a letter the list does not carry.
+    expect(
+      versionedPathForGame(OWN, undefined, ID, GAME_PATH, `/game/${ID}`, ""),
+    ).toBeNull();
   });
 });
