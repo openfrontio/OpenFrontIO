@@ -65,6 +65,11 @@ echo "Extracted to $STATIC_DIR; top-level contents:"
 ls -la "$STATIC_DIR/" || true
 
 R2_ENDPOINT="https://api.${DOMAIN}"
+# The hostname players load the page from, which is what the server list and
+# the static Worker are keyed by (docs/MultiServer.md, "Server list v2"). Behind
+# a load balancer that is the apex (SITE_HOST); a standalone deployment — beta,
+# a branch preview — is its own site.
+SITE="${SITE_HOST:-${SUBDOMAIN}.${DOMAIN}}"
 MANIFEST="$STATIC_DIR/asset-manifest.json"
 if [ ! -f "$MANIFEST" ]; then
     echo "❌ Manifest not found at $MANIFEST"
@@ -182,6 +187,106 @@ else
         exit 1
     fi
     echo "✅ Uploaded $INDEX_KEY."
+
+    # --- Per-version publish (multi-server v2) -------------------------------
+    #
+    # Three more objects, keyed by SITE and the short commit rather than by this
+    # container. Together they are everything a player of this version needs
+    # that is not already a hashed asset: the page, and the desktop shell's
+    # release descriptor plus its cheap poll pointer.
+    #
+    #   game_assets/sites/<site>/v/<short>/index.html
+    #   game_assets/sites/<site>/v/<short>/desktop/release.json
+    #   game_assets/sites/<site>/v/<short>/desktop/version.json
+    #
+    # (The upload endpoint prefixes game_assets/ itself.) Nothing serves these
+    # until the static Worker exists, so this is additive and harmless today —
+    # see docs/MultiServer.md, "Publish pipeline (v2)".
+    #
+    # The page is rendered --environment-only: no cluster, instanceLetter,
+    # instanceId, serverHost or siteHost. One page per VERSION, not per server,
+    # is the whole point; the client asks the API for the server list. The
+    # legacy index-<short>.html above deliberately keeps the server values
+    # until OPE-431 lands, because today's client throws without a worker-count
+    # source.
+    SHORT="${FULL_COMMIT:0:7}"
+    VERSION_PREFIX="sites/${SITE}/v/${SHORT}"
+    echo "Publishing ${VERSION_PREFIX}/ for ${SITE}..."
+
+    # Same single-segment URL encoding the asset loop uses: the whole key goes
+    # through jq's @uri, so "/" arrives as %2F and the endpoint stores it at
+    # game_assets/<key>.
+    upload_versioned() {
+        local key="$1" file="$2" content_type="$3" enc
+        enc="$(jq -rn --arg k "$key" '$k|@uri')"
+        if ! curl -fsS \
+            --retry 5 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 10 --max-time 120 \
+            -X PUT \
+            "$R2_ENDPOINT/game_assets/upload/$enc" \
+            -H "X-API-Key: $API_KEY" \
+            -H "Content-Type: $content_type" \
+            --data-binary "@$file" > /dev/null; then
+            echo "❌ Failed to upload $key"
+            return 1
+        fi
+        echo "✅ Uploaded $key."
+    }
+
+    ENV_INDEX="$EXTRACT_DIR/environment-index.html"
+    if ! docker run --rm --env-file "$ENV_FILE" --entrypoint npx \
+        "${GHCR_IMAGE}" tsx src/server/RenderStaticIndex.ts --environment-only \
+        > "$ENV_INDEX"; then
+        echo "❌ Failed to render the environment-only page"
+        exit 1
+    fi
+    # Same sanity check as the replay shell: a renderer that crashed downstream
+    # of the redirect would otherwise publish an empty page for the version.
+    if ! grep -q "BOOTSTRAP_CONFIG" "$ENV_INDEX"; then
+        echo "❌ The environment-only page looks wrong (no BOOTSTRAP_CONFIG)"
+        exit 1
+    fi
+    # A per-server value in a page served to every player of this version would
+    # pin them all to one server — exactly what v2 removes. Cheap to assert
+    # here, invisible until it hurts otherwise.
+    for FIELD in cluster instanceLetter instanceId serverHost siteHost; do
+        if grep -q "^ *${FIELD}:" "$ENV_INDEX"; then
+            echo "❌ The environment-only page still carries ${FIELD}"
+            exit 1
+        fi
+    done
+
+    DESKTOP_RELEASE="$EXTRACT_DIR/desktop-release.json"
+    DESKTOP_VERSION="$EXTRACT_DIR/desktop-version.json"
+    if ! docker run --rm --env-file "$ENV_FILE" --entrypoint npx \
+        "${GHCR_IMAGE}" tsx src/server/RenderDesktopDescriptor.ts \
+        > "$DESKTOP_RELEASE"; then
+        echo "❌ Failed to build the desktop release descriptor"
+        exit 1
+    fi
+    if ! docker run --rm --env-file "$ENV_FILE" --entrypoint npx \
+        "${GHCR_IMAGE}" tsx src/server/RenderDesktopDescriptor.ts --version-pointer \
+        > "$DESKTOP_VERSION"; then
+        echo "❌ Failed to build the desktop version pointer"
+        exit 1
+    fi
+    # The shell refuses a descriptor it cannot parse, so publishing a truncated
+    # one strands every Steam client on this version.
+    if ! jq -e '.schemaVersion and .clientVersion and .template.sha256' \
+        "$DESKTOP_RELEASE" > /dev/null; then
+        echo "❌ The desktop release descriptor is missing required fields"
+        exit 1
+    fi
+    if ! jq -e '.clientVersion and .coreVersion' "$DESKTOP_VERSION" > /dev/null; then
+        echo "❌ The desktop version pointer is missing required fields"
+        exit 1
+    fi
+
+    upload_versioned "${VERSION_PREFIX}/index.html" "$ENV_INDEX" "text/html" || exit 1
+    upload_versioned "${VERSION_PREFIX}/desktop/release.json" \
+        "$DESKTOP_RELEASE" "application/json" || exit 1
+    upload_versioned "${VERSION_PREFIX}/desktop/version.json" \
+        "$DESKTOP_VERSION" "application/json" || exit 1
 fi
 
 echo "Checking for existing container..."
@@ -281,6 +386,123 @@ if [ $? -eq 0 ]; then
 else
     echo "Failed to start container"
     exit 1
+fi
+
+# Tell the API which commit new players of this site should get. This is the
+# single switch of multi-server v2 (docs/MultiServer.md): servers running
+# `latest` are `open` and take new games, everything else drains, and the
+# static Worker serves `latest`'s page at <site>/ and its /desktop/*.json.
+#
+# It runs LAST, after the new container is up, because the API refuses to flag
+# a version no server has checked in for — that refusal (409) is the interlock
+# that stops a deploy from pointing every player at a build that cannot serve
+# them. The container registers within ~10s of boot, so a 409 immediately after
+# `docker run` is expected and is retried, not an error. There is no separate
+# health wait in this script; this retry loop is the closest thing to one, and
+# CI's own "Wait for deployment to start" step polls /commit.txt afterwards.
+#
+# The markers below delimit the block that tests/UpdateFlagLatest.test.ts
+# extracts and runs against a fake curl — the rest of this script talks to
+# docker and ssh and cannot be executed in a test, but this decision can. Keep
+# them in place.
+# --- BEGIN flag latest (tested) ---
+# Overridable so the test can drive the same loop without waiting 90 seconds.
+: "${FLAG_LATEST_TIMEOUT:=90}"
+: "${FLAG_LATEST_RETRY_DELAY:=5}"
+
+# flag_latest <site> <version> <endpoint> <api_key> <cluster_state_source>
+#
+# Returns 0 when the deploy may report success, 1 when it must not.
+#
+# The asymmetry is deliberate. While the page and the servers still come from
+# BOOTSTRAP_CONFIG, a missing `latest` changes nothing a player can see, so a
+# warning is the honest outcome and failing the deploy would be noise. Once
+# CLUSTER_STATE_SOURCE=api is in the env file the site's clients get their
+# server list from the API, and a version that was never flagged means no
+# server is `open`: nobody can start a game. A deploy that ends there has not
+# succeeded and must not say it has.
+flag_latest() {
+    local site="$1" version="$2" endpoint="$3" api_key="$4" state_source="$5"
+    local strict=no
+    if [ "$state_source" = "api" ]; then
+        strict=yes
+    fi
+
+    local deadline=$((SECONDS + FLAG_LATEST_TIMEOUT))
+    local body code reason
+    body="$(mktemp)"
+
+    while :; do
+        # No -f: the status code IS the answer here, so it must be read rather
+        # than collapsed into a non-zero exit. A curl that cannot reach the API
+        # at all (DNS, TLS, connect timeout) exits non-zero AND prints 000, so
+        # the fallback must only fill in for a curl that printed nothing —
+        # `|| echo 000` would append to curl's own 000 and yield "000000",
+        # which falls through to the decide-now arm and kills the retry loop
+        # on the one failure it exists to survive.
+        if ! code="$(curl -sS --connect-timeout 10 --max-time 30 \
+            -o "$body" -w "%{http_code}" \
+            -X POST "${endpoint}/cluster/latest" \
+            -H "X-API-Key: ${api_key}" \
+            -H "Content-Type: application/json" \
+            -d "{\"site\": \"${site}\", \"version\": \"${version}\"}")"; then
+            code="${code:-000}"
+        fi
+
+        case "$code" in
+            200 | 204)
+                echo "✅ Flagged ${version} as latest for ${site}."
+                rm -f "$body"
+                return 0
+                ;;
+            404)
+                # The API predates the registry. Never strict: there is nothing
+                # to flag and nothing reading it, so this is the expected
+                # answer everywhere until the API ships.
+                echo "⚠️ ${endpoint}/cluster/latest is not deployed yet (HTTP 404); skipping the latest flag."
+                rm -f "$body"
+                return 0
+                ;;
+            409 | 000 | 5??)
+                # 409: no server has checked in for this version yet — the
+                # normal state for the first few seconds after docker run.
+                # 000/5xx: the API is unreachable or broken; same treatment,
+                # because the deploy is equally unfinished either way.
+                if [ "$SECONDS" -ge "$deadline" ]; then
+                    reason="HTTP ${code} after ${FLAG_LATEST_TIMEOUT}s of retries"
+                    break
+                fi
+                echo "… ${endpoint}/cluster/latest returned HTTP ${code}; retrying in ${FLAG_LATEST_RETRY_DELAY}s"
+                sleep "$FLAG_LATEST_RETRY_DELAY"
+                ;;
+            *)
+                # 400/401/403 and friends: a bad key or a malformed request.
+                # Retrying cannot fix it, so decide now.
+                reason="HTTP ${code}"
+                break
+                ;;
+        esac
+    done
+
+    echo "⚠️ Failed to flag ${version} as latest for ${site}: ${reason}"
+    cat "$body" || true
+    rm -f "$body"
+    if [ "$strict" = "yes" ]; then
+        echo "❌ CLUSTER_STATE_SOURCE=api: clients take their server list from the API, so an unflagged version means no server is open. Failing the deploy."
+        return 1
+    fi
+    echo "   Continuing: this site still boots from the page's own values."
+    return 0
+}
+# --- END flag latest (tested) ---
+
+if [[ "$FULL_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+    if ! flag_latest "$SITE" "$FULL_COMMIT" "$R2_ENDPOINT" "$API_KEY" \
+        "${CLUSTER_STATE_SOURCE:-}"; then
+        exit 1
+    fi
+else
+    echo "⚠️ Skipping the latest flag: commit.txt is not a full SHA ('$FULL_COMMIT')"
 fi
 
 echo "======================================================"

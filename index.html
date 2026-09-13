@@ -113,18 +113,30 @@
     <meta property="og:image" content="<%- gameplayScreenshotUrl %>" />
     <meta property="og:type" content="game" />
 
-    <!-- Injected from Server env -->
+    <!--
+      Injected from Server env.
+
+      Every per-server value (cluster, instanceLetter, instanceId, serverHost,
+      siteHost) is emitted through a guard so the whole line — indentation and
+      trailing comma included — disappears when the renderer does not supply
+      it. That is what lets one page be rendered per VERSION rather than per
+      server and uploaded to the CDN (docs/MultiServer.md, "Publish pipeline
+      (v2)"); a game server supplies them all and gets exactly the page it
+      always served.
+
+      Never add a placeholder the Steam shell does not supply: openfront-desktop
+      renders this same template itself and a missing local is a ReferenceError,
+      i.e. a blank window. Guarding an existing one is safe — the shell supplies
+      a value and the line still emits.
+    -->
     <script>
       window.BOOTSTRAP_CONFIG = {
         gitCommit: <%- gitCommit %>,
         assetManifest: <%- assetManifest %>,
         cdnBase: <%- cdnBase %>,
-        gameEnv: <%- gameEnv %>,
-        cluster: <%- cluster %>,
-        instanceLetter: <%- instanceLetter %>,
+        gameEnv: <%- gameEnv %>,<%- typeof cluster !== "undefined" && cluster ? "\n        cluster: " + cluster + "," : "" %><%- typeof instanceLetter !== "undefined" && instanceLetter ? "\n        instanceLetter: " + instanceLetter + "," : "" %>
         turnstileSiteKey: <%- turnstileSiteKey %>,
-        jwtAudience: <%- jwtAudience %>,
-        instanceId: <%- instanceId %>,<%- typeof serverHost !== "undefined" && serverHost ? "\n        serverHost: " + serverHost + "," : "" %><%- typeof siteHost !== "undefined" && siteHost ? "\n        siteHost: " + siteHost + "," : "" %>
+        jwtAudience: <%- jwtAudience %>,<%- typeof instanceId !== "undefined" && instanceId ? "\n        instanceId: " + instanceId + "," : "" %><%- typeof serverHost !== "undefined" && serverHost ? "\n        serverHost: " + serverHost + "," : "" %><%- typeof siteHost !== "undefined" && siteHost ? "\n        siteHost: " + siteHost + "," : "" %>
       };
       document.documentElement.style.setProperty(
         "--background-image-url",
