@@ -198,10 +198,13 @@ jobs:
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
           # Separate domain for GAME hostnames, so the static Worker can own
           # the page host (docs/MultiServer.md, "Two hostnames per
-          # deployment"). Unset is today's behaviour. Blanked for a prod
+          # deployment"). Unset is today's behaviour. Empty for a prod
           # dispatch, mirroring the ENV gating above and the guard in
           # deploy.sh: it is a repo-level variable prod must never inherit.
-          GAME_DOMAIN: ${{ inputs.target_domain == 'openfront.io' && '' || vars.GAME_DOMAIN }}
+          # The value has to sit in the && branch -- `cond && '' || vars.X`
+          # would yield vars.X for EVERY run, because '' is falsy here and
+          # these are value operators, not a ternary.
+          GAME_DOMAIN: ${{ inputs.target_domain != 'openfront.io' && vars.GAME_DOMAIN || '' }}
           # "api" makes servers take their drain state from the API's
           # registry (docs/MultiServer.md, "Server list v2"); unset keeps
           # today's apex colour poll.
@@ -221,12 +224,14 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           API_KEY: ${{ secrets.API_KEY }}
-          # DOMAIN and SUBDOMAIN are already job-level env. Blanked for a prod
+          # DOMAIN and SUBDOMAIN are already job-level env. Empty for a prod
           # dispatch, mirroring the ENV gating above and the guard in
           # deploy.sh — prod discards GAME_DOMAIN, so polling a game host
           # built from it would wait out 300s on a name that does not exist
-          # and fail a deploy that actually succeeded.
-          GAME_DOMAIN: ${{ inputs.target_domain == 'openfront.io' && '' || vars.GAME_DOMAIN }}
+          # and fail a deploy that actually succeeded. Same shape as the
+          # deploy step above: the value must be in the && branch, since ''
+          # is falsy and would fall straight through a trailing ||.
+          GAME_DOMAIN: ${{ inputs.target_domain != 'openfront.io' && vars.GAME_DOMAIN || '' }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
