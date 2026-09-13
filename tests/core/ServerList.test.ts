@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   commitsMatch,
   isCommitLike,
-  ownServerStanding,
   pickServerForBuild,
   ServerList,
   ServerListSchema,
@@ -208,66 +207,6 @@ describe("pickServerForBuild", () => {
     expect(pickServerForBuild(only("fenced", OLD), OLD, () => 0)).toBeNull();
     expect(pickServerForBuild(LIST, "9999999", () => 0)).toBeNull();
     expect(pickServerForBuild({ servers: {} }, OWN, () => 0)).toBeNull();
-  });
-});
-
-// Where the page's own server stands in the list -- the question that tells
-// a stale registry (OPE-430: the server that rendered the page runs this
-// build by construction) apart from a server that has genuinely moved on or
-// been taken out of rotation. See docs/MultiServer.md.
-describe("ownServerStanding", () => {
-  it("is absent when the list carries neither the host nor the letter", () => {
-    // The registry missed a deploy, or the host was renamed: nothing here
-    // describes the server that served this page.
-    expect(ownServerStanding(LIST, "blue.openfront.io", "a", OWN)).toBe(
-      "absent",
-    );
-  });
-
-  it("is other-version when the page's own host now runs another build", () => {
-    // d runs OWN; a page built from OLD served by that same host is behind
-    // it, and a reload from that host hands back the newer build.
-    expect(ownServerStanding(LIST, "falk2-b.openfront.io", null, OLD)).toBe(
-      "other-version",
-    );
-  });
-
-  it("is fenced when the page's own server runs this build but takes nothing", () => {
-    expect(ownServerStanding(LIST, "nbg2-b.openfront.io", null, OWN)).toBe(
-      "fenced",
-    );
-  });
-
-  it("is serving for an open or draining server on this build", () => {
-    expect(ownServerStanding(LIST, "falk2-b.openfront.io", null, OWN)).toBe(
-      "serving",
-    );
-    // Draining still takes this build's games -- that is the rollover.
-    expect(ownServerStanding(LIST, "falk2-a.openfront.io", null, OLD)).toBe(
-      "serving",
-    );
-  });
-
-  it("falls back to the letter when no host is known, or the host moved", () => {
-    // A page carrying only the cluster map names its server by letter; so
-    // does a machine whose hostname changed under a letter that stayed put.
-    expect(ownServerStanding(LIST, null, "f", OWN)).toBe("fenced");
-    expect(ownServerStanding(LIST, "renamed.openfront.io", "f", OWN)).toBe(
-      "fenced",
-    );
-    // Neither identity known at all: nothing to match.
-    expect(ownServerStanding(LIST, null, null, OWN)).toBe("absent");
-  });
-
-  it("matches a host case-insensitively, and a build label that names no commit", () => {
-    expect(ownServerStanding(LIST, "FALK2-B.openfront.io", null, OWN)).toBe(
-      "serving",
-    );
-    // "DEV" matches any version (versionMatches), so its own server is
-    // never on "another build" -- it is serving, or fenced.
-    expect(ownServerStanding(LIST, "falk2-a.openfront.io", null, "DEV")).toBe(
-      "serving",
-    );
   });
 });
 

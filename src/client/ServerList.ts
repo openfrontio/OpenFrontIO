@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { GameID } from "../core/Schemas";
 import {
-  OwnServerStanding,
-  ownServerStanding,
   pickServerForBuild,
   ServerList,
   ServerListSchema,
@@ -46,32 +44,27 @@ const REFRESH_INTERVAL_MS = 30_000;
 const RETRY_INTERVAL_MS = 10_000;
 
 export type ServerListStatus =
-  // The list is loaded and a server for this build was picked.
+  // The list is loaded and a server for this build was picked: own-server
+  // calls go to it.
   | "api"
-  // The list is missing or unreachable; BOOTSTRAP_CONFIG is in charge.
-  // Also the answer for a page a game server rendered whose own server the
-  // list does not carry at all (ownServerStanding "absent"): the registry
-  // is stale, and the host that rendered this page is running this build by
-  // construction, so own-server calls use the page's values exactly as they
-  // do when the API is down.
+  // The page's own values are in charge. Either no list is known (missing,
+  // unreachable, malformed, empty), or the list carries no server for this
+  // build and the page names a server of its own — which is running this
+  // build, because it served this page. A loaded list is still applied, so
+  // a foreign letter keeps routing cross-host; only own-server calls fall
+  // back.
   | "fallback"
   // The list is loaded, no server takes new games from this build, and
-  // `latest` says a newer version exists — this page is behind. The caller
-  // that starts something new (the lobby list) turns this into the existing
-  // "update available" prompt; nothing here navigates the page.
-  //
-  // Said to a page that names no server of its own (the static Worker's,
-  // where a reload fetches `latest`), and to a server-rendered page whose
-  // own host the list says now runs a DIFFERENT build — there a reload from
-  // that host hands back the new build. Never while that host still runs
-  // this one: re-serving the same page would prompt forever (OPE-430).
+  // `latest` names a newer version — this page is behind. Said only to a
+  // page that names no server of its own (the static Worker's), where a
+  // reload really does fetch `latest`. The caller that starts something new
+  // (the lobby list) turns it into the existing "update available" prompt,
+  // and createLobby refuses; nothing here navigates the page.
   | "outdated"
-  // The list is loaded but no server takes new games from this build and
-  // there is nothing to update to either. Nothing is running, or the page's
-  // own server is fenced: deliberately out of rotation on this very build,
-  // so it takes nothing new (createLobby refuses) while a reload would come
-  // back identical. Own-server calls fall back to BOOTSTRAP_CONFIG, so
-  // multiplayer fails as it does today when the server is gone.
+  // As above, but there is nothing to update to either: this page IS
+  // `latest`, or the list names none, so nothing is running. Own-server
+  // calls fall back to the document's origin and multiplayer fails as it
+  // does today when the server is gone.
   | "no-server";
 
 let cached: { list: ServerList; fetchedAt: number } | null = null;
@@ -281,11 +274,13 @@ function scheduleNextPoll(gotList: boolean): void {
  * games but `latest` names a newer one, the answer is "outdated" and the
  * caller that starts something new (PublicLobbySocket.start) raises the
  * existing "update available" prompt — but only on a page that names no
- * server of its own. A page a game server rendered gets "fallback" instead:
- * that server runs this build, and a reload re-serves the same page from
- * it, so an update prompt there would loop forever. Joining or rejoining
- * an existing game, and every in-game request, can ignore it: they get the
- * list applied either way, so a game's own letter still routes.
+ * server of its own, where a reload really does fetch `latest`. A page a
+ * game server rendered gets "fallback" instead: it came from a server
+ * running this build, a reload re-serves the same page from that server,
+ * and an update prompt there would loop forever (OPE-430). Joining or
+ * rejoining an existing game, and every in-game request, can ignore the
+ * status entirely: the list is applied either way, so a game's own letter
+ * still routes.
  */
 export async function ensureServerList(): Promise<ServerListStatus> {
   try {
@@ -347,54 +342,29 @@ function apply(): ServerListStatus {
   // by letter from the list — that is why the list is applied either way —
   // and own-server calls fall back to the page's own values.
   ClientEnv.applyServerList(list, null);
-  // What the list says about the server that served this page decides the
-  // rest (docs/MultiServer.md):
-  //
-  // - absent: the registry is stale (OPE-430 — a deploy that never
-  //   registered, or a renamed host). That server rendered this page, so it
-  //   runs this build, and a reload comes back from it identical. Answer
-  //   "fallback": own server, the page's own values, exactly as when the
-  //   API is unreachable. Telling it to update would prompt forever.
-  // - other-version: the same host now runs a different build. Behind an
-  //   apex (reloadCanLandElsewhere) a reload hands back that build, so
-  //   this page IS behind and isOutdated says so below, its shell
-  //   exemptions included. On a standalone page the list cannot tell an
-  //   old tab (the server really moved on) from the registration lag right
-  //   after a deploy (the page came from the NEW build and the registry
-  //   still says the old one); a reload there re-serves the same page
-  //   either way, so prompting could only loop. "fallback": trust the page,
-  //   and leave the old-tab case to the lobby feed, which compares commits
-  //   with the server itself the moment the socket connects.
-  // - fenced: this server, on this build, deliberately out of rotation. It
-  //   takes nothing new (createLobby refuses), but a reload would come back
-  //   identical, so there is nothing to prompt for: "no-server".
-  //
-  // A Worker-served page names no server of its own, so none of this
-  // applies: a reload really does fetch `latest`, and isOutdated answers.
-  const standing = ownStanding(list, own);
-  if (servedByGameServer()) {
-    if (standing === "absent") return "fallback";
-    if (standing === "other-version" && !reloadCanLandElsewhere()) {
-      return "fallback";
-    }
-  }
-  return isOutdated(list, own, standing) ? "outdated" : "no-server";
-}
 
-// How the list sees the server that served this page. Degrades to "absent"
-// (the OPE-430 answer, which keeps the page on its own values) when the
-// page's identity cannot be read at all.
-function ownStanding(list: ServerList, own: string): OwnServerStanding {
-  try {
-    return ownServerStanding(
-      list,
-      ClientEnv.serverHost() ?? null,
-      ClientEnv.instanceLetter() ?? null,
-      own,
-    );
-  } catch {
-    return "absent";
-  }
+  // The rule (docs/MultiServer.md, OPE-430): "outdated" is a statement
+  // about what a RELOAD would fetch, so only a page that names no server of
+  // its own can be told it. There — the static Worker's page — a reload
+  // really does fetch `latest`.
+  //
+  // A page a game server rendered came from a server running exactly this
+  // build, and a reload re-fetches the page from that same host. So
+  // whatever the list says about that host — a registry that missed a
+  // deploy, an entry naming another build, an entry fenced — the answer is
+  // "fallback": the page's own server and its own values, exactly as when
+  // the API is unreachable. Anything else would prompt, reload, come back
+  // identical, and prompt again, forever. That is what OPE-430 was.
+  //
+  // Such a page is not left behind. The server it talks to tells it
+  // itself, over the lobby feed it is already connected to: a different
+  // commit (that host moved on) or active:false (its deployment is no
+  // longer the live one). That is the pre-v2 mechanism, it needs no list,
+  // and it cannot loop — the signal comes from the very host a reload goes
+  // back to. Only when that host stops answering altogether does the list
+  // get a say again, through reloadWouldRescue below.
+  if (servedByGameServer()) return "fallback";
+  return behindLatest(list, own) ? "outdated" : "no-server";
 }
 
 // The one place the client's randomness lives: src/core carries no
@@ -403,73 +373,76 @@ function randomIndex(count: number): number {
   return Math.floor(Math.random() * count);
 }
 
-// Outdated means a newer version exists for this page to move to. When this
-// page IS latest, or the list names no latest, no server is running at all:
-// there is nothing to update to, and prompting would only loop.
-//
-// versionMatches, not commitsMatch: a build label that names no commit
-// ("DEV" from the dev server, "desktop" from an old shell, "" when
-// BOOTSTRAP_CONFIG is unreadable) matches any version and is never behind —
-// telling the dev server's bundle to reload for an update it cannot fetch
-// would loop forever.
-//
-// The desktop shell is never outdated from here: its updater owns which
-// version it runs, and reloading would only re-run the same local overlay
-// (GameModeSelector.handleUpdateAvailable refuses it too).
-//
-// A replay shell is pinned on purpose: replay.<domain> serves the build a
-// record was made on, so being behind latest is the point. It is skipped
-// here as well as in startServerListPolling, because the lobby socket (the
-// one flow that prompts) runs there too.
-function isOutdated(
-  list: ServerList,
-  own: string,
-  standing: OwnServerStanding,
-): boolean {
-  // A page that carries its own server was served by a game server running
-  // this build, so a reload re-fetches the same page from it and there is
-  // nothing to update to — unless the list says that very host now runs a
-  // DIFFERENT build AND a reload can land elsewhere (behind an apex with
-  // siblings), in which case the reload does hand back the new one. On a
-  // standalone page even that is no exception: right after a deploy the
-  // registry can still name the previous build for a page the new build
-  // just served, and a reload would come straight back. The guard lives
-  // here as well as in apply() so no future caller can reach the
-  // prompt-and-reload loop by another route.
-  if (
-    servedByGameServer() &&
-    !(standing === "other-version" && reloadCanLandElsewhere())
-  ) {
-    return false;
-  }
-  return behindLatest(list, own);
+/**
+ * Is there a newer build than this page's for it to move to at all? The
+ * version half of both questions the list answers.
+ *
+ * versionMatches, not commitsMatch: a build label that names no commit
+ * ("DEV" from the dev server, "desktop" from an old shell, "" when
+ * BOOTSTRAP_CONFIG is unreadable) matches any version and is never behind —
+ * telling the dev server's bundle to reload for an update it cannot fetch
+ * would loop forever. When this page IS `latest`, or the list names none,
+ * there is nothing to move to.
+ *
+ * Three shells are never behind however far from `latest` they run,
+ * because someone else owns which version they are on:
+ *
+ * - the desktop shell: its updater owns that, and reloading would only
+ *   re-run the same local overlay (GameModeSelector.handleUpdateAvailable
+ *   refuses it too);
+ * - a replay shell: replay.<domain> serves the build a record was made on,
+ *   so being behind is the point. Skipped here as well as in
+ *   startServerListPolling, because the lobby socket runs there too;
+ * - a page pinned under `/v/<commit>/`: see isPinnedToAVersion.
+ */
+function behindLatest(list: ServerList, own: string): boolean {
+  if (isDesktopShell()) return false;
+  if (isOnReplayShell()) return false;
+  if (isPinnedToAVersion()) return false;
+  if (list.latest === undefined) return false;
+  return !versionMatches(own, list.latest);
 }
 
 /**
- * Is there a newer build than this page's, that a reload could land on?
+ * Would reloading rescue this tab? The POST-FAILURE question, asked by
+ * PublicLobbySocket.promptIfOutdated once reconnecting has given up — and
+ * the only route by which a page a game server rendered is ever told to
+ * update from the list.
  *
- * The POST-FAILURE question, asked by PublicLobbySocket.promptIfOutdated
- * after reconnecting has given up: "my server is gone — is there a newer
- * build out there?". Deliberately NOT the page-load status: it honours the
- * desktop, replay-shell and pinned-page exemptions (those pages must never
- * be told to reload at all) but not the served-by-game-server guard.
+ * Deliberately not the page-load question. There, a server-rendered page is
+ * never "outdated" (apply above): its own server is serving it, so a reload
+ * comes back identical. Here that server has stopped answering at all,
+ * which is the one shape where a reload can land the player somewhere
+ * better: a tab that was sitting on the homepage when its deployment was
+ * drained and then fenced or removed never gets a feed to learn from — it
+ * just watches its socket fail.
  *
- * The two differ because the reload loop only exists while the page's own
- * server is alive and serving it: there, a reload comes back from the same
- * server on the same build, so "outdated" would prompt forever (OPE-430).
- * A tab whose socket has failed maxWsAttempts times has the opposite
- * problem — its deployment was drained then fenced or removed, no feed is
- * left to carry the `active:false` signal, and a reload goes through the
- * page host (reloadForUpdate re-enters via siteHost), which the load
- * balancer answers from a LIVE deployment. Prompting there is the rescue.
+ * Three conditions, all of them necessary:
+ *
+ * - the list has no server for this build (`listStatus` is not "api"). A
+ *   picked server still takes this build's games, so a socket failing
+ *   against it is a network blip; and being behind `latest` is the normal
+ *   state of every tab for the length of a rollout, so prompting on "api"
+ *   would turn every hiccup in that window into a forced reload.
+ * - there IS a newer build (behindLatest, shell exemptions included) —
+ *   otherwise a reload fetches what this page already runs.
+ * - a reload can land somewhere other than the page's own server
+ *   (reloadCanLandElsewhere) — otherwise the prompt either fails with that
+ *   server or loops against it.
+ *
+ * Nothing is probed. A browser cannot establish liveness: an opaque
+ * cross-origin response carries no status, so a proxy answering 521 for a
+ * torn-down origin and a healthy server look the same. The rule is about
+ * topology instead, which the page knows for certain.
  *
  * False when no list has ever loaded: nothing is known to update to.
  */
-export function newerVersionAvailable(): boolean {
+export function reloadWouldRescue(listStatus: ServerListStatus): boolean {
+  if (listStatus === "api") return false;
   const list = cached?.list ?? null;
   if (list === null) return false;
   try {
-    return behindLatest(list, safeOwnCommit());
+    return behindLatest(list, safeOwnCommit()) && reloadCanLandElsewhere();
   } catch {
     return false;
   }
@@ -478,58 +451,33 @@ export function newerVersionAvailable(): boolean {
 /**
  * Could a reload land anywhere but the page's own server?
  *
- * The post-failure rescue (PublicLobbySocket.promptIfOutdated) is only
- * worth offering when the answer is yes. It is a question about topology,
- * not about liveness: probing the server cannot tell a dead origin from the
- * proxy in front of it answering 5xx (an opaque response carries no status
- * at all), so the rule reads what the page itself says about where a reload
- * goes.
- *
- * - Behind an apex (siteHost defined and not the page's own server, AND
- *   the page's cluster map has siblings — prod: page openfront.io, servers
- *   blue and green.openfront.io): reloadForUpdate re-enters through the
- *   site host, which the load balancer answers from a live deployment. The
- *   prompt cannot loop on a dead server, so it fires with no probe. A proxy
- *   that passes HTTP but blocks WebSockets could still send a tab around
- *   that circle; that is pre-existing behaviour, and the reload does at
- *   least land on a healthy deployment.
+ * - A Worker-served page names no server at all: its reload fetches
+ *   `latest` from the static Worker, which is by definition not one
+ *   deployment.
+ * - Behind an apex — siteHost defined, not the page's own server, and the
+ *   page's cluster map has siblings (prod: page openfront.io, servers blue
+ *   and green.openfront.io) — reloadForUpdate re-enters through the site
+ *   host, which the load balancer answers from a live deployment.
  * - Standalone (no siteHost, or siteHost IS the page's own server, or the
  *   map names only this server — dev's main.openfront.dev, previews, beta):
  *   the reload re-serves the same page from the same server. If that server
- *   is gone the reload fails too; if it is alive with a WebSocket problem,
- *   the prompt loops. Nothing a prompt can do helps, so the rescue never
- *   fires — which is what makes OPE-430 impossible by construction on these
- *   pages. The siblings check is what catches a standalone deployment with
- *   GAME_DOMAIN set: its page host (main.openfront.dev) and game host
- *   (main.server.openfront.dev) differ, but both are one container behind
- *   Traefik, so a differing siteHost alone proves nothing. Same rule as the
- *   server's own apex poll (ActiveDeployment.shouldPollApex).
- * - A Worker-served page names no server: a reload fetches `latest` from
- *   the static Worker, which is by definition somewhere else.
+ *   is gone the reload fails with it; if it is alive with a
+ *   WebSocket-specific problem, the prompt loops. Nothing a prompt can do
+ *   helps.
+ *
+ * The siblings check is what catches a standalone deployment with
+ * GAME_DOMAIN set: its page host (main.openfront.dev) and game host
+ * (main.server.openfront.dev) differ, yet both names reach the one
+ * container behind Traefik, so a differing siteHost alone proves nothing.
+ * Same rule as the server's own apex poll
+ * (ActiveDeployment.shouldPollApex).
  */
-export function reloadCanLandElsewhere(): boolean {
-  try {
-    if (!ClientEnv.servedByGameServer()) return true;
-    const site = ClientEnv.siteHost();
-    if (site === undefined) return false;
-    if (site === ClientEnv.serverHost()) return false;
-    const cluster = ClientEnv.cluster();
-    return cluster !== undefined && Object.keys(cluster).length > 1;
-  } catch {
-    return false;
-  }
-}
-
-// Behind the list's `latest`, for the shells that may be told to reload at
-// all. Everything isOutdated tests except the served-by-game-server guard,
-// which is the one difference between the page-load and post-failure
-// questions above.
-function behindLatest(list: ServerList, own: string): boolean {
-  if (isDesktopShell()) return false;
-  if (isOnReplayShell()) return false;
-  if (isPinnedToAVersion()) return false;
-  if (list.latest === undefined) return false;
-  return !versionMatches(own, list.latest);
+function reloadCanLandElsewhere(): boolean {
+  if (!ClientEnv.servedByGameServer()) return true;
+  const site = ClientEnv.siteHost();
+  if (site === undefined || site === ClientEnv.serverHost()) return false;
+  const cluster = ClientEnv.cluster();
+  return cluster !== undefined && Object.keys(cluster).length > 1;
 }
 
 /**

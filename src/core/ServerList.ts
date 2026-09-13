@@ -148,63 +148,6 @@ export function pickServerForBuild(
   return candidates[index];
 }
 
-/** What the list says about the server that served this page. */
-export type OwnServerStanding =
-  // The list carries no entry for this page's server at all. Either the
-  // registry missed a deploy (OPE-430) or the host was renamed: the server
-  // that served this page is running this build by construction, so the
-  // page's own values stay in charge.
-  | "absent"
-  // The list has this page's server, running a DIFFERENT build. The server
-  // that served this page has moved on, so a reload from that very host
-  // hands back the new build — this page really is behind.
-  | "other-version"
-  // This page's server, on this build, deliberately out of rotation. It
-  // takes nothing new, but a reload would come back identical, so there is
-  // nothing to prompt for either.
-  | "fenced"
-  // This page's server, on this build, open or draining: it still takes
-  // this build's games.
-  | "serving";
-
-/**
- * Where the page's own server stands in the list — the question that tells
- * a stale registry (OPE-430) apart from a server that has genuinely moved
- * on or been fenced. See docs/MultiServer.md.
- *
- * Identity is the injected host when the page carries one, else its letter.
- * The host is tried first because it is what a page is actually served
- * from, and the letter is the fallback for a page that carries only the
- * cluster map — and for a host that was renamed under a letter that stayed
- * put, where the letter is the truer identity of the machine.
- */
-export function ownServerStanding(
-  list: ServerList,
-  ownHost: string | null,
-  ownLetter: string | null,
-  ownCommit: string,
-): OwnServerStanding {
-  const entry = findOwnEntry(list, ownHost, ownLetter);
-  if (entry === undefined) return "absent";
-  if (!versionMatches(ownCommit, entry.version)) return "other-version";
-  return entry.state === "fenced" ? "fenced" : "serving";
-}
-
-function findOwnEntry(
-  list: ServerList,
-  ownHost: string | null,
-  ownLetter: string | null,
-): ServerEntry | undefined {
-  if (ownHost !== null && ownHost !== "") {
-    const host = ownHost.toLowerCase();
-    for (const entry of Object.values(list.servers)) {
-      if (entry.host.toLowerCase() === host) return entry;
-    }
-  }
-  if (ownLetter !== null && ownLetter !== "") return list.servers[ownLetter];
-  return undefined;
-}
-
 /**
  * Split a `/v/<commit>/…` pathname into the commit and the path under it.
  * The site serves every version's page at that prefix, so a page has to

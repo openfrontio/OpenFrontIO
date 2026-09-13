@@ -1922,24 +1922,19 @@ export async function createLobby(): Promise<GameInfo> {
   // request, and the caller's own failure path (re-enabling the button,
   // clearing the share link) runs as usual.
   //
-  // A page a game server rendered answers "fallback" when the list carries
-  // no entry for its own server at all (a stale registry, OPE-430), and
-  // creating against its own host is right there: that host is running this
-  // build — it served this page. But "no-server" on such a page means the
-  // list DOES carry it, fenced: deliberately out of rotation, taking nothing
-  // new, so a lobby minted on it would be born on a server on its way out.
-  // Refuse that too. On a Worker-served page "no-server" means there is no
-  // server at all and ClientEnv.serverHttpBase() is the document's origin,
-  // where the request 404s (or NoServerError is thrown while building a
-  // worker path) — the same failure, reached a step earlier and with a
-  // clearer message.
-  const listStatus = await ensureServerList();
-  if (
-    listStatus === "outdated" ||
-    (listStatus === "no-server" && ClientEnv.servedByGameServer())
-  ) {
+  // "outdated" is by construction a page that names no server of its own
+  // (docs/MultiServer.md, OPE-430): there the list is the only thing that
+  // knows where a server is, and it says there is none for this build. A
+  // page a game server rendered answers "fallback" whatever the list says
+  // about its own host, and creating against that host is right — it is
+  // running this build, because it served this page, and it is where this
+  // tab's lobby list and its session already live. That is how Create
+  // behaved before the list existed, and the signal that moves such a tab
+  // off a deployment on its way out is the lobby feed's commit compare and
+  // drain flag, not this.
+  if ((await ensureServerList()) === "outdated") {
     throw new Error(
-      "createLobby: this build has no server that takes new games",
+      "createLobby: this build has no server; a newer version is available",
     );
   }
   // Send JWT token for creator identification - server extracts persistentID from it
