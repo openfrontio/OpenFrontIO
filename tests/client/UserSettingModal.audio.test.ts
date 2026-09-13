@@ -329,6 +329,35 @@ describe("user-setting audio tab", () => {
     expect(dependent().disabled).toBe(true);
   });
 
+  it("resets every channel to its default from the button", async () => {
+    const before = new UserSettings();
+    before.setAudioVolume("music", 0.1);
+    before.setAudioVolume("effects", 0.2);
+    before.setMuteOnBlur(true);
+    const el = await mountAudioTab();
+    expect(
+      (el.querySelector("#audio-music-slider") as unknown as { value: number })
+        .value,
+    ).toBe(10);
+
+    (el.querySelector("#audio-reset") as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    // Storage is clean, and the sliders re-read it.
+    expect(localStorage.getItem("settings.audio.music")).toBeNull();
+    const sliderValue = (category: string) =>
+      (
+        el.querySelector(`#audio-${category}-slider`) as unknown as {
+          value: number;
+        }
+      ).value;
+    expect(sliderValue("music")).toBe(50);
+    expect(sliderValue("effects")).toBe(70);
+    // Web, and nothing stored any more, so master is silent.
+    expect(sliderValue("master")).toBe(0);
+    expect(checkbox(el, "audio-mute-on-blur-toggle").checked).toBe(false);
+  });
+
   it("renders the same tab on the in-game instance", async () => {
     setAudioControls(stubControls());
     const el = await mountAudioTab({ inGame: true });

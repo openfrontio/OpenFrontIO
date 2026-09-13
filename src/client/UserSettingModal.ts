@@ -525,6 +525,13 @@ export class UserSettingModal extends BaseModal {
     this.requestUpdate();
   }
 
+  private resetAudio() {
+    // No confirmation: nothing is destroyed that a player cannot put back by
+    // moving a slider, and the result is audible immediately.
+    this.userSettings.resetAudio();
+    this.requestUpdate();
+  }
+
   private toggleMuteOnBlur(e: Event) {
     this.userSettings.setMuteOnBlur((e.target as HTMLInputElement).checked);
     // Re-render so the dependent "keep alerts audible" row follows.
@@ -657,6 +664,16 @@ export class UserSettingModal extends BaseModal {
           ?disabled=${!muteOnBlur}
           @change=${this.toggleAlertsWhenUnfocused}
         ></setting-toggle>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button
+          id="audio-reset"
+          class="px-3 py-1 text-sm font-medium rounded-lg border border-white/10 text-white bg-white/5 hover:bg-white/15 transition-colors"
+          @click=${this.resetAudio}
+        >
+          ${translateText("user_setting.audio_reset")}
+        </button>
       </div>
     `;
   }

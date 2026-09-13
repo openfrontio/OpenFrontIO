@@ -98,13 +98,31 @@ function clampVolume(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+const AUDIO_CHANNELS = [
+  "master",
+  "music",
+  "effects",
+  "alerts",
+  "ambience",
+  "interface",
+] as const;
+
+/** Everything "reset to defaults" clears, so the read-through sees a clean slate. */
+const AUDIO_RESET_KEYS: readonly string[] = [
+  ...AUDIO_CHANNELS.map((category) => `settings.audio.${category}`),
+  "settings.audio.muteOnBlur",
+  "settings.audio.alertsWhenUnfocused",
+  // The legacy keys too: leaving them would have the read-through hand the
+  // old two-slider values straight back, which is not "defaults".
+  "settings.backgroundMusicVolume",
+  "settings.soundEffectsVolume",
+];
+
 /** Every key that means "this player has chosen an audio volume before". */
 const AUDIO_VOLUME_KEYS: readonly string[] = [
   "settings.backgroundMusicVolume",
   "settings.soundEffectsVolume",
-  ...(
-    ["master", "music", "effects", "alerts", "ambience", "interface"] as const
-  ).map((category) => `settings.audio.${category}`),
+  ...AUDIO_CHANNELS.map((category) => `settings.audio.${category}`),
 ];
 
 const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
@@ -817,6 +835,33 @@ export class UserSettings {
 
   alertsWhenUnfocused(): boolean {
     return this.getBool("settings.audio.alertsWhenUnfocused", true);
+  }
+
+  /**
+   * Back to the fresh-install state for this platform: every stored audio key
+   * is dropped, including the legacy pair, so the defaults and the master
+   * carve-out resolve against nothing.
+   *
+   * The change events carry the value each key now *resolves to*, not null.
+   * The mixer's listener parses `detail` as a number and ignores NaN, so a
+   * null payload would leave it playing at the old volumes while the tab
+   * showed the new ones.
+   */
+  resetAudio(): void {
+    for (const key of AUDIO_RESET_KEYS) {
+      this.removeCached(key, false);
+    }
+    for (const category of AUDIO_CHANNELS) {
+      this.emitChange(
+        `settings.audio.${category}`,
+        String(this.audioVolume(category)),
+      );
+    }
+    this.emitChange("settings.audio.muteOnBlur", String(this.muteOnBlur()));
+    this.emitChange(
+      "settings.audio.alertsWhenUnfocused",
+      String(this.alertsWhenUnfocused()),
+    );
   }
 
   setAlertsWhenUnfocused(value: boolean): void {

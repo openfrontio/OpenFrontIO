@@ -210,3 +210,88 @@ describe("master volume default", () => {
     expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.3);
   });
 });
+
+describe("resetAudio", () => {
+  beforeEach(() => {
+    resetUserSettingsState();
+    pretendWeb();
+  });
+
+  afterEach(pretendWeb);
+
+  it("clears every audio key, including the legacy pair", () => {
+    const s = new UserSettings();
+    s.setAudioVolume("master", 0.2);
+    s.setAudioVolume("music", 0.3);
+    s.setAudioVolume("effects", 0.4);
+    s.setMuteOnBlur(true);
+    s.setAlertsWhenUnfocused(false);
+    localStorage.setItem("settings.backgroundMusicVolume", "0.9");
+    localStorage.setItem("settings.soundEffectsVolume", "0.9");
+
+    s.resetAudio();
+
+    for (const key of [
+      "settings.audio.master",
+      "settings.audio.music",
+      "settings.audio.effects",
+      "settings.audio.alerts",
+      "settings.audio.ambience",
+      "settings.audio.interface",
+      "settings.audio.muteOnBlur",
+      "settings.audio.alertsWhenUnfocused",
+      "settings.backgroundMusicVolume",
+      "settings.soundEffectsVolume",
+    ]) {
+      expect(localStorage.getItem(key)).toBeNull();
+    }
+  });
+
+  it("returns a web player to the fresh-install state", () => {
+    const s = new UserSettings();
+    s.setAudioVolume("master", 0.2);
+    s.setAudioVolume("effects", 0.1);
+    s.setMuteOnBlur(true);
+    s.setAlertsWhenUnfocused(false);
+
+    s.resetAudio();
+
+    const after = new UserSettings();
+    // Silent on web, because nothing is stored any more — not even the
+    // legacy keys that would otherwise trip the master carve-out.
+    expect(after.audioVolume("master")).toBe(0);
+    expect(after.audioVolume("music")).toBeCloseTo(0.5);
+    expect(after.audioVolume("effects")).toBeCloseTo(0.7);
+    expect(after.audioVolume("alerts")).toBeCloseTo(0.8);
+    expect(after.audioVolume("ambience")).toBeCloseTo(0.4);
+    expect(after.audioVolume("interface")).toBeCloseTo(0.5);
+    expect(after.muteOnBlur()).toBe(false);
+    expect(after.alertsWhenUnfocused()).toBe(true);
+  });
+
+  it("returns a desktop player to an audible master", () => {
+    pretendDesktopShell();
+    const s = new UserSettings();
+    s.setAudioVolume("master", 0.2);
+    s.resetAudio();
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(1.0);
+  });
+
+  it("announces the value each channel now resolves to, not null", () => {
+    // The mixer parses detail as a number and ignores NaN, so a null payload
+    // would leave it playing at the old volumes.
+    const seen: unknown[] = [];
+    const type = `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.master`;
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    globalThis.addEventListener(type, listener);
+
+    const s = new UserSettings();
+    s.setAudioVolume("master", 0.2);
+    seen.length = 0;
+    s.resetAudio();
+
+    globalThis.removeEventListener(type, listener);
+    expect(seen).toEqual(["0"]);
+    expect(seen.every((d) => !isNaN(parseFloat(String(d))))).toBe(true);
+  });
+});

@@ -2072,6 +2072,7 @@
     "audio_music_desc": "The menu theme and the in-game soundtrack.",
     "audio_mute_on_blur": "Mute when the window is not focused",
     "audio_mute_on_blur_desc": "Silence the game while you are working in another window.",
+    "audio_reset": "Reset to defaults",
     "audio_test": "Test",
     "audio_test_muted": "Turn this category up to hear the test sound.",
     "boat_attack": "Boat Attack",
