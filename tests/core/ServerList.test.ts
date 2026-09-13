@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   commitsMatch,
   isCommitLike,
+  ownLetterIn,
   pickServerForBuild,
   ServerList,
   ServerListSchema,
@@ -224,6 +225,44 @@ describe("servesBuild", () => {
     expect(servesBuild(LIST, "f", OWN)).toBe(false);
     expect(servesBuild(LIST, "c", OWN)).toBe(false);
     expect(servesBuild(LIST, "z", OWN)).toBe(false);
+  });
+});
+
+// The lookup half of "a server-rendered page prefers its own server": which
+// letter, if any, the list carries the page's own server under. Whether that
+// server may be picked is servesBuild's question, asked by the client.
+describe("ownLetterIn", () => {
+  it("matches the page's own host against the entries", () => {
+    expect(ownLetterIn(LIST, "nbg2-a.openfront.io", undefined)).toBe("e");
+    // Hostnames are case-insensitive, and the two spellings arrive from
+    // different places (a server's injected value and the registry's).
+    expect(ownLetterIn(LIST, "NBG2-A.openfront.io", undefined)).toBe("e");
+  });
+
+  it("matches by letter when the page names no host of its own", () => {
+    // A web page a game server rendered: the cluster map and its own letter
+    // are all that name its server.
+    expect(ownLetterIn(LIST, undefined, "d")).toBe("d");
+    expect(ownLetterIn(LIST, "", "d")).toBe("d");
+  });
+
+  it("lets the host win when host and letter disagree", () => {
+    // The host is what the page actually talks to; the letter comes from the
+    // cluster map baked into the page, which the registry can have moved on
+    // from.
+    expect(ownLetterIn(LIST, "nbg2-a.openfront.io", "d")).toBe("e");
+    // And a host the list does not carry answers null rather than falling
+    // through to the letter, whose entry names some OTHER host.
+    expect(ownLetterIn(LIST, "blue.openfront.io", "d")).toBeNull();
+  });
+
+  it("is null when the list carries neither", () => {
+    expect(ownLetterIn(LIST, "blue.openfront.io", undefined)).toBeNull();
+    expect(ownLetterIn(LIST, undefined, "z")).toBeNull();
+    expect(ownLetterIn(LIST, undefined, undefined)).toBeNull();
+    expect(
+      ownLetterIn({ servers: {} }, "falk2-b.openfront.io", "d"),
+    ).toBeNull();
   });
 });
 

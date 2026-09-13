@@ -830,6 +830,168 @@ describe("picking between open, draining and fenced", () => {
     });
   });
 
+  // A server-rendered page prefers its own server (OPE-430). Before v2 the
+  // page always talked to the colour that rendered it; the list's random pick
+  // can send it to a sibling, and the two do not have to agree about that
+  // sibling. On dev (openfront.dev, a blue/green pair behind the apex with
+  // CLUSTER_STATE_SOURCE=apex) the registry listed both colours `open` on the
+  // same build while the apex poll had green considering itself draining: a
+  // page rendered by blue that drew green got a lobby feed reporting
+  // active:false, read it as "a new version is available", and reloaded — on
+  // about half of page loads.
+  describe("a server-rendered page prefers its own server", () => {
+    const BLUE = "blue.server.openfront.dev";
+    const GREEN = "green.server.openfront.dev";
+    const OTHER = "falk2-b.openfront.io";
+
+    // The dev pair, as blue renders it.
+    function servedByBlue(overrides: Record<string, unknown> = {}) {
+      setBootstrap({
+        cluster: {
+          a: { host: BLUE, color: "blue", numWorkers: 2 },
+          b: { host: GREEN, color: "green", numWorkers: 2 },
+        },
+        instanceLetter: "a",
+        serverHost: BLUE,
+        siteHost: "openfront.dev",
+        ...overrides,
+      });
+      stubLocation("openfront.dev");
+    }
+
+    // Pin the draw on the LAST candidate, so a test that still lands on the
+    // page's own server landed there for the rule and not by luck.
+    function drawLast() {
+      vi.spyOn(Math, "random").mockReturnValue(0.99);
+    }
+
+    it("stays on the colour that rendered it when both are open on this build", async () => {
+      servedByBlue();
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(
+          listOf({
+            a: server(OWN, "open", BLUE),
+            b: server(OWN, "open", GREEN),
+          }),
+        ),
+      );
+      drawLast();
+
+      // Every load, not most of them: this is the coin flip that was
+      // reloading half of dev's page loads.
+      for (let i = 0; i < 5; i++) {
+        resetServerList();
+        expect(await ensureServerList()).toBe("api");
+        expect(ClientEnv.serverHttpBase()).toBe(`https://${BLUE}`);
+        expect(ClientEnv.serverWsBase()).toBe(`wss://${BLUE}`);
+      }
+    });
+
+    it("keeps its own server while that server is draining on this build", async () => {
+      // The rollover feel, on the page's own server: it still runs this
+      // build, so this page's games still belong there — even though
+      // another server is open on the same build and would win a draw.
+      servedByBlue({ gitCommit: OLD });
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(
+          listOf({
+            a: server(OLD, "draining", BLUE),
+            c: server(OLD, "open", OTHER),
+          }),
+        ),
+      );
+
+      expect(await ensureServerList()).toBe("api");
+      expect(ClientEnv.serverHttpBase()).toBe(`https://${BLUE}`);
+    });
+
+    it("falls back to the list's pick when the list does not carry its server", async () => {
+      servedByBlue();
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(
+          listOf({
+            c: server(OWN, "open", "falk2-a.openfront.io"),
+            d: server(OWN, "open", OTHER),
+          }),
+        ),
+      );
+      drawLast();
+
+      expect(await ensureServerList()).toBe("api");
+      expect(ClientEnv.serverHttpBase()).toBe(`https://${OTHER}`);
+    });
+
+    it("falls back to the list's pick when its own entry is on another build", async () => {
+      // Registration lag, or a tab open across a deploy: the list's entry
+      // for this page's host names a build that is not this page's, so it
+      // proves nothing about this page's build and the ordinary pick
+      // decides among the servers that do run it.
+      servedByBlue();
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(
+          listOf({
+            a: server(OLD, "open", BLUE),
+            d: server(OWN, "open", OTHER),
+          }),
+        ),
+      );
+
+      expect(await ensureServerList()).toBe("api");
+      expect(ClientEnv.serverHttpBase()).toBe(`https://${OTHER}`);
+    });
+
+    it("takes its own server back when a refresh adds it", async () => {
+      // Stronger than the sticky pick below: the own server is the one host
+      // this page knows runs its build, so it wins however the earlier draw
+      // went.
+      vi.useFakeTimers();
+      servedByBlue();
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(listOf({ d: server(OWN, "open", OTHER) })),
+      );
+      expect(await ensureServerList()).toBe("api");
+      expect(ClientEnv.serverHttpBase()).toBe(`https://${OTHER}`);
+
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(
+          listOf({
+            a: server(OWN, "open", BLUE),
+            d: server(OWN, "open", OTHER),
+          }),
+        ),
+      );
+      await vi.advanceTimersByTimeAsync(REFRESH_MS + 1);
+      await ensureServerList();
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(await ensureServerList()).toBe("api");
+      expect(ClientEnv.serverHttpBase()).toBe(`https://${BLUE}`);
+    });
+
+    it("leaves a Worker-served page to the list's pick", async () => {
+      // The control: a page that names no server has no own server to
+      // prefer, so the draw decides — as it always did.
+      setWorkerBootstrap();
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(
+          listOf({
+            a: server(OWN, "open", BLUE),
+            b: server(OWN, "open", GREEN),
+          }),
+        ),
+      );
+
+      const draw = vi.spyOn(Math, "random").mockReturnValue(0.99);
+      expect(await ensureServerList()).toBe("api");
+      expect(ClientEnv.serverHttpBase()).toBe(`https://${GREEN}`);
+
+      draw.mockReturnValue(0);
+      resetServerList();
+      expect(await ensureServerList()).toBe("api");
+      expect(ClientEnv.serverHttpBase()).toBe(`https://${BLUE}`);
+    });
+  });
+
   // The sticky pick, end to end: the page holds the server it picked while
   // that server still takes its games, so the lobby list and the games
   // created from it land together. Each of these refreshes the list under a
