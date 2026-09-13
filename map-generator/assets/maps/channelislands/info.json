@@ -225,5 +225,6 @@
       "name": "Solvang",
       "flag": "California"
     }
-  ]
+  ],
+  "themes": ["north_america"]
 }
