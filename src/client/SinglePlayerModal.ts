@@ -1122,9 +1122,10 @@ export class SinglePlayerModal extends BaseModal {
                 infiniteTroops: this.infiniteTroops,
                 instantBuild: this.instantBuild,
                 randomSpawn: this.randomSpawn,
-                disabledUnits: this.disabledUnits
-                  .map((u) => Object.values(UnitType).find((ut) => ut === u))
-                  .filter((ut): ut is UnitType => ut !== undefined),
+                disabledUnits: this.disabledUnits.filter(
+                  (unit): unit is UnitType =>
+                    Object.values(UnitType).includes(unit),
+                ),
                 nations: sliderToNationsConfig(
                   this.nations,
                   this.defaultNationCount,

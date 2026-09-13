@@ -12,8 +12,10 @@ import {
   Trios,
 } from "../core/game/Game";
 import { GameConfig } from "../core/Schemas";
+import { stripVersionPrefix } from "../core/ServerList";
 import { ClientEnv } from "./ClientEnv";
 import type { LangSelector } from "./LangSelector";
+import { pagePin } from "./PagePin";
 import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/7J5zwb_s_Cg";
@@ -417,12 +419,12 @@ export function createCanvas(): HTMLCanvasElement {
  */
 export function generateCryptoRandomUUID(): string {
   // Type guard to check if randomUUID is available
-  if (crypto !== undefined && "randomUUID" in crypto) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
 
   // Fallback using crypto.getRandomValues
-  if (crypto !== undefined && "getRandomValues" in crypto) {
+  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
     return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(
       /[018]/g,
       (c: number): string =>
@@ -645,9 +647,6 @@ export function getTranslatedPlayerTeamLabel(
   return translated === translationKey ? team : translated;
 }
 
-/**
- * Severity colors mapping for message types
- */
 export const severityColors: Record<string, string> = {
   fail: "text-red-400",
   warn: "text-yellow-400",
@@ -658,9 +657,7 @@ export const severityColors: Record<string, string> = {
 };
 
 /**
- * Gets the CSS classes for styling message types based on their severity
- * @param type The message type to get styling for
- * @returns CSS class string for the message type
+ * Maps a message type to the Tailwind text-color class of its severity.
  */
 export function getMessageTypeClasses(type: MessageType): string {
   switch (type) {
@@ -888,10 +885,52 @@ export function reloadForUpdate(): void {
   if (siteHost !== undefined && url.host !== siteHost) {
     url.protocol = "https:";
     url.host = siteHost;
-    url.pathname = url.pathname.replace(/^\/w\d+\//, "/");
   }
+  // Both prefixes encode what this reload exists to leave behind, whichever
+  // host answers it. `/v/<commit>/` is immutable by design (multi-server
+  // v2): it pins the bundle, so reloading it as-is re-serves the very
+  // version being updated away from, forever, cache-buster or not. And
+  // `/w<n>/` was resolved against the old worker count, which a new version
+  // may have changed — letter routing picks the worker again on the way
+  // back in. apexPathFor drops exactly these two, in either order.
+  url.pathname = apexPathFor(url.pathname);
   url.searchParams.set("v", Date.now().toString(36));
   window.location.replace(url.toString());
+}
+
+/**
+ * The path to ask the apex for when re-entering through it. Both prefixes a
+ * path can carry are specific to where the page came from, and the apex
+ * re-resolves what they encoded: `/w<n>/` is one deployment's worker (letter
+ * routing picks the worker again), and `/v/<commit>/` pins the version whose
+ * staleness is the reason for going to the apex in the first place. Pure so
+ * the rule is testable without booting Main.
+ */
+export function apexPathFor(pathname: string): string {
+  const { path } = stripVersionPrefix(pathname);
+  return path.replace(/^\/w\d+\//, "/");
+}
+
+/**
+ * A same-origin path as THIS document should write it into its own history:
+ * re-prefixed with the page's `/v/<commit>/` when it has one, unchanged
+ * otherwise.
+ *
+ * History entries are not share links, and the two want opposite things. A
+ * share link is version-free on purpose — the recipient should be routed by
+ * whatever version the game's server runs when they open it. A history entry
+ * is this tab's own URL: pressing F5 on it must reload THE BUNDLE THIS PAGE
+ * IS RUNNING, and on a pinned page a version-free path would silently hand
+ * the player `latest` instead, mid-game.
+ *
+ * Reads the pin captured at boot rather than the live pathname: the join
+ * flow rewrites the address bar to the version-free share URL before this
+ * ever runs in a game, and a version-free history entry is precisely what
+ * this exists to avoid writing (PagePin.ts).
+ */
+export function currentPagePath(path: string): string {
+  const commit = pagePin();
+  return commit === null ? path : `/v/${commit}${path}`;
 }
 
 /**
@@ -900,6 +939,10 @@ export function reloadForUpdate(): void {
  * list is empty; the apex always fronts the active one. Same-host,
  * standalone deployments (no siteHost injected), dev, and desktop keep the
  * plain root.
+ *
+ * The plain root is also the right answer on a `/v/<commit>/` page, and for
+ * the same reason: "/" is version-free, so a player leaving to the menu
+ * lands on `latest` rather than back on the build they were leaving.
  */
 export function homeHref(): string {
   const siteHost = ClientEnv.siteHost();

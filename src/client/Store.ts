@@ -1,7 +1,7 @@
 import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
+import { isGrantedSubscription, UserMeResponse } from "../core/ApiSchemas";
 import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
@@ -11,6 +11,7 @@ import "./components/CosmeticPreviewModal";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
+import type { InlineCheckout } from "./components/InlineCheckout";
 import "./components/NotLoggedInWarning";
 import "./components/PackContentsDialog";
 import "./components/PurchaseButton";
@@ -26,7 +27,10 @@ import {
   resolveCosmetics,
   ResolvedCosmetic,
 } from "./Cosmetics";
-import { reportPendingSteamAuthorizations } from "./Payments";
+import {
+  priceStringToCents,
+  reportPendingSteamAuthorizations,
+} from "./Payments";
 import { translateText } from "./Utils";
 
 type StoreTab =
@@ -379,6 +383,7 @@ export class StoreModal extends BaseModal {
     userHasSubscription: boolean,
   ): TemplateResult {
     const priced = resolved.cosmetic as {
+      name?: string;
       product?: Product | null;
       priceHard?: number;
       priceSoft?: number;
@@ -397,10 +402,30 @@ export class StoreModal extends BaseModal {
     const priceSoft = isPurchasable ? priced?.priceSoft : undefined;
     const purchase = (method: "dollar" | "hard" | "soft") =>
       purchaseCosmetic(resolved, method);
+    // Currency packs check out inline (wallet button / in-page card form)
+    // when the display price parses; anything else — including subscriptions,
+    // which are recurring and not a PaymentIntent — keeps the redirect flow,
+    // which is also what an unparseable price degrades to.
+    const amountCents =
+      resolved.type === "pack" && product !== null && priced?.name !== undefined
+        ? priceStringToCents(product.price)
+        : null;
+    const inlineCheckout =
+      amountCents !== null
+        ? {
+            request: {
+              kind: "currency_pack" as const,
+              packName: priced!.name!,
+            },
+            amountCents,
+            successMessageKey: "store.currency_pack_purchase_success",
+          }
+        : null;
     // Reserved currency lines are assigned per visual row by
     // alignPurchaseRows() once the grid has laid out.
     return html`<purchase-button
       .product=${product}
+      .inlineCheckout=${inlineCheckout}
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}
       .rarity=${priced?.rarity ?? "common"}
@@ -539,9 +564,15 @@ export class StoreModal extends BaseModal {
   }
 
   private renderSubscriptionGrid(): TemplateResult {
-    const userHasSubscription =
-      this.userMeResponse !== false &&
-      this.userMeResponse.player.subscription !== null;
+    // Drives the "Switch" label on the other tiers' buy buttons. A granted
+    // player is deliberately NOT counted (OPE-440): they have nothing to
+    // switch from — nobody is billing them — so every tier, theirs included,
+    // is a first purchase and reads as a plain price.
+    const sub =
+      this.userMeResponse === false
+        ? null
+        : this.userMeResponse.player.subscription;
+    const userHasSubscription = sub !== null && !isGrantedSubscription(sub);
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_subscriptions",
       userHasSubscription,
@@ -618,6 +649,14 @@ export class StoreModal extends BaseModal {
   }
 
   protected onClose(): void {
+    // The store hides via CSS (inline modal), so the tiles never disconnect
+    // and an open card-payment modal — portaled to <body> — would float over
+    // the play page after Escape closes the store. Close it explicitly.
+    for (const inline of this.querySelectorAll<InlineCheckout>(
+      "inline-checkout",
+    )) {
+      inline.closeCardModal();
+    }
     this.affiliateCode = null;
     this.openedPack = null;
     this.previewingCosmetic = null;

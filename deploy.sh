@@ -91,6 +91,49 @@ if [ -z "$DOMAIN" ]; then
     exit 1
 fi
 
+# Optional second domain for GAME traffic (docs/MultiServer.md, "Server list
+# v2" -> "Two hostnames per deployment"). A deployment has two hostnames:
+#
+#   page host: <subdomain>.<DOMAIN>       e.g. main.openfront.dev
+#   game host: <subdomain>.<GAME_DOMAIN>  e.g. main.server.openfront.dev
+#
+# The page host is what players type and what the static Worker will serve;
+# the game host is this container, reached directly for WebSockets and /api.
+# They must be separate names because the Worker sits on the page host and
+# must never proxy game traffic. On prod they already are (openfront.io vs
+# blue/green.openfront.io); GAME_DOMAIN is how a dev deployment gets the
+# same shape without inventing a per-branch page domain.
+#
+# DOMAIN keeps its meaning everywhere else: the audience (JWT, api.$DOMAIN)
+# and the page domain. Unset GAME_DOMAIN is exactly today's behaviour, both
+# hostnames collapsing back onto $DOMAIN -- which is what prod does, and
+# what dev does until the variable is set.
+GAME_DOMAIN="${GAME_DOMAIN:-}"
+# Prod ignores it outright. This is a dev-only mechanism: on prod the page and
+# the game already have distinct names (openfront.io vs blue/green.openfront.io),
+# so there is nothing for it to fix there. And it arrives from a REPOSITORY-level
+# GitHub variable, which every workflow in the repo inherits the moment it is
+# set — including the release jobs. Honouring it on prod would compute
+# blue.server.openfront.io, which is in no cluster map and resolves nowhere, and
+# the deploy would fail its own self-match. Ignoring it here is the guarantee;
+# "prod probably won't set it" is not one.
+if [ "$ENV" = "prod" ] && [ -n "$GAME_DOMAIN" ]; then
+    echo "Ignoring GAME_DOMAIN='${GAME_DOMAIN}' on prod: its page and game hosts are already distinct names"
+    GAME_DOMAIN=""
+fi
+# It lands verbatim inside a Traefik Host(`...`) rule and in a DNS name, so
+# hold it to hostname characters. Loose on purpose — this is a typo guard and a
+# shell-injection guard, not a validator for what DNS will actually resolve.
+if [ -n "$GAME_DOMAIN" ]; then
+    case "$GAME_DOMAIN" in
+        *[!a-zA-Z0-9.-]* | .* | -* | *. | *-)
+            echo "Error: GAME_DOMAIN must be a hostname - letters, digits, dots and hyphens, no leading or trailing dot or hyphen - got: '$GAME_DOMAIN'"
+            exit 1
+            ;;
+    esac
+    echo "Using game domain: $GAME_DOMAIN (page domain: $DOMAIN)"
+fi
+
 # Cluster map (docs/MultiServer.md). Three jobs here:
 #   1. jq -c compacts whatever formatting the CI variable carries into one
 #      unspaced line — the remote env file is loaded word-split (update.sh's
@@ -114,7 +157,10 @@ fi
 #      synthesized ones, staying permanently active rather than polling an
 #      apex that answers with some other fleet's identity and wrongly
 #      draining itself.
-FQDN="${SUBDOMAIN}.${DOMAIN}"
+#
+# The host matched here is the deployment's GAME host: cluster entries name
+# the servers clients open sockets to, not the page they loaded.
+FQDN="${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}"
 if [ -n "${CLUSTER_JSON:-}" ]; then
     CLUSTER_JSON=$(printf '%s' "$CLUSTER_JSON" | jq -c .)
     if printf '%s' "$CLUSTER_JSON" | jq -e --arg host "$FQDN" 'any(.[]; .host == $host)' > /dev/null; then
@@ -145,6 +191,16 @@ if [ -z "${CLUSTER_JSON:-}" ]; then
         echo "Error: CLUSTER_JSON must be set for prod deploys"
         exit 1
     fi
+fi
+# A standalone deployment with a separate game domain still has a page host,
+# and it is not FQDN: the page lives on <subdomain>.<DOMAIN> (the Worker)
+# while the container answers on <subdomain>.<GAME_DOMAIN>. Without this the
+# server would register its game host as its own site and upload the page
+# assets under it, and the Worker serving the page host would find nothing.
+# With GAME_DOMAIN unset this is a no-op, so standalone deploys keep an empty
+# SITE_HOST exactly as today.
+if [ -n "$GAME_DOMAIN" ] && [ -z "${SITE_HOST:-}" ]; then
+    SITE_HOST="${SUBDOMAIN}.${DOMAIN}"
 fi
 
 # Resolve the machine name to its SSH target. Two sources, directory first:
@@ -249,9 +305,11 @@ API_KEY=$API_KEY
 ADMIN_BOT_API_KEY=$ADMIN_BOT_API_KEY
 DOMAIN=$DOMAIN
 SUBDOMAIN=$SUBDOMAIN
+GAME_DOMAIN=$GAME_DOMAIN
 SITE_HOST=$SITE_HOST
 CDN_BASE=$CDN_BASE
 CLUSTER_JSON=$CLUSTER_JSON
+CLUSTER_STATE_SOURCE=$CLUSTER_STATE_SOURCE
 TURNSTILE_SITE_KEY=$TURNSTILE_SITE_KEY
 OTEL_EXPORTER_OTLP_ENDPOINT=$OTEL_EXPORTER_OTLP_ENDPOINT
 OTEL_AUTH_HEADER=$OTEL_AUTH_HEADER

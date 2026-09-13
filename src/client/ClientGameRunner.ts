@@ -49,6 +49,7 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
+import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
@@ -369,6 +370,20 @@ export function joinLobby(
           const r = ClientEnv.resolveGame(lobbyConfig.gameID);
           if (r.kind === "cross") {
             window.location.href = `https://${r.host}/game/${lobbyConfig.gameID}${window.location.search}`;
+          } else if (pagePin() !== null) {
+            // A pinned `/v/<commit>/` page must not reload. The pin comes
+            // from PagePin (captured at boot), not from the live pathname:
+            // updateJoinUrlForShare has already rewritten the address bar to
+            // the version-free share URL by the time any mismatch can
+            // arrive, and reading it here would take the branch below.
+            // reloadForUpdate
+            // strips the pin — right for an ordinary stale tab, fatal here:
+            // it lands on `latest`, whose handleUrl sees this same game on
+            // this same older server and pins the page straight back, one
+            // lap per click. Nothing this page can fetch is the build it
+            // needs (that is what a mismatch on a pinned page MEANS: the
+            // version's page is not being served), so say so and stop.
+            void showInGameAlert(translateText("update_available.message"));
           } else {
             showInGameAlert(translateText("update_available.message")).then(
               () => {
@@ -1467,10 +1482,10 @@ export class ClientGameRunner {
     const canBuild = this.canBoatAttack(buildables);
     if (canBuild === false) return false;
 
-    // TODO: Global enable flag
-    // TODO: Global limit autoboat to nearby shore flag
-    // if (!enableAutoBoat) return false;
-    // if (!limitAutoBoatNear) return true;
+    // TODO: honor a global auto-boat enable flag once it exists.
+    // if (!this.userSettings.autoBoat()) return false;
+    // TODO: honor a global "limit auto-boat to nearby shore" flag once it exists.
+    // if (!this.userSettings.autoBoatNearbyOnly()) return true;
     const distanceSquared = this.gameView.euclideanDistSquared(tile, canBuild);
     const limit = 100;
     const limitSquared = limit * limit;

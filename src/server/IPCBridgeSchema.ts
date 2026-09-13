@@ -46,6 +46,11 @@ export const InternalPublicGamesSchema = z.object({
 const WorkerLobbyListSchema = z.object({
   type: z.literal("lobbyList"),
   lobbies: z.array(z.unknown()),
+  // Games this worker is running, lobbies included. The master sums them
+  // for the cluster check-in (ClusterCheckin.ts), so an operator can tell
+  // when a draining server is empty. Optional for a worker build that
+  // predates it; absent counts as zero.
+  liveGames: z.number().int().min(0).optional(),
 });
 
 const WorkerReadySchema = z.object({

@@ -149,15 +149,41 @@ export class ServerEnv {
   static subdomain(): string {
     return process.env.SUBDOMAIN ?? "";
   }
-  // Host this deployment is reachable on directly (`blue.openfront.io`),
-  // bypassing the load balancer. Injected into index.html as `serverHost` so
-  // a tab keeps talking to the deployment that served it — including
-  // reconnects mid-game — after the load balancer flips to the other
-  // deployment. Undefined in dev (no SUBDOMAIN): the client falls back to
-  // same-origin.
+  // Domain the GAME hostnames live under, when it differs from the page
+  // domain (docs/MultiServer.md, "Two hostnames per deployment"). Set on dev
+  // so the static Worker can own `<subdomain>.<DOMAIN>` while sockets and
+  // /api go straight to `<subdomain>.<GAME_DOMAIN>`. Unset — prod, local dev
+  // — means the two collapse onto DOMAIN, which is today's behaviour.
+  static gameDomain(): string | undefined {
+    const v = process.env.GAME_DOMAIN;
+    return v && v.length > 0 ? v : undefined;
+  }
+  // The PAGE host that pairs with a game host under GAME_DOMAIN:
+  // `blue.server.openfront.dev` -> `blue.openfront.dev`. Undefined when
+  // GAME_DOMAIN is unset (page and game host are one name) or the host is
+  // not under it. A player who loads a colour's page directly, bypassing the
+  // apex, arrives from exactly this origin, so CORS must know it.
+  static pageHostFor(gameHost: string): string | undefined {
+    const gameDomain = ServerEnv.gameDomain();
+    const domain = ServerEnv.domain();
+    if (gameDomain === undefined || !domain) return undefined;
+    const suffix = `.${gameDomain}`;
+    if (!gameHost.endsWith(suffix)) return undefined;
+    const label = gameHost.slice(0, -suffix.length);
+    if (!label || label.includes(".")) return undefined;
+    return `${label}.${domain}`;
+  }
+  // The GAME host: the name this deployment is reachable on directly
+  // (`blue.openfront.io`, or `main.server.openfront.dev` with GAME_DOMAIN),
+  // bypassing the load balancer and the static Worker. Injected into
+  // index.html as `serverHost` so a tab keeps talking to the deployment that
+  // served it — including reconnects mid-game — after the load balancer flips
+  // to the other deployment. This is NOT the host the page came from: that is
+  // siteHost(), and with GAME_DOMAIN set the two are always different names.
+  // Undefined in dev (no SUBDOMAIN): the client falls back to same-origin.
   static publicHost(): string | undefined {
     const subdomain = ServerEnv.subdomain();
-    const domain = ServerEnv.domain();
+    const domain = ServerEnv.gameDomain() ?? ServerEnv.domain();
     if (!subdomain || !domain) return undefined;
     return `${subdomain}.${domain}`;
   }
@@ -208,10 +234,12 @@ export class ServerEnv {
     return result.data;
   }
 
-  // This deployment's own cluster entry, found by host: SUBDOMAIN.DOMAIN, or
-  // bare DOMAIN when SUBDOMAIN is empty (dev, standalone boxes). A server
-  // whose host is not in the map refuses boot — it has no letter to mint
-  // under.
+  // This deployment's own cluster entry, found by its game host —
+  // SUBDOMAIN.GAME_DOMAIN, or SUBDOMAIN.DOMAIN when GAME_DOMAIN is unset, or
+  // bare DOMAIN when SUBDOMAIN is empty (dev, standalone boxes). Cluster
+  // entries name the servers clients open sockets to, so matching by the game
+  // host is the whole point. A server whose host is not in the map refuses
+  // boot — it has no letter to mint under.
   static clusterSelf(): { letter: string; entry: ClusterEntry } {
     const selfHost = ServerEnv.publicHost() ?? ServerEnv.domain();
     if (!selfHost) {
@@ -236,12 +264,23 @@ export class ServerEnv {
     return ServerEnv.clusterSelf().entry.color;
   }
 
-  // Host players load the page from when it is a load balancer in front of
-  // several deployments (`openfront.io` for blue/green). Unset for standalone
-  // deployments (beta, staging branches), where the page host is publicHost.
+  // The page host: SITE_HOST. Behind a load balancer that is the apex
+  // (`openfront.io` for blue/green); with GAME_DOMAIN it is
+  // `<subdomain>.<DOMAIN>`, the name the static Worker serves the page on.
+  // Unset only for old-style standalone deploys (beta, staging branches) and
+  // local dev, where the page host and the game host coincide and publicHost
+  // is both.
   static siteHost(): string | undefined {
     const v = process.env.SITE_HOST;
     return v && v.length > 0 ? v : undefined;
+  }
+  // Where the drain decision comes from (docs/MultiServer.md, "Server list
+  // v2"): "apex" is today's /api/health colour poll of the site host; "api"
+  // obeys the state the API assigns at check-in (ClusterCheckin.ts). Any
+  // other value, or none, means apex, so a deploy that doesn't set it is
+  // unchanged.
+  static clusterStateSource(): "apex" | "api" {
+    return process.env.CLUSTER_STATE_SOURCE === "api" ? "api" : "apex";
   }
   static otelEnabled(): boolean {
     return (

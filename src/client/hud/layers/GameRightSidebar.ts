@@ -426,7 +426,7 @@ export class GameRightSidebar extends LitElement implements Controller {
       const lobby = await createNextLobby(this.game.gameID());
       const id = lobby.gameID;
       // ?host routes the creator back into the host view on load.
-      window.location.href = `${window.location.origin}/${ClientEnv.workerPath(id)}/game/${id}?host`;
+      window.location.href = `${window.location.origin}${ClientEnv.gamePath(id)}?host`;
     } catch (error) {
       console.error("Failed to create successor lobby", error);
       this.newLobbyRequested = false;
@@ -570,7 +570,7 @@ export class GameRightSidebar extends LitElement implements Controller {
         }
       </style>
       <aside
-        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${shouldFlashSidebar ? "game-end-timer-sidebar-flash" : ""} ${
+        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${shouldFlashSidebar ? "game-end-timer-sidebar-flash" : ""} ${
           this._isVisible ? "translate-x-0" : "translate-x-full"
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}

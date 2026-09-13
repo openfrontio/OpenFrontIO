@@ -11,6 +11,7 @@ import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { JoinLobbyEvent } from "./Main";
+import { ensureServerList } from "./ServerList";
 import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
 
@@ -258,8 +259,14 @@ export class MatchmakingModal extends BaseModal {
         this.socket.close();
       }
     }
+    // instance_id is the rendering server's own id, which the API ignores
+    // (docs/MultiServer.md) and a static page does not have. Sent only when
+    // the page carries one, rather than as an empty parameter.
+    const instanceId = ClientEnv.instanceId();
+    const instanceParam =
+      instanceId === "" ? "" : `instance_id=${encodeURIComponent(instanceId)}&`;
     this.socket = new WebSocket(
-      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}&mode=${this.mode}`,
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?${instanceParam}mode=${this.mode}`,
     );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
@@ -457,6 +464,10 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameID === null) {
       return;
     }
+    // The matched game may carry any server's letter: resolve it through
+    // the API's list (multi-server v2) rather than this page's own map. No
+    // version check: this runs on a timer and must never navigate the page.
+    await ensureServerList();
     const url = `${ClientEnv.gameHttpBase(this.gameID)}/${ClientEnv.gameWorkerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
     const response = await fetch(url, {

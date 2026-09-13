@@ -34,6 +34,8 @@ export class MasterLobbyService {
   private readonly workers = new Map<number, Worker>();
   // Worker id => the lobbies it owns.
   private readonly workerLobbies = new Map<number, InternalGameInfo[]>();
+  // Worker id => games it last reported running (lobbies included).
+  private readonly workerLiveGames = new Map<number, number>();
   private readonly readyWorkers = new Set<number>();
   // gameID => consecutive broadcast cycles a hosted lobby has lost the
   // per-creator dedup or overflowed the cluster-wide cap. Losing once can be
@@ -69,6 +71,7 @@ export class MasterLobbyService {
           break;
         case "lobbyList":
           this.workerLobbies.set(workerId, this.validLobbies(msg.lobbies));
+          this.workerLiveGames.set(workerId, msg.liveGames ?? 0);
           break;
       }
     });
@@ -95,7 +98,16 @@ export class MasterLobbyService {
   removeWorker(workerId: number) {
     this.workers.delete(workerId);
     this.workerLobbies.delete(workerId);
+    this.workerLiveGames.delete(workerId);
     this.readyWorkers.delete(workerId);
+  }
+
+  // Games running on this server, summed over the workers' last reports.
+  // Reported to the API at check-in (ClusterCheckin.ts).
+  liveGames(): number {
+    let total = 0;
+    for (const n of this.workerLiveGames.values()) total += n;
+    return total;
   }
 
   isHealthy(): boolean {

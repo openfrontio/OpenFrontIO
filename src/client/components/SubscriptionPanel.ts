@@ -1,6 +1,6 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { UserSubscription } from "../../core/ApiSchemas";
+import { isGrantedSubscription, UserSubscription } from "../../core/ApiSchemas";
 import { Subscription } from "../../core/CosmeticSchemas";
 import {
   cancelSubscription,
@@ -119,20 +119,12 @@ export class SubscriptionPanel extends LitElement {
    * therefore must not offer Cancel (nor Manage or Change Tier, which have no
    * billing to reach) and must not claim the month renews.
    *
-   * `=== null`, deliberately, and never `!this.sub.provider`:
-   *
-   *   null      — granted. Hide the destructive controls.
-   *   undefined — the field is absent because the server predates it. We
-   *               CANNOT tell a grant from a Stripe subscription, so keep
-   *               today's behaviour; hiding Cancel on this path would take the
-   *               one control a paying subscriber actually needs.
-   *
-   * A truthiness test is true for both and would do the wrong thing on the
-   * second — which is the whole hazard, because `provider` is on `main` but not
-   * yet on staging, so `undefined` is the live case until the next deploy.
+   * The `=== null` rule itself, and why `undefined` must NOT be treated as a
+   * grant, live on `isGrantedSubscription` — the store asks the same question
+   * (OPE-440) and the two must not drift.
    */
   private isGranted(): boolean {
-    return this.sub.provider === null;
+    return isGrantedSubscription(this.sub);
   }
 
   /** Billed by Steam: managed on the Steam account page, on every surface. */

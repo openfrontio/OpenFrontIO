@@ -310,7 +310,7 @@ export class WinModal extends LitElement implements Controller {
       this.show();
     }
     const updates = this.game.updatesSinceLastTick();
-    const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
+    const winUpdates = updates?.[GameUpdateType.Win] ?? [];
     winUpdates.forEach((wu) => {
       if (wu.winner === undefined) {
         // Match cancelled (e.g. a ranked 2v2 that didn't fill or fully

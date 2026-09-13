@@ -83,10 +83,16 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import { capturePagePin } from "./PagePin";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import "./PlayerProfileModal";
 import { GroupTokenTracker, withGroupToken } from "./PresenceGroup";
 import { RewardsModal } from "./RewardsModal";
+import {
+  ensureServerList,
+  redirectToGameVersion,
+  startServerListPolling,
+} from "./ServerList";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import {
@@ -108,6 +114,8 @@ import "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import {
+  apexPathFor,
+  currentPagePath,
   homeHref,
   incrementGamesPlayed,
   presenceMapKey,
@@ -288,6 +296,16 @@ class Client {
   }> | null = null;
 
   async initialize(): Promise<void> {
+    // FIRST, ahead of consumeCreatorCodePath() and of handleUrl() below --
+    // ahead of every history write this client performs. A page served under
+    // `/v/<commit>/` is pinned to that build, and three guards depend on
+    // knowing it (isPinnedToAVersion, currentPagePath, ClientGameRunner's
+    // version_mismatch branch). The address bar stops being able to answer
+    // the moment updateJoinUrlForShare rewrites it to the version-free share
+    // URL, so take the value while it is still the URL we were served at.
+    // See PagePin.ts.
+    capturePagePin();
+
     // A store referral banner / account "copy link" hands out `/c/<code>`.
     // There's nothing to open here yet -- the code only does anything once
     // the player is signed in (resumePendingCreatorCode in onUserMe handles
@@ -385,6 +403,14 @@ class Client {
       tag: "inventory-modal",
       pageId: "page-inventory",
     });
+
+    // Kick the server-list fetch off here, before anything below awaits the
+    // network, so it overlaps with the rest of boot: by the time a player
+    // can click Join or Create the list is already known and the click
+    // never waits on a fetch (docs/MultiServer.md, "Server list v2"). It
+    // never throws and keeps itself alive with a heartbeat afterwards.
+    startServerListPolling();
+
     // Prefetch turnstile token so it is available when the user joins a lobby.
     // Desktop (Steam) has no Turnstile script and is server-side exempt, so
     // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
@@ -393,8 +419,7 @@ class Client {
     // so rendering the widget there alerts and rejects — and replays never
     // send a token anyway (see getTurnstileToken below).
     this.turnstileTokenPromise =
-      ClientEnv.instanceId() === "desktop" ||
-      isReplayShellHost(window.location.hostname)
+      isDesktopShell() || isReplayShellHost(window.location.hostname)
         ? null
         : getTurnstileToken();
 
@@ -636,7 +661,6 @@ class Client {
       );
 
       if (userMeResponse !== false) {
-        // Authorized
         console.log(
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
@@ -748,11 +772,10 @@ class Client {
     });
 
     if ((await userAuth()) === false) {
-      // Not logged in
+      // Not logged in: apply the signed-out profile directly.
       onUserMe(false);
     } else {
-      // JWT appears to be valid
-      // TODO: Add caching
+      // JWT appears valid: fetch the profile and apply it if still current.
       getUserMe().then(applyUserMe(authGeneration));
     }
 
@@ -816,7 +839,7 @@ class Client {
       this.joinModal.eventBus = this.eventBus;
     }
 
-    // Attempt to join lobby
+    // Attempt to join lobby from the current URL once the document is ready.
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => this.handleUrl());
     } else {
@@ -853,7 +876,7 @@ class Client {
         return;
       }
 
-      // Reset the UI to its initial state
+      // Reset the UI to its initial state.
       this.joinModal?.close();
 
       onJoinChanged();
@@ -903,7 +926,7 @@ class Client {
       this.handleUrl();
     };
 
-    // Handle browser navigation & manual hash edits
+    // Handle browser navigation (back/forward) and manual hash edits.
     window.addEventListener("popstate", onPopState);
     window.addEventListener("hashchange", onHashUpdate);
     window.addEventListener("join-changed", onJoinChanged);
@@ -1042,18 +1065,32 @@ class Client {
       }
     }
 
+    // Every version's page is also served under /v/<commit>/ (multi-server
+    // v2), so the game path may sit behind that prefix.
     const pathMatch = window.location.pathname.match(
-      /^\/(?:w\d+\/)?game\/([^/]+)/,
+      /^(?:\/v\/[^/]+)?\/(?:w\d+\/)?game\/([^/]+)/,
     );
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      // Joining needs the API's server list (multi-server v2): the id's
+      // letter names the game's server there. No version check: joining an
+      // existing game is not starting something new, and the id's letter
+      // names its server whatever version that server runs.
+      await ensureServerList();
       // A letter this shell's cluster map doesn't know means the map
       // predates the game's deployment (stale CDN shell, or a link into a
       // newer fleet). The apex always serves the freshest map, so re-enter
       // through it; on the apex itself (and dev/desktop) fall through to
       // the join flow's normal not-found handling.
       if (this.redirectUnknownLetterToApex(lobbyId)) return;
+      // The game's server may run a different build than this page (a link
+      // into a version still draining, or a page served as `latest` after a
+      // deploy). Open it at that version's page rather than trying to play
+      // it with the wrong bundle. The whole rule -- the loop guard, and the
+      // desktop and replay shells that must never be navigated -- lives in
+      // redirectToGameVersion.
+      if (redirectToGameVersion(lobbyId)) return;
       // ?host means the lobby creator is returning to a successor lobby they
       // reused from the win screen: reopen the host view bound to the existing
       // lobby instead of the join flow. Non-creators who hit this URL still get
@@ -1142,13 +1179,16 @@ class Client {
   private redirectUnknownLetterToApex(gameID: string): boolean {
     if (!ClientEnv.gameLetterUnknown(gameID)) return false;
     if (isDesktopShell()) return false;
+    // With the API's list loaded there is nothing fresher to bounce to: an
+    // unknown letter means the game does not exist.
+    if (ClientEnv.serverListLoaded()) return false;
     // Only load-balanced deployments have an apex to bounce to; standalone
     // ones (beta, branch previews, dev) have no siteHost injected and fall
     // through to the normal not-found flow, as does the apex shell itself
     // (its map is already the freshest; CDN staleness ages out in minutes).
     const apex = ClientEnv.siteHost();
     if (apex === undefined || window.location.host === apex) return false;
-    window.location.href = `https://${apex}${window.location.pathname.replace(/^\/w\d+\//, "/")}${window.location.search}`;
+    window.location.href = `https://${apex}${apexPathFor(window.location.pathname)}${window.location.search}`;
     return true;
   }
 
@@ -1399,9 +1439,11 @@ class Client {
         history.pushState(
           null,
           "",
-          lobbyIdHidden
-            ? "/streamer-mode"
-            : `/${ClientEnv.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+          currentPagePath(
+            lobbyIdHidden
+              ? "/streamer-mode"
+              : `${ClientEnv.gamePath(lobby.gameID)}?live`,
+          ),
         );
       }
 
@@ -1490,7 +1532,7 @@ class Client {
       // on it. On the replay host, fall back to the in-place leave.
       if (!isReplayShellHost(window.location.hostname)) {
         this.resetPresenceToMenu();
-        window.location.href = `/${ClientEnv.workerPath(gameId)}/game/${gameId}`;
+        window.location.href = currentPagePath(ClientEnv.gamePath(gameId));
         return;
       }
       await this.handleLeaveLobby();
@@ -1513,10 +1555,15 @@ class Client {
       // here would leave a URL that 404s when reloaded or shared (see
       // VersionedReplay.ts).
       targetUrl = window.location.pathname;
-    } else if (lobbyIdHidden) {
-      targetUrl = "/streamer-mode";
     } else {
-      targetUrl = `/${ClientEnv.workerPath(lobbyId)}/game/${lobbyId}`;
+      // Version-free on purpose, unlike the in-game entry below: this is the
+      // URL people copy out of the address bar to invite someone, and a
+      // recipient must be routed to the version the GAME'S server runs
+      // (handleUrl -> redirectToGameVersion), not pinned to whatever this
+      // page happens to be serving.
+      targetUrl = lobbyIdHidden
+        ? "/streamer-mode"
+        : ClientEnv.gamePath(lobbyId);
     }
     const currentUrl = window.location.pathname;
 
@@ -1653,7 +1700,7 @@ class Client {
   ): Promise<string | null> {
     if (
       ClientEnv.env() === GameEnv.Dev ||
-      ClientEnv.instanceId() === "desktop" ||
+      isDesktopShell() ||
       // Single-player and replays: no server to verify a token against (and
       // on the CDN replay shells Turnstile cannot load at all). Shared with
       // the desktop gate so the exemption has one definition.

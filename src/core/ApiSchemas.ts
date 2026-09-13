@@ -316,6 +316,40 @@ export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
 
+/**
+ * Is this subscription a GRANT — free access nobody is billing — rather than
+ * something the player bought?
+ *
+ * The one definition, shared by every surface that has to tell the two apart
+ * (OPE-314 hid the account panel's destructive controls on it; OPE-440 turned
+ * the store's dead "Subscribed" tile back into a buy action). It applies the
+ * exact three-state rule documented on `provider` above, so a caller cannot
+ * re-derive a fourth:
+ *
+ *   null      — granted.
+ *   "stripe" / "steam" (or any future rail) — paid.
+ *   undefined — the server predates the field, so we CANNOT tell. Falls back
+ *               to the PAID behaviour, which is the safe side on every
+ *               caller: it keeps Cancel in front of a paying subscriber, and
+ *               it never sends one to a second checkout.
+ *
+ * Spelled out rather than `!sub.provider`, which is true for `undefined` too
+ * and so collapses the two states that must not collapse.
+ *
+ * The explicit null/undefined guard is for the THIRD case — no subscription at
+ * all. `sub?.provider === null` would in fact answer this predicate correctly
+ * (`undefined === null` is false), but it answers by accident: it returns the
+ * same `false` for "pays us" and "has nothing", and those have separate
+ * branches in every caller. The guard names the case instead of relying on two
+ * unrelated states landing on one value.
+ */
+export function isGrantedSubscription(
+  sub: UserSubscription | null | undefined,
+): boolean {
+  if (sub === null || sub === undefined) return false;
+  return sub.provider === null;
+}
+
 // PUT /users/@me/username success payload. `username` is the resolved display
 // form (safe for optimistic UI). The suffix is re-rolled on every rename and
 // the response carries the fresh 30-day cooldown.
@@ -872,10 +906,19 @@ export type PaymentsKind = z.infer<typeof PaymentsKindSchema>;
 //   - "client_overlay" — Steam's overlay purchase dialog is already on screen
 //                        and `redirectUrl` is null. There is nothing to
 //                        navigate to; wait for Steam to report authorization.
+//   - "client_secret"  — a Stripe PaymentIntent was minted and `clientSecret`
+//                        carries its client secret. The client confirms it
+//                        in-page (wallet button or card form); nothing
+//                        navigates. Only returned when the request listed it
+//                        in `handoffs`, so an older client never sees it.
 //
 // Branching on "is redirectUrl set?" instead would silently mis-handle a
 // client_overlay response, so don't.
-export const PaymentsHandoffSchema = z.enum(["redirect", "client_overlay"]);
+export const PaymentsHandoffSchema = z.enum([
+  "redirect",
+  "client_overlay",
+  "client_secret",
+]);
 export type PaymentsHandoff = z.infer<typeof PaymentsHandoffSchema>;
 
 // The 200 body. Deliberately FLAT — `handoff` is a sibling of `redirectUrl`,
@@ -887,6 +930,9 @@ export type PaymentsHandoff = z.infer<typeof PaymentsHandoffSchema>;
 //
 // `expiresAt` is advisory only. Do not build a countdown or an auto-cancel on
 // it — the server owns the order's lifetime.
+//
+// `clientSecret` defaults to null rather than being required so responses from
+// an API deployed before the inline flow still parse.
 export const PaymentsCheckoutResponseSchema = z
   .object({
     orderId: z.string().nullable(),
@@ -894,13 +940,19 @@ export const PaymentsCheckoutResponseSchema = z
     kind: PaymentsKindSchema,
     handoff: PaymentsHandoffSchema,
     redirectUrl: z.string().nullable(),
+    clientSecret: z.string().nullable().default(null),
     expiresAt: z.string().nullable(),
   })
   // A "redirect" with nowhere to redirect to is not a response we can act on;
-  // rejecting it here keeps every caller from having to re-check.
+  // rejecting it here keeps every caller from having to re-check. Same for a
+  // "client_secret" without a secret.
   .refine((body) => body.handoff !== "redirect" || body.redirectUrl !== null, {
     message: "handoff 'redirect' requires a redirectUrl",
-  });
+  })
+  .refine(
+    (body) => body.handoff !== "client_secret" || body.clientSecret !== null,
+    { message: "handoff 'client_secret' requires a clientSecret" },
+  );
 export type PaymentsCheckoutResponse = z.infer<
   typeof PaymentsCheckoutResponseSchema
 >;

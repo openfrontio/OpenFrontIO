@@ -6,7 +6,13 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameEnv } from "../core/configuration/Config";
-import { fetchSiteColor } from "./ActiveDeployment";
+import { fetchSiteColor, shouldPollApex } from "./ActiveDeployment";
+import {
+  applyCheckinState,
+  CHECKIN_INTERVAL_MS,
+  checkinBody,
+  sendCheckin,
+} from "./ClusterCheckin";
 import { getDescriptor } from "./DesktopRelease";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
@@ -106,6 +112,35 @@ app.use(
   }),
 );
 
+// Apple Pay domain verification (Stripe's universal association file,
+// vendored in resources/). Apple fetches this exact path over HTTPS when the
+// domain is registered in the Stripe dashboard, and it must get the raw file:
+// express.static above ignores dotfile paths (so it falls through to here)
+// and the SPA fallback below would answer with the app shell, which makes
+// registration fail with no error anywhere we can see. Registered after the
+// rate limiter so the file read is covered by it. Verify with
+// `curl https://<domain>/.well-known/apple-developer-merchantid-domain-association`.
+app.get(
+  "/.well-known/apple-developer-merchantid-domain-association",
+  (_req, res) => {
+    res.type("text/plain");
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../resources/.well-known/apple-developer-merchantid-domain-association",
+      ),
+      // sendFile refuses dotfile path segments (".well-known") by default.
+      // maxAge matters beyond browsers: nginx's proxy cache honours the
+      // upstream Cache-Control, and sendFile's default max-age=0 would veto
+      // the nginx.conf location block that shields this route.
+      { dotfiles: "allow", maxAge: "1d" },
+      (err) => {
+        if (err && !res.headersSent) res.status(404).end();
+      },
+    );
+  },
+);
+
 app.use("/api", (_req, res, next) => {
   setNoStoreHeaders(res);
   next();
@@ -176,15 +211,50 @@ export async function startMaster() {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
 
+  // Register with the API and keep checking in (docs/MultiServer.md,
+  // "Server list v2"): the API's list is what clients read to find a
+  // server, so a server that isn't checking in isn't offered to anyone.
+  // The reply carries this server's state; it is obeyed only when
+  // CLUSTER_STATE_SOURCE=api, otherwise the apex colour poll below still
+  // decides. Local development (`npm run dev`, no SUBDOMAIN) has no public
+  // host and registers nowhere; every deployed host registers under its own
+  // site.
+  const stateSource = ServerEnv.clusterStateSource();
+  if (checkinBody(0) !== null) {
+    log.info(
+      `Checking in with ${ServerEnv.jwtIssuer()}/cluster/checkin every ${CHECKIN_INTERVAL_MS / 1000}s (state source: ${stateSource})`,
+    );
+    startPolling(async () => {
+      const body = checkinBody(lobbyService.liveGames());
+      if (body === null) return;
+      const state = await sendCheckin(body);
+      applyCheckinState(state, stateSource, (active) =>
+        lobbyService.setActive(active),
+      );
+    }, CHECKIN_INTERVAL_MS);
+  }
+
   // Behind a load balancer (blue/green), only the color the balancer
   // currently routes to should schedule public lobbies. The balancer's
   // /api/health reports the COLOR of whichever deployment answered; colors
   // are deployment-wide, so with several machines per color the poll
   // reaching a sibling — same color, different instanceId — still counts as
-  // "the live color is mine". A standalone deployment (no SITE_HOST, or
-  // SITE_HOST is our own host) is always active.
+  // "the live color is mine". A standalone deployment is always active,
+  // which now includes one whose page host merely differs from its game host
+  // (GAME_DOMAIN, docs/MultiServer.md): a one-entry cluster map has no
+  // sibling to flip to, and its page host is the static Worker, which serves
+  // no /api/health. shouldPollApex holds that whole decision, including the
+  // rule that the API being the state source stops the poll — two deciders
+  // would fight over setActive.
   const siteHost = ServerEnv.siteHost();
-  if (siteHost !== undefined && siteHost !== ServerEnv.publicHost()) {
+  if (
+    shouldPollApex(
+      stateSource,
+      siteHost,
+      ServerEnv.publicHost(),
+      Object.keys(ServerEnv.cluster()).length,
+    )
+  ) {
     log.info(`Polling https://${siteHost}/api/health for active deployment`);
     // 5s: this latency is the window after a flip where the newly-active
     // deployment isn't creating public lobbies yet (and the draining one

@@ -32,6 +32,7 @@ import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
+import { ensureServerList, redirectToGameVersion } from "./ServerList";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { SendSpectateEvent } from "./Transport";
 import { normaliseMapKey } from "./Utils";
@@ -347,6 +348,8 @@ export class JoinLobbyModal extends BaseModal {
                         .clients=${this.players}
                         .lobbyCreatorClientID=${hostClientID}
                         .currentClientID=${this.currentClientID}
+                        .anonymizeNames=${this.gameConfig?.anonymizeNames ??
+                        false}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
                         .isPublicGame=${this.gameConfig?.gameType ===
                         GameType.Public}
@@ -1324,6 +1327,19 @@ export class JoinLobbyModal extends BaseModal {
     lobbyId: string,
     spectator = false,
   ): Promise<boolean> {
+    // The id's letter names the game's server in the API's list
+    // (multi-server v2); load it before resolving. No version check here:
+    // the letter names the server whatever version it runs, and a mismatch
+    // is answered at join time (version_mismatch), never by navigating a
+    // page that may be mid-game.
+    await ensureServerList();
+    // The list also says which build the game's server runs. On the web,
+    // open the game at THAT version's page rather than probing it with the
+    // wrong bundle: true here means a navigation is under way, and the
+    // caller should stop as it does for a game it joined. The desktop and
+    // replay shells, and the loop-guarded cases, fall through -- the whole
+    // rule lives in redirectToGameVersion.
+    if (redirectToGameVersion(lobbyId, spectator)) return true;
     const url = `${ClientEnv.gameHttpBase(lobbyId)}/${ClientEnv.gameWorkerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {

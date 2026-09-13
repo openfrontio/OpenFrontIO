@@ -657,8 +657,8 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         <div
           class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-[500px] overflow-hidden ${containerClasses}"
         >
-          ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
-          ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
+          ${this.player ? this.renderPlayerInfo(this.player) : ""}
+          ${this.unit ? this.renderUnitInfo(this.unit) : ""}
         </div>
       </div>
     `;

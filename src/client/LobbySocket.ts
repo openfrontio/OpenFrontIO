@@ -1,7 +1,8 @@
-import { ClientEnv } from "src/client/ClientEnv";
+import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { showInGameAlert } from "./InGameModal";
+import { ensureServerList, reloadWouldRescue } from "./ServerList";
 import { translateText } from "./Utils";
 
 interface LobbySocketOptions {
@@ -45,8 +46,60 @@ export class PublicLobbySocket {
   async start() {
     this.stopped = false;
     this.wsConnectionAttempts = 0;
-    // Get config to determine number of workers, then pick a random one
-    this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
+    await this.discoverAndConnect();
+  }
+
+  /**
+   * Find a server, pick one of its workers, and connect.
+   *
+   * The lobby list needs a server: ask the API (multi-server v2), falling
+   * back to the page's own values. It answers "outdated" when no server
+   * takes new games from this build any more, a newer version exists, and
+   * this page names no server of its own — the rollover has moved on
+   * without a tab whose reload really does fetch `latest`. The lobby list
+   * is the first thing every homepage starts, so this is where that player
+   * finds out: the same one-shot "update available" prompt a newer commit
+   * in the feed raises.
+   *
+   * A page a game server rendered is never told that (OPE-430: its own
+   * server is serving it, so a reload would come back identical and prompt
+   * forever). It learns from the feed this socket is about to open —
+   * checkServerCommit and checkDeploymentActive below — and, if the socket
+   * never opens at all, from promptIfOutdated.
+   *
+   * The connection goes ahead either way, so a shell that never prompts
+   * (desktop, whose updater owns updates) still gets its lobby list from
+   * the fallback values.
+   *
+   * Retried through here rather than through connectWebSocket when no
+   * server was known: the list may arrive between attempts, and until it
+   * does there is no worker path to build a URL with, so a plain reconnect
+   * would burn every remaining attempt on the same empty path. The attempt
+   * counter is deliberately NOT reset (start() owns that), so the retries
+   * still give up after maxWsAttempts.
+   */
+  private async discoverAndConnect(): Promise<void> {
+    // Each discovery attempt counts, the way each socket attempt does.
+    // connectWebSocket clears this after it builds a socket; the discovery
+    // path never gets that far, so without clearing it here the counter
+    // would freeze at one and the retry would run every reconnectDelay
+    // forever, never reaching maxWsAttempts and never telling the player.
+    this.wsAttemptCounted = false;
+    const listStatus = await ensureServerList();
+    if (this.stopped) return;
+    if (listStatus === "outdated") this.fireUpdateAvailable();
+    // Get config to determine number of workers, then pick a random one.
+    // With no list and nothing injected there is no server to ask (a static
+    // page while the API is unreachable), which is a connection failure like
+    // any other: take the same path a refused socket does rather than
+    // rejecting a promise most callers never await.
+    try {
+      this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
+    } catch (e) {
+      if (!(e instanceof NoServerError)) throw e;
+      this.handleConnectError(e, () => void this.discoverAndConnect());
+      return;
+    }
     this.connectWebSocket();
   }
 
@@ -148,6 +201,17 @@ export class PublicLobbySocket {
     }
   }
 
+  // The one gate for the "update available" prompt: however this tab found
+  // out (the server list at start, a newer commit in the feed, a drained
+  // deployment), the player is asked at most once.
+  private fireUpdateAvailable() {
+    if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
+      return;
+    }
+    this.updateAvailableFired = true;
+    this.onUpdateAvailable();
+  }
+
   private checkServerCommit(serverCommit: string | undefined) {
     if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
       return;
@@ -155,8 +219,7 @@ export class PublicLobbySocket {
     if (serverCommit === undefined) return;
     const ownCommit = ClientEnv.gitCommit();
     if (ownCommit === "DEV" || serverCommit === ownCommit) return;
-    this.updateAvailableFired = true;
-    this.onUpdateAvailable();
+    this.fireUpdateAvailable();
   }
 
   // The deployment serving this feed says the load balancer routes elsewhere.
@@ -170,8 +233,7 @@ export class PublicLobbySocket {
       return;
     }
     if (active !== false) return;
-    this.updateAvailableFired = true;
-    this.onUpdateAvailable();
+    this.fireUpdateAvailable();
   }
 
   private handleClose() {
@@ -183,16 +245,40 @@ export class PublicLobbySocket {
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
       console.error("Max WebSocket attempts reached");
+      void this.promptIfOutdated();
     } else {
       this.scheduleReconnect();
     }
+  }
+
+  // Reconnecting has given up. A tab that was already sitting on the
+  // homepage when its server left the list (drained, then fenced or
+  // removed) never gets a feed to learn from — it just watches the socket
+  // fail — so ask the list again here, and prompt when reloading would
+  // genuinely rescue this tab: nothing serves this build, a newer build
+  // exists, and a reload can land somewhere other than the server that has
+  // stopped answering. ServerList.reloadWouldRescue holds that whole rule,
+  // including why the page-load path above must never ask it (OPE-430).
+  //
+  // ensureServerList never throws and answers from the cached list, so this
+  // costs nothing when the failure was only the network.
+  private async promptIfOutdated(): Promise<void> {
+    if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
+      return;
+    }
+    const listStatus = await ensureServerList();
+    if (this.stopped) return;
+    if (reloadWouldRescue(listStatus)) this.fireUpdateAvailable();
   }
 
   private handleError(error: Event) {
     console.error("WebSocket error:", error);
   }
 
-  private handleConnectError(error: unknown) {
+  // `retry` is what the next attempt should run, for a failure a plain
+  // reconnect cannot fix: with no server known it has to re-run discovery,
+  // not re-dial an empty worker path. Defaults to reconnecting the socket.
+  private handleConnectError(error: unknown, retry?: () => void) {
     console.error("Error connecting WebSocket:", error);
     if (!this.wsAttemptCounted) {
       this.wsAttemptCounted = true;
@@ -200,15 +286,20 @@ export class PublicLobbySocket {
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
       void showInGameAlert(translateText("error_modal.connection_error"));
+      void this.promptIfOutdated();
     } else {
-      this.scheduleReconnect();
+      this.scheduleReconnect(retry);
     }
   }
 
-  private scheduleReconnect() {
+  private scheduleReconnect(retry?: () => void) {
     if (this.wsReconnectTimeout !== null) return;
     this.wsReconnectTimeout = window.setTimeout(() => {
       this.wsReconnectTimeout = null;
+      if (retry !== undefined) {
+        retry();
+        return;
+      }
       this.connectWebSocket();
     }, this.reconnectDelay);
   }

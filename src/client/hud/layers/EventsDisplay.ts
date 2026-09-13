@@ -94,7 +94,7 @@ export class EventsDisplay extends LitElement implements Controller {
   }
 
   private renderButton(options: {
-    content: any; // Can be string, TemplateResult, or other renderable content
+    content: unknown;
     onClick?: () => void;
     className?: string;
     disabled?: boolean;
@@ -109,11 +109,9 @@ export class EventsDisplay extends LitElement implements Controller {
       translate = true,
       hidden = false,
     } = options;
-
     if (hidden) {
       return html``;
     }
-
     return html`
       <button
         class="${className}"

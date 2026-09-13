@@ -107,6 +107,7 @@ docker buildx build \
     --platform linux/amd64 \
     --metadata-file $METADATA_FILE \
     --build-arg GIT_COMMIT=$GIT_COMMIT \
+    --build-arg STRIPE_PUBLISHABLE_KEY="${STRIPE_PUBLISHABLE_KEY:-}" \
     --cache-from type=registry,ref=$BUILDCACHE_IMAGE \
     --cache-to type=registry,ref=$BUILDCACHE_IMAGE,mode=max \
     --tag $GHCR_IMAGE \
