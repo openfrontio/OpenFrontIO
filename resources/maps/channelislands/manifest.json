@@ -240,5 +240,6 @@
       "name": "Solvang"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.channelislands"
 }
