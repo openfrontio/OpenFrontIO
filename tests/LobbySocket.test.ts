@@ -333,6 +333,32 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     socket.stop();
   });
 
+  // The other guard on the rescue: the list still has a server for THIS
+  // build ("api"), so the socket failure is a network blip, not the
+  // deployment going away -- and being behind latest is the normal state of
+  // every tab for the length of a rollout. A prompt here would turn every
+  // hiccup in that window into a reload, and where the reload lands back on
+  // the same server it would loop just as OPE-430 did. The newer-version
+  // question is not even asked.
+  it("does not prompt when the socket fails while the list still serves this build", async () => {
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onUpdateAvailable,
+      maxWsAttempts: 1,
+    });
+    await socket.start();
+
+    mocks.ensureServerList.mockResolvedValue("api");
+    mocks.newerVersionAvailable.mockReturnValue(true);
+    (socket as any).handleClose();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+    expect(mocks.newerVersionAvailable).not.toHaveBeenCalled();
+    socket.stop();
+  });
+
   // The loop case (OPE-430), and the line between the two questions: at page
   // load this server-rendered page must NOT be prompted even though a newer
   // version exists — its own server is serving it, so the reload would come

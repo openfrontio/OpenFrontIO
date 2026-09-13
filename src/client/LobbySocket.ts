@@ -258,13 +258,25 @@ export class PublicLobbySocket {
   // the load balancer answers from a live deployment, so the prompt is a
   // rescue here rather than a loop. start()'s page-load path deliberately
   // does NOT ask this question.
+  //
+  // Only when the list has no server for this build ("fallback" or
+  // "no-server"), never on "api": a picked server still takes this build's
+  // games, so a failed socket there is a network blip, not a gone
+  // deployment -- and a build behind latest is the NORMAL state of every
+  // tab for the length of a rollout. Prompting on "api" would turn every
+  // hiccup in that window into a reload, and where the reload lands back
+  // on the same server (a proxy blocking WebSockets while HTTP still works)
+  // it would loop just as OPE-430 did.
   private async promptIfOutdated(): Promise<void> {
     if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
       return;
     }
     const listStatus = await ensureServerList();
     if (this.stopped) return;
-    if (listStatus === "outdated" || newerVersionAvailable()) {
+    if (
+      listStatus === "outdated" ||
+      (listStatus !== "api" && newerVersionAvailable())
+    ) {
       this.fireUpdateAvailable();
     }
   }
