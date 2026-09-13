@@ -1,5 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement } from "lit/decorators.js";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { isLoggedIn } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
@@ -131,13 +132,46 @@ export class SteamLinkModal extends BaseModal {
     });
   }
 
+  // Is there a real account on the other side of this link, or only a
+  // session?
+  //
+  // A session is NOT enough, and that distinction is the whole point of this
+  // function. POST /auth/refresh with no cookie does not reject — it creates
+  // a guest account and returns a signed JWT (see the API's createGuestAccount
+  // branch), so isLoggedIn() is true for a visitor who has never signed in to
+  // anything. Gating on it alone let a guest walk to the confirm step, where
+  // the account line renders as a bare publicId, and bind their Steam account
+  // to a throwaway player. POST /auth/steam/link then records that player as
+  // the steamId's owner, so linking from their REAL account afterwards is
+  // refused with steam_has_progress — a dead end the player cannot undo.
+  //
+  // responseHasLinkedIdentity is the repo's one identity predicate
+  // (AccountIdentity.ts, whose own comment records the last time a second
+  // copy of this question drifted from it). The nav account button already
+  // decides "signed in" this way, which is why a guest sees a signed-out nav
+  // while this modal used to think they were logged in.
+  //
+  // Ordering is load-bearing. isLoggedIn() runs FIRST so a genuinely
+  // signed-out visitor short-circuits without an extra /users/@me call, and
+  // so `false` from getUserMe below can only mean a transient failure (5xx,
+  // timeout — Api.ts returns the same `false` for that as for signed-out).
+  // Treating that as "guest" would bounce a signed-in player to the login
+  // screen over a network blip; falling through instead opens the modal,
+  // which renders its own load-error state. Uncertainty is not a guest.
+  private async needsAccountLogin(): Promise<boolean> {
+    if (!(await isLoggedIn())) return true;
+    const userMe = await getUserMe();
+    if (userMe === false) return false;
+    return !responseHasLinkedIdentity(userMe);
+  }
+
   // Entry point. The confirm step needs the *logged-in* account's name, so
   // if nobody is logged in there is nothing to confirm yet: stash the token
   // (survives the login redirect) and send the player to log in instead of
   // opening a confirm dialog with a blank side — that would either show
   // nothing useful or, worse, tempt a fallback to something token-derived.
   public async openWithToken(token: string): Promise<void> {
-    if (!(await isLoggedIn())) {
+    if (await this.needsAccountLogin()) {
       stashPendingLink(token);
       window.location.hash = "modal=account";
       return;
@@ -157,7 +191,7 @@ export class SteamLinkModal extends BaseModal {
   // See SteamLink.ts's stashPendingCodeEntry/resumePendingSteamLink and
   // Main.ts's onUserMe for the resume side of this.
   public async openForCodeEntry(): Promise<void> {
-    if (!(await isLoggedIn())) {
+    if (await this.needsAccountLogin()) {
       stashPendingCodeEntry();
       window.location.hash = "modal=account";
       return;
