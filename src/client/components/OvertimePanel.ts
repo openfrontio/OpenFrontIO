@@ -1,17 +1,17 @@
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { GameMode, PlayerType, Team } from "../../core/game/Game";
+import { GameMode, Team } from "../../core/game/Game";
 import { translateText } from "../Utils";
-import { GameView } from "../view";
+import { GameView, PlayerView } from "../view";
 
 /**
  * The Overtime readout: once the mode has kicked in, shows the shrinking
- * tile share required to win against your side's current share (your own in
- * FFA, your whole team's otherwise — the same split WinCheckExecution judges).
- * Embedded by game-right-sidebar so it stacks (centered) under the game timer,
- * like the doomsday-clock panel. Hidden before the start minute, when the mode
- * is off, and after a winner. Spectators and eliminated players still see the
- * required share (no personal line).
+ * tile share required to win against first place's current share (the top
+ * player in FFA, the top team otherwise — the same split WinCheckExecution
+ * judges). Embedded by game-right-sidebar so it stacks (centered) under the
+ * game timer, like the doomsday-clock panel. Hidden before the start minute,
+ * when the mode is off, and after a winner. First place is global info, so
+ * spectators and eliminated players see the full readout too.
  */
 @customElement("overtime-panel")
 export class OvertimePanel extends LitElement {
@@ -29,17 +29,33 @@ export class OvertimePanel extends LitElement {
     return this.game.config().gameConfig().gameMode !== GameMode.FFA;
   }
 
-  private sideTiles(me: ReturnType<GameView["myPlayer"]>): number {
-    if (!me) return 0;
-    const myTeam = me.team();
-    if (!this.isTeamGame() || myTeam === null) return me.numTilesOwned();
-    return this.game
-      .playerViews()
-      .filter(
-        (p) =>
-          p.team() === myTeam && p.isAlive() && p.type() !== PlayerType.Bot,
-      )
-      .reduce((sum, p) => sum + p.numTilesOwned(), 0);
+  // The side closest to winning, judged the way WinCheckExecution judges it:
+  // the top alive player in FFA, the top team by combined alive tiles
+  // otherwise.
+  private firstPlace(): { name: string; tiles: number } | null {
+    const alive = this.game.playerViews().filter((p) => p.isAlive());
+    if (!this.isTeamGame()) {
+      let top: PlayerView | null = null;
+      for (const p of alive) {
+        if (top === null || p.numTilesOwned() > top.numTilesOwned()) top = p;
+      }
+      return top !== null
+        ? { name: top.displayName(), tiles: top.numTilesOwned() }
+        : null;
+    }
+    const teamTiles = new Map<Team, number>();
+    for (const p of alive) {
+      const team = p.team();
+      if (team === null) continue;
+      teamTiles.set(team, (teamTiles.get(team) ?? 0) + p.numTilesOwned());
+    }
+    let topTeam: [Team, number] | null = null;
+    for (const entry of teamTiles) {
+      if (topTeam === null || entry[1] > topTeam[1]) topTeam = entry;
+    }
+    return topTeam !== null
+      ? { name: this.teamDisplayName(topTeam[0]), tiles: topTeam[1] }
+      : null;
   }
 
   // Localized team name (e.g. "Red"); falls back to the raw id for numbered teams.
@@ -57,17 +73,16 @@ export class OvertimePanel extends LitElement {
     this.style.display = visible ? "block" : "none";
     if (!visible || !sd) return html``;
 
-    const me = this.game.myPlayer();
-    const live = !!me && me.isAlive();
     const land = this.game.numLandTiles() - this.game.numTilesWithFallout();
-    const myTeam = me?.team() ?? null;
     // The exact bar the sim checks — one shared formula, never re-derived
     // here. Always a whole percentage (see Config.percentageTilesOwnedToWin).
     const requiredPct = this.game.config().percentageTilesOwnedToWin(elapsed);
-    const yourPct = land > 0 ? (this.sideTiles(me) / land) * 100 : 0;
+    const leader = this.firstPlace();
+    const leaderPct =
+      land > 0 && leader !== null ? (leader.tiles / land) * 100 : 0;
     // Whole percentages only in the readout; floored, so we never overstate
-    // your share against the "hold more than X%" bar.
-    const yourPctShown = Math.floor(yourPct);
+    // the leader's share against the "hold more than X%" bar.
+    const leaderPctShown = Math.floor(leaderPct);
 
     const panel =
       "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg text-white text-sm";
@@ -83,27 +98,24 @@ export class OvertimePanel extends LitElement {
           </span>
         </div>
         <div class="relative h-2.5 w-52 overflow-hidden rounded bg-gray-600/60">
-          <!-- your held share (green) vs the shrinking win threshold (orange
-               bar): the gap between them is how far you are from winning. -->
+          <!-- first place's held share (green) vs the shrinking win threshold
+               (orange bar): the gap between them is how close the game is to
+               ending. -->
           <div
             class="absolute inset-y-0 left-0 bg-green-400"
-            style="width:${Math.min(100, yourPct)}%"
+            style="width:${Math.min(100, leaderPct)}%"
           ></div>
           <div
             class="absolute inset-y-0 w-0.5 bg-orange-400"
             style="left:${Math.min(100, requiredPct)}%"
           ></div>
         </div>
-        ${live
+        ${leader !== null
           ? html`<div class="text-xs text-gray-300">
-              ${myTeam !== null
-                ? translateText("doomsday_clock.your_team", {
-                    team: this.teamDisplayName(myTeam),
-                    pct: yourPctShown,
-                  })
-                : translateText("doomsday_clock.you", {
-                    pct: yourPctShown,
-                  })}
+              ${translateText("overtime.first_place", {
+                name: leader.name,
+                pct: leaderPctShown,
+              })}
             </div>`
           : ""}
       </div>
