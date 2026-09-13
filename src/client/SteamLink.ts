@@ -1,3 +1,5 @@
+import type { UserMeResponse } from "../core/ApiSchemas";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getApiBase } from "./Api";
 import { getAuthHeader, logOut } from "./Auth";
 
@@ -170,9 +172,25 @@ export interface PendingLinkModal {
 // was nothing pending. A missing modal (element not found/not yet defined)
 // still consumes the stash — same "don't replay a stale entry" reasoning as
 // takePendingLink itself — it just has nothing to hand the result to.
+//
+// `userMeResponse` is the login precondition, and it is taken HERE rather
+// than left to the caller because this function consumes the stash: the two
+// have to be decided together or not at all. Resuming while the player is
+// still logged out burns the entry that their *later* successful login
+// should have got to resume.
+//
+// The bar is a real IDENTITY, not merely a session. POST /auth/refresh mints
+// a guest account for any visitor with no cookie, so a `!== false` response
+// says almost nothing — it is true for someone who has never logged in. That
+// is the same predicate SteamLinkModal.needsAccountLogin gates on, and
+// getting it wrong here does not just fail to resume: the modal would open,
+// re-stash, and redirect to #modal=account again on every pass.
 export function resumePendingSteamLink(
+  userMeResponse: UserMeResponse | false,
   modal: PendingLinkModal | undefined,
 ): boolean {
+  if (!responseHasLinkedIdentity(userMeResponse)) return false;
+
   const pending = takePendingLink();
   if (pending === null) return false;
 

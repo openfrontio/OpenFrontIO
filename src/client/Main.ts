@@ -15,7 +15,6 @@ import {
 import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
 import { UserSettings } from "../core/game/UserSettings";
-import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./AccountModal";
 import "./AccountSettingsModal";
 import { adGatekeeper } from "./AdGatekeeper";
@@ -677,18 +676,12 @@ class Client {
         // speculative call while logged out would burn an entry that a
         // *later* successful login should still get to resume.
         //
-        // "Login confirmed" is an IDENTITY, not the enclosing
-        // `userMeResponse !== false`. A guest account satisfies that outer
-        // check (POST /auth/refresh mints one for any visitor), so without
-        // this the stash the modal just wrote on its way to #modal=account
-        // would be consumed and replayed on the very next pass, for a
-        // player who has still not logged in — reopening the modal, which
-        // now re-stashes and redirects again. Same predicate the modal
-        // gates on; see SteamLinkModal.needsAccountLogin.
-        if (
-          responseHasLinkedIdentity(userMeResponse) &&
-          resumePendingSteamLink(this.steamLinkModal)
-        ) {
+        // The response is passed in rather than the check being made here:
+        // the enclosing `userMeResponse !== false` is NOT that confirmation,
+        // because a guest account satisfies it (POST /auth/refresh mints one
+        // for any visitor). resumePendingSteamLink owns the real predicate,
+        // next to the consumption it protects — see its comment.
+        if (resumePendingSteamLink(userMeResponse, this.steamLinkModal)) {
           return;
         }
 
