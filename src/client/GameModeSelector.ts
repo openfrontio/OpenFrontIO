@@ -160,20 +160,28 @@ export function joinIsGateable(lobby: JoinLobbyEvent): boolean {
  * The whole gate decision for one join, as a pure function so it is testable
  * without mounting Main's client. Main adds only the shell check (which
  * decides whether the two desktop states are even read) and the refusal
- * feedback around it.
+ * feedback around it. Both halves it does weigh -- the update state and the
+ * session state -- are desktop-only.
  *
- * Named for the join rather than for the desktop since OPE-439: the update
- * and session halves are still desktop-only, but an unreachable backend
- * refuses a join on the web too.
+ * Backend reachability is deliberately NOT an input here (OPE-439). Every
+ * source that dispatches a join has already reached a server to produce it:
+ * "private" only after checkActiveLobby read `exists` from the game's own
+ * server, "host" only after createLobby minted the id, "public" from a lobby
+ * list arriving over a live server socket, and "matchmaking" only after the
+ * queue matched and checkGame confirmed the game exists. The outage signal
+ * tracks the separate server-list API, whose health says nothing about those
+ * servers, so refusing here could only reject a join that is already under
+ * way. Worst case it ejects a player mid-game: a reload during a list-API
+ * blip proves the game is live, then the refusal closes the join modal,
+ * which leaves the lobby and resets the URL.
  */
 export function shouldBlockJoin(
   lobby: JoinLobbyEvent,
   update: DesktopUpdateState | null,
   session: DesktopSessionState | null,
-  backendOutage: boolean,
 ): boolean {
   if (!joinIsGateable(lobby)) return false;
-  return shouldBlockMultiplayerAction(update, session, backendOutage);
+  return shouldBlockMultiplayerAction(update, session, false);
 }
 
 @customElement("game-mode-selector")

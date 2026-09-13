@@ -372,8 +372,9 @@ describe("MatchmakingModal identity gate", () => {
  * What close() actually does, as opposed to who calls it.
  *
  * Main.blockedJoin calls this modal's close() when it refuses a matchmade
- * join (OPE-439), and the test for that spies on close() because its claim is
- * which joins reach it. That spy is only worth anything if the real close()
+ * join -- on desktop, over a pending update or a lapsed session; backend
+ * reachability is not a funnel input (OPE-439) -- and the tests for that spy
+ * on close() because their claim is which joins reach it. That spy is only worth anything if the real close()
  * genuinely takes the player out of the queue -- so that half is pinned here,
  * against a real modal and its real socket, where it belongs.
  *

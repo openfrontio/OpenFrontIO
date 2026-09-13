@@ -441,10 +441,24 @@ values.
   retry that fails counts towards the outage confirmation like any other
   attempt.
 
-  What consumes the confirmed signal: the desktop status bar's offline
-  state (ranked below a session failure, above any update state), and the
-  multiplayer gates in `GameModeSelector`, `DetailedGameViewModal` and
-  `Main`'s join funnel — on the web as well as on desktop. Single-player is
+  What consumes the confirmed signal, and what it does: the desktop status
+  bar's offline state (ranked below a session failure, above any update
+  state), and the multiplayer _buttons_ in `GameModeSelector` and
+  `DetailedGameViewModal`, which dim and refuse a press — on the web as well
+  as on desktop, where the press also raises a
+  `common.backend_unreachable` toast, since there is no status bar there to
+  name the reason.
+
+  What it deliberately does **not** do: refuse a join that is already under
+  way. `Main`'s join funnel (`shouldBlockJoin`) weighs only the desktop
+  update and session states; reachability is not an input (OPE-439). Every
+  source that dispatches a join has already reached a server to produce it
+  — `private` after `checkActiveLobby` read `exists` from the game's own
+  server, `host` after `createLobby` minted the id, `public` from a lobby
+  list arriving over a live server socket, `matchmaking` after the queue
+  matched — so the server-list API's health says nothing about the join in
+  hand. Refusing there would only ever be wrong, and at worst would eject a
+  player whose reload had just proved their game is live. Single-player is
   never gated, and nothing here touches a game already in progress.
 
 - **Which list:** the desktop shell asks for its injected `serverHost`

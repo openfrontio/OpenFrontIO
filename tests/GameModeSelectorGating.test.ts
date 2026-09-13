@@ -208,22 +208,15 @@ describe("shouldBlockJoin", () => {
   const healthy = { status: "current", bytes: 0, total: 0 } as const;
 
   it("allows a multiplayer join when both states are healthy", () => {
-    expect(shouldBlockJoin(mp, healthy, { status: "signed-in" }, false)).toBe(
-      false,
-    );
+    expect(shouldBlockJoin(mp, healthy, { status: "signed-in" })).toBe(false);
   });
 
   it("blocks a multiplayer join when signed out", () => {
     expect(
-      shouldBlockJoin(
-        mp,
-        healthy,
-        {
-          status: "signed-out",
-          reason: "steam-wedged",
-        },
-        false,
-      ),
+      shouldBlockJoin(mp, healthy, {
+        status: "signed-out",
+        reason: "steam-wedged",
+      }),
     ).toBe(true);
   });
 
@@ -233,8 +226,9 @@ describe("shouldBlockJoin", () => {
       shouldBlockJoin(
         mp,
         { status: "staged", bytes: 0, total: 0 },
-        { status: "signed-in" },
-        false,
+        {
+          status: "signed-in",
+        },
       ),
     ).toBe(true);
   });
@@ -244,27 +238,25 @@ describe("shouldBlockJoin", () => {
       shouldBlockJoin(
         solo,
         { status: "staged", bytes: 0, total: 0 },
-        { status: "signed-out", reason: "steam-wedged" },
-        true,
+        {
+          status: "signed-out",
+          reason: "steam-wedged",
+        },
       ),
     ).toBe(false);
   });
 
   it("does not block on the web, where neither desktop state exists", () => {
-    expect(shouldBlockJoin(mp, null, null, false)).toBe(false);
+    expect(shouldBlockJoin(mp, null, null)).toBe(false);
   });
 
-  // OPE-439. The one input that gates on the web as well as on desktop.
-  it("blocks a multiplayer join on a confirmed backend outage", () => {
-    expect(shouldBlockJoin(mp, null, null, true)).toBe(true);
-    expect(shouldBlockJoin(mp, healthy, { status: "signed-in" }, true)).toBe(
-      true,
-    );
-  });
-
-  it("never blocks single-player on a backend outage", () => {
-    // The desktop build's core offline promise: bot games run entirely
-    // in-client, so an unreachable backend is no reason to refuse one.
-    expect(shouldBlockJoin(solo, null, null, true)).toBe(false);
+  // OPE-439. Reachability is not a funnel input at all: by the time a join
+  // arrives here its source has already reached a server (an /exists probe,
+  // createLobby, a live lobby socket, or the matchmaking queue), so the
+  // server-list API's health cannot make this join wrong. Refusing would
+  // eject a player whose reload just proved their game is live.
+  it("never blocks a join, whatever the reachability signal says", () => {
+    expect(shouldBlockJoin(mp, null, null)).toBe(false);
+    expect(shouldBlockJoin(mp, healthy, { status: "signed-in" })).toBe(false);
   });
 });

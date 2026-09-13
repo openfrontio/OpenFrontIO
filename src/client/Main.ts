@@ -94,7 +94,6 @@ import {
 } from "./PresenceGroup";
 import { RewardsModal } from "./RewardsModal";
 import {
-  backendUnreachableConfirmed,
   ensureServerList,
   redirectToGameVersion,
   startServerListPolling,
@@ -1202,26 +1201,21 @@ class Client {
    * unit-tested; this adds the shell check, the modal cleanup and the
    * feedback.
    *
-   * Two of the three inputs are desktop-only and are read only there. The
-   * third, a confirmed backend outage, applies to the web too (OPE-439): a
-   * join that would open a socket to a backend we have repeatedly failed to
-   * reach is refused rather than left to time out in the lobby.
+   * Both inputs are desktop-only and are read only there. Backend
+   * reachability is not among them (OPE-439): by the time a join reaches
+   * this funnel its source has already reached a server, so the server-list
+   * API being unreachable is no reason to refuse -- see shouldBlockJoin.
    *
    * Says why rather than failing silently, matching what the dimmed buttons
    * do.
    */
   private blockedJoin(lobby: JoinLobbyEvent): boolean {
     const desktop = isDesktopShell();
-    // Read straight from the module rather than kept in a field: it is a
-    // synchronous accessor over the heartbeat's own state, so there is no
-    // event to miss and nothing to seed.
-    const backendOutage = backendUnreachableConfirmed();
     if (
       !shouldBlockJoin(
         lobby,
         desktop ? this.desktopUpdateState : null,
         desktop ? getDesktopSessionState() : null,
-        backendOutage,
       )
     ) {
       return false;
@@ -1244,7 +1238,10 @@ class Client {
     if (lobby.source === "matchmaking" && this.matchmakingModal?.isOpen()) {
       this.matchmakingModal.close();
     }
-    reportMultiplayerRefusal(backendOutage);
+    // false: the web never refuses here any more, so the only feedback left
+    // is the desktop status bar's wiggle -- the bar is already showing the
+    // update or session reason that refused this join.
+    reportMultiplayerRefusal(false);
     return true;
   }
 
