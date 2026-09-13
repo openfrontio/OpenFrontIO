@@ -1,0 +1,273 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  purchaseCosmetic,
+  type ResolvedCosmetic,
+} from "../../src/client/Cosmetics";
+
+vi.mock("../../src/client/Api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Api")>()),
+  getUserMe: vi.fn(),
+  invalidateUserMe: vi.fn(),
+  purchaseCosmeticPack: vi.fn(),
+}));
+
+vi.mock("../../src/client/InGameModal", () => ({
+  showInGameAlert: vi.fn().mockResolvedValue(true),
+  showInGameConfirm: vi.fn().mockResolvedValue(true),
+}));
+
+const { getUserMe, invalidateUserMe, purchaseCosmeticPack } =
+  await import("../../src/client/Api");
+const { showInGameAlert } = await import("../../src/client/InGameModal");
+
+const translations = {
+  "cosmetics.hard": "plutonium",
+  "flags.pirate": "Jolly Roger",
+  "inventory.selected_cosmetic_variant": "{name} ({variant})",
+  "territory_patterns.color_palette.red": "Crimson",
+  "store.login_required": "log in",
+  "store.pack_already_owned": "already own {items}",
+  "store.pack_debt": "debt {debt}",
+  "store.pack_unavailable": "gone",
+  "store.purchase_failed": "failed",
+  "store.purchase_success": "bought {name}",
+};
+
+const starter: ResolvedCosmetic = {
+  type: "cosmeticPack",
+  cosmetic: {
+    name: "starter",
+    displayName: "Starter Pack",
+    description: "",
+    priceHard: 250,
+    rarity: "common",
+    items: [
+      { type: "pattern", name: "camo" },
+      { type: "flag", name: "pirate" },
+    ],
+  },
+  colorPalette: null,
+  relationship: "purchasable",
+  key: "cosmeticPack:starter",
+  packItems: [],
+};
+
+function userWithHard(hard: number) {
+  return { player: { currency: { hard, soft: 0 }, flares: [] } } as never;
+}
+
+describe("purchaseCosmetic for a cosmetic pack", () => {
+  let languageFixture: HTMLElement;
+  let reloadMock: ReturnType<typeof vi.fn>;
+  const originalLocation = window.location;
+
+  beforeEach(() => {
+    languageFixture = document.createElement("lang-selector");
+    Object.assign(languageFixture, {
+      translations,
+      defaultTranslations: translations,
+      currentLang: "en",
+    });
+    document.body.appendChild(languageFixture);
+    reloadMock = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...originalLocation, reload: reloadMock },
+    });
+  });
+
+  afterEach(() => {
+    languageFixture.remove();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: originalLocation,
+    });
+    vi.mocked(getUserMe).mockReset();
+    vi.mocked(invalidateUserMe).mockReset();
+    vi.mocked(purchaseCosmeticPack).mockReset();
+    vi.mocked(showInGameAlert).mockClear();
+  });
+
+  it("buys the pack by slug for plutonium and reloads to show the grants", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValue({
+      ok: true,
+      data: {
+        packName: "starter",
+        currencyType: "hard",
+        amount: "250",
+        flareNames: ["pattern:camo", "flag:pirate"],
+      },
+    });
+
+    await expect(purchaseCosmetic(starter, "hard")).resolves.toBeUndefined();
+
+    expect(purchaseCosmeticPack).toHaveBeenCalledWith("starter");
+    expect(showInGameAlert).toHaveBeenCalledWith("bought Starter Pack");
+    expect(invalidateUserMe).toHaveBeenCalled();
+    expect(reloadMock).toHaveBeenCalled();
+  });
+
+  it("reports the shortfall before any request when the balance is short", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(100));
+
+    const result = await purchaseCosmetic(starter, "hard");
+
+    expect(result).toEqual({
+      currency: "plutonium",
+      shortfall: 150,
+      item: "Starter Pack",
+      canTopUp: true,
+    });
+    expect(purchaseCosmeticPack).not.toHaveBeenCalled();
+  });
+
+  it("re-reads the balance when the server rejects for insufficient funds", async () => {
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(userWithHard(300))
+      .mockResolvedValueOnce(userWithHard(40));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValue({
+      ok: false,
+      code: "insufficient_balance",
+    });
+
+    const result = await purchaseCosmetic(starter, "hard");
+
+    expect(invalidateUserMe).toHaveBeenCalled();
+    expect(result).toMatchObject({ shortfall: 210, item: "Starter Pack" });
+    expect(reloadMock).not.toHaveBeenCalled();
+  });
+
+  it("treats 409 as stale ownership: names the items and refetches", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValue({
+      ok: false,
+      code: "already_owned",
+      ownedFlareNames: ["flag:pirate", "pattern:camo:red"],
+    });
+
+    await purchaseCosmetic(starter, "hard");
+
+    // Translated where a name exists, title-cased otherwise; a coloured
+    // pattern names its colour.
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "already own Jolly Roger, Camo (Crimson)",
+    );
+    expect(invalidateUserMe).toHaveBeenCalled();
+    expect(reloadMock).toHaveBeenCalled();
+  });
+
+  // The API serves a charged-back wallet as a negative balance, so the
+  // pre-check is where a player in debt normally meets this — the server
+  // refusal below only fires when the chargeback lands mid-session. Without
+  // it, -50 against a 250 pack reads as "you need 300 more" with a top-up
+  // button that cannot clear a debt.
+  it("explains the debt from a negative cached balance, before any request", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(-50));
+
+    const result = await purchaseCosmetic(starter, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith("debt 50");
+    expect(purchaseCosmeticPack).not.toHaveBeenCalled();
+    expect(result).toBeUndefined();
+  });
+
+  // An empty wallet is not a debt; a `<= 0` slip would tell every broke
+  // player they are "0 in debt" instead of offering the top-up they need.
+  it("offers the shortfall, not a debt message, on an empty wallet", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(0));
+
+    const result = await purchaseCosmetic(starter, "hard");
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ shortfall: 250, canTopUp: true });
+  });
+
+  it("explains the debt when the re-read comes back negative", async () => {
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(userWithHard(300))
+      .mockResolvedValueOnce(userWithHard(-100));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "insufficient_balance",
+    });
+
+    const result = await purchaseCosmetic(starter, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith("debt 100");
+    // Not a shortfall with a top-up button: it cannot clear a debt.
+    expect(result).toBeUndefined();
+  });
+
+  it("does not invent a shortfall when the re-read covers the price", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "insufficient_balance",
+    });
+
+    const result = await purchaseCosmetic(starter, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith("failed");
+    expect(result).toBeUndefined();
+  });
+
+  // Dropping the cache is not enough on its own: the Store renders from the
+  // userMeResponse broadcast, so without a re-read and re-dispatch it keeps
+  // showing the pre-chargeback balance.
+  it("re-broadcasts the profile after a debt refusal", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "debt",
+      debt: "300",
+    });
+    const broadcast = vi.fn();
+    document.addEventListener("userMeResponse", broadcast);
+
+    await purchaseCosmetic(starter, "hard");
+
+    expect(invalidateUserMe).toHaveBeenCalled();
+    expect(broadcast).toHaveBeenCalled();
+    document.removeEventListener("userMeResponse", broadcast);
+  });
+
+  it("explains debt and stale listings without reloading", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
+
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "debt",
+      debt: "300",
+    });
+    await purchaseCosmetic(starter, "hard");
+    expect(showInGameAlert).toHaveBeenLastCalledWith("debt 300");
+
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "unavailable",
+    });
+    await purchaseCosmetic(starter, "hard");
+    expect(showInGameAlert).toHaveBeenLastCalledWith("gone");
+
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "failed",
+    });
+    await purchaseCosmetic(starter, "hard");
+    expect(showInGameAlert).toHaveBeenLastCalledWith("failed");
+
+    expect(reloadMock).not.toHaveBeenCalled();
+  });
+
+  it("requires a signed-in player and only sells packs for plutonium", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    await purchaseCosmetic(starter, "hard");
+    expect(showInGameAlert).toHaveBeenCalledWith("log in");
+
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
+    await purchaseCosmetic(starter, "soft");
+    expect(purchaseCosmeticPack).not.toHaveBeenCalled();
+  });
+});

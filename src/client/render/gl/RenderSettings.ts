@@ -19,7 +19,6 @@ export interface ThemeSettings {
   teamColors: Record<string, string>;
   humanColors: string[];
   nationColors: string[];
-  botColors: string[];
   /** Used when the primary palettes are exhausted. */
   fallbackColors: string[];
   /** Border = territory color darkened by this absolute amount. */
@@ -308,6 +307,12 @@ export interface RenderSettings {
     conquestLifetimeMs: number;
     conquestFadeIn: number;
     conquestFadeOut: number;
+    /** Visual (not gameplay) explosion radii in world tiles, per bomb type. */
+    nukeRadiusAtom: number;
+    nukeRadiusHydro: number;
+    nukeRadiusMirv: number;
+    /** Multiplier on the nuke debris sprite count (1 = default scatter). */
+    debrisDensity: number;
   };
   nukeTrajectory: {
     lineWidth: number; // px — main line stroke width
@@ -402,6 +407,8 @@ export interface RenderSettings {
   altView: {
     gridFontSize: number;
     recolorStructures: boolean;
+    /** Opacity of the translucent affiliation-colored territory fill. */
+    fillAlpha: number;
   };
   tileDrip: {
     /**

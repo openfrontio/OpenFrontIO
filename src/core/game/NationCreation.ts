@@ -37,7 +37,17 @@ export function createNationsForGame(
       n.coordinates !== undefined
         ? new Cell(n.coordinates[0], n.coordinates[1])
         : undefined,
-      new PlayerInfo(n.name, PlayerType.Nation, null, random.nextID()),
+      new PlayerInfo(
+        n.name,
+        PlayerType.Nation,
+        null,
+        random.nextID(),
+        false,
+        null,
+        [],
+        null,
+        n.flag ?? null,
+      ),
     );
 
   const isCompactMap = gameStart.config.gameMapSize === GameMapSize.Compact;
@@ -121,7 +131,17 @@ function createRandomNations(
       nations.push(
         new Nation(
           spawnCell,
-          new PlayerInfo(extra.name, PlayerType.Nation, null, random.nextID()),
+          new PlayerInfo(
+            extra.name,
+            PlayerType.Nation,
+            null,
+            random.nextID(),
+            false,
+            null,
+            [],
+            null,
+            extra.flag ?? null,
+          ),
         ),
       );
       usedNames.add(extra.name);

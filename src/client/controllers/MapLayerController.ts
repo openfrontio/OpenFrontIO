@@ -34,6 +34,7 @@ export class MapLayerController implements Controller {
       // Images already loaded (e.g. from cache) — set up immediately.
       this.view.setMapLayers(this.gameMap.layers, this.gameMap.layerImages);
       this.applyVisibility();
+      this.applyAlpha();
     } else {
       // Layer images loaded off the critical path. Start fetching now;
       // the renderer tolerates missing layers (warn + skip) until they
@@ -48,6 +49,7 @@ export class MapLayerController implements Controller {
           if (!this.abortSignal.aborted) {
             this.view.setMapLayers(this.gameMap.layers!, images);
             this.applyVisibility();
+            this.applyAlpha();
           }
         })
         .catch((e) =>
@@ -63,6 +65,20 @@ export class MapLayerController implements Controller {
       const vis = overrides.mapLayerVisibility[layer.id];
       if (vis !== undefined) {
         this.view.setLayerVisible(layer.id, vis);
+      }
+    }
+  }
+
+  private applyAlpha() {
+    const overrides = this.userSettings.graphicsOverrides();
+    if (!this.gameMap.layers) return;
+    for (const layer of this.gameMap.layers) {
+      const alpha = overrides.mapLayerAlpha?.[layer.id];
+      if (alpha !== undefined) {
+        this.view.setLayerAlpha(layer.id, alpha);
+      } else if (layer.alpha !== undefined) {
+        // Apply manifest default when no user override exists.
+        this.view.setLayerAlpha(layer.id, layer.alpha);
       }
     }
   }

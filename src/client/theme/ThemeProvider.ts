@@ -1,5 +1,5 @@
 import { Colord, colord, LabaColor } from "colord";
-import { PlayerType, Team } from "../../core/game/Game";
+import { ColoredTeams, PlayerType, Team } from "../../core/game/Game";
 import { UserSettings } from "../../core/game/UserSettings";
 import { simpleHash } from "../../core/Util";
 import { PALETTE_NAMES } from "../render/gl/GraphicsOverrides";
@@ -81,7 +81,6 @@ export function buildTeamPalettes(
  */
 export class SettingsTheme implements Theme {
   private humanColorAllocator: ColorAllocator;
-  private botColorAllocator: ColorAllocator;
   private nationColorAllocator: ColorAllocator;
   private teamPalettes: Map<Team, Colord[]>;
   private teamPlayerColors = new Map<string, Colord>();
@@ -91,12 +90,10 @@ export class SettingsTheme implements Theme {
 
   constructor(private settings: ThemeSettings) {
     const humanColors = settings.humanColors.map(colord);
-    const botColors = settings.botColors.map(colord);
     const nationColors = settings.nationColors.map(colord);
     const fallbackColors = settings.fallbackColors.map(colord);
 
     this.humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
-    this.botColorAllocator = new ColorAllocator(botColors, botColors);
     this.nationColorAllocator = new ColorAllocator(nationColors, nationColors);
     this.teamPalettes = buildTeamPalettes(settings);
 
@@ -137,8 +134,8 @@ export class SettingsTheme implements Theme {
 
   /**
    * Color for a player's territory: a per-player variation when the player is
-   * on a team, otherwise a distinct color allocated from the matching pool
-   * (human / bot / nation).
+   * on a team, the flat Bot team color for tribes, otherwise a distinct color
+   * allocated from the matching pool (human / nation).
    */
   territoryColor(player: PlayerView): Colord {
     const team = player.team();
@@ -149,7 +146,8 @@ export class SettingsTheme implements Theme {
       return this.humanColorAllocator.assignColor(player.id());
     }
     if (player.type() === PlayerType.Bot) {
-      return this.botColorAllocator.assignColor(player.id());
+      // Tribes use the same palette in every mode: the flat Bot team color.
+      return this.teamColorForPlayer(ColoredTeams.Bot, player.id());
     }
     return this.nationColorAllocator.assignColor(player.id());
   }

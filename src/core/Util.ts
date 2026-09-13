@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
+import { exp } from "./DetMath";
 import { Cell, GameType, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import { TileSet } from "./game/TileSet";
@@ -10,6 +11,7 @@ import {
   GameStartInfo,
   PartialGameRecord,
   PlayerRecord,
+  PlayerReport,
   Tribe,
   Turn,
   Winner,
@@ -301,6 +303,9 @@ export function createPartialGameRecord(
   // ingest reads them from the record for owner appearance stats, and
   // replays rebuild GameStartInfo from the record so the same names spawn.
   tribes?: Tribe[],
+  // Player reports filed during the game (multiplayer only; see
+  // GameServer.handleReport). The API ingests them for moderation.
+  reports?: PlayerReport[],
 ): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
   const num_turns = allTurns.length;
@@ -329,6 +334,7 @@ export function createPartialGameRecord(
       num_turns,
       winner,
       tribes,
+      reports,
     },
     version: "v0.0.2",
     turns,
@@ -371,6 +377,21 @@ export function generateID(): GameID {
     8,
   );
   return nanoid();
+}
+
+// Multi-server game id (docs/MultiServer.md): the minting deployment's
+// instance letter + 9 random chars. The 9 random chars carry uniqueness
+// (game ids are permanent archive keys, sized against every game ever
+// minted) and private-lobby unguessability; worker routing hashes the full
+// id, extracting the worker index from entropy that must exist anyway.
+// generateID() stays 8 chars for the ids that never leave one server or one
+// client: client ids, singleplayer games, worker message ids.
+export function generateGameID(instanceLetter: string): GameID {
+  const nanoid = customAlphabet(
+    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
+    9,
+  );
+  return instanceLetter + nanoid();
 }
 
 export function toInt(num: number): bigint {
@@ -442,7 +463,7 @@ export function sigmoid(
   decayRate: number,
   midpoint: number,
 ): number {
-  return 1 / (1 + Math.exp(-decayRate * (value - midpoint)));
+  return 1 / (1 + exp(-decayRate * (value - midpoint)));
 }
 
 export function formatPlayerDisplayName(

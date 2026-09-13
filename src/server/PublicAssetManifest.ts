@@ -31,6 +31,11 @@ const ROOT_PUBLIC_FILES = new Set([
   "version.txt",
 ]);
 
+// Directories served verbatim, without content hashing. Use for pages whose
+// asset URLs are published elsewhere and must stay stable — the press kit links
+// its images by literal path, and outlets hotlink them.
+const ROOT_PUBLIC_DIRS = ["press/"];
+
 const manifestCache = new Map<string, AssetManifest>();
 
 // Bump this to force-invalidate all CDN-cached assets (e.g. after a bad deploy with wrong cache headers).
@@ -275,7 +280,9 @@ function resolveSourceFile(relativePath: string, sourceDirs: string[]): string {
 }
 
 export function shouldKeepRootPublicFile(relativePath: string): boolean {
-  return ROOT_PUBLIC_FILES.has(normalizeAssetPath(relativePath));
+  const normalized = normalizeAssetPath(relativePath);
+  if (ROOT_PUBLIC_FILES.has(normalized)) return true;
+  return ROOT_PUBLIC_DIRS.some((dir) => normalized.startsWith(dir));
 }
 
 export function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {

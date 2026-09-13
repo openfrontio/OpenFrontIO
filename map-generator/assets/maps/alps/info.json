@@ -4,6 +4,8 @@
   "translation_key": "map.alps",
   "categories": ["europe"],
   "multiplayer_frequency": 4,
+  "forced_modifiers": ["isWaterNukes:75"],
+  "themes": ["europe"],
   "nations": [
     {
       "coordinates": [669, 356],
@@ -155,6 +157,5 @@
       "name": "Franche-Comté",
       "flag": "fr"
     }
-  ],
-  "themes": ["europe"]
+  ]
 }

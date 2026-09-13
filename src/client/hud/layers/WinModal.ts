@@ -2,10 +2,12 @@ import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   getGamesPlayed,
+  homeHref,
   isInIframe,
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
+import { Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -191,24 +193,26 @@ export class WinModal extends LitElement implements Controller {
 
     this.patternContent = html`
       <div class="flex gap-4 flex-nowrap justify-start items-start">
-        ${selected.map(
-          (resolved) => html`
+        ${selected.map((resolved) => {
+          // Only patterns were selected above.
+          const pattern = resolved.cosmetic as Pattern | null;
+          return html`
             <div data-win-cosmetic-promo class="flex w-40 flex-col gap-2">
               <cosmetic-card
                 .resolved=${resolved}
                 .interactive=${false}
               ></cosmetic-card>
               <purchase-button
-                .priceHard=${resolved.cosmetic?.priceHard ?? null}
-                .priceSoft=${resolved.cosmetic?.priceSoft ?? null}
-                .rarity=${resolved.cosmetic?.rarity ?? "common"}
+                .priceHard=${pattern?.priceHard ?? null}
+                .priceSoft=${pattern?.priceSoft ?? null}
+                .rarity=${pattern?.rarity ?? "common"}
                 .itemName=${cosmeticSelectionLabel(resolved)}
                 .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard")}
                 .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft")}
               ></purchase-button>
             </div>
-          `,
-        )}
+          `;
+        })}
       </div>
     `;
   }
@@ -270,7 +274,7 @@ export class WinModal extends LitElement implements Controller {
 
   private _handleExit() {
     this.hide();
-    window.location.href = "/";
+    window.location.href = homeHref();
   }
 
   private _handleRequeue() {
@@ -306,7 +310,7 @@ export class WinModal extends LitElement implements Controller {
       this.show();
     }
     const updates = this.game.updatesSinceLastTick();
-    const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
+    const winUpdates = updates?.[GameUpdateType.Win] ?? [];
     winUpdates.forEach((wu) => {
       if (wu.winner === undefined) {
         // Match cancelled (e.g. a ranked 2v2 that didn't fill or fully

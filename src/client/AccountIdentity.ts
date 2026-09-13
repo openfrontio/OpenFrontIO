@@ -31,3 +31,16 @@ export function hasLinkedIdentity(
     (user.email ?? "") !== ""
   );
 }
+
+// The same question asked of a raw /users/@me result, where `false` means "no
+// session". Every identity gate in the client goes through this one function.
+//
+// It exists because the unwrapping used to be open-coded at each call site,
+// which let a second, Steam-blind copy of the predicate (the former
+// `hasLinkedAccount` in Api.ts) survive next to this one and lock Steam-only
+// players out of ranked matchmaking — OPE-199 / OPE-260. One door, one lock.
+export function responseHasLinkedIdentity(
+  userMeResponse: UserMeResponse | false,
+): boolean {
+  return userMeResponse !== false && hasLinkedIdentity(userMeResponse.user);
+}

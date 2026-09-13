@@ -2,6 +2,50 @@
  * WebGL2 utility functions: shader compilation, texture creation, VAO helpers.
  */
 
+/**
+ * Thrown when the WebGL context died while we were building GPU resources —
+ * a GPU-process crash, a driver reset, or the browser reclaiming a context
+ * under memory pressure.
+ *
+ * This is NOT a shader bug, and it is easy to mistake for one: on a lost
+ * context every query returns null rather than failing loudly, so
+ * `getShaderParameter(COMPILE_STATUS)` / `getProgramParameter(LINK_STATUS)`
+ * read as "failed" and `getShaderInfoLog` / `getProgramInfoLog` return null.
+ * A naive check reports a compile/link error with an empty info log, which
+ * sends everyone hunting for a GLSL problem that doesn't exist.
+ *
+ * `phase` is the step we were on when the loss surfaced; it says nothing
+ * about which shader is at fault, only where the context gave out.
+ */
+export class GLContextLostError extends Error {
+  constructor(readonly phase: "compile" | "link") {
+    super(
+      `WebGL context lost during shader ${phase}. The GPU process crashed, ` +
+        `reset, or ran out of memory — this is not a shader error.`,
+    );
+    this.name = "GLContextLostError";
+  }
+}
+
+/**
+ * Format a compile/link failure. Distinguishes a real GLSL failure (info log,
+ * plus the GL error code when the driver gives us no log) from a dead context.
+ */
+function glFailure(
+  gl: WebGL2RenderingContext,
+  phase: "compile" | "link",
+  log: string | null,
+): Error {
+  if (gl.isContextLost()) return new GLContextLostError(phase);
+  // Some drivers link-fail with no log at all. The error code is then the only
+  // hint we get, so keep it in the message rather than reporting an empty one.
+  const detail = log
+    ? `\n${log}`
+    : ` (no info log, glGetError=${gl.getError()})`;
+  const label = phase === "compile" ? "Shader compile" : "Program link";
+  return new Error(`${label} error:${detail}`);
+}
+
 export function compileShader(
   gl: WebGL2RenderingContext,
   type: number,
@@ -11,9 +55,10 @@ export function compileShader(
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    const log = gl.getShaderInfoLog(shader) ?? "";
+    const log = gl.getShaderInfoLog(shader);
+    const err = glFailure(gl, "compile", log);
     gl.deleteShader(shader);
-    throw new Error(`Shader compile error:\n${log}`);
+    throw err;
   }
   return shader;
 }
@@ -32,9 +77,10 @@ export function createProgram(
   gl.deleteShader(vs);
   gl.deleteShader(fs);
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const log = gl.getProgramInfoLog(program) ?? "";
+    const log = gl.getProgramInfoLog(program);
+    const err = glFailure(gl, "link", log);
     gl.deleteProgram(program);
-    throw new Error(`Program link error:\n${log}`);
+    throw err;
   }
   return program;
 }

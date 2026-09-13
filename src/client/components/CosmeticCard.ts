@@ -4,8 +4,13 @@ import { Subscription } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CosmeticInfo";
-import { cosmeticDisplayName, cosmeticRarity } from "./CosmeticPresentation";
+import {
+  cosmeticDisplayName,
+  cosmeticRarity,
+  cosmeticSelectionLabel,
+} from "./CosmeticPresentation";
 import "./CosmeticPreview";
+import "./CosmeticPreviewBubble";
 
 const COSMETIC_CARD_STYLE_ID = "cosmetic-card-styles";
 if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
@@ -393,7 +398,7 @@ export class CosmeticCard extends LitElement {
     // below it rather than over the text. The artwork clips inside its own box
     // so the info tooltip can still overflow the card.
     const content = html`
-      <div class="relative w-full ${previewShape}">
+      <div class="relative w-full flex-1 ${previewShape}">
         <div
           class="flex h-full w-full items-center justify-center overflow-hidden rounded-lg bg-white/5 p-2"
         >
@@ -457,8 +462,11 @@ export class CosmeticCard extends LitElement {
       ${name}
       <!-- The info bubble anchors to this wrapper, not the whole card, so it
            lands on the artwork's corner instead of over the name — and stays
-           outside the card's own button, which may not nest a control. -->
-      <div class="relative w-full">
+           outside the card's own button, which may not nest a control.
+           flex-1 down this chain hands any row-stretch slack (a taller
+           sibling card, e.g. the custom-amount slider) to the artwork box,
+           instead of pooling it as a void between artwork and buttons. -->
+      <div class="relative w-full flex-1 flex flex-col">
         ${this.interactive
           ? html`<button
               type="button"
@@ -466,26 +474,30 @@ export class CosmeticCard extends LitElement {
               aria-label=${displayName}
               aria-pressed=${isEquipped ? "true" : nothing}
               aria-current=${isFocused ? "true" : nothing}
-              class="group relative flex flex-col items-center gap-2 w-full rounded-xl px-3 pb-3 pt-2 cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1"
+              class="group relative flex flex-1 flex-col items-center gap-2 w-full rounded-xl px-3 pb-3 pt-2 cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1"
               @click=${() => this.onActivate?.(active)}
             >
               ${content}
             </button>`
           : html`<div
               data-cosmetic-main
-              class="group relative flex w-full flex-col items-center gap-2 rounded-xl px-3 pb-3 pt-2"
+              class="group relative flex flex-1 w-full flex-col items-center gap-2 rounded-xl px-3 pb-3 pt-2"
             >
               ${content}
             </div>`}
         ${this.interactive && active.cosmetic !== null
           ? html`<cosmetic-info
-              .artist=${priced?.artist}
-              .rarity=${rarity}
-              .colorPalette=${active.colorPalette?.name}
-              .showAdFree=${active.relationship === "purchasable"}
-              .usdValue=${usdValue}
-              .perks=${this.subscriptionPerks()}
-            ></cosmetic-info>`
+                .artist=${priced?.artist}
+                .rarity=${rarity}
+                .colorPalette=${active.colorPalette?.name}
+                .showAdFree=${active.relationship === "purchasable"}
+                .usdValue=${usdValue}
+                .perks=${this.subscriptionPerks()}
+                .items=${(active.packItems ?? []).map(cosmeticSelectionLabel)}
+              ></cosmetic-info>
+              <cosmetic-preview-bubble
+                .resolved=${active}
+              ></cosmetic-preview-bubble>`
           : nothing}
       </div>
       ${this.renderSwatches()}

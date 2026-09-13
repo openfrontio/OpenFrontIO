@@ -35,6 +35,10 @@ function ps(overrides: Partial<PlayerState> = {}): PlayerState {
     deathPosition: null,
     tilesOwned: 0,
     gold: 0,
+    tradeGold: 0,
+    trainGold: 0,
+    piracyGold: 0,
+    goldEarned: 0,
     troops: 0,
     isTraitor: false,
     traitorRemainingTicks: 0,
@@ -82,6 +86,10 @@ function nuke(overrides: Partial<UnitState> = {}): UnitState {
     trainType: null,
     loaded: null,
     constructionStartTick: null,
+    samUpgradeStartTick: null,
+    samUpgradeStartRange: null,
+    samUpgradeTargetLevel: null,
+    samUpgradeDuration: null,
     ...overrides,
   };
 }

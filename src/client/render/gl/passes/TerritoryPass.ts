@@ -42,6 +42,7 @@ export class TerritoryPass {
   private uDefenseDarken: WebGLUniformLocation;
   private uSaturation: WebGLUniformLocation;
   private uTerritoryAlpha: WebGLUniformLocation;
+  private uAltFillAlpha: WebGLUniformLocation;
   private highlightOwner = 0;
   private isTeamMode = false;
 
@@ -55,6 +56,7 @@ export class TerritoryPass {
   private skinAnchorTex: WebGLTexture;
   private defenseCoverageTex: WebGLTexture | null = null;
   private borderTex: WebGLTexture | null = null;
+  private affiliationTex: WebGLTexture | null = null;
 
   private altView = false;
   private showPatterns = true;
@@ -180,6 +182,7 @@ export class TerritoryPass {
       this.program,
       "uTerritoryAlpha",
     )!;
+    this.uAltFillAlpha = gl.getUniformLocation(this.program, "uAltFillAlpha")!;
 
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uTileTex"), 0);
@@ -191,6 +194,7 @@ export class TerritoryPass {
     gl.uniform1i(gl.getUniformLocation(this.program, "uSkinAnchor"), 6);
     gl.uniform1i(gl.getUniformLocation(this.program, "uDefenseCoverageTex"), 7);
     gl.uniform1i(gl.getUniformLocation(this.program, "uBorderTex"), 8);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uAffiliation"), 9);
 
     this.vao = createMapQuad(gl, mapW, mapH);
 
@@ -412,6 +416,11 @@ export class TerritoryPass {
     this.borderTex = tex;
   }
 
+  /** Affiliation palette (row 0 = border/relation colors) for the alt-view fill. */
+  setAffiliationTex(tex: WebGLTexture): void {
+    this.affiliationTex = tex;
+  }
+
   /** Draw territory fill + stale-nuke ground. Blending must be enabled by caller. */
   draw(cameraMatrix: Float32Array): void {
     this.flushTileTexture();
@@ -442,6 +451,7 @@ export class TerritoryPass {
     gl.uniform1f(this.uDefenseDarken, mo.territoryDefenseDarken);
     gl.uniform1f(this.uSaturation, mo.territorySaturation);
     gl.uniform1f(this.uTerritoryAlpha, mo.territoryAlpha);
+    gl.uniform1f(this.uAltFillAlpha, this.settings.altView.fillAlpha);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
@@ -464,6 +474,10 @@ export class TerritoryPass {
     if (this.borderTex) {
       gl.activeTexture(gl.TEXTURE8);
       gl.bindTexture(gl.TEXTURE_2D, this.borderTex);
+    }
+    if (this.affiliationTex) {
+      gl.activeTexture(gl.TEXTURE9);
+      gl.bindTexture(gl.TEXTURE_2D, this.affiliationTex);
     }
 
     gl.bindVertexArray(this.vao);

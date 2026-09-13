@@ -29,6 +29,44 @@ describe("decode resource bounds", () => {
     expect(Date.now() - started).toBeLessThan(50);
   });
 
+  // readCount must not depend on the EXACT per-element minimum. An element's
+  // declared minBytes can over-state its smallest real encoding (a null/absent
+  // field writes zero body bytes), so a compact array of such elements is
+  // smaller than n * declared-min and must still decode. Regression for the
+  // live-stats snapshot rejected as a malformed frame — its sender kicked —
+  // because PlayerLiveStats' three nullable fields inflated the count guard.
+  const overStatedMinBytesCases: Array<[string, z.ZodTypeAny, unknown]> = [
+    [
+      "a nullable field",
+      zb.object({ a: zb.uint(), b: zb.uint().nullable() }),
+      { a: 1, b: null },
+    ],
+    [
+      "an optional field",
+      zb.object({ a: zb.uint(), b: zb.uint().optional() }),
+      { a: 1 },
+    ],
+    [
+      "float + nullables (live-stats shape)",
+      zb.object({
+        id: zb.uint(),
+        troops: zb.float(),
+        killedBy: zb.uint().nullable(),
+        deathPosition: zb.uint().nullable(),
+        team: z.string().nullable(),
+      }),
+      { id: 1, troops: 100.5, killedBy: null, deathPosition: null, team: null },
+    ],
+  ];
+  it.each(overStatedMinBytesCases)(
+    "round-trips a compact array whose elements over-state minBytes (%s)",
+    (_name, element, item) => {
+      const S = zb.object({ xs: element.array() }) as any;
+      const value = { xs: [item, item, item] };
+      expect(S.parseBytes(S.serialize(value))).toStrictEqual(value);
+    },
+  );
+
   it.each([
     ["single-value literals", z.array(z.literal("x"))],
     ["all-literal objects", z.array(z.object({ a: z.literal(1) }))],

@@ -238,6 +238,11 @@
     "name": "Ascension Island"
   },
   {
+    "code": "Association of Caribbean States",
+    "continent": "North America",
+    "name": "Association of Caribbean States"
+  },
+  {
     "code": "Assyria",
     "continent": "Asia",
     "name": "Assyria"
@@ -392,6 +397,11 @@
     "name": "Bavaria (Lozenges)"
   },
   {
+    "code": "Bedford",
+    "continent": "North America",
+    "name": "Bedford"
+  },
+  {
     "code": "by",
     "continent": "Europe",
     "name": "Belarus"
@@ -439,7 +449,7 @@
   {
     "code": "bq",
     "continent": "South America",
-    "name": "Bonaire, Sint Eustatius and Saba"
+    "name": "Bonaire"
   },
   {
     "code": "ba",
@@ -600,6 +610,11 @@
     "name": "Capybara"
   },
   {
+    "code": "CARICOM",
+    "continent": "North America",
+    "name": "CARICOM"
+  },
+  {
     "code": "Carthage",
     "continent": "Africa",
     "name": "Carthage"
@@ -757,6 +772,10 @@
     "code": "km",
     "continent": "Africa",
     "name": "Comoros"
+  },
+  {
+    "code": "Commonwealth",
+    "name": "Commonwealth"
   },
   {
     "code": "Communist flag",
@@ -1124,6 +1143,11 @@
     "name": "Fatimid Caliphate"
   },
   {
+    "code": "Federal Republic of Central America",
+    "continent": "North America",
+    "name": "Federal Republic of Central America"
+  },
+  {
     "code": "fm",
     "continent": "Oceania",
     "name": "Federated States of Micronesia"
@@ -1232,6 +1256,11 @@
     "name": "Garamantes"
   },
   {
+    "code": "Garifuna",
+    "continent": "North America",
+    "name": "Garifuna"
+  },
+  {
     "code": "ge",
     "continent": "Asia",
     "name": "Georgia"
@@ -1333,6 +1362,11 @@
     "name": "Guatemala"
   },
   {
+    "code": "Guatemala Indigenous",
+    "continent": "North America",
+    "name": "Guatemala Indigenous"
+  },
+  {
     "code": "gg",
     "continent": "Europe",
     "name": "Guernsey"
@@ -1346,6 +1380,11 @@
     "code": "gw",
     "continent": "Africa",
     "name": "Guinea-Bissau"
+  },
+  {
+    "code": "pa-ky",
+    "continent": "North America",
+    "name": "Guna Yala"
   },
   {
     "code": "1_Gwent",
@@ -1865,6 +1904,11 @@
     "name": "Leinster"
   },
   {
+    "code": "Lenca",
+    "continent": "North America",
+    "name": "Lenca"
+  },
+  {
     "code": "leon",
     "continent": "Europe",
     "name": "León"
@@ -1926,6 +1970,11 @@
     "code": "Lithuanian SSR",
     "continent": "Europe",
     "name": "Lithuanian SSR"
+  },
+  {
+    "code": "Los Altos",
+    "continent": "North America",
+    "name": "Los Altos"
   },
   {
     "code": "Los Lagos",
@@ -2100,6 +2149,16 @@
     "code": "mu",
     "continent": "Africa",
     "name": "Mauritius"
+  },
+  {
+    "code": "Maya Peninsular",
+    "continent": "North America",
+    "name": "Maya Peninsular"
+  },
+  {
+    "code": "Maya",
+    "continent": "North America",
+    "name": "Maya"
   },
   {
     "code": "yt",
@@ -2282,9 +2341,19 @@
     "name": "Namibia"
   },
   {
+    "code": "Nantucket",
+    "continent": "North America",
+    "name": "Nantucket"
+  },
+  {
     "code": "Napoleon",
     "continent": "Europe",
     "name": "Napoleon"
+  },
+  {
+    "code": "pa-nt",
+    "continent": "North America",
+    "name": "Naso Tjër Di"
   },
   {
     "code": "NATO",
@@ -2398,6 +2467,11 @@
     "code": "nz",
     "continent": "Oceania",
     "name": "New Zealand"
+  },
+  {
+    "code": "pa-nb",
+    "continent": "North America",
+    "name": "Ngäbe-Buglé"
   },
   {
     "code": "ni",
@@ -2565,6 +2639,11 @@
     "name": "Oregon"
   },
   {
+    "code": "Organization of American States",
+    "continent": "North America",
+    "name": "Organization of American States"
+  },
+  {
     "code": "Ottoman Empire",
     "continent": "Asia",
     "name": "Ottoman Empire"
@@ -2593,6 +2672,11 @@
     "code": "Palekh",
     "continent": "Europe",
     "name": "Palekh"
+  },
+  {
+    "code": "Panama Canal Zone",
+    "continent": "North America",
+    "name": "Panama Canal Zone"
   },
   {
     "code": "pa",
@@ -2683,6 +2767,11 @@
     "code": "fr-s",
     "continent": "Europe",
     "name": "Picardy"
+  },
+  {
+    "code": "Pipil",
+    "continent": "North America",
+    "name": "Pipil"
   },
   {
     "code": "Pine Tree Flag",
@@ -3322,6 +3411,11 @@
     "name": "Saarland"
   },
   {
+    "code": "bq-sa",
+    "continent": "North America",
+    "name": "Saba"
+  },
+  {
     "code": "Saba kingdom",
     "continent": "Asia",
     "name": "Saba Kingdom"
@@ -3470,6 +3564,11 @@
     "name": "Scotland"
   },
   {
+    "code": "New Caledonia",
+    "continent": "North America",
+    "name": "Scottish Darien"
+  },
+  {
     "code": "Second Republic of Iraq",
     "continent": "Asia",
     "name": "Second Republic of Iraq"
@@ -3548,6 +3647,11 @@
     "code": "sg",
     "continent": "Asia",
     "name": "Singapore"
+  },
+  {
+    "code": "bq-se",
+    "continent": "North America",
+    "name": "Sint Eustatius"
   },
   {
     "code": "sx",
@@ -3757,6 +3861,11 @@
     "code": "aus_tas",
     "continent": "Oceania",
     "name": "Tasmania"
+  },
+  {
+    "code": "Taunton",
+    "continent": "North America",
+    "name": "Taunton"
   },
   {
     "code": "Tennessee",
@@ -4101,6 +4210,11 @@
     "code": "west_germany",
     "continent": "Europe",
     "name": "West Germany"
+  },
+  {
+    "code": "West Indies Federation",
+    "continent": "North America",
+    "name": "West Indies Federation"
   },
   {
     "code": "West Papua",

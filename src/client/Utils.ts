@@ -12,6 +12,7 @@ import {
   Trios,
 } from "../core/game/Game";
 import { GameConfig } from "../core/Schemas";
+import { ClientEnv } from "./ClientEnv";
 import type { LangSelector } from "./LangSelector";
 import { Platform } from "./Platform";
 
@@ -23,6 +24,23 @@ export function normaliseMapKey(mapName: string): string {
   // the tourney maps (e.g. "Tourney 2 Teams" lives in maps/tourney1/).
   const id = maps.find((m) => m.type === mapName)?.id;
   return (id ?? mapName).toLowerCase().replace(/[\s.]+/g, "");
+}
+
+/**
+ * The map key desktop rich presence carries.
+ *
+ * Steam's localization file composes `#Map_<key>` and resolves it in the
+ * *viewing* user's language, so presence has to send the normalised id -- the
+ * same key `map.<id>` uses in our own translations, which keeps the two from
+ * drifting apart -- rather than the display name, which would compose a token
+ * that does not exist. Steam hides the entire status line when a token fails
+ * to resolve, so getting this wrong is a total failure rather than a partial
+ * one. Absent stays absent.
+ */
+export function presenceMapKey(
+  gameMap: string | undefined,
+): string | undefined {
+  return gameMap === undefined ? undefined : normaliseMapKey(gameMap);
 }
 
 export function getMapName(mapName: string | undefined): string | null {
@@ -399,12 +417,12 @@ export function createCanvas(): HTMLCanvasElement {
  */
 export function generateCryptoRandomUUID(): string {
   // Type guard to check if randomUUID is available
-  if (crypto !== undefined && "randomUUID" in crypto) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
 
   // Fallback using crypto.getRandomValues
-  if (crypto !== undefined && "getRandomValues" in crypto) {
+  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
     return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(
       /[018]/g,
       (c: number): string =>
@@ -446,10 +464,41 @@ function getCachedLangSelector(): LangSelector | null {
   const cached = self.langSelector as LangSelector | null | undefined;
   if (cached && cached.isConnected) return cached;
 
+  // A lit update is scheduled on a microtask, so a component can render once
+  // more after its environment has gone -- which in tests means `document` is
+  // no longer defined by the time this runs. Returning null makes
+  // translateText fall back to the key instead of throwing an unhandled
+  // rejection that fails the whole run.
+  if (typeof document === "undefined") {
+    self.langSelector = null;
+    return null;
+  }
+
   const found = document.querySelector("lang-selector") as LangSelector | null;
   self.langSelector = found ?? null;
   return found;
 }
+
+/** Language codes whose script reads right-to-left (resources/lang/metadata.json). */
+const RTL_LANGUAGES = new Set(["ar", "fa", "he"]);
+
+/**
+ * True when the given language renders right-to-left. Defaults to the
+ * currently selected UI language, so callers can simply write `isRTL()`.
+ */
+export const isRTL = (lang?: string): boolean => {
+  const code = (lang ?? getCachedLangSelector()?.currentLang ?? "en").split(
+    "-",
+  )[0];
+  return RTL_LANGUAGES.has(code);
+};
+
+/**
+ * Value for the HTML `dir` attribute matching the current UI language.
+ * Apply it to containers whose text comes from translateText() so Persian,
+ * Arabic and Hebrew render right-to-left with correct mixed-content ordering.
+ */
+export const textDirection = (): "rtl" | "ltr" => (isRTL() ? "rtl" : "ltr");
 
 export const translateText = (
   key: string,
@@ -514,16 +563,88 @@ export const translateText = (
   }
 };
 
-export function getTranslatedPlayerTeamLabel(team: Team | null): string {
+export interface HasClanTag {
+  clanTag?: string | null | (() => string | null);
+}
+
+type TopClans = {
+  topTag: string | null;
+  topCount: number;
+  secondTag: string | null;
+  secondCount: number;
+  thirdCount: number;
+};
+
+function getTopClans(players: readonly HasClanTag[]): TopClans {
+  const counts = new Map<string, number>();
+  for (const p of players) {
+    const tag = typeof p.clanTag === "function" ? p.clanTag() : p.clanTag;
+    if (tag && tag.trim().length > 0) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  let topTag: string | null = null,
+    topCount = 0;
+  let secondTag: string | null = null,
+    secondCount = 0;
+  let thirdCount = 0;
+
+  for (const [tag, count] of counts) {
+    if (count > topCount) {
+      thirdCount = secondCount;
+      secondTag = topTag;
+      secondCount = topCount;
+      topTag = tag;
+      topCount = count;
+    } else if (count > secondCount) {
+      thirdCount = secondCount;
+      secondTag = tag;
+      secondCount = count;
+    } else if (count > thirdCount) {
+      thirdCount = count;
+    }
+  }
+  return { topTag, topCount, secondTag, secondCount, thirdCount };
+}
+
+export function resolveTeamClanTag(
+  players: Iterable<HasClanTag>,
+): string | null {
+  const list = Array.isArray(players) ? players : Array.from(players);
+  const n = list.length;
+  if (n === 0) return null;
+
+  const { topTag, topCount, secondTag, secondCount, thirdCount } =
+    getTopClans(list);
+
+  if (topTag && topCount > n / 2) {
+    return topTag;
+  }
+  if (
+    topTag &&
+    secondTag &&
+    secondCount > thirdCount &&
+    (topCount + secondCount) / n >= 0.7 &&
+    secondCount / n >= 0.3
+  ) {
+    return [topTag, secondTag].sort().join(" / ");
+  }
+  return null;
+}
+
+export function getTranslatedPlayerTeamLabel(
+  team: Team | null,
+  clanTag?: string | null,
+): string {
   if (!team) return "";
+  if (clanTag) {
+    return `[${clanTag}]`;
+  }
   const translationKey = `team_colors.${team.toLowerCase()}`;
   const translated = translateText(translationKey);
   return translated === translationKey ? team : translated;
 }
 
-/**
- * Severity colors mapping for message types
- */
 export const severityColors: Record<string, string> = {
   fail: "text-red-400",
   warn: "text-yellow-400",
@@ -534,9 +655,7 @@ export const severityColors: Record<string, string> = {
 };
 
 /**
- * Gets the CSS classes for styling message types based on their severity
- * @param type The message type to get styling for
- * @returns CSS class string for the message type
+ * Maps a message type to the Tailwind text-color class of its severity.
  */
 export function getMessageTypeClasses(type: MessageType): string {
   switch (type) {
@@ -742,4 +861,45 @@ export function getSecondsUntilServerTimestamp(
         1000,
     ),
   );
+}
+
+/**
+ * Reload to pick up a newly deployed version. The app shell is served with a
+ * shared-cache TTL (RenderHtml.ts), so a plain reload can hand back the same
+ * stale HTML — with the old gitCommit baked in — for minutes after a deploy,
+ * and a version check that reloads on mismatch would loop. A unique query
+ * string misses the shared cache, so the origin renders the current shell.
+ *
+ * On a deployment host (the document landed there for a cross-host game, or
+ * via a stale bookmark) a same-origin reload re-fetches that SAME
+ * deployment's shell — for a drained or outdated deployment that can never
+ * help, and the drain prompt would loop forever. The apex serves the active
+ * deployment's shell, so go there instead, keeping the path (letter routing
+ * re-resolves a /game/<id>) minus the origin-specific worker prefix.
+ */
+export function reloadForUpdate(): void {
+  const url = new URL(window.location.href);
+  const siteHost = ClientEnv.siteHost();
+  if (siteHost !== undefined && url.host !== siteHost) {
+    url.protocol = "https:";
+    url.host = siteHost;
+    url.pathname = url.pathname.replace(/^\/w\d+\//, "/");
+  }
+  url.searchParams.set("v", Date.now().toString(36));
+  window.location.replace(url.toString());
+}
+
+/**
+ * Where "leave to the menu" navigations should land. On a deployment host
+ * the local homepage may belong to a drained deployment whose public lobby
+ * list is empty; the apex always fronts the active one. Same-host,
+ * standalone deployments (no siteHost injected), dev, and desktop keep the
+ * plain root.
+ */
+export function homeHref(): string {
+  const siteHost = ClientEnv.siteHost();
+  if (siteHost !== undefined && window.location.host !== siteHost) {
+    return `https://${siteHost}/`;
+  }
+  return "/";
 }

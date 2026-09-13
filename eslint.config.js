@@ -48,6 +48,51 @@ export default [
     },
   },
   {
+    // The simulation must be bit-identical on every client. Math.exp & co.
+    // are only "implementation approximated" by the spec; use DetMath.
+    files: ["src/core/**/*.ts"],
+    ignores: ["src/core/DetMath.ts"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        ...[
+          "exp",
+          "expm1",
+          "log",
+          "log1p",
+          "log2",
+          "log10",
+          "pow",
+          "sin",
+          "cos",
+          "tan",
+          "asin",
+          "acos",
+          "atan",
+          "atan2",
+          "sinh",
+          "cosh",
+          "tanh",
+          "cbrt",
+          "hypot",
+        ].map((property) => ({
+          object: "Math",
+          property,
+          message: `Math.${property} differs between JS engines; use src/core/DetMath.ts to keep the simulation deterministic.`,
+        })),
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "BinaryExpression[operator='**']:not([right.type='Literal'][right.value=2])",
+          message:
+            "`**` with a non-2 exponent differs between JS engines; use src/core/DetMath.ts to keep the simulation deterministic.",
+        },
+      ],
+    },
+  },
+  {
     rules: {
       // Enable rules
       "@typescript-eslint/prefer-nullish-coalescing": "error",

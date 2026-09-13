@@ -88,34 +88,35 @@ func inputMapDir(isTest bool) (string, error) {
 
 // processMap handles the end-to-end generation for a single map.
 // It reads the source image and JSON, generates the terrain data, and writes the binary outputs and updated manifest.
-func processMap(ctx context.Context, name string, isTest bool) error {
+// On success it returns the path of the manifest.json it wrote, so callers can format it with Prettier.
+func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 	outputMapBaseDir, err := outputMapDir(isTest)
 	if err != nil {
-		return fmt.Errorf("failed to get map directory: %w", err)
+		return "", fmt.Errorf("failed to get map directory: %w", err)
 	}
 
 	inputMapDir, err := inputMapDir(isTest)
 	if err != nil {
-		return fmt.Errorf("failed to get input map directory: %w", err)
+		return "", fmt.Errorf("failed to get input map directory: %w", err)
 	}
 
 	inputPath := filepath.Join(inputMapDir, name, "image.png")
 	imageBuffer, err := os.ReadFile(inputPath)
 	if err != nil {
-		return fmt.Errorf("failed to read map file %s: %w", inputPath, err)
+		return "", fmt.Errorf("failed to read map file %s: %w", inputPath, err)
 	}
 
 	// Read the info.json file
 	manifestPath := filepath.Join(inputMapDir, name, "info.json")
 	manifestBuffer, err := os.ReadFile(manifestPath)
 	if err != nil {
-		return fmt.Errorf("failed to read info file %s: %w", manifestPath, err)
+		return "", fmt.Errorf("failed to read info file %s: %w", manifestPath, err)
 	}
 
 	// Parse the info buffer as dynamic JSON
 	var manifest map[string]interface{}
 	if err := json.Unmarshal(manifestBuffer, &manifest); err != nil {
-		return fmt.Errorf("failed to parse info.json for %s: %w", name, err)
+		return "", fmt.Errorf("failed to parse info.json for %s: %w", name, err)
 	}
 
 	// Generate maps
@@ -125,7 +126,7 @@ func processMap(ctx context.Context, name string, isTest bool) error {
 		Name:        name,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to generate map for %s: %w", name, err)
+		return "", fmt.Errorf("failed to generate map for %s: %w", name, err)
 	}
 
 	manifest["map"] = map[string]interface{}{
@@ -146,19 +147,19 @@ func processMap(ctx context.Context, name string, isTest bool) error {
 
 	mapDir := filepath.Join(outputMapBaseDir, name)
 	if err := os.MkdirAll(mapDir, 0755); err != nil {
-		return fmt.Errorf("failed to create output directory for %s: %w", name, err)
+		return "", fmt.Errorf("failed to create output directory for %s: %w", name, err)
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "map.bin"), result.Map.Data, 0644); err != nil {
-		return fmt.Errorf("failed to write combined binary for %s: %w", name, err)
+		return "", fmt.Errorf("failed to write combined binary for %s: %w", name, err)
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "map4x.bin"), result.Map4x.Data, 0644); err != nil {
-		return fmt.Errorf("failed to write combined binary for %s: %w", name, err)
+		return "", fmt.Errorf("failed to write combined binary for %s: %w", name, err)
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "map16x.bin"), result.Map16x.Data, 0644); err != nil {
-		return fmt.Errorf("failed to write combined binary for %s: %w", name, err)
+		return "", fmt.Errorf("failed to write combined binary for %s: %w", name, err)
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "thumbnail.webp"), result.Thumbnail, 0644); err != nil {
-		return fmt.Errorf("failed to write thumbnail for %s: %w", name, err)
+		return "", fmt.Errorf("failed to write thumbnail for %s: %w", name, err)
 	}
 
 	// Copy layer PNGs and validate them.
@@ -176,25 +177,25 @@ func processMap(ctx context.Context, name string, isTest bool) error {
 				// Validate placement.
 				placement, _ := layer["placement"].(string)
 				if placement != "land" && placement != "water" {
-					return fmt.Errorf("map %s: layer %q has invalid placement %q (must be \"land\" or \"water\")", name, layerID, placement)
+					return "", fmt.Errorf("map %s: layer %q has invalid placement %q (must be \"land\" or \"water\")", name, layerID, placement)
 				}
 				// Copy the layer PNG.
 				srcPng := filepath.Join(inputMapDir, name, layerID+".png")
 				dstPng := filepath.Join(mapDir, layerID+".png")
 				pngData, err := os.ReadFile(srcPng)
 				if err != nil {
-					return fmt.Errorf("map %s: layer %q PNG not found at %s: %w", name, layerID, srcPng, err)
+					return "", fmt.Errorf("map %s: layer %q PNG not found at %s: %w", name, layerID, srcPng, err)
 				}
 				// Validate dimensions match image.png.
 				img, _, err := image.DecodeConfig(bytes.NewReader(pngData))
 				if err != nil {
-					return fmt.Errorf("map %s: layer %q PNG failed to decode: %w", name, layerID, err)
+					return "", fmt.Errorf("map %s: layer %q PNG failed to decode: %w", name, layerID, err)
 				}
 				if img.Width != result.Map.Width || img.Height != result.Map.Height {
-					return fmt.Errorf("map %s: layer %q PNG dimensions (%dx%d) do not match map (%dx%d)", name, layerID, img.Width, img.Height, result.Map.Width, result.Map.Height)
+					return "", fmt.Errorf("map %s: layer %q PNG dimensions (%dx%d) do not match map (%dx%d)", name, layerID, img.Width, img.Height, result.Map.Width, result.Map.Height)
 				}
 				if err := os.WriteFile(dstPng, pngData, 0644); err != nil {
-					return fmt.Errorf("failed to write layer PNG for %s/%s: %w", name, layerID, err)
+					return "", fmt.Errorf("failed to write layer PNG for %s/%s: %w", name, layerID, err)
 				}
 			}
 		}
@@ -203,13 +204,14 @@ func processMap(ctx context.Context, name string, isTest bool) error {
 	// Serialize the updated manifest to JSON
 	updatedManifest, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to serialize manifest for %s: %w", name, err)
+		return "", fmt.Errorf("failed to serialize manifest for %s: %w", name, err)
 	}
 
-	if err := os.WriteFile(filepath.Join(mapDir, "manifest.json"), updatedManifest, 0644); err != nil {
-		return fmt.Errorf("failed to write manifest for %s: %w", name, err)
+	manifestOutPath := filepath.Join(mapDir, "manifest.json")
+	if err := os.WriteFile(manifestOutPath, updatedManifest, 0644); err != nil {
+		return "", fmt.Errorf("failed to write manifest for %s: %w", name, err)
 	}
-	return nil
+	return manifestOutPath, nil
 }
 
 // parseMapsFlag validates and parses the --maps command-line argument.
@@ -237,16 +239,21 @@ func parseMapsFlag() (map[string]bool, error) {
 // loadTerrainMaps manages the concurrent generation of all selected maps.
 // It spins up goroutines for each map and aggregates any errors.
 // Concurrency is bounded by --workers to cap peak memory usage.
-func loadTerrainMaps() error {
+// On success it returns the manifest.json path written for every map processed.
+func loadTerrainMaps() ([]string, error) {
 	if workersFlag < 1 {
-		return fmt.Errorf("--workers must be >= 1, got %d", workersFlag)
+		return nil, fmt.Errorf("--workers must be >= 1, got %d", workersFlag)
 	}
 	selectedMaps, err := parseMapsFlag()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var wg sync.WaitGroup
-	errChan := make(chan error, len(maps))
+	type result struct {
+		manifestPath string
+		err          error
+	}
+	resultChan := make(chan result, len(maps))
 	sem := make(chan struct{}, workersFlag)
 
 	// Process maps concurrently, bounded by the semaphore
@@ -264,24 +271,25 @@ func loadTerrainMaps() error {
 			testLogTag := slog.Bool("isTest", mapItem.IsTest)
 			logger := slog.Default().With(mapLogTag).With(testLogTag)
 			ctx := ContextWithLogger(context.Background(), logger)
-			if err := processMap(ctx, mapItem.Name, mapItem.IsTest); err != nil {
-				errChan <- err
-			}
+			manifestPath, err := processMap(ctx, mapItem.Name, mapItem.IsTest)
+			resultChan <- result{manifestPath, err}
 		}()
 	}
 
 	// Wait for all goroutines to complete
 	wg.Wait()
-	close(errChan)
+	close(resultChan)
 
-	// Check for errors
-	for err := range errChan {
-		if err != nil {
-			return err
+	// Check for errors and collect the manifest paths written.
+	var manifestPaths []string
+	for r := range resultChan {
+		if r.err != nil {
+			return nil, r.err
 		}
+		manifestPaths = append(manifestPaths, r.manifestPath)
 	}
 
-	return nil
+	return manifestPaths, nil
 }
 
 // main is the entry point for the map generator tool.
@@ -312,7 +320,8 @@ func main() {
 	}
 	maps = discovered
 
-	if err := loadTerrainMaps(); err != nil {
+	manifestPaths, err := loadTerrainMaps()
+	if err != nil {
 		log.Fatalf("Error generating terrain maps: %v", err)
 	}
 
@@ -320,11 +329,22 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading map info: %v", err)
 	}
-	if err := generateMapsTS(infos); err != nil {
+	mapsTSPath, err := generateMapsTS(infos)
+	if err != nil {
 		log.Fatalf("Error generating Maps.gen.ts: %v", err)
 	}
-	if err := generateEnJSON(infos); err != nil {
+	enJSONPath, err := generateEnJSON(infos)
+	if err != nil {
 		log.Fatalf("Error generating en.json map section: %v", err)
+	}
+
+	// Format every file we just wrote with the repo's Prettier config, so
+	// `go run .` alone leaves a clean diff — no separate `npm run format`
+	// step to remember. Regenerated map manifests are the same JSON `go fmt`
+	// produces for Maps.gen.ts and en.json: valid, but not Prettier-shaped.
+	formatFiles := append(manifestPaths, mapsTSPath, enJSONPath)
+	if err := runPrettier(formatFiles); err != nil {
+		slog.Warn("Failed to auto-format generated files with Prettier; run `npm run format` manually", "error", err)
 	}
 
 	fmt.Println("Terrain maps generated successfully")

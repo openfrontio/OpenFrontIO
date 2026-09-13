@@ -30,9 +30,18 @@ function countsMessage(serverTime: number, counts: Record<string, number>) {
   return lobbyFrame({ type: "counts", serverTime, counts });
 }
 
-function makeSocket() {
+function drainedMessage(serverTime: number, active: boolean | undefined) {
+  return lobbyFrame({
+    type: "full",
+    serverTime,
+    games: { ffa: [], team: [], special: [] },
+    active,
+  });
+}
+
+function makeSocket(options?: { onUpdateAvailable?: () => void }) {
   const callback = vi.fn<(g: PublicGames) => void>();
-  const socket = new PublicLobbySocket(callback);
+  const socket = new PublicLobbySocket(callback, options);
   const dispatch = (frame: Uint8Array) => {
     // The real socket is in arraybuffer mode, so handleMessage sees an
     // ArrayBuffer, not a Uint8Array.
@@ -153,5 +162,31 @@ describe("PublicLobbySocket.handleMessage", () => {
 
     expect(prevSnapshot.serverTime).toBe(1000);
     expect(prevFfa).toEqual([lobby("g1", 3)]);
+  });
+});
+
+describe("PublicLobbySocket deployment drain", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("fires onUpdateAvailable once when the feed reports active:false", () => {
+    const onUpdateAvailable = vi.fn();
+    const { dispatch } = makeSocket({ onUpdateAvailable });
+
+    dispatch(drainedMessage(1000, false));
+    dispatch(drainedMessage(1001, false));
+
+    expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fire while the deployment is active or the flag is absent", () => {
+    const onUpdateAvailable = vi.fn();
+    const { dispatch } = makeSocket({ onUpdateAvailable });
+
+    dispatch(drainedMessage(1000, true));
+    dispatch(drainedMessage(1001, undefined));
+
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
   });
 });

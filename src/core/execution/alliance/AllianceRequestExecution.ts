@@ -154,6 +154,8 @@ export class AllianceRequestExecution implements Execution {
         launcher.id(),
         undefined,
         { name: other.displayName(), count },
+        undefined,
+        other.id(),
       );
 
       this.mg.displayMessage(
@@ -162,6 +164,8 @@ export class AllianceRequestExecution implements Execution {
         other.id(),
         undefined,
         { name: launcher.displayName(), count },
+        undefined,
+        launcher.id(),
       );
     }
   }

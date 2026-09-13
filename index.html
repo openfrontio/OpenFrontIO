@@ -33,6 +33,38 @@
         z-index: 150 !important;
       }
 
+      /* Playwire flex leaderboard (header ad): Playwire inlines
+         z-index 2147483647 on it — cap it below modals and the mobile drawer,
+         like the bottom rail. The sticky nav shifts below it via
+         --top-ad-height, and page content via --top-ad-pad, both measured by
+         HomepagePromos, so it never covers the menu bar. */
+      #pw-oop-flex,
+      #adBanner.leaderboard_ad {
+        z-index: 150 !important;
+      }
+
+      /* The flex unit's inline (expanded) state renders into
+         #pw-oop-flex_container, a direct <body> child. Body is a flex row,
+         which squeezed it to width 0 — the unit could never show its
+         expanded state or sense scrolling, so it latched permanently into
+         the docked leaderboard. Give it its own full-width line at the top
+         of the page (body wraps; the content area follows on the next
+         line), so it expands at the top and docks once scrolled past.
+         HomepagePromos locks its min-height to the expanded ad height once
+         seen, so dock/undock never changes the document height (which would
+         jump the scroll position mid-scroll). */
+      #pw-oop-flex_container {
+        order: -1;
+        flex-basis: 100%;
+        width: 100%;
+      }
+      /* body is a column while an inline page is open (see styles.css):
+         size the slot to its content there, not to 100% of the height. */
+      body.page-open #pw-oop-flex_container {
+        flex-basis: auto;
+        flex-shrink: 0;
+      }
+
       /* Google Funding Choices CCPA link override */
       .fc-dns-link,
       .fc-ccpa-root,
@@ -45,11 +77,13 @@
         left: 15px !important;
       }
 
-      /* Ensure full viewport height on iOS */
-      html,
-      body {
+      /* Ensure full viewport height on iOS; body grows with content so the
+         document scrolls (see styles.css) */
+      html {
         height: 100%;
         height: -webkit-fill-available;
+      }
+      body {
         min-height: 100%;
         min-height: -webkit-fill-available;
       }
@@ -79,17 +113,30 @@
     <meta property="og:image" content="<%- gameplayScreenshotUrl %>" />
     <meta property="og:type" content="game" />
 
-    <!-- Injected from Server env -->
+    <!--
+      Injected from Server env.
+
+      Every per-server value (cluster, instanceLetter, instanceId, serverHost,
+      siteHost) is emitted through a guard so the whole line — indentation and
+      trailing comma included — disappears when the renderer does not supply
+      it. That is what lets one page be rendered per VERSION rather than per
+      server and uploaded to the CDN (docs/MultiServer.md, "Publish pipeline
+      (v2)"); a game server supplies them all and gets exactly the page it
+      always served.
+
+      Never add a placeholder the Steam shell does not supply: openfront-desktop
+      renders this same template itself and a missing local is a ReferenceError,
+      i.e. a blank window. Guarding an existing one is safe — the shell supplies
+      a value and the line still emits.
+    -->
     <script>
       window.BOOTSTRAP_CONFIG = {
         gitCommit: <%- gitCommit %>,
         assetManifest: <%- assetManifest %>,
         cdnBase: <%- cdnBase %>,
-        gameEnv: <%- gameEnv %>,
-        numWorkers: <%- numWorkers %>,
+        gameEnv: <%- gameEnv %>,<%- typeof cluster !== "undefined" && cluster ? "\n        cluster: " + cluster + "," : "" %><%- typeof instanceLetter !== "undefined" && instanceLetter ? "\n        instanceLetter: " + instanceLetter + "," : "" %>
         turnstileSiteKey: <%- turnstileSiteKey %>,
-        jwtAudience: <%- jwtAudience %>,
-        instanceId: <%- instanceId %>,<%- typeof serverHost !== "undefined" && serverHost ? "\n        serverHost: " + serverHost + "," : "" %>
+        jwtAudience: <%- jwtAudience %>,<%- typeof instanceId !== "undefined" && instanceId ? "\n        instanceId: " + instanceId + "," : "" %><%- typeof serverHost !== "undefined" && serverHost ? "\n        serverHost: " + serverHost + "," : "" %><%- typeof siteHost !== "undefined" && siteHost ? "\n        siteHost: " + siteHost + "," : "" %>
       };
       document.documentElement.style.setProperty(
         "--background-image-url",
@@ -167,7 +214,7 @@
   </head>
 
   <body
-    class="h-full select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
+    class="select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row flex-wrap content-start"
   >
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
@@ -206,10 +253,13 @@
 
     <!-- MAIN CONTENT AREA -->
     <div
-      class="in-[.in-game]:hidden flex-1 relative overflow-hidden h-full transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
-      <!-- Desktop Top Bar -->
-      <desktop-nav-bar></desktop-nav-bar>
+      <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls,
+           offset below the header ad when one is showing) -->
+      <desktop-nav-bar
+        class="sticky top-[var(--top-ad-height,0px)] z-[60]"
+      ></desktop-nav-bar>
 
       <div
         id="turnstile-container"
@@ -219,6 +269,7 @@
       <homepage-promos></homepage-promos>
       <banned-modal></banned-modal>
       <marketing-consent-toast></marketing-consent-toast>
+      <purchase-nudge-modal></purchase-nudge-modal>
 
       <!-- Main container with responsive padding -->
       <main-layout class="contents">
@@ -347,6 +398,9 @@
         <attacks-display
           class="w-full pointer-events-auto order-1 sm:order-none"
         ></attacks-display>
+        <tutorial-panel
+          class="hidden w-full order-3 sm:order-none"
+        ></tutorial-panel>
         <div
           class="pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none"
         >
@@ -384,7 +438,13 @@
       <replay-panel></replay-panel>
     </div>
     <settings-modal></settings-modal>
-    <graphics-settings-modal></graphics-settings-modal>
+    <!-- The in-game settings modal: the same component as #page-settings, but
+         non-inline, and mounted out here because the page's copy sits in a
+         subtree that is hidden during a match. It must stay AFTER
+         #page-settings in document order: ModalRouter.routeFromHash and
+         Main.ts both resolve this component with
+         document.querySelector("user-setting"), which takes the first match. -->
+    <user-setting id="game-settings"></user-setting>
     <player-panel></player-panel>
     <spawn-timer></spawn-timer>
     <immunity-timer></immunity-timer>
@@ -403,11 +463,11 @@
          component is position:fixed and self-manages visibility (pauses in-game). -->
     <featured-stream></featured-stream>
 
-    <!-- Steam shell runtime-update bar. A direct <body> child, like
+    <!-- Steam shell status bar. A direct <body> child, like
          featured-stream above, so it is not inside the home container -- but
          unlike it, deliberately hidden in-game (see the component's comment).
          Renders nothing outside the desktop shell. -->
-    <desktop-update-bar></desktop-update-bar>
+    <desktop-status-bar></desktop-status-bar>
 
     <!-- Scripts -->
     <script>

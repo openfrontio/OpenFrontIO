@@ -80,13 +80,15 @@ export class SpawnExecution implements Execution {
       return;
     }
 
-    player.tiles().forEach((t) => player.relinquish(t));
+    const prevTiles = Array.from(player.tiles());
+    prevTiles.forEach((t) => player.relinquish(t));
     const spawn = this.getSpawn(
       this.mg.config().isRandomSpawn() ? undefined : this.tile,
     );
 
     if (!spawn) {
       console.warn(`SpawnExecution: cannot spawn ${this.playerInfo.name}`);
+      prevTiles.forEach((t) => player.conquer(t));
       return;
     }
 

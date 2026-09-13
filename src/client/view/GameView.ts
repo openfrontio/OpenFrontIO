@@ -4,6 +4,7 @@ import {
   GameUpdates,
   PlayerID,
   PlayerType,
+  Team,
   TerrainType,
   TerraNullius,
   Tick,
@@ -39,6 +40,7 @@ import { SpiralTrails } from "../render/frame/SpiralTrails";
 import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
+import { resolveTeamClanTag } from "../Utils";
 import { PlayerView } from "./PlayerView";
 import { UnitView } from "./UnitView";
 
@@ -82,6 +84,7 @@ export class GameView implements GameMap {
   private _unitStates = new Map<number, import("../render/types").UnitState>();
   /** smallID → team, for the renderer's relation matrix (team games). */
   private _teams = new Map<number, string>();
+  private _teamClanTags: Map<Team, string | null> | null = null;
   private updatedTiles: TileRef[] = [];
   private updatedTerrainTiles: TileRef[] = [];
   private nukeImpactTiles: TileRef[] = [];
@@ -160,19 +163,11 @@ export class GameView implements GameMap {
       humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
 
-    for (const nation of this._mapData.nations) {
-      // Nations don't have client ids, so we use their name as the key instead.
-      this._cosmetics.set(nation.name, {
-        flag: nation.flag ? `/flags/${nation.flag}.svg` : undefined,
-      } satisfies PlayerCosmetics);
-    }
-    for (const extra of this._mapData.additionalNations) {
-      // Only set if not already provided by a manifest nation with the same name.
-      if (this._cosmetics.has(extra.name)) continue;
-      this._cosmetics.set(extra.name, {
-        flag: extra.flag ? `/flags/${extra.flag}.svg` : undefined,
-      } satisfies PlayerCosmetics);
-    }
+    // Nation-type players carry their own flag on the wire (PlayerUpdate.nationFlag,
+    // sourced from the manifest via PlayerInfo) rather than being looked up here by
+    // name — some maps define multiple nations with the same display name (e.g.
+    // India's and Pakistan's "Punjab", split by the 1947 partition), and a name-keyed
+    // lookup can't tell those apart. See the Nation-branch in update() below.
 
     const mapW = this._map.width();
     const mapH = this._map.height();
@@ -319,6 +314,9 @@ export class GameView implements GameMap {
     if (spawnPhaseEndUpdate) {
       this.startTick = spawnPhaseEndUpdate.startTick;
     }
+    if (gu.updates[GameUpdateType.Win].length > 0) {
+      this._gameOver = true;
+    }
 
     const myDisplayName = formatPlayerDisplayName(
       this._myUsername,
@@ -383,12 +381,15 @@ export class GameView implements GameMap {
           this,
           pu,
           gu.playerNameViewData?.[pu.id],
-          // First check human by clientID, then check nation by name.
-          // Only match by name for actual Nations — not Bots (tribes) whose
-          // random names may coincidentally match a nation name.
+          // Humans get cosmetics by clientID. Nations carry their flag
+          // directly on the update (see PlayerUpdate.nationFlag) rather than
+          // being looked up by name — some maps define multiple nations with
+          // the same display name (e.g. India's and Pakistan's "Punjab").
           this._cosmetics.get(pu.clientID ?? "") ??
-            (pu.playerType === PlayerType.Nation
-              ? this._cosmetics.get(pu.name!)
+            (pu.playerType === PlayerType.Nation && pu.nationFlag
+              ? ({
+                  flag: `/flags/${pu.nationFlag}.svg`,
+                } satisfies PlayerCosmetics)
               : undefined) ??
             {},
         );
@@ -401,6 +402,7 @@ export class GameView implements GameMap {
         this._namesDirty = true;
         this._relationsDirty = true;
         this._clustersDirty = true;
+        this._teamClanTags = null;
       }
     });
 
@@ -421,19 +423,20 @@ export class GameView implements GameMap {
       player.setEmbargoSmallIDs(smallIDs);
     });
 
-    // Packed per-player stats: [smallID, tilesOwned, gold, troops] quads for
-    // every player whose stats changed this tick (the per-tick churn that no
-    // longer travels in PlayerUpdate objects). Applied after pass 1 so
-    // first-emission players exist; their quad carries the same values as
-    // the full update, so double-applying is harmless.
+    // Packed per-player stats: [smallID, tilesOwned, gold, troops, goldEarned]
+    // quints for every player whose stats changed this tick (the per-tick
+    // churn that no longer travels in PlayerUpdate objects). Applied after
+    // pass 1 so first-emission players exist; their quad carries the same
+    // values as the full update, so double-applying is harmless.
     const packedStats = gu.packedPlayerUpdates;
     if (packedStats !== undefined) {
-      for (let i = 0; i + 3 < packedStats.length; i += 4) {
+      for (let i = 0; i + 4 < packedStats.length; i += 5) {
         const state = this._playerStates.get(packedStats[i]);
         if (state === undefined) continue;
         state.tilesOwned = packedStats[i + 1];
         state.gold = packedStats[i + 2];
         state.troops = packedStats[i + 3];
+        state.goldEarned = packedStats[i + 4];
       }
     }
 
@@ -598,7 +601,8 @@ export class GameView implements GameMap {
       tick: gu.tick,
       allianceDuration: this._config.allianceDuration(),
       isTransitiveTarget: (sid) =>
-        this._myPlayer?.hasTransitiveTarget(sid) ?? false,
+        (this._markedPlayers?.has(sid) ?? false) ||
+        (this._myPlayer?.hasTransitiveTarget(sid) ?? false),
       doomsdayClockWarnTicks:
         this._config.doomsdayClockConfig().warnSeconds * 10,
     });
@@ -715,6 +719,10 @@ export class GameView implements GameMap {
    */
   setNukeTrailSpiral(smallID: number, params: SpiralParams): void {
     this.spiralTrails.setParams(smallID, params);
+  }
+
+  clearNukeTrailSpiral(smallID: number): void {
+    this.spiralTrails.clearParams(smallID);
   }
 
   private advanceMotionPlannedUnits(currentTick: Tick): void {
@@ -1030,6 +1038,39 @@ export class GameView implements GameMap {
     return Array.from(this._players.values());
   }
 
+  teamClanTag(team: Team | null): string | null {
+    if (!team) return null;
+    if (this._teamClanTags === null) {
+      if (this._players.size === 0) return null;
+      this._teamClanTags = this.initTeamClanTags();
+    }
+    return this._teamClanTags.get(team) ?? null;
+  }
+
+  invalidateTeamClanTags(): void {
+    this._teamClanTags = null;
+  }
+
+  private initTeamClanTags(): Map<Team, string | null> {
+    const teams = new Map<Team, PlayerView[]>();
+    for (const player of this._players.values()) {
+      const t = player.team();
+      if (t) {
+        let list = teams.get(t);
+        if (!list) {
+          list = [];
+          teams.set(t, list);
+        }
+        list.push(player);
+      }
+    }
+    const result = new Map<Team, string | null>();
+    for (const [t, players] of teams.entries()) {
+      result.set(t, resolveTeamClanTag(players));
+    }
+    return result;
+  }
+
   /**
    * Recompute every player's theme-derived colors. Call when the active theme
    * changes mid-game (e.g. toggling colorblind mode) so existing territories
@@ -1077,6 +1118,13 @@ export class GameView implements GameMap {
     if (this.lastUpdate === null) return 0;
     return this.lastUpdate.tick;
   }
+  // Set once the sim has decided the game (WinUpdate). Play may go on for
+  // those who stay, but the server archives the record at that point.
+  private _gameOver = false;
+  gameOver(): boolean {
+    return this._gameOver;
+  }
+
   inSpawnPhase(): boolean {
     return this.startTick === null;
   }
@@ -1190,6 +1238,9 @@ export class GameView implements GameMap {
   }
   numLandTiles(): number {
     return this._map.numLandTiles();
+  }
+  waterVersion(): number {
+    return this._map.waterVersion();
   }
   /** Map layers defined in the map's info.json, if any. */
   layers(): import("../../core/game/TerrainMapLoader").MapLayer[] {
@@ -1317,7 +1368,36 @@ export class GameView implements GameMap {
     return this._gameID;
   }
 
+  private _markedPlayers: ReadonlySet<number> | null = null;
+
   focusedPlayer(): PlayerView | null {
     return this.myPlayer();
+  }
+
+  /**
+   * Extra smallIDs drawn with the target crosshair by the name pass, on top
+   * of the player's real transitive targets (e.g. the tutorial pointing at
+   * capturable tribes). Null when nothing is requested.
+   */
+  setMarkedPlayers(ids: ReadonlySet<number> | null): void {
+    this._markedPlayers = ids;
+  }
+
+  markedPlayers(): ReadonlySet<number> | null {
+    return this._markedPlayers;
+  }
+
+  private _ownSpawnRing = false;
+
+  /**
+   * Keep the local player's spawn-phase ring drawn after the phase ends
+   * (the tutorial uses it to show a new player where their territory is).
+   */
+  setOwnSpawnRing(show: boolean): void {
+    this._ownSpawnRing = show;
+  }
+
+  ownSpawnRing(): boolean {
+    return this._ownSpawnRing;
   }
 }

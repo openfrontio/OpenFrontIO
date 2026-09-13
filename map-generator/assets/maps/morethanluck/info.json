@@ -4,6 +4,7 @@
   "translation_key": "map.morethanluck",
   "categories": ["arcade"],
   "multiplayer_frequency": 7,
+  "team_frequency": 14,
   "special_team_count": 5,
 
   "nations": [

@@ -1,52 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
 import { ServerNewLobbyMessage } from "../../src/core/Schemas";
-import { Client } from "../../src/server/Client";
-import { GameServer } from "../../src/server/GameServer";
-import { sentServerMessages, testGameConfig } from "../util/Wire";
+import {
+  makeClient as harnessClient,
+  makeGame as harnessGame,
+  makeMockWs,
+  MockWs,
+} from "../util/GameServerHarness";
+import { sentServerMessages } from "../util/Wire";
 
-function makeMockWs() {
-  const handlers: Record<string, (...args: any[]) => any> = {};
-  return {
-    on: (event: string, handler: (...args: any[]) => any) => {
-      handlers[event] = handler;
-    },
-    removeAllListeners: (_event: string) => {},
-    send: vi.fn(),
-    close: vi.fn(),
-    readyState: 1,
-    trigger: (event: string, ...args: any[]) => handlers[event]?.(...args),
-  };
-}
-
-function makeClient(
-  clientID: string,
-  persistentID: string,
-): { client: Client; ws: ReturnType<typeof makeMockWs> } {
+function makeClient(clientID: string, persistentID: string) {
   const ws = makeMockWs();
-  const client = new Client(
+  const client = harnessClient({
     clientID,
     persistentID,
-    null,
-    null,
-    undefined,
-    "127.0.0.1",
-    "TestUser",
-    null,
-    ws as any,
-    undefined,
-    undefined,
-    [],
-  );
+    username: "TestUser",
+    ws,
+  });
   return { client, ws };
 }
 
 // The successor id the broadcast should carry (8-char id shape).
 const SUCCESSOR_ID = "SUCCES01";
 
-function newLobbyBroadcasts(
-  ws: ReturnType<typeof makeMockWs>,
-): ServerNewLobbyMessage[] {
+function newLobbyBroadcasts(ws: MockWs): ServerNewLobbyMessage[] {
   return sentServerMessages(ws).filter(
     (m): m is ServerNewLobbyMessage => m.type === "new_lobby",
   );
@@ -56,16 +32,8 @@ function newLobbyBroadcasts(
 // finished game after minting the successor: the game must remember the id
 // (so repeat requests reuse it) and broadcast it to everyone still connected.
 describe("GameServer - successor lobby", () => {
-  let mockLogger: any;
-
   beforeEach(() => {
     vi.useFakeTimers();
-    mockLogger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
   });
 
   afterEach(() => {
@@ -74,13 +42,7 @@ describe("GameServer - successor lobby", () => {
   });
 
   function makeGame(creatorPersistentID?: string) {
-    return new GameServer(
-      "test-game",
-      mockLogger,
-      Date.now(),
-      testGameConfig({ gameType: GameType.Private }),
-      creatorPersistentID,
-    );
+    return harnessGame({ creatorPersistentID });
   }
 
   it("broadcasts the successor id to everyone still connected", () => {

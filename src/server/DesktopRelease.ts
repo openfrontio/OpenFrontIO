@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import fs from "fs/promises";
 import path from "path";
+import clientApiConfig from "../../client-api.json";
 import { logger } from "./Logger";
 
 const log = logger.child({ comp: "desktop-release" });
@@ -9,6 +10,12 @@ const log = logger.child({ comp: "desktop-release" });
 // A shell below this refuses to stage the update and tells the player to take
 // a Steam update, so a careless bump strands every installed client.
 const MIN_SHELL_VERSION = "0.1.0";
+
+// Capability level this client line provides. The desktop shell refuses to
+// activate a release below its own required level -- see the handshake design
+// in the openfront-desktop repo. Raise this when the client starts REQUIRING
+// something of the shell, not on every release.
+const CLIENT_API: number = clientApiConfig.clientApi;
 
 // ---------------------------------------------------------------------------
 // Mirror of the desktop shell's safeOverlayPath / safeManifestTarget.
@@ -85,6 +92,7 @@ export interface ReleaseDescriptor {
   clientVersion: string;
   coreVersion: string;
   minShellVersion: string;
+  clientApi: number;
   cdnBase: string;
   template: { html: string; sha256: string };
   /**
@@ -286,6 +294,7 @@ export async function buildDescriptor(
     clientVersion: opts.clientVersion,
     coreVersion: coreRaw.trim(),
     minShellVersion: MIN_SHELL_VERSION,
+    clientApi: CLIENT_API,
     cdnBase: opts.cdnBase,
     template: {
       html,

@@ -2,7 +2,7 @@
   "id": "Germany",
   "name": "Germany",
   "translation_key": "map.germany",
-  "categories": ["europe"],
+  "categories": ["europe", "countries"],
   "multiplayer_frequency": 5,
   "custom_tribes": [
     "Aachen, Städteregion",

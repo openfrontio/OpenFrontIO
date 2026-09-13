@@ -15,6 +15,7 @@ COPY tsconfig.json ./
 COPY vite.config.ts ./
 COPY eslint.config.js ./
 COPY index.html ./
+COPY client-api.json ./
 COPY resources ./resources
 COPY proprietary ./proprietary
 COPY src ./src
@@ -28,6 +29,11 @@ COPY scripts ./scripts
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT="$GIT_COMMIT"
+# Baked into the client bundle by a Vite define at build time (see
+# vite.config.ts). Empty is valid: it disables the inline wallet/card flow
+# and every purchase degrades to the redirect flow.
+ARG STRIPE_PUBLISHABLE_KEY=""
+ENV STRIPE_PUBLISHABLE_KEY="$STRIPE_PUBLISHABLE_KEY"
 RUN npm run build-prod
 
 # Production dependencies stage - separate from build
@@ -77,6 +83,7 @@ COPY resources ./resources
 # Remove maps because they are not used by the server.
 RUN rm -rf ./resources/maps
 COPY tsconfig.json ./
+COPY client-api.json ./
 COPY src ./src
 COPY zbin ./zbin
 
@@ -88,7 +95,7 @@ ENV GIT_COMMIT="$GIT_COMMIT"
 
 RUN <<'EOF' tee /usr/local/bin/start.sh
 #!/bin/sh
-# Generate the create-game nginx upstream from NUM_WORKERS before nginx starts.
+# Generate the create-game nginx upstream from CLUSTER_JSON before nginx starts.
 /usr/local/bin/generate-nginx-upstream.sh
 
 if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then

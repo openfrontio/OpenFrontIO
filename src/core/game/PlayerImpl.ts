@@ -18,9 +18,11 @@ import {
   BuildableUnit,
   Cell,
   ColoredTeams,
+  DisconnectSnapshot,
   Embargo,
   EmojiMessage,
   GameMode,
+  GameType,
   Gold,
   MAX_UPGRADE_AMOUNT,
   MutableAlliance,
@@ -55,6 +57,10 @@ import {
   PlayerUpdate,
 } from "./GameUpdates";
 import { ReadonlyTileSet, TileSet } from "./TileSet";
+import {
+  bumpTraversalGeneration,
+  tileTraversalScratch,
+} from "./TileTraversalScratch";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -105,10 +111,22 @@ Object.freeze(EMPTY_EMOJIS);
 
 export class PlayerImpl implements Player {
   public _lastTileChange: number = 0;
+  // Bumped on every ownership change of one of this player's tiles (several
+  // can happen within one tick, so the tick alone is not a cache key).
+  public _tileChangeVersion: number = 0;
   public _pseudo_random: PseudoRandom;
 
   private _gold: bigint;
   private _troops: bigint;
+
+  /** Cumulative ship-trade revenue (arrival credit for src + dst port owners). */
+  private _tradeGold: bigint = 0n;
+  /** Cumulative train revenue: own trains + others' trains stopping at own stations. */
+  private _trainGold: bigint = 0n;
+  /** Cumulative piracy revenue: payouts for captured trade ships. */
+  private _piracyGold: bigint = 0n;
+  /** Cumulative gold received from all sources (incremented in addGold). */
+  private _goldEarned: bigint = 0n;
 
   markedTraitorTick = -1;
   markedDoomsdayClockTick = -1;
@@ -121,6 +139,21 @@ export class PlayerImpl implements Player {
   public _borderTiles = new TileSet();
 
   public _units: Unit[] = [];
+  /** Bumped on every change that can alter a per-type answer over _units: add, remove, ownership
+   *  transfer, level-up, construction toggle (see UnitImpl). Keys the three memos below. */
+  public _myUnitsVersion = 0;
+  private readonly myUnitsMemo = new Map<
+    UnitType,
+    { version: number; list: Unit[] }
+  >();
+  private readonly myUnitCountMemo = new Map<
+    UnitType,
+    { version: number; count: number }
+  >();
+  private readonly myUnitsOwnedMemo = new Map<
+    UnitType,
+    { version: number; owned: number }
+  >();
   public _tiles = new TileSet();
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
@@ -146,6 +179,7 @@ export class PlayerImpl implements Player {
 
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
+  private _disconnectSnapshot: DisconnectSnapshot | null = null;
 
   /**
    * Last PlayerUpdate emitted for this player on the worker→main channel.
@@ -175,12 +209,12 @@ export class PlayerImpl implements Player {
    * return only fields that changed since the previous call (a partial
    * `{ type, id, ...changedFields }`), or `null` if nothing changed.
    *
-   * tilesOwned / gold / troops are excluded from partial updates (they churn
-   * for every alive player every tick): when any of them changed, a
-   * `[smallID, tilesOwned, gold, troops]` quad is pushed to `statsOut`
-   * instead, which GameImpl drains into the transferable
-   * `packedPlayerUpdates` buffer. Attack troop counts likewise go to
-   * `attackTroopsOut` as `[smallID, direction, index, troops]` quads
+   * tilesOwned / gold / troops / goldEarned are excluded from partial
+   * updates (they churn for nearly every alive player every tick): when any
+   * of them changed, a `[smallID, tilesOwned, gold, troops, goldEarned]`
+   * quint is pushed to `statsOut` instead, which GameImpl drains into the
+   * transferable `packedPlayerUpdates` buffer. Attack troop counts likewise
+   * go to `attackTroopsOut` as `[smallID, direction, index, troops]` quads
    * (→ `packedAttackUpdates`) instead of re-sending whole attack arrays.
    *
    * `lastSentUpdate` is updated to the full snapshot on every call.
@@ -197,13 +231,18 @@ export class PlayerImpl implements Player {
       statsOut !== undefined &&
       (prev.tilesOwned !== full.tilesOwned ||
         prev.gold !== full.gold ||
-        prev.troops !== full.troops)
+        prev.troops !== full.troops ||
+        prev.goldEarned !== full.goldEarned)
     ) {
+      // goldEarned gets its own comparison: it can change even when gold
+      // nets back to its previous value within one tick (addGold followed
+      // by removeGold), and the quint must still flush then.
       statsOut.push(
         full.smallID!,
         full.tilesOwned!,
         Number(full.gold),
         full.troops!,
+        Number(full.goldEarned),
       );
     }
     if (attackTroopsOut !== undefined) {
@@ -324,6 +363,7 @@ export class PlayerImpl implements Player {
       name: this.name(),
       displayName: this.displayName(),
       clanTag: this.clanTag(),
+      nationFlag: this.nationFlag(),
       id: this.id(),
       team: this.team() ?? undefined,
       smallID: this.smallID(),
@@ -334,6 +374,10 @@ export class PlayerImpl implements Player {
       deathPosition: deathStats?.deathPosition ?? null,
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
+      tradeGold: this._tradeGold,
+      trainGold: this._trainGold,
+      piracyGold: this._piracyGold,
+      goldEarned: this._goldEarned,
       troops: this.troops(),
       allies: allies,
       embargoes: embargoes,
@@ -368,6 +412,9 @@ export class PlayerImpl implements Player {
   }
   clanTag(): string | null {
     return this.playerInfo.clanTag;
+  }
+  nationFlag(): string | null {
+    return this.playerInfo.nationFlag;
   }
   clientID(): ClientID | null {
     return this.playerInfo.clientID;
@@ -414,9 +461,21 @@ export class PlayerImpl implements Player {
         if (ts.has(u.type())) scratch[n++] = u;
       }
     } else if (second === undefined) {
+      // Single-type queries repeat heavily (warship heal, nation ship tracking,
+      // troop caps): memoised on the per-player units version; hits hand out a copy.
+      const memo = this.myUnitsMemo.get(first as UnitType);
+      if (memo !== undefined && memo.version === this._myUnitsVersion) {
+        return memo.list.slice();
+      }
       for (const u of this._units) {
         if (u.type() === first) scratch[n++] = u;
       }
+      const list = scratch.slice(0, n);
+      this.myUnitsMemo.set(first as UnitType, {
+        version: this._myUnitsVersion,
+        list,
+      });
+      return list.slice();
     } else if (third === undefined) {
       for (const u of this._units) {
         const t = u.type();
@@ -450,17 +509,31 @@ export class PlayerImpl implements Player {
 
   // Count of units owned by the player, not including construction
   unitCount(type: UnitType): number {
+    // Every train station asked for the owner's factory count every tick — a walk
+    // over the whole unit list per station (~2 % of a long headless game).
+    const memo = this.myUnitCountMemo.get(type);
+    if (memo !== undefined && memo.version === this._myUnitsVersion) {
+      return memo.count;
+    }
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
         total += unit.level();
       }
     }
+    this.myUnitCountMemo.set(type, {
+      version: this._myUnitsVersion,
+      count: total,
+    });
     return total;
   }
 
   // Count of units owned by the player, including construction
   unitsOwned(type: UnitType): number {
+    const memo = this.myUnitsOwnedMemo.get(type);
+    if (memo !== undefined && memo.version === this._myUnitsVersion) {
+      return memo.owned;
+    }
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
@@ -471,6 +544,10 @@ export class PlayerImpl implements Player {
         }
       }
     }
+    this.myUnitsOwnedMemo.set(type, {
+      version: this._myUnitsVersion,
+      owned: total,
+    });
     return total;
   }
 
@@ -501,7 +578,34 @@ export class PlayerImpl implements Player {
     return this._borderTiles;
   }
 
+  private nearbyMemo: {
+    version: number;
+    waterVersion: number;
+    result: (Player | TerraNullius)[];
+  } | null = null;
+
   nearby(): (Player | TerraNullius)[] {
+    // Nation AI asks several times per tick (maybeAttack, attackBestTarget,
+    // attackBots, ...) with no map change in between; the answer depends on
+    // tile ownership and fallout (covered by territoryVersion) and on the
+    // land/water/shoreline terrain. Live nuke floods mutate the latter through
+    // WaterManager on the raw GameMap — bypassing GameImpl's bump — so the
+    // map's waterVersion() is a second key, which every conversion advances.
+    const version = this.mg.territoryVersion();
+    const waterVersion = this.mg.map().waterVersion();
+    if (
+      this.nearbyMemo !== null &&
+      this.nearbyMemo.version === version &&
+      this.nearbyMemo.waterVersion === waterVersion
+    ) {
+      return this.nearbyMemo.result.slice();
+    }
+    const result = this.computeNearby();
+    this.nearbyMemo = { version, waterVersion, result };
+    return result.slice();
+  }
+
+  private computeNearby(): (Player | TerraNullius)[] {
     const ns: Set<Player | TerraNullius> = new Set();
     const map = this.mg.map();
     const smallID = this.smallID();
@@ -1179,8 +1283,41 @@ export class PlayerImpl implements Player {
     return this._gold;
   }
 
+  tradeGold(): Gold {
+    return this._tradeGold;
+  }
+
+  addTradeGold(toAdd: Gold): void {
+    this._tradeGold += toAdd;
+  }
+
+  trainGold(): Gold {
+    return this._trainGold;
+  }
+
+  addTrainGold(toAdd: Gold): void {
+    this._trainGold += toAdd;
+  }
+
+  piracyGold(): Gold {
+    return this._piracyGold;
+  }
+
+  addPiracyGold(toAdd: Gold): void {
+    this._piracyGold += toAdd;
+  }
+
+  goldEarned(): Gold {
+    return this._goldEarned;
+  }
+
   addGold(toAdd: Gold, tile?: TileRef): void {
     this._gold += toAdd;
+    // Every gold grant flows through here (workers, trade, trains, piracy,
+    // conquest, donations) — track lifetime income for the leaderboard's
+    // "Gold Income/min" column. Starting gold is assigned directly to the
+    // field in the constructor and deliberately does not count as income.
+    this._goldEarned += toAdd;
     if (tile) {
       this.mg.addUpdate({
         type: GameUpdateType.BonusEvent,
@@ -1249,6 +1386,7 @@ export class PlayerImpl implements Player {
       params,
     );
     this._units.push(b);
+    this._myUnitsVersion++;
     this.recordUnitConstructed(type);
     this.removeGold(cost);
     this.removeTroops("troops" in params ? (params.troops ?? 0) : 0);
@@ -1470,8 +1608,10 @@ export class PlayerImpl implements Player {
       return false;
     }
     const owner = this.mg.owner(tile);
-    // Allow nuking teammates after the game is over (aftergame fun)
-    const gameOver = mg.getWinner() !== null;
+    // Allow nuking teammates after the game is over (aftergame fun), but not in singleplayer.
+    const gameOver =
+      mg.getWinner() !== null &&
+      mg.config().gameConfig().gameType !== GameType.Singleplayer;
     if (owner.isPlayer()) {
       if (this.isOnSameTeam(owner) && !gameOver) {
         return false;
@@ -1581,24 +1721,57 @@ export class PlayerImpl implements Player {
       undefined,
       true,
     );
-    const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
+    // Flood the player's own tiles inside the radius. Same traversal as
+    // GameMap.bfs (stack, N/S/W/E push order) so `nearbyTiles` comes out in
+    // the same order — the stable sort below keeps that order for ties and
+    // callers take the first entry — but on the shared visited array instead
+    // of a Set per call (nation placement calls this per candidate tile).
+    const map = this.mg.map();
+    const w = map.width();
+    const cx = tile % w;
+    const cy = (tile / w) | 0;
+    const smallID = this.smallID();
+    const inside = (t: TileRef): boolean => {
+      const dx = (t % w) - cx;
+      const dy = ((t / w) | 0) - cy;
       return (
-        this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
-        gm.ownerID(t) === this.smallID()
+        dx * dx + dy * dy < searchRadiusSquared && map.ownerID(t) === smallID
       );
-    });
-    const validSet: Set<TileRef> = new Set(nearbyTiles);
+    };
+    const scratch = tileTraversalScratch(this.mg);
+    const gen = bumpTraversalGeneration(scratch);
+    const visited = scratch.visited;
+    const stack = scratch.stack;
+    stack.length = 0;
+    const nearbyTiles: TileRef[] = [];
+    if (inside(tile)) {
+      visited[tile] = gen;
+      nearbyTiles.push(tile);
+      stack.push(tile);
+    }
+    const visit = (n: TileRef) => {
+      if (visited[n] !== gen && inside(n)) {
+        visited[n] = gen;
+        nearbyTiles.push(n);
+        stack.push(n);
+      }
+    };
+    while (stack.length > 0) {
+      map.forEachNeighbor(stack.pop()!, visit);
+    }
 
     const minDistSquared = this.mg.config().structureMinDist() ** 2;
+    const valid: TileRef[] = [];
     for (const t of nearbyTiles) {
+      let blocked = false;
       for (const { unit } of nearbyUnits) {
         if (this.mg.euclideanDistSquared(unit.tile(), t) < minDistSquared) {
-          validSet.delete(t);
+          blocked = true;
           break;
         }
       }
+      if (!blocked) valid.push(t);
     }
-    const valid = Array.from(validSet);
     valid.sort(
       (a, b) =>
         this.mg.euclideanDistSquared(a, tile) -
@@ -1612,6 +1785,10 @@ export class PlayerImpl implements Player {
       ? targetTile
       : false;
   }
+  tileChangeVersion(): number {
+    return this._tileChangeVersion;
+  }
+
   lastTileChange(): Tick {
     return this._lastTileChange;
   }
@@ -1620,8 +1797,32 @@ export class PlayerImpl implements Player {
     return this._isDisconnected;
   }
 
-  markDisconnected(isDisconnected: boolean): void {
+  markDisconnected(
+    isDisconnected: boolean,
+    snapshot?: DisconnectSnapshot,
+  ): void {
     this._isDisconnected = isDisconnected;
+    if (isDisconnected) {
+      if (this._disconnectSnapshot === null) {
+        const team = this.team();
+        this._disconnectSnapshot = snapshot ?? {
+          currentTick: this.mg.ticks(),
+          teamTiles: team ? this.mg.teamTilesOwned(team) : 0,
+          totalLand: this.mg.totalLandTiles(),
+          wasAlive: this.isAlive(),
+        };
+      }
+    } else {
+      this._disconnectSnapshot = null;
+    }
+  }
+
+  disconnectSnapshot(): DisconnectSnapshot | null {
+    return this._disconnectSnapshot;
+  }
+
+  disconnectedAtTick(): number | null {
+    return this._disconnectSnapshot?.currentTick ?? null;
   }
 
   hash(): number {

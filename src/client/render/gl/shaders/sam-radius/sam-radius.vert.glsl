@@ -5,23 +5,25 @@ precision highp float;
 layout(location = 0) in vec2 aPos;
 // Per-instance: x, y, radius
 layout(location = 1) in vec3 aInstance;
-// Per-instance: r, g, b
-layout(location = 2) in vec3 aColor;
-// Per-instance: arcStart, arcEnd
-layout(location = 3) in vec2 aArcBounds;
+// Per-instance: r, g, b, alpha
+layout(location = 2) in vec4 aColor;
+// Per-instance: arcStart, arcEnd, spin
+layout(location = 3) in vec3 aArcBounds;
 
 uniform mat3 uCamera;
 
 out vec2 vLocal;        // [-1, +1] local coords
 flat out float vRadius; // world-space radius for this instance
-flat out vec3 vColor;   // relationship color
+flat out vec4 vColor;   // relationship color + instance alpha
 flat out vec2 vArcBounds; // arc start/end in [0, 2PI)
+flat out float vSpin;   // 1.0 = spinning, 0.0 = static
 
 void main() {
   vLocal = aPos * 2.0 - 1.0;
   vRadius = aInstance.z;
   vColor = aColor;
-  vArcBounds = aArcBounds;
+  vArcBounds = aArcBounds.xy;
+  vSpin = aArcBounds.z;
 
   // Expand quad to cover circle bbox + padding for stroke
   float r = aInstance.z + 2.0;

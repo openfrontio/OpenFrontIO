@@ -1,61 +1,52 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/core/Schemas", async () => {
-  const actual = (await vi.importActual("../../src/core/Schemas")) as any;
-  return {
-    ...actual,
-    GameStartInfoSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-    ServerPrestartMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-  };
-});
-
-vi.mock("../../src/server/CustomTribes", () => ({
-  fetchCustomTribes: vi.fn(),
-}));
-
 import { GameType } from "../../src/core/game/Game";
-import { fetchCustomTribes } from "../../src/server/CustomTribes";
+import { createGameWireContext } from "../../src/core/ZbinWire";
+import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
-import { testGameConfig } from "../util/Wire";
+import {
+  makeGame as harnessGame,
+  makeClient,
+  mockLogger,
+  mockWsOf,
+} from "../util/GameServerHarness";
 
-function fakeClient(clientID: string, publicId?: string) {
-  return {
-    clientID,
-    persistentID: `persist-${clientID}`,
-    publicId,
-    friends: [],
-    username: clientID,
-    clanTag: null,
-    role: null,
-    cosmetics: undefined,
-    ws: { readyState: 3, send: vi.fn() },
-  } as any;
-}
+// The purchased-tribe lookup the game makes at prestart.
+const fetchTribes = vi.fn<(...args: any[]) => Promise<{ name: string }[]>>();
 
-// Lets the fetchCustomTribes .then/.catch chain in fetchTribes() settle.
+// Lets the fetchTribes .then/.catch chain settle.
 async function flushMicrotasks() {
   await Promise.resolve();
   await Promise.resolve();
 }
 
+// The start info start() built, read off the start frame `player` received.
+function startInfo(game: GameServer, player: Client) {
+  const ctx = createGameWireContext(
+    (game.gameInfo().clients ?? []).map((c) => ({ clientID: c.clientID })),
+  );
+  const start = mockWsOf(player)
+    .sent(ctx)
+    .find((m) => m.type === "start");
+  if (start?.type !== "start") throw new Error("no start frame");
+  return start.gameStartInfo;
+}
+
+// A guest (no account, so never part of the tribe lookup) to read the start
+// frame from.
+function watcher(game: GameServer): Client {
+  const client = makeClient();
+  game.joinClient(client);
+  return client;
+}
+
 describe("GameServer custom tribes", () => {
-  let mockLogger: any;
+  let log: any;
 
   beforeEach(() => {
-    // restoreAllMocks doesn't touch vi.mock module mocks — reset the fetch
-    // mock's implementation and call history between tests explicitly.
-    vi.mocked(fetchCustomTribes).mockReset();
+    fetchTribes.mockReset();
     vi.useFakeTimers();
-    mockLogger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    log = mockLogger();
   });
 
   afterEach(() => {
@@ -64,67 +55,62 @@ describe("GameServer custom tribes", () => {
   });
 
   function makeGame(config: Record<string, unknown> = {}) {
-    return new GameServer(
-      "testgame",
-      mockLogger,
-      Date.now(),
-      testGameConfig({
-        gameType: GameType.Public,
-        bots: 400,
-        ...config,
-      }),
-    );
+    return harnessGame({
+      log,
+      config: { gameType: GameType.Public, bots: 400, ...config },
+      deps: { fetchTribes },
+    });
   }
 
   it("fetches the pool at prestart and embeds the tribes in the start info", async () => {
-    vi.mocked(fetchCustomTribes).mockResolvedValue([
+    fetchTribes.mockResolvedValue([
       { name: "Dragon Riders" },
       { name: "Night Wolves" },
     ]);
     const game = makeGame();
-    game.activeClients.push(
-      fakeClient("abcd1234", "pub-1"),
-      fakeClient("efgh5678"), // guest — no account, must be omitted
-    );
+    const player = makeClient({ clientID: "abcd1234", publicId: "pub-1" });
+    game.joinClient(player);
+    // guest — no account, must be omitted
+    game.joinClient(makeClient({ clientID: "efgh5678" }));
 
     game.prestart();
     await flushMicrotasks();
     game.start();
 
-    expect(fetchCustomTribes).toHaveBeenCalledWith([
+    expect(fetchTribes).toHaveBeenCalledWith([
       { clientId: "abcd1234", publicId: "pub-1" },
     ]);
-    expect((game as any).gameStartInfo.tribes).toEqual([
+    expect(startInfo(game, player).tribes).toEqual([
       { name: "Dragon Riders" },
       { name: "Night Wolves" },
     ]);
   });
 
   it("drops tribes from the tail when there are fewer bots", async () => {
-    vi.mocked(fetchCustomTribes).mockResolvedValue([
+    fetchTribes.mockResolvedValue([
       { name: "Dragon Riders" },
       { name: "Night Wolves" },
     ]);
     const game = makeGame({ bots: 1 });
+    const guest = watcher(game);
 
     game.prestart();
     await flushMicrotasks();
     game.start();
 
-    expect((game as any).gameStartInfo.tribes).toEqual([
-      { name: "Dragon Riders" },
-    ]);
+    expect(startInfo(game, guest).tribes).toEqual([{ name: "Dragon Riders" }]);
   });
 
   it("skips the fetch for non-public games", async () => {
     const game = makeGame({ gameType: GameType.Private });
+    const guest = watcher(game);
 
     game.prestart();
     await flushMicrotasks();
     game.start();
 
-    expect(fetchCustomTribes).not.toHaveBeenCalled();
-    expect((game as any).gameStartInfo.tribes).toBeUndefined();
+    expect(fetchTribes).not.toHaveBeenCalled();
+    expect(startInfo(game, guest).tribes).toBeUndefined();
   });
 
   it("skips the fetch when bots are disabled", async () => {
@@ -133,31 +119,33 @@ describe("GameServer custom tribes", () => {
     game.prestart();
     await flushMicrotasks();
 
-    expect(fetchCustomTribes).not.toHaveBeenCalled();
+    expect(fetchTribes).not.toHaveBeenCalled();
   });
 
   it("starts without tribes when the fetch fails", async () => {
-    vi.mocked(fetchCustomTribes).mockRejectedValue(new Error("timeout"));
+    fetchTribes.mockRejectedValue(new Error("timeout"));
     const game = makeGame();
+    const guest = watcher(game);
 
     game.prestart();
     await flushMicrotasks();
     game.start();
 
-    expect((game as any).gameStartInfo.tribes).toBeUndefined();
-    expect(mockLogger.warn).toHaveBeenCalledWith(
+    expect(startInfo(game, guest).tribes).toBeUndefined();
+    expect(log.warn).toHaveBeenCalledWith(
       expect.stringContaining("failed to fetch custom tribes"),
     );
   });
 
   it("omits tribes from the start info when the pool is empty", async () => {
-    vi.mocked(fetchCustomTribes).mockResolvedValue([]);
+    fetchTribes.mockResolvedValue([]);
     const game = makeGame();
+    const guest = watcher(game);
 
     game.prestart();
     await flushMicrotasks();
     game.start();
 
-    expect((game as any).gameStartInfo.tribes).toBeUndefined();
+    expect(startInfo(game, guest).tribes).toBeUndefined();
   });
 });

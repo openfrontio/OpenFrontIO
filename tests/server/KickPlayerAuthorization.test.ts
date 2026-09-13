@@ -1,71 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  makeClient as harnessClient,
+  makeGame as harnessGame,
+  makeMockWs,
+  MockWs,
+} from "../util/GameServerHarness";
+import { clientFrame } from "../util/Wire";
 
-vi.mock("../../src/core/Schemas", async () => {
-  const actual = (await vi.importActual("../../src/core/Schemas")) as any;
-  return {
-    ...actual,
-    GameStartInfoSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-    ServerPrestartMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-  };
-});
-
-import { GameType } from "../../src/core/game/Game";
-import { Client } from "../../src/server/Client";
-import { GameServer } from "../../src/server/GameServer";
-import { clientFrame, testGameConfig } from "../util/Wire";
-
-function makeMockWs() {
-  const handlers: Record<string, (...args: any[]) => any> = {};
-  return {
-    on: (event: string, handler: (...args: any[]) => any) => {
-      handlers[event] = handler;
-    },
-    removeAllListeners: (_event: string) => {},
-    send: vi.fn(),
-    close: vi.fn(),
-    readyState: 1,
-    trigger: (event: string, ...args: any[]) => handlers[event]?.(...args),
-  };
-}
-
-function makeClient(
-  clientID: string,
-  persistentID: string,
-  role?: string,
-): { client: Client; ws: ReturnType<typeof makeMockWs> } {
+function makeClient(clientID: string, persistentID: string, role?: string) {
   const ws = makeMockWs();
-  const client = new Client(
+  const client = harnessClient({
     clientID,
     persistentID,
-    null,
-    role ?? null,
-    undefined,
-    "127.0.0.1",
-    "TestUser",
-    null,
-    ws as any,
-    undefined,
-    undefined,
-    [],
-  );
+    role: role ?? null,
+    username: "TestUser",
+    ws,
+  });
   return { client, ws };
 }
 
 describe("GameServer - kick_player authorization", () => {
-  let mockLogger: any;
-
   beforeEach(() => {
     vi.useFakeTimers();
-    mockLogger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
   });
 
   afterEach(() => {
@@ -74,19 +30,10 @@ describe("GameServer - kick_player authorization", () => {
   });
 
   function makeGame(creatorPersistentID?: string) {
-    return new GameServer(
-      "test-game",
-      mockLogger,
-      Date.now(),
-      testGameConfig({ gameType: GameType.Private }),
-      creatorPersistentID,
-    );
+    return harnessGame({ creatorPersistentID });
   }
 
-  async function sendKickMessage(
-    ws: ReturnType<typeof makeMockWs>,
-    target: string,
-  ) {
+  async function sendKickMessage(ws: MockWs, target: string) {
     await ws.trigger(
       "message",
       clientFrame({

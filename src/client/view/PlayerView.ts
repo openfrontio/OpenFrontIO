@@ -81,6 +81,10 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     deathPosition: pu.deathPosition ?? null,
     tilesOwned: pu.tilesOwned!,
     gold: Number(pu.gold!),
+    tradeGold: Number(pu.tradeGold ?? 0n),
+    trainGold: Number(pu.trainGold ?? 0n),
+    piracyGold: Number(pu.piracyGold ?? 0n),
+    goldEarned: Number(pu.goldEarned ?? 0n),
     troops: pu.troops!,
     isTraitor: pu.isTraitor!,
     traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
@@ -507,6 +511,26 @@ export class PlayerView {
     // Engine Gold is bigint; renderer state stores number. Convert back at the
     // accessor for game-code that still expects bigint semantics.
     return BigInt(this.state.gold);
+  }
+
+  /** Cumulative ship-trade revenue (for gold-rate columns). */
+  tradeGold(): number {
+    return this.state.tradeGold;
+  }
+
+  /** Cumulative train revenue: own trains + external stops at own stations. */
+  trainGold(): number {
+    return this.state.trainGold;
+  }
+
+  /** Cumulative piracy revenue: captured-ship payouts. */
+  piracyGold(): number {
+    return this.state.piracyGold;
+  }
+
+  /** Cumulative gold received from all sources. */
+  goldEarned(): number {
+    return this.state.goldEarned;
   }
 
   troops(): number {

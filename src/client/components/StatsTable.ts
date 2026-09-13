@@ -171,7 +171,9 @@ export abstract class StatsTable extends LitElement {
   private renderHeaderVisual(column: ColumnDef, label: string) {
     const visual = column.headerVisual;
     if (visual === undefined) return html`<span>${label}</span>`;
-    if (visual.kind === "text") return html`<span>${visual.text}</span>`;
+    if (visual.kind === "text") {
+      return html`<span>${translateText(visual.text)}</span>`;
+    }
     return html`<span class="inline-flex items-start">
       <img
         class="size-[1.1rem] object-contain ${visual.white === true
@@ -181,15 +183,19 @@ export abstract class StatsTable extends LitElement {
         alt=""
         aria-hidden="true"
       />${visual.superscript
-        ? html`<img
-            class="size-[0.825rem] object-contain -ml-0.5 ${visual.superscript
-              .white === true
-              ? "brightness-0 invert"
-              : ""}"
-            src=${visual.superscript.src}
-            alt=""
-            aria-hidden="true"
-          />`
+        ? "src" in visual.superscript
+          ? html`<img
+              class="size-[0.825rem] object-contain -ml-0.5 ${visual.superscript
+                .white === true
+                ? "brightness-0 invert"
+                : ""}"
+              src=${visual.superscript.src}
+              alt=""
+              aria-hidden="true"
+            />`
+          : html`<span class="text-[0.6rem] ml-0.5 self-center leading-none"
+              >${translateText(visual.superscript.text)}</span
+            >`
         : nothing}
     </span>`;
   }

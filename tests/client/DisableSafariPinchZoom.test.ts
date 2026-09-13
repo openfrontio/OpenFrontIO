@@ -1,4 +1,5 @@
 import {
+  installCtrlWheelZoomBlocker,
   installDoubleTapZoomBlocker,
   installSafariPinchZoomBlocker,
 } from "../../src/client/utilities/DisableSafariPinchZoom";
@@ -146,6 +147,87 @@ describe("installDoubleTapZoomBlocker", () => {
         "touchend",
         expect.any(Function),
         { passive: false },
+      );
+    } finally {
+      addEventListenerSpy.mockRestore();
+    }
+  });
+});
+
+function dispatchWheel(
+  target: EventTarget,
+  { ctrlKey = false }: { ctrlKey?: boolean } = {},
+): Event {
+  // jsdom's WheelEvent carries no ctrlKey we can set through the constructor,
+  // so dispatch a plain cancelable Event with the one property the blocker
+  // reads stubbed onto it.
+  const event = new Event("wheel", { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "ctrlKey", { value: ctrlKey });
+  target.dispatchEvent(event);
+  return event;
+}
+
+describe("installCtrlWheelZoomBlocker", () => {
+  it("cancels a ctrl+wheel event, which is how Chrome and Firefox report a pinch", () => {
+    const target = document.createElement("div");
+    installCtrlWheelZoomBlocker(target);
+
+    expect(dispatchWheel(target, { ctrlKey: true }).defaultPrevented).toBe(
+      true,
+    );
+  });
+
+  it("leaves a plain wheel event alone so scrollable panels keep scrolling", () => {
+    const target = document.createElement("div");
+    installCtrlWheelZoomBlocker(target);
+
+    expect(dispatchWheel(target).defaultPrevented).toBe(false);
+  });
+
+  it("cancels a pinch over a panel that stops propagation (#5098)", () => {
+    // PlayerPanel and EmojiTable call stopPropagation() on wheel, which would
+    // hide the event from a bubble-phase listener on document.
+    const scope = document.createElement("div");
+    const panel = scope.appendChild(document.createElement("div"));
+    panel.addEventListener("wheel", (e) => e.stopPropagation());
+    installCtrlWheelZoomBlocker(scope);
+
+    expect(dispatchWheel(panel, { ctrlKey: true }).defaultPrevented).toBe(true);
+  });
+
+  it("still lets the canvas listener see the event, so map zoom keeps working", () => {
+    const scope = document.createElement("div");
+    const canvas = scope.appendChild(document.createElement("canvas"));
+    const onWheel = vi.fn();
+    canvas.addEventListener("wheel", onWheel);
+    installCtrlWheelZoomBlocker(scope);
+
+    dispatchWheel(canvas, { ctrlKey: true });
+    expect(onWheel).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not affect events dispatched at unrelated targets", () => {
+    const scope = document.createElement("div");
+    const other = document.createElement("div");
+    installCtrlWheelZoomBlocker(scope);
+
+    expect(dispatchWheel(other, { ctrlKey: true }).defaultPrevented).toBe(
+      false,
+    );
+  });
+
+  it("defaults to attaching the listener to document in the capture phase", () => {
+    const addEventListenerSpy = vi
+      .spyOn(document, "addEventListener")
+      .mockImplementation(() => {});
+
+    try {
+      installCtrlWheelZoomBlocker();
+
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        "wheel",
+        expect.any(Function),
+        { capture: true, passive: false },
       );
     } finally {
       addEventListenerSpy.mockRestore();

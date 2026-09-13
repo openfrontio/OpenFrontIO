@@ -25,6 +25,7 @@ export class MapLayerPass {
   private uPlacement: WebGLUniformLocation;
   private uNukeable: WebGLUniformLocation;
   private uVisible: WebGLUniformLocation;
+  private uAlpha: WebGLUniformLocation;
   private uLayerTex: WebGLUniformLocation;
   private uTerrainBytes: WebGLUniformLocation;
   private uDestroyedMask: WebGLUniformLocation;
@@ -32,6 +33,7 @@ export class MapLayerPass {
   /** CPU-side copy of the destroyed mask for context-restore re-uploads. */
   private destroyedData: Uint8Array;
   private _visible = true;
+  private _alpha = 1.0;
 
   constructor(
     private gl: WebGL2RenderingContext,
@@ -55,6 +57,7 @@ export class MapLayerPass {
     this.uPlacement = gl.getUniformLocation(this.program, "uPlacement")!;
     this.uNukeable = gl.getUniformLocation(this.program, "uNukeable")!;
     this.uVisible = gl.getUniformLocation(this.program, "uVisible")!;
+    this.uAlpha = gl.getUniformLocation(this.program, "uAlpha")!;
     this.uLayerTex = gl.getUniformLocation(this.program, "uLayerTex")!;
     this.uTerrainBytes = gl.getUniformLocation(this.program, "uTerrainBytes")!;
     this.uDestroyedMask = gl.getUniformLocation(
@@ -97,6 +100,11 @@ export class MapLayerPass {
   /** Show/hide this layer (driven by graphics settings). */
   setVisible(visible: boolean): void {
     this._visible = visible;
+  }
+
+  /** Set the alpha multiplier for this layer (0–1). */
+  setAlpha(alpha: number): void {
+    this._alpha = Math.max(0, Math.min(1, alpha));
   }
 
   /**
@@ -253,6 +261,7 @@ export class MapLayerPass {
     gl.uniform1i(this.uPlacement, this.placement);
     gl.uniform1i(this.uNukeable, this.nukeable ? 1 : 0);
     gl.uniform1f(this.uVisible, this._visible ? 1.0 : 0.0);
+    gl.uniform1f(this.uAlpha, this._alpha);
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);

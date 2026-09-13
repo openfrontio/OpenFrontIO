@@ -113,4 +113,28 @@ describe("DistanceBasedBezierCurve", () => {
       expect(dist).toBeLessThanOrEqual(2);
     }
   });
+
+  test("getLength accurately computes the total arc length using the shared subdivide logic", () => {
+    // Test on a curve
+    const p0 = { x: 0, y: 0 };
+    const p1 = { x: 50, y: 100 };
+    const p2 = { x: 100, y: 100 };
+    const p3 = { x: 150, y: 0 };
+
+    const length = DistanceBasedBezierCurve.getLength(p0, p1, p2, p3);
+
+    // A curve bridging 0 to 150 via y=100 must be strictly longer than the straight line distance (150)
+    expect(length).toBeGreaterThan(150);
+
+    // Test on a straight line
+    const straightLength = DistanceBasedBezierCurve.getLength(
+      { x: 0, y: 0 },
+      { x: 50, y: 0 },
+      { x: 100, y: 0 },
+      { x: 150, y: 0 },
+    );
+
+    // The straight line length should be exactly 150
+    expect(Math.round(straightLength)).toBe(150);
+  });
 });

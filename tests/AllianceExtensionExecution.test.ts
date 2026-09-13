@@ -134,6 +134,8 @@ describe("AllianceExtensionExecution", () => {
       player2.id(),
       undefined,
       { name: player1.displayName() },
+      undefined,
+      player1.id(),
     );
     expect(displayMessageSpy).toHaveBeenCalledTimes(1);
 

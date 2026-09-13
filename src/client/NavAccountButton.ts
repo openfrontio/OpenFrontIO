@@ -1,5 +1,5 @@
 import { UserMeResponse } from "../core/ApiSchemas";
-import { hasLinkedIdentity } from "./AccountIdentity";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getDiscordAvatarUrl, translateText } from "./Utils";
 
 // Every account trigger rendered by <nav-account-menu> (the desktop nav pill
@@ -192,7 +192,7 @@ function updateInstance(
   // account whose avatar URL didn't resolve, or a missing avatar element): the
   // user is still authenticated, so show the logged-in person icon. Only a
   // session with no linked identity at all gets the sign-in prompt.
-  if (userMeResponse !== false && hasLinkedIdentity(userMeResponse.user)) {
+  if (responseHasLinkedIdentity(userMeResponse)) {
     showLoggedInPlain();
     return;
   }

@@ -1,7 +1,13 @@
 import { assetUrl } from "src/core/AssetUrls";
-import { UserMeResponse } from "../core/ApiSchemas";
+import {
+  isGrantedSubscription,
+  UserMeResponse,
+  UserSubscription,
+} from "../core/ApiSchemas";
 import {
   ColorPalette,
+  CosmeticPack,
+  CosmeticPackItem,
   Cosmetics,
   CosmeticsSchema,
   Crown,
@@ -22,17 +28,34 @@ import {
 } from "../core/Schemas";
 import {
   changeSubscriptionTier,
-  createCheckoutSession,
   getApiBase,
   getUserMe,
   invalidateUserMe,
+  purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
-import { isPlayingVerified } from "./UsernameInput";
+import {
+  classifyPurchaseReturn,
+  paymentsProvider,
+  purchaseOutcomeMessage,
+  startPurchase,
+} from "./Payments";
+import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
+
+/**
+ * Ceiling on the cosmetics catalog request. Matches the bound the auth calls
+ * already use (Auth.ts, Api.ts) rather than something tighter: when the
+ * catalog fails to load, getPlayerCosmeticsRefs cannot expand the saved
+ * `pattern:<name>` selection into pattern data, so an online player who is
+ * merely slow rather than offline would join without their territory
+ * pattern. A connection that has not answered in ten seconds is down; one
+ * that answers in eight is not, and should keep its cosmetics.
+ */
+export const COSMETICS_FETCH_TIMEOUT_MS = 10_000;
 
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
@@ -100,6 +123,226 @@ export function completeCosmeticPurchaseReturn(
   actions.refreshStore();
 }
 
+export interface PurchaseReturnActions extends CosmeticPurchaseReturnActions {
+  reload(): void;
+  /**
+   * Show a dialog and RESOLVE WHEN IT IS DISMISSED, unlike `alertAndStrip`
+   * which fires and forgets. Needed only where something must happen after
+   * the player has actually read the message -- see the reload below.
+   */
+  alert(message: string): Promise<unknown>;
+}
+
+/**
+ * Handles the #purchase-completed landing hash the payment rails send players
+ * back to.
+ *
+ * `status` has THREE values, not two. `pending` is the one that used to fall
+ * into the failure branch and it means the opposite: the order is durable and
+ * something else -- a capture still in flight, the server-side sweeper -- owns
+ * settling it. Telling a paying player their purchase failed there is the
+ * single worst thing this function can do, so pending is never reported as a
+ * failure and never given a client-side deadline of its own.
+ *
+ * `type` is the checkout's `kind`, except that a subscription arrives as
+ * `subscription_tier`. `provider`, `orderId`, `pack` and `tier` also ride
+ * along; none of them changes what is shown.
+ */
+export function handlePurchaseReturn(
+  params: URLSearchParams,
+  actions: PurchaseReturnActions,
+): void {
+  const status = classifyPurchaseReturn(params.get("status"));
+
+  if (status === "failed") {
+    actions.alertAndStrip(translateText("store.purchase_failed"));
+    return;
+  }
+
+  if (status === "pending") {
+    // The credit lands seconds later; drop the cached profile so the balance
+    // is re-read rather than served stale, and say so without claiming the
+    // purchase either succeeded or failed.
+    invalidateUserMe();
+    actions.alertAndStrip(translateText("store.purchase_pending"));
+    actions.refreshStore();
+    return;
+  }
+
+  const type = params.get("type");
+  if (type === "currency_pack") {
+    actions.alertAndStrip(
+      translateText("store.currency_pack_purchase_success"),
+    );
+    return;
+  }
+
+  if (type === "custom_currency") {
+    // Plutonium is credited asynchronously by the rail's webhook; the balance
+    // refreshes from /users/@me on the next load.
+    actions.alertAndStrip(
+      translateText("store.custom_currency_purchase_success"),
+    );
+    return;
+  }
+
+  if (type === "subscription_tier") {
+    actions.strip();
+    invalidateUserMe();
+    // Reload only once the dialog is DISMISSED, matching the blocking alert
+    // this replaced. Reloading underneath an open dialog throws the message
+    // away before the player has read it.
+    void actions
+      .alert(translateText("store.subscription_purchase_success"))
+      .then(() => actions.reload());
+    return;
+  }
+
+  const cosmeticName = params.get("cosmetic");
+  if (!cosmeticName) {
+    // A generic error rather than "purchase failed": the purchase very likely
+    // succeeded and it is our own landing URL that is malformed, so claiming
+    // failure would be the wrong end of the same mistake `pending` fixes.
+    // Deliberately does NOT strip -- there is nothing here we can act on, and
+    // the unstripped hash keeps the evidence for a bug report.
+    void actions.alert(translateText("common.error_generic"));
+    console.error("purchase-completed but no cosmetic name");
+    return;
+  }
+
+  completeCosmeticPurchaseReturn(
+    cosmeticName,
+    params.get("login-token"),
+    actions,
+  );
+}
+
+/**
+ * Re-read the profile and tell the app about it.
+ *
+ * `invalidateUserMe()` alone only drops the cache; nothing refetches and
+ * nothing is notified, so a surface holding a `userMeResponse` -- an open
+ * StoreModal, the header balance -- keeps rendering the old one. This is the
+ * pair that actually refreshes them.
+ *
+ * A `false` result is deliberately NOT broadcast: getUserMe returns false on
+ * any error, not only an auth failure, and broadcasting it would flip the
+ * whole app to its logged-out UI immediately after a successful purchase. A
+ * stale balance is much the better failure.
+ */
+export async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
+  invalidateUserMe();
+  const fresh = await getUserMe();
+  if (fresh === false) return false;
+  document.dispatchEvent(
+    new CustomEvent("userMeResponse", {
+      detail: fresh,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+  // Returned so a caller that also needs the new balance reads the same
+  // profile it just broadcast, rather than re-fetching it separately.
+  return fresh;
+}
+
+// "Insufficient balance" means three different things once the real balance is
+// known, and each needs a different message. Shared by the single-cosmetic and
+// pack paths so they cannot drift apart.
+function balanceOutcome(
+  balance: number,
+  price: number,
+): "debt" | "shortfall" | "unexplained" {
+  // A chargeback landed since the pre-check; topping up cannot clear it.
+  if (balance < 0) return "debt";
+  // The re-read says they can afford it, so there is no shortfall to quote and
+  // inventing one sends them to buy currency they already have.
+  if (price - balance <= 0) return "unexplained";
+  return "shortfall";
+}
+
+function debtMessage(debt: number): string {
+  return translateText("store.pack_debt", { debt: String(debt) });
+}
+
+/**
+ * Whole days left on a granted subscription, or null when there is no end date
+ * to count to.
+ *
+ * A Steam ownership grant is a fixed free month, so `currentPeriodEnd` is set
+ * and the number is real. An admin comp is open-ended (`currentPeriodEnd`
+ * null) and there is nothing to count — the caller uses the no-days copy
+ * rather than inventing a figure. A date already in the past returns null for
+ * the same reason: "0 days" reads as a bug, and a row the sweeper has not got
+ * to yet is not worth quoting.
+ *
+ * Rounded UP, so the figure never claims they forfeit LESS than they do — the
+ * safe side for a warning about something irreversible. It also gets the case
+ * that would look most like a bug right: two hours into a 30-day grant, floor
+ * would say "29 days".
+ */
+function grantedDaysRemaining(sub: UserSubscription): number | null {
+  const end = sub.currentPeriodEnd;
+  if (!end) return null;
+  const ms = end.getTime() - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  return Math.ceil(ms / 86_400_000);
+}
+
+/**
+ * A granted player starting a PAID subscription — any tier, including the one
+ * their grant already gives them.
+ *
+ * The confirm is not the tier-change copy. That copy promises Stripe proration
+ * ("charged the prorated difference", "credit for the unused portion"), and
+ * none of it is true here: infra expires every granted row in the same
+ * transaction as the paid insert (`expireGrantsForPaidReplacement`,
+ * SteamAgreements.ts, confirmed 12 Sept 2026), so the paid period starts at
+ * settle and the unused free days are simply gone — no credit, no extension,
+ * no stacking. The string says so, and names the days when we know them,
+ * because "not carried over" badly understates 28 of them.
+ *
+ * The purchase itself is the ordinary first-purchase flow: same startPurchase,
+ * same success string, same profile refresh. Only the confirm differs.
+ */
+async function purchaseOverGrant(
+  sub: Subscription,
+  currentSub: UserSubscription,
+): Promise<void> {
+  const targetName = translateCosmetic("subscriptions", sub.name);
+  const days = grantedDaysRemaining(currentSub);
+  // Both keys passed as literals so the en.json sync test can see them.
+  const confirmed = await showInGameConfirm(
+    days === null
+      ? translateText("store.confirm_subscribe_over_grant_no_days", {
+          tier: targetName,
+        })
+      : translateText("store.confirm_subscribe_over_grant", {
+          tier: targetName,
+          days,
+        }),
+    {
+      heading: translateText("store.subscribe_heading"),
+      variant: "warning",
+    },
+  );
+  if (!confirmed) return;
+
+  const outcome = await startPurchase({
+    kind: "subscription_tier",
+    tierName: sub.name,
+  });
+  if (outcome.outcome === "completed") await broadcastFreshUserMe();
+  if (outcome.outcome === "error" && outcome.refetchCatalog) {
+    invalidateCosmetics();
+  }
+  const message = purchaseOutcomeMessage(
+    outcome,
+    "store.subscription_purchase_success",
+  );
+  if (message !== null) await showInGameAlert(message);
+}
+
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
@@ -115,8 +358,57 @@ export async function purchaseCosmetic(
       userMe === false ? null : (userMe.player.subscription ?? null);
 
     if (currentSub) {
+      // OPE-440, and BEFORE every branch below it, including the
+      // already-subscribed one. A grant is not a purchase: nobody is being
+      // billed, so there is no agreement to reprice and `change-tier` answers
+      // 400 "Cannot change tier of a granted subscription" for every tier —
+      // which is why a granted player currently cannot pay us at all. Their
+      // tier selection is a FIRST purchase, and /payments/checkout admits
+      // them on both rails (its exclusivity gate filters
+      // `isNotNull(subscriptions.provider)`, so a granted row is never an
+      // incumbent).
+      //
+      // Including the tier they already hold: buying that same tier is the
+      // likeliest conversion of the whole cohort, and `already_subscribed`
+      // would refuse the one click we most want.
+      //
+      // No rail check like the Steam ones below, because a grant HAS no rail:
+      // `provider` is null, so there is no account fact to disagree with the
+      // device, and startPurchase's paymentsProvider() is the only answer
+      // there is — Steam inside the shell, Stripe on the web. Both are
+      // admitted.
+      if (isGrantedSubscription(currentSub)) {
+        return purchaseOverGrant(sub, currentSub);
+      }
+
       if (currentSub.tier === sub.name) {
         await showInGameAlert(translateText("store.already_subscribed"));
+        return;
+      }
+
+      // S1 (infra OPE-230, lead decision pending Josh): a Steam subscriber
+      // cannot change tier in-app at launch. The server would refuse the
+      // checkout with a 409 anyway; refusing HERE, before the confirm and
+      // before an order is minted, means no dialog that only ever ends in a
+      // refusal and no stranded PENDING row. Same switch the panel reads.
+      if (currentSub.provider === "steam" && !STEAM_TIER_CHANGE_IN_APP) {
+        await showInGameAlert(
+          translateText("store.tier_change_unavailable_steam"),
+        );
+        return;
+      }
+
+      // Rail vs account. `currentSub.provider` is where the ACCOUNT is
+      // billed; `paymentsProvider()` is what this DEVICE can check out on
+      // (Steam only inside the desktop shell). A Steam-billed subscriber in
+      // a plain browser would otherwise see the Steam confirm and then have
+      // a Stripe checkout minted for them — which the server refuses at
+      // gate 1, leaving a stranded row. A Steam agreement can only be
+      // replaced by another Steam agreement, so say where to do it.
+      if (currentSub.provider === "steam" && paymentsProvider() !== "steam") {
+        await showInGameAlert(
+          translateText("store.tier_change_steam_needs_desktop"),
+        );
         return;
       }
 
@@ -129,9 +421,17 @@ export async function purchaseCosmetic(
           ? sub.priceMonthly > currentCosmetic.priceMonthly
           : true;
       const targetName = translateCosmetic("subscriptions", sub.name);
-      const confirmKey = isUpgrade
-        ? "store.confirm_upgrade"
-        : "store.confirm_downgrade";
+      // The Stripe copy promises proration ("charged the prorated
+      // difference", "credit for the unused portion"). On Steam neither
+      // exists: the new tier is a NEW agreement at full price, starting now,
+      // and the rest of the old month is forfeited. Say that, not the
+      // Stripe thing.
+      const confirmKey =
+        currentSub.provider === "steam"
+          ? "store.confirm_tier_change_steam"
+          : isUpgrade
+            ? "store.confirm_upgrade"
+            : "store.confirm_downgrade";
       const confirmed = await showInGameConfirm(
         translateText(confirmKey, { tier: targetName }),
         {
@@ -140,6 +440,32 @@ export async function purchaseCosmetic(
         },
       );
       if (!confirmed) return;
+
+      // A Steam subscription cannot be repriced in place: Steam's only
+      // mechanism is a NEW billing agreement, whose approval disables the old
+      // one (infra Phase 9, §4.4 — and the server's change-tier answers 409
+      // requires_approval for a Steam row). So the change IS a fresh checkout
+      // for the target tier, through the same overlay flow as a first
+      // purchase; the server's gate admits a same-rail different-tier
+      // incumbent and expires the old row when the new one settles. Nothing
+      // is cancelled first: a player who dismisses the dialog keeps what
+      // they had.
+      if (currentSub.provider === "steam") {
+        const outcome = await startPurchase({
+          kind: "subscription_tier",
+          tierName: sub.name,
+        });
+        if (outcome.outcome === "completed") await broadcastFreshUserMe();
+        if (outcome.outcome === "error" && outcome.refetchCatalog) {
+          invalidateCosmetics();
+        }
+        const message = purchaseOutcomeMessage(
+          outcome,
+          "store.change_tier_success_steam",
+        );
+        if (message !== null) await showInGameAlert(message);
+        return;
+      }
 
       const result = await changeSubscriptionTier(sub.name);
       if (result === "rate_limited") {
@@ -158,20 +484,51 @@ export async function purchaseCosmetic(
     }
   }
 
+  if (resolved.type === "cosmeticPack") {
+    return purchasePack(c as CosmeticPack, method);
+  }
+
   if (method === "dollar") {
-    if (!c.product) {
-      await showInGameAlert(translateText("store.checkout_failed"));
+    // Currency packs and subscription tiers go through the rail-agnostic
+    // /payments/checkout, which identifies a listing by NAME. Neither may gate
+    // on the Stripe `product` block: it is null for every Steam-only listing,
+    // and gating on it is what made those unbuyable.
+    if (resolved.type === "pack" || resolved.type === "subscription") {
+      const isPack = resolved.type === "pack";
+      const outcome = await startPurchase(
+        isPack
+          ? { kind: "currency_pack", packName: c.name }
+          : { kind: "subscription_tier", tierName: c.name },
+      );
+      if (outcome.outcome === "completed") {
+        // Not just invalidateUserMe(): that clears the cache and nothing more.
+        // On the overlay path the page never navigates, so an open StoreModal
+        // keeps the `userMeResponse` it was rendered from and shows a stale
+        // balance and subscription after a purchase that has already settled.
+        // Fetching and broadcasting is what actually updates it -- the same
+        // shape TribesPanel uses after a hard-currency purchase.
+        await broadcastFreshUserMe();
+      }
+      // The catalog this store rendered from named something the rail no
+      // longer sells; drop it so the next open refetches.
+      if (outcome.outcome === "error" && outcome.refetchCatalog) {
+        invalidateCosmetics();
+      }
+      const message = purchaseOutcomeMessage(
+        outcome,
+        isPack
+          ? "store.currency_pack_purchase_success"
+          : "store.subscription_purchase_success",
+      );
+      if (message !== null) await showInGameAlert(message);
       return;
     }
-    const url = await createCheckoutSession(
-      c.product.priceId,
-      colorPaletteName,
-    );
-    if (url === false) {
-      await showInGameAlert(translateText("store.checkout_failed"));
-      return;
-    }
-    window.location.href = url;
+
+    // Real money only buys plutonium (packs above) or a subscription;
+    // dollar-priced cosmetics/flares and their legacy create-checkout-session
+    // endpoint are gone. Only a stale cached cosmetics.json that still
+    // carries a product block can land here.
+    await showInGameAlert(translateText("store.checkout_failed"));
     return;
   }
 
@@ -189,14 +546,26 @@ export async function purchaseCosmetic(
     method === "hard" ? (priced.priceHard ?? 0) : (priced.priceSoft ?? 0);
   const userMe = await getUserMe();
   if (userMe === false) {
-    alert(translateText("store.login_required"));
+    await showInGameAlert(translateText("store.login_required"));
     return;
   }
   const balance =
     method === "hard"
       ? (userMe.player.currency?.hard ?? 0)
       : (userMe.player.currency?.soft ?? 0);
-  if (balance < price) {
+  // A charged-back wallet is served as a NEGATIVE balance (the API derives its
+  // own `debt` field as exactly `-hard`), so this — not the server refusal
+  // below — is how a player in debt normally gets here. Without this branch
+  // the negative balance just fails the shortfall check underneath and they
+  // are told "you need 400 more" with a top-up button that cannot clear a
+  // debt. Soft currency can never go negative, so this only fires for hard.
+  if (balance < 0) {
+    await showInGameAlert(debtMessage(-balance));
+    return;
+  }
+  // Built for the pre-check below and reused when the server refuses for the
+  // same reason, so both routes describe the same item the same way.
+  const insufficient = (available: number): InsufficientCurrency => {
     const currencyName = translateText(
       method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
     );
@@ -220,11 +589,17 @@ export async function purchaseCosmetic(
     }
     return {
       currency: currencyName,
-      shortfall: price - balance,
+      // Clamped: the server can refuse on a balance the client still reads as
+      // sufficient, and a zero or negative shortfall reads as "you have
+      // enough", which is the one thing we know is untrue.
+      shortfall: Math.max(1, price - available),
       item: itemName,
       // Only plutonium can be topped up; caps are dismiss-only.
       canTopUp: method === "hard",
     };
+  };
+  if (balance < price) {
+    return insufficient(balance);
   }
 
   const cosmeticType = resolved.type as
@@ -233,19 +608,192 @@ export async function purchaseCosmetic(
     | "flag"
     | "crown"
     | "effect";
-  const success = await purchaseWithCurrency(
+  const result = await purchaseWithCurrency(
     cosmeticType,
     c.name,
     method,
     colorPaletteName,
   );
-  if (!success) {
-    alert(translateText("store.purchase_failed"));
-    return;
+  if (!result.ok) {
+    switch (result.code) {
+      case "insufficient_balance": {
+        // The balance moved since the pre-check: re-read it for the shortfall,
+        // the same way the pack path does. Broadcast as well as re-read —
+        // dropping the cache alone leaves the open Store rendering the old
+        // balance, since it renders from the userMeResponse event.
+        const fresh = await broadcastFreshUserMe();
+        // A failed re-read leaves the real balance unknown. Treating it as
+        // zero would quote the full price as the shortfall — a guess wearing
+        // a number, with a top-up button sized to it.
+        if (fresh === false) {
+          await showInGameAlert(translateText("store.purchase_failed"));
+          return;
+        }
+        const available =
+          method === "hard"
+            ? (fresh.player.currency?.hard ?? 0)
+            : (fresh.player.currency?.soft ?? 0);
+        const outcome = balanceOutcome(available, price);
+        if (outcome === "debt") {
+          await showInGameAlert(debtMessage(-available));
+          return;
+        }
+        if (outcome === "unexplained") {
+          await showInGameAlert(translateText("store.purchase_failed"));
+          return;
+        }
+        return insufficient(available);
+      }
+      case "debt":
+        // A refund or chargeback left the wallet negative. Topping up does not
+        // unblock it, so this gets a plain explanation rather than the
+        // insufficient-currency dialog — the debt settles out of the next
+        // credit. Re-read and re-broadcast so the store stops showing the
+        // pre-chargeback balance: dropping the cache alone would not do it,
+        // since the Store renders from the userMeResponse broadcast.
+        await broadcastFreshUserMe();
+        await showInGameAlert(
+          translateText("store.pack_debt", { debt: result.debt }),
+        );
+        return;
+      case "already_owned":
+        // Either a genuine double-buy or a retry of a purchase that did go
+        // through (the success response was lost): both mean the local
+        // ownership state is stale, so refetch. Mirrors the pack path. No
+        // broadcastFreshUserMe() here — the reload below tears the page down,
+        // so re-dispatching the profile first would be dead work.
+        await showInGameAlert(translateText("store.already_owned"));
+        invalidateUserMe();
+        window.location.reload();
+        return;
+      default:
+        await showInGameAlert(translateText("store.purchase_failed"));
+        return;
+    }
   }
-  alert(translateText("store.purchase_success", { name: c.name }));
+  await showInGameAlert(
+    translateText("store.purchase_success", { name: c.name }),
+  );
   invalidateUserMe();
   window.location.reload();
+}
+
+/**
+ * Buys a cosmetic pack (plutonium only). Mirrors the single-cosmetic currency
+ * flow: a local balance pre-check surfaces the insufficient-funds dialog
+ * before any request; a success reloads so every granted item shows as owned.
+ */
+async function purchasePack(
+  pack: CosmeticPack,
+  method: PaymentMethod,
+): Promise<PurchaseResult> {
+  if (method !== "hard") {
+    console.error("purchaseCosmetic: packs are only sold for hard currency");
+    return;
+  }
+  const userMe = await getUserMe();
+  if (userMe === false) {
+    await showInGameAlert(translateText("store.login_required"));
+    return;
+  }
+  const insufficient = (balance: number): InsufficientCurrency => ({
+    currency: translateText("cosmetics.hard"),
+    shortfall: pack.priceHard - balance,
+    item: pack.displayName,
+    canTopUp: true,
+  });
+  const balance = userMe.player.currency?.hard ?? 0;
+  // Same as the single-cosmetic path: a charged-back wallet arrives here as a
+  // negative balance, and without this it reads as a very large shortfall
+  // with a top-up button that cannot clear a debt.
+  if (balance < 0) {
+    await showInGameAlert(debtMessage(-balance));
+    return;
+  }
+  if (balance < pack.priceHard) {
+    return insufficient(balance);
+  }
+
+  const result = await purchaseCosmeticPack(pack.name);
+  if (result.ok) {
+    await showInGameAlert(
+      translateText("store.purchase_success", { name: pack.displayName }),
+    );
+    invalidateUserMe();
+    window.location.reload();
+    return;
+  }
+  switch (result.code) {
+    case "insufficient_balance": {
+      // The balance moved since the pre-check: re-read it for the shortfall,
+      // and re-broadcast so the open Store stops showing the old balance.
+      const fresh = await broadcastFreshUserMe();
+      // Unknown balance — no honest number to quote.
+      if (fresh === false) {
+        await showInGameAlert(translateText("store.purchase_failed"));
+        return;
+      }
+      const available = fresh.player.currency?.hard ?? 0;
+      const outcome = balanceOutcome(available, pack.priceHard);
+      if (outcome === "debt") {
+        await showInGameAlert(debtMessage(-available));
+        return;
+      }
+      if (outcome === "unexplained") {
+        await showInGameAlert(translateText("store.purchase_failed"));
+        return;
+      }
+      return insufficient(available);
+    }
+    case "debt":
+      // Re-read and re-broadcast, not just invalidate: the Store renders from
+      // the userMeResponse broadcast, so dropping the cache alone would leave
+      // it showing the pre-chargeback balance.
+      await broadcastFreshUserMe();
+      await showInGameAlert(
+        translateText("store.pack_debt", { debt: result.debt }),
+      );
+      return;
+    case "already_owned":
+      // Either a genuine conflict or a retry of a purchase that did go
+      // through: both mean the local ownership state is stale, so refetch.
+      await showInGameAlert(
+        translateText("store.pack_already_owned", {
+          items: result.ownedFlareNames.map(flareDisplayName).join(", "),
+        }),
+      );
+      invalidateUserMe();
+      window.location.reload();
+      return;
+    case "unavailable":
+      await showInGameAlert(translateText("store.pack_unavailable"));
+      return;
+    default:
+      await showInGameAlert(translateText("store.purchase_failed"));
+      return;
+  }
+}
+
+/**
+ * The translated name of the cosmetic a flare refers to: "<type>:<name>",
+ * or "pattern:<name>:<palette>" for a coloured pattern ("Camo (Crimson)").
+ */
+function flareDisplayName(flare: string): string {
+  const [type, name, palette] = flare.split(":");
+  const prefix = {
+    pattern: "territory_patterns.pattern",
+    skin: "territory_patterns.pattern",
+    flag: "flags",
+    crown: "crowns",
+    effect: "effects",
+  }[type];
+  if (!prefix || !name) return flare;
+  const displayName = translateCosmetic(prefix, name);
+  if (!palette) return displayName;
+  return translateText("inventory.selected_cosmetic_variant", {
+    name: displayName,
+    variant: translateCosmetic("territory_patterns.color_palette", palette),
+  });
 }
 
 function simpleHash(str: string): string {
@@ -258,13 +806,25 @@ function simpleHash(str: string): string {
   return hash.toString(36);
 }
 
+/**
+ * Drops the cached cosmetics.json so the next fetchCosmetics() goes to the
+ * network. The remedy for a checkout rejected with a stale listing ("Pack not
+ * available" / "Tier not available"): the catalog the store rendered from no
+ * longer matches what the rail sells.
+ */
+export function invalidateCosmetics(): void {
+  __cosmetics = null;
+}
+
 export async function fetchCosmetics(): Promise<Cosmetics | null> {
   if (__cosmetics !== null) {
     return __cosmetics;
   }
   const request = (async () => {
     try {
-      const response = await fetch(`${getApiBase()}/cosmetics.json`);
+      const response = await fetch(`${getApiBase()}/cosmetics.json`, {
+        signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
+      });
       if (!response.ok) {
         console.error(`HTTP error! status: ${response.status}`);
         return null;
@@ -291,6 +851,23 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
     }
   });
   return request;
+}
+
+/**
+ * Warms the two caches every cosmetics resolution reads — the profile and the
+ * catalog — so a later getPlayerCosmetics()/getPlayerCosmeticsRefs() answers
+ * from memory instead of the network.
+ *
+ * Called from paths that are about to need cosmetics but are not ready to wait
+ * for them, so the network time is spent while the player is still choosing
+ * rather than after they commit. Never rejects: both calls already resolve to
+ * a falsy value on failure, and callers fire and forget.
+ */
+export function prewarmCosmetics(): Promise<void> {
+  return Promise.all([getUserMe(), fetchCosmetics()]).then(
+    () => undefined,
+    () => undefined,
+  );
 }
 
 export async function resolveFlagUrl(
@@ -465,6 +1042,63 @@ export function effectRelationship(
   );
 }
 
+/** The flare a pack item's purchase grants, e.g. "pattern:camo:red". */
+export function packItemFlare(item: CosmeticPackItem): string {
+  const base = `${item.type}:${item.name}`;
+  return item.colorPalette ? `${base}:${item.colorPalette}` : base;
+}
+
+/**
+ * The resolved entry a pack item refers to, or undefined if its cosmetic is
+ * no longer in the catalog. A pattern item is the entry for its palette —
+ * the "pattern:<key>:<palette>" one, or the uncoloured "pattern:<key>" one
+ * when the item names no palette — since that is the flare the pack grants.
+ */
+export function findPackItem(
+  item: CosmeticPackItem,
+  candidates: readonly ResolvedCosmetic[],
+): ResolvedCosmetic | undefined {
+  return candidates.find(
+    (r) =>
+      r.type === item.type &&
+      r.cosmetic?.name === item.name &&
+      (item.type !== "pattern" ||
+        r.key.split(":")[2] === (item.colorPalette ?? undefined)),
+  );
+}
+
+/**
+ * The pack's items the player already owns — by the item's own flare or the
+ * type wildcard. Any owned item blocks buying the pack (the server answers
+ * 409; there is no partial grant), so callers use this to explain why.
+ */
+export function ownedPackItems(
+  pack: CosmeticPack,
+  userMeResponse: UserMeResponse | false,
+): CosmeticPackItem[] {
+  const flares =
+    userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
+  return pack.items.filter(
+    (item) =>
+      flares.includes(packItemFlare(item)) || flares.includes(`${item.type}:*`),
+  );
+}
+
+export function cosmeticPackRelationship(
+  pack: CosmeticPack,
+  userMeResponse: UserMeResponse | false,
+  affiliateCode: string | null,
+): "owned" | "purchasable" | "blocked" {
+  if (pack.items.length === 0) return "blocked";
+  const owned = ownedPackItems(pack, userMeResponse).length;
+  if (owned === pack.items.length) return "owned";
+  // Pack revenue isn't attributed to affiliates: hidden in affiliate mode.
+  if (affiliateCode !== null) return "blocked";
+  // Partially owned packs can't be bought (see ownedPackItems).
+  if (owned > 0) return "blocked";
+  return pack.priceHard > 0 ? "purchasable" : "blocked";
+}
+
 export type ResolvedCosmetic = {
   type:
     | "pattern"
@@ -473,14 +1107,30 @@ export type ResolvedCosmetic = {
     | "crown"
     | "effect"
     | "pack"
+    | "cosmeticPack"
     | "subscription";
-  cosmetic: Pattern | Skin | Flag | Crown | Effect | Pack | Subscription | null;
+  cosmetic:
+    | Pattern
+    | Skin
+    | Flag
+    | Crown
+    | Effect
+    | Pack
+    | CosmeticPack
+    | Subscription
+    | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";
   /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "skin:mountain" */
   key: string;
   /** For effects only: the effectType (also the catalog's outer key). */
   effectType?: string;
+  /**
+   * For cosmetic packs only: the pack's items resolved against this catalog,
+   * in pack order. An item whose cosmetic is no longer in the catalog is
+   * skipped (the server still sells whatever remains in the pack).
+   */
+  packItems?: ResolvedCosmetic[];
 };
 
 /**
@@ -586,7 +1236,12 @@ export function resolveCosmetics(
 
   // Packs
   for (const [packKey, pack] of Object.entries(cosmetics.currencyPacks ?? {})) {
-    const rel = pack.product ? "purchasable" : "blocked";
+    // NEVER gate this on `pack.product`. That block is the Stripe
+    // {productId, priceId} pair and it is null for every Steam-only listing,
+    // so gating rendered those packs as blocked and their buy button never
+    // appeared. A listed currency pack is buyable; if a rail cannot sell it,
+    // the checkout call is what says so.
+    const rel = "purchasable";
     result.push({
       type: "pack",
       cosmetic: pack,
@@ -596,19 +1251,65 @@ export function resolveCosmetics(
     });
   }
 
+  // Cosmetic packs. Items reference cosmetics resolved above (findPackItem).
+  for (const [packKey, pack] of Object.entries(cosmetics.packs ?? {})) {
+    const packItems = pack.items.flatMap((item) => {
+      const found = findPackItem(item, result);
+      return found ? [found] : [];
+    });
+    result.push({
+      type: "cosmeticPack",
+      cosmetic: pack,
+      colorPalette: null,
+      relationship: cosmeticPackRelationship(
+        pack,
+        userMeResponse,
+        affiliateCode,
+      ),
+      key: `cosmeticPack:${packKey}`,
+      packItems,
+    });
+  }
+
   // Subscriptions
   const flares =
     userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
-  const currentSubTier =
+  const currentSub =
     userMeResponse === false
       ? null
-      : (userMeResponse.player.subscription?.tier ?? null);
+      : (userMeResponse.player.subscription ?? null);
+  const currentSubTier = currentSub?.tier ?? null;
+  // OPE-440. A grant is free access nobody is billing, not something the
+  // player bought, and the tier it confers is the one they are likeliest to
+  // buy. Calling it "owned" is what rendered a dead "Subscribed" box where
+  // the buy button goes, so a granted player had no way to pay us for the
+  // tier they were already enjoying. `owned` is read by the store and nowhere
+  // else, so this changes the buy affordance and nothing about what the grant
+  // currently entitles them to.
+  //
+  // A flare is untouched by this: it is a permanent unlock, not a month, and
+  // there is genuinely nothing to sell someone who holds one.
+  const grantIsCurrent = isGrantedSubscription(currentSub);
   for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
     const key = `subscription:${subKey}`;
-    const isCurrent = subKey === currentSubTier || flares.includes(key);
+    // A listing with no Stripe `product` block cannot render a price, so it
+    // falls to "blocked" — and the subscriptions tab lists only purchasable
+    // and owned, so a blocked tier is not shown at all. (Currency packs hit
+    // this and were fixed by never gating on `product`; subscriptions still
+    // do. OPE-441 is the real fix.)
+    const canBeSold = Boolean(sub.product);
+    // ...which is why the grant demotion below is conditional on it. Taking
+    // "owned" away from a tier we then cannot sell would make the card
+    // VANISH from the store, and a card that disappears is a worse failure
+    // than the dead "Subscribed" box this change exists to remove. Not
+    // reachable today — every live tier carries a product — and this is not
+    // the PR to introduce it.
+    const isCurrentTier = subKey === currentSubTier;
+    const demoteGrant = grantIsCurrent && isCurrentTier && canBeSold;
+    const isCurrent = flares.includes(key) || (isCurrentTier && !demoteGrant);
     const rel: ResolvedCosmetic["relationship"] = isCurrent
       ? "owned"
-      : sub.product
+      : canBeSold
         ? "purchasable"
         : "blocked";
     result.push({
@@ -660,7 +1361,13 @@ export function resolvedToPlayerPattern(
   };
 }
 
-export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
+// `verified` is passed in rather than looked up: the caller has already
+// resolved what name the player is joining under (see resolvePlayerName), and
+// the badge has to agree with that exact decision. Reading it back out of the
+// DOM here was the same missing seam.
+export async function getPlayerCosmeticsRefs(
+  opts: { verified?: boolean } = {},
+): Promise<PlayerCosmeticRefs> {
   const userSettings = new UserSettings();
   // Resolve the profile first: getUserMe activates the per-player cosmetics
   // scope (UserSettings.setPlayerId), which must happen before selections are
@@ -689,6 +1396,14 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
   }
 
   let flag = userSettings.getFlag();
+  // Dropping a flag from this join and erasing the player's saved selection
+  // are two different decisions, and only one of them is reversible. Erase
+  // only on a definite answer — the catalog no longer lists the flag, or the
+  // profile says the player is not entitled. "We could not ask" is not an
+  // answer: getUserMe() returns the same `false` for "signed out" and for a
+  // refused connection, a timed-out request or an expired session, so
+  // treating it as "not entitled" erased saved flags over network failures.
+  let flagDenied = false;
   if (flag?.startsWith("flag:")) {
     const key = flag.slice("flag:".length);
     const flagData = cosmetics?.flags?.[key];
@@ -696,21 +1411,31 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
       // Only clear if cosmetics loaded successfully but the key is missing
       if (cosmetics) {
         flag = null;
+        flagDenied = true;
       }
     } else {
       const userMe = await getUserMe();
-      if (!userMe) {
-        flag = null;
-      } else {
+      if (userMe) {
         const flares = userMe.player.flares ?? [];
         const hasWildcard = flares.includes("flag:*");
         if (!hasWildcard && !flares.includes(`flag:${flagData.name}`)) {
           flag = null;
+          flagDenied = true;
         }
+      } else {
+        // Unknown profile: keep the selection, but do not send it. An
+        // entitlement we cannot verify is not one to claim — the server does
+        // not strip an unowned cosmetic ref, it refuses the connection
+        // (Privilege returns "forbidden", Worker.ts closes the socket with
+        // CosmeticsForbidden), so sending it would trade a lost flag for an
+        // unjoinable multiplayer. The pattern, skin and crown branches nearby
+        // do send theirs on an unknown profile and carry that exposure; this
+        // one deliberately does not.
+        flag = null;
       }
     }
   }
-  if (flag === null) {
+  if (flagDenied) {
     userSettings.clearFlag();
   }
 
@@ -790,12 +1515,14 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     skinName,
     crownName,
     effects: Object.keys(effects).length > 0 ? effects : undefined,
-    verified: isPlayingVerified() ? true : undefined,
+    verified: opts.verified ? true : undefined,
   };
 }
 
-export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
-  const refs = await getPlayerCosmeticsRefs();
+export async function getPlayerCosmetics(
+  opts: { verified?: boolean } = {},
+): Promise<PlayerCosmetics> {
+  const refs = await getPlayerCosmeticsRefs(opts);
   const cosmetics = await fetchCosmetics();
 
   const result: PlayerCosmetics = {};

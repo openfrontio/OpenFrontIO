@@ -104,7 +104,8 @@ export type ClientMessage =
   | ClientRejoinMessage
   | ClientLogMessage
   | ClientHashMessage
-  | ClientSpectateMessage;
+  | ClientSpectateMessage
+  | ClientReportMessage;
 
 export type ServerMessage =
   | ServerTurnMessage
@@ -132,6 +133,9 @@ export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientSendLiveStatsMessage = z.infer<
   typeof ClientSendLiveStatsSchema
 >;
+export type ClientReportMessage = z.infer<typeof ClientReportMessageSchema>;
+export type ReportReason = z.infer<typeof ReportReasonSchema>;
+export type PlayerReport = z.infer<typeof PlayerReportSchema>;
 export type PlayerLiveStats = z.infer<typeof PlayerLiveStatsSchema>;
 export type LiveStats = z.infer<typeof LiveStatsSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
@@ -221,10 +225,63 @@ export type LobbyAccent = z.infer<typeof LobbyAccentSchema>;
 // The charset accepts everything AccountUsernameSchema can produce, hyphens
 // included, so a verified account name is always representable on the wire —
 // verified play skips free-form validation, so an unrepresentable name would
-// reach the server and be closed with 1002.
+// reach the server and be closed with CloseCode.BadRequest.
+//
+// Letters and digits the in-game name renderer can actually draw, plus the
+// punctuation a name may carry. This is what lets José, Müller, Renée and
+// Bjørn keep their names instead of falling back to a generated one.
+//
+// The bound is U+00FF — the end of Latin-1 Supplement — and it is set by the
+// renderer twice over. Do not raise it without changing the renderer first:
+//
+//  1. The string path is 8-bit end to end. `TextLayout` writes
+//     `charCodes[i] = text.charCodeAt(i)` into a `Uint8Array`, `DataTextures`
+//     uploads it as `R8UI`/`UNSIGNED_BYTE`, and `name.vert.glsl` uses the
+//     byte directly as the glyph index. Anything above 255 silently truncates
+//     mod 256: Ł (U+0141) would draw as "A", ā (U+0101) as a code-0 slot the
+//     shader drops while still consuming a layout position.
+//  2. The atlas has no glyphs up there anyway. Of the 128 Latin Extended-A
+//     entries in `resources/atlases/msdf-atlas.json`, exactly three (Œ œ Ÿ)
+//     have a real glyph; the other 125 point at .notdef. All 64 Latin-1
+//     Supplement entries are real.
+//
+// `CHAR_RANGE = 384` in the name-pass sizes the metrics and kerning tables, so
+// it looks like the limit and is not — it is an upper bound on ids the atlas
+// file may contain, not on what the string path can carry.
+//
+// Deliberately NOT every codepoint below the bound: that would admit control
+// characters, the C1 block, and HTML-significant punctuation. The ranges skip
+// × (U+00D7) and ÷ (U+00F7), maths symbols sitting inside the Latin-1 letter
+// block, and the ordinal/micro signs.
+//
+// Emoji are excluded on purpose and stay excluded: the renderer draws them as
+// a separate icon beside the name, never inline, so an emoji in the name
+// itself has no glyph at all.
+//
+// Regex source for the character class, not a finished pattern: the wire
+// schema, the free-form form rule and the persona sanitiser all need the same
+// set in different shapes, and a single source is what keeps them from
+// drifting apart by hand (which is how the charsets got out of step before).
+export const RENDERABLE_NAME_ALNUM =
+  "a-zA-Z0-9\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF";
+export const RENDERABLE_NAME_CHARS = ` _.\\-${RENDERABLE_NAME_ALNUM}`;
+
+/** One renderable character. Used per-codepoint by the persona sanitiser. */
+export const RENDERABLE_NAME_CHAR_RE = new RegExp(
+  `^[${RENDERABLE_NAME_CHARS}]$`,
+  "u",
+);
+
+/** At least one letter or digit — punctuation alone is not a name. */
+export const RENDERABLE_NAME_HAS_ALNUM_RE = new RegExp(
+  `[${RENDERABLE_NAME_ALNUM}]`,
+  "u",
+);
+
+// Requires at least one non-space so a name is never all padding.
 export const UsernameSchema = z
   .string()
-  .regex(/^(?=.*\S)[a-zA-Z0-9_\- üÜ.]+$/u)
+  .regex(new RegExp(`^(?=.*\\S)[${RENDERABLE_NAME_CHARS}]+$`, "u"))
   .min(3)
   .max(27);
 
@@ -305,6 +362,19 @@ export const PublicLobbyFullSchema = z.object({
   type: z.literal("full"),
   serverTime: zb.uint(),
   games: z.partialRecord(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+  // Build commit of the serving deployment. Clients on the homepage compare
+  // it to their own bundle's commit to detect that a new version deployed
+  // and prompt a refresh. Optional only so a server can omit it in tests; a
+  // bundle built before this field cannot decode the frame at all (zbin
+  // presence header shifts), which is the usual ship-together tradeoff.
+  gitCommit: z.string().max(64).optional(),
+  // False when the serving deployment is draining: the load balancer routes
+  // elsewhere and this one has stopped queueing public lobbies, so a pinned
+  // tab would watch the list empty out. Clients respond with the same reload
+  // prompt as a commit mismatch — which cannot catch this case by itself,
+  // because the pinned server reports its own commit and a same-commit
+  // blue/green flip keeps them equal. Absent means active.
+  active: z.boolean().optional(),
 });
 
 export const PublicLobbyCountsSchema = z.object({
@@ -325,6 +395,15 @@ export class LobbyInfoEvent implements GameEvent {
     public lobby: GameInfo,
     public myClientID: ClientID,
   ) {}
+}
+
+// This game's opaque grouping token arrived (see GroupToken in the server
+// message schemas). One event for both carriers — lobby_info for anyone who
+// sat in the lobby, the start message for a late joiner who never saw one —
+// so a listener does not have to know which message it came from. Never
+// emitted for singleplayer or a replay: there is no server game to group.
+export class GroupTokenEvent implements GameEvent {
+  constructor(public groupToken: string) {}
 }
 
 export interface ClientInfo {
@@ -387,10 +466,10 @@ export const DoomsdayClockConfigSchema = z.object({
 });
 
 // Overtime (anti-stalemate). After startMinutes of game time the tile share
-// required to win drops steadily from the base (80% FFA / 95% team) at a fixed
-// rate (see OVERTIME_DEFAULTS in Config.ts), so the leading side eventually
-// crosses the shrinking bar and a stalled game is guaranteed to end. Only
-// `enabled` and `startMinutes` are wire-configurable.
+// required to win drops steadily from the 80% base at a fixed rate (see
+// OVERTIME_DEFAULTS in Config.ts), so the leading side eventually crosses the
+// shrinking bar and a stalled game is guaranteed to end. Only `enabled` and
+// `startMinutes` are wire-configurable.
 export const OvertimeConfigSchema = z.object({
   enabled: z.boolean().optional(),
   startMinutes: zb.uint({ min: 1, max: 120 }).optional(),
@@ -453,6 +532,11 @@ export const GameConfigSchema = z.object({
   maxPlayers: zb.uint().optional(),
   // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
   allowedPublicIds: z.array(z.string()).max(200).optional(),
+  // Only accounts the API reports as trusted (users/@me `trustTier`) may join.
+  // Enforced server-side at join (GameServer.joinClient); advertised in the
+  // lobby browser so a card can show a lock. No host UI yet: set through
+  // create_game / update_game_config.
+  trusted: z.boolean().optional(),
   maxTimerValue: zb.uint({ min: 1, max: 120 }).nullable().optional(), // In minutes
   customAllianceDuration: zb.uint({ max: 15 }).nullable().optional(), // In minutes; 0 disables alliances
   startDelay: zb.uint({ max: 600 }).nullable().optional(), // In seconds
@@ -495,7 +579,11 @@ const TokenSchema = z
 
 const EmojiSchema = zb.uint({ max: flattenedEmojiTable.length - 1 });
 
-export const GAME_ID_REGEX = /^[A-Za-z0-9]{8}$/;
+// 8–10: today's ids are 8 chars; multi-server ids (docs/MultiServer.md) will
+// be 10 (instance letter + 9 random). The range ships ahead of the new format
+// so every deployed client/server validates the longer ids before any are
+// minted — old bundles reject unknown id lengths at the Zod layer.
+export const GAME_ID_REGEX = /^[A-Za-z0-9]{8,10}$/;
 
 export const isValidGameID = (value: string): boolean =>
   GAME_ID_REGEX.test(value);
@@ -763,10 +851,10 @@ export const PlayerCosmeticRefsSchema = z.object({
   // One selected effect per slot: key = slot (effectType for trails, nukeType for
   // nuke explosions — see effectTypeForSlot), value = effect name.
   effects: z.record(z.string(), CosmeticNameSchema).optional(),
-  // The player claims to be playing under their verified account username
-  // (renders the blue check next to the name). The game server keeps the
-  // claim only when the join name exactly matches the account's resolved
-  // display name from /users/@me (Worker join → verifiedBadgeAllowed).
+  // Intent to play under the account name. The game server keeps the check
+  // only when the screened join name is the account's bare name
+  // (resolveVerifiedJoin in src/server/Privilege.ts); the name is never
+  // replaced and nothing sent here can mint a badge.
   verified: z.boolean().optional(),
 });
 
@@ -869,6 +957,18 @@ export const ServerPrestartMessageSchema = z.object({
   gameMapSize: z.enum(GameMapSize),
 });
 
+// An opaque, server-minted, per-game token. It identifies "everyone in this
+// game" to something outside the game — the desktop shell publishes it as the
+// Steam player group — without handing that something the game id, which is a
+// private lobby's join secret. Random, never a function of the id, and never
+// accepted back: the server reads it from nowhere, so it grants nothing.
+//
+// Not part of GameStartInfoSchema on purpose. That object is archived into the
+// publicly downloadable game record and emitted to telemetry; a token sitting
+// next to the game id in a public record is exactly the derivation this exists
+// to prevent. It rides the two server->client messages instead.
+const GroupToken = z.string().min(1).max(64);
+
 export const ServerStartGameMessageSchema = z.object({
   type: z.literal("start"),
   // Turns the client missed if they are late to the game.
@@ -878,6 +978,11 @@ export const ServerStartGameMessageSchema = z.object({
   // The clientID assigned to this connection by the server.
   // Absent for replays where the viewer has no player identity.
   myClientID: ID.optional(),
+  // The same token the lobby_info broadcasts carried, repeated here because a
+  // late joiner connects after the lobby phase and never sees one. Optional
+  // because singleplayer and replays synthesize this message locally with no
+  // server game behind it, so they have no token and must send none.
+  groupToken: GroupToken.optional(),
 });
 
 export const ServerDesyncSchema = z.object({
@@ -895,6 +1000,12 @@ export const ServerErrorSchema = z.object({
   type: z.literal("error"),
   error: z.string(),
   message: z.string().optional(),
+  // Build commit of the rejecting server, sent with version_mismatch so the
+  // client can log which build it must update to. Rides the same flip as
+  // ClientJoinMessageSchema.gitCommit: optional only so other errors can omit
+  // it — a pre-field bundle cannot decode the frame (zbin presence header
+  // shifts), the same ship-together tradeoff as PublicLobbyFullSchema.
+  gitCommit: z.string().max(64).optional(),
 });
 
 export const ServerLobbyInfoMessageSchema = z.object({
@@ -902,6 +1013,13 @@ export const ServerLobbyInfoMessageSchema = z.object({
   lobby: GameInfoSchema,
   // The clientID assigned to this connection by the server
   myClientID: ID,
+  // See GroupToken below. Deliberately a sibling of `lobby` rather than a
+  // field of GameInfoSchema: gameInfo() is also the body of several HTTP
+  // routes (Worker's /api/game/:id, the admin-bot routes, the lobby
+  // preview), and a token anyone can GET by game id is a token derived from
+  // the game id. On this message it only ever reaches a connected
+  // participant of this game.
+  groupToken: GroupToken.optional(),
 });
 
 // Broadcast by a finished private game's server to every still-connected client
@@ -964,6 +1082,31 @@ export const ClientSendLiveStatsSchema = z.object({
   stats: LiveStatsSchema,
 });
 
+// A closed enum: the API drops reports with a reason it does not know, so a
+// new value must land in infra (REPORT_REASONS) first.
+export const ReportReasonSchema = z.enum([
+  "botting",
+  "teaming",
+  "inappropriate_username",
+  "griefing",
+]);
+
+// A player reporting another player of the same game. The server keeps them
+// out of the turn log (who reported whom is staff-only) and emits them once,
+// as info.reports of the archived record.
+export const PlayerReportSchema = z.object({
+  reportedBy: ID,
+  reported: ID,
+  reason: ReportReasonSchema,
+});
+
+// Note: reportedBy is NOT sent - the server stamps it from the connection.
+export const ClientReportMessageSchema = z.object({
+  type: z.literal("report"),
+  reported: ID,
+  reason: ReportReasonSchema,
+});
+
 export const ClientHashSchema = z.object({
   type: z.literal("hash"),
   hash: zb.float(),
@@ -998,6 +1141,11 @@ export const ClientJoinMessageSchema = z.object({
   turnstileToken: z.string().nullable(),
   // Watch without playing: no spawn, no team, no lobby slot.
   spectator: z.boolean().optional(),
+  // Build commit of the client bundle. The sim only stays deterministic when
+  // every client in a game runs identical code, so the server rejects joins
+  // whose commit doesn't match its own (missing counts as a mismatch —
+  // pre-feature bundles are by definition stale).
+  gitCommit: z.string().max(64).optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
@@ -1006,6 +1154,8 @@ export const ClientRejoinMessageSchema = z.object({
   // Note: clientID is NOT sent - server looks it up from persistentID in token
   lastTurn: zb.uint(),
   token: TokenSchema,
+  // See ClientJoinMessageSchema.gitCommit.
+  gitCommit: z.string().max(64).optional(),
 });
 
 // Switch between playing and watching from the lobby screen. Lobby-phase only:
@@ -1026,6 +1176,7 @@ export const ClientMessageSchema = zb.discriminatedUnion("type", [
   ClientLogMessageSchema,
   ClientHashSchema,
   ClientSpectateMessageSchema,
+  ClientReportMessageSchema,
 ]);
 
 //
@@ -1046,6 +1197,9 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   num_turns: z.number(),
   winner: WinnerSchema,
   lobbyFillTime: z.number().nonnegative(),
+  // Absent on singleplayer records and on records read back from the API,
+  // which scrubs them like persistentID.
+  reports: PlayerReportSchema.array().optional(),
 });
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 

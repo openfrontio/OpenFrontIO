@@ -15,9 +15,19 @@ const TTL_TICKS = 30;
 /** Sentinel added to a player's shared-water set to signal "touches ocean". */
 const OCEAN_SENTINEL = -1;
 
+interface PlayerWater {
+  tileVersion: number;
+  waterVersion: number;
+  hasOcean: boolean;
+  lakes: Set<number>;
+}
+
 export class SharedWaterCache {
   private tick: number = -Infinity;
   private byPlayer: Map<Player, Set<number> | null> | null = null;
+  // Pass-1 result per player, reused while that player's border and the
+  // map's water are unchanged (most players, most rebuilds).
+  private playerWater = new Map<Player, PlayerWater>();
 
   constructor(private game: Game) {}
 
@@ -28,6 +38,39 @@ export class SharedWaterCache {
       this.tick = tick;
     }
     return this.byPlayer.get(player) ?? null;
+  }
+
+  private waterFor(player: Player, waterVersion: number): PlayerWater {
+    const game = this.game;
+    const tileVersion = player.tileChangeVersion();
+    const cached = this.playerWater.get(player);
+    if (
+      cached !== undefined &&
+      cached.tileVersion === tileVersion &&
+      cached.waterVersion === waterVersion
+    ) {
+      return cached;
+    }
+    let hasOcean = false;
+    const lakes = new Set<number>();
+    // The lake set is only membership-tested, so neighbor visit order does
+    // not matter — use the allocation-free iterator.
+    const visit = (neighbor: number) => {
+      if (!game.isWater(neighbor)) return;
+      if (game.isOcean(neighbor)) {
+        hasOcean = true;
+        return;
+      }
+      const comp = game.getWaterComponent(neighbor);
+      if (comp !== null) lakes.add(comp);
+    };
+    player.borderTiles().forEach((tile) => {
+      if (!game.isShore(tile)) return;
+      game.forEachNeighbor(tile, visit);
+    });
+    const entry = { tileVersion, waterVersion, hasOcean, lakes };
+    this.playerWater.set(player, entry);
+    return entry;
   }
 
   private build(): Map<Player, Set<number> | null> {
@@ -43,26 +86,11 @@ export class SharedWaterCache {
     >();
     const lakePartners = new Map<number, Player[]>();
 
+    const waterVersion = game.map().waterVersion();
     for (const player of game.players()) {
       if (player.type() === PlayerType.Bot) continue;
 
-      let hasOcean = false;
-      const lakes = new Set<number>();
-      // The lake set is only membership-tested, so neighbor visit order does
-      // not matter — use the allocation-free iterator.
-      const visit = (neighbor: number) => {
-        if (!game.isWater(neighbor)) return;
-        if (game.isOcean(neighbor)) {
-          hasOcean = true;
-          return;
-        }
-        const comp = game.getWaterComponent(neighbor);
-        if (comp !== null) lakes.add(comp);
-      };
-      for (const tile of player.borderTiles()) {
-        if (!game.isShore(tile)) continue;
-        game.forEachNeighbor(tile, visit);
-      }
+      const { hasOcean, lakes } = this.waterFor(player, waterVersion);
       playerToWater.set(player, { hasOcean, lakes });
 
       for (const c of lakes) {

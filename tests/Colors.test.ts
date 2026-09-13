@@ -1,4 +1,6 @@
-import { colord, Colord } from "colord";
+import { colord, Colord, extend } from "colord";
+import labPlugin from "colord/plugins/lab";
+import lchPlugin from "colord/plugins/lch";
 import defaultTheme from "../src/client/render/gl/default-theme.json";
 import { createThemeSettings } from "../src/client/render/gl/RenderSettings";
 import {
@@ -6,7 +8,10 @@ import {
   selectDistinctColorIndex,
 } from "../src/client/theme/ColorAllocator";
 import { SettingsTheme } from "../src/client/theme/ThemeProvider";
-import { ColoredTeams } from "../src/core/game/Game";
+import type { PlayerView } from "../src/client/view/PlayerView";
+import { ColoredTeams, PlayerType } from "../src/core/game/Game";
+
+extend([labPlugin, lchPlugin]);
 
 const mockColors: Colord[] = [
   colord({ r: 255, g: 0, b: 0 }),
@@ -59,7 +64,7 @@ describe("ColorAllocator", () => {
     expect(match2).toBe(false);
   });
 
-  test("assignBotColor returns deterministic color from botColors", () => {
+  test("assignColor is deterministic per ID even with a self-fallback pool", () => {
     const allocator = new ColorAllocator(mockColors, mockColors);
 
     const id1 = "bot123";
@@ -138,6 +143,54 @@ describe("colorblind theme", () => {
     expect(border.toHsl().l).toBeCloseTo(fill.toHsl().l * 0.6, 0);
   });
 });
+
+// Tribes (bots) must be tellable from nations by territory color alone
+// (#4845). Colors are allocated through the runtime path
+// (SettingsTheme.territoryColor) rather than read off the theme JSON, so the
+// type dispatch is covered too. Drawing more players than any pool holds
+// exercises the full pool plus the recycling path.
+describe.each(["default", "colorblind"] as const)(
+  "tribe vs nation territory colors — %s theme",
+  (themeName) => {
+    // territoryColor() only reads team/type/id from the player.
+    const player = (type: PlayerType, id: string) =>
+      ({
+        team: () => null,
+        type: () => type,
+        id: () => id,
+      }) as unknown as PlayerView;
+
+    const assignedColors = (type: PlayerType): Colord[] => {
+      const theme = new SettingsTheme(createThemeSettings(themeName));
+      return Array.from({ length: 64 }, (_, i) =>
+        theme.territoryColor(player(type, `${type}-${i}`)),
+      );
+    };
+
+    test("bot territory colors are near-neutral so tribes read as gray", () => {
+      const chromatic = assignedColors(PlayerType.Bot)
+        .filter((c) => c.toLch().c >= 12)
+        .map((c) => c.toHex());
+      expect(chromatic).toEqual([]);
+    });
+
+    test("bots use the flat Bot team color in every mode", () => {
+      const theme = new SettingsTheme(createThemeSettings(themeName));
+      const teamless = theme.territoryColor(player(PlayerType.Bot, "bot-1"));
+      expect(teamless.isEqual(theme.teamColor(ColoredTeams.Bot))).toBe(true);
+    });
+
+    test("every nation color is perceptually far from every bot color", () => {
+      const bots = assignedColors(PlayerType.Bot);
+      const confusable = assignedColors(PlayerType.Nation).flatMap((nation) =>
+        bots
+          .filter((bot) => nation.delta(bot) <= 0.1)
+          .map((bot) => `${nation.toHex()} vs ${bot.toHex()}`),
+      );
+      expect(confusable).toEqual([]);
+    });
+  },
+);
 
 describe("selectDistinctColor", () => {
   test("returns the most distant color", () => {

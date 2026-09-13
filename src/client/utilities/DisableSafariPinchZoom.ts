@@ -98,3 +98,48 @@ export function installDoubleTapZoomBlocker(
     { passive: false },
   );
 }
+
+/**
+ * Blocks the page-level pinch-to-zoom gesture in browsers that deliver it as
+ * a ctrl+wheel event — i.e. everything that is not Safari.
+ *
+ * {@link installSafariPinchZoomBlocker} covers WebKit, which reports a pinch
+ * through `GestureEvent`. Chrome and Firefox instead synthesize a `wheel`
+ * event with `ctrlKey` set, and the only listener for that lives on the map
+ * canvas (see {@link ../InputHandler}). HUD overlays are stacked above the
+ * canvas rather than nested inside it, so a pinch over the leaderboard, the
+ * build menu or any other panel never reaches that listener, nothing calls
+ * `preventDefault()`, and the browser zooms the whole page instead of the
+ * map.
+ *
+ * The listener is registered in the capture phase on purpose: HUD components
+ * such as `PlayerPanel` and `EmojiTable` call `stopPropagation()` on `wheel`
+ * to keep their own scrolling, which would stop a bubble-phase listener on
+ * `document` from ever running.
+ *
+ * Only ctrl+wheel is cancelled. A plain wheel keeps scrolling the panels that
+ * are `overflow-y-auto`, and the canvas listener still receives the event and
+ * zooms the map, because cancelling the browser's default action does not
+ * stop the event from propagating.
+ *
+ * The listener lives for the document's lifetime; the browser releases it
+ * when the page is torn down, so no disposer is needed.
+ *
+ * @param target - The EventTarget to attach the listener to. Defaults to
+ *   `document`.
+ *
+ * @see https://github.com/openfrontio/OpenFrontIO/issues/5098
+ */
+export function installCtrlWheelZoomBlocker(
+  target: EventTarget = document,
+): void {
+  target.addEventListener(
+    "wheel",
+    (e) => {
+      if ((e as WheelEvent).ctrlKey) {
+        e.preventDefault();
+      }
+    },
+    { capture: true, passive: false },
+  );
+}

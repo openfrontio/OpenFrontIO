@@ -7,6 +7,7 @@ import {
   getUserMe,
   invalidateUserMe,
 } from "../Api";
+import { showInGameAlert } from "../InGameModal";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./CapIcon";
@@ -47,7 +48,7 @@ export class RewardsPanel extends LitElement {
     try {
       const result = await claimReward(reward.id);
       if (result === false) {
-        alert(translateText("account_modal.claim_failed"));
+        await showInGameAlert(translateText("account_modal.claim_failed"));
         return;
       }
       invalidateUserMe();
@@ -79,7 +80,7 @@ export class RewardsPanel extends LitElement {
     try {
       const result = await claimAllRewards();
       if (result === false) {
-        alert(translateText("account_modal.claim_failed"));
+        await showInGameAlert(translateText("account_modal.claim_failed"));
         return;
       }
       invalidateUserMe();

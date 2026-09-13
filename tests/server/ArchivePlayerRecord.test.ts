@@ -1,121 +1,139 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("../../src/server/Archive", () => ({
-  archive: vi.fn(),
-  finalizeGameRecord: (record: unknown) => record,
-}));
-
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameType } from "../../src/core/game/Game";
-import { archive } from "../../src/server/Archive";
-import { GameServer } from "../../src/server/GameServer";
+import { PartialGameRecord } from "../../src/core/Schemas";
+import {
+  cid,
+  makeClient,
+  makeGame,
+  mockWsOf,
+  startGame,
+} from "../util/GameServerHarness";
 
-describe("archiveGame player records", () => {
-  let mockLogger: any;
+// What the game writes into the record it archives, driven through real
+// joins and starts and read off the injected archive.
+
+// Lets the fetchTribes .then/.catch chain settle.
+async function flushMicrotasks() {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+describe("archived game records", () => {
+  let archive: ReturnType<
+    typeof vi.fn<(r: PartialGameRecord) => Promise<void>>
+  >;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockLogger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    vi.useFakeTimers();
+    archive = vi.fn(async () => {});
   });
 
-  it("preserves simulation inputs (teamIndex, friends, isLobbyCreator) so replays stay in sync", () => {
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Public,
-    } as any);
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
 
+  const archived = () => archive.mock.calls[0][0];
+
+  it("preserves simulation inputs (teamIndex, friends, isLobbyCreator) so replays stay in sync", async () => {
     // Matchmade 2v2: the server stamps teamIndex on the game start info and
     // every client pins teams from it. The archived record is replayed
     // through the same team assignment, so these fields must survive
     // archiving — dropping them makes replays re-derive different teams and
     // desync from the recorded hashes.
-    (game as any).gameStartInfo = {
-      gameID: "test-game",
-      lobbyCreatedAt: 0,
+    const ALICE = cid("alice");
+    const BOB = cid("bob");
+    const game = makeGame({
       config: { gameType: GameType.Public },
-      players: [
-        {
-          clientID: "clientAAA",
-          username: "alice",
-          clanTag: "AA",
-          cosmetics: {},
-          isLobbyCreator: true,
-          friends: ["clientBBB"],
-          teamIndex: 0,
-        },
-        {
-          clientID: "clientBBB",
-          username: "bob",
-          clanTag: null,
-          cosmetics: {},
-          isLobbyCreator: false,
-          friends: [],
-          teamIndex: 1,
-        },
-      ],
-    };
+      creatorPersistentID: "alice-pid",
+      matchmakingTeams: [["alice-pub"], ["bob-pub"]],
+      deps: { archive },
+    });
+    const alice = makeClient({
+      clientID: ALICE,
+      persistentID: "alice-pid",
+      username: "alice",
+      clanTag: "AA",
+      publicId: "alice-pub",
+      friends: ["bob-pub"],
+      ip: "1.1.1.1",
+    });
+    const bob = makeClient({
+      clientID: BOB,
+      persistentID: "bob-pid",
+      username: "bob",
+      publicId: "bob-pub",
+      ip: "2.2.2.2",
+    });
+    game.joinClient(alice);
+    game.joinClient(bob);
+    startGame(game);
 
-    (game as any).archiveGame();
+    // Both back the same winner: 2 of 2 IPs archives the game.
+    for (const c of [alice, bob]) {
+      await mockWsOf(c).emit({
+        type: "winner",
+        winner: ["player", ALICE],
+        allPlayersStats: {},
+      });
+    }
 
     expect(archive).toHaveBeenCalledTimes(1);
-    const record = vi.mocked(archive).mock.calls[0][0] as any;
-    const [alice, bob] = record.info.players;
-
-    expect(alice).toMatchObject({
-      clientID: "clientAAA",
+    const [a, b] = archived().info.players;
+    expect(a).toMatchObject({
+      clientID: ALICE,
+      username: "alice",
+      clanTag: "AA",
+      persistentID: "alice-pid",
       teamIndex: 0,
-      friends: ["clientBBB"],
+      friends: [BOB],
       isLobbyCreator: true,
     });
-    expect(bob).toMatchObject({
-      clientID: "clientBBB",
+    expect(b).toMatchObject({
+      clientID: BOB,
       teamIndex: 1,
-      friends: [],
       isLobbyCreator: false,
     });
+    // No friends in the game is recorded as the field being absent.
+    expect(b.friends).toBeUndefined();
+    expect(archived().info.winner).toEqual(["player", ALICE]);
   });
 
-  it("carries custom tribe names into the archived record for infra ingest and replays", () => {
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Public,
-    } as any);
+  it("carries custom tribe names into the archived record for infra ingest and replays", async () => {
+    const fetchTribes = vi.fn(async () => [
+      { name: "Dragon Riders" },
+      { name: "Night Wolves" },
+    ]);
+    const game = makeGame({
+      config: { gameType: GameType.Public, bots: 2 },
+      deps: { archive, fetchTribes },
+    });
+    game.joinClient(makeClient({ publicId: "someone-pub" }));
 
-    (game as any).gameStartInfo = {
-      gameID: "test-game",
-      lobbyCreatedAt: 0,
-      config: { gameType: GameType.Public },
-      players: [],
-      tribes: [{ name: "Dragon Riders" }, { name: "Night Wolves" }],
-    };
-
-    (game as any).archiveGame();
+    game.prestart();
+    await flushMicrotasks();
+    game.start();
+    // Ending an unfinished game archives it as it stands.
+    await game.end();
 
     expect(archive).toHaveBeenCalledTimes(1);
-    const record = vi.mocked(archive).mock.calls[0][0] as any;
-    expect(record.info.tribes).toEqual([
+    expect(archived().info.tribes).toEqual([
       { name: "Dragon Riders" },
       { name: "Night Wolves" },
     ]);
   });
 
-  it("omits tribes from the archived record when none were fetched", () => {
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Public,
-    } as any);
+  it("omits tribes from the archived record when none were fetched", async () => {
+    const game = makeGame({
+      config: { gameType: GameType.Public, bots: 2 },
+      deps: { archive },
+    });
+    game.joinClient(makeClient());
 
-    (game as any).gameStartInfo = {
-      gameID: "test-game",
-      lobbyCreatedAt: 0,
-      config: { gameType: GameType.Public },
-      players: [],
-    };
+    startGame(game);
+    await game.end();
 
-    (game as any).archiveGame();
-
-    const record = vi.mocked(archive).mock.calls[0][0] as any;
-    expect(record.info.tribes).toBeUndefined();
+    expect(archive).toHaveBeenCalledTimes(1);
+    expect(archived().info.tribes).toBeUndefined();
   });
 });

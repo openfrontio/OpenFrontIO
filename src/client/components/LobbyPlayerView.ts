@@ -14,14 +14,19 @@ import {
 } from "../../core/game/Game";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
-import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
+import { ClientID, ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
 import { Theme, themeProvider } from "../theme/ThemeProvider";
-import { getTranslatedPlayerTeamLabel, translateText } from "../Utils";
+import {
+  getTranslatedPlayerTeamLabel,
+  resolveTeamClanTag,
+  translateText,
+} from "../Utils";
 
 export interface TeamPreviewData {
   team: Team;
   players: ClientInfo[];
+  clanTag?: string | null;
 }
 
 @customElement("lobby-player-view")
@@ -44,6 +49,9 @@ export class LobbyTeamView extends LitElement {
     return themeProvider.current();
   }
   @state() private showTeamColors: boolean = false;
+  private _clanUpdateTimeout: number | null = null;
+  private _teamClanTags: Map<Team, string | null> = new Map();
+  private _viewerFriends: ReadonlySet<ClientID> = new Set();
 
   // Spectators are in the lobby roster (flagged) but hold no seat and never
   // reach the simulation — so the count header, the team preview and both
@@ -69,6 +77,15 @@ export class LobbyTeamView extends LitElement {
   }
 
   willUpdate(changedProperties: Map<string, any>) {
+    if (
+      changedProperties.has("clients") ||
+      changedProperties.has("currentClientID")
+    ) {
+      const self = this.currentClientID
+        ? this.clients.find((c) => c.clientID === this.currentClientID)
+        : undefined;
+      this._viewerFriends = new Set(self?.friends ?? []);
+    }
     // Recompute team preview when relevant properties change
     // clients is updated from WebSocket lobby_info events
     if (
@@ -81,6 +98,14 @@ export class LobbyTeamView extends LitElement {
       const teamsList = this.getTeamList();
       this.computeTeamPreview(teamsList);
       this.showTeamColors = teamsList.length <= 7;
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this._clanUpdateTimeout !== null) {
+      window.clearTimeout(this._clanUpdateTimeout);
+      this._clanUpdateTimeout = null;
     }
   }
 
@@ -181,12 +206,13 @@ export class LobbyTeamView extends LitElement {
           (client) => {
             const displayName = this.getClientDisplayName(client);
             return html`<div
-              class="px-2 py-1 rounded-sm mb-1 text-xs text-white border
+              class="px-2 py-1 rounded-sm mb-1 text-xs text-white border break-words
                 ${this.isCurrentPlayer(client)
                 ? "bg-malibu-blue/20 border-sky-500/40"
                 : "bg-gray-700/70 border-transparent"}"
             >
               ${displayName} ${this.renderVerifiedBadge(client)}
+              ${this.renderFriendBadge(client)}
             </div>`;
           },
         )}
@@ -249,7 +275,8 @@ export class LobbyTeamView extends LitElement {
             : ""}"
         >
           <span class="text-white"
-            >${displayName} ${this.renderVerifiedBadge(client)}</span
+            >${displayName} ${this.renderVerifiedBadge(client)}
+            ${this.renderFriendBadge(client)}</span
           >
           ${this.renderRevealToggle(client.clientID)}
           ${client.clientID === this.lobbyCreatorClientID
@@ -283,7 +310,8 @@ export class LobbyTeamView extends LitElement {
         ? this.effectiveNationCount
         : this.teamMaxSize;
 
-    const teamLabel = getTranslatedPlayerTeamLabel(preview.team);
+    const clanTag = this._teamClanTags.get(preview.team) ?? null;
+    const teamLabel = getTranslatedPlayerTeamLabel(preview.team, clanTag);
 
     return html`
       <div
@@ -295,14 +323,18 @@ export class LobbyTeamView extends LitElement {
         <div
           class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
         >
-          ${this.showTeamColors
-            ? html` <span
-                class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg)"
-                style="--bg:${this.teamHeaderColor(preview.team)};"
-              ></span>`
-            : null}
-          <span class="truncate">${teamLabel}</span>
-          <span class="text-white/90">${displayCount}/${maxTeamSize}</span>
+          <div class="flex items-center gap-1.5 min-w-0">
+            ${this.showTeamColors
+              ? html` <span
+                  class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg) shrink-0"
+                  style="--bg:${this.teamHeaderColor(preview.team)};"
+                ></span>`
+              : null}
+            <span class="truncate">${teamLabel}</span>
+          </div>
+          <span class="text-white/90 font-bold text-[13px] shrink-0"
+            >${displayCount}/${maxTeamSize}</span
+          >
         </div>
         <div class="p-2 ${isEmpty ? "" : "flex flex-col gap-1.5"}">
           ${isEmpty
@@ -320,9 +352,11 @@ export class LobbyTeamView extends LitElement {
                       ? "bg-malibu-blue/20 border-sky-500/40"
                       : "bg-gray-700/70 border-transparent"}"
                   >
-                    <span class="truncate text-white"
-                      >${displayName} ${this.renderVerifiedBadge(p)}</span
-                    >
+                    <span class="flex items-center gap-1 min-w-0">
+                      <span class="truncate text-white">${displayName}</span>
+                      ${this.renderVerifiedBadge(p)}
+                      ${this.renderFriendBadge(p)}
+                    </span>
                     ${this.renderRevealToggle(p.clientID)}
                     ${p.clientID === this.lobbyCreatorClientID
                       ? html`<span class="ml-2 text-[11px] text-green-300"
@@ -396,6 +430,11 @@ export class LobbyTeamView extends LitElement {
     if (this.gameMode !== GameMode.Team) {
       this.teamPreview = [];
       this.teamMaxSize = 0;
+      this._teamClanTags.clear();
+      if (this._clanUpdateTimeout !== null) {
+        window.clearTimeout(this._clanUpdateTimeout);
+        this._clanUpdateTimeout = null;
+      }
       return;
     }
 
@@ -406,6 +445,7 @@ export class LobbyTeamView extends LitElement {
         { team: ColoredTeams.Humans, players: [...this.activePlayers] },
         { team: ColoredTeams.Nations, players: [] },
       ];
+      this.triggerClanUpdate();
       return;
     }
 
@@ -459,6 +499,32 @@ export class LobbyTeamView extends LitElement {
       team: t,
       players: buckets.get(t) ?? [],
     }));
+    this.triggerClanUpdate();
+  }
+
+  private triggerClanUpdate() {
+    if (this._teamClanTags.size === 0) {
+      this.updateTeamClanTags();
+    } else {
+      this.scheduleClanUpdate();
+    }
+  }
+
+  private scheduleClanUpdate() {
+    if (this._clanUpdateTimeout !== null) return;
+    this._clanUpdateTimeout = window.setTimeout(() => {
+      this.updateTeamClanTags();
+      this._clanUpdateTimeout = null;
+      this.requestUpdate();
+    }, 500);
+  }
+
+  private updateTeamClanTags() {
+    this._teamClanTags.clear();
+    for (const preview of this.teamPreview) {
+      const tag = resolveTeamClanTag(preview.players);
+      this._teamClanTags.set(preview.team, tag);
+    }
   }
 
   private isCurrentPlayer(client: ClientInfo): boolean {
@@ -503,6 +569,30 @@ export class LobbyTeamView extends LitElement {
         fill="none"
         stroke-linecap="round"
         stroke-linejoin="round"
+      ></path>
+    </svg>`;
+  }
+
+  // A mark for players on the viewer's friends list
+  private renderFriendBadge(client: ClientInfo) {
+    if (!this._viewerFriends.has(client.clientID)) return html``;
+    if (this.isCurrentPlayer(client)) return html``;
+    if (this.anonymizeNames || this.userSettings.anonymousNames())
+      return html``;
+    return html`<svg
+      viewBox="0 0 24 24"
+      class="lobby-friend-badge inline-block w-4 h-4 align-[-3px] text-emerald-400 shrink-0"
+      fill="currentColor"
+      aria-label=${translateText("friends.lobby_marker")}
+    >
+      <title>${translateText("friends.lobby_marker")}</title>
+      <circle cx="9" cy="8" r="3.6"></circle>
+      <path
+        d="M9 13.2c-3.4 0-6.3 1.7-6.3 3.9V20h12.6v-2.9c0-2.2-2.9-3.9-6.3-3.9z"
+      ></path>
+      <circle cx="17.4" cy="8.6" r="2.9"></circle>
+      <path
+        d="M17.4 13.4c-.7 0-1.3.06-1.9.18 1.2 1 1.9 2.24 1.9 3.52V20h5.4v-2.6c0-1.9-2.4-4-5.4-4z"
       ></path>
     </svg>`;
   }

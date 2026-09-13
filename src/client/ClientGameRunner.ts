@@ -1,17 +1,18 @@
 import { Config } from "src/core/configuration/Config";
-import { translateText } from "../client/Utils";
+import { ClientEnv } from "../client/ClientEnv";
+import { reloadForUpdate, translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
   ClientID,
   GameID,
   GameRecord,
   GameStartInfo,
+  GroupTokenEvent,
   LobbyInfoEvent,
   PlayerCosmeticRefs,
-  PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
-import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
+import { findClosestBy, replacer } from "../core/Util";
 import {
   BuildableUnit,
   PlayerType,
@@ -25,7 +26,6 @@ import {
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-  WinUpdate,
 } from "../core/game/GameUpdates";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
@@ -34,7 +34,7 @@ import {
   UserSettings,
 } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
-import { getPersistentID } from "./Auth";
+import { isDesktopShell } from "./DesktopShell";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
@@ -49,7 +49,7 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
-import { endGame, startGame, startTime } from "./LocalPersistantStats";
+import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
@@ -69,6 +69,7 @@ import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
+import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import {
   applyGraphicsOverrides,
   createRenderSettings,
@@ -126,7 +127,7 @@ export function joinLobby(
 
   const userSettings: UserSettings = new UserSettings();
   themeProvider.reset(); // fresh colour allocators for this game
-  startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
+  goldRateTracker.resetAll(); // drop samples from a previous in-page game
 
   const transport = new Transport(lobbyConfig, eventBus);
 
@@ -202,6 +203,12 @@ export function joinLobby(
   };
 
   const onmessage = (message: ServerMessage) => {
+    // Before the per-type handling below: the token rides two different
+    // messages and the listener does not care which one delivered it.
+    const groupToken = groupTokenOf(message);
+    if (groupToken !== undefined) {
+      eventBus.emit(new GroupTokenEvent(groupToken));
+    }
     if (message.type === "lobby_info") {
       // Server tells us our assigned clientID
       clientID = message.myClientID;
@@ -244,8 +251,15 @@ export function joinLobby(
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
       resolvePrestart();
+      // Everything in the start message EXCEPT the group token. This log is
+      // the whole message verbatim and players paste it into bug reports;
+      // the token is the one field in it that must not travel that way.
       console.log(
-        `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
+        `lobby: game started: ${JSON.stringify(
+          loggableStartMessage(message),
+          replacer,
+          2,
+        )}`,
       );
       // Server tells us our assigned clientID (also sent on start for late joins)
       clientID = message.myClientID;
@@ -337,6 +351,32 @@ export function joinLobby(
             },
           }),
         );
+      } else if (message.error === "version_mismatch") {
+        console.info(
+          `version mismatch: bundle ${ClientEnv.gitCommit()}, server ${message.gitCommit}`,
+        );
+        // The game's server runs a different build than this bundle. On the
+        // desktop the shell updates its local overlay itself, so just say
+        // what's happening and let its update bar take it from there. On the
+        // web, fork on where the game lives: a cross-host game means OUR
+        // shell is simply a different deployment's — reloading would fetch
+        // the same wrong build, so navigate to the game's own host, whose
+        // shell serves the matching bundle (and map). An own-host game means
+        // this tab is stale (left open across a deploy): reload.
+        if (isDesktopShell()) {
+          void showInGameAlert(translateText("update_available.desktop"));
+        } else {
+          const r = ClientEnv.resolveGame(lobbyConfig.gameID);
+          if (r.kind === "cross") {
+            window.location.href = `https://${r.host}/game/${lobbyConfig.gameID}${window.location.search}`;
+          } else {
+            showInGameAlert(translateText("update_available.message")).then(
+              () => {
+                reloadForUpdate();
+              },
+            );
+          }
+        }
       } else {
         showErrorModal(
           message.error,
@@ -699,7 +739,10 @@ async function createClientGame(
     // so they switch live, like the leaderboard.
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.anonymousNames`,
-      () => webglBuilder.refreshNames(gameView),
+      () => {
+        webglBuilder.refreshNames(gameView);
+        gameView.invalidateTeamClanTags();
+      },
       { signal: graphicsListenerAbort.signal },
     );
 
@@ -736,6 +779,7 @@ async function createClientGame(
     );
 
     // Loaded on demand so lil-gui and the debug GUI stay out of the main bundle.
+    // Two folders: "Effect Editor" and "Render Settings".
     let debugGui: { open(): void; destroy(): void } | null = null;
     let debugGuiLoading = false;
     eventBus.on(ToggleRenderDebugGuiEvent, () => {
@@ -746,6 +790,10 @@ async function createClientGame(
           .then(({ createDebugGui }) => {
             debugGui = createDebugGui(
               view.getSettings(),
+              {
+                setOverride: (effectType, attrs) =>
+                  webglBuilder.setEffectOverride(effectType, attrs),
+              },
               resolveRenderSettings,
               refreshDerivedGraphics,
             );
@@ -865,38 +913,6 @@ export class ClientGameRunner {
     return !!this.myPlayer?.isAlive();
   }
 
-  private async saveGame(update: WinUpdate) {
-    if (!this.clientID) {
-      return;
-    }
-    const players: PlayerRecord[] = [
-      {
-        persistentID: getPersistentID(),
-        username: this.lobby.playerName,
-        clanTag: this.lobby.playerClanTag ?? null,
-        clientID: this.clientID,
-        stats: update.allPlayersStats[this.clientID],
-      },
-    ];
-
-    if (this.lobby.gameStartInfo === undefined) {
-      throw new Error("missing gameStartInfo");
-    }
-    const record = createPartialGameRecord(
-      this.lobby.gameStartInfo.gameID,
-      this.lobby.gameStartInfo.config,
-      players,
-      // Not saving turns locally
-      [],
-      startTime(),
-      Date.now(),
-      update.winner,
-      this.lobby.gameStartInfo.lobbyCreatedAt,
-      this.lobby.gameStartInfo.visibleAt,
-    );
-    endGame(record);
-  }
-
   public start() {
     this.soundManager.playBackgroundMusic();
     console.log("starting client game");
@@ -966,10 +982,6 @@ export class ClientGameRunner {
 
       // Reset tick delay for next measurement
       this.currentTickDelay = undefined;
-
-      if (gu.updates[GameUpdateType.Win].length > 0) {
-        this.saveGame(gu.updates[GameUpdateType.Win][0]);
-      }
     });
 
     const onconnect = () => {
@@ -1455,10 +1467,10 @@ export class ClientGameRunner {
     const canBuild = this.canBoatAttack(buildables);
     if (canBuild === false) return false;
 
-    // TODO: Global enable flag
-    // TODO: Global limit autoboat to nearby shore flag
-    // if (!enableAutoBoat) return false;
-    // if (!limitAutoBoatNear) return true;
+    // TODO: honor a global auto-boat enable flag once it exists.
+    // if (!this.userSettings.autoBoat()) return false;
+    // TODO: honor a global "limit auto-boat to nearby shore" flag once it exists.
+    // if (!this.userSettings.autoBoatNearbyOnly()) return true;
     const distanceSquared = this.gameView.euclideanDistSquared(tile, canBuild);
     const limit = 100;
     const limitSquared = limit * limit;

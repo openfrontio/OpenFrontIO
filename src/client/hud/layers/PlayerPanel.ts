@@ -23,6 +23,7 @@ import {
   SwapRocketDirectionEvent,
 } from "../../InputHandler";
 import {
+  PlayerReportedEvent,
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
   SendEmbargoAllIntentEvent,
@@ -35,18 +36,21 @@ import {
   renderDuration,
   renderNumber,
   renderTroops,
+  showToast,
   translateText,
 } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import "./PlayerModerationModal";
+import "./PlayerReportModal";
 import "./SendResourceModal";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const chatIcon = assetUrl("images/ChatIconWhite.svg");
 const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
 const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
+const reportIcon = assetUrl("images/SirenIconWhite.svg");
 const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
 const stopTradingIcon = assetUrl("images/StopIconWhite.svg");
 const targetIcon = assetUrl("images/TargetIconWhite.svg");
@@ -74,6 +78,10 @@ export class PlayerPanel extends LitElement implements Controller {
   @state() private otherProfile: PlayerProfile | null = null;
   @state() private suppressNextHide: boolean = false;
   @state() private moderationTarget: PlayerView | null = null;
+  @state() private reportTarget: PlayerView | null = null;
+  // clientIDs this client has reported this game (confirmed sent by
+  // Transport); the button locks after one.
+  private reportedClientIDs = new Set<string>();
   @state() private playerRole: string | null = null;
   // Whether this game is a publicly listed lobby. Kept out of
   // GameStartInfo (never touches records), so it's fetched from the worker.
@@ -103,6 +111,11 @@ export class PlayerPanel extends LitElement implements Controller {
     eventBus.on(SwapRocketDirectionEvent, (event) => {
       this.uiState.rocketDirectionUp = event.rocketDirectionUp;
       this.requestUpdate();
+    });
+    eventBus.on(PlayerReportedEvent, (event) => {
+      this.reportedClientIDs.add(event.reported);
+      this.requestUpdate();
+      showToast(translateText("player_panel.report_sent"), "green");
     });
   }
   init() {
@@ -171,6 +184,7 @@ export class PlayerPanel extends LitElement implements Controller {
     this.actions = actions;
     this.tile = tile;
     this.moderationTarget = null;
+    this.reportTarget = null;
     this.isVisible = true;
     this.requestUpdate();
   }
@@ -186,6 +200,7 @@ export class PlayerPanel extends LitElement implements Controller {
     this.sendTarget = target;
     this.sendMode = "gold";
     this.moderationTarget = null;
+    this.reportTarget = null;
     this.isVisible = true;
     this.requestUpdate();
   }
@@ -195,6 +210,7 @@ export class PlayerPanel extends LitElement implements Controller {
     this.sendMode = "none";
     this.sendTarget = null;
     this.moderationTarget = null;
+    this.reportTarget = null;
     this.requestUpdate();
   }
 
@@ -353,6 +369,30 @@ export class PlayerPanel extends LitElement implements Controller {
     this.hide();
   };
 
+  private openReport(e: MouseEvent, other: PlayerView) {
+    e.stopPropagation();
+    this.suppressNextHide = true;
+    this.reportTarget = other;
+  }
+
+  private closeReport = () => {
+    this.reportTarget = null;
+  };
+
+  // Anyone may report another human of a multiplayer game. Singleplayer
+  // records are client-authored and the API ignores their reports; once the
+  // game is decided the record has been archived and the server refuses.
+  private canReport(my: PlayerView, other: PlayerView): boolean {
+    return (
+      this.g.config().gameConfig().gameType !== GameType.Singleplayer &&
+      !this.g.config().isReplay() &&
+      !this.g.gameOver() &&
+      other !== my &&
+      other.type() === PlayerType.Human &&
+      !!other.clientID()
+    );
+  }
+
   private handleToggleRocketDirection(e: Event) {
     e.stopPropagation();
     const next = !this.uiState.rocketDirectionUp;
@@ -469,23 +509,42 @@ export class PlayerPanel extends LitElement implements Controller {
     other: PlayerView,
     isAdmin: boolean,
   ) {
-    if (!my.isLobbyCreator() && !isAdmin) return html``;
+    const canReport = this.canReport(my, other);
     // The host of a publicly listed game cannot kick (server-enforced), so
     // don't offer the panel; admins keep it for moderation.
-    if (this.gameListed && !isAdmin) return html``;
+    const canModerate =
+      (my.isLobbyCreator() || isAdmin) && (!this.gameListed || isAdmin);
+    if (!canReport && !canModerate) return html``;
+    const reported = this.reportedClientIDs.has(other.clientID() ?? "");
+    const reportTitle = reported
+      ? translateText("player_panel.reported")
+      : translateText("player_panel.report");
     const moderationTitle = translateText("player_panel.moderation");
 
     return html`
       <ui-divider></ui-divider>
       <div class="grid auto-cols-fr grid-flow-col gap-1">
-        ${actionButton({
-          onClick: (e: MouseEvent) => this.openModeration(e, other),
-          icon: shieldIcon,
-          iconAlt: "Moderation",
-          title: moderationTitle,
-          label: moderationTitle,
-          type: "red",
-        })}
+        ${canReport
+          ? actionButton({
+              onClick: (e: MouseEvent) => this.openReport(e, other),
+              icon: reportIcon,
+              iconAlt: "Report",
+              title: reportTitle,
+              label: reportTitle,
+              type: "red",
+              disabled: reported,
+            })
+          : ""}
+        ${canModerate
+          ? actionButton({
+              onClick: (e: MouseEvent) => this.openModeration(e, other),
+              icon: shieldIcon,
+              iconAlt: "Moderation",
+              title: moderationTitle,
+              label: moderationTitle,
+              type: "red",
+            })
+          : ""}
       </div>
     `;
   }
@@ -509,7 +568,8 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   private renderIdentityRow(other: PlayerView, my: PlayerView) {
-    const flagCode = other.cosmetics.flag;
+    const flagPath = other.cosmetics.flag;
+    const flagCode = flagPath?.match(/\/flags\/(.+)\.svg$/)?.[1];
     const country =
       typeof flagCode === "string"
         ? Countries.find((c) => c.code === flagCode)
@@ -522,10 +582,11 @@ export class PlayerPanel extends LitElement implements Controller {
 
     return html`
       <div class="flex items-center gap-2.5 flex-wrap">
-        ${country && typeof flagCode === "string"
+        ${flagPath
           ? html`<img
-              src=${assetUrl(`flags/${encodeURIComponent(flagCode)}.svg`)}
-              alt=${country?.name ?? "Flag"}
+              src=${assetUrl(flagPath)}
+              alt=${country?.name ?? translateText("cosmetics.type_flag")}
+              title=${country?.name ?? translateText("cosmetics.type_flag")}
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {
                 (e.target as HTMLImageElement).style.display = "none";
@@ -655,11 +716,6 @@ export class PlayerPanel extends LitElement implements Controller {
   private renderAlliances(other: PlayerView) {
     const allies = other.allies();
 
-    const nameCollator = new Intl.Collator(undefined, { sensitivity: "base" });
-    const alliesSorted = [...allies].sort((a, b) =>
-      nameCollator.compare(a.displayName(), b.displayName()),
-    );
-
     // Map ally PlayerID → expiry tick so each ally shows its own remaining time.
     const expiryByAlly = new Map<string, number>();
     for (const alliance of other.alliances()) {
@@ -671,6 +727,15 @@ export class PlayerPanel extends LitElement implements Controller {
       const remainingTicks = expiresAt - this.g.ticks();
       return Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
     };
+
+    // Soonest-expiring alliances first; ties (and no-expiry allies) by name.
+    const nameCollator = new Intl.Collator(undefined, { sensitivity: "base" });
+    const alliesSorted = [...allies].sort((a, b) => {
+      const remainingA = remainingSecondsFor(a) ?? Infinity;
+      const remainingB = remainingSecondsFor(b) ?? Infinity;
+      if (remainingA !== remainingB) return remainingA - remainingB;
+      return nameCollator.compare(a.displayName(), b.displayName());
+    });
 
     return html`
       <div class="select-none">
@@ -694,7 +759,7 @@ export class PlayerPanel extends LitElement implements Controller {
           class="rounded-lg bg-zinc-800/70 ring-1 ring-zinc-700/60 w-full min-w-0"
         >
           <ul
-            class="max-h-30 overflow-y-auto p-2
+            class="max-h-48 overflow-y-auto p-2
                  flex flex-wrap gap-1.5
                  scrollbar-thin scrollbar-thumb-zinc-600 hover:scrollbar-thumb-zinc-500 scrollbar-track-zinc-800"
             role="list"
@@ -1011,7 +1076,7 @@ export class PlayerPanel extends LitElement implements Controller {
                           ></send-resource-modal>
                         `
                       : ""}
-                    ${this.moderationTarget && !isSpectator
+                    ${this.moderationTarget
                       ? html`
                           <player-moderation-modal
                             .open=${true}
@@ -1025,6 +1090,16 @@ export class PlayerPanel extends LitElement implements Controller {
                             @close=${this.closeModeration}
                             @kicked=${this.handleModerationKicked}
                           ></player-moderation-modal>
+                        `
+                      : ""}
+                    ${this.reportTarget
+                      ? html`
+                          <player-report-modal
+                            .open=${true}
+                            .target=${this.reportTarget}
+                            .eventBus=${this.eventBus}
+                            @close=${this.closeReport}
+                          ></player-report-modal>
                         `
                       : ""}
 
@@ -1050,13 +1125,17 @@ export class PlayerPanel extends LitElement implements Controller {
 
                     <!-- Alliance time remaining -->
                     ${this.renderAllianceExpiry()}
-                    ${isSpectator
-                      ? ""
-                      : html`
+                    ${!isSpectator
+                      ? html`
                           <ui-divider></ui-divider>
                           <!-- Actions -->
                           ${this.renderActions(viewer, other)}
-                        `}
+                        `
+                      : my
+                        ? // Dead (or not yet spawned) players still get to
+                          // report and, as host/admin, moderate.
+                          this.renderModeration(my, other, this.isAdminRole)
+                        : ""}
                   </div>
                 </div>
               </div>

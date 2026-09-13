@@ -1,5 +1,6 @@
 {
   "categories": ["arcade"],
+  "forced_modifiers": ["isWaterNukes:75"],
   "id": "TheBox",
   "map": {
     "height": 2048,

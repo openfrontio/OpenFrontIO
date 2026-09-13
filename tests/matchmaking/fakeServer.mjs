@@ -2,7 +2,8 @@
 // (see the matchmaking integration handoff): WS /matchmaking/join, the
 // {type:"join", jwt} message, {type:"match-assignment", gameId}, and the
 // close-code contract (1008 invalid session, 1000 replaced by newer
-// connection). A control API lets tests trigger each server-side behavior.
+// connection, 41xx terminal rejections). A control API lets tests trigger
+// each server-side behavior.
 
 import http from "node:http";
 import { WebSocketServer } from "ws";
@@ -12,6 +13,11 @@ export async function startFakeMatchmakingServer() {
     joins: [], // every {type:"join"} ever received: { jwt, at }
     sockets: new Map(), // jwt -> ws holding the queue slot
     rejectNextJoin: false,
+  };
+
+  const closeQueued = (code, reason) => {
+    for (const ws of state.sockets.values()) ws.close(code, reason);
+    state.sockets.clear();
   };
 
   const server = http.createServer((req, res) => {
@@ -36,10 +42,16 @@ export async function startFakeMatchmakingServer() {
           state.sockets.clear();
           return send({ ok: true });
         case "/control/replace": // queue slot taken by a newer connection
-          for (const ws of state.sockets.values()) {
-            ws.close(1000, "Replaced by newer connection");
-          }
-          state.sockets.clear();
+          closeQueued(1000, "Replaced by newer connection");
+          return send({ ok: true });
+        case "/control/ranked-limit":
+          closeQueued(4100, "close_reason.ranked_limit_reached");
+          return send({ ok: true });
+        case "/control/invalid-clan":
+          closeQueued(4101, "close_reason.invalid_clan");
+          return send({ ok: true });
+        case "/control/clan-unverified":
+          closeQueued(4102, "close_reason.clan_verification_failed");
           return send({ ok: true });
         case "/control/assign": {
           const { gameId } = JSON.parse(body || "{}");

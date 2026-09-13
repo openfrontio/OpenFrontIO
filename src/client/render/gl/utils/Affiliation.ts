@@ -5,7 +5,9 @@
  *   Row 0: border colors (4-state: self/ally/neutral/embargo)
  *   Row 1: unit colors (3-state: self/ally/enemy)
  *
- * Rebuilt when localPlayerID or relationship data changes.
+ * Colors are computed from the local player's perspective.
+ *
+ * Rebuilt when the local player or relationship data changes.
  */
 
 import type { RenderSettings } from "../RenderSettings";

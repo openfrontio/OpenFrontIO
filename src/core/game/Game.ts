@@ -51,6 +51,13 @@ export type NukeState = {
   waitTicks: number;
 };
 
+export type SamLauncherState = {
+  upgradeStartTick?: number;
+  startRange: number;
+  targetLevel: number;
+  duration: number;
+};
+
 export const AllPlayers = "AllPlayers" as const;
 
 // export type GameUpdates = Record<GameUpdateType, GameUpdate[]>;
@@ -116,6 +123,7 @@ export {
   type GameMapName,
   type MapCategory,
   type MapInfo,
+  type SpecialModifierKey,
 } from "./Maps.gen";
 
 export enum GameType {
@@ -441,6 +449,11 @@ export class PlayerInfo {
     // Server-pinned team slot (index into the game's team list) for
     // matchmade team games; null = assign normally.
     public readonly teamIndex: number | null = null,
+    // Manifest flag code (e.g. "in", "pk") for PlayerType.Nation players.
+    // Carried from the map manifest through to the client so it can render
+    // the correct flag even when multiple nations on a map share a display
+    // name (e.g. India's and Pakistan's "Punjab").
+    public readonly nationFlag: string | null = null,
   ) {
     this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }
@@ -535,6 +548,7 @@ export interface Unit {
   reloadMissile(): void;
   isInCooldown(): boolean;
   missileTimerQueue(): number[];
+  samLauncherState(): SamLauncherState | undefined;
 
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
@@ -561,6 +575,13 @@ export interface Embargo {
   createdAt: Tick;
   isTemporary: boolean;
   target: Player;
+}
+
+export interface DisconnectSnapshot {
+  currentTick: number;
+  teamTiles: number;
+  totalLand: number;
+  wasAlive: boolean;
 }
 
 export interface Player {
@@ -591,9 +612,16 @@ export interface Player {
   clearDoomsdayClock(): void;
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
+  /** Counter bumped on every ownership change of one of this player's tiles (also when its border set can change). */
+  tileChangeVersion(): number;
 
   isDisconnected(): boolean;
-  markDisconnected(isDisconnected: boolean): void;
+  markDisconnected(
+    isDisconnected: boolean,
+    snapshot?: DisconnectSnapshot,
+  ): void;
+  disconnectSnapshot(): DisconnectSnapshot | null;
+  disconnectedAtTick(): number | null;
 
   hasSpawned(): boolean;
   setSpawnTile(spawnTile: TileRef): void;
@@ -610,6 +638,23 @@ export interface Player {
   gold(): Gold;
   addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
+
+  // Cumulative trade revenue, surfaced on the live PlayerUpdate so clients can
+  // compute per-source gold rates (leaderboard "Ship/Train Trade Gold/min").
+  // Mirrors StatsSchemas GOLD_INDEX_TRADE / GOLD_INDEX_TRAIN_* semantics.
+  tradeGold(): Gold;
+  addTradeGold(toAdd: Gold): void;
+  trainGold(): Gold;
+  addTrainGold(toAdd: Gold): void;
+
+  // Cumulative piracy revenue (captured trade ships; GOLD_INDEX_STEAL).
+  piracyGold(): Gold;
+  addPiracyGold(toAdd: Gold): void;
+
+  // Cumulative gold received from ALL sources (workers, trade, trains,
+  // piracy, conquest, donations). Incremented inside addGold(); surfaced on
+  // the live PlayerUpdate for the leaderboard "Gold Income/min" column.
+  goldEarned(): Gold;
   troops(): number;
   setTroops(troops: number): void;
   addTroops(troops: number): void;
@@ -768,6 +813,8 @@ export interface Game extends GameMap {
   owner(ref: TileRef): Player | TerraNullius;
 
   teams(): Team[];
+  teamTilesOwned(team: Team): number;
+  totalLandTiles(): number;
   teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances

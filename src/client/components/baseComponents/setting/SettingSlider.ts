@@ -8,6 +8,9 @@ export class SettingSlider extends LitElement {
   @property({ type: Number }) value = 0;
   @property({ type: Number }) min = 0;
   @property({ type: Number }) max = 100;
+  // Graphics options tune fractional values (opacities, scale factors), which
+  // a whole-number slider cannot express.
+  @property({ type: Number }) step = 1;
   @property({ type: Boolean }) easter = false;
   @property() unit = "%";
   @property({ attribute: false }) formatValue?: (value: number) => string;
@@ -81,6 +84,7 @@ export class SettingSlider extends LitElement {
               [&::-moz-range-thumb]:h-[18px] [&::-moz-range-thumb]:w-[18px] [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-malibu-blue [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:shadow-[var(--shadow-malibu-blue-ring-sm)] [&::-moz-range-thumb]:transition-all active:[&::-moz-range-thumb]:scale-110 active:[&::-moz-range-thumb]:shadow-[var(--shadow-malibu-blue-ring-lg)]"
               min=${this.min}
               max=${this.max}
+              step=${this.step}
               .value=${String(this.value)}
               @input=${this.handleInput}
             />

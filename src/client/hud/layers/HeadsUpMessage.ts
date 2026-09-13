@@ -121,10 +121,10 @@ export class HeadsUpMessage extends LitElement implements Controller {
     this.isCatchingUp =
       this.catchingUpTicks >= HeadsUpMessage.CATCHING_UP_SHOW_THRESHOLD;
 
-    // Announce overtime in this banner (not the toast: the toast slot sits
-    // behind the z-[1001] player info overlay). Window-based rather than a
-    // fired-once flag, so a late joiner or replay seek doesn't get a stale
-    // announcement long after the start minute.
+    // Announce overtime in this banner (not the toast, which is a brief
+    // notification slot). Window-based rather than a fired-once flag, so a
+    // late joiner or replay seek doesn't get a stale announcement long after
+    // the start minute.
     const overtime = this.game.config().overtimeConfig();
     const overtimeStart = overtime.startMinutes * 60;
     const elapsed = this.game.elapsedGameSeconds();
@@ -187,7 +187,7 @@ export class HeadsUpMessage extends LitElement implements Controller {
         ${this.toastMessage
           ? html`
               <div
-                class="fixed top-6 left-1/2 -translate-x-1/2 z-[800] px-6 py-4 rounded-xl transition-all duration-300 animate-fade-in-out"
+                class="fixed top-6 left-1/2 -translate-x-1/2 z-[1002] px-6 py-4 rounded-xl transition-all duration-300 animate-fade-in-out"
                 style="max-width: 90vw; min-width: 200px; text-align: center;
                   background: ${this.toastColor === "red"
                   ? "rgba(239,68,68,0.1)"

@@ -146,6 +146,7 @@ describe("Player update diffing (toUpdate)", () => {
       alice.numTilesOwned(),
       Number(alice.gold()),
       alice.troops(),
+      Number(alice.goldEarned()),
     ]);
 
     // Nothing changed → no quad, no diff.
@@ -157,6 +158,31 @@ describe("Player update diffing (toUpdate)", () => {
     alice.markTraitor();
     expect(alice.toUpdate(statsOut)).not.toBeNull();
     expect(statsOut).toEqual([]);
+  });
+
+  test("income that nets to zero gold still flushes the stats quint", () => {
+    const statsOut: number[] = [];
+    alice.toUpdate(statsOut);
+    statsOut.length = 0;
+
+    // Receive and spend the same amount within one tick: gold is unchanged,
+    // but goldEarned grew — the quint must still be sent or the client's
+    // income rate would silently stall until the next gold change.
+    const goldBefore = alice.gold();
+    const earnedBefore = Number(alice.goldEarned());
+    alice.addGold(500n);
+    alice.removeGold(500n);
+    expect(alice.gold()).toBe(goldBefore);
+
+    const diff = alice.toUpdate(statsOut);
+    expect(diff).toBeNull();
+    expect(statsOut).toEqual([
+      alice.smallID(),
+      alice.numTilesOwned(),
+      Number(alice.gold()),
+      alice.troops(),
+      earnedBefore + 500,
+    ]);
   });
 
   test("first emission carries the stats in the full snapshot, not statsOut", () => {

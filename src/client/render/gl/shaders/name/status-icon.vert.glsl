@@ -159,6 +159,13 @@ void main() {
   // Zoom-based culling (same as name shader)
   float cameraScale = length(vec2(uCamera[0][0], uCamera[1][0]));
   float screenSize  = nameWorldScale * uFontBase * cameraScale;
+  // Targeted players' icons (incl. the crosshair) stay visible at any zoom,
+  // boosted in lockstep with name.vert.glsl so the layout stays aligned.
+  if (statusFlag[5] > 0.5 && screenSize < uCullThreshold) {
+    float boost = uCullThreshold / screenSize;
+    nameWorldScale *= boost;
+    screenSize = uCullThreshold;
+  }
   if (screenSize < uCullThreshold) {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
@@ -179,11 +186,13 @@ void main() {
   float iconX;
   float iconY;
   if (isVerifiedSlot) {
-    // Verified badge: anchored just right of the name text, sitting slightly
-    // below the name line's vertical center (name glyphs center on wy).
-    iconWorldSize = uFontBase * nameWorldScale * 0.9;
-    iconX = wx + pd3.w * nameWorldScale + iconWorldSize * 0.12;
-    iconY = wy - iconWorldSize * 0.4;
+    // Verified badge: small mark tucked against the name's top-right corner,
+    // like a superscript. The name line spans wy +- 0.5 * lineHeight; the
+    // badge is raised so its lower half overlaps the line's top edge.
+    float lineHeight = uFontBase * nameWorldScale;
+    iconWorldSize = lineHeight * 0.55;
+    iconX = wx + pd3.w * nameWorldScale - lineHeight * 0.04;
+    iconY = wy - lineHeight * 0.5 - iconWorldSize * 0.5;
   } else {
     // Count active status icons and position of this one (left-to-right).
     // If an emoji is also active it occupies one extra slot on the right,

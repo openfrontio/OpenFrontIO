@@ -2,6 +2,7 @@ import {
   buildNukeTrajectory,
   computeNukeControlPoints,
   computeTrajectoryThresholds,
+  samRange,
 } from "../src/client/render/gl/utils/NukeTrajectory";
 
 // A large map height so the parabola arc isn't clamped.
@@ -45,8 +46,40 @@ describe("NukeTrajectory thresholds", () => {
       T * (T * (T * cp.p0y + 3 * t * cp.p1y) + 3 * t * t * cp.p2y) +
       t * t * t * cp.p3y;
     const th = computeTrajectoryThresholds(cp, 100, 500, 800, 500, [
-      { x, y, rangeSq: 25 },
+      { x, y, r: 5 },
     ]);
     expect(th.tSamIntercept).toBe(t);
+  });
+
+  test("detects SAM intercept along trajectory", () => {
+    const cp = horizontalCp(100, 800);
+    const sam = { x: 750, y: 500, r: 50 };
+    const th = computeTrajectoryThresholds(cp, 100, 500, 800, 500, [sam]);
+    expect(th.tSamIntercept).toBeLessThan(1.0);
+  });
+
+  test("validates 32 samples across tangent cells and safe cells without padding", () => {
+    const srcX = 1249;
+    const srcY = 108;
+    const samX = 984;
+    const samY = 380;
+    const r = samRange(6); // Level 6 SAM exact radius
+    const sams = [{ x: samX, y: samY, r }];
+
+    // Direct intercept cell
+    const traj = buildNukeTrajectory(srcX, srcY, 859, 397, 1000, true, sams);
+    expect(traj.tSamIntercept).toBeLessThan(1.0);
+
+    // Safe cell passing outside SAM range
+    const safeTraj = buildNukeTrajectory(
+      srcX,
+      srcY,
+      865,
+      380,
+      1000,
+      true,
+      sams,
+    );
+    expect(safeTraj.tSamIntercept).toBe(1.0);
   });
 });

@@ -103,20 +103,39 @@ export class WinCheckExecution implements Execution {
     }
 
     const max = sorted[0];
-    const timeElapsed = this.mg.elapsedGameSeconds();
-    const numTilesWithoutFallout =
-      this.mg.numLandTiles() - this.mg.numTilesWithFallout();
-    if (
-      (max.numTilesOwned() / numTilesWithoutFallout) * 100 >
-        this.mg.config().percentageTilesOwnedToWin(timeElapsed) ||
-      (this.mg.config().gameConfig().maxTimerValue !== undefined &&
-        timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0) ||
-      timeElapsed >= WinCheckExecution.HARD_TIME_LIMIT_SECONDS
-    ) {
+    if (this.hasWon(max.numTilesOwned())) {
       this.mg.setWinner(max, this.mg.stats().stats());
       console.log(`${max.name()} has won the game`);
       this.active = false;
     }
+  }
+
+  // Hold more than the required share of non-fallout land, or outlast the
+  // lobby timer / hard limit.
+  private hasWon(tilesOwned: number): boolean {
+    if (this.mg === null) throw new Error("Not initialized");
+    const timeElapsed = this.mg.elapsedGameSeconds();
+    // null (host lobby, timer off) means no timer, same as undefined.
+    const maxTimerValue = this.mg.config().gameConfig().maxTimerValue;
+    if (
+      maxTimerValue !== undefined &&
+      maxTimerValue !== null &&
+      timeElapsed >= maxTimerValue * 60
+    ) {
+      return true;
+    }
+    if (timeElapsed >= WinCheckExecution.HARD_TIME_LIMIT_SECONDS) {
+      return true;
+    }
+    const numTilesWithoutFallout =
+      this.mg.numLandTiles() - this.mg.numTilesWithFallout();
+    // Cross-multiplied: the threshold is a whole percentage, so this is
+    // exact integer math.
+    return (
+      tilesOwned * 100 >
+      numTilesWithoutFallout *
+        this.mg.config().percentageTilesOwnedToWin(timeElapsed)
+    );
   }
 
   checkWinnerTeam(): void {
@@ -161,16 +180,7 @@ export class WinCheckExecution implements Execution {
       return;
     }
     const max = sorted[0];
-    const timeElapsed = this.mg.elapsedGameSeconds();
-    const numTilesWithoutFallout =
-      this.mg.numLandTiles() - this.mg.numTilesWithFallout();
-    const percentage = (max[1] / numTilesWithoutFallout) * 100;
-    if (
-      percentage > this.mg.config().percentageTilesOwnedToWin(timeElapsed) ||
-      (this.mg.config().gameConfig().maxTimerValue !== undefined &&
-        timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0) ||
-      timeElapsed >= WinCheckExecution.HARD_TIME_LIMIT_SECONDS
-    ) {
+    if (this.hasWon(max[1])) {
       if (max[0] === ColoredTeams.Bot) return;
       this.mg.setWinner(max[0], this.mg.stats().stats());
       console.log(`${max[0]} has won the game`);

@@ -1,4 +1,5 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
+import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import {
@@ -8,9 +9,11 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  UnitType,
 } from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
+import { executeTicks } from "./util/utils";
 
 describe("Ai Attack Behavior", () => {
   let game: Game;
@@ -601,4 +604,193 @@ describe("Hard/Impossible troop floor", () => {
     // The bypass allows retaliation with at least the incoming 50k
     expect(exec.startTroops).toBeGreaterThanOrEqual(50_000);
   });
+});
+
+describe("Juicy target strategy", () => {
+  /**
+   * Sets up an attacker bordering a tiny/weak enemy and a large,
+   * structure-rich enemy that's under-defended relative to its own troop cap.
+   */
+  async function setupJuicyTest() {
+    const testGame = await setup("big_plains", { infiniteGold: true });
+
+    const attackerInfo = new PlayerInfo(
+      "attacker",
+      PlayerType.Nation,
+      null,
+      "attacker_id",
+    );
+    const weakInfo = new PlayerInfo("weak", PlayerType.Human, null, "weak_id");
+    const richInfo = new PlayerInfo("rich", PlayerType.Human, null, "rich_id");
+    testGame.addPlayer(attackerInfo);
+    testGame.addPlayer(weakInfo);
+    testGame.addPlayer(richInfo);
+
+    const attacker = testGame.player("attacker_id");
+    const weak = testGame.player("weak_id");
+    const rich = testGame.player("rich_id");
+
+    // Base share so all three border each other
+    let assigned = 0;
+    const base = [attacker, weak, rich];
+    testGame.map().forEachTile((tile) => {
+      if (assigned >= 90) return;
+      if (!testGame.map().isLand(tile)) return;
+      base[assigned % 3].conquer(tile);
+      assigned++;
+    });
+
+    // Give `rich` a lot more territory than `weak` — the actual prize
+    let extra = 0;
+    testGame.map().forEachTile((tile) => {
+      if (extra >= 300) return;
+      if (!testGame.map().isLand(tile) || testGame.hasOwner(tile)) return;
+      rich.conquer(tile);
+      extra++;
+    });
+
+    // `rich` gets a few upgraded cities (level 3 each); `weak` gets none
+    for (const tile of Array.from(rich.tiles()).slice(0, 3)) {
+      const city = rich.buildUnit(UnitType.City, tile, {});
+      city.increaseLevel();
+      city.increaseLevel();
+    }
+
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.5,
+      0.3,
+      0.2,
+    );
+
+    return { testGame, attacker, weak, rich, behavior };
+  }
+
+  it("prefers the large, structure-rich, under-defended enemy over a tiny weak one", async () => {
+    const { testGame, attacker, weak, rich, behavior } = await setupJuicyTest();
+
+    attacker.setTroops(5_000_000);
+    // Both must clear the 25%-fewer-troops safety threshold, but `rich` is
+    // far below its own troop cap — that's what makes it juicier than `weak`.
+    weak.setTroops(50_000);
+    rich.setTroops(Math.floor(testGame.config().maxTroops(rich) * 0.1));
+
+    const target = (behavior as any).findJuicyTarget([weak, rich]);
+    expect(target).toBe(rich);
+  });
+
+  it("excludes enemies with less than a 25% troop deficit, regardless of size", async () => {
+    const { attacker, rich, behavior } = await setupJuicyTest();
+
+    attacker.setTroops(100_000);
+    // Only 20% fewer troops than the attacker — fails the 25% safety margin
+    // even though `rich` is otherwise the juiciest candidate on the map.
+    rich.setTroops(80_000);
+
+    const target = (behavior as any).findJuicyTarget([rich]);
+    expect(target).toBeNull();
+  });
+});
+
+describe("Juicy target strategy - end-to-end via maybeAttack", () => {
+  /**
+   * Partitions the entire map into three vertical stripes (weak | attacker |
+   * rich), so there's no unowned or nuked land anywhere. That matters because
+   * `maybeAttack()` has an early TerraNullius out, and `nuked` sits ahead of
+   * `juicy` in both priority lists — either would pre-empt `juicy` if the
+   * attacker bordered any unowned land.
+   */
+  async function setupEndToEnd(difficulty: Difficulty) {
+    const testGame = await setup("big_plains", { difficulty }, [
+      new PlayerInfo("attacker", PlayerType.Nation, null, "attacker_id"),
+      new PlayerInfo("weak", PlayerType.Human, null, "weak_id"),
+      new PlayerInfo("rich", PlayerType.Human, null, "rich_id"),
+    ]);
+
+    const attacker = testGame.player("attacker_id");
+    const weak = testGame.player("weak_id");
+    const rich = testGame.player("rich_id");
+
+    const width = testGame.map().width();
+    const height = testGame.map().height();
+    const attackerX0 = 40;
+    const attackerX1 = 60;
+    expect(width).toBeGreaterThan(attackerX1);
+
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < height; y++) {
+        const tile = testGame.ref(x, y);
+        if (!testGame.map().isLand(tile)) continue;
+        if (x < attackerX0) weak.conquer(tile);
+        else if (x < attackerX1) attacker.conquer(tile);
+        else rich.conquer(tile);
+      }
+    }
+
+    expect(attacker.sharesBorderWith(weak)).toBe(true);
+    expect(attacker.sharesBorderWith(rich)).toBe(true);
+
+    attacker.setTroops(5_000_000);
+    // Both must clear the 15%-of-own-max floor (else `veryWeak` would grab
+    // them first) and the 75%-of-attacker cap (else `juicy` would reject
+    // them). `rich` is still the juicier one: more tiles, upgraded cities,
+    // and further below its own troop cap - but also has MORE troops than
+    // `weak`, so `weakest` would never pick it.
+    weak.setTroops(Math.floor(testGame.config().maxTroops(weak) * 0.5));
+    for (const tile of Array.from(rich.tiles()).slice(0, 3)) {
+      const city = rich.buildUnit(UnitType.City, tile, {});
+      city.increaseLevel();
+      city.increaseLevel();
+    }
+    rich.setTroops(Math.floor(testGame.config().maxTroops(rich) * 0.3));
+
+    const emojiBehavior = new NationEmojiBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+    );
+    const allianceBehavior = new NationAllianceBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      emojiBehavior,
+    );
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.0, // triggerRatio — always ready so strategy selection is deterministic
+      0.0, // reserveRatio
+      0.2, // expandRatio
+      allianceBehavior,
+      emojiBehavior,
+    );
+
+    return { testGame, attacker, weak, rich, behavior };
+  }
+
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s: attacks the juicy target, not the weakest one, per the declared priority order",
+    async (difficulty) => {
+      const { testGame, attacker, weak, rich, behavior } =
+        await setupEndToEnd(difficulty);
+
+      // Sanity: `weakest` would pick `weak` (fewer troops) if it ran instead
+      // of `juicy` — asserting the attack lands on `rich` proves `juicy` is
+      // the strategy that actually fired, in its declared priority slot.
+      expect(weak.troops()).toBeLessThan(rich.troops());
+
+      const before = attacker.outgoingAttacks().length;
+      behavior.maybeAttack();
+      executeTicks(testGame, 1);
+
+      const attacks = attacker.outgoingAttacks().slice(before);
+      expect(attacks.length).toBeGreaterThan(0);
+      for (const attack of attacks) {
+        expect(attack.target()).toBe(rich);
+      }
+    },
+  );
 });

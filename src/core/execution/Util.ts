@@ -2,6 +2,7 @@ import { GameView } from "../../client/view";
 import { NukeMagnitude } from "../configuration/Config";
 import { Game, Player, Structures } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
+import { ReadonlyTileSet } from "../game/TileSet";
 
 export interface NukeBlastParams {
   gm: GameMap;
@@ -174,13 +175,82 @@ export function closestTile(
   return [minRef, minDistance];
 }
 
+/**
+ * Manhattan distance from `tile` to the nearest member of `tiles`, or Infinity
+ * when `tiles` is empty. Same value as closestTile()[1] without the sort and
+ * copies of closestTwoTiles(); use when only the distance matters.
+ */
+export function nearestTileDist(
+  gm: GameMap,
+  tiles: Iterable<TileRef>,
+  tile: TileRef,
+): number {
+  let best = Infinity;
+  for (const t of tiles) {
+    const d = gm.manhattanDist(t, tile);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+/**
+ * Manhattan distance from `tile` to the nearest member of `tiles` when that
+ * distance is at most `cap`, otherwise Infinity. Walks Manhattan rings of
+ * growing radius around `tile` instead of scanning the whole set, so the
+ * cost is O(cap^2) membership checks rather than O(|tiles|) — for "distance
+ * to my border, clamped at the spacing constant" that is a few hundred
+ * lookups instead of thousands. Exact: a ring is only reached after every
+ * closer ring came up empty.
+ */
+function isTileSetLike(
+  tiles: ReadonlyTileSet | Iterable<TileRef>,
+): tiles is ReadonlyTileSet {
+  return typeof (tiles as ReadonlyTileSet).has === "function";
+}
+
+export function nearestTileDistCapped(
+  gm: GameMap,
+  tiles: ReadonlyTileSet | Iterable<TileRef>,
+  tile: TileRef,
+  cap: number,
+): number {
+  if (!isTileSetLike(tiles)) {
+    // Plain iterable (tests hand in arrays): fall back to the linear scan.
+    const d = nearestTileDist(gm, tiles, tile);
+    return d <= cap ? d : Infinity;
+  }
+  if (tiles.size === 0) return Infinity;
+  if (tiles.has(tile)) return 0;
+  const w = gm.width();
+  const h = gm.height();
+  const cx = gm.x(tile);
+  const cy = gm.y(tile);
+  for (let d = 1; d <= cap; d++) {
+    for (let dx = -d; dx <= d; dx++) {
+      const x = cx + dx;
+      if (x < 0 || x >= w) continue;
+      const dy = d - Math.abs(dx);
+      const y1 = cy - dy;
+      if (y1 >= 0 && tiles.has(y1 * w + x)) return d;
+      if (dy !== 0) {
+        const y2 = cy + dy;
+        if (y2 < h && tiles.has(y2 * w + x)) return d;
+      }
+    }
+  }
+  return Infinity;
+}
+
 export function closestTwoTiles(
   gm: GameMap,
   x: Iterable<TileRef>,
   y: Iterable<TileRef>,
 ): { x: TileRef; y: TileRef } | null {
-  const xSorted = Array.from(x).sort((a, b) => gm.x(a) - gm.x(b));
-  const ySorted = Array.from(y).sort((a, b) => gm.x(a) - gm.x(b));
+  // Coordinates inlined (ref = y * width + x): the sort comparator and the
+  // sweep below run over every border tile of both players.
+  const w = gm.width();
+  const xSorted = Array.from(x).sort((a, b) => (a % w) - (b % w));
+  const ySorted = Array.from(y).sort((a, b) => (a % w) - (b % w));
 
   if (xSorted.length === 0 || ySorted.length === 0) {
     return null;
@@ -195,9 +265,11 @@ export function closestTwoTiles(
     const currentX = xSorted[i];
     const currentY = ySorted[j];
 
+    const cxX = currentX % w;
+    const cyX = currentY % w;
     const distance =
-      Math.abs(gm.x(currentX) - gm.x(currentY)) +
-      Math.abs(gm.y(currentX) - gm.y(currentY));
+      Math.abs(cxX - cyX) +
+      Math.abs(((currentX / w) | 0) - ((currentY / w) | 0));
 
     if (distance < minDistance) {
       minDistance = distance;
@@ -213,7 +285,7 @@ export function closestTwoTiles(
       i++;
     }
     // Otherwise, move whichever pointer has smaller x value
-    else if (gm.x(currentX) < gm.x(currentY)) {
+    else if (cxX < cyX) {
       i++;
     } else {
       j++;

@@ -4,6 +4,8 @@ import {
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
   type ClanDiscord,
+  type ClanDonationsResponse,
+  ClanDonationsResponseSchema,
   type ClanGameFilter,
   type ClanGamesResponse,
   ClanGamesResponseSchema,
@@ -27,6 +29,8 @@ export type {
   ClanBansResponse,
   ClanBrowseResponse,
   ClanDiscord,
+  ClanDonation,
+  ClanDonationsResponse,
   ClanGame,
   ClanGameFilter,
   ClanGamePlayer,
@@ -654,6 +658,39 @@ export async function donateToClan(
     }
   }
   return { error: "clan_modal.error_failed" };
+}
+
+export type ClanDonationsFetchError = "forbidden" | "failed";
+
+/**
+ * Members-only page of donations made to the clan, newest first. `currencyType`
+ * narrows to one currency (and scopes `total`); omitted means both. The
+ * endpoint rejects empty query values, so a param is only sent when set.
+ */
+export async function fetchClanDonations(
+  tag: string,
+  opts: { page?: number; limit?: number; currencyType?: ClanCurrencyType } = {},
+): Promise<ClanDonationsResponse | { error: ClanDonationsFetchError }> {
+  try {
+    const params = new URLSearchParams();
+    params.set("page", String(opts.page ?? 1));
+    params.set("limit", String(opts.limit ?? 10));
+    if (opts.currencyType) params.set("currencyType", opts.currencyType);
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/donations?${params}`,
+    );
+    if (res.status === 403) return { error: "forbidden" };
+    if (!res.ok) return { error: "failed" };
+    const json = await res.json();
+    const parsed = ClanDonationsResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchClanDonations: Zod validation failed", parsed.error);
+      return { error: "failed" };
+    }
+    return parsed.data;
+  } catch {
+    return { error: "failed" };
+  }
 }
 
 export async function fetchClanBans(
