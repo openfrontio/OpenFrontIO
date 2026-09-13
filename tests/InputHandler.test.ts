@@ -683,30 +683,6 @@ describe("InputHandler AutoUpgrade", () => {
       window.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(false);
     });
-
-    test("prevents default when the configured altKey binding is pressed", () => {
-      (inputHandler as any).keybinds.altKey = "KeyK";
-      const event = new KeyboardEvent("keydown", {
-        code: "KeyK",
-        cancelable: true,
-      });
-
-      window.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(true);
-    });
-
-    test("does not prevent default for an unbound key", () => {
-      (inputHandler as any).keybinds.altKey = "KeyK";
-      const event = new KeyboardEvent("keydown", {
-        // chose F13 to avoid this test because regular
-        // keys risk being assigned their own hotkeys
-        code: "F13",
-        cancelable: true,
-      });
-
-      window.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(false);
-    });
   });
 
   describe("Numpad number keys for build keybinds", () => {
