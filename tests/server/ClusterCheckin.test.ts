@@ -41,6 +41,37 @@ describe("checkinBody", () => {
     });
   });
 
+  // A dev deployment with GAME_DOMAIN set has the same two-hostname shape as
+  // prod without a load balancer: the page lives on <subdomain>.<DOMAIN>,
+  // which the static Worker serves, and this server answers on
+  // <subdomain>.<GAME_DOMAIN>. It must register the page host as its `site`
+  // — that is what the client's server list is keyed by — and its game host
+  // as `host`, or players would be pointed at the Worker for sockets.
+  test("separates the page host from the game host when GAME_DOMAIN is set", () => {
+    vi.stubEnv("DOMAIN", "openfront.dev");
+    vi.stubEnv("GAME_DOMAIN", "server.openfront.dev");
+    vi.stubEnv("SUBDOMAIN", "main");
+    vi.stubEnv("SITE_HOST", "main.openfront.dev");
+    vi.stubEnv(
+      "CLUSTER_JSON",
+      JSON.stringify({
+        a: {
+          host: "main.server.openfront.dev",
+          color: "blue",
+          numWorkers: 2,
+        },
+      }),
+    );
+    expect(checkinBody(3)).toEqual({
+      site: "main.openfront.dev",
+      letter: "a",
+      host: "main.server.openfront.dev",
+      version: "bfd5563a11111111111111111111111111111111",
+      numWorkers: 2,
+      liveGames: 3,
+    });
+  });
+
   // Every deployed host that isn't behind the apex load balancer is its own
   // site. Mirrors (the openfront.dev apex serving nightly) are aliased in
   // the API, so nothing here reports them.

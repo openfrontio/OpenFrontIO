@@ -82,6 +82,51 @@ describe("applyGameApiCorsHeaders", () => {
     applyGameApiCorsHeaders(undefined, setHeader);
     expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
   });
+
+  // Two hostnames per deployment (docs/MultiServer.md): with GAME_DOMAIN set
+  // the page is served from main.openfront.dev by the static Worker while
+  // this server answers on main.server.openfront.dev, so every /api call the
+  // page makes is cross-origin and the page host has to be granted.
+  describe("a deployment whose page host differs from its game host", () => {
+    beforeEach(() => {
+      vi.stubEnv("SITE_HOST", "main.openfront.dev");
+      vi.stubEnv(
+        "CLUSTER_JSON",
+        JSON.stringify({
+          a: {
+            host: "main.server.openfront.dev",
+            color: "blue",
+            numWorkers: 2,
+          },
+        }),
+      );
+    });
+    afterEach(() => vi.unstubAllEnvs());
+
+    test("allows the page origin", () => {
+      const { headers, setHeader } = collect();
+      applyGameApiCorsHeaders("https://main.openfront.dev", setHeader);
+      expect(headers.get("Access-Control-Allow-Origin")).toBe(
+        "https://main.openfront.dev",
+      );
+    });
+
+    test("allows the game host's own origin", () => {
+      const { headers, setHeader } = collect();
+      applyGameApiCorsHeaders("https://main.server.openfront.dev", setHeader);
+      expect(headers.get("Access-Control-Allow-Origin")).toBe(
+        "https://main.server.openfront.dev",
+      );
+    });
+
+    test("refuses another page on the same domain", () => {
+      // Sharing a parent domain grants nothing: only this deployment's own
+      // page host and the fleet's game hosts are allowed.
+      const { headers, setHeader } = collect();
+      applyGameApiCorsHeaders("https://other.openfront.dev", setHeader);
+      expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+    });
+  });
 });
 
 describe("gameApiCors middleware, mounted on a real Express app", () => {

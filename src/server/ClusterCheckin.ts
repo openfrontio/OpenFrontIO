@@ -30,14 +30,20 @@ export type ServerState = z.infer<typeof ServerStateSchema>;
 export type ClusterStateSource = "apex" | "api";
 
 export interface CheckinBody {
-  // The hostname players load the page from: the apex behind a load
-  // balancer (SITE_HOST), else this deployment's own host, so beta,
-  // nightly, alpha and branch previews each register under themselves.
-  // Lists are keyed by it. Mirrors, such as the openfront.dev apex
-  // serving nightly, are an alias table in the API, never something a
-  // server reports about itself.
+  // The PAGE host: the hostname players load the page from (SITE_HOST) —
+  // the apex behind a load balancer, `<subdomain>.<DOMAIN>` where a separate
+  // GAME_DOMAIN gives the deployment two names (docs/MultiServer.md, "Two
+  // hostnames per deployment"), else this deployment's own host, so an
+  // old-style beta, nightly, alpha or branch preview registers under itself.
+  // Lists are keyed by it. Mirrors, such as the openfront.dev apex serving
+  // nightly, are an alias table in the API, never something a server reports
+  // about itself.
   site: string;
   letter: string;
+  // The GAME host: where clients open sockets and send /api for games this
+  // server runs (ServerEnv.publicHost). Distinct from `site` whenever
+  // something else owns the page host — a load balancer on prod, the static
+  // Worker on a dev deployment with GAME_DOMAIN set.
   host: string;
   // GIT_COMMIT, the full sha. Clients compare it prefix-tolerantly.
   version: string;
