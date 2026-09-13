@@ -1922,13 +1922,24 @@ export async function createLobby(): Promise<GameInfo> {
   // request, and the caller's own failure path (re-enabling the button,
   // clearing the share link) runs as usual.
   //
-  // Only a page the static Worker served is ever told "outdated". A page a
-  // game server rendered answers "fallback" even when the list carries no
-  // server for its build, and creating against its own host is right: that
-  // host is running this build — it served this page.
-  if ((await ensureServerList()) === "outdated") {
+  // A page a game server rendered answers "fallback" when the list carries
+  // no entry for its own server at all (a stale registry, OPE-430), and
+  // creating against its own host is right there: that host is running this
+  // build — it served this page. But "no-server" on such a page means the
+  // list DOES carry it, fenced: deliberately out of rotation, taking nothing
+  // new, so a lobby minted on it would be born on a server on its way out.
+  // Refuse that too. On a Worker-served page "no-server" means there is no
+  // server at all and ClientEnv.serverHttpBase() is the document's origin,
+  // where the request 404s (or NoServerError is thrown while building a
+  // worker path) — the same failure, reached a step earlier and with a
+  // clearer message.
+  const listStatus = await ensureServerList();
+  if (
+    listStatus === "outdated" ||
+    (listStatus === "no-server" && ClientEnv.servedByGameServer())
+  ) {
     throw new Error(
-      "createLobby: this build has no server; a newer version is available",
+      "createLobby: this build has no server that takes new games",
     );
   }
   // Send JWT token for creator identification - server extracts persistentID from it

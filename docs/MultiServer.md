@@ -470,48 +470,72 @@ values.
     (`version_mismatch`). `/v/<commit>/` is now used only for pinned pages
     of existing games and replays — roadmap item 2.
 
-### A server-rendered page is never "outdated" by the list
+### A server-rendered page is never "outdated" while its own server serves it
 
-`outdated` is a statement about what a RELOAD would fetch, so it only
-applies to a page that names no server of its own — one the static Worker
-served, where a reload fetches `latest`. A page that carries `serverHost`,
-or `cluster` + `instanceLetter`, came from a game server that is running
-exactly this build (it rendered the page), and a reload re-fetches the same
-page from that same server. So the list can never make such a page
-`outdated`: `ClientEnv.servedByGameServer()` gates it, in `apply()` (which
-answers `fallback`, the page's own values, exactly as when the API is
-unreachable) and again as the first line of `isOutdated`, so no caller can
-reach it by another route. When the list carries no server on the page's
-build, that page's own injected server IS the server for its build.
+`outdated` is a statement about what a RELOAD would fetch. A page that
+carries `serverHost`, or `cluster` + `instanceLetter`
+(`ClientEnv.servedByGameServer()`), was rendered BY a game server, and a
+reload re-fetches it from that same host — so what the list says about
+_that host_ decides everything. `ownServerStanding()` in
+`src/core/ServerList.ts` answers it, matching the injected host against the
+list's entries, else the page's letter (the truer identity when a hostname
+moves under a letter that stays put):
 
-Without the gate a registry that misses a deploy strands every visitor:
-`main.openfront.dev` served pages from a game server whose build the list
-never listed, the lobby socket raised "a new version is available", the
-reload re-served the same page from the same server, and it prompted again,
-forever.
+- **absent** — the list carries neither. The registry is stale, and the
+  host that rendered this page is running this build by construction:
+  `apply()` answers `fallback`, the page's own values, exactly as when the
+  API is unreachable. This is OPE-430.
+- **other-version** — the same host now runs a different build, so a reload
+  from it hands back that build. The page really is behind: `isOutdated`
+  applies (its desktop, replay-shell and pinned-page exemptions included)
+  and the status is `outdated`. The one case where a server-rendered page is
+  told to update.
+- **fenced** — its own server, on its own build, deliberately out of
+  rotation: `no-server`. It takes nothing new, so `Api.createLobby` refuses
+  (on `no-server` as well as `outdated` whenever the page names a server),
+  but a reload would come back identical, so nothing prompts.
+- **serving** — open or draining on this build: picked normally, `api`.
 
-The gate holds only while that server is actually serving the page. Two
-things still reach a server-rendered page: the lobby feed's drain flag
-(`active: false`), unchanged; and, once its socket has failed
-`maxWsAttempts` times, `newerVersionAvailable()` — a separate, exported
-question that `PublicLobbySocket.promptIfOutdated` asks on that path only.
-It is `isOutdated` without the served-by-game-server guard (the desktop,
-replay-shell and pinned-page exemptions all still apply): a dead socket is
-the page's own server proving it is gone — drained, then fenced or removed,
-with no feed left to say so — and `reloadForUpdate` re-enters through the
-page host, which the load balancer answers from a LIVE deployment. So the
-same fact that would loop at page load is the rescue after the socket has
-given up.
+Without the absent rule a registry that misses a deploy strands every
+visitor: `main.openfront.dev` served pages from a game server whose build
+the list never listed, the lobby socket raised "a new version is
+available", the reload re-served the same page from the same server, and it
+prompted again, forever.
 
-Two guards keep the rescue from becoming the loop by another route. It
-never runs while the list still has a server for this build (status
-`"api"`): a failed socket there is a network blip, and being behind
-`latest` is every tab's normal state for the length of a rollout. And it
-checks its own premise first: `ownServerReachable()` makes one plain GET of
-the page's server's `/api/health`, and a server that still answers, with
-any status, has a WebSocket problem rather than being gone -- a reload
-would land back on it and fail the same way. Only a network error or a
-timeout there lets the prompt fire.
+### The post-failure rescue
+
+Rollover reaches a server-rendered page through the lobby feed's drain flag
+(`active: false`), unchanged. A tab whose deployment was drained and then
+fenced or removed never gets that feed — it just watches its socket fail —
+so once `PublicLobbySocket` has given up after `maxWsAttempts`,
+`promptIfOutdated` asks two further questions that the page-load path never
+asks:
+
+- `newerVersionAvailable()` — `isOutdated` without the
+  served-by-game-server rule (the shell exemptions still apply): is this
+  build behind the list's `latest` at all? Only asked when the list has no
+  server for this build; on `api` a failed socket is a network blip, and
+  being behind `latest` is every tab's normal state for the length of a
+  rollout.
+- `reloadCanLandElsewhere()` — could a reload land anywhere but this page's
+  own server? A question about TOPOLOGY, not liveness: probing the server
+  cannot tell a dead origin from the proxy in front of it answering 5xx,
+  since an opaque cross-origin response carries no status at all.
+  - Behind an apex (`siteHost` defined and not the page's own server —
+    prod: page `openfront.io`, server `blue.openfront.io`):
+    `reloadForUpdate` re-enters through the site host, which the load
+    balancer answers from a live deployment. The rescue cannot loop on a
+    dead server, so it prompts. (A proxy that passes HTTP while blocking
+    WebSockets could still send a tab around that circle; that is
+    pre-existing behaviour, and the reload does land on a healthy
+    deployment.)
+  - Standalone (no `siteHost`, or `siteHost` IS the page's own server — dev
+    `main.openfront.dev` today, previews, beta): the reload re-serves the
+    same page from the same server. If it is gone the reload fails too; if
+    it is alive with a WebSocket problem, the prompt loops. Nothing a
+    prompt can do helps, so the rescue never fires — which is what makes
+    OPE-430 impossible by construction on those pages.
+  - A Worker-served page names no server: its reload fetches `latest`.
 
 ## The static page: booting with no server of its own
 

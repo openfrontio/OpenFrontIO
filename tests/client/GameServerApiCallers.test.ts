@@ -84,10 +84,31 @@ describe("createLobby", () => {
   // prompt is what moves the player forward.
   it("refuses to create when no server runs this build any more", async () => {
     mocks.ensureServerList.mockResolvedValue("outdated");
-    await expect(createLobby()).rejects.toThrow(/newer version is available/);
+    await expect(createLobby()).rejects.toThrow(/no server that takes new/);
     expect(
       fetchMock.mock.calls.some((c) => String(c[0]).includes("create_game")),
     ).toBe(false);
+  });
+
+  // This page names its own server (serverHost above), so "no-server" means
+  // the list DOES carry that server, fenced: deliberately out of rotation,
+  // taking nothing new. A lobby minted there would be born on a server on
+  // its way out, so Create refuses here too.
+  it("refuses to create on its own server once the list fences it", async () => {
+    mocks.ensureServerList.mockResolvedValue("no-server");
+    await expect(createLobby()).rejects.toThrow(/no server that takes new/);
+    expect(
+      fetchMock.mock.calls.some((c) => String(c[0]).includes("create_game")),
+    ).toBe(false);
+  });
+
+  // A stale registry (OPE-430) answers "fallback" instead: the list has no
+  // entry for this page's server at all, and that host is running this
+  // build — it served this page — so Create goes ahead on it.
+  it("creates on the page's own server when the list has no entry for it", async () => {
+    mocks.ensureServerList.mockResolvedValue("fallback");
+    await createLobby();
+    expect(lastUrl()).toBe(`https://${SERVER_HOST}/api/create_game`);
   });
 
   it("still sends the play token as the creator's identity", async () => {

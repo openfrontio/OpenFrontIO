@@ -5,7 +5,7 @@ import { showInGameAlert } from "./InGameModal";
 import {
   ensureServerList,
   newerVersionAvailable,
-  ownServerReachable,
+  reloadCanLandElsewhere,
 } from "./ServerList";
 import { translateText } from "./Utils";
 
@@ -272,10 +272,12 @@ export class PublicLobbySocket {
   // on the same server (a proxy blocking WebSockets while HTTP still works)
   // it would loop just as OPE-430 did.
   //
-  // And the premise itself is checked before the rescue fires: a dead
-  // socket is only proof the server is gone if plain HTTP to it fails too
-  // (ownServerReachable). A server that still answers HTTP has a WebSocket
-  // problem, and a reload would come back to it and fail the same way.
+  // And only where a reload can land somewhere else at all
+  // (reloadCanLandElsewhere): on a standalone page the reload re-serves the
+  // same page from the same server, so a prompt either fails with it or
+  // loops against it. That is a question about topology, not liveness —
+  // probing the server cannot tell a dead origin from the proxy in front of
+  // it answering 5xx.
   private async promptIfOutdated(): Promise<void> {
     if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
       return;
@@ -286,9 +288,8 @@ export class PublicLobbySocket {
       this.fireUpdateAvailable();
       return;
     }
-    if (listStatus === "api" || !newerVersionAvailable()) return;
-    if (await ownServerReachable()) return;
-    if (this.stopped) return;
+    if (listStatus === "api") return;
+    if (!newerVersionAvailable() || !reloadCanLandElsewhere()) return;
     this.fireUpdateAvailable();
   }
 

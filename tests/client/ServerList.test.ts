@@ -5,8 +5,8 @@ import {
   backendReachable,
   ensureServerList,
   newerVersionAvailable,
-  ownServerReachable,
   redirectToGameVersion,
+  reloadCanLandElsewhere,
   resetServerList,
   serverListSite,
   serverListUrl,
@@ -736,6 +736,57 @@ describe("picking between open, draining and fenced", () => {
         numWorkers: 16,
       });
     });
+
+    // The list DOES carry this page's server, on a different build: that
+    // host has moved on, so a reload from it hands back the new build.
+    // "Outdated" here is news, not a loop — the one case where a
+    // server-rendered page is told to update.
+    it("is outdated when its own host now runs a different build", async () => {
+      setBootstrap({ gitCommit: OLD, serverHost: "blue.openfront.io" });
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(listOf({ a: server(OWN, "open", "blue.openfront.io") })),
+      );
+
+      expect(await ensureServerList()).toBe("outdated");
+    });
+
+    // Its own server, on its own build, deliberately out of rotation. It
+    // takes nothing new (createLobby refuses on "no-server" here), but a
+    // reload would come back identical, so there is nothing to prompt for.
+    it("answers no-server when its own host is fenced on this build", async () => {
+      setBootstrap({ gitCommit: OLD, serverHost: "blue.openfront.io" });
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(
+          listOf({
+            a: server(OLD, "fenced", "blue.openfront.io"),
+            d: server(OWN, "open", "falk2-b.openfront.io"),
+          }),
+        ),
+      );
+
+      expect(await ensureServerList()).toBe("no-server");
+    });
+
+    it("finds its own fenced entry by letter when no host was injected", async () => {
+      // The map plus the page's letter are the identity here — and the
+      // truer one when a host is renamed under a letter that stayed put.
+      setBootstrap({
+        gitCommit: OLD,
+        serverHost: undefined,
+        siteHost: undefined,
+      });
+      stubLocation("blue.openfront.io");
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(
+          listOf({
+            a: server(OLD, "fenced", "renamed.openfront.io"),
+            d: server(OWN, "open", "falk2-b.openfront.io"),
+          }),
+        ),
+      );
+
+      expect(await ensureServerList()).toBe("no-server");
+    });
   });
 
   // The sticky pick, end to end: the page holds the server it picked while
@@ -826,10 +877,45 @@ describe("picking between open, draining and fenced", () => {
   });
 });
 
-// Opening a game whose server runs another build. One exported decision for
-// both call sites (Main.handleUrl, JoinLobbyModal.checkActiveLobby) so the
-// shells that must not be navigated cannot be remembered in one and
-// forgotten in the other.
+// Where a reload would land, which is what decides whether the
+// post-failure rescue is worth offering. A question about topology, not
+// liveness: probing the page's own server cannot tell a dead origin from
+// the proxy in front of it answering 5xx.
+describe("reloadCanLandElsewhere", () => {
+  it("is true for a page behind an apex", () => {
+    // Prod: the page is openfront.io, its server blue.openfront.io, and
+    // reloadForUpdate re-enters through the site host — which the load
+    // balancer answers from a live deployment.
+    setBootstrap({ siteHost: "openfront.io", serverHost: "blue.openfront.io" });
+    expect(reloadCanLandElsewhere()).toBe(true);
+  });
+
+  it("is false for a standalone page with no site host", () => {
+    // A reload re-serves the same page from the same server: if it is gone
+    // the reload fails too, and if it is alive the prompt loops.
+    setBootstrap({ siteHost: undefined, serverHost: "main.openfront.dev" });
+    expect(reloadCanLandElsewhere()).toBe(false);
+  });
+
+  it("is false when the site host IS the page's own server", () => {
+    // Dev today (main.openfront.dev renders its own page), previews, beta:
+    // the apex and the deployment are one host, so there is nowhere else
+    // for the reload to go.
+    setBootstrap({
+      siteHost: "main.openfront.dev",
+      serverHost: "main.openfront.dev",
+    });
+    expect(reloadCanLandElsewhere()).toBe(false);
+  });
+
+  it("is true for a Worker-served page, which names no server at all", () => {
+    // A reload fetches `latest` from the static Worker, which is by
+    // definition somewhere other than one deployment.
+    setWorkerBootstrap();
+    expect(reloadCanLandElsewhere()).toBe(true);
+  });
+});
+
 // The POST-FAILURE question, asked by PublicLobbySocket.promptIfOutdated
 // once reconnecting has given up: "my server is gone — is there a newer
 // build a reload would fetch?". It deliberately differs from the page-load
@@ -838,36 +924,6 @@ describe("picking between open, draining and fenced", () => {
 // socket that has failed maxWsAttempts times is that server proving it is
 // gone, and reloadForUpdate re-enters through the page host, which the load
 // balancer answers from a live deployment.
-describe("ownServerReachable", () => {
-  it("is true on any HTTP answer, a 503 included", async () => {
-    setBootstrap({ gitCommit: OLD });
-    const probe = vi.fn(
-      async (_input: RequestInfo | URL) => new Response("", { status: 503 }),
-    );
-    expect(await ownServerReachable(probe as unknown as typeof fetch)).toBe(
-      true,
-    );
-    expect(probe.mock.calls[0][0]).toBe(
-      `${ClientEnv.serverHttpBase()}/api/health`,
-    );
-    // Cross-origin on every real topology, and the master's health route
-    // sends no CORS headers: only an opaque request can succeed there.
-    expect((probe.mock.calls[0] as unknown[])[1]).toMatchObject({
-      mode: "no-cors",
-    });
-  });
-
-  it("is false on a network error", async () => {
-    setBootstrap({ gitCommit: OLD });
-    const probe = vi.fn(async () => {
-      throw new TypeError("network down");
-    });
-    expect(await ownServerReachable(probe as unknown as typeof fetch)).toBe(
-      false,
-    );
-  });
-});
-
 describe("newerVersionAvailable", () => {
   const NEWER = {
     latest: OWN,
@@ -930,6 +986,10 @@ describe("newerVersionAvailable", () => {
   });
 });
 
+// Opening a game whose server runs another build. One exported decision for
+// both call sites (Main.handleUrl, JoinLobbyModal.checkActiveLobby) so the
+// shells that must not be navigated cannot be remembered in one and
+// forgotten in the other.
 describe("redirectToGameVersion", () => {
   // Letter c runs OLD in API_LIST; the page is built from OWN.
   async function withList() {

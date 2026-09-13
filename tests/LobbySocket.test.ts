@@ -13,9 +13,10 @@ const mocks = vi.hoisted(() => ({
   // The post-failure question (ServerList.newerVersionAvailable): asked only
   // once reconnecting has given up, never at page load.
   newerVersionAvailable: vi.fn((): boolean => false),
-  // The rescue's premise check (ServerList.ownServerReachable): false means
-  // the page's own server no longer answers HTTP either.
-  ownServerReachable: vi.fn(async (): Promise<boolean> => false),
+  // Where a reload would land (ServerList.reloadCanLandElsewhere): true on
+  // a page behind an apex, false on a standalone one that would re-serve
+  // itself.
+  reloadCanLandElsewhere: vi.fn((): boolean => true),
   showInGameAlert: vi.fn(async (_message: string) => {}),
 }));
 
@@ -32,7 +33,7 @@ vi.mock("../src/client/ServerList", async (importOriginal) => {
     ...actual,
     ensureServerList: mocks.ensureServerList,
     newerVersionAvailable: mocks.newerVersionAvailable,
-    ownServerReachable: mocks.ownServerReachable,
+    reloadCanLandElsewhere: mocks.reloadCanLandElsewhere,
   };
 });
 
@@ -242,8 +243,8 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     mocks.ensureServerList.mockResolvedValue("api");
     mocks.newerVersionAvailable.mockReset();
     mocks.newerVersionAvailable.mockReturnValue(false);
-    mocks.ownServerReachable.mockReset();
-    mocks.ownServerReachable.mockResolvedValue(false);
+    mocks.reloadCanLandElsewhere.mockReset();
+    mocks.reloadCanLandElsewhere.mockReturnValue(true);
     vi.stubGlobal("WebSocket", FakeWebSocket);
     ClientEnv.reset();
     (window as any).BOOTSTRAP_CONFIG = {
@@ -339,12 +340,12 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     socket.stop();
   });
 
-  // The rescue checks its premise. A dead socket only proves the server is
-  // gone if plain HTTP to it fails too; a server that still answers has a
-  // WebSocket problem (a proxy blocking upgrades, say), and a reload would
-  // come back to it and fail the same way -- the OPE-430 loop, paced by
-  // maxWsAttempts instead of page loads.
-  it("does not prompt when the page's own server still answers HTTP", async () => {
+  // A standalone page (no apex in front of it: dev's main.openfront.dev
+  // today, previews, beta) re-serves itself on a reload. If its server is
+  // gone the reload fails too, and if it is alive with a WebSocket problem
+  // the prompt loops -- OPE-430 again, paced by maxWsAttempts. So the
+  // rescue does not fire there, whatever the list says.
+  it("does not prompt when a reload would come back from the same server", async () => {
     const onUpdateAvailable = vi.fn();
     const socket = new PublicLobbySocket(vi.fn(), {
       onUpdateAvailable,
@@ -354,11 +355,8 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
 
     mocks.ensureServerList.mockResolvedValue("fallback");
     mocks.newerVersionAvailable.mockReturnValue(true);
-    mocks.ownServerReachable.mockResolvedValue(true);
+    mocks.reloadCanLandElsewhere.mockReturnValue(false);
     (socket as any).handleClose();
-    await vi.waitFor(() =>
-      expect(mocks.ownServerReachable).toHaveBeenCalledTimes(1),
-    );
     await Promise.resolve();
     await Promise.resolve();
 
@@ -621,6 +619,10 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
     mocks.newerVersionAvailable.mockImplementation(
       serverList.newerVersionAvailable,
     );
+    mocks.reloadCanLandElsewhere.mockReset();
+    mocks.reloadCanLandElsewhere.mockImplementation(
+      serverList.reloadCanLandElsewhere,
+    );
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal(
       "fetch",
@@ -664,10 +666,14 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
   // goes through the page host — which the load balancer answers from a
   // live deployment. So the newer version IS news now.
   it("prompts once its socket has given up, though the same list said fallback", async () => {
+    // Prod's shape: the page is served behind the apex, so reloadForUpdate
+    // re-enters through openfront.io and the load balancer answers from a
+    // live deployment — the reload cannot come back to this dead host.
     bootstrap({
       cluster: { a: { host: "blue.openfront.io", numWorkers: 2 } },
       instanceLetter: "a",
       serverHost: "blue.openfront.io",
+      siteHost: "openfront.io",
     });
     const onUpdateAvailable = vi.fn();
     const socket = new PublicLobbySocket(vi.fn(), {
