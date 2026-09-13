@@ -410,7 +410,10 @@ export function isPinnedToAVersion(): boolean {
  * (the game's own, not whatever the address bar shows) -- is
  * versionedPathForGame.
  */
-export function redirectToGameVersion(gameID: GameID): boolean {
+export function redirectToGameVersion(
+  gameID: GameID,
+  spectator = false,
+): boolean {
   if (isDesktopShell()) return false;
   if (isOnReplayShell()) return false;
   const target = versionedPathForGame(
@@ -420,6 +423,7 @@ export function redirectToGameVersion(gameID: GameID): boolean {
     safeGamePath(gameID),
     window.location.pathname,
     window.location.search,
+    spectator,
   );
   if (target === null) return false;
   window.location.href = target;

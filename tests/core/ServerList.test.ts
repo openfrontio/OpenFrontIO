@@ -349,6 +349,38 @@ describe("versionedPathForGame", () => {
     );
   });
 
+  // Spectate from the homepage lives only in memory until this navigation,
+  // and Main.handleUrl reads it from the search: the rebuilt URL must carry
+  // it, or the spectator lands as a player and takes a seat.
+  it("carries a spectate intent onto the rebuilt path", () => {
+    expect(versionedPathForGame(OWN, OTHER, ID, GAME_PATH, "/", "", true)).toBe(
+      `/v/${SHORT_OTHER}/game/${ID}?spectate`,
+    );
+    // The page's own search already says it, or deliberately does not.
+    expect(
+      versionedPathForGame(
+        OWN,
+        OTHER,
+        ID,
+        GAME_PATH,
+        `/w3/game/${ID}`,
+        "?spectate",
+        false,
+      ),
+    ).toBe(`/v/${SHORT_OTHER}/game/${ID}?spectate`);
+    expect(
+      versionedPathForGame(
+        OWN,
+        OTHER,
+        ID,
+        GAME_PATH,
+        `/w3/game/${ID}`,
+        "",
+        true,
+      ),
+    ).toBe(`/v/${SHORT_OTHER}/game/${ID}`);
+  });
+
   // The sharper case: versioning the ambient path would route the player
   // into a DIFFERENT game than the one they asked to join.
   it("ignores another game's path, and its search", () => {

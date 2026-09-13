@@ -1339,7 +1339,7 @@ export class JoinLobbyModal extends BaseModal {
     // caller should stop as it does for a game it joined. The desktop and
     // replay shells, and the loop-guarded cases, fall through -- the whole
     // rule lives in redirectToGameVersion.
-    if (redirectToGameVersion(lobbyId)) return true;
+    if (redirectToGameVersion(lobbyId, spectator)) return true;
     const url = `${ClientEnv.gameHttpBase(lobbyId)}/${ClientEnv.gameWorkerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {

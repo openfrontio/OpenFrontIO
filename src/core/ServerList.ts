@@ -270,6 +270,12 @@ export function versionedPathForGame(
   gameVersionFreePath: string,
   pathname: string,
   search: string,
+  // Only read on the rebuilt path. A Spectate click on the homepage carries
+  // its intent in memory alone, and a full navigation drops memory, so the
+  // target URL has to say it: Main.handleUrl reads spectate mode from the
+  // search and nowhere else. When the path already names the game, its own
+  // search carries the flag (or not) and is kept verbatim.
+  spectator = false,
 ): string | null {
   if (gameVersion === undefined) return null;
   if (versionMatches(ownCommit, gameVersion)) return null;
@@ -279,5 +285,9 @@ export function versionedPathForGame(
   if (current !== null && commitsMatch(current, gameVersion)) return null;
   return pathNamesGame(path, gameID)
     ? versionedPath(gameVersion, pathname, search)
-    : versionedPath(gameVersion, gameVersionFreePath, "");
+    : versionedPath(
+        gameVersion,
+        gameVersionFreePath,
+        spectator ? "?spectate" : "",
+      );
 }
