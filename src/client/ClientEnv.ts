@@ -231,14 +231,16 @@ export class ClientEnv {
   // NOT serverHttpBase(): that is a game server, and once the API's list has
   // picked one it is a deployment host (falk2-b.openfront.io) with no site
   // on it. This reads only the page's own injected values, which name sites:
-  // the shell's serverHost (openfront.io, nightly.openfront.dev,
-  // main.openfront.dev), else the apex a web page was rendered behind.
+  // the apex a web page was rendered behind (siteHost) first, because a
+  // server-rendered page carries serverHost too and there it is one
+  // deployment (blue.openfront.io), not the site; else the shell's
+  // serverHost, which IS the site on desktop (openfront.io,
+  // nightly.openfront.dev, main.openfront.dev) and injects no siteHost.
   // Undefined when neither was injected; callers fall back themselves.
   static siteOrigin(): string | undefined {
     const v = ClientEnv.get();
-    if (v.serverHost) return `https://${v.serverHost}`;
-    if (v.siteHost) return `https://${v.siteHost}`;
-    return undefined;
+    const host = v.siteHost ?? v.serverHost;
+    return host ? `https://${host}` : undefined;
   }
   // Origin (scheme + host, no trailing slash) of the game server that hosts the
   // public-lobby and in-game WebSockets. The lobby-list and game sockets append
