@@ -641,7 +641,7 @@
     "decaying": "Zerfall -{rate} Zellen/s",
     "final": "Endzone, {pct} % halten",
     "growing": "Wird {pct}% in {time} erreichen",
-    "hold": "Halten <unk> {pct}%",
+    "hold": "Halten ≥ {pct}%",
     "next_wave": "Steigt auf {pct}% in {time}",
     "stable": "Stabil",
     "title": "Weltuntergangs Uhr",
