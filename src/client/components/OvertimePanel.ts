@@ -1,6 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { GameMode, Team } from "../../core/game/Game";
+import { ColoredTeams, GameMode, Team } from "../../core/game/Game";
 import { translateText } from "../Utils";
 import { GameView, PlayerView } from "../view";
 
@@ -46,7 +46,9 @@ export class OvertimePanel extends LitElement {
     const teamTiles = new Map<Team, number>();
     for (const p of alive) {
       const team = p.team();
-      if (team === null) continue;
+      // The bot team can never be declared winner (WinCheckExecution bails
+      // out for it), so it is never "first place" here either.
+      if (team === null || team === ColoredTeams.Bot) continue;
       teamTiles.set(team, (teamTiles.get(team) ?? 0) + p.numTilesOwned());
     }
     let topTeam: [Team, number] | null = null;

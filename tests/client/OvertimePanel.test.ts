@@ -1,6 +1,6 @@
 import { OvertimePanel } from "../../src/client/components/OvertimePanel";
 import type { GameView, PlayerView } from "../../src/client/view";
-import { GameMode, Team } from "../../src/core/game/Game";
+import { ColoredTeams, GameMode, Team } from "../../src/core/game/Game";
 
 // Keys pass through with their params appended, so assertions can check both
 // which string is shown and what it was filled with.
@@ -96,6 +96,20 @@ describe("OvertimePanel", () => {
     await panel.updateComplete;
 
     expect(panel.textContent).toContain("overtime.first_place|Red,50");
+  });
+
+  it("never shows the bot team as first place, matching the sim's win rule", async () => {
+    const panel = createPanel({
+      gameMode: GameMode.Team,
+      players: [
+        player("bot1", 600, { team: ColoredTeams.Bot }),
+        player("A", 300, { team: "Red" }),
+        player("C", 100, { team: "Blue" }),
+      ],
+    });
+    await panel.updateComplete;
+
+    expect(panel.textContent).toContain("overtime.first_place|Red,30");
   });
 
   it("stays hidden before the start minute", async () => {
