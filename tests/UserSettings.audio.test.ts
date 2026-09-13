@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   AudioCategory,
   USER_SETTINGS_CHANGED_EVENT,
@@ -17,6 +17,18 @@ function resetUserSettingsState() {
   statics.playerId = null;
 }
 
+/** The shell sets this global; isDesktopShell() keys off it. */
+function pretendDesktopShell() {
+  (
+    globalThis as unknown as { window: Record<string, unknown> }
+  ).window.openfrontDesktop = {};
+}
+
+function pretendWeb() {
+  delete (globalThis as unknown as { window: Record<string, unknown> }).window
+    .openfrontDesktop;
+}
+
 const INHERITS_EFFECTS: AudioCategory[] = [
   "effects",
   "alerts",
@@ -29,7 +41,8 @@ describe("audio channel volumes", () => {
 
   it("returns the per-channel defaults when nothing is stored", () => {
     const s = new UserSettings();
-    expect(s.audioVolume("master")).toBeCloseTo(1.0);
+    // Master is the one platform-dependent default; see the master describe
+    // block below. Everything else is the same everywhere.
     expect(s.audioVolume("music")).toBeCloseTo(0.5);
     expect(s.audioVolume("effects")).toBeCloseTo(0.7);
     expect(s.audioVolume("alerts")).toBeCloseTo(0.8);
@@ -141,5 +154,59 @@ describe("legacy volume accessors", () => {
     expect(s.audioVolume("music")).toBeCloseTo(0.4);
     expect(s.audioVolume("effects")).toBeCloseTo(0.65);
     expect(localStorage.getItem("settings.audio.music")).toBe("0.4");
+  });
+});
+
+describe("master volume default", () => {
+  beforeEach(() => {
+    resetUserSettingsState();
+    pretendWeb();
+  });
+
+  afterEach(pretendWeb);
+
+  it("starts web silent when the player has never chosen any audio value", () => {
+    // Parity with main, where both old sliders defaulted to 0, and ordinary
+    // autoplay etiquette: nothing should start making noise by itself.
+    const s = new UserSettings();
+    expect(s.audioVolume("master")).toBe(0);
+    // The channels themselves are untouched — only master differs.
+    expect(s.audioVolume("music")).toBeCloseTo(0.5);
+    expect(s.audioVolume("effects")).toBeCloseTo(0.7);
+    expect(s.audioVolume("alerts")).toBeCloseTo(0.8);
+    expect(s.audioVolume("ambience")).toBeCloseTo(0.4);
+    expect(s.audioVolume("interface")).toBeCloseTo(0.5);
+  });
+
+  it("starts the desktop shell audible", () => {
+    pretendDesktopShell();
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(1.0);
+  });
+
+  it("keeps a returning web player audible when only a legacy key is stored", () => {
+    // Master has no legacy key, so without this carve-out a player who had
+    // deliberately set the old sliders would upgrade into silence.
+    localStorage.setItem("settings.backgroundMusicVolume", "0.5");
+    const s = new UserSettings();
+    expect(s.audioVolume("master")).toBeCloseTo(1.0);
+    expect(s.audioVolume("music")).toBeCloseTo(0.5);
+  });
+
+  it("counts a stored channel key as having chosen, even at zero", () => {
+    localStorage.setItem("settings.audio.effects", "0");
+    const s = new UserSettings();
+    expect(s.audioVolume("master")).toBeCloseTo(1.0);
+    expect(s.audioVolume("effects")).toBe(0);
+  });
+
+  it("lets a stored master value win on either platform", () => {
+    localStorage.setItem("settings.audio.master", "0.3");
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.3);
+
+    pretendDesktopShell();
+    resetUserSettingsState();
+    pretendDesktopShell();
+    localStorage.setItem("settings.audio.master", "0.3");
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.3);
   });
 });

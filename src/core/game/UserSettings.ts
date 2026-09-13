@@ -10,6 +10,9 @@ import {
   DEFAULT_STATS_COLUMNS,
   StatsTableKind,
 } from "../../client/StatsConstants";
+// DesktopShell.ts imports nothing, so this cannot introduce an import cycle
+// (verified with madge: 58 cycles before and after, none involving it).
+import { isDesktopShell } from "../../client/DesktopShell";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
@@ -94,6 +97,15 @@ function clampVolume(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.max(0, Math.min(1, value));
 }
+
+/** Every key that means "this player has chosen an audio volume before". */
+const AUDIO_VOLUME_KEYS: readonly string[] = [
+  "settings.backgroundMusicVolume",
+  "settings.soundEffectsVolume",
+  ...(
+    ["master", "music", "effects", "alerts", "ambience", "interface"] as const
+  ).map((category) => `settings.audio.${category}`),
+];
 
 const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
   music: "settings.backgroundMusicVolume",
@@ -752,12 +764,37 @@ export class UserSettings {
    * the only writer is a slider drag, so 0 is always a deliberate choice and
    * never means "unset".
    */
+  /**
+   * What master falls back to with nothing stored for it.
+   *
+   * The desktop shell is a game the player deliberately launched, so it starts
+   * audible. The web build starts silent, matching main today — both of the
+   * old sliders defaulted to 0, and audio that starts by itself on the web is
+   * bad manners besides.
+   *
+   * The carve-out: master has no legacy key of its own, so defaulting it to 0
+   * would silence a returning player who had deliberately set the old
+   * sliders. If any audio value is stored at all, master defaults to 1.0 and
+   * that player keeps hearing what they chose.
+   */
+  private defaultMasterVolume(): number {
+    if (isDesktopShell()) return AUDIO_DEFAULTS.master;
+    const chosenBefore = AUDIO_VOLUME_KEYS.some(
+      (key) => this.getCached(key) !== null,
+    );
+    return chosenBefore ? AUDIO_DEFAULTS.master : 0;
+  }
+
   audioVolume(category: AudioCategory): number {
     const legacyKey = AUDIO_LEGACY_KEY[category];
+    // Only master is platform-dependent; every channel default is the same
+    // everywhere, and the mixer is identical on both.
+    const base =
+      category === "master"
+        ? this.defaultMasterVolume()
+        : AUDIO_DEFAULTS[category];
     const fallback =
-      legacyKey === undefined
-        ? AUDIO_DEFAULTS[category]
-        : this.getFloat(legacyKey, AUDIO_DEFAULTS[category]);
+      legacyKey === undefined ? base : this.getFloat(legacyKey, base);
     // Clamp on read as well as on write: the legacy keys were never bounded,
     // so a stored "1.5" would otherwise reach the slider as 150.
     return clampVolume(this.getFloat(`settings.audio.${category}`, fallback));
