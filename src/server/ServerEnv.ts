@@ -243,6 +243,14 @@ export class ServerEnv {
     const v = process.env.SITE_HOST;
     return v && v.length > 0 ? v : undefined;
   }
+  // Where the drain decision comes from (docs/MultiServer.md, "Server list
+  // v2"): "apex" is today's /api/health colour poll of the site host; "api"
+  // obeys the state the API assigns at check-in (ClusterCheckin.ts). Any
+  // other value, or none, means apex, so a deploy that doesn't set it is
+  // unchanged.
+  static clusterStateSource(): "apex" | "api" {
+    return process.env.CLUSTER_STATE_SOURCE === "api" ? "api" : "apex";
+  }
   static otelEnabled(): boolean {
     return (
       ServerEnv.gameEnv !== GameEnv.Dev &&
