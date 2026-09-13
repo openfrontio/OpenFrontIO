@@ -435,12 +435,21 @@ const OWN_SERVER_PROBE_TIMEOUT_MS = 5_000;
  * shape again, paced by maxWsAttempts). So the rescue checks its premise:
  * one GET of the server's health route. Any HTTP answer, a 503 included,
  * is the server being there; only a network error or a timeout is not.
+ *
+ * mode "no-cors": the page's server is a different origin on every real
+ * topology (openfront.io -> blue.openfront.io, main.openfront.dev ->
+ * main.server.openfront.dev), and /api/health is answered by the master,
+ * which sends no CORS headers. A cors-mode fetch would be rejected by the
+ * browser every time, alive server or not. An opaque response is all this
+ * needs: it resolves on any HTTP answer and rejects only when nothing
+ * answered.
  */
 export async function ownServerReachable(
   fetchFn: typeof fetch = fetch,
 ): Promise<boolean> {
   try {
     await fetchFn(`${ClientEnv.serverHttpBase()}/api/health`, {
+      mode: "no-cors",
       cache: "no-store",
       signal: AbortSignal.timeout(OWN_SERVER_PROBE_TIMEOUT_MS),
     });

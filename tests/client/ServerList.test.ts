@@ -850,6 +850,11 @@ describe("ownServerReachable", () => {
     expect(probe.mock.calls[0][0]).toBe(
       `${ClientEnv.serverHttpBase()}/api/health`,
     );
+    // Cross-origin on every real topology, and the master's health route
+    // sends no CORS headers: only an opaque request can succeed there.
+    expect((probe.mock.calls[0] as unknown[])[1]).toMatchObject({
+      mode: "no-cors",
+    });
   });
 
   it("is false on a network error", async () => {
