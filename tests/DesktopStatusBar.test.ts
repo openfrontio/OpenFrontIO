@@ -9,6 +9,9 @@ import {
   retryServerList,
 } from "../src/client/ServerList";
 
+// Matches RETRY_BUTTON_COOLDOWN_MS in the component.
+const COOLDOWN_MS = 5_000;
+
 describe("barSource", () => {
   it("shows nothing when both states are healthy", () => {
     expect(
@@ -136,10 +139,16 @@ describe("the rendered offline state", () => {
     return bar;
   }
 
+  // The button, whichever label it is wearing. `retrying` has `retry` as a
+  // prefix, so this matches on the shared stem rather than either key.
   function retryButton(bar: HTMLElement): HTMLButtonElement | undefined {
     return Array.from(bar.querySelectorAll("button")).find((b) =>
       b.textContent?.includes("desktop_status.retry"),
     );
+  }
+
+  function buttonLabel(bar: HTMLElement): string {
+    return retryButton(bar)!.textContent!.trim();
   }
 
   beforeEach(() => {
@@ -290,5 +299,110 @@ describe("the rendered offline state", () => {
 
     release(new Response("{}", { status: 404 }));
     await vi.waitFor(() => expect(backendUnreachableConfirmed()).toBe(false));
+  });
+
+  // The press's own attempt fails in milliseconds against a stubbed fetch,
+  // so without a cooldown the button would come straight back and a player
+  // watching an outage could sit there clicking it -- one real request each.
+  it("keeps Retry disabled for the cooldown after a press, then re-enables it", async () => {
+    await confirmOutage();
+    const bar = mountBar();
+    await bar.updateComplete;
+
+    retryButton(bar)!.click();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    // The attempt itself has settled by now; the cooldown is what is still
+    // holding the button.
+    await bar.updateComplete;
+    expect(retryButton(bar)!.disabled).toBe(true);
+
+    vi.advanceTimersByTime(COOLDOWN_MS - 1);
+    await bar.updateComplete;
+    expect(retryButton(bar)!.disabled).toBe(true);
+
+    vi.advanceTimersByTime(1);
+    await bar.updateComplete;
+    expect(retryButton(bar)!.disabled).toBe(false);
+    expect(buttonLabel(bar)).toBe("desktop_status.retry");
+  });
+
+  it("costs one attempt for a rapid double click", async () => {
+    await confirmOutage();
+    const bar = mountBar();
+    await bar.updateComplete;
+    const before = fetchMock.mock.calls.length;
+
+    const button = retryButton(bar)!;
+    button.click();
+    button.click();
+    button.click();
+
+    expect(fetchMock).toHaveBeenCalledTimes(before + 1);
+  });
+
+  // The automatic half of the same protection: while the heartbeat is
+  // already asking, a press could only ever join the attempt that is out, so
+  // the button says what is happening instead of offering a no-op.
+  it("disables Retry and says so while an automatic attempt is in flight", async () => {
+    await confirmOutage();
+    const bar = mountBar();
+    await bar.updateComplete;
+    expect(retryButton(bar)!.disabled).toBe(false);
+
+    // Failing the attempt, not answering it: an answer would clear the
+    // outage and take this whole bar away before the assertion.
+    let fail: (e: unknown) => void = () => {};
+    fetchMock.mockImplementation(
+      async () =>
+        await new Promise<Response>((_resolve, reject) => {
+          fail = reject;
+        }),
+    );
+    // Nobody clicked anything: this is the heartbeat's own beat. Stepping
+    // past the backoff first, since two failures are already behind us.
+    vi.advanceTimersByTime(60_000);
+    const beat = ensureServerList();
+    await bar.updateComplete;
+
+    expect(retryButton(bar)!.disabled).toBe(true);
+    expect(buttonLabel(bar)).toBe("desktop_status.retrying");
+    expect(retryButton(bar)!.title).toBe("desktop_status.retrying");
+
+    // Settling re-enables it: no click happened, so no cooldown is owed.
+    fail(new TypeError("network down"));
+    await beat;
+    await bar.updateComplete;
+    expect(retryButton(bar)!.disabled).toBe(false);
+    expect(buttonLabel(bar)).toBe("desktop_status.retry");
+  });
+
+  it("stays disabled after an attempt settles if the click's cooldown is still running", async () => {
+    await confirmOutage();
+    const bar = mountBar();
+    await bar.updateComplete;
+
+    let fail: (e: unknown) => void = () => {};
+    fetchMock.mockImplementation(
+      async () =>
+        await new Promise<Response>((_resolve, reject) => {
+          fail = reject;
+        }),
+    );
+    retryButton(bar)!.click();
+    await bar.updateComplete;
+    expect(retryButton(bar)!.disabled).toBe(true);
+
+    // The attempt ends well inside the cooldown. Whichever ends LATER is the
+    // one that governs, so the button is still held.
+    vi.advanceTimersByTime(1_000);
+    fail(new TypeError("network down"));
+    await vi.waitFor(() =>
+      expect(buttonLabel(bar)).toBe("desktop_status.retry"),
+    );
+    expect(retryButton(bar)!.disabled).toBe(true);
+
+    vi.advanceTimersByTime(COOLDOWN_MS);
+    await bar.updateComplete;
+    expect(retryButton(bar)!.disabled).toBe(false);
   });
 });

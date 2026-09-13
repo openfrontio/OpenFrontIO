@@ -11,13 +11,24 @@ import {
   type DesktopUpdateState,
 } from "../DesktopShell";
 import {
+  attemptInFlight,
   backendUnreachableConfirmed,
   retryServerList,
   type BackendReachabilityDetail,
+  type ServerListAttemptDetail,
 } from "../ServerList";
 import { translateText } from "../Utils";
 
 const WIGGLE_CLASS = "animate-bounce";
+
+// How long Retry stays disabled after a press, on top of however long that
+// press's own attempt takes. The fetch is bounded at 4s, so without this the
+// button would come back within seconds of a failure and a player watching an
+// outage could sit there clicking it -- each click a real request. Five
+// seconds is long enough that leaning on it costs nothing and short enough
+// that someone who has just plugged their network back in is not left
+// waiting on a button that looks broken.
+const RETRY_BUTTON_COOLDOWN_MS = 5_000;
 
 /**
  * Which state the single bottom slot shows, in one fixed order rather than a
@@ -83,11 +94,17 @@ export class DesktopStatusBar extends LitElement {
   @state() private updateState: DesktopUpdateState | null = null;
   @state() private sessionState: DesktopSessionState | null = null;
   @state() private backendOutage = false;
-  // True from a Retry press until that attempt settles, so the button cannot
-  // be pressed again while its own request is still out. ServerList throttles
-  // and dedupes underneath, but a button that keeps accepting clicks and
-  // visibly does nothing reads as broken.
-  @state() private retrying = false;
+  // Whether ANY server-list attempt is out, this bar's own Retry press or a
+  // heartbeat beat. ServerList throttles and dedupes underneath, but a button
+  // that keeps accepting clicks and visibly does nothing reads as broken --
+  // and while the heartbeat is already asking, a press could only ever join
+  // the attempt that is out, so offering it is a lie.
+  @state() private attempting = false;
+  // Whether the post-press cooldown is still running. The button is disabled
+  // while EITHER this or `attempting` holds, so the two compose into "until
+  // whichever ends later" without either needing to know about the other.
+  @state() private coolingDown = false;
+  private cooldownTimer: number | undefined;
 
   private unsubscribe: (() => void) | null = null;
 
@@ -99,6 +116,12 @@ export class DesktopStatusBar extends LitElement {
     this.backendOutage = (
       e as CustomEvent<BackendReachabilityDetail>
     ).detail.confirmed;
+  };
+
+  private onAttempt = (e: Event) => {
+    this.attempting = (
+      e as CustomEvent<ServerListAttemptDetail>
+    ).detail.inFlight;
   };
 
   // The bar's own element, so wiggle() can restart the animation with a real
@@ -140,10 +163,12 @@ export class DesktopStatusBar extends LitElement {
     // this element upgrades.
     if (isDesktopShell()) {
       this.backendOutage = backendUnreachableConfirmed();
+      this.attempting = attemptInFlight();
       document.addEventListener(
         "backend-reachability",
         this.onBackendReachability,
       );
+      document.addEventListener("server-list-attempt", this.onAttempt);
     }
   }
 
@@ -156,7 +181,9 @@ export class DesktopStatusBar extends LitElement {
       "backend-reachability",
       this.onBackendReachability,
     );
+    document.removeEventListener("server-list-attempt", this.onAttempt);
     window.clearTimeout(this.wiggleTimer);
+    window.clearTimeout(this.cooldownTimer);
   }
 
   /** Draws attention when the player tries to do something the update gates. */
@@ -248,39 +275,64 @@ export class DesktopStatusBar extends LitElement {
 
   /**
    * Retry for the offline state: ask the server list to try the API again
-   * right now rather than waiting out the heartbeat's retry interval.
+   * right now rather than waiting out the heartbeat's backoff, which after a
+   * few failures is up to a minute long.
    *
    * Nothing is rendered from the result. A successful attempt flips
    * backendReachable() to true, which dispatches "backend-reachability",
    * which is what makes this whole bar disappear -- so the button's own
    * feedback is the bar going away. A failed one leaves the bar as it is,
    * which is also correct.
+   *
+   * Disabled while an attempt is out (whoever started it) and for
+   * RETRY_BUTTON_COOLDOWN_MS after a press, whichever ends later. While the
+   * heartbeat is the one asking, the label says so rather than sitting there
+   * greyed out for no visible reason: a dead button with no explanation is
+   * the thing this feature was reported as.
    */
   private reachabilityAction() {
+    const disabled = this.retryDisabled();
     return html`<button
       class="shrink-0 px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius
              text-sm font-medium uppercase tracking-wider
              disabled:opacity-50 disabled:cursor-not-allowed
              disabled:hover:bg-malibu-blue"
-      ?disabled=${this.retrying}
+      ?disabled=${disabled}
+      title=${this.attempting
+        ? translateText("desktop_status.retrying")
+        : nothing}
       @click=${() => this.onRetryClick()}
     >
-      ${translateText("desktop_status.retry")}
+      ${this.attempting
+        ? translateText("desktop_status.retrying")
+        : translateText("desktop_status.retry")}
     </button>`;
   }
 
+  private retryDisabled(): boolean {
+    return this.attempting || this.coolingDown;
+  }
+
   private onRetryClick(): void {
-    if (this.retrying) return;
-    this.retrying = true;
-    retryServerList()
-      .catch((err: unknown) => {
-        // retryServerList never rejects; belt and braces, so a change there
-        // cannot surface as an unhandled rejection from a click handler.
-        console.error("desktop-status-bar: server list retry failed", err);
-      })
-      .finally(() => {
-        this.retrying = false;
-      });
+    // The rendered `disabled` already stops a real click getting here; this
+    // guard is for the synthetic ones (a double click delivered in the same
+    // task, before Lit has re-rendered) and costs nothing.
+    if (this.retryDisabled()) return;
+    this.coolingDown = true;
+    window.clearTimeout(this.cooldownTimer);
+    this.cooldownTimer = window.setTimeout(() => {
+      this.coolingDown = false;
+    }, RETRY_BUTTON_COOLDOWN_MS);
+    // `attempting` is not set here: retryServerList dispatches
+    // "server-list-attempt" synchronously when it starts a fetch, and that
+    // one event covers this press and the heartbeat alike. Setting it here
+    // too would leave it stuck on for a press the 1s floor swallowed, which
+    // starts no attempt and so announces no settle.
+    retryServerList().catch((err: unknown) => {
+      // retryServerList never rejects; belt and braces, so a change there
+      // cannot surface as an unhandled rejection from a click handler.
+      console.error("desktop-status-bar: server list retry failed", err);
+    });
   }
 
   private label(s: DesktopUpdateState) {

@@ -441,19 +441,34 @@ values.
   there is an outage to back off from, so confirmation is never slowed by
   it. One missed beat is a blip the cached list serves straight through, and
   dimming multiplayer for 10s over it would be worse than the blip; any
-  answer resets the count. Every change to either
-  value is announced on the document as `backend-reachability` with
-  `{ reachable, confirmed }`. Consumers seed from the accessor and then
-  subscribe — the event is one-shot, so a component mounting afterwards
-  would otherwise never learn the state (OPE-396).
+  answer resets the count. Every change to either value is announced on the
+  document as `backend-reachability` with `{ reachable, confirmed }`.
+  Consumers seed from the accessor and then subscribe — the event is
+  one-shot, so a component mounting afterwards would otherwise never learn
+  the state (OPE-396).
+- **Busy (a third signal):** `attemptInFlight()` says whether an attempt is
+  out right now, automatic or manual, and every start and settle is
+  announced as `server-list-attempt` with `{ inFlight }`. Separate from
+  `backend-reachability` because that one fires only on a **change**: an
+  attempt that fails exactly like the last one announces nothing, which is
+  precisely the case the Retry button has to see.
 - **Retry:** `retryServerList()` is the player-initiated attempt behind the
   desktop status bar's offline Retry. It ignores the heartbeat's backoff (a
   person pressing a button is not a timer, and once an outage has run a
-  while that wait is up to a minute) but has a 1s floor
-  of its own, inside which a second press hands back the same promise; past
-  that, `fetchOnce()` still dedupes against an attempt already in flight. A
-  retry that fails counts towards the outage confirmation like any other
-  attempt.
+  while that wait is up to a minute) but has a 1s floor of its own, inside
+  which a second press hands back the same promise; past that,
+  `fetchOnce()` still dedupes against an attempt already in flight. A retry
+  that fails counts towards the outage confirmation like any other attempt.
+
+  The floor is the last line of defence rather than the first. The button
+  itself is disabled under **either** of two conditions, so it comes back
+  whenever the later of them ends: while any server-list attempt is in
+  flight (`attemptInFlight()` / `server-list-attempt`), whoever started it —
+  during an automatic one it reads `desktop_status.retrying` rather than
+  sitting greyed out for no visible reason — and for a 5s cooldown after a
+  press (`RETRY_BUTTON_COOLDOWN_MS` in `DesktopStatusBar`), since a stubbed
+  or fast failure settles in milliseconds and would otherwise hand the
+  button straight back to a player clicking at an outage.
 
   What consumes the confirmed signal, and what it does: the desktop status
   bar's offline state (ranked below a session failure, above any update

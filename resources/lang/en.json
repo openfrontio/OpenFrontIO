@@ -584,7 +584,8 @@
   },
   "desktop_status": {
     "offline": "Offline: can't reach the OpenFront servers",
-    "retry": "Retry"
+    "retry": "Retry",
+    "retrying": "Retrying…"
   },
   "desktop_update": {
     "blocked": "A Steam update is required for the latest version",
