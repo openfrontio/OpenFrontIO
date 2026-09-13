@@ -400,10 +400,25 @@ and prod is unaffected. The decision table above is unit-tested in
 
 A deployment answers on two names, and they do different jobs:
 
-| Name      | Shape                       | Serves                                          |
+| Name      | Is                          | Serves                                          |
 | --------- | --------------------------- | ----------------------------------------------- |
-| page host | `<subdomain>.<DOMAIN>`      | the page: HTML, assets — soon a static Worker   |
+| page host | `SITE_HOST`                 | the page: HTML, assets — soon a static Worker   |
 | game host | `<subdomain>.<GAME_DOMAIN>` | the game: WebSockets, `/api/*` — this container |
+
+The game host is always `<subdomain>.<GAME_DOMAIN>` (or `<subdomain>.<DOMAIN>`
+with `GAME_DOMAIN` unset). The page host is `SITE_HOST`, and what fills that in
+depends on whether the deployment has siblings:
+
+- **In a multi-entry cluster map** — prod's blue/green, and the dev blue/green
+  pair — the page host is the **apex**: `openfront.io`, `openfront.dev`. That
+  is genuinely where players load the page from, and `deploy.sh` has always
+  defaulted `SITE_HOST` to `$DOMAIN` for these. `GAME_DOMAIN` does not change
+  it.
+- **Standalone** (`main`, `nightly`, beta, a branch preview) there is no apex,
+  so with `GAME_DOMAIN` set `deploy.sh` fills `SITE_HOST` in with
+  `<subdomain>.<DOMAIN>` — the deployment's own page name, which is what the
+  Worker will serve. With `GAME_DOMAIN` unset it stays empty, as today, because
+  page and game are then the same name anyway.
 
 They have to be separate names because the static Worker will sit on the page
 host and serve a cached page for every player of a version. Game traffic must
@@ -413,6 +428,10 @@ client picks a game server itself.
 
 Prod is already shaped this way — `openfront.io` is the page, `blue.openfront.io`
 and `green.openfront.io` are the games — because the load balancer forced it.
+`deploy.sh` therefore ignores `GAME_DOMAIN` entirely on prod: it is a
+repository-level variable that every workflow inherits the day it is set, and
+honouring it there would compute `blue.server.openfront.io`, which is in no
+cluster map and resolves nowhere.
 Dev was not: `main.openfront.dev` was both. `GAME_DOMAIN` is the one deploy
 variable that gives a dev deployment the prod shape, e.g.
 `GAME_DOMAIN=server.openfront.dev` makes `main` page at `main.openfront.dev`
@@ -426,10 +445,7 @@ What follows from it:
 - The cluster map names GAME hosts — it is the list of servers clients open
   sockets to. `deploy.sh` matches this box against it by its game host, and
   `ServerEnv.clusterSelf()` does the same on boot.
-- Check-in reports both: `site` is the page host, `host` is the game host. For
-  a standalone dev deployment `deploy.sh` now fills `SITE_HOST` in with
-  `<subdomain>.<DOMAIN>`, so the page assets are uploaded and the server
-  registers under the name the Worker will serve.
+- Check-in reports both: `site` is the page host, `host` is the game host.
 - Traefik matches both names during the transition, so the box keeps
   answering on the name people have bookmarked until the Worker is actually
   routed at the page host. After that the page-host clause never matches:
@@ -445,6 +461,10 @@ What follows from it:
   dev deployment has a `SITE_HOST` once `GAME_DOMAIN` is set, and a standalone
   one must not poll its own page host for `/api/health` — the Worker serves no
   such route, and with one entry there is no other colour to flip to anyway.
+  The pair still polls, and it polls **through its page host**: the apex is how
+  it learns which colour is live. So the Worker on the apex has to keep passing
+  `/api/health` through to a server until `CLUSTER_STATE_SOURCE=api` is turned
+  on for the pair and the API owns that decision instead.
 
 `GAME_DOMAIN` unset collapses both names back onto `$DOMAIN`, which is exactly
 today's behaviour: prod never sets it, and dev does not until the DNS wildcard

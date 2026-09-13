@@ -368,11 +368,18 @@ docker network create web 2> /dev/null || true
 # Worker owns the page host its DNS stops pointing here and that clause
 # simply never matches. With GAME_DOMAIN unset there is one name and the
 # rule is byte-for-byte the one this script has always emitted.
+#
+# The markers below delimit the block tests/UpdateTraefikHostRule.test.ts
+# extracts and runs, the same way the restart policy above is tested: the
+# rest of this script talks to docker, this decision is three strings in and
+# one string out. Keep them in place.
+# --- BEGIN traefik host rule (tested) ---
 if [ -n "${GAME_DOMAIN:-}" ]; then
     TRAEFIK_HOST_RULE="Host(\`${SUBDOMAIN}.${DOMAIN}\`) || Host(\`${SUBDOMAIN}.${GAME_DOMAIN}\`)"
 else
     TRAEFIK_HOST_RULE="Host(\`${SUBDOMAIN}.${DOMAIN}\`)"
 fi
+# --- END traefik host rule (tested) ---
 
 docker run -d \
     --restart="${RESTART}" \

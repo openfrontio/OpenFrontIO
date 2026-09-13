@@ -22,14 +22,16 @@ const HealthSchema = z.object({ color: ClusterColorSchema });
  *    a standalone deployment by definition — nothing to flip to, so nothing
  *    to poll for.
  *
- * Pure, so the decision is testable without booting the master.
+ * Pure, so the decision is testable without booting the master. Narrows
+ * `siteHost` on the way out: "we should poll" implies there is a host to
+ * poll, so the caller gets the string without re-checking for undefined.
  */
 export function shouldPollApex(
   stateSource: ClusterStateSource,
   siteHost: string | undefined,
   publicHost: string | undefined,
   clusterSize: number,
-): boolean {
+): siteHost is string {
   return (
     stateSource === "apex" &&
     siteHost !== undefined &&

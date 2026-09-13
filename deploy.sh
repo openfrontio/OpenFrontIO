@@ -109,7 +109,28 @@ fi
 # hostnames collapsing back onto $DOMAIN -- which is what prod does, and
 # what dev does until the variable is set.
 GAME_DOMAIN="${GAME_DOMAIN:-}"
+# Prod ignores it outright. This is a dev-only mechanism: on prod the page and
+# the game already have distinct names (openfront.io vs blue/green.openfront.io),
+# so there is nothing for it to fix there. And it arrives from a REPOSITORY-level
+# GitHub variable, which every workflow in the repo inherits the moment it is
+# set — including the release jobs. Honouring it on prod would compute
+# blue.server.openfront.io, which is in no cluster map and resolves nowhere, and
+# the deploy would fail its own self-match. Ignoring it here is the guarantee;
+# "prod probably won't set it" is not one.
+if [ "$ENV" = "prod" ] && [ -n "$GAME_DOMAIN" ]; then
+    echo "Ignoring GAME_DOMAIN='${GAME_DOMAIN}' on prod: its page and game hosts are already distinct names"
+    GAME_DOMAIN=""
+fi
+# It lands verbatim inside a Traefik Host(`...`) rule and in a DNS name, so
+# hold it to hostname characters. Loose on purpose — this is a typo guard and a
+# shell-injection guard, not a validator for what DNS will actually resolve.
 if [ -n "$GAME_DOMAIN" ]; then
+    case "$GAME_DOMAIN" in
+        *[!a-zA-Z0-9.-]* | .* | -* | *. | *-)
+            echo "Error: GAME_DOMAIN must be a hostname - letters, digits, dots and hyphens, no leading or trailing dot or hyphen - got: '$GAME_DOMAIN'"
+            exit 1
+            ;;
+    esac
     echo "Using game domain: $GAME_DOMAIN (page domain: $DOMAIN)"
 fi
 

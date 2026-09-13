@@ -247,24 +247,21 @@ export async function startMaster() {
   // rule that the API being the state source stops the poll — two deciders
   // would fight over setActive.
   const siteHost = ServerEnv.siteHost();
-  const apexHost =
-    siteHost !== undefined &&
+  if (
     shouldPollApex(
       stateSource,
       siteHost,
       ServerEnv.publicHost(),
       Object.keys(ServerEnv.cluster()).length,
     )
-      ? siteHost
-      : undefined;
-  if (apexHost !== undefined) {
-    log.info(`Polling https://${apexHost}/api/health for active deployment`);
+  ) {
+    log.info(`Polling https://${siteHost}/api/health for active deployment`);
     // 5s: this latency is the window after a flip where the newly-active
     // deployment isn't creating public lobbies yet (and the draining one
     // still is). startPolling serializes runs, so the fetch's 10s timeout
     // can't pile requests up.
     startPolling(async () => {
-      const siteColor = await fetchSiteColor(apexHost);
+      const siteColor = await fetchSiteColor(siteHost);
       if (siteColor === null) return;
       lobbyService.setActive(siteColor === ServerEnv.color());
     }, 5 * 1000);
