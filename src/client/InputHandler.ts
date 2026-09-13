@@ -319,6 +319,28 @@ export class InputHandler {
     this.buildKeybindTable();
   };
 
+  /**
+   * Drops every piece of in-flight pointer/drag/long-press state. Shared by
+   * the blur handler, the re-initialize guard and destroy(): each has to leave
+   * the handler with nothing latched, or a pointer that was physically down
+   * stays recorded as down while `pointers` is empty, and the next ordinary
+   * move is treated as a drag from a stale origin. Deliberately emits
+   * nothing -- blur re-emits the events it owes around this call.
+   */
+  private resetPointerState() {
+    this.pointerDown = false;
+    this.pointers.clear();
+    this.lastGestureScale = null;
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    this.longPressActive = false;
+    this.suppressNextTap = false;
+    this.selectionBoxActive = false;
+    this.multiSelectionActive = false;
+  }
+
   /** Re-read the player's keybinds and rebuild the key dispatch table. */
   private buildKeybindTable() {
     this.keybinds = this.userSettings.keybinds(Platform.isMac);
@@ -494,12 +516,7 @@ export class InputHandler {
       clearInterval(this.moveInterval);
       this.moveInterval = null;
     }
-    if (this.longPressTimer !== null) {
-      clearTimeout(this.longPressTimer);
-      this.longPressTimer = null;
-    }
-    this.longPressActive = false;
-    this.suppressNextTap = false;
+    this.resetPointerState();
     this.listenerAbort = new AbortController();
     const { signal } = this.listenerAbort;
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e), {
@@ -572,18 +589,10 @@ export class InputHandler {
           this.alternateView = false;
           this.eventBus.emit(new AlternateViewEvent(false));
         }
-        this.pointerDown = false;
-        this.pointers.clear();
-        this.lastGestureScale = null;
-        if (this.longPressTimer !== null) {
-          clearTimeout(this.longPressTimer);
-          this.longPressTimer = null;
-        }
-        this.longPressActive = false;
-        this.suppressNextTap = false;
-        if (this.selectionBoxActive || this.multiSelectionActive) {
-          this.selectionBoxActive = false;
-          this.multiSelectionActive = false;
+        const hadSelection =
+          this.selectionBoxActive || this.multiSelectionActive;
+        this.resetPointerState();
+        if (hadSelection) {
           this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
         }
         this.canvas.style.cursor = "";
@@ -1289,19 +1298,13 @@ export class InputHandler {
     this.listenerAbort?.abort();
     this.listenerAbort = null;
     this.eventBus.off(UnitSelectionEvent, this.onUnitSelection);
-    // A touch pointerdown arms an 800ms long-press timer. Aborting the
-    // listeners does not cancel it, so without this it can still fire after
-    // teardown: emitting TouchLongPressStartEvent on the page-global bus,
-    // into the next game, and setting the cursor on a canvas the renderer
-    // has already removed.
-    if (this.longPressTimer !== null) {
-      clearTimeout(this.longPressTimer);
-      this.longPressTimer = null;
-    }
-    this.longPressActive = false;
-    this.suppressNextTap = false;
+    // Includes the 800ms long-press timer a touch pointerdown arms: aborting
+    // the listeners does not cancel it, so without this it can still fire
+    // after teardown, emitting TouchLongPressStartEvent on the page-global
+    // bus, into the next game, and setting the cursor on a canvas the
+    // renderer has already removed.
+    this.resetPointerState();
     this.activeKeys.clear();
-    this.lastGestureScale = null;
     this.keybindAndEvent = [];
     this.keybinds = {};
   }

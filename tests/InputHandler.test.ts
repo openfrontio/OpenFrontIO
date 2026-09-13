@@ -4,7 +4,9 @@ import {
   CloseViewEvent,
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
+  DragEvent,
   InputHandler,
+  MouseOverEvent,
   TouchLongPressStartEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
@@ -1421,15 +1423,7 @@ describe("InputHandler teardown (OPE-411)", () => {
     const handler = makeHandler(document.createElement("canvas"), bus);
     try {
       handler.initialize();
-      handler["onPointerDown"](
-        new PointerEvent("pointerdown", {
-          button: 0,
-          clientX: 10,
-          clientY: 20,
-          pointerId: 1,
-          pointerType: "touch",
-        }),
-      );
+      touchOrMouseDown(handler, "touch");
       expect(handler["longPressTimer"]).not.toBeNull();
 
       handler.destroy();
@@ -1450,15 +1444,7 @@ describe("InputHandler teardown (OPE-411)", () => {
     const handler = makeHandler(document.createElement("canvas"), bus);
     try {
       handler.initialize();
-      handler["onPointerDown"](
-        new PointerEvent("pointerdown", {
-          button: 0,
-          clientX: 10,
-          clientY: 20,
-          pointerId: 1,
-          pointerType: "touch",
-        }),
-      );
+      touchOrMouseDown(handler, "touch");
 
       handler.initialize();
       const emit = vi.spyOn(bus, "emit");
@@ -1494,6 +1480,96 @@ describe("InputHandler teardown (OPE-411)", () => {
 
     eventBus.emit(new UnitSelectionEvent(null, false));
     expect(inputHandler["unitSelectionActive"]).toBe(true);
+  });
+
+  const touchOrMouseDown = (handler: InputHandler, pointerType: string) =>
+    handler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType,
+      }),
+    );
+
+  const movePointer = (handler: InputHandler) =>
+    handler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 400,
+        clientY: 400,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+
+  it("drops in-flight pointer state on re-initialize", () => {
+    // pointers.clear() runs unconditionally on initialize, so leaving
+    // pointerDown latched would make the next ordinary move a drag from a
+    // stale origin.
+    touchOrMouseDown(inputHandler, "mouse");
+    expect(inputHandler["pointerDown"]).toBe(true);
+
+    inputHandler.initialize();
+
+    const emit = vi.spyOn(eventBus, "emit");
+    movePointer(inputHandler);
+
+    expect(
+      emit.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+    ).toBe(false);
+    expect(
+      emit.mock.calls.some((c: unknown[]) => c[0] instanceof MouseOverEvent),
+    ).toBe(true);
+  });
+
+  // resetPointerState() is shared with the blur handler; blur owes a cancel
+  // event that the other two callers must not emit, so lock both halves.
+  it("window blur still cancels an active selection box", () => {
+    inputHandler["selectionBoxActive"] = true;
+    const emit = vi.spyOn(eventBus, "emit");
+
+    window.dispatchEvent(new Event("blur"));
+
+    expect(
+      emit.mock.calls.some(
+        (c: unknown[]) => c[0] instanceof WarshipSelectionBoxCancelEvent,
+      ),
+    ).toBe(true);
+    expect(inputHandler["selectionBoxActive"]).toBe(false);
+    expect(inputHandler["pointerDown"]).toBe(false);
+  });
+
+  it("window blur emits no cancel when nothing was selected", () => {
+    const emit = vi.spyOn(eventBus, "emit");
+
+    window.dispatchEvent(new Event("blur"));
+
+    expect(
+      emit.mock.calls.some(
+        (c: unknown[]) => c[0] instanceof WarshipSelectionBoxCancelEvent,
+      ),
+    ).toBe(false);
+  });
+
+  it("destroy() emits nothing even with a selection box active", () => {
+    inputHandler["selectionBoxActive"] = true;
+    const emit = vi.spyOn(eventBus, "emit");
+
+    inputHandler.destroy();
+
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("drops in-flight pointer state on destroy()", () => {
+    touchOrMouseDown(inputHandler, "mouse");
+    inputHandler.destroy();
+
+    expect(inputHandler["pointerDown"]).toBe(false);
+    expect(inputHandler["pointers"].size).toBe(0);
+    expect(inputHandler["selectionBoxActive"]).toBe(false);
+    expect(inputHandler["multiSelectionActive"]).toBe(false);
   });
 
   it("clears the pan/zoom interval on destroy()", () => {
