@@ -395,3 +395,57 @@ Until the Worker exists nothing reads any of this, so the uploads are additive
 and prod is unaffected. The decision table above is unit-tested in
 `tests/UpdateFlagLatest.test.ts`, which extracts the real function out of
 `update.sh` and drives it with a scripted `curl`.
+
+### Two hostnames per deployment
+
+A deployment answers on two names, and they do different jobs:
+
+| Name      | Shape                       | Serves                                          |
+| --------- | --------------------------- | ----------------------------------------------- |
+| page host | `<subdomain>.<DOMAIN>`      | the page: HTML, assets — soon a static Worker   |
+| game host | `<subdomain>.<GAME_DOMAIN>` | the game: WebSockets, `/api/*` — this container |
+
+They have to be separate names because the static Worker will sit on the page
+host and serve a cached page for every player of a version. Game traffic must
+never pass through it: a Worker proxying WebSockets is an expense and a
+failure mode for no gain, and the whole point of the server list is that the
+client picks a game server itself.
+
+Prod is already shaped this way — `openfront.io` is the page, `blue.openfront.io`
+and `green.openfront.io` are the games — because the load balancer forced it.
+Dev was not: `main.openfront.dev` was both. `GAME_DOMAIN` is the one deploy
+variable that gives a dev deployment the prod shape, e.g.
+`GAME_DOMAIN=server.openfront.dev` makes `main` page at `main.openfront.dev`
+and game at `main.server.openfront.dev`.
+
+What follows from it:
+
+- `DOMAIN` is unchanged everywhere it is used today: the JWT audience, the R2
+  endpoint `api.$DOMAIN`, the page domain, the restart policy. `GAME_DOMAIN`
+  only ever renames the game host.
+- The cluster map names GAME hosts — it is the list of servers clients open
+  sockets to. `deploy.sh` matches this box against it by its game host, and
+  `ServerEnv.clusterSelf()` does the same on boot.
+- Check-in reports both: `site` is the page host, `host` is the game host. For
+  a standalone dev deployment `deploy.sh` now fills `SITE_HOST` in with
+  `<subdomain>.<DOMAIN>`, so the page assets are uploaded and the server
+  registers under the name the Worker will serve.
+- Traefik matches both names during the transition, so the box keeps
+  answering on the name people have bookmarked until the Worker is actually
+  routed at the page host. After that the page-host clause never matches:
+
+  ```
+  Host(`main.openfront.dev`) || Host(`main.server.openfront.dev`)
+  ```
+
+- CI polls the GAME host for `commit.txt` when waiting for a deploy: the page
+  host will be answered by the Worker, which knows nothing about a container's
+  commit.
+- The apex colour poll now also requires a cluster map with siblings. Every
+  dev deployment has a `SITE_HOST` once `GAME_DOMAIN` is set, and a standalone
+  one must not poll its own page host for `/api/health` — the Worker serves no
+  such route, and with one entry there is no other colour to flip to anyway.
+
+`GAME_DOMAIN` unset collapses both names back onto `$DOMAIN`, which is exactly
+today's behaviour: prod never sets it, and dev does not until the DNS wildcard
+and certificate for the game domain exist.

@@ -6,7 +6,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameEnv } from "../core/configuration/Config";
-import { fetchSiteColor } from "./ActiveDeployment";
+import { fetchSiteColor, shouldPollApex } from "./ActiveDeployment";
 import {
   applyCheckinState,
   CHECKIN_INTERVAL_MS,
@@ -239,22 +239,32 @@ export async function startMaster() {
   // /api/health reports the COLOR of whichever deployment answered; colors
   // are deployment-wide, so with several machines per color the poll
   // reaching a sibling — same color, different instanceId — still counts as
-  // "the live color is mine". A standalone deployment (no SITE_HOST, or
-  // SITE_HOST is our own host) is always active. Not started when the API
-  // is the state source: two deciders would fight over setActive.
+  // "the live color is mine". A standalone deployment is always active,
+  // which now includes one whose page host merely differs from its game host
+  // (GAME_DOMAIN, docs/MultiServer.md): a one-entry cluster map has no
+  // sibling to flip to, and its page host is the static Worker, which serves
+  // no /api/health. shouldPollApex holds that whole decision, including the
+  // rule that the API being the state source stops the poll — two deciders
+  // would fight over setActive.
   const siteHost = ServerEnv.siteHost();
-  if (
-    stateSource === "apex" &&
+  const apexHost =
     siteHost !== undefined &&
-    siteHost !== ServerEnv.publicHost()
-  ) {
-    log.info(`Polling https://${siteHost}/api/health for active deployment`);
+    shouldPollApex(
+      stateSource,
+      siteHost,
+      ServerEnv.publicHost(),
+      Object.keys(ServerEnv.cluster()).length,
+    )
+      ? siteHost
+      : undefined;
+  if (apexHost !== undefined) {
+    log.info(`Polling https://${apexHost}/api/health for active deployment`);
     // 5s: this latency is the window after a flip where the newly-active
     // deployment isn't creating public lobbies yet (and the draining one
     // still is). startPolling serializes runs, so the fetch's 10s timeout
     // can't pile requests up.
     startPolling(async () => {
-      const siteColor = await fetchSiteColor(siteHost);
+      const siteColor = await fetchSiteColor(apexHost);
       if (siteColor === null) return;
       lobbyService.setActive(siteColor === ServerEnv.color());
     }, 5 * 1000);

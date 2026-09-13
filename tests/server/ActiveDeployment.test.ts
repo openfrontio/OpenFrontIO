@@ -1,5 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
-import { fetchSiteColor } from "../../src/server/ActiveDeployment";
+import {
+  fetchSiteColor,
+  shouldPollApex,
+} from "../../src/server/ActiveDeployment";
 
 function fetchReturning(body: unknown, status = 200): typeof fetch {
   return vi.fn(
@@ -60,5 +63,44 @@ describe("fetchSiteColor", () => {
       throw new Error("ECONNRESET");
     }) as unknown as typeof fetch;
     await expect(fetchSiteColor("openfront.io", fetchFn)).resolves.toBeNull();
+  });
+});
+
+// Whether to run the apex colour poll at all (Master.ts). The cluster-size
+// condition is what keeps a standalone deployment from polling its own page
+// host once GAME_DOMAIN gives every dev deploy a SITE_HOST — that host is
+// the static Worker, which serves no /api/health.
+describe("shouldPollApex", () => {
+  const APEX = "openfront.io";
+  const SELF = "blue.openfront.io";
+
+  test("polls a multi-entry fleet whose page host is someone else", () => {
+    expect(shouldPollApex("apex", APEX, SELF, 2)).toBe(true);
+  });
+
+  test("does not poll when the API owns the drain decision", () => {
+    // Two deciders would fight over setActive.
+    expect(shouldPollApex("api", APEX, SELF, 2)).toBe(false);
+  });
+
+  test("does not poll without a page host", () => {
+    expect(shouldPollApex("apex", undefined, SELF, 2)).toBe(false);
+  });
+
+  test("does not poll when the page host is our own host", () => {
+    expect(shouldPollApex("apex", SELF, SELF, 2)).toBe(false);
+  });
+
+  test("does not poll a single-entry map, however the hosts differ", () => {
+    // A dev deployment with GAME_DOMAIN set: page host main.openfront.dev,
+    // game host main.server.openfront.dev, one entry, nothing to flip to.
+    expect(
+      shouldPollApex(
+        "apex",
+        "main.openfront.dev",
+        "main.server.openfront.dev",
+        1,
+      ),
+    ).toBe(false);
   });
 });

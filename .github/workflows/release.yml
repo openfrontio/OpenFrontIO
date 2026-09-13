@@ -102,6 +102,9 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          # Separate domain for GAME hostnames (docs/MultiServer.md, "Two
+          # hostnames per deployment"). Prod does not set it, so unchanged.
+          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
           CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
@@ -112,12 +115,18 @@ jobs:
           bash -x ./deploy.sh staging staging "${IMAGE_ID}" alpha
       - name: ⏳ Wait for deployment to start
         env:
-          FQDN: alpha.${{ vars.DOMAIN }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          SUBDOMAIN: alpha
+          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
           API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          # Poll the GAME host: with GAME_DOMAIN set the page host is served
+          # by the static Worker, which knows nothing about this container's
+          # commit. Unset, the two are the same name (docs/MultiServer.md).
+          GAME_FQDN="${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}"
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${GAME_FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1
@@ -164,6 +173,9 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          # Separate domain for GAME hostnames (docs/MultiServer.md, "Two
+          # hostnames per deployment"). Prod does not set it, so unchanged.
+          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
           CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
@@ -176,12 +188,18 @@ jobs:
           ./deploy.sh prod "${TARGET_HOST}" "${IMAGE_ID}" "${TARGET_SUBDOMAIN}"
       - name: ⏳ Wait for deployment to start
         env:
-          FQDN: ${{ matrix.target.subdomain }}.${{ vars.DOMAIN }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          SUBDOMAIN: ${{ matrix.target.subdomain }}
+          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
           API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          # Poll the GAME host: with GAME_DOMAIN set the page host is served
+          # by the static Worker, which knows nothing about this container's
+          # commit. Unset, the two are the same name (docs/MultiServer.md).
+          GAME_FQDN="${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}"
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${GAME_FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1
@@ -240,6 +258,9 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          # Separate domain for GAME hostnames (docs/MultiServer.md, "Two
+          # hostnames per deployment"). Prod does not set it, so unchanged.
+          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
           CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
@@ -253,12 +274,18 @@ jobs:
           ./deploy.sh prod "${TARGET_HOST}" "${IMAGE_ID}" "${TARGET_SUBDOMAIN}"
       - name: ⏳ Wait for deployment to start
         env:
-          FQDN: ${{ matrix.target.subdomain }}.${{ vars.DOMAIN }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          SUBDOMAIN: ${{ matrix.target.subdomain }}
+          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
           API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          # Poll the GAME host: with GAME_DOMAIN set the page host is served
+          # by the static Worker, which knows nothing about this container's
+          # commit. Unset, the two are the same name (docs/MultiServer.md).
+          GAME_FQDN="${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}"
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${GAME_FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1
@@ -311,6 +338,9 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          # Separate domain for GAME hostnames (docs/MultiServer.md, "Two
+          # hostnames per deployment"). Prod does not set it, so unchanged.
+          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
           CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
@@ -324,12 +354,18 @@ jobs:
           ./deploy.sh prod "${TARGET_HOST}" "${IMAGE_ID}" "${TARGET_SUBDOMAIN}"
       - name: ⏳ Wait for deployment to start
         env:
-          FQDN: ${{ matrix.target.subdomain }}.${{ vars.DOMAIN }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          SUBDOMAIN: ${{ matrix.target.subdomain }}
+          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
           API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          # Poll the GAME host: with GAME_DOMAIN set the page host is served
+          # by the static Worker, which knows nothing about this container's
+          # commit. Unset, the two are the same name (docs/MultiServer.md).
+          GAME_FQDN="${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}"
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${GAME_FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1

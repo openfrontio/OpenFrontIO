@@ -196,6 +196,10 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          # Separate domain for GAME hostnames, so the static Worker can own
+          # the page host (docs/MultiServer.md, "Two hostnames per
+          # deployment"). Unset is today's behaviour.
+          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
           # "api" makes servers take their drain state from the API's
           # registry (docs/MultiServer.md, "Server list v2"); unset keeps
           # today's apex colour poll.
@@ -215,10 +219,16 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           API_KEY: ${{ secrets.API_KEY }}
+          # DOMAIN and SUBDOMAIN are already job-level env.
+          GAME_DOMAIN: ${{ vars.GAME_DOMAIN }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          # Poll the GAME host: with GAME_DOMAIN set the page host is served
+          # by the static Worker, which knows nothing about this container's
+          # commit. Unset, the two are the same name (docs/MultiServer.md).
+          GAME_FQDN="${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}"
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${GAME_FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1

@@ -1,7 +1,42 @@
 import { z } from "zod";
 import { ClusterColorSchema, type ClusterColor } from "../core/ClusterConfig";
+import type { ClusterStateSource } from "./ClusterCheckin";
 
 const HealthSchema = z.object({ color: ClusterColorSchema });
+
+/**
+ * Whether this deployment should poll the site host's /api/health to learn
+ * which colour is live (the pre-registry drain decision). All four conditions
+ * must hold:
+ *
+ *  - the drain decision comes from the apex, not the API — two deciders would
+ *    fight over setActive;
+ *  - there IS a page host to ask;
+ *  - it is not this deployment's own game host, or we would be asking
+ *    ourselves;
+ *  - and the cluster map has siblings. This last one is what makes a page
+ *    host separate from the game host safe (docs/MultiServer.md, "Two
+ *    hostnames per deployment"): with GAME_DOMAIN set, every dev deployment
+ *    gets a SITE_HOST, including standalone ones whose page host is served by
+ *    the static Worker and answers no /api/health at all. A one-entry map is
+ *    a standalone deployment by definition — nothing to flip to, so nothing
+ *    to poll for.
+ *
+ * Pure, so the decision is testable without booting the master.
+ */
+export function shouldPollApex(
+  stateSource: ClusterStateSource,
+  siteHost: string | undefined,
+  publicHost: string | undefined,
+  clusterSize: number,
+): boolean {
+  return (
+    stateSource === "apex" &&
+    siteHost !== undefined &&
+    siteHost !== publicHost &&
+    clusterSize > 1
+  );
+}
 
 /**
  * Ask the site host (the load balancer, e.g. `openfront.io`) which deployment
