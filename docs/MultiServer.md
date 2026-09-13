@@ -485,11 +485,17 @@ moves under a letter that stays put):
   host that rendered this page is running this build by construction:
   `apply()` answers `fallback`, the page's own values, exactly as when the
   API is unreachable. This is OPE-430.
-- **other-version** — the same host now runs a different build, so a reload
-  from it hands back that build. The page really is behind: `isOutdated`
-  applies (its desktop, replay-shell and pinned-page exemptions included)
-  and the status is `outdated`. The one case where a server-rendered page is
-  told to update.
+- **other-version** — the same host now runs a different build. Behind an
+  apex with siblings (`reloadCanLandElsewhere()`) a reload hands back that
+  build, so the page really is behind: `isOutdated` applies (its desktop,
+  replay-shell and pinned-page exemptions included) and the status is
+  `outdated`. The one case where a server-rendered page is told to update.
+  On a standalone page the list cannot tell an old tab from the
+  registration lag right after a deploy (the page came from the new build
+  while the registry still names the old one), and a reload re-serves the
+  same page either way, so the status is `fallback` there: the page trusts
+  itself, and the old-tab case is left to the lobby feed, which compares
+  commits with the server itself as soon as the socket connects.
 - **fenced** — its own server, on its own build, deliberately out of
   rotation: `no-server`. It takes nothing new, so `Api.createLobby` refuses
   (on `no-server` as well as `outdated` whenever the page names a server),

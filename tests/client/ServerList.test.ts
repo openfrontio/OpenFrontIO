@@ -741,6 +741,45 @@ describe("picking between open, draining and fenced", () => {
     // host has moved on, so a reload from it hands back the new build.
     // "Outdated" here is news, not a loop — the one case where a
     // server-rendered page is told to update.
+    // The same list shape on a STANDALONE page is not outdated: the list
+    // cannot tell an old tab from the registration lag right after a deploy
+    // (the page came from the new build; the registry still says the old
+    // one), and a reload re-serves the same page either way, so a prompt
+    // could only loop. The page trusts itself; the lobby feed, which
+    // compares commits with the server directly, handles the old-tab case.
+    it("trusts a standalone page whose host the list puts on another build", async () => {
+      setBootstrap({
+        gitCommit: OLD,
+        siteHost: "main.openfront.dev",
+        serverHost: "main.server.openfront.dev",
+        instanceLetter: "a",
+        cluster: {
+          a: {
+            host: "main.server.openfront.dev",
+            color: "blue",
+            numWorkers: 2,
+          },
+        },
+      });
+      fetchMock.mockImplementation(async () =>
+        jsonResponse({
+          latest: OWN,
+          servers: {
+            a: {
+              host: "main.server.openfront.dev",
+              numWorkers: 2,
+              version: OWN,
+              state: "open",
+            },
+          },
+        }),
+      );
+      expect(await ensureServerList()).toBe("fallback");
+      expect(ClientEnv.serverHttpBase()).toBe(
+        "https://main.server.openfront.dev",
+      );
+    });
+
     it("is outdated when its own host now runs a different build", async () => {
       setBootstrap({ gitCommit: OLD, serverHost: "blue.openfront.io" });
       fetchMock.mockImplementation(async () =>

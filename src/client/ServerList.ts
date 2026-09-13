@@ -355,9 +355,16 @@ function apply(): ServerListStatus {
   //   runs this build, and a reload comes back from it identical. Answer
   //   "fallback": own server, the page's own values, exactly as when the
   //   API is unreachable. Telling it to update would prompt forever.
-  // - other-version: the same host now runs a different build, so a reload
-  //   from it hands back that build. This page IS behind — isOutdated says
-  //   so below, its shell exemptions included.
+  // - other-version: the same host now runs a different build. Behind an
+  //   apex (reloadCanLandElsewhere) a reload hands back that build, so
+  //   this page IS behind and isOutdated says so below, its shell
+  //   exemptions included. On a standalone page the list cannot tell an
+  //   old tab (the server really moved on) from the registration lag right
+  //   after a deploy (the page came from the NEW build and the registry
+  //   still says the old one); a reload there re-serves the same page
+  //   either way, so prompting could only loop. "fallback": trust the page,
+  //   and leave the old-tab case to the lobby feed, which compares commits
+  //   with the server itself the moment the socket connects.
   // - fenced: this server, on this build, deliberately out of rotation. It
   //   takes nothing new (createLobby refuses), but a reload would come back
   //   identical, so there is nothing to prompt for: "no-server".
@@ -365,7 +372,12 @@ function apply(): ServerListStatus {
   // A Worker-served page names no server of its own, so none of this
   // applies: a reload really does fetch `latest`, and isOutdated answers.
   const standing = ownStanding(list, own);
-  if (servedByGameServer() && standing === "absent") return "fallback";
+  if (servedByGameServer()) {
+    if (standing === "absent") return "fallback";
+    if (standing === "other-version" && !reloadCanLandElsewhere()) {
+      return "fallback";
+    }
+  }
   return isOutdated(list, own, standing) ? "outdated" : "no-server";
 }
 
@@ -417,11 +429,19 @@ function isOutdated(
   // A page that carries its own server was served by a game server running
   // this build, so a reload re-fetches the same page from it and there is
   // nothing to update to — unless the list says that very host now runs a
-  // DIFFERENT build, in which case the reload does hand back the new one.
-  // That single exception is what keeps this from being the OPE-430 loop;
-  // the guard lives here as well as in apply() so no future caller can
-  // reach the prompt-and-reload loop by another route.
-  if (servedByGameServer() && standing !== "other-version") return false;
+  // DIFFERENT build AND a reload can land elsewhere (behind an apex with
+  // siblings), in which case the reload does hand back the new one. On a
+  // standalone page even that is no exception: right after a deploy the
+  // registry can still name the previous build for a page the new build
+  // just served, and a reload would come straight back. The guard lives
+  // here as well as in apply() so no future caller can reach the
+  // prompt-and-reload loop by another route.
+  if (
+    servedByGameServer() &&
+    !(standing === "other-version" && reloadCanLandElsewhere())
+  ) {
+    return false;
+  }
   return behindLatest(list, own);
 }
 
