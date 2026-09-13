@@ -644,7 +644,12 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
 
   it("does not prompt: a reload would re-serve the same page from the same server", async () => {
     bootstrap({
-      cluster: { a: { host: "blue.openfront.io", numWorkers: 2 } },
+      // Prod's shape: a sibling in the map is what makes the site host an
+      // apex a reload can land elsewhere through (reloadCanLandElsewhere).
+      cluster: {
+        a: { host: "blue.openfront.io", numWorkers: 2 },
+        b: { host: "green.openfront.io", numWorkers: 2 },
+      },
       instanceLetter: "a",
       serverHost: "blue.openfront.io",
     });
@@ -670,7 +675,12 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
     // re-enters through openfront.io and the load balancer answers from a
     // live deployment — the reload cannot come back to this dead host.
     bootstrap({
-      cluster: { a: { host: "blue.openfront.io", numWorkers: 2 } },
+      // Prod's shape: a sibling in the map is what makes the site host an
+      // apex a reload can land elsewhere through (reloadCanLandElsewhere).
+      cluster: {
+        a: { host: "blue.openfront.io", numWorkers: 2 },
+        b: { host: "green.openfront.io", numWorkers: 2 },
+      },
       instanceLetter: "a",
       serverHost: "blue.openfront.io",
       siteHost: "openfront.io",
