@@ -2046,7 +2046,7 @@
     "build_sam_launcher": "Build SAM Launcher",
     "build_sam_launcher_desc": "Build a SAM Launcher under your cursor.",
     "build_scroll_modifier": "Build Scroll Modifier",
-    "build_scroll_modifier_desc": "Hold this key and scroll to change build amount",
+    "build_scroll_modifier_desc": "Hold this key and scroll to change build amount.",
     "build_warship": "Build Warship",
     "build_warship_desc": "Build a Warship under your cursor.",
     "camera_movement": "Camera Movement",
