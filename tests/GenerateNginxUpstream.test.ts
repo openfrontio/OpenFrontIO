@@ -14,6 +14,7 @@ function generate(env: {
   clusterJson?: string;
   subdomain?: string;
   domain?: string;
+  gameDomain?: string;
 }): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nginx-upstream-"));
   const out = path.join(dir, "00-workers.conf");
@@ -21,9 +22,11 @@ function generate(env: {
   delete childEnv.CLUSTER_JSON;
   delete childEnv.SUBDOMAIN;
   delete childEnv.DOMAIN;
+  delete childEnv.GAME_DOMAIN;
   if (env.clusterJson !== undefined) childEnv.CLUSTER_JSON = env.clusterJson;
   if (env.subdomain !== undefined) childEnv.SUBDOMAIN = env.subdomain;
   if (env.domain !== undefined) childEnv.DOMAIN = env.domain;
+  if (env.gameDomain !== undefined) childEnv.GAME_DOMAIN = env.gameDomain;
   try {
     execFileSync("sh", [SCRIPT, out], { env: childEnv, stdio: "pipe" });
     return fs.readFileSync(out, "utf8");
@@ -87,6 +90,41 @@ map $worker $worker_port {
 }
 `,
     );
+  });
+
+  // The self-match must agree with ServerEnv.publicHost: with GAME_DOMAIN set
+  // this container's entry is keyed by the GAME host, <subdomain>.<GAME_DOMAIN>
+  // (docs/MultiServer.md, "Two hostnames per deployment"). #5397 changed the
+  // node side and deploy.sh but not this script, so the first dev deploy with
+  // the variable set found no entry, wrote no workers conf, and nginx refused
+  // to start on the missing upstream -- "connection refused" for the whole
+  // container. The map below deliberately carries the page host under another
+  // letter so a match on the wrong name is a wrong worker count, not a pass.
+  const DEV = JSON.stringify({
+    a: { host: "main.server.openfront.dev", color: "blue", numWorkers: 3 },
+    b: { host: "main.openfront.dev", color: "blue", numWorkers: 1 },
+  });
+
+  it("matches by the game host when GAME_DOMAIN is set", () => {
+    const conf = generate({
+      clusterJson: DEV,
+      subdomain: "main",
+      domain: "openfront.dev",
+      gameDomain: "server.openfront.dev",
+    });
+    expect(conf).toContain("server 127.0.0.1:3003;");
+  });
+
+  it("matches by the page host when GAME_DOMAIN is empty", () => {
+    // deploy.sh writes GAME_DOMAIN= into every env file, set or not.
+    const conf = generate({
+      clusterJson: DEV,
+      subdomain: "main",
+      domain: "openfront.dev",
+      gameDomain: "",
+    });
+    expect(conf).toContain("server 127.0.0.1:3001;");
+    expect(conf).not.toContain("server 127.0.0.1:3002;");
   });
 
   it("fails loudly when the host has no cluster entry", () => {
