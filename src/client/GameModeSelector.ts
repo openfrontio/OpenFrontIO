@@ -36,6 +36,7 @@ import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
+import { isPinnedToAVersion } from "./ServerList";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { UsernameInput } from "./UsernameInput";
 import {
@@ -142,6 +143,13 @@ export class GameModeSelector extends LitElement {
     // meaningless here, and reloading re-serves the same immutable shell,
     // which would loop the prompt forever.
     if (isReplayShellHost(window.location.hostname)) return;
+    // A page pinned under /v/<commit>/ is on that build because the game it
+    // opened runs there (redirectToGameVersion), and its build's servers are
+    // draining by definition -- so the lobby feed's drain signal fires on
+    // every load. Reloading would strip the pin, land on latest, and be
+    // re-pinned straight back: the same loop as the replay shell, closed the
+    // same way. Leaving to the menu goes to the version-free root anyway.
+    if (isPinnedToAVersion()) return;
     // A blocking reload prompt during a lobby wait would eject the player
     // from a lobby the draining deployment deliberately lets finish — and a
     // private lobby's members are all pinned to the same deployment, so they

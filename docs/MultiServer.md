@@ -469,6 +469,146 @@ values.
     (`version_mismatch`). `/v/<commit>/` is now used only for pinned pages
     of existing games and replays — roadmap item 2.
 
+## The static page: booting with no server of its own
+
+Roadmap item 2. A page built once per version and served to everyone can
+only carry what is the same for every player, so `ClientEnv` splits the
+values it reads in two.
+
+**Required (the environment):** `gameEnv`, `turnstileSiteKey`,
+`jwtAudience`, `gitCommit` (plus the optional `assetManifest` / `cdnBase`).
+A page missing one of these has no environment to run in and still throws
+`Missing BOOTSTRAP_CONFIG`.
+
+**Optional (a server):** `cluster`, `instanceLetter`, `numWorkers`,
+`serverHost`, `siteHost`, `instanceId`. A server that renders the page
+still injects them all, and every accessor prefers the API's list and falls
+back to them — so nothing changes until the pipeline uploads
+environment-only pages. `instanceId()` reads `""` when absent, and
+`Matchmaking` then leaves the parameter off the join URL entirely (the API
+ignores it either way).
+
+**`NoServerError`** (exported from `src/client/ClientEnv.ts`) is thrown when
+no server is known at all — no list loaded, nothing injected — by
+`numWorkers()` and `workerPath()`. A worker count is a property of ONE
+server, so there is no answer to fall back on: any number routes to a worker
+that does not own the game.
+
+`serverWsBase()` / `serverHttpBase()` deliberately do NOT throw. With
+nothing injected the document's own origin is the historical answer, and on
+a dev box or a standalone deployment it is the CORRECT one — the game server
+is what served the page. On a static page it is wrong, but wrong in the way
+that surfaces as an ordinary connection failure rather than as a refusal to
+build a URL.
+
+Callers either await `ensureServerList()` first or handle the throw:
+`LobbySocket.start` routes it into its existing connection-error path
+(the same alert a refused socket produces), and `createLobby` lets it
+propagate to callers that already catch. Share links never throw:
+`ClientEnv.gamePath(gameID)` returns `/w<n>/game/<id>` when a worker count
+is known for that id (from the list by letter, else this page's own) and
+plain `/game/<id>` when none is. Both shapes are served — the game server's
+SPA fallback and the static Worker — and the join flow re-resolves the
+worker from the id anyway.
+
+## Opening a game at its server's version
+
+Roadmap item 2, the other half. The list says which commit each server runs,
+so a page can tell before joining that the game it was asked to open lives
+on a different build — a link into a version still draining, or a page served
+as `latest` after a deploy.
+
+`ClientEnv.gameVersion(gameID)` reads that commit (undefined with no list, or
+for a letter the list doesn't carry, or for a legacy id with no letter), and
+`redirectToGameVersion(gameID)` in `src/client/ServerList.ts` is the whole
+decision, exported so the two places a game is opened from a URL —
+`Main.handleUrl`'s `/game/<id>` branch and `JoinLobbyModal.checkActiveLobby`,
+each after `ensureServerList()` — cannot drift apart. It never navigates the
+two shells that have no `/v/<commit>/` routes to go to:
+
+- **desktop**, whose updater owns which version it runs (a mismatch there
+  stays `update_available.desktop`);
+- **a replay shell**, where `replay.<domain>/<gameId>` serves the build a
+  record was made on. It does load the site's list — `siteHost` is injected
+  there — so nothing else would stop it, and a navigation would 404 and lose
+  an archived replay.
+
+The rest is `versionedPathForGame(ownCommit, gameVersion, pathname, search)`
+in `src/core/ServerList.ts`, which answers null (stay here, join as today)
+when:
+
+- the version is unknown — a navigation on a guess is worse than joining and
+  finding out;
+- the versions match, including a build whose own label names no commit
+  (`DEV`, `desktop`), which matches anything;
+- the page already lives under `/v/<gameVersion>/` yet still isn't that
+  build — the version's page isn't being served (before the static Worker
+  exists, say). That is the loop guard, and falling through hands the
+  mismatch to join-time `version_mismatch`, whose cross-host redirect
+  already answers it.
+
+### A pinned page is never "outdated"
+
+A document under `/v/<commit>/` is pinned ON PURPOSE, so it is never reported
+`outdated` however far behind `latest` it is — decided in `isOutdated`
+(`src/client/ServerList.ts`) rather than at the call sites, so no future
+caller of `ensureServerList` can get it wrong.
+
+Being behind is the point. The one flow that puts a player on a pinned page
+is opening a game whose server runs an older build, so the page is behind by
+construction and _permanently_ — unlike an ordinary tab, where being behind
+is news ("a deploy happened while you were here") and the prompt is a
+one-shot. Prompting here would fire on every visit, and its remedy
+(`reloadForUpdate`, which strips the prefix) would silently undo the pin the
+player asked for. Leaving is already one click away: "leave to the menu" goes
+to the version-free root. Same exemption, and the same reason, as the desktop
+and replay shells.
+
+A pinned page needs no special treatment beyond that: its build's servers are
+`draining`, not `fenced`, so the ordinary "an open server on my build, else a
+draining one" pick already routes it to one, and Create and the lobby feed
+work there like anywhere else.
+
+The one loop it must not enter runs through join-time `version_mismatch`
+(`ClientGameRunner`). `reloadForUpdate` strips the pin — right for an
+ordinary stale tab, wrong here: the reload lands on `latest`, whose
+`handleUrl` sees the same game on the same older server and pins the page
+straight back, one lap per click. So a pinned page takes the game's own host
+when the id resolves cross-host, and otherwise says `update_available.message`
+and stops. Nothing it can fetch is the build it needs — that is precisely
+what a mismatch on a pinned page means: the version's page is not being
+served.
+
+## Paths on a `/v/<commit>/` page
+
+Every version's page is also served under `/v/<commit>/`, immutably, so a
+document may live under that prefix and every same-origin path it builds or
+parses has to account for it.
+
+- **Parsing:** `Main.handleUrl`'s game-id match accepts an optional
+  `/v/<commit>` prefix ahead of the optional `/w<n>` one.
+- **Staying put:** every `history.pushState` / `replaceState` builds from
+  `window.location.pathname` (`ModalRouter`, `consumeRequeueUrl`), or from
+  `currentPagePath()` (`src/client/Utils.ts`), which re-applies the page's own
+  `/v/<commit>/` to a path built from scratch. A history entry is this tab's
+  own URL, so F5 on it must reload THE BUNDLE THIS PAGE IS RUNNING; a
+  version-free entry would hand a pinned player `latest` mid-game. Six places
+  build a game path from scratch; five of them use it: the in-game `?live`
+  entry, the invite navigation, `AccountModal.viewGame`,
+  `PlayerProfileModal.viewGame` and `ClanGameHistoryView.watchReplay`. The
+  sixth, `updateJoinUrlForShare`, is the deliberate exception below.
+- **Share links stay version-free**, including the address-bar URL
+  `updateJoinUrlForShare` writes, which is exactly what people copy to
+  invite someone. The recipient must be routed to the version the GAME'S
+  server runs when they open it, which `handleUrl` → `redirectToGameVersion`
+  does. Pinning that URL would hand them the inviter's build instead.
+- **`homeHref()`** returns the version-free `/`. "Leave to the menu" should
+  land the player on `latest`, not back on the build they were leaving.
+- **`reloadForUpdate()`** strips the prefix (`stripVersionPrefix`, or
+  `apexPathFor` when it also leaves for the apex). `/v/<commit>/` pins the
+  bundle, so reloading it as-is re-serves the very version the update is
+  leaving behind — forever, cache-buster or not.
+
 ## `latest`: the one switch
 
 Each site has one `latest` commit. The build pipeline sets it once the new
@@ -491,10 +631,7 @@ turns into the "update available" prompt.
 
 1. **Client reads the list** (this repo, above). Dormant until the API
    serves a list.
-2. **Client tolerates a static page:** boots without per-server values
-   (`cluster`, `instanceLetter`, `serverHost`, `siteHost`, `instanceId`),
-   and a game on a server running another version is opened at
-   `/v/<version>/…`.
+2. **Client tolerates a static page** (below).
 3. **Servers register and check in** with the API (letter, host, version,
    worker count, live games) every ~10s; a `draining` reply stops public
    lobby scheduling — only when enabled, otherwise today's apex colour

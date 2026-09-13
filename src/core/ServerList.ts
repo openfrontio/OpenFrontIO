@@ -164,13 +164,34 @@ export function stripVersionPrefix(pathname: string): {
   return { commit: m[1], path: "/" + rest };
 }
 
+// The pipeline publishes each version's page under the first 7 lowercase
+// characters of its sha (`sites/<site>/v/<short7>/index.html`), and the
+// static Worker keys on the same 7. Servers report the full 40-char sha
+// (GIT_COMMIT), so anything that goes INTO a URL has to be narrowed to that
+// form -- see commitsMatch, which exists because the two spellings coexist.
+const SHORT_COMMIT_LENGTH = 7;
+
+/**
+ * A commit as a `/v/<commit>/` URL segment spells it: the first 7 lowercase
+ * hex characters. A value that names no commit is left alone -- it cannot be
+ * truncated into something meaningful, and commitsMatch only matches it
+ * against itself anyway.
+ */
+export function shortCommit(commit: string): string {
+  if (!isCommitLike(commit)) return commit;
+  return commit.toLowerCase().slice(0, SHORT_COMMIT_LENGTH);
+}
+
 /**
  * The URL (path + search) that loads `commit`'s page for the current
  * document, keeping the game path. Worker prefixes are origin-specific
- * and letter routing re-resolves them, so they are dropped. Returns null
- * when the page is already under `/v/<commit>/`: that is the one loop guard
- * shared by every caller that pins a page to a version, and it must stay
- * here so no caller can navigate a page to itself.
+ * and letter routing re-resolves them, so they are dropped. The commit is
+ * emitted short (shortCommit): that is the spelling the bucket layout and
+ * the static Worker use, and a caller hands us whatever the server list
+ * carries, which is the full sha. Returns null when the page is already
+ * under `/v/<commit>/`: that is the one loop guard shared by every caller
+ * that pins a page to a version, and it must stay here so no caller can
+ * navigate a page to itself.
  */
 export function versionedPath(
   commit: string,
@@ -180,5 +201,93 @@ export function versionedPath(
   const { commit: current, path } = stripVersionPrefix(pathname);
   if (current !== null && commitsMatch(current, commit)) return null;
   const bare = path.replace(WORKER_PREFIX_RE, "/");
-  return `/v/${commit}${bare}${search}`;
+  return `/v/${shortCommit(commit)}${bare}${search}`;
+}
+
+// A version-free game path as the site serves it: `/game/<id>` or
+// `/w<n>/game/<id>`, the two shapes Main.handleUrl's route matcher accepts
+// (it matches a prefix, so a trailing segment or a query is fine).
+const GAME_PATH_RE = /^(?:\/w\d+)?\/game\/([^/?#]+)/;
+
+/**
+ * Whether a version-free pathname is the page of `gameID` specifically --
+ * not the homepage, not a menu route, and not ANOTHER game's page.
+ *
+ * The redirect below preserves the current path only when it passes this,
+ * because the two callers reach it from quite different places: handleUrl
+ * runs on `/game/<id>` (where the path IS the game), while
+ * checkActiveLobby also runs from the homepage on a typed or pasted code
+ * and from a click in the lobby list, where it is not.
+ */
+function pathNamesGame(versionFreePath: string, gameID: string): boolean {
+  const m = versionFreePath.match(GAME_PATH_RE);
+  if (m === null) return false;
+  let id = m[1];
+  try {
+    id = decodeURIComponent(id);
+  } catch {
+    // A malformed escape is not a game id; compare the raw segment.
+  }
+  return id === gameID;
+}
+
+/**
+ * Where to send a page that is opening a game whose server runs a different
+ * build, or null to stay put and open it here.
+ *
+ * The decision, shared by the two places a game is opened from a URL
+ * (Main.handleUrl's `/game/<id>` branch and JoinLobbyModal.checkActiveLobby),
+ * so they cannot drift apart:
+ *
+ * - `gameVersion` undefined — no list loaded, or a letter it doesn't carry:
+ *   nothing is known about the game's server, and a navigation on a guess
+ *   would be worse than joining and finding out.
+ * - the versions match — including a build whose own label names no commit
+ *   ("DEV", "desktop"), which matches anything and must never be sent off
+ *   its own server. See versionMatches.
+ * - the page already lives under `/v/<gameVersion>/` yet still isn't that
+ *   build (the version's page isn't being served). That is the loop guard,
+ *   and falling through hands the mismatch to join-time `version_mismatch`,
+ *   which redirects cross-host.
+ *
+ * WHICH path gets versioned is the other half of the rule, and it is decided
+ * by `gameID`, not by the address bar. Only when the current path names THIS
+ * game is it carried over (with its search — `?lobby`, `?spectate`, `?host`
+ * all belong to that game). Otherwise the target is built from
+ * `gameVersionFreePath`, the game's own version-free path
+ * (`ClientEnv.gamePath(gameID)`), with no search: checkActiveLobby is also
+ * called from the homepage, where keeping `window.location.pathname` would
+ * send the player to the other build's HOME page and silently drop the code
+ * they just typed, and from a page showing a DIFFERENT game, where it would
+ * route them into that one instead.
+ *
+ * Desktop never calls this: its updater owns which version it runs.
+ */
+export function versionedPathForGame(
+  ownCommit: string,
+  gameVersion: string | undefined,
+  gameID: string,
+  gameVersionFreePath: string,
+  pathname: string,
+  search: string,
+  // Only read on the rebuilt path. A Spectate click on the homepage carries
+  // its intent in memory alone, and a full navigation drops memory, so the
+  // target URL has to say it: Main.handleUrl reads spectate mode from the
+  // search and nowhere else. When the path already names the game, its own
+  // search carries the flag (or not) and is kept verbatim.
+  spectator = false,
+): string | null {
+  if (gameVersion === undefined) return null;
+  if (versionMatches(ownCommit, gameVersion)) return null;
+  const { commit: current, path } = stripVersionPrefix(pathname);
+  // The loop guard, applied to where the page IS rather than to the target,
+  // so it holds on the rebuilt path too.
+  if (current !== null && commitsMatch(current, gameVersion)) return null;
+  return pathNamesGame(path, gameID)
+    ? versionedPath(gameVersion, pathname, search)
+    : versionedPath(
+        gameVersion,
+        gameVersionFreePath,
+        spectator ? "?spectate" : "",
+      );
 }
