@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
+import { resetPagePinForTests } from "../../src/client/PagePin";
 import {
   backendReachable,
   ensureServerList,
@@ -23,6 +24,9 @@ const RETRY_MS = 10_000;
 
 const OWN = "bfd5563a11111111111111111111111111111111";
 const OLD = "5ccc50a722222222222222222222222222222222";
+// What `/v/<commit>/` carries: the bucket layout and the static Worker both
+// key on the first 7 characters (see shortCommit).
+const SHORT_OLD = "5ccc50a";
 
 const API_LIST = {
   latest: OWN,
@@ -76,6 +80,9 @@ function stubLocation(host: string, pathname = "/", search = "") {
     writable: true,
     configurable: true,
   });
+  // isPinnedToAVersion answers from the pin captured at boot (PagePin.ts),
+  // so a restubbed location only counts once the captured value is dropped.
+  resetPagePinForTests();
   return loc;
 }
 
@@ -733,7 +740,22 @@ describe("redirectToGameVersion", () => {
     const loc = stubLocation("openfront.io", "/game/cAbCd12345", "?lobby");
     await withList();
     expect(redirectToGameVersion("cAbCd12345")).toBe(true);
-    expect(loc.href).toBe(`/v/${OLD}/game/cAbCd12345?lobby`);
+    expect(loc.href).toBe(`/v/${SHORT_OLD}/game/cAbCd12345?lobby`);
+  });
+
+  // The path is built from the GAME, not from the address bar:
+  // checkActiveLobby also runs from the homepage (a typed or pasted code, a
+  // click in the lobby list) and from a page showing a different game.
+  it("builds the game's own path when the address bar is elsewhere", async () => {
+    const loc = stubLocation("openfront.io", "/");
+    await withList();
+    expect(redirectToGameVersion("cAbCd12345")).toBe(true);
+    expect(loc.href).toBe(`/v/${SHORT_OLD}/game/cAbCd12345`);
+
+    const other = stubLocation("openfront.io", "/game/dAbCd12345", "?spectate");
+    await withList();
+    expect(redirectToGameVersion("cAbCd12345")).toBe(true);
+    expect(other.href).toBe(`/v/${SHORT_OLD}/game/cAbCd12345`);
   });
 
   it("stays put when the game's server runs this build", async () => {

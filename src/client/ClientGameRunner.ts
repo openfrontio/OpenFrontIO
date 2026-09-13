@@ -12,7 +12,6 @@ import {
   PlayerCosmeticRefs,
   ServerMessage,
 } from "../core/Schemas";
-import { stripVersionPrefix } from "../core/ServerList";
 import { findClosestBy, replacer } from "../core/Util";
 import {
   BuildableUnit,
@@ -50,6 +49,7 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
+import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
@@ -370,10 +370,13 @@ export function joinLobby(
           const r = ClientEnv.resolveGame(lobbyConfig.gameID);
           if (r.kind === "cross") {
             window.location.href = `https://${r.host}/game/${lobbyConfig.gameID}${window.location.search}`;
-          } else if (
-            stripVersionPrefix(window.location.pathname).commit !== null
-          ) {
-            // A pinned `/v/<commit>/` page must not reload. reloadForUpdate
+          } else if (pagePin() !== null) {
+            // A pinned `/v/<commit>/` page must not reload. The pin comes
+            // from PagePin (captured at boot), not from the live pathname:
+            // updateJoinUrlForShare has already rewritten the address bar to
+            // the version-free share URL by the time any mismatch can
+            // arrive, and reading it here would take the branch below.
+            // reloadForUpdate
             // strips the pin — right for an ordinary stale tab, fatal here:
             // it lands on `latest`, whose handleUrl sees this same game on
             // this same older server and pins the page straight back, one

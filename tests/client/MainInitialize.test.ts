@@ -9,6 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { capturePagePin } from "../../src/client/PagePin";
 import { SendKickPlayerIntentEvent } from "../../src/client/Transport";
 import { EventBus } from "../../src/core/EventBus";
 
@@ -307,6 +308,12 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       writable: true,
       configurable: true,
     });
+    // Client.initialize() takes the pin as its very first act (PagePin.ts),
+    // and this suite boots Main once in beforeAll, before the stub above.
+    // Re-taking it here is what a genuinely pinned document would have done
+    // -- and it is the whole point: from here on the answer no longer moves
+    // when the share rewrite takes the prefix out of the address bar.
+    capturePagePin();
     const replaceSpy = vi
       .spyOn(history, "replaceState")
       .mockImplementation(() => {});

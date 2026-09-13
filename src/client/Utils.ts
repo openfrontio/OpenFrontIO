@@ -15,6 +15,7 @@ import { GameConfig } from "../core/Schemas";
 import { stripVersionPrefix } from "../core/ServerList";
 import { ClientEnv } from "./ClientEnv";
 import type { LangSelector } from "./LangSelector";
+import { pagePin } from "./PagePin";
 import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/7J5zwb_s_Cg";
@@ -922,10 +923,13 @@ export function apexPathFor(pathname: string): string {
  * IS RUNNING, and on a pinned page a version-free path would silently hand
  * the player `latest` instead, mid-game.
  *
- * Pure apart from reading location, so the rule is testable without Main.
+ * Reads the pin captured at boot rather than the live pathname: the join
+ * flow rewrites the address bar to the version-free share URL before this
+ * ever runs in a game, and a version-free history entry is precisely what
+ * this exists to avoid writing (PagePin.ts).
  */
 export function currentPagePath(path: string): string {
-  const { commit } = stripVersionPrefix(window.location.pathname);
+  const commit = pagePin();
   return commit === null ? path : `/v/${commit}${path}`;
 }
 

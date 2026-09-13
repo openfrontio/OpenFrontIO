@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { capturePagePin, resetPagePinForTests } from "../../src/client/PagePin";
 import { EventBus } from "../../src/core/EventBus";
 import { GameUpdateType } from "../../src/core/game/GameUpdates";
 
@@ -324,6 +325,9 @@ describe("version_mismatch on a pinned /v/<commit>/ page", () => {
       writable: true,
       configurable: true,
     });
+    // The mismatch handler reads the pin captured at boot, so a restubbed
+    // location only counts once the captured value is dropped.
+    resetPagePinForTests();
   }
 
   afterEach(() => {
@@ -334,6 +338,7 @@ describe("version_mismatch on a pinned /v/<commit>/ page", () => {
     });
     envMocks.resolveGame.mockReturnValue({ kind: "own" });
     vi.mocked(reloadForUpdate).mockClear();
+    resetPagePinForTests();
   });
 
   it("goes to the game's own host instead of reloading", () => {
@@ -388,5 +393,30 @@ describe("version_mismatch on a pinned /v/<commit>/ page", () => {
 
     for (let i = 0; i < 10; i++) await Promise.resolve();
     expect(reloadForUpdate).toHaveBeenCalled();
+  });
+
+  // The regression this pin exists for. The join flow rewrites the address
+  // bar to the version-free SHARE url (Main.updateJoinUrlForShare) before a
+  // mismatch can arrive, so a handler reading window.location.pathname live
+  // sees an unpinned page and reloads -- onto `latest`, which re-pins to the
+  // same older server, forever. The pin is taken at boot and does not move.
+  it("stays pinned after the share-URL rewrite drops the prefix", async () => {
+    stubLocation("/v/5ccc50a7/game/game1234");
+    capturePagePin();
+
+    // What history.replaceState(null, "", "/game/<id>") leaves behind.
+    (window.location as unknown as { pathname: string }).pathname =
+      "/game/game1234";
+
+    joinLobby(new EventBus(), makeLobbyConfig(false));
+
+    captured.lobbyOnMessage!({
+      type: "error",
+      error: "version_mismatch",
+      gitCommit: "server-commit",
+    });
+
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    expect(reloadForUpdate).not.toHaveBeenCalled();
   });
 });

@@ -5,13 +5,13 @@ import {
   ServerList,
   ServerListSchema,
   servesBuild,
-  stripVersionPrefix,
   versionedPathForGame,
   versionMatches,
 } from "../core/ServerList";
 import { getApiBase } from "./ApiBase";
 import { ClientEnv } from "./ClientEnv";
 import { isDesktopShell } from "./DesktopShell";
+import { pagePin } from "./PagePin";
 import { isReplayShellHost } from "./VersionedReplay";
 
 // Multi-server v2 (docs/MultiServer.md, "Server list v2"): the API says which
@@ -380,13 +380,14 @@ function isOutdated(list: ServerList, own: string): boolean {
  * The same exemption as the desktop shell and the replay shells above, for
  * the same reason: a page whose version someone else owns must not be told
  * to update itself.
+ *
+ * Read from the pin captured at boot, never from the live pathname: the
+ * join flow rewrites the address bar to a version-free share URL, and this
+ * question is about the bundle, which that rewrite does not change. See
+ * PagePin.ts.
  */
 export function isPinnedToAVersion(): boolean {
-  try {
-    return stripVersionPrefix(window.location.pathname).commit !== null;
-  } catch {
-    return false;
-  }
+  return pagePin() !== null;
 }
 
 /**
@@ -405,7 +406,9 @@ export function isPinnedToAVersion(): boolean {
  *   would 404 and lose an archived replay. (It DOES load the site's list —
  *   siteHost is injected — so nothing else would stop it.)
  *
- * The rest of the rule, including the loop guard, is versionedPathForGame.
+ * The rest of the rule -- the loop guard, and WHICH path gets versioned
+ * (the game's own, not whatever the address bar shows) -- is
+ * versionedPathForGame.
  */
 export function redirectToGameVersion(gameID: GameID): boolean {
   if (isDesktopShell()) return false;
@@ -413,12 +416,26 @@ export function redirectToGameVersion(gameID: GameID): boolean {
   const target = versionedPathForGame(
     safeOwnCommit(),
     ClientEnv.gameVersion(gameID),
+    gameID,
+    safeGamePath(gameID),
     window.location.pathname,
     window.location.search,
   );
   if (target === null) return false;
   window.location.href = target;
   return true;
+}
+
+// The game's own version-free path, which the redirect versions whenever
+// the address bar is not already showing this game. Degrades like safeSite
+// below: ClientEnv.gamePath() reads the cluster map, and a page with no
+// BOOTSTRAP_CONFIG must not take a join down while building a URL.
+function safeGamePath(gameID: GameID): string {
+  try {
+    return ClientEnv.gamePath(gameID);
+  } catch {
+    return `/game/${encodeURIComponent(gameID)}`;
+  }
 }
 
 function isOnReplayShell(): boolean {

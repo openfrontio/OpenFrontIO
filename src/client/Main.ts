@@ -83,6 +83,7 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import { capturePagePin } from "./PagePin";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import "./PlayerProfileModal";
 import { GroupTokenTracker, withGroupToken } from "./PresenceGroup";
@@ -295,6 +296,16 @@ class Client {
   }> | null = null;
 
   async initialize(): Promise<void> {
+    // FIRST, ahead of consumeCreatorCodePath() and of handleUrl() below --
+    // ahead of every history write this client performs. A page served under
+    // `/v/<commit>/` is pinned to that build, and three guards depend on
+    // knowing it (isPinnedToAVersion, currentPagePath, ClientGameRunner's
+    // version_mismatch branch). The address bar stops being able to answer
+    // the moment updateJoinUrlForShare rewrites it to the version-free share
+    // URL, so take the value while it is still the URL we were served at.
+    // See PagePin.ts.
+    capturePagePin();
+
     // A store referral banner / account "copy link" hands out `/c/<code>`.
     // There's nothing to open here yet -- the code only does anything once
     // the player is signed in (resumePendingCreatorCode in onUserMe handles

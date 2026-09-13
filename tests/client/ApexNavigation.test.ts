@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
+import { capturePagePin, resetPagePinForTests } from "../../src/client/PagePin";
+import { isPinnedToAVersion } from "../../src/client/ServerList";
 import {
   apexPathFor,
   currentPagePath,
@@ -15,8 +17,12 @@ import {
 describe("apex-aware navigation", () => {
   const replace = vi.fn<(url: string) => void>();
 
+  // currentPagePath reads the pin captured at boot (PagePin.ts), not the
+  // live pathname, so every restubbed location has to drop the captured
+  // value -- exactly as a fresh document would.
   function stubPage(host: string, path: string, siteHost?: string) {
     ClientEnv.reset();
+    resetPagePinForTests();
     window.BOOTSTRAP_CONFIG = {
       gameEnv: "prod",
       cluster: {
@@ -156,6 +162,27 @@ describe("apex-aware navigation", () => {
   it("currentPagePath leaves a version-free page alone", () => {
     stubPage("openfront.io", "/w1/game/dAbCd12345", "openfront.io");
     expect(currentPagePath("/game/dAbCd12345")).toBe("/game/dAbCd12345");
+  });
+
+  // The pin is a property of the BUNDLE, and the join flow moves the address
+  // bar off it: updateJoinUrlForShare replaceStates to the version-free
+  // share URL before the in-game `?live` entry is ever written. Reading the
+  // live pathname there would write a version-free history entry, so F5
+  // mid-game would hand a pinned player `latest`. capturePagePin() at boot
+  // is what keeps the answer from moving with the address bar.
+  it("keeps the pin after the share-URL rewrite drops the prefix", () => {
+    stubPage("openfront.io", "/v/5ccc50a7/game/dAbCd12345", "openfront.io");
+    capturePagePin();
+    expect(isPinnedToAVersion()).toBe(true);
+
+    // What history.replaceState(null, "", "/game/<id>") leaves behind.
+    (window.location as unknown as { pathname: string }).pathname =
+      "/game/dAbCd12345";
+
+    expect(isPinnedToAVersion()).toBe(true);
+    expect(currentPagePath("/w1/game/dAbCd12345?live")).toBe(
+      "/v/5ccc50a7/w1/game/dAbCd12345?live",
+    );
   });
 
   // The unknown-letter bounce (Main.redirectUnknownLetterToApex) goes to the
