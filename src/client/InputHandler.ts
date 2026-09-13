@@ -928,7 +928,7 @@ export class InputHandler {
 
   private onScroll(event: WheelEvent) {
     const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
-    // Shift takes priority unconditionally
+    // The hardcoded shift scroll attack ratio changing takes priority.
     if (event.shiftKey) {
       const increment = this.userSettings.attackRatioIncrement();
       const ratio = scrollValue > 0 ? -increment : increment;
@@ -943,9 +943,11 @@ export class InputHandler {
           scrollValue > 0 ? "decrease" : "increase",
         );
       }
+      // Prevent zooming if the build scroll modifier is active.
+      return;
     }
 
-    // Alt also blocks zooming, to match behavior of Ctrl / Shift
+    // Any alt also blocks zooming, to match behavior of Ctrl / Shift
     if (event.altKey) {
       return;
     }
