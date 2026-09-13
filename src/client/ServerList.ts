@@ -19,7 +19,8 @@ import { isReplayShellHost } from "./VersionedReplay";
 //
 // The list is fetched once at page load (bounded, so offline singleplayer
 // waits seconds at worst and never hangs) and kept warm by a heartbeat:
-// every REFRESH_INTERVAL_MS on success, RETRY_INTERVAL_MS after a failure.
+// every REFRESH_INTERVAL_MS on success, and on a backing-off schedule after
+// a failure (retryDelayMs).
 // Clicking Join or Create therefore never waits on the network — whatever
 // the list's age, ensureServerList() answers from the cached copy and
 // revalidates behind it. Only a page that has never seen a list waits for a
@@ -35,21 +36,35 @@ import { isReplayShellHost } from "./VersionedReplay";
 // The heartbeat doubles as the client's backend-reachability probe
 // (backendReachable() for the raw per-attempt answer,
 // backendUnreachableConfirmed() for the debounced one the UI gates on, and
-// the "backend-reachability" document event carrying both).
+// the "backend-reachability" document event carrying both), and it says when
+// it is busy (attemptInFlight() plus the "server-list-attempt" event), which
+// is what the desktop status bar's Retry button disables itself on.
 
 // Bounded so an unreachable API costs one short wait, after which the
 // bootstrap values take over.
 const FETCH_TIMEOUT_MS = 4_000;
 // Heartbeat: how long a list is served before it is revalidated in the
-// background, and how soon a failed attempt is retried.
+// background.
 const REFRESH_INTERVAL_MS = 30_000;
-const RETRY_INTERVAL_MS = 10_000;
+// Retry schedule after an unanswered attempt: the first retry comes after
+// RETRY_BASE_MS and each further consecutive failure doubles the wait, up to
+// RETRY_MAX_MS. Any answer at all resets it to the base.
+//
+// The point of the backoff is the long tail. A player who closes their laptop
+// lid, or sits on a train through a tunnel, should not have the page firing a
+// 4s request every 10s for an hour; a backend that is genuinely down should
+// not take that traffic from every open tab either. The base is short because
+// the common case is a blip that the very next request clears, and the cap is
+// a minute because past that point the player has almost certainly stopped
+// waiting -- and the Retry button is the escape hatch for anyone who has not.
+const RETRY_BASE_MS = 10_000;
+const RETRY_MAX_MS = 60_000;
 // How many attempts in a row must go unanswered before the UI calls it an
 // outage. One failure is a blip -- a 4s timeout on a flaky connection, a
 // worker restart mid-beat, a proxy hiccup -- and the cached list keeps
 // serving straight through it, so gating multiplayer on the first one would
 // take the game away from a player whose next request would have worked. Two
-// in a row, which take a retry interval to accumulate, is evidence.
+// in a row, which take RETRY_BASE_MS to accumulate, is evidence.
 const CONFIRM_OUTAGE_AFTER_FAILURES = 2;
 // Floor between player-initiated retries, so someone leaning on the button
 // cannot outpace the request it started. Short enough that a deliberate
@@ -183,6 +198,39 @@ export function backendUnreachableConfirmed(): boolean {
   );
 }
 
+/**
+ * Whether an attempt is out right now, automatic or manual. Synchronous, so
+ * UI that gates on it can seed itself at mount; the "server-list-attempt"
+ * event below carries every change.
+ */
+export function attemptInFlight(): boolean {
+  return inflight !== null;
+}
+
+/** The detail carried by the "server-list-attempt" document event. */
+export interface ServerListAttemptDetail {
+  inFlight: boolean;
+}
+
+/**
+ * Announced on the document when an attempt starts and again when it settles.
+ *
+ * Separate from "backend-reachability" on purpose: that one fires only on a
+ * CHANGE of reachability, so an attempt that fails exactly like the last one
+ * announces nothing at all -- which is precisely the case the desktop status
+ * bar's Retry button needs to see, since it disables itself while the
+ * heartbeat is already trying. Pairs with attemptInFlight() for the same
+ * reason every other signal here does: the event is one-shot, so a component
+ * mounting mid-attempt has only the accessor to read (OPE-396).
+ */
+function announceAttempt(inFlight: boolean): void {
+  document.dispatchEvent(
+    new CustomEvent<ServerListAttemptDetail>("server-list-attempt", {
+      detail: { inFlight },
+    }),
+  );
+}
+
 /** The detail carried by the "backend-reachability" document event. */
 export interface BackendReachabilityDetail {
   reachable: boolean;
@@ -205,7 +253,7 @@ function recordAttempt(answered: boolean, cause?: unknown): void {
   const confirmed = backendUnreachableConfirmed();
   if (wasReachable === answered && wasConfirmed === confirmed) return;
   // Only transitions are logged: the heartbeat runs forever and an offline
-  // player must not get a console line every RETRY_INTERVAL_MS.
+  // player must not get a console line on every beat.
   if (!answered && wasReachable !== false) {
     console.warn("Server list API unreachable, using known values", cause);
   } else if (!answered && confirmed && !wasConfirmed) {
@@ -277,7 +325,9 @@ function fetchOnce(): Promise<ServerList | null> {
     })
     .finally(() => {
       inflight = null;
+      announceAttempt(false);
     });
+  announceAttempt(true);
   return inflight;
 }
 
@@ -317,6 +367,11 @@ function runPoll(): void {
 
 // Scheduled after each attempt settles, never on a fixed interval: a slow
 // or hanging fetch must not stack attempts on top of each other.
+//
+// The retry side reads consecutiveFailures, which recordAttempt has already
+// updated for the attempt that just settled -- so an answered attempt that
+// carried no list (a 404 for this site) waits the base interval rather than
+// inheriting an earlier outage's backoff.
 function scheduleNextPoll(gotList: boolean): void {
   if (!polling) return;
   pollTimer = setTimeout(
@@ -324,7 +379,7 @@ function scheduleNextPoll(gotList: boolean): void {
       pollTimer = null;
       runPoll();
     },
-    gotList ? REFRESH_INTERVAL_MS : RETRY_INTERVAL_MS,
+    gotList ? REFRESH_INTERVAL_MS : retryDelayMs(consecutiveFailures),
   );
 }
 
@@ -392,17 +447,21 @@ export async function ensureServerList(): Promise<ServerListStatus> {
  * Try the API again right now, at the player's request: the Retry on the
  * desktop status bar's offline state (OPE-439).
  *
- * Deliberately ignores the heartbeat's retry interval. That interval exists
+ * Deliberately ignores the heartbeat's retry schedule. That backoff exists
  * to stop TIMER-driven callers hammering a down API between beats, and a
  * person pressing a button is not one of those -- holding their click for up
- * to RETRY_INTERVAL_MS would make the button look broken in exactly the
- * situation it exists for.
+ * to a minute (RETRY_MAX_MS, once an outage has been going a while) would
+ * make the button look broken in exactly the situation it exists for.
  *
  * It does have a floor of its own, MANUAL_RETRY_MIN_INTERVAL_MS. Inside that
  * window a second press is a no-op that hands back the same promise, so a
  * player leaning on the button cannot outpace the request it started. Past
  * the throttle, fetchOnce() still dedupes: a press landing on top of a
- * heartbeat beat joins that attempt rather than starting a second.
+ * heartbeat beat joins that attempt rather than starting a second. This is
+ * the last line of defence, not the first: the button that calls this is
+ * itself disabled while an attempt is out and for a cooldown after a press
+ * (DesktopStatusBar), and the floor is what holds if anything ever calls
+ * this without going through such a button.
  *
  * A retry that fails counts towards the outage confirmation like any other
  * attempt -- pressing Retry against a backend that is genuinely down should
@@ -433,12 +492,33 @@ async function runManualRetry(): Promise<ServerListStatus> {
   }
 }
 
+/**
+ * How long to wait before retrying, given how many attempts in a row have
+ * gone unanswered. Pure, so the schedule can be read (and tested) without a
+ * clock: RETRY_BASE_MS after the first failure, doubling on each further
+ * consecutive failure, capped at RETRY_MAX_MS.
+ *
+ *   1 -> 10s   2 -> 20s   3 -> 40s   4+ -> 60s
+ *
+ * Zero (or anything lower, defensively) is the base too: that is the state
+ * after an ANSWER, and the next beat's schedule should already be back to
+ * the short interval rather than inheriting the outage's.
+ */
+export function retryDelayMs(consecutiveFailures: number): number {
+  if (consecutiveFailures <= 1) return RETRY_BASE_MS;
+  // Math.min before the shift ever gets big: 2 ** 30 * 10s is still finite,
+  // but there is no reason to let a long outage compute an absurd number.
+  const doublings = Math.min(consecutiveFailures - 1, 20);
+  return Math.min(RETRY_BASE_MS * 2 ** doublings, RETRY_MAX_MS);
+}
+
 // Whether a caller may start a fresh attempt, or must leave it to the
 // heartbeat's next beat. Only a failed attempt holds anything back, and only
-// for the retry interval; the cached list (if any) keeps serving meanwhile.
+// for the current backoff delay; the cached list (if any) keeps serving
+// meanwhile.
 function retryDue(): boolean {
   if (lastAttempt === null || !lastAttempt.failed) return true;
-  return Date.now() - lastAttempt.at >= RETRY_INTERVAL_MS;
+  return Date.now() - lastAttempt.at >= retryDelayMs(consecutiveFailures);
 }
 
 function apply(): ServerListStatus {

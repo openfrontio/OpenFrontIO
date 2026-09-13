@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import { resetPagePinForTests } from "../../src/client/PagePin";
 import {
+  attemptInFlight,
   backendReachable,
   backendUnreachableConfirmed,
   ensureServerList,
   redirectToGameVersion,
   reloadWouldRescue,
   resetServerList,
+  retryDelayMs,
   retryServerList,
   serverListSite,
   serverListUrl,
@@ -23,7 +25,10 @@ import {
 // known, and a failed refresh never throws the last good list away.
 
 const REFRESH_MS = 30_000;
+// The FIRST retry delay. Later ones double (retryDelayMs), so anywhere a test
+// needs a second or third failed attempt it spells the wait out.
 const RETRY_MS = 10_000;
+const RETRY_MAX_MS = 60_000;
 
 const OWN = "bfd5563a11111111111111111111111111111111";
 const OLD = "5ccc50a722222222222222222222222222222222";
@@ -366,6 +371,37 @@ describe("ensureServerList", () => {
   });
 });
 
+// The retry schedule on its own, with no clock and no fetch: a failing API
+// must not be asked every 10s forever (a lid-closed laptop would keep firing
+// a 4s request all night), but the first retry has to stay quick because the
+// common case is a blip the very next request clears.
+describe("retryDelayMs", () => {
+  it("waits the base interval after the first failure", () => {
+    expect(retryDelayMs(1)).toBe(RETRY_MS);
+  });
+
+  it("doubles on each further consecutive failure", () => {
+    expect(retryDelayMs(2)).toBe(2 * RETRY_MS);
+    expect(retryDelayMs(3)).toBe(4 * RETRY_MS);
+  });
+
+  it("caps the wait rather than doubling forever", () => {
+    // 4 failures is already 80s uncapped, so the cap bites here and stays.
+    expect(retryDelayMs(4)).toBe(RETRY_MAX_MS);
+    expect(retryDelayMs(10)).toBe(RETRY_MAX_MS);
+    expect(retryDelayMs(1_000)).toBe(RETRY_MAX_MS);
+    expect(Number.isFinite(retryDelayMs(1_000))).toBe(true);
+  });
+
+  it("is back at the base with no failures behind it", () => {
+    // What an ANSWER leaves the counter at. The next beat's schedule must
+    // not inherit the outage's -- a recovered backend that then misses once
+    // should be retried in 10s, not in a minute.
+    expect(retryDelayMs(0)).toBe(RETRY_MS);
+    expect(retryDelayMs(-1)).toBe(RETRY_MS);
+  });
+});
+
 describe("startServerListPolling", () => {
   it("fetches at page load and keeps a heartbeat, retrying sooner after a failure", async () => {
     vi.useFakeTimers();
@@ -393,9 +429,27 @@ describe("startServerListPolling", () => {
     await vi.advanceTimersByTimeAsync(1_000);
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
+    // Two failures deep, the heartbeat backs off: 20s, not another 10s.
+    await vi.advanceTimersByTimeAsync(2 * RETRY_MS - 1_000);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    // ...and one answer puts it straight back on the short schedule. The
+    // beat after a success is the refresh cadence, and a failure right after
+    // that is a first failure again.
+    fetchMock.mockImplementation(async () => jsonResponse(API_LIST));
+    await vi.advanceTimersByTimeAsync(4 * RETRY_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    await vi.advanceTimersByTimeAsync(REFRESH_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    await vi.advanceTimersByTimeAsync(RETRY_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+
     stopServerListPolling();
     await vi.advanceTimersByTimeAsync(REFRESH_MS * 2);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(7);
   });
 
   it("does not poll on a replay shell host", async () => {
@@ -428,9 +482,9 @@ describe("a confirmed outage, as opposed to one missed beat", () => {
       expect(backendUnreachableConfirmed()).toBe(false);
       expect(seen).toEqual([{ reachable: false, confirmed: false }]);
 
-      // The second one confirms it. `reachable` did not change, so this
-      // announcement exists only because `confirmed` did -- which is the
-      // transition every gate acts on.
+      // The second one confirms it, a base retry delay after the first --
+      // the backoff only starts stretching once there is an outage to back
+      // off from, so the confirmation still lands inside the first 10s.
       await vi.advanceTimersByTimeAsync(RETRY_MS);
       await ensureServerList();
       expect(backendUnreachableConfirmed()).toBe(true);
@@ -439,14 +493,18 @@ describe("a confirmed outage, as opposed to one missed beat", () => {
         { reachable: false, confirmed: true },
       ]);
 
-      // A third changes nothing, so it is not announced.
-      await vi.advanceTimersByTimeAsync(RETRY_MS);
+      // A third changes nothing, so it is not announced. Two failures deep,
+      // the next attempt is due 20s after the last rather than 10s.
+      const attemptsBefore = fetchMock.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(2 * RETRY_MS);
       await ensureServerList();
+      expect(fetchMock).toHaveBeenCalledTimes(attemptsBefore + 1);
       expect(seen).toHaveLength(2);
 
-      // One answer clears it outright -- no gradual recovery.
+      // One answer clears it outright -- no gradual recovery. Three failures
+      // deep, so 40s.
       fetchMock.mockImplementation(async () => jsonResponse(API_LIST));
-      await vi.advanceTimersByTimeAsync(RETRY_MS);
+      await vi.advanceTimersByTimeAsync(4 * RETRY_MS);
       expect(await ensureServerList()).toBe("api");
       expect(backendUnreachableConfirmed()).toBe(false);
       expect(seen).toEqual([
@@ -644,6 +702,82 @@ describe("retryServerList", () => {
     });
     expect(await retryServerList()).toBe("fallback");
     expect(backendReachable()).toBe(false);
+  });
+});
+
+// What the desktop status bar's Retry button disables itself on. The
+// reachability event is no use for it: that one fires only when reachability
+// CHANGES, so an attempt that fails exactly like the last one announces
+// nothing -- and the button still has to grey out while it is out.
+describe("attemptInFlight and the server-list-attempt event", () => {
+  it("is true from the moment an attempt starts until it settles, and says so", async () => {
+    const seen: unknown[] = [];
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("server-list-attempt", listener);
+    try {
+      expect(attemptInFlight()).toBe(false);
+
+      let release: (r: Response) => void = () => {};
+      fetchMock.mockImplementation(
+        async () =>
+          await new Promise<Response>((resolve) => {
+            release = resolve;
+          }),
+      );
+
+      const pending = ensureServerList();
+      expect(attemptInFlight()).toBe(true);
+      expect(seen).toEqual([{ inFlight: true }]);
+
+      release(jsonResponse(API_LIST));
+      await pending;
+      expect(attemptInFlight()).toBe(false);
+      expect(seen).toEqual([{ inFlight: true }, { inFlight: false }]);
+    } finally {
+      document.removeEventListener("server-list-attempt", listener);
+    }
+  });
+
+  it("announces one start per attempt, however many callers join it", async () => {
+    const seen: unknown[] = [];
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("server-list-attempt", listener);
+    try {
+      let release: (r: Response) => void = () => {};
+      fetchMock.mockImplementation(
+        async () =>
+          await new Promise<Response>((resolve) => {
+            release = resolve;
+          }),
+      );
+
+      const first = retryServerList();
+      const second = retryServerList();
+      const third = ensureServerList();
+      expect(seen).toEqual([{ inFlight: true }]);
+
+      release(jsonResponse(API_LIST));
+      await Promise.all([first, second, third]);
+      expect(seen).toEqual([{ inFlight: true }, { inFlight: false }]);
+    } finally {
+      document.removeEventListener("server-list-attempt", listener);
+    }
+  });
+
+  it("settles even when the fetch throws outright", async () => {
+    const seen: unknown[] = [];
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("server-list-attempt", listener);
+    try {
+      fetchMock.mockImplementation(() => {
+        throw new Error("fetch itself blew up");
+      });
+      await ensureServerList();
+      expect(attemptInFlight()).toBe(false);
+      expect(seen).toEqual([{ inFlight: true }, { inFlight: false }]);
+    } finally {
+      document.removeEventListener("server-list-attempt", listener);
+    }
   });
 });
 

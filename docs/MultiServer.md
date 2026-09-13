@@ -405,16 +405,27 @@ values.
 
 - **Fetched at page load, then a heartbeat.** `startServerListPolling()`
   runs early in `Client.initialize()`: the first fetch overlaps with the
-  rest of boot, and the list is refreshed every 30s, retried every 10s
-  after a failed attempt. Each fetch is bounded (4s), so offline
-  singleplayer waits seconds at worst and never hangs.
+  rest of boot, and the list is refreshed every 30s on success. Each fetch
+  is bounded (4s), so offline singleplayer waits seconds at worst and never
+  hangs.
+- **Failed attempts back off.** `retryDelayMs(consecutiveFailures)` is the
+  schedule, and it is a pure function so it can be read without a clock: 10s
+  after the first unanswered attempt, doubling on each further consecutive
+  one (20s, 40s), capped at 60s. **Any** answer at all — a 404 included —
+  resets it to the base, so a page that recovers and then misses once is
+  retried in 10s rather than inheriting the old outage's wait. The base is
+  short because the common case is a blip the next request clears; the cap
+  exists because a lid-closed laptop should not fire a request every 10s all
+  night, and by a minute in the player who is still waiting has the Retry
+  button. The success cadence (30s) is untouched by any of this.
 - **A click never waits when a list is known.** `ensureServerList()`
   answers from the cached list whatever its age and revalidates behind the
   answer (stale-while-revalidate); only a page that has never got a list
   waits for a fetch — the one in flight, or one it starts. A page with no
-  list whose last attempt failed under 10s ago starts none: it answers
-  `fallback` and leaves retrying to the heartbeat, so a caller on a timer
-  (the matchmaking poll, every second) cannot hammer a down API.
+  list whose last attempt failed less than the current backoff delay ago
+  starts none: it answers `fallback` and leaves retrying to the heartbeat,
+  so a caller on a timer (the matchmaking poll, every second) cannot hammer
+  a down API.
 - **A failed refresh keeps the last good list.** Network error, timeout,
   non-OK, malformed or empty: the previous list keeps serving. The API
   caches its answer for seconds anyway, so a blip must not flip a working
@@ -425,17 +436,20 @@ values.
   site), false on a timeout or network error. It is deliberately twitchy,
   so nothing player-facing gates on it.
   `backendUnreachableConfirmed()` is the debounced one the UI uses: true
-  only once **two** attempts in a row have gone unanswered, which takes a
-  retry interval to accumulate. One missed beat is a blip the cached list
-  serves straight through, and dimming multiplayer for 10s over it would be
-  worse than the blip; any answer resets the count. Every change to either
+  only once **two** attempts in a row have gone unanswered, which takes the
+  base retry delay (10s) to accumulate — the backoff only stretches once
+  there is an outage to back off from, so confirmation is never slowed by
+  it. One missed beat is a blip the cached list serves straight through, and
+  dimming multiplayer for 10s over it would be worse than the blip; any
+  answer resets the count. Every change to either
   value is announced on the document as `backend-reachability` with
   `{ reachable, confirmed }`. Consumers seed from the accessor and then
   subscribe — the event is one-shot, so a component mounting afterwards
   would otherwise never learn the state (OPE-396).
 - **Retry:** `retryServerList()` is the player-initiated attempt behind the
-  desktop status bar's offline Retry. It ignores the heartbeat's retry
-  interval (a person pressing a button is not a timer) but has a 1s floor
+  desktop status bar's offline Retry. It ignores the heartbeat's backoff (a
+  person pressing a button is not a timer, and once an outage has run a
+  while that wait is up to a minute) but has a 1s floor
   of its own, inside which a second press hands back the same promise; past
   that, `fetchOnce()` still dedupes against an attempt already in flight. A
   retry that fails counts towards the outage confirmation like any other
