@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
-import { homeHref, reloadForUpdate } from "../../src/client/Utils";
+import { apexPathFor, homeHref, reloadForUpdate } from "../../src/client/Utils";
 
 // A document can sit on a deployment host (cross-host game visit, stale
 // bookmark). There, a same-origin reload or a "/" exit re-enters the SAME
@@ -79,5 +79,20 @@ describe("apex-aware navigation", () => {
       expect(["openfront.io", "beta.openfront.io"]).toContain(url.host);
       expect(url.searchParams.has("v")).toBe(true);
     }
+  });
+
+  // The unknown-letter bounce (Main.redirectUnknownLetterToApex) goes to the
+  // apex precisely because this page's routing knowledge is stale. Both
+  // prefixes encode that stale knowledge: the worker is one deployment's,
+  // and /v/<commit>/ pins the very version being left behind -- keeping it
+  // would land back on the same shell with the same unknown letter.
+  it("apexPathFor drops the worker and version prefixes", () => {
+    expect(apexPathFor("/w1/game/dAbCd12345")).toBe("/game/dAbCd12345");
+    expect(apexPathFor("/v/bfd5563a/game/dAbCd12345")).toBe("/game/dAbCd12345");
+    expect(apexPathFor("/v/bfd5563a/w1/game/dAbCd12345")).toBe(
+      "/game/dAbCd12345",
+    );
+    expect(apexPathFor("/game/dAbCd12345")).toBe("/game/dAbCd12345");
+    expect(apexPathFor("/")).toBe("/");
   });
 });
