@@ -70,7 +70,7 @@ export class OvertimePanel extends LitElement {
     const yourPctShown = Math.floor(yourPct);
 
     const panel =
-      "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg text-white text-sm";
+      "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-bl-lg text-white text-sm";
 
     return html`
       <div class="${panel}">

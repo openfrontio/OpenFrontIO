@@ -17,22 +17,32 @@ function isAllowedOrigin(origin: string): boolean {
   // docs/MultiServer.md), so each sibling's origin must be allowed. Own host
   // included — harmless (same-origin requests skip CORS) and keeps the rule
   // uniform.
-  return Object.values(ServerEnv.cluster()).some(
-    (entry) => origin === `https://${entry.host}`,
-  );
+  // And each member's PAGE host when GAME_DOMAIN splits the two names
+  // (`blue.openfront.dev` for game host `blue.server.openfront.dev`): a
+  // player who loads a colour's page directly rather than through the apex
+  // arrives from that origin, and before the split it was the same name as
+  // the game host and so already on this list.
+  return Object.values(ServerEnv.cluster()).some((entry) => {
+    if (origin === `https://${entry.host}`) return true;
+    const pageHost = ServerEnv.pageHostFor(entry.host);
+    return pageHost !== undefined && origin === `https://${pageHost}`;
+  });
 }
 
 /**
- * Grant the game server's `/api` routes to the desktop app and to the site
- * behind the load balancer.
+ * Grant the game server's `/api` routes to the desktop app and to the page
+ * host the players came from.
  *
- * The desktop client's renderer lives on `app://openfront` while the game
- * server is `openfront.io` (or a branch host on dev), so every `/api` call is
- * cross-origin. The web client is cross-origin too when the page came from a
- * load balancer host (`openfront.io`) but the page pins its game server to the
- * deployment that served it (`blue.openfront.io`, see ServerEnv.publicHost).
- * The POSTs send Authorization and Content-Type, which makes them non-simple,
- * so the browser preflights.
+ * A deployment has two hostnames (docs/MultiServer.md, "Two hostnames per
+ * deployment"): the page host players load from — the apex `openfront.io`, or
+ * `main.openfront.dev` served by the static Worker where GAME_DOMAIN is set —
+ * and the game host this server answers on (`blue.openfront.io`,
+ * `main.server.openfront.dev`; see ServerEnv.publicHost). Those are different
+ * origins, so every `/api` call the page makes is cross-origin — which is why
+ * the page host is allowed here alongside every game host in the fleet. The
+ * desktop client's renderer is cross-origin for a different reason: it loads
+ * from `app://openfront`. The POSTs send Authorization and Content-Type,
+ * which makes them non-simple, so the browser preflights.
  *
  * Deliberately no `Access-Control-Allow-Credentials`: the play token travels
  * in the Authorization header, so nothing here needs cookies, and granting

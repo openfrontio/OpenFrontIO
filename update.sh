@@ -65,10 +65,13 @@ echo "Extracted to $STATIC_DIR; top-level contents:"
 ls -la "$STATIC_DIR/" || true
 
 R2_ENDPOINT="https://api.${DOMAIN}"
-# The hostname players load the page from, which is what the server list and
+# The hostname players load the PAGE from, which is what the server list and
 # the static Worker are keyed by (docs/MultiServer.md, "Server list v2"). Behind
-# a load balancer that is the apex (SITE_HOST); a standalone deployment — beta,
-# a branch preview — is its own site.
+# a load balancer that is the apex (SITE_HOST); with GAME_DOMAIN set, deploy.sh
+# also fills SITE_HOST in for a standalone deployment, because its page host
+# (<subdomain>.<DOMAIN>) is then a different name from the game host this
+# container answers on (<subdomain>.<GAME_DOMAIN>). An old-style standalone
+# deployment — beta, a branch preview — is its own site, page and game alike.
 SITE="${SITE_HOST:-${SUBDOMAIN}.${DOMAIN}}"
 MANIFEST="$STATIC_DIR/asset-manifest.json"
 if [ ! -f "$MANIFEST" ]; then
@@ -357,13 +360,34 @@ echo "Starting new container for ${HOST} environment..."
 # Ensure the traefik network exists
 docker network create web 2> /dev/null || true
 
+# Traefik Host() rule. With GAME_DOMAIN set this container owns two names:
+# its game host (<subdomain>.<GAME_DOMAIN>), which is what cluster entries
+# point sockets and /api at, and — during the transition, until the static
+# Worker is actually routed — its page host (<subdomain>.<DOMAIN>), so the
+# box still answers on the name people already have bookmarked. Once the
+# Worker owns the page host its DNS stops pointing here and that clause
+# simply never matches. With GAME_DOMAIN unset there is one name and the
+# rule is byte-for-byte the one this script has always emitted.
+#
+# The markers below delimit the block tests/UpdateTraefikHostRule.test.ts
+# extracts and runs, the same way the restart policy above is tested: the
+# rest of this script talks to docker, this decision is three strings in and
+# one string out. Keep them in place.
+# --- BEGIN traefik host rule (tested) ---
+if [ -n "${GAME_DOMAIN:-}" ]; then
+    TRAEFIK_HOST_RULE="Host(\`${SUBDOMAIN}.${DOMAIN}\`) || Host(\`${SUBDOMAIN}.${GAME_DOMAIN}\`)"
+else
+    TRAEFIK_HOST_RULE="Host(\`${SUBDOMAIN}.${DOMAIN}\`)"
+fi
+# --- END traefik host rule (tested) ---
+
 docker run -d \
     --restart="${RESTART}" \
     --env-file "$ENV_FILE" \
     --name "${CONTAINER_NAME}" \
     --network web \
     --label "traefik.enable=true" \
-    --label "traefik.http.routers.${CONTAINER_NAME}.rule=Host(\`${SUBDOMAIN}.${DOMAIN}\`)" \
+    --label "traefik.http.routers.${CONTAINER_NAME}.rule=${TRAEFIK_HOST_RULE}" \
     --label "traefik.http.routers.${CONTAINER_NAME}.entrypoints=websecure" \
     --label "traefik.http.routers.${CONTAINER_NAME}.tls=true" \
     --label "traefik.http.services.${CONTAINER_NAME}.loadbalancer.server.port=80" \

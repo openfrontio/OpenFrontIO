@@ -1,4 +1,4 @@
-import { ClientEnv } from "src/client/ClientEnv";
+import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { ZbContext } from "../../zbin";
 import {
   CloseCode,
@@ -424,7 +424,20 @@ export class Transport {
     // names the hosting deployment, so a shared lobby link or rejoin works
     // from any shell in the fleet. Own/legacy ids keep the historical
     // behavior (same-origin on web, serverHost on the desktop app).
-    const workerPath = ClientEnv.gameWorkerPath(this.lobbyConfig.gameID);
+    // No server known at all (a static page whose list never loaded, and an
+    // id whose letter nothing in it carries) means there is no worker to
+    // dial. That is a connection that cannot be made, not a bug: route it
+    // into the same terminal dialog a refused socket produces rather than
+    // letting it escape as an unhandled exception from the join.
+    let workerPath: string;
+    try {
+      workerPath = ClientEnv.gameWorkerPath(this.lobbyConfig.gameID);
+    } catch (e) {
+      if (!(e instanceof NoServerError)) throw e;
+      console.error("No server for game", this.lobbyConfig.gameID, e);
+      this.handleConnectionRefused(CloseReason.Unknown);
+      return;
+    }
     this.socket = new WebSocket(
       `${ClientEnv.gameWsBase(this.lobbyConfig.gameID)}/${workerPath}`,
     );

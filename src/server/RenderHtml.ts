@@ -56,6 +56,11 @@ export async function renderHtmlContent(
         cluster: JSON.stringify(ServerEnv.cluster()),
         instanceLetter: JSON.stringify(ServerEnv.instanceLetter()),
         instanceId: JSON.stringify(ServerEnv.instanceId()),
+        // The GAME host: the name this deployment answers sockets and /api
+        // on, which is not the host the page came from whenever something
+        // else owns that (a load balancer on prod, the static Worker on a
+        // dev deployment with GAME_DOMAIN). Pinning the tab to it is what
+        // keeps a game alive across a balancer flip.
         serverHost:
           ServerEnv.publicHost() === undefined
             ? undefined

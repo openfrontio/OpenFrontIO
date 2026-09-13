@@ -4,8 +4,13 @@
 # Generates the per-worker nginx config from CLUSTER_JSON at container start
 # (the cluster map arrives via the runtime env file and is not known when the
 # image is built, so it can't be baked into nginx.conf). The worker count is
-# this deployment's own cluster entry, found by host — SUBDOMAIN.DOMAIN, bare
-# DOMAIN when SUBDOMAIN is empty — the same self-match ServerEnv performs.
+# this deployment's own cluster entry, found by host — SUBDOMAIN.GAME_DOMAIN
+# when GAME_DOMAIN is set (the game host, docs/MultiServer.md "Two hostnames
+# per deployment"), else SUBDOMAIN.DOMAIN, bare DOMAIN when SUBDOMAIN is empty
+# — the same self-match ServerEnv.publicHost performs. Getting this wrong is
+# not a fallback: with no entry the workers conf is never written, nginx dies
+# on the missing upstream, and Traefik reports "connection refused" for the
+# whole container.
 # Emits two things, both in the http context, into a single conf.d file:
 #
 #   1. upstream openfront_workers  - random-balanced across the live workers, so
@@ -32,7 +37,7 @@ if [ -n "${CLUSTER_JSON:-}" ]; then
             process.exit(1);
         }
         console.log(entry.numWorkers);
-    ' "${SUBDOMAIN:+${SUBDOMAIN}.}${DOMAIN:-}")
+    ' "${SUBDOMAIN:+${SUBDOMAIN}.}${GAME_DOMAIN:-${DOMAIN:-}}")
 else
     # No map at all (dev, manual runs): single worker, like the old
     # NUM_WORKERS default.

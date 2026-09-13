@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { capturePagePin, resetPagePinForTests } from "../src/client/PagePin";
 import type { PublicGames } from "../src/core/Schemas";
 
 // OPE-255. The component stops its public-lobby socket when a game starts
@@ -113,6 +114,7 @@ describe("GameModeSelector update prompt on the replay shell host", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.mocked(showInGameAlert).mockClear();
+    resetPagePinForTests();
   });
 
   it("suppresses the prompt on replay.<domain>", () => {
@@ -127,6 +129,48 @@ describe("GameModeSelector update prompt on the replay shell host", () => {
 
   it("still prompts on ordinary hosts", () => {
     vi.stubGlobal("location", { hostname: "openfront.io" });
+    const selector = new GameModeSelector() as any;
+
+    selector.handleUpdateAvailable();
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+  });
+});
+
+// A page pinned under /v/<commit>/ sits on a draining build on purpose, so
+// the lobby feed's drain signal fires on every load. Prompting would strip
+// the pin, reload at latest, and be re-pinned straight back -- the loop the
+// pinned-page work exists to prevent (see isOutdated and ClientGameRunner's
+// version_mismatch handler for the other two exits).
+describe("GameModeSelector update prompt on a pinned /v/<commit>/ page", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.mocked(showInGameAlert).mockClear();
+    resetPagePinForTests();
+  });
+
+  it("suppresses the prompt when the page is pinned to a version", () => {
+    vi.stubGlobal("location", {
+      hostname: "openfront.io",
+      pathname: "/v/5ccc50a7/game/dAbCd12345",
+    });
+    // isPinnedToAVersion answers from the pin captured at boot (PagePin.ts),
+    // so take it against the stubbed location, as Client.initialize() does.
+    capturePagePin();
+    const selector = new GameModeSelector() as any;
+
+    selector.handleUpdateAvailable();
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(selector.updateDeferred).toBe(false);
+  });
+
+  it("still prompts at a version-free path", () => {
+    vi.stubGlobal("location", {
+      hostname: "openfront.io",
+      pathname: "/game/dAbCd12345",
+    });
+    capturePagePin();
     const selector = new GameModeSelector() as any;
 
     selector.handleUpdateAvailable();
