@@ -87,6 +87,7 @@ import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import "./PlayerProfileModal";
 import { GroupTokenTracker, withGroupToken } from "./PresenceGroup";
 import { RewardsModal } from "./RewardsModal";
+import { ensureServerList, startServerListPolling } from "./ServerList";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import {
@@ -108,6 +109,7 @@ import "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import {
+  apexPathFor,
   homeHref,
   incrementGamesPlayed,
   presenceMapKey,
@@ -385,6 +387,14 @@ class Client {
       tag: "inventory-modal",
       pageId: "page-inventory",
     });
+
+    // Kick the server-list fetch off here, before anything below awaits the
+    // network, so it overlaps with the rest of boot: by the time a player
+    // can click Join or Create the list is already known and the click
+    // never waits on a fetch (docs/MultiServer.md, "Server list v2"). It
+    // never throws and keeps itself alive with a heartbeat afterwards.
+    startServerListPolling();
+
     // Prefetch turnstile token so it is available when the user joins a lobby.
     // Desktop (Steam) has no Turnstile script and is server-side exempt, so
     // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
@@ -1040,12 +1050,19 @@ class Client {
       }
     }
 
+    // Every version's page is also served under /v/<commit>/ (multi-server
+    // v2), so the game path may sit behind that prefix.
     const pathMatch = window.location.pathname.match(
-      /^\/(?:w\d+\/)?game\/([^/]+)/,
+      /^(?:\/v\/[^/]+)?\/(?:w\d+\/)?game\/([^/]+)/,
     );
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      // Joining needs the API's server list (multi-server v2): the id's
+      // letter names the game's server there. No version check: joining an
+      // existing game is not starting something new, and the id's letter
+      // names its server whatever version that server runs.
+      await ensureServerList();
       // A letter this shell's cluster map doesn't know means the map
       // predates the game's deployment (stale CDN shell, or a link into a
       // newer fleet). The apex always serves the freshest map, so re-enter
@@ -1140,13 +1157,16 @@ class Client {
   private redirectUnknownLetterToApex(gameID: string): boolean {
     if (!ClientEnv.gameLetterUnknown(gameID)) return false;
     if (isDesktopShell()) return false;
+    // With the API's list loaded there is nothing fresher to bounce to: an
+    // unknown letter means the game does not exist.
+    if (ClientEnv.serverListLoaded()) return false;
     // Only load-balanced deployments have an apex to bounce to; standalone
     // ones (beta, branch previews, dev) have no siteHost injected and fall
     // through to the normal not-found flow, as does the apex shell itself
     // (its map is already the freshest; CDN staleness ages out in minutes).
     const apex = ClientEnv.siteHost();
     if (apex === undefined || window.location.host === apex) return false;
-    window.location.href = `https://${apex}${window.location.pathname.replace(/^\/w\d+\//, "/")}${window.location.search}`;
+    window.location.href = `https://${apex}${apexPathFor(window.location.pathname)}${window.location.search}`;
     return true;
   }
 

@@ -2,6 +2,7 @@ import { ClientEnv } from "src/client/ClientEnv";
 import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { showInGameAlert } from "./InGameModal";
+import { ensureServerList } from "./ServerList";
 import { translateText } from "./Utils";
 
 interface LobbySocketOptions {
@@ -45,6 +46,18 @@ export class PublicLobbySocket {
   async start() {
     this.stopped = false;
     this.wsConnectionAttempts = 0;
+    // The lobby list needs a server: ask the API which one (multi-server
+    // v2), falling back to the page's own values. It answers "outdated"
+    // when no server takes new games from this build any more and a newer
+    // version exists — the rollover has moved on without this tab. The
+    // lobby list is the first thing every homepage starts, so this is where
+    // the player finds out: the same one-shot "update available" prompt a
+    // newer commit in the feed raises. The connection goes ahead either
+    // way, so a shell that never prompts (desktop, whose updater owns
+    // updates) still gets its lobby list from the fallback values.
+    const listStatus = await ensureServerList();
+    if (this.stopped) return;
+    if (listStatus === "outdated") this.fireUpdateAvailable();
     // Get config to determine number of workers, then pick a random one
     this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
     this.connectWebSocket();
@@ -148,6 +161,17 @@ export class PublicLobbySocket {
     }
   }
 
+  // The one gate for the "update available" prompt: however this tab found
+  // out (the server list at start, a newer commit in the feed, a drained
+  // deployment), the player is asked at most once.
+  private fireUpdateAvailable() {
+    if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
+      return;
+    }
+    this.updateAvailableFired = true;
+    this.onUpdateAvailable();
+  }
+
   private checkServerCommit(serverCommit: string | undefined) {
     if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
       return;
@@ -155,8 +179,7 @@ export class PublicLobbySocket {
     if (serverCommit === undefined) return;
     const ownCommit = ClientEnv.gitCommit();
     if (ownCommit === "DEV" || serverCommit === ownCommit) return;
-    this.updateAvailableFired = true;
-    this.onUpdateAvailable();
+    this.fireUpdateAvailable();
   }
 
   // The deployment serving this feed says the load balancer routes elsewhere.
@@ -170,8 +193,7 @@ export class PublicLobbySocket {
       return;
     }
     if (active !== false) return;
-    this.updateAvailableFired = true;
-    this.onUpdateAvailable();
+    this.fireUpdateAvailable();
   }
 
   private handleClose() {
@@ -183,9 +205,26 @@ export class PublicLobbySocket {
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
       console.error("Max WebSocket attempts reached");
+      void this.promptIfOutdated();
     } else {
       this.scheduleReconnect();
     }
+  }
+
+  // Reconnecting has given up. A tab that was already sitting on the
+  // homepage when its server left the list (drained, then fenced or
+  // removed) never gets a feed to learn from — it just watches the socket
+  // fail — so ask the list again here. If nothing runs this build any more
+  // and a newer version exists, this is the same one-shot prompt start()
+  // raises. ensureServerList never throws and answers from the cached list,
+  // so this costs nothing when the failure was only the network.
+  private async promptIfOutdated(): Promise<void> {
+    if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
+      return;
+    }
+    const listStatus = await ensureServerList();
+    if (this.stopped) return;
+    if (listStatus === "outdated") this.fireUpdateAvailable();
   }
 
   private handleError(error: Event) {
@@ -200,6 +239,7 @@ export class PublicLobbySocket {
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
       void showInGameAlert(translateText("error_modal.connection_error"));
+      void this.promptIfOutdated();
     } else {
       this.scheduleReconnect();
     }
