@@ -436,6 +436,9 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
 
     beforeAll(async () => {
       ServerList = await import("../../src/client/ServerList");
+      // The pinned-page test above joins once and leaves the call on the
+      // mock; every "was not joined" claim below counts from zero.
+      mocks.joinLobby.mockClear();
       // Test 3 above left the username gate closed; every join below has to
       // get past it to reach the gate under test.
       const input = document.querySelector("username-input") as unknown as {
