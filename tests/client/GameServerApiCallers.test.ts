@@ -81,13 +81,27 @@ describe("createLobby", () => {
   // No server runs this build any more (the rollover moved on without this
   // tab): creating against the page's own stale host would mint a lobby on
   // a server that is going away. The lobby socket's "update available"
-  // prompt is what moves the player forward.
+  // prompt is what moves the player forward. Only a Worker-served page is
+  // ever told "outdated" (OPE-430), and there the page names no server at
+  // all, so there is nothing to create against either.
   it("refuses to create when no server runs this build any more", async () => {
     mocks.ensureServerList.mockResolvedValue("outdated");
     await expect(createLobby()).rejects.toThrow(/newer version is available/);
     expect(
       fetchMock.mock.calls.some((c) => String(c[0]).includes("create_game")),
     ).toBe(false);
+  });
+
+  // A page a game server rendered answers "fallback" whatever the list says
+  // about its own host — a registry that missed its deploy (OPE-430), an
+  // entry on another build, an entry fenced. That host is running this
+  // build, because it served this page, and this tab's lobby list and
+  // session already live on it, so Create goes ahead there exactly as it
+  // did before the list existed.
+  it("creates on the page's own server when the list has no server for this build", async () => {
+    mocks.ensureServerList.mockResolvedValue("fallback");
+    await createLobby();
+    expect(lastUrl()).toBe(`https://${SERVER_HOST}/api/create_game`);
   });
 
   it("still sends the play token as the creator's identity", async () => {

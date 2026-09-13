@@ -1921,6 +1921,17 @@ export async function createLobby(): Promise<GameInfo> {
   // already; a Create that gets there first fails like any other failed
   // request, and the caller's own failure path (re-enabling the button,
   // clearing the share link) runs as usual.
+  //
+  // "outdated" is by construction a page that names no server of its own
+  // (docs/MultiServer.md, OPE-430): there the list is the only thing that
+  // knows where a server is, and it says there is none for this build. A
+  // page a game server rendered answers "fallback" whatever the list says
+  // about its own host, and creating against that host is right — it is
+  // running this build, because it served this page, and it is where this
+  // tab's lobby list and its session already live. That is how Create
+  // behaved before the list existed, and the signal that moves such a tab
+  // off a deployment on its way out is the lobby feed's commit compare and
+  // drain flag, not this.
   if ((await ensureServerList()) === "outdated") {
     throw new Error(
       "createLobby: this build has no server; a newer version is available",

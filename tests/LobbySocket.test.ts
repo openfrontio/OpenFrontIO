@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../src/client/ClientEnv";
 import { PublicLobbySocket } from "../src/client/LobbySocket";
+import type { ServerListStatus } from "../src/client/ServerList";
 import {
   PublicGameInfo,
   PublicGames,
@@ -10,6 +11,10 @@ import { lobbyFrame } from "./util/Wire";
 
 const mocks = vi.hoisted(() => ({
   ensureServerList: vi.fn(async (): Promise<string> => "api"),
+  // The post-failure question (ServerList.reloadWouldRescue): would a
+  // reload actually land this tab somewhere better? Asked only once
+  // reconnecting has given up, never at page load.
+  reloadWouldRescue: vi.fn((_status: ServerListStatus): boolean => false),
   showInGameAlert: vi.fn(async (_message: string) => {}),
 }));
 
@@ -22,7 +27,11 @@ vi.mock("../src/client/InGameModal", async (importOriginal) => {
 });
 vi.mock("../src/client/ServerList", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, ensureServerList: mocks.ensureServerList };
+  return {
+    ...actual,
+    ensureServerList: mocks.ensureServerList,
+    reloadWouldRescue: mocks.reloadWouldRescue,
+  };
 });
 
 function lobby(
@@ -229,6 +238,8 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     mocks.ensureServerList.mockReset();
     mocks.ensureServerList.mockResolvedValue("api");
+    mocks.reloadWouldRescue.mockReset();
+    mocks.reloadWouldRescue.mockReturnValue(false);
     vi.stubGlobal("WebSocket", FakeWebSocket);
     ClientEnv.reset();
     (window as any).BOOTSTRAP_CONFIG = {
@@ -277,7 +288,13 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
   // drained, then fenced, and the socket just fails. No feed arrives to
   // carry a commit or a drain flag, so the list is the only thing left that
   // can tell the player to reload.
-  it("asks the list again once reconnecting has given up, and prompts if this build is outdated", async () => {
+  //
+  // This page names a server of its own (serverHost above), so the list
+  // never answers "outdated" here — the OPE-430 rule. What decides is
+  // ServerList.reloadWouldRescue, handed the fresh status: the socket has
+  // proven that server is gone, and behind an apex a reload lands on a live
+  // deployment.
+  it("asks the list again once reconnecting has given up, and prompts when a reload would rescue it", async () => {
     const onUpdateAvailable = vi.fn();
     const socket = new PublicLobbySocket(vi.fn(), {
       onUpdateAvailable,
@@ -286,11 +303,14 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     await socket.start();
     expect(onUpdateAvailable).not.toHaveBeenCalled();
 
-    mocks.ensureServerList.mockResolvedValue("outdated");
+    mocks.ensureServerList.mockResolvedValue("fallback");
+    mocks.reloadWouldRescue.mockReturnValue(true);
     (socket as any).handleClose();
     await Promise.resolve();
     await Promise.resolve();
     expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
+    // Asked about the status the list has just given, not about a stale one.
+    expect(mocks.reloadWouldRescue).toHaveBeenCalledWith("fallback");
 
     // Every further failure re-asks at most a prompt already given.
     (socket as any).handleClose();
@@ -301,6 +321,11 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     socket.stop();
   });
 
+  // The control for the rescue above: the list still has a server for this
+  // build, so a socket failure is just a socket failure — a blip, not a
+  // deployment that went away. The status is handed over all the same; the
+  // rule that reads it lives in ServerList (reloadWouldRescue), where every
+  // topology is exercised against real lists.
   it("does not prompt when the socket fails but a server is still there", async () => {
     const onUpdateAvailable = vi.fn();
     const socket = new PublicLobbySocket(vi.fn(), {
@@ -312,7 +337,27 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(onUpdateAvailable).not.toHaveBeenCalled();
+    expect(mocks.reloadWouldRescue).toHaveBeenCalledWith("api");
     socket.stop();
+  });
+
+  // The line between the two questions (OPE-430): at page load a
+  // server-rendered page must not be prompted even when a reload from a
+  // dead server would have rescued it — its own server is serving it right
+  // now, so the reload comes back identical and prompts again. Only a
+  // socket that has given up turns the same facts into the rescue above,
+  // which is why the question is not even asked here.
+  it("does not prompt at page load on a server-rendered page", async () => {
+    mocks.ensureServerList.mockResolvedValue("fallback");
+    mocks.reloadWouldRescue.mockReturnValue(true);
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), { onUpdateAvailable });
+
+    await socket.start();
+    socket.stop();
+
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+    expect(mocks.reloadWouldRescue).not.toHaveBeenCalled();
   });
 
   it("does not prompt after the socket was stopped", async () => {
@@ -322,7 +367,8 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
       maxWsAttempts: 1,
     });
     await socket.start();
-    mocks.ensureServerList.mockResolvedValue("outdated");
+    mocks.ensureServerList.mockResolvedValue("fallback");
+    mocks.reloadWouldRescue.mockReturnValue(true);
     (socket as any).promptIfOutdated();
     socket.stop();
     await Promise.resolve();
@@ -459,5 +505,244 @@ describe("PublicLobbySocket.start with no server known", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+// OPE-430, end to end through the real server list: the one flow that
+// prompts, on the kind of page that must never be prompted.
+//
+// Live on main.openfront.dev, where the page is still rendered by a game
+// server: a deploy failed to register the new build in the API's registry,
+// so the list carried no server on the page's build and a `latest` that was
+// a different commit. This socket raised "a new version of OpenFront is
+// available", the reload re-fetched the same page from the same server, and
+// it prompted again — forever.
+describe("PublicLobbySocket.start on a page its own game server rendered", () => {
+  const OLD = "5ccc50a722222222222222222222222222222222";
+  // No server on the old build, latest is a different commit: the list that
+  // used to answer "outdated".
+  const NOTHING_ON_MY_BUILD = {
+    latest: OWN,
+    servers: {
+      d: {
+        host: "falk2-b.openfront.io",
+        numWorkers: 8,
+        version: OWN,
+        state: "open" as const,
+      },
+    },
+  };
+
+  class FakeWebSocket {
+    static OPEN = 1;
+    readyState = 0;
+    binaryType = "";
+    constructor(public url: string) {}
+    addEventListener() {}
+    close() {}
+  }
+
+  let serverList: typeof import("../src/client/ServerList");
+
+  function bootstrap(extra: Record<string, unknown>) {
+    ClientEnv.reset();
+    serverList.resetServerList();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      turnstileSiteKey: "k",
+      jwtAudience: "openfront.io",
+      gitCommit: OLD,
+      ...extra,
+    };
+  }
+
+  beforeEach(async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.showInGameAlert.mockClear();
+    // The status is what is under test here, so the real implementation
+    // runs — against a stubbed fetch, not the network.
+    serverList = await vi.importActual<
+      typeof import("../src/client/ServerList")
+    >("../src/client/ServerList");
+    mocks.ensureServerList.mockReset();
+    mocks.ensureServerList.mockImplementation(serverList.ensureServerList);
+    mocks.reloadWouldRescue.mockReset();
+    mocks.reloadWouldRescue.mockImplementation(serverList.reloadWouldRescue);
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    vi.stubGlobal(
+      "fetch",
+      async () =>
+        new Response(JSON.stringify(NOTHING_ON_MY_BUILD), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+  });
+
+  afterEach(() => {
+    serverList.resetServerList();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    ClientEnv.reset();
+    delete (window as any).BOOTSTRAP_CONFIG;
+  });
+
+  it("does not prompt: a reload would re-serve the same page from the same server", async () => {
+    bootstrap({
+      // Prod's shape: a sibling in the map is what makes the site host an
+      // apex a reload can land elsewhere through (reloadCanLandElsewhere).
+      cluster: {
+        a: { host: "blue.openfront.io", numWorkers: 2 },
+        b: { host: "green.openfront.io", numWorkers: 2 },
+      },
+      instanceLetter: "a",
+      serverHost: "blue.openfront.io",
+    });
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), { onUpdateAvailable });
+
+    await socket.start();
+
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+    // And the lobby list still connects, on the page's own server.
+    expect((socket as any).ws.url).toMatch(
+      /^wss:\/\/blue\.openfront\.io\/w\d+\/lobbies$/,
+    );
+    socket.stop();
+  });
+
+  // The rescue, end to end on the same page and the same list: once the
+  // socket has given up, that server has proven it cannot answer, and the
+  // reload goes through the page host — which the load balancer answers
+  // from a live deployment. So the newer version IS news now.
+  it("prompts once its socket has given up, though the same list said fallback", async () => {
+    // Prod's shape: the page is served behind the apex, so reloadForUpdate
+    // re-enters through openfront.io and the load balancer answers from a
+    // live deployment — the reload cannot come back to this dead host.
+    bootstrap({
+      // Prod's shape: a sibling in the map is what makes the site host an
+      // apex a reload can land elsewhere through (reloadCanLandElsewhere).
+      cluster: {
+        a: { host: "blue.openfront.io", numWorkers: 2 },
+        b: { host: "green.openfront.io", numWorkers: 2 },
+      },
+      instanceLetter: "a",
+      serverHost: "blue.openfront.io",
+      siteHost: "openfront.io",
+    });
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onUpdateAvailable,
+      maxWsAttempts: 1,
+    });
+
+    await socket.start();
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+
+    (socket as any).handleClose();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
+    socket.stop();
+  });
+
+  // Registration lag on an apex page, end to end: the registry names a
+  // stale version for this page's own host while `latest` is already this
+  // page's build. Nothing in the list serves this build, yet the server
+  // that rendered the page is alive and correct — so the page keeps it, the
+  // lobby list connects there, and nothing prompts.
+  it("never prompts when the registry lags behind a server that is already latest", async () => {
+    vi.stubGlobal(
+      "fetch",
+      async () =>
+        new Response(
+          JSON.stringify({
+            latest: OWN,
+            servers: {
+              a: {
+                host: "blue.openfront.io",
+                numWorkers: 2,
+                version: OLD,
+                state: "open" as const,
+              },
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
+    bootstrap({
+      gitCommit: OWN,
+      cluster: {
+        a: { host: "blue.openfront.io", numWorkers: 2 },
+        b: { host: "green.openfront.io", numWorkers: 2 },
+      },
+      instanceLetter: "a",
+      serverHost: "blue.openfront.io",
+      siteHost: "openfront.io",
+    });
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onUpdateAvailable,
+      maxWsAttempts: 1,
+    });
+
+    await socket.start();
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+    expect((socket as any).ws.url).toMatch(
+      /^wss:\/\/blue\.openfront\.io\/w\d+\/lobbies$/,
+    );
+
+    // And not after the socket gives up either: there is no newer build.
+    (socket as any).handleClose();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+    socket.stop();
+  });
+
+  // A standalone deployment (dev's main.openfront.dev today, previews,
+  // beta) has nowhere else for a reload to go: a one-entry cluster map, and
+  // Traefik routes its page host and its game host to the same container.
+  // So even a socket that has given up raises nothing — a prompt there
+  // would reload straight back into this page and fire again.
+  it("never prompts a standalone page, even once its socket has given up", async () => {
+    bootstrap({
+      cluster: { a: { host: "main.server.openfront.dev", numWorkers: 2 } },
+      instanceLetter: "a",
+      serverHost: "main.server.openfront.dev",
+      siteHost: "main.openfront.dev",
+    });
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onUpdateAvailable,
+      maxWsAttempts: 1,
+    });
+
+    await socket.start();
+    (socket as any).handleClose();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
+    socket.stop();
+  });
+
+  it("still prompts a Worker-served page on the very same list", async () => {
+    // The control: nothing about the list changed, only whether the page
+    // names a server. A page that names none reloads into `latest`, so
+    // "outdated" is true news there.
+    bootstrap({});
+    const onUpdateAvailable = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onUpdateAvailable,
+      maxWsAttempts: 1,
+    });
+
+    await socket.start();
+    socket.stop();
+
+    expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
   });
 });

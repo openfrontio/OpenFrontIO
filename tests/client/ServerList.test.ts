@@ -5,6 +5,7 @@ import {
   backendReachable,
   ensureServerList,
   redirectToGameVersion,
+  reloadWouldRescue,
   resetServerList,
   serverListSite,
   serverListUrl,
@@ -64,6 +65,23 @@ function setBootstrap(overrides: Record<string, unknown> = {}) {
   };
   ClientEnv.reset();
   resetServerList();
+}
+
+// A page the static Worker served: the environment values and nothing that
+// names a server — no serverHost, no cluster map, no instanceLetter, no
+// instanceId. Reloading a page like this really does fetch `latest`, which
+// is what makes the list's "outdated" answer meaningful; a page a game
+// server rendered is re-served by that same server on the same build, so it
+// is never outdated (ClientEnv.servedByGameServer).
+function setWorkerBootstrap(overrides: Record<string, unknown> = {}) {
+  setBootstrap({
+    cluster: undefined,
+    instanceLetter: undefined,
+    serverHost: undefined,
+    siteHost: undefined,
+    instanceId: undefined,
+    ...overrides,
+  });
 }
 
 function stubLocation(host: string, pathname = "/", search = "") {
@@ -490,8 +508,10 @@ describe("picking between open, draining and fenced", () => {
 
   it("never picks a fenced server, and says so when it is the only one on my build", async () => {
     // Fenced takes nothing new even from the build it runs, so there is no
-    // server for this page; latest names a build it could move to.
-    setBootstrap({ gitCommit: OLD });
+    // server for this page; latest names a build it could move to. Told to
+    // a Worker-served page, whose reload fetches latest — the only kind
+    // "outdated" is ever said to.
+    setWorkerBootstrap({ gitCommit: OLD });
     const loc = stubLocation("openfront.io", "/w1/game/cAbCd12345", "?lobby");
     fetchMock.mockImplementation(async () =>
       jsonResponse(
@@ -504,8 +524,9 @@ describe("picking between open, draining and fenced", () => {
     expect(await ensureServerList()).toBe("outdated");
     // The prompt navigates, not this: the page is left exactly where it is.
     expect(loc.href).toBe("https://openfront.io/w1/game/cAbCd12345?lobby");
-    // Own-server calls fall back to the page's own values...
-    expect(ClientEnv.serverWsBase()).toBe("wss://blue.openfront.io");
+    // Own-server calls fall back to the page's own values — here the
+    // document's origin, the only thing a Worker-served page has...
+    expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
     // ...and existing games still resolve by letter from the list.
     expect(ClientEnv.resolveGame("cAbCd12345")).toEqual({
       kind: "cross",
@@ -534,7 +555,8 @@ describe("picking between open, draining and fenced", () => {
   // menu" goes to the version-free root. Same exemption, for the same
   // reason, as the desktop and replay shells.
   it("never reports outdated on a page pinned under /v/<commit>/", async () => {
-    setBootstrap({ gitCommit: OLD });
+    // Worker-served, so the pin is the only thing holding "outdated" back.
+    setWorkerBootstrap({ gitCommit: OLD });
     const loc = stubLocation(
       "openfront.io",
       `/v/${OLD}/game/cAbCd12345`,
@@ -563,7 +585,7 @@ describe("picking between open, draining and fenced", () => {
 
   it("still reports outdated for the same list on an unpinned page", async () => {
     // The pin is the only difference from the test above.
-    setBootstrap({ gitCommit: OLD });
+    setWorkerBootstrap({ gitCommit: OLD });
     stubLocation("openfront.io", "/game/cAbCd12345");
     fetchMock.mockImplementation(async () =>
       jsonResponse(
@@ -580,15 +602,16 @@ describe("picking between open, draining and fenced", () => {
     // Nothing my build can use and I AM latest: nothing is running.
     // Multiplayer fails as it does today; there is no newer version to
     // prompt for.
+    setWorkerBootstrap();
     const loc = stubLocation("openfront.io");
     fetchMock.mockImplementation(async () =>
       jsonResponse(listOf({ c: server(OWN, "fenced") })),
     );
     expect(await ensureServerList()).toBe("no-server");
     expect(loc.href).toBe("https://openfront.io/");
-    expect(ClientEnv.serverWsBase()).toBe("wss://blue.openfront.io");
+    expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
 
-    setBootstrap({ gitCommit: OLD });
+    setWorkerBootstrap({ gitCommit: OLD });
     fetchMock.mockImplementation(async () =>
       jsonResponse(listOf({ c: server(OLD, "fenced") }, null)),
     );
@@ -601,7 +624,7 @@ describe("picking between open, draining and fenced", () => {
   // update it has no way to fetch would only loop.
   it("is never outdated on a build whose version names no commit", async () => {
     for (const label of ["DEV", "desktop", ""]) {
-      setBootstrap({ gitCommit: label });
+      setWorkerBootstrap({ gitCommit: label });
       const loc = stubLocation("openfront.io");
       fetchMock.mockImplementation(async () =>
         jsonResponse(listOf({ c: server(OLD, "fenced") })),
@@ -615,7 +638,10 @@ describe("picking between open, draining and fenced", () => {
   // latest is the whole point of the page, and re-serving the same
   // immutable shell would prompt forever.
   it("leaves a replay shell on its pinned build", async () => {
-    setBootstrap({ gitCommit: OLD });
+    // The shell host is the guard under test, so this fixture names no
+    // server; a replay shell that injects one is answered earlier by the
+    // page-server rule, to the same effect — no prompt.
+    setWorkerBootstrap({ gitCommit: OLD });
     const loc = stubLocation("replay.openfront.io", "/dAbCd12345");
     fetchMock.mockImplementation(async () =>
       jsonResponse(listOf({ c: server(OLD, "fenced") })),
@@ -626,6 +652,10 @@ describe("picking between open, draining and fenced", () => {
 
   // The desktop shell updates itself (download, stage, its own reload
   // button): a web-style update prompt there would re-run the same overlay.
+  // It also injects a serverHost of its own, so it is answered by the
+  // page-server rule first — "fallback", the shell's own values, never
+  // "outdated". The isDesktopShell() exemption still covers a shell that
+  // injects no host at all.
   it("leaves the desktop shell to its updater", async () => {
     (window as any).openfrontDesktop = {};
     setBootstrap({ gitCommit: OLD, serverHost: "openfront.io" });
@@ -633,9 +663,171 @@ describe("picking between open, draining and fenced", () => {
     fetchMock.mockImplementation(async () =>
       jsonResponse(listOf({ c: server(OLD, "fenced") })),
     );
-    expect(await ensureServerList()).toBe("no-server");
+    expect(await ensureServerList()).toBe("fallback");
     expect(loc.href).toBe("https://openfront/");
     expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
+  });
+
+  // OPE-430. Live on main.openfront.dev: the page was still rendered by a
+  // game server (the static Worker is not routed yet), a deploy failed to
+  // register the new build in the API's registry, so the list carried no
+  // server on the page's build and a `latest` that was a different commit.
+  // The page was told "outdated", the prompt reloaded it, the same server
+  // served the same page, and it prompted again — forever.
+  //
+  // The rule: a page that names a server came FROM a server running this
+  // build, and a reload re-fetches the page from that same host, so the
+  // list can never make it outdated — whatever it says about that host.
+  // The answer is always "fallback": the page's own server and its own
+  // values, exactly as when the API is unreachable.
+  describe("a page a game server rendered", () => {
+    // No server on the page's build, and a latest that is a different
+    // commit: exactly the list that used to say "outdated".
+    const nothingOnMyBuild = () =>
+      listOf({
+        c: server(OLD, "fenced"),
+        d: server(OWN, "open", "falk2-b.openfront.io"),
+      });
+
+    beforeEach(() => {
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(nothingOnMyBuild()),
+      );
+    });
+
+    it("answers fallback and keeps the server that served it (serverHost)", async () => {
+      setBootstrap({ gitCommit: OLD, serverHost: "blue.openfront.io" });
+      const loc = stubLocation("openfront.io", "/", "");
+
+      expect(await ensureServerList()).toBe("fallback");
+      // Own-server calls go to the page's own server: it is running this
+      // build — it served this page.
+      expect(ClientEnv.serverHttpBase()).toBe("https://blue.openfront.io");
+      expect(ClientEnv.serverWsBase()).toBe("wss://blue.openfront.io");
+      // "fallback" here is not "no list": the list IS applied, so a foreign
+      // letter still routes cross-host.
+      expect(ClientEnv.serverListLoaded()).toBe(true);
+      expect(ClientEnv.resolveGame("dAbCd12345")).toEqual({
+        kind: "cross",
+        host: "falk2-b.openfront.io",
+        numWorkers: 16,
+      });
+      // And nothing navigated: no prompt, no reload, no loop.
+      expect(loc.href).toBe("https://openfront.io/");
+    });
+
+    it("answers fallback with only a cluster map and its own letter", async () => {
+      // A web page a game server rendered carries no serverHost — the map
+      // plus its own letter are what name its server.
+      setBootstrap({
+        gitCommit: OLD,
+        serverHost: undefined,
+        siteHost: undefined,
+      });
+      stubLocation("blue.openfront.io");
+
+      expect(await ensureServerList()).toBe("fallback");
+      // Its own server is the document's origin, and the worker count comes
+      // from its own entry in the injected map.
+      expect(ClientEnv.serverHttpBase()).toBe("https://blue.openfront.io");
+      expect(ClientEnv.numWorkers()).toBe(2);
+      expect(ClientEnv.serverListLoaded()).toBe(true);
+      expect(ClientEnv.resolveGame("dAbCd12345")).toEqual({
+        kind: "cross",
+        host: "falk2-b.openfront.io",
+        numWorkers: 16,
+      });
+    });
+
+    // Review round 6's scenario. The list DOES carry this page's host, on a
+    // different build. Right after a deploy that is registration lag — the
+    // page came from the NEW build while the registry still names the old
+    // one — and on a tab left open across a deploy the host really has
+    // moved on. The list cannot tell the two apart, and a reload re-serves
+    // this same page in the first case, so neither is "outdated" here. The
+    // stale tab is told by the server itself: the lobby feed's commit
+    // compare fires as soon as the socket connects to that very host.
+    it("is not outdated when the list puts its own host on another build", async () => {
+      setBootstrap({ gitCommit: OLD, serverHost: "blue.openfront.io" });
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(listOf({ a: server(OWN, "open", "blue.openfront.io") })),
+      );
+
+      expect(await ensureServerList()).toBe("fallback");
+      expect(ClientEnv.serverHttpBase()).toBe("https://blue.openfront.io");
+    });
+
+    // The same list shape on a standalone deployment with GAME_DOMAIN set:
+    // its page host (main.openfront.dev) and game host
+    // (main.server.openfront.dev) differ, but both reach the one container.
+    it("is not outdated on a standalone page whose page and game hosts differ", async () => {
+      setBootstrap({
+        gitCommit: OLD,
+        siteHost: "main.openfront.dev",
+        serverHost: "main.server.openfront.dev",
+        instanceLetter: "a",
+        cluster: {
+          a: {
+            host: "main.server.openfront.dev",
+            color: "blue",
+            numWorkers: 2,
+          },
+        },
+      });
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(
+          listOf({ a: server(OWN, "open", "main.server.openfront.dev") }),
+        ),
+      );
+
+      expect(await ensureServerList()).toBe("fallback");
+      expect(ClientEnv.serverHttpBase()).toBe(
+        "https://main.server.openfront.dev",
+      );
+    });
+
+    // Review round 7's scenario: registration lag on an apex page. The
+    // registry still names a stale version for this page's own host while
+    // `latest` already IS this page's build, so nothing in the list serves
+    // it and the page is not behind either. Under the per-standing rules
+    // this fell through to "no-server" and Create was refused on a server
+    // that was alive, correctly built, and had just rendered the page.
+    // There is no such fall-through now: a page that names a server answers
+    // "fallback", so Create goes to its own host (GameServerApiCallers) and
+    // nothing prompts, at page load or after a socket failure.
+    it("creates on its own server when the registry lags and this build is latest", async () => {
+      setBootstrap({ gitCommit: OWN, serverHost: "blue.openfront.io" });
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(listOf({ a: server(OLD, "open", "blue.openfront.io") })),
+      );
+
+      expect(await ensureServerList()).toBe("fallback");
+      expect(ClientEnv.serverHttpBase()).toBe("https://blue.openfront.io");
+      // Nor is there anything a reload could rescue: this page IS latest.
+      expect(reloadWouldRescue("fallback")).toBe(false);
+    });
+
+    // Review round 5's fenced case. The page's own server, on its own
+    // build, deliberately out of rotation: it takes nothing new, but a
+    // reload would come back identical, so there is nothing to prompt for.
+    // Create goes to that host as it did before the list existed
+    // (Api.createLobby), and the deployment tells its own tabs it is on its
+    // way out over the feed it is already serving them — active:false, once
+    // the API stops calling it open (ClusterCheckin.applyCheckinState).
+    it("is not outdated when its own entry is fenced on this build", async () => {
+      setBootstrap({ gitCommit: OLD, serverHost: "blue.openfront.io" });
+      fetchMock.mockImplementation(async () =>
+        jsonResponse(
+          listOf({
+            a: server(OLD, "fenced", "blue.openfront.io"),
+            d: server(OWN, "open", "falk2-b.openfront.io"),
+          }),
+        ),
+      );
+
+      expect(await ensureServerList()).toBe("fallback");
+      expect(ClientEnv.serverHttpBase()).toBe("https://blue.openfront.io");
+    });
   });
 
   // The sticky pick, end to end: the page holds the server it picked while
@@ -723,6 +915,159 @@ describe("picking between open, draining and fenced", () => {
         expect(loc.href).toBe(`https://openfront.io/v/${OWN}/game/cAbCd12345`);
       }
     }
+  });
+});
+
+// The POST-FAILURE question (ServerList.reloadWouldRescue), asked by
+// PublicLobbySocket.promptIfOutdated once reconnecting has given up: would
+// reloading actually rescue this tab? Its three conditions are the three
+// ways this could go wrong, and each of these cases is a scenario a review
+// round raised against an earlier draft of this PR.
+describe("reloadWouldRescue", () => {
+  // A newer build exists, and nothing serves this page's build.
+  const NEWER = {
+    latest: OWN,
+    servers: {
+      d: {
+        host: "falk2-b.openfront.io",
+        numWorkers: 16,
+        version: OWN,
+        state: "open",
+      },
+    },
+  };
+  // The same, plus a draining server this page's build can still use.
+  const STILL_SERVED = {
+    latest: OWN,
+    servers: {
+      ...NEWER.servers,
+      c: {
+        host: "falk2-a.openfront.io",
+        numWorkers: 16,
+        version: OLD,
+        state: "draining",
+      },
+    },
+  };
+
+  beforeEach(() => {
+    fetchMock.mockImplementation(async () => jsonResponse(NEWER));
+  });
+
+  it("rescues a deployment that was drained, then fenced or removed", async () => {
+    // A tab that was already sitting on the homepage gets no feed to learn
+    // from — it just watches its socket fail. Behind the apex the reload
+    // re-enters through the site host, which the load balancer answers from
+    // a live deployment, so this is a rescue and not a loop. (The page-load
+    // status for this very page and list is "fallback": the two questions
+    // differ, and this is the pair that shows it.)
+    setBootstrap({ gitCommit: OLD });
+    expect(await ensureServerList()).toBe("fallback");
+    expect(reloadWouldRescue("fallback")).toBe(true);
+  });
+
+  it("never rescues while the list still serves this build", async () => {
+    // A picked server still takes this build's games, so a socket failing
+    // against it is a network blip — and being behind `latest` is the
+    // normal state of every tab for the length of a rollout, so prompting
+    // here would turn every hiccup in that window into a forced reload.
+    setBootstrap({ gitCommit: OLD });
+    fetchMock.mockImplementation(async () => jsonResponse(STILL_SERVED));
+    expect(await ensureServerList()).toBe("api");
+    expect(reloadWouldRescue("api")).toBe(false);
+  });
+
+  it("never rescues a standalone page, whose reload comes back from the same server", async () => {
+    // dev's main.openfront.dev today, previews, beta. If that server is
+    // gone the reload fails with it; if it is alive with a WebSocket-only
+    // problem (a proxy passing HTTP while blocking upgrades) the prompt
+    // would reload, come back to the same container and prompt again —
+    // OPE-430, paced by maxWsAttempts.
+    setBootstrap({
+      gitCommit: OLD,
+      siteHost: undefined,
+      serverHost: "main.openfront.dev",
+      instanceLetter: "a",
+      cluster: { a: { host: "main.openfront.dev", numWorkers: 2 } },
+    });
+    stubLocation("main.openfront.dev");
+    expect(await ensureServerList()).toBe("fallback");
+    expect(reloadWouldRescue("fallback")).toBe(false);
+  });
+
+  it("never rescues a single-server deployment whose page and game hosts differ", async () => {
+    // With GAME_DOMAIN set even a standalone deployment gets a siteHost
+    // that differs from its game host, while Traefik routes both names to
+    // the one container. The map having no siblings is what tells this
+    // apart from prod's apex — the same rule the server's own apex poll
+    // uses (ActiveDeployment.shouldPollApex).
+    setBootstrap({
+      gitCommit: OLD,
+      siteHost: "main.openfront.dev",
+      serverHost: "main.server.openfront.dev",
+      instanceLetter: "a",
+      cluster: { a: { host: "main.server.openfront.dev", numWorkers: 2 } },
+    });
+    expect(await ensureServerList()).toBe("fallback");
+    expect(reloadWouldRescue("fallback")).toBe(false);
+  });
+
+  it("asks no network question: this is topology, not liveness", async () => {
+    // Probing the page's own server cannot answer it. The master's
+    // /api/health sends no CORS headers, so a cross-origin probe fails
+    // whatever the server's state, and an opaque (no-cors) response carries
+    // no status at all — a proxy answering 521 for a torn-down origin and a
+    // healthy server look the same. Only the list is ever fetched.
+    setBootstrap({ gitCommit: OLD });
+    expect(await ensureServerList()).toBe("fallback");
+    fetchMock.mockClear();
+
+    expect(reloadWouldRescue("fallback")).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("is false before any list has loaded", () => {
+    // Nothing is known to update to, so nothing can be promised.
+    expect(reloadWouldRescue("fallback")).toBe(false);
+  });
+
+  it("is false when this page already runs latest", async () => {
+    setBootstrap({ gitCommit: OWN });
+    await ensureServerList();
+    expect(reloadWouldRescue("fallback")).toBe(false);
+  });
+
+  it("is false when the list names no latest", async () => {
+    setBootstrap({ gitCommit: OLD });
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ servers: NEWER.servers }),
+    );
+    await ensureServerList();
+    expect(reloadWouldRescue("fallback")).toBe(false);
+  });
+
+  it("keeps the exemptions of the shells that must never reload", async () => {
+    // A pinned page is behind on purpose, and the desktop shell's updater
+    // owns its version: a dead socket is no reason to tell either to
+    // reload.
+    setBootstrap({ gitCommit: OLD });
+    stubLocation("openfront.io", `/v/${OLD}/game/dAbCd12345`);
+    await ensureServerList();
+    expect(reloadWouldRescue("fallback")).toBe(false);
+
+    (window as any).openfrontDesktop = {};
+    setBootstrap({ gitCommit: OLD, serverHost: "openfront.io" });
+    stubLocation("openfront");
+    await ensureServerList();
+    expect(reloadWouldRescue("fallback")).toBe(false);
+  });
+
+  it("rescues a Worker-served page, whose reload fetches latest", async () => {
+    // It names no server, so a reload is by definition somewhere else —
+    // and this is the page the page-load path already answers "outdated".
+    setWorkerBootstrap({ gitCommit: OLD });
+    expect(await ensureServerList()).toBe("outdated");
+    expect(reloadWouldRescue("outdated")).toBe(true);
   });
 });
 
