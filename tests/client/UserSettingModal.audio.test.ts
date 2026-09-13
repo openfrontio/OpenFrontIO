@@ -79,7 +79,10 @@ function testButton(el: TestModal, category: string): HTMLButtonElement | null {
 
 /** Stands in for AudioMixer across the CuePlayer seam. */
 function stubControls(
-  opts: { audible?: boolean; manual?: boolean } = {},
+  opts: {
+    audible?: boolean | ((category: AudioCategory) => boolean);
+    manual?: boolean;
+  } = {},
 ): AudioControls & {
   calls: CueCategory[];
   finish: () => void;
@@ -97,7 +100,10 @@ function stubControls(
         breaks = reject;
       });
     },
-    isAudible: () => opts.audible ?? true,
+    isAudible: (category: AudioCategory) =>
+      typeof opts.audible === "function"
+        ? opts.audible(category)
+        : (opts.audible ?? true),
     finish: () => release?.(),
     fail: () => breaks?.(new Error("cue failed")),
   };
@@ -282,13 +288,33 @@ describe("user-setting audio tab", () => {
     }
   });
 
-  it("disables the button with a hint when the channel is silent", async () => {
-    setAudioControls(stubControls({ audible: false }));
+  it("disables the button with the channel hint when only that channel is silent", async () => {
+    // Master audible, effects at 0.
+    setAudioControls(stubControls({ audible: (c) => c !== "effects" }));
     const el = await mountAudioTab();
 
     const button = testButton(el, "effects")!;
     expect(button.disabled).toBe(true);
     expect(button.getAttribute("title")).toBe("user_setting.audio_test_muted");
+    // A channel that is up still offers a working button.
+    expect(testButton(el, "alerts")!.disabled).toBe(false);
+  });
+
+  it("blames master, not the channel, when master is the blocker", async () => {
+    // A fresh web install: master 0, every channel at its non-zero default.
+    // isAudible gates on master first, so all three would otherwise tell the
+    // player to turn up a slider that is already up — and there is no Test
+    // button on the master row to act on.
+    setAudioControls(stubControls({ audible: false }));
+    const el = await mountAudioTab();
+
+    for (const category of TESTABLE) {
+      const button = testButton(el, category)!;
+      expect(button.disabled).toBe(true);
+      expect(button.getAttribute("title")).toBe(
+        "user_setting.audio_test_master_muted",
+      );
+    }
   });
 
   it("renders no test buttons before the mixer registers itself", async () => {
@@ -375,6 +401,21 @@ describe("user-setting audio tab", () => {
     expect(box().checked).toBe(false);
   });
 
+  it("keeps the slider fill in step with a programmatic value change", async () => {
+    // Reset to defaults moves .value from outside; without this the thumb
+    // moved but the filled part of the track stayed where it was.
+    new UserSettings().setAudioVolume("music", 0.1);
+    const el = await mountAudioTab();
+    const track = () =>
+      el.querySelector("#audio-music-slider input[type=range]") as HTMLElement;
+    expect(track().style.getPropertyValue("--fill")).toBe("10%");
+
+    (el.querySelector("#audio-reset") as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    expect(track().style.getPropertyValue("--fill")).toBe("50%");
+  });
+
   it("renders the same tab on the in-game instance", async () => {
     setAudioControls(stubControls());
     const el = await mountAudioTab({ inGame: true });
@@ -414,6 +455,7 @@ describe("user-setting audio tab", () => {
       "audio_alerts_when_unfocused_desc",
       "audio_test",
       "audio_test_muted",
+      "audio_test_master_muted",
       "audio_reset",
     ];
     expect(required.filter((k) => !(k in en.user_setting))).toEqual([]);
