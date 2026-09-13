@@ -70,6 +70,26 @@ export class ClientEnv {
   static serverListLoaded(): boolean {
     return ClientEnv.apiList !== null;
   }
+  /**
+   * Whether this page carries a server of its own — a page a game server
+   * rendered, not a static one. True when `serverHost` was injected, or
+   * when the cluster map and this page's own letter both were.
+   *
+   * A page like that was served BY a game server running exactly this
+   * build, and a reload re-fetches it from that same host, so the API's
+   * list can never make it "outdated": there is nothing a reload would move
+   * it to, and when the list carries no server for this build (a registry
+   * that missed a deploy, say) the page's own injected server IS the server
+   * for it. The list-driven "outdated" answer belongs to pages that name no
+   * server — the static Worker's — where a reload really does fetch
+   * `latest`. See ServerList.apply and reloadWouldRescue, and
+   * docs/MultiServer.md.
+   */
+  static servedByGameServer(): boolean {
+    const v = ClientEnv.get();
+    if (v.serverHost !== undefined) return true;
+    return v.cluster !== undefined && v.instanceLetter !== undefined;
+  }
   private static pickedServer(): { host: string; numWorkers: number } | null {
     const a = ClientEnv.apiList;
     if (a === null || a.picked === null) return null;

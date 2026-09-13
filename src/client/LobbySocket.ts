@@ -2,7 +2,7 @@ import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { showInGameAlert } from "./InGameModal";
-import { ensureServerList } from "./ServerList";
+import { ensureServerList, reloadWouldRescue } from "./ServerList";
 import { translateText } from "./Utils";
 
 interface LobbySocketOptions {
@@ -52,15 +52,24 @@ export class PublicLobbySocket {
   /**
    * Find a server, pick one of its workers, and connect.
    *
-   * The lobby list needs a server: ask the API which one (multi-server v2),
-   * falling back to the page's own values. It answers "outdated" when no
-   * server takes new games from this build any more and a newer version
-   * exists — the rollover has moved on without this tab. The lobby list is
-   * the first thing every homepage starts, so this is where the player
+   * The lobby list needs a server: ask the API (multi-server v2), falling
+   * back to the page's own values. It answers "outdated" when no server
+   * takes new games from this build any more, a newer version exists, and
+   * this page names no server of its own — the rollover has moved on
+   * without a tab whose reload really does fetch `latest`. The lobby list
+   * is the first thing every homepage starts, so this is where that player
    * finds out: the same one-shot "update available" prompt a newer commit
-   * in the feed raises. The connection goes ahead either way, so a shell
-   * that never prompts (desktop, whose updater owns updates) still gets its
-   * lobby list from the fallback values.
+   * in the feed raises.
+   *
+   * A page a game server rendered is never told that (OPE-430: its own
+   * server is serving it, so a reload would come back identical and prompt
+   * forever). It learns from the feed this socket is about to open —
+   * checkServerCommit and checkDeploymentActive below — and, if the socket
+   * never opens at all, from promptIfOutdated.
+   *
+   * The connection goes ahead either way, so a shell that never prompts
+   * (desktop, whose updater owns updates) still gets its lobby list from
+   * the fallback values.
    *
    * Retried through here rather than through connectWebSocket when no
    * server was known: the list may arrive between attempts, and until it
@@ -245,17 +254,21 @@ export class PublicLobbySocket {
   // Reconnecting has given up. A tab that was already sitting on the
   // homepage when its server left the list (drained, then fenced or
   // removed) never gets a feed to learn from — it just watches the socket
-  // fail — so ask the list again here. If nothing runs this build any more
-  // and a newer version exists, this is the same one-shot prompt start()
-  // raises. ensureServerList never throws and answers from the cached list,
-  // so this costs nothing when the failure was only the network.
+  // fail — so ask the list again here, and prompt when reloading would
+  // genuinely rescue this tab: nothing serves this build, a newer build
+  // exists, and a reload can land somewhere other than the server that has
+  // stopped answering. ServerList.reloadWouldRescue holds that whole rule,
+  // including why the page-load path above must never ask it (OPE-430).
+  //
+  // ensureServerList never throws and answers from the cached list, so this
+  // costs nothing when the failure was only the network.
   private async promptIfOutdated(): Promise<void> {
     if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
       return;
     }
     const listStatus = await ensureServerList();
     if (this.stopped) return;
-    if (listStatus === "outdated") this.fireUpdateAvailable();
+    if (reloadWouldRescue(listStatus)) this.fireUpdateAvailable();
   }
 
   private handleError(error: Event) {
