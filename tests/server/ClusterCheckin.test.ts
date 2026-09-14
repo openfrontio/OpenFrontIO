@@ -26,6 +26,9 @@ describe("checkinBody", () => {
     vi.stubEnv("DOMAIN", "openfront.io");
     vi.stubEnv("SUBDOMAIN", "blue");
     vi.stubEnv("GIT_COMMIT", "bfd5563a11111111111111111111111111111111");
+    // Explicit rather than inherited: whether this repo's own CI box happens
+    // to export MACHINE must not decide whether the body carries the key.
+    vi.stubEnv("MACHINE", "");
   });
   afterEach(() => vi.unstubAllEnvs());
 
@@ -108,6 +111,55 @@ describe("checkinBody", () => {
       });
     },
   );
+
+  // The machine the container runs on (OPE-455). The registry holds a site to
+  // one OPEN server per machine, which it can only do if the server says which
+  // box it is on: blue and green routinely share one, and flipping to a colour
+  // on the same machine buys no redundancy.
+  test("reports the machine it runs on when deploy.sh supplied one", () => {
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    vi.stubEnv("MACHINE", "falk2");
+    expect(checkinBody(7)).toMatchObject({ machine: "falk2" });
+  });
+
+  // Omitted, not null and not empty: the registry's CheckInSchema on infra
+  // main does not know the field yet, and an absent key is the one shape every
+  // version of that schema accepts.
+  test.each([
+    ["MACHINE is unset", ""],
+    ["MACHINE is whitespace", "   "],
+    ["MACHINE is not a hostname label", "falk2.openfront.io"],
+    ["MACHINE carries a shell fragment", "falk2; rm -rf /"],
+  ])("omits the key entirely when %s", (_what, value) => {
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    vi.stubEnv("MACHINE", value);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const body = checkinBody(7);
+    expect(body).not.toBeNull();
+    expect(body && "machine" in body).toBe(false);
+    warn.mockRestore();
+  });
+
+  // A malformed value costs the field, never the check-in: every other key is
+  // still exactly what it would have been.
+  test("a malformed machine leaves the rest of the body untouched", () => {
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    vi.stubEnv("MACHINE", "falk 2");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(checkinBody(7)).toEqual({
+      site: "openfront.io",
+      letter: "a",
+      host: "blue.openfront.io",
+      version: "bfd5563a11111111111111111111111111111111",
+      numWorkers: 4,
+      liveGames: 7,
+    });
+    // Once, not once per beat: check-in runs every 10s forever, so a value
+    // nobody is going to fix would otherwise fill the logs.
+    checkinBody(7);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
 
   test("does not check in from local development (npm run dev, no SUBDOMAIN)", () => {
     vi.stubEnv("SITE_HOST", "");

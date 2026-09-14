@@ -49,6 +49,13 @@ export interface CheckinBody {
   version: string;
   numWorkers: number;
   liveGames: number;
+  // The machine this container runs on (ServerEnv.machine(), ultimately
+  // deploy.sh's machine argument): `falk2`, `nbg2`, `staging`. The registry
+  // uses it to keep a site to at most one OPEN server per machine (OPE-455),
+  // since blue and green frequently share a box. Omitted entirely when
+  // MACHINE is unset or malformed — the registry's schema predates the field
+  // and an absent key is exactly what it expects.
+  machine?: string;
 }
 
 const CheckinReplySchema = z.object({ state: ServerStateSchema });
@@ -62,6 +69,7 @@ export function checkinBody(liveGames: number): CheckinBody | null {
   const host = ServerEnv.publicHost();
   if (host === undefined) return null;
   const { letter, entry } = ServerEnv.clusterSelf();
+  const machine = ServerEnv.machine();
   return {
     site: ServerEnv.siteHost() ?? host,
     letter,
@@ -69,6 +77,10 @@ export function checkinBody(liveGames: number): CheckinBody | null {
     version: ServerEnv.gitCommit(),
     numWorkers: entry.numWorkers,
     liveGames,
+    // Spread, not `machine: undefined`: JSON.stringify would drop the key
+    // either way, but an explicit undefined would make every equality
+    // assertion here and every future reader wonder which it is.
+    ...(machine !== undefined ? { machine } : {}),
   };
 }
 
