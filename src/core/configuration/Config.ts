@@ -136,8 +136,10 @@ const TERRA_NULLIUS_MAX_COST = 100;
 // army matches the old cost, bigger stacks pay less, smaller pay more.
 const ATTACKER_LOSS_BASE = 0.463;
 const ATTACKER_LOSS_PER_DENSITY = 0.0039;
-// Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
-const SPEED_COST_DIVISOR = 7.77;
+// Speed divisor: 8.25 / 0.965, absorbing the same sigmoid tail. 8.25 is the
+// old 7.5 raised ~10%: v34 pace feedback said attacks felt a bit too slow, so
+// every player-vs-player attack lands ~10% faster across the board.
+const SPEED_COST_DIVISOR = 8.55;
 // Speed-only: the attacker's territory bonus runs a touch deeper for speed
 // than the 0.7 loss depth above (floor 0.27x vs 0.3x). Paired with the 0.82
 // sub-parity floor on the ratio curve, an overwhelming push lands ~18%
