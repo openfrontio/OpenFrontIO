@@ -86,7 +86,11 @@ import "./NewsModal";
 import { capturePagePin } from "./PagePin";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import "./PlayerProfileModal";
-import { GroupTokenTracker, withGroupToken } from "./PresenceGroup";
+import {
+  GroupTokenTracker,
+  presenceLobbyId,
+  withGroupToken,
+} from "./PresenceGroup";
 import { RewardsModal } from "./RewardsModal";
 import {
   ensureServerList,
@@ -489,7 +493,7 @@ class Client {
         // (mirrors LobbyPlayerView and the join modal's own count).
         playerCount: event.lobby.clients?.filter((c) => !c.spectator).length,
         maxPlayers: config?.maxPlayers,
-        lobbyId: event.lobby.gameID,
+        lobbyId: presenceLobbyId(config, event.lobby.gameID),
       };
       this.presenceSpectating =
         event.lobby.clients?.find((c) => c.clientID === event.myClientID)
@@ -1262,11 +1266,13 @@ class Client {
       maxPlayers: joinConfig?.maxPlayers,
       // Omitted for singleplayer and replays: no server hosts those ids, so
       // advertising one has the shell offer friends a Join that cannot work.
-      // The optional field already means "not joinable".
+      // The optional field already means "not joinable". presenceLobbyId
+      // withholds it for public FFA too, for the same reason the invite
+      // button hides there: a friend joining that match is a team.
       lobbyId:
         lobby.source === "singleplayer" || lobby.gameRecord !== undefined
           ? undefined
-          : lobby.gameID,
+          : presenceLobbyId(joinConfig, lobby.gameID),
     };
     this.emitPresence();
 

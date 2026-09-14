@@ -155,10 +155,18 @@ describe("JoinLobbyModal Steam invite button", () => {
     return container;
   }
 
-  function lobbyModal(): JoinLobbyModal {
+  // A joined lobby whose config has arrived; private FFA unless overridden.
+  function lobbyModal(config?: {
+    gameType: GameType;
+    gameMode: GameMode;
+  }): JoinLobbyModal {
     const modal = new JoinLobbyModal();
     (modal as unknown as { currentLobbyId: string }).currentLobbyId =
       "ABCD1234";
+    (modal as unknown as { gameConfig: unknown }).gameConfig = config ?? {
+      gameType: GameType.Private,
+      gameMode: GameMode.FFA,
+    };
     return modal;
   }
 
@@ -185,10 +193,21 @@ describe("JoinLobbyModal Steam invite button", () => {
     expect(renderHeader(modal).querySelector(INVITE)).toBeNull();
   });
 
-  it("appears in a joined lobby on the desktop shell", () => {
+  it("appears in a joined private lobby on the desktop shell", () => {
     presenceMocks.isAvailable.mockReturnValue(true);
 
     expect(renderHeader(lobbyModal()).querySelector(INVITE)).not.toBeNull();
+  });
+
+  // The URL-join and accepted-Steam-invite paths render this header before
+  // the first lobby_info delivers the config. That window must not show a
+  // button the config may be about to forbid.
+  it("is absent while the lobby's config is still unknown", () => {
+    presenceMocks.isAvailable.mockReturnValue(true);
+    const modal = lobbyModal();
+    (modal as unknown as { gameConfig: unknown }).gameConfig = null;
+
+    expect(renderHeader(modal).querySelector(INVITE)).toBeNull();
   });
 
   it("opens the Steam invite dialog when clicked", () => {
@@ -217,33 +236,20 @@ describe("JoinLobbyModal Steam invite button", () => {
   // the button is suppressed exactly there and nowhere else.
   it("is absent in a public FFA lobby", () => {
     presenceMocks.isAvailable.mockReturnValue(true);
-    const modal = lobbyModal();
-    (modal as unknown as { gameConfig: unknown }).gameConfig = {
+    const modal = lobbyModal({
       gameType: GameType.Public,
       gameMode: GameMode.FFA,
-    };
+    });
 
     expect(renderHeader(modal).querySelector(INVITE)).toBeNull();
   });
 
   it("appears in a public team lobby", () => {
     presenceMocks.isAvailable.mockReturnValue(true);
-    const modal = lobbyModal();
-    (modal as unknown as { gameConfig: unknown }).gameConfig = {
+    const modal = lobbyModal({
       gameType: GameType.Public,
       gameMode: GameMode.Team,
-    };
-
-    expect(renderHeader(modal).querySelector(INVITE)).not.toBeNull();
-  });
-
-  it("appears in a private FFA lobby", () => {
-    presenceMocks.isAvailable.mockReturnValue(true);
-    const modal = lobbyModal();
-    (modal as unknown as { gameConfig: unknown }).gameConfig = {
-      gameType: GameType.Private,
-      gameMode: GameMode.FFA,
-    };
+    });
 
     expect(renderHeader(modal).querySelector(INVITE)).not.toBeNull();
   });
