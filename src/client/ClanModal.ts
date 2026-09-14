@@ -1,7 +1,9 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { GameEnv } from "../core/configuration/Config";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { type ClanInfo, type ClanMember } from "./ClanApi";
+import { ClientEnv } from "./ClientEnv";
 import { BaseModal } from "./components/BaseModal";
 import "./components/clan/ClanBansView";
 import "./components/clan/ClanBrowseView";
@@ -123,6 +125,12 @@ export class ClanModal extends BaseModal {
     return this.view === "detail" && !!this.selectedClanTag;
   }
 
+  // The clan territory map hasn't shipped to production yet: prod shows a
+  // Coming Soon placeholder and never frames the map page.
+  private get mapComingSoon(): boolean {
+    return ClientEnv.env() === GameEnv.Prod;
+  }
+
   protected modalConfig() {
     return {
       tabs: this.onListView
@@ -161,7 +169,9 @@ export class ClanModal extends BaseModal {
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
           rightContent:
-            this.activeTab === "map" ? this.fullscreenButton() : undefined,
+            this.activeTab === "map" && !this.mapComingSoon
+              ? this.fullscreenButton()
+              : undefined,
         })
       : this.renderSubViewHeader();
   }
@@ -620,6 +630,13 @@ export class ClanModal extends BaseModal {
 
     // List view (map / my clans / browse) — header + tabs are rendered by o-modal
     if (this.activeTab === "map") {
+      if (this.mapComingSoon) {
+        return html`<div class="flex h-full items-center justify-center">
+          <p class="text-white/40 text-sm">
+            ${translateText("clan_modal.map_coming_soon")}
+          </p>
+        </div>`;
+      }
       // Mounted only while open: the page polls its API while framed.
       return this.isModalOpen
         ? html`<clan-map-view class="block h-full"></clan-map-view>`
