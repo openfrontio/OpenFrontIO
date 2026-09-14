@@ -16,14 +16,12 @@ import {
 } from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
-import "../CopyButton";
-import { modalHeader } from "../ui/ModalHeader";
+import { playerNameLink } from "../ui/PlayerNameLink";
 import {
   type ClanRole,
   defaultOrderForSort,
   filterMembersBySearch,
   formatClanDate,
-  modalContainerClass,
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberSearchInput,
@@ -45,6 +43,7 @@ export class ClanManageView extends LitElement {
 
   @state() private manageName = "";
   @state() private manageDescription = "";
+  @state() private manageDiscordUrl = "";
   @state() private manageIsOpen = true;
   @state() private saving = false;
   @state() private members: ClanMember[] = [];
@@ -59,14 +58,16 @@ export class ClanManageView extends LitElement {
   @state() private confirmTargetId: string | null = null;
   @state() private pendingRequestCount = 0;
   @state() private actionPending = false;
-  private memberSearch = "";
+  @state() private memberSearch = "";
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
+  private memberLoadSeq = 0;
 
   connectedCallback() {
     super.connectedCallback();
     if (this.selectedClan) {
       this.manageName = this.selectedClan.name;
       this.manageDescription = this.selectedClan.description ?? "";
+      this.manageDiscordUrl = this.selectedClan.discordUrl ?? "";
       this.manageIsOpen = this.selectedClan.isOpen ?? true;
     }
     this.loadMembers(1);
@@ -74,31 +75,47 @@ export class ClanManageView extends LitElement {
 
   disconnectedCallback() {
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
+    this.memberLoadSeq++;
     super.disconnectedCallback();
   }
 
-  private async loadMembers(page: number) {
+  private async loadMembers(page: number, search = this.memberSearch) {
+    const seq = ++this.memberLoadSeq;
     if (this.members.length === 0) this.loading = true;
-    const res = await fetchClanMembers(
-      this.clanTag,
-      page,
-      this.membersPerPage,
-      this.memberSort,
-      this.memberOrder,
-    );
+    const res = search
+      ? await fetchClanMembers(
+          this.clanTag,
+          page,
+          this.membersPerPage,
+          this.memberSort,
+          this.memberOrder,
+          search,
+        )
+      : await fetchClanMembers(
+          this.clanTag,
+          page,
+          this.membersPerPage,
+          this.memberSort,
+          this.memberOrder,
+        );
+    if (seq !== this.memberLoadSeq || search !== this.memberSearch) return;
     if (!res) {
       this.loading = false;
       return;
     }
     if (res.results.length === 0 && page > 1) {
-      await this.loadMembers(1);
+      await this.loadMembers(1, search);
       return;
     }
     this.members = res.results;
     this.membersTotal = res.total;
     this.memberPage = page;
     this.pendingRequestCount = res.pendingRequests ?? 0;
-    if (this.selectedClan && this.selectedClan.memberCount !== res.total) {
+    if (
+      !search &&
+      this.selectedClan &&
+      this.selectedClan.memberCount !== res.total
+    ) {
       this.dispatchEvent(
         new CustomEvent("clan-updated", {
           detail: { memberCount: res.total },
@@ -113,10 +130,20 @@ export class ClanManageView extends LitElement {
   private async handleSaveSettings() {
     const clan = this.selectedClan;
     if (!clan) return;
-    const patch: { name?: string; description?: string; isOpen?: boolean } = {};
+    const patch: {
+      name?: string;
+      description?: string;
+      discordUrl?: string;
+      isOpen?: boolean;
+    } = {};
     if (this.manageName !== clan.name) patch.name = this.manageName;
     if ((this.manageDescription ?? "") !== (clan.description ?? ""))
       patch.description = this.manageDescription;
+    // Discord URL is leader-only; the input only renders for leaders, so this
+    // diff is a no-op for officers (server also enforces it). "" clears the
+    // link — the server trims and coerces it to null.
+    if ((this.manageDiscordUrl ?? "") !== (clan.discordUrl ?? ""))
+      patch.discordUrl = this.manageDiscordUrl;
     if (this.manageIsOpen !== (clan.isOpen ?? true))
       patch.isOpen = this.manageIsOpen;
     if (Object.keys(patch).length === 0) return;
@@ -133,6 +160,7 @@ export class ClanManageView extends LitElement {
         detail: {
           name: result.name,
           description: result.description,
+          discordUrl: result.discordUrl,
           isOpen: result.isOpen,
         },
         bubbles: true,
@@ -243,10 +271,13 @@ export class ClanManageView extends LitElement {
   }
 
   private onSearchInput(e: Event) {
+    const search = (e.target as HTMLInputElement).value.trim();
+    if (search === this.memberSearch) return;
+    this.memberSearch = search;
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberSearchDebounce = setTimeout(() => {
-      this.memberSearch = (e.target as HTMLInputElement).value;
-      this.requestUpdate();
+      this.memberSearchDebounce = null;
+      void this.loadMembers(1, search);
     }, 200);
   }
 
@@ -262,21 +293,8 @@ export class ClanManageView extends LitElement {
     this.loadMembers(1);
   }
 
-  private navigateDetail = () =>
-    this.dispatchEvent(
-      new CustomEvent("navigate-detail", { bubbles: true, composed: true }),
-    );
-
   render() {
-    if (this.loading)
-      return html`<div class="${modalContainerClass}">
-        ${modalHeader({
-          title: translateText("clan_modal.manage_clan"),
-          onBack: this.navigateDetail,
-          ariaLabel: translateText("common.back"),
-        })}
-        ${renderLoadingSpinner()}
-      </div>`;
+    if (this.loading) return renderLoadingSpinner();
 
     const clan = this.selectedClan;
     if (!clan) return "";
@@ -335,187 +353,194 @@ export class ClanManageView extends LitElement {
 
   private renderManageContent(clan: ClanInfo) {
     return html`
-      <div class="${modalContainerClass}">
-        ${modalHeader({
-          title: translateText("clan_modal.manage_clan"),
-          onBack: this.navigateDetail,
-          ariaLabel: translateText("common.back"),
-          rightContent: html`<span
-            class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white/50 border border-white/10"
-            >[${clan.tag}]</span
-          >`,
-        })}
-        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1 p-4 lg:p-6">
-          <div class="space-y-6">
-            <!-- Edit Settings -->
-            <div
-              class="bg-white/5 rounded-2xl border border-white/10 p-6 space-y-5"
+      <div class="space-y-6">
+        <!-- Edit Settings -->
+        <div
+          class="bg-white/5 rounded-2xl border border-white/10 p-6 space-y-5"
+        >
+          <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
+            ${translateText("clan_modal.clan_settings")}
+          </h3>
+          <div>
+            <label
+              class="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2"
+              >${translateText("clan_modal.clan_name")}</label
             >
-              <h3
-                class="text-sm font-bold text-white/60 uppercase tracking-wider"
-              >
-                ${translateText("clan_modal.clan_settings")}
-              </h3>
-              <div>
-                <label
-                  class="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2"
-                  >${translateText("clan_modal.clan_name")}</label
-                >
-                <input
-                  type="text"
-                  .value=${this.manageName}
-                  @input=${(e: Event) =>
-                    (this.manageName = (e.target as HTMLInputElement).value)}
-                  maxlength="35"
-                  class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
-                />
-              </div>
-              <div>
-                <label
-                  class="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2"
-                  >${translateText("clan_modal.description")}</label
-                >
-                <textarea
-                  .value=${this.manageDescription}
-                  @input=${(e: Event) =>
-                    (this.manageDescription = (
-                      e.target as HTMLTextAreaElement
-                    ).value)}
-                  maxlength="200"
-                  rows="3"
-                  class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm resize-none"
-                ></textarea>
-              </div>
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-white text-sm font-bold">
-                    ${translateText("clan_modal.open_clan")}
-                  </div>
-                  <div class="text-white/40 text-xs">
-                    ${translateText("clan_modal.open_clan_desc")}
-                  </div>
-                </div>
-                <button
-                  role="switch"
-                  aria-checked="${this.manageIsOpen}"
-                  aria-label="${translateText("clan_modal.open_clan")}"
-                  @click=${() => (this.manageIsOpen = !this.manageIsOpen)}
-                  class="relative w-12 h-7 rounded-full transition-all ${this
-                    .manageIsOpen
-                    ? "bg-malibu-blue"
-                    : "bg-white/20"}"
-                >
-                  <div
-                    class="absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${this
-                      .manageIsOpen
-                      ? "left-6"
-                      : "left-1"}"
-                  ></div>
-                </button>
-              </div>
-              <button
-                @click=${() => this.handleSaveSettings()}
-                ?disabled=${this.saving}
-                class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all disabled:opacity-50"
-              >
-                ${this.saving
-                  ? translateText("clan_modal.saving")
-                  : translateText("clan_modal.save_changes")}
-              </button>
-            </div>
-
-            <!-- Member Management -->
-            <div
-              class="bg-white/5 rounded-2xl border border-white/10 p-6 space-y-4"
-            >
-              <h3
-                class="text-sm font-bold text-white/60 uppercase tracking-wider"
-              >
-                ${translateText("clan_modal.members")}
-                (${clan.memberCount ?? 0})
-              </h3>
-              ${renderMemberSearchInput(
-                (e) => this.onSearchInput(e),
-                undefined,
-                renderMemberSortControl(
-                  this.memberSort,
-                  this.memberOrder,
-                  (s) => this.onSortChange(s),
-                  () => this.onOrderToggle(),
-                ),
-              )}
-              ${(() => {
-                const filtered = filterMembersBySearch(
-                  this.members,
-                  this.memberSearch,
-                );
-                return html`
-                  <div class="space-y-2">
-                    ${filtered.map((m) => this.renderManageMemberRow(m))}
-                  </div>
-                  ${renderMemberPagination(
-                    this.memberPage,
-                    this.membersTotal,
-                    this.membersPerPage,
-                    (p) => this.loadMembers(p),
-                    (pp) => {
-                      this.membersPerPage = pp;
-                      this.loadMembers(1);
-                    },
-                  )}
-                `;
-              })()}
-            </div>
-
-            <!-- Danger Zone -->
-            <div
-              class="bg-red-500/5 rounded-2xl border border-red-500/20 p-6 space-y-4"
-            >
-              <h3
-                class="text-sm font-bold text-red-400/80 uppercase tracking-wider"
-              >
-                ${translateText("clan_modal.danger_zone")}
-              </h3>
-              <button
-                @click=${() =>
-                  this.dispatchEvent(
-                    new CustomEvent("navigate-bans", {
-                      bubbles: true,
-                      composed: true,
-                    }),
-                  )}
-                class="w-full px-6 py-3 text-sm font-bold text-red-400 uppercase tracking-wider bg-red-600/20 hover:bg-red-600/30 rounded-xl transition-all border border-red-500/30"
-              >
-                ${translateText("clan_modal.banned_players")}
-              </button>
-              ${this.myRole === "leader"
-                ? html`
-                    <button
-                      @click=${() =>
-                        this.dispatchEvent(
-                          new CustomEvent("navigate-transfer", {
-                            bubbles: true,
-                            composed: true,
-                          }),
-                        )}
-                      class="w-full px-6 py-3 text-sm font-bold text-amber-400 uppercase tracking-wider bg-amber-600/20 hover:bg-amber-600/30 rounded-xl transition-all border border-amber-500/30"
-                    >
-                      ${translateText("clan_modal.transfer_leadership")}
-                    </button>
-                    <button
-                      @click=${() => {
-                        this.confirmAction = "disband";
-                        this.confirmTargetId = null;
-                      }}
-                      ?disabled=${this.confirmAction === "disband"}
-                      class="w-full px-6 py-3 text-sm font-bold text-red-400 uppercase tracking-wider bg-red-600/20 hover:bg-red-600/30 rounded-xl transition-all border border-red-500/30 disabled:opacity-50 disabled:pointer-events-none"
-                    >
-                      ${translateText("clan_modal.disband_clan")}
-                    </button>
-                  `
-                : ""}
-            </div>
+            <input
+              type="text"
+              .value=${this.manageName}
+              @input=${(e: Event) =>
+                (this.manageName = (e.target as HTMLInputElement).value)}
+              maxlength="35"
+              class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
+            />
           </div>
+          <div>
+            <label
+              class="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2"
+              >${translateText("clan_modal.description")}</label
+            >
+            <textarea
+              .value=${this.manageDescription}
+              @input=${(e: Event) =>
+                (this.manageDescription = (
+                  e.target as HTMLTextAreaElement
+                ).value)}
+              maxlength="200"
+              rows="3"
+              class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm resize-none"
+            ></textarea>
+          </div>
+          ${this.myRole === "leader"
+            ? html`
+                <div>
+                  <label
+                    class="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2"
+                    >${translateText("clan_modal.discord_url_label")}</label
+                  >
+                  <input
+                    type="url"
+                    .value=${this.manageDiscordUrl}
+                    @input=${(e: Event) =>
+                      (this.manageDiscordUrl = (
+                        e.target as HTMLInputElement
+                      ).value)}
+                    placeholder="https://discord.gg/..."
+                    maxlength="255"
+                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
+                  />
+                  <p class="text-white/40 text-xs mt-2">
+                    ${translateText("clan_modal.discord_url_hint")}
+                  </p>
+                </div>
+              `
+            : ""}
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-white text-sm font-bold">
+                ${translateText("clan_modal.open_clan")}
+              </div>
+              <div class="text-white/40 text-xs">
+                ${translateText("clan_modal.open_clan_desc")}
+              </div>
+            </div>
+            <button
+              role="switch"
+              aria-checked="${this.manageIsOpen}"
+              aria-label="${translateText("clan_modal.open_clan")}"
+              @click=${() => (this.manageIsOpen = !this.manageIsOpen)}
+              class="relative w-12 h-7 rounded-full transition-all ${this
+                .manageIsOpen
+                ? "bg-malibu-blue"
+                : "bg-white/20"}"
+            >
+              <div
+                class="absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${this
+                  .manageIsOpen
+                  ? "left-6"
+                  : "left-1"}"
+              ></div>
+            </button>
+          </div>
+          <button
+            @click=${() => this.handleSaveSettings()}
+            ?disabled=${this.saving}
+            class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all disabled:opacity-50"
+          >
+            ${this.saving
+              ? translateText("clan_modal.saving")
+              : translateText("clan_modal.save_changes")}
+          </button>
+        </div>
+
+        <!-- Member Management -->
+        <div
+          class="bg-white/5 rounded-2xl border border-white/10 p-6 space-y-4"
+        >
+          <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
+            ${translateText("clan_modal.members")} (${clan.memberCount ?? 0})
+          </h3>
+          ${renderMemberSearchInput(
+            (e) => this.onSearchInput(e),
+            this.memberSearch,
+            undefined,
+            renderMemberSortControl(
+              this.memberSort,
+              this.memberOrder,
+              (s) => this.onSortChange(s),
+              () => this.onOrderToggle(),
+            ),
+          )}
+          ${(() => {
+            const filtered = filterMembersBySearch(
+              this.members,
+              this.memberSearch,
+            );
+            return html`
+              <div class="space-y-2">
+                ${filtered.map((m) => this.renderManageMemberRow(m))}
+              </div>
+              ${renderMemberPagination(
+                this.memberPage,
+                this.membersTotal,
+                this.membersPerPage,
+                (p) => this.loadMembers(p),
+                (pp) => {
+                  this.membersPerPage = pp;
+                  this.loadMembers(1);
+                },
+              )}
+            `;
+          })()}
+        </div>
+
+        <!-- Danger Zone -->
+        <div
+          class="bg-red-500/5 rounded-2xl border border-red-500/20 p-6 space-y-4"
+        >
+          <h3
+            class="text-sm font-bold text-red-400/80 uppercase tracking-wider"
+          >
+            ${translateText("clan_modal.danger_zone")}
+          </h3>
+          <button
+            @click=${() =>
+              this.dispatchEvent(
+                new CustomEvent("navigate-bans", {
+                  bubbles: true,
+                  composed: true,
+                }),
+              )}
+            class="w-full px-6 py-3 text-sm font-bold text-red-400 uppercase tracking-wider bg-red-600/20 hover:bg-red-600/30 rounded-xl transition-all border border-red-500/30"
+          >
+            ${translateText("clan_modal.banned_players")}
+          </button>
+          ${this.myRole === "leader"
+            ? html`
+                <button
+                  @click=${() =>
+                    this.dispatchEvent(
+                      new CustomEvent("navigate-transfer", {
+                        bubbles: true,
+                        composed: true,
+                      }),
+                    )}
+                  class="w-full px-6 py-3 text-sm font-bold text-amber-400 uppercase tracking-wider bg-amber-600/20 hover:bg-amber-600/30 rounded-xl transition-all border border-amber-500/30"
+                >
+                  ${translateText("clan_modal.transfer_leadership")}
+                </button>
+                <button
+                  @click=${() => {
+                    this.confirmAction = "disband";
+                    this.confirmTargetId = null;
+                  }}
+                  ?disabled=${this.confirmAction === "disband"}
+                  class="w-full px-6 py-3 text-sm font-bold text-red-400 uppercase tracking-wider bg-red-600/20 hover:bg-red-600/30 rounded-xl transition-all border border-red-500/30 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  ${translateText("clan_modal.disband_clan")}
+                </button>
+              `
+            : ""}
         </div>
       </div>
     `;
@@ -550,13 +575,7 @@ export class ClanManageView extends LitElement {
           >
             ${renderRoleIcon(member.role)}
           </div>
-          <copy-button
-            compact
-            .copyText=${member.publicId}
-            .displayText=${member.publicId}
-            .showVisibilityToggle=${false}
-            .showCopyIcon=${false}
-          ></copy-button>
+          ${playerNameLink(this, member.username, member.publicId)}
           <span class="text-white/30 text-[10px] whitespace-nowrap">
             ${translateText("clan_modal.joined_date", {
               date: formatClanDate(member.joinedAt),

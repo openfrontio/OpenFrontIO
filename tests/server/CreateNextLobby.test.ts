@@ -1,0 +1,95 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ServerNewLobbyMessage } from "../../src/core/Schemas";
+import {
+  makeClient as harnessClient,
+  makeGame as harnessGame,
+  makeMockWs,
+  MockWs,
+} from "../util/GameServerHarness";
+import { sentServerMessages } from "../util/Wire";
+
+function makeClient(clientID: string, persistentID: string) {
+  const ws = makeMockWs();
+  const client = harnessClient({
+    clientID,
+    persistentID,
+    username: "TestUser",
+    ws,
+  });
+  return { client, ws };
+}
+
+// The successor id the broadcast should carry (8-char id shape).
+const SUCCESSOR_ID = "SUCCES01";
+
+function newLobbyBroadcasts(ws: MockWs): ServerNewLobbyMessage[] {
+  return sentServerMessages(ws).filter(
+    (m): m is ServerNewLobbyMessage => m.type === "new_lobby",
+  );
+}
+
+// The worker's create_game?previous= flow calls setSuccessorLobby on the
+// finished game after minting the successor: the game must remember the id
+// (so repeat requests reuse it) and broadcast it to everyone still connected.
+describe("GameServer - successor lobby", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllTimers();
+  });
+
+  function makeGame(creatorPersistentID?: string) {
+    return harnessGame({ creatorPersistentID });
+  }
+
+  it("broadcasts the successor id to everyone still connected", () => {
+    const game = makeGame("creator-pid");
+    const { client: creator, ws: creatorWs } = makeClient(
+      "creator-cid",
+      "creator-pid",
+    );
+    const { client: other, ws: otherWs } = makeClient("other-cid", "other-pid");
+    game.joinClient(creator);
+    game.joinClient(other);
+
+    game.setSuccessorLobby(SUCCESSOR_ID);
+
+    expect(newLobbyBroadcasts(creatorWs)).toHaveLength(1);
+    expect(newLobbyBroadcasts(otherWs)).toHaveLength(1);
+    expect(newLobbyBroadcasts(otherWs)[0].gameID).toBe(SUCCESSOR_ID);
+  });
+
+  it("remembers the successor id so repeat requests can reuse it", () => {
+    const game = makeGame("creator-pid");
+    expect(game.successorLobby()).toBeNull();
+
+    game.setSuccessorLobby(SUCCESSOR_ID);
+
+    expect(game.successorLobby()).toBe(SUCCESSOR_ID);
+  });
+
+  it("re-broadcasts on a repeat call (double click) with the same id", () => {
+    const game = makeGame("creator-pid");
+    const { client: creator, ws: creatorWs } = makeClient(
+      "creator-cid",
+      "creator-pid",
+    );
+    game.joinClient(creator);
+
+    game.setSuccessorLobby(SUCCESSOR_ID);
+    game.setSuccessorLobby(SUCCESSOR_ID);
+
+    expect(newLobbyBroadcasts(creatorWs)).toHaveLength(2);
+    expect(game.successorLobby()).toBe(SUCCESSOR_ID);
+  });
+
+  it("authorizes successor creation by creator persistentID", () => {
+    const game = makeGame("creator-pid");
+    // The worker checks isCreator() before minting a successor.
+    expect(game.isCreator("creator-pid")).toBe(true);
+    expect(game.isCreator("rando-pid")).toBe(false);
+  });
+});

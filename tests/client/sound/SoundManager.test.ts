@@ -113,7 +113,8 @@ describe("SoundManager", () => {
     new SoundManager(bus, settings);
     const bgHowls = howlInstances.slice(0, 3);
     bgHowls.forEach((h) => {
-      expect(h.volume).toHaveBeenCalledWith(0.5);
+      // Slider position is curved (squared) into perceptual gain: 0.5² = 0.25.
+      expect(h.volume).toHaveBeenCalledWith(0.25);
     });
   });
 
@@ -124,8 +125,9 @@ describe("SoundManager", () => {
     howlInstances.length = 0;
     new SoundManager(bus, settings);
     bus.emit(new PlaySoundEffectEvent("click"));
+    // Slider position 0.3 is curved (squared) into perceptual gain: 0.3² = 0.09.
     expect(howlCtor).toHaveBeenLastCalledWith(
-      expect.objectContaining({ volume: 0.3 }),
+      expect.objectContaining({ volume: 0.09 }),
     );
   });
 
@@ -133,7 +135,8 @@ describe("SoundManager", () => {
     eventBus.emit(new SetBackgroundMusicVolumeEvent(0.7));
     const bgHowls = howlInstances.slice(0, 3);
     bgHowls.forEach((h) => {
-      expect(h.volume).toHaveBeenCalledWith(0.7);
+      // 0.7² = 0.49 perceptual gain.
+      expect(h.volume).toHaveBeenCalledWith(0.7 * 0.7);
     });
   });
 
@@ -142,7 +145,8 @@ describe("SoundManager", () => {
     const clickHowl = howlInstances[howlInstances.length - 1];
     clickHowl.volume.mockClear();
     eventBus.emit(new SetSoundEffectsVolumeEvent(0.4));
-    expect(clickHowl.volume).toHaveBeenCalledWith(0.4);
+    // 0.4² = 0.16 perceptual gain.
+    expect(clickHowl.volume).toHaveBeenCalledWith(0.4 * 0.4);
   });
 
   it("clamps volume values between 0 and 1", () => {
@@ -156,6 +160,16 @@ describe("SoundManager", () => {
     eventBus.emit(new SetBackgroundMusicVolumeEvent(-0.5));
     bgHowls.forEach((h) => {
       expect(h.volume).toHaveBeenCalledWith(0);
+    });
+  });
+
+  it("curves the slider position into perceptual gain so the top of the range is audibly distinct", () => {
+    const bgHowls = howlInstances.slice(0, 3);
+    // Linear gain would make 0.9 and 1.0 nearly indistinguishable; squaring
+    // spreads the top end (0.9 → 0.81) so reductions are noticeable sooner.
+    eventBus.emit(new SetBackgroundMusicVolumeEvent(0.9));
+    bgHowls.forEach((h) => {
+      expect(h.volume).toHaveBeenLastCalledWith(0.81);
     });
   });
 

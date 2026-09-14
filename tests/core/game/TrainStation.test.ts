@@ -1,6 +1,6 @@
 import { GameUpdateType } from "src/core/game/GameUpdates";
 import { vi, type Mocked } from "vitest";
-import { DefaultConfig } from "../../../src/core/configuration/DefaultConfig";
+import { Config } from "../../../src/core/configuration/Config";
 import { TrainExecution } from "../../../src/core/execution/TrainExecution";
 import {
   Difficulty,
@@ -16,7 +16,6 @@ import {
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 import { UserSettings } from "../../../src/core/game/UserSettings";
 import { GameConfig } from "../../../src/core/Schemas";
-import { TestServerConfig } from "../../util/TestServerConfig";
 
 vi.mock("../../../src/core/game/Game");
 vi.mock("../../../src/core/execution/TrainExecution");
@@ -50,6 +49,7 @@ describe("TrainStation", () => {
 
     player = {
       addGold: vi.fn(),
+      addTrainGold: vi.fn(),
       id: 1,
       canTrade: vi.fn().mockReturnValue(true),
       isAlliedWith: vi.fn().mockReturnValue(false),
@@ -99,6 +99,7 @@ describe("TrainStation", () => {
   it("records external trade on the station owner", () => {
     const stationOwner = {
       addGold: vi.fn(),
+      addTrainGold: vi.fn(),
       id: 1,
       canTrade: vi.fn().mockReturnValue(true),
       isAlliedWith: vi.fn().mockReturnValue(false),
@@ -106,6 +107,7 @@ describe("TrainStation", () => {
     } as any;
     const trainOwner = {
       addGold: vi.fn(),
+      addTrainGold: vi.fn(),
       id: 2,
       canTrade: vi.fn().mockReturnValue(true),
       isAlliedWith: vi.fn().mockReturnValue(false),
@@ -121,6 +123,8 @@ describe("TrainStation", () => {
 
     expect(stationOwner.addGold).toHaveBeenCalledWith(500n, unit.tile());
     expect(trainOwner.addGold).toHaveBeenCalledWith(500n, unit.tile());
+    expect(stationOwner.addTrainGold).toHaveBeenCalledWith(500n);
+    expect(trainOwner.addTrainGold).toHaveBeenCalledWith(500n);
     expect(gameStats.trainExternalTrade).toHaveBeenCalledWith(
       stationOwner,
       500n,
@@ -206,12 +210,11 @@ describe("TrainStation", () => {
   });
 });
 
-describe("DefaultConfig.trainGold trade stop penalty", () => {
-  let config: DefaultConfig;
+describe("Config.trainGold trade stop penalty", () => {
+  let config: Config;
   let mockPlayer: Player;
 
   beforeEach(() => {
-    const serverConfig = new TestServerConfig();
     const gameConfig: GameConfig = {
       gameMap: GameMapType.Asia,
       gameMapSize: GameMapSize.Normal,
@@ -228,12 +231,7 @@ describe("DefaultConfig.trainGold trade stop penalty", () => {
       disableNavMesh: false,
       randomSpawn: false,
     };
-    config = new DefaultConfig(
-      serverConfig,
-      gameConfig,
-      new UserSettings(),
-      false,
-    );
+    config = new Config(gameConfig, new UserSettings(), false);
     mockPlayer = { isLobbyCreator: () => false } as unknown as Player;
   });
 

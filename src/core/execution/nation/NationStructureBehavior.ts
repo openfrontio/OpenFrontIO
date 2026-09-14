@@ -16,7 +16,7 @@ import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { ConstructionExecution } from "../ConstructionExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
-import { closestTile, closestTwoTiles } from "../Util";
+import { nearestTileDist, nearestTileDistCapped } from "../Util";
 import { randTerritoryTileArray } from "./NationUtils";
 
 /**
@@ -78,6 +78,13 @@ const FIRST_MISSILE_SILO_RATIO = 0.4;
 /** If we have more than this many structures per tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1500;
 
+/**
+ * Minimum number of full-map water tiles a water body must have for the AI to
+ * consider placing a port on it.  Prevents the AI from wasting ports on tiny
+ * decorative ponds scattered across the map.
+ */
+const MIN_PORT_WATER_COMPONENT_SIZE = 3000;
+
 /** Estimated number of tiles per city equivalent, used when cities are disabled */
 const TILES_PER_CITY_EQUIVALENT = 2000;
 
@@ -122,6 +129,9 @@ const UNDER_ATTACK_THREAT_RATIO = 0.35;
  */
 const DEFENSE_POST_RATIO_PER_POST = 0.4;
 
+// Reusable neighbor buffer for hot loops; the simulation is single-threaded.
+const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
+
 export class NationStructureBehavior {
   private reachableStationsCache: Array<{
     tile: TileRef;
@@ -131,6 +141,7 @@ export class NationStructureBehavior {
   private _sharedWaterComponents: Set<number> | null = null;
   private lastStructureTick: number | null = null;
   private placementsCount = 0;
+  private builtCrowdedMapFirstStructure = false;
   private _hasHighStartingGold: boolean | null = null;
   private _postSaveUpStartTick: number | null = null;
 
@@ -249,16 +260,21 @@ export class NationStructureBehavior {
     const attackerSet = new Set(landAttacks.map((a) => a.attacker()));
     if (attackerSet.size === 0) return [];
 
+    // Set.forEach + a reused neighbor buffer: border sets are huge, and
+    // for..of over a Set allocates an iterator-result object per element.
+    // "Any neighbor is an attacker" is order-insensitive.
     const frontTiles: TileRef[] = [];
-    outer: for (const borderTile of player.borderTiles()) {
-      for (const neighbor of game.neighbors(borderTile)) {
-        const owner = game.owner(neighbor);
+    const nbuf = NEIGHBOR_SCRATCH;
+    player.borderTiles().forEach((borderTile) => {
+      const n = game.neighbors4(borderTile, nbuf);
+      for (let i = 0; i < n; i++) {
+        const owner = game.owner(nbuf[i]);
         if (attackerSet.has(owner as Player)) {
           frontTiles.push(borderTile);
-          continue outer;
+          return;
         }
       }
-    }
+    });
     return frontTiles;
   }
 
@@ -351,7 +367,13 @@ export class NationStructureBehavior {
       if (!game.isValidCoord(x, y)) continue;
       const t = game.ref(x, y);
       if (game.owner(t) !== player) continue;
-      const [, borderDist] = closestTile(game, borderTiles, t);
+      // Only "inside [min, max]" matters, so the search is capped at max.
+      const borderDist = nearestTileDistCapped(
+        game,
+        borderTiles,
+        t,
+        maxBorderDist,
+      );
       if (borderDist < minBorderDist || borderDist > maxBorderDist) continue;
       if (!player.canBuild(unitType, t)) continue;
       result.push(t);
@@ -447,19 +469,22 @@ export class NationStructureBehavior {
     // On crowded maps the first structure is a port (or factory if landlocked)
     // instead of a city, so nations can get income earlier.
     // Mainly intended for private 200+ nation HvN games.
+    // Own one-shot flag, set only on success: unitsOwned(City) never clears
+    // (starves cities forever) and placementsCount can get consumed by the
+    // SAM-first branch above.
     if (
       !citiesDisabled &&
-      this.player.unitsOwned(UnitType.City) === 0 &&
+      !this.builtCrowdedMapFirstStructure &&
       this.isHighNationDensity()
     ) {
       const preferredFirst =
         hasCoastalTiles && !config.isUnitDisabled(UnitType.Port)
           ? UnitType.Port
           : UnitType.Factory;
-      if (
-        !config.isUnitDisabled(preferredFirst) &&
-        this.maybeSpawnStructure(preferredFirst)
-      ) {
+      if (config.isUnitDisabled(preferredFirst)) {
+        this.builtCrowdedMapFirstStructure = true;
+      } else if (this.maybeSpawnStructure(preferredFirst)) {
+        this.builtCrowdedMapFirstStructure = true;
         return true;
       }
     }
@@ -717,7 +742,7 @@ export class NationStructureBehavior {
   private getTotalStructureDensity(): number {
     const tilesOwned = this.player.numTilesOwned();
     return tilesOwned > 0
-      ? this.player.units(...Structures.types).length / tilesOwned
+      ? this.player.units(Structures.types).length / tilesOwned
       : 0; //ignoring levels for structures
   }
 
@@ -844,7 +869,14 @@ export class NationStructureBehavior {
         // tile a valid port site — skip the component lookup.
         if (this.game.isOcean(neighbor)) return true;
         const comp = this.game.getWaterComponent(neighbor);
-        if (comp !== null && shared.has(comp)) return true;
+        if (comp === null || !shared.has(comp)) continue;
+        // Skip tiny lakes that are too small for meaningful port use (not on Easy).
+        const { difficulty } = this.game.config().gameConfig();
+        if (difficulty !== Difficulty.Easy) {
+          const size = this.game.getWaterComponentSize(neighbor);
+          if (size !== null && size < MIN_PORT_WATER_COMPONENT_SIZE) continue;
+        }
+        return true;
       }
       return false;
     });
@@ -902,17 +934,20 @@ export class NationStructureBehavior {
       w += game.magnitude(tile);
 
       // Prefer to be away from the border
-      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
+      // Clamped at borderSpacing, so the ring search may stop there.
+      const closestBorderDist = nearestTileDistCapped(
+        game,
+        borderTiles,
+        tile,
+        borderSpacing,
+      );
       w += Math.min(closestBorderDist, borderSpacing);
 
       // Prefer to be away from other structures of the same type
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
-      if (closestOther !== null) {
-        const d = game.manhattanDist(closestOther.x, tile);
-        w += Math.min(d, structureSpacing);
-      }
+      const d = nearestTileDist(game, otherTiles, tile);
+      if (d !== Infinity) w += Math.min(d, structureSpacing);
 
       return w;
     };
@@ -932,7 +967,7 @@ export class NationStructureBehavior {
       // Prefer to be as far as possible from other ports
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const [, closestOtherDist] = closestTile(game, otherTiles, tile);
+      const closestOtherDist = nearestTileDist(game, otherTiles, tile);
       w += closestOtherDist;
 
       return w;
@@ -976,24 +1011,24 @@ export class NationStructureBehavior {
       w += game.magnitude(tile);
 
       // Prefer to be away from the border
-      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
+      // Clamped at borderSpacing, so the ring search may stop there.
+      const closestBorderDist = nearestTileDistCapped(
+        game,
+        borderTiles,
+        tile,
+        borderSpacing,
+      );
       w += Math.min(closestBorderDist, borderSpacing);
 
       // Prefer to be away from other factories
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
-      if (closestOther !== null) {
-        const d = game.manhattanDist(closestOther.x, tile);
-        w += Math.min(d, stationRange);
-      }
+      const d = nearestTileDist(game, otherTiles, tile);
+      if (d !== Infinity) w += Math.min(d, stationRange);
 
       // Prefer to be away from cities (cross-type spacing)
-      const closestCity = closestTwoTiles(game, cityTiles, [tile]);
-      if (closestCity !== null) {
-        const d = game.manhattanDist(closestCity.x, tile);
-        w += Math.min(d, structureSpacing);
-      }
+      const d2 = nearestTileDist(game, cityTiles, tile);
+      if (d2 !== Infinity) w += Math.min(d2, structureSpacing);
 
       if (!useConnectionScore) {
         return w;
@@ -1191,23 +1226,23 @@ export class NationStructureBehavior {
 
       w += game.magnitude(tile);
 
-      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
+      // Clamped at borderSpacing, so the ring search may stop there.
+      const closestBorderDist = nearestTileDistCapped(
+        game,
+        borderTiles,
+        tile,
+        borderSpacing,
+      );
       w += Math.min(closestBorderDist, borderSpacing);
 
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
-      if (closestOther !== null) {
-        const d = game.manhattanDist(closestOther.x, tile);
-        w += Math.min(d, structureSpacing);
-      }
+      const d = nearestTileDist(game, otherTiles, tile);
+      if (d !== Infinity) w += Math.min(d, structureSpacing);
 
       // Prefer to be away from factories (cross-type spacing)
-      const closestFactory = closestTwoTiles(game, factoryTiles, [tile]);
-      if (closestFactory !== null) {
-        const d = game.manhattanDist(closestFactory.x, tile);
-        w += Math.min(d, structureSpacing);
-      }
+      const d2 = nearestTileDist(game, factoryTiles, tile);
+      if (d2 !== Infinity) w += Math.min(d2, structureSpacing);
 
       if (!useConnectionScore) {
         return w;
@@ -1285,20 +1320,23 @@ export class NationStructureBehavior {
       w += game.magnitude(tile);
 
       // Prefer to be away from the border
-      const closestBorder = closestTwoTiles(game, borderTiles, [tile]);
-      if (closestBorder !== null) {
-        const d = game.manhattanDist(closestBorder.x, tile);
-        w += Math.min(d, borderSpacing);
+      const closestBorderDist = nearestTileDistCapped(
+        game,
+        borderTiles,
+        tile,
+        borderSpacing,
+      );
+      // Infinity here also means "farther than borderSpacing", which still
+      // earns the clamped term; only an empty border set contributes nothing.
+      if (borderTiles.size > 0) {
+        w += Math.min(closestBorderDist, borderSpacing);
       }
 
       // Prefer to be away from other structures of the same type
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
-      if (closestOther !== null) {
-        const d = game.manhattanDist(closestOther.x, tile);
-        w += Math.min(d, structureSpacing);
-      }
+      const d = nearestTileDist(game, otherTiles, tile);
+      if (d !== Infinity) w += Math.min(d, structureSpacing);
 
       // Prefer to be in range of other structures (skip on easy difficulty)
       if (difficulty !== Difficulty.Easy) {

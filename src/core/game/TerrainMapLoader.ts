@@ -4,9 +4,14 @@ import { GameMapLoader } from "./GameMapLoader";
 
 export type TerrainMapData = {
   nations: Nation[];
+  additionalNations: AdditionalNation[];
   gameMap: GameMap;
   miniGameMap: GameMap;
   teamGameSpawnAreas?: TeamGameSpawnAreas;
+  /** Map layers from the manifest, if any. */
+  layers?: MapLayer[];
+  /** Pre-loaded layer PNG images keyed by layer id. */
+  layerImages?: Map<string, ImageBitmap>;
 };
 
 const loadedMaps = new Map<string, TerrainMapData>();
@@ -23,12 +28,40 @@ export interface MapManifest {
   map4x: MapMetadata;
   map16x: MapMetadata;
   nations: Nation[];
+  // Optional pool of fallback nation names used when a game requests more
+  // nations than the manifest defines. Picked at random; if still not enough,
+  // the remainder is generated procedurally.
+  additionalNations?: AdditionalNation[];
   teamGameSpawnAreas?: TeamGameSpawnAreas;
+  /** Optional map layers rendered between terrain and territory. */
+  layers?: MapLayer[];
+}
+
+export type LayerPlacement = "land" | "water";
+
+export interface MapLayer {
+  /** Unique identifier — also the PNG filename (without extension). */
+  id: string;
+  /** Whether the layer sits on land or water tiles. */
+  placement: LayerPlacement;
+  /** If true, the layer is permanently destroyed in nuke impact radii. */
+  nukeable?: boolean;
+  /**
+   * Default opacity for this layer (0–1). Used as the initial value for the
+   * player's layer-alpha slider.  Omit to default to 1 (fully opaque).
+   */
+  alpha?: number;
 }
 
 export interface Nation {
-  coordinates: [number, number];
-  flag: string;
+  coordinates?: [number, number];
+  flag?: string;
+  name: string;
+}
+
+export interface AdditionalNation {
+  coordinates?: [number, number];
+  flag?: string;
   name: string;
 }
 
@@ -36,6 +69,9 @@ export async function loadTerrainMap(
   map: GameMapType,
   mapSize: GameMapSize,
   terrainMapFileLoader: GameMapLoader,
+  /** Whether to load layer PNG images inline. The Web Worker path should
+   *  pass false — it never renders layers and should not retain ImageBitmaps. */
+  loadImages: boolean = true,
 ): Promise<TerrainMapData> {
   const cacheKey = `${map}:${mapSize}`;
   const cached = loadedMaps.get(cacheKey);
@@ -58,10 +94,20 @@ export async function loadTerrainMap(
 
   if (mapSize === GameMapSize.Compact) {
     manifest.nations.forEach((nation) => {
-      nation.coordinates = [
-        Math.floor(nation.coordinates[0] / 2),
-        Math.floor(nation.coordinates[1] / 2),
-      ];
+      if (nation.coordinates !== undefined) {
+        nation.coordinates = [
+          Math.floor(nation.coordinates[0] / 2),
+          Math.floor(nation.coordinates[1] / 2),
+        ];
+      }
+    });
+    manifest.additionalNations?.forEach((nation) => {
+      if (nation.coordinates !== undefined) {
+        nation.coordinates = [
+          Math.floor(nation.coordinates[0] / 2),
+          Math.floor(nation.coordinates[1] / 2),
+        ];
+      }
     });
   }
 
@@ -80,14 +126,110 @@ export async function loadTerrainMap(
     teamGameSpawnAreas = scaled;
   }
 
+  const layers = manifest.layers;
+
+  // Validate layer placements and alpha at game start.
+  if (layers) {
+    for (const layer of layers) {
+      if (layer.placement !== "land" && layer.placement !== "water") {
+        throw new Error(
+          `Map ${map}: layer "${layer.id}" has invalid placement "${layer.placement}" (must be "land" or "water")`,
+        );
+      }
+      if (
+        layer.alpha !== undefined &&
+        (!Number.isFinite(layer.alpha) || layer.alpha < 0 || layer.alpha > 1)
+      ) {
+        throw new Error(
+          `Map ${map}: layer "${layer.id}" has invalid alpha ${layer.alpha} (must be a finite number between 0 and 1)`,
+        );
+      }
+    }
+  }
+
+  // Load layer PNG images if requested and the manifest defines layers.
+  // For Compact maps, downsample to map4x dimensions to match the game map.
+  // When loadImages=false (e.g. Web Worker), skip image loading — the caller
+  // can use loadLayerImages() separately.
+  let layerImages: Map<string, ImageBitmap> | undefined;
+  if (loadImages && layers && layers.length > 0) {
+    layerImages = new Map();
+    const compactW =
+      mapSize === GameMapSize.Compact ? manifest.map4x.width : undefined;
+    const compactH =
+      mapSize === GameMapSize.Compact ? manifest.map4x.height : undefined;
+    await Promise.all(
+      layers.map(async (layer) => {
+        try {
+          let img = await mapFiles.layerPng(layer.id);
+          if (compactW !== undefined && compactH !== undefined) {
+            img = await createImageBitmap(img, {
+              resizeWidth: compactW,
+              resizeHeight: compactH,
+              resizeQuality: "high",
+            });
+          }
+          layerImages!.set(layer.id, img);
+        } catch (e) {
+          console.warn(
+            `[MapLoader] Failed to load layer "${layer.id}" for map ${map}: ${e}`,
+          );
+        }
+      }),
+    );
+  }
+
   const result = {
     nations: manifest.nations,
+    additionalNations: manifest.additionalNations ?? [],
     gameMap: gameMap,
     miniGameMap: miniMap,
     teamGameSpawnAreas,
+    layers,
+    layerImages,
   };
   loadedMaps.set(cacheKey, result);
   return result;
+}
+
+/**
+ * Load layer PNG images for a map that already has layer definitions.
+ * Call this off the critical path (after the game has started) and pass
+ * the result to `Renderer.setMapLayers()`.
+ */
+export async function loadLayerImages(
+  map: GameMapType,
+  mapSize: GameMapSize,
+  terrainMapFileLoader: GameMapLoader,
+  layers: MapLayer[],
+): Promise<Map<string, ImageBitmap>> {
+  const mapFiles = terrainMapFileLoader.getMapData(map);
+  const manifest = await mapFiles.manifest();
+  const images = new Map<string, ImageBitmap>();
+  const compactW =
+    mapSize === GameMapSize.Compact ? manifest.map4x.width : undefined;
+  const compactH =
+    mapSize === GameMapSize.Compact ? manifest.map4x.height : undefined;
+  await Promise.all(
+    layers.map(async (layer) => {
+      try {
+        let img = await mapFiles.layerPng(layer.id);
+        if (compactW !== undefined && compactH !== undefined) {
+          img = await createImageBitmap(img, {
+            resizeWidth: compactW,
+            resizeHeight: compactH,
+            resizeQuality: "high",
+          });
+        }
+        images.set(layer.id, img);
+      } catch (e) {
+        console.warn(
+          `[MapLoader] Failed to load layer "${layer.id}" for map ${map}: ${e}`,
+        );
+      }
+    }),
+  );
+  return images;
 }
 
 export async function genTerrainFromBin(

@@ -12,6 +12,7 @@ import {
 
 export enum RankType {
   ConquestHumans = "ConquestHumans",
+  ConquestNations = "ConquestNations",
   ConquestBots = "ConquestBots",
   Atoms = "Atoms",
   Hydros = "Hydros",
@@ -23,6 +24,21 @@ export enum RankType {
   ConqueredGold = "ConqueredGold",
   Lifetime = "Lifetime",
 }
+
+export const RANK_TYPE_LABEL_KEYS: Record<RankType, string> = {
+  [RankType.Lifetime]: "game_info_modal.survival_time",
+  [RankType.ConquestHumans]: "game_info_modal.num_of_conquests_humans",
+  [RankType.ConquestNations]: "game_info_modal.num_of_conquests_nations",
+  [RankType.ConquestBots]: "game_info_modal.num_of_conquests_bots",
+  [RankType.Atoms]: "game_info_modal.atoms",
+  [RankType.Hydros]: "game_info_modal.hydros",
+  [RankType.MIRV]: "game_info_modal.mirv",
+  [RankType.TotalGold]: "game_info_modal.all_gold",
+  [RankType.StolenGold]: "game_info_modal.stolen_gold",
+  [RankType.NavalTrade]: "game_info_modal.naval_trade",
+  [RankType.TrainTrade]: "game_info_modal.train_trade",
+  [RankType.ConqueredGold]: "game_info_modal.conquest_gold",
+};
 
 export interface PlayerInfo {
   id: string;
@@ -84,7 +100,10 @@ export class Ranking {
         clanTag: player.clanTag,
         conquests,
         flag: player.cosmetics?.flag ?? undefined,
-        killedAt: stats.killedAt !== null ? Number(stats.killedAt) : undefined,
+        killedAt:
+          stats.killedAt === undefined || stats.killedAt === null
+            ? undefined
+            : Number(stats.killedAt),
         gold,
         atoms: Number(stats.bombs?.abomb?.[0]) || 0,
         hydros: Number(stats.bombs?.hbomb?.[0]) || 0,
@@ -119,17 +138,16 @@ export class Ranking {
   private getScore(player: PlayerInfo, type: RankType): number {
     switch (type) {
       case RankType.Lifetime:
-        if (player.killedAt) {
+        if (player.killedAt !== undefined) {
           return (player.killedAt / Math.max(this.duration, 1)) * 10;
         }
         return 100;
       case RankType.ConquestHumans:
         return Number(player.conquests[PLAYER_INDEX_HUMAN] ?? 0n);
+      case RankType.ConquestNations:
+        return Number(player.conquests[PLAYER_INDEX_NATION] ?? 0n);
       case RankType.ConquestBots:
-        return (
-          Number(player.conquests[PLAYER_INDEX_BOT] ?? 0n) +
-          Number(player.conquests[PLAYER_INDEX_NATION] ?? 0n)
-        );
+        return Number(player.conquests[PLAYER_INDEX_BOT] ?? 0n);
       case RankType.Atoms:
         return player.atoms;
       case RankType.Hydros:

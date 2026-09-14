@@ -1,4 +1,4 @@
-import { AllPlayersStats } from "../Schemas";
+import { AllPlayersStats, ClientID } from "../Schemas";
 import { NukeType, OtherUnitType, PlayerStats } from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
 
@@ -65,6 +65,11 @@ export interface Stats {
     troops: number | bigint,
   ): void;
 
+  // Player takes ownership of target's transport ship, by conquering them or
+  // by inheriting from a disconnected teammate. Unlike a trade ship, which is
+  // captured by hunting it down, this one changes hands with its owner.
+  boatCapturedTroops(player: Player, target: Player): void;
+
   // Player launches bomb at target
   bombLaunch(
     player: Player,
@@ -101,6 +106,17 @@ export interface Stats {
 
   // player was killed (0 tiles)
   playerKilled(player: Player, tick: number): void;
+
+  // OFM live standings: who eliminated the player (null = non-client killer) and
+  // their finishing place. Both first-write-wins.
+  recordKilledBy(victim: Player, killerClientID: ClientID | null): void;
+  recordDeathPosition(victim: Player, position: number): void;
+
+  // Record tiles owned at game end (final standings).
+  recordFinalTiles(player: Player, tiles: number | bigint): void;
+
+  // Record that player eliminated human victim at tick (OFM kill scoring).
+  recordKill(player: Player, victim: Player, tick: number | bigint): void;
 
   // Player's train arrives at any station, generating gold
   trainSelfTrade(player: Player, gold: number | bigint): void;

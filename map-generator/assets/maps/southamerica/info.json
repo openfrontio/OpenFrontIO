@@ -1,5 +1,10 @@
 {
-  "name": "Americas",
+  "id": "SouthAmerica",
+  "name": "South America",
+  "translation_key": "map.southamerica",
+  "categories": ["featured", "continental", "south_america"],
+  "multiplayer_frequency": 5,
+  "featured_rank": 4,
   "nations": [
     {
       "coordinates": [438, 58],
@@ -126,5 +131,6 @@
       "name": "São Paulo",
       "flag": "Sao Paulo"
     }
-  ]
+  ],
+  "themes": ["south_america"]
 }

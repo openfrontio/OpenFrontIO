@@ -34,7 +34,7 @@ export class TradeShipExecution implements Execution {
     this.mg = mg;
     const stagger =
       TradeShipExecution._staggerCounter++ % WaterPathFinder.STAGGER_SPREAD;
-    this.pathFinder = new WaterPathFinder(mg, stagger);
+    this.pathFinder = new WaterPathFinder(mg, stagger, true); // memoized: port tile to port tile repeats
   }
 
   tick(ticks: number): void {
@@ -69,6 +69,15 @@ export class TradeShipExecution implements Execution {
     if (this.wasCaptured !== true && this.origOwner !== tradeShipOwner) {
       // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
+      this.mg.displayMessage(
+        "events_display.trade_ship_captured",
+        MessageType.UNIT_DESTROYED,
+        this.origOwner.id(),
+        undefined,
+        { name: tradeShipOwner.displayName() },
+        this.tradeShip.id(),
+        tradeShipOwner.id(),
+      );
     }
 
     // If a player captures another player's port while trading we should delete
@@ -130,10 +139,7 @@ export class TradeShipExecution implements Execution {
         if (dst !== this.motionPlanDst) {
           this.motionPlanId++;
           const from = result.node;
-          const path = this.pathFinder.findPath(from, dst) ?? [from];
-          if (path.length === 0 || path[0] !== from) {
-            path.unshift(from);
-          }
+          const path = this.pathFinder.pathForTraversal(from, dst);
 
           this.mg.recordMotionPlan({
             kind: "grid",
@@ -174,6 +180,7 @@ export class TradeShipExecution implements Execution {
 
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
+      this.tradeShip!.owner().addPiracyGold(gold);
       this.mg.displayMessage(
         "events_display.received_gold_from_captured_ship",
         MessageType.CAPTURED_ENEMY_UNIT,
@@ -183,34 +190,18 @@ export class TradeShipExecution implements Execution {
           gold: renderNumber(gold),
           name: this.origOwner.displayName(),
         },
+        undefined,
+        this.origOwner.id(),
       );
       // Record stats
       this.mg
         .stats()
         .boatCapturedTrade(this.tradeShip!.owner(), this.origOwner, gold);
     } else {
-      this.srcPort.owner().addGold(gold);
+      this.srcPort.owner().addGold(gold, this.srcPort.tile());
       this._dstPort.owner().addGold(gold, this._dstPort.tile());
-      this.mg.displayMessage(
-        "events_display.received_gold_from_trade",
-        MessageType.RECEIVED_GOLD_FROM_TRADE,
-        this._dstPort.owner().id(),
-        gold,
-        {
-          gold: renderNumber(gold),
-          name: this.srcPort.owner().displayName(),
-        },
-      );
-      this.mg.displayMessage(
-        "events_display.received_gold_from_trade",
-        MessageType.RECEIVED_GOLD_FROM_TRADE,
-        this.srcPort.owner().id(),
-        gold,
-        {
-          gold: renderNumber(gold),
-          name: this._dstPort.owner().displayName(),
-        },
-      );
+      this.srcPort.owner().addTradeGold(gold);
+      this._dstPort.owner().addTradeGold(gold);
       // Record stats
       this.mg
         .stats()

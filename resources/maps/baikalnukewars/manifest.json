@@ -1,4 +1,8 @@
 {
+  "categories": ["fictional"],
+  "display_name": "Baikal (Nuke Wars)",
+  "forced_modifiers": ["isWaterNukes:50"],
+  "id": "BaikalNukeWars",
   "map": {
     "height": 1564,
     "num_land_tiles": 1968430,
@@ -14,8 +18,10 @@
     "num_land_tiles": 488323,
     "width": 1250
   },
-  "name": "Baikal (Nuke Wars)",
+  "multiplayer_frequency": 0,
+  "name": "Baikal Nuke Wars",
   "nations": [],
+  "special_team_count": 2,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -31,5 +37,7 @@
         "y": 0
       }
     ]
-  }
+  },
+  "team_frequency": 30,
+  "translation_key": "map.baikalnukewars"
 }

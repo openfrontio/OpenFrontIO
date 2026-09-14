@@ -1,0 +1,27 @@
+# Check every text file out as LF on every platform.
+#
+# Without this, Git's default on Windows (core.autocrlf=true) rewrites text
+# files to CRLF at checkout time. The bytes stored in the repository are LF
+# either way, so this is invisible in diffs -- but anything that HASHES a file
+# on disk sees different content depending on which OS checked it out, and this
+# repo hashes a lot of files on disk:
+#
+#   - scripts/buildAssetHashes.ts content-addresses everything under resources/
+#     into asset-manifest.json and the desktop release descriptor. 1192 files
+#     under resources/ are CRLF-converted on a Windows checkout, so a Windows
+#     build emits different hashed filenames for byte-identical content.
+#   - The same script hashes src/core to produce coreVersion, served from
+#     /desktop/version.json. All 138 files there are CRLF-converted, so a
+#     Windows build reports a core version no Linux build ever produces.
+#
+# Measured on the same commit (bd7e83ad5): Linux and macOS CI both emit
+# core ab08220a8dc0, matching the deployed descriptor exactly, while Windows CI
+# emits 34fc175e3b67. The practical cost lands on the Steam desktop client,
+# whose Windows depot then shares almost no content-addressed assets with the
+# CDN: a fresh install has no active release pointer, so it always runs a
+# download plan, and on Windows that plan is 1186 files / 61 MB of assets it
+# already shipped with -- versus effectively nothing on Linux and macOS.
+#
+# text=auto keeps Git's binary detection, so maps, images and audio are still
+# left untouched; only files Git already treats as text are normalised.
+* text=auto eol=lf

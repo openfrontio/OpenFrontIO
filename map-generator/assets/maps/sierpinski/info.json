@@ -1,5 +1,9 @@
 {
+  "id": "Sierpinski",
   "name": "Sierpinski",
+  "translation_key": "map.sierpinski",
+  "categories": ["arcade"],
+  "multiplayer_frequency": 10,
   "nations": [
     {
       "coordinates": [216, 701],

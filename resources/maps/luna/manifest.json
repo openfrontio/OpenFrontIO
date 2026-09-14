@@ -1,4 +1,7 @@
 {
+  "categories": ["cosmic"],
+  "forced_modifiers": ["isWaterNukes:50"],
+  "id": "Luna",
   "map": {
     "height": 3508,
     "num_land_tiles": 1517614,
@@ -6,12 +9,12 @@
   },
   "map16x": {
     "height": 877,
-    "num_land_tiles": 84692,
+    "num_land_tiles": 84663,
     "width": 327
   },
   "map4x": {
     "height": 1754,
-    "num_land_tiles": 364566,
+    "num_land_tiles": 363006,
     "width": 654
   },
   "name": "Luna",
@@ -134,14 +137,15 @@
     {
       "coordinates": [755, 3035],
       "flag": "",
-      "name": "T▆p░S▅cr▅t░M▊l▊t▅r▆░B▅s▅"
+      "name": "T0Þ $e¢®ët Mi|¡tªr¥ ß@§£"
     },
     {
       "coordinates": [628, 921],
-      "flag": "",
-      "name": "▊"
+      "flag": "custom/luna_monolith",
+      "name": "ΜΟΝΟʟΙȚΗ"
     }
   ],
+  "special_team_count": 2,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -157,5 +161,7 @@
         "y": 1754
       }
     ]
-  }
+  },
+  "team_frequency": 15,
+  "translation_key": "map.luna"
 }

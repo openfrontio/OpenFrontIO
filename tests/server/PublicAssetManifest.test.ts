@@ -6,7 +6,9 @@ import { normalizeAssetPath } from "../../src/core/AssetUrls";
 import {
   buildPublicAssetManifest,
   clearPublicAssetManifestCache,
+  copyRootPublicFiles,
   createHashedPublicAssetFiles,
+  shouldKeepRootPublicFile,
 } from "../../src/server/PublicAssetManifest";
 
 describe("PublicAssetManifest", () => {
@@ -276,5 +278,36 @@ describe("PublicAssetManifest", () => {
       getExpectedRelativeEmittedPath(xmlHref, pngHref),
     );
     expect(emittedXml).not.toContain('file="pages/p0.png"');
+  });
+
+  test("copies unhashed public directories verbatim, keeping paths stable", async () => {
+    const { resourcesDir, outDir } = await createTempResources();
+    await fs.mkdir(path.join(resourcesDir, "press", "images"), {
+      recursive: true,
+    });
+    await fs.writeFile(
+      path.join(resourcesDir, "press", "index.html"),
+      "<!doctype html>\n",
+    );
+    await fs.writeFile(
+      path.join(resourcesDir, "press", "images", "key-art.png"),
+      "png",
+    );
+
+    copyRootPublicFiles(resourcesDir, outDir);
+
+    await expect(
+      fs.readFile(path.join(outDir, "press", "index.html"), "utf8"),
+    ).resolves.toBe("<!doctype html>\n");
+    await expect(
+      fs.readFile(path.join(outDir, "press", "images", "key-art.png"), "utf8"),
+    ).resolves.toBe("png");
+  });
+
+  test("leaves directories outside the allowlist alone", () => {
+    expect(shouldKeepRootPublicFile("press/index.html")).toBe(true);
+    expect(shouldKeepRootPublicFile("terms-of-service.html")).toBe(true);
+    expect(shouldKeepRootPublicFile("pressed/index.html")).toBe(false);
+    expect(shouldKeepRootPublicFile("maps/world.bin")).toBe(false);
   });
 });

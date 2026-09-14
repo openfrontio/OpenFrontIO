@@ -41,9 +41,6 @@ describe("Counter Warship Infestation", () => {
     game.addPlayer(enemyInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const nation = game.player("nation_id");
     const enemy = game.player("enemy_id");
@@ -186,9 +183,6 @@ describe("Counter Warship Infestation", () => {
     );
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const nation = game.player("nation_id");
     const ally = game.player("ally_id");

@@ -4,28 +4,25 @@ import {
   PeriodicExportingMetricReader,
 } from "@opentelemetry/sdk-metrics";
 import * as dotenv from "dotenv";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameManager } from "./GameManager";
 import { getOtelResource, getPromLabels } from "./OtelResource";
+import { ServerEnv } from "./ServerEnv";
 
 dotenv.config();
 
 export function initWorkerMetrics(gameManager: GameManager): void {
-  // Get server configuration
-  const config = getServerConfigFromServer();
-
   // Create resource with worker information
   const resource = getOtelResource();
 
   // Configure auth headers
   const headers: Record<string, string> = {};
-  if (config.otelEnabled()) {
-    headers["Authorization"] = "Basic " + config.otelAuthHeader();
+  if (ServerEnv.otelEnabled()) {
+    headers["Authorization"] = "Basic " + ServerEnv.otelAuthHeader();
   }
 
   // Create metrics exporter
   const metricExporter = new OTLPMetricExporter({
-    url: `${config.otelEndpoint()}/v1/metrics`,
+    url: `${ServerEnv.otelEndpoint()}/v1/metrics`,
     headers,
   });
 

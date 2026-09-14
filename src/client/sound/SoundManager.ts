@@ -107,8 +107,16 @@ export class SoundManager {
     });
   }
 
+  // Slider positions are linear (0–1) but perceived loudness is roughly
+  // logarithmic, so feeding the position straight to Howler makes the top of
+  // the range sound identical. Square the position for an audio-taper curve.
+  private perceptualGain(position: number): number {
+    const clamped = Math.max(0, Math.min(1, position));
+    return clamped * clamped;
+  }
+
   public setBackgroundMusicVolume(volume: number): void {
-    this.backgroundMusicVolume = Math.max(0, Math.min(1, volume));
+    this.backgroundMusicVolume = this.perceptualGain(volume);
     this.safely("set background music volume", () => {
       this.backgroundMusic.forEach((track) => {
         track.volume(this.backgroundMusicVolume);
@@ -159,7 +167,7 @@ export class SoundManager {
   }
 
   public setSoundEffectsVolume(volume: number): void {
-    this.soundEffectsVolume = Math.max(0, Math.min(1, volume));
+    this.soundEffectsVolume = this.perceptualGain(volume);
     this.safely("set sound effects volume", () => {
       this.soundEffects.forEach((sound) => {
         sound.volume(this.soundEffectsVolume);

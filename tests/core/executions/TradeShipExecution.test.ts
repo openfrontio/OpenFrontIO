@@ -1,5 +1,5 @@
 import { TradeShipExecution } from "../../../src/core/execution/TradeShipExecution";
-import { Game, Player, Unit } from "../../../src/core/game/Game";
+import { Game, MessageType, Player, Unit } from "../../../src/core/game/Game";
 import { PathStatus } from "../../../src/core/pathfinding/types";
 import { setup } from "../../util/Setup";
 
@@ -28,6 +28,8 @@ describe("TradeShipExecution", () => {
       buildUnit: vi.fn((type, spawn, opts) => tradeShip),
       displayName: vi.fn(() => "Origin"),
       addGold: vi.fn(),
+      addTradeGold: vi.fn(),
+      addPiracyGold: vi.fn(),
       units: vi.fn(() => [dstPort]),
       unitCount: vi.fn(() => 1),
       id: vi.fn(() => 1),
@@ -38,6 +40,8 @@ describe("TradeShipExecution", () => {
     dstOwner = {
       id: vi.fn(() => 2),
       addGold: vi.fn(),
+      addTradeGold: vi.fn(),
+      addPiracyGold: vi.fn(),
       displayName: vi.fn(() => "Destination"),
       units: vi.fn(() => [dstPort]),
       unitCount: vi.fn(() => 1),
@@ -47,7 +51,10 @@ describe("TradeShipExecution", () => {
 
     pirate = {
       id: vi.fn(() => 3),
+      clientID: vi.fn(() => 3),
       addGold: vi.fn(),
+      addTradeGold: vi.fn(),
+      addPiracyGold: vi.fn(),
       displayName: vi.fn(() => "Destination"),
       units: vi.fn(() => [piratePort, piratePort2]),
       unitCount: vi.fn(() => 2),
@@ -107,13 +114,17 @@ describe("TradeShipExecution", () => {
     tradeShipExecution["pathFinder"] = {
       next: vi.fn(() => ({ status: PathStatus.NEXT, node: 32 })),
       findPath: vi.fn((from: number) => [from]),
+      pathForTraversal: vi.fn(() => [32]),
     } as any;
     tradeShipExecution["tradeShip"] = tradeShip;
   });
 
   it("should initialize and tick without errors", () => {
+    const pathFinder = tradeShipExecution["pathFinder"];
     tradeShipExecution.tick(1);
     expect(tradeShipExecution.isActive()).toBe(true);
+    expect(pathFinder.pathForTraversal).toHaveBeenCalledOnce();
+    expect(pathFinder.findPath).not.toHaveBeenCalled();
   });
 
   it("should deactivate if tradeShip is not active", () => {
@@ -135,14 +146,58 @@ describe("TradeShipExecution", () => {
     expect(tradeShip.setTargetUnit).toHaveBeenCalledWith(piratePort);
   });
 
+  it("should notify the original owner when the ship is captured", () => {
+    tradeShip.owner = vi.fn(() => pirate);
+    tradeShipExecution.tick(1);
+    expect(game.displayMessage).toHaveBeenCalledWith(
+      "events_display.trade_ship_captured",
+      MessageType.UNIT_DESTROYED,
+      origOwner.id(),
+      undefined,
+      { name: pirate.displayName() },
+      tradeShip.id(),
+      pirate.id(),
+    );
+  });
+
+  it("should only notify the original owner once across ticks", () => {
+    tradeShip.owner = vi.fn(() => pirate);
+    tradeShipExecution.tick(1);
+    tradeShipExecution.tick(2);
+    expect(game.displayMessage).toHaveBeenCalledTimes(1);
+  });
+
   it("should complete trade and award gold", () => {
     tradeShipExecution["pathFinder"] = {
       next: vi.fn(() => ({ status: PathStatus.COMPLETE, node: 32 })),
       findPath: vi.fn((from: number) => [from]),
+      pathForTraversal: vi.fn(() => [32]),
     } as any;
     tradeShipExecution.tick(1);
     expect(tradeShip.delete).toHaveBeenCalledWith(false);
     expect(tradeShipExecution.isActive()).toBe(false);
-    expect(game.displayMessage).toHaveBeenCalled();
+    expect(origOwner.addGold).toHaveBeenCalled();
+    expect(dstOwner.addGold).toHaveBeenCalled();
+    // Both port owners earn ship-trade revenue (live gold-rate columns).
+    expect(origOwner.addTradeGold).toHaveBeenCalled();
+    expect(dstOwner.addTradeGold).toHaveBeenCalled();
+    // A normal arrival is trade, not piracy.
+    expect(origOwner.addPiracyGold).not.toHaveBeenCalled();
+    expect(dstOwner.addPiracyGold).not.toHaveBeenCalled();
+  });
+
+  it("should count captured-ship payout as piracy revenue only", () => {
+    // Captured ships pay steal gold to the captor — GOLD_INDEX_STEAL
+    // semantics: piracy revenue, distinct from trade revenue.
+    tradeShip.owner = vi.fn(() => pirate);
+    tradeShipExecution["pathFinder"] = {
+      next: vi.fn(() => ({ status: PathStatus.COMPLETE, node: 32 })),
+      findPath: vi.fn((from: number) => [from]),
+      pathForTraversal: vi.fn(() => [32]),
+    } as any;
+    tradeShipExecution.tick(1);
+    expect(pirate.addGold).toHaveBeenCalled();
+    expect(pirate.addPiracyGold).toHaveBeenCalled();
+    expect(pirate.addTradeGold).not.toHaveBeenCalled();
   });
 });

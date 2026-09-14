@@ -1,6 +1,8 @@
+import { atan2 } from "../DetMath";
 import {
   Execution,
   Game,
+  isUnit,
   MessageType,
   Player,
   Structures,
@@ -39,11 +41,10 @@ export class NukeExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     if (this.speed === -1) {
-      this.speed = this.mg.config().defaultNukeSpeed();
+      this.speed = this.mg.config().nukeSpeed(this.nukeType);
     }
     this.pathFinder = UniversalPathFinding.Parabola(mg, {
       increment: this.speed,
-      distanceBasedHeight: this.nukeType !== UnitType.MIRVWarhead,
       directionUp: this.rocketDirectionUp,
     });
   }
@@ -99,7 +100,7 @@ export class NukeExecution implements Execution {
           const d2 = dx * dx + dy * dy;
           if (d2 > outer2) continue;
           if (d2 > inner2) {
-            const angle = Math.atan2(dy, dx) + Math.PI; // [0, 2π]
+            const angle = atan2(dy, dx) + Math.PI; // [0, 2π]
             const t = (angle / (2 * Math.PI)) * NUM_SAMPLES;
             const i0 = Math.floor(t) % NUM_SAMPLES;
             const i1 = (i0 + 1) % NUM_SAMPLES;
@@ -107,14 +108,20 @@ export class NukeExecution implements Execution {
             const threshold = radiiSq[i0] * (1 - frac) + radiiSq[i1] * frac;
             if (d2 > threshold) continue;
           }
-          result.add(this.mg.ref(px, py));
+          const tile = this.mg.ref(px, py);
+          if (this.mg.isImpassable(tile)) continue;
+          result.add(tile);
         }
       }
       this.tilesToDestroyCache = result;
     } else {
       this.tilesToDestroyCache = this.mg.bfs(this.dst, (_, n: TileRef) => {
         const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
-        return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
+        return (
+          d2 <= outer2 &&
+          (d2 <= inner2 || rand.chance(2)) &&
+          !this.mg.isImpassable(n)
+        );
       });
     }
     return this.tilesToDestroyCache;
@@ -183,11 +190,31 @@ export class NukeExecution implements Execution {
         this.active = false;
         return;
       }
-      this.src = spawn;
-      this.nuke = this.player.buildUnit(this.nukeType, spawn, {
+      // The launch tile can be overridden by the caller (e.g. MIRV warheads
+      // launch from the MIRV separation point, not a silo).
+      this.src ??= spawn;
+      const silo = this.player
+        .units(UnitType.MissileSilo)
+        .find((silo) => silo.tile() === spawn);
+      // Stacked purchases launch several nukes across ticks; delay each missile
+      // so launches from the same silo trail each other instead of overlapping,
+      // need to check the entire queue because even if nukes have waitticks,
+      // the silo queue will be filled with the same tick.
+      if (silo !== undefined) {
+        let lastDep = 0;
+        for (const launchTick of silo.missileTimerQueue()) {
+          lastDep = Math.max(launchTick + 1, lastDep + 1);
+        }
+        if (lastDep > this.mg.ticks()) {
+          this.waitTicks += lastDep - this.mg.ticks();
+        }
+      }
+      this.nuke = this.player.buildUnit(this.nukeType, this.src, {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
+      this.nuke.updateNukeState({ waitTicks: this.waitTicks });
+      this.recordMotionPlan(ticks);
       if (this.nuke.type() !== UnitType.MIRVWarhead) {
         this.maybeBreakAlliances();
       }
@@ -218,9 +245,6 @@ export class NukeExecution implements Execution {
       }
 
       // after sending a nuke set the missilesilo on cooldown
-      const silo = this.player
-        .units(UnitType.MissileSilo)
-        .find((silo) => silo.tile() === spawn);
       if (silo) {
         silo.launch();
       }
@@ -234,15 +258,32 @@ export class NukeExecution implements Execution {
     }
 
     if (this.waitTicks > 0) {
-      this.waitTicks--;
+      this.nuke.updateNukeState({ waitTicks: --this.waitTicks });
       return;
     }
 
     // Move to next tile
     const result = this.pathFinder.next(this.src!, this.dst, this.speed);
+
     if (result.status === PathStatus.COMPLETE) {
-      this.detonate();
-      return;
+      // move it afterward for visual effect
+      this.nuke.move(result.node);
+
+      // Check for very close SAM missiles that are targeting this.
+      // The SAM logic should be the main source of truth, since missiles can skip pixels
+      // and be affected by execution order
+      const shouldBeDestroyed =
+        this.mg.nearbyUnits(
+          this.dst,
+          this.mg.config().defaultSamMissileSpeed(),
+          UnitType.SAMMissile,
+          ({ unit }) => {
+            if (!isUnit(unit) || unit.owner() === this.nuke?.owner())
+              return false;
+            return unit.targetUnit()?.id() === this.nuke?.id();
+          },
+        ).length >= 1;
+      if (!shouldBeDestroyed) this.detonate();
     } else if (result.status === PathStatus.NEXT) {
       this.updateNukeTargetable();
       this.nuke.move(result.node);
@@ -253,6 +294,37 @@ export class NukeExecution implements Execution {
 
   public getNuke(): Unit | null {
     return this.nuke;
+  }
+
+  /**
+   * Record a motion plan so the client can derive the nuke's position each
+   * tick instead of receiving per-tick unit updates (see TradeShipExecution).
+   * Replays a separate pathfinder because the curve's cached points don't
+   * advance exactly one index per tick — the plan path must be the exact
+   * tile sequence that movement's `next()` calls will produce.
+   */
+  private recordMotionPlan(ticks: number): void {
+    if (this.nuke === null || this.src === undefined || this.src === null) {
+      return;
+    }
+    const pathFinder = UniversalPathFinding.Parabola(this.mg, {
+      increment: this.speed,
+      directionUp: this.rocketDirectionUp,
+    });
+    const path: TileRef[] = [this.src];
+    let result = pathFinder.next(this.src, this.dst, this.speed);
+    while (result.status === PathStatus.NEXT) {
+      path.push(result.node);
+      result = pathFinder.next(this.src, this.dst, this.speed);
+    }
+    this.mg.recordMotionPlan({
+      kind: "grid",
+      unitId: this.nuke.id(),
+      planId: 1,
+      startTick: ticks + this.waitTicks + 1,
+      ticksPerStep: 1,
+      path,
+    });
   }
 
   private getTrajectory(target: TileRef): TrajectoryTile[] {
@@ -319,12 +391,19 @@ export class NukeExecution implements Execution {
       if (mg.isLand(tile)) {
         mg.queueWaterConversion(tile);
       }
+
+      // Record every tile in the blast radius for nukeable layer destruction.
+      mg.queueNukeImpact(tile);
     }
 
     // Then compute the explosion effect on each player
     for (const [player, numImpactedTiles] of tilesPerPlayers) {
       const tilesBeforeNuke = player.numTilesOwned() + numImpactedTiles;
       const transportShips = player.units(UnitType.TransportShip);
+      const transportShipTroops = new Map<Unit, number>();
+      for (const unit of transportShips) {
+        transportShipTroops.set(unit, unit.troops());
+      }
       const outgoingAttacks = player.outgoingAttacks();
       const maxTroops = config.maxTroops(player);
       // nukeDeathFactor could compute the complete fallout in a single call instead
@@ -350,15 +429,18 @@ export class NukeExecution implements Execution {
           attack.setTroops(attackTroops - deaths);
         }
         for (const unit of transportShips) {
-          const unitTroops = unit.troops();
+          const unitTroops = transportShipTroops.get(unit) ?? unit.troops();
           const deaths = config.nukeDeathFactor(
             this.nukeType,
             unitTroops,
             numTilesLeft,
             maxTroops,
           );
-          unit.setTroops(unitTroops - deaths);
+          transportShipTroops.set(unit, Math.max(0, unitTroops - deaths));
         }
+      }
+      for (const [unit, troops] of transportShipTroops) {
+        unit.setTroops(troops);
       }
     }
 
@@ -386,6 +468,27 @@ export class NukeExecution implements Execution {
     this.nuke.setReachedTarget();
     this.nuke.delete(false);
 
+    if (
+      this.nukeType === UnitType.AtomBomb ||
+      this.nukeType === UnitType.HydrogenBomb
+    ) {
+      const messageKey =
+        this.nukeType === UnitType.AtomBomb
+          ? "events_display.atom_bomb_detonated"
+          : "events_display.hydrogen_bomb_detonated";
+      for (const [impactedPlayer] of tilesPerPlayers) {
+        mg.displayMessage(
+          messageKey,
+          MessageType.NUKE_DETONATED,
+          impactedPlayer.id(),
+          undefined,
+          { name: this.player.displayName() },
+          undefined,
+          this.player.id(),
+        );
+      }
+    }
+
     // Record stats
     this.mg
       .stats()
@@ -402,6 +505,13 @@ export class NukeExecution implements Execution {
           unit.touch();
         }
       }
+    }
+  }
+
+  cancel(): void {
+    this.active = false;
+    if (this.nuke !== null && this.nuke.isActive()) {
+      this.nuke.delete(false);
     }
   }
 

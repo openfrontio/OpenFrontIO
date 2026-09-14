@@ -13,7 +13,6 @@ import { GameMapImpl } from "../../../src/core/game/GameMap";
 import { UserSettings } from "../../../src/core/game/UserSettings";
 import { GameConfig } from "../../../src/core/Schemas";
 import { TestConfig } from "../../util/TestConfig";
-import { TestServerConfig } from "../../util/TestServerConfig";
 
 export const W = "W"; // Water
 export const L = "L"; // Land
@@ -131,7 +130,6 @@ export function createGame(data: TestMapData): Game {
     miniNumLand,
   );
 
-  const serverConfig = new TestServerConfig();
   const gameConfig: GameConfig = {
     gameMap: GameMapType.Asia,
     gameMapSize: GameMapSize.Normal,
@@ -148,12 +146,7 @@ export function createGame(data: TestMapData): Game {
     disableNavMesh: false,
     randomSpawn: false,
   };
-  const config = new TestConfig(
-    serverConfig,
-    gameConfig,
-    new UserSettings(),
-    false,
-  );
+  const config = new TestConfig(gameConfig, new UserSettings(), false);
 
   return createGameImpl([], [], gameMap, miniGameMap, config);
 }

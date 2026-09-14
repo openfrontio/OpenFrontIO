@@ -2,9 +2,11 @@ import { WinCheckExecution } from "../../../src/core/execution/WinCheckExecution
 import {
   ColoredTeams,
   GameMode,
+  Player,
   PlayerInfo,
   PlayerType,
   RankedType,
+  Team,
 } from "../../../src/core/game/Game";
 import { playerInfo, setup } from "../../util/Setup";
 
@@ -65,12 +67,8 @@ describe("WinCheckExecution", () => {
     mg.numLandTiles = vi.fn(() => 100);
     mg.numTilesWithFallout = vi.fn(() => 0);
     mg.stats = vi.fn(() => ({ stats: () => ({ mocked: true }) }));
-    // Advance ticks until timeElapsed (in seconds) >= maxTimerValue * 60
-    // timeElapsed = (ticks - numSpawnPhaseTurns) / 10  =>
-    // ticks >= numSpawnPhaseTurns + maxTimerValue * 600
-    const threshold =
-      mg.config().numSpawnPhaseTurns() +
-      (mg.config().gameConfig().maxTimerValue ?? 0) * 600;
+    mg.endSpawnPhase();
+    const threshold = (mg.config().gameConfig().maxTimerValue ?? 0) * 600;
     while (mg.ticks() < threshold) {
       mg.executeNextTick();
     }
@@ -109,9 +107,6 @@ describe("WinCheckExecution - Nation Winners", () => {
     const nation = game.player("nation_id");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign 81% of land to Nation
     const totalLand = game.numLandTiles();
@@ -171,10 +166,7 @@ describe("WinCheckExecution - Nation Winners", () => {
     game.addPlayer(nationInfo);
     const nation = game.player("nation_id");
 
-    // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.endSpawnPhase();
 
     // Give Nation 60% territory (below 80% threshold)
     // Give human 30% territory
@@ -200,9 +192,7 @@ describe("WinCheckExecution - Nation Winners", () => {
     expect(nation.numTilesOwned()).toBeGreaterThan(human.numTilesOwned());
 
     // Fast-forward game ticks past timer expiration
-    const threshold =
-      game.config().numSpawnPhaseTurns() +
-      (game.config().gameConfig().maxTimerValue ?? 0) * 600;
+    const threshold = (game.config().gameConfig().maxTimerValue ?? 0) * 600;
     while (game.ticks() < threshold) {
       game.executeNextTick();
     }
@@ -258,9 +248,6 @@ describe("WinCheckExecution - Nation Winners", () => {
     const nation3 = game.player("nation3_id");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign territories: Nation1 (85%), Nation2 (10%), Nation3 (5%)
     const totalLand = game.numLandTiles();
@@ -327,11 +314,8 @@ describe("WinCheckExecution - Nation Winners", () => {
     expect(bot2.team()).toBe(ColoredTeams.Bot);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
-    // Assign 96% of land to bot team (above 95% Team mode threshold)
+    // Assign 96% of land to bot team (above the 80% win threshold)
     const totalLand = game.numLandTiles();
     const botTeamTiles = Math.ceil(totalLand * 0.96);
     let bot1Assigned = 0;
@@ -352,9 +336,9 @@ describe("WinCheckExecution - Nation Winners", () => {
       }
     });
 
-    // Verify territory ownership (bot team has > 95%)
+    // Verify territory ownership (bot team is above the 80% win threshold)
     const botTeamTotal = bot1.numTilesOwned() + bot2.numTilesOwned();
-    expect(botTeamTotal / totalLand).toBeGreaterThan(0.95);
+    expect(botTeamTotal / totalLand).toBeGreaterThan(0.8);
 
     // Mock setWinner to capture calls
     const setWinnerSpy = vi.fn();
@@ -392,9 +376,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human2 = game.player("Player2");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign some territory to both players
     let human1Count = 0;
@@ -447,9 +428,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human2 = game.player("Player2");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign territory to both players
     let human1Count = 0;
@@ -503,9 +481,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human2 = game.player("Player2");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Both players disconnect
     human1.markDisconnected(true);
@@ -547,9 +522,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const nation = game.player("NationPlayer");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign territory to all players
     let humanCount = 0;
@@ -581,5 +553,230 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     // Verify human is declared winner (only one human player)
     expect(setWinnerSpy).toHaveBeenCalledWith(human, expect.anything());
     expect(winCheck.isActive()).toBe(false);
+  });
+});
+
+describe("WinCheckExecution - Overtime", () => {
+  test("win threshold decays after the start minute", async () => {
+    const game = await setup("big_plains", {
+      gameMode: GameMode.FFA,
+      overtime: { enabled: true, startMinutes: 1 },
+    });
+    const config = game.config();
+    expect(config.percentageTilesOwnedToWin(0)).toBe(80);
+    // Unchanged up to and including the start minute.
+    expect(config.percentageTilesOwnedToWin(60)).toBe(80);
+    // Whole percentage points only: 2%/min -> one 1% step every 30 seconds.
+    expect(config.percentageTilesOwnedToWin(89)).toBe(80);
+    expect(config.percentageTilesOwnedToWin(90)).toBe(79);
+    expect(config.percentageTilesOwnedToWin(119)).toBe(79);
+    expect(config.percentageTilesOwnedToWin(60 + 5 * 60)).toBe(70);
+    // No floor: clamps at 0 so the leader always qualifies eventually.
+    expect(config.percentageTilesOwnedToWin(60 + 41 * 60)).toBe(0);
+  });
+
+  test("threshold never decays when the mode is off", async () => {
+    const game = await setup("big_plains", { gameMode: GameMode.FFA });
+    expect(game.config().percentageTilesOwnedToWin(10_000)).toBe(80);
+  });
+
+  test("team games use the same base and decay as FFA", async () => {
+    const game = await setup("big_plains", {
+      gameMode: GameMode.Team,
+      playerTeams: 2,
+      overtime: { enabled: true, startMinutes: 1 },
+    });
+    expect(game.config().percentageTilesOwnedToWin(0)).toBe(80);
+    expect(game.config().percentageTilesOwnedToWin(60 + 5 * 60)).toBe(70);
+  });
+
+  test("a null maxTimerValue is no timer, not a zero-minute one", async () => {
+    // Host lobbies send null when the max-timer toggle is off.
+    const game = await setup("big_plains", {
+      gameMode: GameMode.FFA,
+      maxTimerValue: null,
+    });
+    const nationInfo = new PlayerInfo(
+      "TestNation",
+      PlayerType.Nation,
+      null,
+      "nation_id",
+    );
+    game.addPlayer(nationInfo);
+    const nation = game.player("nation_id");
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (assigned >= 10) return;
+      if (!game.map().isLand(tile)) return;
+      nation.conquer(tile);
+      assigned++;
+    });
+
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    winCheck.checkWinnerFFA();
+    expect(game.getWinner()).toBeNull();
+    expect(winCheck.isActive()).toBe(true);
+  });
+
+  test("leader wins once the shrinking bar drops below their share", async () => {
+    const game = await setup("big_plains", {
+      gameMode: GameMode.FFA,
+      overtime: { enabled: true, startMinutes: 1 },
+    });
+
+    // 79% of the land: under the 80% base, so no win until the bar shrinks.
+    const nationInfo = new PlayerInfo(
+      "TestNation",
+      PlayerType.Nation,
+      null,
+      "nation_id",
+    );
+    game.addPlayer(nationInfo);
+    const nation = game.player("nation_id");
+    const totalLand = game.numLandTiles();
+    const targetTiles = Math.floor(totalLand * 0.79);
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (assigned >= targetTiles) return;
+      if (!game.map().isLand(tile)) return;
+      nation.conquer(tile);
+      assigned++;
+    });
+
+    const setWinnerSpy = vi.fn();
+    game.setWinner = setWinnerSpy;
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+
+    winCheck.checkWinnerFFA();
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
+
+    // Two game-minutes in, the bar is 78% — below the nation's 79%.
+    while (game.elapsedGameSeconds() < 120) {
+      game.executeNextTick();
+    }
+    winCheck.checkWinnerFFA();
+    expect(setWinnerSpy).toHaveBeenCalledWith(nation, expect.anything());
+    expect(winCheck.isActive()).toBe(false);
+  });
+});
+
+describe("WinCheckExecution - 2v2 Ranked Team Elimination", () => {
+  async function setup2v2(rankedType?: RankedType) {
+    const game = await setup(
+      "big_plains",
+      {
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+        maxPlayers: 4,
+        rankedType,
+      },
+      [
+        playerInfo("P1", PlayerType.Human),
+        playerInfo("P2", PlayerType.Human),
+        playerInfo("P3", PlayerType.Human),
+        playerInfo("P4", PlayerType.Human),
+      ],
+    );
+
+    // Group the humans by their assigned team.
+    const byTeam = new Map<Team, Player[]>();
+    for (const id of ["P1", "P2", "P3", "P4"]) {
+      const player = game.player(id);
+      const team = player.team()!;
+      byTeam.set(team, [...(byTeam.get(team) ?? []), player]);
+    }
+    const [teamA, teamB] = Array.from(byTeam.values());
+    expect(teamA).toHaveLength(2);
+    expect(teamB).toHaveLength(2);
+
+    // Give every player territory so they are all alive.
+    const all = [...teamA, ...teamB];
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      if (assigned >= all.length * 10) return;
+      all[Math.floor(assigned / 10)].conquer(tile);
+      assigned++;
+    });
+
+    const setWinnerSpy = vi.fn();
+    game.setWinner = setWinnerSpy;
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    return { teamA, teamB, setWinnerSpy, winCheck };
+  }
+
+  function kill(player: Player) {
+    player.tiles().forEach((t) => player.relinquish(t));
+    expect(player.isAlive()).toBe(false);
+  }
+
+  test("should set winning team when the other team's players disconnect", async () => {
+    const { teamA, teamB, setWinnerSpy, winCheck } = await setup2v2(
+      RankedType.TwoVTwo,
+    );
+
+    teamA.forEach((p) => p.markDisconnected(true));
+    winCheck.checkWinnerTeam();
+
+    expect(setWinnerSpy).toHaveBeenCalledWith(
+      teamB[0].team(),
+      expect.anything(),
+    );
+    expect(winCheck.isActive()).toBe(false);
+  });
+
+  test("should set winning team when the other team is dead or disconnected", async () => {
+    const { teamA, teamB, setWinnerSpy, winCheck } = await setup2v2(
+      RankedType.TwoVTwo,
+    );
+
+    kill(teamA[0]);
+    teamA[1].markDisconnected(true);
+    winCheck.checkWinnerTeam();
+
+    expect(setWinnerSpy).toHaveBeenCalledWith(
+      teamB[0].team(),
+      expect.anything(),
+    );
+    expect(winCheck.isActive()).toBe(false);
+  });
+
+  test("should not set winner while both teams have an active player", async () => {
+    const { teamA, setWinnerSpy, winCheck } = await setup2v2(
+      RankedType.TwoVTwo,
+    );
+
+    // One team is down a player but not fully out.
+    kill(teamA[0]);
+    winCheck.checkWinnerTeam();
+
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
+  });
+
+  test("should not set winner when no team has an active player", async () => {
+    const { teamA, teamB, setWinnerSpy, winCheck } = await setup2v2(
+      RankedType.TwoVTwo,
+    );
+
+    [...teamA, ...teamB].forEach((p) => p.markDisconnected(true));
+    winCheck.checkWinnerTeam();
+
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
+  });
+
+  test("should not eliminate teams in unranked team games", async () => {
+    const { teamA, setWinnerSpy, winCheck } = await setup2v2();
+
+    teamA.forEach((p) => p.markDisconnected(true));
+    winCheck.checkWinnerTeam();
+
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
   });
 });

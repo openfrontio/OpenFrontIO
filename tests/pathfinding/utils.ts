@@ -255,9 +255,7 @@ export async function setupFromPath(
   const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
   const miniGameMap = await genTerrainFromBin(manifest.map4x, miniMapBinBuffer);
 
-  // Configure the game
   const config = new TestConfig(
-    new (await import("../util/TestServerConfig")).TestServerConfig(),
     {
       gameMap: GameMapType.Asia,
       gameMapSize: GameMapSize.Normal,

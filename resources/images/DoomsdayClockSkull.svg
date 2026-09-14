@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 32 32">
+  <!-- Skull scaled to ~85% and nudged up so it clears the name below it. -->
+  <g transform="translate(16 13) scale(0.85) translate(-16 -15)">
+    <!-- cranium + jaw as one outline -->
+    <path d="M16 1.2C9.2 1.2 3.8 6.3 3.8 13.2c0 3.7 1.7 6.6 4 8.5.6.5.9 1.2.9 2v2.6c0 1.4 1.1 2.5 2.5 2.5h9.6c1.4 0 2.5-1.1 2.5-2.5v-2.6c0-.8.3-1.5.9-2 2.3-1.9 4-4.8 4-8.5C28.2 6.3 22.8 1.2 16 1.2Z"
+          fill="#F4F4F4" stroke="#191919" stroke-width="1.4" stroke-linejoin="round"/>
+    <!-- eye sockets -->
+    <ellipse cx="11.1" cy="13.3" rx="3.7" ry="4.3" fill="#191919"/>
+    <ellipse cx="20.9" cy="13.3" rx="3.7" ry="4.3" fill="#191919"/>
+    <!-- nasal cavity -->
+    <path d="M16 17.6l-2 3.7h4z" fill="#191919"/>
+    <!-- teeth -->
+    <g stroke="#191919" stroke-width="1.4" stroke-linecap="round">
+      <line x1="13" y1="24.4" x2="13" y2="28.2"/>
+      <line x1="16" y1="24.4" x2="16" y2="28.4"/>
+      <line x1="19" y1="24.4" x2="19" y2="28.2"/>
+    </g>
+  </g>
+</svg>

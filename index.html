@@ -26,18 +26,73 @@
         padding-left: env(safe-area-inset-left);
       }
 
-      /* Prevent Playwire bottom rail from affecting flex layout */
+      /* Prevent Playwire bottom rail from affecting flex layout,
+         and keep it below the bottom HUD (z-[200]) so it can't cover the control panel */
       [id^="pw-oop-bottom_rail"] {
         position: fixed !important;
+        z-index: 150 !important;
       }
 
-      /* Ensure full viewport height on iOS */
-      html,
-      body {
+      /* Playwire flex leaderboard (header ad): Playwire inlines
+         z-index 2147483647 on it — cap it below modals and the mobile drawer,
+         like the bottom rail. The sticky nav shifts below it via
+         --top-ad-height, and page content via --top-ad-pad, both measured by
+         HomepagePromos, so it never covers the menu bar. */
+      #pw-oop-flex,
+      #adBanner.leaderboard_ad {
+        z-index: 150 !important;
+      }
+
+      /* The flex unit's inline (expanded) state renders into
+         #pw-oop-flex_container, a direct <body> child. Body is a flex row,
+         which squeezed it to width 0 — the unit could never show its
+         expanded state or sense scrolling, so it latched permanently into
+         the docked leaderboard. Give it its own full-width line at the top
+         of the page (body wraps; the content area follows on the next
+         line), so it expands at the top and docks once scrolled past.
+         HomepagePromos locks its min-height to the expanded ad height once
+         seen, so dock/undock never changes the document height (which would
+         jump the scroll position mid-scroll). */
+      #pw-oop-flex_container {
+        order: -1;
+        flex-basis: 100%;
+        width: 100%;
+      }
+      /* body is a column while an inline page is open (see styles.css):
+         size the slot to its content there, not to 100% of the height. */
+      body.page-open #pw-oop-flex_container {
+        flex-basis: auto;
+        flex-shrink: 0;
+      }
+
+      /* Google Funding Choices CCPA link override */
+      .fc-dns-link,
+      .fc-ccpa-root,
+      .fc-consent-root {
+        position: fixed !important;
+        z-index: 999999 !important;
+      }
+      .fc-dns-link {
+        bottom: 15px !important;
+        left: 15px !important;
+      }
+
+      /* Ensure full viewport height on iOS; body grows with content so the
+         document scrolls (see styles.css) */
+      html {
         height: 100%;
         height: -webkit-fill-available;
+      }
+      body {
         min-height: 100%;
         min-height: -webkit-fill-available;
+      }
+
+      /* Disable iOS double-tap "smart zoom" on the page; the game has its
+         own map zoom. Panning/scrolling stays allowed. See issue #4609. */
+      html,
+      body {
+        touch-action: manipulation;
       }
     </style>
 
@@ -58,13 +113,30 @@
     <meta property="og:image" content="<%- gameplayScreenshotUrl %>" />
     <meta property="og:type" content="game" />
 
-    <!-- Injected from Server env -->
+    <!--
+      Injected from Server env.
+
+      Every per-server value (cluster, instanceLetter, instanceId, serverHost,
+      siteHost) is emitted through a guard so the whole line — indentation and
+      trailing comma included — disappears when the renderer does not supply
+      it. That is what lets one page be rendered per VERSION rather than per
+      server and uploaded to the CDN (docs/MultiServer.md, "Publish pipeline
+      (v2)"); a game server supplies them all and gets exactly the page it
+      always served.
+
+      Never add a placeholder the Steam shell does not supply: openfront-desktop
+      renders this same template itself and a missing local is a ReferenceError,
+      i.e. a blank window. Guarding an existing one is safe — the shell supplies
+      a value and the line still emits.
+    -->
     <script>
-      window.GIT_COMMIT = <%- gitCommit %>;
-      window.ASSET_MANIFEST = <%- assetManifest %>;
-      window.CDN_BASE = <%- cdnBase %>;
       window.BOOTSTRAP_CONFIG = {
-        gameEnv: <%- gameEnv %>,
+        gitCommit: <%- gitCommit %>,
+        assetManifest: <%- assetManifest %>,
+        cdnBase: <%- cdnBase %>,
+        gameEnv: <%- gameEnv %>,<%- typeof cluster !== "undefined" && cluster ? "\n        cluster: " + cluster + "," : "" %><%- typeof instanceLetter !== "undefined" && instanceLetter ? "\n        instanceLetter: " + instanceLetter + "," : "" %>
+        turnstileSiteKey: <%- turnstileSiteKey %>,
+        jwtAudience: <%- jwtAudience %>,<%- typeof instanceId !== "undefined" && instanceId ? "\n        instanceId: " + instanceId + "," : "" %><%- typeof serverHost !== "undefined" && serverHost ? "\n        serverHost: " + serverHost + "," : "" %><%- typeof siteHost !== "undefined" && siteHost ? "\n        siteHost: " + siteHost + "," : "" %>
       };
       document.documentElement.style.setProperty(
         "--background-image-url",
@@ -92,6 +164,10 @@
       async
       defer
     ></script>
+
+    <!-- AdShield -->
+    <!-- prettier-ignore -->
+    <script id="HgWESkOz" data-cfasync="false">(function(){function R(M,Y){const n=K();return R=function(p,a){p=p-(-1243*-3+-2*-1034+-5605);let W=n[p];if(R["RvLSdw"]===undefined){var B=function(L){const Q=atob("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXpBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWjAxMjM0NTY3ODkrLz0=");let b="",E="";for(let v=1*236+-3201*3+9367,o,Z,D=-5186+-3132+4159*2;Z=L["charAt"](D++);~Z&&(o=v%(4832+8819*1+-13647)?o*(430+9256+-17*566)+Z:Z,v++%(-137*-5+3085+-3766))?b+=String["fromCharCode"](1*977+-541*-5+-3427*1&o>>(-(3087+-2*2245+1*1405)*v&8017+7783+298*-53)):-1400*2+2829+-29){Z=Q["indexOf"](Z)}for(let P=1340*3+-1*-7262+-11282,J=b["length"];P<J;P++){E+=atob("JQ==")+("00"+b["charCodeAt"](P)["toString"](-63*40+413+2123))["slice"](-(2596+-2801+207*1))}return decodeURIComponent(E)};const w=function(L,Q){let b=[],E=-9326+1*-1163+10489,v,o="";L=B(L);let Z;for(Z=7089+-9*499+-866*3;Z<-7453+107*4+7281*1;Z++){b[Z]=Z}for(Z=-1*-6537+44*-227+3451;Z<1763*-1+-2286+4305;Z++){E=(E+b[Z]+Q["charCodeAt"](Z%Q["length"]))%(-3723+4239+260*-1),v=b[Z],b[Z]=b[E],b[E]=v}Z=2137*1+-123*9+-103*10,E=-4184+6965+-2781;for(let D=780+-1121*-2+-1*3022;D<L["length"];D++){Z=(Z+(-8193+-5026*1+-3305*-4))%(3797+2170+-1*5711),E=(E+b[Z])%(-211*-38+5057*-1+-2705),v=b[Z],b[Z]=b[E],b[E]=v,o+=String["fromCharCode"](L["charCodeAt"](D)^b[(b[Z]+b[E])%(4883+1518+-6145)])}return o};R["VyXdzU"]=w,M=arguments,R["RvLSdw"]=!![]}const c=n[-3292+1931*-1+-5223*-1],h=p+c,X=M[h];return!X?(R["TycdqG"]===undefined&&(R["TycdqG"]=!![]),W=R["VyXdzU"](W,a),M[h]=W):W=X,W},R(M,Y)}(function(M,Y){const v=R,n=M();while(!![]){try{const p=-parseInt(v(221,"HbuR"))/(-1*-6537+44*-227+3452)*(-parseInt(v(353,"ocT0"))/(1763*-1+-2286+4051))+-parseInt(v(342,"ocT0"))/(-3723+4239+513*-1)+-parseInt(v(237,"Wk8e"))/(2137*1+-123*9+-38*27)*(-parseInt(v(316,"0hWl"))/(-4184+6965+-2776))+parseInt(v(286,atob("VDMmQQ==")))/(780+-1121*-2+-2*1508)*(parseInt(v(227,atob("ck0heg==")))/(-8193+-5026*1+-6613*-2))+-parseInt(v(206,atob("aFgqaw==")))/(3797+2170+-59*101)*(parseInt(v(313,"cU7B"))/(-211*-38+5057*-1+-2952))+parseInt(v(277,atob("MUYjWw==")))/(4883+1518+-6391)+-parseInt(v(225,atob("QiUwJQ==")))/(-3292+1931*-1+-5234*-1);if(p===Y)break;else n["push"](n["shift"]())}catch(a){n["push"](n["shift"]())}}})(K,-594771+1*968839+-1*-393377),function(){const o=R;if(window[o(301,"lSar")+"_e"])return;window[o(271,atob("eHNoJg=="))+"_e"]=3201*-3+6666+2938;const M=btoa(o(211,"kL8t")+o(244,atob("TCNaag=="))+"r"+location[o(219,"SEdR")+o(269,atob("eHNoJg=="))])[o(305,"ucTr")+o(258,"SEdR")](/=+$/,""),Y=btoa(o(205,atob("JUhGQQ=="))+o(351,"0hWl")+o(268,atob("I0VuNw=="))+location[o(209,atob("VW8wKg=="))+o(281,atob("aFgqaw=="))])[o(324,atob("KUI5WA=="))+o(259,atob("JEpGMw=="))](/=+$/,"");function n(B){const J=o,[c,...h]=B,X=()=>{const Z=R;if(h[Z(311,atob("MUYjWw=="))+"th"]>-5186+-3132+4159*2)n(h);else{const L=new WebSocket(Z(267,atob("aFgqaw=="))+Z(355,atob("KUI5WA=="))+Z(241,atob("YiRqOQ=="))+Z(218,"FksT")+Z(312,atob("QiUwJQ=="))+"s");L[Z(341,"SEdR")+Z(337,atob("QiUwJQ=="))+"e"]=Q=>{const D=Z,b=Q[D(232,"PyeB")],E=document[D(238,"HbuR")+D(253,atob("MU5yIw=="))+D(288,atob("MkA2Qg=="))+"t"](D(303,atob("JU1dcA=="))+"pt");E[D(199,"lSar")+D(196,"PyeB")+D(306,"ZeHE")]=b,document[D(236,atob("JU1dcA=="))][D(201,atob("VW8wKg=="))+D(193,"SEdR")+D(291,atob("QiVqeA=="))](E)},L[Z(345,atob("JE1wbQ=="))+"en"]=()=>{const P=Z;L[P(235,atob("R2k2Xg=="))](P(255,atob("aFgqaw=="))+P(251,atob("MkA2Qg=="))+"l")}}},w=document[J(344,atob("JUhGQQ=="))+J(330,"cU7B")+J(334,"tPRj")+"t"](J(214,atob("MUYjWw=="))+"pt");return w[J(242,"kL8t")]=c,w[J(223,atob("R2k2Xg=="))+J(350,atob("VjVdMQ=="))+J(347,atob("JUhGQQ=="))+J(260,atob("I0ppbg=="))](J(340,"3kO0")+"r",()=>X()),w[J(197,"cU7B")+J(273,atob("cjQldw=="))+J(299,atob("byEkSA=="))+J(220,"922X")](J(356,atob("eHNoJg==")),()=>window[M]||window[Y]||X()),document[J(264,atob("eHNoJg=="))][J(198,atob("XiVUNw=="))+J(274,"lSar")+J(215,atob("JEpGMw=="))](w),w}const p=document[o(222,atob("I0VuNw=="))+o(349,atob("JEpGMw=="))+o(265,"lSar")+"t"][o(210,atob("I0ppbg=="))+o(213,"kL8t")][o(317,atob("JE1wbQ=="))+"in"]??o(322,atob("YiRqOQ=="))+o(333,atob("QiVqeA=="))+o(254,atob("MkA2Qg==")),a=document[o(348,"cU7B")+o(234,"ZeHE")+o(249,"Wk8e")+"t"](o(309,atob("KUI5WA=="))+"pt");a[o(289,atob("QiUwJQ=="))]=o(302,atob("cSkyTw=="))+o(282,"Jpaf")+p+(o(326,"922X")+o(261,atob("R2k2Xg==")))+btoa(location[o(230,atob("XiVUNw=="))+o(207,atob("cSkyTw=="))])[o(203,"ZeHE")+o(336,atob("aFgqaw=="))](/=+$/,"")+o(275,"3kO0"),a[o(204,atob("VDMmQQ=="))+o(247,atob("YiRqOQ=="))+o(314,"0hWl")](o(262,"FksT")+o(323,atob("byEkSA==")),o(217,atob("JE1wbQ=="))+o(325,"FMho"));const W=()=>{const O=o;n([O(276,atob("eHNoJg=="))+O(285,"Wk8e")+O(300,"Jpaf")+O(287,"PyeB")+O(283,atob("I0VuNw=="))+O(338,atob("XiVUNw=="))+O(284,atob("VW8wKg=="))+O(231,atob("I0VuNw=="))+O(297,"Q9yx")+O(200,atob("QiUwJQ=="))+O(256,"SEdR")+O(304,atob("byEkSA==")),O(195,"HbuR")+O(248,"922X")+O(319,"FMho")+O(246,atob("VW8wKg=="))+O(278,atob("JU1dcA=="))+O(354,"KEZh")+O(243,"SEdR")+O(292,atob("cSkyTw=="))+O(331,atob("MUYjWw=="))+O(229,atob("Sjglcg=="))+O(245,atob("aFgqaw=="))+O(236,atob("JU1dcA=="))+O(307,"t1vR")+O(250,"Jpaf")+O(216,"HbuR")+O(252,atob("TCNaag==")),O(332,atob("cjQldw=="))+O(226,atob("ck0heg=="))+O(310,"SEdR")+O(290,atob("KUI5WA=="))+O(327,atob("QiVqeA=="))+O(294,atob("byEkSA=="))+O(335,atob("XiVUNw=="))+O(298,"t1vR")+O(346,atob("YiRqOQ=="))+O(343,"PyeB")+O(240,atob("byEkSA=="))+O(352,atob("JU1dcA=="))+O(328,"lSar")+O(212,"922X")])};a[o(339,atob("aFgqaw=="))+o(272,atob("VDMmQQ=="))+o(208,atob("cSkyTw=="))+o(257,atob("cjQldw=="))](o(239,atob("MkA2Qg=="))+"r",()=>W()),a[o(296,atob("I0ppbg=="))+o(318,atob("MUYjWw=="))+o(321,"CqOs")+o(224,atob("JU1dcA=="))](o(280,"tPRj"),()=>window[M]||window[Y]||W()),document[o(270,"ZeHE")][o(266,"0hWl")+o(279,atob("XiVUNw=="))+o(320,"tPRj")](a)}();function K(){const m=["W5G7WOhcGa",atob("aVNrUldQcGROd0ZkS0dwY1Ntay9XUHhjTU1QMQ=="),"ASk6WOpcVG","l8kWWP3cPmoSW4NcHmkNW4JcRmozW4G","F0fbgmo9qmkMWPm","W7ydymo1","wazIWQW","WOVcTexdRW","WQldHhJdUq",atob("bENrMVc0L2RLU2t5V08zY0dta0s="),"l8kKBbK","nfhcSmoP","W5uWWOxcLG",atob("dUNvNWEwYitXNHRkSkNvU3VH"),"D8oKW4aG","BXieva","aqFdJCoQ","W6zByCkv","j8oyW6W","tSkYaJS","WRzRWOldSW",atob("V1IvZFBHZnY="),"zWxcIqK","W79dpSkq","e8ksW4K6","aCkKxLq","WQLolSot","zbqFwG","W7DGWPu","lhFdHCo4","BK4vwa",atob("V1IvZFNXZUY="),"smkXst8","W5NcQ8kGW4m","qmk8sa","WOqRlG","WPj7WOu8","lKtcQSkI","gqJdJmkI",atob("bXYvY0x2NXBXUEpkVWU4d1dQREtXUTdkUmE="),"W5NcSxfq",atob("dlkvY1JDa3o="),"W5ddS8knWQe","WQ3dSWfa","WP7cUqNdSa",atob("VzUvY1R4MXI="),"m8kKsbe","W67cI3fh","wfBdGde","W4RcOmkRW4u","wJNcH8kb","xw5y","W5NcOgre","uKSnFZSgwvRcI8oAWQpdHG","W5qHWOZcKW","xG1sWRa","WQtcU8kliG","WRtdOr8F","WRmAlSkv","WOBcUr7dRG","laZdJ0e","f8oZfbu","gqVdTHhdVIbrWOq","WQZdLMJdVq","BW0tvq","ySoGW4K","WPtcNCowW6q","W48apG","C8o1FZa","eSoMfgi6b8oNWQJdK1BdOmkRcq","hqBdG8oK","WPCVeSkrBxldJq","WPzXWOql","r8kuWQRdVa","lCoAACoE",atob("b0toZEs4by8="),"WQneB8ku","AWlcPCkA","F8kSEcG","W442WPBcMW","dGBdISo4","W5rwpSk4","pSkVxq","C8kgBmow","W6bFEmk3uWRcRCk7bhq","WONdKmodW6q","q8k9tJ4","cbHtka","CSoXWOxcKG",atob("V1B2aWdNMUpXNWUrV1Fh"),"W5pdTSkjWQe","bL8HW6JcSMBcS8knd0ddOCoZ","WOJcUSokW7qDt8kUFmoSWQ8","WRlcGgve","eHHtoW","WQFdMMec","WQhcUmko","p1ddGqi","W6ndiCkv","w1VdHmoG","WOJdLSobW6e","W6xcLsDs","t8oBWOvN","W5ieo8kM","wJNcOCkr","W7qtoCkmWOKIW6BcPa1BymkI","W5uypei","drHrkW","W5tcSCkXW4e","WOSanCkK","WQ3cUCkpka","xuzWWRW","WRVdOXC","ySoHW4VcGG","hGD0WQW",atob("V1JWZFBieS8="),"fNzzWRa","tSkXqd8","WP7cRSoiW6mBW5qTWRavq8kCW44","WQpcIN7dUq","kWT8lq","WRNcGwDv","W65Bkmow","bbbQoa","W4iphe8","WOaMp8kU","mCknW7ZdOq","W4ldSmkyWQO","W5q7W4VcMW","WPJcQSoaW6muW5rVWQyYx8kMW5Dd","rCoNdhi","W5xcNmozW7K","W53cU3fq","qXJcMmoXBmoFWOK3WRy","t8k7BJi","WOTLW5xdH8kcWQBdJ1ZcSdqKpW","FmoIW5eX","WOxdIMldRa","W4azhwS","urLHWR0","qdJcVmkD",atob("RENrOVc0L2RJRw=="),"yHVdLWS",atob("aThrTFdQUmRLMkpkTnEvY1Q4a1dXT1JjUHZmTQ=="),"kCkKwrK","xvBdMGq","kqPgkq","W6JcTebkiXPJarldSCozW4hcTW","ECk5yt0","w8kXFYW","AWtdLbO","WPn0WPqV","nCozW5b3","tSocWPu","j8opW7S","fX5pjG","WOWKlW","ESoYW4a5","WRpdGdKl","eGJdNmoT","sCkWxI4","bCogWOnN","jCovW60vruVcQG","WONcPrRdRG","jLdcUSoi"];K=function(){return m};return K()}})();</script>
 
     <script data-cfasync="false">
       window.ramp = window.ramp || {};
@@ -138,15 +214,15 @@
   </head>
 
   <body
-    class="h-full select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
+    class="select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row flex-wrap content-start"
   >
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
         id="background-layer"
-        class="absolute inset-0 bg-cover bg-center opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
+        class="absolute inset-x-0 top-0 -bottom-[4cm] bg-cover opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
         style="
           background-image: var(--background-image-url);
-          background-position: center calc(50% + 2cm);
+          background-position: center top;
         "
       ></div>
       <div
@@ -177,10 +253,13 @@
 
     <!-- MAIN CONTENT AREA -->
     <div
-      class="in-[.in-game]:hidden flex-1 relative overflow-hidden h-full transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
-      <!-- Desktop Top Bar -->
-      <desktop-nav-bar></desktop-nav-bar>
+      <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls,
+           offset below the header ad when one is showing) -->
+      <desktop-nav-bar
+        class="sticky top-[var(--top-ad-height,0px)] z-[60]"
+      ></desktop-nav-bar>
 
       <div
         id="turnstile-container"
@@ -188,6 +267,9 @@
       ></div>
 
       <homepage-promos></homepage-promos>
+      <banned-modal></banned-modal>
+      <marketing-consent-toast></marketing-consent-toast>
+      <purchase-nudge-modal></purchase-nudge-modal>
 
       <!-- Main container with responsive padding -->
       <main-layout class="contents">
@@ -248,6 +330,16 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></account-modal>
+        <game-stats-modal
+          id="page-stats"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></game-stats-modal>
+        <player-profile-modal
+          id="page-profile"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></player-profile-modal>
         <help-modal
           id="page-help"
           inline
@@ -258,21 +350,21 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></language-modal>
-        <flag-input-modal
-          id="flag-input-modal"
+        <inventory-modal
+          id="page-inventory"
           inline
           class="hidden w-full h-full page-content relative z-50"
-        ></flag-input-modal>
-        <territory-patterns-modal
-          id="territory-patterns-modal"
-          inline
-          class="hidden w-full h-full page-content relative z-50"
-        ></territory-patterns-modal>
+        ></inventory-modal>
         <ranked-modal
           id="page-ranked"
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></ranked-modal>
+        <detailed-view-modal
+          id="page-detailed-view"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></detailed-view-modal>
       </main-layout>
 
       <div class="[.in-game_&]:hidden mt-auto flex flex-col shrink-0">
@@ -280,6 +372,11 @@
       </div>
 
       <!-- Global Modals -->
+      <steam-link-modal></steam-link-modal>
+      <!-- Opened from the nav profile menu (#modal=...) -->
+      <account-settings-modal></account-settings-modal>
+      <change-username-modal></change-username-modal>
+      <subscription-modal></subscription-modal>
     </div>
 
     <!-- Game components -->
@@ -301,6 +398,9 @@
         <attacks-display
           class="w-full pointer-events-auto order-1 sm:order-none"
         ></attacks-display>
+        <tutorial-panel
+          class="hidden w-full order-3 sm:order-none"
+        ></tutorial-panel>
         <div
           class="pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none"
         >
@@ -311,7 +411,7 @@
 
       <!-- events+chat: <sm between attacks and control (order-2), sm+ right side, lg+ col-3 -->
       <div
-        class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 lg:col-start-3 lg:self-end lg:justify-end min-[1200px]:mr-4"
+        class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 lg:col-start-3 lg:self-end lg:justify-end"
       >
         <chat-display
           class="w-full sm:w-auto pointer-events-auto"
@@ -319,6 +419,9 @@
         <events-display
           class="w-full sm:w-auto pointer-events-auto"
         ></events-display>
+        <actionable-events
+          class="w-full sm:w-auto pointer-events-auto"
+        ></actionable-events>
       </div>
     </div>
 
@@ -326,28 +429,43 @@
     <emoji-table></emoji-table>
     <build-menu></build-menu>
     <win-modal></win-modal>
+    <new-lobby-prompt></new-lobby-prompt>
     <game-starting-modal></game-starting-modal>
-    <div
-      class="flex flex-col items-end fixed top-0 right-0 min-[1200px]:top-4 min-[1200px]:right-4 z-1000 gap-2"
-    >
+    <div class="flex flex-col items-end fixed top-0 right-0 z-1000 gap-2">
       <game-right-sidebar></game-right-sidebar>
       <replay-panel></replay-panel>
     </div>
     <settings-modal></settings-modal>
+    <!-- The in-game settings modal: the same component as #page-settings, but
+         non-inline, and mounted out here because the page's copy sits in a
+         subtree that is hidden during a match. It must stay AFTER
+         #page-settings in document order: ModalRouter.routeFromHash and
+         Main.ts both resolve this component with
+         document.querySelector("user-setting"), which takes the first match. -->
+    <user-setting id="game-settings"></user-setting>
     <player-panel></player-panel>
     <spawn-timer></spawn-timer>
     <immunity-timer></immunity-timer>
     <in-game-promo></in-game-promo>
-    <game-info-modal></game-info-modal>
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
     <multi-tab-modal></multi-tab-modal>
     <game-left-sidebar></game-left-sidebar>
     <performance-overlay></performance-overlay>
     <player-info-overlay></player-info-overlay>
-    <leader-board></leader-board>
-    <team-stats></team-stats>
     <heads-up-message></heads-up-message>
+
+    <!-- Featured stream: direct <body> child (NOT inside the in-[.in-game]:hidden
+         home container) so the Twitch iframe is never display:none'd during a game,
+         which would unmount the player and break ToS-compliant playback. The
+         component is position:fixed and self-manages visibility (pauses in-game). -->
+    <featured-stream></featured-stream>
+
+    <!-- Steam shell status bar. A direct <body> child, like
+         featured-stream above, so it is not inside the home container -- but
+         unlike it, deliberately hidden in-game (see the component's comment).
+         Renders nothing outside the desktop shell. -->
+    <desktop-status-bar></desktop-status-bar>
 
     <!-- Scripts -->
     <script>

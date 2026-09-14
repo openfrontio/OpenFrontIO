@@ -5,7 +5,6 @@ import { AbstractGraphAStar } from "./AStar.AbstractGraph";
 import { AStarWaterBounded } from "./AStar.WaterBounded";
 import { AbstractGraph, AbstractNode } from "./AbstractGraph";
 import { BFSGrid } from "./BFS.Grid";
-import { LAND_MARKER } from "./ConnectedComponents";
 
 export class AStarWaterHierarchical implements PathFinder<number> {
   private tileBFS: BFSGrid;
@@ -49,6 +48,19 @@ export class AStarWaterHierarchical implements PathFinder<number> {
 
     // SourceResolver for multi-source search
     this.sourceResolver = new SourceResolver(this.map, this.graph);
+  }
+
+  /**
+   * Swap in a rebuilt abstract graph, reusing the map-sized search
+   * scratch buffers (BFSGrid alone is ~20MB on large maps — reallocating
+   * it on every water-graph rebuild causes GC churn).  Only the
+   * graph-derived helpers are recreated.  Path caches live on the graph
+   * itself, so they reset naturally with the new graph.
+   */
+  setGraph(graph: AbstractGraph): void {
+    this.graph = graph;
+    this.abstractAStar = new AbstractGraphAStar(graph);
+    this.sourceResolver = new SourceResolver(this.map, graph);
   }
 
   findPath(from: number | number[], to: number): number[] | null {
@@ -314,7 +326,7 @@ export class AStarWaterHierarchical implements PathFinder<number> {
       this.map.height(),
       tile,
       maxDistance,
-      (t: TileRef) => this.graph.getComponentId(t) !== LAND_MARKER,
+      (t: TileRef) => this.map.isWater(t),
       (t: TileRef, _dist: number) => {
         const tileX = this.map.x(t);
         const tileY = this.map.y(t);

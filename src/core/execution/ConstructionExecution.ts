@@ -22,6 +22,7 @@ export class ConstructionExecution implements Execution {
     private constructionType: UnitType,
     private tile: TileRef,
     private rocketDirectionUp?: boolean,
+    private amount?: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -103,19 +104,24 @@ export class ConstructionExecution implements Execution {
     const player = this.player;
     switch (this.constructionType) {
       case UnitType.AtomBomb:
-      case UnitType.HydrogenBomb:
-        this.mg.addExecution(
-          new NukeExecution(
-            this.constructionType,
-            player,
-            this.tile,
-            null,
-            -1,
-            0,
-            this.rocketDirectionUp,
-          ),
-        );
+      case UnitType.HydrogenBomb: {
+        const count = this.amount ?? 1;
+        for (let i = 0; i < count; i++) {
+          // NukeExecution staggers same-tick launches per silo itself.
+          this.mg.addExecution(
+            new NukeExecution(
+              this.constructionType,
+              player,
+              this.tile,
+              null,
+              -1,
+              0,
+              this.rocketDirectionUp,
+            ),
+          );
+        }
         break;
+      }
       case UnitType.MIRV:
         this.mg.addExecution(new MirvExecution(player, this.tile));
         break;

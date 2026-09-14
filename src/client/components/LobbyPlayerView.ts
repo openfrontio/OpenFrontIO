@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
-import { PastelTheme } from "../../core/configuration/PastelTheme";
 import {
   ColoredTeams,
   Duos,
@@ -15,13 +14,19 @@ import {
 } from "../../core/game/Game";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
-import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
+import { ClientID, ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
-import { getTranslatedPlayerTeamLabel, translateText } from "../Utils";
+import { Theme, themeProvider } from "../theme/ThemeProvider";
+import {
+  getTranslatedPlayerTeamLabel,
+  resolveTeamClanTag,
+  translateText,
+} from "../Utils";
 
 export interface TeamPreviewData {
   team: Team;
   players: ClientInfo[];
+  clanTag?: string | null;
 }
 
 @customElement("lobby-player-view")
@@ -34,11 +39,29 @@ export class LobbyTeamView extends LitElement {
   @property({ type: String }) currentClientID: string = "";
   @property({ attribute: "team-count" }) teamCount: TeamCountConfig = 2;
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
+  @property({ type: Function }) onToggleNameReveal?: (clientID: string) => void;
+  @property({ type: Array }) nameReveals: string[] = [];
+  @property({ type: Boolean }) anonymizeNames: boolean = false;
   @property({ type: Number }) nationCount: number = 0;
   @property({ type: Boolean }) isPublicGame: boolean = false;
 
-  private theme: PastelTheme = new PastelTheme();
+  private get theme(): Theme {
+    return themeProvider.current();
+  }
   @state() private showTeamColors: boolean = false;
+  private _clanUpdateTimeout: number | null = null;
+  private _teamClanTags: Map<Team, string | null> = new Map();
+  private _viewerFriends: ReadonlySet<ClientID> = new Set();
+
+  // Spectators are in the lobby roster (flagged) but hold no seat and never
+  // reach the simulation — so the count header, the team preview and both
+  // player lists show PLAYERS only, and spectators get their own bubble below.
+  private get activePlayers(): ClientInfo[] {
+    return this.clients.filter((c) => !c.spectator);
+  }
+  private get spectators(): ClientInfo[] {
+    return this.clients.filter((c) => c.spectator === true);
+  }
   private userSettings: UserSettings = new UserSettings();
 
   /**
@@ -48,12 +71,21 @@ export class LobbyTeamView extends LitElement {
    */
   private get effectiveNationCount(): number {
     if (this.isPublicGame && this.teamCount === HumansVsNations) {
-      return this.clients.length;
+      return this.activePlayers.length;
     }
     return this.nationCount;
   }
 
   willUpdate(changedProperties: Map<string, any>) {
+    if (
+      changedProperties.has("clients") ||
+      changedProperties.has("currentClientID")
+    ) {
+      const self = this.currentClientID
+        ? this.clients.find((c) => c.clientID === this.currentClientID)
+        : undefined;
+      this._viewerFriends = new Set(self?.friends ?? []);
+    }
     // Recompute team preview when relevant properties change
     // clients is updated from WebSocket lobby_info events
     if (
@@ -69,6 +101,14 @@ export class LobbyTeamView extends LitElement {
     }
   }
 
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this._clanUpdateTimeout !== null) {
+      window.clearTimeout(this._clanUpdateTimeout);
+      this._clanUpdateTimeout = null;
+    }
+  }
+
   render() {
     return html`
       <div class="border-t border-white/10 pt-6">
@@ -76,8 +116,8 @@ export class LobbyTeamView extends LitElement {
           <div
             class="text-xs font-bold text-white/40 uppercase tracking-widest"
           >
-            ${this.clients.length}
-            ${this.clients.length === 1
+            ${this.activePlayers.length}
+            ${this.activePlayers.length === 1
               ? translateText("host_modal.player")
               : translateText("host_modal.players")}
             <span style="margin: 0 8px;">•</span>
@@ -93,6 +133,48 @@ export class LobbyTeamView extends LitElement {
           ${this.gameMode === GameMode.Team
             ? this.renderTeamMode()
             : this.renderFreeForAll()}
+        </div>
+        ${this.renderSpectators()}
+      </div>
+    `;
+  }
+
+  // Watchers, in their own bubble under the players box — they hold no seat, so
+  // mixing them into the lists above would show them as people about to play.
+  // Mirrors the players section: the count header sits ABOVE the box (same
+  // classes as the "N players" header) and the box reuses .players-list, which
+  // is what centers the tags.
+  private renderSpectators() {
+    const spectators = this.spectators;
+    if (spectators.length === 0) return html``;
+    return html`
+      <div class="mt-4">
+        <div
+          class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4"
+        >
+          ${spectators.length}
+          ${spectators.length === 1
+            ? translateText("host_modal.spectator")
+            : translateText("host_modal.spectators")}
+        </div>
+        <div
+          class="players-list block rounded-lg border border-white/10 bg-white/5 p-2"
+        >
+          ${repeat(
+            spectators,
+            (c) => c.clientID ?? c.username,
+            (client) =>
+              html`<span
+                class="player-tag ${this.isCurrentPlayer(client)
+                  ? "current-player"
+                  : ""}"
+              >
+                <span class="text-white"
+                  >${this.getClientDisplayName(client)}
+                  ${this.renderVerifiedBadge(client)}</span
+                >
+              </span>`,
+          )}
         </div>
       </div>
     `;
@@ -119,17 +201,18 @@ export class LobbyTeamView extends LitElement {
           ${translateText("host_modal.players")}
         </div>
         ${repeat(
-          this.clients,
+          this.activePlayers,
           (c) => c.clientID ?? c.username,
           (client) => {
             const displayName = this.getClientDisplayName(client);
             return html`<div
-              class="px-2 py-1 rounded-sm mb-1 text-xs text-white border
+              class="px-2 py-1 rounded-sm mb-1 text-xs text-white border break-words
                 ${this.isCurrentPlayer(client)
                 ? "bg-malibu-blue/20 border-sky-500/40"
                 : "bg-gray-700/70 border-transparent"}"
             >
-              ${displayName}
+              ${displayName} ${this.renderVerifiedBadge(client)}
+              ${this.renderFriendBadge(client)}
             </div>`;
           },
         )}
@@ -165,9 +248,24 @@ export class LobbyTeamView extends LitElement {
     </div>`;
   }
 
+  // Host-only per-player toggle for who may see real names under anonymizeNames.
+  private renderRevealToggle(clientID: string) {
+    if (!this.onToggleNameReveal || !this.anonymizeNames) return html``;
+    const on = this.nameReveals.includes(clientID);
+    return html`<button
+      @click=${() => this.onToggleNameReveal?.(clientID)}
+      title=${translateText("host_modal.toggle_name_reveal")}
+      style="background:none;border:none;cursor:pointer;font-size:13px;line-height:1;margin-left:4px;opacity:${on
+        ? "1"
+        : "0.35"};"
+    >
+      👁
+    </button>`;
+  }
+
   private renderFreeForAll() {
     return html`${repeat(
-      this.clients,
+      this.activePlayers,
       (c) => c.clientID ?? c.username,
       (client) => {
         const displayName = this.getClientDisplayName(client);
@@ -176,7 +274,11 @@ export class LobbyTeamView extends LitElement {
             ? "current-player"
             : ""}"
         >
-          <span class="text-white">${displayName}</span>
+          <span class="text-white"
+            >${displayName} ${this.renderVerifiedBadge(client)}
+            ${this.renderFriendBadge(client)}</span
+          >
+          ${this.renderRevealToggle(client.clientID)}
           ${client.clientID === this.lobbyCreatorClientID
             ? html`<span class="host-badge"
                 >(${translateText("host_modal.host_badge")})</span
@@ -208,7 +310,8 @@ export class LobbyTeamView extends LitElement {
         ? this.effectiveNationCount
         : this.teamMaxSize;
 
-    const teamLabel = getTranslatedPlayerTeamLabel(preview.team);
+    const clanTag = this._teamClanTags.get(preview.team) ?? null;
+    const teamLabel = getTranslatedPlayerTeamLabel(preview.team, clanTag);
 
     return html`
       <div
@@ -220,14 +323,18 @@ export class LobbyTeamView extends LitElement {
         <div
           class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
         >
-          ${this.showTeamColors
-            ? html` <span
-                class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg)"
-                style="--bg:${this.teamHeaderColor(preview.team)};"
-              ></span>`
-            : null}
-          <span class="truncate">${teamLabel}</span>
-          <span class="text-white/90">${displayCount}/${maxTeamSize}</span>
+          <div class="flex items-center gap-1.5 min-w-0">
+            ${this.showTeamColors
+              ? html` <span
+                  class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg) shrink-0"
+                  style="--bg:${this.teamHeaderColor(preview.team)};"
+                ></span>`
+              : null}
+            <span class="truncate">${teamLabel}</span>
+          </div>
+          <span class="text-white/90 font-bold text-[13px] shrink-0"
+            >${displayCount}/${maxTeamSize}</span
+          >
         </div>
         <div class="p-2 ${isEmpty ? "" : "flex flex-col gap-1.5"}">
           ${isEmpty
@@ -245,7 +352,12 @@ export class LobbyTeamView extends LitElement {
                       ? "bg-malibu-blue/20 border-sky-500/40"
                       : "bg-gray-700/70 border-transparent"}"
                   >
-                    <span class="truncate text-white">${displayName}</span>
+                    <span class="flex items-center gap-1 min-w-0">
+                      <span class="truncate text-white">${displayName}</span>
+                      ${this.renderVerifiedBadge(p)}
+                      ${this.renderFriendBadge(p)}
+                    </span>
+                    ${this.renderRevealToggle(p.clientID)}
                     ${p.clientID === this.lobbyCreatorClientID
                       ? html`<span class="ml-2 text-[11px] text-green-300"
                           >(${translateText("host_modal.host_badge")})</span
@@ -274,7 +386,7 @@ export class LobbyTeamView extends LitElement {
 
   private getTeamList(): Team[] {
     if (this.gameMode !== GameMode.Team) return [];
-    const playerCount = this.clients.length + this.effectiveNationCount;
+    const playerCount = this.activePlayers.length + this.effectiveNationCount;
     const config = this.teamCount;
 
     if (config === HumansVsNations) {
@@ -318,20 +430,26 @@ export class LobbyTeamView extends LitElement {
     if (this.gameMode !== GameMode.Team) {
       this.teamPreview = [];
       this.teamMaxSize = 0;
+      this._teamClanTags.clear();
+      if (this._clanUpdateTimeout !== null) {
+        window.clearTimeout(this._clanUpdateTimeout);
+        this._clanUpdateTimeout = null;
+      }
       return;
     }
 
     // HumansVsNations: show all clients under Humans initially
     if (this.teamCount === HumansVsNations) {
-      this.teamMaxSize = this.clients.length;
+      this.teamMaxSize = this.activePlayers.length;
       this.teamPreview = [
-        { team: ColoredTeams.Humans, players: [...this.clients] },
+        { team: ColoredTeams.Humans, players: [...this.activePlayers] },
         { team: ColoredTeams.Nations, players: [] },
       ];
+      this.triggerClanUpdate();
       return;
     }
 
-    const players = this.clients.map(
+    const players = this.activePlayers.map(
       (c) =>
         new PlayerInfo(
           c.username,
@@ -340,11 +458,14 @@ export class LobbyTeamView extends LitElement {
           c.clientID,
           false,
           c.clanTag,
+          c.friends ?? [],
+          c.teamIndex ?? null,
         ),
     );
     const assignment = assignTeamsLobbyPreview(
       players,
       teams,
+      this.teamCount,
       this.effectiveNationCount,
     );
     const buckets = new Map<Team, ClientInfo[]>();
@@ -378,6 +499,32 @@ export class LobbyTeamView extends LitElement {
       team: t,
       players: buckets.get(t) ?? [],
     }));
+    this.triggerClanUpdate();
+  }
+
+  private triggerClanUpdate() {
+    if (this._teamClanTags.size === 0) {
+      this.updateTeamClanTags();
+    } else {
+      this.scheduleClanUpdate();
+    }
+  }
+
+  private scheduleClanUpdate() {
+    if (this._clanUpdateTimeout !== null) return;
+    this._clanUpdateTimeout = window.setTimeout(() => {
+      this.updateTeamClanTags();
+      this._clanUpdateTimeout = null;
+      this.requestUpdate();
+    }, 500);
+  }
+
+  private updateTeamClanTags() {
+    this._teamClanTags.clear();
+    for (const preview of this.teamPreview) {
+      const tag = resolveTeamClanTag(preview.players);
+      this._teamClanTags.set(preview.team, tag);
+    }
   }
 
   private isCurrentPlayer(client: ClientInfo): boolean {
@@ -400,5 +547,53 @@ export class LobbyTeamView extends LitElement {
     const anonymizedUsername =
       createRandomName(client.username, PlayerType.Human) ?? client.username;
     return formatPlayerDisplayName(anonymizedUsername, client.clanTag);
+  }
+
+  // Blue check for players on their server-validated account name. Withheld
+  // when this row's name is locally anonymized — the badge vouches for the
+  // exact displayed name.
+  private renderVerifiedBadge(client: ClientInfo) {
+    const anonymized =
+      this.userSettings.anonymousNames() && !this.isCurrentPlayer(client);
+    if (client.verified !== true || anonymized) return html``;
+    return html`<svg
+      viewBox="0 0 24 24"
+      class="inline-block w-3.5 h-3.5 align-[-2px] text-blue-400 shrink-0"
+      aria-label=${translateText("username.verified_heading")}
+    >
+      <circle cx="12" cy="12" r="10" fill="currentColor"></circle>
+      <path
+        d="M7.5 12.5l3 3 6-6.5"
+        stroke="white"
+        stroke-width="2.2"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      ></path>
+    </svg>`;
+  }
+
+  // A mark for players on the viewer's friends list
+  private renderFriendBadge(client: ClientInfo) {
+    if (!this._viewerFriends.has(client.clientID)) return html``;
+    if (this.isCurrentPlayer(client)) return html``;
+    if (this.anonymizeNames || this.userSettings.anonymousNames())
+      return html``;
+    return html`<svg
+      viewBox="0 0 24 24"
+      class="lobby-friend-badge inline-block w-4 h-4 align-[-3px] text-emerald-400 shrink-0"
+      fill="currentColor"
+      aria-label=${translateText("friends.lobby_marker")}
+    >
+      <title>${translateText("friends.lobby_marker")}</title>
+      <circle cx="9" cy="8" r="3.6"></circle>
+      <path
+        d="M9 13.2c-3.4 0-6.3 1.7-6.3 3.9V20h12.6v-2.9c0-2.2-2.9-3.9-6.3-3.9z"
+      ></path>
+      <circle cx="17.4" cy="8.6" r="2.9"></circle>
+      <path
+        d="M17.4 13.4c-.7 0-1.3.06-1.9.18 1.2 1 1.9 2.24 1.9 3.52V20h5.4v-2.6c0-1.9-2.4-4-5.4-4z"
+      ></path>
+    </svg>`;
   }
 }

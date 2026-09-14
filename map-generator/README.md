@@ -17,11 +17,12 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 
 ## Creating a new map
 
+Maps are discovered automatically from the `assets/maps/` folders — `info.json` holds everything the game needs to know about a map.
+
 1. Create a new folder in `assets/maps/<map_name>`
 2. Create `assets/maps/<map_name>/image.png`
-3. Create `assets/maps/<map_name>/info.json` with name and countries
-4. Add the map name in `main.go` The `<name>` in `{Name: "<name>"},` should match the `<map-name>` folder at `assets/maps/<map_name>`
-5. Run the generator for your map: `go run . --maps=<map_name>`
+3. Create `assets/maps/<map_name>/info.json` (see below)
+4. Run the generator for your map: `go run . --maps=<map_name>`
 
    By default, `go run .` will process all defined maps.
 
@@ -33,11 +34,11 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 
    `go run . --maps=northamerica,world`
 
-6. Find the output folder at `../resources/maps/<map_name>`
-7. Go back to the root directory: `cd ..`
-8. Run the default formatter: `npm run format`
-   This rewrites ALL files in place. Git figures out which files are actually changed, don't worry.
-   Alternatively, while the formatter migration is in progress, you can run Prettier per file: `npx prettier --write resources/maps/<map_name>/<file_name>` or in VSCode install the Prettier extension and per file do Show and run Commands > Format Document.
+5. Find the output folder at `../resources/maps/<map_name>`
+
+`go run .` formats every file it writes with Prettier as its last step (shelling out to `npx prettier --write`), so the output already matches `npm run format` — no separate formatting step needed. If `npx prettier` isn't available (e.g. `npm ci` hasn't been run), generation still succeeds but prints a warning; run `npm run format` from the root directory to format manually in that case.
+
+`npm run gen-maps` (from the root directory) is equivalent to `go run .` for all maps.
 
 ## Output Files
 
@@ -46,6 +47,8 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 - `../resources/maps/<map_name>/map4x.bin` - 1/4 scale (half dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/map16x.bin` - 1/16 scale (quarter dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/thumbnail.webp` - WebP image thumbnail of the map.
+- `../src/core/game/Maps.gen.ts` - Generated TypeScript (the `GameMapType` enum and the `maps` list of `MapInfo` objects) built from every map's info.json. Regenerated on every run, even with `--maps`.
+- `../resources/lang/en.json` - The `map` section is rewritten with each map's display name. Regenerated on every run, even with `--maps`.
 
 ## Command Line Flags
 
@@ -81,41 +84,108 @@ If you are doing work in image editing software or using automated tools, `./map
 - `Pixel` -> `Terrain Type & Magnitude` mapping in `GenerateMap`
 - `Terrain Type` -> `Thumbnail Color` mapping in `getThumbnailColor`
 
-In-Game, terrain is rendered using themes. The color of a tile is determined dynamically based on
-its **Terrain Type** and **Magnitude**. Theme Files:
+### Impassable Terrain
 
-- `../src/core/configuration/PastelTheme.ts` (Light)
-- `../src/core/configuration/PastelThemeDark.ts` (Dark).
+Pure black pixels (`#000000` / `rgb(0, 0, 0)` with alpha ≥ 20) are encoded as **impassable terrain**. This is a solid, static void that:
+
+- Cannot be owned, attacked, or nuked.
+- Nuke trajectories cannot pass over it (just as they cannot leave the map border).
+- Renders as the map background colour, making the map appear non-rectangular.
+
+Use impassable terrain to carve out non-rectangular map shapes or to create barriers that divide regions without water.
+
+In-Game, the color of a tile is determined dynamically based on its **Terrain Type** and **Magnitude**.
+
+- Ocean default color definition: `../src/client/render/gl/render-settings.json` (user changeable via settings)
+- Terrain color calculations: `../src/client/render/gl/utils/ColorUtils.ts#L50`
 
 ## Create info.json
 
-The map-generator will process your input file at `assets/maps/<map_name>/info.json` to determine the
-position of Nations, their starting coordinates, and any flags.
+The map-generator reads `assets/maps/<map_name>/info.json` to determine nation positions, starting coordinates, flags, and other map metadata.
 
-Example:
+### Example
 
 ```json
 {
-  "name": "MySampleMap",
+  "id": "MySampleMap",
+  "name": "My Sample Map",
+  "translation_key": "map.mysamplemap",
+  "categories": ["europe", "featured"],
+  "multiplayer_frequency": 4,
+  "featured_rank": 5,
+  "layers": [
+    {
+      "id": "roads",
+      "placement": "land",
+      "nukeable": true
+    }
+  ],
   "nations": [
     {
       "coordinates": [396, 364],
       "name": "United States",
       "flag": "us"
+    },
+    {
+      "coordinates": [512, 280],
+      "name": "Canada",
+      "flag": "ca"
     }
   ]
 }
 ```
 
-`coordinates` is x/y position of the nation spawn on the map. Origin is at top left, with x extending right and y extending down
+### Fields
 
-`name` is a `CamelCaseName` of your map. It is used to enable the map in-game.
+| Field                   | Required | Description                                                                                                                                                                                                                      |
+| ----------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                    | ✅       | `CamelCaseName` of the map. Must match the `assets/maps/<map_name>` folder name (case-insensitive). Becomes the `GameMapType` enum key.                                                                                          |
+| `name`                  | ✅       | Canonical name — the `GameMapType` enum value. **Must never change** once the map ships (it is part of the wire format and stored in game records).                                                                              |
+| `translation_key`       | ✅       | Key in `../resources/lang/en.json`. Must be `map.<foldername>`.                                                                                                                                                                  |
+| `categories`            | ✅       | One or more category strings (see below). No duplicates. Must have at least one entry. Groups the map in the map picker.                                                                                                         |
+| `multiplayer_frequency` |          | How often the map appears in the public multiplayer playlist. Use `0` (or omit) to exclude from rotation. Used as fallback when per-mode frequencies are not set.                                                                |
+| `ffa_frequency`         |          | FFA lobby rotation weight. Overrides `multiplayer_frequency` for FFA lobbies. Use `0` to exclude from FFA. Omit to use `multiplayer_frequency`.                                                                                  |
+| `team_frequency`        |          | Team lobby rotation weight. Overrides `multiplayer_frequency` for Team lobbies. Use `0` to exclude from Team. Omit to use `multiplayer_frequency`.                                                                               |
+| `special_frequency`     |          | Special lobby rotation weight. Overrides `multiplayer_frequency` for Special lobbies. Use `0` to exclude from Special. Omit to use `multiplayer_frequency`.                                                                      |
+| `disabled_modifiers`    |          | Array of modifier keys that should never be rolled for this map in special games (e.g. `["isRandomSpawn"]`).                                                                                                                     |
+| `forced_modifiers`      |          | Array of modifiers always forced on in special games. Plain key (e.g. `"startingGold5M"`) or `"key:percentage"` (e.g. `"goldMultiplier:75"` = 75% chance). Counts toward the 3-modifier cap.                                     |
+| `display_name`          |          | English display name written to `../resources/lang/en.json`. Defaults to `name`. Set only when the display name differs from the canonical name (e.g. `"MENA"`, `"Europe (Classic)"`).                                           |
+| `featured_rank`         |          | Position in the featured grid (`1` = first). Requires `"featured"` in `categories`. Unranked featured maps sort after ranked ones, alphabetically.                                                                               |
+| `special_team_count`    |          | Preferred team count for team/special games — see `SPECIAL_TEAM_MAPS` in `../src/server/MapPlaylist.ts`. Must be `0` or `≥ 2` (1 is not allowed).                                                                                |
+| `custom_tribes`         |          | Array of tribe names or `{ "name": "...", "coordinates": [x, y] }` objects. Coordinates are optional (omit for random spawn). Tribe names must be unique and must not collide with `nations[].name`. Empty strings are rejected. |
+| `themes`                |          | Array of theme strings for tribe name generation.                                                                                                                                                                                |
+| `layers`                |          | Array of map layer definitions rendered between terrain and territory (see below).                                                                                                                                               |
+| `nations`               |          | Array of nation objects (see below).                                                                                                                                                                                             |
 
-`flag` is the code for a country
+### Categories
 
-- The full list of supported codes can be seen in `../src/client/data/countries.json` - all ISO_3166 codes are supported, with several additions.
+Each entry in `categories` must be one of:
 
-- For quick reference, [Use country codes found here](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes)
+`featured`, `new`, `world`, `continental`, `europe`, `asia`, `north_america`, `africa`, `south_america`, `oceania`, `antarctica`, `countries`, `cosmic`, `fictional`, `arcade`, `tournament`
+
+Maps that straddle regions (e.g. Black Sea, Bering Strait) can list more than one. Add `featured` to show the map in the featured section of the map picker.
+
+### Nations
+
+Each nation object has:
+
+| Field         | Required | Description                                                                                                                                                                                                                                       |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`        | ✅       | Display name of the nation.                                                                                                                                                                                                                       |
+| `coordinates` |          | `[x, y]` position of the nation spawn. Origin is top-left, x extends right, y extends down. Omit for random spawn.                                                                                                                                |
+| `flag`        |          | ISO 3166 country code (e.g. `"us"`, `"ca"`, `"de"`). The full list of supported codes is in `../src/client/data/countries.json`. For quick reference, see [ISO 3166 country codes](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes). |
+
+### Layers
+
+Layers are PNG overlays rendered between terrain and territory, useful for decorations. Each layer is a separate PNG file in `assets/maps/<map_name>/` named `<id>.png`.
+
+| Field       | Required | Description                                                                                                                                           |
+| ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`        | ✅       | Unique identifier for the layer. Also the PNG filename (without extension). Must be alphanumeric (hyphens allowed). Must not be `"image"` (reserved). |
+| `placement` | ✅       | `"land"` or `"water"` — whether the layer sits on land (and impassable terrain) or water tiles.                                                       |
+| `nukeable`  |          | If `true`, the layer is permanently destroyed in nuke impact radii. Defaults to `false`.                                                              |
+
+Layer display names are stored in the `map_layers` section of `../resources/lang/en.json` (keyed by layer id). Players can disable layers in the graphics settings.
 
 ## Update CREDITS.md
 
@@ -130,11 +200,14 @@ The country will need to be added to `../src/client/data/countries.json`
 
 ## To Enable In-Game
 
-Using the `name` from your json:
+Everything is generated from the info.json files when the map-generator runs —
+there are no manual steps:
 
-- Add to GameMapType and mapCategories in `../src/core/game/Game.ts`
-- Add to the map playlist in `../src/server/MapPlaylist.ts`
-- Add to the `map` translation object in `../resources/lang/en.json`
+- The `GameMapType` enum and the `maps` list (one `MapInfo` per map) are
+  written to `../src/core/game/Maps.gen.ts`. Do not edit that file by hand.
+- The `map` section of `../resources/lang/en.json` is rewritten with each
+  map's `display_name` (or `name`). Translations to other languages are
+  managed via Crowdin.
 
 ## Notes
 

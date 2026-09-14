@@ -1,21 +1,23 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
-import { Cell, PlayerType, Unit } from "./game/Game";
+import { exp } from "./DetMath";
+import { Cell, GameType, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
+import { TileSet } from "./game/TileSet";
 import {
   GameConfig,
   GameID,
   GameRecord,
+  GameStartInfo,
   PartialGameRecord,
   PlayerRecord,
+  PlayerReport,
+  Tribe,
   Turn,
   Winner,
 } from "./Schemas";
 
-import {
-  TRIBE_NAME_PREFIXES,
-  TRIBE_NAME_SUFFIXES,
-} from "./execution/utils/TribeNames";
+import { resolveTribeNameData } from "./execution/utils/TribeNames";
 
 export function manhattanDistWrapped(
   c1: Cell,
@@ -127,20 +129,33 @@ export function simpleHash(str: string): number {
 
 export function calculateBoundingBox(
   gm: GameMap,
-  borderTiles: ReadonlySet<TileRef>,
+  borderTiles: Iterable<TileRef>,
 ): { min: Cell; max: Cell } {
   let minX = Infinity,
     minY = Infinity,
     maxX = -Infinity,
     maxY = -Infinity;
 
-  for (const tile of borderTiles) {
+  const visit = (tile: TileRef) => {
     const x = gm.x(tile);
     const y = gm.y(tile);
     minX = Math.min(minX, x);
     minY = Math.min(minY, y);
     maxX = Math.max(maxX, x);
     maxY = Math.max(maxY, y);
+  };
+  // Indexed/forEach paths: for..of over a large Set (player border sets)
+  // allocates an iterator-result object per element.
+  if (Array.isArray(borderTiles)) {
+    for (let i = 0; i < borderTiles.length; i++) {
+      visit(borderTiles[i]);
+    }
+  } else if (borderTiles instanceof Set || borderTiles instanceof TileSet) {
+    borderTiles.forEach(visit);
+  } else {
+    for (const tile of borderTiles) {
+      visit(tile);
+    }
   }
 
   return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
@@ -200,7 +215,7 @@ export function getMode<T>(counts: Map<T, number>): T | null {
 
 export function calculateBoundingBoxCenter(
   gm: GameMap,
-  borderTiles: ReadonlySet<TileRef>,
+  borderTiles: Iterable<TileRef>,
 ): Cell {
   const { min, max } = calculateBoundingBox(gm, borderTiles);
   return boundingBoxCenter({ min, max });
@@ -240,6 +255,37 @@ export function onlyImages(html: string) {
   });
 }
 
+// Replays rebuild GameStartInfo from the archived record, which keeps
+// players' real clanTag and friends (analytics reads them). Live clients
+// never simulated with those: the server blanks clanTag when clan tags are
+// disabled, and clanTag + friends when names are anonymized — identically
+// for every client, because both feed deterministic team assignment
+// (TeamAssignment.ts). Mirrors GameServer.start() (wireGameStartInfo) and
+// startInfoFor(); replays must apply the same blanking before simulating,
+// or team games with either setting diverge from the recorded hashes.
+// Singleplayer records were simulated (and archived) with the real values —
+// no server, no blanking — so they replay as-is.
+export function toWireGameStartInfo(info: GameStartInfo): GameStartInfo {
+  const config = info.config;
+  if (config.gameType === GameType.Singleplayer) {
+    return info;
+  }
+  const blankClanTags =
+    (config.disableClanTags ?? false) || (config.anonymizeNames ?? false);
+  const blankFriends = config.anonymizeNames ?? false;
+  if (!blankClanTags && !blankFriends) {
+    return info;
+  }
+  return {
+    ...info,
+    players: info.players.map((p) => ({
+      ...p,
+      clanTag: blankClanTags ? null : p.clanTag,
+      friends: blankFriends ? undefined : p.friends,
+    })),
+  };
+}
+
 export function createPartialGameRecord(
   gameID: GameID,
   config: GameConfig,
@@ -253,6 +299,13 @@ export function createPartialGameRecord(
   lobbyCreatedAt?: number,
   // Time the lobby became visible to players (ms).
   visibleAt?: number,
+  // Purchased bot tribe names in use this game (public games only). Infra
+  // ingest reads them from the record for owner appearance stats, and
+  // replays rebuild GameStartInfo from the record so the same names spawn.
+  tribes?: Tribe[],
+  // Player reports filed during the game (multiplayer only; see
+  // GameServer.handleReport). The API ingests them for moderation.
+  reports?: PlayerReport[],
 ): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
   const num_turns = allTurns.length;
@@ -280,6 +333,8 @@ export function createPartialGameRecord(
       duration,
       num_turns,
       winner,
+      tribes,
+      reports,
     },
     version: "v0.0.2",
     turns,
@@ -324,6 +379,21 @@ export function generateID(): GameID {
   return nanoid();
 }
 
+// Multi-server game id (docs/MultiServer.md): the minting deployment's
+// instance letter + 9 random chars. The 9 random chars carry uniqueness
+// (game ids are permanent archive keys, sized against every game ever
+// minted) and private-lobby unguessability; worker routing hashes the full
+// id, extracting the worker index from entropy that must exist anyway.
+// generateID() stays 8 chars for the ids that never leave one server or one
+// client: client ids, singleplayer games, worker message ids.
+export function generateGameID(instanceLetter: string): GameID {
+  const nanoid = customAlphabet(
+    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
+    9,
+  );
+  return instanceLetter + nanoid();
+}
+
 export function toInt(num: number): bigint {
   if (num === Infinity) {
     return BigInt(Number.MAX_SAFE_INTEGER);
@@ -352,13 +422,12 @@ export function createRandomName(
 ): string | null {
   let randomName: string | null = null;
   if (playerType === PlayerType.Human) {
+    const { prefixes, suffixes } = resolveTribeNameData();
     const hash = simpleHash(name);
-    const prefixIndex = hash % TRIBE_NAME_PREFIXES.length;
-    const suffixIndex =
-      Math.floor(hash / TRIBE_NAME_PREFIXES.length) %
-      TRIBE_NAME_SUFFIXES.length;
+    const prefixIndex = hash % prefixes.length;
+    const suffixIndex = Math.floor(hash / prefixes.length) % suffixes.length;
 
-    randomName = `👤 ${TRIBE_NAME_PREFIXES[prefixIndex]} ${TRIBE_NAME_SUFFIXES[suffixIndex]}`;
+    randomName = `👤 ${prefixes[prefixIndex]} ${suffixes[suffixIndex]}`;
   }
   return randomName;
 }
@@ -394,7 +463,7 @@ export function sigmoid(
   decayRate: number,
   midpoint: number,
 ): number {
-  return 1 / (1 + Math.exp(-decayRate * (value - midpoint)));
+  return 1 / (1 + exp(-decayRate * (value - midpoint)));
 }
 
 export function formatPlayerDisplayName(
@@ -410,4 +479,47 @@ const CLAN_TAG_INVALID_CHARS = new RegExp(`[^${CLAN_TAG_CHARS}]`, "g");
 
 export function sanitizeClanTag(tag: string): string {
   return tag.replace(CLAN_TAG_INVALID_CHARS, "").substring(0, 5).toUpperCase();
+}
+
+// Longest label a featured lobby may show in the browser. Long enough for
+// "Europe — Official OpenFront Masters Scrims", short enough that one row
+// cannot crowd out the rest of the list. Lives here rather than in Schemas so
+// the sanitiser that enforces it has no import back into Schemas — that edge
+// would close a require cycle.
+export const LOBBY_LABEL_MAX = 48;
+
+// A featured lobby's label is host-supplied text shown in the lobby browser, so
+// it is sanitised before it can reach anyone: control characters and bidi
+// overrides stripped (they let text render as something entirely different),
+// whitespace collapsed, then length-capped. Rendered as TEXT, never markup —
+// emoji work because they are ordinary codepoints.
+export function sanitizeLobbyLabel(raw: string): string {
+  const kept: string[] = [];
+  // Iterated by CODE POINT, not code unit: an emoji is a surrogate pair, and
+  // slicing one in half is how a label turns into a replacement glyph.
+  for (const ch of raw) {
+    const cp = ch.codePointAt(0)!;
+    // Tab/newline/vertical tab/form feed/carriage return are C0 controls, but
+    // they are also word separators: dropping them outright would weld
+    // "Europe\nScrims" into "EuropeScrims". They become spaces, and the
+    // collapse below folds any run of them into one.
+    if (cp === 0x09 || (cp >= 0x0a && cp <= 0x0d)) {
+      kept.push(" ");
+      continue;
+    }
+    if (cp < 0x20 || cp === 0x7f) continue; // other C0 controls and DEL
+    if (cp >= 0x80 && cp <= 0x9f) continue; // C1 controls
+    // Bidi overrides, isolates and marks: they make following text render in
+    // another direction, which is how a label claims to be something it isn't.
+    if (cp >= 0x202a && cp <= 0x202e) continue;
+    if (cp >= 0x2066 && cp <= 0x2069) continue;
+    if (cp === 0x200e || cp === 0x200f) continue;
+    if (cp === 0x061c) continue; // ARABIC LETTER MARK — zero-width, bidi-active
+    // NB: U+200D ZERO WIDTH JOINER is deliberately KEPT — emoji sequences like
+    // 👨‍👩‍👧 are built from it, and stripping it would break them apart.
+    kept.push(ch);
+  }
+  return Array.from(kept.join("").replace(/\s+/g, " ").trim())
+    .slice(0, LOBBY_LABEL_MAX)
+    .join("");
 }

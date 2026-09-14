@@ -1,10 +1,14 @@
-import { Unit, UnitType } from "../../../src/core/game/Game";
+import { FactoryExecution } from "../../../src/core/execution/FactoryExecution";
+import { PortExecution } from "../../../src/core/execution/PortExecution";
+import { PlayerType, Unit, UnitType } from "../../../src/core/game/Game";
+import { TileRef } from "../../../src/core/game/GameMap";
 import {
   RailNetworkImpl,
   StationManagerImpl,
 } from "../../../src/core/game/RailNetworkImpl";
 import { Railroad } from "../../../src/core/game/Railroad";
 import { Cluster } from "../../../src/core/game/TrainStation";
+import { playerInfo, setup } from "../../util/Setup";
 
 // Mock types
 const createMockStation = (unitId: number): any => {
@@ -168,6 +172,53 @@ describe("RailNetworkImpl", () => {
     expect(neighborStation.setCluster).toHaveBeenCalled();
   });
 
+  describe("overlappingRailroads", () => {
+    test("returns deterministic deduplicated TileRef array", () => {
+      const tile = 42 as any;
+      const railGridMock = {
+        query: vi.fn(
+          () => new Set([{ tiles: [50, 42, 60] }, { tiles: [60, 45, 42] }]),
+        ),
+      };
+      (network as any).railGrid = railGridMock;
+
+      const result = network.overlappingRailroads(UnitType.City, tile);
+
+      expect(railGridMock.query).toHaveBeenCalledWith(tile, 3);
+      expect(result).toEqual([42, 45, 50, 60]); // Deduplicated and sorted
+    });
+
+    test("returns empty array when no railroads overlap", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      const result = network.overlappingRailroads(UnitType.City, tile);
+
+      expect(result).toEqual([]);
+    });
+
+    test.each([
+      UnitType.MissileSilo,
+      UnitType.DefensePost,
+      UnitType.SAMLauncher,
+    ])(
+      "returns empty array for %s which cannot snap to railroads",
+      (unitType) => {
+        const tile = 42 as any;
+        const railGridMock = {
+          query: vi.fn(() => new Set([{ tiles: [50, 42, 60] }])),
+        };
+        (network as any).railGrid = railGridMock;
+
+        const result = network.overlappingRailroads(unitType, tile);
+
+        expect(result).toEqual([]);
+        expect(railGridMock.query).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   describe("computeGhostRailPaths", () => {
     test("returns empty when snappable rails exist nearby", () => {
       const tile = 42 as any;
@@ -329,5 +380,147 @@ describe("RailNetworkImpl", () => {
       expect(pathService.findTilePath).toHaveBeenCalledTimes(1);
       expect(pathService.findTilePath).toHaveBeenCalledWith(tile, 100);
     });
+
+    test("factory connects to nearby structures with no pre-existing factory", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      // No factory in range, and the nearby city is not a station yet.
+      game.hasUnitNearby.mockReturnValue(false);
+      stationManager.findStation.mockReturnValue(null);
+
+      const cityUnit = {
+        id: 1,
+        tile: vi.fn(() => 100),
+        type: vi.fn(() => UnitType.City),
+      };
+      game.nearbyUnits.mockReturnValue([{ unit: cityUnit, distSquared: 400 }]);
+
+      const mockPath = [100, 60, 50, 42];
+      pathService.findTilePath.mockReturnValue(mockPath);
+
+      const result = network.computeGhostRailPaths(UnitType.Factory, tile);
+      expect(result).toEqual([mockPath]);
+      expect(pathService.findTilePath).toHaveBeenCalledWith(100, tile);
+    });
+
+    test("factory preserves path direction to a non-station port", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      game.hasUnitNearby.mockReturnValue(false);
+      stationManager.findStation.mockReturnValue(null);
+
+      const portUnit = {
+        id: 1,
+        tile: vi.fn(() => 100),
+        type: vi.fn(() => UnitType.Port),
+      };
+      game.nearbyUnits.mockReturnValue([{ unit: portUnit, distSquared: 400 }]);
+
+      const mockPath = [42, 50, 60, 100];
+      pathService.findTilePath.mockReturnValue(mockPath);
+
+      const result = network.computeGhostRailPaths(UnitType.Factory, tile);
+      expect(result).toEqual([mockPath]);
+      expect(pathService.findTilePath).toHaveBeenCalledWith(tile, 100);
+    });
+
+    test("city does not connect to non-station neighbors without a factory", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      game.hasUnitNearby.mockReturnValue(false);
+
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
+      expect(result).toEqual([]);
+    });
+  });
+});
+
+function expectSameRailGeometry(
+  previewPath: TileRef[],
+  actualPath: TileRef[],
+): void {
+  const sameGeometry =
+    previewPath.length === actualPath.length &&
+    (previewPath.every((tile, index) => tile === actualPath[index]) ||
+      previewPath.every(
+        (tile, index) => tile === actualPath[actualPath.length - 1 - index],
+      ));
+  expect(sameGeometry).toBe(true);
+}
+
+describe("factory rail preview path consistency", () => {
+  test("matches the railway created for a promoted non-station city", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+
+    const cityTile = game.ref(5, 5);
+    const factoryTile = game.ref(25, 25);
+    const city = player.buildUnit(UnitType.City, cityTile, {});
+
+    expect(city.hasTrainStation()).toBe(false);
+    const previewPath = game
+      .railNetwork()
+      .computeGhostRailPaths(UnitType.Factory, factoryTile)[0];
+    expect(previewPath).toBeDefined();
+
+    const factory = player.buildUnit(UnitType.Factory, factoryTile, {});
+    game.addExecution(new FactoryExecution(factory));
+    for (let i = 0; i < 5; i++) {
+      game.executeNextTick();
+    }
+
+    const manager = game.railNetwork().stationManager();
+    const cityStation = manager.findStation(city);
+    const factoryStation = manager.findStation(factory);
+    expect(cityStation).not.toBeNull();
+    expect(factoryStation).not.toBeNull();
+
+    const railroad = cityStation!.getRailroadTo(factoryStation!);
+    expect(railroad).not.toBeNull();
+    expectSameRailGeometry(previewPath, railroad!.tiles);
+  });
+
+  test("matches the railway created for a pre-existing port", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+
+    const portTile = game.ref(5, 5);
+    const factoryTile = game.ref(25, 25);
+    const port = player.buildUnit(UnitType.Port, portTile, {});
+    game.addExecution(new PortExecution(port));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    expect(port.hasTrainStation()).toBe(false);
+    const previewPath = game
+      .railNetwork()
+      .computeGhostRailPaths(UnitType.Factory, factoryTile)[0];
+    expect(previewPath).toBeDefined();
+
+    const factory = player.buildUnit(UnitType.Factory, factoryTile, {});
+    game.addExecution(new FactoryExecution(factory));
+    for (let i = 0; i < 5; i++) {
+      game.executeNextTick();
+    }
+
+    const manager = game.railNetwork().stationManager();
+    const portStation = manager.findStation(port);
+    const factoryStation = manager.findStation(factory);
+    expect(portStation).not.toBeNull();
+    expect(factoryStation).not.toBeNull();
+
+    const railroad = factoryStation!.getRailroadTo(portStation!);
+    expect(railroad).not.toBeNull();
+    expectSameRailGeometry(previewPath, railroad!.tiles);
   });
 });

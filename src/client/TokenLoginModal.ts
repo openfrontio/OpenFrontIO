@@ -4,6 +4,7 @@ import { tempTokenLogin } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { showInGameAlert } from "./InGameModal";
 import { translateText } from "./Utils";
 
 @customElement("token-login")
@@ -22,40 +23,28 @@ export class TokenLoginModal extends BaseModal {
     super();
   }
 
-  render() {
-    const title = translateText("token_login_modal.title");
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title,
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-        })}
-        <div class="flex-1 flex flex-col gap-4 p-6">
-          ${this.email ? this.loginSuccess(this.email) : this.loggingIn()}
-        </div>
-      </div>
-    `;
+  protected modalConfig() {
+    return { maxWidth: "620px" };
+  }
 
-    if (this.inline) {
-      return content;
-    }
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText("token_login_modal.title"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+    });
+  }
 
+  protected renderBody() {
     return html`
-      <o-modal
-        id="token-login-modal"
-        title="${title}"
-        hideHeader
-        hideCloseButton
-        maxWidth="620px"
-      >
-        ${content}
-      </o-modal>
+      <div class="flex-1 flex flex-col gap-4 p-6">
+        ${this.email ? this.loginSuccess(this.email) : this.loggingIn()}
+      </div>
     `;
   }
 
   private loggingIn() {
-    const loggingText = translateText("token_login_modal.logging_in");
+    const loggingText = translateText("token_login_modal.title");
     return html`
       <div class="flex items-center gap-4">
         <div
@@ -89,15 +78,6 @@ export class TokenLoginModal extends BaseModal {
     `;
   }
 
-  public open(): void {
-    if (!this.token) {
-      return;
-    }
-    super.open();
-    clearInterval(this.retryInterval);
-    this.retryInterval = setInterval(() => this.tryLogin(), 3000);
-  }
-
   public openWithToken(token: string): void {
     this.token = token;
     this.email = null;
@@ -106,11 +86,22 @@ export class TokenLoginModal extends BaseModal {
     this.open();
   }
 
-  public close() {
+  public open(args?: Record<string, unknown>): void {
+    if (!this.token) {
+      return;
+    }
+    super.open(args);
+  }
+
+  protected onOpen(): void {
+    clearInterval(this.retryInterval);
+    this.retryInterval = setInterval(() => this.tryLogin(), 3000);
+  }
+
+  protected onClose(): void {
     this.token = null;
     clearInterval(this.retryInterval);
     this.attemptCount = 0;
-    super.close();
     this.isAttemptingLogin = false;
   }
 
@@ -120,7 +111,7 @@ export class TokenLoginModal extends BaseModal {
     }
     if (this.attemptCount > 3) {
       this.close();
-      alert("Login failed. Please try again later.");
+      void showInGameAlert(translateText("error_modal.login_failed"));
       return;
     }
     this.attemptCount++;

@@ -1,4 +1,3 @@
-import { renderNumber, renderTroops } from "../../client/Utils";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -19,11 +18,13 @@ import {
   BuildableUnit,
   Cell,
   ColoredTeams,
+  DisconnectSnapshot,
   Embargo,
   EmojiMessage,
   GameMode,
+  GameType,
   Gold,
-  MessageType,
+  MAX_UPGRADE_AMOUNT,
   MutableAlliance,
   Player,
   PlayerBuildable,
@@ -44,16 +45,30 @@ import {
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import {
+  ATTACK_DELTA_INCOMING,
+  ATTACK_DELTA_OUTGOING,
+  diffPlayerUpdate,
+  packAttackTroopDeltas,
+} from "./GameUpdateUtils";
+import {
   AllianceView,
   AttackUpdate,
   GameUpdateType,
   PlayerUpdate,
 } from "./GameUpdates";
+import { ReadonlyTileSet, TileSet } from "./TileSet";
+import {
+  bumpTraversalGeneration,
+  tileTraversalScratch,
+} from "./TileTraversalScratch";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
 } from "./TransportShipUtils";
 import { UnitImpl } from "./UnitImpl";
+
+// Rot re-stamps every second, so a little slack keeps the cue from strobing.
+const DECAY_CUE_GRACE_TICKS = 30;
 
 interface Target {
   tick: Tick;
@@ -67,22 +82,79 @@ class Donation {
   ) {}
 }
 
+// Shared singletons for empty collections in toFullUpdate. Sharing
+// references lets diffPlayerUpdate's `a === b` fast paths skip structural
+// comparison and avoids per-player-per-tick allocations. The arrays are
+// frozen so accidental in-worker mutation throws instead of silently
+// corrupting every player's updates; updates crossing to the main thread
+// are structured-cloned (clones are mutable). Sets cannot be frozen
+// (Set.add ignores freeze) — EMPTY_EMBARGOES must never be mutated.
+const EMPTY_NUMBER_ARRAY: number[] = [];
+const EMPTY_STRING_ARRAY: string[] = [];
+const EMPTY_ATTACK_UPDATES: AttackUpdate[] = [];
+const EMPTY_ALLIANCE_VIEWS: AllianceView[] = [];
+const EMPTY_EMOJIS: EmojiMessage[] = [];
+const EMPTY_EMBARGOES = new Set<string>();
+// Reusable buffers for hot loops. The simulation is single-threaded and these
+// are fully consumed before any re-entrant call, so sharing is safe.
+const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
+const UNITS_SCRATCH: Unit[] = [];
+const TYPE_SET_SCRATCH = new Set<UnitType>();
+// N, S, W, E — the sampling directions used by shoreReachableNeighbors().
+const SHORE_DIRECTIONS_DX = [0, 0, -1, 1];
+const SHORE_DIRECTIONS_DY = [-1, 1, 0, 0];
+Object.freeze(EMPTY_NUMBER_ARRAY);
+Object.freeze(EMPTY_STRING_ARRAY);
+Object.freeze(EMPTY_ATTACK_UPDATES);
+Object.freeze(EMPTY_ALLIANCE_VIEWS);
+Object.freeze(EMPTY_EMOJIS);
+
 export class PlayerImpl implements Player {
   public _lastTileChange: number = 0;
+  // Bumped on every ownership change of one of this player's tiles (several
+  // can happen within one tick, so the tick alone is not a cache key).
+  public _tileChangeVersion: number = 0;
   public _pseudo_random: PseudoRandom;
 
   private _gold: bigint;
   private _troops: bigint;
 
+  /** Cumulative ship-trade revenue (arrival credit for src + dst port owners). */
+  private _tradeGold: bigint = 0n;
+  /** Cumulative train revenue: own trains + others' trains stopping at own stations. */
+  private _trainGold: bigint = 0n;
+  /** Cumulative piracy revenue: payouts for captured trade ships. */
+  private _piracyGold: bigint = 0n;
+  /** Cumulative gold received from all sources (incremented in addGold). */
+  private _goldEarned: bigint = 0n;
+
   markedTraitorTick = -1;
+  markedDoomsdayClockTick = -1;
+  /** Tick territory rot last took land from this player (-1 = never). */
+  private rottedAtTick = -1;
   private _betrayalCount: number = 0;
 
   private embargoes = new Map<PlayerID, Embargo>();
 
-  public _borderTiles: Set<TileRef> = new Set();
+  public _borderTiles = new TileSet();
 
   public _units: Unit[] = [];
-  public _tiles: Set<TileRef> = new Set();
+  /** Bumped on every change that can alter a per-type answer over _units: add, remove, ownership
+   *  transfer, level-up, construction toggle (see UnitImpl). Keys the three memos below. */
+  public _myUnitsVersion = 0;
+  private readonly myUnitsMemo = new Map<
+    UnitType,
+    { version: number; list: Unit[] }
+  >();
+  private readonly myUnitCountMemo = new Map<
+    UnitType,
+    { version: number; count: number }
+  >();
+  private readonly myUnitsOwnedMemo = new Map<
+    UnitType,
+    { version: number; owned: number }
+  >();
+  public _tiles = new TileSet();
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
   private _expiredAlliances: Alliance[] = [];
@@ -90,6 +162,7 @@ export class PlayerImpl implements Player {
   private targets_: Target[] = [];
 
   private outgoingEmojis_: EmojiMessage[] = [];
+  private outgoingQuickChats_ = new Map<number, Tick>();
 
   private sentDonations: Donation[] = [];
 
@@ -102,8 +175,18 @@ export class PlayerImpl implements Player {
   public _outgoingAttacks: Attack[] = [];
   public _outgoingLandAttacks: Attack[] = [];
 
+  public _alliances: MutableAlliance[] = [];
+
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
+  private _disconnectSnapshot: DisconnectSnapshot | null = null;
+
+  /**
+   * Last PlayerUpdate emitted for this player on the worker→main channel.
+   * Used by GameImpl's tick loop to compute field-level diffs. Undefined on
+   * first emission (full snapshot sent).
+   */
+  public lastSentUpdate: PlayerUpdate | undefined;
 
   constructor(
     private mg: GameImpl,
@@ -119,64 +202,198 @@ export class PlayerImpl implements Player {
 
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
 
-  toUpdate(): PlayerUpdate {
-    const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
-      ar.recipient().id(),
-    );
+  /**
+   * Build a PlayerUpdate for the worker→main wire.
+   *
+   * The first call for a player returns the full snapshot. Subsequent calls
+   * return only fields that changed since the previous call (a partial
+   * `{ type, id, ...changedFields }`), or `null` if nothing changed.
+   *
+   * tilesOwned / gold / troops / goldEarned are excluded from partial
+   * updates (they churn for nearly every alive player every tick): when any
+   * of them changed, a `[smallID, tilesOwned, gold, troops, goldEarned]`
+   * quint is pushed to `statsOut` instead, which GameImpl drains into the
+   * transferable `packedPlayerUpdates` buffer. Attack troop counts likewise
+   * go to `attackTroopsOut` as `[smallID, direction, index, troops]` quads
+   * (→ `packedAttackUpdates`) instead of re-sending whole attack arrays.
+   *
+   * `lastSentUpdate` is updated to the full snapshot on every call.
+   */
+  toUpdate(
+    statsOut?: number[],
+    attackTroopsOut?: number[],
+  ): PlayerUpdate | null {
+    const full = this.toFullUpdate();
+    const prev = this.lastSentUpdate;
+    this.lastSentUpdate = full;
+    if (prev === undefined) return full;
+    if (
+      statsOut !== undefined &&
+      (prev.tilesOwned !== full.tilesOwned ||
+        prev.gold !== full.gold ||
+        prev.troops !== full.troops ||
+        prev.goldEarned !== full.goldEarned)
+    ) {
+      // goldEarned gets its own comparison: it can change even when gold
+      // nets back to its previous value within one tick (addGold followed
+      // by removeGold), and the quint must still flush then.
+      statsOut.push(
+        full.smallID!,
+        full.tilesOwned!,
+        Number(full.gold),
+        full.troops!,
+        Number(full.goldEarned),
+      );
+    }
+    if (attackTroopsOut !== undefined) {
+      packAttackTroopDeltas(
+        prev.outgoingAttacks,
+        full.outgoingAttacks,
+        full.smallID!,
+        ATTACK_DELTA_OUTGOING,
+        attackTroopsOut,
+      );
+      packAttackTroopDeltas(
+        prev.incomingAttacks,
+        full.incomingAttacks,
+        full.smallID!,
+        ATTACK_DELTA_INCOMING,
+        attackTroopsOut,
+      );
+    }
+    return diffPlayerUpdate(prev, full);
+  }
 
-    return {
-      type: GameUpdateType.Player,
-      clientID: this.clientID(),
-      name: this.name(),
-      displayName: this.displayName(),
-      id: this.id(),
-      team: this.team() ?? undefined,
-      smallID: this.smallID(),
-      playerType: this.type(),
-      isAlive: this.isAlive(),
-      isDisconnected: this.isDisconnected(),
-      tilesOwned: this.numTilesOwned(),
-      gold: this._gold,
-      troops: this.troops(),
-      allies: this.alliances().map((a) => a.other(this).smallID()),
-      embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
-      isTraitor: this.isTraitor(),
-      traitorRemainingTicks: this.getTraitorRemainingTicks(),
-      targets: this.targets().map((p) => p.smallID()),
-      outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this.outgoingAttacks().map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
-      incomingAttacks: this.incomingAttacks().map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
-      outgoingAllianceRequests: outgoingAllianceRequests,
-      alliances: this.alliances().map(
+  private toFullUpdate(): PlayerUpdate {
+    // Empty collections reuse shared singletons (EMPTY_*) so
+    // diffPlayerUpdate's reference fast paths hit and nothing is allocated.
+    // This runs for every player every tick; most collections are empty for
+    // most players. The singletons are never mutated — updates are
+    // structured-cloned before leaving the worker.
+    let outgoingAllianceRequests = EMPTY_STRING_ARRAY;
+    for (const ar of this.mg.allianceRequests) {
+      if (ar.requestor() === this) {
+        if (outgoingAllianceRequests === EMPTY_STRING_ARRAY) {
+          outgoingAllianceRequests = [];
+        }
+        outgoingAllianceRequests.push(ar.recipient().id());
+      }
+    }
+
+    const alliances = this.alliances();
+    let allies = EMPTY_NUMBER_ARRAY;
+    let allianceViews = EMPTY_ALLIANCE_VIEWS;
+    if (alliances.length > 0) {
+      allies = alliances.map((a) => a.other(this).smallID());
+      const extensionCutoff =
+        this.mg.ticks() + this.mg.config().allianceExtensionPromptOffset();
+      allianceViews = alliances.map(
         (a) =>
           ({
             id: a.id(),
             other: a.other(this).id(),
             createdAt: a.createdAt(),
             expiresAt: a.expiresAt(),
-            hasExtensionRequest:
-              a.expiresAt() <=
-              this.mg.ticks() +
-                this.mg.config().allianceExtensionPromptOffset(),
+            hasExtensionRequest: a.expiresAt() <= extensionCutoff,
           }) satisfies AllianceView,
-      ),
+      );
+    }
+
+    let embargoes = EMPTY_EMBARGOES;
+    if (this.embargoes.size > 0) {
+      embargoes = new Set<string>();
+      for (const id of this.embargoes.keys()) {
+        embargoes.add(id.toString());
+      }
+    }
+
+    let targets = EMPTY_NUMBER_ARRAY;
+    if (this.targets_.length > 0) {
+      const t = this.targets();
+      if (t.length > 0) {
+        targets = t.map((p) => p.smallID());
+      }
+    }
+
+    let outgoingEmojis = EMPTY_EMOJIS;
+    if (this.outgoingEmojis_.length > 0) {
+      const e = this.outgoingEmojis();
+      if (e.length > 0) {
+        outgoingEmojis = e;
+      }
+    }
+
+    const outgoingAttacks =
+      this._outgoingAttacks.length === 0
+        ? EMPTY_ATTACK_UPDATES
+        : this._outgoingAttacks.map((a) => {
+            return {
+              attackerID: a.attacker().smallID(),
+              targetID: a.target().smallID(),
+              troops: a.troops(),
+              id: a.id(),
+              retreating: a.retreating(),
+            } satisfies AttackUpdate;
+          });
+
+    let incomingAttacks = EMPTY_ATTACK_UPDATES;
+    if (this._incomingAttacks.length > 0) {
+      const incoming = this.incomingAttacks();
+      if (incoming.length > 0) {
+        incomingAttacks = incoming.map((a) => {
+          return {
+            attackerID: a.attacker().smallID(),
+            targetID: a.target().smallID(),
+            troops: a.troops(),
+            id: a.id(),
+            retreating: a.retreating(),
+          } satisfies AttackUpdate;
+        });
+      }
+    }
+
+    // OFM live standings: elimination info is stored on the player's stats
+    // (set live in the sim via mg.stats()), surfaced here so it rides the live
+    // PlayerUpdate every tick rather than only appearing in the game-end record.
+    const deathStats = this.mg.stats().getPlayerStats(this);
+
+    return {
+      type: GameUpdateType.Player,
+      clientID: this.clientID(),
+      name: this.name(),
+      displayName: this.displayName(),
+      clanTag: this.clanTag(),
+      nationFlag: this.nationFlag(),
+      id: this.id(),
+      team: this.team() ?? undefined,
+      smallID: this.smallID(),
+      playerType: this.type(),
+      isAlive: this.isAlive(),
+      isDisconnected: this.isDisconnected(),
+      killedBy: deathStats?.killedBy ?? null,
+      deathPosition: deathStats?.deathPosition ?? null,
+      tilesOwned: this.numTilesOwned(),
+      gold: this._gold,
+      tradeGold: this._tradeGold,
+      trainGold: this._trainGold,
+      piracyGold: this._piracyGold,
+      goldEarned: this._goldEarned,
+      troops: this.troops(),
+      allies: allies,
+      embargoes: embargoes,
+      isTraitor: this.isTraitor(),
+      traitorRemainingTicks: this.getTraitorRemainingTicks(),
+      inDoomsdayClock: this.inDoomsdayClock(),
+      isDecaying: this.isDecaying(),
+      markedDoomsdayClockTick: this.markedDoomsdayClockTick,
+      targets: targets,
+      outgoingEmojis: outgoingEmojis,
+      outgoingAttacks: outgoingAttacks,
+      incomingAttacks: incomingAttacks,
+      outgoingAllianceRequests: outgoingAllianceRequests,
+      alliances: allianceViews,
       hasSpawned: this.hasSpawned(),
+      spawnTile: this._spawnTile,
       betrayals: this._betrayalCount,
       lastDeleteUnitTick: this.lastDeleteUnitTick,
       isLobbyCreator: this.isLobbyCreator(),
@@ -193,7 +410,12 @@ export class PlayerImpl implements Player {
   displayName(): string {
     return this.playerInfo.displayName;
   }
-
+  clanTag(): string | null {
+    return this.playerInfo.clanTag;
+  }
+  nationFlag(): string | null {
+    return this.playerInfo.nationFlag;
+  }
   clientID(): ClientID | null {
     return this.playerInfo.clientID;
   }
@@ -206,59 +428,66 @@ export class PlayerImpl implements Player {
     return this.playerInfo.playerType;
   }
 
-  units(...types: UnitType[]): Unit[] {
-    const len = types.length;
-    if (len === 0) {
+  units(): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
+  units(
+    first?: UnitType | readonly UnitType[],
+    second?: UnitType,
+    third?: UnitType,
+  ): Unit[] {
+    if (first === undefined) {
       return this._units;
     }
 
-    // Fast paths for common small arity calls to avoid Set allocation.
-    if (len === 1) {
-      const t0 = types[0]!;
-      const out: Unit[] = [];
-      for (const u of this._units) {
-        if (u.type() === t0) out.push(u);
-      }
-      return out;
-    }
+    // Hot path. Matches are gathered into a reusable scratch buffer and
+    // copied out with an exact-size slice, so each call allocates exactly
+    // one right-sized result array. Fixed-arity parameters (rather than a
+    // rest parameter) avoid allocating an argument array per call.
+    const scratch = UNITS_SCRATCH;
+    let n = 0;
 
-    if (len === 2) {
-      const t0 = types[0]!;
-      const t1 = types[1]!;
-      if (t0 === t1) {
-        const out: Unit[] = [];
-        for (const u of this._units) {
-          if (u.type() === t0) out.push(u);
-        }
-        return out;
+    if (Array.isArray(first)) {
+      const types = first as readonly UnitType[];
+      if (types.length === 0) {
+        return this._units;
       }
-      const out: Unit[] = [];
+      const ts = TYPE_SET_SCRATCH;
+      ts.clear();
+      for (const t of types) {
+        ts.add(t);
+      }
+      for (const u of this._units) {
+        if (ts.has(u.type())) scratch[n++] = u;
+      }
+    } else if (second === undefined) {
+      // Single-type queries repeat heavily (warship heal, nation ship tracking,
+      // troop caps): memoised on the per-player units version; hits hand out a copy.
+      const memo = this.myUnitsMemo.get(first as UnitType);
+      if (memo !== undefined && memo.version === this._myUnitsVersion) {
+        return memo.list.slice();
+      }
+      for (const u of this._units) {
+        if (u.type() === first) scratch[n++] = u;
+      }
+      const list = scratch.slice(0, n);
+      this.myUnitsMemo.set(first as UnitType, {
+        version: this._myUnitsVersion,
+        list,
+      });
+      return list.slice();
+    } else if (third === undefined) {
       for (const u of this._units) {
         const t = u.type();
-        if (t === t0 || t === t1) out.push(u);
+        if (t === first || t === second) scratch[n++] = u;
       }
-      return out;
-    }
-
-    if (len === 3) {
-      const t0 = types[0]!;
-      const t1 = types[1]!;
-      const t2 = types[2]!;
-      // Keep semantics identical for duplicates in types by using direct comparisons.
-      const out: Unit[] = [];
+    } else {
       for (const u of this._units) {
         const t = u.type();
-        if (t === t0 || t === t1 || t === t2) out.push(u);
+        if (t === first || t === second || t === third) scratch[n++] = u;
       }
-      return out;
     }
-
-    const ts = new Set(types);
-    const out: Unit[] = [];
-    for (const u of this._units) {
-      if (ts.has(u.type())) out.push(u);
-    }
-    return out;
+    return scratch.slice(0, n);
   }
 
   private numUnitsConstructed: Partial<Record<UnitType, number>> = {};
@@ -270,32 +499,41 @@ export class PlayerImpl implements Player {
     }
   }
 
-  // Count of units built by the player, including construction
+  // Count of units built by the player, including those still under
+  // construction. recordUnitConstructed() is called in buildUnit() the moment a
+  // unit is created (while still under construction), so numUnitsConstructed
+  // already accounts for in-progress builds — don't re-count them.
   unitsConstructed(type: UnitType): number {
-    const built = this.numUnitsConstructed[type] ?? 0;
-    let constructing = 0;
-    for (const unit of this._units) {
-      if (unit.type() !== type) continue;
-      if (!unit.isUnderConstruction()) continue;
-      constructing++;
-    }
-    const total = constructing + built;
-    return total;
+    return this.numUnitsConstructed[type] ?? 0;
   }
 
   // Count of units owned by the player, not including construction
   unitCount(type: UnitType): number {
+    // Every train station asked for the owner's factory count every tick — a walk
+    // over the whole unit list per station (~2 % of a long headless game).
+    const memo = this.myUnitCountMemo.get(type);
+    if (memo !== undefined && memo.version === this._myUnitsVersion) {
+      return memo.count;
+    }
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
         total += unit.level();
       }
     }
+    this.myUnitCountMemo.set(type, {
+      version: this._myUnitsVersion,
+      count: total,
+    });
     return total;
   }
 
   // Count of units owned by the player, including construction
   unitsOwned(type: UnitType): number {
+    const memo = this.myUnitsOwnedMemo.get(type);
+    if (memo !== undefined && memo.version === this._myUnitsVersion) {
+      return memo.owned;
+    }
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
@@ -306,13 +544,21 @@ export class PlayerImpl implements Player {
         }
       }
     }
+    this.myUnitsOwnedMemo.set(type, {
+      version: this._myUnitsVersion,
+      owned: total,
+    });
     return total;
   }
 
   sharesBorderWith(other: Player | TerraNullius): boolean {
+    const map = this.mg.map();
+    const otherID = other.smallID();
+    const nbuf = NEIGHBOR_SCRATCH;
     for (const border of this._borderTiles) {
-      for (const neighbor of this.mg.map().neighbors(border)) {
-        if (this.mg.map().ownerID(neighbor) === other.smallID()) {
+      const n = map.neighbors4(border, nbuf);
+      for (let i = 0; i < n; i++) {
+        if (map.ownerID(nbuf[i]) === otherID) {
           return true;
         }
       }
@@ -324,27 +570,60 @@ export class PlayerImpl implements Player {
     return this._tiles.size;
   }
 
-  tiles(): ReadonlySet<TileRef> {
-    return new Set(this._tiles.values()) as Set<TileRef>;
+  tiles(): ReadonlyTileSet {
+    return this._tiles;
   }
 
-  borderTiles(): ReadonlySet<TileRef> {
+  borderTiles(): ReadonlyTileSet {
     return this._borderTiles;
   }
 
+  private nearbyMemo: {
+    version: number;
+    waterVersion: number;
+    result: (Player | TerraNullius)[];
+  } | null = null;
+
   nearby(): (Player | TerraNullius)[] {
+    // Nation AI asks several times per tick (maybeAttack, attackBestTarget,
+    // attackBots, ...) with no map change in between; the answer depends on
+    // tile ownership and fallout (covered by territoryVersion) and on the
+    // land/water/shoreline terrain. Live nuke floods mutate the latter through
+    // WaterManager on the raw GameMap — bypassing GameImpl's bump — so the
+    // map's waterVersion() is a second key, which every conversion advances.
+    const version = this.mg.territoryVersion();
+    const waterVersion = this.mg.map().waterVersion();
+    if (
+      this.nearbyMemo !== null &&
+      this.nearbyMemo.version === version &&
+      this.nearbyMemo.waterVersion === waterVersion
+    ) {
+      return this.nearbyMemo.result.slice();
+    }
+    const result = this.computeNearby();
+    this.nearbyMemo = { version, waterVersion, result };
+    return result.slice();
+  }
+
+  private computeNearby(): (Player | TerraNullius)[] {
     const ns: Set<Player | TerraNullius> = new Set();
-    for (const border of this.borderTiles()) {
-      for (const neighbor of this.mg.map().neighbors(border)) {
-        if (this.mg.map().isLand(neighbor)) {
-          const owner = this.mg.map().ownerID(neighbor);
-          if (owner !== this.smallID()) {
-            ns.add(
-              this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
-            );
-          }
+    const map = this.mg.map();
+    const smallID = this.smallID();
+    const visit = (neighbor: TileRef) => {
+      if (map.isLand(neighbor) && !map.isImpassable(neighbor)) {
+        if (!map.hasOwner(neighbor) && map.hasFallout(neighbor)) {
+          return;
+        }
+        const owner = map.ownerID(neighbor);
+        if (owner !== smallID) {
+          ns.add(
+            this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
+          );
         }
       }
+    };
+    for (const border of this.borderTiles()) {
+      map.forEachNeighbor(border, visit);
     }
     for (const n of this.shoreReachableNeighbors()) {
       ns.add(n);
@@ -358,21 +637,19 @@ export class PlayerImpl implements Player {
   private shoreReachableNeighbors(): Set<Player | TerraNullius> {
     const ns: Set<Player | TerraNullius> = new Set();
     const map = this.mg.map();
-    const shores = Array.from(this.borderTiles()).filter((t) => map.isShore(t));
-    const directions: [number, number][] = [
-      [0, -1],
-      [0, 1],
-      [-1, 0],
-      [1, 0],
-    ];
 
-    for (let i = 0; i < shores.length; i += 10) {
-      const border = shores[i];
+    let shoreIdx = 0;
+    for (const border of this.borderTiles()) {
+      if (!map.isShore(border)) continue;
+      // Visit every 10th shore tile.
+      if (shoreIdx++ % 10 !== 0) continue;
 
       const bx = map.x(border);
       const by = map.y(border);
 
-      for (const [dx, dy] of directions) {
+      for (let d = 0; d < 4; d++) {
+        const dx = SHORE_DIRECTIONS_DX[d];
+        const dy = SHORE_DIRECTIONS_DY[d];
         // Only follow directions that immediately enter water; land-adjacent
         // directions are already covered by the direct neighbors() loop.
         const x1 = bx + dx;
@@ -385,6 +662,7 @@ export class PlayerImpl implements Player {
         if (!map.isValidCoord(nx, ny)) continue;
         const tile = map.ref(nx, ny);
         if (!map.isLand(tile)) continue;
+        if (map.isImpassable(tile)) continue;
         if (!map.hasOwner(tile) && map.hasFallout(tile)) continue;
         const owner = map.ownerID(tile);
         if (owner !== this.smallID()) {
@@ -462,9 +740,7 @@ export class PlayerImpl implements Player {
   }
 
   alliances(): MutableAlliance[] {
-    return this.mg.alliances_.filter(
-      (a) => a.requestor() === this || a.recipient() === this,
-    );
+    return this._alliances;
   }
 
   expiredAlliances(): Alliance[] {
@@ -590,6 +866,44 @@ export class PlayerImpl implements Player {
 
     // Record stats (only for real Humans)
     this.mg.stats().betray(this);
+  }
+
+  // A dead player is never "in doomsday clock": nothing clears the mark on death
+  // (the execution only processes alive contenders), so gate on isAlive() to
+  // avoid a stuck skull/panel and per-tick update churn for eliminated players.
+  inDoomsdayClock(): boolean {
+    return this.isAlive() && this.markedDoomsdayClockTick >= 0;
+  }
+
+  // Ticks spent continuously below the doomsday-clock bar (0 when not marked or dead).
+  doomsdayClockTicks(): number {
+    return this.inDoomsdayClock()
+      ? this.mg.ticks() - this.markedDoomsdayClockTick
+      : 0;
+  }
+
+  enterDoomsdayClock(): void {
+    if (this.markedDoomsdayClockTick < 0) {
+      this.markedDoomsdayClockTick = this.mg.ticks();
+    }
+  }
+
+  clearDoomsdayClock(): void {
+    this.markedDoomsdayClockTick = -1;
+    this.rottedAtTick = -1;
+  }
+
+  markRotted(): void {
+    this.rottedAtTick = this.mg.ticks();
+  }
+
+  // Territory actively rotting. Stamped by the execution rather than derived from
+  // troops vs the floor: that is a knife-edge equality (the drain lands exactly ON
+  // the floor) and the floor moves as rot shrinks the cap, so a client-side copy
+  // flickers.
+  isDecaying(): boolean {
+    if (!this.inDoomsdayClock() || this.rottedAtTick < 0) return false;
+    return this.mg.ticks() - this.rottedAtTick <= DECAY_CUE_GRACE_TICKS;
   }
 
   betrayals(): number {
@@ -735,7 +1049,25 @@ export class PlayerImpl implements Player {
     return true;
   }
 
+  canSendQuickChat(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
+    const lastSentAt = this.outgoingQuickChats_.get(recipient.smallID());
+    return (
+      lastSentAt === undefined ||
+      this.mg.ticks() - lastSentAt >= this.mg.config().quickChatCooldown()
+    );
+  }
+
+  recordQuickChat(recipient: Player): void {
+    this.outgoingQuickChats_.set(recipient.smallID(), this.mg.ticks());
+  }
+
   canDonateGold(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
@@ -763,6 +1095,9 @@ export class PlayerImpl implements Player {
   }
 
   canDonateTroops(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
@@ -790,50 +1125,42 @@ export class PlayerImpl implements Player {
   }
 
   donateTroops(recipient: Player, troops: number): boolean {
+    // Defense-in-depth: canDonateTroops already checks this, but guard here too
+    // to prevent self-donation if the method is called directly.
+    if (recipient === this) return false;
     if (troops <= 0) return false;
     const removed = this.removeTroops(troops);
     if (removed === 0) return false;
     recipient.addTroops(removed);
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    this.mg.displayMessage(
-      "events_display.sent_troops_to_player",
-      MessageType.SENT_TROOPS_TO_PLAYER,
-      this.id(),
-      undefined,
-      { troops: renderTroops(troops), name: recipient.displayName() },
-    );
-    this.mg.displayMessage(
-      "events_display.received_troops_from_player",
-      MessageType.RECEIVED_TROOPS_FROM_PLAYER,
-      recipient.id(),
-      undefined,
-      { troops: renderTroops(troops), name: this.displayName() },
-    );
+    this.mg.addUpdate({
+      type: GameUpdateType.DonateEvent,
+      donationType: "troops",
+      senderId: this.id(),
+      recipientId: recipient.id(),
+      amount: BigInt(removed),
+    });
     return true;
   }
 
   donateGold(recipient: Player, gold: Gold): boolean {
+    // Defense-in-depth: canDonateGold already checks this, but guard here too
+    // to prevent self-donation if the method is called directly.
+    if (recipient === this) return false;
     if (gold <= 0n) return false;
     const removed = this.removeGold(gold);
     if (removed === 0n) return false;
     recipient.addGold(removed);
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    this.mg.displayMessage(
-      "events_display.sent_gold_to_player",
-      MessageType.SENT_GOLD_TO_PLAYER,
-      this.id(),
-      undefined,
-      { gold: renderNumber(gold), name: recipient.displayName() },
-    );
-    this.mg.displayMessage(
-      "events_display.received_gold_from_player",
-      MessageType.RECEIVED_GOLD_FROM_PLAYER,
-      recipient.id(),
-      gold,
-      { gold: renderNumber(gold), name: this.displayName() },
-    );
+    this.mg.addUpdate({
+      type: GameUpdateType.DonateEvent,
+      donationType: "gold",
+      senderId: this.id(),
+      recipientId: recipient.id(),
+      amount: removed,
+    });
     return true;
   }
 
@@ -943,6 +1270,9 @@ export class PlayerImpl implements Player {
   }
 
   isFriendly(other: Player, treatAFKFriendly: boolean = false): boolean {
+    if (other === this) {
+      return true;
+    }
     if (other.isDisconnected() && !treatAFKFriendly) {
       return false;
     }
@@ -953,8 +1283,41 @@ export class PlayerImpl implements Player {
     return this._gold;
   }
 
+  tradeGold(): Gold {
+    return this._tradeGold;
+  }
+
+  addTradeGold(toAdd: Gold): void {
+    this._tradeGold += toAdd;
+  }
+
+  trainGold(): Gold {
+    return this._trainGold;
+  }
+
+  addTrainGold(toAdd: Gold): void {
+    this._trainGold += toAdd;
+  }
+
+  piracyGold(): Gold {
+    return this._piracyGold;
+  }
+
+  addPiracyGold(toAdd: Gold): void {
+    this._piracyGold += toAdd;
+  }
+
+  goldEarned(): Gold {
+    return this._goldEarned;
+  }
+
   addGold(toAdd: Gold, tile?: TileRef): void {
     this._gold += toAdd;
+    // Every gold grant flows through here (workers, trade, trains, piracy,
+    // conquest, donations) — track lifetime income for the leaderboard's
+    // "Gold Income/min" column. Starting gold is assigned directly to the
+    // field in the constructor and deliberately does not count as income.
+    this._goldEarned += toAdd;
     if (tile) {
       this.mg.addUpdate({
         type: GameUpdateType.BonusEvent,
@@ -1023,6 +1386,7 @@ export class PlayerImpl implements Player {
       params,
     );
     this._units.push(b);
+    this._myUnitsVersion++;
     this.recordUnitConstructed(type);
     this.removeGold(cost);
     this.removeTroops("troops" in params ? (params.troops ?? 0) : 0);
@@ -1151,13 +1515,27 @@ export class PlayerImpl implements Player {
 
       const buildNew = canBuild !== false && canUpgrade === false;
 
+      // Cumulative bulk-upgrade totals. Each upgrade raises the unit's level
+      // and the constructed count, so step n costs the same as if the player
+      // already had n extra units — cost(mg, this, n).
+      let upgradeCosts: Gold[] | undefined;
+      if (canUpgrade !== false) {
+        upgradeCosts = new Array<Gold>(MAX_UPGRADE_AMOUNT);
+        let total = 0n;
+        for (let n = 0; n < MAX_UPGRADE_AMOUNT; n++) {
+          total += config.unitInfo(u).cost(mg, this, n);
+          upgradeCosts[n] = total;
+        }
+      }
+
       result[i] = {
         type: u,
         canBuild,
         canUpgrade,
         cost,
+        upgradeCosts,
         overlappingRailroads: buildNew
-          ? rail.overlappingRailroads(canBuild as TileRef)
+          ? rail.overlappingRailroads(u, canBuild as TileRef)
           : [],
         ghostRailPaths: buildNew
           ? rail.computeGhostRailPaths(u, canBuild as TileRef)
@@ -1225,9 +1603,15 @@ export class PlayerImpl implements Player {
     if (mg.isSpawnImmunityActive()) {
       return false;
     }
+    // Impassable terrain cannot be nuked.
+    if (mg.isImpassable(tile)) {
+      return false;
+    }
     const owner = this.mg.owner(tile);
-    // Allow nuking teammates after the game is over (aftergame fun)
-    const gameOver = mg.getWinner() !== null;
+    // Allow nuking teammates after the game is over (aftergame fun), but not in singleplayer.
+    const gameOver =
+      mg.getWinner() !== null &&
+      mg.config().gameConfig().gameType !== GameType.Singleplayer;
     if (owner.isPlayer()) {
       if (this.isOnSameTeam(owner) && !gameOver) {
         return false;
@@ -1255,14 +1639,15 @@ export class PlayerImpl implements Player {
     }
 
     // only get missilesilos that are not on cooldown and not under construction
-    const bestSilo = findClosestBy(
-      this.units(UnitType.MissileSilo),
-      (silo) => mg.manhattanDist(silo.tile(), tile),
+    const readySilos = this.units(UnitType.MissileSilo).filter(
       (silo) =>
         silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
     );
-
-    return bestSilo?.tile() ?? false;
+    readySilos.sort(
+      (a, b) =>
+        mg.manhattanDist(a.tile(), tile) - mg.manhattanDist(b.tile(), tile),
+    );
+    return readySilos[0]?.tile() ?? false;
   }
 
   portSpawn(tile: TileRef, validTiles: TileRef[] | null): TileRef | false {
@@ -1308,7 +1693,7 @@ export class PlayerImpl implements Player {
   }
 
   landBasedUnitSpawn(tile: TileRef): TileRef | false {
-    return this.mg.isLand(tile) ? tile : false;
+    return this.mg.isLand(tile) && !this.mg.isImpassable(tile) ? tile : false;
   }
 
   landBasedStructureSpawn(
@@ -1336,24 +1721,57 @@ export class PlayerImpl implements Player {
       undefined,
       true,
     );
-    const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
+    // Flood the player's own tiles inside the radius. Same traversal as
+    // GameMap.bfs (stack, N/S/W/E push order) so `nearbyTiles` comes out in
+    // the same order — the stable sort below keeps that order for ties and
+    // callers take the first entry — but on the shared visited array instead
+    // of a Set per call (nation placement calls this per candidate tile).
+    const map = this.mg.map();
+    const w = map.width();
+    const cx = tile % w;
+    const cy = (tile / w) | 0;
+    const smallID = this.smallID();
+    const inside = (t: TileRef): boolean => {
+      const dx = (t % w) - cx;
+      const dy = ((t / w) | 0) - cy;
       return (
-        this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
-        gm.ownerID(t) === this.smallID()
+        dx * dx + dy * dy < searchRadiusSquared && map.ownerID(t) === smallID
       );
-    });
-    const validSet: Set<TileRef> = new Set(nearbyTiles);
+    };
+    const scratch = tileTraversalScratch(this.mg);
+    const gen = bumpTraversalGeneration(scratch);
+    const visited = scratch.visited;
+    const stack = scratch.stack;
+    stack.length = 0;
+    const nearbyTiles: TileRef[] = [];
+    if (inside(tile)) {
+      visited[tile] = gen;
+      nearbyTiles.push(tile);
+      stack.push(tile);
+    }
+    const visit = (n: TileRef) => {
+      if (visited[n] !== gen && inside(n)) {
+        visited[n] = gen;
+        nearbyTiles.push(n);
+        stack.push(n);
+      }
+    };
+    while (stack.length > 0) {
+      map.forEachNeighbor(stack.pop()!, visit);
+    }
 
     const minDistSquared = this.mg.config().structureMinDist() ** 2;
+    const valid: TileRef[] = [];
     for (const t of nearbyTiles) {
+      let blocked = false;
       for (const { unit } of nearbyUnits) {
         if (this.mg.euclideanDistSquared(unit.tile(), t) < minDistSquared) {
-          validSet.delete(t);
+          blocked = true;
           break;
         }
       }
+      if (!blocked) valid.push(t);
     }
-    const valid = Array.from(validSet);
     valid.sort(
       (a, b) =>
         this.mg.euclideanDistSquared(a, tile) -
@@ -1367,6 +1785,10 @@ export class PlayerImpl implements Player {
       ? targetTile
       : false;
   }
+  tileChangeVersion(): number {
+    return this._tileChangeVersion;
+  }
+
   lastTileChange(): Tick {
     return this._lastTileChange;
   }
@@ -1375,8 +1797,32 @@ export class PlayerImpl implements Player {
     return this._isDisconnected;
   }
 
-  markDisconnected(isDisconnected: boolean): void {
+  markDisconnected(
+    isDisconnected: boolean,
+    snapshot?: DisconnectSnapshot,
+  ): void {
     this._isDisconnected = isDisconnected;
+    if (isDisconnected) {
+      if (this._disconnectSnapshot === null) {
+        const team = this.team();
+        this._disconnectSnapshot = snapshot ?? {
+          currentTick: this.mg.ticks(),
+          teamTiles: team ? this.mg.teamTilesOwned(team) : 0,
+          totalLand: this.mg.totalLandTiles(),
+          wasAlive: this.isAlive(),
+        };
+      }
+    } else {
+      this._disconnectSnapshot = null;
+    }
+  }
+
+  disconnectSnapshot(): DisconnectSnapshot | null {
+    return this._disconnectSnapshot;
+  }
+
+  disconnectedAtTick(): number | null {
+    return this._disconnectSnapshot?.currentTick ?? null;
   }
 
   hash(): number {
@@ -1448,11 +1894,10 @@ export class PlayerImpl implements Player {
     player: Player,
     treatAFKFriendly: boolean = false,
   ): boolean {
-    if (this.type() === PlayerType.Bot) {
-      // Bots are not affected by immunity
+    if (this.type() !== PlayerType.Human) {
+      // Only human attackers respect PVP immunity
       return !this.isFriendly(player, treatAFKFriendly);
     }
-    // Humans and Nations respect immunity
     return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
   }
 
@@ -1466,7 +1911,7 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    if (!this.mg.isLand(tile)) {
+    if (!this.mg.isLand(tile) || this.mg.isImpassable(tile)) {
       return false;
     }
     if (this.mg.hasOwner(tile)) {
@@ -1475,7 +1920,7 @@ export class PlayerImpl implements Player {
       for (const t of this.mg.bfs(
         tile,
         andFN(
-          (gm, t) => !gm.hasOwner(t) && gm.isLand(t),
+          (gm, t) => !gm.hasOwner(t) && gm.isLand(t) && !gm.isImpassable(t),
           manhattanDistFN(tile, 200),
         ),
       )) {

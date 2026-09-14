@@ -104,8 +104,9 @@ export class NationWarshipBehavior {
       .units(UnitType.TransportShip)
       .forEach((u) => this.trackedTransportShips.add(u));
 
-    // Iterate tracked transport ships; if it got destroyed by an enemy: retaliate
-    for (const ship of Array.from(this.trackedTransportShips)) {
+    // Iterate tracked transport ships; if it got destroyed by an enemy:
+    // retaliate. Deleting the current entry while iterating a Set is safe.
+    for (const ship of this.trackedTransportShips) {
       if (!ship.isActive()) {
         // Distinguish between arrival/retreat and enemy destruction
         if (ship.wasDestroyedByEnemy() && ship.destroyer() !== undefined) {
@@ -127,8 +128,9 @@ export class NationWarshipBehavior {
       .units(UnitType.TradeShip)
       .forEach((u) => this.trackedTradeShips.add(u));
 
-    // Iterate tracked trade ships; if we no longer own it, it was captured: retaliate
-    for (const ship of Array.from(this.trackedTradeShips)) {
+    // Iterate tracked trade ships; if we no longer own it, it was captured:
+    // retaliate. Deleting the current entry while iterating a Set is safe.
+    for (const ship of this.trackedTradeShips) {
       if (!ship.isActive()) {
         this.trackedTradeShips.delete(ship);
         continue;
@@ -143,21 +145,21 @@ export class NationWarshipBehavior {
 
   private trackIncomingTransportsAndRetaliate(): void {
     // Add any transports which are targeting us to our tracking map
-    this.game
-      .units(UnitType.TransportShip)
-      .filter((p) => {
-        const target = p.targetTile();
-        return (
-          target &&
-          p.isActive() &&
-          !p.transportShipState().isRetreating &&
-          this.game.ownerID(target) === this.player?.smallID() &&
-          p.owner().smallID() !== this.player?.smallID()
-        );
-      })
-      .forEach((p) => this.trackedIncomingTransportShips.add(p));
+    for (const p of this.game.units(UnitType.TransportShip)) {
+      const target = p.targetTile();
+      if (
+        target &&
+        p.isActive() &&
+        !p.transportShipState().isRetreating &&
+        this.game.ownerID(target) === this.player?.smallID() &&
+        p.owner().smallID() !== this.player?.smallID()
+      ) {
+        this.trackedIncomingTransportShips.add(p);
+      }
+    }
 
-    for (const transport of Array.from(this.trackedIncomingTransportShips)) {
+    // Deleting the current entry while iterating a Set is safe.
+    for (const transport of this.trackedIncomingTransportShips) {
       const target = transport.targetTile();
       if (
         !transport.isActive() ||

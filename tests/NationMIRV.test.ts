@@ -37,9 +37,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const attacker = game.player("attacker_id");
     const nation = game.player("nation_id");
@@ -167,9 +164,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const dominantPlayer = game.player("dominant_id");
     const nation = game.player("nation_id");
@@ -342,9 +336,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const steamroller = game.player("steamroller_id");
     const secondPlayer = game.player("second_id");
@@ -502,9 +493,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const steamroller = game.player("steamroller_id");
     const secondPlayer = game.player("second_id");
@@ -600,6 +588,7 @@ describe("Nation MIRV Retaliation", () => {
   });
 
   test("nation launches MIRV to prevent team victory when team approaches victory denial threshold (targets biggest team member)", async () => {
+    // 70% share: above the Medium threshold (65%), below the old team-only 80%.
     // Setup game
     const teamPlayer1Info = new PlayerInfo(
       "team_player_1",
@@ -637,9 +626,6 @@ describe("Nation MIRV Retaliation", () => {
     // Players already added via setup() with Team mode and shared clan for humans
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const teamPlayer1 = game.player("team1_id");
     const teamPlayer2 = game.player("team2_id");
@@ -667,7 +653,7 @@ describe("Nation MIRV Retaliation", () => {
     // Give team players a large amount of territory to exceed team threshold,
     // but skew so teamPlayer1 is clearly the largest member
     const totalLandTiles = game.map().numLandTiles();
-    const teamTargetTiles = Math.floor(totalLandTiles * 0.82);
+    const teamTargetTiles = Math.floor(totalLandTiles * 0.7);
 
     let conqueredTiles = 0;
     for (
@@ -709,7 +695,8 @@ describe("Nation MIRV Retaliation", () => {
     const teamTerritory =
       teamPlayer1.numTilesOwned() + teamPlayer2.numTilesOwned();
     const teamShare = teamTerritory / game.map().numLandTiles();
-    expect(teamShare).toBeGreaterThan(0.8); //
+    expect(teamShare).toBeGreaterThan(0.65);
+    expect(teamShare).toBeLessThan(0.8);
 
     // Track MIRVs before nation considers team victory denial
     const mirvCountBefore = nation.units(UnitType.MIRV).length;

@@ -1,5 +1,9 @@
 {
+  "id": "Achiran",
   "name": "Achiran",
+  "translation_key": "map.achiran",
+  "categories": ["fictional", "europe"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [785, 985],
@@ -21,5 +25,6 @@
       "flag": "ie",
       "name": "Achill"
     }
-  ]
+  ],
+  "themes": ["europe", "scary"]
 }

@@ -1,6 +1,7 @@
 import {
   Execution,
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -20,12 +21,18 @@ export class SpawnExecution implements Execution {
   private random: PseudoRandom;
   active: boolean = true;
   private mg: Game;
+  private queuedDuringSpawnPhase = false;
   private static readonly MAX_SPAWN_TRIES = 1_000;
+  private static readonly RELAX_MIN_DIST_AT = 750;
 
   constructor(
     gameID: GameID,
     private playerInfo: PlayerInfo,
     public tile?: TileRef,
+    // True only for spawns built from a client's spawn intent. Internal
+    // callers (PlayerSpawner, NationExecution) are trusted and place players
+    // deliberately, including at the end of the spawn phase; a client may not.
+    private fromIntent: boolean = false,
   ) {
     this.random = new PseudoRandom(
       simpleHash(playerInfo.id) + simpleHash(gameID),
@@ -34,13 +41,18 @@ export class SpawnExecution implements Execution {
 
   init(mg: Game, ticks: number) {
     this.mg = mg;
+    this.queuedDuringSpawnPhase = mg.inSpawnPhase();
   }
 
   tick(ticks: number) {
     this.active = false;
 
-    if (!this.mg.inSpawnPhase()) {
-      this.active = false;
+    // Security: `tile` arrives straight off a spawn intent. A fractional or
+    // out-of-range ref indexes past the terrain buffers, so downstream lookups
+    // read back undefined instead of failing. Reject it before relinquishing
+    // any territory, so a malformed intent is a clean no-op on every client.
+    if (this.tile !== undefined && !this.mg.isValidRef(this.tile)) {
+      console.warn(`SpawnExecution: invalid spawn tile ${this.tile}`);
       return;
     }
 
@@ -51,16 +63,32 @@ export class SpawnExecution implements Execution {
       player = this.mg.addPlayer(this.playerInfo);
     }
 
+    // Security: a client's spawn intent is only honoured if it was *issued*
+    // during the spawn phase. Gating on the phase at tick time is wrong in
+    // both directions — an intent sent on the final spawn-phase tick runs a
+    // tick later and would be rejected, while checking hasSpawned() instead
+    // lets a player who never picked drop into a live game at a tile of their
+    // choosing. init() still sees the phase for a last-tick pick but not for
+    // anything sent afterwards, and runs identically on every client, so a
+    // rejected intent is a deterministic no-op rather than a desync.
+    if (this.fromIntent && !this.queuedDuringSpawnPhase) {
+      return;
+    }
+
     // Security: If random spawn is enabled, prevent players from re-rolling their spawn location
     if (this.mg.config().isRandomSpawn() && player.hasSpawned()) {
       return;
     }
 
-    player.tiles().forEach((t) => player.relinquish(t));
-    const spawn = this.getSpawn(this.tile);
+    const prevTiles = Array.from(player.tiles());
+    prevTiles.forEach((t) => player.relinquish(t));
+    const spawn = this.getSpawn(
+      this.mg.config().isRandomSpawn() ? undefined : this.tile,
+    );
 
     if (!spawn) {
       console.warn(`SpawnExecution: cannot spawn ${this.playerInfo.name}`);
+      prevTiles.forEach((t) => player.conquer(t));
       return;
     }
 
@@ -76,6 +104,15 @@ export class SpawnExecution implements Execution {
     }
 
     player.setSpawnTile(spawn.center);
+
+    if (
+      this.mg.config().gameConfig().gameType === GameType.Singleplayer &&
+      this.playerInfo.playerType === PlayerType.Human
+    ) {
+      // In singleplayer, spawn ends when player selects
+      // a spawn location.
+      this.mg.endSpawnPhase();
+    }
   }
 
   isActive(): boolean {
@@ -113,24 +150,26 @@ export class SpawnExecution implements Execution {
         continue;
       }
 
-      const isOtherPlayerSpawnedNearby = this.mg
-        .allPlayers()
-        .filter((player) => player.id() !== this.playerInfo.id)
-        .some((player) => {
-          const spawnTile = player.spawnTile();
+      if (tries <= SpawnExecution.RELAX_MIN_DIST_AT) {
+        const isOtherPlayerSpawnedNearby = this.mg
+          .allPlayers()
+          .filter((player) => player.id() !== this.playerInfo.id)
+          .some((player) => {
+            const spawnTile = player.spawnTile();
 
-          if (spawnTile === undefined) {
-            return false;
-          }
+            if (spawnTile === undefined) {
+              return false;
+            }
 
-          return (
-            this.mg.manhattanDist(spawnTile, center) <
-            this.mg.config().minDistanceBetweenPlayers()
-          );
-        });
+            return (
+              this.mg.manhattanDist(spawnTile, center) <
+              this.mg.config().minDistanceBetweenPlayers()
+            );
+          });
 
-      if (isOtherPlayerSpawnedNearby) {
-        continue;
+        if (isOtherPlayerSpawnedNearby) {
+          continue;
+        }
       }
 
       const tiles = getSpawnTiles(this.mg, center, true);

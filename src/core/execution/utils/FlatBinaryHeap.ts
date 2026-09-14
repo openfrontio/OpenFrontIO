@@ -43,12 +43,11 @@ export class FlatBinaryHeap {
     this.tiles[i] = tile;
   }
 
-  //remove tiles
-  dequeue(): [TileRef, number] {
+  /** remove and return the lowest-priority tile (no per-call allocation) */
+  dequeue(): TileRef {
     if (this.len === 0) throw new Error("heap empty");
 
     const topTile = this.tiles[0];
-    const topPri = this.pri[0];
 
     const lastPri = this.pri[--this.len];
     const lastTile = this.tiles[this.len];
@@ -68,7 +67,7 @@ export class FlatBinaryHeap {
     }
     this.pri[i] = lastPri;
     this.tiles[i] = lastTile;
-    return [topTile, topPri];
+    return topTile;
   }
 
   /** double the underlying storage */

@@ -3,9 +3,7 @@ import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-
-const config = getServerConfigFromServer();
+import { ServerEnv } from "./ServerEnv";
 
 export function getOtelResource() {
   return resourceFromAttributes({
@@ -16,14 +14,14 @@ export function getOtelResource() {
 }
 
 export function getPromLabels() {
+  const workerId = ServerEnv.workerId();
   return {
-    "service.instance.id": process.env.HOSTNAME,
-    "openfront.environment": config.env(),
-    "openfront.host": process.env.HOST,
-    "openfront.domain": process.env.DOMAIN,
-    "openfront.subdomain": process.env.SUBDOMAIN,
-    "openfront.component": process.env.WORKER_ID
-      ? "Worker " + process.env.WORKER_ID
-      : "Master",
+    "service.instance.id": ServerEnv.hostname(),
+    "openfront.environment": ServerEnv.env(),
+    "openfront.host": ServerEnv.host(),
+    "openfront.domain": ServerEnv.domain(),
+    "openfront.subdomain": ServerEnv.subdomain(),
+    "openfront.component":
+      workerId !== undefined ? "Worker " + workerId : "Master",
   };
 }

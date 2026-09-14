@@ -4,7 +4,6 @@ import { parse } from "node-html-parser";
 import path from "path";
 import type { Logger } from "winston";
 import { z } from "zod";
-import type { ServerConfig } from "../core/configuration/Config";
 import { GAME_ID_REGEX, GameInfo } from "../core/Schemas";
 import { replacer } from "../core/Util";
 import type { GameManager } from "./GameManager";
@@ -16,17 +15,19 @@ import {
 } from "./GamePreviewBuilder";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { getAppShellContent, setHtmlNoCacheHeaders } from "./RenderHtml";
+import { ServerEnv } from "./ServerEnv";
 
-const requestOrigin = (req: Request, config: ServerConfig): string => {
+const requestOrigin = (req: Request): string => {
   const protoHeader = (req.headers["x-forwarded-proto"] as string) ?? "";
   const proto = protoHeader.split(",")[0]?.trim() || req.protocol || "https";
-  const host = req.get("host") ?? `${config.subdomain()}.${config.domain()}`;
+  const host =
+    req.get("host") ?? `${ServerEnv.subdomain()}.${ServerEnv.domain()}`;
 
   // Force https only for the configured public domain (and its subdomains).
   // This avoids hardcoding hostnames while ensuring we don't force https on
   // localhost or arbitrary custom hosts.
   const hostname = host.split(":")[0].toLowerCase();
-  const domain = config.domain().toLowerCase();
+  const domain = ServerEnv.domain().toLowerCase();
   const forceHttps = hostname === domain || hostname.endsWith(`.${domain}`);
 
   return `${forceHttps ? "https" : proto}://${host}`;
@@ -35,12 +36,11 @@ const requestOrigin = (req: Request, config: ServerConfig): string => {
 export function registerGamePreviewRoute(opts: {
   app: Express;
   gm: GameManager;
-  config: ServerConfig;
   workerId: number;
   log: Logger;
   baseDir: string;
 }) {
-  const { app, gm, config, log, baseDir } = opts;
+  const { app, gm, log, baseDir } = opts;
 
   const gameIDSchema = z.string().regex(GAME_ID_REGEX);
 
@@ -52,11 +52,11 @@ export function registerGamePreviewRoute(opts: {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 1500);
     try {
-      const apiDomain = config.jwtIssuer();
+      const apiDomain = ServerEnv.jwtIssuer();
       const encodedID = encodeURIComponent(gameID);
       const response = await fetch(`${apiDomain}/game/${encodedID}`, {
         headers: {
-          "x-api-key": config.apiKey(),
+          "x-api-key": ServerEnv.apiKey(),
         },
         signal: controller.signal,
       });
@@ -99,11 +99,11 @@ export function registerGamePreviewRoute(opts: {
         return res.redirect(302, "/");
       }
 
-      const origin = requestOrigin(req, config);
+      const origin = requestOrigin(req);
       const meta = await buildPreview(
         gameID,
         origin,
-        config.workerPath(gameID),
+        ServerEnv.workerPath(gameID),
         lobby,
         publicInfo,
       );

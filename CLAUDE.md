@@ -11,8 +11,8 @@ npm run start:client     # Client only
 npm run start:server-dev # Server only
 npm test                 # Run all tests (Vitest)
 npm run test:coverage    # Tests with coverage
-npm run lint             # ESLint
-npm run lint:fix         # ESLint with auto-fix
+npm run lint             # Oxlint + ESLint
+npm run lint:fix         # Oxlint + ESLint with auto-fix
 npm run format           # Prettier (default formatter during Oxfmt migration)
 npm run format:oxfmt     # Oxfmt (opt-in incremental migration formatter)
 npm run build-prod       # Production build
@@ -46,6 +46,8 @@ The game simulation runs **on each client**, not the server. The server only rel
 6. Core sends **GameUpdates** back to client → client renders
 
 Intents and all wire messages are Zod-validated schemas defined in `src/core/Schemas.ts`.
+Every WebSocket frame is a compact binary encoding of those schemas
+(`src/core/ZbinWire.ts`, library docs in `zbin/README.md`). HTTP stays JSON.
 
 ### CDN / Static Assets
 
@@ -62,6 +64,7 @@ The game server only serves `index.html` and the WebSocket. All other assets (JS
 | `src/server/Master.ts`      | Lobby and game registry                |
 | `tests/util/Setup.ts`       | Test helper — creates test games       |
 | `docs/Architecture.md`      | Architecture overview                  |
+| `zbin/README.md`            | Binary wire format for zod schemas     |
 | `docs/Auth.md`              | JWT/auth flow                          |
 | `docs/API.md`               | Public API endpoints                   |
 | `vite.config.ts`            | Build config, CDN handling             |

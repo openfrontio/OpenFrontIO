@@ -1,7 +1,9 @@
 {
+  "categories": ["europe"],
+  "id": "GatewayToTheAtlantic",
   "map": {
     "height": 1968,
-    "num_land_tiles": 2239818,
+    "num_land_tiles": 2239824,
     "width": 2216
   },
   "map16x": {
@@ -11,10 +13,11 @@
   },
   "map4x": {
     "height": 984,
-    "num_land_tiles": 554983,
+    "num_land_tiles": 554984,
     "width": 1108
   },
-  "name": "GatewayToTheAtlantic",
+  "multiplayer_frequency": 5,
+  "name": "Gateway to the Atlantic",
   "nations": [
     {
       "coordinates": [2161, 420],
@@ -113,8 +116,8 @@
     },
     {
       "coordinates": [1374, 926],
-      "flag": "catalonia",
-      "name": "Crown of Aragon"
+      "flag": "Crown Of Aragon",
+      "name": "Kingdom of Aragon"
     },
     {
       "coordinates": [1695, 119],
@@ -151,5 +154,7 @@
       "flag": "Holy Roman Empire",
       "name": "Holy Roman Empire"
     }
-  ]
+  ],
+  "themes": ["europe"],
+  "translation_key": "map.gatewaytotheatlantic"
 }

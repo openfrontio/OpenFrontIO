@@ -1,5 +1,11 @@
 {
+  "id": "Luna",
   "name": "Luna",
+  "translation_key": "map.luna",
+  "categories": ["cosmic"],
+  "team_frequency": 15,
+  "special_team_count": 2,
+  "forced_modifiers": ["isWaterNukes:50"],
   "nations": [
     {
       "coordinates": [265, 662],
@@ -46,7 +52,6 @@
       "flag": "us",
       "name": "Artemis II"
     },
-
     {
       "coordinates": [515, 170],
       "flag": "Russian SSR",
@@ -57,7 +62,6 @@
       "flag": "Russian SSR",
       "name": "Luna 21"
     },
-
     {
       "coordinates": [1030, 790],
       "flag": "Russian SSR",
@@ -83,7 +87,6 @@
       "flag": "Russian SSR",
       "name": "Luna 1"
     },
-
     {
       "coordinates": [672, 2323],
       "flag": "cn",
@@ -104,13 +107,11 @@
       "flag": "cn",
       "name": "Chang'e 6"
     },
-
     {
       "coordinates": [830, 745],
       "flag": "jp",
       "name": "S.L.I.M."
     },
-
     {
       "coordinates": [400, 3360],
       "flag": "in",
@@ -121,22 +122,31 @@
       "flag": "in",
       "name": "Chandrayaan 1"
     },
-
     {
       "coordinates": [755, 3035],
       "flag": "",
-      "name": "T▆p░S▅cr▅t░M▊l▊t▅r▆░B▅s▅"
+      "name": "T0Þ $e¢®ët Mi|¡tªr¥ ß@§£"
     },
     {
       "coordinates": [628, 921],
-      "flag": "",
-      "name": "▊"
+      "flag": "custom/luna_monolith",
+      "name": "ΜΟΝΟʟΙȚΗ"
     }
   ],
   "teamGameSpawnAreas": {
     "2": [
-      { "x": 0, "y": 0, "width": 1308, "height": 1754 },
-      { "x": 0, "y": 1754, "width": 1308, "height": 1754 }
+      {
+        "x": 0,
+        "y": 0,
+        "width": 1308,
+        "height": 1754
+      },
+      {
+        "x": 0,
+        "y": 1754,
+        "width": 1308,
+        "height": 1754
+      }
     ]
   }
 }

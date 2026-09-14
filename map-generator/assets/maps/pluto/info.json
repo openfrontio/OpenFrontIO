@@ -1,5 +1,11 @@
 {
+  "id": "Pluto",
   "name": "Pluto",
+  "translation_key": "map.pluto",
+  "categories": ["cosmic"],
+  "multiplayer_frequency": 6,
+  "team_frequency": 12,
+  "special_team_count": 2,
   "nations": [
     {
       "coordinates": [396, 364],
@@ -81,5 +87,21 @@
       "name": "Free Pluto State",
       "flag": ""
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1300,
+        "width": 1050,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1300,
+        "width": 1050,
+        "x": 1050,
+        "y": 0
+      }
+    ]
+  }
 }

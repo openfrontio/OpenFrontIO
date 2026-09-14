@@ -1,4 +1,7 @@
 {
+  "categories": ["arcade"],
+  "forced_modifiers": ["isWaterNukes:75"],
+  "id": "TheBox",
   "map": {
     "height": 2048,
     "num_land_tiles": 4194304,
@@ -14,7 +17,8 @@
     "num_land_tiles": 1048576,
     "width": 1024
   },
-  "name": "TheBox",
+  "multiplayer_frequency": 3,
+  "name": "The Box",
   "nations": [
     {
       "coordinates": [10, 10],
@@ -81,5 +85,6 @@
       "flag": "",
       "name": "Non-peaceful Bot"
     }
-  ]
+  ],
+  "translation_key": "map.thebox"
 }

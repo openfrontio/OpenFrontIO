@@ -1,8 +1,8 @@
 import { LitElement, html, nothing } from "lit";
-import { resolveMarkdown } from "lit-markdown";
 import { customElement, state } from "lit/decorators.js";
 import type { NewsItem } from "../../core/ApiSchemas";
 import { getNews } from "../Api";
+import { renderMarkdown } from "../Markdown";
 import { translateText } from "../Utils";
 
 export type { NewsItem };
@@ -140,7 +140,7 @@ export class NewsBox extends LitElement {
                 >`}
             <span
               class="text-xs text-white/50 block [&_a]:text-blue-300 [&_a:hover]:text-blue-200"
-              >${resolveMarkdown(
+              >${renderMarkdown(
                 item.descriptionTranslationKey
                   ? translateText(item.descriptionTranslationKey)
                   : (item.description ?? ""),

@@ -1,23 +1,27 @@
 {
+  "categories": ["europe"],
+  "id": "Italia",
   "map": {
     "height": 1272,
-    "num_land_tiles": 780495,
+    "num_land_tiles": 775663,
     "width": 1360
   },
   "map16x": {
     "height": 318,
-    "num_land_tiles": 47179,
+    "num_land_tiles": 46701,
     "width": 340
   },
   "map4x": {
     "height": 636,
-    "num_land_tiles": 192649,
+    "num_land_tiles": 191249,
     "width": 680
   },
+  "multiplayer_frequency": 6,
   "name": "Italia",
   "nations": [
     {
       "coordinates": [1038, 993],
+      "flag": "TwoSicilies",
       "name": "Kingdom of the Two Sicilies"
     },
     {
@@ -27,25 +31,28 @@
     },
     {
       "coordinates": [785, 578],
-      "flag": "va",
+      "flag": "PapalStates",
       "name": "Papal States"
     },
     {
       "coordinates": [625, 534],
-      "name": "Tuscany"
+      "flag": "Grand Duchy of Tuscany",
+      "name": "Grand Duchy of Tuscany"
     },
     {
       "coordinates": [595, 190],
       "flag": "venice",
-      "name": "Venice"
+      "name": "Republic of Venice"
     },
     {
       "coordinates": [469, 386],
-      "name": "Modena"
+      "flag": "Duchy of Modena and Reggio",
+      "name": "Duchy of Modena"
     },
     {
       "coordinates": [391, 254],
-      "name": "Parma"
+      "flag": "Duchy of Parma",
+      "name": "Duchy of Parma"
     },
     {
       "coordinates": [361, 68],
@@ -54,6 +61,7 @@
     },
     {
       "coordinates": [278, 774],
+      "flag": "Kingdom of Sardinia",
       "name": "Kingdom of Sardinia"
     },
     {
@@ -67,8 +75,26 @@
       "name": "Austrian Empire"
     },
     {
+      "coordinates": [870, 1240],
+      "flag": "gb",
+      "name": "Colony of Malta"
+    },
+    {
+      "coordinates": [1255, 31],
+      "flag": "Kingdom of Hungary",
+      "name": "Kingdom of Hungary"
+    },
+    {
+      "coordinates": [630, 350],
+      "flag": "sm",
+      "name": "San Marino"
+    },
+    {
       "coordinates": [1238, 349],
+      "flag": "tr",
       "name": "Ottoman Empire"
     }
-  ]
+  ],
+  "themes": ["europe"],
+  "translation_key": "map.italia"
 }

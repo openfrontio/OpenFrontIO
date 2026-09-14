@@ -9,6 +9,7 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
+import { GameUpdateType, UnitUpdate } from "../src/core/game/GameUpdates";
 import { GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
@@ -69,10 +70,8 @@ describe("Attack", () => {
         defenderSpawn,
       ),
     );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
 
     attacker = game.player(attackerInfo.id);
     defender = game.player(defenderInfo.id);
@@ -121,10 +120,24 @@ describe("Attack", () => {
     const ship = defender.units(UnitType.TransportShip)[0];
     expect(ship.troops()).toBe(100);
 
-    game.executeNextTick();
+    const updates = game.executeNextTick();
+    const updatedShip = defender.units(UnitType.TransportShip)[0];
+    const shipUpdates = (updates[GameUpdateType.Unit] as UnitUpdate[]).filter(
+      (u) => u.id === ship.id(),
+    );
 
     expect(nuke.isActive()).toBe(false);
-    expect(defender.units(UnitType.TransportShip)[0].troops()).toBeLessThan(90);
+    expect(updatedShip.troops()).toBeLessThan(90);
+    expect(shipUpdates).toContainEqual(
+      expect.objectContaining({
+        id: ship.id(),
+        unitType: UnitType.TransportShip,
+        troops: updatedShip.troops(),
+        transportShipState: expect.objectContaining({
+          troops: updatedShip.troops(),
+        }),
+      }),
+    );
   });
 
   test("Boat penalty on retreat Transport Ship arrival", async () => {
@@ -184,10 +197,8 @@ describe("Attack race condition with alliance requests", () => {
       "playerB_id",
     );
     playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 11));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
   });
 
   it("Should not mark attacker as traitor when alliance is formed after attack starts", async () => {
@@ -302,6 +313,8 @@ describe("Attack race condition with alliance requests", () => {
       "playerB_id",
     );
     const playerC = addPlayerToGame(playerCInfo, game, game.ref(10, 10));
+    game.executeNextTick();
+    game.executeNextTick();
 
     // Player A sends alliance request to Player B
     const allianceRequestAtoB = playerA.createAllianceRequest(playerB);
@@ -357,10 +370,8 @@ describe("Transport ship alliance rejection", () => {
       "playerB_id",
     );
     playerB = addPlayerToGame(playerBInfo, game, game.ref(7, 15));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
   });
 
   test("Should cancel alliance requests if the recipient sends a transport ship", async () => {
@@ -383,11 +394,18 @@ describe("Transport ship alliance rejection", () => {
 
 describe("Attack immunity", () => {
   beforeEach(async () => {
-    game = await setup("ocean_and_land", {
-      infiniteGold: true,
-      instantBuild: true,
-      infiniteTroops: true,
-    });
+    game = await setup(
+      "ocean_and_land",
+      {
+        infiniteGold: true,
+        instantBuild: true,
+        infiniteTroops: true,
+      },
+      [],
+      undefined,
+      undefined,
+      false,
+    );
 
     (game.config() as TestConfig).setSpawnImmunityDuration(immunityPhaseTicks);
 
@@ -407,10 +425,8 @@ describe("Attack immunity", () => {
       "playerB_id",
     );
     playerB = addPlayerToGame(playerBInfo, game, game.ref(7, 15));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
   });
 
   test("Should not be able to attack during immunity phase", async () => {
@@ -525,5 +541,185 @@ describe("Attack immunity", () => {
     // And send the exact same order
     constructionExecution(game, playerA, 0, 11, UnitType.AtomBomb, 3);
     expect(playerA.units(UnitType.AtomBomb)).toHaveLength(1);
+  });
+
+  test("Should abort TransportShipExecution when target is the attacker itself", async () => {
+    // Wait for spawn immunity to end to ensure it doesn't prematurely abort the execution
+    waitForImmunityToEnd();
+
+    // playerA tries to send a transport ship targeting one of playerA's own tiles (spawn tile at 7, 0)
+    const selfTarget = game.ref(7, 0);
+    const exec = new TransportShipExecution(playerA, selfTarget, 10);
+    game.addExecution(exec);
+    game.executeNextTick();
+
+    // Verify it aborted immediately: active is false, and no transport ship unit spawned
+    expect(exec.isActive()).toBe(false);
+    expect(playerA.units(UnitType.TransportShip)).toHaveLength(0);
+  });
+
+  test("Nation can attack human during PVP immunity", async () => {
+    const nationInfo = new PlayerInfo(
+      "nation",
+      PlayerType.Nation,
+      null,
+      "nation_id",
+    );
+    const nation = addPlayerToGame(nationInfo, game, game.ref(15, 0));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    // Nation attacks playerA during PVP immunity - should succeed
+    game.addExecution(new AttackExecution(null, nation, "playerA_id", null));
+    game.executeNextTick();
+    expect(nation.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Bot can attack human during PVP immunity", async () => {
+    const botInfo = new PlayerInfo("bot", PlayerType.Bot, null, "bot_id");
+    const bot = addPlayerToGame(botInfo, game, game.ref(15, 0));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    // Bot attacks playerA during PVP immunity - should succeed
+    game.addExecution(new AttackExecution(null, bot, "playerA_id", null));
+    game.executeNextTick();
+    expect(bot.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Nation can attack nation during PVP immunity", async () => {
+    const nationAInfo = new PlayerInfo(
+      "nationA",
+      PlayerType.Nation,
+      null,
+      "nationA_id",
+    );
+    const nationA = addPlayerToGame(nationAInfo, game, game.ref(15, 0));
+
+    const nationBInfo = new PlayerInfo(
+      "nationB",
+      PlayerType.Nation,
+      null,
+      "nationB_id",
+    );
+    addPlayerToGame(nationBInfo, game, game.ref(15, 15));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    // Nation A attacks Nation B during PVP immunity - should succeed
+    game.addExecution(new AttackExecution(null, nationA, "nationB_id", null));
+    game.executeNextTick();
+    expect(nationA.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Nation cannot attack allied human during PVP immunity", async () => {
+    const nationInfo = new PlayerInfo(
+      "nation",
+      PlayerType.Nation,
+      null,
+      "nation_id",
+    );
+    const nation = addPlayerToGame(nationInfo, game, game.ref(15, 0));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    // Create alliance between nation and playerA
+    const allianceRequest = nation.createAllianceRequest(playerA);
+    if (allianceRequest) {
+      allianceRequest.accept();
+    }
+    expect(nation.isAlliedWith(playerA)).toBe(true);
+
+    // Nation tries to attack allied playerA during immunity - should be blocked by friendliness
+    game.addExecution(new AttackExecution(null, nation, "playerA_id", null));
+    game.executeNextTick();
+    expect(nation.outgoingAttacks()).toHaveLength(0);
+  });
+});
+
+describe("Fractional attack troop duplication (#4948)", () => {
+  let dupeGame: Game;
+  let dupeAttacker: Player;
+  let dupeDefender: Player;
+
+  beforeEach(async () => {
+    dupeGame = await setup("ocean_and_land", {
+      infiniteGold: true,
+      instantBuild: true,
+    });
+    const attackerInfo = new PlayerInfo(
+      "attacker dude",
+      PlayerType.Human,
+      null,
+      "attacker_id",
+    );
+    const defenderInfo = new PlayerInfo(
+      "defender dude",
+      PlayerType.Human,
+      null,
+      "defender_id",
+    );
+    dupeGame.addPlayer(attackerInfo);
+    dupeGame.addPlayer(defenderInfo);
+
+    dupeGame.addExecution(
+      new SpawnExecution(
+        gameID,
+        dupeGame.player(attackerInfo.id).info(),
+        dupeGame.ref(0, 10),
+      ),
+      new SpawnExecution(
+        gameID,
+        dupeGame.player(defenderInfo.id).info(),
+        dupeGame.ref(0, 15),
+      ),
+    );
+    dupeGame.executeNextTick();
+    dupeGame.executeNextTick();
+
+    dupeAttacker = dupeGame.player(attackerInfo.id);
+    dupeDefender = dupeGame.player(defenderInfo.id);
+  });
+
+  function outgoingTroops(): number {
+    return dupeAttacker
+      .outgoingAttacks()
+      .reduce((sum, attack) => sum + attack.troops(), 0);
+  }
+
+  it("carries only the troops that were actually deducted", () => {
+    dupeGame.addExecution(
+      new AttackExecution(50.7, dupeAttacker, dupeDefender.id()),
+    );
+    dupeGame.executeNextTick();
+
+    // removeTroops() floors, so 50.7 costs the owner 50. The attack must not
+    // be worth more than that, or retreat refunds troops nobody paid for.
+    expect(outgoingTroops()).toBe(50);
+  });
+
+  it("does not accumulate value from a burst of sub-troop attacks", () => {
+    for (let i = 0; i < 10; i++) {
+      dupeGame.addExecution(
+        new AttackExecution(0.999, dupeAttacker, dupeDefender.id()),
+      );
+    }
+    dupeGame.executeNextTick();
+
+    // Each request deducts 0. Combining ten of them must not produce an
+    // attack worth 9.99 that retreat would refund as 9 free troops.
+    expect(outgoingTroops()).toBe(0);
+  });
+
+  it("keeps attack troops integral so combining cannot drift", () => {
+    for (let i = 0; i < 5; i++) {
+      dupeGame.addExecution(
+        new AttackExecution(20.4, dupeAttacker, dupeDefender.id()),
+      );
+    }
+    dupeGame.executeNextTick();
+
+    expect(Number.isInteger(outgoingTroops())).toBe(true);
+    expect(outgoingTroops()).toBe(100);
   });
 });

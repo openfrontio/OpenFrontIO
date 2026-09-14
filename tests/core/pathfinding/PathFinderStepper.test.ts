@@ -125,6 +125,22 @@ describe("PathFinderStepper", () => {
     });
   });
 
+  describe("pathAfterNext", () => {
+    it("returns a copy of the cached remainder", () => {
+      const pathMap = new Map<string, number[]>([["1->5", [1, 2, 3, 4, 5]]]);
+      const stepper = new PathFinderStepper(createMockFinder(pathMap));
+
+      expect(stepper.pathAfterNext()).toBeNull();
+      expect(stepper.next(1, 5)).toEqual({ status: PathStatus.NEXT, node: 2 });
+      const path = stepper.pathAfterNext();
+      expect(path).toBeInstanceOf(Uint32Array);
+      expect(Array.from(path!)).toEqual([2, 3, 4, 5]);
+
+      path![0] = 99;
+      expect(stepper.next(2, 5)).toEqual({ status: PathStatus.NEXT, node: 3 });
+    });
+  });
+
   describe("findPath", () => {
     it("delegates to inner finder", () => {
       const pathMap = new Map<string, number[]>([["1->5", [1, 2, 3, 4, 5]]]);

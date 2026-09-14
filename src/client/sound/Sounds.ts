@@ -15,6 +15,7 @@ export type SoundEffect =
   | "build-defense-post"
   | "build-warship"
   | "sam-built"
+  | "silo-built"
   | "message"
   | "click";
 
@@ -32,6 +33,7 @@ export const soundEffectUrls: ReadonlyMap<SoundEffect, string> = new Map([
   ["build-defense-post", assetUrl("sounds/effects/build-defense-post.mp3")],
   ["build-warship", assetUrl("sounds/effects/build-warship.mp3")],
   ["sam-built", assetUrl("sounds/effects/sam-built.mp3")],
+  ["silo-built", assetUrl("sounds/effects/silo-built.mp3")],
   ["message", assetUrl("sounds/effects/message.mp3")],
   ["click", assetUrl("sounds/effects/click.mp3")],
 ]);

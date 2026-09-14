@@ -1,19 +1,7 @@
 import { LitElement, PropertyValues, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../Utils";
-
-const ACTIVE_CARD =
-  "bg-malibu-blue/20 border-malibu-blue/50 shadow-[var(--shadow-malibu-blue)]";
-const INACTIVE_CARD =
-  "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20";
-const INPUT_CLASS =
-  "w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-malibu-blue p-1 my-1";
-const CARD_LABEL_CLASS =
-  "text-xs uppercase font-bold tracking-wider leading-tight break-words hyphens-auto";
-
-function cardClass(active: boolean, extra = ""): string {
-  return `w-full h-full rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 ${extra} ${active ? ACTIVE_CARD : INACTIVE_CARD}`;
-}
+import { CARD_LABEL_CLASS, INPUT_CLASS, cardClass } from "./InputCardStyles";
 
 @customElement("toggle-input-card")
 export class ToggleInputCard extends LitElement {
@@ -27,6 +15,9 @@ export class ToggleInputCard extends LitElement {
   @property({ attribute: false }) inputValue?: number | string;
   @property({ attribute: false }) inputAriaLabel?: string;
   @property({ attribute: false }) inputPlaceholder?: string;
+  // Optional hint shown under the input when its value is 0 (e.g. "Disabled"),
+  // so a 0 that means "off" isn't cryptic.
+  @property({ attribute: false }) zeroLabel?: string;
   @property({ attribute: false }) defaultInputValue?: number | string;
   @property({ attribute: false }) minValidOnEnable?: number;
   @property({ attribute: false }) onToggle?: (
@@ -41,15 +32,14 @@ export class ToggleInputCard extends LitElement {
     return this;
   }
 
+  // Autofocus + select the number input when the card is toggled on. Safe now
+  // that the input is always mounted (focusing a freshly-inserted one janked).
   protected updated(changedProperties: PropertyValues<this>) {
     if (!changedProperties.has("checked")) return;
-    const previousChecked = changedProperties.get("checked");
-    if (previousChecked === false && this.checked) {
+    if (changedProperties.get("checked") === false && this.checked) {
       const input = this.querySelector("input");
-      if (input) {
-        input.focus();
-        input.select();
-      }
+      input?.focus();
+      input?.select();
     }
   }
 
@@ -103,7 +93,7 @@ export class ToggleInputCard extends LitElement {
 
   render() {
     return html`
-      <div class="${cardClass(this.checked, "relative overflow-hidden")}">
+      <div class="${cardClass(this.checked)}">
         <button
           type="button"
           aria-pressed=${this.checked}
@@ -145,28 +135,41 @@ export class ToggleInputCard extends LitElement {
           </span>
         </button>
 
-        ${this.checked
-          ? html`
-              <div
-                class="absolute left-3 right-3 top-1/2 -translate-y-1/2 z-10"
+        <!-- Keep the input permanently mounted and just hide it when unchecked.
+             Rendering it conditionally (\${checked ? input : nothing}) inserts a
+             fresh input on enable, and focusing a just-inserted input forces
+             several ms of layout/paint per frame. CSS-hiding an always-present
+             input avoids that. -->
+        <div
+          class="absolute left-3 right-3 top-1/2 -translate-y-1/2 z-10 ${this
+            .checked
+            ? ""
+            : "hidden"}"
+        >
+          <input
+            type=${this.inputType}
+            id=${this.inputId ?? nothing}
+            min=${this.inputMin ?? nothing}
+            max=${this.inputMax ?? nothing}
+            step=${this.inputStep ?? nothing}
+            .value=${String(this.inputValue ?? "")}
+            class=${INPUT_CLASS}
+            aria-label=${this.inputAriaLabel ?? nothing}
+            placeholder=${this.inputPlaceholder ?? nothing}
+            @input=${this.onInput}
+            @change=${this.onChange}
+            @keydown=${this.onKeyDown}
+          />
+          ${this.checked &&
+          this.zeroLabel !== undefined &&
+          this.toOptionalNumber(this.inputValue) === 0
+            ? html`<div
+                class="pointer-events-none absolute left-0 right-0 top-full mt-0.5 text-center text-[10px] leading-none text-white/70"
               >
-                <input
-                  type=${this.inputType}
-                  id=${this.inputId ?? nothing}
-                  min=${this.inputMin ?? nothing}
-                  max=${this.inputMax ?? nothing}
-                  step=${this.inputStep ?? nothing}
-                  .value=${String(this.inputValue ?? "")}
-                  class=${INPUT_CLASS}
-                  aria-label=${this.inputAriaLabel ?? nothing}
-                  placeholder=${this.inputPlaceholder ?? nothing}
-                  @input=${this.onInput}
-                  @change=${this.onChange}
-                  @keydown=${this.onKeyDown}
-                />
-              </div>
-            `
-          : nothing}
+                ${this.zeroLabel}
+              </div>`
+            : nothing}
+        </div>
       </div>
     `;
   }

@@ -1,12 +1,15 @@
-import { placeName } from "../client/graphics/NameBoxCalculator";
-import { getGameLogicConfig } from "./configuration/ConfigLoader";
+import { placeName, placeSpawnName } from "../client/hud/NameBoxCalculator";
+import { Config } from "./configuration/Config";
+import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
+import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
   BuildableUnit,
   Game,
+  GameType,
   GameUpdates,
   NameViewData,
   Player,
@@ -35,11 +38,12 @@ export async function createGameRunner(
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
-  const config = await getGameLogicConfig(gameStart.config, null);
+  const config = new Config(gameStart.config, null, false, gameStart.listed);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,
     mapLoader,
+    false, // Worker never renders layers — skip image loading to save memory.
   );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
@@ -51,12 +55,15 @@ export async function createGameRunner(
       random.nextID(),
       p.isLobbyCreator ?? false,
       p.clanTag,
+      p.friends ?? [],
+      p.teamIndex ?? null,
     );
   });
 
   const nations = createNationsForGame(
     gameStart,
     gameMap.nations,
+    gameMap.additionalNations,
     humans.length,
     random,
   );
@@ -72,7 +79,12 @@ export async function createGameRunner(
 
   const gr = new GameRunner(
     game,
-    new Executor(game, gameStart.gameID, clientID),
+    new Executor(
+      game,
+      gameStart.gameID,
+      clientID,
+      gameStart.tribes?.map((t) => t.name),
+    ),
     callBack,
   );
   gr.init();
@@ -93,6 +105,12 @@ export class GameRunner {
   ) {}
 
   init() {
+    if (this.game.config().gameConfig().gameType !== GameType.Singleplayer) {
+      this.game.addExecution(new SpawnTimerExecution());
+    }
+    if (this.game.config().spawnNations()) {
+      this.game.addExecution(...this.execManager.nationExecutions());
+    }
     if (this.game.config().isRandomSpawn()) {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }
@@ -101,10 +119,10 @@ export class GameRunner {
         ...this.execManager.spawnTribes(this.game.config().bots()),
       );
     }
-    if (this.game.config().spawnNations()) {
-      this.game.addExecution(...this.execManager.nationExecutions());
-    }
     this.game.addExecution(new WinCheckExecution());
+    if (this.game.config().doomsdayClockConfig().enabled) {
+      this.game.addExecution(new DoomsdayClockExecution());
+    }
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
       this.game.addExecution(
         new RecomputeRailClusterExecution(this.game.railNetwork()),
@@ -130,6 +148,7 @@ export class GameRunner {
     );
     this.currTurn++;
 
+    const wasInSpawnPhase = this.game.inSpawnPhase();
     let updates: GameUpdates;
     let tickExecutionDuration: number;
 
@@ -152,33 +171,51 @@ export class GameRunner {
       return false;
     }
 
-    if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
-      this.game
-        .players()
-        .filter(
-          (p) =>
-            p.type() === PlayerType.Human || p.type() === PlayerType.Nation,
-        )
-        .forEach(
-          (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
-        );
+    // Track whether placements were recomputed this tick — the record is
+    // only attached to the update when it could have changed, so the main
+    // thread doesn't structured-clone an identical ~all-players record on
+    // every other tick.
+    let viewDataChanged = false;
+    if (this.game.inSpawnPhase()) {
+      for (const p of this.game.players()) {
+        if (p.type() !== PlayerType.Human && p.type() !== PlayerType.Nation) {
+          continue;
+        }
+        if (p.spawnTile() === undefined) continue;
+        this.playerViewData[p.id()] = placeSpawnName(this.game, p);
+        viewDataChanged = true;
+      }
     }
 
-    if (this.game.ticks() < 3 || this.game.ticks() % 30 === 0) {
-      this.game.players().forEach((p) => {
+    const spawnJustEnded = wasInSpawnPhase && !this.game.inSpawnPhase();
+    if (
+      spawnJustEnded ||
+      this.game.ticks() < 3 ||
+      this.game.ticks() % 30 === 0
+    ) {
+      for (const p of this.game.players()) {
         this.playerViewData[p.id()] = placeName(this.game, p);
-      });
+      }
+      viewDataChanged = true;
     }
 
     const packedTileUpdates = this.game.drainPackedTileUpdates();
     const packedMotionPlans = this.game.drainPackedMotionPlans();
+    const packedPlayerUpdates = this.game.drainPackedPlayerUpdates();
+    const packedAttackUpdates = this.game.drainPackedAttackUpdates();
+    const nukeImpactTiles = this.game.drainNukeImpacts();
+    const packedNukeImpacts =
+      nukeImpactTiles.length > 0 ? new Uint32Array(nukeImpactTiles) : undefined;
 
     this.callBack({
       tick: this.game.ticks(),
       packedTileUpdates,
       ...(packedMotionPlans ? { packedMotionPlans } : {}),
+      ...(packedPlayerUpdates ? { packedPlayerUpdates } : {}),
+      ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
+      ...(packedNukeImpacts ? { packedNukeImpacts } : {}),
       updates: updates,
-      playerNameViewData: this.playerViewData,
+      ...(viewDataChanged ? { playerNameViewData: this.playerViewData } : {}),
       tickExecutionDuration: tickExecutionDuration,
       pendingTurns: pendingTurns ?? 0,
     });
@@ -249,7 +286,9 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
     return {
-      borderTiles: player.borderTiles(),
+      // Copy into a plain Set: this result crosses the worker boundary via
+      // structured clone, which TileSet does not survive.
+      borderTiles: new Set(player.borderTiles()),
     } as PlayerBorderTiles;
   }
 

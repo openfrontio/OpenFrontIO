@@ -56,6 +56,16 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
         }),
       ),
       webpPath: mapAssetUrl("thumbnail.webp"),
+      layerPng: (layerId: string) =>
+        fetch(mapAssetUrl(`${layerId}.png`))
+          .then((res) => {
+            if (!res.ok)
+              throw new Error(
+                `Failed to load ${mapAssetUrl(`${layerId}.png`)}`,
+              );
+            return res.blob();
+          })
+          .then((blob) => createImageBitmap(blob)),
     } satisfies MapData;
 
     this.maps.set(map, mapData);

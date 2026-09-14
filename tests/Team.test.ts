@@ -2,6 +2,7 @@ import {
   ColoredTeams,
   Game,
   GameMode,
+  PlayerInfo,
   PlayerType,
 } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
@@ -38,5 +39,34 @@ describe("Teams", () => {
     expect(game.player("human1").isOnSameTeam(game.player("human2"))).toBe(
       false,
     );
+  });
+
+  test("humans with pinned teamIndex get the matcher's exact split", async () => {
+    // Matchmade 2v2: the server stamps teamIndex per player; the split
+    // [h1,h4] vs [h2,h3] must survive full game construction.
+    const pinned = (name: string, teamIndex: number) =>
+      new PlayerInfo(
+        name,
+        PlayerType.Human,
+        name,
+        name,
+        false,
+        null,
+        [],
+        teamIndex,
+      );
+    game = await setup(
+      "plains",
+      {
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+      },
+      [pinned("h1", 0), pinned("h2", 1), pinned("h3", 1), pinned("h4", 0)],
+    );
+
+    expect(game.player("h1").team()).toBe(ColoredTeams.Red);
+    expect(game.player("h2").team()).toBe(ColoredTeams.Blue);
+    expect(game.player("h3").team()).toBe(ColoredTeams.Blue);
+    expect(game.player("h4").team()).toBe(ColoredTeams.Red);
   });
 });

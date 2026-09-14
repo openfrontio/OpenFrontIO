@@ -1,11 +1,10 @@
 import { PathFinder } from "../types";
 import { AbstractGraph } from "./AbstractGraph";
-import { BucketQueue, MinHeap, PriorityQueue } from "./PriorityQueue";
+import { MinHeap, PriorityQueue } from "./PriorityQueue";
 
 export interface AbstractGraphAStarConfig {
   heuristicWeight?: number;
   maxIterations?: number;
-  useMinHeap?: boolean; // Use MinHeap instead of BucketQueue (better for variable costs)
 }
 
 export class AbstractGraphAStar implements PathFinder<number> {
@@ -34,17 +33,10 @@ export class AbstractGraphAStar implements PathFinder<number> {
     this.cameFrom = new Int32Array(numNodes);
     this.startNode = new Int32Array(numNodes);
 
-    // For abstract graphs with variable costs, MinHeap may be better
-    // BucketQueue is O(1) but requires integer priorities
-    if (config?.useMinHeap) {
-      this.queue = new MinHeap(numNodes);
-    } else {
-      // Estimate max priority: weight * (mapWidth + mapHeight)
-      // Use cluster size * clusters as approximation
-      const maxDist = graph.clusterSize * Math.max(graph.clustersX, 10) * 2;
-      const maxF = this.heuristicWeight * maxDist;
-      this.queue = new BucketQueue(maxF);
-    }
+    // MinHeap: abstract edge costs are variable and long routes accumulate f-values beyond any cheap bucket-range estimate.
+    // A* also pushes lazy duplicates (a node re-enters the queue each time its gScore improves), so live entries can exceed
+    // numNodes; size for the worst case — one push per directed edge relaxation — to avoid the heap's resize-with-error path.
+    this.queue = new MinHeap(numNodes + graph.edgeCount * 2);
   }
 
   findPath(start: number | number[], goal: number): number[] | null {

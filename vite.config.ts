@@ -1,10 +1,12 @@
 import tailwindcss from "@tailwindcss/vite";
 import fs from "fs";
+import http from "http";
 import { lookup as lookupMime } from "mrmime";
 import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
+import { configDefaults } from "vitest/config";
 import {
   type AssetManifest,
   buildAssetUrl,
@@ -51,9 +53,119 @@ function serveProprietaryDir(
   };
 }
 
+// Dev-only stand-in for nginx's `location = /link` blocks (see nginx.conf).
+//
+// The desktop app's account-linking gate prints a short URL for the player to
+// type by hand when it cannot open their browser for them. In production
+// nginx 302s /link to /#steam-link, the client route that shows the code-entry
+// form. Without this middleware the dev server falls through to Vite's SPA
+// fallback and serves the home page instead -- a 200, so it does not look
+// broken, but the printed URL silently would not work locally.
+//
+// A redirect rather than serving index.html directly, so dev matches
+// production exactly and the desktop's siteUrlForAudience can emit one URL
+// shape for every environment.
+function steamLinkAliasRedirect(): Plugin {
+  return {
+    name: "steam-link-alias-redirect",
+    configureServer(server) {
+      // Matches on `originalUrl`, not `url`, and that is load-bearing.
+      //
+      // Whatever the documented middleware ordering, the measured behaviour
+      // in this config is that by the time this handler runs `req.url` has
+      // already been rewritten to "/index.html", while `originalUrl` still
+      // holds what the browser asked for. Logging both showed a request to
+      // /link arriving here as url="/index.html", originalUrl="/link".
+      // Which middleware performs that rewrite was not established, so this
+      // deliberately does not claim one.
+      //
+      // The practical warning: switching this to `req.url` type-checks,
+      // lints, runs, and silently never matches -- the dev server just keeps
+      // serving the home page with a 200. Re-verify against a running server
+      // if you change it, and use a control path (e.g. /linkxyz) to prove a
+      // 200 is not coming from the SPA fallback.
+      server.middlewares.use((req, res, next) => {
+        const requested = (req as { originalUrl?: string }).originalUrl;
+        if (!requested) return next();
+
+        // Decode before comparing, because nginx resolves percent-encoded
+        // bytes before exact `location =` matching but URL.pathname does
+        // not: "/link%2F" reaches production as /link/ and redirects, and
+        // would otherwise fall straight through here. The whole point of
+        // this plugin is that dev and production agree.
+        let pathname: string;
+        try {
+          pathname = decodeURIComponent(
+            new URL(requested, "http://x").pathname,
+          );
+        } catch {
+          // Malformed percent-encoding -- not our route; let Vite answer.
+          return next();
+        }
+
+        // Exact matches only, mirroring nginx's `location =`. A prefix match
+        // would swallow any future /link/* route.
+        if (pathname !== "/link" && pathname !== "/link/") return next();
+        res.writeHead(302, { Location: "/#steam-link" });
+        res.end();
+      });
+    },
+  };
+}
+
+// Dev-only stand-in for the nginx random-worker routing (the openfront_workers
+// upstream). Forwards these prefix-less POSTs to a randomly chosen worker port
+// so the worker can mint a self-owned id. Runs as direct middleware (before
+// vite's /api proxy).
+const RANDOM_WORKER_PATHS = ["/api/create_game", "/api/adminbot/create_game"];
+function randomWorkerCreateProxy(numWorkers: number): Plugin {
+  return {
+    name: "random-worker-create-proxy",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.method !== "POST") return next();
+        const path = (req.url ?? "").split("?")[0];
+        if (!RANDOM_WORKER_PATHS.includes(path)) return next();
+        const port = 3001 + Math.floor(Math.random() * numWorkers);
+        const proxyReq = http.request(
+          {
+            host: "localhost",
+            port,
+            path,
+            method: "POST",
+            headers: req.headers,
+          },
+          (proxyRes) => {
+            res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+            proxyRes.pipe(res);
+          },
+        );
+        proxyReq.on("error", (err) => {
+          res.statusCode = 502;
+          res.end(`create proxy error: ${err.message}`);
+        });
+        req.pipe(proxyReq);
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
+  // Dev cluster map: mirrors the CLUSTER_JSON the dev server boots with
+  // (package.json start:server-dev), so the dev-served index.html carries the
+  // same shape production RenderHtml injects. The proxy below needs the
+  // worker count to know how many /wN paths to forward.
+  const devClusterJson =
+    env.CLUSTER_JSON ??
+    '{"a":{"host":"localhost","color":"blue","numWorkers":2}}';
+  const devCluster = JSON.parse(devClusterJson) as Record<
+    string,
+    { numWorkers: number }
+  >;
+  const devInstanceLetter = Object.keys(devCluster)[0];
+  const devNumWorkers = devCluster[devInstanceLetter].numWorkers;
   const resourcesDir = getResourcesDir(__dirname);
   const proprietaryDir = getProprietaryDir(__dirname);
   const sourceDirs = [resourcesDir, proprietaryDir];
@@ -65,6 +177,13 @@ export default defineConfig(({ mode }) => {
     assetManifest: JSON.stringify(assetManifest),
     cdnBase: JSON.stringify(cdnBase),
     gameEnv: JSON.stringify(env.GAME_ENV ?? "dev"),
+    cluster: devClusterJson,
+    instanceLetter: JSON.stringify(devInstanceLetter),
+    turnstileSiteKey: JSON.stringify(
+      env.TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
+    ),
+    jwtAudience: JSON.stringify(env.DOMAIN ?? "localhost"),
+    instanceId: JSON.stringify(env.INSTANCE_ID ?? "DEV_ID"),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(
@@ -148,6 +267,19 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: "jsdom",
       setupFiles: "./tests/setup.ts",
+      // Git worktrees live inside the repo, so their tests match the default
+      // glob and run against that worktree's own (often stale) source and
+      // node_modules. Anyone with a worktree checked out sees failures that
+      // have nothing to do with their branch.
+      // Spread the defaults rather than restating them: setting `exclude`
+      // replaces vitest's built-in list, and hand-copying a subset silently
+      // drops the dot-directory pattern (.git, .cache, .output, ...) --
+      // reintroducing the same stray-file problem this is here to fix.
+      exclude: [
+        ...configDefaults.exclude,
+        "**/.worktrees/**",
+        "**/.claude/worktrees/**",
+      ],
     },
     root: "./",
     base: "/",
@@ -162,7 +294,11 @@ export default defineConfig(({ mode }) => {
 
     plugins: [
       ...(!isProduction
-        ? [serveProprietaryDir(proprietaryDir, resourcesDir)]
+        ? [
+            serveProprietaryDir(proprietaryDir, resourcesDir),
+            randomWorkerCreateProxy(devNumWorkers),
+            steamLinkAliasRedirect(),
+          ]
         : []),
       ...(isProduction
         ? []
@@ -191,10 +327,18 @@ export default defineConfig(({ mode }) => {
         isProduction ? "" : "localhost:3000",
       ),
       "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
+      // Empty when unset (and always empty under vitest, mirroring API_DOMAIN)
+      // so the replacement is always a string literal — an undefined define
+      // would leave a bare `process.env` reference in the browser bundle.
       "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
-        env.STRIPE_PUBLISHABLE_KEY,
+        mode === "test" ? "" : (env.STRIPE_PUBLISHABLE_KEY ?? ""),
       ),
-      "process.env.API_DOMAIN": JSON.stringify(env.API_DOMAIN),
+      // Force empty under vitest (mode "test") so the getApiBase localhost-
+      // fallback test is deterministic regardless of any API_DOMAIN in the
+      // host shell / CI environment.
+      "process.env.API_DOMAIN": JSON.stringify(
+        mode === "test" ? "" : (env.API_DOMAIN ?? ""),
+      ),
       // Add other process.env variables if needed, OR migrate code to import.meta.env
     },
 
@@ -205,7 +349,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks: (id) => {
-            const vendorModules = ["pixi.js", "howler", "zod"];
+            const vendorModules = ["howler", "zod"];
             if (vendorModules.some((module) => id.includes(module))) {
               return "vendor";
             }
@@ -216,6 +360,7 @@ export default defineConfig(({ mode }) => {
 
     server: {
       port: 9000,
+      host: process.env.VITE_HOST === "lan",
       // Automatically open the browser when the server starts
       open: process.env.SKIP_BROWSER_OPEN !== "true",
       proxy: {

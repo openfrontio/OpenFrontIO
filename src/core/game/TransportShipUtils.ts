@@ -13,7 +13,7 @@ export function canBuildTransportShip(
     return false;
   }
 
-  const dst = targetTransportTile(game, tile);
+  const dst = targetTransportTile(game, player, tile);
   if (dst === null) {
     return false;
   }
@@ -30,9 +30,15 @@ export function canBuildTransportShip(
   return spatial.closestShoreByWater(player, dst) ?? false;
 }
 
-export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
+export function targetTransportTile(
+  gm: Game,
+  attacker: Player,
+  tile: TileRef,
+): TileRef | null {
   const spatial = new SpatialQuery(gm);
-  return spatial.closestShore(gm.owner(tile), tile);
+  // Only consider landing shores the attacker can actually reach by water, so a
+  // shore facing a disconnected inland lake is never chosen as the target.
+  return spatial.closestReachableShore(gm.owner(tile), attacker, tile);
 }
 
 export function bestShoreDeploymentSource(

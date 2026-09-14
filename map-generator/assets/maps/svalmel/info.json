@@ -1,5 +1,9 @@
 {
+  "id": "Svalmel",
   "name": "Svalmel",
+  "translation_key": "map.svalmel",
+  "categories": ["fictional", "europe", "north_america"],
+  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [900, 850],
@@ -26,5 +30,6 @@
       "name": "Nordaustlandet",
       "flag": "no"
     }
-  ]
+  ],
+  "themes": ["europe", "north_america"]
 }

@@ -1,0 +1,11 @@
+{
+  "name": "openfrontio-issue-lifecycle",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic GitHub Actions for issue lifecycle (stale closer, assignment invariant, approval-label sync). See README.md.",
+  "dependencies": {
+    "@octokit/rest": "^21.0.2",
+    "tsx": "^4.21.0"
+  }
+}

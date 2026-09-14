@@ -2,8 +2,8 @@ import { LitElement, TemplateResult, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../../Utils";
 
-type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
-type ButtonSize = "sm" | "md" | "lg";
+type ButtonVariant = "primary" | "secondary" | "danger" | "warning" | "ghost";
+type ButtonSize = "xs" | "sm" | "md" | "lg";
 type ButtonWidth = "auto" | "block" | "blockDesktop" | "fill";
 type IconPosition = "left" | "right" | "only";
 
@@ -37,6 +37,8 @@ export class OButton extends LitElement {
         return "bg-gray-700 hover:bg-gray-600 text-white disabled:bg-gray-800 disabled:text-gray-400";
       case "danger":
         return "bg-red-600 hover:bg-red-500 text-white disabled:bg-red-900 disabled:text-gray-300";
+      case "warning":
+        return "bg-cyber-yellow hover:brightness-110 text-gray-900 disabled:bg-yellow-900 disabled:text-gray-300";
       case "ghost":
         return "bg-transparent hover:bg-white/10 text-malibu-blue disabled:text-gray-500 disabled:hover:bg-transparent";
     }
@@ -45,6 +47,8 @@ export class OButton extends LitElement {
   private sizeClasses(): string {
     if (this.iconPosition === "only") {
       switch (this.size) {
+        case "xs":
+          return "w-6 h-6 text-xs";
         case "sm":
           return "w-8 h-8 text-sm";
         case "md":
@@ -54,6 +58,8 @@ export class OButton extends LitElement {
       }
     }
     switch (this.size) {
+      case "xs":
+        return "py-1 px-2 text-xs";
       case "sm":
         return "py-1.5 px-3 text-sm";
       case "md":

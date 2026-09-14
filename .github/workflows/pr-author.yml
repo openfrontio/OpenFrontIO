@@ -13,4 +13,4 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: toshimaru/auto-author-assign@bdd7688cbf9e6d5683f02f8c7d8ae4062a254b6d
+      - uses: toshimaru/auto-author-assign@a78a94b219445cece8ccf0d45fec60af449f212a

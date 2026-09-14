@@ -86,6 +86,11 @@ Ernie Wright (USRA) ORCID logo.
 Scientist
 Noah Petro (NASA/GSFC) ORCID logo.
 
+### Titan Map
+
+[NASA/JPL-Caltech/ASI/USGS](https://science.nasa.gov/photojournal/titans-north/)
+[Public Domain](https://www.nasa.gov/nasa-brand-center/images-and-media/)
+
 ### Antarctica Map
 
 Polar Geospatial Center, 2018, "PGC Map Catalog", https://doi.org/10.7910/DVN/6R8F7U, Harvard Dataverse, V1, [2364], [Apr-02-2026].
@@ -106,6 +111,7 @@ Licensed under ODbL
 Stats icon by [Meko](https://thenounproject.com/mekoda/) – https://thenounproject.com/icon/stats-4942475/
 Pay Per Click icon by [Fauzan Adiima](https://thenounproject.com/creator/fauzan94/) – https://thenounproject.com/icon/pay-per-click-2586454/
 Medal icon by [Snow](https://thenounproject.com/snowdoll/) – https://thenounproject.com/icon/medal-4567887/
+Guild icon by Trimanggolo Mulyo – https://thenounproject.com/icon/guild-8266144/
 
 ### Flags
 

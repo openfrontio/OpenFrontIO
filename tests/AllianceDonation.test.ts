@@ -33,10 +33,6 @@ describe("Alliance Donation", () => {
     player2.conquer(game.ref(0, 1));
     player2.addGold(100n);
     player2.addTroops(100);
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
   });
 
   test("Can donate gold after alliance formed by reply", () => {

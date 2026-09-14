@@ -1,19 +1,17 @@
-import { colord, Colord } from "colord";
+import { colord, Colord, extend } from "colord";
+import labPlugin from "colord/plugins/lab";
+import lchPlugin from "colord/plugins/lch";
+import defaultTheme from "../src/client/render/gl/default-theme.json";
+import { createThemeSettings } from "../src/client/render/gl/RenderSettings";
 import {
   ColorAllocator,
   selectDistinctColorIndex,
-} from "../src/core/configuration/ColorAllocator";
-import {
-  blue,
-  botColor,
-  green,
-  orange,
-  purple,
-  red,
-  teal,
-  yellow,
-} from "../src/core/configuration/Colors";
-import { ColoredTeams } from "../src/core/game/Game";
+} from "../src/client/theme/ColorAllocator";
+import { SettingsTheme } from "../src/client/theme/ThemeProvider";
+import type { PlayerView } from "../src/client/view/PlayerView";
+import { ColoredTeams, PlayerType } from "../src/core/game/Game";
+
+extend([labPlugin, lchPlugin]);
 
 const mockColors: Colord[] = [
   colord({ r: 255, g: 0, b: 0 }),
@@ -66,7 +64,7 @@ describe("ColorAllocator", () => {
     expect(match2).toBe(false);
   });
 
-  test("assignBotColor returns deterministic color from botColors", () => {
+  test("assignColor is deterministic per ID even with a self-fallback pool", () => {
     const allocator = new ColorAllocator(mockColors, mockColors);
 
     const id1 = "bot123";
@@ -80,73 +78,119 @@ describe("ColorAllocator", () => {
     expect(c1.isEqual(c1Again)).toBe(true);
     expect(c2.isEqual(c2Again)).toBe(true);
   });
+});
 
-  test("assignTeamColor returns the base color from the team", () => {
-    expect(allocator.assignTeamColor(ColoredTeams.Blue)).toEqual(blue);
-    expect(allocator.assignTeamColor(ColoredTeams.Red)).toEqual(red);
-    expect(allocator.assignTeamColor(ColoredTeams.Teal)).toEqual(teal);
-    expect(allocator.assignTeamColor(ColoredTeams.Purple)).toEqual(purple);
-    expect(allocator.assignTeamColor(ColoredTeams.Yellow)).toEqual(yellow);
-    expect(allocator.assignTeamColor(ColoredTeams.Orange)).toEqual(orange);
-    expect(allocator.assignTeamColor(ColoredTeams.Green)).toEqual(green);
-    expect(allocator.assignTeamColor(ColoredTeams.Bot)).toEqual(botColor);
-    expect(allocator.assignTeamColor(ColoredTeams.Humans)).toEqual(blue);
-    expect(allocator.assignTeamColor(ColoredTeams.Nations)).toEqual(red);
+describe("default theme team colors", () => {
+  const teamBase = (team: keyof typeof defaultTheme.teamColors): Colord =>
+    colord(defaultTheme.teamColors[team]);
+
+  test("teamColor returns the base color from the theme JSON", () => {
+    const theme = new SettingsTheme(createThemeSettings("default"));
+    expect(theme.teamColor(ColoredTeams.Blue)).toEqual(teamBase("Blue"));
+    expect(theme.teamColor(ColoredTeams.Red)).toEqual(teamBase("Red"));
+    expect(theme.teamColor(ColoredTeams.Teal)).toEqual(teamBase("Teal"));
+    expect(theme.teamColor(ColoredTeams.Purple)).toEqual(teamBase("Purple"));
+    expect(theme.teamColor(ColoredTeams.Yellow)).toEqual(teamBase("Yellow"));
+    expect(theme.teamColor(ColoredTeams.Orange)).toEqual(teamBase("Orange"));
+    expect(theme.teamColor(ColoredTeams.Green)).toEqual(teamBase("Green"));
+    expect(theme.teamColor(ColoredTeams.Bot)).toEqual(teamBase("Bot"));
+    expect(theme.teamColor(ColoredTeams.Humans)).toEqual(teamBase("Humans"));
+    expect(theme.teamColor(ColoredTeams.Nations)).toEqual(teamBase("Nations"));
   });
 
-  test("assignTeamPlayerColor always returns the same color for the same playerID", () => {
-    const playerId = "player123";
-
-    const blueColor1 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Blue,
-      playerId,
-    );
-    const blueColor2 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Blue,
-      playerId,
-    );
-
-    expect(blueColor1.isEqual(blueColor2)).toBe(true);
-
-    const redColor1 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Red,
-      playerId,
-    );
-    const redColor2 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Red,
-      playerId,
-    );
-
-    expect(redColor1.isEqual(redColor2)).toBe(true);
+  test("teamColorForPlayer is stable for the same playerID", () => {
+    const theme = new SettingsTheme(createThemeSettings("default"));
+    const a = theme.teamColorForPlayer(ColoredTeams.Blue, "player123");
+    const b = theme.teamColorForPlayer(ColoredTeams.Blue, "player123");
+    expect(a.isEqual(b)).toBe(true);
   });
 
-  test("assignTeamPlayerColor returns a different color when the playerID is different", () => {
-    const playerIdOne = "player1";
-    const playerIdTwo = "player2";
-
-    const blueColorPlayerOne = allocator.assignTeamPlayerColor(
-      ColoredTeams.Blue,
-      playerIdOne,
-    );
-    const blueColorPlayerTwo = allocator.assignTeamPlayerColor(
-      ColoredTeams.Blue,
-      playerIdTwo,
-    );
-
-    expect(blueColorPlayerOne.isEqual(blueColorPlayerTwo)).toBe(false);
-
-    const redColorPlayerOne = allocator.assignTeamPlayerColor(
-      ColoredTeams.Red,
-      playerIdOne,
-    );
-    const redColorPlayerTwo = allocator.assignTeamPlayerColor(
-      ColoredTeams.Red,
-      playerIdTwo,
-    );
-
-    expect(redColorPlayerOne.isEqual(redColorPlayerTwo)).toBe(false);
+  test("teamColorForPlayer differs for different playerIDs", () => {
+    const theme = new SettingsTheme(createThemeSettings("default"));
+    const a = theme.teamColorForPlayer(ColoredTeams.Blue, "player1");
+    const b = theme.teamColorForPlayer(ColoredTeams.Blue, "player2");
+    expect(a.isEqual(b)).toBe(false);
   });
 });
+
+describe("colorblind theme", () => {
+  test("applies a palette distinct from the default theme", () => {
+    const defaultTheme = new SettingsTheme(createThemeSettings("default"));
+    const colorblind = new SettingsTheme(createThemeSettings("colorblind"));
+
+    // At least one team's base color should differ — the colorblind theme
+    // swaps the team palettes for CVD-safe (Okabe-Ito) colors.
+    const teams = [
+      ColoredTeams.Blue,
+      ColoredTeams.Red,
+      ColoredTeams.Teal,
+      ColoredTeams.Purple,
+      ColoredTeams.Yellow,
+      ColoredTeams.Orange,
+      ColoredTeams.Green,
+    ];
+    const anyDifferent = teams.some(
+      (team) =>
+        !defaultTheme.teamColor(team).isEqual(colorblind.teamColor(team)),
+    );
+    expect(anyDifferent).toBe(true);
+  });
+
+  test("scales border lightness relative to the fill", () => {
+    const colorblind = new SettingsTheme(createThemeSettings("colorblind"));
+    const fill = colord("#0072b2");
+    const border = colorblind.borderColor(fill);
+    expect(border.toHsl().l).toBeCloseTo(fill.toHsl().l * 0.6, 0);
+  });
+});
+
+// Tribes (bots) must be tellable from nations by territory color alone
+// (#4845). Colors are allocated through the runtime path
+// (SettingsTheme.territoryColor) rather than read off the theme JSON, so the
+// type dispatch is covered too. Drawing more players than any pool holds
+// exercises the full pool plus the recycling path.
+describe.each(["default", "colorblind"] as const)(
+  "tribe vs nation territory colors — %s theme",
+  (themeName) => {
+    // territoryColor() only reads team/type/id from the player.
+    const player = (type: PlayerType, id: string) =>
+      ({
+        team: () => null,
+        type: () => type,
+        id: () => id,
+      }) as unknown as PlayerView;
+
+    const assignedColors = (type: PlayerType): Colord[] => {
+      const theme = new SettingsTheme(createThemeSettings(themeName));
+      return Array.from({ length: 64 }, (_, i) =>
+        theme.territoryColor(player(type, `${type}-${i}`)),
+      );
+    };
+
+    test("bot territory colors are near-neutral so tribes read as gray", () => {
+      const chromatic = assignedColors(PlayerType.Bot)
+        .filter((c) => c.toLch().c >= 12)
+        .map((c) => c.toHex());
+      expect(chromatic).toEqual([]);
+    });
+
+    test("bots use the flat Bot team color in every mode", () => {
+      const theme = new SettingsTheme(createThemeSettings(themeName));
+      const teamless = theme.territoryColor(player(PlayerType.Bot, "bot-1"));
+      expect(teamless.isEqual(theme.teamColor(ColoredTeams.Bot))).toBe(true);
+    });
+
+    test("every nation color is perceptually far from every bot color", () => {
+      const bots = assignedColors(PlayerType.Bot);
+      const confusable = assignedColors(PlayerType.Nation).flatMap((nation) =>
+        bots
+          .filter((bot) => nation.delta(bot) <= 0.1)
+          .map((bot) => `${nation.toHex()} vs ${bot.toHex()}`),
+      );
+      expect(confusable).toEqual([]);
+    });
+  },
+);
 
 describe("selectDistinctColor", () => {
   test("returns the most distant color", () => {
@@ -158,8 +202,7 @@ describe("selectDistinctColor", () => {
     ];
 
     const result = selectDistinctColorIndex(availableColors, assignedColors);
-    expect(result).not.toBeNull();
-    const rgb = availableColors[result!].toRgb();
+    const rgb = availableColors[result].toRgb();
     expect([
       { r: 0, g: 255, b: 0, a: 1 },
       { r: 0, g: 0, b: 255, a: 1 },

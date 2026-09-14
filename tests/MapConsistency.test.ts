@@ -1,6 +1,13 @@
 import fs from "fs";
 import path from "path";
-import { GameMapName, GameMapType, mapCategories } from "../src/core/game/Game";
+import {
+  type CustomTribe,
+  GameMapName,
+  GameMapType,
+  MapInfo,
+  maps,
+} from "../src/core/game/Game";
+import { validateLayer } from "./util/layerValidation";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -12,9 +19,7 @@ function toFolderName(key: GameMapName): string {
 const ROOT = path.resolve(__dirname, "..");
 const MAP_GEN_MAPS = path.join(ROOT, "map-generator", "assets", "maps");
 const RESOURCES_MAPS = path.join(ROOT, "resources", "maps");
-const MAIN_GO = path.join(ROOT, "map-generator", "main.go");
 const EN_JSON = path.join(ROOT, "resources", "lang", "en.json");
-const MAP_PLAYLIST = path.join(ROOT, "src", "server", "MapPlaylist.ts");
 
 const allMapKeys = Object.keys(GameMapType) as GameMapName[];
 
@@ -29,99 +34,77 @@ const FREQUENCY_EXEMPTIONS: Set<GameMapName> = new Set([
   "Tourney4",
   "EuropeClassic",
   "BritanniaClassic",
+  "ChoppingBlock",
+  "Luna",
 ]);
 
-/** Parse the main.go maps registry and return the set of non-test map folder names. */
-function getMainGoMaps(): Set<string> {
-  const content = fs.readFileSync(MAIN_GO, "utf8");
-  const names = new Set<string>();
-  // Match lines like {Name: "africa"} or {Name: "africa", IsTest: true}
-  const re = /\{Name:\s*"([^"]+)"(?:,\s*IsTest:\s*true)?\}/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(content)) !== null) {
-    // Check if it's a test map
-    if (!m[0].includes("IsTest: true")) {
-      names.add(m[1]);
-    }
-  }
-  return names;
-}
+// Keys in the en.json "map" section that are UI strings, not map names.
+const EN_JSON_META_KEYS = new Set([
+  "map",
+  "featured",
+  "all",
+  "favorites",
+  "random",
+]);
 
-/** Get the en.json map translation keys. */
-function getEnJsonMapKeys(): Set<string> {
+/** Get the en.json "map" section. */
+function getEnJsonMapSection(): Record<string, string> {
   const content = JSON.parse(fs.readFileSync(EN_JSON, "utf8"));
-  const mapSection = content.map as Record<string, string>;
-  // Exclude meta keys that aren't actual maps.
-  const metaKeys = new Set(["map", "featured", "all", "random"]);
-  return new Set(Object.keys(mapSection).filter((k) => !metaKeys.has(k)));
+  return content.map as Record<string, string>;
 }
 
-/** Get all maps listed in the mapCategories from Game.ts. */
-function getCategorizedMaps(): Set<string> {
-  const result = new Set<string>();
-  for (const maps of Object.values(mapCategories)) {
-    for (const map of maps) {
-      result.add(map as string);
+const mapsById = new Map<GameMapName, MapInfo>(maps.map((m) => [m.id, m]));
+
+/** Read the parsed info.json for a map, or null if missing. */
+function readInfoJson(key: GameMapName): Record<string, unknown> | null {
+  const infoPath = path.join(MAP_GEN_MAPS, toFolderName(key), "info.json");
+  if (!fs.existsSync(infoPath)) return null;
+  return JSON.parse(fs.readFileSync(infoPath, "utf8"));
+}
+
+/** The generator treats falsy info.json values (0, "") as "omitted". */
+function orOmitted(value: unknown): unknown {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+  return value || undefined;
+}
+
+/**
+ * Normalize info.json custom_tribes (mixed string/object array) to the
+ * Maps.gen.ts format (all CustomTribe objects with name and optional coordinates).
+ */
+function normalizeCustomTribes(raw: unknown): CustomTribe[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  return raw.map((entry, i) => {
+    if (typeof entry === "string") {
+      if (entry === "") throw new Error(`custom_tribes[${i}]: empty string`);
+      return { name: entry };
     }
-  }
-  return result;
-}
-
-/** Parse the frequency record keys from MapPlaylist.ts. */
-function getFrequencyKeys(): Set<string> {
-  const content = fs.readFileSync(MAP_PLAYLIST, "utf8");
-  // Extract the frequency block
-  const freqMatch = content.match(/const frequency[\s\S]*?\{([\s\S]*?)\};/);
-  if (!freqMatch) {
-    throw new Error(
-      `Failed to parse frequency record from MapPlaylist.ts (first 200 chars: ${content.slice(0, 200)})`,
-    );
-  }
-  const keys = new Set<string>();
-  const re = /(\w+):/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(freqMatch[1])) !== null) {
-    keys.add(m[1]);
-  }
-  return keys;
+    if (entry === null || typeof entry !== "object")
+      throw new Error(`custom_tribes[${i}]: invalid entry`);
+    const obj = entry as { name?: unknown; coordinates?: unknown };
+    if (typeof obj.name !== "string" || obj.name === "")
+      throw new Error(`custom_tribes[${i}]: name must be a non-empty string`);
+    if (obj.coordinates !== undefined) {
+      if (
+        !Array.isArray(obj.coordinates) ||
+        obj.coordinates.length !== 2 ||
+        typeof obj.coordinates[0] !== "number" ||
+        typeof obj.coordinates[1] !== "number"
+      )
+        throw new Error(`custom_tribes[${i}]: coordinates must be [x, y]`);
+      return {
+        name: obj.name,
+        coordinates: obj.coordinates as [number, number],
+      };
+    }
+    return { name: obj.name };
+  });
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("Map consistency", () => {
-  test("Every GameMapType is registered in main.go", () => {
-    const mainGoMaps = getMainGoMaps();
-    const errors: string[] = [];
-    for (const key of allMapKeys) {
-      const folder = toFolderName(key);
-      if (!mainGoMaps.has(folder)) {
-        errors.push(`${key} (folder "${folder}") is missing from main.go`);
-      }
-    }
-    if (errors.length > 0) {
-      throw new Error("Maps missing from main.go:\n" + errors.join("\n"));
-    }
-  });
-
-  test("Every main.go map has a GameMapType entry", () => {
-    const mainGoMaps = getMainGoMaps();
-    const folderToKey = new Map(allMapKeys.map((k) => [toFolderName(k), k]));
-    const errors: string[] = [];
-    for (const folder of mainGoMaps) {
-      if (!folderToKey.has(folder)) {
-        errors.push(
-          `main.go map "${folder}" has no matching GameMapType entry`,
-        );
-      }
-    }
-    if (errors.length > 0) {
-      throw new Error(
-        "main.go maps missing from GameMapType:\n" + errors.join("\n"),
-      );
-    }
-  });
-
-  test("Every GameMapType has map-generator assets (image.png + info.json only)", () => {
+  test("Every GameMapType has map-generator assets (image.png + info.json + layer PNGs only)", () => {
     const errors: string[] = [];
     for (const key of allMapKeys) {
       const folder = toFolderName(key);
@@ -135,14 +118,38 @@ describe("Map consistency", () => {
       }
 
       const files = fs.readdirSync(dir).sort();
-      const expected = ["image.png", "info.json"];
-      if (
-        files.length !== expected.length ||
-        !files.every((f, i) => f === expected[i])
-      ) {
+      // image.png and info.json are always required.
+      if (!files.includes("image.png")) {
         errors.push(
-          `${key}: expected [${expected.join(", ")}] but found [${files.join(", ")}]`,
+          `${key}: missing "image.png" in map-generator/assets/maps/${folder}/`,
         );
+      }
+      if (!files.includes("info.json")) {
+        errors.push(
+          `${key}: missing "info.json" in map-generator/assets/maps/${folder}/`,
+        );
+      }
+
+      // Build the set of expected PNGs: image.png + layer PNGs.
+      const info = readInfoJson(key);
+      const layers = (info?.layers as Array<{ id: string }> | undefined) ?? [];
+      const allowedPngs = new Set(["image.png"]);
+      for (const layer of layers) {
+        allowedPngs.add(`${layer.id}.png`);
+      }
+
+      for (const file of files) {
+        if (file === "info.json") continue;
+        if (file.endsWith(".png") && !allowedPngs.has(file)) {
+          errors.push(
+            `${key}: unexpected file "${file}" in map-generator/assets/maps/${folder}/`,
+          );
+        }
+        if (!file.endsWith(".png") && file !== "info.json") {
+          errors.push(
+            `${key}: unexpected file "${file}" in map-generator/assets/maps/${folder}/`,
+          );
+        }
       }
     }
     if (errors.length > 0) {
@@ -150,69 +157,253 @@ describe("Map consistency", () => {
     }
   });
 
-  test("Every GameMapType is listed in at least one mapCategories group", () => {
-    const categorized = getCategorizedMaps();
+  test("The maps list and GameMapType match one-to-one", () => {
     const errors: string[] = [];
     for (const key of allMapKeys) {
-      const value = GameMapType[key];
-      if (!categorized.has(value)) {
-        errors.push(
-          `${key} ("${value}") is not listed in any mapCategories group`,
-        );
+      if (!mapsById.has(key)) {
+        errors.push(`${key} has no entry in the generated maps list`);
       }
     }
+    for (const m of maps) {
+      if (!(m.id in GameMapType)) {
+        errors.push(`maps list entry "${m.id}" is not a GameMapType key`);
+      }
+    }
+    if (maps.length !== mapsById.size) {
+      errors.push("maps list contains duplicate ids");
+    }
     if (errors.length > 0) {
-      throw new Error("Maps missing from mapCategories:\n" + errors.join("\n"));
+      throw new Error("maps list violations:\n" + errors.join("\n"));
     }
   });
 
-  test("Every GameMapType (except exemptions) has a frequency entry", () => {
-    const freqKeys = getFrequencyKeys();
+  // Maps.gen.ts is generated from the info.json files by the map-generator.
+  // If this test fails, run `npm run gen-maps` to regenerate it.
+  test("info.json metadata matches the generated Maps.gen.ts", () => {
+    const errors: string[] = [];
+    for (const key of allMapKeys) {
+      const info = readInfoJson(key);
+      const map = mapsById.get(key);
+      if (info === null || map === undefined) {
+        continue; // Other tests catch missing files/entries.
+      }
+      const value = GameMapType[key];
+      if (info.id !== key) {
+        errors.push(`${key}: info.json id is "${info.id}", expected "${key}"`);
+      }
+      if (info.name !== value) {
+        errors.push(
+          `${key}: info.json name is "${info.name}", but GameMapType.${key} is "${value}"`,
+        );
+      }
+      const fields: [string, unknown, unknown][] = [
+        ["categories", info.categories, map.categories],
+        ["translation_key", info.translation_key, map.translationKey],
+        [
+          "multiplayer_frequency",
+          info.multiplayer_frequency ?? 0,
+          map.multiplayerFrequency,
+        ],
+        ["ffa_frequency", info.ffa_frequency ?? -1, map.ffaFrequency],
+        ["team_frequency", info.team_frequency ?? -1, map.teamFrequency],
+        [
+          "special_frequency",
+          info.special_frequency ?? -1,
+          map.specialFrequency,
+        ],
+        ["featured_rank", orOmitted(info.featured_rank), map.featuredRank],
+        [
+          "special_team_count",
+          orOmitted(info.special_team_count),
+          map.specialTeamCount,
+        ],
+        [
+          "disabled_modifiers",
+          orOmitted(info.disabled_modifiers),
+          map.disabledModifiers,
+        ],
+        [
+          "forced_modifiers",
+          orOmitted(info.forced_modifiers),
+          map.forcedModifiers,
+        ],
+        ["themes", orOmitted(info.themes), map.themes],
+        [
+          "custom_tribes",
+          normalizeCustomTribes(info.custom_tribes),
+          map.customTribes,
+        ],
+        [
+          "defaultNationCount",
+          Array.isArray(info.nations) ? info.nations.length : 0,
+          map.defaultNationCount,
+        ],
+      ];
+      for (const [field, infoValue, mapValue] of fields) {
+        if (JSON.stringify(infoValue) !== JSON.stringify(mapValue)) {
+          errors.push(
+            `${key}: info.json ${field} is ${JSON.stringify(infoValue)}, but the maps list has ${JSON.stringify(mapValue)}`,
+          );
+        }
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(
+        "info.json and Maps.gen.ts are out of sync (run `npm run gen-maps`):\n" +
+          errors.join("\n"),
+      );
+    }
+  });
+
+  test("Every GameMapType (except exemptions) has a frequency set", () => {
     const errors: string[] = [];
     for (const key of allMapKeys) {
       if (FREQUENCY_EXEMPTIONS.has(key)) continue;
-      if (!freqKeys.has(key)) {
+      const info = readInfoJson(key);
+      if (info === null) continue; // Other tests catch missing files.
+      const freq = info.multiplayer_frequency;
+      const hasFallback = typeof freq === "number" && freq > 0;
+      const hasPerMode =
+        (typeof info.ffa_frequency === "number" && info.ffa_frequency > 0) ||
+        (typeof info.team_frequency === "number" && info.team_frequency > 0) ||
+        (typeof info.special_frequency === "number" &&
+          info.special_frequency > 0);
+      if (!hasFallback && !hasPerMode) {
         errors.push(
-          `${key} is missing from the frequency record in MapPlaylist.ts`,
+          `${key} has no frequency in info.json (set multiplayer_frequency > 0, or at least one per-mode frequency, or add the map to FREQUENCY_EXEMPTIONS)`,
         );
       }
     }
     if (errors.length > 0) {
       throw new Error(
-        "Maps missing from frequency (not exempted):\n" + errors.join("\n"),
+        "Maps missing a frequency (not exempted):\n" + errors.join("\n"),
       );
     }
   });
 
-  test("No unknown keys in frequency record", () => {
-    const freqKeys = getFrequencyKeys();
-    const validKeys = new Set(allMapKeys);
+  test("Per-mode frequencies are valid numbers when set", () => {
+    const VALID_MODIFIER_KEYS = new Set([
+      "isRandomSpawn",
+      "isCompact",
+      "isCrowded",
+      "isHardNations",
+      "startingGold1M",
+      "startingGold5M",
+      "startingGold25M",
+      "goldMultiplier",
+      "isAlliancesDisabled",
+      "isNukesDisabled",
+      "isSAMsDisabled",
+      "isPeaceTime",
+      "isWaterNukes",
+      "isDoomsdayClock",
+    ]);
     const errors: string[] = [];
-    for (const key of freqKeys) {
-      if (!validKeys.has(key as GameMapName)) {
-        errors.push(`"${key}" in frequency is not a valid GameMapName`);
+    for (const key of allMapKeys) {
+      const info = readInfoJson(key);
+      if (info === null) continue;
+      for (const field of [
+        "ffa_frequency",
+        "team_frequency",
+        "special_frequency",
+      ]) {
+        const val = info[field];
+        if (val !== undefined && (typeof val !== "number" || val < 0)) {
+          errors.push(
+            `${key}: ${field} is ${JSON.stringify(val)} (must be a non-negative number or omitted)`,
+          );
+        }
+      }
+      // Validate disabled_modifiers values.
+      const disabled = info.disabled_modifiers;
+      if (Array.isArray(disabled)) {
+        for (const mod of disabled) {
+          if (typeof mod !== "string" || !VALID_MODIFIER_KEYS.has(mod)) {
+            errors.push(
+              `${key}: disabled_modifiers contains invalid modifier "${mod}"`,
+            );
+          }
+        }
+      }
+      // Validate forced_modifiers format: plain key or "key:percentage".
+      const forced = info.forced_modifiers;
+      if (Array.isArray(forced)) {
+        for (const entry of forced) {
+          if (typeof entry !== "string") {
+            errors.push(
+              `${key}: forced_modifiers contains non-string entry ${JSON.stringify(entry)}`,
+            );
+            continue;
+          }
+          const parts = entry.split(":");
+          if (parts.length > 2) {
+            errors.push(
+              `${key}: forced_modifiers "${entry}" has too many colon-separated segments (expected "modifier" or "modifier:percentage")`,
+            );
+            continue;
+          }
+          const [mod, pctStr] = parts;
+          if (!VALID_MODIFIER_KEYS.has(mod)) {
+            errors.push(
+              `${key}: forced_modifiers contains invalid modifier "${mod}"`,
+            );
+          }
+          if (pctStr !== undefined) {
+            if (!/^\d+$/.test(pctStr)) {
+              errors.push(
+                `${key}: forced_modifiers "${entry}" has non-integer percentage`,
+              );
+            } else {
+              const pct = parseInt(pctStr, 10);
+              if (pct < 1 || pct > 100) {
+                errors.push(
+                  `${key}: forced_modifiers "${entry}" has invalid percentage (must be 1-100)`,
+                );
+              }
+            }
+          }
+        }
       }
     }
     if (errors.length > 0) {
       throw new Error(
-        "Unknown keys in frequency record:\n" + errors.join("\n"),
+        "Invalid per-mode frequency or modifier fields in info.json:\n" +
+          errors.join("\n"),
       );
     }
   });
 
-  test("Every GameMapType is registered in en.json map translations", () => {
-    const enKeys = getEnJsonMapKeys();
+  // The en.json "map" section is generated from the info.json files.
+  // If this test fails, run `npm run gen-maps` to regenerate it.
+  test("en.json map translations match info.json display names", () => {
+    const enMapSection = getEnJsonMapSection();
     const errors: string[] = [];
     for (const key of allMapKeys) {
       const folder = toFolderName(key);
-      if (!enKeys.has(folder)) {
+      const info = readInfoJson(key);
+      if (info === null) continue; // Other tests catch missing files.
+      const expected = orOmitted(info.display_name) ?? info.name;
+      if (enMapSection[folder] === undefined) {
         errors.push(
           `${key} (key "${folder}") is missing from en.json map translations`,
         );
+      } else if (enMapSection[folder] !== expected) {
+        errors.push(
+          `${key}: en.json map.${folder} is "${enMapSection[folder]}", but info.json says "${expected}"`,
+        );
+      }
+    }
+    const validKeys = new Set(allMapKeys.map((k) => toFolderName(k)));
+    for (const enKey of Object.keys(enMapSection)) {
+      if (!EN_JSON_META_KEYS.has(enKey) && !validKeys.has(enKey)) {
+        errors.push(`en.json map.${enKey} does not match any map`);
       }
     }
     if (errors.length > 0) {
-      throw new Error("Maps missing from en.json:\n" + errors.join("\n"));
+      throw new Error(
+        "en.json map section is out of sync (run `npm run gen-maps`):\n" +
+          errors.join("\n"),
+      );
     }
   });
 
@@ -294,39 +485,68 @@ describe("Map consistency", () => {
         const info = JSON.parse(fs.readFileSync(infoPath, "utf8"));
         const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 
-        type NationEntry = { name: string; coordinates: [number, number] };
-        const infoNations: NationEntry[] = (info.nations ?? []).map(
-          (n: NationEntry) => ({ name: n.name, coordinates: n.coordinates }),
-        );
-        const manifestNations: NationEntry[] = (manifest.nations ?? []).map(
-          (n: NationEntry) => ({ name: n.name, coordinates: n.coordinates }),
-        );
+        // ── Compare nations ──────────────────────────────────────────────
+        type NationEntry = {
+          name: string;
+          coordinates?: [number, number];
+        };
 
-        if (infoNations.length !== manifestNations.length) {
-          errors.push(
-            `${key}: nation count mismatch — info.json has ${infoNations.length}, manifest.json has ${manifestNations.length}`,
-          );
-          continue;
+        function compareNationArrays(
+          label: string,
+          infoArr: NationEntry[],
+          manifestArr: NationEntry[],
+        ): void {
+          if (infoArr.length !== manifestArr.length) {
+            errors.push(
+              `${key}: ${label} count mismatch — info.json has ${infoArr.length}, manifest.json has ${manifestArr.length}`,
+            );
+            return;
+          }
+          for (let i = 0; i < infoArr.length; i++) {
+            const inf = infoArr[i];
+            const man = manifestArr[i];
+            if (inf.name !== man.name) {
+              errors.push(
+                `${key}: ${label}[${i}] name mismatch — info.json "${inf.name}" vs manifest.json "${man.name}"`,
+              );
+              continue;
+            }
+            const infHasCoords = inf.coordinates !== undefined;
+            const manHasCoords = man.coordinates !== undefined;
+            if (infHasCoords !== manHasCoords) {
+              errors.push(
+                `${key}: ${label} "${inf.name}" (index ${i}) coordinate presence differs — info.json ${infHasCoords ? "has" : "missing"} coordinates, manifest.json ${manHasCoords ? "has" : "missing"} coordinates`,
+              );
+              continue;
+            }
+            if (inf.coordinates && man.coordinates) {
+              const [ix, iy] = inf.coordinates;
+              const [mx, my] = man.coordinates;
+              if (ix !== mx || iy !== my) {
+                errors.push(
+                  `${key}: ${label} "${inf.name}" (index ${i}) coordinates differ — info.json [${ix}, ${iy}] vs manifest.json [${mx}, ${my}]`,
+                );
+              }
+            }
+          }
         }
 
-        // Compare nations by index (order must match; names can be duplicated).
-        for (let i = 0; i < infoNations.length; i++) {
-          const inf = infoNations[i];
-          const man = manifestNations[i];
-          if (inf.name !== man.name) {
-            errors.push(
-              `${key}: nations[${i}] name mismatch — info.json "${inf.name}" vs manifest.json "${man.name}"`,
-            );
-            continue;
-          }
-          const [ix, iy] = inf.coordinates;
-          const [mx, my] = man.coordinates;
-          if (ix !== mx || iy !== my) {
-            errors.push(
-              `${key}: nation "${inf.name}" (index ${i}) coordinates differ — info.json [${ix}, ${iy}] vs manifest.json [${mx}, ${my}]`,
-            );
-          }
-        }
+        const toEntry = (n: NationEntry) => ({
+          name: n.name,
+          coordinates: n.coordinates,
+        });
+
+        compareNationArrays(
+          "nation",
+          (info.nations ?? []).map(toEntry),
+          (manifest.nations ?? []).map(toEntry),
+        );
+
+        compareNationArrays(
+          "additionalNation",
+          (info.additionalNations ?? []).map(toEntry),
+          (manifest.additionalNations ?? []).map(toEntry),
+        );
       } catch (err) {
         errors.push(`${key}: failed to parse JSON — ${(err as Error).message}`);
       }
@@ -335,6 +555,208 @@ describe("Map consistency", () => {
     if (errors.length > 0) {
       throw new Error(
         "Nation data mismatches between info.json and manifest.json:\n" +
+          errors.join("\n"),
+      );
+    }
+  });
+
+  test("Map metadata in info.json and manifest.json should match", () => {
+    const metadataKeys = [
+      "id",
+      "name",
+      "display_name",
+      "translation_key",
+      "categories",
+      "multiplayer_frequency",
+      "featured_rank",
+      "special_team_count",
+    ];
+    const errors: string[] = [];
+
+    for (const key of allMapKeys) {
+      const info = readInfoJson(key);
+      const manifestPath = path.join(
+        RESOURCES_MAPS,
+        toFolderName(key),
+        "manifest.json",
+      );
+      if (info === null || !fs.existsSync(manifestPath)) {
+        continue; // Other tests catch missing files.
+      }
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+
+      for (const field of metadataKeys) {
+        if (JSON.stringify(info[field]) !== JSON.stringify(manifest[field])) {
+          errors.push(
+            `${key}: "${field}" mismatch — info.json ${JSON.stringify(info[field])} vs manifest.json ${JSON.stringify(manifest[field])}`,
+          );
+        }
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(
+        "Metadata mismatches between info.json and manifest.json (run `npm run gen-maps`):\n" +
+          errors.join("\n"),
+      );
+    }
+  });
+
+  // ── Layer validation ────────────────────────────────────────────────────
+
+  test("Layer definitions in info.json are valid", () => {
+    const errors: string[] = [];
+
+    for (const key of allMapKeys) {
+      const info = readInfoJson(key);
+      if (info === null) continue;
+      const layers = info.layers as
+        | Array<{ id: string; placement: string; nukeable?: boolean }>
+        | undefined;
+      if (!layers || !Array.isArray(layers)) continue;
+
+      const ids = new Set<string>();
+      for (let i = 0; i < layers.length; i++) {
+        errors.push(...validateLayer(layers[i], i, key, ids));
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(
+        "Layer definition violations in info.json:\n" + errors.join("\n"),
+      );
+    }
+  });
+
+  test("Layer PNGs exist in map-generator and resources for every defined layer", () => {
+    const errors: string[] = [];
+
+    for (const key of allMapKeys) {
+      const info = readInfoJson(key);
+      if (info === null) continue;
+      const layers = info.layers as
+        | Array<{ id: string; placement: string }>
+        | undefined;
+      if (!layers || !Array.isArray(layers)) continue;
+
+      const folder = toFolderName(key);
+      const genDir = path.join(MAP_GEN_MAPS, folder);
+      const resDir = path.join(RESOURCES_MAPS, folder);
+
+      for (const layer of layers) {
+        const genPng = path.join(genDir, `${layer.id}.png`);
+        if (!fs.existsSync(genPng)) {
+          errors.push(
+            `${key}: layer PNG "${layer.id}.png" missing in map-generator/assets/maps/${folder}/`,
+          );
+        }
+        const resPng = path.join(resDir, `${layer.id}.png`);
+        if (!fs.existsSync(resPng)) {
+          errors.push(
+            `${key}: layer PNG "${layer.id}.png" missing in resources/maps/${folder}/`,
+          );
+        }
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error("Missing layer PNGs:\n" + errors.join("\n"));
+    }
+  });
+
+  test("No unreferenced PNGs in map-generator asset folders", () => {
+    const errors: string[] = [];
+
+    for (const key of allMapKeys) {
+      const info = readInfoJson(key);
+      if (info === null) continue;
+      const folder = toFolderName(key);
+      const genDir = path.join(MAP_GEN_MAPS, folder);
+
+      const layers = (info.layers as Array<{ id: string }> | undefined) ?? [];
+      const allowedPngs = new Set(["image.png"]);
+      for (const layer of layers) {
+        allowedPngs.add(`${layer.id}.png`);
+      }
+
+      const files = fs.readdirSync(genDir);
+      for (const file of files) {
+        if (file.endsWith(".png") && !allowedPngs.has(file)) {
+          errors.push(
+            `${key}: unexpected PNG "${file}" in map-generator/assets/maps/${folder}/ (not image.png or a defined layer)`,
+          );
+        }
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error("Unreferenced PNGs:\n" + errors.join("\n"));
+    }
+  });
+
+  test("Layers in manifest.json match info.json", () => {
+    const errors: string[] = [];
+
+    for (const key of allMapKeys) {
+      const info = readInfoJson(key);
+      const manifestPath = path.join(
+        RESOURCES_MAPS,
+        toFolderName(key),
+        "manifest.json",
+      );
+      if (info === null || !fs.existsSync(manifestPath)) continue;
+
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      const infoLayers =
+        (info.layers as Array<Record<string, unknown>> | undefined) ?? [];
+      const manifestLayers =
+        (manifest.layers as Array<Record<string, unknown>> | undefined) ?? [];
+
+      if (infoLayers.length !== manifestLayers.length) {
+        errors.push(
+          `${key}: "layers" count mismatch — info.json has ${infoLayers.length}, manifest.json has ${manifestLayers.length}`,
+        );
+        continue;
+      }
+
+      for (let i = 0; i < infoLayers.length; i++) {
+        // Compare by serializing sorted keys (Go marshals keys alphabetically).
+        const normalize = (obj: Record<string, unknown>) =>
+          JSON.stringify(obj, Object.keys(obj).sort());
+        if (normalize(infoLayers[i]) !== normalize(manifestLayers[i])) {
+          errors.push(
+            `${key}: layers[${i}] mismatch — info.json ${JSON.stringify(infoLayers[i])} vs manifest.json ${JSON.stringify(manifestLayers[i])}`,
+          );
+        }
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(
+        "Layer data mismatches between info.json and manifest.json:\n" +
+          errors.join("\n"),
+      );
+    }
+  });
+
+  test("Layer names exist in en.json map_layers section", () => {
+    const enContent = JSON.parse(fs.readFileSync(EN_JSON, "utf8"));
+    const mapLayersSection =
+      (enContent.map_layers as Record<string, string> | undefined) ?? {};
+
+    const errors: string[] = [];
+    for (const key of allMapKeys) {
+      const info = readInfoJson(key);
+      if (info === null) continue;
+      const layers = info.layers as Array<{ id: string }> | undefined;
+      if (!layers || !Array.isArray(layers)) continue;
+
+      for (const layer of layers) {
+        if (mapLayersSection[layer.id] === undefined) {
+          errors.push(
+            `${key}: layer "${layer.id}" is missing from en.json map_layers section`,
+          );
+        }
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(
+        "Layer names missing from en.json (run `npm run gen-maps`):\n" +
           errors.join("\n"),
       );
     }

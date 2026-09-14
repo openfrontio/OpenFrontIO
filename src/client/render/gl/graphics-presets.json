@@ -1,0 +1,62 @@
+[
+  {
+    "nameKey": "graphics_setting.preset_default",
+    "descKey": "graphics_setting.preset_default_desc",
+    "overrides": {}
+  },
+  {
+    "nameKey": "graphics_setting.preset_night",
+    "descKey": "graphics_setting.preset_night_desc",
+    "overrides": { "lighting": { "ambient": 0.36 } }
+  },
+  {
+    "nameKey": "graphics_setting.preset_evans_pick",
+    "descKey": "graphics_setting.preset_evans_pick_desc",
+    "overrides": {
+      "name": {
+        "hoverFadeAlpha": 0.4,
+        "hoverGlowWidth": 8
+      },
+      "structure": {
+        "classicIcons": false
+      },
+      "mapOverlay": {
+        "navalHighlight": true,
+        "highlightFillBrighten": 0.68,
+        "highlightBrighten": 0.17,
+        "highlightThicken": 3,
+        "territorySaturation": 1,
+        "territoryAlpha": 0.54
+      },
+      "terrain": {
+        "backgroundColor": "#131b25",
+        "oceanColor": "#274963",
+        "plainsColor": "#b3d080",
+        "highlandColor": "#d6c69a",
+        "mountainColor": "#fff5f5"
+      },
+      "lighting": {
+        "ambient": 0.76,
+        "falloffPower": 1
+      }
+    }
+  },
+  {
+    "nameKey": "graphics_setting.preset_colorblind",
+    "descKey": "graphics_setting.preset_colorblind_desc",
+    "overrides": {
+      "palette": "colorblind",
+      "affiliation": {
+        "selfColor": "#0072b2",
+        "allyColor": "#56b4e9",
+        "enemyColor": "#d55e00"
+      },
+      "mapOverlay": {
+        "friendlyTintColor": "#0072b2",
+        "embargoTintColor": "#d55e00",
+        "friendlyTintRatio": 0.85,
+        "embargoTintRatio": 0.85
+      }
+    }
+  }
+]

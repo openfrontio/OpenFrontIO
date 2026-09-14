@@ -6,6 +6,7 @@
     "lang_code": "zh-CN"
   },
   "common": {
+    "not_logged_in": "未登录",
     "close": "关闭",
     "copy": "复制",
     "paste": "粘贴",
@@ -24,6 +25,7 @@
     "copied": "已复制！",
     "click_to_copy": "点击复制",
     "enabled": "已启用",
+    "disabled": "已禁用",
     "map_default": "地图默认值"
   },
   "main": {
@@ -52,8 +54,8 @@
     "go_to_troubleshooting": "移步到我们的疑难解答页面"
   },
   "news": {
-    "github_link": "在 Github 上",
-    "title": "发行说明"
+    "title": "发行说明",
+    "github_link": "在 Github 上"
   },
   "troubleshooting": {
     "title": "疑难解答",
@@ -97,11 +99,16 @@
     "action_build": "打开建造菜单",
     "action_emote": "打开表情菜单",
     "action_center": "将镜头居中在玩家身上",
+    "action_pause_game": "暂停/恢复游戏",
+    "action_game_speed": "游戏速度调整（单人模式）",
     "action_zoom": "放大/缩小",
     "action_move_camera": "移动镜头",
     "action_ratio_change": "减少/增加进攻部队的比率",
     "action_reset_gfx": "重置图形",
     "action_auto_upgrade": "自动升级最近的建筑",
+    "action_warship_multiselect": "多选战舰（拖拽绘制选择框）",
+    "action_warship_selectall": "选择你的所有军舰",
+    "drag": "拖动",
     "ui_section": "游戏 UI",
     "ui_leaderboard": "排行榜",
     "ui_your_team": "你的队伍:",
@@ -118,12 +125,13 @@
     "ui_options": "选项",
     "ui_options_desc": "内含以下内容：",
     "ui_playeroverlay": "玩家信息叠层",
-    "ui_playeroverlay_desc": "当鼠标悬停在一个国家上时，玩家信息叠层将显示在“选项”下方。它将显示该玩家的类型，包括真人玩家、国家（智能AI）或部落；还会显示该国对你的态度 (从敌对到友好)；显示该国防守军队数量，黄金，军舰及各种建筑物的数量。",
+    "ui_playeroverlay_desc": "当鼠标悬停在一个国家上时，将显示玩家信息叠层。它将显示该玩家的类型（人类、国家或部落）、该国对你的态度 (从敌对到友好)、防守军队数量、黄金、军舰及各种建筑物的数量。",
     "ui_wilderness": "荒野",
-    "option_pause": "暂停/继续游戏 - 仅在单人模式下有效。",
+    "option_pause": "暂停/继续游戏 - 在多人模式下无效。",
+    "option_speed": "速度 - 调整游戏速度。无法在多人游戏中使用。",
     "option_timer": "计时器 - 自游戏开始以来经过的时长。",
     "option_exit": "退出按钮。",
-    "option_settings": "设置 — 打开设置菜单。你可以在其中切换以下选项：备用视图、表情符号、深色模式、忍者模式 (匿名/随机玩家名模式)，以及左键点击的行为。",
+    "option_settings": "设置 — 打开设置菜单。你可以在其中切换以下选项：备用视图、表情符号、深色模式、主播模式，以及左键点击的行为。",
     "radial_title": "环形菜单",
     "radial_desc": "右击 (或在手机上触摸) 来打开右键菜单。右击其他地方来关闭它。在该菜单中，你可以：",
     "radial_build": "打开建造菜单。",
@@ -180,7 +188,8 @@
     "exit_confirmation": "确定要退出游戏吗？",
     "bomb_direction": "原子弹 / 氢弹抛物线方向",
     "icon_alt_player_leaderboard": "玩家排行榜图标",
-    "icon_alt_team_leaderboard": "团队排行榜图标"
+    "icon_alt_team_leaderboard": "团队排行榜图标",
+    "game_id_tooltip": "游戏 ID"
   },
   "single_modal": {
     "random_spawn": "随机出生点",
@@ -196,10 +205,11 @@
     "infinite_troops": "无限军队",
     "compact_map": "紧凑地图",
     "disable_alliances": "禁用结盟",
+    "water_nukes": "水中核弹",
     "max_timer": "游戏时长（分钟）",
     "max_timer_placeholder": "分钟",
     "max_timer_invalid": "请输入一个有效的最大计时器值（1-120分钟）",
-    "enables_title": "启用设置",
+    "enables_title": "禁用单位",
     "start": "开始游戏",
     "options_changed_no_achievements": "自定义设置 - 成就已禁用",
     "gold_multiplier": "黄金乘数",
@@ -229,7 +239,7 @@
     "clear_session": "清除会话",
     "failed_to_send_recovery_email": "发送恢复邮件失败",
     "enter_email_address": "请输入电子邮件地址",
-    "personal_player_id": "个人玩家 ID："
+    "public_player_id": "公开的玩家 ID："
   },
   "leaderboard_modal": {
     "title": "排行榜",
@@ -325,6 +335,10 @@
     "svalmel": "斯瓦尔梅尔",
     "manicouagan": "马尼夸根陨石坑",
     "lemnos": "利姆诺斯岛",
+    "tourney1": "锦标赛 2个队伍",
+    "tourney2": "锦标赛 3个队伍",
+    "tourney3": "锦标赛 4个队伍",
+    "tourney4": "锦标赛 8个队伍",
     "passage": "海上航线",
     "sierpinski": "谢尔宾斯基分形",
     "thebox": "沙盒",
@@ -342,12 +356,26 @@
     "niledelta": "尼罗河三角洲",
     "arctic": "北极地区",
     "sanfrancisco": "旧金山",
-    "aegean": "爱琴海"
+    "aegean": "爱琴海",
+    "milkyway": "银河系",
+    "marenostrum": "我们的海",
+    "dyslexdria": "迪斯勒克斯加",
+    "greatlakes": "五大湖",
+    "straitofmalacca": "马六甲海峡",
+    "luna": "月球",
+    "conakry": "科纳克里",
+    "caucasus": "高加索山脉",
+    "losangeles": "洛杉矶",
+    "beringsea": "白令海",
+    "antarctica": "南极洲",
+    "archipelagosea": "群岛海",
+    "bajacalifornia": "下加利福尼亚"
   },
   "map_categories": {
     "featured": "精选",
     "continental": "大陆",
     "regional": "地区",
+    "tournament": "锦标赛",
     "fantasy": "其他",
     "special": "特殊",
     "arcade": "街机"
@@ -364,7 +392,11 @@
     "error": "发生错误。请再试一次或联系支持人员。",
     "joined_waiting": "房间已加入！等待房主开始游戏……",
     "version_mismatch": "这场游戏基于另一个版本，无法加入。",
-    "disabled_units": "禁用单位"
+    "disabled_units": "禁用单位",
+    "game_length": "游戏时长",
+    "pvp_immunity": "PVP 开局和平期时长",
+    "starting_gold": "开局黄金",
+    "host_cheats": "房主作弊模式"
   },
   "public_lobby": {
     "title": "正在等待游戏开始……",
@@ -407,7 +439,7 @@
     "bots_disabled": "禁用",
     "nations": "国家：",
     "nations_disabled": "已禁用",
-    "player_immunity_duration": "PVP 豁免期限（分钟）",
+    "player_immunity_duration": "PVP 开局和平期时长（分钟）",
     "max_timer": "游戏时长（分钟）",
     "mins_placeholder": "分钟",
     "instant_build": "立即建造",
@@ -417,7 +449,8 @@
     "donate_troops": "捐赠军队",
     "compact_map": "紧凑地图",
     "disable_alliances": "禁用结盟",
-    "enables_title": "启用设置",
+    "water_nukes": "水中核弹",
+    "enables_title": "禁用单位",
     "player": "玩家",
     "players": "玩家",
     "nation_players": "国家",
@@ -440,8 +473,8 @@
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "初始黄金（M）",
     "starting_gold_placeholder": "5",
-    "leave_confirmation": "确定要离开房间吗？",
-    "team_type": "队伍类型"
+    "host_cheats": "房主作弊模式",
+    "leave_confirmation": "确定要离开房间吗？"
   },
   "team_colors": {
     "red": "红色",
@@ -486,8 +519,20 @@
     "crowded": "密度",
     "hard_nations": "困难的国家",
     "starting_gold": "{amount}M 初始黄金",
+    "starting_gold_label": "开局黄金",
     "gold_multiplier": "x{amount} 黄金乘数",
-    "disable_alliances": "结盟已禁用"
+    "disable_alliances": "结盟已禁用",
+    "disable_alliances_label": "盟友",
+    "ports_disabled": "港口已禁用",
+    "ports_disabled_label": "港口",
+    "nukes_disabled": "核弹已禁用",
+    "nukes_disabled_label": "核弹",
+    "sams_disabled": "防空塔已禁用",
+    "sams_disabled_label": "防空塔",
+    "peace_time": "4分钟和平期",
+    "peace_time_label": "PVP 和平期",
+    "water_nukes": "水中核弹",
+    "water_nukes_label": "水中核弹"
   },
   "select_lang": {
     "title": "选择语言"
@@ -509,6 +554,7 @@
     "title": "设置",
     "tab_basic": "基本设置",
     "tab_keybinds": "热键绑定",
+    "keybinds_hint": "按下一个按键，以绑定它。可以指定单个按键，或使用 Shift + 按键的组合。",
     "dark_mode_label": "深色模式",
     "dark_mode_desc": "在浅色和深色主题之间切换网站外观",
     "emojis_label": "表情符号",
@@ -517,8 +563,6 @@
     "alert_frame_desc": "切换警告框显示。若启用，则当你被背叛或被陆上攻击时将会显示此警告框。",
     "special_effects_label": "特效",
     "special_effects_desc": "切换特效开关。停用以改进性能",
-    "structure_sprites_label": "建筑贴图",
-    "structure_sprites_desc": "切换建筑贴图",
     "cursor_cost_label_label": "建造按钮显示消耗",
     "cursor_cost_label_desc": "在建造按钮下显示花费",
     "anonymous_names_label": "隐藏的名称",
@@ -535,6 +579,8 @@
     "territory_patterns_desc": "选择是否在游戏中显示领土皮肤",
     "coordinate_grid_label": "坐标网格",
     "coordinate_grid_desc": "切换字母数字网格叠层",
+    "attacking_troops_overlay_label": "攻击中军队叠层",
+    "attacking_troops_overlay_desc": "在前线显示攻击者 vs 防守者的军队数量。",
     "performance_overlay_label": "性能叠层",
     "performance_overlay_desc": "切换性能叠层。启用后将显示性能叠层。在游戏过程中按下 Shift+D 可进行切换。",
     "easter_writing_speed_label": "写入速度乘数",
@@ -571,18 +617,29 @@
     "build_menu_modifier_desc": "按住此键并点击以打开建造菜单。",
     "emoji_menu_modifier": "Emoji 表情菜单编辑器",
     "emoji_menu_modifier_desc": "按住此键并点击以打开 Emoji 表情菜单。",
+    "pause_game": "暂停",
+    "pause_game_desc": "暂停或恢复游戏 (单人玩家和自定义游戏的房主)。",
+    "game_speed_up": "游戏加速",
+    "game_speed_up_desc": "轮换到下一个游戏速度（0.5，1，2，最大）。仅限单人玩家。",
+    "game_speed_down": "游戏减速",
+    "game_speed_down_desc": "轮换到上一个游戏速度。仅限单人玩家。",
     "attack_ratio_controls": "攻击比例控制",
     "attack_ratio_up": "增加攻击比例",
     "attack_ratio_up_desc": "增加 {amount}% 攻击比例",
     "attack_ratio_down": "降低攻击比例",
     "attack_ratio_down_desc": "降低 {amount}% 攻击比例",
     "attack_ratio_increment_label": "攻击比例调整快捷键单次增减量",
-    "attack_ratio_increment_desc": "每次按下攻击比例增减快捷键时的变化值。",
+    "attack_ratio_increment_desc": "每次按下/滚轮滚动攻击比例增减快捷键时的变化值。",
     "attack_keybinds": "攻击快捷键",
     "boat_attack": "船只攻击",
     "boat_attack_desc": "向鼠标所指地块发送船只攻击。",
     "ground_attack": "对地攻击",
     "ground_attack_desc": "向鼠标所指地块发送船只攻击。",
+    "ally_keybinds": "结盟相关按键绑定",
+    "request_alliance": "申请结盟",
+    "request_alliance_desc": "向鼠标所指地块对应的玩家发起结盟申请。",
+    "break_alliance": "撕毁盟约（背叛）",
+    "break_alliance_desc": "解除鼠标所指地块对应玩家的同盟关系。",
     "swap_direction": "调换火箭方向",
     "swap_direction_desc": "切换火箭发射方向（上/下）。",
     "zoom_controls": "缩放控制",
@@ -610,7 +667,9 @@
     "exit_game_info": "返回主菜单",
     "background_music_volume": "背景音量",
     "sound_effects_volume": "音效音量",
-    "keybind_conflict_error": "按键 {key} 已经绑定到另一动作上了。"
+    "keybind_conflict_error": "按键 {key} 已经绑定到另一动作上了。",
+    "structure_sprites_label": "建筑贴图",
+    "structure_sprites_desc": "切换建筑贴图"
   },
   "chat": {
     "title": "快捷聊天",
@@ -714,6 +773,7 @@
       "city": "增加最大人口",
       "factory": "创建铁轨并生成火车"
     },
+    "warship_shift_hint": "按住 Shift 并拖动以一次性选择多艘军舰",
     "not_enough_money": "金钱不足"
   },
   "win_modal": {
@@ -736,7 +796,6 @@
     "youtube_tutorial": "需要帮助吗？"
   },
   "leaderboard": {
-    "hide": "隐藏",
     "player": "玩家",
     "team": "队伍",
     "owned": "已占领",
@@ -747,10 +806,10 @@
     "warships": "军舰",
     "cities": "城市",
     "show_control": "显示面板",
-    "show_units": "显示单位"
+    "show_units": "显示单位",
+    "hide": "隐藏"
   },
   "events_display": {
-    "events": "事件",
     "retreating": "正在撤退",
     "alliance_request_status": "{name} {status}你的联盟请求",
     "alliance_accepted": "已接受",
@@ -767,6 +826,7 @@
     "sent_emoji": "发送给 {name}: {emoji}",
     "renew_alliance": "请求续期",
     "request_alliance": "{name} 请求结盟！",
+    "alliance_request_sent": "已向 {name} 发送结盟请求。",
     "focus": "聚焦",
     "accept_alliance": "接受",
     "reject_alliance": "拒绝",
@@ -777,7 +837,6 @@
     "betrayal_debuff_ends": "距离背叛减益效果结束还剩 {time} 秒",
     "attack_cancelled_retreat": "已取消进攻，在撤退时损失了 {troops} 兵力",
     "received_gold_from_captured_ship": "捕获了 {name} 的商船，获得 {gold} 黄金",
-    "received_gold_from_trade": "与 {name} 贸易获得了 {gold} 黄金",
     "received_gold_from_conquest": "征服了 {name} 并获得 {gold} 黄金",
     "conquered_no_gold": "征服了 {name} （对方没在玩了，因此未掠夺到黄金）",
     "missile_intercepted": "已拦截导弹 {unit}",
@@ -789,7 +848,9 @@
     "unit_captured_by_enemy": "你的 {unit} 被 {name} 捕获",
     "captured_enemy_unit": "已捕获 {name} 的 {unit}",
     "unit_destroyed": "你的 {unit} 已被摧毁",
-    "no_boats_available": "无可用船，最多 {max} 个"
+    "no_boats_available": "无可用船，最多 {max} 个",
+    "events": "事件",
+    "received_gold_from_trade": "与 {name} 贸易获得了 {gold} 黄金"
   },
   "player_type": {
     "player": "玩家",
@@ -834,7 +895,9 @@
   },
   "kick_reason": {
     "duplicate_session": "已被踢出游戏（也可能你正在另一个标签页上玩游戏）",
-    "lobby_creator": "已被房主踢出房间"
+    "lobby_creator": "已被房主踢出房间",
+    "admin": "被管理员踢出",
+    "host_left": "房主已离开房间。"
   },
   "send_troops_modal": {
     "title_with_name": "向 {name} 发送军队",
@@ -895,8 +958,23 @@
     "random_spawn": "随机出生点已启用。正在为你选择出生点……",
     "singleplayer_game_paused": "游戏已暂停",
     "multiplayer_game_paused": "游戏已被房主暂停",
-    "pvp_immunity_active": "PVP 免疫生效，持续 {seconds} 秒",
+    "pvp_immunity_active": "PVP 和平期将持续 {seconds} 秒",
     "catching_up": "正在追赶进度……"
+  },
+  "store": {
+    "title": "商店",
+    "patterns": "皮肤",
+    "flags": "旗帜",
+    "packs": "合集包",
+    "no_flags": "这里没有别的旗帜啦！过段时间再来吧。",
+    "no_skins": "这里没有别的皮肤啦！过段时间再来吧。",
+    "no_packs": "这里没有别的合集包啦！过段时间再来吧。",
+    "currency_pack_purchase_success": "货币合集包购买成功！",
+    "checkout_failed": "创建结账会话失败啦。",
+    "login_required": "你需要登录才能买。",
+    "not_enough_currency": "钱不够，买不了。",
+    "purchase_failed": "购买失败。请再试一次。",
+    "purchase_success": "购买成功：{name}"
   },
   "territory_patterns": {
     "title": "皮肤",
@@ -906,10 +984,19 @@
     },
     "select_skin": "选择皮肤",
     "selected": "已选择",
-    "colors": "颜色",
-    "show_only_owned": "我的皮肤",
-    "all_owned": "您已拥有所有皮肤！请稍后再来查看新皮肤。",
-    "not_logged_in": "未登录"
+    "search": "正在努力搜索……"
+  },
+  "cosmetics": {
+    "artist_label": "艺术家：",
+    "color_label": "颜色：",
+    "common": "普通",
+    "uncommon": "精良",
+    "rare": "稀有",
+    "epic": "史诗",
+    "legendary": "传说",
+    "adfree": "永久去除广告！",
+    "hard": "钚",
+    "soft": "胶囊"
   },
   "flag_input": {
     "title": "选择旗帜",
@@ -980,6 +1067,8 @@
     "public": "公开",
     "private": "私有",
     "solo": "单挑",
+    "ranked": "排位赛",
+    "ranked_1v1": "1v1",
     "mode": "模式",
     "stats_wins": "胜场数",
     "stats_losses": "败场数",
@@ -992,5 +1081,31 @@
     "description": "（内测版）",
     "login_required": "登录后开始排位赛！",
     "must_login": "您必须登录才能玩排位赛。"
+  },
+  "news_box": {
+    "tournament": "锦标赛",
+    "tutorial": "教程",
+    "news": "新闻",
+    "warning": "警告",
+    "dismiss": "忽略",
+    "go_to_item": "跳转到商品 {num}",
+    "firefox_warning": "Openfront.io 在 [基于 Firefox 的浏览器](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox) 上表现不佳。我们推荐你使用 [基于 Chromium 的浏览器](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) 来获得最佳性能体验。"
+  },
+  "ios_banner": {
+    "text": "将 OpenFront 添加到主屏幕，获得全屏体验",
+    "how": "如何操作",
+    "later": "稍后",
+    "never": "从不",
+    "modal_title": "在 iOS 上全屏使用",
+    "modal_desc": "您的浏览器不支持全屏，但您可以将 OpenFront 添加到您的主屏幕以获得沉浸体验：",
+    "step_share": "点击浏览器中的“分享”按钮",
+    "step_scroll_and_tap": "向下滚动并点击",
+    "step_add_to_home_label": "添加到主屏幕",
+    "step_open": "从主屏幕打开 — 无地址栏，全屏启动",
+    "got_it": "好的"
+  },
+  "fullscreen": {
+    "enter": "进入全屏",
+    "exit": "退出全屏"
   }
 }

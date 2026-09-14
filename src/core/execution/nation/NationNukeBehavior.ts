@@ -99,7 +99,7 @@ export class NationNukeBehavior {
     }
     const range = this.game.config().nukeMagnitudes(nukeType).outer;
 
-    const structures = nukeTarget.units(...Structures.types);
+    const structures = nukeTarget.units(Structures.types);
     const structureTiles = structures.map((u) => u.tile());
     const difficulty = this.game.config().gameConfig().difficulty;
     // Use more random tiles on Impossible difficulty to improve chances of finding a perfect SAM outranging spot
@@ -278,7 +278,7 @@ export class NationNukeBehavior {
       if (this.player.isFriendly(other)) continue;
       const tilesOwned = other.numTilesOwned();
       if (tilesOwned === 0) continue;
-      const structures = other.units(...Structures.types);
+      const structures = other.units(Structures.types);
       let levelSum = 0;
       for (const s of structures) levelSum += s.level();
       // Skip players with too few structures regardless of density
@@ -549,7 +549,7 @@ export class NationNukeBehavior {
     targetTile: TileRef,
     excludedSamIds?: Set<number>,
   ): boolean {
-    const speed = this.game.config().defaultNukeSpeed();
+    const speed = this.game.config().nukeSpeed(UnitType.AtomBomb);
     const pathFinder = UniversalPathFinding.Parabola(this.game, {
       increment: speed,
       distanceBasedHeight: true, // Atom/Hydrogen bombs use distance-based height
@@ -830,7 +830,7 @@ export class NationNukeBehavior {
       // distance to target (via nukeSpawn). Our planning must mirror that order.
       // Silos with interceptable trajectories will still be picked first by
       // NukeExecution — their bombs launch but get intercepted, "wasting" slots.
-      const nukeSpeed = this.game.config().defaultNukeSpeed();
+      const nukeSpeed = this.game.config().nukeSpeed(UnitType.AtomBomb);
       const allAvailableSilos: {
         silo: Unit;
         slots: number;
@@ -1044,6 +1044,7 @@ export class NationNukeBehavior {
 
     // First pass: find silos with an unblocked trajectory to the failed
     // target. Only these contribute slots to the overwhelm plan.
+    // "Unblocked" means not interceptable by non-covering enemy SAMs.
     const unblockedSilos: Unit[] = [];
     for (const silo of silos) {
       if (

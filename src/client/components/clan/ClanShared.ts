@@ -5,9 +5,10 @@ import type {
   ClanMemberOrder,
   ClanMemberSort,
   ClanMemberStats,
-  ClanStats,
 } from "../../ClanApi";
 import { showToast, translateText } from "../../Utils";
+import { playerNameLink } from "../ui/PlayerNameLink";
+import "./ClanStatsBreakdown";
 export { renderLoadingSpinner } from "../BaseModal";
 export { showToast };
 
@@ -16,9 +17,6 @@ export type ClanRole = "leader" | "officer" | "member";
 export function defaultOrderForSort(sort: ClanMemberSort): ClanMemberOrder {
   return sort === "default" ? "asc" : "desc";
 }
-
-export const modalContainerClass =
-  "h-full flex flex-col overflow-hidden bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10";
 
 const dateCache = new Map<string, string>();
 
@@ -80,26 +78,6 @@ export function renderStat(label: string, value: string): TemplateResult {
         ${label}
       </div>
       <div class="text-white font-bold text-sm truncate">${value}</div>
-    </div>
-  `;
-}
-
-export function renderClanWL(stats: ClanStats): TemplateResult | string {
-  if (stats.games === 0) return "";
-  return html`
-    <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3">
-      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
-        ${translateText("clan_modal.statistics")}
-      </h3>
-      <div class="space-y-1.5">
-        ${statBuckets.map(({ key, labelKey }) =>
-          renderWLBarRow(
-            translateText(labelKey),
-            stats.stats[key].wins,
-            stats.stats[key].losses,
-          ),
-        )}
-      </div>
     </div>
   `;
 }
@@ -174,6 +152,7 @@ export function renderServerPagination(
 
 export function renderMemberSearchInput(
   onInput: (e: Event) => void,
+  value: string,
   placeholderKey = "clan_modal.search_members_placeholder",
   trailing?: TemplateResult,
 ): TemplateResult {
@@ -181,6 +160,7 @@ export function renderMemberSearchInput(
     <div class="relative w-full sm:flex-1 sm:min-w-0">
       <input
         type="text"
+        .value=${value}
         @input=${onInput}
         class="w-full h-10 pl-10 pr-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
         placeholder="${translateText(placeholderKey)}"
@@ -329,16 +309,7 @@ export function renderMemberPagination(
   `;
 }
 
-const statBuckets = [
-  { key: "total" as const, labelKey: "clan_modal.stats_total" },
-  { key: "ffa" as const, labelKey: "clan_modal.stats_ffa" },
-  { key: "team" as const, labelKey: "clan_modal.stats_team" },
-  { key: "hvn" as const, labelKey: "clan_modal.stats_hvn" },
-  { key: "ranked" as const, labelKey: "clan_modal.stats_ranked" },
-  { key: "1v1" as const, labelKey: "clan_modal.stats_1v1" },
-];
-
-function renderWLBarRow(
+export function renderWLBarRow(
   label: string,
   wins: number,
   losses: number,
@@ -362,26 +333,30 @@ function renderWLBarRow(
         ${label}
       </span>
       <div
-        class="flex-1 flex h-5 rounded-md overflow-hidden bg-white/5 text-[11px] font-bold text-white tabular-nums"
+        class="relative flex-1 h-5 rounded-md overflow-hidden bg-white/5"
         role="img"
         aria-label="${wins} wins, ${losses} losses"
       >
-        ${wins > 0
-          ? html`<div
-              class="bg-malibu-blue flex items-center px-1.5 overflow-hidden whitespace-nowrap"
-              style="width:${winPct}%"
-            >
-              ${wins}W
-            </div>`
-          : ""}
-        ${losses > 0
-          ? html`<div
-              class="bg-red-500 flex items-center justify-end px-1.5 overflow-hidden whitespace-nowrap"
-              style="width:${lossPct}%"
-            >
-              ${losses}L
-            </div>`
-          : ""}
+        <div class="absolute inset-0 flex">
+          ${wins > 0
+            ? html`<div
+                class="bg-malibu-blue h-full"
+                style="width:${winPct}%"
+              ></div>`
+            : ""}
+          ${losses > 0
+            ? html`<div
+                class="bg-red-500 h-full"
+                style="width:${lossPct}%"
+              ></div>`
+            : ""}
+        </div>
+        <div
+          class="absolute inset-0 flex items-center justify-between px-1.5 text-[11px] font-bold text-white tabular-nums whitespace-nowrap pointer-events-none"
+        >
+          <span>${wins > 0 ? `${wins}W` : ""}</span>
+          <span>${losses > 0 ? `${losses}L` : ""}</span>
+        </div>
       </div>
       <span
         class="text-xs font-bold shrink-0 tabular-nums w-9 text-right ${rateClass}"
@@ -397,21 +372,17 @@ export function renderMemberStats(
 ): TemplateResult | string {
   if (!stats) return "";
   return html`
-    <div class="mt-1.5 space-y-1">
-      ${statBuckets.map(({ key, labelKey }) =>
-        renderWLBarRow(
-          translateText(labelKey),
-          stats[key].wins,
-          stats[key].losses,
-        ),
-      )}
+    <div class="mt-1.5">
+      <clan-stats-breakdown .stats=${stats}></clan-stats-breakdown>
     </div>
   `;
 }
 
+// `host` raises the `view-profile` event that opens the profile modal.
 export function renderMemberRow(
   member: ClanMember,
   myPublicId: string | null,
+  host: HTMLElement,
 ): TemplateResult {
   const isMe = member.publicId === myPublicId;
   return html`
@@ -433,20 +404,16 @@ export function renderMemberRow(
         <div class="flex-1 min-w-0 flex flex-col">
           <div class="flex items-center justify-between gap-2">
             <div class="min-w-0">
-              <copy-button
-                compact
-                .copyText=${member.publicId}
-                .displayText=${member.publicId}
-                .showVisibilityToggle=${false}
-                .showCopyIcon=${false}
-              ></copy-button>
+              ${playerNameLink(host, member.username, member.publicId)}
             </div>
-            <span
-              class="text-white/30 text-[10px] shrink-0 text-right whitespace-nowrap"
-              >${translateText("clan_modal.joined_date", {
-                date: formatClanDate(member.joinedAt),
-              })}</span
-            >
+            <div class="flex items-center gap-2 shrink-0">
+              <span
+                class="text-white/30 text-[10px] text-right whitespace-nowrap"
+                >${translateText("clan_modal.joined_date", {
+                  date: formatClanDate(member.joinedAt),
+                })}</span
+              >
+            </div>
           </div>
         </div>
       </div>
@@ -463,7 +430,9 @@ export function filterMembersBySearch(
   const q = search.toLowerCase();
   return members.filter(
     (m) =>
-      m.publicId.toLowerCase().includes(q) || m.role.toLowerCase().includes(q),
+      m.publicId.toLowerCase().includes(q) ||
+      m.role.toLowerCase().includes(q) ||
+      (m.username?.toLowerCase().includes(q) ?? false),
   );
 }
 
@@ -473,5 +442,9 @@ export function filterRequestsBySearch(
 ): ClanJoinRequest[] {
   if (!search) return requests;
   const q = search.toLowerCase();
-  return requests.filter((r) => r.publicId.toLowerCase().includes(q));
+  return requests.filter(
+    (r) =>
+      r.publicId.toLowerCase().includes(q) ||
+      (r.username?.toLowerCase().includes(q) ?? false),
+  );
 }

@@ -2,7 +2,10 @@ import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
   MessageType,
+  NukeState,
   Player,
+  SamLauncherState,
+  TerraNullius,
   Tick,
   TrainType,
   TrajectoryTile,
@@ -16,16 +19,18 @@ import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
 import { GameUpdateType, UnitUpdate } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
+import { maxHealthWithVeterancy } from "./Veterancy";
 
 export class UnitImpl implements Unit {
   private _active = true;
   private _targetTile: TileRef | undefined;
+  private _targetPlayer: Player | TerraNullius | undefined;
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
   private _transportShipState: TransportShipState | undefined = undefined;
   private _warshipState: WarshipState | undefined = undefined;
-  private _targetedBySAM = false;
+  private _nukeState: NukeState | undefined = undefined;
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
   private _destroyer: Player | undefined = undefined;
@@ -41,9 +46,8 @@ export class UnitImpl implements Unit {
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
   // Nuke only
-  private _trajectoryIndex: number = 0;
-  private _trajectory: TrajectoryTile[];
   private _deletionAt: number | null = null;
+  private _samLauncherState: SamLauncherState | undefined;
 
   constructor(
     private _type: UnitType,
@@ -57,7 +61,16 @@ export class UnitImpl implements Unit {
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._targetTile =
       "targetTile" in params ? (params.targetTile ?? undefined) : undefined;
-    this._trajectory = "trajectory" in params ? (params.trajectory ?? []) : [];
+    this._targetPlayer =
+      "targetPlayer" in params ? (params.targetPlayer ?? undefined) : undefined;
+    if ("trajectory" in params || "waitTicks" in params) {
+      this._nukeState = {
+        trajectory: params.trajectory ?? [],
+        waitTicks: 0,
+        trajectoryIndex: 0,
+        targetedBySam: false,
+      };
+    }
     this._troops = "troops" in params ? (params.troops ?? 0) : 0;
     this._lastSetSafeFromPirates =
       "lastSetSafeFromPirates" in params
@@ -66,11 +79,20 @@ export class UnitImpl implements Unit {
     if (this._type === UnitType.TransportShip) {
       this._transportShipState = { isRetreating: false, troops: 0 };
     }
+    if (this._type === UnitType.SAMLauncher) {
+      this._samLauncherState = {
+        startRange: this.mg.config().samRange(1),
+        targetLevel: 1,
+        duration: this.mg.config().samUpgradeDuration(),
+      };
+    }
     if ("patrolTile" in params) {
       this._warshipState = {
         state: "patrolling",
         patrolTile: params.patrolTile,
         lastCombatTick: -100,
+        veterancy: 0,
+        veterancyProgress: 0,
       };
     }
     this._targetUnit =
@@ -121,7 +143,7 @@ export class UnitImpl implements Unit {
   }
 
   toUpdate(): UnitUpdate {
-    return {
+    const update: UnitUpdate = {
       type: GameUpdateType.Unit,
       unitType: this._type,
       id: this._id,
@@ -138,6 +160,12 @@ export class UnitImpl implements Unit {
         this._transportShipState !== undefined
           ? this.transportShipState()
           : undefined,
+      nukeState:
+        this._nukeState !== undefined ? { ...this._nukeState } : undefined,
+      samUpgrade:
+        this._samLauncherState?.upgradeStartTick !== undefined
+          ? { ...this._samLauncherState }
+          : undefined,
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
       targetable: this._targetable,
@@ -152,6 +180,7 @@ export class UnitImpl implements Unit {
       trainType: this._trainType,
       loaded: this._loaded,
     };
+    return update;
   }
 
   type(): UnitType {
@@ -172,7 +201,12 @@ export class UnitImpl implements Unit {
   }
 
   setTroops(troops: number): void {
-    this._troops = Math.max(0, troops);
+    const nextTroops = Math.max(0, troops);
+    if (this._troops === nextTroops) {
+      return;
+    }
+    this._troops = nextTroops;
+    this.mg.addUpdate(this.toUpdate());
   }
   troops(): number {
     return this._troops;
@@ -207,25 +241,34 @@ export class UnitImpl implements Unit {
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
         break;
+      // Transports change hands when their owner is conquered, or when a
+      // disconnected teammate's fleet is inherited. Boats have no "lost"
+      // slot, so only the captor is credited.
+      //
+      // Trade ships are deliberately absent: they reach here too, but the
+      // warship that hunts one down records the capture itself, and counting
+      // it again would double every act of piracy.
+      case UnitType.TransportShip:
+        this.mg.stats().boatCapturedTroops(newOwner, this._owner);
+        break;
     }
     this._lastOwner = this._owner;
     this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
+    this._lastOwner._myUnitsVersion++;
     this._owner = newOwner;
     this._owner._units.push(this);
+    this._owner._myUnitsVersion++;
+    this.mg.bumpUnitsVersion();
     this.mg.addUpdate(this.toUpdate());
-    this.mg.displayMessage(
-      "events_display.unit_captured_by_enemy",
-      MessageType.UNIT_CAPTURED_BY_ENEMY,
-      this._lastOwner.id(),
-      undefined,
-      { unit: this.type(), name: newOwner.displayName() },
-    );
-    this.mg.displayMessage(
-      "events_display.captured_enemy_unit",
-      MessageType.CAPTURED_ENEMY_UNIT,
-      newOwner.id(),
-      undefined,
-      { unit: this.type(), name: this._lastOwner.displayName() },
+  }
+
+  maxHealth(): number {
+    const base = this.info().maxHealth ?? 1;
+    // veterancy() is 0 for non-warships, so this returns base for them.
+    return maxHealthWithVeterancy(
+      base,
+      this.veterancy(),
+      this.mg.config().warshipVeterancyHealthBonus(),
     );
   }
 
@@ -234,7 +277,7 @@ export class UnitImpl implements Unit {
     const nextHealth = withinInt(
       this._health + toInt(delta),
       0n,
-      toInt(this.info().maxHealth ?? 1),
+      toInt(this.maxHealth()),
     );
 
     if (nextHealth === previousHealth) {
@@ -289,6 +332,7 @@ export class UnitImpl implements Unit {
     this._destroyer = destroyer ?? undefined;
 
     this._owner._units = this._owner._units.filter((b) => b !== this);
+    this._owner._myUnitsVersion++;
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
@@ -322,11 +366,12 @@ export class UnitImpl implements Unit {
   }
 
   private displayMessageOnDeleted(): void {
-    if (this._type === UnitType.MIRVWarhead) {
-      return;
-    }
-
-    if (this._type === UnitType.Train && this._trainType !== TrainType.Engine) {
+    // Only warships and transport ships are worth notifying about; everything
+    // else is either visible on the map or too low-stakes to surface.
+    if (
+      this._type !== UnitType.Warship &&
+      this._type !== UnitType.TransportShip
+    ) {
       return;
     }
 
@@ -336,6 +381,7 @@ export class UnitImpl implements Unit {
       this.owner().id(),
       undefined,
       { unit: this._type },
+      this.id(),
     );
   }
 
@@ -378,6 +424,8 @@ export class UnitImpl implements Unit {
       patrolTile: merged.patrolTile,
       retreatPort: merged.retreatPort,
       lastCombatTick: this._warshipState.lastCombatTick,
+      veterancy: this._warshipState.veterancy,
+      veterancyProgress: this._warshipState.veterancyProgress,
     };
     this.mg.addUpdate(this.toUpdate());
   }
@@ -426,6 +474,33 @@ export class UnitImpl implements Unit {
     }
   }
 
+  nukeState(): NukeState {
+    if (this._nukeState === undefined) {
+      throw new Error("nukeState called on non-nuke unit");
+    }
+    return this._nukeState;
+  }
+
+  updateNukeState(update: Partial<NukeState>): void {
+    if (this._nukeState === undefined) {
+      throw new Error("updateNukeState called on non-nuke unit");
+    }
+    const merged = { ...this._nukeState, ...update };
+    if (
+      merged.targetedBySam === this._nukeState.targetedBySam &&
+      merged.trajectoryIndex === this._nukeState.trajectoryIndex &&
+      merged.waitTicks === this._nukeState.waitTicks
+    )
+      return;
+    this._nukeState = {
+      targetedBySam: merged.targetedBySam,
+      trajectoryIndex: merged.trajectoryIndex,
+      waitTicks: merged.waitTicks,
+      trajectory: this._nukeState.trajectory,
+    };
+    this.mg.addUpdate(this.toUpdate());
+  }
+
   isUnderConstruction(): boolean {
     return this._underConstruction;
   }
@@ -433,6 +508,7 @@ export class UnitImpl implements Unit {
   setUnderConstruction(underConstruction: boolean): void {
     if (this._underConstruction !== underConstruction) {
       this._underConstruction = underConstruction;
+      this._owner._myUnitsVersion++; // unitsOwned() weighs under-construction units differently
       this.mg.addUpdate(this.toUpdate());
     }
   }
@@ -462,6 +538,10 @@ export class UnitImpl implements Unit {
     return this._missileTimerQueue;
   }
 
+  samLauncherState(): SamLauncherState | undefined {
+    return this._samLauncherState;
+  }
+
   reloadMissile(): void {
     this._missileTimerQueue.shift();
     this.mg.addUpdate(this.toUpdate());
@@ -475,17 +555,24 @@ export class UnitImpl implements Unit {
     return this._targetTile;
   }
 
+  targetPlayer(): Player | TerraNullius | undefined {
+    return this._targetPlayer;
+  }
+
   setTrajectoryIndex(i: number): void {
-    const max = this._trajectory.length - 1;
-    this._trajectoryIndex = i < 0 ? 0 : i > max ? max : i;
+    if (this._nukeState === undefined) {
+      throw new Error("setTrajectoryIndex called on non-nuke unit");
+    }
+    const max = this.trajectory().length - 1;
+    this._nukeState.trajectoryIndex = i < 0 ? 0 : i > max ? max : i;
   }
 
   trajectoryIndex(): number {
-    return this._trajectoryIndex;
+    return this._nukeState?.trajectoryIndex ?? 0;
   }
 
   trajectory(): TrajectoryTile[] {
-    return this._trajectory;
+    return this._nukeState?.trajectory ?? [];
   }
 
   setTargetUnit(target: Unit | undefined): void {
@@ -497,11 +584,11 @@ export class UnitImpl implements Unit {
   }
 
   setTargetedBySAM(targeted: boolean): void {
-    this._targetedBySAM = targeted;
+    this._nukeState!.targetedBySam = targeted;
   }
 
   targetedBySAM(): boolean {
-    return this._targetedBySAM;
+    return this._nukeState!.targetedBySam;
   }
 
   setReachedTarget(): void {
@@ -527,6 +614,84 @@ export class UnitImpl implements Unit {
     return this._level;
   }
 
+  veterancy(): number {
+    return this._warshipState?.veterancy ?? 0;
+  }
+
+  /** Raise veterancy by one level (capped), which raises max health. The ship
+   *  is NOT instantly healed — it heals toward the higher cap normally.
+   *  No-op for non-warships or at the cap. */
+  private increaseVeterancy(): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    if (
+      this._warshipState.veterancy >= this.mg.config().warshipMaxVeterancy()
+    ) {
+      return;
+    }
+    this._warshipState.veterancy++;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  recordKill(targetType: UnitType): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    if (targetType === UnitType.Warship) {
+      // Final blow on an enemy warship: instant level, and the partial
+      // transport/capture progress toward the next level is wiped.
+      this._warshipState.veterancyProgress = 0;
+      this.increaseVeterancy();
+    } else if (targetType === UnitType.TransportShip) {
+      this.addVeterancyProgress(UnitType.TransportShip);
+    }
+  }
+
+  recordTradeCapture(): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    this.addVeterancyProgress(UnitType.TradeShip);
+  }
+
+  /**
+   * Add partial progress toward the next veterancy level from a non-kill source.
+   *
+   * Transports and captures share one integer progress meter. One level =
+   * transportThreshold * captureThreshold points; a transport is worth
+   * `captureThreshold` points and a capture is worth `transportThreshold`
+   * points. That makes `transportThreshold` transports OR `captureThreshold`
+   * captures (or any mix) fill exactly one level — all integer math, no floats.
+   * Overflow carries into the next level (only a warship kill resets it).
+   */
+  private addVeterancyProgress(source: UnitType): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    const maxVeterancy = this.mg.config().warshipMaxVeterancy();
+    if (this._warshipState.veterancy >= maxVeterancy) {
+      return;
+    }
+    const transportThreshold = this.mg
+      .config()
+      .warshipVeterancyTransportKills();
+    const captureThreshold = this.mg.config().warshipVeterancyTradeCaptures();
+    const pointsPerLevel = transportThreshold * captureThreshold;
+    this._warshipState.veterancyProgress +=
+      source === UnitType.TransportShip ? captureThreshold : transportThreshold;
+    while (
+      this._warshipState.veterancyProgress >= pointsPerLevel &&
+      this._warshipState.veterancy < maxVeterancy
+    ) {
+      this._warshipState.veterancyProgress -= pointsPerLevel;
+      this.increaseVeterancy();
+    }
+    if (this._warshipState.veterancy >= maxVeterancy) {
+      this._warshipState.veterancyProgress = 0;
+    }
+  }
+
   setTrainStation(trainStation: boolean): void {
     this._hasTrainStation = trainStation;
     this.mg.addUpdate(this.toUpdate());
@@ -537,7 +702,20 @@ export class UnitImpl implements Unit {
   }
 
   increaseLevel(): void {
+    if (this._type === UnitType.SAMLauncher) {
+      const currentTick = this.mg.ticks();
+      const currentRange = this.mg.config().dynamicSamRange(this, currentTick);
+      this._samLauncherState = {
+        upgradeStartTick: currentTick,
+        startRange: currentRange,
+        targetLevel: this._level + 1,
+        duration: this.mg.config().samUpgradeDuration(),
+      };
+    }
     this._level++;
+    // unitCount()/unitsOwned() are level-weighted and memoised on these versions
+    this.mg.bumpUnitsVersion();
+    this._owner._myUnitsVersion++;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
       this._missileTimerQueue.push(this.mg.ticks());
     }
@@ -549,10 +727,16 @@ export class UnitImpl implements Unit {
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
       this._missileTimerQueue.pop();
     }
+    if (this._type === UnitType.SAMLauncher) {
+      this._samLauncherState = undefined;
+    }
     if (this._level <= 0) {
       this.delete(true, destroyer);
       return;
     }
+    // unitCount()/unitsOwned() are level-weighted and memoised on these versions
+    this.mg.bumpUnitsVersion();
+    this._owner._myUnitsVersion++;
     this.mg.addUpdate(this.toUpdate());
   }
 

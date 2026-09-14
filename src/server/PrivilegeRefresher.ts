@@ -1,5 +1,6 @@
 import { base64url } from "jose";
 import { Logger } from "winston";
+import { ReservedClanTagsResponseSchema } from "../core/ClanApiSchemas";
 import { CosmeticsSchema } from "../core/CosmeticSchemas";
 import { startPolling } from "./PollingLoop";
 import {
@@ -14,14 +15,13 @@ export class PrivilegeRefresher {
   private privilegeChecker: PrivilegeChecker | null = null;
   private failOpenPrivilegeChecker: PrivilegeChecker =
     new FailOpenPrivilegeChecker();
-  private cosmeticFlagUrls: Set<string> = new Set();
 
   private log: Logger;
 
   constructor(
     private cosmeticsEndpoint: string,
-    private profaneWordsEndpoint: string,
     private apiKey: string,
+    private reservedClanTagsEndpoint: string,
     parentLog: Logger,
     private refreshInterval: number = 1000 * 60 * 3,
   ) {
@@ -39,10 +39,6 @@ export class PrivilegeRefresher {
     return this.privilegeChecker ?? this.failOpenPrivilegeChecker;
   }
 
-  public getCosmeticFlagUrls(): Set<string> {
-    return this.cosmeticFlagUrls;
-  }
-
   private async loadPrivilegeChecker(): Promise<void> {
     this.log.info(`Loading privilege checker`);
     try {
@@ -58,9 +54,9 @@ export class PrivilegeRefresher {
         }
       };
 
-      const [cosmeticsResponse, profaneWordsResponse] = await Promise.all([
+      const [cosmeticsResponse, reservedClanTagsResponse] = await Promise.all([
         fetchWithTimeout(this.cosmeticsEndpoint),
-        fetchWithTimeout(this.profaneWordsEndpoint),
+        fetchWithTimeout(this.reservedClanTagsEndpoint),
       ]);
 
       if (!cosmeticsResponse || !cosmeticsResponse.ok) {
@@ -76,31 +72,34 @@ export class PrivilegeRefresher {
         throw new Error(`Invalid cosmetics data: ${result.error.message}`);
       }
 
-      let bannedWords: string[] = [];
-      if (profaneWordsResponse && profaneWordsResponse.ok) {
-        try {
-          bannedWords = await profaneWordsResponse.json();
-          this.log.info(
-            `Loaded ${bannedWords.length} profane words from ${this.profaneWordsEndpoint}`,
-          );
-        } catch (error) {
-          this.log.warn(`Failed to parse profane words JSON, using empty list`);
-        }
-      } else {
-        this.log.warn(
-          `Failed to fetch profane words (status ${profaneWordsResponse?.status ?? "network error"}), using empty list`,
+      // Reserved clan tags are critical: a missing or malformed list would
+      // make every non-member tag look fictional and let impersonation
+      // through. Throw so the previous (good) checker is retained instead.
+      if (!reservedClanTagsResponse || !reservedClanTagsResponse.ok) {
+        throw new Error(
+          `Reserved clan tags HTTP error! status: ${reservedClanTagsResponse?.status ?? "network error"}`,
         );
       }
+      const reservedClanTagsData = await reservedClanTagsResponse.json();
+      const reservedClanTagsResult =
+        ReservedClanTagsResponseSchema.safeParse(reservedClanTagsData);
+      if (!reservedClanTagsResult.success) {
+        throw new Error(
+          `Invalid reserved clan tags data: ${reservedClanTagsResult.error.message}`,
+        );
+      }
+      const reservedClanTags = new Set(
+        reservedClanTagsResult.data.map((tag) => tag.toUpperCase()),
+      );
 
       this.privilegeChecker = new PrivilegeCheckerImpl(
         result.data,
         base64url.decode,
-        bannedWords,
+        reservedClanTags,
       );
-      this.cosmeticFlagUrls = new Set(
-        Object.values(result.data.flags).map((f) => f.url),
+      this.log.info(
+        `Privilege checker loaded successfully (${reservedClanTags.size} reserved clan tags)`,
       );
-      this.log.info(`Privilege checker loaded successfully`);
     } catch (error) {
       this.log.error(`Failed to load privilege checker:`, error);
       throw error;

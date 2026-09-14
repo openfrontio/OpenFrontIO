@@ -1,6 +1,5 @@
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import { NukeExecution } from "../../src/core/execution/NukeExecution";
-import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
 import {
   Game,
   Player,
@@ -8,12 +7,10 @@ import {
   PlayerType,
   UnitType,
 } from "../../src/core/game/Game";
-import { GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
 
 describe("Construction economy", () => {
   let game: Game;
-  const gameID: GameID = "game_id";
   let player: Player;
   let other: Player;
   const builderInfo = new PlayerInfo(
@@ -34,14 +31,10 @@ describe("Construction economy", () => {
       },
       [builderInfo, otherInfo],
     );
-    const spawn = game.ref(0, 10);
-    game.addExecution(new SpawnExecution(gameID, builderInfo, spawn));
-    game.addExecution(new SpawnExecution(gameID, otherInfo, spawn));
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
     player = game.player(builderInfo.id);
     other = game.player(otherInfo.id);
+    player.conquer(game.ref(0, 10));
+    other.conquer(game.ref(10, 10));
   });
 
   test("City charges gold once and no refund thereafter (allow passive income)", () => {

@@ -1,23 +1,43 @@
-import { html, LitElement } from "lit";
+import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
-import { getUserMe, hasLinkedAccount } from "./Api";
+import { CloseCode, isTerminalClose } from "../core/CloseCodes";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
+import { getUserMe, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { JoinLobbyEvent } from "./Main";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
+import type { JoinLobbyEvent } from "./Main";
+import { ensureServerList } from "./ServerList";
+import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
+
+type MatchmakingJoin = {
+  type: "join";
+  jwt: string;
+  clanTag?: string;
+};
 
 @customElement("matchmaking-modal")
 export class MatchmakingModal extends BaseModal {
-  private static instanceIdPromise: Promise<string> | null = null;
   private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
   private connectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private watchdogTimeout: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
+  private intentionalClose = false;
+  // Which queue to join; set by Main from the open-matchmaking event
+  // before the modal opens.
+  public mode: "1v1" | "2v2" = "1v1";
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
+  @state() private limitReached = false;
+  @state() private queueSize: number | null = null;
+  private selectedClanTag: string | null = null;
   private elo: number | string = "...";
 
   constructor() {
@@ -29,43 +49,50 @@ export class MatchmakingModal extends BaseModal {
     return this;
   }
 
-  render() {
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText(
+        this.mode === "2v2"
+          ? "matchmaking_modal.title_2v2"
+          : "matchmaking_modal.title",
+      ),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+    });
+  }
+
+  protected renderBody() {
     const eloDisplay = html`
       <p class="text-center mt-2 mb-4 text-white/60">
         ${translateText("matchmaking_modal.elo", { elo: this.elo })}
       </p>
     `;
-
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("matchmaking_modal.title"),
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-        })}
-        <div class="flex-1 flex flex-col items-center justify-center gap-6 p-6">
-          ${eloDisplay} ${this.renderInner()}
-        </div>
-      </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
     return html`
-      <o-modal
-        id="matchmaking-modal"
-        title="${translateText("matchmaking_modal.title")}"
-        hideCloseButton
-        hideHeader
-      >
-        ${content}
-      </o-modal>
+      <div class="flex flex-col items-center justify-center gap-6 p-6">
+        ${eloDisplay} ${this.renderInner()}
+      </div>
     `;
   }
 
   private renderInner() {
+    if (this.limitReached) {
+      return html`
+        <div class="flex flex-col items-center gap-4 text-center">
+          <p class="text-white font-bold">
+            ${translateText("matchmaking_modal.limit_reached")}
+          </p>
+          <p class="text-sm text-white/60">
+            ${translateText("matchmaking_modal.limit_reached_info")}
+          </p>
+          <button
+            @click=${this.openSubscriptions}
+            class="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold uppercase tracking-wider rounded-xl transition-colors"
+          >
+            ${translateText("matchmaking_modal.limit_upsell")}
+          </button>
+        </div>
+      `;
+    }
     if (!this.connected) {
       return this.renderLoadingSpinner(
         translateText("matchmaking_modal.connecting"),
@@ -73,10 +100,21 @@ export class MatchmakingModal extends BaseModal {
       );
     }
     if (this.gameID === null) {
-      return this.renderLoadingSpinner(
-        translateText("matchmaking_modal.searching"),
-        "green",
-      );
+      return html`
+        ${this.queueSize !== null
+          ? html`
+              <p class="text-center text-white/60">
+                ${translateText("matchmaking_modal.queue_size", {
+                  count: this.queueSize,
+                })}
+              </p>
+            `
+          : ""}
+        ${this.renderLoadingSpinner(
+          translateText("matchmaking_modal.searching"),
+          "green",
+        )}
+      `;
     } else {
       return this.renderLoadingSpinner(
         translateText("matchmaking_modal.waiting_for_game"),
@@ -85,12 +123,150 @@ export class MatchmakingModal extends BaseModal {
     }
   }
 
-  private async connect() {
-    const config = await getRuntimeClientServerConfig();
-    const instanceId = await MatchmakingModal.getInstanceId();
+  // Re-enter the queue after a pre-start match cancellation (a matched
+  // player never connected to the game server). The modal is normally still
+  // open on "waiting for game" at that point — reset back to searching and
+  // reconnect. Returns false when the modal was closed in the meantime, so
+  // the caller knows nothing was rejoined.
+  public requeue(): boolean {
+    if (!this.isModalOpen) {
+      return false;
+    }
+    if (this.gameCheckInterval) {
+      clearInterval(this.gameCheckInterval);
+      this.gameCheckInterval = null;
+    }
+    this.connected = false;
+    this.gameID = null;
+    this.intentionalClose = false;
+    this.limitReached = false;
+    this.queueSize = null;
+    this.reconnectAttempts = 0;
+    this.connect();
+    return true;
+  }
 
+  private openSubscriptions = () => {
+    // The matchmaking modal isn't registered with the modal router, so it
+    // won't be closed by the store opening from the hash change.
+    this.close();
+    window.location.hash = "modal=store&tab=subscriptions";
+  };
+
+  // The lobby writes to every queued socket every ~3s (queue-size), so
+  // prolonged silence means the connection died without a close frame
+  // (locked phone, dropped wifi). Left alone, that leaves a ghost in the
+  // queue and games start short-handed — only the client can detect this,
+  // so reconnect. Rejoining is safe: one account holds one queue slot.
+  private resetWatchdog() {
+    this.clearWatchdog();
+    this.watchdogTimeout = setTimeout(() => {
+      console.warn("[Matchmaking] no server message for 15s, reconnecting");
+      if (this.socket) {
+        // A dead socket can take a long time to emit its close event;
+        // detach handlers so it can't trigger a second reconnect later.
+        this.socket.onclose = null;
+        this.socket.onmessage = null;
+        this.socket.onerror = null;
+        this.socket.close();
+      }
+      this.connected = false;
+      this.queueSize = null;
+      this.connect();
+    }, 15000);
+  }
+
+  private clearWatchdog() {
+    if (this.watchdogTimeout) {
+      clearTimeout(this.watchdogTimeout);
+      this.watchdogTimeout = null;
+    }
+  }
+
+  private selectedClanFrom(userMe: UserMeResponse): string | null {
+    if (this.mode !== "2v2") {
+      return null;
+    }
+    const selectedTag = document
+      .querySelector<UsernameInput>("username-input")
+      ?.getClanTag();
+    if (selectedTag === null || selectedTag === undefined) {
+      return null;
+    }
+    return (
+      userMe.player.clans?.find(
+        (clan) => clan.tag.toUpperCase() === selectedTag.toUpperCase(),
+      )?.tag ?? null
+    );
+  }
+
+  private showMatchmakingError(messageKey: string) {
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText(messageKey),
+          color: "red",
+          duration: 5000,
+        },
+      }),
+    );
+  }
+
+  private handleInvalidClan() {
+    const rejectedClanTag = this.selectedClanTag;
+    this.connected = false;
+    this.close();
+    this.showMatchmakingError("matchmaking_modal.invalid_clan");
+
+    invalidateUserMe();
+    void getUserMe().then((userMe) => {
+      if (userMe === false || rejectedClanTag === null) {
+        return;
+      }
+      const stillMember = userMe.player.clans?.some(
+        (clan) => clan.tag.toUpperCase() === rejectedClanTag.toUpperCase(),
+      );
+      if (!stillMember) {
+        document
+          .querySelector<UsernameInput>("username-input")
+          ?.clearClanTag(rejectedClanTag);
+      }
+    });
+  }
+
+  private async connect() {
+    // Pending timers from a previous socket must not fire on this one.
+    this.clearWatchdog();
+    if (this.connectTimeout) {
+      clearTimeout(this.connectTimeout);
+      this.connectTimeout = null;
+    }
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    // Nor may the previous socket itself: requeue()/onOpen() reset
+    // intentionalClose and gameID before reconnecting, so a delayed close
+    // event from the old socket would look unexpected and schedule a
+    // duplicate connection — the server would then kick this one as
+    // "replaced by newer connection".
+    if (this.socket) {
+      this.socket.onopen = null;
+      this.socket.onmessage = null;
+      this.socket.onerror = null;
+      this.socket.onclose = null;
+      if (this.socket.readyState !== WebSocket.CLOSED) {
+        this.socket.close();
+      }
+    }
+    // instance_id is the rendering server's own id, which the API ignores
+    // (docs/MultiServer.md) and a static page does not have. Sent only when
+    // the page carries one, rather than as an empty parameter.
+    const instanceId = ClientEnv.instanceId();
+    const instanceParam =
+      instanceId === "" ? "" : `instance_id=${encodeURIComponent(instanceId)}&`;
     this.socket = new WebSocket(
-      `${config.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(instanceId)}`,
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?${instanceParam}mode=${this.mode}`,
     );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
@@ -103,20 +279,32 @@ export class MatchmakingModal extends BaseModal {
         // otherwise the "searching" message will be shown immediately.
         // Also wait so people who back out immediately aren't added
         // to the matchmaking queue.
-        this.socket.send(
-          JSON.stringify({
-            type: "join",
-            jwt: await getPlayToken(),
-          }),
-        );
+        const message: MatchmakingJoin = {
+          type: "join",
+          jwt: await getPlayToken(),
+          ...(this.selectedClanTag === null
+            ? {}
+            : { clanTag: this.selectedClanTag }),
+        };
+        this.socket.send(JSON.stringify(message));
         this.connected = true;
+        // The server starts broadcasting queue-size once we're queued;
+        // from here on, silence means the connection is dead.
+        this.resetWatchdog();
         this.requestUpdate();
       }, 2000);
     };
     this.socket.onmessage = (event) => {
       console.log(event.data);
+      this.resetWatchdog();
       const data = JSON.parse(event.data);
+      if (data.type === "queue-size") {
+        this.queueSize = data.count;
+        return;
+      }
       if (data.type === "match-assignment") {
+        this.clearWatchdog();
+        this.intentionalClose = true;
         this.socket?.close();
         console.log(`matchmaking: got game ID: ${data.gameId}`);
         this.gameID = data.gameId;
@@ -126,35 +314,76 @@ export class MatchmakingModal extends BaseModal {
     this.socket.onerror = (event: Event) => {
       console.error("WebSocket error occurred:", event);
     };
-    this.socket.onclose = () => {
-      console.log("Matchmaking server closed connection");
+    this.socket.onclose = (event: CloseEvent) => {
+      console.log(
+        `Matchmaking server closed connection: code=${event.code} reason=${event.reason}`,
+      );
+      this.clearWatchdog();
+      this.queueSize = null;
+      if (this.intentionalClose || this.gameID !== null) {
+        return;
+      }
+      // The live matchmaking service still sends these rejections as
+      // 1008/1011 with a bare reason; it is moving to the 41xx codes. Accept
+      // both until that has shipped, or a player out of free ranked matches
+      // would be re-queued by the retry path below instead of told.
+      const legacyReason =
+        event.code === 1008 || event.code === 1011 ? event.reason : null;
+      // Out of free ranked plays — the server will keep refusing until the
+      // next UTC day (or a subscription), so don't reconnect.
+      if (
+        event.code === CloseCode.RankedLimitReached ||
+        legacyReason === "ranked_limit_reached"
+      ) {
+        this.connected = false;
+        this.limitReached = true;
+        return;
+      }
+      if (
+        event.code === CloseCode.InvalidClan ||
+        legacyReason === "invalid_clan"
+      ) {
+        this.handleInvalidClan();
+        return;
+      }
+      if (
+        event.code === CloseCode.ClanVerificationFailed ||
+        legacyReason === "clan_verification_failed"
+      ) {
+        this.connected = false;
+        this.close();
+        this.showMatchmakingError("matchmaking_modal.clan_verification_failed");
+        return;
+      }
+      if (event.code === CloseCode.Normal) {
+        // A newer connection for this account (e.g. a second tab) took the
+        // queue slot; this socket was replaced. Do not retry.
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: translateText("matchmaking_modal.replaced"),
+              color: "red",
+              duration: 5000,
+            },
+          }),
+        );
+        this.close();
+        return;
+      }
+      if (isTerminalClose(event.code)) {
+        this.connected = false;
+        this.close();
+        this.showMatchmakingError("matchmaking_modal.rejected");
+        return;
+      }
+      // 1008: the jwt was rejected — getPlayToken() refreshes expired tokens,
+      // so rejoining sends a fresh one. Anything else is a server
+      // restart/deploy; the queue is in-memory only, so rejoin. Back off in
+      // case the failure repeats.
+      this.connected = false;
+      const delay = Math.min(1000 * 2 ** this.reconnectAttempts++, 15000);
+      this.reconnectTimeout = setTimeout(() => this.connect(), delay);
     };
-  }
-
-  private static async getInstanceId(): Promise<string> {
-    MatchmakingModal.instanceIdPromise ??= fetch("/api/instance", {
-      cache: "no-store",
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(
-            `Failed to load instance id: ${response.status} ${response.statusText}`,
-          );
-        }
-
-        const data = (await response.json()) as { instanceId?: string };
-        if (!data.instanceId) {
-          throw new Error("Missing instance id");
-        }
-
-        return data.instanceId;
-      })
-      .catch((error: unknown) => {
-        MatchmakingModal.instanceIdPromise = null;
-        throw error;
-      });
-
-    return MatchmakingModal.instanceIdPromise;
   }
 
   protected async onOpen(): Promise<void> {
@@ -164,15 +393,28 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    const isLoggedIn =
-      userMe &&
-      userMe.user &&
-      (userMe.user.discord !== undefined || userMe.user.email !== undefined);
-    if (!isLoggedIn) {
+    // CrazyGames players authenticate through the SDK rather than a linked
+    // account, so a signed-in CrazyGames user counts as logged in for ranked.
+    const crazyGamesSignedIn =
+      crazyGamesSDK.isOnCrazyGames() &&
+      (await crazyGamesSDK.getUserProfile()) !== null;
+    if (!this.isModalOpen) {
+      return;
+    }
+
+    // The `userMe === false` term is not redundant with the predicate below,
+    // which also returns false for `false`: it is what stops a signed-in
+    // CrazyGames player with no /users/@me from falling through to the
+    // leaderboard read, which would dereference `false`. It also narrows the
+    // type for that read.
+    if (
+      userMe === false ||
+      (!responseHasLinkedIdentity(userMe) && !crazyGamesSignedIn)
+    ) {
       window.dispatchEvent(
         new CustomEvent("show-message", {
           detail: {
-            message: translateText("matchmaking_button.must_login"),
+            message: translateText("matchmaking_modal.must_login"),
             color: "red",
             duration: 3000,
           },
@@ -183,21 +425,34 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    this.elo =
-      userMe.player.leaderboard?.oneVone?.elo ??
-      translateText("matchmaking_modal.no_elo");
+    const row =
+      this.mode === "2v2"
+        ? userMe.player.leaderboard?.twoVtwo
+        : userMe.player.leaderboard?.oneVone;
+    this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
+    this.selectedClanTag = this.selectedClanFrom(userMe);
 
     this.connected = false;
     this.gameID = null;
+    this.intentionalClose = false;
+    this.limitReached = false;
+    this.queueSize = null;
+    this.reconnectAttempts = 0;
     this.connect();
   }
 
   protected onClose(): void {
     this.connected = false;
+    this.intentionalClose = true;
     this.socket?.close();
+    this.clearWatchdog();
     if (this.connectTimeout) {
       clearTimeout(this.connectTimeout);
       this.connectTimeout = null;
+    }
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
     }
     if (this.gameCheckInterval) {
       clearInterval(this.gameCheckInterval);
@@ -209,8 +464,11 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameID === null) {
       return;
     }
-    const config = await getRuntimeClientServerConfig();
-    const url = `/${config.workerPath(this.gameID)}/api/game/${this.gameID}/exists`;
+    // The matched game may carry any server's letter: resolve it through
+    // the API's list (multi-server v2) rather than this page's own map. No
+    // version check: this runs on a timer and must never navigate the page.
+    await ensureServerList();
+    const url = `${ClientEnv.gameHttpBase(this.gameID)}/${ClientEnv.gameWorkerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -244,68 +502,5 @@ export class MatchmakingModal extends BaseModal {
         composed: true,
       }),
     );
-  }
-}
-
-@customElement("matchmaking-button")
-export class MatchmakingButton extends LitElement {
-  @state() private isLoggedIn = false;
-
-  constructor() {
-    super();
-  }
-
-  async connectedCallback() {
-    super.connectedCallback();
-    // Listen for user authentication changes
-    document.addEventListener("userMeResponse", (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail) {
-        const userMeResponse = customEvent.detail as UserMeResponse | false;
-        this.isLoggedIn = hasLinkedAccount(userMeResponse);
-      }
-    });
-  }
-
-  createRenderRoot() {
-    return this;
-  }
-
-  render() {
-    return this.isLoggedIn
-      ? html`
-          <button
-            @click="${this.handleLoggedInClick}"
-            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center group overflow-hidden relative"
-            title="${translateText("matchmaking_modal.title")}"
-          >
-            <span class="relative z-10 text-2xl">
-              ${translateText("matchmaking_button.play_ranked")}
-            </span>
-            <span
-              class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
-            >
-              ${translateText("matchmaking_button.description")}
-            </span>
-          </button>
-        `
-      : html`
-          <button
-            @click="${this.handleLoggedOutClick}"
-            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center overflow-hidden relative cursor-pointer"
-          >
-            <span class="relative z-10 text-2xl">
-              ${translateText("matchmaking_button.login_required")}
-            </span>
-          </button>
-        `;
-  }
-
-  private handleLoggedInClick() {
-    document.dispatchEvent(new CustomEvent("open-matchmaking"));
-  }
-
-  private handleLoggedOutClick() {
-    window.showPage?.("page-account");
   }
 }

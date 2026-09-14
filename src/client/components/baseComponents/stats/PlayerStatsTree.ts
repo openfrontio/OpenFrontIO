@@ -1,59 +1,65 @@
-import { LitElement, PropertyValues, html } from "lit";
+import { LitElement, PropertyValues, TemplateResult, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { PlayerStatsLeaf, PlayerStatsTree } from "../../../../core/ApiSchemas";
+import {
+  PlayerRecentStats,
+  PlayerStatsGameMode,
+  PlayerStatsGameModes,
+  PlayerStatsLeaf,
+  PlayerStatsTree,
+} from "../../../../core/ApiSchemas";
 import {
   Difficulty,
   GameMode,
   GameType,
   RankedType,
   isDifficulty,
-  isGameMode,
-  isGameType,
 } from "../../../../core/game/Game";
 import { PlayerStats } from "../../../../core/StatsSchemas";
-import { renderNumber, translateText } from "../../../Utils";
-import "./PlayerStatsGrid";
+import { translateText } from "../../../Utils";
+import "./PlayerStatsSummary";
 import "./PlayerStatsTable";
+
+const ALL_SELECTION = "all" as const;
+type AllSelection = typeof ALL_SELECTION;
+type AvailableType = GameType | "Ranked";
+type TypeSelection = AvailableType | AllSelection;
+type ModeSelection = PlayerStatsGameMode | AllSelection;
+type DifficultySelection = Difficulty | AllSelection;
+type RankedTypeSelection = RankedType | AllSelection;
+const TYPE_ORDER: readonly AvailableType[] = [
+  GameType.Public,
+  GameType.Private,
+  "Ranked",
+  GameType.Singleplayer,
+];
 
 @customElement("player-stats-tree-view")
 export class PlayerStatsTreeView extends LitElement {
   @property({ type: Object }) statsTree?: PlayerStatsTree;
-  @state() selectedType: GameType | "Ranked" = GameType.Public;
-  @state() selectedMode: GameMode = GameMode.FFA;
-  @state() selectedDifficulty: Difficulty = Difficulty.Medium;
-  @state() selectedRankedType: RankedType = RankedType.OneVOne;
+  @state() selectedType: TypeSelection = ALL_SELECTION;
+  @state() selectedMode: ModeSelection = ALL_SELECTION;
+  @state() selectedDifficulty: DifficultySelection = ALL_SELECTION;
+  @state() selectedRankedType: RankedTypeSelection = ALL_SELECTION;
+
   private get typeNode() {
-    if (this.selectedType === "Ranked") return undefined;
+    if (this.selectedType === ALL_SELECTION || this.selectedType === "Ranked") {
+      return undefined;
+    }
     return this.statsTree?.[this.selectedType];
   }
 
-  private get modeNode() {
-    return this.typeNode?.[this.selectedMode];
-  }
-
-  private get shouldMergeDifficulties() {
-    return this.selectedType === GameType.Public;
-  }
-
-  private get availableTypes(): (GameType | "Ranked")[] {
+  private get availableTypes(): AvailableType[] {
     if (!this.statsTree) return [];
-    const types: (GameType | "Ranked")[] = Object.keys(this.statsTree).filter(
-      (k): k is GameType =>
-        isGameType(k) &&
-        Object.keys(this.statsTree![k as GameType] ?? {}).length > 0,
+    return TYPE_ORDER.filter((type) =>
+      type === "Ranked"
+        ? Object.keys(this.statsTree?.Ranked ?? {}).length > 0
+        : Object.keys(this.statsTree?.[type] ?? {}).length > 0,
     );
-    if (
-      this.statsTree.Ranked &&
-      Object.keys(this.statsTree.Ranked).length > 0
-    ) {
-      types.push("Ranked");
-    }
-    return types;
   }
 
-  private get availableModes(): GameMode[] {
+  private get availableModes(): PlayerStatsGameMode[] {
     if (!this.typeNode) return [];
-    return Object.keys(this.typeNode).filter(isGameMode);
+    return PlayerStatsGameModes.filter((mode) => this.typeNode?.[mode]);
   }
 
   private get availableRankedTypes(): RankedType[] {
@@ -64,20 +70,76 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private get availableDifficulties(): Difficulty[] {
-    if (!this.modeNode) return [];
-    return Object.keys(this.modeNode).filter(isDifficulty);
+    if (!this.typeNode || this.selectedType === GameType.Public) return [];
+    const modes =
+      this.selectedMode === ALL_SELECTION
+        ? this.availableModes
+        : [this.selectedMode];
+    return Object.values(Difficulty).filter((difficulty) =>
+      modes.some((mode) => this.typeNode?.[mode]?.[difficulty]),
+    );
   }
 
-  private labelForMode(m: GameMode) {
-    return m === GameMode.FFA
-      ? translateText("game_mode.ffa")
-      : translateText("game_mode.teams");
+  private labelForMode(m: PlayerStatsGameMode) {
+    if (m === GameMode.FFA) return translateText("game_mode.ffa");
+    if (m === GameMode.Team) return translateText("game_mode.teams");
+    return translateText("game_mode.hvn");
+  }
+
+  private labelForType(t: TypeSelection) {
+    if (t === ALL_SELECTION) {
+      return translateText("player_stats_tree.all");
+    }
+    return t === "Ranked"
+      ? translateText("player_stats_tree.ranked")
+      : t === GameType.Public
+        ? translateText("player_stats_tree.public")
+        : t === GameType.Private
+          ? translateText("player_stats_tree.private")
+          : translateText("player_stats_tree.solo");
+  }
+
+  // A full-width filter row styled like the game-history tab: a pill container
+  // wrapping tab-style buttons that grow to fill the row.
+  private renderFilterRow(buttons: TemplateResult[]): TemplateResult {
+    return html`
+      <div
+        role="tablist"
+        class="flex flex-wrap gap-1 p-1 bg-white/5 border border-white/10 rounded-xl"
+      >
+        ${buttons}
+      </div>
+    `;
+  }
+
+  private renderFilterTab(
+    label: string,
+    isActive: boolean,
+    onSelect: () => void,
+    title?: string,
+  ): TemplateResult {
+    return html`
+      <button
+        type="button"
+        role="tab"
+        aria-selected=${isActive}
+        title=${title ?? nothing}
+        @click=${onSelect}
+        class="grow basis-20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${isActive
+          ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
+          : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"}"
+      >
+        ${label}
+      </button>
+    `;
   }
 
   private labelForRankedType(r: RankedType) {
     switch (r) {
       case RankedType.OneVOne:
         return translateText("player_stats_tree.ranked_1v1");
+      case RankedType.TwoVTwo:
+        return translateText("player_stats_tree.ranked_2v2");
     }
   }
 
@@ -86,29 +148,123 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private getSelectedLeaf(): PlayerStatsLeaf | null {
+    let leaf: PlayerStatsLeaf | null;
+    if (this.selectedType === ALL_SELECTION) {
+      leaf = this.mergeLeaves(
+        this.availableTypes.flatMap((type) =>
+          type === "Ranked"
+            ? this.getRankedLeaves(ALL_SELECTION)
+            : this.getGameTypeLeaves(type, ALL_SELECTION, ALL_SELECTION),
+        ),
+      );
+    } else if (this.selectedType === "Ranked") {
+      leaf = this.mergeLeaves(this.getRankedLeaves(this.selectedRankedType));
+    } else {
+      leaf = this.mergeLeaves(
+        this.getGameTypeLeaves(
+          this.selectedType,
+          this.selectedMode,
+          this.selectedType === GameType.Public
+            ? ALL_SELECTION
+            : this.selectedDifficulty,
+        ),
+      );
+    }
+    if (!leaf) return null;
+    const recent = this.getSelectedRecentStats();
+    return recent ? { ...leaf, recent } : leaf;
+  }
+
+  private getSelectedRecentStats(): PlayerRecentStats | undefined {
+    const recent = this.statsTree?.recent;
+    if (!recent) return undefined;
+    if (this.selectedType === ALL_SELECTION) return recent.all;
     if (this.selectedType === "Ranked") {
-      return this.statsTree?.Ranked?.[this.selectedRankedType] ?? null;
+      const rankedRecent = recent.Ranked;
+      if (!rankedRecent) return undefined;
+      return this.selectedRankedType === ALL_SELECTION
+        ? rankedRecent.all
+        : rankedRecent[this.selectedRankedType];
     }
 
-    const modeNode = this.modeNode;
-    if (!modeNode) return null;
-
-    if (!this.shouldMergeDifficulties) {
-      return modeNode[this.selectedDifficulty] ?? null;
+    const typeRecent = recent[this.selectedType];
+    if (!typeRecent) return undefined;
+    if (this.selectedMode === ALL_SELECTION) {
+      return this.selectedType === GameType.Public ||
+        this.selectedDifficulty === ALL_SELECTION
+        ? typeRecent.all
+        : typeRecent[this.selectedDifficulty];
     }
 
-    const diffKeys = Object.keys(modeNode).filter(isDifficulty);
-    if (!diffKeys.length) return null;
+    const modeRecent = typeRecent[this.selectedMode];
+    if (!modeRecent) return undefined;
+    return this.selectedType === GameType.Public ||
+      this.selectedDifficulty === ALL_SELECTION
+      ? modeRecent.all
+      : modeRecent[this.selectedDifficulty];
+  }
 
-    return diffKeys.reduce<PlayerStatsLeaf | null>((merged, diffKey) => {
-      const leaf = modeNode[diffKey];
-      if (!leaf) return merged;
+  private getGameTypeLeaves(
+    type: GameType,
+    modeSelection: ModeSelection,
+    difficultySelection: DifficultySelection,
+  ): PlayerStatsLeaf[] {
+    const typeNode = this.statsTree?.[type];
+    if (!typeNode) return [];
+    const modes =
+      modeSelection === ALL_SELECTION
+        ? PlayerStatsGameModes.filter((mode) => typeNode[mode])
+        : [modeSelection];
+
+    return modes.flatMap((mode) => {
+      const modeNode = typeNode[mode];
+      if (!modeNode) return [];
+      const difficulties =
+        difficultySelection === ALL_SELECTION
+          ? Object.keys(modeNode).filter(isDifficulty)
+          : [difficultySelection];
+      return difficulties.flatMap((difficulty) => {
+        const leaf = modeNode[difficulty];
+        return leaf ? [leaf] : [];
+      });
+    });
+  }
+
+  private getRankedLeaves(
+    rankedTypeSelection: RankedTypeSelection,
+  ): PlayerStatsLeaf[] {
+    const rankedNode = this.statsTree?.Ranked;
+    if (!rankedNode) return [];
+    const rankedTypes =
+      rankedTypeSelection === ALL_SELECTION
+        ? this.availableRankedTypes
+        : [rankedTypeSelection];
+    return rankedTypes.flatMap((rankedType) => {
+      const leaf = rankedNode[rankedType];
+      return leaf ? [leaf] : [];
+    });
+  }
+
+  private mergeLeaves(leaves: PlayerStatsLeaf[]): PlayerStatsLeaf | null {
+    const merged = this.reduceLeaves(leaves);
+    if (merged === null) return null;
+    // A leaf's `recent` is a newest-100 window, and windows from different
+    // buckets cannot be added together — so it only survives an exact
+    // selection. Kept as a fallback for responses that carry per-leaf recent
+    // stats without the tree-level `stats.recent` aggregate.
+    const only = leaves.length === 1 ? leaves[0].recent : undefined;
+    return only === undefined ? merged : { ...merged, recent: only };
+  }
+
+  private reduceLeaves(leaves: PlayerStatsLeaf[]): PlayerStatsLeaf | null {
+    return leaves.reduce<PlayerStatsLeaf | null>((merged, leaf) => {
       if (!merged) {
         return {
           wins: leaf.wins,
           losses: leaf.losses,
           total: leaf.total,
           stats: this.cloneStats(leaf.stats),
+          recentGames: this.mergeRecentGames(undefined, leaf.recentGames),
         };
       }
       return {
@@ -116,40 +272,77 @@ export class PlayerStatsTreeView extends LitElement {
         losses: merged.losses + leaf.losses,
         total: merged.total + leaf.total,
         stats: this.mergeStats(merged.stats, leaf.stats),
+        recentGames: this.mergeRecentGames(
+          merged.recentGames,
+          leaf.recentGames,
+        ),
       };
     }, null);
   }
 
+  private mergeRecentGames(
+    base: PlayerStatsLeaf["recentGames"],
+    next: PlayerStatsLeaf["recentGames"],
+  ): PlayerStatsLeaf["recentGames"] {
+    if (!base && !next) return undefined;
+    const byGameId = new Map<
+      bigint,
+      NonNullable<PlayerStatsLeaf["recentGames"]>[number]
+    >();
+    for (const game of [...(base ?? []), ...(next ?? [])]) {
+      byGameId.set(game.gameId, game);
+    }
+    return [...byGameId.values()]
+      .sort((left, right) =>
+        left.gameId === right.gameId ? 0 : left.gameId > right.gameId ? -1 : 1,
+      )
+      .slice(0, 100);
+  }
+
   private syncSelection(): void {
     const types = this.availableTypes;
-    if (types.length && !types.includes(this.selectedType as GameType)) {
-      this.selectedType = types[0];
+    if (
+      this.selectedType !== ALL_SELECTION &&
+      !types.includes(this.selectedType)
+    ) {
+      this.selectedType = ALL_SELECTION;
+    }
+    if (this.selectedType === ALL_SELECTION) {
+      return;
     }
     if (this.selectedType === "Ranked") {
       const rankedTypes = this.availableRankedTypes;
       if (
-        rankedTypes.length &&
+        this.selectedRankedType !== ALL_SELECTION &&
         !rankedTypes.includes(this.selectedRankedType)
       ) {
-        this.selectedRankedType = rankedTypes[0];
+        this.selectedRankedType = ALL_SELECTION;
       }
       return;
     }
     const modes = this.availableModes;
-    if (modes.length && !modes.includes(this.selectedMode)) {
-      this.selectedMode = modes[0];
+    if (
+      this.selectedMode !== ALL_SELECTION &&
+      !modes.includes(this.selectedMode)
+    ) {
+      this.selectedMode = ALL_SELECTION;
     }
     const diffs = this.availableDifficulties;
     if (
-      !this.shouldMergeDifficulties &&
-      diffs.length &&
+      this.selectedDifficulty !== ALL_SELECTION &&
       !diffs.includes(this.selectedDifficulty)
     ) {
-      this.selectedDifficulty = diffs[0];
+      this.selectedDifficulty = ALL_SELECTION;
     }
   }
 
   protected willUpdate(changedProperties: PropertyValues) {
+    if (changedProperties.has("statsTree")) {
+      this.selectedType = ALL_SELECTION;
+      this.selectedMode = ALL_SELECTION;
+      this.selectedDifficulty = ALL_SELECTION;
+      this.selectedRankedType = ALL_SELECTION;
+    }
     if (
       changedProperties.has("statsTree") ||
       changedProperties.has("selectedType") ||
@@ -161,25 +354,25 @@ export class PlayerStatsTreeView extends LitElement {
     }
   }
 
-  private setGameType(t: GameType | "Ranked") {
+  private setGameType(t: TypeSelection) {
     if (this.selectedType === t) return;
     this.selectedType = t;
     this.requestUpdate();
   }
 
-  private setMode(m: GameMode) {
+  private setMode(m: ModeSelection) {
     if (this.selectedMode === m) return;
     this.selectedMode = m;
     this.requestUpdate();
   }
 
-  private setRankedType(r: RankedType) {
+  private setRankedType(r: RankedTypeSelection) {
     if (this.selectedRankedType === r) return;
     this.selectedRankedType = r;
     this.requestUpdate();
   }
 
-  private setDifficulty(d: Difficulty) {
+  private setDifficulty(d: DifficultySelection) {
     if (this.selectedDifficulty === d) return;
     this.selectedDifficulty = d;
     this.requestUpdate();
@@ -265,125 +458,86 @@ export class PlayerStatsTreeView extends LitElement {
     const diffs = this.availableDifficulties;
     const rankedTypes = this.availableRankedTypes;
     const leaf = this.getSelectedLeaf();
-    const wlr = leaf
-      ? leaf.losses === 0n
-        ? Number(leaf.wins)
-        : Number(leaf.wins) / Number(leaf.losses)
-      : 0;
 
     return html`
       <div class="flex flex-col gap-4">
-        <!-- Filters -->
-        <div
-          class="flex flex-wrap gap-2 items-center justify-between p-2 bg-black/20 rounded-lg border border-white/5"
-        >
-          <!-- Type selector -->
-          <div class="flex gap-1">
-            ${types.map(
-              (t) => html`
-                <button
-                  class="text-xs px-3 py-1.5 rounded-md border font-bold uppercase tracking-wider transition-all duration-200 ${this
-                    .selectedType === t
-                    ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/40"
-                    : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"}"
-                  @click=${() => this.setGameType(t)}
-                >
-                  ${t === "Ranked"
-                    ? translateText("player_stats_tree.ranked")
-                    : t === GameType.Public
-                      ? translateText("player_stats_tree.public")
-                      : t === GameType.Private
-                        ? translateText("player_stats_tree.private")
-                        : translateText("player_stats_tree.solo")}
-                </button>
-              `,
-            )}
-          </div>
-
-          <div class="flex gap-2">
-            <!-- Ranked type selector -->
-            ${this.selectedType === "Ranked" && rankedTypes.length
-              ? html`<div
-                  class="flex gap-1 bg-black/20 rounded-md p-1 border border-white/5"
-                >
-                  ${rankedTypes.map(
-                    (r) => html`
-                      <button
-                        class="text-xs px-3 py-1 rounded-sm transition-colors ${this
-                          .selectedRankedType === r
-                          ? "bg-white/20 text-white font-bold"
-                          : "text-gray-400 hover:text-white"}"
-                        @click=${() => this.setRankedType(r)}
-                      >
-                        ${this.labelForRankedType(r)}
-                      </button>
-                    `,
-                  )}
-                </div>`
-              : html``}
-
-            <!-- Mode selector -->
-            ${modes.length
-              ? html`<div
-                  class="flex gap-1 bg-black/20 rounded-md p-1 border border-white/5"
-                >
-                  ${modes.map(
-                    (m) => html`
-                      <button
-                        class="text-xs px-3 py-1 rounded-sm transition-colors ${this
-                          .selectedMode === m
-                          ? "bg-white/20 text-white font-bold"
-                          : "text-gray-400 hover:text-white"}"
-                        @click=${() => this.setMode(m)}
-                        title=${translateText("player_stats_tree.mode")}
-                      >
-                        ${this.labelForMode(m)}
-                      </button>
-                    `,
-                  )}
-                </div>`
-              : html``}
-
-            <!-- Difficulty selector -->
-            ${!this.shouldMergeDifficulties && diffs.length
-              ? html`<div
-                  class="flex gap-1 bg-black/20 rounded-md p-1 border border-white/5"
-                >
-                  ${diffs.map(
-                    (d) =>
-                      html` <button
-                        class="text-xs px-3 py-1 rounded-sm transition-colors ${this
-                          .selectedDifficulty === d
-                          ? "bg-white/20 text-white font-bold"
-                          : "text-gray-400 hover:text-white"}"
-                        @click=${() => this.setDifficulty(d)}
-                        title=${translateText("difficulty.difficulty")}
-                      >
-                        ${translateText(`difficulty.${d.toLowerCase()}`)}
-                      </button>`,
-                  )}
-                </div>`
-              : html``}
-          </div>
+        <!-- Filters: a type row, then a context-dependent second row (ranked
+             type / mode / difficulty), styled like the game-history tab. -->
+        <div class="space-y-2">
+          ${this.renderFilterRow([
+            this.renderFilterTab(
+              this.labelForType(ALL_SELECTION),
+              this.selectedType === ALL_SELECTION,
+              () => this.setGameType(ALL_SELECTION),
+            ),
+            ...types.map((t) =>
+              this.renderFilterTab(
+                this.labelForType(t),
+                this.selectedType === t,
+                () => this.setGameType(t),
+              ),
+            ),
+          ])}
+          ${this.selectedType === "Ranked" && rankedTypes.length
+            ? this.renderFilterRow([
+                this.renderFilterTab(
+                  this.labelForType(ALL_SELECTION),
+                  this.selectedRankedType === ALL_SELECTION,
+                  () => this.setRankedType(ALL_SELECTION),
+                ),
+                ...rankedTypes.map((r) =>
+                  this.renderFilterTab(
+                    this.labelForRankedType(r) ?? "",
+                    this.selectedRankedType === r,
+                    () => this.setRankedType(r),
+                  ),
+                ),
+              ])
+            : nothing}
+          ${modes.length
+            ? this.renderFilterRow([
+                this.renderFilterTab(
+                  this.labelForType(ALL_SELECTION),
+                  this.selectedMode === ALL_SELECTION,
+                  () => this.setMode(ALL_SELECTION),
+                  translateText("player_stats_tree.mode"),
+                ),
+                ...modes.map((m) =>
+                  this.renderFilterTab(
+                    this.labelForMode(m),
+                    this.selectedMode === m,
+                    () => this.setMode(m),
+                    translateText("player_stats_tree.mode"),
+                  ),
+                ),
+              ])
+            : nothing}
+          ${diffs.length
+            ? this.renderFilterRow([
+                this.renderFilterTab(
+                  this.labelForType(ALL_SELECTION),
+                  this.selectedDifficulty === ALL_SELECTION,
+                  () => this.setDifficulty(ALL_SELECTION),
+                  translateText("difficulty.difficulty"),
+                ),
+                ...diffs.map((d) =>
+                  this.renderFilterTab(
+                    translateText(`difficulty.${d.toLowerCase()}`),
+                    this.selectedDifficulty === d,
+                    () => this.setDifficulty(d),
+                    translateText("difficulty.difficulty"),
+                  ),
+                ),
+              ])
+            : nothing}
         </div>
 
         ${leaf
           ? html`
-              <div class="space-y-6 mt-2">
-                <player-stats-grid
-                  .titles=${[
-                    translateText("player_stats_tree.stats_wins"),
-                    translateText("player_stats_tree.stats_losses"),
-                    translateText("player_stats_tree.stats_wlr"),
-                    translateText("player_stats_tree.stats_games_played"),
-                  ]}
-                  .values=${[
-                    renderNumber(leaf.wins),
-                    renderNumber(leaf.losses),
-                    wlr.toFixed(2),
-                    renderNumber(leaf.total),
-                  ]}
-                ></player-stats-grid>
+              <div class="border-t border-white/10">
+                <div class="py-3">
+                  <player-stats-summary .leaf=${leaf}></player-stats-summary>
+                </div>
 
                 <div class="border-t border-white/10 pt-6">
                   <player-stats-table

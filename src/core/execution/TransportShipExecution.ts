@@ -91,6 +91,11 @@ export class TransportShipExecution implements Execution {
       }
     }
 
+    if (this.target === this.attacker) {
+      this.active = false;
+      return;
+    }
+
     if (this.target.isPlayer() && !this.attacker.canAttackPlayer(this.target)) {
       this.active = false;
       return;
@@ -101,7 +106,7 @@ export class TransportShipExecution implements Execution {
       .boatAttackAmount(this.attacker, this.target);
     this.troops = Math.min(this.troops, this.attacker.troops());
 
-    this.dst = targetTransportTile(this.mg, this.ref);
+    this.dst = targetTransportTile(this.mg, this.attacker, this.ref);
 
     if (this.dst === null) {
       console.warn(

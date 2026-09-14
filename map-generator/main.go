@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"image"
+	_ "image/png"
 	"log"
 	"log/slog"
 	"os"
@@ -13,100 +16,45 @@ import (
 	"sync"
 )
 
-// maps defines the registry of available maps to be processed.
-// Each entry contains the folder name and a flag indicating if it's a test map.
-//
-// New maps need to be added here in order to allow the map-generator to process them.
-var maps = []struct {
+// mapEntry identifies one map to process: its folder name and whether it
+// lives in assets/test_maps instead of assets/maps.
+type mapEntry struct {
 	Name   string
 	IsTest bool
-}{
-	{Name: "africa"},
-	{Name: "asia"},
-	{Name: "australia"},
-	{Name: "achiran"},
-	{Name: "alps"},
-	{Name: "baikal"},
-	{Name: "baikalnukewars"},
-	{Name: "betweentwoseas"},
-	{Name: "beringstrait"},
-	{Name: "blacksea"},
-	{Name: "bosphorusstraits"},
-	{Name: "britannia"},
-	{Name: "britanniaclassic"},
-	{Name: "deglaciatedantarctica"},
-	{Name: "eastasia"},
-	{Name: "europe"},
-	{Name: "europeclassic"},
-	{Name: "falklandislands"},
-	{Name: "faroeislands"},
-	{Name: "fourislands"},
-	{Name: "gatewaytotheatlantic"},
-	{Name: "giantworldmap"},
-	{Name: "gulfofstlawrence"},
-	{Name: "halkidiki"},
-	{Name: "iceland"},
-	{Name: "italia"},
-	{Name: "japan"},
-	{Name: "lisbon"},
-	{Name: "manicouagan"},
-    {Name: "straitofmalacca"},
-	{Name: "mars"},
-	{Name: "mena"},
-	{Name: "middleeast"},
-	{Name: "montreal"},
-	{Name: "newyorkcity"},
-	{Name: "northamerica"},
-	{Name: "oceania"},
-	{Name: "pangaea"},
-	{Name: "passage"},
-	{Name: "pluto"},
-	{Name: "sierpinski"},
-	{Name: "southamerica"},
-	{Name: "straitofgibraltar"},
-	{Name: "straitofhormuz"},
-	{Name: "surrounded"},
-	{Name: "svalmel"},
-	{Name: "world"},
-	{Name: "lemnos"},
-	{Name: "twolakes"},
-	{Name: "tourney1"},
-	{Name: "tourney2"},
-	{Name: "tourney3"},
-	{Name: "tourney4"},
-	{Name: "thebox"},
-	{Name: "didier"},
-	{Name: "didierfrance"},
-	{Name: "amazonriver"},
-	{Name: "yenisei"},
-	{Name: "tradersdream"},
-	{Name: "hawaii"},
-	{Name: "niledelta"},
-	{Name: "arctic"},
-	{Name: "sanfrancisco"},
-	{Name: "aegean"},
-	{Name: "milkyway"},
-	{Name: "marenostrum"},
-	{Name: "greatlakes"},
-	{Name: "dyslexdria"},
-	{Name: "luna"},
-	{Name: "conakry"},
-	{Name: "caucasus"},
-    {Name: "losangeles"},
-    {Name: "beringsea"}, 
-    {Name: "antarctica"},
-    {Name: "archipelagosea"},
-    {Name: "bajacalifornia"},
-	{Name: "big_plains", IsTest: true},
-	{Name: "half_land_half_ocean", IsTest: true},
-	{Name: "ocean_and_land", IsTest: true},
-	{Name: "plains", IsTest: true},
-	{Name: "giantworldmap", IsTest: true},
-	{Name: "world", IsTest: true},
+}
+
+// maps holds the registry of maps to process, discovered from the assets
+// directories by discoverMaps() at startup.
+var maps []mapEntry
+
+// discoverMaps builds the map registry from the filesystem: every folder in
+// assets/maps, plus every folder in assets/test_maps as a test map. Adding a
+// map is just adding a folder with image.png and info.json.
+func discoverMaps() ([]mapEntry, error) {
+	var result []mapEntry
+	for _, isTest := range []bool{false, true} {
+		dir, err := inputMapDir(isTest)
+		if err != nil {
+			return nil, err
+		}
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read maps directory %s: %w", dir, err)
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				result = append(result, mapEntry{Name: entry.Name(), IsTest: isTest})
+			}
+		}
+	}
+	return result, nil
 }
 
 // mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
 var mapsFlag string
+
+// workersFlag controls how many maps are processed concurrently, bounding peak memory usage.
+var workersFlag int
 
 // logFlags holds all the flags related to configuring the map-generator logging
 var logFlags LogFlags
@@ -140,34 +88,35 @@ func inputMapDir(isTest bool) (string, error) {
 
 // processMap handles the end-to-end generation for a single map.
 // It reads the source image and JSON, generates the terrain data, and writes the binary outputs and updated manifest.
-func processMap(ctx context.Context, name string, isTest bool) error {
+// On success it returns the path of the manifest.json it wrote, so callers can format it with Prettier.
+func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 	outputMapBaseDir, err := outputMapDir(isTest)
 	if err != nil {
-		return fmt.Errorf("failed to get map directory: %w", err)
+		return "", fmt.Errorf("failed to get map directory: %w", err)
 	}
 
 	inputMapDir, err := inputMapDir(isTest)
 	if err != nil {
-		return fmt.Errorf("failed to get input map directory: %w", err)
+		return "", fmt.Errorf("failed to get input map directory: %w", err)
 	}
 
 	inputPath := filepath.Join(inputMapDir, name, "image.png")
 	imageBuffer, err := os.ReadFile(inputPath)
 	if err != nil {
-		return fmt.Errorf("failed to read map file %s: %w", inputPath, err)
+		return "", fmt.Errorf("failed to read map file %s: %w", inputPath, err)
 	}
 
 	// Read the info.json file
 	manifestPath := filepath.Join(inputMapDir, name, "info.json")
 	manifestBuffer, err := os.ReadFile(manifestPath)
 	if err != nil {
-		return fmt.Errorf("failed to read info file %s: %w", manifestPath, err)
+		return "", fmt.Errorf("failed to read info file %s: %w", manifestPath, err)
 	}
 
 	// Parse the info buffer as dynamic JSON
 	var manifest map[string]interface{}
 	if err := json.Unmarshal(manifestBuffer, &manifest); err != nil {
-		return fmt.Errorf("failed to parse info.json for %s: %w", name, err)
+		return "", fmt.Errorf("failed to parse info.json for %s: %w", name, err)
 	}
 
 	// Generate maps
@@ -177,7 +126,7 @@ func processMap(ctx context.Context, name string, isTest bool) error {
 		Name:        name,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to generate map for %s: %w", name, err)
+		return "", fmt.Errorf("failed to generate map for %s: %w", name, err)
 	}
 
 	manifest["map"] = map[string]interface{}{
@@ -198,31 +147,71 @@ func processMap(ctx context.Context, name string, isTest bool) error {
 
 	mapDir := filepath.Join(outputMapBaseDir, name)
 	if err := os.MkdirAll(mapDir, 0755); err != nil {
-		return fmt.Errorf("failed to create output directory for %s: %w", name, err)
+		return "", fmt.Errorf("failed to create output directory for %s: %w", name, err)
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "map.bin"), result.Map.Data, 0644); err != nil {
-		return fmt.Errorf("failed to write combined binary for %s: %w", name, err)
+		return "", fmt.Errorf("failed to write combined binary for %s: %w", name, err)
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "map4x.bin"), result.Map4x.Data, 0644); err != nil {
-		return fmt.Errorf("failed to write combined binary for %s: %w", name, err)
+		return "", fmt.Errorf("failed to write combined binary for %s: %w", name, err)
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "map16x.bin"), result.Map16x.Data, 0644); err != nil {
-		return fmt.Errorf("failed to write combined binary for %s: %w", name, err)
+		return "", fmt.Errorf("failed to write combined binary for %s: %w", name, err)
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "thumbnail.webp"), result.Thumbnail, 0644); err != nil {
-		return fmt.Errorf("failed to write thumbnail for %s: %w", name, err)
+		return "", fmt.Errorf("failed to write thumbnail for %s: %w", name, err)
+	}
+
+	// Copy layer PNGs and validate them.
+	if layersRaw, ok := manifest["layers"]; ok {
+		if layersArr, ok := layersRaw.([]interface{}); ok {
+			for _, layerRaw := range layersArr {
+				layer, ok := layerRaw.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				layerID, _ := layer["id"].(string)
+				if layerID == "" {
+					continue
+				}
+				// Validate placement.
+				placement, _ := layer["placement"].(string)
+				if placement != "land" && placement != "water" {
+					return "", fmt.Errorf("map %s: layer %q has invalid placement %q (must be \"land\" or \"water\")", name, layerID, placement)
+				}
+				// Copy the layer PNG.
+				srcPng := filepath.Join(inputMapDir, name, layerID+".png")
+				dstPng := filepath.Join(mapDir, layerID+".png")
+				pngData, err := os.ReadFile(srcPng)
+				if err != nil {
+					return "", fmt.Errorf("map %s: layer %q PNG not found at %s: %w", name, layerID, srcPng, err)
+				}
+				// Validate dimensions match image.png.
+				img, _, err := image.DecodeConfig(bytes.NewReader(pngData))
+				if err != nil {
+					return "", fmt.Errorf("map %s: layer %q PNG failed to decode: %w", name, layerID, err)
+				}
+				if img.Width != result.Map.Width || img.Height != result.Map.Height {
+					return "", fmt.Errorf("map %s: layer %q PNG dimensions (%dx%d) do not match map (%dx%d)", name, layerID, img.Width, img.Height, result.Map.Width, result.Map.Height)
+				}
+				if err := os.WriteFile(dstPng, pngData, 0644); err != nil {
+					return "", fmt.Errorf("failed to write layer PNG for %s/%s: %w", name, layerID, err)
+				}
+			}
+		}
 	}
 
 	// Serialize the updated manifest to JSON
 	updatedManifest, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to serialize manifest for %s: %w", name, err)
+		return "", fmt.Errorf("failed to serialize manifest for %s: %w", name, err)
 	}
 
-	if err := os.WriteFile(filepath.Join(mapDir, "manifest.json"), updatedManifest, 0644); err != nil {
-		return fmt.Errorf("failed to write manifest for %s: %w", name, err)
+	manifestOutPath := filepath.Join(mapDir, "manifest.json")
+	if err := os.WriteFile(manifestOutPath, updatedManifest, 0644); err != nil {
+		return "", fmt.Errorf("failed to write manifest for %s: %w", name, err)
 	}
-	return nil
+	return manifestOutPath, nil
 }
 
 // parseMapsFlag validates and parses the --maps command-line argument.
@@ -249,15 +238,25 @@ func parseMapsFlag() (map[string]bool, error) {
 
 // loadTerrainMaps manages the concurrent generation of all selected maps.
 // It spins up goroutines for each map and aggregates any errors.
-func loadTerrainMaps() error {
+// Concurrency is bounded by --workers to cap peak memory usage.
+// On success it returns the manifest.json path written for every map processed.
+func loadTerrainMaps() ([]string, error) {
+	if workersFlag < 1 {
+		return nil, fmt.Errorf("--workers must be >= 1, got %d", workersFlag)
+	}
 	selectedMaps, err := parseMapsFlag()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var wg sync.WaitGroup
-	errChan := make(chan error, len(maps))
+	type result struct {
+		manifestPath string
+		err          error
+	}
+	resultChan := make(chan result, len(maps))
+	sem := make(chan struct{}, workersFlag)
 
-	// Process maps concurrently
+	// Process maps concurrently, bounded by the semaphore
 	for _, mapItem := range maps {
 		if selectedMaps != nil && !selectedMaps[mapItem.Name] {
 			continue
@@ -266,34 +265,38 @@ func loadTerrainMaps() error {
 		mapItem := mapItem
 		go func() {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			mapLogTag := slog.String("map", mapItem.Name)
 			testLogTag := slog.Bool("isTest", mapItem.IsTest)
 			logger := slog.Default().With(mapLogTag).With(testLogTag)
 			ctx := ContextWithLogger(context.Background(), logger)
-			if err := processMap(ctx, mapItem.Name, mapItem.IsTest); err != nil {
-				errChan <- err
-			}
+			manifestPath, err := processMap(ctx, mapItem.Name, mapItem.IsTest)
+			resultChan <- result{manifestPath, err}
 		}()
 	}
 
 	// Wait for all goroutines to complete
 	wg.Wait()
-	close(errChan)
+	close(resultChan)
 
-	// Check for errors
-	for err := range errChan {
-		if err != nil {
-			return err
+	// Check for errors and collect the manifest paths written.
+	var manifestPaths []string
+	for r := range resultChan {
+		if r.err != nil {
+			return nil, r.err
 		}
+		manifestPaths = append(manifestPaths, r.manifestPath)
 	}
 
-	return nil
+	return manifestPaths, nil
 }
 
 // main is the entry point for the map generator tool.
 // It parses flags and triggers the map generation process.
 func main() {
 	flag.StringVar(&mapsFlag, "maps", "", "optional comma-separated list of maps to process. ex: --maps=world,eastasia,big_plains")
+	flag.IntVar(&workersFlag, "workers", 4, "number of maps to process concurrently. reduce to lower peak memory usage.")
 	flag.StringVar(&logFlags.logLevel, "log-level", "", "Explicitly sets the log level to one of: ALL, DEBUG, INFO (default), WARN, ERROR.")
 	flag.BoolVar(&logFlags.verbose, "verbose", false, "Adds additional logging and prefixes logs with the [mapname].  Alias of log-level=DEBUG.")
 	flag.BoolVar(&logFlags.verbose, "v", false, "-verbose shorthand")
@@ -311,8 +314,37 @@ func main() {
 
 	slog.SetDefault(logger)
 
-	if err := loadTerrainMaps(); err != nil {
+	discovered, err := discoverMaps()
+	if err != nil {
+		log.Fatalf("Error discovering maps: %v", err)
+	}
+	maps = discovered
+
+	manifestPaths, err := loadTerrainMaps()
+	if err != nil {
 		log.Fatalf("Error generating terrain maps: %v", err)
+	}
+
+	infos, err := loadMapInfos()
+	if err != nil {
+		log.Fatalf("Error loading map info: %v", err)
+	}
+	mapsTSPath, err := generateMapsTS(infos)
+	if err != nil {
+		log.Fatalf("Error generating Maps.gen.ts: %v", err)
+	}
+	enJSONPath, err := generateEnJSON(infos)
+	if err != nil {
+		log.Fatalf("Error generating en.json map section: %v", err)
+	}
+
+	// Format every file we just wrote with the repo's Prettier config, so
+	// `go run .` alone leaves a clean diff — no separate `npm run format`
+	// step to remember. Regenerated map manifests are the same JSON `go fmt`
+	// produces for Maps.gen.ts and en.json: valid, but not Prettier-shaped.
+	formatFiles := append(manifestPaths, mapsTSPath, enJSONPath)
+	if err := runPrettier(formatFiles); err != nil {
+		slog.Warn("Failed to auto-format generated files with Prettier; run `npm run format` manually", "error", err)
 	}
 
 	fmt.Println("Terrain maps generated successfully")

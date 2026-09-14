@@ -1,7 +1,20 @@
+import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
+import { AttackExecution } from "../src/core/execution/AttackExecution";
+import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
+import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import {
+  Difficulty,
+  Game,
+  GameMode,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
+import { executeTicks } from "./util/utils";
 
 describe("Ai Attack Behavior", () => {
   let game: Game;
@@ -46,11 +59,6 @@ describe("Ai Attack Behavior", () => {
     // Add troops
     testBot.addTroops(5000);
     testHuman.addTroops(5000);
-
-    // Skip spawn phase
-    while (testGame.inSpawnPhase()) {
-      testGame.executeNextTick();
-    }
 
     const behavior = new AiAttackBehavior(
       new PseudoRandom(42),
@@ -128,13 +136,19 @@ describe("Ai Attack Behavior", () => {
 
     nation.addTroops(1000);
 
+    // Provide an emoji behavior so sendAttack can run the full Nation code
+    // path; the attack on an ally must be blocked by AttackExecution's
+    // alliance check regardless of what the AI decides.
+    const nationRandom = new PseudoRandom(42);
     const nationBehavior = new AiAttackBehavior(
-      new PseudoRandom(42),
+      nationRandom,
       game,
       nation,
       0.5,
       0.5,
       0.2,
+      undefined,
+      new NationEmojiBehavior(nationRandom, game, nation),
     );
 
     // Alliance between nation and human
@@ -146,8 +160,9 @@ describe("Ai Attack Behavior", () => {
     const attacksBefore = nation.outgoingAttacks().length;
     nation.addTroops(50_000);
 
-    // Nation tries to attack ally (should be blocked)
-    nationBehavior.sendAttack(human);
+    // Force the attack past shouldAttack's dice gate so the alliance check
+    // in AttackExecution is the layer under test, regardless of RNG outcome.
+    nationBehavior.sendAttack(human, true);
 
     // Execute a few ticks to process the attacks
     for (let i = 0; i < 5; i++) {
@@ -157,4 +172,712 @@ describe("Ai Attack Behavior", () => {
     expect(nation.isAlliedWith(human)).toBe(true);
     expect(nation.outgoingAttacks()).toHaveLength(attacksBefore);
   });
+});
+
+describe("Hard/Impossible troop floor", () => {
+  /**
+   * Sets up a game where a nation attacker borders a neighbor and a bot target.
+   * All players get alternating land tiles so they share borders.
+   */
+  async function setupTroopFloorTest(difficulty: Difficulty) {
+    const testGame = await setup("big_plains", {
+      difficulty,
+    });
+
+    const attackerInfo = new PlayerInfo(
+      "attacker",
+      PlayerType.Nation,
+      null,
+      "attacker_id",
+    );
+    const neighborInfo = new PlayerInfo(
+      "neighbor",
+      PlayerType.Human,
+      null,
+      "neighbor_id",
+    );
+    const botInfo = new PlayerInfo(
+      "target_bot",
+      PlayerType.Bot,
+      null,
+      "bot_id",
+    );
+    testGame.addPlayer(attackerInfo);
+    testGame.addPlayer(neighborInfo);
+    testGame.addPlayer(botInfo);
+
+    const attacker = testGame.player("attacker_id");
+    const neighbor = testGame.player("neighbor_id");
+    const bot = testGame.player("bot_id");
+
+    // Assign alternating tiles so all three share borders
+    let assigned = 0;
+    testGame.map().forEachTile((tile) => {
+      if (assigned >= 90) return;
+      if (!testGame.map().isLand(tile)) return;
+      const players = [attacker, neighbor, bot];
+      players[assigned % 3].conquer(tile);
+      assigned++;
+    });
+
+    // Give bot target a tiny amount of troops so it's a valid target
+    bot.addTroops(100);
+
+    // Nation type requires alliance and emoji behaviors
+    const mockEmoji = {
+      maybeSendAttackEmoji: vi.fn(),
+      sendEmoji: vi.fn(),
+    } as any;
+    const mockAlliance = { maybeBetray: vi.fn() } as any;
+
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.5, // triggerRatio
+      0.3, // reserveRatio
+      0.2, // expandRatio
+      mockAlliance,
+      mockEmoji,
+    );
+
+    return { testGame, attacker, neighbor, bot, behavior };
+  }
+
+  it("Hard: caps attack troops so nation retains 75% of strongest neighbor's troops", async () => {
+    const { testGame, attacker, neighbor, behavior } =
+      await setupTroopFloorTest(Difficulty.Hard);
+
+    attacker.addTroops(100_000);
+    neighbor.addTroops(90_000);
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    // Attack the neighbor directly (already shares border, is Human type)
+    const result = behavior.sendAttack(neighbor);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    // Nation must retain at least 75% of strongest non-allied neighbor's troops
+    const minRetained = Math.ceil(neighbor.troops() * 0.75);
+    const expectedCap = Math.max(0, attacker.troops() - minRetained);
+    expect(exec.startTroops).toBeLessThanOrEqual(expectedCap);
+  });
+
+  it("Hard: prevents attack when nation troops < 75% of strongest neighbor", async () => {
+    const { testGame, attacker, neighbor, bot, behavior } =
+      await setupTroopFloorTest(Difficulty.Hard);
+
+    // Attacker has fewer troops than 75% of neighbor
+    attacker.addTroops(3_000);
+    neighbor.addTroops(5_000);
+    // minRetained = ceil(5_000 * 0.75) = 3_750
+    // troopSendCap = max(0, 3_000 - 3_750) = 0
+    // Attack should be blocked entirely
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(bot);
+
+    expect(result).toBe(false);
+    expect(addExecSpy).not.toHaveBeenCalled();
+  });
+
+  it("Hard: skips attack when capped troops are < 20% of target's troops", async () => {
+    const { testGame, attacker, neighbor, behavior } =
+      await setupTroopFloorTest(Difficulty.Hard);
+
+    // Add a strong human target sharing borders
+    const targetInfo = new PlayerInfo(
+      "strong_target",
+      PlayerType.Human,
+      null,
+      "target_id",
+    );
+    testGame.addPlayer(targetInfo);
+    const target = testGame.player("target_id");
+
+    // Give target some tiles from the attacker's pool
+    let stolen = 0;
+    for (const tile of Array.from(attacker.tiles())) {
+      if (stolen >= 20) break;
+      target.conquer(tile);
+      stolen++;
+    }
+
+    attacker.addTroops(100_000);
+    neighbor.addTroops(100_000);
+    target.addTroops(300_000);
+    // troopSendCap = 100_000 - ceil(100_000 * 0.75) = 25_000
+    // 20% of target = 300_000 * 0.2 = 60_000
+    // 25_000 < 60_000 → attack should be blocked
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(target);
+
+    expect(result).toBe(false);
+    expect(addExecSpy).not.toHaveBeenCalled();
+  });
+
+  it("Impossible: caps attack troops so nation retains 90% of strongest neighbor's troops", async () => {
+    const { testGame, attacker, neighbor, behavior } =
+      await setupTroopFloorTest(Difficulty.Impossible);
+
+    attacker.addTroops(100_000);
+    neighbor.addTroops(90_000);
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    // Attack the neighbor directly (already shares border, is Human type)
+    const result = behavior.sendAttack(neighbor);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    // Nation must retain at least 90% of strongest non-allied neighbor's troops
+    const minRetained = Math.ceil(neighbor.troops() * 0.9);
+    const expectedCap = Math.max(0, attacker.troops() - minRetained);
+    expect(exec.startTroops).toBeLessThanOrEqual(expectedCap);
+  });
+
+  it("Easy: no troop floor — sends based on reserve only", async () => {
+    const { testGame, attacker, neighbor, bot, behavior } =
+      await setupTroopFloorTest(Difficulty.Easy);
+
+    attacker.addTroops(100_000);
+    neighbor.addTroops(90_000);
+    // No cap on Easy — sends full reserve amount
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(bot);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    // On Easy, no troop floor applies — troops are only limited by the reserve ratio
+    expect(exec.startTroops).toBeGreaterThan(0);
+    // Verify the troops exceed what the Hard cap would have been
+    const hardCap = Math.max(
+      0,
+      attacker.troops() - Math.ceil(neighbor.troops() * 0.75),
+    );
+    expect(exec.startTroops).toBeGreaterThan(hardCap);
+  });
+
+  it("Hard: sendAttack uncapped when nation has no player neighbors", async () => {
+    const testGame = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+      difficulty: Difficulty.Hard,
+    });
+
+    // Give bot only half the land so there's unowned land to attack via sendAttack
+    const botInfo = new PlayerInfo("lone_bot", PlayerType.Bot, null, "lone_id");
+    testGame.addPlayer(botInfo);
+    const bot = testGame.player("lone_id");
+    let assigned = 0;
+    testGame.map().forEachTile((tile) => {
+      if (!testGame.map().isLand(tile)) return;
+      if (assigned % 2 === 0) bot.conquer(tile);
+      assigned++;
+    });
+    bot.addTroops(100_000);
+
+    // No player neighbors — troopSendCap should return Infinity
+    expect(bot.nearby().filter((n) => n.isPlayer()).length).toBe(0);
+
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      bot,
+      0.5,
+      0.3,
+      0.2,
+    );
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    // sendAttack goes through sendLandAttack which applies troopSendCap.
+    // With no player neighbors, troopSendCap returns Infinity (no cap).
+    const result = behavior.sendAttack(testGame.terraNullius());
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    // No cap applies, so troops should be the full reserve amount
+    expect(exec.startTroops).toBeGreaterThan(40_000);
+  });
+
+  it("Team: troopSendCap returns Infinity — no cap in team games", async () => {
+    // Same setup as Hard cap test but with GameMode.Team
+    const testGame = await setup("big_plains", {
+      difficulty: Difficulty.Hard,
+      gameMode: GameMode.Team,
+      playerTeams: 2,
+    });
+
+    const attackerInfo = new PlayerInfo(
+      "attacker",
+      PlayerType.Nation,
+      null,
+      "attacker_id",
+    );
+    const neighborInfo = new PlayerInfo(
+      "neighbor",
+      PlayerType.Human,
+      null,
+      "neighbor_id",
+    );
+    const botInfo = new PlayerInfo(
+      "target_bot",
+      PlayerType.Bot,
+      null,
+      "bot_id",
+    );
+    testGame.addPlayer(attackerInfo);
+    testGame.addPlayer(neighborInfo);
+    testGame.addPlayer(botInfo);
+
+    const attacker = testGame.player("attacker_id");
+    const neighbor = testGame.player("neighbor_id");
+    const bot = testGame.player("bot_id");
+
+    let assigned = 0;
+    testGame.map().forEachTile((tile) => {
+      if (assigned >= 90) return;
+      if (!testGame.map().isLand(tile)) return;
+      const players = [attacker, neighbor, bot];
+      players[assigned % 3].conquer(tile);
+      assigned++;
+    });
+    bot.addTroops(100);
+
+    const mockEmoji = {
+      maybeSendAttackEmoji: vi.fn(),
+      sendEmoji: vi.fn(),
+    } as any;
+    const mockAlliance = { maybeBetray: vi.fn() } as any;
+
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.5,
+      0.3,
+      0.2,
+      mockAlliance,
+      mockEmoji,
+    );
+
+    // In FFA Hard, attacker with 100k and neighbor with 90k would cap
+    // attack troops to 32.5k. In Team mode, troopSendCap returns Infinity
+    // so the attack is not capped by neighbor strength.
+    attacker.addTroops(100_000);
+    neighbor.addTroops(90_000);
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(bot);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    // In FFA Hard, troops would be capped to 32.5k. In Team mode, no cap.
+    expect(exec.startTroops).toBeGreaterThan(32_500);
+  });
+
+  it("Team: isAttackTooWeak returns false — weak attacks allowed in team games", async () => {
+    // Same setup as the FFA "skips attack when capped troops are < 20%" test
+    // but with GameMode.Team. In FFA Hard, the attack would be blocked.
+    const testGame = await setup("big_plains", {
+      difficulty: Difficulty.Hard,
+      gameMode: GameMode.Team,
+      playerTeams: 2,
+    });
+
+    const attackerInfo = new PlayerInfo(
+      "attacker",
+      PlayerType.Nation,
+      null,
+      "attacker_id",
+    );
+    const neighborInfo = new PlayerInfo(
+      "neighbor",
+      PlayerType.Human,
+      null,
+      "neighbor_id",
+    );
+    testGame.addPlayer(attackerInfo);
+    testGame.addPlayer(neighborInfo);
+
+    const attacker = testGame.player("attacker_id");
+    const neighbor = testGame.player("neighbor_id");
+
+    // Add a strong human target sharing borders
+    const targetInfo = new PlayerInfo(
+      "strong_target",
+      PlayerType.Human,
+      null,
+      "target_id",
+    );
+    testGame.addPlayer(targetInfo);
+    const target = testGame.player("target_id");
+
+    let assigned = 0;
+    testGame.map().forEachTile((tile) => {
+      if (assigned >= 90) return;
+      if (!testGame.map().isLand(tile)) return;
+      const players = [attacker, neighbor, target];
+      players[assigned % 3].conquer(tile);
+      assigned++;
+    });
+
+    const mockEmoji = {
+      maybeSendAttackEmoji: vi.fn(),
+      sendEmoji: vi.fn(),
+    } as any;
+    const mockAlliance = { maybeBetray: vi.fn() } as any;
+
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.5,
+      0.3,
+      0.2,
+      mockAlliance,
+      mockEmoji,
+    );
+
+    attacker.addTroops(100_000);
+    neighbor.addTroops(100_000);
+    target.addTroops(300_000);
+    // In FFA Hard: troopSendCap = 25k, 20% of target = 60k → blocked.
+    // In Team mode: isAttackTooWeak returns false, so the attack proceeds
+    // even though troops would be below 20% of the target.
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(target);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    expect(exec.startTroops).toBeGreaterThan(0);
+  });
+
+  it("Hard: nation under attack bypasses troopSendCap and isAttackTooWeak", async () => {
+    const { testGame, attacker, neighbor, behavior } =
+      await setupTroopFloorTest(Difficulty.Hard);
+
+    // Neighbor has far more troops, so the normal cap would be 0
+    attacker.addTroops(100_000);
+    neighbor.addTroops(200_000);
+    // Normal cap = max(0, 100k - ceil(200k * 0.75)) = max(0, 100k - 150k) = 0
+    // Without the bypass, the nation couldn't attack at all.
+    const normalCap = Math.max(
+      0,
+      attacker.troops() - Math.ceil(neighbor.troops() * 0.75),
+    );
+    expect(normalCap).toBe(0);
+
+    // Simulate the neighbor attacking with 50k troops
+    testGame.addExecution(new AttackExecution(50_000, neighbor, attacker.id()));
+    testGame.executeNextTick();
+    expect(attacker.incomingAttacks().length).toBeGreaterThan(0);
+
+    // With incoming attacks, troopSendCap raises to at least totalIncoming
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(neighbor);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    // The bypass allows retaliation with at least the incoming 50k
+    expect(exec.startTroops).toBeGreaterThanOrEqual(50_000);
+  });
+});
+
+describe("Juicy target strategy", () => {
+  /**
+   * Sets up an attacker bordering a tiny/weak enemy and a large,
+   * structure-rich enemy that's under-defended relative to its own troop cap.
+   */
+  async function setupJuicyTest() {
+    const testGame = await setup("big_plains", { infiniteGold: true });
+
+    const attackerInfo = new PlayerInfo(
+      "attacker",
+      PlayerType.Nation,
+      null,
+      "attacker_id",
+    );
+    const weakInfo = new PlayerInfo("weak", PlayerType.Human, null, "weak_id");
+    const richInfo = new PlayerInfo("rich", PlayerType.Human, null, "rich_id");
+    testGame.addPlayer(attackerInfo);
+    testGame.addPlayer(weakInfo);
+    testGame.addPlayer(richInfo);
+
+    const attacker = testGame.player("attacker_id");
+    const weak = testGame.player("weak_id");
+    const rich = testGame.player("rich_id");
+
+    // Base share so all three border each other
+    let assigned = 0;
+    const base = [attacker, weak, rich];
+    testGame.map().forEachTile((tile) => {
+      if (assigned >= 90) return;
+      if (!testGame.map().isLand(tile)) return;
+      base[assigned % 3].conquer(tile);
+      assigned++;
+    });
+
+    // Give `rich` a lot more territory than `weak` — the actual prize
+    let extra = 0;
+    testGame.map().forEachTile((tile) => {
+      if (extra >= 300) return;
+      if (!testGame.map().isLand(tile) || testGame.hasOwner(tile)) return;
+      rich.conquer(tile);
+      extra++;
+    });
+
+    // `rich` gets a few upgraded cities (level 3 each); `weak` gets none
+    for (const tile of Array.from(rich.tiles()).slice(0, 3)) {
+      const city = rich.buildUnit(UnitType.City, tile, {});
+      city.increaseLevel();
+      city.increaseLevel();
+    }
+
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.5,
+      0.3,
+      0.2,
+    );
+
+    return { testGame, attacker, weak, rich, behavior };
+  }
+
+  it("prefers the large, structure-rich, under-defended enemy over a tiny weak one", async () => {
+    const { testGame, attacker, weak, rich, behavior } = await setupJuicyTest();
+
+    attacker.setTroops(5_000_000);
+    // Both must clear the 25%-fewer-troops safety threshold, but `rich` is
+    // far below its own troop cap — that's what makes it juicier than `weak`.
+    weak.setTroops(50_000);
+    rich.setTroops(Math.floor(testGame.config().maxTroops(rich) * 0.1));
+
+    const target = (behavior as any).findJuicyTarget([weak, rich]);
+    expect(target).toBe(rich);
+  });
+
+  it("excludes enemies with less than a 25% troop deficit, regardless of size", async () => {
+    const { attacker, rich, behavior } = await setupJuicyTest();
+
+    attacker.setTroops(100_000);
+    // Only 20% fewer troops than the attacker — fails the 25% safety margin
+    // even though `rich` is otherwise the juiciest candidate on the map.
+    rich.setTroops(80_000);
+
+    const target = (behavior as any).findJuicyTarget([rich]);
+    expect(target).toBeNull();
+  });
+});
+
+describe("Juicy target strategy - end-to-end via maybeAttack", () => {
+  /**
+   * Partitions the entire map into three vertical stripes (weak | attacker |
+   * rich), so there's no unowned or nuked land anywhere. That matters because
+   * `maybeAttack()` has an early TerraNullius out, and `nuked` sits ahead of
+   * `juicy` in both priority lists — either would pre-empt `juicy` if the
+   * attacker bordered any unowned land.
+   */
+  async function setupEndToEnd(difficulty: Difficulty) {
+    const testGame = await setup("big_plains", { difficulty }, [
+      new PlayerInfo("attacker", PlayerType.Nation, null, "attacker_id"),
+      new PlayerInfo("weak", PlayerType.Human, null, "weak_id"),
+      new PlayerInfo("rich", PlayerType.Human, null, "rich_id"),
+    ]);
+
+    const attacker = testGame.player("attacker_id");
+    const weak = testGame.player("weak_id");
+    const rich = testGame.player("rich_id");
+
+    const width = testGame.map().width();
+    const height = testGame.map().height();
+    const attackerX0 = 40;
+    const attackerX1 = 60;
+    expect(width).toBeGreaterThan(attackerX1);
+
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < height; y++) {
+        const tile = testGame.ref(x, y);
+        if (!testGame.map().isLand(tile)) continue;
+        if (x < attackerX0) weak.conquer(tile);
+        else if (x < attackerX1) attacker.conquer(tile);
+        else rich.conquer(tile);
+      }
+    }
+
+    expect(attacker.sharesBorderWith(weak)).toBe(true);
+    expect(attacker.sharesBorderWith(rich)).toBe(true);
+
+    attacker.setTroops(5_000_000);
+    // Both must clear the 15%-of-own-max floor (else `veryWeak` would grab
+    // them first) and the 75%-of-attacker cap (else `juicy` would reject
+    // them). `rich` is still the juicier one: more tiles, upgraded cities,
+    // and further below its own troop cap - but also has MORE troops than
+    // `weak`, so `weakest` would never pick it.
+    weak.setTroops(Math.floor(testGame.config().maxTroops(weak) * 0.5));
+    for (const tile of Array.from(rich.tiles()).slice(0, 3)) {
+      const city = rich.buildUnit(UnitType.City, tile, {});
+      city.increaseLevel();
+      city.increaseLevel();
+    }
+    rich.setTroops(Math.floor(testGame.config().maxTroops(rich) * 0.3));
+
+    const emojiBehavior = new NationEmojiBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+    );
+    const allianceBehavior = new NationAllianceBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      emojiBehavior,
+    );
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.0, // triggerRatio — always ready so strategy selection is deterministic
+      0.0, // reserveRatio
+      0.2, // expandRatio
+      allianceBehavior,
+      emojiBehavior,
+    );
+
+    return { testGame, attacker, weak, rich, behavior };
+  }
+
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s: attacks the juicy target, not the weakest one, per the declared priority order",
+    async (difficulty) => {
+      const { testGame, attacker, weak, rich, behavior } =
+        await setupEndToEnd(difficulty);
+
+      // Sanity: `weakest` would pick `weak` (fewer troops) if it ran instead
+      // of `juicy` — asserting the attack lands on `rich` proves `juicy` is
+      // the strategy that actually fired, in its declared priority slot.
+      expect(weak.troops()).toBeLessThan(rich.troops());
+
+      const before = attacker.outgoingAttacks().length;
+      behavior.maybeAttack();
+      executeTicks(testGame, 1);
+
+      const attacks = attacker.outgoingAttacks().slice(before);
+      expect(attacks.length).toBeGreaterThan(0);
+      for (const attack of attacks) {
+        expect(attack.target()).toBe(rich);
+      }
+    },
+  );
+});
+
+describe("Juicy ally betrayal strategy - end-to-end via maybeAttack", () => {
+  /**
+   * Partitions the entire map between just `attacker` and `ally` - no third
+   * player, so there are no bordering enemies at all. That makes every other
+   * `attackBestTarget` strategy a guaranteed no-op, isolating `betray` as the
+   * only strategy that can possibly fire.
+   */
+  async function setupEndToEnd(difficulty: Difficulty) {
+    const testGame = await setup("big_plains", { difficulty }, [
+      new PlayerInfo("attacker", PlayerType.Nation, null, "attacker_id"),
+      new PlayerInfo("ally", PlayerType.Human, null, "ally_id"),
+    ]);
+
+    const attacker = testGame.player("attacker_id");
+    const ally = testGame.player("ally_id");
+
+    const width = testGame.map().width();
+    const height = testGame.map().height();
+    const midpoint = Math.floor(width / 2);
+
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < height; y++) {
+        const tile = testGame.ref(x, y);
+        if (!testGame.map().isLand(tile)) continue;
+        if (x < midpoint) ally.conquer(tile);
+        else attacker.conquer(tile);
+      }
+    }
+
+    expect(attacker.sharesBorderWith(ally)).toBe(true);
+
+    attacker.setTroops(1_000_000);
+    ally.setTroops(100_000); // well under the safety threshold
+
+    // Form a real alliance (two ticks, no other ticks before this) so
+    // isAlliedWith()/breakAlliance() behave normally.
+    testGame.addExecution(new AllianceRequestExecution(attacker, ally.id()));
+    testGame.executeNextTick();
+    testGame.addExecution(new AllianceRequestExecution(ally, attacker.id()));
+    testGame.executeNextTick();
+    expect(attacker.isAlliedWith(ally)).toBe(true);
+
+    const emojiBehavior = new NationEmojiBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+    );
+    const allianceBehavior = new NationAllianceBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      emojiBehavior,
+    );
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.0, // triggerRatio — always ready so strategy selection is deterministic
+      0.0, // reserveRatio
+      0.2, // expandRatio
+      allianceBehavior,
+      emojiBehavior,
+    );
+
+    return { testGame, attacker, ally, behavior };
+  }
+
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s: betrays and attacks the ally through the full maybeAttack pipeline",
+    async (difficulty) => {
+      const { testGame, attacker, ally, behavior } =
+        await setupEndToEnd(difficulty);
+
+      behavior.maybeAttack();
+      executeTicks(testGame, 1);
+
+      expect(attacker.isAlliedWith(ally)).toBe(false);
+      const attacks = attacker.outgoingAttacks();
+      expect(attacks.length).toBeGreaterThan(0);
+      for (const attack of attacks) {
+        expect(attack.target()).toBe(ally);
+      }
+    },
+  );
 });

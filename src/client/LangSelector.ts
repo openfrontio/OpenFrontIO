@@ -209,8 +209,8 @@ export class LangSelector extends LitElement {
       "host-lobby-modal",
       "join-lobby-modal",
       "emoji-table",
-      "leader-board",
-      "leaderboard-tabs",
+      "player-stats",
+      "team-stats",
       "leaderboard-player-list",
       "leaderboard-clan-table",
       "build-menu",
@@ -223,21 +223,33 @@ export class LangSelector extends LitElement {
       "settings-modal",
       "username-input",
       "game-mode-selector",
+      "graphics-preset-selector",
       "user-setting",
       "o-modal",
       "o-button",
-      "territory-patterns-modal",
+      "inventory-modal",
       "store-modal",
-      "pattern-input",
+      "cosmetic-card",
+      "cosmetic-info",
+      "cosmetic-preview",
+      "inventory-loadout-bar",
+      "purchase-button",
+      "custom-currency-card",
       "fluent-slider",
       "news-modal",
-      "news-button",
       "account-modal",
+      "game-stats-modal",
+      "player-profile-modal",
+      "game-info-view",
+      "ranking-controls",
       "leaderboard-modal",
-      "flag-input-modal",
-      "flag-input",
-      "matchmaking-button",
+      "effects-grid",
       "token-login",
+      "tribes-panel",
+      "steam-wishlist",
+      "steam-wishlist-button",
+      "streaming-now",
+      "tutorial-panel",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;
@@ -373,18 +385,20 @@ function flattenTranslations(
   parentKey = "",
   result: Record<string, string> = {},
 ): Record<string, string> {
-  for (const key in obj) {
+  for (const key of Object.keys(obj)) {
     const value = obj[key];
     const fullKey = parentKey ? `${parentKey}.${key}` : key;
-
     if (typeof value === "string") {
       result[fullKey] = value;
-    } else if (value && typeof value === "object" && !Array.isArray(value)) {
+    } else if (
+      typeof value === "object" &&
+      value !== null &&
+      !Array.isArray(value)
+    ) {
       flattenTranslations(value, fullKey, result);
     } else {
       console.warn("Unknown type", typeof value, value);
     }
   }
-
   return result;
 }

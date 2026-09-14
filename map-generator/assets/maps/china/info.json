@@ -1,0 +1,181 @@
+{
+  "name": "China",
+  "id": "China",
+  "translation_key": "map.china",
+  "categories": ["countries", "asia", "new"],
+  "multiplayer_frequency": 8,
+  "layers": [{ "id": "label", "placement": "water", "nukeable": false }],
+  "nations": [
+    {
+      "coordinates": [1737, 1732],
+      "name": "Hong Kong",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1626, 1687],
+      "name": "Guangdong",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1082, 1322],
+      "name": "Sichuan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1758, 388],
+      "name": "Heilongjiang",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1479, 759],
+      "name": "Inner Mongolia",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [571, 866],
+      "name": "Xinjiang",
+      "flag": "Eastern_Turkistan_Flag"
+    },
+    {
+      "coordinates": [475, 1336],
+      "name": "Tibet",
+      "flag": "tibet"
+    },
+    {
+      "coordinates": [1030, 1075],
+      "name": "Gansu",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1101, 1744],
+      "name": "Yunnan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1572, 1936],
+      "name": "Hainan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1794, 1163],
+      "name": "Jiangsu",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1691, 1760],
+      "name": "Macau",
+      "flag": "mo"
+    },
+    {
+      "coordinates": [2021, 1609],
+      "name": "Taiwan",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1870, 1566],
+      "name": "Fujian",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1578, 1499],
+      "name": "Hunan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1338, 1543],
+      "name": "Guizhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1953, 579],
+      "name": "Jilin",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1402, 1716],
+      "name": "Guangxi",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1751, 1471],
+      "name": "Jiangxi",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1245, 1363],
+      "name": "Chongqing",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1927, 1265],
+      "name": "Shanghai",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1896, 1404],
+      "name": "Zhejiang",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1751, 1057],
+      "name": "Shandong",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1590, 999],
+      "name": "Hebei",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1631, 880],
+      "name": "Beijing",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1680, 952],
+      "name": "Tianjin",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1876, 770],
+      "name": "Liaoning",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1488, 1353],
+      "name": "Hubei",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1661, 1262],
+      "name": "Anhui",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1516, 1163],
+      "name": "Henan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1226, 1147],
+      "name": "Shaanxi",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1402, 1049],
+      "name": "Shanxi",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [779, 1192],
+      "name": "Qinghai",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1226, 1049],
+      "flag": "cn",
+      "name": "Ningxia"
+    }
+  ],
+  "themes": ["asia"]
+}

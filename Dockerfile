@@ -15,12 +15,25 @@ COPY tsconfig.json ./
 COPY vite.config.ts ./
 COPY eslint.config.js ./
 COPY index.html ./
+COPY client-api.json ./
 COPY resources ./resources
 COPY proprietary ./proprietary
 COPY src ./src
+COPY zbin ./zbin
+# build-prod runs scripts/buildAssetHashes.ts after vite, to emit
+# static/asset-hashes.json and static/core-version.txt for the desktop
+# release descriptor. Without this the image build fails at that step with
+# ERR_MODULE_NOT_FOUND -- the unit suite cannot catch it, because only the
+# container build runs build-prod from a copied tree.
+COPY scripts ./scripts
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT="$GIT_COMMIT"
+# Baked into the client bundle by a Vite define at build time (see
+# vite.config.ts). Empty is valid: it disables the inline wallet/card flow
+# and every purchase degrades to the redirect flow.
+ARG STRIPE_PUBLISHABLE_KEY=""
+ENV STRIPE_PUBLISHABLE_KEY="$STRIPE_PUBLISHABLE_KEY"
 RUN npm run build-prod
 
 # Production dependencies stage - separate from build
@@ -54,6 +67,10 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN rm -f /etc/nginx/sites-enabled/default
 
+# Script that generates the create-game worker upstream at container start.
+COPY generate-nginx-upstream.sh /usr/local/bin/generate-nginx-upstream.sh
+RUN chmod +x /usr/local/bin/generate-nginx-upstream.sh
+
 # Copy production node_modules from prod-deps stage (cached separately from build)
 COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
 COPY package*.json ./
@@ -66,7 +83,9 @@ COPY resources ./resources
 # Remove maps because they are not used by the server.
 RUN rm -rf ./resources/maps
 COPY tsconfig.json ./
+COPY client-api.json ./
 COPY src ./src
+COPY zbin ./zbin
 
 
 ARG GIT_COMMIT=unknown
@@ -76,6 +95,9 @@ ENV GIT_COMMIT="$GIT_COMMIT"
 
 RUN <<'EOF' tee /usr/local/bin/start.sh
 #!/bin/sh
+# Generate the create-game nginx upstream from CLUSTER_JSON before nginx starts.
+/usr/local/bin/generate-nginx-upstream.sh
+
 if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
     exec timeout 25h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 else
