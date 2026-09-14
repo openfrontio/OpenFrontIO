@@ -10,7 +10,12 @@
 // `groupToken: undefined` for every singleplayer game, and a strip that only
 // exists as a line inside a console.log call is a strip nothing defends.
 
-import type { ServerMessage, ServerStartGameMessage } from "../core/Schemas";
+import type {
+  GameConfig,
+  ServerMessage,
+  ServerStartGameMessage,
+} from "../core/Schemas";
+import { GameMode, GameType } from "../core/game/Game";
 import type { PresencePayload } from "./DesktopPresence";
 
 // The token this server message carries, if it carries one.
@@ -73,6 +78,35 @@ export class GroupTokenTracker {
   clear(): void {
     this.token = undefined;
   }
+}
+
+// The lobbyId a presence payload may carry for this game, if any.
+//
+// A published lobbyId is what has the shell keep a joinable shadow lobby
+// behind the game, i.e. what makes Steam's own "Join Game" (friends list,
+// overlay) work — independently of the in-app invite button. Public FFA is
+// deliberately withheld: friends joining an every-man-for-himself public
+// match is an invitation to team, so neither the button nor Steam's native
+// join may offer it. Public team lobbies and private lobbies stay joinable.
+//
+// A config not yet known also counts as not joinable, rather than joinable
+// until proven otherwise: the joins that start without one (a /game/<id>
+// link, an accepted Steam invite) get the real config from the next
+// lobby_info moments later, so the cautious default costs a beat of shadow-
+// lobby setup — the optimistic one would advertise a public FFA join for
+// exactly that beat.
+export function presenceLobbyId(
+  config: Pick<GameConfig, "gameType" | "gameMode"> | undefined,
+  gameID: string,
+): string | undefined {
+  if (config === undefined) return undefined;
+  if (
+    config.gameType === GameType.Public &&
+    config.gameMode !== GameMode.Team
+  ) {
+    return undefined;
+  }
+  return gameID;
 }
 
 // Attach the token to a presence payload, or leave the payload alone.
