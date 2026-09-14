@@ -56,6 +56,47 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
 }
 
 export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
+
+/**
+ * Mixer channels. Category is a pure function of the cue name (categoryOf in
+ * client/sound/Sounds.ts); nothing chooses a channel at the call site.
+ */
+export type AudioCategory =
+  | "master"
+  | "music"
+  | "effects"
+  | "alerts"
+  | "ambience"
+  | "interface";
+
+const AUDIO_DEFAULTS: Record<AudioCategory, number> = {
+  master: 1.0,
+  music: 0.5,
+  effects: 0.7,
+  alerts: 0.8,
+  ambience: 0.4,
+  interface: 0.5,
+};
+
+// Read-through, not a migration pass: a category with no key of its own
+// inherits the value the player had already chosen under the old two-slider
+// scheme, so splitting effects into four channels doesn't reset three of them.
+// The legacy keys are left in place and simply stop being written.
+// Channels the single old "sound effects" slider used to cover.
+const SPLIT_FROM_SOUND_EFFECTS: readonly AudioCategory[] = [
+  "effects",
+  "alerts",
+  "ambience",
+  "interface",
+];
+
+const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
+  music: "settings.backgroundMusicVolume",
+  effects: "settings.soundEffectsVolume",
+  alerts: "settings.soundEffectsVolume",
+  ambience: "settings.soundEffectsVolume",
+  interface: "settings.soundEffectsVolume",
+};
 /**
  * Storage key for the player's selected territory cosmetic. Stores either
  * `"pattern:<name>[:<palette>]"` or `"skin:<name>"` — patterns and skins are
@@ -700,12 +741,50 @@ export class UserSettings {
     this.setString(STATS_COLUMNS_KEYS[kind], JSON.stringify(ids));
   }
 
-  backgroundMusicVolume(): number {
-    return this.getFloat("settings.backgroundMusicVolume", 0);
+  /**
+   * Channel volume, 0-1. Falls back to the legacy key before the default, so
+   * an existing player keeps the level they chose. A stored 0 is respected:
+   * the only writer is a slider drag, so 0 is always a deliberate choice and
+   * never means "unset".
+   */
+  audioVolume(category: AudioCategory): number {
+    const legacyKey = AUDIO_LEGACY_KEY[category];
+    const fallback =
+      legacyKey === undefined
+        ? AUDIO_DEFAULTS[category]
+        : this.getFloat(legacyKey, AUDIO_DEFAULTS[category]);
+    return this.getFloat(`settings.audio.${category}`, fallback);
   }
 
+  setAudioVolume(category: AudioCategory, volume: number): void {
+    const clamped = Math.max(0, Math.min(1, volume));
+    this.setFloat(`settings.audio.${category}`, clamped);
+  }
+
+  muteOnBlur(): boolean {
+    return this.getBool("settings.audio.muteOnBlur", true);
+  }
+
+  setMuteOnBlur(value: boolean): void {
+    this.setBool("settings.audio.muteOnBlur", value);
+  }
+
+  alertsWhenUnfocused(): boolean {
+    return this.getBool("settings.audio.alertsWhenUnfocused", true);
+  }
+
+  setAlertsWhenUnfocused(value: boolean): void {
+    this.setBool("settings.audio.alertsWhenUnfocused", value);
+  }
+
+  /** @deprecated use audioVolume("music"). */
+  backgroundMusicVolume(): number {
+    return this.audioVolume("music");
+  }
+
+  /** @deprecated use setAudioVolume("music", v). */
   setBackgroundMusicVolume(volume: number): void {
-    this.setFloat("settings.backgroundMusicVolume", volume);
+    this.setAudioVolume("music", volume);
   }
 
   // What % attack ratio increments per click/scroll
@@ -844,11 +923,23 @@ export class UserSettings {
     }
   }
 
+  /** @deprecated use audioVolume("effects"). */
   soundEffectsVolume(): number {
-    return this.getFloat("settings.soundEffectsVolume", 0);
+    return this.audioVolume("effects");
   }
 
+  /**
+   * @deprecated use setAudioVolume("effects", v).
+   *
+   * Writes every channel that split out of the old "sound effects" slider,
+   * not just effects. Until the Audio tab ships there is one slider for all
+   * four, and writing only effects would leave clicks, alerts and ambience
+   * stuck at the inherited value with no control that moves them — a player
+   * muting sound effects would still hear them.
+   */
   setSoundEffectsVolume(volume: number): void {
-    this.setFloat("settings.soundEffectsVolume", volume);
+    for (const category of SPLIT_FROM_SOUND_EFFECTS) {
+      this.setAudioVolume(category, volume);
+    }
   }
 }
