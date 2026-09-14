@@ -101,10 +101,9 @@ git checkout -b fix/issue-number-bug-name
 
 ### Coding Standards
 
-We enforce code quality using Oxlint, ESLint, and Prettier. ESLint remains during the Oxlint migration as a compatibility backstop. Oxfmt is available during the incremental formatter migration, but Prettier is still the default formatter. All code must follow existing style patterns, and new features should not break existing functionality.
+We enforce code quality using Oxlint, ESLint, and Oxfmt. ESLint remains during the Oxlint migration as a compatibility backstop. All code must follow existing style patterns, and new features should not break existing functionality.
 
 - **Format Code**: `npm run format`
-- **Format Code with Oxfmt**: `npm run format:oxfmt`
 - **Lint Code**: `npm run lint`
 - **Lint & Fix**: `npm run lint:fix`
 
