@@ -380,6 +380,41 @@ export class ClientEnv {
       window.location.host,
     );
   }
+  // Origin a link that LEAVES this client should point at — a lobby invite, a
+  // game link, the domain the magic-link email comes back to. See
+  // deriveShareOrigin. Compose a path of your own onto it
+  // (`${shareOrigin()}${gamePath(id)}`); shareBase() is the variant that keeps
+  // the current page's path, for a link that differs only in its #hash.
+  static shareOrigin(): string {
+    return deriveShareOrigin(
+      shareBootstrap,
+      window.location.protocol,
+      window.location.origin,
+    );
+  }
+  static shareBase(): string {
+    return deriveShareBase(
+      shareBootstrap,
+      window.location.protocol,
+      window.location.origin,
+      window.location.pathname,
+    );
+  }
+}
+
+/**
+ * BOOTSTRAP_CONFIG values the share helpers need, read on demand.
+ *
+ * A thunk, not two arguments, so the helpers can decide the http(s) case
+ * without touching the bootstrap at all: reading it means REQUIRING it, and a
+ * plain web page (or a jsdom test rendering a copy button) must not start
+ * depending on BOOTSTRAP_CONFIG merely to build a link to itself.
+ */
+function shareBootstrap(): { siteOrigin?: string; jwtAudience: string } {
+  return {
+    siteOrigin: ClientEnv.siteOrigin(),
+    jwtAudience: ClientEnv.jwtAudience(),
+  };
 }
 
 /**
@@ -474,6 +509,70 @@ export function deriveServerHttpBase(
   );
   return `${secure ? "https:" : "http:"}//${host}`;
 }
+
+/** Whether an origin on this scheme is a real web address someone else can open. */
+function isWebScheme(locationProtocol: string): boolean {
+  return locationProtocol === "http:" || locationProtocol === "https:";
+}
+
+/**
+ * Where a link meant to LEAVE this client should point.
+ *
+ * On the web that is the document's own origin: the page the copier is looking
+ * at is the page the recipient should get.
+ *
+ * The desktop shell is the exception, and the reason this exists. It serves the
+ * renderer from its own privileged scheme — `app://openfront/index.html` — so a
+ * link built from `window.location` reads
+ * `app://openfront/index.html#modal=profile&publicID=…`, which resolves to
+ * nothing anywhere except inside that one Electron app. It is not even a link
+ * the desktop client itself can take back: the friends box only unwraps http(s)
+ * URLs. So the shell's links go to siteOrigin() — the website it was downloaded
+ * from (openfront.io in prod, a branch subdomain on staging) — with the same
+ * audience fallback desktopWebAccountSettingsUrl in Auth.ts already used for
+ * this question, localhost dev port included, for a shell that injects neither
+ * host.
+ *
+ * Keyed on the document's scheme rather than on siteOrigin's presence, because
+ * the `app:` scheme is itself what makes a link unshareable, and because a
+ * server-rendered web page is a site in its own right: whatever host the copier
+ * is reading right now is a host their recipient can open. (A desktop build
+ * pointed at a local dev server with OPENFRONT_DEV_URL is on http and gets the
+ * web answer for exactly that reason.)
+ */
+export function deriveShareOrigin(
+  bootstrap: () => { siteOrigin?: string; jwtAudience: string },
+  locationProtocol: string,
+  locationOrigin: string,
+): string {
+  if (isWebScheme(locationProtocol)) return locationOrigin;
+  const { siteOrigin, jwtAudience } = bootstrap();
+  if (siteOrigin) return siteOrigin;
+  return jwtAudience === "localhost"
+    ? "http://localhost:9000"
+    : `https://${jwtAudience}`;
+}
+
+/**
+ * deriveShareOrigin plus the page path to hang a `#hash` link off — what a
+ * modal's copy-link button wants, since the modals are hash-routed.
+ *
+ * The web keeps the current path, so a link copied from `/c/CODE` still carries
+ * the creator code. The desktop shell drops it: its path is the shell's local
+ * `/index.html`, which means nothing on the website.
+ */
+export function deriveShareBase(
+  bootstrap: () => { siteOrigin?: string; jwtAudience: string },
+  locationProtocol: string,
+  locationOrigin: string,
+  locationPathname: string,
+): string {
+  const origin = deriveShareOrigin(bootstrap, locationProtocol, locationOrigin);
+  return isWebScheme(locationProtocol)
+    ? `${origin}${locationPathname}`
+    : `${origin}/`;
+}
+
 /**
  * Values that flow from server → client via index.html. Set on the server from
  * process.env, then re-hydrated on the client from window.BOOTSTRAP_CONFIG.
