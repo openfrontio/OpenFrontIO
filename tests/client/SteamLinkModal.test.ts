@@ -49,9 +49,15 @@ vi.mock("../../src/client/Utils", () => ({
 
 import { SteamLinkModal } from "../../src/client/SteamLinkModal";
 
-function makeUserMe(username: string | null): UserMeResponse {
+// Defaults to an account with a real identity on it, because that is the
+// precondition the modal now gates on -- a bare session is NOT enough (see
+// the guest-account suite below). Pass `user` explicitly to build a guest.
+function makeUserMe(
+  username: string | null,
+  user: UserMeResponse["user"] = { email: "player@example.com" },
+): UserMeResponse {
   return {
-    user: {},
+    user,
     player: {
       publicId: "p1",
       adfree: false,
@@ -113,12 +119,210 @@ describe("SteamLinkModal", () => {
     expect(redeemSteamLinkMock).not.toHaveBeenCalled();
   });
 
+  // The site hands every visitor a session: POST /auth/refresh with no cookie
+  // creates a guest account and returns a signed JWT, so isLoggedIn() is true
+  // for someone who has never signed in to anything. Gating on that alone let
+  // a guest reach the confirm step and bind their Steam account to a
+  // throwaway player -- which POST /auth/steam/link then treats as the owner,
+  // so linking from their real account afterwards is refused
+  // (steam_has_progress) with no way for the player to undo it. The gate is
+  // "does this account have an identity", not "is there a session".
+  describe("guest account (a session, but no linked identity)", () => {
+    it("routes a guest to the login flow instead of confirming, stashing the token", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe("Ada", {}));
+
+      await modal.openWithToken("tok-abc");
+      await modal.updateComplete;
+
+      expect(stashPendingLinkMock).toHaveBeenCalledWith("tok-abc");
+      expect(window.location.hash).toBe("#modal=account");
+      expect(modal.isOpen()).toBe(false);
+      expect(fetchSteamLinkTicketMock).not.toHaveBeenCalled();
+      expect(redeemSteamLinkMock).not.toHaveBeenCalled();
+    });
+
+    it("routes a guest to the login flow from the code-entry path too, stashing the intent", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe(null, {}));
+
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+
+      expect(stashPendingCodeEntryMock).toHaveBeenCalledTimes(1);
+      expect(stashPendingLinkMock).not.toHaveBeenCalled();
+      expect(window.location.hash).toBe("#modal=account");
+      expect(modal.isOpen()).toBe(false);
+      expect(redeemSteamLinkCodeMock).not.toHaveBeenCalled();
+    });
+
+    it("accepts an account whose only identity is Steam, which is a real account", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(
+        makeUserMe("Ada", {
+          steam: {
+            steamId: "76561198000000000",
+            personaName: "Ada",
+            avatarUrl: null,
+          },
+        }),
+      );
+      fetchSteamLinkTicketMock.mockResolvedValue({
+        ok: true,
+        personaName: "Ada",
+      });
+
+      await modal.openWithToken("tok-abc");
+      await modal.updateComplete;
+
+      expect(modal.isOpen()).toBe(true);
+      expect(stashPendingLinkMock).not.toHaveBeenCalled();
+      expect(window.location.hash).not.toBe("#modal=account");
+    });
+
+    // `false` from getUserMe means EITHER signed out OR a transient failure
+    // (5xx, timeout -- see Api.ts). isLoggedIn() has already said a session
+    // exists, so it cannot mean "guest" here. Opening and showing the
+    // load-error state is the honest outcome; bouncing a signed-in player to
+    // the login screen over a network blip is not. Covered end-to-end by
+    // "shows a load-error state with no confirm control when /users/@me
+    // fails" above -- asserted here as the gate's own decision.
+    it("does not treat an unreadable /users/@me as a guest", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(false);
+      fetchSteamLinkTicketMock.mockResolvedValue({
+        ok: true,
+        personaName: "Ada",
+      });
+
+      await modal.openWithToken("tok-abc");
+      await modal.updateComplete;
+
+      expect(stashPendingLinkMock).not.toHaveBeenCalled();
+      expect(window.location.hash).not.toBe("#modal=account");
+      expect(modal.isOpen()).toBe(true);
+    });
+
+    // The window the gate above cannot close on its own. getUserMe() memoises
+    // its answer, but Api.ts deliberately UN-caches an aborted/timed-out
+    // attempt (and a 401 clears the session outright), so the gate's read and
+    // the modal's own read are not guaranteed to agree. A first read that
+    // times out returns `false` -- correctly not treated as a guest -- and
+    // the modal opens; the next read is then a fresh fetch that can succeed
+    // and hand back the very guest profile the gate never got to see. If only
+    // `userMe === false` is checked there, that guest reaches "ready" with the
+    // confirm control enabled, and confirming binds Steam to the throwaway
+    // account for good (steam_has_progress, unrecoverable) -- the exact
+    // outcome this whole change exists to prevent. The rule has to be applied
+    // at every read of userMe, not once at the door.
+    describe("when the gate's read failed and a later read sees the guest", () => {
+      it("routes to the login flow from the token path instead of reaching confirm", async () => {
+        isLoggedInMock.mockResolvedValue(true);
+        // 1st = the gate's read, timed out (Api.ts clears its cache for
+        // exactly this case). 2nd = onOpen's, a fresh fetch that succeeds.
+        getUserMeMock
+          .mockResolvedValueOnce(false)
+          .mockResolvedValue(makeUserMe("Ada", {}));
+        fetchSteamLinkTicketMock.mockResolvedValue({
+          ok: true,
+          personaName: "Ada",
+        });
+
+        await modal.openWithToken("tok-abc");
+        await vi.waitFor(async () => {
+          await modal.updateComplete;
+          expect(window.location.hash).toBe("#modal=account");
+        });
+
+        // Same destination as the gate's: stashed so the login redirect does
+        // not lose the token, and the modal is gone rather than sitting on a
+        // confirm step it must never show.
+        expect(stashPendingLinkMock).toHaveBeenCalledWith("tok-abc");
+        expect(modal.isOpen()).toBe(false);
+        // close() hides the shell but leaves the rendered body in the light
+        // DOM, so assert the state that actually matters: Confirm was never
+        // enabled (it is enabled only in loadState "ready"), so there was no
+        // moment at which a click could have redeemed anything.
+        expect(confirmButton()?.disabled ?? true).toBe(true);
+        expect(redeemSteamLinkMock).not.toHaveBeenCalled();
+      });
+
+      it("routes to the login flow from the code path instead of reaching confirm", async () => {
+        isLoggedInMock.mockResolvedValue(true);
+        // 1st = the gate's read (openForCodeEntry), timed out. 2nd =
+        // handleCodeSubmit's, which succeeds and returns the guest.
+        getUserMeMock
+          .mockResolvedValueOnce(false)
+          .mockResolvedValue(makeUserMe(null, {}));
+
+        await modal.openForCodeEntry();
+        await modal.updateComplete;
+        expect(modal.isOpen()).toBe(true);
+
+        const input = modal.querySelector<HTMLInputElement>(
+          "input.steam-link-code-input",
+        );
+        expect(input).not.toBeNull();
+        input!.value = "ABCDEFGH";
+        input!.dispatchEvent(new Event("input", { bubbles: true }));
+        modal
+          .querySelector<HTMLButtonElement>("button.steam-link-code-submit-btn")
+          ?.click();
+
+        await vi.waitFor(async () => {
+          await modal.updateComplete;
+          expect(window.location.hash).toBe("#modal=account");
+        });
+
+        expect(stashPendingCodeEntryMock).toHaveBeenCalledTimes(1);
+        expect(stashPendingLinkMock).not.toHaveBeenCalled();
+        expect(modal.isOpen()).toBe(false);
+        // See the token-path case above: absent-or-disabled, never enabled.
+        expect(confirmButton()?.disabled ?? true).toBe(true);
+        expect(redeemSteamLinkCodeMock).not.toHaveBeenCalled();
+      });
+
+      // The control: the same disagreement between the two reads, but the
+      // second one returns a REAL account. A rule applied at every read must
+      // still let this through, or a single timed-out read would strand a
+      // logged-in player at the login screen.
+      it("still reaches confirm when the later read returns a real account", async () => {
+        isLoggedInMock.mockResolvedValue(true);
+        getUserMeMock
+          .mockResolvedValueOnce(false)
+          .mockResolvedValue(makeUserMe("web.1234"));
+        fetchSteamLinkTicketMock.mockResolvedValue({
+          ok: true,
+          personaName: "Ada",
+        });
+
+        await modal.openWithToken("tok-abc");
+        await vi.waitFor(async () => {
+          await modal.updateComplete;
+          expect(confirmButton()?.disabled).toBe(false);
+        });
+
+        expect(modal.isOpen()).toBe(true);
+        expect(stashPendingLinkMock).not.toHaveBeenCalled();
+        expect(window.location.hash).not.toBe("#modal=account");
+        expect(modal.textContent).toContain("web.1234");
+      });
+    });
+  });
+
   it("renders both names once loaded, and disables confirm until both have loaded", async () => {
     isLoggedInMock.mockResolvedValue(true);
     const ticket = deferred<{ ok: true; personaName: string | null }>();
     const userMe = deferred<UserMeResponse>();
     fetchSteamLinkTicketMock.mockReturnValue(ticket.promise);
-    getUserMeMock.mockReturnValue(userMe.promise);
+    // First call is the identity gate's (see needsAccountLogin) and must
+    // settle for the modal to open at all; the deferred one is onOpen's. In
+    // production these are the same memoised promise (Api.ts caches
+    // __userMe), so only onOpen's is ever genuinely in flight — which is the
+    // state this test is about.
+    getUserMeMock
+      .mockReturnValueOnce(Promise.resolve(makeUserMe("web.1234")))
+      .mockReturnValue(userMe.promise);
 
     await modal.openWithToken("tok-abc");
     await modal.updateComplete;
@@ -334,9 +538,15 @@ describe("SteamLinkModal", () => {
 
     it("rejects a malformed code inline, with no network call at all", async () => {
       isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
 
       await modal.openForCodeEntry();
       await modal.updateComplete;
+
+      // Opening already read /users/@me once, for the identity gate. What
+      // this test is about is what SUBMITTING a malformed code costs, so
+      // count from here rather than from zero.
+      const callsBeforeSubmit = getUserMeMock.mock.calls.length;
 
       // Contains 'O', which the fixed alphabet deliberately excludes.
       typeCode("2345678O");
@@ -344,7 +554,7 @@ describe("SteamLinkModal", () => {
       await modal.updateComplete;
 
       expect(modal.textContent).toContain("steam_link_modal.invalid_code");
-      expect(getUserMeMock).not.toHaveBeenCalled();
+      expect(getUserMeMock).toHaveBeenCalledTimes(callsBeforeSubmit);
       expect(redeemSteamLinkCodeMock).not.toHaveBeenCalled();
     });
 
@@ -494,7 +704,9 @@ describe("SteamLinkModal", () => {
         await modal.updateComplete;
         expect(confirmButton()?.disabled).toBe(false);
       });
-      expect(getUserMeMock).toHaveBeenCalledTimes(1);
+      // Exactly two: the identity gate's read when the form opened, and one
+      // submit. Enter must not double-submit — three would mean it did.
+      expect(getUserMeMock).toHaveBeenCalledTimes(2);
     });
 
     it("posts the normalized code, not the raw typed value, to redeemSteamLinkCode on confirm", async () => {

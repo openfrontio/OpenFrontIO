@@ -679,7 +679,13 @@ class Client {
         // resumePendingSteamLink() consumes the stash on read, so a
         // speculative call while logged out would burn an entry that a
         // *later* successful login should still get to resume.
-        if (resumePendingSteamLink(this.steamLinkModal)) {
+        //
+        // The response is passed in rather than the check being made here:
+        // the enclosing `userMeResponse !== false` is NOT that confirmation,
+        // because a guest account satisfies it (POST /auth/refresh mints one
+        // for any visitor). resumePendingSteamLink owns the real predicate,
+        // next to the consumption it protects — see its comment.
+        if (resumePendingSteamLink(userMeResponse, this.steamLinkModal)) {
           return;
         }
 

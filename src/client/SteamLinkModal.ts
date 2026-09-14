@@ -1,5 +1,7 @@
 import { html, TemplateResult } from "lit";
 import { customElement } from "lit/decorators.js";
+import type { UserMeResponse } from "../core/ApiSchemas";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { isLoggedIn } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
@@ -8,6 +10,7 @@ import {
   fetchSteamLinkTicket,
   isValidSteamLinkCode,
   normalizeSteamLinkCode,
+  type PendingLink,
   redeemSteamLink,
   redeemSteamLinkCode,
   stashPendingCodeEntry,
@@ -42,6 +45,25 @@ const REASON_KEYS: Record<string, string> = {
   rate_limited: "steam_link_modal.reason_rate_limited",
 };
 const DEFAULT_REASON_KEY = "common.error_generic";
+
+// The one identity rule this file applies, in the three places `userMe`
+// decides whether the confirm step may be reached. Factored out because those
+// three reads are NOT guaranteed to agree: getUserMe() memoises its answer,
+// but Api.ts deliberately un-caches an aborted/timed-out attempt (and a 401
+// clears the session outright), so the gate below can pass on an unreadable
+// `false` and a later read then succeed — returning the guest profile the
+// gate never got to see. One copy of the rule, applied at every read, is what
+// closes that window.
+//
+// `false` is NOT a guest. It means signed-out OR a transient failure (5xx,
+// timeout — Api.ts returns the same value for all three), and the callers
+// have already established that a session exists, so the only remaining
+// meanings are transient. Uncertainty is not a guest: those fall through to
+// the modal's own load-error state rather than bouncing a signed-in player to
+// the login screen over a network blip.
+function isGuestAccount(userMe: UserMeResponse | false): boolean {
+  return userMe !== false && !responseHasLinkedIdentity(userMe);
+}
 
 // "rate_limited" is the one reason whose message takes a parameter
 // (Retry-After's seconds, when the server sent one) — every other reason is
@@ -131,15 +153,69 @@ export class SteamLinkModal extends BaseModal {
     });
   }
 
+  // Is there a real account on the other side of this link, or only a
+  // session?
+  //
+  // A session is NOT enough, and that distinction is the whole point of this
+  // function. POST /auth/refresh with no cookie does not reject — it creates
+  // a guest account and returns a signed JWT (see the API's createGuestAccount
+  // branch), so isLoggedIn() is true for a visitor who has never signed in to
+  // anything. Gating on it alone let a guest walk to the confirm step, where
+  // the account line renders as a bare publicId, and bind their Steam account
+  // to a throwaway player. POST /auth/steam/link then records that player as
+  // the steamId's owner, so linking from their REAL account afterwards is
+  // refused with steam_has_progress — a dead end the player cannot undo.
+  //
+  // responseHasLinkedIdentity is the repo's one identity predicate
+  // (AccountIdentity.ts, whose own comment records the last time a second
+  // copy of this question drifted from it). The nav account button already
+  // decides "signed in" this way, which is why a guest sees a signed-out nav
+  // while this modal used to think they were logged in.
+  //
+  // Ordering is load-bearing. isLoggedIn() runs FIRST so a genuinely
+  // signed-out visitor short-circuits without an extra /users/@me call, and
+  // so `false` from getUserMe below can only mean a transient failure (5xx,
+  // timeout — Api.ts returns the same `false` for that as for signed-out).
+  // Treating that as "guest" would bounce a signed-in player to the login
+  // screen over a network blip; falling through instead opens the modal,
+  // which renders its own load-error state. Uncertainty is not a guest.
+  private async needsAccountLogin(): Promise<boolean> {
+    if (!(await isLoggedIn())) return true;
+    return isGuestAccount(await getUserMe());
+  }
+
+  // The single destination for "you need a real account first", shared by the
+  // entry gate above and by the two post-open reads (onOpen/handleCodeSubmit)
+  // that can be the first to actually see a guest profile. Stash so the flow
+  // survives the login redirect, then hand the player to the account modal,
+  // which shows the login options. No new user-visible copy: the outcome IS
+  // the gate's outcome, so it reuses the gate's exact behaviour rather than
+  // inventing a second, near-identical message for the same situation.
+  //
+  // `pending` is passed rather than read off `this` because the entry gate
+  // runs BEFORE mode/token are assigned, and because close() below clears
+  // `this.token` on its way out. Bumping requestId first supersedes any read
+  // still in flight, so a slower one can't land on a now-closed modal and
+  // drag it back to "ready".
+  private routeToAccountLogin(pending: PendingLink): void {
+    this.requestId++;
+    if (pending.kind === "token") {
+      stashPendingLink(pending.token);
+    } else {
+      stashPendingCodeEntry();
+    }
+    if (this.isOpen()) this.close();
+    window.location.hash = "modal=account";
+  }
+
   // Entry point. The confirm step needs the *logged-in* account's name, so
   // if nobody is logged in there is nothing to confirm yet: stash the token
   // (survives the login redirect) and send the player to log in instead of
   // opening a confirm dialog with a blank side — that would either show
   // nothing useful or, worse, tempt a fallback to something token-derived.
   public async openWithToken(token: string): Promise<void> {
-    if (!(await isLoggedIn())) {
-      stashPendingLink(token);
-      window.location.hash = "modal=account";
+    if (await this.needsAccountLogin()) {
+      this.routeToAccountLogin({ kind: "token", token });
       return;
     }
     this.mode = "token";
@@ -157,9 +233,8 @@ export class SteamLinkModal extends BaseModal {
   // See SteamLink.ts's stashPendingCodeEntry/resumePendingSteamLink and
   // Main.ts's onUserMe for the resume side of this.
   public async openForCodeEntry(): Promise<void> {
-    if (!(await isLoggedIn())) {
-      stashPendingCodeEntry();
-      window.location.hash = "modal=account";
+    if (await this.needsAccountLogin()) {
+      this.routeToAccountLogin({ kind: "code_entry" });
       return;
     }
     this.mode = "code";
@@ -193,6 +268,14 @@ export class SteamLinkModal extends BaseModal {
     void Promise.all([fetchSteamLinkTicket(token), getUserMe()]).then(
       ([ticket, userMe]) => {
         if (myRequestId !== this.requestId) return; // superseded
+        // Checked before the ticket, so the identity rule never depends on an
+        // unrelated network result: a guest must be sent to log in whether or
+        // not the ticket happened to load. The stash is re-read after login,
+        // and a genuinely dead ticket lands in load_error on that pass.
+        if (isGuestAccount(userMe)) {
+          this.routeToAccountLogin({ kind: "token", token });
+          return;
+        }
         if (!ticket.ok || userMe === false) {
           this.loadState = "load_error";
           this.requestUpdate();
@@ -247,6 +330,12 @@ export class SteamLinkModal extends BaseModal {
     // render below renders via the dedicated no-persona prompt.
     void getUserMe().then((userMe) => {
       if (myRequestId !== this.requestId) return; // superseded
+      // Same rule as onOpen's, and for the same reason — this can be the
+      // first read that actually returns a profile (see isGuestAccount).
+      if (isGuestAccount(userMe)) {
+        this.routeToAccountLogin({ kind: "code_entry" });
+        return;
+      }
       if (userMe === false) {
         this.loadState = "load_error";
         this.requestUpdate();

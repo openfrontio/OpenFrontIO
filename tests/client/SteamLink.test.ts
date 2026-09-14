@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 vi.mock("../../src/client/ClientEnv", () => ({
   ClientEnv: { jwtAudience: () => "localhost" },
@@ -209,11 +210,25 @@ describe("resumePendingSteamLink", () => {
     openForCodeEntry: vi.fn(async () => {}),
   });
 
+  // A signed-in account. The identity is what matters, not the player
+  // fields, so this is the minimum shape responseHasLinkedIdentity accepts.
+  const signedIn = {
+    user: { email: "player@example.com" },
+    player: { publicId: "p1", adfree: false },
+  } as unknown as UserMeResponse;
+
+  // A guest: a real session with no identity on it, which is what POST
+  // /auth/refresh hands any visitor who arrives without a cookie.
+  const guest = {
+    user: {},
+    player: { publicId: "p1", adfree: false },
+  } as unknown as UserMeResponse;
+
   it("resumes a stashed token via openWithToken", () => {
     stashPendingLink("tok-abc");
     const modal = makeModal();
 
-    const resumed = resumePendingSteamLink(modal);
+    const resumed = resumePendingSteamLink(signedIn, modal);
 
     expect(resumed).toBe(true);
     expect(modal.openWithToken).toHaveBeenCalledWith("tok-abc");
@@ -224,7 +239,7 @@ describe("resumePendingSteamLink", () => {
     stashPendingCodeEntry();
     const modal = makeModal();
 
-    const resumed = resumePendingSteamLink(modal);
+    const resumed = resumePendingSteamLink(signedIn, modal);
 
     expect(resumed).toBe(true);
     expect(modal.openForCodeEntry).toHaveBeenCalledTimes(1);
@@ -234,7 +249,7 @@ describe("resumePendingSteamLink", () => {
   it("returns false and calls nothing when there is no pending link", () => {
     const modal = makeModal();
 
-    const resumed = resumePendingSteamLink(modal);
+    const resumed = resumePendingSteamLink(signedIn, modal);
 
     expect(resumed).toBe(false);
     expect(modal.openWithToken).not.toHaveBeenCalled();
@@ -252,8 +267,47 @@ describe("resumePendingSteamLink", () => {
     // early-returns on it, and that is still right here — the entry is gone,
     // so falling through to other hash handling would act on a flow that no
     // longer exists.
-    expect(resumePendingSteamLink(undefined)).toBe(true);
+    expect(resumePendingSteamLink(signedIn, undefined)).toBe(true);
     expect(takePendingLink()).toBeNull();
+  });
+
+  // The precondition lives in this function, not in Main.ts, precisely
+  // because it consumes the stash: deciding "may we resume" and "take the
+  // entry" in two places is how the entry gets burned for a player who has
+  // not logged in yet.
+  describe("login precondition", () => {
+    it("does not resume for a guest, and leaves the stash for a later login", () => {
+      stashPendingLink("tok-abc");
+      const modal = makeModal();
+
+      // A guest has a session, so a `!== false` check would wave this
+      // through — and the modal would then reopen, re-stash and redirect to
+      // #modal=account on every pass.
+      expect(resumePendingSteamLink(guest, modal)).toBe(false);
+      expect(modal.openWithToken).not.toHaveBeenCalled();
+      expect(modal.openForCodeEntry).not.toHaveBeenCalled();
+
+      // Still there: the login it is waiting for can still redeem it.
+      expect(takePendingLink()).toEqual({ kind: "token", token: "tok-abc" });
+    });
+
+    it("does not resume a code-entry intent for a guest either", () => {
+      stashPendingCodeEntry();
+      const modal = makeModal();
+
+      expect(resumePendingSteamLink(guest, modal)).toBe(false);
+      expect(modal.openForCodeEntry).not.toHaveBeenCalled();
+      expect(takePendingLink()).toEqual({ kind: "code_entry" });
+    });
+
+    it("does not resume when there is no session at all", () => {
+      stashPendingLink("tok-abc");
+      const modal = makeModal();
+
+      expect(resumePendingSteamLink(false, modal)).toBe(false);
+      expect(modal.openWithToken).not.toHaveBeenCalled();
+      expect(takePendingLink()).toEqual({ kind: "token", token: "tok-abc" });
+    });
   });
 });
 
