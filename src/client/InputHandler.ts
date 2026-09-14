@@ -1100,7 +1100,7 @@ export class InputHandler {
           // first jump goes 1 -> 5 as before
           this.uiState.upgradeMultiplier =
             currentMultiplier === 1 ? 5 : currentMultiplier + 5;
-          // allow keyboard-only users to loop back to 1
+          // allow going back to 1 quickly by using hotkey.
           if (this.uiState.upgradeMultiplier > MAX_UPGRADE_AMOUNT) {
             this.uiState.upgradeMultiplier = 1;
           }
