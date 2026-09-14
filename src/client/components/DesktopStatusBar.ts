@@ -139,12 +139,22 @@ export class DesktopStatusBar extends LitElement {
         aria-live="polite"
       >
         <div class="flex-1 min-w-0">
-          <div class="text-sm font-medium truncate">
+          <!-- The action button sits right after the text instead of at the
+               far right edge: the Steam overlay's notification popup covers
+               the bar's bottom-right corner. -->
+          <div class="flex items-center gap-4">
+            <div class="text-sm font-medium truncate min-w-0">
+              ${source === "session" && session !== null
+                ? this.sessionLabel(session)
+                : update !== null
+                  ? this.label(update)
+                  : ""}
+            </div>
             ${source === "session" && session !== null
-              ? this.sessionLabel(session)
+              ? this.sessionAction(session)
               : update !== null
-                ? this.label(update)
-                : ""}
+                ? this.action(update)
+                : nothing}
           </div>
           ${source === "update" && update?.status === "downloading"
             ? html`<div
@@ -157,11 +167,6 @@ export class DesktopStatusBar extends LitElement {
               </div>`
             : nothing}
         </div>
-        ${source === "session" && session !== null
-          ? this.sessionAction(session)
-          : update !== null
-            ? this.action(update)
-            : nothing}
       </div>
     `;
   }
