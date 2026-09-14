@@ -129,7 +129,13 @@ export class JoinLobbyModal extends BaseModal {
       this.currentLobbyId && this.isPrivateLobby()
         ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
         : undefined;
-    const invite = inviteFriendsButton();
+    // Except public FFA: inviting Steam friends into an every-man-for-himself
+    // public match encourages teaming, so the button stays off there. Public
+    // team lobbies and private lobbies keep it.
+    const isPublicFfa =
+      this.gameConfig?.gameType === GameType.Public &&
+      this.gameConfig.gameMode !== GameMode.Team;
+    const invite = isPublicFfa ? undefined : inviteFriendsButton();
     return modalHeader({
       // titleContent (not title) so the bell can sit at the right edge of the
       // title row via ml-auto, next to the copy/invite cluster.

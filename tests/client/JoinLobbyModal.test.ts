@@ -20,6 +20,7 @@ vi.mock("../../src/client/DesktopPresence", () => ({
 }));
 
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
+import { GameMode, GameType } from "../../src/core/game/Game";
 
 describe("JoinLobbyModal server time offset", () => {
   let nowMs = 0;
@@ -210,6 +211,41 @@ describe("JoinLobbyModal Steam invite button", () => {
 
     expect(() => button?.click()).not.toThrow();
     await Promise.resolve();
+  });
+
+  // Inviting Steam friends into a public FFA match encourages teaming, so
+  // the button is suppressed exactly there and nowhere else.
+  it("is absent in a public FFA lobby", () => {
+    presenceMocks.isAvailable.mockReturnValue(true);
+    const modal = lobbyModal();
+    (modal as unknown as { gameConfig: unknown }).gameConfig = {
+      gameType: GameType.Public,
+      gameMode: GameMode.FFA,
+    };
+
+    expect(renderHeader(modal).querySelector(INVITE)).toBeNull();
+  });
+
+  it("appears in a public team lobby", () => {
+    presenceMocks.isAvailable.mockReturnValue(true);
+    const modal = lobbyModal();
+    (modal as unknown as { gameConfig: unknown }).gameConfig = {
+      gameType: GameType.Public,
+      gameMode: GameMode.Team,
+    };
+
+    expect(renderHeader(modal).querySelector(INVITE)).not.toBeNull();
+  });
+
+  it("appears in a private FFA lobby", () => {
+    presenceMocks.isAvailable.mockReturnValue(true);
+    const modal = lobbyModal();
+    (modal as unknown as { gameConfig: unknown }).gameConfig = {
+      gameType: GameType.Private,
+      gameMode: GameMode.FFA,
+    };
+
+    expect(renderHeader(modal).querySelector(INVITE)).not.toBeNull();
   });
 
   it("does not suppress the private-lobby copy button", () => {
