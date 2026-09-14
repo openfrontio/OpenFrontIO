@@ -168,6 +168,11 @@ export class HostLobbyModal extends BaseModal {
         return link;
       }
     }
+    // window.location.origin is deliberate here, NOT ClientEnv.shareOrigin():
+    // this URL only ever reaches history.replaceState (updateLobbyHistory), and
+    // replaceState to a different origin throws a SecurityError. The link the
+    // host actually shares is built separately by copy-button, which does use
+    // shareOrigin.
     return `${window.location.origin}${ClientEnv.gamePath(this.lobbyId)}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
   }
 
