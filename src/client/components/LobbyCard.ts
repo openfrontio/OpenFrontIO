@@ -46,14 +46,16 @@ export function trustRequiredDialog(
   signedIn: boolean,
   onClose: () => void,
 ): TemplateResult {
-  const base = signedIn
-    ? "public_lobby.trust_required_body"
-    : "public_lobby.trust_required_body_signed_out";
+  const body = crazyGamesSDK.isOnCrazyGames()
+    ? signedIn
+      ? "public_lobby.trust_required_body_crazygames"
+      : "public_lobby.trust_required_body_signed_out_crazygames"
+    : signedIn
+      ? "public_lobby.trust_required_body"
+      : "public_lobby.trust_required_body_signed_out";
   return html`<confirm-dialog
     .heading=${translateText("public_lobby.trust_required_title")}
-    .message=${translateText(
-      crazyGamesSDK.isOnCrazyGames() ? `${base}_crazygames` : base,
-    )}
+    .message=${translateText(body)}
     variant="warning"
     .showClose=${true}
     .buttons=${"confirmOnly"}
