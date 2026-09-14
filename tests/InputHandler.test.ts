@@ -1349,7 +1349,8 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
       mockCanvas,
       eventBus,
     );
-    testSettings.setKeybinds({ buildAtomBomb: "Digit8" });
+    // Intentionally non-existing keys as keybinds.
+    testSettings.setKeybinds({ buildAtomBomb: "F14" });
     testSettings.setKeybinds({ buildScrollModifier: "F13" });
     inputHandler.initialize();
   });
@@ -1360,29 +1361,21 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
 
   test("repeated hotkey taps increase the build multiplier by 5 each time and loop", () => {
     // First tap sets ghostStructure and resets multiplier to 1
-    window.dispatchEvent(
-      new KeyboardEvent("keyup", { code: "Digit8", key: "8" }),
-    );
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.AtomBomb);
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
 
     // Second tap: 1 -> 5
-    window.dispatchEvent(
-      new KeyboardEvent("keyup", { code: "Digit8", key: "8" }),
-    );
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(5);
 
     // Third tap: 5 -> 10
-    window.dispatchEvent(
-      new KeyboardEvent("keyup", { code: "Digit8", key: "8" }),
-    );
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(10);
 
     // Verify loop back to 1 after exceeding MAX_UPGRADE_AMOUNT
     inputHandler["uiState"].upgradeMultiplier = MAX_UPGRADE_AMOUNT;
-    window.dispatchEvent(
-      new KeyboardEvent("keyup", { code: "Digit8", key: "8" }),
-    );
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
   });
 
