@@ -1204,7 +1204,10 @@ class Client {
    * Both inputs are desktop-only and are read only there. Backend
    * reachability is not among them (OPE-439): by the time a join reaches
    * this funnel its source has already reached a server, so the server-list
-   * API being unreachable is no reason to refuse -- see shouldBlockJoin.
+   * API being unreachable is no reason to refuse. The lobby cards one step
+   * earlier hold to the same rule, so nothing dims or refuses on it there
+   * either -- see shouldBlockJoin, and the rule at the top of
+   * GameModeSelector.ts.
    *
    * Says why rather than failing silently, matching what the dimmed buttons
    * do.

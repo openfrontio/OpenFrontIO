@@ -452,43 +452,64 @@ values.
   `backend-reachability` because that one fires only on a **change**: an
   attempt that fails exactly like the last one announces nothing, which is
   precisely the case the Retry button has to see.
-- **Retry:** `retryServerList()` is the player-initiated attempt behind the
-  desktop status bar's offline Retry. It ignores the heartbeat's backoff (a
-  person pressing a button is not a timer, and once an outage has run a
-  while that wait is up to a minute) but has a 1s floor of its own, inside
-  which a second press hands back the same promise; past that,
-  `fetchOnce()` still dedupes against an attempt already in flight. A retry
-  that fails counts towards the outage confirmation like any other attempt.
+- **Retry:** `retryServerList()` is the player-initiated attempt. It
+  ignores the heartbeat's backoff (a person pressing a button is not a
+  timer, and once an outage has run a while that wait is up to a minute) but
+  has a 1s floor of its own, inside which a second press hands back the same
+  promise; past that, `fetchOnce()` still dedupes against an attempt already
+  in flight. A retry that fails counts towards the outage confirmation like
+  any other attempt.
 
-  The floor is the last line of defence rather than the first. The button
-  itself is disabled under **either** of two conditions, so it comes back
-  whenever the later of them ends: while any server-list attempt is in
-  flight (`attemptInFlight()` / `server-list-attempt`), whoever started it —
-  during an automatic one it reads `desktop_status.retrying` rather than
-  sitting greyed out for no visible reason — and for a 5s cooldown after a
-  press (`RETRY_BUTTON_COOLDOWN_MS` in `DesktopStatusBar`), since a stubbed
-  or fast failure settles in milliseconds and would otherwise hand the
-  button straight back to a player clicking at an outage.
+  The floor is the last line of defence rather than the first. Above it sits
+  one policy, `manualRetryAvailable()`, shared by both shells' affordances
+  and reading one clock: no retry while any server-list attempt is in flight
+  (`attemptInFlight()` / `server-list-attempt`), whoever started it, and
+  none for `MANUAL_RETRY_COOLDOWN_MS` (5s) after the last player-initiated
+  one — a stubbed or fast failure settles in milliseconds and would
+  otherwise hand the affordance straight back to a player clicking at an
+  outage.
 
-  What consumes the confirmed signal, and what it does: the desktop status
-  bar's offline state (ranked below a session failure, above any update
-  state), and the multiplayer _buttons_ in `GameModeSelector` and
-  `DetailedGameViewModal`, which dim and refuse a press — on the web as well
-  as on desktop, where the press also raises a
-  `common.backend_unreachable` toast, since there is no status bar there to
-  name the reason.
+  The two affordances:
+  - **Desktop:** the status bar's offline Retry, disabled under either
+    condition above so it comes back whenever the later of them ends. During
+    an automatic attempt it reads `desktop_status.retrying` rather than
+    sitting greyed out for no visible reason.
+  - **Web:** there is no status bar, so the refused click _is_ the retry.
+    `reportMultiplayerRefusal` probes when `manualRetryAvailable()` says it
+    would do something, and raises the `common.backend_unreachable` toast
+    either way — which is what makes that toast's "try again" true. Without
+    it a web player's only way out would be the heartbeat's next beat, up to
+    `RETRY_MAX_MS` away.
 
-  What it deliberately does **not** do: refuse a join that is already under
-  way. `Main`'s join funnel (`shouldBlockJoin`) weighs only the desktop
-  update and session states; reachability is not an input (OPE-439). Every
-  source that dispatches a join has already reached a server to produce it
-  — `private` after `checkActiveLobby` read `exists` from the game's own
-  server, `host` after `createLobby` minted the id, `public` from a lobby
-  list arriving over a live server socket, `matchmaking` after the queue
-  matched — so the server-list API's health says nothing about the join in
-  hand. Refusing there would only ever be wrong, and at worst would eject a
-  player whose reload had just proved their game is live. Single-player is
-  never gated, and nothing here touches a game already in progress.
+- **What reachability may gate, and what it may not.** The rule, stated
+  once at the top of `GameModeSelector.ts` and referenced from every call
+  site: the signal is the health of **one** thing, the server-list API. It
+  is not a general "is the network up" light, and it says nothing about
+  whether any given _game_ server is up. So it gates exactly the actions
+  that cannot begin until that API answers, because nothing has yet told the
+  client which server to talk to.
+  - _Gated (API-dependent):_ Create/host a lobby, Ranked/matchmaking, and
+    the join-by-code modal, in `GameModeSelector`. These dim and refuse a
+    press — `shouldBlockMultiplayerAction` with
+    `backendUnreachableConfirmed()` — on the web as well as on desktop.
+  - _Not gated (socket-sourced):_ every public or hosted lobby card, in the
+    homepage selector and in `DetailedGameViewModal` alike, and every join
+    that reaches `Main`'s funnel. These call
+    `shouldBlockSocketSourcedAction`, the same predicate with the
+    reachability input nailed shut, so a card neither dims nor refuses over
+    a list-API outage; `DetailedGameViewModal` does not subscribe to the
+    signal at all.
+
+  A card is in front of the player because a game server sent it over a
+  socket that is still open, which is the only liveness that join needs.
+  Likewise every join source has already reached a server to produce its
+  event — `private` after `checkActiveLobby` read `exists` from the game's
+  own server, `host` after `createLobby` minted the id, `public` from that
+  live lobby feed, `matchmaking` after the queue matched. Refusing on the
+  list API's health could only ever reject a join that is already under way,
+  and at worst would eject a player whose reload had just proved their game
+  is live. Single-player is never gated either way, and nothing here touches
+  a game already in progress.
 
 - **Which list:** the desktop shell asks for its injected `serverHost`
   (its values are exactly the sites); a web page asks for its `siteHost`

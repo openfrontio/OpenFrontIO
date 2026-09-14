@@ -13,6 +13,7 @@ import {
 import {
   attemptInFlight,
   backendUnreachableConfirmed,
+  MANUAL_RETRY_COOLDOWN_MS,
   retryServerList,
   type BackendReachabilityDetail,
   type ServerListAttemptDetail,
@@ -22,13 +23,10 @@ import { translateText } from "../Utils";
 const WIGGLE_CLASS = "animate-bounce";
 
 // How long Retry stays disabled after a press, on top of however long that
-// press's own attempt takes. The fetch is bounded at 4s, so without this the
-// button would come back within seconds of a failure and a player watching an
-// outage could sit there clicking it -- each click a real request. Five
-// seconds is long enough that leaning on it costs nothing and short enough
-// that someone who has just plugged their network back in is not left
-// waiting on a button that looks broken.
-const RETRY_BUTTON_COOLDOWN_MS = 5_000;
+// press's own attempt takes. The number lives in ServerList because the web
+// shares it: with no bar to press there, a refused multiplayer click is the
+// retry (GameModeSelector.reportMultiplayerRefusal), throttled by
+// manualRetryAvailable() on this same cooldown and the same clock.
 
 /**
  * Which state the single bottom slot shows, in one fixed order rather than a
@@ -285,7 +283,7 @@ export class DesktopStatusBar extends LitElement {
    * which is also correct.
    *
    * Disabled while an attempt is out (whoever started it) and for
-   * RETRY_BUTTON_COOLDOWN_MS after a press, whichever ends later. While the
+   * MANUAL_RETRY_COOLDOWN_MS after a press, whichever ends later. While the
    * heartbeat is the one asking, the label says so rather than sitting there
    * greyed out for no visible reason: a dead button with no explanation is
    * the thing this feature was reported as.
@@ -322,7 +320,7 @@ export class DesktopStatusBar extends LitElement {
     window.clearTimeout(this.cooldownTimer);
     this.cooldownTimer = window.setTimeout(() => {
       this.coolingDown = false;
-    }, RETRY_BUTTON_COOLDOWN_MS);
+    }, MANUAL_RETRY_COOLDOWN_MS);
     // `attempting` is not set here: retryServerList dispatches
     // "server-list-attempt" synchronously when it starts a fetch, and that
     // one event covers this press and the heartbeat alike. Setting it here

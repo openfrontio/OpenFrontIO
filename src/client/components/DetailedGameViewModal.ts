@@ -14,15 +14,11 @@ import {
 } from "../DesktopShell";
 import {
   reportMultiplayerRefusal,
-  shouldBlockMultiplayerAction,
+  shouldBlockSocketSourcedAction,
 } from "../GameModeSelector";
 import { JoinLobbyModal } from "../JoinLobbyModal";
 import { PublicLobbySocket } from "../LobbySocket";
 import { JoinLobbyEvent } from "../Main";
-import {
-  backendUnreachableConfirmed,
-  type BackendReachabilityDetail,
-} from "../ServerList";
 import { UsernameInput } from "../UsernameInput";
 import {
   calculateServerTimeOffset,
@@ -126,10 +122,10 @@ export class DetailedGameViewModal extends BaseModal {
   @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
   @state() private desktopSessionState: DesktopSessionState | null = null;
-  // The DEBOUNCED outage signal, not the raw per-attempt one: see
-  // multiplayerAllowedForBackend for why one missed heartbeat must not gate
-  // this browser's join.
-  @state() private backendOutage = false;
+  // No backend-reachability state, deliberately. Every lobby this browser
+  // shows arrived over a live game-server socket, and by the reachability
+  // rule (GameModeSelector, top of file) the server-list API's health may not
+  // gate such a join -- so there is nothing here for the signal to decide.
 
   private serverTimeOffset = 0;
   private countdownTimer: number | null = null;
@@ -201,13 +197,6 @@ export class DetailedGameViewModal extends BaseModal {
       "desktop-session-state",
       this.onDesktopSessionState,
     );
-    // Seeded unconditionally, unlike the two above: an unreachable backend
-    // refuses a join on the web as well as on desktop (OPE-439).
-    this.backendOutage = backendUnreachableConfirmed();
-    document.addEventListener(
-      "backend-reachability",
-      this.onBackendReachability,
-    );
   }
 
   disconnectedCallback() {
@@ -219,10 +208,6 @@ export class DetailedGameViewModal extends BaseModal {
     document.removeEventListener(
       "desktop-session-state",
       this.onDesktopSessionState,
-    );
-    document.removeEventListener(
-      "backend-reachability",
-      this.onBackendReachability,
     );
     this.onClose();
     super.disconnectedCallback();
@@ -247,12 +232,6 @@ export class DetailedGameViewModal extends BaseModal {
 
   private onDesktopSessionState = (e: Event) => {
     this.desktopSessionState = (e as CustomEvent<DesktopSessionState>).detail;
-  };
-
-  private onBackendReachability = (e: Event) => {
-    this.backendOutage = (
-      e as CustomEvent<BackendReachabilityDetail>
-    ).detail.confirmed;
   };
 
   // ---- Slot animation ----
@@ -481,10 +460,12 @@ export class DetailedGameViewModal extends BaseModal {
       // Gated, not disabled: `disabled` also sets pointer-events-none and would
       // swallow the click that's supposed to make the update bar wiggle. join()
       // does the actual refusing.
-      blocked: shouldBlockMultiplayerAction(
+      //
+      // Socket-sourced: the desktop update and session states dim a card, a
+      // list-API outage never does. Same predicate join() refuses on.
+      blocked: shouldBlockSocketSourcedAction(
         this.desktopUpdateState,
         this.desktopSessionState,
-        this.backendOutage,
       ),
       viewerTrusted: this.viewerTrusted,
       onClick: () => this.join(lobby),
@@ -802,21 +783,25 @@ export class DetailedGameViewModal extends BaseModal {
    * Refuses the action and draws attention to the update bar. Returns true
    * when the caller should stop.
    *
-   * Mirrors GameModeSelector's blockedByUpdate() (deliberately not shared: it
-   * touches this component's own state field) -- see that file for why this
-   * nudges the bar instead of relying on `disabled`, which would swallow the
-   * click.
+   * Mirrors GameModeSelector's blockedFromLobbyJoin() (deliberately not
+   * shared: it touches this component's own state fields) -- see that file for
+   * why this nudges the bar instead of relying on `disabled`, which would
+   * swallow the click.
+   *
+   * Every lobby here came over a live game-server socket, so reachability is
+   * not an input and there is no reachability reason to report: `false` to the
+   * refusal report leaves the desktop wiggle as the only feedback, which is
+   * all the update and session states need.
    */
-  private blockedFromMultiplayer(): boolean {
+  private blockedFromLobbyJoin(): boolean {
     if (
-      !shouldBlockMultiplayerAction(
+      !shouldBlockSocketSourcedAction(
         this.desktopUpdateState,
         this.desktopSessionState,
-        this.backendOutage,
       )
     )
       return false;
-    reportMultiplayerRefusal(this.backendOutage);
+    reportMultiplayerRefusal(false);
     return true;
   }
 
@@ -825,7 +810,7 @@ export class DetailedGameViewModal extends BaseModal {
     // Checked -- and the bar nudged -- before close(): a blocked attempt must
     // leave the modal open and tell the player why, not vanish silently. This
     // sits above the hosted/public branch below so both paths are covered.
-    if (this.blockedFromMultiplayer()) return;
+    if (this.blockedFromLobbyJoin()) return;
     // Also before close(): the popup explains how to become trusted, so it
     // must stay on screen with the browser rather than vanish with it.
     if (!canJoinTrustedLobby(lobby, this.viewerTrusted)) {

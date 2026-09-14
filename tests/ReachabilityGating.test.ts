@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../src/client/ClientEnv";
 import {
+  attemptInFlight,
   backendUnreachableConfirmed,
   ensureServerList,
+  MANUAL_RETRY_COOLDOWN_MS,
   resetServerList,
   retryServerList,
 } from "../src/client/ServerList";
@@ -54,6 +56,11 @@ let wiggle: ReturnType<typeof vi.fn>;
 let joinLobby: ReturnType<typeof vi.fn>;
 let messages: string[];
 let fetchMock: ReturnType<typeof vi.fn>;
+// Added to the real clock, so a test can step past the manual-retry cooldown
+// without waiting out five real seconds. Only Date.now is moved: ServerList's
+// throttles are all clock comparisons, and faking timers wholesale would
+// stall Lit's own scheduling.
+let clockOffset: number;
 
 function stub(tag: string, methods: Record<string, unknown>): void {
   const el = document.createElement(tag);
@@ -98,6 +105,15 @@ function clickEveryButton(): number {
   return buttons.length;
 }
 
+/**
+ * The rendered public-lobby card's button. Socket-sourced: whatever the
+ * server-list API is doing, this one must keep working (the reachability rule
+ * at the top of GameModeSelector.ts).
+ */
+function lobbyCardButton(): HTMLButtonElement | null {
+  return selector.querySelector("button.group");
+}
+
 /** Announces a reachability change the way the heartbeat does. */
 async function announce(reachable: boolean, confirmed = false): Promise<void> {
   document.dispatchEvent(
@@ -140,6 +156,9 @@ beforeEach(() => {
 
   fetchMock = vi.fn(async () => new Response("{}", { status: 404 }));
   vi.stubGlobal("fetch", fetchMock);
+  clockOffset = 0;
+  const realNow = Date.now.bind(Date);
+  vi.spyOn(Date, "now").mockImplementation(() => realNow() + clockOffset);
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "info").mockImplementation(() => {});
 
@@ -210,7 +229,10 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
     expect(messages).toEqual([]);
   });
 
-  it("dims and refuses every entry point once the outage is confirmed", async () => {
+  it("dims and refuses the API-DEPENDENT entry points once the outage is confirmed", async () => {
+    // Create, Ranked and Join-by-code each have to resolve a server for
+    // something nothing has told this client about, so a dead list API really
+    // does mean the click cannot work.
     selector = await mountSelector();
     await announce(false, true);
 
@@ -221,7 +243,42 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
 
     expect(joinOpen).not.toHaveBeenCalled();
     expect(hostOpen).not.toHaveBeenCalled();
-    expect(joinLobby).not.toHaveBeenCalled();
+  });
+
+  it("still joins the public lobby card during a confirmed outage", async () => {
+    // The rule (GameModeSelector, top of file): this lobby arrived over a
+    // live game-server socket, which is the only liveness the join needs. The
+    // server-list API's health says nothing about that server, and Main's
+    // funnel would let the very same join through -- so refusing here would
+    // only reject a join that is already under way.
+    selector = await mountSelector();
+    await announce(false, true);
+
+    const card = lobbyCardButton();
+    expect(card).not.toBeNull();
+    card!.click();
+
+    expect(joinLobby).toHaveBeenCalled();
+    expect(joinLobby.mock.calls[0][0].detail.gameID).toBe("public-1");
+  });
+
+  it("does not dim the public lobby card during a confirmed outage", async () => {
+    selector = await mountSelector();
+    await announce(false, true);
+
+    expect(lobbyCardButton()?.getAttribute("aria-disabled")).toBe("false");
+  });
+
+  it("says nothing when a card click goes through during an outage", async () => {
+    // The toast is for a REFUSAL. A join that proceeded has nothing to
+    // apologise for, and telling the player the servers are unreachable while
+    // taking them into a game would be a lie.
+    selector = await mountSelector();
+    await announce(false, true);
+
+    lobbyCardButton()!.click();
+
+    expect(messages).toEqual([]);
   });
 
   it("says why, on the web, where there is no status bar to read", async () => {
@@ -284,6 +341,9 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
     clickEveryButton();
     expect(joinOpen).not.toHaveBeenCalled();
     expect(hostOpen).not.toHaveBeenCalled();
+    // ...and the card that came over the socket still joins, from the same
+    // seed.
+    expect(joinLobby).toHaveBeenCalled();
   });
 
   it("does not gate a selector that mounted after an attempt SUCCEEDED", async () => {
@@ -297,5 +357,129 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
     expect(clickEveryButton()).toBeGreaterThan(0);
     expect(joinOpen).toHaveBeenCalled();
     expect(hostOpen).toHaveBeenCalled();
+  });
+});
+
+/**
+ * The web's escape hatch. Desktop has the status bar's Retry button; the web
+ * has no bar at all, so without this the only way out of a gated state is the
+ * heartbeat's next beat -- and that backs off to as much as RETRY_MAX_MS once
+ * an outage has run a while. A toast reading "Check your connection and try
+ * again" over a button where trying again provably does nothing is worse than
+ * no toast, so on the web the refused click IS the retry.
+ *
+ * Driven through the real ServerList module: the point is that the click
+ * reaches the same probe the desktop button does, throttled by the same
+ * policy (manualRetryAvailable) and the same clock.
+ */
+describe("a refused multiplayer click on the web", () => {
+  /** Past the shared manual-retry cooldown, so a probe is available again. */
+  function advancePastRetryCooldown(): void {
+    clockOffset += MANUAL_RETRY_COOLDOWN_MS + 1;
+  }
+
+  /** Mounts a selector against a module that has already confirmed an outage. */
+  async function mountGated(): Promise<void> {
+    await confirmOutage();
+    selector = await mountSelector();
+    // confirmOutage's own manual retry started the cooldown; step past it so
+    // each test starts from "a probe is available".
+    advancePastRetryCooldown();
+  }
+
+  it("probes the API again", async () => {
+    await mountGated();
+    const before = fetchMock.mock.calls.length;
+
+    clickEveryButton();
+
+    expect(messages).toContain("common.backend_unreachable");
+    expect(fetchMock.mock.calls.length).toBe(before + 1);
+  });
+
+  it("collapses a flurry of refused clicks into a single probe", async () => {
+    // Three gated entry points are clicked in that one pass. The first starts
+    // an attempt; while it is in flight the rest could only join it, so
+    // offering them a request each would just point traffic at a backend that
+    // is already known to be struggling.
+    await mountGated();
+    const before = fetchMock.mock.calls.length;
+
+    clickEveryButton();
+
+    expect(fetchMock.mock.calls.length).toBe(before + 1);
+  });
+
+  it("does not probe again inside the cooldown, but still says why", async () => {
+    await mountGated();
+    clickEveryButton();
+    await vi.waitFor(() => expect(attemptInFlight()).toBe(false));
+    const after = fetchMock.mock.calls.length;
+    messages.length = 0;
+
+    clickEveryButton();
+
+    expect(fetchMock.mock.calls.length).toBe(after);
+    // The player is still being refused, so they are still told so: the
+    // throttle is on the request, not on the explanation.
+    expect(messages).toContain("common.backend_unreachable");
+  });
+
+  it("probes again once the cooldown has elapsed", async () => {
+    await mountGated();
+    clickEveryButton();
+    await vi.waitFor(() => expect(attemptInFlight()).toBe(false));
+    const after = fetchMock.mock.calls.length;
+
+    advancePastRetryCooldown();
+    clickEveryButton();
+
+    expect(fetchMock.mock.calls.length).toBe(after + 1);
+  });
+
+  it("lets the player back in when the probe finds the backend up", async () => {
+    // End to end: a refused click starts the probe, the probe answers, the
+    // reachability event that carries the answer un-dims the buttons, and the
+    // next click goes through. No Retry button involved anywhere.
+    await mountGated();
+    fetchMock.mockImplementation(
+      async () =>
+        new Response("{}", {
+          status: 404,
+        }),
+    );
+
+    clickEveryButton();
+    await vi.waitFor(() => expect(backendUnreachableConfirmed()).toBe(false));
+    await selector.updateComplete;
+
+    expect(
+      selector.querySelectorAll('button[aria-disabled="true"]').length,
+    ).toBe(0);
+    expect(clickEveryButton()).toBeGreaterThan(0);
+    expect(hostOpen).toHaveBeenCalled();
+    expect(joinOpen).toHaveBeenCalled();
+  });
+
+  it("does not probe when the click was not refused", async () => {
+    // The control. A healthy page clicks the same buttons; nothing here may
+    // turn an ordinary click into an extra request.
+    selector = await mountSelector();
+    const before = fetchMock.mock.calls.length;
+
+    clickEveryButton();
+
+    expect(fetchMock.mock.calls.length).toBe(before);
+  });
+
+  it("does not probe on a card click that goes through", async () => {
+    // Socket-sourced: it was never refused, so there is nothing to retry.
+    await mountGated();
+    const before = fetchMock.mock.calls.length;
+
+    lobbyCardButton()!.click();
+
+    expect(joinLobby).toHaveBeenCalled();
+    expect(fetchMock.mock.calls.length).toBe(before);
   });
 });

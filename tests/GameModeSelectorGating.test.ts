@@ -4,6 +4,7 @@ import {
   multiplayerAllowedForBackend,
   shouldBlockJoin,
   shouldBlockMultiplayerAction,
+  shouldBlockSocketSourcedAction,
 } from "../src/client/GameModeSelector";
 import { GameType } from "../src/core/game/Game";
 
@@ -258,5 +259,73 @@ describe("shouldBlockJoin", () => {
   it("never blocks a join, whatever the reachability signal says", () => {
     expect(shouldBlockJoin(mp, null, null)).toBe(false);
     expect(shouldBlockJoin(mp, healthy, { status: "signed-in" })).toBe(false);
+  });
+});
+
+/**
+ * The other half of the reachability rule (GameModeSelector, top of file):
+ * whatever the server-list API is doing, it may not gate an action whose
+ * target arrived over a live game-server socket -- a public or hosted lobby
+ * card, in either browser. The card exists because a game server sent it over
+ * a socket that is still open, which is the only liveness the join needs.
+ *
+ * This predicate takes no reachability argument AT ALL, which is the point:
+ * there is no value a caller could pass that would make a card refuse on the
+ * list API's health. The desktop update and session states still apply --
+ * those are statements about this client, not about any server.
+ */
+describe("shouldBlockSocketSourcedAction", () => {
+  const healthy = { status: "current", bytes: 0, total: 0 } as const;
+
+  it("allows a card click on the web, where no desktop state exists", () => {
+    expect(shouldBlockSocketSourcedAction(null, null)).toBe(false);
+  });
+
+  it("allows a card click when both desktop states are healthy", () => {
+    expect(
+      shouldBlockSocketSourcedAction(healthy, { status: "signed-in" }),
+    ).toBe(false);
+  });
+
+  it("still blocks a card click while an update is pending", () => {
+    expect(
+      shouldBlockSocketSourcedAction(
+        { status: "staged", bytes: 0, total: 0 },
+        {
+          status: "signed-in",
+        },
+      ),
+    ).toBe(true);
+  });
+
+  it("still blocks a card click while signed out", () => {
+    expect(
+      shouldBlockSocketSourcedAction(healthy, {
+        status: "signed-out",
+        reason: "steam-wedged",
+      }),
+    ).toBe(true);
+  });
+
+  // The finding this rule answers: the funnel refused to gate a "public" join
+  // on reachability while the card that produces it dimmed and refused one
+  // step earlier, on exactly the same lobby. Now both ask the same question.
+  it("agrees with the funnel on the join its card produces", () => {
+    const publicJoin = { gameID: "g", source: "public" } as any;
+    for (const update of [
+      null,
+      healthy,
+      { status: "staged", bytes: 0, total: 0 } as const,
+    ]) {
+      for (const session of [
+        null,
+        { status: "signed-in" } as const,
+        { status: "signed-out", reason: "steam-wedged" } as const,
+      ]) {
+        expect(shouldBlockSocketSourcedAction(update, session)).toBe(
+          shouldBlockJoin(publicJoin, update, session),
+        );
+      }
+    }
   });
 });

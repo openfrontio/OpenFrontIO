@@ -6,6 +6,8 @@ import {
   backendReachable,
   backendUnreachableConfirmed,
   ensureServerList,
+  MANUAL_RETRY_COOLDOWN_MS,
+  manualRetryAvailable,
   redirectToGameVersion,
   reloadWouldRescue,
   resetServerList,
@@ -593,6 +595,73 @@ describe("backend reachability", () => {
     } finally {
       document.removeEventListener("backend-reachability", listener);
     }
+  });
+});
+
+/**
+ * The policy above retryServerList's own floor, shared by both shells'
+ * player-initiated retries so they cannot drift: the desktop status bar's
+ * Retry button (which renders its disabled state from the same two
+ * conditions) and, on the web where there is no such button, a refused
+ * multiplayer click (GameModeSelector.reportMultiplayerRefusal). The web
+ * caller has nothing to disable, so it asks this instead.
+ */
+describe("manualRetryAvailable", () => {
+  it("is available before anyone has asked", () => {
+    expect(manualRetryAvailable()).toBe(true);
+  });
+
+  it("is unavailable while an attempt is out, whoever started it", async () => {
+    let release: (r: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      async () =>
+        await new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+
+    // The heartbeat's own beat, not a manual one: a press landing on top of
+    // it could only join the attempt already out, so offering it is a lie.
+    const beat = ensureServerList();
+    expect(attemptInFlight()).toBe(true);
+    expect(manualRetryAvailable()).toBe(false);
+
+    release(jsonResponse(API_LIST));
+    await beat;
+    expect(manualRetryAvailable()).toBe(true);
+  });
+
+  it("is unavailable for the cooldown after a player-initiated attempt", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+
+    await retryServerList();
+    // Settled in milliseconds, which is exactly the case the cooldown exists
+    // for: without it a stubbed or fast failure hands the affordance straight
+    // back to someone clicking at an outage.
+    expect(attemptInFlight()).toBe(false);
+    expect(manualRetryAvailable()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(MANUAL_RETRY_COOLDOWN_MS - 1);
+    expect(manualRetryAvailable()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(manualRetryAvailable()).toBe(true);
+  });
+
+  it("counts a retry the floor swallowed as the same cooldown", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    await retryServerList();
+    await vi.advanceTimersByTimeAsync(500);
+
+    // Inside the 1s floor: no new attempt, and no new cooldown either -- the
+    // window still ends MANUAL_RETRY_COOLDOWN_MS after the attempt that ran.
+    await retryServerList();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(MANUAL_RETRY_COOLDOWN_MS - 500);
+    expect(manualRetryAvailable()).toBe(true);
   });
 });
 

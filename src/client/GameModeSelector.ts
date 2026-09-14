@@ -39,6 +39,8 @@ import { JoinLobbyEvent } from "./Main";
 import {
   backendUnreachableConfirmed,
   isPinnedToAVersion,
+  manualRetryAvailable,
+  retryServerList,
   type BackendReachabilityDetail,
 } from "./ServerList";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -67,8 +69,43 @@ const TUTORIAL_ACTION =
 const TUTORIAL_CARD_MAX_GAMES = 5;
 
 /**
+ * THE REACHABILITY RULE (OPE-439). Stated once, here; every other call site
+ * in this feature points back at this comment rather than restating it.
+ *
+ * The backend-reachability signal is the health of ONE thing: the server-list
+ * API (`/cluster.json`), as observed by ServerList's heartbeat. It is not a
+ * general "is the internet up" light, and in particular it says nothing about
+ * whether any given GAME server is up.
+ *
+ * So it may gate exactly one category of action: the ones that cannot even
+ * begin without that API answering first, because nothing has yet told the
+ * client which server to talk to.
+ *
+ *   GATED (API-dependent): creating/hosting a lobby, entering matchmaking,
+ *   opening the join-by-code modal. Each has to resolve a server for
+ *   something the client has heard nothing about, so a dead list API really
+ *   does mean the click cannot work. These dim, and refuse with
+ *   reportMultiplayerRefusal.
+ *
+ *   NOT GATED (socket-sourced): anything whose target arrived over a live
+ *   game-server socket -- every card in the public lobby feed, in both the
+ *   homepage selector and the detailed browser -- and every join that reaches
+ *   Main's funnel (shouldBlockJoin). The card's very existence is proof that
+ *   the game server behind it is up and talking to us, which is the only
+ *   liveness that join needs. Refusing there could only ever reject a join
+ *   that is already under way, over the health of an unrelated API. These
+ *   neither dim nor refuse on reachability: they call
+ *   shouldBlockSocketSourcedAction, which is the same predicate with the
+ *   reachability input nailed shut.
+ *
+ * The other two inputs (desktop update state, desktop session state) apply to
+ * both categories, which is why the two predicates differ only in this one
+ * argument.
+ *
+ * ---
+ *
  * Whether multiplayer should be available given what we know about the
- * backend (OPE-439).
+ * backend.
  *
  * The parameter is ServerList.backendUnreachableConfirmed(), NOT the raw
  * backendReachable(), and the difference is load-bearing. That accessor is
@@ -97,7 +134,11 @@ export function multiplayerAllowedForBackend(backendOutage: boolean): boolean {
  * `backendOutage` is the only one of the three that also applies on the web,
  * which is why it is a required parameter rather than an optional one: an
  * entry point that forgets to pass it would silently stay ungated, and a
- * compile error is the cheapest way to notice.
+ * compile error is the cheapest way to notice. Pass
+ * backendUnreachableConfirmed() only from an API-dependent entry point; a
+ * socket-sourced one calls shouldBlockSocketSourcedAction instead, so that
+ * "reachability does not apply here" is a named decision rather than a
+ * `false` literal someone has to interpret.
  */
 export function shouldBlockMultiplayerAction(
   update: DesktopUpdateState | null,
@@ -111,7 +152,30 @@ export function shouldBlockMultiplayerAction(
 }
 
 /**
- * Tells the player why a multiplayer action was refused.
+ * The same gate for an action whose target arrived over a live game-server
+ * socket: a public or hosted lobby card, in either browser, and every join
+ * that reaches Main's funnel (shouldBlockJoin below wraps this).
+ *
+ * Reachability is not an input, by the rule at the top of this file: the card
+ * is in front of the player because a game server sent it over a socket that
+ * is still open, so the server-list API's health cannot make joining it
+ * wrong. The desktop update and session states still apply -- they are
+ * statements about this client, not about any server.
+ *
+ * A function rather than `shouldBlockMultiplayerAction(u, s, false)` at four
+ * call sites so the dimming and the click-through of a given control cannot
+ * drift apart, and so grep finds every place the rule is exercised.
+ */
+export function shouldBlockSocketSourcedAction(
+  update: DesktopUpdateState | null,
+  session: DesktopSessionState | null,
+): boolean {
+  return shouldBlockMultiplayerAction(update, session, false);
+}
+
+/**
+ * Tells the player why a multiplayer action was refused -- and, on the web,
+ * acts as the retry it tells them to make.
  *
  * On desktop the status bar is already showing the reason and its remedy, so
  * the click lands there as a wiggle rather than as a message that would say
@@ -121,6 +185,22 @@ export function shouldBlockMultiplayerAction(
  *
  * Only reachability needs the web half: every other reason to refuse here is
  * desktop-only, and on desktop the bar always carries it.
+ *
+ * The refused click also PROBES on the web, and that is the point rather than
+ * a nicety. Desktop has a Retry button; the web has nothing, so without this
+ * the only way out of the gated state is the heartbeat's own next beat --
+ * which backs off to as much as RETRY_MAX_MS once an outage has run a while.
+ * A message reading "try again" over a button where trying again provably did
+ * nothing is worse than no message. So the click the player makes IS the
+ * retry, and the message is true.
+ *
+ * Throttled by ServerList.manualRetryAvailable(), the same policy (and the
+ * same clock) as the desktop button's disabled state: nothing while an
+ * attempt is already out, nothing for MANUAL_RETRY_COOLDOWN_MS after the last
+ * one. A player clicking at an outage gets the message every time and a
+ * request at most every few seconds. Nothing is rendered from the result: a
+ * successful probe flips the reachability signal, which is what un-dims the
+ * buttons -- the feedback is the gate going away.
  */
 export function reportMultiplayerRefusal(backendOutage: boolean): void {
   // Optional-call the method rather than dispatching an event: the bar is a
@@ -136,6 +216,13 @@ export function reportMultiplayerRefusal(backendOutage: boolean): void {
   // index.html on every build and simply renders nothing on the web, so its
   // presence proves nothing about whether the player can see a reason.
   if (!isDesktopShell() && backendOutage) {
+    if (manualRetryAvailable()) {
+      retryServerList().catch((err: unknown) => {
+        // retryServerList never rejects; belt and braces, so a change there
+        // cannot surface as an unhandled rejection from a click handler.
+        console.error("server list retry from a refused click failed", err);
+      });
+    }
     showToast(translateText("common.backend_unreachable"), "red");
   }
 }
@@ -163,17 +250,24 @@ export function joinIsGateable(lobby: JoinLobbyEvent): boolean {
  * feedback around it. Both halves it does weigh -- the update state and the
  * session state -- are desktop-only.
  *
- * Backend reachability is deliberately NOT an input here (OPE-439). Every
- * source that dispatches a join has already reached a server to produce it:
- * "private" only after checkActiveLobby read `exists` from the game's own
- * server, "host" only after createLobby minted the id, "public" from a lobby
- * list arriving over a live server socket, and "matchmaking" only after the
- * queue matched and checkGame confirmed the game exists. The outage signal
- * tracks the separate server-list API, whose health says nothing about those
- * servers, so refusing here could only reject a join that is already under
- * way. Worst case it ejects a player mid-game: a reload during a list-API
- * blip proves the game is live, then the refusal closes the join modal,
- * which leaves the lobby and resets the URL.
+ * Backend reachability is deliberately NOT an input here -- the rule at the
+ * top of this file, which is why this defers to
+ * shouldBlockSocketSourcedAction. Every source that dispatches a join has
+ * already reached a server to produce it: "private" only after
+ * checkActiveLobby read `exists` from the game's own server, "host" only
+ * after createLobby minted the id, "public" from a lobby list arriving over a
+ * live server socket, and "matchmaking" only after the queue matched and
+ * checkGame confirmed the game exists. The outage signal tracks the separate
+ * server-list API, whose health says nothing about those servers, so refusing
+ * here could only reject a join that is already under way. Worst case it
+ * ejects a player mid-game: a reload during a list-API blip proves the game
+ * is live, then the refusal closes the join modal, which leaves the lobby and
+ * resets the URL.
+ *
+ * The controls one step earlier in the funnel -- the lobby cards in this
+ * component and in DetailedGameViewModal, which are where a "public" join
+ * comes from -- hold to the same rule for the same reason, so a card is
+ * neither dimmed nor refused over a list-API outage.
  */
 export function shouldBlockJoin(
   lobby: JoinLobbyEvent,
@@ -181,7 +275,7 @@ export function shouldBlockJoin(
   session: DesktopSessionState | null,
 ): boolean {
   if (!joinIsGateable(lobby)) return false;
-  return shouldBlockMultiplayerAction(update, session, false);
+  return shouldBlockSocketSourcedAction(update, session);
 }
 
 @customElement("game-mode-selector")
@@ -526,16 +620,21 @@ export class GameModeSelector extends LitElement {
   }
 
   /**
-   * Refuses the action and tells the player why. Returns true when the caller
-   * should stop.
+   * Refuses an API-DEPENDENT action (Create, Ranked, Join by code) and tells
+   * the player why. Returns true when the caller should stop.
+   *
+   * The reachability half applies here -- see the rule at the top of this
+   * file: none of these three can resolve a server without the list API. A
+   * lobby card goes through blockedFromLobbyJoin below instead.
    *
    * Deliberately NOT implemented with the `disabled` attribute the way
    * renderSmallActionCard handles invalid input: a disabled control (and
    * `pointer-events-none` alongside it) swallows the click, leaving nothing to
-   * trigger the wiggle. The button stays clickable and merely stops being
-   * actionable.
+   * trigger the wiggle -- and, on the web, nothing to trigger the retry that
+   * reportMultiplayerRefusal makes of it. The button stays clickable and
+   * merely stops being actionable.
    */
-  private blockedFromMultiplayer(): boolean {
+  private blockedFromApiAction(): boolean {
     if (
       !shouldBlockMultiplayerAction(
         this.desktopUpdateState,
@@ -548,8 +647,27 @@ export class GameModeSelector extends LitElement {
     return true;
   }
 
+  /**
+   * The same, for the public-lobby card: the desktop states still refuse, a
+   * list-API outage never does. Its lobby came over a live game-server socket
+   * (the rule at the top of this file), so there is no reachability reason to
+   * refuse and nothing to retry -- hence `false` to the refusal report, which
+   * leaves the desktop wiggle as the only feedback.
+   */
+  private blockedFromLobbyJoin(): boolean {
+    if (
+      !shouldBlockSocketSourcedAction(
+        this.desktopUpdateState,
+        this.desktopSessionState,
+      )
+    )
+      return false;
+    reportMultiplayerRefusal(false);
+    return true;
+  }
+
   private openRankedMenu = () => {
-    if (this.blockedFromMultiplayer()) return;
+    if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
     window.showPage?.("page-ranked");
   };
@@ -573,13 +691,13 @@ export class GameModeSelector extends LitElement {
   };
 
   private openHostLobby = () => {
-    if (this.blockedFromMultiplayer()) return;
+    if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
     (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
   };
 
   private openJoinLobby = () => {
-    if (this.blockedFromMultiplayer()) return;
+    if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
     (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
   };
@@ -710,16 +828,19 @@ export class GameModeSelector extends LitElement {
     // with pointer-events-none) swallows the click, and the click is what
     // makes the update bar wiggle. `blocked` only dims and reports
     // aria-disabled; validateAndJoin does the refusing.
+    //
+    // Socket-sourced, so a list-API outage neither dims this nor refuses it:
+    // the same predicate validateAndJoin uses, for the reason in the rule at
+    // the top of this file.
     return lobbyCard({
       lobby,
       subtitle: titleContent,
       timeDisplay,
       timeDisplayUppercase,
       disabled: !this.inputValid,
-      blocked: shouldBlockMultiplayerAction(
+      blocked: shouldBlockSocketSourcedAction(
         this.desktopUpdateState,
         this.desktopSessionState,
-        this.backendOutage,
       ),
       viewerTrusted: this.viewerTrusted,
       onClick: () => this.validateAndJoin(lobby),
@@ -727,7 +848,7 @@ export class GameModeSelector extends LitElement {
   }
 
   private validateAndJoin(lobby: PublicGameInfo) {
-    if (this.blockedFromMultiplayer()) return;
+    if (this.blockedFromLobbyJoin()) return;
     if (!this.validateUsername()) return;
     if (!canJoinTrustedLobby(lobby, this.viewerTrusted)) {
       this.showTrustRequired = true;

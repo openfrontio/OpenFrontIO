@@ -70,6 +70,21 @@ const CONFIRM_OUTAGE_AFTER_FAILURES = 2;
 // cannot outpace the request it started. Short enough that a deliberate
 // second press still works, which is the whole point of a manual retry.
 const MANUAL_RETRY_MIN_INTERVAL_MS = 1_000;
+/**
+ * How long a player-initiated retry stays unavailable after one, on top of
+ * however long that attempt itself takes. The fetch is bounded at 4s, so
+ * without this a failure would hand the affordance back within seconds and a
+ * player watching an outage could sit there firing real requests at it. Five
+ * seconds is long enough that leaning on it costs nothing and short enough
+ * that someone who has just plugged their network back in is not left waiting
+ * on something that looks broken.
+ *
+ * One number for both affordances: the desktop status bar's Retry button
+ * (which disables itself for this long after a press) and the web's refused
+ * multiplayer click, which doubles as a retry because there is no bar there
+ * to press. manualRetryAvailable() below is what the latter asks.
+ */
+export const MANUAL_RETRY_COOLDOWN_MS = 5_000;
 
 export type ServerListStatus =
   // The list is loaded and a server for this build was picked: own-server
@@ -205,6 +220,33 @@ export function backendUnreachableConfirmed(): boolean {
  */
 export function attemptInFlight(): boolean {
   return inflight !== null;
+}
+
+/**
+ * Whether asking for a player-initiated retry right now would actually probe
+ * the API, rather than be swallowed.
+ *
+ * For callers that have no button of their own to disable -- the web's
+ * refused multiplayer click (GameModeSelector.reportMultiplayerRefusal),
+ * which is the web's stand-in for the desktop status bar's Retry. The bar
+ * renders its own disabled state from the same two conditions, so the two
+ * affordances share one policy and one clock:
+ *
+ * - nothing while an attempt is already out, whoever started it. A press
+ *   landing on top of one could only join it, so offering it is a lie.
+ * - nothing for MANUAL_RETRY_COOLDOWN_MS after the last player-initiated
+ *   attempt, so a player clicking at an outage cannot turn each click into a
+ *   request.
+ *
+ * Advisory, not enforcement: retryServerList() has its own floor and
+ * fetchOnce() dedupes underneath, so a caller that skips this check still
+ * cannot hammer the API. This exists so such a caller can tell whether its
+ * retry did anything.
+ */
+export function manualRetryAvailable(): boolean {
+  if (attemptInFlight()) return false;
+  if (lastManualRetry === null) return true;
+  return Date.now() - lastManualRetry.at >= MANUAL_RETRY_COOLDOWN_MS;
 }
 
 /** The detail carried by the "server-list-attempt" document event. */
@@ -444,8 +486,12 @@ export async function ensureServerList(): Promise<ServerListStatus> {
 }
 
 /**
- * Try the API again right now, at the player's request: the Retry on the
- * desktop status bar's offline state (OPE-439).
+ * Try the API again right now, at the player's request (OPE-439). Two
+ * callers, one per shell: the Retry on the desktop status bar's offline
+ * state, and -- because the web has no such bar -- a refused multiplayer
+ * click on the web, which doubles as that press
+ * (GameModeSelector.reportMultiplayerRefusal). Both gate themselves on
+ * manualRetryAvailable()'s policy first.
  *
  * Deliberately ignores the heartbeat's retry schedule. That backoff exists
  * to stop TIMER-driven callers hammering a down API between beats, and a
@@ -461,7 +507,8 @@ export async function ensureServerList(): Promise<ServerListStatus> {
  * the last line of defence, not the first: the button that calls this is
  * itself disabled while an attempt is out and for a cooldown after a press
  * (DesktopStatusBar), and the floor is what holds if anything ever calls
- * this without going through such a button.
+ * this without going through such a button, or through
+ * manualRetryAvailable().
  *
  * A retry that fails counts towards the outage confirmation like any other
  * attempt -- pressing Retry against a backend that is genuinely down should
