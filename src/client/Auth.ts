@@ -114,27 +114,15 @@ export function steamLogin() {
 // The website's account-settings page, for the desktop shell to open in the
 // browser. Never from window.location, which is app://openfront in the shell.
 //
-// ClientEnv.siteOrigin() -- the host the shell injects as serverHost, whose
-// values are exactly the sites. NOT serverHttpBase(): that answers with
-// whichever game server the API's server list picked (multi-server v2), a
-// deployment host with no website on it. And NOT the JWT audience: that is
-// the bare host only in production (openfront.io); on a dev/staging build it
-// is a branch subdomain (main.openfront.dev, <branch>.openfront.dev) with
-// nothing deployed at the apex, which is exactly why serverHost exists (see
-// resolveServerOrigin in ClientEnv.ts). The audience-derived origin, with the
+// The precedence this used to spell out for itself -- siteOrigin() (NOT
+// serverHttpBase(), which answers with whichever game server the API's list
+// picked, a deployment host with no website on it), then the audience with the
 // same localhost:9000 special case as the shell's own siteUrlForAudience
-// (openfront-desktop's linkApi.ts), is only the fallback for a shell that
-// injects no site host at all.
+// (openfront-desktop's linkApi.ts) -- is now ClientEnv.shareOrigin(), which is
+// that same question asked by every outbound link in the client. See
+// deriveShareOrigin.
 function desktopWebAccountSettingsUrl(): string {
-  let origin: string | undefined = ClientEnv.siteOrigin();
-  if (origin === undefined) {
-    const audience = getAudience();
-    origin =
-      audience === "localhost"
-        ? "http://localhost:9000"
-        : `https://${audience}`;
-  }
-  return `${origin}/#modal=account-settings`;
+  return `${ClientEnv.shareOrigin()}/#modal=account-settings`;
 }
 
 // Link a Google account to the currently logged-in player. Unlike login this is
@@ -677,7 +665,12 @@ export async function sendMagicLink(email: string): Promise<boolean> {
       },
       credentials: "include",
       body: JSON.stringify({
-        redirectDomain: window.location.origin,
+        // The domain the server builds the emailed link on, so it has to be a
+        // real website: the recipient opens it in a browser, possibly on
+        // another device. window.location.origin is `app://openfront` in the
+        // shell, which would email a link nothing can open. See
+        // deriveShareOrigin in ClientEnv.ts.
+        redirectDomain: ClientEnv.shareOrigin(),
         email: email,
       }),
     });
