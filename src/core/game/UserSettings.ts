@@ -73,7 +73,14 @@ export type AudioCategory =
   | "interface";
 
 const AUDIO_DEFAULTS: Record<AudioCategory, number> = {
-  master: 1.0,
+  // Not 1.0. perceptualGain squares the slider position, so this is about
+  // -5 dB rather than the -2.5 dB the number reads as, which is the size of
+  // cut the "too loud on desktop" reports were asking for. Desktop is where
+  // it is felt, because that is the platform this default actually applies
+  // on (see defaultMasterVolume), but it is not a desktop-only value: it is
+  // also where the web carve-out lands a player who opts in, and the two
+  // should agree about how loud "default" is.
+  master: 0.75,
   music: 0.5,
   effects: 0.7,
   alerts: 0.8,
@@ -117,6 +124,31 @@ const AUDIO_RESET_KEYS: readonly string[] = [
   "settings.backgroundMusicVolume",
   "settings.soundEffectsVolume",
 ];
+
+/**
+ * Bumped to force every existing player back to the platform defaults once.
+ *
+ * Version 1 is the new audio delivery itself. The read-through in
+ * audioVolume() below was meant to carry an existing player's two old sliders
+ * across, but it only carries the channels those sliders covered: a player who
+ * had ever dragged ONE of them stored a key, which satisfies the master
+ * carve-out in defaultMasterVolume() -- so master resolves to audible -- while
+ * the four channels the other slider never covered fall through to the new
+ * defaults. That is a web player who opted into music years ago now hearing
+ * the entire new cue layer at full level, having opted into none of it.
+ *
+ * A reset rather than a narrower rule because the stored state cannot say
+ * which it is: "dragged the music slider and left effects alone" and "dragged
+ * the music slider and never had the choice" are the same two keys. Clearing
+ * everything lets the platform default answer instead, which on the web is
+ * silence until the player asks otherwise.
+ *
+ * The cost is that choices already made in the new Audio tab go with it.
+ * Deliberate, and the reason this is version-stamped rather than repeated:
+ * whatever the player picks after the reset is theirs and survives.
+ */
+const AUDIO_RESET_VERSION = 1;
+const AUDIO_RESET_VERSION_KEY = "settings.audio.resetVersion";
 
 /** Every key that means "this player has chosen an audio volume before". */
 const AUDIO_VOLUME_KEYS: readonly string[] = [
@@ -874,6 +906,36 @@ export class UserSettings {
       "settings.audio.alertsWhenUnfocused",
       String(this.alertsWhenUnfocused()),
     );
+  }
+
+  /**
+   * Runs resetAudio() once per player, on every platform, the first time a
+   * build carrying a new AUDIO_RESET_VERSION is loaded. See that constant for
+   * why the reset exists.
+   *
+   * Idempotent by the stamp, not by a flag in memory: the stamp is written
+   * whether or not there was anything to clear, so a fresh install spends the
+   * version without a reset it did not need and a returning player is reset
+   * exactly once however many times the page reloads.
+   *
+   * The stamp is written LAST. A throw anywhere in resetAudio -- localStorage
+   * full, or unavailable in a hardened browser -- then leaves the version
+   * unspent and the next load tries again, rather than recording a reset that
+   * did not happen.
+   *
+   * @returns whether this call performed the reset.
+   */
+  resetAudioOnce(): boolean {
+    const stamped = parseInt(this.getCached(AUDIO_RESET_VERSION_KEY) ?? "", 10);
+    // NaN covers both "never stamped" and a value some other build wrote that
+    // this one cannot read; either way the reset has not run here.
+    const applied = Number.isFinite(stamped) ? stamped : 0;
+    if (applied >= AUDIO_RESET_VERSION) return false;
+    this.resetAudio();
+    // No change event: nothing listens for the stamp, and resetAudio has
+    // already announced every value that actually moved.
+    this.setCached(AUDIO_RESET_VERSION_KEY, String(AUDIO_RESET_VERSION), false);
+    return true;
   }
 
   setAlertsWhenUnfocused(value: boolean): void {
