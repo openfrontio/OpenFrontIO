@@ -1350,7 +1350,7 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
       eventBus,
     );
     testSettings.setKeybinds({ buildAtomBomb: "Digit8" });
-    testSettings.setKeybinds({ buildScrollModifier:"F13" });
+    testSettings.setKeybinds({ buildScrollModifier: "F13" });
     inputHandler.initialize();
   });
 
