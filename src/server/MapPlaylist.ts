@@ -32,7 +32,7 @@ const MAX_PLAYER_COUNT = 125;
 // creation order) is trusted-only (GameConfig.trusted): only accounts the API
 // reports as trusted may join. A fixed rotation rather than a roll so the
 // lobbies on offer at any moment are never all locked.
-const TRUSTED_PUBLIC_EVERY = 4;
+const TRUSTED_PUBLIC_EVERY = 6;
 
 // Trusted-only lobbies draw from a much smaller pool of eligible accounts, so
 // cap them well below the open-lobby sizes to keep them filling and starting.

@@ -6,11 +6,11 @@ vi.mock("../../src/server/MapLandTiles", () => ({
   getMapLandTiles: async () => 1_000_000,
 }));
 
-// Every 4th scheduled public game is trusted-only, counted across FFA, team
-// and special in creation order: three open lobbies, then one locked. A
+// Every 6th scheduled public game is trusted-only, counted across FFA, team
+// and special in creation order: five open lobbies, then one locked. A
 // rotation, not a roll, so the lobbies on offer are never all locked at once.
 describe("MapPlaylist trusted-only public games", () => {
-  it("marks every 4th game trusted-only across all types", async () => {
+  it("marks every 6th game trusted-only across all types", async () => {
     const playlist = new MapPlaylist();
     const types = [
       "ffa",
@@ -21,6 +21,10 @@ describe("MapPlaylist trusted-only public games", () => {
       "special",
       "ffa",
       "team",
+      "special",
+      "ffa",
+      "team",
+      "special",
     ] as const;
     const trusted: boolean[] = [];
     for (const type of types) {
@@ -32,7 +36,11 @@ describe("MapPlaylist trusted-only public games", () => {
       false,
       false,
       false,
+      false,
+      false,
       true,
+      false,
+      false,
       false,
       false,
       false,
@@ -43,7 +51,7 @@ describe("MapPlaylist trusted-only public games", () => {
   it("counts per playlist instance, starting open", async () => {
     const a = new MapPlaylist();
     const b = new MapPlaylist();
-    for (let i = 0; i < 3; i++) await a.gameConfig("ffa");
+    for (let i = 0; i < 5; i++) await a.gameConfig("ffa");
     expect((await a.gameConfig("ffa")).trusted).toBe(true);
     // b has its own counter: its first game is open.
     expect((await b.gameConfig("ffa")).trusted).toBeUndefined();
@@ -62,7 +70,7 @@ describe("MapPlaylist trusted-only public games", () => {
         expect(config.maxPlayers).toBeLessThanOrEqual(25);
       }
     }
-    expect(trustedSeen).toBe(6);
+    expect(trustedSeen).toBe(4);
   });
 
   it("does not depend on Math.random", async () => {
@@ -71,7 +79,7 @@ describe("MapPlaylist trusted-only public games", () => {
       const playlist = new MapPlaylist();
       expect((await playlist.gameConfig("ffa")).trusted).toBeUndefined();
       randomSpy.mockReturnValue(0.9);
-      for (let i = 0; i < 2; i++) await playlist.gameConfig("team");
+      for (let i = 0; i < 4; i++) await playlist.gameConfig("team");
       expect((await playlist.gameConfig("special")).trusted).toBe(true);
     } finally {
       randomSpy.mockRestore();
