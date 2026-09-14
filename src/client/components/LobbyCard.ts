@@ -3,6 +3,7 @@ import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo } from "../../core/Schemas";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
+import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { getMapName, getModifierLabels, translateText } from "../Utils";
 import "./ConfirmDialog";
@@ -38,18 +39,20 @@ export function canJoinTrustedLobby(
  * Popup shown instead of attempting to join a trusted-only lobby the viewer
  * can't get into (the server would refuse them anyway). Tells them how to
  * become trusted rather than letting the join fail: a signed-out viewer is
- * told to sign in first, since trust only attaches to an account.
+ * told to sign in first, since trust only attaches to an account. CrazyGames
+ * has no purchases, so its variants only suggest playing more games.
  */
 export function trustRequiredDialog(
   signedIn: boolean,
   onClose: () => void,
 ): TemplateResult {
+  const base = signedIn
+    ? "public_lobby.trust_required_body"
+    : "public_lobby.trust_required_body_signed_out";
   return html`<confirm-dialog
     .heading=${translateText("public_lobby.trust_required_title")}
     .message=${translateText(
-      signedIn
-        ? "public_lobby.trust_required_body"
-        : "public_lobby.trust_required_body_signed_out",
+      crazyGamesSDK.isOnCrazyGames() ? `${base}_crazygames` : base,
     )}
     variant="warning"
     .showClose=${true}
