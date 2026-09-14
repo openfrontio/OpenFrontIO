@@ -1350,8 +1350,10 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
       eventBus,
     );
     // Intentionally non-existing keys as keybinds.
-    testSettings.setKeybinds({ buildAtomBomb: "F14" });
-    testSettings.setKeybinds({ buildScrollModifier: "F13" });
+    testSettings.setKeybinds({
+      buildAtomBomb: "F14",
+      buildScrollModifier: "F13",
+    });
     inputHandler.initialize();
   });
 
