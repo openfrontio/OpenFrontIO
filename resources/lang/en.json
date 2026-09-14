@@ -568,6 +568,26 @@
     "title": "Support a Creator",
     "unsupport": "Unsupport"
   },
+  "desktop_gate": {
+    "back_to_game": "Back to Game",
+    "browser_fallback": "Couldn't open your browser automatically — use the link above.",
+    "cancel": "Cancel",
+    "code_destination_generic": "Enter this code on the OpenFront website to link your account:",
+    "code_destination_site": "Enter this code at {site} to link your account:",
+    "continue_to_game": "Continue to Game",
+    "expired": "This code has expired. Start over to get a new one.",
+    "heading": "Welcome to OpenFront",
+    "link_existing": "Link Existing Account",
+    "linking_failed_reason": "Linking failed: {reason}",
+    "linking_failed_unknown": "Linking failed for an unknown reason.",
+    "new_player": "New Player",
+    "not_found": "This code is no longer valid. Start over to get a new one.",
+    "prompt": "Is this your first time playing, or do you already have an account?",
+    "retry": "Retry",
+    "starting_link": "Starting account linking…",
+    "ticket_unavailable": "Couldn't start account linking right now. You can try again, or continue to the game.",
+    "title": "OpenFront - Account Setup"
+  },
   "desktop_presence": {
     "in_game": "In game",
     "spectating": "Spectating"
