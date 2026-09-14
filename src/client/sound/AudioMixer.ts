@@ -97,6 +97,13 @@ interface ActiveSound {
   howl: Howl;
   id: number;
   category: CueCategory;
+  /**
+   * What finishing means for this playback. Held here as well as in the
+   * Howler listeners so that a cue which can never finish on its own -- a
+   * file that would not load -- can still be settled by whoever gives up on
+   * it, without that code needing to know what any given cue was for.
+   */
+  done: () => void;
 }
 
 /**
@@ -353,8 +360,9 @@ export class AudioMixer {
       if (howl === null) return;
       const id = howl.play();
       howl.volume(this.volumeFor(category), id);
-      this.active.push({ howl, id, category });
-      this.releaseOnce(howl, id, () => this.forget(id));
+      const done = () => this.forget(id);
+      this.active.push({ howl, id, category, done });
+      this.releaseOnce(howl, id, done);
     });
   }
 
@@ -379,11 +387,12 @@ export class AudioMixer {
       }
       const id = howl.play();
       howl.volume(this.volumeFor(category), id);
-      this.active.push({ howl, id, category });
-      this.releaseOnce(howl, id, () => {
+      const done = () => {
         this.forget(id);
         resolve();
-      });
+      };
+      this.active.push({ howl, id, category, done });
+      this.releaseOnce(howl, id, done);
     });
   }
 
@@ -467,8 +476,24 @@ export class AudioMixer {
    * each time.
    */
   private discard(name: SoundEffect, howl: Howl): void {
+    const stranded = this.active.filter((sound) => sound.howl === howl);
     this.active = this.active.filter((sound) => sound.howl !== howl);
     if (this.cache.get(name) === howl) this.cache.delete(name);
+    // Settle whatever was waiting on a cue that is now never going to play.
+    // Nothing in Howler will do it: a play() queued behind a failed load
+    // leaves its Sound with _paused still true, and unload() only stops
+    // sounds that are NOT paused -- so it emits no "stop", "end" never comes,
+    // and "playerror" needs a play that actually ran. All three of
+    // releaseOnce's listeners stay silent for good.
+    //
+    // Each entry carries its own completion callback, so this does not need
+    // to know what any of them are for: previewCue's promise resolves here,
+    // and play()'s callback is a no-op because the bookkeeping above has
+    // already happened. Before the unload below, so no resolver can be caught
+    // by anything that does.
+    for (const sound of stranded) {
+      this.safely(`settle discarded cue ${name}`, () => sound.done());
+    }
     // Bookkeeping first, then unload. A Howl adds itself to Howler._howls on
     // construction and is only ever spliced back out by unload(), so without
     // this the discarded one would sit in that global registry for the life
@@ -477,11 +502,11 @@ export class AudioMixer {
     // iterates the registry. Retrying the fetch means one more per failed
     // attempt rather than one per cue, so it compounds.
     //
-    // Safe to call from inside the loaderror handler: unload() stops the
-    // sounds, and those "stop" events dispatch on a timeout, so the release
-    // handlers run after this returns and find nothing left to forget. It
-    // emits no loaderror of its own, and the listener that brought us here
-    // was registered with once() and is already gone.
+    // Safe to call from inside the loaderror handler: it emits no loaderror
+    // of its own, and the listener that brought us here was registered with
+    // once() and is already gone, so it cannot re-enter. Any "stop" it does
+    // emit dispatches on a timeout and lands after this returns, finding
+    // nothing left to forget.
     this.safely(`unload sound ${name}`, () => howl.unload());
   }
 

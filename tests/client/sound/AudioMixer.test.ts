@@ -305,6 +305,26 @@ describe("failed cues", () => {
     expect(Math.max(...howl.volumes)).toBeLessThanOrEqual(ceiling);
   });
 
+  it("settles a preview whose file will not load", async () => {
+    // previewCue resolves through releaseOnce, whose three listeners are all
+    // id-bound and none of which can ever fire for a cue that never played.
+    // The promise gates a preview button's disabled state, so left unsettled
+    // the first UI to wire this up gets a button stuck disabled for good.
+    build({ effects: 1 });
+    const pending = mixer.previewCue("effects");
+    const howl = builtCity()[0];
+
+    howl._fire("loaderror", -1);
+
+    // Raced against a real timeout rather than awaited bare: getting this
+    // wrong should fail the test, not hang the suite.
+    const outcome = await Promise.race([
+      pending.then(() => "settled"),
+      new Promise((r) => setTimeout(() => r("hung"), 50)),
+    ]);
+    expect(outcome).toBe("settled");
+  });
+
   it("unloads a discarded cue instead of stranding it in Howler", () => {
     // A Howl adds itself to Howler._howls when constructed and is only ever
     // removed by unload(). Dropping it from our cache alone would leave it
