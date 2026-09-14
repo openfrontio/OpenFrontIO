@@ -161,6 +161,12 @@ Translators are welcome! We use Crowdin for translations. To help translate Open
 4. Select the language you want to translate. If your language isn't listed, click "Request New Language".
 5. Translate the strings.
 
+Each language carries a flag, set by the `svg` string in the `lang` section and
+matched to a file in `resources/flags/`. Where a language isn't tied to a single
+country, use a script or community icon rather than a national flag — for example
+`zh-hant` (the glyph 繁) for Traditional Chinese, alongside `catalonia`, `eo` and
+`toki_pona`.
+
 Feel free to ask questions in the translation Discord server!
 
 ## License
