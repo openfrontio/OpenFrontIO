@@ -26,6 +26,7 @@ import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { GameStartingModal } from "./GameStartingModal";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
@@ -216,6 +217,9 @@ export class SinglePlayerModal extends BaseModal {
   // Identifies the current start attempt. Bumped on every start and on every
   // close, so an attempt that outlives its modal can tell it has been retired.
   private startAttempt: number = 0;
+  // Which attempt the starting overlay is up for, so a retired attempt's
+  // cleanup cannot hide the overlay a newer attempt has shown.
+  private overlayAttempt: number = 0;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -1050,6 +1054,17 @@ export class SinglePlayerModal extends BaseModal {
     // reads as loading rather than as a dead click.
     this.starting = true;
     const attempt = ++this.startAttempt;
+    // The full-screen starting overlay, up from the click rather than at
+    // prestart: it also covers Main's own awaits after the dispatch. On
+    // success GameRenderer hides it (a canPlay() refusal hides it in
+    // handleJoinLobby); an attempt retired before dispatching never reaches
+    // either, so the finally below releases it.
+    const startingModal = document.querySelector("game-starting-modal");
+    const overlay =
+      startingModal instanceof GameStartingModal ? startingModal : null;
+    this.overlayAttempt = attempt;
+    overlay?.show();
+    let dispatched = false;
     try {
       console.log(
         `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
@@ -1169,12 +1184,19 @@ export class SinglePlayerModal extends BaseModal {
           composed: true,
         }),
       );
+      dispatched = true;
       this.close();
     } finally {
       // Only if this attempt is still the live one: a retired attempt
       // settling later must not clear the busy state of the one that
       // replaced it.
       if (attempt === this.startAttempt) this.starting = false;
+      // An attempt that never dispatched join-lobby handed the overlay to no
+      // one, so no downstream hide point will fire for it. Release it here —
+      // unless a newer attempt has since shown it again and owns it now.
+      if (!dispatched && this.overlayAttempt === attempt) {
+        overlay?.hide();
+      }
     }
   }
 

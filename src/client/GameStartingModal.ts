@@ -39,6 +39,9 @@ export class GameStartingModal extends LitElement {
         <p class="text-base text-white/40 mb-4">
           ${translateText("game_starting_modal.code_license")}
         </p>
+        <div
+          class="w-10 h-10 mx-auto mb-4 border-4 border-white/20 border-t-white rounded-full animate-spin"
+        ></div>
         <p
           class="text-xl font-medium tracking-wider text-white bg-white/5 border border-white/10 px-4 py-3 rounded-xl"
         >

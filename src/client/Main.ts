@@ -1225,6 +1225,12 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     if (this.usernameInput && !this.usernameInput.canPlay()) {
+      // The singleplayer modal shows the starting overlay before dispatching
+      // join-lobby; a refused join must release it or it stays over the menu.
+      const startingModal = document.querySelector("game-starting-modal");
+      if (startingModal instanceof GameStartingModal) {
+        startingModal.hide();
+      }
       return;
     }
     if (this.blockedDesktopJoin(lobby)) {
