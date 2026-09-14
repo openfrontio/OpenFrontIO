@@ -206,7 +206,6 @@ export function createRenderer(
   if (gameSettingsModal === null) {
     console.warn("In-game settings modal (#game-settings) not found");
   } else {
-    gameSettingsModal.eventBus = eventBus;
     gameSettingsModal.uiState = uiState;
     gameSettingsModal.mapLayers = game.layers();
     gameSettingsModal.onLayerVisibilityChange = (layerId, visible) => {

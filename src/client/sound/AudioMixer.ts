@@ -4,7 +4,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../../core/game/UserSettings";
-import { setCuePlayer } from "./CuePlayer";
+import { setAudioControls, setCuePlayer } from "./CuePlayer";
 import {
   AmbienceTrack,
   categoryOf,
@@ -526,6 +526,7 @@ export function initAudioMixer(userSettings: UserSettings): AudioMixer {
   instance?.dispose();
   instance = new AudioMixer(userSettings);
   setCuePlayer((name) => instance?.play(name));
+  setAudioControls(instance);
   return instance;
 }
 
@@ -539,6 +540,7 @@ export function resetAudioMixerForTest(): void {
   instance?.dispose();
   instance = null;
   setCuePlayer(null);
+  setAudioControls(null);
 }
 
 export type { AmbienceTrack, CueCategory };
