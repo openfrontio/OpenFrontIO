@@ -420,7 +420,15 @@ export class AudioMixer {
     const src = soundEffectUrls.get(name);
     if (!src) return null;
     try {
-      const howl = new Howl({ src: [src] });
+      // Silent until play() sets the channel level on the id it is starting.
+      // Howler defaults to 1, and on a cue's FIRST play that is audible, not
+      // merely untidy: both play() and the volume write queue behind the
+      // load, and Howler runs the queued volume from inside a setTimeout
+      // after the sound has already started. So the attack of every cue's
+      // first play went out at full channel scale regardless of where the
+      // player had the slider. Starting from zero turns that into a couple of
+      // silent milliseconds instead, which is the better way to be wrong.
+      const howl = new Howl({ src: [src], volume: 0 });
       this.cache.set(name, howl);
       // Bound without an id on purpose. Howler emits loaderror with a null id
       // for everything except a media-element error -- no codec, a failed

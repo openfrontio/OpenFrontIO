@@ -50,6 +50,9 @@ vi.mock("howler", () => {
     constructor(opts: any) {
       this.src = opts.src[0];
       this.html5 = opts.html5 ?? false;
+      // Howler's own default when the option is omitted. Recorded like any
+      // other level, because it is one: the group starts here.
+      this.volumes.push(opts.volume ?? 1);
       howlInstances.push(this);
     }
   }
@@ -286,6 +289,20 @@ describe("failed cues", () => {
     // ...and the dead Howl left the cache, so this is a fresh one rather than
     // the same corpse handing out entries nothing can ever release.
     expect(builtCity().length).toBe(2);
+  });
+
+  it("never puts a cue above its channel level", () => {
+    // Howler defaults a Howl to full scale, and on a cue's first play the
+    // queued volume write lands a macrotask after the sound has started -- so
+    // the attack went out at full channel scale wherever the slider was. The
+    // gap itself is Howler queue behaviour this double does not model; what
+    // is checked here is the invariant it broke.
+    build({ effects: 0.5 });
+    mixer.play("build-city");
+    const howl = builtCity()[0];
+
+    const ceiling = perceptualGain(0.5);
+    expect(Math.max(...howl.volumes)).toBeLessThanOrEqual(ceiling);
   });
 
   it("unloads a discarded cue instead of stranding it in Howler", () => {
