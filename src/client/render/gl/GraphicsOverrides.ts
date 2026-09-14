@@ -11,6 +11,9 @@ export const GraphicsOverridesSchema = z
   .object({
     // Which theme palette to render with (player colors, terrain tints, …).
     palette: z.enum(PALETTE_NAMES),
+    // Color tribes from the theme's classic (pre-v34) bot pool instead of
+    // the flat Bot team color.
+    classicBotColors: z.boolean(),
     name: z
       .object({
         nameScaleFactor: z.number(),

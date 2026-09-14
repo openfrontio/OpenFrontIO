@@ -471,6 +471,19 @@ export class GraphicsAdvancedSettings extends LitElement {
     this.patchMapOverlay({ navalHighlight: !this.currentNavalHighlight() });
   }
 
+  private currentClassicBotColors(): boolean {
+    return this.userSettings.graphicsOverrides().classicBotColors ?? false;
+  }
+
+  private onToggleClassicBotColors() {
+    const current = this.userSettings.graphicsOverrides();
+    this.writeOverrides({
+      ...current,
+      classicBotColors: !this.currentClassicBotColors(),
+    });
+    this.requestUpdate();
+  }
+
   private currentHighlightFill(): number {
     return (
       this.userSettings.graphicsOverrides().mapOverlay?.highlightFillBrighten ??
@@ -1009,6 +1022,14 @@ export class GraphicsAdvancedSettings extends LitElement {
         id="naval-highlight-toggle"
         .checked=${this.currentNavalHighlight()}
         @change=${this.onToggleNavalHighlight}
+      ></setting-toggle>
+
+      <setting-toggle
+        label=${translateText("graphics_setting.classic_bot_colors_label")}
+        description=${translateText("graphics_setting.classic_bot_colors_desc")}
+        id="classic-bot-colors-toggle"
+        .checked=${this.currentClassicBotColors()}
+        @change=${this.onToggleClassicBotColors}
       ></setting-toggle>
 
       <setting-slider
