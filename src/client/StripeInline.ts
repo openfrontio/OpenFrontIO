@@ -9,6 +9,8 @@ import type {
 // on the critical path of every page load. /pure defers it to the first
 // loadStripe() call, i.e. to the first time a priced store tile renders.
 import { loadStripe } from "@stripe/stripe-js/pure";
+import { GameEnv } from "../core/configuration/Config";
+import { ClientEnv } from "./ClientEnv";
 import {
   createInlinePaymentIntent,
   paymentsProvider,
@@ -28,12 +30,31 @@ export function stripePublishableKey(): string | null {
 }
 
 /**
+ * Whether `key`'s mode (live vs test) matches the mode the environment's
+ * API mints intents in. One image can serve several environments — a
+ * release build serves both the alpha ring (test-mode API) and prod (live)
+ * — but the bundle bakes exactly one key, and a mode mismatch shows wallet
+ * buttons whose confirms always fail AFTER the player has authorized the
+ * wallet sheet. Mismatches must instead disable the inline flow, which
+ * falls back to redirect checkout — that rail needs no client-side key.
+ */
+export function stripeKeyMatchesEnv(key: string, env: GameEnv): boolean {
+  return key.startsWith("pk_live_") === (env === GameEnv.Prod);
+}
+
+/**
  * Whether the inline Stripe flow (wallet button on the tile, in-page card
  * form) can run at all: web rail only — the desktop shell buys on Steam and
- * must never reach Stripe — and only in a build that carries a key.
+ * must never reach Stripe — and only in a build whose key matches the
+ * environment's Stripe mode.
  */
 export function stripeInlineAvailable(): boolean {
-  return paymentsProvider() === "stripe" && stripePublishableKey() !== null;
+  const key = stripePublishableKey();
+  return (
+    paymentsProvider() === "stripe" &&
+    key !== null &&
+    stripeKeyMatchesEnv(key, ClientEnv.env())
+  );
 }
 
 // One Stripe.js instance per page. A failed load resets the slot so a later
@@ -126,6 +147,14 @@ export class InlineCheckoutSession {
       mode: "payment",
       amount: amountCents,
       currency: "usd",
+      // Must mirror the payment_method_types the API mints intents with.
+      // Deferred-mode Elements otherwise offers every dashboard-enabled
+      // method (Amazon Pay, Klarna, ...), and confirming one of those
+      // against an intent that only allows card/link fails with "The
+      // PaymentMethod provided is not allowed for this PaymentIntent" —
+      // after the player already picked it and hit pay. Wallets ride on
+      // "card", so the express button is unaffected.
+      paymentMethodTypes: ["card", "link"],
       appearance: { theme: "night" },
     });
     return new InlineCheckoutSession(stripe, elements, request, amountCents);
