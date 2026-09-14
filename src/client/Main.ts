@@ -115,6 +115,14 @@ import {
   SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
+import {
+  requestTurnstileToken,
+  resolveTurnstileToken,
+  TURNSTILE_LOAD_FAILED_CODE,
+  TurnstileError,
+  type TurnstileApi,
+  type TurnstileToken,
+} from "./TurnstileToken";
 import "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -155,7 +163,7 @@ import "./styles/modal/chat.css";
 
 declare global {
   interface Window {
-    turnstile: any;
+    turnstile?: TurnstileApi;
     adsEnabled: boolean;
     gtag?: (...args: any[]) => void;
     PageOS: {
@@ -295,10 +303,7 @@ class Client {
   // GroupTokenTracker for why a repeat must not re-emit.
   private readonly presenceGroup = new GroupTokenTracker();
 
-  private turnstileTokenPromise: Promise<{
-    token: string;
-    createdAt: number;
-  }> | null = null;
+  private turnstileTokenPromise: Promise<TurnstileToken> | null = null;
 
   async initialize(): Promise<void> {
     // FIRST, ahead of consumeCreatorCodePath() and of handleUrl() below --
@@ -421,12 +426,18 @@ class Client {
     // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
     // script" after its load wait. Also skip on the versioned replay shells:
     // the replay host may not be on the Turnstile site key's domain allowlist,
-    // so rendering the widget there alerts and rejects — and replays never
+    // so rendering the widget there just fails — and replays never
     // send a token anyway (see getTurnstileToken below).
-    this.turnstileTokenPromise =
+    const turnstilePrefetch =
       isDesktopShell() || isReplayShellHost(window.location.hostname)
         ? null
         : getTurnstileToken();
+    // A prefetch that fails is not an error anyone has asked about yet: the
+    // join path drops it and fetches once more (see getTurnstileToken below),
+    // and only that attempt alerts. Mark it handled here so a boot-time
+    // rejection nobody is awaiting yet does not surface as an unhandled one.
+    turnstilePrefetch?.catch(() => {});
+    this.turnstileTokenPromise = turnstilePrefetch;
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -1756,29 +1767,21 @@ class Client {
       return null;
     }
 
-    // Always request a new token on crazygames.
-    if (this.turnstileTokenPromise === null || crazyGamesSDK.isOnCrazyGames()) {
-      console.log("No prefetched turnstile token, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
-
-    const token = await this.turnstileTokenPromise;
-    // Clear promise so a new token is fetched next time
+    const prefetch = this.turnstileTokenPromise;
+    // Clear promise so a new token is fetched next time. Unconditional: a
+    // prefetch that rejected must not be waited on twice either.
     this.turnstileTokenPromise = null;
-    if (!token) {
-      console.log("No turnstile token");
-      return null;
-    }
 
-    const tokenTTL = 3 * 60 * 1000;
-    if (Date.now() < token.createdAt + tokenTTL) {
-      console.log("Prefetched turnstile token is valid");
-
-      return token.token;
-    } else {
-      console.log("Turnstile token expired, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
+    return resolveTurnstileToken({
+      prefetch,
+      requestFresh: getTurnstileToken,
+      // Always request a new token on crazygames.
+      forceFresh: crazyGamesSDK.isOnCrazyGames(),
+      onError: (code) =>
+        void showInGameAlert(
+          translateText("error_modal.turnstile_error", { code }),
+        ),
+    });
   }
 }
 
@@ -1828,43 +1831,26 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
-async function getTurnstileToken(): Promise<{
-  token: string;
-  createdAt: number;
-}> {
+async function getTurnstileToken(): Promise<TurnstileToken> {
   // Wait for Turnstile script to load (handles slow connections)
   let attempts = 0;
-  while (typeof window.turnstile === "undefined" && attempts < 100) {
+  while (window.turnstile === undefined && attempts < 100) {
     await new Promise((resolve) => setTimeout(resolve, 100));
     attempts++;
   }
 
-  if (typeof window.turnstile === "undefined") {
-    throw new Error("Failed to load Turnstile script");
+  const turnstile = window.turnstile;
+  if (turnstile === undefined) {
+    throw new TurnstileError(
+      TURNSTILE_LOAD_FAILED_CODE,
+      "Failed to load Turnstile script",
+    );
   }
 
-  const widgetId = window.turnstile.render("#turnstile-container", {
+  // The render/execute choreography (and why the callbacks go on render)
+  // lives in TurnstileToken.ts.
+  return requestTurnstileToken(turnstile, {
     sitekey: ClientEnv.turnstileSiteKey(),
-    size: "normal",
-    appearance: "interaction-only",
-    theme: "light",
-  });
-
-  return new Promise((resolve, reject) => {
-    window.turnstile.execute(widgetId, {
-      callback: (token: string) => {
-        window.turnstile.remove(widgetId);
-        console.log(`Turnstile token received: ${token}`);
-        resolve({ token, createdAt: Date.now() });
-      },
-      "error-callback": (errorCode: string) => {
-        window.turnstile.remove(widgetId);
-        console.error(`Turnstile error: ${errorCode}`);
-        void showInGameAlert(
-          translateText("error_modal.turnstile_error", { code: errorCode }),
-        );
-        reject(new Error(`Turnstile failed: ${errorCode}`));
-      },
-    });
+    container: "#turnstile-container",
   });
 }
