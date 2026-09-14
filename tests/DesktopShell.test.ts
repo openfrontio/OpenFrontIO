@@ -229,6 +229,11 @@ describe("desktopSteamLocale", () => {
       "",
       42,
       {},
+      // Well-shaped but not a real tag: "12" is neither a region nor a
+      // variant. Caught by getCanonicalLocales, not the shape check -- and
+      // worth a case of its own, because getClosestSupportedLang would narrow
+      // it to "en" and let it beat a valid navigator.language.
+      "en-12",
     ]) {
       window.openfrontDesktop = { steamLocale: locale };
       expect(desktopSteamLocale(), String(locale)).toBeNull();

@@ -43,7 +43,26 @@ export function desktopSteamLocale(): string | null {
   const desktop = window.openfrontDesktop as LocaleBridge | undefined;
   const locale = desktop?.steamLocale;
   if (typeof locale !== "string") return null;
-  return /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(locale) ? locale : null;
+  // Shape first, then BCP-47 proper. The regex alone accepts tags that are
+  // well-shaped but not real -- "en-12", whose second subtag is neither a
+  // region (two alpha, or three digits) nor a variant (5-8 alphanumerics, or
+  // four starting with a digit). getClosestSupportedLang would then narrow it
+  // to "en" on its first two characters, so a malformed value from the shell
+  // would silently beat a perfectly good navigator.language.
+  //
+  // getCanonicalLocales throws on anything structurally invalid, which is the
+  // real check; the regex stays in front of it because it is what rejects the
+  // path- and identifier-shaped inputs explicitly, rather than incidentally.
+  if (!/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(locale)) return null;
+  try {
+    Intl.getCanonicalLocales(locale);
+  } catch {
+    return null;
+  }
+  // The ORIGINAL, not the canonicalised form: this value is matched against
+  // the codes in metadata.json, and canonicalisation is free to rewrite case
+  // and aliases in ways that list does not follow.
+  return locale;
 }
 
 // The version label is purely cosmetic and must never block client
