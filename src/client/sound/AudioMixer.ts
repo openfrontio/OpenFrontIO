@@ -461,6 +461,20 @@ export class AudioMixer {
   private discard(name: SoundEffect, howl: Howl): void {
     this.active = this.active.filter((sound) => sound.howl !== howl);
     if (this.cache.get(name) === howl) this.cache.delete(name);
+    // Bookkeeping first, then unload. A Howl adds itself to Howler._howls on
+    // construction and is only ever spliced back out by unload(), so without
+    // this the discarded one would sit in that global registry for the life
+    // of the page -- unreachable, since it has just left the cache that
+    // dispose() walks, and adding work to every Howler.volume() call, which
+    // iterates the registry. Retrying the fetch means one more per failed
+    // attempt rather than one per cue, so it compounds.
+    //
+    // Safe to call from inside the loaderror handler: unload() stops the
+    // sounds, and those "stop" events dispatch on a timeout, so the release
+    // handlers run after this returns and find nothing left to forget. It
+    // emits no loaderror of its own, and the listener that brought us here
+    // was registered with once() and is already gone.
+    this.safely(`unload sound ${name}`, () => howl.unload());
   }
 
   private safely(action: string, fn: () => void): void {

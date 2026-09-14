@@ -287,6 +287,20 @@ describe("failed cues", () => {
     // the same corpse handing out entries nothing can ever release.
     expect(builtCity().length).toBe(2);
   });
+
+  it("unloads a discarded cue instead of stranding it in Howler", () => {
+    // A Howl adds itself to Howler._howls when constructed and is only ever
+    // removed by unload(). Dropping it from our cache alone would leave it
+    // there for the life of the page, unreachable and slowing every
+    // Howler.volume() call, once per failed attempt.
+    build({ effects: 1 });
+    mixer.play("build-city");
+    const howl = builtCity()[0];
+
+    howl._fire("loaderror", -1);
+
+    expect(howl.unload).toHaveBeenCalled();
+  });
 });
 
 describe("registered loops", () => {
