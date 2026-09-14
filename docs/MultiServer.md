@@ -435,6 +435,13 @@ values.
   the page while that server still takes this build's games — a flip from
   `open` to `draining` does not move it. `ClientEnv.serverWsBase()` /
   `serverHttpBase()` / `numWorkers()` answer from it.
+- **A server-rendered page prefers its own server** (`ownLetterIn` +
+  `servesBuild`, ahead of the draw and of stickiness): when the list carries
+  the page's own server — matched on the injected `serverHost`, else on the
+  page's own letter — and that entry is `open` or `draining` on this build,
+  that letter is the pick. Only when the list carries no such entry, or it
+  does not serve this build, does the random pick decide. A Worker-served
+  page names no server and is unaffected.
 - **Existing game** (link, rejoin, matchmade id): the id's letter names
   the server in the list, whatever its state. `ClientEnv.resolveGame()`
   answers from the list; an unknown letter means the game doesn't exist
@@ -546,13 +553,22 @@ necessary:
 
 #### Per topology
 
-| Topology                                                                                       | Own-server calls                                           | Create refused | Prompt at page load                                 | Prompt once the socket gives up                               |
-| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | -------------- | --------------------------------------------------- | ------------------------------------------------------------- |
-| **Prod behind an apex** — page `openfront.io`, server `blue.openfront.io`, two-entry map       | the list's pick for this build, else the page's own server | never          | never from the list; the feed's commit / drain flag | yes, when nothing serves this build and `latest` is newer     |
-| **Standalone** — dev `main.openfront.dev`, previews, beta; one-entry map, `GAME_DOMAIN` or not | same                                                       | never          | same                                                | never: a reload re-serves this same page from the same server |
-| **Worker-served page** (roadmap item 2)                                                        | the list's pick, else the document's origin                | on `outdated`  | on `outdated`                                       | on `outdated` — its three conditions hold by construction     |
-| **Desktop shell** — `app://openfront`, injects its own `serverHost`                            | same                                                       | never          | never: its updater owns which version it runs       | never                                                         |
-| **Replay shell**, and any `/v/<commit>/` pinned page                                           | same                                                       | never          | never: pinned to that build on purpose              | never                                                         |
+| Topology                                                                                       | Own-server calls                                                      | Create refused | Prompt at page load                                 | Prompt once the socket gives up                               |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | -------------- | --------------------------------------------------- | ------------------------------------------------------------- |
+| **Prod behind an apex** — page `openfront.io`, server `blue.openfront.io`, two-entry map       | the page's own server when it serves this build, else the list's pick | never          | never from the list; the feed's commit / drain flag | yes, when nothing serves this build and `latest` is newer     |
+| **Standalone** — dev `main.openfront.dev`, previews, beta; one-entry map, `GAME_DOMAIN` or not | same                                                                  | never          | same                                                | never: a reload re-serves this same page from the same server |
+| **Worker-served page** (roadmap item 2)                                                        | the list's pick, else the document's origin                           | on `outdated`  | on `outdated`                                       | on `outdated` — its three conditions hold by construction     |
+| **Desktop shell** — `app://openfront`, injects its own `serverHost`                            | same                                                                  | never          | never: its updater owns which version it runs       | never                                                         |
+| **Replay shell**, and any `/v/<commit>/` pinned page                                           | same                                                                  | never          | never: pinned to that build on purpose              | never                                                         |
+
+A server-rendered page prefers its own server because the page and the
+registry can disagree about a sibling while the page's own server is, by
+construction, right about itself: on dev (`openfront.dev`, a blue/green pair
+behind the apex with `CLUSTER_STATE_SOURCE=apex`) the registry listed both
+colours `open` on the same build while the apex poll had green considering
+itself draining, so a page rendered by blue that drew green got a lobby feed
+reporting `active: false`, read it as "a new version is available", and
+reloaded — on about half of page loads.
 
 Nothing in the table navigates the page by itself: the prompt is the existing
 one-shot `onUpdateAvailable` → `GameModeSelector.handleUpdateAvailable` →

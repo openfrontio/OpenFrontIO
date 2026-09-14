@@ -149,6 +149,44 @@ export function pickServerForBuild(
 }
 
 /**
+ * The letter under which `list` carries the page's OWN server, or null when
+ * it carries none.
+ *
+ * A page a game server rendered names that server twice over — the injected
+ * `serverHost`, and the page's own letter in the cluster map it was built
+ * with — and the client prefers it over a random pick whenever it still
+ * serves this build (src/client/ServerList.apply). This is the lookup half
+ * of that rule, kept here because it is pure and has to be tested on its own.
+ *
+ * The host decides whenever there is one: it is what the page actually
+ * talks to, and letters come from the cluster map baked into the page,
+ * which the registry can have moved on from. So a host that names no entry
+ * answers null rather than falling through to the letter — the letter
+ * matching a DIFFERENT host would name a server this page was never served
+ * by. Only a page carrying no host at all (a web shell with the map and its
+ * own letter and nothing else) is matched by letter.
+ *
+ * Host comparison is case-insensitive: hostnames are, and the two spellings
+ * reach this from different places (a server's injected value and the
+ * registry's).
+ */
+export function ownLetterIn(
+  list: ServerList,
+  ownHost: string | undefined,
+  ownLetter: string | undefined,
+): string | null {
+  if (ownHost !== undefined && ownHost !== "") {
+    const want = ownHost.toLowerCase();
+    for (const [letter, entry] of Object.entries(list.servers)) {
+      if (entry.host.toLowerCase() === want) return letter;
+    }
+    return null;
+  }
+  if (ownLetter === undefined) return null;
+  return list.servers[ownLetter] === undefined ? null : ownLetter;
+}
+
+/**
  * Split a `/v/<commit>/…` pathname into the commit and the path under it.
  * The site serves every version's page at that prefix, so a page has to
  * read its own routes through it, and a redirect between versions has to

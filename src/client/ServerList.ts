@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { GameID } from "../core/Schemas";
 import {
+  ownLetterIn,
   pickServerForBuild,
   ServerList,
   ServerListSchema,
@@ -268,7 +269,10 @@ function scheduleNextPoll(gotList: boolean): void {
  * before a deploy keeps playing on their own build's server until they
  * refresh, which is how rollovers feel today. It is sticky for the page's
  * lifetime while that server still takes this build's games, so the lobby
- * list and the games created from it land together.
+ * list and the games created from it land together. Ahead of the draw comes
+ * the page's own server: a page a game server rendered stays on the server
+ * that rendered it whenever the list carries it serving this build (see
+ * ownServerLetter).
  *
  * Nothing here ever navigates the page. When no server takes this build's
  * games but `latest` names a newer one, the answer is "outdated" and the
@@ -327,10 +331,15 @@ function apply(): ServerListStatus {
   }
 
   const own = safeOwnCommit();
-  // Sticky while the picked server still takes this build's games — a flip
-  // from open to draining does not move the page, only fencing (or the
-  // letter going away) does.
-  if (pickedLetter === null || !servesBuild(list, pickedLetter, own)) {
+  const ownServer = ownServerLetter(list, own);
+  if (ownServer !== null) {
+    // A server-rendered page prefers its own server (OPE-430). See
+    // ownServerLetter.
+    pickedLetter = ownServer;
+  } else if (pickedLetter === null || !servesBuild(list, pickedLetter, own)) {
+    // Sticky while the picked server still takes this build's games — a flip
+    // from open to draining does not move the page, only fencing (or the
+    // letter going away) does.
     pickedLetter = pickServerForBuild(list, own, randomIndex);
   }
   if (pickedLetter !== null) {
@@ -365,6 +374,47 @@ function apply(): ServerListStatus {
   // get a say again, through reloadWouldRescue below.
   if (servedByGameServer()) return "fallback";
   return behindLatest(list, own) ? "outdated" : "no-server";
+}
+
+/**
+ * The letter of the page's OWN server when the list carries it and it still
+ * serves this build — the letter apply() picks ahead of any draw.
+ *
+ * **A server-rendered page prefers its own server.** Before v2 a page always
+ * talked to the colour that rendered it; the list's random pick can send it
+ * to a sibling instead, and the two do not have to agree about that sibling.
+ * On dev (`openfront.dev`, a blue/green pair behind the apex with
+ * `CLUSTER_STATE_SOURCE=apex`) the registry listed both colours `open` on the
+ * same build while the apex poll had green considering itself draining: a
+ * page rendered by blue that drew green got a lobby feed reporting
+ * `active: false`, read it as "a new version is available", and reloaded —
+ * on about half of page loads. Prod would do the same across the v34
+ * rollover. The page's own server is the one host it knows is running this
+ * build, because it served this page, so it is the pick that cannot
+ * disagree with itself.
+ *
+ * Null on a page that names no server (the static Worker's — there is no own
+ * server to prefer), when the list does not carry that server, or when the
+ * entry it carries does not serve this build (fenced, or another version).
+ * Those fall through to the ordinary sticky random pick, and the fenced and
+ * lagging-registry cases through it to "fallback", exactly as before.
+ *
+ * The desktop shell carries an injected `serverHost` too, but its value is a
+ * SITE (openfront.io, main.openfront.dev) rather than a deployment the
+ * registry lists, so it names no entry and the list's pick stands — except
+ * on a standalone deployment whose one server IS that host, where the two
+ * answers are the same server anyway.
+ *
+ * Not sticky, and it does not need to be: it answers the same letter on
+ * every refresh for as long as the list keeps naming the page's own server,
+ * and the letter it names cannot move to another host — letters are
+ * append-only and never reused.
+ */
+function ownServerLetter(list: ServerList, own: string): string | null {
+  if (!servedByGameServer()) return null;
+  const letter = ownLetterIn(list, safeServerHost(), safeInstanceLetter());
+  if (letter === null) return null;
+  return servesBuild(list, letter, own) ? letter : null;
 }
 
 // The one place the client's randomness lives: src/core carries no
@@ -582,6 +632,25 @@ function safeOwnCommit(): string {
     return ClientEnv.gitCommit();
   } catch {
     return "";
+  }
+}
+
+// The page's own server, as the two shapes that name it spell it. Degrade
+// like the accessors above: an unreadable BOOTSTRAP_CONFIG names no server,
+// and the own-server preference simply does not apply.
+function safeServerHost(): string | undefined {
+  try {
+    return ClientEnv.serverHost();
+  } catch {
+    return undefined;
+  }
+}
+
+function safeInstanceLetter(): string | undefined {
+  try {
+    return ClientEnv.instanceLetter();
+  } catch {
+    return undefined;
   }
 }
 
