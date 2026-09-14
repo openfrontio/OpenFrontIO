@@ -1225,6 +1225,12 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     if (this.usernameInput && !this.usernameInput.canPlay()) {
+      // The singleplayer modal shows the starting overlay before dispatching
+      // join-lobby; a refused join must release it or it stays over the menu.
+      const startingModal = document.querySelector("game-starting-modal");
+      if (startingModal instanceof GameStartingModal) {
+        startingModal.hide();
+      }
       return;
     }
     if (this.blockedDesktopJoin(lobby)) {
@@ -1291,7 +1297,16 @@ class Client {
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID);
     }
-    const auth = await userAuth();
+    // Singleplayer runs entirely locally, and the session is only used here
+    // for the HUD role — the end-of-game archive establishes its own session
+    // via getAuthHeader(). So don't let a token refresh block starting a
+    // local game (offline on Steam it waits out the 5s ticket timeout):
+    // read the cached JWT and refresh in the background instead.
+    const isSingleplayer = lobby.source === "singleplayer";
+    if (isSingleplayer) {
+      void userAuth();
+    }
+    const auth = await userAuth(!isSingleplayer);
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
     // Ensure the one-shot Steam name-seed has settled before reading
     // getUsername(), mirroring how getClanCheck() runs in parallel with the
