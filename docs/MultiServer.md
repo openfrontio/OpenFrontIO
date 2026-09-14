@@ -405,25 +405,112 @@ values.
 
 - **Fetched at page load, then a heartbeat.** `startServerListPolling()`
   runs early in `Client.initialize()`: the first fetch overlaps with the
-  rest of boot, and the list is refreshed every 30s, retried every 10s
-  after a failed attempt. Each fetch is bounded (4s), so offline
-  singleplayer waits seconds at worst and never hangs.
+  rest of boot, and the list is refreshed every 30s on success. Each fetch
+  is bounded (4s), so offline singleplayer waits seconds at worst and never
+  hangs.
+- **Failed attempts back off.** `retryDelayMs(consecutiveFailures)` is the
+  schedule, and it is a pure function so it can be read without a clock: 10s
+  after the first unanswered attempt, doubling on each further consecutive
+  one (20s, 40s), capped at 60s. **Any** answer at all — a 404 included —
+  resets it to the base, so a page that recovers and then misses once is
+  retried in 10s rather than inheriting the old outage's wait. The base is
+  short because the common case is a blip the next request clears; the cap
+  exists because a lid-closed laptop should not fire a request every 10s all
+  night, and by a minute in the player who is still waiting has the Retry
+  button. The success cadence (30s) is untouched by any of this.
 - **A click never waits when a list is known.** `ensureServerList()`
   answers from the cached list whatever its age and revalidates behind the
   answer (stale-while-revalidate); only a page that has never got a list
   waits for a fetch — the one in flight, or one it starts. A page with no
-  list whose last attempt failed under 10s ago starts none: it answers
-  `fallback` and leaves retrying to the heartbeat, so a caller on a timer
-  (the matchmaking poll, every second) cannot hammer a down API.
+  list whose last attempt failed less than the current backoff delay ago
+  starts none: it answers `fallback` and leaves retrying to the heartbeat,
+  so a caller on a timer (the matchmaking poll, every second) cannot hammer
+  a down API.
 - **A failed refresh keeps the last good list.** Network error, timeout,
   non-OK, malformed or empty: the previous list keeps serving. The API
   caches its answer for seconds anyway, so a blip must not flip a working
   page into fallback. Only a client that never got a list falls back.
-- **Reachability:** `backendReachable()` is null until the first attempt
-  settles, true when the API answered at all (a 404 included — reachable,
-  but no list for this site), false on a timeout or network error. Every
-  change is announced on the document as `backend-reachability` with
-  `{ reachable }` for UI to consume.
+- **Reachability (two signals, OPE-439):** `backendReachable()` is the raw
+  per-attempt answer — null until the first attempt settles, true when the
+  API answered at all (a 404 included: reachable, but no list for this
+  site), false on a timeout or network error. It is deliberately twitchy,
+  so nothing player-facing gates on it.
+  `backendUnreachableConfirmed()` is the debounced one the UI uses: true
+  only once **two** attempts in a row have gone unanswered, which takes the
+  base retry delay (10s) to accumulate — the backoff only stretches once
+  there is an outage to back off from, so confirmation is never slowed by
+  it. One missed beat is a blip the cached list serves straight through, and
+  dimming multiplayer for 10s over it would be worse than the blip; any
+  answer resets the count. Every change to either value is announced on the
+  document as `backend-reachability` with `{ reachable, confirmed }`.
+  Consumers seed from the accessor and then subscribe — the event is
+  one-shot, so a component mounting afterwards would otherwise never learn
+  the state (OPE-396).
+- **Busy (a third signal):** `attemptInFlight()` says whether an attempt is
+  out right now, automatic or manual, and every start and settle is
+  announced as `server-list-attempt` with `{ inFlight }`. Separate from
+  `backend-reachability` because that one fires only on a **change**: an
+  attempt that fails exactly like the last one announces nothing, which is
+  precisely the case the Retry button has to see.
+- **Retry:** `retryServerList()` is the player-initiated attempt. It
+  ignores the heartbeat's backoff (a person pressing a button is not a
+  timer, and once an outage has run a while that wait is up to a minute) but
+  has a 1s floor of its own, inside which a second press hands back the same
+  promise; past that, `fetchOnce()` still dedupes against an attempt already
+  in flight. A retry that fails counts towards the outage confirmation like
+  any other attempt.
+
+  The floor is the last line of defence rather than the first. Above it sits
+  one policy, `manualRetryAvailable()`, shared by both shells' affordances
+  and reading one clock: no retry while any server-list attempt is in flight
+  (`attemptInFlight()` / `server-list-attempt`), whoever started it, and
+  none for `MANUAL_RETRY_COOLDOWN_MS` (5s) after the last player-initiated
+  one — a stubbed or fast failure settles in milliseconds and would
+  otherwise hand the affordance straight back to a player clicking at an
+  outage.
+
+  The two affordances:
+  - **Desktop:** the status bar's offline Retry, disabled under either
+    condition above so it comes back whenever the later of them ends. During
+    an automatic attempt it reads `desktop_status.retrying` rather than
+    sitting greyed out for no visible reason.
+  - **Web:** there is no status bar, so the refused click _is_ the retry.
+    `reportMultiplayerRefusal` probes when `manualRetryAvailable()` says it
+    would do something, and raises the `common.backend_unreachable` toast
+    either way — which is what makes that toast's "try again" true. Without
+    it a web player's only way out would be the heartbeat's next beat, up to
+    `RETRY_MAX_MS` away.
+
+- **What reachability may gate, and what it may not.** The rule, stated
+  once at the top of `GameModeSelector.ts` and referenced from every call
+  site: the signal is the health of **one** thing, the server-list API. It
+  is not a general "is the network up" light, and it says nothing about
+  whether any given _game_ server is up. So it gates exactly the actions
+  that cannot begin until that API answers, because nothing has yet told the
+  client which server to talk to.
+  - _Gated (API-dependent):_ Create/host a lobby, Ranked/matchmaking, and
+    the join-by-code modal, in `GameModeSelector`. These dim and refuse a
+    press — `shouldBlockMultiplayerAction` with
+    `backendUnreachableConfirmed()` — on the web as well as on desktop.
+  - _Not gated (socket-sourced):_ every public or hosted lobby card, in the
+    homepage selector and in `DetailedGameViewModal` alike, and every join
+    that reaches `Main`'s funnel. These call
+    `shouldBlockSocketSourcedAction`, the same predicate with the
+    reachability input nailed shut, so a card neither dims nor refuses over
+    a list-API outage; `DetailedGameViewModal` does not subscribe to the
+    signal at all.
+
+  A card is in front of the player because a game server sent it over a
+  socket that is still open, which is the only liveness that join needs.
+  Likewise every join source has already reached a server to produce its
+  event — `private` after `checkActiveLobby` read `exists` from the game's
+  own server, `host` after `createLobby` minted the id, `public` from that
+  live lobby feed, `matchmaking` after the queue matched. Refusing on the
+  list API's health could only ever reject a join that is already under way,
+  and at worst would eject a player whose reload had just proved their game
+  is live. Single-player is never gated either way, and nothing here touches
+  a game already in progress.
+
 - **Which list:** the desktop shell asks for its injected `serverHost`
   (its values are exactly the sites); a web page asks for its `siteHost`
   when rendered behind an apex, else `window.location.host`. Decided with

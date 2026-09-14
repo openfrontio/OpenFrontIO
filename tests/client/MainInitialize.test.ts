@@ -8,9 +8,10 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { capturePagePin } from "../../src/client/PagePin";
 import { SendKickPlayerIntentEvent } from "../../src/client/Transport";
+import { translateText } from "../../src/client/Utils";
 import { EventBus } from "../../src/core/EventBus";
 
 const mocks = vi.hoisted(() => ({
@@ -386,5 +387,224 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
         expect.stringContaining("Your player ID is public-id-1"),
       ),
     );
+  });
+
+  /**
+   * OPE-439. The entry-point components dim their own buttons, but every join
+   * -- matchmaking's, a deep link, the host/join modals -- funnels through
+   * handleJoinLobby without passing one, so the funnel gate is the only thing
+   * that covers them. This is a WEB boot (no openfrontDesktop), which is
+   * precisely what the pre-existing desktop gate could not cover.
+   *
+   * Driven through the real ServerList module: the reachability the funnel
+   * reads has to be the one the heartbeat actually produces.
+   */
+  describe("the join funnel lets joins through while the server-list API is unreachable", () => {
+    let ServerList: typeof import("../../src/client/ServerList");
+    let messages: string[];
+    let onMessage: EventListener;
+
+    /**
+     * Replaces the fetch stub and drives the module to the state named.
+     *
+     * An outage takes TWO unanswered attempts to confirm, and only the
+     * confirmed signal gates -- so reaching the state under test means making
+     * both, which the manual retry does without waiting out the heartbeat's
+     * retry interval.
+     */
+    async function settleReachability(reachable: boolean): Promise<void> {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => {
+          if (!reachable) throw new TypeError("network down");
+          return {
+            ok: false,
+            status: 404,
+            statusText: "Not Found",
+            headers: new Map<string, string>(),
+            json: async () => ({}),
+            text: async () => "",
+            arrayBuffer: async () => new ArrayBuffer(0),
+          };
+        }),
+      );
+      ServerList.resetServerList();
+      await ServerList.ensureServerList();
+      if (!reachable) await ServerList.retryServerList();
+      expect(ServerList.backendUnreachableConfirmed()).toBe(!reachable);
+    }
+
+    beforeAll(async () => {
+      ServerList = await import("../../src/client/ServerList");
+      // The pinned-page test above joins once and leaves the call on the
+      // mock; every join-count claim below counts from zero.
+      mocks.joinLobby.mockClear();
+      // Test 3 above left the username gate closed; every join below has to
+      // get past it to reach the gate under test.
+      const input = document.querySelector("username-input") as unknown as {
+        canPlay: () => boolean;
+      };
+      input.canPlay = () => true;
+      messages = [];
+      onMessage = (e: Event) => {
+        messages.push((e as CustomEvent).detail?.message);
+      };
+      window.addEventListener("show-message", onMessage);
+    });
+
+    afterAll(() => {
+      window.removeEventListener("show-message", onMessage);
+      ServerList.resetServerList();
+    });
+
+    /**
+     * The matchmaking modal's close() is the teardown its Back button uses:
+     * it shuts the queue socket and clears the watchdog. The funnel reaches
+     * for it only when it refuses a matchmade join, so it is also the
+     * sharpest witness that an outage does NOT refuse -- if the funnel had
+     * gated here, a queued player would have been dropped out of the queue.
+     *
+     * Spied rather than driven for real: opening the modal for real would
+     * open a queue WebSocket, and the claim under test is only whether any
+     * join reaches close().
+     */
+    function spyOnMatchmakingModal(): {
+      close: ReturnType<typeof vi.spyOn>;
+      restore: () => void;
+    } {
+      const modal = document.querySelector("matchmaking-modal") as unknown as {
+        isOpen: () => boolean;
+        close: () => void;
+      };
+      expect(modal).not.toBeNull();
+      const isOpen = vi.spyOn(modal, "isOpen").mockReturnValue(true);
+      const close = vi.spyOn(modal, "close").mockImplementation(() => {});
+      return {
+        close,
+        restore: () => {
+          close.mockRestore();
+          isOpen.mockRestore();
+        },
+      };
+    }
+
+    /** The shape handleJoinLobby expects back; neither promise settles. */
+    function stubJoinLobbyReturn(): void {
+      mocks.joinLobby.mockReturnValue({
+        prestart: new Promise(() => {}),
+        join: new Promise(() => {}),
+        stop: vi.fn(),
+      });
+    }
+
+    // OPE-439. A confirmed outage means the SERVER-LIST API has missed two
+    // heartbeats -- it says nothing about the game server this join is
+    // headed for, which the dispatching source has already reached. The
+    // sharpest case is this one: a player mid-game reloads during a
+    // list-API blip, JoinLobbyModal.checkActiveLobby reads `exists` from the
+    // game's own server, and refusing here would close the join modal,
+    // leave the lobby and reset the URL -- ejecting them from a game that
+    // was confirmed live moments earlier.
+    it("joins a private game the source already confirmed, outage and all", async () => {
+      await settleReachability(false);
+      logSpy.mockClear();
+      messages.length = 0;
+      mocks.joinLobby.mockClear();
+      stubJoinLobbyReturn();
+      const matchmaking = spyOnMatchmakingModal();
+
+      try {
+        document.dispatchEvent(
+          new CustomEvent("join-lobby", {
+            detail: { gameID: "AbCd1234", source: "private" },
+            bubbles: true,
+          }),
+        );
+
+        // The far edge of the funnel, not the "joining lobby" log: that log
+        // is written BEFORE handleJoinLobby awaits userAuth, the username
+        // seed and the cosmetics refs, so a regression in that tail would
+        // leave a log assertion passing over a join that never happened.
+        await vi.waitFor(() =>
+          expect(mocks.joinLobby).toHaveBeenCalledTimes(1),
+        );
+        // ...and with the lobby that was dispatched, not some other one.
+        expect(mocks.joinLobby.mock.calls[0][1].gameID).toBe("AbCd1234");
+        // No toast either: the funnel refuses nothing, so it has nothing to
+        // report. The dimmed buttons and the status bar still carry the
+        // outage, and a refused BUTTON press still says why -- that half is
+        // covered in ReachabilityGating.
+        expect(messages).not.toContain(
+          translateText("common.backend_unreachable"),
+        );
+        // And nothing tore down the queue behind a player's back.
+        expect(matchmaking.close).not.toHaveBeenCalled();
+      } finally {
+        matchmaking.restore();
+      }
+    });
+
+    it("does not cancel a live matchmaking queue during an outage", async () => {
+      // The same claim on the source that owns that modal: a matchmade join
+      // arriving during an outage is joined, not refused, so the queue
+      // teardown never runs.
+      await settleReachability(false);
+      messages.length = 0;
+      mocks.joinLobby.mockClear();
+      stubJoinLobbyReturn();
+      const matchmaking = spyOnMatchmakingModal();
+
+      try {
+        document.dispatchEvent(
+          new CustomEvent("join-lobby", {
+            detail: { gameID: "AbCd1234", source: "matchmaking" },
+            bubbles: true,
+          }),
+        );
+
+        await vi.waitFor(() =>
+          expect(mocks.joinLobby).toHaveBeenCalledTimes(1),
+        );
+        expect(matchmaking.close).not.toHaveBeenCalled();
+        expect(messages).not.toContain(
+          translateText("common.backend_unreachable"),
+        );
+      } finally {
+        matchmaking.restore();
+      }
+    });
+
+    it("lets the same join through once the backend answers", async () => {
+      // The control. Without it a join refused for any unrelated reason --
+      // the username gate, a listener that never ran -- would make the cases
+      // above vacuous, since they too assert a join that goes through.
+      await settleReachability(true);
+      logSpy.mockClear();
+      messages.length = 0;
+      mocks.joinLobby.mockClear();
+      stubJoinLobbyReturn();
+
+      document.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: { gameID: "AbCd1234", source: "matchmaking" },
+          bubbles: true,
+        }),
+      );
+
+      // The far edge of the funnel, not the "joining lobby" log: that log is
+      // written BEFORE handleJoinLobby awaits userAuth, the username seed and
+      // the cosmetics refs, so a regression anywhere in that tail would leave
+      // the log assertion passing over a join that never happened. joinLobby
+      // is the call that actually starts one.
+      await vi.waitFor(() => expect(mocks.joinLobby).toHaveBeenCalledTimes(1));
+      // ...and with the lobby that was dispatched, not some other one.
+      expect(mocks.joinLobby.mock.calls[0][1].gameID).toBe("AbCd1234");
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining("joining lobby"),
+      );
+      expect(messages).not.toContain(
+        translateText("common.backend_unreachable"),
+      );
+    });
   });
 });

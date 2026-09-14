@@ -58,7 +58,8 @@ import "./GameModeSelector";
 import {
   GameModeSelector,
   joinIsGateable,
-  shouldBlockDesktopJoin,
+  reportMultiplayerRefusal,
+  shouldBlockJoin,
 } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GameStatsModal";
@@ -1170,21 +1171,6 @@ class Client {
 
   private desktopUpdateState: DesktopUpdateState | null = null;
 
-  /**
-   * The real multiplayer gate. The entry-point components dim their own
-   * buttons, but EVERY join -- theirs, matchmaking's, a deep link, the
-   * host/join modals -- funnels through handleJoinLobby, and most of those
-   * never pass a button. Matchmaking is the sharpest case: it dispatches
-   * join-lobby itself when a match is found, with no click to intercept, so
-   * without this a signed-out player queues, matches, and is closed by the
-   * server with the Turnstile error this whole feature exists to replace.
-   *
-   * The decision itself lives in shouldBlockDesktopJoin, which is pure and
-   * unit-tested; this adds the shell check, the modal cleanup and the wiggle.
-   *
-   * Draws attention to the status bar rather than failing silently, matching
-   * what the dimmed buttons do.
-   */
   // See the call site in handleUrl. True when a navigation was issued.
   private redirectUnknownLetterToApex(gameID: string): boolean {
     if (!ClientEnv.gameLetterUnknown(gameID)) return false;
@@ -1202,13 +1188,37 @@ class Client {
     return true;
   }
 
-  private blockedDesktopJoin(lobby: JoinLobbyEvent): boolean {
-    if (!isDesktopShell()) return false;
+  /**
+   * The real multiplayer gate. The entry-point components dim their own
+   * buttons, but EVERY join -- theirs, matchmaking's, a deep link, the
+   * host/join modals -- funnels through handleJoinLobby, and most of those
+   * never pass a button. Matchmaking is the sharpest case: it dispatches
+   * join-lobby itself when a match is found, with no click to intercept, so
+   * without this a signed-out player queues, matches, and is closed by the
+   * server with the Turnstile error this whole feature exists to replace.
+   *
+   * The decision itself lives in shouldBlockJoin, which is pure and
+   * unit-tested; this adds the shell check, the modal cleanup and the
+   * feedback.
+   *
+   * Both inputs are desktop-only and are read only there. Backend
+   * reachability is not among them (OPE-439): by the time a join reaches
+   * this funnel its source has already reached a server, so the server-list
+   * API being unreachable is no reason to refuse. The lobby cards one step
+   * earlier hold to the same rule, so nothing dims or refuses on it there
+   * either -- see shouldBlockJoin, and the rule at the top of
+   * GameModeSelector.ts.
+   *
+   * Says why rather than failing silently, matching what the dimmed buttons
+   * do.
+   */
+  private blockedJoin(lobby: JoinLobbyEvent): boolean {
+    const desktop = isDesktopShell();
     if (
-      !shouldBlockDesktopJoin(
+      !shouldBlockJoin(
         lobby,
-        this.desktopUpdateState,
-        getDesktopSessionState(),
+        desktop ? this.desktopUpdateState : null,
+        desktop ? getDesktopSessionState() : null,
       )
     ) {
       return false;
@@ -1220,11 +1230,21 @@ class Client {
     // client never entered, with the game starting without them.
     this.joinModal?.close();
     this.hostModal?.close();
-    (
-      document.querySelector("desktop-status-bar") as
-        | (HTMLElement & { wiggle?: () => void })
-        | null
-    )?.wiggle?.();
+    // Matchmaking dispatches its own join once the server matches it, so a
+    // refusal here leaves its modal sitting on "waiting for a game" over a
+    // match that will never be entered. close() is the same teardown its Back
+    // button uses -- it shuts the queue socket and clears the watchdog -- so
+    // the player leaves the queue rather than holding a slot from a screen
+    // that is lying to them. Scoped to the source that owns that modal: a
+    // deep link refused while someone is legitimately queued must not cancel
+    // their queue.
+    if (lobby.source === "matchmaking" && this.matchmakingModal?.isOpen()) {
+      this.matchmakingModal.close();
+    }
+    // false: the web never refuses here any more, so the only feedback left
+    // is the desktop status bar's wiggle -- the bar is already showing the
+    // update or session reason that refused this join.
+    reportMultiplayerRefusal(false);
     return true;
   }
 
@@ -1239,7 +1259,7 @@ class Client {
       }
       return;
     }
-    if (this.blockedDesktopJoin(lobby)) {
+    if (this.blockedJoin(lobby)) {
       return;
     }
     // Only once the join is actually going ahead: a refused dispatch that

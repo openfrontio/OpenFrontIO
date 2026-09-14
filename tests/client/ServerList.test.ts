@@ -2,11 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import { resetPagePinForTests } from "../../src/client/PagePin";
 import {
+  attemptInFlight,
   backendReachable,
+  backendUnreachableConfirmed,
   ensureServerList,
+  MANUAL_RETRY_COOLDOWN_MS,
+  manualRetryAvailable,
   redirectToGameVersion,
   reloadWouldRescue,
   resetServerList,
+  retryDelayMs,
+  retryServerList,
   serverListSite,
   serverListUrl,
   startServerListPolling,
@@ -21,7 +27,10 @@ import {
 // known, and a failed refresh never throws the last good list away.
 
 const REFRESH_MS = 30_000;
+// The FIRST retry delay. Later ones double (retryDelayMs), so anywhere a test
+// needs a second or third failed attempt it spells the wait out.
 const RETRY_MS = 10_000;
+const RETRY_MAX_MS = 60_000;
 
 const OWN = "bfd5563a11111111111111111111111111111111";
 const OLD = "5ccc50a722222222222222222222222222222222";
@@ -364,6 +373,37 @@ describe("ensureServerList", () => {
   });
 });
 
+// The retry schedule on its own, with no clock and no fetch: a failing API
+// must not be asked every 10s forever (a lid-closed laptop would keep firing
+// a 4s request all night), but the first retry has to stay quick because the
+// common case is a blip the very next request clears.
+describe("retryDelayMs", () => {
+  it("waits the base interval after the first failure", () => {
+    expect(retryDelayMs(1)).toBe(RETRY_MS);
+  });
+
+  it("doubles on each further consecutive failure", () => {
+    expect(retryDelayMs(2)).toBe(2 * RETRY_MS);
+    expect(retryDelayMs(3)).toBe(4 * RETRY_MS);
+  });
+
+  it("caps the wait rather than doubling forever", () => {
+    // 4 failures is already 80s uncapped, so the cap bites here and stays.
+    expect(retryDelayMs(4)).toBe(RETRY_MAX_MS);
+    expect(retryDelayMs(10)).toBe(RETRY_MAX_MS);
+    expect(retryDelayMs(1_000)).toBe(RETRY_MAX_MS);
+    expect(Number.isFinite(retryDelayMs(1_000))).toBe(true);
+  });
+
+  it("is back at the base with no failures behind it", () => {
+    // What an ANSWER leaves the counter at. The next beat's schedule must
+    // not inherit the outage's -- a recovered backend that then misses once
+    // should be retried in 10s, not in a minute.
+    expect(retryDelayMs(0)).toBe(RETRY_MS);
+    expect(retryDelayMs(-1)).toBe(RETRY_MS);
+  });
+});
+
 describe("startServerListPolling", () => {
   it("fetches at page load and keeps a heartbeat, retrying sooner after a failure", async () => {
     vi.useFakeTimers();
@@ -391,9 +431,27 @@ describe("startServerListPolling", () => {
     await vi.advanceTimersByTimeAsync(1_000);
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
+    // Two failures deep, the heartbeat backs off: 20s, not another 10s.
+    await vi.advanceTimersByTimeAsync(2 * RETRY_MS - 1_000);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    // ...and one answer puts it straight back on the short schedule. The
+    // beat after a success is the refresh cadence, and a failure right after
+    // that is a first failure again.
+    fetchMock.mockImplementation(async () => jsonResponse(API_LIST));
+    await vi.advanceTimersByTimeAsync(4 * RETRY_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    await vi.advanceTimersByTimeAsync(REFRESH_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    await vi.advanceTimersByTimeAsync(RETRY_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+
     stopServerListPolling();
     await vi.advanceTimersByTimeAsync(REFRESH_MS * 2);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(7);
   });
 
   it("does not poll on a replay shell host", async () => {
@@ -403,6 +461,87 @@ describe("startServerListPolling", () => {
     startServerListPolling();
     await vi.advanceTimersByTimeAsync(REFRESH_MS * 2);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("a confirmed outage, as opposed to one missed beat", () => {
+  // The gates read backendUnreachableConfirmed(), never the raw signal: the
+  // heartbeat is expected to miss occasionally while the cached list carries
+  // on serving, and dimming every multiplayer button for a retry interval
+  // over one 4s timeout is worse than the timeout.
+  it("takes two consecutive failures, and any answer resets the count", async () => {
+    vi.useFakeTimers();
+    const seen: unknown[] = [];
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("backend-reachability", listener);
+    try {
+      expect(backendUnreachableConfirmed()).toBe(false);
+
+      // One failure: reachable flips, but nothing is confirmed yet.
+      fetchMock.mockRejectedValue(new TypeError("network down"));
+      await ensureServerList();
+      expect(backendReachable()).toBe(false);
+      expect(backendUnreachableConfirmed()).toBe(false);
+      expect(seen).toEqual([{ reachable: false, confirmed: false }]);
+
+      // The second one confirms it, a base retry delay after the first --
+      // the backoff only starts stretching once there is an outage to back
+      // off from, so the confirmation still lands inside the first 10s.
+      await vi.advanceTimersByTimeAsync(RETRY_MS);
+      await ensureServerList();
+      expect(backendUnreachableConfirmed()).toBe(true);
+      expect(seen).toEqual([
+        { reachable: false, confirmed: false },
+        { reachable: false, confirmed: true },
+      ]);
+
+      // A third changes nothing, so it is not announced. Two failures deep,
+      // the next attempt is due 20s after the last rather than 10s.
+      const attemptsBefore = fetchMock.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(2 * RETRY_MS);
+      await ensureServerList();
+      expect(fetchMock).toHaveBeenCalledTimes(attemptsBefore + 1);
+      expect(seen).toHaveLength(2);
+
+      // One answer clears it outright -- no gradual recovery. Three failures
+      // deep, so 40s.
+      fetchMock.mockImplementation(async () => jsonResponse(API_LIST));
+      await vi.advanceTimersByTimeAsync(4 * RETRY_MS);
+      expect(await ensureServerList()).toBe("api");
+      expect(backendUnreachableConfirmed()).toBe(false);
+      expect(seen).toEqual([
+        { reachable: false, confirmed: false },
+        { reachable: false, confirmed: true },
+        { reachable: true, confirmed: false },
+      ]);
+
+      // ...and the count restarts: one failure after a success is a blip
+      // again, not a resumption of the old outage.
+      fetchMock.mockRejectedValue(new TypeError("network down"));
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+      await ensureServerList();
+      expect(backendUnreachableConfirmed()).toBe(false);
+    } finally {
+      document.removeEventListener("backend-reachability", listener);
+    }
+  });
+
+  it("counts a failed manual retry towards the confirmation", async () => {
+    // Pressing Retry against a backend that is genuinely down should settle
+    // the question sooner, not reset it.
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    await ensureServerList();
+    expect(backendUnreachableConfirmed()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1_500);
+    await retryServerList();
+    expect(backendUnreachableConfirmed()).toBe(true);
+  });
+
+  it("is never confirmed before the first attempt settles", async () => {
+    expect(backendReachable()).toBe(null);
+    expect(backendUnreachableConfirmed()).toBe(false);
   });
 });
 
@@ -425,20 +564,23 @@ describe("backend reachability", () => {
       );
       expect(await ensureServerList()).toBe("fallback");
       expect(backendReachable()).toBe(true);
-      expect(seen).toEqual([{ reachable: true }]);
+      expect(seen).toEqual([{ reachable: true, confirmed: false }]);
 
       // Unchanged: no second announcement.
       await vi.advanceTimersByTimeAsync(RETRY_MS);
       expect(await ensureServerList()).toBe("fallback");
       expect(backendReachable()).toBe(true);
-      expect(seen).toEqual([{ reachable: true }]);
+      expect(seen).toEqual([{ reachable: true, confirmed: false }]);
 
       // A network error is not an answer.
       fetchMock.mockRejectedValue(new TypeError("network down"));
       await vi.advanceTimersByTimeAsync(RETRY_MS);
       expect(await ensureServerList()).toBe("fallback");
       expect(backendReachable()).toBe(false);
-      expect(seen).toEqual([{ reachable: true }, { reachable: false }]);
+      expect(seen).toEqual([
+        { reachable: true, confirmed: false },
+        { reachable: false, confirmed: false },
+      ]);
 
       // Back up again.
       fetchMock.mockImplementation(async () => jsonResponse(API_LIST));
@@ -446,12 +588,264 @@ describe("backend reachability", () => {
       expect(await ensureServerList()).toBe("api");
       expect(backendReachable()).toBe(true);
       expect(seen).toEqual([
-        { reachable: true },
-        { reachable: false },
-        { reachable: true },
+        { reachable: true, confirmed: false },
+        { reachable: false, confirmed: false },
+        { reachable: true, confirmed: false },
       ]);
     } finally {
       document.removeEventListener("backend-reachability", listener);
+    }
+  });
+});
+
+/**
+ * The policy above retryServerList's own floor, shared by both shells'
+ * player-initiated retries so they cannot drift: the desktop status bar's
+ * Retry button (which renders its disabled state from the same two
+ * conditions) and, on the web where there is no such button, a refused
+ * multiplayer click (GameModeSelector.reportMultiplayerRefusal). The web
+ * caller has nothing to disable, so it asks this instead.
+ */
+describe("manualRetryAvailable", () => {
+  it("is available before anyone has asked", () => {
+    expect(manualRetryAvailable()).toBe(true);
+  });
+
+  it("is unavailable while an attempt is out, whoever started it", async () => {
+    let release: (r: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      async () =>
+        await new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+
+    // The heartbeat's own beat, not a manual one: a press landing on top of
+    // it could only join the attempt already out, so offering it is a lie.
+    const beat = ensureServerList();
+    expect(attemptInFlight()).toBe(true);
+    expect(manualRetryAvailable()).toBe(false);
+
+    release(jsonResponse(API_LIST));
+    await beat;
+    expect(manualRetryAvailable()).toBe(true);
+  });
+
+  it("is unavailable for the cooldown after a player-initiated attempt", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+
+    await retryServerList();
+    // Settled in milliseconds, which is exactly the case the cooldown exists
+    // for: without it a stubbed or fast failure hands the affordance straight
+    // back to someone clicking at an outage.
+    expect(attemptInFlight()).toBe(false);
+    expect(manualRetryAvailable()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(MANUAL_RETRY_COOLDOWN_MS - 1);
+    expect(manualRetryAvailable()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(manualRetryAvailable()).toBe(true);
+  });
+
+  it("counts a retry the floor swallowed as the same cooldown", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    await retryServerList();
+    await vi.advanceTimersByTimeAsync(500);
+
+    // Inside the 1s floor: no new attempt, and no new cooldown either -- the
+    // window still ends MANUAL_RETRY_COOLDOWN_MS after the attempt that ran.
+    await retryServerList();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(MANUAL_RETRY_COOLDOWN_MS - 500);
+    expect(manualRetryAvailable()).toBe(true);
+  });
+});
+
+describe("retryServerList", () => {
+  // The Retry on the desktop status bar's offline state (OPE-439). The retry
+  // interval exists to stop timer-driven callers hammering a down API between
+  // heartbeats; a player pressing a button is not one of those, and making
+  // them wait up to 10s for anything to happen would make the button look
+  // broken in exactly the situation it exists for.
+  it("attempts immediately, inside the interval that holds ensureServerList back", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    expect(await ensureServerList()).toBe("fallback");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // The control: an ordinary caller in the same moment is held back for a
+    // full RETRY_MS. The manual retry is not.
+    expect(await ensureServerList()).toBe("fallback");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    expect(await retryServerList()).toBe("fallback");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Past its own 1s floor, and still far inside RETRY_MS.
+    await vi.advanceTimersByTimeAsync(1_500);
+    await retryServerList();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  // A player leaning on the button must not outpace the request it starts.
+  it("throttles a second press inside its floor to the same attempt", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    const first = retryServerList();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await first;
+
+    // Settled, but still inside the floor: the press is a no-op that hands
+    // back the same promise rather than starting a second request.
+    await vi.advanceTimersByTimeAsync(300);
+    const second = retryServerList();
+    expect(second).toBe(first);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(800);
+    const third = retryServerList();
+    expect(third).not.toBe(first);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await third;
+  });
+
+  it("applies a list that the retry brings back, and clears the offline state", async () => {
+    vi.useFakeTimers();
+    const seen: unknown[] = [];
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("backend-reachability", listener);
+    try {
+      fetchMock.mockRejectedValue(new TypeError("network down"));
+      expect(await ensureServerList()).toBe("fallback");
+      expect(backendReachable()).toBe(false);
+      // The page's own values are in charge while the API is unreachable.
+      expect(ClientEnv.serverWsBase()).toBe("wss://blue.openfront.io");
+
+      fetchMock.mockImplementation(async () => jsonResponse(API_LIST));
+      await vi.advanceTimersByTimeAsync(1_500);
+      expect(await retryServerList()).toBe("api");
+      expect(backendReachable()).toBe(true);
+      // Not just the flag: the list the retry fetched is applied, which is
+      // what makes the bar disappear AND what the next join will use.
+      expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+      expect(seen).toEqual([
+        { reachable: false, confirmed: false },
+        { reachable: true, confirmed: false },
+      ]);
+    } finally {
+      document.removeEventListener("backend-reachability", listener);
+    }
+  });
+
+  // A repeat-clicker, or a click landing on top of a heartbeat beat, must
+  // cost one request rather than one per click.
+  it("joins an attempt already in flight instead of starting a second", async () => {
+    vi.useFakeTimers();
+    let release: (r: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      async () =>
+        await new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+
+    const first = retryServerList();
+    const second = retryServerList();
+    const third = ensureServerList();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    release(jsonResponse(API_LIST));
+    expect(await first).toBe("api");
+    expect(await second).toBe("api");
+    expect(await third).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("never throws, whatever the fetch does", async () => {
+    fetchMock.mockImplementation(() => {
+      throw new Error("fetch itself blew up");
+    });
+    expect(await retryServerList()).toBe("fallback");
+    expect(backendReachable()).toBe(false);
+  });
+});
+
+// What the desktop status bar's Retry button disables itself on. The
+// reachability event is no use for it: that one fires only when reachability
+// CHANGES, so an attempt that fails exactly like the last one announces
+// nothing -- and the button still has to grey out while it is out.
+describe("attemptInFlight and the server-list-attempt event", () => {
+  it("is true from the moment an attempt starts until it settles, and says so", async () => {
+    const seen: unknown[] = [];
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("server-list-attempt", listener);
+    try {
+      expect(attemptInFlight()).toBe(false);
+
+      let release: (r: Response) => void = () => {};
+      fetchMock.mockImplementation(
+        async () =>
+          await new Promise<Response>((resolve) => {
+            release = resolve;
+          }),
+      );
+
+      const pending = ensureServerList();
+      expect(attemptInFlight()).toBe(true);
+      expect(seen).toEqual([{ inFlight: true }]);
+
+      release(jsonResponse(API_LIST));
+      await pending;
+      expect(attemptInFlight()).toBe(false);
+      expect(seen).toEqual([{ inFlight: true }, { inFlight: false }]);
+    } finally {
+      document.removeEventListener("server-list-attempt", listener);
+    }
+  });
+
+  it("announces one start per attempt, however many callers join it", async () => {
+    const seen: unknown[] = [];
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("server-list-attempt", listener);
+    try {
+      let release: (r: Response) => void = () => {};
+      fetchMock.mockImplementation(
+        async () =>
+          await new Promise<Response>((resolve) => {
+            release = resolve;
+          }),
+      );
+
+      const first = retryServerList();
+      const second = retryServerList();
+      const third = ensureServerList();
+      expect(seen).toEqual([{ inFlight: true }]);
+
+      release(jsonResponse(API_LIST));
+      await Promise.all([first, second, third]);
+      expect(seen).toEqual([{ inFlight: true }, { inFlight: false }]);
+    } finally {
+      document.removeEventListener("server-list-attempt", listener);
+    }
+  });
+
+  it("settles even when the fetch throws outright", async () => {
+    const seen: unknown[] = [];
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    document.addEventListener("server-list-attempt", listener);
+    try {
+      fetchMock.mockImplementation(() => {
+        throw new Error("fetch itself blew up");
+      });
+      await ensureServerList();
+      expect(attemptInFlight()).toBe(false);
+      expect(seen).toEqual([{ inFlight: true }, { inFlight: false }]);
+    } finally {
+      document.removeEventListener("server-list-attempt", listener);
     }
   });
 });
