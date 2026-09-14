@@ -247,7 +247,12 @@ export class UserSettingModal extends BaseModal {
       actions: [string, string];
       keyPrefix: string;
     }> = [
-      { actions: ["emojiMenuModifier", "altKey"], keyPrefix: "Alt" },
+      // This is a tad ugly, but it's the only solution I found.
+      {
+        actions: ["buildScrollModifier", "emojiMenuModifier"],
+        keyPrefix: "Alt",
+      },
+      { actions: ["altKey", "emojiMenuModifier"], keyPrefix: "Alt" },
       { actions: ["buildScrollModifier", "altKey"], keyPrefix: "Alt" },
       { actions: ["boxSelectWarships", "shiftKey"], keyPrefix: "Shift" },
     ];
