@@ -220,6 +220,12 @@ export class MapPlaylist {
 
     const excludedModifiers: ModifierKey[] = [];
 
+    // Crowded raises the count to 60/125, which the trusted cap would undo
+    // anyway; keep its modifier slot for one that still has an effect.
+    if (trusted) {
+      excludedModifiers.push("isCrowded");
+    }
+
     // Check if compact map would leave every team with at least 2 players
     const supportsCompact =
       mode !== GameMode.Team ||

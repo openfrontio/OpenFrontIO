@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { GameConfigSchema } from "../../src/core/Schemas";
+import { GameConfig, GameConfigSchema } from "../../src/core/Schemas";
 import { MapPlaylist } from "../../src/server/MapPlaylist";
 
 vi.mock("../../src/server/MapLandTiles", () => ({
@@ -71,6 +71,19 @@ describe("MapPlaylist trusted-only public games", () => {
       }
     }
     expect(trustedSeen).toBe(4);
+  });
+
+  it("never rolls the crowded modifier for trusted special games", async () => {
+    // Crowded would set 60/125 players only for the trusted cap to undo it,
+    // leaving a badge with no effect — so it must be excluded up front.
+    const playlist = new MapPlaylist() as unknown as {
+      getSpecialConfig(trusted: boolean): Promise<GameConfig>;
+    };
+    for (let i = 0; i < 50; i++) {
+      const config = await playlist.getSpecialConfig(true);
+      expect(config.publicGameModifiers?.isCrowded).toBeUndefined();
+      expect(config.maxPlayers).toBeLessThanOrEqual(25);
+    }
   });
 
   it("does not depend on Math.random", async () => {
