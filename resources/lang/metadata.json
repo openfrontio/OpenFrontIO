@@ -36,16 +36,16 @@
     "svg": "dk"
   },
   {
-    "code": "de-CH",
-    "native": "Schweizerdeutsch",
-    "en": "Swiss-German",
-    "svg": "gsw"
-  },
-  {
     "code": "de",
     "native": "Deutsch",
     "en": "German",
     "svg": "de"
+  },
+  {
+    "code": "de-CH",
+    "native": "Schweizerdeutsch",
+    "en": "Swiss-German",
+    "svg": "gsw"
   },
   {
     "code": "el",
@@ -226,6 +226,12 @@
     "native": "Tiếng Việt",
     "en": "Vietnamese",
     "svg": "vn"
+  },
+  {
+    "code": "zh",
+    "native": "繁體中文",
+    "en": "Chinese Traditional",
+    "svg": "tw"
   },
   {
     "code": "zh-CN",
