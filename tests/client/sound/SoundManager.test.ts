@@ -261,6 +261,42 @@ describe("ambience", () => {
     expect(city.volumes[city.volumes.length - 1]).toBeCloseTo(0.25 * 0.1);
   });
 
+  it("does not stamp the outgoing loop with the incoming track's level", () => {
+    // Zoomed out to silence, so the outgoing loop is stopped rather than
+    // faded. setAmbienceEnvelope then runs the mixer's change listener back
+    // through retargetAmbience while currentAmbience is still the outgoing
+    // track -- which used to write the INCOMING level onto the stopped Howl.
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    const city = find("city.mp3");
+    settings.setAudioVolume("ambience", 0);
+    eventBus.emit(new SetAmbienceEvent("city", 0));
+    expect(city.volumes[city.volumes.length - 1]).toBe(0);
+    settings.setAudioVolume("ambience", 1);
+
+    eventBus.emit(new SetAmbienceEvent("factory", 0.1));
+
+    // It is stopped and silent; it must not be carrying factory's level.
+    expect(city.volumes[city.volumes.length - 1]).toBe(0);
+  });
+
+  it("fades a revisited loop in rather than cutting to full", () => {
+    // The consequence of the stamp above: on the way back, setAmbience reads
+    // the stale value as its starting volume, and a start that equals the
+    // target skips the fade entirely.
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    settings.setAudioVolume("ambience", 0);
+    eventBus.emit(new SetAmbienceEvent("city", 0));
+    settings.setAudioVolume("ambience", 1);
+    eventBus.emit(new SetAmbienceEvent("factory", 0.1));
+    const city = find("city.mp3");
+    city.fade.mockClear();
+
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+
+    expect(city.fade).toHaveBeenCalledTimes(1);
+    expect(city.fade.mock.calls[0][0]).toBe(0);
+  });
+
   it("follows the ambience slider while a loop is running", () => {
     eventBus.emit(new SetAmbienceEvent("city", 0.1));
     settings.setAudioVolume("ambience", 0.5);

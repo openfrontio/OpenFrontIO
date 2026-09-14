@@ -205,6 +205,14 @@ export class SoundManager {
     const from = current.volume() as number;
     if (from === 0) {
       current.stop();
+      // Flagged even though there is no fade to protect. setAmbience pushes
+      // the new envelope in right after this, which runs the mixer's change
+      // listener back through retargetAmbience() while currentAmbience is
+      // still this outgoing track -- and with nothing to stop it, that stamps
+      // the stopped loop with the INCOMING track's level. A later revisit
+      // then reads that stale value as its starting volume, and if it happens
+      // to equal the target it plays at full level instead of fading in.
+      this.fadingOut.add(current);
       return;
     }
     this.fadingOut.add(current);
