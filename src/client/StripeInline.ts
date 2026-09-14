@@ -147,6 +147,14 @@ export class InlineCheckoutSession {
       mode: "payment",
       amount: amountCents,
       currency: "usd",
+      // Must mirror the payment_method_types the API mints intents with.
+      // Deferred-mode Elements otherwise offers every dashboard-enabled
+      // method (Amazon Pay, Klarna, ...), and confirming one of those
+      // against an intent that only allows card/link fails with "The
+      // PaymentMethod provided is not allowed for this PaymentIntent" —
+      // after the player already picked it and hit pay. Wallets ride on
+      // "card", so the express button is unaffected.
+      paymentMethodTypes: ["card", "link"],
       appearance: { theme: "night" },
     });
     return new InlineCheckoutSession(stripe, elements, request, amountCents);
