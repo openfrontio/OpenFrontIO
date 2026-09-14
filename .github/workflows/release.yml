@@ -46,6 +46,15 @@ jobs:
         env:
           GHCR_REPO: openfront-prod
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          # Baked into the client bundle at image-build time (build.sh
+          # --build-arg → Dockerfile → Vite define). Live-mode key, because
+          # release images serve openfront.io where the API mints live
+          # intents; publishable keys ship in the bundle, so a repo-level
+          # var is fine. The same image also serves the alpha ring, whose
+          # API is test-mode — the mode guard in StripeInline.ts keeps the
+          # inline flow off there (redirect checkout still works). Unset
+          # keeps the inline flow off everywhere.
+          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY_LIVE }}
           RELEASE_BODY: ${{ github.event.release.body }}
           RELEASE_NAME: ${{ github.event.release.name }}
           RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
