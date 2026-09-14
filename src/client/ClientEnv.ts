@@ -399,6 +399,13 @@ export class ClientEnv {
  * dev/staging (default `main.openfront.dev`, or `<branch>.openfront.dev`). So
  * the host is injected explicitly rather than derived.
  *
+ * The one exception is a LOOPBACK serverHost: that is a developer pointing a
+ * desktop build at a local dev server (`npm run dev`, port 9000), which
+ * speaks plain HTTP/WS — dialing it over wss:// fails the TLS handshake
+ * before a single frame. Loopback is decided by hostname alone, so it cannot
+ * widen what a production host resolves to. The web build injects no
+ * serverHost and is untouched.
+ *
  * When no `serverHost` is configured — the normal web build — the game server
  * is same-origin as the document, so we keep the historical behaviour: scheme
  * and host come from `window.location`, which is what the previously relative
@@ -410,7 +417,12 @@ function resolveServerOrigin(
   locationHost: string,
 ): { secure: boolean; host: string } {
   if (serverHost) {
-    return { secure: true, host: serverHost };
+    const hostname = serverHost.replace(/:\d+$/, "");
+    const loopback =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "[::1]";
+    return { secure: !loopback, host: serverHost };
   }
   return { secure: locationProtocol === "https:", host: locationHost };
 }
