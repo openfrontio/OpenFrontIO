@@ -282,6 +282,37 @@ export class ServerEnv {
   static clusterStateSource(): "apex" | "api" {
     return process.env.CLUSTER_STATE_SOURCE === "api" ? "api" : "apex";
   }
+  // The machine this container runs on — `falk2`, `nbg2`, `staging`: the
+  // second argument to deploy.sh, which writes it into the container's env as
+  // MACHINE. Reported at check-in (ClusterCheckin.ts) so the registry can hold
+  // a site to at most one OPEN server per machine (OPE-455): blue and green
+  // often share a box, and a colour flip that lands on the same machine buys
+  // no redundancy. Nothing in this repo reads it back.
+  //
+  // Held to the shape deploy.sh already demands of a machine argument —
+  // letters, digits and hyphens, at most a hostname label's 63 octets — and
+  // anything else is dropped with one warning rather than sent. The check-in
+  // body has to stay something the registry will accept, so a fat-fingered
+  // MACHINE must cost a stray field, never the registration. Cached by the
+  // raw value so the 10s check-in doesn't re-warn on every beat, while a test
+  // that stubs the env still sees its own value.
+  private static cachedMachineRaw: string | null = null;
+  private static cachedMachine: string | undefined = undefined;
+  static machine(): string | undefined {
+    const raw = process.env.MACHINE ?? "";
+    if (raw === ServerEnv.cachedMachineRaw) return ServerEnv.cachedMachine;
+    ServerEnv.cachedMachineRaw = raw;
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) {
+      ServerEnv.cachedMachine = undefined;
+    } else if (/^[a-zA-Z0-9-]{1,63}$/.test(trimmed)) {
+      ServerEnv.cachedMachine = trimmed;
+    } else {
+      console.warn(`Ignoring malformed MACHINE: ${JSON.stringify(trimmed)}`);
+      ServerEnv.cachedMachine = undefined;
+    }
+    return ServerEnv.cachedMachine;
+  }
   static otelEnabled(): boolean {
     return (
       ServerEnv.gameEnv !== GameEnv.Dev &&

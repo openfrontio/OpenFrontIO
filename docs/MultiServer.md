@@ -739,9 +739,22 @@ turns into the "update available" prompt.
    serves a list.
 2. **Client tolerates a static page** (below).
 3. **Servers register and check in** with the API (letter, host, version,
-   worker count, live games) every ~10s; a `draining` reply stops public
-   lobby scheduling — only when enabled, otherwise today's apex colour
+   worker count, live games, machine) every ~10s; a `draining` reply stops
+   public lobby scheduling — only when enabled, otherwise today's apex colour
    poll stays.
+
+   `machine` is the **box** a container runs on — `falk2`, `nbg2`, `staging`
+   — not a hostname: it is deploy.sh's machine argument, written into the
+   container's env as `MACHINE` and read back by `ServerEnv.machine()`. The
+   registry needs it because blue and green frequently share a machine, so
+   "one open server per site" and "one open server per **machine**" are
+   different rules, and only the second one actually buys redundancy: a flip
+   to a colour on the same box survives nothing the first colour would not
+   have survived. Enforcement is the registry's (infra, OPE-455); this repo
+   only reports the value, and omits the key entirely when `MACHINE` is unset
+   or is not a plain label, so a bad value can never cost a server its
+   registration.
+
 4. **Pipeline:** `RenderStaticIndex` renders an environment-only page per
    site and uploads it with the desktop descriptor; a final step flags the
    version as `latest` once its servers have registered. Landed (#5369);

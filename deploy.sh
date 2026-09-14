@@ -299,6 +299,13 @@ cat > $ENV_FILE << 'EOL'
 GAME_ENV=$ENV
 ENV=$ENV
 HOST=$HOST
+# MACHINE is HOST under a name that cannot be misread: in cluster vocabulary a
+# host is a game hostname (blue.openfront.io), while this is the box a
+# container runs on (falk2, nbg2, staging). Check-in reports it so the registry
+# can hold a site to one open server per machine (OPE-455). Kept free of
+# quotes, backticks and dollar signs: this heredoc is written inside the
+# double-quoted ssh command above, so the local shell reads these lines too.
+MACHINE=$HOST
 GHCR_IMAGE=$GHCR_IMAGE
 GHCR_TOKEN=$GHCR_TOKEN
 API_KEY=$API_KEY
