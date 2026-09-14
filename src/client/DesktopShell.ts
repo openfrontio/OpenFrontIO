@@ -17,6 +17,35 @@ export function isDesktopShell(): boolean {
 // SteamSDK.ts for why (TS2717).
 type VersionBridge = { version?: () => Promise<string> };
 
+// The locale the player's Steam implies. A plain VALUE, not a function, unlike
+// every other member of this bridge: the shell reads it from Steam once at
+// startup and passes it into the window, so it is fixed for the window's life
+// and needs no IPC round trip. That matters because the shell's own account
+// gate reads it while painting its first screen.
+type LocaleBridge = { steamLocale?: unknown };
+
+/**
+ * The locale Steam reports for this player, or null if it reports none.
+ *
+ * Null and "not on desktop" are deliberately the same answer: both mean
+ * "nothing better than the browser's own locale is known", which is exactly
+ * what the caller should then fall back to. Steam being absent, Steam
+ * declining to answer, and running on the web are not worth distinguishing
+ * here -- they lead to the same behaviour.
+ *
+ * Validated rather than trusted despite coming from our own shell. It arrives
+ * as a process-argv string (see the shell's preload) and is about to be
+ * interpolated into an asset URL by loadLanguage, so a hostile or merely
+ * malformed value should not get that far. A BCP-47-shaped tag is all this
+ * ever needs to be.
+ */
+export function desktopSteamLocale(): string | null {
+  const desktop = window.openfrontDesktop as LocaleBridge | undefined;
+  const locale = desktop?.steamLocale;
+  if (typeof locale !== "string") return null;
+  return /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(locale) ? locale : null;
+}
+
 // The version label is purely cosmetic and must never block client
 // initialisation. The bridge below is implemented in a different (private)
 // repository, so this public repo cannot enforce that its version() call

@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../core/AssetUrls";
+import { desktopSteamLocale } from "./DesktopShell";
 import "./LanguageModal";
 import { LanguageModal } from "./LanguageModal";
 import { formatDebugTranslation } from "./Utils";
@@ -85,7 +86,16 @@ export class LangSelector extends LitElement {
   }
 
   private async initializeLanguage() {
-    const browserLocale = navigator.language;
+    // On the Steam desktop build, the shell reports the locale the player's
+    // Steam is set to. It outranks navigator.language -- which there is the OS
+    // locale, and so ignores Steam entirely -- but NOT a saved choice, which
+    // stays the last word on every platform.
+    //
+    // Ordering it this way is what keeps the language following Steam: the
+    // shell's value is consulted afresh each launch rather than persisted, so
+    // a player who changes their Steam language sees the game follow, while a
+    // player who picks a language in-game has that stick.
+    const browserLocale = desktopSteamLocale() ?? navigator.language;
     const savedLang = localStorage.getItem("lang");
     const userLang = this.getClosestSupportedLang(savedLang ?? browserLocale);
 
