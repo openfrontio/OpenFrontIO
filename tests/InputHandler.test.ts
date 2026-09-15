@@ -1,4 +1,5 @@
 import {
+  AttackRatioEvent,
   AutoUpgradeEvent,
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
@@ -11,7 +12,7 @@ import {
 import { UIState } from "../src/client/UIState";
 import { GameView, PlayerView, UnitView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
-import { UnitType } from "../src/core/game/Game";
+import { MAX_UPGRADE_AMOUNT, UnitType } from "../src/core/game/Game";
 import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
 
 class MockPointerEvent {
@@ -660,6 +661,30 @@ describe("InputHandler AutoUpgrade", () => {
     });
   });
 
+  describe("Alt key default prevention", () => {
+    test("prevents the browser's default action when leftAlt is pressed", () => {
+      const event = new KeyboardEvent("keydown", {
+        code: "AltLeft",
+        altKey: true,
+        cancelable: true,
+      });
+
+      window.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    test("does not prevent the browser's default action when rightAlt is pressed", () => {
+      const event = new KeyboardEvent("keydown", {
+        code: "AltRight",
+        altKey: true,
+        cancelable: true,
+      });
+
+      window.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
   describe("Numpad number keys for build keybinds", () => {
     beforeEach(() => {
       inputHandler.destroy();
@@ -1292,5 +1317,157 @@ describe("InputHandler right-click cancels unit selection (#4692)", () => {
     expect(
       emitted.some((e) => e instanceof WarshipSelectionBoxCancelEvent),
     ).toBe(true);
+  });
+});
+
+describe("GhostStructure Hotkeys tapping/Scrolling", () => {
+  let inputHandler: InputHandler;
+  let eventBus: EventBus;
+  let mockCanvas: HTMLCanvasElement;
+  let uiState: UIState;
+  let testSettings: UserSettings;
+  let mockGameView: GameView;
+
+  beforeEach(() => {
+    mockGameView = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true }),
+    } as GameView;
+    testSettings = new UserSettings();
+    testSettings.removeCached(KEYBINDS_KEY, false);
+    mockCanvas = document.createElement("canvas");
+    eventBus = new EventBus();
+    uiState = {
+      attackRatio: 20,
+      ghostStructure: null,
+      rocketDirectionUp: true,
+      upgradeMultiplier: 1,
+    } as UIState;
+    inputHandler = new InputHandler(
+      mockGameView,
+      uiState,
+      mockCanvas,
+      eventBus,
+    );
+    // Intentionally non-existing keys as keybinds.
+    testSettings.setKeybinds({
+      buildAtomBomb: "F14",
+      buildScrollModifier: "F13",
+    });
+    inputHandler.initialize();
+  });
+
+  afterEach(() => {
+    inputHandler.destroy();
+  });
+
+  test("repeated hotkey taps increase the build multiplier by 5 each time and loop", () => {
+    // First tap sets ghostStructure and resets multiplier to 1
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.AtomBomb);
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    // Second tap: 1 -> 5
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(5);
+
+    // Third tap: 5 -> 10
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(10);
+
+    // Verify loop back to 1 after exceeding MAX_UPGRADE_AMOUNT
+    inputHandler["uiState"].upgradeMultiplier = MAX_UPGRADE_AMOUNT;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+  });
+
+  test("wheel scroll up increases upgrade multiplier", () => {
+    uiState.ghostStructure = UnitType.City;
+    // Use the actual buildScrollModifier keybind
+    inputHandler["activeKeys"].add(
+      inputHandler["keybinds"].buildScrollModifier,
+    );
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: -100, // Scroll up
+        altKey: false,
+      }),
+    );
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(2);
+  });
+
+  test("wheel scroll down decreases upgrade multiplier", () => {
+    uiState.ghostStructure = UnitType.City;
+    uiState.upgradeMultiplier = 5;
+    inputHandler["activeKeys"].add(
+      inputHandler["keybinds"].buildScrollModifier,
+    );
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: 100, // Scroll down
+        altKey: false,
+      }),
+    );
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(4);
+  });
+
+  test("wheel scroll doesn't go below 1", () => {
+    uiState.ghostStructure = UnitType.City;
+    uiState.upgradeMultiplier = 1;
+    inputHandler["activeKeys"].add(
+      inputHandler["keybinds"].buildScrollModifier,
+    );
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: 100,
+        altKey: false,
+      }),
+    );
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+  });
+
+  test("wheel scroll doesn't exceed MAX_UPGRADE_AMOUNT", () => {
+    uiState.ghostStructure = UnitType.City;
+    uiState.upgradeMultiplier = MAX_UPGRADE_AMOUNT;
+    inputHandler["activeKeys"].add(
+      inputHandler["keybinds"].buildScrollModifier,
+    );
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: -100,
+        altKey: false,
+      }),
+    );
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(MAX_UPGRADE_AMOUNT);
+  });
+
+  test("shift + scroll wheel changes attack ratio", () => {
+    const mockEmit = vi.spyOn(eventBus, "emit");
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: -100,
+        shiftKey: true,
+      }),
+    );
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: 100,
+        shiftKey: true,
+      }),
+    );
+
+    const ratioEvents = mockEmit.mock.calls
+      .map((call) => call[0])
+      .filter((e) => e instanceof AttackRatioEvent) as AttackRatioEvent[];
+
+    expect(ratioEvents.length).toBe(2);
+    expect(ratioEvents[0].attackRatio).toBeGreaterThan(0);
+    expect(ratioEvents[1].attackRatio).toBeLessThan(0);
   });
 });

@@ -1,10 +1,16 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
+
+import {
+  MAX_UPGRADE_AMOUNT,
+  PlayerBuildableUnitType,
+  UnitType,
+} from "../core/game/Game";
 import {
   KEYBINDS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../core/game/UserSettings";
+
 import { Platform } from "./Platform";
 import { UIState } from "./UIState";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
@@ -481,7 +487,6 @@ export class InputHandler {
       "wheel",
       (e) => {
         this.onScroll(e);
-        this.onShiftScroll(e);
         e.preventDefault();
       },
       { passive: false },
@@ -604,6 +609,12 @@ export class InputHandler {
       if (isTextInput && e.code !== "Escape") {
         return;
       }
+      // for hotkey usage, mostly an issue on Firefox.
+      // we specifically prevent the Left Alt key to avoid browser menu triggers,
+      // but allow Right Alt (often AltGr) to preserve international character input.
+      if (e.code === "AltLeft") {
+        e.preventDefault();
+      }
 
       if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
         e.preventDefault();
@@ -701,6 +712,7 @@ export class InputHandler {
           this.keybinds.boxSelectWarships,
           this.keybinds.emojiMenuModifier,
           this.keybinds.buildMenuModifier,
+          this.keybinds.buildScrollModifier,
           this.keybinds.altKey,
         ].includes(e.code)
       ) {
@@ -720,6 +732,12 @@ export class InputHandler {
       const isTextInput = this.isTextInputTarget(e.target);
       if (isTextInput && !this.activeKeys.has(e.code)) {
         return;
+      }
+      // for hotkey usage, mostly an issue on Firefox.
+      // we specifically prevent the Left Alt key to avoid browser menu triggers,
+      // but allow Right Alt (often AltGr) to preserve international character input.
+      if (e.code === "AltLeft") {
+        e.preventDefault();
       }
 
       // When the meta (cmd) or ctrl key is released, any keys that were held
@@ -909,32 +927,54 @@ export class InputHandler {
   }
 
   private onScroll(event: WheelEvent) {
-    if (!event.shiftKey) {
-      const realCtrl =
-        this.activeKeys.has("ControlLeft") ||
-        this.activeKeys.has("ControlRight");
-      if (event.ctrlKey) {
-        if (!realCtrl) {
-          // Pinch-to-zoom gesture (trackpad): small deltas, amplify.
-          // Ignore large deltas — those are browser zoom shortcuts (cmd+/cmd-)
-          // which fire synthetic wheel events we don't want to handle.
-          if (Math.abs(event.deltaY) <= 10) {
-            this.eventBus.emit(
-              new ZoomEvent(event.x, event.y, event.deltaY * 10),
-            );
-          }
-        }
-        // Always return when ctrlKey is set — whether it's a real ctrl scroll,
-        // a pinch gesture, or a browser zoom event, none should reach the
-        // regular scroll path below.
-        return;
-      }
-      // Regular scroll wheel: ignore tiny residual momentum events that macOS
-      // keeps sending after a gesture ends (especially after browser zoom changes
-      // devicePixelRatio, which can cause these to accumulate into runaway zoom).
-      if (Math.abs(event.deltaY) < 2) return;
-      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
+    const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
+    // The hardcoded shift scroll attack ratio changing takes priority.
+    if (event.shiftKey) {
+      const increment = this.userSettings.attackRatioIncrement();
+      const ratio = scrollValue > 0 ? -increment : increment;
+      this.eventBus.emit(new AttackRatioEvent(ratio));
+      return;
     }
+
+    if (this.activeKeys.has(this.keybinds.buildScrollModifier)) {
+      if (Math.abs(scrollValue) > 2) {
+        this.setGhostStructure(
+          this.uiState.ghostStructure,
+          scrollValue > 0 ? "decrease" : "increase",
+        );
+      }
+      // Prevent zooming if the build scroll modifier is active.
+      return;
+    }
+
+    // Any alt also blocks zooming, to match behavior of Ctrl / Shift
+    if (event.altKey) {
+      return;
+    }
+
+    const realCtrl =
+      this.activeKeys.has("ControlLeft") || this.activeKeys.has("ControlRight");
+    if (event.ctrlKey) {
+      if (!realCtrl) {
+        // Pinch-to-zoom gesture (trackpad): small deltas, amplify.
+        // Ignore large deltas — those are browser zoom shortcuts (cmd+/cmd-)
+        // which fire synthetic wheel events we don't want to handle.
+        if (Math.abs(event.deltaY) <= 10) {
+          this.eventBus.emit(
+            new ZoomEvent(event.x, event.y, event.deltaY * 10),
+          );
+        }
+      }
+      // Always return when ctrlKey is set — whether it's a real ctrl scroll,
+      // a pinch gesture, or a browser zoom event, none should reach the
+      // regular scroll path below.
+      return;
+    }
+    // Regular scroll wheel: ignore tiny residual momentum events that macOS
+    // keeps sending after a gesture ends (especially after browser zoom changes
+    // devicePixelRatio, which can cause these to accumulate into runaway zoom).
+    if (Math.abs(event.deltaY) < 2) return;
+    this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
   }
 
   /**
@@ -958,15 +998,6 @@ export class InputHandler {
     const delta = ZOOM_DELTA_DIVISOR * (1 / ratio - 1);
     if (delta === 0) return;
     this.eventBus.emit(new ZoomEvent(event.clientX, event.clientY, delta));
-  }
-
-  private onShiftScroll(event: WheelEvent) {
-    if (event.shiftKey) {
-      const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
-      const increment = this.userSettings.attackRatioIncrement();
-      const ratio = scrollValue > 0 ? -increment : increment;
-      this.eventBus.emit(new AttackRatioEvent(ratio));
-    }
   }
 
   private onPointerMove(event: PointerEvent) {
@@ -1055,13 +1086,38 @@ export class InputHandler {
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
-  private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
+  private setGhostStructure(
+    ghostStructure: PlayerBuildableUnitType | null,
+    source: "increase" | "decrease" | "hotkey" = "hotkey",
+  ) {
     if (
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null
     ) {
-      this.uiState.upgradeMultiplier =
-        this.uiState.upgradeMultiplier === 1 ? 5 : 1;
+      const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
+      switch (source) {
+        case "hotkey":
+          // first jump goes 1 -> 5 as before
+          this.uiState.upgradeMultiplier =
+            currentMultiplier === 1 ? 5 : currentMultiplier + 5;
+          // allow going back to 1 quickly by using hotkey.
+          if (this.uiState.upgradeMultiplier > MAX_UPGRADE_AMOUNT) {
+            this.uiState.upgradeMultiplier = 1;
+          }
+          break;
+        case "increase":
+          this.uiState.upgradeMultiplier = currentMultiplier + 1;
+          // clamp mouse wheel users to max
+          if (this.uiState.upgradeMultiplier > MAX_UPGRADE_AMOUNT) {
+            this.uiState.upgradeMultiplier = MAX_UPGRADE_AMOUNT;
+          }
+          break;
+        case "decrease":
+          // decrease only if above 1, we do not clear ghosts with scrollDown
+          this.uiState.upgradeMultiplier =
+            currentMultiplier > 1 ? currentMultiplier - 1 : 1;
+          break;
+      }
     } else {
       this.uiState.upgradeMultiplier = 1;
       this.uiState.ghostStructure = ghostStructure;

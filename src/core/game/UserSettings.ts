@@ -46,6 +46,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     moveDown: "KeyS",
     moveRight: "KeyD",
     buildMenuModifier: isMac ? "MetaLeft" : "ControlLeft",
+    buildScrollModifier: "AltLeft",
     emojiMenuModifier: "AltLeft",
     boxSelectWarships: "ShiftLeft",
     shiftKey: "ShiftLeft",
