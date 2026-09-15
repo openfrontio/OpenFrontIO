@@ -104,6 +104,9 @@ curl "https://api.openfront.io/public/player/HabCsQYR"
 
 ### Get Player Sessions
 
+> **Deprecated:** returns the player's entire history in one unbounded
+> response. Use [Get Player Sessions (v2)](#get-player-sessions-v2) instead.
+
 Retrieve a list of games & client ids (session ids) for a specific player.
 
 **Endpoint:**
@@ -116,6 +119,54 @@ GET https://api.openfront.io/public/player/:playerId/sessions
 
 ```bash
 curl "https://api.openfront.io/public/player/HabCsQYR/sessions"
+```
+
+### Get Player Sessions (v2)
+
+Paginated replacement for the endpoint above: the same per-session fields,
+returned newest game first in pages of 100 with keyset (cursor) pagination
+like [Get Player Games](#get-player-games).
+
+**Endpoint:**
+
+```
+GET https://api.openfront.io/public/v2/player/:playerId/sessions
+```
+
+**Query Parameters:**
+
+- `cursor` (optional): Opaque continuation token. Pass the `nextCursor` value from the previous response verbatim to fetch the next page — do not construct or parse it.
+
+**Response:**
+
+```json
+{
+  "results": [
+    {
+      "gameId": "abc123",
+      "gameStart": "2026-05-17T21:04:00.000Z",
+      "gameEnd": "2026-05-17T21:24:34.000Z",
+      "gameType": "Public",
+      "gameMode": "Team",
+      "gameRankedType": "unranked",
+      "clientId": "client-session-id",
+      "username": "alice",
+      "clanTag": "ABC",
+      "hasWon": true
+    }
+  ],
+  "nextCursor": "opaque-token"
+}
+```
+
+- `nextCursor` is `null` when there are no more sessions.
+- Unlike the v1 endpoint, a known player with no sessions returns an empty
+  `results` array (v1 answers 404); 404 means the player id is unknown.
+
+**Example:**
+
+```bash
+curl "https://api.openfront.io/public/v2/player/HabCsQYR/sessions"
 ```
 
 ### Get Player Games
