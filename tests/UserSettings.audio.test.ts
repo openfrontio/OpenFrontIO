@@ -84,7 +84,7 @@ describe("audio channel volumes", () => {
   it("has no legacy fallback for master", () => {
     localStorage.setItem("settings.soundEffectsVolume", "0.1");
     localStorage.setItem("settings.backgroundMusicVolume", "0.1");
-    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.75);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.9);
   });
 
   it("writes the channel key and clamps to 0-1", () => {
@@ -180,7 +180,7 @@ describe("master volume default", () => {
 
   it("starts the desktop shell audible, at the default master level", () => {
     pretendDesktopShell();
-    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.75);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.9);
   });
 
   it("keeps a returning web player audible when only a legacy key is stored", () => {
@@ -188,14 +188,14 @@ describe("master volume default", () => {
     // deliberately set the old sliders would upgrade into silence.
     localStorage.setItem("settings.backgroundMusicVolume", "0.5");
     const s = new UserSettings();
-    expect(s.audioVolume("master")).toBeCloseTo(0.75);
+    expect(s.audioVolume("master")).toBeCloseTo(0.9);
     expect(s.audioVolume("music")).toBeCloseTo(0.5);
   });
 
   it("counts a stored channel key as having chosen, even at zero", () => {
     localStorage.setItem("settings.audio.effects", "0");
     const s = new UserSettings();
-    expect(s.audioVolume("master")).toBeCloseTo(0.75);
+    expect(s.audioVolume("master")).toBeCloseTo(0.9);
     expect(s.audioVolume("effects")).toBe(0);
   });
 
@@ -212,8 +212,8 @@ describe("master volume default", () => {
     s.setAudioVolume("effects", 0.7);
 
     globalThis.removeEventListener(type, listener);
-    expect(s.audioVolume("master")).toBeCloseTo(0.75);
-    expect(seen).toEqual(["0.75"]);
+    expect(s.audioVolume("master")).toBeCloseTo(0.9);
+    expect(seen).toEqual(["0.9"]);
   });
 
   it("announces the flip through the legacy setters too", () => {
@@ -225,7 +225,7 @@ describe("master volume default", () => {
     new UserSettings().setBackgroundMusicVolume(0.5);
 
     globalThis.removeEventListener(type, listener);
-    expect(seen).toEqual(["0.75"]);
+    expect(seen).toEqual(["0.9"]);
   });
 
   it("announces the flip only once, not on every later write", () => {
@@ -240,7 +240,7 @@ describe("master volume default", () => {
     s.setAudioVolume("alerts", 0.2);
 
     globalThis.removeEventListener(type, listener);
-    expect(seen).toEqual(["0.75"]);
+    expect(seen).toEqual(["0.9"]);
   });
 
   it("does not announce a flip when master is stored", () => {
@@ -260,7 +260,7 @@ describe("master volume default", () => {
 
   it("trips the carve-out on a legacy effects value alone", () => {
     localStorage.setItem("settings.soundEffectsVolume", "0.65");
-    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.75);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.9);
   });
 
   it("does not trip the carve-out on the blur toggles alone", () => {
@@ -346,7 +346,7 @@ describe("resetAudio", () => {
     const s = new UserSettings();
     s.setAudioVolume("master", 0.2);
     s.resetAudio();
-    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.75);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.9);
   });
 
   it("is safe to call twice, and on empty storage", () => {
@@ -425,7 +425,7 @@ describe("one-time audio reset", () => {
     // defaults. Audible, at full level, opted into by nobody.
     localStorage.setItem("settings.backgroundMusicVolume", "0.4");
     const before = new UserSettings();
-    expect(before.audioVolume("master")).toBeCloseTo(0.75);
+    expect(before.audioVolume("master")).toBeCloseTo(0.9);
     expect(before.audioVolume("effects")).toBeCloseTo(0.7);
 
     expect(new UserSettings().resetAudioOnce()).toBe(true);
@@ -462,14 +462,23 @@ describe("one-time audio reset", () => {
     pretendDesktopShell();
     localStorage.setItem("settings.audio.master", "1");
     expect(new UserSettings().resetAudioOnce()).toBe(true);
-    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.75);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.9);
   });
 
-  it("re-runs when the stamp is from a version this build cannot read", () => {
-    localStorage.setItem("settings.audio.resetVersion", "not-a-number");
+  it.each([
+    ["not-a-number"],
+    // parseInt would read this as 1 and skip a reset that has never run.
+    ["1-corrupt"],
+    ["1.5"],
+    ["-1"],
+    [""],
+    ["Infinity"],
+  ])("re-runs when the stamp reads %j, which is not a version", (stamp) => {
+    localStorage.setItem("settings.audio.resetVersion", stamp);
     localStorage.setItem("settings.audio.master", "1");
     expect(new UserSettings().resetAudioOnce()).toBe(true);
     expect(localStorage.getItem("settings.audio.resetVersion")).toBe("1");
+    expect(localStorage.getItem("settings.audio.master")).toBeNull();
   });
 
   it("does not re-run when a later version has already stamped it", () => {

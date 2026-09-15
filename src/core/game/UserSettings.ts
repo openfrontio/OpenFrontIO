@@ -73,14 +73,15 @@ export type AudioCategory =
   | "interface";
 
 const AUDIO_DEFAULTS: Record<AudioCategory, number> = {
-  // Not 1.0. perceptualGain squares the slider position, so this is about
-  // -5 dB rather than the -2.5 dB the number reads as, which is the size of
-  // cut the "too loud on desktop" reports were asking for. Desktop is where
-  // it is felt, because that is the platform this default actually applies
-  // on (see defaultMasterVolume), but it is not a desktop-only value: it is
-  // also where the web carve-out lands a player who opts in, and the two
-  // should agree about how loud "default" is.
-  master: 0.75,
+  // Not 1.0, in answer to the "too loud on desktop" reports. perceptualGain
+  // squares the slider position, so the cut is twice what the number reads
+  // as: 0.9 is -0.9 dB on the handle and -1.8 dB by the time it is heard.
+  //
+  // Desktop is where it is felt, because that is the platform this default
+  // actually applies on (see defaultMasterVolume), but it is not a
+  // desktop-only value: it is also where the web carve-out lands a player
+  // who opts in, and the two should agree about how loud "default" is.
+  master: 0.9,
   music: 0.5,
   effects: 0.7,
   alerts: 0.8,
@@ -926,10 +927,14 @@ export class UserSettings {
    * @returns whether this call performed the reset.
    */
   resetAudioOnce(): boolean {
-    const stamped = parseInt(this.getCached(AUDIO_RESET_VERSION_KEY) ?? "", 10);
-    // NaN covers both "never stamped" and a value some other build wrote that
-    // this one cannot read; either way the reset has not run here.
-    const applied = Number.isFinite(stamped) ? stamped : 0;
+    const raw = this.getCached(AUDIO_RESET_VERSION_KEY);
+    // Number, not parseInt: parseInt stops at the first character it cannot
+    // use, so "1-corrupt" reads as 1 and skips a reset that has never run.
+    // A stamp is a whole non-negative number or it is not a stamp.
+    const stamped = raw === null ? Number.NaN : Number(raw);
+    // The fallback covers "never stamped" and anything this build cannot
+    // read; either way the reset has not happened here.
+    const applied = Number.isSafeInteger(stamped) && stamped >= 0 ? stamped : 0;
     if (applied >= AUDIO_RESET_VERSION) return false;
     this.resetAudio();
     // No change event: nothing listens for the stamp, and resetAudio has
