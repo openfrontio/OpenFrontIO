@@ -474,12 +474,17 @@ export class DetailedGameViewModal extends BaseModal {
 
   private timeDisplay(lobby: PublicGameInfo): string {
     if (lobby.startsAt === undefined) {
-      // Scheduled lobbies only get a countdown once they're the active one for
-      // their bucket; the one queued behind it is simply next up. Hosted
-      // lobbies never get one — they start when the host says so.
-      return lobby.publicGameType === "hosted"
-        ? translateText("public_lobby.waiting_for_players")
-        : translateText("detailed_view.queued");
+      if (lobby.publicGameType === "hosted") {
+        return translateText("public_lobby.waiting_for_players");
+      }
+      // Use the full server queue so filtering doesn't renumber waiting lobbies.
+      const queue = this.lobbies?.games[lobby.publicGameType]?.filter(
+        (candidate) => candidate.startsAt === undefined,
+      );
+      const position =
+        (queue?.findIndex((candidate) => candidate.gameID === lobby.gameID) ??
+          -1) + 1;
+      return translateText("detailed_view.queue_position", { position });
     }
     const seconds = getSecondsUntilServerTimestamp(
       lobby.startsAt,
