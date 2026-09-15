@@ -401,6 +401,23 @@ into `/v/<commit>/`. Both compares only work on commit-shaped values, so a
 list carrying anything else is rejected whole and the client keeps its own
 values.
 
+### A non-`open` server stops offering ranked matches too (OPE-469)
+
+`draining`, standby and `fenced` all stop new games, and that includes ranked
+ones. Each worker long-polls the API's matchmaking check-in to volunteer as
+the host for the next match (`src/server/RankedCheckin.ts`); it now makes that
+offer only while the deployment-active flag the master pushes over
+`lobbiesBroadcast` is true — the flag that already reconciles both drain
+sources (`ClusterCheckin.applyCheckinState` with `CLUSTER_STATE_SOURCE=api`,
+the apex colour poll otherwise). Games already assigned or running are
+untouched; only the next offer is withheld, and the worker defaults to active
+until its master says otherwise. Without this, blue ran v0.34.0 as `draining`
+while every `openfront.io` page served green's v0.34.1, blue's workers kept
+claiming matches, and players on the new build were assigned a blue game, got
+`version_mismatch`, went to fetch blue's build, and arrived past the start
+deadline — so the match cancelled short-handed and the game was pruned before
+they could connect ("Connection refused: Game not found").
+
 ## What the client does (`src/client/ServerList.ts`, `src/core/ServerList.ts`)
 
 - **Fetched at page load, then a heartbeat.** `startServerListPolling()`
