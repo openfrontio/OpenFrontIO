@@ -504,9 +504,12 @@ export class BuildPreviewController implements Controller {
     ) {
       return false;
     }
+    // Traitor allies are excluded: betraying a traitor breaks the alliance
+    // but carries no traitor mark (GameImpl.breakAlliance), so nuking one
+    // is safe and shows no warning.
     this.connectedAllySmallIds.clear();
     for (const ally of myPlayer.allies()) {
-      if (!ally.isDisconnected()) {
+      if (!ally.isDisconnected() && !ally.isTraitor()) {
         this.connectedAllySmallIds.add(ally.smallID());
       }
     }
