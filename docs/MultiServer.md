@@ -428,10 +428,11 @@ servers that can host a page's match are the ones registered under the site
 that list is read for. The API keeps one ranked queue per `site:mode`, and
 both sides name their site:
 
-- **The client join** sends `site=<serverListSite()>` — the apex for a page
+- **The client join** sends `site=<matchmakingSite()>`
+  (`src/client/ServerList.ts`): `serverListSite()` — the apex for a page
   behind one, `<subdomain>.<DOMAIN>` under GAME_DOMAIN, the desktop's pinned
-  server host — the same value it fetches `/cluster.json` for
-  (`matchmakingSite()` in `src/client/ServerList.ts`).
+  server host, the same value it fetches `/cluster.json` for — passed
+  through the shape check below.
 - **The worker check-in** sends `site` as `ClusterCheckin.registeredSite()`:
   `SITE_HOST`, else its own public host — the site it registers under.
 
