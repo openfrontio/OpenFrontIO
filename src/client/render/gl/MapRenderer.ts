@@ -367,9 +367,6 @@ export class MapRenderer {
   setGridView(active: boolean): void {
     this.renderer?.setGridView(active);
   }
-  setShowPatterns(active: boolean): void {
-    this.renderer?.setShowPatterns(active);
-  }
   setHighlightOwner(ownerID: number): void {
     this.renderer?.setHighlightOwner(ownerID);
   }

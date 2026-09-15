@@ -32,7 +32,6 @@ export function visibleCosmetics(
     delete visible.pattern;
     delete visible.skin;
   }
-  if (visibility.territoryColors === false) delete visible.color;
   if (visibility.flags === false) delete visible.flag;
   if (visibility.crowns === false) delete visible.crown;
   if (cosmetics.effects !== undefined) {

@@ -3,15 +3,20 @@ import { GraphicsOverridesSchema } from "../../src/client/render/gl/GraphicsOver
 import { applyGraphicsOverrides } from "../../src/client/render/gl/RenderOverrides";
 import { createRenderSettings } from "../../src/client/render/gl/RenderSettings";
 import { visibleCosmetics } from "../../src/client/view/CosmeticVisibility";
+import { GameUpdateType } from "../../src/core/game/GameUpdates";
 import { UserSettings } from "../../src/core/game/UserSettings";
 import type { PlayerCosmetics } from "../../src/core/Schemas";
-import { makeGameView, makePlayerView } from "../util/viewStubs";
+import {
+  makeEmptyGu,
+  makeGameView,
+  makeNameViewData,
+  makePlayerUpdate,
+} from "../util/viewStubs";
 
 const EQUIPPED: PlayerCosmetics = {
   flag: "/flags/US.svg",
   pattern: { name: "stripes", patternData: "AAAA" },
   skin: { name: "lava", url: "/skins/lava.png" },
-  color: { color: "#ff0000" },
   crown: { name: "gold", url: "/crowns/gold.png" },
   effects: {
     transportShipTrail: { name: "rainbow", effectType: "transportShipTrail" },
@@ -58,17 +63,11 @@ describe("visibleCosmetics", () => {
   test("hides each disabled category", () => {
     const visible = visibleCosmetics(
       EQUIPPED,
-      {
-        territorySkins: false,
-        territoryColors: false,
-        flags: false,
-        crowns: false,
-      },
+      { territorySkins: false, flags: false, crowns: false },
       "other",
     );
     expect(visible.pattern).toBeUndefined();
     expect(visible.skin).toBeUndefined();
-    expect(visible.color).toBeUndefined();
     expect(visible.flag).toBeUndefined();
     expect(visible.crown).toBeUndefined();
     expect(visible.effects).toEqual(EQUIPPED.effects);
@@ -118,46 +117,49 @@ describe("PlayerView cosmetics", () => {
   // PlayerView decodes patterns for real, so leave the placeholder one out.
   const PLAYER_COSMETICS = {
     flag: EQUIPPED.flag,
-    color: EQUIPPED.color,
+    crown: EQUIPPED.crown,
   } as PlayerCosmetics;
 
   afterEach(() => userSettings.setGraphicsOverrides({}));
 
+  // Registers both players through GameView.update, the path the renderer
+  // reads them from.
+  function gameWithPlayers() {
+    const game = makeGameView({
+      myClientID: "client-me",
+      humans: [
+        { clientID: "client-me", cosmetics: PLAYER_COSMETICS },
+        { clientID: "client-other", cosmetics: PLAYER_COSMETICS },
+      ] as never,
+    });
+    const gu = makeEmptyGu(1);
+    gu.updates[GameUpdateType.Player] = [
+      makePlayerUpdate({ id: "me", smallID: 1, clientID: "client-me" }),
+      makePlayerUpdate({ id: "other", smallID: 2, clientID: "client-other" }),
+    ];
+    gu.playerNameViewData = {
+      me: makeNameViewData(),
+      other: makeNameViewData(),
+    };
+    game.update(gu);
+    return { game, me: game.player("me"), other: game.player("other") };
+  }
+
   test("applies the visibility settings to other players only", () => {
     userSettings.setGraphicsOverrides({ cosmetics: { showFrom: "self" } });
-    const game = makeGameView({ myClientID: "client-me" });
-    const me = makePlayerView({
-      game,
-      data: { clientID: "client-me", id: "me", smallID: 1 },
-      cosmetics: PLAYER_COSMETICS,
-    });
-    const other = makePlayerView({
-      game,
-      data: { clientID: "client-other", id: "other", smallID: 2 },
-      cosmetics: PLAYER_COSMETICS,
-    });
+    const { me, other } = gameWithPlayers();
     expect(me.cosmetics.flag).toBe(EQUIPPED.flag);
     expect(other.cosmetics.flag).toBeUndefined();
     expect(other.equippedCosmetics.flag).toBe(EQUIPPED.flag);
   });
 
   test("refreshPlayerCosmetics picks up changed settings", () => {
-    const game = makeGameView({ myClientID: "client-me" });
-    const other = makePlayerView({
-      game,
-      data: { clientID: "client-other", id: "other", smallID: 2 },
-      cosmetics: PLAYER_COSMETICS,
-    });
-    expect(other.cosmetics.color).toEqual(EQUIPPED.color);
-    expect(other.territoryColor().toHex()).toBe("#ff0000");
+    const { game, me, other } = gameWithPlayers();
+    expect(other.cosmetics.crown).toEqual(EQUIPPED.crown);
 
-    userSettings.setGraphicsOverrides({
-      cosmetics: { territoryColors: false },
-    });
+    userSettings.setGraphicsOverrides({ cosmetics: { crowns: false } });
     game.refreshPlayerCosmetics();
-    // makePlayerView doesn't register the player with the game.
-    other.refreshCosmetics();
-    expect(other.cosmetics.color).toBeUndefined();
-    expect(other.territoryColor().toHex()).not.toBe("#ff0000");
+    expect(other.cosmetics.crown).toBeUndefined();
+    expect(me.cosmetics.crown).toEqual(EQUIPPED.crown);
   });
 });

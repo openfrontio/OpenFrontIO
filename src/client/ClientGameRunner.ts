@@ -746,8 +746,6 @@ async function createClientGame(
 
     const graphicsListenerAbort = new AbortController();
 
-    view.setShowPatterns(userSettings.territoryPatterns());
-
     const mapLayerController = new MapLayerController(
       view,
       gameMap,
@@ -756,12 +754,6 @@ async function createClientGame(
       lobbyConfig.gameStartInfo.config.gameMapSize,
       mapLoader,
       graphicsListenerAbort.signal,
-    );
-
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
-      (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
-      { signal: graphicsListenerAbort.signal },
     );
 
     // Re-resolve names drawn on the map when the anonymous-names setting toggles

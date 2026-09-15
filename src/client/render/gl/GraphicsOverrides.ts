@@ -124,7 +124,6 @@ export const GraphicsOverridesSchema = z
         // Whose cosmetics besides your own are drawn.
         showFrom: z.enum(COSMETICS_SHOW_FROM),
         territorySkins: z.boolean(),
-        territoryColors: z.boolean(),
         flags: z.boolean(),
         // Opacity of every flag beside a name (0-1).
         flagOpacity: z.number().min(0).max(1),

@@ -46,11 +46,6 @@ const COSMETIC_CATEGORIES: ReadonlyArray<{
     descKey: "graphics_setting.cosmetics_territory_skins_desc",
   },
   {
-    key: "territoryColors",
-    labelKey: "graphics_setting.cosmetics_territory_colors_label",
-    descKey: "graphics_setting.cosmetics_territory_colors_desc",
-  },
-  {
     key: "flags",
     labelKey: "graphics_setting.cosmetics_flags_label",
     descKey: "graphics_setting.cosmetics_flags_desc",

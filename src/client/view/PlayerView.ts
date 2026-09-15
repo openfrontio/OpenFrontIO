@@ -169,9 +169,7 @@ export class PlayerView {
     );
     this.computeColors();
 
-    const pattern = userSettings.territoryPatterns()
-      ? this.cosmetics.pattern
-      : undefined;
+    const pattern = this.cosmetics.pattern;
     this.decoder =
       pattern === undefined
         ? undefined
@@ -200,9 +198,7 @@ export class PlayerView {
     const defaultTerritoryColor = theme.territoryColor(this);
     const defaultBorderColor = theme.borderColor(defaultTerritoryColor);
 
-    const pattern = userSettings.territoryPatterns()
-      ? this.cosmetics.pattern
-      : undefined;
+    const pattern = this.cosmetics.pattern;
     if (pattern) {
       pattern.colorPalette ??= {
         name: "",

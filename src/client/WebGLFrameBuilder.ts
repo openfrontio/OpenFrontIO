@@ -575,6 +575,8 @@ export class WebGLFrameBuilder {
       this.patternData,
     );
     this.effectResolved.clear();
+    // Ticks (and so update()) stop while the game is paused.
+    this.syncPlayerEffects(gameView);
   }
 
   /**

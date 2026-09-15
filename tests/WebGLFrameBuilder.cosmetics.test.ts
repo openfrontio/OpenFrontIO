@@ -1,6 +1,7 @@
 import { colord } from "colord";
 import { describe, expect, it } from "vitest";
 import { WebGLFrameBuilder } from "../src/client/WebGLFrameBuilder";
+import { STRUCTURES_EFFECT_BLOCK } from "../src/client/render/gl/utils/ColorUtils";
 import type { PlayerStatic } from "../src/client/render/types";
 import type { CosmeticVisibility } from "../src/client/view/CosmeticVisibility";
 import type { PlayerCosmetics } from "../src/core/Schemas";
@@ -16,6 +17,7 @@ const EQUIPPED = {
 function setup(visibility: CosmeticVisibility = {}) {
   const skinCalls: Array<[number, string | null]> = [];
   const cosmeticUploads: PlayerStatic[][] = [];
+  const effectUploads: Float32Array[] = [];
   const view = {
     initSkinAtlas: () => {},
     addPlayers: () => {},
@@ -25,9 +27,12 @@ function setup(visibility: CosmeticVisibility = {}) {
       skinCalls.push([sid, url]),
     updatePlayerCosmetics: (players: PlayerStatic[]) =>
       cosmeticUploads.push(players),
+    updateEffectPalette: (palette: Float32Array) => effectUploads.push(palette),
   };
   const builder = new WebGLFrameBuilder(view as never) as unknown as {
+    localPlayerSmallID: number;
     effectResolved: Set<number>;
+    setEffectOverride: WebGLFrameBuilder["setEffectOverride"];
     syncPlayers(gameView: unknown): void;
     syncLocalPlayer(gameView: unknown): void;
     refreshCosmetics(gameView: unknown): void;
@@ -49,8 +54,10 @@ function setup(visibility: CosmeticVisibility = {}) {
     refreshPlayerCosmetics: () => {
       player.cosmetics = {};
     },
+    setNukeTrailSpiral: () => {},
+    clearNukeTrailSpiral: () => {},
   };
-  return { builder, gameView, skinCalls, cosmeticUploads };
+  return { builder, gameView, skinCalls, cosmeticUploads, effectUploads };
 }
 
 describe("WebGLFrameBuilder cosmetics refresh", () => {
@@ -66,8 +73,28 @@ describe("WebGLFrameBuilder cosmetics refresh", () => {
     expect(cosmeticUploads).toHaveLength(1);
     expect(cosmeticUploads[0][0].flag).toBeUndefined();
     expect(cosmeticUploads[0][0].crown).toBeUndefined();
-    // Effects re-resolve against the new visibility on the next update().
-    expect(builder.effectResolved.size).toBe(0);
+  });
+
+  it("re-resolves effects during the refresh, without waiting for a tick", () => {
+    const { builder, gameView, effectUploads } = setup();
+    builder.localPlayerSmallID = SID;
+    builder.setEffectOverride("structures", {
+      type: "transition",
+      colors: ["#ff0000", "#00ff00"],
+      frequency: 2,
+    });
+
+    builder.refreshCosmetics(gameView);
+
+    expect(effectUploads).toHaveLength(1);
+    const PALETTE_SIZE = 4096;
+    const MAX_TRAIL_COLORS = 8;
+    const count =
+      effectUploads[0][
+        (STRUCTURES_EFFECT_BLOCK * MAX_TRAIL_COLORS * PALETTE_SIZE + SID) * 4 +
+          3
+      ];
+    expect(count).toBe(2);
   });
 
   it("skips players the renderer hasn't registered yet", () => {
