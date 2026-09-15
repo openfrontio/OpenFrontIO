@@ -9,6 +9,7 @@ const stashPendingCodeEntryMock = vi.hoisted(() => vi.fn());
 const fetchSteamLinkTicketMock = vi.hoisted(() => vi.fn());
 const redeemSteamLinkMock = vi.hoisted(() => vi.fn());
 const redeemSteamLinkCodeMock = vi.hoisted(() => vi.fn());
+const answerSteamLinkConflictMock = vi.hoisted(() => vi.fn());
 const getUserMeMock = vi.hoisted(() => vi.fn());
 const invalidateUserMeMock = vi.hoisted(() => vi.fn());
 
@@ -33,6 +34,7 @@ vi.mock("../../src/client/SteamLink", async (importOriginal) => {
     fetchSteamLinkTicket: fetchSteamLinkTicketMock,
     redeemSteamLink: redeemSteamLinkMock,
     redeemSteamLinkCode: redeemSteamLinkCodeMock,
+    answerSteamLinkConflict: answerSteamLinkConflictMock,
   };
 });
 
@@ -764,6 +766,256 @@ describe("SteamLinkModal", () => {
         );
       });
       expect(modal.textContent).not.toContain("common.error_generic");
+    });
+  });
+
+  // ─── The discard confirmation ──────────────────────────────────────────
+  //
+  // `steam_has_progress` used to be a dead end: the Steam account already
+  // belongs to an OpenFront account created by the first launch, the link is
+  // permanent, and the only way out was a support ticket. The server may now
+  // offer to discard that account, and these cover the modal's half of it.
+  describe("conflict discard", () => {
+    const account = {
+      publicId: "p9",
+      username: "Throwaway",
+      createdAt: "2026-09-01T00:00:00.000Z",
+      personaName: "Ada",
+      gamesPlayed: 2,
+      gamesPlayedCapped: false,
+    };
+
+    const discardButton = () =>
+      modal.querySelector<HTMLButtonElement>("button.steam-link-discard-btn");
+    const cancelButton = () =>
+      modal.querySelector<HTMLButtonElement>("button.steam-link-cancel-btn");
+
+    async function reachConfirmation(): Promise<void> {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+      fetchSteamLinkTicketMock.mockResolvedValue({
+        ok: true,
+        personaName: "Ada",
+      });
+      redeemSteamLinkMock.mockResolvedValue({
+        ok: false,
+        reason: "steam_has_progress",
+        conflict: { discardable: true, account },
+      });
+
+      await modal.openWithToken("tok-abc");
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(confirmButton()?.disabled).toBe(false);
+      });
+      confirmButton()?.click();
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(discardButton()).not.toBeNull();
+      });
+    }
+
+    it("offers the discard instead of the dead-end refusal", async () => {
+      await reachConfirmation();
+
+      // What is being destroyed, and what is being kept: both have to be on
+      // the screen, or the player cannot tell which way round it is.
+      expect(modal.textContent).toContain("Throwaway");
+      expect(modal.textContent).toContain("steam_link_modal.conflict_warning");
+      expect(modal.textContent).toContain("steam_link_modal.conflict_keep");
+      expect(modal.textContent).not.toContain(
+        "steam_link_modal.reason_steam_has_progress",
+      );
+    });
+
+    it("confirming discards and reports success", async () => {
+      await reachConfirmation();
+      answerSteamLinkConflictMock.mockResolvedValue({ ok: true, linked: true });
+
+      discardButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain("steam_link_modal.success");
+      });
+      expect(answerSteamLinkConflictMock).toHaveBeenCalledWith("discard");
+      expect(invalidateUserMeMock).toHaveBeenCalled();
+    });
+
+    it("surfaces a refused discard with the server's reason", async () => {
+      await reachConfirmation();
+      answerSteamLinkConflictMock.mockResolvedValue({
+        ok: false,
+        reason: "discard_deferred",
+      });
+
+      discardButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain(
+          "steam_link_modal.reason_discard_deferred",
+        );
+      });
+    });
+
+    // A purchase still settling on the other account is the ONE refusal the
+    // server leaves the offer standing for — it clears by itself in minutes,
+    // so the confirmation has to stay answerable rather than becoming a
+    // second dead end.
+    it("stays answerable after a deferred refusal", async () => {
+      await reachConfirmation();
+      answerSteamLinkConflictMock.mockResolvedValue({
+        ok: false,
+        reason: "discard_deferred",
+      });
+
+      discardButton()?.click();
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain(
+          "steam_link_modal.reason_discard_deferred",
+        );
+      });
+
+      expect(discardButton()?.disabled).toBe(false);
+      // Still ours to cancel, so closing must still release the desktop's
+      // ticket rather than leaving the game waiting.
+      answerSteamLinkConflictMock.mockClear();
+      modal.close();
+      await modal.updateComplete;
+      expect(answerSteamLinkConflictMock).toHaveBeenCalledWith("cancel");
+    });
+
+    // The confirmation stays on screen while the delete runs: falling back to
+    // the ordinary link confirm step here would show "Linking…" over an
+    // account deletion, which is the wrong thing to tell someone mid-delete.
+    it("keeps the confirmation on screen while deleting", async () => {
+      await reachConfirmation();
+      const answer = deferred<{ ok: boolean; linked: boolean }>();
+      answerSteamLinkConflictMock.mockReturnValue(answer.promise);
+
+      discardButton()?.click();
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(discardButton()?.disabled).toBe(true);
+      });
+
+      expect(modal.textContent).toContain("steam_link_modal.conflict_deleting");
+      expect(modal.textContent).not.toContain("steam_link_modal.linking");
+      answer.resolve({ ok: true, linked: true });
+    });
+
+    // Declining is an answer. The desktop is polling a link ticket the server
+    // left open for this question, so telling it now is the difference
+    // between an immediate refusal and a ten-minute hang.
+    it("declining tells the server and closes", async () => {
+      await reachConfirmation();
+      answerSteamLinkConflictMock.mockResolvedValue({
+        ok: true,
+        linked: false,
+      });
+
+      cancelButton()?.click();
+      await modal.updateComplete;
+
+      expect(answerSteamLinkConflictMock).toHaveBeenCalledWith("cancel");
+      expect(modal.isOpen()).toBe(false);
+    });
+
+    it("closing an unanswered offer declines it too", async () => {
+      await reachConfirmation();
+      answerSteamLinkConflictMock.mockResolvedValue({
+        ok: true,
+        linked: false,
+      });
+
+      modal.close();
+      await modal.updateComplete;
+
+      expect(answerSteamLinkConflictMock).toHaveBeenCalledWith("cancel");
+    });
+
+    it("does not decline after the offer has already been spent", async () => {
+      await reachConfirmation();
+      answerSteamLinkConflictMock.mockResolvedValue({ ok: true, linked: true });
+
+      discardButton()?.click();
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain("steam_link_modal.success");
+      });
+      answerSteamLinkConflictMock.mockClear();
+
+      modal.close();
+      await modal.updateComplete;
+
+      expect(answerSteamLinkConflictMock).not.toHaveBeenCalled();
+    });
+
+    // Money makes it support's call. The player gets the specific reason,
+    // which is what stops them opening a ticket to ask what the problem was.
+    it("renders the paid block rather than an offer", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+      fetchSteamLinkTicketMock.mockResolvedValue({
+        ok: true,
+        personaName: "Ada",
+      });
+      redeemSteamLinkMock.mockResolvedValue({
+        ok: false,
+        reason: "steam_has_progress",
+        conflict: { discardable: false, block: "paid" },
+      });
+
+      await modal.openWithToken("tok-abc");
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(confirmButton()?.disabled).toBe(false);
+      });
+      confirmButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain(
+          "steam_link_modal.reason_discard_blocked_paid",
+        );
+      });
+      expect(discardButton()).toBeNull();
+    });
+
+    // The website's entry point: its refusal already happened on the Steam
+    // OpenID redirect, so the modal opens straight onto the confirmation.
+    it("opens straight onto the confirmation for the website flow", async () => {
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+
+      await modal.openForConflict(account);
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(discardButton()).not.toBeNull();
+      });
+
+      expect(modal.isOpen()).toBe(true);
+      // No ticket, no code: nothing was redeemed to get here.
+      expect(redeemSteamLinkMock).not.toHaveBeenCalled();
+      expect(fetchSteamLinkTicketMock).not.toHaveBeenCalled();
+    });
+
+    // Nothing is waiting on the website path, so closing must NOT spend the
+    // offer — that would cost a player who closed the dialog to think about it
+    // another full trip through Steam.
+    it("closing the website flow leaves the offer alone", async () => {
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+
+      await modal.openForConflict(account);
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(discardButton()).not.toBeNull();
+      });
+      modal.close();
+      await modal.updateComplete;
+
+      expect(answerSteamLinkConflictMock).not.toHaveBeenCalled();
     });
   });
 });
