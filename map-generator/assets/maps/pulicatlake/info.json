@@ -1,0 +1,71 @@
+{
+  "id": "PulicatLake",
+  "name": "Pulicat Lake",
+  "translation_key": "map.pulicatlake",
+  "categories": ["asia", "new"],
+  "multiplayer_frequency": 3,
+  "special_team_count": 2,
+  "nations": [
+    {
+      "coordinates": [115, 178],
+      "name": "Chittamur",
+      "flag": "in"
+    },
+    {
+      "coordinates": [296, 273],
+      "name": "Dugarajapatnam",
+      "flag": "in"
+    },
+    {
+      "coordinates": [157, 606],
+      "name": "Nelapattu",
+      "flag": "in"
+    },
+    {
+      "coordinates": [712, 798],
+      "name": "Sriharikota",
+      "flag": "in"
+    },
+    {
+      "coordinates": [39, 859],
+      "name": "Sullurpeta",
+      "flag": "in"
+    },
+    {
+      "coordinates": [386, 999],
+      "name": "Venadu",
+      "flag": "in"
+    },
+    {
+      "coordinates": [477, 1198],
+      "name": "Irakkam",
+      "flag": "in"
+    },
+    {
+      "coordinates": [446, 1557],
+      "name": "Sunnambukulam",
+      "flag": "in"
+    },
+    {
+      "coordinates": [808, 1661],
+      "name": "Annamalaicheri",
+      "flag": "in"
+    },
+    {
+      "coordinates": [981, 1791],
+      "name": "Pulicat",
+      "flag": "in"
+    },
+    {
+      "coordinates": [326, 1814],
+      "name": "Gummidipoondi",
+      "flag": "in"
+    },
+    {
+      "coordinates": [778, 1834],
+      "name": "Thirupalaivanam",
+      "flag": "in"
+    }
+  ],
+  "themes": ["asia"]
+}
