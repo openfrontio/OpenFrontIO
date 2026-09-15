@@ -68,6 +68,7 @@ export class RadialMenu implements Controller {
   private isTransitioning: boolean = false;
   private lastHideTime: number = 0;
   private reopenCooldownMs: number = 300;
+  private menuOpenedAt: number = 0;
 
   private anchorX = 0;
   private anchorY = 0;
@@ -144,9 +145,18 @@ export class RadialMenu implements Controller {
       .style("left", "0")
       .style("width", "100vw")
       .style("height", "100vh")
-      .on("click", () => {
+      .on("click", (event: Event) => {
+        if (!this.isClickAllowed(event)) return;
         this.hideRadialMenu();
         this.eventBus.emit(new CloseRadialMenuEvent());
+      })
+      .on("touchstart", (event: Event) => {
+        const target = event.target as Element | null;
+        if (target === this.menuElement.node() || target?.tagName === "svg") {
+          event.preventDefault();
+          this.hideRadialMenu();
+          this.eventBus.emit(new CloseRadialMenuEvent());
+        }
       })
       .on("contextmenu", (e) => {
         e.preventDefault();
@@ -168,7 +178,10 @@ export class RadialMenu implements Controller {
       .style("left", "50%")
       .style("transform", "translate(-50%, -50%)")
       .style("pointer-events", "all")
-      .on("click", (event) => this.hideRadialMenu());
+      .on(
+        "click",
+        (event) => this.isClickAllowed(event) && this.hideRadialMenu(),
+      );
 
     const container = svg
       .append("g")
@@ -194,8 +207,9 @@ export class RadialMenu implements Controller {
       .attr("r", this.config.centerButtonSize)
       .attr("fill", "transparent")
       .style("cursor", "pointer")
-      .on("click", (event) => {
+      .on("click", (event: Event) => {
         event.stopPropagation();
+        if (!this.isClickAllowed(event)) return;
         this.handleCenterButtonClick();
       })
       .on("touchstart", (event: Event) => {
@@ -556,7 +570,8 @@ export class RadialMenu implements Controller {
         handleMouseMove(event as MouseEvent);
       });
 
-      path.on("click", function (event) {
+      path.on("click", (event: MouseEvent) => {
+        if (!this.isClickAllowed(event)) return;
         onClick(d, event);
       });
 
@@ -878,6 +893,7 @@ export class RadialMenu implements Controller {
     this.selectedItemId = null;
     this.anchorX = x;
     this.anchorY = y;
+    this.menuOpenedAt = Date.now();
 
     this.menuElement.style("display", "block");
     this.clampAndSetMenuPositionForLevel(this.currentLevel);
@@ -1345,6 +1361,13 @@ export class RadialMenu implements Controller {
     const now = Date.now();
     const timeSinceHide = now - this.lastHideTime;
     return timeSinceHide >= this.reopenCooldownMs;
+  }
+
+  private isClickAllowed(event?: Event): boolean {
+    if (event instanceof PointerEvent && event.pointerType === "mouse") {
+      return true;
+    }
+    return Date.now() - this.menuOpenedAt >= 250;
   }
 
   private showTooltip(items: TooltipItem[] | TooltipKey[]) {
