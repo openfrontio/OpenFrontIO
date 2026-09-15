@@ -825,8 +825,11 @@ export class UserSettings {
    *
    * The carve-out: master has no legacy key of its own, so defaulting it to 0
    * would silence a returning player who had deliberately set the old
-   * sliders. If any audio value is stored at all, master defaults to 1.0 and
-   * that player keeps hearing what they chose.
+   * sliders. If any audio value is stored at all, master falls back to
+   * AUDIO_DEFAULTS.master and that player keeps hearing what they chose.
+   *
+   * Named rather than quoted, here and in setAudioVolume below, so the two
+   * cannot drift apart the next time the default moves.
    */
   private defaultMasterVolume(): number {
     if (isDesktopShell()) return AUDIO_DEFAULTS.master;
@@ -852,10 +855,11 @@ export class UserSettings {
   }
 
   setAudioVolume(category: AudioCategory, volume: number): void {
-    // Writing any channel can flip the web master carve-out from 0 to 1.0
-    // (see defaultMasterVolume): the player now has a stored audio value.
-    // Nothing else would announce that, so the mixer would sit at master 0 —
-    // a silent game — while the tab showed master at 100.
+    // Writing any channel can flip the web master carve-out from 0 to
+    // AUDIO_DEFAULTS.master (see defaultMasterVolume): the player now has a
+    // stored audio value. Nothing else would announce that, so the mixer
+    // would sit at master 0 — a silent game — while the tab showed the
+    // default.
     const masterBefore = this.audioVolume("master");
     this.setFloat(`settings.audio.${category}`, clampVolume(volume));
     if (category === "master") return;

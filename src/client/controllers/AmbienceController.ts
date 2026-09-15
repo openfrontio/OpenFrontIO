@@ -37,9 +37,13 @@ const MAX_VIEW_SCALE = 20;
  * ever get.
  */
 const AMBIENCE_PEAK_GAIN = 0.3;
-// Re-emitting on every sub-perceptible step would put an event on the bus
-// each tick of a slow zoom; a step is roughly a quarter of a dB here.
-const GAIN_EPSILON = 0.003;
+// Re-emitting on every sub-perceptible step would put an event on the bus each
+// tick of a slow zoom. A quarter of a dB is the step that buys, and a quarter
+// dB is a ratio -- 10^(0.25/20), about 3% -- so it has to be taken against the
+// envelope rather than written flat, or tripling the ceiling above silently
+// triples how often this fires. Held near the top of the envelope, which is
+// where a slow zoom spends its time and the only place the dedup matters.
+const GAIN_EPSILON = AMBIENCE_PEAK_GAIN * 0.03;
 // The structure must be this close (in tiles) to the center of the view.
 const AMBIENCE_RANGE_TILES = 20;
 
