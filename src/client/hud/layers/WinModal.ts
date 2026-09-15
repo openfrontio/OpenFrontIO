@@ -1,6 +1,7 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
+  DESKTOP_TUTORIAL_VIDEO_URL,
   getGamesPlayed,
   homeHref,
   isInIframe,
@@ -23,6 +24,7 @@ import {
   resolveCosmetics,
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { Platform } from "../../Platform";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
@@ -142,14 +144,21 @@ export class WinModal extends LitElement implements Controller {
         </h3>
         <!-- 56.25% = 9:16 -->
         <div class="relative w-full pb-[56.25%]">
-          <iframe
-            class="absolute top-0 left-0 w-full h-full rounded-sm"
-            src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
-            title="YouTube video player"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-          ></iframe>
+          ${Platform.isElectron
+            ? html`<video
+                class="absolute top-0 left-0 w-full h-full rounded-sm"
+                src="${this.isVisible ? DESKTOP_TUTORIAL_VIDEO_URL : ""}"
+                controls
+                preload="metadata"
+              ></video>`
+            : html`<iframe
+                class="absolute top-0 left-0 w-full h-full rounded-sm"
+                src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
+                title="YouTube video player"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+              ></iframe>`}
         </div>
       </div>
     `;
