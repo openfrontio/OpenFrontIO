@@ -428,6 +428,10 @@ export class WebGLFrameBuilder {
     if (sid !== 0 && this.effectOverridesUsed) {
       this.effectResolved.delete(sid);
     }
+    // Players resolved before the local player couldn't tell who's a teammate.
+    if (gameView.cosmeticVisibility().showFrom === "teammates") {
+      this.refreshCosmetics(gameView);
+    }
     if (me) {
       const rail = me.railColor().toRgb();
       this.view.setLocalRailColor(rail.r / 255, rail.g / 255, rail.b / 255);

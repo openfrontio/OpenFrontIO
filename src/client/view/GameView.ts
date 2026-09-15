@@ -468,15 +468,8 @@ export class GameView implements GameMap {
       }
     }
 
-    if (this._myClientID && this._myPlayer === null) {
-      this._myPlayer = this.playerByClientID(this._myClientID);
-      // Players created before the local player couldn't tell who's a teammate.
-      if (
-        this._myPlayer !== null &&
-        this._cosmeticVisibility.showFrom === "teammates"
-      ) {
-        this.refreshPlayerCosmetics();
-      }
+    if (this._myClientID) {
+      this._myPlayer ??= this.playerByClientID(this._myClientID);
     }
 
     for (const unit of this._units.values()) {
