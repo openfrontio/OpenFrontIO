@@ -992,6 +992,291 @@ describe("InputHandler AutoUpgrade", () => {
   });
 });
 
+describe("Click and hold when ghost is bomb", () => {
+  let inputHandler: InputHandler;
+  let mockGameView: GameView;
+  let eventBus: EventBus;
+  let mockCanvas: HTMLCanvasElement;
+  let uiState: UIState;
+
+  beforeEach(() => {
+    mockGameView = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true }),
+    } as GameView;
+    mockCanvas = document.createElement("canvas");
+    mockCanvas.width = 800;
+    mockCanvas.height = 600;
+
+    eventBus = new EventBus();
+    uiState = {
+      attackRatio: 20,
+      ghostStructure: UnitType.AtomBomb,
+      rocketDirectionUp: true,
+      upgradeMultiplier: 1,
+    } as UIState;
+    inputHandler = new InputHandler(
+      mockGameView,
+      uiState,
+      mockCanvas,
+      eventBus,
+    );
+    inputHandler.initialize();
+  });
+
+  afterEach(() => {
+    inputHandler.destroy();
+  });
+
+  test("does not prevent single-click behavior within grace period", () => {
+    vi.useFakeTimers();
+    const mockEmit = vi.spyOn(eventBus, "emit");
+
+    const downEvent = new PointerEvent("pointerdown", {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+    const upEvent = new PointerEvent("pointerup", {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+    inputHandler["onPointerDown"](downEvent);
+
+    vi.advanceTimersByTime(inputHandler.HOLD_POINTER_WAIT_MS - 1);
+    inputHandler["onPointerUp"](upEvent);
+
+    const emittedTypes = mockEmit.mock.calls.map(
+      (call) => call[0].constructor.name,
+    );
+    expect(emittedTypes).toContain("MouseUpEvent");
+    vi.useRealTimers();
+  });
+
+  test("triggers events on expected timeline when fully stationary", () => {
+    vi.useFakeTimers();
+    const mockEmit = vi.spyOn(eventBus, "emit");
+    let el = 0; // expected launches
+    const multi = 15;
+
+    const downEvent = new PointerEvent("pointerdown", {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    inputHandler["onPointerDown"](downEvent);
+
+    vi.advanceTimersByTime(inputHandler.HOLD_POINTER_WAIT_MS - 1);
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.advanceTimersByTime(2);
+    el++;
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.advanceTimersByTime(inputHandler.HOLD_SECOND_ACTION_DELAY_MS);
+    el++;
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.advanceTimersByTime(inputHandler.HOLD_REPEATED_ACTION_TRIGGER_RATE);
+    el++;
+
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.advanceTimersByTime(
+      inputHandler.HOLD_REPEATED_ACTION_TRIGGER_RATE * multi,
+    );
+    el = el + multi;
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    const emittedTypes = mockEmit.mock.calls.map(
+      (call) => call[0].constructor.name,
+    );
+    expect(emittedTypes).toContain("MouseDownEvent");
+    expect(emittedTypes).toContain("ConfirmGhostStructureEvent");
+
+    vi.useRealTimers();
+  });
+
+  test("triggers event on expected timeline when drag started after grace period", () => {
+    vi.useFakeTimers();
+    const mockEmit = vi.spyOn(eventBus, "emit");
+    let el = 0; // expected launches
+    const multi = 15;
+
+    const downEvent = new PointerEvent("pointerdown", {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    const moveEvent = new PointerEvent("pointermove", {
+      button: 0,
+      clientX: 130, // 30px move > DRAG_THRESHOLD_PX (10)
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    inputHandler["onPointerDown"](downEvent);
+
+    vi.advanceTimersByTime(inputHandler.HOLD_POINTER_WAIT_MS - 2);
+    // right before grace period
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.advanceTimersByTime(2);
+    // right after grace period, move the mouse
+    inputHandler["onPointerMove"](moveEvent);
+    el++;
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.advanceTimersByTime(inputHandler.HOLD_SECOND_ACTION_DELAY_MS);
+    el++;
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.advanceTimersByTime(inputHandler.HOLD_REPEATED_ACTION_TRIGGER_RATE);
+    el++;
+
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.advanceTimersByTime(
+      inputHandler.HOLD_REPEATED_ACTION_TRIGGER_RATE * multi,
+    );
+    el = el + multi;
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    const emittedTypes = mockEmit.mock.calls.map(
+      (call) => call[0].constructor.name,
+    );
+    expect(emittedTypes).toContain("MouseDownEvent");
+    expect(emittedTypes).toContain("ConfirmGhostStructureEvent");
+
+    vi.useRealTimers();
+  });
+
+  test("clickHold does nothing when pointer moved before the grace period completes", () => {
+    vi.useFakeTimers();
+    const mockEmit = vi.spyOn(eventBus, "emit");
+
+    const downEvent = new PointerEvent("pointerdown", {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    const moveEvent = new PointerEvent("pointermove", {
+      button: 0,
+      clientX: 130, // 30px move > DRAG_THRESHOLD_PX (10)
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    inputHandler["onPointerDown"](downEvent);
+    vi.advanceTimersByTime(1);
+    inputHandler["onPointerMove"](moveEvent);
+
+    vi.advanceTimersByTime(inputHandler.HOLD_POINTER_WAIT_MS - 2);
+    // still within grace period
+    inputHandler["onPointerMove"](moveEvent);
+
+    vi.advanceTimersByTime(
+      inputHandler.HOLD_REPEATED_ACTION_TRIGGER_RATE +
+        inputHandler.HOLD_REPEATED_ACTION_TRIGGER_RATE,
+    );
+
+    const confirmCalls = mockEmit.mock.calls.filter(
+      ([event]) => event instanceof ConfirmGhostStructureEvent,
+    );
+    expect(confirmCalls).toHaveLength(0);
+    vi.useRealTimers();
+  });
+
+  test("does not double fire when HOLD_POINTER_WAIT_MS < onPointerUp < HOLD_SECOND_ACTION_DELAY_MS", () => {
+    vi.useFakeTimers();
+    const mockEmit = vi.spyOn(eventBus, "emit");
+    const el = 1; // expected launches
+
+    const downEvent = new PointerEvent("pointerdown", {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    const upEvent = new PointerEvent("pointerup", {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    inputHandler["onPointerDown"](downEvent);
+    vi.advanceTimersByTime(inputHandler.HOLD_POINTER_WAIT_MS + 1);
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.advanceTimersByTime(1);
+    inputHandler["onPointerUp"](upEvent);
+    vi.advanceTimersByTime(inputHandler.HOLD_REPEATED_ACTION_TRIGGER_RATE - 3);
+
+    expect(
+      mockEmit.mock.calls.filter(
+        ([event]) => event instanceof ConfirmGhostStructureEvent,
+      ),
+    ).toHaveLength(el);
+
+    vi.useRealTimers();
+  });
+});
+
 describe("Warship box selection (Shift+drag)", () => {
   let inputHandler: InputHandler;
   let eventBus: EventBus;
