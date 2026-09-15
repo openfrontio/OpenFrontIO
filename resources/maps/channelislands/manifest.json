@@ -3,17 +3,17 @@
   "id": "ChannelIslands",
   "map": {
     "height": 2628,
-    "num_land_tiles": 1816022,
+    "num_land_tiles": 1839326,
     "width": 4744
   },
   "map16x": {
     "height": 657,
-    "num_land_tiles": 110251,
+    "num_land_tiles": 112455,
     "width": 1186
   },
   "map4x": {
     "height": 1314,
-    "num_land_tiles": 449210,
+    "num_land_tiles": 456137,
     "width": 2372
   },
   "multiplayer_frequency": 7,
