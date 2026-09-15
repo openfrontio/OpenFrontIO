@@ -167,7 +167,9 @@ export class WinModal extends LitElement implements Controller {
         <div
           class="mx-auto w-full overflow-x-auto overflow-y-visible rounded-sm"
         >
-          <div class="flex min-w-max items-start justify-start gap-4 px-1 py-1">
+          <div
+            class="flex min-w-max items-start justify-center gap-4 px-1 py-1"
+          >
             ${this.patternContent}
           </div>
         </div>
