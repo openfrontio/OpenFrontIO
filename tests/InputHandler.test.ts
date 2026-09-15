@@ -8,6 +8,7 @@ import {
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
 } from "../src/client/InputHandler";
+import { Platform } from "../src/client/Platform";
 import { UIState } from "../src/client/UIState";
 import { GameView, PlayerView, UnitView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
@@ -23,6 +24,8 @@ class MockPointerEvent {
   pointerId: number;
   type: string;
   pointerType: string;
+  ctrlKey: boolean;
+  shiftKey: boolean;
   preventDefault: () => void;
 
   constructor(type: string, init: any) {
@@ -34,6 +37,8 @@ class MockPointerEvent {
     this.y = init.y ?? init.clientY;
     this.pointerId = init.pointerId;
     this.pointerType = init.pointerType ?? "mouse";
+    this.ctrlKey = init.ctrlKey ?? false;
+    this.shiftKey = init.shiftKey ?? false;
     this.preventDefault = vi.fn();
   }
 }
@@ -287,6 +292,153 @@ describe("InputHandler AutoUpgrade", () => {
         (call) => call[0].constructor.name,
       );
       expect(emittedTypes).not.toContain("ContextMenuEvent");
+    });
+  });
+
+  describe("Ctrl+left click (#4918)", () => {
+    let isMacDescriptor: PropertyDescriptor | undefined;
+
+    function setIsMac(value: boolean) {
+      Object.defineProperty(Platform, "isMac", {
+        configurable: true,
+        value,
+      });
+    }
+
+    function fireLeftPointerUp(ctrlKey: boolean) {
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+        ctrlKey,
+      });
+      inputHandler["lastPointerDownX"] = 149;
+      inputHandler["lastPointerDownY"] = 249;
+      inputHandler["onPointerUp"](pointerEvent);
+    }
+
+    beforeEach(() => {
+      isMacDescriptor = Object.getOwnPropertyDescriptor(Platform, "isMac");
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+    });
+
+    afterEach(() => {
+      if (isMacDescriptor) {
+        Object.defineProperty(Platform, "isMac", isMacDescriptor);
+      }
+    });
+
+    test("on Mac, should not emit MouseUpEvent on ctrl+left release (secondary-click)", () => {
+      setIsMac(true);
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      fireLeftPointerUp(true);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+      expect(emittedTypes).not.toContain("ContextMenuEvent");
+      expect(emittedTypes).not.toContain("ShowBuildMenuEvent");
+    });
+
+    test("should still emit MouseUpEvent on plain left release", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      fireLeftPointerUp(false);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseUpEvent");
+    });
+
+    test("Win/Linux: ctrl+left still opens the build menu when Control is held", () => {
+      setIsMac(false);
+      inputHandler["keybinds"].buildMenuModifier = "ControlLeft";
+      inputHandler["activeKeys"].add("ControlLeft");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      fireLeftPointerUp(true);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("ShowBuildMenuEvent");
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+    });
+
+    test("Win/Linux: Right Ctrl+left still attacks (not a dead click)", () => {
+      setIsMac(false);
+      inputHandler["keybinds"].buildMenuModifier = "ControlLeft";
+      inputHandler["activeKeys"].add("ControlRight");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      fireLeftPointerUp(true);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseUpEvent");
+      expect(emittedTypes).not.toContain("ShowBuildMenuEvent");
+    });
+
+    test("Mac: ctrl+left does not open build menu even if rebound to ControlLeft", () => {
+      setIsMac(true);
+      inputHandler["keybinds"].buildMenuModifier = "ControlLeft";
+      inputHandler["activeKeys"].add("ControlLeft");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      fireLeftPointerUp(true);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).not.toContain("ShowBuildMenuEvent");
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+    });
+
+    test("Mac: cmd+left still opens the build menu", () => {
+      setIsMac(true);
+      inputHandler["keybinds"].buildMenuModifier = "MetaLeft";
+      inputHandler["activeKeys"].add("MetaLeft");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      fireLeftPointerUp(false);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("ShowBuildMenuEvent");
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+    });
+
+    test("Mac: ctrl+left during spawn still emits MouseUpEvent", () => {
+      setIsMac(true);
+      mockGameView.inSpawnPhase = () => true;
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      fireLeftPointerUp(true);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseUpEvent");
+    });
+
+    test("onContextMenu still opens the radial after ctrl+left", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      const mouseEvent = new MouseEvent("contextmenu", {
+        clientX: 150,
+        clientY: 250,
+      });
+      inputHandler["onContextMenu"](mouseEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("ContextMenuEvent");
     });
   });
 
