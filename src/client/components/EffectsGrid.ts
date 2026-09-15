@@ -291,12 +291,12 @@ export class EffectsGrid extends LitElement {
   private renderTabBar(): TemplateResult {
     return html`
       <div
-        class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-b border-white/10 px-4 sm:flex-nowrap"
+        class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-b border-white/10 px-4"
       >
         ${EFFECT_TYPES.map((type) => {
           const active = this.activeType === type;
           return html`<button
-            class="-mb-px min-w-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${active
+            class="-mb-px max-w-full shrink-0 whitespace-normal border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${active
               ? "border-malibu-blue text-aquarius"
               : "border-transparent text-white/40 hover:text-white/70"}"
             @click=${() => this.selectEffectType(type)}
