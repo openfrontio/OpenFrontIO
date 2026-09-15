@@ -2,6 +2,7 @@ import { z } from "zod";
 import { GameID } from "../core/Schemas";
 import {
   commitsMatch,
+  isCommitLike,
   ownLetterIn,
   pickServerForBuild,
   ServerList,
@@ -853,10 +854,10 @@ export function redirectToGameVersion(
  * (docs/MultiServer.md, "Opening a game at its server's version", OPE-471).
  *
  * Same decision as redirectToGameVersion, with two differences that apply
- * only once the server has answered: its own `gitCommit` (optional on the
- * wire) stands in when the list carries no version for this game, and the
- * loop guard reads the boot-time pin, since the join has already rewritten
- * the address bar to the version-free share URL (PagePin.ts).
+ * only once the server has answered: the commit it refused us with wins
+ * over the list, which is stale-while-revalidate, and the loop guard reads
+ * the boot-time pin, since the join has already rewritten the address bar
+ * to the version-free share URL (PagePin.ts).
  */
 export function versionedPathForMismatchedGame(
   gameID: GameID,
@@ -864,7 +865,13 @@ export function versionedPathForMismatchedGame(
 ): string | null {
   if (isDesktopShell()) return null;
   if (isOnReplayShell()) return null;
-  const version = ClientEnv.gameVersion(gameID) ?? serverCommit;
+  // A GIT_COMMIT that names no commit ("DEV", "unknown") must never reach a
+  // /v/<x>/ URL: treat it as if the server had said nothing.
+  const fromServer =
+    serverCommit !== undefined && isCommitLike(serverCommit)
+      ? serverCommit
+      : undefined;
+  const version = fromServer ?? ClientEnv.gameVersion(gameID);
   if (version === undefined) return null;
   const pinned = pagePin();
   if (pinned !== null && commitsMatch(pinned, version)) return null;

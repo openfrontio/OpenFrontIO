@@ -752,9 +752,14 @@ the server cancels it (OPE-469).
 
 That is also why join-time `version_mismatch` (`ClientGameRunner`) now tries
 this page's own host first: `versionedPathForMismatchedGame` asks the same
-question as the redirect above, with the refusing server's own `gitCommit`
-standing in whenever the list carries no version for that game's letter, and
-answers the `/v/<commit>/` path on the host already loaded. Only when there
+question as the redirect above and answers the `/v/<commit>/` path on the
+host already loaded. It asks it of the refusing server's own `gitCommit`
+first — that server has just said which build it runs, where the list is
+stale-while-revalidate and may still name the version the join was attempted
+on — and of the list only when the server names no commit at all. A
+`GIT_COMMIT` that is not commit-shaped (`DEV`, `unknown`) counts as naming
+none: it would otherwise build a dead `/v/unknown/` URL instead of falling
+through to the recovery below. Only when there
 is no such page — versions match, an exempt shell, or the page is already
 pinned to the commit the server names — does it fall through to the
 cross-host, pinned and reload branches described below. Its loop guard reads
