@@ -747,6 +747,15 @@ export async function startWorker() {
             workerId,
           });
           ws.close(CloseCode.Forbidden, CloseReason.NotTrusted);
+        } else if (joinResult === "redirected") {
+          // Normal, not a rejection code: the game already sent this client
+          // where to go, and Normal is the client's silent branch, so no
+          // dialog appears while it navigates.
+          log.info("client redirected to a pool sibling", {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(CloseCode.Normal, CloseReason.PoolRedirect);
         } else if (joinResult === "ended") {
           log.info(`client tried to join ended game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,

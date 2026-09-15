@@ -51,6 +51,9 @@ export const CloseReason = {
   RankedLimitReached: "close_reason.ranked_limit_reached",
   InvalidClan: "close_reason.invalid_clan",
   ClanVerificationFailed: "close_reason.clan_verification_failed",
+  // Rendered in one case only: a second redirect from the same lobby, which
+  // the client refuses rather than following. The redirect itself is silent.
+  PoolRedirect: "close_reason.pool_redirect",
   // Shown for a terminal close whose reason is not one of ours.
   Unknown: "close_reason.unknown",
 } as const;
