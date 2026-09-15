@@ -485,4 +485,65 @@ describe("the rendered needs-account session state", () => {
     const button = bar.querySelector("button");
     expect(button?.textContent?.trim()).toBe("desktop_status.go_online");
   });
+
+  // The two above only check the label; this checks the WIRING -- that a
+  // click actually reaches the bridge, not just that a button with the right
+  // text exists. See desktopLinkGate() in DesktopShell.ts: it reads
+  // window.openfrontDesktop.showLinkGate.
+  it("invokes showLinkGate when Go online is clicked", async () => {
+    const showLinkGate = vi.fn(() => Promise.resolve());
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      showLinkGate,
+    };
+
+    const bar = mountBar();
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", {
+        detail: { status: "signed-out", reason: "needs-account" },
+      }),
+    );
+    await bar.updateComplete;
+
+    bar.querySelector("button")!.click();
+
+    expect(showLinkGate).toHaveBeenCalledTimes(1);
+
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = undefined;
+  });
+
+  // A rejected showLinkGate() must be caught, not left to become an
+  // unhandled rejection -- see the handler's own comment on why it uses
+  // `.catch` instead of the bare `void` form used elsewhere in this file.
+  it("handles a rejected showLinkGate without an unhandled rejection", async () => {
+    const showLinkGate = vi.fn(() => Promise.reject(new Error("no bridge")));
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      showLinkGate,
+    };
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const bar = mountBar();
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", {
+        detail: { status: "signed-out", reason: "needs-account" },
+      }),
+    );
+    await bar.updateComplete;
+
+    bar.querySelector("button")!.click();
+
+    // Flush the promise's microtask queue so the `.catch` has run before
+    // this test ends -- otherwise a missing `.catch` would surface as an
+    // unhandled rejection on a LATER test rather than a failure here.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(showLinkGate).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledWith(
+      "desktop-status-bar: showLinkGate failed",
+      expect.any(Error),
+    );
+
+    errorSpy.mockRestore();
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = undefined;
+  });
 });
