@@ -11,6 +11,7 @@ const apiMocks = vi.hoisted(() => ({
 // The two ClientEnv reads the version check below depends on: this bundle's
 // commit, and the commit the matched game's server runs (the API's list).
 const envMocks = vi.hoisted(() => ({
+  siteHost: vi.fn((): string | undefined => "openfront.test"),
   gitCommit: vi.fn(() => "bfd5563a11111111111111111111111111111111"),
   gameVersion: vi.fn((_gameID: string): string | undefined => undefined),
 }));
@@ -35,6 +36,7 @@ vi.mock("../../src/client/ClientEnv", () => ({
     workerPath: vi.fn(() => "w0"),
     gitCommit: envMocks.gitCommit,
     gameVersion: envMocks.gameVersion,
+    siteHost: envMocks.siteHost,
     gamePath: vi.fn((gameID: string) => `/w0/game/${gameID}`),
     gameHttpBase: vi.fn(() => "https://falk2-a.openfront.io"),
     gameWorkerPath: vi.fn(() => "w0"),
@@ -632,7 +634,7 @@ describe("MatchmakingModal queue join carries the page's build", () => {
     const { socket } = await openAndJoin("1v1");
 
     expect(socket.url).toBe(
-      `ws://matchmaking.test/matchmaking/join?instance_id=test-instance&mode=1v1&version=${OWN}`,
+      `ws://matchmaking.test/matchmaking/join?instance_id=test-instance&mode=1v1&version=${OWN}&site=openfront.test`,
     );
   });
 
@@ -642,7 +644,49 @@ describe("MatchmakingModal queue join carries the page's build", () => {
     const { socket } = await openAndJoin("2v2");
 
     expect(socket.url).toBe(
-      "ws://matchmaking.test/matchmaking/join?instance_id=test-instance&mode=2v2",
+      "ws://matchmaking.test/matchmaking/join?instance_id=test-instance&mode=2v2&site=openfront.test",
     );
+  });
+});
+
+// infra #738: the API keeps one ranked queue per SITE, so a match can only
+// land on a server this page's list resolves. The site is the one the list
+// is read for (serverListSite), not the document host.
+describe("MatchmakingModal queue join carries the page's site", () => {
+  const OWN = "bfd5563a11111111111111111111111111111111";
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    sockets.length = 0;
+    apiMocks.getUserMe.mockReset();
+    apiMocks.getUserMe.mockResolvedValue(userMe());
+    envMocks.gitCommit.mockReturnValue(OWN);
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    envMocks.siteHost.mockReturnValue("openfront.test");
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("sends the site whose server list this page reads", async () => {
+    envMocks.siteHost.mockReturnValue("beta.openfront.test");
+
+    const { socket } = await openAndJoin("1v1");
+
+    expect(socket.url).toContain("&site=beta.openfront.test");
+  });
+
+  it("omits the site when it is not a name the API accepts", async () => {
+    // The API refuses a malformed site rather than ignoring it, so a dev
+    // page's host:port must not reach the join URL.
+    envMocks.siteHost.mockReturnValue("localhost:9000");
+
+    const { socket } = await openAndJoin("1v1");
+
+    expect(socket.url).not.toContain("site=");
   });
 });

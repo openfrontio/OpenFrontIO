@@ -18,6 +18,17 @@ export function isCommitLike(value: string): boolean {
   return COMMIT_RE.test(value);
 }
 
+// A site name as the API's registry accepts it (its `SiteSchema`): a
+// lowercase hostname — no scheme, no port, no path. The matchmaking join and
+// the ranked check-in send the site only when it has this shape, because the
+// API refuses a malformed one outright rather than treating it as absent,
+// and a dev page's `localhost:9000` must not take the join down.
+const SITE_RE = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
+
+export function isSiteLike(value: string): boolean {
+  return value.length <= 253 && SITE_RE.test(value) && !value.includes("..");
+}
+
 // Every commit the list names is validated on the way in. Commits decide
 // which server a build may use, and a commit-shaped value is the only thing
 // those compares — and `/v/<commit>/`, which pins a page to a version — can
