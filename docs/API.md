@@ -227,8 +227,13 @@ curl "https://api.openfront.io/public/player/HabCsQYR/games?filter=team&type=pub
 ### Recently Deleted Players
 
 List the public ids of players deleted in the last 7 days, newest first. Poll
-this at least once a week to remove deleted accounts from any data you have
-collected — deletions older than the 7-day window are not returned.
+this daily and delete those players from any data you have collected.
+
+Pass `since` (the `deletedAt` of your last sync, or the time you last polled)
+to fetch only newer deletions. Deletions are never returned more than 7 days
+after the fact: a `since` more than 7 days in the past is rejected with a 400.
+If you miss the window, reconcile instead by dropping any player whose
+`/public/player/:playerId` now returns 404.
 
 **Endpoint:**
 
@@ -236,10 +241,15 @@ collected — deletions older than the 7-day window are not returned.
 GET https://api.openfront.io/public/players/recently-deleted
 ```
 
+**Query Parameters:**
+
+- `since` (optional): ISO 8601 timestamp; only return players deleted after
+  this time. Must be within the last 7 days.
+
 **Example:**
 
 ```bash
-curl "https://api.openfront.io/public/players/recently-deleted"
+curl "https://api.openfront.io/public/players/recently-deleted?since=2026-09-14T00:00:00Z"
 ```
 
 **Response:**
