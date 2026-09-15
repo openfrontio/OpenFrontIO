@@ -224,6 +224,35 @@ GET https://api.openfront.io/public/player/:playerId/games
 curl "https://api.openfront.io/public/player/HabCsQYR/games?filter=team&type=public"
 ```
 
+### Recently Deleted Players
+
+List the public ids of players deleted in the last 7 days, newest first. Poll
+this at least once a week to remove deleted accounts from any data you have
+collected — deletions older than the 7-day window are not returned.
+
+**Endpoint:**
+
+```
+GET https://api.openfront.io/public/players/recently-deleted
+```
+
+**Example:**
+
+```bash
+curl "https://api.openfront.io/public/players/recently-deleted"
+```
+
+**Response:**
+
+```json
+[
+  {
+    "publicId": "HabCsQYR",
+    "deletedAt": "2026-09-14T08:12:33.000Z"
+  }
+]
+```
+
 ## Clans
 
 ### Clan Leaderboard
