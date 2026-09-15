@@ -228,6 +228,48 @@ describe("Steam login", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  // The shell declines to mint a ticket until the player answers the
+  // account-link gate. That must land as a diagnosed signed-out state --
+  // and, critically, must never attempt the /auth/steam exchange, because
+  // that exchange is what silently creates a throwaway account.
+  it("does not exchange a ticket when the shell reports needs-account", async () => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: false,
+      reason: "needs-account",
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    await getAuthHeader();
+
+    expect(getDesktopSessionState()).toEqual({
+      status: "signed-out",
+      reason: "needs-account",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // An old client talking to a new shell can receive a ticket failure reason
+  // outside its own SteamTicketFailure union. That must still fall through to
+  // the safe default rather than return undefined at runtime: signed-out with
+  // "steam-error", never attempting an exchange.
+  it("maps an unrecognised ticket failure reason to the steam-error default", async () => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: false,
+      reason: "future-reason" as never,
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    await getAuthHeader();
+
+    expect(getDesktopSessionState()).toEqual({
+      status: "signed-out",
+      reason: "steam-error",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["unavailable", "steam-unavailable"],
     ["timeout", "steam-wedged"],
