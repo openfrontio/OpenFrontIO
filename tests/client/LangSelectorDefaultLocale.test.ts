@@ -9,6 +9,16 @@ function defaultLocale(): string {
   return (selector as unknown as { defaultLocale(): string }).defaultLocale();
 }
 
+/** The language the client would actually load for defaultLocale()'s answer. */
+function resolvedDefaultLanguage(): string {
+  const selector = new LangSelector();
+  const priv = selector as unknown as {
+    defaultLocale(): string;
+    getClosestSupportedLang(lang: string): string;
+  };
+  return priv.getClosestSupportedLang(priv.defaultLocale());
+}
+
 /** What the Steam shell's preload would expose, or nothing off the shell. */
 function withShellLocale(locale: string | null): void {
   window.openfrontDesktop =
@@ -54,6 +64,14 @@ describe("LangSelector default locale", () => {
   // Every language we ship that Steam has no UI language for. Each of these
   // reaches us only via the OS locale, so each is a player the unfixed
   // behaviour silently moved to English.
+  //
+  // Asserted on the RESOLVED language, not on defaultLocale()'s raw return.
+  // The raw form would be an echo -- defaultLocale hands the OS locale back
+  // untouched, so `expect(defaultLocale()).toBe(locale)` reduces to
+  // `expect(x).toBe(x)` and passes for "zz" or "" just as happily. Resolving
+  // is what makes each code carry its own claim: that it is a language we
+  // really ship, so a drop from metadata.json fails this rather than sailing
+  // through as another opaque string.
   it("yields for every language Steam cannot express", () => {
     for (const locale of [
       "bn",
@@ -72,7 +90,7 @@ describe("LangSelector default locale", () => {
     ]) {
       withShellLocale("en");
       withOsLocale(locale);
-      expect(defaultLocale(), locale).toBe(locale);
+      expect(resolvedDefaultLanguage(), locale).toBe(locale);
     }
   });
 
