@@ -44,6 +44,17 @@ describe("stripePublishableKey", () => {
   it("returns the page's key", () => {
     expect(stripePublishableKey()).toBe("pk_test_abc");
   });
+
+  // stripeInlineAvailable is a render-path gate; a page with no usable
+  // BOOTSTRAP_CONFIG (ClientEnv.get() throws) must read as "no key", not
+  // blow up the component render that asked.
+  it("is null when the page has no BOOTSTRAP_CONFIG", () => {
+    keyMock.mockImplementation(() => {
+      throw new Error("Missing BOOTSTRAP_CONFIG");
+    });
+    expect(stripePublishableKey()).toBeNull();
+    expect(stripeInlineAvailable()).toBe(false);
+  });
 });
 
 describe("stripeKeyMatchesEnv", () => {

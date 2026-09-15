@@ -29,7 +29,16 @@ import { translateText } from "./Utils";
  * deployment passes the key whose mode matches its API at startup.
  */
 export function stripePublishableKey(): string | null {
-  const key = ClientEnv.stripePublishableKey();
+  // Never throws: this is a render-path gate (store tiles consult it on
+  // every render), and ClientEnv.get() throws on a page with no usable
+  // BOOTSTRAP_CONFIG (tests, a worker thread). Such a page simply has no
+  // key, which the callers already handle.
+  let key: string | undefined;
+  try {
+    key = ClientEnv.stripePublishableKey();
+  } catch {
+    return null;
+  }
   return key === undefined || key === "" ? null : key;
 }
 
