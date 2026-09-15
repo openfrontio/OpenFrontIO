@@ -85,17 +85,46 @@ export class LangSelector extends LitElement {
     return "en";
   }
 
+  /**
+   * The locale to default to when the player has never chosen one.
+   *
+   * On the Steam desktop build the shell reports the locale the player's Steam
+   * is set to, which is a better signal than navigator.language -- there the
+   * OS locale, which ignores Steam entirely.
+   *
+   * But only when Steam actually said something. Steam offers about thirty UI
+   * languages and we ship forty, and English is ALSO Steam's fallback for a
+   * language it cannot express: a player whose system is Estonian cannot have
+   * Estonian Steam, so theirs reports English. "The player wants English" and
+   * "Steam has no way to say what this player reads" are the same answer, so
+   * an answer that lands on English is treated as no answer and the OS locale
+   * decides -- which is what this did before Steam was consulted at all.
+   *
+   * Tested on the RESOLVED language rather than the raw tag, so a Steam
+   * language we ship no translation for (Thai, Romanian, Norwegian) counts as
+   * uninformative for the same reason and by the same path.
+   *
+   * The case this deliberately gets wrong: someone who genuinely wants English
+   * while their system is German now gets German. That is exactly what they
+   * got before the shell reported anything, so it is an old imperfection left
+   * standing rather than a new one -- and the in-game picker settles it for
+   * good, because a saved choice outranks both of these.
+   */
+  private defaultLocale(): string {
+    const osLocale = navigator.language;
+    const steamLocale = desktopSteamLocale();
+    if (steamLocale === null) return osLocale;
+    return this.getClosestSupportedLang(steamLocale) === "en"
+      ? osLocale
+      : steamLocale;
+  }
+
   private async initializeLanguage() {
-    // On the Steam desktop build, the shell reports the locale the player's
-    // Steam is set to. It outranks navigator.language -- which there is the OS
-    // locale, and so ignores Steam entirely -- but NOT a saved choice, which
-    // stays the last word on every platform.
-    //
-    // Ordering it this way is what keeps the language following Steam: the
-    // shell's value is consulted afresh each launch rather than persisted, so
-    // a player who changes their Steam language sees the game follow, while a
-    // player who picks a language in-game has that stick.
-    const browserLocale = desktopSteamLocale() ?? navigator.language;
+    // A saved choice is the last word on every platform. Everything else is
+    // just how the DEFAULT is picked -- see defaultLocale, and note it is
+    // consulted afresh each launch rather than persisted, so a player who
+    // changes their Steam language sees the game follow.
+    const browserLocale = this.defaultLocale();
     const savedLang = localStorage.getItem("lang");
     const userLang = this.getClosestSupportedLang(savedLang ?? browserLocale);
 
