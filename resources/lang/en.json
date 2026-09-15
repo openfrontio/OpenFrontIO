@@ -1712,6 +1712,7 @@
     "trust_required_ok": "OK",
     "trust_required_title": "Trusted-only lobby",
     "trusted_locked": "Trusted accounts only. Your account isn't trusted yet.",
+    "trusted_tooltip_title": "Trusted lobby",
     "trusted_unlocked": "Trusted accounts only. Your account is trusted.",
     "upcoming": "Upcoming",
     "waiting_for_players": "Waiting for players"
