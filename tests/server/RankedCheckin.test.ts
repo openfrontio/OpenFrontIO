@@ -110,6 +110,7 @@ describe("rankedCheckinPass", () => {
     vi.stubEnv("SUBDOMAIN", "blue");
     vi.stubEnv("API_KEY", "test-key");
     vi.stubEnv("INSTANCE_ID", "abcd1234");
+    vi.stubEnv("GIT_COMMIT", "bfd5563a11111111111111111111111111111111");
   });
 
   afterEach(() => {
@@ -127,14 +128,48 @@ describe("rankedCheckinPass", () => {
     const [url, init] = vi.mocked(fetchFn).mock.calls[0];
     expect(url).toBe("https://api.openfront.io/matchmaking/checkin");
     const body = JSON.parse(String((init as RequestInit).body));
-    // The body is unchanged by OPE-469; the API keys its queue off it.
+    // The body is otherwise unchanged by OPE-469; the API keys its queue
+    // off it.
     expect(body).toMatchObject({
       id: 0,
       ccu: 3,
       instanceId: "abcd1234",
       mode: "1v1",
+      version: "bfd5563a11111111111111111111111111111111",
     });
     expect(typeof body.gameId).toBe("string");
+  });
+
+  // OPE-470 / infra #732: the Lobby only assigns a match to a server whose
+  // version matches the players'. Missing matches missing, so the key has to
+  // be absent — not null, not "DEV" — whenever the build names no commit.
+  it("carries the build's commit as version", async () => {
+    vi.stubEnv("GIT_COMMIT", "A".repeat(40));
+    const fetchFn = okFetch({ assignment: null });
+    const deps = makeDeps(() => true, fetchFn);
+    const gate = new RankedCheckinGate(deps.isActive, deps.log);
+
+    await rankedCheckinPass("1v1", gate, deps);
+
+    const [, init] = vi.mocked(fetchFn).mock.calls[0];
+    const body = JSON.parse(String((init as RequestInit).body));
+    // Lowercased: the API specifies the field lowercase.
+    expect(body.version).toBe("a".repeat(40));
+  });
+
+  it("omits version when the build names no commit", async () => {
+    for (const label of ["DEV", "unknown"]) {
+      vi.stubEnv("GIT_COMMIT", label);
+      const fetchFn = okFetch({ assignment: null });
+      const deps = makeDeps(() => true, fetchFn);
+      const gate = new RankedCheckinGate(deps.isActive, deps.log);
+
+      await rankedCheckinPass("1v1", gate, deps);
+
+      const [, init] = vi.mocked(fetchFn).mock.calls[0];
+      const body = JSON.parse(String((init as RequestInit).body));
+      expect(body).not.toHaveProperty("version");
+    }
   });
 
   it("does not open the long poll while the deployment is draining", async () => {

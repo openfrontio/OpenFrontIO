@@ -411,7 +411,10 @@ offer only while the deployment-active flag the master pushes over
 sources (`ClusterCheckin.applyCheckinState` with `CLUSTER_STATE_SOURCE=api`,
 the apex colour poll otherwise). Games already assigned or running are
 untouched; only the next offer is withheld, and the worker defaults to active
-until its master says otherwise. Without this, blue ran v0.34.0 as `draining`
+until its master says otherwise. The check-in also carries the server's own
+commit as `version` (omitted when `GIT_COMMIT` names no commit), so the
+Lobby can refuse to assign a match to a server on a different build than the
+players — the contract form of the same rule (OPE-470). Without this, blue ran v0.34.0 as `draining`
 while every `openfront.io` page served green's v0.34.1, blue's workers kept
 claiming matches, and players on the new build were assigned a blue game, got
 `version_mismatch`, went to fetch blue's build, and arrived past the start

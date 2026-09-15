@@ -1,5 +1,6 @@
 import type winston from "winston";
 import { z } from "zod";
+import { isCommitLike } from "../core/ServerList";
 import type { GameManager } from "./GameManager";
 import type { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
@@ -106,6 +107,28 @@ export interface RankedCheckinDeps {
 }
 
 /**
+ * The build this server runs, for the check-in body's `version` (OPE-470,
+ * infra #732): the Lobby assigns a match only to a server whose version
+ * matches the players', which is the contract version of what the drain gate
+ * above enforces by deployment state. Missing matches missing, so a server
+ * that sends nothing is treated exactly as before.
+ *
+ * Sent only when GIT_COMMIT is actually commit-shaped. A malformed value is
+ * a 400 from the API, and the two non-sha labels a build can carry — "DEV"
+ * from `npm run start:server-dev`, "unknown" from the Dockerfile's default —
+ * name no build, so there is nothing to match against. Lowercased because
+ * the field is specified lowercase; real shas already are.
+ *
+ * A spread of {} rather than `version: undefined`: JSON.stringify drops the
+ * key either way, but an explicit undefined would leave every reader
+ * wondering which it is (the same choice as ClusterCheckin's `machine`).
+ */
+function buildVersionField(): { version?: string } {
+  const commit = ServerEnv.gitCommit();
+  return isCommitLike(commit) ? { version: commit.toLowerCase() } : {};
+}
+
+/**
  * One check-in pass. Exported for tests: the polling wrapper is what makes
  * the real loop awkward to drive, not the body.
  */
@@ -143,6 +166,7 @@ export async function rankedCheckinPass(
         ccu: gm.activeClients(),
         instanceId: process.env.INSTANCE_ID,
         mode,
+        ...buildVersionField(),
       }),
       signal: controller.signal,
     });
