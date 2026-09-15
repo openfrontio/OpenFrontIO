@@ -108,6 +108,7 @@ function makeRunner(overrides: {
     playerByClientID: vi.fn(overrides.playerByClientID ?? (() => myPlayer)),
     euclideanDistSquared: () => overrides.boatDistSquared ?? 0,
   };
+  const input = { initialize: vi.fn(), destroy: vi.fn() };
   const runner = new ClientGameRunner(
     { gameID: "game1234" } as LobbyConfig,
     "c0000001",
@@ -120,7 +121,7 @@ function makeRunner(overrides: {
         screenToWorldCoordinates: vi.fn(() => ({ x: 1, y: 2 })),
       },
     } as never,
-    { initialize: vi.fn() } as never,
+    input as never,
     {
       updateCallback: vi.fn(),
       rejoinGame: vi.fn(),
@@ -133,7 +134,7 @@ function makeRunner(overrides: {
     { goToPlayer: () => false } as never,
   );
   runner.start();
-  return { runner, eventBus, gameView, myPlayer };
+  return { runner, eventBus, gameView, myPlayer, input };
 }
 
 const flushPromises = () => new Promise((r) => setTimeout(r, 0));
@@ -232,5 +233,24 @@ describe("auto boat", () => {
     await flushPromises();
 
     expect(boats).toHaveLength(0);
+  });
+});
+
+describe("stop() (OPE-411)", () => {
+  it("calls input.destroy()", () => {
+    const { runner, input } = makeRunner({});
+
+    runner.stop();
+
+    expect(input.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("tolerates a second stop()", () => {
+    const { runner, input } = makeRunner({});
+
+    runner.stop();
+    runner.stop();
+
+    expect(input.destroy).toHaveBeenCalledTimes(2);
   });
 });

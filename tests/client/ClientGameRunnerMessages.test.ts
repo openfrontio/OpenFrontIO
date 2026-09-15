@@ -152,7 +152,7 @@ function makeStartedRunner(withStartInfo: boolean) {
     "c0000001",
     eventBus,
     renderer as never,
-    { initialize: vi.fn() } as never,
+    { initialize: vi.fn(), destroy: vi.fn() } as never,
     transport as never,
     worker as never,
     gameView as never,
