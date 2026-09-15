@@ -134,6 +134,9 @@ export class ClientEnv {
       numWorkers: bc.numWorkers,
       turnstileSiteKey: bc.turnstileSiteKey,
       jwtAudience: bc.jwtAudience,
+      // Optional: a deployment without a key (or a desktop shell, which
+      // buys on Steam) omits it, and the inline Stripe flow stays off.
+      stripePublishableKey: bc.stripePublishableKey,
       // Absent on a static page: only a server that renders the page knows
       // its own instance id. Empty means "none", and callers send it only
       // when it is there (the API ignores it either way).
@@ -153,6 +156,9 @@ export class ClientEnv {
   // takes a source so we don't have to keep them in sync by hand.
   static env(): GameEnv {
     return ClientEnv.get().gameEnv;
+  }
+  static stripePublishableKey(): string | undefined {
+    return ClientEnv.get().stripePublishableKey;
   }
   // Worker count of the server this page talks to: the server the API's list
   // picked, else the own cluster entry when the map was injected, else the
@@ -589,6 +595,10 @@ export interface ClientEnvValues {
   numWorkers?: number;
   turnstileSiteKey: string;
   jwtAudience: string;
+  // Optional: absent when the deployment carries no Stripe key (dev, desktop
+  // shells). Environment-scoped like turnstileSiteKey, so a static page
+  // carries it too.
+  stripePublishableKey?: string;
   // "" on a static page, which no server rendered.
   instanceId: string;
   gitCommit: string;
