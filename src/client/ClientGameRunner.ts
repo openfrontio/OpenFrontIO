@@ -51,6 +51,7 @@ import {
 } from "./InputHandler";
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
+import { versionedPathForMismatchedGame } from "./ServerList";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
@@ -359,17 +360,24 @@ export function joinLobby(
         );
         // The game's server runs a different build than this bundle. On the
         // desktop the shell updates its local overlay itself, so just say
-        // what's happening and let its update bar take it from there. On the
-        // web, fork on where the game lives: a cross-host game means OUR
-        // shell is simply a different deployment's — reloading would fetch
-        // the same wrong build, so navigate to the game's own host, whose
-        // shell serves the matching bundle (and map). An own-host game means
-        // this tab is stale (left open across a deploy): reload.
+        // what's happening and let its update bar take it from there.
+        //
+        // On the web, in order: this host's own `/v/<commit>/` page, which
+        // keeps the loaded document and the Turnstile token; else the
+        // game's host, whose shell serves the matching bundle (and map);
+        // else this tab is simply stale (left open across a deploy), so
+        // reload. See docs/MultiServer.md (OPE-471).
         if (isDesktopShell()) {
           void showInGameAlert(translateText("update_available.desktop"));
         } else {
+          const versioned = versionedPathForMismatchedGame(
+            lobbyConfig.gameID,
+            message.gitCommit,
+          );
           const r = ClientEnv.resolveGame(lobbyConfig.gameID);
-          if (r.kind === "cross") {
+          if (versioned !== null) {
+            window.location.href = versioned;
+          } else if (r.kind === "cross") {
             window.location.href = `https://${r.host}/game/${lobbyConfig.gameID}${window.location.search}`;
           } else if (pagePin() !== null) {
             // A pinned `/v/<commit>/` page must not reload. The pin comes
