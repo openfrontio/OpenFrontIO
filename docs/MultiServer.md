@@ -41,7 +41,7 @@ behavior except the bugs it fixes.
 | Relationship to open PR #5164                               | **Absorb it.** Fold `t3code/preserve-websocket-old-deployment` (ActiveDeployment, serverHost pinning, drain, version-mismatch join gate) into this work as PR 2 and supersede that PR.                                                                                                                                |
 | New game ID size                                            | **10 chars total** — instance letter + 9 random from the existing 58-symbol alphabet. `GAME_ID_REGEX` widens to a `{8,10}` length range so archived 8-char IDs stay valid. (~0.8 expected archive-key collisions at 200M lifetime games; today's 8-char IDs are already near their first expected collision at ~20M.) |
 | Deployment color source                                     | **Explicit `color` field in cluster.json** — read by boot validation, `/api/health`, and the drain check. Subdomain naming is not load-bearing.                                                                                                                                                                       |
-| Matchmaking DO re-key (`mode` instead of `instanceId:mode`) | **API-side only.** This repo keeps sending `instance_id` (client join param, worker checkin body); the API just stops keying on it. Zero-coordination rollout.                                                                                                                                                        |
+| Matchmaking DO re-key (`mode` instead of `instanceId:mode`) | **API-side only.** This repo keeps sending `instance_id` (client join param, worker checkin body); the API just stops keying on it. Zero-coordination rollout. Since infra #738 the key is `site:mode` — see "The ranked queue is keyed by site" below.                                                               |
 
 ## cluster.json
 
@@ -420,6 +420,38 @@ claiming matches, and players on the new build were assigned a blue game, got
 `version_mismatch`, went to fetch blue's build, and arrived past the start
 deadline — so the match cancelled short-handed and the game was pruned before
 they could connect ("Connection refused: Game not found").
+
+### The ranked queue is keyed by site (infra #738)
+
+A matched game id is resolved through the player's server list, so the only
+servers that can host a page's match are the ones registered under the site
+that list is read for. The API keeps one ranked queue per `site:mode`, and
+both sides name their site:
+
+- **The client join** sends `site=<serverListSite()>` — the apex for a page
+  behind one, `<subdomain>.<DOMAIN>` under GAME_DOMAIN, the desktop's pinned
+  server host — the same value it fetches `/cluster.json` for
+  (`matchmakingSite()` in `src/client/ServerList.ts`).
+- **The worker check-in** sends `site` as `ClusterCheckin.registeredSite()`:
+  `SITE_HOST`, else its own public host — the site it registers under.
+
+Either is sent only when it is a name the API's `SiteSchema` accepts
+(`isSiteLike` in `src/core/ServerList.ts`: a lowercase hostname, no port), for
+the same reason `version` is only sent when commit-shaped — the API refuses a
+malformed value rather than treating it as absent. A side that sends none
+lands in the legacy `shared` pool, where it still meets the other legacy side.
+
+The API also checks the site's registry at assignment: the offered id's
+letter must be registered under that site and `open`, or the offer is
+released and the next server tried. That is the second guard on the OPE-469
+rule above — a server on an old build, or one that never learned its state,
+keeps offering, and now its offer is checked against what the site's players
+actually see in `GET /cluster.json`.
+
+Why: on 15 Sept 2026 every branch preview on the staging host deployed as
+letter `a` and checked into the same API, so `main.openfront.dev` — same
+letter and build as blue — won openfront.dev's matches, and the client polled
+blue for a game that lived on a host its list could not name.
 
 ## What the client does (`src/client/ServerList.ts`, `src/core/ServerList.ts`)
 

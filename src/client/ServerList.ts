@@ -3,6 +3,7 @@ import { GameID } from "../core/Schemas";
 import {
   commitsMatch,
   isCommitLike,
+  isSiteLike,
   ownLetterIn,
   pickServerForBuild,
   ServerList,
@@ -164,6 +165,18 @@ export function resetServerList(): void {
 export function serverListSite(): string | undefined {
   if (isDesktopShell()) return ClientEnv.serverHost();
   return ClientEnv.siteHost() ?? window.location.host;
+}
+
+/**
+ * The site a ranked join names, so the API pools this page only with game
+ * servers registered under the site whose list it reads: the same site the
+ * list is fetched for, or undefined when there is none or it is not a name
+ * the API would accept (a dev page's `localhost:9000`). See
+ * docs/MultiServer.md, "The ranked queue is keyed by site".
+ */
+export function matchmakingSite(): string | undefined {
+  const site = safeSite();
+  return site !== undefined && isSiteLike(site) ? site : undefined;
 }
 
 export function serverListUrl(site: string): string {

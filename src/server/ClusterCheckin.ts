@@ -61,6 +61,18 @@ export interface CheckinBody {
 const CheckinReplySchema = z.object({ state: ServerStateSchema });
 
 /**
+ * The site this server registers under: the page host (SITE_HOST — the apex
+ * for blue/green, `<subdomain>.<DOMAIN>` under GAME_DOMAIN), else its own
+ * public host for an old-style standalone deploy. Undefined under local
+ * development, where there is no public host and nothing registers. The
+ * ranked check-in names the same site (RankedCheckin.ts), so the API pools
+ * this server only with players whose page reads this site's list.
+ */
+export function registeredSite(): string | undefined {
+  return ServerEnv.siteHost() ?? ServerEnv.publicHost();
+}
+
+/**
  * What this server reports, or null under local development (`npm run dev`:
  * no SUBDOMAIN, so no public host), where there is nothing to register.
  * Every deployed host has one and registers under its own site.
@@ -71,7 +83,7 @@ export function checkinBody(liveGames: number): CheckinBody | null {
   const { letter, entry } = ServerEnv.clusterSelf();
   const machine = ServerEnv.machine();
   return {
-    site: ServerEnv.siteHost() ?? host,
+    site: registeredSite() ?? host,
     letter,
     host,
     version: ServerEnv.gitCommit(),
