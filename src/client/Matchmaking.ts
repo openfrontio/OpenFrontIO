@@ -12,7 +12,11 @@ import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { JoinLobbyEvent } from "./Main";
-import { ensureServerList, redirectToGameVersion } from "./ServerList";
+import {
+  ensureServerList,
+  matchmakingSite,
+  redirectToGameVersion,
+} from "./ServerList";
 import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
 
@@ -274,8 +278,18 @@ export class MatchmakingModal extends BaseModal {
     const versionParam = isCommitLike(ownCommit)
       ? `&version=${encodeURIComponent(ownCommit)}`
       : "";
+    // The queue is also partitioned by SITE: a matched game id is resolved
+    // through this page's server list, so the API pools this page only with
+    // servers registered under the site that list is read for. Without it,
+    // any server on the API that shared blue's letter and build could win
+    // the match — a branch preview did, on 15 Sept 2026 — and the id would
+    // point at a host this page cannot reach. Sent only when the site is a
+    // name the API accepts; a page with none joins the legacy shared pool.
+    const site = matchmakingSite();
+    const siteParam =
+      site === undefined ? "" : `&site=${encodeURIComponent(site)}`;
     this.socket = new WebSocket(
-      `${ClientEnv.jwtIssuer()}/matchmaking/join?${instanceParam}mode=${this.mode}${versionParam}`,
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?${instanceParam}mode=${this.mode}${versionParam}${siteParam}`,
     );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");

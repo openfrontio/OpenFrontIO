@@ -1,6 +1,7 @@
 import type winston from "winston";
 import { z } from "zod";
-import { isCommitLike } from "../core/ServerList";
+import { isCommitLike, isSiteLike } from "../core/ServerList";
+import { registeredSite } from "./ClusterCheckin";
 import type { GameManager } from "./GameManager";
 import type { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
@@ -129,6 +130,24 @@ function buildVersionField(): { version?: string } {
 }
 
 /**
+ * The site this server registers under (ClusterCheckin.registeredSite), for
+ * the check-in body's `site`. The API keeps one ranked queue per site: only
+ * players whose page reads this site's server list can resolve the game id
+ * this server offers, so those are the only players it may host — and the
+ * Lobby checks this site's registry that the server is `open` before
+ * handing it a match, the second guard on the gate above.
+ *
+ * Sent only when it is a name the API's SiteSchema accepts, for the same
+ * reason as `version`: a malformed value is a 400, not "no site". Local
+ * development has no public host and sends nothing, landing in the legacy
+ * shared pool exactly as before.
+ */
+function buildSiteField(): { site?: string } {
+  const site = registeredSite();
+  return site !== undefined && isSiteLike(site) ? { site } : {};
+}
+
+/**
  * One check-in pass. Exported for tests: the polling wrapper is what makes
  * the real loop awkward to drive, not the body.
  */
@@ -167,6 +186,7 @@ export async function rankedCheckinPass(
         instanceId: process.env.INSTANCE_ID,
         mode,
         ...buildVersionField(),
+        ...buildSiteField(),
       }),
       signal: controller.signal,
     });
