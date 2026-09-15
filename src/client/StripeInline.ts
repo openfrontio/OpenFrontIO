@@ -19,13 +19,26 @@ import {
 import { translateText } from "./Utils";
 
 /**
- * The publishable key baked in at build time, or null when the build has none
- * (dev without a key, tests). Null disables the inline flow entirely; tiles
- * fall back to the redirect flow, which needs no client-side Stripe.
+ * The publishable key the page carried in, or null when it has none (dev
+ * without a key, tests, desktop shells, a deployment with no key set). Null
+ * disables the inline flow entirely; tiles fall back to the redirect flow,
+ * which needs no client-side Stripe.
+ *
+ * Delivered per-environment via BOOTSTRAP_CONFIG (like turnstileSiteKey),
+ * not baked into the bundle: builds are environment-agnostic, and each
+ * deployment passes the key whose mode matches its API at startup.
  */
 export function stripePublishableKey(): string | null {
-  // The build defines this as "" when unset, so empty means "no key" too.
-  const key = process.env.STRIPE_PUBLISHABLE_KEY;
+  // Never throws: this is a render-path gate (store tiles consult it on
+  // every render), and ClientEnv.get() throws on a page with no usable
+  // BOOTSTRAP_CONFIG (tests, a worker thread). Such a page simply has no
+  // key, which the callers already handle.
+  let key: string | undefined;
+  try {
+    key = ClientEnv.stripePublishableKey();
+  } catch {
+    return null;
+  }
   return key === undefined || key === "" ? null : key;
 }
 
