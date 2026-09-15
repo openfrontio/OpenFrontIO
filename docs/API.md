@@ -135,7 +135,10 @@ GET https://api.openfront.io/public/v2/player/:playerId/sessions
 
 **Query Parameters:**
 
-- `cursor` (optional): Opaque continuation token. Pass the `nextCursor` value from the previous response verbatim to fetch the next page — do not construct or parse it.
+- `filter` (optional): Mode bucket, one of `[ffa, team, hvn, ranked]`. Omit for all modes.
+- `type` (optional): Game type, one of `[public, private, singleplayer]`. Omit for all types. `filter` and `type` are orthogonal and may be combined.
+- `start` / `end` (optional): ISO 8601 datetimes bounding the game start time (inclusive). Each may be given alone; `start` must be before `end`.
+- `cursor` (optional): Opaque continuation token. Pass the `nextCursor` value from the previous response verbatim to fetch the next page — do not construct or parse it. A cursor is bound to the filters it was issued under; changing any other parameter requires starting over without a cursor.
 
 **Response:**
 
