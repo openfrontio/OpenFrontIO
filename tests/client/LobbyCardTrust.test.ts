@@ -74,14 +74,25 @@ describe("lobbyCard trust lock", () => {
     const icon = trustIcon(renderCard(lobby(true), false));
     expect(icon?.dataset.trust).toBe("locked");
     expect(icon?.classList.contains("text-red-400")).toBe(true);
-    expect(icon?.getAttribute("title")).toBe("public_lobby.trusted_locked");
+    expect(icon?.getAttribute("aria-label")).toBe(
+      "public_lobby.trusted_locked",
+    );
+    const tooltip = icon?.querySelector("[role=tooltip]");
+    expect(tooltip?.textContent).toContain(
+      "public_lobby.trusted_tooltip_title",
+    );
+    expect(tooltip?.textContent).toContain("public_lobby.trusted_locked");
   });
 
   it("shows an open lock when the viewer is trusted", () => {
     const icon = trustIcon(renderCard(lobby(true), true));
     expect(icon?.dataset.trust).toBe("unlocked");
     expect(icon?.classList.contains("text-green-400")).toBe(true);
-    expect(icon?.getAttribute("title")).toBe("public_lobby.trusted_unlocked");
+    const tooltip = icon?.querySelector("[role=tooltip]");
+    expect(tooltip?.textContent).toContain(
+      "public_lobby.trusted_tooltip_title",
+    );
+    expect(tooltip?.textContent).toContain("public_lobby.trusted_unlocked");
   });
 });
 
