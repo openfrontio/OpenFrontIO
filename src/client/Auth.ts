@@ -509,6 +509,8 @@ function ticketReason(
       return "steam-wedged";
     case "error":
       return "steam-error";
+    case "needs-account":
+      return "needs-account";
     default:
       return "steam-error";
   }

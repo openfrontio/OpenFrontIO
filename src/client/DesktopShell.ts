@@ -350,7 +350,8 @@ export type SessionFailureKind =
   | "steam-error" // the native ticket call threw for some other reason
   | "steam-ticket-rejected" // /auth/steam 401: Steam refused the ticket
   | "steam-backend" // /auth/steam 5xx: Steam's backend, not the player
-  | "network"; // the request never completed
+  | "network" // the request never completed
+  | "needs-account"; // the shell won't mint a ticket until the gate is answered
 
 export interface DesktopSessionState {
   status: DesktopSessionStatus;
