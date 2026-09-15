@@ -196,10 +196,20 @@ export function resolveTeamsList(
     if (divisor === 0) {
       throw new Error(`Unknown TeamCountConfig ${config}`);
     }
-    numTeams = Math.ceil(totalPlayers / divisor);
+    // At least 2, even when attendance can't fill two teams: public lobbies
+    // start on their countdown no matter how few players are seated (or none,
+    // when only spectators remain), and a private Duos lobby can start with a
+    // single clan packed onto one team. Throwing here ("Too few teams") killed
+    // game construction on every client — the game ran server-side while
+    // everyone hung on the loading screen. The lobby preview already clamps
+    // the same way (LobbyPlayerView.getTeamList), so this keeps them in step.
+    numTeams = Math.max(2, Math.ceil(totalPlayers / divisor));
   } else {
     numTeams = config;
   }
+  // Numeric configs state the team count outright, so below 2 is a
+  // misconfiguration (e.g. a Team game with playerTeams unset resolves to 0)
+  // and should stay loud rather than be silently reshaped.
   if (numTeams < 2) {
     throw new Error(`Too few teams: ${numTeams}`);
   }
