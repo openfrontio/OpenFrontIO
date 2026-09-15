@@ -17,6 +17,7 @@ import {
   serverListUrl,
   startServerListPolling,
   stopServerListPolling,
+  versionedPathForMismatchedGame,
 } from "../../src/client/ServerList";
 
 // Priority 1 of the multi-server v2 handoff: the client fetches the server
@@ -1689,5 +1690,72 @@ describe("redirectToGameVersion", () => {
     await withList();
     expect(redirectToGameVersion("cAbCd12345")).toBe(false);
     expect(loc.href).toBe("https://replay.openfront.io/cAbCd12345");
+  });
+});
+
+// What the join-time version_mismatch handler asks (OPE-471). Letter c runs
+// OLD in API_LIST, letter d runs OWN — this page's build.
+describe("versionedPathForMismatchedGame", () => {
+  async function withList() {
+    expect(await ensureServerList()).toBe("api");
+  }
+
+  // The server just refused the join with this commit; the list is
+  // stale-while-revalidate and may still name the build we tried.
+  it("prefers the refusing server's commit over the list", async () => {
+    stubLocation("openfront.io", "/game/dAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("dAbCd12345", OLD)).toBe(
+      `/v/${SHORT_OLD}/game/dAbCd12345`,
+    );
+  });
+
+  it("falls back to the list when the server names no commit", async () => {
+    stubLocation("openfront.io", "/game/cAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("cAbCd12345", undefined)).toBe(
+      `/v/${SHORT_OLD}/game/cAbCd12345`,
+    );
+  });
+
+  // GIT_COMMIT is "DEV" on a dev server and "unknown" in the Dockerfile's
+  // default: no build to ask for, and never a /v/<x>/ URL.
+  it("ignores a server commit that names no build", async () => {
+    stubLocation("openfront.io", "/game/cAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("cAbCd12345", "unknown")).toBe(
+      `/v/${SHORT_OLD}/game/cAbCd12345`,
+    );
+
+    stubLocation("openfront.io", "/game/dAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("dAbCd12345", "DEV")).toBeNull();
+  });
+
+  it("stays put when the page is already pinned to that commit", async () => {
+    stubLocation("openfront.io", `/v/${SHORT_OLD}/game/cAbCd12345`);
+    await withList();
+    expect(versionedPathForMismatchedGame("cAbCd12345", OLD)).toBeNull();
+  });
+
+  // A pin the server contradicts is an ordinary mismatch: the pre-join
+  // redirect used a list that has since moved on.
+  it("leaves a pin the server names a different commit than", async () => {
+    stubLocation("openfront.io", "/v/1234567/game/cAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("cAbCd12345", OLD)).toBe(
+      `/v/${SHORT_OLD}/game/cAbCd12345`,
+    );
+  });
+
+  it("answers nothing on the shells with no /v/<commit>/ routes", async () => {
+    stubLocation("replay.openfront.io", "/cAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("cAbCd12345", OLD)).toBeNull();
+
+    stubLocation("openfront.io", "/game/cAbCd12345");
+    await withList();
+    (window as any).openfrontDesktop = {};
+    expect(versionedPathForMismatchedGame("cAbCd12345", OLD)).toBeNull();
   });
 });

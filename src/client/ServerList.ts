@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { GameID } from "../core/Schemas";
 import {
+  commitsMatch,
+  isCommitLike,
   ownLetterIn,
   pickServerForBuild,
   ServerList,
@@ -844,6 +846,43 @@ export function redirectToGameVersion(
   if (target === null) return false;
   window.location.href = target;
   return true;
+}
+
+/**
+ * The `/v/<commit>/` page for a game on THIS page's host, or null when there
+ * is none to go to. The join-time `version_mismatch` handler's first choice
+ * (docs/MultiServer.md, "Opening a game at its server's version", OPE-471).
+ *
+ * Same decision as redirectToGameVersion, with two differences that apply
+ * only once the server has answered: the commit it refused us with wins
+ * over the list, which is stale-while-revalidate, and the loop guard reads
+ * the boot-time pin, since the join has already rewritten the address bar
+ * to the version-free share URL (PagePin.ts).
+ */
+export function versionedPathForMismatchedGame(
+  gameID: GameID,
+  serverCommit: string | undefined,
+): string | null {
+  if (isDesktopShell()) return null;
+  if (isOnReplayShell()) return null;
+  // A GIT_COMMIT that names no commit ("DEV", "unknown") must never reach a
+  // /v/<x>/ URL: treat it as if the server had said nothing.
+  const fromServer =
+    serverCommit !== undefined && isCommitLike(serverCommit)
+      ? serverCommit
+      : undefined;
+  const version = fromServer ?? ClientEnv.gameVersion(gameID);
+  if (version === undefined) return null;
+  const pinned = pagePin();
+  if (pinned !== null && commitsMatch(pinned, version)) return null;
+  return versionedPathForGame(
+    safeOwnCommit(),
+    version,
+    gameID,
+    safeGamePath(gameID),
+    window.location.pathname,
+    window.location.search,
+  );
 }
 
 // The game's own version-free path, which the redirect versions whenever
