@@ -26,6 +26,7 @@ import {
 import { TerrainMapData } from "../../core/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "../../core/game/UnitGrid";
+import { UserSettings } from "../../core/game/UserSettings";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../../core/Schemas";
 import { formatPlayerDisplayName } from "../../core/Util";
 import { WorkerClient } from "../../core/worker/WorkerClient";
@@ -41,8 +42,13 @@ import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
 import { resolveTeamClanTag } from "../Utils";
+import type { CosmeticVisibility } from "./CosmeticVisibility";
 import { PlayerView } from "./PlayerView";
 import { UnitView } from "./UnitView";
+
+function readCosmeticVisibility(): CosmeticVisibility {
+  return new UserSettings().graphicsOverrides().cosmetics ?? {};
+}
 
 const TRAIL_TYPES: ReadonlySet<UnitType> = new Set<UnitType>([
   UnitType.TransportShip,
@@ -143,6 +149,7 @@ export class GameView implements GameMap {
   private toDelete = new Set<number>();
 
   private _cosmetics: Map<string, PlayerCosmetics> = new Map();
+  private _cosmeticVisibility: CosmeticVisibility = readCosmeticVisibility();
 
   private _map: GameMap;
 
@@ -461,8 +468,15 @@ export class GameView implements GameMap {
       }
     }
 
-    if (this._myClientID) {
-      this._myPlayer ??= this.playerByClientID(this._myClientID);
+    if (this._myClientID && this._myPlayer === null) {
+      this._myPlayer = this.playerByClientID(this._myClientID);
+      // Players created before the local player couldn't tell who's a teammate.
+      if (
+        this._myPlayer !== null &&
+        this._cosmeticVisibility.showFrom === "teammates"
+      ) {
+        this.refreshPlayerCosmetics();
+      }
     }
 
     for (const unit of this._units.values()) {
@@ -1079,6 +1093,21 @@ export class GameView implements GameMap {
   refreshPlayerColors(): void {
     for (const p of this._players.values()) {
       p.refreshColors();
+    }
+  }
+
+  cosmeticVisibility(): CosmeticVisibility {
+    return this._cosmeticVisibility;
+  }
+
+  /**
+   * Re-read the cosmetics visibility settings and re-resolve every player's
+   * drawn cosmetics and colors; the renderer must be refreshed afterwards.
+   */
+  refreshPlayerCosmetics(): void {
+    this._cosmeticVisibility = readCosmeticVisibility();
+    for (const p of this._players.values()) {
+      p.refreshCosmetics();
     }
   }
 

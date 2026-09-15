@@ -298,6 +298,7 @@ export interface RenderSettings {
     hoverGlowWidth: number;
     /** Peak opacity of the hover glow (0 disables it). */
     hoverGlowAlpha: number;
+    flagAlpha: number;
   };
   fx: {
     shockwaveRingWidth: number;
