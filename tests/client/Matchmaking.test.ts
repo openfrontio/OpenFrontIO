@@ -451,20 +451,10 @@ describe("MatchmakingModal.close() teardown", () => {
   });
 });
 
-/**
- * Opening a matched game at its server's version (OPE-471).
- *
- * Matchmaking pairs players by rating, not by build, so a page served as
- * `latest` is routinely matched onto a server still draining the previous
- * one. Joining anyway ends in `version_mismatch` at join time, and for a
- * ranked game that is far too late: the fallback loads another deployment's
- * shell from scratch, which misses the match's start deadline, and the
- * players who did connect have their game cancelled (OPE-469).
- *
- * So the question is asked exactly once, at the one moment it is both
- * answerable and free: /exists has said there is a game, and nothing has
- * been joined yet.
- */
+// A match can land on a server running another build, and being bounced at
+// join time costs a ranked game its start deadline (OPE-471). The question
+// is asked exactly once: /exists has said there is a game, nothing has been
+// joined yet.
 describe("MatchmakingModal opens the match at its server's version", () => {
   const OWN = "bfd5563a11111111111111111111111111111111";
   const OLD = "5ccc50a722222222222222222222222222222222";
@@ -493,8 +483,8 @@ describe("MatchmakingModal opens the match at its server's version", () => {
     return loc;
   }
 
-  // Drives a modal from an empty queue to the moment after the match's
-  // game exists, and reports what checkGame did with it.
+  // Drives a modal from an empty queue to just after checkGame has seen the
+  // match's game exist.
   async function matchAndCheck() {
     const joined = vi.fn();
     const { modal, socket } = await openAndJoin("1v1");
@@ -569,9 +559,8 @@ describe("MatchmakingModal opens the match at its server's version", () => {
     expect(joined).not.toHaveBeenCalled();
   });
 
-  // The poll runs once a second while the server is still creating the
-  // game. Navigating has to stop it: another beat would fire a second
-  // /exists (and a second navigation) at a page on its way out.
+  // Another beat would fire a second /exists, and a second navigation, at a
+  // page already on its way out.
   it("stops polling once it has navigated", async () => {
     envMocks.gameVersion.mockReturnValue(OLD);
 
@@ -583,7 +572,6 @@ describe("MatchmakingModal opens the match at its server's version", () => {
   });
 
   it("joins when no version is known for the game", async () => {
-    // A list that carries no entry for this letter, or none loaded at all.
     // Navigating on a guess is worse than joining and finding out.
     envMocks.gameVersion.mockReturnValue(undefined);
     const loc = stubLocation("openfront.io");
@@ -605,8 +593,7 @@ describe("MatchmakingModal opens the match at its server's version", () => {
     expect(loc.href).toBe("https://openfront.io/");
   });
 
-  // replay.<domain> has no /v/<commit>/ routes at all, so a navigation
-  // there would 404.
+  // replay.<domain> has no /v/<commit>/ routes, so that would 404.
   it("never navigates a replay shell", async () => {
     envMocks.gameVersion.mockReturnValue(OLD);
     const loc = stubLocation("replay.openfront.io");

@@ -15,10 +15,9 @@ const captured = vi.hoisted(() => ({
 
 const envMocks = vi.hoisted(() => ({
   resolveGame: vi.fn((): unknown => ({ kind: "own" })),
-  // A build label that names no commit, which is what most of this file
-  // wants: versionMatches() treats it as matching any server, so the
-  // versioned-page branch never fires and the older fallbacks are reached
-  // exactly as before. The versioned-page tests set a real sha.
+  // A label naming no commit matches any server (versionMatches), so the
+  // versioned-page branch never fires: what most of this file wants. The
+  // versioned-page tests set a real sha.
   gitCommit: vi.fn(() => "test-commit"),
   gameVersion: vi.fn((_gameID: string): string | undefined => undefined),
 }));
@@ -429,17 +428,9 @@ describe("version_mismatch on a pinned /v/<commit>/ page", () => {
   });
 });
 
-/**
- * The first choice on a web mismatch: this page's own host serves every
- * version under `/v/<commit>/`, so the build the game needs is one
- * same-origin navigation away (OPE-471).
- *
- * The order is the point. The cross-host fallback loads another
- * deployment's shell from scratch — Turnstile, bundle, map — and OPE-469 is
- * what that costs a matchmade game: the start deadline passed while the tab
- * was booting, the server cancelled the match, and the reloaded page was
- * told the game did not exist.
- */
+// The first choice on a web mismatch: this host serves every version under
+// `/v/<commit>/`, one same-origin navigation away, where the cross-host
+// fallback costs a full shell boot (OPE-471).
 describe("version_mismatch takes the versioned page on this host first", () => {
   const OWN = "bfd5563a11111111111111111111111111111111";
   const OLD = "5ccc50a722222222222222222222222222222222";
@@ -504,9 +495,8 @@ describe("version_mismatch takes the versioned page on this host first", () => {
     expect(reloadForUpdate).not.toHaveBeenCalled();
   });
 
-  // The list can carry no version for this game at all — a legacy id with
-  // no letter, or a letter deployed after this page fetched its list — and
-  // the server that just refused the join names its own build regardless.
+  // A legacy id with no letter, or a letter deployed after this page
+  // fetched its list; the refusing server names its own build regardless.
   it("uses the refusing server's own commit when the list knows none", () => {
     stubLocation("/game/game1234");
     envMocks.gameVersion.mockReturnValue(undefined);
@@ -516,10 +506,8 @@ describe("version_mismatch takes the versioned page on this host first", () => {
     expect(window.location.href).toBe(`/v/${SHORT_OLD}/game/game1234`);
   });
 
-  // The loop guard, and the reason it reads the pin rather than the address
-  // bar: the join has already rewritten the bar to the version-free share
-  // URL, so a page under /v/<commit>/ looks unpinned and would navigate to
-  // itself, forever.
+  // The loop guard reads the pin, not the address bar: the join has already
+  // rewritten the bar version-free, so the page looks unpinned here.
   it("stays put on a page already pinned to the version the server names", async () => {
     stubLocation(`/v/${SHORT_OLD}/game/game1234`);
     capturePagePin();
@@ -537,8 +525,7 @@ describe("version_mismatch takes the versioned page on this host first", () => {
   });
 
   it("still reloads a stale tab when no version can be named", async () => {
-    // Neither the list nor the server says which build is wanted, so there
-    // is no versioned page to ask for: the ordinary stale-tab reload.
+    // No build is named, so there is no versioned page to ask for.
     stubLocation("/game/game1234");
 
     sendMismatch(undefined);

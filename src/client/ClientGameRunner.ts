@@ -362,20 +362,11 @@ export function joinLobby(
         // desktop the shell updates its local overlay itself, so just say
         // what's happening and let its update bar take it from there.
         //
-        // On the web the first choice is this page's OWN host, which serves
-        // every version under `/v/<commit>/`: staying here keeps the loaded
-        // document, the CDN cache and the Turnstile token, so the second
-        // attempt starts almost immediately. The game host's page is the
-        // fallback it used to be, and OPE-469 is why the order matters — a
-        // full boot of another deployment's shell missed a ranked game's
-        // start deadline, and the match was cancelled out from under the
-        // players who had connected.
-        //
-        // Below that, unchanged: a cross-host game means OUR shell is
-        // simply a different deployment's — reloading would fetch the same
-        // wrong build, so navigate to the game's own host, whose shell
-        // serves the matching bundle (and map). An own-host game means this
-        // tab is stale (left open across a deploy): reload.
+        // On the web, in order: this host's own `/v/<commit>/` page, which
+        // keeps the loaded document and the Turnstile token; else the
+        // game's host, whose shell serves the matching bundle (and map);
+        // else this tab is simply stale (left open across a deploy), so
+        // reload. See docs/MultiServer.md (OPE-471).
         if (isDesktopShell()) {
           void showInGameAlert(translateText("update_available.desktop"));
         } else {

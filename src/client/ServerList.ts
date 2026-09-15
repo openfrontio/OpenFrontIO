@@ -849,32 +849,17 @@ export function redirectToGameVersion(
 
 /**
  * The `/v/<commit>/` page for a game on THIS page's host, or null when there
- * is no such page to go to. The join-time `version_mismatch` handler's first
- * choice (ClientGameRunner, OPE-471).
+ * is none to go to. The join-time `version_mismatch` handler's first choice
+ * (docs/MultiServer.md, "Opening a game at its server's version", OPE-471).
  *
- * Same decision as redirectToGameVersion above, and the same two shells are
- * refused for the same reasons, with two differences that only apply once a
- * server has actually answered:
- *
- * - **The server's own commit is authoritative.** `message.gitCommit` comes
- *   from the very server that refused the join, so it is right even where
- *   the list is not: a legacy id with no letter, a letter deployed after
- *   this page fetched its list, or no list at all. The list is still
- *   preferred when it carries an entry, so both callers agree about which
- *   page a given game opens at.
- * - **The loop guard reads the pin, not the address bar.** By the time a
- *   mismatch can arrive the join has rewritten the address bar to the
- *   version-free share URL (PagePin.ts), so a page already under
- *   `/v/<thatCommit>/` looks unpinned to versionedPathForGame and would
- *   navigate to itself, forever. A page pinned to the build the server
- *   names has nothing left to fetch — that is what a mismatch there MEANS —
- *   so it answers null and the caller says so and stops.
+ * Same decision as redirectToGameVersion, with two differences that apply
+ * only once the server has answered: its own `gitCommit` (optional on the
+ * wire) stands in when the list carries no version for this game, and the
+ * loop guard reads the boot-time pin, since the join has already rewritten
+ * the address bar to the version-free share URL (PagePin.ts).
  */
 export function versionedPathForMismatchedGame(
   gameID: GameID,
-  // Optional on the wire (ServerMessage's error carries it only for this
-  // error), so an older server that names no commit simply leaves the list
-  // as the only source, exactly as before.
   serverCommit: string | undefined,
 ): string | null {
   if (isDesktopShell()) return null;
