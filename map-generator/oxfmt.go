@@ -7,15 +7,15 @@ import (
 	"path/filepath"
 )
 
-// runPrettier formats the given files in place using the repo's Prettier
-// config (../.prettierrc), the same tool `npm run format` and CI's
-// `npx prettier --check .` job use. It runs from the repo root so relative
+// runOxfmt formats the given files in place using the repo's Oxfmt config
+// (../.oxfmtrc.json), the same tool `npm run format` and CI's
+// `npm run format:check` job use. It runs from the repo root so relative
 // paths and config discovery behave exactly as they do for `npm run format`.
 //
 // Only the given files are touched — unlike `npm run format`, this does not
 // reformat the whole repo, so it's safe to run on every `go run .`,
 // including `--maps=<one map>` runs.
-func runPrettier(files []string) error {
+func runOxfmt(files []string) error {
 	if len(files) == 0 {
 		return nil
 	}
@@ -26,7 +26,7 @@ func runPrettier(files []string) error {
 	}
 	repoRoot := filepath.Join(cwd, "..")
 
-	args := []string{"--no-install", "prettier", "--write"}
+	args := []string{"--no-install", "oxfmt", "--write"}
 	for _, f := range files {
 		rel, err := filepath.Rel(repoRoot, f)
 		if err != nil {
@@ -40,7 +40,7 @@ func runPrettier(files []string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("npx prettier --write failed (is `npm ci` up to date?): %w", err)
+		return fmt.Errorf("npx oxfmt --write failed (is `npm ci` up to date?): %w", err)
 	}
 	return nil
 }
