@@ -758,6 +758,7 @@ describe("WorkerLobbyService hosted lobbies", () => {
       nameReveals: ["c1"],
       nameRevealPublicIds: ["p2"],
       hostCheats: { infiniteGold: true },
+      pool: { id: "pool-1", siblings: ["aaaa1111", "bbbb2222"] },
     });
     game.setListed(true);
     gm.listedLobbies.mockReturnValue([game]);
@@ -775,6 +776,8 @@ describe("WorkerLobbyService hosted lobbies", () => {
     expect(reported.gameConfig.nameReveals).toBeUndefined();
     expect(reported.gameConfig.nameRevealPublicIds).toBeUndefined();
     expect(reported.gameConfig.hostCheats).toBeUndefined();
+    // A listed pool advertises its entry point, not the sibling ids.
+    expect(reported.gameConfig.pool).toBeUndefined();
   });
 
   it("excludes matchmaking games (Public but no publicGameType) from the report", () => {
