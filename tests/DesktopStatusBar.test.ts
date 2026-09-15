@@ -439,3 +439,50 @@ describe("the rendered offline state", () => {
     expect(retryButton(bar)!.disabled).toBe(false);
   });
 });
+
+/**
+ * "needs-account" is diagnosed, not a failure: nothing broke, the player
+ * simply has no account yet. Both assertions below exist because the switch
+ * in sessionLabel/sessionAction falls through to a "something went wrong"
+ * default that would be actively wrong here -- see this suite's own
+ * mutation check, which confirms that by deleting each case.
+ */
+describe("the rendered needs-account session state", () => {
+  function mountBar(): HTMLElement & { updateComplete: Promise<unknown> } {
+    const bar = document.createElement("desktop-status-bar") as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    document.body.appendChild(bar);
+    return bar;
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("labels the bar with the needs-account key, not the generic fallback", async () => {
+    const bar = mountBar();
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", {
+        detail: { status: "signed-out", reason: "needs-account" },
+      }),
+    );
+    await bar.updateComplete;
+
+    expect(bar.textContent).toContain("desktop_session.needs_account");
+    expect(bar.textContent).not.toContain("desktop_session.generic");
+  });
+
+  it("offers Go online rather than the generic Retry", async () => {
+    const bar = mountBar();
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", {
+        detail: { status: "signed-out", reason: "needs-account" },
+      }),
+    );
+    await bar.updateComplete;
+
+    const button = bar.querySelector("button");
+    expect(button?.textContent?.trim()).toBe("desktop_status.go_online");
+  });
+});

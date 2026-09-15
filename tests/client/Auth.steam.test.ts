@@ -259,6 +259,7 @@ describe("Steam login", () => {
       ok: false,
       reason: "future-reason" as never,
     });
+    const fetchMock = vi.spyOn(globalThis, "fetch");
 
     await getAuthHeader();
 
@@ -266,6 +267,7 @@ describe("Steam login", () => {
       status: "signed-out",
       reason: "steam-error",
     });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it.each([

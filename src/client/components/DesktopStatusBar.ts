@@ -436,12 +436,16 @@ export class DesktopStatusBar extends LitElement {
                text-sm font-medium uppercase tracking-wider"
         @click=${() => {
           // desktopLinkGate() is null on the web and on a shell too old to
-          // expose showLinkGate -- see its own doc comment in DesktopShell.ts
-          // -- but this button only ever renders from a `needs-account`
-          // session, which only a desktop shell can report, so null here
-          // would itself be a bug worth seeing in the console rather than
-          // swallowing. The bare `void` form used elsewhere in this file
-          // would swallow a rejection into an unhandled promise instead;
+          // expose showLinkGate -- see its own doc comment in DesktopShell.ts.
+          // That case is unreachable from this button specifically: a shell
+          // with no bridge at all makes SteamSDK.getTicket() report
+          // `unavailable`, not `needs-account`, and any shell whose preload
+          // reports `needs-account` also exposes showLinkGate -- so this
+          // click handler can only ever run against a real bridge. If it
+          // somehow didn't, the `?.` below would short-circuit and swallow it
+          // with nothing in the console; only a REJECTION from showLinkGate()
+          // reaches the .catch. The bare `void` form used elsewhere in this
+          // file would swallow a rejection into an unhandled promise instead;
           // AccountModal's handleShowLinkGate catches for the same reason.
           desktopLinkGate()
             ?.showLinkGate()
