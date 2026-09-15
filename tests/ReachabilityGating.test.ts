@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../src/client/ClientEnv";
+import { shouldBlockMultiplayerAction } from "../src/client/GameModeSelector";
 import {
   attemptInFlight,
   backendUnreachableConfirmed,
@@ -481,5 +482,26 @@ describe("a refused multiplayer click on the web", () => {
 
     expect(joinLobby).toHaveBeenCalled();
     expect(fetchMock.mock.calls.length).toBe(before);
+  });
+});
+
+/**
+ * `multiplayerAllowedForSession` refuses every `signed-out` state regardless
+ * of `reason`, so "needs-account" gates multiplayer for free and needed no
+ * production change here. This pins that: if the rule is ever narrowed to an
+ * allowlist of reasons, this is what would catch a player with no account yet
+ * slipping through.
+ */
+describe("shouldBlockMultiplayerAction with a needs-account session", () => {
+  it("blocks multiplayer when no account exists yet, online or offline", () => {
+    for (const backendOutage of [false, true]) {
+      expect(
+        shouldBlockMultiplayerAction(
+          null,
+          { status: "signed-out", reason: "needs-account" },
+          backendOutage,
+        ),
+      ).toBe(true);
+    }
   });
 });

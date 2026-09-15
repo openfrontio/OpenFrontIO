@@ -110,6 +110,39 @@ describe("barSource", () => {
     ).toBe("session");
   });
 
+  // "needs-account" is the one signed-out reason whose remedy (reopening the
+  // gate) is itself a network call, so it is the one exception to "session
+  // always outranks reachability" -- see barSource's own comment.
+  it("shows the account prompt when the backend is reachable", () => {
+    expect(
+      barSource(
+        null,
+        { status: "signed-out", reason: "needs-account" },
+        /* backendOutage */ false,
+      ),
+    ).toBe("session");
+  });
+
+  it("yields to the reachability slot while the backend is unreachable", () => {
+    expect(
+      barSource(
+        null,
+        { status: "signed-out", reason: "needs-account" },
+        /* backendOutage */ true,
+      ),
+    ).toBe("reachability");
+  });
+
+  it("does not change the priority for other signed-out reasons", () => {
+    expect(
+      barSource(
+        null,
+        { status: "signed-out", reason: "steam-wedged" },
+        /* backendOutage */ true,
+      ),
+    ).toBe("session");
+  });
+
   // The argument is the CONFIRMED outage, so "unsettled" and "missed once"
   // both arrive here as false and show nothing. There is no neutral state in
   // this bar to hang a "Checking…" on, and inventing one would put a strip

@@ -594,6 +594,7 @@
   },
   "desktop_session": {
     "generic": "Couldn't sign in to your OpenFront account",
+    "needs_account": "Set up your OpenFront account to play online",
     "network": "Can't reach OpenFront. Check your connection.",
     "retry": "Retry",
     "retrying": "Signing in…",
@@ -603,6 +604,7 @@
     "steam_wedged": "Steam couldn't verify your session. Restarting Steam usually fixes this."
   },
   "desktop_status": {
+    "go_online": "Go online",
     "offline": "Offline: can't reach the OpenFront servers",
     "retry": "Retry",
     "retrying": "Retrying…"

@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { createRef, ref, type Ref } from "lit/directives/ref.js";
 import { getDesktopSessionState } from "../Auth";
 import {
+  desktopLinkGate,
   desktopUpdate,
   isDesktopShell,
   multiplayerAllowedForSession,
@@ -41,6 +42,11 @@ const WIGGLE_CLASS = "animate-bounce";
  * update -- Retry" points at a button that provably cannot work until the
  * network comes back, while "Offline" names the actual cause.
  *
+ * One signed-out reason breaks the session > reachability half of that order:
+ * `needs-account`'s own remedy is itself a network call, so while the backend
+ * is unreachable it is really a symptom of reachability too. See the
+ * exception carved out at the top of the function below.
+ *
  * `backendOutage` is the DEBOUNCED signal
  * (ServerList.backendUnreachableConfirmed()), and it is only ever true on
  * desktop -- the bar renders nothing on the web, so the component never
@@ -54,6 +60,20 @@ export function barSource(
   session: DesktopSessionState | null,
   backendOutage: boolean,
 ): "session" | "reachability" | "update" | "none" {
+  // The one exception to session > reachability. "needs-account" is the only
+  // signed-out reason whose action is itself a network call: reopening the
+  // gate mints a link ticket. While the backend is unreachable that button
+  // cannot succeed, and an offline message with a working Retry beats an
+  // account prompt with a dead one. Every other signed-out reason still
+  // outranks reachability, because each names something the player can act
+  // on regardless of the backend.
+  if (
+    backendOutage &&
+    session?.status === "signed-out" &&
+    session.reason === "needs-account"
+  ) {
+    return "reachability";
+  }
   if (session !== null && !multiplayerAllowedForSession(session)) {
     return "session";
   }
@@ -384,6 +404,8 @@ export class DesktopStatusBar extends LitElement {
 
   private sessionLabel(s: DesktopSessionState): string {
     switch (s.reason) {
+      case "needs-account":
+        return translateText("desktop_session.needs_account");
       case "steam-wedged":
         return translateText("desktop_session.steam_wedged");
       case "steam-unavailable":
@@ -404,6 +426,33 @@ export class DesktopStatusBar extends LitElement {
 
   private sessionAction(s: DesktopSessionState) {
     if (s.status === "retrying") return nothing;
+    // "needs-account" gets its own button rather than the Retry below: there
+    // is nothing to retry, the account simply does not exist yet, and the
+    // remedy is reopening the shell's link gate so the player can create or
+    // link one.
+    if (s.status === "signed-out" && s.reason === "needs-account") {
+      return html`<button
+        class="shrink-0 px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius
+               text-sm font-medium uppercase tracking-wider"
+        @click=${() => {
+          // desktopLinkGate() is null on the web and on a shell too old to
+          // expose showLinkGate -- see its own doc comment in DesktopShell.ts
+          // -- but this button only ever renders from a `needs-account`
+          // session, which only a desktop shell can report, so null here
+          // would itself be a bug worth seeing in the console rather than
+          // swallowing. The bare `void` form used elsewhere in this file
+          // would swallow a rejection into an unhandled promise instead;
+          // AccountModal's handleShowLinkGate catches for the same reason.
+          desktopLinkGate()
+            ?.showLinkGate()
+            .catch((err: unknown) => {
+              console.error("desktop-status-bar: showLinkGate failed", err);
+            });
+        }}
+      >
+        ${translateText("desktop_status.go_online")}
+      </button>`;
+    }
     return html`<button
       class="shrink-0 px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius
              text-sm font-medium uppercase tracking-wider"
