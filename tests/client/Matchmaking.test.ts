@@ -8,6 +8,13 @@ const apiMocks = vi.hoisted(() => ({
   invalidateUserMe: vi.fn(),
 }));
 
+// The two ClientEnv reads the version check below depends on: this bundle's
+// commit, and the commit the matched game's server runs (the API's list).
+const envMocks = vi.hoisted(() => ({
+  gitCommit: vi.fn(() => "bfd5563a11111111111111111111111111111111"),
+  gameVersion: vi.fn((_gameID: string): string | undefined => undefined),
+}));
+
 // Deliberately NOT mocking the identity predicate. The previous version of
 // this file stubbed it to `() => true`, which is precisely why these tests
 // stayed green while Steam-only players were being hard-rejected from ranked
@@ -26,7 +33,20 @@ vi.mock("../../src/client/ClientEnv", () => ({
     instanceId: vi.fn(() => "test-instance"),
     jwtIssuer: vi.fn(() => "ws://matchmaking.test"),
     workerPath: vi.fn(() => "w0"),
+    gitCommit: envMocks.gitCommit,
+    gameVersion: envMocks.gameVersion,
+    gamePath: vi.fn((gameID: string) => `/w0/game/${gameID}`),
+    gameHttpBase: vi.fn(() => "https://falk2-a.openfront.io"),
+    gameWorkerPath: vi.fn(() => "w0"),
   },
+}));
+
+// Only the network half is stubbed. redirectToGameVersion is the real
+// decision -- it is the thing under test below, and stubbing it would prove
+// nothing about which games actually navigate.
+vi.mock("../../src/client/ServerList", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/ServerList")>()),
+  ensureServerList: vi.fn(async () => "api" as const),
 }));
 
 vi.mock("../../src/client/CrazyGamesSDK", () => ({
@@ -428,5 +448,172 @@ describe("MatchmakingModal.close() teardown", () => {
 
     await vi.advanceTimersByTimeAsync(60_000);
     expect(sockets).toHaveLength(1);
+  });
+});
+
+/**
+ * Opening a matched game at its server's version (OPE-471).
+ *
+ * Matchmaking pairs players by rating, not by build, so a page served as
+ * `latest` is routinely matched onto a server still draining the previous
+ * one. Joining anyway ends in `version_mismatch` at join time, and for a
+ * ranked game that is far too late: the fallback loads another deployment's
+ * shell from scratch, which misses the match's start deadline, and the
+ * players who did connect have their game cancelled (OPE-469).
+ *
+ * So the question is asked exactly once, at the one moment it is both
+ * answerable and free: /exists has said there is a game, and nothing has
+ * been joined yet.
+ */
+describe("MatchmakingModal opens the match at its server's version", () => {
+  const OWN = "bfd5563a11111111111111111111111111111111";
+  const OLD = "5ccc50a722222222222222222222222222222222";
+  // What `/v/<commit>/` carries: the bucket layout and the static Worker
+  // both key on the first 7 characters.
+  const SHORT_OLD = "5ccc50a";
+  const GAME_ID = "cAbCd12345";
+
+  const realLocation = window.location;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  function stubLocation(host: string, pathname = "/") {
+    const loc = {
+      protocol: "https:",
+      host,
+      hostname: host,
+      pathname,
+      search: "",
+      href: `https://${host}${pathname}`,
+    };
+    Object.defineProperty(window, "location", {
+      value: loc,
+      writable: true,
+      configurable: true,
+    });
+    return loc;
+  }
+
+  // Drives a modal from an empty queue to the moment after the match's
+  // game exists, and reports what checkGame did with it.
+  async function matchAndCheck() {
+    const joined = vi.fn();
+    const { modal, socket } = await openAndJoin("1v1");
+    modal.addEventListener("join-lobby", joined);
+
+    socket.onmessage!({
+      data: JSON.stringify({ type: "match-assignment", gameId: GAME_ID }),
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+
+    return { modal, joined };
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    sockets.length = 0;
+    apiMocks.getUserMe.mockReset();
+    apiMocks.getUserMe.mockResolvedValue(userMe());
+    apiMocks.invalidateUserMe.mockReset();
+    envMocks.gitCommit.mockReturnValue(OWN);
+    envMocks.gameVersion.mockReturnValue(undefined);
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ exists: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    delete (window as unknown as { openfrontDesktop?: unknown })
+      .openfrontDesktop;
+    stubLocation("openfront.io");
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, "location", {
+      value: realLocation,
+      writable: true,
+      configurable: true,
+    });
+    delete (window as unknown as { openfrontDesktop?: unknown })
+      .openfrontDesktop;
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("joins directly when the match landed on this build", async () => {
+    envMocks.gameVersion.mockReturnValue(OWN);
+    const loc = stubLocation("openfront.io");
+
+    const { joined } = await matchAndCheck();
+
+    expect(joined).toHaveBeenCalledOnce();
+    expect((joined.mock.calls[0][0] as CustomEvent).detail).toMatchObject({
+      gameID: GAME_ID,
+      source: "matchmaking",
+    });
+    expect(loc.href).toBe("https://openfront.io/");
+  });
+
+  it("goes to the game's version instead of joining on another build", async () => {
+    envMocks.gameVersion.mockReturnValue(OLD);
+    const loc = stubLocation("openfront.io");
+
+    const { joined } = await matchAndCheck();
+
+    expect(loc.href).toBe(`/v/${SHORT_OLD}/game/${GAME_ID}`);
+    expect(joined).not.toHaveBeenCalled();
+  });
+
+  // The poll runs once a second while the server is still creating the
+  // game. Navigating has to stop it: another beat would fire a second
+  // /exists (and a second navigation) at a page on its way out.
+  it("stops polling once it has navigated", async () => {
+    envMocks.gameVersion.mockReturnValue(OLD);
+
+    await matchAndCheck();
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("joins when no version is known for the game", async () => {
+    // A list that carries no entry for this letter, or none loaded at all.
+    // Navigating on a guess is worse than joining and finding out.
+    envMocks.gameVersion.mockReturnValue(undefined);
+    const loc = stubLocation("openfront.io");
+
+    const { joined } = await matchAndCheck();
+
+    expect(joined).toHaveBeenCalledOnce();
+    expect(loc.href).toBe("https://openfront.io/");
+  });
+
+  it("never navigates the desktop shell, which owns its own version", async () => {
+    envMocks.gameVersion.mockReturnValue(OLD);
+    const loc = stubLocation("openfront.io");
+    (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {};
+
+    const { joined } = await matchAndCheck();
+
+    expect(joined).toHaveBeenCalledOnce();
+    expect(loc.href).toBe("https://openfront.io/");
+  });
+
+  // replay.<domain> has no /v/<commit>/ routes at all, so a navigation
+  // there would 404.
+  it("never navigates a replay shell", async () => {
+    envMocks.gameVersion.mockReturnValue(OLD);
+    const loc = stubLocation("replay.openfront.io");
+
+    const { joined } = await matchAndCheck();
+
+    expect(joined).toHaveBeenCalledOnce();
+    expect(loc.href).toBe("https://replay.openfront.io/");
   });
 });

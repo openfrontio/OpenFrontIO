@@ -714,10 +714,10 @@ as `latest` after a deploy.
 `ClientEnv.gameVersion(gameID)` reads that commit (undefined with no list, or
 for a letter the list doesn't carry, or for a legacy id with no letter), and
 `redirectToGameVersion(gameID)` in `src/client/ServerList.ts` is the whole
-decision, exported so the two places a game is opened from a URL —
-`Main.handleUrl`'s `/game/<id>` branch and `JoinLobbyModal.checkActiveLobby`,
-each after `ensureServerList()` — cannot drift apart. It never navigates the
-two shells that have no `/v/<commit>/` routes to go to:
+decision, exported so the three places a game is opened cannot drift apart —
+`Main.handleUrl`'s `/game/<id>` branch, `JoinLobbyModal.checkActiveLobby` and
+`MatchmakingModal.checkGame`, each after `ensureServerList()`. It never
+navigates the two shells that have no `/v/<commit>/` routes to go to:
 
 - **desktop**, whose updater owns which version it runs (a mismatch there
   stays `update_available.desktop`);
@@ -737,8 +737,29 @@ when:
 - the page already lives under `/v/<gameVersion>/` yet still isn't that
   build — the version's page isn't being served (before the static Worker
   exists, say). That is the loop guard, and falling through hands the
-  mismatch to join-time `version_mismatch`, whose cross-host redirect
-  already answers it.
+  mismatch to join-time `version_mismatch`, whose redirect already answers
+  it.
+
+The matchmaking modal asks at one specific moment, and not before: the poll
+that waits for the matched game to be created runs every second and must
+never navigate, so the question comes after `/exists` answers true and
+immediately before the `join-lobby` dispatch. A ranked match cannot afford
+the join-time answer (OPE-471): matchmaking pairs players by rating rather
+than by build, so a page served as `latest` is routinely matched onto a
+server still draining the previous one, and being bounced at join time costs
+a whole page boot — long enough that the match's start deadline passes and
+the server cancels it (OPE-469).
+
+That is also why join-time `version_mismatch` (`ClientGameRunner`) now tries
+this page's own host first: `versionedPathForMismatchedGame` asks the same
+question as the redirect above, with the refusing server's own `gitCommit`
+standing in whenever the list carries no version for that game's letter, and
+answers the `/v/<commit>/` path on the host already loaded. Only when there
+is no such page — versions match, an exempt shell, or the page is already
+pinned to the commit the server names — does it fall through to the
+cross-host, pinned and reload branches described below. Its loop guard reads
+the pin captured at boot rather than the address bar, which the join has
+already rewritten to the version-free share URL.
 
 ### A pinned page is never "outdated"
 
@@ -766,11 +787,13 @@ The one loop it must not enter runs through join-time `version_mismatch`
 (`ClientGameRunner`). `reloadForUpdate` strips the pin — right for an
 ordinary stale tab, wrong here: the reload lands on `latest`, whose
 `handleUrl` sees the same game on the same older server and pins the page
-straight back, one lap per click. So a pinned page takes the game's own host
-when the id resolves cross-host, and otherwise says `update_available.message`
-and stops. Nothing it can fetch is the build it needs — that is precisely
-what a mismatch on a pinned page means: the version's page is not being
-served.
+straight back, one lap per click. So a pinned page whose server names the very
+commit it is pinned to says `update_available.message` and stops: nothing it
+can fetch is the build it needs — that is precisely what a mismatch there
+means, the version's page is not being served. A pin naming some OTHER commit
+is an ordinary mismatch, and takes the versioned page for that commit (else
+the game's own host when the id resolves cross-host) — at most one hop before
+the guard above catches it.
 
 ## Paths on a `/v/<commit>/` page
 

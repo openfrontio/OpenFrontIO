@@ -11,7 +11,7 @@ import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { JoinLobbyEvent } from "./Main";
-import { ensureServerList } from "./ServerList";
+import { ensureServerList, redirectToGameVersion } from "./ServerList";
 import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
 
@@ -465,8 +465,14 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
     // The matched game may carry any server's letter: resolve it through
-    // the API's list (multi-server v2) rather than this page's own map. No
-    // version check: this runs on a timer and must never navigate the page.
+    // the API's list (multi-server v2) rather than this page's own map.
+    //
+    // The version question is asked once, below, and only after /exists
+    // says there is a game to join. The POLL must never navigate -- it
+    // fires every second while the server is still creating the game, and a
+    // navigation from inside it would tear the page down mid-match-setup --
+    // but the join itself must open the game at its server's version rather
+    // than connect with the wrong bundle (OPE-471).
     await ensureServerList();
     const url = `${ClientEnv.gameHttpBase(this.gameID)}/${ClientEnv.gameWorkerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
@@ -490,6 +496,27 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameCheckInterval) {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
+    }
+
+    // Matchmaking pairs players by rating, not by build, so the match can
+    // land on a server running another version than this page (OPE-469: a
+    // static page served as `latest` matched onto a server still draining
+    // the previous build). Joining anyway ends in `version_mismatch`, and
+    // answering it there is far too late for a ranked game, which has a
+    // start deadline the other players are already waiting on: in OPE-469
+    // that answer loaded the game host's own page from scratch, Turnstile
+    // and all, the match was cancelled while it booted, and the reloaded
+    // tab was told the game did not exist. The mismatch handler now takes
+    // this host's `/v/<commit>/` page first, which is quicker, but no
+    // mid-connect reload is quick enough to rely on.
+    //
+    // So ask here, once, at the one moment the answer is both known and
+    // free: the game exists, nothing has been joined yet. Same single
+    // decision as every other place a game is opened (docs/MultiServer.md)
+    // -- it stays put on the desktop and replay shells, when no version is
+    // known for this game, and when that version is this page's.
+    if (redirectToGameVersion(this.gameID)) {
+      return;
     }
 
     this.dispatchEvent(

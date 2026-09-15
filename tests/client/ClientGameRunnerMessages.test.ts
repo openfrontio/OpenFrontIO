@@ -15,12 +15,20 @@ const captured = vi.hoisted(() => ({
 
 const envMocks = vi.hoisted(() => ({
   resolveGame: vi.fn((): unknown => ({ kind: "own" })),
+  // A build label that names no commit, which is what most of this file
+  // wants: versionMatches() treats it as matching any server, so the
+  // versioned-page branch never fires and the older fallbacks are reached
+  // exactly as before. The versioned-page tests set a real sha.
+  gitCommit: vi.fn(() => "test-commit"),
+  gameVersion: vi.fn((_gameID: string): string | undefined => undefined),
 }));
 
 vi.mock("../../src/client/ClientEnv", () => ({
   ClientEnv: {
-    gitCommit: () => "test-commit",
+    gitCommit: envMocks.gitCommit,
     resolveGame: envMocks.resolveGame,
+    gameVersion: envMocks.gameVersion,
+    gamePath: (gameID: string) => `/w0/game/${gameID}`,
   },
 }));
 vi.mock("../../src/client/Auth", () => ({
@@ -418,5 +426,124 @@ describe("version_mismatch on a pinned /v/<commit>/ page", () => {
 
     for (let i = 0; i < 10; i++) await Promise.resolve();
     expect(reloadForUpdate).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The first choice on a web mismatch: this page's own host serves every
+ * version under `/v/<commit>/`, so the build the game needs is one
+ * same-origin navigation away (OPE-471).
+ *
+ * The order is the point. The cross-host fallback loads another
+ * deployment's shell from scratch — Turnstile, bundle, map — and OPE-469 is
+ * what that costs a matchmade game: the start deadline passed while the tab
+ * was booting, the server cancelled the match, and the reloaded page was
+ * told the game did not exist.
+ */
+describe("version_mismatch takes the versioned page on this host first", () => {
+  const OWN = "bfd5563a11111111111111111111111111111111";
+  const OLD = "5ccc50a722222222222222222222222222222222";
+  const SHORT_OLD = "5ccc50a";
+  const realLocation = window.location;
+
+  function stubLocation(pathname: string) {
+    Object.defineProperty(window, "location", {
+      value: {
+        href: `https://openfront.io${pathname}`,
+        hostname: "openfront.io",
+        pathname,
+        search: "",
+      },
+      writable: true,
+      configurable: true,
+    });
+    resetPagePinForTests();
+  }
+
+  function sendMismatch(gitCommit: string | undefined) {
+    joinLobby(new EventBus(), makeLobbyConfig(false));
+    captured.lobbyOnMessage!({
+      type: "error",
+      error: "version_mismatch",
+      gitCommit,
+    });
+  }
+
+  beforeEach(() => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    envMocks.gitCommit.mockReturnValue(OWN);
+    envMocks.gameVersion.mockReturnValue(undefined);
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, "location", {
+      value: realLocation,
+      writable: true,
+      configurable: true,
+    });
+    envMocks.gitCommit.mockReturnValue("test-commit");
+    envMocks.gameVersion.mockReturnValue(undefined);
+    envMocks.resolveGame.mockReturnValue({ kind: "own" });
+    vi.mocked(reloadForUpdate).mockClear();
+    resetPagePinForTests();
+  });
+
+  it("goes to the game's version on this host rather than to its host", async () => {
+    stubLocation("/game/game1234");
+    envMocks.gameVersion.mockReturnValue(OLD);
+    envMocks.resolveGame.mockReturnValue({
+      kind: "cross",
+      host: "falk2-a.openfront.io",
+      numWorkers: 16,
+    });
+
+    sendMismatch(OLD);
+
+    expect(window.location.href).toBe(`/v/${SHORT_OLD}/game/game1234`);
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    expect(reloadForUpdate).not.toHaveBeenCalled();
+  });
+
+  // The list can carry no version for this game at all — a legacy id with
+  // no letter, or a letter deployed after this page fetched its list — and
+  // the server that just refused the join names its own build regardless.
+  it("uses the refusing server's own commit when the list knows none", () => {
+    stubLocation("/game/game1234");
+    envMocks.gameVersion.mockReturnValue(undefined);
+
+    sendMismatch(OLD);
+
+    expect(window.location.href).toBe(`/v/${SHORT_OLD}/game/game1234`);
+  });
+
+  // The loop guard, and the reason it reads the pin rather than the address
+  // bar: the join has already rewritten the bar to the version-free share
+  // URL, so a page under /v/<commit>/ looks unpinned and would navigate to
+  // itself, forever.
+  it("stays put on a page already pinned to the version the server names", async () => {
+    stubLocation(`/v/${SHORT_OLD}/game/game1234`);
+    capturePagePin();
+    (window.location as unknown as { pathname: string }).pathname =
+      "/game/game1234";
+    envMocks.gameVersion.mockReturnValue(OLD);
+
+    sendMismatch(OLD);
+
+    expect(window.location.href).toBe(
+      `https://openfront.io/v/${SHORT_OLD}/game/game1234`,
+    );
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    expect(reloadForUpdate).not.toHaveBeenCalled();
+  });
+
+  it("still reloads a stale tab when no version can be named", async () => {
+    // Neither the list nor the server says which build is wanted, so there
+    // is no versioned page to ask for: the ordinary stale-tab reload.
+    stubLocation("/game/game1234");
+
+    sendMismatch(undefined);
+
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    expect(reloadForUpdate).toHaveBeenCalled();
   });
 });
