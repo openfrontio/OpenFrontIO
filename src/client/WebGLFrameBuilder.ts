@@ -428,6 +428,10 @@ export class WebGLFrameBuilder {
     if (sid !== 0 && this.effectOverridesUsed) {
       this.effectResolved.delete(sid);
     }
+    // Players resolved before the local player couldn't tell who's a teammate.
+    if (gameView.cosmeticVisibility().showFrom === "teammates") {
+      this.refreshCosmetics(gameView);
+    }
     if (me) {
       const rail = me.railColor().toRgb();
       this.view.setLocalRailColor(rail.r / 255, rail.g / 255, rail.b / 255);
@@ -526,9 +530,11 @@ export class WebGLFrameBuilder {
   private syncPlayers(gameView: GameView): void {
     if (!this.skinsInitialized) {
       this.skinsInitialized = true;
+      // Hidden skins are registered too, so the cosmetics visibility settings
+      // can reveal them mid-game.
       const urls = new Set<string>();
       for (const p of gameView.players()) {
-        const url = p.cosmetics.skin?.url;
+        const url = p.equippedCosmetics.skin?.url;
         if (url) urls.add(assetUrl(url));
       }
       this.view.initSkinAtlas([...urls]);
@@ -538,53 +544,7 @@ export class WebGLFrameBuilder {
       const smallID = p.smallID();
       if (this.knownSmallIDs.has(smallID)) continue;
       this.knownSmallIDs.add(smallID);
-
-      this.writePaletteEntry(smallID, p.territoryColor(), p.borderColor());
-
-      // p.cosmetics.flag has already been server-resolved to either a full URL
-      // or a relative asset path (e.g. "/flags/US.svg" or a CDN URL for a
-      // custom flag). assetUrl() passes URLs through and rewrites paths.
-      const flagRef = p.cosmetics.flag;
-      const flagUrl = flagRef ? assetUrl(flagRef) : undefined;
-
-      // Crown cosmetic: already server-resolved to the catalog image URL.
-      const crownRef = p.cosmetics.crown?.url;
-      const crownUrl = crownRef ? assetUrl(crownRef) : undefined;
-
-      const skin = p.cosmetics.skin;
-      if (skin?.url) {
-        this.view.setPlayerSkin(smallID, assetUrl(skin.url));
-      }
-
-      const pattern = p.cosmetics.pattern;
-      if (pattern && pattern.patternData) {
-        try {
-          const decoded = decodePatternData(
-            pattern.patternData,
-            base64url.decode,
-          );
-          const metaOff = smallID * 4;
-          this.patternMeta[metaOff] = 1.0; // hasPattern = true
-          this.patternMeta[metaOff + 1] = decoded.width;
-          this.patternMeta[metaOff + 2] = decoded.height;
-          this.patternMeta[metaOff + 3] = decoded.scale;
-
-          this.patternData.set(decoded.bytes.slice(3), smallID * 1024);
-        } catch (e) {
-          console.warn("Failed to decode territory pattern", e);
-        }
-      }
-
-      newPlayers.push({
-        ...p.static,
-        // displayName() honors the anonymous-names setting; static.displayName
-        // is always the real name.
-        displayName: p.displayName(),
-        flag: flagUrl,
-        crown: crownUrl,
-        verified: p.cosmetics.verified === true,
-        color: p.territoryColor().toHex(),
-      });
+      newPlayers.push(this.writePlayerCosmetics(p));
     }
     if (newPlayers.length > 0) {
       this.view.addPlayers(
@@ -594,6 +554,82 @@ export class WebGLFrameBuilder {
         this.patternData,
       );
     }
+  }
+
+  /**
+   * Re-apply the cosmetics visibility settings mid-game: re-resolve which
+   * cosmetics every player shows, rewrite their colors, skin, pattern, flag
+   * and crown, and re-resolve their effects on the next update().
+   */
+  refreshCosmetics(gameView: GameView): void {
+    gameView.refreshPlayerCosmetics();
+    const players: PlayerStatic[] = [];
+    for (const p of gameView.players()) {
+      if (!this.knownSmallIDs.has(p.smallID())) continue;
+      players.push(this.writePlayerCosmetics(p));
+    }
+    this.view.updatePlayerCosmetics(
+      players,
+      this.palette,
+      this.patternMeta,
+      this.patternData,
+    );
+    this.effectResolved.clear();
+  }
+
+  /**
+   * Write a player's palette entry, skin and pattern for upload, and return
+   * their renderer header. Also clears whatever a now-hidden cosmetic wrote.
+   */
+  private writePlayerCosmetics(p: PlayerView): PlayerStatic {
+    const smallID = p.smallID();
+    this.writePaletteEntry(smallID, p.territoryColor(), p.borderColor());
+
+    // p.cosmetics.flag has already been server-resolved to either a full URL
+    // or a relative asset path (e.g. "/flags/US.svg" or a CDN URL for a
+    // custom flag). assetUrl() passes URLs through and rewrites paths.
+    const flagRef = p.cosmetics.flag;
+    const flagUrl = flagRef ? assetUrl(flagRef) : undefined;
+
+    // Crown cosmetic: already server-resolved to the catalog image URL.
+    const crownRef = p.cosmetics.crown?.url;
+    const crownUrl = crownRef ? assetUrl(crownRef) : undefined;
+
+    if (p.equippedCosmetics.skin?.url) {
+      const skinUrl = p.cosmetics.skin?.url;
+      this.view.setPlayerSkin(smallID, skinUrl ? assetUrl(skinUrl) : null);
+    }
+
+    const metaOff = smallID * 4;
+    this.patternMeta.fill(0, metaOff, metaOff + 4);
+    const pattern = p.cosmetics.pattern;
+    if (pattern && pattern.patternData) {
+      try {
+        const decoded = decodePatternData(
+          pattern.patternData,
+          base64url.decode,
+        );
+        this.patternMeta[metaOff] = 1.0; // hasPattern = true
+        this.patternMeta[metaOff + 1] = decoded.width;
+        this.patternMeta[metaOff + 2] = decoded.height;
+        this.patternMeta[metaOff + 3] = decoded.scale;
+
+        this.patternData.set(decoded.bytes.slice(3), smallID * 1024);
+      } catch (e) {
+        console.warn("Failed to decode territory pattern", e);
+      }
+    }
+
+    return {
+      ...p.static,
+      // displayName() honors the anonymous-names setting; static.displayName
+      // is always the real name.
+      displayName: p.displayName(),
+      flag: flagUrl,
+      crown: crownUrl,
+      verified: p.cosmetics.verified === true,
+      color: p.territoryColor().toHex(),
+    };
   }
 
   /**

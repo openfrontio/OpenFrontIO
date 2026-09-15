@@ -30,6 +30,7 @@ import {
 import { UserSettings } from "../../core/game/UserSettings";
 import { PlayerState, PlayerStatic, PlayerTypeEnum } from "../render/types";
 import { themeProvider } from "../theme/ThemeProvider";
+import { type CosmeticOwner, visibleCosmetics } from "./CosmeticVisibility";
 import { GameView } from "./GameView";
 import { UnitView } from "./UnitView";
 
@@ -116,6 +117,8 @@ export class PlayerView {
   public state: PlayerState;
   /** Static header data — set once at construction, never mutated. */
   public static: PlayerStatic;
+  /** The equipped cosmetics this client draws. */
+  public cosmetics!: PlayerCosmetics;
 
   // Assigned via computeColors() in the constructor; re-assignable on theme change.
   private _territoryColor!: Colord;
@@ -137,7 +140,8 @@ export class PlayerView {
     data: PlayerUpdate,
     // Undefined until the worker's first name placement for this player.
     public nameData: NameViewData | undefined,
-    public cosmetics: PlayerCosmetics,
+    /** Everything the player has equipped, before visibility settings. */
+    public readonly equippedCosmetics: PlayerCosmetics,
   ) {
     this.state = stateFromUpdate(data);
     this.static = staticFromUpdate(data);
@@ -149,6 +153,20 @@ export class PlayerView {
       this.anonymousName = createRandomName(data.name!, data.playerType!);
     }
 
+    this.refreshCosmetics();
+  }
+
+  /**
+   * Re-resolve which equipped cosmetics are drawn (see visibleCosmetics) and
+   * everything derived from them. Call when the cosmetics visibility settings
+   * or the local player's team change; the renderer must be refreshed after.
+   */
+  refreshCosmetics(): void {
+    this.cosmetics = visibleCosmetics(
+      this.equippedCosmetics,
+      this.game.cosmeticVisibility(),
+      this.cosmeticOwner(),
+    );
     this.computeColors();
 
     const pattern = userSettings.territoryPatterns()
@@ -158,6 +176,17 @@ export class PlayerView {
       pattern === undefined
         ? undefined
         : new PatternDecoder(pattern, base64url.decode);
+  }
+
+  private cosmeticOwner(): CosmeticOwner {
+    if (
+      this.static.clientID !== null &&
+      this.static.clientID === this.game.myClientID()
+    ) {
+      return "self";
+    }
+    const myTeam = this.game.myPlayer()?.team() ?? null;
+    return myTeam !== null && this.team() === myTeam ? "teammate" : "other";
   }
 
   /**

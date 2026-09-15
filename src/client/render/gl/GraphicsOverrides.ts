@@ -7,6 +7,8 @@ import { z } from "zod";
  */
 export const PALETTE_NAMES = ["default", "colorblind"] as const;
 
+export const COSMETICS_SHOW_FROM = ["everyone", "teammates", "self"] as const;
+
 export const GraphicsOverridesSchema = z
   .object({
     // Which theme palette to render with (player colors, terrain tints, …).
@@ -111,6 +113,29 @@ export const GraphicsOverridesSchema = z
         ambient: z.number(),
         // Exponent controlling how sharply a light fades with distance.
         falloffPower: z.number(),
+      })
+      .partial(),
+    /**
+     * Which of other players' cosmetics are drawn. Your own are always drawn.
+     * Category keys are shown unless explicitly false.
+     */
+    cosmetics: z
+      .object({
+        // Whose cosmetics besides your own are drawn.
+        showFrom: z.enum(COSMETICS_SHOW_FROM),
+        territorySkins: z.boolean(),
+        territoryColors: z.boolean(),
+        flags: z.boolean(),
+        // Opacity of every flag beside a name (0-1).
+        flagOpacity: z.number().min(0).max(1),
+        crowns: z.boolean(),
+        transportShipTrail: z.boolean(),
+        nukeTrail: z.boolean(),
+        nukeExplosion: z.boolean(),
+        structures: z.boolean(),
+        warship: z.boolean(),
+        train: z.boolean(),
+        railroad: z.boolean(),
       })
       .partial(),
     /** Per-layer visibility toggles keyed by layer id. */
