@@ -305,20 +305,37 @@ export class SteamLinkModal extends BaseModal {
     }
 
     if (this.mode === "conflict") {
-      // The persona travels with the offer (the server resolved it), so the
-      // only thing still to fetch is the name of the account being KEPT —
-      // which is half of what this screen is for. Render immediately rather
-      // than behind a spinner: the destructive half is already known, and a
-      // missing name degrades to the no-name phrasing below.
-      this.loadState = "ready";
+      // LOADING FIRST, and `ready` only once the account being KEPT has a
+      // name. Not a spinner for its own sake: `ready` is what renders the
+      // "Delete it and link" button, and the whole job of this screen is to
+      // say which account survives and which one goes. Reaching `ready` while
+      // `username` is still null would put an enabled, irreversible button
+      // over a blank "You'll keep ___" line on first paint — and leave it
+      // there for good if the read fails.
+      //
+      // This is the same sequencing the token path already uses, and the same
+      // invariant the confirm step's own comment relies on ("always a real,
+      // identifying string once ready"). The conflict branch reached `ready`
+      // without it; now it does not.
+      this.loadState = "loading";
       this.personaName = this.conflict?.personaName ?? null;
       void getUserMe().then((userMe) => {
         if (myRequestId !== this.requestId) return; // superseded
-        if (userMe === false) return;
+        if (userMe === false) {
+          // The load-error state, NOT a confirmation with a blank name in it.
+          // A screen that cannot name the survivor is asking the player to
+          // approve a deletion on trust. Same rule the token path applies to
+          // an unreadable /users/@me, and the same reason the confirm step
+          // has no "unknown account" placeholder.
+          this.loadState = "load_error";
+          this.requestUpdate();
+          return;
+        }
         // Same `username ?? publicId` convention as the confirm step above:
         // a placeholder noun here would gut the point of naming the account
         // the player keeps.
         this.username = userMe.player.username ?? userMe.player.publicId;
+        this.loadState = "ready";
         this.requestUpdate();
       });
       return;
@@ -554,12 +571,21 @@ export class SteamLinkModal extends BaseModal {
     } else {
       this.redeemState = "failed";
       this.failureReason = result.reason;
-      // `discard_deferred` is the ONE refusal the server leaves the offer
-      // standing for — a purchase on that account is still settling, which
-      // clears by itself in minutes. So the confirmation stays answerable:
-      // the button works again, and closing still releases the desktop's
-      // ticket. Every other refusal has spent the offer for good.
-      this.conflictAnswered = result.reason !== "discard_deferred";
+      // Two outcomes leave the offer answerable, for opposite reasons.
+      //
+      // `discard_deferred` is the one REFUSAL the server leaves it standing
+      // for — a purchase on that account is still settling, which clears by
+      // itself in minutes.
+      //
+      // `failed` is not an answer at all: it covers a network error and any
+      // unexpected status, so the request may never have reached the server
+      // and the offer may still be live. Treating it as spent would skip the
+      // cancel in onClose and leave the desktop's ticket pending until it
+      // expires. A cancel against an offer that WAS spent is harmless — the
+      // server answers 410 and the call is best-effort — so the cheap
+      // direction to be wrong in is the one that releases the ticket.
+      this.conflictAnswered =
+        result.reason !== "discard_deferred" && result.reason !== "failed";
     }
     this.requestUpdate();
   }
@@ -576,12 +602,13 @@ export class SteamLinkModal extends BaseModal {
   protected renderBody(): TemplateResult {
     if (this.loadState === "load_error") {
       // The token path's copy ("...try again from Steam") is the wrong
-      // instruction on the code path — the player is already on the
-      // website holding a code, not going back through Steam.
+      // instruction on every other path — the code player is already on the
+      // website holding a code, and the website conflict flow never went
+      // through Steam's client at all.
       const loadErrorMessage =
-        this.mode === "code"
-          ? translateText("steam_link_modal.load_error_code")
-          : translateText("steam_link_modal.load_error");
+        this.mode === "token"
+          ? translateText("steam_link_modal.load_error")
+          : translateText("steam_link_modal.load_error_code");
       return html`
         <div class="flex flex-col gap-4 p-6 text-center">
           <p
@@ -621,10 +648,19 @@ export class SteamLinkModal extends BaseModal {
     // undone. The account line is the safeguard — a player who is about to
     // delete the account they actually wanted should be able to see that from
     // the name, the age and the games count before they click.
+    // `load_error` has already returned above, so reaching here means the
+    // conflict screen is the right one to show — ready or still resolving.
     if (this.conflict !== null) {
       const conflict = this.conflict;
       const deleting = this.redeemState === "redeeming";
-      const kept = this.username ?? "";
+      // The destructive half of this screen is known up front (it travels
+      // with the offer); the half naming the account being KEPT may still be
+      // resolving. Render the same "…" placeholder the link confirm step uses
+      // rather than the link confirm step itself — which would flash "Link
+      // Steam … with account …", the wrong screen entirely — and keep the
+      // discard button disabled until there is a name on the line above it.
+      const ready = this.loadState === "ready";
+      const kept = ready ? (this.username ?? "") : "…";
       const created =
         conflict.createdAt === null
           ? null
@@ -685,7 +721,7 @@ export class SteamLinkModal extends BaseModal {
             </button>
             <button
               class="steam-link-discard-btn ${BUTTON_BASE} bg-red-500/90 text-white hover:bg-red-500"
-              ?disabled=${deleting}
+              ?disabled=${deleting || !ready}
               @click=${() => this.handleDiscard()}
             >
               ${translateText(

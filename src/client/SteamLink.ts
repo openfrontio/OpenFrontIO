@@ -276,14 +276,51 @@ export type SteamLinkConflict =
   | { discardable: true; account: SteamConflictAccount }
   | { discardable: false; block: string };
 
+const isStringOrNull = (v: unknown): v is string | null =>
+  v === null || typeof v === "string";
+
+/**
+ * Validate the account field rather than trusting its shape.
+ *
+ * Our own API is on the other end, so this is not defending against an
+ * attacker — it is defending against the ONE screen in this flow whose button
+ * deletes an account. Every field here is rendered on it, and a partial object
+ * would put "undefined" where the account's name goes, or "undefined games
+ * played" under it, on exactly the screen a player is reading to decide
+ * whether this is the account they meant. A half-rendered confirmation is
+ * worse than no offer at all, so anything unrecognised degrades to no offer
+ * and the player sees the plain refusal.
+ */
+function parseConflictAccount(value: unknown): SteamConflictAccount | null {
+  if (typeof value !== "object" || value === null) return null;
+  const a = value as Record<string, unknown>;
+  if (typeof a.publicId !== "string") return null;
+  if (
+    !isStringOrNull(a.username) ||
+    !isStringOrNull(a.createdAt) ||
+    !isStringOrNull(a.personaName)
+  ) {
+    return null;
+  }
+  if (typeof a.gamesPlayed !== "number" || !Number.isFinite(a.gamesPlayed)) {
+    return null;
+  }
+  if (typeof a.gamesPlayedCapped !== "boolean") return null;
+  return {
+    publicId: a.publicId,
+    username: a.username,
+    createdAt: a.createdAt,
+    personaName: a.personaName,
+    gamesPlayed: a.gamesPlayed,
+    gamesPlayedCapped: a.gamesPlayedCapped,
+  };
+}
+
 function parseConflict(body: unknown): SteamLinkConflict | null {
-  const b = body as {
-    discardable?: unknown;
-    block?: unknown;
-    account?: SteamConflictAccount;
-  } | null;
-  if (b?.discardable === true && b.account !== undefined) {
-    return { discardable: true, account: b.account };
+  const b = body as { discardable?: unknown; block?: unknown } | null;
+  if (b?.discardable === true) {
+    const account = parseConflictAccount((b as { account?: unknown }).account);
+    return account === null ? null : { discardable: true, account };
   }
   if (b?.discardable === false && typeof b.block === "string") {
     return { discardable: false, block: b.block };

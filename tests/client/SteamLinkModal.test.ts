@@ -1001,6 +1001,71 @@ describe("SteamLinkModal", () => {
       expect(fetchSteamLinkTicketMock).not.toHaveBeenCalled();
     });
 
+    // The button is irreversible, so it must not be clickable while the line
+    // above it ("You'll keep ___") is still blank. The token path already
+    // sequences this way; the website path used to reach `ready` synchronously
+    // and render an enabled Delete over a name that had not arrived.
+    it("does not offer Delete until the kept account has a name", async () => {
+      const userMe = deferred<UserMeResponse>();
+      getUserMeMock.mockReturnValue(userMe.promise);
+
+      await modal.openForConflict(account);
+      await modal.updateComplete;
+
+      expect(discardButton()?.disabled).toBe(true);
+      expect(modal.textContent).not.toContain(
+        "steam_link_modal.confirm_prompt",
+      );
+
+      userMe.resolve(makeUserMe("web.1234"));
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(discardButton()?.disabled).toBe(false);
+      });
+    });
+
+    // `false` is a transient failure as much as a signed-out read (Api.ts
+    // returns the same value for both). A confirmation that cannot name the
+    // survivor is asking the player to approve a deletion on trust.
+    it("shows the load error rather than an unnamed confirmation", async () => {
+      getUserMeMock.mockResolvedValue(false);
+
+      await modal.openForConflict(account);
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain("steam_link_modal.load_error_code");
+      });
+
+      // The code variant's wording, asserted above, not the token path's
+      // "try again from Steam" — this player never went through Steam's
+      // client to get here.
+      expect(discardButton()).toBeNull();
+    });
+
+    // `failed` covers a network error and any unexpected status, so the
+    // request may never have reached the server and the offer may still be
+    // live. Treating it as spent would leave the desktop's ticket pending
+    // until expiry; a cancel against an already-spent offer is a harmless 410.
+    it("stays cancellable when the discard request never landed", async () => {
+      await reachConfirmation();
+      answerSteamLinkConflictMock.mockResolvedValue({
+        ok: false,
+        reason: "failed",
+      });
+
+      discardButton()?.click();
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain("common.error_generic");
+      });
+
+      answerSteamLinkConflictMock.mockClear();
+      modal.close();
+      await modal.updateComplete;
+
+      expect(answerSteamLinkConflictMock).toHaveBeenCalledWith("cancel");
+    });
+
     // Nothing is waiting on the website path, so closing must NOT spend the
     // offer — that would cost a player who closed the dialog to think about it
     // another full trip through Steam.

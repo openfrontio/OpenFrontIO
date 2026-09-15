@@ -560,6 +560,60 @@ describe("the discard offer", () => {
     });
   });
 
+  // Our own API is on the other end, so this is not about an attacker — it is
+  // about the one screen whose button deletes an account. A partial object
+  // would put "undefined" where the account name goes on exactly the screen a
+  // player reads to decide whether this is the account they meant, so anything
+  // unrecognised degrades to no offer and the plain refusal.
+  it.each([
+    ["null", null],
+    ["a non-object", "nope"],
+    ["missing publicId", { ...account, publicId: undefined }],
+    ["a non-string username", { ...account, username: 7 }],
+    ["a non-numeric gamesPlayed", { ...account, gamesPlayed: "2" }],
+    [
+      "a non-boolean gamesPlayedCapped",
+      { ...account, gamesPlayedCapped: "no" },
+    ],
+  ])("drops a discardable conflict with %s", async (_label, bad) => {
+    fetchMock().mockResolvedValueOnce(
+      res(
+        { reason: "steam_has_progress", discardable: true, account: bad },
+        409,
+      ),
+    );
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result).toEqual({ ok: false, reason: "steam_has_progress" });
+  });
+
+  // null is explicitly allowed on these three — an account with no claimed
+  // username, no resolvable Steam persona, or an unreadable created date is
+  // ordinary, not malformed.
+  it("keeps a conflict whose nullable fields are null", async () => {
+    const sparse = {
+      ...account,
+      username: null,
+      createdAt: null,
+      personaName: null,
+    };
+    fetchMock().mockResolvedValueOnce(
+      res(
+        { reason: "steam_has_progress", discardable: true, account: sparse },
+        409,
+      ),
+    );
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "steam_has_progress",
+      conflict: { discardable: true, account: sparse },
+    });
+  });
+
   it("omits conflict entirely when the server sent none", async () => {
     fetchMock().mockResolvedValueOnce(
       res({ reason: "steam_has_progress" }, 409),
