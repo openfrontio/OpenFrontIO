@@ -604,3 +604,45 @@ describe("MatchmakingModal opens the match at its server's version", () => {
     expect(loc.href).toBe("https://replay.openfront.io/");
   });
 });
+
+// The shared queue is partitioned by build (OPE-470), so the join has to
+// say which one this page is. A value that names no commit is left off: the
+// API rejects a malformed version with a 400.
+describe("MatchmakingModal queue join carries the page's build", () => {
+  const OWN = "bfd5563a11111111111111111111111111111111";
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    sockets.length = 0;
+    apiMocks.getUserMe.mockReset();
+    apiMocks.getUserMe.mockResolvedValue(userMe());
+    envMocks.gitCommit.mockReturnValue(OWN);
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    envMocks.gitCommit.mockReturnValue(OWN);
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("sends the commit this page was built from", async () => {
+    const { socket } = await openAndJoin("1v1");
+
+    expect(socket.url).toBe(
+      `ws://matchmaking.test/matchmaking/join?instance_id=test-instance&mode=1v1&version=${OWN}`,
+    );
+  });
+
+  it("omits the version for a build that names no commit", async () => {
+    envMocks.gitCommit.mockReturnValue("DEV");
+
+    const { socket } = await openAndJoin("2v2");
+
+    expect(socket.url).toBe(
+      "ws://matchmaking.test/matchmaking/join?instance_id=test-instance&mode=2v2",
+    );
+  });
+});

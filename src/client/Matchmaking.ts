@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { CloseCode, isTerminalClose } from "../core/CloseCodes";
+import { isCommitLike } from "../core/ServerList";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
@@ -265,8 +266,16 @@ export class MatchmakingModal extends BaseModal {
     const instanceId = ClientEnv.instanceId();
     const instanceParam =
       instanceId === "" ? "" : `instance_id=${encodeURIComponent(instanceId)}&`;
+    // The queue is partitioned by build (OPE-470), so a match is only ever
+    // assigned on a server this page can play on. Sent only when the build
+    // names a commit: the API rejects anything else, and a label like "DEV"
+    // names no build to partition by.
+    const ownCommit = ClientEnv.gitCommit();
+    const versionParam = isCommitLike(ownCommit)
+      ? `&version=${encodeURIComponent(ownCommit)}`
+      : "";
     this.socket = new WebSocket(
-      `${ClientEnv.jwtIssuer()}/matchmaking/join?${instanceParam}mode=${this.mode}`,
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?${instanceParam}mode=${this.mode}${versionParam}`,
     );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
