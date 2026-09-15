@@ -65,6 +65,12 @@ describe("deriveServerHttpBase", () => {
         deriveServerHttpBase("openfront.io", "https:", "elsewhere.example"),
       ).toBe("https://openfront.io");
     });
+
+    it("targets a loopback serverHost over plain http (local dev server)", () => {
+      expect(deriveServerHttpBase("localhost:9000", "app:", "openfront")).toBe(
+        "http://localhost:9000",
+      );
+    });
   });
 
   // The invariant that matters once the client picks a server at runtime (the
@@ -76,6 +82,7 @@ describe("deriveServerHttpBase", () => {
       [undefined, "http:", "localhost:3000"],
       ["openfront.io", "app:", "openfront"],
       ["main.openfront.dev", "app:", "openfront"],
+      ["localhost:9000", "app:", "openfront"],
     ] as const)(
       "names the same host for (%s, %s, %s)",
       (serverHost, protocol, host) => {

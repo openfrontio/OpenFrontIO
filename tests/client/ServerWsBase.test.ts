@@ -63,4 +63,36 @@ describe("deriveServerWsBase", () => {
       );
     });
   });
+
+  describe("desktop build against a local dev server (loopback serverHost)", () => {
+    it("targets localhost over plain ws", () => {
+      expect(deriveServerWsBase("localhost:9000", "app:", "openfront")).toBe(
+        "ws://localhost:9000",
+      );
+    });
+
+    it("targets 127.0.0.1 over plain ws", () => {
+      expect(deriveServerWsBase("127.0.0.1:9000", "app:", "openfront")).toBe(
+        "ws://127.0.0.1:9000",
+      );
+    });
+
+    it("targets [::1] over plain ws", () => {
+      expect(deriveServerWsBase("[::1]:9000", "app:", "openfront")).toBe(
+        "ws://[::1]:9000",
+      );
+    });
+
+    it("is decided by hostname, not port: a public host stays wss", () => {
+      expect(deriveServerWsBase("openfront.io:9000", "app:", "openfront")).toBe(
+        "wss://openfront.io:9000",
+      );
+    });
+
+    it("does not treat a localhost SUBDOMAIN as loopback", () => {
+      expect(
+        deriveServerWsBase("localhost.openfront.io", "app:", "openfront"),
+      ).toBe("wss://localhost.openfront.io");
+    });
+  });
 });
