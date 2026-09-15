@@ -67,13 +67,30 @@ describe("AmbienceController", () => {
   });
 
   describe("zoom envelope", () => {
-    // The sound designer asked for -20 dB below the channel at the deepest
-    // zoom, fading to silence as the player pulls back out.
-    it("peaks at -20 dB when fully zoomed in", () => {
+    // The sound designer asked for -20 dB below the cues at the deepest zoom,
+    // fading to silence as the player pulls back out. See AMBIENCE_PEAK_GAIN
+    // for why that is 0.3 here and not the literal 0.1: the ambience channel
+    // is already down by its own slider taper, and the two used to stack.
+    it("peaks at the envelope ceiling when fully zoomed in", () => {
       transformHandler.scale = 20; // the clamp ceiling
       nearby = [structure(UnitType.City, 4)];
       controller.tick();
-      expect(gains[0]).toBeCloseTo(0.1);
+      expect(gains[0]).toBeCloseTo(0.3);
+    });
+
+    it("lands 20 dB under the cues at the default channel settings", () => {
+      // The relationship the spec is actually about, checked end to end
+      // rather than as a bare constant: this is what stops the envelope and
+      // the ambience slider's own squaring from compounding again.
+      transformHandler.scale = 20;
+      nearby = [structure(UnitType.City, 4)];
+      controller.tick();
+      // Squared, because that is what AudioMixer's perceptualGain does to a
+      // slider position. Inlined rather than imported: pulling AudioMixer in
+      // would drag howler into this test's import graph for two multiplies.
+      const ambience = 0.4 ** 2 * gains[0];
+      const effects = 0.7 ** 2;
+      expect(20 * Math.log10(ambience / effects)).toBeCloseTo(-20, 0);
     });
 
     it("is silent at the threshold and rises from there", () => {
@@ -84,7 +101,7 @@ describe("AmbienceController", () => {
 
       transformHandler.scale = 14; // halfway
       controller.tick();
-      expect(gains[1]).toBeCloseTo(0.05);
+      expect(gains[1]).toBeCloseTo(0.15);
     });
 
     it("re-emits while the player keeps zooming, on the same track", () => {
