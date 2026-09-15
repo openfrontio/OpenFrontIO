@@ -141,8 +141,9 @@ export function categoryOf(name: SoundEffect | AmbienceTrack): CueCategory {
 export class SetAmbienceEvent implements GameEvent {
   /**
    * @param gain 0-1 zoom envelope from AmbienceController, multiplied by the
-   *   ambience channel volume. Aiden's spec is -20 dB at the deepest zoom
-   *   fading to silence as the player pulls back, so this peaks at 0.1.
+   *   ambience channel volume. Aiden's spec is -20 dB under the cues at the
+   *   deepest zoom, fading to silence as the player pulls back; see
+   *   AMBIENCE_PEAK_GAIN for why that lands at 0.3 rather than 0.1.
    */
   constructor(
     public readonly track: AmbienceTrack | null,

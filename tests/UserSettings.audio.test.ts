@@ -84,7 +84,7 @@ describe("audio channel volumes", () => {
   it("has no legacy fallback for master", () => {
     localStorage.setItem("settings.soundEffectsVolume", "0.1");
     localStorage.setItem("settings.backgroundMusicVolume", "0.1");
-    expect(new UserSettings().audioVolume("master")).toBeCloseTo(1.0);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.9);
   });
 
   it("writes the channel key and clamps to 0-1", () => {
@@ -178,9 +178,9 @@ describe("master volume default", () => {
     expect(s.audioVolume("interface")).toBeCloseTo(0.5);
   });
 
-  it("starts the desktop shell audible", () => {
+  it("starts the desktop shell audible, at the default master level", () => {
     pretendDesktopShell();
-    expect(new UserSettings().audioVolume("master")).toBeCloseTo(1.0);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.9);
   });
 
   it("keeps a returning web player audible when only a legacy key is stored", () => {
@@ -188,20 +188,20 @@ describe("master volume default", () => {
     // deliberately set the old sliders would upgrade into silence.
     localStorage.setItem("settings.backgroundMusicVolume", "0.5");
     const s = new UserSettings();
-    expect(s.audioVolume("master")).toBeCloseTo(1.0);
+    expect(s.audioVolume("master")).toBeCloseTo(0.9);
     expect(s.audioVolume("music")).toBeCloseTo(0.5);
   });
 
   it("counts a stored channel key as having chosen, even at zero", () => {
     localStorage.setItem("settings.audio.effects", "0");
     const s = new UserSettings();
-    expect(s.audioVolume("master")).toBeCloseTo(1.0);
+    expect(s.audioVolume("master")).toBeCloseTo(0.9);
     expect(s.audioVolume("effects")).toBe(0);
   });
 
   it("announces master when the first write flips the carve-out", () => {
     // Otherwise the mixer stays at master 0 — a silent game — while the tab
-    // shows master at 100.
+    // shows master at its default.
     const seen: unknown[] = [];
     const type = `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.master`;
     const listener = (e: Event) => seen.push((e as CustomEvent).detail);
@@ -212,8 +212,8 @@ describe("master volume default", () => {
     s.setAudioVolume("effects", 0.7);
 
     globalThis.removeEventListener(type, listener);
-    expect(s.audioVolume("master")).toBeCloseTo(1);
-    expect(seen).toEqual(["1"]);
+    expect(s.audioVolume("master")).toBeCloseTo(0.9);
+    expect(seen).toEqual(["0.9"]);
   });
 
   it("announces the flip through the legacy setters too", () => {
@@ -225,7 +225,7 @@ describe("master volume default", () => {
     new UserSettings().setBackgroundMusicVolume(0.5);
 
     globalThis.removeEventListener(type, listener);
-    expect(seen).toEqual(["1"]);
+    expect(seen).toEqual(["0.9"]);
   });
 
   it("announces the flip only once, not on every later write", () => {
@@ -240,7 +240,7 @@ describe("master volume default", () => {
     s.setAudioVolume("alerts", 0.2);
 
     globalThis.removeEventListener(type, listener);
-    expect(seen).toEqual(["1"]);
+    expect(seen).toEqual(["0.9"]);
   });
 
   it("does not announce a flip when master is stored", () => {
@@ -260,7 +260,7 @@ describe("master volume default", () => {
 
   it("trips the carve-out on a legacy effects value alone", () => {
     localStorage.setItem("settings.soundEffectsVolume", "0.65");
-    expect(new UserSettings().audioVolume("master")).toBeCloseTo(1.0);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.9);
   });
 
   it("does not trip the carve-out on the blur toggles alone", () => {
@@ -346,7 +346,7 @@ describe("resetAudio", () => {
     const s = new UserSettings();
     s.setAudioVolume("master", 0.2);
     s.resetAudio();
-    expect(new UserSettings().audioVolume("master")).toBeCloseTo(1.0);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.9);
   });
 
   it("is safe to call twice, and on empty storage", () => {
@@ -407,5 +407,106 @@ describe("resetAudio", () => {
     globalThis.removeEventListener(type, listener);
     expect(seen).toEqual(["0"]);
     expect(seen.every((d) => !isNaN(parseFloat(String(d))))).toBe(true);
+  });
+});
+
+describe("one-time audio reset", () => {
+  beforeEach(() => {
+    resetUserSettingsState();
+    pretendWeb();
+  });
+
+  afterEach(pretendWeb);
+
+  it("clears the state that had a web player hearing cues they never chose", () => {
+    // The reported case: the old build's music slider was dragged once and
+    // effects was left alone, so the master carve-out reads "has chosen" and
+    // the four channels that slider never covered fall through to the new
+    // defaults. Audible, at full level, opted into by nobody.
+    localStorage.setItem("settings.backgroundMusicVolume", "0.4");
+    const before = new UserSettings();
+    expect(before.audioVolume("master")).toBeCloseTo(0.9);
+    expect(before.audioVolume("effects")).toBeCloseTo(0.7);
+
+    expect(new UserSettings().resetAudioOnce()).toBe(true);
+
+    const after = new UserSettings();
+    expect(after.audioVolume("master")).toBe(0);
+    expect(localStorage.getItem("settings.backgroundMusicVolume")).toBeNull();
+  });
+
+  it("runs once and then leaves the player's own choices alone", () => {
+    const s = new UserSettings();
+    expect(s.resetAudioOnce()).toBe(true);
+
+    s.setAudioVolume("master", 0.3);
+    s.setAudioVolume("ambience", 0.9);
+    s.setMuteOnBlur(true);
+
+    expect(new UserSettings().resetAudioOnce()).toBe(false);
+    const after = new UserSettings();
+    expect(after.audioVolume("master")).toBeCloseTo(0.3);
+    expect(after.audioVolume("ambience")).toBeCloseTo(0.9);
+    expect(after.muteOnBlur()).toBe(true);
+  });
+
+  it("spends the version on a fresh install too, so it cannot fire later", () => {
+    // Nothing to clear here, but the stamp still has to be written: otherwise
+    // the reset would be waiting to go off after the player has set levels.
+    expect(new UserSettings().resetAudioOnce()).toBe(true);
+    expect(localStorage.getItem("settings.audio.resetVersion")).toBe("1");
+    expect(new UserSettings().resetAudioOnce()).toBe(false);
+  });
+
+  it("runs on the desktop shell as well, landing on the desktop default", () => {
+    pretendDesktopShell();
+    localStorage.setItem("settings.audio.master", "1");
+    expect(new UserSettings().resetAudioOnce()).toBe(true);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.9);
+  });
+
+  it.each([
+    ["not-a-number"],
+    // parseInt would read this as 1 and skip a reset that has never run.
+    ["1-corrupt"],
+    ["1.5"],
+    ["-1"],
+    [""],
+    ["Infinity"],
+  ])("re-runs when the stamp reads %j, which is not a version", (stamp) => {
+    localStorage.setItem("settings.audio.resetVersion", stamp);
+    localStorage.setItem("settings.audio.master", "1");
+    expect(new UserSettings().resetAudioOnce()).toBe(true);
+    expect(localStorage.getItem("settings.audio.resetVersion")).toBe("1");
+    expect(localStorage.getItem("settings.audio.master")).toBeNull();
+  });
+
+  it("does not re-run when a later version has already stamped it", () => {
+    localStorage.setItem("settings.audio.resetVersion", "99");
+    localStorage.setItem("settings.audio.master", "1");
+    expect(new UserSettings().resetAudioOnce()).toBe(false);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(1);
+  });
+
+  it("survives the tab's own reset button, which must not re-arm it", () => {
+    const s = new UserSettings();
+    s.resetAudioOnce();
+    s.setAudioVolume("master", 0.3);
+    s.resetAudio();
+    expect(localStorage.getItem("settings.audio.resetVersion")).toBe("1");
+    expect(new UserSettings().resetAudioOnce()).toBe(false);
+  });
+
+  it("announces the reset values, so a running mixer follows it", () => {
+    localStorage.setItem("settings.soundEffectsVolume", "0.9");
+    const seen: unknown[] = [];
+    const type = `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.master`;
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    globalThis.addEventListener(type, listener);
+
+    new UserSettings().resetAudioOnce();
+
+    globalThis.removeEventListener(type, listener);
+    expect(seen).toEqual(["0"]);
   });
 });
