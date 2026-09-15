@@ -304,7 +304,9 @@ export class CosmeticCard extends LitElement {
 
   private renderSwatches() {
     const variants = this.variants.filter(
-      (variant) => variant.colorPalette !== null,
+      (variant) =>
+        variant.colorPalette !== null ||
+        (variant.type === "pattern" && variant.cosmetic !== null),
     );
     if (!this.interactive || !this.showSwatches || variants.length === 0) {
       return nothing;
@@ -322,7 +324,7 @@ export class CosmeticCard extends LitElement {
         const isActive = variant.key === activeKey;
         const label = palette
           ? translateCosmetic("territory_patterns.color_palette", palette.name)
-          : cosmeticDisplayName(variant);
+          : translateText("territory_patterns.pattern.default");
         return html`<button
           type="button"
           data-variant-key=${variant.key}
