@@ -57,6 +57,13 @@ export class ServerEnv {
     }
     return v;
   }
+  // Optional, unlike turnstileSiteKey: a deployment without a key just keeps
+  // the inline Stripe flow off (the store falls back to redirect checkout).
+  static stripePublishableKey(): string | undefined {
+    const v = process.env.STRIPE_PUBLISHABLE_KEY;
+    if (!v) return undefined;
+    return v;
+  }
   static jwtAudience(): string {
     const v = process.env.DOMAIN;
     if (!v) {
