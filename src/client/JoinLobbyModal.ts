@@ -623,9 +623,6 @@ export class JoinLobbyModal extends BaseModal {
     // disarmLeaveOnClose() runs, no close cascade can re-arm it and
     // disconnect the player mid game-start.
     this.leaveLobbyOnClose = true;
-    this.publicLobbies = null;
-    this.hostedLobbiesLoaded = false;
-    void this.hostedLobbySocket.start();
     const lobbyId = typeof args?.lobbyId === "string" ? args.lobbyId : "";
     const lobbyInfo = args?.lobbyInfo as GameInfo | PublicGameInfo | undefined;
     if (lobbyId) {
@@ -634,7 +631,16 @@ export class JoinLobbyModal extends BaseModal {
       if (!lobbyInfo) {
         this.handleUrlJoin(lobbyId, args?.spectate === true);
       }
+    } else {
+      this.startLobbyFeed();
     }
+  }
+
+  private startLobbyFeed(lobbyId?: string) {
+    this.publicLobbies = null;
+    this.hostedLobbies = [];
+    this.hostedLobbiesLoaded = false;
+    void this.hostedLobbySocket.start(lobbyId);
   }
 
   private async handleUrlJoin(
@@ -683,6 +689,7 @@ export class JoinLobbyModal extends BaseModal {
     lobbyInfo?: GameInfo | PublicGameInfo,
   ) {
     this.currentLobbyId = lobbyId;
+    this.startLobbyFeed(lobbyId);
     // clientID will be assigned by server via lobby_info message
     this.currentClientID = "";
     this.gameConfig = null;
@@ -709,6 +716,7 @@ export class JoinLobbyModal extends BaseModal {
     this.currentLobbyId = "";
     this.currentClientID = "";
     this.isConnecting = false;
+    if (this.isModalOpen) this.startLobbyFeed();
   }
 
   private leaveLobby() {

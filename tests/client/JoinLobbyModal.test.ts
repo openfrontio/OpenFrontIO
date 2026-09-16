@@ -22,6 +22,37 @@ vi.mock("../../src/client/DesktopPresence", () => ({
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
 import { GameMode, GameType } from "../../src/core/game/Game";
 
+describe("JoinLobbyModal queue feed target", () => {
+  it("follows the joined game and restores the default feed on returning to the form", () => {
+    const modal = new JoinLobbyModal();
+    const state = modal as any;
+    const start = vi
+      .spyOn(state.hostedLobbySocket, "start")
+      .mockResolvedValue(undefined);
+    state.startLobbyUpdates = vi.fn();
+    state.stopLobbyUpdates = vi.fn();
+
+    state.onOpen();
+    expect(start).toHaveBeenLastCalledWith(undefined);
+    start.mockClear();
+    state.onOpen({ lobbyId: "b123456789", lobbyInfo: {} });
+    expect(start).toHaveBeenCalledExactlyOnceWith("b123456789");
+
+    state.publicLobbies = { serverTime: 0, games: {} };
+    state.startTrackingLobby("c123456789");
+    expect(start).toHaveBeenLastCalledWith("c123456789");
+    expect(state.publicLobbies).toBeNull();
+    state.isModalOpen = true;
+    state.resetTrackingState();
+    expect(start).toHaveBeenLastCalledWith(undefined);
+    start.mockClear();
+    state.isModalOpen = false;
+    state.resetTrackingState();
+    expect(start).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+});
+
 describe("JoinLobbyModal queue status", () => {
   function setup() {
     const modal = new JoinLobbyModal();

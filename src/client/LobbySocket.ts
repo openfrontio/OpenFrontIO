@@ -1,5 +1,5 @@
 import { ClientEnv, NoServerError } from "src/client/ClientEnv";
-import { PublicGames } from "../core/Schemas";
+import { GameID, PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { showInGameAlert } from "./InGameModal";
 import { ensureServerList, reloadWouldRescue } from "./ServerList";
@@ -26,6 +26,8 @@ export class PublicLobbySocket {
   private wsAttemptCounted = false;
   private workerPath: string = "";
   private stopped = true;
+  private generation = 0;
+  private gameID: GameID | undefined;
   // Latest full snapshot, used as the base for applying counts-only deltas.
   private lastFull: PublicGames | null = null;
 
@@ -43,7 +45,10 @@ export class PublicLobbySocket {
     this.onUpdateAvailable = options?.onUpdateAvailable;
   }
 
-  async start() {
+  /** Follow a joined game's server, or the picked server for lobby browsing. */
+  async start(gameID?: GameID) {
+    this.stop();
+    this.gameID = gameID;
     this.stopped = false;
     this.wsConnectionAttempts = 0;
     await this.discoverAndConnect();
@@ -84,9 +89,10 @@ export class PublicLobbySocket {
     // path never gets that far, so without clearing it here the counter
     // would freeze at one and the retry would run every reconnectDelay
     // forever, never reaching maxWsAttempts and never telling the player.
+    const generation = this.generation;
     this.wsAttemptCounted = false;
     const listStatus = await ensureServerList();
-    if (this.stopped) return;
+    if (this.stopped || generation !== this.generation) return;
     if (listStatus === "outdated") this.fireUpdateAvailable();
     // Get config to determine number of workers, then pick a random one.
     // With no list and nothing injected there is no server to ask (a static
@@ -94,7 +100,10 @@ export class PublicLobbySocket {
     // any other: take the same path a refused socket does rather than
     // rejecting a promise most callers never await.
     try {
-      this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
+      this.workerPath =
+        this.gameID !== undefined
+          ? `/${ClientEnv.gameWorkerPath(this.gameID)}`
+          : getRandomWorkerPath(ClientEnv.numWorkers());
     } catch (e) {
       if (!(e instanceof NoServerError)) throw e;
       this.handleConnectError(e, () => void this.discoverAndConnect());
@@ -105,16 +114,19 @@ export class PublicLobbySocket {
 
   stop() {
     this.stopped = true;
+    this.generation++;
     this.lastFull = null;
     this.disconnectWebSocket();
   }
 
   private connectWebSocket() {
+    if (this.stopped) return;
     try {
       // Clean up existing WebSocket before creating a new one
       if (this.ws) {
-        this.ws.close();
+        const oldSocket = this.ws;
         this.ws = null;
+        oldSocket.close();
       }
       // Drop any cached snapshot — the server primes new connections with a
       // fresh full message, and a stale base could mis-merge incoming deltas.
@@ -122,17 +134,33 @@ export class PublicLobbySocket {
 
       // WS origin comes from ClientEnv (same-origin on web, audience-derived on
       // the desktop app://openfront origin), not window.location.host.
-      const wsUrl = `${ClientEnv.serverWsBase()}${this.workerPath}/lobbies`;
+      const base =
+        this.gameID !== undefined
+          ? ClientEnv.gameWsBase(this.gameID)
+          : ClientEnv.serverWsBase();
+      const wsUrl = `${base}${this.workerPath}/lobbies`;
 
-      this.ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(wsUrl);
+      this.ws = ws;
       // Frames are zbin payloads; without this they would arrive as Blobs.
       this.ws.binaryType = "arraybuffer";
       this.wsAttemptCounted = false;
 
-      this.ws.addEventListener("open", () => this.handleOpen());
-      this.ws.addEventListener("message", (event) => this.handleMessage(event));
-      this.ws.addEventListener("close", () => this.handleClose());
-      this.ws.addEventListener("error", (error) => this.handleError(error));
+      // Switching the joined game replaces this socket. Late callbacks from
+      // its predecessor must not update the new queue or schedule a reconnect.
+      const isCurrent = () => !this.stopped && this.ws === ws;
+      ws.addEventListener("open", () => {
+        if (isCurrent()) this.handleOpen();
+      });
+      ws.addEventListener("message", (event) => {
+        if (isCurrent()) this.handleMessage(event);
+      });
+      ws.addEventListener("close", () => {
+        if (isCurrent()) this.handleClose();
+      });
+      ws.addEventListener("error", (error) => {
+        if (isCurrent()) this.handleError(error);
+      });
     } catch (error) {
       this.handleConnectError(error);
     }
@@ -266,8 +294,9 @@ export class PublicLobbySocket {
     if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
       return;
     }
+    const generation = this.generation;
     const listStatus = await ensureServerList();
-    if (this.stopped) return;
+    if (this.stopped || generation !== this.generation) return;
     if (reloadWouldRescue(listStatus)) this.fireUpdateAvailable();
   }
 
@@ -306,8 +335,9 @@ export class PublicLobbySocket {
 
   private disconnectWebSocket() {
     if (this.ws) {
-      this.ws.close();
+      const oldSocket = this.ws;
       this.ws = null;
+      oldSocket.close();
     }
     if (this.wsReconnectTimeout !== null) {
       clearTimeout(this.wsReconnectTimeout);
