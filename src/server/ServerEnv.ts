@@ -292,8 +292,9 @@ export class ServerEnv {
   // Whether the master joins its site's shared public-lobby roster
   // (LobbyCoordinatorClient.ts, infra docs/lobby-coordinator.md). "api"
   // connects to the API's coordinator and lets it schedule this site's public
-  // lobbies; anything else, or none, keeps single-server scheduling, so a
-  // deploy that doesn't set it is unchanged on the wire.
+  // lobbies; "off", anything else, or none keeps single-server scheduling,
+  // so a deploy that doesn't set it is unchanged on the wire. "off" exists
+  // so a GitHub environment can override a repo-level "api" explicitly.
   static lobbyCoordinator(): "api" | "off" {
     return process.env.LOBBY_COORDINATOR === "api" ? "api" : "off";
   }
