@@ -1,17 +1,77 @@
 import { getDesktopSessionState } from "./Auth";
-import { isDesktopShell } from "./DesktopShell";
+import { isDesktopShell, type SessionFailureKind } from "./DesktopShell";
 import {
   backendReachable,
   retryServerList,
   type BackendReachabilityDetail,
 } from "./ServerList";
 
-// Main owns sign-in and the profile refresh. Keep the network and button
-// triggers together so recovering one multiplayer gate also recovers the other.
+/**
+ * Signed-out reasons an automatic retry can plausibly resolve.
+ *
+ * The manual Retry button always retries, whatever the reason — the player
+ * asked, and they may know something we don't (they just restarted Steam).
+ * The automatic triggers are different: they fire on a connectivity change,
+ * so they should only re-attempt failures a connectivity change can fix.
+ * Everything else costs a Steam ticket mint plus a round trip to fail in
+ * exactly the same way.
+ *
+ * Deliberately absent, because no amount of reconnecting changes them:
+ *
+ * - `steam-unavailable` — Steam is not running. Coming back online does not
+ *   start it.
+ * - `steam-wedged` — the ticket call timed out. Only a Steam restart has ever
+ *   cleared this (see retrySteamSignIn's note); a silent retry buys nothing
+ *   and delays the message telling the player what to do.
+ * - `steam-ticket-rejected` — a completed 401. Steam looked at the ticket and
+ *   said no; the next ticket is refused identically.
+ *
+ * `needs-account` IS included, deliberately, for two reasons. The shell
+ * currently reports an unreachable status endpoint as `needs-account` rather
+ * than as a network failure, so this reason is genuinely produced by the kind
+ * of outage that reconnecting resolves. And a player can complete linking on
+ * the website while the game is open, after which an account exists and a
+ * retry signs them in.
+ */
+const AUTO_RETRY_REASONS: ReadonlySet<SessionFailureKind> = new Set([
+  "network",
+  "steam-backend",
+  "steam-error",
+  "needs-account",
+]);
+
+/** Whether an automatic (connectivity-driven) retry is worth attempting. */
+function worthAutoRetrying(): boolean {
+  const state = getDesktopSessionState();
+  if (state.status !== "signed-out") return false;
+  // A signed-out state with no reason at all is the generic failure; retrying
+  // it on reconnect is the behaviour this module exists to add.
+  return state.reason === undefined || AUTO_RETRY_REASONS.has(state.reason);
+}
+
+/**
+ * Wires up desktop session recovery and returns an unsubscribe function.
+ *
+ * Main owns sign-in and the profile refresh. Keeping the network and button
+ * triggers together means recovering one multiplayer gate also recovers the
+ * other: a session that comes back is useless if the server list is still
+ * cached as unreachable, and vice versa.
+ *
+ * The manual `desktop-session-retry` listener is registered on EVERY boot,
+ * desktop or web. The status bar dispatches that event and nothing else
+ * listens for it, so gating it behind `isDesktopShell()` would leave the
+ * event with no handler at all on a web boot.
+ *
+ * Only the automatic triggers — `online` and `backend-reachability` — are
+ * desktop-only, because only the desktop shell has a Steam session to
+ * recover.
+ *
+ * @param signIn Re-runs Steam sign-in and refreshes the profile.
+ * @returns A cleanup function that removes every listener registered here.
+ */
 export function subscribeDesktopSessionRecovery(
   signIn: () => Promise<void>,
 ): () => void {
-  if (!isDesktopShell()) return () => {};
   let reachable = backendReachable();
   let retrying = false;
   const retry = async (checkServers: boolean) => {
@@ -28,19 +88,28 @@ export function subscribeDesktopSessionRecovery(
       retrying = false;
     }
   };
+  // The player asked, so this retries regardless of reason.
   const onRetry = () => void retry(true);
+  document.addEventListener("desktop-session-retry", onRetry);
+
+  if (!isDesktopShell()) {
+    return () => {
+      document.removeEventListener("desktop-session-retry", onRetry);
+    };
+  }
+
   const onOnline = () => {
-    if (getDesktopSessionState().status === "signed-out") onRetry();
+    if (worthAutoRetrying()) void retry(true);
   };
   const onReachability = (event: Event) => {
     const next = (event as CustomEvent<BackendReachabilityDetail>).detail;
+    // Only a false -> true transition is a recovery. `backendReachable()` is
+    // null before the first attempt settles, and null -> true is a first
+    // answer rather than a recovery, so it must not trigger a retry.
     const recovered = reachable === false && next.reachable;
     reachable = next.reachable;
-    if (recovered && getDesktopSessionState().status === "signed-out") {
-      void retry(false);
-    }
+    if (recovered && worthAutoRetrying()) void retry(false);
   };
-  document.addEventListener("desktop-session-retry", onRetry);
   document.addEventListener("backend-reachability", onReachability);
   window.addEventListener("online", onOnline);
   return () => {
