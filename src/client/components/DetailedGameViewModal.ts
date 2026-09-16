@@ -17,10 +17,10 @@ import {
   shouldBlockSocketSourcedAction,
 } from "../GameModeSelector";
 import { JoinLobbyModal } from "../JoinLobbyModal";
+import { getLobbyQueuePosition } from "../LobbyQueue";
 import { PublicLobbySocket } from "../LobbySocket";
 import { JoinLobbyEvent } from "../Main";
 import { UsernameInput } from "../UsernameInput";
-import { getLobbyQueuePosition } from "../utilities/LobbyQueuePosition";
 import {
   calculateServerTimeOffset,
   getGameModeLabel,

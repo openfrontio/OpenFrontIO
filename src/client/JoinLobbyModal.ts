@@ -31,6 +31,7 @@ import {
 } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { getLobbyQueuePosition } from "./LobbyQueue";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { ensureServerList, redirectToGameVersion } from "./ServerList";
@@ -45,7 +46,6 @@ import "./components/LobbyPlayerView";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
-import { getLobbyQueuePosition } from "./utilities/LobbyQueuePosition";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {

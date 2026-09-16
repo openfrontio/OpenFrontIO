@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getLobbyQueuePosition } from "../../src/client/utilities/LobbyQueuePosition";
+import { getLobbyQueuePosition } from "../../src/client/LobbyQueue";
 import type { PublicGameInfo, PublicGames } from "../../src/core/Schemas";
 
 function lobby(
