@@ -45,6 +45,7 @@ import "./components/LobbyPlayerView";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
+import { getLobbyQueuePosition } from "./utilities/LobbyQueuePosition";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
@@ -88,22 +89,6 @@ export class JoinLobbyModal extends BaseModal {
 
   private isPrivateLobby(): boolean {
     return this.gameConfig?.gameType === GameType.Private;
-  }
-
-  private get queuePosition(): number | null {
-    if (this.gameConfig?.gameType !== GameType.Public) return null;
-    // Match the browser's position within the full scheduled bucket, excluding
-    // its active countdown. A missing snapshot/lobby must not show Queue: 0.
-    for (const type of ["ffa", "team", "special"] as const) {
-      const queue = this.publicLobbies?.games[type]?.filter(
-        (lobby) => lobby.startsAt === undefined,
-      );
-      const index = queue?.findIndex(
-        (lobby) => lobby.gameID === this.currentLobbyId,
-      );
-      if (index !== undefined && index >= 0) return index + 1;
-    }
-    return null;
   }
 
   // Read off the server's own view of us, so a switch it refused (lobby full,
@@ -337,7 +322,10 @@ export class JoinLobbyModal extends BaseModal {
             this.serverTimeOffset,
           )
         : null;
-    const queuePosition = this.queuePosition;
+    const queuePosition =
+      this.gameConfig?.gameType === GameType.Public
+        ? getLobbyQueuePosition(this.publicLobbies, this.currentLobbyId)
+        : null;
     const statusLabel =
       secondsRemaining === null
         ? this.isPrivateLobby()
