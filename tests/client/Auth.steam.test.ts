@@ -9,7 +9,7 @@ import {
 import { ClientEnv } from "../../src/client/ClientEnv";
 import { subscribeDesktopSessionRecovery } from "../../src/client/DesktopSessionRecovery";
 import { multiplayerAllowedForSession } from "../../src/client/DesktopShell";
-import { steamSDK } from "../../src/client/SteamSDK";
+import { steamSDK, type SteamTicketFailure } from "../../src/client/SteamSDK";
 
 function setBootstrapConfig() {
   (window as any).BOOTSTRAP_CONFIG = {
@@ -246,6 +246,31 @@ describe("Steam login", () => {
     expect(getDesktopSessionState()).toEqual({
       status: "signed-out",
       reason: "needs-account",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // The shell distinguishes three reasons it may decline to mint, and only
+  // one of them is "set up an account". Collapsing them is the bug this
+  // mapping exists to prevent: an OpenFront API outage used to tell a player
+  // with a perfectly good account to set one up. None of them may attempt the
+  // exchange.
+  it.each([
+    ["ticket-rejected", "steam-ticket-rejected"],
+    ["api-unreachable", "network"],
+  ])("maps the shell's %s to %s without exchanging", async (from, to) => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: false,
+      reason: from as SteamTicketFailure,
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    await getAuthHeader();
+
+    expect(getDesktopSessionState()).toEqual({
+      status: "signed-out",
+      reason: to,
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
