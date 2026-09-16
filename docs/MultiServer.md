@@ -944,7 +944,7 @@ fully-rendered `index-<short>.html` replay shell next to them. `update.sh`
 now also publishes, per **site** and per **version**, the three objects the
 static Worker will serve. The site is `SITE_HOST` when the deployment sits
 behind a load balancer, else `<subdomain>.<domain>`; the version is the
-7-character prefix of `static/commit.txt`. All four uploads go through
+7-character prefix of `static/commit.txt`. All uploads go through
 `PUT $R2_ENDPOINT/game_assets/upload/<urlencoded key>`, which prefixes
 `game_assets/`:
 
@@ -953,6 +953,15 @@ behind a load balancer, else `<subdomain>.<domain>`; the version is the
 | `sites/<site>/v/<short>/index.html`           | `RenderStaticIndex.ts --environment-only`      |
 | `sites/<site>/v/<short>/desktop/release.json` | `RenderDesktopDescriptor.ts`                   |
 | `sites/<site>/v/<short>/desktop/version.json` | `RenderDesktopDescriptor.ts --version-pointer` |
+| `sites/<site>/v/<short>/root-files.json`      | the build (`writeRootFilesIndex`)              |
+| `sites/<site>/v/<short>/root/<path>`          | copied from `static/`, one per index entry     |
+
+Everything in `resources/public/` (the policy pages, `robots.txt`, `ads.txt`,
+`press/`, and Apple Pay's `.well-known/` file) is served verbatim at the site
+root. The site Worker has no origin behind it, so it serves these from R2:
+`root-files.json` maps each path to its content type (plus a `"<dir>/"` entry
+for a directory with an `index.html`), and the Worker serves exactly what it
+lists. To publish a new root file, add it to `resources/public/`.
 
 Both renderers run inside the freshly built image with the live container's
 env file, exactly as the replay shell already does, so what is published is

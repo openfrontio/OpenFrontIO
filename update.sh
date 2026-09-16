@@ -290,6 +290,29 @@ else
         "$DESKTOP_RELEASE" "application/json" || exit 1
     upload_versioned "${VERSION_PREFIX}/desktop/version.json" \
         "$DESKTOP_VERSION" "application/json" || exit 1
+
+    # resources/public/ (policy pages, robots.txt, press/, .well-known/): the
+    # site has no origin behind the Worker, so it serves these from here, by
+    # the index the build wrote. Directory entries ("press/") have no file of
+    # their own.
+    ROOT_FILES_INDEX="$STATIC_DIR/root-files.json"
+    if ! jq -e '.["privacy-policy.html"] and .["terms-of-service.html"]' \
+        "$ROOT_FILES_INDEX" > /dev/null; then
+        echo "❌ The root-files index is missing or lacks the policy pages"
+        exit 1
+    fi
+    while IFS= read -r ROOT_PATH; do
+        case "$ROOT_PATH" in
+            /* | .. | ../* | */../* | */..)
+                echo "❌ refusing unsafe path: $ROOT_PATH" >&2
+                exit 1
+                ;;
+        esac
+        upload_versioned "${VERSION_PREFIX}/root/${ROOT_PATH}" \
+            "$STATIC_DIR/$ROOT_PATH" "application/octet-stream" || exit 1
+    done < <(jq -r 'keys[] | select(endswith("/") | not)' "$ROOT_FILES_INDEX")
+    upload_versioned "${VERSION_PREFIX}/root-files.json" \
+        "$ROOT_FILES_INDEX" "application/json" || exit 1
 fi
 
 echo "Checking for existing container..."

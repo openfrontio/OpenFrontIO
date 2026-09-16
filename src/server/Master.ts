@@ -113,7 +113,7 @@ app.use(
 );
 
 // Apple Pay domain verification (Stripe's universal association file,
-// vendored in resources/). Apple fetches this exact path over HTTPS when the
+// vendored in resources/public/). Apple fetches this exact path over HTTPS when the
 // domain is registered in the Stripe dashboard, and it must get the raw file:
 // express.static above ignores dotfile paths (so it falls through to here)
 // and the SPA fallback below would answer with the app shell, which makes
@@ -127,7 +127,7 @@ app.get(
     res.sendFile(
       path.join(
         __dirname,
-        "../../resources/.well-known/apple-developer-merchantid-domain-association",
+        "../../resources/public/.well-known/apple-developer-merchantid-domain-association",
       ),
       // sendFile refuses dotfile path segments (".well-known") by default.
       // maxAge matters beyond browsers: nginx's proxy cache honours the
