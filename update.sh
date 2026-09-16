@@ -321,7 +321,10 @@ else
         [ -n "$ROOT_PATH" ] || continue
         grep -qxF "root-files/$ROOT_HASH" <<< "$ROOT_MISSING" || continue
         case "$ROOT_PATH" in
-            /* | *..*) echo "❌ refusing unsafe path: $ROOT_PATH" >&2; exit 1 ;;
+            /* | *..*)
+                echo "❌ refusing unsafe path: $ROOT_PATH" >&2
+                exit 1
+                ;;
         esac
         upload_versioned "root-files/$ROOT_HASH" "$STATIC_DIR/$ROOT_PATH" \
             "application/octet-stream" || exit 1
