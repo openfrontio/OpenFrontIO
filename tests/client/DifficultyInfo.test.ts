@@ -6,14 +6,8 @@ import {
   DIFFICULTY_TROOP_PERCENT,
   DifficultyInfo,
 } from "../../src/client/components/DifficultyInfo";
-import { Config } from "../../src/core/configuration/Config";
-import {
-  Difficulty,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../../src/core/game/Game";
-import { GameConfig } from "../../src/core/Schemas";
+import { Difficulty, PlayerType } from "../../src/core/game/Game";
+import { playerInfo, setup } from "../util/Setup";
 
 const DIFFICULTIES = [
   Difficulty.Easy,
@@ -21,14 +15,6 @@ const DIFFICULTIES = [
   Difficulty.Hard,
   Difficulty.Impossible,
 ];
-
-function config(difficulty: Difficulty): Config {
-  return new Config({ difficulty } as unknown as GameConfig, null, false);
-}
-
-function playerInfo(playerType: PlayerType): PlayerInfo {
-  return { playerType } as unknown as PlayerInfo;
-}
 
 /** What the bubble should read, composed from en.json the way the UI does. */
 function expectedText(difficulty: Difficulty): string {
@@ -45,26 +31,16 @@ function expectedText(difficulty: Difficulty): string {
   return note === undefined ? main : `${main} ${note}`;
 }
 
-function player(type: PlayerType): Player {
-  return {
-    type: () => type,
-    numTilesOwned: () => 1_000,
-    units: () => [],
-    troops: () => 0,
-  } as unknown as Player;
-}
-
 describe("DIFFICULTY_TROOP_PERCENT", () => {
-  it.each(DIFFICULTIES)("matches the simulation on %s", (difficulty) => {
-    const cfg = config(difficulty);
+  it.each(DIFFICULTIES)("matches the simulation on %s", async (difficulty) => {
+    const game = await setup("plains", { difficulty });
+    const human = game.addPlayer(playerInfo("human", PlayerType.Human));
+    const nation = game.addPlayer(playerInfo("nation", PlayerType.Nation));
     const percent = DIFFICULTY_TROOP_PERCENT[difficulty];
 
-    const startRatio =
-      cfg.startManpower(playerInfo(PlayerType.Nation)) /
-      cfg.startManpower(playerInfo(PlayerType.Human));
+    const startRatio = nation.troops() / human.troops();
     const capRatio =
-      cfg.maxTroops(player(PlayerType.Nation)) /
-      cfg.maxTroops(player(PlayerType.Human));
+      game.config().maxTroops(nation) / game.config().maxTroops(human);
 
     expect(startRatio * 100).toBeCloseTo(percent);
     expect(capRatio * 100).toBeCloseTo(percent);
