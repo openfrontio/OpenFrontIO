@@ -488,7 +488,10 @@ export class GameConfigSettings extends LitElement {
                         ${translateText(`difficulty.${key.toLowerCase()}`)}
                       </span>
                     </button>
-                    <difficulty-info .difficultyKey=${key}></difficulty-info>
+                    <difficulty-info
+                      .difficultyKey=${key}
+                      .disabled=${isDisabled}
+                    ></difficulty-info>
                   </div>
                 `;
               })}

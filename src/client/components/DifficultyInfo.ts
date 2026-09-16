@@ -23,12 +23,15 @@ const DIFFICULTIES_WITH_NOTE: ReadonlySet<Difficulty> = new Set([
 @customElement("difficulty-info")
 export class DifficultyInfo extends LitElement {
   @property({ type: String }) difficultyKey = "";
+  /** Set while the card is unselectable, i.e. the game has no nations at all. */
+  @property({ type: Boolean }) disabled = false;
 
   createRenderRoot() {
     return this;
   }
 
   render() {
+    if (this.disabled) return nothing;
     const difficulty = this.difficultyKey as Difficulty;
     const percent = DIFFICULTY_TROOP_PERCENT[difficulty];
     if (percent === undefined) return nothing;

@@ -149,6 +149,20 @@ describe("<difficulty-info>", () => {
     );
   });
 
+  // The card's DISABLED_CARD styling sits on its <button>, and the badge is a
+  // sibling of it -- so a badge left rendered would be the one crisp, clickable
+  // thing on a card that is greyed out as unavailable.
+  it("renders nothing while the card is disabled", async () => {
+    const el = await createInfo(Difficulty.Easy);
+    expect(el.querySelector("button")).toBeTruthy();
+
+    el.disabled = true;
+    await el.updateComplete;
+
+    expect(el.querySelector("button")).toBeNull();
+    expect(el.querySelector('[role="tooltip"]')).toBeNull();
+  });
+
   it("renders nothing for an unknown difficulty", async () => {
     const el = await createInfo("Nightmare");
     expect(el.querySelector("button")).toBeNull();
