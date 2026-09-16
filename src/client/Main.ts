@@ -48,6 +48,7 @@ import {
   resumePendingCreatorCode,
 } from "./CreatorCode";
 import { desktopPresence, type PresencePayload } from "./DesktopPresence";
+import { subscribeDesktopSessionRecovery } from "./DesktopSessionRecovery";
 import {
   desktopUpdate,
   isDesktopShell,
@@ -800,12 +801,23 @@ class Client {
       void onUserMe(false);
     });
 
+    // Register before initial auth settles: the status bar may already offer
+    // Retry while startup is still waiting for its first session.
+    subscribeDesktopSessionRecovery(async () => {
+      invalidateUserMe();
+      snapshotLapseMarker();
+      const generation = ++authGeneration;
+      const result = await retrySteamSignIn();
+      applyUserMe(generation)(result === false ? false : await getUserMe());
+    });
+
+    const initialAuthGeneration = authGeneration;
     if ((await userAuth()) === false) {
       // Not logged in: apply the signed-out profile directly.
-      onUserMe(false);
+      applyUserMe(initialAuthGeneration)(false);
     } else {
       // JWT appears valid: fetch the profile and apply it if still current.
-      getUserMe().then(applyUserMe(authGeneration));
+      getUserMe().then(applyUserMe(initialAuthGeneration));
     }
 
     // Re-run auth when the player signs into CrazyGames mid-session. Logout
@@ -821,11 +833,6 @@ class Client {
       );
     });
 
-    // The desktop status bar's Retry. Orchestrated here rather than in the
-    // bar because a successful sign-in also has to refresh userMe, the nav
-    // account button and the cached profile -- the same reason the
-    // CrazyGames listener above lives here. The authGeneration guard means a
-    // response that arrives after another auth change cannot be applied.
     // Subscribe to the bridge directly rather than to the status bar's
     // re-broadcast. The bar subscribes when its element upgrades and the
     // bridge replays the current state immediately, so that event fires long
@@ -837,17 +844,6 @@ class Client {
     // bar's own subscription.
     desktopUpdate()?.subscribe((state) => {
       this.desktopUpdateState = state;
-    });
-
-    document.addEventListener("desktop-session-retry", () => {
-      invalidateUserMe();
-      snapshotLapseMarker();
-      const generation = authGeneration;
-      retrySteamSignIn().then((result) =>
-        result === false
-          ? applyUserMe(generation)(false)
-          : getUserMe().then(applyUserMe(generation)),
-      );
     });
 
     this.hostModal = document.querySelector(
