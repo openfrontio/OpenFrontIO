@@ -16,6 +16,8 @@ vi.mock("../../src/client/Auth", () => ({
 
 import { getAuthHeader, logOut } from "../../src/client/Auth";
 import {
+  answerSteamLinkConflict,
+  fetchSteamLinkConflict,
   fetchSteamLinkTicket,
   isSteamLinkHash,
   isValidSteamLinkCode,
@@ -511,5 +513,261 @@ describe("fetchSteamLinkTicket", () => {
     fetchMock().mockRejectedValueOnce(new TypeError("network down"));
 
     expect(await fetchSteamLinkTicket("tok123")).toEqual({ ok: false });
+  });
+});
+
+describe("the discard offer", () => {
+  const account = {
+    publicId: "p9",
+    username: "Throwaway",
+    createdAt: "2026-09-01T00:00:00.000Z",
+    personaName: "Ada",
+    gamesPlayed: 2,
+    gamesPlayedCapped: false,
+  };
+
+  // The refusal is unchanged — same status, same reason — with the offer
+  // attached. A build that does not know about `conflict` reads it exactly as
+  // it always did.
+  it("carries a discardable conflict off a 409", async () => {
+    fetchMock().mockResolvedValueOnce(
+      res({ reason: "steam_has_progress", discardable: true, account }, 409),
+    );
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "steam_has_progress",
+      conflict: { discardable: true, account },
+    });
+  });
+
+  it("carries the block when there is no way through", async () => {
+    fetchMock().mockResolvedValueOnce(
+      res(
+        { reason: "steam_has_progress", discardable: false, block: "paid" },
+        409,
+      ),
+    );
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "steam_has_progress",
+      conflict: { discardable: false, block: "paid" },
+    });
+  });
+
+  // Our own API is on the other end, so this is not about an attacker — it is
+  // about the one screen whose button deletes an account. A partial object
+  // would put "undefined" where the account name goes on exactly the screen a
+  // player reads to decide whether this is the account they meant, so anything
+  // unrecognised degrades to no offer and the plain refusal.
+  it.each([
+    ["null", null],
+    ["a non-object", "nope"],
+    ["missing publicId", { ...account, publicId: undefined }],
+    ["a non-string username", { ...account, username: 7 }],
+    ["a non-numeric gamesPlayed", { ...account, gamesPlayed: "2" }],
+    [
+      "a non-boolean gamesPlayedCapped",
+      { ...account, gamesPlayedCapped: "no" },
+    ],
+  ])("drops a discardable conflict with %s", async (_label, bad) => {
+    fetchMock().mockResolvedValueOnce(
+      res(
+        { reason: "steam_has_progress", discardable: true, account: bad },
+        409,
+      ),
+    );
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result).toEqual({ ok: false, reason: "steam_has_progress" });
+  });
+
+  // null is explicitly allowed on these three — an account with no claimed
+  // username, no resolvable Steam persona, or an unreadable created date is
+  // ordinary, not malformed.
+  it("keeps a conflict whose nullable fields are null", async () => {
+    const sparse = {
+      ...account,
+      username: null,
+      createdAt: null,
+      personaName: null,
+    };
+    fetchMock().mockResolvedValueOnce(
+      res(
+        { reason: "steam_has_progress", discardable: true, account: sparse },
+        409,
+      ),
+    );
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "steam_has_progress",
+      conflict: { discardable: true, account: sparse },
+    });
+  });
+
+  it("omits conflict entirely when the server sent none", async () => {
+    fetchMock().mockResolvedValueOnce(
+      res({ reason: "steam_has_progress" }, 409),
+    );
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result).toEqual({ ok: false, reason: "steam_has_progress" });
+  });
+
+  // How the WEBSITE path finds the offer: the OpenID redirect deliberately
+  // carries nothing, so the client asks on its own authenticated session.
+  it("fetches the pending offer with the session's auth header", async () => {
+    fetchMock().mockResolvedValueOnce(res({ discardable: true, account }));
+
+    const result = await fetchSteamLinkConflict();
+
+    const [url, init] = fetchMock().mock.calls[0];
+    expect(url).toBe("https://api.test/auth/steam/link/conflict");
+    expect(init.headers.Authorization).toBe("Bearer test-jwt");
+    expect(result).toEqual({
+      ok: true,
+      conflict: { discardable: true, account },
+    });
+  });
+
+  // 404 is the ordinary "nothing pending" — every link outcome other than a
+  // discardable steam_has_progress produces it.
+  it("reports nothing pending on 404", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 404));
+
+    expect(await fetchSteamLinkConflict()).toEqual({
+      ok: true,
+      conflict: null,
+    });
+  });
+
+  // Same convention as the other two authenticated calls: a stale JWT is
+  // cleared rather than left in place.
+  it("clears a stale session on 401 and reports a failure", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 401));
+
+    expect(await fetchSteamLinkConflict()).toEqual({
+      ok: false,
+      reason: "failed",
+    });
+    expect(logOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a failure rather than throwing when the request fails", async () => {
+    fetchMock().mockRejectedValueOnce(new TypeError("network down"));
+
+    expect(await fetchSteamLinkConflict()).toEqual({
+      ok: false,
+      reason: "failed",
+    });
+  });
+
+  // A throttled READ is not a refusal: the offer is still there and reading
+  // never consumes it, so this must not degrade to the permanent dead end.
+  it("maps a throttled offer lookup to rate_limited with its wait", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 429, { "Retry-After": "7" }));
+
+    expect(await fetchSteamLinkConflict()).toEqual({
+      ok: false,
+      reason: "rate_limited",
+      retryAfterSeconds: 7,
+    });
+  });
+
+  // The throttle runs before the handler, so a 429 never spent the offer —
+  // collapsing it into "failed" would render the generic message and invite a
+  // click straight back into the same limiter.
+  it("maps a throttled answer to rate_limited, same as the redeem path", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 429, { "Retry-After": "12" }));
+
+    expect(await answerSteamLinkConflict("discard")).toEqual({
+      ok: false,
+      reason: "rate_limited",
+      retryAfterSeconds: 12,
+    });
+  });
+
+  // 410 means gone whatever the body says, so an unreadable one must not fall
+  // back to a "failed" the UI treats as still answerable.
+  it("treats a 410 with no readable reason as offer_unavailable", async () => {
+    fetchMock().mockResolvedValueOnce(res(null, 410));
+
+    expect(await answerSteamLinkConflict("discard")).toEqual({
+      ok: false,
+      reason: "offer_unavailable",
+    });
+  });
+
+  // The body carries the ANSWER and nothing else: no account id, no token.
+  // The server re-derives what may be deleted from the session and its own
+  // record, so this call cannot name a target.
+  it("answers with the action alone", async () => {
+    fetchMock().mockResolvedValueOnce(res({ linked: true, discarded: true }));
+
+    const result = await answerSteamLinkConflict("discard");
+
+    const [url, init] = fetchMock().mock.calls[0];
+    expect(url).toBe("https://api.test/auth/steam/link/discard");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ action: "discard" });
+    expect(result).toEqual({ ok: true, linked: true });
+  });
+
+  // The block travels with the reason, because the server's re-check can
+  // refuse at confirm time and that refusal needs the same specific copy the
+  // up-front one gets. An earlier version of this test asserted the block was
+  // dropped, which locked the generic "contact support" message in.
+  it("surfaces a 409 refusal reason and its block", async () => {
+    fetchMock().mockResolvedValueOnce(
+      res({ reason: "discard_blocked", block: "paid" }, 409),
+    );
+
+    expect(await answerSteamLinkConflict("discard")).toEqual({
+      ok: false,
+      reason: "discard_blocked",
+      block: "paid",
+    });
+  });
+
+  it("omits block when the refusal carries none", async () => {
+    fetchMock().mockResolvedValueOnce(res({ reason: "discard_deferred" }, 409));
+
+    expect(await answerSteamLinkConflict("discard")).toEqual({
+      ok: false,
+      reason: "discard_deferred",
+    });
+  });
+
+  // Single-use server-side: a spent or expired offer is a 410, which is also
+  // what a double-click produces.
+  it("surfaces a spent offer as offer_unavailable", async () => {
+    fetchMock().mockResolvedValueOnce(
+      res({ reason: "offer_unavailable" }, 410),
+    );
+
+    expect(await answerSteamLinkConflict("discard")).toEqual({
+      ok: false,
+      reason: "offer_unavailable",
+    });
+  });
+
+  it("clears a stale session on 401, like every other authenticated call", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 401));
+
+    expect(await answerSteamLinkConflict("discard")).toEqual({
+      ok: false,
+      reason: "failed",
+    });
+    expect(logOut).toHaveBeenCalledTimes(1);
   });
 });
