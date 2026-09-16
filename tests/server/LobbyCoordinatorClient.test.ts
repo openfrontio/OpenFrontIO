@@ -227,7 +227,11 @@ describe("LobbyCoordinatorClient", () => {
   // live one): a deliberate refusal, retried slowly rather than hammered.
   it("retries slowly after a 403 or a Disabled close", () => {
     client.start();
-    current().emit("unexpected-response", {}, { statusCode: 403 });
+    const refused = current();
+    refused.emit("unexpected-response", {}, { statusCode: 403 });
+    // ws leaves the aborted handshake to the listener; the client must
+    // terminate it or every refusal leaks a request.
+    expect(refused.terminated).toBe(true);
     vi.advanceTimersByTime(RECONNECT_SLOW_MS - 1);
     expect(sockets).toHaveLength(1);
     vi.advanceTimersByTime(1);
@@ -238,6 +242,19 @@ describe("LobbyCoordinatorClient", () => {
     expect(sockets).toHaveLength(2);
     vi.advanceTimersByTime(1);
     expect(sockets).toHaveLength(3);
+  });
+
+  // Regression: lastRosterAt starts at 0, so without a connect-time floor
+  // the first tick after every open read as 15s of silence and tore the
+  // socket down in a tight reconnect loop.
+  it("gives a fresh socket the full silence window before its first roster", () => {
+    const s = connectAndOpen();
+    vi.advanceTimersByTime(SOCKET_SILENCE_MS - 1000);
+    expect(s.terminated).toBe(false);
+    expect(sockets).toHaveLength(1);
+    expect(client.isCoordinated()).toBe(false);
+    vi.advanceTimersByTime(2000);
+    expect(s.terminated).toBe(true);
   });
 
   it("tears down a socket that has delivered no roster for 15s", () => {

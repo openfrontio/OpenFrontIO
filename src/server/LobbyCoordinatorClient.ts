@@ -143,6 +143,11 @@ export class LobbyCoordinatorClient {
   private tickTimer: NodeJS.Timeout | null = null;
   private backoffMs = RECONNECT_MIN_MS;
   private lastRosterAt = 0;
+  // When the current socket opened. The silence guard in tick() measures
+  // from the later of this and the last roster, so a fresh socket gets the
+  // full SOCKET_SILENCE_MS to deliver its first roster; isCoordinated()
+  // deliberately does not look at it — only a roster proves liveness.
+  private connectedAt = 0;
   // The latest lobbies the master gave us; sent on the next eligible tick.
   private pendingReport: { lobbies: InternalGameInfo[]; liveGames: number } = {
     lobbies: [],
@@ -209,6 +214,7 @@ export class LobbyCoordinatorClient {
     socket.on("open", () => {
       if (this.socket !== socket) return;
       this.open = true;
+      this.connectedAt = this.now();
       this.backoffMs = RECONNECT_MIN_MS;
       this.opts.log.info("lobby coordinator: connected", {
         url: this.opts.url,
@@ -230,6 +236,11 @@ export class LobbyCoordinatorClient {
       const status = res.statusCode ?? 0;
       this.opts.log.warn("lobby coordinator: upgrade refused", { status });
       this.dropSocket(socket);
+      // With a listener registered, ws leaves the aborted handshake to us:
+      // terminate() in the CONNECTING state destroys the request, and
+      // nothing else will (no `close` is emitted for a socket that never
+      // opened).
+      socket.terminate();
       this.scheduleReconnect(
         status === 403 ? RECONNECT_SLOW_MS : this.nextBackoff(),
       );
@@ -280,7 +291,10 @@ export class LobbyCoordinatorClient {
   private tick(): void {
     if (!this.open || this.socket === null) return;
     const now = this.now();
-    if (now - this.lastRosterAt > SOCKET_SILENCE_MS) {
+    if (
+      now - Math.max(this.lastRosterAt, this.connectedAt) >
+      SOCKET_SILENCE_MS
+    ) {
       this.opts.log.warn("lobby coordinator: no roster for 15s, reconnecting");
       const socket = this.socket;
       this.dropSocket(socket);
