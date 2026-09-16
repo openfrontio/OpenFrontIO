@@ -530,7 +530,13 @@ export class GameModeSelector extends LitElement {
    */
   public start() {
     this.feedWanted = true;
-    if (lobbyFeedSuspended(this.desktopSessionState)) return;
+    if (lobbyFeedSuspended(this.desktopSessionState)) {
+      // The session may have dropped while Main had the feed stopped, in
+      // which case the snapshot from before the game is still here and its
+      // cards would render as joinable.
+      this.lobbies = null;
+      return;
+    }
     this.lobbySocket.start();
   }
 

@@ -11,13 +11,16 @@ import type { PublicGames } from "../src/core/Schemas";
 // jsdom has no WebSocket worth talking to and this test is about the
 // lifecycle, not the wire, so the socket is a spy -- following the same
 // pattern as GameModeSelectorGatingWiring.test.ts.
-const { socketCalls } = vi.hoisted(() => ({
+const { socketCalls, lobbiesCallbackRef } = vi.hoisted(() => ({
   socketCalls: { started: 0, stopped: 0 },
+  lobbiesCallbackRef: { current: null as ((g: PublicGames) => void) | null },
 }));
 
 vi.mock("../src/client/LobbySocket", () => ({
   PublicLobbySocket: class {
-    constructor(_onUpdate: (g: PublicGames) => void) {}
+    constructor(onUpdate: (g: PublicGames) => void) {
+      lobbiesCallbackRef.current = onUpdate;
+    }
     start(): void {
       socketCalls.started++;
     }
@@ -253,6 +256,36 @@ describe("GameModeSelector lobby feed while the desktop session is gated", () =>
 
     setSession({ status: "signed-in" });
     expect(socketCalls.started).toBe(2);
+  });
+
+  it("drops a snapshot kept across a game when start() finds the session gated", async () => {
+    lobbiesCallbackRef.current?.({
+      serverTime: Date.now(),
+      games: {
+        ffa: [
+          {
+            gameID: "abc",
+            numClients: 1,
+            publicGameType: "ffa",
+            gameConfig: {
+              gameMap: "World",
+              gameMode: "Free For All",
+              maxPlayers: 8,
+            },
+          },
+        ],
+      },
+    } as unknown as PublicGames);
+    await selector.updateComplete;
+    expect(selector.querySelector("button.group")).not.toBeNull();
+
+    selector.stop();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    selector.start();
+    await selector.updateComplete;
+
+    expect(selector.querySelector("button.group")).toBeNull();
+    expect(selector.textContent).toContain("mode_selector.offline_lobbies");
   });
 
   it("shows an offline message in place of the spinner while gated", async () => {
