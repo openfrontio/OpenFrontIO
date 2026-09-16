@@ -291,46 +291,26 @@ else
     upload_versioned "${VERSION_PREFIX}/desktop/version.json" \
         "$DESKTOP_VERSION" "application/json" || exit 1
 
-    # The unhashed root files (privacy policy, terms, LICENSE, robots.txt,
-    # version.txt, press/): the site has no origin behind the Worker, so these
-    # exist nowhere else. Stored once by content hash at root-files/<sha256>
-    # and found through the version's index, so a press kit that did not change
-    # is not uploaded again on every deploy of every site. Directory entries
-    # ("press/") share their index.html's hash and have no file of their own.
-    ROOT_FILES_INDEX="$EXTRACT_DIR/root-files.json"
-    if ! docker run --rm --env-file "$ENV_FILE" --entrypoint npx \
-        "${GHCR_IMAGE}" tsx src/server/RenderRootFiles.ts \
-        > "$ROOT_FILES_INDEX"; then
-        echo "❌ Failed to build the root-files index"
-        exit 1
-    fi
-    if ! jq -e '.files["privacy-policy.html"].sha256 and .files["terms-of-service.html"].sha256' \
+    # resources/public/ (policy pages, robots.txt, press/, .well-known/): the
+    # site has no origin behind the Worker, so it serves these from here, by
+    # the index the build wrote. Directory entries ("press/") have no file of
+    # their own.
+    ROOT_FILES_INDEX="$STATIC_DIR/root-files.json"
+    if ! jq -e '.["privacy-policy.html"] and .["terms-of-service.html"]' \
         "$ROOT_FILES_INDEX" > /dev/null; then
-        echo "❌ The root-files index is missing the policy pages"
+        echo "❌ The root-files index is missing or lacks the policy pages"
         exit 1
     fi
-    ROOT_KEYS_JSON="$(jq '[.files[] | "root-files/" + .sha256] | unique' "$ROOT_FILES_INDEX")"
-    ROOT_MISSING="$(curl -fsS --connect-timeout 10 --max-time 120 \
-        -X POST "$R2_ENDPOINT/game_assets/check" \
-        -H "X-API-Key: $API_KEY" \
-        -H "Content-Type: application/json" \
-        -d "{\"keys\": $ROOT_KEYS_JSON}" | jq -r '.missing[]')" || {
-        echo "❌ /check failed for the root files"
-        exit 1
-    }
-    while IFS=$'\t' read -r ROOT_PATH ROOT_HASH; do
-        [ -n "$ROOT_PATH" ] || continue
-        grep -qxF "root-files/$ROOT_HASH" <<< "$ROOT_MISSING" || continue
+    while IFS= read -r ROOT_PATH; do
         case "$ROOT_PATH" in
             /* | .. | ../* | */../* | */..)
                 echo "❌ refusing unsafe path: $ROOT_PATH" >&2
                 exit 1
                 ;;
         esac
-        upload_versioned "root-files/$ROOT_HASH" "$STATIC_DIR/$ROOT_PATH" \
-            "application/octet-stream" || exit 1
-    done < <(jq -r '.files | to_entries[] | select(.key | endswith("/") | not)
-        | "\(.key)\t\(.value.sha256)"' "$ROOT_FILES_INDEX")
+        upload_versioned "${VERSION_PREFIX}/root/${ROOT_PATH}" \
+            "$STATIC_DIR/$ROOT_PATH" "application/octet-stream" || exit 1
+    done < <(jq -r 'keys[] | select(endswith("/") | not)' "$ROOT_FILES_INDEX")
     upload_versioned "${VERSION_PREFIX}/root-files.json" \
         "$ROOT_FILES_INDEX" "application/json" || exit 1
 fi

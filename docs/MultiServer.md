@@ -948,20 +948,20 @@ behind a load balancer, else `<subdomain>.<domain>`; the version is the
 `PUT $R2_ENDPOINT/game_assets/upload/<urlencoded key>`, which prefixes
 `game_assets/`:
 
-| Object                                        | Rendered by                                           |
-| --------------------------------------------- | ----------------------------------------------------- |
-| `sites/<site>/v/<short>/index.html`           | `RenderStaticIndex.ts --environment-only`             |
-| `sites/<site>/v/<short>/desktop/release.json` | `RenderDesktopDescriptor.ts`                          |
-| `sites/<site>/v/<short>/desktop/version.json` | `RenderDesktopDescriptor.ts --version-pointer`        |
-| `sites/<site>/v/<short>/root-files.json`      | `RenderRootFiles.ts`                                  |
-| `root-files/<sha256>`                         | copied from `static/` (only if `/check` says missing) |
+| Object                                        | Rendered by                                    |
+| --------------------------------------------- | ---------------------------------------------- |
+| `sites/<site>/v/<short>/index.html`           | `RenderStaticIndex.ts --environment-only`      |
+| `sites/<site>/v/<short>/desktop/release.json` | `RenderDesktopDescriptor.ts`                   |
+| `sites/<site>/v/<short>/desktop/version.json` | `RenderDesktopDescriptor.ts --version-pointer` |
+| `sites/<site>/v/<short>/root-files.json`      | the build (`writeRootFilesIndex`)              |
+| `sites/<site>/v/<short>/root/<path>`          | copied from `static/`, one per index entry     |
 
-The root files (`privacy-policy.html`, `terms-of-service.html`, `LICENSE`,
-`robots.txt`, `version.txt`, `press/`, the `ROOT_PUBLIC_FILES` list in
-`PublicAssetManifest.ts`) have no origin behind the site Worker, so it serves
-them from R2 too. `root-files.json` maps each path to the sha256 of its bytes,
-and each file is stored once under that hash, so an unchanged press kit is not
-uploaded again on every deploy.
+Everything in `resources/public/` (the policy pages, `robots.txt`, `ads.txt`,
+`press/`, and Apple Pay's `.well-known/` file) is served verbatim at the site
+root. The site Worker has no origin behind it, so it serves these from R2:
+`root-files.json` maps each path to its content type (plus a `"<dir>/"` entry
+for a directory with an `index.html`), and the Worker serves exactly what it
+lists. To publish a new root file, add it to `resources/public/`.
 
 Both renderers run inside the freshly built image with the live container's
 env file, exactly as the replay shell already does, so what is published is

@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
@@ -10,7 +9,8 @@ import {
   clearPublicAssetManifestCache,
   copyRootPublicFiles,
   createHashedPublicAssetFiles,
-  shouldKeepRootPublicFile,
+  getPublicDir,
+  writeRootFilesIndex,
 } from "../../src/server/PublicAssetManifest";
 
 describe("PublicAssetManifest", () => {
@@ -282,75 +282,72 @@ describe("PublicAssetManifest", () => {
     expect(emittedXml).not.toContain('file="pages/p0.png"');
   });
 
-  test("copies unhashed public directories verbatim, keeping paths stable", async () => {
+  test("copies resources/public/ verbatim to the site root, dot-directories included", async () => {
     const { resourcesDir, outDir } = await createTempResources();
-    await fs.mkdir(path.join(resourcesDir, "press", "images"), {
+    const publicDir = getPublicDir(resourcesDir);
+    await fs.mkdir(path.join(publicDir, "press", "images"), {
       recursive: true,
     });
-    await fs.writeFile(
-      path.join(resourcesDir, "press", "index.html"),
-      "<!doctype html>\n",
-    );
-    await fs.writeFile(
-      path.join(resourcesDir, "press", "images", "key-art.png"),
-      "png",
-    );
+    await fs.mkdir(path.join(publicDir, ".well-known"), { recursive: true });
+    await fs.writeFile(path.join(publicDir, "press", "index.html"), "press");
+    await fs.writeFile(path.join(publicDir, "press", "images", "a.png"), "png");
+    await fs.writeFile(path.join(publicDir, ".well-known", "apple"), "apple");
+    await fs.writeFile(path.join(publicDir, ".DS_Store"), "junk");
 
-    copyRootPublicFiles(resourcesDir, outDir);
+    copyRootPublicFiles(publicDir, outDir);
 
     await expect(
-      fs.readFile(path.join(outDir, "press", "index.html"), "utf8"),
-    ).resolves.toBe("<!doctype html>\n");
-    await expect(
-      fs.readFile(path.join(outDir, "press", "images", "key-art.png"), "utf8"),
+      fs.readFile(path.join(outDir, "press", "images", "a.png"), "utf8"),
     ).resolves.toBe("png");
+    await expect(
+      fs.readFile(path.join(outDir, ".well-known", "apple"), "utf8"),
+    ).resolves.toBe("apple");
+    await expect(fs.access(path.join(outDir, ".DS_Store"))).rejects.toThrow();
   });
 
-  test("indexes the root files by hash and content type, with directory entries", async () => {
-    const { outDir } = await createTempResources();
-    await fs.mkdir(path.join(outDir, "press", "images"), { recursive: true });
-    await fs.mkdir(path.join(outDir, "_assets"), { recursive: true });
-    await fs.writeFile(path.join(outDir, "privacy-policy.html"), "policy");
-    await fs.writeFile(path.join(outDir, "LICENSE"), "mit");
-    await fs.writeFile(path.join(outDir, "press", "index.html"), "policy");
-    await fs.writeFile(path.join(outDir, "press", "images", "a.png"), "png");
-    await fs.writeFile(path.join(outDir, "_assets", "app.js"), "js");
-    await fs.writeFile(path.join(outDir, "index.html"), "shell");
+  test("indexes every root file's content type, with directory entries", async () => {
+    const { resourcesDir, outDir } = await createTempResources();
+    const publicDir = getPublicDir(resourcesDir);
+    await fs.mkdir(path.join(publicDir, "press"), { recursive: true });
+    await fs.mkdir(path.join(publicDir, ".well-known"), { recursive: true });
+    await fs.writeFile(path.join(publicDir, "privacy-policy.html"), "p");
+    await fs.writeFile(path.join(publicDir, "index.html"), "not a dir entry");
+    await fs.writeFile(path.join(publicDir, "press", "index.html"), "press");
+    await fs.writeFile(path.join(publicDir, "press", "Kit 1.png"), "png");
+    await fs.writeFile(path.join(publicDir, ".well-known", "apple"), "a");
 
-    const sha = (s: string) => createHash("sha256").update(s).digest("hex");
-    const html = {
-      sha256: sha("policy"),
-      contentType: "text/html; charset=utf-8",
-    };
-    expect(buildRootFilesIndex(outDir)).toEqual({
-      files: {
-        LICENSE: {
-          sha256: sha("mit"),
-          contentType: "text/plain; charset=utf-8",
-        },
-        "press/": html,
-        "press/images/a.png": { sha256: sha("png"), contentType: "image/png" },
-        "press/index.html": html,
-        "privacy-policy.html": html,
-      },
+    writeRootFilesIndex(publicDir, outDir);
+
+    const html = "text/html; charset=utf-8";
+    expect(
+      JSON.parse(
+        await fs.readFile(path.join(outDir, "root-files.json"), "utf8"),
+      ),
+    ).toEqual({
+      ".well-known/apple": "text/plain; charset=utf-8",
+      "index.html": html,
+      "press/": html,
+      "press/Kit 1.png": "image/png",
+      "press/index.html": html,
+      "privacy-policy.html": html,
     });
   });
 
   test("refuses a root file it has no content type for", async () => {
-    const { outDir } = await createTempResources();
-    await fs.mkdir(path.join(outDir, "press"), { recursive: true });
-    await fs.writeFile(path.join(outDir, "press", "kit.xyz"), "?");
-    expect(() => buildRootFilesIndex(outDir)).toThrow(/press\/kit\.xyz/);
+    const { resourcesDir } = await createTempResources();
+    const publicDir = getPublicDir(resourcesDir);
+    await fs.mkdir(path.join(publicDir, "press"), { recursive: true });
+    await fs.writeFile(path.join(publicDir, "press", "kit.xyz"), "?");
+    expect(() => buildRootFilesIndex(publicDir)).toThrow(/press\/kit\.xyz/);
   });
 
-  test("has a content type for every real root file", () => {
-    expect(() => buildRootFilesIndex(path.resolve("resources"))).not.toThrow();
-  });
-
-  test("leaves directories outside the allowlist alone", () => {
-    expect(shouldKeepRootPublicFile("press/index.html")).toBe(true);
-    expect(shouldKeepRootPublicFile("terms-of-service.html")).toBe(true);
-    expect(shouldKeepRootPublicFile("pressed/index.html")).toBe(false);
-    expect(shouldKeepRootPublicFile("maps/world.bin")).toBe(false);
+  test("indexes the real resources/public/, policy pages included", () => {
+    const index = buildRootFilesIndex(getPublicDir(path.resolve("resources")));
+    expect(index["privacy-policy.html"]).toBe("text/html; charset=utf-8");
+    expect(index["terms-of-service.html"]).toBe("text/html; charset=utf-8");
+    expect(
+      index[".well-known/apple-developer-merchantid-domain-association"],
+    ).toBe("text/plain; charset=utf-8");
+    expect(index["press/"]).toBe("text/html; charset=utf-8");
   });
 });
