@@ -35,9 +35,12 @@ function serveRootPublicDir(publicDir: string): Plugin {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (!req.url) return next();
-        let rel = decodeURIComponent(new URL(req.url, "http://x").pathname);
-        if (rel.includes("..")) return next();
-        if (rel.endsWith("/")) rel += "index.html";
+        let rel = decodeURIComponent(
+          new URL(req.url, "http://x").pathname,
+        ).replace(/^\/+/, "");
+        if (rel.split(/[\\/]/).some((part) => part === "." || part === ".."))
+          return next();
+        if (rel === "" || rel.endsWith("/")) rel += "index.html";
         const filePath = path.join(publicDir, rel);
         if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile())
           return next();
