@@ -40,6 +40,7 @@ vi.mock("../src/client/InGameModal", async (importOriginal) => {
   };
 });
 
+import { ClientEnv } from "../src/client/ClientEnv";
 import { GameModeSelector } from "../src/client/GameModeSelector";
 import { showInGameAlert } from "../src/client/InGameModal";
 
@@ -176,5 +177,96 @@ describe("GameModeSelector update prompt on a pinned /v/<commit>/ page", () => {
     selector.handleUpdateAvailable();
 
     expect(showInGameAlert).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The feed is closed while the desktop session is gated -- every join it could
+// offer would be refused -- and reopened when the session comes back. Main's
+// own stop()/start() still wins: a session change must never reopen a feed
+// Main closed for a game.
+describe("GameModeSelector lobby feed while the desktop session is gated", () => {
+  let selector: GameModeSelector & { updateComplete: Promise<unknown> };
+
+  function setSession(detail: { status: string; reason?: string }) {
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", { detail }),
+    );
+  }
+
+  beforeEach(() => {
+    socketCalls.started = 0;
+    socketCalls.stopped = 0;
+    window.BOOTSTRAP_CONFIG = {
+      gameEnv: "dev",
+      numWorkers: 1,
+      turnstileSiteKey: "",
+      jwtAudience: "test",
+      instanceId: "test",
+      gitCommit: "test",
+    };
+    ClientEnv.reset();
+    selector = document.createElement(
+      "game-mode-selector",
+    ) as GameModeSelector & { updateComplete: Promise<unknown> };
+    document.body.appendChild(selector);
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+    window.BOOTSTRAP_CONFIG = undefined;
+    ClientEnv.reset();
+  });
+
+  it("closes the feed when the session drops and reopens it when it returns", () => {
+    expect(socketCalls.started).toBe(1);
+
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    expect(socketCalls.stopped).toBe(1);
+
+    setSession({ status: "signed-in" });
+    expect(socketCalls.started).toBe(2);
+  });
+
+  it("does not churn the socket on a session change that keeps it gated", () => {
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    setSession({ status: "retrying" });
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    expect(socketCalls.stopped).toBe(1);
+    expect(socketCalls.started).toBe(1);
+  });
+
+  it("does not reopen a feed Main stopped for a game", () => {
+    selector.stop();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    setSession({ status: "signed-in" });
+    expect(socketCalls.started).toBe(1);
+
+    selector.start();
+    expect(socketCalls.started).toBe(2);
+  });
+
+  it("keeps a start() while gated closed until the session returns", () => {
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    selector.stop();
+    selector.start();
+    expect(socketCalls.started).toBe(1);
+
+    setSession({ status: "signed-in" });
+    expect(socketCalls.started).toBe(2);
+  });
+
+  it("shows an offline message in place of the spinner while gated", async () => {
+    await selector.updateComplete;
+    expect(selector.querySelector(".animate-spin")).not.toBeNull();
+
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await selector.updateComplete;
+    expect(selector.querySelector(".animate-spin")).toBeNull();
+    expect(selector.textContent).toContain("mode_selector.offline_lobbies");
+
+    setSession({ status: "signed-in" });
+    await selector.updateComplete;
+    expect(selector.querySelector(".animate-spin")).not.toBeNull();
+    expect(selector.textContent).not.toContain("mode_selector.offline_lobbies");
   });
 });

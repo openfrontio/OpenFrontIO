@@ -127,8 +127,21 @@ export class DesktopStatusBar extends LitElement {
   private unsubscribe: (() => void) | null = null;
 
   private onSessionState = (e: Event) => {
-    this.sessionState = (e as CustomEvent<DesktopSessionState>).detail;
+    const next = (e as CustomEvent<DesktopSessionState>).detail;
+    this.sessionState = next;
+    // A Retry that lands back on the same signed-out reason changes nothing
+    // on screen (the shell answered in a few ms, so even "Signing in…" never
+    // paints). Wiggle so the press is seen to have been tried.
+    const before = this.sessionAtRetry;
+    if (before === null || next.status === "retrying") return;
+    this.sessionAtRetry = null;
+    if (next.status === before.status && next.reason === before.reason) {
+      this.wiggle();
+    }
   };
+
+  // The session state when Retry was pressed, until the retry settles.
+  private sessionAtRetry: DesktopSessionState | null = null;
 
   private onBackendReachability = (e: Event) => {
     this.backendOutage = (
@@ -461,6 +474,7 @@ export class DesktopStatusBar extends LitElement {
       class="shrink-0 px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius
              text-sm font-medium uppercase tracking-wider"
       @click=${() => {
+        this.sessionAtRetry = s;
         // Main.ts owns the retry, because a successful sign-in also has to
         // refresh userMe, the nav account button and the cached profile --
         // all of which already live there. See its crazyGamesSDK listener.

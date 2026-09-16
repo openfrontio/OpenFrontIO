@@ -547,3 +547,69 @@ describe("the rendered needs-account session state", () => {
     (window as { openfrontDesktop?: unknown }).openfrontDesktop = undefined;
   });
 });
+
+// A Retry on a gated session that lands back on the same reason (Steam is
+// still not running) repaints nothing: the shell answers in milliseconds, so
+// not even "Signing in…" is seen. The bar wiggles instead, so the press is
+// visibly tried rather than reading as a dead button.
+describe("Retry on a session state that does not change", () => {
+  function mountBar(): HTMLElement & { updateComplete: Promise<unknown> } {
+    const bar = document.createElement("desktop-status-bar") as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    document.body.appendChild(bar);
+    return bar;
+  }
+
+  function setSession(detail: { status: string; reason?: string }) {
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", { detail }),
+    );
+  }
+
+  function strip(bar: HTMLElement): HTMLElement {
+    return bar.querySelector('[role="status"]') as HTMLElement;
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("wiggles when the retry settles on the same signed-out reason", async () => {
+    const bar = mountBar();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(false);
+
+    bar.querySelector("button")!.click();
+    setSession({ status: "retrying" });
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(true);
+  });
+
+  it("does not wiggle when the retry lands somewhere new", async () => {
+    const bar = mountBar();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    bar.querySelector("button")!.click();
+    setSession({ status: "retrying" });
+    setSession({ status: "signed-out", reason: "network" });
+    await bar.updateComplete;
+
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(false);
+  });
+
+  it("does not wiggle on a session change nobody pressed Retry for", async () => {
+    const bar = mountBar();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(false);
+  });
+});
