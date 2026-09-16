@@ -81,6 +81,7 @@ describe("WinModal tick win handling", () => {
     modal?.remove();
     modal = undefined;
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("emits the winner and celebrates when my team wins", async () => {
@@ -153,6 +154,16 @@ describe("WinModal tick win handling", () => {
   });
 
   it("shows the buttons as soon as show() runs, before the cosmetics fetch settles", async () => {
+    // A visible modal activates steam-wishlist, which observes its own size;
+    // jsdom has no ResizeObserver.
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
     vi.mocked(fetchCosmetics).mockReturnValueOnce(new Promise(() => {}));
     setup(makeGame({ winner: ["team", "Blue"], myTeam: "Blue" }));
     document.body.appendChild(modal!);
