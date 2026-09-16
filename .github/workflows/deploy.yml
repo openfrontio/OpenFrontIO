@@ -213,6 +213,9 @@ jobs:
           # registry (docs/MultiServer.md, "Server list v2"); unset keeps
           # today's apex colour poll.
           CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
+          # "api" joins the site's shared public-lobby roster (infra
+          # docs/lobby-coordinator.md); unset keeps per-server scheduling.
+          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}

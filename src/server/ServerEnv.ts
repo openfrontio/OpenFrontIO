@@ -289,6 +289,14 @@ export class ServerEnv {
   static clusterStateSource(): "apex" | "api" {
     return process.env.CLUSTER_STATE_SOURCE === "api" ? "api" : "apex";
   }
+  // Whether the master joins its site's shared public-lobby roster
+  // (LobbyCoordinatorClient.ts, infra docs/lobby-coordinator.md). "api"
+  // connects to the API's coordinator and lets it schedule this site's public
+  // lobbies; anything else, or none, keeps single-server scheduling, so a
+  // deploy that doesn't set it is unchanged on the wire.
+  static lobbyCoordinator(): "api" | "off" {
+    return process.env.LOBBY_COORDINATOR === "api" ? "api" : "off";
+  }
   // The machine this container runs on — `falk2`, `nbg2`, `staging`: the
   // second argument to deploy.sh, which writes it into the container's env as
   // MACHINE. Reported at check-in (ClusterCheckin.ts) so the registry can hold
