@@ -491,7 +491,7 @@ async function doRefreshJwt(): Promise<void> {
   }
 }
 
-// Total mapping from the shell's three ticket failures. Kept exhaustive by
+// Total mapping from the shell's four ticket failures. Kept exhaustive by
 // the parameter type: adding a SteamTicketFailure value fails the build here.
 // The `default` is not reachable through that exhaustive type, but the shell
 // lives in a separate repo and the bridge shape reaches us as `unknown` at
@@ -509,6 +509,8 @@ function ticketReason(
       return "steam-wedged";
     case "error":
       return "steam-error";
+    case "needs-account":
+      return "needs-account";
     default:
       return "steam-error";
   }

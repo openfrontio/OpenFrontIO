@@ -444,15 +444,25 @@ export class Config {
    * Global spawn throttle for the train economy, counted in Train *units*
    * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns for the very
    * first trains, ~1x around 35 units (~5 trains), then a capacity
-   * sigmoid damps spawning past the ~300-unit midpoint. The damping
-   * flattens onto a ~0.25 plateau past ~460 units (~65 trains), so a big
+   * sigmoid damps spawning past the ~500-unit midpoint. The damping
+   * flattens onto a ~0.25 plateau past ~730 units (~100 trains), so a big
    * enough rail economy still scales at a quarter of the un-damped rate,
    * until a global hard cap far beyond any normal game collapses the
    * plateau past ~900 units (~130 trains).
+   *
+   * The midpoint was 300 units in v34.0. Public-game telemetry put a real
+   * lobby at ~4.2 train units per player, so a 50-player game sat at ~210
+   * units and a 70-player game at ~300 — i.e. normal lobbies were landing
+   * on and past the knee, costing factories 35-56% of their v33 income.
+   * The 61-nation benchmark this curve was tuned against peaks at 91 units,
+   * roughly a quarter of a full public lobby, so it never saw that region.
+   * 500 keeps lobbies up to ~20 players at v33 factory income, still
+   * constrains big lobbies (~-12% at 50 players, ~-24% at 80), and leaves
+   * the plateau and the hard cap that bound the extreme tail untouched.
    */
   trainSaturation(numTrainUnits: number): number {
     const boost = 1 + 0.5 * exp(-numTrainUnits / 30);
-    const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 300);
+    const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 500);
     const plateau = 0.25 * (1 - sigmoid(numTrainUnits, Math.LN2 / 150, 900));
     return boost * Math.max(damping, plateau);
   }

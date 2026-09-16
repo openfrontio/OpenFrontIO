@@ -1,7 +1,11 @@
 // Mirrors SteamTicketResult in openfront-desktop's src/main/steam.ts. The two
 // repositories cannot import from each other, so this is a hand-kept copy; if
 // you change one, change the other.
-export type SteamTicketFailure = "unavailable" | "timeout" | "error";
+export type SteamTicketFailure =
+  | "unavailable"
+  | "timeout"
+  | "error"
+  | "needs-account";
 
 export type SteamTicketResult =
   | { ok: true; ticket: string }
