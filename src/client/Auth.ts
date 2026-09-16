@@ -623,9 +623,8 @@ export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
 // share one exchange rather than race on __jwt. A refresh already in flight
 // is allowed to settle first so its stale result cannot satisfy the retry.
 //
-// There is no automatic retry anywhere: a wedged Steam session does not
-// self-heal (only a Steam restart cleared it in both observed cases), so a
-// silent retry would buy nothing and delay the message.
+// DesktopSessionRecovery also calls this when connectivity returns. Failures
+// remain actionable; there is no timer repeatedly retrying a wedged session.
 let __steamRetryPromise: Promise<UserAuth> | null = null;
 export async function retrySteamSignIn(): Promise<UserAuth> {
   __steamRetryPromise ??= (async () => {

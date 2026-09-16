@@ -7,6 +7,7 @@ import {
   retrySteamSignIn,
 } from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
+import { subscribeDesktopSessionRecovery } from "../../src/client/DesktopSessionRecovery";
 import { multiplayerAllowedForSession } from "../../src/client/DesktopShell";
 import { steamSDK } from "../../src/client/SteamSDK";
 
@@ -334,6 +335,63 @@ describe("Steam login", () => {
       status: "signed-out",
       reason: "network",
     });
+  });
+
+  it("restores a session after offline startup and a failed Retry, without reloading", async () => {
+    window.openfrontDesktop = {};
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    const getTicket = vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: true,
+      ticket: "fresh-ticket",
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("offline"));
+    const applyProfile = vi.fn();
+    const stop = subscribeDesktopSessionRecovery(async () => {
+      applyProfile(await retrySteamSignIn());
+    });
+    try {
+      expect(await getAuthHeader()).toBe("");
+      document.dispatchEvent(new CustomEvent("desktop-session-retry"));
+      await vi.waitFor(() => expect(applyProfile).toHaveBeenCalledWith(false));
+
+      document.dispatchEvent(
+        new CustomEvent("backend-reachability", {
+          detail: { reachable: false, confirmed: true },
+        }),
+      );
+      const jwt = new UnsecuredJWT({
+        jti: "some-id",
+        sub: "AAAAAAAAAAAAAAAAAAAAAA",
+        iat: Math.floor(Date.now() / 1000),
+        iss: "https://api.openfront.dev",
+        aud: "openfront.dev",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      }).encode();
+      fetchMock.mockImplementation(
+        async () =>
+          new Response(JSON.stringify({ jwt, expiresIn: 900 }), {
+            status: 200,
+          }),
+      );
+      document.dispatchEvent(
+        new CustomEvent("backend-reachability", {
+          detail: { reachable: true, confirmed: false },
+        }),
+      );
+      await vi.waitFor(() =>
+        expect(applyProfile).toHaveBeenCalledWith(
+          expect.objectContaining({ jwt }),
+        ),
+      );
+      expect(getDesktopSessionState()).toEqual({ status: "signed-in" });
+      expect(await getAuthHeader()).toBe(`Bearer ${jwt}`);
+      expect(getTicket).toHaveBeenCalledTimes(3);
+    } finally {
+      stop();
+      window.openfrontDesktop = undefined;
+    }
   });
 
   it("publishes each transition as a desktop-session-state event", async () => {
