@@ -936,6 +936,46 @@ describe("SteamLinkModal", () => {
       expect(discardButton()).toBeNull();
     });
 
+    // The regression the previous fix introduced: clearing `conflict` on a
+    // terminal refusal retired the whole screen, and on the WEBSITE path
+    // (no token) renderBody then fell through to the ordinary link-confirm
+    // step — "Link Steam … with account …" over an enabled button whose
+    // handler finds no token and returns silently.
+    it("does not fall through to the link screen on the website path", async () => {
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+      await modal.openForConflict(account);
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(discardButton()).not.toBeNull();
+      });
+      answerSteamLinkConflictMock.mockResolvedValue({
+        ok: false,
+        reason: "discard_blocked",
+        block: "paid",
+      });
+
+      discardButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain(
+          "steam_link_modal.reason_discard_blocked_paid",
+        );
+      });
+      // The refusal keeps its own screen; the link-confirm step never appears,
+      // and the destructive action is gone rather than merely disabled.
+      expect(modal.textContent).not.toContain(
+        "steam_link_modal.confirm_prompt",
+      );
+      expect(discardButton()).toBeNull();
+      // What is left is a way out, and it must not post against a spent offer.
+      answerSteamLinkConflictMock.mockClear();
+      cancelButton()?.click();
+      await modal.updateComplete;
+      expect(answerSteamLinkConflictMock).not.toHaveBeenCalled();
+      expect(modal.isOpen()).toBe(false);
+    });
+
     // ...but a refusal the player can still answer keeps its button.
     it("keeps the confirmation when the refusal is retryable", async () => {
       await reachConfirmation();

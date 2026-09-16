@@ -601,14 +601,14 @@ export class SteamLinkModal extends BaseModal {
       // direction to be wrong in is the one that releases the ticket.
       this.conflictAnswered =
         result.reason !== "discard_deferred" && result.reason !== "failed";
-      // Take the button away once the offer is spent. `conflictAnswered` has
-      // already drawn exactly this line — it is true for the refusals that are
-      // permanent (blocked) or terminal (the offer is gone) and false for the
-      // two that can still be answered. Leaving the confirmation on screen
-      // with an enabled "Delete it and link" under a permanent refusal invites
-      // a second click that can only be refused again, on the one screen where
-      // a live destructive button should never be decorative.
-      if (this.conflictAnswered) this.conflict = null;
+      // NOTE: `conflict` deliberately stays non-null here, even when the offer
+      // is spent. Clearing it retires the whole screen, and on the website
+      // path (mode "conflict", no token) renderBody then falls through to the
+      // ordinary link-confirm step — "Link Steam … with account …" over an
+      // enabled button whose handler finds `token === null` and returns,
+      // silently. The screen that explains the refusal is the right one to
+      // stay on; what must go is the destructive ACTION, and the render below
+      // drops it on exactly this condition.
     }
     this.requestUpdate();
   }
@@ -676,6 +676,15 @@ export class SteamLinkModal extends BaseModal {
     if (this.conflict !== null) {
       const conflict = this.conflict;
       const deleting = this.redeemState === "redeeming";
+      // The offer is gone and the refusal is final: `discard_blocked` or a
+      // spent/expired offer. `conflictAnswered` already draws this line — it
+      // stays false for the two refusals that can still be answered
+      // (`discard_deferred`, and a transport `failed` that may never have
+      // reached the server). Nothing here can be retried, so the only action
+      // left is to leave, and a live "Delete it and link" underneath a
+      // permanent refusal would be decorative on the one screen where that is
+      // least acceptable.
+      const spent = this.conflictAnswered && this.redeemState === "failed";
       // The destructive half of this screen is known up front (it travels
       // with the offer); the half naming the account being KEPT may still be
       // resolving. Render the same "…" placeholder the link confirm step uses
@@ -738,21 +747,24 @@ export class SteamLinkModal extends BaseModal {
             <button
               class="steam-link-cancel-btn ${BUTTON_BASE} bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white/80"
               ?disabled=${deleting}
-              @click=${() => this.handleDeclineConflict()}
+              @click=${() =>
+                spent ? this.close() : this.handleDeclineConflict()}
             >
-              ${translateText("common.cancel")}
+              ${translateText(spent ? "common.close" : "common.cancel")}
             </button>
-            <button
-              class="steam-link-discard-btn ${BUTTON_BASE} bg-red-500/90 text-white hover:bg-red-500"
-              ?disabled=${deleting || !ready}
-              @click=${() => this.handleDiscard()}
-            >
-              ${translateText(
-                deleting
-                  ? "steam_link_modal.conflict_deleting"
-                  : "steam_link_modal.conflict_confirm",
-              )}
-            </button>
+            ${spent
+              ? null
+              : html`<button
+                  class="steam-link-discard-btn ${BUTTON_BASE} bg-red-500/90 text-white hover:bg-red-500"
+                  ?disabled=${deleting || !ready}
+                  @click=${() => this.handleDiscard()}
+                >
+                  ${translateText(
+                    deleting
+                      ? "steam_link_modal.conflict_deleting"
+                      : "steam_link_modal.conflict_confirm",
+                  )}
+                </button>`}
           </div>
         </div>
       `;
