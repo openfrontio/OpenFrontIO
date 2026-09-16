@@ -105,6 +105,9 @@ const STAGING_ENV = {
   GIT_COMMIT: "a".repeat(40),
   CDN_BASE: "https://cdn.example",
   DOMAIN: "openfront.dev",
+  // Required by the descriptor's `bootstrap` (the environment-only
+  // BOOTSTRAP_CONFIG), exactly as the page render already requires it.
+  TURNSTILE_SITE_KEY: "test-key",
 };
 
 describe("RenderDesktopDescriptor CLI", () => {

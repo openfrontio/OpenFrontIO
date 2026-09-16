@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import clientApiConfig from "../../client-api.json";
 import { logger } from "./Logger";
+import { buildBootstrapConfig, type BootstrapConfig } from "./RenderHtml";
 
 const log = logger.child({ comp: "desktop-release" });
 
@@ -16,6 +17,12 @@ const MIN_SHELL_VERSION = "0.1.0";
 // in the openfront-desktop repo. Raise this when the client starts REQUIRING
 // something of the shell, not on every release.
 const CLIENT_API: number = clientApiConfig.clientApi;
+
+// The descriptor also carries `bootstrap` (see ReleaseDescriptor): the
+// environment-scoped BOOTSTRAP_CONFIG values, rendered by the same function
+// that renders index.html. Step 3 of that migration -- a single
+// `<%- bootstrapConfig %>` placeholder in index.html and a MIN_SHELL_VERSION
+// bump -- waits until the shell that reads `bootstrap` has shipped.
 
 // ---------------------------------------------------------------------------
 // Mirror of the desktop shell's safeOverlayPath / safeManifestTarget.
@@ -112,6 +119,22 @@ export interface ReleaseDescriptor {
    * that boots but cannot start a game.
    */
   assetManifest: Record<string, string>;
+  /**
+   * The environment-scoped BOOTSTRAP_CONFIG this build's server would render
+   * into its own page (`renderHtmlContent(..., { perServer: false })`): the
+   * same object, from the same buildBootstrapConfig, so the two cannot drift.
+   * Carries gitCommit, assetManifest, cdnBase, gameEnv, turnstileSiteKey,
+   * jwtAudience and (when set) stripePublishableKey; never a server value
+   * (cluster, instanceLetter, instanceId, serverHost, siteHost).
+   *
+   * The shell spreads it into its render locals and overrides only what it
+   * owns -- cdnBase, assetManifest, gitCommit, serverHost, instanceId -- so a
+   * field added upstream reaches the desktop page without a shell release.
+   * Additive: shells that predate it ignore it (hence schemaVersion stays 1).
+   * Once every installed shell reads it, index.html collapses to a single
+   * `<%- bootstrapConfig %>` placeholder and MIN_SHELL_VERSION rises (step 3).
+   */
+  bootstrap?: BootstrapConfig;
 }
 
 export interface VersionPointer {
@@ -302,6 +325,14 @@ export async function buildDescriptor(
     },
     assets,
     assetManifest,
+    // Environment-only on purpose: this descriptor is published per VERSION
+    // and served to every Steam client of it, so naming one server here would
+    // pin them all to that server. It also keeps the build off CLUSTER_JSON.
+    bootstrap: buildBootstrapConfig({
+      perServer: false,
+      assetManifest,
+      cdnBase: opts.cdnBase,
+    }),
   };
 }
 

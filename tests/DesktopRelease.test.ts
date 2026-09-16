@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildDescriptor,
   clearDesktopReleaseCache,
@@ -18,9 +18,19 @@ vi.mock("../src/server/Logger", () => ({
 
 let dir: string;
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 beforeEach(async () => {
   clearDesktopReleaseCache();
   warnMock.mockClear();
+  // The descriptor carries the environment-only BOOTSTRAP_CONFIG, which reads
+  // the same required env as rendering index.html does. GIT_COMMIT comes from
+  // tests/setup.ts. Deliberately NO CLUSTER_JSON: building the descriptor must
+  // not need a cluster map (tests/server/BootstrapConfig.test.ts proves it).
+  vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
+  vi.stubEnv("DOMAIN", "openfront.io");
   dir = await fs.mkdtemp(path.join(os.tmpdir(), "release-"));
   await fs.writeFile(
     path.join(dir, "index.html"),

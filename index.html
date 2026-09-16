@@ -127,7 +127,19 @@
       Never add a placeholder the Steam shell does not supply: openfront-desktop
       renders this same template itself and a missing local is a ReferenceError,
       i.e. a blank window. Guarding an existing one is safe — the shell supplies
-      a value and the line still emits.
+      a value and the line still emits. tests/server/BootstrapConfig.test.ts
+      ("Steam shell contract") renders this file with exactly the shell's
+      locals and fails CI on any new unguarded one.
+
+      The field list lives in ONE place: buildBootstrapConfig in
+      src/server/RenderHtml.ts. Each field below is a local derived from that
+      object, and the whole object is also available as `bootstrapConfig`. The
+      desktop release descriptor carries the same object as `bootstrap`, so a
+      value added there reaches the Steam page too. Once every installed shell
+      supplies `bootstrapConfig`, this block becomes one placeholder emitting
+      that object (with a MIN_SHELL_VERSION bump in src/server/DesktopRelease.ts)
+      — not before. EJS evaluates tags inside HTML comments too, so never
+      spell a placeholder out here.
     -->
     <script>
       window.BOOTSTRAP_CONFIG = {

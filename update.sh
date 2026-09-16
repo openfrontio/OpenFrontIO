@@ -202,9 +202,10 @@ else
     #   game_assets/sites/<site>/v/<short>/desktop/release.json
     #   game_assets/sites/<site>/v/<short>/desktop/version.json
     #
-    # (The upload endpoint prefixes game_assets/ itself.) Nothing serves these
-    # until the static Worker exists, so this is additive and harmless today —
-    # see docs/MultiServer.md, "Publish pipeline (v2)".
+    # (The upload endpoint prefixes game_assets/ itself.) The site Worker
+    # serves all three from the bucket on openfront.io and main.openfront.dev
+    # (x-openfront-served: bucket), so these uploads are load-bearing — see
+    # docs/MultiServer.md, "Roadmap item 4 in detail: the publish pipeline".
     #
     # The page is rendered --environment-only: no cluster, instanceLetter,
     # instanceId, serverHost or siteHost. One page per VERSION, not per server,
