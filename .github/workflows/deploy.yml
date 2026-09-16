@@ -213,6 +213,13 @@ jobs:
           # registry (docs/MultiServer.md, "Server list v2"); unset keeps
           # today's apex colour poll.
           CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
+          # "api" joins the site's shared public-lobby roster (infra
+          # docs/lobby-coordinator.md); anything else keeps per-server
+          # scheduling. Read from the repo-level var here (staging jobs have
+          # no environment); the prod environments override it with "off"
+          # until prod is ready, since an environment var wins over a repo
+          # var of the same name.
+          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
