@@ -790,18 +790,13 @@ function reloadCanLandElsewhere(): boolean {
   const site = ClientEnv.siteHost();
   if (site === undefined || site === ClientEnv.serverHost()) return false;
   // Somewhere else to land: the site's list names a server other than the
-  // one that rendered this page. The list answers whenever it has loaded —
-  // and reloadWouldRescue only asks with a list in hand. The page's injected
-  // map names only its own server (a server knows itself alone now), so it
-  // is the answer only when no list ever loaded, where it correctly reads
-  // as "nowhere else".
-  const own = ClientEnv.serverHost();
+  // one that rendered this page. Only the list can say — the page's injected
+  // map names its own server alone now — and reloadWouldRescue only asks
+  // with a list in hand, so "no list" reads as "nowhere else".
   const list = cached?.list ?? null;
-  if (list !== null) {
-    return Object.values(list.servers).some((s) => s.host !== own);
-  }
-  const cluster = ClientEnv.cluster();
-  return cluster !== undefined && Object.keys(cluster).length > 1;
+  if (list === null) return false;
+  const own = ClientEnv.serverHost();
+  return Object.values(list.servers).some((s) => s.host !== own);
 }
 
 /**

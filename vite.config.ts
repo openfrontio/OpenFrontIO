@@ -187,6 +187,18 @@ export default defineConfig(({ mode }) => {
   // worker count to know how many /wN paths to forward.
   const devInstanceLetter = env.INSTANCE_LETTER || "a";
   const devNumWorkers = Number(env.NUM_WORKERS || 2);
+  // The same checks ServerEnv applies: the letter leads every game id, and
+  // the count feeds a modulo, so a bad value here is a wNaN worker path.
+  if (!/^[a-z]$/.test(devInstanceLetter)) {
+    throw new Error(
+      `INSTANCE_LETTER must be one lowercase letter, got ${JSON.stringify(devInstanceLetter)}`,
+    );
+  }
+  if (!Number.isInteger(devNumWorkers) || devNumWorkers < 1) {
+    throw new Error(
+      `NUM_WORKERS must be a positive integer, got ${JSON.stringify(env.NUM_WORKERS)}`,
+    );
+  }
   const devClusterJson = JSON.stringify({
     [devInstanceLetter]: { host: "localhost", numWorkers: devNumWorkers },
   });

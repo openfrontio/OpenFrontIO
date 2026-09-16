@@ -36,6 +36,17 @@ jobs:
               exit 1
             fi
           done
+          # Blue and green are one site, and a letter names one host there for
+          # good (the registry binds it), so two targets sharing a letter would
+          # leave one of them refused at check-in and never flagged latest.
+          # Catch it here, before alpha ships. Unset vars fall back to the
+          # single-box defaults below, which are known to be distinct.
+          dupes="$(printf '%s\n%s' "${DEPLOY_TARGETS_BLUE:-[]}" "${DEPLOY_TARGETS_GREEN:-[]}" \
+            | jq -rs 'add | [.[].letter] | group_by(.) | map(select(length > 1) | .[0]) | .[]')"
+          if [ -n "$dupes" ]; then
+            echo "Error: instance letter(s) used by more than one blue/green target: ${dupes}"
+            exit 1
+          fi
       - name: 🔗 Log in to Docker Hub
         uses: docker/login-action@v4
         with:

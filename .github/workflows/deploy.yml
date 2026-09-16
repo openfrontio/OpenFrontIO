@@ -27,6 +27,20 @@ on:
         required: false
         default: ""
         type: string
+      # A prod dispatch has no deploy target entry to take its identity from
+      # (release.yml's DEPLOY_TARGETS_* carry it there), and deploy.sh refuses
+      # a prod deploy without one. Dev dispatches leave these empty and get
+      # the standalone defaults.
+      instance_letter:
+        description: "Instance letter (required for openfront.io)"
+        required: false
+        default: ""
+        type: string
+      num_workers:
+        description: "Worker count (required for openfront.io)"
+        required: false
+        default: ""
+        type: string
 
   # Automatic deployment on push
   # See https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#onpushpull_requestpull_request_targetpathspaths-ignore
@@ -214,8 +228,8 @@ jobs:
           # the schedule; empty otherwise, and deploy.sh fills in the
           # standalone defaults (letter a, 2 workers, <subdomain>.<game
           # domain>). See deploy.sh, "identity".
-          INSTANCE_LETTER: ${{ matrix.letter || '' }}
-          NUM_WORKERS: ${{ matrix.numWorkers || '' }}
+          INSTANCE_LETTER: ${{ matrix.letter || inputs.instance_letter || '' }}
+          NUM_WORKERS: ${{ matrix.numWorkers || inputs.num_workers || '' }}
           GAME_HOST: ${{ matrix.gameHost || '' }}
           SITE_HOST: ${{ matrix.site || '' }}
           # Separate domain for GAME hostnames, so the static Worker can own
