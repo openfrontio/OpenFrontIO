@@ -491,7 +491,7 @@ async function doRefreshJwt(): Promise<void> {
   }
 }
 
-// Total mapping from the shell's four ticket failures. Kept exhaustive by
+// Total mapping from the shell's six ticket failures. Kept exhaustive by
 // the parameter type: adding a SteamTicketFailure value fails the build here.
 // The `default` is not reachable through that exhaustive type, but the shell
 // lives in a separate repo and the bridge shape reaches us as `unknown` at
@@ -511,6 +511,17 @@ function ticketReason(
       return "steam-error";
     case "needs-account":
       return "needs-account";
+    case "ticket-rejected":
+      // A completed 401 from the status check. The player's own /auth/steam
+      // call would be refused identically, so this is the same situation the
+      // web path already has a message for.
+      return "steam-ticket-rejected";
+    case "api-unreachable":
+      // The shell could not reach OUR api to ask about the account -- nothing
+      // to do with Steam, and nothing the player does to their account
+      // changes it. "Can't reach OpenFront. Check your connection." is
+      // exactly right, and `network` already says that.
+      return "network";
     default:
       return "steam-error";
   }
