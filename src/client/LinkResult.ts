@@ -1,4 +1,5 @@
 import { showInGameAlert } from "./InGameModal";
+import { fetchSteamLinkConflict, type SteamConflictAccount } from "./SteamLink";
 import { translateText } from "./Utils";
 
 /**
@@ -43,6 +44,76 @@ const LINK_RESULT_KEYS: Record<string, string> = {
  * outcome, then strip the one-shot param so a refresh or re-open can't replay
  * it.
  */
+/**
+ * The one link outcome that is a QUESTION rather than a verdict.
+ *
+ * `steam_has_progress` means the Steam account is already attached to an
+ * OpenFront account that holds it and nothing else — the account the desktop
+ * login creates for a player who launched on Steam before ever linking. Until
+ * now that was a dead end a player could only escape by asking support to
+ * delete the account for them; the server may now offer to do exactly that,
+ * and this is where the website picks the offer up.
+ *
+ * The offer is NOT in the URL. The callback is a redirect, so anything it
+ * handed back would travel in the hash and outlive the request in history and
+ * session restore — a capability to delete an account has no business there.
+ * The server keeps it against the session instead, and this asks for it.
+ *
+ * Every failure falls back to the alert this function used to show: no offer,
+ * an unreachable endpoint, or a missing modal element all degrade to the
+ * refusal the player would have seen before any of this existed.
+ */
+interface ConflictModal {
+  openForConflict(account: SteamConflictAccount): Promise<void>;
+}
+
+async function offerSteamConflictDiscard(): Promise<void> {
+  const deadEnd = () =>
+    void showInGameAlert(
+      translateText("steam_link_modal.reason_steam_has_progress"),
+    );
+
+  const lookup = await fetchSteamLinkConflict();
+  if (!lookup.ok) {
+    // The one failure with a better message than the dead end: a throttled
+    // read is not a refusal, and "can't be merged" would be wrong for it.
+    if (lookup.reason === "rate_limited") {
+      return void showInGameAlert(
+        translateText("steam_link_modal.reason_rate_limited", {
+          seconds: lookup.retryAfterSeconds ?? 0,
+        }),
+      );
+    }
+    return deadEnd();
+  }
+  const conflict = lookup.conflict;
+  if (conflict === null) return deadEnd();
+  if (!conflict.discardable) {
+    // There is genuinely no way through, and saying WHICH is what keeps the
+    // player from opening a ticket to ask.
+    return void showInGameAlert(
+      translateText(
+        conflict.block === "paid"
+          ? "steam_link_modal.reason_discard_blocked_paid"
+          : "steam_link_modal.reason_discard_blocked",
+      ),
+    );
+  }
+
+  // Structural, not the SteamLinkModal class: this module is otherwise free of
+  // Lit and of the modal's own dependencies, and the same
+  // small-interface-over-import convention already governs SteamLink.ts's
+  // PendingLinkModal.
+  const modal = document.querySelector<HTMLElement & ConflictModal>(
+    "steam-link-modal",
+  );
+  if (modal === null || typeof modal.openForConflict !== "function") {
+    console.warn("offerSteamConflictDiscard: steam-link-modal unavailable");
+    return deadEnd();
+  }
+  await modal.openForConflict(conflict.account);
+}
+
 export function consumeLinkResult(args?: Record<string, unknown>): void {
   const link = typeof args?.link === "string" ? args.link : undefined;
   if (link === undefined) return;
@@ -69,6 +140,14 @@ export function consumeLinkResult(args?: Record<string, unknown>): void {
   // hasOwnProperty.call rather than Object.hasOwn: the latter needs an es2022
   // lib target and this project builds below that.
   if (!Object.prototype.hasOwnProperty.call(LINK_RESULT_KEYS, link)) return;
+
+  // Handled after the own-property check above, so an attacker-chosen hash
+  // still cannot reach it by any name other than this exact one.
+  if (link === "steam_has_progress") {
+    void offerSteamConflictDiscard();
+    return;
+  }
+
   const messageKey = LINK_RESULT_KEYS[link]!;
   void showInGameAlert(translateText(messageKey));
 }
