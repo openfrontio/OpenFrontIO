@@ -114,3 +114,25 @@ describe("admin bot create_game public listing", () => {
     expect(res.statusCode).toBe(400);
   });
 });
+
+describe("admin bot create_game pool membership", () => {
+  const pool = (siblings: string[]) => ({ id: "pool-1", siblings });
+
+  it("refuses a pool that does not contain the lobby being created", () => {
+    // Otherwise the lobby keeps nobody: every joiner is routed to a sibling.
+    const { handler, created } = captureCreateHandler({ setListed: vi.fn() });
+    const res = mockRes();
+    handler({ body: { ...BASE, pool: pool(["bbbb2222", "cccc3333"]) } }, res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe("pool_missing_own_id");
+    expect(created.config).toBeUndefined();
+  });
+
+  it("creates the lobby when the pool contains its minted id", () => {
+    const { handler, created } = captureCreateHandler({ setListed: vi.fn() });
+    const res = mockRes();
+    handler({ body: { ...BASE, pool: pool(["aaaaaaaa", "bbbb2222"]) } }, res);
+    expect(res.statusCode).toBe(200);
+    expect(created.config?.pool).toEqual(pool(["aaaaaaaa", "bbbb2222"]));
+  });
+});
