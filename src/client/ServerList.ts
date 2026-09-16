@@ -770,11 +770,11 @@ export function reloadWouldRescue(listStatus: ServerListStatus): boolean {
  *   `latest` from the static Worker, which is by definition not one
  *   deployment.
  * - Behind an apex — siteHost defined, not the page's own server, and the
- *   page's cluster map has siblings (prod: page openfront.io, servers blue
- *   and green.openfront.io) — reloadForUpdate re-enters through the site
- *   host, which the load balancer answers from a live deployment.
+ *   site's list has siblings (prod: page openfront.io, servers blue and
+ *   green.openfront.io) — reloadForUpdate re-enters through the site host,
+ *   which the load balancer answers from a live deployment.
  * - Standalone (no siteHost, or siteHost IS the page's own server, or the
- *   map names only this server — dev's main.openfront.dev, previews, beta):
+ *   site has only this server — dev's main.openfront.dev, previews, beta):
  *   the reload re-serves the same page from the same server. If that server
  *   is gone the reload fails with it; if it is alive with a
  *   WebSocket-specific problem, the prompt loops. Nothing a prompt can do
@@ -784,13 +784,22 @@ export function reloadWouldRescue(listStatus: ServerListStatus): boolean {
  * GAME_DOMAIN set: its page host (main.openfront.dev) and game host
  * (main.server.openfront.dev) differ, yet both names reach the one
  * container behind Traefik, so a differing siteHost alone proves nothing.
- * Same rule as the server's own apex poll
- * (ActiveDeployment.shouldPollApex).
  */
 function reloadCanLandElsewhere(): boolean {
   if (!ClientEnv.servedByGameServer()) return true;
   const site = ClientEnv.siteHost();
   if (site === undefined || site === ClientEnv.serverHost()) return false;
+  // Somewhere else to land: the site's list names a server other than the
+  // one that rendered this page. The list answers whenever it has loaded —
+  // and reloadWouldRescue only asks with a list in hand. The page's injected
+  // map names only its own server (a server knows itself alone now), so it
+  // is the answer only when no list ever loaded, where it correctly reads
+  // as "nowhere else".
+  const own = ClientEnv.serverHost();
+  const list = cached?.list ?? null;
+  if (list !== null) {
+    return Object.values(list.servers).some((s) => s.host !== own);
+  }
   const cluster = ClientEnv.cluster();
   return cluster !== undefined && Object.keys(cluster).length > 1;
 }

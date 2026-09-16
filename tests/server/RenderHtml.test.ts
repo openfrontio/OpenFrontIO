@@ -14,19 +14,19 @@ import { ServerEnv } from "../../src/server/ServerEnv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Covers both hosts the tests below boot as: the pinned blue deployment and
-// the bare-domain dev box.
-const TEST_CLUSTER = JSON.stringify({
-  a: { host: "blue.openfront.io", color: "blue", numWorkers: 1 },
-  b: { host: "localhost", color: "blue", numWorkers: 1 },
-});
+// The identity deploy.sh writes: the tests below boot as letter "a" with one
+// worker, on whichever host their DOMAIN/SUBDOMAIN name.
+function stubIdentity() {
+  vi.stubEnv("INSTANCE_LETTER", "a");
+  vi.stubEnv("NUM_WORKERS", "1");
+}
 
 describe("RenderHtml", () => {
   const originalGitCommit = process.env.GIT_COMMIT;
   let tempDir: string | null = null;
 
   beforeEach(() => {
-    vi.stubEnv("CLUSTER_JSON", TEST_CLUSTER);
+    stubIdentity();
     vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
     vi.stubEnv("DOMAIN", "localhost");
   });
@@ -62,7 +62,7 @@ describe("RenderHtml", () => {
     expect(second).not.toContain('"second"');
   });
 
-  test("injects the cluster map and own instance letter", async () => {
+  test("injects the one-entry map and own instance letter", async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "render-html-"));
     const htmlPath = path.join(tempDir, "index.html");
     await fs.writeFile(
@@ -74,9 +74,9 @@ describe("RenderHtml", () => {
 
     const rendered = await getAppShellContent(htmlPath);
 
-    // DOMAIN=localhost with no SUBDOMAIN resolves to entry "b".
-    expect(rendered).toContain('instanceLetter: "b"');
-    expect(rendered).toContain('"host":"blue.openfront.io"');
+    // DOMAIN=localhost with no SUBDOMAIN: the map names the bare domain.
+    expect(rendered).toContain('instanceLetter: "a"');
+    expect(rendered).toContain('"host":"localhost"');
     expect(rendered).toContain('"numWorkers":1');
   });
 
@@ -101,7 +101,7 @@ describe("RenderHtml serverHost pinning", () => {
   let tempDir: string | null = null;
 
   beforeEach(() => {
-    vi.stubEnv("CLUSTER_JSON", TEST_CLUSTER);
+    stubIdentity();
     vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
     vi.stubEnv("GIT_COMMIT", "abc");
   });
@@ -143,7 +143,7 @@ describe("RenderHtml siteHost injection", () => {
   let tempDir: string | null = null;
 
   beforeEach(() => {
-    vi.stubEnv("CLUSTER_JSON", TEST_CLUSTER);
+    stubIdentity();
     vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
     vi.stubEnv("GIT_COMMIT", "abc");
     vi.stubEnv("DOMAIN", "openfront.io");
@@ -185,7 +185,7 @@ describe("RenderHtml stripePublishableKey injection", () => {
   let tempDir: string | null = null;
 
   beforeEach(() => {
-    vi.stubEnv("CLUSTER_JSON", TEST_CLUSTER);
+    stubIdentity();
     vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
     vi.stubEnv("GIT_COMMIT", "abc");
     vi.stubEnv("DOMAIN", "openfront.io");
@@ -240,7 +240,7 @@ function bootstrapConfig(html: string): Record<string, unknown> {
 
 describe("RenderHtml environment-only render", () => {
   beforeEach(() => {
-    vi.stubEnv("CLUSTER_JSON", TEST_CLUSTER);
+    stubIdentity();
     vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
     vi.stubEnv("DOMAIN", "openfront.io");
     vi.stubEnv("SUBDOMAIN", "blue");
@@ -294,12 +294,13 @@ describe("RenderHtml environment-only render", () => {
     expect(config[field], field).toBeDefined();
   });
 
-  // Rendering without the per-server locals must not go anywhere near
-  // CLUSTER_JSON: the pipeline builds this page from an image, and requiring a
-  // valid cluster entry for the rendering host would be a deploy-time failure
-  // for no reason.
-  it("renders without a cluster map at all", async () => {
-    vi.stubEnv("CLUSTER_JSON", "");
+  // Rendering without the per-server locals must not go anywhere near the
+  // server's identity: the pipeline builds this page from an image, and
+  // requiring one for the rendering host would be a deploy-time failure for
+  // no reason.
+  it("renders without an identity at all", async () => {
+    vi.stubEnv("INSTANCE_LETTER", "");
+    vi.stubEnv("NUM_WORKERS", "");
     vi.stubEnv("SUBDOMAIN", "nobody");
 
     const html = await renderHtmlContent(REAL_TEMPLATE, { perServer: false });

@@ -43,27 +43,43 @@ behavior except the bugs it fixes.
 | Deployment color source                                     | **Explicit `color` field in cluster.json** — read by boot validation, `/api/health`, and the drain check. Subdomain naming is not load-bearing.                                                                                                                                                                       |
 | Matchmaking DO re-key (`mode` instead of `instanceId:mode`) | **API-side only.** This repo keeps sending `instance_id` (client join param, worker checkin body); the API just stops keying on it. Zero-coordination rollout. Since infra #738 the key is `site:mode` — see "The ranked queue is keyed by site" below.                                                               |
 
-## cluster.json
+## Server identity (formerly `cluster.json`)
+
+A server knows only itself. Its identity arrives in its env from the deploy
+target entry that deployed it (`deploy.sh`, "identity"):
+
+| Env               | Meaning                                                                                                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INSTANCE_LETTER` | Leads every game id it mints. Append-only per site, never reused; the registry binds it to the host permanently. Required on prod, defaults to `a` outside it (a preview is its own site).   |
+| `NUM_WORKERS`     | Worker processes. Frozen while the letter has live games (ids route by `hash % NUM_WORKERS`). Required on prod, defaults to 2 outside it.                                                    |
+| `GAME_HOST`       | The name clients open sockets to. Defaults to `<subdomain>.<game domain>`; a machine-scoped fleet member (`blue.nbg2.<game domain>`) passes it. Also decides the container name (update.sh). |
+| `SITE_HOST`       | The page host: the apex for a fleet member (the workflows pass it), `<subdomain>.<DOMAIN>` under `GAME_DOMAIN`, else empty.                                                                  |
+
+The deploy target entries carry these fields — `DEPLOY_TARGETS_BLUE`,
+`DEPLOY_TARGETS_GREEN`, `DEPLOY_TARGETS_BETA` for the release, and
+`DEPLOY_TARGETS_DEV` for the nightly:
 
 ```json
-{
-  "a": { "host": "blue.openfront.io", "color": "blue", "numWorkers": 16 },
-  "b": { "host": "green.openfront.io", "color": "green", "numWorkers": 16 }
-}
+[
+  { "host": "falk2", "subdomain": "blue", "letter": "c", "numWorkers": 20 },
+  {
+    "host": "nbg2",
+    "subdomain": "blue",
+    "letter": "f",
+    "numWorkers": 20,
+    "gameHost": "blue.nbg2.openfront.io"
+  }
+]
 ```
 
-- Stored in a GitHub Actions var per environment (`CLUSTER_JSON`, replacing
-  `NUM_WORKERS`), injected as env at deploy. The build stays
-  environment-agnostic.
-- Zod-validated at boot: unique letters, unique hosts, color ∈
-  {blue, green}. Malformed config refuses to start.
-- A server finds its own entry by matching `SUBDOMAIN.DOMAIN` (when
-  `SUBDOMAIN` is empty — dev — the self host is just `DOMAIN`, i.e.
-  `localhost`). That yields its letter (minting), color (drain), and worker
-  count (forking). Refuse boot if absent. No second knob to drift.
-- Delivered to web clients via the RenderHtml bootstrap injection, and served
-  at `GET /cluster.json` for the desktop app — which is also the desktop
-  build's server discovery (kills the baked `numWorkers: 1` → `/w0` bug).
+There is no shared map any more. The fleet as a whole is the API registry's
+list (`GET /cluster.json?site=…`, "The server list" below), assembled from
+the check-ins; the server still synthesizes a one-entry map naming itself
+(`ServerEnv.cluster()`) for the page it renders and for the desktop shell's
+`GET /cluster.json`, which is the page's fallback when the list is
+unavailable. Which server takes new games is the registry's decision alone
+(`latest` plus one open server per machine), so `color` is gone with the map:
+blue and green are deploy slots, nothing more.
 
 ## Routing rule (uniform — own deployment is not a special case)
 
@@ -306,12 +322,11 @@ All of these are config edits; no code changes.
    deploying to. Legacy `SERVER_HOST_<NAME>` secrets remain a fallback for
    local runs, but in CI only `SERVER_HOST_FALK2` is wired through — every
    other machine must be in the directory.
-4. Vars: append the new letters to every prod `CLUSTER_JSON`
-   (append-only — never reuse a letter), and add the machine to the
-   `DEPLOY_TARGETS_BLUE` and `DEPLOY_TARGETS_GREEN` **repository** vars:
-   `[{"host":"falk2","subdomain":"blue"},{"host":"nbg2","subdomain":"blue"}]`
-   (machine-scoped: the subdomain is the slot, the host is the machine;
-   the cluster entry is `blue.nbg2.<game domain>`).
+4. Vars: add the machine's blue and green to the `DEPLOY_TARGETS_BLUE` and
+   `DEPLOY_TARGETS_GREEN` **repository** vars, each with a fresh letter
+   (append-only — never reuse one), its worker count and its game host:
+   `[{"host":"falk2","subdomain":"blue","letter":"c","numWorkers":20},{"host":"nbg2","subdomain":"blue","letter":"f","numWorkers":20,"gameHost":"blue.nbg2.openfront.io"}]`
+   (machine-scoped: the subdomain is the slot, the host is the machine).
    Repository-level, not environment-level: GitHub expands a job's matrix
    before its environment exists, so an environment-scoped var would be
    invisible there and the jobs would silently deploy only the single-box

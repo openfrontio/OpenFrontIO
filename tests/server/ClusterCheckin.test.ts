@@ -9,10 +9,6 @@ import {
 // server tells the API who it is and what it runs, and the API replies with
 // whether it should take new games. Until CLUSTER_STATE_SOURCE=api the reply
 // is recorded but not obeyed, so a deploy without the API is unchanged.
-const CLUSTER = JSON.stringify({
-  a: { host: "blue.openfront.io", color: "blue", numWorkers: 4 },
-  b: { host: "green.openfront.io", color: "green", numWorkers: 4 },
-});
 
 function fetchReturning(body: unknown, status = 200) {
   return vi.fn(
@@ -22,7 +18,9 @@ function fetchReturning(body: unknown, status = 200) {
 
 describe("checkinBody", () => {
   beforeEach(() => {
-    vi.stubEnv("CLUSTER_JSON", CLUSTER);
+    vi.stubEnv("GAME_ENV", "prod");
+    vi.stubEnv("INSTANCE_LETTER", "a");
+    vi.stubEnv("NUM_WORKERS", "4");
     vi.stubEnv("DOMAIN", "openfront.io");
     vi.stubEnv("SUBDOMAIN", "blue");
     vi.stubEnv("GIT_COMMIT", "bfd5563a11111111111111111111111111111111");
@@ -55,16 +53,7 @@ describe("checkinBody", () => {
     vi.stubEnv("GAME_DOMAIN", "server.openfront.dev");
     vi.stubEnv("SUBDOMAIN", "main");
     vi.stubEnv("SITE_HOST", "main.openfront.dev");
-    vi.stubEnv(
-      "CLUSTER_JSON",
-      JSON.stringify({
-        a: {
-          host: "main.server.openfront.dev",
-          color: "blue",
-          numWorkers: 2,
-        },
-      }),
-    );
+    vi.stubEnv("NUM_WORKERS", "2");
     expect(checkinBody(3)).toEqual({
       site: "main.openfront.dev",
       letter: "a",
@@ -99,10 +88,7 @@ describe("checkinBody", () => {
       vi.stubEnv("SITE_HOST", "");
       vi.stubEnv("DOMAIN", domain);
       vi.stubEnv("SUBDOMAIN", subdomain);
-      vi.stubEnv(
-        "CLUSTER_JSON",
-        JSON.stringify({ a: { host, color: "blue", numWorkers } }),
-      );
+      vi.stubEnv("NUM_WORKERS", String(numWorkers));
       expect(checkinBody(0)).toMatchObject({
         site: host,
         host,

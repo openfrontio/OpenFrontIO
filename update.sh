@@ -403,7 +403,7 @@ echo "Starting new container for ${HOST} environment..."
 docker network create web 2> /dev/null || true
 
 # Traefik Host() rule. The container always answers on its game host —
-# GAME_HOST, as deploy.sh resolved it from the cluster map, or
+# GAME_HOST, as deploy.sh settled it from the deploy target, or
 # <subdomain>.<GAME_DOMAIN>/<subdomain>.<DOMAIN> for an env file written by
 # hand. With GAME_DOMAIN set a standalone deployment also owns its page host
 # (<subdomain>.<DOMAIN>) during the transition, until the static Worker is

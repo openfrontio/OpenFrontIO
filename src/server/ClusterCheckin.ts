@@ -8,9 +8,10 @@ import { ServerEnv } from "./ServerEnv";
 // server that is not checking in is not offered to anyone; a deploy that
 // fails halfway can't leave the list claiming servers that aren't there.
 //
-// The reply is only obeyed when CLUSTER_STATE_SOURCE=api. Until then the
-// drain decision stays with today's apex colour poll (ActiveDeployment.ts),
-// so this can ship before the API serves the registry.
+// The reply is only obeyed when CLUSTER_STATE_SOURCE=api, which every
+// deployment sets; any other value leaves the server permanently active
+// (the apex colour poll that used to fill that gap is gone with the
+// cluster map).
 
 export const CHECKIN_INTERVAL_MS = 10_000;
 const CHECKIN_TIMEOUT_MS = 8_000;
@@ -80,14 +81,13 @@ export function registeredSite(): string | undefined {
 export function checkinBody(liveGames: number): CheckinBody | null {
   const host = ServerEnv.publicHost();
   if (host === undefined) return null;
-  const { letter, entry } = ServerEnv.clusterSelf();
   const machine = ServerEnv.machine();
   return {
     site: registeredSite() ?? host,
-    letter,
+    letter: ServerEnv.instanceLetter(),
     host,
     version: ServerEnv.gitCommit(),
-    numWorkers: entry.numWorkers,
+    numWorkers: ServerEnv.numWorkers(),
     liveGames,
     // Spread, not `machine: undefined`: JSON.stringify would drop the key
     // either way, but an explicit undefined would make every equality

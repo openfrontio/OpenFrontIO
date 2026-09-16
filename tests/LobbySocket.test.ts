@@ -703,11 +703,29 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
   });
 
   // A standalone deployment (dev's main.openfront.dev today, previews,
-  // beta) has nowhere else for a reload to go: a one-entry cluster map, and
-  // Traefik routes its page host and its game host to the same container.
-  // So even a socket that has given up raises nothing — a prompt there
-  // would reload straight back into this page and fire again.
+  // beta) has nowhere else for a reload to go: its site's list names only
+  // its own server, and Traefik routes its page host and its game host to
+  // the same container. So even a socket that has given up raises nothing —
+  // a prompt there would reload straight back into this page and fire again.
   it("never prompts a standalone page, even once its socket has given up", async () => {
+    vi.stubGlobal(
+      "fetch",
+      async () =>
+        new Response(
+          JSON.stringify({
+            latest: OWN,
+            servers: {
+              a: {
+                host: "main.server.openfront.dev",
+                numWorkers: 2,
+                version: OWN,
+                state: "open" as const,
+              },
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
     bootstrap({
       cluster: { a: { host: "main.server.openfront.dev", numWorkers: 2 } },
       instanceLetter: "a",

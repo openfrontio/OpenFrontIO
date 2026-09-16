@@ -31,8 +31,8 @@ jobs:
           for name in DEPLOY_TARGETS_BETA DEPLOY_TARGETS_BLUE DEPLOY_TARGETS_GREEN; do
             value="${!name}"
             [ -z "$value" ] && continue
-            if ! printf '%s' "$value" | jq -e 'type == "array" and length > 0 and all(.[]; (.host | type == "string") and (.subdomain | type == "string"))' > /dev/null; then
-              echo "Error: repository var ${name} must be a non-empty JSON array of {host, subdomain} objects, got: ${value}"
+            if ! printf '%s' "$value" | jq -e 'type == "array" and length > 0 and all(.[]; (.host | type == "string") and (.subdomain | type == "string") and (.letter | type == "string") and (.numWorkers | type == "number"))' > /dev/null; then
+              echo "Error: repository var ${name} must be a non-empty JSON array of {host, subdomain, letter, numWorkers[, gameHost]} objects, got: ${value}"
               exit 1
             fi
           done
@@ -101,7 +101,6 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
           CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
@@ -145,7 +144,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        target: ${{ fromJSON(vars.DEPLOY_TARGETS_BETA || '[{"host":"falk2","subdomain":"beta"}]') }}
+        target: ${{ fromJSON(vars.DEPLOY_TARGETS_BETA || '[{"host":"falk2","subdomain":"beta","letter":"e","numWorkers":4}]') }}
     steps:
       - uses: actions/checkout@v7
       # deploy.sh keyscans the target it resolves, so this step only
@@ -169,7 +168,11 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          # This container's identity, from its deploy target entry (see the
+          # matrix comment on deploy-blue and deploy.sh, "identity").
+          INSTANCE_LETTER: ${{ matrix.target.letter }}
+          NUM_WORKERS: ${{ matrix.target.numWorkers }}
+          GAME_HOST: ${{ matrix.target.gameHost || '' }}
           CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
@@ -210,8 +213,15 @@ jobs:
     timeout-minutes: 30
     environment: prod-blue
     # One leg per machine in the blue fleet, from the DEPLOY_TARGETS_BLUE
-    # REPOSITORY var:
-    #   [{"host":"falk2","subdomain":"blue"}, {"host":"nbg2","subdomain":"blue2"}]
+    # REPOSITORY var. Each entry is one container's whole identity:
+    #   [{"host":"falk2","subdomain":"blue","letter":"c","numWorkers":20},
+    #    {"host":"nbg2","subdomain":"blue","letter":"f","numWorkers":20,
+    #     "gameHost":"blue.nbg2.openfront.io"}]
+    # letter leads every game id the container mints (append-only, never
+    # reused); numWorkers is frozen while the letter has live games; gameHost
+    # is the name clients open sockets to, defaulting to
+    # <subdomain>.<domain> — pass it to put the machine in the name so every
+    # box carries a plain blue and green (deploy.sh, "identity").
     # Repository-level and per-color on purpose: GitHub expands
     # strategy.matrix before the job's environment exists, so an
     # environment-scoped var is invisible here and would silently fall back
@@ -219,13 +229,13 @@ jobs:
     # list to both colors. host is a machine name deploy.sh resolves via the
     # SERVER_HOSTS_JSON secret (lowercase keys; SERVER_HOST_FALK2 is the
     # only legacy secret wired through in CI); subdomain is that machine's
-    # cluster entry. Defaults to today's single box. Sequential (and
+    # slot. Defaults to today's single box. Sequential (and
     # stopping on the first failure) so a bad image or a dead machine halts
     # the rollout after one leg instead of taking the whole color down.
     strategy:
       max-parallel: 1
       matrix:
-        target: ${{ fromJSON(vars.DEPLOY_TARGETS_BLUE || '[{"host":"falk2","subdomain":"blue"}]') }}
+        target: ${{ fromJSON(vars.DEPLOY_TARGETS_BLUE || '[{"host":"falk2","subdomain":"blue","letter":"c","numWorkers":20}]') }}
     steps:
       - uses: actions/checkout@v7
       # deploy.sh keyscans the target it resolves, so this step only
@@ -251,7 +261,11 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          # This container's identity, from its deploy target entry (see the
+          # matrix comment on deploy-blue and deploy.sh, "identity").
+          INSTANCE_LETTER: ${{ matrix.target.letter }}
+          NUM_WORKERS: ${{ matrix.target.numWorkers }}
+          GAME_HOST: ${{ matrix.target.gameHost || '' }}
           CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
@@ -264,7 +278,6 @@ jobs:
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
           TARGET_SUBDOMAIN: ${{ matrix.target.subdomain }}
-          EXPECTED_COLOR: blue
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
@@ -295,14 +308,16 @@ jobs:
     # One leg per machine in the green fleet, from the DEPLOY_TARGETS_GREEN
     # REPOSITORY var (see deploy-blue for the format and why it must be
     # repository-level and per-color):
-    #   [{"host":"falk2","subdomain":"green"}, {"host":"nbg2","subdomain":"green2"}]
+    #   [{"host":"falk2","subdomain":"green","letter":"d","numWorkers":20},
+    #    {"host":"nbg2","subdomain":"green","letter":"g","numWorkers":20,
+    #     "gameHost":"green.nbg2.openfront.io"}]
     # Defaults to today's single box. Sequential (and stopping on the first
     # failure) so a bad image or a dead machine halts the rollout after one
     # leg instead of taking the whole color down.
     strategy:
       max-parallel: 1
       matrix:
-        target: ${{ fromJSON(vars.DEPLOY_TARGETS_GREEN || '[{"host":"falk2","subdomain":"green"}]') }}
+        target: ${{ fromJSON(vars.DEPLOY_TARGETS_GREEN || '[{"host":"falk2","subdomain":"green","letter":"d","numWorkers":20}]') }}
     steps:
       - uses: actions/checkout@v7
       # deploy.sh keyscans the target it resolves, so this step only
@@ -328,7 +343,11 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          # This container's identity, from its deploy target entry (see the
+          # matrix comment on deploy-blue and deploy.sh, "identity").
+          INSTANCE_LETTER: ${{ matrix.target.letter }}
+          NUM_WORKERS: ${{ matrix.target.numWorkers }}
+          GAME_HOST: ${{ matrix.target.gameHost || '' }}
           CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
@@ -341,7 +360,6 @@ jobs:
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
           TARGET_SUBDOMAIN: ${{ matrix.target.subdomain }}
-          EXPECTED_COLOR: green
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail

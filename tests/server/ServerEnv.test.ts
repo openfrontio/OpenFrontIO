@@ -2,115 +2,79 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { GAME_ID_REGEX } from "../../src/core/Schemas";
 import { ServerEnv } from "../../src/server/ServerEnv";
 
-// A two-deployment prod-shaped map plus a bare-domain dev box.
-const CLUSTER = JSON.stringify({
-  a: { host: "blue.openfront.io", color: "blue", numWorkers: 4 },
-  b: { host: "green.openfront.io", color: "green", numWorkers: 2 },
-  c: { host: "openfront.example", color: "blue", numWorkers: 1 },
-});
-
-function stubCluster(subdomain: string, domain: string, json = CLUSTER) {
-  vi.stubEnv("CLUSTER_JSON", json);
+// A deployed server's identity, as deploy.sh writes it into the env file.
+function stubIdentity(
+  subdomain: string,
+  domain: string,
+  letter = "a",
+  numWorkers = "4",
+) {
+  vi.stubEnv("INSTANCE_LETTER", letter);
+  vi.stubEnv("NUM_WORKERS", numWorkers);
   vi.stubEnv("SUBDOMAIN", subdomain);
   vi.stubEnv("DOMAIN", domain);
 }
 
-describe("ServerEnv.cluster", () => {
+describe("ServerEnv identity", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  test("parses a valid map", () => {
-    vi.stubEnv("CLUSTER_JSON", CLUSTER);
-    expect(ServerEnv.cluster().a.numWorkers).toBe(4);
-    expect(ServerEnv.cluster().b.color).toBe("green");
+  test("reads the letter and worker count deploy.sh wrote", () => {
+    stubIdentity("green", "openfront.io", "d", "20");
+    expect(ServerEnv.instanceLetter()).toBe("d");
+    expect(ServerEnv.numWorkers()).toBe(20);
   });
 
-  test("falls back to the single-entry localhost map in dev when unset", () => {
-    vi.stubEnv("CLUSTER_JSON", "");
-    expect(ServerEnv.cluster()).toEqual(
-      JSON.parse(ServerEnv.DEV_DEFAULT_CLUSTER_JSON),
-    );
+  test("synthesizes a one-entry map naming this server", () => {
+    stubIdentity("green", "openfront.io", "d", "20");
+    expect(ServerEnv.cluster()).toEqual({
+      d: { host: "green.openfront.io", numWorkers: 20 },
+    });
   });
 
-  test("throws on malformed JSON", () => {
-    vi.stubEnv("CLUSTER_JSON", "{not json");
-    expect(() => ServerEnv.cluster()).toThrow(/not valid JSON/);
+  test("names the bare DOMAIN in the map when SUBDOMAIN is empty", () => {
+    stubIdentity("", "openfront.example", "c", "1");
+    expect(ServerEnv.cluster()).toEqual({
+      c: { host: "openfront.example", numWorkers: 1 },
+    });
   });
 
-  test("throws on duplicate hosts", () => {
-    vi.stubEnv(
-      "CLUSTER_JSON",
-      JSON.stringify({
-        a: { host: "same.io", color: "blue", numWorkers: 1 },
-        b: { host: "same.io", color: "green", numWorkers: 1 },
-      }),
-    );
-    expect(() => ServerEnv.cluster()).toThrow(/Invalid CLUSTER_JSON/);
-  });
-
-  test("throws on a bad color or letter", () => {
-    vi.stubEnv(
-      "CLUSTER_JSON",
-      JSON.stringify({
-        a: { host: "x.io", color: "purple", numWorkers: 1 },
-      }),
-    );
-    expect(() => ServerEnv.cluster()).toThrow(/Invalid CLUSTER_JSON/);
-
-    vi.stubEnv(
-      "CLUSTER_JSON",
-      JSON.stringify({
-        ab: { host: "x.io", color: "blue", numWorkers: 1 },
-      }),
-    );
-    expect(() => ServerEnv.cluster()).toThrow(/Invalid CLUSTER_JSON/);
-  });
-});
-
-describe("ServerEnv.clusterSelf", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  test("resolves by SUBDOMAIN.DOMAIN", () => {
-    stubCluster("green", "openfront.io");
-    expect(ServerEnv.instanceLetter()).toBe("b");
-    expect(ServerEnv.numWorkers()).toBe(2);
-    expect(ServerEnv.color()).toBe("green");
-  });
-
-  test("resolves by bare DOMAIN when SUBDOMAIN is empty", () => {
-    stubCluster("", "openfront.example");
-    expect(ServerEnv.instanceLetter()).toBe("c");
-    expect(ServerEnv.numWorkers()).toBe(1);
-  });
-
-  test("throws when the host has no entry", () => {
-    stubCluster("red", "openfront.io");
-    expect(() => ServerEnv.numWorkers()).toThrow(/no entry in CLUSTER_JSON/);
-  });
-
-  // Cluster entries name the hosts clients open sockets to, so a deployment
-  // with a separate GAME_DOMAIN must find itself by its GAME host, never by
-  // the page host the Worker serves.
-  test("resolves by the game host when GAME_DOMAIN is set", () => {
-    vi.stubEnv(
-      "CLUSTER_JSON",
-      JSON.stringify({
-        a: {
-          host: "main.server.openfront.dev",
-          color: "blue",
-          numWorkers: 2,
-        },
-        b: { host: "main.openfront.dev", color: "green", numWorkers: 9 },
-      }),
-    );
-    vi.stubEnv("SUBDOMAIN", "main");
-    vi.stubEnv("DOMAIN", "openfront.dev");
+  // GAME_HOST is the name deploy.sh settled on — for a machine-scoped fleet
+  // member it is not derivable from SUBDOMAIN and GAME_DOMAIN — and the map
+  // must carry that same name, or a page would pin itself to a host the
+  // registry does not know.
+  test("names GAME_HOST in the map when deploy.sh wrote one", () => {
+    stubIdentity("blue", "openfront.dev", "f", "2");
     vi.stubEnv("GAME_DOMAIN", "server.openfront.dev");
-    expect(ServerEnv.instanceLetter()).toBe("a");
-    expect(ServerEnv.numWorkers()).toBe(2);
+    vi.stubEnv("GAME_HOST", "blue.nbg2.server.openfront.dev");
+    expect(ServerEnv.cluster()).toEqual({
+      f: { host: "blue.nbg2.server.openfront.dev", numWorkers: 2 },
+    });
+  });
+
+  test.each(["ab", "A", "1", "-"])("refuses INSTANCE_LETTER %j", (letter) => {
+    stubIdentity("blue", "openfront.io", letter);
+    expect(() => ServerEnv.instanceLetter()).toThrow(/Invalid INSTANCE_LETTER/);
+  });
+
+  test.each(["0", "-1", "1.5", "two"])("refuses NUM_WORKERS %j", (n) => {
+    stubIdentity("blue", "openfront.io", "a", n);
+    expect(() => ServerEnv.numWorkers()).toThrow(/Invalid NUM_WORKERS/);
+  });
+
+  // The test process runs as GameEnv.Dev (GAME_ENV is read once at class
+  // load), where a missing identity falls back to the local defaults. A
+  // deployed server refuses to boot on the same input; deploy.sh guarantees
+  // it never gets there (tests/DeployIdentity.test.ts).
+  test("falls back to the local dev identity when unset", () => {
+    vi.stubEnv("INSTANCE_LETTER", "");
+    vi.stubEnv("NUM_WORKERS", "");
+    vi.stubEnv("SUBDOMAIN", "");
+    vi.stubEnv("DOMAIN", "localhost");
+    expect(ServerEnv.cluster()).toEqual({
+      a: { host: "localhost", numWorkers: 2 },
+    });
   });
 });
 
@@ -120,7 +84,7 @@ describe("ServerEnv game id minting", () => {
   });
 
   test("mints 10-char ids under the own instance letter", () => {
-    stubCluster("blue", "openfront.io");
+    stubIdentity("blue", "openfront.io");
     for (let i = 0; i < 20; i++) {
       const id = ServerEnv.generateGameId();
       expect(id).toHaveLength(10);
@@ -130,7 +94,7 @@ describe("ServerEnv game id minting", () => {
   });
 
   test("generateGameIdForWorker hashes the full id to the worker", () => {
-    stubCluster("blue", "openfront.io");
+    stubIdentity("blue", "openfront.io");
     for (const workerId of [0, 1, 2, 3]) {
       const id = ServerEnv.generateGameIdForWorker(workerId);
       expect(id).not.toBeNull();

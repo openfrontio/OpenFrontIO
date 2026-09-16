@@ -49,10 +49,10 @@ export async function renderHtmlContent(
   // included.
   const perServerLocals = perServer
     ? {
-        // The fleet map plus which entry is this server. Replaces the old
-        // numWorkers scalar: the client derives its own-server worker count
-        // from cluster[instanceLetter], and (PR 5) routes foreign game ids by
-        // their leading letter.
+        // This server's one-entry map plus its letter (ServerEnv.cluster).
+        // Replaces the old numWorkers scalar: the client derives its
+        // own-server worker count from cluster[instanceLetter]; foreign game
+        // ids route by the API's list.
         cluster: JSON.stringify(ServerEnv.cluster()),
         instanceLetter: JSON.stringify(ServerEnv.instanceLetter()),
         instanceId: JSON.stringify(ServerEnv.instanceId()),
