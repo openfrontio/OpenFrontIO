@@ -33,8 +33,9 @@ export const SOCKET_SILENCE_MS = 15_000;
 export const REPORT_MIN_INTERVAL_MS = 1_000;
 export const REPORT_HEARTBEAT_MS = 5_000;
 // Reconnect backoff: 1s doubling to 30s. A refusal that will not clear by
-// itself (the site has shared lobbies off, this letter is bound to another
-// host) is retried slowly instead.
+// itself (a 4xx on the upgrade, the site turning shared lobbies off, this
+// letter bound to another host) is retried slowly instead; being replaced
+// by a newer socket for the same letter is not retried at all.
 export const RECONNECT_MIN_MS = 1_000;
 export const RECONNECT_MAX_MS = 30_000;
 export const RECONNECT_SLOW_MS = 60_000;
@@ -231,8 +232,10 @@ export class LobbyCoordinatorClient {
     });
     socket.on("unexpected-response", (_req, res) => {
       if (this.socket !== socket) return;
-      // 403 shared_lobbies_disabled: the site has the feature off. Not an
-      // outage, so retry slowly rather than hammer a deliberate refusal.
+      // Any 4xx is a deliberate refusal that a retry will not change on its
+      // own: 403 shared_lobbies_disabled (the site has the feature off),
+      // 401 (wrong API key), 400 (bad site). Retry slowly rather than hammer
+      // it; a 5xx is an outage and gets the ordinary backoff.
       const status = res.statusCode ?? 0;
       this.opts.log.warn("lobby coordinator: upgrade refused", { status });
       this.dropSocket(socket);
@@ -241,9 +244,8 @@ export class LobbyCoordinatorClient {
       // nothing else will (no `close` is emitted for a socket that never
       // opened).
       socket.terminate();
-      this.scheduleReconnect(
-        status === 403 ? RECONNECT_SLOW_MS : this.nextBackoff(),
-      );
+      const refused = status >= 400 && status < 500;
+      this.scheduleReconnect(refused ? RECONNECT_SLOW_MS : this.nextBackoff());
     });
     socket.on("error", (err) => {
       if (this.socket !== socket) return;
@@ -259,6 +261,15 @@ export class LobbyCoordinatorClient {
         reason: String(reason),
       });
       this.dropSocket(socket);
+      if (code === CoordinatorCloseCode.Replaced) {
+        // A newer socket for this letter connected: another process owns it
+        // now (normally our own successor during a restart). Reconnecting
+        // would only take turns evicting each other.
+        this.opts.log.warn(
+          "lobby coordinator: replaced by a newer connection for this letter, not reconnecting",
+        );
+        return;
+      }
       const slow =
         code === CoordinatorCloseCode.Disabled ||
         code === CoordinatorCloseCode.WrongHost;

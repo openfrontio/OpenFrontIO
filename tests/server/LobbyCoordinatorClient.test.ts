@@ -257,6 +257,31 @@ describe("LobbyCoordinatorClient", () => {
     expect(s.terminated).toBe(true);
   });
 
+  it("retries any 4xx upgrade refusal slowly, a 5xx with backoff", () => {
+    client.start();
+    current().emit("unexpected-response", {}, { statusCode: 401 });
+    vi.advanceTimersByTime(RECONNECT_SLOW_MS - 1);
+    expect(sockets).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(sockets).toHaveLength(2);
+    current().emit("unexpected-response", {}, { statusCode: 400 });
+    vi.advanceTimersByTime(RECONNECT_SLOW_MS);
+    expect(sockets).toHaveLength(3);
+    current().emit("unexpected-response", {}, { statusCode: 502 });
+    vi.advanceTimersByTime(RECONNECT_MIN_MS);
+    expect(sockets).toHaveLength(4);
+  });
+
+  // A newer socket for our letter took over — normally our own successor
+  // during a restart. Reconnecting would just evict it in turn.
+  it("does not reconnect after being replaced", () => {
+    const s = connectAndOpen();
+    s.emit("close", CoordinatorCloseCode.Replaced, Buffer.from("replaced"));
+    vi.advanceTimersByTime(RECONNECT_SLOW_MS * 2);
+    expect(sockets).toHaveLength(1);
+    expect(client.isCoordinated()).toBe(false);
+  });
+
   it("tears down a socket that has delivered no roster for 15s", () => {
     const s = connectAndOpen();
     s.receive(emptyRoster());
