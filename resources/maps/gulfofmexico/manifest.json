@@ -251,7 +251,7 @@
       "name": "New Bight"
     }
   ],
-  "categories": ["north_america"],
+  "categories": ["north_america", "new"],
   "id": "GulfOfMexico",
   "map": {
     "height": 1928,

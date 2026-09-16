@@ -2,7 +2,7 @@
   "name": "Yangtze River",
   "id": "YangtzeRiver",
   "translation_key": "map.yangtzeriver",
-  "categories": ["asia"],
+  "categories": ["new", "asia"],
   "multiplayer_frequency": 3,
   "nations": [
     {

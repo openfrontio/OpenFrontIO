@@ -2,7 +2,7 @@
   "id": "CapeCod",
   "name": "Cape Cod",
   "translation_key": "map.capecod",
-  "categories": ["north_america"],
+  "categories": ["north_america", "new"],
   "multiplayer_frequency": 4,
   "nations": [
     {
