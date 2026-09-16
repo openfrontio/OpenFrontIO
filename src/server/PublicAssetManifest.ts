@@ -401,6 +401,21 @@ export function copyRootPublicFiles(
   }
 }
 
+export type RootFilesIndex = { files: Record<string, string> };
+
+// The static Worker serves the root files from R2 by this index, which maps
+// each path to the full sha256 of its bytes: update.sh stores every file at
+// root-files/<sha256>, and the Worker builds that key itself from the hash.
+export function buildRootFilesIndex(staticDir: string): RootFilesIndex {
+  const files: Record<string, string> = {};
+  for (const relativePath of listRootPublicFiles(staticDir)) {
+    files[relativePath] = createHash("sha256")
+      .update(fs.readFileSync(path.join(staticDir, relativePath)))
+      .digest("hex");
+  }
+  return { files };
+}
+
 export function writePublicAssetManifest(
   outDir: string,
   assetManifest: AssetManifest,

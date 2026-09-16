@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
@@ -5,6 +6,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import { normalizeAssetPath } from "../../src/core/AssetUrls";
 import {
   buildPublicAssetManifest,
+  buildRootFilesIndex,
   clearPublicAssetManifestCache,
   copyRootPublicFiles,
   createHashedPublicAssetFiles,
@@ -302,6 +304,21 @@ describe("PublicAssetManifest", () => {
     await expect(
       fs.readFile(path.join(outDir, "press", "images", "key-art.png"), "utf8"),
     ).resolves.toBe("png");
+  });
+
+  test("indexes the root files by the sha256 of their bytes", async () => {
+    const { outDir } = await createTempResources();
+    await fs.mkdir(path.join(outDir, "press"), { recursive: true });
+    await fs.mkdir(path.join(outDir, "_assets"), { recursive: true });
+    await fs.writeFile(path.join(outDir, "privacy-policy.html"), "policy");
+    await fs.writeFile(path.join(outDir, "press", "index.html"), "policy");
+    await fs.writeFile(path.join(outDir, "_assets", "app.js"), "js");
+    await fs.writeFile(path.join(outDir, "index.html"), "shell");
+
+    const sha = createHash("sha256").update("policy").digest("hex");
+    expect(buildRootFilesIndex(outDir)).toEqual({
+      files: { "press/index.html": sha, "privacy-policy.html": sha },
+    });
   });
 
   test("leaves directories outside the allowlist alone", () => {
