@@ -1792,6 +1792,7 @@
     "reason_discard_blocked": "This Steam account's OpenFront account can't be removed automatically. Please contact support and we'll sort it out for you.",
     "reason_discard_blocked_paid": "This Steam account's OpenFront account has purchases on it, so we can't delete it automatically. Please contact support and we'll sort it out for you.",
     "reason_discard_deferred": "A purchase on that account is still going through. Please try again in a few minutes.",
+    "reason_discard_not_linked": "The link didn't complete. Please start the link again.",
     "reason_expired": "This link has expired. Please try again from Steam.",
     "reason_offer_unavailable": "This confirmation has expired. Please start the link again.",
     "reason_rate_limited": "Too many attempts. Please wait {seconds, plural, =0 {a moment} one {# second} other {# seconds}} and try again.",

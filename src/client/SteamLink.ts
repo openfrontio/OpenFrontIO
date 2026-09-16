@@ -328,6 +328,15 @@ function parseConflict(body: unknown): SteamLinkConflict | null {
   return null;
 }
 
+// Retry-After in its delay-seconds form (RFC 9110 §10.2.3). An HTTP-date form
+// or a missing/stripped header both degrade to null rather than throwing.
+// Shared by every call in this file that can be throttled: the redeem, the
+// offer lookup and the answer all sit behind the same kind of limiter.
+function parseRetryAfterSeconds(response: Response): number | null {
+  const header = response.headers.get("Retry-After");
+  return header !== null && /^\d+$/.test(header) ? Number(header) : null;
+}
+
 export type RedeemSteamLinkResult =
   | { ok: true }
   | {
@@ -409,12 +418,11 @@ async function postSteamLinkRedeem(
     }
 
     if (response.status === 429) {
-      const retryAfterHeader = response.headers.get("Retry-After");
-      const retryAfterSeconds =
-        retryAfterHeader !== null && /^\d+$/.test(retryAfterHeader)
-          ? Number(retryAfterHeader)
-          : null;
-      return { ok: false, reason: "rate_limited", retryAfterSeconds };
+      return {
+        ok: false,
+        reason: "rate_limited",
+        retryAfterSeconds: parseRetryAfterSeconds(response),
+      };
     }
 
     // Name the shared function and the payload kind, not redeemSteamLink:
@@ -464,13 +472,24 @@ export async function redeemSteamLinkCode(
 // request in history and session restore. The desktop path never needs this —
 // its 409 already carried the same answer in the body.
 //
-// Null for "no offer" AND for every failure. A player who cannot reach this
-// endpoint sees exactly the dead end they saw before it existed, which is the
-// right direction to degrade in.
-export async function fetchSteamLinkConflict(): Promise<SteamLinkConflict | null> {
+// `failed` covers a 401 (stale JWT, cleared), any unexpected status and a
+// network error, and the caller shows exactly the dead end the player saw
+// before this endpoint existed — the right direction to degrade in. 429 is the
+// one failure with a BETTER message than that: the throttle refuses a read
+// that would have succeeded, and "can't be merged" is wrong for it, so it is
+// surfaced with its wait, like the redeem.
+export type SteamLinkConflictLookup =
+  | { ok: true; conflict: SteamLinkConflict | null }
+  | {
+      ok: false;
+      reason: "rate_limited" | "failed";
+      retryAfterSeconds?: number | null;
+    };
+
+export async function fetchSteamLinkConflict(): Promise<SteamLinkConflictLookup> {
   try {
     const authHeader = await getAuthHeader();
-    if (authHeader === "") return null;
+    if (authHeader === "") return { ok: false, reason: "failed" };
 
     const response = await fetch(`${getApiBase()}/auth/steam/link/conflict`, {
       headers: { Accept: "application/json", Authorization: authHeader },
@@ -478,19 +497,33 @@ export async function fetchSteamLinkConflict(): Promise<SteamLinkConflict | null
     // 404 is the ordinary "nothing pending", not an error worth logging: it is
     // what every link outcome other than a discardable steam_has_progress
     // produces, and this is called on every returning link redirect.
-    if (response.status === 404) return null;
+    if (response.status === 404) return { ok: true, conflict: null };
+    // Same convention as the other two authenticated calls in this file: a
+    // stale JWT is cleared rather than left in place.
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, reason: "failed" };
+    }
+    if (response.status === 429) {
+      return {
+        ok: false,
+        reason: "rate_limited",
+        retryAfterSeconds: parseRetryAfterSeconds(response),
+      };
+    }
     if (response.status !== 200) {
       console.warn(
         "fetchSteamLinkConflict: unexpected status",
         response.status,
         response.statusText,
       );
-      return null;
+      return { ok: false, reason: "failed" };
     }
-    return parseConflict(await response.json());
+    // An unrecognised body is "no offer", not a failure — see parseConflict.
+    return { ok: true, conflict: parseConflict(await response.json()) };
   } catch (e) {
     console.error("fetchSteamLinkConflict: request failed", e);
-    return null;
+    return { ok: false, reason: "failed" };
   }
 }
 
@@ -505,6 +538,8 @@ export type AnswerSteamLinkConflictResult =
       // naming which block it was is what stops the player opening a ticket
       // to ask.
       block?: string;
+      // Only with reason "rate_limited"; see parseRetryAfterSeconds.
+      retryAfterSeconds?: number | null;
     };
 
 // POST /auth/steam/link/discard — answers the offer.
@@ -547,12 +582,27 @@ export async function answerSteamLinkConflict(
     // 409 (the re-check refused it) and 410 (the offer is gone) both carry a
     // machine-readable reason. Passed through verbatim, exactly as the redeem
     // path does — the UI has a message per reason and must not collapse them.
+    // A 410 with no readable reason still means gone, so it defaults to the
+    // reason that status stands for rather than to a retryable "failed".
     if (response.status === 409 || response.status === 410) {
       const body = await response.json().catch(() => null);
+      const fallback = response.status === 410 ? "offer_unavailable" : "failed";
       return {
         ok: false,
-        reason: typeof body?.reason === "string" ? body.reason : "failed",
+        reason: typeof body?.reason === "string" ? body.reason : fallback,
         ...(typeof body?.block === "string" ? { block: body.block } : {}),
+      };
+    }
+    // The throttle (5/min) runs before the handler, and the handler is what
+    // consumes the offer — so a 429 never spent it. That is why this must not
+    // collapse into "failed" either: the UI treats it as still answerable,
+    // and says how long to wait rather than inviting a click straight back
+    // into the same limiter.
+    if (response.status === 429) {
+      return {
+        ok: false,
+        reason: "rate_limited",
+        retryAfterSeconds: parseRetryAfterSeconds(response),
       };
     }
 

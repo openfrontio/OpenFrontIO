@@ -73,7 +73,20 @@ async function offerSteamConflictDiscard(): Promise<void> {
       translateText("steam_link_modal.reason_steam_has_progress"),
     );
 
-  const conflict = await fetchSteamLinkConflict();
+  const lookup = await fetchSteamLinkConflict();
+  if (!lookup.ok) {
+    // The one failure with a better message than the dead end: a throttled
+    // read is not a refusal, and "can't be merged" would be wrong for it.
+    if (lookup.reason === "rate_limited") {
+      return void showInGameAlert(
+        translateText("steam_link_modal.reason_rate_limited", {
+          seconds: lookup.retryAfterSeconds ?? 0,
+        }),
+      );
+    }
+    return deadEnd();
+  }
+  const conflict = lookup.conflict;
   if (conflict === null) return deadEnd();
   if (!conflict.discardable) {
     // There is genuinely no way through, and saying WHICH is what keeps the

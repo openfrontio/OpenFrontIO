@@ -634,21 +634,78 @@ describe("the discard offer", () => {
     const [url, init] = fetchMock().mock.calls[0];
     expect(url).toBe("https://api.test/auth/steam/link/conflict");
     expect(init.headers.Authorization).toBe("Bearer test-jwt");
-    expect(result).toEqual({ discardable: true, account });
+    expect(result).toEqual({
+      ok: true,
+      conflict: { discardable: true, account },
+    });
   });
 
   // 404 is the ordinary "nothing pending" — every link outcome other than a
   // discardable steam_has_progress produces it.
-  it("returns null when nothing is pending", async () => {
+  it("reports nothing pending on 404", async () => {
     fetchMock().mockResolvedValueOnce(res({}, 404));
 
-    expect(await fetchSteamLinkConflict()).toBeNull();
+    expect(await fetchSteamLinkConflict()).toEqual({
+      ok: true,
+      conflict: null,
+    });
   });
 
-  it("returns null rather than throwing when the request fails", async () => {
+  // Same convention as the other two authenticated calls: a stale JWT is
+  // cleared rather than left in place.
+  it("clears a stale session on 401 and reports a failure", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 401));
+
+    expect(await fetchSteamLinkConflict()).toEqual({
+      ok: false,
+      reason: "failed",
+    });
+    expect(logOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a failure rather than throwing when the request fails", async () => {
     fetchMock().mockRejectedValueOnce(new TypeError("network down"));
 
-    expect(await fetchSteamLinkConflict()).toBeNull();
+    expect(await fetchSteamLinkConflict()).toEqual({
+      ok: false,
+      reason: "failed",
+    });
+  });
+
+  // A throttled READ is not a refusal: the offer is still there and reading
+  // never consumes it, so this must not degrade to the permanent dead end.
+  it("maps a throttled offer lookup to rate_limited with its wait", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 429, { "Retry-After": "7" }));
+
+    expect(await fetchSteamLinkConflict()).toEqual({
+      ok: false,
+      reason: "rate_limited",
+      retryAfterSeconds: 7,
+    });
+  });
+
+  // The throttle runs before the handler, so a 429 never spent the offer —
+  // collapsing it into "failed" would render the generic message and invite a
+  // click straight back into the same limiter.
+  it("maps a throttled answer to rate_limited, same as the redeem path", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 429, { "Retry-After": "12" }));
+
+    expect(await answerSteamLinkConflict("discard")).toEqual({
+      ok: false,
+      reason: "rate_limited",
+      retryAfterSeconds: 12,
+    });
+  });
+
+  // 410 means gone whatever the body says, so an unreadable one must not fall
+  // back to a "failed" the UI treats as still answerable.
+  it("treats a 410 with no readable reason as offer_unavailable", async () => {
+    fetchMock().mockResolvedValueOnce(res(null, 410));
+
+    expect(await answerSteamLinkConflict("discard")).toEqual({
+      ok: false,
+      reason: "offer_unavailable",
+    });
   });
 
   // The body carries the ANSWER and nothing else: no account id, no token.

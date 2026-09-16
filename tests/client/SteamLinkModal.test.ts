@@ -484,6 +484,33 @@ describe("SteamLinkModal", () => {
     expect(invalidateUserMeMock).toHaveBeenCalled();
   });
 
+  // Same rule as the discard's: the header close and Escape stay live during
+  // "Linking…", and a link that landed has changed the cached profile whether
+  // or not the modal is still there to say so.
+  it("refreshes the cached profile even if closed while linking", async () => {
+    isLoggedInMock.mockResolvedValue(true);
+    fetchSteamLinkTicketMock.mockResolvedValue({
+      ok: true,
+      personaName: "Ada",
+    });
+    getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+    const redeem = deferred<{ ok: true }>();
+    redeemSteamLinkMock.mockReturnValue(redeem.promise);
+
+    await modal.openWithToken("tok-abc");
+    await vi.waitFor(async () => {
+      await modal.updateComplete;
+      expect(confirmButton()?.disabled).toBe(false);
+    });
+    confirmButton()?.click();
+    await modal.updateComplete;
+    invalidateUserMeMock.mockClear();
+    modal.close();
+    redeem.resolve({ ok: true });
+
+    await vi.waitFor(() => expect(invalidateUserMeMock).toHaveBeenCalled());
+  });
+
   // ─── Code-entry path (Task 17) ──────────────────────────────────────────
   // The desktop gate's fallback: when the browser handoff itself fails, it
   // shows an 8-character code instead of opening a token-carrying URL. There
@@ -974,6 +1001,263 @@ describe("SteamLinkModal", () => {
       await modal.updateComplete;
       expect(answerSteamLinkConflictMock).not.toHaveBeenCalled();
       expect(modal.isOpen()).toBe(false);
+    });
+
+    // BaseModal re-runs onOpen() on an already-open modal without onClose(),
+    // and a new #steam-link handoff opens straight on top. The previous offer's
+    // destructive screen must not survive into the new flow.
+    it("does not carry a stale offer into a new handoff", async () => {
+      await reachConfirmation();
+      redeemSteamLinkMock.mockResolvedValue({ ok: true });
+
+      await modal.openWithToken("tok-second");
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(confirmButton()).not.toBeNull();
+      });
+
+      expect(discardButton()).toBeNull();
+      expect(modal.textContent).not.toContain(
+        "steam_link_modal.conflict_warning",
+      );
+    });
+
+    // The server has already deleted an account and moved a Steam id by the
+    // time this resolves, and the profile is cached for the page's lifetime.
+    // Closing mid-delete must not leave the page showing the pre-link account.
+    it("refreshes the profile even if closed while deleting", async () => {
+      await reachConfirmation();
+      const answer = deferred<{ ok: boolean; linked: boolean }>();
+      answerSteamLinkConflictMock.mockReturnValue(answer.promise);
+      invalidateUserMeMock.mockClear();
+
+      discardButton()?.click();
+      await modal.updateComplete;
+      modal.close();
+      answer.resolve({ ok: true, linked: true });
+
+      await vi.waitFor(() => expect(invalidateUserMeMock).toHaveBeenCalled());
+    });
+
+    // Cancel and close are the same "not now" to a website player; neither may
+    // spend the offer there, since nothing is waiting on it.
+    it("website Cancel leaves the offer alone, like website close", async () => {
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+      await modal.openForConflict(account);
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(discardButton()).not.toBeNull();
+      });
+
+      cancelButton()?.click();
+      await modal.updateComplete;
+
+      expect(answerSteamLinkConflictMock).not.toHaveBeenCalled();
+      expect(modal.isOpen()).toBe(false);
+    });
+
+    // This line is how the player recognises the account about to be deleted.
+    it("omits an unparseable created date rather than showing Invalid Date", async () => {
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+      await modal.openForConflict({ ...account, createdAt: "not-a-date" });
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(discardButton()).not.toBeNull();
+      });
+
+      expect(modal.textContent).not.toContain("Invalid Date");
+      expect(modal.textContent).toContain("Throwaway");
+    });
+
+    const conflictCodeInput = () =>
+      modal.querySelector<HTMLInputElement>("input.steam-link-code-input");
+
+    // The code path up to its confirm step; the redeem's answer is the
+    // caller's choice.
+    async function reachCodeConfirm(): Promise<void> {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+      const input = conflictCodeInput();
+      expect(input).not.toBeNull();
+      input!.value = "ABCDEFGH";
+      input!.dispatchEvent(new Event("input", { bubbles: true }));
+      modal
+        .querySelector<HTMLButtonElement>("button.steam-link-code-submit-btn")
+        ?.click();
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(confirmButton()?.disabled).toBe(false);
+      });
+    }
+
+    // The code path's usual answer to a refusal is "back to the field" — but
+    // the code was RIGHT here; the refusal is about the Steam account, and
+    // there is nothing to retype. The confirmation replaces the field.
+    it("shows the confirmation on the code path rather than returning to the field", async () => {
+      await reachCodeConfirm();
+      redeemSteamLinkCodeMock.mockResolvedValue({
+        ok: false,
+        reason: "steam_has_progress",
+        conflict: { discardable: true, account },
+      });
+
+      confirmButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(discardButton()).not.toBeNull();
+      });
+      expect(conflictCodeInput()).toBeNull();
+      expect(modal.textContent).toContain("Throwaway");
+    });
+
+    // ...whereas a conflict with NO way through is a refusal like any other on
+    // the code path: back to the field, with the block named inline — the same
+    // place the same refusal lands from a server that sends no offer at all.
+    // Landing on the confirm step instead left "Link Account" enabled over a
+    // code that could only be refused again.
+    it("sends a code-path refusal with no way through back to the field, naming the block", async () => {
+      await reachCodeConfirm();
+      redeemSteamLinkCodeMock.mockResolvedValue({
+        ok: false,
+        reason: "steam_has_progress",
+        conflict: { discardable: false, block: "paid" },
+      });
+
+      confirmButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(conflictCodeInput()).not.toBeNull();
+      });
+      expect(modal.textContent).toContain(
+        "steam_link_modal.reason_discard_blocked_paid",
+      );
+      expect(confirmButton()).toBeNull();
+      expect(discardButton()).toBeNull();
+    });
+
+    // Every terminal answer the server documents, each with a specific
+    // message: the offer is spent, the button goes, and the way out posts
+    // nothing.
+    it.each([
+      [
+        "offer_unavailable",
+        undefined,
+        "steam_link_modal.reason_offer_unavailable",
+      ],
+      ["offer_invalid", undefined, "steam_link_modal.reason_offer_unavailable"],
+      [
+        "account_is_guest",
+        undefined,
+        "steam_link_modal.reason_offer_unavailable",
+      ],
+      [
+        "steam_linked_elsewhere",
+        undefined,
+        "steam_link_modal.reason_steam_linked_elsewhere",
+      ],
+      ["discard_blocked", "banned", "steam_link_modal.reason_discard_blocked"],
+      ["discard_blocked", "support", "steam_link_modal.reason_discard_blocked"],
+    ])(
+      "retires the confirmation on %s (block %s) with a specific message",
+      async (reason, block, key) => {
+        await reachConfirmation();
+        answerSteamLinkConflictMock.mockResolvedValue({
+          ok: false,
+          reason,
+          ...(block === undefined ? {} : { block }),
+        });
+
+        discardButton()?.click();
+
+        await vi.waitFor(async () => {
+          await modal.updateComplete;
+          expect(modal.textContent).toContain(key);
+        });
+        expect(modal.textContent).not.toContain("common.error_generic");
+        expect(discardButton()).toBeNull();
+        answerSteamLinkConflictMock.mockClear();
+        cancelButton()?.click();
+        await modal.updateComplete;
+        expect(answerSteamLinkConflictMock).not.toHaveBeenCalled();
+        expect(modal.isOpen()).toBe(false);
+      },
+    );
+
+    // The throttle runs before the handler, so a 429 never spent the offer:
+    // the wait is named, the button stays, and closing still releases the
+    // desktop's ticket.
+    it("treats a throttled discard as still answerable", async () => {
+      await reachConfirmation();
+      answerSteamLinkConflictMock.mockResolvedValue({
+        ok: false,
+        reason: "rate_limited",
+        retryAfterSeconds: 30,
+      });
+
+      discardButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain(
+          'steam_link_modal.reason_rate_limited:{"seconds":30}',
+        );
+      });
+      expect(modal.textContent).not.toContain("common.error_generic");
+      expect(discardButton()?.disabled).toBe(false);
+      answerSteamLinkConflictMock.mockClear();
+      modal.close();
+      await modal.updateComplete;
+      expect(answerSteamLinkConflictMock).toHaveBeenCalledWith("cancel");
+    });
+
+    // A 200 is not a link. The response models the two separately (a cancel
+    // is a 200 with linked: false), and "now linked" over an account that is
+    // not would be the worst message to show right after an irreversible
+    // delete. Spent, though: the server answered, so nothing is cancelled.
+    it("does not report success when the server answered without linking", async () => {
+      await reachConfirmation();
+      answerSteamLinkConflictMock.mockResolvedValue({
+        ok: true,
+        linked: false,
+      });
+      invalidateUserMeMock.mockClear();
+
+      discardButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain(
+          "steam_link_modal.reason_discard_not_linked",
+        );
+      });
+      expect(modal.textContent).not.toContain("steam_link_modal.success");
+      expect(discardButton()).toBeNull();
+      expect(invalidateUserMeMock).toHaveBeenCalled();
+      answerSteamLinkConflictMock.mockClear();
+      modal.close();
+      await modal.updateComplete;
+      expect(answerSteamLinkConflictMock).not.toHaveBeenCalled();
+    });
+
+    // The identity rule applies at every read of /users/@me, this one
+    // included: a throwaway account is not a survivor worth naming. No login
+    // redirect here — there is no pending link to stash and resume.
+    it("shows the load error rather than naming a guest as the account kept", async () => {
+      getUserMeMock.mockResolvedValue(makeUserMe("Ada", {}));
+
+      await modal.openForConflict(account);
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain("steam_link_modal.load_error_code");
+      });
+
+      expect(discardButton()).toBeNull();
+      expect(stashPendingLinkMock).not.toHaveBeenCalled();
+      expect(window.location.hash).not.toBe("#modal=account");
     });
 
     // ...but a refusal the player can still answer keeps its button.

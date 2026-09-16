@@ -46,7 +46,7 @@ function setHash(hash: string) {
 beforeEach(() => {
   alertMock.mockClear();
   fetchSteamLinkConflictMock.mockReset();
-  fetchSteamLinkConflictMock.mockResolvedValue(null);
+  fetchSteamLinkConflictMock.mockResolvedValue({ ok: true, conflict: null });
 });
 
 afterEach(() => {
@@ -100,8 +100,8 @@ describe("consumeLinkResult", () => {
     it("opens the discard confirmation instead of the dead-end alert", async () => {
       const { openForConflict } = installModal();
       fetchSteamLinkConflictMock.mockResolvedValue({
-        discardable: true,
-        account,
+        ok: true,
+        conflict: { discardable: true, account },
       });
       setHash("#modal=account&link=steam_has_progress");
 
@@ -118,8 +118,8 @@ describe("consumeLinkResult", () => {
     it("names the paid block rather than the generic refusal", async () => {
       installModal();
       fetchSteamLinkConflictMock.mockResolvedValue({
-        discardable: false,
-        block: "paid",
+        ok: true,
+        conflict: { discardable: false, block: "paid" },
       });
       setHash("#modal=account&link=steam_has_progress");
 
@@ -135,8 +135,8 @@ describe("consumeLinkResult", () => {
     it("falls back to the refusal when the modal is missing", async () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
       fetchSteamLinkConflictMock.mockResolvedValue({
-        discardable: true,
-        account,
+        ok: true,
+        conflict: { discardable: true, account },
       });
       setHash("#modal=account&link=steam_has_progress");
 
@@ -149,9 +149,50 @@ describe("consumeLinkResult", () => {
       );
     });
 
+    // A throttled lookup is not a refusal, and "can't be merged" would be
+    // wrong for it: the player is told how long to wait instead.
+    it("names the wait when the lookup is throttled", async () => {
+      installModal();
+      fetchSteamLinkConflictMock.mockResolvedValue({
+        ok: false,
+        reason: "rate_limited",
+        retryAfterSeconds: 7,
+      });
+      setHash("#modal=account&link=steam_has_progress");
+
+      consumeLinkResult({ modal: "account", link: "steam_has_progress" });
+
+      await vi.waitFor(() =>
+        expect(alertMock).toHaveBeenCalledWith(
+          "steam_link_modal.reason_rate_limited",
+        ),
+      );
+    });
+
+    it("falls back to the refusal when the lookup fails", async () => {
+      const { openForConflict } = installModal();
+      fetchSteamLinkConflictMock.mockResolvedValue({
+        ok: false,
+        reason: "failed",
+      });
+      setHash("#modal=account&link=steam_has_progress");
+
+      consumeLinkResult({ modal: "account", link: "steam_has_progress" });
+
+      await vi.waitFor(() =>
+        expect(alertMock).toHaveBeenCalledWith(
+          "steam_link_modal.reason_steam_has_progress",
+        ),
+      );
+      expect(openForConflict).not.toHaveBeenCalled();
+    });
+
     // Still one-shot: the follow-up question must not keep the param alive.
     it("still strips the param before asking", () => {
-      fetchSteamLinkConflictMock.mockResolvedValue(null);
+      fetchSteamLinkConflictMock.mockResolvedValue({
+        ok: true,
+        conflict: null,
+      });
       setHash("#modal=account&link=steam_has_progress");
 
       consumeLinkResult({ modal: "account", link: "steam_has_progress" });
