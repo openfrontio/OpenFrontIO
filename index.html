@@ -58,11 +58,26 @@
         flex-basis: 100%;
         width: 100%;
       }
-      /* body is a column while an inline page is open (see styles.css):
-         size the slot to its content there, not to 100% of the height. */
+      /* While an inline page (store, settings, ...) is open the document is
+         locked at scroll 0 (see styles.css), so the unit would sit expanded
+         (350px tall) in flow above the modal for as long as the page is open,
+         squeezing the modal to a sliver. Playwire docks the unit through an
+         IntersectionObserver on this container, so park the container just
+         above the viewport instead: the unit then collapses to its fixed
+         leaderboard (measured into --top-ad-height, which pads the content
+         area below), and re-expands in flow when the page closes. No
+         transform here — the docked unit is position: fixed and must keep
+         the viewport as its containing block. */
       body.page-open #pw-oop-flex_container {
-        flex-basis: auto;
-        flex-shrink: 0;
+        position: fixed;
+        bottom: 100%;
+        left: 0;
+        width: 100%;
+      }
+      /* Playwire docks the unit with position: fixed and top: auto, i.e. at
+         its static (in-flow) position — which is now above the viewport. */
+      body.page-open #pw-oop-flex {
+        top: 0;
       }
 
       /* Google Funding Choices CCPA link override */
@@ -253,12 +268,14 @@
 
     <!-- MAIN CONTENT AREA -->
     <div
-      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] in-[.page-open]:pt-[var(--top-ad-height,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
       <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls,
-           offset below the header ad when one is showing) -->
+           offset below the header ad when one is showing; static while an
+           inline page is open, when the content area is padded below the ad
+           instead and nothing scrolls) -->
       <desktop-nav-bar
-        class="sticky top-[var(--top-ad-height,0px)] z-[60]"
+        class="sticky top-[var(--top-ad-height,0px)] z-[60] in-[.page-open]:static"
       ></desktop-nav-bar>
 
       <div
