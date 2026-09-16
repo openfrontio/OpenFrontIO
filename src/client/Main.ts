@@ -48,6 +48,7 @@ import {
   resumePendingCreatorCode,
 } from "./CreatorCode";
 import { desktopPresence, type PresencePayload } from "./DesktopPresence";
+import { subscribeDesktopSessionRecovery } from "./DesktopSessionRecovery";
 import {
   desktopUpdate,
   isDesktopShell,
@@ -58,7 +59,8 @@ import "./GameModeSelector";
 import {
   GameModeSelector,
   joinIsGateable,
-  shouldBlockDesktopJoin,
+  reportMultiplayerRefusal,
+  shouldBlockJoin,
 } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GameStatsModal";
@@ -83,10 +85,20 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import { capturePagePin } from "./PagePin";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import "./PlayerProfileModal";
-import { GroupTokenTracker, withGroupToken } from "./PresenceGroup";
+import {
+  GroupTokenTracker,
+  presenceLobbyId,
+  withGroupToken,
+} from "./PresenceGroup";
 import { RewardsModal } from "./RewardsModal";
+import {
+  ensureServerList,
+  redirectToGameVersion,
+  startServerListPolling,
+} from "./ServerList";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import {
@@ -104,10 +116,20 @@ import {
   SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
+import {
+  requestTurnstileToken,
+  resolveTurnstileToken,
+  TURNSTILE_LOAD_FAILED_CODE,
+  TurnstileError,
+  type TurnstileApi,
+  type TurnstileToken,
+} from "./TurnstileToken";
 import "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import {
+  apexPathFor,
+  currentPagePath,
   homeHref,
   incrementGamesPlayed,
   presenceMapKey,
@@ -118,6 +140,8 @@ import "./components/BannedModal";
 import "./components/DesktopStatusBar";
 import "./components/MarketingConsentToast";
 import "./components/PurchaseNudgeModal";
+import { initAudioMixer } from "./sound/AudioMixer";
+import { startMenuMusic } from "./sound/MenuMusic";
 import {
   installCtrlWheelZoomBlocker,
   installDoubleTapZoomBlocker,
@@ -142,7 +166,7 @@ import "./styles/modal/chat.css";
 
 declare global {
   interface Window {
-    turnstile: any;
+    turnstile?: TurnstileApi;
     adsEnabled: boolean;
     gtag?: (...args: any[]) => void;
     PageOS: {
@@ -199,6 +223,7 @@ declare global {
     "session-cleared": CustomEvent;
     "leave-lobby": CustomEvent;
     "game-starting": CustomEvent;
+    "menu-restored": CustomEvent;
     "update-game-config": CustomEvent;
   }
 }
@@ -282,12 +307,19 @@ class Client {
   // GroupTokenTracker for why a repeat must not re-emit.
   private readonly presenceGroup = new GroupTokenTracker();
 
-  private turnstileTokenPromise: Promise<{
-    token: string;
-    createdAt: number;
-  }> | null = null;
+  private turnstileTokenPromise: Promise<TurnstileToken> | null = null;
 
   async initialize(): Promise<void> {
+    // FIRST, ahead of consumeCreatorCodePath() and of handleUrl() below --
+    // ahead of every history write this client performs. A page served under
+    // `/v/<commit>/` is pinned to that build, and three guards depend on
+    // knowing it (isPinnedToAVersion, currentPagePath, ClientGameRunner's
+    // version_mismatch branch). The address bar stops being able to answer
+    // the moment updateJoinUrlForShare rewrites it to the version-free share
+    // URL, so take the value while it is still the URL we were served at.
+    // See PagePin.ts.
+    capturePagePin();
+
     // A store referral banner / account "copy link" hands out `/c/<code>`.
     // There's nothing to open here yet -- the code only does anything once
     // the player is signed in (resumePendingCreatorCode in onUserMe handles
@@ -302,6 +334,10 @@ class Client {
     // consuming an empty stash before the code was ever written, losing the
     // prefill for an already-signed-in visitor hitting /c/CODE directly.
     consumeCreatorCodePath();
+
+    // One mixer for the page: the menu theme here and the SoundManager a game
+    // creates later both route through it, so the volume sliders reach both.
+    startMenuMusic(initAudioMixer(this.userSettings));
 
     // Snapshot the lapse-notice marker SYNCHRONOUSLY, before the first await.
     //
@@ -385,18 +421,31 @@ class Client {
       tag: "inventory-modal",
       pageId: "page-inventory",
     });
+
+    // Kick the server-list fetch off here, before anything below awaits the
+    // network, so it overlaps with the rest of boot: by the time a player
+    // can click Join or Create the list is already known and the click
+    // never waits on a fetch (docs/MultiServer.md, "Server list v2"). It
+    // never throws and keeps itself alive with a heartbeat afterwards.
+    startServerListPolling();
+
     // Prefetch turnstile token so it is available when the user joins a lobby.
     // Desktop (Steam) has no Turnstile script and is server-side exempt, so
     // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
     // script" after its load wait. Also skip on the versioned replay shells:
     // the replay host may not be on the Turnstile site key's domain allowlist,
-    // so rendering the widget there alerts and rejects — and replays never
+    // so rendering the widget there just fails — and replays never
     // send a token anyway (see getTurnstileToken below).
-    this.turnstileTokenPromise =
-      ClientEnv.instanceId() === "desktop" ||
-      isReplayShellHost(window.location.hostname)
+    const turnstilePrefetch =
+      isDesktopShell() || isReplayShellHost(window.location.hostname)
         ? null
         : getTurnstileToken();
+    // A prefetch that fails is not an error anyone has asked about yet: the
+    // join path drops it and fetches once more (see getTurnstileToken below),
+    // and only that attempt alerts. Mark it handled here so a boot-time
+    // rejection nobody is awaiting yet does not surface as an unhandled one.
+    turnstilePrefetch?.catch(() => {});
+    this.turnstileTokenPromise = turnstilePrefetch;
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -464,7 +513,7 @@ class Client {
         // (mirrors LobbyPlayerView and the join modal's own count).
         playerCount: event.lobby.clients?.filter((c) => !c.spectator).length,
         maxPlayers: config?.maxPlayers,
-        lobbyId: event.lobby.gameID,
+        lobbyId: presenceLobbyId(config, event.lobby.gameID),
       };
       this.presenceSpectating =
         event.lobby.clients?.find((c) => c.clientID === event.myClientID)
@@ -650,7 +699,13 @@ class Client {
         // resumePendingSteamLink() consumes the stash on read, so a
         // speculative call while logged out would burn an entry that a
         // *later* successful login should still get to resume.
-        if (resumePendingSteamLink(this.steamLinkModal)) {
+        //
+        // The response is passed in rather than the check being made here:
+        // the enclosing `userMeResponse !== false` is NOT that confirmation,
+        // because a guest account satisfies it (POST /auth/refresh mints one
+        // for any visitor). resumePendingSteamLink owns the real predicate,
+        // next to the consumption it protects — see its comment.
+        if (resumePendingSteamLink(userMeResponse, this.steamLinkModal)) {
           return;
         }
 
@@ -746,12 +801,23 @@ class Client {
       void onUserMe(false);
     });
 
+    // Register before initial auth settles: the status bar may already offer
+    // Retry while startup is still waiting for its first session.
+    subscribeDesktopSessionRecovery(async () => {
+      invalidateUserMe();
+      snapshotLapseMarker();
+      const generation = ++authGeneration;
+      const result = await retrySteamSignIn();
+      applyUserMe(generation)(result === false ? false : await getUserMe());
+    });
+
+    const initialAuthGeneration = authGeneration;
     if ((await userAuth()) === false) {
       // Not logged in: apply the signed-out profile directly.
-      onUserMe(false);
+      applyUserMe(initialAuthGeneration)(false);
     } else {
       // JWT appears valid: fetch the profile and apply it if still current.
-      getUserMe().then(applyUserMe(authGeneration));
+      getUserMe().then(applyUserMe(initialAuthGeneration));
     }
 
     // Re-run auth when the player signs into CrazyGames mid-session. Logout
@@ -767,11 +833,6 @@ class Client {
       );
     });
 
-    // The desktop status bar's Retry. Orchestrated here rather than in the
-    // bar because a successful sign-in also has to refresh userMe, the nav
-    // account button and the cached profile -- the same reason the
-    // CrazyGames listener above lives here. The authGeneration guard means a
-    // response that arrives after another auth change cannot be applied.
     // Subscribe to the bridge directly rather than to the status bar's
     // re-broadcast. The bar subscribes when its element upgrades and the
     // bridge replays the current state immediately, so that event fires long
@@ -783,17 +844,6 @@ class Client {
     // bar's own subscription.
     desktopUpdate()?.subscribe((state) => {
       this.desktopUpdateState = state;
-    });
-
-    document.addEventListener("desktop-session-retry", () => {
-      invalidateUserMe();
-      snapshotLapseMarker();
-      const generation = authGeneration;
-      retrySteamSignIn().then((result) =>
-        result === false
-          ? applyUserMe(generation)(false)
-          : getUserMe().then(applyUserMe(generation)),
-      );
     });
 
     this.hostModal = document.querySelector(
@@ -1040,18 +1090,32 @@ class Client {
       }
     }
 
+    // Every version's page is also served under /v/<commit>/ (multi-server
+    // v2), so the game path may sit behind that prefix.
     const pathMatch = window.location.pathname.match(
-      /^\/(?:w\d+\/)?game\/([^/]+)/,
+      /^(?:\/v\/[^/]+)?\/(?:w\d+\/)?game\/([^/]+)/,
     );
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      // Joining needs the API's server list (multi-server v2): the id's
+      // letter names the game's server there. No version check: joining an
+      // existing game is not starting something new, and the id's letter
+      // names its server whatever version that server runs.
+      await ensureServerList();
       // A letter this shell's cluster map doesn't know means the map
       // predates the game's deployment (stale CDN shell, or a link into a
       // newer fleet). The apex always serves the freshest map, so re-enter
       // through it; on the apex itself (and dev/desktop) fall through to
       // the join flow's normal not-found handling.
       if (this.redirectUnknownLetterToApex(lobbyId)) return;
+      // The game's server may run a different build than this page (a link
+      // into a version still draining, or a page served as `latest` after a
+      // deploy). Open it at that version's page rather than trying to play
+      // it with the wrong bundle. The whole rule -- the loop guard, and the
+      // desktop and replay shells that must never be navigated -- lives in
+      // redirectToGameVersion.
+      if (redirectToGameVersion(lobbyId)) return;
       // ?host means the lobby creator is returning to a successor lobby they
       // reused from the win screen: reopen the host view bound to the existing
       // lobby instead of the join flow. Non-creators who hit this URL still get
@@ -1121,6 +1185,23 @@ class Client {
 
   private desktopUpdateState: DesktopUpdateState | null = null;
 
+  // See the call site in handleUrl. True when a navigation was issued.
+  private redirectUnknownLetterToApex(gameID: string): boolean {
+    if (!ClientEnv.gameLetterUnknown(gameID)) return false;
+    if (isDesktopShell()) return false;
+    // With the API's list loaded there is nothing fresher to bounce to: an
+    // unknown letter means the game does not exist.
+    if (ClientEnv.serverListLoaded()) return false;
+    // Only load-balanced deployments have an apex to bounce to; standalone
+    // ones (beta, branch previews, dev) have no siteHost injected and fall
+    // through to the normal not-found flow, as does the apex shell itself
+    // (its map is already the freshest; CDN staleness ages out in minutes).
+    const apex = ClientEnv.siteHost();
+    if (apex === undefined || window.location.host === apex) return false;
+    window.location.href = `https://${apex}${apexPathFor(window.location.pathname)}${window.location.search}`;
+    return true;
+  }
+
   /**
    * The real multiplayer gate. The entry-point components dim their own
    * buttons, but EVERY join -- theirs, matchmaking's, a deep link, the
@@ -1130,33 +1211,28 @@ class Client {
    * without this a signed-out player queues, matches, and is closed by the
    * server with the Turnstile error this whole feature exists to replace.
    *
-   * The decision itself lives in shouldBlockDesktopJoin, which is pure and
-   * unit-tested; this adds the shell check, the modal cleanup and the wiggle.
+   * The decision itself lives in shouldBlockJoin, which is pure and
+   * unit-tested; this adds the shell check, the modal cleanup and the
+   * feedback.
    *
-   * Draws attention to the status bar rather than failing silently, matching
-   * what the dimmed buttons do.
+   * Both inputs are desktop-only and are read only there. Backend
+   * reachability is not among them (OPE-439): by the time a join reaches
+   * this funnel its source has already reached a server, so the server-list
+   * API being unreachable is no reason to refuse. The lobby cards one step
+   * earlier hold to the same rule, so nothing dims or refuses on it there
+   * either -- see shouldBlockJoin, and the rule at the top of
+   * GameModeSelector.ts.
+   *
+   * Says why rather than failing silently, matching what the dimmed buttons
+   * do.
    */
-  // See the call site in handleUrl. True when a navigation was issued.
-  private redirectUnknownLetterToApex(gameID: string): boolean {
-    if (!ClientEnv.gameLetterUnknown(gameID)) return false;
-    if (isDesktopShell()) return false;
-    // Only load-balanced deployments have an apex to bounce to; standalone
-    // ones (beta, branch previews, dev) have no siteHost injected and fall
-    // through to the normal not-found flow, as does the apex shell itself
-    // (its map is already the freshest; CDN staleness ages out in minutes).
-    const apex = ClientEnv.siteHost();
-    if (apex === undefined || window.location.host === apex) return false;
-    window.location.href = `https://${apex}${window.location.pathname.replace(/^\/w\d+\//, "/")}${window.location.search}`;
-    return true;
-  }
-
-  private blockedDesktopJoin(lobby: JoinLobbyEvent): boolean {
-    if (!isDesktopShell()) return false;
+  private blockedJoin(lobby: JoinLobbyEvent): boolean {
+    const desktop = isDesktopShell();
     if (
-      !shouldBlockDesktopJoin(
+      !shouldBlockJoin(
         lobby,
-        this.desktopUpdateState,
-        getDesktopSessionState(),
+        desktop ? this.desktopUpdateState : null,
+        desktop ? getDesktopSessionState() : null,
       )
     ) {
       return false;
@@ -1168,20 +1244,36 @@ class Client {
     // client never entered, with the game starting without them.
     this.joinModal?.close();
     this.hostModal?.close();
-    (
-      document.querySelector("desktop-status-bar") as
-        | (HTMLElement & { wiggle?: () => void })
-        | null
-    )?.wiggle?.();
+    // Matchmaking dispatches its own join once the server matches it, so a
+    // refusal here leaves its modal sitting on "waiting for a game" over a
+    // match that will never be entered. close() is the same teardown its Back
+    // button uses -- it shuts the queue socket and clears the watchdog -- so
+    // the player leaves the queue rather than holding a slot from a screen
+    // that is lying to them. Scoped to the source that owns that modal: a
+    // deep link refused while someone is legitimately queued must not cancel
+    // their queue.
+    if (lobby.source === "matchmaking" && this.matchmakingModal?.isOpen()) {
+      this.matchmakingModal.close();
+    }
+    // false: the web never refuses here any more, so the only feedback left
+    // is the desktop status bar's wiggle -- the bar is already showing the
+    // update or session reason that refused this join.
+    reportMultiplayerRefusal(false);
     return true;
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     if (this.usernameInput && !this.usernameInput.canPlay()) {
+      // The singleplayer modal shows the starting overlay before dispatching
+      // join-lobby; a refused join must release it or it stays over the menu.
+      const startingModal = document.querySelector("game-starting-modal");
+      if (startingModal instanceof GameStartingModal) {
+        startingModal.hide();
+      }
       return;
     }
-    if (this.blockedDesktopJoin(lobby)) {
+    if (this.blockedJoin(lobby)) {
       return;
     }
     // Only once the join is actually going ahead: a refused dispatch that
@@ -1220,11 +1312,13 @@ class Client {
       maxPlayers: joinConfig?.maxPlayers,
       // Omitted for singleplayer and replays: no server hosts those ids, so
       // advertising one has the shell offer friends a Join that cannot work.
-      // The optional field already means "not joinable".
+      // The optional field already means "not joinable". presenceLobbyId
+      // withholds it for public FFA too, for the same reason the invite
+      // button hides there: a friend joining that match is a team.
       lobbyId:
         lobby.source === "singleplayer" || lobby.gameRecord !== undefined
           ? undefined
-          : lobby.gameID,
+          : presenceLobbyId(joinConfig, lobby.gameID),
     };
     this.emitPresence();
 
@@ -1243,7 +1337,16 @@ class Client {
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID);
     }
-    const auth = await userAuth();
+    // Singleplayer runs entirely locally, and the session is only used here
+    // for the HUD role — the end-of-game archive establishes its own session
+    // via getAuthHeader(). So don't let a token refresh block starting a
+    // local game (offline on Steam it waits out the 5s ticket timeout):
+    // read the cached JWT and refresh in the background instead.
+    const isSingleplayer = lobby.source === "singleplayer";
+    if (isSingleplayer) {
+      void userAuth();
+    }
+    const auth = await userAuth(!isSingleplayer);
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
     // Ensure the one-shot Steam name-seed has settled before reading
     // getUsername(), mirroring how getClanCheck() runs in parallel with the
@@ -1397,9 +1500,11 @@ class Client {
         history.pushState(
           null,
           "",
-          lobbyIdHidden
-            ? "/streamer-mode"
-            : `/${ClientEnv.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+          currentPagePath(
+            lobbyIdHidden
+              ? "/streamer-mode"
+              : `${ClientEnv.gamePath(lobby.gameID)}?live`,
+          ),
         );
       }
 
@@ -1488,7 +1593,7 @@ class Client {
       // on it. On the replay host, fall back to the in-place leave.
       if (!isReplayShellHost(window.location.hostname)) {
         this.resetPresenceToMenu();
-        window.location.href = `/${ClientEnv.workerPath(gameId)}/game/${gameId}`;
+        window.location.href = currentPagePath(ClientEnv.gamePath(gameId));
         return;
       }
       await this.handleLeaveLobby();
@@ -1511,10 +1616,15 @@ class Client {
       // here would leave a URL that 404s when reloaded or shared (see
       // VersionedReplay.ts).
       targetUrl = window.location.pathname;
-    } else if (lobbyIdHidden) {
-      targetUrl = "/streamer-mode";
     } else {
-      targetUrl = `/${ClientEnv.workerPath(lobbyId)}/game/${lobbyId}`;
+      // Version-free on purpose, unlike the in-game entry below: this is the
+      // URL people copy out of the address bar to invite someone, and a
+      // recipient must be routed to the version the GAME'S server runs
+      // (handleUrl -> redirectToGameVersion), not pinned to whatever this
+      // page happens to be serving.
+      targetUrl = lobbyIdHidden
+        ? "/streamer-mode"
+        : ClientEnv.gamePath(lobbyId);
     }
     const currentUrl = window.location.pathname;
 
@@ -1573,6 +1683,11 @@ class Client {
     if (menuChromeIsTornDown()) {
       this.gameModeSelector?.start();
       restoreMenuChrome();
+      // The counterpart to "game-starting", and the only signal that the home
+      // page is live again without a navigation. MenuMusic tore its gesture
+      // listeners down at prestart and needs them back, or the menu theme is
+      // silent for the rest of the session.
+      document.dispatchEvent(new CustomEvent("menu-restored"));
     }
 
     if (this.joinModal.isOpen()) {
@@ -1651,7 +1766,7 @@ class Client {
   ): Promise<string | null> {
     if (
       ClientEnv.env() === GameEnv.Dev ||
-      ClientEnv.instanceId() === "desktop" ||
+      isDesktopShell() ||
       // Single-player and replays: no server to verify a token against (and
       // on the CDN replay shells Turnstile cannot load at all). Shared with
       // the desktop gate so the exemption has one definition.
@@ -1660,29 +1775,21 @@ class Client {
       return null;
     }
 
-    // Always request a new token on crazygames.
-    if (this.turnstileTokenPromise === null || crazyGamesSDK.isOnCrazyGames()) {
-      console.log("No prefetched turnstile token, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
-
-    const token = await this.turnstileTokenPromise;
-    // Clear promise so a new token is fetched next time
+    const prefetch = this.turnstileTokenPromise;
+    // Clear promise so a new token is fetched next time. Unconditional: a
+    // prefetch that rejected must not be waited on twice either.
     this.turnstileTokenPromise = null;
-    if (!token) {
-      console.log("No turnstile token");
-      return null;
-    }
 
-    const tokenTTL = 3 * 60 * 1000;
-    if (Date.now() < token.createdAt + tokenTTL) {
-      console.log("Prefetched turnstile token is valid");
-
-      return token.token;
-    } else {
-      console.log("Turnstile token expired, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
+    return resolveTurnstileToken({
+      prefetch,
+      requestFresh: getTurnstileToken,
+      // Always request a new token on crazygames.
+      forceFresh: crazyGamesSDK.isOnCrazyGames(),
+      onError: (code) =>
+        void showInGameAlert(
+          translateText("error_modal.turnstile_error", { code }),
+        ),
+    });
   }
 }
 
@@ -1732,43 +1839,26 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
-async function getTurnstileToken(): Promise<{
-  token: string;
-  createdAt: number;
-}> {
+async function getTurnstileToken(): Promise<TurnstileToken> {
   // Wait for Turnstile script to load (handles slow connections)
   let attempts = 0;
-  while (typeof window.turnstile === "undefined" && attempts < 100) {
+  while (window.turnstile === undefined && attempts < 100) {
     await new Promise((resolve) => setTimeout(resolve, 100));
     attempts++;
   }
 
-  if (typeof window.turnstile === "undefined") {
-    throw new Error("Failed to load Turnstile script");
+  const turnstile = window.turnstile;
+  if (turnstile === undefined) {
+    throw new TurnstileError(
+      TURNSTILE_LOAD_FAILED_CODE,
+      "Failed to load Turnstile script",
+    );
   }
 
-  const widgetId = window.turnstile.render("#turnstile-container", {
+  // The render/execute choreography (and why the callbacks go on render)
+  // lives in TurnstileToken.ts.
+  return requestTurnstileToken(turnstile, {
     sitekey: ClientEnv.turnstileSiteKey(),
-    size: "normal",
-    appearance: "interaction-only",
-    theme: "light",
-  });
-
-  return new Promise((resolve, reject) => {
-    window.turnstile.execute(widgetId, {
-      callback: (token: string) => {
-        window.turnstile.remove(widgetId);
-        console.log(`Turnstile token received: ${token}`);
-        resolve({ token, createdAt: Date.now() });
-      },
-      "error-callback": (errorCode: string) => {
-        window.turnstile.remove(widgetId);
-        console.error(`Turnstile error: ${errorCode}`);
-        void showInGameAlert(
-          translateText("error_modal.turnstile_error", { code: errorCode }),
-        );
-        reject(new Error(`Turnstile failed: ${errorCode}`));
-      },
-    });
+    container: "#turnstile-container",
   });
 }

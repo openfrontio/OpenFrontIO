@@ -3,6 +3,7 @@ import {
   composeVersionDisplay,
   desktopLinkGate,
   desktopQuit,
+  desktopSteamLocale,
   desktopVersion,
   requestDesktopQuit,
 } from "../src/client/DesktopShell";
@@ -184,5 +185,65 @@ describe("requestDesktopQuit", () => {
       },
     };
     expect(() => requestDesktopQuit()).not.toThrow();
+  });
+});
+
+describe("desktopSteamLocale", () => {
+  afterEach(() => {
+    window.openfrontDesktop = undefined;
+  });
+
+  it("returns the locale the shell reports", () => {
+    window.openfrontDesktop = { steamLocale: "pt-BR" };
+    expect(desktopSteamLocale()).toBe("pt-BR");
+  });
+
+  // "Not on desktop" and "Steam told the shell nothing" are deliberately the
+  // same answer: both mean nothing better than navigator.language is known,
+  // and both must leave it deciding rather than pinning the player to English.
+  it("is null off the desktop shell", () => {
+    window.openfrontDesktop = undefined;
+    expect(desktopSteamLocale()).toBeNull();
+  });
+
+  it("is null when the shell reports no locale", () => {
+    window.openfrontDesktop = { steamLocale: null };
+    expect(desktopSteamLocale()).toBeNull();
+  });
+
+  it("is null when the bridge predates the field", () => {
+    window.openfrontDesktop = {};
+    expect(desktopSteamLocale()).toBeNull();
+  });
+
+  // The value reaches the shell as a process-argv string and is about to be
+  // interpolated into an asset URL by loadLanguage, so it is validated rather
+  // than trusted for arriving from our own preload.
+  it("rejects anything that is not a language tag", () => {
+    for (const locale of [
+      "../../etc/passwd",
+      "en_US",
+      "e",
+      "en-",
+      "en US",
+      "",
+      42,
+      {},
+      // Well-shaped but not a real tag: "12" is neither a region nor a
+      // variant. Caught by getCanonicalLocales, not the shape check -- and
+      // worth a case of its own, because getClosestSupportedLang would narrow
+      // it to "en" and let it beat a valid navigator.language.
+      "en-12",
+    ]) {
+      window.openfrontDesktop = { steamLocale: locale };
+      expect(desktopSteamLocale(), String(locale)).toBeNull();
+    }
+  });
+
+  it("accepts the shapes the mapping actually emits", () => {
+    for (const locale of ["en", "fr", "zh-CN", "pt-BR", "sv-SE", "es-419"]) {
+      window.openfrontDesktop = { steamLocale: locale };
+      expect(desktopSteamLocale(), locale).toBe(locale);
+    }
   });
 });

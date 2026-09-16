@@ -50,6 +50,7 @@ import {
   GameInfo,
 } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
+import { getApiBase, getAudience } from "./ApiBase";
 import {
   getAuthHeader,
   getPlayToken,
@@ -58,6 +59,7 @@ import {
   userAuth,
 } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
+import { ensureServerList } from "./ServerList";
 
 export async function fetchPlayerById(
   playerId: string,
@@ -602,7 +604,7 @@ export async function setCreatorCode(
       return { ok: false, code: "failed" };
     }
     invalidateUserMe();
-    return { ok: true, creator: parsed.data };
+    return { ok: true, creator: parsed.data.creator };
   } catch (e) {
     console.error("setCreatorCode: request failed", e);
     return { ok: false, code: "failed" };
@@ -1854,6 +1856,7 @@ export async function openSubscriptionPortal(): Promise<string | false> {
 // default is to change nothing.
 export async function fetchLobbyListed(gameID: string): Promise<boolean> {
   try {
+    await ensureServerList();
     const res = await fetch(
       `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}`,
       { headers: { Accept: "application/json" } },
@@ -1877,6 +1880,7 @@ export async function setLobbyListed(
   listed: boolean,
 ): Promise<{ ok: true; listed: boolean } | { ok: false; error?: string }> {
   try {
+    await ensureServerList();
     const token = await getPlayToken();
     const response = await fetch(
       `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}/listing`,
@@ -1908,6 +1912,31 @@ export async function setLobbyListed(
 // (nginx in prod, the vite dev proxy locally) picks a worker, which mints a
 // self-owned id and returns it.
 export async function createLobby(): Promise<GameInfo> {
+  // A new game needs a server that takes new games on this build: ask the
+  // API (multi-server v2), falling back to the page's own server. When the
+  // list says nothing runs this build any more, creating against the page's
+  // own (by then stale) host would at best mint a lobby on a server that is
+  // going away, so stop here instead. By the time Create is clicked the
+  // lobby socket has almost always raised the "update available" prompt
+  // already; a Create that gets there first fails like any other failed
+  // request, and the caller's own failure path (re-enabling the button,
+  // clearing the share link) runs as usual.
+  //
+  // "outdated" is by construction a page that names no server of its own
+  // (docs/MultiServer.md, OPE-430): there the list is the only thing that
+  // knows where a server is, and it says there is none for this build. A
+  // page a game server rendered answers "fallback" whatever the list says
+  // about its own host, and creating against that host is right — it is
+  // running this build, because it served this page, and it is where this
+  // tab's lobby list and its session already live. That is how Create
+  // behaved before the list existed, and the signal that moves such a tab
+  // off a deployment on its way out is the lobby feed's commit compare and
+  // drain flag, not this.
+  if ((await ensureServerList()) === "outdated") {
+    throw new Error(
+      "createLobby: this build has no server; a newer version is available",
+    );
+  }
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();
@@ -1947,6 +1976,14 @@ export async function createLobby(): Promise<GameInfo> {
 export async function createNextLobby(
   previousGameID: string,
 ): Promise<GameInfo> {
+  // Nothing is caught here: a NoServerError from gameWorkerPath below
+  // propagates to the only caller (GameRightSidebar's successor-lobby
+  // button), which already catches, logs and re-enables the button — the
+  // right answer for "there is no server to create it on". No "outdated"
+  // check either, unlike createLobby: this continues an existing game on
+  // the server that game already lives on, rather than starting something
+  // new somewhere.
+  await ensureServerList();
   const token = await getPlayToken();
   const response = await fetch(
     `${ClientEnv.gameHttpBase(previousGameID)}/${ClientEnv.gameWorkerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
@@ -1966,25 +2003,10 @@ export async function createNextLobby(
   return (await response.json()) as GameInfo;
 }
 
-export function getApiBase() {
-  const domainname = getAudience();
-
-  if (domainname === "localhost") {
-    const apiDomain = process.env.API_DOMAIN;
-    if (apiDomain) {
-      return `https://${apiDomain}`;
-    }
-    return localStorage.getItem("apiHost") ?? "http://localhost:8787";
-  }
-
-  return `https://api.${domainname}`;
-}
-
-export function getAudience() {
-  // Sourced from BOOTSTRAP_CONFIG (server/desktop-injected) rather than
-  // window.location, so the desktop app (app://openfront) targets real infra.
-  return ClientEnv.jwtAudience();
-}
+// getApiBase/getAudience moved to ApiBase.ts so ServerList.ts (which this
+// module imports) can use them without a cycle; re-exported here for every
+// existing importer.
+export { getApiBase, getAudience };
 
 export async function fetchGameById(
   gameId: string,

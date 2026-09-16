@@ -49,7 +49,9 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
+import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
+import { versionedPathForMismatchedGame } from "./ServerList";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
@@ -83,6 +85,7 @@ import {
   trackGLInit,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
+import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
 import { SoundManager } from "./sound/SoundManager";
 import { themeProvider } from "./theme/ThemeProvider";
 import { GameView, PlayerView } from "./view";
@@ -357,18 +360,39 @@ export function joinLobby(
         );
         // The game's server runs a different build than this bundle. On the
         // desktop the shell updates its local overlay itself, so just say
-        // what's happening and let its update bar take it from there. On the
-        // web, fork on where the game lives: a cross-host game means OUR
-        // shell is simply a different deployment's — reloading would fetch
-        // the same wrong build, so navigate to the game's own host, whose
-        // shell serves the matching bundle (and map). An own-host game means
-        // this tab is stale (left open across a deploy): reload.
+        // what's happening and let its update bar take it from there.
+        //
+        // On the web, in order: this host's own `/v/<commit>/` page, which
+        // keeps the loaded document and the Turnstile token; else the
+        // game's host, whose shell serves the matching bundle (and map);
+        // else this tab is simply stale (left open across a deploy), so
+        // reload. See docs/MultiServer.md (OPE-471).
         if (isDesktopShell()) {
           void showInGameAlert(translateText("update_available.desktop"));
         } else {
+          const versioned = versionedPathForMismatchedGame(
+            lobbyConfig.gameID,
+            message.gitCommit,
+          );
           const r = ClientEnv.resolveGame(lobbyConfig.gameID);
-          if (r.kind === "cross") {
+          if (versioned !== null) {
+            window.location.href = versioned;
+          } else if (r.kind === "cross") {
             window.location.href = `https://${r.host}/game/${lobbyConfig.gameID}${window.location.search}`;
+          } else if (pagePin() !== null) {
+            // A pinned `/v/<commit>/` page must not reload. The pin comes
+            // from PagePin (captured at boot), not from the live pathname:
+            // updateJoinUrlForShare has already rewritten the address bar to
+            // the version-free share URL by the time any mismatch can
+            // arrive, and reading it here would take the branch below.
+            // reloadForUpdate
+            // strips the pin — right for an ordinary stale tab, fatal here:
+            // it lands on `latest`, whose handleUrl sees this same game on
+            // this same older server and pins the page straight back, one
+            // lap per click. Nothing this page can fetch is the build it
+            // needs (that is what a mismatch on a pinned page MEANS: the
+            // version's page is not being served), so say so and stop.
+            void showInGameAlert(translateText("update_available.message"));
           } else {
             showInGameAlert(translateText("update_available.message")).then(
               () => {
@@ -697,7 +721,12 @@ async function createClientGame(
   inputOverlay.style.touchAction = "none";
   document.body.appendChild(inputOverlay);
 
-  const soundManager = new SoundManager(eventBus, userSettings);
+  // Main.ts creates the mixer on page load; fall back for entry points that
+  // start a game without it (tests, embedded shells).
+  const soundManager = new SoundManager(
+    eventBus,
+    audioMixer() ?? initAudioMixer(userSettings),
+  );
   try {
     // Resolve render settings (defaults + user overrides) up front so the
     // renderer is built with the final values — no construct-with-defaults,
@@ -717,8 +746,6 @@ async function createClientGame(
 
     const graphicsListenerAbort = new AbortController();
 
-    view.setShowPatterns(userSettings.territoryPatterns());
-
     const mapLayerController = new MapLayerController(
       view,
       gameMap,
@@ -727,12 +754,6 @@ async function createClientGame(
       lobbyConfig.gameStartInfo.config.gameMapSize,
       mapLoader,
       graphicsListenerAbort.signal,
-    );
-
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
-      (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
-      { signal: graphicsListenerAbort.signal },
     );
 
     // Re-resolve names drawn on the map when the anonymous-names setting toggles
@@ -765,9 +786,23 @@ async function createClientGame(
     };
     // Re-apply render settings, then re-theme and recolor players, on a
     // graphics-override change (covers a theme switch such as colorblind mode).
+    // Flag opacity is a render setting, not visibility, so it's left out.
+    const cosmeticVisibilityKey = (): string =>
+      JSON.stringify({
+        ...userSettings.graphicsOverrides().cosmetics,
+        flagOpacity: undefined,
+      });
+    let cosmeticVisibility = cosmeticVisibilityKey();
     const onGraphicsChanged = (): void => {
       regenerateRenderSettings();
       refreshDerivedGraphics();
+      // Re-resolving every player's cosmetics is heavier than the rest, so
+      // only do it when the cosmetics visibility itself changed.
+      const nextCosmeticVisibility = cosmeticVisibilityKey();
+      if (nextCosmeticVisibility !== cosmeticVisibility) {
+        cosmeticVisibility = nextCosmeticVisibility;
+        webglBuilder.refreshCosmetics(gameView);
+      }
     };
     // No initial regenerate or terrain rebuild needed — the renderer was
     // constructed with the resolved settings above, so the terrain texture
@@ -1121,6 +1156,13 @@ export class ClientGameRunner {
   public stop() {
     this.soundManager.dispose();
     this.graphicsListenerAbort?.abort();
+    // Detach the input handler's window/canvas listeners and its EventBus
+    // subscription. Nothing else ever did, and the bus is created once per
+    // page, so a handler from a finished game kept translating keys into
+    // events that the next game receives, and joining another game without a
+    // page reload stacked a second live handler on top. Idempotent, like the
+    // disposals around it.
+    this.input.destroy();
     this.disposeRenderer?.();
     if (!this.isActive) return;
 

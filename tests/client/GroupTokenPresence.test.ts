@@ -4,9 +4,11 @@ import {
   GroupTokenTracker,
   groupTokenOf,
   loggableStartMessage,
+  presenceLobbyId,
   withGroupToken,
 } from "../../src/client/PresenceGroup";
 import { EventBus } from "../../src/core/EventBus";
+import { GameMode, GameType } from "../../src/core/game/Game";
 import {
   GroupTokenEvent,
   type ServerMessage,
@@ -206,5 +208,45 @@ describe("GroupTokenTracker", () => {
     // A real change still gets through.
     eventBus.emit(new GroupTokenEvent("T3RmaXJzdGdhbWU0"));
     expect(emitPresence).toHaveBeenCalledTimes(2);
+  });
+});
+
+// A published lobbyId is what has the shell keep a joinable shadow lobby, so
+// this rule — not the invite button — is what actually decides whether Steam's
+// native "Join Game" works. Public FFA must not be joinable (a friend joining
+// is a team); a config not yet known must not be joinable either, or the
+// URL-join and accepted-invite paths would advertise a public FFA join for
+// the beat before the first lobby_info.
+describe("presenceLobbyId", () => {
+  it("withholds the id while the config is unknown", () => {
+    expect(presenceLobbyId(undefined, GAME)).toBeUndefined();
+  });
+
+  it("withholds the id for a public FFA game", () => {
+    expect(
+      presenceLobbyId(
+        testGameConfig({
+          gameType: GameType.Public,
+          gameMode: GameMode.FFA,
+        }),
+        GAME,
+      ),
+    ).toBeUndefined();
+  });
+
+  it("advertises a public team game", () => {
+    expect(
+      presenceLobbyId(
+        testGameConfig({
+          gameType: GameType.Public,
+          gameMode: GameMode.Team,
+        }),
+        GAME,
+      ),
+    ).toBe(GAME);
+  });
+
+  it("advertises a private game", () => {
+    expect(presenceLobbyId(testGameConfig(), GAME)).toBe(GAME);
   });
 });

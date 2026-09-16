@@ -1,3 +1,4 @@
+import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
@@ -790,6 +791,92 @@ describe("Juicy target strategy - end-to-end via maybeAttack", () => {
       expect(attacks.length).toBeGreaterThan(0);
       for (const attack of attacks) {
         expect(attack.target()).toBe(rich);
+      }
+    },
+  );
+});
+
+describe("Juicy ally betrayal strategy - end-to-end via maybeAttack", () => {
+  /**
+   * Partitions the entire map between just `attacker` and `ally` - no third
+   * player, so there are no bordering enemies at all. That makes every other
+   * `attackBestTarget` strategy a guaranteed no-op, isolating `betray` as the
+   * only strategy that can possibly fire.
+   */
+  async function setupEndToEnd(difficulty: Difficulty) {
+    const testGame = await setup("big_plains", { difficulty }, [
+      new PlayerInfo("attacker", PlayerType.Nation, null, "attacker_id"),
+      new PlayerInfo("ally", PlayerType.Human, null, "ally_id"),
+    ]);
+
+    const attacker = testGame.player("attacker_id");
+    const ally = testGame.player("ally_id");
+
+    const width = testGame.map().width();
+    const height = testGame.map().height();
+    const midpoint = Math.floor(width / 2);
+
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < height; y++) {
+        const tile = testGame.ref(x, y);
+        if (!testGame.map().isLand(tile)) continue;
+        if (x < midpoint) ally.conquer(tile);
+        else attacker.conquer(tile);
+      }
+    }
+
+    expect(attacker.sharesBorderWith(ally)).toBe(true);
+
+    attacker.setTroops(1_000_000);
+    ally.setTroops(100_000); // well under the safety threshold
+
+    // Form a real alliance (two ticks, no other ticks before this) so
+    // isAlliedWith()/breakAlliance() behave normally.
+    testGame.addExecution(new AllianceRequestExecution(attacker, ally.id()));
+    testGame.executeNextTick();
+    testGame.addExecution(new AllianceRequestExecution(ally, attacker.id()));
+    testGame.executeNextTick();
+    expect(attacker.isAlliedWith(ally)).toBe(true);
+
+    const emojiBehavior = new NationEmojiBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+    );
+    const allianceBehavior = new NationAllianceBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      emojiBehavior,
+    );
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.0, // triggerRatio — always ready so strategy selection is deterministic
+      0.0, // reserveRatio
+      0.2, // expandRatio
+      allianceBehavior,
+      emojiBehavior,
+    );
+
+    return { testGame, attacker, ally, behavior };
+  }
+
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s: betrays and attacks the ally through the full maybeAttack pipeline",
+    async (difficulty) => {
+      const { testGame, attacker, ally, behavior } =
+        await setupEndToEnd(difficulty);
+
+      behavior.maybeAttack();
+      executeTicks(testGame, 1);
+
+      expect(attacker.isAlliedWith(ally)).toBe(false);
+      const attacks = attacker.outgoingAttacks();
+      expect(attacks.length).toBeGreaterThan(0);
+      for (const attack of attacks) {
+        expect(attack.target()).toBe(ally);
       }
     },
   );

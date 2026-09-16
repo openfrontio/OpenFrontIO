@@ -6,8 +6,19 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameEnv } from "../core/configuration/Config";
-import { fetchSiteColor } from "./ActiveDeployment";
+import { fetchSiteColor, shouldPollApex } from "./ActiveDeployment";
+import {
+  applyCheckinState,
+  CHECKIN_INTERVAL_MS,
+  checkinBody,
+  registeredSite,
+  sendCheckin,
+} from "./ClusterCheckin";
 import { getDescriptor } from "./DesktopRelease";
+import {
+  coordinatorUrl,
+  LobbyCoordinatorClient,
+} from "./LobbyCoordinatorClient";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { MasterLobbyService } from "./MasterLobbyService";
@@ -107,7 +118,7 @@ app.use(
 );
 
 // Apple Pay domain verification (Stripe's universal association file,
-// vendored in resources/). Apple fetches this exact path over HTTPS when the
+// vendored in resources/public/). Apple fetches this exact path over HTTPS when the
 // domain is registered in the Stripe dashboard, and it must get the raw file:
 // express.static above ignores dotfile paths (so it falls through to here)
 // and the SPA fallback below would answer with the app shell, which makes
@@ -121,7 +132,7 @@ app.get(
     res.sendFile(
       path.join(
         __dirname,
-        "../../resources/.well-known/apple-developer-merchantid-domain-association",
+        "../../resources/public/.well-known/apple-developer-merchantid-domain-association",
       ),
       // sendFile refuses dotfile path segments (".well-known") by default.
       // maxAge matters beyond browsers: nginx's proxy cache honours the
@@ -160,6 +171,33 @@ export async function startMaster() {
   process.env.INSTANCE_ID = INSTANCE_ID;
 
   log.info(`Instance ID: ${INSTANCE_ID}`);
+
+  // Join the site's shared public-lobby roster (LobbyCoordinatorClient.ts)
+  // when LOBBY_COORDINATOR=api and this server has a public host to
+  // register under, the same test as the check-in below. Started before the
+  // workers fork so the first roster normally lands before scheduling
+  // begins; until it does, and whenever it stops, the master schedules its
+  // own lobbies exactly as it does without a coordinator.
+  const hello = checkinBody(0);
+  const coordinator = coordinatorUrl(registeredSite());
+  if (coordinator !== null && hello !== null) {
+    log.info(`Joining lobby coordinator at ${coordinator}`);
+    const client = new LobbyCoordinatorClient({
+      url: coordinator,
+      apiKey: ServerEnv.apiKey(),
+      hello: {
+        letter: hello.letter,
+        host: hello.host,
+        version: hello.version,
+        numWorkers: hello.numWorkers,
+        instanceId: INSTANCE_ID,
+      },
+      handlers: lobbyService.coordinatorHandlers(),
+      log,
+    });
+    lobbyService.attachCoordinator(client);
+    client.start();
+  }
 
   // Fork workers
   for (let i = 0; i < ServerEnv.numWorkers(); i++) {
@@ -205,15 +243,50 @@ export async function startMaster() {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
 
+  // Register with the API and keep checking in (docs/MultiServer.md,
+  // "Server list v2"): the API's list is what clients read to find a
+  // server, so a server that isn't checking in isn't offered to anyone.
+  // The reply carries this server's state; it is obeyed only when
+  // CLUSTER_STATE_SOURCE=api, otherwise the apex colour poll below still
+  // decides. Local development (`npm run dev`, no SUBDOMAIN) has no public
+  // host and registers nowhere; every deployed host registers under its own
+  // site.
+  const stateSource = ServerEnv.clusterStateSource();
+  if (checkinBody(0) !== null) {
+    log.info(
+      `Checking in with ${ServerEnv.jwtIssuer()}/cluster/checkin every ${CHECKIN_INTERVAL_MS / 1000}s (state source: ${stateSource})`,
+    );
+    startPolling(async () => {
+      const body = checkinBody(lobbyService.liveGames());
+      if (body === null) return;
+      const state = await sendCheckin(body);
+      applyCheckinState(state, stateSource, (active) =>
+        lobbyService.setActive(active),
+      );
+    }, CHECKIN_INTERVAL_MS);
+  }
+
   // Behind a load balancer (blue/green), only the color the balancer
   // currently routes to should schedule public lobbies. The balancer's
   // /api/health reports the COLOR of whichever deployment answered; colors
   // are deployment-wide, so with several machines per color the poll
   // reaching a sibling — same color, different instanceId — still counts as
-  // "the live color is mine". A standalone deployment (no SITE_HOST, or
-  // SITE_HOST is our own host) is always active.
+  // "the live color is mine". A standalone deployment is always active,
+  // which now includes one whose page host merely differs from its game host
+  // (GAME_DOMAIN, docs/MultiServer.md): a one-entry cluster map has no
+  // sibling to flip to, and its page host is the static Worker, which serves
+  // no /api/health. shouldPollApex holds that whole decision, including the
+  // rule that the API being the state source stops the poll — two deciders
+  // would fight over setActive.
   const siteHost = ServerEnv.siteHost();
-  if (siteHost !== undefined && siteHost !== ServerEnv.publicHost()) {
+  if (
+    shouldPollApex(
+      stateSource,
+      siteHost,
+      ServerEnv.publicHost(),
+      Object.keys(ServerEnv.cluster()).length,
+    )
+  ) {
     log.info(`Polling https://${siteHost}/api/health for active deployment`);
     // 5s: this latency is the window after a flip where the newly-active
     // deployment isn't creating public lobbies yet (and the draining one

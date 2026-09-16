@@ -43,13 +43,15 @@ ENV=$1
 # different machines (directory keys are lowercase by convention).
 HOST=$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')
 VERSION_TAG=$3
-SUBDOMAIN=$4
+# Lowercased because browsers lowercase the page host and the API rejects a
+# site with uppercase letters, so a mixed-case name would never register.
+SUBDOMAIN=$(printf '%s' "$4" | tr '[:upper:]' '[:lower:]')
 
 # Validate subdomain - it becomes a DNS label in the Traefik Host() rule, a
 # Docker container name, and part of a path on the remote host, so hold it to the
 # RFC 1123 label rules: letters, digits and interior hyphens, 63 octets at most.
 case "$SUBDOMAIN" in
-    "" | *[!a-zA-Z0-9-]* | -* | *-)
+    "" | *[!a-z0-9-]* | -* | *-)
         echo "Error: subdomain must be a valid hostname label - letters, digits and interior hyphens only - got: '$SUBDOMAIN'"
         exit 1
         ;;
@@ -91,60 +93,155 @@ if [ -z "$DOMAIN" ]; then
     exit 1
 fi
 
+# Optional second domain for GAME traffic (docs/MultiServer.md, "Server list
+# v2" -> "Two hostnames per deployment"). A deployment has two hostnames:
+#
+#   page host: <subdomain>.<DOMAIN>       e.g. main.openfront.dev
+#   game host: <subdomain>.<GAME_DOMAIN>  e.g. main.server.openfront.dev
+#
+# The page host is what players type and what the static Worker will serve;
+# the game host is this container, reached directly for WebSockets and /api.
+# They must be separate names because the Worker sits on the page host and
+# must never proxy game traffic. On prod they already are (openfront.io vs
+# blue/green.openfront.io); GAME_DOMAIN is how a dev deployment gets the
+# same shape without inventing a per-branch page domain.
+#
+# DOMAIN keeps its meaning everywhere else: the audience (JWT, api.$DOMAIN)
+# and the page domain. Unset GAME_DOMAIN is exactly today's behaviour, both
+# hostnames collapsing back onto $DOMAIN -- which is what prod does, and
+# what dev does until the variable is set.
+GAME_DOMAIN="${GAME_DOMAIN:-}"
+# Prod ignores it outright. This is a dev-only mechanism: on prod the page and
+# the game already have distinct names (openfront.io vs blue/green.openfront.io),
+# so there is nothing for it to fix there. And it arrives from a REPOSITORY-level
+# GitHub variable, which every workflow in the repo inherits the moment it is
+# set — including the release jobs. Honouring it on prod would compute
+# blue.server.openfront.io, which is in no cluster map and resolves nowhere, and
+# the deploy would fail its own self-match. Ignoring it here is the guarantee;
+# "prod probably won't set it" is not one.
+if [ "$ENV" = "prod" ] && [ -n "$GAME_DOMAIN" ]; then
+    echo "Ignoring GAME_DOMAIN='${GAME_DOMAIN}' on prod: its page and game hosts are already distinct names"
+    GAME_DOMAIN=""
+fi
+# It lands verbatim inside a Traefik Host(`...`) rule and in a DNS name, so
+# hold it to hostname characters. Loose on purpose — this is a typo guard and a
+# shell-injection guard, not a validator for what DNS will actually resolve.
+if [ -n "$GAME_DOMAIN" ]; then
+    case "$GAME_DOMAIN" in
+        *[!a-zA-Z0-9.-]* | .* | -* | *. | *-)
+            echo "Error: GAME_DOMAIN must be a hostname - letters, digits, dots and hyphens, no leading or trailing dot or hyphen - got: '$GAME_DOMAIN'"
+            exit 1
+            ;;
+    esac
+    echo "Using game domain: $GAME_DOMAIN (page domain: $DOMAIN)"
+fi
+
 # Cluster map (docs/MultiServer.md). Three jobs here:
 #   1. jq -c compacts whatever formatting the CI variable carries into one
 #      unspaced line — the remote env file is loaded word-split (update.sh's
 #      `export $(... | xargs)`), so any internal whitespace would shatter the
 #      assignment and abort the deploy. This also fails fast on invalid JSON.
-#   2. A shared map applies only to the deployments it names. Outside prod, a
-#      host with no entry (feature branches, nightly) falls back to the
-#      synthesized single-entry map below instead of failing the server's
-#      boot self-match — so one repo-level CLUSTER_JSON can describe the
-#      load-balanced blue/green .dev pair while every other deploy stays
-#      standalone. Prod is strict both ways: it always requires an explicit
-#      map that names this host, because a synthesized entry would mint game
-#      ids under a letter the real fleet map does not own.
+#   2. A shared map applies only to the deployments it names. This deployment
+#      is looked up under two names, machine-scoped first:
+#        <subdomain>.<machine>.<game domain>   blue.staging2.server.openfront.dev
+#        <subdomain>.<game domain>             blue.server.openfront.dev
+#      The first is how one colour spans machines: every box carries its own
+#      blue and green, and the machine sits in the hostname, so a box is one
+#      wildcard DNS record and two cluster entries. The second is the
+#      standalone shape (main, a branch preview, prod's blue.openfront.io).
+#      Whichever matches is the GAME HOST — the name clients open sockets to
+#      — and it travels in the env file as GAME_HOST so the container
+#      (Traefik rule, nginx self-match) and the server (ServerEnv.publicHost)
+#      never re-derive it. Outside prod, a host under neither name (feature
+#      branches, nightly) falls back to the synthesized single-entry map
+#      below instead of failing the server's boot self-match — so one
+#      repo-level CLUSTER_JSON can describe the .dev fleet while every other
+#      deploy stays standalone. Prod is strict both ways: it always requires
+#      an explicit map that names this host, because a synthesized entry
+#      would mint game ids under a letter the real fleet map does not own.
 #   3. Sharing a multi-entry map means being behind the load balancer, so
 #      that also switches on the drain poll: SITE_HOST defaults to the apex
 #      ($DOMAIN) for deployments in a map with siblings (release.yml also
 #      sets it explicitly, but only for the prod blue/green jobs; this
-#      covers the .dev pair). One map = one balanced fleet, so a standalone
+#      covers the .dev fleet). One map = one balanced fleet, so a standalone
 #      prod deployment (beta) gets its OWN single-entry map, never an entry
 #      in the fleet's — and a single-entry map keeps SITE_HOST empty, like
 #      synthesized ones, staying permanently active rather than polling an
 #      apex that answers with some other fleet's identity and wrongly
 #      draining itself.
-FQDN="${SUBDOMAIN}.${DOMAIN}"
+#
+# A machine-scoped deployment also carries the machine in its container name
+# (DEPLOYMENT_NAME, update.sh): the same slot on two machines must not
+# collide when the "machines" are two names for one box, which is how
+# staging rehearses a multi-machine fleet. Everything else keeps the bare
+# subdomain, so no existing container is renamed.
+#
+# The markers below delimit the block tests/DeployGameHost.test.ts extracts
+# and runs against a table of deployments — the rest of this script talks to
+# ssh and cannot be executed in a test, but this decision can. Keep them in
+# place.
+# --- BEGIN game host (tested) ---
+GAME_HOST="${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}"
+MACHINE_GAME_HOST="${SUBDOMAIN}.${HOST}.${GAME_DOMAIN:-$DOMAIN}"
+DEPLOYMENT_NAME="$SUBDOMAIN"
 if [ -n "${CLUSTER_JSON:-}" ]; then
     CLUSTER_JSON=$(printf '%s' "$CLUSTER_JSON" | jq -c .)
-    if printf '%s' "$CLUSTER_JSON" | jq -e --arg host "$FQDN" 'any(.[]; .host == $host)' > /dev/null; then
+    cluster_has_host() {
+        printf '%s' "$CLUSTER_JSON" | jq -e --arg host "$1" 'any(.[]; .host == $host)' > /dev/null
+    }
+    if cluster_has_host "$MACHINE_GAME_HOST"; then
+        GAME_HOST="$MACHINE_GAME_HOST"
+        DEPLOYMENT_NAME="${HOST}-${SUBDOMAIN}"
+        echo "Game host ${GAME_HOST} (machine-scoped cluster entry)"
+    elif cluster_has_host "$GAME_HOST"; then
+        echo "Game host ${GAME_HOST} (cluster entry)"
+    elif [ "$ENV" != "prod" ]; then
+        echo "Neither ${MACHINE_GAME_HOST} nor ${GAME_HOST} is in provided CLUSTER_JSON; ignoring the shared map"
+        CLUSTER_JSON=""
+    else
+        echo "Error: prod host has no entry in CLUSTER_JSON (tried ${MACHINE_GAME_HOST} and ${GAME_HOST})"
+        exit 1
+    fi
+    if [ -n "$CLUSTER_JSON" ]; then
         # Presence alone can't catch a mistyped DEPLOY_TARGETS entry that
         # points a blue leg at a green cluster host, so the color jobs pass
         # the color they are rolling out and we require the entry to match.
-        if [ -n "${EXPECTED_COLOR:-}" ] && ! printf '%s' "$CLUSTER_JSON" | jq -e --arg host "$FQDN" --arg color "$EXPECTED_COLOR" 'any(.[]; .host == $host and .color == $color)' > /dev/null; then
-            echo "Error: ${FQDN} is in CLUSTER_JSON but not with color '${EXPECTED_COLOR}' - refusing to deploy onto another color's host"
+        if [ -n "${EXPECTED_COLOR:-}" ] && ! printf '%s' "$CLUSTER_JSON" | jq -e --arg host "$GAME_HOST" --arg color "$EXPECTED_COLOR" 'any(.[]; .host == $host and .color == $color)' > /dev/null; then
+            echo "Error: ${GAME_HOST} is in CLUSTER_JSON but not with color '${EXPECTED_COLOR}' - refusing to deploy onto another color's host"
             exit 1
         fi
         if printf '%s' "$CLUSTER_JSON" | jq -e 'length > 1' > /dev/null; then
             SITE_HOST="${SITE_HOST:-$DOMAIN}"
         fi
-    elif [ "$ENV" != "prod" ]; then
-        echo "Host ${FQDN} not in provided CLUSTER_JSON; ignoring the shared map"
-        CLUSTER_JSON=""
-    else
-        echo "Error: prod host ${FQDN} has no entry in CLUSTER_JSON"
-        exit 1
     fi
 fi
 if [ -z "${CLUSTER_JSON:-}" ]; then
     if [ "$ENV" != "prod" ]; then
-        CLUSTER_JSON=$(jq -nc --arg host "$FQDN" \
+        CLUSTER_JSON=$(jq -nc --arg host "$GAME_HOST" \
             '{a: {host: $host, color: "blue", numWorkers: 2}}')
-        echo "CLUSTER_JSON not set; synthesized single-entry map for ${FQDN}"
+        echo "CLUSTER_JSON not set; synthesized single-entry map for ${GAME_HOST}"
     else
         echo "Error: CLUSTER_JSON must be set for prod deploys"
         exit 1
     fi
+fi
+# A standalone deployment with a separate game domain still has a page host,
+# and it is not GAME_HOST: the page lives on <subdomain>.<DOMAIN> (the Worker)
+# while the container answers on <subdomain>.<GAME_DOMAIN>. Without this the
+# server would register its game host as its own site and upload the page
+# assets under it, and the Worker serving the page host would find nothing.
+# With GAME_DOMAIN unset this is a no-op, so standalone deploys keep an empty
+# SITE_HOST exactly as today.
+if [ -n "$GAME_DOMAIN" ] && [ -z "${SITE_HOST:-}" ]; then
+    SITE_HOST="${SUBDOMAIN}.${DOMAIN}"
+fi
+# --- END game host (tested) ---
+
+# Hand the resolved game host back to the workflow (deploy.yml, "Wait for
+# deployment to start" polls it): a machine-scoped host cannot be recomputed
+# there without repeating the lookup above. No-op outside GitHub Actions.
+if [ -n "${GITHUB_ENV:-}" ]; then
+    echo "GAME_HOST=${GAME_HOST}" >> "$GITHUB_ENV"
 fi
 
 # Resolve the machine name to its SSH target. Two sources, directory first:
@@ -214,6 +311,7 @@ print_header "DEPLOYMENT INFORMATION"
 echo "Environment: ${ENV}"
 echo "Host: ${HOST}"
 echo "Subdomain: ${SUBDOMAIN}"
+echo "Game host: ${GAME_HOST}"
 echo "Image: $GHCR_IMAGE"
 echo "Target Server: $SERVER_HOST"
 
@@ -243,16 +341,31 @@ cat > $ENV_FILE << 'EOL'
 GAME_ENV=$ENV
 ENV=$ENV
 HOST=$HOST
+# MACHINE is HOST under a name that cannot be misread: in cluster vocabulary a
+# host is a game hostname (blue.openfront.io), while this is the box a
+# container runs on (falk2, nbg2, staging). Check-in reports it so the registry
+# can hold a site to one open server per machine (OPE-455). Kept free of
+# quotes, backticks and dollar signs: this heredoc is written inside the
+# double-quoted ssh command above, so the local shell reads these lines too.
+MACHINE=$HOST
 GHCR_IMAGE=$GHCR_IMAGE
 GHCR_TOKEN=$GHCR_TOKEN
 API_KEY=$API_KEY
 ADMIN_BOT_API_KEY=$ADMIN_BOT_API_KEY
 DOMAIN=$DOMAIN
 SUBDOMAIN=$SUBDOMAIN
+GAME_DOMAIN=$GAME_DOMAIN
+# The game host the cluster map resolved above, and the container name
+# suffix that goes with it (machine-qualified for a machine-scoped host).
+GAME_HOST=$GAME_HOST
+DEPLOYMENT_NAME=$DEPLOYMENT_NAME
 SITE_HOST=$SITE_HOST
 CDN_BASE=$CDN_BASE
 CLUSTER_JSON=$CLUSTER_JSON
+CLUSTER_STATE_SOURCE=$CLUSTER_STATE_SOURCE
+LOBBY_COORDINATOR=$LOBBY_COORDINATOR
 TURNSTILE_SITE_KEY=$TURNSTILE_SITE_KEY
+STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY
 OTEL_EXPORTER_OTLP_ENDPOINT=$OTEL_EXPORTER_OTLP_ENDPOINT
 OTEL_AUTH_HEADER=$OTEL_AUTH_HEADER
 EOL

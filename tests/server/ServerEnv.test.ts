@@ -90,6 +90,28 @@ describe("ServerEnv.clusterSelf", () => {
     stubCluster("red", "openfront.io");
     expect(() => ServerEnv.numWorkers()).toThrow(/no entry in CLUSTER_JSON/);
   });
+
+  // Cluster entries name the hosts clients open sockets to, so a deployment
+  // with a separate GAME_DOMAIN must find itself by its GAME host, never by
+  // the page host the Worker serves.
+  test("resolves by the game host when GAME_DOMAIN is set", () => {
+    vi.stubEnv(
+      "CLUSTER_JSON",
+      JSON.stringify({
+        a: {
+          host: "main.server.openfront.dev",
+          color: "blue",
+          numWorkers: 2,
+        },
+        b: { host: "main.openfront.dev", color: "green", numWorkers: 9 },
+      }),
+    );
+    vi.stubEnv("SUBDOMAIN", "main");
+    vi.stubEnv("DOMAIN", "openfront.dev");
+    vi.stubEnv("GAME_DOMAIN", "server.openfront.dev");
+    expect(ServerEnv.instanceLetter()).toBe("a");
+    expect(ServerEnv.numWorkers()).toBe(2);
+  });
 });
 
 describe("ServerEnv game id minting", () => {
@@ -210,6 +232,56 @@ describe("ServerEnv.publicHost", () => {
     vi.stubEnv("SUBDOMAIN", "");
     vi.stubEnv("DOMAIN", "localhost");
     expect(ServerEnv.publicHost()).toBeUndefined();
+  });
+
+  // With a separate game domain the deployment has two names: the page host
+  // (<subdomain>.<DOMAIN>, the static Worker) and the game host, which is
+  // what publicHost means — sockets and /api come straight here.
+  test("uses GAME_DOMAIN when one is set", () => {
+    vi.stubEnv("SUBDOMAIN", "main");
+    vi.stubEnv("DOMAIN", "openfront.dev");
+    vi.stubEnv("GAME_DOMAIN", "server.openfront.dev");
+    expect(ServerEnv.publicHost()).toBe("main.server.openfront.dev");
+    expect(ServerEnv.gameDomain()).toBe("server.openfront.dev");
+  });
+
+  test("falls back to DOMAIN when GAME_DOMAIN is unset", () => {
+    vi.stubEnv("SUBDOMAIN", "main");
+    vi.stubEnv("DOMAIN", "openfront.dev");
+    expect(ServerEnv.publicHost()).toBe("main.openfront.dev");
+    expect(ServerEnv.gameDomain()).toBeUndefined();
+  });
+
+  // deploy.sh resolves the game host from the cluster map and writes it
+  // through as GAME_HOST. A machine-scoped entry — the machine in the
+  // hostname so one colour can span boxes — is not derivable from SUBDOMAIN
+  // and GAME_DOMAIN, so the written value wins over the derivation.
+  test("prefers GAME_HOST when deploy.sh resolved one", () => {
+    vi.stubEnv("SUBDOMAIN", "blue");
+    vi.stubEnv("DOMAIN", "openfront.dev");
+    vi.stubEnv("GAME_DOMAIN", "server.openfront.dev");
+    vi.stubEnv("GAME_HOST", "blue.staging2.server.openfront.dev");
+    expect(ServerEnv.publicHost()).toBe("blue.staging2.server.openfront.dev");
+  });
+
+  test("treats an empty GAME_HOST as unset", () => {
+    vi.stubEnv("SUBDOMAIN", "main");
+    vi.stubEnv("DOMAIN", "openfront.dev");
+    vi.stubEnv("GAME_DOMAIN", "server.openfront.dev");
+    vi.stubEnv("GAME_HOST", "");
+    expect(ServerEnv.publicHost()).toBe("main.server.openfront.dev");
+  });
+
+  // An empty repo variable is how GitHub delivers "not set", and deploy.sh
+  // writes GAME_DOMAIN= into the env file unconditionally, so empty must
+  // read exactly like absent or every prod container would try to serve
+  // itself on a bare subdomain.
+  test("treats an empty GAME_DOMAIN as unset", () => {
+    vi.stubEnv("SUBDOMAIN", "blue");
+    vi.stubEnv("DOMAIN", "openfront.io");
+    vi.stubEnv("GAME_DOMAIN", "");
+    expect(ServerEnv.publicHost()).toBe("blue.openfront.io");
+    expect(ServerEnv.gameDomain()).toBeUndefined();
   });
 });
 

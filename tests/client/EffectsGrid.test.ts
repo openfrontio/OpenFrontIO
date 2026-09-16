@@ -248,8 +248,8 @@ describe("EffectsGrid", () => {
     const tab = grid.querySelector<HTMLButtonElement>(
       "button[class*='-mb-px']",
     )!;
-    // Matches the o-modal tab bar (px-4 py-3 text-sm font-bold) and stays on
-    // one line, so the nested bar is neither bolder nor taller than its parent.
+    // Matches the o-modal typography while allowing long translated labels
+    // to wrap within their buttons.
     for (const token of [
       "px-4",
       "py-3",
@@ -257,7 +257,7 @@ describe("EffectsGrid", () => {
       "font-bold",
       "uppercase",
       "tracking-wider",
-      "whitespace-nowrap",
+      "whitespace-normal",
     ]) {
       expect(tab.classList.contains(token)).toBe(true);
     }

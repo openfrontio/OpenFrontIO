@@ -10,6 +10,9 @@ import {
   DEFAULT_STATS_COLUMNS,
   StatsTableKind,
 } from "../../client/StatsConstants";
+// DesktopShell.ts imports nothing, so this cannot introduce an import cycle
+// (verified with madge: 58 cycles before and after, none involving it).
+import { isDesktopShell } from "../../client/DesktopShell";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
@@ -56,6 +59,112 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
 }
 
 export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
+
+/**
+ * Mixer channels. Category is a pure function of the cue name (categoryOf in
+ * client/sound/Sounds.ts); nothing chooses a channel at the call site.
+ */
+export type AudioCategory =
+  | "master"
+  | "music"
+  | "effects"
+  | "alerts"
+  | "ambience"
+  | "interface";
+
+const AUDIO_DEFAULTS: Record<AudioCategory, number> = {
+  // Not 1.0, in answer to the "too loud on desktop" reports. perceptualGain
+  // squares the slider position, so the cut is twice what the number reads
+  // as: 0.9 is -0.9 dB on the handle and -1.8 dB by the time it is heard.
+  //
+  // Desktop is where it is felt, because that is the platform this default
+  // actually applies on (see defaultMasterVolume), but it is not a
+  // desktop-only value: it is also where the web carve-out lands a player
+  // who opts in, and the two should agree about how loud "default" is.
+  master: 0.9,
+  music: 0.5,
+  effects: 0.7,
+  alerts: 0.8,
+  ambience: 0.4,
+  interface: 0.5,
+};
+
+// Read-through, not a migration pass: a category with no key of its own
+// inherits the value the player had already chosen under the old two-slider
+// scheme, so splitting effects into four channels doesn't reset three of them.
+// The legacy keys are left in place and simply stop being written.
+// Channels the single old "sound effects" slider used to cover.
+const SPLIT_FROM_SOUND_EFFECTS: readonly AudioCategory[] = [
+  "effects",
+  "alerts",
+  "ambience",
+  "interface",
+];
+
+function clampVolume(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+const AUDIO_CHANNELS = [
+  "master",
+  "music",
+  "effects",
+  "alerts",
+  "ambience",
+  "interface",
+] as const;
+
+/** Everything "reset to defaults" clears, so the read-through sees a clean slate. */
+const AUDIO_RESET_KEYS: readonly string[] = [
+  ...AUDIO_CHANNELS.map((category) => `settings.audio.${category}`),
+  "settings.audio.muteOnBlur",
+  "settings.audio.alertsWhenUnfocused",
+  // The legacy keys too: leaving them would have the read-through hand the
+  // old two-slider values straight back, which is not "defaults".
+  "settings.backgroundMusicVolume",
+  "settings.soundEffectsVolume",
+];
+
+/**
+ * Bumped to force every existing player back to the platform defaults once.
+ *
+ * Version 1 is the new audio delivery itself. The read-through in
+ * audioVolume() below was meant to carry an existing player's two old sliders
+ * across, but it only carries the channels those sliders covered: a player who
+ * had ever dragged ONE of them stored a key, which satisfies the master
+ * carve-out in defaultMasterVolume() -- so master resolves to audible -- while
+ * the four channels the other slider never covered fall through to the new
+ * defaults. That is a web player who opted into music years ago now hearing
+ * the entire new cue layer at full level, having opted into none of it.
+ *
+ * A reset rather than a narrower rule because the stored state cannot say
+ * which it is: "dragged the music slider and left effects alone" and "dragged
+ * the music slider and never had the choice" are the same two keys. Clearing
+ * everything lets the platform default answer instead, which on the web is
+ * silence until the player asks otherwise.
+ *
+ * The cost is that choices already made in the new Audio tab go with it.
+ * Deliberate, and the reason this is version-stamped rather than repeated:
+ * whatever the player picks after the reset is theirs and survives.
+ */
+const AUDIO_RESET_VERSION = 1;
+const AUDIO_RESET_VERSION_KEY = "settings.audio.resetVersion";
+
+/** Every key that means "this player has chosen an audio volume before". */
+const AUDIO_VOLUME_KEYS: readonly string[] = [
+  "settings.backgroundMusicVolume",
+  "settings.soundEffectsVolume",
+  ...AUDIO_CHANNELS.map((category) => `settings.audio.${category}`),
+];
+
+const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
+  music: "settings.backgroundMusicVolume",
+  effects: "settings.soundEffectsVolume",
+  alerts: "settings.soundEffectsVolume",
+  ambience: "settings.soundEffectsVolume",
+  interface: "settings.soundEffectsVolume",
+};
 /**
  * Storage key for the player's selected territory cosmetic. Stores either
  * `"pattern:<name>[:<palette>]"` or `"skin:<name>"` — patterns and skins are
@@ -293,10 +402,6 @@ export class UserSettings {
     return this.getBool("settings.leftClickOpensMenu", false);
   }
 
-  territoryPatterns() {
-    return this.getBool("settings.territoryPatterns", true);
-  }
-
   goToPlayer() {
     return this.getBool("settings.goToPlayer", true);
   }
@@ -364,10 +469,6 @@ export class UserSettings {
 
   toggleCursorCostLabel() {
     this.setBool("settings.cursorCostLabel", !this.cursorCostLabel());
-  }
-
-  toggleTerritoryPatterns() {
-    this.setBool("settings.territoryPatterns", !this.territoryPatterns());
   }
 
   toggleGoToPlayer() {
@@ -700,12 +801,156 @@ export class UserSettings {
     this.setString(STATS_COLUMNS_KEYS[kind], JSON.stringify(ids));
   }
 
-  backgroundMusicVolume(): number {
-    return this.getFloat("settings.backgroundMusicVolume", 0);
+  /**
+   * Channel volume, 0-1. Falls back to the legacy key before the default, so
+   * an existing player keeps the level they chose. A stored 0 is respected:
+   * the only writer is a slider drag, so 0 is always a deliberate choice and
+   * never means "unset".
+   */
+  /**
+   * What master falls back to with nothing stored for it.
+   *
+   * The desktop shell is a game the player deliberately launched, so it starts
+   * audible. The web build starts silent, matching main today — both of the
+   * old sliders defaulted to 0, and audio that starts by itself on the web is
+   * bad manners besides.
+   *
+   * The carve-out: master has no legacy key of its own, so defaulting it to 0
+   * would silence a returning player who had deliberately set the old
+   * sliders. If any audio value is stored at all, master falls back to
+   * AUDIO_DEFAULTS.master and that player keeps hearing what they chose.
+   *
+   * Named rather than quoted, here and in setAudioVolume below, so the two
+   * cannot drift apart the next time the default moves.
+   */
+  private defaultMasterVolume(): number {
+    if (isDesktopShell()) return AUDIO_DEFAULTS.master;
+    const chosenBefore = AUDIO_VOLUME_KEYS.some(
+      (key) => this.getCached(key) !== null,
+    );
+    return chosenBefore ? AUDIO_DEFAULTS.master : 0;
   }
 
+  audioVolume(category: AudioCategory): number {
+    const legacyKey = AUDIO_LEGACY_KEY[category];
+    // Only master is platform-dependent; every channel default is the same
+    // everywhere, and the mixer is identical on both.
+    const base =
+      category === "master"
+        ? this.defaultMasterVolume()
+        : AUDIO_DEFAULTS[category];
+    const fallback =
+      legacyKey === undefined ? base : this.getFloat(legacyKey, base);
+    // Clamp on read as well as on write: the legacy keys were never bounded,
+    // so a stored "1.5" would otherwise reach the slider as 150.
+    return clampVolume(this.getFloat(`settings.audio.${category}`, fallback));
+  }
+
+  setAudioVolume(category: AudioCategory, volume: number): void {
+    // Writing any channel can flip the web master carve-out from 0 to
+    // AUDIO_DEFAULTS.master (see defaultMasterVolume): the player now has a
+    // stored audio value. Nothing else would announce that, so the mixer
+    // would sit at master 0 — a silent game — while the tab showed the
+    // default.
+    const masterBefore = this.audioVolume("master");
+    this.setFloat(`settings.audio.${category}`, clampVolume(volume));
+    if (category === "master") return;
+    // A stored master is authoritative; the carve-out cannot apply.
+    if (this.getCached("settings.audio.master") !== null) return;
+    const masterAfter = this.audioVolume("master");
+    if (masterAfter !== masterBefore) {
+      this.emitChange("settings.audio.master", String(masterAfter));
+    }
+  }
+
+  muteOnBlur(): boolean {
+    // Off by default (Josh, 11 Sept 2026): the game keeps playing when the
+    // window loses focus unless the player asks otherwise. alertsWhenUnfocused
+    // stays on, since it only applies once this is turned on.
+    return this.getBool("settings.audio.muteOnBlur", false);
+  }
+
+  setMuteOnBlur(value: boolean): void {
+    this.setBool("settings.audio.muteOnBlur", value);
+  }
+
+  alertsWhenUnfocused(): boolean {
+    return this.getBool("settings.audio.alertsWhenUnfocused", true);
+  }
+
+  /**
+   * Back to the fresh-install state for this platform: every stored audio key
+   * is dropped, including the legacy pair, so the defaults and the master
+   * carve-out resolve against nothing.
+   *
+   * The change events carry the value each key now *resolves to*, not null.
+   * The mixer's listener parses `detail` as a number and ignores NaN, so a
+   * null payload would leave it playing at the old volumes while the tab
+   * showed the new ones.
+   */
+  resetAudio(): void {
+    for (const key of AUDIO_RESET_KEYS) {
+      this.removeCached(key, false);
+    }
+    for (const category of AUDIO_CHANNELS) {
+      this.emitChange(
+        `settings.audio.${category}`,
+        String(this.audioVolume(category)),
+      );
+    }
+    this.emitChange("settings.audio.muteOnBlur", String(this.muteOnBlur()));
+    this.emitChange(
+      "settings.audio.alertsWhenUnfocused",
+      String(this.alertsWhenUnfocused()),
+    );
+  }
+
+  /**
+   * Runs resetAudio() once per player, on every platform, the first time a
+   * build carrying a new AUDIO_RESET_VERSION is loaded. See that constant for
+   * why the reset exists.
+   *
+   * Idempotent by the stamp, not by a flag in memory: the stamp is written
+   * whether or not there was anything to clear, so a fresh install spends the
+   * version without a reset it did not need and a returning player is reset
+   * exactly once however many times the page reloads.
+   *
+   * The stamp is written LAST. A throw anywhere in resetAudio -- localStorage
+   * full, or unavailable in a hardened browser -- then leaves the version
+   * unspent and the next load tries again, rather than recording a reset that
+   * did not happen.
+   *
+   * @returns whether this call performed the reset.
+   */
+  resetAudioOnce(): boolean {
+    const raw = this.getCached(AUDIO_RESET_VERSION_KEY);
+    // Number, not parseInt: parseInt stops at the first character it cannot
+    // use, so "1-corrupt" reads as 1 and skips a reset that has never run.
+    // A stamp is a whole non-negative number or it is not a stamp.
+    const stamped = raw === null ? Number.NaN : Number(raw);
+    // The fallback covers "never stamped" and anything this build cannot
+    // read; either way the reset has not happened here.
+    const applied = Number.isSafeInteger(stamped) && stamped >= 0 ? stamped : 0;
+    if (applied >= AUDIO_RESET_VERSION) return false;
+    this.resetAudio();
+    // No change event: nothing listens for the stamp, and resetAudio has
+    // already announced every value that actually moved.
+    this.setCached(AUDIO_RESET_VERSION_KEY, String(AUDIO_RESET_VERSION), false);
+    return true;
+  }
+
+  setAlertsWhenUnfocused(value: boolean): void {
+    this.setBool("settings.audio.alertsWhenUnfocused", value);
+  }
+
+  /** @deprecated use audioVolume("music"). */
+  backgroundMusicVolume(): number {
+    return this.audioVolume("music");
+  }
+
+  /** @deprecated use setAudioVolume("music", v). */
   setBackgroundMusicVolume(volume: number): void {
-    this.setFloat("settings.backgroundMusicVolume", volume);
+    this.setAudioVolume("music", volume);
   }
 
   // What % attack ratio increments per click/scroll
@@ -844,11 +1089,23 @@ export class UserSettings {
     }
   }
 
+  /** @deprecated use audioVolume("effects"). */
   soundEffectsVolume(): number {
-    return this.getFloat("settings.soundEffectsVolume", 0);
+    return this.audioVolume("effects");
   }
 
+  /**
+   * @deprecated use setAudioVolume("effects", v).
+   *
+   * Writes every channel that split out of the old "sound effects" slider,
+   * not just effects. Until the Audio tab ships there is one slider for all
+   * four, and writing only effects would leave clicks, alerts and ambience
+   * stuck at the inherited value with no control that moves them — a player
+   * muting sound effects would still hear them.
+   */
   setSoundEffectsVolume(volume: number): void {
-    this.setFloat("settings.soundEffectsVolume", volume);
+    for (const category of SPLIT_FROM_SOUND_EFFECTS) {
+      this.setAudioVolume(category, volume);
+    }
   }
 }

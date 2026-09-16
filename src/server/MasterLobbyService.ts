@@ -13,6 +13,13 @@ import {
   MasterUpdateGame,
   WorkerMessageSchema,
 } from "./IPCBridgeSchema";
+import {
+  CoordinatorCreateGame,
+  CoordinatorHandlers,
+  CoordinatorRoster,
+  CoordinatorUpdateLobby,
+  LobbyCoordinatorClient,
+} from "./LobbyCoordinatorClient";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
@@ -34,6 +41,8 @@ export class MasterLobbyService {
   private readonly workers = new Map<number, Worker>();
   // Worker id => the lobbies it owns.
   private readonly workerLobbies = new Map<number, InternalGameInfo[]>();
+  // Worker id => games it last reported running (lobbies included).
+  private readonly workerLiveGames = new Map<number, number>();
   private readonly readyWorkers = new Set<number>();
   // gameID => consecutive broadcast cycles a hosted lobby has lost the
   // per-creator dedup or overflowed the cluster-wide cap. Losing once can be
@@ -46,6 +55,28 @@ export class MasterLobbyService {
   // finishes the games it has and stops scheduling public lobbies, so nobody
   // can farm empty games on the deployment that's being retired.
   private active = true;
+
+  // Two modes (infra docs/lobby-coordinator.md, "The master: two modes"):
+  //
+  //   coordinated: the site's lobby coordinator holds one roster for every
+  //     master on this build. It decides which lobby counts down and which
+  //     server creates the next one; this master obeys createGame /
+  //     updateLobby and feeds workers the coordinator's roster.
+  //   local: today's single-server behaviour — schedule over own workers,
+  //     advertise own lobbies only.
+  //
+  // Mode is a function of one thing: has a roster arrived in the last
+  // COORDINATOR_STALE_MS. Not "is the socket open" — a socket can be open and
+  // dead. Without a coordinator attached (LOBBY_COORDINATOR unset, local
+  // dev) the master is local forever and this code path is today's, byte for
+  // byte on the wire.
+  private coordinator: LobbyCoordinatorClient | null = null;
+  private coordinated = false;
+  private roster: CoordinatorRoster | null = null;
+  // Delists the coordinator asked for, forwarded on the next broadcast. A
+  // set rather than the roster's own field so a roster that arrives twice
+  // between broadcasts does not lose the first one's delists.
+  private readonly pendingDelist = new Set<string>();
 
   constructor(
     private playlist: MapPlaylist,
@@ -69,6 +100,11 @@ export class MasterLobbyService {
           break;
         case "lobbyList":
           this.workerLobbies.set(workerId, this.validLobbies(msg.lobbies));
+          this.workerLiveGames.set(workerId, msg.liveGames ?? 0);
+          // The client coalesces: at most one report a second, plus a
+          // heartbeat. Every change is offered so a numClients-only change
+          // still reaches the site roster within a second.
+          this.coordinator?.report(this.ownLobbies(), this.liveGames());
           break;
       }
     });
@@ -95,7 +131,16 @@ export class MasterLobbyService {
   removeWorker(workerId: number) {
     this.workers.delete(workerId);
     this.workerLobbies.delete(workerId);
+    this.workerLiveGames.delete(workerId);
     this.readyWorkers.delete(workerId);
+  }
+
+  // Games running on this server, summed over the workers' last reports.
+  // Reported to the API at check-in (ClusterCheckin.ts).
+  liveGames(): number {
+    let total = 0;
+    for (const n of this.workerLiveGames.values()) total += n;
+    return total;
   }
 
   isHealthy(): boolean {
@@ -103,6 +148,93 @@ export class MasterLobbyService {
     // This allows for some leeway if a worker crashes.
     const minWorkers = Math.max(ServerEnv.numWorkers() / 2, 1);
     return this.started && this.readyWorkers.size >= minWorkers;
+  }
+
+  /**
+   * Join the site's shared roster. The client owns the socket; this service
+   * owns what a roster or a command means. Attach before workers are ready
+   * so a coordinated master never schedules locally at boot: scheduling only
+   * starts once all workers are ready, by which time the socket has normally
+   * delivered a roster.
+   */
+  attachCoordinator(client: LobbyCoordinatorClient) {
+    this.coordinator = client;
+  }
+
+  coordinatorHandlers(): CoordinatorHandlers {
+    return {
+      onRoster: (roster) => this.handleRoster(roster),
+      onCreateGame: (msg) => {
+        this.handleCoordinatorCreate(msg).catch((error) => {
+          this.log.error("coordinator createGame failed:", error);
+        });
+      },
+      onUpdateLobby: (msg) => this.handleCoordinatorUpdate(msg),
+    };
+  }
+
+  private handleRoster(roster: CoordinatorRoster) {
+    this.roster = roster;
+    for (const gameID of roster.delistGameIDs) this.pendingDelist.add(gameID);
+  }
+
+  // "You create the next lobby of this type." The coordinator only asks
+  // masters the registry reports open; the active check is belt and braces.
+  // Before all workers are ready the create is refused too: the
+  // coordinator's pending slot expires in 10s and goes to another server.
+  // recentMaps (what the site just played) is not yet fed to the playlist —
+  // its no-consecutive-repeat rule stays per server for now.
+  private async handleCoordinatorCreate(msg: CoordinatorCreateGame) {
+    if (!this.active || !this.started) {
+      this.log.info(
+        `refusing coordinator createGame (${msg.publicGameType}): ${
+          this.active ? "workers not ready" : "deployment inactive"
+        }`,
+      );
+      return;
+    }
+    this.sendMessageToWorker({
+      type: "createGame",
+      gameID: ServerEnv.generateGameId(),
+      gameConfig: await this.playlist.gameConfig(msg.publicGameType),
+      publicGameType: msg.publicGameType,
+    } satisfies MasterCreateGame);
+  }
+
+  // The countdown for one of this master's lobbies. The coordinator sends it
+  // to the owner; a foreign id would hash to one of our workers anyway, so
+  // check ownership rather than forward a countdown for a game we don't run.
+  private handleCoordinatorUpdate(msg: CoordinatorUpdateLobby) {
+    if (!this.ownLobbies().some((l) => l.gameID === msg.gameID)) {
+      this.log.warn(`ignoring coordinator updateLobby for foreign lobby`, {
+        gameID: msg.gameID,
+      });
+      return;
+    }
+    this.sendMessageToWorker({
+      type: "updateLobby",
+      gameID: msg.gameID,
+      startsAt: msg.startsAt,
+    });
+  }
+
+  private ownLobbies(): InternalGameInfo[] {
+    return Array.from(this.workerLobbies.values()).flat();
+  }
+
+  // Re-evaluates the mode and logs a flip. Called from both loops so the
+  // decision is made at most twice a second and the log says which way.
+  private isCoordinated(): boolean {
+    const next = this.coordinator?.isCoordinated() ?? false;
+    if (next !== this.coordinated) {
+      this.coordinated = next;
+      this.log.info(
+        next
+          ? "lobby coordinator roster received, switching to coordinated mode"
+          : "no lobby coordinator roster for 5s, switching to single-server mode",
+      );
+    }
+    return next;
   }
 
   setActive(active: boolean) {
@@ -132,7 +264,7 @@ export class MasterLobbyService {
     games: Record<PublicGameType, InternalGameInfo[]>;
     losers: string[];
   } {
-    const lobbies = Array.from(this.workerLobbies.values()).flat();
+    const lobbies = this.ownLobbies();
 
     const result: Record<PublicGameType, InternalGameInfo[]> = {
       ffa: [],
@@ -233,8 +365,25 @@ export class MasterLobbyService {
   }
 
   private broadcastLobbies() {
-    const { games, losers } = this.getAllLobbies();
-    const delist = this.delistGameIDs(losers);
+    let games: Record<PublicGameType, InternalGameInfo[]>;
+    let delist: string[];
+    if (this.isCoordinated() && this.roster !== null) {
+      // The site's merged roster for this build, stamped with our own
+      // active flag. Dedup, cap and the two-strike delist rule ran on the
+      // coordinator; it only names lobbies this master owns.
+      games = this.roster.games;
+      delist = [...this.pendingDelist];
+      this.pendingDelist.clear();
+      if (delist.length > 0) {
+        this.log.info(
+          `delisting hosted lobbies at coordinator's request: ${delist.join(", ")}`,
+        );
+      }
+    } else {
+      const own = this.getAllLobbies();
+      games = own.games;
+      delist = this.delistGameIDs(own.losers);
+    }
     const msg = {
       type: "lobbiesBroadcast",
       publicGames: {
@@ -258,6 +407,10 @@ export class MasterLobbyService {
   }
 
   private async maybeScheduleLobby() {
+    // Coordinated: the site's queue depth and countdowns are the
+    // coordinator's; adding our own here would double-schedule.
+    if (this.isCoordinated()) return;
+
     const lobbiesByType = this.getAllLobbies().games;
 
     // Scheduled types only: hosted lobbies are started by their host, never

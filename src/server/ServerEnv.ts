@@ -57,6 +57,13 @@ export class ServerEnv {
     }
     return v;
   }
+  // Optional, unlike turnstileSiteKey: a deployment without a key just keeps
+  // the inline Stripe flow off (the store falls back to redirect checkout).
+  static stripePublishableKey(): string | undefined {
+    const v = process.env.STRIPE_PUBLISHABLE_KEY;
+    if (!v) return undefined;
+    return v;
+  }
   static jwtAudience(): string {
     const v = process.env.DOMAIN;
     if (!v) {
@@ -149,15 +156,50 @@ export class ServerEnv {
   static subdomain(): string {
     return process.env.SUBDOMAIN ?? "";
   }
-  // Host this deployment is reachable on directly (`blue.openfront.io`),
-  // bypassing the load balancer. Injected into index.html as `serverHost` so
-  // a tab keeps talking to the deployment that served it — including
-  // reconnects mid-game — after the load balancer flips to the other
-  // deployment. Undefined in dev (no SUBDOMAIN): the client falls back to
-  // same-origin.
-  static publicHost(): string | undefined {
-    const subdomain = ServerEnv.subdomain();
+  // Domain the GAME hostnames live under, when it differs from the page
+  // domain (docs/MultiServer.md, "Two hostnames per deployment"). Set on dev
+  // so the static Worker can own `<subdomain>.<DOMAIN>` while sockets and
+  // /api go straight to `<subdomain>.<GAME_DOMAIN>`. Unset — prod, local dev
+  // — means the two collapse onto DOMAIN, which is today's behaviour.
+  static gameDomain(): string | undefined {
+    const v = process.env.GAME_DOMAIN;
+    return v && v.length > 0 ? v : undefined;
+  }
+  // The PAGE host that pairs with a game host under GAME_DOMAIN:
+  // `blue.server.openfront.dev` -> `blue.openfront.dev`. Undefined when
+  // GAME_DOMAIN is unset (page and game host are one name) or the host is
+  // not under it. A player who loads a colour's page directly, bypassing the
+  // apex, arrives from exactly this origin, so CORS must know it.
+  static pageHostFor(gameHost: string): string | undefined {
+    const gameDomain = ServerEnv.gameDomain();
     const domain = ServerEnv.domain();
+    if (gameDomain === undefined || !domain) return undefined;
+    const suffix = `.${gameDomain}`;
+    if (!gameHost.endsWith(suffix)) return undefined;
+    const label = gameHost.slice(0, -suffix.length);
+    if (!label || label.includes(".")) return undefined;
+    return `${label}.${domain}`;
+  }
+  // The GAME host: the name this deployment is reachable on directly
+  // (`blue.openfront.io`, or `main.server.openfront.dev` with GAME_DOMAIN),
+  // bypassing the load balancer and the static Worker. Injected into
+  // index.html as `serverHost` so a tab keeps talking to the deployment that
+  // served it — including reconnects mid-game — after the load balancer flips
+  // to the other deployment. This is NOT the host the page came from: that is
+  // siteHost(), and with GAME_DOMAIN set the two are always different names.
+  // Undefined in dev (no SUBDOMAIN): the client falls back to same-origin.
+  //
+  // GAME_HOST, when deploy.sh wrote one, is authoritative: it is the name the
+  // cluster map actually carries for this deployment, and for a
+  // machine-scoped entry (`blue.staging2.server.openfront.dev`, the machine
+  // in the hostname so one colour can span boxes) it is not derivable from
+  // SUBDOMAIN and GAME_DOMAIN alone. The derivation below is the standalone
+  // shape and stays for env files written by hand.
+  static publicHost(): string | undefined {
+    const explicit = process.env.GAME_HOST;
+    if (explicit && explicit.length > 0) return explicit;
+    const subdomain = ServerEnv.subdomain();
+    const domain = ServerEnv.gameDomain() ?? ServerEnv.domain();
     if (!subdomain || !domain) return undefined;
     return `${subdomain}.${domain}`;
   }
@@ -208,10 +250,12 @@ export class ServerEnv {
     return result.data;
   }
 
-  // This deployment's own cluster entry, found by host: SUBDOMAIN.DOMAIN, or
-  // bare DOMAIN when SUBDOMAIN is empty (dev, standalone boxes). A server
-  // whose host is not in the map refuses boot — it has no letter to mint
-  // under.
+  // This deployment's own cluster entry, found by its game host —
+  // SUBDOMAIN.GAME_DOMAIN, or SUBDOMAIN.DOMAIN when GAME_DOMAIN is unset, or
+  // bare DOMAIN when SUBDOMAIN is empty (dev, standalone boxes). Cluster
+  // entries name the servers clients open sockets to, so matching by the game
+  // host is the whole point. A server whose host is not in the map refuses
+  // boot — it has no letter to mint under.
   static clusterSelf(): { letter: string; entry: ClusterEntry } {
     const selfHost = ServerEnv.publicHost() ?? ServerEnv.domain();
     if (!selfHost) {
@@ -236,12 +280,63 @@ export class ServerEnv {
     return ServerEnv.clusterSelf().entry.color;
   }
 
-  // Host players load the page from when it is a load balancer in front of
-  // several deployments (`openfront.io` for blue/green). Unset for standalone
-  // deployments (beta, staging branches), where the page host is publicHost.
+  // The page host: SITE_HOST. Behind a load balancer that is the apex
+  // (`openfront.io` for blue/green); with GAME_DOMAIN it is
+  // `<subdomain>.<DOMAIN>`, the name the static Worker serves the page on.
+  // Unset only for old-style standalone deploys (beta, staging branches) and
+  // local dev, where the page host and the game host coincide and publicHost
+  // is both.
   static siteHost(): string | undefined {
     const v = process.env.SITE_HOST;
     return v && v.length > 0 ? v : undefined;
+  }
+  // Where the drain decision comes from (docs/MultiServer.md, "Server list
+  // v2"): "apex" is today's /api/health colour poll of the site host; "api"
+  // obeys the state the API assigns at check-in (ClusterCheckin.ts). Any
+  // other value, or none, means apex, so a deploy that doesn't set it is
+  // unchanged.
+  static clusterStateSource(): "apex" | "api" {
+    return process.env.CLUSTER_STATE_SOURCE === "api" ? "api" : "apex";
+  }
+  // Whether the master joins its site's shared public-lobby roster
+  // (LobbyCoordinatorClient.ts, infra docs/lobby-coordinator.md). "api"
+  // connects to the API's coordinator and lets it schedule this site's public
+  // lobbies; "off", anything else, or none keeps single-server scheduling,
+  // so a deploy that doesn't set it is unchanged on the wire. "off" exists
+  // so a GitHub environment can override a repo-level "api" explicitly.
+  static lobbyCoordinator(): "api" | "off" {
+    return process.env.LOBBY_COORDINATOR === "api" ? "api" : "off";
+  }
+  // The machine this container runs on — `falk2`, `nbg2`, `staging`: the
+  // second argument to deploy.sh, which writes it into the container's env as
+  // MACHINE. Reported at check-in (ClusterCheckin.ts) so the registry can hold
+  // a site to at most one OPEN server per machine (OPE-455): blue and green
+  // often share a box, and a colour flip that lands on the same machine buys
+  // no redundancy. Nothing in this repo reads it back.
+  //
+  // Held to the shape deploy.sh already demands of a machine argument —
+  // letters, digits and hyphens, at most a hostname label's 63 octets — and
+  // anything else is dropped with one warning rather than sent. The check-in
+  // body has to stay something the registry will accept, so a fat-fingered
+  // MACHINE must cost a stray field, never the registration. Cached by the
+  // raw value so the 10s check-in doesn't re-warn on every beat, while a test
+  // that stubs the env still sees its own value.
+  private static cachedMachineRaw: string | null = null;
+  private static cachedMachine: string | undefined = undefined;
+  static machine(): string | undefined {
+    const raw = process.env.MACHINE ?? "";
+    if (raw === ServerEnv.cachedMachineRaw) return ServerEnv.cachedMachine;
+    ServerEnv.cachedMachineRaw = raw;
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) {
+      ServerEnv.cachedMachine = undefined;
+    } else if (/^[a-zA-Z0-9-]{1,63}$/.test(trimmed)) {
+      ServerEnv.cachedMachine = trimmed;
+    } else {
+      console.warn(`Ignoring malformed MACHINE: ${JSON.stringify(trimmed)}`);
+      ServerEnv.cachedMachine = undefined;
+    }
+    return ServerEnv.cachedMachine;
   }
   static otelEnabled(): boolean {
     return (

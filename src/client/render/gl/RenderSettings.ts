@@ -19,6 +19,11 @@ export interface ThemeSettings {
   teamColors: Record<string, string>;
   humanColors: string[];
   nationColors: string[];
+  /**
+   * The pre-v34 tribe (bot) color pool, used instead of the flat Bot team
+   * color when the classicBotColors graphics override is on.
+   */
+  classicBotColors: string[];
   /** Used when the primary palettes are exhausted. */
   fallbackColors: string[];
   /** Border = territory color darkened by this absolute amount. */
@@ -293,6 +298,7 @@ export interface RenderSettings {
     hoverGlowWidth: number;
     /** Peak opacity of the hover glow (0 disables it). */
     hoverGlowAlpha: number;
+    flagAlpha: number;
   };
   fx: {
     shockwaveRingWidth: number;

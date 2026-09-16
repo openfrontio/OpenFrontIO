@@ -21,6 +21,7 @@ on:
         options:
           - masters
           - staging
+          - staging2
           - falk2
       target_subdomain:
         description: "Deployment Subdomain"
@@ -59,22 +60,28 @@ jobs:
     # Deploy on push/schedule/workflow_dispatch (see "on:") unless this is a fork
     if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
     # Use different logic based on event type
-    name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}${{ matrix.subdomain && format(' ({0})', matrix.subdomain) }}
+    name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}${{ matrix.subdomain && format(' ({0} on {1})', matrix.subdomain, matrix.host) }}
     runs-on: ubuntu-latest
-    # The schedule fans out to all three dev pools; every other event deploys a
-    # single subdomain, expressed as a one-element matrix with an empty string
-    # so RAW_SUBDOMAIN below falls through to the per-event logic.
+    # The schedule fans out to nightly and the dev fleet: blue and green on
+    # each of the two dev "machines". staging2 is a second name for the
+    # staging box (SERVER_HOSTS_JSON), so the fleet rehearses per-machine
+    # routing, the registry's one-open-server-per-machine rule and
+    # cross-machine joins on one host; each leg's game host carries its
+    # machine (blue.staging2.server.openfront.dev — deploy.sh, "game host").
+    # Every other event deploys a single subdomain, expressed as a
+    # one-element matrix with an empty string so RAW_SUBDOMAIN and HOST below
+    # fall through to the per-event logic.
     strategy:
       fail-fast: false
-      # One leg at a time: parallel legs would race three concurrent pushes of
-      # the shared :latest/:buildcache tags (build.sh tags both on every build)
-      # and pile all three deploys onto deploy.sh's 15-minute host-side flock.
+      # One leg at a time: parallel legs would race concurrent pushes of the
+      # shared :latest/:buildcache tags (build.sh tags both on every build)
+      # and pile every deploy onto deploy.sh's 15-minute host-side flock.
       # Sequential legs have one writer at a time and no lock contention, and
-      # legs 2 and 3 rebuild from the registry cache leg 1 just pushed, so they
+      # later legs rebuild from the registry cache leg 1 just pushed, so they
       # are cheap.
       max-parallel: 1
       matrix:
-        subdomain: ${{ github.event_name == 'schedule' && fromJSON('["nightly", "green", "blue"]') || fromJSON('[""]') }}
+        include: ${{ github.event_name == 'schedule' && fromJSON('[{"subdomain":"nightly","host":"staging"},{"subdomain":"green","host":"staging"},{"subdomain":"blue","host":"staging"},{"subdomain":"green","host":"staging2"},{"subdomain":"blue","host":"staging2"}]') || fromJSON('[{"subdomain":""}]') }}
     timeout-minutes: 30
     environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
@@ -87,26 +94,28 @@ jobs:
         run: |
           # A branch name can hold characters that are illegal in a DNS label, a
           # Docker container name, and a file path (e.g. "fix/some-bug"), so
-          # normalize it to an RFC 1123 label first: underscores and slashes
-          # become hyphens to keep the name readable (fix/some-bug ->
-          # fix-some-bug), anything else outside [a-zA-Z0-9-] is dropped, and the
-          # result is capped at the 63-octet label limit with no edge hyphens.
-          READABLE="$(printf '%s' "$RAW_SUBDOMAIN" | tr '_/' '--')"
-          LABEL="$(printf '%s' "$READABLE" | tr -cd 'a-zA-Z0-9-')"
+          # normalize it to an RFC 1123 label first: lowercased, because
+          # browsers lowercase the host and the API only accepts a lowercase
+          # site; underscores and slashes become hyphens to keep the name
+          # readable (Fix/some-bug -> fix-some-bug); anything else outside
+          # [a-z0-9-] is dropped; and the result is capped at the 63-octet label
+          # limit with no edge hyphens.
+          READABLE="$(printf '%s' "$RAW_SUBDOMAIN" | tr '[:upper:]' '[:lower:]' | tr '_/' '--')"
+          LABEL="$(printf '%s' "$READABLE" | tr -cd 'a-z0-9-')"
           LABEL="$(printf '%s' "${LABEL:0:63}" | sed 's/^-*//; s/-*$//')"
           if [ -z "$LABEL" ]; then
             echo "Error: subdomain is empty after sanitizing '$RAW_SUBDOMAIN'"
             exit 1
           fi
-          # The hyphen mapping above is deliberately canonical: fix/foo and
-          # fix-foo share a subdomain. But dropping or trimming characters is
-          # lossy in ways that aren't obvious from the branch name (feat/héllo
-          # and feat/hllo would collide), so whenever sanitizing went beyond
-          # the hyphen mapping, append a digest of the original to keep such
-          # branches on distinct hosts. Names that pass through untouched
-          # (main, nightly, a hand-typed prod subdomain) keep their exact
-          # spelling, which update.sh relies on for its `SUBDOMAIN = main`
-          # restart check.
+          # The case and hyphen mappings above are deliberately canonical:
+          # Fix/foo and fix-foo share a subdomain, as they would in DNS anyway.
+          # But dropping or trimming characters is lossy in ways that aren't
+          # obvious from the branch name (feat/héllo and feat/hllo would
+          # collide), so whenever sanitizing went beyond those mappings,
+          # append a digest of the original to keep such branches on distinct
+          # hosts. Names already in canonical form (main, nightly, a hand-typed
+          # prod subdomain) pass through unchanged, which update.sh relies on
+          # for its `SUBDOMAIN = main` restart check.
           if [ "$LABEL" != "$READABLE" ]; then
             HASH="$(printf '%s' "$RAW_SUBDOMAIN" | sha256sum | cut -c1-6)"
             LABEL="$(printf '%s' "${LABEL:0:56}" | sed 's/-*$//')-${HASH}"
@@ -181,14 +190,18 @@ jobs:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
-          HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }} # schedule and push both use staging
+          # The schedule names a machine per leg; a dispatch picks one; a push
+          # always lands on staging.
+          HOST: ${{ matrix.host || (github.event_name == 'workflow_dispatch' && inputs.target_host) || 'staging' }}
           CDN_BASE: ${{ vars.CDN_BASE }}
-          # Baked into the client bundle at image-build time (build.sh
-          # --build-arg → Dockerfile → Vite define). Repo-level var holds the
-          # test-mode key; the `prod` environment (attached above for prod
-          # dispatches only) overrides it with the live-mode one — the key's
-          # mode must match the mode the API mints intents in, or every
-          # confirm fails. Unset/empty keeps the inline payment flow off (the
+          # Runtime env for the game server, which injects it into the
+          # page's BOOTSTRAP_CONFIG exactly like TURNSTILE_SITE_KEY — builds
+          # are environment-agnostic. Repo-level var holds the test-mode
+          # key; the `prod` environment (attached above for prod dispatches
+          # only) overrides it with the live-mode one — the key's mode must
+          # match the mode the API mints intents in (a mismatch is caught by
+          # the guard in StripeInline.ts, which just disables the inline
+          # flow). Unset/empty also keeps the inline payment flow off (the
           # store falls back to redirect checkout).
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
@@ -196,6 +209,26 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          # Separate domain for GAME hostnames, so the static Worker can own
+          # the page host (docs/MultiServer.md, "Two hostnames per
+          # deployment"). Unset is today's behaviour. Empty for a prod
+          # dispatch, mirroring the ENV gating above and the guard in
+          # deploy.sh: it is a repo-level variable prod must never inherit.
+          # The value has to sit in the && branch -- `cond && '' || vars.X`
+          # would yield vars.X for EVERY run, because '' is falsy here and
+          # these are value operators, not a ternary.
+          GAME_DOMAIN: ${{ inputs.target_domain != 'openfront.io' && vars.GAME_DOMAIN || '' }}
+          # "api" makes servers take their drain state from the API's
+          # registry (docs/MultiServer.md, "Server list v2"); unset keeps
+          # today's apex colour poll.
+          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
+          # "api" joins the site's shared public-lobby roster (infra
+          # docs/lobby-coordinator.md); anything else keeps per-server
+          # scheduling. Read from the repo-level var here (staging jobs have
+          # no environment); the prod environments override it with "off"
+          # until prod is ready, since an environment var wins over a repo
+          # var of the same name.
+          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
@@ -211,10 +244,25 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           API_KEY: ${{ secrets.API_KEY }}
+          # DOMAIN and SUBDOMAIN are already job-level env. Empty for a prod
+          # dispatch, mirroring the ENV gating above and the guard in
+          # deploy.sh — prod discards GAME_DOMAIN, so polling a game host
+          # built from it would wait out 300s on a name that does not exist
+          # and fail a deploy that actually succeeded. Same shape as the
+          # deploy step above: the value must be in the && branch, since ''
+          # is falsy and would fall straight through a trailing ||.
+          GAME_DOMAIN: ${{ inputs.target_domain != 'openfront.io' && vars.GAME_DOMAIN || '' }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          # Poll the GAME host: with GAME_DOMAIN set the page host is served
+          # by the static Worker, which knows nothing about this container's
+          # commit. Unset, the two are the same name (docs/MultiServer.md).
+          # deploy.sh exports GAME_HOST once it has resolved the name from
+          # the cluster map — a machine-scoped host cannot be recomputed
+          # here; the fallback covers a run that never reached that step.
+          GAME_FQDN="${GAME_HOST:-${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}}"
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${GAME_FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1

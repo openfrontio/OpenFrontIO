@@ -17,13 +17,41 @@ import {
   copyRootPublicFiles,
   createHashedPublicAssetFiles,
   getProprietaryDir,
+  getPublicDir,
   getResourcesDir,
   writePublicAssetManifest,
+  writeRootFilesIndex,
 } from "./src/server/PublicAssetManifest";
 
 // Vite already handles these, but its good practice to define them explicitly
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Dev-only: resources/public/ is served at the site root, as the build copies
+// it into static/. Vite's publicDir (resources/) would put it under /public/.
+function serveRootPublicDir(publicDir: string): Plugin {
+  return {
+    name: "serve-root-public-dir",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url) return next();
+        let rel = decodeURIComponent(
+          new URL(req.url, "http://x").pathname,
+        ).replace(/^\/+/, "");
+        if (rel.split(/[\\/]/).some((part) => part === "." || part === ".."))
+          return next();
+        if (rel === "" || rel.endsWith("/")) rel += "index.html";
+        const filePath = path.join(publicDir, rel);
+        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile())
+          return next();
+        const mime = lookupMime(filePath);
+        if (mime) res.setHeader("Content-Type", mime);
+        res.setHeader("Cache-Control", "no-store");
+        fs.createReadStream(filePath).pipe(res);
+      });
+    },
+  };
+}
 
 function serveProprietaryDir(
   proprietaryDir: string,
@@ -225,7 +253,8 @@ export default defineConfig(({ mode }) => {
     },
     closeBundle() {
       const outDir = path.join(__dirname, "static");
-      copyRootPublicFiles(resourcesDir, outDir);
+      copyRootPublicFiles(getPublicDir(resourcesDir), outDir);
+      writeRootFilesIndex(getPublicDir(resourcesDir), outDir);
       // Run the source→hashed copy first; createHashedPublicAssetFiles iterates
       // assetManifest and expects every key to resolve to a file in resources/
       // or proprietary/. Vite's bundle output (assets/...) doesn't, so it's
@@ -295,6 +324,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       ...(!isProduction
         ? [
+            serveRootPublicDir(getPublicDir(resourcesDir)),
             serveProprietaryDir(proprietaryDir, resourcesDir),
             randomWorkerCreateProxy(devNumWorkers),
             steamLinkAliasRedirect(),
@@ -327,12 +357,6 @@ export default defineConfig(({ mode }) => {
         isProduction ? "" : "localhost:3000",
       ),
       "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
-      // Empty when unset (and always empty under vitest, mirroring API_DOMAIN)
-      // so the replacement is always a string literal — an undefined define
-      // would leave a bare `process.env` reference in the browser bundle.
-      "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
-        mode === "test" ? "" : (env.STRIPE_PUBLISHABLE_KEY ?? ""),
-      ),
       // Force empty under vitest (mode "test") so the getApiBase localhost-
       // fallback test is deterministic regardless of any API_DOMAIN in the
       // host shell / CI environment.

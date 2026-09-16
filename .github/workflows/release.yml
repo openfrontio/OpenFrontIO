@@ -102,7 +102,14 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
+          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).
+          # Environment-scoped: the prod-* environments carry the live-mode
+          # key; alpha has no environment and inherits the repo-level
+          # test-mode key, matching its test-mode API.
+          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           SSH_KEY: ~/.ssh/id_rsa
@@ -163,7 +170,14 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
+          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).
+          # Environment-scoped: the prod-* environments carry the live-mode
+          # key; alpha has no environment and inherits the repo-level
+          # test-mode key, matching its test-mode API.
+          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
@@ -238,7 +252,14 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
+          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).
+          # Environment-scoped: the prod-* environments carry the live-mode
+          # key; alpha has no environment and inherits the repo-level
+          # test-mode key, matching its test-mode API.
+          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
@@ -308,7 +329,14 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
+          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).
+          # Environment-scoped: the prod-* environments carry the live-mode
+          # key; alpha has no environment and inherits the repo-level
+          # test-mode key, matching its test-mode API.
+          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
