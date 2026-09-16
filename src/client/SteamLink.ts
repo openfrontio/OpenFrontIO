@@ -496,7 +496,16 @@ export async function fetchSteamLinkConflict(): Promise<SteamLinkConflict | null
 
 export type AnswerSteamLinkConflictResult =
   | { ok: true; linked: boolean }
-  | { ok: false; reason: string };
+  | {
+      ok: false;
+      reason: string;
+      // Set alongside `reason: "discard_blocked"` when the server's re-check
+      // at confirm time found a reason support has to handle — "paid" today.
+      // The refusal path needs it for the same reason the offer path does:
+      // naming which block it was is what stops the player opening a ticket
+      // to ask.
+      block?: string;
+    };
 
 // POST /auth/steam/link/discard — answers the offer.
 //
@@ -543,6 +552,7 @@ export async function answerSteamLinkConflict(
       return {
         ok: false,
         reason: typeof body?.reason === "string" ? body.reason : "failed",
+        ...(typeof body?.block === "string" ? { block: body.block } : {}),
       };
     }
 

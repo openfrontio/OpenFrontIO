@@ -533,6 +533,15 @@ export class SteamLinkModal extends BaseModal {
   // not. `block` is why support has to do it — only "paid" gets its own
   // message, since naming that one is what stops the player opening a ticket
   // to ask what the problem was.
+  // The one place `discard_blocked` becomes a message key, shared by both
+  // paths that can receive it: the offer (applyConflict, where the server
+  // refused up front) and the answer (handleDiscard, where the re-check
+  // refused at confirm time). Only "paid" has its own copy — naming that one
+  // is what stops the player opening a ticket to ask what the problem was.
+  private static blockedReasonKey(block: string | undefined): string {
+    return block === "paid" ? "discard_blocked_paid" : "discard_blocked";
+  }
+
   private applyConflict(conflict: SteamLinkConflict): void {
     if (conflict.discardable) {
       this.conflict = conflict.account;
@@ -544,8 +553,7 @@ export class SteamLinkModal extends BaseModal {
     }
     this.conflict = null;
     this.redeemState = "failed";
-    this.failureReason =
-      conflict.block === "paid" ? "discard_blocked_paid" : "discard_blocked";
+    this.failureReason = SteamLinkModal.blockedReasonKey(conflict.block);
   }
 
   // Confirmed: delete the other account and take its Steam id.
@@ -570,7 +578,14 @@ export class SteamLinkModal extends BaseModal {
       this.redeemState = "success";
     } else {
       this.redeemState = "failed";
-      this.failureReason = result.reason;
+      // Same synthesis the offer path does. The server's re-check can refuse
+      // at confirm time — a purchase landing on the doomed account between the
+      // offer and the click — and that refusal deserves the specific copy the
+      // up-front one gets, not the generic dead end.
+      this.failureReason =
+        result.reason === "discard_blocked"
+          ? SteamLinkModal.blockedReasonKey(result.block)
+          : result.reason;
       // Two outcomes leave the offer answerable, for opposite reasons.
       //
       // `discard_deferred` is the one REFUSAL the server leaves it standing
@@ -586,6 +601,14 @@ export class SteamLinkModal extends BaseModal {
       // direction to be wrong in is the one that releases the ticket.
       this.conflictAnswered =
         result.reason !== "discard_deferred" && result.reason !== "failed";
+      // Take the button away once the offer is spent. `conflictAnswered` has
+      // already drawn exactly this line — it is true for the refusals that are
+      // permanent (blocked) or terminal (the offer is gone) and false for the
+      // two that can still be answered. Leaving the confirmation on screen
+      // with an enabled "Delete it and link" under a permanent refusal invites
+      // a second click that can only be refused again, on the one screen where
+      // a live destructive button should never be decorative.
+      if (this.conflictAnswered) this.conflict = null;
     }
     this.requestUpdate();
   }

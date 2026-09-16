@@ -906,6 +906,55 @@ describe("SteamLinkModal", () => {
       answer.resolve({ ok: true, linked: true });
     });
 
+    // Two fixes in one: the paid block now survives the answer path (the
+    // server re-checks at confirm time, so a purchase landing on the doomed
+    // account between the offer and the click refuses HERE and deserves the
+    // same specific copy the up-front refusal gets — the answer path used to
+    // drop `block` and fall back to the generic dead end), and a permanent
+    // refusal takes the button with it. Leaving the
+    // confirmation on screen with an enabled "Delete it and link" under a
+    // refusal that can only ever be refused again is a live destructive
+    // control that does nothing — the one screen where that is least
+    // acceptable.
+    it("retires the confirmation when the refusal is permanent", async () => {
+      await reachConfirmation();
+      answerSteamLinkConflictMock.mockResolvedValue({
+        ok: false,
+        reason: "discard_blocked",
+        block: "paid",
+      });
+
+      discardButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain(
+          "steam_link_modal.reason_discard_blocked_paid",
+        );
+      });
+      // Gone, not merely disabled.
+      expect(discardButton()).toBeNull();
+    });
+
+    // ...but a refusal the player can still answer keeps its button.
+    it("keeps the confirmation when the refusal is retryable", async () => {
+      await reachConfirmation();
+      answerSteamLinkConflictMock.mockResolvedValue({
+        ok: false,
+        reason: "discard_deferred",
+      });
+
+      discardButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain(
+          "steam_link_modal.reason_discard_deferred",
+        );
+      });
+      expect(discardButton()).not.toBeNull();
+    });
+
     // Declining is an answer. The desktop is polling a link ticket the server
     // left open for this question, so telling it now is the difference
     // between an immediate refusal and a ten-minute hang.

@@ -666,7 +666,11 @@ describe("the discard offer", () => {
     expect(result).toEqual({ ok: true, linked: true });
   });
 
-  it("surfaces a 409 refusal reason verbatim", async () => {
+  // The block travels with the reason, because the server's re-check can
+  // refuse at confirm time and that refusal needs the same specific copy the
+  // up-front one gets. An earlier version of this test asserted the block was
+  // dropped, which locked the generic "contact support" message in.
+  it("surfaces a 409 refusal reason and its block", async () => {
     fetchMock().mockResolvedValueOnce(
       res({ reason: "discard_blocked", block: "paid" }, 409),
     );
@@ -674,6 +678,16 @@ describe("the discard offer", () => {
     expect(await answerSteamLinkConflict("discard")).toEqual({
       ok: false,
       reason: "discard_blocked",
+      block: "paid",
+    });
+  });
+
+  it("omits block when the refusal carries none", async () => {
+    fetchMock().mockResolvedValueOnce(res({ reason: "discard_deferred" }, 409));
+
+    expect(await answerSteamLinkConflict("discard")).toEqual({
+      ok: false,
+      reason: "discard_deferred",
     });
   });
 
