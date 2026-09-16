@@ -401,17 +401,49 @@ export function copyRootPublicFiles(
   }
 }
 
-export type RootFilesIndex = { files: Record<string, string> };
+export type RootFile = { sha256: string; contentType: string };
+export type RootFilesIndex = { files: Record<string, RootFile> };
 
-// The static Worker serves the root files from R2 by this index, which maps
-// each path to the full sha256 of its bytes: update.sh stores every file at
-// root-files/<sha256>, and the Worker builds that key itself from the hash.
+const ROOT_FILE_TYPES: Record<string, string> = {
+  "": "text/plain; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".pdf": "application/pdf",
+  ".zip": "application/zip",
+};
+
+function rootFileContentType(relativePath: string): string {
+  const ext = path.posix.extname(relativePath).toLowerCase();
+  const type = ROOT_FILE_TYPES[ext];
+  if (type === undefined) {
+    throw new Error(
+      `No content type for root file ${relativePath}; add ${ext} to ROOT_FILE_TYPES`,
+    );
+  }
+  return type;
+}
+
+// The site Worker serves every root file from this index and knows nothing
+// else about them: update.sh stores each file at root-files/<sha256>, and a
+// directory with an index.html gets its own "<dir>/" entry.
 export function buildRootFilesIndex(staticDir: string): RootFilesIndex {
-  const files: Record<string, string> = {};
+  const files: Record<string, RootFile> = {};
   for (const relativePath of listRootPublicFiles(staticDir)) {
-    files[relativePath] = createHash("sha256")
-      .update(fs.readFileSync(path.join(staticDir, relativePath)))
-      .digest("hex");
+    const entry = {
+      sha256: createHash("sha256")
+        .update(fs.readFileSync(path.join(staticDir, relativePath)))
+        .digest("hex"),
+      contentType: rootFileContentType(relativePath),
+    };
+    files[relativePath] = entry;
+    if (path.posix.basename(relativePath) === "index.html") {
+      files[path.posix.dirname(relativePath) + "/"] = entry;
+    }
   }
   return { files };
 }

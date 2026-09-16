@@ -306,19 +306,45 @@ describe("PublicAssetManifest", () => {
     ).resolves.toBe("png");
   });
 
-  test("indexes the root files by the sha256 of their bytes", async () => {
+  test("indexes the root files by hash and content type, with directory entries", async () => {
     const { outDir } = await createTempResources();
-    await fs.mkdir(path.join(outDir, "press"), { recursive: true });
+    await fs.mkdir(path.join(outDir, "press", "images"), { recursive: true });
     await fs.mkdir(path.join(outDir, "_assets"), { recursive: true });
     await fs.writeFile(path.join(outDir, "privacy-policy.html"), "policy");
+    await fs.writeFile(path.join(outDir, "LICENSE"), "mit");
     await fs.writeFile(path.join(outDir, "press", "index.html"), "policy");
+    await fs.writeFile(path.join(outDir, "press", "images", "a.png"), "png");
     await fs.writeFile(path.join(outDir, "_assets", "app.js"), "js");
     await fs.writeFile(path.join(outDir, "index.html"), "shell");
 
-    const sha = createHash("sha256").update("policy").digest("hex");
+    const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+    const html = {
+      sha256: sha("policy"),
+      contentType: "text/html; charset=utf-8",
+    };
     expect(buildRootFilesIndex(outDir)).toEqual({
-      files: { "press/index.html": sha, "privacy-policy.html": sha },
+      files: {
+        LICENSE: {
+          sha256: sha("mit"),
+          contentType: "text/plain; charset=utf-8",
+        },
+        "press/": html,
+        "press/images/a.png": { sha256: sha("png"), contentType: "image/png" },
+        "press/index.html": html,
+        "privacy-policy.html": html,
+      },
     });
+  });
+
+  test("refuses a root file it has no content type for", async () => {
+    const { outDir } = await createTempResources();
+    await fs.mkdir(path.join(outDir, "press"), { recursive: true });
+    await fs.writeFile(path.join(outDir, "press", "kit.xyz"), "?");
+    expect(() => buildRootFilesIndex(outDir)).toThrow(/press\/kit\.xyz/);
+  });
+
+  test("has a content type for every real root file", () => {
+    expect(() => buildRootFilesIndex(path.resolve("resources"))).not.toThrow();
   });
 
   test("leaves directories outside the allowlist alone", () => {

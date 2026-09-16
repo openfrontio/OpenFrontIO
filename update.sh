@@ -295,7 +295,8 @@ else
     # version.txt, press/): the site has no origin behind the Worker, so these
     # exist nowhere else. Stored once by content hash at root-files/<sha256>
     # and found through the version's index, so a press kit that did not change
-    # is not uploaded again on every deploy of every site.
+    # is not uploaded again on every deploy of every site. Directory entries
+    # ("press/") share their index.html's hash and have no file of their own.
     ROOT_FILES_INDEX="$EXTRACT_DIR/root-files.json"
     if ! docker run --rm --env-file "$ENV_FILE" --entrypoint npx \
         "${GHCR_IMAGE}" tsx src/server/RenderRootFiles.ts \
@@ -303,12 +304,12 @@ else
         echo "❌ Failed to build the root-files index"
         exit 1
     fi
-    if ! jq -e '.files["privacy-policy.html"] and .files["terms-of-service.html"]' \
+    if ! jq -e '.files["privacy-policy.html"].sha256 and .files["terms-of-service.html"].sha256' \
         "$ROOT_FILES_INDEX" > /dev/null; then
         echo "❌ The root-files index is missing the policy pages"
         exit 1
     fi
-    ROOT_KEYS_JSON="$(jq '[.files[] | "root-files/" + .] | unique' "$ROOT_FILES_INDEX")"
+    ROOT_KEYS_JSON="$(jq '[.files[] | "root-files/" + .sha256] | unique' "$ROOT_FILES_INDEX")"
     ROOT_MISSING="$(curl -fsS --connect-timeout 10 --max-time 120 \
         -X POST "$R2_ENDPOINT/game_assets/check" \
         -H "X-API-Key: $API_KEY" \
@@ -328,7 +329,8 @@ else
         esac
         upload_versioned "root-files/$ROOT_HASH" "$STATIC_DIR/$ROOT_PATH" \
             "application/octet-stream" || exit 1
-    done < <(jq -r '.files | to_entries[] | "\(.key)\t\(.value)"' "$ROOT_FILES_INDEX")
+    done < <(jq -r '.files | to_entries[] | select(.key | endswith("/") | not)
+        | "\(.key)\t\(.value.sha256)"' "$ROOT_FILES_INDEX")
     upload_versioned "${VERSION_PREFIX}/root-files.json" \
         "$ROOT_FILES_INDEX" "application/json" || exit 1
 fi
