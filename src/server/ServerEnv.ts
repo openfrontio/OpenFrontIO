@@ -188,7 +188,16 @@ export class ServerEnv {
   // to the other deployment. This is NOT the host the page came from: that is
   // siteHost(), and with GAME_DOMAIN set the two are always different names.
   // Undefined in dev (no SUBDOMAIN): the client falls back to same-origin.
+  //
+  // GAME_HOST, when deploy.sh wrote one, is authoritative: it is the name the
+  // cluster map actually carries for this deployment, and for a
+  // machine-scoped entry (`blue.staging2.server.openfront.dev`, the machine
+  // in the hostname so one colour can span boxes) it is not derivable from
+  // SUBDOMAIN and GAME_DOMAIN alone. The derivation below is the standalone
+  // shape and stays for env files written by hand.
   static publicHost(): string | undefined {
+    const explicit = process.env.GAME_HOST;
+    if (explicit && explicit.length > 0) return explicit;
     const subdomain = ServerEnv.subdomain();
     const domain = ServerEnv.gameDomain() ?? ServerEnv.domain();
     if (!subdomain || !domain) return undefined;
@@ -288,6 +297,15 @@ export class ServerEnv {
   // unchanged.
   static clusterStateSource(): "apex" | "api" {
     return process.env.CLUSTER_STATE_SOURCE === "api" ? "api" : "apex";
+  }
+  // Whether the master joins its site's shared public-lobby roster
+  // (LobbyCoordinatorClient.ts, infra docs/lobby-coordinator.md). "api"
+  // connects to the API's coordinator and lets it schedule this site's public
+  // lobbies; "off", anything else, or none keeps single-server scheduling,
+  // so a deploy that doesn't set it is unchanged on the wire. "off" exists
+  // so a GitHub environment can override a repo-level "api" explicitly.
+  static lobbyCoordinator(): "api" | "off" {
+    return process.env.LOBBY_COORDINATOR === "api" ? "api" : "off";
   }
   // The machine this container runs on — `falk2`, `nbg2`, `staging`: the
   // second argument to deploy.sh, which writes it into the container's env as

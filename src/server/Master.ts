@@ -11,9 +11,14 @@ import {
   applyCheckinState,
   CHECKIN_INTERVAL_MS,
   checkinBody,
+  registeredSite,
   sendCheckin,
 } from "./ClusterCheckin";
 import { getDescriptor } from "./DesktopRelease";
+import {
+  coordinatorUrl,
+  LobbyCoordinatorClient,
+} from "./LobbyCoordinatorClient";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { MasterLobbyService } from "./MasterLobbyService";
@@ -113,7 +118,7 @@ app.use(
 );
 
 // Apple Pay domain verification (Stripe's universal association file,
-// vendored in resources/). Apple fetches this exact path over HTTPS when the
+// vendored in resources/public/). Apple fetches this exact path over HTTPS when the
 // domain is registered in the Stripe dashboard, and it must get the raw file:
 // express.static above ignores dotfile paths (so it falls through to here)
 // and the SPA fallback below would answer with the app shell, which makes
@@ -127,7 +132,7 @@ app.get(
     res.sendFile(
       path.join(
         __dirname,
-        "../../resources/.well-known/apple-developer-merchantid-domain-association",
+        "../../resources/public/.well-known/apple-developer-merchantid-domain-association",
       ),
       // sendFile refuses dotfile path segments (".well-known") by default.
       // maxAge matters beyond browsers: nginx's proxy cache honours the
@@ -166,6 +171,33 @@ export async function startMaster() {
   process.env.INSTANCE_ID = INSTANCE_ID;
 
   log.info(`Instance ID: ${INSTANCE_ID}`);
+
+  // Join the site's shared public-lobby roster (LobbyCoordinatorClient.ts)
+  // when LOBBY_COORDINATOR=api and this server has a public host to
+  // register under, the same test as the check-in below. Started before the
+  // workers fork so the first roster normally lands before scheduling
+  // begins; until it does, and whenever it stops, the master schedules its
+  // own lobbies exactly as it does without a coordinator.
+  const hello = checkinBody(0);
+  const coordinator = coordinatorUrl(registeredSite());
+  if (coordinator !== null && hello !== null) {
+    log.info(`Joining lobby coordinator at ${coordinator}`);
+    const client = new LobbyCoordinatorClient({
+      url: coordinator,
+      apiKey: ServerEnv.apiKey(),
+      hello: {
+        letter: hello.letter,
+        host: hello.host,
+        version: hello.version,
+        numWorkers: hello.numWorkers,
+        instanceId: INSTANCE_ID,
+      },
+      handlers: lobbyService.coordinatorHandlers(),
+      log,
+    });
+    lobbyService.attachCoordinator(client);
+    client.start();
+  }
 
   // Fork workers
   for (let i = 0; i < ServerEnv.numWorkers(); i++) {

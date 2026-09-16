@@ -15,6 +15,7 @@ function generate(env: {
   subdomain?: string;
   domain?: string;
   gameDomain?: string;
+  gameHost?: string;
 }): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nginx-upstream-"));
   const out = path.join(dir, "00-workers.conf");
@@ -23,10 +24,12 @@ function generate(env: {
   delete childEnv.SUBDOMAIN;
   delete childEnv.DOMAIN;
   delete childEnv.GAME_DOMAIN;
+  delete childEnv.GAME_HOST;
   if (env.clusterJson !== undefined) childEnv.CLUSTER_JSON = env.clusterJson;
   if (env.subdomain !== undefined) childEnv.SUBDOMAIN = env.subdomain;
   if (env.domain !== undefined) childEnv.DOMAIN = env.domain;
   if (env.gameDomain !== undefined) childEnv.GAME_DOMAIN = env.gameDomain;
+  if (env.gameHost !== undefined) childEnv.GAME_HOST = env.gameHost;
   try {
     execFileSync("sh", [SCRIPT, out], { env: childEnv, stdio: "pipe" });
     return fs.readFileSync(out, "utf8");
@@ -125,6 +128,31 @@ map $worker $worker_port {
     });
     expect(conf).toContain("server 127.0.0.1:3001;");
     expect(conf).not.toContain("server 127.0.0.1:3002;");
+  });
+
+  // A machine-scoped entry (blue.staging2.server.openfront.dev) is not
+  // derivable from SUBDOMAIN and GAME_DOMAIN: deploy.sh resolved it from the
+  // map and wrote it through as GAME_HOST, and this self-match must take
+  // that over its own derivation, exactly as ServerEnv.publicHost does. The
+  // derived name sits in the map under another letter so a wrong match is a
+  // wrong worker count, not a pass.
+  it("matches by GAME_HOST when deploy.sh resolved one", () => {
+    const conf = generate({
+      clusterJson: JSON.stringify({
+        a: { host: "blue.server.openfront.dev", color: "blue", numWorkers: 1 },
+        f: {
+          host: "blue.staging2.server.openfront.dev",
+          color: "blue",
+          numWorkers: 2,
+        },
+      }),
+      subdomain: "blue",
+      domain: "openfront.dev",
+      gameDomain: "server.openfront.dev",
+      gameHost: "blue.staging2.server.openfront.dev",
+    });
+    expect(conf).toContain("server 127.0.0.1:3002;");
+    expect(conf).not.toContain("server 127.0.0.1:3003;");
   });
 
   it("fails loudly when the host has no cluster entry", () => {

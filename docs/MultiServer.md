@@ -286,7 +286,20 @@ fleet redeploy.
 All of these are config edits; no code changes.
 
 1. Provision the box; install docker/traefik per the existing host setup.
-2. DNS: `blue2.openfront.io` and `green2.openfront.io` → the new machine.
+2. DNS: the new machine's game hosts → the new machine. The fleet shape is
+   **machine-scoped**: every box carries its own `blue` and `green`, and
+   the machine sits in the hostname — `blue.nbg2.<game domain>`,
+   `green.nbg2.<game domain>` — so one wildcard record
+   (`*.nbg2.<game domain>`) covers the box. deploy.sh looks a deployment
+   up under that name first and under the bare `<subdomain>.<game domain>`
+   second, so a fleet can carry both shapes while it migrates
+   (`blue2.openfront.io` still works; it is just a standalone-shaped entry
+   on a second machine). A machine-scoped container is named
+   `openfront-<env>-<machine>-<subdomain>`, which is what lets staging
+   rehearse two machines on one box: `staging2` is a second name for the
+   staging box in `SERVER_HOSTS_JSON`, and its blue and green sit next to
+   staging's own as `blue.staging2.server.openfront.dev` and
+   `green.staging2.server.openfront.dev`.
 3. Secrets: add the machine to `SERVER_HOSTS_JSON`
    (`{"falk2":"<ip>","nbg2":"<ip>"}`, lowercase keys) — deploy.sh resolves
    machine names from this directory and keyscans only the machine it is
@@ -296,7 +309,9 @@ All of these are config edits; no code changes.
 4. Vars: append the new letters to every prod `CLUSTER_JSON`
    (append-only — never reuse a letter), and add the machine to the
    `DEPLOY_TARGETS_BLUE` and `DEPLOY_TARGETS_GREEN` **repository** vars:
-   `[{"host":"falk2","subdomain":"blue"},{"host":"nbg2","subdomain":"blue2"}]`.
+   `[{"host":"falk2","subdomain":"blue"},{"host":"nbg2","subdomain":"blue"}]`
+   (machine-scoped: the subdomain is the slot, the host is the machine;
+   the cluster entry is `blue.nbg2.<game domain>`).
    Repository-level, not environment-level: GitHub expands a job's matrix
    before its environment exists, so an environment-scoped var would be
    invisible there and the jobs would silently deploy only the single-box
@@ -313,16 +328,18 @@ wait for games to end), then delete its cluster entries and its
 
 ## Future (discussed, not built)
 
-- **Merged public lobby feeds (PR 7, wanted once a color spans 2+
-  machines):** public pools are per-deployment by design, so N machines
-  split the fill funnel N ways. Fix without a coordinator: each master
-  serves `GET /lobbies.json` with ONLY its first-hand sanitized lobbies
-  (loop-proof by construction; `s-maxage=1` so it doubles as a CDN-absorbed
-  client endpoint), and each master polls its same-color siblings (from its
-  own cluster map + color) and folds their lobbies into its broadcast.
-  Zero client changes — the merged list arrives through the existing feed,
-  and joining a foreign lobby already routes by its letter. Null-tolerant
-  like the drain poll: an unreachable sibling just contributes nothing.
+- **Merged public lobby feeds:** built as a per-site lobby coordinator on
+  the API (infra `docs/lobby-coordinator.md`) rather than the sibling poll
+  first sketched here. Every master holds one WebSocket to its site's
+  coordinator (`src/server/LobbyCoordinatorClient.ts`), reports its own
+  lobbies, and gets back the merged roster for its build plus "create the
+  next lobby" and "this lobby counts down" commands; the queue depth is
+  site-wide. `MasterLobbyService` runs `coordinated` while rosters arrive
+  and falls back to today's single-server scheduling within 5 s when they
+  stop. Off unless `LOBBY_COORDINATOR=api` and the site's `sharedLobbies`
+  registry flag is on. Zero client changes — the merged list arrives through
+  the existing feed, and joining a foreign lobby already routes by its
+  letter.
 - **Cluster registry:** pulled forward as "Server list v2" below.
 
 ---
@@ -944,7 +961,7 @@ fully-rendered `index-<short>.html` replay shell next to them. `update.sh`
 now also publishes, per **site** and per **version**, the three objects the
 static Worker will serve. The site is `SITE_HOST` when the deployment sits
 behind a load balancer, else `<subdomain>.<domain>`; the version is the
-7-character prefix of `static/commit.txt`. All four uploads go through
+7-character prefix of `static/commit.txt`. All uploads go through
 `PUT $R2_ENDPOINT/game_assets/upload/<urlencoded key>`, which prefixes
 `game_assets/`:
 
@@ -953,6 +970,15 @@ behind a load balancer, else `<subdomain>.<domain>`; the version is the
 | `sites/<site>/v/<short>/index.html`           | `RenderStaticIndex.ts --environment-only`      |
 | `sites/<site>/v/<short>/desktop/release.json` | `RenderDesktopDescriptor.ts`                   |
 | `sites/<site>/v/<short>/desktop/version.json` | `RenderDesktopDescriptor.ts --version-pointer` |
+| `sites/<site>/v/<short>/root-files.json`      | the build (`writeRootFilesIndex`)              |
+| `sites/<site>/v/<short>/root/<path>`          | copied from `static/`, one per index entry     |
+
+Everything in `resources/public/` (the policy pages, `robots.txt`, `ads.txt`,
+`press/`, and Apple Pay's `.well-known/` file) is served verbatim at the site
+root. The site Worker has no origin behind it, so it serves these from R2:
+`root-files.json` maps each path to its content type (plus a `"<dir>/"` entry
+for a directory with an `index.html`), and the Worker serves exactly what it
+lists. To publish a new root file, add it to `resources/public/`.
 
 Both renderers run inside the freshly built image with the live container's
 env file, exactly as the replay shell already does, so what is published is
@@ -1008,9 +1034,15 @@ A deployment answers on two names, and they do different jobs:
 | page host | `SITE_HOST`                 | the page: HTML, assets — soon a static Worker   |
 | game host | `<subdomain>.<GAME_DOMAIN>` | the game: WebSockets, `/api/*` — this container |
 
-The game host is always `<subdomain>.<GAME_DOMAIN>` (or `<subdomain>.<DOMAIN>`
-with `GAME_DOMAIN` unset). The page host is `SITE_HOST`, and what fills that in
-depends on whether the deployment has siblings:
+The game host is `<subdomain>.<GAME_DOMAIN>` (or `<subdomain>.<DOMAIN>` with
+`GAME_DOMAIN` unset) for a standalone deployment, and
+`<subdomain>.<machine>.<GAME_DOMAIN>` for a fleet member whose cluster entry
+carries the machine (the runbook above). deploy.sh resolves which by looking
+the deployment up in the cluster map, machine-scoped name first, and writes
+the answer into the container's env as `GAME_HOST`; `ServerEnv.publicHost()`,
+the Traefik rule and the nginx self-match all read that rather than
+re-deriving it. The page host is `SITE_HOST`, and what fills that in depends
+on whether the deployment has siblings:
 
 - **In a multi-entry cluster map** — prod's blue/green, and the dev blue/green
   pair — the page host is the **apex**: `openfront.io`, `openfront.dev`. That
