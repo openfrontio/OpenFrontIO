@@ -215,7 +215,10 @@ jobs:
           CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           # "api" joins the site's shared public-lobby roster (infra
           # docs/lobby-coordinator.md); unset keeps per-server scheduling.
-          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
+          # Staging only for now, gated like GAME_DOMAIN: a repo-level var is
+          # the only kind a non-prod job can see, and prod must not inherit
+          # it until release.yml opts in deliberately.
+          LOBBY_COORDINATOR: ${{ inputs.target_domain != 'openfront.io' && vars.LOBBY_COORDINATOR || '' }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
