@@ -153,10 +153,11 @@ describe("desktop session recovery", () => {
     expect(signIn).toHaveBeenCalledOnce();
   });
 
-  // needs-account is deliberately IN the auto-retry set: the shell reports an
-  // unreachable status endpoint as needs-account, so it is genuinely produced
-  // by the kind of outage reconnecting resolves, and a player can finish
-  // linking on the website while the game is open.
+  // needs-account is deliberately IN the auto-retry set, for the one case
+  // that survives: a player can finish linking on the website while the game
+  // is open, after which an account exists and a retry signs them in. (It was
+  // also transient back when the shell reported an unreachable status
+  // endpoint as needs-account; openfront-desktop#91 fixed that.)
   it("auto-retries needs-account when reachability recovers", () => {
     vi.mocked(getDesktopSessionState).mockReturnValue({
       status: "signed-out",
