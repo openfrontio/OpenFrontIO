@@ -282,6 +282,20 @@ describe("LobbyCoordinatorClient", () => {
     expect(client.isCoordinated()).toBe(false);
   });
 
+  // A TCP connect that succeeds but whose upgrade is never answered fires
+  // no event at all; without a guard in the connecting phase the client
+  // would sit in local mode for the life of the process.
+  it("tears down a handshake that is never answered", () => {
+    client.start();
+    const s = current();
+    vi.advanceTimersByTime(SOCKET_SILENCE_MS - 1000);
+    expect(s.terminated).toBe(false);
+    vi.advanceTimersByTime(2000);
+    expect(s.terminated).toBe(true);
+    vi.advanceTimersByTime(RECONNECT_MIN_MS);
+    expect(sockets).toHaveLength(2);
+  });
+
   it("tears down a socket that has delivered no roster for 15s", () => {
     const s = connectAndOpen();
     s.receive(emptyRoster());

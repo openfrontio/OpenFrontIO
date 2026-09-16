@@ -144,10 +144,14 @@ export class LobbyCoordinatorClient {
   private tickTimer: NodeJS.Timeout | null = null;
   private backoffMs = RECONNECT_MIN_MS;
   private lastRosterAt = 0;
-  // When the current socket opened. The silence guard in tick() measures
-  // from the later of this and the last roster, so a fresh socket gets the
-  // full SOCKET_SILENCE_MS to deliver its first roster; isCoordinated()
-  // deliberately does not look at it — only a roster proves liveness.
+  // When the current socket was created (connect attempt) and when it
+  // opened. The silence guard in tick() measures from the latest of these
+  // and the last roster, so a fresh socket gets the full SOCKET_SILENCE_MS
+  // to complete its handshake and deliver its first roster. A handshake
+  // that never answers fires no event at all, so the guard must run while
+  // still connecting. isCoordinated() deliberately looks at neither — only
+  // a roster proves liveness.
+  private attemptedAt = 0;
   private connectedAt = 0;
   // The latest lobbies the master gave us; sent on the next eligible tick.
   private pendingReport: { lobbies: InternalGameInfo[]; liveGames: number } = {
@@ -161,7 +165,12 @@ export class LobbyCoordinatorClient {
     this.connect =
       opts.connect ??
       ((url, headers) =>
-        new WebSocket(url, { headers }) as unknown as CoordinatorSocket);
+        new WebSocket(url, {
+          headers,
+          // ws has no default: without it a handshake the far end never
+          // answers hangs forever with no event. tick() guards this too.
+          handshakeTimeout: SOCKET_SILENCE_MS,
+        }) as unknown as CoordinatorSocket);
     this.now = opts.now ?? Date.now;
   }
 
@@ -212,6 +221,7 @@ export class LobbyCoordinatorClient {
       return;
     }
     this.socket = socket;
+    this.attemptedAt = this.now();
     socket.on("open", () => {
       if (this.socket !== socket) return;
       this.open = true;
@@ -297,22 +307,30 @@ export class LobbyCoordinatorClient {
     this.reconnectTimer.unref?.();
   }
 
-  // Once a second: send a report if the lobbies changed or the heartbeat is
-  // due, and tear down a socket the coordinator has gone quiet on.
+  // Once a second: tear down a socket the coordinator has gone quiet on
+  // (or never answered), then send a report if the lobbies changed or the
+  // heartbeat is due.
   private tick(): void {
-    if (!this.open || this.socket === null) return;
+    if (this.socket === null) return;
     const now = this.now();
-    if (
-      now - Math.max(this.lastRosterAt, this.connectedAt) >
-      SOCKET_SILENCE_MS
-    ) {
-      this.opts.log.warn("lobby coordinator: no roster for 15s, reconnecting");
+    const lastSign = Math.max(
+      this.lastRosterAt,
+      this.connectedAt,
+      this.attemptedAt,
+    );
+    if (now - lastSign > SOCKET_SILENCE_MS) {
+      this.opts.log.warn(
+        this.open
+          ? "lobby coordinator: no roster for 15s, reconnecting"
+          : "lobby coordinator: handshake not answered in 15s, reconnecting",
+      );
       const socket = this.socket;
       this.dropSocket(socket);
       socket.terminate();
       this.scheduleReconnect(this.nextBackoff());
       return;
     }
+    if (!this.open) return;
     if (this.reportDirty || now - this.lastReportAt >= REPORT_HEARTBEAT_MS) {
       this.sendReport();
     }
