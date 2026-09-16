@@ -944,15 +944,24 @@ fully-rendered `index-<short>.html` replay shell next to them. `update.sh`
 now also publishes, per **site** and per **version**, the three objects the
 static Worker will serve. The site is `SITE_HOST` when the deployment sits
 behind a load balancer, else `<subdomain>.<domain>`; the version is the
-7-character prefix of `static/commit.txt`. All four uploads go through
+7-character prefix of `static/commit.txt`. All uploads go through
 `PUT $R2_ENDPOINT/game_assets/upload/<urlencoded key>`, which prefixes
 `game_assets/`:
 
-| Object                                        | Rendered by                                    |
-| --------------------------------------------- | ---------------------------------------------- |
-| `sites/<site>/v/<short>/index.html`           | `RenderStaticIndex.ts --environment-only`      |
-| `sites/<site>/v/<short>/desktop/release.json` | `RenderDesktopDescriptor.ts`                   |
-| `sites/<site>/v/<short>/desktop/version.json` | `RenderDesktopDescriptor.ts --version-pointer` |
+| Object                                        | Rendered by                                           |
+| --------------------------------------------- | ----------------------------------------------------- |
+| `sites/<site>/v/<short>/index.html`           | `RenderStaticIndex.ts --environment-only`             |
+| `sites/<site>/v/<short>/desktop/release.json` | `RenderDesktopDescriptor.ts`                          |
+| `sites/<site>/v/<short>/desktop/version.json` | `RenderDesktopDescriptor.ts --version-pointer`        |
+| `sites/<site>/v/<short>/root-files.json`      | `RenderRootFiles.ts`                                  |
+| `root-files/<sha256>`                         | copied from `static/` (only if `/check` says missing) |
+
+The root files (`privacy-policy.html`, `terms-of-service.html`, `LICENSE`,
+`robots.txt`, `version.txt`, `press/`, the `ROOT_PUBLIC_FILES` list in
+`PublicAssetManifest.ts`) have no origin behind the site Worker, so it serves
+them from R2 too. `root-files.json` maps each path to the sha256 of its bytes,
+and each file is stored once under that hash, so an unchanged press kit is not
+uploaded again on every deploy.
 
 Both renderers run inside the freshly built image with the live container's
 env file, exactly as the replay shell already does, so what is published is
