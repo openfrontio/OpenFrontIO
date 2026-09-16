@@ -143,7 +143,12 @@ describe("creator code client functions", () => {
       await getUserMe();
       const callsBeforeMutation = fetchMock.mock.calls.length;
 
-      respond(200, { code: "LEWIS", displayName: "Lewis" });
+      // The API's real success body (infra bindingSuccess): the creator is
+      // nested under `creator`, beside `ok: true`.
+      respond(200, {
+        ok: true,
+        creator: { code: "LEWIS", displayName: "Lewis" },
+      });
       const result = await setCreatorCode("LEWIS");
 
       expect(result).toEqual({

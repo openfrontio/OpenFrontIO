@@ -996,18 +996,30 @@ describe("PublicCreatorSchema", () => {
 });
 
 describe("PutCreatorResponseSchema", () => {
-  it("parses the bind confirmation (code + displayName only)", () => {
+  it("parses the API's bind confirmation envelope", () => {
     const result = PutCreatorResponseSchema.safeParse({
-      code: "LEWIS",
-      displayName: "Lewis",
+      ok: true,
+      creator: { code: "LEWIS", displayName: "Lewis" },
     });
     expect(result.success).toBe(true);
   });
 
+  it("rejects the un-enveloped pair the API never sends", () => {
+    expect(
+      PutCreatorResponseSchema.safeParse({
+        code: "LEWIS",
+        displayName: "Lewis",
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects a missing displayName", () => {
-    expect(PutCreatorResponseSchema.safeParse({ code: "LEWIS" }).success).toBe(
-      false,
-    );
+    expect(
+      PutCreatorResponseSchema.safeParse({
+        ok: true,
+        creator: { code: "LEWIS" },
+      }).success,
+    ).toBe(false);
   });
 });
 

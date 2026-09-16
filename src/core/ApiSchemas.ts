@@ -420,9 +420,18 @@ export type PublicCreator = z.infer<typeof PublicCreatorSchema>;
 // name of the creator the caller is now bound to. Deliberately just the
 // public pair, not the full player.creator record (sinceAt/canChangeAt):
 // callers invalidate the cached /users/@me instead of duplicating those here.
-export const PutCreatorResponseSchema = PublicCreatorSchema.pick({
-  code: true,
-  displayName: true,
+//
+// The API wraps the pair in an envelope — `{ ok: true, creator: { code,
+// displayName } }` (infra `users/@me/creator/PUT.ts` bindingSuccess) — the same
+// `ok` field its failures carry. Parsing the pair at the top level rejected
+// every successful bind, so the panel showed "Something went wrong" after the
+// server had already bound the creator.
+export const PutCreatorResponseSchema = z.object({
+  ok: z.literal(true),
+  creator: PublicCreatorSchema.pick({
+    code: true,
+    displayName: true,
+  }),
 });
 export type PutCreatorResponse = z.infer<typeof PutCreatorResponseSchema>;
 
