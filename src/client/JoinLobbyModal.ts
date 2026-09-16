@@ -20,6 +20,7 @@ import {
   GameRecordSchema,
   LobbyInfoEvent,
   PublicGameInfo,
+  PublicGames,
 } from "../core/Schemas";
 import {
   Difficulty,
@@ -65,6 +66,7 @@ export class JoinLobbyModal extends BaseModal {
   // the pre-join form.
   @state() private hostedLobbies: PublicGameInfo[] = [];
   @state() private hostedLobbiesLoaded = false;
+  @state() private publicLobbies: PublicGames | null = null;
   // Deliberately not persisted: the bell starts off and is re-armed by hand
   // for each game (reset in startTrackingLobby).
   @state() private notifyOnStart = false;
@@ -79,12 +81,29 @@ export class JoinLobbyModal extends BaseModal {
   private handledJoinTimeout = false;
 
   private readonly hostedLobbySocket = new PublicLobbySocket((lobbies) => {
+    this.publicLobbies = lobbies;
     this.hostedLobbies = lobbies.games?.hosted ?? [];
     this.hostedLobbiesLoaded = true;
   });
 
   private isPrivateLobby(): boolean {
     return this.gameConfig?.gameType === GameType.Private;
+  }
+
+  private get queuePosition(): number | null {
+    if (this.gameConfig?.gameType !== GameType.Public) return null;
+    // Match the browser's position within the full scheduled bucket, excluding
+    // its active countdown. A missing snapshot/lobby must not show Queue: 0.
+    for (const type of ["ffa", "team", "special"] as const) {
+      const queue = this.publicLobbies?.games[type]?.filter(
+        (lobby) => lobby.startsAt === undefined,
+      );
+      const index = queue?.findIndex(
+        (lobby) => lobby.gameID === this.currentLobbyId,
+      );
+      if (index !== undefined && index >= 0) return index + 1;
+    }
+    return null;
   }
 
   // Read off the server's own view of us, so a switch it refused (lobby full,
@@ -318,11 +337,16 @@ export class JoinLobbyModal extends BaseModal {
             this.serverTimeOffset,
           )
         : null;
+    const queuePosition = this.queuePosition;
     const statusLabel =
       secondsRemaining === null
         ? this.isPrivateLobby()
           ? translateText("private_lobby.joined_waiting")
-          : translateText("public_lobby.waiting_for_players")
+          : queuePosition !== null
+            ? translateText("detailed_view.queue_position", {
+                position: queuePosition,
+              })
+            : translateText("public_lobby.waiting_for_players")
         : secondsRemaining > 0
           ? translateText("public_lobby.starting_in", {
               time: renderDuration(secondsRemaining),
@@ -611,6 +635,7 @@ export class JoinLobbyModal extends BaseModal {
     // disarmLeaveOnClose() runs, no close cascade can re-arm it and
     // disconnect the player mid game-start.
     this.leaveLobbyOnClose = true;
+    this.publicLobbies = null;
     this.hostedLobbiesLoaded = false;
     void this.hostedLobbySocket.start();
     const lobbyId = typeof args?.lobbyId === "string" ? args.lobbyId : "";
@@ -718,6 +743,7 @@ export class JoinLobbyModal extends BaseModal {
 
   protected onClose(): void {
     this.hostedLobbySocket.stop();
+    this.publicLobbies = null;
     this.hostedLobbies = [];
     this.hostedLobbiesLoaded = false;
     this.clearCountdownTimer();

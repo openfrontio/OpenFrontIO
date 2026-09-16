@@ -22,6 +22,74 @@ vi.mock("../../src/client/DesktopPresence", () => ({
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
 import { GameMode, GameType } from "../../src/core/game/Game";
 
+describe("JoinLobbyModal queue status", () => {
+  function setup() {
+    const modal = new JoinLobbyModal();
+    const state = modal as any;
+    state.currentLobbyId = "queued-2";
+    state.gameConfig = { gameType: GameType.Public };
+    state.isConnecting = true;
+    const language = document.createElement("lang-selector") as any;
+    language.currentLang = "debug";
+    document.body.append(language);
+    const queued = [{ gameID: "queued-1" }, { gameID: "queued-2" }];
+    const update = (queue = queued) =>
+      state.hostedLobbySocket.onLobbiesUpdate({
+        serverTime: Date.now(),
+        games: {
+          team: [{ gameID: "other-bucket" }],
+          ffa: [{ gameID: "active", startsAt: Date.now() + 60_000 }, ...queue],
+        },
+      });
+    const status = () => {
+      const container = document.createElement("div");
+      render(state.renderBody(), container);
+      return container.textContent;
+    };
+    return { state, update, status };
+  }
+
+  it("updates the position within its own queue as earlier lobbies leave", () => {
+    const { update, status } = setup();
+    update();
+    expect(status()).toContain("detailed_view.queue_position::position=2");
+    update([{ gameID: "queued-2" }]);
+    expect(status()).toContain("detailed_view.queue_position::position=1");
+  });
+
+  it("falls back to waiting before the feed arrives or when the lobby is absent", () => {
+    const { update, status } = setup();
+    expect(status()).toContain("public_lobby.waiting_for_players");
+    update([]);
+    expect(status()).toContain("public_lobby.waiting_for_players");
+    expect(status()).not.toContain("detailed_view.queue_position");
+  });
+
+  it("lets the lobby countdown take precedence over a stale queue snapshot", () => {
+    const { state, update, status } = setup();
+    update();
+    state.lobbyStartAt = Date.now() + 30_000;
+    expect(status()).toContain("public_lobby.starting_in");
+    expect(status()).not.toContain("detailed_view.queue_position");
+  });
+
+  it("preserves private and hosted lobby waiting status", () => {
+    const { state, update, status } = setup();
+    update();
+    state.gameConfig = { gameType: GameType.Private };
+    expect(status()).toContain("private_lobby.joined_waiting");
+    expect(status()).not.toContain("detailed_view.queue_position");
+  });
+
+  it("clears the snapshot when the modal closes", () => {
+    const { state, update } = setup();
+    update();
+    state.leaveLobbyOnClose = false;
+    state.onClose();
+    expect(state.publicLobbies).toBeNull();
+  });
+});
+
 describe("JoinLobbyModal server time offset", () => {
   let nowMs = 0;
 
