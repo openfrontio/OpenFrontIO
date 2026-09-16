@@ -402,10 +402,6 @@ export class UserSettings {
     return this.getBool("settings.leftClickOpensMenu", false);
   }
 
-  territoryPatterns() {
-    return this.getBool("settings.territoryPatterns", true);
-  }
-
   goToPlayer() {
     return this.getBool("settings.goToPlayer", true);
   }
@@ -473,10 +469,6 @@ export class UserSettings {
 
   toggleCursorCostLabel() {
     this.setBool("settings.cursorCostLabel", !this.cursorCostLabel());
-  }
-
-  toggleTerritoryPatterns() {
-    this.setBool("settings.territoryPatterns", !this.territoryPatterns());
   }
 
   toggleGoToPlayer() {

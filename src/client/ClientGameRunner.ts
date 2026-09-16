@@ -746,8 +746,6 @@ async function createClientGame(
 
     const graphicsListenerAbort = new AbortController();
 
-    view.setShowPatterns(userSettings.territoryPatterns());
-
     const mapLayerController = new MapLayerController(
       view,
       gameMap,
@@ -756,12 +754,6 @@ async function createClientGame(
       lobbyConfig.gameStartInfo.config.gameMapSize,
       mapLoader,
       graphicsListenerAbort.signal,
-    );
-
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
-      (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
-      { signal: graphicsListenerAbort.signal },
     );
 
     // Re-resolve names drawn on the map when the anonymous-names setting toggles
@@ -794,9 +786,23 @@ async function createClientGame(
     };
     // Re-apply render settings, then re-theme and recolor players, on a
     // graphics-override change (covers a theme switch such as colorblind mode).
+    // Flag opacity is a render setting, not visibility, so it's left out.
+    const cosmeticVisibilityKey = (): string =>
+      JSON.stringify({
+        ...userSettings.graphicsOverrides().cosmetics,
+        flagOpacity: undefined,
+      });
+    let cosmeticVisibility = cosmeticVisibilityKey();
     const onGraphicsChanged = (): void => {
       regenerateRenderSettings();
       refreshDerivedGraphics();
+      // Re-resolving every player's cosmetics is heavier than the rest, so
+      // only do it when the cosmetics visibility itself changed.
+      const nextCosmeticVisibility = cosmeticVisibilityKey();
+      if (nextCosmeticVisibility !== cosmeticVisibility) {
+        cosmeticVisibility = nextCosmeticVisibility;
+        webglBuilder.refreshCosmetics(gameView);
+      }
     };
     // No initial regenerate or terrain rebuild needed — the renderer was
     // constructed with the resolved settings above, so the terrain texture

@@ -41,6 +41,7 @@ export class IconProgram {
   private uEmojiRowOffset: WebGLUniformLocation;
   private uFadeOwnerID: WebGLUniformLocation;
   private uHoverFadeAlpha: WebGLUniformLocation;
+  private uFlagAlpha: WebGLUniformLocation;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -113,6 +114,7 @@ export class IconProgram {
       this.program,
       "uHoverFadeAlpha",
     )!;
+    this.uFlagAlpha = gl.getUniformLocation(this.program, "uFlagAlpha")!;
 
     this.loadEmojiAtlas();
   }
@@ -165,6 +167,7 @@ export class IconProgram {
     gl.uniform1f(this.uEmojiRowOffset, ns.emojiRowOffset);
     gl.uniform1f(this.uFadeOwnerID, fadeOwnerID);
     gl.uniform1f(this.uHoverFadeAlpha, ns.hoverFadeAlpha);
+    gl.uniform1f(this.uFlagAlpha, ns.flagAlpha);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.playerDataTex);

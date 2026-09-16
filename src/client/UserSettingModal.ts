@@ -467,15 +467,6 @@ export class UserSettingModal extends BaseModal {
     this.requestUpdate();
   }
 
-  private toggleTerritoryPatterns() {
-    this.userSettings.toggleTerritoryPatterns();
-
-    console.log(
-      "🏳️ Territory Patterns:",
-      this.userSettings.territoryPatterns() ? "ON" : "OFF",
-    );
-  }
-
   private toggleGoToPlayer() {
     this.userSettings.toggleGoToPlayer();
 
@@ -1582,15 +1573,6 @@ export class UserSettingModal extends BaseModal {
       <!-- 💾 Save / share the whole configuration. Top level, not inside
            Advanced: a player who never expands the fold should still find it. -->
       <graphics-preset-tools></graphics-preset-tools>
-
-      <!-- 🏳️ Territory Patterns -->
-      <setting-toggle
-        label="${translateText("user_setting.territory_patterns_label")}"
-        description="${translateText("user_setting.territory_patterns_desc")}"
-        id="territory-patterns-toggle"
-        .checked=${this.userSettings.territoryPatterns()}
-        @change=${this.toggleTerritoryPatterns}
-      ></setting-toggle>
 
       <!-- 😊 Emojis -->
       <setting-toggle
