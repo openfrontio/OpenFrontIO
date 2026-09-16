@@ -21,6 +21,7 @@ on:
         options:
           - masters
           - staging
+          - staging2
           - falk2
       target_subdomain:
         description: "Deployment Subdomain"
@@ -59,22 +60,28 @@ jobs:
     # Deploy on push/schedule/workflow_dispatch (see "on:") unless this is a fork
     if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
     # Use different logic based on event type
-    name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}${{ matrix.subdomain && format(' ({0})', matrix.subdomain) }}
+    name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}${{ matrix.subdomain && format(' ({0} on {1})', matrix.subdomain, matrix.host) }}
     runs-on: ubuntu-latest
-    # The schedule fans out to all three dev pools; every other event deploys a
-    # single subdomain, expressed as a one-element matrix with an empty string
-    # so RAW_SUBDOMAIN below falls through to the per-event logic.
+    # The schedule fans out to nightly and the dev fleet: blue and green on
+    # each of the two dev "machines". staging2 is a second name for the
+    # staging box (SERVER_HOSTS_JSON), so the fleet rehearses per-machine
+    # routing, the registry's one-open-server-per-machine rule and
+    # cross-machine joins on one host; each leg's game host carries its
+    # machine (blue.staging2.server.openfront.dev — deploy.sh, "game host").
+    # Every other event deploys a single subdomain, expressed as a
+    # one-element matrix with an empty string so RAW_SUBDOMAIN and HOST below
+    # fall through to the per-event logic.
     strategy:
       fail-fast: false
-      # One leg at a time: parallel legs would race three concurrent pushes of
-      # the shared :latest/:buildcache tags (build.sh tags both on every build)
-      # and pile all three deploys onto deploy.sh's 15-minute host-side flock.
+      # One leg at a time: parallel legs would race concurrent pushes of the
+      # shared :latest/:buildcache tags (build.sh tags both on every build)
+      # and pile every deploy onto deploy.sh's 15-minute host-side flock.
       # Sequential legs have one writer at a time and no lock contention, and
-      # legs 2 and 3 rebuild from the registry cache leg 1 just pushed, so they
+      # later legs rebuild from the registry cache leg 1 just pushed, so they
       # are cheap.
       max-parallel: 1
       matrix:
-        subdomain: ${{ github.event_name == 'schedule' && fromJSON('["nightly", "green", "blue"]') || fromJSON('[""]') }}
+        include: ${{ github.event_name == 'schedule' && fromJSON('[{"subdomain":"nightly","host":"staging"},{"subdomain":"green","host":"staging"},{"subdomain":"blue","host":"staging"},{"subdomain":"green","host":"staging2"},{"subdomain":"blue","host":"staging2"}]') || fromJSON('[{"subdomain":""}]') }}
     timeout-minutes: 30
     environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
@@ -183,7 +190,9 @@ jobs:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
-          HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }} # schedule and push both use staging
+          # The schedule names a machine per leg; a dispatch picks one; a push
+          # always lands on staging.
+          HOST: ${{ matrix.host || (github.event_name == 'workflow_dispatch' && inputs.target_host) || 'staging' }}
           CDN_BASE: ${{ vars.CDN_BASE }}
           # Runtime env for the game server, which injects it into the
           # page's BOOTSTRAP_CONFIG exactly like TURNSTILE_SITE_KEY — builds
@@ -249,7 +258,10 @@ jobs:
           # Poll the GAME host: with GAME_DOMAIN set the page host is served
           # by the static Worker, which knows nothing about this container's
           # commit. Unset, the two are the same name (docs/MultiServer.md).
-          GAME_FQDN="${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}"
+          # deploy.sh exports GAME_HOST once it has resolved the name from
+          # the cluster map — a machine-scoped host cannot be recomputed
+          # here; the fallback covers a run that never reached that step.
+          GAME_FQDN="${GAME_HOST:-${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}}"
           while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${GAME_FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"

@@ -26,8 +26,13 @@ echo "======================================================"
 echo "🔄 UPDATING SERVER: ${HOST} ENVIRONMENT"
 echo "======================================================"
 
-# Container and image configuration
-CONTAINER_NAME="openfront-${ENV}-${SUBDOMAIN}"
+# Container and image configuration. DEPLOYMENT_NAME is the bare subdomain
+# for a standalone deployment and <machine>-<subdomain> for a machine-scoped
+# one (deploy.sh, "game host"): the same slot on two machines must not share
+# a container name when both "machines" are names for one box. The fallback
+# keeps a hand-written env file working.
+DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-$SUBDOMAIN}"
+CONTAINER_NAME="openfront-${ENV}-${DEPLOYMENT_NAME}"
 
 echo "Pulling ${GHCR_IMAGE} from GitHub Container Registry..."
 docker pull "${GHCR_IMAGE}"
@@ -315,24 +320,38 @@ else
         "$ROOT_FILES_INDEX" "application/json" || exit 1
 fi
 
-echo "Checking for existing container..."
-# Use docker ps with filter for exact name match
-RUNNING_CONTAINER="$(docker ps --filter "name=^${CONTAINER_NAME}$" -q)"
-if [ -n "$RUNNING_CONTAINER" ]; then
-    echo "Stopping running container $RUNNING_CONTAINER..."
-    docker stop "$RUNNING_CONTAINER"
-    echo "Waiting for container to fully stop and release resources..."
-    sleep 5 # Add a 5-second delay
-    docker rm "$RUNNING_CONTAINER"
-    echo "Container $RUNNING_CONTAINER stopped and removed."
-fi
+# remove_container <name>: stop and remove the container of that exact name,
+# running or not. Silent when there is none.
+remove_container() {
+    local name="$1" running stopped
+    # Use docker ps with filter for exact name match
+    running="$(docker ps --filter "name=^${name}$" -q)"
+    if [ -n "$running" ]; then
+        echo "Stopping running container $running ($name)..."
+        docker stop "$running"
+        echo "Waiting for container to fully stop and release resources..."
+        sleep 5 # Add a 5-second delay
+        docker rm "$running"
+        echo "Container $running stopped and removed."
+    fi
+    # Also check for stopped containers with the same name
+    stopped="$(docker ps -a --filter "name=^${name}$" -q)"
+    if [ -n "$stopped" ]; then
+        echo "Removing stopped container $stopped ($name)..."
+        docker rm "$stopped"
+        echo "Container $stopped removed."
+    fi
+}
 
-# Also check for stopped containers with the same name
-STOPPED_CONTAINER="$(docker ps -a --filter "name=^${CONTAINER_NAME}$" -q)"
-if [ -n "$STOPPED_CONTAINER" ]; then
-    echo "Removing stopped container $STOPPED_CONTAINER..."
-    docker rm "$STOPPED_CONTAINER"
-    echo "Container $STOPPED_CONTAINER removed."
+echo "Checking for existing container..."
+remove_container "${CONTAINER_NAME}"
+# A slot that has just moved to a machine-scoped host leaves its old
+# container behind under the bare name, still claiming
+# <subdomain>.<GAME_DOMAIN> — a host no cluster entry names any more — and,
+# for the long-lived slots, with restart=always keeping it up. The two
+# shapes are exclusive for one slot on one box, so retire it here.
+if [ "${DEPLOYMENT_NAME}" != "${SUBDOMAIN}" ]; then
+    remove_container "openfront-${ENV}-${SUBDOMAIN}"
 fi
 
 # Docker restart policy. `always` means the daemon brings this container back
@@ -383,24 +402,28 @@ echo "Starting new container for ${HOST} environment..."
 # Ensure the traefik network exists
 docker network create web 2> /dev/null || true
 
-# Traefik Host() rule. With GAME_DOMAIN set this container owns two names:
-# its game host (<subdomain>.<GAME_DOMAIN>), which is what cluster entries
-# point sockets and /api at, and — during the transition, until the static
-# Worker is actually routed — its page host (<subdomain>.<DOMAIN>), so the
-# box still answers on the name people already have bookmarked. Once the
-# Worker owns the page host its DNS stops pointing here and that clause
-# simply never matches. With GAME_DOMAIN unset there is one name and the
-# rule is byte-for-byte the one this script has always emitted.
+# Traefik Host() rule. The container always answers on its game host —
+# GAME_HOST, as deploy.sh resolved it from the cluster map, or
+# <subdomain>.<GAME_DOMAIN>/<subdomain>.<DOMAIN> for an env file written by
+# hand. With GAME_DOMAIN set a standalone deployment also owns its page host
+# (<subdomain>.<DOMAIN>) during the transition, until the static Worker is
+# actually routed there, so the box still answers on the name people already
+# have bookmarked; once the Worker owns it that clause simply never matches.
+# A machine-scoped host (blue.staging2.server.openfront.dev) has no page host
+# of its own — its page is the apex, SITE_HOST — so it gets the one name.
+# With GAME_DOMAIN unset there is one name and the rule is byte-for-byte the
+# one this script has always emitted.
 #
 # The markers below delimit the block tests/UpdateTraefikHostRule.test.ts
 # extracts and runs, the same way the restart policy above is tested: the
-# rest of this script talks to docker, this decision is three strings in and
+# rest of this script talks to docker, this decision is four strings in and
 # one string out. Keep them in place.
 # --- BEGIN traefik host rule (tested) ---
-if [ -n "${GAME_DOMAIN:-}" ]; then
-    TRAEFIK_HOST_RULE="Host(\`${SUBDOMAIN}.${DOMAIN}\`) || Host(\`${SUBDOMAIN}.${GAME_DOMAIN}\`)"
+GAME_HOST="${GAME_HOST:-${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}}"
+if [ -n "${GAME_DOMAIN:-}" ] && [ "${GAME_HOST}" = "${SUBDOMAIN}.${GAME_DOMAIN}" ]; then
+    TRAEFIK_HOST_RULE="Host(\`${SUBDOMAIN}.${DOMAIN}\`) || Host(\`${GAME_HOST}\`)"
 else
-    TRAEFIK_HOST_RULE="Host(\`${SUBDOMAIN}.${DOMAIN}\`)"
+    TRAEFIK_HOST_RULE="Host(\`${GAME_HOST}\`)"
 fi
 # --- END traefik host rule (tested) ---
 

@@ -188,7 +188,16 @@ export class ServerEnv {
   // to the other deployment. This is NOT the host the page came from: that is
   // siteHost(), and with GAME_DOMAIN set the two are always different names.
   // Undefined in dev (no SUBDOMAIN): the client falls back to same-origin.
+  //
+  // GAME_HOST, when deploy.sh wrote one, is authoritative: it is the name the
+  // cluster map actually carries for this deployment, and for a
+  // machine-scoped entry (`blue.staging2.server.openfront.dev`, the machine
+  // in the hostname so one colour can span boxes) it is not derivable from
+  // SUBDOMAIN and GAME_DOMAIN alone. The derivation below is the standalone
+  // shape and stays for env files written by hand.
   static publicHost(): string | undefined {
+    const explicit = process.env.GAME_HOST;
+    if (explicit && explicit.length > 0) return explicit;
     const subdomain = ServerEnv.subdomain();
     const domain = ServerEnv.gameDomain() ?? ServerEnv.domain();
     if (!subdomain || !domain) return undefined;
