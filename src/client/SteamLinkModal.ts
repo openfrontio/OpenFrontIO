@@ -7,6 +7,7 @@ import { isLoggedIn } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
+  answerSteamLinkConflict,
   fetchSteamLinkTicket,
   isValidSteamLinkCode,
   normalizeSteamLinkCode,
@@ -15,6 +16,7 @@ import {
   redeemSteamLinkCode,
   stashPendingCodeEntry,
   stashPendingLink,
+  type SteamConflictAccount,
 } from "./SteamLink";
 import { translateText } from "./Utils";
 
@@ -22,7 +24,12 @@ import { translateText } from "./Utils";
 // the player hasn't given us a code yet, so there's nothing to fetch.
 type LoadState = "code_entry" | "loading" | "ready" | "load_error";
 type RedeemState = "idle" | "redeeming" | "success" | "failed";
-type Mode = "token" | "code";
+// "conflict" is the website's entry point, and the only mode that opens
+// straight onto the discard confirmation: its refusal already happened, over
+// on the Steam OpenID redirect, so there is no ticket, no code and nothing to
+// redeem here — just the question of whether to discard the account in the
+// way. See openForConflict.
+type Mode = "token" | "code" | "conflict";
 
 // Known machine-readable refusal reasons from POST /auth/steam/link (see the
 // status-code mapping in SteamLink.ts's redeemSteamLink/redeemSteamLinkCode).
@@ -43,12 +50,62 @@ const REASON_KEYS: Record<string, string> = {
   steam_has_progress: "steam_link_modal.reason_steam_has_progress",
   expired: "steam_link_modal.reason_expired",
   rate_limited: "steam_link_modal.reason_rate_limited",
+  // Answers to the discard confirmation, from POST /auth/steam/link/discard.
+  // `discard_blocked` is the generic "support has to do this one"; the paid
+  // case gets its own message below, because naming the reason is what stops
+  // the player from opening a ticket to ask what it was.
+  discard_blocked: "steam_link_modal.reason_discard_blocked",
+  // Client-synthesized (the server sends reason `discard_blocked` with
+  // `block: "paid"`); see applyConflict.
+  discard_blocked_paid: "steam_link_modal.reason_discard_blocked_paid",
+  discard_deferred: "steam_link_modal.reason_discard_deferred",
+  offer_unavailable: "steam_link_modal.reason_offer_unavailable",
+  // Terminal answers with nothing to do but start over. `offer_invalid` is a
+  // stashed offer that no longer matches this session; `account_is_guest` is a
+  // session that could never have held one. Both read as "expired" to the
+  // player, and the generic "please try again" would point at a button that
+  // is no longer there.
+  offer_invalid: "steam_link_modal.reason_offer_unavailable",
+  account_is_guest: "steam_link_modal.reason_offer_unavailable",
+  // Client-synthesized: a 200 whose `linked` is false. The offer is spent and
+  // an account may be gone, but this one is not linked — see handleDiscard.
+  discard_not_linked: "steam_link_modal.reason_discard_not_linked",
 };
 const DEFAULT_REASON_KEY = "common.error_generic";
 
-// The one identity rule this file applies, in the three places `userMe`
+// Answers to the discard that leave the offer STANDING, so the confirmation
+// stays answerable and closing still declines on the desktop paths. Every
+// other answer spends it.
+//   discard_deferred — the one refusal the server restores the offer for: a
+//                      purchase on that account is still settling.
+//   rate_limited     — the throttle refused before the handler ran, and the
+//                      handler is what consumes the offer.
+//   failed           — not an answer at all: a network error or an unexpected
+//                      status, so the request may never have reached the
+//                      server. A cancel against an offer that WAS spent is a
+//                      harmless 410, so the cheap direction to be wrong in is
+//                      the one that releases the desktop's ticket.
+const RETRYABLE_DISCARD_REASONS: ReadonlySet<string> = new Set([
+  "discard_deferred",
+  "rate_limited",
+  "failed",
+]);
+
+// The discard confirmation's phases. Derived in ONE place (conflictPhase)
+// from fields the modal already keeps, so the render, the discard handler and
+// the close path cannot disagree about which one it is in — a review round
+// found a regression that came from exactly that recombination drifting
+// between sites.
+//   "naming"   the account being KEPT has no name yet; Delete is disabled.
+//   "ready"    answerable — first time, or again after a retryable refusal.
+//   "deleting" the discard is in flight; both buttons are disabled.
+//   "spent"    the offer is gone and the refusal is final; only Close is left.
+type ConflictPhase = "naming" | "ready" | "deleting" | "spent";
+
+// The one identity rule this file applies, at every read of `userMe` (the two
+// entry paths, the code submit, and the conflict-mode load) where `userMe`
 // decides whether the confirm step may be reached. Factored out because those
-// three reads are NOT guaranteed to agree: getUserMe() memoises its answer,
+// reads are NOT guaranteed to agree: getUserMe() memoises its answer,
 // but Api.ts deliberately un-caches an aborted/timed-out attempt (and a 401
 // clears the session outright), so the gate below can pass on an unreadable
 // `false` and a later read then succeed — returning the guest profile the
@@ -135,6 +192,18 @@ export class SteamLinkModal extends BaseModal {
   private code: string | null = null;
   private codeDraft = "";
   private codeError: string | null = null;
+
+  // The account the player would destroy by confirming. Non-null ONLY while
+  // the discard confirmation is the screen being shown: it is both the render
+  // data and the "is there an unanswered offer" flag that onClose reads, so
+  // every path that answers the offer clears it first.
+  private conflict: SteamConflictAccount | null = null;
+  // Whether the offer above has already been SPENT — a discard or a cancel
+  // has gone to the server. Separate from `conflict` because the confirmation
+  // stays on screen while the discard is in flight (it is the screen that says
+  // "Deleting…"), so "still showing it" and "still ours to cancel" stop being
+  // the same question the moment the button is pressed.
+  private conflictAnswered = false;
 
   // Guards a stale open()'s fetch/redeem continuation from clobbering state
   // that belongs to a later call (a re-open with a different token, or a
@@ -242,8 +311,36 @@ export class SteamLinkModal extends BaseModal {
     this.open();
   }
 
+  // Entry point for the WEBSITE's link flow (LinkResult.ts). That flow's
+  // refusal already happened on the Steam OpenID redirect, so there is
+  // nothing left to redeem — the only question is whether to discard the
+  // account in the way, and this opens straight onto it.
+  //
+  // No login gate, unlike the two entry points above: reaching this state at
+  // all required an authenticated /auth/link/steam round trip, and the offer
+  // it produced is keyed to that very session server-side. A guest cannot
+  // hold one.
+  public async openForConflict(account: SteamConflictAccount): Promise<void> {
+    this.mode = "conflict";
+    this.token = null;
+    this.conflict = account;
+    this.open();
+  }
+
   protected onOpen(): void {
     const myRequestId = ++this.requestId;
+    // BaseModal.open() re-runs onOpen() on an ALREADY-OPEN modal without
+    // calling onClose() first, and Main.ts opens this one straight off a hash
+    // change — so a new handoff can land on top of a discard confirmation. Left
+    // alone, the stale `conflict` wins in renderBody and the previous offer's
+    // "Delete it and link" reappears over an unrelated link attempt.
+    //
+    // Not a blanket reset: openForConflict assigns `conflict` BEFORE calling
+    // open(), so in that mode the account here is the new one, not a stale
+    // one. Nothing is posted for an offer abandoned this way either — offers
+    // are keyed on the player, so a late cancel could spend the new one.
+    if (this.mode !== "conflict") this.conflict = null;
+    this.conflictAnswered = false;
     this.redeemState = "idle";
     this.failureReason = null;
     this.retryAfterSeconds = null;
@@ -255,6 +352,49 @@ export class SteamLinkModal extends BaseModal {
       this.code = null;
       this.codeDraft = "";
       this.codeError = null;
+      return;
+    }
+
+    if (this.mode === "conflict") {
+      // LOADING FIRST, and `ready` only once the account being KEPT has a
+      // name. Not a spinner for its own sake: `ready` is what renders the
+      // "Delete it and link" button, and the whole job of this screen is to
+      // say which account survives and which one goes. Reaching `ready` while
+      // `username` is still null would put an enabled, irreversible button
+      // over a blank "You'll keep ___" line on first paint — and leave it
+      // there for good if the read fails.
+      //
+      // This is the same sequencing the token path already uses, and the same
+      // invariant the confirm step's own comment relies on ("always a real,
+      // identifying string once ready"). The conflict branch reached `ready`
+      // without it; now it does not.
+      this.loadState = "loading";
+      this.personaName = this.conflict?.personaName ?? null;
+      void getUserMe().then((userMe) => {
+        if (myRequestId !== this.requestId) return; // superseded
+        // The load-error state, NOT a confirmation with a blank name in it.
+        // A screen that cannot name the survivor is asking the player to
+        // approve a deletion on trust. Same rule the token path applies to an
+        // unreadable /users/@me, and the same reason the confirm step has no
+        // "unknown account" placeholder.
+        //
+        // A guest lands here too — the identity rule applies at every read
+        // (see isGuestAccount), and a throwaway account is not a survivor
+        // worth naming. No login redirect on this path: there is no pending
+        // link to stash and resume, and the server refuses a guest's answer
+        // regardless (account_is_guest).
+        if (userMe === false || isGuestAccount(userMe)) {
+          this.loadState = "load_error";
+          this.requestUpdate();
+          return;
+        }
+        // Same `username ?? publicId` convention as the confirm step above:
+        // a placeholder noun here would gut the point of naming the account
+        // the player keeps.
+        this.username = userMe.player.username ?? userMe.player.publicId;
+        this.loadState = "ready";
+        this.requestUpdate();
+      });
       return;
     }
 
@@ -296,6 +436,30 @@ export class SteamLinkModal extends BaseModal {
   }
 
   protected onClose(): void {
+    // Closing on an unanswered discard offer IS declining it — but only on the
+    // desktop paths, and the asymmetry is deliberate rather than an oversight.
+    //
+    // A token/code flow has the game sitting behind it polling a link ticket
+    // the server left open precisely because a question was outstanding.
+    // Walking away without telling it means the gate spins for the ticket's
+    // full ten minutes; declining releases it now, and the player sees the
+    // refusal immediately instead of a hang.
+    //
+    // The website flow (mode "conflict") has no ticket and nothing waiting, so
+    // there is nothing to release — and spending the offer there would cost a
+    // player who closed the dialog to think about it another full trip through
+    // Steam. It is left to expire on its own instead.
+    if (
+      this.conflict !== null &&
+      !this.conflictAnswered &&
+      this.mode !== "conflict"
+    ) {
+      // Not awaited, and failures are ignored: this is a courtesy to the
+      // desktop, and the ticket expires by itself if it never lands.
+      void answerSteamLinkConflict("cancel");
+    }
+    this.conflict = null;
+    this.conflictAnswered = false;
     this.token = null;
     this.code = null;
     this.codeDraft = "";
@@ -377,12 +541,42 @@ export class SteamLinkModal extends BaseModal {
     this.requestUpdate();
 
     const result = await redeem();
+    // BEFORE the stale-request guard, for the same reason handleDiscard does
+    // it: the header close and Escape stay live during "Linking…", and a link
+    // that landed has changed the profile /users/@me caches for the page's
+    // lifetime whether or not the modal is still there to say so.
+    if (result.ok) invalidateUserMe();
     if (myRequestId !== this.requestId) return; // closed/reopened meanwhile
 
     if (result.ok) {
-      invalidateUserMe();
       this.redeemState = "success";
-    } else if (this.mode === "code") {
+      this.requestUpdate();
+      return;
+    }
+
+    // A refusal the player can still answer: the Steam id belongs to an
+    // account that holds it and nothing else, and the server is offering to
+    // discard it. Show the confirmation instead of the dead end — including
+    // on the code path, whose usual "back to the field" handling below is
+    // exactly wrong here (the code was right; there is nothing to retype).
+    const conflict = result.conflict;
+    if (conflict !== undefined && conflict.discardable) {
+      this.showConflict(conflict.account);
+      this.requestUpdate();
+      return;
+    }
+
+    // Everything else is an ordinary refusal, INCLUDING a conflict with no way
+    // through (`discardable: false`): the block only changes which message is
+    // shown, not where. So the code path still returns to its field, and the
+    // token path still reports it on the confirm step — the same places the
+    // same refusal lands from a server that sends no offer at all.
+    const reason =
+      conflict !== undefined && !conflict.discardable
+        ? SteamLinkModal.blockedReasonKey(conflict.block)
+        : result.reason;
+    const retryAfterSeconds = result.retryAfterSeconds ?? null;
+    if (this.mode === "code") {
       // A refused code has nothing left to fix on this confirm screen —
       // Confirm would just resubmit the exact same, already-refused code.
       // The alphabet still has eye-confusable pairs (B/8, S/5, 2/Z, G/6), so
@@ -395,30 +589,136 @@ export class SteamLinkModal extends BaseModal {
       // too, so a later, successful resubmission doesn't render this stale
       // failure the instant it reaches "ready" again.
       this.loadState = "code_entry";
-      this.codeError = reasonMessage(
-        result.reason,
-        result.retryAfterSeconds ?? null,
-      );
+      this.codeError = reasonMessage(reason, retryAfterSeconds);
       this.redeemState = "idle";
       this.failureReason = null;
       this.retryAfterSeconds = null;
     } else {
       this.redeemState = "failed";
-      this.failureReason = result.reason;
-      this.retryAfterSeconds = result.retryAfterSeconds ?? null;
+      this.failureReason = reason;
+      this.retryAfterSeconds = retryAfterSeconds;
     }
     this.requestUpdate();
+  }
+
+  // The one place `discard_blocked` becomes a message key, shared by both
+  // paths that can receive it: the offer (handleConfirm, where the server
+  // refused up front) and the answer (handleDiscard, where the re-check
+  // refused at confirm time). Only "paid" has its own copy — naming that one
+  // is what stops the player opening a ticket to ask what the problem was;
+  // "banned" and "support" are both support's call and share the generic one.
+  private static blockedReasonKey(block: string | undefined): string {
+    return block === "paid" ? "discard_blocked_paid" : "discard_blocked";
+  }
+
+  // Switch the desktop paths onto the discard confirmation. `conflict` is set
+  // here and cleared only by success or close — never by a refusal, because
+  // the screen that explains the refusal is this one. Clearing it on a refusal
+  // once retired the whole screen, and on the website path (no token)
+  // renderBody then fell through to the link-confirm step over a button that
+  // did nothing.
+  private showConflict(account: SteamConflictAccount): void {
+    this.conflict = account;
+    this.conflictAnswered = false;
+    this.personaName = account.personaName ?? this.personaName;
+    this.redeemState = "idle";
+    this.failureReason = null;
+    this.retryAfterSeconds = null;
+  }
+
+  // See ConflictPhase. Only meaningful while `conflict !== null`.
+  private conflictPhase(): ConflictPhase {
+    if (this.redeemState === "redeeming") return "deleting";
+    if (this.conflictAnswered) return "spent";
+    if (this.loadState !== "ready") return "naming";
+    return "ready";
+  }
+
+  // Confirmed: delete the other account and take its Steam id.
+  private async handleDiscard(): Promise<void> {
+    if (this.conflict === null || this.conflictPhase() !== "ready") return;
+
+    const myRequestId = this.requestId;
+    // Marked spent BEFORE the request, not after it: the offer is single-use
+    // server-side, so a close racing this call must not also fire a cancel
+    // against something already being spent.
+    this.conflictAnswered = true;
+    this.redeemState = "redeeming";
+    this.failureReason = null;
+    this.retryAfterSeconds = null;
+    this.requestUpdate();
+
+    const result = await answerSteamLinkConflict("discard");
+    // BEFORE the stale-request guard. The header close and Escape stay live
+    // during "Deleting…", so the modal can be gone by the time this resolves —
+    // but a 200 means the server has acted, and /users/@me is cached for the
+    // page's lifetime. Skipping this with the rest of the continuation would
+    // leave the page showing the pre-link account until a reload.
+    if (result.ok) invalidateUserMe();
+    if (myRequestId !== this.requestId) return; // closed/reopened meanwhile
+
+    // Success is `linked`, not merely 200. The response models the two
+    // separately (a cancel is a 200 with linked: false), and "Your Steam
+    // account is now linked" over an account that is not would be the worst
+    // message this modal could show right after an irreversible delete.
+    if (result.ok && result.linked) {
+      this.conflict = null;
+      this.redeemState = "success";
+      this.requestUpdate();
+      return;
+    }
+
+    let reason: string;
+    if (result.ok) {
+      // Spent — the server answered — but not linked. Terminal: there is no
+      // offer left to answer, and the only way forward is a fresh link.
+      reason = "discard_not_linked";
+    } else if (result.reason === "discard_blocked") {
+      // Same synthesis the offer path does. The server's re-check can refuse
+      // at confirm time — a purchase landing on the doomed account between
+      // the offer and the click — and that refusal deserves the specific copy
+      // the up-front one gets, not the generic dead end.
+      reason = SteamLinkModal.blockedReasonKey(result.block);
+    } else {
+      reason = result.reason;
+    }
+    this.redeemState = "failed";
+    this.failureReason = reason;
+    this.retryAfterSeconds = result.ok
+      ? null
+      : (result.retryAfterSeconds ?? null);
+    // Whether the offer is still ours to answer decides the phase (see
+    // RETRYABLE_DISCARD_REASONS): Delete stays for a retryable refusal and
+    // goes for a final one. `conflict` itself stays either way — see
+    // showConflict for why a refusal must never clear it.
+    this.conflictAnswered = !RETRYABLE_DISCARD_REASONS.has(reason);
+    this.requestUpdate();
+  }
+
+  // Declined. Tells the server so the desktop's ticket is released now rather
+  // than at expiry, then closes — same destination as the Cancel on every
+  // other step of this modal. Desktop paths only, for the same reason onClose
+  // draws the line there: the website flow has no ticket, so posting would do
+  // nothing but spend the offer, and Cancel and close are the same "not now"
+  // to a player — one must not cost them another trip through Steam when the
+  // other does not. `conflictAnswered` is set first so onClose cannot post a
+  // second cancel on the way out.
+  private handleDeclineConflict(): void {
+    this.conflictAnswered = true;
+    if (this.mode !== "conflict") void answerSteamLinkConflict("cancel");
+    this.close();
   }
 
   protected renderBody(): TemplateResult {
     if (this.loadState === "load_error") {
       // The token path's copy ("...try again from Steam") is the wrong
-      // instruction on the code path — the player is already on the
-      // website holding a code, not going back through Steam.
+      // instruction on every other path — the code player is already on the
+      // website holding a code, and the website conflict flow never went
+      // through Steam's client at all.
       const loadErrorMessage =
-        this.mode === "code"
-          ? translateText("steam_link_modal.load_error_code")
-          : translateText("steam_link_modal.load_error");
+        this.mode === "token"
+          ? translateText("steam_link_modal.load_error")
+          : translateText("steam_link_modal.load_error_code");
       return html`
         <div class="flex flex-col gap-4 p-6 text-center">
           <p
@@ -448,6 +748,113 @@ export class SteamLinkModal extends BaseModal {
           >
             ${translateText("common.close")}
           </button>
+        </div>
+      `;
+    }
+
+    // The discard confirmation. Deliberately the only screen in this modal
+    // whose primary action is destructive, and it is laid out to be read in
+    // that order: what is being deleted, what is being kept, that it cannot be
+    // undone. The account line is the safeguard — a player who is about to
+    // delete the account they actually wanted should be able to see that from
+    // the name, the age and the games count before they click.
+    // `load_error` has already returned above, so reaching here means the
+    // conflict screen is the right one to show — ready or still resolving.
+    if (this.conflict !== null) {
+      const conflict = this.conflict;
+      // One derived phase drives every button below (see ConflictPhase). In
+      // "spent" the only action left is to leave: a live "Delete it and link"
+      // underneath a final refusal would be decorative on the one screen where
+      // that is least acceptable.
+      const phase = this.conflictPhase();
+      // The destructive half of this screen is known up front (it travels
+      // with the offer); the half naming the account being KEPT may still be
+      // resolving. Render the same "…" placeholder the link confirm step uses
+      // rather than the link confirm step itself — which would flash "Link
+      // Steam … with account …", the wrong screen entirely — and keep the
+      // discard button disabled until there is a name on the line above it.
+      const kept = phase === "naming" ? "…" : (this.username ?? "");
+      // An unparseable date is omitted exactly like a missing one. This line is
+      // how the player recognises the account about to be deleted, and
+      // "Invalid Date" there is noise at the worst moment — the API's date
+      // wire format has wobbled before (see TribesPanel's identical guard).
+      const createdAt =
+        conflict.createdAt === null ? null : new Date(conflict.createdAt);
+      const created =
+        createdAt === null || Number.isNaN(createdAt.getTime())
+          ? null
+          : createdAt.toLocaleDateString();
+      const games = conflict.gamesPlayedCapped
+        ? translateText("steam_link_modal.conflict_games_capped", {
+            games: conflict.gamesPlayed,
+          })
+        : translateText("steam_link_modal.conflict_games", {
+            games: conflict.gamesPlayed,
+          });
+      // Same rule as the link prompt above: no placeholder noun for a missing
+      // Steam name, a dedicated phrasing instead, or the copy reads as a
+      // doubled "Steam ... Steam account".
+      const prompt =
+        conflict.personaName === null
+          ? translateText("steam_link_modal.conflict_prompt_no_persona")
+          : translateText("steam_link_modal.conflict_prompt", {
+              persona: conflict.personaName,
+            });
+
+      return html`
+        <div class="flex flex-col gap-4 p-6">
+          <p class="text-white text-base font-medium text-center">${prompt}</p>
+          <p class="text-white/70 text-sm text-center">
+            ${translateText("steam_link_modal.conflict_explain")}
+          </p>
+          <div
+            class="steam-link-conflict-account flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center"
+          >
+            <span class="text-white text-sm font-semibold"
+              >${conflict.username ?? conflict.publicId}</span
+            >
+            <span class="text-white/50 text-xs">
+              ${games}${created === null ? "" : ` · ${created}`}
+            </span>
+          </div>
+          <p class="text-white/70 text-sm text-center">
+            ${translateText("steam_link_modal.conflict_keep", {
+              username: kept,
+            })}
+          </p>
+          <p class="text-red-400 text-sm text-center font-medium">
+            ${translateText("steam_link_modal.conflict_warning")}
+          </p>
+          ${this.redeemState === "failed"
+            ? html`<p class="text-red-400 text-sm text-center">
+                ${reasonMessage(this.failureReason, this.retryAfterSeconds)}
+              </p>`
+            : null}
+          <div class="flex gap-3">
+            <button
+              class="steam-link-cancel-btn ${BUTTON_BASE} bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white/80"
+              ?disabled=${phase === "deleting"}
+              @click=${() =>
+                phase === "spent" ? this.close() : this.handleDeclineConflict()}
+            >
+              ${translateText(
+                phase === "spent" ? "common.close" : "common.cancel",
+              )}
+            </button>
+            ${phase === "spent"
+              ? null
+              : html`<button
+                  class="steam-link-discard-btn ${BUTTON_BASE} bg-red-500/90 text-white hover:bg-red-500"
+                  ?disabled=${phase !== "ready"}
+                  @click=${() => this.handleDiscard()}
+                >
+                  ${translateText(
+                    phase === "deleting"
+                      ? "steam_link_modal.conflict_deleting"
+                      : "steam_link_modal.conflict_confirm",
+                  )}
+                </button>`}
+          </div>
         </div>
       `;
     }

@@ -43,13 +43,15 @@ ENV=$1
 # different machines (directory keys are lowercase by convention).
 HOST=$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')
 VERSION_TAG=$3
-SUBDOMAIN=$4
+# Lowercased because browsers lowercase the page host and the API rejects a
+# site with uppercase letters, so a mixed-case name would never register.
+SUBDOMAIN=$(printf '%s' "$4" | tr '[:upper:]' '[:lower:]')
 
 # Validate subdomain - it becomes a DNS label in the Traefik Host() rule, a
 # Docker container name, and part of a path on the remote host, so hold it to the
 # RFC 1123 label rules: letters, digits and interior hyphens, 63 octets at most.
 case "$SUBDOMAIN" in
-    "" | *[!a-zA-Z0-9-]* | -* | *-)
+    "" | *[!a-z0-9-]* | -* | *-)
         echo "Error: subdomain must be a valid hostname label - letters, digits and interior hyphens only - got: '$SUBDOMAIN'"
         exit 1
         ;;

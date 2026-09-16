@@ -491,7 +491,7 @@ async function doRefreshJwt(): Promise<void> {
   }
 }
 
-// Total mapping from the shell's three ticket failures. Kept exhaustive by
+// Total mapping from the shell's six ticket failures. Kept exhaustive by
 // the parameter type: adding a SteamTicketFailure value fails the build here.
 // The `default` is not reachable through that exhaustive type, but the shell
 // lives in a separate repo and the bridge shape reaches us as `unknown` at
@@ -509,6 +509,19 @@ function ticketReason(
       return "steam-wedged";
     case "error":
       return "steam-error";
+    case "needs-account":
+      return "needs-account";
+    case "ticket-rejected":
+      // A completed 401 from the status check. The player's own /auth/steam
+      // call would be refused identically, so this is the same situation the
+      // web path already has a message for.
+      return "steam-ticket-rejected";
+    case "api-unreachable":
+      // The shell could not reach OUR api to ask about the account -- nothing
+      // to do with Steam, and nothing the player does to their account
+      // changes it. "Can't reach OpenFront. Check your connection." is
+      // exactly right, and `network` already says that.
+      return "network";
     default:
       return "steam-error";
   }
@@ -621,9 +634,8 @@ export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
 // share one exchange rather than race on __jwt. A refresh already in flight
 // is allowed to settle first so its stale result cannot satisfy the retry.
 //
-// There is no automatic retry anywhere: a wedged Steam session does not
-// self-heal (only a Steam restart cleared it in both observed cases), so a
-// silent retry would buy nothing and delay the message.
+// DesktopSessionRecovery also calls this when connectivity returns. Failures
+// remain actionable; there is no timer repeatedly retrying a wedged session.
 let __steamRetryPromise: Promise<UserAuth> | null = null;
 export async function retrySteamSignIn(): Promise<UserAuth> {
   __steamRetryPromise ??= (async () => {
