@@ -216,11 +216,34 @@ describe("LobbyCoordinatorClient", () => {
     expect(sockets).toHaveLength(n);
     vi.advanceTimersByTime(1);
     expect(sockets).toHaveLength(n + 1);
-    // A successful open resets the backoff to 1s.
+    // An open alone does not reset the backoff: the coordinator may still
+    // reject the hello. The first roster does.
     current().emit("open");
+    current().emit("close", CoordinatorCloseCode.BadHello, Buffer.from(""));
+    vi.advanceTimersByTime(RECONNECT_MIN_MS);
+    expect(sockets).toHaveLength(n + 1);
+    vi.advanceTimersByTime(RECONNECT_MAX_MS - RECONNECT_MIN_MS);
+    expect(sockets).toHaveLength(n + 2);
+    current().emit("open");
+    current().receive(emptyRoster());
     current().emit("close", 1006, Buffer.from(""));
     vi.advanceTimersByTime(RECONNECT_MIN_MS);
-    expect(sockets).toHaveLength(n + 2);
+    expect(sockets).toHaveLength(n + 3);
+  });
+
+  // Regression: resetting backoff on open let a coordinator that rejects
+  // every hello be retried once a second forever.
+  it("backs off exponentially when the hello keeps being rejected", () => {
+    client.start();
+    for (const expected of [1, 2, 4, 8]) {
+      current().emit("open");
+      current().emit("close", CoordinatorCloseCode.BadHello, Buffer.from(""));
+      const before = sockets.length;
+      vi.advanceTimersByTime(expected * RECONNECT_MIN_MS - 1);
+      expect(sockets).toHaveLength(before);
+      vi.advanceTimersByTime(1);
+      expect(sockets).toHaveLength(before + 1);
+    }
   });
 
   // The site has sharedLobbies off (403 before any socket, or Disabled on a

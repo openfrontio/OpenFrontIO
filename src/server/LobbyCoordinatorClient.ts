@@ -226,7 +226,9 @@ export class LobbyCoordinatorClient {
       if (this.socket !== socket) return;
       this.open = true;
       this.connectedAt = this.now();
-      this.backoffMs = RECONNECT_MIN_MS;
+      // Backoff is NOT reset here: a socket that opens and is then closed
+      // with BadHello or Silent must keep escalating. It resets on the
+      // first roster, the point where the connection has proven useful.
       this.opts.log.info("lobby coordinator: connected", {
         url: this.opts.url,
       });
@@ -371,6 +373,7 @@ export class LobbyCoordinatorClient {
     switch (msg.type) {
       case "roster": {
         this.lastRosterAt = this.now();
+        this.backoffMs = RECONNECT_MIN_MS;
         const games: Record<PublicGameType, InternalGameInfo[]> = {
           ffa: [],
           team: [],
