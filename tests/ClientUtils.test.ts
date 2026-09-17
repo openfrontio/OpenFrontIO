@@ -12,7 +12,6 @@ vi.mock("../src/core/game/Game", () => ({
 }));
 
 // Import the functions to be tested and also  so we can spy on it.
-import * as Utils from "../src/client/Utils"; // Import the entire module as Utils namespace
 import {
   formatKeyForDisplay,
   formatPercentage,
@@ -23,25 +22,6 @@ import {
 
 // Set up global beforeEach/afterEach for
 // to ensure it is mocked for all tests that rely on it (e.g., renderDuration)
-beforeEach(() => {
-  // Spy on the  function and mock its implementation
-  vi.spyOn(Utils, "").mockImplementation((key: string) => {
-    switch (key) {
-      case "common.duration_hour_short":
-        return "h";
-      case "common.duration_minute_short":
-        return "min";
-      case "common.duration_second_short":
-        return "s";
-      default:
-        return key; // Fallback to key for any other translation calls
-    }
-  });
-});
-
-afterEach(() => {
-  vi.restoreAllMocks(); // Restore all mocks after each test
-});
 
 describe("normaliseMapKey", () => {
   it("should normalise a simple map name correctly", () => {
