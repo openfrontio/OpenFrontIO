@@ -1,12 +1,14 @@
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { Game, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { StatsImpl } from "../src/core/game/StatsImpl";
+import { AllPlayersStats } from "../src/core/Schemas";
 import {
   ALLIANCE_INDEX_BROKEN_BY_OTHER,
   ALLIANCE_INDEX_EXPIRED,
   ALLIANCE_INDEX_FORMED,
   ALLIANCE_INDEX_HELD_TO_END,
   ALLIANCE_INDEX_LONGEST_HELD,
+  PlayerStats,
 } from "../src/core/StatsSchemas";
 import { setup } from "./util/Setup";
 
@@ -22,16 +24,24 @@ describe("alliance stats", () => {
     player1 = game.player("player_1_id");
   });
 
+  /** stats.stats() indexes by clientID into a record whose values are
+   * themselves optional, so `.client1` alone is `PlayerStats | undefined`. */
+  function client1Stats(): NonNullable<PlayerStats> {
+    const s = stats.stats().client1;
+    expect(s).toBeDefined();
+    return s!;
+  }
+
   it("counts alliances formed", () => {
     stats.allianceFormed(player1);
     stats.allianceFormed(player1);
-    expect(stats.stats().client1.alliances![ALLIANCE_INDEX_FORMED]).toBe(2n);
+    expect(client1Stats().alliances![ALLIANCE_INDEX_FORMED]).toBe(2n);
   });
 
   it("counts being betrayed separately from expiry", () => {
     stats.allianceEnded(player1, 100, "brokenByOther");
     stats.allianceEnded(player1, 50, "expired");
-    const a = stats.stats().client1.alliances!;
+    const a = client1Stats().alliances!;
     expect(a[ALLIANCE_INDEX_BROKEN_BY_OTHER]).toBe(1n);
     expect(a[ALLIANCE_INDEX_EXPIRED]).toBe(1n);
   });
@@ -40,14 +50,12 @@ describe("alliance stats", () => {
     stats.allianceEnded(player1, 100, "expired");
     stats.allianceEnded(player1, 600, "brokenByOther");
     stats.allianceEnded(player1, 20, null);
-    expect(stats.stats().client1.alliances![ALLIANCE_INDEX_LONGEST_HELD]).toBe(
-      600n,
-    );
+    expect(client1Stats().alliances![ALLIANCE_INDEX_LONGEST_HELD]).toBe(600n);
   });
 
   it("updates the longest alliance without bumping any counter", () => {
     stats.allianceEnded(player1, 900, null);
-    const a = stats.stats().client1.alliances!;
+    const a = client1Stats().alliances!;
     expect(a[ALLIANCE_INDEX_LONGEST_HELD]).toBe(900n);
     expect(a[ALLIANCE_INDEX_BROKEN_BY_OTHER]).toBe(0n);
     expect(a[ALLIANCE_INDEX_EXPIRED]).toBe(0n);
@@ -55,7 +63,7 @@ describe("alliance stats", () => {
 
   it("records alliances still standing at the end", () => {
     stats.recordAlliancesAtEnd(player1, 2, 1200);
-    const a = stats.stats().client1.alliances!;
+    const a = client1Stats().alliances!;
     expect(a[ALLIANCE_INDEX_HELD_TO_END]).toBe(2n);
     expect(a[ALLIANCE_INDEX_LONGEST_HELD]).toBe(1200n);
   });
@@ -63,9 +71,7 @@ describe("alliance stats", () => {
   it("lets a still-standing alliance beat an earlier broken one", () => {
     stats.allianceEnded(player1, 300, "brokenByOther");
     stats.recordAlliancesAtEnd(player1, 1, 1500);
-    expect(stats.stats().client1.alliances![ALLIANCE_INDEX_LONGEST_HELD]).toBe(
-      1500n,
-    );
+    expect(client1Stats().alliances![ALLIANCE_INDEX_LONGEST_HELD]).toBe(1500n);
   });
 });
 
@@ -101,11 +107,26 @@ describe("alliance stats wiring (GameImpl)", () => {
     return player1.allianceWith(player2)!;
   }
 
+  /** s indexes by clientID into a record whose values are themselves
+   * optional, so `s.client1`/`s.client2` alone is `PlayerStats | undefined`. */
+  function playerStats(
+    s: AllPlayersStats,
+    clientID: string,
+  ): NonNullable<PlayerStats> {
+    const p = s[clientID];
+    expect(p).toBeDefined();
+    return p!;
+  }
+
   it("credits both parties when an alliance forms", () => {
     formAlliance();
     const s = game.stats().stats();
-    expect(s.client1.alliances![ALLIANCE_INDEX_FORMED]).toBe(1n);
-    expect(s.client2.alliances![ALLIANCE_INDEX_FORMED]).toBe(1n);
+    expect(playerStats(s, "client1").alliances![ALLIANCE_INDEX_FORMED]).toBe(
+      1n,
+    );
+    expect(playerStats(s, "client2").alliances![ALLIANCE_INDEX_FORMED]).toBe(
+      1n,
+    );
   });
 
   it("credits only the betrayed party on a break, not the breaker", () => {
@@ -113,16 +134,19 @@ describe("alliance stats wiring (GameImpl)", () => {
     player1.breakAlliance(alliance);
     const s = game.stats().stats();
     // player2 was betrayed
-    expect(s.client2.alliances![ALLIANCE_INDEX_BROKEN_BY_OTHER]).toBe(1n);
+    expect(
+      playerStats(s, "client2").alliances![ALLIANCE_INDEX_BROKEN_BY_OTHER],
+    ).toBe(1n);
     // player1 is the breaker: not counted here (betray() already counts it
     // via markTraitor), but their longest-held maximum still updates so both
     // sides see the same alliance's duration.
-    expect(s.client1.alliances?.[ALLIANCE_INDEX_BROKEN_BY_OTHER] ?? 0n).toBe(
-      0n,
-    );
-    expect(s.client1.alliances![ALLIANCE_INDEX_LONGEST_HELD]).toBe(
-      s.client2.alliances![ALLIANCE_INDEX_LONGEST_HELD],
-    );
+    expect(
+      playerStats(s, "client1").alliances?.[ALLIANCE_INDEX_BROKEN_BY_OTHER] ??
+        0n,
+    ).toBe(0n);
+    expect(
+      playerStats(s, "client1").alliances![ALLIANCE_INDEX_LONGEST_HELD],
+    ).toBe(playerStats(s, "client2").alliances![ALLIANCE_INDEX_LONGEST_HELD]);
   });
 
   it("does not count a break against a disconnected player as betrayal", () => {
@@ -130,9 +154,10 @@ describe("alliance stats wiring (GameImpl)", () => {
     player2.markDisconnected(true);
     player1.breakAlliance(alliance);
     const s = game.stats().stats();
-    expect(s.client2.alliances?.[ALLIANCE_INDEX_BROKEN_BY_OTHER] ?? 0n).toBe(
-      0n,
-    );
+    expect(
+      playerStats(s, "client2").alliances?.[ALLIANCE_INDEX_BROKEN_BY_OTHER] ??
+        0n,
+    ).toBe(0n);
   });
 
   it("does not count a break against an already-traitor player as betrayal", () => {
@@ -140,17 +165,22 @@ describe("alliance stats wiring (GameImpl)", () => {
     player2.markTraitor();
     player1.breakAlliance(alliance);
     const s = game.stats().stats();
-    expect(s.client2.alliances?.[ALLIANCE_INDEX_BROKEN_BY_OTHER] ?? 0n).toBe(
-      0n,
-    );
+    expect(
+      playerStats(s, "client2").alliances?.[ALLIANCE_INDEX_BROKEN_BY_OTHER] ??
+        0n,
+    ).toBe(0n);
   });
 
   it("credits both parties on expiry", () => {
     const alliance = formAlliance();
     game.expireAlliance(alliance);
     const s = game.stats().stats();
-    expect(s.client1.alliances![ALLIANCE_INDEX_EXPIRED]).toBe(1n);
-    expect(s.client2.alliances![ALLIANCE_INDEX_EXPIRED]).toBe(1n);
+    expect(playerStats(s, "client1").alliances![ALLIANCE_INDEX_EXPIRED]).toBe(
+      1n,
+    );
+    expect(playerStats(s, "client2").alliances![ALLIANCE_INDEX_EXPIRED]).toBe(
+      1n,
+    );
   });
 
   it("credits an alliance still standing when the game ends", () => {
@@ -164,9 +194,17 @@ describe("alliance stats wiring (GameImpl)", () => {
     // Would be 0n/undefined without GameImpl.setWinner's
     // recordAlliancesAtEnd wiring: nothing else in this test breaks or
     // expires the alliance.
-    expect(s.client1.alliances![ALLIANCE_INDEX_HELD_TO_END]).toBe(1n);
-    expect(s.client2.alliances![ALLIANCE_INDEX_HELD_TO_END]).toBe(1n);
-    expect(s.client1.alliances![ALLIANCE_INDEX_LONGEST_HELD]).toBe(ticksHeld);
-    expect(s.client2.alliances![ALLIANCE_INDEX_LONGEST_HELD]).toBe(ticksHeld);
+    expect(
+      playerStats(s, "client1").alliances![ALLIANCE_INDEX_HELD_TO_END],
+    ).toBe(1n);
+    expect(
+      playerStats(s, "client2").alliances![ALLIANCE_INDEX_HELD_TO_END],
+    ).toBe(1n);
+    expect(
+      playerStats(s, "client1").alliances![ALLIANCE_INDEX_LONGEST_HELD],
+    ).toBe(ticksHeld);
+    expect(
+      playerStats(s, "client2").alliances![ALLIANCE_INDEX_LONGEST_HELD],
+    ).toBe(ticksHeld);
   });
 });

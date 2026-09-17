@@ -2,6 +2,7 @@ import { Game, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { StatsImpl } from "../src/core/game/StatsImpl";
 import {
   ALLIANCE_INDEX_PEAK_CONCURRENT,
+  PlayerStats,
   TILE_INDEX_DRAWDOWN_PEAK,
   TILE_INDEX_DRAWDOWN_TROUGH,
   TILE_INDEX_PEAK,
@@ -34,11 +35,19 @@ describe("tick sampling", () => {
   const sample = (tiles: number, troops = 0, alliances = 0) =>
     stats.recordTickSample(player1, tiles, troops, alliances);
 
+  /** stats.stats() indexes by clientID into a record whose values are
+   * themselves optional, so `.client1` alone is `PlayerStats | undefined`. */
+  function client1Stats(): NonNullable<PlayerStats> {
+    const s = stats.stats().client1;
+    expect(s).toBeDefined();
+    return s!;
+  }
+
   it("keeps the worst drawdown even after a later, higher peak", () => {
     sample(1000);
     sample(100);
     sample(1100);
-    const tiles = stats.stats().client1.tiles!;
+    const tiles = client1Stats().tiles!;
     expect(tiles[TILE_INDEX_PEAK]).toBe(1100n);
     expect(tiles[TILE_INDEX_DRAWDOWN_PEAK]).toBe(1000n);
     expect(tiles[TILE_INDEX_DRAWDOWN_TROUGH]).toBe(100n);
@@ -49,7 +58,7 @@ describe("tick sampling", () => {
     sample(500); // 50% fall
     sample(1000);
     sample(900); // 10% fall, more recent
-    const tiles = stats.stats().client1.tiles!;
+    const tiles = client1Stats().tiles!;
     expect(tiles[TILE_INDEX_DRAWDOWN_PEAK]).toBe(1000n);
     expect(tiles[TILE_INDEX_DRAWDOWN_TROUGH]).toBe(500n);
   });
@@ -58,7 +67,7 @@ describe("tick sampling", () => {
     sample(10);
     sample(100);
     sample(1000);
-    const tiles = stats.stats().client1.tiles!;
+    const tiles = client1Stats().tiles!;
     expect(tiles[TILE_INDEX_DRAWDOWN_PEAK]).toBe(
       tiles[TILE_INDEX_DRAWDOWN_TROUGH],
     );
@@ -67,10 +76,8 @@ describe("tick sampling", () => {
   it("records peak troops and peak concurrent alliances, not final", () => {
     sample(10, 500, 3);
     sample(10, 100, 1);
-    expect(stats.stats().client1.peakTroops).toBe(500n);
-    expect(
-      stats.stats().client1.alliances![ALLIANCE_INDEX_PEAK_CONCURRENT],
-    ).toBe(3n);
+    expect(client1Stats().peakTroops).toBe(500n);
+    expect(client1Stats().alliances![ALLIANCE_INDEX_PEAK_CONCURRENT]).toBe(3n);
   });
 
   it("still tracks drawdown after a leading zero-tile sample", () => {
@@ -80,7 +87,7 @@ describe("tick sampling", () => {
     sample(0);
     sample(5000);
     sample(1);
-    const tiles = stats.stats().client1.tiles!;
+    const tiles = client1Stats().tiles!;
     expect(tiles[TILE_INDEX_DRAWDOWN_PEAK]).toBe(5000n);
     expect(tiles[TILE_INDEX_DRAWDOWN_TROUGH]).toBe(1n);
   });
@@ -90,7 +97,7 @@ describe("tick sampling", () => {
     sample(50); // 50% fall from 100
     sample(1000); // new peak; no decline yet at the peak itself
     sample(100); // 90% fall from 1000, worse than the stored 50% fall
-    const tiles = stats.stats().client1.tiles!;
+    const tiles = client1Stats().tiles!;
     expect(tiles[TILE_INDEX_DRAWDOWN_PEAK]).toBe(1000n);
     expect(tiles[TILE_INDEX_DRAWDOWN_TROUGH]).toBe(100n);
   });
