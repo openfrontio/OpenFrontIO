@@ -65,7 +65,14 @@ vi.mock("../../src/client/CrazyGamesSDK", () => ({
 }));
 
 vi.mock("src/client/ClientEnv", () => ({
-  ClientEnv: { workerPath: vi.fn(() => "w0") },
+  ClientEnv: {
+    workerPath: vi.fn(() => "w0"),
+    // The profile header's copy-link button builds its URL from this; the web
+    // answer is the document itself (see deriveShareBase).
+    shareBase: vi.fn(
+      () => `${window.location.origin}${window.location.pathname}`,
+    ),
+  },
 }));
 
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({

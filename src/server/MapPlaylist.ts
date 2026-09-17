@@ -31,8 +31,14 @@ const MAX_PLAYER_COUNT = 125;
 // Every Nth scheduled public game (FFA, team and special alike, counted in
 // creation order) is trusted-only (GameConfig.trusted): only accounts the API
 // reports as trusted may join. A fixed rotation rather than a roll so the
-// lobbies on offer at any moment are never all locked.
-const TRUSTED_PUBLIC_EVERY = 4;
+// lobbies on offer at any moment are never all locked. Must stay coprime with
+// the 3-type ffa/team/special scheduling cycle (MasterLobbyService), or the
+// trusted slot aliases onto a single game type.
+const TRUSTED_PUBLIC_EVERY = 7;
+
+// Trusted-only lobbies draw from a much smaller pool of eligible accounts, so
+// cap them well below the open-lobby sizes to keep them filling and starting.
+const TRUSTED_MAX_PLAYER_COUNT = 25;
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: 2, weight: 10 },
@@ -130,17 +136,21 @@ export class MapPlaylist {
   private scheduled = 0;
 
   public async gameConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
-    const config = await this.rollConfig(type);
     this.scheduled++;
-    if (this.scheduled % TRUSTED_PUBLIC_EVERY === 0) {
+    const trusted = this.scheduled % TRUSTED_PUBLIC_EVERY === 0;
+    const config = await this.rollConfig(type, trusted);
+    if (trusted) {
       config.trusted = true;
     }
     return config;
   }
 
-  private async rollConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
+  private async rollConfig(
+    type: ScheduledPublicGameType,
+    trusted: boolean,
+  ): Promise<GameConfig> {
     if (type === "special") {
-      return this.getSpecialConfig();
+      return this.getSpecialConfig(trusted);
     }
 
     const mode = type === "ffa" ? GameMode.FFA : GameMode.Team;
@@ -159,11 +169,13 @@ export class MapPlaylist {
       isCompact = undefined;
     }
 
-    const unadjustedMaxPlayers = await this.lobbyMaxPlayers(
-      map,
-      mode,
-      isCompact,
-    );
+    let unadjustedMaxPlayers = await this.lobbyMaxPlayers(map, mode, isCompact);
+    if (trusted) {
+      unadjustedMaxPlayers = Math.min(
+        unadjustedMaxPlayers,
+        TRUSTED_MAX_PLAYER_COUNT,
+      );
+    }
     playerTeams = this.adjustTeamCountForPlayerCapacity(
       playerTeams,
       unadjustedMaxPlayers,
@@ -202,13 +214,19 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private async getSpecialConfig(): Promise<GameConfig> {
+  private async getSpecialConfig(trusted: boolean): Promise<GameConfig> {
     const mode = Math.random() < 0.5 ? GameMode.FFA : GameMode.Team;
     const map = this.getNextMap("special", mode);
     let playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
     const excludedModifiers: ModifierKey[] = [];
+
+    // Crowded raises the count to 60/125, which the trusted cap would undo
+    // anyway; keep its modifier slot for one that still has an effect.
+    if (trusted) {
+      excludedModifiers.push("isCrowded");
+    }
 
     // Check if compact map would leave every team with at least 2 players
     const supportsCompact =
@@ -369,8 +387,14 @@ export class MapPlaylist {
       }
     }
 
-    const unadjustedMaxPlayers =
+    let unadjustedMaxPlayers =
       crowdedMaxPlayers ?? (await this.lobbyMaxPlayers(map, mode, isCompact));
+    if (trusted) {
+      unadjustedMaxPlayers = Math.min(
+        unadjustedMaxPlayers,
+        TRUSTED_MAX_PLAYER_COUNT,
+      );
+    }
     playerTeams = this.adjustTeamCountForPlayerCapacity(
       playerTeams,
       unadjustedMaxPlayers,

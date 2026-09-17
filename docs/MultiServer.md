@@ -41,29 +41,50 @@ behavior except the bugs it fixes.
 | Relationship to open PR #5164                               | **Absorb it.** Fold `t3code/preserve-websocket-old-deployment` (ActiveDeployment, serverHost pinning, drain, version-mismatch join gate) into this work as PR 2 and supersede that PR.                                                                                                                                |
 | New game ID size                                            | **10 chars total** — instance letter + 9 random from the existing 58-symbol alphabet. `GAME_ID_REGEX` widens to a `{8,10}` length range so archived 8-char IDs stay valid. (~0.8 expected archive-key collisions at 200M lifetime games; today's 8-char IDs are already near their first expected collision at ~20M.) |
 | Deployment color source                                     | **Explicit `color` field in cluster.json** — read by boot validation, `/api/health`, and the drain check. Subdomain naming is not load-bearing.                                                                                                                                                                       |
-| Matchmaking DO re-key (`mode` instead of `instanceId:mode`) | **API-side only.** This repo keeps sending `instance_id` (client join param, worker checkin body); the API just stops keying on it. Zero-coordination rollout.                                                                                                                                                        |
+| Matchmaking DO re-key (`mode` instead of `instanceId:mode`) | **API-side only.** This repo keeps sending `instance_id` (client join param, worker checkin body); the API just stops keying on it. Zero-coordination rollout. Since infra #738 the key is `site:mode` — see "The ranked queue is keyed by site" below.                                                               |
 
-## cluster.json
+## Server identity (formerly `cluster.json`)
+
+A server knows only itself, from four env vars. Where it answers
+(`GAME_HOST`, `SITE_HOST`) is settled by `deploy.sh` from the deploy target;
+who it is (`INSTANCE_LETTER`, `NUM_WORKERS`) is the API registry's answer.
+`update.sh` asks once per deploy, on the box, before anything is rendered or
+swapped (`POST /cluster/register` with `{site, host, cpus}`; infra
+`docs/cluster-registry.md`, "Registration") and writes the reply into the
+container's env file.
+
+| Env               | Meaning                                                                                                                                                                                                                                                   |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INSTANCE_LETTER` | Leads every game id it mints. The registry hands a host the letter already bound to it, or the site's lowest unused one; bindings are permanent and letters are never reused.                                                                             |
+| `NUM_WORKERS`     | Worker processes. The operator's setting for that letter in the admin panel's Cluster page, else the API's default for the machine's thread count. Fixed for the container's life (ids route by `hash % NUM_WORKERS`): a change lands on the next deploy. |
+| `GAME_HOST`       | The name clients open sockets to. Defaults to `<subdomain>.<game domain>`; a machine-scoped fleet member (`blue.nbg2.<game domain>`) passes it. Also decides the container name (update.sh).                                                              |
+| `SITE_HOST`       | The page host. Passed explicitly it wins (a target entry's optional `site`); else the apex (`DOMAIN`) for the `blue` and `green` slots, which belong to the apex site by convention; else `<subdomain>.<DOMAIN>` under `GAME_DOMAIN`; else empty.         |
+
+A deploy that cannot reach the registry fails before the old container is
+touched. `INSTANCE_LETTER` and `NUM_WORKERS` set in `deploy.sh`'s own
+environment are passed through and win over the registry, for a hand-run
+deploy while the API is down. Local development registers nowhere and defaults
+to `a` and 2.
+
+The deploy targets (`DEPLOY_TARGETS_BLUE`, `DEPLOY_TARGETS_GREEN`,
+`DEPLOY_TARGETS_BETA` for the release, `DEPLOY_TARGETS_DEV` for the nightly)
+only say where containers run:
 
 ```json
-{
-  "a": { "host": "blue.openfront.io", "color": "blue", "numWorkers": 16 },
-  "b": { "host": "green.openfront.io", "color": "green", "numWorkers": 16 }
-}
+[
+  { "host": "falk2", "subdomain": "blue" },
+  { "host": "nbg2", "subdomain": "blue", "gameHost": "blue.nbg2.openfront.io" }
+]
 ```
 
-- Stored in a GitHub Actions var per environment (`CLUSTER_JSON`, replacing
-  `NUM_WORKERS`), injected as env at deploy. The build stays
-  environment-agnostic.
-- Zod-validated at boot: unique letters, unique hosts, color ∈
-  {blue, green}. Malformed config refuses to start.
-- A server finds its own entry by matching `SUBDOMAIN.DOMAIN` (when
-  `SUBDOMAIN` is empty — dev — the self host is just `DOMAIN`, i.e.
-  `localhost`). That yields its letter (minting), color (drain), and worker
-  count (forking). Refuse boot if absent. No second knob to drift.
-- Delivered to web clients via the RenderHtml bootstrap injection, and served
-  at `GET /cluster.json` for the desktop app — which is also the desktop
-  build's server discovery (kills the baked `numWorkers: 1` → `/w0` bug).
+There is no shared map any more. The fleet as a whole is the API registry's
+list (`GET /cluster.json?site=…`, "The server list" below), assembled from
+the check-ins; the server still synthesizes a one-entry map naming itself
+(`ServerEnv.cluster()`) for the page it renders, which is the page's
+fallback when the list is unavailable. The game server serves no
+`/cluster.json` of its own. Which server takes new games is the registry's decision alone
+(`latest` plus one open server per machine), so `color` is gone with the map:
+blue and green are deploy slots, nothing more.
 
 ## Routing rule (uniform — own deployment is not a special case)
 
@@ -206,7 +227,8 @@ except for the new ID format.
     `deploy.sh` env file, `package.json` dev script (single-entry localhost
     map), `tests/GenerateNginxUpstream.test.ts`, `tests/server/*` env setup,
     `tests/matchmaking/e2e.mjs`.
-- `GET /cluster.json` on the master (desktop server discovery).
+- `GET /cluster.json` on the master (desktop server discovery). Since
+  removed: the desktop shell synthesizes its own map and never fetched it.
 - Minting: `generateID()` grows a variant for game IDs — own instance letter
   - 9 random chars; `generateGameIdForWorker` keeps hash-to-self rejection
     sampling over the full 10-char ID. Client IDs stay 8-char.
@@ -286,43 +308,59 @@ fleet redeploy.
 All of these are config edits; no code changes.
 
 1. Provision the box; install docker/traefik per the existing host setup.
-2. DNS: `blue2.openfront.io` and `green2.openfront.io` → the new machine.
+2. DNS: the new machine's game hosts → the new machine. The fleet shape is
+   **machine-scoped**: every box carries its own `blue` and `green`, and
+   the machine sits in the hostname — `blue.nbg2.<game domain>`,
+   `green.nbg2.<game domain>` — so one wildcard record
+   (`*.nbg2.<game domain>`) covers the box. deploy.sh looks a deployment
+   up under that name first and under the bare `<subdomain>.<game domain>`
+   second, so a fleet can carry both shapes while it migrates
+   (`blue2.openfront.io` still works; it is just a standalone-shaped entry
+   on a second machine). A machine-scoped container is named
+   `openfront-<env>-<machine>-<subdomain>`, which is what lets staging
+   rehearse two machines on one box: `staging2` is a second name for the
+   staging box in `SERVER_HOSTS_JSON`, and its blue and green sit next to
+   staging's own as `blue.staging2.server.openfront.dev` and
+   `green.staging2.server.openfront.dev`.
 3. Secrets: add the machine to `SERVER_HOSTS_JSON`
    (`{"falk2":"<ip>","nbg2":"<ip>"}`, lowercase keys) — deploy.sh resolves
    machine names from this directory and keyscans only the machine it is
    deploying to. Legacy `SERVER_HOST_<NAME>` secrets remain a fallback for
    local runs, but in CI only `SERVER_HOST_FALK2` is wired through — every
    other machine must be in the directory.
-4. Vars: append the new letters to every prod `CLUSTER_JSON`
-   (append-only — never reuse a letter), and add the machine to the
-   `DEPLOY_TARGETS_BLUE` and `DEPLOY_TARGETS_GREEN` **repository** vars:
-   `[{"host":"falk2","subdomain":"blue"},{"host":"nbg2","subdomain":"blue2"}]`.
+4. Vars: add the machine's blue and green to the `DEPLOY_TARGETS_BLUE` and
+   `DEPLOY_TARGETS_GREEN` **repository** vars with their game hosts:
+   `[{"host":"falk2","subdomain":"blue"},{"host":"nbg2","subdomain":"blue","gameHost":"blue.nbg2.openfront.io"}]`
+   (machine-scoped: the subdomain is the slot, the host is the machine). The
+   registry assigns each new host a letter on its first deploy and sizes its
+   workers from the machine; adjust the count on the admin Cluster page.
    Repository-level, not environment-level: GitHub expands a job's matrix
    before its environment exists, so an environment-scoped var would be
    invisible there and the jobs would silently deploy only the single-box
-   default. The deploy jobs run one sequential matrix leg per entry, stop
-   the rollout at the first failing machine, and refuse a subdomain whose
-   cluster entry carries the other color.
+   default. The deploy jobs run one sequential matrix leg per entry and stop
+   the rollout at the first failing machine.
 5. Cloudflare: add the new blue/green origins to their pools.
-6. Deploy (fleet redeploy so every server sees the new map).
+6. Deploy.
 
 Removal is the reverse, drain-first: drop the machine from the
 `DEPLOY_TARGETS_*` vars and the CF pools, let its letters drain (flip away,
-wait for games to end), then delete its cluster entries and its
-`SERVER_HOSTS_JSON` entry. The letters stay retired forever.
+wait for games to end), then retire its letters on the admin Cluster page and
+delete its `SERVER_HOSTS_JSON` entry. The letters stay retired forever.
 
 ## Future (discussed, not built)
 
-- **Merged public lobby feeds (PR 7, wanted once a color spans 2+
-  machines):** public pools are per-deployment by design, so N machines
-  split the fill funnel N ways. Fix without a coordinator: each master
-  serves `GET /lobbies.json` with ONLY its first-hand sanitized lobbies
-  (loop-proof by construction; `s-maxage=1` so it doubles as a CDN-absorbed
-  client endpoint), and each master polls its same-color siblings (from its
-  own cluster map + color) and folds their lobbies into its broadcast.
-  Zero client changes — the merged list arrives through the existing feed,
-  and joining a foreign lobby already routes by its letter. Null-tolerant
-  like the drain poll: an unreachable sibling just contributes nothing.
+- **Merged public lobby feeds:** built as a per-site lobby coordinator on
+  the API (infra `docs/lobby-coordinator.md`) rather than the sibling poll
+  first sketched here. Every master holds one WebSocket to its site's
+  coordinator (`src/server/LobbyCoordinatorClient.ts`), reports its own
+  lobbies, and gets back the merged roster for its build plus "create the
+  next lobby" and "this lobby counts down" commands; the queue depth is
+  site-wide. `MasterLobbyService` runs `coordinated` while rosters arrive
+  and falls back to today's single-server scheduling within 5 s when they
+  stop. Off unless `LOBBY_COORDINATOR=api` and the site's `sharedLobbies`
+  registry flag is on. Zero client changes — the merged list arrives through
+  the existing feed, and joining a foreign lobby already routes by its
+  letter.
 - **Cluster registry:** pulled forward as "Server list v2" below.
 
 ---
@@ -401,6 +439,58 @@ into `/v/<commit>/`. Both compares only work on commit-shaped values, so a
 list carrying anything else is rejected whole and the client keeps its own
 values.
 
+### A non-`open` server stops offering ranked matches too (OPE-469)
+
+`draining`, standby and `fenced` all stop new games, and that includes ranked
+ones. Each worker long-polls the API's matchmaking check-in to volunteer as
+the host for the next match (`src/server/RankedCheckin.ts`); it now makes that
+offer only while the deployment-active flag the master pushes over
+`lobbiesBroadcast` is true — the flag the check-in reply sets
+(`ClusterCheckin.applyCheckinState`). Games already assigned or running are
+untouched; only the next offer is withheld, and the worker defaults to active
+until its master says otherwise. The check-in also carries the server's own
+commit as `version` (omitted when `GIT_COMMIT` names no commit), so the
+Lobby can refuse to assign a match to a server on a different build than the
+players — the contract form of the same rule (OPE-470). Without this, blue ran v0.34.0 as `draining`
+while every `openfront.io` page served green's v0.34.1, blue's workers kept
+claiming matches, and players on the new build were assigned a blue game, got
+`version_mismatch`, went to fetch blue's build, and arrived past the start
+deadline — so the match cancelled short-handed and the game was pruned before
+they could connect ("Connection refused: Game not found").
+
+### The ranked queue is keyed by site (infra #738)
+
+A matched game id is resolved through the player's server list, so the only
+servers that can host a page's match are the ones registered under the site
+that list is read for. The API keeps one ranked queue per `site:mode`, and
+both sides name their site:
+
+- **The client join** sends `site=<matchmakingSite()>`
+  (`src/client/ServerList.ts`): `serverListSite()` — the apex for a page
+  behind one, `<subdomain>.<DOMAIN>` under GAME_DOMAIN, the desktop's pinned
+  server host, the same value it fetches `/cluster.json` for — passed
+  through the shape check below.
+- **The worker check-in** sends `site` as `ClusterCheckin.registeredSite()`:
+  `SITE_HOST`, else its own public host — the site it registers under.
+
+Either is sent only when it is a name the API's `SiteSchema` accepts
+(`isSiteLike` in `src/core/ServerList.ts`: a lowercase hostname, no port), for
+the same reason `version` is only sent when commit-shaped — the API refuses a
+malformed value rather than treating it as absent. A side that sends none
+lands in the legacy `shared` pool, where it still meets the other legacy side.
+
+The API also checks the site's registry at assignment: the offered id's
+letter must be registered under that site and `open`, or the offer is
+released and the next server tried. That is the second guard on the OPE-469
+rule above — a server on an old build, or one that never learned its state,
+keeps offering, and now its offer is checked against what the site's players
+actually see in `GET /cluster.json`.
+
+Why: on 15 Sept 2026 every branch preview on the staging host deployed as
+letter `a` and checked into the same API, so `main.openfront.dev` — same
+letter and build as blue — won openfront.dev's matches, and the client polled
+blue for a game that lived on a host its list could not name.
+
 ## What the client does (`src/client/ServerList.ts`, `src/core/ServerList.ts`)
 
 - **Fetched at page load, then a heartbeat.** `startServerListPolling()`
@@ -432,9 +522,9 @@ values.
   page into fallback. Only a client that never got a list falls back.
 - **Reachability (two signals, OPE-439):** `backendReachable()` is the raw
   per-attempt answer — null until the first attempt settles, true when the
-  API answered at all (a 404 included: reachable, but no list for this
-  site), false on a timeout or network error. It is deliberately twitchy,
-  so nothing player-facing gates on it.
+  API answered with anything below a 500 (a 404 included: reachable, but no
+  list for this site), false on a timeout, a network error or a 5xx. It is
+  deliberately twitchy, so nothing player-facing gates on it.
   `backendUnreachableConfirmed()` is the debounced one the UI uses: true
   only once **two** attempts in a row have gone unanswered, which takes the
   base retry delay (10s) to accumulate — the backoff only stretches once
@@ -480,6 +570,13 @@ values.
     either way — which is what makes that toast's "try again" true. Without
     it a web player's only way out would be the heartbeat's next beat, up to
     `RETRY_MAX_MS` away.
+  - **Both:** the Retry in the homepage's lobby slot, shown when the public
+    lobby feed has given up or an outage is confirmed (never on a gated
+    desktop session, where the status bar owns the remedy). It goes through
+    `refreshServerList()`, which applies the same policy and otherwise waits
+    for the attempt already in flight, so a `PublicLobbySocket.start` with
+    `refreshList` never dials from a list older than the answer it could
+    have had.
 
 - **What reachability may gate, and what it may not.** The rule, stated
   once at the top of `GameModeSelector.ts` and referenced from every call
@@ -598,9 +695,9 @@ server, and it prompted again — forever. That was OPE-430.
 A server-rendered page is not left behind by this, because it does not need
 the list to find out. The server it is talking to tells it, over the lobby
 feed it is already connected to: a different `gitCommit` (that host has moved
-on) or `active: false` (its deployment is no longer the live one — with
-`CLUSTER_STATE_SOURCE=api` both `draining` and `fenced` set it, see
-`ClusterCheckin.applyCheckinState`; behind an apex the colour poll does). That
+on) or `active: false` (its deployment is no longer the live one — `draining`,
+`fenced` and a refused check-in all set it, see
+`ClusterCheckin.applyCheckinState`). That
 is the pre-v2 mechanism, it cannot loop — the signal comes from the very host
 a reload goes back to — and it covers the stale tab, the rollover and the
 fenced own server alike.
@@ -650,12 +747,11 @@ necessary:
 
 A server-rendered page prefers its own server because the page and the
 registry can disagree about a sibling while the page's own server is, by
-construction, right about itself: on dev (`openfront.dev`, a blue/green pair
-behind the apex with `CLUSTER_STATE_SOURCE=apex`) the registry listed both
-colours `open` on the same build while the apex poll had green considering
-itself draining, so a page rendered by blue that drew green got a lobby feed
-reporting `active: false`, read it as "a new version is available", and
-reloaded — on about half of page loads.
+construction, right about itself. A server learns its drain state from its
+check-in reply, so for up to one check-in interval after the registry moves
+`open` between siblings, the list can call a server `open` whose lobby feed
+still reports `active: false`. A page rendered by blue that drew green in that
+window would read the feed as "a new version is available" and reload.
 
 Nothing in the table navigates the page by itself: the prompt is the existing
 one-shot `onUpdateAvailable` → `GameModeSelector.handleUpdateAvailable` →
@@ -714,10 +810,10 @@ as `latest` after a deploy.
 `ClientEnv.gameVersion(gameID)` reads that commit (undefined with no list, or
 for a letter the list doesn't carry, or for a legacy id with no letter), and
 `redirectToGameVersion(gameID)` in `src/client/ServerList.ts` is the whole
-decision, exported so the two places a game is opened from a URL —
-`Main.handleUrl`'s `/game/<id>` branch and `JoinLobbyModal.checkActiveLobby`,
-each after `ensureServerList()` — cannot drift apart. It never navigates the
-two shells that have no `/v/<commit>/` routes to go to:
+decision, exported so the three places a game is opened cannot drift apart —
+`Main.handleUrl`'s `/game/<id>` branch, `JoinLobbyModal.checkActiveLobby` and
+`MatchmakingModal.checkGame`, each after `ensureServerList()`. It never
+navigates the two shells that have no `/v/<commit>/` routes to go to:
 
 - **desktop**, whose updater owns which version it runs (a mismatch there
   stays `update_available.desktop`);
@@ -737,8 +833,34 @@ when:
 - the page already lives under `/v/<gameVersion>/` yet still isn't that
   build — the version's page isn't being served (before the static Worker
   exists, say). That is the loop guard, and falling through hands the
-  mismatch to join-time `version_mismatch`, whose cross-host redirect
-  already answers it.
+  mismatch to join-time `version_mismatch`, whose redirect already answers
+  it.
+
+The matchmaking modal asks at one specific moment, and not before: the poll
+that waits for the matched game to be created runs every second and must
+never navigate, so the question comes after `/exists` answers true and
+immediately before the `join-lobby` dispatch. A ranked match cannot afford
+the join-time answer (OPE-471): matchmaking pairs players by rating rather
+than by build, so a page served as `latest` is routinely matched onto a
+server still draining the previous one, and being bounced at join time costs
+a whole page boot — long enough that the match's start deadline passes and
+the server cancels it (OPE-469).
+
+That is also why join-time `version_mismatch` (`ClientGameRunner`) now tries
+this page's own host first: `versionedPathForMismatchedGame` asks the same
+question as the redirect above and answers the `/v/<commit>/` path on the
+host already loaded. It asks it of the refusing server's own `gitCommit`
+first — that server has just said which build it runs, where the list is
+stale-while-revalidate and may still name the version the join was attempted
+on — and of the list only when the server names no commit at all. A
+`GIT_COMMIT` that is not commit-shaped (`DEV`, `unknown`) counts as naming
+none: it would otherwise build a dead `/v/unknown/` URL instead of falling
+through to the recovery below. Only when there
+is no such page — versions match, an exempt shell, or the page is already
+pinned to the commit the server names — does it fall through to the
+cross-host, pinned and reload branches described below. Its loop guard reads
+the pin captured at boot rather than the address bar, which the join has
+already rewritten to the version-free share URL.
 
 ### A pinned page is never "outdated"
 
@@ -766,11 +888,13 @@ The one loop it must not enter runs through join-time `version_mismatch`
 (`ClientGameRunner`). `reloadForUpdate` strips the pin — right for an
 ordinary stale tab, wrong here: the reload lands on `latest`, whose
 `handleUrl` sees the same game on the same older server and pins the page
-straight back, one lap per click. So a pinned page takes the game's own host
-when the id resolves cross-host, and otherwise says `update_available.message`
-and stops. Nothing it can fetch is the build it needs — that is precisely
-what a mismatch on a pinned page means: the version's page is not being
-served.
+straight back, one lap per click. So a pinned page whose server names the very
+commit it is pinned to says `update_available.message` and stops: nothing it
+can fetch is the build it needs — that is precisely what a mismatch there
+means, the version's page is not being served. A pin naming some OTHER commit
+is an ordinary mismatch, and takes the versioned page for that commit (else
+the game's own host when the id resolves cross-host) — at most one hop before
+the guard above catches it.
 
 ## Paths on a `/v/<commit>/` page
 
@@ -826,9 +950,11 @@ turns into the "update available" prompt.
    serves a list.
 2. **Client tolerates a static page** (below).
 3. **Servers register and check in** with the API (letter, host, version,
-   worker count, live games, machine) every ~10s; a `draining` reply stops
-   public lobby scheduling — only when enabled, otherwise today's apex colour
-   poll stays.
+   worker count, live games, machine) every ~10s, and the reply is always
+   obeyed: only `open` schedules public lobbies. A deployed server schedules
+   none until its first `open`, and a `409` (the letter is bound to another
+   host) stops it and is logged as an error; an unreachable API changes
+   nothing.
 
    `machine` is the **box** a container runs on — `falk2`, `nbg2`, `staging`
    — not a hostname: it is deploy.sh's machine argument, written into the
@@ -863,7 +989,7 @@ fully-rendered `index-<short>.html` replay shell next to them. `update.sh`
 now also publishes, per **site** and per **version**, the three objects the
 static Worker will serve. The site is `SITE_HOST` when the deployment sits
 behind a load balancer, else `<subdomain>.<domain>`; the version is the
-7-character prefix of `static/commit.txt`. All four uploads go through
+7-character prefix of `static/commit.txt`. All uploads go through
 `PUT $R2_ENDPOINT/game_assets/upload/<urlencoded key>`, which prefixes
 `game_assets/`:
 
@@ -872,6 +998,15 @@ behind a load balancer, else `<subdomain>.<domain>`; the version is the
 | `sites/<site>/v/<short>/index.html`           | `RenderStaticIndex.ts --environment-only`      |
 | `sites/<site>/v/<short>/desktop/release.json` | `RenderDesktopDescriptor.ts`                   |
 | `sites/<site>/v/<short>/desktop/version.json` | `RenderDesktopDescriptor.ts --version-pointer` |
+| `sites/<site>/v/<short>/root-files.json`      | the build (`writeRootFilesIndex`)              |
+| `sites/<site>/v/<short>/root/<path>`          | copied from `static/`, one per index entry     |
+
+Everything in `resources/public/` (the policy pages, `robots.txt`, `ads.txt`,
+`press/`, and Apple Pay's `.well-known/` file) is served verbatim at the site
+root. The site Worker has no origin behind it, so it serves these from R2:
+`root-files.json` maps each path to its content type (plus a `"<dir>/"` entry
+for a directory with an `index.html`), and the Worker serves exactly what it
+lists. To publish a new root file, add it to `resources/public/`.
 
 Both renderers run inside the freshly built image with the live container's
 env file, exactly as the replay shell already does, so what is published is
@@ -902,16 +1037,10 @@ servers register within ~10s of boot. Outcomes:
 - `200` / `204` — logged, done.
 - `404` — the API predates the registry; warn and continue.
 - `400` / `401` / `403` — a bad key or a malformed request. No retry can fix
-  it, so it is decided at once on the same terms as the row below: warn and
-  continue, or fail under `CLUSTER_STATE_SOURCE=api`.
-- `409` (or an unreachable API) after the retries — warn and continue, because
-  the page and its servers still come from `BOOTSTRAP_CONFIG` and nothing a
-  player sees has changed. **Unless** `CLUSTER_STATE_SOURCE=api` is in the
-  site's env file, which says its clients take the server list from the API: an
-  unflagged version then means no server is `open` and nobody can start a game,
-  so the deploy fails rather than reporting a success it did not achieve.
-  `deploy.sh` gains the passthrough for that variable separately (roadmap item
-  3); until it does, it is always absent, which is the lenient path above.
+  it, so the deploy fails at once.
+- `409` (or an unreachable API) after the retries — the deploy fails. Clients
+  take the server list from the API, so an unflagged version means no server
+  is `open` and nobody can start a game; reporting success would be false.
 
 Until the Worker exists nothing reads any of this, so the uploads are additive
 and prod is unaffected. The decision table above is unit-tested in
@@ -927,9 +1056,15 @@ A deployment answers on two names, and they do different jobs:
 | page host | `SITE_HOST`                 | the page: HTML, assets — soon a static Worker   |
 | game host | `<subdomain>.<GAME_DOMAIN>` | the game: WebSockets, `/api/*` — this container |
 
-The game host is always `<subdomain>.<GAME_DOMAIN>` (or `<subdomain>.<DOMAIN>`
-with `GAME_DOMAIN` unset). The page host is `SITE_HOST`, and what fills that in
-depends on whether the deployment has siblings:
+The game host is `<subdomain>.<GAME_DOMAIN>` (or `<subdomain>.<DOMAIN>` with
+`GAME_DOMAIN` unset) for a standalone deployment, and
+`<subdomain>.<machine>.<GAME_DOMAIN>` for a fleet member whose cluster entry
+carries the machine (the runbook above). deploy.sh resolves which by looking
+the deployment up in the cluster map, machine-scoped name first, and writes
+the answer into the container's env as `GAME_HOST`; `ServerEnv.publicHost()`,
+the Traefik rule and the nginx self-match all read that rather than
+re-deriving it. The page host is `SITE_HOST`, and what fills that in depends
+on whether the deployment has siblings:
 
 - **In a multi-entry cluster map** — prod's blue/green, and the dev blue/green
   pair — the page host is the **apex**: `openfront.io`, `openfront.dev`. That
@@ -985,8 +1120,8 @@ What follows from it:
   such route, and with one entry there is no other colour to flip to anyway.
   The pair still polls, and it polls **through its page host**: the apex is how
   it learns which colour is live. So the Worker on the apex has to keep passing
-  `/api/health` through to a server until `CLUSTER_STATE_SOURCE=api` is turned
-  on for the pair and the API owns that decision instead.
+  `/api/health` through to a server. (Superseded: the colour poll is gone and
+  the check-in reply alone decides who drains.)
 
 With `GAME_DOMAIN` unset the game host falls back to `<subdomain>.<DOMAIN>`,
 which is exactly today's behaviour. That does not mean one hostname: a

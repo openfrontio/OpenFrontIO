@@ -10,12 +10,40 @@ import { GameView } from "../view";
 // clamped to [0.2, 20]).
 const AMBIENCE_ZOOM_SCALE = 8;
 const MAX_VIEW_SCALE = 20;
-// The sound designer's spec: -20 dB below the channel at the deepest zoom,
-// fading to silence as the player pulls back out. 10^(-20/20) = 0.1.
-const AMBIENCE_PEAK_GAIN = 0.1;
-// Re-emitting on every sub-perceptible step would put an event on the bus
-// each tick of a slow zoom; a step is roughly a quarter of a dB here.
-const GAIN_EPSILON = 0.003;
+/**
+ * Ceiling of the zoom envelope: what the deepest zoom multiplies the ambience
+ * channel by, fading to silence as the player pulls back out.
+ *
+ * The sound designer's spec is "-20 dB", which is a statement about where
+ * ambience sits in the MIX -- under the cues, not under itself. This used to
+ * be 0.1, the literal -20 dB, applied as a raw multiplier on top of a channel
+ * that is already well down: perceptualGain squares the slider, so ambience at
+ * its 0.4 default is 0.16, or -16 dB, before the envelope is applied at all.
+ * The two stacked, and ambience peaked at 0.016 -- -36 dBFS, 30 dB under the
+ * effects channel, which is inaudible under gameplay rather than quiet. That
+ * is the "ambience never plays" report: it was playing.
+ *
+ * Staged against the effects channel instead, which is what the cues the spec
+ * is relative to actually run at:
+ *
+ *     effects at its 0.7 default   0.7^2        = 0.49    (-6.2 dB)
+ *     spec: 20 dB under that       0.49 * 0.1   = 0.049   (-26.2 dB)
+ *     ambience at its 0.4 default  0.4^2        = 0.16
+ *     so the envelope needs        0.049 / 0.16 = 0.3
+ *
+ * Master scales both channels equally, so the 20 dB relationship holds
+ * wherever the player puts it. A player who pushes the ambience slider to 1.0
+ * tops out at 0.3, -10.5 dB, which is as loud as background texture should
+ * ever get.
+ */
+const AMBIENCE_PEAK_GAIN = 0.3;
+// Re-emitting on every sub-perceptible step would put an event on the bus each
+// tick of a slow zoom. A quarter of a dB is the step that buys, and a quarter
+// dB is a ratio -- 10^(0.25/20), about 3% -- so it has to be taken against the
+// envelope rather than written flat, or tripling the ceiling above silently
+// triples how often this fires. Held near the top of the envelope, which is
+// where a slow zoom spends its time and the only place the dedup matters.
+const GAIN_EPSILON = AMBIENCE_PEAK_GAIN * 0.03;
 // The structure must be this close (in tiles) to the center of the view.
 const AMBIENCE_RANGE_TILES = 20;
 

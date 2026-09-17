@@ -17,13 +17,41 @@ import {
   copyRootPublicFiles,
   createHashedPublicAssetFiles,
   getProprietaryDir,
+  getPublicDir,
   getResourcesDir,
   writePublicAssetManifest,
+  writeRootFilesIndex,
 } from "./src/server/PublicAssetManifest";
 
 // Vite already handles these, but its good practice to define them explicitly
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Dev-only: resources/public/ is served at the site root, as the build copies
+// it into static/. Vite's publicDir (resources/) would put it under /public/.
+function serveRootPublicDir(publicDir: string): Plugin {
+  return {
+    name: "serve-root-public-dir",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url) return next();
+        let rel = decodeURIComponent(
+          new URL(req.url, "http://x").pathname,
+        ).replace(/^\/+/, "");
+        if (rel.split(/[\\/]/).some((part) => part === "." || part === ".."))
+          return next();
+        if (rel === "" || rel.endsWith("/")) rel += "index.html";
+        const filePath = path.join(publicDir, rel);
+        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile())
+          return next();
+        const mime = lookupMime(filePath);
+        if (mime) res.setHeader("Content-Type", mime);
+        res.setHeader("Cache-Control", "no-store");
+        fs.createReadStream(filePath).pipe(res);
+      });
+    },
+  };
+}
 
 function serveProprietaryDir(
   proprietaryDir: string,
@@ -153,19 +181,30 @@ function randomWorkerCreateProxy(numWorkers: number): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
-  // Dev cluster map: mirrors the CLUSTER_JSON the dev server boots with
-  // (package.json start:server-dev), so the dev-served index.html carries the
-  // same shape production RenderHtml injects. The proxy below needs the
+  // Dev identity: the same INSTANCE_LETTER / NUM_WORKERS defaults the dev
+  // server boots with (ServerEnv), so the dev-served index.html carries the
+  // one-entry map production RenderHtml injects. The proxy below needs the
   // worker count to know how many /wN paths to forward.
-  const devClusterJson =
-    env.CLUSTER_JSON ??
-    '{"a":{"host":"localhost","color":"blue","numWorkers":2}}';
-  const devCluster = JSON.parse(devClusterJson) as Record<
-    string,
-    { numWorkers: number }
-  >;
-  const devInstanceLetter = Object.keys(devCluster)[0];
-  const devNumWorkers = devCluster[devInstanceLetter].numWorkers;
+  const devInstanceLetter = env.INSTANCE_LETTER || "a";
+  // Strict decimal first: Number() alone would take "1e3" or " 2".
+  const devNumWorkers = /^[1-9][0-9]*$/.test(env.NUM_WORKERS || "2")
+    ? Number(env.NUM_WORKERS || 2)
+    : NaN;
+  // The same checks ServerEnv applies: the letter leads every game id, and
+  // the count feeds a modulo, so a bad value here is a wNaN worker path.
+  if (!/^[a-z]$/.test(devInstanceLetter)) {
+    throw new Error(
+      `INSTANCE_LETTER must be one lowercase letter, got ${JSON.stringify(devInstanceLetter)}`,
+    );
+  }
+  if (!Number.isInteger(devNumWorkers) || devNumWorkers < 1) {
+    throw new Error(
+      `NUM_WORKERS must be a positive integer, got ${JSON.stringify(env.NUM_WORKERS)}`,
+    );
+  }
+  const devClusterJson = JSON.stringify({
+    [devInstanceLetter]: { host: "localhost", numWorkers: devNumWorkers },
+  });
   const resourcesDir = getResourcesDir(__dirname);
   const proprietaryDir = getProprietaryDir(__dirname);
   const sourceDirs = [resourcesDir, proprietaryDir];
@@ -225,7 +264,8 @@ export default defineConfig(({ mode }) => {
     },
     closeBundle() {
       const outDir = path.join(__dirname, "static");
-      copyRootPublicFiles(resourcesDir, outDir);
+      copyRootPublicFiles(getPublicDir(resourcesDir), outDir);
+      writeRootFilesIndex(getPublicDir(resourcesDir), outDir);
       // Run the source→hashed copy first; createHashedPublicAssetFiles iterates
       // assetManifest and expects every key to resolve to a file in resources/
       // or proprietary/. Vite's bundle output (assets/...) doesn't, so it's
@@ -295,6 +335,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       ...(!isProduction
         ? [
+            serveRootPublicDir(getPublicDir(resourcesDir)),
             serveProprietaryDir(proprietaryDir, resourcesDir),
             randomWorkerCreateProxy(devNumWorkers),
             steamLinkAliasRedirect(),
@@ -327,12 +368,6 @@ export default defineConfig(({ mode }) => {
         isProduction ? "" : "localhost:3000",
       ),
       "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
-      // Empty when unset (and always empty under vitest, mirroring API_DOMAIN)
-      // so the replacement is always a string literal — an undefined define
-      // would leave a bare `process.env` reference in the browser bundle.
-      "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
-        mode === "test" ? "" : (env.STRIPE_PUBLISHABLE_KEY ?? ""),
-      ),
       // Force empty under vitest (mode "test") so the getApiBase localhost-
       // fallback test is deterministic regardless of any API_DOMAIN in the
       // host shell / CI environment.

@@ -27,6 +27,8 @@ import {
   DISPLAY_SETTLE_TIMEOUT_MS,
   isDisplaySnapshot,
   selectedDisplayId,
+  UI_SCALE_OPTIONS,
+  uiScaleOptions,
   type DesktopDisplayInfo,
   type DesktopDisplayPrefsPatch,
   type DesktopDisplaySnapshot,
@@ -37,6 +39,7 @@ import { Platform } from "./Platform";
 import type { AudioControls } from "./sound/CuePlayer";
 import { audioControls, playCue } from "./sound/CuePlayer";
 import type { CueCategory } from "./sound/Sounds";
+import { canHandOffToSteam } from "./SteamHandoff";
 import type { UIState } from "./UIState";
 
 /**
@@ -420,6 +423,12 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  private toggleSteamLobbyLinks() {
+    this.userSettings.setSteamLobbyLinks(
+      this.userSettings.steamLobbyLinks() === "steam" ? "browser" : "steam",
+    );
+  }
+
   private toggleLeftClickOpensMenu() {
     this.userSettings.toggleLeftClickOpenMenu();
     console.log(
@@ -465,15 +474,6 @@ export class UserSettingModal extends BaseModal {
   private sliderNukeAllianceSafetyDuration(e: CustomEvent<{ value: number }>) {
     this.userSettings.setNukeAllianceSafetyDuration(e.detail.value);
     this.requestUpdate();
-  }
-
-  private toggleTerritoryPatterns() {
-    this.userSettings.toggleTerritoryPatterns();
-
-    console.log(
-      "🏳️ Territory Patterns:",
-      this.userSettings.territoryPatterns() ? "ON" : "OFF",
-    );
   }
 
   private toggleGoToPlayer() {
@@ -980,6 +980,12 @@ export class UserSettingModal extends BaseModal {
       mode.value = snapshot.prefs.mode;
     }
 
+    const scale = this.querySelector<SettingSelect>("#display-ui-scale-select");
+    const uiScale = snapshot.prefs.uiScale;
+    if (scale && uiScale !== undefined && scale.value !== String(uiScale)) {
+      scale.value = String(uiScale);
+    }
+
     const monitor = this.querySelector<SettingSelect>(
       "#display-monitor-select",
     );
@@ -1002,6 +1008,12 @@ export class UserSettingModal extends BaseModal {
     // and there is no reason to spend an IPC round trip to be told so.
     if (value !== "windowed" && value !== "borderless") return;
     this.applyDisplayPatch({ mode: value });
+  };
+
+  private handleUiScaleChange = (e: CustomEvent<{ value: unknown }>) => {
+    const value = Number(e.detail?.value);
+    if (!UI_SCALE_OPTIONS.includes(value)) return;
+    this.applyDisplayPatch({ uiScale: value });
   };
 
   private handleDisplayMonitorChange = (e: CustomEvent<{ value: unknown }>) => {
@@ -1061,6 +1073,7 @@ export class UserSettingModal extends BaseModal {
 
     const displays = snapshot.displays;
     const selectedId = selectedDisplayId(snapshot);
+    const uiScale = snapshot.prefs.uiScale;
 
     // Rendered as its own row rather than as the spec's extra option inside
     // the picker: losing the remembered monitor usually drops the count to
@@ -1099,6 +1112,24 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleDisplayModeChange}
       ></setting-select>
 
+      ${uiScale === undefined
+        ? null
+        : html`
+            <setting-select
+              id="display-ui-scale-select"
+              label=${translateText("user_setting.display_ui_scale_label")}
+              description=${translateText("user_setting.display_ui_scale_desc")}
+              .value=${String(uiScale)}
+              ?disabled=${this.displayBusy}
+              .options=${uiScaleOptions(uiScale).map((scale) => ({
+                value: scale,
+                label: translateText("user_setting.display_ui_scale_option", {
+                  scale,
+                }),
+              }))}
+              @change=${this.handleUiScaleChange}
+            ></setting-select>
+          `}
       ${displays.length > 1
         ? html`
             <setting-select
@@ -1583,15 +1614,6 @@ export class UserSettingModal extends BaseModal {
            Advanced: a player who never expands the fold should still find it. -->
       <graphics-preset-tools></graphics-preset-tools>
 
-      <!-- 🏳️ Territory Patterns -->
-      <setting-toggle
-        label="${translateText("user_setting.territory_patterns_label")}"
-        description="${translateText("user_setting.territory_patterns_desc")}"
-        id="territory-patterns-toggle"
-        .checked=${this.userSettings.territoryPatterns()}
-        @change=${this.toggleTerritoryPatterns}
-      ></setting-toggle>
-
       <!-- 😊 Emojis -->
       <setting-toggle
         label="${translateText("user_setting.emojis_label")}"
@@ -1671,6 +1693,18 @@ export class UserSettingModal extends BaseModal {
         .checked=${!this.userSettings.lobbyIdVisibility()}
         @change=${this.toggleLobbyIdVisibility}
       ></setting-toggle>
+
+      ${canHandOffToSteam()
+        ? html`<setting-toggle
+            label="${translateText("user_setting.steam_lobby_links_label")}"
+            description="${translateText(
+              "user_setting.steam_lobby_links_desc",
+            )}"
+            id="steam-lobby-links-toggle"
+            .checked=${this.userSettings.steamLobbyLinks() === "steam"}
+            @change=${this.toggleSteamLobbyLinks}
+          ></setting-toggle>`
+        : null}
 
       <!-- 🔍 Go to player -->
       <setting-toggle

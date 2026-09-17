@@ -39,7 +39,9 @@ import { JoinLobbyEvent } from "./Main";
 import {
   backendUnreachableConfirmed,
   isPinnedToAVersion,
+  MANUAL_RETRY_COOLDOWN_MS,
   manualRetryAvailable,
+  refreshServerList,
   retryServerList,
   type BackendReachabilityDetail,
 } from "./ServerList";
@@ -118,8 +120,8 @@ const TUTORIAL_CARD_MAX_GAMES = 5;
  *     the next request would very likely have worked; taking the game away
  *     for a retry interval over one blip is worse than the blip.
  *
- * It is also false when the API answered at all -- a 404 for a site with no
- * list is a reachable backend.
+ * It is also false when the API answered with anything short of a 5xx -- a
+ * 404 for a site with no list is a reachable backend.
  */
 export function multiplayerAllowedForBackend(backendOutage: boolean): boolean {
   return !backendOutage;
@@ -149,6 +151,25 @@ export function shouldBlockMultiplayerAction(
   if (session !== null && !multiplayerAllowedForSession(session)) return true;
   if (!multiplayerAllowedForBackend(backendOutage)) return true;
   return false;
+}
+
+/**
+ * Whether the public-lobby feed should be closed rather than kept open.
+ *
+ * A gated desktop session refuses every join the feed could offer, so keeping
+ * the socket open only spends a connection on cards nobody can use and shows
+ * a spinner that never resolves into anything playable. Close it and say
+ * "offline" instead; it reopens when the session comes back.
+ *
+ * Reachability is deliberately NOT an input, by the rule at the top of this
+ * file: the feed is socket-sourced, and the list API's health says nothing
+ * about the game server behind it. The update state is not either -- a
+ * pending update is not "offline".
+ */
+export function lobbyFeedSuspended(
+  session: DesktopSessionState | null,
+): boolean {
+  return session !== null && !multiplayerAllowedForSession(session);
 }
 
 /**
@@ -299,12 +320,31 @@ export class GameModeSelector extends LitElement {
   // only stops it when a game actually starts (prestart/join), so it is still
   // listening during the whole lobby wait.
   private inLobby = false;
+  // Whether Main wants the feed open at all (false from game start until the
+  // player is back at the menu). Kept apart from the socket's own state so a
+  // session change can close and reopen the feed without forgetting that.
+  private feedWanted = false;
+  // The socket ran out of fast attempts and is only re-dialing slowly;
+  // cleared by the next start() or snapshot.
+  @state() private feedGaveUp = false;
+  // The lobby slot's Retry is held for ServerList's manual-retry cooldown: a
+  // press inside it could start no request, and would look broken.
+  @state() private retryCoolingDown = false;
+  private retryCooldownTimer: number | undefined;
   // An update/drain signal arrived during a lobby wait; prompt on leave-lobby.
   private updateDeferred = false;
 
   private lobbySocket = new PublicLobbySocket(
     (lobbies) => this.handleLobbiesUpdate(lobbies),
-    { onUpdateAvailable: () => this.handleUpdateAvailable() },
+    {
+      onUpdateAvailable: () => this.handleUpdateAvailable(),
+      onGaveUp: () => {
+        // Nothing is loading any more, and cards from a feed that has died
+        // are lobbies the player cannot join.
+        this.feedGaveUp = true;
+        this.lobbies = null;
+      },
+    },
   );
 
   private handleUpdateAvailable() {
@@ -357,7 +397,6 @@ export class GameModeSelector extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.lobbySocket.start();
     this.defaultLobbyTime = ClientEnv.gameCreationRate() / 1000;
     window.addEventListener(
       "username-validity-change",
@@ -377,6 +416,9 @@ export class GameModeSelector extends LitElement {
       this.desktopUpdateState = getDesktopUpdateState();
       this.desktopSessionState = getDesktopSessionState();
     }
+    // After the session seed above: a shell that already knows it has no
+    // session must not open a feed it will close on the next tick.
+    this.start();
     document.addEventListener(
       "desktop-session-state",
       this.onDesktopSessionState,
@@ -403,6 +445,8 @@ export class GameModeSelector extends LitElement {
 
   disconnectedCallback() {
     this.stop();
+    window.clearTimeout(this.retryCooldownTimer);
+    this.retryCoolingDown = false;
     window.removeEventListener(
       "username-validity-change",
       this.handleValidityChange,
@@ -459,7 +503,17 @@ export class GameModeSelector extends LitElement {
   };
 
   private onDesktopSessionState = (e: Event) => {
-    this.desktopSessionState = (e as CustomEvent<DesktopSessionState>).detail;
+    const next = (e as CustomEvent<DesktopSessionState>).detail;
+    const wasSuspended = lobbyFeedSuspended(this.desktopSessionState);
+    this.desktopSessionState = next;
+    const suspended = lobbyFeedSuspended(next);
+    if (suspended === wasSuspended || !this.feedWanted) return;
+    if (suspended) {
+      this.closeLobbyFeed();
+    } else {
+      this.feedGaveUp = false;
+      this.lobbySocket.start();
+    }
   };
 
   private onBackendReachability = (e: Event) => {
@@ -469,7 +523,15 @@ export class GameModeSelector extends LitElement {
   };
 
   public stop() {
+    this.feedWanted = false;
     this.lobbySocket.stop();
+  }
+
+  // Also drops the snapshot: a card from a feed we have closed is a lobby the
+  // player cannot join, and the hero slot reads `null` as "show why".
+  private closeLobbyFeed() {
+    this.lobbySocket.stop();
+    this.lobbies = null;
   }
 
   /**
@@ -487,11 +549,85 @@ export class GameModeSelector extends LitElement {
    * snapshot and re-primes the list from the server.
    */
   public start() {
-    this.lobbySocket.start();
+    this.openLobbyFeed();
   }
+
+  private openLobbyFeed(refreshList = false) {
+    this.feedWanted = true;
+    this.feedGaveUp = false;
+    if (lobbyFeedSuspended(this.desktopSessionState)) {
+      // The session may have dropped while Main had the feed stopped, in
+      // which case the snapshot from before the game is still here and its
+      // cards would render as joinable.
+      this.lobbies = null;
+      return;
+    }
+    this.lobbySocket.start({ refreshList });
+  }
+
+  /**
+   * Whether an empty hero slot should say "offline" instead of spinning. The
+   * feed is closed on a gated session, so nothing is loading; on a confirmed
+   * outage it may still be connecting, but a spinner that the status bar
+   * contradicts reads as broken, and the feed reconnects on its own if the
+   * server answers.
+   */
+  private offlineForLobbies(): boolean {
+    return (
+      lobbyFeedSuspended(this.desktopSessionState) ||
+      this.backendOutage ||
+      this.feedGaveUp
+    );
+  }
+
+  private renderLobbiesUnavailable() {
+    // A gated desktop session has its remedy in the status bar, and the feed
+    // stays closed until it is taken, so a Retry here could only do nothing.
+    const canRetry = !lobbyFeedSuspended(this.desktopSessionState);
+    // "Offline" is only ever said of a gated desktop session. An outage is
+    // our servers not answering, which is not the player being offline.
+    const message = !canRetry
+      ? "mode_selector.offline_lobbies"
+      : this.backendOutage
+        ? "mode_selector.servers_unreachable"
+        : "mode_selector.lobbies_unreachable";
+    return html`<div
+      class="flex flex-col items-center justify-center gap-3 h-44 sm:h-full rounded-xl bg-surface/60 px-6 text-center text-sm font-medium text-white/60"
+    >
+      ${translateText(message)}
+      ${canRetry
+        ? html`<button
+            class="px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius text-white text-sm font-medium uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-malibu-blue"
+            ?disabled=${this.retryCoolingDown}
+            @click=${this.retryLobbies}
+          >
+            ${translateText("mode_selector.retry_lobbies")}
+          </button>`
+        : nothing}
+    </div>`;
+  }
+
+  private retryLobbies = () => {
+    if (this.retryCoolingDown) return;
+    this.retryCoolingDown = true;
+    this.retryCooldownTimer = window.setTimeout(() => {
+      this.retryCoolingDown = false;
+    }, MANUAL_RETRY_COOLDOWN_MS);
+    // Only a feed that gave up is reopened: one still inside its fast
+    // attempts is already dialing, and restarting it would throw that attempt
+    // away. The socket refreshes the list itself before it dials.
+    if (this.feedGaveUp && this.feedWanted) {
+      this.openLobbyFeed(true);
+      return;
+    }
+    // Shown over a feed that has not given up, this is a confirmed outage,
+    // which only an answer from the list API clears.
+    void refreshServerList();
+  };
 
   private handleLobbiesUpdate(lobbies: PublicGames) {
     this.lobbies = lobbies;
+    this.feedGaveUp = false;
     this.serverTimeOffset = calculateServerTimeOffset(lobbies.serverTime);
     document.dispatchEvent(
       new CustomEvent("public-lobbies-update", {
@@ -528,7 +664,7 @@ export class GameModeSelector extends LitElement {
     // reading-flow keeps focus order following the rows (Chromium only).
     return html`
       <div
-        class="flex flex-col gap-4 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] sm:[reading-flow:grid-rows]"
+        class="flex flex-col gap-4 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
       >
         <ios-add-to-home-screen-banner
           class="no-crazygames [&:empty]:hidden sm:col-span-2 sm:row-start-1"
@@ -580,13 +716,15 @@ export class GameModeSelector extends LitElement {
           ? html`<div class="min-w-0 sm:col-start-1 sm:row-start-2">
               ${ffa
                 ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
-                : html`<div
-                    class="flex items-center justify-center h-44 sm:h-full"
-                  >
-                    <span
-                      class="size-24 rounded-full border-[6px] border-blue-500/30 border-t-blue-500 animate-spin"
-                    ></span>
-                  </div>`}
+                : this.offlineForLobbies()
+                  ? this.renderLobbiesUnavailable()
+                  : html`<div
+                      class="flex items-center justify-center h-44 sm:h-full"
+                    >
+                      <span
+                        class="size-24 rounded-full border-[6px] border-blue-500/30 border-t-blue-500 animate-spin"
+                      ></span>
+                    </div>`}
             </div>`
           : nothing}
 

@@ -73,8 +73,10 @@ export function initWorkerMetrics(gameManager: GameManager): void {
   });
 
   connectedClientsGauge.addCallback((result) => {
-    const count = gameManager.activeClients();
-    result.observe(count, getPromLabels());
+    const labels = getPromLabels();
+    for (const [platform, count] of gameManager.activeClientsByPlatform()) {
+      result.observe(count, { ...labels, "openfront.platform": platform });
+    }
   });
 
   desyncsGauge.addCallback((result) => {

@@ -6,7 +6,7 @@ import {
   isCloseReason,
   isTerminalClose,
 } from "../core/CloseCodes";
-import { EventBus, GameEvent } from "../core/EventBus";
+import { EventBus, EventConstructor, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
   GameType,
@@ -43,6 +43,7 @@ import {
 } from "../core/ZbinWire";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
+import { clientPlatform } from "./ClientPlatform";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
@@ -263,6 +264,11 @@ export class Transport {
   // also the last moment a peer can send a dictionary-encoded field.
   private zbinCtx: ZbContext | null = null;
 
+  // The bus outlives the transport (one per page, one transport per join),
+  // so every subscription must be undone in leaveGame or a superseded
+  // transport keeps answering the live game's events.
+  private readonly unsubscribers: Array<() => void> = [];
+
   constructor(
     private lobbyConfig: LobbyConfig,
     private eventBus: EventBus,
@@ -273,87 +279,91 @@ export class Transport {
       this.lobbyConfig.gameRecord !== undefined ||
       this.lobbyConfig.gameStartInfo?.config.gameType === GameType.Singleplayer;
 
-    this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
+    this.subscribe(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),
     );
-    this.eventBus.on(SendAllianceRejectIntentEvent, (e) =>
+    this.subscribe(SendAllianceRejectIntentEvent, (e) =>
       this.onAllianceRejectUIEvent(e),
     );
-    this.eventBus.on(SendAllianceExtensionIntentEvent, (e) =>
+    this.subscribe(SendAllianceExtensionIntentEvent, (e) =>
       this.onSendAllianceExtensionIntent(e),
     );
-    this.eventBus.on(SendBreakAllianceIntentEvent, (e) =>
+    this.subscribe(SendBreakAllianceIntentEvent, (e) =>
       this.onBreakAllianceRequestUIEvent(e),
     );
-    this.eventBus.on(SendSpawnIntentEvent, (e) =>
-      this.onSendSpawnIntentEvent(e),
-    );
-    this.eventBus.on(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
-    this.eventBus.on(SendUpgradeStructureIntentEvent, (e) =>
+    this.subscribe(SendSpawnIntentEvent, (e) => this.onSendSpawnIntentEvent(e));
+    this.subscribe(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
+    this.subscribe(SendUpgradeStructureIntentEvent, (e) =>
       this.onSendUpgradeStructureIntent(e),
     );
-    this.eventBus.on(SendBoatAttackIntentEvent, (e) =>
+    this.subscribe(SendBoatAttackIntentEvent, (e) =>
       this.onSendBoatAttackIntent(e),
     );
-    this.eventBus.on(SendTargetPlayerIntentEvent, (e) =>
+    this.subscribe(SendTargetPlayerIntentEvent, (e) =>
       this.onSendTargetPlayerIntent(e),
     );
-    this.eventBus.on(SendEmojiIntentEvent, (e) => this.onSendEmojiIntent(e));
-    this.eventBus.on(SendDonateGoldIntentEvent, (e) =>
+    this.subscribe(SendEmojiIntentEvent, (e) => this.onSendEmojiIntent(e));
+    this.subscribe(SendDonateGoldIntentEvent, (e) =>
       this.onSendDonateGoldIntent(e),
     );
-    this.eventBus.on(SendDonateTroopsIntentEvent, (e) =>
+    this.subscribe(SendDonateTroopsIntentEvent, (e) =>
       this.onSendDonateTroopIntent(e),
     );
-    this.eventBus.on(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
-    this.eventBus.on(SendEmbargoIntentEvent, (e) =>
-      this.onSendEmbargoIntent(e),
-    );
-    this.eventBus.on(SendEmbargoAllIntentEvent, (e) =>
+    this.subscribe(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
+    this.subscribe(SendEmbargoIntentEvent, (e) => this.onSendEmbargoIntent(e));
+    this.subscribe(SendEmbargoAllIntentEvent, (e) =>
       this.onSendEmbargoAllIntent(e),
     );
-    this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
+    this.subscribe(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
-    this.eventBus.on(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
-    this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
-    this.eventBus.on(SendLiveStatsEvent, (e) => this.onSendLiveStatsEvent(e));
-    this.eventBus.on(SendPlayerReportEvent, (e) =>
+    this.subscribe(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
+    this.subscribe(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
+    this.subscribe(SendLiveStatsEvent, (e) => this.onSendLiveStatsEvent(e));
+    this.subscribe(SendPlayerReportEvent, (e) =>
       this.onSendPlayerReportEvent(e),
     );
-    this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
-    this.eventBus.on(CancelAttackIntentEvent, (e) =>
+    this.subscribe(SendHashEvent, (e) => this.onSendHashEvent(e));
+    this.subscribe(CancelAttackIntentEvent, (e) =>
       this.onCancelAttackIntentEvent(e),
     );
-    this.eventBus.on(CancelBoatIntentEvent, (e) =>
+    this.subscribe(CancelBoatIntentEvent, (e) =>
       this.onCancelBoatIntentEvent(e),
     );
 
-    this.eventBus.on(MoveWarshipIntentEvent, (e) => {
+    this.subscribe(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
 
-    this.eventBus.on(SendDeleteUnitIntentEvent, (e) =>
+    this.subscribe(SendDeleteUnitIntentEvent, (e) =>
       this.onSendDeleteUnitIntent(e),
     );
 
-    this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
+    this.subscribe(SendKickPlayerIntentEvent, (e) =>
       this.onSendKickPlayerIntent(e),
     );
 
-    this.eventBus.on(SendUpdateGameConfigIntentEvent, (e) =>
+    this.subscribe(SendUpdateGameConfigIntentEvent, (e) =>
       this.onSendUpdateGameConfigIntent(e),
     );
 
-    this.eventBus.on(SendToggleGameStartTimer, (e) =>
+    this.subscribe(SendToggleGameStartTimer, (e) =>
       this.onSendToggleGameStartTimer(e),
     );
-    this.eventBus.on(SendSpectateEvent, (e) => {
+    this.subscribe(SendSpectateEvent, (e) => {
       this.lobbyConfig.spectator = e.spectator;
       this.sendMsg({
         type: "spectate",
         spectator: e.spectator,
       } satisfies ClientSpectateMessage);
     });
+  }
+
+  private subscribe<T extends GameEvent>(
+    eventType: EventConstructor<T>,
+    handler: (event: T) => void,
+  ) {
+    this.eventBus.on(eventType, handler);
+    this.unsubscribers.push(() => this.eventBus.off(eventType, handler));
   }
 
   private startPing() {
@@ -648,6 +658,7 @@ export class Transport {
       token: await getPlayToken(),
       spectator: this.lobbyConfig.spectator,
       gitCommit: ClientEnv.gitCommit(),
+      platform: clientPlatform(),
     } satisfies ClientJoinMessage);
   }
 
@@ -663,6 +674,9 @@ export class Transport {
   }
 
   leaveGame() {
+    for (const unsubscribe of this.unsubscribers.splice(0)) {
+      unsubscribe();
+    }
     if (this.isLocal) {
       this.localServer.endGame();
       return;
@@ -833,7 +847,6 @@ export class Transport {
         "WebSocket is not open. Current state:",
         this.socket?.readyState,
       );
-      console.log("attempting reconnect");
     }
   }
 
@@ -877,7 +890,6 @@ export class Transport {
         "WebSocket is not open. Current state:",
         this.socket?.readyState,
       );
-      console.log("attempting reconnect");
     }
   }
 

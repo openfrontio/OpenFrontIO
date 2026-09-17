@@ -524,6 +524,12 @@ let instance: AudioMixer | null = null;
 /** Created once, from Main.ts, before anything asks to play. */
 export function initAudioMixer(userSettings: UserSettings): AudioMixer {
   instance?.dispose();
+  // Before the mixer reads a single volume. This is the one place both entry
+  // points -- Main.ts on the home page and ClientGameRunner for a game URL
+  // opened directly -- go through, so putting the one-time reset here is what
+  // makes it run exactly once per page and always ahead of the constructor
+  // that caches the values it clears.
+  userSettings.resetAudioOnce();
   instance = new AudioMixer(userSettings);
   setCuePlayer((name) => instance?.play(name));
   setAudioControls(instance);

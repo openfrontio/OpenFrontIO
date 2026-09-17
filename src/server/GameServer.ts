@@ -779,6 +779,10 @@ export class GameServer {
     return this.clients.active().length;
   }
 
+  public activeClients(): readonly Client[] {
+    return this.clients.active();
+  }
+
   public numDesyncedClients(): number {
     return this.desync.count();
   }

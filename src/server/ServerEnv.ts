@@ -1,11 +1,6 @@
 import { JWK } from "jose";
 import { z } from "zod";
-import {
-  ClusterColor,
-  ClusterConfig,
-  ClusterConfigSchema,
-  ClusterEntry,
-} from "../core/ClusterConfig";
+import { ClusterConfig, InstanceLetterSchema } from "../core/ClusterConfig";
 import { GameEnv, parseGameEnv } from "../core/configuration/Config";
 import { GameID } from "../core/Schemas";
 import { generateGameID, simpleHash } from "../core/Util";
@@ -47,14 +42,35 @@ export class ServerEnv {
         return "prod";
     }
   }
+  // Worker processes behind this server, from NUM_WORKERS (update.sh, from
+  // the API registry). Frozen for the lifetime of every game id minted here:
+  // ids route to workers by hash % numWorkers, so it may only change on a
+  // deploy after this letter has fully drained. Dev defaults to 2, matching
+  // vite.config.ts's proxy; a deployed server without it refuses boot.
   static numWorkers(): number {
-    return ServerEnv.clusterSelf().entry.numWorkers;
+    const raw = process.env.NUM_WORKERS;
+    if (raw === undefined || raw.length === 0) {
+      if (ServerEnv.gameEnv === GameEnv.Dev) return 2;
+      throw new Error("NUM_WORKERS not set");
+    }
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 1) {
+      throw new Error(`Invalid NUM_WORKERS: ${JSON.stringify(raw)}`);
+    }
+    return n;
   }
   static turnstileSiteKey(): string {
     const v = process.env.TURNSTILE_SITE_KEY;
     if (!v) {
       throw new Error("TURNSTILE_SITE_KEY not set");
     }
+    return v;
+  }
+  // Optional, unlike turnstileSiteKey: a deployment without a key just keeps
+  // the inline Stripe flow off (the store falls back to redirect checkout).
+  static stripePublishableKey(): string | undefined {
+    const v = process.env.STRIPE_PUBLISHABLE_KEY;
+    if (!v) return undefined;
     return v;
   }
   static jwtAudience(): string {
@@ -125,7 +141,7 @@ export class ServerEnv {
   }
   // Mint a game id under this deployment's instance letter.
   static generateGameId(): GameID {
-    return generateGameID(ServerEnv.clusterSelf().letter);
+    return generateGameID(ServerEnv.instanceLetter());
   }
 
   // Generate a game id that hashes to `workerId`, so requests for the game route
@@ -181,87 +197,57 @@ export class ServerEnv {
   // to the other deployment. This is NOT the host the page came from: that is
   // siteHost(), and with GAME_DOMAIN set the two are always different names.
   // Undefined in dev (no SUBDOMAIN): the client falls back to same-origin.
+  //
+  // GAME_HOST, when deploy.sh wrote one, is authoritative: it is the name the
+  // cluster map actually carries for this deployment, and for a
+  // machine-scoped entry (`blue.staging2.server.openfront.dev`, the machine
+  // in the hostname so one colour can span boxes) it is not derivable from
+  // SUBDOMAIN and GAME_DOMAIN alone. The derivation below is the standalone
+  // shape and stays for env files written by hand.
   static publicHost(): string | undefined {
+    const explicit = process.env.GAME_HOST;
+    if (explicit && explicit.length > 0) return explicit;
     const subdomain = ServerEnv.subdomain();
     const domain = ServerEnv.gameDomain() ?? ServerEnv.domain();
     if (!subdomain || !domain) return undefined;
     return `${subdomain}.${domain}`;
   }
-  // Cluster topology (docs/MultiServer.md): parsed from the CLUSTER_JSON env,
-  // which replaced NUM_WORKERS. Absent or malformed refuses boot — a server
-  // that doesn't know the fleet map can't mint ids or route games. Dev is the
-  // exception: it defaults to a single-entry localhost map (kept in sync with
-  // vite.config.ts's dev fallback) rather than making every dev script carry
-  // JSON through cross-platform shell quoting. Cached by the raw string so
-  // repeated reads don't re-parse but tests that stub the env still see
-  // their value.
-  static readonly DEV_DEFAULT_CLUSTER_JSON =
-    '{"a":{"host":"localhost","color":"blue","numWorkers":2}}';
-  private static cachedClusterRaw: string | null = null;
-  private static cachedCluster: ClusterConfig | null = null;
-  static cluster(): ClusterConfig {
-    const fromEnv = process.env.CLUSTER_JSON;
-    const raw =
-      fromEnv !== undefined && fromEnv.length > 0
-        ? fromEnv
-        : ServerEnv.gameEnv === GameEnv.Dev
-          ? ServerEnv.DEV_DEFAULT_CLUSTER_JSON
-          : undefined;
-    if (raw === undefined) {
-      throw new Error("CLUSTER_JSON not set");
+  // This server's instance letter, from INSTANCE_LETTER (update.sh, from the
+  // API registry): the first character of every game id it mints, which is
+  // how a game id names its server for the rest of its life (docs/
+  // MultiServer.md). Letters are append-only per site and the API registry
+  // binds each to its host permanently, so a hand-set letter that belongs to
+  // another host is refused at check-in, not here — but a malformed one
+  // refuses boot, since ids minted under it would validate nowhere. Dev
+  // defaults to "a".
+  static instanceLetter(): string {
+    const raw = process.env.INSTANCE_LETTER;
+    if (raw === undefined || raw.length === 0) {
+      if (ServerEnv.gameEnv === GameEnv.Dev) return "a";
+      throw new Error("INSTANCE_LETTER not set");
     }
-    if (raw === ServerEnv.cachedClusterRaw && ServerEnv.cachedCluster) {
-      return ServerEnv.cachedCluster;
-    }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch (e) {
-      // Manual cause assignment: target ES2020's Error constructor predates
-      // the options bag (same pattern as zbin/bytes.ts).
-      const error = new Error(
-        `CLUSTER_JSON is not valid JSON: ${e instanceof Error ? e.message : e}`,
-      );
-      (error as { cause?: unknown }).cause = e;
-      throw error;
-    }
-    const result = ClusterConfigSchema.safeParse(parsed);
+    const result = InstanceLetterSchema.safeParse(raw);
     if (!result.success) {
-      throw new Error(`Invalid CLUSTER_JSON: ${z.prettifyError(result.error)}`);
+      throw new Error(
+        `Invalid INSTANCE_LETTER: ${JSON.stringify(raw)} (one lowercase letter)`,
+      );
     }
-    ServerEnv.cachedClusterRaw = raw;
-    ServerEnv.cachedCluster = result.data;
     return result.data;
   }
 
-  // This deployment's own cluster entry, found by its game host —
-  // SUBDOMAIN.GAME_DOMAIN, or SUBDOMAIN.DOMAIN when GAME_DOMAIN is unset, or
-  // bare DOMAIN when SUBDOMAIN is empty (dev, standalone boxes). Cluster
-  // entries name the servers clients open sockets to, so matching by the game
-  // host is the whole point. A server whose host is not in the map refuses
-  // boot — it has no letter to mint under.
-  static clusterSelf(): { letter: string; entry: ClusterEntry } {
-    const selfHost = ServerEnv.publicHost() ?? ServerEnv.domain();
-    if (!selfHost) {
-      throw new Error("DOMAIN not set, cannot resolve own cluster entry");
-    }
-    const cluster = ServerEnv.cluster();
-    for (const [letter, entry] of Object.entries(cluster)) {
-      if (entry.host === selfHost) return { letter, entry };
-    }
-    throw new Error(
-      `Host ${selfHost} has no entry in CLUSTER_JSON (letters: ${Object.keys(cluster).join(", ")})`,
-    );
-  }
-
-  // The first character of every game id this deployment mints.
-  static instanceLetter(): string {
-    return ServerEnv.clusterSelf().letter;
-  }
-
-  // Which blue/green pool this deployment belongs to (drain checks, PR 6).
-  static color(): ClusterColor {
-    return ServerEnv.clusterSelf().entry.color;
+  // The one-entry map naming this server, in the shape the page reads
+  // (ClusterConfig.ts): its letter, its game host (bare
+  // DOMAIN under local dev, where there is no public host) and its worker
+  // count. This used to be the whole fleet, read from CLUSTER_JSON; the
+  // fleet is the API registry's list now and this is only the page's own
+  // server for when that list is unavailable.
+  static cluster(): ClusterConfig {
+    return {
+      [ServerEnv.instanceLetter()]: {
+        host: ServerEnv.publicHost() ?? ServerEnv.domain(),
+        numWorkers: ServerEnv.numWorkers(),
+      },
+    };
   }
 
   // The page host: SITE_HOST. Behind a load balancer that is the apex
@@ -274,13 +260,14 @@ export class ServerEnv {
     const v = process.env.SITE_HOST;
     return v && v.length > 0 ? v : undefined;
   }
-  // Where the drain decision comes from (docs/MultiServer.md, "Server list
-  // v2"): "apex" is today's /api/health colour poll of the site host; "api"
-  // obeys the state the API assigns at check-in (ClusterCheckin.ts). Any
-  // other value, or none, means apex, so a deploy that doesn't set it is
-  // unchanged.
-  static clusterStateSource(): "apex" | "api" {
-    return process.env.CLUSTER_STATE_SOURCE === "api" ? "api" : "apex";
+  // Whether the master joins its site's shared public-lobby roster
+  // (LobbyCoordinatorClient.ts, infra docs/lobby-coordinator.md). "api"
+  // connects to the API's coordinator and lets it schedule this site's public
+  // lobbies; "off", anything else, or none keeps single-server scheduling,
+  // so a deploy that doesn't set it is unchanged on the wire. "off" exists
+  // so a GitHub environment can override a repo-level "api" explicitly.
+  static lobbyCoordinator(): "api" | "off" {
+    return process.env.LOBBY_COORDINATOR === "api" ? "api" : "off";
   }
   // The machine this container runs on — `falk2`, `nbg2`, `staging`: the
   // second argument to deploy.sh, which writes it into the container's env as

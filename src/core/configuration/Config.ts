@@ -48,6 +48,10 @@ declare global {
       numWorkers?: number;
       turnstileSiteKey?: string;
       jwtAudience?: string;
+      // Environment-scoped like turnstileSiteKey, but optional: a deployment
+      // without one (dev, desktop shells) just keeps the inline Stripe flow
+      // off.
+      stripePublishableKey?: string;
       // The rendering server's own id. Absent on a static page, which no
       // server rendered; ClientEnv.instanceId() then answers "".
       instanceId?: string;
@@ -136,8 +140,10 @@ const TERRA_NULLIUS_MAX_COST = 100;
 // army matches the old cost, bigger stacks pay less, smaller pay more.
 const ATTACKER_LOSS_BASE = 0.463;
 const ATTACKER_LOSS_PER_DENSITY = 0.0039;
-// Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
-const SPEED_COST_DIVISOR = 7.77;
+// Speed divisor: 8.25 / 0.965, absorbing the same sigmoid tail. 8.25 is the
+// old 7.5 raised ~10%: v34 pace feedback said attacks felt a bit too slow, so
+// every player-vs-player attack lands ~10% faster across the board.
+const SPEED_COST_DIVISOR = 8.55;
 // Speed-only: the attacker's territory bonus runs a touch deeper for speed
 // than the 0.7 loss depth above (floor 0.27x vs 0.3x). Paired with the 0.82
 // sub-parity floor on the ratio curve, an overwhelming push lands ~18%
@@ -438,15 +444,25 @@ export class Config {
    * Global spawn throttle for the train economy, counted in Train *units*
    * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns for the very
    * first trains, ~1x around 35 units (~5 trains), then a capacity
-   * sigmoid damps spawning past the ~300-unit midpoint. The damping
-   * flattens onto a ~0.25 plateau past ~460 units (~65 trains), so a big
+   * sigmoid damps spawning past the ~500-unit midpoint. The damping
+   * flattens onto a ~0.25 plateau past ~730 units (~100 trains), so a big
    * enough rail economy still scales at a quarter of the un-damped rate,
    * until a global hard cap far beyond any normal game collapses the
    * plateau past ~900 units (~130 trains).
+   *
+   * The midpoint was 300 units in v34.0. Public-game telemetry put a real
+   * lobby at ~4.2 train units per player, so a 50-player game sat at ~210
+   * units and a 70-player game at ~300 — i.e. normal lobbies were landing
+   * on and past the knee, costing factories 35-56% of their v33 income.
+   * The 61-nation benchmark this curve was tuned against peaks at 91 units,
+   * roughly a quarter of a full public lobby, so it never saw that region.
+   * 500 keeps lobbies up to ~20 players at v33 factory income, still
+   * constrains big lobbies (~-12% at 50 players, ~-24% at 80), and leaves
+   * the plateau and the hard cap that bound the extreme tail untouched.
    */
   trainSaturation(numTrainUnits: number): number {
     const boost = 1 + 0.5 * exp(-numTrainUnits / 30);
-    const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 300);
+    const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 500);
     const plateau = 0.25 * (1 - sigmoid(numTrainUnits, Math.LN2 / 150, 900));
     return boost * Math.max(damping, plateau);
   }

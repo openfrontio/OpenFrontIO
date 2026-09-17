@@ -3,6 +3,7 @@ import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo } from "../../core/Schemas";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
+import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { getMapName, getModifierLabels, translateText } from "../Utils";
 import "./ConfirmDialog";
@@ -38,19 +39,23 @@ export function canJoinTrustedLobby(
  * Popup shown instead of attempting to join a trusted-only lobby the viewer
  * can't get into (the server would refuse them anyway). Tells them how to
  * become trusted rather than letting the join fail: a signed-out viewer is
- * told to sign in first, since trust only attaches to an account.
+ * told to sign in first, since trust only attaches to an account. CrazyGames
+ * has no purchases, so its variants only suggest playing more games.
  */
 export function trustRequiredDialog(
   signedIn: boolean,
   onClose: () => void,
 ): TemplateResult {
+  const body = crazyGamesSDK.isOnCrazyGames()
+    ? signedIn
+      ? "public_lobby.trust_required_body_crazygames"
+      : "public_lobby.trust_required_body_signed_out_crazygames"
+    : signedIn
+      ? "public_lobby.trust_required_body"
+      : "public_lobby.trust_required_body_signed_out";
   return html`<confirm-dialog
     .heading=${translateText("public_lobby.trust_required_title")}
-    .message=${translateText(
-      signedIn
-        ? "public_lobby.trust_required_body"
-        : "public_lobby.trust_required_body_signed_out",
-    )}
+    .message=${translateText(body)}
     variant="warning"
     .showClose=${true}
     .buttons=${"confirmOnly"}
@@ -253,13 +258,21 @@ function trustLockIcon(viewerTrusted: boolean): TemplateResult {
       : "public_lobby.trusted_locked",
   );
   return html`<span
-    class="${BADGE} absolute bottom-2 right-2 flex items-center px-1.5 py-1 ${viewerTrusted
+    class="${BADGE} group/trust absolute bottom-2 right-2 flex items-center px-1.5 py-1 ${viewerTrusted
       ? "text-green-400"
       : "text-red-400"}"
-    title=${label}
     aria-label=${label}
     data-trust=${viewerTrusted ? "unlocked" : "locked"}
   >
+    <span
+      role="tooltip"
+      class="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden w-max max-w-48 flex-col gap-0.5 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs normal-case tracking-normal text-white shadow-xl group-hover/trust:flex"
+    >
+      <span class="font-bold"
+        >${translateText("public_lobby.trusted_tooltip_title")}</span
+      >
+      <span class="text-white/80">${label}</span>
+    </span>
     <svg
       class="size-4"
       viewBox="0 0 20 20"
