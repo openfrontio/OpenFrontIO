@@ -133,6 +133,7 @@ import { UsernameInput } from "./UsernameInput";
 import {
   apexPathFor,
   currentPagePath,
+  flushReloadToast,
   homeHref,
   incrementGamesPlayed,
   presenceMapKey,
@@ -324,6 +325,8 @@ class Client {
     // URL, so take the value while it is still the URL we were served at.
     // See PagePin.ts.
     capturePagePin();
+
+    flushReloadToast();
 
     // A store referral banner / account "copy link" hands out `/c/<code>`.
     // There's nothing to open here yet -- the code only does anything once
@@ -1714,7 +1717,10 @@ class Client {
 
     if (this.joinModal.isOpen()) {
       this.joinModal.close();
-      if (event?.detail.cause === "full-lobby") {
+      if (
+        event?.detail.cause === "full-lobby" ||
+        event?.detail.cause === "game-started"
+      ) {
         window.dispatchEvent(
           new CustomEvent("show-message", {
             detail: {

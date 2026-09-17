@@ -311,10 +311,10 @@ export function joinLobby(
         });
     }
     if (message.type === "error") {
-      if (message.error === "full-lobby") {
+      if (message.error === "full-lobby" || message.error === "game-started") {
         document.dispatchEvent(
           new CustomEvent("leave-lobby", {
-            detail: { lobby: lobbyConfig.gameID, cause: "full-lobby" },
+            detail: { lobby: lobbyConfig.gameID, cause: message.error },
             bubbles: true,
             composed: true,
           }),

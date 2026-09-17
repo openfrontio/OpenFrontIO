@@ -124,7 +124,7 @@ describe("GameServer group token", () => {
     startGame(game);
     const expected = tokensSentTo(mockWsOf(player))[0].groupToken;
 
-    const latecomer = makeClient({ clientID: cid("p2") });
+    const latecomer = makeClient({ clientID: cid("p2"), spectator: true });
     game.joinClient(latecomer);
 
     const ctx = createGameWireContext([{ clientID: cid("p1") }]);
