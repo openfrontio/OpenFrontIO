@@ -322,12 +322,22 @@ export class GameModeSelector extends LitElement {
   // player is back at the menu). Kept apart from the socket's own state so a
   // session change can close and reopen the feed without forgetting that.
   private feedWanted = false;
+  // The socket stopped reconnecting; cleared by the next start() or snapshot.
+  @state() private feedGaveUp = false;
   // An update/drain signal arrived during a lobby wait; prompt on leave-lobby.
   private updateDeferred = false;
 
   private lobbySocket = new PublicLobbySocket(
     (lobbies) => this.handleLobbiesUpdate(lobbies),
-    { onUpdateAvailable: () => this.handleUpdateAvailable() },
+    {
+      onUpdateAvailable: () => this.handleUpdateAvailable(),
+      onGaveUp: () => {
+        // Nothing is loading any more, and cards from a feed that has died
+        // are lobbies the player cannot join.
+        this.feedGaveUp = true;
+        this.lobbies = null;
+      },
+    },
   );
 
   private handleUpdateAvailable() {
@@ -492,6 +502,7 @@ export class GameModeSelector extends LitElement {
     if (suspended) {
       this.closeLobbyFeed();
     } else {
+      this.feedGaveUp = false;
       this.lobbySocket.start();
     }
   };
@@ -530,6 +541,7 @@ export class GameModeSelector extends LitElement {
    */
   public start() {
     this.feedWanted = true;
+    this.feedGaveUp = false;
     if (lobbyFeedSuspended(this.desktopSessionState)) {
       // The session may have dropped while Main had the feed stopped, in
       // which case the snapshot from before the game is still here and its
@@ -548,11 +560,16 @@ export class GameModeSelector extends LitElement {
    * server answers.
    */
   private offlineForLobbies(): boolean {
-    return lobbyFeedSuspended(this.desktopSessionState) || this.backendOutage;
+    return (
+      lobbyFeedSuspended(this.desktopSessionState) ||
+      this.backendOutage ||
+      this.feedGaveUp
+    );
   }
 
   private handleLobbiesUpdate(lobbies: PublicGames) {
     this.lobbies = lobbies;
+    this.feedGaveUp = false;
     this.serverTimeOffset = calculateServerTimeOffset(lobbies.serverTime);
     document.dispatchEvent(
       new CustomEvent("public-lobbies-update", {
