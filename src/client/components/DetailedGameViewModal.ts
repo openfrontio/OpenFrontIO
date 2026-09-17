@@ -17,6 +17,7 @@ import {
   shouldBlockSocketSourcedAction,
 } from "../GameModeSelector";
 import { JoinLobbyModal } from "../JoinLobbyModal";
+import { getLobbyQueuePosition } from "../LobbyQueue";
 import { PublicLobbySocket } from "../LobbySocket";
 import { JoinLobbyEvent } from "../Main";
 import { UsernameInput } from "../UsernameInput";
@@ -477,14 +478,10 @@ export class DetailedGameViewModal extends BaseModal {
       if (lobby.publicGameType === "hosted") {
         return translateText("public_lobby.waiting_for_players");
       }
-      // Use the full server queue so filtering doesn't renumber waiting lobbies.
-      const queue = this.lobbies?.games[lobby.publicGameType]?.filter(
-        (candidate) => candidate.startsAt === undefined,
-      );
-      const position =
-        (queue?.findIndex((candidate) => candidate.gameID === lobby.gameID) ??
-          -1) + 1;
-      return translateText("detailed_view.queue_position", { position });
+      const position = getLobbyQueuePosition(this.lobbies, lobby.gameID);
+      return position !== null
+        ? translateText("detailed_view.queue_position", { position })
+        : translateText("public_lobby.waiting_for_players");
     }
     const seconds = getSecondsUntilServerTimestamp(
       lobby.startsAt,

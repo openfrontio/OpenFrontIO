@@ -20,6 +20,7 @@ import {
   GameRecordSchema,
   LobbyInfoEvent,
   PublicGameInfo,
+  PublicGames,
 } from "../core/Schemas";
 import {
   Difficulty,
@@ -30,6 +31,7 @@ import {
 } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { getLobbyQueuePosition } from "./LobbyQueue";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { ensureServerList, redirectToGameVersion } from "./ServerList";
@@ -65,6 +67,7 @@ export class JoinLobbyModal extends BaseModal {
   // the pre-join form.
   @state() private hostedLobbies: PublicGameInfo[] = [];
   @state() private hostedLobbiesLoaded = false;
+  @state() private publicLobbies: PublicGames | null = null;
   // Deliberately not persisted: the bell starts off and is re-armed by hand
   // for each game (reset in startTrackingLobby).
   @state() private notifyOnStart = false;
@@ -79,6 +82,7 @@ export class JoinLobbyModal extends BaseModal {
   private handledJoinTimeout = false;
 
   private readonly hostedLobbySocket = new PublicLobbySocket((lobbies) => {
+    this.publicLobbies = lobbies;
     this.hostedLobbies = lobbies.games?.hosted ?? [];
     this.hostedLobbiesLoaded = true;
   });
@@ -318,11 +322,19 @@ export class JoinLobbyModal extends BaseModal {
             this.serverTimeOffset,
           )
         : null;
+    const queuePosition =
+      this.gameConfig?.gameType === GameType.Public
+        ? getLobbyQueuePosition(this.publicLobbies, this.currentLobbyId)
+        : null;
     const statusLabel =
       secondsRemaining === null
         ? this.isPrivateLobby()
           ? translateText("private_lobby.joined_waiting")
-          : translateText("public_lobby.waiting_for_players")
+          : queuePosition !== null
+            ? translateText("detailed_view.queue_position", {
+                position: queuePosition,
+              })
+            : translateText("public_lobby.waiting_for_players")
         : secondsRemaining > 0
           ? translateText("public_lobby.starting_in", {
               time: renderDuration(secondsRemaining),
@@ -611,8 +623,6 @@ export class JoinLobbyModal extends BaseModal {
     // disarmLeaveOnClose() runs, no close cascade can re-arm it and
     // disconnect the player mid game-start.
     this.leaveLobbyOnClose = true;
-    this.hostedLobbiesLoaded = false;
-    void this.hostedLobbySocket.start();
     const lobbyId = typeof args?.lobbyId === "string" ? args.lobbyId : "";
     const lobbyInfo = args?.lobbyInfo as GameInfo | PublicGameInfo | undefined;
     if (lobbyId) {
@@ -621,7 +631,16 @@ export class JoinLobbyModal extends BaseModal {
       if (!lobbyInfo) {
         this.handleUrlJoin(lobbyId, args?.spectate === true);
       }
+    } else {
+      this.startLobbyFeed();
     }
+  }
+
+  private startLobbyFeed(lobbyId?: string) {
+    this.publicLobbies = null;
+    this.hostedLobbies = [];
+    this.hostedLobbiesLoaded = false;
+    void this.hostedLobbySocket.start(lobbyId);
   }
 
   private async handleUrlJoin(
@@ -670,6 +689,7 @@ export class JoinLobbyModal extends BaseModal {
     lobbyInfo?: GameInfo | PublicGameInfo,
   ) {
     this.currentLobbyId = lobbyId;
+    this.startLobbyFeed(lobbyId);
     // clientID will be assigned by server via lobby_info message
     this.currentClientID = "";
     this.gameConfig = null;
@@ -696,6 +716,7 @@ export class JoinLobbyModal extends BaseModal {
     this.currentLobbyId = "";
     this.currentClientID = "";
     this.isConnecting = false;
+    if (this.isModalOpen) this.startLobbyFeed();
   }
 
   private leaveLobby() {
@@ -718,6 +739,7 @@ export class JoinLobbyModal extends BaseModal {
 
   protected onClose(): void {
     this.hostedLobbySocket.stop();
+    this.publicLobbies = null;
     this.hostedLobbies = [];
     this.hostedLobbiesLoaded = false;
     this.clearCountdownTimer();
