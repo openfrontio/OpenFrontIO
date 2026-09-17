@@ -152,6 +152,25 @@ export function shouldBlockMultiplayerAction(
 }
 
 /**
+ * Whether the public-lobby feed should be closed rather than kept open.
+ *
+ * A gated desktop session refuses every join the feed could offer, so keeping
+ * the socket open only spends a connection on cards nobody can use and shows
+ * a spinner that never resolves into anything playable. Close it and say
+ * "offline" instead; it reopens when the session comes back.
+ *
+ * Reachability is deliberately NOT an input, by the rule at the top of this
+ * file: the feed is socket-sourced, and the list API's health says nothing
+ * about the game server behind it. The update state is not either -- a
+ * pending update is not "offline".
+ */
+export function lobbyFeedSuspended(
+  session: DesktopSessionState | null,
+): boolean {
+  return session !== null && !multiplayerAllowedForSession(session);
+}
+
+/**
  * The same gate for an action whose target arrived over a live game-server
  * socket: a public or hosted lobby card, in either browser, and every join
  * that reaches Main's funnel (shouldBlockJoin below wraps this).
@@ -299,6 +318,10 @@ export class GameModeSelector extends LitElement {
   // only stops it when a game actually starts (prestart/join), so it is still
   // listening during the whole lobby wait.
   private inLobby = false;
+  // Whether Main wants the feed open at all (false from game start until the
+  // player is back at the menu). Kept apart from the socket's own state so a
+  // session change can close and reopen the feed without forgetting that.
+  private feedWanted = false;
   // An update/drain signal arrived during a lobby wait; prompt on leave-lobby.
   private updateDeferred = false;
 
@@ -357,7 +380,6 @@ export class GameModeSelector extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.lobbySocket.start();
     this.defaultLobbyTime = ClientEnv.gameCreationRate() / 1000;
     window.addEventListener(
       "username-validity-change",
@@ -377,6 +399,9 @@ export class GameModeSelector extends LitElement {
       this.desktopUpdateState = getDesktopUpdateState();
       this.desktopSessionState = getDesktopSessionState();
     }
+    // After the session seed above: a shell that already knows it has no
+    // session must not open a feed it will close on the next tick.
+    this.start();
     document.addEventListener(
       "desktop-session-state",
       this.onDesktopSessionState,
@@ -459,7 +484,16 @@ export class GameModeSelector extends LitElement {
   };
 
   private onDesktopSessionState = (e: Event) => {
-    this.desktopSessionState = (e as CustomEvent<DesktopSessionState>).detail;
+    const next = (e as CustomEvent<DesktopSessionState>).detail;
+    const wasSuspended = lobbyFeedSuspended(this.desktopSessionState);
+    this.desktopSessionState = next;
+    const suspended = lobbyFeedSuspended(next);
+    if (suspended === wasSuspended || !this.feedWanted) return;
+    if (suspended) {
+      this.closeLobbyFeed();
+    } else {
+      this.lobbySocket.start();
+    }
   };
 
   private onBackendReachability = (e: Event) => {
@@ -469,7 +503,15 @@ export class GameModeSelector extends LitElement {
   };
 
   public stop() {
+    this.feedWanted = false;
     this.lobbySocket.stop();
+  }
+
+  // Also drops the snapshot: a card from a feed we have closed is a lobby the
+  // player cannot join, and the hero slot reads `null` as "show why".
+  private closeLobbyFeed() {
+    this.lobbySocket.stop();
+    this.lobbies = null;
   }
 
   /**
@@ -487,7 +529,26 @@ export class GameModeSelector extends LitElement {
    * snapshot and re-primes the list from the server.
    */
   public start() {
+    this.feedWanted = true;
+    if (lobbyFeedSuspended(this.desktopSessionState)) {
+      // The session may have dropped while Main had the feed stopped, in
+      // which case the snapshot from before the game is still here and its
+      // cards would render as joinable.
+      this.lobbies = null;
+      return;
+    }
     this.lobbySocket.start();
+  }
+
+  /**
+   * Whether an empty hero slot should say "offline" instead of spinning. The
+   * feed is closed on a gated session, so nothing is loading; on a confirmed
+   * outage it may still be connecting, but a spinner that the status bar
+   * contradicts reads as broken, and the feed reconnects on its own if the
+   * server answers.
+   */
+  private offlineForLobbies(): boolean {
+    return lobbyFeedSuspended(this.desktopSessionState) || this.backendOutage;
   }
 
   private handleLobbiesUpdate(lobbies: PublicGames) {
@@ -580,13 +641,19 @@ export class GameModeSelector extends LitElement {
           ? html`<div class="min-w-0 sm:col-start-1 sm:row-start-2">
               ${ffa
                 ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
-                : html`<div
-                    class="flex items-center justify-center h-44 sm:h-full"
-                  >
-                    <span
-                      class="size-24 rounded-full border-[6px] border-blue-500/30 border-t-blue-500 animate-spin"
-                    ></span>
-                  </div>`}
+                : this.offlineForLobbies()
+                  ? html`<div
+                      class="flex items-center justify-center h-44 sm:h-full rounded-xl bg-surface/60 px-6 text-center text-sm font-medium text-white/60"
+                    >
+                      ${translateText("mode_selector.offline_lobbies")}
+                    </div>`
+                  : html`<div
+                      class="flex items-center justify-center h-44 sm:h-full"
+                    >
+                      <span
+                        class="size-24 rounded-full border-[6px] border-blue-500/30 border-t-blue-500 animate-spin"
+                      ></span>
+                    </div>`}
             </div>`
           : nothing}
 
