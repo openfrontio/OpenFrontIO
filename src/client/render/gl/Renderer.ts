@@ -59,6 +59,7 @@ import { SpawnOverlayPass } from "./passes/SpawnOverlayPass";
 import { SpiralRibbonPass } from "./passes/SpiralRibbonPass";
 import { StructureLevelPass } from "./passes/StructureLevelPass";
 import { StructurePass } from "./passes/StructurePass";
+import { TeamMarkerPass, type TeamMarker } from "./passes/TeamMarkerPass";
 import { TerrainPass } from "./passes/TerrainPass";
 import { TerritoryPass } from "./passes/TerritoryPass";
 import { TrailPass } from "./passes/TrailPass";
@@ -149,6 +150,7 @@ export class GPURenderer {
   private coordinateGridPass: CoordinateGridPass;
   private spawnOverlayPass: SpawnOverlayPass;
   private smallPlayerGlowPass: SmallPlayerGlowPass;
+  private teamMarkerPass: TeamMarkerPass;
   private inSpawnPhase = false;
 
   // Map-layer passes keyed by layer id, drawn between terrain and territory.
@@ -561,6 +563,9 @@ export class GPURenderer {
 
     // --- Crosshair (warship placement) ---
     this.crosshairPass = new CrosshairPass(gl);
+
+    // --- Team markers (pulsing star over each teammate) ---
+    this.teamMarkerPass = new TeamMarkerPass(gl);
 
     // --- Remaining passes (unchanged from v1) ---
     this.structurePass = new StructurePass(
@@ -1110,6 +1115,10 @@ export class GPURenderer {
     this.smallPlayerGlowPass.update(set);
   }
 
+  updateTeamMarkers(markers: TeamMarker[]): void {
+    this.teamMarkerPass.update(markers);
+  }
+
   // ---------------------------------------------------------------------------
   // Queries
   // ---------------------------------------------------------------------------
@@ -1373,6 +1382,8 @@ export class GPURenderer {
     if (pe.structure) this.structureLevelPass.draw(cam, zoom);
     // Small-player glow draws after structures so buildings can't hide it.
     this.smallPlayerGlowPass.draw(cam);
+    // Teammate stars sit above territory/structures, below bars and names.
+    if (!this.altView) this.teamMarkerPass.draw(cam);
     if (pe.bar) this.barPass.draw(cam);
     this.updateSelectionBox();
     this.selectionBoxPass.draw(cam, this.frameTick);
@@ -1501,6 +1512,7 @@ export class GPURenderer {
     this.rangeCirclePass.dispose();
     this.samRadiusPass.dispose();
     this.crosshairPass.dispose();
+    this.teamMarkerPass.dispose();
     this.structurePass.dispose();
     this.structureLevelPass.dispose();
     this.unitPass.dispose();

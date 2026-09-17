@@ -18,9 +18,15 @@ import { decodePatternData } from "../core/PatternDecoder";
 import { getCachedCosmetics } from "./Cosmetics";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
 import { uploadFrameData } from "./render/frame/Upload";
+import { themeProvider } from "./theme/ThemeProvider";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
-import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
+import type {
+  MapRenderer,
+  PlayerStatic,
+  SpawnCenter,
+  TeamMarker,
+} from "./render/gl";
 import {
   DEFAULT_NUKE_EXPLOSION_COLOR,
   MAX_NUKE_EXPLOSION_COLORS,
@@ -301,6 +307,7 @@ export class WebGLFrameBuilder {
     this.syncLocalPlayer(gameView);
     this.syncSpawnOverlay(gameView);
     this.syncSmallPlayerGlow(gameView);
+    this.syncTeamMarkers(gameView);
     this.syncTerrainDeltas(gameView);
     this.syncNukeImpacts(gameView);
     this.resolveDeadUnitExplosions(gameView);
@@ -525,6 +532,39 @@ export class WebGLFrameBuilder {
       }
     }
     this.view.updateSmallPlayerGlow(any ? set : null);
+  }
+
+  /**
+   * Spawn phase in team games: a pulsing star over each teammate's spawn so
+   * you can find your team while picking your own spot. Off once the spawn
+   * phase ends and in games without teams.
+   */
+  private syncTeamMarkers(gameView: GameView): void {
+    const me = gameView.myPlayer();
+    if (!me || me.team() === null || !gameView.inSpawnPhase()) {
+      this.view.updateTeamMarkers([]);
+      return;
+    }
+    // The team's base color (not the per-player variation) so every star on
+    // the map reads as "my team" at a glance.
+    const c = themeProvider.current().teamColor(me.team()!).toRgb();
+    const markers: TeamMarker[] = [];
+    for (const p of gameView.players()) {
+      if (!p.isPlayer() || p.smallID() === me.smallID()) continue;
+      if (!p.isOnSameTeam(me)) continue;
+      // spawnTile tracks the currently-selected spawn directly (see
+      // syncSpawnOverlay); nameLocation lags it by a couple of ticks.
+      const spawnTile = p.state.spawnTile;
+      if (spawnTile === undefined) continue;
+      markers.push({
+        x: gameView.x(spawnTile),
+        y: gameView.y(spawnTile),
+        r: c.r / 255,
+        g: c.g / 255,
+        b: c.b / 255,
+      });
+    }
+    this.view.updateTeamMarkers(markers);
   }
 
   private syncPlayers(gameView: GameView): void {
