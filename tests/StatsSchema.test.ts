@@ -2,7 +2,12 @@ import {
   PlayerStatsLeafSchema,
   PlayerStatsTreeSchema,
 } from "../src/core/ApiSchemas";
-import { PlayerStatsSchema } from "../src/core/StatsSchemas";
+import {
+  ALLIANCE_INDEX_LONGEST_HELD,
+  ATTACK_INDEX_MAX_RECV,
+  PlayerStatsSchema,
+  TILE_INDEX_DRAWDOWN_TROUGH,
+} from "../src/core/StatsSchemas";
 
 function testPlayerSchema(
   json: string,
@@ -163,5 +168,26 @@ describe("PlayerStatsTreeSchema", () => {
     });
 
     expect(result.Public?.["Humans Vs Nations"]?.Hard?.total).toBe(3n);
+  });
+});
+
+describe("PlayerStats new fields", () => {
+  it("parses tiles, alliances and peakTroops", () => {
+    const parsed = PlayerStatsSchema.parse({
+      tiles: ["1000", "1000", "100"],
+      alliances: ["3", "1", "1", "1", "2", "540"],
+      peakTroops: "250000",
+    });
+    expect(parsed?.tiles?.[TILE_INDEX_DRAWDOWN_TROUGH]).toBe(100n);
+    expect(parsed?.alliances?.[ALLIANCE_INDEX_LONGEST_HELD]).toBe(540n);
+    expect(parsed?.peakTroops).toBe(250000n);
+  });
+
+  it("parses a record with none of the new fields", () => {
+    const parsed = PlayerStatsSchema.parse({ attacks: ["1", "2", "3"] });
+    expect(parsed?.tiles).toBeUndefined();
+    expect(parsed?.alliances).toBeUndefined();
+    expect(parsed?.peakTroops).toBeUndefined();
+    expect(parsed?.attacks?.[ATTACK_INDEX_MAX_RECV]).toBeUndefined();
   });
 });

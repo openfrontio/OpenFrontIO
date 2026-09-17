@@ -62,6 +62,27 @@ export const unitTypeToOtherUnit = {
 export const ATTACK_INDEX_SENT = 0; // Outgoing attack troops
 export const ATTACK_INDEX_RECV = 1; // Incmoing attack troops
 export const ATTACK_INDEX_CANCEL = 2; // Cancelled attack troops
+// Largest SINGLE incoming attack, by the troop count it launched with. A
+// running maximum, not a sum -- ATTACK_INDEX_RECV already carries the total.
+export const ATTACK_INDEX_MAX_RECV = 3;
+
+// Tiles. Peak is the high-water mark; the drawdown pair is the worst
+// proportional decline from a running peak to any later point (maximum
+// drawdown), which is what makes a comeback measurable. The pair is NOT
+// "peak, then lowest after it" -- recovering to a new peak would erase the
+// collapse that made it a comeback.
+export const TILE_INDEX_PEAK = 0;
+export const TILE_INDEX_DRAWDOWN_PEAK = 1;
+export const TILE_INDEX_DRAWDOWN_TROUGH = 2;
+
+// Alliances. BROKEN_BY_OTHER is the betrayed side; the breaker's side is
+// already counted by `betrayals`. LONGEST_HELD is in ticks.
+export const ALLIANCE_INDEX_FORMED = 0;
+export const ALLIANCE_INDEX_BROKEN_BY_OTHER = 1;
+export const ALLIANCE_INDEX_EXPIRED = 2;
+export const ALLIANCE_INDEX_HELD_TO_END = 3;
+export const ALLIANCE_INDEX_PEAK_CONCURRENT = 4;
+export const ALLIANCE_INDEX_LONGEST_HELD = 5;
 
 // Player types
 export const PLAYER_INDEX_HUMAN = 0;
@@ -143,6 +164,12 @@ export const PlayerStatsSchema = z
     bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),
     gold: AtLeastOneNumberSchema.optional(),
     units: z.partialRecord(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
+    // Appended at the end of the shape on purpose: zbin encodes object fields
+    // in declaration order (zbin/zb.ts), so inserting above would silently
+    // change the wire layout for every field after the insertion point.
+    tiles: AtLeastOneNumberSchema.optional(),
+    alliances: AtLeastOneNumberSchema.optional(),
+    peakTroops: BigIntStringSchema.optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
