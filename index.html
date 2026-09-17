@@ -155,8 +155,12 @@
       };
       // Set here rather than from the bundle so the first paint already has the
       // desktop layout. The shell's preload defines openfrontDesktop before
-      // any page script runs.
-      if (window.openfrontDesktop) {
+      // any page script runs. ?desktop-layout previews it outside prod.
+      if (
+        window.openfrontDesktop ||
+        (window.BOOTSTRAP_CONFIG.gameEnv !== "prod" &&
+          new URLSearchParams(location.search).has("desktop-layout"))
+      ) {
         document.documentElement.classList.add("desktop-shell");
       }
       document.documentElement.style.setProperty(
