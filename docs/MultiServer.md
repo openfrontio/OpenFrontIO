@@ -998,7 +998,16 @@ worker-count source.
 same `buildDescriptor`; publishing them per version lets the Worker answer for
 a site with no game server reachable, and makes a rollback a pointer flip.
 `release.json`'s `template.html` is the raw EJS template by design: the Steam
-shell renders it itself.
+shell renders it itself. The descriptor also carries `bootstrap`: the
+environment-only `BOOTSTRAP_CONFIG` object (`gitCommit`, `assetManifest`,
+`cdnBase`, `gameEnv`, `turnstileSiteKey`, `jwtAudience`, and
+`stripePublishableKey` when set — never a server value), produced by the same
+`buildBootstrapConfig` in `RenderHtml.ts` that the page render derives its
+locals from. The shell spreads it into its render context and overrides only
+what it owns (`cdnBase`, `assetManifest`, `gitCommit`, `serverHost`,
+`instanceId`), so a field added upstream reaches the Steam page without a shell
+release. Once every installed shell reads it, `index.html` collapses to a
+single `<%- bootstrapConfig %>` placeholder and `MIN_SHELL_VERSION` rises.
 
 **Flagging `latest`.** After the new container is running, `update.sh` calls
 `POST $R2_ENDPOINT/cluster/latest` with `{ site, version }` (version is the
@@ -1020,8 +1029,10 @@ servers register within ~10s of boot. Outcomes:
   `deploy.sh` gains the passthrough for that variable separately (roadmap item
   3); until it does, it is always absent, which is the lenient path above.
 
-Until the Worker exists nothing reads any of this, so the uploads are additive
-and prod is unaffected. The decision table above is unit-tested in
+The site Worker is live and serves these objects from the bucket on
+`openfront.io` and `main.openfront.dev` (`x-openfront-served: bucket`), so a
+missing or malformed upload is a real outage for that version, not a no-op.
+The decision table above is unit-tested in
 `tests/UpdateFlagLatest.test.ts`, which extracts the real function out of
 `update.sh` and drives it with a scripted `curl`.
 
