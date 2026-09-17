@@ -12,6 +12,9 @@ interface LobbySocketOptions {
   // Fired at most once, when the server advertises a different build commit
   // than this bundle — i.e. a new version deployed while this tab was open.
   onUpdateAvailable?: () => void;
+  // Fired each time reconnecting reaches maxWsAttempts and stops. Nothing
+  // reconnects after that until start() is called again.
+  onGaveUp?: () => void;
 }
 
 function getRandomWorkerPath(numWorkers: number): string {
@@ -32,6 +35,7 @@ export class PublicLobbySocket {
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
   private readonly onUpdateAvailable?: () => void;
+  private readonly onGaveUp?: () => void;
   private updateAvailableFired = false;
 
   constructor(
@@ -41,6 +45,7 @@ export class PublicLobbySocket {
     this.reconnectDelay = options?.reconnectDelay ?? 3000;
     this.maxWsAttempts = options?.maxWsAttempts ?? 3;
     this.onUpdateAvailable = options?.onUpdateAvailable;
+    this.onGaveUp = options?.onGaveUp;
   }
 
   async start() {
@@ -140,7 +145,11 @@ export class PublicLobbySocket {
 
   private handleOpen() {
     console.log("WebSocket connected: lobby updating");
-    this.wsConnectionAttempts = 0;
+    // The attempt counter is NOT reset here but on the first frame that
+    // decodes (handleMessage). A client whose wire format the server has
+    // moved past opens fine and then fails every frame; resetting on open
+    // made that an endless open/fail/reconnect loop that never reached
+    // maxWsAttempts, and so never reached promptIfOutdated either.
     if (this.wsReconnectTimeout !== null) {
       clearTimeout(this.wsReconnectTimeout);
       this.wsReconnectTimeout = null;
@@ -152,6 +161,7 @@ export class PublicLobbySocket {
       const message = decodeLobbyMessage(
         new Uint8Array(event.data as ArrayBuffer),
       );
+      this.wsConnectionAttempts = 0;
       if (message.type === "full") {
         this.checkServerCommit(message.gitCommit);
         this.checkDeploymentActive(message.active);
@@ -245,6 +255,7 @@ export class PublicLobbySocket {
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
       console.error("Max WebSocket attempts reached");
+      this.onGaveUp?.();
       void this.promptIfOutdated();
     } else {
       this.scheduleReconnect();
@@ -286,6 +297,7 @@ export class PublicLobbySocket {
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
       void showInGameAlert(translateText("error_modal.connection_error"));
+      this.onGaveUp?.();
       void this.promptIfOutdated();
     } else {
       this.scheduleReconnect(retry);

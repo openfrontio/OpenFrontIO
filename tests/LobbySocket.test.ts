@@ -321,6 +321,53 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     socket.stop();
   });
 
+  // A client whose wire format the server has moved past: every socket opens
+  // and every frame fails to decode. Resetting the attempt count on open made
+  // that loop forever, so the cap -- and with it the outdated prompt and the
+  // give-up signal -- was unreachable in exactly the case it exists for.
+  it("reaches the cap when sockets open but no frame ever decodes", async () => {
+    const onGaveUp = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onGaveUp,
+      maxWsAttempts: 2,
+    });
+    await socket.start();
+
+    (socket as any).handleOpen();
+    (socket as any).handleClose();
+    expect(onGaveUp).not.toHaveBeenCalled();
+
+    (socket as any).connectWebSocket();
+    (socket as any).handleOpen();
+    (socket as any).handleClose();
+    expect(onGaveUp).toHaveBeenCalledTimes(1);
+    socket.stop();
+  });
+
+  it("starts the count over once a frame decodes", async () => {
+    const onGaveUp = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onGaveUp,
+      maxWsAttempts: 2,
+    });
+    await socket.start();
+    (socket as any).handleClose();
+
+    (socket as any).connectWebSocket();
+    (socket as any).handleOpen();
+    const frame = fullMessage(1000, {});
+    (socket as any).handleMessage({
+      data: frame.buffer.slice(
+        frame.byteOffset,
+        frame.byteOffset + frame.byteLength,
+      ),
+    } as MessageEvent);
+    (socket as any).handleClose();
+
+    expect(onGaveUp).not.toHaveBeenCalled();
+    socket.stop();
+  });
+
   // The control for the rescue above: the list still has a server for this
   // build, so a socket failure is just a socket failure — a blip, not a
   // deployment that went away. The status is handed over all the same; the

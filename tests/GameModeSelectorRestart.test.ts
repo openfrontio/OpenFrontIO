@@ -11,15 +11,20 @@ import type { PublicGames } from "../src/core/Schemas";
 // jsdom has no WebSocket worth talking to and this test is about the
 // lifecycle, not the wire, so the socket is a spy -- following the same
 // pattern as GameModeSelectorGatingWiring.test.ts.
-const { socketCalls, lobbiesCallbackRef } = vi.hoisted(() => ({
+const { socketCalls, lobbiesCallbackRef, gaveUpRef } = vi.hoisted(() => ({
   socketCalls: { started: 0, stopped: 0 },
   lobbiesCallbackRef: { current: null as ((g: PublicGames) => void) | null },
+  gaveUpRef: { current: null as (() => void) | null },
 }));
 
 vi.mock("../src/client/LobbySocket", () => ({
   PublicLobbySocket: class {
-    constructor(onUpdate: (g: PublicGames) => void) {
+    constructor(
+      onUpdate: (g: PublicGames) => void,
+      options?: { onGaveUp?: () => void },
+    ) {
       lobbiesCallbackRef.current = onUpdate;
+      gaveUpRef.current = options?.onGaveUp ?? null;
     }
     start(): void {
       socketCalls.started++;
@@ -286,6 +291,50 @@ describe("GameModeSelector lobby feed while the desktop session is gated", () =>
 
     expect(selector.querySelector("button.group")).toBeNull();
     expect(selector.textContent).toContain("mode_selector.offline_lobbies");
+  });
+
+  it("swaps the spinner and any cards for the offline message once the socket gives up", async () => {
+    const snapshot = {
+      serverTime: Date.now(),
+      games: {
+        ffa: [
+          {
+            gameID: "abc",
+            numClients: 1,
+            publicGameType: "ffa",
+            gameConfig: {
+              gameMap: "World",
+              gameMode: "Free For All",
+              maxPlayers: 8,
+            },
+          },
+        ],
+      },
+    } as unknown as PublicGames;
+    lobbiesCallbackRef.current?.(snapshot);
+    await selector.updateComplete;
+    expect(selector.querySelector("button.group")).not.toBeNull();
+
+    gaveUpRef.current?.();
+    await selector.updateComplete;
+    expect(selector.querySelector("button.group")).toBeNull();
+    expect(selector.querySelector(".animate-spin")).toBeNull();
+    expect(selector.textContent).toContain("mode_selector.offline_lobbies");
+
+    // A feed that comes back is believed.
+    lobbiesCallbackRef.current?.(snapshot);
+    await selector.updateComplete;
+    expect(selector.querySelector("button.group")).not.toBeNull();
+  });
+
+  it("spins again on a start() after giving up", async () => {
+    gaveUpRef.current?.();
+    await selector.updateComplete;
+    expect(selector.querySelector(".animate-spin")).toBeNull();
+
+    selector.start();
+    await selector.updateComplete;
+    expect(selector.querySelector(".animate-spin")).not.toBeNull();
   });
 
   it("shows an offline message in place of the spinner while gated", async () => {
