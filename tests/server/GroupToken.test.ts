@@ -114,9 +114,8 @@ describe("GameServer group token", () => {
     expect(lastOf(frames[0])).toBe(lastOf(frames[1]));
   });
 
-  // A late joiner (a spectator; a late player is turned away) never sees a
-  // lobby_info — the broadcast stopped before they connected — so the start
-  // message is their only chance at the token.
+  // A late joiner never sees a lobby_info — the broadcast stopped before they
+  // connected — so the start message is their only chance at the token.
   it("gives a late joiner the token in its catch-up start message", () => {
     const game = makeGame({ id: cid("late") });
     const player = makeClient({ clientID: cid("p1") });

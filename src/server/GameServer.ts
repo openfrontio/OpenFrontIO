@@ -75,6 +75,10 @@ import {
 } from "./telemetry/MatchTelemetry";
 
 // Outcome of GameServer.joinClient. The worker maps each to a close code.
+// A non-spectator join landing this soon after start() is someone who meant
+// to play and missed it; after this they are taken to have come to watch.
+const LATE_JOIN_GRACE_MS = 5_000;
+
 export type JoinResult =
   | "joined"
   | "kicked"
@@ -501,16 +505,19 @@ export class GameServer {
 
     // gameStartInfo.players is frozen at start, so a late arrival could never
     // spawn. An admitted player reconnecting through the join path keeps
-    // their seat. Anyone else who meant to play is told they missed it
-    // rather than being dropped into the game as a watcher they never asked
-    // to be; a deliberate spectator (the ?spectate link) may still arrive
-    // mid-game.
+    // their seat. A player whose join lands just after the start meant to
+    // play (a last-second click on the lobby), so they are told they missed
+    // it rather than dropped into a game they cannot play. Anyone later
+    // came to watch (a shared link) and joins as a spectator.
     if (this.stage === "started") {
       if (this.rejoinClient(client.ws, client.persistentID, 0)) {
         return "joined";
       }
-      if (!client.spectator) {
-        this.log.info("cannot add client, game already started", {
+      if (
+        !client.spectator &&
+        Date.now() - (this._startTime ?? 0) < LATE_JOIN_GRACE_MS
+      ) {
+        this.log.info("cannot add client, game just started", {
           clientID: client.clientID,
         });
         client.ws.send(
@@ -524,6 +531,7 @@ export class GameServer {
         );
         return "started";
       }
+      client.spectator = true;
     }
 
     // Spectators take no slot: they never spawn, so a full lobby is still

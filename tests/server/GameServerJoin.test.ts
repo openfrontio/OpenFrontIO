@@ -228,7 +228,7 @@ describe("GameServer.joinClient — active game reconnection", () => {
     expect((startMsg as any).myClientID).toBe(cid("orig"));
   });
 
-  it("turns away a genuine late arrival after game start", () => {
+  it("turns away a genuine late arrival just after game start", () => {
     const game = makeGame();
     const player = makeClient({ clientID: cid("p1"), persistentID: "p1-pid" });
     game.joinClient(player);

@@ -159,13 +159,14 @@ describe("GameServer - spectators", () => {
     expect(handleIntent).toHaveBeenCalled();
   });
 
-  it("turns away a player who arrives after the start", () => {
+  it("turns away a player who arrives just after the start", () => {
     // The player list is frozen at start; a late joiner used to be admitted as a
     // player who could never spawn, then as a spectator they never asked to be.
-    // Either way they were in a game they could not play, so they are told
-    // they missed it instead.
+    // Someone landing seconds after the start clicked the lobby to play, so
+    // they are told they missed it instead.
     const game = makeGame();
     startGame(game);
+    vi.advanceTimersByTime(2_000);
     const late = makeClient("late");
     expect(game.joinClient(late)).toBe("started");
     expect(mockWsOf(late).sent()).toContainEqual({
@@ -178,6 +179,22 @@ describe("GameServer - spectators", () => {
         .some((m) => m.type === "start"),
     ).toBe(false);
     expect(game.numClients()).toBe(0);
+  });
+
+  it("seats a player arriving well after the start as a spectator", () => {
+    // Past the grace window the game is no longer joinable from the lobby
+    // browser; whoever arrives followed a shared link to watch.
+    const game = makeGame();
+    startGame(game);
+    vi.advanceTimersByTime(5_000);
+    const late = makeClient("late");
+    expect(game.joinClient(late)).toBe("joined");
+    expect(late.spectator).toBe(true);
+    expect(
+      mockWsOf(late)
+        .sent()
+        .some((m) => m.type === "start"),
+    ).toBe(true);
   });
 
   it("lets a player in during prestart", () => {
@@ -342,8 +359,8 @@ describe("GameServer - spectators", () => {
   });
 
   it("may join after the game has started", () => {
-    // A caster arriving mid-game is the normal case. Only a late *player* is
-    // turned away; asking to watch must keep working.
+    // A caster arriving mid-game is the normal case. Only a player landing
+    // just after the start is turned away; asking to watch must keep working.
     const game = makeGame();
     startGame(game);
     expect(game.joinClient(makeClient("cast", true))).toBe("joined");
