@@ -1714,7 +1714,10 @@ class Client {
 
     if (this.joinModal.isOpen()) {
       this.joinModal.close();
-      if (event?.detail.cause === "full-lobby") {
+      if (
+        event?.detail.cause === "full-lobby" ||
+        event?.detail.cause === "game-started"
+      ) {
         window.dispatchEvent(
           new CustomEvent("show-message", {
             detail: {

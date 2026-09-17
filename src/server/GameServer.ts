@@ -75,13 +75,18 @@ import {
 } from "./telemetry/MatchTelemetry";
 
 // Outcome of GameServer.joinClient. The worker maps each to a close code.
+// A non-spectator join landing this soon after start() is someone who meant
+// to play and missed it; after this they are taken to have come to watch.
+const LATE_JOIN_GRACE_MS = 5_000;
+
 export type JoinResult =
   | "joined"
   | "kicked"
   | "rejected"
   | "ended"
   | "not_allowlisted"
-  | "not_trusted";
+  | "not_trusted"
+  | "started";
 
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -499,11 +504,32 @@ export class GameServer {
     }
 
     // gameStartInfo.players is frozen at start, so a late arrival could never
-    // spawn. They used to join as a player anyway; watching is what actually
-    // happened to them, so it is what they join as.
+    // spawn. An admitted player reconnecting through the join path keeps
+    // their seat. A player whose join lands just after the start meant to
+    // play (a last-second click on the lobby), so they are told they missed
+    // it rather than dropped into a game they cannot play. Anyone later
+    // came to watch (a shared link) and joins as a spectator.
     if (this.stage === "started") {
       if (this.rejoinClient(client.ws, client.persistentID, 0)) {
         return "joined";
+      }
+      if (
+        !client.spectator &&
+        Date.now() - (this._startTime ?? 0) < LATE_JOIN_GRACE_MS
+      ) {
+        this.log.info("cannot add client, game just started", {
+          clientID: client.clientID,
+        });
+        client.ws.send(
+          encodeServerMessage(
+            {
+              type: "error",
+              error: "game-started",
+            } satisfies ServerErrorMessage,
+            this.zbinCtx,
+          ),
+        );
+        return "started";
       }
       client.spectator = true;
     }
@@ -613,7 +639,7 @@ export class GameServer {
       this.hasReachedMaxPlayerCount = true;
     }
 
-    // In case a client joined the game late and missed the start message.
+    // A spectator arriving mid-game missed the start message.
     if (this.stage === "started") {
       this.sendStartGameMsg(client.ws, 0);
     }
