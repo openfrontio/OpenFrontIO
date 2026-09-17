@@ -81,6 +81,7 @@ const PREVIEW_CEILING_MS = 10_000;
 
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
+  private currentUiScale: number | undefined;
   protected routerName: string | undefined = "settings";
 
   /**
@@ -982,6 +983,7 @@ export class UserSettingModal extends BaseModal {
 
     const scale = this.querySelector<SettingSelect>("#display-ui-scale-select");
     const uiScale = snapshot.prefs.uiScale;
+    this.currentUiScale = uiScale;
     if (scale && uiScale !== undefined && scale.value !== String(uiScale)) {
       scale.value = String(uiScale);
     }
@@ -1012,7 +1014,10 @@ export class UserSettingModal extends BaseModal {
 
   private handleUiScaleChange = (e: CustomEvent<{ value: unknown }>) => {
     const value = Number(e.detail?.value);
-    if (!UI_SCALE_OPTIONS.includes(value)) return;
+    const current = this.currentUiScale;
+    const validOptions =
+      current !== undefined ? uiScaleOptions(current) : UI_SCALE_OPTIONS;
+    if (!Number.isFinite(value) || !validOptions.includes(value)) return;
     this.applyDisplayPatch({ uiScale: value });
   };
 
