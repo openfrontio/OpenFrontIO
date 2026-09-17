@@ -93,14 +93,17 @@ describe("SteamHandoffModal", () => {
     expect(new UserSettings().steamLobbyLinks()).toBe("steam");
   });
 
-  it("drops the lobby URL when dismissed without a choice", async () => {
-    const resume = vi.fn();
-    history.pushState(null, "", `/w0/game/${LOBBY}`);
-    replaceState.mockClear();
-    modal.offer(LOBBY, "ask", resume);
-    await modal.updateComplete;
-    modal.close();
-    expect(resume).not.toHaveBeenCalled();
-    expect(replaceState).toHaveBeenCalledWith(null, "", "/");
-  });
+  it.each([`/w0/game/${LOBBY}`, `/w0/game/${LOBBY}/`])(
+    "drops the lobby URL %s when dismissed without a choice",
+    async (path) => {
+      const resume = vi.fn();
+      history.pushState(null, "", path);
+      replaceState.mockClear();
+      modal.offer(LOBBY, "ask", resume);
+      await modal.updateComplete;
+      modal.close();
+      expect(resume).not.toHaveBeenCalled();
+      expect(replaceState).toHaveBeenCalledWith(null, "", "/");
+    },
+  );
 });

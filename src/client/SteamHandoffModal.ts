@@ -64,7 +64,7 @@ export class SteamHandoffModal extends BaseModal {
     if (
       this.onPlayInBrowser !== null &&
       this.lobbyId !== null &&
-      window.location.pathname.endsWith(`/game/${this.lobbyId}`)
+      window.location.pathname.includes(`/game/${this.lobbyId}`)
     ) {
       history.replaceState(null, "", "/");
     }
