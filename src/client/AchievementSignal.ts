@@ -14,6 +14,9 @@ import { desktopAchievements } from "./DesktopAchievements";
 // This record is an OPTIMISATION, never load-bearing: the shell filters what
 // it receives against what the platform already holds, so a lost or stale
 // record costs a redundant no-op call and can never cause a missed unlock.
+// That holds only while every write corresponds to a delivery -- a name
+// recorded without a shell to receive it is lost for good, which is why both
+// the write below and syncAchievements are gated on the shell being capable.
 const KEY = "achievements.pushed";
 
 // Keyed by player: two accounts on one machine would otherwise have the first
@@ -56,7 +59,11 @@ export function pushEarnedAchievements(
   }
   if (fresh.length === 0) return [];
   desktopAchievements.unlock(fresh);
-  write(playerId, known);
+  // Only record what was actually delivered. unlock() is a no-op on a shell
+  // that does not support achievements, and marking a name as pushed when
+  // nothing received it would lose it for good. syncAchievements already
+  // refuses to get this far in that case; this is the second lock on the door.
+  if (desktopAchievements.isAvailable()) write(playerId, known);
   return fresh;
 }
 
@@ -80,6 +87,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export async function syncAchievements(opts?: {
   gameId?: string;
 }): Promise<void> {
+  // Nothing downstream can receive an achievement unless a capable shell is
+  // present, and running anyway would be actively harmful, not merely
+  // wasteful: every name fetched would be written to the record as "pushed"
+  // while nothing received it, so a player running a shell too old to take
+  // them would have their whole back catalogue marked delivered and would
+  // never see it once a capable shell arrived. It also saves a /users/@me
+  // round trip per launch and per game for everyone playing in a browser.
+  //
+  // REMOVE THIS when the same signal is reused to drive an in-page toast:
+  // there is no shell to gate on in that future, and the record would then
+  // need to be keyed by consumer rather than shared.
+  if (!desktopAchievements.isAvailable()) return;
+
   const attempts = opts?.gameId === undefined ? 1 : RETRY_DELAYS_MS.length + 1;
   for (let attempt = 0; attempt < attempts; attempt++) {
     if (attempt > 0) await sleep(RETRY_DELAYS_MS[attempt - 1]);

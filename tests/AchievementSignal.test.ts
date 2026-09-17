@@ -16,12 +16,30 @@ import { desktopAchievements } from "../src/client/DesktopAchievements";
 const getUserMeMock = vi.mocked(getUserMe);
 const invalidateUserMeMock = vi.mocked(invalidateUserMe);
 
+// Mirrors AchievementSignal.ts's KEY, which is private to that module.
+const RECORD_KEY = "achievements.pushed";
+
+/** A shell new enough to receive achievements. Both the push path and the
+ * sync are gated on one being present, so every test that expects either to
+ * do anything has to install it. `unlock` is spied over separately, so
+ * nothing actually reaches this object. */
+function installCapableShell() {
+  (window as any).openfrontDesktop = {
+    shell: { api: 4 },
+    achievements: { unlock: vi.fn() },
+  };
+}
+
 describe("achievement record", () => {
   beforeEach(() => {
     localStorage.clear();
+    installCapableShell();
     vi.spyOn(desktopAchievements, "unlock").mockImplementation(() => undefined);
   });
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    delete (window as any).openfrontDesktop;
+    vi.restoreAllMocks();
+  });
 
   const row = (achievement: string) => ({
     achievement,
@@ -35,8 +53,26 @@ describe("achievement record", () => {
       row("win_ffa"),
       row("launch_mirv"),
     ]);
-    expect(pushed.sort()).toEqual(["launch_mirv", "win_ffa"]);
-    expect(desktopAchievements.unlock).toHaveBeenCalledWith(pushed);
+    // Asserted against literal names, and before anything sorts `pushed`:
+    // vitest keeps the call argument by reference, so comparing it against
+    // the returned array -- the same object -- passes for any value at all.
+    expect(desktopAchievements.unlock).toHaveBeenCalledWith([
+      "win_ffa",
+      "launch_mirv",
+    ]);
+    expect([...pushed].sort()).toEqual(["launch_mirv", "win_ffa"]);
+  });
+
+  it("does not record a name when no shell was there to receive it", () => {
+    delete (window as any).openfrontDesktop;
+
+    pushEarnedAchievements("p1", [row("win_ffa")]);
+
+    // Nothing was delivered, so nothing may be marked delivered -- otherwise
+    // the name is lost the moment a capable shell does arrive.
+    expect(localStorage.getItem(RECORD_KEY)).toBeNull();
+    installCapableShell();
+    expect(pushEarnedAchievements("p1", [row("win_ffa")])).toEqual(["win_ffa"]);
   });
 
   it("does not re-push a name already in the record", () => {
@@ -94,6 +130,7 @@ function profile(rows: PlayerAchievement[], publicId = "p1"): UserMeResponse {
 describe("syncAchievements", () => {
   beforeEach(() => {
     localStorage.clear();
+    installCapableShell();
     vi.spyOn(desktopAchievements, "unlock").mockImplementation(() => undefined);
     getUserMeMock.mockReset();
     invalidateUserMeMock.mockReset();
@@ -101,6 +138,7 @@ describe("syncAchievements", () => {
   });
 
   afterEach(() => {
+    delete (window as any).openfrontDesktop;
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -172,5 +210,34 @@ describe("syncAchievements", () => {
     await expect(syncAchievements()).resolves.toBeUndefined();
 
     expect(desktopAchievements.unlock).not.toHaveBeenCalled();
+  });
+
+  // The record is only safe to write when something received the names. With
+  // no capable shell the sync must not run at all -- not fetch, and above all
+  // not record. A version that merely skipped `unlock` would still poison the
+  // record and silently cost the player every achievement earned in the
+  // meantime, so the storage assertion is the one that matters here.
+  it.each([
+    ["no bridge at all", undefined],
+    ["a shell too old to take achievements", { shell: { api: 3 } }],
+    [
+      "an old shell that exposes the namespace anyway",
+      { shell: { api: 3 }, achievements: { unlock: () => undefined } },
+    ],
+  ])("does not fetch or record with %s", async (_label, bridge) => {
+    if (bridge === undefined) {
+      delete (window as any).openfrontDesktop;
+    } else {
+      (window as any).openfrontDesktop = bridge;
+    }
+    getUserMeMock.mockResolvedValue(profile([achRow("win_ffa")]));
+
+    await syncAchievements();
+    await syncAchievements({ gameId: "g1" });
+
+    expect(getUserMeMock).not.toHaveBeenCalled();
+    expect(invalidateUserMeMock).not.toHaveBeenCalled();
+    expect(desktopAchievements.unlock).not.toHaveBeenCalled();
+    expect(localStorage.getItem(RECORD_KEY)).toBeNull();
   });
 });

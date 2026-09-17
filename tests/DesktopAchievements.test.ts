@@ -17,6 +17,19 @@ describe("DesktopAchievements", () => {
     expect(desktopAchievements.isAvailable()).toBe(false);
   });
 
+  it("sends nothing to a shell that exposes the namespace without declaring api 4", () => {
+    // The half-a-surface case the gate exists for: the method is right there
+    // and callable, and must still not be called. Without the isAvailable
+    // check in unlock() this is the only test that fails.
+    const unlock = vi.fn().mockResolvedValue(undefined);
+    (window as any).openfrontDesktop = {
+      shell: { api: 3 },
+      achievements: { unlock },
+    };
+    desktopAchievements.unlock(["win_ffa"]);
+    expect(unlock).not.toHaveBeenCalled();
+  });
+
   it("forwards names on a shell that declares api 4", () => {
     const unlock = vi.fn().mockResolvedValue(undefined);
     (window as any).openfrontDesktop = {
