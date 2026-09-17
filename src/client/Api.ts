@@ -311,11 +311,12 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
  * reload the page. One 500 after one game should not cost the session its
  * account.
  *
- * So a refresh never touches the shared memo at all: on success the caller
- * gets the fresh profile, on failure the cache still holds exactly what it
- * held before. The memo staying one game stale is the pre-existing state of
- * affairs — nothing invalidated it automatically before this — and is
- * strictly better than the alternative.
+ * So a refresh never reads or populates the shared memo: the caller gets the
+ * fresh profile on success, and on failure the cache still holds exactly what
+ * it held before — a stale or falsy value cannot be cached. A 401 still clears
+ * it, but via the normal sign-out path, which is correct. The memo staying one
+ * game stale is the pre-existing state of affairs and strictly better than the
+ * alternative.
  */
 export async function fetchUserMeUncached(): Promise<UserMeResponse | false> {
   return (await requestUserMe()).profile;

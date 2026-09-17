@@ -74,12 +74,11 @@ export function pushEarnedAchievements(
 // this poll -- so at t=0 there is provably nothing new to read yet. The first
 // attempt waits rather than spending a round trip on a certain miss.
 //
-// Two attempts, ~7s. Every client in the lobby runs this at the same instant,
-// against the API that is busy ingesting that same game, so each extra
-// attempt costs one /users/@me per player: a 100-player game pays 100 round
-// trips per entry here. Two is enough for ingest to land while the win modal
-// is still on screen, and a poll that misses entirely is not a lost
-// achievement -- the next startup reconcile catches it.
+// Two attempts, ~7s. Only players on a shell that implements the bridge poll.
+// They run this at the same instant, so each extra attempt costs one /users/@me
+// per capable player. A bounded budget is affordable because the cost scales
+// with players, and a poll that misses entirely is not a lost achievement --
+// the next startup reconcile catches it.
 const POST_GAME_DELAYS_MS = [2_000, 5_000];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
