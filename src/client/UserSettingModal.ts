@@ -27,6 +27,8 @@ import {
   DISPLAY_SETTLE_TIMEOUT_MS,
   isDisplaySnapshot,
   selectedDisplayId,
+  UI_SCALE_OPTIONS,
+  uiScaleOptions,
   type DesktopDisplayInfo,
   type DesktopDisplayPrefsPatch,
   type DesktopDisplaySnapshot,
@@ -971,6 +973,12 @@ export class UserSettingModal extends BaseModal {
       mode.value = snapshot.prefs.mode;
     }
 
+    const scale = this.querySelector<SettingSelect>("#display-ui-scale-select");
+    const uiScale = snapshot.prefs.uiScale;
+    if (scale && uiScale !== undefined && scale.value !== String(uiScale)) {
+      scale.value = String(uiScale);
+    }
+
     const monitor = this.querySelector<SettingSelect>(
       "#display-monitor-select",
     );
@@ -993,6 +1001,12 @@ export class UserSettingModal extends BaseModal {
     // and there is no reason to spend an IPC round trip to be told so.
     if (value !== "windowed" && value !== "borderless") return;
     this.applyDisplayPatch({ mode: value });
+  };
+
+  private handleUiScaleChange = (e: CustomEvent<{ value: unknown }>) => {
+    const value = Number(e.detail?.value);
+    if (!UI_SCALE_OPTIONS.includes(value)) return;
+    this.applyDisplayPatch({ uiScale: value });
   };
 
   private handleDisplayMonitorChange = (e: CustomEvent<{ value: unknown }>) => {
@@ -1052,6 +1066,7 @@ export class UserSettingModal extends BaseModal {
 
     const displays = snapshot.displays;
     const selectedId = selectedDisplayId(snapshot);
+    const uiScale = snapshot.prefs.uiScale;
 
     // Rendered as its own row rather than as the spec's extra option inside
     // the picker: losing the remembered monitor usually drops the count to
@@ -1090,6 +1105,24 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleDisplayModeChange}
       ></setting-select>
 
+      ${uiScale === undefined
+        ? null
+        : html`
+            <setting-select
+              id="display-ui-scale-select"
+              label=${translateText("user_setting.display_ui_scale_label")}
+              description=${translateText("user_setting.display_ui_scale_desc")}
+              .value=${String(uiScale)}
+              ?disabled=${this.displayBusy}
+              .options=${uiScaleOptions(uiScale).map((scale) => ({
+                value: scale,
+                label: translateText("user_setting.display_ui_scale_option", {
+                  scale,
+                }),
+              }))}
+              @change=${this.handleUiScaleChange}
+            ></setting-select>
+          `}
       ${displays.length > 1
         ? html`
             <setting-select
