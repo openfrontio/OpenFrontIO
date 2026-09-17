@@ -7,6 +7,8 @@ layout(location = 0) in vec2 aPos;
 layout(location = 1) in vec2 aCenter;
 // Per-instance: r, g, b
 layout(location = 2) in vec3 aColor;
+// Per-instance: size relative to the full star
+layout(location = 3) in float aScale;
 
 uniform mat3 uCamera;
 uniform float uHalfSize; // half-size in screen pixels
@@ -26,5 +28,5 @@ void main() {
   vec3 clip = uCamera * vec3(aCenter + 0.5, 1.0);
   vec2 pixelToNDC = 2.0 / uViewport;
   gl_Position = vec4(
-    clip.xy + (vLocal * uHalfSize + NUDGE_PX) * pixelToNDC, 0.0, 1.0);
+    clip.xy + (vLocal * uHalfSize * aScale + NUDGE_PX) * pixelToNDC, 0.0, 1.0);
 }

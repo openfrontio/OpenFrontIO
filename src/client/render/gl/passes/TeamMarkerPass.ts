@@ -11,8 +11,8 @@ import { createProgram } from "../utils/GlUtils";
 import fragSrc from "../shaders/team-marker/team-marker.frag.glsl?raw";
 import vertSrc from "../shaders/team-marker/team-marker.vert.glsl?raw";
 
-// Per-instance: x, y, r, g, b
-const FLOATS_PER_INSTANCE = 5;
+// Per-instance: x, y, r, g, b, scale
+const FLOATS_PER_INSTANCE = 6;
 /** Half-size of the star quad in screen pixels at the peak of the pulse. */
 const MARKER_HALF_PX = 34;
 const PULSE_SPEED = 0.0025; // radians per ms
@@ -30,6 +30,8 @@ export interface TeamMarker {
   r: number;
   g: number;
   b: number;
+  /** Size relative to the full star (1 = human teammate). */
+  scale: number;
 }
 
 export class TeamMarkerPass {
@@ -70,7 +72,7 @@ export class TeamMarkerPass {
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
-    // Instance buffer: [x, y, r, g, b]
+    // Instance buffer: [x, y, r, g, b, scale]
     const glBuf = gl.createBuffer()!;
     this.instanceBuf = new DynamicInstanceBuffer(
       gl,
@@ -91,6 +93,11 @@ export class TeamMarkerPass {
     gl.vertexAttribPointer(2, 3, gl.FLOAT, false, stride, 8);
     gl.vertexAttribDivisor(2, 1);
 
+    // Attribute 3: per-instance float (scale)
+    gl.enableVertexAttribArray(3);
+    gl.vertexAttribPointer(3, 1, gl.FLOAT, false, stride, 20);
+    gl.vertexAttribDivisor(3, 1);
+
     gl.bindVertexArray(null);
   }
 
@@ -109,6 +116,7 @@ export class TeamMarkerPass {
       data[off + 2] = m.r;
       data[off + 3] = m.g;
       data[off + 4] = m.b;
+      data[off + 5] = m.scale;
     }
 
     const gl = this.gl;

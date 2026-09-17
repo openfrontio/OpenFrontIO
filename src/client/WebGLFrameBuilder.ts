@@ -64,6 +64,8 @@ const SMALL_PLAYER_GLOW_GRACE_SECONDS = 60;
 // The set is a visual aid, not tick-critical, so rescan ~once a second
 // (10 ticks) instead of every tick.
 const SMALL_PLAYER_GLOW_RESCAN_TICKS = 10;
+// Nation teammates' spawn stars are drawn at this fraction of a human's.
+const NATION_MARKER_SCALE = 0.6;
 
 // The effect-palette block order: index = block (rows block·MAX_TRAIL_COLORS …).
 // trail.frag.glsl picks its block from the trail tile's nuke bit — block 0 =
@@ -462,10 +464,14 @@ export class WebGLFrameBuilder {
     const myTeam = me?.team() ?? null;
     const centers: SpawnCenter[] = [];
     for (const p of gameView.players()) {
-      if (!p.isPlayer() || p.type() !== PlayerType.Human) continue;
+      if (!p.isPlayer()) continue;
+      const isSelf = me !== null && p.smallID() === me.smallID();
+      const isTeammate = myTeam !== null && p.team() === myTeam && !isSelf;
+      // Nations only take part as teammates (their ring), never as enemy
+      // highlights.
+      if (p.type() !== PlayerType.Human && !isTeammate) continue;
       const spawnTile = p.state.spawnTile;
       if (spawnTile === undefined) continue;
-      const isSelf = me !== null && p.smallID() === me.smallID();
       if (!inSpawnPhase && !isSelf) continue;
       // myPlayer's ring pulses white→this color in SpawnOverlayPass: gold
       // when teamless, own territory tint in team games (matches teammates'
@@ -482,10 +488,7 @@ export class WebGLFrameBuilder {
         g: useGold ? 0.84 : c.g / 255,
         b: useGold ? 0 : c.b / 255,
         isSelf,
-        isTeammate:
-          myTeam !== null &&
-          p.team() === myTeam &&
-          p.smallID() !== me?.smallID(),
+        isTeammate,
       });
     }
     this.view.updateSpawnOverlay(inSpawnPhase, centers);
@@ -562,6 +565,9 @@ export class WebGLFrameBuilder {
         r: c.r / 255,
         g: c.g / 255,
         b: c.b / 255,
+        // Human teammates get the full star; nations a smaller one so real
+        // players stand out.
+        scale: p.type() === PlayerType.Human ? 1 : NATION_MARKER_SCALE,
       });
     }
     this.view.updateTeamMarkers(markers);
