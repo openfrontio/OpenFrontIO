@@ -17,6 +17,7 @@ import { GameEnv } from "../core/configuration/Config";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import "./AccountSettingsModal";
+import { syncAchievements } from "./AchievementSignal";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
@@ -818,6 +819,12 @@ class Client {
     } else {
       // JWT appears valid: fetch the profile and apply it if still current.
       getUserMe().then(applyUserMe(initialAuthGeneration));
+
+      // Catches anything the post-game poll missed: a player who quit before
+      // the game was archived, an earlier failed push, or a web player who
+      // has just linked a platform account and has a whole history to hand
+      // over.
+      void syncAchievements();
     }
 
     // Re-run auth when the player signs into CrazyGames mid-session. Logout

@@ -12,6 +12,7 @@ import { Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { syncAchievements } from "../../AchievementSignal";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
@@ -318,6 +319,11 @@ export class WinModal extends LitElement implements Controller {
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates?.[GameUpdateType.Win] ?? [];
     winUpdates.forEach((wu) => {
+      // Achievements are awarded server-side during ingest, which the game
+      // server triggers from the winner vote this same update drives. Fire
+      // and forget: the sync retries on its own and the startup reconcile is
+      // the backstop, so nothing here needs to await or report.
+      void syncAchievements({ gameId: this.game.gameID() });
       if (wu.winner === undefined) {
         // Match cancelled (e.g. a ranked 2v2 that didn't fill or fully
         // spawn): the game ends with no winner. Still vote the result to the

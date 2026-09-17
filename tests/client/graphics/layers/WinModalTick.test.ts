@@ -19,6 +19,10 @@ vi.mock("../../../../src/client/Api", () => ({
   getUserMe: vi.fn(async () => null),
 }));
 
+vi.mock("../../../../src/client/AchievementSignal", () => ({
+  syncAchievements: vi.fn(async () => {}),
+}));
+
 vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("../../../../src/client/Cosmetics")
@@ -35,6 +39,7 @@ vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
   },
 }));
 
+import { syncAchievements } from "../../../../src/client/AchievementSignal";
 import { crazyGamesSDK } from "../../../../src/client/CrazyGamesSDK";
 
 type Winner = ["team", string] | ["player", string] | undefined;
@@ -43,6 +48,7 @@ function makeGame(opts: {
   winner: Winner;
   myTeam?: string;
   myClientID?: string;
+  gameID?: string;
   winnerPlayer?: {
     isPlayer: () => boolean;
     clientID: () => string | null;
@@ -61,6 +67,7 @@ function makeGame(opts: {
     updatesSinceLastTick: () => ({ [GameUpdateType.Win]: [winUpdate] }),
     playerByClientID: () => opts.winnerPlayer,
     config: () => ({ gameConfig: () => ({ rankedType: undefined }) }),
+    gameID: () => opts.gameID ?? "game-abc-123",
   } as unknown as GameView;
 }
 
@@ -187,5 +194,31 @@ describe("WinModal tick win handling", () => {
 
     expect(events).toHaveLength(0);
     expect(modal!.isVisible).toBe(false);
+  });
+
+  it("syncs achievements with the game's id from gameID(), not the config", () => {
+    // Pins the id source: config().gameConfig() is present on this fake game
+    // but deliberately carries no gameID field, so a regression that reads
+    // the id from there instead of gameID() would pass `undefined` here and
+    // fail this assertion.
+    setup(
+      makeGame({
+        winner: ["team", "Blue"],
+        myTeam: "Blue",
+        gameID: "game-xyz-789",
+      }),
+    );
+    modal!.tick();
+
+    expect(syncAchievements).toHaveBeenCalledWith({ gameId: "game-xyz-789" });
+  });
+
+  it("syncs achievements even when the match is cancelled", () => {
+    setup(makeGame({ winner: undefined, gameID: "game-cancelled-1" }));
+    modal!.tick();
+
+    expect(syncAchievements).toHaveBeenCalledWith({
+      gameId: "game-cancelled-1",
+    });
   });
 });
