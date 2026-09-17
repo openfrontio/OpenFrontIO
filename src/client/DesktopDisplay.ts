@@ -152,7 +152,10 @@ export function isDisplaySnapshot(
   if (typeof s.prefs !== "object" || s.prefs === null) return false;
   const prefs = s.prefs as Record<string, unknown>;
   if (prefs.mode !== "windowed" && prefs.mode !== "borderless") return false;
-  if (prefs.uiScale !== undefined && typeof prefs.uiScale !== "number") {
+  if (
+    prefs.uiScale !== undefined &&
+    (typeof prefs.uiScale !== "number" || !Number.isFinite(prefs.uiScale))
+  ) {
     return false;
   }
   return prefs.displayId === null || typeof prefs.displayId === "number";

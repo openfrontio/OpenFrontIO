@@ -1,4 +1,7 @@
+import IntlMessageFormat from "intl-messageformat";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import en from "../../resources/lang/en.json";
 
 import {
   DISPLAY_SETTLE_TIMEOUT_MS,
@@ -741,6 +744,29 @@ describe("Display tab UI scale", () => {
     await flush(el);
     expect(scaleSelect(el)?.value).toBe("1");
   });
+
+  it("formats the en.json option label as a percentage", () => {
+    const format = new IntlMessageFormat(
+      en.user_setting.display_ui_scale_option,
+      "en",
+    );
+    expect(format.format({ scale: 1.25 })).toBe("125%");
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY])(
+    "ignores a snapshot whose uiScale is %s",
+    async (uiScale) => {
+      const fake = fakeBridge(scaled(1.25));
+      fake.install();
+      const el = await mount();
+      el.open({ tab: "display" });
+      await flush(el);
+
+      fake.push(scaled(uiScale));
+      await flush(el);
+      expect(scaleSelect(el)?.value).toBe("1.25");
+    },
+  );
 
   it("ignores a snapshot whose uiScale is not a number", async () => {
     const fake = fakeBridge(scaled(1.25));

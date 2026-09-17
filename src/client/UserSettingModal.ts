@@ -1067,7 +1067,6 @@ export class UserSettingModal extends BaseModal {
     const displays = snapshot.displays;
     const selectedId = selectedDisplayId(snapshot);
     const uiScale = snapshot.prefs.uiScale;
-    const percent = new Intl.NumberFormat(undefined, { style: "percent" });
 
     // Rendered as its own row rather than as the spec's extra option inside
     // the picker: losing the remembered monitor usually drops the count to
@@ -1117,7 +1116,9 @@ export class UserSettingModal extends BaseModal {
               ?disabled=${this.displayBusy}
               .options=${uiScaleOptions(uiScale).map((scale) => ({
                 value: scale,
-                label: percent.format(scale),
+                label: translateText("user_setting.display_ui_scale_option", {
+                  scale,
+                }),
               }))}
               @change=${this.handleUiScaleChange}
             ></setting-select>
