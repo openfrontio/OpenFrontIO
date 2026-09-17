@@ -159,14 +159,33 @@ describe("GameServer - spectators", () => {
     expect(handleIntent).toHaveBeenCalled();
   });
 
-  it("joining after the start makes you a spectator, not a seatless player", () => {
+  it("turns away a player who arrives after the start", () => {
     // The player list is frozen at start; a late joiner used to be admitted as a
-    // player who could never spawn.
+    // player who could never spawn, then as a spectator they never asked to be.
+    // Either way they were in a game they could not play, so they are told
+    // they missed it instead.
     const game = makeGame();
     startGame(game);
     const late = makeClient("late");
-    expect(game.joinClient(late)).toBe("joined");
-    expect(late.spectator).toBe(true);
+    expect(game.joinClient(late)).toBe("started");
+    expect(mockWsOf(late).sent()).toContainEqual({
+      type: "error",
+      error: "game-started",
+    });
+    expect(
+      mockWsOf(late)
+        .sent()
+        .some((m) => m.type === "start"),
+    ).toBe(false);
+    expect(game.numClients()).toBe(0);
+  });
+
+  it("lets a player in during prestart", () => {
+    // The player list is only frozen at start(), so a join that lands in the
+    // prestart window still gets a seat.
+    const game = makeGame();
+    game.prestart();
+    expect(game.joinClient(makeClient("late"))).toBe("joined");
   });
 
   it("does not put a spectator's disconnect into the turn log", () => {

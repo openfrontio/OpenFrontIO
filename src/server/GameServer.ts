@@ -81,7 +81,8 @@ export type JoinResult =
   | "rejected"
   | "ended"
   | "not_allowlisted"
-  | "not_trusted";
+  | "not_trusted"
+  | "started";
 
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -499,13 +500,30 @@ export class GameServer {
     }
 
     // gameStartInfo.players is frozen at start, so a late arrival could never
-    // spawn. They used to join as a player anyway; watching is what actually
-    // happened to them, so it is what they join as.
+    // spawn. An admitted player reconnecting through the join path keeps
+    // their seat. Anyone else who meant to play is told they missed it
+    // rather than being dropped into the game as a watcher they never asked
+    // to be; a deliberate spectator (the ?spectate link) may still arrive
+    // mid-game.
     if (this.stage === "started") {
       if (this.rejoinClient(client.ws, client.persistentID, 0)) {
         return "joined";
       }
-      client.spectator = true;
+      if (!client.spectator) {
+        this.log.info("cannot add client, game already started", {
+          clientID: client.clientID,
+        });
+        client.ws.send(
+          encodeServerMessage(
+            {
+              type: "error",
+              error: "game-started",
+            } satisfies ServerErrorMessage,
+            this.zbinCtx,
+          ),
+        );
+        return "started";
+      }
     }
 
     // Spectators take no slot: they never spawn, so a full lobby is still
@@ -613,7 +631,7 @@ export class GameServer {
       this.hasReachedMaxPlayerCount = true;
     }
 
-    // In case a client joined the game late and missed the start message.
+    // A spectator arriving mid-game missed the start message.
     if (this.stage === "started") {
       this.sendStartGameMsg(client.ws, 0);
     }

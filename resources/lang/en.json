@@ -451,6 +451,7 @@
     "forbidden": "You don't have access to this server.",
     "game_ended": "This game has ended.",
     "game_not_found": "Game not found.",
+    "game_started": "The game already started without you.",
     "internal_error": "The server hit an internal error.",
     "invalid_clan": "The selected clan is no longer valid.",
     "invalid_message": "The server couldn't read your join request.",
