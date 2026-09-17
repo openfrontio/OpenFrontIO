@@ -37,6 +37,7 @@ import { Platform } from "./Platform";
 import type { AudioControls } from "./sound/CuePlayer";
 import { audioControls, playCue } from "./sound/CuePlayer";
 import type { CueCategory } from "./sound/Sounds";
+import { canHandOffToSteam } from "./SteamHandoff";
 import type { UIState } from "./UIState";
 
 /**
@@ -417,6 +418,12 @@ export class UserSettingModal extends BaseModal {
     console.log(
       "👁️ Hidden Lobby IDs:",
       !this.userSettings.lobbyIdVisibility() ? "ON" : "OFF",
+    );
+  }
+
+  private toggleSteamLobbyLinks() {
+    this.userSettings.setSteamLobbyLinks(
+      this.userSettings.steamLobbyLinks() === "steam" ? "browser" : "steam",
     );
   }
 
@@ -1653,6 +1660,18 @@ export class UserSettingModal extends BaseModal {
         .checked=${!this.userSettings.lobbyIdVisibility()}
         @change=${this.toggleLobbyIdVisibility}
       ></setting-toggle>
+
+      ${canHandOffToSteam()
+        ? html`<setting-toggle
+            label="${translateText("user_setting.steam_lobby_links_label")}"
+            description="${translateText(
+              "user_setting.steam_lobby_links_desc",
+            )}"
+            id="steam-lobby-links-toggle"
+            .checked=${this.userSettings.steamLobbyLinks() === "steam"}
+            @change=${this.toggleSteamLobbyLinks}
+          ></setting-toggle>`
+        : null}
 
       <!-- 🔍 Go to player -->
       <setting-toggle

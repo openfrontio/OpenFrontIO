@@ -398,6 +398,23 @@ export class UserSettings {
     return this.getBool("settings.lobbyIdVisibility", true);
   }
 
+  steamBuildSeen() {
+    return this.getBool("settings.steamBuildSeen", false);
+  }
+
+  markSteamBuildSeen() {
+    this.setBool("settings.steamBuildSeen", true);
+  }
+
+  steamLobbyLinks(): "ask" | "steam" | "browser" {
+    const value = this.getString("settings.steamLobbyLinks", "ask");
+    return value === "steam" || value === "browser" ? value : "ask";
+  }
+
+  setSteamLobbyLinks(value: "steam" | "browser") {
+    this.setString("settings.steamLobbyLinks", value);
+  }
+
   leftClickOpensMenu() {
     return this.getBool("settings.leftClickOpensMenu", false);
   }
