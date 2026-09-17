@@ -1383,7 +1383,7 @@ export class GPURenderer {
     // Small-player glow draws after structures so buildings can't hide it.
     this.smallPlayerGlowPass.draw(cam);
     // Teammate stars sit above territory/structures, below bars and names.
-    if (!this.altView) this.teamMarkerPass.draw(cam);
+    if (!this.altView) this.teamMarkerPass.draw(cam, zoom);
     if (pe.bar) this.barPass.draw(cam);
     this.updateSelectionBox();
     this.selectionBoxPass.draw(cam, this.frameTick);

@@ -16,6 +16,13 @@ const FLOATS_PER_INSTANCE = 5;
 /** Half-size of the star quad in screen pixels at the peak of the pulse. */
 const MARKER_HALF_PX = 34;
 const PULSE_SPEED = 0.0025; // radians per ms
+/**
+ * Zoom (pixels per tile) band over which the stars fade out. Zoomed in past
+ * this a teammate's spawn is plainly visible on its own, and a screen-sized
+ * star would just cover it.
+ */
+const FADE_START_ZOOM = 3;
+const FADE_END_ZOOM = 5;
 
 export interface TeamMarker {
   x: number;
@@ -115,8 +122,18 @@ export class TeamMarkerPass {
     );
   }
 
-  draw(cameraMatrix: Float32Array): void {
+  draw(cameraMatrix: Float32Array, zoom: number): void {
     if (this.instanceCount === 0) return;
+    const zoomFade =
+      1 -
+      Math.min(
+        1,
+        Math.max(
+          0,
+          (zoom - FADE_START_ZOOM) / (FADE_END_ZOOM - FADE_START_ZOOM),
+        ),
+      );
+    if (zoomFade <= 0) return;
 
     const gl = this.gl;
     const now = performance.now();
@@ -131,7 +148,7 @@ export class TeamMarkerPass {
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     // Breathe: the star grows and brightens together, then eases back.
     gl.uniform1f(this.uHalfSize, MARKER_HALF_PX * (0.7 + 0.3 * pulse));
-    gl.uniform1f(this.uAlpha, 0.55 + 0.45 * pulse);
+    gl.uniform1f(this.uAlpha, (0.55 + 0.45 * pulse) * zoomFade);
     gl.uniform2f(this.uViewport, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
     gl.bindVertexArray(this.vao);
