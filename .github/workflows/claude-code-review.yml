@@ -27,6 +27,13 @@ jobs:
     uses: openfrontio/.github/.github/workflows/claude-code-review.yml@main
     with:
       runner: ubuntu-latest
+      # TEMPORARY diagnostic. Every run since the shared workflow landed
+      # (2026-09-17 ~18:00 UTC) ends after 10-15 turns without posting, only in
+      # this repo's fork-safe mode and only on the backup account; the same
+      # account posts fine in infra. The hidden tool stream is the only way to
+      # see why. PR data here is public and secrets are masked; remove once
+      # the cause is fixed.
+      show-full-output: true
     secrets: inherit
     # pull-requests: write is the minimum for `gh pr comment` and the inline
     # comment tool; id-token: write is for the action's OIDC exchange with the
