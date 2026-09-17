@@ -51,6 +51,7 @@ vi.mock("../src/client/InGameModal", async (importOriginal) => {
 import { ClientEnv } from "../src/client/ClientEnv";
 import { GameModeSelector } from "../src/client/GameModeSelector";
 import { showInGameAlert } from "../src/client/InGameModal";
+import * as ServerList from "../src/client/ServerList";
 
 describe("GameModeSelector lobby-socket lifecycle", () => {
   beforeEach(() => {
@@ -319,7 +320,9 @@ describe("GameModeSelector lobby feed while the desktop session is gated", () =>
     await selector.updateComplete;
     expect(selector.querySelector("button.group")).toBeNull();
     expect(selector.querySelector(".animate-spin")).toBeNull();
-    expect(selector.textContent).toContain("mode_selector.offline_lobbies");
+    // Not "offline": the API still answers, only the feed is gone.
+    expect(selector.textContent).toContain("mode_selector.lobbies_unreachable");
+    expect(selector.textContent).not.toContain("mode_selector.offline_lobbies");
 
     // A feed that comes back is believed.
     lobbiesCallbackRef.current?.(snapshot);
@@ -335,6 +338,41 @@ describe("GameModeSelector lobby feed while the desktop session is gated", () =>
     selector.start();
     await selector.updateComplete;
     expect(selector.querySelector(".animate-spin")).not.toBeNull();
+  });
+
+  // The reported dead end: the socket gave up during a deploy, the API was
+  // fine so no outage showed anywhere, and nothing on the page could reopen
+  // the feed short of a reload.
+  it("offers a Retry that reopens the feed once the socket gives up", async () => {
+    gaveUpRef.current?.();
+    await selector.updateComplete;
+    const started = socketCalls.started;
+
+    const retry = Array.from(selector.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("mode_selector.retry_lobbies"),
+    );
+    expect(retry).toBeDefined();
+    // The API is "reachable" here, and the list is asked again all the same:
+    // a static page whose cluster.json answered without a list has no server
+    // to dial until it does.
+    const probe = vi
+      .spyOn(ServerList, "retryServerList")
+      .mockResolvedValue("fallback");
+    retry!.click();
+    await selector.updateComplete;
+
+    expect(probe).toHaveBeenCalledTimes(1);
+    probe.mockRestore();
+    expect(socketCalls.started).toBe(started + 1);
+    expect(selector.querySelector(".animate-spin")).not.toBeNull();
+  });
+
+  it("offers no Retry while the session is gated, where the status bar owns the remedy", async () => {
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await selector.updateComplete;
+
+    expect(selector.textContent).toContain("mode_selector.offline_lobbies");
+    expect(selector.textContent).not.toContain("mode_selector.retry_lobbies");
   });
 
   it("shows an offline message in place of the spinner while gated", async () => {

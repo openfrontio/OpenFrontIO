@@ -567,6 +567,46 @@ export class GameModeSelector extends LitElement {
     );
   }
 
+  private renderLobbiesUnavailable() {
+    // A gated desktop session has its remedy in the status bar, and the feed
+    // stays closed until it is taken, so a Retry here could only do nothing.
+    const canRetry = !lobbyFeedSuspended(this.desktopSessionState);
+    // The feed dying alone is not the player being offline: the API still
+    // answers, so no outage is showing anywhere else.
+    const feedOnly = canRetry && !this.backendOutage;
+    return html`<div
+      class="flex flex-col items-center justify-center gap-3 h-44 sm:h-full rounded-xl bg-surface/60 px-6 text-center text-sm font-medium text-white/60"
+    >
+      ${translateText(
+        feedOnly
+          ? "mode_selector.lobbies_unreachable"
+          : "mode_selector.offline_lobbies",
+      )}
+      ${canRetry
+        ? html`<button
+            class="px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius text-white text-sm font-medium uppercase tracking-wider"
+            @click=${this.retryLobbies}
+          >
+            ${translateText("mode_selector.retry_lobbies")}
+          </button>`
+        : nothing}
+    </div>`;
+  }
+
+  private retryLobbies = () => {
+    // Not only on a confirmed outage: a cluster.json that answered without a
+    // list (a 5xx) is "reachable", and leaves a static page with no server to
+    // dial until the heartbeat's next beat. start() below joins this fetch.
+    if (manualRetryAvailable()) {
+      retryServerList().catch((err: unknown) => {
+        console.error("server list retry from the lobby slot failed", err);
+      });
+    }
+    // Only a feed that gave up: one still inside its fast attempts is already
+    // dialing, and restarting it would throw that attempt away.
+    if (this.feedGaveUp) this.start();
+  };
+
   private handleLobbiesUpdate(lobbies: PublicGames) {
     this.lobbies = lobbies;
     this.feedGaveUp = false;
@@ -659,11 +699,7 @@ export class GameModeSelector extends LitElement {
               ${ffa
                 ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
                 : this.offlineForLobbies()
-                  ? html`<div
-                      class="flex items-center justify-center h-44 sm:h-full rounded-xl bg-surface/60 px-6 text-center text-sm font-medium text-white/60"
-                    >
-                      ${translateText("mode_selector.offline_lobbies")}
-                    </div>`
+                  ? this.renderLobbiesUnavailable()
                   : html`<div
                       class="flex items-center justify-center h-44 sm:h-full"
                     >

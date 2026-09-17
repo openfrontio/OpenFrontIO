@@ -368,6 +368,52 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     socket.stop();
   });
 
+  // A deploy outlasts the fast attempts. A socket that stopped for good there
+  // left the homepage saying "unavailable" until the player reloaded.
+  it("keeps re-dialing after giving up, and recovers without a start()", async () => {
+    vi.useFakeTimers();
+    try {
+      const onGaveUp = vi.fn();
+      const onUpdate = vi.fn();
+      const socket = new PublicLobbySocket(onUpdate, {
+        onGaveUp,
+        maxWsAttempts: 1,
+        reconnectDelay: 1000,
+      });
+      await socket.start();
+      (socket as any).handleClose();
+      expect(onGaveUp).toHaveBeenCalledTimes(1);
+
+      const connect = vi.spyOn(socket as any, "connectWebSocket");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(connect).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(45_000);
+      expect(connect).toHaveBeenCalledTimes(1);
+
+      // Still down: no second announcement, and another slow retry.
+      (socket as any).handleClose();
+      expect(onGaveUp).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(45_000);
+      expect(connect).toHaveBeenCalledTimes(2);
+
+      const frame = fullMessage(1000, {});
+      (socket as any).handleMessage({
+        data: frame.buffer.slice(
+          frame.byteOffset,
+          frame.byteOffset + frame.byteLength,
+        ),
+      } as MessageEvent);
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Recovered, so the next outage is announced again.
+      (socket as any).handleClose();
+      expect(onGaveUp).toHaveBeenCalledTimes(2);
+      socket.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // The control for the rescue above: the list still has a server for this
   // build, so a socket failure is just a socket failure — a blip, not a
   // deployment that went away. The status is handed over all the same; the
@@ -546,9 +592,14 @@ describe("PublicLobbySocket.start with no server known", () => {
       expect(mocks.showInGameAlert).toHaveBeenCalledTimes(1);
       expect(mocks.showInGameAlert.mock.calls[0][0]).toContain("connection");
 
-      // And it stops: no third attempt, no second alert.
+      // It keeps asking, slowly, but announces the outage only once.
+      const asked = mocks.ensureServerList.mock.calls.length;
       await vi.advanceTimersByTimeAsync(10_000);
+      expect(mocks.ensureServerList.mock.calls.length).toBe(asked);
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(mocks.ensureServerList.mock.calls.length).toBeGreaterThan(asked);
       expect(mocks.showInGameAlert).toHaveBeenCalledTimes(1);
+      socket.stop();
     } finally {
       vi.useRealTimers();
     }

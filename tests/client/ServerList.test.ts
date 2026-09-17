@@ -597,6 +597,31 @@ describe("backend reachability", () => {
       document.removeEventListener("backend-reachability", listener);
     }
   });
+
+  // Unlike a 404, a 5xx says nothing behind the API can be trusted to work
+  // either. Counted as answered, it left a static page with no list, no
+  // server to dial and no outage showing anywhere.
+  it("counts a 5xx towards the outage, like an attempt nothing answered", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ error: "bad gateway" }, 502),
+    );
+    expect(await ensureServerList()).toBe("fallback");
+    expect(backendReachable()).toBe(false);
+    expect(backendUnreachableConfirmed()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(RETRY_MS);
+    expect(await ensureServerList()).toBe("fallback");
+    expect(backendUnreachableConfirmed()).toBe(true);
+
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ error: "unknown site" }, 404),
+    );
+    await vi.advanceTimersByTimeAsync(RETRY_MS * 2);
+    expect(await ensureServerList()).toBe("fallback");
+    expect(backendReachable()).toBe(true);
+    expect(backendUnreachableConfirmed()).toBe(false);
+  });
 });
 
 /**

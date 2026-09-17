@@ -184,10 +184,10 @@ export function serverListUrl(site: string): string {
 }
 
 /**
- * Whether the API answered our LAST attempt at all — any HTTP status, a 404
- * included. Null until the first attempt settles, false on a timeout or a
- * network error. "Answered" is not "served a usable list": a site with no
- * list is a reachable backend.
+ * Whether the API answered our LAST attempt — any status below 500, a 404
+ * included. Null until the first attempt settles, false on a timeout, a
+ * network error or a 5xx. "Answered" is not "served a usable list": a site
+ * with no list is a reachable backend.
  *
  * This is the raw signal, and it is deliberately twitchy: one timed-out
  * heartbeat flips it. Anything that takes something AWAY from the player
@@ -336,6 +336,13 @@ async function fetchServerList(site: string): Promise<ServerList | null> {
   } catch (e) {
     // Timed out, offline, DNS, TLS: nothing answered.
     recordAttempt(false, e);
+    return null;
+  }
+  // A 5xx is the API (or the edge in front of it) failing, not answering:
+  // everything else behind it is failing the same way, so it counts towards
+  // the outage like a timeout does.
+  if (res.status >= 500) {
+    recordAttempt(false, new Error(`server list answered ${res.status}`));
     return null;
   }
   recordAttempt(true);

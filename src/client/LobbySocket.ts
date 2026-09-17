@@ -12,10 +12,15 @@ interface LobbySocketOptions {
   // Fired at most once, when the server advertises a different build commit
   // than this bundle — i.e. a new version deployed while this tab was open.
   onUpdateAvailable?: () => void;
-  // Fired each time reconnecting reaches maxWsAttempts and stops. Nothing
-  // reconnects after that until start() is called again.
+  // Fired when reconnecting reaches maxWsAttempts, once per outage. The
+  // socket keeps trying after that, at GAVE_UP_RETRY_MS instead of
+  // reconnectDelay, so a caller showing "unavailable" recovers on its own.
   onGaveUp?: () => void;
 }
+
+// Jittered per attempt: every tab open through a deploy gives up within the
+// same few seconds, and would otherwise re-dial the new server in lockstep.
+const GAVE_UP_RETRY_MS = 30_000;
 
 function getRandomWorkerPath(numWorkers: number): string {
   const workerIndex = Math.floor(Math.random() * numWorkers);
@@ -27,6 +32,9 @@ export class PublicLobbySocket {
   private wsReconnectTimeout: number | null = null;
   private wsConnectionAttempts = 0;
   private wsAttemptCounted = false;
+  // Past maxWsAttempts and not yet recovered; cleared by the first frame
+  // that decodes, like the attempt counter, and by start().
+  private gaveUp = false;
   private workerPath: string = "";
   private stopped = true;
   // Latest full snapshot, used as the base for applying counts-only deltas.
@@ -51,6 +59,9 @@ export class PublicLobbySocket {
   async start() {
     this.stopped = false;
     this.wsConnectionAttempts = 0;
+    this.gaveUp = false;
+    // A start() over a pending slow retry must dial now, not join its wait.
+    this.disconnectWebSocket();
     await this.discoverAndConnect();
   }
 
@@ -162,6 +173,7 @@ export class PublicLobbySocket {
         new Uint8Array(event.data as ArrayBuffer),
       );
       this.wsConnectionAttempts = 0;
+      this.gaveUp = false;
       if (message.type === "full") {
         this.checkServerCommit(message.gitCommit);
         this.checkDeploymentActive(message.active);
@@ -254,12 +266,20 @@ export class PublicLobbySocket {
       this.wsConnectionAttempts++;
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
-      console.error("Max WebSocket attempts reached");
-      this.onGaveUp?.();
-      void this.promptIfOutdated();
-    } else {
-      this.scheduleReconnect();
+      if (!this.gaveUp) console.error("Max WebSocket attempts reached");
+      this.giveUp();
     }
+    this.scheduleReconnect();
+  }
+
+  // Returns whether this call is the one that crossed the cap, so a caller
+  // with its own one-off announcement makes it once per outage too.
+  private giveUp(): boolean {
+    const first = !this.gaveUp;
+    this.gaveUp = true;
+    if (first) this.onGaveUp?.();
+    void this.promptIfOutdated();
+    return first;
   }
 
   // Reconnecting has given up. A tab that was already sitting on the
@@ -295,13 +315,10 @@ export class PublicLobbySocket {
       this.wsAttemptCounted = true;
       this.wsConnectionAttempts++;
     }
-    if (this.wsConnectionAttempts >= this.maxWsAttempts) {
+    if (this.wsConnectionAttempts >= this.maxWsAttempts && this.giveUp()) {
       void showInGameAlert(translateText("error_modal.connection_error"));
-      this.onGaveUp?.();
-      void this.promptIfOutdated();
-    } else {
-      this.scheduleReconnect(retry);
     }
+    this.scheduleReconnect(retry);
   }
 
   private scheduleReconnect(retry?: () => void) {
@@ -313,7 +330,12 @@ export class PublicLobbySocket {
         return;
       }
       this.connectWebSocket();
-    }, this.reconnectDelay);
+    }, this.nextReconnectDelay());
+  }
+
+  private nextReconnectDelay(): number {
+    if (!this.gaveUp) return this.reconnectDelay;
+    return GAVE_UP_RETRY_MS * (0.5 + Math.random());
   }
 
   private disconnectWebSocket() {
