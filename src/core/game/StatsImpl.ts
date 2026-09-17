@@ -1,6 +1,7 @@
 import { AllPlayersStats, ClientID } from "../Schemas";
 import {
   ATTACK_INDEX_CANCEL,
+  ATTACK_INDEX_MAX_RECV,
   ATTACK_INDEX_RECV,
   ATTACK_INDEX_SENT,
   BOAT_INDEX_ARRIVE,
@@ -88,6 +89,15 @@ export class StatsImpl implements Stats {
     p.attacks[index] += _bigint(value);
   }
 
+  private _maxAttack(player: Player, index: number, value: BigIntLike) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.attacks ??= [0n];
+    while (p.attacks.length <= index) p.attacks.push(0n);
+    const v = _bigint(value);
+    if (v > p.attacks[index]) p.attacks[index] = v;
+  }
+
   private _addBetrayal(player: Player, value: BigIntLike) {
     const data = this._makePlayerStats(player);
     if (data === undefined) return;
@@ -169,6 +179,10 @@ export class StatsImpl implements Stats {
     this._addAttack(player, ATTACK_INDEX_SENT, troops);
     if (target.isPlayer()) {
       this._addAttack(target, ATTACK_INDEX_RECV, troops);
+      // A running maximum, deliberately not reversed by attackCancel: the
+      // attack was launched at this size, and "the biggest attack I faced" is
+      // about what was sent at you, not what survived being called off.
+      this._maxAttack(target, ATTACK_INDEX_MAX_RECV, troops);
     }
   }
 

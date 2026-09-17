@@ -7,6 +7,10 @@ import {
 } from "../src/core/game/Game";
 import { Stats } from "../src/core/game/Stats";
 import { StatsImpl } from "../src/core/game/StatsImpl";
+import {
+  ATTACK_INDEX_MAX_RECV,
+  ATTACK_INDEX_RECV,
+} from "../src/core/StatsSchemas";
 import { replacer } from "../src/core/Util";
 import { setup } from "./util/Setup";
 
@@ -34,7 +38,7 @@ describe("Stats", () => {
         attacks: [1n],
       },
       client2: {
-        attacks: [0n, 1n],
+        attacks: [0n, 1n, 0n, 1n],
       },
     });
   });
@@ -49,6 +53,23 @@ describe("Stats", () => {
         attacks: [0n, -1n],
       },
     });
+  });
+
+  test("records the largest single incoming attack, not the sum", () => {
+    stats.attack(player1, player2, 10);
+    stats.attack(player1, player2, 50);
+    stats.attack(player1, player2, 20);
+    const recv = stats.stats().client2.attacks!;
+    expect(recv[ATTACK_INDEX_RECV]).toBe(80n);
+    expect(recv[ATTACK_INDEX_MAX_RECV]).toBe(50n);
+  });
+
+  test("attackCancel does not lower the recorded maximum", () => {
+    stats.attack(player1, player2, 50);
+    stats.attackCancel(player1, player2, 50);
+    const recv = stats.stats().client2.attacks!;
+    expect(recv[ATTACK_INDEX_RECV]).toBe(0n);
+    expect(recv[ATTACK_INDEX_MAX_RECV]).toBe(50n);
   });
 
   test("betray", () => {
