@@ -2172,6 +2172,8 @@
     "display_monitor_desc": "Which display the game opens on.",
     "display_monitor_label": "Monitor",
     "display_primary": "Primary",
+    "display_ui_scale_desc": "Makes menus, text and the in-game HUD larger or smaller.",
+    "display_ui_scale_label": "UI scale",
     "display_unnamed": "Display {index}",
     "easter_bug_count_desc": "How many bugs you're okay with (0–1000, emotionally)",
     "easter_bug_count_label": "Bug Count",
