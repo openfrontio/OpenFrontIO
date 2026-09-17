@@ -25,6 +25,20 @@ export interface Stats {
   // Player betrays another player
   betray(player: Player): void;
 
+  // Player entered an alliance. Called for BOTH parties.
+  allianceFormed(player: Player): void;
+
+  // An alliance this player was in ended, after `durationTicks`. `counter`
+  // selects which tally to bump: the betrayed party passes "brokenByOther",
+  // a timeout passes "expired" for both parties, and the BREAKER passes null
+  // -- their side is already counted by betray(). All three update the
+  // longest-held maximum, which is why the breaker still calls this.
+  allianceEnded(
+    player: Player,
+    durationTicks: number | bigint,
+    counter: "brokenByOther" | "expired" | null,
+  ): void;
+
   // Time between lobby creation and game start (ms)
   lobbyFillTime(fillTimeMs: number): void;
 

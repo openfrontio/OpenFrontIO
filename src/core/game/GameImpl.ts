@@ -423,6 +423,8 @@ export class GameImpl implements Game {
     );
     (alliance.requestor() as PlayerImpl)._alliances.push(alliance);
     (alliance.recipient() as PlayerImpl)._alliances.push(alliance);
+    this.stats().allianceFormed(requestor);
+    this.stats().allianceFormed(recipient);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
       request,
     );
@@ -843,9 +845,19 @@ export class GameImpl implements Game {
         `${breaker} not allied with ${other}, cannot break alliance`,
       );
     }
+    const duration = this._ticks - alliance.createdAt();
     if (!other.isTraitor() && !other.isDisconnected()) {
       breaker.markTraitor();
+      // Only a real betrayal counts as being betrayed. Gated on the same
+      // condition as markTraitor so that a teammate dropping their connection
+      // is not recorded as having stabbed anyone in the back.
+      this.stats().allianceEnded(other, duration, "brokenByOther");
+    } else {
+      this.stats().allianceEnded(other, duration, null);
     }
+    // The breaker's side is already counted by betray(); this call is only
+    // here so their longest-held maximum still sees this alliance.
+    this.stats().allianceEnded(breaker, duration, null);
 
     this.detachAlliance(alliance);
 
@@ -868,7 +880,11 @@ export class GameImpl implements Game {
         `cannot expire alliance: must have exactly one alliance, have ${alliances.length}`,
       );
     }
-    this.detachAlliance(alliances[0]);
+    const expiring = alliances[0];
+    const duration = this._ticks - expiring.createdAt();
+    this.stats().allianceEnded(expiring.requestor(), duration, "expired");
+    this.stats().allianceEnded(expiring.recipient(), duration, "expired");
+    this.detachAlliance(expiring);
     this.addUpdate({
       type: GameUpdateType.AllianceExpired,
       player1ID: alliance.requestor().smallID(),

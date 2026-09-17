@@ -1,5 +1,9 @@
 import { AllPlayersStats, ClientID } from "../Schemas";
 import {
+  ALLIANCE_INDEX_BROKEN_BY_OTHER,
+  ALLIANCE_INDEX_EXPIRED,
+  ALLIANCE_INDEX_FORMED,
+  ALLIANCE_INDEX_LONGEST_HELD,
   ALLIANCE_INDEX_PEAK_CONCURRENT,
   ATTACK_INDEX_CANCEL,
   ATTACK_INDEX_MAX_RECV,
@@ -189,6 +193,13 @@ export class StatsImpl implements Stats {
     if (v > arr[index]) arr[index] = v;
   }
 
+  private _addAlliance(player: Player, index: number, value: BigIntLike) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    const arr = this._allianceArray(p, index);
+    arr[index] += _bigint(value);
+  }
+
   attack(
     player: Player,
     target: Player | TerraNullius,
@@ -218,6 +229,23 @@ export class StatsImpl implements Stats {
 
   betray(player: Player): void {
     this._addBetrayal(player, 1);
+  }
+
+  allianceFormed(player: Player): void {
+    this._addAlliance(player, ALLIANCE_INDEX_FORMED, 1);
+  }
+
+  allianceEnded(
+    player: Player,
+    durationTicks: BigIntLike,
+    counter: "brokenByOther" | "expired" | null,
+  ): void {
+    if (counter === "brokenByOther") {
+      this._addAlliance(player, ALLIANCE_INDEX_BROKEN_BY_OTHER, 1);
+    } else if (counter === "expired") {
+      this._addAlliance(player, ALLIANCE_INDEX_EXPIRED, 1);
+    }
+    this._maxAlliance(player, ALLIANCE_INDEX_LONGEST_HELD, durationTicks);
   }
 
   boatSendTrade(player: Player, target: Player): void {
