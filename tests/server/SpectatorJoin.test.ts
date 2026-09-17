@@ -197,6 +197,24 @@ describe("GameServer - spectators", () => {
     ).toBe(true);
   });
 
+  it("turns away a player whose join lands as a filled lobby starts", () => {
+    // The common case: the last seat goes while a click is in flight. Filling
+    // starts the game a couple of seconds later, so the join lands just after
+    // start(). It used to get "full-lobby"; the spectator change put the
+    // started check ahead of the capacity check and, since spectators hold
+    // no seat, admitted the player as one. Either refusal reaches the same
+    // "didn't enter in time" toast; what matters is that they are not seated.
+    const game = makeGame(2);
+    game.joinClient(makeClient("p1"));
+    game.joinClient(makeClient("p2"));
+    startGame(game);
+    vi.advanceTimersByTime(1_000);
+    const late = makeClient("late");
+    expect(game.joinClient(late)).toBe("started");
+    expect(late.spectator).toBe(false);
+    expect(game.numClients()).toBe(2);
+  });
+
   it("lets a player in during prestart", () => {
     // The player list is only frozen at start(), so a join that lands in the
     // prestart window still gets a seat.
