@@ -43,6 +43,7 @@ import {
 } from "../core/ZbinWire";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
+import { clientPlatform } from "./ClientPlatform";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
@@ -657,6 +658,7 @@ export class Transport {
       token: await getPlayToken(),
       spectator: this.lobbyConfig.spectator,
       gitCommit: ClientEnv.gitCommit(),
+      platform: clientPlatform(),
     } satisfies ClientJoinMessage);
   }
 

@@ -1128,6 +1128,12 @@ export const ClientIntentMessageSchema = z.object({
   intent: IntentSchema,
 });
 
+// Where the client was distributed, as the client reports it. Unverified, so
+// fit for metric dimensions only; the signed provider="steam" claim is the
+// trustworthy Steam signal. Append new members only (zbin ordinals).
+export const ClientPlatformSchema = z.enum(["web", "steam", "crazygames"]);
+export type ClientPlatform = z.infer<typeof ClientPlatformSchema>;
+
 // WARNING: never send this message to clients.
 // Note: clientID is NOT included - server assigns it based on persistentID from token
 export const ClientJoinMessageSchema = z.object({
@@ -1146,6 +1152,10 @@ export const ClientJoinMessageSchema = z.object({
   // whose commit doesn't match its own (missing counts as a mismatch —
   // pre-feature bundles are by definition stale).
   gitCommit: z.string().max(64).optional(),
+  // Must stay the last field, and its presence bit must not spill into a new
+  // header byte: then a stale bundle's frame (which lacks it) still decodes,
+  // reaches the gitCommit check above, and the player is told to refresh.
+  platform: ClientPlatformSchema.optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
