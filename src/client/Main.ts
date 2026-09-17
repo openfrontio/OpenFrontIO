@@ -101,6 +101,9 @@ import {
 } from "./ServerList";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import { steamHandoffMode } from "./SteamHandoff";
+import "./SteamHandoffModal";
+import { SteamHandoffModal } from "./SteamHandoffModal";
 import {
   isSteamLinkHash,
   parseSteamLinkToken,
@@ -284,6 +287,8 @@ class Client {
   private matchmakingModal: MatchmakingModal;
   private rewardsModal: RewardsModal;
   private steamLinkModal: SteamLinkModal;
+  private steamHandoffModal: SteamHandoffModal | null = null;
+  private steamHandoffDeclinedFor: string | null = null;
   private mostRecentJoinEvent: number;
   // A join the player has committed to but that has not reached a lobbyHandle
   // yet. `lobbyHandle` alone does not cover this: a public-lobby join awaits
@@ -641,6 +646,8 @@ class Client {
     ) {
       console.warn("Steam link modal element not found");
     }
+
+    this.steamHandoffModal = document.querySelector("steam-handoff-modal");
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       if (crazyGamesSDK.isOnCrazyGames()) {
@@ -1060,6 +1067,9 @@ class Client {
     // and the token itself is opaque, so no decoding is needed or expected.
     const steamLinkToken = parseSteamLinkToken(hash);
     if (steamLinkToken) {
+      // Only the token form: the desktop gate opened it in this browser, so
+      // the Steam build is on this machine. A typed code can come from a phone.
+      this.userSettings.markSteamBuildSeen();
       strip();
       void this.steamLinkModal?.openWithToken(steamLinkToken);
       return;
@@ -1098,6 +1108,17 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      const handoff =
+        this.steamHandoffDeclinedFor === lobbyId
+          ? "none"
+          : steamHandoffMode(this.userSettings, window.location.search);
+      if (handoff !== "none" && this.steamHandoffModal !== null) {
+        this.steamHandoffModal.offer(lobbyId, handoff, () => {
+          this.steamHandoffDeclinedFor = lobbyId;
+          void this.handleUrl();
+        });
+        return;
+      }
       // Joining needs the API's server list (multi-server v2): the id's
       // letter names the game's server there. No version check: joining an
       // existing game is not starting something new, and the id's letter
@@ -1439,6 +1460,7 @@ class Client {
         "leaderboard-button",
         "token-login",
         "steam-link-modal",
+        "steam-handoff-modal",
         "matchmaking-modal",
         "clan-modal",
         "account-settings-modal",

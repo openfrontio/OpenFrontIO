@@ -1799,6 +1799,15 @@
   "spawn_timer": {
     "team_percent_tooltip": "{team}: {percent}"
   },
+  "steam_handoff": {
+    "launched": "Opening this lobby in the Steam app. If nothing happens, make sure Steam is running.",
+    "open_in_steam": "Open in Steam",
+    "play_in_browser": "Play in browser",
+    "prompt": "You have OpenFront on Steam. Where do you want to join this lobby?",
+    "remember": "Remember my choice",
+    "title": "Join Lobby",
+    "try_again": "Try again"
+  },
   "steam_link_modal": {
     "code_placeholder": "XXXX-XXXX",
     "code_prompt": "Enter the code shown on your Steam desktop app.",
@@ -2242,6 +2251,8 @@
     "select_all_warships_desc": "Select all of your warships on the map.",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "special_effects_label": "Special effects",
+    "steam_lobby_links_desc": "Open lobby links in the Steam app instead of joining in this browser",
+    "steam_lobby_links_label": "Open Lobby Links in Steam",
     "swap_direction": "Swap Rocket Direction",
     "swap_direction_desc": "Toggle rocket launch direction (up/down).",
     "tab_audio": "Audio",
