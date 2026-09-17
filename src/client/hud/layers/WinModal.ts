@@ -24,6 +24,7 @@ import {
   resolveCosmetics,
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { isDesktopShell } from "../../DesktopShell";
 import { Platform } from "../../Platform";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
@@ -163,9 +164,11 @@ export class WinModal extends LitElement implements Controller {
         <h3 class="text-xl font-semibold text-white mb-3">
           ${translateText("win_modal.support_openfront")}
         </h3>
-        <p class="text-white mb-3">
-          ${translateText("win_modal.territory_pattern")}
-        </p>
+        ${isDesktopShell()
+          ? null
+          : html`<p class="text-white mb-3">
+              ${translateText("win_modal.territory_pattern")}
+            </p>`}
         <div
           class="mx-auto w-full overflow-x-auto overflow-y-visible rounded-sm"
         >
