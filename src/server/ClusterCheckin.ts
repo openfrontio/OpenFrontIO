@@ -7,10 +7,6 @@ import { ServerEnv } from "./ServerEnv";
 // The API's list is what clients read (src/client/ServerList.ts), so a
 // server that is not checking in is not offered to anyone; a deploy that
 // fails halfway can't leave the list claiming servers that aren't there.
-//
-// The reply is only obeyed when CLUSTER_STATE_SOURCE=api. Until then the
-// drain decision stays with today's apex colour poll (ActiveDeployment.ts),
-// so this can ship before the API serves the registry.
 
 export const CHECKIN_INTERVAL_MS = 10_000;
 const CHECKIN_TIMEOUT_MS = 8_000;
@@ -27,7 +23,17 @@ const CHECKIN_TIMEOUT_MS = 8_000;
 export const ServerStateSchema = z.enum(["open", "draining", "fenced"]);
 export type ServerState = z.infer<typeof ServerStateSchema>;
 
-export type ClusterStateSource = "apex" | "api";
+// The API binds a letter to a host for good and answers 409 to any other
+// host claiming it. The API routes that letter's games elsewhere, so a
+// refused server must take no new ones.
+export interface CheckinRefusal {
+  refused: string;
+}
+export type CheckinResult = ServerState | CheckinRefusal | null;
+
+export function isRefusal(result: CheckinResult): result is CheckinRefusal {
+  return typeof result === "object" && result !== null;
+}
 
 export interface CheckinBody {
   // The PAGE host: the hostname players load the page from (SITE_HOST) —
@@ -59,6 +65,10 @@ export interface CheckinBody {
 }
 
 const CheckinReplySchema = z.object({ state: ServerStateSchema });
+const RefusalBodySchema = z.object({
+  reason: z.string().optional(),
+  host: z.string().optional(),
+});
 
 /**
  * The site this server registers under: the page host (SITE_HOST — the apex
@@ -80,14 +90,13 @@ export function registeredSite(): string | undefined {
 export function checkinBody(liveGames: number): CheckinBody | null {
   const host = ServerEnv.publicHost();
   if (host === undefined) return null;
-  const { letter, entry } = ServerEnv.clusterSelf();
   const machine = ServerEnv.machine();
   return {
     site: registeredSite() ?? host,
-    letter,
+    letter: ServerEnv.instanceLetter(),
     host,
     version: ServerEnv.gitCommit(),
-    numWorkers: entry.numWorkers,
+    numWorkers: ServerEnv.numWorkers(),
     liveGames,
     // Spread, not `machine: undefined`: JSON.stringify would drop the key
     // either way, but an explicit undefined would make every equality
@@ -97,15 +106,16 @@ export function checkinBody(liveGames: number): CheckinBody | null {
 }
 
 /**
- * One check-in. Returns the state the API assigned, or null when the answer
- * is unusable (the API predates the registry, a bot challenge, a network
- * error). Callers must treat null as "no change", never as "drain": the
- * failure mode of an unreachable API is the status quo.
+ * One check-in. Returns the state the API assigned, a refusal when the API
+ * rejects this server's identity (409), or null when the answer is unusable
+ * (the API predates the registry, a bot challenge, a network error). Callers
+ * must treat null as "no change", never as "drain": the failure mode of an
+ * unreachable API is the status quo.
  */
 export async function sendCheckin(
   body: CheckinBody,
   fetchFn: typeof fetch = fetch,
-): Promise<ServerState | null> {
+): Promise<CheckinResult> {
   try {
     const res = await fetchFn(`${ServerEnv.jwtIssuer()}/cluster/checkin`, {
       method: "POST",
@@ -116,6 +126,15 @@ export async function sendCheckin(
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(CHECKIN_TIMEOUT_MS),
     });
+    if (res.status === 409) {
+      const detail = RefusalBodySchema.safeParse(
+        await res.json().catch(() => null),
+      );
+      const { reason, host } = detail.success ? detail.data : {};
+      return {
+        refused: `${reason ?? "no reason given"}${host ? ` (host: ${host})` : ""}`,
+      };
+    }
     if (!res.ok) return null;
     const parsed = CheckinReplySchema.safeParse(await res.json());
     return parsed.success ? parsed.data.state : null;
@@ -125,16 +144,13 @@ export async function sendCheckin(
 }
 
 /**
- * Turn a check-in reply into the lobby service's active flag, but only when
- * the API is the configured source of that decision. Active means "open";
- * draining and fenced both stop new games. Pure, so the switch is testable
- * without booting the master.
+ * Turn a check-in reply into the lobby service's active flag. Active means
+ * "open"; draining, fenced and refused all stop new games.
  */
 export function applyCheckinState(
-  state: ServerState | null,
-  source: ClusterStateSource,
+  result: CheckinResult,
   setActive: (active: boolean) => void,
 ): void {
-  if (state === null || source !== "api") return;
-  setActive(state === "open");
+  if (result === null) return;
+  setActive(result === "open");
 }

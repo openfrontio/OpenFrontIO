@@ -21,10 +21,23 @@ on:
         options:
           - masters
           - staging
-          - staging2
           - falk2
       target_subdomain:
         description: "Deployment Subdomain"
+        required: false
+        default: ""
+        type: string
+      # A prod dispatch has no deploy target entry to take its identity from
+      # (release.yml's DEPLOY_TARGETS_* carry it there), and deploy.sh refuses
+      # a prod deploy without one. Dev dispatches leave these empty and get
+      # the standalone defaults.
+      instance_letter:
+        description: "Instance letter (required for openfront.io)"
+        required: false
+        default: ""
+        type: string
+      num_workers:
+        description: "Worker count (required for openfront.io)"
         required: false
         default: ""
         type: string
@@ -62,15 +75,19 @@ jobs:
     # Use different logic based on event type
     name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}${{ matrix.subdomain && format(' ({0} on {1})', matrix.subdomain, matrix.host) }}
     runs-on: ubuntu-latest
-    # The schedule fans out to nightly and the dev fleet: blue and green on
-    # each of the two dev "machines". staging2 is a second name for the
-    # staging box (SERVER_HOSTS_JSON), so the fleet rehearses per-machine
-    # routing, the registry's one-open-server-per-machine rule and
-    # cross-machine joins on one host; each leg's game host carries its
-    # machine (blue.staging2.server.openfront.dev — deploy.sh, "game host").
-    # Every other event deploys a single subdomain, expressed as a
-    # one-element matrix with an empty string so RAW_SUBDOMAIN and HOST below
-    # fall through to the per-event logic.
+    # The schedule fans out to nightly and the dev fleet, one leg per entry
+    # of the DEPLOY_TARGETS_DEV REPOSITORY var (repository-level because
+    # GitHub expands strategy.matrix before a job's environment exists).
+    # Each entry is a container's identity, the same shape release.yml's
+    # DEPLOY_TARGETS_* use: host is the machine deploy.sh resolves through
+    # SERVER_HOSTS_JSON, subdomain the slot; a fleet member also carries its
+    # letter, numWorkers and gameHost (blue.<machine>.server.openfront.dev to
+    # put the machine in the name). site is an optional override: deploy.sh
+    # already puts the blue and green slots on the apex. An entry without a
+    # letter is standalone and deploy.sh defaults its identity. Defaults to
+    # today's single box. Every other event deploys a single subdomain,
+    # expressed as a one-element matrix with an empty string so RAW_SUBDOMAIN
+    # and HOST below fall through to the per-event logic.
     strategy:
       fail-fast: false
       # One leg at a time: parallel legs would race concurrent pushes of the
@@ -81,7 +98,7 @@ jobs:
       # are cheap.
       max-parallel: 1
       matrix:
-        include: ${{ github.event_name == 'schedule' && fromJSON('[{"subdomain":"nightly","host":"staging"},{"subdomain":"green","host":"staging"},{"subdomain":"blue","host":"staging"},{"subdomain":"green","host":"staging2"},{"subdomain":"blue","host":"staging2"}]') || fromJSON('[{"subdomain":""}]') }}
+        include: ${{ github.event_name == 'schedule' && fromJSON(vars.DEPLOY_TARGETS_DEV || '[{"subdomain":"nightly","host":"staging"},{"subdomain":"green","host":"staging","letter":"b","numWorkers":2,"gameHost":"green.server.openfront.dev"},{"subdomain":"blue","host":"staging","letter":"a","numWorkers":2,"gameHost":"blue.server.openfront.dev"}]') || fromJSON('[{"subdomain":""}]') }}
     timeout-minutes: 30
     environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
@@ -89,6 +106,43 @@ jobs:
       # Sanitized into SUBDOMAIN by the first step below - do not use directly.
       RAW_SUBDOMAIN: ${{ matrix.subdomain || github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
     steps:
+      # Runs in every leg because the matrix is expanded from this same var
+      # before any step exists; with a bad var each leg stops here, so nothing
+      # deploys. JSON that does not parse fails the matrix expansion itself.
+      - name: 🔍 Validate deploy targets
+        if: ${{ github.event_name == 'schedule' && vars.DEPLOY_TARGETS_DEV != '' }}
+        env:
+          DEPLOY_TARGETS_DEV: ${{ vars.DEPLOY_TARGETS_DEV }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$DEPLOY_TARGETS_DEV" | jq -e '
+            type == "array" and length > 0 and all(.[];
+              type == "object"
+              and (.host | type == "string")
+              and (.subdomain | type == "string")
+              and (if has("site") then .site | type == "string" else true end)
+              and (if has("letter") then
+                (.letter | type == "string" and test("^[a-z]$"))
+                and (.numWorkers | type == "number" and . > 0 and . == floor)
+              else true end))' > /dev/null; then
+            echo "Error: repository var DEPLOY_TARGETS_DEV must be a non-empty JSON array of {host, subdomain[, letter, numWorkers, gameHost, site]} objects, letter one lowercase letter and numWorkers a positive integer, got: ${DEPLOY_TARGETS_DEV}"
+            exit 1
+          fi
+          # A letter names one host per site for good (the registry binds it),
+          # so a repeat would leave one target refused at check-in. Site and
+          # letter resolve as deploy.sh resolves them; an entry with neither a
+          # site nor a colour slot is its own site and cannot collide.
+          dupes="$(printf '%s' "$DEPLOY_TARGETS_DEV" | jq -r --arg apex "$DOMAIN" '
+            [.[] | {
+              site: (.site // (if .subdomain == "blue" or .subdomain == "green" then $apex else null end)),
+              letter: (.letter // "a")
+            } | select(.site != null)]
+            | group_by([.site, .letter])
+            | map(select(length > 1) | .[0] | "\(.letter) on \(.site)") | .[]')"
+          if [ -n "$dupes" ]; then
+            echo "Error: instance letter(s) used by more than one DEPLOY_TARGETS_DEV target of the same site: ${dupes}"
+            exit 1
+          fi
       - uses: actions/checkout@v7
       - name: 📝 Update job summary
         run: |
@@ -208,7 +262,14 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
+          # This container's identity, from its DEPLOY_TARGETS_DEV entry on
+          # the schedule; empty otherwise, and deploy.sh fills in the
+          # standalone defaults (letter a, 2 workers, <subdomain>.<game
+          # domain>). See deploy.sh, "identity".
+          INSTANCE_LETTER: ${{ matrix.letter || inputs.instance_letter || '' }}
+          NUM_WORKERS: ${{ matrix.numWorkers || inputs.num_workers || '' }}
+          GAME_HOST: ${{ matrix.gameHost || '' }}
+          SITE_HOST: ${{ matrix.site || '' }}
           # Separate domain for GAME hostnames, so the static Worker can own
           # the page host (docs/MultiServer.md, "Two hostnames per
           # deployment"). Unset is today's behaviour. Empty for a prod
@@ -218,10 +279,6 @@ jobs:
           # would yield vars.X for EVERY run, because '' is falsy here and
           # these are value operators, not a ternary.
           GAME_DOMAIN: ${{ inputs.target_domain != 'openfront.io' && vars.GAME_DOMAIN || '' }}
-          # "api" makes servers take their drain state from the API's
-          # registry (docs/MultiServer.md, "Server list v2"); unset keeps
-          # today's apex colour poll.
-          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           # "api" joins the site's shared public-lobby roster (infra
           # docs/lobby-coordinator.md); anything else keeps per-server
           # scheduling. Read from the repo-level var here (staging jobs have

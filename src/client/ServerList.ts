@@ -648,8 +648,8 @@ function apply(): ServerListStatus {
  * **A server-rendered page prefers its own server.** Before v2 a page always
  * talked to the colour that rendered it; the list's random pick can send it
  * to a sibling instead, and the two do not have to agree about that sibling.
- * On dev (`openfront.dev`, a blue/green pair behind the apex with
- * `CLUSTER_STATE_SOURCE=apex`) the registry listed both colours `open` on the
+ * On dev (`openfront.dev`, a blue/green pair behind the apex, then still
+ * draining by an apex colour poll) the registry listed both colours `open` on the
  * same build while the apex poll had green considering itself draining: a
  * page rendered by blue that drew green got a lobby feed reporting
  * `active: false`, read it as "a new version is available", and reloaded —
@@ -770,11 +770,11 @@ export function reloadWouldRescue(listStatus: ServerListStatus): boolean {
  *   `latest` from the static Worker, which is by definition not one
  *   deployment.
  * - Behind an apex — siteHost defined, not the page's own server, and the
- *   page's cluster map has siblings (prod: page openfront.io, servers blue
- *   and green.openfront.io) — reloadForUpdate re-enters through the site
- *   host, which the load balancer answers from a live deployment.
+ *   site's list has siblings (prod: page openfront.io, servers blue and
+ *   green.openfront.io) — reloadForUpdate re-enters through the site host,
+ *   which the load balancer answers from a live deployment.
  * - Standalone (no siteHost, or siteHost IS the page's own server, or the
- *   map names only this server — dev's main.openfront.dev, previews, beta):
+ *   site has only this server — dev's main.openfront.dev, previews, beta):
  *   the reload re-serves the same page from the same server. If that server
  *   is gone the reload fails with it; if it is alive with a
  *   WebSocket-specific problem, the prompt loops. Nothing a prompt can do
@@ -784,15 +784,19 @@ export function reloadWouldRescue(listStatus: ServerListStatus): boolean {
  * GAME_DOMAIN set: its page host (main.openfront.dev) and game host
  * (main.server.openfront.dev) differ, yet both names reach the one
  * container behind Traefik, so a differing siteHost alone proves nothing.
- * Same rule as the server's own apex poll
- * (ActiveDeployment.shouldPollApex).
  */
 function reloadCanLandElsewhere(): boolean {
   if (!ClientEnv.servedByGameServer()) return true;
   const site = ClientEnv.siteHost();
   if (site === undefined || site === ClientEnv.serverHost()) return false;
-  const cluster = ClientEnv.cluster();
-  return cluster !== undefined && Object.keys(cluster).length > 1;
+  // Somewhere else to land: the site's list names a server other than the
+  // one that rendered this page. Only the list can say — the page's injected
+  // map names its own server alone now — and reloadWouldRescue only asks
+  // with a list in hand, so "no list" reads as "nowhere else".
+  const list = cached?.list ?? null;
+  if (list === null) return false;
+  const own = ClientEnv.serverHost();
+  return Object.values(list.servers).some((s) => s.host !== own);
 }
 
 /**

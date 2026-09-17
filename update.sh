@@ -403,7 +403,7 @@ echo "Starting new container for ${HOST} environment..."
 docker network create web 2> /dev/null || true
 
 # Traefik Host() rule. The container always answers on its game host —
-# GAME_HOST, as deploy.sh resolved it from the cluster map, or
+# GAME_HOST, as deploy.sh settled it from the deploy target, or
 # <subdomain>.<GAME_DOMAIN>/<subdomain>.<DOMAIN> for an env file written by
 # hand. With GAME_DOMAIN set a standalone deployment also owns its page host
 # (<subdomain>.<DOMAIN>) during the transition, until the static Worker is
@@ -480,23 +480,14 @@ fi
 : "${FLAG_LATEST_TIMEOUT:=90}"
 : "${FLAG_LATEST_RETRY_DELAY:=5}"
 
-# flag_latest <site> <version> <endpoint> <api_key> <cluster_state_source>
+# flag_latest <site> <version> <endpoint> <api_key>
 #
-# Returns 0 when the deploy may report success, 1 when it must not.
-#
-# The asymmetry is deliberate. While the page and the servers still come from
-# BOOTSTRAP_CONFIG, a missing `latest` changes nothing a player can see, so a
-# warning is the honest outcome and failing the deploy would be noise. Once
-# CLUSTER_STATE_SOURCE=api is in the env file the site's clients get their
-# server list from the API, and a version that was never flagged means no
-# server is `open`: nobody can start a game. A deploy that ends there has not
-# succeeded and must not say it has.
+# Returns 0 when the deploy may report success, 1 when it must not. Clients
+# get their server list from the API, and a version that was never flagged
+# means no server is `open`: nobody can start a game. A deploy that ends there
+# has not succeeded and must not say it has.
 flag_latest() {
-    local site="$1" version="$2" endpoint="$3" api_key="$4" state_source="$5"
-    local strict=no
-    if [ "$state_source" = "api" ]; then
-        strict=yes
-    fi
+    local site="$1" version="$2" endpoint="$3" api_key="$4"
 
     local deadline=$((SECONDS + FLAG_LATEST_TIMEOUT))
     local body code reason
@@ -526,9 +517,8 @@ flag_latest() {
                 return 0
                 ;;
             404)
-                # The API predates the registry. Never strict: there is nothing
-                # to flag and nothing reading it, so this is the expected
-                # answer everywhere until the API ships.
+                # The API predates the registry: there is nothing to flag and
+                # nothing reading it.
                 echo "⚠️ ${endpoint}/cluster/latest is not deployed yet (HTTP 404); skipping the latest flag."
                 rm -f "$body"
                 return 0
@@ -554,21 +544,16 @@ flag_latest() {
         esac
     done
 
-    echo "⚠️ Failed to flag ${version} as latest for ${site}: ${reason}"
+    echo "❌ Failed to flag ${version} as latest for ${site}: ${reason}"
     cat "$body" || true
     rm -f "$body"
-    if [ "$strict" = "yes" ]; then
-        echo "❌ CLUSTER_STATE_SOURCE=api: clients take their server list from the API, so an unflagged version means no server is open. Failing the deploy."
-        return 1
-    fi
-    echo "   Continuing: this site still boots from the page's own values."
-    return 0
+    echo "   Clients take their server list from the API, so an unflagged version means no server is open. Failing the deploy."
+    return 1
 }
 # --- END flag latest (tested) ---
 
 if [[ "$FULL_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-    if ! flag_latest "$SITE" "$FULL_COMMIT" "$R2_ENDPOINT" "$API_KEY" \
-        "${CLUSTER_STATE_SOURCE:-}"; then
+    if ! flag_latest "$SITE" "$FULL_COMMIT" "$R2_ENDPOINT" "$API_KEY"; then
         exit 1
     fi
 else

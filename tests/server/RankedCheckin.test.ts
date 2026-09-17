@@ -13,11 +13,6 @@ import { mockLogger } from "../util/GameServerHarness";
 // and the match cancelled short-handed. The ranked check-in must follow the
 // same active flag the master already pushes to its workers.
 
-const CLUSTER = JSON.stringify({
-  a: { host: "blue.openfront.io", color: "blue", numWorkers: 4 },
-  b: { host: "green.openfront.io", color: "green", numWorkers: 4 },
-});
-
 function okFetch(body: unknown = {}) {
   return vi.fn(
     async () => new Response(JSON.stringify(body), { status: 200 }),
@@ -105,7 +100,9 @@ describe("RankedCheckinGate", () => {
 
 describe("rankedCheckinPass", () => {
   beforeEach(() => {
-    vi.stubEnv("CLUSTER_JSON", CLUSTER);
+    vi.stubEnv("GAME_ENV", "prod");
+    vi.stubEnv("INSTANCE_LETTER", "a");
+    vi.stubEnv("NUM_WORKERS", "4");
     vi.stubEnv("DOMAIN", "openfront.io");
     vi.stubEnv("SUBDOMAIN", "blue");
     vi.stubEnv("API_KEY", "test-key");

@@ -54,7 +54,12 @@ export class MasterLobbyService {
   // False once the load balancer points at another deployment: this one only
   // finishes the games it has and stops scheduling public lobbies, so nobody
   // can farm empty games on the deployment that's being retired.
-  private active = true;
+  private active: boolean;
+  // Clients read a broadcast active:false as "reload, this deployment was
+  // retired", and workers stop ranked matchmaking on it. A server still
+  // waiting for its first API answer is neither, so until setActive is
+  // called the broadcast says active while scheduling stays off.
+  private stateKnown: boolean;
 
   // Two modes (infra docs/lobby-coordinator.md, "The master: two modes"):
   //
@@ -81,7 +86,11 @@ export class MasterLobbyService {
   constructor(
     private playlist: MapPlaylist,
     private log: winston.Logger,
-  ) {}
+    awaitApiState = false,
+  ) {
+    this.active = !awaitApiState;
+    this.stateKnown = !awaitApiState;
+  }
 
   registerWorker(workerId: number, worker: Worker) {
     this.workers.set(workerId, worker);
@@ -238,11 +247,12 @@ export class MasterLobbyService {
   }
 
   setActive(active: boolean) {
+    this.stateKnown = true;
     if (active === this.active) return;
     this.active = active;
     this.log.info(
       active
-        ? "deployment is active again, resuming public lobby scheduling"
+        ? "deployment is active, scheduling public lobbies"
         : "deployment is no longer active, stopping public lobby scheduling",
     );
   }
@@ -391,7 +401,7 @@ export class MasterLobbyService {
         games,
       },
       delistGameIDs: delist.length > 0 ? delist : undefined,
-      active: this.active,
+      active: this.active || !this.stateKnown,
     } satisfies MasterLobbiesBroadcast;
     for (const [workerId, worker] of this.workers.entries()) {
       worker.send(msg, (e) => {

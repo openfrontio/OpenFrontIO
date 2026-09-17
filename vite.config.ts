@@ -181,19 +181,27 @@ function randomWorkerCreateProxy(numWorkers: number): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
-  // Dev cluster map: mirrors the CLUSTER_JSON the dev server boots with
-  // (package.json start:server-dev), so the dev-served index.html carries the
-  // same shape production RenderHtml injects. The proxy below needs the
+  // Dev identity: the same INSTANCE_LETTER / NUM_WORKERS defaults the dev
+  // server boots with (ServerEnv), so the dev-served index.html carries the
+  // one-entry map production RenderHtml injects. The proxy below needs the
   // worker count to know how many /wN paths to forward.
-  const devClusterJson =
-    env.CLUSTER_JSON ??
-    '{"a":{"host":"localhost","color":"blue","numWorkers":2}}';
-  const devCluster = JSON.parse(devClusterJson) as Record<
-    string,
-    { numWorkers: number }
-  >;
-  const devInstanceLetter = Object.keys(devCluster)[0];
-  const devNumWorkers = devCluster[devInstanceLetter].numWorkers;
+  const devInstanceLetter = env.INSTANCE_LETTER || "a";
+  const devNumWorkers = Number(env.NUM_WORKERS || 2);
+  // The same checks ServerEnv applies: the letter leads every game id, and
+  // the count feeds a modulo, so a bad value here is a wNaN worker path.
+  if (!/^[a-z]$/.test(devInstanceLetter)) {
+    throw new Error(
+      `INSTANCE_LETTER must be one lowercase letter, got ${JSON.stringify(devInstanceLetter)}`,
+    );
+  }
+  if (!Number.isInteger(devNumWorkers) || devNumWorkers < 1) {
+    throw new Error(
+      `NUM_WORKERS must be a positive integer, got ${JSON.stringify(env.NUM_WORKERS)}`,
+    );
+  }
+  const devClusterJson = JSON.stringify({
+    [devInstanceLetter]: { host: "localhost", numWorkers: devNumWorkers },
+  });
   const resourcesDir = getResourcesDir(__dirname);
   const proprietaryDir = getProprietaryDir(__dirname);
   const sourceDirs = [resourcesDir, proprietaryDir];

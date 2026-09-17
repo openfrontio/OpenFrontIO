@@ -61,8 +61,8 @@ function setBootstrap(overrides: Record<string, unknown> = {}) {
   (window as any).BOOTSTRAP_CONFIG = {
     gameEnv: "prod",
     cluster: {
-      a: { host: "blue.openfront.io", color: "blue", numWorkers: 2 },
-      b: { host: "green.openfront.io", color: "green", numWorkers: 2 },
+      a: { host: "blue.openfront.io", numWorkers: 2 },
+      b: { host: "green.openfront.io", numWorkers: 2 },
     },
     instanceLetter: "a",
     turnstileSiteKey: "x",
@@ -1164,7 +1164,6 @@ describe("picking between open, draining and fenced", () => {
         cluster: {
           a: {
             host: "main.server.openfront.dev",
-            color: "blue",
             numWorkers: 2,
           },
         },
@@ -1228,8 +1227,8 @@ describe("picking between open, draining and fenced", () => {
   // A server-rendered page prefers its own server (OPE-430). Before v2 the
   // page always talked to the colour that rendered it; the list's random pick
   // can send it to a sibling, and the two do not have to agree about that
-  // sibling. On dev (openfront.dev, a blue/green pair behind the apex with
-  // CLUSTER_STATE_SOURCE=apex) the registry listed both colours `open` on the
+  // sibling. On dev (openfront.dev, a blue/green pair behind the apex, then
+  // still draining by an apex colour poll) the registry listed both colours `open` on the
   // same build while the apex poll had green considering itself draining: a
   // page rendered by blue that drew green got a lobby feed reporting
   // active:false, read it as "a new version is available", and reloaded — on
@@ -1243,8 +1242,8 @@ describe("picking between open, draining and fenced", () => {
     function servedByBlue(overrides: Record<string, unknown> = {}) {
       setBootstrap({
         cluster: {
-          a: { host: BLUE, color: "blue", numWorkers: 2 },
-          b: { host: GREEN, color: "green", numWorkers: 2 },
+          a: { host: BLUE, numWorkers: 2 },
+          b: { host: GREEN, numWorkers: 2 },
         },
         instanceLetter: "a",
         serverHost: BLUE,
@@ -1555,9 +1554,9 @@ describe("reloadWouldRescue", () => {
   it("never rescues a single-server deployment whose page and game hosts differ", async () => {
     // With GAME_DOMAIN set even a standalone deployment gets a siteHost
     // that differs from its game host, while Traefik routes both names to
-    // the one container. The map having no siblings is what tells this
-    // apart from prod's apex — the same rule the server's own apex poll
-    // uses (ActiveDeployment.shouldPollApex).
+    // the one container. The site's list having no siblings is what tells
+    // this apart from prod's apex: main.openfront.dev is its own site, and
+    // its list names its one server.
     setBootstrap({
       gitCommit: OLD,
       siteHost: "main.openfront.dev",
@@ -1565,8 +1564,34 @@ describe("reloadWouldRescue", () => {
       instanceLetter: "a",
       cluster: { a: { host: "main.server.openfront.dev", numWorkers: 2 } },
     });
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({
+        latest: OWN,
+        servers: {
+          a: {
+            host: "main.server.openfront.dev",
+            numWorkers: 2,
+            version: OWN,
+            state: "open",
+          },
+        },
+      }),
+    );
     expect(await ensureServerList()).toBe("fallback");
     expect(reloadWouldRescue("fallback")).toBe(false);
+  });
+
+  it("rescues a server-rendered fleet page by the list's siblings, not its own map", async () => {
+    // A server injects a map naming only itself now, so the map alone would
+    // read every fleet page as standalone. Behind the apex the list names
+    // the siblings a reload can land on.
+    setBootstrap({
+      gitCommit: OLD,
+      instanceLetter: "a",
+      cluster: { a: { host: "blue.openfront.io", numWorkers: 2 } },
+    });
+    expect(await ensureServerList()).toBe("fallback");
+    expect(reloadWouldRescue("fallback")).toBe(true);
   });
 
   it("asks no network question: this is topology, not liveness", async () => {

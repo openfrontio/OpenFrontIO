@@ -6,11 +6,11 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameEnv } from "../core/configuration/Config";
-import { fetchSiteColor, shouldPollApex } from "./ActiveDeployment";
 import {
   applyCheckinState,
   CHECKIN_INTERVAL_MS,
   checkinBody,
+  isRefusal,
   registeredSite,
   sendCheckin,
 } from "./ClusterCheckin";
@@ -162,7 +162,10 @@ export async function startMaster() {
   log.info(`Primary ${process.pid} is running`);
   log.info(`Setting up ${ServerEnv.numWorkers()} workers...`);
 
-  lobbyService = new MasterLobbyService(playlist, log);
+  // A server that registers schedules nothing until the API calls it open: a
+  // mistyped letter must not mint lobbies under a letter routed elsewhere.
+  const registers = checkinBody(0) !== null;
+  lobbyService = new MasterLobbyService(playlist, log, registers);
 
   const INSTANCE_ID =
     ServerEnv.env() === GameEnv.Dev
@@ -246,80 +249,40 @@ export async function startMaster() {
   // Register with the API and keep checking in (docs/MultiServer.md,
   // "Server list v2"): the API's list is what clients read to find a
   // server, so a server that isn't checking in isn't offered to anyone.
-  // The reply carries this server's state; it is obeyed only when
-  // CLUSTER_STATE_SOURCE=api, otherwise the apex colour poll below still
-  // decides. Local development (`npm run dev`, no SUBDOMAIN) has no public
-  // host and registers nowhere; every deployed host registers under its own
-  // site.
-  const stateSource = ServerEnv.clusterStateSource();
-  if (checkinBody(0) !== null) {
+  // Local development (`npm run dev`, no SUBDOMAIN) has no public host and
+  // registers nowhere; every deployed host registers under its own site.
+  if (registers) {
     log.info(
-      `Checking in with ${ServerEnv.jwtIssuer()}/cluster/checkin every ${CHECKIN_INTERVAL_MS / 1000}s (state source: ${stateSource})`,
+      `Checking in with ${ServerEnv.jwtIssuer()}/cluster/checkin every ${CHECKIN_INTERVAL_MS / 1000}s`,
     );
+    let lastRefusal: string | null = null;
     startPolling(async () => {
       const body = checkinBody(lobbyService.liveGames());
       if (body === null) return;
-      const state = await sendCheckin(body);
-      applyCheckinState(state, stateSource, (active) =>
-        lobbyService.setActive(active),
-      );
+      const result = await sendCheckin(body);
+      if (isRefusal(result)) {
+        if (result.refused !== lastRefusal) {
+          log.error(
+            `API refused check-in as letter ${body.letter} from ${body.host}: ${result.refused}. Scheduling no public lobbies until it is accepted.`,
+          );
+        }
+        lastRefusal = result.refused;
+      } else if (result !== null) {
+        lastRefusal = null;
+      }
+      applyCheckinState(result, (active) => lobbyService.setActive(active));
     }, CHECKIN_INTERVAL_MS);
-  }
-
-  // Behind a load balancer (blue/green), only the color the balancer
-  // currently routes to should schedule public lobbies. The balancer's
-  // /api/health reports the COLOR of whichever deployment answered; colors
-  // are deployment-wide, so with several machines per color the poll
-  // reaching a sibling — same color, different instanceId — still counts as
-  // "the live color is mine". A standalone deployment is always active,
-  // which now includes one whose page host merely differs from its game host
-  // (GAME_DOMAIN, docs/MultiServer.md): a one-entry cluster map has no
-  // sibling to flip to, and its page host is the static Worker, which serves
-  // no /api/health. shouldPollApex holds that whole decision, including the
-  // rule that the API being the state source stops the poll — two deciders
-  // would fight over setActive.
-  const siteHost = ServerEnv.siteHost();
-  if (
-    shouldPollApex(
-      stateSource,
-      siteHost,
-      ServerEnv.publicHost(),
-      Object.keys(ServerEnv.cluster()).length,
-    )
-  ) {
-    log.info(`Polling https://${siteHost}/api/health for active deployment`);
-    // 5s: this latency is the window after a flip where the newly-active
-    // deployment isn't creating public lobbies yet (and the draining one
-    // still is). startPolling serializes runs, so the fetch's 10s timeout
-    // can't pile requests up.
-    startPolling(async () => {
-      const siteColor = await fetchSiteColor(siteHost);
-      if (siteColor === null) return;
-      lobbyService.setActive(siteColor === ServerEnv.color());
-    }, 5 * 1000);
   }
 }
 
-// The fleet topology map, verbatim from this server's own config. Web
-// clients get it baked into BOOTSTRAP_CONFIG; this endpoint is for the
-// desktop shell, which loads its renderer from app:// and discovers the
-// cluster from its configured serverHost at boot instead.
-app.get("/cluster.json", (_req, res) => {
-  setNoStoreHeaders(res);
-  res.json(ServerEnv.cluster());
-});
-
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;
+  // instanceId is diagnostics: it tells the machines behind an apex apart.
   const instanceId = ServerEnv.instanceId();
-  // The drain check (ActiveDeployment) compares colors: deployment-wide,
-  // where instanceId is per-machine and would false-drain siblings behind
-  // the same apex. instanceId stays for diagnostics.
-  const color = ServerEnv.color();
   if (ready) {
-    res.json({ status: "ok", instanceId, color });
+    res.json({ status: "ok", instanceId });
   } else {
-    res.status(503).json({ status: "unavailable", instanceId, color });
+    res.status(503).json({ status: "unavailable", instanceId });
   }
 });
 
