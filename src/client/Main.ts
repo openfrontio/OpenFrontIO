@@ -785,10 +785,31 @@ class Client {
     // nav and re-disable ads, so a response is only applied while the session
     // it was fetched under is still current.
     let authGeneration = 0;
+
+    // Catches anything the post-game poll missed: a player who quit before the
+    // game was archived, an earlier failed push, or a player who has just
+    // linked a platform account and has a whole history to hand over.
+    //
+    // Hung off every established session rather than off boot alone, because
+    // a session can arrive later than boot: recovered from the status bar, or
+    // signed into mid-session through the link modal -- the very case that
+    // last bullet names. Keyed by player id so it runs once per session and
+    // not again on each later profile refresh, while still re-running when a
+    // different account signs in (the record is per-player too).
+    let achievementsSyncedFor: string | null = null;
+    const reconcileAchievements = (userMeResponse: UserMeResponse | false) => {
+      if (userMeResponse === false) return;
+      const playerId = userMeResponse.player.publicId;
+      if (achievementsSyncedFor === playerId) return;
+      achievementsSyncedFor = playerId;
+      void syncAchievements();
+    };
+
     const applyUserMe =
       (generation: number) => (userMeResponse: UserMeResponse | false) => {
         if (generation !== authGeneration) return;
         void onUserMe(userMeResponse);
+        reconcileAchievements(userMeResponse);
       };
 
     // A session dropped in the background — an expired refresh token, a 401 on
@@ -818,13 +839,8 @@ class Client {
       applyUserMe(initialAuthGeneration)(false);
     } else {
       // JWT appears valid: fetch the profile and apply it if still current.
+      // applyUserMe carries the achievements reconcile.
       getUserMe().then(applyUserMe(initialAuthGeneration));
-
-      // Catches anything the post-game poll missed: a player who quit before
-      // the game was archived, an earlier failed push, or a web player who
-      // has just linked a platform account and has a whole history to hand
-      // over.
-      void syncAchievements();
     }
 
     // Re-run auth when the player signs into CrazyGames mid-session. Logout

@@ -1,5 +1,5 @@
 import { PlayerAchievement } from "../core/ApiSchemas";
-import { getUserMe, invalidateUserMe } from "./Api";
+import { fetchUserMeUncached, getUserMe } from "./Api";
 import { desktopAchievements } from "./DesktopAchievements";
 
 // Which achievement names have already been handed to the shell.
@@ -67,22 +67,33 @@ export function pushEarnedAchievements(
   return fresh;
 }
 
-// Bounded and deliberately unhurried. Ingest runs synchronously inside the
-// API's POST /game, which the game server fires as soon as the winner vote
-// resolves, so the first or second attempt normally lands while the win modal
-// is still on screen. A poll that misses entirely is not a lost achievement --
-// the next startup reconcile catches it -- so there is no reason to be
-// aggressive.
-const RETRY_DELAYS_MS = [2_000, 5_000, 15_000];
+// The post-game schedule, as the delay BEFORE each attempt.
+//
+// Ingest runs synchronously inside the API's POST /game, which the game
+// server fires as the winner vote resolves -- the very update that triggers
+// this poll -- so at t=0 there is provably nothing new to read yet. The first
+// attempt waits rather than spending a round trip on a certain miss.
+//
+// Two attempts, ~7s. Every client in the lobby runs this at the same instant,
+// against the API that is busy ingesting that same game, so each extra
+// attempt costs one /users/@me per player: a 100-player game pays 100 round
+// trips per entry here. Two is enough for ingest to land while the win modal
+// is still on screen, and a poll that misses entirely is not a lost
+// achievement -- the next startup reconcile catches it.
+const POST_GAME_DELAYS_MS = [2_000, 5_000];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Fetch, diff and push.
  *
- * With no `gameId` this is the startup reconcile: one fetch, push whatever is
- * new. With a `gameId` it retries until that game's achievements have been
- * ingested, because the row we are waiting for may not exist yet.
+ * With no `gameId` this is the startup reconcile: one fetch of the session's
+ * profile, push whatever is new. With a `gameId` it is the post-game poll,
+ * which gives ingest a bounded moment to land before reading (see
+ * POST_GAME_DELAYS_MS) and deliberately does not disturb that shared profile.
+ *
+ * Callers must not invoke the post-game form for a game the server never
+ * archives -- singleplayer and replays -- where no row can ever appear.
  */
 export async function syncAchievements(opts?: {
   gameId?: string;
@@ -100,32 +111,43 @@ export async function syncAchievements(opts?: {
   // need to be keyed by consumer rather than shared.
   if (!desktopAchievements.isAvailable()) return;
 
-  const attempts = opts?.gameId === undefined ? 1 : RETRY_DELAYS_MS.length + 1;
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    if (attempt > 0) await sleep(RETRY_DELAYS_MS[attempt - 1]);
-    try {
-      // The profile is memoised for the session. The startup reconcile reads
-      // the profile the session just fetched during boot, which is already
-      // fresh, so invalidating there would only force a redundant round trip
-      // for every player on every launch. The post-game poll always
-      // invalidates: its cached copy predates the game ending, so it must be
-      // dropped before every attempt or every retry would read the same
-      // stale answer.
-      if (opts?.gameId !== undefined || attempt > 0) invalidateUserMe();
-      const me = await getUserMe();
-      if (me === false) return; // Signed out; nothing to attribute.
-      const rows = me.player.achievements.player;
-      if (
-        opts?.gameId !== undefined &&
-        !rows.some((r) => r.game === opts.gameId)
-      ) {
-        continue; // Not ingested yet.
-      }
-      pushEarnedAchievements(me.player.publicId, rows);
-      return;
-    } catch {
-      // Network failures are ordinary here. The next attempt, or the next
-      // startup, will do.
+  const gameId = opts?.gameId;
+
+  if (gameId === undefined) {
+    // Startup reconcile. The profile is memoised for the session and the one
+    // the session just fetched during boot is already fresh, so this reads
+    // the cached copy rather than forcing a redundant round trip on every
+    // player on every launch.
+    const me = await getUserMe();
+    if (me === false) return;
+    pushEarnedAchievements(me.player.publicId, me.player.achievements.player);
+    return;
+  }
+
+  for (let attempt = 0; attempt < POST_GAME_DELAYS_MS.length; attempt++) {
+    await sleep(POST_GAME_DELAYS_MS[attempt]);
+    // Uncached, and deliberately NOT invalidateUserMe() + getUserMe(): the
+    // memo is the session's shared profile, and a refetch that fails would
+    // replace it with `false` for every other consumer. See
+    // fetchUserMeUncached in Api.ts. It answers rather than throws, on every
+    // outcome, so there is nothing here to catch.
+    const me = await fetchUserMeUncached();
+    if (me === false) {
+      // `false` is every unhappy answer the contract can give -- signed out,
+      // a 401, a 500, a dropped connection, a self-imposed timeout -- and it
+      // cannot tell them apart, so this cannot conclude "signed out" and
+      // stop. Retrying is right for the transient half and costs a genuinely
+      // signed-out player one extra request per game.
+      continue;
     }
+    const rows = me.player.achievements.player;
+    const fresh = pushEarnedAchievements(me.player.publicId, rows);
+    // The fetch landed and the diff has been applied, so this attempt did its
+    // job; what remains is deciding whether ingest is worth waiting for. A
+    // row for this game, or a name we just handed over, says it is not. The
+    // ordinary game is one where the player earned nothing and neither will
+    // ever be true, which is why the schedule above -- not this condition --
+    // is what bounds the loop.
+    if (fresh.length > 0 || rows.some((r) => r.game === gameId)) return;
   }
 }

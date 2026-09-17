@@ -5,6 +5,7 @@ import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import { SendWinnerEvent } from "../../../../src/client/Transport";
 import type { GameView } from "../../../../src/client/view";
 import { EventBus } from "../../../../src/core/EventBus";
+import { GameType } from "../../../../src/core/game/Game";
 import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
 vi.mock("../../../../src/client/Utils", () => ({
@@ -49,6 +50,11 @@ function makeGame(opts: {
   myTeam?: string;
   myClientID?: string;
   gameID?: string;
+  // Defaults to a game the server archives -- a public multiplayer match,
+  // not a replay of one -- because that is the only kind with achievements
+  // to sync.
+  gameType?: GameType;
+  isReplay?: boolean;
   winnerPlayer?: {
     isPlayer: () => boolean;
     clientID: () => string | null;
@@ -66,7 +72,13 @@ function makeGame(opts: {
     inSpawnPhase: () => false,
     updatesSinceLastTick: () => ({ [GameUpdateType.Win]: [winUpdate] }),
     playerByClientID: () => opts.winnerPlayer,
-    config: () => ({ gameConfig: () => ({ rankedType: undefined }) }),
+    config: () => ({
+      gameConfig: () => ({
+        rankedType: undefined,
+        gameType: opts.gameType ?? GameType.Public,
+      }),
+      isReplay: () => opts.isReplay ?? false,
+    }),
     gameID: () => opts.gameID ?? "game-abc-123",
   } as unknown as GameView;
 }
@@ -220,5 +232,35 @@ describe("WinModal tick win handling", () => {
     expect(syncAchievements).toHaveBeenCalledWith({
       gameId: "game-cancelled-1",
     });
+  });
+
+  // Only games the server archives are ingested, so no achievement row for a
+  // singleplayer game or a replay can ever exist. Polling for one spends the
+  // poll's whole schedule -- a /users/@me per attempt -- on a certain miss.
+  it("does not sync achievements for a singleplayer game", () => {
+    setup(
+      makeGame({
+        winner: ["team", "Blue"],
+        myTeam: "Blue",
+        gameType: GameType.Singleplayer,
+      }),
+    );
+    modal!.tick();
+
+    expect(syncAchievements).not.toHaveBeenCalled();
+  });
+
+  it("does not sync achievements while watching a replay", () => {
+    setup(
+      makeGame({
+        winner: ["team", "Blue"],
+        myTeam: "Blue",
+        gameType: GameType.Public,
+        isReplay: true,
+      }),
+    );
+    modal!.tick();
+
+    expect(syncAchievements).not.toHaveBeenCalled();
   });
 });

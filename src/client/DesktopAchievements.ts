@@ -5,15 +5,8 @@
 // It reports which achievements the server says this player has earned; what
 // the shell makes of them is the shell's business.
 
-// The shell that provides this namespace declares shell.api >= 4. Anything
-// older either predates the namespace or is a shell exposing half a surface
-// without having said so -- refuse both, rather than calling whatever happens
-// to be present. See DesktopPresence.isAvailable for the same reasoning.
-const ACHIEVEMENTS_API = 4;
-
 interface AchievementsBridge {
   achievements?: { unlock(names: string[]): Promise<void> };
-  shell?: { api?: number };
 }
 
 // Narrowed locally rather than re-declaring the global -- a second
@@ -23,9 +16,27 @@ function bridge(): AchievementsBridge | undefined {
 }
 
 class DesktopAchievements {
+  // Feature-detected, and deliberately NOT gated on `shell.api` the way
+  // DesktopPresence.isAvailable is. Do not "fix" this back.
+  //
+  // The api ladder is owned by the shell repository, not this one. This module
+  // was first written against `api >= 4` on the belief that 4 would be the
+  // level introducing this namespace; 4 had in fact already shipped there
+  // meaning something unrelated, so the gate passed on every shell in the
+  // wild while no shell had an achievements namespace at all. Any number
+  // picked here is a guess about another repository's future and can go stale
+  // exactly that way. Detecting the method cannot: a shell that can take
+  // achievements has it, and one that cannot does not.
+  //
+  // The two modules differ because the cost of being wrong differs. A
+  // mis-gated presence call degrades a cosmetic feature for one session. A
+  // mis-gated achievements call reports "delivered" for names that nothing
+  // received, and AchievementSignal records those names permanently -- the
+  // player's whole back catalogue is marked handed over while the platform
+  // holds none of it, and no later run can tell. Silent, permanent data loss
+  // is worth trusting less and checking more.
   isAvailable(): boolean {
-    const api = bridge()?.shell?.api;
-    return typeof api === "number" && api >= ACHIEVEMENTS_API;
+    return typeof bridge()?.achievements?.unlock === "function";
   }
 
   // Fire-and-forget. The shell filters this list against what the platform
