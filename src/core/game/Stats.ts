@@ -15,6 +15,14 @@ export interface Stats {
     troops: number | bigint,
   ): void;
 
+  // An attack of this size is now bearing down on target, after any
+  // cancelling-out and merging with the attacker's other attacks. Separate
+  // from attack() because that one is called per click, before the merge.
+  attackMaxIncoming(
+    target: Player | TerraNullius,
+    troops: number | bigint,
+  ): void;
+
   // Player cancels attack on target
   attackCancel(
     player: Player,

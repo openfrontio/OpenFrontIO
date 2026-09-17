@@ -218,11 +218,15 @@ export class StatsImpl implements Stats {
     this._addAttack(player, ATTACK_INDEX_SENT, troops);
     if (target.isPlayer()) {
       this._addAttack(target, ATTACK_INDEX_RECV, troops);
-      // A running maximum, deliberately not reversed by attackCancel: the
-      // attack was launched at this size, and "the biggest attack I faced" is
-      // about what was sent at you, not what survived being called off.
-      this._maxAttack(target, ATTACK_INDEX_MAX_RECV, troops);
     }
+  }
+
+  attackMaxIncoming(target: Player | TerraNullius, troops: BigIntLike): void {
+    if (!target.isPlayer()) return;
+    // A running maximum, deliberately not reversed by attackCancel: the attack
+    // was bearing down at this size, and "the biggest attack I faced" is about
+    // what was sent at you, not what survived being called off.
+    this._maxAttack(target, ATTACK_INDEX_MAX_RECV, troops);
   }
 
   attackCancel(
