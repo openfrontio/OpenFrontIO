@@ -959,17 +959,24 @@ describe("StoreModal cosmetic browser", () => {
     expect(
       modal.querySelector(`[data-cosmetic-key="${red.key}"]`),
     ).toBeTruthy();
+    // Only a registered modal writes the hash, and nothing registers one here,
+    // so assert the router call that keeps a reload/share on the same view.
+    const syncArgs = vi.spyOn(modalRouter, "syncArgs");
 
     const input = modal.querySelector<HTMLInputElement>(
       "[data-store-affiliate-input]",
     )!;
-    input.value = "  creator ";
+    // Sentence-cased by an on-screen keyboard: must still hit "creator".
+    input.value = "  Creator ";
     input.form!.requestSubmit();
     await vi.waitFor(() =>
       expect(card(modal, affiliatePattern.key)?.state).toBe("focused"),
     );
     expect(modal.querySelector(`[data-cosmetic-key="${red.key}"]`)).toBeNull();
     expect(modal.querySelector("[data-store-affiliate-input]")).toBeNull();
+    expect(syncArgs).toHaveBeenLastCalledWith("store", {
+      affiliateCode: "creator",
+    });
 
     modal
       .querySelector<HTMLButtonElement>("[data-store-affiliate-back]")!
@@ -980,6 +987,9 @@ describe("StoreModal cosmetic browser", () => {
       ).toBeTruthy(),
     );
     expect(modal.querySelector("[data-store-affiliate-input]")).toBeTruthy();
+    expect(syncArgs).toHaveBeenLastCalledWith("store", {
+      affiliateCode: null,
+    });
   });
 });
 

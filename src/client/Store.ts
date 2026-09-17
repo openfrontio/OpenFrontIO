@@ -27,6 +27,7 @@ import {
   resolveCosmetics,
   ResolvedCosmetic,
 } from "./Cosmetics";
+import { modalRouter } from "./ModalRouter";
 import {
   priceStringToCents,
   reportPendingSteamAuthorizations,
@@ -185,6 +186,9 @@ export class StoreModal extends BaseModal {
         data-store-affiliate-input
         type="text"
         autocomplete="off"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
         placeholder=${translateText("store.affiliate_placeholder")}
         class="w-36 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white placeholder-white/30 focus:border-malibu-blue/50 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50"
       />
@@ -194,16 +198,39 @@ export class StoreModal extends BaseModal {
     </form>`;
   }
 
+  // Catalog codes are matched exactly (Cosmetics.ts), and on-screen keyboards
+  // (Steam Deck, phones) capitalise the first letter of hand-typed input, so
+  // a typed code is resolved to the catalog's own spelling when one matches
+  // case-insensitively. An unknown code is kept as typed and shows the empty
+  // state. The hash is synced so a reload or share lands in the same view.
   private enterAffiliate(raw: string): void {
-    const code = raw.trim();
-    if (!code) return;
+    const typed = raw.trim();
+    if (!typed) return;
+    const lower = typed.toLowerCase();
+    const match = resolveCosmetics(this.cosmetics, this.userMeResponse, null)
+      .map((resolved) => resolved.cosmetic)
+      .find(
+        (c) =>
+          c !== null &&
+          "affiliateCode" in c &&
+          typeof c.affiliateCode === "string" &&
+          c.affiliateCode.toLowerCase() === lower,
+      );
+    const code =
+      match &&
+      "affiliateCode" in match &&
+      typeof match.affiliateCode === "string"
+        ? match.affiliateCode
+        : typed;
     this.affiliateCode = code;
+    modalRouter.syncArgs(this.routerName, { affiliateCode: code });
     this.selectVisible(this.groupsForTab(this.activeTab));
     this.requestUpdate();
   }
 
   private exitAffiliate(): void {
     this.affiliateCode = null;
+    modalRouter.syncArgs(this.routerName, { affiliateCode: null });
     this.selectVisible(this.groupsForTab(this.activeTab));
     this.requestUpdate();
   }
