@@ -180,6 +180,47 @@ describe("deploy.sh identity", () => {
     expect(r.deploymentName).toBe("blue");
   });
 
+  // A manual workflow_dispatch of a colour passes no SITE_HOST; the slot must
+  // still register under the apex or it silently leaves the site's list.
+  const dev = {
+    env: "staging",
+    machine: "staging",
+    domain: "openfront.dev",
+    gameDomain: "server.openfront.dev",
+  } as const;
+  const prod = {
+    env: "prod",
+    machine: "falk2",
+    domain: "openfront.io",
+    letter: "c",
+    numWorkers: "20",
+  } as const;
+  it.each<[string, Inputs, string]>([
+    ["blue on dev", { ...dev, subdomain: "blue" }, "openfront.dev"],
+    ["green on dev", { ...dev, subdomain: "green" }, "openfront.dev"],
+    ["blue on prod", { ...prod, subdomain: "blue" }, "openfront.io"],
+    ["green on prod", { ...prod, subdomain: "green" }, "openfront.io"],
+    [
+      "an explicit SITE_HOST on a colour",
+      { ...dev, subdomain: "green", siteHost: "green.openfront.dev" },
+      "green.openfront.dev",
+    ],
+    ["main on dev", { ...dev, subdomain: "main" }, "main.openfront.dev"],
+    [
+      "bluegreen (not a slot)",
+      { ...dev, subdomain: "bluegreen" },
+      "bluegreen.openfront.dev",
+    ],
+    [
+      "blue2 (not a slot)",
+      { ...dev, subdomain: "blue2" },
+      "blue2.openfront.dev",
+    ],
+    ["blue2 on prod (not a slot)", { ...prod, subdomain: "blue2" }, ""],
+  ])("resolves the site of %s", (_what, inputs, siteHost) => {
+    expect(resolve(inputs).siteHost).toBe(siteHost);
+  });
+
   // A prod container with no identity would mint ids under a letter nobody
   // owns; refuse before anything is copied to the box.
   it("refuses a prod deploy without a letter or worker count", () => {

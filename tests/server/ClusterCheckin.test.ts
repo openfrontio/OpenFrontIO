@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   applyCheckinState,
   checkinBody,
+  isRefusal,
   sendCheckin,
 } from "../../src/server/ClusterCheckin";
 
 // Multi-server v2, priority 3 (docs/MultiServer.md, "Server list v2"): every
 // server tells the API who it is and what it runs, and the API replies with
-// whether it should take new games. Until CLUSTER_STATE_SOURCE=api the reply
-// is recorded but not obeyed, so a deploy without the API is unchanged.
+// whether it should take new games.
 
 function fetchReturning(body: unknown, status = 200) {
   return vi.fn(
@@ -197,6 +197,7 @@ describe("sendCheckin", () => {
 
   test.each([
     ["a 404 (API without the registry yet)", fetchReturning({}, 404)],
+    ["a 5xx", fetchReturning({}, 503)],
     ["a state outside the vocabulary", fetchReturning({ state: "retired" })],
     [
       "a non-JSON body",
@@ -213,34 +214,58 @@ describe("sendCheckin", () => {
   ])("returns null on %s", async (_name, fetchFn) => {
     await expect(sendCheckin(body, fetchFn)).resolves.toBeNull();
   });
+
+  // The letter belongs to another host, so the API routes its games there.
+  test("reports a 409 as a refusal carrying the API's reason", async () => {
+    const result = await sendCheckin(
+      body,
+      fetchReturning(
+        { reason: "letter_bound_to_other_host", host: "green.openfront.io" },
+        409,
+      ),
+    );
+    expect(isRefusal(result)).toBe(true);
+    expect(result).toEqual({
+      refused: "letter_bound_to_other_host (host: green.openfront.io)",
+    });
+  });
+
+  test("a 409 with an unreadable body is still a refusal", async () => {
+    const fetchFn = vi.fn(
+      async () => new Response("<html>", { status: 409 }),
+    ) as unknown as typeof fetch;
+    await expect(sendCheckin(body, fetchFn)).resolves.toEqual({
+      refused: "no reason given",
+    });
+  });
 });
 
 describe("applyCheckinState", () => {
-  test("obeys the API only when it is the configured state source", () => {
+  test("only open is active", () => {
     const setActive = vi.fn();
-    applyCheckinState("draining", "api", setActive);
+    applyCheckinState("draining", setActive);
     expect(setActive).toHaveBeenLastCalledWith(false);
-    applyCheckinState("open", "api", setActive);
+    applyCheckinState("open", setActive);
     expect(setActive).toHaveBeenLastCalledWith(true);
+  });
+
+  test("a refused server takes no new games", () => {
+    const setActive = vi.fn();
+    applyCheckinState({ refused: "letter_bound_to_other_host" }, setActive);
+    expect(setActive).toHaveBeenLastCalledWith(false);
   });
 
   // A fence is an operator holding this server out of rotation. It has to
   // stop new games like a drain does; only "open" is active.
   test("a fenced server takes no new games", () => {
     const setActive = vi.fn();
-    applyCheckinState("fenced", "api", setActive);
+    applyCheckinState("fenced", setActive);
     expect(setActive).toHaveBeenLastCalledWith(false);
-  });
-
-  test("records but never applies the state under the apex source", () => {
-    const setActive = vi.fn();
-    applyCheckinState("draining", "apex", setActive);
-    expect(setActive).not.toHaveBeenCalled();
   });
 
   test("a failed check-in never drains: null means no change", () => {
     const setActive = vi.fn();
-    applyCheckinState(null, "api", setActive);
+    applyCheckinState(null, setActive);
     expect(setActive).not.toHaveBeenCalled();
   });
 });

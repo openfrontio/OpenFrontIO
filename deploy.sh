@@ -155,11 +155,12 @@ fi
 #                    fleet member on a machine-scoped name
 #                    (blue.nbg2.<game domain>: every box carries its own blue
 #                    and green, one wildcard DNS record per box) passes it.
-#   SITE_HOST        the page host: the apex for a fleet member (the release
-#                    jobs and DEPLOY_TARGETS_DEV pass it), else
-#                    <subdomain>.<DOMAIN> under GAME_DOMAIN (the Worker's
-#                    name for this deployment's page), else empty — page and
-#                    game are then one name.
+#   SITE_HOST        the page host. Passed explicitly it wins; else the apex
+#                    (DOMAIN) for the blue and green slots, which belong to
+#                    the apex site by convention; else <subdomain>.<DOMAIN>
+#                    under GAME_DOMAIN (the Worker's name for this
+#                    deployment's page); else empty — page and game are then
+#                    one name.
 #
 # GAME_HOST travels as-is so the container (Traefik rule, nginx self-match)
 # and the server (ServerEnv.publicHost) never re-derive it. A machine-scoped
@@ -208,8 +209,14 @@ if [ "$GAME_HOST" = "${SUBDOMAIN}.${HOST}.${GAME_DOMAIN:-$DOMAIN}" ]; then
 else
     DEPLOYMENT_NAME="$SUBDOMAIN"
 fi
-if [ -n "$GAME_DOMAIN" ] && [ -z "${SITE_HOST:-}" ]; then
-    SITE_HOST="${SUBDOMAIN}.${DOMAIN}"
+if [ -z "${SITE_HOST:-}" ]; then
+    # Must stay ahead of the GAME_DOMAIN default: a manual dispatch of
+    # blue/green passes no SITE_HOST and would otherwise leave the apex list.
+    if [ "$SUBDOMAIN" = "blue" ] || [ "$SUBDOMAIN" = "green" ]; then
+        SITE_HOST="$DOMAIN"
+    elif [ -n "$GAME_DOMAIN" ]; then
+        SITE_HOST="${SUBDOMAIN}.${DOMAIN}"
+    fi
 fi
 echo "Identity: letter ${INSTANCE_LETTER}, ${NUM_WORKERS} workers, game host ${GAME_HOST}, site ${SITE_HOST:-<self>}"
 # --- END identity (tested) ---
@@ -339,7 +346,6 @@ SITE_HOST=$SITE_HOST
 CDN_BASE=$CDN_BASE
 INSTANCE_LETTER=$INSTANCE_LETTER
 NUM_WORKERS=$NUM_WORKERS
-CLUSTER_STATE_SOURCE=$CLUSTER_STATE_SOURCE
 LOBBY_COORDINATOR=$LOBBY_COORDINATOR
 TURNSTILE_SITE_KEY=$TURNSTILE_SITE_KEY
 STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY

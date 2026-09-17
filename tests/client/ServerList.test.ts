@@ -1227,8 +1227,8 @@ describe("picking between open, draining and fenced", () => {
   // A server-rendered page prefers its own server (OPE-430). Before v2 the
   // page always talked to the colour that rendered it; the list's random pick
   // can send it to a sibling, and the two do not have to agree about that
-  // sibling. On dev (openfront.dev, a blue/green pair behind the apex with
-  // CLUSTER_STATE_SOURCE=apex) the registry listed both colours `open` on the
+  // sibling. On dev (openfront.dev, a blue/green pair behind the apex, then
+  // still draining by an apex colour poll) the registry listed both colours `open` on the
   // same build while the apex poll had green considering itself draining: a
   // page rendered by blue that drew green got a lobby feed reporting
   // active:false, read it as "a new version is available", and reloaded — on

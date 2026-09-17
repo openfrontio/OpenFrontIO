@@ -144,3 +144,56 @@ describe("MasterLobbyService inactive deployment still starts queued lobbies", (
     expect(createGameMessages(worker)).toHaveLength(0);
   });
 });
+
+describe("MasterLobbyService awaiting the API's first answer", () => {
+  let worker: ReturnType<typeof createMockWorker>;
+  let service: MasterLobbyService;
+
+  beforeEach(() => {
+    // The describe above leaves its loops registered; schedulerTask() takes
+    // the first match.
+    vi.mocked(startPolling).mockClear();
+    vi.stubEnv("DOMAIN", "localhost");
+    vi.spyOn(ServerEnv, "numWorkers").mockReturnValue(1);
+    const playlist = { gameConfig: vi.fn(async () => ({})) };
+    const log = { info: vi.fn(), error: vi.fn() } as any;
+    service = new MasterLobbyService(playlist as any, log, true);
+    worker = createMockWorker();
+    service.registerWorker(0, worker as any);
+    worker.emit("message", { type: "workerReady", workerId: 0 });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    vi.mocked(startPolling).mockClear();
+  });
+
+  function lastBroadcastActive(): boolean | undefined {
+    const broadcasts = worker.send.mock.calls.filter(
+      ([msg]) => msg.type === "lobbiesBroadcast",
+    );
+    return broadcasts[broadcasts.length - 1]?.[0].active;
+  }
+
+  it("schedules nothing until the API says open, and stays healthy", async () => {
+    await schedulerTask()();
+    expect(createGameMessages(worker)).toHaveLength(0);
+    expect(service.isHealthy()).toBe(true);
+
+    service.setActive(true);
+    await schedulerTask()();
+    expect(createGameMessages(worker).length).toBeGreaterThan(0);
+  });
+
+  // active:false on the feed makes every connected tab prompt a reload; a
+  // server that merely has not heard from the API yet must not send it.
+  it("does not tell clients to leave before the API has answered", async () => {
+    await broadcastTask()();
+    expect(lastBroadcastActive()).toBe(true);
+
+    service.setActive(false);
+    await broadcastTask()();
+    expect(lastBroadcastActive()).toBe(false);
+  });
+});

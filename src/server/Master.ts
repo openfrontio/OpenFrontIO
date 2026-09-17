@@ -10,6 +10,7 @@ import {
   applyCheckinState,
   CHECKIN_INTERVAL_MS,
   checkinBody,
+  isRefusal,
   registeredSite,
   sendCheckin,
 } from "./ClusterCheckin";
@@ -161,7 +162,10 @@ export async function startMaster() {
   log.info(`Primary ${process.pid} is running`);
   log.info(`Setting up ${ServerEnv.numWorkers()} workers...`);
 
-  lobbyService = new MasterLobbyService(playlist, log);
+  // A server that registers schedules nothing until the API calls it open: a
+  // mistyped letter must not mint lobbies under a letter routed elsewhere.
+  const registers = checkinBody(0) !== null;
+  lobbyService = new MasterLobbyService(playlist, log, registers);
 
   const INSTANCE_ID =
     ServerEnv.env() === GameEnv.Dev
@@ -245,35 +249,31 @@ export async function startMaster() {
   // Register with the API and keep checking in (docs/MultiServer.md,
   // "Server list v2"): the API's list is what clients read to find a
   // server, so a server that isn't checking in isn't offered to anyone.
-  // The reply carries this server's state; it is obeyed only when
-  // CLUSTER_STATE_SOURCE=api, otherwise the apex colour poll below still
-  // decides. Local development (`npm run dev`, no SUBDOMAIN) has no public
-  // host and registers nowhere; every deployed host registers under its own
-  // site.
-  const stateSource = ServerEnv.clusterStateSource();
-  if (checkinBody(0) !== null) {
+  // Local development (`npm run dev`, no SUBDOMAIN) has no public host and
+  // registers nowhere; every deployed host registers under its own site.
+  if (registers) {
     log.info(
-      `Checking in with ${ServerEnv.jwtIssuer()}/cluster/checkin every ${CHECKIN_INTERVAL_MS / 1000}s (state source: ${stateSource})`,
+      `Checking in with ${ServerEnv.jwtIssuer()}/cluster/checkin every ${CHECKIN_INTERVAL_MS / 1000}s`,
     );
+    let lastRefusal: string | null = null;
     startPolling(async () => {
       const body = checkinBody(lobbyService.liveGames());
       if (body === null) return;
-      const state = await sendCheckin(body);
-      applyCheckinState(state, stateSource, (active) =>
-        lobbyService.setActive(active),
-      );
+      const result = await sendCheckin(body);
+      if (isRefusal(result)) {
+        if (result.refused !== lastRefusal) {
+          log.error(
+            `API refused check-in as letter ${body.letter} from ${body.host}: ${result.refused}. Scheduling no public lobbies until it is accepted.`,
+          );
+        }
+        lastRefusal = result.refused;
+      } else if (result !== null) {
+        lastRefusal = null;
+      }
+      applyCheckinState(result, (active) => lobbyService.setActive(active));
     }, CHECKIN_INTERVAL_MS);
   }
 }
-
-// This server's own one-entry map (ServerEnv.cluster). Web clients get it
-// baked into BOOTSTRAP_CONFIG; this endpoint is for the desktop shell, which
-// loads its renderer from app:// and discovers the server it was configured
-// with from here at boot instead. The fleet is the API's /cluster.json.
-app.get("/cluster.json", (_req, res) => {
-  setNoStoreHeaders(res);
-  res.json(ServerEnv.cluster());
-});
 
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;

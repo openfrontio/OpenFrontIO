@@ -648,8 +648,8 @@ function apply(): ServerListStatus {
  * **A server-rendered page prefers its own server.** Before v2 a page always
  * talked to the colour that rendered it; the list's random pick can send it
  * to a sibling instead, and the two do not have to agree about that sibling.
- * On dev (`openfront.dev`, a blue/green pair behind the apex with
- * `CLUSTER_STATE_SOURCE=apex`) the registry listed both colours `open` on the
+ * On dev (`openfront.dev`, a blue/green pair behind the apex, then still
+ * draining by an apex colour poll) the registry listed both colours `open` on the
  * same build while the apex poll had green considering itself draining: a
  * page rendered by blue that drew green got a lobby feed reporting
  * `active: false`, read it as "a new version is available", and reloaded —

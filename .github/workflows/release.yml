@@ -112,7 +112,6 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).
@@ -184,7 +183,6 @@ jobs:
           INSTANCE_LETTER: ${{ matrix.target.letter }}
           NUM_WORKERS: ${{ matrix.target.numWorkers }}
           GAME_HOST: ${{ matrix.target.gameHost || '' }}
-          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).
@@ -277,7 +275,6 @@ jobs:
           INSTANCE_LETTER: ${{ matrix.target.letter }}
           NUM_WORKERS: ${{ matrix.target.numWorkers }}
           GAME_HOST: ${{ matrix.target.gameHost || '' }}
-          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).
@@ -359,7 +356,6 @@ jobs:
           INSTANCE_LETTER: ${{ matrix.target.letter }}
           NUM_WORKERS: ${{ matrix.target.numWorkers }}
           GAME_HOST: ${{ matrix.target.gameHost || '' }}
-          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
           LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).

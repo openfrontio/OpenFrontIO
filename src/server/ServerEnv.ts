@@ -234,8 +234,8 @@ export class ServerEnv {
     return result.data;
   }
 
-  // The one-entry map naming this server, in the shape the page and the
-  // desktop shell read (ClusterConfig.ts): its letter, its game host (bare
+  // The one-entry map naming this server, in the shape the page reads
+  // (ClusterConfig.ts): its letter, its game host (bare
   // DOMAIN under local dev, where there is no public host) and its worker
   // count. This used to be the whole fleet, read from CLUSTER_JSON; the
   // fleet is the API registry's list now and this is only the page's own
@@ -258,14 +258,6 @@ export class ServerEnv {
   static siteHost(): string | undefined {
     const v = process.env.SITE_HOST;
     return v && v.length > 0 ? v : undefined;
-  }
-  // Where the drain decision comes from (docs/MultiServer.md, "Server list
-  // v2"): "apex" is today's /api/health colour poll of the site host; "api"
-  // obeys the state the API assigns at check-in (ClusterCheckin.ts). Any
-  // other value, or none, means apex, so a deploy that doesn't set it is
-  // unchanged.
-  static clusterStateSource(): "apex" | "api" {
-    return process.env.CLUSTER_STATE_SOURCE === "api" ? "api" : "apex";
   }
   // Whether the master joins its site's shared public-lobby roster
   // (LobbyCoordinatorClient.ts, infra docs/lobby-coordinator.md). "api"
