@@ -355,14 +355,26 @@ describe("GameModeSelector lobby feed while the desktop session is gated", () =>
     // The API is "reachable" here, and the list is asked again all the same:
     // a static page whose cluster.json answered without a list has no server
     // to dial until it does.
-    const probe = vi
-      .spyOn(ServerList, "retryServerList")
-      .mockResolvedValue("fallback");
+    let settle!: (status: "fallback") => void;
+    const probe = vi.spyOn(ServerList, "retryServerList").mockReturnValue(
+      new Promise((resolve) => {
+        settle = resolve;
+      }),
+    );
     retry!.click();
     await selector.updateComplete;
 
     expect(probe).toHaveBeenCalledTimes(1);
     probe.mockRestore();
+    // Spinning already, but not dialing until the list is back: discovery
+    // answers from a cached list at once, and that list names the server
+    // that just died.
+    expect(selector.querySelector(".animate-spin")).not.toBeNull();
+    expect(socketCalls.started).toBe(started);
+
+    settle("fallback");
+    await Promise.resolve();
+    await Promise.resolve();
     expect(socketCalls.started).toBe(started + 1);
     expect(selector.querySelector(".animate-spin")).not.toBeNull();
   });

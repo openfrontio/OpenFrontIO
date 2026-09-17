@@ -594,17 +594,23 @@ export class GameModeSelector extends LitElement {
   }
 
   private retryLobbies = () => {
-    // Not only on a confirmed outage: a cluster.json that answered without a
-    // list (a 5xx) is "reachable", and leaves a static page with no server to
-    // dial until the heartbeat's next beat. start() below joins this fetch.
-    if (manualRetryAvailable()) {
-      retryServerList().catch((err: unknown) => {
-        console.error("server list retry from the lobby slot failed", err);
-      });
-    }
+    // Not only on a confirmed outage: a feed usually dies because its server
+    // left the list, and a 5xx-then-recovered API leaves a static page with
+    // no server to dial until the heartbeat's next beat.
+    const refreshed = manualRetryAvailable()
+      ? retryServerList().catch((err: unknown) => {
+          console.error("server list retry from the lobby slot failed", err);
+        })
+      : Promise.resolve();
     // Only a feed that gave up: one still inside its fast attempts is already
     // dialing, and restarting it would throw that attempt away.
-    if (this.feedGaveUp) this.start();
+    if (!this.feedGaveUp) return;
+    // Spin now, dial after the refresh: with a list already cached, discovery
+    // answers from it at once and would re-dial the server that just died.
+    this.feedGaveUp = false;
+    void refreshed.then(() => {
+      if (this.feedWanted) this.start();
+    });
   };
 
   private handleLobbiesUpdate(lobbies: PublicGames) {
