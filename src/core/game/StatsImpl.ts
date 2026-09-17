@@ -3,6 +3,7 @@ import {
   ALLIANCE_INDEX_BROKEN_BY_OTHER,
   ALLIANCE_INDEX_EXPIRED,
   ALLIANCE_INDEX_FORMED,
+  ALLIANCE_INDEX_HELD_TO_END,
   ALLIANCE_INDEX_LONGEST_HELD,
   ALLIANCE_INDEX_PEAK_CONCURRENT,
   ATTACK_INDEX_CANCEL,
@@ -354,6 +355,19 @@ export class StatsImpl implements Stats {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
     p.finalTiles = _bigint(tiles);
+  }
+
+  recordAlliancesAtEnd(
+    player: Player,
+    stillStanding: number,
+    longestStandingTicks: BigIntLike,
+  ): void {
+    this._addAlliance(player, ALLIANCE_INDEX_HELD_TO_END, stillStanding);
+    this._maxAlliance(
+      player,
+      ALLIANCE_INDEX_LONGEST_HELD,
+      longestStandingTicks,
+    );
   }
 
   recordTickSample(

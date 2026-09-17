@@ -947,6 +947,13 @@ export class GameImpl implements Game {
     // OFM: snapshot final tiles for standings (bots skipped in recordFinalTiles).
     for (const player of this.players()) {
       this.stats().recordFinalTiles(player, player.numTilesOwned());
+      const standing = player.alliances();
+      let longest = 0;
+      for (const a of standing) {
+        const held = this._ticks - a.createdAt();
+        if (held > longest) longest = held;
+      }
+      this.stats().recordAlliancesAtEnd(player, standing.length, longest);
     }
     this.addUpdate({
       type: GameUpdateType.Win,

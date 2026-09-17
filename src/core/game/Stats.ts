@@ -129,6 +129,14 @@ export interface Stats {
   // Record tiles owned at game end (final standings).
   recordFinalTiles(player: Player, tiles: number | bigint): void;
 
+  // Alliances still standing when the game ended. Called for every player
+  // from GameImpl.setWinner, beside recordFinalTiles.
+  recordAlliancesAtEnd(
+    player: Player,
+    stillStanding: number,
+    longestStandingTicks: number | bigint,
+  ): void;
+
   // Per-player, per-tick sample of state that only has a high-water value.
   // Called once per living, spawned player per tick from
   // GameImpl.executeNextTick(). Values are passed in rather than read off the

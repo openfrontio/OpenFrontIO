@@ -5,6 +5,7 @@ import {
   ALLIANCE_INDEX_BROKEN_BY_OTHER,
   ALLIANCE_INDEX_EXPIRED,
   ALLIANCE_INDEX_FORMED,
+  ALLIANCE_INDEX_HELD_TO_END,
   ALLIANCE_INDEX_LONGEST_HELD,
 } from "../src/core/StatsSchemas";
 import { setup } from "./util/Setup";
@@ -50,6 +51,21 @@ describe("alliance stats", () => {
     expect(a[ALLIANCE_INDEX_LONGEST_HELD]).toBe(900n);
     expect(a[ALLIANCE_INDEX_BROKEN_BY_OTHER]).toBe(0n);
     expect(a[ALLIANCE_INDEX_EXPIRED]).toBe(0n);
+  });
+
+  it("records alliances still standing at the end", () => {
+    stats.recordAlliancesAtEnd(player1, 2, 1200);
+    const a = stats.stats().client1.alliances!;
+    expect(a[ALLIANCE_INDEX_HELD_TO_END]).toBe(2n);
+    expect(a[ALLIANCE_INDEX_LONGEST_HELD]).toBe(1200n);
+  });
+
+  it("lets a still-standing alliance beat an earlier broken one", () => {
+    stats.allianceEnded(player1, 300, "brokenByOther");
+    stats.recordAlliancesAtEnd(player1, 1, 1500);
+    expect(stats.stats().client1.alliances![ALLIANCE_INDEX_LONGEST_HELD]).toBe(
+      1500n,
+    );
   });
 });
 
@@ -135,5 +151,22 @@ describe("alliance stats wiring (GameImpl)", () => {
     const s = game.stats().stats();
     expect(s.client1.alliances![ALLIANCE_INDEX_EXPIRED]).toBe(1n);
     expect(s.client2.alliances![ALLIANCE_INDEX_EXPIRED]).toBe(1n);
+  });
+
+  it("credits an alliance still standing when the game ends", () => {
+    const alliance = formAlliance();
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+    const ticksHeld = BigInt(game.ticks() - alliance.createdAt());
+
+    game.setWinner(player1, game.stats().stats());
+
+    const s = game.stats().stats();
+    // Would be 0n/undefined without GameImpl.setWinner's
+    // recordAlliancesAtEnd wiring: nothing else in this test breaks or
+    // expires the alliance.
+    expect(s.client1.alliances![ALLIANCE_INDEX_HELD_TO_END]).toBe(1n);
+    expect(s.client2.alliances![ALLIANCE_INDEX_HELD_TO_END]).toBe(1n);
+    expect(s.client1.alliances![ALLIANCE_INDEX_LONGEST_HELD]).toBe(ticksHeld);
+    expect(s.client2.alliances![ALLIANCE_INDEX_LONGEST_HELD]).toBe(ticksHeld);
   });
 });
