@@ -1,5 +1,6 @@
 import { AllPlayersStats, ClientID } from "../Schemas";
 import {
+  ALLIANCE_INDEX_PEAK_CONCURRENT,
   ATTACK_INDEX_CANCEL,
   ATTACK_INDEX_MAX_RECV,
   ATTACK_INDEX_RECV,
@@ -29,6 +30,9 @@ import {
   PLAYER_INDEX_HUMAN,
   PLAYER_INDEX_NATION,
   PlayerStats,
+  TILE_INDEX_DRAWDOWN_PEAK,
+  TILE_INDEX_DRAWDOWN_TROUGH,
+  TILE_INDEX_PEAK,
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
@@ -171,6 +175,20 @@ export class StatsImpl implements Stats {
     p.killedAt = _bigint(tick);
   }
 
+  private _allianceArray(p: NonNullable<PlayerStats>, index: number) {
+    p.alliances ??= [0n];
+    while (p.alliances.length <= index) p.alliances.push(0n);
+    return p.alliances;
+  }
+
+  private _maxAlliance(player: Player, index: number, value: BigIntLike) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    const arr = this._allianceArray(p, index);
+    const v = _bigint(value);
+    if (v > arr[index]) arr[index] = v;
+  }
+
   attack(
     player: Player,
     target: Player | TerraNullius,
@@ -308,6 +326,37 @@ export class StatsImpl implements Stats {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
     p.finalTiles = _bigint(tiles);
+  }
+
+  recordTickSample(
+    player: Player,
+    tiles: BigIntLike,
+    troops: BigIntLike,
+    allianceCount: number,
+  ): void {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+
+    const t = _bigint(tiles);
+    const firstSample = p.tiles === undefined;
+    p.tiles ??= [0n, 0n, 0n];
+    while (p.tiles.length <= TILE_INDEX_DRAWDOWN_TROUGH) p.tiles.push(0n);
+    if (t > p.tiles[TILE_INDEX_PEAK]) p.tiles[TILE_INDEX_PEAK] = t;
+    const peak = p.tiles[TILE_INDEX_PEAK];
+    const ddPeak = p.tiles[TILE_INDEX_DRAWDOWN_PEAK];
+    const ddTrough = p.tiles[TILE_INDEX_DRAWDOWN_TROUGH];
+    // Cross-multiplied rather than compared as a ratio, so this stays in
+    // exact integer arithmetic. bigint is unbounded, so there is no overflow
+    // to reason about.
+    if (firstSample || (peak - t) * ddPeak > (ddPeak - ddTrough) * peak) {
+      p.tiles[TILE_INDEX_DRAWDOWN_PEAK] = peak;
+      p.tiles[TILE_INDEX_DRAWDOWN_TROUGH] = t;
+    }
+
+    const tr = _bigint(troops);
+    if (p.peakTroops === undefined || tr > p.peakTroops) p.peakTroops = tr;
+
+    this._maxAlliance(player, ALLIANCE_INDEX_PEAK_CONCURRENT, allianceCount);
   }
 
   recordKilledBy(victim: Player, killerClientID: ClientID | null): void {

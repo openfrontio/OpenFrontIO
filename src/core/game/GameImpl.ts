@@ -510,6 +510,17 @@ export class GameImpl implements Game {
     this.execs.push(...inited);
     this.unInitExecs = unInited;
     for (const player of this._players.values()) {
+      // Sampled before toUpdate so the reading is of the tick that just ran.
+      // Dead and unspawned players are skipped: an eliminated player's fall
+      // to zero tiles would otherwise register as a total collapse.
+      if (player.isAlive() && player.hasSpawned()) {
+        this.stats().recordTickSample(
+          player,
+          player.numTilesOwned(),
+          Math.floor(player.troops()),
+          player.alliances().length,
+        );
+      }
       const update = player.toUpdate(
         this.playerStatsQuads,
         this.attackTroopsQuads,

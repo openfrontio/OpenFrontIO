@@ -115,6 +115,17 @@ export interface Stats {
   // Record tiles owned at game end (final standings).
   recordFinalTiles(player: Player, tiles: number | bigint): void;
 
+  // Per-player, per-tick sample of state that only has a high-water value.
+  // Called once per living, spawned player per tick from
+  // GameImpl.executeNextTick(). Values are passed in rather than read off the
+  // player, matching recordFinalTiles: Stats is a sink, not a reader.
+  recordTickSample(
+    player: Player,
+    tiles: number | bigint,
+    troops: number | bigint,
+    allianceCount: number,
+  ): void;
+
   // Record that player eliminated human victim at tick (OFM kill scoring).
   recordKill(player: Player, victim: Player, tick: number | bigint): void;
 
