@@ -226,8 +226,11 @@ export class BuildPreviewController implements Controller {
       }
     }
 
-    // Check if targeting an ally (for nuke warning visual)
-    let targetingAlly = false;
+    // Check if the strike would mark us a traitor (for nuke warning visual).
+    // Traitor allies are excluded: betraying a traitor breaks the alliance
+    // but carries no traitor mark (GameImpl.breakAlliance), so nuking one
+    // is safe and shows no warning.
+    let allyWarning = false;
     const myPlayer = this.game.myPlayer();
     const nukeType = this.ghostUnit.buildableUnit.type;
     if (
@@ -239,13 +242,13 @@ export class BuildPreviewController implements Controller {
       const allies = myPlayer.allies();
       for (let i = 0; i < allies.length; i++) {
         const ally = allies[i];
-        if (!ally.isDisconnected()) {
+        if (!ally.isDisconnected() && !ally.isTraitor()) {
           this.connectedAllySmallIds.add(ally.smallID());
         }
       }
 
       if (this.connectedAllySmallIds.size > 0) {
-        targetingAlly = wouldNukeBreakAlliance({
+        allyWarning = wouldNukeBreakAlliance({
           game: this.game,
           targetTile: tileRef,
           magnitude: this.game.config().nukeMagnitudes(nukeType),
@@ -261,7 +264,7 @@ export class BuildPreviewController implements Controller {
       .then((buildables) => {
         if (!this.ghostUnit) {
           this.pendingConfirm = null;
-          this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+          this.emitGhostPreview(tileRef, allyWarning, trajectoryTileRef);
           return;
         }
 
@@ -274,7 +277,7 @@ export class BuildPreviewController implements Controller {
             canUpgrade: false,
           });
           this.pendingConfirm = null;
-          this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+          this.emitGhostPreview(tileRef, allyWarning, trajectoryTileRef);
           return;
         }
 
@@ -288,7 +291,7 @@ export class BuildPreviewController implements Controller {
           }
         }
 
-        this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+        this.emitGhostPreview(tileRef, allyWarning, trajectoryTileRef);
       });
   }
 
@@ -300,10 +303,10 @@ export class BuildPreviewController implements Controller {
    */
   private emitGhostPreview(
     tileRef: TileRef | undefined,
-    targetingAlly: boolean,
+    allyWarning: boolean,
     trajectoryTileRef: TileRef | undefined,
   ): void {
-    const data = this.buildGhostPreviewData(tileRef, targetingAlly);
+    const data = this.buildGhostPreviewData(tileRef, allyWarning);
     if (data === null) {
       this.lastGhostData = null;
       this.view.updateGhostPreview(null);
@@ -428,7 +431,7 @@ export class BuildPreviewController implements Controller {
 
   private buildGhostPreviewData(
     tileRef: TileRef | undefined,
-    targetingAlly: boolean,
+    allyWarning: boolean,
   ): GhostPreviewData | null {
     if (!this.ghostUnit) return null;
     if (tileRef === undefined) return null;
@@ -503,7 +506,7 @@ export class BuildPreviewController implements Controller {
       ownerID: myPlayer.smallID(),
       upgradeTargetTile,
       rangeRadius,
-      rangeWarning: targetingAlly,
+      rangeWarning: allyWarning,
     };
   }
 
