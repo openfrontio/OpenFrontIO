@@ -43,6 +43,14 @@
         z-index: 150 !important;
       }
 
+      /* Gutter rails (left/right) get the same inline max z-index, which put
+         them over the featured Twitch player (z-[45000]) and its close
+         button. Cap them like the other units. */
+      [id^="pw-oop-left_rail"],
+      [id^="pw-oop-right_rail"] {
+        z-index: 150 !important;
+      }
+
       /* The flex unit's inline (expanded) state renders into
          #pw-oop-flex_container, a direct <body> child. Body is a flex row,
          which squeezed it to width 0 — the unit could never show its
