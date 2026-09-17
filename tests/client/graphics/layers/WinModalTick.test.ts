@@ -55,6 +55,9 @@ function makeGame(opts: {
   // to sync.
   gameType?: GameType;
   isReplay?: boolean;
+  // How many Win updates a single tick carries. Defaults to one; 0 is a tick
+  // with no win at all.
+  winUpdateCount?: number;
   winnerPlayer?: {
     isPlayer: () => boolean;
     clientID: () => string | null;
@@ -62,6 +65,10 @@ function makeGame(opts: {
   };
 }): GameView {
   const winUpdate = { winner: opts.winner, allPlayersStats: {} };
+  const winUpdates = Array.from(
+    { length: opts.winUpdateCount ?? 1 },
+    () => winUpdate,
+  );
   return {
     myPlayer: () => ({
       isAlive: () => true,
@@ -70,7 +77,7 @@ function makeGame(opts: {
       clientID: () => opts.myClientID ?? null,
     }),
     inSpawnPhase: () => false,
-    updatesSinceLastTick: () => ({ [GameUpdateType.Win]: [winUpdate] }),
+    updatesSinceLastTick: () => ({ [GameUpdateType.Win]: winUpdates }),
     playerByClientID: () => opts.winnerPlayer,
     config: () => ({
       gameConfig: () => ({
@@ -243,6 +250,34 @@ describe("WinModal tick win handling", () => {
         winner: ["team", "Blue"],
         myTeam: "Blue",
         gameType: GameType.Singleplayer,
+      }),
+    );
+    modal!.tick();
+
+    expect(syncAchievements).not.toHaveBeenCalled();
+  });
+
+  it("syncs once per game end, not once per Win update in the tick", () => {
+    // The sync is about the game being over, which happens once however many
+    // Win updates the tick happens to carry.
+    setup(
+      makeGame({
+        winner: ["team", "Blue"],
+        myTeam: "Blue",
+        winUpdateCount: 3,
+      }),
+    );
+    modal!.tick();
+
+    expect(syncAchievements).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not sync achievements on a tick with no Win update", () => {
+    setup(
+      makeGame({
+        winner: ["team", "Blue"],
+        myTeam: "Blue",
+        winUpdateCount: 0,
       }),
     );
     modal!.tick();

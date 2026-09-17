@@ -327,12 +327,15 @@ export class WinModal extends LitElement implements Controller {
     const isServerGame =
       config.gameConfig().gameType !== GameType.Singleplayer &&
       !config.isReplay();
+    // Achievements are awarded server-side during ingest, which the game
+    // server triggers from the winner vote these updates drive. Fire and
+    // forget: the sync retries on its own and the startup reconcile is the
+    // backstop, so nothing here needs to await or report. One game end is one
+    // sync, so this sits outside the loop.
+    if (isServerGame && winUpdates.length > 0) {
+      void syncAchievements({ gameId: this.game.gameID() });
+    }
     winUpdates.forEach((wu) => {
-      // Achievements are awarded server-side during ingest, which the game
-      // server triggers from the winner vote this same update drives. Fire
-      // and forget: the sync retries on its own and the startup reconcile is
-      // the backstop, so nothing here needs to await or report.
-      if (isServerGame) void syncAchievements({ gameId: this.game.gameID() });
       if (wu.winner === undefined) {
         // Match cancelled (e.g. a ranked 2v2 that didn't fill or fully
         // spawn): the game ends with no winner. Still vote the result to the
