@@ -150,14 +150,13 @@ export class StoreModal extends BaseModal {
   }
 
   // Steam has no URL bar, so the `#affiliate=CODE` share link (Main.ts) is
-  // unreachable there. This bar lets a player type the code instead and lands
-  // them in the same affiliate view; in affiliate mode it swaps to a way back.
-  private renderAffiliateBar(): TemplateResult {
+  // unreachable there. This header control lets a player type the code and
+  // lands them in the same affiliate view; in that view it swaps to a way back.
+  private renderAffiliateControl(): TemplateResult {
+    const buttonClass =
+      "shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white/70 hover:bg-white/10 hover:text-white";
     if (this.affiliateCode) {
-      return html`<div
-        data-store-affiliate-bar
-        class="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2"
-      >
+      return html`<div class="flex items-center gap-2">
         <span class="text-sm text-white/70 break-all">
           ${translateText("store.affiliate_showing", {
             code: this.affiliateCode,
@@ -165,7 +164,7 @@ export class StoreModal extends BaseModal {
         </span>
         <button
           data-store-affiliate-back
-          class="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white/70 hover:bg-white/10 hover:text-white"
+          class=${buttonClass}
           @click=${() => this.exitAffiliate()}
         >
           ${translateText("store.affiliate_back")}
@@ -173,8 +172,7 @@ export class StoreModal extends BaseModal {
       </div>`;
     }
     return html`<form
-      data-store-affiliate-bar
-      class="flex items-center justify-end gap-2 border-b border-white/10 px-4 py-2"
+      class="flex items-center gap-2"
       @submit=${(e: Event) => {
         e.preventDefault();
         const input = (e.currentTarget as HTMLFormElement).querySelector(
@@ -188,12 +186,9 @@ export class StoreModal extends BaseModal {
         type="text"
         autocomplete="off"
         placeholder=${translateText("store.affiliate_placeholder")}
-        class="w-44 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white placeholder-white/30 focus:border-malibu-blue/50 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50"
+        class="w-36 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white placeholder-white/30 focus:border-malibu-blue/50 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50"
       />
-      <button
-        type="submit"
-        class="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white/70 hover:bg-white/10 hover:text-white"
-      >
+      <button type="submit" class=${buttonClass}>
         ${translateText("store.affiliate_go")}
       </button>
     </form>`;
@@ -222,7 +217,8 @@ export class StoreModal extends BaseModal {
       title: translateText("store.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
-      rightContent: html`<div class="flex items-center gap-4">
+      rightContent: html`<div class="flex flex-wrap items-center gap-4">
+        ${this.renderAffiliateControl()}
         ${currency
           ? html`<currency-display
               .hard=${currency.hard}
@@ -649,7 +645,7 @@ export class StoreModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
-    return html`${this.renderHeader()}${this.renderAffiliateBar()}
+    return html`${this.renderHeader()}
     ${this.previewingCosmetic
       ? html`<cosmetic-preview-modal
           .resolved=${this.previewingCosmetic}
