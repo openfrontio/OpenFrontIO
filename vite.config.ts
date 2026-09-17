@@ -186,7 +186,10 @@ export default defineConfig(({ mode }) => {
   // one-entry map production RenderHtml injects. The proxy below needs the
   // worker count to know how many /wN paths to forward.
   const devInstanceLetter = env.INSTANCE_LETTER || "a";
-  const devNumWorkers = Number(env.NUM_WORKERS || 2);
+  // Strict decimal first: Number() alone would take "1e3" or " 2".
+  const devNumWorkers = /^[1-9][0-9]*$/.test(env.NUM_WORKERS || "2")
+    ? Number(env.NUM_WORKERS || 2)
+    : NaN;
   // The same checks ServerEnv applies: the letter leads every game id, and
   // the count feeds a modulo, so a bad value here is a wNaN worker path.
   if (!/^[a-z]$/.test(devInstanceLetter)) {

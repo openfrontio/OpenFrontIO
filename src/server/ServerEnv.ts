@@ -42,8 +42,8 @@ export class ServerEnv {
         return "prod";
     }
   }
-  // Worker processes behind this server, from NUM_WORKERS (deploy.sh, from
-  // the deploy target). Frozen for the lifetime of every game id minted here:
+  // Worker processes behind this server, from NUM_WORKERS (update.sh, from
+  // the API registry). Frozen for the lifetime of every game id minted here:
   // ids route to workers by hash % numWorkers, so it may only change on a
   // deploy after this letter has fully drained. Dev defaults to 2, matching
   // vite.config.ts's proxy; a deployed server without it refuses boot.
@@ -212,13 +212,14 @@ export class ServerEnv {
     if (!subdomain || !domain) return undefined;
     return `${subdomain}.${domain}`;
   }
-  // This server's instance letter, from INSTANCE_LETTER (deploy.sh, from the
-  // deploy target): the first character of every game id it mints, which is
+  // This server's instance letter, from INSTANCE_LETTER (update.sh, from the
+  // API registry): the first character of every game id it mints, which is
   // how a game id names its server for the rest of its life (docs/
   // MultiServer.md). Letters are append-only per site and the API registry
-  // binds each to its host permanently, so a fat-fingered letter is refused
-  // at check-in, not here — but a malformed one refuses boot, since ids
-  // minted under it would validate nowhere. Dev defaults to "a".
+  // binds each to its host permanently, so a hand-set letter that belongs to
+  // another host is refused at check-in, not here — but a malformed one
+  // refuses boot, since ids minted under it would validate nowhere. Dev
+  // defaults to "a".
   static instanceLetter(): string {
     const raw = process.env.INSTANCE_LETTER;
     if (raw === undefined || raw.length === 0) {

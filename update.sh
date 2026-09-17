@@ -78,6 +78,77 @@ R2_ENDPOINT="https://api.${DOMAIN}"
 # container answers on (<subdomain>.<GAME_DOMAIN>). An old-style standalone
 # deployment — beta, a branch preview — is its own site, page and game alike.
 SITE="${SITE_HOST:-${SUBDOMAIN}.${DOMAIN}}"
+
+# Ask the API who this container is (infra docs/cluster-registry.md,
+# "Registration"): the registry owns each site's letters and an operator sets
+# worker counts in the admin panel, so neither lives in deploy config. Asked
+# here, once per deploy, and written into the env file so the render steps,
+# nginx and the server all read one answer, and a container restart can never
+# pick up a different worker count while its game ids are live. A value
+# already in the env file wins, as an escape hatch for an API that is down.
+#
+# The markers delimit the block tests/UpdateRegister.test.ts runs against a
+# fake curl. Keep them in place.
+# --- BEGIN register (tested) ---
+: "${REGISTER_ATTEMPTS:=6}"
+: "${REGISTER_RETRY_DELAY:=5}"
+
+register_identity() {
+    local endpoint="$1" api_key="$2" site="$3" host="$4" cpus="$5"
+    local body code attempt payload
+    body="$(mktemp)"
+    payload="$(jq -nc --arg site "$site" --arg host "$host" --argjson cpus "$cpus" \
+        '{site: $site, host: $host, cpus: $cpus}')"
+    for attempt in $(seq 1 "$REGISTER_ATTEMPTS"); do
+        code="$(curl -sS -o "$body" -w "%{http_code}" \
+            --connect-timeout 10 --max-time 30 \
+            -X POST "${endpoint}/cluster/register" \
+            -H "X-API-Key: ${api_key}" \
+            -H "Content-Type: application/json" \
+            -d "$payload" || true)"
+        case "$code" in
+            200)
+                REGISTERED_LETTER="$(jq -r '.letter // empty' "$body")"
+                REGISTERED_NUM_WORKERS="$(jq -r '.numWorkers // empty' "$body")"
+                rm -f "$body"
+                case "$REGISTERED_LETTER" in [a-z]) ;; *) REGISTERED_LETTER="" ;; esac
+                case "$REGISTERED_NUM_WORKERS" in "" | *[!0-9]* | 0*) REGISTERED_NUM_WORKERS="" ;; esac
+                if [ -z "$REGISTERED_LETTER" ] || [ -z "$REGISTERED_NUM_WORKERS" ]; then
+                    REGISTERED_LETTER="" REGISTERED_NUM_WORKERS=""
+                    echo "❌ ${endpoint}/cluster/register answered 200 with an unusable identity."
+                    return 1
+                fi
+                return 0
+                ;;
+            4*)
+                echo "❌ ${endpoint}/cluster/register refused ${host} on ${site} (HTTP ${code}): $(cat "$body" 2> /dev/null)"
+                rm -f "$body"
+                return 1
+                ;;
+        esac
+        echo "… ${endpoint}/cluster/register returned HTTP ${code:-none}; attempt ${attempt}/${REGISTER_ATTEMPTS}"
+        sleep "$REGISTER_RETRY_DELAY"
+    done
+    rm -f "$body"
+    echo "❌ Could not register with ${endpoint}. Set INSTANCE_LETTER and NUM_WORKERS on the deploy to go ahead without it."
+    return 1
+}
+# --- END register (tested) ---
+
+if [ -z "${INSTANCE_LETTER:-}" ] || [ -z "${NUM_WORKERS:-}" ]; then
+    if ! register_identity "$R2_ENDPOINT" "$API_KEY" "$SITE" \
+        "${GAME_HOST:-${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}}" \
+        "$(nproc 2> /dev/null || getconf _NPROCESSORS_ONLN)"; then
+        exit 1
+    fi
+    export INSTANCE_LETTER="${INSTANCE_LETTER:-$REGISTERED_LETTER}"
+    export NUM_WORKERS="${NUM_WORKERS:-$REGISTERED_NUM_WORKERS}"
+    # The env file is what `docker run --env-file` hands the render steps and
+    # the container; drop any empty assignment deploy.sh wrote first.
+    sed -i.bak -e '/^INSTANCE_LETTER=/d' -e '/^NUM_WORKERS=/d' "$ENV_FILE" && rm -f "$ENV_FILE.bak"
+    printf 'INSTANCE_LETTER=%s\nNUM_WORKERS=%s\n' "$INSTANCE_LETTER" "$NUM_WORKERS" >> "$ENV_FILE"
+fi
+echo "Identity: letter ${INSTANCE_LETTER}, ${NUM_WORKERS} workers"
 MANIFEST="$STATIC_DIR/asset-manifest.json"
 if [ ! -f "$MANIFEST" ]; then
     echo "❌ Manifest not found at $MANIFEST"
@@ -403,7 +474,7 @@ echo "Starting new container for ${HOST} environment..."
 docker network create web 2> /dev/null || true
 
 # Traefik Host() rule. The container always answers on its game host —
-# GAME_HOST, as deploy.sh settled it from the deploy target, or
+# GAME_HOST, as deploy.sh settled it, or
 # <subdomain>.<GAME_DOMAIN>/<subdomain>.<DOMAIN> for an env file written by
 # hand. With GAME_DOMAIN set a standalone deployment also owns its page host
 # (<subdomain>.<DOMAIN>) during the transition, until the static Worker is

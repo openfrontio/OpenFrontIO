@@ -136,19 +136,13 @@ if [ -n "$GAME_DOMAIN" ]; then
     echo "Using game domain: $GAME_DOMAIN (page domain: $DOMAIN)"
 fi
 
-# Identity (docs/MultiServer.md). A server knows only itself, and everything
-# it knows arrives here from the deploy target — a release.yml
-# DEPLOY_TARGETS_* entry, a deploy.yml DEPLOY_TARGETS_DEV entry, or nothing
-# at all for a branch preview — and goes into the container's env file:
+# Identity (docs/MultiServer.md). Where a container answers comes from the
+# deploy target and is settled here; WHO it is (its letter, its worker count)
+# is the API registry's answer, fetched on the box by update.sh's "register"
+# block. INSTANCE_LETTER and NUM_WORKERS are not set by any workflow: a value
+# in this script's environment is passed through and wins over the registry,
+# for a hand-run deploy while the API is down.
 #
-#   INSTANCE_LETTER  leads every game id this server mints, and so names it
-#                    for the life of every game (append-only per site; the
-#                    API registry binds it to the host). Required on prod.
-#                    Outside prod it defaults to "a": a preview or nightly is
-#                    its own site with its own single server, so no config.
-#   NUM_WORKERS      worker processes, frozen while the letter has live games
-#                    (ids route by hash % NUM_WORKERS). Required on prod,
-#                    defaults to 2 outside it.
 #   GAME_HOST        the name clients open sockets to. Defaults to the
 #                    standalone shape <subdomain>.<game domain> — which is
 #                    also prod's blue.openfront.io behind the balancer. A
@@ -173,25 +167,18 @@ fi
 # ssh and cannot be executed in a test, but this decision can. Keep them in
 # place.
 # --- BEGIN identity (tested) ---
-if [ "$ENV" = "prod" ]; then
-    for required in INSTANCE_LETTER NUM_WORKERS; do
-        if [ -z "${!required:-}" ]; then
-            echo "Error: ${required} must be set for prod deploys (the deploy target entry carries it)"
-            exit 1
-        fi
-    done
-fi
-INSTANCE_LETTER="${INSTANCE_LETTER:-a}"
-NUM_WORKERS="${NUM_WORKERS:-2}"
+INSTANCE_LETTER="${INSTANCE_LETTER:-}"
+NUM_WORKERS="${NUM_WORKERS:-}"
 case "$INSTANCE_LETTER" in
-    [a-z]) ;;
+    "" | [a-z]) ;;
     *)
         echo "Error: INSTANCE_LETTER must be one lowercase letter, got: '${INSTANCE_LETTER}'"
         exit 1
         ;;
 esac
 case "$NUM_WORKERS" in
-    "" | *[!0-9]* | 0*)
+    "") ;;
+    *[!0-9]* | 0*)
         echo "Error: NUM_WORKERS must be a positive integer, got: '${NUM_WORKERS}'"
         exit 1
         ;;
@@ -218,7 +205,7 @@ if [ -z "${SITE_HOST:-}" ]; then
         SITE_HOST="${SUBDOMAIN}.${DOMAIN}"
     fi
 fi
-echo "Identity: letter ${INSTANCE_LETTER}, ${NUM_WORKERS} workers, game host ${GAME_HOST}, site ${SITE_HOST:-<self>}"
+echo "Identity: game host ${GAME_HOST}, site ${SITE_HOST:-<self>}"
 # --- END identity (tested) ---
 
 # Hand the resolved game host back to the workflow (deploy.yml, "Wait for

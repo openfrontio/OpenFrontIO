@@ -45,30 +45,35 @@ behavior except the bugs it fixes.
 
 ## Server identity (formerly `cluster.json`)
 
-A server knows only itself. Its identity arrives in its env from the deploy
-target entry that deployed it (`deploy.sh`, "identity"):
+A server knows only itself, from four env vars. Where it answers
+(`GAME_HOST`, `SITE_HOST`) is settled by `deploy.sh` from the deploy target;
+who it is (`INSTANCE_LETTER`, `NUM_WORKERS`) is the API registry's answer.
+`update.sh` asks once per deploy, on the box, before anything is rendered or
+swapped (`POST /cluster/register` with `{site, host, cpus}`; infra
+`docs/cluster-registry.md`, "Registration") and writes the reply into the
+container's env file.
 
-| Env               | Meaning                                                                                                                                                                                                                                           |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `INSTANCE_LETTER` | Leads every game id it mints. Append-only per site, never reused; the registry binds it to the host permanently. Required on prod, defaults to `a` outside it (a preview is its own site).                                                        |
-| `NUM_WORKERS`     | Worker processes. Frozen while the letter has live games (ids route by `hash % NUM_WORKERS`). Required on prod, defaults to 2 outside it.                                                                                                         |
-| `GAME_HOST`       | The name clients open sockets to. Defaults to `<subdomain>.<game domain>`; a machine-scoped fleet member (`blue.nbg2.<game domain>`) passes it. Also decides the container name (update.sh).                                                      |
-| `SITE_HOST`       | The page host. Passed explicitly it wins (a target entry's optional `site`); else the apex (`DOMAIN`) for the `blue` and `green` slots, which belong to the apex site by convention; else `<subdomain>.<DOMAIN>` under `GAME_DOMAIN`; else empty. |
+| Env               | Meaning                                                                                                                                                                                                                                                   |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INSTANCE_LETTER` | Leads every game id it mints. The registry hands a host the letter already bound to it, or the site's lowest unused one; bindings are permanent and letters are never reused.                                                                             |
+| `NUM_WORKERS`     | Worker processes. The operator's setting for that letter in the admin panel's Cluster page, else the API's default for the machine's thread count. Fixed for the container's life (ids route by `hash % NUM_WORKERS`): a change lands on the next deploy. |
+| `GAME_HOST`       | The name clients open sockets to. Defaults to `<subdomain>.<game domain>`; a machine-scoped fleet member (`blue.nbg2.<game domain>`) passes it. Also decides the container name (update.sh).                                                              |
+| `SITE_HOST`       | The page host. Passed explicitly it wins (a target entry's optional `site`); else the apex (`DOMAIN`) for the `blue` and `green` slots, which belong to the apex site by convention; else `<subdomain>.<DOMAIN>` under `GAME_DOMAIN`; else empty.         |
 
-The deploy target entries carry these fields — `DEPLOY_TARGETS_BLUE`,
-`DEPLOY_TARGETS_GREEN`, `DEPLOY_TARGETS_BETA` for the release, and
-`DEPLOY_TARGETS_DEV` for the nightly:
+A deploy that cannot reach the registry fails before the old container is
+touched. `INSTANCE_LETTER` and `NUM_WORKERS` set in `deploy.sh`'s own
+environment are passed through and win over the registry, for a hand-run
+deploy while the API is down. Local development registers nowhere and defaults
+to `a` and 2.
+
+The deploy targets (`DEPLOY_TARGETS_BLUE`, `DEPLOY_TARGETS_GREEN`,
+`DEPLOY_TARGETS_BETA` for the release, `DEPLOY_TARGETS_DEV` for the nightly)
+only say where containers run:
 
 ```json
 [
-  { "host": "falk2", "subdomain": "blue", "letter": "c", "numWorkers": 20 },
-  {
-    "host": "nbg2",
-    "subdomain": "blue",
-    "letter": "f",
-    "numWorkers": 20,
-    "gameHost": "blue.nbg2.openfront.io"
-  }
+  { "host": "falk2", "subdomain": "blue" },
+  { "host": "nbg2", "subdomain": "blue", "gameHost": "blue.nbg2.openfront.io" }
 ]
 ```
 
@@ -324,23 +329,23 @@ All of these are config edits; no code changes.
    local runs, but in CI only `SERVER_HOST_FALK2` is wired through — every
    other machine must be in the directory.
 4. Vars: add the machine's blue and green to the `DEPLOY_TARGETS_BLUE` and
-   `DEPLOY_TARGETS_GREEN` **repository** vars, each with a fresh letter
-   (append-only — never reuse one), its worker count and its game host:
-   `[{"host":"falk2","subdomain":"blue","letter":"c","numWorkers":20},{"host":"nbg2","subdomain":"blue","letter":"f","numWorkers":20,"gameHost":"blue.nbg2.openfront.io"}]`
-   (machine-scoped: the subdomain is the slot, the host is the machine).
+   `DEPLOY_TARGETS_GREEN` **repository** vars with their game hosts:
+   `[{"host":"falk2","subdomain":"blue"},{"host":"nbg2","subdomain":"blue","gameHost":"blue.nbg2.openfront.io"}]`
+   (machine-scoped: the subdomain is the slot, the host is the machine). The
+   registry assigns each new host a letter on its first deploy and sizes its
+   workers from the machine; adjust the count on the admin Cluster page.
    Repository-level, not environment-level: GitHub expands a job's matrix
    before its environment exists, so an environment-scoped var would be
    invisible there and the jobs would silently deploy only the single-box
-   default. The deploy jobs run one sequential matrix leg per entry, stop
-   the rollout at the first failing machine, and refuse a subdomain whose
-   cluster entry carries the other color.
+   default. The deploy jobs run one sequential matrix leg per entry and stop
+   the rollout at the first failing machine.
 5. Cloudflare: add the new blue/green origins to their pools.
-6. Deploy (fleet redeploy so every server sees the new map).
+6. Deploy.
 
 Removal is the reverse, drain-first: drop the machine from the
 `DEPLOY_TARGETS_*` vars and the CF pools, let its letters drain (flip away,
-wait for games to end), then delete its cluster entries and its
-`SERVER_HOSTS_JSON` entry. The letters stay retired forever.
+wait for games to end), then retire its letters on the admin Cluster page and
+delete its `SERVER_HOSTS_JSON` entry. The letters stay retired forever.
 
 ## Future (discussed, not built)
 
