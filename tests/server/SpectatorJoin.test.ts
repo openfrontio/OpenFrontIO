@@ -342,8 +342,8 @@ describe("GameServer - spectators", () => {
   });
 
   it("may join after the game has started", () => {
-    // A caster arriving mid-game is the normal case; a late player already
-    // gets the same treatment, so this only has to keep working.
+    // A caster arriving mid-game is the normal case. Only a late *player* is
+    // turned away; asking to watch must keep working.
     const game = makeGame();
     startGame(game);
     expect(game.joinClient(makeClient("cast", true))).toBe("joined");
