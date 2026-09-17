@@ -731,6 +731,7 @@ export async function startWorker() {
           friends,
           clientMsg.spectator === true,
           trusted,
+          clientMsg.platform,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
