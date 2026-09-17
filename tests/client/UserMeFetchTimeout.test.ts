@@ -28,7 +28,7 @@ const profile = {
     unlimitedRanked: false,
     canCreatePublicLobbies: false,
     flares: [],
-    achievements: { singleplayerMap: [] },
+    achievements: { player: [], singleplayerMap: [] },
     friends: [],
     subscription: null,
   },
