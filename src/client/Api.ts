@@ -236,10 +236,22 @@ async function requestUserMe(): Promise<{
       signal: AbortSignal.timeout(10_000),
     });
     if (response.status === 401) {
+      // Only when the session that issued this request is still the current
+      // one — the same guard, and the same reason, as the setPlayerId one
+      // below. logOut() POSTs /auth/logout with credentials, revoking
+      // whatever refresh cookie is live *now*, so a 401 that merely reports
+      // the death of a session already replaced (sign-out then sign-in while
+      // this was in flight, which the post-game poll made reachable) would
+      // end the session that replaced it, signing out the player who just
+      // signed in. A 401 for the session that is still current is a genuine
+      // conclusion about it and still ends it.
+      //
       // Clearing the session announces itself (see clearLocalSession), so
       // consumers holding account state don't mistake this for the
       // transient failure the `false` below also represents.
-      await logOut();
+      if (isSessionActive(claims.sub)) {
+        await logOut();
+      }
       return { profile: false, aborted: false };
     }
     if (response.status !== 200) return { profile: false, aborted: false };
