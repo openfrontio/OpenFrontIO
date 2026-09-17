@@ -68,6 +68,12 @@ describe("alliance stats", () => {
     expect(a[ALLIANCE_INDEX_LONGEST_HELD]).toBe(1200n);
   });
 
+  it("treats alliances held to the end as a snapshot, not a running total", () => {
+    stats.recordAlliancesAtEnd(player1, 2, 1200);
+    stats.recordAlliancesAtEnd(player1, 2, 1200);
+    expect(client1Stats().alliances![ALLIANCE_INDEX_HELD_TO_END]).toBe(2n);
+  });
+
   it("lets a still-standing alliance beat an earlier broken one", () => {
     stats.allianceEnded(player1, 300, "brokenByOther");
     stats.recordAlliancesAtEnd(player1, 1, 1500);
@@ -131,6 +137,14 @@ describe("alliance stats wiring (GameImpl)", () => {
 
   it("credits only the betrayed party on a break, not the breaker", () => {
     const alliance = formAlliance();
+    // Let the alliance actually run. Breaking it in the tick it formed makes
+    // every duration 0n, and the breaker's longest-held assertion below then
+    // reduces to 0n === 0n -- which still passes with the breaker's
+    // allianceEnded call deleted.
+    for (let i = 0; i < 7; i++) game.executeNextTick();
+    const ticksHeld = BigInt(game.ticks() - alliance.createdAt());
+    expect(ticksHeld).toBeGreaterThan(0n);
+
     player1.breakAlliance(alliance);
     const s = game.stats().stats();
     // player2 was betrayed
@@ -145,8 +159,46 @@ describe("alliance stats wiring (GameImpl)", () => {
         0n,
     ).toBe(0n);
     expect(
+      playerStats(s, "client2").alliances![ALLIANCE_INDEX_LONGEST_HELD],
+    ).toBe(ticksHeld);
+    expect(
       playerStats(s, "client1").alliances![ALLIANCE_INDEX_LONGEST_HELD],
     ).toBe(playerStats(s, "client2").alliances![ALLIANCE_INDEX_LONGEST_HELD]);
+  });
+
+  it("credits both sides' longest held when an alliance ends by elimination", () => {
+    const alliance = formAlliance();
+    for (let i = 0; i < 9; i++) game.executeNextTick();
+    const ticksHeld = BigInt(game.ticks() - alliance.createdAt());
+    expect(ticksHeld).toBeGreaterThan(0n);
+
+    // What PlayerExecution.removeOnDeath() does when a player is eliminated.
+    player2.removeAllAlliances();
+
+    const s = game.stats().stats();
+    for (const clientID of ["client1", "client2"]) {
+      const a = playerStats(s, clientID).alliances!;
+      expect(a[ALLIANCE_INDEX_LONGEST_HELD]).toBe(ticksHeld);
+      // Nobody betrayed anyone and nothing timed out.
+      expect(a[ALLIANCE_INDEX_BROKEN_BY_OTHER] ?? 0n).toBe(0n);
+      expect(a[ALLIANCE_INDEX_EXPIRED] ?? 0n).toBe(0n);
+    }
+  });
+
+  it("does not leave the survivor's longest held at zero when their ally is eliminated", () => {
+    // The whole point of the elimination wiring: the survivor played out a
+    // long alliance and the game ends with them, so recordAlliancesAtEnd
+    // never sees it -- it was detached at the moment of the elimination.
+    const alliance = formAlliance();
+    for (let i = 0; i < 12; i++) game.executeNextTick();
+    const ticksHeld = BigInt(game.ticks() - alliance.createdAt());
+
+    player2.removeAllAlliances();
+    game.setWinner(player1, game.stats().stats());
+
+    const a = playerStats(game.stats().stats(), "client1").alliances!;
+    expect(a[ALLIANCE_INDEX_LONGEST_HELD]).toBe(ticksHeld);
+    expect(a[ALLIANCE_INDEX_HELD_TO_END]).toBe(0n);
   });
 
   it("does not count a break against a disconnected player as betrayal", () => {

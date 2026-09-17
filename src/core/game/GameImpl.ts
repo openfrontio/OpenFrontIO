@@ -895,7 +895,19 @@ export class GameImpl implements Game {
   public removeAlliancesByPlayerSilently(player: Player): void {
     // Snapshot — detachAlliance reassigns the player's _alliances as it goes.
     const removed = [...(player as PlayerImpl)._alliances];
-    for (const alliance of removed) this.detachAlliance(alliance);
+    for (const alliance of removed) {
+      // Elimination is the fourth way an alliance ends, and in practice the
+      // commonest. Nobody betrayed and nothing expired, so no counter moves;
+      // the null counter is here purely so both sides' longest-held maximum
+      // still sees the alliance. Without this the survivor's longest held
+      // would silently read 0 from an alliance that ran the whole game, and
+      // recordAlliancesAtEnd cannot pick it up either — by then it is
+      // already detached.
+      const duration = this._ticks - alliance.createdAt();
+      this.stats().allianceEnded(alliance.requestor(), duration, null);
+      this.stats().allianceEnded(alliance.recipient(), duration, null);
+      this.detachAlliance(alliance);
+    }
   }
 
   /** Remove an alliance from both participants' per-player alliance lists. */

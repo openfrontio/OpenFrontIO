@@ -201,6 +201,15 @@ export class StatsImpl implements Stats {
     arr[index] += _bigint(value);
   }
 
+  /** For slots holding a snapshot of end-of-game state rather than a running
+   * total, so that writing one twice cannot silently double it. */
+  private _setAlliance(player: Player, index: number, value: BigIntLike) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    const arr = this._allianceArray(p, index);
+    arr[index] = _bigint(value);
+  }
+
   attack(
     player: Player,
     target: Player | TerraNullius,
@@ -362,7 +371,11 @@ export class StatsImpl implements Stats {
     stillStanding: number,
     longestStandingTicks: BigIntLike,
   ): void {
-    this._addAlliance(player, ALLIANCE_INDEX_HELD_TO_END, stillStanding);
+    // HELD_TO_END is a count of what was standing at the final tick, not a
+    // tally of events: it is written, not accumulated. Today setWinner runs
+    // once per game, but an additive write would double silently the day that
+    // stops being true, and no assertion anywhere would catch it.
+    this._setAlliance(player, ALLIANCE_INDEX_HELD_TO_END, stillStanding);
     this._maxAlliance(
       player,
       ALLIANCE_INDEX_LONGEST_HELD,
