@@ -11,6 +11,7 @@ import { lobbyFrame } from "./util/Wire";
 
 const mocks = vi.hoisted(() => ({
   ensureServerList: vi.fn(async (): Promise<string> => "api"),
+  refreshServerList: vi.fn(async (): Promise<string> => "api"),
   // The post-failure question (ServerList.reloadWouldRescue): would a
   // reload actually land this tab somewhere better? Asked only once
   // reconnecting has given up, never at page load.
@@ -30,6 +31,7 @@ vi.mock("../src/client/ServerList", async (importOriginal) => {
   return {
     ...actual,
     ensureServerList: mocks.ensureServerList,
+    refreshServerList: mocks.refreshServerList,
     reloadWouldRescue: mocks.reloadWouldRescue,
   };
 });
@@ -368,8 +370,8 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     socket.stop();
   });
 
-  // A deploy outlasts the fast attempts. A socket that stopped for good there
-  // left the homepage saying "unavailable" until the player reloaded.
+  // A deploy outlasts the fast attempts, and the homepage says "unavailable"
+  // from the give-up until a frame arrives.
   it("keeps re-dialing after giving up, and recovers without a start()", async () => {
     vi.useFakeTimers();
     try {
@@ -387,8 +389,11 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
       const connect = vi.spyOn(socket as any, "connectWebSocket");
       await vi.advanceTimersByTimeAsync(1000);
       expect(connect).not.toHaveBeenCalled();
+      // Discovery's own call, so the dial reads the list as it is now.
+      mocks.ensureServerList.mockClear();
       await vi.advanceTimersByTimeAsync(45_000);
       expect(connect).toHaveBeenCalledTimes(1);
+      expect(mocks.ensureServerList).toHaveBeenCalledTimes(1);
 
       // Still down: no second announcement, and another slow retry.
       (socket as any).handleClose();
@@ -449,6 +454,83 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
 
     sockets[1].emit("close");
     expect(onGaveUp).toHaveBeenCalledTimes(1);
+    socket.stop();
+  });
+
+  function deferredStatus() {
+    let settle!: (status: string) => void;
+    const promise = new Promise<string>((resolve) => {
+      settle = resolve;
+    });
+    return { promise, settle };
+  }
+
+  function countSockets(): { count: number } {
+    const made = { count: 0 };
+    vi.stubGlobal(
+      "WebSocket",
+      class extends FakeWebSocket {
+        constructor(url: string) {
+          super(url);
+          made.count++;
+        }
+      },
+    );
+    return made;
+  }
+
+  // Discovery answers from a cached list at once, and after a failure that
+  // list may still name the server that died.
+  it("waits for a refreshed list before dialing when asked to", async () => {
+    const made = countSockets();
+    const refresh = deferredStatus();
+    mocks.refreshServerList.mockReset();
+    mocks.refreshServerList.mockReturnValue(refresh.promise);
+    const socket = new PublicLobbySocket(vi.fn(), {});
+
+    const started = socket.start({ refreshList: true });
+    await Promise.resolve();
+    expect(made.count).toBe(0);
+    expect(mocks.ensureServerList).not.toHaveBeenCalled();
+
+    refresh.settle("api");
+    await started;
+    expect(made.count).toBe(1);
+    socket.stop();
+  });
+
+  it("dials once when a second start() lands while the first is still waiting for the list", async () => {
+    const made = countSockets();
+    const first = deferredStatus();
+    mocks.ensureServerList.mockReturnValueOnce(first.promise);
+    const socket = new PublicLobbySocket(vi.fn(), {});
+
+    const stale = socket.start();
+    await socket.start();
+    expect(made.count).toBe(1);
+
+    first.settle("api");
+    await stale;
+    expect(made.count).toBe(1);
+    socket.stop();
+  });
+
+  it("does not dial for a start() that was stopped and restarted while it waited", async () => {
+    const made = countSockets();
+    const first = deferredStatus();
+    const onUpdateAvailable = vi.fn();
+    mocks.ensureServerList.mockReturnValueOnce(first.promise);
+    const socket = new PublicLobbySocket(vi.fn(), { onUpdateAvailable });
+
+    const stale = socket.start();
+    socket.stop();
+    await socket.start();
+    expect(made.count).toBe(1);
+
+    first.settle("outdated");
+    await stale;
+    expect(made.count).toBe(1);
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
     socket.stop();
   });
 

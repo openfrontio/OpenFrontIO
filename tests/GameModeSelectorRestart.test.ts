@@ -12,7 +12,11 @@ import type { PublicGames } from "../src/core/Schemas";
 // lifecycle, not the wire, so the socket is a spy -- following the same
 // pattern as GameModeSelectorGatingWiring.test.ts.
 const { socketCalls, lobbiesCallbackRef, gaveUpRef } = vi.hoisted(() => ({
-  socketCalls: { started: 0, stopped: 0 },
+  socketCalls: {
+    started: 0,
+    stopped: 0,
+    lastStart: undefined as { refreshList?: boolean } | undefined,
+  },
   lobbiesCallbackRef: { current: null as ((g: PublicGames) => void) | null },
   gaveUpRef: { current: null as (() => void) | null },
 }));
@@ -26,8 +30,9 @@ vi.mock("../src/client/LobbySocket", () => ({
       lobbiesCallbackRef.current = onUpdate;
       gaveUpRef.current = options?.onGaveUp ?? null;
     }
-    start(): void {
+    start(options?: { refreshList?: boolean }): void {
       socketCalls.started++;
+      socketCalls.lastStart = options;
     }
     stop(): void {
       socketCalls.stopped++;
@@ -340,43 +345,77 @@ describe("GameModeSelector lobby feed while the desktop session is gated", () =>
     expect(selector.querySelector(".animate-spin")).not.toBeNull();
   });
 
-  // The reported dead end: the socket gave up during a deploy, the API was
-  // fine so no outage showed anywhere, and nothing on the page could reopen
-  // the feed short of a reload.
+  function retryButton(): HTMLButtonElement | undefined {
+    return Array.from(selector.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("mode_selector.retry_lobbies"),
+    );
+  }
+
+  // The API answers here, so no outage shows anywhere: without the Retry the
+  // only way to reopen a feed that gave up is a reload.
   it("offers a Retry that reopens the feed once the socket gives up", async () => {
     gaveUpRef.current?.();
     await selector.updateComplete;
     const started = socketCalls.started;
+    const probe = vi.spyOn(ServerList, "refreshServerList");
 
-    const retry = Array.from(selector.querySelectorAll("button")).find((b) =>
-      b.textContent?.includes("mode_selector.retry_lobbies"),
-    );
-    expect(retry).toBeDefined();
-    // The API is "reachable" here, and the list is asked again all the same:
-    // a static page whose cluster.json answered without a list has no server
-    // to dial until it does.
-    let settle!: (status: "fallback") => void;
-    const probe = vi.spyOn(ServerList, "retryServerList").mockReturnValue(
-      new Promise((resolve) => {
-        settle = resolve;
-      }),
-    );
-    retry!.click();
+    retryButton()!.click();
     await selector.updateComplete;
 
-    expect(probe).toHaveBeenCalledTimes(1);
-    probe.mockRestore();
-    // Spinning already, but not dialing until the list is back: discovery
-    // answers from a cached list at once, and that list names the server
-    // that just died.
-    expect(selector.querySelector(".animate-spin")).not.toBeNull();
-    expect(socketCalls.started).toBe(started);
-
-    settle("fallback");
-    await Promise.resolve();
-    await Promise.resolve();
+    // The socket is what waits for the list, so the refresh-then-dial order
+    // has one owner; a probe from here as well would race it.
     expect(socketCalls.started).toBe(started + 1);
+    expect(socketCalls.lastStart).toEqual({ refreshList: true });
+    expect(probe).not.toHaveBeenCalled();
     expect(selector.querySelector(".animate-spin")).not.toBeNull();
+    probe.mockRestore();
+  });
+
+  it("does not reopen from Retry a feed Main stopped for a game", async () => {
+    gaveUpRef.current?.();
+    await selector.updateComplete;
+    selector.stop();
+    const started = socketCalls.started;
+    const probe = vi
+      .spyOn(ServerList, "refreshServerList")
+      .mockResolvedValue("fallback");
+
+    retryButton()!.click();
+
+    expect(socketCalls.started).toBe(started);
+    probe.mockRestore();
+  });
+
+  it("only probes the list on an outage whose feed has not given up, and holds the button for the cooldown", async () => {
+    vi.useFakeTimers();
+    const probe = vi
+      .spyOn(ServerList, "refreshServerList")
+      .mockResolvedValue("fallback");
+    try {
+      document.dispatchEvent(
+        new CustomEvent("backend-reachability", {
+          detail: { reachable: false, confirmed: true },
+        }),
+      );
+      await selector.updateComplete;
+      const started = socketCalls.started;
+
+      retryButton()!.click();
+      await selector.updateComplete;
+      expect(probe).toHaveBeenCalledTimes(1);
+      expect(socketCalls.started).toBe(started);
+      expect(retryButton()!.disabled).toBe(true);
+
+      retryButton()!.click();
+      expect(probe).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(ServerList.MANUAL_RETRY_COOLDOWN_MS);
+      await selector.updateComplete;
+      expect(retryButton()!.disabled).toBe(false);
+    } finally {
+      probe.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
   it("says the servers cannot be reached on a confirmed outage, never that the player is offline", async () => {

@@ -522,9 +522,9 @@ blue for a game that lived on a host its list could not name.
   page into fallback. Only a client that never got a list falls back.
 - **Reachability (two signals, OPE-439):** `backendReachable()` is the raw
   per-attempt answer — null until the first attempt settles, true when the
-  API answered at all (a 404 included: reachable, but no list for this
-  site), false on a timeout or network error. It is deliberately twitchy,
-  so nothing player-facing gates on it.
+  API answered with anything below a 500 (a 404 included: reachable, but no
+  list for this site), false on a timeout, a network error or a 5xx. It is
+  deliberately twitchy, so nothing player-facing gates on it.
   `backendUnreachableConfirmed()` is the debounced one the UI uses: true
   only once **two** attempts in a row have gone unanswered, which takes the
   base retry delay (10s) to accumulate — the backoff only stretches once
@@ -570,6 +570,13 @@ blue for a game that lived on a host its list could not name.
     either way — which is what makes that toast's "try again" true. Without
     it a web player's only way out would be the heartbeat's next beat, up to
     `RETRY_MAX_MS` away.
+  - **Both:** the Retry in the homepage's lobby slot, shown when the public
+    lobby feed has given up or an outage is confirmed (never on a gated
+    desktop session, where the status bar owns the remedy). It goes through
+    `refreshServerList()`, which applies the same policy and otherwise waits
+    for the attempt already in flight, so a `PublicLobbySocket.start` with
+    `refreshList` never dials from a list older than the answer it could
+    have had.
 
 - **What reachability may gate, and what it may not.** The rule, stated
   once at the top of `GameModeSelector.ts` and referenced from every call

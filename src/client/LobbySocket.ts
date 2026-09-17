@@ -2,7 +2,11 @@ import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { showInGameAlert } from "./InGameModal";
-import { ensureServerList, reloadWouldRescue } from "./ServerList";
+import {
+  ensureServerList,
+  refreshServerList,
+  reloadWouldRescue,
+} from "./ServerList";
 import { translateText } from "./Utils";
 
 interface LobbySocketOptions {
@@ -37,6 +41,10 @@ export class PublicLobbySocket {
   private gaveUp = false;
   private workerPath: string = "";
   private stopped = true;
+  // Bumped by start() and stop(). A continuation that awaited the server
+  // list under an older value belongs to a run that has been replaced,
+  // and must neither dial nor prompt on its behalf.
+  private generation = 0;
   // Latest full snapshot, used as the base for applying counts-only deltas.
   private lastFull: PublicGames | null = null;
 
@@ -56,13 +64,17 @@ export class PublicLobbySocket {
     this.onGaveUp = options?.onGaveUp;
   }
 
-  async start() {
+  // `refreshList` is for a start the player asked for after a failure: the
+  // cached list answers discovery at once, and may still name the server that
+  // just died, so the dial waits for ServerList.refreshServerList instead.
+  async start(options?: { refreshList?: boolean }) {
     this.stopped = false;
+    this.generation++;
     this.wsConnectionAttempts = 0;
     this.gaveUp = false;
     // A start() over a pending slow retry must dial now, not join its wait.
     this.disconnectWebSocket();
-    await this.discoverAndConnect();
+    await this.discoverAndConnect(options?.refreshList);
   }
 
   /**
@@ -94,15 +106,18 @@ export class PublicLobbySocket {
    * counter is deliberately NOT reset (start() owns that), so the retries
    * still give up after maxWsAttempts.
    */
-  private async discoverAndConnect(): Promise<void> {
+  private async discoverAndConnect(refreshList = false): Promise<void> {
     // Each discovery attempt counts, the way each socket attempt does.
     // connectWebSocket clears this after it builds a socket; the discovery
     // path never gets that far, so without clearing it here the counter
     // would freeze at one and the retry would run every reconnectDelay
     // forever, never reaching maxWsAttempts and never telling the player.
     this.wsAttemptCounted = false;
-    const listStatus = await ensureServerList();
-    if (this.stopped) return;
+    const generation = this.generation;
+    const listStatus = await (refreshList
+      ? refreshServerList()
+      : ensureServerList());
+    if (generation !== this.generation) return;
     if (listStatus === "outdated") this.fireUpdateAvailable();
     // Get config to determine number of workers, then pick a random one.
     // With no list and nothing injected there is no server to ask (a static
@@ -113,7 +128,7 @@ export class PublicLobbySocket {
       this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
     } catch (e) {
       if (!(e instanceof NoServerError)) throw e;
-      this.handleConnectError(e, () => void this.discoverAndConnect());
+      this.handleConnectError(e, true);
       return;
     }
     this.connectWebSocket();
@@ -121,6 +136,7 @@ export class PublicLobbySocket {
 
   stop() {
     this.stopped = true;
+    this.generation++;
     this.lastFull = null;
     this.disconnectWebSocket();
   }
@@ -311,8 +327,9 @@ export class PublicLobbySocket {
     if (this.updateAvailableFired || this.onUpdateAvailable === undefined) {
       return;
     }
+    const generation = this.generation;
     const listStatus = await ensureServerList();
-    if (this.stopped) return;
+    if (generation !== this.generation) return;
     if (reloadWouldRescue(listStatus)) this.fireUpdateAvailable();
   }
 
@@ -320,10 +337,10 @@ export class PublicLobbySocket {
     console.error("WebSocket error:", error);
   }
 
-  // `retry` is what the next attempt should run, for a failure a plain
-  // reconnect cannot fix: with no server known it has to re-run discovery,
-  // not re-dial an empty worker path. Defaults to reconnecting the socket.
-  private handleConnectError(error: unknown, retry?: () => void) {
+  // `rediscover` is for a failure a plain reconnect cannot fix: with no server
+  // known the next attempt has to re-run discovery, not re-dial an empty
+  // worker path.
+  private handleConnectError(error: unknown, rediscover = false) {
     console.error("Error connecting WebSocket:", error);
     if (!this.wsAttemptCounted) {
       this.wsAttemptCounted = true;
@@ -332,15 +349,17 @@ export class PublicLobbySocket {
     if (this.wsConnectionAttempts >= this.maxWsAttempts && this.giveUp()) {
       void showInGameAlert(translateText("error_modal.connection_error"));
     }
-    this.scheduleReconnect(retry);
+    this.scheduleReconnect(rediscover);
   }
 
-  private scheduleReconnect(retry?: () => void) {
+  private scheduleReconnect(rediscover = false) {
     if (this.wsReconnectTimeout !== null) return;
     this.wsReconnectTimeout = window.setTimeout(() => {
       this.wsReconnectTimeout = null;
-      if (retry !== undefined) {
-        retry();
+      // A slow re-dial rediscovers too: by now the list may name another
+      // server, and the worker path was drawn from the old one's count.
+      if (rediscover || this.gaveUp) {
+        void this.discoverAndConnect();
         return;
       }
       this.connectWebSocket();

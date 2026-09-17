@@ -517,7 +517,8 @@ export async function ensureServerList(): Promise<ServerListStatus> {
  * state, and -- because the web has no such bar -- a refused multiplayer
  * click on the web, which doubles as that press
  * (GameModeSelector.reportMultiplayerRefusal). Both gate themselves on
- * manualRetryAvailable()'s policy first.
+ * manualRetryAvailable()'s policy first, as does refreshServerList below,
+ * which is how the lobby slot's Retry gets here.
  *
  * Deliberately ignores the heartbeat's retry schedule. That backoff exists
  * to stop TIMER-driven callers hammering a down API between beats, and a
@@ -561,6 +562,31 @@ async function runManualRetry(): Promise<ServerListStatus> {
     return apply();
   } catch (e) {
     console.warn("Server list retry failed, using page values", e);
+    return "fallback";
+  }
+}
+
+/**
+ * The freshest list a player-initiated action can have before it dials: what
+ * the lobby slot's Retry waits on (PublicLobbySocket.start). ensureServerList
+ * cannot serve it, because it answers from the cached list at once, and after
+ * a failure that list may still name the server that just died.
+ *
+ * Owns the whole ordering so no caller has to rebuild it from the accessors:
+ * a retry when manualRetryAvailable() allows one, otherwise the attempt
+ * already out, whoever started it. With neither, a manual retry settled
+ * within the cooldown, and the cached list is as fresh as that policy lets
+ * it get.
+ *
+ * Never throws, for the same reason ensureServerList does not.
+ */
+export async function refreshServerList(): Promise<ServerListStatus> {
+  if (manualRetryAvailable()) return retryServerList();
+  try {
+    await inflight;
+    return apply();
+  } catch (e) {
+    console.warn("Server list refresh failed, using page values", e);
     return "fallback";
   }
 }

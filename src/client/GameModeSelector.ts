@@ -39,7 +39,9 @@ import { JoinLobbyEvent } from "./Main";
 import {
   backendUnreachableConfirmed,
   isPinnedToAVersion,
+  MANUAL_RETRY_COOLDOWN_MS,
   manualRetryAvailable,
+  refreshServerList,
   retryServerList,
   type BackendReachabilityDetail,
 } from "./ServerList";
@@ -118,8 +120,8 @@ const TUTORIAL_CARD_MAX_GAMES = 5;
  *     the next request would very likely have worked; taking the game away
  *     for a retry interval over one blip is worse than the blip.
  *
- * It is also false when the API answered at all -- a 404 for a site with no
- * list is a reachable backend.
+ * It is also false when the API answered with anything short of a 5xx -- a
+ * 404 for a site with no list is a reachable backend.
  */
 export function multiplayerAllowedForBackend(backendOutage: boolean): boolean {
   return !backendOutage;
@@ -322,8 +324,13 @@ export class GameModeSelector extends LitElement {
   // player is back at the menu). Kept apart from the socket's own state so a
   // session change can close and reopen the feed without forgetting that.
   private feedWanted = false;
-  // The socket stopped reconnecting; cleared by the next start() or snapshot.
+  // The socket ran out of fast attempts and is only re-dialing slowly;
+  // cleared by the next start() or snapshot.
   @state() private feedGaveUp = false;
+  // The lobby slot's Retry is held for ServerList's manual-retry cooldown: a
+  // press inside it could start no request, and would look broken.
+  @state() private retryCoolingDown = false;
+  private retryCooldownTimer: number | undefined;
   // An update/drain signal arrived during a lobby wait; prompt on leave-lobby.
   private updateDeferred = false;
 
@@ -438,6 +445,8 @@ export class GameModeSelector extends LitElement {
 
   disconnectedCallback() {
     this.stop();
+    window.clearTimeout(this.retryCooldownTimer);
+    this.retryCoolingDown = false;
     window.removeEventListener(
       "username-validity-change",
       this.handleValidityChange,
@@ -540,6 +549,10 @@ export class GameModeSelector extends LitElement {
    * snapshot and re-primes the list from the server.
    */
   public start() {
+    this.openLobbyFeed();
+  }
+
+  private openLobbyFeed(refreshList = false) {
     this.feedWanted = true;
     this.feedGaveUp = false;
     if (lobbyFeedSuspended(this.desktopSessionState)) {
@@ -549,7 +562,7 @@ export class GameModeSelector extends LitElement {
       this.lobbies = null;
       return;
     }
-    this.lobbySocket.start();
+    this.lobbySocket.start({ refreshList });
   }
 
   /**
@@ -584,7 +597,8 @@ export class GameModeSelector extends LitElement {
       ${translateText(message)}
       ${canRetry
         ? html`<button
-            class="px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius text-white text-sm font-medium uppercase tracking-wider"
+            class="px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius text-white text-sm font-medium uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-malibu-blue"
+            ?disabled=${this.retryCoolingDown}
             @click=${this.retryLobbies}
           >
             ${translateText("mode_selector.retry_lobbies")}
@@ -594,23 +608,21 @@ export class GameModeSelector extends LitElement {
   }
 
   private retryLobbies = () => {
-    // Not only on a confirmed outage: a feed usually dies because its server
-    // left the list, and a 5xx-then-recovered API leaves a static page with
-    // no server to dial until the heartbeat's next beat.
-    const refreshed = manualRetryAvailable()
-      ? retryServerList().catch((err: unknown) => {
-          console.error("server list retry from the lobby slot failed", err);
-        })
-      : Promise.resolve();
-    // Only a feed that gave up: one still inside its fast attempts is already
-    // dialing, and restarting it would throw that attempt away.
-    if (!this.feedGaveUp) return;
-    // Spin now, dial after the refresh: with a list already cached, discovery
-    // answers from it at once and would re-dial the server that just died.
-    this.feedGaveUp = false;
-    void refreshed.then(() => {
-      if (this.feedWanted) this.start();
-    });
+    if (this.retryCoolingDown) return;
+    this.retryCoolingDown = true;
+    this.retryCooldownTimer = window.setTimeout(() => {
+      this.retryCoolingDown = false;
+    }, MANUAL_RETRY_COOLDOWN_MS);
+    // Only a feed that gave up is reopened: one still inside its fast
+    // attempts is already dialing, and restarting it would throw that attempt
+    // away. The socket refreshes the list itself before it dials.
+    if (this.feedGaveUp && this.feedWanted) {
+      this.openLobbyFeed(true);
+      return;
+    }
+    // Shown over a feed that has not given up, this is a confirmed outage,
+    // which only an answer from the list API clears.
+    void refreshServerList();
   };
 
   private handleLobbiesUpdate(lobbies: PublicGames) {
