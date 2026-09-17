@@ -26,6 +26,8 @@ class TradeStationStopHandler implements TrainStopHandler {
         rel(trainOwner, stationOwner),
         trainExecution.tradeStopsVisited(),
         trainOwner,
+        trainExecution.sourceLevel(),
+        station.unit.level(),
       );
     // Share revenue with the station owner if it's not the current player
     if (trainOwner !== stationOwner) {
