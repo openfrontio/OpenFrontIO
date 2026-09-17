@@ -604,7 +604,7 @@ export async function setCreatorCode(
       return { ok: false, code: "failed" };
     }
     invalidateUserMe();
-    return { ok: true, creator: parsed.data };
+    return { ok: true, creator: parsed.data.creator };
   } catch (e) {
     console.error("setCreatorCode: request failed", e);
     return { ok: false, code: "failed" };
