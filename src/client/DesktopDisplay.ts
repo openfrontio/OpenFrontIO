@@ -161,8 +161,8 @@ export function isDisplaySnapshot(
   return prefs.displayId === null || typeof prefs.displayId === "number";
 }
 
-// Must stay inside the shell's accepted range (UI_SCALE_MIN/MAX in
-// openfront-desktop's displayTypes.ts), or the shell refuses the patch.
+// Mirrors UI_SCALE_STEPS in openfront-desktop's uiScaleKeys.ts, which the
+// zoom keys step through. Values outside UI_SCALE_MIN/MAX are refused.
 export const UI_SCALE_OPTIONS: readonly number[] = [
   0.75, 0.9, 1, 1.1, 1.25, 1.5,
 ];
