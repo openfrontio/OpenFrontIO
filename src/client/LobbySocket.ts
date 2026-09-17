@@ -140,15 +140,29 @@ export class PublicLobbySocket {
       // the desktop app://openfront origin), not window.location.host.
       const wsUrl = `${ClientEnv.serverWsBase()}${this.workerPath}/lobbies`;
 
-      this.ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(wsUrl);
+      this.ws = ws;
       // Frames are zbin payloads; without this they would arrive as Blobs.
-      this.ws.binaryType = "arraybuffer";
+      ws.binaryType = "arraybuffer";
       this.wsAttemptCounted = false;
 
-      this.ws.addEventListener("open", () => this.handleOpen());
-      this.ws.addEventListener("message", (event) => this.handleMessage(event));
-      this.ws.addEventListener("close", () => this.handleClose());
-      this.ws.addEventListener("error", (error) => this.handleError(error));
+      // A replaced socket's close arrives after its successor is dialing, and
+      // would count an attempt against it and schedule a reconnect over it.
+      const current = (handler: () => void) => () => {
+        if (this.ws === ws) handler();
+      };
+      ws.addEventListener(
+        "open",
+        current(() => this.handleOpen()),
+      );
+      ws.addEventListener("message", (event) => {
+        if (this.ws === ws) this.handleMessage(event);
+      });
+      ws.addEventListener(
+        "close",
+        current(() => this.handleClose()),
+      );
+      ws.addEventListener("error", (error) => this.handleError(error));
     } catch (error) {
       this.handleConnectError(error);
     }

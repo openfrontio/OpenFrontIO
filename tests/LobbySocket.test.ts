@@ -414,6 +414,44 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     }
   });
 
+  // start() closes the socket it replaces, and that socket's close event
+  // lands after its successor is already dialing.
+  it("ignores a close from a socket it has already replaced", async () => {
+    const sockets: Array<{ emit: (type: string) => void }> = [];
+    class ListeningWebSocket {
+      static OPEN = 1;
+      readyState = 0;
+      binaryType = "";
+      private listeners = new Map<string, Array<() => void>>();
+      constructor(public url: string) {
+        sockets.push(this);
+      }
+      addEventListener(type: string, fn: () => void) {
+        this.listeners.set(type, [...(this.listeners.get(type) ?? []), fn]);
+      }
+      emit(type: string) {
+        for (const fn of this.listeners.get(type) ?? []) fn();
+      }
+      close() {}
+    }
+    vi.stubGlobal("WebSocket", ListeningWebSocket);
+    const onGaveUp = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onGaveUp,
+      maxWsAttempts: 1,
+    });
+    await socket.start();
+    await socket.start();
+    expect(sockets).toHaveLength(2);
+
+    sockets[0].emit("close");
+    expect(onGaveUp).not.toHaveBeenCalled();
+
+    sockets[1].emit("close");
+    expect(onGaveUp).toHaveBeenCalledTimes(1);
+    socket.stop();
+  });
+
   // The control for the rescue above: the list still has a server for this
   // build, so a socket failure is just a socket failure — a blip, not a
   // deployment that went away. The status is handed over all the same; the
