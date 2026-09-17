@@ -8,9 +8,7 @@ const {
   showToast,
   getUserProfile,
   showAuthPrompt,
-  isOnSteam,
 } = vi.hoisted(() => ({
-  isOnSteam: vi.fn(() => false),
   getUserProfile: vi.fn(async () => null as { username: string } | null),
   showAuthPrompt: vi.fn(async () => null),
   logOut: vi.fn(async () => {}),
@@ -22,9 +20,6 @@ const {
 vi.mock("../../src/client/Auth", () => ({ logOut }));
 vi.mock("../../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: { isOnCrazyGames, getUserProfile, showAuthPrompt },
-}));
-vi.mock("../../src/client/SteamSDK", () => ({
-  steamSDK: { isOnSteam },
 }));
 vi.mock("../../src/client/InGameModal", () => ({ showInGameConfirm }));
 vi.mock("../../src/client/Navigation", () => ({
@@ -72,7 +67,7 @@ describe("nav-account-menu", () => {
     el.remove();
     vi.clearAllMocks();
     isOnCrazyGames.mockReturnValue(false);
-    isOnSteam.mockReturnValue(false);
+    delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
     getUserProfile.mockResolvedValue(null);
     window.showPage = undefined;
   });
@@ -182,7 +177,9 @@ describe("nav-account-menu", () => {
   });
 
   it("drops log-out on Steam, where the ticket signs the player back in", async () => {
-    isOnSteam.mockReturnValue(true);
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      steam: {},
+    };
     fireUserMe(userMe());
     await el.updateComplete;
     await click(trigger());
