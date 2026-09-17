@@ -571,17 +571,17 @@ export class GameModeSelector extends LitElement {
     // A gated desktop session has its remedy in the status bar, and the feed
     // stays closed until it is taken, so a Retry here could only do nothing.
     const canRetry = !lobbyFeedSuspended(this.desktopSessionState);
-    // The feed dying alone is not the player being offline: the API still
-    // answers, so no outage is showing anywhere else.
-    const feedOnly = canRetry && !this.backendOutage;
+    // "Offline" is only ever said of a gated desktop session. An outage is
+    // our servers not answering, which is not the player being offline.
+    const message = !canRetry
+      ? "mode_selector.offline_lobbies"
+      : this.backendOutage
+        ? "mode_selector.servers_unreachable"
+        : "mode_selector.lobbies_unreachable";
     return html`<div
       class="flex flex-col items-center justify-center gap-3 h-44 sm:h-full rounded-xl bg-surface/60 px-6 text-center text-sm font-medium text-white/60"
     >
-      ${translateText(
-        feedOnly
-          ? "mode_selector.lobbies_unreachable"
-          : "mode_selector.offline_lobbies",
-      )}
+      ${translateText(message)}
       ${canRetry
         ? html`<button
             class="px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius text-white text-sm font-medium uppercase tracking-wider"

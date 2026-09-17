@@ -367,6 +367,19 @@ describe("GameModeSelector lobby feed while the desktop session is gated", () =>
     expect(selector.querySelector(".animate-spin")).not.toBeNull();
   });
 
+  it("says the servers cannot be reached on a confirmed outage, never that the player is offline", async () => {
+    document.dispatchEvent(
+      new CustomEvent("backend-reachability", {
+        detail: { reachable: false, confirmed: true },
+      }),
+    );
+    await selector.updateComplete;
+
+    expect(selector.textContent).toContain("mode_selector.servers_unreachable");
+    expect(selector.textContent).not.toContain("mode_selector.offline_lobbies");
+    expect(selector.textContent).toContain("mode_selector.retry_lobbies");
+  });
+
   it("offers no Retry while the session is gated, where the status bar owns the remedy", async () => {
     setSession({ status: "signed-out", reason: "steam-unavailable" });
     await selector.updateComplete;
