@@ -9,6 +9,7 @@ import {
   MANUAL_RETRY_COOLDOWN_MS,
   manualRetryAvailable,
   redirectToGameVersion,
+  refreshServerList,
   reloadWouldRescue,
   resetServerList,
   retryDelayMs,
@@ -597,6 +598,30 @@ describe("backend reachability", () => {
       document.removeEventListener("backend-reachability", listener);
     }
   });
+
+  // Unlike a 404, a 5xx says nothing behind the API can be trusted to work
+  // either, and a static page it leaves without a list has no server to dial.
+  it("counts a 5xx towards the outage, like an attempt nothing answered", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ error: "bad gateway" }, 502),
+    );
+    expect(await ensureServerList()).toBe("fallback");
+    expect(backendReachable()).toBe(false);
+    expect(backendUnreachableConfirmed()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(RETRY_MS);
+    expect(await ensureServerList()).toBe("fallback");
+    expect(backendUnreachableConfirmed()).toBe(true);
+
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ error: "unknown site" }, 404),
+    );
+    await vi.advanceTimersByTimeAsync(RETRY_MS * 2);
+    expect(await ensureServerList()).toBe("fallback");
+    expect(backendReachable()).toBe(true);
+    expect(backendUnreachableConfirmed()).toBe(false);
+  });
 });
 
 /**
@@ -772,6 +797,76 @@ describe("retryServerList", () => {
     });
     expect(await retryServerList()).toBe("fallback");
     expect(backendReachable()).toBe(false);
+  });
+});
+
+// What the lobby slot's Retry dials from. ensureServerList answers from the
+// cached list at once, and after a failure that list may still name the
+// server that just died.
+describe("refreshServerList", () => {
+  const MOVED_LIST = {
+    latest: OWN,
+    servers: {
+      e: {
+        host: "falk2-c.openfront.io",
+        numWorkers: 16,
+        version: OWN,
+        state: "open",
+      },
+    },
+  };
+
+  it("fetches before it answers, where ensureServerList answers from the cache", async () => {
+    expect(await ensureServerList()).toBe("api");
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+
+    fetchMock.mockImplementation(async () => jsonResponse(MOVED_LIST));
+    expect(await ensureServerList()).toBe("api");
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
+  });
+
+  // Inside retryServerList's floor as well, where a press is handed back the
+  // previous, already settled, result.
+  it("waits for an attempt someone else has out rather than answering early", async () => {
+    vi.useFakeTimers();
+    expect(await retryServerList()).toBe("api");
+
+    let release: (r: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      async () =>
+        await new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    startServerListPolling();
+    expect(attemptInFlight()).toBe(true);
+
+    let settled = false;
+    const refreshed = refreshServerList().then((status) => {
+      settled = true;
+      return status;
+    });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(settled).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    release(jsonResponse(MOVED_LIST));
+    expect(await refreshed).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
+  });
+
+  it("answers from the cached list inside the manual-retry cooldown", async () => {
+    vi.useFakeTimers();
+    expect(await retryServerList()).toBe("api");
+    await vi.advanceTimersByTimeAsync(1_500);
+
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

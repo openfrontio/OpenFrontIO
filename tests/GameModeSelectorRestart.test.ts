@@ -12,7 +12,11 @@ import type { PublicGames } from "../src/core/Schemas";
 // lifecycle, not the wire, so the socket is a spy -- following the same
 // pattern as GameModeSelectorGatingWiring.test.ts.
 const { socketCalls, lobbiesCallbackRef, gaveUpRef } = vi.hoisted(() => ({
-  socketCalls: { started: 0, stopped: 0 },
+  socketCalls: {
+    started: 0,
+    stopped: 0,
+    lastStart: undefined as { refreshList?: boolean } | undefined,
+  },
   lobbiesCallbackRef: { current: null as ((g: PublicGames) => void) | null },
   gaveUpRef: { current: null as (() => void) | null },
 }));
@@ -26,8 +30,9 @@ vi.mock("../src/client/LobbySocket", () => ({
       lobbiesCallbackRef.current = onUpdate;
       gaveUpRef.current = options?.onGaveUp ?? null;
     }
-    start(): void {
+    start(options?: { refreshList?: boolean }): void {
       socketCalls.started++;
+      socketCalls.lastStart = options;
     }
     stop(): void {
       socketCalls.stopped++;
@@ -51,6 +56,7 @@ vi.mock("../src/client/InGameModal", async (importOriginal) => {
 import { ClientEnv } from "../src/client/ClientEnv";
 import { GameModeSelector } from "../src/client/GameModeSelector";
 import { showInGameAlert } from "../src/client/InGameModal";
+import * as ServerList from "../src/client/ServerList";
 
 describe("GameModeSelector lobby-socket lifecycle", () => {
   beforeEach(() => {
@@ -319,7 +325,9 @@ describe("GameModeSelector lobby feed while the desktop session is gated", () =>
     await selector.updateComplete;
     expect(selector.querySelector("button.group")).toBeNull();
     expect(selector.querySelector(".animate-spin")).toBeNull();
-    expect(selector.textContent).toContain("mode_selector.offline_lobbies");
+    // Not "offline": the API still answers, only the feed is gone.
+    expect(selector.textContent).toContain("mode_selector.lobbies_unreachable");
+    expect(selector.textContent).not.toContain("mode_selector.offline_lobbies");
 
     // A feed that comes back is believed.
     lobbiesCallbackRef.current?.(snapshot);
@@ -335,6 +343,100 @@ describe("GameModeSelector lobby feed while the desktop session is gated", () =>
     selector.start();
     await selector.updateComplete;
     expect(selector.querySelector(".animate-spin")).not.toBeNull();
+  });
+
+  function retryButton(): HTMLButtonElement | undefined {
+    return Array.from(selector.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("mode_selector.retry_lobbies"),
+    );
+  }
+
+  // The API answers here, so no outage shows anywhere: without the Retry the
+  // only way to reopen a feed that gave up is a reload.
+  it("offers a Retry that reopens the feed once the socket gives up", async () => {
+    gaveUpRef.current?.();
+    await selector.updateComplete;
+    const started = socketCalls.started;
+    const probe = vi.spyOn(ServerList, "refreshServerList");
+
+    retryButton()!.click();
+    await selector.updateComplete;
+
+    // The socket is what waits for the list, so the refresh-then-dial order
+    // has one owner; a probe from here as well would race it.
+    expect(socketCalls.started).toBe(started + 1);
+    expect(socketCalls.lastStart).toEqual({ refreshList: true });
+    expect(probe).not.toHaveBeenCalled();
+    expect(selector.querySelector(".animate-spin")).not.toBeNull();
+    probe.mockRestore();
+  });
+
+  it("does not reopen from Retry a feed Main stopped for a game", async () => {
+    gaveUpRef.current?.();
+    await selector.updateComplete;
+    selector.stop();
+    const started = socketCalls.started;
+    const probe = vi
+      .spyOn(ServerList, "refreshServerList")
+      .mockResolvedValue("fallback");
+
+    retryButton()!.click();
+
+    expect(socketCalls.started).toBe(started);
+    probe.mockRestore();
+  });
+
+  it("only probes the list on an outage whose feed has not given up, and holds the button for the cooldown", async () => {
+    vi.useFakeTimers();
+    const probe = vi
+      .spyOn(ServerList, "refreshServerList")
+      .mockResolvedValue("fallback");
+    try {
+      document.dispatchEvent(
+        new CustomEvent("backend-reachability", {
+          detail: { reachable: false, confirmed: true },
+        }),
+      );
+      await selector.updateComplete;
+      const started = socketCalls.started;
+
+      retryButton()!.click();
+      await selector.updateComplete;
+      expect(probe).toHaveBeenCalledTimes(1);
+      expect(socketCalls.started).toBe(started);
+      expect(retryButton()!.disabled).toBe(true);
+
+      retryButton()!.click();
+      expect(probe).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(ServerList.MANUAL_RETRY_COOLDOWN_MS);
+      await selector.updateComplete;
+      expect(retryButton()!.disabled).toBe(false);
+    } finally {
+      probe.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("says the servers cannot be reached on a confirmed outage, never that the player is offline", async () => {
+    document.dispatchEvent(
+      new CustomEvent("backend-reachability", {
+        detail: { reachable: false, confirmed: true },
+      }),
+    );
+    await selector.updateComplete;
+
+    expect(selector.textContent).toContain("mode_selector.servers_unreachable");
+    expect(selector.textContent).not.toContain("mode_selector.offline_lobbies");
+    expect(selector.textContent).toContain("mode_selector.retry_lobbies");
+  });
+
+  it("offers no Retry while the session is gated, where the status bar owns the remedy", async () => {
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await selector.updateComplete;
+
+    expect(selector.textContent).toContain("mode_selector.offline_lobbies");
+    expect(selector.textContent).not.toContain("mode_selector.retry_lobbies");
   });
 
   it("shows an offline message in place of the spinner while gated", async () => {
