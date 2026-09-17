@@ -43,22 +43,26 @@ describe("DesktopAchievements", () => {
     expect(desktopAchievements.isAvailable()).toBe(true);
   });
 
-  it("sends nothing to a shell without the namespace", () => {
+  // unlock answers whether the names actually reached the shell. The caller
+  // records what it delivers and never re-sends a recorded name, so every
+  // false below is the difference between a name retried later and a name
+  // lost for good.
+  it("sends nothing to a shell without the namespace", async () => {
     (window as any).openfrontDesktop = { shell: { api: 4 } };
-    expect(() => desktopAchievements.unlock(["win_ffa"])).not.toThrow();
+    await expect(desktopAchievements.unlock(["win_ffa"])).resolves.toBe(false);
   });
 
-  it("forwards names to a shell that exposes unlock", () => {
+  it("forwards names to a shell that exposes unlock", async () => {
     const unlock = vi.fn().mockResolvedValue(undefined);
     (window as any).openfrontDesktop = {
       shell: { api: 4 },
       achievements: { unlock },
     };
-    desktopAchievements.unlock(["win_ffa"]);
+    await expect(desktopAchievements.unlock(["win_ffa"])).resolves.toBe(true);
     expect(unlock).toHaveBeenCalledWith(["win_ffa"]);
   });
 
-  it("does not throw when the bridge throws synchronously", () => {
+  it("does not throw when the bridge throws synchronously", async () => {
     (window as any).openfrontDesktop = {
       achievements: {
         unlock: () => {
@@ -66,20 +70,33 @@ describe("DesktopAchievements", () => {
         },
       },
     };
-    expect(() => desktopAchievements.unlock(["win_ffa"])).not.toThrow();
+    await expect(desktopAchievements.unlock(["win_ffa"])).resolves.toBe(false);
   });
 
-  it("does not throw when unlock returns something that is not a promise", () => {
-    const unlock = vi.fn(() => undefined);
+  // A shell that HAS the namespace but cannot honour the call: the platform
+  // library never initialised, the native call threw, the main process errored.
+  // It looks capable and delivers nothing, so it must report a failure rather
+  // than let the caller record these names as handed over.
+  it("reports failure, without throwing, when the bridge rejects", async () => {
+    const unlock = vi.fn().mockRejectedValue(new Error("not initialised"));
     (window as any).openfrontDesktop = { achievements: { unlock } };
-    expect(() => desktopAchievements.unlock(["win_ffa"])).not.toThrow();
+    await expect(desktopAchievements.unlock(["win_ffa"])).resolves.toBe(false);
     expect(unlock).toHaveBeenCalledWith(["win_ffa"]);
   });
 
-  it("sends nothing for an empty list", () => {
+  // Off-contract -- the bridge declares Promise<void> -- but harmless: the
+  // call returned without an error, which is the only signal there is.
+  it("does not throw when unlock returns something that is not a promise", async () => {
+    const unlock = vi.fn(() => undefined);
+    (window as any).openfrontDesktop = { achievements: { unlock } };
+    await expect(desktopAchievements.unlock(["win_ffa"])).resolves.toBe(true);
+    expect(unlock).toHaveBeenCalledWith(["win_ffa"]);
+  });
+
+  it("sends nothing for an empty list", async () => {
     const unlock = vi.fn().mockResolvedValue(undefined);
     (window as any).openfrontDesktop = { achievements: { unlock } };
-    desktopAchievements.unlock([]);
+    await expect(desktopAchievements.unlock([])).resolves.toBe(false);
     expect(unlock).not.toHaveBeenCalled();
   });
 });

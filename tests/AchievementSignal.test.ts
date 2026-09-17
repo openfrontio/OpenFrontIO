@@ -42,7 +42,7 @@ describe("achievement record", () => {
   beforeEach(() => {
     localStorage.clear();
     installCapableShell();
-    vi.spyOn(desktopAchievements, "unlock").mockImplementation(() => undefined);
+    vi.spyOn(desktopAchievements, "unlock").mockResolvedValue(true);
   });
   afterEach(() => {
     delete (window as any).openfrontDesktop;
@@ -55,8 +55,8 @@ describe("achievement record", () => {
     achievedAt: null,
   });
 
-  it("pushes each distinct name once, however often it recurs", () => {
-    const pushed = pushEarnedAchievements("p1", [
+  it("pushes each distinct name once, however often it recurs", async () => {
+    const pushed = await pushEarnedAchievements("p1", [
       row("win_ffa"),
       row("win_ffa"),
       row("launch_mirv"),
@@ -71,54 +71,89 @@ describe("achievement record", () => {
     expect([...pushed].sort()).toEqual(["launch_mirv", "win_ffa"]);
   });
 
-  it("does not record a name when no shell was there to receive it", () => {
+  it("does not record a name when no shell was there to receive it", async () => {
     delete (window as any).openfrontDesktop;
+    vi.mocked(desktopAchievements.unlock).mockResolvedValue(false);
 
-    pushEarnedAchievements("p1", [row("win_ffa")]);
+    await pushEarnedAchievements("p1", [row("win_ffa")]);
 
     // Nothing was delivered, so nothing may be marked delivered -- otherwise
     // the name is lost the moment a capable shell does arrive.
     expect(localStorage.getItem(RECORD_KEY)).toBeNull();
     installCapableShell();
-    expect(pushEarnedAchievements("p1", [row("win_ffa")])).toEqual(["win_ffa"]);
+    vi.mocked(desktopAchievements.unlock).mockResolvedValue(true);
+    expect(await pushEarnedAchievements("p1", [row("win_ffa")])).toEqual([
+      "win_ffa",
+    ]);
+  });
+
+  // The same permanent loss from a third direction: a shell that HAS the
+  // namespace, so every capability check passes, but whose handler rejects --
+  // an uninitialised platform library, a native call that throws. Nothing
+  // arrived, so nothing may be recorded, and the names stay owed.
+  it("does not record a name the shell's unlock rejected", async () => {
+    // The real bridge wrapper, not the spy: the rejection has to travel the
+    // path the shipped code takes.
+    vi.mocked(desktopAchievements.unlock).mockRestore();
+    (window as any).openfrontDesktop = {
+      achievements: { unlock: vi.fn().mockRejectedValue(new Error("no")) },
+    };
+
+    await expect(
+      pushEarnedAchievements("p1", [row("win_ffa")]),
+    ).resolves.toEqual([]);
+    expect(localStorage.getItem(RECORD_KEY)).toBeNull();
+
+    // ...so the next run hands them over again.
+    installCapableShell();
+    vi.spyOn(desktopAchievements, "unlock").mockResolvedValue(true);
+    expect(await pushEarnedAchievements("p1", [row("win_ffa")])).toEqual([
+      "win_ffa",
+    ]);
   });
 
   // The same loss, from the direction that actually shipped: a shell whose
   // api number would have satisfied a hardcoded gate, with no namespace
   // behind it. unlock() reaches nothing, so nothing may be recorded.
-  it("does not record a name for a shell that declares a high api but has no namespace", () => {
+  it("does not record a name for a shell that declares a high api but has no namespace", async () => {
     (window as any).openfrontDesktop = { shell: { api: 99 } };
+    vi.mocked(desktopAchievements.unlock).mockResolvedValue(false);
 
-    pushEarnedAchievements("p1", [row("win_ffa")]);
+    await pushEarnedAchievements("p1", [row("win_ffa")]);
 
     expect(localStorage.getItem(RECORD_KEY)).toBeNull();
     installCapableShell();
-    expect(pushEarnedAchievements("p1", [row("win_ffa")])).toEqual(["win_ffa"]);
+    vi.mocked(desktopAchievements.unlock).mockResolvedValue(true);
+    expect(await pushEarnedAchievements("p1", [row("win_ffa")])).toEqual([
+      "win_ffa",
+    ]);
   });
 
-  it("does not re-push a name already in the record", () => {
-    pushEarnedAchievements("p1", [row("win_ffa")]);
-    const second = pushEarnedAchievements("p1", [
+  it("does not re-push a name already in the record", async () => {
+    await pushEarnedAchievements("p1", [row("win_ffa")]);
+    const second = await pushEarnedAchievements("p1", [
       row("win_ffa"),
       row("win_team"),
     ]);
     expect(second).toEqual(["win_team"]);
   });
 
-  it("does not honour a record belonging to another player", () => {
-    pushEarnedAchievements("p1", [row("win_ffa")]);
-    const other = pushEarnedAchievements("p2", [row("win_ffa")]);
+  it("does not honour a record belonging to another player", async () => {
+    await pushEarnedAchievements("p1", [row("win_ffa")]);
+    const other = await pushEarnedAchievements("p2", [row("win_ffa")]);
     expect(other).toEqual(["win_ffa"]);
   });
 
-  it("survives storage being unavailable", () => {
+  it("survives storage being unavailable", async () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("denied");
     });
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("denied");
     });
-    expect(() => pushEarnedAchievements("p1", [row("win_ffa")])).not.toThrow();
+    await expect(
+      pushEarnedAchievements("p1", [row("win_ffa")]),
+    ).resolves.toEqual(["win_ffa"]);
   });
 });
 
@@ -152,7 +187,7 @@ describe("syncAchievements", () => {
   beforeEach(() => {
     localStorage.clear();
     installCapableShell();
-    vi.spyOn(desktopAchievements, "unlock").mockImplementation(() => undefined);
+    vi.spyOn(desktopAchievements, "unlock").mockResolvedValue(true);
     getUserMeMock.mockReset();
     fetchUncachedMock.mockReset();
     invalidateUserMeMock.mockReset();
@@ -173,6 +208,92 @@ describe("syncAchievements", () => {
     }
     await sync;
   }
+
+  /** What Auth's clearLocalSession announces on every logout, expiry and 401
+   * (see announceLoggedOut). It is the only signal this module gets that one
+   * session has ended and anything after it belongs to another. */
+  function clearSession() {
+    document.dispatchEvent(new CustomEvent("session-cleared"));
+  }
+
+  // The player signs out and back in -- as a different account, or the same
+  // one -- while a post-game request is in flight. The answer describes the
+  // session that has gone, but the platform account behind the shell did not
+  // change with it, so acting on it would unlock one player's achievements
+  // against another's platform account and record them under the old player's
+  // id, where no later run would ever re-push them.
+  it("discards a post-game answer that arrived after the session changed", async () => {
+    let answer!: (value: UserMeResponse | false) => void;
+    fetchUncachedMock.mockImplementation(
+      () =>
+        new Promise<UserMeResponse | false>((resolve) => {
+          answer = resolve;
+        }),
+    );
+
+    const sync = syncAchievements({ gameId: "g1" });
+    await vi.advanceTimersByTimeAsync(POST_GAME_DELAYS_MS[0]);
+    expect(fetchUncachedMock).toHaveBeenCalledOnce();
+
+    clearSession();
+    answer(profile([achRow("win_ffa", "g1")]));
+    await vi.advanceTimersByTimeAsync(60_000);
+    await sync;
+
+    expect(desktopAchievements.unlock).not.toHaveBeenCalled();
+    expect(localStorage.getItem(RECORD_KEY)).toBeNull();
+    // Abandoned rather than retried: a request issued now would carry the new
+    // session's credentials on the old session's errand, and a 401 on it
+    // would sign the player who just signed in back out.
+    expect(fetchUncachedMock).toHaveBeenCalledOnce();
+  });
+
+  // The same rule with nobody signing back in. "The old session is dead" is
+  // not a reason to do anything at all.
+  it("stops the poll when the session goes and does not come back", async () => {
+    fetchUncachedMock.mockResolvedValue(profile([achRow("win_ffa", "g1")]));
+
+    const sync = syncAchievements({ gameId: "g1" });
+    clearSession();
+    await vi.advanceTimersByTimeAsync(60_000);
+    await sync;
+
+    expect(fetchUncachedMock).not.toHaveBeenCalled();
+    expect(desktopAchievements.unlock).not.toHaveBeenCalled();
+    expect(localStorage.getItem(RECORD_KEY)).toBeNull();
+  });
+
+  it("discards a startup answer that arrived after the session changed", async () => {
+    let answer!: (value: UserMeResponse | false) => void;
+    getUserMeMock.mockImplementation(
+      () =>
+        new Promise<UserMeResponse | false>((resolve) => {
+          answer = resolve;
+        }),
+    );
+
+    const sync = syncAchievements();
+    clearSession();
+    answer(profile([achRow("win_ffa")]));
+    await sync;
+
+    expect(desktopAchievements.unlock).not.toHaveBeenCalled();
+    expect(localStorage.getItem(RECORD_KEY)).toBeNull();
+  });
+
+  // Delivery failing is not delivery. The record must stay empty so the names
+  // are handed over again, and the poll must not count them as pushed and
+  // stop early on the strength of it.
+  it("does not record or count names the shell failed to take", async () => {
+    fetchUncachedMock.mockResolvedValue(profile([achRow("win_ffa", "g0")]));
+    vi.mocked(desktopAchievements.unlock).mockResolvedValue(false);
+
+    await runPoll("g2");
+
+    expect(desktopAchievements.unlock).toHaveBeenCalledWith(["win_ffa"]);
+    expect(localStorage.getItem(RECORD_KEY)).toBeNull();
+    expect(fetchUncachedMock).toHaveBeenCalledTimes(POST_GAME_DELAYS_MS.length);
+  });
 
   it("startup reconcile (no gameId) reads the session's profile once and pushes what's new", async () => {
     getUserMeMock.mockResolvedValue(profile([achRow("win_ffa")]));
@@ -243,7 +364,7 @@ describe("syncAchievements", () => {
   it("costs the common 'earned nothing' game a bounded number of attempts", async () => {
     fetchUncachedMock.mockResolvedValue(profile([achRow("old", "g0")]));
     // Already delivered, so no attempt can push anything.
-    pushEarnedAchievements("p1", [achRow("old", "g0")]);
+    await pushEarnedAchievements("p1", [achRow("old", "g0")]);
     vi.mocked(desktopAchievements.unlock).mockClear();
 
     await runPoll("g2");

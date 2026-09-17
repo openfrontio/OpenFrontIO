@@ -84,8 +84,9 @@ const SingleplayerMapAchievementSchema = z.object({
 // Consumers that care about "has this been earned" must deduplicate by name.
 export const PlayerAchievementSchema = z.object({
   achievement: z.string(),
-  // games.game -- the game's UUID string. NOT the server's `gameId`, which is
-  // a stringified bigint row id.
+  // games.game -- the client-generated game id (an instance letter plus a
+  // nine-character nanoid, stored as a varchar). NOT the server's `gameId`,
+  // which is a stringified bigint row id.
   game: z.string().nullable(),
   achievedAt: z.iso.datetime().nullable(),
 });

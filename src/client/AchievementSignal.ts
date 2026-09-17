@@ -15,9 +15,29 @@ import { desktopAchievements } from "./DesktopAchievements";
 // it receives against what the platform already holds, so a lost or stale
 // record costs a redundant no-op call and can never cause a missed unlock.
 // That holds only while every write corresponds to a delivery -- a name
-// recorded without a shell to receive it is lost for good, which is why both
-// the write below and syncAchievements are gated on the shell being capable.
+// recorded without a shell to receive it is lost for good, which is why the
+// write below waits for unlock() to confirm delivery and syncAchievements
+// does not run at all without a capable shell.
 const KEY = "achievements.pushed";
+
+// The session a request was issued under.
+//
+// A /users/@me issued before a logout can still be in flight when the session
+// goes, and an answer fetched under the old session must not be acted on
+// under the new one: the names are the previous account's, while the platform
+// account behind the shell does not change when the OpenFront account does,
+// so pushing them would hand one player's achievements to another. Auth's
+// clearLocalSession announces every logout, expiry and 401 as
+// `session-cleared`, so a sign-out bumps this whether or not a different
+// account signs back in.
+//
+// Same idea as Main.ts's authGeneration, which guards profile application
+// against the same race; that counter is a local inside Main's boot path and
+// cannot be read from here, so this module keeps its own off the same event.
+let authGeneration = 0;
+document.addEventListener("session-cleared", () => {
+  authGeneration++;
+});
 
 // Keyed by player: two accounts on one machine would otherwise have the first
 // one's record suppress the second's achievements.
@@ -43,13 +63,14 @@ function write(playerId: string, names: Set<string>): void {
 }
 
 /**
- * Hand every earned name not yet in the record to the shell, and record it.
- * Returns the names newly pushed.
+ * Hand every earned name not yet in the record to the shell, and record what
+ * the shell actually took. Returns the names delivered -- empty when delivery
+ * failed, so a caller deciding whether to try again treats them as still owed.
  */
-export function pushEarnedAchievements(
+export async function pushEarnedAchievements(
   playerId: string,
   rows: PlayerAchievement[],
-): string[] {
+): Promise<string[]> {
   const known = read(playerId);
   const fresh: string[] = [];
   for (const { achievement } of rows) {
@@ -58,12 +79,13 @@ export function pushEarnedAchievements(
     fresh.push(achievement);
   }
   if (fresh.length === 0) return [];
-  desktopAchievements.unlock(fresh);
-  // Only record what was actually delivered. unlock() is a no-op on a shell
-  // that does not support achievements, and marking a name as pushed when
-  // nothing received it would lose it for good. syncAchievements already
-  // refuses to get this far in that case; this is the second lock on the door.
-  if (desktopAchievements.isAvailable()) write(playerId, known);
+  // Only record what was actually delivered: marking a name as pushed when
+  // nothing received it would lose it for good. unlock() answers false both
+  // for a shell that cannot take achievements at all and for one whose
+  // handler failed, which is the whole condition -- a rejected call delivered
+  // nothing however capable the shell looked.
+  if (!(await desktopAchievements.unlock(fresh))) return [];
+  write(playerId, known);
   return fresh;
 }
 
@@ -112,6 +134,12 @@ export async function syncAchievements(opts?: {
 
   const gameId = opts?.gameId;
 
+  // Captured once, not per request: everything below belongs to the session
+  // that is live right now, and a sign-out at any point -- while a request is
+  // in flight, or while the schedule below is sleeping between them -- retires
+  // all of it. See authGeneration above.
+  const generation = authGeneration;
+
   if (gameId === undefined) {
     // Startup reconcile. The profile is memoised for the session and the one
     // the session just fetched during boot is already fresh, so this reads
@@ -119,18 +147,27 @@ export async function syncAchievements(opts?: {
     // player on every launch.
     const me = await getUserMe();
     if (me === false) return;
-    pushEarnedAchievements(me.player.publicId, me.player.achievements.player);
+    if (generation !== authGeneration) return;
+    await pushEarnedAchievements(
+      me.player.publicId,
+      me.player.achievements.player,
+    );
     return;
   }
 
   for (let attempt = 0; attempt < POST_GAME_DELAYS_MS.length; attempt++) {
     await sleep(POST_GAME_DELAYS_MS[attempt]);
+    if (generation !== authGeneration) return;
     // Uncached, and deliberately NOT invalidateUserMe() + getUserMe(): the
     // memo is the session's shared profile, and a refetch that fails would
     // replace it with `false` for every other consumer. See
     // fetchUserMeUncached in Api.ts. It answers rather than throws, on every
     // outcome, so there is nothing here to catch.
     const me = await fetchUserMeUncached();
+    // Answered for a session that has since gone. Abandon the poll rather than
+    // retry it: the game it was started for belongs to that retired session
+    // too, so there is nothing left here worth another request.
+    if (generation !== authGeneration) return;
     if (me === false) {
       // `false` is every unhappy answer the contract can give -- signed out,
       // a 401, a 500, a dropped connection, a self-imposed timeout -- and it
@@ -140,7 +177,7 @@ export async function syncAchievements(opts?: {
       continue;
     }
     const rows = me.player.achievements.player;
-    const fresh = pushEarnedAchievements(me.player.publicId, rows);
+    const fresh = await pushEarnedAchievements(me.player.publicId, rows);
     // The fetch landed and the diff has been applied, so this attempt did its
     // job; what remains is deciding whether ingest is worth waiting for. A
     // row for this game, or a name we just handed over, says it is not. The

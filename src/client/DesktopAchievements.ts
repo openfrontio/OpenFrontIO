@@ -17,41 +17,43 @@ function bridge(): AchievementsBridge | undefined {
 
 class DesktopAchievements {
   // Feature-detected, and deliberately NOT gated on `shell.api` the way
-  // DesktopPresence.isAvailable is. Do not "fix" this back.
+  // DesktopPresence.isAvailable is. Do not "fix" this back to an api number.
   //
-  // The api ladder is owned by the shell repository, not this one. This module
-  // was first written against `api >= 4` on the belief that 4 would be the
-  // level introducing this namespace; 4 had in fact already shipped there
-  // meaning something unrelated, so the gate passed on every shell in the
-  // wild while no shell had an achievements namespace at all. Any number
-  // picked here is a guess about another repository's future and can go stale
-  // exactly that way. Detecting the method cannot: a shell that can take
-  // achievements has it, and one that cannot does not.
+  // The api ladder is owned by the shell repository, not this one, so any
+  // level named here is a guess about another repository's future and can go
+  // stale without this repository noticing. Detecting the method cannot: a
+  // shell that can take achievements has it, and one that cannot does not.
   //
-  // The two modules differ because the cost of being wrong differs. A
-  // mis-gated presence call degrades a cosmetic feature for one session. A
-  // mis-gated achievements call reports "delivered" for names that nothing
-  // received, and AchievementSignal records those names permanently -- the
-  // player's whole back catalogue is marked handed over while the platform
-  // holds none of it, and no later run can tell. Silent, permanent data loss
-  // is worth trusting less and checking more.
+  // Stricter than DesktopPresence because the cost of a wrong gate differs. A
+  // mis-gated presence call degrades a cosmetic feature for one session; a
+  // mis-gated achievements call reports "delivered" for names nothing
+  // received, which AchievementSignal then records permanently -- silent,
+  // irreversible loss. Full account: the shell repository's achievements
+  // design doc, "Gated on the method being present".
   isAvailable(): boolean {
     return typeof bridge()?.achievements?.unlock === "function";
   }
 
-  // Fire-and-forget. The shell filters this list against what the platform
-  // already holds, so sending a name that is already unlocked is a no-op and
-  // re-sending is always safe.
-  unlock(names: string[]): void {
-    if (names.length === 0) return;
-    if (!this.isAvailable()) return;
+  /**
+   * Hand names to the shell. Resolves true only once the shell has taken them.
+   *
+   * The caller records what it delivers and never re-sends a recorded name,
+   * so a call the shell could not honour has to be reported as a failure
+   * rather than swallowed: a name recorded without a delivery is lost for
+   * good. The shell filters the list against what the platform already holds,
+   * so re-sending one it already has is a no-op and always safe.
+   */
+  async unlock(names: string[]): Promise<boolean> {
+    if (names.length === 0) return false;
+    if (!this.isAvailable()) return false;
     try {
-      void bridge()
-        ?.achievements?.unlock(names)
-        ?.catch(() => undefined);
+      await bridge()?.achievements?.unlock(names);
+      return true;
     } catch {
-      // A bridge that throws synchronously must not take the game down --
-      // achievements are cosmetic.
+      // A bridge that throws synchronously, or whose handler rejects -- an
+      // uninitialised platform library, a failing native call -- must not take
+      // the game down. Achievements are cosmetic; the caller retries.
+      return false;
     }
   }
 }
