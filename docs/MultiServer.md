@@ -735,12 +735,11 @@ necessary:
 
 A server-rendered page prefers its own server because the page and the
 registry can disagree about a sibling while the page's own server is, by
-construction, right about itself: on dev (`openfront.dev`, a blue/green pair
-behind the apex, then still draining by an apex colour poll) the registry listed both
-colours `open` on the same build while the apex poll had green considering
-itself draining, so a page rendered by blue that drew green got a lobby feed
-reporting `active: false`, read it as "a new version is available", and
-reloaded — on about half of page loads.
+construction, right about itself. A server learns its drain state from its
+check-in reply, so for up to one check-in interval after the registry moves
+`open` between siblings, the list can call a server `open` whose lobby feed
+still reports `active: false`. A page rendered by blue that drew green in that
+window would read the feed as "a new version is available" and reload.
 
 Nothing in the table navigates the page by itself: the prompt is the existing
 one-shot `onUpdateAvailable` → `GameModeSelector.handleUpdateAvailable` →
