@@ -23,7 +23,7 @@ function settings(
 describe("steamJoinUrl", () => {
   it("passes the game id as a +join_game launch argument", () => {
     expect(steamJoinUrl("aB3xY9zQ12")).toBe(
-      "steam://run/5228420//+join_game%20aB3xY9zQ12/",
+      "steam://run/3560670//+join_game%20aB3xY9zQ12/",
     );
   });
 });

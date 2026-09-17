@@ -2,7 +2,7 @@ import type { UserSettings } from "../core/game/UserSettings";
 import { clientPlatform } from "./ClientPlatform";
 import { Platform } from "./Platform";
 
-const STEAM_APP_ID = 5228420;
+const STEAM_APP_ID = 3560670;
 
 export type SteamHandoffMode = "none" | "ask" | "steam";
 
