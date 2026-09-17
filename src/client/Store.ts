@@ -149,6 +149,70 @@ export class StoreModal extends BaseModal {
     await this.refresh();
   }
 
+  // Steam has no URL bar, so the `#affiliate=CODE` share link (Main.ts) is
+  // unreachable there. This bar lets a player type the code instead and lands
+  // them in the same affiliate view; in affiliate mode it swaps to a way back.
+  private renderAffiliateBar(): TemplateResult {
+    if (this.affiliateCode) {
+      return html`<div
+        data-store-affiliate-bar
+        class="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2"
+      >
+        <span class="text-sm text-white/70 break-all">
+          ${translateText("store.affiliate_showing", {
+            code: this.affiliateCode,
+          })}
+        </span>
+        <button
+          data-store-affiliate-back
+          class="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white/70 hover:bg-white/10 hover:text-white"
+          @click=${() => this.exitAffiliate()}
+        >
+          ${translateText("store.affiliate_back")}
+        </button>
+      </div>`;
+    }
+    return html`<form
+      data-store-affiliate-bar
+      class="flex items-center justify-end gap-2 border-b border-white/10 px-4 py-2"
+      @submit=${(e: Event) => {
+        e.preventDefault();
+        const input = (e.currentTarget as HTMLFormElement).querySelector(
+          "input",
+        );
+        if (input) this.enterAffiliate(input.value);
+      }}
+    >
+      <input
+        data-store-affiliate-input
+        type="text"
+        autocomplete="off"
+        placeholder=${translateText("store.affiliate_placeholder")}
+        class="w-44 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white placeholder-white/30 focus:border-malibu-blue/50 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50"
+      />
+      <button
+        type="submit"
+        class="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white/70 hover:bg-white/10 hover:text-white"
+      >
+        ${translateText("store.affiliate_go")}
+      </button>
+    </form>`;
+  }
+
+  private enterAffiliate(raw: string): void {
+    const code = raw.trim();
+    if (!code) return;
+    this.affiliateCode = code;
+    this.selectVisible(this.groupsForTab(this.activeTab));
+    this.requestUpdate();
+  }
+
+  private exitAffiliate(): void {
+    this.affiliateCode = null;
+    this.selectVisible(this.groupsForTab(this.activeTab));
+    this.requestUpdate();
+  }
+
   private renderHeader(): TemplateResult {
     const currency =
       this.userMeResponse === false
@@ -585,7 +649,7 @@ export class StoreModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
-    return html`${this.renderHeader()}
+    return html`${this.renderHeader()}${this.renderAffiliateBar()}
     ${this.previewingCosmetic
       ? html`<cosmetic-preview-modal
           .resolved=${this.previewingCosmetic}
