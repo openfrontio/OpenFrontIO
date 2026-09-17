@@ -27,20 +27,6 @@ on:
         required: false
         default: ""
         type: string
-      # A prod dispatch has no deploy target entry to take its identity from
-      # (release.yml's DEPLOY_TARGETS_* carry it there), and deploy.sh refuses
-      # a prod deploy without one. Dev dispatches leave these empty and get
-      # the standalone defaults.
-      instance_letter:
-        description: "Instance letter (required for openfront.io)"
-        required: false
-        default: ""
-        type: string
-      num_workers:
-        description: "Worker count (required for openfront.io)"
-        required: false
-        default: ""
-        type: string
 
   # Automatic deployment on push
   # See https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#onpushpull_requestpull_request_targetpathspaths-ignore
@@ -78,14 +64,11 @@ jobs:
     # The schedule fans out to nightly and the dev fleet, one leg per entry
     # of the DEPLOY_TARGETS_DEV REPOSITORY var (repository-level because
     # GitHub expands strategy.matrix before a job's environment exists).
-    # Each entry is a container's identity, the same shape release.yml's
-    # DEPLOY_TARGETS_* use: host is the machine deploy.sh resolves through
-    # SERVER_HOSTS_JSON, subdomain the slot; a fleet member also carries its
-    # letter, numWorkers and gameHost (blue.<machine>.server.openfront.dev to
-    # put the machine in the name). site is an optional override: deploy.sh
-    # already puts the blue and green slots on the apex. An entry without a
-    # letter is standalone and deploy.sh defaults its identity. Defaults to
-    # today's single box. Every other event deploys a single subdomain,
+    # Same shape as release.yml's DEPLOY_TARGETS_*: host is the machine
+    # deploy.sh resolves through SERVER_HOSTS_JSON, subdomain the slot;
+    # gameHost (blue.<machine>.server.openfront.dev) puts the machine in the
+    # name, and site overrides the default, which already puts the blue and
+    # green slots on the apex. Defaults to today's single box. Every other event deploys a single subdomain,
     # expressed as a one-element matrix with an empty string so RAW_SUBDOMAIN
     # and HOST below fall through to the per-event logic.
     strategy:
@@ -98,7 +81,7 @@ jobs:
       # are cheap.
       max-parallel: 1
       matrix:
-        include: ${{ github.event_name == 'schedule' && fromJSON(vars.DEPLOY_TARGETS_DEV || '[{"subdomain":"nightly","host":"staging"},{"subdomain":"green","host":"staging","letter":"b","numWorkers":2,"gameHost":"green.server.openfront.dev"},{"subdomain":"blue","host":"staging","letter":"a","numWorkers":2,"gameHost":"blue.server.openfront.dev"}]') || fromJSON('[{"subdomain":""}]') }}
+        include: ${{ github.event_name == 'schedule' && fromJSON(vars.DEPLOY_TARGETS_DEV || '[{"subdomain":"nightly","host":"staging"},{"subdomain":"green","host":"staging"},{"subdomain":"blue","host":"staging"}]') || fromJSON('[{"subdomain":""}]') }}
     timeout-minutes: 30
     environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
@@ -120,27 +103,9 @@ jobs:
               type == "object"
               and (.host | type == "string")
               and (.subdomain | type == "string")
-              and (if has("site") then .site | type == "string" else true end)
-              and (if has("letter") then
-                (.letter | type == "string" and test("^[a-z]$"))
-                and (.numWorkers | type == "number" and . > 0 and . == floor)
-              else true end))' > /dev/null; then
-            echo "Error: repository var DEPLOY_TARGETS_DEV must be a non-empty JSON array of {host, subdomain[, letter, numWorkers, gameHost, site]} objects, letter one lowercase letter and numWorkers a positive integer, got: ${DEPLOY_TARGETS_DEV}"
-            exit 1
-          fi
-          # A letter names one host per site for good (the registry binds it),
-          # so a repeat would leave one target refused at check-in. Site and
-          # letter resolve as deploy.sh resolves them; an entry with neither a
-          # site nor a colour slot is its own site and cannot collide.
-          dupes="$(printf '%s' "$DEPLOY_TARGETS_DEV" | jq -r --arg apex "$DOMAIN" '
-            [.[] | {
-              site: (.site // (if .subdomain == "blue" or .subdomain == "green" then $apex else null end)),
-              letter: (.letter // "a")
-            } | select(.site != null)]
-            | group_by([.site, .letter])
-            | map(select(length > 1) | .[0] | "\(.letter) on \(.site)") | .[]')"
-          if [ -n "$dupes" ]; then
-            echo "Error: instance letter(s) used by more than one DEPLOY_TARGETS_DEV target of the same site: ${dupes}"
+              and (if has("gameHost") then .gameHost | type == "string" else true end)
+              and (if has("site") then .site | type == "string" else true end))' > /dev/null; then
+            echo "Error: repository var DEPLOY_TARGETS_DEV must be a non-empty JSON array of {host, subdomain[, gameHost, site]} objects, got: ${DEPLOY_TARGETS_DEV}"
             exit 1
           fi
       - uses: actions/checkout@v7
@@ -262,12 +227,8 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          # This container's identity, from its DEPLOY_TARGETS_DEV entry on
-          # the schedule; empty otherwise, and deploy.sh fills in the
-          # standalone defaults (letter a, 2 workers, <subdomain>.<game
-          # domain>). See deploy.sh, "identity".
-          INSTANCE_LETTER: ${{ matrix.letter || inputs.instance_letter || '' }}
-          NUM_WORKERS: ${{ matrix.numWorkers || inputs.num_workers || '' }}
+          # From the DEPLOY_TARGETS_DEV entry on the schedule; empty otherwise,
+          # and deploy.sh fills in the defaults (deploy.sh, "identity").
           GAME_HOST: ${{ matrix.gameHost || '' }}
           SITE_HOST: ${{ matrix.site || '' }}
           # Separate domain for GAME hostnames, so the static Worker can own

@@ -2,7 +2,7 @@
 # generate-nginx-upstream.sh
 #
 # Generates the per-worker nginx config from NUM_WORKERS at container start
-# (the worker count arrives via the runtime env file, from the deploy target,
+# (the worker count arrives via the runtime env file, from the API registry,
 # and is not known when the image is built, so it can't be baked into
 # nginx.conf). The same value ServerEnv.numWorkers reads; a disagreement here
 # is not a fallback: too few upstreams and the workers nginx never lists get

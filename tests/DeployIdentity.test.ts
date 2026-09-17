@@ -86,22 +86,20 @@ function failure(env: Inputs): string {
 }
 
 describe("deploy.sh identity", () => {
-  // Prod as it is today: the target entry names the letter and worker count,
-  // the game host is the bare subdomain, the page is the apex (release.yml
-  // passes SITE_HOST).
-  it("takes prod's identity from the deploy target", () => {
+  // Prod: the game host is the bare subdomain, the page is the apex
+  // (release.yml passes SITE_HOST). The letter and worker count stay empty
+  // for update.sh to fill in from the registry.
+  it("resolves prod's hosts and leaves the identity to the registry", () => {
     const r = resolve({
       env: "prod",
       machine: "falk2",
       subdomain: "blue",
       domain: "openfront.io",
-      letter: "c",
-      numWorkers: "20",
       siteHost: "openfront.io",
     });
     expect(r).toEqual({
-      letter: "c",
-      numWorkers: "20",
+      letter: "",
+      numWorkers: "",
       gameHost: "blue.openfront.io",
       deploymentName: "blue",
       siteHost: "openfront.io",
@@ -110,7 +108,7 @@ describe("deploy.sh identity", () => {
 
   // A branch preview is its own site with its own single server: nothing to
   // configure, so nothing is.
-  it("defaults a standalone dev deployment's identity", () => {
+  it("resolves a standalone dev deployment's hosts", () => {
     const r = resolve({
       env: "staging",
       machine: "staging",
@@ -119,8 +117,8 @@ describe("deploy.sh identity", () => {
       gameDomain: "server.openfront.dev",
     });
     expect(r).toEqual({
-      letter: "a",
-      numWorkers: "2",
+      letter: "",
+      numWorkers: "",
       gameHost: "feat-foo.server.openfront.dev",
       deploymentName: "feat-foo",
       // Under GAME_DOMAIN the page has its own name, which the Worker serves.
@@ -134,8 +132,6 @@ describe("deploy.sh identity", () => {
       machine: "falk2",
       subdomain: "beta",
       domain: "openfront.io",
-      letter: "e",
-      numWorkers: "4",
     });
     expect(r.gameHost).toBe("beta.openfront.io");
     expect(r.siteHost).toBe("");
@@ -192,8 +188,6 @@ describe("deploy.sh identity", () => {
     env: "prod",
     machine: "falk2",
     domain: "openfront.io",
-    letter: "c",
-    numWorkers: "20",
   } as const;
   it.each<[string, Inputs, string]>([
     ["blue on dev", { ...dev, subdomain: "blue" }, "openfront.dev"],
@@ -221,27 +215,19 @@ describe("deploy.sh identity", () => {
     expect(resolve(inputs).siteHost).toBe(siteHost);
   });
 
-  // A prod container with no identity would mint ids under a letter nobody
-  // owns; refuse before anything is copied to the box.
-  it("refuses a prod deploy without a letter or worker count", () => {
-    expect(
-      failure({
-        env: "prod",
-        machine: "falk2",
-        subdomain: "blue",
-        domain: "openfront.io",
-        numWorkers: "20",
-      }),
-    ).toContain("INSTANCE_LETTER must be set");
-    expect(
-      failure({
-        env: "prod",
-        machine: "falk2",
-        subdomain: "blue",
-        domain: "openfront.io",
-        letter: "c",
-      }),
-    ).toContain("NUM_WORKERS must be set");
+  // The escape hatch for a hand-run deploy while the API is down: a value
+  // given here reaches the env file, and update.sh then skips the registry.
+  it("passes an explicit letter and worker count through", () => {
+    const r = resolve({
+      env: "prod",
+      machine: "falk2",
+      subdomain: "blue",
+      domain: "openfront.io",
+      letter: "c",
+      numWorkers: "20",
+    });
+    expect(r.letter).toBe("c");
+    expect(r.numWorkers).toBe("20");
   });
 
   it.each(["ab", "C", "1"])("refuses letter %j", (letter) => {

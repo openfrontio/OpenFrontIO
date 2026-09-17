@@ -8,8 +8,8 @@ import { z } from "zod";
 // and never reusing its letter for a different host.
 //
 // This is no longer configuration. A server knows only ITSELF — its letter,
-// game host and worker count arrive in its env from the deploy target
-// (INSTANCE_LETTER, GAME_HOST, NUM_WORKERS; deploy.sh) — and ServerEnv.cluster
+// game host and worker count arrive in its env (INSTANCE_LETTER, GAME_HOST,
+// NUM_WORKERS; docs/MultiServer.md, "Server identity") — and ServerEnv.cluster
 // synthesizes a one-entry map from them for the page it renders. The fleet
 // as a whole is the API registry's list
 // (src/core/ServerList.ts), which clients read; the one-entry map is the
