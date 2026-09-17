@@ -338,7 +338,6 @@ export class StatsImpl implements Stats {
     if (p === undefined) return;
 
     const t = _bigint(tiles);
-    const firstSample = p.tiles === undefined;
     p.tiles ??= [0n, 0n, 0n];
     while (p.tiles.length <= TILE_INDEX_DRAWDOWN_TROUGH) p.tiles.push(0n);
     if (t > p.tiles[TILE_INDEX_PEAK]) p.tiles[TILE_INDEX_PEAK] = t;
@@ -347,8 +346,10 @@ export class StatsImpl implements Stats {
     const ddTrough = p.tiles[TILE_INDEX_DRAWDOWN_TROUGH];
     // Cross-multiplied rather than compared as a ratio, so this stays in
     // exact integer arithmetic. bigint is unbounded, so there is no overflow
-    // to reason about.
-    if (firstSample || (peak - t) * ddPeak > (ddPeak - ddTrough) * peak) {
+    // to reason about. ddPeak === 0n means no drawdown has been recorded yet
+    // (including a leading zero-tile sample, which cannot itself represent a
+    // decline), so unconditionally seed rather than comparing against it.
+    if (ddPeak === 0n || (peak - t) * ddPeak > (ddPeak - ddTrough) * peak) {
       p.tiles[TILE_INDEX_DRAWDOWN_PEAK] = peak;
       p.tiles[TILE_INDEX_DRAWDOWN_TROUGH] = t;
     }

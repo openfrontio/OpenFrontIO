@@ -517,7 +517,7 @@ export class GameImpl implements Game {
         this.stats().recordTickSample(
           player,
           player.numTilesOwned(),
-          Math.floor(player.troops()),
+          player.troops(),
           player.alliances().length,
         );
       }
