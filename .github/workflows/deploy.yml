@@ -21,9 +21,19 @@ on:
         options:
           - masters
           - staging
+          - staging2
           - falk2
       target_subdomain:
         description: "Deployment Subdomain"
+        required: false
+        default: ""
+        type: string
+      # A fleet member on a second machine needs a name of its own
+      # (blue.staging2.server.openfront.dev): the registry keys letters by
+      # host, so two boxes answering as blue.server.openfront.dev would share
+      # one. Empty is <subdomain>.<game domain>.
+      game_host:
+        description: "Game host (only for a machine-scoped fleet member)"
         required: false
         default: ""
         type: string
@@ -229,7 +239,7 @@ jobs:
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
           # From the DEPLOY_TARGETS_DEV entry on the schedule; empty otherwise,
           # and deploy.sh fills in the defaults (deploy.sh, "identity").
-          GAME_HOST: ${{ matrix.gameHost || '' }}
+          GAME_HOST: ${{ matrix.gameHost || inputs.game_host || '' }}
           SITE_HOST: ${{ matrix.site || '' }}
           # Separate domain for GAME hostnames, so the static Worker can own
           # the page host (docs/MultiServer.md, "Two hostnames per
