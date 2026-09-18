@@ -327,8 +327,9 @@ export class GameModeSelector extends LitElement {
   // The socket ran out of fast attempts and is only re-dialing slowly;
   // cleared by the next start() or snapshot.
   @state() private feedGaveUp = false;
-  // The lobby slot's Retry is held for ServerList's manual-retry cooldown: a
-  // press inside it could start no request, and would look broken.
+  // Held for the same cooldown as the other Retry affordances, on this
+  // component's own clock: refreshServerList fires a real request per press
+  // (past its 1s floor), so this is what stops a player leaning on it.
   @state() private retryCoolingDown = false;
   private retryCooldownTimer: number | undefined;
   // An update/drain signal arrived during a lobby wait; prompt on leave-lobby.

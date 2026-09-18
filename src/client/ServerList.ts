@@ -132,6 +132,9 @@ let consecutiveFailures = 0;
 // back the same attempt rather than start or skip one.
 let lastManualRetry: { at: number; result: Promise<ServerListStatus> } | null =
   null;
+// The same, on its own clock, for refreshServerList().
+let lastRefresh: { at: number; result: Promise<ServerListStatus> } | null =
+  null;
 let warnedMalformed = false;
 
 /** Test-only. */
@@ -144,6 +147,7 @@ export function resetServerList(): void {
   reachable = null;
   consecutiveFailures = 0;
   lastManualRetry = null;
+  lastRefresh = null;
   warnedMalformed = false;
   ClientEnv.applyServerList(null, null);
 }
@@ -517,8 +521,7 @@ export async function ensureServerList(): Promise<ServerListStatus> {
  * state, and -- because the web has no such bar -- a refused multiplayer
  * click on the web, which doubles as that press
  * (GameModeSelector.reportMultiplayerRefusal). Both gate themselves on
- * manualRetryAvailable()'s policy first, as does refreshServerList below,
- * which is how the lobby slot's Retry gets here.
+ * manualRetryAvailable()'s policy first.
  *
  * Deliberately ignores the heartbeat's retry schedule. That backoff exists
  * to stop TIMER-driven callers hammering a down API between beats, and a
@@ -551,17 +554,17 @@ export function retryServerList(): Promise<ServerListStatus> {
   ) {
     return lastManualRetry.result;
   }
-  const result = runManualRetry();
+  const result = fetchAndApply();
   lastManualRetry = { at: now, result };
   return result;
 }
 
-async function runManualRetry(): Promise<ServerListStatus> {
+async function fetchAndApply(): Promise<ServerListStatus> {
   try {
     await fetchOnce();
     return apply();
   } catch (e) {
-    console.warn("Server list retry failed, using page values", e);
+    console.warn("Server list fetch failed, using page values", e);
     return "fallback";
   }
 }
@@ -572,23 +575,30 @@ async function runManualRetry(): Promise<ServerListStatus> {
  * cannot serve it, because it answers from the cached list at once, and after
  * a failure that list may still name the server that just died.
  *
- * Owns the whole ordering so no caller has to rebuild it from the accessors:
- * a retry when manualRetryAvailable() allows one, otherwise the attempt
- * already out, whoever started it. With neither, a manual retry settled
- * within the cooldown, and the cached list is as fresh as that policy lets
- * it get.
+ * Not routed through retryServerList, on purpose. Its clock is the shared
+ * policy for the OTHER two affordances (manualRetryAvailable): a press here
+ * must neither be answered from a press that settled inside that floor --
+ * which would be a dial from the cache, the thing this exists to avoid --
+ * nor stamp the clock and hold the web's refused-click probe for a press it
+ * did not make. The lobby slot's Retry holds itself for the cooldown, and
+ * this keeps the same MANUAL_RETRY_MIN_INTERVAL_MS floor on a clock of its
+ * own, so a caller that is not behind that button still cannot turn each
+ * call into a request. Like retryServerList, it ignores the heartbeat's
+ * backoff: a person pressing a button is not a timer.
  *
  * Never throws, for the same reason ensureServerList does not.
  */
-export async function refreshServerList(): Promise<ServerListStatus> {
-  if (manualRetryAvailable()) return retryServerList();
-  try {
-    await inflight;
-    return apply();
-  } catch (e) {
-    console.warn("Server list refresh failed, using page values", e);
-    return "fallback";
+export function refreshServerList(): Promise<ServerListStatus> {
+  const now = Date.now();
+  if (
+    lastRefresh !== null &&
+    now - lastRefresh.at < MANUAL_RETRY_MIN_INTERVAL_MS
+  ) {
+    return lastRefresh.result;
   }
+  const result = fetchAndApply();
+  lastRefresh = { at: now, result };
+  return result;
 }
 
 /**

@@ -501,9 +501,10 @@ blue for a game that lived on a host its list could not name.
 - **Failed attempts back off.** `retryDelayMs(consecutiveFailures)` is the
   schedule, and it is a pure function so it can be read without a clock: 10s
   after the first unanswered attempt, doubling on each further consecutive
-  one (20s, 40s), capped at 60s. **Any** answer at all — a 404 included —
+  one (20s, 40s), capped at 60s. Any answer below a 500 — a 404 included —
   resets it to the base, so a page that recovers and then misses once is
-  retried in 10s rather than inheriting the old outage's wait. The base is
+  retried in 10s rather than inheriting the old outage's wait; a 5xx counts
+  as unanswered. The base is
   short because the common case is a blip the next request clears; the cap
   exists because a lid-closed laptop should not fire a request every 10s all
   night, and by a minute in the player who is still waiting has the Retry
@@ -551,15 +552,15 @@ blue for a game that lived on a host its list could not name.
   any other attempt.
 
   The floor is the last line of defence rather than the first. Above it sits
-  one policy, `manualRetryAvailable()`, shared by both shells' affordances
-  and reading one clock: no retry while any server-list attempt is in flight
+  one policy, `manualRetryAvailable()`, shared by the two affordances that
+  reach `retryServerList` and reading one clock: no retry while any server-list attempt is in flight
   (`attemptInFlight()` / `server-list-attempt`), whoever started it, and
   none for `MANUAL_RETRY_COOLDOWN_MS` (5s) after the last player-initiated
   one — a stubbed or fast failure settles in milliseconds and would
   otherwise hand the affordance straight back to a player clicking at an
   outage.
 
-  The two affordances:
+  The affordances:
   - **Desktop:** the status bar's offline Retry, disabled under either
     condition above so it comes back whenever the later of them ends. During
     an automatic attempt it reads `desktop_status.retrying` rather than
@@ -572,11 +573,12 @@ blue for a game that lived on a host its list could not name.
     `RETRY_MAX_MS` away.
   - **Both:** the Retry in the homepage's lobby slot, shown when the public
     lobby feed has given up or an outage is confirmed (never on a gated
-    desktop session, where the status bar owns the remedy). It goes through
-    `refreshServerList()`, which applies the same policy and otherwise waits
-    for the attempt already in flight, so a `PublicLobbySocket.start` with
-    `refreshList` never dials from a list older than the answer it could
-    have had.
+    desktop session, where the status bar owns the remedy). It holds itself
+    for the same cooldown but does not share the clock: it goes through
+    `refreshServerList()`, which has a 1s floor of its own and otherwise
+    joins the attempt already in flight or starts one, so a
+    `PublicLobbySocket.start` with `refreshList` never dials from a list
+    older than the answer it could have had.
 
 - **What reachability may gate, and what it may not.** The rule, stated
   once at the top of `GameModeSelector.ts` and referenced from every call

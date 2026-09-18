@@ -860,13 +860,56 @@ describe("refreshServerList", () => {
     expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
   });
 
-  it("answers from the cached list inside the manual-retry cooldown", async () => {
+  // The manual-retry clock belongs to the other two affordances, and a press
+  // of one of them must not turn this into a dial from the cache: on the web
+  // a refused multiplayer click is such a press (reportMultiplayerRefusal),
+  // and the lobby slot's Retry can land inside its floor with nothing in
+  // flight, where retryServerList would hand back the settled result.
+  it("fetches inside another press's floor and cooldown when nothing is in flight", async () => {
     vi.useFakeTimers();
     expect(await retryServerList()).toBe("api");
-    await vi.advanceTimersByTimeAsync(1_500);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+    await vi.advanceTimersByTimeAsync(500);
 
+    fetchMock.mockImplementation(async () => jsonResponse(MOVED_LIST));
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
+  });
+
+  // ...and the converse: it does not stamp that clock, so the refused-click
+  // probe is not held for a press it did not make.
+  it("leaves the manual-retry clock to the buttons that share it", async () => {
+    vi.useFakeTimers();
+    expect(await refreshServerList()).toBe("api");
+    expect(manualRetryAvailable()).toBe(true);
+  });
+
+  it("has a floor of its own, inside which a second call joins the first", async () => {
+    vi.useFakeTimers();
+    expect(await refreshServerList()).toBe("api");
     expect(await refreshServerList()).toBe("api");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  // A person pressing a button is not a timer: the heartbeat's backoff after
+  // a failure must not turn the Retry into a dial from the cached list.
+  it("fetches inside the heartbeat's backoff after a failed attempt", async () => {
+    vi.useFakeTimers();
+    expect(await ensureServerList()).toBe("api");
+    fetchMock.mockRejectedValueOnce(new TypeError("network down"));
+    expect(await retryServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    fetchMock.mockImplementation(async () => jsonResponse(MOVED_LIST));
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
   });
 });
 
