@@ -52,7 +52,8 @@ const FETCH_TIMEOUT_MS = 4_000;
 const REFRESH_INTERVAL_MS = 30_000;
 // Retry schedule after an unanswered attempt: the first retry comes after
 // RETRY_BASE_MS and each further consecutive failure doubles the wait, up to
-// RETRY_MAX_MS. Any answer at all resets it to the base.
+// RETRY_MAX_MS. Any answer below a 500 resets it to the base; a 5xx counts
+// as unanswered (fetchServerList).
 //
 // The point of the backoff is the long tail. A player who closes their laptop
 // lid, or sits on a train through a tunnel, should not have the page firing a
@@ -124,17 +125,39 @@ let pickedLetter: string | null = null;
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let polling = false;
 let reachable: boolean | null = null;
-// Consecutive unanswered attempts, reset by any answer. Only this, and not
+// Consecutive unanswered attempts (a 5xx is one), reset by any other
+// answer. Only this, and not
 // `reachable` alone, decides backendUnreachableConfirmed().
 let consecutiveFailures = 0;
-// The most recent player-initiated retry, for the throttle in
-// retryServerList(). Holds the promise so a press inside the window can hand
-// back the same attempt rather than start or skip one.
-let lastManualRetry: { at: number; result: Promise<ServerListStatus> } | null =
-  null;
-// The same, on its own clock, for refreshServerList().
-let lastRefresh: { at: number; result: Promise<ServerListStatus> } | null =
-  null;
+// A player-facing entry point's floor. Holds the promise so a call inside
+// the window hands back the same attempt rather than start or skip one.
+class FlooredFetch {
+  private last: { at: number; result: Promise<ServerListStatus> } | null = null;
+
+  run(): Promise<ServerListStatus> {
+    const now = Date.now();
+    if (
+      this.last !== null &&
+      now - this.last.at < MANUAL_RETRY_MIN_INTERVAL_MS
+    ) {
+      return this.last.result;
+    }
+    const result = fetchAndApply();
+    this.last = { at: now, result };
+    return result;
+  }
+
+  lastAt(): number | null {
+    return this.last?.at ?? null;
+  }
+
+  reset(): void {
+    this.last = null;
+  }
+}
+// Two clocks on purpose: see refreshServerList.
+const manualRetry = new FlooredFetch();
+const refresh = new FlooredFetch();
 let warnedMalformed = false;
 
 /** Test-only. */
@@ -146,8 +169,8 @@ export function resetServerList(): void {
   pickedLetter = null;
   reachable = null;
   consecutiveFailures = 0;
-  lastManualRetry = null;
-  lastRefresh = null;
+  manualRetry.reset();
+  refresh.reset();
   warnedMalformed = false;
   ClientEnv.applyServerList(null, null);
 }
@@ -215,8 +238,9 @@ export function backendReachable(): boolean | null {
  * a Retry to escape it with.
  *
  * So: false until CONFIRM_OUTAGE_AFTER_FAILURES attempts in a row have gone
- * unanswered, which takes a retry interval to accumulate. Any answer at all
- * resets the count, a player-initiated retry counts like any other attempt,
+ * unanswered, which takes a retry interval to accumulate. Any answer below
+ * a 500 resets the count, a player-initiated retry counts like any other
+ * attempt,
  * and this is never true before the first attempt settles — unknown is not
  * unreachable.
  *
@@ -265,8 +289,9 @@ export function attemptInFlight(): boolean {
  */
 export function manualRetryAvailable(): boolean {
   if (attemptInFlight()) return false;
-  if (lastManualRetry === null) return true;
-  return Date.now() - lastManualRetry.at >= MANUAL_RETRY_COOLDOWN_MS;
+  const at = manualRetry.lastAt();
+  if (at === null) return true;
+  return Date.now() - at >= MANUAL_RETRY_COOLDOWN_MS;
 }
 
 /** The detail carried by the "server-list-attempt" document event. */
@@ -516,12 +541,13 @@ export async function ensureServerList(): Promise<ServerListStatus> {
 }
 
 /**
- * Try the API again right now, at the player's request (OPE-439). Two
- * callers, one per shell: the Retry on the desktop status bar's offline
- * state, and -- because the web has no such bar -- a refused multiplayer
- * click on the web, which doubles as that press
- * (GameModeSelector.reportMultiplayerRefusal). Both gate themselves on
- * manualRetryAvailable()'s policy first.
+ * Try the API again right now, at the player's request (OPE-439). Three
+ * callers: the Retry on the desktop status bar's offline state, and --
+ * because the web has no such bar -- a refused multiplayer click on the web,
+ * which doubles as that press (GameModeSelector.reportMultiplayerRefusal),
+ * both gating themselves on manualRetryAvailable()'s policy first; and the
+ * desktop session Retry (DesktopSessionRecovery), which gates on nothing
+ * here and relies on its own in-flight latch plus the floor below.
  *
  * Deliberately ignores the heartbeat's retry schedule. That backoff exists
  * to stop TIMER-driven callers hammering a down API between beats, and a
@@ -534,11 +560,10 @@ export async function ensureServerList(): Promise<ServerListStatus> {
  * player leaning on the button cannot outpace the request it started. Past
  * the throttle, fetchOnce() still dedupes: a press landing on top of a
  * heartbeat beat joins that attempt rather than starting a second. This is
- * the last line of defence, not the first: the button that calls this is
- * itself disabled while an attempt is out and for a cooldown after a press
- * (DesktopStatusBar), and the floor is what holds if anything ever calls
- * this without going through such a button, or through
- * manualRetryAvailable().
+ * the last line of defence, not the first: the status bar's offline Retry
+ * is itself disabled while an attempt is out and for a cooldown after a
+ * press, and the floor is what holds for a caller that goes through no such
+ * button (the session Retry above).
  *
  * A retry that fails counts towards the outage confirmation like any other
  * attempt -- pressing Retry against a backend that is genuinely down should
@@ -547,16 +572,7 @@ export async function ensureServerList(): Promise<ServerListStatus> {
  * Never throws, for the same reason ensureServerList does not.
  */
 export function retryServerList(): Promise<ServerListStatus> {
-  const now = Date.now();
-  if (
-    lastManualRetry !== null &&
-    now - lastManualRetry.at < MANUAL_RETRY_MIN_INTERVAL_MS
-  ) {
-    return lastManualRetry.result;
-  }
-  const result = fetchAndApply();
-  lastManualRetry = { at: now, result };
-  return result;
+  return manualRetry.run();
 }
 
 async function fetchAndApply(): Promise<ServerListStatus> {
@@ -576,29 +592,19 @@ async function fetchAndApply(): Promise<ServerListStatus> {
  * a failure that list may still name the server that just died.
  *
  * Not routed through retryServerList, on purpose. Its clock is the shared
- * policy for the OTHER two affordances (manualRetryAvailable): a press here
- * must neither be answered from a press that settled inside that floor --
- * which would be a dial from the cache, the thing this exists to avoid --
- * nor stamp the clock and hold the web's refused-click probe for a press it
- * did not make. The lobby slot's Retry holds itself for the cooldown, and
- * this keeps the same MANUAL_RETRY_MIN_INTERVAL_MS floor on a clock of its
- * own, so a caller that is not behind that button still cannot turn each
- * call into a request. Like retryServerList, it ignores the heartbeat's
- * backoff: a person pressing a button is not a timer.
+ * policy for the other affordances (manualRetryAvailable): a press here must
+ * neither be answered from a press that settled inside that floor -- which
+ * would be a dial from the cache, the thing this exists to avoid -- nor
+ * stamp the clock and hold the web's refused-click probe for a press it did
+ * not make. It has the same floor on a clock of its own, so a second call
+ * inside MANUAL_RETRY_MIN_INTERVAL_MS is handed the first's result, settled
+ * or not: callers that need a fresh answer per press space presses further
+ * apart than that (the lobby slot's Retry holds itself for the cooldown).
  *
  * Never throws, for the same reason ensureServerList does not.
  */
 export function refreshServerList(): Promise<ServerListStatus> {
-  const now = Date.now();
-  if (
-    lastRefresh !== null &&
-    now - lastRefresh.at < MANUAL_RETRY_MIN_INTERVAL_MS
-  ) {
-    return lastRefresh.result;
-  }
-  const result = fetchAndApply();
-  lastRefresh = { at: now, result };
-  return result;
+  return refresh.run();
 }
 
 /**
