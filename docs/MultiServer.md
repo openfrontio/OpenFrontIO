@@ -501,9 +501,10 @@ blue for a game that lived on a host its list could not name.
 - **Failed attempts back off.** `retryDelayMs(consecutiveFailures)` is the
   schedule, and it is a pure function so it can be read without a clock: 10s
   after the first unanswered attempt, doubling on each further consecutive
-  one (20s, 40s), capped at 60s. **Any** answer at all — a 404 included —
+  one (20s, 40s), capped at 60s. Any answer below a 500 — a 404 included —
   resets it to the base, so a page that recovers and then misses once is
-  retried in 10s rather than inheriting the old outage's wait. The base is
+  retried in 10s rather than inheriting the old outage's wait; a 5xx counts
+  as unanswered. The base is
   short because the common case is a blip the next request clears; the cap
   exists because a lid-closed laptop should not fire a request every 10s all
   night, and by a minute in the player who is still waiting has the Retry

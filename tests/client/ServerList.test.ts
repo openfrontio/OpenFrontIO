@@ -860,13 +860,20 @@ describe("refreshServerList", () => {
     expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
   });
 
-  it("answers from the cached list inside the manual-retry cooldown", async () => {
+  // The cooldown belongs to the buttons, and another one's press must not
+  // turn this one into a dial from the cache: on the web a refused
+  // multiplayer click is such a press (reportMultiplayerRefusal), and the
+  // lobby slot's Retry can land inside its cooldown with nothing in flight.
+  it("fetches inside another press's manual-retry cooldown when nothing is in flight", async () => {
     vi.useFakeTimers();
     expect(await retryServerList()).toBe("api");
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
     await vi.advanceTimersByTimeAsync(1_500);
 
+    fetchMock.mockImplementation(async () => jsonResponse(MOVED_LIST));
     expect(await refreshServerList()).toBe("api");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
   });
 });
 
