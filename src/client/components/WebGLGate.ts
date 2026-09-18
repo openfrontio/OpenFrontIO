@@ -1,5 +1,10 @@
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import {
+  desktopQuit,
+  isDesktopShell,
+  requestDesktopQuit,
+} from "../DesktopShell";
 
 export type WebGLGateStatus = "software" | "unsupported" | "limited";
 
@@ -71,6 +76,16 @@ const SAFARI_NOTES: string[] = [
   "iPhone/iPad: WebGL is natively supported and always on for iOS 8 and later.",
 ];
 
+// The desktop shell bundles its own Chromium, so browser settings, flags and
+// the player's default browser have no bearing on it. Restarting is what
+// players report clears it.
+const DESKTOP_STEPS: string[] = [
+  "Quit OpenFront.",
+  "Restart Steam, then launch OpenFront again.",
+  "If this keeps happening, restart your computer.",
+  "If it still happens, update your graphics drivers from NVIDIA, AMD or Intel.",
+];
+
 /**
  * Full-screen gate shown when the WebGL2 context is unusable ("software",
  * "unsupported" — hard block) or degraded ("limited" — texture sizes capped
@@ -89,6 +104,9 @@ export class WebGLGate extends LitElement {
   }
 
   render() {
+    if (this.status !== "limited" && isDesktopShell()) {
+      return this.renderDesktop();
+    }
     const limited = this.status === "limited";
     const software = this.status === "software";
     const title = limited
@@ -143,6 +161,41 @@ export class WebGLGate extends LitElement {
                   @click=${() => this.remove()}
                 >
                   Continue anyway
+                </button>
+              `
+            : null}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderDesktop() {
+    return html`
+      <div
+        class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/85 p-5"
+      >
+        <div
+          class="w-full max-w-lg max-h-[85vh] overflow-y-auto p-6 sm:p-8 rounded-xl bg-surface text-white shadow-2xl"
+        >
+          <h2 class="text-xl font-bold mb-3">
+            Graphics acceleration unavailable
+          </h2>
+          <p class="text-sm leading-relaxed text-white/85 mb-5">
+            OpenFront couldn't use your graphics card, so the game can't run.
+            This is usually temporary. To fix it:
+          </p>
+          <ol
+            class="pl-5 list-decimal text-sm leading-relaxed text-white/85 space-y-1.5"
+          >
+            ${DESKTOP_STEPS.map((step) => html`<li>${step}</li>`)}
+          </ol>
+          ${desktopQuit() !== null
+            ? html`
+                <button
+                  class="mt-5 w-full py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-bold text-white transition-colors"
+                  @click=${() => requestDesktopQuit()}
+                >
+                  Quit OpenFront
                 </button>
               `
             : null}
