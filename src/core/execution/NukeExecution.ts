@@ -446,7 +446,6 @@ export class NukeExecution implements Execution {
 
     const outer2 = magnitude.outer * magnitude.outer;
     const dst = this.dst;
-    const destroyer = this.player;
     for (const unit of mg.units()) {
       const type = unit.type();
       if (
@@ -459,7 +458,10 @@ export class NukeExecution implements Execution {
         continue;
       }
       if (mg.euclideanDistSquared(dst, unit.tile()) < outer2) {
-        unit.delete(true, destroyer);
+        // treatAFKFriendly matches warship targeting: a disconnected
+        // teammate's or ally's units are still not kills.
+        const friendly = this.player.isFriendly(unit.owner(), true);
+        unit.delete(true, friendly ? undefined : this.player);
       }
     }
 
