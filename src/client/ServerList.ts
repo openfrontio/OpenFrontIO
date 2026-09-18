@@ -517,8 +517,7 @@ export async function ensureServerList(): Promise<ServerListStatus> {
  * state, and -- because the web has no such bar -- a refused multiplayer
  * click on the web, which doubles as that press
  * (GameModeSelector.reportMultiplayerRefusal). Both gate themselves on
- * manualRetryAvailable()'s policy first. The lobby slot's Retry gets here
- * through refreshServerList below, on its own cooldown.
+ * manualRetryAvailable()'s policy first.
  *
  * Deliberately ignores the heartbeat's retry schedule. That backoff exists
  * to stop TIMER-driven callers hammering a down API between beats, and a
@@ -551,12 +550,14 @@ export function retryServerList(): Promise<ServerListStatus> {
   ) {
     return lastManualRetry.result;
   }
-  const result = runManualRetry();
+  const result = fetchAndApply();
   lastManualRetry = { at: now, result };
   return result;
 }
 
-async function runManualRetry(): Promise<ServerListStatus> {
+// fetchOnce joins the attempt already out, whoever started it, and starts
+// one otherwise; so this is the freshest answer obtainable right now.
+async function fetchAndApply(): Promise<ServerListStatus> {
   try {
     await fetchOnce();
     return apply();
@@ -572,24 +573,17 @@ async function runManualRetry(): Promise<ServerListStatus> {
  * cannot serve it, because it answers from the cached list at once, and after
  * a failure that list may still name the server that just died.
  *
- * Joins the attempt already out, whoever started it, and otherwise fetches.
- * MANUAL_RETRY_COOLDOWN_MS is not consulted: that is the policy for the
- * BUTTONS (each holds itself for it), and a press that reaches here has been
- * allowed by its own. Another press's allowance settling moments ago must not
- * turn this one into a dial from the cache. retryServerList's own floor
- * still holds, so a press inside it joins that attempt rather than none.
+ * Not routed through retryServerList, on purpose. Its clock is the shared
+ * policy for the OTHER two affordances (manualRetryAvailable): a press here
+ * must neither be answered from a press that settled inside that floor --
+ * which would be a dial from the cache, the thing this exists to avoid --
+ * nor stamp the clock and hold the web's refused-click probe for a press it
+ * did not make. The lobby slot's Retry holds itself for the cooldown.
  *
  * Never throws, for the same reason ensureServerList does not.
  */
-export async function refreshServerList(): Promise<ServerListStatus> {
-  if (inflight === null) return retryServerList();
-  try {
-    await inflight;
-    return apply();
-  } catch (e) {
-    console.warn("Server list refresh failed, using page values", e);
-    return "fallback";
-  }
+export function refreshServerList(): Promise<ServerListStatus> {
+  return fetchAndApply();
 }
 
 /**

@@ -573,11 +573,11 @@ blue for a game that lived on a host its list could not name.
     `RETRY_MAX_MS` away.
   - **Both:** the Retry in the homepage's lobby slot, shown when the public
     lobby feed has given up or an outage is confirmed (never on a gated
-    desktop session, where the status bar owns the remedy). It goes through
-    `refreshServerList()`, which applies the same policy and otherwise waits
-    for the attempt already in flight, so a `PublicLobbySocket.start` with
-    `refreshList` never dials from a list older than the answer it could
-    have had.
+    desktop session, where the status bar owns the remedy). It holds itself
+    for the same cooldown but does not share the clock: it goes through
+    `refreshServerList()`, which joins the attempt already in flight or
+    starts one, so a `PublicLobbySocket.start` with `refreshList` never
+    dials from a list older than the answer it could have had.
 
 - **What reachability may gate, and what it may not.** The rule, stated
   once at the top of `GameModeSelector.ts` and referenced from every call
