@@ -246,6 +246,7 @@ export class LangSelector extends LitElement {
     const components = [
       "single-player-modal",
       "host-lobby-modal",
+      "map-picker",
       "join-lobby-modal",
       "emoji-table",
       "player-stats",
