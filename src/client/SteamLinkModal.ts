@@ -18,7 +18,7 @@ import {
   stashPendingLink,
   type SteamConflictAccount,
 } from "./SteamLink";
-import { translateText } from "./Utils";
+import { showToast, translateText } from "./Utils";
 
 // "code_entry" is a step before "loading"/"ready"/"load_error" exist at all —
 // the player hasn't given us a code yet, so there's nothing to fetch.
@@ -257,9 +257,8 @@ export class SteamLinkModal extends BaseModal {
   // entry gate above and by the two post-open reads (onOpen/handleCodeSubmit)
   // that can be the first to actually see a guest profile. Stash so the flow
   // survives the login redirect, then hand the player to the account modal,
-  // which shows the login options. No new user-visible copy: the outcome IS
-  // the gate's outcome, so it reuses the gate's exact behaviour rather than
-  // inventing a second, near-identical message for the same situation.
+  // which shows the login options, with a toast saying why they landed there
+  // (otherwise the redirect reads as the link silently failing).
   //
   // `pending` is passed rather than read off `this` because the entry gate
   // runs BEFORE mode/token are assigned, and because close() below clears
@@ -274,6 +273,7 @@ export class SteamLinkModal extends BaseModal {
       stashPendingCodeEntry();
     }
     if (this.isOpen()) this.close();
+    showToast(translateText("steam_link_modal.login_required"), "red");
     window.location.hash = "modal=account";
   }
 

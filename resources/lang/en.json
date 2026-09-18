@@ -1833,6 +1833,7 @@
     "linking": "Linking…",
     "load_error": "Couldn't load your account details. Please try again from Steam.",
     "load_error_code": "Couldn't load your account details. Please try again.",
+    "login_required": "Please log in to link your Steam account.",
     "reason_account_already_has_steam": "Your account is already linked to a different Steam account.",
     "reason_discard_blocked": "This Steam account's OpenFront account can't be removed automatically. Please contact support and we'll sort it out for you.",
     "reason_discard_blocked_paid": "This Steam account's OpenFront account has purchases on it, so we can't delete it automatically. Please contact support and we'll sort it out for you.",
