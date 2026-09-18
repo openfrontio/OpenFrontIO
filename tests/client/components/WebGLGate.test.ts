@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import en from "../../../resources/lang/en.json";
 import {
   WebGLGate,
   type WebGLGateStatus,
@@ -50,6 +51,20 @@ describe("webgl-gate", () => {
     expect(button?.textContent?.trim()).toBe("desktop_webgl_gate.quit");
     button!.click();
     expect(quit).toHaveBeenCalledOnce();
+  });
+
+  it("has an en.json entry for every string on the desktop gate", async () => {
+    window.openfrontDesktop = { quit: () => Promise.resolve() };
+    await mount("unsupported");
+
+    const keys = [...gate!.querySelectorAll("h2, p, li, button")].map((el) =>
+      el.textContent!.trim(),
+    );
+    expect(keys).toHaveLength(7);
+    for (const key of keys) {
+      const leaf = key.slice("desktop_webgl_gate.".length);
+      expect(en.desktop_webgl_gate).toHaveProperty(leaf);
+    }
   });
 
   it("omits the quit button on a shell without quit()", async () => {
