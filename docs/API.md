@@ -104,6 +104,9 @@ curl "https://api.openfront.io/public/player/HabCsQYR"
 
 ### Get Player Sessions
 
+> **Deprecated:** returns the player's entire history in one unbounded
+> response. Use [Get Player Sessions (v2)](#get-player-sessions-v2) instead.
+
 Retrieve a list of games & client ids (session ids) for a specific player.
 
 **Endpoint:**
@@ -116,6 +119,57 @@ GET https://api.openfront.io/public/player/:playerId/sessions
 
 ```bash
 curl "https://api.openfront.io/public/player/HabCsQYR/sessions"
+```
+
+### Get Player Sessions (v2)
+
+Paginated replacement for the endpoint above: the same per-session fields,
+returned newest game first in pages of 100 with keyset (cursor) pagination
+like [Get Player Games](#get-player-games).
+
+**Endpoint:**
+
+```
+GET https://api.openfront.io/public/v2/player/:playerId/sessions
+```
+
+**Query Parameters:**
+
+- `filter` (optional): Mode bucket, one of `[ffa, team, hvn, ranked]`. Omit for all modes.
+- `type` (optional): Game type, one of `[public, private, singleplayer]`. Omit for all types. `filter` and `type` are orthogonal and may be combined.
+- `start` / `end` (optional): ISO 8601 datetimes bounding the game start time (inclusive). Each may be given alone; `start` must be before `end`.
+- `cursor` (optional): Opaque continuation token. Pass the `nextCursor` value from the previous response verbatim to fetch the next page — do not construct or parse it. A cursor is bound to the filters it was issued under; changing any other parameter requires starting over without a cursor.
+
+**Response:**
+
+```json
+{
+  "results": [
+    {
+      "gameId": "abc123",
+      "gameStart": "2026-05-17T21:04:00.000Z",
+      "gameEnd": "2026-05-17T21:24:34.000Z",
+      "gameType": "Public",
+      "gameMode": "Team",
+      "gameRankedType": "unranked",
+      "clientId": "client-session-id",
+      "username": "alice",
+      "clanTag": "ABC",
+      "hasWon": true
+    }
+  ],
+  "nextCursor": "opaque-token"
+}
+```
+
+- `nextCursor` is `null` when there are no more sessions.
+- Unlike the v1 endpoint, a known player with no sessions returns an empty
+  `results` array (v1 answers 404); 404 means the player id is unknown.
+
+**Example:**
+
+```bash
+curl "https://api.openfront.io/public/v2/player/HabCsQYR/sessions"
 ```
 
 ### Get Player Games
@@ -168,6 +222,45 @@ GET https://api.openfront.io/public/player/:playerId/games
 
 ```bash
 curl "https://api.openfront.io/public/player/HabCsQYR/games?filter=team&type=public"
+```
+
+### Recently Deleted Players
+
+List the public ids of players deleted in the last 7 days, newest first. Poll
+this daily and delete those players from any data you have collected.
+
+Pass `since` (the `deletedAt` of your last sync, or the time you last polled)
+to fetch only newer deletions. Deletions are never returned more than 7 days
+after the fact: a `since` more than 7 days in the past is rejected with a 400.
+If you miss the window, reconcile instead by dropping any player whose
+`/public/player/:playerId` now returns 404.
+
+**Endpoint:**
+
+```
+GET https://api.openfront.io/public/players/recently-deleted
+```
+
+**Query Parameters:**
+
+- `since` (optional): ISO 8601 timestamp; only return players deleted after
+  this time. Must be within the last 7 days.
+
+**Example:**
+
+```bash
+curl "https://api.openfront.io/public/players/recently-deleted?since=2026-09-14T00:00:00Z"
+```
+
+**Response:**
+
+```json
+[
+  {
+    "publicId": "HabCsQYR",
+    "deletedAt": "2026-09-14T08:12:33.000Z"
+  }
+]
 ```
 
 ## Clans

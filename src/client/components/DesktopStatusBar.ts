@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { createRef, ref, type Ref } from "lit/directives/ref.js";
 import { getDesktopSessionState } from "../Auth";
 import {
+  desktopLinkGate,
   desktopUpdate,
   isDesktopShell,
   multiplayerAllowedForSession,
@@ -41,6 +42,11 @@ const WIGGLE_CLASS = "animate-bounce";
  * update -- Retry" points at a button that provably cannot work until the
  * network comes back, while "Offline" names the actual cause.
  *
+ * One signed-out reason breaks the session > reachability half of that order:
+ * `needs-account`'s own remedy is itself a network call, so while the backend
+ * is unreachable it is really a symptom of reachability too. See the
+ * exception carved out at the top of the function below.
+ *
  * `backendOutage` is the DEBOUNCED signal
  * (ServerList.backendUnreachableConfirmed()), and it is only ever true on
  * desktop -- the bar renders nothing on the web, so the component never
@@ -54,6 +60,20 @@ export function barSource(
   session: DesktopSessionState | null,
   backendOutage: boolean,
 ): "session" | "reachability" | "update" | "none" {
+  // The one exception to session > reachability. "needs-account" is the only
+  // signed-out reason whose action is itself a network call: reopening the
+  // gate mints a link ticket. While the backend is unreachable that button
+  // cannot succeed, and an offline message with a working Retry beats an
+  // account prompt with a dead one. Every other signed-out reason still
+  // outranks reachability, because each names something the player can act
+  // on regardless of the backend.
+  if (
+    backendOutage &&
+    session?.status === "signed-out" &&
+    session.reason === "needs-account"
+  ) {
+    return "reachability";
+  }
   if (session !== null && !multiplayerAllowedForSession(session)) {
     return "session";
   }
@@ -107,8 +127,56 @@ export class DesktopStatusBar extends LitElement {
   private unsubscribe: (() => void) | null = null;
 
   private onSessionState = (e: Event) => {
-    this.sessionState = (e as CustomEvent<DesktopSessionState>).detail;
+    const next = (e as CustomEvent<DesktopSessionState>).detail;
+    const wasGated =
+      this.sessionState !== null &&
+      !multiplayerAllowedForSession(this.sessionState);
+    this.sessionState = next;
+    if (wasGated && next.status === "signed-in") this.applyStagedUpdate();
+    // A Retry that lands back on the same signed-out reason changes nothing
+    // on screen (the shell answered in a few ms, so even "Signing in…" never
+    // paints). Wiggle so the press is seen to have been tried.
+    const before = this.sessionAtRetry;
+    if (before === null || next.status === "retrying") return;
+    this.sessionAtRetry = null;
+    if (next.status === before.status && next.reason === before.reason) {
+      this.wiggle();
+    }
   };
+
+  /**
+   * Reloads into a staged update the moment a gated session signs in.
+   *
+   * barSource ranks the session above the update, so while the session was
+   * gated the staged release's Reload was never on screen and the player had
+   * no way to apply it. They are about to get multiplayer back on a client
+   * that may be too old to speak to the servers (a stale wire format fails
+   * every lobby frame), so apply it now rather than leave a button to find.
+   *
+   * Only from a GATED state: a fresh page goes unknown -> signed-in, which
+   * must not reload, or applying would loop. Never mid-game or while waiting
+   * in a lobby, where a reload throws the player out.
+   */
+  private applyStagedUpdate(): void {
+    if (this.updateState?.status !== "staged") return;
+    if (this.inLobby || document.body.classList.contains("in-game")) return;
+    desktopUpdate()
+      ?.apply()
+      .catch((err: unknown) => {
+        console.error("desktop-status-bar: auto-apply failed", err);
+      });
+  }
+
+  private inLobby = false;
+  private onJoinLobby = () => {
+    this.inLobby = true;
+  };
+  private onLeaveLobby = () => {
+    this.inLobby = false;
+  };
+
+  // The session state when Retry was pressed, until the retry settles.
+  private sessionAtRetry: DesktopSessionState | null = null;
 
   private onBackendReachability = (e: Event) => {
     this.backendOutage = (
@@ -151,6 +219,8 @@ export class DesktopStatusBar extends LitElement {
     // startup, quite possibly before this element upgrades.
     if (isDesktopShell()) this.sessionState = getDesktopSessionState();
     document.addEventListener("desktop-session-state", this.onSessionState);
+    document.addEventListener("join-lobby", this.onJoinLobby);
+    document.addEventListener("leave-lobby", this.onLeaveLobby);
 
     // Reachability is subscribed ONLY on desktop, unlike the entry-point
     // components that gate on it. The heartbeat runs on the web too and
@@ -175,6 +245,8 @@ export class DesktopStatusBar extends LitElement {
     this.unsubscribe?.();
     this.unsubscribe = null;
     document.removeEventListener("desktop-session-state", this.onSessionState);
+    document.removeEventListener("join-lobby", this.onJoinLobby);
+    document.removeEventListener("leave-lobby", this.onLeaveLobby);
     document.removeEventListener(
       "backend-reachability",
       this.onBackendReachability,
@@ -384,6 +456,8 @@ export class DesktopStatusBar extends LitElement {
 
   private sessionLabel(s: DesktopSessionState): string {
     switch (s.reason) {
+      case "needs-account":
+        return translateText("desktop_session.needs_account");
       case "steam-wedged":
         return translateText("desktop_session.steam_wedged");
       case "steam-unavailable":
@@ -404,10 +478,42 @@ export class DesktopStatusBar extends LitElement {
 
   private sessionAction(s: DesktopSessionState) {
     if (s.status === "retrying") return nothing;
+    // "needs-account" gets its own button rather than the Retry below: there
+    // is nothing to retry, the account simply does not exist yet, and the
+    // remedy is reopening the shell's link gate so the player can create or
+    // link one.
+    if (s.status === "signed-out" && s.reason === "needs-account") {
+      return html`<button
+        class="shrink-0 px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius
+               text-sm font-medium uppercase tracking-wider"
+        @click=${() => {
+          // desktopLinkGate() is null on the web and on a shell too old to
+          // expose showLinkGate -- see its own doc comment in DesktopShell.ts.
+          // That case is unreachable from this button specifically: a shell
+          // with no bridge at all makes SteamSDK.getTicket() report
+          // `unavailable`, not `needs-account`, and any shell whose preload
+          // reports `needs-account` also exposes showLinkGate -- so this
+          // click handler can only ever run against a real bridge. If it
+          // somehow didn't, the `?.` below would short-circuit and swallow it
+          // with nothing in the console; only a REJECTION from showLinkGate()
+          // reaches the .catch. The bare `void` form used elsewhere in this
+          // file would swallow a rejection into an unhandled promise instead;
+          // AccountModal's handleShowLinkGate catches for the same reason.
+          desktopLinkGate()
+            ?.showLinkGate()
+            .catch((err: unknown) => {
+              console.error("desktop-status-bar: showLinkGate failed", err);
+            });
+        }}
+      >
+        ${translateText("desktop_status.go_online")}
+      </button>`;
+    }
     return html`<button
       class="shrink-0 px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius
              text-sm font-medium uppercase tracking-wider"
       @click=${() => {
+        this.sessionAtRetry = s;
         // Main.ts owns the retry, because a successful sign-in also has to
         // refresh userMe, the nav account button and the cached profile --
         // all of which already live there. See its crazyGamesSDK listener.

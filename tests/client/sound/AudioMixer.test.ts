@@ -65,6 +65,7 @@ vi.mock("howler", () => {
 import { Howler } from "howler";
 import {
   AudioMixer,
+  initAudioMixer,
   perceptualGain,
   resetAudioMixerForTest,
 } from "../../../src/client/sound/AudioMixer";
@@ -537,5 +538,34 @@ describe("preview cues", () => {
     build({ effects: 0 });
     await expect(mixer.previewCue("effects")).resolves.toBeUndefined();
     expect(howlInstances.length).toBe(0);
+  });
+});
+
+describe("initAudioMixer", () => {
+  it("runs the one-time audio reset before reading a single volume", () => {
+    // initAudioMixer is the only path both Main.ts and ClientGameRunner take,
+    // so it is where the reset has to land to be guaranteed to run ahead of
+    // the constructor that caches the values it clears. Reading the mixer's
+    // own level is the check that matters: a reset that ran afterwards would
+    // leave it here playing the stale value.
+    localStorage.setItem("settings.audio.ambience", "1");
+    const created = initAudioMixer(new UserSettings());
+    try {
+      expect(localStorage.getItem("settings.audio.ambience")).toBeNull();
+      expect(created.volumeFor("ambience")).toBeCloseTo(perceptualGain(0.4));
+    } finally {
+      resetAudioMixerForTest();
+    }
+  });
+
+  it("leaves a player who has already been reset alone", () => {
+    localStorage.setItem("settings.audio.resetVersion", "1");
+    localStorage.setItem("settings.audio.ambience", "1");
+    initAudioMixer(new UserSettings());
+    try {
+      expect(localStorage.getItem("settings.audio.ambience")).toBe("1");
+    } finally {
+      resetAudioMixerForTest();
+    }
   });
 });

@@ -2,6 +2,8 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
+/* The Steam shell has no ad slots, so it can use the width they reserve. */
+@custom-variant desktop (&:where(.desktop-shell, .desktop-shell *));
 
 @theme {
   --default-ring-width: 3px;

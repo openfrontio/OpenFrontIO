@@ -33,8 +33,8 @@ import { resolveVerifiedJoin } from "./Privilege";
 
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
-import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { startRankedCheckinLoops } from "./RankedCheckin";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
@@ -79,7 +79,16 @@ export async function startWorker() {
 
   setTimeout(
     () => {
-      startMatchmakingPolling(gm);
+      // The ranked loop follows the deployment-active flag the master pushes
+      // to this worker (OPE-469): a draining, standby or fenced server keeps
+      // the games it has but stops offering new matches.
+      startRankedCheckinLoops({
+        gm,
+        playlist,
+        workerId,
+        log,
+        isActive: () => lobbyService.isDeploymentActive(),
+      });
     },
     1000 + Math.random() * 2000,
   );
@@ -722,6 +731,7 @@ export async function startWorker() {
           friends,
           clientMsg.spectator === true,
           trusted,
+          clientMsg.platform,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
@@ -759,6 +769,12 @@ export async function startWorker() {
             workerId,
           });
           ws.close(CloseCode.LobbyFull, CloseReason.LobbyFull);
+        } else if (joinResult === "started") {
+          log.info(`client joined game ${clientMsg.gameID} after it started`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(CloseCode.GameStarted, CloseReason.GameStarted);
         }
 
         // Handle other message types
@@ -807,105 +823,6 @@ export async function startWorker() {
   process.on("unhandledRejection", (reason, promise) => {
     log.error(`unhandled rejection at:`, promise, "reason:", reason);
   });
-}
-
-async function startMatchmakingPolling(gm: GameManager) {
-  // One checkin serves exactly one queue, so a host serving both modes
-  // runs one long-poll loop per mode.
-  startMatchmakingLoop(gm, "1v1");
-  startMatchmakingLoop(gm, "2v2");
-}
-
-const MatchmakingAssignmentSchema = z.object({
-  // Flat list of matched players' publicIds.
-  players: z.array(z.string()),
-  // The matcher's team split ([[a],[b]] for 1v1). Optional for tolerance,
-  // but the current API always sends it.
-  teams: z.array(z.array(z.string())).optional(),
-});
-
-function startMatchmakingLoop(gm: GameManager, mode: "1v1" | "2v2") {
-  startPolling(
-    async () => {
-      try {
-        const url = `${ServerEnv.jwtIssuer() + "/matchmaking/checkin"}`;
-        const gameId = ServerEnv.generateGameIdForWorker(workerId);
-        if (gameId === null) {
-          log.warn(`Failed to generate game ID for worker ${workerId}`);
-          return;
-        }
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": ServerEnv.apiKey(),
-          },
-          body: JSON.stringify({
-            id: workerId,
-            gameId: gameId,
-            ccu: gm.activeClients(),
-            instanceId: process.env.INSTANCE_ID,
-            mode,
-          }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          log.warn(
-            `Failed to poll ${mode} lobby: ${response.status} ${response.statusText}`,
-          );
-          return;
-        }
-
-        const data = await response.json();
-        log.info(`Lobby ${mode} poll successful:`, data);
-
-        if (data.assignment) {
-          const parsed = MatchmakingAssignmentSchema.safeParse(data.assignment);
-          if (!parsed.success) {
-            // Don't strand the matched players: create the game without
-            // the allowlist/team pins rather than dropping the match.
-            log.warn(
-              `Unexpected ${mode} assignment shape: ${z.prettifyError(parsed.error)}`,
-            );
-          }
-          const baseConfig =
-            mode === "2v2" ? playlist.get2v2Config() : playlist.get1v1Config();
-          const game = gm.createGame(
-            gameId,
-            parsed.success
-              ? { ...baseConfig, allowedPublicIds: parsed.data.players }
-              : baseConfig,
-            undefined,
-            // Deadline for the slowest player: after match-assignment the
-            // client still has to poll game existence, pass Turnstile, and
-            // clear join auth; anyone not connected when start() fires is
-            // left out of the roster and the ranked game starts short-handed.
-            // A full lobby is NOT delayed by this — hasReachedMaxPlayerCount
-            // flips the phase to Active as soon as everyone has joined.
-            Date.now() + 15000,
-            undefined,
-            parsed.success ? parsed.data.teams : undefined,
-          );
-          if (game === null) {
-            log.warn(`Failed to create matchmaking game ${gameId}`);
-          }
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") {
-          // Abort is expected if no game is scheduled on this worker.
-          return;
-        }
-        log.error(`Error polling ${mode} lobby:`, error);
-      }
-    },
-    5000 + Math.random() * 1000,
-  );
 }
 
 function getClientIp(req: http.IncomingMessage): string {

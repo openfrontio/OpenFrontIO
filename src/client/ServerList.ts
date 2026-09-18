@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { GameID } from "../core/Schemas";
 import {
+  commitsMatch,
+  isCommitLike,
+  isSiteLike,
   ownLetterIn,
   pickServerForBuild,
   ServerList,
@@ -164,15 +167,27 @@ export function serverListSite(): string | undefined {
   return ClientEnv.siteHost() ?? window.location.host;
 }
 
+/**
+ * The site a ranked join names, so the API pools this page only with game
+ * servers registered under the site whose list it reads: the same site the
+ * list is fetched for, or undefined when there is none or it is not a name
+ * the API would accept (a dev page's `localhost:9000`). See
+ * docs/MultiServer.md, "The ranked queue is keyed by site".
+ */
+export function matchmakingSite(): string | undefined {
+  const site = safeSite();
+  return site !== undefined && isSiteLike(site) ? site : undefined;
+}
+
 export function serverListUrl(site: string): string {
   return `${getApiBase()}/cluster.json?site=${encodeURIComponent(site)}`;
 }
 
 /**
- * Whether the API answered our LAST attempt at all — any HTTP status, a 404
- * included. Null until the first attempt settles, false on a timeout or a
- * network error. "Answered" is not "served a usable list": a site with no
- * list is a reachable backend.
+ * Whether the API answered our LAST attempt — any status below 500, a 404
+ * included. Null until the first attempt settles, false on a timeout, a
+ * network error or a 5xx. "Answered" is not "served a usable list": a site
+ * with no list is a reachable backend.
  *
  * This is the raw signal, and it is deliberately twitchy: one timed-out
  * heartbeat flips it. Anything that takes something AWAY from the player
@@ -321,6 +336,13 @@ async function fetchServerList(site: string): Promise<ServerList | null> {
   } catch (e) {
     // Timed out, offline, DNS, TLS: nothing answered.
     recordAttempt(false, e);
+    return null;
+  }
+  // A 5xx is the API (or the edge in front of it) failing, not answering:
+  // everything else behind it is failing the same way, so it counts towards
+  // the outage like a timeout does.
+  if (res.status >= 500) {
+    recordAttempt(false, new Error(`server list answered ${res.status}`));
     return null;
   }
   recordAttempt(true);
@@ -495,7 +517,8 @@ export async function ensureServerList(): Promise<ServerListStatus> {
  * state, and -- because the web has no such bar -- a refused multiplayer
  * click on the web, which doubles as that press
  * (GameModeSelector.reportMultiplayerRefusal). Both gate themselves on
- * manualRetryAvailable()'s policy first.
+ * manualRetryAvailable()'s policy first, as does refreshServerList below,
+ * which is how the lobby slot's Retry gets here.
  *
  * Deliberately ignores the heartbeat's retry schedule. That backoff exists
  * to stop TIMER-driven callers hammering a down API between beats, and a
@@ -539,6 +562,31 @@ async function runManualRetry(): Promise<ServerListStatus> {
     return apply();
   } catch (e) {
     console.warn("Server list retry failed, using page values", e);
+    return "fallback";
+  }
+}
+
+/**
+ * The freshest list a player-initiated action can have before it dials: what
+ * the lobby slot's Retry waits on (PublicLobbySocket.start). ensureServerList
+ * cannot serve it, because it answers from the cached list at once, and after
+ * a failure that list may still name the server that just died.
+ *
+ * Owns the whole ordering so no caller has to rebuild it from the accessors:
+ * a retry when manualRetryAvailable() allows one, otherwise the attempt
+ * already out, whoever started it. With neither, a manual retry settled
+ * within the cooldown, and the cached list is as fresh as that policy lets
+ * it get.
+ *
+ * Never throws, for the same reason ensureServerList does not.
+ */
+export async function refreshServerList(): Promise<ServerListStatus> {
+  if (manualRetryAvailable()) return retryServerList();
+  try {
+    await inflight;
+    return apply();
+  } catch (e) {
+    console.warn("Server list refresh failed, using page values", e);
     return "fallback";
   }
 }
@@ -633,8 +681,8 @@ function apply(): ServerListStatus {
  * **A server-rendered page prefers its own server.** Before v2 a page always
  * talked to the colour that rendered it; the list's random pick can send it
  * to a sibling instead, and the two do not have to agree about that sibling.
- * On dev (`openfront.dev`, a blue/green pair behind the apex with
- * `CLUSTER_STATE_SOURCE=apex`) the registry listed both colours `open` on the
+ * On dev (`openfront.dev`, a blue/green pair behind the apex, then still
+ * draining by an apex colour poll) the registry listed both colours `open` on the
  * same build while the apex poll had green considering itself draining: a
  * page rendered by blue that drew green got a lobby feed reporting
  * `active: false`, read it as "a new version is available", and reloaded —
@@ -755,11 +803,11 @@ export function reloadWouldRescue(listStatus: ServerListStatus): boolean {
  *   `latest` from the static Worker, which is by definition not one
  *   deployment.
  * - Behind an apex — siteHost defined, not the page's own server, and the
- *   page's cluster map has siblings (prod: page openfront.io, servers blue
- *   and green.openfront.io) — reloadForUpdate re-enters through the site
- *   host, which the load balancer answers from a live deployment.
+ *   site's list has siblings (prod: page openfront.io, servers blue and
+ *   green.openfront.io) — reloadForUpdate re-enters through the site host,
+ *   which the load balancer answers from a live deployment.
  * - Standalone (no siteHost, or siteHost IS the page's own server, or the
- *   map names only this server — dev's main.openfront.dev, previews, beta):
+ *   site has only this server — dev's main.openfront.dev, previews, beta):
  *   the reload re-serves the same page from the same server. If that server
  *   is gone the reload fails with it; if it is alive with a
  *   WebSocket-specific problem, the prompt loops. Nothing a prompt can do
@@ -769,15 +817,19 @@ export function reloadWouldRescue(listStatus: ServerListStatus): boolean {
  * GAME_DOMAIN set: its page host (main.openfront.dev) and game host
  * (main.server.openfront.dev) differ, yet both names reach the one
  * container behind Traefik, so a differing siteHost alone proves nothing.
- * Same rule as the server's own apex poll
- * (ActiveDeployment.shouldPollApex).
  */
 function reloadCanLandElsewhere(): boolean {
   if (!ClientEnv.servedByGameServer()) return true;
   const site = ClientEnv.siteHost();
   if (site === undefined || site === ClientEnv.serverHost()) return false;
-  const cluster = ClientEnv.cluster();
-  return cluster !== undefined && Object.keys(cluster).length > 1;
+  // Somewhere else to land: the site's list names a server other than the
+  // one that rendered this page. Only the list can say — the page's injected
+  // map names its own server alone now — and reloadWouldRescue only asks
+  // with a list in hand, so "no list" reads as "nowhere else".
+  const list = cached?.list ?? null;
+  if (list === null) return false;
+  const own = ClientEnv.serverHost();
+  return Object.values(list.servers).some((s) => s.host !== own);
 }
 
 /**
@@ -844,6 +896,43 @@ export function redirectToGameVersion(
   if (target === null) return false;
   window.location.href = target;
   return true;
+}
+
+/**
+ * The `/v/<commit>/` page for a game on THIS page's host, or null when there
+ * is none to go to. The join-time `version_mismatch` handler's first choice
+ * (docs/MultiServer.md, "Opening a game at its server's version", OPE-471).
+ *
+ * Same decision as redirectToGameVersion, with two differences that apply
+ * only once the server has answered: the commit it refused us with wins
+ * over the list, which is stale-while-revalidate, and the loop guard reads
+ * the boot-time pin, since the join has already rewritten the address bar
+ * to the version-free share URL (PagePin.ts).
+ */
+export function versionedPathForMismatchedGame(
+  gameID: GameID,
+  serverCommit: string | undefined,
+): string | null {
+  if (isDesktopShell()) return null;
+  if (isOnReplayShell()) return null;
+  // A GIT_COMMIT that names no commit ("DEV", "unknown") must never reach a
+  // /v/<x>/ URL: treat it as if the server had said nothing.
+  const fromServer =
+    serverCommit !== undefined && isCommitLike(serverCommit)
+      ? serverCommit
+      : undefined;
+  const version = fromServer ?? ClientEnv.gameVersion(gameID);
+  if (version === undefined) return null;
+  const pinned = pagePin();
+  if (pinned !== null && commitsMatch(pinned, version)) return null;
+  return versionedPathForGame(
+    safeOwnCommit(),
+    version,
+    gameID,
+    safeGamePath(gameID),
+    window.location.pathname,
+    window.location.search,
+  );
 }
 
 // The game's own version-free path, which the redirect versions whenever

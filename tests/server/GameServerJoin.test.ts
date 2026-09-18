@@ -228,7 +228,7 @@ describe("GameServer.joinClient — active game reconnection", () => {
     expect((startMsg as any).myClientID).toBe(cid("orig"));
   });
 
-  it("marks genuine late arrival after game start as spectator", () => {
+  it("turns away a genuine late arrival just after game start", () => {
     const game = makeGame();
     const player = makeClient({ clientID: cid("p1"), persistentID: "p1-pid" });
     game.joinClient(player);
@@ -239,7 +239,8 @@ describe("GameServer.joinClient — active game reconnection", () => {
       clientID: cid("late"),
       persistentID: "late-pid",
     });
-    expect(game.joinClient(lateClient)).toBe("joined");
-    expect(lateClient.spectator).toBe(true);
+    expect(game.joinClient(lateClient)).toBe("started");
+    expect(lateClient.spectator).toBe(false);
+    expect(game.getClientIdForPersistentId("late-pid")).toBeNull();
   });
 });

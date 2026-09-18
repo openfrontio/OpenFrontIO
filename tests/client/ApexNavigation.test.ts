@@ -26,8 +26,8 @@ describe("apex-aware navigation", () => {
     window.BOOTSTRAP_CONFIG = {
       gameEnv: "prod",
       cluster: {
-        c: { host: "blue.openfront.io", color: "blue", numWorkers: 2 },
-        d: { host: "green.openfront.io", color: "green", numWorkers: 2 },
+        c: { host: "blue.openfront.io", numWorkers: 2 },
+        d: { host: "green.openfront.io", numWorkers: 2 },
       },
       instanceLetter: "d",
       turnstileSiteKey: "k",

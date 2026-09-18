@@ -1,30 +1,27 @@
 import { z } from "zod";
 
-// The cluster topology map (docs/MultiServer.md): every game-hosting
-// deployment in the fleet, keyed by its instance letter. The letter is the
-// first character of every game id the deployment mints, which is how a game
-// id names its server for the rest of its life — so letters are append-only:
-// retiring a deployment means draining it and deleting its entry, never
-// reusing its letter for a different host.
+// The shape a page or the desktop shell is handed for "which servers exist":
+// entries keyed by instance letter, each naming a host and its worker count
+// (docs/MultiServer.md). The letter is the first character of every game id
+// the server mints, which is how a game id names its server for the rest of
+// its life — so letters are append-only: retiring a server means draining it
+// and never reusing its letter for a different host.
 //
-// The map is configuration, not discovery: servers read it from the
-// CLUSTER_JSON env at boot (ServerEnv), clients from BOOTSTRAP_CONFIG or
-// GET /cluster.json. Every server carries the whole map and finds itself by
-// host (SUBDOMAIN.DOMAIN, bare DOMAIN in dev).
-
-export const ClusterColorSchema = z.enum(["blue", "green"]);
-export type ClusterColor = z.infer<typeof ClusterColorSchema>;
+// This is no longer configuration. A server knows only ITSELF — its letter,
+// game host and worker count arrive in its env (INSTANCE_LETTER, GAME_HOST,
+// NUM_WORKERS; docs/MultiServer.md, "Server identity") — and ServerEnv.cluster
+// synthesizes a one-entry map from them for the page it renders. The fleet
+// as a whole is the API registry's list
+// (src/core/ServerList.ts), which clients read; the one-entry map is the
+// page's fallback when that list is unavailable.
 
 export const ClusterEntrySchema = z.object({
   // Host the deployment is reachable on directly (e.g. "blue.openfront.io"),
   // bypassing any load balancer. Also the self-match key at boot.
   host: z.string().min(1),
-  // Which blue/green pool the deployment belongs to. Deployment-wide, unlike
-  // the per-machine instanceId — the drain check compares colors (PR 6).
-  color: ClusterColorSchema,
   // Worker processes behind this host. Frozen for the lifetime of every game
   // id minted under it: ids route to workers by hash % numWorkers, so change
-  // it only on a deploy after the color has fully drained.
+  // it only on a deploy after the letter has fully drained.
   numWorkers: z.number().int().min(1),
 });
 export type ClusterEntry = z.infer<typeof ClusterEntrySchema>;
@@ -32,7 +29,7 @@ export type ClusterEntry = z.infer<typeof ClusterEntrySchema>;
 // Lowercase letter only: it leads every game id, and a single unambiguous
 // case avoids letter-vs-Letter config drift. (Game-id validation accepts any
 // alphanumeric, so the constraint can widen later without a wire change.)
-const InstanceLetterSchema = z.string().regex(/^[a-z]$/);
+export const InstanceLetterSchema = z.string().regex(/^[a-z]$/);
 
 export const ClusterConfigSchema = z
   .record(InstanceLetterSchema, ClusterEntrySchema)

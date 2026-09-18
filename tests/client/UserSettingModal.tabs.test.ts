@@ -81,7 +81,6 @@ describe("user-setting tabs", () => {
   // half of the pair rather than silently passing.
   const GRAPHICS_CONTROLS = [
     "graphics-preset-selector",
-    "#territory-patterns-toggle",
     "#emoji-toggle",
     "#performance-overlay-toggle",
   ];

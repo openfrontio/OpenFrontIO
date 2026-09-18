@@ -1,6 +1,7 @@
 import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import {
+  DESKTOP_TUTORIAL_VIDEO_URL,
   textDirection,
   translateText,
   TUTORIAL_VIDEO_URL,
@@ -19,6 +20,7 @@ export class HelpModal extends BaseModal {
 
   @state() private keybinds: Record<string, string> = this.getKeybinds();
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
+  @query("#tutorial-video-player") private videoPlayer?: HTMLVideoElement;
 
   private getKeybinds(): Record<string, string> {
     return new UserSettings().keybinds(Platform.isMac);
@@ -142,15 +144,30 @@ export class HelpModal extends BaseModal {
             class="bg-white/5 rounded-xl border border-white/10 overflow-hidden mb-8"
           >
             <div class="relative w-full h-0 pb-[56.25%]">
-              <iframe
-                id="tutorial-video-iframe"
-                class="absolute top-0 left-0 w-full h-full"
-                src="${this.isModalOpen ? TUTORIAL_VIDEO_URL : ""}"
-                title="${translateText("help_modal.video_tutorial_title")}"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen
-              ></iframe>
+              ${
+                Platform.isElectron
+                  ? html`<video
+                      id="tutorial-video-player"
+                      class="absolute top-0 left-0 w-full h-full"
+                      src="${DESKTOP_TUTORIAL_VIDEO_URL}"
+                      title="${translateText(
+                        "help_modal.video_tutorial_title",
+                      )}"
+                      controls
+                      preload="metadata"
+                    ></video>`
+                  : html`<iframe
+                      id="tutorial-video-iframe"
+                      class="absolute top-0 left-0 w-full h-full"
+                      src="${this.isModalOpen ? TUTORIAL_VIDEO_URL : ""}"
+                      title="${translateText(
+                        "help_modal.video_tutorial_title",
+                      )}"
+                      frameborder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowfullscreen
+                    ></iframe>`
+              }
             </div>
           </section>
 
@@ -1291,5 +1308,8 @@ export class HelpModal extends BaseModal {
     if (this.videoIframe) {
       this.videoIframe.src = "";
     }
+    // The desktop <video> keeps its src -- the file is local, so unlike the
+    // YouTube iframe there is nothing to unload; pausing is enough.
+    this.videoPlayer?.pause();
   }
 }

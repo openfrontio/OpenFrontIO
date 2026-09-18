@@ -258,13 +258,21 @@ function trustLockIcon(viewerTrusted: boolean): TemplateResult {
       : "public_lobby.trusted_locked",
   );
   return html`<span
-    class="${BADGE} absolute bottom-2 right-2 flex items-center px-1.5 py-1 ${viewerTrusted
+    class="${BADGE} group/trust absolute bottom-2 right-2 flex items-center px-1.5 py-1 ${viewerTrusted
       ? "text-green-400"
       : "text-red-400"}"
-    title=${label}
     aria-label=${label}
     data-trust=${viewerTrusted ? "unlocked" : "locked"}
   >
+    <span
+      role="tooltip"
+      class="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden w-max max-w-48 flex-col gap-0.5 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs normal-case tracking-normal text-white shadow-xl group-hover/trust:flex"
+    >
+      <span class="font-bold"
+        >${translateText("public_lobby.trusted_tooltip_title")}</span
+      >
+      <span class="text-white/80">${label}</span>
+    </span>
     <svg
       class="size-4"
       viewBox="0 0 20 20"
