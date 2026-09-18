@@ -5,6 +5,7 @@ import {
   isDesktopShell,
   requestDesktopQuit,
 } from "../DesktopShell";
+import { translateText } from "../Utils";
 
 export type WebGLGateStatus = "software" | "unsupported" | "limited";
 
@@ -78,12 +79,13 @@ const SAFARI_NOTES: string[] = [
 
 // The desktop shell bundles its own Chromium, so browser settings, flags and
 // the player's default browser have no bearing on it. Restarting is what
-// players report clears it.
-const DESKTOP_STEPS: string[] = [
-  "Quit OpenFront.",
-  "Restart Steam, then launch OpenFront again.",
-  "If this keeps happening, restart your computer.",
-  "If it still happens, update your graphics drivers from NVIDIA, AMD or Intel.",
+// players report clears it. Unlike the browser steps above, these name no
+// browser UI, so they are translated.
+const DESKTOP_STEP_KEYS = [
+  "desktop_webgl_gate.step_quit",
+  "desktop_webgl_gate.step_restart_steam",
+  "desktop_webgl_gate.step_restart_computer",
+  "desktop_webgl_gate.step_drivers",
 ];
 
 /**
@@ -178,16 +180,17 @@ export class WebGLGate extends LitElement {
           class="w-full max-w-lg max-h-[85vh] overflow-y-auto p-6 sm:p-8 rounded-xl bg-surface text-white shadow-2xl"
         >
           <h2 class="text-xl font-bold mb-3">
-            Graphics acceleration unavailable
+            ${translateText("desktop_webgl_gate.title")}
           </h2>
           <p class="text-sm leading-relaxed text-white/85 mb-5">
-            OpenFront couldn't use your graphics card, so the game can't run.
-            This is usually temporary. To fix it:
+            ${translateText("desktop_webgl_gate.intro")}
           </p>
           <ol
             class="pl-5 list-decimal text-sm leading-relaxed text-white/85 space-y-1.5"
           >
-            ${DESKTOP_STEPS.map((step) => html`<li>${step}</li>`)}
+            ${DESKTOP_STEP_KEYS.map(
+              (key) => html`<li>${translateText(key)}</li>`,
+            )}
           </ol>
           ${desktopQuit() !== null
             ? html`
@@ -195,7 +198,7 @@ export class WebGLGate extends LitElement {
                   class="mt-5 w-full py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-bold text-white transition-colors"
                   @click=${() => requestDesktopQuit()}
                 >
-                  Quit OpenFront
+                  ${translateText("desktop_webgl_gate.quit")}
                 </button>
               `
             : null}

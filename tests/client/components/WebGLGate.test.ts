@@ -24,7 +24,7 @@ describe("webgl-gate", () => {
     await mount("unsupported");
 
     expect(gate!.textContent).toContain("Google Chrome");
-    expect(gate!.textContent).not.toContain("Restart Steam");
+    expect(gate!.textContent).not.toContain("desktop_webgl_gate");
   });
 
   it.each<WebGLGateStatus>(["unsupported", "software"])(
@@ -33,7 +33,9 @@ describe("webgl-gate", () => {
       window.openfrontDesktop = {};
       await mount(status);
 
-      expect(gate!.textContent).toContain("Restart Steam");
+      expect(gate!.textContent).toContain(
+        "desktop_webgl_gate.step_restart_steam",
+      );
       expect(gate!.textContent).not.toContain("chrome://flags");
       expect(gate!.textContent).not.toContain("Safari");
     },
@@ -45,7 +47,7 @@ describe("webgl-gate", () => {
     await mount("unsupported");
 
     const button = gate!.querySelector("button");
-    expect(button?.textContent?.trim()).toBe("Quit OpenFront");
+    expect(button?.textContent?.trim()).toBe("desktop_webgl_gate.quit");
     button!.click();
     expect(quit).toHaveBeenCalledOnce();
   });
