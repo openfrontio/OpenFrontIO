@@ -132,6 +132,9 @@ let consecutiveFailures = 0;
 // back the same attempt rather than start or skip one.
 let lastManualRetry: { at: number; result: Promise<ServerListStatus> } | null =
   null;
+// The same, on its own clock, for refreshServerList().
+let lastRefresh: { at: number; result: Promise<ServerListStatus> } | null =
+  null;
 let warnedMalformed = false;
 
 /** Test-only. */
@@ -144,6 +147,7 @@ export function resetServerList(): void {
   reachable = null;
   consecutiveFailures = 0;
   lastManualRetry = null;
+  lastRefresh = null;
   warnedMalformed = false;
   ClientEnv.applyServerList(null, null);
 }
@@ -555,14 +559,12 @@ export function retryServerList(): Promise<ServerListStatus> {
   return result;
 }
 
-// fetchOnce joins the attempt already out, whoever started it, and starts
-// one otherwise; so this is the freshest answer obtainable right now.
 async function fetchAndApply(): Promise<ServerListStatus> {
   try {
     await fetchOnce();
     return apply();
   } catch (e) {
-    console.warn("Server list retry failed, using page values", e);
+    console.warn("Server list fetch failed, using page values", e);
     return "fallback";
   }
 }
@@ -578,12 +580,25 @@ async function fetchAndApply(): Promise<ServerListStatus> {
  * must neither be answered from a press that settled inside that floor --
  * which would be a dial from the cache, the thing this exists to avoid --
  * nor stamp the clock and hold the web's refused-click probe for a press it
- * did not make. The lobby slot's Retry holds itself for the cooldown.
+ * did not make. The lobby slot's Retry holds itself for the cooldown, and
+ * this keeps the same MANUAL_RETRY_MIN_INTERVAL_MS floor on a clock of its
+ * own, so a caller that is not behind that button still cannot turn each
+ * call into a request. Like retryServerList, it ignores the heartbeat's
+ * backoff: a person pressing a button is not a timer.
  *
  * Never throws, for the same reason ensureServerList does not.
  */
 export function refreshServerList(): Promise<ServerListStatus> {
-  return fetchAndApply();
+  const now = Date.now();
+  if (
+    lastRefresh !== null &&
+    now - lastRefresh.at < MANUAL_RETRY_MIN_INTERVAL_MS
+  ) {
+    return lastRefresh.result;
+  }
+  const result = fetchAndApply();
+  lastRefresh = { at: now, result };
+  return result;
 }
 
 /**

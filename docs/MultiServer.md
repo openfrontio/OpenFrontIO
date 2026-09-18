@@ -552,15 +552,15 @@ blue for a game that lived on a host its list could not name.
   any other attempt.
 
   The floor is the last line of defence rather than the first. Above it sits
-  one policy, `manualRetryAvailable()`, shared by both shells' affordances
-  and reading one clock: no retry while any server-list attempt is in flight
+  one policy, `manualRetryAvailable()`, shared by the two affordances that
+  reach `retryServerList` and reading one clock: no retry while any server-list attempt is in flight
   (`attemptInFlight()` / `server-list-attempt`), whoever started it, and
   none for `MANUAL_RETRY_COOLDOWN_MS` (5s) after the last player-initiated
   one — a stubbed or fast failure settles in milliseconds and would
   otherwise hand the affordance straight back to a player clicking at an
   outage.
 
-  The two affordances:
+  The affordances:
   - **Desktop:** the status bar's offline Retry, disabled under either
     condition above so it comes back whenever the later of them ends. During
     an automatic attempt it reads `desktop_status.retrying` rather than
@@ -575,9 +575,10 @@ blue for a game that lived on a host its list could not name.
     lobby feed has given up or an outage is confirmed (never on a gated
     desktop session, where the status bar owns the remedy). It holds itself
     for the same cooldown but does not share the clock: it goes through
-    `refreshServerList()`, which joins the attempt already in flight or
-    starts one, so a `PublicLobbySocket.start` with `refreshList` never
-    dials from a list older than the answer it could have had.
+    `refreshServerList()`, which has a 1s floor of its own and otherwise
+    joins the attempt already in flight or starts one, so a
+    `PublicLobbySocket.start` with `refreshList` never dials from a list
+    older than the answer it could have had.
 
 - **What reachability may gate, and what it may not.** The rule, stated
   once at the top of `GameModeSelector.ts` and referenced from every call

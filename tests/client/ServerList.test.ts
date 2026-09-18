@@ -884,6 +884,33 @@ describe("refreshServerList", () => {
     expect(await refreshServerList()).toBe("api");
     expect(manualRetryAvailable()).toBe(true);
   });
+
+  it("has a floor of its own, inside which a second call joins the first", async () => {
+    vi.useFakeTimers();
+    expect(await refreshServerList()).toBe("api");
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  // A person pressing a button is not a timer: the heartbeat's backoff after
+  // a failure must not turn the Retry into a dial from the cached list.
+  it("fetches inside the heartbeat's backoff after a failed attempt", async () => {
+    vi.useFakeTimers();
+    expect(await ensureServerList()).toBe("api");
+    fetchMock.mockRejectedValueOnce(new TypeError("network down"));
+    expect(await retryServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    fetchMock.mockImplementation(async () => jsonResponse(MOVED_LIST));
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
+  });
 });
 
 // What the desktop status bar's Retry button disables itself on. The
