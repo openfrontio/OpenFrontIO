@@ -47,7 +47,9 @@ export class WorkerLobbyService {
   private lastFullGameIds: string | null = null;
   // Deployment-active flag from the master's broadcast (see
   // MasterLobbiesBroadcastSchema.active). Stamped onto every full snapshot so
-  // pinned tabs on a draining deployment get told to reload.
+  // pinned tabs on a draining deployment get told to reload, and read by the
+  // ranked check-in loop so a draining server stops offering matches too
+  // (RankedCheckin.ts, OPE-469).
   private deploymentActive = true;
 
   constructor(
@@ -63,6 +65,15 @@ export class WorkerLobbyService {
     this.setupUpgradeHandler();
     this.setupLobbiesWebSocket();
     this.setupIPCListener();
+  }
+
+  /**
+   * Whether the master last said this deployment may take new games. True
+   * until the first broadcast arrives, so a worker that has not yet heard
+   * from its master behaves as it always has.
+   */
+  isDeploymentActive(): boolean {
+    return this.deploymentActive;
   }
 
   private setupIPCListener() {
@@ -186,6 +197,7 @@ export class WorkerLobbyService {
     this.sendToMaster({
       type: "lobbyList",
       lobbies: [...publicLobbies, ...hostedLobbies],
+      liveGames: this.gm.activeGames(),
     } satisfies WorkerLobbyList);
   }
 

@@ -7,7 +7,12 @@ import {
   GameMode,
   GameType,
 } from "../core/game/Game";
-import { GameConfig, GameID, PublicGameType } from "../core/Schemas";
+import {
+  ClientPlatformSchema,
+  GameConfig,
+  GameID,
+  PublicGameType,
+} from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer, JoinResult } from "./GameServer";
 import {
@@ -122,6 +127,20 @@ export class GameManager {
       totalClients += game.numClients();
     });
     return totalClients;
+  }
+
+  // Every platform is present, zeros included, so a platform whose last
+  // player leaves reports 0 instead of its series going stale.
+  activeClientsByPlatform(): Map<Client["platform"], number> {
+    const counts = new Map<Client["platform"], number>(
+      [...ClientPlatformSchema.options, "unknown" as const].map((p) => [p, 0]),
+    );
+    for (const game of this.games.values()) {
+      for (const client of game.activeClients()) {
+        counts.set(client.platform, counts.get(client.platform)! + 1);
+      }
+    }
+    return counts;
   }
 
   desyncCount(): number {

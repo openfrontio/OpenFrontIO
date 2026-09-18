@@ -6,8 +6,19 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameEnv } from "../core/configuration/Config";
-import { fetchSiteColor } from "./ActiveDeployment";
+import {
+  applyCheckinState,
+  CHECKIN_INTERVAL_MS,
+  checkinBody,
+  isRefusal,
+  registeredSite,
+  sendCheckin,
+} from "./ClusterCheckin";
 import { getDescriptor } from "./DesktopRelease";
+import {
+  coordinatorUrl,
+  LobbyCoordinatorClient,
+} from "./LobbyCoordinatorClient";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { MasterLobbyService } from "./MasterLobbyService";
@@ -107,7 +118,7 @@ app.use(
 );
 
 // Apple Pay domain verification (Stripe's universal association file,
-// vendored in resources/). Apple fetches this exact path over HTTPS when the
+// vendored in resources/public/). Apple fetches this exact path over HTTPS when the
 // domain is registered in the Stripe dashboard, and it must get the raw file:
 // express.static above ignores dotfile paths (so it falls through to here)
 // and the SPA fallback below would answer with the app shell, which makes
@@ -121,7 +132,7 @@ app.get(
     res.sendFile(
       path.join(
         __dirname,
-        "../../resources/.well-known/apple-developer-merchantid-domain-association",
+        "../../resources/public/.well-known/apple-developer-merchantid-domain-association",
       ),
       // sendFile refuses dotfile path segments (".well-known") by default.
       // maxAge matters beyond browsers: nginx's proxy cache honours the
@@ -151,7 +162,10 @@ export async function startMaster() {
   log.info(`Primary ${process.pid} is running`);
   log.info(`Setting up ${ServerEnv.numWorkers()} workers...`);
 
-  lobbyService = new MasterLobbyService(playlist, log);
+  // A server that registers schedules nothing until the API calls it open: a
+  // mistyped letter must not mint lobbies under a letter routed elsewhere.
+  const registers = checkinBody(0) !== null;
+  lobbyService = new MasterLobbyService(playlist, log, registers);
 
   const INSTANCE_ID =
     ServerEnv.env() === GameEnv.Dev
@@ -160,6 +174,33 @@ export async function startMaster() {
   process.env.INSTANCE_ID = INSTANCE_ID;
 
   log.info(`Instance ID: ${INSTANCE_ID}`);
+
+  // Join the site's shared public-lobby roster (LobbyCoordinatorClient.ts)
+  // when LOBBY_COORDINATOR=api and this server has a public host to
+  // register under, the same test as the check-in below. Started before the
+  // workers fork so the first roster normally lands before scheduling
+  // begins; until it does, and whenever it stops, the master schedules its
+  // own lobbies exactly as it does without a coordinator.
+  const hello = checkinBody(0);
+  const coordinator = coordinatorUrl(registeredSite());
+  if (coordinator !== null && hello !== null) {
+    log.info(`Joining lobby coordinator at ${coordinator}`);
+    const client = new LobbyCoordinatorClient({
+      url: coordinator,
+      apiKey: ServerEnv.apiKey(),
+      hello: {
+        letter: hello.letter,
+        host: hello.host,
+        version: hello.version,
+        numWorkers: hello.numWorkers,
+        instanceId: INSTANCE_ID,
+      },
+      handlers: lobbyService.coordinatorHandlers(),
+      log,
+    });
+    lobbyService.attachCoordinator(client);
+    client.start();
+  }
 
   // Fork workers
   for (let i = 0; i < ServerEnv.numWorkers(); i++) {
@@ -205,48 +246,43 @@ export async function startMaster() {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
 
-  // Behind a load balancer (blue/green), only the color the balancer
-  // currently routes to should schedule public lobbies. The balancer's
-  // /api/health reports the COLOR of whichever deployment answered; colors
-  // are deployment-wide, so with several machines per color the poll
-  // reaching a sibling — same color, different instanceId — still counts as
-  // "the live color is mine". A standalone deployment (no SITE_HOST, or
-  // SITE_HOST is our own host) is always active.
-  const siteHost = ServerEnv.siteHost();
-  if (siteHost !== undefined && siteHost !== ServerEnv.publicHost()) {
-    log.info(`Polling https://${siteHost}/api/health for active deployment`);
-    // 5s: this latency is the window after a flip where the newly-active
-    // deployment isn't creating public lobbies yet (and the draining one
-    // still is). startPolling serializes runs, so the fetch's 10s timeout
-    // can't pile requests up.
+  // Register with the API and keep checking in (docs/MultiServer.md,
+  // "Server list v2"): the API's list is what clients read to find a
+  // server, so a server that isn't checking in isn't offered to anyone.
+  // Local development (`npm run dev`, no SUBDOMAIN) has no public host and
+  // registers nowhere; every deployed host registers under its own site.
+  if (registers) {
+    log.info(
+      `Checking in with ${ServerEnv.jwtIssuer()}/cluster/checkin every ${CHECKIN_INTERVAL_MS / 1000}s`,
+    );
+    let lastRefusal: string | null = null;
     startPolling(async () => {
-      const siteColor = await fetchSiteColor(siteHost);
-      if (siteColor === null) return;
-      lobbyService.setActive(siteColor === ServerEnv.color());
-    }, 5 * 1000);
+      const body = checkinBody(lobbyService.liveGames());
+      if (body === null) return;
+      const result = await sendCheckin(body);
+      if (isRefusal(result)) {
+        if (result.refused !== lastRefusal) {
+          log.error(
+            `API refused check-in as letter ${body.letter} from ${body.host}: ${result.refused}. Scheduling no public lobbies until it is accepted.`,
+          );
+        }
+        lastRefusal = result.refused;
+      } else if (result !== null) {
+        lastRefusal = null;
+      }
+      applyCheckinState(result, (active) => lobbyService.setActive(active));
+    }, CHECKIN_INTERVAL_MS);
   }
 }
 
-// The fleet topology map, verbatim from this server's own config. Web
-// clients get it baked into BOOTSTRAP_CONFIG; this endpoint is for the
-// desktop shell, which loads its renderer from app:// and discovers the
-// cluster from its configured serverHost at boot instead.
-app.get("/cluster.json", (_req, res) => {
-  setNoStoreHeaders(res);
-  res.json(ServerEnv.cluster());
-});
-
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;
+  // instanceId is diagnostics: it tells the machines behind an apex apart.
   const instanceId = ServerEnv.instanceId();
-  // The drain check (ActiveDeployment) compares colors: deployment-wide,
-  // where instanceId is per-machine and would false-drain siblings behind
-  // the same apex. instanceId stays for diagnostics.
-  const color = ServerEnv.color();
   if (ready) {
-    res.json({ status: "ok", instanceId, color });
+    res.json({ status: "ok", instanceId });
   } else {
-    res.status(503).json({ status: "unavailable", instanceId, color });
+    res.status(503).json({ status: "unavailable", instanceId });
   }
 });
 

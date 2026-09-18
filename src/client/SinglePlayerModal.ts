@@ -26,6 +26,7 @@ import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { GameStartingModal } from "./GameStartingModal";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
@@ -216,6 +217,9 @@ export class SinglePlayerModal extends BaseModal {
   // Identifies the current start attempt. Bumped on every start and on every
   // close, so an attempt that outlives its modal can tell it has been retired.
   private startAttempt: number = 0;
+  // Which attempt the starting overlay is up for, so a retired attempt's
+  // cleanup cannot hide the overlay a newer attempt has shown.
+  private overlayAttempt: number = 0;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -623,6 +627,17 @@ export class SinglePlayerModal extends BaseModal {
     // attempts dispatch join-lobby with different gameIDs and whichever
     // resolves last wins, which can be the one the player abandoned.
     this.startAttempt++;
+    // If the retired attempt still owned the starting overlay it never
+    // dispatched join-lobby, so nothing downstream will hide it: without
+    // this, dismissing the modal mid-preparation leaves a full-screen
+    // overlay blocking the menu until the preparation deadline settles.
+    if (this.overlayAttempt !== 0) {
+      this.overlayAttempt = 0;
+      const startingModal = document.querySelector("game-starting-modal");
+      if (startingModal instanceof GameStartingModal) {
+        startingModal.hide();
+      }
+    }
     this.resetOptions();
   }
 
@@ -1050,6 +1065,16 @@ export class SinglePlayerModal extends BaseModal {
     // reads as loading rather than as a dead click.
     this.starting = true;
     const attempt = ++this.startAttempt;
+    // The full-screen starting overlay, up from the click rather than at
+    // prestart: it also covers Main's own awaits after the dispatch. On
+    // success GameRenderer hides it (a canPlay() refusal hides it in
+    // handleJoinLobby); an attempt that never dispatches reaches neither, so
+    // onClose (or the finally below, for exits without a close) releases it.
+    const startingModal = document.querySelector("game-starting-modal");
+    const overlay =
+      startingModal instanceof GameStartingModal ? startingModal : null;
+    this.overlayAttempt = attempt;
+    overlay?.show();
     try {
       console.log(
         `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
@@ -1169,12 +1194,24 @@ export class SinglePlayerModal extends BaseModal {
           composed: true,
         }),
       );
+      // The overlay is the join pipeline's now — GameRenderer or Main's
+      // canPlay() refusal hides it. Disowning it keeps the close below (and
+      // any later onClose) from taking it down mid game-load.
+      this.overlayAttempt = 0;
       this.close();
     } finally {
       // Only if this attempt is still the live one: a retired attempt
       // settling later must not clear the busy state of the one that
       // replaced it.
       if (attempt === this.startAttempt) this.starting = false;
+      // An attempt that still owns the overlay dispatched nothing, so no
+      // downstream hide point will ever fire for it. onClose normally
+      // releases it the moment the modal is dismissed; this catches exits
+      // without a close, like resolveNameAndCosmetics() throwing.
+      if (this.overlayAttempt === attempt) {
+        this.overlayAttempt = 0;
+        overlay?.hide();
+      }
     }
   }
 

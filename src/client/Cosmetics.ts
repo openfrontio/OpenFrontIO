@@ -1,5 +1,9 @@
 import { assetUrl } from "src/core/AssetUrls";
-import { UserMeResponse } from "../core/ApiSchemas";
+import {
+  isGrantedSubscription,
+  UserMeResponse,
+  UserSubscription,
+} from "../core/ApiSchemas";
 import {
   ColorPalette,
   CosmeticPack,
@@ -261,6 +265,84 @@ function debtMessage(debt: number): string {
   return translateText("store.pack_debt", { debt: String(debt) });
 }
 
+/**
+ * Whole days left on a granted subscription, or null when there is no end date
+ * to count to.
+ *
+ * A Steam ownership grant is a fixed free month, so `currentPeriodEnd` is set
+ * and the number is real. An admin comp is open-ended (`currentPeriodEnd`
+ * null) and there is nothing to count — the caller uses the no-days copy
+ * rather than inventing a figure. A date already in the past returns null for
+ * the same reason: "0 days" reads as a bug, and a row the sweeper has not got
+ * to yet is not worth quoting.
+ *
+ * Rounded UP, so the figure never claims they forfeit LESS than they do — the
+ * safe side for a warning about something irreversible. It also gets the case
+ * that would look most like a bug right: two hours into a 30-day grant, floor
+ * would say "29 days".
+ */
+function grantedDaysRemaining(sub: UserSubscription): number | null {
+  const end = sub.currentPeriodEnd;
+  if (!end) return null;
+  const ms = end.getTime() - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  return Math.ceil(ms / 86_400_000);
+}
+
+/**
+ * A granted player starting a PAID subscription — any tier, including the one
+ * their grant already gives them.
+ *
+ * The confirm is not the tier-change copy. That copy promises Stripe proration
+ * ("charged the prorated difference", "credit for the unused portion"), and
+ * none of it is true here: infra expires every granted row in the same
+ * transaction as the paid insert (`expireGrantsForPaidReplacement`,
+ * SteamAgreements.ts, confirmed 12 Sept 2026), so the paid period starts at
+ * settle and the unused free days are simply gone — no credit, no extension,
+ * no stacking. The string says so, and names the days when we know them,
+ * because "not carried over" badly understates 28 of them.
+ *
+ * The purchase itself is the ordinary first-purchase flow: same startPurchase,
+ * same success string, same profile refresh. Only the confirm differs.
+ */
+async function purchaseOverGrant(
+  sub: Subscription,
+  currentSub: UserSubscription,
+): Promise<void> {
+  const targetName = translateCosmetic("subscriptions", sub.name);
+  const days = grantedDaysRemaining(currentSub);
+  // Both keys passed as literals so the en.json sync test can see them.
+  const confirmed = await showInGameConfirm(
+    days === null
+      ? translateText("store.confirm_subscribe_over_grant_no_days", {
+          tier: targetName,
+        })
+      : translateText("store.confirm_subscribe_over_grant", {
+          tier: targetName,
+          days,
+        }),
+    {
+      heading: translateText("store.subscribe_heading"),
+      variant: "warning",
+    },
+  );
+  if (!confirmed) return;
+
+  const outcome = await startPurchase({
+    kind: "subscription_tier",
+    tierName: sub.name,
+  });
+  if (outcome.outcome === "completed") await broadcastFreshUserMe();
+  if (outcome.outcome === "error" && outcome.refetchCatalog) {
+    invalidateCosmetics();
+  }
+  const message = purchaseOutcomeMessage(
+    outcome,
+    "store.subscription_purchase_success",
+  );
+  if (message !== null) await showInGameAlert(message);
+}
+
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
@@ -276,6 +358,29 @@ export async function purchaseCosmetic(
       userMe === false ? null : (userMe.player.subscription ?? null);
 
     if (currentSub) {
+      // OPE-440, and BEFORE every branch below it, including the
+      // already-subscribed one. A grant is not a purchase: nobody is being
+      // billed, so there is no agreement to reprice and `change-tier` answers
+      // 400 "Cannot change tier of a granted subscription" for every tier —
+      // which is why a granted player currently cannot pay us at all. Their
+      // tier selection is a FIRST purchase, and /payments/checkout admits
+      // them on both rails (its exclusivity gate filters
+      // `isNotNull(subscriptions.provider)`, so a granted row is never an
+      // incumbent).
+      //
+      // Including the tier they already hold: buying that same tier is the
+      // likeliest conversion of the whole cohort, and `already_subscribed`
+      // would refuse the one click we most want.
+      //
+      // No rail check like the Steam ones below, because a grant HAS no rail:
+      // `provider` is null, so there is no account fact to disagree with the
+      // device, and startPurchase's paymentsProvider() is the only answer
+      // there is — Steam inside the shell, Stripe on the web. Both are
+      // admitted.
+      if (isGrantedSubscription(currentSub)) {
+        return purchaseOverGrant(sub, currentSub);
+      }
+
       if (currentSub.tier === sub.name) {
         await showInGameAlert(translateText("store.already_subscribed"));
         return;
@@ -1169,16 +1274,42 @@ export function resolveCosmetics(
   // Subscriptions
   const flares =
     userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
-  const currentSubTier =
+  const currentSub =
     userMeResponse === false
       ? null
-      : (userMeResponse.player.subscription?.tier ?? null);
+      : (userMeResponse.player.subscription ?? null);
+  const currentSubTier = currentSub?.tier ?? null;
+  // OPE-440. A grant is free access nobody is billing, not something the
+  // player bought, and the tier it confers is the one they are likeliest to
+  // buy. Calling it "owned" is what rendered a dead "Subscribed" box where
+  // the buy button goes, so a granted player had no way to pay us for the
+  // tier they were already enjoying. `owned` is read by the store and nowhere
+  // else, so this changes the buy affordance and nothing about what the grant
+  // currently entitles them to.
+  //
+  // A flare is untouched by this: it is a permanent unlock, not a month, and
+  // there is genuinely nothing to sell someone who holds one.
+  const grantIsCurrent = isGrantedSubscription(currentSub);
   for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
     const key = `subscription:${subKey}`;
-    const isCurrent = subKey === currentSubTier || flares.includes(key);
+    // A listing with no Stripe `product` block cannot render a price, so it
+    // falls to "blocked" — and the subscriptions tab lists only purchasable
+    // and owned, so a blocked tier is not shown at all. (Currency packs hit
+    // this and were fixed by never gating on `product`; subscriptions still
+    // do. OPE-441 is the real fix.)
+    const canBeSold = Boolean(sub.product);
+    // ...which is why the grant demotion below is conditional on it. Taking
+    // "owned" away from a tier we then cannot sell would make the card
+    // VANISH from the store, and a card that disappears is a worse failure
+    // than the dead "Subscribed" box this change exists to remove. Not
+    // reachable today — every live tier carries a product — and this is not
+    // the PR to introduce it.
+    const isCurrentTier = subKey === currentSubTier;
+    const demoteGrant = grantIsCurrent && isCurrentTier && canBeSold;
+    const isCurrent = flares.includes(key) || (isCurrentTier && !demoteGrant);
     const rel: ResolvedCosmetic["relationship"] = isCurrent
       ? "owned"
-      : sub.product
+      : canBeSold
         ? "purchasable"
         : "blocked";
     result.push({

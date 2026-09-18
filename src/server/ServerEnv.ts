@@ -1,11 +1,6 @@
 import { JWK } from "jose";
 import { z } from "zod";
-import {
-  ClusterColor,
-  ClusterConfig,
-  ClusterConfigSchema,
-  ClusterEntry,
-} from "../core/ClusterConfig";
+import { ClusterConfig, InstanceLetterSchema } from "../core/ClusterConfig";
 import { GameEnv, parseGameEnv } from "../core/configuration/Config";
 import { GameID } from "../core/Schemas";
 import { generateGameID, simpleHash } from "../core/Util";
@@ -47,14 +42,35 @@ export class ServerEnv {
         return "prod";
     }
   }
+  // Worker processes behind this server, from NUM_WORKERS (update.sh, from
+  // the API registry). Frozen for the lifetime of every game id minted here:
+  // ids route to workers by hash % numWorkers, so it may only change on a
+  // deploy after this letter has fully drained. Dev defaults to 2, matching
+  // vite.config.ts's proxy; a deployed server without it refuses boot.
   static numWorkers(): number {
-    return ServerEnv.clusterSelf().entry.numWorkers;
+    const raw = process.env.NUM_WORKERS;
+    if (raw === undefined || raw.length === 0) {
+      if (ServerEnv.gameEnv === GameEnv.Dev) return 2;
+      throw new Error("NUM_WORKERS not set");
+    }
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 1) {
+      throw new Error(`Invalid NUM_WORKERS: ${JSON.stringify(raw)}`);
+    }
+    return n;
   }
   static turnstileSiteKey(): string {
     const v = process.env.TURNSTILE_SITE_KEY;
     if (!v) {
       throw new Error("TURNSTILE_SITE_KEY not set");
     }
+    return v;
+  }
+  // Optional, unlike turnstileSiteKey: a deployment without a key just keeps
+  // the inline Stripe flow off (the store falls back to redirect checkout).
+  static stripePublishableKey(): string | undefined {
+    const v = process.env.STRIPE_PUBLISHABLE_KEY;
+    if (!v) return undefined;
     return v;
   }
   static jwtAudience(): string {
@@ -125,7 +141,7 @@ export class ServerEnv {
   }
   // Mint a game id under this deployment's instance letter.
   static generateGameId(): GameID {
-    return generateGameID(ServerEnv.clusterSelf().letter);
+    return generateGameID(ServerEnv.instanceLetter());
   }
 
   // Generate a game id that hashes to `workerId`, so requests for the game route
@@ -149,99 +165,140 @@ export class ServerEnv {
   static subdomain(): string {
     return process.env.SUBDOMAIN ?? "";
   }
-  // Host this deployment is reachable on directly (`blue.openfront.io`),
-  // bypassing the load balancer. Injected into index.html as `serverHost` so
-  // a tab keeps talking to the deployment that served it — including
-  // reconnects mid-game — after the load balancer flips to the other
-  // deployment. Undefined in dev (no SUBDOMAIN): the client falls back to
-  // same-origin.
-  static publicHost(): string | undefined {
-    const subdomain = ServerEnv.subdomain();
+  // Domain the GAME hostnames live under, when it differs from the page
+  // domain (docs/MultiServer.md, "Two hostnames per deployment"). Set on dev
+  // so the static Worker can own `<subdomain>.<DOMAIN>` while sockets and
+  // /api go straight to `<subdomain>.<GAME_DOMAIN>`. Unset — prod, local dev
+  // — means the two collapse onto DOMAIN, which is today's behaviour.
+  static gameDomain(): string | undefined {
+    const v = process.env.GAME_DOMAIN;
+    return v && v.length > 0 ? v : undefined;
+  }
+  // The PAGE host that pairs with a game host under GAME_DOMAIN:
+  // `blue.server.openfront.dev` -> `blue.openfront.dev`. Undefined when
+  // GAME_DOMAIN is unset (page and game host are one name) or the host is
+  // not under it. A player who loads a colour's page directly, bypassing the
+  // apex, arrives from exactly this origin, so CORS must know it.
+  static pageHostFor(gameHost: string): string | undefined {
+    const gameDomain = ServerEnv.gameDomain();
     const domain = ServerEnv.domain();
+    if (gameDomain === undefined || !domain) return undefined;
+    const suffix = `.${gameDomain}`;
+    if (!gameHost.endsWith(suffix)) return undefined;
+    const label = gameHost.slice(0, -suffix.length);
+    if (!label || label.includes(".")) return undefined;
+    return `${label}.${domain}`;
+  }
+  // The GAME host: the name this deployment is reachable on directly
+  // (`blue.openfront.io`, or `main.server.openfront.dev` with GAME_DOMAIN),
+  // bypassing the load balancer and the static Worker. Injected into
+  // index.html as `serverHost` so a tab keeps talking to the deployment that
+  // served it — including reconnects mid-game — after the load balancer flips
+  // to the other deployment. This is NOT the host the page came from: that is
+  // siteHost(), and with GAME_DOMAIN set the two are always different names.
+  // Undefined in dev (no SUBDOMAIN): the client falls back to same-origin.
+  //
+  // GAME_HOST, when deploy.sh wrote one, is authoritative: it is the name the
+  // cluster map actually carries for this deployment, and for a
+  // machine-scoped entry (`blue.staging2.server.openfront.dev`, the machine
+  // in the hostname so one colour can span boxes) it is not derivable from
+  // SUBDOMAIN and GAME_DOMAIN alone. The derivation below is the standalone
+  // shape and stays for env files written by hand.
+  static publicHost(): string | undefined {
+    const explicit = process.env.GAME_HOST;
+    if (explicit && explicit.length > 0) return explicit;
+    const subdomain = ServerEnv.subdomain();
+    const domain = ServerEnv.gameDomain() ?? ServerEnv.domain();
     if (!subdomain || !domain) return undefined;
     return `${subdomain}.${domain}`;
   }
-  // Cluster topology (docs/MultiServer.md): parsed from the CLUSTER_JSON env,
-  // which replaced NUM_WORKERS. Absent or malformed refuses boot — a server
-  // that doesn't know the fleet map can't mint ids or route games. Dev is the
-  // exception: it defaults to a single-entry localhost map (kept in sync with
-  // vite.config.ts's dev fallback) rather than making every dev script carry
-  // JSON through cross-platform shell quoting. Cached by the raw string so
-  // repeated reads don't re-parse but tests that stub the env still see
-  // their value.
-  static readonly DEV_DEFAULT_CLUSTER_JSON =
-    '{"a":{"host":"localhost","color":"blue","numWorkers":2}}';
-  private static cachedClusterRaw: string | null = null;
-  private static cachedCluster: ClusterConfig | null = null;
-  static cluster(): ClusterConfig {
-    const fromEnv = process.env.CLUSTER_JSON;
-    const raw =
-      fromEnv !== undefined && fromEnv.length > 0
-        ? fromEnv
-        : ServerEnv.gameEnv === GameEnv.Dev
-          ? ServerEnv.DEV_DEFAULT_CLUSTER_JSON
-          : undefined;
-    if (raw === undefined) {
-      throw new Error("CLUSTER_JSON not set");
+  // This server's instance letter, from INSTANCE_LETTER (update.sh, from the
+  // API registry): the first character of every game id it mints, which is
+  // how a game id names its server for the rest of its life (docs/
+  // MultiServer.md). Letters are append-only per site and the API registry
+  // binds each to its host permanently, so a hand-set letter that belongs to
+  // another host is refused at check-in, not here — but a malformed one
+  // refuses boot, since ids minted under it would validate nowhere. Dev
+  // defaults to "a".
+  static instanceLetter(): string {
+    const raw = process.env.INSTANCE_LETTER;
+    if (raw === undefined || raw.length === 0) {
+      if (ServerEnv.gameEnv === GameEnv.Dev) return "a";
+      throw new Error("INSTANCE_LETTER not set");
     }
-    if (raw === ServerEnv.cachedClusterRaw && ServerEnv.cachedCluster) {
-      return ServerEnv.cachedCluster;
-    }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch (e) {
-      // Manual cause assignment: target ES2020's Error constructor predates
-      // the options bag (same pattern as zbin/bytes.ts).
-      const error = new Error(
-        `CLUSTER_JSON is not valid JSON: ${e instanceof Error ? e.message : e}`,
-      );
-      (error as { cause?: unknown }).cause = e;
-      throw error;
-    }
-    const result = ClusterConfigSchema.safeParse(parsed);
+    const result = InstanceLetterSchema.safeParse(raw);
     if (!result.success) {
-      throw new Error(`Invalid CLUSTER_JSON: ${z.prettifyError(result.error)}`);
+      throw new Error(
+        `Invalid INSTANCE_LETTER: ${JSON.stringify(raw)} (one lowercase letter)`,
+      );
     }
-    ServerEnv.cachedClusterRaw = raw;
-    ServerEnv.cachedCluster = result.data;
     return result.data;
   }
 
-  // This deployment's own cluster entry, found by host: SUBDOMAIN.DOMAIN, or
-  // bare DOMAIN when SUBDOMAIN is empty (dev, standalone boxes). A server
-  // whose host is not in the map refuses boot — it has no letter to mint
-  // under.
-  static clusterSelf(): { letter: string; entry: ClusterEntry } {
-    const selfHost = ServerEnv.publicHost() ?? ServerEnv.domain();
-    if (!selfHost) {
-      throw new Error("DOMAIN not set, cannot resolve own cluster entry");
-    }
-    const cluster = ServerEnv.cluster();
-    for (const [letter, entry] of Object.entries(cluster)) {
-      if (entry.host === selfHost) return { letter, entry };
-    }
-    throw new Error(
-      `Host ${selfHost} has no entry in CLUSTER_JSON (letters: ${Object.keys(cluster).join(", ")})`,
-    );
+  // The one-entry map naming this server, in the shape the page reads
+  // (ClusterConfig.ts): its letter, its game host (bare
+  // DOMAIN under local dev, where there is no public host) and its worker
+  // count. This used to be the whole fleet, read from CLUSTER_JSON; the
+  // fleet is the API registry's list now and this is only the page's own
+  // server for when that list is unavailable.
+  static cluster(): ClusterConfig {
+    return {
+      [ServerEnv.instanceLetter()]: {
+        host: ServerEnv.publicHost() ?? ServerEnv.domain(),
+        numWorkers: ServerEnv.numWorkers(),
+      },
+    };
   }
 
-  // The first character of every game id this deployment mints.
-  static instanceLetter(): string {
-    return ServerEnv.clusterSelf().letter;
-  }
-
-  // Which blue/green pool this deployment belongs to (drain checks, PR 6).
-  static color(): ClusterColor {
-    return ServerEnv.clusterSelf().entry.color;
-  }
-
-  // Host players load the page from when it is a load balancer in front of
-  // several deployments (`openfront.io` for blue/green). Unset for standalone
-  // deployments (beta, staging branches), where the page host is publicHost.
+  // The page host: SITE_HOST. Behind a load balancer that is the apex
+  // (`openfront.io` for blue/green); with GAME_DOMAIN it is
+  // `<subdomain>.<DOMAIN>`, the name the static Worker serves the page on.
+  // Unset only for old-style standalone deploys (beta, staging branches) and
+  // local dev, where the page host and the game host coincide and publicHost
+  // is both.
   static siteHost(): string | undefined {
     const v = process.env.SITE_HOST;
     return v && v.length > 0 ? v : undefined;
+  }
+  // Whether the master joins its site's shared public-lobby roster
+  // (LobbyCoordinatorClient.ts, infra docs/lobby-coordinator.md). "api"
+  // connects to the API's coordinator and lets it schedule this site's public
+  // lobbies; "off", anything else, or none keeps single-server scheduling,
+  // so a deploy that doesn't set it is unchanged on the wire. "off" exists
+  // so a GitHub environment can override a repo-level "api" explicitly.
+  static lobbyCoordinator(): "api" | "off" {
+    return process.env.LOBBY_COORDINATOR === "api" ? "api" : "off";
+  }
+  // The machine this container runs on — `falk2`, `nbg2`, `staging`: the
+  // second argument to deploy.sh, which writes it into the container's env as
+  // MACHINE. Reported at check-in (ClusterCheckin.ts) so the registry can hold
+  // a site to at most one OPEN server per machine (OPE-455): blue and green
+  // often share a box, and a colour flip that lands on the same machine buys
+  // no redundancy. Nothing in this repo reads it back.
+  //
+  // Held to the shape deploy.sh already demands of a machine argument —
+  // letters, digits and hyphens, at most a hostname label's 63 octets — and
+  // anything else is dropped with one warning rather than sent. The check-in
+  // body has to stay something the registry will accept, so a fat-fingered
+  // MACHINE must cost a stray field, never the registration. Cached by the
+  // raw value so the 10s check-in doesn't re-warn on every beat, while a test
+  // that stubs the env still sees its own value.
+  private static cachedMachineRaw: string | null = null;
+  private static cachedMachine: string | undefined = undefined;
+  static machine(): string | undefined {
+    const raw = process.env.MACHINE ?? "";
+    if (raw === ServerEnv.cachedMachineRaw) return ServerEnv.cachedMachine;
+    ServerEnv.cachedMachineRaw = raw;
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) {
+      ServerEnv.cachedMachine = undefined;
+    } else if (/^[a-zA-Z0-9-]{1,63}$/.test(trimmed)) {
+      ServerEnv.cachedMachine = trimmed;
+    } else {
+      console.warn(`Ignoring malformed MACHINE: ${JSON.stringify(trimmed)}`);
+      ServerEnv.cachedMachine = undefined;
+    }
+    return ServerEnv.cachedMachine;
   }
   static otelEnabled(): boolean {
     return (

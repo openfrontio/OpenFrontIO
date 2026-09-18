@@ -164,6 +164,13 @@ export class AttackExecution implements Execution {
       }
     }
 
+    // Only now is it known how large the attack the defender actually faces
+    // is: a big assault is built by clicking repeatedly, and each click's
+    // execution absorbs the earlier ones above. Recorded before the loops it
+    // would measure one click, and would count an attack that cancelled out
+    // and never landed.
+    this.mg.stats().attackMaxIncoming(this.target, this.attack.troops());
+
     if (this.target.isPlayer()) {
       const difficulty = this.mg.config().gameConfig().difficulty;
       let relationChange: number;

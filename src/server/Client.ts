@@ -1,7 +1,12 @@
 import WebSocket from "ws";
 import { TokenPayload } from "../core/ApiSchemas";
 import { Tick } from "../core/game/Game";
-import { ClientID, PlayerCosmetics, Winner } from "../core/Schemas";
+import {
+  ClientID,
+  ClientPlatform,
+  PlayerCosmetics,
+  Winner,
+} from "../core/Schemas";
 
 export class Client {
   public lastPing: number = Date.now();
@@ -29,5 +34,7 @@ export class Client {
     // Whether the API reported this account as trusted when it joined (the
     // gate for GameConfig.trusted). Anonymous joins are never trusted.
     public readonly trusted: boolean = false,
+    // Client-reported and unverified; metric dimension only.
+    public readonly platform: ClientPlatform | "unknown" = "unknown",
   ) {}
 }

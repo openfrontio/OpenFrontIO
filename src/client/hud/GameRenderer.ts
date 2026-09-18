@@ -1,6 +1,7 @@
 import { EventBus } from "../../core/EventBus";
 import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
+import { AmbienceController } from "../controllers/AmbienceController";
 import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
@@ -205,7 +206,6 @@ export function createRenderer(
   if (gameSettingsModal === null) {
     console.warn("In-game settings modal (#game-settings) not found");
   } else {
-    gameSettingsModal.eventBus = eventBus;
     gameSettingsModal.uiState = uiState;
     gameSettingsModal.mapLayers = game.layers();
     gameSettingsModal.onLayerVisibilityChange = (layerId, visible) => {
@@ -329,6 +329,7 @@ export function createRenderer(
     new ViewModeController(eventBus, view),
     new AttackingTroopsController(game, eventBus, userSettings, view),
     new SoundEffectController(game, eventBus),
+    new AmbienceController(game, eventBus, transformHandler),
     ...(mapLayerController ? [mapLayerController] : []),
     eventsDisplay,
     actionableEvents,

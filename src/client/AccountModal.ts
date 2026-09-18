@@ -38,8 +38,9 @@ import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
 import { showInGameAlert } from "./InGameModal";
 import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
+import { steamSDK } from "./SteamSDK";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
-import { translateText } from "./Utils";
+import { currentPagePath, translateText } from "./Utils";
 
 // Each login refusal says its own thing. Sharing one string was fine while
 // email_exists was the only recognised result; a player refused because their
@@ -613,7 +614,7 @@ export class AccountModal extends BaseModal {
   private async viewGame(gameId: string): Promise<void> {
     this.close();
     const encodedGameId = encodeURIComponent(gameId);
-    const newUrl = `/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
+    const newUrl = currentPagePath(ClientEnv.gamePath(gameId));
 
     history.pushState({ join: gameId }, "", newUrl);
     window.dispatchEvent(
@@ -800,14 +801,17 @@ export class AccountModal extends BaseModal {
             <div class="space-y-3">${this.renderEmailField()}</div>
           </div>
 
-          <div class="mt-8 text-center border-t border-white/10 pt-6">
-            <button
-              @click="${this.handleLogout}"
-              class="text-[10px] font-bold text-white/20 hover:text-red-400 transition-colors uppercase tracking-widest pb-0.5"
-            >
-              ${translateText("account_modal.clear_session")}
-            </button>
-          </div>
+          <!-- Not on Steam: the Steam ticket re-creates the session on reload. -->
+          ${steamSDK.isOnSteam()
+            ? nothing
+            : html`<div class="mt-8 text-center border-t border-white/10 pt-6">
+                <button
+                  @click="${this.handleLogout}"
+                  class="text-[10px] font-bold text-white/20 hover:text-red-400 transition-colors uppercase tracking-widest pb-0.5"
+                >
+                  ${translateText("account_modal.clear_session")}
+                </button>
+              </div>`}
         </div>
       </div>
     `;

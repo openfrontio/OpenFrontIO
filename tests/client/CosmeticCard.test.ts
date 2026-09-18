@@ -298,6 +298,29 @@ describe("CosmeticCard", () => {
     );
   });
 
+  it("omits the ad-free entitlement in the desktop shell, which has no ads", async () => {
+    installTranslations();
+    window.openfrontDesktop = {};
+    try {
+      await createCard();
+      card!.resolved = {
+        ...red,
+        relationship: "purchasable",
+        cosmetic: {
+          ...red.cosmetic!,
+          product: { productId: "pattern", priceId: "pattern", price: "$5" },
+        } as never,
+      };
+      await card!.updateComplete;
+
+      expect(
+        card!.querySelector("[data-cosmetic-info]")?.textContent,
+      ).not.toContain("ad-free for life!");
+    } finally {
+      delete window.openfrontDesktop;
+    }
+  });
+
   it("adds rarity hover effects only where the rarity needs them", async () => {
     await createCard();
     expect(card!.querySelector("[data-cosmetic-shimmer]")).toBeNull();

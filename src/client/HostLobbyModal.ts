@@ -168,7 +168,12 @@ export class HostLobbyModal extends BaseModal {
         return link;
       }
     }
-    return `${window.location.origin}/${ClientEnv.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
+    // window.location.origin is deliberate here, NOT ClientEnv.shareOrigin():
+    // this URL only ever reaches history.replaceState (updateLobbyHistory), and
+    // replaceState to a different origin throws a SecurityError. The link the
+    // host actually shares is built separately by copy-button, which does use
+    // shareOrigin.
+    return `${window.location.origin}${ClientEnv.gamePath(this.lobbyId)}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
   }
 
   private async constructUrl(): Promise<string> {
@@ -1495,7 +1500,6 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private kickPlayer(clientID: string) {
-    // Dispatch event to be handled by WebSocket instead of HTTP
     this.dispatchEvent(
       new CustomEvent("kick-player", {
         detail: { target: clientID },
