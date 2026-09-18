@@ -245,9 +245,9 @@ export class UnitImpl implements Unit {
       // disconnected teammate's fleet is inherited. Boats have no "lost"
       // slot, so only the captor is credited.
       //
-      // Trade ships are deliberately absent: they reach here too, but the
-      // warship that hunts one down records the capture itself, and counting
-      // it again would double every act of piracy.
+      // Trade ships are deliberately absent: TradeShipExecution records the
+      // capture when the ship reaches the captor's port, so counting it here
+      // would double every act of piracy.
       case UnitType.TransportShip:
         this.mg.stats().boatCapturedTroops(newOwner, this._owner);
         break;

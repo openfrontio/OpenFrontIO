@@ -178,7 +178,10 @@ export class TradeShipExecution implements Execution {
       .config()
       .tradeShipGold(this.tilesTraveled, this.tradeShip!.owner());
 
-    if (this.wasCaptured) {
+    if (this.wasCaptured && this.tradeShip!.owner() === this.origOwner) {
+      // Retaken by its original owner: the payout stands, but nobody pirated it.
+      this.origOwner.addGold(gold, this._dstPort.tile());
+    } else if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
       this.tradeShip!.owner().addPiracyGold(gold);
       this.mg.displayMessage(

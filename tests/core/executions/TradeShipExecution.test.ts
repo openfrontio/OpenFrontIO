@@ -200,4 +200,41 @@ describe("TradeShipExecution", () => {
     expect(pirate.addPiracyGold).toHaveBeenCalled();
     expect(pirate.addTradeGold).not.toHaveBeenCalled();
   });
+
+  it("should not credit a capture when the original owner retakes the ship", () => {
+    const capturedTrade = vi.spyOn(game.stats(), "boatCapturedTrade");
+    origOwner.units = vi.fn(() => [srcPort]);
+
+    tradeShip.owner = vi.fn(() => pirate);
+    tradeShipExecution.tick(1);
+    expect(tradeShip.setTargetUnit).toHaveBeenCalledWith(piratePort);
+
+    tradeShip.owner = vi.fn(() => origOwner);
+    tradeShipExecution["pathFinder"] = {
+      next: vi.fn(() => ({ status: PathStatus.COMPLETE, node: 32 })),
+      findPath: vi.fn((from: number) => [from]),
+      pathForTraversal: vi.fn(() => [32]),
+    } as any;
+    tradeShipExecution.tick(2);
+
+    expect(tradeShipExecution.isActive()).toBe(false);
+    expect(tradeShip.setTargetUnit).toHaveBeenLastCalledWith(srcPort);
+    expect(capturedTrade).not.toHaveBeenCalled();
+    expect(origOwner.addGold).toHaveBeenCalledOnce();
+    for (const player of [origOwner, dstOwner, pirate]) {
+      expect(player.addPiracyGold).not.toHaveBeenCalled();
+      expect(player.addTradeGold).not.toHaveBeenCalled();
+    }
+    expect(pirate.addGold).not.toHaveBeenCalled();
+    expect(dstOwner.addGold).not.toHaveBeenCalled();
+    expect(game.displayMessage).not.toHaveBeenCalledWith(
+      "events_display.received_gold_from_captured_ship",
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
+  });
 });
