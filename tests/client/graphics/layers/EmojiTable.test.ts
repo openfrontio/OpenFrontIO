@@ -84,4 +84,20 @@ describe("EmojiTable event bus wiring", () => {
 
     expect(table.isVisible).toBe(false);
   });
+  it("ignores ShowEmojiMenuEvent while already open to preserve original target", async () => {
+    const secondPlayer = { name: "second" };
+    tileOwner = otherPlayer;
+    eventBus.emit(new ShowEmojiMenuEvent(3, 4));
+    expect(table.isVisible).toBe(true);
+
+    // Simulate clicking an emoji button while still holding Alt over a different player
+    tileOwner = secondPlayer;
+    eventBus.emit(new ShowEmojiMenuEvent(10, 20));
+
+    await pickEmoji(1);
+
+    expect(emojiIntents).toHaveLength(1);
+    expect(emojiIntents[0].recipient).toBe(otherPlayer);
+    expect(emojiIntents[0].emoji).toBe(1);
+  });
 });

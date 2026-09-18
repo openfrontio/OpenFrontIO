@@ -17,6 +17,9 @@ export class EmojiTable extends LitElement {
 
   initEventBus(eventBus: EventBus) {
     eventBus.on(ShowEmojiMenuEvent, (e) => {
+      if (this.isVisible) {
+        return;
+      }
       this.isVisible = true;
       const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
       if (!this.game.isValidCoord(cell.x, cell.y)) {
