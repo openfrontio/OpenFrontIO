@@ -2,8 +2,9 @@ name: 🏷️ Release
 
 on:
   release:
+    # No "created": it fires alongside "published" when a release goes live
+    # (and never for drafts), so listing both runs the whole rollout twice.
     types:
-      - created
       - edited
       - published
 
