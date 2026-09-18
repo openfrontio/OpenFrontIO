@@ -829,8 +829,8 @@ describe("refreshServerList", () => {
     expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
   });
 
-  // Inside retryServerList's floor as well, where a press is handed back the
-  // previous, already settled, result.
+  // The attempt is the heartbeat's, so nothing here goes through
+  // retryServerList: it is fetchOnce joining that attempt that holds this.
   it("waits for an attempt someone else has out rather than answering early", async () => {
     vi.useFakeTimers();
     expect(await retryServerList()).toBe("api");
@@ -894,6 +894,26 @@ describe("refreshServerList", () => {
     await vi.advanceTimersByTimeAsync(1_000);
     expect(await refreshServerList()).toBe("api");
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("counts a failure towards the outage, and hands it back inside the floor", async () => {
+    vi.useFakeTimers();
+    expect(await ensureServerList()).toBe("api");
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    expect(await refreshServerList()).toBe("api");
+    expect(backendReachable()).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Inside the floor the failed attempt is what a second call gets.
+    fetchMock.mockImplementation(async () => jsonResponse(MOVED_LIST));
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(await refreshServerList()).toBe("api");
+    expect(backendReachable()).toBe(true);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
   });
 
   // A person pressing a button is not a timer: the heartbeat's backoff after
