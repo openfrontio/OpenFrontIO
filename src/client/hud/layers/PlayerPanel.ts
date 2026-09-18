@@ -156,7 +156,11 @@ export class PlayerPanel extends LitElement implements Controller {
       // Refresh actions & alliance expiry
       const myPlayer = this.g.myPlayer();
       if (myPlayer !== null && myPlayer.isAlive()) {
-        this.actions = await myPlayer.actions(this.tile, null);
+        try {
+          this.actions = await myPlayer.actions(this.tile, null);
+        } catch (error) {
+          console.warn("Failed to refresh player panel actions:", error);
+        }
         if (this.actions?.interaction?.allianceInfo?.expiresAt !== undefined) {
           const expiresAt = this.actions.interaction.allianceInfo.expiresAt;
           const remainingTicks = expiresAt - this.g.ticks();

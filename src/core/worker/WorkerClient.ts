@@ -186,15 +186,24 @@ export class WorkerClient {
         reject(new Error("Worker not initialized"));
         return;
       }
-
       const messageId = generateID();
+      const cleanup = (timer: ReturnType<typeof setTimeout>) => {
+        clearTimeout(timer);
+        this.messageHandlers.delete(messageId);
+      };
+      const timeout = setTimeout(() => {
+        cleanup(timeout);
+        console.warn(`player_actions request timed out (request ${messageId})`);
+        reject(new Error("player_actions request timed out"));
+      }, 5000);
 
       this.messageHandlers.set(messageId, (message) => {
-        if (
-          message.type === "player_actions_result" &&
-          message.result !== undefined
-        ) {
+        if (message.type === "player_actions_result") {
+          cleanup(timeout);
           resolve(message.result);
+        } else if (message.type === "player_actions_error") {
+          cleanup(timeout);
+          reject(new Error(message.error));
         }
       });
 
