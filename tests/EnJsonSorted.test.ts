@@ -33,7 +33,7 @@ test("en.json keys are alphabetically sorted at every level", () => {
   const errors = findUnsortedObjects(content, "en.json");
   if (errors.length > 0) {
     throw new Error(
-      "en.json keys are out of order (sort with `jq -S . resources/lang/en.json` + prettier):\n" +
+      "en.json keys are out of order (sort with `jq -S . resources/lang/en.json` + `npm run format`):\n" +
         errors.join("\n"),
     );
   }
