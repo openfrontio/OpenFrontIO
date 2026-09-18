@@ -13,6 +13,7 @@ import {
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
 } from "../src/client/InputHandler";
+import { Platform } from "../src/client/Platform";
 import { UIState } from "../src/client/UIState";
 import { GameView, PlayerView, UnitView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
@@ -28,6 +29,10 @@ class MockPointerEvent {
   pointerId: number;
   type: string;
   pointerType: string;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
+  metaKey: boolean;
   preventDefault: () => void;
 
   constructor(type: string, init: any) {
@@ -39,6 +44,10 @@ class MockPointerEvent {
     this.y = init.y ?? init.clientY;
     this.pointerId = init.pointerId;
     this.pointerType = init.pointerType ?? "mouse";
+    this.ctrlKey = Boolean(init.ctrlKey);
+    this.shiftKey = Boolean(init.shiftKey);
+    this.altKey = Boolean(init.altKey);
+    this.metaKey = Boolean(init.metaKey);
     this.preventDefault = vi.fn();
   }
 }
@@ -1623,6 +1632,112 @@ describe("InputHandler teardown (OPE-411)", () => {
     } finally {
       handler.destroy();
       vi.useRealTimers();
+    }
+  });
+});
+
+describe("Mac Ctrl + Left Click handling (#4918)", () => {
+  let canvas: HTMLCanvasElement;
+  let eventBus: EventBus;
+  let inputHandler: InputHandler;
+
+  beforeEach(() => {
+    canvas = document.createElement("canvas");
+    canvas.width = 800;
+    canvas.height = 600;
+    eventBus = new EventBus();
+    const mockGameView = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true }),
+    } as any;
+
+    inputHandler = new InputHandler(
+      mockGameView,
+      {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        upgradeMultiplier: 1,
+      },
+      canvas,
+      eventBus,
+    );
+    inputHandler.initialize();
+  });
+
+  afterEach(() => {
+    inputHandler.destroy();
+  });
+
+  test("does not emit MouseDownEvent or MouseUpEvent on Ctrl + Left Click when on Mac", () => {
+    const originalIsMac = Platform.isMac;
+    (Platform as any).isMac = true;
+    try {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      const downEvent = new PointerEvent("pointerdown", {
+        button: 0,
+        ctrlKey: true,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+      });
+      Object.assign(downEvent, { x: 100, y: 100 });
+      inputHandler["onPointerDown"](downEvent);
+
+      const upEvent = new PointerEvent("pointerup", {
+        button: 0,
+        ctrlKey: true,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+      });
+      Object.assign(upEvent, { x: 100, y: 100 });
+      inputHandler.onPointerUp(upEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        ([e]) => (e as any).constructor.name,
+      );
+      expect(emittedTypes).not.toContain("MouseDownEvent");
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+    } finally {
+      (Platform as any).isMac = originalIsMac;
+    }
+  });
+
+  test("emits MouseDownEvent and MouseUpEvent on Ctrl + Left Click when not on Mac", () => {
+    const originalIsMac = Platform.isMac;
+    (Platform as any).isMac = false;
+    try {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      const downEvent = new PointerEvent("pointerdown", {
+        button: 0,
+        ctrlKey: true,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+      });
+      Object.assign(downEvent, { x: 100, y: 100 });
+      inputHandler["onPointerDown"](downEvent);
+
+      const upEvent = new PointerEvent("pointerup", {
+        button: 0,
+        ctrlKey: true,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+      });
+      Object.assign(upEvent, { x: 100, y: 100 });
+      inputHandler.onPointerUp(upEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        ([e]) => (e as any).constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseDownEvent");
+      expect(emittedTypes).toContain("MouseUpEvent");
+    } finally {
+      (Platform as any).isMac = originalIsMac;
     }
   });
 });

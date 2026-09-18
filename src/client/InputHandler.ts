@@ -834,7 +834,7 @@ export class InputHandler {
       return;
     }
 
-    if (event.button > 0) {
+    if (event.button > 0 || (Platform.isMac && event.ctrlKey)) {
       return;
     }
 
@@ -890,7 +890,7 @@ export class InputHandler {
       return;
     }
 
-    if (event.button > 0) {
+    if (event.button > 0 || (Platform.isMac && event.ctrlKey)) {
       return;
     }
     this.pointerDown = false;
@@ -1038,7 +1038,7 @@ export class InputHandler {
       return;
     }
 
-    if (event.button > 0) {
+    if (event.button > 0 || (Platform.isMac && event.ctrlKey)) {
       return;
     }
 
