@@ -619,6 +619,15 @@
     "reload": "Reload",
     "retry": "Retry"
   },
+  "desktop_webgl_gate": {
+    "intro": "OpenFront couldn't use your graphics card, so the game can't run. This is usually temporary. To fix it:",
+    "quit": "Quit OpenFront",
+    "step_drivers": "If it still happens, update your graphics drivers from NVIDIA, AMD or Intel.",
+    "step_quit": "Quit OpenFront.",
+    "step_restart_computer": "If this keeps happening, restart your computer.",
+    "step_restart_steam": "Restart Steam, then launch OpenFront again.",
+    "title": "Graphics acceleration unavailable"
+  },
   "detailed_view": {
     "capacity": "Capacity",
     "delete_profile": "Delete",
