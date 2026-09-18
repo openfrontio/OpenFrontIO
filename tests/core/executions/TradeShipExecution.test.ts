@@ -1,7 +1,20 @@
 import { TradeShipExecution } from "../../../src/core/execution/TradeShipExecution";
-import { Game, MessageType, Player, Unit } from "../../../src/core/game/Game";
+import {
+  Game,
+  MessageType,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  Unit,
+  UnitType,
+} from "../../../src/core/game/Game";
 import { PathStatus } from "../../../src/core/pathfinding/types";
+import {
+  BOAT_INDEX_CAPTURE,
+  GOLD_INDEX_STEAL,
+} from "../../../src/core/StatsSchemas";
 import { setup } from "../../util/Setup";
+import { executeTicks } from "../../util/utils";
 
 describe("TradeShipExecution", () => {
   let game: Game;
@@ -200,41 +213,54 @@ describe("TradeShipExecution", () => {
     expect(pirate.addPiracyGold).toHaveBeenCalled();
     expect(pirate.addTradeGold).not.toHaveBeenCalled();
   });
+});
 
-  it("should not credit a capture when the original owner retakes the ship", () => {
-    const capturedTrade = vi.spyOn(game.stats(), "boatCapturedTrade");
-    origOwner.units = vi.fn(() => [srcPort]);
+describe("TradeShipExecution recapture", () => {
+  test("retaking your own trade ship credits no capture", async () => {
+    const game = await setup("half_land_half_ocean", {}, [
+      new PlayerInfo("origin", PlayerType.Human, null, "origin"),
+      new PlayerInfo("partner", PlayerType.Human, null, "partner"),
+      new PlayerInfo("pirate", PlayerType.Human, null, "pirate"),
+    ]);
+    const origin = game.player("origin");
+    const partner = game.player("partner");
+    const pirate = game.player("pirate");
+    executeTicks(game, 50);
 
-    tradeShip.owner = vi.fn(() => pirate);
-    tradeShipExecution.tick(1);
-    expect(tradeShip.setTargetUnit).toHaveBeenCalledWith(piratePort);
+    const port = (owner: Player, y: number) => {
+      owner.conquer(game.ref(7, y));
+      return owner.buildUnit(UnitType.Port, game.ref(7, y), {});
+    };
+    const srcPort = port(origin, 1);
+    const homePort = port(origin, 14);
+    const dstPort = port(partner, 8);
+    port(pirate, 4);
 
-    tradeShip.owner = vi.fn(() => origOwner);
-    tradeShipExecution["pathFinder"] = {
-      next: vi.fn(() => ({ status: PathStatus.COMPLETE, node: 32 })),
-      findPath: vi.fn((from: number) => [from]),
-      pathForTraversal: vi.fn(() => [32]),
-    } as any;
-    tradeShipExecution.tick(2);
+    const execution = new TradeShipExecution(origin, srcPort, dstPort);
+    game.addExecution(execution);
+    executeTicks(game, 2);
+    const [tradeShip] = origin.units(UnitType.TradeShip);
 
-    expect(tradeShipExecution.isActive()).toBe(false);
-    expect(tradeShip.setTargetUnit).toHaveBeenLastCalledWith(srcPort);
-    expect(capturedTrade).not.toHaveBeenCalled();
-    expect(origOwner.addGold).toHaveBeenCalledOnce();
-    for (const player of [origOwner, dstOwner, pirate]) {
-      expect(player.addPiracyGold).not.toHaveBeenCalled();
-      expect(player.addTradeGold).not.toHaveBeenCalled();
+    pirate.captureUnit(tradeShip);
+    game.executeNextTick();
+    // Losing the source port keeps the retaken ship sailing home instead of
+    // being scrapped as a same-owner trade.
+    partner.captureUnit(srcPort);
+    origin.captureUnit(tradeShip);
+
+    const goldBefore = origin.gold();
+    for (let i = 0; i < 100 && execution.isActive(); i++) {
+      game.executeNextTick();
     }
-    expect(pirate.addGold).not.toHaveBeenCalled();
-    expect(dstOwner.addGold).not.toHaveBeenCalled();
-    expect(game.displayMessage).not.toHaveBeenCalledWith(
-      "events_display.received_gold_from_captured_ship",
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-    );
+
+    expect(execution.isActive()).toBe(false);
+    expect(tradeShip.targetUnit()).toBe(homePort);
+    expect(origin.gold()).toBeGreaterThan(goldBefore);
+    expect(origin.piracyGold()).toBe(0n);
+    for (const player of [origin, partner, pirate]) {
+      const stats = game.stats().getPlayerStats(player);
+      expect(stats?.boats?.trade?.[BOAT_INDEX_CAPTURE] ?? 0n).toBe(0n);
+      expect(stats?.gold?.[GOLD_INDEX_STEAL] ?? 0n).toBe(0n);
+    }
   });
 });
