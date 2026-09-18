@@ -20,7 +20,6 @@ export class EmojiTable extends LitElement {
       if (this.isVisible) {
         return;
       }
-      this.isVisible = true;
       const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
       if (!this.game.isValidCoord(cell.x, cell.y)) {
         return;
