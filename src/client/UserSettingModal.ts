@@ -116,6 +116,16 @@ export class UserSettingModal extends BaseModal {
   private userSettings: UserSettings = new UserSettings();
   private readonly defaultKeybinds = getDefaultKeybinds(Platform.isMac);
 
+  /**
+   * The effective keybind map (saved merged over defaults). A default whose
+   * key is claimed by a saved binding is absent here — see mergeKeybinds — so
+   * rows fall back to this map rather than the raw defaults: a blocked
+   * default displays as unbound instead of advertising a key that triggers
+   * another action.
+   */
+  private effectiveKeybinds: Record<string, string> =
+    this.userSettings.keybinds(Platform.isMac);
+
   // Optional "return to where you came from" callback, supplied by the caller
   // of open() and invoked once on close. The in-game menu uses it to reappear.
   private onReturn?: () => void;
@@ -199,6 +209,7 @@ export class UserSettingModal extends BaseModal {
   };
 
   private loadKeybindsFromStorage() {
+    this.effectiveKeybinds = this.userSettings.keybinds(Platform.isMac);
     const parsed = this.userSettings.parsedUserKeybinds();
     if (Object.keys(parsed).length === 0) {
       this.userKeybinds = {};
@@ -334,6 +345,7 @@ export class UserSettingModal extends BaseModal {
       [action]: { value: value, key: key },
     };
     this.userSettings.setKeybinds(this.userKeybinds);
+    this.effectiveKeybinds = this.userSettings.keybinds(Platform.isMac);
   }
 
   private getKeyValue(action: string): string | undefined {
@@ -346,7 +358,11 @@ export class UserSettingModal extends BaseModal {
 
   private getKeyChar(action: string): string {
     const entry = this.userKeybinds[action];
-    if (!entry) return formatKeyForDisplay(this.defaultKeybinds[action] || "");
+    // No saved entry: fall back through the effective map. A default whose
+    // key is claimed by a saved binding is absent there and renders as
+    // unbound ("None"), not as the key that would trigger the other action.
+    if (!entry)
+      return formatKeyForDisplay(this.effectiveKeybinds[action] ?? "");
     return entry.key || formatKeyForDisplay(entry.value || "");
   }
 
@@ -1526,12 +1542,52 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="zoomOutMinus"
+        label=${translateText("user_setting.zoom_out")}
+        description=${translateText("user_setting.zoom_out_desc")}
+        defaultKey=${this.defaultKeybinds.zoomOutMinus}
+        .value=${this.getKeyValue("zoomOutMinus")}
+        .display=${this.getKeyChar("zoomOutMinus")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="zoomOutNumpad"
+        label=${translateText("user_setting.zoom_out")}
+        description=${translateText("user_setting.zoom_out_desc")}
+        defaultKey=${this.defaultKeybinds.zoomOutNumpad}
+        .value=${this.getKeyValue("zoomOutNumpad")}
+        .display=${this.getKeyChar("zoomOutNumpad")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="zoomIn"
         label=${translateText("user_setting.zoom_in")}
         description=${translateText("user_setting.zoom_in_desc")}
         defaultKey=${this.defaultKeybinds.zoomIn}
         .value=${this.getKeyValue("zoomIn")}
         .display=${this.getKeyChar("zoomIn")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="zoomInEqual"
+        label=${translateText("user_setting.zoom_in")}
+        description=${translateText("user_setting.zoom_in_desc")}
+        defaultKey=${this.defaultKeybinds.zoomInEqual}
+        .value=${this.getKeyValue("zoomInEqual")}
+        .display=${this.getKeyChar("zoomInEqual")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="zoomInNumpad"
+        label=${translateText("user_setting.zoom_in")}
+        description=${translateText("user_setting.zoom_in_desc")}
+        defaultKey=${this.defaultKeybinds.zoomInNumpad}
+        .value=${this.getKeyValue("zoomInNumpad")}
+        .display=${this.getKeyChar("zoomInNumpad")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

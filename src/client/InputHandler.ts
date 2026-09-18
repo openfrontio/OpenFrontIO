@@ -640,15 +640,15 @@ export class InputHandler {
 
       if (
         this.activeKeys.has(this.keybinds.zoomOut) ||
-        this.activeKeys.has("Minus") ||
-        this.activeKeys.has("NumpadSubtract")
+        this.activeKeys.has(this.keybinds.zoomOutMinus) ||
+        this.activeKeys.has(this.keybinds.zoomOutNumpad)
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
       }
       if (
         this.activeKeys.has(this.keybinds.zoomIn) ||
-        this.activeKeys.has("Equal") ||
-        this.activeKeys.has("NumpadAdd")
+        this.activeKeys.has(this.keybinds.zoomInEqual) ||
+        this.activeKeys.has(this.keybinds.zoomInNumpad)
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
       }
@@ -746,10 +746,10 @@ export class InputHandler {
             "ArrowLeft",
             "ArrowDown",
             "ArrowRight",
-            "Minus",
-            "Equal",
-            "NumpadAdd",
-            "NumpadSubtract",
+            this.keybinds.zoomOutMinus,
+            this.keybinds.zoomOutNumpad,
+            this.keybinds.zoomInEqual,
+            this.keybinds.zoomInNumpad,
             this.keybinds.attackRatioDown,
             this.keybinds.attackRatioUp,
             this.keybinds.centerCamera,
