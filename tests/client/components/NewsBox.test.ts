@@ -1,5 +1,6 @@
 import newsItems from "../../../resources/news.json";
 import {
+  filterNewsByPlatform,
   getVisibleNewsItems,
   NewsItem,
 } from "../../../src/client/components/NewsBox";
@@ -56,6 +57,38 @@ describe("NewsBox", () => {
       localStorage.setItem(DISMISSED_NEWS_KEY, JSON.stringify(allIds));
       const items = getVisibleNewsItems(allItems);
       expect(items.length).toBe(0);
+    });
+  });
+
+  describe("filterNewsByPlatform", () => {
+    const everywhere: NewsItem = { id: "a", title: "A", type: "announcement" };
+    const emptyList: NewsItem = {
+      id: "b",
+      title: "B",
+      type: "announcement",
+      platforms: [],
+    };
+    const webOnly: NewsItem = {
+      id: "c",
+      title: "C",
+      type: "announcement",
+      platforms: ["web", "crazygames"],
+    };
+    const items = [everywhere, emptyList, webOnly];
+
+    it("hides items targeted at other platforms", () => {
+      expect(filterNewsByPlatform(items, "steam").map((i) => i.id)).toEqual([
+        "a",
+        "b",
+      ]);
+    });
+
+    it("shows items targeted at the current platform", () => {
+      expect(filterNewsByPlatform(items, "web").map((i) => i.id)).toEqual([
+        "a",
+        "b",
+        "c",
+      ]);
     });
   });
 

@@ -856,6 +856,8 @@ export const NewsItemSchema = z.object({
   descriptionTranslationKey: z.string().optional(),
   url: z.string().nullable().optional(),
   type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
+  // Absent or empty means every platform.
+  platforms: z.array(z.string()).optional(),
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
 
