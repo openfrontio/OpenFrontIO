@@ -240,6 +240,7 @@ describe("TradeShipExecution recapture", () => {
     game.addExecution(execution);
     executeTicks(game, 2);
     const [tradeShip] = origin.units(UnitType.TradeShip);
+    const displayMessage = vi.spyOn(game, "displayMessage");
 
     pirate.captureUnit(tradeShip);
     game.executeNextTick();
@@ -257,6 +258,9 @@ describe("TradeShipExecution recapture", () => {
     expect(tradeShip.targetUnit()).toBe(homePort);
     expect(origin.gold()).toBeGreaterThan(goldBefore);
     expect(origin.piracyGold()).toBe(0n);
+    expect(displayMessage.mock.calls.map(([message]) => message)).not.toContain(
+      "events_display.received_gold_from_captured_ship",
+    );
     for (const player of [origin, partner, pirate]) {
       const stats = game.stats().getPlayerStats(player);
       expect(stats?.boats?.trade?.[BOAT_INDEX_CAPTURE] ?? 0n).toBe(0n);
