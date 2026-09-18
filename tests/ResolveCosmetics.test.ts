@@ -26,7 +26,7 @@ function makeUserMe(flares: string[] = []): UserMeResponse {
       unlimitedRanked: false,
       canCreatePublicLobbies: false,
       flares,
-      achievements: { singleplayerMap: [] },
+      achievements: { singleplayerMap: [], player: [] },
       friends: [],
       subscription: null,
     },

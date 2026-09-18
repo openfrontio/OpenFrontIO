@@ -320,13 +320,23 @@ export async function isLoggedIn(): Promise<boolean> {
   return userAuthResult !== false;
 }
 
-// True when the in-memory session still belongs to the given JWT subject.
-// Lets callers of authenticated endpoints discard a response that arrived
-// after a logout or session change invalidated the request's session.
+// True when the in-memory session still belongs to the given player. Lets
+// callers of authenticated endpoints discard a response that arrived after a
+// logout or session change invalidated the request's session.
+//
+// `sub` is the dashed UUID TokenPayloadSchema transforms the claim into --
+// what every caller holds -- while the JWT carries the base64url form, so the
+// two have to be brought to the same encoding before comparing. Converting
+// here rather than at the call sites means no caller has to know which
+// encoding this wants.
 export function isSessionActive(sub: string): boolean {
   if (__jwt === null) return false;
   try {
-    return decodeJwt(__jwt).sub === sub;
+    const raw = decodeJwt(__jwt).sub;
+    if (raw === undefined) return false;
+    // Throws on a subject that is not a base64url UUID, which the catch
+    // below answers the same way as an undecodable JWT: not this session.
+    return base64urlToUuid(raw) === sub;
   } catch {
     return false;
   }
