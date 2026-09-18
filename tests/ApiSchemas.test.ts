@@ -1373,3 +1373,20 @@ describe("PostTribeBoostResponseSchema", () => {
     ).toBe(false);
   });
 });
+
+describe("UserMeResponseSchema player achievements", () => {
+  const achievements = UserMeResponseSchema.shape.player.shape.achievements;
+
+  it("keeps the server-awarded player achievements array", () => {
+    const parsed = achievements.parse({
+      singleplayerMap: [],
+      player: [{ achievement: "win_ffa", game: "abc123", achievedAt: null }],
+    });
+    expect(parsed.player[0].achievement).toBe("win_ffa");
+  });
+
+  it("defaults player to an empty array when the server omits it", () => {
+    const parsed = achievements.parse({ singleplayerMap: [] });
+    expect(parsed.player).toEqual([]);
+  });
+});

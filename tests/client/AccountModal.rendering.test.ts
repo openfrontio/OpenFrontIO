@@ -72,7 +72,7 @@ function makeUserMe(
       adfree: false,
       unlimitedRanked: false,
       canCreatePublicLobbies: false,
-      achievements: { singleplayerMap: [] },
+      achievements: { singleplayerMap: [], player: [] },
       friends: [],
       subscription: null,
       currency: { soft: 100, hard: 10 },

@@ -61,8 +61,8 @@ describe("TransportCaptureStats", () => {
   });
 
   test("does not count a captured trade ship as a transport", () => {
-    // The warship that hunts a trade ship down records the capture itself, so
-    // routing trade ships through the same path would double-count piracy.
+    // TradeShipExecution records the capture on delivery, so routing trade
+    // ships through the same path would double-count piracy.
     const destinationPort = captor.buildUnit(
       UnitType.Port,
       game.ref(50, 50),

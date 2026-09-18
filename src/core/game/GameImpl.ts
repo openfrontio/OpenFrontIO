@@ -423,6 +423,8 @@ export class GameImpl implements Game {
     );
     (alliance.requestor() as PlayerImpl)._alliances.push(alliance);
     (alliance.recipient() as PlayerImpl)._alliances.push(alliance);
+    this.stats().allianceFormed(requestor);
+    this.stats().allianceFormed(recipient);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
       request,
     );
@@ -510,6 +512,17 @@ export class GameImpl implements Game {
     this.execs.push(...inited);
     this.unInitExecs = unInited;
     for (const player of this._players.values()) {
+      // Sampled before toUpdate so the reading is of the tick that just ran.
+      // Dead and unspawned players are skipped: an eliminated player's fall
+      // to zero tiles would otherwise register as a total collapse.
+      if (player.isAlive() && player.hasSpawned()) {
+        this.stats().recordTickSample(
+          player,
+          player.numTilesOwned(),
+          player.troops(),
+          player.alliances().length,
+        );
+      }
       const update = player.toUpdate(
         this.playerStatsQuads,
         this.attackTroopsQuads,
@@ -832,9 +845,19 @@ export class GameImpl implements Game {
         `${breaker} not allied with ${other}, cannot break alliance`,
       );
     }
+    const duration = this._ticks - alliance.createdAt();
     if (!other.isTraitor() && !other.isDisconnected()) {
       breaker.markTraitor();
+      // Only a real betrayal counts as being betrayed. Gated on the same
+      // condition as markTraitor so that a teammate dropping their connection
+      // is not recorded as having stabbed anyone in the back.
+      this.stats().allianceEnded(other, duration, "brokenByOther");
+    } else {
+      this.stats().allianceEnded(other, duration, null);
     }
+    // The breaker's side is already counted by betray(); this call is only
+    // here so their longest-held maximum still sees this alliance.
+    this.stats().allianceEnded(breaker, duration, null);
 
     this.detachAlliance(alliance);
 
@@ -857,7 +880,11 @@ export class GameImpl implements Game {
         `cannot expire alliance: must have exactly one alliance, have ${alliances.length}`,
       );
     }
-    this.detachAlliance(alliances[0]);
+    const expiring = alliances[0];
+    const duration = this._ticks - expiring.createdAt();
+    this.stats().allianceEnded(expiring.requestor(), duration, "expired");
+    this.stats().allianceEnded(expiring.recipient(), duration, "expired");
+    this.detachAlliance(expiring);
     this.addUpdate({
       type: GameUpdateType.AllianceExpired,
       player1ID: alliance.requestor().smallID(),
@@ -868,7 +895,19 @@ export class GameImpl implements Game {
   public removeAlliancesByPlayerSilently(player: Player): void {
     // Snapshot — detachAlliance reassigns the player's _alliances as it goes.
     const removed = [...(player as PlayerImpl)._alliances];
-    for (const alliance of removed) this.detachAlliance(alliance);
+    for (const alliance of removed) {
+      // Elimination is the fourth way an alliance ends, and in practice the
+      // commonest. Nobody betrayed and nothing expired, so no counter moves;
+      // the null counter is here purely so both sides' longest-held maximum
+      // still sees the alliance. Without this the survivor's longest held
+      // would silently read 0 from an alliance that ran the whole game, and
+      // recordAlliancesAtEnd cannot pick it up either — by then it is
+      // already detached.
+      const duration = this._ticks - alliance.createdAt();
+      this.stats().allianceEnded(alliance.requestor(), duration, null);
+      this.stats().allianceEnded(alliance.recipient(), duration, null);
+      this.detachAlliance(alliance);
+    }
   }
 
   /** Remove an alliance from both participants' per-player alliance lists. */
@@ -920,6 +959,13 @@ export class GameImpl implements Game {
     // OFM: snapshot final tiles for standings (bots skipped in recordFinalTiles).
     for (const player of this.players()) {
       this.stats().recordFinalTiles(player, player.numTilesOwned());
+      const standing = player.alliances();
+      let longest = 0;
+      for (const a of standing) {
+        const held = this._ticks - a.createdAt();
+        if (held > longest) longest = held;
+      }
+      this.stats().recordAlliancesAtEnd(player, standing.length, longest);
     }
     this.addUpdate({
       type: GameUpdateType.Win,
