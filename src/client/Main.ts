@@ -37,11 +37,16 @@ import {
   nextBootInterrupt,
   parseClaimPromptStore,
   runBootInterrupt,
+  steamGrantStringsReady,
 } from "./BootInterrupts";
 import "./ChangeUsernameModal";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
-import { getPlayerCosmeticsRefs, handlePurchaseReturn } from "./Cosmetics";
+import {
+  getPlayerCosmeticsRefs,
+  handlePurchaseReturn,
+  translateCosmetic,
+} from "./Cosmetics";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
@@ -102,6 +107,13 @@ import {
 } from "./ServerList";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import {
+  parseSteamGrantStore,
+  recordSteamGrant,
+  STEAM_GRANT_NOTICE_KEY,
+  steamGrantEndedDue,
+  steamGrantWelcomeDue,
+} from "./SteamGrantNotices";
 import { steamHandoffMode } from "./SteamHandoff";
 import "./SteamHandoffModal";
 import { SteamHandoffModal } from "./SteamHandoffModal";
@@ -679,6 +691,22 @@ class Client {
         });
         adGatekeeper.start();
       }
+      // Before the dispatch: <username-input> reads this store when it picks
+      // the lapse notice's wording, and the record has to be current by then.
+      const grantStoreBefore = parseSteamGrantStore(
+        localStorage.getItem(STEAM_GRANT_NOTICE_KEY),
+      );
+      const grantStore = recordSteamGrant(
+        grantStoreBefore,
+        userMeResponse,
+        Date.now(),
+      );
+      if (grantStore !== grantStoreBefore) {
+        localStorage.setItem(
+          STEAM_GRANT_NOTICE_KEY,
+          JSON.stringify(grantStore),
+        );
+      }
       // Snapshot in, dispatch and comparison inside — see
       // lapseShownAfterDispatch for why the snapshot cannot be read there.
       const lapseShown = lapseShownAfterDispatch(
@@ -693,6 +721,11 @@ class Client {
             }),
           ),
         () => localStorage.getItem(LAPSE_NOTICE_KEY),
+      );
+      // Re-read, not `grantStore`: a lapse notice that carried the grant
+      // sign-off marked it shown from inside the dispatch above.
+      const grantStoreAfterDispatch = parseSteamGrantStore(
+        localStorage.getItem(STEAM_GRANT_NOTICE_KEY),
       );
 
       if (userMeResponse !== false) {
@@ -762,11 +795,22 @@ class Client {
             username,
             usernameBase,
             lapseNoticeDue: lapseShown,
+            grantWelcomeDue: steamGrantWelcomeDue(
+              grantStoreAfterDispatch,
+              userMeResponse,
+              Date.now(),
+            ),
+            grantEndedDue: steamGrantEndedDue(
+              grantStoreAfterDispatch,
+              userMeResponse,
+              Date.now(),
+            ),
+            grantStringsReady: steamGrantStringsReady(translateText),
             rewardCount: rewards.length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
           }),
-          { claimStore, publicId },
+          { claimStore, grantStore: grantStoreAfterDispatch, publicId },
           {
             translate: translateText,
             confirm: (body, heading, confirmText) =>
@@ -777,12 +821,21 @@ class Client {
                 variant: "warning",
                 confirmText,
               }),
+            alert: async (body, heading) => {
+              await showInGameAlert(body, { heading });
+            },
+            tierName: (tier) => translateCosmetic("subscriptions", tier),
             navigate: (hash) => {
               window.location.hash = hash;
             },
             openRewards: () => this.rewardsModal?.openWithRewards(rewards),
             storeClaimPrompt: (store) =>
               localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(store)),
+            storeSteamGrant: (store) =>
+              localStorage.setItem(
+                STEAM_GRANT_NOTICE_KEY,
+                JSON.stringify(store),
+              ),
             now: () => Date.now(),
           },
         );
