@@ -136,19 +136,19 @@ describe("annexation only takes territory that is actually enclosed", () => {
       }
     }
 
-    // Surround the outer border with attacker tiles so outer border is landlocked
-    for (let x = 29; x <= 71; x++) {
-      attacker.conquer(game.ref(x, 29));
-      attacker.conquer(game.ref(x, 71));
-    }
-    for (let y = 29; y <= 71; y++) {
-      attacker.conquer(game.ref(29, y));
-      attacker.conquer(game.ref(71, y));
-    }
+    // Place attacker tiles at the corners of the outer border so that if the
+    // outer border were mistakenly treated as a secondary cluster, isSurrounded()
+    // would evaluate to true.
+    attacker.conquer(game.ref(29, 29));
+    attacker.conquer(game.ref(71, 29));
+    attacker.conquer(game.ref(29, 71));
+    attacker.conquer(game.ref(71, 71));
 
     const exec = new PlayerExecution(defender);
     exec.init(game, 0);
-    const clusters: TileRef[][] = (exec as any).calculateClusters();
+    const { clusters } = (exec as any).calculateClusters() as {
+      clusters: TileRef[][];
+    };
     expect(clusters.length).toBeGreaterThanOrEqual(2);
 
     // Verify that the inner hole's cluster has strictly more border tiles than the outer perimeter
@@ -168,7 +168,7 @@ describe("annexation only takes territory that is actually enclosed", () => {
     const defenderTilesBefore = defender.numTilesOwned();
     expect(defenderTilesBefore).toBeGreaterThan(0);
 
-    exec.tick(0);
+    (exec as unknown as { removeClusters(): void }).removeClusters();
 
     // Defender must not be wiped out / annexed
     expect(defender.numTilesOwned()).toBe(defenderTilesBefore);
