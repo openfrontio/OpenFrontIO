@@ -131,13 +131,17 @@ export class PlayerExecution implements Execution {
       return;
     }
 
-    // Find the largest cluster with a single linear scan (O(n)).
+    const boxes = [calculateBoundingBox(this.mg, clusters[0])];
     let largestIndex = 0;
-    let largestSize = clusters[0].length;
     for (let i = 1; i < clusters.length; i++) {
-      const size = clusters[i].length;
-      if (size > largestSize) {
-        largestSize = size;
+      const box = calculateBoundingBox(this.mg, clusters[i]);
+      boxes.push(box);
+      if (inscribed(box, boxes[largestIndex])) {
+        largestIndex = i;
+      } else if (
+        !inscribed(boxes[largestIndex], box) &&
+        clusters[i].length > clusters[largestIndex].length
+      ) {
         largestIndex = i;
       }
     }
@@ -145,7 +149,7 @@ export class PlayerExecution implements Execution {
     const largestCluster = clusters[largestIndex];
     if (largestCluster === undefined) throw new Error("No clusters");
 
-    const largestClusterBox = calculateBoundingBox(this.mg, largestCluster);
+    const largestClusterBox = boxes[largestIndex];
     this.player.largestClusterBoundingBox = largestClusterBox;
     const surroundedBy = this.surroundedBySamePlayer(
       largestCluster,
@@ -159,7 +163,7 @@ export class PlayerExecution implements Execution {
     for (let i = 0; i < clusters.length; i++) {
       if (i === largestIndex) continue;
       const cluster = clusters[i];
-      if (this.isSurrounded(cluster)) {
+      if (this.isSurrounded(cluster, boxes[i])) {
         this.removeCluster(cluster);
       }
     }
@@ -219,7 +223,10 @@ export class PlayerExecution implements Execution {
     return false;
   }
 
-  private isSurrounded(cluster: readonly TileRef[]): boolean {
+  private isSurrounded(
+    cluster: readonly TileRef[],
+    clusterBox: { min: Cell; max: Cell },
+  ): boolean {
     let hasEnemy = false;
     let minX = Infinity,
       minY = Infinity,
@@ -249,7 +256,6 @@ export class PlayerExecution implements Execution {
     if (!hasEnemy) {
       return false;
     }
-    const clusterBox = calculateBoundingBox(this.mg, cluster);
     const enemyBox = { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
     return inscribed(enemyBox, clusterBox);
   }
