@@ -27,6 +27,7 @@ import {
   resolveCosmetics,
   ResolvedCosmetic,
 } from "./Cosmetics";
+import { modalRouter } from "./ModalRouter";
 import {
   priceStringToCents,
   reportPendingSteamAuthorizations,
@@ -149,6 +150,91 @@ export class StoreModal extends BaseModal {
     await this.refresh();
   }
 
+  // Steam has no URL bar, so the `#affiliate=CODE` share link (Main.ts) is
+  // unreachable there. This header control lets a player type the code and
+  // lands them in the same affiliate view; in that view it swaps to a way back.
+  private renderAffiliateControl(): TemplateResult {
+    const buttonClass =
+      "shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white/70 hover:bg-white/10 hover:text-white";
+    if (this.affiliateCode) {
+      return html`<div class="flex items-center gap-2">
+        <span class="text-sm text-white/70 break-all">
+          ${translateText("store.affiliate_showing", {
+            code: this.affiliateCode,
+          })}
+        </span>
+        <button
+          data-store-affiliate-back
+          class=${buttonClass}
+          @click=${() => this.exitAffiliate()}
+        >
+          ${translateText("store.affiliate_back")}
+        </button>
+      </div>`;
+    }
+    return html`<form
+      class="flex items-center gap-2"
+      @submit=${(e: Event) => {
+        e.preventDefault();
+        const input = (e.currentTarget as HTMLFormElement).querySelector(
+          "input",
+        );
+        if (input) this.enterAffiliate(input.value);
+      }}
+    >
+      <input
+        data-store-affiliate-input
+        type="text"
+        autocomplete="off"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+        placeholder=${translateText("store.affiliate_placeholder")}
+        class="w-36 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white placeholder-white/30 focus:border-malibu-blue/50 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50"
+      />
+      <button type="submit" class=${buttonClass}>
+        ${translateText("store.affiliate_go")}
+      </button>
+    </form>`;
+  }
+
+  // Catalog codes are matched exactly (Cosmetics.ts), and on-screen keyboards
+  // (Steam Deck, phones) capitalise the first letter of hand-typed input, so
+  // a typed code is resolved to the catalog's own spelling when one matches
+  // case-insensitively. An unknown code is kept as typed and shows the empty
+  // state. The hash is synced so a reload or share lands in the same view.
+  private enterAffiliate(raw: string): void {
+    const typed = raw.trim();
+    if (!typed) return;
+    const lower = typed.toLowerCase();
+    const match = resolveCosmetics(this.cosmetics, this.userMeResponse, null)
+      .map((resolved) => resolved.cosmetic)
+      .find(
+        (c) =>
+          c !== null &&
+          "affiliateCode" in c &&
+          typeof c.affiliateCode === "string" &&
+          c.affiliateCode.toLowerCase() === lower,
+      );
+    const code =
+      match &&
+      "affiliateCode" in match &&
+      typeof match.affiliateCode === "string"
+        ? match.affiliateCode
+        : typed;
+    this.affiliateCode = code;
+    modalRouter.syncArgs(this.routerName, { affiliateCode: code });
+    this.selectVisible(this.groupsForTab(this.activeTab));
+    this.requestUpdate();
+  }
+
+  private exitAffiliate(): void {
+    this.affiliateCode = null;
+    modalRouter.syncArgs(this.routerName, { affiliateCode: null });
+    this.selectVisible(this.groupsForTab(this.activeTab));
+    this.requestUpdate();
+  }
+
   private renderHeader(): TemplateResult {
     const currency =
       this.userMeResponse === false
@@ -158,7 +244,8 @@ export class StoreModal extends BaseModal {
       title: translateText("store.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
-      rightContent: html`<div class="flex items-center gap-4">
+      rightContent: html`<div class="flex flex-wrap items-center gap-4">
+        ${this.renderAffiliateControl()}
         ${currency
           ? html`<currency-display
               .hard=${currency.hard}

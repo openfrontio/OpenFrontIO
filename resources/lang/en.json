@@ -1866,6 +1866,10 @@
     "title": "Wishlist OpenFront on Steam!"
   },
   "store": {
+    "affiliate_back": "Back to store",
+    "affiliate_go": "Go",
+    "affiliate_placeholder": "Creator's code",
+    "affiliate_showing": "Showing items for {code}",
     "already_owned": "You already own this item. Nothing was charged.",
     "already_subscribed": "Already subscribed.",
     "bundles": "Bundles",

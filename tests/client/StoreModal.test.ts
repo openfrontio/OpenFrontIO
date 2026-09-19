@@ -6,6 +6,7 @@ import {
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../src/client/Cosmetics";
+import { modalRouter } from "../../src/client/ModalRouter";
 import "../../src/client/Store";
 import type { StoreModal } from "../../src/client/Store";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
@@ -949,6 +950,47 @@ describe("StoreModal cosmetic browser", () => {
 
     await purchaseButton(modal, affiliatePattern.key).onPurchaseHard!();
     expect(purchaseCosmetic).toHaveBeenCalledWith(affiliatePattern, "hard");
+  });
+
+  // Steam has no URL bar for the #affiliate= share link, so a typed code must
+  // reach the same view -- and there must be a way back out of it.
+  it("enters and leaves affiliate mode from the typed code bar", async () => {
+    resolvedCatalog = [red, affiliatePattern];
+    const modal = await openStoreOnCosmetic("patterns");
+    expect(
+      modal.querySelector(`[data-cosmetic-key="${red.key}"]`),
+    ).toBeTruthy();
+    // Only a registered modal writes the hash, and nothing registers one here,
+    // so assert the router call that keeps a reload/share on the same view.
+    const syncArgs = vi.spyOn(modalRouter, "syncArgs");
+
+    const input = modal.querySelector<HTMLInputElement>(
+      "[data-store-affiliate-input]",
+    )!;
+    // Sentence-cased by an on-screen keyboard: must still hit "creator".
+    input.value = "  Creator ";
+    input.form!.requestSubmit();
+    await vi.waitFor(() =>
+      expect(card(modal, affiliatePattern.key)?.state).toBe("focused"),
+    );
+    expect(modal.querySelector(`[data-cosmetic-key="${red.key}"]`)).toBeNull();
+    expect(modal.querySelector("[data-store-affiliate-input]")).toBeNull();
+    expect(syncArgs).toHaveBeenLastCalledWith("store", {
+      affiliateCode: "creator",
+    });
+
+    modal
+      .querySelector<HTMLButtonElement>("[data-store-affiliate-back]")!
+      .click();
+    await vi.waitFor(() =>
+      expect(
+        modal.querySelector(`[data-cosmetic-key="${red.key}"]`),
+      ).toBeTruthy(),
+    );
+    expect(modal.querySelector("[data-store-affiliate-input]")).toBeTruthy();
+    expect(syncArgs).toHaveBeenLastCalledWith("store", {
+      affiliateCode: null,
+    });
   });
 });
 
