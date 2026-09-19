@@ -18,13 +18,14 @@ export class OButton extends LitElement {
   @property({ attribute: false }) icon?: TemplateResult;
   @property({ type: Boolean }) disable = false;
   @property({ type: Boolean }) submit = false;
+  @property({ type: Boolean }) uppercase = true;
 
   createRenderRoot() {
     return this;
   }
 
   private readonly BASE =
-    "font-bold uppercase tracking-wider rounded-xl border border-transparent " +
+    "font-bold tracking-wider rounded-xl border border-transparent " +
     "transition-all duration-300 transform hover:-translate-y-px " +
     "outline-none text-center whitespace-normal break-words leading-tight overflow-hidden relative " +
     "disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:opacity-70";
@@ -88,7 +89,8 @@ export class OButton extends LitElement {
         ? this.title
         : translateText(this.translationKey);
     const iconOnly = this.iconPosition === "only";
-    const classes = `${this.BASE} ${this.variantClasses()} ${this.sizeClasses()} ${this.widthClasses()}`;
+    const casing = this.uppercase ? "uppercase" : "normal-case";
+    const classes = `${this.BASE} ${casing} ${this.variantClasses()} ${this.sizeClasses()} ${this.widthClasses()}`;
 
     return html`
       <button
