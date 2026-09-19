@@ -47,6 +47,7 @@ export interface GameMap {
   // neighbors()) and returns the count. out must have length >= 4; reuse it
   // across calls to avoid allocation in hot loops.
   neighbors4(ref: TileRef, out: TileRef[]): number;
+  neighbors8(ref: TileRef, out: TileRef[]): number;
   // Zero-allocation neighbor iteration including diagonals, in dx-major
   // order: (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1).
   forEachNeighborWithDiag(
@@ -418,6 +419,28 @@ export class GameMapImpl implements GameMap {
     if (ref < (this.height_ - 1) * w) out[n++] = ref + w;
     if (x !== 0) out[n++] = ref - 1;
     if (x !== w - 1) out[n++] = ref + 1;
+    return n;
+  }
+
+  neighbors8(ref: TileRef, out: TileRef[]): number {
+    const w = this.width_;
+    const x = ref % w;
+    const hasN = ref >= w;
+    const hasS = ref < (this.height_ - 1) * w;
+    let n = 0;
+
+    if (x !== 0) {
+      if (hasN) out[n++] = ref - 1 - w;
+      out[n++] = ref - 1;
+      if (hasS) out[n++] = ref - 1 + w;
+    }
+    if (hasN) out[n++] = ref - w;
+    if (hasS) out[n++] = ref + w;
+    if (x !== w - 1) {
+      if (hasN) out[n++] = ref + 1 - w;
+      out[n++] = ref + 1;
+      if (hasS) out[n++] = ref + 1 + w;
+    }
     return n;
   }
 
