@@ -18,7 +18,9 @@ export function cosmeticDisplayName(resolved: ResolvedCosmetic): string {
   }
   if (resolved.type === "pack" || resolved.type === "cosmeticPack") {
     const name = (cosmetic as Pack | CosmeticPack).displayName ?? "";
-    return name.replace(/\b\w/g, (c) => c.toUpperCase());
+    return name.replace(/(^|[\s-])\p{L}/gu, (match) =>
+      match.toLocaleUpperCase(),
+    );
   }
   if (resolved.type === "subscription") {
     return translateCosmetic("subscriptions", cosmetic.name);
