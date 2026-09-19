@@ -1,0 +1,433 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [135, 1056],
+      "flag": "ic",
+      "name": "Frontera"
+    },
+    {
+      "coordinates": [147, 1143],
+      "flag": "ic",
+      "name": "El Pinar"
+    },
+    {
+      "coordinates": [703, 778],
+      "flag": "ic",
+      "name": "Agulo"
+    },
+    {
+      "coordinates": [583, 777],
+      "flag": "ic",
+      "name": "Alojera"
+    },
+    {
+      "coordinates": [587, 836],
+      "flag": "ic",
+      "name": "La Calera"
+    },
+    {
+      "coordinates": [655, 851],
+      "flag": "ic",
+      "name": "Alajero"
+    },
+    {
+      "coordinates": [690, 885],
+      "flag": "ic",
+      "name": "Barranco de Santiago"
+    },
+    {
+      "coordinates": [606, 865],
+      "flag": "ic",
+      "name": "La Rajita"
+    },
+    {
+      "coordinates": [431, 303],
+      "flag": "ic",
+      "name": "Mazo"
+    },
+    {
+      "coordinates": [455, 173],
+      "flag": "ic",
+      "name": "Puntallana"
+    },
+    {
+      "coordinates": [427, 116],
+      "flag": "ic",
+      "name": "Barlovento"
+    },
+    {
+      "coordinates": [308, 115],
+      "flag": "ic",
+      "name": "Garafia"
+    },
+    {
+      "coordinates": [297, 183],
+      "flag": "ic",
+      "name": "Puntagorda"
+    },
+    {
+      "coordinates": [334, 292],
+      "flag": "ic",
+      "name": "Los Llanos de Aridane"
+    },
+    {
+      "coordinates": [382, 399],
+      "flag": "ic",
+      "name": "Las Caletas"
+    },
+    {
+      "coordinates": [357, 418],
+      "flag": "ic",
+      "name": "Fuencaliente"
+    },
+    {
+      "coordinates": [1582, 557],
+      "flag": "ic",
+      "name": "San Cristobal de la Laguna"
+    },
+    {
+      "coordinates": [1496, 554],
+      "flag": "ic",
+      "name": "Tacoronte"
+    },
+    {
+      "coordinates": [1539, 645],
+      "flag": "ic",
+      "name": "Candelaria"
+    },
+    {
+      "coordinates": [1504, 677],
+      "flag": "ic",
+      "name": "Guimar"
+    },
+    {
+      "coordinates": [1449, 748],
+      "flag": "ic",
+      "name": "Fasnia"
+    },
+    {
+      "coordinates": [1427, 800],
+      "flag": "ic",
+      "name": "Arico"
+    },
+    {
+      "coordinates": [1323, 650],
+      "flag": "ic",
+      "name": "Los Realejos"
+    },
+    {
+      "coordinates": [1226, 643],
+      "flag": "ic",
+      "name": "Icod de los Vinos"
+    },
+    {
+      "coordinates": [1125, 630],
+      "flag": "ic",
+      "name": "Buenavista del Norte"
+    },
+    {
+      "coordinates": [1181, 822],
+      "flag": "ic",
+      "name": "Guia de Isora"
+    },
+    {
+      "coordinates": [1145, 704],
+      "flag": "ic",
+      "name": "Santiago del Teide"
+    },
+    {
+      "coordinates": [1243, 958],
+      "flag": "ic",
+      "name": "Costa del Silencio"
+    },
+    {
+      "coordinates": [1346, 939],
+      "flag": "ic",
+      "name": "El Medano"
+    },
+    {
+      "coordinates": [1337, 852],
+      "flag": "ic",
+      "name": "Granadilla de Abona"
+    },
+    {
+      "coordinates": [2134, 1001],
+      "flag": "ic",
+      "name": "Arucas"
+    },
+    {
+      "coordinates": [2040, 975],
+      "flag": "ic",
+      "name": "Galdar"
+    },
+    {
+      "coordinates": [2004, 1015],
+      "flag": "ic",
+      "name": "Agaete"
+    },
+    {
+      "coordinates": [1925, 1116],
+      "flag": "ic",
+      "name": "San Nicolas de Tolentino"
+    },
+    {
+      "coordinates": [1938, 1216],
+      "flag": "ic",
+      "name": "La Playa de Mogan"
+    },
+    {
+      "coordinates": [1973, 1255],
+      "flag": "ic",
+      "name": "Puerto Rico"
+    },
+    {
+      "coordinates": [2049, 1292],
+      "flag": "ic",
+      "name": "El Oasis"
+    },
+    {
+      "coordinates": [2097, 1266],
+      "flag": "ic",
+      "name": "Maspalomas"
+    },
+    {
+      "coordinates": [2143, 1253],
+      "flag": "ic",
+      "name": "San Agustin"
+    },
+    {
+      "coordinates": [2221, 1190],
+      "flag": "ic",
+      "name": "Arinaga"
+    },
+    {
+      "coordinates": [2097, 1059],
+      "flag": "ic",
+      "name": "Teror"
+    },
+    {
+      "coordinates": [2169, 1065],
+      "flag": "ic",
+      "name": "Santa Brigida"
+    },
+    {
+      "coordinates": [2124, 1088],
+      "flag": "ic",
+      "name": "Vega de San Mateo"
+    },
+    {
+      "coordinates": [2670, 1122],
+      "flag": "ic",
+      "name": "Puerto de la Cruz"
+    },
+    {
+      "coordinates": [2777, 1162],
+      "flag": "ic",
+      "name": "Jandia Playa"
+    },
+    {
+      "coordinates": [2895, 1080],
+      "flag": "ic",
+      "name": "Matas Blancas"
+    },
+    {
+      "coordinates": [3221, 620],
+      "flag": "ic",
+      "name": "Corralejo"
+    },
+    {
+      "coordinates": [2878, 1053],
+      "flag": "ic",
+      "name": "La Pared"
+    },
+    {
+      "coordinates": [3046, 1044],
+      "flag": "ic",
+      "name": "Gran Tarajal"
+    },
+    {
+      "coordinates": [3159, 964],
+      "flag": "ic",
+      "name": "Pozo Negro"
+    },
+    {
+      "coordinates": [3174, 921],
+      "flag": "ic",
+      "name": "Las Salinas"
+    },
+    {
+      "coordinates": [3127, 655],
+      "flag": "ic",
+      "name": "Cotillo"
+    },
+    {
+      "coordinates": [3065, 763],
+      "flag": "ic",
+      "name": "Los Molinos"
+    },
+    {
+      "coordinates": [2963, 883],
+      "flag": "ic",
+      "name": "Puerto de la Peña"
+    },
+    {
+      "coordinates": [3088, 860],
+      "flag": "ic",
+      "name": "Antigua"
+    },
+    {
+      "coordinates": [3162, 735],
+      "flag": "ic",
+      "name": "La Oliva"
+    },
+    {
+      "coordinates": [3577, 259],
+      "flag": "ic",
+      "name": "Haria"
+    },
+    {
+      "coordinates": [3338, 427],
+      "flag": "ic",
+      "name": "Yaiza"
+    },
+    {
+      "coordinates": [3360, 345],
+      "flag": "ic",
+      "name": "Tinajo"
+    },
+    {
+      "coordinates": [3388, 438],
+      "flag": "ic",
+      "name": "Tias"
+    },
+    {
+      "coordinates": [3432, 413],
+      "flag": "ic",
+      "name": "San Bartolome"
+    },
+    {
+      "coordinates": [3499, 346],
+      "flag": "ic",
+      "name": "Teguise"
+    },
+    {
+      "coordinates": [3868, 1184],
+      "flag": "ma",
+      "name": "Tah"
+    },
+    {
+      "coordinates": [3956, 1352],
+      "flag": "ma",
+      "name": "Hagunia"
+    },
+    {
+      "coordinates": [3781, 1291],
+      "flag": "ma",
+      "name": "Daoura"
+    },
+    {
+      "coordinates": [3584, 160],
+      "flag": "ic",
+      "name": "La Graciosa"
+    },
+    {
+      "coordinates": [3592, 37],
+      "flag": "ic",
+      "name": "Alegranza"
+    }
+  ],
+  "categories": ["new", "africa"],
+  "id": "CanaryIslands",
+  "map": {
+    "height": 1400,
+    "num_land_tiles": 592368,
+    "width": 4000
+  },
+  "map16x": {
+    "height": 350,
+    "num_land_tiles": 35639,
+    "width": 1000
+  },
+  "map4x": {
+    "height": 700,
+    "num_land_tiles": 146323,
+    "width": 2000
+  },
+  "multiplayer_frequency": 3,
+  "name": "Canary Islands",
+  "nations": [
+    {
+      "coordinates": [229, 1022],
+      "flag": "ic",
+      "name": "Valverde"
+    },
+    {
+      "coordinates": [436, 253],
+      "flag": "ic",
+      "name": "Santa Cruz de la Palma"
+    },
+    {
+      "coordinates": [745, 843],
+      "flag": "ic",
+      "name": "San Sebastian de la Gomera"
+    },
+    {
+      "coordinates": [1238, 860],
+      "flag": "ic",
+      "name": "Arona"
+    },
+    {
+      "coordinates": [1645, 562],
+      "flag": "ic",
+      "name": "Santa Cruz de Tenerife"
+    },
+    {
+      "coordinates": [2212, 995],
+      "flag": "ic",
+      "name": "Las Palmas"
+    },
+    {
+      "coordinates": [2208, 1106],
+      "flag": "ic",
+      "name": "Telde"
+    },
+    {
+      "coordinates": [2105, 1178],
+      "flag": "ic",
+      "name": "San Bartolome de Tirajana"
+    },
+    {
+      "coordinates": [3009, 925],
+      "flag": "ic",
+      "name": "Pajara"
+    },
+    {
+      "coordinates": [1405, 622],
+      "flag": "ic",
+      "name": "Puerto de la Cruz"
+    },
+    {
+      "coordinates": [3194, 814],
+      "flag": "ic",
+      "name": "Puerto del Rosario"
+    },
+    {
+      "coordinates": [3488, 426],
+      "flag": "ic",
+      "name": "Arrecife"
+    },
+    {
+      "coordinates": [3689, 1358],
+      "flag": "ma",
+      "name": "Laayoune"
+    },
+    {
+      "coordinates": [3929, 1051],
+      "flag": "ma",
+      "name": "Tarfaya"
+    }
+  ],
+  "team_frequency": 10,
+  "themes": ["africa"],
+  "translation_key": "map.canaryislands"
+}
