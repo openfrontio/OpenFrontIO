@@ -75,6 +75,10 @@
     {
       "key": "build_posts",
       "requiresPlayer": false
+    },
+    {
+      "key": "build_sam_site",
+      "requiresPlayer": false
     }
   ],
   "greet": [
@@ -154,6 +158,10 @@
     },
     {
       "key": "fun",
+      "requiresPlayer": false
+    },
+    {
+      "key": "great_supine_protoplasmic_invertebrate_jellies",
       "requiresPlayer": false
     },
     {
