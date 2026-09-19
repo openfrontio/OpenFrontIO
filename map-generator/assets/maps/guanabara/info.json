@@ -2,220 +2,128 @@
   "id": "Guanabara",
   "name": "Rio de Janeiro",
   "translation_key": "map.guanabara",
-  "categories": [
-    "south_america"
-  ],
-  "multiplayer_frequency": 0,
+  "categories": ["south_america"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "name": "Niterói",
-      "coordinates": [
-        851,
-        957
-      ]
+      "coordinates": [851, 957]
     },
     {
       "name": "São Gonçalo",
-      "coordinates": [
-        1082,
-        723
-      ]
+      "coordinates": [1082, 723]
     },
     {
       "name": "Duque de Caxias",
-      "coordinates": [
-        183,
-        552
-      ]
+      "coordinates": [183, 552]
     },
     {
       "name": "Magé",
-      "coordinates": [
-        1134,
-        66
-      ]
+      "coordinates": [1134, 66]
     },
     {
       "name": "Guapimirim",
-      "coordinates": [
-        1318,
-        181
-      ]
+      "coordinates": [1318, 181]
     },
     {
       "name": "Itaboraí",
-      "coordinates": [
-        1407,
-        439
-      ]
+      "coordinates": [1407, 439]
     },
     {
       "name": "Belford Roxo",
-      "coordinates": [
-        67,
-        307
-      ]
+      "coordinates": [67, 307]
     },
     {
       "name": "São João de Meriti",
-      "coordinates": [
-        59,
-        530
-      ]
+      "coordinates": [59, 530]
     },
     {
       "name": "Maricá",
-      "coordinates": [
-        1404,
-        1120
-      ]
+      "coordinates": [1404, 1120]
     },
     {
       "name": "Ilha do Fundão",
-      "coordinates": [
-        453,
-        811
-      ]
+      "coordinates": [453, 811]
     },
     {
       "name": "Paquetá",
-      "coordinates": [
-        891,
-        461
-      ]
+      "coordinates": [891, 461]
     },
     {
       "name": "Ilha do Governador",
-      "coordinates": [
-        500,
-        629
-      ]
+      "coordinates": [500, 629]
     },
     {
       "name": "Campos Elyseos",
-      "coordinates": [
-        352,
-        284
-      ]
+      "coordinates": [352, 284]
     },
     {
       "name": "Imbariê",
-      "coordinates": [
-        505,
-        10
-      ]
+      "coordinates": [505, 10]
     },
     {
       "name": "Guia de Pacobaíba",
-      "coordinates": [
-        688,
-        272
-      ]
+      "coordinates": [688, 272]
     },
     {
       "name": "Suruí",
-      "coordinates": [
-        833,
-        103
-      ]
+      "coordinates": [833, 103]
     },
     {
       "name": "Neves",
-      "coordinates": [
-        924,
-        823
-      ]
+      "coordinates": [924, 823]
     },
     {
       "name": "Sete Pontes",
-      "coordinates": [
-        1187,
-        873
-      ]
+      "coordinates": [1187, 873]
     },
     {
       "name": "Itambi",
-      "coordinates": [
-        1458,
-        356
-      ]
+      "coordinates": [1458, 356]
     },
     {
       "name": "Cafubá",
-      "coordinates": [
-        1014,
-        1081
-      ]
+      "coordinates": [1014, 1081]
     },
     {
       "name": "Copacabana",
-      "coordinates": [
-        637,
-        1242
-      ]
+      "coordinates": [637, 1242]
     },
     {
       "name": "São Cristóvão",
-      "coordinates": [
-        495,
-        977
-      ]
+      "coordinates": [495, 977]
     },
     {
       "name": "Tijuca",
-      "coordinates": [
-        445,
-        1091
-      ]
+      "coordinates": [445, 1091]
     },
     {
       "name": "Leblon",
-      "coordinates": [
-        466,
-        1326
-      ]
+      "coordinates": [466, 1326]
     },
     {
       "name": "Penha",
-      "coordinates": [
-        306,
-        774
-      ]
+      "coordinates": [306, 774]
     },
     {
       "name": "Méier",
-      "coordinates": [
-        285,
-        984
-      ]
+      "coordinates": [285, 984]
     },
     {
       "name": "São Conrado",
-      "coordinates": [
-        323,
-        1356
-      ]
+      "coordinates": [323, 1356]
     },
     {
       "name": "Flamengo",
-      "coordinates": [
-        642,
-        1114
-      ]
+      "coordinates": [642, 1114]
     },
     {
       "name": "Glória",
-      "coordinates": [
-        651,
-        1070
-      ]
+      "coordinates": [651, 1070]
     },
     {
       "name": "Ipanema",
-      "coordinates": [
-        575,
-        1305
-      ]
+      "coordinates": [575, 1305]
     }
   ]
 }

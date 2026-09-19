@@ -1290,7 +1290,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Guanabara,
     translationKey: "map.guanabara",
     categories: ["south_america"],
-    multiplayerFrequency: 0,
+    multiplayerFrequency: 5,
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
