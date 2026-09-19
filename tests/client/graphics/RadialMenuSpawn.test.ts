@@ -12,6 +12,7 @@ vi.mock("../../../src/client/Utils", () => ({
   renderNumber: (num: number) => num.toString(),
 }));
 
+import { RadialMenu } from "../../../src/client/hud/layers/RadialMenu";
 import {
   centerButtonElement,
   MenuElementParams,
@@ -37,5 +38,18 @@ describe("RadialMenu center button - spawn phase", () => {
     expect(handleSpawn).toHaveBeenCalledExactlyOnceWith(tile);
     expect(handleAttack).not.toHaveBeenCalled();
     expect(closeMenu).toHaveBeenCalled();
+  });
+
+  it("guards against synthetic clicks immediately after opening", () => {
+    const menu = new RadialMenu({} as any, {} as any, {} as any);
+    menu["menuOpenedAt"] = Date.now();
+    expect(menu["isClickAllowed"]()).toBe(false);
+    expect(
+      menu["isClickAllowed"](
+        new PointerEvent("click", { pointerType: "mouse" }),
+      ),
+    ).toBe(true);
+    menu["menuOpenedAt"] = Date.now() - 300;
+    expect(menu["isClickAllowed"]()).toBe(true);
   });
 });
