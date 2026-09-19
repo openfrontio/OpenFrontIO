@@ -165,8 +165,11 @@ export class PlayerExecution implements Execution {
     const tMaxY = boxes[largestIndex * 4 + 3];
 
     // Fix: Doughnut borders. Prevents a heavily deformed crater (hole) from having more border tiles
-    // and falsely claiming primary cluster. If largest cluster is completely enclosed by another, it's a hole.
-    // Perf: We use flat indices (`tMinX <= boxes[jIdx]`) so evaluating 500+ holes happens in nanoseconds.
+    // and falsely claiming primary cluster. A cluster is a hole if it is completely enclosed by another
+    // cluster of the SAME contiguous territory. Bbox containment alone is insufficient (disjoint C-shapes).
+    let clusterTerritoryIds: Int32Array | null = null;
+    let nextTerritoryId = 1;
+
     let isLargestHole = false;
     for (let j = 0; j < clusters.length; j++) {
       if (j !== largestIndex) {
@@ -177,8 +180,27 @@ export class PlayerExecution implements Execution {
           boxes[jIdx + 2] >= tMaxX &&
           boxes[jIdx + 3] >= tMaxY
         ) {
-          isLargestHole = true;
-          break;
+          if (!clusterTerritoryIds) {
+            clusterTerritoryIds = new Int32Array(clusters.length);
+            const scratch = this.traversalState();
+            for (let c = 0; c < clusters.length; c++) {
+              const cl = clusters[c];
+              for (let k = 0; k < cl.length; k++) {
+                scratch.clusterIndexMap[cl[k]] = c + 1;
+              }
+            }
+          }
+          nextTerritoryId = this.checkAndAssignTerritory(
+            clusters,
+            largestIndex,
+            j,
+            clusterTerritoryIds,
+            nextTerritoryId,
+          );
+          if (clusterTerritoryIds[largestIndex] === clusterTerritoryIds[j]) {
+            isLargestHole = true;
+            break;
+          }
         }
       }
     }
@@ -204,8 +226,17 @@ export class PlayerExecution implements Execution {
               boxes[jIdx + 2] >= iMaxX &&
               boxes[jIdx + 3] >= iMaxY
             ) {
-              isHole = true;
-              break;
+              nextTerritoryId = this.checkAndAssignTerritory(
+                clusters,
+                i,
+                j,
+                clusterTerritoryIds!,
+                nextTerritoryId,
+              );
+              if (clusterTerritoryIds![i] === clusterTerritoryIds![j]) {
+                isHole = true;
+                break;
+              }
             }
           }
         }
@@ -216,6 +247,16 @@ export class PlayerExecution implements Execution {
       }
       if (bestIndex !== -1) {
         largestIndex = bestIndex;
+      }
+    }
+
+    if (clusterTerritoryIds) {
+      const scratch = this.traversalState();
+      for (let c = 0; c < clusters.length; c++) {
+        const cl = clusters[c];
+        for (let k = 0; k < cl.length; k++) {
+          scratch.clusterIndexMap[cl[k]] = 0;
+        }
       }
     }
 
@@ -256,6 +297,59 @@ export class PlayerExecution implements Execution {
         this.removeCluster(cluster);
       }
     }
+  }
+
+  private checkAndAssignTerritory(
+    clusters: TileRef[][],
+    cIdxA: number,
+    cIdxB: number,
+    clusterTerritoryIds: Int32Array,
+    nextTerritoryId: number,
+  ): number {
+    if (
+      clusterTerritoryIds[cIdxA] !== 0 &&
+      clusterTerritoryIds[cIdxA] === clusterTerritoryIds[cIdxB]
+    ) {
+      return nextTerritoryId;
+    }
+    if (clusterTerritoryIds[cIdxA] !== 0 && clusterTerritoryIds[cIdxB] !== 0) {
+      return nextTerritoryId;
+    }
+
+    const startIdx = clusterTerritoryIds[cIdxB] === 0 ? cIdxB : cIdxA;
+    const territoryId = nextTerritoryId++;
+
+    const state = this.traversalState();
+    const visited = state.visited;
+    const floodGen = this.bumpGeneration();
+    const stack = state.stack;
+    stack.length = 0;
+
+    const start = clusters[startIdx][0];
+    visited[start] = floodGen;
+    stack.push(start);
+
+    const map = this.map;
+    const myOwner = this.player.smallID();
+    clusterTerritoryIds[startIdx] = territoryId;
+
+    while (stack.length > 0) {
+      const tile = stack.pop()!;
+      const numNeighbors = map.neighbors8(tile, this.nbuf8);
+      for (let nIdx = 0; nIdx < numNeighbors; nIdx++) {
+        const n = this.nbuf8[nIdx];
+        if (visited[n] === floodGen) continue;
+        if (map.ownerID(n) === myOwner) {
+          visited[n] = floodGen;
+          stack.push(n);
+          const cIdxPlusOne = state.clusterIndexMap[n];
+          if (cIdxPlusOne > 0) {
+            clusterTerritoryIds[cIdxPlusOne - 1] = territoryId;
+          }
+        }
+      }
+    }
+    return nextTerritoryId;
   }
 
   // Perf: Accepts raw bounds to skip allocating {min, max} Box objects for every target evaluated.
@@ -523,7 +617,7 @@ export class PlayerExecution implements Execution {
     const currentGen = this.bumpGeneration();
 
     const clusters: TileRef[][] = [];
-    const boxes = new Int32Array(borderTiles.size * 4);
+    let boxes = new Int32Array(64);
     let clusterIdx = 0;
 
     // Set.forEach instead of for..of: iterating a large Set allocates an
@@ -531,6 +625,12 @@ export class PlayerExecution implements Execution {
     const includeFn = (tile: TileRef) => visited[tile] === borderGen;
     borderTiles.forEach((startTile) => {
       if (visited[startTile] === currentGen) return;
+
+      if (clusterIdx * 4 >= boxes.length) {
+        const newBoxes = new Int32Array(boxes.length * 2);
+        newBoxes.set(boxes);
+        boxes = newBoxes;
+      }
 
       const cluster = this.floodFillWithGen(
         currentGen,

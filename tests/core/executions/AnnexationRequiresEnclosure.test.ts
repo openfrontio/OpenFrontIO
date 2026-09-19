@@ -146,9 +146,9 @@ describe("annexation only takes territory that is actually enclosed", () => {
 
     const exec = new PlayerExecution(defender);
     exec.init(game, 0);
-    const { clusters } = (exec as any).calculateClusters() as {
-      clusters: TileRef[][];
-    };
+    const { clusters } = (
+      exec as unknown as { calculateClusters(): { clusters: TileRef[][] } }
+    ).calculateClusters();
     expect(clusters.length).toBeGreaterThanOrEqual(2);
 
     // Verify that the inner hole's cluster has strictly more border tiles than the outer perimeter
