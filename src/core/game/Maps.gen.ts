@@ -86,7 +86,6 @@ export enum GameMapType {
   Montreal = "Montreal", // map-generator/assets/maps/montreal/info.json
   MoreThanLuck = "More Than Luck", // map-generator/assets/maps/morethanluck/info.json
   NewYorkCity = "New York City", // map-generator/assets/maps/newyorkcity/info.json
-  NewZealand = "New Zealand", // map-generator/assets/maps/newzealand/info.json
   NileDelta = "Nile Delta", // map-generator/assets/maps/niledelta/info.json
   NorthAmerica = "North America", // map-generator/assets/maps/northamerica/info.json
   NorthwestPassage = "Northwest Passage", // map-generator/assets/maps/northwestpassage/info.json
@@ -1796,18 +1795,6 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 20,
     themes: ["north_america"],
-  },
-  {
-    id: "NewZealand",
-    type: GameMapType.NewZealand,
-    translationKey: "map.newzealand",
-    categories: ["new", "oceania"],
-    multiplayerFrequency: 5,
-    ffaFrequency: -1,
-    teamFrequency: -1,
-    specialFrequency: -1,
-    defaultNationCount: 20,
-    themes: ["oceania"],
   },
   {
     id: "NileDelta",
