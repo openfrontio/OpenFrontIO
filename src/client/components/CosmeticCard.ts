@@ -418,7 +418,7 @@ export class CosmeticCard extends LitElement {
     `;
     const name = html`<span
       data-cosmetic-name
-      class="w-full whitespace-normal break-words px-3 pt-3 text-center text-sm font-bold leading-tight text-white ${this
+      class="w-full capitalize  whitespace-normal break-words px-3 pt-3 text-center text-sm font-bold leading-tight text-white ${this
         .interactive
         ? "cursor-pointer"
         : ""}"
