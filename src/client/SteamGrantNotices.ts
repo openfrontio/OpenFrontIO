@@ -200,10 +200,15 @@ export function steamGrantEnded(
   const record = store[userMe.player.publicId];
   if (record === undefined) return null;
   if (Date.parse(record.periodEnd) > now) return null;
+  // Anything still entitling them means the month has not "ended" in any
+  // sense the player would recognise: a paid subscription, a running dated
+  // grant, or an open-ended admin comp (provider null, no end date).
   const sub = userMe.player.subscription;
-  if (sub && !isGrantedSubscription(sub)) return null;
-  if (sub?.currentPeriodEnd && sub.currentPeriodEnd.getTime() > now)
-    return null;
+  if (sub) {
+    if (!isGrantedSubscription(sub)) return null;
+    if (!sub.currentPeriodEnd || sub.currentPeriodEnd.getTime() > now)
+      return null;
+  }
   return record;
 }
 

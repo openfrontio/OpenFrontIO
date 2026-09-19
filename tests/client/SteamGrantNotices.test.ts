@@ -241,6 +241,15 @@ describe("steamGrantEnded", () => {
     expect(steamGrantEnded(recorded(), nothing(), NOW)).toBeNull();
   });
 
+  // Support comped the account after the purchase. The comp is a provider-null
+  // row with no end date, so it is neither paid nor a running dated grant, and
+  // telling that player their access ended would be exactly the lie this
+  // module exists to stop.
+  it("finds nothing while an open-ended admin comp is live", () => {
+    expect(steamGrantEnded(recorded(), adminComp(), after)).toBeNull();
+    expect(steamGrantEndedDue(recorded(), adminComp(), after)).toBe(false);
+  });
+
   it("finds nothing once the player pays or gets a newer grant", () => {
     expect(steamGrantEnded(recorded(), paid(), after)).toBeNull();
     const renewed = me({
