@@ -302,4 +302,28 @@ describe("EventsDisplay handlers", () => {
       expect(events()).toHaveLength(0);
     });
   });
+
+  describe("onDisplayMessageEvent", () => {
+    it("translates unit names in event parameters", () => {
+      ed.onDisplayMessageEvent({
+        type: GameUpdateType.DisplayEvent,
+        message: "events_display.unit_destroyed",
+        messageType: MessageType.UNIT_DESTROYED,
+        playerID: 1,
+        params: { unit: "unit_type.boat" },
+      });
+      ed.onDisplayMessageEvent({
+        type: GameUpdateType.DisplayEvent,
+        message: "events_display.missile_intercepted",
+        messageType: MessageType.SAM_HIT,
+        playerID: 1,
+        params: { unit: "unit_type.atom_bomb" },
+      });
+
+      expect(events().map((event) => event.description)).toEqual([
+        'events_display.unit_destroyed {"unit":"unit_type.boat"}',
+        'events_display.missile_intercepted {"unit":"unit_type.atom_bomb"}',
+      ]);
+    });
+  });
 });
