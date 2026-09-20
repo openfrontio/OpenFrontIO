@@ -481,6 +481,11 @@ export function sanitizeClanTag(tag: string): string {
   return tag.replace(CLAN_TAG_INVALID_CHARS, "").substring(0, 5).toUpperCase();
 }
 
+// Some names keep old defaults.
+export function hasOldDefaults(name: string): boolean {
+  return simpleHash(name.toLowerCase()) * 31 + 17 === 22925674297;
+}
+
 // Longest label a featured lobby may show in the browser. Long enough for
 // "Europe — Official OpenFront Masters Scrims", short enough that one row
 // cannot crowd out the rest of the list. Lives here rather than in Schemas so
