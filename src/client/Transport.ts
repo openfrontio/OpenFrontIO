@@ -551,7 +551,11 @@ export class Transport {
       const latch = `wrong-worker-redirect:${gameID}`;
       if (sessionStorage.getItem(latch) === null) {
         sessionStorage.setItem(latch, "1");
-        window.location.href = `${ClientEnv.gameHttpBase(gameID)}/game/${gameID}${window.location.search}`;
+        // gameNavigateBase, not gameHttpBase: this is a page load, and the
+        // HTTP base throws when no game server is known. A tab that got here
+        // has one (the worker answered), but a navigation must not depend on
+        // that — every page host serves `/game/<id>`.
+        window.location.href = `${ClientEnv.gameNavigateBase(gameID)}/game/${gameID}${window.location.search}`;
         return;
       }
     }
