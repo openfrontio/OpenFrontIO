@@ -1,0 +1,144 @@
+{
+  "categories": ["south_america"],
+  "id": "Guanabara",
+  "map": {
+    "height": 1680,
+    "num_land_tiles": 1498664,
+    "width": 1488
+  },
+  "map16x": {
+    "height": 420,
+    "num_land_tiles": 91674,
+    "width": 372
+  },
+  "map4x": {
+    "height": 840,
+    "num_land_tiles": 371752,
+    "width": 744
+  },
+  "multiplayer_frequency": 5,
+  "name": "Rio de Janeiro",
+  "nations": [
+    {
+      "coordinates": [851, 957],
+      "name": "Niterói"
+    },
+    {
+      "coordinates": [1082, 723],
+      "name": "São Gonçalo"
+    },
+    {
+      "coordinates": [183, 552],
+      "name": "Duque de Caxias"
+    },
+    {
+      "coordinates": [1134, 66],
+      "name": "Magé"
+    },
+    {
+      "coordinates": [1318, 181],
+      "name": "Guapimirim"
+    },
+    {
+      "coordinates": [1407, 439],
+      "name": "Itaboraí"
+    },
+    {
+      "coordinates": [67, 307],
+      "name": "Belford Roxo"
+    },
+    {
+      "coordinates": [59, 530],
+      "name": "São João de Meriti"
+    },
+    {
+      "coordinates": [1404, 1120],
+      "name": "Maricá"
+    },
+    {
+      "coordinates": [453, 811],
+      "name": "Ilha do Fundão"
+    },
+    {
+      "coordinates": [891, 461],
+      "name": "Paquetá"
+    },
+    {
+      "coordinates": [500, 629],
+      "name": "Ilha do Governador"
+    },
+    {
+      "coordinates": [352, 284],
+      "name": "Campos Elyseos"
+    },
+    {
+      "coordinates": [505, 10],
+      "name": "Imbariê"
+    },
+    {
+      "coordinates": [688, 272],
+      "name": "Guia de Pacobaíba"
+    },
+    {
+      "coordinates": [833, 103],
+      "name": "Suruí"
+    },
+    {
+      "coordinates": [924, 823],
+      "name": "Neves"
+    },
+    {
+      "coordinates": [1187, 873],
+      "name": "Sete Pontes"
+    },
+    {
+      "coordinates": [1458, 356],
+      "name": "Itambi"
+    },
+    {
+      "coordinates": [1014, 1081],
+      "name": "Cafubá"
+    },
+    {
+      "coordinates": [637, 1242],
+      "name": "Copacabana"
+    },
+    {
+      "coordinates": [495, 977],
+      "name": "São Cristóvão"
+    },
+    {
+      "coordinates": [445, 1091],
+      "name": "Tijuca"
+    },
+    {
+      "coordinates": [466, 1326],
+      "name": "Leblon"
+    },
+    {
+      "coordinates": [306, 774],
+      "name": "Penha"
+    },
+    {
+      "coordinates": [285, 984],
+      "name": "Méier"
+    },
+    {
+      "coordinates": [323, 1356],
+      "name": "São Conrado"
+    },
+    {
+      "coordinates": [642, 1114],
+      "name": "Flamengo"
+    },
+    {
+      "coordinates": [651, 1070],
+      "name": "Glória"
+    },
+    {
+      "coordinates": [575, 1305],
+      "name": "Ipanema"
+    }
+  ],
+  "translation_key": "map.guanabara"
+}
