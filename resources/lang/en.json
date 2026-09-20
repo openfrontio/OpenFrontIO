@@ -1872,10 +1872,8 @@
     "default_name": "Steam player"
   },
   "steam_wishlist": {
-    "cta": "Wishlist now",
-    "on_steam": "OpenFront on Steam",
-    "release": "Available Q3 2026",
-    "title": "Wishlist OpenFront on Steam!"
+    "buy_cta": "Buy on Steam",
+    "buy_on_steam": "Buy OpenFront on Steam"
   },
   "store": {
     "already_owned": "You already own this item. Nothing was charged.",
