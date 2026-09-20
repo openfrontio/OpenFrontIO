@@ -73,6 +73,7 @@ export class SpiralRibbonPass {
 
   private ribbons: readonly SpiralRibbon[] = [];
   private readonly buffers = new Map<number, RibbonBuffers>();
+  private readonly liveRibbonIds = new Set<number>();
   // Scratch for expanding samples to strip vertices; grown on demand.
   private vertScratch = new Float32Array(512 * 2 * VERT_FLOATS);
   // Flat scratch for the uColors uniform (8 × vec3).
@@ -129,7 +130,10 @@ export class SpiralRibbonPass {
    */
   updateRibbons(ribbons: readonly SpiralRibbon[]): void {
     this.ribbons = ribbons;
-    const live = new Set<number>();
+    if (ribbons.length === 0 && this.buffers.size === 0) return;
+
+    const live = this.liveRibbonIds;
+    live.clear();
     for (const r of ribbons) {
       live.add(r.id);
       this.uploadRibbon(r);
