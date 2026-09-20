@@ -127,6 +127,18 @@ export class WorldTextPass {
   private active: ActivePopup[] = [];
 
   // Persistent ghost-cost label (separate from popup lifecycle; doesn't fade).
+  private ghostCostLabelEntry = {
+    x: 0,
+    y: 0,
+    text: "",
+    topText: undefined as string | undefined,
+    colorR: 1,
+    colorG: 1,
+    colorB: 1,
+  };
+  private lastGhostCost: number | null = null;
+  private lastGhostCostText = "";
+
   private ghostCostLabel: {
     x: number;
     y: number;
@@ -325,46 +337,45 @@ export class WorldTextPass {
    * Set or clear the ghost-cost label rendered under the build cursor.
    * `null` clears it. Called from Renderer.updateGhostPreview.
    */
+  clearGhostCostLabel(): void {
+    this.ghostCostLabel = null;
+    this.lastGhostCost = null;
+  }
+
   setGhostCostLabel(
-    label: {
-      tileX: number;
-      tileY: number;
-      cost: number;
-      canAfford: boolean;
-      canPlace: boolean;
-      topText?: string;
-    } | null,
+    tileX: number,
+    tileY: number,
+    cost: number,
+    canAfford: boolean,
+    canPlace: boolean,
+    topText?: string,
   ): void {
-    if (label === null) {
-      this.ghostCostLabel = null;
-      return;
-    }
-    // Color precedence: red (can't afford) > gray (can't place here) > white (OK).
     let r = 1,
       g = 1,
       b = 1;
-    if (!label.canAfford) {
+    if (!canAfford) {
       g = 0.3;
       b = 0.3;
-    } else if (!label.canPlace) {
+    } else if (!canPlace) {
       r = 0.6;
       g = 0.6;
       b = 0.6;
     }
 
-    // The vertex shader adds +0.5 to (x, y) for tile-center alignment, so we
-    // pass raw tile coords here — same convention as the other popup entries.
-    // Y offset is applied in rebuildInstances (zoom-relative).
-    this.ghostCostLabel = {
-      x: label.tileX,
-      y: label.tileY,
-      // cost 0 means "no cost line" (multiplier-badge-only label).
-      text: label.cost > 0 ? renderNumber(label.cost) : "",
-      topText: label.topText,
-      colorR: r,
-      colorG: g,
-      colorB: b,
-    };
+    if (this.lastGhostCost !== cost) {
+      this.lastGhostCost = cost;
+      this.lastGhostCostText = cost > 0 ? renderNumber(cost) : "";
+    }
+
+    const entry = this.ghostCostLabelEntry;
+    entry.x = tileX;
+    entry.y = tileY;
+    entry.text = this.lastGhostCostText;
+    entry.topText = topText;
+    entry.colorR = r;
+    entry.colorG = g;
+    entry.colorB = b;
+    this.ghostCostLabel = entry;
   }
 
   /**
