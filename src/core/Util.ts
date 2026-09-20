@@ -40,13 +40,23 @@ export function within(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+export function distSortBy<T>(
+  gm: GameMap,
+  target: TileRef,
+  tileOf: (value: T) => TileRef,
+): (a: T, b: T) => number {
+  return (a: T, b: T) => {
+    return (
+      gm.manhattanDist(tileOf(a), target) - gm.manhattanDist(tileOf(b), target)
+    );
+  };
+}
+
 export function distSort(
   gm: GameMap,
   target: TileRef,
 ): (a: TileRef, b: TileRef) => number {
-  return (a: TileRef, b: TileRef) => {
-    return gm.manhattanDist(a, target) - gm.manhattanDist(b, target);
-  };
+  return distSortBy(gm, target, (tile) => tile);
 }
 
 export function distSortUnit(
@@ -55,12 +65,7 @@ export function distSortUnit(
 ): (a: Unit, b: Unit) => number {
   const targetRef = typeof target === "number" ? target : target.tile();
 
-  return (a: Unit, b: Unit) => {
-    return (
-      gm.manhattanDist(a.tile(), targetRef) -
-      gm.manhattanDist(b.tile(), targetRef)
-    );
-  };
+  return distSortBy(gm, targetRef, (unit) => unit.tile());
 }
 
 /**
@@ -371,11 +376,13 @@ export function assertNever(x: never): never {
   throw new Error("Unexpected value: " + x);
 }
 
+// Game ids and client ids share one alphabet (no 0/O ambiguity); game ids
+// add an instance letter up front (docs/MultiServer.md).
+const GAME_ID_ALPHABET =
+  "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
+
 export function generateID(): GameID {
-  const nanoid = customAlphabet(
-    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
-    8,
-  );
+  const nanoid = customAlphabet(GAME_ID_ALPHABET, 8);
   return nanoid();
 }
 
@@ -387,10 +394,7 @@ export function generateID(): GameID {
 // generateID() stays 8 chars for the ids that never leave one server or one
 // client: client ids, singleplayer games, worker message ids.
 export function generateGameID(instanceLetter: string): GameID {
-  const nanoid = customAlphabet(
-    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
-    9,
-  );
+  const nanoid = customAlphabet(GAME_ID_ALPHABET, 9);
   return instanceLetter + nanoid();
 }
 
@@ -479,6 +483,11 @@ const CLAN_TAG_INVALID_CHARS = new RegExp(`[^${CLAN_TAG_CHARS}]`, "g");
 
 export function sanitizeClanTag(tag: string): string {
   return tag.replace(CLAN_TAG_INVALID_CHARS, "").substring(0, 5).toUpperCase();
+}
+
+// Some names keep old defaults.
+export function hasOldDefaults(name: string): boolean {
+  return simpleHash(name.toLowerCase()) * 31 + 17 === 22925674297;
 }
 
 // Longest label a featured lobby may show in the browser. Long enough for
