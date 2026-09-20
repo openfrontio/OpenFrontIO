@@ -425,28 +425,28 @@ export class GameImpl implements Game {
     (alliance.recipient() as PlayerImpl)._alliances.push(alliance);
     this.stats().allianceFormed(requestor);
     this.stats().allianceFormed(recipient);
-    (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
-      request,
-    );
 
-    this.addUpdate({
-      type: GameUpdateType.AllianceRequestReply,
-      request: request.toUpdate(),
-      accepted: true,
-    });
+    this.recordAllianceRequestReply(request, true);
   }
 
   rejectAllianceRequest(request: AllianceRequestImpl) {
     this.allianceRequests = this.allianceRequests.filter(
       (ar) => ar !== request,
     );
+    this.recordAllianceRequestReply(request, false);
+  }
+
+  private recordAllianceRequestReply(
+    request: AllianceRequestImpl,
+    accepted: boolean,
+  ): void {
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
       request,
     );
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
       request: request.toUpdate(),
-      accepted: false,
+      accepted,
     });
   }
 
@@ -565,15 +565,14 @@ export class GameImpl implements Game {
   }
 
   drainPackedPlayerUpdates(): Float64Array | null {
-    const quads = this.playerStatsQuads;
-    if (quads.length === 0) return null;
-    const packed = Float64Array.from(quads);
-    quads.length = 0;
-    return packed;
+    return this.drainPackedFloatUpdates(this.playerStatsQuads);
   }
 
   drainPackedAttackUpdates(): Float64Array | null {
-    const quads = this.attackTroopsQuads;
+    return this.drainPackedFloatUpdates(this.attackTroopsQuads);
+  }
+
+  private drainPackedFloatUpdates(quads: number[]): Float64Array | null {
     if (quads.length === 0) return null;
     const packed = Float64Array.from(quads);
     quads.length = 0;
