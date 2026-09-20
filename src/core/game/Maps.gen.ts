@@ -1953,7 +1953,7 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 30,
-    themes: ["southamerica"],
+    themes: ["south_america"],
   },
   {
     id: "Russia",
