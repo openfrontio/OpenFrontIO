@@ -10,6 +10,7 @@ import {
 import { GameConfig } from "../../src/core/Schemas";
 import {
   applyGameConfigPatch,
+  hasRuleChanges,
   hostCheatsEnabled,
 } from "../../src/server/ConfigPatch";
 import { testGameConfig } from "../util/Wire";
@@ -132,5 +133,29 @@ describe("hostCheatsEnabled", () => {
     { startingGold: 0 },
   ])("is on when %o grants something", (block) => {
     expect(hostCheatsEnabled(block)).toBe(true);
+  });
+});
+describe("hasRuleChanges", () => {
+  it("returns false if config is exactly the same", () => {
+    const target = testGameConfig();
+    expect(hasRuleChanges(target, {})).toBe(false);
+  });
+
+  it("returns true if a rule changed", () => {
+    const target = testGameConfig();
+    expect(hasRuleChanges(target, { infiniteGold: true })).toBe(true);
+  });
+
+  it("returns false if a cosmetic field changed", () => {
+    const target = testGameConfig();
+    expect(hasRuleChanges(target, { anonymizeNames: true })).toBe(false);
+  });
+
+  it("returns true if a nested array rule changed", () => {
+    const target = testGameConfig();
+    target.disabledUnits = [];
+    expect(hasRuleChanges(target, { disabledUnits: [UnitType.City] })).toBe(
+      true,
+    );
   });
 });

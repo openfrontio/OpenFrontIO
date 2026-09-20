@@ -87,6 +87,42 @@ export function applyGameConfigPatch(
   target.hostCheats = patch.hostCheats;
 }
 
+export function hasRuleChanges(
+  target: GameConfig,
+  patch: Partial<GameConfig>,
+): boolean {
+  // Fields that don't affect gameplay rules
+  const nonRuleKeys = new Set([
+    "anonymizeNames",
+    "nameReveals",
+    "nameRevealPublicIds",
+  ]);
+
+  for (const key of COPIED_KEYS) {
+    if (nonRuleKeys.has(key)) continue;
+    if (
+      patch[key] !== undefined &&
+      JSON.stringify(patch[key]) !== JSON.stringify(target[key])
+    ) {
+      return true;
+    }
+  }
+  for (const key of NULLABLE_KEYS) {
+    if (patch[key] !== undefined) {
+      const p = patch[key] ?? undefined;
+      if (p !== target[key]) return true;
+    }
+  }
+  if (patch.hostCheats !== undefined) {
+    if (
+      JSON.stringify(patch.hostCheats) !== JSON.stringify(target.hostCheats)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Whether the host-only cheat block actually grants anything: mere presence
 // isn't enough, the client can send hostCheats with every field off.
 export function hostCheatsEnabled(hc: GameConfig["hostCheats"]): boolean {

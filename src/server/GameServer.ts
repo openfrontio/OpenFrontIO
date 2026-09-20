@@ -54,7 +54,11 @@ import { createPartialGameRecord } from "../core/Util";
 import { createGameWireContext, encodeServerMessage } from "../core/ZbinWire";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
-import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
+import {
+  applyGameConfigPatch,
+  hasRuleChanges,
+  hostCheatsEnabled,
+} from "./ConfigPatch";
 import { LiveStatsVote, WinnerVote } from "./Consensus";
 import { fetchCustomTribes } from "./CustomTribes";
 import { DesyncDetector } from "./DesyncDetector";
@@ -196,6 +200,7 @@ export class GameServer {
   private ended = false;
   private paused = false;
   private _startTime: number | null = null;
+  private gracePeriodUntil?: number;
   private hasReachedMaxPlayerCount: boolean = false;
 
   private endTurnIntervalID: ReturnType<typeof setInterval> | undefined;
@@ -400,7 +405,22 @@ export class GameServer {
       }
 
       case "update_game_config": {
+        const rulesChanged = hasRuleChanges(this.gameConfig, stamped.config);
         this.updateGameConfig(stamped.config);
+
+        if (
+          rulesChanged &&
+          !this.isPublic() &&
+          this.clients.players().length > 1
+        ) {
+          const minStart = Date.now() + 30_000;
+          this.gracePeriodUntil = minStart;
+          if (this.startsAt !== undefined && this.startsAt < minStart) {
+            this.setStartsAt(minStart);
+            this.broadcastLobbyInfo();
+          }
+        }
+
         return finish({ status: 200 });
       }
 
@@ -408,8 +428,12 @@ export class GameServer {
         if (this.startsAt) {
           this.startsAt = undefined;
         } else {
+          const requestedStart =
+            Date.now() + (this.gameConfig.startDelay ?? 0) * 1000;
           this.setStartsAt(
-            Date.now() + (this.gameConfig.startDelay ?? 0) * 1000,
+            this.gracePeriodUntil
+              ? Math.max(requestedStart, this.gracePeriodUntil)
+              : requestedStart,
           );
         }
         return finish({ status: 200 });
