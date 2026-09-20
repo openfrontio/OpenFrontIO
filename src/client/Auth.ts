@@ -211,20 +211,43 @@ export async function linkSteam(): Promise<boolean> {
   }
 }
 
-export async function tempTokenLogin(token: string): Promise<string | null> {
-  const response = await fetch(
-    `${getApiBase()}/auth/login/token?login-token=${token}`,
-    {
-      credentials: "include",
-    },
-  );
+export type TokenLoginResult =
+  | { status: "success"; email: string }
+  // A 400 is final: the token was invalid, expired, or already consumed.
+  // Retrying it is pointless.
+  | { status: "failed"; code: "consumed" | "expired" | "invalid" }
+  // A network hiccup or non-400 error — worth retrying.
+  | { status: "retry" };
+
+export async function tempTokenLogin(token: string): Promise<TokenLoginResult> {
+  let response: Response;
+  try {
+    response = await fetch(
+      `${getApiBase()}/auth/login/token?login-token=${token}`,
+      {
+        credentials: "include",
+      },
+    );
+  } catch (e) {
+    console.error("Token login request failed", e);
+    return { status: "retry" };
+  }
+  if (response.status === 400) {
+    const body = await response.json().catch(() => null);
+    const code =
+      body?.code === "consumed" ||
+      body?.code === "expired" ||
+      body?.code === "invalid"
+        ? body.code
+        : "invalid";
+    return { status: "failed", code };
+  }
   if (response.status !== 200) {
     console.error("Token login failed", response);
-    return null;
+    return { status: "retry" };
   }
-  const json = await response.json();
-  const { email } = json;
-  return email;
+  const { email } = await response.json();
+  return { status: "success", email };
 }
 
 export async function getAuthHeader(): Promise<string> {
