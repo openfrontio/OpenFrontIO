@@ -227,14 +227,14 @@ export class AttackingTroopsController implements Controller {
   private pushLabels(): void {
     if (this.alternateView || this.attacks.size === 0) {
       if (this.labelBuf.length > 0) {
-        this.labelBuf = [];
+        this.labelBuf.length = 0;
         this.view.setAttackTroopLabels(this.labelBuf);
       }
       return;
     }
 
     const now = performance.now();
-    const out: AttackTroopLabel[] = [];
+    let outIdx = 0;
 
     for (const entry of this.attacks.values()) {
       const r = entry.isIncoming ? INCOMING_R : OUTGOING_R;
@@ -244,18 +244,22 @@ export class AttackingTroopsController implements Controller {
         const t = Math.min(1, (now - slot.startMs) / ANIM_MS);
         slot.curX = slot.srcX + (slot.dstX - slot.srcX) * t;
         slot.curY = slot.srcY + (slot.dstY - slot.srcY) * t;
-        out.push({
-          x: slot.curX,
-          y: slot.curY,
-          text: entry.text,
-          colorR: r,
-          colorG: g,
-          colorB: b,
-        });
+        let label = this.labelBuf[outIdx];
+        if (label === undefined) {
+          label = { x: 0, y: 0, text: "", colorR: 0, colorG: 0, colorB: 0 };
+          this.labelBuf[outIdx] = label;
+        }
+        label.x = slot.curX;
+        label.y = slot.curY;
+        label.text = entry.text;
+        label.colorR = r;
+        label.colorG = g;
+        label.colorB = b;
+        outIdx++;
       }
     }
 
-    this.labelBuf = out;
-    this.view.setAttackTroopLabels(out);
+    this.labelBuf.length = outIdx;
+    this.view.setAttackTroopLabels(this.labelBuf);
   }
 }
