@@ -56,7 +56,6 @@ export enum GameMapType {
   Germany = "Germany", // map-generator/assets/maps/germany/info.json
   GiantWorldMap = "Giant World Map", // map-generator/assets/maps/giantworldmap/info.json
   GreatLakes = "Great Lakes", // map-generator/assets/maps/greatlakes/info.json
-  Guanabara = "Rio de Janeiro", // map-generator/assets/maps/guanabara/info.json
   GulfOfGuinea = "Gulf Of Guinea", // map-generator/assets/maps/gulfofguinea/info.json
   GulfOfMexico = "Gulf Of Mexico", // map-generator/assets/maps/gulfofmexico/info.json
   GulfOfStLawrence = "Gulf of St. Lawrence", // map-generator/assets/maps/gulfofstlawrence/info.json
@@ -99,6 +98,7 @@ export enum GameMapType {
   Pluto = "Pluto", // map-generator/assets/maps/pluto/info.json
   PulicatLake = "Pulicat Lake", // map-generator/assets/maps/pulicatlake/info.json
   QingChina = "Qing China", // map-generator/assets/maps/qingchina/info.json
+  RioDeJaneiro = "Rio de Janeiro", // map-generator/assets/maps/riodejaneiro/info.json
   Russia = "Russia", // map-generator/assets/maps/russia/info.json
   SanFrancisco = "San Francisco", // map-generator/assets/maps/sanfrancisco/info.json
   Scandinavia = "Scandinavia", // map-generator/assets/maps/scandinavia/info.json
@@ -554,7 +554,7 @@ export const maps: readonly MapInfo[] = [
     id: "CapeCod",
     type: GameMapType.CapeCod,
     translationKey: "map.capecod",
-    categories: ["north_america", "new"],
+    categories: ["north_america"],
     multiplayerFrequency: 4,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -603,7 +603,7 @@ export const maps: readonly MapInfo[] = [
     id: "CentralAmerica",
     type: GameMapType.CentralAmerica,
     translationKey: "map.centralamerica",
-    categories: ["new", "north_america"],
+    categories: ["north_america"],
     multiplayerFrequency: 5,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -615,10 +615,10 @@ export const maps: readonly MapInfo[] = [
     id: "ChannelIslands",
     type: GameMapType.ChannelIslands,
     translationKey: "map.channelislands",
-    categories: ["new", "north_america"],
-    multiplayerFrequency: 7,
+    categories: ["north_america"],
+    multiplayerFrequency: 4,
     ffaFrequency: -1,
-    teamFrequency: -1,
+    teamFrequency: 7,
     specialFrequency: -1,
     defaultNationCount: 44,
     themes: ["north_america"],
@@ -627,7 +627,7 @@ export const maps: readonly MapInfo[] = [
     id: "China",
     type: GameMapType.China,
     translationKey: "map.china",
-    categories: ["countries", "asia", "new"],
+    categories: ["countries", "asia"],
     multiplayerFrequency: 8,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -1299,17 +1299,6 @@ export const maps: readonly MapInfo[] = [
     themes: ["north_america"],
   },
   {
-    id: "Guanabara",
-    type: GameMapType.Guanabara,
-    translationKey: "map.guanabara",
-    categories: ["south_america"],
-    multiplayerFrequency: 5,
-    ffaFrequency: -1,
-    teamFrequency: -1,
-    specialFrequency: -1,
-    defaultNationCount: 30,
-  },
-  {
     id: "GulfOfGuinea",
     type: GameMapType.GulfOfGuinea,
     translationKey: "map.gulfofguinea",
@@ -1325,7 +1314,7 @@ export const maps: readonly MapInfo[] = [
     id: "GulfOfMexico",
     type: GameMapType.GulfOfMexico,
     translationKey: "map.gulfofmexico",
-    categories: ["north_america", "new"],
+    categories: ["north_america"],
     multiplayerFrequency: 5,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -1955,6 +1944,18 @@ export const maps: readonly MapInfo[] = [
     themes: ["asia"],
   },
   {
+    id: "RioDeJaneiro",
+    type: GameMapType.RioDeJaneiro,
+    translationKey: "map.riodejaneiro",
+    categories: ["south_america", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 30,
+    themes: ["southamerica"],
+  },
+  {
     id: "Russia",
     type: GameMapType.Russia,
     translationKey: "map.russia",
@@ -2342,7 +2343,7 @@ export const maps: readonly MapInfo[] = [
     id: "YangtzeRiver",
     type: GameMapType.YangtzeRiver,
     translationKey: "map.yangtzeriver",
-    categories: ["new", "asia"],
+    categories: ["asia"],
     multiplayerFrequency: 3,
     ffaFrequency: -1,
     teamFrequency: -1,

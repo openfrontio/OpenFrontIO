@@ -1,0 +1,175 @@
+{
+  "categories": ["south_america", "new"],
+  "id": "RioDeJaneiro",
+  "map": {
+    "height": 1680,
+    "num_land_tiles": 1498664,
+    "width": 1488
+  },
+  "map16x": {
+    "height": 420,
+    "num_land_tiles": 91674,
+    "width": 372
+  },
+  "map4x": {
+    "height": 840,
+    "num_land_tiles": 371752,
+    "width": 744
+  },
+  "multiplayer_frequency": 4,
+  "name": "Rio de Janeiro",
+  "nations": [
+    {
+      "coordinates": [851, 957],
+      "flag": "br",
+      "name": "Niterói"
+    },
+    {
+      "coordinates": [1082, 723],
+      "flag": "br",
+      "name": "São Gonçalo"
+    },
+    {
+      "coordinates": [183, 552],
+      "flag": "br",
+      "name": "Duque de Caxias"
+    },
+    {
+      "coordinates": [1134, 66],
+      "flag": "br",
+      "name": "Magé"
+    },
+    {
+      "coordinates": [1318, 181],
+      "flag": "br",
+      "name": "Guapimirim"
+    },
+    {
+      "coordinates": [1407, 439],
+      "flag": "br",
+      "name": "Itaboraí"
+    },
+    {
+      "coordinates": [67, 307],
+      "flag": "br",
+      "name": "Belford Roxo"
+    },
+    {
+      "coordinates": [59, 530],
+      "flag": "br",
+      "name": "São João de Meriti"
+    },
+    {
+      "coordinates": [1404, 1120],
+      "flag": "br",
+      "name": "Maricá"
+    },
+    {
+      "coordinates": [453, 811],
+      "flag": "br",
+      "name": "Ilha do Fundão"
+    },
+    {
+      "coordinates": [891, 461],
+      "flag": "br",
+      "name": "Paquetá"
+    },
+    {
+      "coordinates": [500, 629],
+      "flag": "br",
+      "name": "Ilha do Governador"
+    },
+    {
+      "coordinates": [352, 284],
+      "flag": "br",
+      "name": "Campos Elyseos"
+    },
+    {
+      "coordinates": [505, 10],
+      "flag": "br",
+      "name": "Imbariê"
+    },
+    {
+      "coordinates": [688, 272],
+      "flag": "br",
+      "name": "Guia de Pacobaíba"
+    },
+    {
+      "coordinates": [833, 103],
+      "flag": "br",
+      "name": "Suruí"
+    },
+    {
+      "coordinates": [924, 823],
+      "flag": "br",
+      "name": "Neves"
+    },
+    {
+      "coordinates": [1187, 873],
+      "flag": "br",
+      "name": "Sete Pontes"
+    },
+    {
+      "coordinates": [1458, 356],
+      "flag": "br",
+      "name": "Itambi"
+    },
+    {
+      "coordinates": [1014, 1081],
+      "flag": "br",
+      "name": "Cafubá"
+    },
+    {
+      "coordinates": [637, 1242],
+      "flag": "br",
+      "name": "Copacabana"
+    },
+    {
+      "coordinates": [495, 977],
+      "flag": "br",
+      "name": "São Cristóvão"
+    },
+    {
+      "coordinates": [445, 1091],
+      "flag": "br",
+      "name": "Tijuca"
+    },
+    {
+      "coordinates": [466, 1326],
+      "flag": "br",
+      "name": "Leblon"
+    },
+    {
+      "coordinates": [306, 774],
+      "flag": "br",
+      "name": "Penha"
+    },
+    {
+      "coordinates": [285, 984],
+      "flag": "br",
+      "name": "Méier"
+    },
+    {
+      "coordinates": [323, 1356],
+      "flag": "br",
+      "name": "São Conrado"
+    },
+    {
+      "coordinates": [642, 1114],
+      "flag": "br",
+      "name": "Flamengo"
+    },
+    {
+      "coordinates": [651, 1070],
+      "flag": "br",
+      "name": "Glória"
+    },
+    {
+      "coordinates": [575, 1305],
+      "flag": "br",
+      "name": "Ipanema"
+    }
+  ],
+  "themes": ["southamerica"],
+  "translation_key": "map.riodejaneiro"
+}
