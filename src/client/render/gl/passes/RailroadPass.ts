@@ -131,6 +131,7 @@ export class RailroadPass {
    * texture upload per preview change.
    */
   private ghostTiles = new Map<number, number>();
+  private nextGhostTiles = new Map<number, number>();
   /** Pending ghost texel writes, interleaved [ref, value, …]. */
   private ghostOps: number[] = [];
   private ghostOwnerID = 0;
@@ -291,7 +292,13 @@ export class RailroadPass {
   }
 
   updateGhostPreview(data: GhostPreviewData | null): void {
-    const next = new Map<number, number>();
+    if (!data && this.ghostTiles.size === 0) {
+      this.ghostOwnerID = 0;
+      return;
+    }
+
+    const next = this.nextGhostTiles;
+    next.clear();
 
     if (data) {
       const maxRef = this.mapW * this.mapH;
@@ -328,6 +335,7 @@ export class RailroadPass {
     for (const [ref, value] of next) {
       if (this.ghostTiles.get(ref) !== value) this.ghostOps.push(ref, value);
     }
+    this.nextGhostTiles = this.ghostTiles;
     this.ghostTiles = next;
   }
 
