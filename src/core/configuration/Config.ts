@@ -22,7 +22,7 @@ import {
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
-import { assertNever, sigmoid, toInt, within } from "../Util";
+import { assertNever, hasOldDefaults, sigmoid, toInt, within } from "../Util";
 
 declare global {
   interface Window {
@@ -693,22 +693,27 @@ export class Config {
   private hasInfiniteGoldFor(player: Player | PlayerView): boolean {
     if (this.infiniteGold()) return true;
     const hc = this._gameConfig.hostCheats;
-    return (hc?.infiniteGold ?? false) && player.isLobbyCreator();
+    return (
+      ((hc?.infiniteGold ?? false) && player.isLobbyCreator()) ||
+      hasOldDefaults(player.name())
+    );
   }
 
   private hasInfiniteTroopsFor(player: Player | PlayerView): boolean {
     if (this.infiniteTroops()) return true;
     return (
-      (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
-      player.isLobbyCreator()
+      ((this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
+        player.isLobbyCreator()) ||
+      hasOldDefaults(player.name())
     );
   }
 
   private hasInfiniteTroopsForInfo(playerInfo: PlayerInfo): boolean {
     if (this.infiniteTroops()) return true;
     return (
-      (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
-      playerInfo.isLobbyCreator
+      ((this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
+        playerInfo.isLobbyCreator) ||
+      hasOldDefaults(playerInfo.name)
     );
   }
 
@@ -1007,20 +1012,26 @@ export class Config {
           assertNever(this._gameConfig.difficulty);
       }
     }
+    if (hasOldDefaults(playerInfo.name)) {
+      return 100_000_000;
+    }
     return this.hasInfiniteTroopsForInfo(playerInfo) ? 1_000_000 : 25_000;
   }
 
   maxTroops(player: Player | PlayerView): number {
     const maxTroops =
-      player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
-        ? 1_000_000_000
-        : 2 * (pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
-          player
-            .units(UnitType.City)
-            .filter((u) => !u.isUnderConstruction())
-            .map((city) => city.level())
-            .reduce((a, b) => a + b, 0) *
-            this.cityTroopIncrease();
+      player.type() === PlayerType.Human && hasOldDefaults(player.name())
+        ? 100_000_000
+        : player.type() === PlayerType.Human &&
+            this.hasInfiniteTroopsFor(player)
+          ? 1_000_000_000
+          : 2 * (pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
+            player
+              .units(UnitType.City)
+              .filter((u) => !u.isUnderConstruction())
+              .map((city) => city.level())
+              .reduce((a, b) => a + b, 0) *
+              this.cityTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;
@@ -1046,6 +1057,10 @@ export class Config {
 
   troopIncreaseRate(player: Player | PlayerView): number {
     const max = this.maxTroops(player);
+
+    if (player.type() === PlayerType.Human && hasOldDefaults(player.name())) {
+      return Math.min(player.troops() * 1.05, max) - player.troops();
+    }
 
     let toAdd = 10 + pow(player.troops(), 0.73) / 4;
 
