@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
@@ -46,9 +46,21 @@ export class UnitDisplay extends LitElement implements Controller {
   private allDisabled = false;
   private _hoveredUnit: PlayerBuildableUnitType | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
+  @state() private layoutMap: Map<string, string> | null = null;
 
   createRenderRoot() {
     return this;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    if (navigator.keyboard) {
+      navigator.keyboard.getLayoutMap().then((map) => {
+        this.layoutMap = map;
+      }).catch((e) => {
+        console.warn("Failed to get keyboard layout map:", e);
+      });
+    }
   }
 
   init() {
@@ -148,74 +160,85 @@ export class UnitDisplay extends LitElement implements Controller {
             this._cities,
             UnitType.City,
             "city",
-            this.keybinds["buildCity"]?.key ?? "1",
+            this.getHotkey("buildCity", "Digit1"),
           )}
           ${this.renderUnitItem(
             factoryIcon,
             this._factories,
             UnitType.Factory,
             "factory",
-            this.keybinds["buildFactory"]?.key ?? "2",
+            this.getHotkey("buildFactory", "Digit2"),
           )}
           ${this.renderUnitItem(
             portIcon,
             this._port,
             UnitType.Port,
             "port",
-            this.keybinds["buildPort"]?.key ?? "3",
+            this.getHotkey("buildPort", "Digit3"),
           )}
           ${this.renderUnitItem(
             defensePostIcon,
             this._defensePost,
             UnitType.DefensePost,
             "defense_post",
-            this.keybinds["buildDefensePost"]?.key ?? "4",
+            this.getHotkey("buildDefensePost", "Digit4"),
           )}
           ${this.renderUnitItem(
             missileSiloIcon,
             this._missileSilo,
             UnitType.MissileSilo,
             "missile_silo",
-            this.keybinds["buildMissileSilo"]?.key ?? "5",
+            this.getHotkey("buildMissileSilo", "Digit5"),
           )}
           ${this.renderUnitItem(
             samLauncherIcon,
             this._samLauncher,
             UnitType.SAMLauncher,
             "sam_launcher",
-            this.keybinds["buildSamLauncher"]?.key ?? "6",
+            this.getHotkey("buildSamLauncher", "Digit6"),
           )}
           ${this.renderUnitItem(
             warshipIcon,
             this._warships,
             UnitType.Warship,
             "warship",
-            this.keybinds["buildWarship"]?.key ?? "7",
+            this.getHotkey("buildWarship", "Digit7"),
           )}
           ${this.renderUnitItem(
             atomBombIcon,
             null,
             UnitType.AtomBomb,
             "atom_bomb",
-            this.keybinds["buildAtomBomb"]?.key ?? "8",
+            this.getHotkey("buildAtomBomb", "Digit8"),
           )}
           ${this.renderUnitItem(
             hydrogenBombIcon,
             null,
             UnitType.HydrogenBomb,
             "hydrogen_bomb",
-            this.keybinds["buildHydrogenBomb"]?.key ?? "9",
+            this.getHotkey("buildHydrogenBomb", "Digit9"),
           )}
           ${this.renderUnitItem(
             mirvIcon,
             null,
             UnitType.MIRV,
             "mirv",
-            this.keybinds["buildMIRV"]?.key ?? "0",
+            this.getHotkey("buildMIRV", "Digit0"),
           )}
         </div>
       </div>
     `;
+  }
+
+  private getHotkey(action: string, defaultCode: string): string {
+    const entry = this.keybinds[action];
+    if (entry && entry.key) {
+      return entry.key;
+    }
+    if (this.layoutMap && this.layoutMap.has(defaultCode)) {
+      return this.layoutMap.get(defaultCode)!;
+    }
+    return defaultCode.replace("Digit", "").replace("Key", "");
   }
 
   private renderUnitItem(

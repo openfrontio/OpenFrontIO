@@ -19,8 +19,20 @@ export class HelpModal extends BaseModal {
   protected routerName = "help";
 
   @state() private keybinds: Record<string, string> = this.getKeybinds();
+  @state() private layoutMap: Map<string, string> | null = null;
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
   @query("#tutorial-video-player") private videoPlayer?: HTMLVideoElement;
+
+  connectedCallback() {
+    super.connectedCallback();
+    if (navigator.keyboard) {
+      navigator.keyboard.getLayoutMap().then((map) => {
+        this.layoutMap = map;
+      }).catch((e) => {
+        console.warn("Failed to get keyboard layout map:", e);
+      });
+    }
+  }
 
   private getKeybinds(): Record<string, string> {
     return new UserSettings().keybinds(Platform.isMac);
@@ -50,6 +62,7 @@ export class HelpModal extends BaseModal {
     };
 
     if (specialLabels[code]) return specialLabels[code];
+    if (this.layoutMap && this.layoutMap.has(code)) return this.layoutMap.get(code)!.toUpperCase();
     if (code.startsWith("Key") && code.length === 4) return code.slice(3);
     if (code.startsWith("Digit")) return code.slice(5);
     if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;

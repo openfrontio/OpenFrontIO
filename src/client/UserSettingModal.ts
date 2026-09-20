@@ -1,5 +1,14 @@
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
+
+declare global {
+  interface Navigator {
+    keyboard?: {
+      getLayoutMap(): Promise<Map<string, string>>;
+    };
+  }
+}
+
 import { formatKeyForDisplay, translateText } from "../client/Utils";
 import type { MapLayer } from "../core/game/TerrainMapLoader";
 import {
@@ -129,6 +138,8 @@ export class UserSettingModal extends BaseModal {
     { value: string; key: string }
   > = {};
 
+  @state() private layoutMap: Map<string, string> | null = null;
+
   // ---- Display tab state (desktop shell only) ----
   //
   // Every field here is inert on the web: the tab is not in tabs[] when
@@ -166,6 +177,14 @@ export class UserSettingModal extends BaseModal {
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
     );
+
+    if (navigator.keyboard) {
+      navigator.keyboard.getLayoutMap().then((map) => {
+        this.layoutMap = map;
+      }).catch((e) => {
+        console.warn("Failed to get keyboard layout map:", e);
+      });
+    }
   }
 
   disconnectedCallback() {
@@ -346,7 +365,13 @@ export class UserSettingModal extends BaseModal {
 
   private getKeyChar(action: string): string {
     const entry = this.userKeybinds[action];
-    if (!entry) return formatKeyForDisplay(this.defaultKeybinds[action] || "");
+    if (!entry) {
+      const defaultCode = this.defaultKeybinds[action] || "";
+      if (this.layoutMap && this.layoutMap.has(defaultCode)) {
+        return this.layoutMap.get(defaultCode)!.toUpperCase();
+      }
+      return formatKeyForDisplay(defaultCode);
+    }
     return entry.key || formatKeyForDisplay(entry.value || "");
   }
 
