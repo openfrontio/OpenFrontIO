@@ -1065,36 +1065,14 @@ export class PlayerImpl implements Player {
   }
 
   canDonateGold(recipient: Player): boolean {
-    if (recipient === this) {
-      return false;
-    }
-    if (
-      !this.isAlive() ||
-      !recipient.isAlive() ||
-      !this.isFriendly(recipient)
-    ) {
-      return false;
-    }
-    if (
-      recipient.type() === PlayerType.Human &&
-      this.mg.config().donateGold() === false
-    ) {
-      return false;
-    }
-    for (const donation of this.sentDonations) {
-      if (donation.recipient === recipient) {
-        if (
-          this.mg.ticks() - donation.tick <
-          this.mg.config().donateCooldown()
-        ) {
-          return false;
-        }
-      }
-    }
-    return true;
+    return this.canDonate(recipient, this.mg.config().donateGold());
   }
 
   canDonateTroops(recipient: Player): boolean {
+    return this.canDonate(recipient, this.mg.config().donateTroops());
+  }
+
+  private canDonate(recipient: Player, donationsEnabled: boolean): boolean {
     if (recipient === this) {
       return false;
     }
@@ -1105,10 +1083,7 @@ export class PlayerImpl implements Player {
     ) {
       return false;
     }
-    if (
-      recipient.type() === PlayerType.Human &&
-      this.mg.config().donateTroops() === false
-    ) {
+    if (recipient.type() === PlayerType.Human && !donationsEnabled) {
       return false;
     }
     for (const donation of this.sentDonations) {
