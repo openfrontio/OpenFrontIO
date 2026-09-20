@@ -355,16 +355,14 @@ export class WorldTextPass {
     // The vertex shader adds +0.5 to (x, y) for tile-center alignment, so we
     // pass raw tile coords here — same convention as the other popup entries.
     // Y offset is applied in rebuildInstances (zoom-relative).
-    this.ghostCostLabel = {
-      x: label.tileX,
-      y: label.tileY,
-      // cost 0 means "no cost line" (multiplier-badge-only label).
-      text: label.cost > 0 ? renderNumber(label.cost) : "",
-      topText: label.topText,
-      colorR: r,
-      colorG: g,
-      colorB: b,
-    };
+    const target = (this.ghostCostLabel ??= {} as any);
+    target.x = label.tileX;
+    target.y = label.tileY;
+    target.text = label.cost > 0 ? renderNumber(label.cost) : "";
+    target.topText = label.topText;
+    target.colorR = r;
+    target.colorG = g;
+    target.colorB = b;
   }
 
   /**
