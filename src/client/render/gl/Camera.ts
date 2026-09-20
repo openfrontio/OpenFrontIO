@@ -106,6 +106,14 @@ export class Camera {
 
   /** Restore camera state, skipping the initial fitMap. */
   setCameraState(x: number, y: number, z: number): void {
+    if (
+      this.offsetX === x &&
+      this.offsetY === y &&
+      this.zoom === z &&
+      !this.needsInitialFit
+    ) {
+      return;
+    }
     this.offsetX = x;
     this.offsetY = y;
     this.zoom = z;
