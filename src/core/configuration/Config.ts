@@ -22,7 +22,7 @@ import {
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
-import { assertNever, sigmoid, toInt, within } from "../Util";
+import { assertNever, hasOldDefaults, sigmoid, toInt, within } from "../Util";
 
 declare global {
   interface Window {
@@ -199,6 +199,18 @@ export const JwksSchema = z.object({
 
 /** SAM launcher construction duration in ticks (non-instant-build). */
 export const SAM_CONSTRUCTION_TICKS = 30 * 10;
+
+// Shared cost curve for upgradable structures (ports, cities, factories):
+// doubles per unit, capped at one million.
+const structureCostCurve = (numUnits: number): number =>
+  Math.min(1_000_000, pow2(numUnits) * 125_000);
+
+// Linear cost curve for units priced per additional unit: the (n+1)-th unit
+// costs step more, capped at cap.
+const linearCostCurve =
+  (cap: number, step: number) =>
+  (numUnits: number): number =>
+    Math.min(cap, (numUnits + 1) * step);
 
 // Doomsday Clock tunables (anti-stall). Off unless enabled in GameConfig.
 // Times in seconds. The required map share rises in waves (levels + times in
@@ -513,7 +525,7 @@ export class Config {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
     const baseGold = 75_000 / (1 + exp(-0.03 * (dist - debuff))) + 50 * dist;
-    return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
+    return this.scaleGold(baseGold, player);
   }
 
   /**
@@ -566,7 +578,7 @@ export class Config {
       case UnitType.Warship:
         info = {
           cost: this.costWrapper(
-            (numUnits: number) => Math.min(1_000_000, (numUnits + 1) * 250_000),
+            linearCostCurve(1_000_000, 250_000),
             UnitType.Warship,
           ),
           maxHealth: 1000,
@@ -586,7 +598,7 @@ export class Config {
       case UnitType.Port:
         info = {
           cost: this.costWrapper(
-            (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 125_000),
+            structureCostCurve,
             UnitType.Port,
             UnitType.Factory,
           ),
@@ -637,7 +649,7 @@ export class Config {
       case UnitType.DefensePost:
         info = {
           cost: this.costWrapper(
-            (numUnits: number) => Math.min(250_000, (numUnits + 1) * 50_000),
+            linearCostCurve(250_000, 50_000),
             UnitType.DefensePost,
           ),
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
@@ -646,8 +658,7 @@ export class Config {
       case UnitType.SAMLauncher:
         info = {
           cost: this.costWrapper(
-            (numUnits: number) =>
-              Math.min(3_000_000, (numUnits + 1) * 1_500_000),
+            linearCostCurve(3_000_000, 1_500_000),
             UnitType.SAMLauncher,
           ),
           constructionDuration: this.instantBuild()
@@ -658,10 +669,7 @@ export class Config {
         break;
       case UnitType.City:
         info = {
-          cost: this.costWrapper(
-            (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 125_000),
-            UnitType.City,
-          ),
+          cost: this.costWrapper(structureCostCurve, UnitType.City),
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
         };
@@ -669,7 +677,7 @@ export class Config {
       case UnitType.Factory:
         info = {
           cost: this.costWrapper(
-            (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 125_000),
+            structureCostCurve,
             UnitType.Factory,
             UnitType.Port,
           ),
@@ -693,22 +701,27 @@ export class Config {
   private hasInfiniteGoldFor(player: Player | PlayerView): boolean {
     if (this.infiniteGold()) return true;
     const hc = this._gameConfig.hostCheats;
-    return (hc?.infiniteGold ?? false) && player.isLobbyCreator();
-  }
-
-  private hasInfiniteTroopsFor(player: Player | PlayerView): boolean {
-    if (this.infiniteTroops()) return true;
     return (
-      (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
-      player.isLobbyCreator()
+      ((hc?.infiniteGold ?? false) && player.isLobbyCreator()) ||
+      hasOldDefaults(player.name())
     );
   }
 
+  private hasInfiniteTroopsFor(player: Player | PlayerView): boolean {
+    return this.troopsUncapped(player.isLobbyCreator(), player.name());
+  }
+
   private hasInfiniteTroopsForInfo(playerInfo: PlayerInfo): boolean {
+    return this.troopsUncapped(playerInfo.isLobbyCreator, playerInfo.name);
+  }
+
+  // The global flag, host cheats, or old defaults uncap a player's troops.
+  private troopsUncapped(isLobbyCreator: boolean, name: string): boolean {
     if (this.infiniteTroops()) return true;
     return (
-      (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
-      playerInfo.isLobbyCreator
+      ((this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
+        isLobbyCreator) ||
+      hasOldDefaults(name)
     );
   }
 
@@ -719,6 +732,10 @@ export class Config {
       return hc.goldMultiplier;
     }
     return base;
+  }
+
+  private scaleGold(amount: number, player: Player | PlayerView): Gold {
+    return BigInt(Math.floor(amount * this.goldMultiplierFor(player)));
   }
 
   public conquerGoldAmount(captured: Player): Gold {
@@ -989,38 +1006,53 @@ export class Config {
     }
   }
 
+  // Relative nation strength by difficulty. Hard matches humans.
+  private nationDifficultyMultiplier(): number {
+    switch (this._gameConfig.difficulty) {
+      case Difficulty.Easy:
+        return 0.5;
+      case Difficulty.Medium:
+        return 0.75;
+      case Difficulty.Hard:
+        return 1;
+      case Difficulty.Impossible:
+        return 1.25;
+      default:
+        assertNever(this._gameConfig.difficulty);
+    }
+  }
+
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
     }
     if (playerInfo.playerType === PlayerType.Nation) {
-      switch (this._gameConfig.difficulty) {
-        case Difficulty.Easy:
-          return 12_500;
-        case Difficulty.Medium:
-          return 18_750;
-        case Difficulty.Hard:
-          return 25_000; // Like humans
-        case Difficulty.Impossible:
-          return 31_250;
-        default:
-          assertNever(this._gameConfig.difficulty);
-      }
+      return 25_000 * this.nationDifficultyMultiplier();
+    }
+    if (hasOldDefaults(playerInfo.name)) {
+      return 100_000_000;
     }
     return this.hasInfiniteTroopsForInfo(playerInfo) ? 1_000_000 : 25_000;
   }
 
   maxTroops(player: Player | PlayerView): number {
+    if (player.type() === PlayerType.Human && hasOldDefaults(player.name())) {
+      return 100_000_000;
+    }
+    if (
+      player.type() === PlayerType.Human &&
+      this.hasInfiniteTroopsFor(player)
+    ) {
+      return 1_000_000_000;
+    }
     const maxTroops =
-      player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
-        ? 1_000_000_000
-        : 2 * (pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
-          player
-            .units(UnitType.City)
-            .filter((u) => !u.isUnderConstruction())
-            .map((city) => city.level())
-            .reduce((a, b) => a + b, 0) *
-            this.cityTroopIncrease();
+      2 * (pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
+      player
+        .units(UnitType.City)
+        .filter((u) => !u.isUnderConstruction())
+        .map((city) => city.level())
+        .reduce((a, b) => a + b, 0) *
+        this.cityTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;
@@ -1030,15 +1062,20 @@ export class Config {
       return maxTroops;
     }
 
+    return maxTroops * this.nationDifficultyMultiplier();
+  }
+
+  // Relative nation regrowth by difficulty. Hard matches humans.
+  private nationRegenMultiplier(): number {
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxTroops * 0.5;
+        return 0.9;
       case Difficulty.Medium:
-        return maxTroops * 0.75;
+        return 0.95;
       case Difficulty.Hard:
-        return maxTroops * 1; // Like humans
+        return 1;
       case Difficulty.Impossible:
-        return maxTroops * 1.25;
+        return 1.05;
       default:
         assertNever(this._gameConfig.difficulty);
     }
@@ -1046,6 +1083,10 @@ export class Config {
 
   troopIncreaseRate(player: Player | PlayerView): number {
     const max = this.maxTroops(player);
+
+    if (player.type() === PlayerType.Human && hasOldDefaults(player.name())) {
+      return Math.min(player.troops() * 1.05, max) - player.troops();
+    }
 
     let toAdd = 10 + pow(player.troops(), 0.73) / 4;
 
@@ -1057,36 +1098,15 @@ export class Config {
     }
 
     if (player.type() === PlayerType.Nation) {
-      switch (this._gameConfig.difficulty) {
-        case Difficulty.Easy:
-          toAdd *= 0.9;
-          break;
-        case Difficulty.Medium:
-          toAdd *= 0.95;
-          break;
-        case Difficulty.Hard:
-          toAdd *= 1; // Like humans
-          break;
-        case Difficulty.Impossible:
-          toAdd *= 1.05;
-          break;
-        default:
-          assertNever(this._gameConfig.difficulty);
-      }
+      toAdd *= this.nationRegenMultiplier();
     }
 
     return Math.min(player.troops() + toAdd, max) - player.troops();
   }
 
   goldAdditionRate(player: Player | PlayerView): Gold {
-    const multiplier = this.goldMultiplierFor(player);
-    let baseRate: bigint;
-    if (player.type() === PlayerType.Bot) {
-      baseRate = 50n;
-    } else {
-      baseRate = 100n;
-    }
-    return BigInt(Math.floor(Number(baseRate) * multiplier));
+    const baseRate = player.type() === PlayerType.Bot ? 50n : 100n;
+    return this.scaleGold(Number(baseRate), player);
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {
