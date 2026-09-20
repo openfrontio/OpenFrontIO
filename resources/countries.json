@@ -273,6 +273,11 @@
     "name": "Atlanta"
   },
   {
+    "code": "nz-auckland",
+    "continent": "Oceania",
+    "name": "Auckland"
+  },
+  {
     "code": "Austin",
     "continent": "North America",
     "name": "Austin"
@@ -710,6 +715,11 @@
     "name": "Champagne-Ardenne"
   },
   {
+    "code": "nz-chatham",
+    "continent": "Oceania",
+    "name": "Chatham Islands"
+  },
+  {
     "code": "Cherokee Nation",
     "continent": "North America",
     "name": "Cherokee"
@@ -743,6 +753,11 @@
     "code": "Chinook",
     "continent": "North America",
     "name": "Chinook"
+  },
+  {
+    "code": "nz-christchurch",
+    "continent": "Oceania",
+    "name": "Christchurch"
   },
   {
     "code": "cx",
@@ -1010,6 +1025,11 @@
     "code": "1_Dumnonia",
     "continent": "Europe",
     "name": "Dumnonia"
+  },
+  {
+    "code": "nz-dunedin",
+    "continent": "Oceania",
+    "name": "Dunedin"
   },
   {
     "code": "Dutch East India Company",
@@ -1457,6 +1477,11 @@
     "name": "Haida"
   },
   {
+    "code": "nu-hak",
+    "continent": "Oceania",
+    "name": "Hakupu"
+  },
+  {
     "code": "fr-hdf",
     "continent": "Europe",
     "name": "Hauts-de-France"
@@ -1848,6 +1873,11 @@
     "code": "Kokang",
     "continent": "Asia",
     "name": "Kokang"
+  },
+  {
+    "code": "nz-koru",
+    "continent": "Oceania",
+    "name": "Koru"
   },
   {
     "code": "xk",
@@ -2411,6 +2441,11 @@
     "name": "Nantucket"
   },
   {
+    "code": "nz-napier",
+    "continent": "Oceania",
+    "name": "Napier"
+  },
+  {
     "code": "Napoleon",
     "continent": "Europe",
     "name": "Napoleon"
@@ -2453,6 +2488,11 @@
     "code": "Negeri Sembilan",
     "continent": "Asia",
     "name": "Negeri Sembilan"
+  },
+  {
+    "code": "nz-nelson",
+    "continent": "Oceania",
+    "name": "Nelson"
   },
   {
     "code": "np",
@@ -2719,6 +2759,11 @@
     "name": "Orlando"
   },
   {
+    "code": "nz-otago",
+    "continent": "Oceania",
+    "name": "Otago"
+  },
+  {
     "code": "Ottoman Empire",
     "continent": "Asia",
     "name": "Ottoman Empire"
@@ -2878,6 +2923,11 @@
     "name": "Polish–Lithuanian Commonwealth"
   },
   {
+    "code": "nz-porirua",
+    "continent": "Oceania",
+    "name": "Porirua"
+  },
+  {
     "code": "pt",
     "continent": "Europe",
     "name": "Portugal"
@@ -2960,6 +3010,11 @@
     "code": "Rashidi Emirate",
     "continent": "Asia",
     "name": "Rashidi Emirate"
+  },
+  {
+    "code": "nz-red peak",
+    "continent": "Oceania",
+    "name": "Red Peak"
   },
   {
     "code": "Republic of China",
@@ -3059,6 +3114,11 @@
   {
     "code": "Ror Empire",
     "name": "Ror Empire"
+  },
+  {
+    "code": "nz-ross dependency",
+    "continent": "Oceania",
+    "name": "Ross Dependency"
   },
   {
     "code": "ru",
@@ -3729,6 +3789,21 @@
     "name": "Sikkim"
   },
   {
+    "code": "nz-silver fern (black)",
+    "continent": "Oceania",
+    "name": "Silver Fern (black)"
+  },
+  {
+    "code": "nz-silver fern (red)",
+    "continent": "Oceania",
+    "name": "Silver Fern (red)"
+  },
+  {
+    "code": "nz-silver fern (white)",
+    "continent": "Oceania",
+    "name": "Silver Fern (white)"
+  },
+  {
     "code": "sg",
     "continent": "Asia",
     "name": "Singapore"
@@ -4157,6 +4232,16 @@
     "name": "United States of America"
   },
   {
+    "code": "United Tribes of New Zealand",
+    "continent": "Oceania",
+    "name": "United Tribes of New Zealand"
+  },
+  {
+    "code": "nz-upper hutt",
+    "continent": "Oceania",
+    "name": "Upper Hutt"
+  },
+  {
     "code": "Upper Silesia",
     "continent": "Europe",
     "name": "Upper Silesia"
@@ -4290,6 +4375,11 @@
     "code": "Washington",
     "continent": "North America",
     "name": "Washington"
+  },
+  {
+    "code": "nz-wellington",
+    "continent": "Oceania",
+    "name": "Wellington"
   },
   {
     "code": "1_Wessex",

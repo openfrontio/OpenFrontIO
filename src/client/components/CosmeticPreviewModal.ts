@@ -19,10 +19,10 @@ import type { CosmeticRenderCanvas } from "./cosmetics/CosmeticRenderCanvas";
 export const TEAM_COLORS = [
   { name: "Red", hex: "#eb3333" },
   { name: "Blue", hex: "#2962ff" },
-  { name: "Teal", hex: "#2bd4bd" },
+  { name: "Teal", hex: "#06b6d4" },
   { name: "Purple", hex: "#9234ea" },
   { name: "Yellow", hex: "#e7b008" },
-  { name: "Orange", hex: "#f97415" },
+  { name: "Orange", hex: "#ff7f0e" },
   { name: "Green", hex: "#41be52" },
 ];
 

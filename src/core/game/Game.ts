@@ -793,6 +793,7 @@ export interface Game extends GameMap {
   // neighbors()) and returns the count. Reuse out across calls to avoid
   // allocation.
   neighbors4(ref: TileRef, out: TileRef[]): number;
+  neighbors8(ref: TileRef, out: TileRef[]): number;
   // Zero-allocation neighbor iteration for performance-critical cluster calculation
   // Alternative to neighborsWithDiag() that returns arrays
   // Avoids creating intermediate arrays and uses a callback for better performance

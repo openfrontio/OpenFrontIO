@@ -672,6 +672,16 @@
     "easy": "Easy",
     "hard": "Hard",
     "impossible": "Impossible",
+    "info": "{smarts}, {troops}",
+    "info_label": "Show difficulty details",
+    "info_note_hard": "(This difficulty is used in public HvN games)",
+    "info_note_medium": "(This difficulty is used in public FFA games)",
+    "info_smarts_easy": "Dumb",
+    "info_smarts_hard": "Smart",
+    "info_smarts_impossible": "Very smart",
+    "info_smarts_medium": "Average",
+    "info_troops": "{percent}% of a human's max troops",
+    "info_troops_same": "the same max troops as a human",
     "medium": "Medium"
   },
   "discord_user_header": {
@@ -1379,6 +1389,7 @@
     "montreal": "Montreal",
     "morethanluck": "More Than Luck",
     "newyorkcity": "New York City",
+    "newzealand": "New Zealand",
     "niledelta": "Nile Delta",
     "northamerica": "North America",
     "northwestpassage": "Northwest Passage",
@@ -1387,6 +1398,7 @@
     "pangaea": "Pangaea",
     "passage": "Passage",
     "pluto": "Pluto",
+    "pulicatlake": "Pulicat Lake",
     "qingchina": "Qing China",
     "random": "Random",
     "russia": "Russia",
@@ -1860,10 +1872,8 @@
     "default_name": "Steam player"
   },
   "steam_wishlist": {
-    "cta": "Wishlist now",
-    "on_steam": "OpenFront on Steam",
-    "release": "Available Q3 2026",
-    "title": "Wishlist OpenFront on Steam!"
+    "buy_cta": "Buy on Steam",
+    "buy_on_steam": "Buy OpenFront on Steam"
   },
   "store": {
     "already_owned": "You already own this item. Nothing was charged.",
