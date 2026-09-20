@@ -127,6 +127,15 @@ export class WorldTextPass {
   private active: ActivePopup[] = [];
 
   // Persistent ghost-cost label (separate from popup lifecycle; doesn't fade).
+  private ghostCostEntry = {
+    x: 0,
+    y: 0,
+    text: "",
+    topText: undefined as string | undefined,
+    colorR: 1,
+    colorG: 1,
+    colorB: 1,
+  };
   private ghostCostLabel: {
     x: number;
     y: number;
@@ -355,14 +364,15 @@ export class WorldTextPass {
     // The vertex shader adds +0.5 to (x, y) for tile-center alignment, so we
     // pass raw tile coords here — same convention as the other popup entries.
     // Y offset is applied in rebuildInstances (zoom-relative).
-    const target = (this.ghostCostLabel ??= {} as any);
-    target.x = label.tileX;
-    target.y = label.tileY;
-    target.text = label.cost > 0 ? renderNumber(label.cost) : "";
-    target.topText = label.topText;
-    target.colorR = r;
-    target.colorG = g;
-    target.colorB = b;
+    const entry = this.ghostCostEntry;
+    entry.x = label.tileX;
+    entry.y = label.tileY;
+    entry.text = label.cost > 0 ? renderNumber(label.cost) : "";
+    entry.topText = label.topText;
+    entry.colorR = r;
+    entry.colorG = g;
+    entry.colorB = b;
+    this.ghostCostLabel = entry;
   }
 
   /**
