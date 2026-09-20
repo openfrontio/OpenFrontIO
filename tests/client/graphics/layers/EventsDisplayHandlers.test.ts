@@ -27,9 +27,14 @@ vi.mock("lit/directives/unsafe-html.js", () => ({
 
 vi.mock("../../../../src/client/Utils", () => ({
   // Include params in the output so descriptions are assertable.
-  translateText: vi.fn((key: string, params?: Record<string, unknown>) =>
-    params ? `${key} ${JSON.stringify(params)}` : key,
-  ),
+  translateText: vi.fn((key: string, params?: Record<string, unknown>) => {
+    const translations: Record<string, string> = {
+      "unit_type.atom_bomb": "Atom Bomb",
+      "unit_type.boat": "Boat",
+    };
+    const text = translations[key] ?? key;
+    return params ? `${text} ${JSON.stringify(params)}` : text;
+  }),
   renderNumber: vi.fn(),
   renderTroops: vi.fn(),
   getMessageTypeClasses: vi.fn(() => ""),
@@ -321,8 +326,8 @@ describe("EventsDisplay handlers", () => {
       });
 
       expect(events().map((event) => event.description)).toEqual([
-        'events_display.unit_destroyed {"unit":"unit_type.boat"}',
-        'events_display.missile_intercepted {"unit":"unit_type.atom_bomb"}',
+        'events_display.unit_destroyed {"unit":"Boat"}',
+        'events_display.missile_intercepted {"unit":"Atom Bomb"}',
       ]);
     });
   });
