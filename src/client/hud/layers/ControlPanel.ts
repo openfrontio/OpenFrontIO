@@ -628,10 +628,7 @@ export class ControlPanel extends LitElement implements Controller {
           ${this.renderMobileTroopBar()}
         </div>
         <!-- Sword + % and troop count label -->
-        <div
-          class="flex flex-col items-center justify-center shrink-0"
-          translate="no"
-        >
+        <div class="flex flex-col items-center justify-center shrink-0">
           <div class="flex items-center gap-0.5">
             <img
               src=${swordIcon}
@@ -641,16 +638,16 @@ export class ControlPanel extends LitElement implements Controller {
               height="10"
               style="filter: brightness(0) invert(1);"
             />
-            <span class="text-white text-xs font-bold tabular-nums"
-              >${(this.attackRatio * 100).toFixed(0)}%</span
+            <span
+              class="text-white text-[11px] font-bold tabular-nums text-center leading-tight whitespace-pre-wrap"
+              >${translateText("control_panel.attack_ratio", {
+                percent: (this.attackRatio * 100).toFixed(0),
+                troops: renderTroops(
+                  (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
+                ),
+              })}</span
             >
           </div>
-          <span
-            class="text-white/80 text-[10px] font-bold tabular-nums leading-none"
-            >(${renderTroops(
-              (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-            )})</span
-          >
         </div>
         <!-- Attack ratio slider -->
         <div

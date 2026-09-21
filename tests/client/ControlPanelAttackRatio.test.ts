@@ -64,7 +64,8 @@ describe("control-panel attack ratio", () => {
     await (panel as any).updateComplete;
 
     const mobileContainer = panel.querySelector(".lg\\:hidden");
-    expect(mobileContainer?.textContent).toContain("20%");
-    expect(mobileContainer?.textContent).toContain("(2.00K)");
+    expect(mobileContainer?.textContent).toContain(
+      "control_panel.attack_ratio",
+    );
   });
 });
