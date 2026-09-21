@@ -426,7 +426,7 @@ export interface BootInterruptPorts {
 export interface BootInterruptContext {
   claimStore: ClaimPromptStore;
   publicId: string;
-  hasRewards?: boolean;
+  hasRewards: boolean;
 }
 
 /**

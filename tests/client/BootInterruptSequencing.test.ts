@@ -110,7 +110,11 @@ describe("boot sequencing against a real <username-input>", () => {
       claimPromptDue: true,
       claimStringsReady: true,
     });
-    await runBootInterrupt(interrupt, { claimStore: {}, publicId: "p" }, ports);
+    await runBootInterrupt(
+      interrupt,
+      { claimStore: {}, publicId: "p", hasRewards: false },
+      ports,
+    );
     return { interrupt, ...calls };
   }
 

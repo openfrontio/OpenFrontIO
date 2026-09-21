@@ -422,7 +422,7 @@ describe("runBootInterrupt", () => {
     return { base, calls };
   }
 
-  const context = { claimStore: {}, publicId: ME };
+  const context = { claimStore: {}, publicId: ME, hasRewards: false };
 
   async function run(
     interrupt: BootInterrupt | null,
@@ -707,7 +707,7 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     };
     await runBootInterrupt(
       nextBootInterrupt(inputs),
-      { claimStore: {}, publicId: ME },
+      { claimStore: {}, publicId: ME, hasRewards: false },
       {
         translate: unready,
         confirm: async (body) => {
