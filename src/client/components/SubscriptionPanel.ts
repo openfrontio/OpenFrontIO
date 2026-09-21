@@ -1,6 +1,10 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { isGrantedSubscription, UserSubscription } from "../../core/ApiSchemas";
+import {
+  isGrantedSubscription,
+  isUnpaidSubscription,
+  UserSubscription,
+} from "../../core/ApiSchemas";
 import { Subscription } from "../../core/CosmeticSchemas";
 import {
   cancelSubscription,
@@ -132,8 +136,16 @@ export class SubscriptionPanel extends LitElement {
     return this.sub.provider === "steam";
   }
 
-  // Status pill: amber while winding down, green while active, neutral for the
-  // payment-problem states (past_due, unpaid, …).
+  /**
+   * The latest invoice is unpaid and the rail is still retrying it. Not
+   * entitled, but live — see `isUnpaidSubscription`.
+   */
+  private isUnpaid(): boolean {
+    return isUnpaidSubscription(this.sub);
+  }
+
+  // Status pill: amber while winding down, red while unpaid, green while
+  // active, neutral for anything else the server might send.
   private renderStatusPill(): TemplateResult {
     const base =
       "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider border";
@@ -144,6 +156,15 @@ export class SubscriptionPanel extends LitElement {
       >
         <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
         ${translateText("account_modal.sub_status_canceling")}
+      </span>`;
+    }
+
+    if (this.isUnpaid()) {
+      return html`<span
+        class="${base} bg-red-500/10 border-red-500/30 text-red-300"
+      >
+        <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+        ${translateText("account_modal.sub_status_past_due")}
       </span>`;
     }
 
@@ -179,6 +200,9 @@ export class SubscriptionPanel extends LitElement {
   // a grant is never winding down: the server has no pending-cancel state for
   // one, it expires immediately.
   private renderPeriodLine(): TemplateResult | typeof nothing {
+    // Unpaid: "Renews {date}" would promise a renewal that already failed.
+    // The actions note says what actually happens next.
+    if (this.isUnpaid()) return nothing;
     const periodEnd = this.periodEnd();
     if (!periodEnd) return nothing;
     const dateKey = this.isGranted()
@@ -351,11 +375,69 @@ export class SubscriptionPanel extends LitElement {
     `;
   }
 
+  /**
+   * The actions for a subscription whose latest invoice is unpaid (Stripe
+   * past_due). Not entitled, but live: the rail is still retrying the charge,
+   * so the server refuses a NEW subscription (409 subscription_past_due) and
+   * its Cancel and Change Tier routes act on entitled rows only — rendering
+   * either here would be a dead control. The one thing that helps is fixing
+   * the card, and on Stripe that is the billing portal: the same Manage
+   * button, labelled for what it does here.
+   *
+   * Steam has no card-fix page. The recovery there is a fresh purchase, which
+   * the checkout gate admits on that rail, so the copy says so and Manage
+   * keeps opening the Steam subscriptions page.
+   *
+   * The desktop build keeps the no-link-out rule (see `renderManageOnWeb`):
+   * the note, then where billing is managed.
+   */
+  private renderUnpaidActions(): TemplateResult {
+    const note = html`<p
+      class="text-[11px] text-center text-red-200/70 leading-snug"
+    >
+      ${translateText(
+        this.isSteam()
+          ? "account_modal.sub_unpaid_steam"
+          : "account_modal.sub_unpaid",
+      )}
+    </p>`;
+    if (this.isSteam()) {
+      return html`<div class="flex flex-col gap-2">
+        <o-button
+          variant="secondary"
+          width="block"
+          size="md"
+          translationKey="account_modal.manage_subscription"
+          @click=${this.handleManage}
+        ></o-button>
+        ${note}
+      </div>`;
+    }
+    if (isDesktopShell()) {
+      return html`<div class="flex flex-col gap-2">
+        ${note} ${this.renderManageOnWeb()}
+      </div>`;
+    }
+    return html`<div class="flex flex-col gap-2">
+      <o-button
+        variant="primary"
+        width="block"
+        size="md"
+        translationKey="account_modal.update_payment_method"
+        @click=${this.handleManage}
+      ></o-button>
+      ${note}
+    </div>`;
+  }
+
   private renderActions(): TemplateResult {
     // Before every other branch, and NOT gated on the desktop shell: a grant is
     // a property of the account, so a Steam buyer who signs in on the website
     // sees the same panel and would meet the same one-way Cancel there.
     if (this.isGranted()) return this.renderGrantedNote();
+    // Before the rail branches: on both rails the row is one the server will
+    // not cancel or re-tier, so neither rail's normal control set applies.
+    if (this.isUnpaid()) return this.renderUnpaidActions();
     if (this.isSteam()) return this.renderSteamActions();
 
     // The whole desktop build, not just a Steam-authenticated session: the

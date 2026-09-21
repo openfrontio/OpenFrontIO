@@ -335,6 +335,14 @@ function checkoutError(
     // Nothing was charged; the store's own copy for "you have this already".
     case "already_subscribed":
       return error(translateText("store.already_subscribed"));
+    // The server's text says what to do (fix the card or cancel under
+    // Manage, not subscribe again); fall back to a line that says the same.
+    case "subscription_past_due":
+      return error(
+        result.message !== ""
+          ? result.message
+          : translateText("store.checkout_subscription_past_due"),
+      );
     // The server's text says what to do (cancel in the Steam account, then
     // subscribe again); fall back to a generic line if it sent none.
     case "tier_change_unavailable_on_provider":

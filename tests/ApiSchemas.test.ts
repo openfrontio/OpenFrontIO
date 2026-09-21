@@ -596,6 +596,56 @@ describe("RewardSchema", () => {
   });
 });
 
+describe("UserMeResponseSchema unpaidSubscription", () => {
+  const base = {
+    user: {},
+    player: {
+      publicId: "p1",
+      adfree: false,
+      unlimitedRanked: false,
+      canCreatePublicLobbies: false,
+      achievements: { singleplayerMap: [] },
+      friends: [],
+      subscription: null,
+    },
+  };
+
+  it("is optional, for a server that predates it", () => {
+    const result = UserMeResponseSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.unpaidSubscription).toBeUndefined();
+    }
+  });
+
+  it("accepts a past_due row in the subscription's shape", () => {
+    const result = UserMeResponseSchema.safeParse({
+      ...base,
+      player: {
+        ...base.player,
+        unpaidSubscription: {
+          tier: "sovereign",
+          status: "past_due",
+          currentPeriodEnd: "2026-10-20T15:16:16.000Z",
+          cancelAtPeriodEnd: false,
+          provider: "stripe",
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.unpaidSubscription).toMatchObject({
+        tier: "sovereign",
+        status: "past_due",
+        provider: "stripe",
+      });
+      expect(
+        result.data.player.unpaidSubscription?.currentPeriodEnd,
+      ).toBeInstanceOf(Date);
+    }
+  });
+});
+
 describe("UserMeResponseSchema rewards", () => {
   const basePlayer = {
     publicId: "p1",

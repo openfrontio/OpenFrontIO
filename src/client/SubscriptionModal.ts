@@ -21,7 +21,11 @@ export class SubscriptionModal extends ProfileMenuModal {
   @state() private cosmetics: Cosmetics | null = null;
 
   protected renderSignedIn(userMe: UserMeResponse): TemplateResult {
-    const sub = userMe.player.subscription;
+    // An unpaid subscription (a failed renewal the rail is still retrying)
+    // is not entitled, so it is not `subscription` — but it is the one the
+    // player must act on, and the panel is where the Manage button lives.
+    const sub =
+      userMe.player.subscription ?? userMe.player.unpaidSubscription ?? null;
     if (!sub) {
       return html`
         <div class="p-6">

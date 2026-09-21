@@ -780,6 +780,38 @@ describe("startPurchase — error mapping", () => {
     });
   });
 
+  // Same rule: the server's text says what to do instead of subscribing
+  // again, so it is shown as-is, with the store's own line only when it sent
+  // none.
+  it("shows the server's own text for an unpaid subscription, and the store's line without one", async () => {
+    expect(
+      await failWith({
+        ok: false,
+        code: "subscription_past_due",
+        message: "Your subscription has an unpaid invoice.",
+        existingProvider: "stripe",
+        existingTier: "sovereign",
+      }),
+    ).toEqual({
+      outcome: "error",
+      message: "Your subscription has an unpaid invoice.",
+      refetchCatalog: false,
+    });
+    expect(
+      await failWith({
+        ok: false,
+        code: "subscription_past_due",
+        message: "",
+        existingProvider: "stripe",
+        existingTier: "sovereign",
+      }),
+    ).toEqual({
+      outcome: "error",
+      message: "store.checkout_subscription_past_due",
+      refetchCatalog: false,
+    });
+  });
+
   it("uses the store's own copy for a tier the player already holds", async () => {
     expect(
       await failWith({

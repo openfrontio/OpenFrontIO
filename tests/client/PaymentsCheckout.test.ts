@@ -377,6 +377,28 @@ describe("createPaymentsCheckout errors", () => {
     });
   });
 
+  it("maps 409 subscription_past_due with the server's message and the rail in arrears", async () => {
+    respond(409, {
+      reason: "subscription_past_due",
+      existingProvider: "stripe",
+      existingTier: "sovereign",
+      message: "Your subscription has an unpaid invoice.",
+    });
+    expect(
+      await createPaymentsCheckout({
+        provider: "stripe",
+        kind: "subscription_tier",
+        tierName: "sovereign",
+      }),
+    ).toEqual({
+      ok: false,
+      code: "subscription_past_due",
+      message: "Your subscription has an unpaid invoice.",
+      existingProvider: "stripe",
+      existingTier: "sovereign",
+    });
+  });
+
   it("maps 409 pending_provider_transaction with its provider", async () => {
     respond(409, {
       reason: "pending_provider_transaction",

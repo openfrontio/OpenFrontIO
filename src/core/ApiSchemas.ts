@@ -295,6 +295,31 @@ export const UserMeResponseSchema = z.object({
         provider: z.string().nullable().optional(),
       })
       .nullable(),
+    // A paid subscription the player is NOT entitled to because its latest
+    // invoice is unpaid and the rail is still retrying it (Stripe dunning,
+    // `status: "past_due"`). Never set beside a non-null `subscription`.
+    //
+    // Same shape as `subscription` so it renders on the same panel, because
+    // the way out lives there: the Manage button opens the billing portal,
+    // which is where the card gets fixed. The store refuses a new
+    // subscription meanwhile (409 subscription_past_due), so without this the
+    // player saw "no active subscription", no Manage button, and a checkout
+    // that only said no. Read it for DISPLAY only — every entitlement
+    // decision keeps reading `subscription`.
+    //
+    // Optional: an older server omits it, and that must read as "nothing
+    // unpaid", not as a parse failure that blanks the whole account view.
+    unpaidSubscription: z
+      .object({
+        tier: z.string(),
+        status: z.string(),
+        currentPeriodEnd: z.coerce.date().nullable(),
+        cancelAtPeriodEnd: z.boolean(),
+        // Loose for the reason `subscription.provider` is; never null here.
+        provider: z.string().nullable().optional(),
+      })
+      .nullable()
+      .optional(),
     // Marketing-email consent state (client-driven consent). `consented` is the
     // player's current decision; `hasEmail` is whether a verified contact email
     // exists to subscribe. Optional so an older API without the field is treated
@@ -332,6 +357,19 @@ export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
 export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
+
+/**
+ * Is this a subscription the player is NOT entitled to because its latest
+ * invoice is unpaid? True only for the row `/users/@me` serves as
+ * `unpaidSubscription`; an entitled subscription never carries this status.
+ * The panel hides the controls the server refuses on such a row (Cancel and
+ * Change Tier act on entitled rows only) and offers the one that helps.
+ */
+export function isUnpaidSubscription(
+  sub: UserSubscription | null | undefined,
+): boolean {
+  return sub?.status === "past_due";
+}
 
 /**
  * Is this subscription a GRANT — free access nobody is billing — rather than

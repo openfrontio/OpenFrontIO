@@ -196,8 +196,12 @@ export class NavAccountMenu extends LitElement {
 
     const player =
       this.userMeResponse === false ? null : this.userMeResponse.player;
+    // An unpaid subscription counts: its Manage button is how the player
+    // fixes the failed payment, so the item that reaches it must show.
     const subscribed =
-      player?.subscription !== undefined && player?.subscription !== null;
+      (player?.subscription !== undefined && player?.subscription !== null) ||
+      (player?.unpaidSubscription !== undefined &&
+        player?.unpaidSubscription !== null);
     const publicId = player?.publicId ?? "";
 
     const items: MenuItem[] = [];

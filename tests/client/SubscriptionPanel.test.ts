@@ -283,6 +283,92 @@ describe("subscription-panel", () => {
     });
   });
 
+  // An unpaid subscription: the renewal charge failed and the rail is still
+  // retrying it. /users/@me serves it as `unpaidSubscription`, and the modal
+  // hands it to this panel because the way out — the billing portal — is
+  // behind Manage. The server refuses Cancel and Change Tier on such a row
+  // (entitled rows only) and refuses a new checkout (409
+  // subscription_past_due), so neither control may render.
+  describe("an unpaid (past_due) subscription", () => {
+    const buttonKeys = () =>
+      Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+    const cancelButton = () =>
+      Array.from(el.querySelectorAll("button")).find(
+        (b) =>
+          b.closest("o-button") === null &&
+          (b.textContent ?? "").includes("account_modal.cancel_subscription"),
+      );
+
+    beforeEach(async () => {
+      el.sub = sub({ status: "past_due", provider: "stripe" });
+      await el.updateComplete;
+    });
+
+    it("offers Update payment method and nothing the server would refuse", () => {
+      expect(buttonKeys()).toEqual(["account_modal.update_payment_method"]);
+      expect(cancelButton()).toBeUndefined();
+      expect(text()).toContain("account_modal.sub_unpaid");
+      expect(text()).toContain("account_modal.sub_status_past_due");
+    });
+
+    it("does not claim the subscription renews", () => {
+      expect(text()).not.toContain("account_modal.sub_renews_on");
+      expect(text()).not.toContain(PERIOD_END_TEXT);
+    });
+
+    it("opens the billing portal from Update payment method", async () => {
+      const opened: string[] = [];
+      const original = window.open;
+      window.open = ((url: string) => {
+        opened.push(url);
+        return null;
+      }) as typeof window.open;
+      try {
+        const update = Array.from(el.querySelectorAll("o-button")).find(
+          (b) =>
+            b.getAttribute("translationKey") ===
+            "account_modal.update_payment_method",
+        )!;
+        update.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        await new Promise((r) => setTimeout(r, 0));
+        expect(opened).toEqual(["https://portal.example"]);
+      } finally {
+        window.open = original;
+      }
+    });
+
+    // The no-link-out rule holds here too: the button would be dead, so the
+    // panel says what happened and where billing is managed instead.
+    it("says where billing is managed inside the desktop shell, with no link-out", async () => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+      try {
+        el.requestUpdate();
+        await el.updateComplete;
+        expect(buttonKeys()).toEqual([]);
+        expect(text()).toContain("account_modal.sub_unpaid");
+        expect(text()).toContain("account_modal.manage_subscription_on_web");
+        expect(el.querySelector("a")).toBeNull();
+      } finally {
+        delete (window as unknown as { openfrontDesktop?: unknown })
+          .openfrontDesktop;
+      }
+    });
+
+    // Steam has no card-fix page; the recovery on that rail is a fresh
+    // purchase, which the checkout gate admits.
+    it("on Steam, keeps Manage and says to subscribe again from the store", async () => {
+      el.sub = sub({ status: "past_due", provider: "steam" });
+      await el.updateComplete;
+      expect(buttonKeys()).toEqual(["account_modal.manage_subscription"]);
+      expect(cancelButton()).toBeUndefined();
+      expect(text()).toContain("account_modal.sub_unpaid_steam");
+    });
+  });
+
   // Phase 9 (OPE-230). Billed by Steam and managed on the Steam account
   // page, which the server's portal route returns as a static URL for a Steam
   // row. That page is not a payment origin, so unlike Stripe's portal the

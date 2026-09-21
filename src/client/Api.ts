@@ -1535,6 +1535,18 @@ export type PaymentsCheckoutResult =
   // (a double click, or the store offered a tier they have). Nothing was
   // charged.
   | { ok: false; code: "already_subscribed"; existingTier: string }
+  // 409 subscription_past_due: the player's paid subscription has an unpaid
+  // invoice the rail is still retrying, so a second one would double-bill
+  // them the day a retry lands. `message` is the server's player-facing text
+  // and says what to do instead (fix the card or cancel under Manage), so
+  // show it as-is. Nothing was charged.
+  | {
+      ok: false;
+      code: "subscription_past_due";
+      message: string;
+      existingProvider: PaymentsProvider;
+      existingTier: string;
+    }
   // 409 tier_change_unavailable_on_provider: a Steam subscriber tried to
   // change tier and Steam refused a second agreement while one is live, or
   // tier changes are switched off on that rail. `message` is the server's
@@ -1686,6 +1698,21 @@ export async function createPaymentsCheckout(
             existingTier:
               typeof body?.existingTier === "string" ? body.existingTier : "",
           };
+        }
+        if (reason === "subscription_past_due") {
+          const existingProvider = readProvider(body?.existingProvider);
+          // Always a paid row (a grant has no invoice), so the rail is
+          // always named; a body without one is malformed.
+          if (existingProvider !== null) {
+            return {
+              ok: false,
+              code: "subscription_past_due",
+              message: typeof body?.message === "string" ? body.message : "",
+              existingProvider,
+              existingTier:
+                typeof body?.existingTier === "string" ? body.existingTier : "",
+            };
+          }
         }
         if (
           reason === "tier_change_unavailable_on_provider" &&
