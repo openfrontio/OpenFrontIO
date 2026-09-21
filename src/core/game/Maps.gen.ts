@@ -27,6 +27,7 @@ export enum GameMapType {
   BranchingPaths = "Branching Paths", // map-generator/assets/maps/branchingpaths/info.json
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
   BritanniaClassic = "Britannia Classic", // map-generator/assets/maps/britanniaclassic/info.json
+  CanaryIslands = "Canary Islands", // map-generator/assets/maps/canaryislands/info.json
   CapeCod = "Cape Cod", // map-generator/assets/maps/capecod/info.json
   Caribbean = "Caribbean", // map-generator/assets/maps/caribbean/info.json
   CaspianSea = "Caspian Sea", // map-generator/assets/maps/caspiansea/info.json
@@ -55,6 +56,7 @@ export enum GameMapType {
   Germany = "Germany", // map-generator/assets/maps/germany/info.json
   GiantWorldMap = "Giant World Map", // map-generator/assets/maps/giantworldmap/info.json
   GreatLakes = "Great Lakes", // map-generator/assets/maps/greatlakes/info.json
+  Guanabara = "Rio de Janeiro", // map-generator/assets/maps/guanabara/info.json
   GulfOfGuinea = "Gulf Of Guinea", // map-generator/assets/maps/gulfofguinea/info.json
   GulfOfMexico = "Gulf Of Mexico", // map-generator/assets/maps/gulfofmexico/info.json
   GulfOfStLawrence = "Gulf of St. Lawrence", // map-generator/assets/maps/gulfofstlawrence/info.json
@@ -535,6 +537,18 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 23,
     themes: ["europe"],
+  },
+  {
+    id: "CanaryIslands",
+    type: GameMapType.CanaryIslands,
+    translationKey: "map.canaryislands",
+    categories: ["new", "africa"],
+    multiplayerFrequency: 3,
+    ffaFrequency: -1,
+    teamFrequency: 10,
+    specialFrequency: -1,
+    defaultNationCount: 14,
+    themes: ["africa"],
   },
   {
     id: "CapeCod",
@@ -1385,6 +1399,17 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 34,
     themes: ["north_america"],
+  },
+  {
+    id: "Guanabara",
+    type: GameMapType.Guanabara,
+    translationKey: "map.guanabara",
+    categories: ["south_america"],
+    multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 30,
   },
   {
     id: "GulfOfGuinea",

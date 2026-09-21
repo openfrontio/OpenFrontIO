@@ -3,17 +3,17 @@
   "id": "PulicatLake",
   "map": {
     "height": 1796,
-    "num_land_tiles": 865544,
+    "num_land_tiles": 851671,
     "width": 1176
   },
   "map16x": {
     "height": 449,
-    "num_land_tiles": 51202,
+    "num_land_tiles": 49500,
     "width": 294
   },
   "map4x": {
     "height": 898,
-    "num_land_tiles": 212464,
+    "num_land_tiles": 207418,
     "width": 588
   },
   "multiplayer_frequency": 3,

@@ -731,6 +731,7 @@
     "crashed": "Game crashed!",
     "desync_notice": "You are desynced from other players. What you see might differ from other players.",
     "login_failed": "Login failed. Please try again later.",
+    "login_token_consumed": "This login link was already used. You're probably already logged in — check another tab.",
     "paste_discord": "Please paste the following in your bug report in Discord:",
     "spawn_failed": {
       "description": "Automatic spawn selection failed. You can't play this game.",
@@ -1327,6 +1328,7 @@
     "branchingpaths": "Branching Paths",
     "britannia": "Britannia",
     "britanniaclassic": "Britannia (Classic)",
+    "canaryislands": "Canary Islands",
     "capecod": "Cape Cod",
     "caribbean": "Caribbean",
     "caspiansea": "Caspian Sea",
@@ -1357,6 +1359,7 @@
     "germany": "Germany",
     "giantworldmap": "Giant World Map",
     "greatlakes": "Great Lakes",
+    "guanabara": "Rio de Janeiro",
     "gulfofguinea": "Gulf Of Guinea",
     "gulfofmexico": "Gulf Of Mexico",
     "gulfofstlawrence": "Gulf of St. Lawrence",
