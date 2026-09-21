@@ -9,7 +9,11 @@ declare global {
   }
 }
 
-import { formatKeyForDisplay, translateText } from "../client/Utils";
+import {
+  formatKeyForDisplay,
+  resolveKeybindLabel,
+  translateText,
+} from "../client/Utils";
 import type { MapLayer } from "../core/game/TerrainMapLoader";
 import {
   AudioCategory,
@@ -179,11 +183,14 @@ export class UserSettingModal extends BaseModal {
     );
 
     if (navigator.keyboard) {
-      navigator.keyboard.getLayoutMap().then((map) => {
-        this.layoutMap = map;
-      }).catch((e) => {
-        console.warn("Failed to get keyboard layout map:", e);
-      });
+      navigator.keyboard
+        .getLayoutMap()
+        .then((map) => {
+          this.layoutMap = map;
+        })
+        .catch((e) => {
+          console.warn("Failed to get keyboard layout map:", e);
+        });
     }
   }
 
@@ -365,14 +372,8 @@ export class UserSettingModal extends BaseModal {
 
   private getKeyChar(action: string): string {
     const entry = this.userKeybinds[action];
-    if (!entry) {
-      const defaultCode = this.defaultKeybinds[action] || "";
-      if (this.layoutMap && this.layoutMap.has(defaultCode)) {
-        return this.layoutMap.get(defaultCode)!.toUpperCase();
-      }
-      return formatKeyForDisplay(defaultCode);
-    }
-    return entry.key || formatKeyForDisplay(entry.value || "");
+    const defaultCode = this.defaultKeybinds[action] || "";
+    return resolveKeybindLabel(entry, defaultCode, this.layoutMap);
   }
 
   private handleEasterEggKey = (e: KeyboardEvent) => {

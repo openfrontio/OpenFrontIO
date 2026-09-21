@@ -12,7 +12,7 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
-import { renderNumber, translateText } from "../../Utils";
+import { renderNumber, resolveKeybindLabel, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
   atomBombIcon,
@@ -55,11 +55,14 @@ export class UnitDisplay extends LitElement implements Controller {
   connectedCallback() {
     super.connectedCallback();
     if (navigator.keyboard) {
-      navigator.keyboard.getLayoutMap().then((map) => {
-        this.layoutMap = map;
-      }).catch((e) => {
-        console.warn("Failed to get keyboard layout map:", e);
-      });
+      navigator.keyboard
+        .getLayoutMap()
+        .then((map) => {
+          this.layoutMap = map;
+        })
+        .catch((e) => {
+          console.warn("Failed to get keyboard layout map:", e);
+        });
     }
   }
 
@@ -232,13 +235,7 @@ export class UnitDisplay extends LitElement implements Controller {
 
   private getHotkey(action: string, defaultCode: string): string {
     const entry = this.keybinds[action];
-    if (entry && entry.key) {
-      return entry.key;
-    }
-    if (this.layoutMap && this.layoutMap.has(defaultCode)) {
-      return this.layoutMap.get(defaultCode)!;
-    }
-    return defaultCode.replace("Digit", "").replace("Key", "");
+    return resolveKeybindLabel(entry, defaultCode, this.layoutMap);
   }
 
   private renderUnitItem(

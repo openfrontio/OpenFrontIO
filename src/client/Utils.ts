@@ -381,6 +381,34 @@ export function formatPercentage(value: number): string {
  * formatKeyForDisplay("ArrowUp") // returns "Arrowup"
  * formatKeyForDisplay("") // returns ""
  */
+export function resolveKeybindLabel(
+  entry: any,
+  defaultCode: string,
+  layoutMap: Map<string, string> | null,
+): string {
+  const valueCode =
+    typeof entry === "string" ? entry : (entry?.value ?? defaultCode);
+  const savedKey = typeof entry === "string" ? "" : (entry?.key ?? "");
+
+  let isShift = false;
+  let codeToResolve = valueCode;
+  if (valueCode.startsWith("Shift+")) {
+    isShift = true;
+    codeToResolve = valueCode.slice(6);
+  }
+
+  if (layoutMap && layoutMap.has(codeToResolve)) {
+    const char = layoutMap.get(codeToResolve)!.toUpperCase();
+    return isShift ? `Shift+${char}` : char;
+  }
+
+  if (savedKey) {
+    return savedKey;
+  }
+
+  return formatKeyForDisplay(valueCode);
+}
+
 export function formatKeyForDisplay(value: string): string {
   // Handle empty string
   if (!value) return "";

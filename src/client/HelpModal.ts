@@ -26,11 +26,14 @@ export class HelpModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     if (navigator.keyboard) {
-      navigator.keyboard.getLayoutMap().then((map) => {
-        this.layoutMap = map;
-      }).catch((e) => {
-        console.warn("Failed to get keyboard layout map:", e);
-      });
+      navigator.keyboard
+        .getLayoutMap()
+        .then((map) => {
+          this.layoutMap = map;
+        })
+        .catch((e) => {
+          console.warn("Failed to get keyboard layout map:", e);
+        });
     }
   }
 
@@ -61,8 +64,12 @@ export class HelpModal extends BaseModal {
       Comma: "<",
     };
 
+    if ((code === "Period" || code === "Comma") && this.layoutMap?.has(code)) {
+      return this.layoutMap.get(code)!.toUpperCase();
+    }
     if (specialLabels[code]) return specialLabels[code];
-    if (this.layoutMap && this.layoutMap.has(code)) return this.layoutMap.get(code)!.toUpperCase();
+    if (this.layoutMap && this.layoutMap.has(code))
+      return this.layoutMap.get(code)!.toUpperCase();
     if (code.startsWith("Key") && code.length === 4) return code.slice(3);
     if (code.startsWith("Digit")) return code.slice(5);
     if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;
