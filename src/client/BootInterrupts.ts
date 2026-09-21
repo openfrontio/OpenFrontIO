@@ -426,6 +426,7 @@ export interface BootInterruptPorts {
 export interface BootInterruptContext {
   claimStore: ClaimPromptStore;
   publicId: string;
+  hasRewards: boolean;
 }
 
 /**
@@ -467,6 +468,7 @@ export async function runBootInterrupt(
         claimPromptShown(context.claimStore, ports.now(), context.publicId),
       );
       const accepted = await ports.confirm(body, heading, confirmText);
+      if (context.hasRewards) ports.openRewards();
       if (accepted) ports.navigate(USERNAME_FORM_HASH);
       return;
     }

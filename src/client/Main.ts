@@ -766,7 +766,7 @@ class Client {
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
           }),
-          { claimStore, publicId },
+          { claimStore, publicId, hasRewards: rewards.length > 0 },
           {
             translate: translateText,
             confirm: (body, heading, confirmText) =>

@@ -18,6 +18,7 @@ import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
   accountNameHeld,
+  accountPremiumUnclaimed,
   accountVerifiedName,
   clampUsername,
   genAnonUsername,
@@ -1053,6 +1054,7 @@ export class UsernameInput extends LitElement {
 
   private renderUseVerifiedButton() {
     const eligible = this.verifiedName() !== null;
+    const unclaimed = accountPremiumUnclaimed(this.userMe);
     const held = accountNameHeld(this.userMe);
     const hint = held
       ? translateText("username.verified_held_hint", {
@@ -1060,13 +1062,20 @@ export class UsernameInput extends LitElement {
             (this.userMe === false ? undefined : this.userMe?.player)
               ?.usernameBase ?? "",
         })
-      : translateText("username.verified_use_hint");
+      : unclaimed
+        ? translateText("username.verified_claim_hint")
+        : translateText("username.verified_use_hint");
+
+    const buttonClass = eligible
+      ? "border-malibu-blue/50 bg-malibu-blue/10 hover:border-malibu-blue/80 hover:bg-malibu-blue/20"
+      : unclaimed
+        ? "border-amber-500/40 bg-amber-950/40 hover:border-amber-500/60 hover:bg-amber-950/60"
+        : "border-white/10 bg-black/20 hover:border-white/25 hover:bg-black/35";
+
     return html`
       <button
         type="button"
-        class="group flex h-full w-full items-center justify-center gap-1.5 rounded-lg border px-2 transition-colors cursor-pointer select-none ${eligible
-          ? "border-malibu-blue/50 bg-malibu-blue/10 hover:border-malibu-blue/80 hover:bg-malibu-blue/20"
-          : "border-white/10 bg-black/20 hover:border-white/25 hover:bg-black/35"}"
+        class="group flex h-full w-full items-center justify-center gap-1.5 rounded-lg border px-2 transition-colors cursor-pointer select-none ${buttonClass}"
         title=${hint}
         aria-pressed="false"
         @click=${this.handleVerifiedToggle}
@@ -1075,13 +1084,17 @@ export class UsernameInput extends LitElement {
           "w-5 h-5 transition-colors",
           eligible
             ? "text-aquarius"
-            : "text-white/25 group-hover:text-white/45",
+            : unclaimed
+              ? "text-amber-500/80 group-hover:text-amber-400"
+              : "text-white/25 group-hover:text-white/45",
           null,
         )}
         <span
           class="hidden sm:inline text-sm font-medium whitespace-nowrap transition-colors ${eligible
             ? "text-white"
-            : "text-white/60 group-hover:text-white/90"}"
+            : unclaimed
+              ? "text-amber-500/80 group-hover:text-amber-400"
+              : "text-white/60 group-hover:text-white/90"}"
           >${translateText("username.verified_use")}</span
         >
       </button>
