@@ -242,11 +242,27 @@ export async function tempTokenLogin(token: string): Promise<TokenLoginResult> {
         : "invalid";
     return { status: "failed", code };
   }
+  // A permanent client error (anything but the rate-limit 429) can't be
+  // fixed by asking again with the same token — only 429 and a transient
+  // server/network failure are worth retrying.
+  if (
+    response.status >= 400 &&
+    response.status < 500 &&
+    response.status !== 429
+  ) {
+    console.error("Token login failed with a permanent client error", response);
+    return { status: "failed", code: "invalid" };
+  }
   if (response.status !== 200) {
     console.error("Token login failed", response);
     return { status: "retry" };
   }
-  const { email } = await response.json();
+  const body = await response.json().catch(() => null);
+  const email = (body as { email?: unknown } | null)?.email;
+  if (typeof email !== "string") {
+    console.error("Token login succeeded but response had no email", body);
+    return { status: "retry" };
+  }
   return { status: "success", email };
 }
 
