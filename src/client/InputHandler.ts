@@ -843,8 +843,9 @@ export class InputHandler {
     if (wasLongPress) {
       this.canvas.style.cursor = "";
       // If long-press fired but no drag happened (selectionBoxActive is false),
-      // allow touch tap to proceed so stationary long-press can open menus.
-      if (!this.selectionBoxActive) {
+      // allow touch tap to proceed so stationary long-press can open menus,
+      // unless the pointer was canceled (e.g. by native gesture hijacking).
+      if (!this.selectionBoxActive && event.type !== "pointercancel") {
         this.suppressNextTap = false;
       }
     }
