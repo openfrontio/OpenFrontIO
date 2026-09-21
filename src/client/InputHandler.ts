@@ -893,6 +893,11 @@ export class InputHandler {
     if (event.button > 0) {
       return;
     }
+    // The release listener is global so map drags can end over the HUD. A HUD
+    // click has no matching map pointerdown and must not reuse stale map state.
+    if (!this.pointerDown || !this.pointers.has(event.pointerId)) {
+      return;
+    }
     this.pointerDown = false;
     this.pointers.clear();
 

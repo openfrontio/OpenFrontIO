@@ -79,6 +79,19 @@ describe("InputHandler AutoUpgrade", () => {
     );
   });
 
+  const beginTrackedPointer = (x: number, y: number, pointerId = 1) => {
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: x,
+        clientY: y,
+        pointerId,
+      }),
+    );
+    inputHandler["lastPointerDownX"] = x;
+    inputHandler["lastPointerDownY"] = y;
+  };
+
   afterEach(() => {
     inputHandler.destroy();
   });
@@ -256,9 +269,9 @@ describe("InputHandler AutoUpgrade", () => {
         button: 0,
         clientX: 150,
         clientY: 250,
+        pointerId: 1,
       });
-      inputHandler["lastPointerDownX"] = 149;
-      inputHandler["lastPointerDownY"] = 249;
+      beginTrackedPointer(149, 249);
 
       inputHandler["onPointerUp"](pointerEvent);
 
@@ -306,9 +319,9 @@ describe("InputHandler AutoUpgrade", () => {
         button: 0,
         clientX: 150,
         clientY: 250,
+        pointerId: 1,
       });
-      inputHandler["lastPointerDownX"] = 149;
-      inputHandler["lastPointerDownY"] = 249;
+      beginTrackedPointer(149, 249);
 
       inputHandler["onPointerUp"](pointerEvent);
 
@@ -329,9 +342,9 @@ describe("InputHandler AutoUpgrade", () => {
         button: 0,
         clientX: 150,
         clientY: 250,
+        pointerId: 1,
       });
-      inputHandler["lastPointerDownX"] = 149;
-      inputHandler["lastPointerDownY"] = 249;
+      beginTrackedPointer(149, 249);
 
       inputHandler["onPointerUp"](pointerEvent);
 
@@ -352,9 +365,9 @@ describe("InputHandler AutoUpgrade", () => {
         button: 0,
         clientX: 150,
         clientY: 250,
+        pointerId: 1,
       });
-      inputHandler["lastPointerDownX"] = 149;
-      inputHandler["lastPointerDownY"] = 249;
+      beginTrackedPointer(149, 249);
 
       inputHandler["onPointerUp"](pointerEvent);
 
@@ -367,6 +380,21 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Pointer Event Handling", () => {
+    test("should ignore a pointerup without a matching canvas pointerdown", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: 150,
+          clientY: 250,
+          pointerId: 1,
+        }),
+      );
+
+      expect(mockEmit).not.toHaveBeenCalled();
+    });
+
     test("should handle pointer events with different pointer IDs", () => {
       const mockEmit = vi.spyOn(eventBus, "emit");
 
