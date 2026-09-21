@@ -211,6 +211,20 @@ export enum UnitType {
   Factory = "Factory",
 }
 
+export const UnitTranslations: ReadonlyMap<UnitType, string> = new Map([
+  [UnitType.City, "unit_type.city"],
+  [UnitType.DefensePost, "unit_type.defense_post"],
+  [UnitType.Port, "unit_type.port"],
+  [UnitType.Warship, "unit_type.warship"],
+  [UnitType.TransportShip, "unit_type.boat"],
+  [UnitType.MissileSilo, "unit_type.missile_silo"],
+  [UnitType.SAMLauncher, "unit_type.sam_launcher"],
+  [UnitType.AtomBomb, "unit_type.atom_bomb"],
+  [UnitType.HydrogenBomb, "unit_type.hydrogen_bomb"],
+  [UnitType.MIRV, "unit_type.mirv"],
+  [UnitType.Factory, "unit_type.factory"],
+]);
+
 export enum TrainType {
   Engine = "Engine",
   TailEngine = "TailEngine",
