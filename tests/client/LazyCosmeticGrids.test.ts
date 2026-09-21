@@ -102,6 +102,23 @@ describe("lazy cosmetic previews", () => {
     expect(preview.querySelector("canvas")).toBeNull();
   });
 
+  it("blanks the canvas when new pattern data won't decode", async () => {
+    const preview = await mountPreview(checker);
+    report(preview, true);
+    await preview.updateComplete;
+    expect(preview.querySelector("canvas")!.width).toBe(150);
+
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    preview.resolved = {
+      ...checker,
+      cosmetic: { name: "broken", pattern: "AA", rarity: "rare" },
+    } as unknown as ResolvedCosmetic;
+    await preview.updateComplete;
+    await preview.querySelector<LitElement>("pattern-preview-canvas")!
+      .updateComplete;
+    expect(preview.querySelector("canvas")!.width).toBe(0);
+  });
+
   it("stops observing once removed", async () => {
     const preview = await mountPreview(checker);
     preview.remove();
@@ -166,6 +183,23 @@ describe("ProgressiveList", () => {
     await host.updateComplete;
     expect(count(host)).toBe(100);
     expect(sentinel(host)).toBeNull();
+  });
+
+  it("keeps paging after a new key while still on the first page", async () => {
+    const host = document.createElement("paged-host") as PagedHost;
+    document.body.appendChild(host);
+    await host.updateComplete;
+    const firstSentinel = sentinel(host);
+
+    host.search = "a";
+    host.requestUpdate();
+    await host.updateComplete;
+    expect(count(host)).toBe(40);
+    expect(sentinel(host)).toBe(firstSentinel);
+
+    report(sentinel(host)!, true);
+    await host.updateComplete;
+    expect(count(host)).toBe(80);
   });
 
   it("starts over on a new key and on reset", async () => {

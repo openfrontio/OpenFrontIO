@@ -16,6 +16,7 @@ interface ListState {
 
 interface Watched {
   element: Element;
+  state: ListState;
   limit: number;
   stop: () => void;
 }
@@ -66,10 +67,15 @@ export class ProgressiveList implements ReactiveController {
       );
       const state = this.lists.get(slot)!;
       const current = this.watched.get(slot);
-      // Re-observe after every page, even on the same element: the observer
-      // only reports changes, and a sentinel still near the screen after a
-      // short page has nothing left to change.
-      if (current?.element === element && current.limit === state.limit) {
+      // Re-observe after every page or new key, even on the same element:
+      // the observer only reports changes, so a sentinel that stays near
+      // would never fire again, and a callback bound to a replaced state
+      // ignores everything.
+      if (
+        current?.element === element &&
+        current.state === state &&
+        current.limit === state.limit
+      ) {
         continue;
       }
       current?.stop();
@@ -78,6 +84,7 @@ export class ProgressiveList implements ReactiveController {
       const limit = state.limit;
       this.watched.set(slot, {
         element,
+        state,
         limit,
         stop: observeNear(element, (near) => {
           if (!near || state !== this.lists.get(slot) || state.limit !== limit)

@@ -60,7 +60,7 @@ export class PatternPreviewCanvas extends LitElement {
   render() {
     return html`<canvas
       role="img"
-      aria-label="Pattern preview"
+      aria-label=${translateText("cosmetics.pattern_preview")}
       class="w-full h-full object-contain [image-rendering:pixelated] pointer-events-none"
     ></canvas>`;
   }
@@ -153,6 +153,8 @@ function paintPattern(
     );
   } catch (e) {
     console.error("Error decoding pattern", e);
+    canvas.width = 0;
+    canvas.height = 0;
     return false;
   }
 
