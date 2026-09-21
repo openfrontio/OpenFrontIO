@@ -80,13 +80,13 @@ const TOUCH_TEXT_STEPS = new Set([
 
 /** Defaults shown when the player hasn't rebound the action (see UnitDisplay). */
 const HOTKEY_FALLBACKS = {
-  buildCity: "1",
-  buildFactory: "2",
-  buildPort: "3",
-  buildDefensePost: "4",
-  buildWarship: "7",
-  buildMissileSilo: "5",
-  buildAtomBomb: "8",
+  buildCity: "Digit1",
+  buildFactory: "Digit2",
+  buildPort: "Digit3",
+  buildDefensePost: "Digit4",
+  buildWarship: "Digit7",
+  buildMissileSilo: "Digit5",
+  buildAtomBomb: "Digit8",
 } as const;
 
 @customElement("tutorial-panel")
