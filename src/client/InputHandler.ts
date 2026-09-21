@@ -1047,12 +1047,15 @@ export class InputHandler {
       return;
     }
 
-    this.pointers.set(event.pointerId, event);
-
     if (!this.pointerDown) {
       this.eventBus.emit(new MouseOverEvent(event.clientX, event.clientY));
       return;
     }
+
+    if (!this.pointers.has(event.pointerId)) {
+      return;
+    }
+    this.pointers.set(event.pointerId, event);
 
     if (this.pointers.size === 1) {
       const deltaX = event.clientX - this.lastPointerX;

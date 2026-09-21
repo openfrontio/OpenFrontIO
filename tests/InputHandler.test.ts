@@ -395,6 +395,35 @@ describe("InputHandler AutoUpgrade", () => {
       expect(mockEmit).not.toHaveBeenCalled();
     });
 
+    test("should ignore HUD pointer movement while a map pointer is down", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      beginTrackedPointer(100, 100, 1);
+      mockEmit.mockClear();
+
+      inputHandler["onPointerMove"](
+        new PointerEvent("pointermove", {
+          button: -1,
+          clientX: 400,
+          clientY: 400,
+          pointerId: 2,
+        }),
+      );
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: 400,
+          clientY: 400,
+          pointerId: 2,
+        }),
+      );
+
+      expect(mockEmit).not.toHaveBeenCalled();
+      expect(inputHandler["pointerDown"]).toBe(true);
+      expect(inputHandler["pointers"].has(1)).toBe(true);
+      expect(inputHandler["pointers"].has(2)).toBe(false);
+    });
+
     test("should handle pointer events with different pointer IDs", () => {
       const mockEmit = vi.spyOn(eventBus, "emit");
 
