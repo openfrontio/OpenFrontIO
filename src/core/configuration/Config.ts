@@ -442,8 +442,8 @@ export class Config {
 
   /**
    * Global spawn throttle for the train economy, counted in Train *units*
-   * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns for the very
-   * first trains, ~1x around 35 units (~5 trains), then a capacity
+   * (~7 per train: engine, tail, 5 cars). Up to 1.8x spawns for the very
+   * first trains, ~1x around 45 units (~6 trains), then a capacity
    * sigmoid damps spawning past the ~560-unit midpoint. The damping
    * flattens onto a ~0.25 plateau past ~810 units (~115 trains), so a big
    * enough rail economy still scales at a quarter of the un-damped rate,
@@ -462,7 +462,7 @@ export class Config {
    * dominance, and leaves the plateau and hard cap untouched.
    */
   trainSaturation(numTrainUnits: number): number {
-    const boost = 1 + 0.5 * exp(-numTrainUnits / 30);
+    const boost = 1 + 0.8 * exp(-numTrainUnits / 30);
     const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 560);
     const plateau = 0.25 * (1 - sigmoid(numTrainUnits, Math.LN2 / 150, 900));
     return boost * Math.max(damping, plateau);
@@ -518,10 +518,10 @@ export class Config {
   }
 
   /**
-   * Global spawn throttle for the trade-ship economy. A mild ~1.45x odds
+   * Global spawn throttle for the trade-ship economy. A ~1.8x odds
    * boost while the world fleet is small (the pity timer square-roots the
-   * realized effect, so ~1.2x actual spawns), held through the opening
-   * trading minutes and crossing the old un-boosted curve around 110
+   * realized effect, so ~1.35x actual spawns), held through the opening
+   * trading minutes and crossing the old un-boosted curve around 170
    * ships, then a capacity sigmoid damps spawning past the ~330-ship
    * midpoint. The damping flattens onto a 0.25 plateau past ~415 ships
    * (~half cadence per port after the pity timer), so heavy port
@@ -536,7 +536,7 @@ export class Config {
    * everything past ~450 ships (the late game) numerically unchanged.
    */
   tradeShipSaturation(numTradeShips: number): number {
-    const boost = 1 + 0.45 * exp(-numTradeShips / 120);
+    const boost = 1 + 0.8 * exp(-numTradeShips / 120);
     const damping = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 330);
     const plateau = 0.25 * (1 - sigmoid(numTradeShips, Math.LN2 / 100, 800));
     return boost * Math.max(damping, plateau);
