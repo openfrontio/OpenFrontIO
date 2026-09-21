@@ -2331,7 +2331,8 @@
     "verified_sub_required_confirm": "View store",
     "verified_use": "Use verified",
     "verified_use_custom": "Switch back to a custom name",
-    "verified_use_hint": "Play under your verified account name"
+    "verified_use_hint": "Play under your verified account name",
+    "verified_claim_hint": "Claim your verified name"
   },
   "win_modal": {
     "died": "You died",
