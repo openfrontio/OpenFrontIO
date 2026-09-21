@@ -231,7 +231,7 @@ export function nextBootInterrupt(
 export const CLAIM_PROMPT_KEY = "usernameClaimPrompt";
 
 /** How many times the claim prompt may ever interrupt one account. */
-export const CLAIM_PROMPT_MAX_SHOWS = 3;
+export const CLAIM_PROMPT_MAX_SHOWS = 1;
 
 /**
  * The quiet period between showings. A player who launches five times in an
