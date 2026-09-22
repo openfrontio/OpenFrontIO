@@ -7,8 +7,8 @@ import {
   DragEvent,
   InputHandler,
   MouseDownEvent,
-  MouseUpEvent,
   MouseOverEvent,
+  MouseUpEvent,
   TouchLongPressStartEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
@@ -52,6 +52,7 @@ function dispatchDomPointer(
   type: "pointerdown" | "pointermove" | "pointerup",
   x: number,
   y: number,
+  pointerId = 1,
 ): void {
   const event = new Event(type, { bubbles: true, composed: true });
   Object.assign(event, {
@@ -60,7 +61,7 @@ function dispatchDomPointer(
     clientY: y,
     x,
     y,
-    pointerId: 1,
+    pointerId,
     pointerType: "mouse",
   });
   target.dispatchEvent(event);
@@ -437,6 +438,34 @@ describe("InputHandler AutoUpgrade", () => {
       expect(inputHandler["pointerDown"]).toBe(false);
       expect(inputHandler["pointers"].size).toBe(0);
       expect(mouseUp).not.toHaveBeenCalled();
+    });
+
+    test("preserves an existing map pointer when a toast drag starts", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(mockCanvas, "pointerdown", 20, 20, 1);
+      dispatchDomPointer(toast, "pointerdown", 100, 100, 2);
+      dispatchDomPointer(toast, "pointermove", 104, 100, 2);
+
+      expect(inputHandler["pointers"].size).toBe(2);
+
+      dispatchDomPointer(toast, "pointermove", 110, 100, 2);
+
+      expect(inputHandler["pointerDown"]).toBe(true);
+      expect(inputHandler["pointers"].size).toBe(1);
+      expect(inputHandler["pointers"].has(1)).toBe(true);
+      expect(inputHandler["pointers"].has(2)).toBe(false);
+
+      dispatchDomPointer(window, "pointerup", 20, 20, 1);
+      toast.remove();
+
+      expect(mouseUp).toHaveBeenCalledOnce();
     });
 
     test("should ignore a pointerup without a matching canvas pointerdown", () => {
