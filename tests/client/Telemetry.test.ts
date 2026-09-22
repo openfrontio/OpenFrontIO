@@ -82,7 +82,7 @@ describe("Telemetry", () => {
     });
     await initTelemetry();
     expect(initializeFaro.mock.calls[0][0]).toMatchObject({
-      app: { environment: "preprod" },
+      app: { environment: "staging" },
       sessionTracking: { samplingRate: 1 },
     });
   });

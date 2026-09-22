@@ -129,8 +129,10 @@ function environmentName(env: GameEnv): string {
   switch (env) {
     case GameEnv.Prod:
       return "prod";
+    // Matches ServerEnv.gameEnvName, so browser and server signals for one
+    // deployment share an environment label in Grafana.
     case GameEnv.Preprod:
-      return "preprod";
+      return "staging";
     default:
       return "dev";
   }
