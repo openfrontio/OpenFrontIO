@@ -141,6 +141,19 @@ describe("Telemetry", () => {
     expect(config.beforeSend(item)).toEqual(item);
   });
 
+  // Faro does not guard the hook, so a shape it cannot scrub must be dropped,
+  // never thrown (into Faro's flush timer) and never sent unscrubbed.
+  it("drops a signal it cannot scrub instead of throwing", async () => {
+    page({ faroCollectorUrl: "https://faro.example/collect/k" });
+    await initTelemetry();
+    const config = initializeFaro.mock.calls[0][0] as {
+      beforeSend: (item: unknown) => unknown;
+    };
+    expect(
+      config.beforeSend({ type: "event", payload: null, meta: null }),
+    ).toBe(null);
+  });
+
   it("reports a game error with its game and client ids", async () => {
     page({ faroCollectorUrl: "https://faro.example/collect/k" });
 

@@ -83,20 +83,28 @@ export function stripUrl(url: string): string {
   return url.split(/[?#]/, 1)[0];
 }
 
-function scrubUrls(item: TransportItem): TransportItem {
-  const page = item.meta.page;
-  if (page?.url !== undefined) {
-    item.meta = { ...item.meta, page: { ...page, url: stripUrl(page.url) } };
-  }
-  const attributes = (item.payload as { attributes?: Record<string, unknown> })
-    .attributes;
-  if (attributes !== undefined) {
-    for (const key of ["fromUrl", "toUrl"]) {
-      const value = attributes[key];
-      if (typeof value === "string") attributes[key] = stripUrl(value);
+// Faro runs this hook unguarded on its flush path. Anything it cannot scrub
+// is dropped (null) rather than thrown or sent as-is: telemetry must neither
+// reach the player nor leak what it was meant to cut.
+function scrubUrls(item: TransportItem): TransportItem | null {
+  try {
+    const page = item.meta.page;
+    if (page?.url !== undefined) {
+      item.meta = { ...item.meta, page: { ...page, url: stripUrl(page.url) } };
     }
+    const attributes = (
+      item.payload as { attributes?: Record<string, unknown> } | null
+    )?.attributes;
+    if (attributes !== undefined && attributes !== null) {
+      for (const key of ["fromUrl", "toUrl"]) {
+        const value = attributes[key];
+        if (typeof value === "string") attributes[key] = stripUrl(value);
+      }
+    }
+    return item;
+  } catch {
+    return null;
   }
-  return item;
 }
 
 /** Test-only. */
