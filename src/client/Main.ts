@@ -960,7 +960,11 @@ class Client {
         steamSDK.isOnSteam() &&
         (window.location.hash === "" || window.location.hash === "#")
       ) {
-        history.pushState(null, "", window.location.pathname);
+        history.pushState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
       }
 
       if (this.currentUrl !== null && this.lobbyHandle !== null) {
@@ -1010,7 +1014,11 @@ class Client {
     ) {
       // Push an initial state so the hardware back button has something to pop,
       // triggering our onPopState trap above instead of exiting the app.
-      history.pushState(null, "", window.location.pathname);
+      history.pushState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
     }
 
     function updateSliderProgress(slider: HTMLInputElement) {
