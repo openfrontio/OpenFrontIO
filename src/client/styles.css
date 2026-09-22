@@ -736,11 +736,13 @@ unit-display .tutorial-highlight::after {
 }
 
 .remove-player-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 16px;
   height: 16px;
+  padding: 0;
+  flex-shrink: 0;
   margin-left: 4px;
   border: none;
   border-radius: 50%;

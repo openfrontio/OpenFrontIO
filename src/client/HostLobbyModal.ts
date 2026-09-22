@@ -650,6 +650,7 @@ export class HostLobbyModal extends BaseModal {
             width="block"
             size="lg"
             .title=${statusLabel}
+            .uppercase=${secondsRemaining === null}
             ?disable=${this.lobbyStartAt === null && this.clients.length < 2}
             @click=${this.toggleGameStartTimer}
           ></o-button>

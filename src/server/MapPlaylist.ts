@@ -25,8 +25,9 @@ import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
 
-// Hard cap on player count for performance. Applied after compact-map reduction.
-const MAX_PLAYER_COUNT = 125;
+// Lobby size the Crowded modifier forces on small maps (compact / normal).
+const CROWDED_COMPACT_PLAYER_COUNT = 60;
+const CROWDED_PLAYER_COUNT = 125;
 
 // Every Nth scheduled public game (FFA, team and special alike, counted in
 // creation order) is trusted-only (GameConfig.trusted): only accounts the API
@@ -344,7 +345,7 @@ export class MapPlaylist {
     if (appliedForced.has("isDoomsdayClock")) isDoomsdayClock = true;
 
     // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
-    // set player count to MAX_PLAYER_COUNT (or 60 if compact map is also enabled)
+    // set player count to CROWDED_PLAYER_COUNT (or CROWDED_COMPACT_PLAYER_COUNT if compact map is also enabled)
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
       crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, !!isCompact);
@@ -755,8 +756,8 @@ export class MapPlaylist {
     const [l, , s] = this.calculateMapPlayerCounts(landTiles);
     // Worst case: smallest tier with team mode 1.5x multiplier, capped at l
     let p = Math.min(Math.ceil(s * 1.5), l);
-    // Apply compact 75% player reduction, then cap for performance
-    p = Math.min(Math.max(3, Math.floor(p * 0.25)), MAX_PLAYER_COUNT);
+    // Apply compact 75% player reduction
+    p = Math.max(3, Math.floor(p * 0.25));
     // Apply team adjustment
     p = this.adjustForTeams(p, playerTeams);
     return this.supportsTeamPlayerCount(p, playerTeams);
@@ -832,10 +833,9 @@ export class MapPlaylist {
     isCompact: boolean,
   ): Promise<number | undefined> {
     const landTiles = await getMapLandTiles(map);
-    const [rawFirstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
-    const firstPlayerCount = Math.min(rawFirstPlayerCount, MAX_PLAYER_COUNT);
+    const [firstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
     if (firstPlayerCount <= 60) {
-      return isCompact ? 60 : MAX_PLAYER_COUNT;
+      return isCompact ? CROWDED_COMPACT_PLAYER_COUNT : CROWDED_PLAYER_COUNT;
     }
     return undefined;
   }
@@ -854,8 +854,6 @@ export class MapPlaylist {
     if (isCompactMap) {
       p = Math.max(3, Math.floor(p * 0.25));
     }
-    // Cap for performance
-    p = Math.min(p, MAX_PLAYER_COUNT);
     return p;
   }
 

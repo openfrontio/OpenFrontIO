@@ -230,7 +230,7 @@ export class WinModal extends LitElement implements Controller {
     return html`
       <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
         <h3 class="text-xl font-semibold text-white mb-3">
-          ${translateText("steam_wishlist.title")}
+          ${translateText("steam_wishlist.buy_on_steam")}
         </h3>
         <steam-wishlist
           campaign="win_modal"

@@ -11,6 +11,12 @@ import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { NukeType } from "../StatsSchemas";
 
+const INTERCEPTED_UNIT_TRANSLATION_KEYS: Partial<Record<UnitType, string>> = {
+  [UnitType.AtomBomb]: "unit_type.atom_bomb",
+  [UnitType.HydrogenBomb]: "unit_type.hydrogen_bomb",
+  [UnitType.MIRVWarhead]: "unit_type.mirv",
+};
+
 export class SAMMissileExecution implements Execution {
   private active = true;
   private pathFinder: SteppingPathFinder<TileRef>;
@@ -72,7 +78,11 @@ export class SAMMissileExecution implements Execution {
           MessageType.SAM_HIT,
           this._owner.id(),
           undefined,
-          { unit: this.target.type() },
+          {
+            unit:
+              INTERCEPTED_UNIT_TRANSLATION_KEYS[this.target.type()] ??
+              this.target.type(),
+          },
         );
         this.active = false;
         this.target.delete(true, this._owner);
