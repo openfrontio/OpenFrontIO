@@ -12,6 +12,8 @@ import { Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { GameType, RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameStartInfo } from "../../../core/Schemas";
+import { generateID } from "../../../core/Util";
 import { syncAchievements } from "../../AchievementSignal";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticCard";
@@ -36,8 +38,10 @@ import { GameView } from "../../view";
 export class WinModal extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
+  private gameStartInfo?: GameStartInfo;
 
   private hasShownDeathModal = false;
+  private playAgainRequested = false;
 
   @state()
   isVisible = false;
@@ -93,6 +97,17 @@ export class WinModal extends LitElement implements Controller {
                   class="flex-1"
                   translationKey="win_modal.requeue"
                   @click=${this._handleRequeue}
+                ></o-button>
+              `
+            : null}
+          ${this.isSingleplayer && !this.isRankedGame
+            ? html`
+                <o-button
+                  variant="primary"
+                  width="block"
+                  class="flex-1"
+                  translationKey="win_modal.requeue"
+                  @click=${this._handlePlayAgain}
                 ></o-button>
               `
             : null}
@@ -281,6 +296,13 @@ export class WinModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  resetForGame(gameStartInfo?: GameStartInfo) {
+    this.gameStartInfo = gameStartInfo;
+    this.hasShownDeathModal = false;
+    this.playAgainRequested = false;
+    this.isVisible = false;
+  }
+
   private _handleExit() {
     this.hide();
     window.location.href = homeHref();
@@ -299,6 +321,40 @@ export class WinModal extends LitElement implements Controller {
               ? ("2v2" as const)
               : ("1v1" as const),
         },
+      }),
+    );
+  }
+
+  private get isSingleplayer(): boolean {
+    return (
+      this.gameStartInfo?.config.gameType === GameType.Singleplayer &&
+      this.gameStartInfo.players.length > 0
+    );
+  }
+
+  private _handlePlayAgain() {
+    if (
+      this.playAgainRequested ||
+      !this.isSingleplayer ||
+      this.isRankedGame ||
+      this.gameStartInfo === undefined
+    )
+      return;
+
+    const gameStartInfo: GameStartInfo = {
+      ...this.gameStartInfo,
+      gameID: generateID(),
+      lobbyCreatedAt: Date.now(),
+      players: this.gameStartInfo.players.map((player, index) =>
+        index === 0 ? { ...player, clientID: generateID() } : player,
+      ),
+    };
+
+    this.playAgainRequested = true;
+    this.hide();
+    document.dispatchEvent(
+      new CustomEvent("matchmaking-requeue", {
+        detail: { mode: "solo" as const, gameStartInfo },
       }),
     );
   }

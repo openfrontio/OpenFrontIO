@@ -850,6 +850,7 @@ async function createClientGame(
       lobbyConfig.playerRole,
       view,
       mapLayerController,
+      lobbyConfig.gameStartInfo,
     );
 
     const { builder: webglBuilder, stopFrameLoop } = mountWebGLFrameLoop(
