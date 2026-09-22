@@ -49,7 +49,7 @@ global.PointerEvent = MockPointerEvent as any;
 
 function dispatchDomPointer(
   target: EventTarget,
-  type: "pointerdown" | "pointermove" | "pointerup",
+  type: "pointerdown" | "pointermove" | "pointerup" | "pointercancel",
   x: number,
   y: number,
   pointerId = 1,
@@ -438,6 +438,48 @@ describe("InputHandler AutoUpgrade", () => {
       expect(inputHandler["pointerDown"]).toBe(false);
       expect(inputHandler["pointers"].size).toBe(0);
       expect(mouseUp).not.toHaveBeenCalled();
+    });
+
+    test("does not convert a cancelled toast gesture into a game tap", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(toast, "pointerdown", 100, 100);
+      dispatchDomPointer(toast, "pointercancel", 101, 101);
+      toast.remove();
+
+      expect(inputHandler["pointerDown"]).toBe(false);
+      expect(inputHandler["pointers"].size).toBe(0);
+      expect(mouseUp).not.toHaveBeenCalled();
+    });
+
+    test("preserves an existing map pointer when a toast tap ends", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(mockCanvas, "pointerdown", 20, 20, 1);
+      dispatchDomPointer(toast, "pointerdown", 100, 100, 2);
+      dispatchDomPointer(toast, "pointerup", 101, 101, 2);
+
+      expect(inputHandler["pointerDown"]).toBe(true);
+      expect(inputHandler["pointers"].size).toBe(1);
+      expect(inputHandler["pointers"].has(1)).toBe(true);
+      expect(mouseUp).not.toHaveBeenCalled();
+
+      dispatchDomPointer(window, "pointerup", 20, 20, 1);
+      toast.remove();
+
+      expect(mouseUp).toHaveBeenCalledOnce();
     });
 
     test("preserves an existing map pointer when a toast drag starts", () => {

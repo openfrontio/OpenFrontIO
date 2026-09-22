@@ -531,7 +531,7 @@ export class InputHandler {
     window.addEventListener("pointerup", (e) => this.onPointerUp(e), {
       signal,
     });
-    window.addEventListener("pointercancel", (e) => this.onPointerUp(e), {
+    window.addEventListener("pointercancel", this.onPointerCancel, {
       signal,
     });
     this.canvas.addEventListener(
@@ -946,6 +946,14 @@ export class InputHandler {
     this.suppressNextTap = false;
   }
 
+  private onPointerCancel = (event: PointerEvent): void => {
+    if (this.passThroughPointers.has(event.pointerId)) {
+      this.cancelPassThroughDrag(event.pointerId);
+      return;
+    }
+    this.onPointerUp(event);
+  };
+
   onPointerUp(event: PointerEvent) {
     if (event.button === 1) {
       event.preventDefault();
@@ -953,6 +961,13 @@ export class InputHandler {
     }
 
     if (event.button > 0) {
+      return;
+    }
+    if (
+      this.passThroughPointers.has(event.pointerId) &&
+      this.pointers.size > 1
+    ) {
+      this.cancelPassThroughDrag(event.pointerId);
       return;
     }
     this.passThroughPointers.delete(event.pointerId);
