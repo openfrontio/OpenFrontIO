@@ -98,6 +98,7 @@ import { RewardsModal } from "./RewardsModal";
 import {
   ensureServerList,
   redirectToGameVersion,
+  setServerListInGame,
   startServerListPolling,
 } from "./ServerList";
 import "./SinglePlayerModal";
@@ -249,12 +250,14 @@ export interface JoinLobbyEvent {
 /**
  * The single point where "a match is running" is published.
  *
- * Two consumers, and they must never disagree:
+ * Three consumers, and they must never disagree:
  *   - the `.in-game` body class, which the client's own markup keys off to hide
  *     the footer, the nav bars and the desktop update snackbar;
  *   - the Electron shell's updater, which pauses asset downloads and version
  *     polling in-game so a cache-bust cannot saturate a player's connection
- *     mid-match.
+ *     mid-match;
+ *   - the server-list heartbeat, which pauses in-game: a running match already
+ *     knows its server, so polling /cluster.json through it buys nothing.
  *
  * Every add/remove of that class goes through here. Setting the class without
  * telling the shell leaves the updater's pause dead; telling the shell without
@@ -267,6 +270,7 @@ export interface JoinLobbyEvent {
  */
 function setInGameSignal(inGame: boolean): void {
   document.body.classList.toggle("in-game", inGame);
+  setServerListInGame(inGame);
   void desktopUpdate()
     ?.setInGame?.(inGame)
     ?.catch(() => {});
