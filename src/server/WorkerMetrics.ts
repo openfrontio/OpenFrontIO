@@ -7,10 +7,14 @@ import * as dotenv from "dotenv";
 import { GameManager } from "./GameManager";
 import { getOtelResource, getPromLabels } from "./OtelResource";
 import { ServerEnv } from "./ServerEnv";
+import { WorkerLobbyService } from "./WorkerLobbyService";
 
 dotenv.config();
 
-export function initWorkerMetrics(gameManager: GameManager): void {
+export function initWorkerMetrics(
+  gameManager: GameManager,
+  lobbyService: WorkerLobbyService,
+): void {
   // Create resource with worker information
   const resource = getOtelResource();
 
@@ -56,6 +60,14 @@ export function initWorkerMetrics(gameManager: GameManager): void {
     },
   );
 
+  const lobbyClientsGauge = meter.createObservableGauge(
+    "openfront.lobby_clients.gauge",
+    {
+      description:
+        "Number of clients connected to the /lobbies WebSocket on this worker",
+    },
+  );
+
   const desyncsGauge = meter.createObservableGauge("openfront.desyncs.gauge", {
     description: "Number of detected desyncs on active games on this worker",
   });
@@ -77,6 +89,10 @@ export function initWorkerMetrics(gameManager: GameManager): void {
     for (const [platform, count] of gameManager.activeClientsByPlatform()) {
       result.observe(count, { ...labels, "openfront.platform": platform });
     }
+  });
+
+  lobbyClientsGauge.addCallback((result) => {
+    result.observe(lobbyService.connectedClients(), getPromLabels());
   });
 
   desyncsGauge.addCallback((result) => {

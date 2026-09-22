@@ -94,7 +94,7 @@ export async function startWorker() {
   );
 
   if (ServerEnv.otelEnabled()) {
-    initWorkerMetrics(gm);
+    initWorkerMetrics(gm, lobbyService);
   }
 
   const privilegeRefresher = new PrivilegeRefresher(

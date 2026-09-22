@@ -76,6 +76,11 @@ export class WorkerLobbyService {
     return this.deploymentActive;
   }
 
+  /** Browsers currently connected to this worker's /lobbies socket. */
+  connectedClients(): number {
+    return this.lobbyClients.size;
+  }
+
   private setupIPCListener() {
     process.on("message", (raw: unknown) => this.handleMasterMessage(raw));
   }
