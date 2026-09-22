@@ -214,6 +214,11 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     // maybe, later — document order keeps ours the querySelector result).
     document.body.innerHTML = `<username-input></username-input>${bodyInner}`;
 
+    localStorage.setItem(
+      "achievements.pushed",
+      JSON.stringify({ playerId: "p1", names: ["win_ffa"] }),
+    );
+
     // The import runs bootstrap: component registration, element upgrades,
     // then `new Client().initialize()`.
     await import("../../src/client/Main");
@@ -235,6 +240,10 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     // userAuth() === false → onUserMe(false) (line 735), which flips the ad
     // entitlement on for a signed-out web player.
     expect(window.adsEnabled).toBe(true);
+  });
+
+  it("clears the stale achievements.pushed record", () => {
+    expect(localStorage.getItem("achievements.pushed")).toBeNull();
   });
 
   it("routes a hashchange through onHashUpdate", async () => {

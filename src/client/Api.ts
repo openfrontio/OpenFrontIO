@@ -241,10 +241,9 @@ async function requestUserMe(): Promise<{
       // below. logOut() POSTs /auth/logout with credentials, revoking
       // whatever refresh cookie is live *now*, so a 401 that merely reports
       // the death of a session already replaced (sign-out then sign-in while
-      // this was in flight, which the post-game poll made reachable) would
-      // end the session that replaced it, signing out the player who just
-      // signed in. A 401 for the session that is still current is a genuine
-      // conclusion about it and still ends it.
+      // this was in flight) would end the session that replaced it, signing
+      // out the player who just signed in. A 401 for the session that is
+      // still current is a genuine conclusion about it and still ends it.
       //
       // Clearing the session announces itself (see clearLocalSession), so
       // consumers holding account state don't mistake this for the
@@ -308,30 +307,6 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
   })();
   __userMe = attempt.request;
   return attempt.request;
-}
-
-/**
- * Fetch /users/@me without reading OR disturbing the memoised copy.
- *
- * For the caller that needs an answer newer than the session's shared
- * profile — today, the post-game achievements poll, which runs after every
- * game. invalidateUserMe() + getUserMe() would do the same job while the
- * network is healthy, but a refetch that comes back falsy for any reason
- * other than a timeout is then memoised as `false` in the profile's place,
- * and every later consumer in the session — account nav, cosmetics, store,
- * the multiplayer join path — reads the player as signed out until they
- * reload the page. One 500 after one game should not cost the session its
- * account.
- *
- * So a refresh never reads or populates the shared memo: the caller gets the
- * fresh profile on success, and on failure the cache still holds exactly what
- * it held before — a stale or falsy value cannot be cached. A 401 still clears
- * it, but via the normal sign-out path, which is correct. The memo staying one
- * game stale is the pre-existing state of affairs and strictly better than the
- * alternative.
- */
-export async function fetchUserMeUncached(): Promise<UserMeResponse | false> {
-  return (await requestUserMe()).profile;
 }
 
 export function invalidateUserMe() {
