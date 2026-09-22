@@ -19,8 +19,12 @@ import { clientPlatform } from "./ClientPlatform";
  */
 
 // Fraction of sessions that report at all. Faro samples per session, so an
-// unsampled session sends nothing — errors included.
-const SESSION_SAMPLING_RATE = 1;
+// unsampled session sends nothing — errors included. Prod has enough
+// players that 1% is plenty of signal; everywhere else every session
+// reports, so a staging or dev deployment shows its errors right away.
+export function sessionSamplingRate(env: GameEnv): number {
+  return env === GameEnv.Prod ? 0.01 : 1;
+}
 
 let faroPromise: Promise<Faro | null> | null = null;
 
@@ -38,6 +42,7 @@ export function initTelemetry(): Promise<Faro | null> {
     faroPromise = Promise.resolve(null);
     return faroPromise;
   }
+  const env = ClientEnv.env();
   faroPromise = import("@grafana/faro-web-sdk")
     .then(({ initializeFaro, getWebInstrumentations }) =>
       initializeFaro({
@@ -45,10 +50,10 @@ export function initTelemetry(): Promise<Faro | null> {
         app: {
           name: "openfront-client",
           version: ClientEnv.gitCommit(),
-          environment: environmentName(ClientEnv.env()),
+          environment: environmentName(env),
         },
         sessionTracking: {
-          samplingRate: SESSION_SAMPLING_RATE,
+          samplingRate: sessionSamplingRate(env),
           session: { attributes: { platform: clientPlatform() } },
         },
         instrumentations: getWebInstrumentations({ captureConsole: false }),

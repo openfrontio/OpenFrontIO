@@ -63,10 +63,27 @@ describe("Telemetry", () => {
         version: "abc1234",
         environment: "prod",
       },
-      sessionTracking: { session: { attributes: { platform: "web" } } },
+      sessionTracking: {
+        samplingRate: 0.01,
+        session: { attributes: { platform: "web" } },
+      },
     });
     expect(getWebInstrumentations).toHaveBeenCalledWith({
       captureConsole: false,
+    });
+  });
+
+  // Prod has the players to make 1% plenty; a staging deployment wants every
+  // session so its errors show up at once.
+  it("samples 1% of sessions in prod and every session on staging", async () => {
+    page({
+      gameEnv: "staging",
+      faroCollectorUrl: "https://faro.example/collect/k",
+    });
+    await initTelemetry();
+    expect(initializeFaro.mock.calls[0][0]).toMatchObject({
+      app: { environment: "preprod" },
+      sessionTracking: { samplingRate: 1 },
     });
   });
 
