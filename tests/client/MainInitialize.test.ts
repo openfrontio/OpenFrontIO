@@ -62,6 +62,7 @@ vi.mock("../../src/client/BootInterrupts", () => ({
   CLAIM_PROMPT_KEY: "claim-prompt-store",
   claimPromptDue: () => false,
   claimPromptStringsReady: () => false,
+  steamGrantStringsReady: () => false,
   joinOwnsInFlightFlag: () => true,
   lapseShownAfterDispatch: (
     _resp: unknown,

@@ -77,9 +77,9 @@
     "reward_daily": "Daily subscription reward",
     "reward_signup_bonus": "Subscription signup bonus",
     "sign_in_desc": "Sign in to save your stats and progress",
-    "sub_granted_ends_on": "Free access ends {date}",
-    "sub_granted_from_purchase": "Included free with your Steam purchase. It isn't billed and doesn't renew, so there's nothing to manage or cancel.",
+    "sub_granted_from_purchase": "Included with your Steam purchase, paid for once on Steam. It isn't billed and doesn't renew, so there's nothing to manage or cancel. When it ends you keep the full game at no charge; only the {tier} perks stop.",
     "sub_granted_indefinite": "Free access granted to your account. It isn't billed, so there's nothing to manage or cancel.",
+    "sub_granted_perks_end_on": "{tier} perks end {date}",
     "sub_price_monthly": "{price}/mo",
     "sub_renews_on": "Renews {date}",
     "sub_status_active": "Active",
@@ -787,6 +787,15 @@
     "live": "LIVE",
     "minimize": "Minimize",
     "open_on_twitch": "Open {channel} on Twitch"
+  },
+  "free_play": {
+    "account": "Your account, stats, friends and cosmetics",
+    "ad_free_steam": "No ads in the Steam app, ever",
+    "after_grant_heading": "After it ends, you still get",
+    "custom_lobbies": "Private custom lobbies with friends",
+    "free_heading": "Playing for free includes",
+    "full_game": "The full game: every map and mode, online and single-player",
+    "ranked": "Ranked play, with the free daily match limit"
   },
   "friends": {
     "accept": "Accept",
@@ -1829,6 +1838,12 @@
   "spawn_timer": {
     "team_percent_tooltip": "{team}: {percent}"
   },
+  "steam_grant": {
+    "ended_body": "The month of {tier} that came with your Steam purchase has ended. Nothing has been charged and nothing will be. You keep the full game: every map and mode, online play, ranked with the free daily limit, and custom lobbies with friends. The Steam app stays ad-free. If you want the {tier} perks back, you can subscribe from the store at any time.",
+    "ended_heading": "Your included Steam month has ended",
+    "welcome_body": "Your Steam purchase includes {tier} until {date}. You paid once, on Steam: nothing is billed and nothing renews. When it ends you keep the full game, every map and mode, and the Steam app stays ad-free. Only the {tier} perks stop.",
+    "welcome_heading": "Included with your Steam purchase"
+  },
   "steam_handoff": {
     "launched": "Opening this lobby in the Steam app. If nothing happens, make sure Steam is running.",
     "open_in_steam": "Open in Steam",
@@ -2314,6 +2329,8 @@
     "enter_username": "Enter your username",
     "invalid_chars": "Username can only contain letters, numbers, spaces, underscores, hyphens, and periods.",
     "lapse_notice": "Your subscription ended, so you are no longer playing as \"{name}\". It stays reserved for you until {date} — resubscribe before then to keep it. After that anyone can take it.",
+    "lapse_notice_after_grant": "The month of premium access that came with your Steam purchase has ended, so you are no longer playing as \"{name}\". You keep the full game at no charge; only the premium perks stop. The name stays reserved for you until {date} — subscribe before then to keep it. After that anyone can take it.",
+    "lapse_notice_after_grant_at_risk": "The month of premium access that came with your Steam purchase has ended, so you are no longer playing as \"{name}\", and the name is no longer reserved. You keep the full game at no charge. Another player can take the name at any moment — subscribe now to keep it.",
     "lapse_notice_at_risk": "You are no longer playing as \"{name}\", and it is no longer reserved. Another player can take it at any moment — resubscribe now to keep it.",
     "not_string": "Username must be a string.",
     "tag": "TAG",
