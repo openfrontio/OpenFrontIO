@@ -353,6 +353,7 @@ describe("InventoryModal", () => {
       ownershipState: "loaded",
       isLoading: false,
       loadFailed: false,
+      isModalOpen: true,
     });
     modal.requestUpdate();
     await modal.updateComplete;
@@ -378,6 +379,20 @@ describe("InventoryModal", () => {
         .querySelector("o-modal")
         ?.shadowRoot?.querySelector('[role="tablist"]'),
     ).toBeNull();
+  });
+
+  it("builds no cosmetic cards while closed", async () => {
+    modal.open();
+    await modal.updateComplete;
+    expect(card(modal, "skin:owned_skin")).toBeTruthy();
+
+    modal.close();
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-card")).toBeNull();
+
+    modal.open();
+    await modal.updateComplete;
+    expect(card(modal, "skin:owned_skin")).toBeTruthy();
   });
 
   it("drops an open preview when the inventory closes", async () => {
