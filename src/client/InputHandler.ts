@@ -522,6 +522,9 @@ export class InputHandler {
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e), {
       signal,
     });
+    window.addEventListener("pointerdown", this.onPassThroughPointerDown, {
+      signal,
+    });
     window.addEventListener("pointerup", (e) => this.onPointerUp(e), {
       signal,
     });
@@ -884,6 +887,38 @@ export class InputHandler {
     }
   }
 
+  private isGameInputPassThrough(event: PointerEvent): boolean {
+    return (
+      event
+        .composedPath?.()
+        .some(
+          (target) =>
+            target instanceof HTMLElement &&
+            target.hasAttribute("data-game-input-pass-through"),
+        ) ?? false
+    );
+  }
+
+  private onPassThroughPointerDown = (event: PointerEvent): void => {
+    if (this.isGameInputPassThrough(event)) {
+      this.onPointerDown(event);
+    }
+  };
+
+  private cancelPassThroughDrag(): void {
+    this.pointerDown = false;
+    this.pointers.clear();
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    if (this.longPressActive) {
+      this.canvas.style.cursor = "";
+    }
+    this.longPressActive = false;
+    this.suppressNextTap = false;
+  }
+
   onPointerUp(event: PointerEvent) {
     if (event.button === 1) {
       event.preventDefault();
@@ -1053,6 +1088,16 @@ export class InputHandler {
     }
 
     if (!this.pointers.has(event.pointerId)) {
+      return;
+    }
+
+    if (this.isGameInputPassThrough(event)) {
+      const distance =
+        Math.abs(event.clientX - this.lastPointerDownX) +
+        Math.abs(event.clientY - this.lastPointerDownY);
+      if (distance >= this.DRAG_THRESHOLD_PX) {
+        this.cancelPassThroughDrag();
+      }
       return;
     }
     this.pointers.set(event.pointerId, event);

@@ -119,7 +119,10 @@ export class HeadsUpMessage extends LitElement implements Controller {
 
   private onToastPointerUp = (event: PointerEvent) => {
     if (event.pointerId !== this.toastPointerId) return;
-    const distance = Math.hypot(this.toastDragOffset.x, this.toastDragOffset.y);
+    const distance = Math.hypot(
+      event.clientX - this.toastDragStart.x,
+      event.clientY - this.toastDragStart.y,
+    );
     if (distance >= HeadsUpMessage.TOAST_DISMISS_DISTANCE) {
       this.dismissToast();
       return;
@@ -235,6 +238,7 @@ export class HeadsUpMessage extends LitElement implements Controller {
           ? html`
               <div
                 data-game-toast
+                data-game-input-pass-through
                 class="fixed top-6 left-1/2 -translate-x-1/2 z-[1002]
                        max-w-[90vw] pointer-events-auto touch-none select-none
                        cursor-grab active:cursor-grabbing"

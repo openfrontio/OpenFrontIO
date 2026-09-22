@@ -86,6 +86,16 @@ describe("HeadsUpMessage toast gestures", () => {
     expect(element.querySelector("[data-game-toast]")).toBeNull();
   });
 
+  it("uses the final pointer position when no move event arrives", async () => {
+    const toast = await showToast();
+
+    dispatchPointer(toast, "pointerdown", 0, 0);
+    dispatchPointer(toast, "pointerup", 80, 0);
+    await element.updateComplete;
+
+    expect(element.querySelector("[data-game-toast]")).toBeNull();
+  });
+
   it("restores the toast when the pointer gesture is cancelled", async () => {
     const toast = await showToast();
 

@@ -6,6 +6,8 @@ import {
   ContextMenuEvent,
   DragEvent,
   InputHandler,
+  MouseDownEvent,
+  MouseUpEvent,
   MouseOverEvent,
   TouchLongPressStartEvent,
   UnitSelectionEvent,
@@ -44,6 +46,25 @@ class MockPointerEvent {
 }
 
 global.PointerEvent = MockPointerEvent as any;
+
+function dispatchDomPointer(
+  target: EventTarget,
+  type: "pointerdown" | "pointermove" | "pointerup",
+  x: number,
+  y: number,
+): void {
+  const event = new Event(type, { bubbles: true, composed: true });
+  Object.assign(event, {
+    button: 0,
+    clientX: x,
+    clientY: y,
+    x,
+    y,
+    pointerId: 1,
+    pointerType: "mouse",
+  });
+  target.dispatchEvent(event);
+}
 
 describe("InputHandler AutoUpgrade", () => {
   let inputHandler: InputHandler;
@@ -380,6 +401,44 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Pointer Event Handling", () => {
+    test("passes a toast tap through to the game input", () => {
+      const mouseDown = vi.fn();
+      const mouseUp = vi.fn();
+      eventBus.on(MouseDownEvent, mouseDown);
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(toast, "pointerdown", 100, 100);
+      dispatchDomPointer(toast, "pointerup", 101, 101);
+      toast.remove();
+
+      expect(mouseDown).toHaveBeenCalledOnce();
+      expect(mouseUp).toHaveBeenCalledOnce();
+    });
+
+    test("cancels game input when a toast interaction becomes a drag", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(toast, "pointerdown", 100, 100);
+      dispatchDomPointer(toast, "pointermove", 110, 100);
+      dispatchDomPointer(toast, "pointerup", 180, 100);
+      toast.remove();
+
+      expect(inputHandler["pointerDown"]).toBe(false);
+      expect(inputHandler["pointers"].size).toBe(0);
+      expect(mouseUp).not.toHaveBeenCalled();
+    });
+
     test("should ignore a pointerup without a matching canvas pointerdown", () => {
       const mockEmit = vi.spyOn(eventBus, "emit");
 
