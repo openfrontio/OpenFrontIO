@@ -531,6 +531,7 @@
     "legendary": "Legendary",
     "pack_includes": "Includes:",
     "pack_more_items": "+{count} more",
+    "pattern_preview": "Pattern preview",
     "per_day": "/day",
     "public_lobbies": "Public lobbies",
     "public_lobbies_info": "Host custom lobbies that are publicly listed for anyone to join.",
