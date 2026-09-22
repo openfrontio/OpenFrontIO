@@ -443,6 +443,27 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     socket.stop();
   });
 
+  it("logs rather than warns when the server closes normally", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const socket = new PublicLobbySocket(vi.fn(), { maxWsAttempts: 3 });
+    await socket.start();
+
+    (socket as any).handleClose(
+      ABNORMAL_CLOSE[0],
+      { code: 1000, reason: "", wasClean: true } as CloseEvent,
+      Date.now(),
+    );
+
+    expect(warn).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "Lobby socket blue.openfront.io/w0/lobbies closed (1000)",
+      ),
+    );
+    socket.stop();
+  });
+
   // start() closes the socket it replaces, and that socket's close event
   // lands after its successor is already dialing.
   it("ignores a close from a socket it has already replaced", async () => {

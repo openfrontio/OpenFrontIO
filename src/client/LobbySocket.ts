@@ -1,4 +1,5 @@
 import { ClientEnv, NoServerError } from "src/client/ClientEnv";
+import { CloseCode } from "../core/CloseCodes";
 import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { showInGameAlert } from "./InGameModal";
@@ -297,10 +298,14 @@ export class PublicLobbySocket {
       this.wsAttemptCounted = true;
       this.wsConnectionAttempts++;
     }
-    console.warn(
+    const detail =
       `Lobby socket ${describeSocketClose(url, event, openedAt)}; ` +
-        `attempt ${this.wsConnectionAttempts}/${this.maxWsAttempts}, reconnecting`,
-    );
+      `attempt ${this.wsConnectionAttempts}/${this.maxWsAttempts}, reconnecting`;
+    if (event.code === CloseCode.Normal) {
+      console.log(detail);
+    } else {
+      console.warn(detail);
+    }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
       if (!this.gaveUp) console.error("Max WebSocket attempts reached");
       this.giveUp();
