@@ -222,6 +222,11 @@ export default defineConfig(({ mode }) => {
       env.TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
     ),
     jwtAudience: JSON.stringify(env.DOMAIN ?? "localhost"),
+    // Dev only: set FARO_COLLECTOR_URL in .env to point a local client at a
+    // collector; unset drops the guarded line, exactly as in production.
+    faroCollectorUrl: env.FARO_COLLECTOR_URL
+      ? JSON.stringify(env.FARO_COLLECTOR_URL)
+      : undefined,
     instanceId: JSON.stringify(env.INSTANCE_ID ?? "DEV_ID"),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),

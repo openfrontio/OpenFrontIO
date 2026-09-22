@@ -233,6 +233,9 @@ jobs:
           # flow). Unset/empty also keeps the inline payment flow off (the
           # store falls back to redirect checkout).
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          # Grafana Faro collector for browser telemetry, delivered the same
+          # way (runtime env → BOOTSTRAP_CONFIG). Unset keeps it off.
+          FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}

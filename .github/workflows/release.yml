@@ -109,6 +109,7 @@ jobs:
           # key; alpha has no environment and inherits the repo-level
           # test-mode key, matching its test-mode API.
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           SSH_KEY: ~/.ssh/id_rsa
@@ -176,6 +177,7 @@ jobs:
           # key; alpha has no environment and inherits the repo-level
           # test-mode key, matching its test-mode API.
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
@@ -262,6 +264,7 @@ jobs:
           # key; alpha has no environment and inherits the repo-level
           # test-mode key, matching its test-mode API.
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
@@ -338,6 +341,7 @@ jobs:
           # key; alpha has no environment and inherits the repo-level
           # test-mode key, matching its test-mode API.
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
