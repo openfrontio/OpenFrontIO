@@ -1,4 +1,4 @@
-import type { Faro } from "@grafana/faro-web-sdk";
+import type { Faro, TransportItem } from "@grafana/faro-web-sdk";
 import { GameEnv } from "../core/configuration/Config";
 import { ClientEnv } from "./ClientEnv";
 import { clientPlatform } from "./ClientPlatform";
@@ -52,6 +52,7 @@ export function initTelemetry(): Promise<Faro | null> {
           session: { attributes: { platform: clientPlatform() } },
         },
         instrumentations: getWebInstrumentations({ captureConsole: false }),
+        beforeSend: scrubUrls,
       }),
     )
     .catch((e: unknown) => {
@@ -59,6 +60,34 @@ export function initTelemetry(): Promise<Faro | null> {
       return null;
     });
   return faroPromise;
+}
+
+/**
+ * Faro stamps location.href onto every signal (page meta) and the navigation
+ * event carries the from/to URLs. The auth flows land single-use credentials
+ * in the URL hash — `#steam-link?token=…`, `#token-login?token-login=…` — and
+ * handleUrl() only strips them after userAuth() resolves, well after the SDK
+ * has initialized. So every URL that leaves the page is cut to origin +
+ * path: no query, no hash.
+ */
+export function stripUrl(url: string): string {
+  return url.split(/[?#]/, 1)[0];
+}
+
+function scrubUrls(item: TransportItem): TransportItem {
+  const page = item.meta.page;
+  if (page?.url !== undefined) {
+    item.meta = { ...item.meta, page: { ...page, url: stripUrl(page.url) } };
+  }
+  const attributes = (item.payload as { attributes?: Record<string, unknown> })
+    .attributes;
+  if (attributes !== undefined) {
+    for (const key of ["fromUrl", "toUrl"]) {
+      const value = attributes[key];
+      if (typeof value === "string") attributes[key] = stripUrl(value);
+    }
+  }
+  return item;
 }
 
 /** Test-only. */

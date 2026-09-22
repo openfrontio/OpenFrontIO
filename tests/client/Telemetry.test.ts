@@ -70,6 +70,59 @@ describe("Telemetry", () => {
     });
   });
 
+  // The auth flows park single-use tokens in the URL hash until handleUrl()
+  // strips them, and Faro stamps location.href onto every signal. Nothing
+  // past the path may leave the page.
+  it("cuts every outgoing URL to origin + path", async () => {
+    page({ faroCollectorUrl: "https://faro.example/collect/k" });
+    await initTelemetry();
+
+    const config = initializeFaro.mock.calls[0][0] as {
+      beforeSend: (item: unknown) => unknown;
+    };
+    const item = {
+      type: "event",
+      payload: {
+        name: "navigation",
+        attributes: {
+          fromUrl: "https://openfront.io/#steam-link?token=secret",
+          toUrl: "https://openfront.io/game/abc?x=1#y",
+          other: "kept",
+        },
+      },
+      meta: {
+        page: { url: "https://openfront.io/#token-login?token-login=secret" },
+        app: { name: "openfront-client" },
+      },
+    };
+
+    expect(config.beforeSend(item)).toEqual({
+      type: "event",
+      payload: {
+        name: "navigation",
+        attributes: {
+          fromUrl: "https://openfront.io/",
+          toUrl: "https://openfront.io/game/abc",
+          other: "kept",
+        },
+      },
+      meta: {
+        page: { url: "https://openfront.io/" },
+        app: { name: "openfront-client" },
+      },
+    });
+  });
+
+  it("passes a signal without a page or attributes through untouched", async () => {
+    page({ faroCollectorUrl: "https://faro.example/collect/k" });
+    await initTelemetry();
+    const config = initializeFaro.mock.calls[0][0] as {
+      beforeSend: (item: unknown) => unknown;
+    };
+    const item = { type: "log", payload: { message: "m" }, meta: {} };
+    expect(config.beforeSend(item)).toEqual(item);
+  });
+
   it("reports a game error with its game and client ids", async () => {
     page({ faroCollectorUrl: "https://faro.example/collect/k" });
 
