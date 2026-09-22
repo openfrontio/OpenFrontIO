@@ -65,6 +65,7 @@ describe("Telemetry", () => {
       },
       sessionTracking: {
         samplingRate: 0.01,
+        persistent: true,
         session: { attributes: { platform: "web" } },
       },
     });

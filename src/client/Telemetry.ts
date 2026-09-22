@@ -54,6 +54,10 @@ export function initTelemetry(): Promise<Faro | null> {
         },
         sessionTracking: {
           samplingRate: sessionSamplingRate(env),
+          // localStorage-backed, so a session (and its sampling decision)
+          // survives the reloads the client performs itself — the apex
+          // redirect, the versioned-path join, a rejoin after a crash.
+          persistent: true,
           session: { attributes: { platform: clientPlatform() } },
         },
         instrumentations: getWebInstrumentations({ captureConsole: false }),
