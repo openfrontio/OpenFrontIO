@@ -251,8 +251,11 @@ export class TrainExecution implements Execution {
     for (let i = 0; i < path.length - 1; i++) {
       const segment = getOrientedRailroad(path[i], path[i + 1]);
       if (!segment) return null;
-      for (const tile of segment.getTiles()) {
-        if (this.pathTiles[cursor++] !== tile) {
+      for (let j = 0; j < segment.getTiles().length; j++) {
+        // A newly split path will have overlapping tiles at the new intermediate stations.
+        // Since this.pathTiles was built from the original single segment, it doesn't have these duplicates.
+        if (i > 0 && j === 0) continue;
+        if (this.pathTiles[cursor++] !== segment.getTiles()[j]) {
           return null;
         }
       }
@@ -271,6 +274,27 @@ export class TrainExecution implements Execution {
     if (this.currentRailroad === null || !this.canTradeWithDestination()) {
       return null;
     }
+
+    // If the current direct connection was broken (e.g., by a newly placed station splitting it),
+    // resolve the split so trains can stop and trade at the new station.
+    if (!getOrientedRailroad(this.stations[0], this.stations[1])) {
+      const newRailroad = this.resolveSplitRailroad();
+      if (!newRailroad) {
+        return null;
+      }
+      this.currentRailroad = newRailroad;
+
+      // The old railroad might have been split into multiple segments.
+      // If the train has already physically passed the newly placed stations,
+      // advance its logical segment and adjust its currentTile index accordingly.
+      while (this.currentTile >= this.currentRailroad.getTiles().length) {
+        this.currentTile -= this.currentRailroad.getTiles().length;
+        if (!this.nextStation()) {
+          return null; // Train is past the end of the new path
+        }
+      }
+    }
+
     this.saveTraversedTiles(this.currentTile, this.speed);
     this.currentTile = this.currentTile + this.speed;
     const leftOver = this.currentTile - this.currentRailroad.getTiles().length;

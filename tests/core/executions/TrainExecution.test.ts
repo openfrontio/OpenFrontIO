@@ -37,7 +37,7 @@ describe("TrainExecution", () => {
     };
 
     link(stationA, stationB, [0, 1], 1);
-    const railBC = link(stationB, stationC, [1, 2, 2, 3, 3, 4], 2);
+    const railBC = link(stationB, stationC, [1, 2, 3, 4], 2);
 
     const exec = new TrainExecution(net, player, stationA, stationC, 1);
     exec.init(game, 0);
@@ -135,7 +135,7 @@ describe("TrainExecution", () => {
     };
 
     link(stationA, stationB, [0, 1], 1);
-    const railBC = link(stationB, stationC, [1, 2, 2, 3], 2);
+    const railBC = link(stationB, stationC, [1, 2, 3], 2);
 
     const exec = new TrainExecution(net, player, stationA, stationC, 1);
     exec.init(game, 0);
@@ -183,7 +183,7 @@ describe("TrainExecution", () => {
     };
 
     link(stationA, stationB, [0, 1], 1);
-    const railBC = link(stationB, stationC, [1, 2, 2, 3], 2);
+    const railBC = link(stationB, stationC, [1, 2, 3], 2);
 
     const exec = new TrainExecution(net, player, stationA, stationC, 1);
     exec.init(game, 0);
