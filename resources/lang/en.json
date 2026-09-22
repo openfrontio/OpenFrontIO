@@ -2214,6 +2214,8 @@
     "coordinate_grid_label": "Coordinate Grid",
     "cursor_cost_label_desc": "Show a cost pill under the build cursor icon",
     "cursor_cost_label_label": "Cursor Build Cost",
+    "dark_mode_desc": "Prevents white screen flashbang when reloading or loading into matches",
+    "dark_mode_label": "Dark Mode",
     "development_only": "Development Only",
     "display_f11_hint": "Press F11 at any time to switch between windowed and borderless.",
     "display_missing": "Remembered display not connected — using the primary display",

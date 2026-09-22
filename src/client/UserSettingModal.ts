@@ -1630,8 +1630,8 @@ export class UserSettingModal extends BaseModal {
 
       <!-- 🌙 Dark Mode -->
       <setting-toggle
-        label="Dark Mode"
-        description="Prevents white screen flashbang when reloading or loading into matches"
+        label="${translateText("user_setting.dark_mode_label")}"
+        description="${translateText("user_setting.dark_mode_desc")}"
         id="dark-mode-toggle"
         .checked=${this.userSettings.darkMode()}
         @change=${this.toggleDarkMode}

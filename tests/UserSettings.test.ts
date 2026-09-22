@@ -1,6 +1,7 @@
 import {
   ACTIVE_LOADOUT_KEY,
   CROWN_KEY,
+  DARK_MODE_KEY,
   EFFECTS_KEY,
   FLAG_KEY,
   LOADOUTS_KEY,
@@ -592,5 +593,38 @@ describe("UserSettings audio volumes", () => {
 
     localStorage.setItem("settings.backgroundMusicVolume", "-1");
     expect(new UserSettings().audioVolume("music")).toBe(0);
+  });
+});
+
+describe("UserSettings dark mode", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("defaults to false when nothing is stored", () => {
+    expect(new UserSettings().darkMode()).toBe(false);
+  });
+
+  it("reads stored true and false", () => {
+    localStorage.setItem(DARK_MODE_KEY, "true");
+    expect(new UserSettings().darkMode()).toBe(true);
+
+    localStorage.setItem(DARK_MODE_KEY, "false");
+    const statics = UserSettings as unknown as {
+      cache: Map<string, string | null>;
+    };
+    statics.cache.clear();
+    expect(new UserSettings().darkMode()).toBe(false);
+  });
+
+  it("toggleDarkMode flips and persists value", () => {
+    const s = new UserSettings();
+    expect(s.darkMode()).toBe(false);
+
+    s.toggleDarkMode();
+    expect(s.darkMode()).toBe(true);
+    expect(localStorage.getItem(DARK_MODE_KEY)).toBe("true");
+
+    s.toggleDarkMode();
+    expect(s.darkMode()).toBe(false);
+    expect(localStorage.getItem(DARK_MODE_KEY)).toBe("false");
   });
 });
