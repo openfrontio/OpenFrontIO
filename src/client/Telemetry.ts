@@ -60,6 +60,11 @@ export function initTelemetry(): Promise<Faro | null> {
           persistent: true,
           session: { attributes: { platform: clientPlatform() } },
         },
+        // Resource timings are one event per fetch/XHR — every CDN asset,
+        // API call and ad beacon, all match long — and were >90% of the
+        // volume of a staging session at ~2KB a line. Navigation timing and
+        // web vitals cover page load; the rest is not worth the ingest.
+        trackResources: false,
         instrumentations: getWebInstrumentations({ captureConsole: false }),
         beforeSend: scrubUrls,
       }),

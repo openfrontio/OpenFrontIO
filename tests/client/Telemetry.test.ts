@@ -68,6 +68,7 @@ describe("Telemetry", () => {
         persistent: true,
         session: { attributes: { platform: "web" } },
       },
+      trackResources: false,
     });
     expect(getWebInstrumentations).toHaveBeenCalledWith({
       captureConsole: false,
