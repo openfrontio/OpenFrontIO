@@ -300,6 +300,7 @@ export class WinModal extends LitElement implements Controller {
     this.gameStartInfo = gameStartInfo;
     this.hasShownDeathModal = false;
     this.playAgainRequested = false;
+    this.isWin = false;
     this.isVisible = false;
   }
 
@@ -350,14 +351,14 @@ export class WinModal extends LitElement implements Controller {
         index === 0 ? { ...player, clientID: generateID() } : player,
       ),
     };
-
-    this.playAgainRequested = true;
-    this.hide();
     document.dispatchEvent(
       new CustomEvent("matchmaking-requeue", {
         detail: { mode: "solo" as const, gameStartInfo },
       }),
     );
+
+    this.playAgainRequested = true;
+    this.hide();
   }
 
   init() {}
