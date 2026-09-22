@@ -14,7 +14,11 @@ import {
 } from "../core/Schemas";
 import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
-import { UserSettings } from "../core/game/UserSettings";
+import {
+  DARK_MODE_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import "./AccountModal";
 import "./AccountSettingsModal";
 import { syncAchievements } from "./AchievementSignal";
@@ -1924,6 +1928,16 @@ const bootstrap = () => {
   // map canvas cancels — so pinching over a HUD panel zoomed the page instead
   // of the map. See issue #5098.
   installCtrlWheelZoomBlocker();
+
+  const userSettings = new UserSettings();
+  document.documentElement.classList.toggle("dark", userSettings.darkMode());
+  globalThis.addEventListener(
+    `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
+    (e: Event) => {
+      const isDark = (e as CustomEvent).detail === "true";
+      document.documentElement.classList.toggle("dark", isDark);
+    },
+  );
 
   initLayout();
   new Client().initialize();

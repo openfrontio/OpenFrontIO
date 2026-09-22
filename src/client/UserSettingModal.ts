@@ -383,6 +383,15 @@ export class UserSettingModal extends BaseModal {
     }, 5000);
   }
 
+  private toggleDarkMode() {
+    this.userSettings.toggleDarkMode();
+    document.documentElement.classList.toggle(
+      "dark",
+      this.userSettings.darkMode(),
+    );
+    this.requestUpdate();
+  }
+
   private toggleEmojis() {
     this.userSettings.toggleEmojis();
 
@@ -1618,6 +1627,15 @@ export class UserSettingModal extends BaseModal {
       <!-- 💾 Save / share the whole configuration. Top level, not inside
            Advanced: a player who never expands the fold should still find it. -->
       <graphics-preset-tools></graphics-preset-tools>
+
+      <!-- 🌙 Dark Mode -->
+      <setting-toggle
+        label="Dark Mode"
+        description="Prevents white screen flashbang when reloading or loading into matches"
+        id="dark-mode-toggle"
+        .checked=${this.userSettings.darkMode()}
+        @change=${this.toggleDarkMode}
+      ></setting-toggle>
 
       <!-- 😊 Emojis -->
       <setting-toggle

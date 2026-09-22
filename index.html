@@ -6,12 +6,31 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
+    <script>
+      try {
+        if (localStorage.getItem("settings.darkMode") === "true") {
+          document.documentElement.classList.add("dark");
+        }
+      } catch (e) {}
+    </script>
     <title data-i18n="main.title">OpenFront (ALPHA)</title>
     <link rel="manifest" href="<%- manifestHref %>" />
     <link rel="icon" type="image/svg+xml" href="<%- faviconHref %>" />
 
     <!-- Preload styles -->
     <style>
+      html.dark.preload {
+        visibility: visible !important;
+        opacity: 1 !important;
+        background-color: #111827 !important;
+        color-scheme: dark;
+      }
+
+      html.dark.preload body {
+        visibility: hidden;
+        opacity: 0;
+      }
+
       .preload {
         visibility: hidden;
         opacity: 0;
@@ -252,7 +271,7 @@
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
         id="background-layer"
-        class="absolute inset-x-0 top-0 -bottom-[4cm] bg-cover opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
+        class="absolute inset-x-0 top-0 -bottom-[4cm] bg-cover opacity-30 [filter:brightness(1.0)]"
         style="
           background-image: var(--background-image-url);
           background-position: center top;
