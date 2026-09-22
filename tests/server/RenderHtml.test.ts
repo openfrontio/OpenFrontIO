@@ -223,6 +223,36 @@ describe("RenderHtml stripePublishableKey injection", () => {
   });
 });
 
+describe("RenderHtml faroCollectorUrl injection", () => {
+  beforeEach(() => {
+    stubIdentity();
+    vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
+    vi.stubEnv("GIT_COMMIT", "abc");
+    vi.stubEnv("DOMAIN", "openfront.io");
+    vi.stubEnv("SUBDOMAIN", "blue");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    clearAppShellContentCache();
+  });
+
+  test("carries the collector URL into the page", async () => {
+    vi.stubEnv("FARO_COLLECTOR_URL", "https://faro.example/collect/k");
+    const html = await renderHtmlContent(REAL_TEMPLATE);
+    expect(html).toContain(
+      '\n        faroCollectorUrl: "https://faro.example/collect/k",',
+    );
+  });
+
+  test("omits the line entirely when no collector is configured", async () => {
+    vi.stubEnv("FARO_COLLECTOR_URL", "");
+    const html = await renderHtmlContent(REAL_TEMPLATE);
+    expect(html).not.toContain("faroCollectorUrl");
+    expect(bootstrapConfig(html)).not.toHaveProperty("faroCollectorUrl");
+  });
+});
+
 // The real template, not a fixture. Everything above renders a one-line stub,
 // which is the right scope for those tests but cannot catch the thing this
 // file most needs to catch: that the guarded BOOTSTRAP_CONFIG block in
@@ -248,6 +278,7 @@ describe("RenderHtml environment-only render", () => {
     vi.stubEnv("INSTANCE_ID", "i-1");
     vi.stubEnv("GIT_COMMIT", "abc");
     vi.stubEnv("STRIPE_PUBLISHABLE_KEY", "pk_test_abc");
+    vi.stubEnv("FARO_COLLECTOR_URL", "https://faro.example/collect/k");
   });
 
   afterEach(() => {
@@ -284,6 +315,7 @@ describe("RenderHtml environment-only render", () => {
     // Environment-scoped, so the static per-version page must carry it:
     // it is how a page served by the static Worker still gets a key.
     ["stripePublishableKey"],
+    ["faroCollectorUrl"],
     ["cdnBase"],
     ["assetManifest"],
   ])("keeps the build/environment value %s", async (field) => {
@@ -328,6 +360,7 @@ describe("RenderHtml environment-only render", () => {
         '        turnstileSiteKey: "test-key",',
         '        jwtAudience: "openfront.io",',
         '        stripePublishableKey: "pk_test_abc",',
+        '        faroCollectorUrl: "https://faro.example/collect/k",',
         '        instanceId: "i-1",',
         '        serverHost: "blue.openfront.io",',
         '        siteHost: "openfront.io",',

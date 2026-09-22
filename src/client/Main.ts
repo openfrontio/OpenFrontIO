@@ -126,6 +126,7 @@ import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
 import { StoreModal } from "./Store";
 import "./SubscriptionModal";
+import { initTelemetry } from "./Telemetry";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
@@ -1893,6 +1894,10 @@ const hideCrazyGamesElements = () => {
 
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
+  // First, so the error hooks are in place for everything below. No-op
+  // without a collector URL (see Telemetry.ts); never awaited.
+  void initTelemetry();
+
   // Prevent Safari's page-level pinch-zoom, which ignores `user-scalable=no`
   // on iOS and can softlock the HUD. See issue #2330.
   installSafariPinchZoomBlocker();
