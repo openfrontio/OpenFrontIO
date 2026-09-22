@@ -7,6 +7,7 @@ import {
   refreshServerList,
   reloadWouldRescue,
 } from "./ServerList";
+import { describeSocketClose } from "./SocketClose";
 import { translateText } from "./Utils";
 
 interface LobbySocketOptions {
@@ -167,18 +168,20 @@ export class PublicLobbySocket {
       const current = (handler: () => void) => () => {
         if (this.ws === ws) handler();
       };
+      let openedAt: number | null = null;
       ws.addEventListener(
         "open",
-        current(() => this.handleOpen()),
+        current(() => {
+          openedAt = Date.now();
+          this.handleOpen();
+        }),
       );
       ws.addEventListener("message", (event) => {
         if (this.ws === ws) this.handleMessage(event);
       });
-      ws.addEventListener(
-        "close",
-        current(() => this.handleClose()),
-      );
-      ws.addEventListener("error", (error) => this.handleError(error));
+      ws.addEventListener("close", (event) => {
+        if (this.ws === ws) this.handleClose(ws.url, event, openedAt);
+      });
     } catch (error) {
       this.handleConnectError(error);
     }
@@ -288,13 +291,16 @@ export class PublicLobbySocket {
     this.fireUpdateAvailable();
   }
 
-  private handleClose() {
+  private handleClose(url: string, event: CloseEvent, openedAt: number | null) {
     if (this.stopped) return;
-    console.log("WebSocket disconnected, attempting to reconnect...");
     if (!this.wsAttemptCounted) {
       this.wsAttemptCounted = true;
       this.wsConnectionAttempts++;
     }
+    console.warn(
+      `Lobby socket ${describeSocketClose(url, event, openedAt)}; ` +
+        `attempt ${this.wsConnectionAttempts}/${this.maxWsAttempts}, reconnecting`,
+    );
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
       if (!this.gaveUp) console.error("Max WebSocket attempts reached");
       this.giveUp();
@@ -331,10 +337,6 @@ export class PublicLobbySocket {
     const listStatus = await ensureServerList();
     if (generation !== this.generation) return;
     if (reloadWouldRescue(listStatus)) this.fireUpdateAvailable();
-  }
-
-  private handleError(error: Event) {
-    console.error("WebSocket error:", error);
   }
 
   // `rediscover` is for a failure a plain reconnect cannot fix: with no server
