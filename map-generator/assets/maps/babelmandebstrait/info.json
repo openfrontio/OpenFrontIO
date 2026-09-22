@@ -1,0 +1,219 @@
+{
+  "id": "BabelMandebStrait",
+  "name": "Bab el-Mandeb Strait",
+  "translation_key": "map.babelmandebstrait",
+  "categories": ["new", "africa", "asia"],
+  "multiplayer_frequency": 5,
+  "team_frequency": 10,
+  "special_team_count": 2,
+  "nations": [
+    {
+      "coordinates": [744, 1228],
+      "name": "French Somaliland",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [695, 32],
+      "name": "Jizan",
+      "flag": "sa"
+    },
+    {
+      "coordinates": [1166, 923],
+      "name": "Aden",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [994, 407],
+      "name": "Sanaa",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [1198, 1477],
+      "name": "Berbera",
+      "flag": "so"
+    },
+    {
+      "coordinates": [787, 816],
+      "name": "Mocha",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [735, 519],
+      "name": "Al-Hudaydah",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [967, 961],
+      "name": "Sultanate of Lahej",
+      "flag": "Sultanate of Lahej"    
+    },
+    {
+      "coordinates": [1307, 809],
+      "name": "Sultanate of Fadhli",
+      "flag": "Sultanate of Fadhli"    
+    },
+    {
+      "coordinates": [1241, 757],
+      "name": "Sultanate of Lower Yafa",
+      "flag": "Sultanate of Lower Yafa"    
+    },
+    {
+      "coordinates": [1476, 762],
+      "name": "Lower Aulaqi Sultanate",
+      "flag": "Lower Aulaqi Sultanate"    
+    },
+    {
+      "coordinates": [1374, 560],
+      "name": "Emirate of Beihan",
+      "flag": "Emirate of Beihan"    
+    },
+    {
+      "coordinates": [966, 725],
+      "name": "Taiz",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [1047, 651],
+      "name": "Ibb",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [1284, 318],
+      "name": "Marib",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [894, 44],
+      "name": "Saada",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [627, 897],
+      "name": "Assab",
+      "flag": "Eritrea (Ethiopian)"
+    },
+    {
+      "coordinates": [396, 684],
+      "name": "Edd",
+      "flag": "Eritrea (Ethiopian)"
+    },
+    {
+      "coordinates": [228, 538],
+      "name": "Tio",
+      "flag": "Eritrea (Ethiopian)"
+    },
+    {
+      "coordinates": [66, 436],
+      "name": "Mersa Fatuma",
+      "flag": "Eritrea (Ethiopian)"
+    },
+    {
+      "coordinates": [226, 1194],
+      "name": "Asayita",
+      "flag": "Ethiopian Empire"
+    },
+    {
+      "coordinates": [63, 1374],
+      "name": "Bati",
+      "flag": "Ethiopian Empire"
+    },
+    {
+      "coordinates": [11, 696],
+      "name": "Mekelle",
+      "flag": "Ethiopian Empire"
+    },
+    {
+      "coordinates": [16, 538],
+      "name": "Adigrat",
+      "flag": "Ethiopian Empire"
+    },
+    {
+      "coordinates": [70, 275],
+      "name": "Dahlak",
+      "flag": "Eritrea (Ethiopian)"
+    },
+    {
+      "coordinates": [821, 1301],
+      "name": "Zeila",
+      "flag": "so"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [779, 670],
+      "name": "Zabid",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [1326, 653],
+      "name": "Audhali",
+      "flag": "South Arabia Federation"    
+    },
+    {
+      "coordinates": [657, 260],
+      "name": "Al Luḩayyah",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [1165, 131],
+      "name": "Al Hazm",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [1203, 697],
+      "name": "Upper Yafa",
+      "flag": "Upper Yafa"    
+    },
+    {
+      "coordinates": [1125, 734],
+      "name": "Muflihi Sheikdom",
+      "flag": "South Arabia Federation"    
+    },
+    {
+      "coordinates": [1155, 705],
+      "name": "Sheikhdom of Sha'ib",
+      "flag": "South Arabia Federation"    
+    },
+    {
+      "coordinates": [804, 230],
+      "name": "Hajjah",
+      "flag": "North yemen"
+    },
+    {
+      "coordinates": [1118, 941],
+      "name": "Aqrabi Sheikhdom",
+      "flag": "Aqrabi Sheikhdom"    
+    },
+    {
+      "coordinates": [1048, 837],
+      "name": "Haushebi Sultanate",
+      "flag": "Haushabi"    
+    },
+    {
+      "coordinates": [1453, 600],
+      "name": "Upper Aulaqi Sultanate",
+      "flag": "South Arabia Federation"    
+    },
+    {
+      "coordinates": [1081, 810],
+      "name": "Alawi Sheikhdom",
+      "flag": "Alawi Sheikhdom"    
+    },
+    {
+      "coordinates": [1410, 687],
+      "name": "Dathina Sheikhdom",
+      "flag": "Dathina Sheikhdom"    
+    },
+    {
+      "coordinates": [1116, 787],
+      "name": "Emirate of Dhala",
+      "flag": "Emirate of Dhala"    
+    },
+    {
+      "coordinates": [727, 1158],
+      "name": "Tadjoura",
+      "flag": "fr"
+    }
+  ],
+  "themes": ["africa", "asia"]
+}
