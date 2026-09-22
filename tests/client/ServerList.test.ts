@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ClientEnv } from "../../src/client/ClientEnv";
+import { ClientEnv, NoServerError } from "../../src/client/ClientEnv";
 import { resetPagePinForTests } from "../../src/client/PagePin";
 import {
   attemptInFlight,
@@ -1077,9 +1077,11 @@ describe("picking between open, draining and fenced", () => {
     expect(await ensureServerList()).toBe("outdated");
     // The prompt navigates, not this: the page is left exactly where it is.
     expect(loc.href).toBe("https://openfront.io/w1/game/cAbCd12345?lobby");
-    // Own-server calls fall back to the page's own values — here the
-    // document's origin, the only thing a Worker-served page has...
-    expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
+    // Own-server calls have nothing to fall back to: the document's origin
+    // is all a Worker-served page has, and it is the page host, not a game
+    // server. Dialing it is what produced 1.1M edge timeouts a day
+    // (ai-ops#21); an outdated page should be reloading, not connecting...
+    expect(() => ClientEnv.serverWsBase()).toThrow(NoServerError);
     // ...and existing games still resolve by letter from the list.
     expect(ClientEnv.resolveGame("cAbCd12345")).toEqual({
       kind: "cross",
@@ -1162,7 +1164,12 @@ describe("picking between open, draining and fenced", () => {
     );
     expect(await ensureServerList()).toBe("no-server");
     expect(loc.href).toBe("https://openfront.io/");
-    expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
+    // And it does NOT fall back to the page host. This is one of the two
+    // states that used to dial the apex (the other is "outdated"): the list
+    // answered and named no server for this build, so there is nothing to
+    // connect to, and `wss://openfront.io` is a host whose edge can only time
+    // the connect out (ai-ops#21).
+    expect(() => ClientEnv.serverWsBase()).toThrow(NoServerError);
 
     setWorkerBootstrap({ gitCommit: OLD });
     fetchMock.mockImplementation(async () =>
