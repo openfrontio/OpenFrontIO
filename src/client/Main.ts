@@ -1262,9 +1262,23 @@ class Client {
   }
 
   private consumeSingleplayerRequeueData(): GameStartInfo | null {
-    const serialized = sessionStorage.getItem(SINGLEPLAYER_REQUEUE_STORAGE_KEY);
-    sessionStorage.removeItem(SINGLEPLAYER_REQUEUE_STORAGE_KEY);
-    if (serialized === null) return null;
+    let serialized: string | null;
+    try {
+      serialized = sessionStorage.getItem(SINGLEPLAYER_REQUEUE_STORAGE_KEY);
+    } catch (error) {
+      console.warn("Unable to access singleplayer requeue data", error);
+      return null;
+    }
+
+    if (serialized === null) {
+      return null;
+    }
+
+    try {
+      sessionStorage.removeItem(SINGLEPLAYER_REQUEUE_STORAGE_KEY);
+    } catch (error) {
+      console.warn("unable to remove singleplayer requeue data", error);
+    }
 
     try {
       const parsed = GameStartInfoSchema.safeParse(JSON.parse(serialized));
@@ -1829,11 +1843,17 @@ class Client {
         console.warn("Solo requeue requested without game settings");
         return;
       }
-      sessionStorage.setItem(
-        SINGLEPLAYER_REQUEUE_STORAGE_KEY,
-        JSON.stringify(event.detail.gameStartInfo),
-      );
-      window.location.href = `${homeHref()}?requeue=solo`;
+
+      try {
+        sessionStorage.setItem(
+          SINGLEPLAYER_REQUEUE_STORAGE_KEY,
+          JSON.stringify(event.detail.gameStartInfo),
+        );
+      } catch (error) {
+        console.warn("Unable to set player requeue data", error);
+        return;
+      }
+      window.location.href = `/?requeue=solo`;
       return;
     }
     if (this.matchmakingModal?.requeue()) {

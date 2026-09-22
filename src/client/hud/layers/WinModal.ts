@@ -328,7 +328,8 @@ export class WinModal extends LitElement implements Controller {
   private get isSingleplayer(): boolean {
     return (
       this.gameStartInfo?.config.gameType === GameType.Singleplayer &&
-      this.gameStartInfo.players.length > 0
+      this.gameStartInfo.players.length > 0 &&
+      this.game?.config().isReplay() !== true
     );
   }
 
