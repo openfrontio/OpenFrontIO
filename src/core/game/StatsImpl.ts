@@ -1,4 +1,6 @@
+import { z } from "zod";
 import { AllPlayersStats, ClientID } from "../Schemas";
+import { snapshotType } from "../snapshot/SnapshotType";
 import {
   ALLIANCE_INDEX_BROKEN_BY_OTHER,
   ALLIANCE_INDEX_EXPIRED,
@@ -68,7 +70,16 @@ const conquest_by_type: Record<PlayerType, number> = {
 };
 
 export class StatsImpl implements Stats {
-  private readonly data: AllPlayersStats = {};
+  private data: AllPlayersStats = {};
+
+  snapshot(): StatsState {
+    return { data: this.data };
+  }
+
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: StatsState): void {
+    this.data = s.data as AllPlayersStats;
+  }
 
   getPlayerStats(player: Player): PlayerStats {
     const clientID = player.clientID();
@@ -475,3 +486,14 @@ export class StatsImpl implements Stats {
 
   lobbyFillTime(fillTimeMs: number): void {}
 }
+
+export const StatsSnapshot = snapshotType({
+  name: "Stats",
+  version: 1,
+  schema: z.object({
+    // Stored as the live AllPlayersStats tree (bigints and all). Its shape is
+    // versioned by StatsSchemas, which game records already keep readable.
+    data: z.record(z.string(), z.unknown()),
+  }),
+});
+export type StatsState = z.infer<typeof StatsSnapshot.schema>;

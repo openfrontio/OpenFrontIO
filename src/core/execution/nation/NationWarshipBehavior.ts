@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   AllPlayers,
   Difficulty,
@@ -10,6 +11,16 @@ import {
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  Versioned,
+  zRef,
+} from "../../snapshot/SnapshotType";
 import { ConstructionExecution } from "../ConstructionExecution";
 import {
   EMOJI_WARSHIP_RETALIATION,
@@ -32,6 +43,37 @@ export class NationWarshipBehavior {
     private player: Player,
     private emojiBehavior: NationEmojiBehavior,
   ) {}
+
+  snapshot(w: SnapshotWriter): Versioned {
+    // Sets are iterated in order and may hold dead units.
+    const units = (set: Set<Unit>) => [...set].map((u) => w.unit(u));
+    return w.versioned(NationWarshipBehaviorSnapshot, {
+      trackedTransportShips: units(this.trackedTransportShips),
+      trackedTradeShips: units(this.trackedTradeShips),
+      trackedIncomingTransportShips: units(this.trackedIncomingTransportShips),
+      dealtWithTransportShip: units(this.dealtWithTransportShip),
+    });
+  }
+
+  /** Fills a prototype-only shell; only assigns (see README). */
+  restoreSnapshot(
+    raw: unknown,
+    r: SnapshotReader,
+    random: PseudoRandom,
+    player: Player,
+    emojiBehavior: NationEmojiBehavior,
+  ): void {
+    const s = readVersioned(NationWarshipBehaviorSnapshot, raw);
+    const units = (refs: number[]) => new Set(refs.map((i) => r.unit(i)));
+    this.random = random;
+    this.game = r.game;
+    this.player = player;
+    this.emojiBehavior = emojiBehavior;
+    this.trackedTransportShips = units(s.trackedTransportShips);
+    this.trackedTradeShips = units(s.trackedTradeShips);
+    this.trackedIncomingTransportShips = units(s.trackedIncomingTransportShips);
+    this.dealtWithTransportShip = units(s.dealtWithTransportShip);
+  }
 
   maybeSpawnWarship(): boolean {
     if (this.player === null) throw new Error("not initialized");
@@ -463,3 +505,14 @@ export class NationWarshipBehavior {
     return this.game.unitInfo(type).cost(this.game, this.player);
   }
 }
+
+export const NationWarshipBehaviorSnapshot = snapshotType({
+  name: "NationWarshipBehavior",
+  version: 1,
+  schema: z.object({
+    trackedTransportShips: z.array(zRef()),
+    trackedTradeShips: z.array(zRef()),
+    trackedIncomingTransportShips: z.array(zRef()),
+    dealtWithTransportShip: z.array(zRef()),
+  }),
+});
