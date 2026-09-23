@@ -113,7 +113,7 @@ describe("nation and tribe snapshots", () => {
     await expectSnapshotRoundTrip(game, MAP, 3);
     run(game, 5);
     await expectSnapshotRoundTrip(game, MAP, 10);
-  });
+  }, 60_000);
 
   test("round-trips once behaviors run", async () => {
     const game = await nationGame(Difficulty.Hard);

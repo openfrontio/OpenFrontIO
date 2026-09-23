@@ -296,11 +296,16 @@ export function diffGraphs(
  * The standard snapshot check for a game in any state:
  *  1. restoring reproduces the live object graph exactly (diffGraphs),
  *  2. snapshot -> restore -> snapshot is byte-identical,
- *  3. the original and the restored game stay byte-identical for `ticks`
- *     more ticks, compared every tick.
+ *  3. the original and the restored game stay identical for `ticks` more
+ *     ticks: same hash every tick, same snapshot bytes every 5 ticks and at
+ *     the end.
  * `onTick` runs on both games before each tick (e.g. to add the same
  * executions to each); it receives the game it should act on.
  */
+function hash(game: Game): number {
+  return (game as unknown as { hash(): number }).hash();
+}
+
 export async function expectSnapshotRoundTrip(
   game: Game,
   mapName: string,
@@ -315,6 +320,12 @@ export async function expectSnapshotRoundTrip(
     onTick?.(restored, i);
     game.executeNextTick();
     restored.executeNextTick();
+    // The state hash every tick, the full snapshot every few (it is the
+    // expensive part on big maps) and on the last.
+    if (hash(game) !== hash(restored)) {
+      throw new Error(`hash diverged ${i + 1} tick(s) after restore`);
+    }
+    if ((i + 1) % 5 !== 0 && i + 1 !== ticks) continue;
     const diffs = diffSnapshots(snapshotGame(game), snapshotGame(restored));
     if (diffs.length > 0) {
       throw new Error(

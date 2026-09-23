@@ -606,7 +606,15 @@ export class GameMapImpl implements GameMap {
    * edited tiles can be swapped back to their original bytes without a
    * second pass.
    */
+  // The map file never changes, so its hash is computed once.
+  private pristineHashCache: number | null = null;
+
   private pristineHash(): number {
+    this.pristineHashCache ??= this.computePristineHash();
+    return this.pristineHashCache;
+  }
+
+  private computePristineHash(): number {
     const mix = (i: number, b: number) =>
       Math.imul(b + 1, Math.imul(i + 1, 0x9e3779b1) ^ 0x85ebca6b);
     let h = 0;
