@@ -2,6 +2,8 @@ import http from "http";
 import { WebSocket, WebSocketServer } from "ws";
 import { CloseCode, CloseReason } from "../core/CloseCodes";
 import {
+  ClientPlatform,
+  ClientPlatformSchema,
   GameConfig,
   PublicGameInfo,
   PublicGames,
@@ -35,7 +37,10 @@ function publicLobbyGameConfig(gc: GameConfig): GameConfig {
 
 export class WorkerLobbyService {
   private readonly lobbiesWss: WebSocketServer;
-  private readonly lobbyClients: Set<WebSocket> = new Set();
+  // Keyed by socket, valued by the platform the client named in the
+  // upgrade URL's ?platform= (see LobbySocket.ts), for the per-platform gauge.
+  private readonly lobbyClients: Map<WebSocket, ClientPlatform | "unknown"> =
+    new Map();
   // Most recent snapshot from master, serialized on demand for new
   // connections so they don't have to wait for the next broadcast.
   private lastPublicGames: InternalPublicGames | null = null;
@@ -74,6 +79,22 @@ export class WorkerLobbyService {
    */
   isDeploymentActive(): boolean {
     return this.deploymentActive;
+  }
+
+  /** Browsers currently connected to this worker's /lobbies socket. */
+  connectedClients(): number {
+    return this.lobbyClients.size;
+  }
+
+  /** Same, per platform, zeros included. */
+  connectedClientsByPlatform(): Map<ClientPlatform | "unknown", number> {
+    const counts = new Map<ClientPlatform | "unknown", number>(
+      [...ClientPlatformSchema.options, "unknown" as const].map((p) => [p, 0]),
+    );
+    for (const platform of this.lobbyClients.values()) {
+      counts.set(platform, counts.get(platform)! + 1);
+    }
+    return counts;
   }
 
   private setupIPCListener() {
@@ -270,7 +291,7 @@ export class WorkerLobbyService {
 
   private setupUpgradeHandler() {
     this.server.on("upgrade", (request, socket, head) => {
-      const pathname = request.url ?? "";
+      const pathname = (request.url ?? "").split("?")[0];
       if (pathname === "/lobbies" || pathname.endsWith("/lobbies")) {
         this.lobbiesWss.handleUpgrade(request, socket, head, (ws) => {
           this.lobbiesWss.emit("connection", ws, request);
@@ -284,44 +305,47 @@ export class WorkerLobbyService {
   }
 
   private setupLobbiesWebSocket() {
-    this.lobbiesWss.on("connection", (ws: WebSocket) => {
-      this.lobbyClients.add(ws);
-      // Prime the new client with the most recent snapshot — otherwise it
-      // would only see counts-only deltas (which it can't apply without a
-      // base) until the next structural change.
-      if (this.lastPublicGames !== null) {
-        ws.send(
-          encodeLobbyMessage({
-            type: "full",
-            serverTime: this.lastPublicGames.serverTime,
-            games: this.sanitizeGames(this.lastPublicGames.games),
-            gitCommit: ServerEnv.gitCommit(),
-            active: this.deploymentActive,
-          } satisfies PublicLobbyMessage),
-        );
-      }
-      ws.on("message", () => {
-        ws.terminate();
-      });
-      ws.on("close", () => {
-        this.lobbyClients.delete(ws);
-      });
-
-      ws.on("error", (error) => {
-        this.log.error(`Lobbies WebSocket error:`, error);
-        this.lobbyClients.delete(ws);
-        try {
-          if (
-            ws.readyState === WebSocket.OPEN ||
-            ws.readyState === WebSocket.CONNECTING
-          ) {
-            ws.close(CloseCode.InternalError, CloseReason.InternalError);
-          }
-        } catch (closeError) {
-          this.log.error("Error closing lobbies WebSocket:", closeError);
+    this.lobbiesWss.on(
+      "connection",
+      (ws: WebSocket, request?: http.IncomingMessage) => {
+        this.lobbyClients.set(ws, lobbyClientPlatform(request?.url));
+        // Prime the new client with the most recent snapshot — otherwise it
+        // would only see counts-only deltas (which it can't apply without a
+        // base) until the next structural change.
+        if (this.lastPublicGames !== null) {
+          ws.send(
+            encodeLobbyMessage({
+              type: "full",
+              serverTime: this.lastPublicGames.serverTime,
+              games: this.sanitizeGames(this.lastPublicGames.games),
+              gitCommit: ServerEnv.gitCommit(),
+              active: this.deploymentActive,
+            } satisfies PublicLobbyMessage),
+          );
         }
-      });
-    });
+        ws.on("message", () => {
+          ws.terminate();
+        });
+        ws.on("close", () => {
+          this.lobbyClients.delete(ws);
+        });
+
+        ws.on("error", (error) => {
+          this.log.error(`Lobbies WebSocket error:`, error);
+          this.lobbyClients.delete(ws);
+          try {
+            if (
+              ws.readyState === WebSocket.OPEN ||
+              ws.readyState === WebSocket.CONNECTING
+            ) {
+              ws.close(CloseCode.InternalError, CloseReason.InternalError);
+            }
+          } catch (closeError) {
+            this.log.error("Error closing lobbies WebSocket:", closeError);
+          }
+        });
+      },
+    );
   }
 
   private broadcastLobbiesToClients(publicGames: InternalPublicGames) {
@@ -368,16 +392,29 @@ export class WorkerLobbyService {
     const frame = encodeLobbyMessage(payload);
 
     const clientsToRemove: WebSocket[] = [];
-    this.lobbyClients.forEach((client) => {
+    for (const client of this.lobbyClients.keys()) {
       if (client.readyState === WebSocket.OPEN) {
         client.send(frame);
       } else {
         clientsToRemove.push(client);
       }
-    });
+    }
 
     clientsToRemove.forEach((client) => {
       this.lobbyClients.delete(client);
     });
   }
+}
+
+// The platform a lobby client announced in its upgrade URL. Anything missing
+// or unrecognised (an older bundle, a hand-rolled client) counts as unknown.
+function lobbyClientPlatform(
+  url: string | undefined,
+): ClientPlatform | "unknown" {
+  const query = url?.split("?")[1];
+  if (query === undefined) return "unknown";
+  const parsed = ClientPlatformSchema.safeParse(
+    new URLSearchParams(query).get("platform"),
+  );
+  return parsed.success ? parsed.data : "unknown";
 }

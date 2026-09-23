@@ -12,7 +12,9 @@ import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessage,
+  ClientPlatformSchema,
   ID,
+  isValidGameID,
   MAX_HOSTED_LOBBIES,
   ServerErrorMessage,
 } from "../core/Schemas";
@@ -36,6 +38,7 @@ import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { startRankedCheckinLoops } from "./RankedCheckin";
 import { ServerEnv } from "./ServerEnv";
+import { SingleplayerPresence } from "./SingleplayerPresence";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
 import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
@@ -76,6 +79,7 @@ export async function startWorker() {
 
   // Initialize lobby service (handles WebSocket upgrade routing)
   const lobbyService = new WorkerLobbyService(server, wss, gm, log);
+  const singleplayerPresence = new SingleplayerPresence();
 
   setTimeout(
     () => {
@@ -94,7 +98,7 @@ export async function startWorker() {
   );
 
   if (ServerEnv.otelEnabled()) {
-    initWorkerMetrics(gm);
+    initWorkerMetrics(gm, lobbyService, singleplayerPresence);
   }
 
   const privilegeRefresher = new PrivilegeRefresher(
@@ -348,6 +352,24 @@ export async function startWorker() {
       gameID: game.id,
     });
     res.json({ listed });
+  });
+
+  // Singleplayer games run in the browser; the client beats here once a
+  // minute so the worker can export how many are in progress (see
+  // SingleplayerPresence). The id is client-minted and routes here by hash,
+  // exactly like the game socket would.
+  app.post("/api/singleplayer/:id/heartbeat", (req, res) => {
+    const gameID = req.params.id;
+    if (!isValidGameID(gameID)) {
+      res.status(400).json({ error: "Invalid game ID" });
+      return;
+    }
+    const platform = ClientPlatformSchema.safeParse(req.body?.platform);
+    singleplayerPresence.heartbeat(
+      gameID,
+      platform.success ? platform.data : "unknown",
+    );
+    res.status(204).end();
   });
 
   app.get("/api/game/:id/exists", async (req, res) => {
