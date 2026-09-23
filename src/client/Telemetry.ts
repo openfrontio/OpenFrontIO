@@ -5,7 +5,8 @@ import { clientPlatform } from "./ClientPlatform";
 
 /**
  * Browser telemetry via Grafana Faro: uncaught errors, unhandled rejections,
- * web vitals and session/view metadata, shipped to the collector named by
+ * web vitals, in-game performance summaries (GameMetrics.ts) and
+ * session/view metadata, shipped to the collector named by
  * BOOTSTRAP_CONFIG.faroCollectorUrl (FARO_COLLECTOR_URL on the server).
  *
  * Off entirely when no URL is injected — dev, desktop shells without one,
@@ -66,7 +67,7 @@ export function initTelemetry(): Promise<Faro | null> {
         // web vitals cover page load; the rest is not worth the ingest.
         trackResources: false,
         instrumentations: getWebInstrumentations({ captureConsole: false }),
-        beforeSend: scrubUrls,
+        beforeSend: filterSignal,
       }),
     )
     .catch((e: unknown) => {
@@ -74,6 +75,29 @@ export function initTelemetry(): Promise<Faro | null> {
       return null;
     });
   return faroPromise;
+}
+
+// Cloudflare's script monitor puts a report-only CSP (`connect-src 'none'`,
+// disposition=report) on every page, and the browser then raises a
+// securitypolicyviolation event for every fetch that policy would have
+// blocked: each CDN asset, API call, and the Faro collector itself. Faro's
+// default instrumentation forwards them all, which made them ~85% of prod
+// event volume, none of it actionable since nothing is actually blocked.
+const DROPPED_EVENTS = new Set(["securitypolicyviolation"]);
+
+// Faro runs this hook unguarded on its flush path. Anything it cannot handle
+// is dropped (null) rather than thrown or sent as-is: telemetry must neither
+// reach the player nor leak what it was meant to cut.
+function filterSignal(item: TransportItem): TransportItem | null {
+  try {
+    if (item.type === "event") {
+      const name = (item.payload as { name?: unknown } | null)?.name;
+      if (typeof name === "string" && DROPPED_EVENTS.has(name)) return null;
+    }
+    return scrubUrls(item);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -88,28 +112,21 @@ export function stripUrl(url: string): string {
   return url.split(/[?#]/, 1)[0];
 }
 
-// Faro runs this hook unguarded on its flush path. Anything it cannot scrub
-// is dropped (null) rather than thrown or sent as-is: telemetry must neither
-// reach the player nor leak what it was meant to cut.
-function scrubUrls(item: TransportItem): TransportItem | null {
-  try {
-    const page = item.meta.page;
-    if (page?.url !== undefined) {
-      item.meta = { ...item.meta, page: { ...page, url: stripUrl(page.url) } };
-    }
-    const attributes = (
-      item.payload as { attributes?: Record<string, unknown> } | null
-    )?.attributes;
-    if (attributes !== undefined && attributes !== null) {
-      for (const key of ["fromUrl", "toUrl"]) {
-        const value = attributes[key];
-        if (typeof value === "string") attributes[key] = stripUrl(value);
-      }
-    }
-    return item;
-  } catch {
-    return null;
+function scrubUrls(item: TransportItem): TransportItem {
+  const page = item.meta.page;
+  if (page?.url !== undefined) {
+    item.meta = { ...item.meta, page: { ...page, url: stripUrl(page.url) } };
   }
+  const attributes = (
+    item.payload as { attributes?: Record<string, unknown> } | null
+  )?.attributes;
+  if (attributes !== undefined && attributes !== null) {
+    for (const key of ["fromUrl", "toUrl"]) {
+      const value = attributes[key];
+      if (typeof value === "string") attributes[key] = stripUrl(value);
+    }
+  }
+  return item;
 }
 
 /** Test-only. */
@@ -139,6 +156,22 @@ export function reportGameError(
         message: message ?? "",
       },
     });
+  });
+}
+
+/**
+ * A summarised in-game measurement (see GameMetrics.ts): one Faro
+ * measurement of the given type, with the game and client it came from as
+ * its context.
+ */
+export function reportMeasurement(
+  type: string,
+  values: Record<string, number>,
+  context: Record<string, string>,
+): void {
+  void initTelemetry().then((faro) => {
+    if (faro === null) return;
+    faro.api.pushMeasurement({ type, values }, { context });
   });
 }
 

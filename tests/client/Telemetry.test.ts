@@ -3,11 +3,15 @@ import { ClientEnv } from "../../src/client/ClientEnv";
 import {
   initTelemetry,
   reportGameError,
+  reportMeasurement,
   resetTelemetry,
 } from "../../src/client/Telemetry";
 
 const pushError = vi.fn();
-const initializeFaro = vi.fn((_config: unknown) => ({ api: { pushError } }));
+const pushMeasurement = vi.fn();
+const initializeFaro = vi.fn((_config: unknown) => ({
+  api: { pushError, pushMeasurement },
+}));
 const getWebInstrumentations = vi.fn((_options: unknown) => []);
 
 vi.mock("@grafana/faro-web-sdk", () => ({
@@ -43,8 +47,10 @@ describe("Telemetry", () => {
     expect(initializeFaro).not.toHaveBeenCalled();
 
     reportGameError("boom", undefined, "gameid", "client", "crashed");
+    reportMeasurement("frame_time", { p50: 16 }, { gameID: "gameid" });
     await Promise.resolve();
     expect(pushError).not.toHaveBeenCalled();
+    expect(pushMeasurement).not.toHaveBeenCalled();
   });
 
   it("initializes once against the injected collector, tagged with the build", async () => {
@@ -142,6 +148,32 @@ describe("Telemetry", () => {
     expect(config.beforeSend(item)).toEqual(item);
   });
 
+  // Cloudflare's report-only CSP makes the browser fire one of these per
+  // fetch; nothing is blocked, so they are volume without signal.
+  it("drops CSP violation reports and keeps other browser events", async () => {
+    page({ faroCollectorUrl: "https://faro.example/collect/k" });
+    await initTelemetry();
+    const config = initializeFaro.mock.calls[0][0] as {
+      beforeSend: (item: unknown) => unknown;
+    };
+    const csp = {
+      type: "event",
+      payload: {
+        name: "securitypolicyviolation",
+        attributes: { blockedURI: "https://cdn.ofedge.io/x.mp3" },
+      },
+      meta: { page: { url: "https://openfront.io/" } },
+    };
+    expect(config.beforeSend(csp)).toBe(null);
+
+    const start = {
+      type: "event",
+      payload: { name: "session_start", attributes: {} },
+      meta: { page: { url: "https://openfront.io/" } },
+    };
+    expect(config.beforeSend(start)).toEqual(start);
+  });
+
   // Faro does not guard the hook, so a shape it cannot scrub must be dropped,
   // never thrown (into Faro's flush timer) and never sent unscrubbed.
   it("drops a signal it cannot scrub instead of throwing", async () => {
@@ -176,5 +208,26 @@ describe("Telemetry", () => {
       type: "error_modal.desync_notice",
       context: { gameID: "gameid", clientID: "client", message: "details" },
     });
+  });
+
+  it("reports a measurement with its values and context", async () => {
+    page({ faroCollectorUrl: "https://faro.example/collect/k" });
+
+    reportMeasurement(
+      "tick_interval",
+      { p50: 100, p90: 120, p99: 400, count: 300 },
+      { gameID: "gameid", clientID: "client" },
+    );
+    await initTelemetry();
+    await Promise.resolve();
+
+    expect(pushMeasurement).toHaveBeenCalledTimes(1);
+    expect(pushMeasurement).toHaveBeenCalledWith(
+      {
+        type: "tick_interval",
+        values: { p50: 100, p90: 120, p99: 400, count: 300 },
+      },
+      { context: { gameID: "gameid", clientID: "client" } },
+    );
   });
 });

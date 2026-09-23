@@ -241,9 +241,9 @@ export class UnitImpl implements Unit {
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
         break;
-      // Transports change hands when their owner is conquered, or when a
-      // disconnected teammate's fleet is inherited. Boats have no "lost"
-      // slot, so only the captor is credited.
+      // Only a disconnected teammate's fleet reaches this case (see
+      // GameImpl.conquerPlayer), so it is a transfer inside a team, not a
+      // loss: the previous owner is credited nothing, not BOAT_INDEX_LOST.
       //
       // Trade ships are deliberately absent: TradeShipExecution records the
       // capture when the ship reaches the captor's port, so counting it here
@@ -337,8 +337,21 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
 
-    if (displayMessage !== false) {
+    // `displayMessage === false` is how a caller retires a unit that was not
+    // destroyed: a boat that reached port or retreated, a shell that landed, a
+    // voluntary delete. Every other deletion is a destruction, which costs its
+    // owner the unit even when nobody is credited with the kill -- their own
+    // nuke, their elimination, health reaching zero with no attacker.
+    const wasDestroyed = displayMessage !== false;
+
+    if (wasDestroyed) {
       this.displayMessageOnDeleted();
+      switch (this._type) {
+        case UnitType.TransportShip:
+        case UnitType.TradeShip:
+          this.mg.stats().boatLose(this._owner, this._type);
+          break;
+      }
     }
 
     if (destroyer !== undefined) {
