@@ -148,6 +148,32 @@ describe("Telemetry", () => {
     expect(config.beforeSend(item)).toEqual(item);
   });
 
+  // Cloudflare's report-only CSP makes the browser fire one of these per
+  // fetch; nothing is blocked, so they are volume without signal.
+  it("drops CSP violation reports and keeps other browser events", async () => {
+    page({ faroCollectorUrl: "https://faro.example/collect/k" });
+    await initTelemetry();
+    const config = initializeFaro.mock.calls[0][0] as {
+      beforeSend: (item: unknown) => unknown;
+    };
+    const csp = {
+      type: "event",
+      payload: {
+        name: "securitypolicyviolation",
+        attributes: { blockedURI: "https://cdn.ofedge.io/x.mp3" },
+      },
+      meta: { page: { url: "https://openfront.io/" } },
+    };
+    expect(config.beforeSend(csp)).toBe(null);
+
+    const start = {
+      type: "event",
+      payload: { name: "session_start", attributes: {} },
+      meta: { page: { url: "https://openfront.io/" } },
+    };
+    expect(config.beforeSend(start)).toEqual(start);
+  });
+
   // Faro does not guard the hook, so a shape it cannot scrub must be dropped,
   // never thrown (into Faro's flush timer) and never sent unscrubbed.
   it("drops a signal it cannot scrub instead of throwing", async () => {
