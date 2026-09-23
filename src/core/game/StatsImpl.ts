@@ -13,8 +13,10 @@ import {
   BOAT_INDEX_ARRIVE,
   BOAT_INDEX_CAPTURE,
   BOAT_INDEX_DESTROY,
+  BOAT_INDEX_LOST,
   BOAT_INDEX_SENT,
   BoatUnit,
+  BoatUnitType,
   BOMB_INDEX_INTERCEPT,
   BOMB_INDEX_LAND,
   BOMB_INDEX_LAUNCH,
@@ -38,6 +40,7 @@ import {
   TILE_INDEX_DRAWDOWN_PEAK,
   TILE_INDEX_DRAWDOWN_TROUGH,
   TILE_INDEX_PEAK,
+  unitTypeToBoatUnit,
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
@@ -303,6 +306,10 @@ export class StatsImpl implements Stats {
 
   boatCapturedTroops(player: Player, target: Player): void {
     this._addBoat(player, "trans", BOAT_INDEX_CAPTURE, 1);
+  }
+
+  boatLose(player: Player, type: BoatUnitType): void {
+    this._addBoat(player, unitTypeToBoatUnit[type], BOAT_INDEX_LOST, 1);
   }
 
   bombLaunch(

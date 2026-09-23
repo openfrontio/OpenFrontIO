@@ -5,6 +5,7 @@ import {
 import {
   ALLIANCE_INDEX_LONGEST_HELD,
   ATTACK_INDEX_MAX_RECV,
+  BOAT_INDEX_LOST,
   PlayerStatsSchema,
   TILE_INDEX_DRAWDOWN_TROUGH,
 } from "../src/core/StatsSchemas";
@@ -181,6 +182,21 @@ describe("PlayerStats new fields", () => {
     expect(parsed?.tiles?.[TILE_INDEX_DRAWDOWN_TROUGH]).toBe(100n);
     expect(parsed?.alliances?.[ALLIANCE_INDEX_LONGEST_HELD]).toBe(540n);
     expect(parsed?.peakTroops).toBe(250000n);
+  });
+
+  it("parses a boat loss count", () => {
+    const parsed = PlayerStatsSchema.parse({
+      boats: { trans: ["4", "3", "0", "1", "2"] },
+    });
+    expect(parsed?.boats?.trans?.[BOAT_INDEX_LOST]).toBe(2n);
+  });
+
+  it("parses a banked record written before boat losses existed", () => {
+    const parsed = PlayerStatsSchema.parse({
+      boats: { trans: ["4", "3", "0", "1"], trade: ["9", "8", "1", "0"] },
+    });
+    expect(parsed?.boats?.trans?.[BOAT_INDEX_LOST]).toBeUndefined();
+    expect(parsed?.boats?.trade?.[BOAT_INDEX_LOST]).toBeUndefined();
   });
 
   it("parses a record with none of the new fields", () => {

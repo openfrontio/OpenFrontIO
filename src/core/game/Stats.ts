@@ -1,5 +1,10 @@
 import { AllPlayersStats, ClientID } from "../Schemas";
-import { NukeType, OtherUnitType, PlayerStats } from "../StatsSchemas";
+import {
+  BoatUnitType,
+  NukeType,
+  OtherUnitType,
+  PlayerStats,
+} from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
 
 export interface Stats {
@@ -91,6 +96,11 @@ export interface Stats {
   // by inheriting from a disconnected teammate. Unlike a trade ship, which is
   // captured by hunting it down, this one changes hands with its owner.
   boatCapturedTroops(player: Player, target: Player): void;
+
+  // Player's boat was destroyed. Counts every destruction, including ones no
+  // one is credited with (the owner's own nuke, the owner being eliminated),
+  // so it is not the mirror of boatDestroyTrade/boatDestroyTroops.
+  boatLose(player: Player, type: BoatUnitType): void;
 
   // Player launches bomb at target
   bombLaunch(
