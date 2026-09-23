@@ -159,6 +159,8 @@ import "./components/BannedModal";
 import "./components/DesktopStatusBar";
 import "./components/MarketingConsentToast";
 import "./components/PurchaseNudgeModal";
+import { classicReplayHref } from "./replay/ReplayEntry";
+import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
 import { initAudioMixer } from "./sound/AudioMixer";
 import { startMenuMusic } from "./sound/MenuMusic";
 import {
@@ -291,6 +293,8 @@ function setInGameSignal(inGame: boolean): void {
 
 class Client {
   private lobbyHandle: JoinLobbyResult | null = null;
+  /** The game the replay viewer is showing, once it has replaced the menu. */
+  private replayViewerID: string | null = null;
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
@@ -967,6 +971,17 @@ class Client {
     });
 
     const onHashUpdate = () => {
+      if (this.replayViewerID !== null) {
+        this.leaveReplayViewer();
+        return;
+      }
+      // Checked before the join modal is closed below: closing it resets
+      // the URL, which would drop the hash before handleUrl reads it.
+      const replayViewerID = parseReplayViewerHash(window.location.hash);
+      if (replayViewerID !== null) {
+        void this.openReplayViewer(replayViewerID);
+        return;
+      }
       // Router-managed hash changes (#modal=...) are handled by the router
       // syncing in/out; we don't need to tear down the lobby state for them.
       if (modalRouter.isHashRouted()) {
@@ -1002,6 +1017,10 @@ class Client {
         );
       }
 
+      if (this.replayViewerID !== null) {
+        this.leaveReplayViewer();
+        return;
+      }
       if (this.currentUrl !== null && this.lobbyHandle !== null) {
         console.info("Game is active");
 
@@ -1074,6 +1093,52 @@ class Client {
       });
   }
 
+  /**
+   * Replace the menu with the replay viewer. Leaving it reloads the page,
+   * like leaving a game.
+   */
+  private async openReplayViewer(gameID: string): Promise<void> {
+    // Opening the viewer fires both popstate and hashchange, and both can
+    // get here (CrazyGames awaits its SDK first). Only the first opens it.
+    if (this.replayViewerID !== null) return;
+    this.replayViewerID = gameID;
+    let ReplayViewer: typeof import("./replay/ReplayViewer").ReplayViewer;
+    try {
+      ({ ReplayViewer } = await import("./replay/ReplayViewer"));
+    } catch (err) {
+      // The viewer's chunk didn't load (a network error, or a deploy that
+      // replaced it). The menu is still up, so fall back to the client-side
+      // replay. It's a full page load, which also picks up a new deploy.
+      console.error("replay viewer failed to load:", err);
+      this.replayViewerID = null;
+      window.location.assign(classicReplayHref(gameID));
+      return;
+    }
+    this.gameModeSelector.stop();
+    hideMenuChrome();
+    setInGameSignal(true);
+    const viewer = new ReplayViewer();
+    viewer.gameID = gameID;
+    document.body.appendChild(viewer);
+  }
+
+  /**
+   * The URL changed under the viewer (Back, or an edited hash). The menu
+   * isn't there to route it, so load the page again: another replay opens
+   * its viewer, anything else goes home, like leaving a game.
+   */
+  private leaveReplayViewer(): void {
+    const gameID = parseReplayViewerHash(window.location.hash);
+    // Opening the viewer fires both popstate and hashchange, and the first
+    // one opens it. The second still points at the open replay.
+    if (gameID === this.replayViewerID) return;
+    if (gameID !== null) {
+      window.location.reload();
+    } else {
+      window.location.href = homeHref();
+    }
+  }
+
   private async handleUrl() {
     // Wait for modal custom elements to be defined
     await Promise.all([
@@ -1122,6 +1187,13 @@ class Client {
     // Decode the hash first to handle encoded characters
     const decodedHash = decodeURIComponent(hash);
     const params = new URLSearchParams(decodedHash.split("?")[1] || "");
+
+    // The replay viewer takes over the page (loaded on demand).
+    const replayViewerID = parseReplayViewerHash(hash);
+    if (replayViewerID !== null) {
+      await this.openReplayViewer(replayViewerID);
+      return;
+    }
 
     // The `/c/<code>` share-link path is stashed (and stripped) by
     // consumeCreatorCodePath() at the very start of initialize(), before this

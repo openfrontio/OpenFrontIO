@@ -1818,6 +1818,24 @@
     "game_speed": "Game speed",
     "replay_speed": "Replay speed"
   },
+  "replay_viewer": {
+    "following": "Following {name}",
+    "load_failed": "This replay could not be loaded.",
+    "loading": "Loading replay…",
+    "partial": "Only the first {time} of this game can be watched.",
+    "pause": "Pause",
+    "play": "Play",
+    "processing": "Preparing this replay…",
+    "processing_fetching": "Fetching the game record",
+    "processing_simulating": "Replaying the game: {percent}%",
+    "timeline": "Replay timeline",
+    "unavailable_desync": "This game doesn't replay correctly on this version of OpenFront.",
+    "unavailable_failed": "Processing this game failed.",
+    "unavailable_not_found": "This game could not be found.",
+    "unavailable_other_build": "This game was played on another version of OpenFront.",
+    "unavailable_unreachable": "The game could not be downloaded. Check your connection and try again.",
+    "watch_classic": "Watch the old replay instead"
+  },
   "rewards_modal": {
     "title": "Rewards"
   },

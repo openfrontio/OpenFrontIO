@@ -102,6 +102,16 @@ vi.mock("../../src/client/ClientGameRunner", () => ({
   joinLobby: mocks.joinLobby,
 }));
 
+// The viewer pulls in the WebGL renderer. A bare element is enough to see
+// that Main opened it, and for which game.
+vi.mock("../../src/client/replay/ReplayViewer", () => {
+  class ReplayViewer extends HTMLElement {
+    gameID = "";
+  }
+  customElements.define("replay-viewer", ReplayViewer);
+  return { ReplayViewer };
+});
+
 function userMeFixture(): unknown {
   return {
     user: { email: "player@example.com" },
@@ -616,5 +626,26 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
         translateText("common.backend_unreachable"),
       );
     });
+  });
+
+  // Last: the viewer replaces the menu, and any later hash change would
+  // then leave the page.
+  it("opens the replay viewer when the hash changes to one, though closing the join modal resets the URL", async () => {
+    const joinModal = document.querySelector("join-lobby-modal") as unknown as {
+      close: () => void;
+    };
+    // What JoinLobbyModal.onClose does when there's no lobby to keep.
+    const closeSpy = vi
+      .spyOn(joinModal, "close")
+      .mockImplementation(() => history.replaceState(null, "", "/"));
+    window.location.hash = "#replay-viewer=dqKzit4cWu";
+    window.dispatchEvent(new Event("hashchange"));
+    await vi.waitFor(() =>
+      expect(
+        (document.querySelector("replay-viewer") as { gameID?: string } | null)
+          ?.gameID,
+      ).toBe("dqKzit4cWu"),
+    );
+    closeSpy.mockRestore();
   });
 });
