@@ -267,8 +267,11 @@ export class CosmeticPreviewModal extends LitElement {
     const rarityLabel = cosmeticRarityLabel(this.resolved);
     const skinPalettes = this.skinPalettes();
     const teamPalettes = this.teamPalettes();
-    const artist = (this.resolved.cosmetic as { artist?: string } | null)
-      ?.artist;
+    const credits = this.resolved.cosmetic as {
+      artist?: string;
+      aiDisclosed?: boolean;
+    } | null;
+    const artist = credits?.artist;
 
     return html`<div
       data-cosmetic-preview-modal
@@ -301,6 +304,15 @@ export class CosmeticPreviewModal extends LitElement {
                   <span class="text-white/90 font-medium">${artist}</span>
                 </span>`
               : nothing}
+            ${
+              // Same rule as <cosmetic-info>: only a declaration that was actually made shows, so
+              // a cosmetic can't say it used AI on the card and stay silent here.
+              credits?.aiDisclosed === true
+                ? html`<span class="text-xs text-white/60 whitespace-nowrap">
+                    ${translateText("cosmetics.ai_label")}
+                  </span>`
+                : nothing
+            }
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <div

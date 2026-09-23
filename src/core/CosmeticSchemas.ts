@@ -96,6 +96,10 @@ const CosmeticSchema = z.object({
   priceSoft: z.number().optional(),
   priceHard: z.number().optional(),
   artist: z.string().optional(),
+  // Whether the artist declared they used generative AI making this. Present only when they
+  // actually answered: the catalogue omits the field for everything nobody was asked about, so
+  // absent means "unknown", never "no". Shown beside the artist credit in <cosmetic-info>.
+  aiDisclosed: z.boolean().optional(),
   rarity: z
     .enum(["common", "uncommon", "rare", "epic", "legendary"])
     .or(z.string()),
