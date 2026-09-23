@@ -330,6 +330,24 @@ export default defineConfig(({ mode }) => {
     base: "/",
     publicDir: isProduction ? false : "resources",
 
+    // Vite's JS preload helper (`__vitePreload`, used by dynamic import())
+    // resolves a chunk's dependency list against `base`, so with base "/" the
+    // helper chunks behind e.g. the lazy Faro import were requested from the
+    // page origin, where nothing serves /assets/ (openfront.io answered 503,
+    // and the import() rejected, so telemetry never started). Emitting those
+    // references relative makes the helper resolve them against
+    // import.meta.url, i.e. wherever the importing chunk itself was loaded
+    // from -- the CDN in production, same-origin in dev -- without baking
+    // CDN_BASE into the bundle (the Docker build does not have it). HTML keeps
+    // Vite's /assets/ refs so rewriteAssetsForCdn can turn them into the
+    // request-time EJS placeholder.
+    experimental: {
+      renderBuiltUrl(_filename, { hostType }) {
+        if (hostType === "js") return { relative: true };
+        return undefined;
+      },
+    },
+
     resolve: {
       tsconfigPaths: true,
       alias: {
