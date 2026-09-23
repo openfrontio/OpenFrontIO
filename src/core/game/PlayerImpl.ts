@@ -1151,7 +1151,13 @@ export class PlayerImpl implements Player {
     if (gold <= 0n) return false;
     const removed = this.removeGold(gold);
     if (removed === 0n) return false;
+    // Must be read before addGold: the recipient's balance at this instant is
+    // the only chance to record how broke they were when the gold landed.
+    const recipientGoldBefore = recipient.gold();
     recipient.addGold(removed);
+    this.mg
+      .stats()
+      .goldDonationReceived(recipient, removed, recipientGoldBefore);
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.addUpdate({

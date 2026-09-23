@@ -121,6 +121,16 @@ export interface Stats {
   // Player earns gold from workers
   goldWork(player: Player, gold: number | bigint): void;
 
+  // Player receives donated gold. `goldBefore` is their balance at the moment
+  // the donation is applied, before the gold is added — nothing else records a
+  // gold balance, so "were they broke when it arrived" cannot be recovered
+  // from the cumulative counters afterwards.
+  goldDonationReceived(
+    player: Player,
+    gold: number | bigint,
+    goldBefore: number | bigint,
+  ): void;
+
   // Player builds a unit of type
   unitBuild(player: Player, type: OtherUnitType): void;
 

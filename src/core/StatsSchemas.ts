@@ -110,6 +110,24 @@ export const GOLD_INDEX_TRADE = 2; // Gold earned by trade ships
 export const GOLD_INDEX_STEAL = 3; // Gold earned by capturing trade ships
 export const GOLD_INDEX_TRAIN_SELF = 4; // Gold earned by own trains
 export const GOLD_INDEX_TRAIN_OTHER = 5; // Gold earned by other players trains
+// Appended: `gold` is a variable-length array, so records written before this
+// index existed stay valid and simply stop one short.
+export const GOLD_INDEX_DONATE_RECV = 6; // Gold received from donations
+
+// Donations. Only the receiving side is counted; a donation the sender makes
+// is already visible as the gold leaving their income curve. RECV_BROKE is the
+// subset of RECV that landed while the recipient held less than
+// DONATION_BROKE_GOLD_THRESHOLD, measured before the gold was added.
+export const DONATION_INDEX_GOLD_RECV = 0;
+export const DONATION_INDEX_GOLD_RECV_BROKE = 1;
+
+// Broke means "cannot buy anything at all": the cheapest purchasable unit in
+// the game is a first Defense Post at 50k, and every other structure, warship
+// and warhead costs more (Config.ts). A literal rather than a read of the cost
+// table on purpose — a banked record is judged by infra long after the match,
+// so the line has to mean the same thing forever, even if the economy is
+// rebalanced.
+export const DONATION_BROKE_GOLD_THRESHOLD = 50_000n;
 
 // Other Units
 export const OTHER_INDEX_BUILT = 0; // Structures and warships built
@@ -173,6 +191,7 @@ export const PlayerStatsSchema = z
     tiles: AtLeastOneNumberSchema.optional(),
     alliances: AtLeastOneNumberSchema.optional(),
     peakTroops: BigIntStringSchema.optional(),
+    donations: AtLeastOneNumberSchema.optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
