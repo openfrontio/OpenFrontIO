@@ -10,11 +10,10 @@ import {
 } from "../../../client/Utils";
 import { Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
-import { RankedType } from "../../../core/game/Game";
+import { GameType, RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameStartInfo } from "../../../core/Schemas";
 import { generateID } from "../../../core/Util";
-import { syncAchievements } from "../../AchievementSignal";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
