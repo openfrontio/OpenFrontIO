@@ -351,6 +351,9 @@ export const PublicGameInfoSchema = z.object({
   label: LobbyLabelSchema.optional(),
   accent: LobbyAccentSchema.optional(),
   featured: z.boolean().optional(),
+  // Hosted lobbies only: server timestamp when the listing auto-starts, so
+  // the lobby browser can show a countdown before the host presses Start.
+  autoStartAt: zb.uint().optional(),
 });
 
 export const PublicGamesSchema = z.object({

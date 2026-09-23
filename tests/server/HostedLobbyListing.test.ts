@@ -806,6 +806,7 @@ describe("WorkerLobbyService hosted lobbies", () => {
     expect(reported.gameConfig.nameReveals).toBeUndefined();
     expect(reported.gameConfig.nameRevealPublicIds).toBeUndefined();
     expect(reported.gameConfig.hostCheats).toBeUndefined();
+    expect(reported.autoStartAt).toBe(game.autoStartAt());
   });
 
   it("excludes matchmaking games (Public but no publicGameType) from the report", () => {
@@ -882,6 +883,19 @@ describe("WorkerLobbyService hosted lobbies", () => {
     const primed = sentPayloads(lateWs)[0];
     expect(primed.type).toBe("full");
     expect(primed.games.hosted[0].creatorID).toBeUndefined();
+  });
+
+  it("carries a hosted lobby's auto-start deadline to clients", () => {
+    const ws = connectClient();
+    emitBroadcast({
+      ffa: [],
+      team: [],
+      special: [],
+      hosted: [hostedLobby("g1", "hash", { autoStartAt: 123_456 })],
+    });
+
+    const full = sentPayloads(ws).find((p) => p.type === "full");
+    expect(full.games.hosted[0].autoStartAt).toBe(123_456);
   });
 
   it("re-sends a full when a hosted lobby's config changes without a gameID change", () => {
