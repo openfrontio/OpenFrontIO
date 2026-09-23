@@ -187,4 +187,31 @@ describe("archived game records", () => {
     expect(archive).toHaveBeenCalledTimes(1);
     expect(archived().info.tribes).toBeUndefined();
   });
+
+  it("records the public lobby type for infra's per-type join rates", async () => {
+    const game = makeGame({
+      config: { gameType: GameType.Public },
+      publicGameType: "special",
+      deps: { archive },
+    });
+    game.joinClient(makeClient());
+
+    startGame(game);
+    await game.end();
+
+    expect(archived().info.publicGameType).toBe("special");
+  });
+
+  it("omits the public lobby type for a game with none", async () => {
+    const game = makeGame({
+      config: { gameType: GameType.Private },
+      deps: { archive },
+    });
+    game.joinClient(makeClient());
+
+    startGame(game);
+    await game.end();
+
+    expect(archived().info.publicGameType).toBeUndefined();
+  });
 });
