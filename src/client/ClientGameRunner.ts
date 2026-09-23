@@ -11,6 +11,7 @@ import {
   LobbyInfoEvent,
   PlayerCosmeticRefs,
   ServerMessage,
+  Turn,
 } from "../core/Schemas";
 import { findClosestBy, replacer } from "../core/Util";
 import {
@@ -108,6 +109,9 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
   // Watch without playing.
   spectator?: boolean;
+  // Saved historical turns when resuming a solo match.
+  resumeTurns?: Turn[];
+  resumeSnapshot?: Uint8Array;
 }
 
 export interface JoinLobbyResult {
@@ -698,7 +702,11 @@ async function createClientGame(
   // Kick off the font-atlas fetch so it overlaps with worker init; the
   // render passes need it parsed before createWebGLView runs.
   const atlasDataLoad = preloadAtlasData();
-  const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
+  const worker = new WorkerClient(
+    lobbyConfig.gameStartInfo,
+    clientID,
+    lobbyConfig.resumeSnapshot,
+  );
   await worker.initialize();
   await atlasDataLoad;
   const gameView = new GameView(

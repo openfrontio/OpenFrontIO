@@ -11,6 +11,7 @@ import {
   GroupTokenEvent,
   LobbyInfoEvent,
   PublicGameInfo,
+  Turn,
 } from "../core/Schemas";
 import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
@@ -258,6 +259,8 @@ export interface JoinLobbyEvent {
   publicLobbyInfo?: GameInfo | PublicGameInfo;
   // Watch without playing.
   spectator?: boolean;
+  resumeTurns?: Turn[];
+  resumeSnapshot?: Uint8Array;
 }
 
 /**
@@ -1491,6 +1494,8 @@ class Client {
           : undefined),
       gameRecord: lobby.gameRecord,
       spectator: lobby.spectator,
+      resumeTurns: lobby.resumeTurns,
+      resumeSnapshot: lobby.resumeSnapshot,
     });
 
     if (this.mostRecentJoinEvent !== event.timeStamp) {

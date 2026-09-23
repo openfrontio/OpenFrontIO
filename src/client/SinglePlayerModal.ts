@@ -27,9 +27,16 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { GameStartingModal } from "./GameStartingModal";
-import { showInGameAlert } from "./InGameModal";
+import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
+import {
+  clearSoloSave,
+  decompressSoloTurns,
+  getSoloSave,
+  getSoloSnapshot,
+  SoloSaveState,
+} from "./SinglePlayerSaveManager";
 import { UsernameInput } from "./UsernameInput";
 import {
   getBotsForCompactMap,
@@ -185,6 +192,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private gameMode: GameMode = DEFAULT_OPTIONS.gameMode;
   @state() private teamCount: TeamCountConfig = DEFAULT_OPTIONS.teamCount;
   @state() private showAchievements: boolean = false;
+  @state() private resumeSave: SoloSaveState | null = null;
   @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
   // Maps that support achievements (have nations). null until loaded — the
   // medal overview shows a placeholder total meanwhile.
@@ -230,6 +238,7 @@ export class SinglePlayerModal extends BaseModal {
       this.handleUserMeResponse as EventListener,
     );
     void this.loadNationCount();
+    this.resumeSave = getSoloSave();
   }
 
   disconnectedCallback() {
@@ -238,6 +247,96 @@ export class SinglePlayerModal extends BaseModal {
       this.handleUserMeResponse as EventListener,
     );
     super.disconnectedCallback();
+  }
+
+  private async handleResumeGame() {
+    if (!this.resumeSave) return;
+    const save = this.resumeSave;
+
+    let resumeSnapshot: Uint8Array | undefined;
+    if (save.snapshot) {
+      const snapData = await getSoloSnapshot();
+      if (snapData) {
+        resumeSnapshot = snapData.snapshot;
+      }
+    }
+    const turns =
+      !resumeSnapshot && save.turns
+        ? decompressSoloTurns(save.turns, save.numTurns)
+        : undefined;
+
+    this.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID: save.gameID,
+          gameStartInfo: save.gameStartInfo,
+          source: "singleplayer",
+          resumeSnapshot,
+          resumeTurns: turns,
+        } satisfies JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    this.close();
+  }
+
+  private async handleDiscardGame() {
+    const confirmed = await showInGameConfirm(
+      translateText("single_modal.confirm_discard") ||
+        "Are you sure you want to discard your saved singleplayer game?",
+    );
+    if (!confirmed) return;
+    clearSoloSave();
+    this.resumeSave = null;
+    this.requestUpdate();
+  }
+
+  private renderResumeBanner(): TemplateResult | null {
+    if (!this.resumeSave) return null;
+
+    const map = this.resumeSave.gameStartInfo.config.gameMap;
+    const totalSeconds = Math.floor(this.resumeSave.numTurns / 10);
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = Math.floor(totalSeconds % 60);
+    const time =
+      h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+
+    return html`
+      <div
+        class="mb-6 p-4 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+      >
+        <div class="flex flex-col gap-1">
+          <div class="text-sm font-bold text-blue-400 uppercase tracking-wider">
+            ${translateText("single_modal.resume_game")}
+          </div>
+          <div class="text-xs text-white/70">
+            ${translateText("single_modal.resume_desc", {
+              map: String(map),
+              time,
+              minutes: pad(m),
+              seconds: pad(s),
+            })}
+          </div>
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <o-button
+            variant="secondary"
+            size="sm"
+            translationKey="single_modal.discard_game"
+            @click=${this.handleDiscardGame}
+          ></o-button>
+          <o-button
+            variant="primary"
+            size="sm"
+            translationKey="single_modal.resume"
+            @click=${this.handleResumeGame}
+          ></o-button>
+        </div>
+      </div>
+    `;
   }
 
   private toggleAchievements = () => {
@@ -483,6 +582,7 @@ export class SinglePlayerModal extends BaseModal {
         <div
           class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 pt-4 pb-6 mr-1 mx-auto w-full max-w-5xl"
         >
+          ${this.renderResumeBanner()}
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-6"}
@@ -700,6 +800,7 @@ export class SinglePlayerModal extends BaseModal {
     // case. It does not help when the backend is unreachable: fetchCosmetics
     // deliberately does not cache a failure, so the click re-pays one bounded
     // attempt. Remembering an unreachable backend is OPE-403.
+    this.resumeSave = getSoloSave();
     void prewarmCosmetics();
   }
 
@@ -1194,6 +1295,8 @@ export class SinglePlayerModal extends BaseModal {
           composed: true,
         }),
       );
+      clearSoloSave();
+      this.resumeSave = null;
       // The overlay is the join pipeline's now — GameRenderer or Main's
       // canPlay() refusal hides it. Disowning it keeps the close below (and
       // any later onClose) from taking it down mid game-load.
