@@ -102,7 +102,10 @@ export function initWorkerMetrics(
   });
 
   lobbyClientsGauge.addCallback((result) => {
-    result.observe(lobbyService.connectedClients(), getPromLabels());
+    const labels = getPromLabels();
+    for (const [platform, count] of lobbyService.connectedClientsByPlatform()) {
+      result.observe(count, { ...labels, "openfront.platform": platform });
+    }
   });
 
   singleplayerGamesGauge.addCallback((result) => {

@@ -26,7 +26,7 @@ describe("WorkerLobbyService.connectedClients", () => {
     (service as any).sendToMaster = vi.fn();
   });
 
-  function connectClient() {
+  function connectClient(url?: string) {
     const handlers = new Map<string, (...args: unknown[]) => void>();
     const ws = {
       send: vi.fn(),
@@ -36,9 +36,27 @@ describe("WorkerLobbyService.connectedClients", () => {
       readyState: WebSocket.OPEN as number,
       close: () => handlers.get("close")?.(),
     };
-    (service as any).lobbiesWss.emit("connection", ws);
+    (service as any).lobbiesWss.emit(
+      "connection",
+      ws,
+      url === undefined ? undefined : { url },
+    );
     return ws;
   }
+
+  it("counts clients per platform from the upgrade URL, zeros included", () => {
+    connectClient("/w0/lobbies?platform=steam");
+    connectClient("/w0/lobbies?platform=web");
+    connectClient("/w0/lobbies?platform=web");
+    connectClient("/w0/lobbies?platform=toaster");
+    connectClient("/w0/lobbies");
+    expect(Object.fromEntries(service.connectedClientsByPlatform())).toEqual({
+      web: 2,
+      steam: 1,
+      crazygames: 0,
+      unknown: 2,
+    });
+  });
 
   it("counts connected sockets and drops them on close", () => {
     expect(service.connectedClients()).toBe(0);

@@ -2,6 +2,7 @@ import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { CloseCode } from "../core/CloseCodes";
 import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
+import { clientPlatform } from "./ClientPlatform";
 import { showInGameAlert } from "./InGameModal";
 import {
   ensureServerList,
@@ -156,7 +157,9 @@ export class PublicLobbySocket {
 
       // WS origin comes from ClientEnv (same-origin on web, audience-derived on
       // the desktop app://openfront origin), not window.location.host.
-      const wsUrl = `${ClientEnv.serverWsBase()}${this.workerPath}/lobbies`;
+      // ?platform= is only for the server's per-platform lobby gauge: the
+      // lobby socket has no join message to carry it in.
+      const wsUrl = `${ClientEnv.serverWsBase()}${this.workerPath}/lobbies?platform=${clientPlatform()}`;
 
       const ws = new WebSocket(wsUrl);
       this.ws = ws;

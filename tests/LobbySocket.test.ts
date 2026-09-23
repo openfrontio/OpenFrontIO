@@ -728,7 +728,7 @@ describe("PublicLobbySocket.start with no server known", () => {
 
       expect(urls).toHaveLength(1);
       expect(urls[0]).toMatch(
-        /^wss:\/\/falk2-b\.openfront\.io\/w\d+\/lobbies$/,
+        /^wss:\/\/falk2-b\.openfront\.io\/w\d+\/lobbies\?platform=web$/,
       );
       expect(mocks.showInGameAlert).not.toHaveBeenCalled();
     } finally {
@@ -871,7 +871,7 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
     expect(onUpdateAvailable).not.toHaveBeenCalled();
     // And the lobby list still connects, on the page's own server.
     expect((socket as any).ws.url).toMatch(
-      /^wss:\/\/blue\.openfront\.io\/w\d+\/lobbies$/,
+      /^wss:\/\/blue\.openfront\.io\/w\d+\/lobbies\?platform=web$/,
     );
     socket.stop();
   });
@@ -954,7 +954,7 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
     await socket.start();
     expect(onUpdateAvailable).not.toHaveBeenCalled();
     expect((socket as any).ws.url).toMatch(
-      /^wss:\/\/blue\.openfront\.io\/w\d+\/lobbies$/,
+      /^wss:\/\/blue\.openfront\.io\/w\d+\/lobbies\?platform=web$/,
     );
 
     // And not after the socket gives up either: there is no newer build.
