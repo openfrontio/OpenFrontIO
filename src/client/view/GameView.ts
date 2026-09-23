@@ -18,7 +18,6 @@ import {
   GameUpdateViewData,
   SpawnPhaseEndUpdate,
 } from "../../core/game/GameUpdates";
-import { ATTACK_DELTA_OUTGOING } from "../../core/game/GameUpdateUtils";
 import {
   MotionPlanRecord,
   unpackMotionPlans,
@@ -41,22 +40,20 @@ import { SpiralTrails } from "../render/frame/SpiralTrails";
 import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
+import { TRAIL_TYPES } from "../render/types/UnitType";
 import { resolveTeamClanTag } from "../Utils";
 import type { CosmeticVisibility } from "./CosmeticVisibility";
+import {
+  applyPackedAttackTroops,
+  applyPackedPlayerStats,
+  embargoSmallIDs,
+} from "./EntityState";
 import { PlayerView } from "./PlayerView";
 import { UnitView } from "./UnitView";
 
 function readCosmeticVisibility(): CosmeticVisibility {
   return new UserSettings().graphicsOverrides().cosmetics ?? {};
 }
-
-const TRAIL_TYPES: ReadonlySet<UnitType> = new Set<UnitType>([
-  UnitType.TransportShip,
-  UnitType.AtomBomb,
-  UnitType.HydrogenBomb,
-  UnitType.MIRV,
-  UnitType.MIRVWarhead,
-]);
 
 type TrainPlanState = {
   planId: number;
@@ -420,53 +417,19 @@ export class GameView implements GameMap {
       if (pu.embargoes === undefined) return;
       const player = this._players.get(pu.id);
       if (player === undefined) return;
-      const smallIDs: number[] = [];
-      for (const otherPlayerID of pu.embargoes) {
-        const otherPV = this._players.get(otherPlayerID);
-        if (otherPV !== undefined) {
-          smallIDs.push(otherPV.smallID());
-        }
-      }
+      const smallIDs = embargoSmallIDs(pu.embargoes, (id) =>
+        this._players.get(id)?.smallID(),
+      );
       player.setEmbargoSmallIDs(smallIDs);
     });
 
-    // Packed per-player stats: [smallID, tilesOwned, gold, troops, goldEarned]
-    // quints for every player whose stats changed this tick (the per-tick
-    // churn that no longer travels in PlayerUpdate objects). Applied after
-    // pass 1 so first-emission players exist; their quad carries the same
-    // values as the full update, so double-applying is harmless.
-    const packedStats = gu.packedPlayerUpdates;
-    if (packedStats !== undefined) {
-      for (let i = 0; i + 4 < packedStats.length; i += 5) {
-        const state = this._playerStates.get(packedStats[i]);
-        if (state === undefined) continue;
-        state.tilesOwned = packedStats[i + 1];
-        state.gold = packedStats[i + 2];
-        state.troops = packedStats[i + 3];
-        state.goldEarned = packedStats[i + 4];
-      }
-    }
-
-    // Packed attack troop counts: [ownerSmallID, direction, index, troops]
-    // quads. The attack arrays themselves are only resent when membership/
-    // order changes, which is also what keeps these indexes valid — a tick
-    // either resends an array (fresh troops included) or patches it, never
-    // both. See packAttackTroopDeltas.
-    const packedAttacks = gu.packedAttackUpdates;
-    if (packedAttacks !== undefined) {
-      for (let i = 0; i + 3 < packedAttacks.length; i += 4) {
-        const state = this._playerStates.get(packedAttacks[i]);
-        if (state === undefined) continue;
-        const attacks =
-          packedAttacks[i + 1] === ATTACK_DELTA_OUTGOING
-            ? state.outgoingAttacks
-            : state.incomingAttacks;
-        const attack = attacks[packedAttacks[i + 2]];
-        if (attack !== undefined) {
-          attack.troops = packedAttacks[i + 3];
-        }
-      }
-    }
+    // Packed per-player stats and attack troop counts, the per-tick churn
+    // that no longer travels in PlayerUpdate objects. Applied after pass 1
+    // so first-emission players exist; their stats carry the same values
+    // as the full update, so applying both is harmless.
+    const stateOf = (smallID: number) => this._playerStates.get(smallID);
+    applyPackedPlayerStats(gu.packedPlayerUpdates, stateOf);
+    applyPackedAttackTroops(gu.packedAttackUpdates, stateOf);
 
     if (this._myClientID) {
       this._myPlayer ??= this.playerByClientID(this._myClientID);
