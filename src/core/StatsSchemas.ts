@@ -23,10 +23,10 @@ export const BoatUnitSchema = z.enum(boatUnits);
 export type BoatUnit = z.infer<typeof BoatUnitSchema>;
 export type BoatUnitType = UnitType.TradeShip | UnitType.TransportShip;
 
-// export const unitTypeToBoatUnit = {
-//   [UnitType.TradeShip]: "trade",
-//   [UnitType.TransportShip]: "trans",
-// } as const satisfies Record<BoatUnitType, BoatUnit>;
+export const unitTypeToBoatUnit = {
+  [UnitType.TradeShip]: "trade",
+  [UnitType.TransportShip]: "trans",
+} as const satisfies Record<BoatUnitType, BoatUnit>;
 
 export const otherUnits = [
   "city",
@@ -94,6 +94,9 @@ export const BOAT_INDEX_SENT = 0; // Boats launched
 export const BOAT_INDEX_ARRIVE = 1; // Boats arrived
 export const BOAT_INDEX_CAPTURE = 2; // Boats captured
 export const BOAT_INDEX_DESTROY = 3; // Boats destroyed
+// Appended: `boats` values are already variable-length arrays, so records
+// written before this index existed stay valid and simply stop one short.
+export const BOAT_INDEX_LOST = 4; // Own boats destroyed, whoever destroyed them
 
 // Bombs
 export const BOMB_INDEX_LAUNCH = 0; // Bombs launched
