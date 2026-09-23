@@ -41,6 +41,14 @@ describe("SingleplayerPresence", () => {
     expect(presence.activeGames()).toBe(1);
   });
 
+  it("prunes expired games on heartbeat, without a gauge read", () => {
+    const { presence, advance } = make();
+    presence.heartbeat("gameAAAA", "web");
+    advance(SINGLEPLAYER_PRESENCE_TTL_MS + 1);
+    presence.heartbeat("gameBBBB", "web");
+    expect((presence as any).lastSeen.size).toBe(1);
+  });
+
   it("drops a game once its last beat is older than the TTL", () => {
     const { presence, advance } = make();
     presence.heartbeat("gameAAAA", "web");

@@ -24,23 +24,29 @@ export class SingleplayerPresence {
   ) {}
 
   heartbeat(gameID: GameID, platform: Platform): void {
+    // Prune here too, not only when the gauge reads: with OTel off nothing
+    // reads it, and the map would grow by one entry per id ever seen.
+    this.prune();
     this.lastSeen.set(gameID, { at: this.now(), platform });
   }
 
   /** Games heard from within the TTL, per platform, zeros included. */
   activeGamesByPlatform(): Map<Platform, number> {
+    this.prune();
     const counts = new Map<Platform, number>(
       [...ClientPlatformSchema.options, "unknown" as const].map((p) => [p, 0]),
     );
-    const cutoff = this.now() - this.ttlMs;
-    for (const [gameID, { at, platform }] of this.lastSeen) {
-      if (at < cutoff) {
-        this.lastSeen.delete(gameID);
-        continue;
-      }
+    for (const { platform } of this.lastSeen.values()) {
       counts.set(platform, counts.get(platform)! + 1);
     }
     return counts;
+  }
+
+  private prune(): void {
+    const cutoff = this.now() - this.ttlMs;
+    for (const [gameID, { at }] of this.lastSeen) {
+      if (at < cutoff) this.lastSeen.delete(gameID);
+    }
   }
 
   activeGames(): number {
