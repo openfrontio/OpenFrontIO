@@ -1,0 +1,334 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [2312, 748],
+      "flag": "britishcolumbia",
+      "name": "Whistler"
+    },
+    {
+      "coordinates": [2478, 1460],
+      "flag": "britishcolumbia",
+      "name": "Tsawwassen"
+    },
+    {
+      "coordinates": [2157, 1480],
+      "flag": "britishcolumbia",
+      "name": "Ladysmith"
+    },
+    {
+      "coordinates": [1157, 1216],
+      "flag": "britishcolumbia",
+      "name": "Hot Springs Cove"
+    },
+    {
+      "coordinates": [930, 823],
+      "flag": "britishcolumbia",
+      "name": "Zeballos"
+    },
+    {
+      "coordinates": [414, 389],
+      "flag": "britishcolumbia",
+      "name": "Holberg"
+    },
+    {
+      "coordinates": [699, 628],
+      "flag": "britishcolumbia",
+      "name": "Port Alice"
+    },
+    {
+      "coordinates": [897, 420],
+      "flag": "britishcolumbia",
+      "name": "Mitchell Bay"
+    },
+    {
+      "coordinates": [1277, 298],
+      "flag": "britishcolumbia",
+      "name": "Kingcome Inlet"
+    },
+    {
+      "coordinates": [1642, 997],
+      "flag": "britishcolumbia",
+      "name": "Comox"
+    },
+    {
+      "coordinates": [1828, 856],
+      "flag": "britishcolumbia",
+      "name": "Lund"
+    },
+    {
+      "coordinates": [1766, 1194],
+      "flag": "britishcolumbia",
+      "name": "Qualicum Beach"
+    },
+    {
+      "coordinates": [2571, 1340],
+      "flag": "britishcolumbia",
+      "name": "Surrey"
+    },
+    {
+      "coordinates": [2304, 1592],
+      "flag": "britishcolumbia",
+      "name": "Fulford Harbour"
+    },
+    {
+      "coordinates": [2099, 1813],
+      "flag": "britishcolumbia",
+      "name": "Shirley"
+    },
+    {
+      "coordinates": [2073, 1582],
+      "flag": "britishcolumbia",
+      "name": "Lake Cowichan"
+    },
+    {
+      "coordinates": [1779, 1673],
+      "flag": "britishcolumbia",
+      "name": "Whyac"
+    },
+    {
+      "coordinates": [1704, 1496],
+      "flag": "britishcolumbia",
+      "name": "Sarita"
+    },
+    {
+      "coordinates": [1530, 1447],
+      "flag": "britishcolumbia",
+      "name": "Salmon Beach"
+    },
+    {
+      "coordinates": [1063, 1205],
+      "flag": "britishcolumbia",
+      "name": "Hesquiat"
+    },
+    {
+      "coordinates": [815, 860],
+      "flag": "britishcolumbia",
+      "name": "Cachalot"
+    },
+    {
+      "coordinates": [677, 402],
+      "flag": "britishcolumbia",
+      "name": "Fort Rupert"
+    },
+    {
+      "coordinates": [963, 518],
+      "flag": "britishcolumbia",
+      "name": "Telegraph Bay"
+    },
+    {
+      "coordinates": [1482, 668],
+      "flag": "britishcolumbia",
+      "name": "Elk Bay"
+    },
+    {
+      "coordinates": [2267, 1801],
+      "flag": "britishcolumbia",
+      "name": "Langford"
+    },
+    {
+      "coordinates": [1891, 1512],
+      "flag": "britishcolumbia",
+      "name": "Nitinat"
+    },
+    {
+      "coordinates": [1735, 1404],
+      "flag": "britishcolumbia",
+      "name": "Nahmint"
+    },
+    {
+      "coordinates": [1825, 1229],
+      "flag": "britishcolumbia",
+      "name": "Bowser"
+    },
+    {
+      "coordinates": [1451, 350],
+      "flag": "britishcolumbia",
+      "name": "Glendale Cove"
+    },
+    {
+      "coordinates": [1244, 511],
+      "flag": "britishcolumbia",
+      "name": "Port Neville"
+    }
+  ],
+  "categories": ["north_america", "new"],
+  "id": "VancouverIsland",
+  "map": {
+    "height": 1980,
+    "num_land_tiles": 2012664,
+    "width": 2600
+  },
+  "map16x": {
+    "height": 495,
+    "num_land_tiles": 117919,
+    "width": 650
+  },
+  "map4x": {
+    "height": 990,
+    "num_land_tiles": 491184,
+    "width": 1300
+  },
+  "multiplayer_frequency": 4,
+  "name": "Vancouver Island",
+  "nations": [
+    {
+      "coordinates": [2478, 1308],
+      "flag": "Vancouver",
+      "name": "Vancouver"
+    },
+    {
+      "coordinates": [1878, 1926],
+      "flag": "Washington",
+      "name": "Clallam County"
+    },
+    {
+      "coordinates": [2527, 1686],
+      "flag": "Washington",
+      "name": "San Juan"
+    },
+    {
+      "coordinates": [2348, 1797],
+      "flag": "britishcolumbia",
+      "name": "Victoria"
+    },
+    {
+      "coordinates": [2198, 1604],
+      "flag": "britishcolumbia",
+      "name": "Duncan"
+    },
+    {
+      "coordinates": [2074, 1336],
+      "flag": "britishcolumbia",
+      "name": "Nanaimo"
+    },
+    {
+      "coordinates": [1772, 1339],
+      "flag": "britishcolumbia",
+      "name": "Port Alberni"
+    },
+    {
+      "coordinates": [1916, 1264],
+      "flag": "britishcolumbia",
+      "name": "Parksville"
+    },
+    {
+      "coordinates": [1477, 1483],
+      "flag": "britishcolumbia",
+      "name": "Ucluelet"
+    },
+    {
+      "coordinates": [1331, 1358],
+      "flag": "britishcolumbia",
+      "name": "Tofino"
+    },
+    {
+      "coordinates": [1674, 1041],
+      "flag": "britishcolumbia",
+      "name": "Courtenay"
+    },
+    {
+      "coordinates": [1555, 833],
+      "flag": "britishcolumbia",
+      "name": "Campbell River"
+    },
+    {
+      "coordinates": [657, 371],
+      "flag": "britishcolumbia",
+      "name": "Port Hardy"
+    },
+    {
+      "coordinates": [1886, 928],
+      "flag": "britishcolumbia",
+      "name": "Powell River"
+    },
+    {
+      "coordinates": [2444, 1000],
+      "flag": "britishcolumbia",
+      "name": "Squamish"
+    },
+    {
+      "coordinates": [2195, 1167],
+      "flag": "britishcolumbia",
+      "name": "Sechelt"
+    },
+    {
+      "coordinates": [1426, 603],
+      "flag": "britishcolumbia",
+      "name": "Rock Bay"
+    },
+    {
+      "coordinates": [1220, 563],
+      "flag": "britishcolumbia",
+      "name": "Sayward"
+    },
+    {
+      "coordinates": [2188, 1834],
+      "flag": "britishcolumbia",
+      "name": "Sooke"
+    },
+    {
+      "coordinates": [1651, 1575],
+      "flag": "britishcolumbia",
+      "name": "Bamfield"
+    },
+    {
+      "coordinates": [832, 484],
+      "flag": "britishcolumbia",
+      "name": "Port McNeill"
+    },
+    {
+      "coordinates": [1920, 1744],
+      "flag": "britishcolumbia",
+      "name": "Port Renfrew"
+    },
+    {
+      "coordinates": [1005, 846],
+      "flag": "britishcolumbia",
+      "name": "Tahsis"
+    },
+    {
+      "coordinates": [698, 789],
+      "flag": "britishcolumbia",
+      "name": "Kyuquot"
+    },
+    {
+      "coordinates": [409, 498],
+      "flag": "britishcolumbia",
+      "name": "Winter Harbour"
+    },
+    {
+      "coordinates": [1216, 1252],
+      "flag": "britishcolumbia",
+      "name": "Ahousat"
+    },
+    {
+      "coordinates": [2324, 1680],
+      "flag": "britishcolumbia",
+      "name": "Sidney"
+    },
+    {
+      "coordinates": [2100, 995],
+      "flag": "britishcolumbia",
+      "name": "Earls Cove"
+    },
+    {
+      "coordinates": [1236, 1009],
+      "flag": "britishcolumbia",
+      "name": "Gold River"
+    },
+    {
+      "coordinates": [1262, 90],
+      "name": "Kwakwaka'wakw Nation"
+    },
+    {
+      "coordinates": [1970, 1557],
+      "name": "Coast Salish Nation"
+    },
+    {
+      "coordinates": [998, 1060],
+      "name": "Nuu-chah-nulth Nation"
+    }
+  ],
+  "themes": ["north_america"],
+  "translation_key": "map.vancouverisland"
+}

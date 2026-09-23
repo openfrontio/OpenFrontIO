@@ -645,6 +645,11 @@
     "name": "Carthage"
   },
   {
+    "code": "Cascadia",
+    "continent": "North America",
+    "name": "Cascadia"
+  },
+  {
     "code": "castille",
     "continent": "Europe",
     "name": "Castile"
@@ -1246,6 +1251,11 @@
     "code": "fr-i",
     "continent": "Europe",
     "name": "Franche-Comté"
+  },
+  {
+    "code": "Franco-Columbians",
+    "continent": "North America",
+    "name": "Franco-Columbians"
   },
   {
     "code": "1_Franks",
@@ -2421,6 +2431,11 @@
     "name": "Murcia"
   },
   {
+    "code": "Musqueam",
+    "continent": "North America",
+    "name": "Musqueam"
+  },
+  {
     "code": "mm",
     "continent": "Asia",
     "name": "Myanmar"
@@ -2599,6 +2614,11 @@
     "name": "Nigeria"
   },
   {
+    "code": "Nisga'a",
+    "continent": "North America",
+    "name": "Nisga'a"
+  },
+  {
     "code": "nu",
     "continent": "Oceania",
     "name": "Niue"
@@ -2697,6 +2717,11 @@
     "code": "novascotia",
     "continent": "North America",
     "name": "Nova Scotia"
+  },
+  {
+    "code": "Nunatsiavut",
+    "continent": "North America",
+    "name": "Nunatsiavut"
   },
   {
     "code": "Nunavik",
@@ -4247,6 +4272,11 @@
     "name": "Upper Silesia"
   },
   {
+    "code": "Upper Skagit",
+    "continent": "North America",
+    "name": "Upper Skagit"
+  },
+  {
     "code": "Urartu",
     "continent": "Asia",
     "name": "Urartu"
@@ -4280,6 +4310,11 @@
     "code": "valencia",
     "continent": "Europe",
     "name": "Valencia Republic"
+  },
+  {
+    "code": "Vancouver",
+    "continent": "North America",
+    "name": "Vancouver"
   },
   {
     "code": "vu",
@@ -4417,6 +4452,11 @@
     "name": "West Virginia"
   },
   {
+    "code": "Western Canada",
+    "continent": "North America",
+    "name": "Western Canada"
+  },
+  {
     "code": "eh",
     "continent": "Africa",
     "name": "Western Sahara"
@@ -4458,6 +4498,11 @@
     "code": "Yukon",
     "continent": "North America",
     "name": "Yukon"
+  },
+  {
+    "code": "Yuułuʔiłʔatḥ",
+    "continent": "North America",
+    "name": "Yuułuʔiłʔatḥ"
   },
   {
     "code": "Zaire",
