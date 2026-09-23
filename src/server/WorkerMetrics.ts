@@ -7,6 +7,7 @@ import * as dotenv from "dotenv";
 import { GameManager } from "./GameManager";
 import { getOtelResource, getPromLabels } from "./OtelResource";
 import { ServerEnv } from "./ServerEnv";
+import { SingleplayerPresence } from "./SingleplayerPresence";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 
 dotenv.config();
@@ -14,6 +15,7 @@ dotenv.config();
 export function initWorkerMetrics(
   gameManager: GameManager,
   lobbyService: WorkerLobbyService,
+  singleplayerPresence: SingleplayerPresence,
 ): void {
   // Create resource with worker information
   const resource = getOtelResource();
@@ -68,6 +70,14 @@ export function initWorkerMetrics(
     },
   );
 
+  const singleplayerGamesGauge = meter.createObservableGauge(
+    "openfront.singleplayer_games.gauge",
+    {
+      description:
+        "Number of in-browser singleplayer games heartbeating to this worker",
+    },
+  );
+
   const desyncsGauge = meter.createObservableGauge("openfront.desyncs.gauge", {
     description: "Number of detected desyncs on active games on this worker",
   });
@@ -93,6 +103,16 @@ export function initWorkerMetrics(
 
   lobbyClientsGauge.addCallback((result) => {
     result.observe(lobbyService.connectedClients(), getPromLabels());
+  });
+
+  singleplayerGamesGauge.addCallback((result) => {
+    const labels = getPromLabels();
+    for (const [
+      platform,
+      count,
+    ] of singleplayerPresence.activeGamesByPlatform()) {
+      result.observe(count, { ...labels, "openfront.platform": platform });
+    }
   });
 
   desyncsGauge.addCallback((result) => {
