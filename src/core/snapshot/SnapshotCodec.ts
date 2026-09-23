@@ -64,6 +64,30 @@ if (new Uint8Array(new Uint16Array([1]).buffer)[0] !== 1) {
   throw new Error("snapshot codec requires a little-endian platform");
 }
 
+// Explicit mapping rather than indexing TYPED_ARRAYS with a stored value.
+function typedArrayKind(kind: number): (typeof TYPED_ARRAYS)[number] {
+  switch (kind) {
+    case 0:
+      return Int8Array;
+    case 1:
+      return Uint8Array;
+    case 2:
+      return Int16Array;
+    case 3:
+      return Uint16Array;
+    case 4:
+      return Int32Array;
+    case 5:
+      return Uint32Array;
+    case 6:
+      return Float32Array;
+    case 7:
+      return Float64Array;
+    default:
+      throw new SnapshotCodecError(`unknown typed array kind ${kind}`);
+  }
+}
+
 export class SnapshotCodecError extends Error {
   override readonly name = "SnapshotCodecError";
 }
@@ -293,6 +317,11 @@ export function decodeSnapshotValue(bytes: Uint8Array): unknown {
         const out: Record<string, unknown> = {};
         for (let i = 0; i < n; i++) {
           const k = readString(r.u8());
+          // Snapshots can be hand-edited or corrupt: a "__proto__" key would
+          // replace the object's prototype instead of adding a field.
+          if (k === "__proto__") {
+            throw new SnapshotCodecError("invalid object key __proto__");
+          }
           out[k] = read();
         }
         return out;
@@ -316,11 +345,7 @@ export function decodeSnapshotValue(bytes: Uint8Array): unknown {
         return out;
       }
       case Tag.TypedArray: {
-        const kind = r.u8();
-        const C = TYPED_ARRAYS[kind];
-        if (C === undefined) {
-          throw new SnapshotCodecError(`unknown typed array kind ${kind}`);
-        }
+        const C = typedArrayKind(r.u8());
         const byteLength = r.uint();
         if (byteLength % C.BYTES_PER_ELEMENT !== 0) {
           throw new SnapshotCodecError(`misaligned ${C.name} payload`);

@@ -65,6 +65,18 @@ describe("snapshot codec", () => {
     expect(() => encodeSnapshotValue({ s: new Set() })).toThrow(/plain/);
   });
 
+  test("rejects a __proto__ key", () => {
+    const bytes = encodeSnapshotValue(JSON.parse('{"__proto__": {"x": 1}}'));
+    expect(() => decodeSnapshotValue(bytes)).toThrow(/__proto__/);
+  });
+
+  test("rejects unknown typed array kinds", () => {
+    // Tag.TypedArray, kind 8, zero length.
+    expect(() => decodeSnapshotValue(new Uint8Array([12, 8, 0]))).toThrow(
+      /typed array kind/,
+    );
+  });
+
   test("rejects trailing bytes and bad tags", () => {
     const bytes = encodeSnapshotValue(1);
     expect(() => decodeSnapshotValue(new Uint8Array([...bytes, 0]))).toThrow();
