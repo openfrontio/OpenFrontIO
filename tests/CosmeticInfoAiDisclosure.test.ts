@@ -12,6 +12,7 @@ import { CosmeticInfo } from "../src/client/components/CosmeticInfo";
 // these assertions look for, and the English string is checked once, below.
 const AI_KEY = "cosmetics.ai_label";
 
+/** Renders a `<cosmetic-info>` with the given properties and waits for its first update. */
 async function renderInfo(
   props: Partial<Pick<CosmeticInfo, "artist" | "aiDisclosed" | "rarity">>,
 ): Promise<CosmeticInfo> {

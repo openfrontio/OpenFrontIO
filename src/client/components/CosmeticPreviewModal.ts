@@ -298,19 +298,36 @@ export class CosmeticPreviewModal extends LitElement {
             >
               ${rarityLabel}
             </span>
-            ${artist
-              ? html`<span class="text-xs text-white/60 whitespace-nowrap">
-                  ${translateText("cosmetics.artist_label")}
-                  <span class="text-white/90 font-medium">${artist}</span>
-                </span>`
-              : nothing}
             ${
-              // Same rule as <cosmetic-info>: only a declaration that was actually made shows, so
-              // a cosmetic can't say it used AI on the card and stay silent here.
-              credits?.aiDisclosed === true
-                ? html`<span class="text-xs text-white/60 whitespace-nowrap">
-                    ${translateText("cosmetics.ai_label")}
-                  </span>`
+              // Both credits stack in one column rather than sitting as two more items in this
+              // row. The header is a single flex line inside an overflow-hidden panel, and every
+              // item in it refuses to wrap: at phone width a third and fourth nowrap item push
+              // the line past the panel and the last one is clipped away. Stacked, they take the
+              // height they need and the row keeps its one long truncating item (the name).
+              //
+              // Same rule as <cosmetic-info> for the AI line itself: only a declaration that was
+              // actually made shows, so a cosmetic can't say it used AI on the card and stay
+              // silent here.
+              artist || credits?.aiDisclosed === true
+                ? html`<div class="flex min-w-0 flex-col items-start gap-y-0.5">
+                    ${artist
+                      ? html`<span
+                          class="truncate text-xs text-white/60 max-w-full"
+                        >
+                          ${translateText("cosmetics.artist_label")}
+                          <span class="text-white/90 font-medium"
+                            >${artist}</span
+                          >
+                        </span>`
+                      : nothing}
+                    ${credits?.aiDisclosed === true
+                      ? html`<span
+                          class="truncate text-xs text-white/60 max-w-full"
+                        >
+                          ${translateText("cosmetics.ai_label")}
+                        </span>`
+                      : nothing}
+                  </div>`
                 : nothing
             }
           </div>
