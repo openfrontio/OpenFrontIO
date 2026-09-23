@@ -248,8 +248,12 @@ describe("listed lobby auto-start", () => {
     game.joinClient(makeClient("host", CREATOR, fakeWs()));
     game.setListed(true, { autoStartMs: 2 * 60_000, maxPlayers: 2 });
     expect(game.autoStartAt()).toBe(Date.now() + 2 * 60_000);
-    expect(game.gameInfo().gameConfig.maxPlayers).toBe(2);
+    expect(game.gameInfo().gameConfig?.maxPlayers).toBe(2);
     expect(game.phase()).toBe(GamePhase.Lobby);
+
+    // Relisting can't change the advertised cap.
+    game.setListed(true, { maxPlayers: 50 });
+    expect(game.gameInfo().gameConfig?.maxPlayers).toBe(2);
 
     // Filling to the cap starts the game before the deadline.
     game.joinClient(makeClient("guest", OTHER_CREATOR, fakeWs()));
@@ -378,7 +382,7 @@ describe("listed lobby host powers", () => {
     const bots = { type: "update_game_config", config: { bots: 7 } } as any;
     game.setListed(true);
     expect(game.handleIntent(bots, asHost).status).toBe(409);
-    expect(game.gameInfo().gameConfig.bots).not.toBe(7);
+    expect(game.gameInfo().gameConfig?.bots).not.toBe(7);
   });
 
   it("reports host cheats only when a cheat is actually granted", () => {

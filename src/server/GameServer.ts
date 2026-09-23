@@ -1598,8 +1598,11 @@ export class GameServer {
     listed: boolean,
     options: { autoStartMs?: number; maxPlayers?: number } = {},
   ): void {
+    const wasListed = this.listing.isListed();
     this.listing.setListed(listed, options.autoStartMs);
-    if (listed && options.maxPlayers !== undefined) {
+    // Only on the transition: relisting must not change the cap players
+    // joined under.
+    if (listed && !wasListed && options.maxPlayers !== undefined) {
       this.gameConfig.maxPlayers = options.maxPlayers;
       if (this.playerCount() >= options.maxPlayers) {
         this.hasReachedMaxPlayerCount = true;
