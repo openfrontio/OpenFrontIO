@@ -1,5 +1,5 @@
 {
-  "categories": ["new", "north_america"],
+  "categories": ["north_america"],
   "custom_tribes": [
     "Abenaki Tribe",
     "Absentee Shawnee Tribe",
@@ -342,6 +342,7 @@
       "name": "Solvang"
     }
   ],
+  "team_frequency": 7,
   "themes": ["north_america", "western"],
   "translation_key": "map.channelislands"
 }
