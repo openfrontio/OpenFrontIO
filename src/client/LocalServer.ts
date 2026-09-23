@@ -88,11 +88,6 @@ export class LocalServer {
 
   start() {
     console.log("local server starting");
-    if (!this.isReplay && this.lobbyConfig.gameStartInfo !== undefined) {
-      this.stopHeartbeat = startSingleplayerHeartbeat(
-        this.lobbyConfig.gameStartInfo.gameID,
-      );
-    }
     this.turnCheckInterval = setInterval(() => {
       const turnIntervalMs =
         ClientEnv.turnIntervalMs() * this.replaySpeedMultiplier;
@@ -160,6 +155,12 @@ export class LocalServer {
       // Don't send myClientID for replays — viewer has no player identity.
       myClientID: this.lobbyConfig.gameRecord ? undefined : this.clientID,
     } satisfies ServerStartGameMessage);
+    // Last, so a start() that throws above leaves no interval behind.
+    if (!this.isReplay) {
+      this.stopHeartbeat = startSingleplayerHeartbeat(
+        this.lobbyConfig.gameStartInfo.gameID,
+      );
+    }
   }
 
   onMessage(clientMsg: ClientMessage) {

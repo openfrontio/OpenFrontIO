@@ -9,6 +9,10 @@ import { ClientPlatform, ClientPlatformSchema, GameID } from "../core/Schemas";
 export const SINGLEPLAYER_HEARTBEAT_INTERVAL_MS = 60_000;
 export const SINGLEPLAYER_PRESENCE_TTL_MS =
   3 * SINGLEPLAYER_HEARTBEAT_INTERVAL_MS;
+// The route is unauthenticated and any well-formed id is accepted, so cap
+// how many distinct games a worker will track: well above what one worker
+// legitimately sees, small enough that a flood cannot grow the map.
+export const SINGLEPLAYER_PRESENCE_MAX_GAMES = 50_000;
 
 type Platform = ClientPlatform | "unknown";
 
@@ -18,16 +22,31 @@ export class SingleplayerPresence {
     { at: number; platform: Platform }
   >();
 
+  private lastPrunedAt = -Infinity;
+
   constructor(
     private readonly ttlMs: number = SINGLEPLAYER_PRESENCE_TTL_MS,
     private readonly now: () => number = Date.now,
+    private readonly maxGames: number = SINGLEPLAYER_PRESENCE_MAX_GAMES,
   ) {}
 
   heartbeat(gameID: GameID, platform: Platform): void {
     // Prune here too, not only when the gauge reads: with OTel off nothing
-    // reads it, and the map would grow by one entry per id ever seen.
-    this.prune();
-    this.lastSeen.set(gameID, { at: this.now(), platform });
+    // reads it, and the map would grow by one entry per id ever seen. A
+    // full scan per beat would be quadratic under a flood, so throttle it
+    // to once an interval — except at the cap, where a stale entry must not
+    // cost a real game its slot.
+    const now = this.now();
+    if (
+      now - this.lastPrunedAt >= SINGLEPLAYER_HEARTBEAT_INTERVAL_MS ||
+      this.lastSeen.size >= this.maxGames
+    ) {
+      this.prune();
+    }
+    if (!this.lastSeen.has(gameID) && this.lastSeen.size >= this.maxGames) {
+      return;
+    }
+    this.lastSeen.set(gameID, { at: now, platform });
   }
 
   /** Games heard from within the TTL, per platform, zeros included. */
@@ -43,7 +62,8 @@ export class SingleplayerPresence {
   }
 
   private prune(): void {
-    const cutoff = this.now() - this.ttlMs;
+    this.lastPrunedAt = this.now();
+    const cutoff = this.lastPrunedAt - this.ttlMs;
     for (const [gameID, { at }] of this.lastSeen) {
       if (at < cutoff) this.lastSeen.delete(gameID);
     }
