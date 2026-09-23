@@ -1,6 +1,5 @@
 import { Colord, colord } from "colord";
 import { base64url } from "jose";
-import { ColorPalette } from "../../core/CosmeticSchemas";
 import { PatternDecoder } from "../../core/PatternDecoder";
 import { ClientID, PlayerCosmetics } from "../../core/Schemas";
 import { createRandomName } from "../../core/Util";
@@ -33,6 +32,7 @@ import { themeProvider } from "../theme/ThemeProvider";
 import { type CosmeticOwner, visibleCosmetics } from "./CosmeticVisibility";
 import { playerStateFromUpdate, playerStaticFromUpdate } from "./EntityState";
 import { GameView } from "./GameView";
+import { resolvePlayerColors } from "./PlayerColors";
 import { UnitView } from "./UnitView";
 
 const userSettings: UserSettings = new UserSettings();
@@ -132,40 +132,17 @@ export class PlayerView {
   private computeColors(): void {
     const theme = themeProvider.current();
 
-    const defaultTerritoryColor = theme.territoryColor(this);
-    const defaultBorderColor = theme.borderColor(defaultTerritoryColor);
-
     const pattern = this.cosmetics.pattern;
-    if (pattern) {
-      pattern.colorPalette ??= {
-        name: "",
-        primaryColor: defaultTerritoryColor.toHex(),
-        secondaryColor: defaultBorderColor.toHex(),
-      } satisfies ColorPalette;
-    }
-
-    if (this.team() === null) {
-      this._territoryColor = colord(
-        this.cosmetics.color?.color ??
-          pattern?.colorPalette?.primaryColor ??
-          defaultTerritoryColor.toHex(),
-      );
-    } else {
-      this._territoryColor = defaultTerritoryColor;
-    }
-
-    this._structureColors = theme.structureColors(this._territoryColor);
-
-    const maybeFocusedBorderColor =
-      this.game.myClientID() === this.static.clientID
-        ? theme.focusedBorderColor()
-        : defaultBorderColor;
-
-    this._borderColor = new Colord(
-      pattern?.colorPalette?.secondaryColor ??
-        this.cosmetics.color?.color ??
-        maybeFocusedBorderColor.toHex(),
+    const colors = resolvePlayerColors(
+      theme,
+      theme.territoryColor(this),
+      this.cosmetics,
+      this.team(),
+      this.game.myClientID() === this.static.clientID,
     );
+    this._territoryColor = colors.territory;
+    this._borderColor = colors.border;
+    this._structureColors = theme.structureColors(this._territoryColor);
 
     // Rail color (only used for the local player's rails): white for
     // visibility, flipped to black when the territory is too light for white
