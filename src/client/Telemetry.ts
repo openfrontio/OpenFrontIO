@@ -5,7 +5,8 @@ import { clientPlatform } from "./ClientPlatform";
 
 /**
  * Browser telemetry via Grafana Faro: uncaught errors, unhandled rejections,
- * web vitals and session/view metadata, shipped to the collector named by
+ * web vitals, in-game performance summaries (GameMetrics.ts) and
+ * session/view metadata, shipped to the collector named by
  * BOOTSTRAP_CONFIG.faroCollectorUrl (FARO_COLLECTOR_URL on the server).
  *
  * Off entirely when no URL is injected — dev, desktop shells without one,
@@ -139,6 +140,22 @@ export function reportGameError(
         message: message ?? "",
       },
     });
+  });
+}
+
+/**
+ * A summarised in-game measurement (see GameMetrics.ts): one Faro
+ * measurement of the given type, with the game and client it came from as
+ * its context.
+ */
+export function reportMeasurement(
+  type: string,
+  values: Record<string, number>,
+  context: Record<string, string>,
+): void {
+  void initTelemetry().then((faro) => {
+    if (faro === null) return;
+    faro.api.pushMeasurement({ type, values }, { context });
   });
 }
 
