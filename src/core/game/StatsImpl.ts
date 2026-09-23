@@ -20,6 +20,10 @@ import {
   BOMB_INDEX_INTERCEPT,
   BOMB_INDEX_LAND,
   BOMB_INDEX_LAUNCH,
+  DONATION_BROKE_GOLD_THRESHOLD,
+  DONATION_INDEX_GOLD_RECV,
+  DONATION_INDEX_GOLD_RECV_BROKE,
+  GOLD_INDEX_DONATE_RECV,
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_TRAIN_OTHER,
@@ -152,6 +156,14 @@ export class StatsImpl implements Stats {
     p.gold ??= [0n];
     while (p.gold.length <= index) p.gold.push(0n);
     p.gold[index] += _bigint(value);
+  }
+
+  private _addDonation(player: Player, index: number, value: BigIntLike) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.donations ??= [0n];
+    while (p.donations.length <= index) p.donations.push(0n);
+    p.donations[index] += _bigint(value);
   }
 
   private _addOtherUnit(
@@ -337,6 +349,18 @@ export class StatsImpl implements Stats {
 
   goldWork(player: Player, gold: BigIntLike): void {
     this._addGold(player, GOLD_INDEX_WORK, gold);
+  }
+
+  goldDonationReceived(
+    player: Player,
+    gold: BigIntLike,
+    goldBefore: BigIntLike,
+  ): void {
+    this._addGold(player, GOLD_INDEX_DONATE_RECV, gold);
+    this._addDonation(player, DONATION_INDEX_GOLD_RECV, 1);
+    if (_bigint(goldBefore) < DONATION_BROKE_GOLD_THRESHOLD) {
+      this._addDonation(player, DONATION_INDEX_GOLD_RECV_BROKE, 1);
+    }
   }
 
   goldWar(player: Player, captured: Player, gold: BigIntLike): void {
