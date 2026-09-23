@@ -60,6 +60,16 @@ describe("ListingState", () => {
     );
   });
 
+  it("uses the host's chosen start time, dropped on delist", () => {
+    const listing = new ListingState();
+    listing.setListed(true, 2 * 60_000);
+    expect(listing.autoStartAt()).toBe(T0 + 2 * 60_000);
+
+    listing.setListed(false);
+    listing.setListed(true);
+    expect(listing.autoStartAt()).toBe(T0 + HOSTED_LOBBY_AUTO_START_MS);
+  });
+
   it("gives a featured lobby the longer deadline", () => {
     const listing = new ListingState();
     listing.setFeatured({});

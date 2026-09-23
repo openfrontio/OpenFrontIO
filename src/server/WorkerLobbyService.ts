@@ -213,6 +213,7 @@ export class WorkerLobbyService {
         label: g.lobbyLabel(),
         accent: g.lobbyAccent(),
         featured: g.isFeatured() ? true : undefined,
+        autoStartAt: gi.autoStartAt,
       } satisfies InternalGameInfo;
     });
     this.sendToMaster({
