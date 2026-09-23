@@ -1905,6 +1905,7 @@ export async function fetchLobbyListed(gameID: string): Promise<boolean> {
 export async function setLobbyListed(
   gameID: string,
   listed: boolean,
+  options: { autoStartMs?: number; maxPlayers?: number } = {},
 ): Promise<{ ok: true; listed: boolean } | { ok: false; error?: string }> {
   try {
     await ensureServerList();
@@ -1917,7 +1918,7 @@ export async function setLobbyListed(
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ listed }),
+        body: JSON.stringify({ listed, ...options }),
       },
     );
     const body = await response.json().catch(() => null);

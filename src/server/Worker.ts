@@ -13,9 +13,12 @@ import { GameType } from "../core/game/Game";
 import {
   ClientMessage,
   ClientPlatformSchema,
+  HOSTED_LOBBY_AUTO_START_MS,
   ID,
   isValidGameID,
   MAX_HOSTED_LOBBIES,
+  MAX_HOSTED_LOBBY_PLAYERS,
+  MIN_HOSTED_LOBBY_AUTO_START_MS,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
@@ -274,11 +277,27 @@ export async function startWorker() {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    const parsed = z.object({ listed: z.boolean() }).safeParse(req.body);
+    const parsed = z
+      .object({
+        listed: z.boolean(),
+        autoStartMs: z
+          .number()
+          .int()
+          .min(MIN_HOSTED_LOBBY_AUTO_START_MS)
+          .max(HOSTED_LOBBY_AUTO_START_MS)
+          .optional(),
+        maxPlayers: z
+          .number()
+          .int()
+          .min(2)
+          .max(MAX_HOSTED_LOBBY_PLAYERS)
+          .optional(),
+      })
+      .safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: z.prettifyError(parsed.error) });
     }
-    const { listed } = parsed.data;
+    const { listed, autoStartMs, maxPlayers } = parsed.data;
 
     const game = gm.game(req.params.id);
     if (game === null) {
@@ -314,6 +333,12 @@ export async function startWorker() {
         return res.status(409).json({ error: "listing_host_cheats_enabled" });
       }
 
+      // A cap at or below the current head count would advertise a lobby
+      // nobody can join.
+      if (maxPlayers !== undefined && maxPlayers <= game.numPlayers()) {
+        return res.status(409).json({ error: "listing_max_players_too_low" });
+      }
+
       // Dev has no subscription backend; skip the check so the feature is
       // testable locally (same precedent as Turnstile).
       if (ServerEnv.env() !== GameEnv.Dev) {
@@ -347,9 +372,11 @@ export async function startWorker() {
       }
     }
 
-    game.setListed(listed);
+    game.setListed(listed, { autoStartMs, maxPlayers });
     log.info(`lobby listing ${listed ? "enabled" : "disabled"}`, {
       gameID: game.id,
+      autoStartMs,
+      maxPlayers,
     });
     res.json({ listed });
   });
