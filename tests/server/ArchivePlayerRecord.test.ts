@@ -5,6 +5,7 @@ import {
   cid,
   makeClient,
   makeGame,
+  mockLogger,
   mockWsOf,
   startGame,
 } from "../util/GameServerHarness";
@@ -97,6 +98,56 @@ describe("archived game records", () => {
     // No friends in the game is recorded as the field being absent.
     expect(b.friends).toBeUndefined();
     expect(archived().info.winner).toEqual(["player", ALICE]);
+  });
+
+  it("records a player the winner vote has no stats for without a warn line", async () => {
+    // A player who left or never spawned before the vote is absent from
+    // allPlayersStats. That is routine in almost every archived game, and it
+    // used to produce one warn line per such player: with the other noise
+    // gone, it was ~40% of prod warn volume. The record simply carries no
+    // stats for them, so this is debug, not warn.
+    const ALICE = cid("alice");
+    const BOB = cid("bob");
+    const log = mockLogger();
+    const game = makeGame({
+      config: { gameType: GameType.Public },
+      deps: { archive },
+      log,
+    });
+    const alice = makeClient({
+      clientID: ALICE,
+      persistentID: "alice-pid",
+      publicId: "alice-pub",
+      ip: "1.1.1.1",
+    });
+    const bob = makeClient({
+      clientID: BOB,
+      persistentID: "bob-pid",
+      publicId: "bob-pub",
+      ip: "2.2.2.2",
+    });
+    game.joinClient(alice);
+    game.joinClient(bob);
+    startGame(game);
+
+    const stats = { attacks: [1n] };
+    for (const c of [alice, bob]) {
+      await mockWsOf(c).emit({
+        type: "winner",
+        winner: ["player", ALICE],
+        allPlayersStats: { [ALICE]: stats },
+      });
+    }
+
+    expect(archive).toHaveBeenCalledTimes(1);
+    const [a, b] = archived().info.players;
+    expect(a).toMatchObject({ clientID: ALICE, stats });
+    expect(b.clientID).toBe(BOB);
+    expect(b.stats).toBeUndefined();
+    expect(log.warn).not.toHaveBeenCalled();
+    expect(log.debug).toHaveBeenCalledWith(
+      expect.stringContaining(`Unable to find stats for clientID ${BOB}`),
+    );
   });
 
   it("carries custom tribe names into the archived record for infra ingest and replays", async () => {
