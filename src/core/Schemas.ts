@@ -192,6 +192,11 @@ export const MAX_HOSTED_LOBBIES = 10;
 // deadline; relisting starts a fresh one.
 export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
 
+// The host picks the start time (up to HOSTED_LOBBY_AUTO_START_MS) and the
+// player cap when listing; filling to the cap starts the game early.
+export const MIN_HOSTED_LOBBY_AUTO_START_MS = 60 * 1000;
+export const MAX_HOSTED_LOBBY_PLAYERS = 100;
+
 // Featured lobbies get a longer window. A scheduled event announced ahead of
 // time needs the listing to still be up when its audience arrives, and unlike a
 // subscriber sitting on a listing the host is an authenticated admin bot. Only

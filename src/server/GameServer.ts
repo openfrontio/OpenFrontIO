@@ -1591,8 +1591,25 @@ export class GameServer {
     }));
   }
 
-  public setListed(listed: boolean): void {
-    this.listing.setListed(listed);
+  // `options` are the host's picks from the listing dialog: how long until
+  // the lobby auto-starts, and the player cap that starts it early once
+  // filled.
+  public setListed(
+    listed: boolean,
+    options: { autoStartMs?: number; maxPlayers?: number } = {},
+  ): void {
+    this.listing.setListed(listed, options.autoStartMs);
+    if (listed && options.maxPlayers !== undefined) {
+      this.gameConfig.maxPlayers = options.maxPlayers;
+      if (this.playerCount() >= options.maxPlayers) {
+        this.hasReachedMaxPlayerCount = true;
+      }
+    }
+  }
+
+  // Players (not spectators) currently seated in the lobby.
+  public numPlayers(): number {
+    return this.playerCount();
   }
 
   public autoStartAt(): number | undefined {
