@@ -77,6 +77,7 @@ export enum GameMapType {
   Lisbon = "Lisbon", // map-generator/assets/maps/lisbon/info.json
   LosAngeles = "Los Angeles", // map-generator/assets/maps/losangeles/info.json
   Luna = "Luna", // map-generator/assets/maps/luna/info.json
+  Madagascar = "Madagascar", // map-generator/assets/maps/madagascar/info.json
   Manicouagan = "Manicouagan", // map-generator/assets/maps/manicouagan/info.json
   MareNostrum = "Mare Nostrum", // map-generator/assets/maps/marenostrum/info.json
   Mars = "Mars", // map-generator/assets/maps/mars/info.json
@@ -1795,6 +1796,20 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 25,
     specialTeamCount: 2,
     forcedModifiers: ["isWaterNukes:50"],
+  },
+  {
+    id: "Madagascar",
+    type: GameMapType.Madagascar,
+    translationKey: "map.madagascar",
+    categories: ["new", "africa"],
+    multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: 10,
+    specialFrequency: -1,
+    defaultNationCount: 34,
+    specialTeamCount: 2,
+    forcedModifiers: ["isWaterNukes:50"],
+    themes: ["africa"],
   },
   {
     id: "Manicouagan",
