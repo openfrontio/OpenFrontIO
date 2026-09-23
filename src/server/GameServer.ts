@@ -541,7 +541,7 @@ export class GameServer {
       this.gameConfig.maxPlayers &&
       this.playerCount() >= this.gameConfig.maxPlayers
     ) {
-      this.log.warn(`cannot add client, game full`, {
+      this.log.debug(`cannot add client, game full`, {
         clientID: client.clientID,
       });
 
@@ -1761,7 +1761,9 @@ export class GameServer {
       (player) => {
         const stats = winner?.allPlayersStats[player.clientID];
         if (stats === undefined) {
-          this.log.warn(`Unable to find stats for clientID ${player.clientID}`);
+          this.log.debug(
+            `Unable to find stats for clientID ${player.clientID}`,
+          );
         }
         return {
           clientID: player.clientID,
