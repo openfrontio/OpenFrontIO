@@ -2,6 +2,7 @@ import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { Cosmetics } from "../core/CosmeticSchemas";
+import { renderFreePlayPerks } from "./components/FreePlayPerks";
 import "./components/SubscriptionPanel";
 import { fetchCosmetics } from "./Cosmetics";
 import { ProfileMenuModal } from "./ProfileMenuModal";
@@ -31,6 +32,9 @@ export class SubscriptionModal extends ProfileMenuModal {
             <p class="text-white/60 text-sm">
               ${translateText("subscription_modal.none")}
             </p>
+            <div class="w-full text-left rounded-lg bg-white/5 px-4 py-3">
+              ${renderFreePlayPerks("free_play.free_heading")}
+            </div>
             <o-button
               variant="primary"
               size="md"

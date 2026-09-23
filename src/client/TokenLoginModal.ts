@@ -121,10 +121,25 @@ export class TokenLoginModal extends BaseModal {
       return;
     }
     try {
-      this.email = await tempTokenLogin(this.token);
-      if (!this.email) {
+      const result = await tempTokenLogin(this.token);
+      if (result.status === "retry") {
         return;
       }
+      if (result.status === "failed") {
+        // A 400 is final — stop polling instead of burning the remaining
+        // retries and the player's time on a link that will never succeed.
+        clearInterval(this.retryInterval);
+        this.close();
+        void showInGameAlert(
+          translateText(
+            result.code === "consumed"
+              ? "error_modal.login_token_consumed"
+              : "error_modal.login_failed",
+          ),
+        );
+        return;
+      }
+      this.email = result.email;
       clearInterval(this.retryInterval);
       setTimeout(() => {
         this.close();

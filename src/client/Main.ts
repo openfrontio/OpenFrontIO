@@ -17,7 +17,6 @@ import { GameEnv } from "../core/configuration/Config";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import "./AccountSettingsModal";
-import { syncAchievements } from "./AchievementSignal";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
@@ -37,11 +36,16 @@ import {
   nextBootInterrupt,
   parseClaimPromptStore,
   runBootInterrupt,
+  steamGrantStringsReady,
 } from "./BootInterrupts";
 import "./ChangeUsernameModal";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
-import { getPlayerCosmeticsRefs, handlePurchaseReturn } from "./Cosmetics";
+import {
+  getPlayerCosmeticsRefs,
+  handlePurchaseReturn,
+  translateCosmetic,
+} from "./Cosmetics";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
@@ -98,10 +102,18 @@ import { RewardsModal } from "./RewardsModal";
 import {
   ensureServerList,
   redirectToGameVersion,
+  setServerListInGame,
   startServerListPolling,
 } from "./ServerList";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import {
+  parseSteamGrantStore,
+  recordSteamGrant,
+  STEAM_GRANT_NOTICE_KEY,
+  steamGrantEndedDue,
+  steamGrantWelcomeDue,
+} from "./SteamGrantNotices";
 import { steamHandoffMode } from "./SteamHandoff";
 import "./SteamHandoffModal";
 import { SteamHandoffModal } from "./SteamHandoffModal";
@@ -114,6 +126,7 @@ import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
 import { StoreModal } from "./Store";
 import "./SubscriptionModal";
+import { initTelemetry } from "./Telemetry";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
@@ -249,12 +262,14 @@ export interface JoinLobbyEvent {
 /**
  * The single point where "a match is running" is published.
  *
- * Two consumers, and they must never disagree:
+ * Three consumers, and they must never disagree:
  *   - the `.in-game` body class, which the client's own markup keys off to hide
  *     the footer, the nav bars and the desktop update snackbar;
  *   - the Electron shell's updater, which pauses asset downloads and version
  *     polling in-game so a cache-bust cannot saturate a player's connection
- *     mid-match.
+ *     mid-match;
+ *   - the server-list heartbeat, which pauses in-game: a running match already
+ *     knows its server, so polling /cluster.json through it buys nothing.
  *
  * Every add/remove of that class goes through here. Setting the class without
  * telling the shell leaves the updater's pause dead; telling the shell without
@@ -267,6 +282,7 @@ export interface JoinLobbyEvent {
  */
 function setInGameSignal(inGame: boolean): void {
   document.body.classList.toggle("in-game", inGame);
+  setServerListInGame(inGame);
   void desktopUpdate()
     ?.setInGame?.(inGame)
     ?.catch(() => {});
@@ -328,6 +344,9 @@ class Client {
     capturePagePin();
 
     flushReloadToast();
+
+    // Stale key still in existing players' storage; nothing reads it.
+    localStorage.removeItem("achievements.pushed");
 
     // A store referral banner / account "copy link" hands out `/c/<code>`.
     // There's nothing to open here yet -- the code only does anything once
@@ -679,6 +698,22 @@ class Client {
         });
         adGatekeeper.start();
       }
+      // Before the dispatch: <username-input> reads this store when it picks
+      // the lapse notice's wording, and the record has to be current by then.
+      const grantStoreBefore = parseSteamGrantStore(
+        localStorage.getItem(STEAM_GRANT_NOTICE_KEY),
+      );
+      const grantStore = recordSteamGrant(
+        grantStoreBefore,
+        userMeResponse,
+        Date.now(),
+      );
+      if (grantStore !== grantStoreBefore) {
+        localStorage.setItem(
+          STEAM_GRANT_NOTICE_KEY,
+          JSON.stringify(grantStore),
+        );
+      }
       // Snapshot in, dispatch and comparison inside — see
       // lapseShownAfterDispatch for why the snapshot cannot be read there.
       const lapseShown = lapseShownAfterDispatch(
@@ -693,6 +728,11 @@ class Client {
             }),
           ),
         () => localStorage.getItem(LAPSE_NOTICE_KEY),
+      );
+      // Re-read, not `grantStore`: a lapse notice that carried the grant
+      // sign-off marked it shown from inside the dispatch above.
+      const grantStoreAfterDispatch = parseSteamGrantStore(
+        localStorage.getItem(STEAM_GRANT_NOTICE_KEY),
       );
 
       if (userMeResponse !== false) {
@@ -762,11 +802,22 @@ class Client {
             username,
             usernameBase,
             lapseNoticeDue: lapseShown,
+            grantWelcomeDue: steamGrantWelcomeDue(
+              grantStoreAfterDispatch,
+              userMeResponse,
+              Date.now(),
+            ),
+            grantEndedDue: steamGrantEndedDue(
+              grantStoreAfterDispatch,
+              userMeResponse,
+              Date.now(),
+            ),
+            grantStringsReady: steamGrantStringsReady(translateText),
             rewardCount: rewards.length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
           }),
-          { claimStore, publicId },
+          { claimStore, grantStore: grantStoreAfterDispatch, publicId },
           {
             translate: translateText,
             confirm: (body, heading, confirmText) =>
@@ -777,12 +828,21 @@ class Client {
                 variant: "warning",
                 confirmText,
               }),
+            alert: async (body, heading) => {
+              await showInGameAlert(body, { heading });
+            },
+            tierName: (tier) => translateCosmetic("subscriptions", tier),
             navigate: (hash) => {
               window.location.hash = hash;
             },
             openRewards: () => this.rewardsModal?.openWithRewards(rewards),
             storeClaimPrompt: (store) =>
               localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(store)),
+            storeSteamGrant: (store) =>
+              localStorage.setItem(
+                STEAM_GRANT_NOTICE_KEY,
+                JSON.stringify(store),
+              ),
             now: () => Date.now(),
           },
         );
@@ -796,30 +856,10 @@ class Client {
     // it was fetched under is still current.
     let authGeneration = 0;
 
-    // Catches anything the post-game poll missed: a player who quit before the
-    // game was archived, an earlier failed push, or a player who has just
-    // linked a platform account and has a whole history to hand over.
-    //
-    // Hung off every established session rather than off boot alone, because
-    // a session can arrive later than boot: recovered from the status bar, or
-    // signed into mid-session through the link modal -- the very case that
-    // last bullet names. Keyed by player id so it runs once per session and
-    // not again on each later profile refresh, while still re-running when a
-    // different account signs in (the record is per-player too).
-    let achievementsSyncedFor: string | null = null;
-    const reconcileAchievements = (userMeResponse: UserMeResponse | false) => {
-      if (userMeResponse === false) return;
-      const playerId = userMeResponse.player.publicId;
-      if (achievementsSyncedFor === playerId) return;
-      achievementsSyncedFor = playerId;
-      void syncAchievements();
-    };
-
     const applyUserMe =
       (generation: number) => (userMeResponse: UserMeResponse | false) => {
         if (generation !== authGeneration) return;
         void onUserMe(userMeResponse);
-        reconcileAchievements(userMeResponse);
       };
 
     // A session dropped in the background — an expired refresh token, a 401 on
@@ -849,7 +889,6 @@ class Client {
       applyUserMe(initialAuthGeneration)(false);
     } else {
       // JWT appears valid: fetch the profile and apply it if still current.
-      // applyUserMe carries the achievements reconcile.
       getUserMe().then(applyUserMe(initialAuthGeneration));
     }
 
@@ -1855,6 +1894,10 @@ const hideCrazyGamesElements = () => {
 
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
+  // First, so the error hooks are in place for everything below. No-op
+  // without a collector URL (see Telemetry.ts); never awaited.
+  void initTelemetry();
+
   // Prevent Safari's page-level pinch-zoom, which ignores `user-scalable=no`
   // on iOS and can softlock the HUD. See issue #2330.
   installSafariPinchZoomBlocker();

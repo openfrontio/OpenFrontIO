@@ -380,7 +380,12 @@ export class UnitImpl implements Unit {
       MessageType.UNIT_DESTROYED,
       this.owner().id(),
       undefined,
-      { unit: this._type },
+      {
+        unit:
+          this._type === UnitType.TransportShip
+            ? "unit_type.boat"
+            : "unit_type.warship",
+      },
       this.id(),
     );
   }

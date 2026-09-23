@@ -174,6 +174,12 @@
     "svg": "pt"
   },
   {
+    "code": "ro",
+    "native": "Română",
+    "en": "Romanian",
+    "svg": "ro"
+  },
+  {
     "code": "ru",
     "native": "Русский",
     "en": "Russian",
@@ -228,15 +234,15 @@
     "svg": "vn"
   },
   {
-    "code": "zh-TW",
-    "native": "繁體中文",
-    "en": "Chinese Traditional",
-    "svg": "zh-hant"
-  },
-  {
     "code": "zh-CN",
     "native": "简体中文",
     "en": "Chinese Simplified",
     "svg": "cn"
+  },
+  {
+    "code": "zh-TW",
+    "native": "繁體中文",
+    "en": "Chinese Traditional",
+    "svg": "zh-hant"
   }
 ]

@@ -37,6 +37,10 @@ vi.mock("src/client/ClientEnv", async (importOriginal) => {
       gameWorkerPath: vi.fn(() => "w0"),
       gameWsBase: vi.fn(() => "ws://game.test"),
       gameHttpBase: vi.fn(() => "http://game.test"),
+      // Where the wrong-worker navigation goes. Separate from gameHttpBase
+      // because that one throws when no game server is known and a page load
+      // must not.
+      gameNavigateBase: vi.fn(() => "http://game.test"),
     },
   };
 });
