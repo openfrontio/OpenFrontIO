@@ -120,6 +120,7 @@ export function saveSoloGame(
   compressedSnapshot?: Uint8Array,
 ): void {
   try {
+    const existing = getSoloSave();
     const identity = getActiveIdentity();
     const saveState: SoloSaveState = {
       version: 1,
@@ -133,7 +134,9 @@ export function saveSoloGame(
       steamId: identity.steamId,
       snapshot: compressedSnapshot
         ? uint8ArrayToBase64(compressedSnapshot)
-        : undefined,
+        : existing?.gameID === gameStartInfo.gameID
+          ? existing?.snapshot
+          : undefined,
     };
     const scopedKey = getScopedSoloSaveKey();
     localStorage.setItem(scopedKey, JSON.stringify(saveState));

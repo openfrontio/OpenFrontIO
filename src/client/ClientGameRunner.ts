@@ -34,6 +34,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../core/game/UserSettings";
+import { compressSnapshot } from "../core/snapshot/GameSnapshot";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
@@ -54,6 +55,7 @@ import {
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { versionedPathForMismatchedGame } from "./ServerList";
+import { clearSoloSave, saveSoloSnapshot } from "./SinglePlayerSaveManager";
 import { reportGameError } from "./Telemetry";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
@@ -68,6 +70,7 @@ import {
   SendHashEvent,
   SendSpawnIntentEvent,
   SendUpgradeStructureIntentEvent,
+  SendWinnerEvent,
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
@@ -929,6 +932,8 @@ export class ClientGameRunner {
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
+  private hasWinner: boolean = false;
+  private snapshotInFlight: boolean = false;
 
   constructor(
     private lobby: LobbyConfig,
@@ -947,6 +952,10 @@ export class ClientGameRunner {
     private metrics: GameMetrics | null = null,
   ) {
     this.lastMessageTime = Date.now();
+    this.eventBus.on(SendWinnerEvent, () => {
+      this.hasWinner = true;
+      clearSoloSave();
+    });
   }
 
   /**
@@ -1026,6 +1035,31 @@ export class ClientGameRunner {
       this.gameView.update(gu);
       this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
+      if (
+        !this.snapshotInFlight &&
+        this.transport.isLocal &&
+        !this.lobby.gameRecord &&
+        !this.hasWinner &&
+        this.lobby.gameStartInfo &&
+        gu.tick > 0 &&
+        gu.tick % 50 === 0
+      ) {
+        this.snapshotInFlight = true;
+        this.worker
+          .snapshot()
+          .then((raw) => compressSnapshot(raw))
+          .then((compressed) => {
+            if (!this.hasWinner && this.lobby.gameStartInfo) {
+              saveSoloSnapshot(this.lobby.gameStartInfo, compressed, gu.tick);
+            }
+          })
+          .catch((err) => {
+            console.warn("Auto-snapshot failed:", err);
+          })
+          .finally(() => {
+            this.snapshotInFlight = false;
+          });
+      }
       if (gu.tickExecutionDuration !== undefined) {
         this.metrics?.recordTickExecution(gu.tickExecutionDuration);
       }

@@ -159,4 +159,18 @@ describe("SinglePlayerSaveManager", () => {
     expect(restored?.numTurns).toBe(150);
     expect(restored?.snapshot).toEqual(rawBytes);
   });
+
+  it("preserves an existing snapshot when saveSoloGame is called with matching gameID", async () => {
+    const rawBytes = new Uint8Array([10, 20, 30, 40]);
+    const compressed = await compressSnapshot(rawBytes);
+    saveSoloSnapshot(dummyStartInfo(), compressed, 50);
+
+    // Save turns for the same match
+    saveSoloGame(dummyStartInfo(), []);
+
+    const save = getSoloSave();
+    expect(save?.snapshot).not.toBeUndefined();
+    const restored = await getSoloSnapshot();
+    expect(restored?.snapshot).toEqual(rawBytes);
+  });
 });
