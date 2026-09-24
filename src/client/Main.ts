@@ -1113,6 +1113,7 @@ class Client {
     try {
       ({ ReplayViewer } = await import("./replay/ReplayViewer"));
     } catch (err) {
+      if (this.replayViewerID !== gameID) return;
       // The viewer's chunk didn't load (a network error, or a deploy that
       // replaced it). The menu is still up, so fall back to the client-side
       // replay. It's a full page load, which also picks up a new deploy.
@@ -1121,6 +1122,7 @@ class Client {
       window.location.assign(classicReplayHref(gameID));
       return;
     }
+    if (this.replayViewerID !== gameID) return;
     this.gameModeSelector.stop();
     hideMenuChrome();
     setInGameSignal(true);

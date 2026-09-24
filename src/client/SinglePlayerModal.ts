@@ -320,19 +320,20 @@ export class SinglePlayerModal extends BaseModal {
       if (attempt !== this.resumeAttempt) return;
 
       this.clearSaveOnGameStart = null;
-      this.dispatchEvent(
-        new CustomEvent("join-lobby", {
-          detail: {
-            gameID: save.gameID,
-            gameStartInfo: save.gameStartInfo,
-            source: "singleplayer",
-            resumeSnapshot,
-            resumeTurns: turns,
-          } satisfies JoinLobbyEvent,
-          bubbles: true,
-          composed: true,
-        }),
-      );
+      const joinEvent = new CustomEvent("join-lobby", {
+        detail: {
+          gameID: save.gameID,
+          gameStartInfo: save.gameStartInfo,
+          source: "singleplayer",
+          resumeSnapshot,
+          resumeTurns: turns,
+        } satisfies JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      this.dispatchEvent(joinEvent);
+      if (joinEvent.defaultPrevented) return;
       this.close();
     } finally {
       if (attempt === this.resumeAttempt) {
