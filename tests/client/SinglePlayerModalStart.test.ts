@@ -183,4 +183,30 @@ describe("SinglePlayerModal start", () => {
     expect(events[0].resumeSnapshot).toBeUndefined();
     snapSpy.mockRestore();
   });
+
+  it("derives turn count from greater of numTurns and final turnNumber + 1 when decompressing saved turns", async () => {
+    const modal = createModal();
+    modal.resumeSave = {
+      gameID: "save_turns",
+      numTurns: 10,
+      turns: [
+        { turnNumber: 0, intents: [] },
+        { turnNumber: 15, intents: [] },
+      ],
+    } as any;
+
+    const decompressSpy = vi.spyOn(saveManager, "decompressSoloTurns");
+    const events: any[] = [];
+    modal.addEventListener("join-lobby", (e: Event) =>
+      events.push((e as CustomEvent).detail),
+    );
+
+    await modal.handleResumeGame();
+
+    // 15 + 1 = 16 > 10
+    expect(decompressSpy).toHaveBeenCalledWith(modal.resumeSave.turns, 16);
+    expect(events).toHaveLength(1);
+    expect(events[0].gameID).toBe("save_turns");
+    decompressSpy.mockRestore();
+  });
 });

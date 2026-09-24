@@ -734,12 +734,14 @@ async function createClientGame(
       );
     } catch (e) {
       console.warn("Failed to restore maps from snapshot", e);
+      throw e;
     }
     try {
       const header = readSnapshotHeader(lobbyConfig.resumeSnapshot);
       initialStartTick = header.startTick ?? null;
     } catch (e) {
       console.warn("Failed to read snapshot header for initial startTick", e);
+      throw e;
     }
   }
 

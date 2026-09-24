@@ -294,9 +294,14 @@ export class SinglePlayerModal extends BaseModal {
           resumeSnapshot = snapData.snapshot;
         }
       }
+      const lastTurnNum =
+        save.turns && save.turns.length > 0
+          ? save.turns[save.turns.length - 1].turnNumber
+          : -1;
+      const turnCount = Math.max(save.numTurns, lastTurnNum + 1);
       const turns =
         !resumeSnapshot && save.turns
-          ? decompressSoloTurns(save.turns, save.numTurns)
+          ? decompressSoloTurns(save.turns, turnCount)
           : undefined;
 
       if (!resumeSnapshot && !turns) {
