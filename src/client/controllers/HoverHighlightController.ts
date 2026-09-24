@@ -32,7 +32,9 @@ export class HoverHighlightController implements Controller {
   }
 
   private navalHighlightEnabled(): boolean {
-    return this.view.getSettings().mapOverlay.navalHighlight;
+    // getSettings() returns {} while the renderer is absent (before init, or
+    // after a lost WebGL context), so mapOverlay may be missing.
+    return this.view.getSettings().mapOverlay?.navalHighlight ?? false;
   }
 
   private onMouseMove(e: MouseMoveEvent): void {
