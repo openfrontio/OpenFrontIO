@@ -96,6 +96,7 @@ export class TokenLoginModal extends BaseModal {
   protected onOpen(): void {
     clearInterval(this.retryInterval);
     this.retryInterval = setInterval(() => this.tryLogin(), 3000);
+    void this.tryLogin();
   }
 
   protected onClose(): void {
@@ -126,17 +127,15 @@ export class TokenLoginModal extends BaseModal {
         return;
       }
       if (result.status === "failed") {
-        // A 400 is final — stop polling instead of burning the remaining
-        // retries and the player's time on a link that will never succeed.
+        // Permanent failures cannot succeed with another attempt.
         clearInterval(this.retryInterval);
         this.close();
-        void showInGameAlert(
-          translateText(
-            result.code === "consumed"
-              ? "error_modal.login_token_consumed"
-              : "error_modal.login_failed",
-          ),
-        );
+        const messageKey = {
+          consumed: "error_modal.login_token_consumed",
+          expired: "error_modal.login_token_expired",
+          invalid: "error_modal.login_token_invalid",
+        }[result.code];
+        void showInGameAlert(translateText(messageKey));
         return;
       }
       this.email = result.email;

@@ -37,50 +37,54 @@ describe("TokenLoginModal — retry loop", () => {
     vi.useRealTimers();
   });
 
-  // The bug: a 400 (invalid/expired/consumed — all final) used to be treated
-  // like a transient failure, so the modal kept polling every 3s until
-  // attemptCount > 3 — 4 wasted requests and ~12s of spinner for a link that
-  // was never going to succeed.
-  it("stops polling after a single failed 400 instead of retrying up to 4 times", async () => {
-    tempTokenLoginMock.mockResolvedValue({ status: "failed", code: "invalid" });
+  it.each([
+    ["expired", "error_modal.login_token_expired"],
+    ["invalid", "error_modal.login_token_invalid"],
+    ["consumed", "error_modal.login_token_consumed"],
+  ])(
+    "shows the %s message immediately and stops retrying",
+    async (code, message) => {
+      tempTokenLoginMock.mockResolvedValue({ status: "failed", code });
 
-    modal.openWithToken("bad-token");
-    await vi.advanceTimersByTimeAsync(3000);
+      modal.openWithToken("bad-token");
+      expect(tempTokenLoginMock).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(0);
 
-    expect(tempTokenLoginMock).toHaveBeenCalledTimes(1);
-    expect(modal.isOpen()).toBe(false);
-    expect(showInGameAlertMock).toHaveBeenCalledWith(
-      "error_modal.login_failed",
-    );
+      expect(modal.isOpen()).toBe(false);
+      expect(showInGameAlertMock).toHaveBeenCalledWith(message);
 
-    // Advancing well past what would have been the 4-attempt window must not
-    // trigger any further calls — the interval was cleared.
-    await vi.advanceTimersByTimeAsync(15000);
-    expect(tempTokenLoginMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows the consumed-specific message when the token was already used", async () => {
-    tempTokenLoginMock.mockResolvedValue({
-      status: "failed",
-      code: "consumed",
-    });
-
-    modal.openWithToken("used-token");
-    await vi.advanceTimersByTimeAsync(3000);
-
-    expect(showInGameAlertMock).toHaveBeenCalledWith(
-      "error_modal.login_token_consumed",
-    );
-  });
+      await vi.advanceTimersByTimeAsync(15000);
+      expect(tempTokenLoginMock).toHaveBeenCalledOnce();
+    },
+  );
 
   it("keeps polling on a transient (retry) result", async () => {
     tempTokenLoginMock.mockResolvedValue({ status: "retry" });
 
     modal.openWithToken("tok");
+    expect(tempTokenLoginMock).toHaveBeenCalledOnce();
     await vi.advanceTimersByTimeAsync(3000);
     await vi.advanceTimersByTimeAsync(3000);
 
-    expect(tempTokenLoginMock).toHaveBeenCalledTimes(2);
+    expect(tempTokenLoginMock).toHaveBeenCalledTimes(3);
+    expect(showInGameAlertMock).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(tempTokenLoginMock).toHaveBeenCalledTimes(4);
+    expect(showInGameAlertMock).toHaveBeenCalledWith(
+      "error_modal.login_failed",
+    );
+  });
+
+  it("cancels retries when the modal closes", async () => {
+    tempTokenLoginMock.mockResolvedValue({ status: "retry" });
+
+    modal.openWithToken("tok");
+    expect(tempTokenLoginMock).toHaveBeenCalledOnce();
+    modal.close();
+
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(tempTokenLoginMock).toHaveBeenCalledOnce();
     expect(showInGameAlertMock).not.toHaveBeenCalled();
   });
 
@@ -91,9 +95,13 @@ describe("TokenLoginModal — retry loop", () => {
     });
 
     modal.openWithToken("good-token");
-    await vi.advanceTimersByTimeAsync(3000);
+    expect(tempTokenLoginMock).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(0);
 
     expect(tempTokenLoginMock).toHaveBeenCalledTimes(1);
     expect(showInGameAlertMock).not.toHaveBeenCalled();
+    expect(modal.isOpen()).toBe(true);
+    await modal.updateComplete;
+    expect(modal.textContent).toContain("token_login_modal.success");
   });
 });
