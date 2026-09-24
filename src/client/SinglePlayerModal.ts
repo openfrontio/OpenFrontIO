@@ -195,6 +195,9 @@ export class SinglePlayerModal extends BaseModal {
   @state() private teamCount: TeamCountConfig = DEFAULT_OPTIONS.teamCount;
   @state() private showAchievements: boolean = false;
   @state() private resumeSave: SoloSaveState | null = null;
+  @state() private resumeInFlight: boolean = false;
+  private resumeAttempt: number = 0;
+  private clearSaveOnGameStart: boolean = false;
   @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
   // Maps that support achievements (have nations). null until loaded — the
   // medal overview shows a placeholder total meanwhile.
@@ -239,6 +242,10 @@ export class SinglePlayerModal extends BaseModal {
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
     );
+    document.addEventListener(
+      "game-starting",
+      this.handleGameStarting as EventListener,
+    );
     void this.loadNationCount();
     this.resumeSave = getSoloSave();
     if (clientPlatform() === "steam") {
@@ -256,53 +263,80 @@ export class SinglePlayerModal extends BaseModal {
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
     );
+    document.removeEventListener(
+      "game-starting",
+      this.handleGameStarting as EventListener,
+    );
     super.disconnectedCallback();
   }
 
-  private async handleResumeGame() {
-    if (!this.resumeSave) return;
-    const save = this.resumeSave;
-
-    let resumeSnapshot: Uint8Array | undefined;
-    if (save.snapshot) {
-      const snapData = await getSoloSnapshot();
-      if (snapData) {
-        resumeSnapshot = snapData.snapshot;
-      }
-    }
-    const turns =
-      !resumeSnapshot && save.turns
-        ? decompressSoloTurns(save.turns, save.numTurns)
-        : undefined;
-
-    if (!resumeSnapshot && !turns) {
-      showInGameAlert(
-        translateText("single_modal.resume_failed") ||
-          "Failed to resume saved game.",
-      );
-      clearSoloSave(save.gameID);
+  private handleGameStarting = () => {
+    if (this.clearSaveOnGameStart) {
+      this.clearSaveOnGameStart = false;
+      clearSoloSave();
       this.resumeSave = null;
       this.requestUpdate();
-      return;
     }
+  };
 
-    this.dispatchEvent(
-      new CustomEvent("join-lobby", {
-        detail: {
-          gameID: save.gameID,
-          gameStartInfo: save.gameStartInfo,
-          source: "singleplayer",
-          resumeSnapshot,
-          resumeTurns: turns,
-        } satisfies JoinLobbyEvent,
-        bubbles: true,
-        composed: true,
-      }),
-    );
-    this.close();
+  private async handleResumeGame() {
+    if (this.resumeInFlight || !this.resumeSave) return;
+    this.resumeInFlight = true;
+    const attempt = ++this.resumeAttempt;
+    const save = this.resumeSave;
+
+    try {
+      let resumeSnapshot: Uint8Array | undefined;
+      if (save.snapshot) {
+        const snapData = await getSoloSnapshot();
+        if (attempt !== this.resumeAttempt) return;
+        if (snapData) {
+          resumeSnapshot = snapData.snapshot;
+        }
+      }
+      const turns =
+        !resumeSnapshot && save.turns
+          ? decompressSoloTurns(save.turns, save.numTurns)
+          : undefined;
+
+      if (!resumeSnapshot && !turns) {
+        if (attempt !== this.resumeAttempt) return;
+        showInGameAlert(
+          translateText("single_modal.resume_failed") ||
+            "Failed to resume saved game.",
+        );
+        clearSoloSave(save.gameID);
+        this.resumeSave = null;
+        this.requestUpdate();
+        return;
+      }
+
+      if (attempt !== this.resumeAttempt) return;
+
+      this.clearSaveOnGameStart = false;
+      this.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: {
+            gameID: save.gameID,
+            gameStartInfo: save.gameStartInfo,
+            source: "singleplayer",
+            resumeSnapshot,
+            resumeTurns: turns,
+          } satisfies JoinLobbyEvent,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      this.close();
+    } finally {
+      if (attempt === this.resumeAttempt) {
+        this.resumeInFlight = false;
+      }
+    }
   }
 
   private async handleDiscardGame() {
+    if (this.resumeInFlight) return;
     const confirmed = await showInGameConfirm(
       translateText("single_modal.confirm_discard") ||
         "Are you sure you want to discard your saved singleplayer game?",
@@ -316,7 +350,7 @@ export class SinglePlayerModal extends BaseModal {
   private renderResumeBanner(): TemplateResult | null {
     if (!this.resumeSave) return null;
 
-    const map = this.resumeSave.gameStartInfo.config.gameMap;
+    const map = this.resumeSave.gameStartInfo?.config?.gameMap ?? "World";
     const totalSeconds = Math.floor(this.resumeSave.numTurns / 10);
     const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
     const h = Math.floor(totalSeconds / 3600);
@@ -347,12 +381,14 @@ export class SinglePlayerModal extends BaseModal {
             variant="secondary"
             size="sm"
             translationKey="single_modal.discard_game"
+            .disabled=${this.resumeInFlight}
             @click=${this.handleDiscardGame}
           ></o-button>
           <o-button
             variant="primary"
             size="sm"
             translationKey="single_modal.resume"
+            .disabled=${this.resumeInFlight}
             @click=${this.handleResumeGame}
           ></o-button>
         </div>
@@ -748,6 +784,8 @@ export class SinglePlayerModal extends BaseModal {
     // attempts dispatch join-lobby with different gameIDs and whichever
     // resolves last wins, which can be the one the player abandoned.
     this.startAttempt++;
+    this.resumeAttempt++;
+    this.resumeInFlight = false;
     // If the retired attempt still owned the starting overlay it never
     // dispatched join-lobby, so nothing downstream will hide it: without
     // this, dismissing the modal mid-preparation leaves a full-screen
@@ -815,6 +853,8 @@ export class SinglePlayerModal extends BaseModal {
 
   protected onOpen(): void {
     void this.loadNationCount();
+    this.clearSaveOnGameStart = false;
+    this.resumeInFlight = false;
     // Spend the cosmetics round trip while the player is picking a map, not
     // after they commit. startGame() still resolves cosmetics properly; this
     // only moves the network time off the click, for the slow-but-reachable
@@ -1194,6 +1234,8 @@ export class SinglePlayerModal extends BaseModal {
     // Hold the button in its busy state until join-lobby is away so the wait
     // reads as loading rather than as a dead click.
     this.starting = true;
+    this.resumeAttempt++;
+    this.resumeInFlight = false;
     const attempt = ++this.startAttempt;
     // The full-screen starting overlay, up from the click rather than at
     // prestart: it also covers Main's own awaits after the dispatch. On
@@ -1324,8 +1366,7 @@ export class SinglePlayerModal extends BaseModal {
           composed: true,
         }),
       );
-      clearSoloSave();
-      this.resumeSave = null;
+      this.clearSaveOnGameStart = true;
       // The overlay is the join pipeline's now — GameRenderer or Main's
       // canPlay() refusal hides it. Disowning it keeps the close below (and
       // any later onClose) from taking it down mid game-load.

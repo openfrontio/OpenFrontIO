@@ -1087,7 +1087,7 @@ export class ClientGameRunner {
             return { compressed, snapshotTick };
           })
           .then(({ compressed, snapshotTick }) => {
-            if (!this.hasWinner && this.lobby.gameStartInfo) {
+            if (this.isActive && !this.hasWinner && this.lobby.gameStartInfo) {
               saveSoloSnapshot(
                 this.lobby.gameStartInfo,
                 compressed,
