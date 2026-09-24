@@ -154,8 +154,16 @@ export class ContinueGameModal extends LitElement {
                     <div
                       class="text-xs text-zinc-400 flex items-center gap-3 shrink-0"
                     >
-                      <span>${p.troops.toLocaleString()} troops</span>
-                      <span>${p.tiles.toLocaleString()} tiles</span>
+                      <span>
+                        ${translateText("replay_viewer.player_stats_troops", {
+                          troops: p.troops.toLocaleString(),
+                        })}
+                      </span>
+                      <span>
+                        ${translateText("replay_viewer.player_stats_tiles", {
+                          tiles: p.tiles.toLocaleString(),
+                        })}
+                      </span>
                     </div>
                   </button>
                 `;
@@ -207,7 +215,7 @@ export class ContinueGameModal extends LitElement {
               @click=${this.close}
               ?disabled=${this.loading}
             >
-              ${translateText("common.cancel") || "Cancel"}
+              ${translateText("replay_viewer.cancel")}
             </button>
             <button
               class="px-5 py-2 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-400 active:bg-sky-600 transition rounded-xl shadow-lg shadow-sky-500/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"

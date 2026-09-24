@@ -1820,6 +1820,7 @@
   },
   "replay_viewer": {
     "bot_difficulty": "Bot Difficulty",
+    "cancel": "Cancel",
     "continue_from_here": "Continue Game from Here",
     "continue_modal_desc": "Take over and continue playing as a singleplayer match from this moment.",
     "continue_modal_title": "Play from this Tick",
@@ -1830,6 +1831,8 @@
     "pause": "Pause",
     "play": "Play",
     "play_now": "Play Now",
+    "player_stats_tiles": "{tiles} tiles",
+    "player_stats_troops": "{troops} troops",
     "preparing_game": "Preparing game state…",
     "processing": "Preparing this replay…",
     "processing_fetching": "Fetching the game record",
@@ -1932,7 +1935,7 @@
   },
   "steam_wishlist": {
     "buy_cta": "Buy on Steam",
-    "buy_on_steam": "Buy OpenFront on Steam!"
+    "buy_on_steam": "Buy OpenFront on Steam"
   },
   "store": {
     "already_owned": "You already own this item. Nothing was charged.",
@@ -2393,6 +2396,7 @@
     "verified_use_hint": "Play under your verified account name"
   },
   "win_modal": {
+    "buy_on_steam": "Buy OpenFront on Steam!",
     "died": "You died",
     "discord_description": "Connect with players, discover new features, and win prizes!",
     "exit": "Exit Game",
