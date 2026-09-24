@@ -544,6 +544,9 @@ export const CosmeticsSchema = z.object({
       boostDurationDays: z.number(),
     })
     .optional(),
+  // Price to put a listed lobby in the public queue (host modal's Queue
+  // button). Optional like tribeNames; the button hides when absent.
+  lobbyQueue: z.object({ priceHard: z.number() }).optional(),
 });
 
 /**
