@@ -1,4 +1,9 @@
-import { Game, GameMode } from "../../../src/core/game/Game";
+import {
+  Game,
+  GameMode,
+  GameType,
+  HumansVsNations,
+} from "../../../src/core/game/Game";
 import { GameRunner } from "../../../src/core/GameRunner";
 import { GameConfig, GameStartInfo } from "../../../src/core/Schemas";
 import { EXECUTION_SNAPSHOT_TYPES } from "../../../src/core/snapshot/ExecutionRegistry";
@@ -93,6 +98,15 @@ const VARIANTS: [string, Partial<GameConfig>][] = [
   // Water nukes rewrite terrain and the water graph mid-game.
   ["water nukes", { waterNukes: true }],
   ["teams", { gameMode: GameMode.Team, playerTeams: 2 }],
+  [
+    "humans vs nations",
+    { gameMode: GameMode.Team, playerTeams: HumansVsNations },
+  ],
+  ["random spawn", { randomSpawn: true }],
+  // No spawn timer; the spawn phase ends differently.
+  ["singleplayer", { gameType: GameType.Singleplayer }],
+  // Overtime from minute 1, so the shrinking win bar is live in the run.
+  ["overtime", { overtime: { enabled: true, startMinutes: 1 } }],
 ];
 
 describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
