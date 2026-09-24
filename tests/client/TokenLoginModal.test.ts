@@ -17,6 +17,14 @@ vi.mock("../../src/client/Utils", () => ({
 
 import { TokenLoginModal } from "../../src/client/TokenLoginModal";
 
+function deferred() {
+  let resolve!: (value: unknown) => void;
+  const promise = new Promise<unknown>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 describe("TokenLoginModal — retry loop", () => {
   let modal: TokenLoginModal;
 
@@ -88,6 +96,103 @@ describe("TokenLoginModal — retry loop", () => {
     expect(showInGameAlertMock).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { status: "failed", code: "expired" },
+    { status: "success", email: "old@example.com" },
+  ])("ignores a $status response after close", async (result) => {
+    const pending = deferred();
+    tempTokenLoginMock.mockReturnValue(pending.promise);
+
+    modal.openWithToken("old-token");
+    modal.close();
+    pending.resolve(result);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(modal.isOpen()).toBe(false);
+    expect(showInGameAlertMock).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each([
+    { status: "failed", code: "invalid" },
+    { status: "success", email: "old@example.com" },
+  ])(
+    "keeps a reopened request active after an old $status",
+    async (oldResult) => {
+      const oldRequest = deferred();
+      const newRequest = deferred();
+      tempTokenLoginMock
+        .mockReturnValueOnce(oldRequest.promise)
+        .mockReturnValueOnce(newRequest.promise);
+
+      modal.openWithToken("old-token");
+      modal.close();
+      modal.openWithToken("new-token");
+      expect(tempTokenLoginMock).toHaveBeenCalledTimes(2);
+
+      oldRequest.resolve(oldResult);
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(modal.isOpen()).toBe(true);
+      expect(tempTokenLoginMock).toHaveBeenCalledTimes(2);
+      expect(showInGameAlertMock).not.toHaveBeenCalled();
+      await modal.updateComplete;
+      expect(modal.textContent).not.toContain("token_login_modal.success");
+
+      newRequest.resolve({ status: "failed", code: "expired" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(showInGameAlertMock).toHaveBeenCalledWith(
+        "error_modal.login_token_expired",
+      );
+    },
+  );
+
+  it("starts a fresh request when opened again while already open", async () => {
+    const oldRequest = deferred();
+    const newRequest = deferred();
+    tempTokenLoginMock
+      .mockReturnValueOnce(oldRequest.promise)
+      .mockReturnValueOnce(newRequest.promise);
+
+    modal.openWithToken("token");
+    modal.open();
+    expect(tempTokenLoginMock).toHaveBeenCalledTimes(2);
+
+    oldRequest.resolve({ status: "retry" });
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(tempTokenLoginMock).toHaveBeenCalledTimes(2);
+
+    newRequest.resolve({ status: "failed", code: "invalid" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(showInGameAlertMock).toHaveBeenCalledWith(
+      "error_modal.login_token_invalid",
+    );
+  });
+
+  it.each([true, false])(
+    "cancels a scheduled reload when reopened after success (close first: %s)",
+    async (closeFirst) => {
+      const nextRequest = deferred();
+      tempTokenLoginMock
+        .mockResolvedValueOnce({ status: "success", email: "old@example.com" })
+        .mockReturnValueOnce(nextRequest.promise);
+
+      modal.openWithToken("old-token");
+      await vi.advanceTimersByTimeAsync(0);
+      await modal.updateComplete;
+      expect(modal.textContent).toContain("token_login_modal.success");
+
+      if (closeFirst) modal.close();
+      modal.openWithToken("new-token");
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(modal.isOpen()).toBe(true);
+      expect(tempTokenLoginMock).toHaveBeenCalledTimes(2);
+      expect(showInGameAlertMock).not.toHaveBeenCalled();
+      await modal.updateComplete;
+      expect(modal.textContent).not.toContain("token_login_modal.success");
+    },
+  );
+
   it("still logs in successfully on a success result", async () => {
     tempTokenLoginMock.mockResolvedValue({
       status: "success",
@@ -103,5 +208,19 @@ describe("TokenLoginModal — retry loop", () => {
     expect(modal.isOpen()).toBe(true);
     await modal.updateComplete;
     expect(modal.textContent).toContain("token_login_modal.success");
+  });
+
+  it("closes after the success delay when the opening is still current", async () => {
+    tempTokenLoginMock.mockResolvedValue({
+      status: "success",
+      email: "a@b.c",
+    });
+    const closeSpy = vi.spyOn(modal, "close");
+
+    modal.openWithToken("good-token");
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(closeSpy).toHaveBeenCalledOnce();
+    expect(modal.isOpen()).toBe(false);
   });
 });

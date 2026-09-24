@@ -13,6 +13,10 @@ export class TokenLoginModal extends BaseModal {
 
   private retryInterval: NodeJS.Timeout | undefined = undefined;
 
+  private successTimeout: ReturnType<typeof setTimeout> | undefined;
+
+  private loginGeneration = 0;
+
   private token: string | null = null;
 
   private email: string | null = null;
@@ -80,9 +84,6 @@ export class TokenLoginModal extends BaseModal {
 
   public openWithToken(token: string): void {
     this.token = token;
-    this.email = null;
-    this.attemptCount = 0;
-    this.isAttemptingLogin = false;
     this.open();
   }
 
@@ -94,19 +95,28 @@ export class TokenLoginModal extends BaseModal {
   }
 
   protected onOpen(): void {
+    this.loginGeneration++;
+    this.email = null;
+    this.attemptCount = 0;
+    this.isAttemptingLogin = false;
     clearInterval(this.retryInterval);
+    clearTimeout(this.successTimeout);
+    this.requestUpdate();
     this.retryInterval = setInterval(() => this.tryLogin(), 3000);
     void this.tryLogin();
   }
 
   protected onClose(): void {
+    this.loginGeneration++;
     this.token = null;
     clearInterval(this.retryInterval);
+    clearTimeout(this.successTimeout);
     this.attemptCount = 0;
     this.isAttemptingLogin = false;
   }
 
   private async tryLogin() {
+    const generation = this.loginGeneration;
     if (this.isAttemptingLogin) {
       return;
     }
@@ -123,6 +133,9 @@ export class TokenLoginModal extends BaseModal {
     }
     try {
       const result = await tempTokenLogin(this.token);
+      if (generation !== this.loginGeneration) {
+        return;
+      }
       if (result.status === "retry") {
         return;
       }
@@ -140,15 +153,22 @@ export class TokenLoginModal extends BaseModal {
       }
       this.email = result.email;
       clearInterval(this.retryInterval);
-      setTimeout(() => {
+      this.successTimeout = setTimeout(() => {
+        if (generation !== this.loginGeneration) {
+          return;
+        }
         this.close();
         window.location.reload();
       }, 1000);
       this.requestUpdate();
     } catch (e) {
-      console.error(e);
+      if (generation === this.loginGeneration) {
+        console.error(e);
+      }
     } finally {
-      this.isAttemptingLogin = false;
+      if (generation === this.loginGeneration) {
+        this.isAttemptingLogin = false;
+      }
     }
   }
 }
