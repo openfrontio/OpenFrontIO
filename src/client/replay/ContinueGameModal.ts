@@ -1,5 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { assetUrl } from "../../core/AssetUrls";
 import { Difficulty } from "../../core/game/Game";
 import { translateText } from "../Utils";
 import { formatGameTime } from "./ReplayControls";
@@ -11,6 +12,7 @@ export interface ContinuePlayerOption {
   flag?: string;
   troops: number;
   tiles: number;
+  controlPercent?: number;
 }
 
 @customElement("continue-game-modal")
@@ -22,6 +24,7 @@ export class ContinueGameModal extends LitElement {
 
   @state() private selectedPlayerID = "";
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() private searchQuery = "";
   @state() private loading = false;
   @state() private error = "";
 
@@ -30,6 +33,9 @@ export class ContinueGameModal extends LitElement {
   }
 
   willUpdate(changedProperties: Map<string, unknown>): void {
+    if (changedProperties.has("open") && !this.open) {
+      this.searchQuery = "";
+    }
     if (changedProperties.has("initialPlayerID") && this.initialPlayerID) {
       this.selectedPlayerID = this.initialPlayerID;
     }
@@ -42,10 +48,23 @@ export class ContinueGameModal extends LitElement {
     }
   }
 
+  private renderFlag(flag?: string) {
+    if (!flag) return nothing;
+    if (flag.includes("/") || flag.includes(".svg")) {
+      return html`<img
+        src=${assetUrl(flag)}
+        alt=""
+        class="w-5 h-3.5 object-cover rounded-xs shrink-0"
+      />`;
+    }
+    return html`<span class="text-base shrink-0">${flag}</span>`;
+  }
+
   private close(): void {
     if (this.loading) return;
     this.open = false;
     this.error = "";
+    this.searchQuery = "";
     this.dispatchEvent(
       new CustomEvent("close", { bubbles: true, composed: true }),
     );
@@ -128,46 +147,102 @@ export class ContinueGameModal extends LitElement {
 
           <!-- Player Selection -->
           <div class="flex flex-col gap-2">
-            <label class="text-sm font-semibold text-zinc-200">
-              ${translateText("replay_viewer.select_player")}
-            </label>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-semibold text-zinc-200">
+                ${translateText("replay_viewer.select_player")}
+              </label>
+              ${this.players.length > 0
+                ? html`<span class="text-xs text-zinc-400">
+                    ${this.searchQuery.trim()
+                      ? `${
+                          this.players.filter((p) =>
+                            p.name
+                              .toLowerCase()
+                              .includes(this.searchQuery.trim().toLowerCase()),
+                          ).length
+                        } / ${this.players.length}`
+                      : `${this.players.length}`}
+                  </span>`
+                : nothing}
+            </div>
+
+            <!-- Search Bar -->
+            <div class="relative">
+              <input
+                type="text"
+                placeholder="${translateText("replay_viewer.search_players")}"
+                .value=${this.searchQuery}
+                @input=${(e: InputEvent) => {
+                  this.searchQuery = (e.target as HTMLInputElement).value;
+                }}
+                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-sky-400 transition"
+              />
+              ${this.searchQuery
+                ? html`<button
+                    type="button"
+                    class="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-xs"
+                    @click=${() => (this.searchQuery = "")}
+                  >
+                    ✕
+                  </button>`
+                : nothing}
+            </div>
+
             <div
               class="max-h-48 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar"
             >
-              ${this.players.map((p) => {
-                const isSelected = p.id === this.selectedPlayerID;
-                return html`
-                  <button
-                    type="button"
-                    class="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-left transition border ${isSelected
-                      ? "bg-sky-500/20 border-sky-400 text-white"
-                      : "bg-white/5 border-transparent text-zinc-300 hover:bg-white/10"}"
-                    @click=${() => (this.selectedPlayerID = p.id)}
-                    ?disabled=${this.loading}
-                  >
-                    <div class="flex items-center gap-2.5 truncate">
-                      ${p.flag
-                        ? html`<span class="text-base">${p.flag}</span>`
-                        : nothing}
-                      <span class="font-medium truncate">${p.name}</span>
+              ${(() => {
+                const query = this.searchQuery.trim().toLowerCase();
+                const filtered = query
+                  ? this.players.filter((p) =>
+                      p.name.toLowerCase().includes(query),
+                    )
+                  : this.players;
+
+                if (filtered.length === 0) {
+                  return html`
+                    <div class="text-xs text-zinc-400 text-center py-4">
+                      ${translateText("replay_viewer.no_players_found")}
                     </div>
-                    <div
-                      class="text-xs text-zinc-400 flex items-center gap-3 shrink-0"
+                  `;
+                }
+
+                return filtered.map((p) => {
+                  const isSelected = p.id === this.selectedPlayerID;
+                  return html`
+                    <button
+                      type="button"
+                      class="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-left transition border ${isSelected
+                        ? "bg-sky-500/20 border-sky-400 text-white"
+                        : "bg-white/5 border-transparent text-zinc-300 hover:bg-white/10"}"
+                      @click=${() => (this.selectedPlayerID = p.id)}
+                      ?disabled=${this.loading}
                     >
-                      <span>
-                        ${translateText("replay_viewer.player_stats_troops", {
-                          troops: p.troops.toLocaleString(),
-                        })}
-                      </span>
-                      <span>
-                        ${translateText("replay_viewer.player_stats_tiles", {
-                          tiles: p.tiles.toLocaleString(),
-                        })}
-                      </span>
-                    </div>
-                  </button>
-                `;
-              })}
+                      <div class="flex items-center gap-2.5 truncate">
+                        ${this.renderFlag(p.flag)}
+                        <span class="font-medium truncate">${p.name}</span>
+                      </div>
+                      <div
+                        class="text-xs text-zinc-400 flex items-center gap-3 shrink-0"
+                      >
+                        <span>
+                          ${translateText("replay_viewer.player_stats_troops", {
+                            troops: p.troops.toLocaleString(),
+                          })}
+                        </span>
+                        <span>
+                          ${translateText(
+                            "replay_viewer.player_stats_control",
+                            {
+                              percent: `${(p.controlPercent ?? 0).toFixed(1)}%`,
+                            },
+                          )}
+                        </span>
+                      </div>
+                    </button>
+                  `;
+                });
+              })()}
             </div>
           </div>
 

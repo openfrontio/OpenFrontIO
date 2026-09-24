@@ -789,17 +789,23 @@ export class ReplayViewer extends LitElement {
     if (adapter) {
       adapter.sync();
       const inSpawn = adapter.inSpawnPhase();
+      const landTiles = adapter.numLandTiles();
       players = adapter
         .playerViews()
         .filter((pv) => inSpawn || pv.isAlive())
-        .map((pv) => ({
-          id: pv.id(),
-          name: pv.displayName() || pv.name(),
-          smallID: pv.smallID(),
-          flag: pv.flag(),
-          troops: pv.troops(),
-          tiles: pv.numTilesOwned(),
-        }));
+        .map((pv) => {
+          const tiles = pv.numTilesOwned();
+          const controlPercent = landTiles > 0 ? (tiles / landTiles) * 100 : 0;
+          return {
+            id: pv.id(),
+            name: pv.displayName() || pv.name(),
+            smallID: pv.smallID(),
+            flag: pv.flag(),
+            troops: pv.troops(),
+            tiles,
+            controlPercent,
+          };
+        });
     }
     this.continuePlayers = players;
     this.continueInitialPlayerID = adapter?.focus?.id() ?? players[0]?.id ?? "";
