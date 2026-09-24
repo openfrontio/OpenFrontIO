@@ -115,13 +115,15 @@ export type ServerMessage =
   | ServerPrestartMessage
   | ServerErrorMessage
   | ServerLobbyInfoMessage
-  | ServerNewLobbyMessage;
+  | ServerNewLobbyMessage
+  | ServerPongMessage;
 
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
   typeof ServerStartGameMessageSchema
 >;
 export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
+export type ServerPongMessage = z.infer<typeof ServerPongMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
 export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
 export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
@@ -195,7 +197,12 @@ export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
 // The host picks the start time (up to HOSTED_LOBBY_AUTO_START_MS) and the
 // player cap when listing; filling to the cap starts the game early.
 export const MIN_HOSTED_LOBBY_AUTO_START_MS = 60 * 1000;
+export const MIN_HOSTED_LOBBY_PLAYERS = 10;
 export const MAX_HOSTED_LOBBY_PLAYERS = 100;
+
+// A listed lobby this close to its auto-start can no longer be queued, so a
+// host can't pay for a queue spot the lobby starts before it reaches.
+export const LOBBY_QUEUE_CUTOFF_MS = 30 * 1000;
 
 // Featured lobbies get a longer window. A scheduled event announced ahead of
 // time needs the listing to still be up when its audience arrives, and unlike a
@@ -334,6 +341,9 @@ export const GameInfoSchema = z.object({
   label: LobbyLabelSchema.optional(),
   accent: LobbyAccentSchema.optional(),
   featured: z.boolean().optional(),
+  // Listed lobbies only: the host paid to put it in the public Special
+  // queue, so the queue's countdown starts it.
+  queued: z.boolean().optional(),
 });
 
 // Browser-facing lobby info. Master/worker-internal fields (the creator hash
@@ -354,6 +364,10 @@ export const PublicGameInfoSchema = z.object({
   // Hosted lobbies only: server timestamp when the listing auto-starts, so
   // the lobby browser can show a countdown before the host presses Start.
   autoStartAt: zb.uint().optional(),
+  // A player's listed lobby (hosted, or paid into a public queue) rather
+  // than one the server scheduled, so the browser can label it Custom.
+  // Featured lobbies are official events and never carry it.
+  custom: z.boolean().optional(),
 });
 
 export const PublicGamesSchema = z.object({
@@ -1038,6 +1052,12 @@ export const ServerNewLobbyMessageSchema = z.object({
   gameID: ID,
 });
 
+// The reply to a ClientPingMessage, echoing its sentAt.
+export const ServerPongMessageSchema = z.object({
+  type: z.literal("pong"),
+  sentAt: zb.uint(),
+});
+
 export const ServerMessageSchema = zb.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -1047,6 +1067,7 @@ export const ServerMessageSchema = zb.discriminatedUnion("type", [
   ServerErrorSchema,
   ServerLobbyInfoMessageSchema,
   ServerNewLobbyMessageSchema,
+  ServerPongMessageSchema,
 ]);
 
 //
@@ -1127,8 +1148,12 @@ export const ClientLogMessageSchema = z.object({
   log: ID,
 });
 
+// sentAt is the client's own performance.now() (whole ms), echoed back in the
+// pong so the client can time the round trip without keeping state. Only
+// meaningful to the client that sent it.
 export const ClientPingMessageSchema = z.object({
   type: z.literal("ping"),
+  sentAt: zb.uint(),
 });
 
 export const ClientIntentMessageSchema = z.object({
