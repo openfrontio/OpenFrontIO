@@ -13,11 +13,6 @@ import { capturePagePin } from "../../src/client/PagePin";
 import { SendKickPlayerIntentEvent } from "../../src/client/Transport";
 import { translateText } from "../../src/client/Utils";
 import { EventBus } from "../../src/core/EventBus";
-import {
-  DARK_MODE_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../src/core/game/UserSettings";
 
 const mocks = vi.hoisted(() => ({
   userAuth: vi.fn(async (): Promise<unknown> => false),
@@ -402,42 +397,6 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
         expect.stringContaining("Your player ID is public-id-1"),
       ),
     );
-  });
-
-  it("synchronizes dark mode class on document.documentElement with settings and events", () => {
-    const userSettings = new UserSettings();
-
-    // 1. Initial boot state (defaults to false)
-    expect(userSettings.darkMode()).toBe(false);
-    expect(document.documentElement.classList.contains("dark")).toBe(false);
-
-    // 2. Direct event dispatch with "true" detail
-    globalThis.dispatchEvent(
-      new CustomEvent(`${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`, {
-        detail: "true",
-      }),
-    );
-    expect(document.documentElement.classList.contains("dark")).toBe(true);
-
-    // 3. Direct event dispatch with "false" detail
-    globalThis.dispatchEvent(
-      new CustomEvent(`${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`, {
-        detail: "false",
-      }),
-    );
-    expect(document.documentElement.classList.contains("dark")).toBe(false);
-
-    // 4. toggleDarkMode() transition (false -> true)
-    userSettings.toggleDarkMode();
-    expect(userSettings.darkMode()).toBe(true);
-    expect(localStorage.getItem(DARK_MODE_KEY)).toBe("true");
-    expect(document.documentElement.classList.contains("dark")).toBe(true);
-
-    // 5. toggleDarkMode() transition (true -> false)
-    userSettings.toggleDarkMode();
-    expect(userSettings.darkMode()).toBe(false);
-    expect(localStorage.getItem(DARK_MODE_KEY)).toBe("false");
-    expect(document.documentElement.classList.contains("dark")).toBe(false);
   });
 
   /**

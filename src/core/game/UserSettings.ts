@@ -173,7 +173,6 @@ const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
 export const CROWN_KEY = "crown";
-export const DARK_MODE_KEY = "settings.darkMode";
 export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
@@ -379,10 +378,6 @@ export class UserSettings {
     this.setCached(key, value.toString());
   }
 
-  darkMode(): boolean {
-    return this.getBool(DARK_MODE_KEY, false);
-  }
-
   emojis() {
     return this.getBool("settings.emojis", true);
   }
@@ -446,10 +441,6 @@ export class UserSettings {
 
   toggleLeftClickOpenMenu() {
     this.setBool("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
-  }
-
-  toggleDarkMode(): void {
-    this.setBool(DARK_MODE_KEY, !this.darkMode());
   }
 
   toggleEmojis() {
