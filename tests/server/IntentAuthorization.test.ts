@@ -28,6 +28,7 @@ const bot = actor({ isAdmin: true, isAdminBot: true });
 const lobby = (over: Partial<IntentGameState> = {}): IntentGameState => ({
   isPublic: false,
   isListed: false,
+  isQueued: false,
   hasStarted: false,
   ...over,
 });
@@ -150,6 +151,20 @@ describe("authorizeIntent", () => {
     ["start timer by a player", timer, player, lobby(), 403],
     ["start timer by the host", timer, host, lobby(), null],
     ["start timer by the bot", timer, bot, lobby(), null],
+    [
+      "start timer by the host in a queued lobby",
+      timer,
+      host,
+      lobby({ isListed: true, isQueued: true }),
+      409,
+    ],
+    [
+      "start timer by the bot in a queued lobby",
+      timer,
+      bot,
+      lobby({ isListed: true, isQueued: true }),
+      null,
+    ],
     [
       "start timer on a public game",
       timer,

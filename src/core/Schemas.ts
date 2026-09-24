@@ -334,6 +334,9 @@ export const GameInfoSchema = z.object({
   label: LobbyLabelSchema.optional(),
   accent: LobbyAccentSchema.optional(),
   featured: z.boolean().optional(),
+  // Listed lobbies only: the host paid to put it in the public Special
+  // queue, so the queue's countdown starts it.
+  queued: z.boolean().optional(),
 });
 
 // Browser-facing lobby info. Master/worker-internal fields (the creator hash

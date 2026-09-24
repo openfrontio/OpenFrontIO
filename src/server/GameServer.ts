@@ -359,6 +359,7 @@ export class GameServer {
     const denied = authorizeIntent(intent, actor, {
       isPublic: this.isPublic(),
       isListed: this.isListed(),
+      isQueued: this.listing.isQueued(),
       hasStarted: this.hasStarted(),
     });
     if (denied !== null) {
@@ -1559,6 +1560,7 @@ export class GameServer {
       label: this.listing.lobbyLabel(),
       accent: this.listing.lobbyAccent(),
       featured: this.listing.isFeatured() ? true : undefined,
+      queued: this.listing.isQueued() ? true : undefined,
     };
   }
 
@@ -1608,6 +1610,21 @@ export class GameServer {
         this.hasReachedMaxPlayerCount = true;
       }
     }
+  }
+
+  public isQueued(): boolean {
+    return this.listing.isQueued();
+  }
+
+  public queuedAt(): number | undefined {
+    return this.listing.queuedAtTime();
+  }
+
+  // The host paid to put this listed lobby in the public Special queue. The
+  // worker then reports it as a Special lobby and the queue's countdown
+  // starts it; the listing deadline no longer applies.
+  public queueForPublic(): void {
+    this.listing.queue();
   }
 
   // Players (not spectators) currently seated in the lobby.

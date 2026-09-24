@@ -197,7 +197,9 @@ export class WorkerLobbyService {
     // Subscriber-listed private lobbies. creatorID (a hash of the creator's
     // persistentID) rides along for the one-listed-lobby-per-creator check;
     // sanitizeGames strips it before anything reaches browsers. The config is
-    // reduced to the publicLobbyGameConfig allowlist.
+    // reduced to the publicLobbyGameConfig allowlist. A lobby the host paid
+    // to queue is reported as Special with its queuedAt, which puts it right
+    // behind the counting-down Special lobby.
     const hostedLobbies = this.gm.listedLobbies().map((g) => {
       const gi = g.gameInfo();
       return {
@@ -205,7 +207,8 @@ export class WorkerLobbyService {
         numClients: gi.clients?.length ?? 0,
         startsAt: gi.startsAt,
         gameConfig: gi.gameConfig && publicLobbyGameConfig(gi.gameConfig),
-        publicGameType: "hosted",
+        publicGameType: g.isQueued() ? "special" : "hosted",
+        queuedAt: g.queuedAt(),
         creatorID: g.hashedCreatorID(),
         createdAt: g.createdAt,
         // Already sanitised on the way in (GameServer.setFeatured), so nothing
@@ -263,14 +266,13 @@ export class WorkerLobbyService {
     const broadcastIds = new Set(broadcast.map((l) => l.gameID));
     const localExtra = this.gm
       .listedLobbies()
-      .filter((g) => !broadcastIds.has(g.id)).length;
+      .filter((g) => !g.isQueued() && !broadcastIds.has(g.id)).length;
     return broadcast.length + localExtra;
   }
 
-  // Strips worker/master-internal fields (creatorID, createdAt) before lobby
-  // info is
-  // sent to browser clients, converting InternalGameInfo to the
-  // browser-facing PublicGameInfo.
+  // Strips worker/master-internal fields (creatorID, createdAt, queuedAt)
+  // before lobby info is sent to browser clients, converting
+  // InternalGameInfo to the browser-facing PublicGameInfo.
   private sanitizeGames(
     games: InternalPublicGames["games"],
   ): PublicGames["games"] {
@@ -283,6 +285,7 @@ export class WorkerLobbyService {
         ({
           creatorID: _creatorID,
           createdAt: _createdAt,
+          queuedAt: _queuedAt,
           ...rest
         }): PublicGameInfo => rest,
       );
