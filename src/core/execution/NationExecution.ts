@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Difficulty,
   Execution,
@@ -14,6 +15,24 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
+import {
+  NationSchema,
+  nationData,
+  newCell,
+  readPlayerInfo,
+} from "../snapshot/CommonSchemas";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import {
+  VersionedSchema,
+  zNum,
+  zPlayerRef,
+  zRandom,
+} from "../snapshot/SnapshotType";
 import { assertNever, simpleHash } from "../Util";
 import { NationAllianceBehavior } from "./nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "./nation/NationEmojiBehavior";
@@ -45,7 +64,7 @@ export class NationExecution implements Execution {
   private reserveRatio: number;
   private expandRatio: number;
 
-  private readonly embargoMalusApplied = new Set<PlayerID>();
+  private embargoMalusApplied = new Set<PlayerID>();
 
   constructor(
     private gameID: GameID,
@@ -369,4 +388,128 @@ export class NationExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return true;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    // The nation is normally one of the game's own; store it by index so
+    // identity survives. Dynamically created nations are stored inline.
+    const nationIndex = w.game.nations().indexOf(this.nation);
+    return NationExecutionSnapshot.write({
+      active: this.active,
+      gameID: this.gameID,
+      nationIndex: nationIndex === -1 ? null : nationIndex,
+      nation: nationIndex === -1 ? nationData(this.nation) : null,
+      random: w.random(this.random),
+      initialized: this.mg !== undefined,
+      player: w.playerOrNull(this.player),
+      attackRate: this.attackRate ?? null,
+      attackTick: this.attackTick ?? null,
+      triggerRatio: this.triggerRatio,
+      reserveRatio: this.reserveRatio,
+      expandRatio: this.expandRatio,
+      embargoMalusApplied: [...this.embargoMalusApplied],
+      spawnExecAdded: this.spawnExecAdded,
+      behaviors: this.behaviorsInitialized
+        ? {
+            emoji: this.emojiBehavior.snapshot(w),
+            mirv: this.mirvBehavior.snapshot(w),
+            alliance: this.allianceBehavior.snapshot(w),
+            warship: this.warshipBehavior.snapshot(w),
+            attack: this.attackBehavior.snapshot(w),
+            nuke: this.nukeBehavior.snapshot(w),
+            structure: this.structureBehavior.snapshot(w),
+          }
+        : null,
+    });
+  }
+
+  restoreSnapshot(s: NationState, r: SnapshotReader): void {
+    this.active = s.active;
+    this.gameID = s.gameID;
+    if (s.nationIndex !== null) {
+      this.nation = r.game.nations()[s.nationIndex];
+    } else if (s.nation !== null) {
+      const cell = s.nation.spawnCell;
+      this.nation = new Nation(
+        cell === null ? undefined : newCell(cell),
+        readPlayerInfo(s.nation.playerInfo, r),
+      );
+    }
+    // One PRNG shared with every behavior, as in a live game.
+    const random = r.random(s.random);
+    this.random = random;
+    if (s.initialized) this.mg = r.game;
+    this.player = r.playerOrNull(s.player);
+    if (s.attackRate !== null) this.attackRate = s.attackRate;
+    if (s.attackTick !== null) this.attackTick = s.attackTick;
+    this.triggerRatio = s.triggerRatio;
+    this.reserveRatio = s.reserveRatio;
+    this.expandRatio = s.expandRatio;
+    this.embargoMalusApplied = new Set(s.embargoMalusApplied);
+    this.spawnExecAdded = s.spawnExecAdded;
+    this.behaviorsInitialized = s.behaviors !== null;
+    const b = s.behaviors;
+    const player = this.player;
+    if (b === null || player === null) return;
+    const shell = <T extends object>(cls: { prototype: T }): T =>
+      Object.create(cls.prototype) as T;
+    const emoji = shell(NationEmojiBehavior);
+    const mirv = shell(NationMIRVBehavior);
+    const alliance = shell(NationAllianceBehavior);
+    const warship = shell(NationWarshipBehavior);
+    const attack = shell(AiAttackBehavior);
+    const nuke = shell(NationNukeBehavior);
+    const structure = shell(NationStructureBehavior);
+    emoji.restoreSnapshot(b.emoji, r, random, player);
+    mirv.restoreSnapshot(b.mirv, r, random, player, emoji);
+    alliance.restoreSnapshot(b.alliance, r, random, player, emoji);
+    warship.restoreSnapshot(b.warship, r, random, player, emoji);
+    attack.restoreSnapshot(b.attack, r, random, player, alliance, emoji);
+    nuke.restoreSnapshot(b.nuke, r, random, player, attack, emoji);
+    structure.restoreSnapshot(b.structure, r, random, player);
+    this.emojiBehavior = emoji;
+    this.mirvBehavior = mirv;
+    this.allianceBehavior = alliance;
+    this.warshipBehavior = warship;
+    this.attackBehavior = attack;
+    this.nukeBehavior = nuke;
+    this.structureBehavior = structure;
+  }
 }
+
+// Each behavior is its own versioned record, so its layout can change
+// without bumping this one.
+const NationStateSchema = z.object({
+  active: z.boolean(),
+  gameID: z.string(),
+  nationIndex: z.number().int().nonnegative().nullable(),
+  nation: NationSchema.nullable(),
+  random: zRandom(),
+  initialized: z.boolean(),
+  player: zPlayerRef().nullable(),
+  attackRate: zNum().nullable(),
+  attackTick: zNum().nullable(),
+  triggerRatio: zNum(),
+  reserveRatio: zNum(),
+  expandRatio: zNum(),
+  embargoMalusApplied: z.array(z.string()),
+  spawnExecAdded: z.boolean(),
+  behaviors: z
+    .object({
+      emoji: VersionedSchema,
+      mirv: VersionedSchema,
+      alliance: VersionedSchema,
+      warship: VersionedSchema,
+      attack: VersionedSchema,
+      nuke: VersionedSchema,
+      structure: VersionedSchema,
+    })
+    .nullable(),
+});
+type NationState = z.infer<typeof NationStateSchema>;
+
+export const NationExecutionSnapshot = execSnapshotType({
+  name: "Nation",
+  version: 1,
+  schema: NationStateSchema,
+  cls: () => NationExecution,
+});

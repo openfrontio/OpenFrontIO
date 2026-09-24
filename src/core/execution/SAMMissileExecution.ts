@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Execution,
   Game,
@@ -9,6 +10,18 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import {
+  AirPathFinderSchema,
+  airPathFinderState,
+  restoreAirPathFinder,
+} from "../snapshot/PathfinderSnapshots";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zNum, zPlayerRef, zRef, zTile } from "../snapshot/SnapshotType";
 import { NukeType } from "../StatsSchemas";
 
 const INTERCEPTED_UNIT_TRANSLATION_KEYS: Partial<Record<UnitType, string>> = {
@@ -105,4 +118,55 @@ export class SAMMissileExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return SAMMissileExecutionSnapshot.write({
+      active: this.active,
+      // mg and the pathfinder are both set by init.
+      pathFinder:
+        this.mg === undefined ? null : airPathFinderState(this.pathFinder),
+      missile: this.SAMMissile === undefined ? null : w.unit(this.SAMMissile),
+      speed: this.speed,
+      spawn: this.spawn,
+      owner: w.player(this._owner),
+      ownerUnit: w.unit(this.ownerUnit),
+      target: w.unit(this.target),
+      targetTile: this.targetTile,
+    });
+  }
+
+  restoreSnapshot(s: SAMMissileState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.pathFinder !== null) {
+      this.mg = r.game;
+      this.pathFinder = restoreAirPathFinder(r.game, s.pathFinder);
+    }
+    if (s.missile !== null) this.SAMMissile = r.unit(s.missile);
+    this.speed = s.speed;
+    this.spawn = s.spawn;
+    this._owner = r.player(s.owner);
+    this.ownerUnit = r.unit(s.ownerUnit);
+    this.target = r.unit(s.target);
+    this.targetTile = s.targetTile;
+  }
 }
+
+const SAMMissileStateSchema = z.object({
+  active: z.boolean(),
+  pathFinder: AirPathFinderSchema.nullable(),
+  missile: zRef().nullable(),
+  speed: zNum(),
+  spawn: zTile(),
+  owner: zPlayerRef(),
+  ownerUnit: zRef(),
+  target: zRef(),
+  targetTile: zTile(),
+});
+type SAMMissileState = z.infer<typeof SAMMissileStateSchema>;
+
+export const SAMMissileExecutionSnapshot = execSnapshotType({
+  name: "SAMMissile",
+  version: 1,
+  schema: SAMMissileStateSchema,
+  cls: () => SAMMissileExecution,
+});

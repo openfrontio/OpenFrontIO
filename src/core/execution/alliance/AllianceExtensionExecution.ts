@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Execution,
   Game,
@@ -5,11 +6,18 @@ import {
   Player,
   PlayerID,
 } from "../../game/Game";
+import { execSnapshotType } from "../../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import { zPlayerRef } from "../../snapshot/SnapshotType";
 
 export class AllianceExtensionExecution implements Execution {
   constructor(
-    private readonly from: Player,
-    private readonly toID: PlayerID,
+    private from: Player,
+    private toID: PlayerID,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -89,4 +97,29 @@ export class AllianceExtensionExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return AllianceExtensionExecutionSnapshot.write({
+      from: w.player(this.from),
+      toID: this.toID,
+    });
+  }
+
+  restoreSnapshot(s: AllianceExtensionState, r: SnapshotReader): void {
+    this.from = r.player(s.from);
+    this.toID = s.toID;
+  }
 }
+
+const AllianceExtensionStateSchema = z.object({
+  from: zPlayerRef(),
+  toID: z.string(),
+});
+type AllianceExtensionState = z.infer<typeof AllianceExtensionStateSchema>;
+
+export const AllianceExtensionExecutionSnapshot = execSnapshotType({
+  name: "AllianceExtension",
+  version: 1,
+  schema: AllianceExtensionStateSchema,
+  cls: () => AllianceExtensionExecution,
+});

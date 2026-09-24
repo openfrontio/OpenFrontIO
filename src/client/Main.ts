@@ -124,6 +124,7 @@ import {
 } from "./SteamLink";
 import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
+import { steamSDK } from "./SteamSDK";
 import { StoreModal } from "./Store";
 import "./SubscriptionModal";
 import { initTelemetry } from "./Telemetry";
@@ -987,6 +988,20 @@ class Client {
     };
 
     const onPopState = () => {
+      // Steam hardware back button fix (Issue #5514):
+      // If we navigate back to root on Steam, push state forward so the back button doesn't exit the app
+      // and show the blank 'Starting' screen.
+      if (
+        steamSDK.isOnSteam() &&
+        (window.location.hash === "" || window.location.hash === "#")
+      ) {
+        history.pushState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
+      }
+
       if (this.currentUrl !== null && this.lobbyHandle !== null) {
         console.info("Game is active");
 
@@ -1027,6 +1042,19 @@ class Client {
     window.addEventListener("popstate", onPopState);
     window.addEventListener("hashchange", onHashUpdate);
     window.addEventListener("join-changed", onJoinChanged);
+
+    if (
+      steamSDK.isOnSteam() &&
+      (window.location.hash === "" || window.location.hash === "#")
+    ) {
+      // Push an initial state so the hardware back button has something to pop,
+      // triggering our onPopState trap above instead of exiting the app.
+      history.pushState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    }
 
     function updateSliderProgress(slider: HTMLInputElement) {
       const percent =

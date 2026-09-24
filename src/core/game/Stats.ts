@@ -11,8 +11,6 @@ export interface Stats {
   getPlayerStats(player: Player): PlayerStats | null;
   stats(): AllPlayersStats;
 
-  numMirvsLaunched(): bigint;
-
   // Player attacks target
   attack(
     player: Player,

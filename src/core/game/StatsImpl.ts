@@ -1,4 +1,6 @@
+import { z } from "zod";
 import { AllPlayersStats, ClientID } from "../Schemas";
+import { snapshotType } from "../snapshot/SnapshotType";
 import {
   ALLIANCE_INDEX_BROKEN_BY_OTHER,
   ALLIANCE_INDEX_EXPIRED,
@@ -48,7 +50,7 @@ import {
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
-import { Player, PlayerType, TerraNullius, UnitType } from "./Game";
+import { Player, PlayerType, TerraNullius } from "./Game";
 import { Stats } from "./Stats";
 
 type BigIntLike = bigint | number;
@@ -68,12 +70,15 @@ const conquest_by_type: Record<PlayerType, number> = {
 };
 
 export class StatsImpl implements Stats {
-  private readonly data: AllPlayersStats = {};
+  private data: AllPlayersStats = {};
 
-  private _numMirvLaunched: bigint = 0n;
+  snapshot(): StatsState {
+    return { data: this.data };
+  }
 
-  numMirvsLaunched(): bigint {
-    return this._numMirvLaunched;
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: StatsState): void {
+    this.data = s.data as AllPlayersStats;
   }
 
   getPlayerStats(player: Player): PlayerStats {
@@ -329,9 +334,6 @@ export class StatsImpl implements Stats {
     target: Player | TerraNullius,
     type: NukeType,
   ): void {
-    if (type === UnitType.MIRV) {
-      this._numMirvLaunched++;
-    }
     this._addBomb(player, type, BOMB_INDEX_LAUNCH, 1);
   }
 
@@ -484,3 +486,14 @@ export class StatsImpl implements Stats {
 
   lobbyFillTime(fillTimeMs: number): void {}
 }
+
+export const StatsSnapshot = snapshotType({
+  name: "Stats",
+  version: 1,
+  schema: z.object({
+    // Stored as the live AllPlayersStats tree (bigints and all). Its shape is
+    // versioned by StatsSchemas, which game records already keep readable.
+    data: z.record(z.string(), z.unknown()),
+  }),
+});
+export type StatsState = z.infer<typeof StatsSnapshot.schema>;
