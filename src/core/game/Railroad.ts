@@ -1,3 +1,9 @@
+import { z } from "zod";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { snapshotType, zInt, zRef, zTiles } from "../snapshot/SnapshotType";
 import { Game } from "./Game";
 import { TileRef } from "./GameMap";
 import { GameUpdateType } from "./GameUpdates";
@@ -39,7 +45,36 @@ export class Railroad {
     }
     return closestIndex;
   }
+
+  snapshot(w: SnapshotWriter): RailroadState {
+    return {
+      id: this.id,
+      from: w.station(this.from),
+      to: w.station(this.to),
+      tiles: w.tiles(this.tiles),
+    };
+  }
+
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: RailroadState, r: SnapshotReader): void {
+    this.id = s.id;
+    this.from = r.station(s.from);
+    this.to = r.station(s.to);
+    this.tiles = Array.from(s.tiles);
+  }
 }
+
+export const RailroadSnapshot = snapshotType({
+  name: "Railroad",
+  version: 1,
+  schema: z.object({
+    id: zInt(),
+    from: zRef(),
+    to: zRef(),
+    tiles: zTiles(),
+  }),
+});
+export type RailroadState = z.infer<typeof RailroadSnapshot.schema>;
 
 export function getOrientedRailroad(
   from: TrainStation,
@@ -76,5 +111,10 @@ export class OrientedRailroad {
 
   getEnd(): TrainStation {
     return this.forward ? this.railroad.to : this.railroad.from;
+  }
+
+  /** The wrapped railroad and direction, for game snapshots. */
+  getState(): { railroad: Railroad; forward: boolean } {
+    return { railroad: this.railroad, forward: this.forward };
   }
 }

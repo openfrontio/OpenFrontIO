@@ -29,7 +29,9 @@ export type WorkerMessageType =
   | "attack_clustered_positions"
   | "attack_clustered_positions_result"
   | "transport_ship_spawn"
-  | "transport_ship_spawn_result";
+  | "transport_ship_spawn_result"
+  | "snapshot"
+  | "snapshot_result";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
@@ -43,6 +45,8 @@ export interface InitMessage extends BaseWorkerMessage {
   gameStartInfo: GameStartInfo;
   clientID: ClientID | undefined;
   cdnBase: string;
+  /** Resume from this game snapshot instead of starting a new game. */
+  snapshot?: Uint8Array;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {
@@ -143,6 +147,17 @@ export interface TransportShipSpawnResultMessage extends BaseWorkerMessage {
   result: TileRef | false;
 }
 
+export interface SnapshotMessage extends BaseWorkerMessage {
+  type: "snapshot";
+  gitCommit?: string;
+}
+
+export interface SnapshotResultMessage extends BaseWorkerMessage {
+  type: "snapshot_result";
+  /** Uncompressed; null if the snapshot failed (see the worker log). */
+  snapshot: Uint8Array | null;
+}
+
 // Union types for type safety
 export type MainThreadMessage =
   | InitMessage
@@ -152,7 +167,8 @@ export type MainThreadMessage =
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
   | AttackClusteredPositionsMessage
-  | TransportShipSpawnMessage;
+  | TransportShipSpawnMessage
+  | SnapshotMessage;
 
 // Message send from worker
 export type WorkerMessage =
@@ -166,4 +182,5 @@ export type WorkerMessage =
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
   | AttackClusteredPositionsResultMessage
-  | TransportShipSpawnResultMessage;
+  | TransportShipSpawnResultMessage
+  | SnapshotResultMessage;

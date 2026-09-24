@@ -148,9 +148,13 @@ function renderWebManifestAsset({
       );
     }
 
+    // The browser resolves a manifest icon's src against the manifest's own
+    // URL, and in production that is the CDN's /game_assets prefix, so a
+    // root-relative /_assets/... src would 404 at the CDN origin. Write it
+    // relative to the emitted manifest instead, like the BMFont pages.
     return {
       ...icon,
-      src: referencedHashedUrl,
+      src: getEmittedAssetRelativePath("manifest.json", referencedHashedUrl),
     };
   });
   return `${JSON.stringify(manifest, null, 2)}\n`;

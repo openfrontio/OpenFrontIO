@@ -29,6 +29,11 @@
     "name": "Adygea"
   },
   {
+    "code": "Aden State",
+    "continent": "Asia",
+    "name": "Aden State"
+  },
+  {
     "code": "af",
     "continent": "Asia",
     "name": "Afghanistan"
@@ -82,6 +87,11 @@
     "code": "Alaska",
     "continent": "North America",
     "name": "Alaska"
+  },
+  {
+    "code": "Alawi Sheikhdom",
+    "continent": "Asia",
+    "name": "Alawi Sheikhdom"
   },
   {
     "code": "alberta",
@@ -191,6 +201,11 @@
     "code": "antipope",
     "continent": "Europe",
     "name": "Anti-Pope"
+  },
+  {
+    "code": "Aqrabi Sheikhdom",
+    "continent": "Asia",
+    "name": "Aqrabi Sheikhdom"
   },
   {
     "code": "aquitaine",
@@ -375,6 +390,11 @@
   {
     "code": "baguette",
     "name": "Baguette"
+  },
+  {
+    "code": "Baidah Sultanate",
+    "continent": "Asia",
+    "name": "Baidah Sultanate"
   },
   {
     "code": "es-ib",
@@ -957,6 +977,11 @@
     "name": "Dallas"
   },
   {
+    "code": "Dathina Sheikhdom",
+    "continent": "Asia",
+    "name": "Dathina Sheikhdom"
+  },
+  {
     "code": "Delaware",
     "continent": "North America",
     "name": "Delaware"
@@ -1091,6 +1116,16 @@
     "name": "Emirate of Asir"
   },
   {
+    "code": "Emirate of Beihan",
+    "continent": "Asia",
+    "name": "Emirate of Beihan"
+  },
+  {
+    "code": "Emirate of Dhala",
+    "continent": "Asia",
+    "name": "Emirate of Dhala"
+  },
+  {
     "code": "granada",
     "continent": "Europe",
     "name": "Emirate of Granada"
@@ -1120,6 +1155,11 @@
     "code": "gq",
     "continent": "Africa",
     "name": "Equatorial Guinea"
+  },
+  {
+    "code": "Eritrea (Ethiopian)",
+    "continent": "Africa",
+    "name": "Eritrea (Ethiopian)"
   },
   {
     "code": "er",
@@ -1482,6 +1522,11 @@
     "name": "Hakupu"
   },
   {
+    "code": "Haushabi",
+    "continent": "Asia",
+    "name": "Haushabi Sultanate"
+  },
+  {
     "code": "fr-hdf",
     "continent": "Europe",
     "name": "Hauts-de-France"
@@ -1689,6 +1734,11 @@
     "code": "Karelo-Finnish SSR",
     "continent": "Europe",
     "name": "Karelo-Finnish SSR"
+  },
+  {
+    "code": "Kathiri State",
+    "continent": "Asia",
+    "name": "Kathiri State"
   },
   {
     "code": "Kayah",
@@ -2082,6 +2132,11 @@
     "name": "Louisiana"
   },
   {
+    "code": "Lower Aulaqi Sultanate",
+    "continent": "Asia",
+    "name": "Lower Aulaqi Sultanate"
+  },
+  {
     "code": "DE-NI",
     "continent": "Europe",
     "name": "Lower Saxony"
@@ -2130,6 +2185,11 @@
     "code": "mg",
     "continent": "Africa",
     "name": "Madagascar"
+  },
+  {
+    "code": "Mahra Sultanate",
+    "continent": "Asia",
+    "name": "Mahra Sultanate"
   },
   {
     "code": "Maine (1901)",
@@ -2992,6 +3052,11 @@
     "name": "Qing Dynasty"
   },
   {
+    "code": "Qu'aiti Sultanate",
+    "continent": "Asia",
+    "name": "Qu'aiti Sultanate"
+  },
+  {
     "code": "Quebec",
     "continent": "North America",
     "name": "Quebec"
@@ -3764,6 +3829,11 @@
     "name": "Seychelles"
   },
   {
+    "code": "Sheikdom of Upper Asir",
+    "continent": "Asia",
+    "name": "Sheikdom of Upper Asir"
+  },
+  {
     "code": "Siam",
     "continent": "Asia",
     "name": "Siam"
@@ -3853,6 +3923,11 @@
     "name": "South Africa"
   },
   {
+    "code": "South Arabia Federation",
+    "continent": "Asia",
+    "name": "South Arabia Federation"
+  },
+  {
     "code": "aus_souaus",
     "continent": "Oceania",
     "name": "South Australia"
@@ -3931,6 +4006,21 @@
     "code": "sd",
     "continent": "Africa",
     "name": "Sudan"
+  },
+  {
+    "code": "Sultanate of Fadhli",
+    "continent": "Asia",
+    "name": "Sultanate of Fadhli"
+  },
+  {
+    "code": "Sultanate of Lahej",
+    "continent": "Asia",
+    "name": "Sultanate of Lahej"
+  },
+  {
+    "code": "Sultanate of Lower Yafa",
+    "continent": "Asia",
+    "name": "Sultanate of Lower Yafa"
   },
   {
     "code": "Sultanate of Nejd",
@@ -4247,6 +4337,11 @@
     "name": "Upper Silesia"
   },
   {
+    "code": "Upper Yafa",
+    "continent": "Asia",
+    "name": "Upper Yafa"
+  },
+  {
     "code": "Urartu",
     "continent": "Asia",
     "name": "Urartu"
@@ -4355,6 +4450,11 @@
     "code": "Wa State",
     "continent": "Asia",
     "name": "Wa State"
+  },
+  {
+    "code": "Wahidi Sultanate of Balhaf",
+    "continent": "Asia",
+    "name": "Wahidi Sultanate of Balhaf"
   },
   {
     "code": "gb-wls",

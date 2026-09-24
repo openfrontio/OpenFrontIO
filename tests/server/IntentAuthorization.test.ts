@@ -126,11 +126,25 @@ describe("authorizeIntent", () => {
       409,
     ],
     [
-      "config without cheats in a listed lobby",
+      "config by the host in a listed lobby",
       config({ bots: 1 }),
       host,
       lobby({ isListed: true }),
+      409,
+    ],
+    [
+      "config by the bot in a listed lobby",
+      config({ bots: 1 }),
+      bot,
+      lobby({ isListed: true }),
       null,
+    ],
+    [
+      "config enabling host cheats in a bot's listed lobby",
+      config({ hostCheats: { infiniteGold: true } }),
+      bot,
+      lobby({ isListed: true }),
+      409,
     ],
 
     ["start timer by a player", timer, player, lobby(), 403],

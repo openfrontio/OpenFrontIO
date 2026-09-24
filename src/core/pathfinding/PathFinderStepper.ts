@@ -108,6 +108,30 @@ export class PathFinderStepper<T> implements SteppingPathFinder<T> {
     this.lastTo = null;
   }
 
+  /** Traversal progress, for game snapshots (see PathfinderSnapshots). */
+  getState(): {
+    path: T[] | Uint32Array | null;
+    pathIndex: number;
+    lastTo: T | null;
+  } {
+    return { path: this.path, pathIndex: this.pathIndex, lastTo: this.lastTo };
+  }
+
+  setState(s: {
+    path: T[] | Uint32Array | null;
+    pathIndex: number;
+    lastTo: T | null;
+  }): void {
+    this.path = s.path;
+    this.pathIndex = s.pathIndex;
+    this.lastTo = s.lastTo;
+  }
+
+  /** The wrapped finder, for snapshots of finders that carry state. */
+  innerFinder(): PathFinder<T> {
+    return this.finder;
+  }
+
   /**
    * Returns a copy of the active path beginning at the node most recently
    * returned by next(). Returns null when there is no active traversal.
