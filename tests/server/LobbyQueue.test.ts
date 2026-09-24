@@ -195,6 +195,26 @@ describe("WorkerLobbyService queued lobbies", () => {
     expect(list.lobbies[0].autoStartAt).toBeUndefined();
   });
 
+  it("counts a queued lobby on another worker as the creator's listing", () => {
+    const { service } = createService([]);
+    broadcast(service, {
+      ffa: [],
+      team: [],
+      special: [
+        {
+          gameID: "paid1",
+          numClients: 1,
+          publicGameType: "special",
+          creatorID: "creator-a",
+          queuedAt: 5,
+        },
+      ],
+      hosted: [],
+    });
+    expect(service.creatorHasListedLobby("creator-a", "other")).toBe(true);
+    expect(service.creatorHasListedLobby("creator-b", "other")).toBe(false);
+  });
+
   it("doesn't count a queued lobby against the hosted cap", () => {
     const game = makeGame();
     game.setListed(true);
@@ -274,6 +294,29 @@ describe("MasterLobbyService paid queue order", () => {
       .getAllLobbies()
       .games.special.map((l: InternalGameInfo) => l.gameID);
     expect(order).toEqual(["front", "paid-early", "paid-late", "old", "new"]);
+  });
+
+  it("drops the creator's hosted lobby, not their queued one", () => {
+    const { service, worker } = createService();
+    worker.emit("message", {
+      type: "lobbyList",
+      lobbies: [
+        special("paid", { creatorID: "creator-a", queuedAt: 100 }),
+        {
+          gameID: "second",
+          numClients: 0,
+          publicGameType: "hosted",
+          creatorID: "creator-a",
+        },
+      ],
+    });
+
+    const { games, losers } = (service as any).getAllLobbies();
+    expect(games.special.map((l: InternalGameInfo) => l.gameID)).toEqual([
+      "paid",
+    ]);
+    expect(games.hosted).toEqual([]);
+    expect(losers).toEqual(["second"]);
   });
 
   it("gives the next countdown to a paid lobby over older ones", async () => {

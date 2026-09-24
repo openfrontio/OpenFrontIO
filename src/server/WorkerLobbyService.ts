@@ -229,12 +229,16 @@ export class WorkerLobbyService {
   // Whether the creator (hashed persistentID) already has a listed lobby
   // other than `excludeGameID`. Checks the cluster-wide view from the last
   // master broadcast plus this worker's own lobbies (fresher than the
-  // broadcast interval).
+  // broadcast interval). A lobby the host paid to queue is broadcast under
+  // special, and still counts as their one listing.
   public creatorHasListedLobby(
     hashedCreatorID: string,
     excludeGameID: string,
   ): boolean {
-    const broadcast = this.lastPublicGames?.games["hosted"] ?? [];
+    const broadcast = [
+      ...(this.lastPublicGames?.games["hosted"] ?? []),
+      ...(this.lastPublicGames?.games["special"] ?? []),
+    ];
     if (
       broadcast.some((l) => {
         if (l.gameID === excludeGameID || l.creatorID !== hashedCreatorID) {

@@ -320,7 +320,13 @@ export class MasterLobbyService {
     // so broadcastLobbies can tell the owning worker to clear the loser's
     // listed flag — otherwise it would stay flagged Public on its worker
     // while never appearing in any browser.
-    const seenCreators = new Set<string>();
+    // A queued lobby (reported under special) is the creator's listing too,
+    // and always wins: the host paid for it.
+    const seenCreators = new Set<string>(
+      result.special.flatMap((l) =>
+        l.creatorID === undefined ? [] : [l.creatorID],
+      ),
+    );
     const losers: string[] = [];
     result.hosted = result.hosted.filter((lobby) => {
       if (lobby.creatorID === undefined) return true;
