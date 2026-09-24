@@ -8,6 +8,7 @@ import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { notableLobbySettings } from "../utilities/LobbySettingsSummary";
 import { getMapName, getModifierLabels, translateText } from "../Utils";
 import "./ConfirmDialog";
+import { hideFloatingTooltip, showFloatingTooltip } from "./FloatingTooltip";
 
 /**
  * Whether the signed-in player may join trusted-only lobbies, from the
@@ -211,19 +212,23 @@ export function lobbyCard({
         class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
       >
         <div class="flex min-w-0 flex-col items-start gap-1">
-          ${lobby.custom
+          ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
+        </div>
+        <!-- Custom sits under the time pill: beside it, a long status like
+             "Waiting for players" squeezes it out of view. -->
+        <div class="flex shrink-0 flex-col items-end gap-1">
+          <span
+            class="${PILL} tabular-nums ${timeDisplayUppercase
+              ? ""
+              : "normal-case"}"
+            >${timeDisplay}</span
+          >
+          ${custom
             ? html`<span class=${CUSTOM_PILL}
                 >${translateText("public_lobby.custom")}</span
               >`
             : nothing}
-          ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
         </div>
-        <span
-          class="${PILL} shrink-0 tabular-nums ${timeDisplayUppercase
-            ? ""
-            : "normal-case"}"
-          >${timeDisplay}</span
-        >
       </div>
 
       <div
@@ -294,42 +299,40 @@ function customInfoIcon(
     }
   }
   const title = translateText("public_lobby.custom_tooltip_title");
-  // The tooltip is the icon's sibling, not its child, so it is positioned
-  // against the full-width bottom bar and wraps inside the card (which clips
-  // overflow) instead of hanging off a 16px icon.
+  const tooltip = html`<div class="flex flex-col gap-0.5">
+    <span class="font-bold">${title}</span>
+    ${lines.length > 0
+      ? lines.map((l) => html`<span class="text-white/80">${l}</span>`)
+      : html`<span class="text-white/80"
+          >${translateText("public_lobby.custom_default_settings")}</span
+        >`}
+  </div>`;
+  // Floats in <body> (FloatingTooltip): the card clips its overflow, and so
+  // do the modal panels the cards sit in.
+  const show = (e: Event) =>
+    showFloatingTooltip(e.currentTarget as HTMLElement, tooltip);
   return html`<span
-      class="${BADGE} peer/custom absolute bottom-2 ${besideLock
-        ? "right-11"
-        : "right-2"} flex items-center px-1.5 py-1 text-orange-400"
-      aria-label=${title}
-      data-custom-info
+    class="${BADGE} absolute bottom-2 ${besideLock
+      ? "right-11"
+      : "right-2"} flex items-center px-1.5 py-1 text-orange-400"
+    aria-label=${title}
+    data-custom-info
+    @mouseenter=${show}
+    @mouseleave=${hideFloatingTooltip}
+  >
+    <svg
+      class="size-4"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
     >
-      <svg
-        class="size-4"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        aria-hidden="true"
-      >
-        <path
-          fill-rule="evenodd"
-          d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z"
-          clip-rule="evenodd"
-        />
-      </svg>
-    </span>
-    <span
-      role="tooltip"
-      class="pointer-events-none absolute inset-x-2 bottom-full mb-1.5 hidden flex-col gap-0.5 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs normal-case tracking-normal text-white shadow-xl peer-hover/custom:flex"
-    >
-      <span class="font-bold">${title}</span>
-      <!-- One wrapped line, not one per setting: the homepage cards are
-           short. -->
-      <span class="text-white/80"
-        >${lines.length > 0
-          ? lines.join(" · ")
-          : translateText("public_lobby.custom_default_settings")}</span
-      >
-    </span>`;
+      <path
+        fill-rule="evenodd"
+        d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z"
+        clip-rule="evenodd"
+      />
+    </svg>
+  </span>`;
 }
 
 /** Bottom-right lock: red and closed when the viewer can't join, green and open when they can. */
