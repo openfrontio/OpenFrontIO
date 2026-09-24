@@ -202,9 +202,16 @@ export async function getSoloSnapshot(): Promise<{
 
 /**
  * Clears the saved singleplayer game for the active account.
+ * If gameID is supplied, only clears if the stored save matches that gameID.
  */
-export function clearSoloSave(): void {
+export function clearSoloSave(gameID?: GameID): void {
   try {
+    if (gameID) {
+      const current = getSoloSave();
+      if (current && current.gameID !== gameID) {
+        return;
+      }
+    }
     const scopedKey = getScopedSoloSaveKey();
     if (scopedKey) {
       localStorage.removeItem(scopedKey);

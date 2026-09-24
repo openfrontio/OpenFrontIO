@@ -252,7 +252,9 @@ export class LocalServer {
     }
     if (clientMsg.type === "winner") {
       this.winner = clientMsg;
-      clearSoloSave();
+      if (!this.isReplay && this.lobbyConfig.gameStartInfo) {
+        clearSoloSave(this.lobbyConfig.gameStartInfo.gameID);
+      }
       this.allPlayersStats = clientMsg.allPlayersStats;
       if (!this.isReplay) {
         // Archive as soon as the game is decided: endGame() only runs during

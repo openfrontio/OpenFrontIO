@@ -109,7 +109,12 @@ describe("SinglePlayerSaveManager", () => {
     mockSteamId = "76561198000000001";
     expect(getSoloSave()).not.toBe(null);
 
-    clearSoloSave();
+    // Mismatched gameID does not clear save
+    clearSoloSave("game_other" as GameID);
+    expect(getSoloSave()).not.toBe(null);
+
+    // Matching gameID clears save
+    clearSoloSave("game_test_1" as GameID);
     expect(getSoloSave()).toBe(null);
   });
 

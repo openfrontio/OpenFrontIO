@@ -955,7 +955,7 @@ export class ClientGameRunner {
     this.eventBus.on(SendWinnerEvent, () => {
       this.hasWinner = true;
       if (this.transport.isLocal && !this.lobby.gameRecord) {
-        clearSoloSave();
+        clearSoloSave(this.lobby.gameStartInfo?.gameID);
       }
     });
   }

@@ -1844,6 +1844,7 @@
     "options_changed_no_achievements": "Custom settings – achievements disabled",
     "resume": "Resume",
     "resume_desc": "You have an unfinished singleplayer match on map {map} ({time}).",
+    "resume_failed": "Failed to resume saved game.",
     "resume_game": "Resume In-Progress Game",
     "sign_in_for_achievements": "Sign in for achievements",
     "toggle_achievements": "Toggle achievements"

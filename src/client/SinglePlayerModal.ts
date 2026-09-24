@@ -275,6 +275,17 @@ export class SinglePlayerModal extends BaseModal {
         ? decompressSoloTurns(save.turns, save.numTurns)
         : undefined;
 
+    if (!resumeSnapshot && !turns) {
+      showInGameAlert(
+        translateText("single_modal.resume_failed") ||
+          "Failed to resume saved game.",
+      );
+      clearSoloSave(save.gameID);
+      this.resumeSave = null;
+      this.requestUpdate();
+      return;
+    }
+
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
