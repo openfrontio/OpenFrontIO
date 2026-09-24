@@ -1,6 +1,7 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
+  DESKTOP_TUTORIAL_VIDEO_URL,
   getGamesPlayed,
   homeHref,
   isInIframe,
@@ -23,6 +24,9 @@ import {
   resolveCosmetics,
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { isDesktopShell } from "../../DesktopShell";
+import { Platform } from "../../Platform";
+import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
 import { GameView } from "../../view";
@@ -36,9 +40,6 @@ export class WinModal extends LitElement implements Controller {
 
   @state()
   isVisible = false;
-
-  @state()
-  showButtons = false;
 
   @state()
   private isWin = false;
@@ -75,11 +76,7 @@ export class WinModal extends LitElement implements Controller {
         <div class="min-h-0 flex-1 overflow-y-auto pr-0.5">
           ${this.innerHtml()}
         </div>
-        <div
-          class="${this.showButtons
-            ? "mt-4 flex justify-between gap-2.5 shrink-0"
-            : "hidden"}"
-        >
+        <div class="mt-4 flex justify-between gap-2.5 shrink-0">
           <o-button
             variant="primary"
             width="block"
@@ -141,14 +138,21 @@ export class WinModal extends LitElement implements Controller {
         </h3>
         <!-- 56.25% = 9:16 -->
         <div class="relative w-full pb-[56.25%]">
-          <iframe
-            class="absolute top-0 left-0 w-full h-full rounded-sm"
-            src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
-            title="YouTube video player"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-          ></iframe>
+          ${Platform.isElectron
+            ? html`<video
+                class="absolute top-0 left-0 w-full h-full rounded-sm"
+                src="${this.isVisible ? DESKTOP_TUTORIAL_VIDEO_URL : ""}"
+                controls
+                preload="metadata"
+              ></video>`
+            : html`<iframe
+                class="absolute top-0 left-0 w-full h-full rounded-sm"
+                src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
+                title="YouTube video player"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+              ></iframe>`}
         </div>
       </div>
     `;
@@ -160,13 +164,17 @@ export class WinModal extends LitElement implements Controller {
         <h3 class="text-xl font-semibold text-white mb-3">
           ${translateText("win_modal.support_openfront")}
         </h3>
-        <p class="text-white mb-3">
-          ${translateText("win_modal.territory_pattern")}
-        </p>
+        ${isDesktopShell()
+          ? null
+          : html`<p class="text-white mb-3">
+              ${translateText("win_modal.territory_pattern")}
+            </p>`}
         <div
           class="mx-auto w-full overflow-x-auto overflow-y-visible rounded-sm"
         >
-          <div class="flex min-w-max items-start justify-start gap-4 px-1 py-1">
+          <div
+            class="flex min-w-max items-start justify-center gap-4 px-1 py-1"
+          >
             ${this.patternContent}
           </div>
         </div>
@@ -221,7 +229,7 @@ export class WinModal extends LitElement implements Controller {
     return html`
       <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
         <h3 class="text-xl font-semibold text-white mb-3">
-          ${translateText("steam_wishlist.title")}
+          ${translateText("steam_wishlist.buy_on_steam")}
         </h3>
         <steam-wishlist
           campaign="win_modal"
@@ -254,21 +262,21 @@ export class WinModal extends LitElement implements Controller {
 
   async show() {
     crazyGamesSDK.gameplayStop();
-    await this.loadPatternContent();
-    // Check if this is a ranked game
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
     this.requestUpdate();
-    setTimeout(() => {
-      this.showButtons = true;
-      this.requestUpdate();
-    }, 3000);
+    try {
+      await this.loadPatternContent();
+    } catch (error) {
+      console.warn("Failed to load win modal cosmetics", error);
+      return;
+    }
+    this.requestUpdate();
   }
 
   hide() {
     this.isVisible = false;
-    this.showButtons = false;
     this.requestUpdate();
   }
 
@@ -307,6 +315,7 @@ export class WinModal extends LitElement implements Controller {
     ) {
       this.hasShownDeathModal = true;
       this._title = translateText("win_modal.died");
+      this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
       this.show();
     }
     const updates = this.game.updatesSinceLastTick();
@@ -333,6 +342,7 @@ export class WinModal extends LitElement implements Controller {
           });
           this.isWin = false;
         }
+        this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       } else if (wu.winner[0] === "nation") {
@@ -341,6 +351,7 @@ export class WinModal extends LitElement implements Controller {
           nation: wu.winner[1],
         });
         this.isWin = false;
+        this.playEndOfGameSound();
         this.show();
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);
@@ -364,9 +375,21 @@ export class WinModal extends LitElement implements Controller {
           });
           this.isWin = false;
         }
+        this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       }
     });
+  }
+
+  private playEndOfGameSound(): void {
+    if (this.isWin) {
+      this.eventBus.emit(new PlaySoundEffectEvent("victory"));
+    } else if (!this.hasShownDeathModal && this.game.myPlayer()?.hasSpawned()) {
+      // Spawned check: spectators and replay viewers shouldn't get a
+      // personal defeat sting. The cue also already played if the player
+      // died earlier (hasShownDeathModal).
+      this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
+    }
   }
 }

@@ -180,6 +180,19 @@ describe.each(["default", "colorblind"] as const)(
       expect(teamless.isEqual(theme.teamColor(ColoredTeams.Bot))).toBe(true);
     });
 
+    test("classic bot colors override draws from the classic (pre-v34) pool", () => {
+      const settings = createThemeSettings(themeName);
+      const theme = new SettingsTheme(settings);
+      theme.useClassicBotColors = true;
+      const pool = settings.classicBotColors.map((hex) => colord(hex));
+      const outsidePool = Array.from({ length: 64 }, (_, i) =>
+        theme.territoryColor(player(PlayerType.Bot, `bot-${i}`)),
+      )
+        .filter((c) => !pool.some((p) => p.isEqual(c)))
+        .map((c) => c.toHex());
+      expect(outsidePool).toEqual([]);
+    });
+
     test("every nation color is perceptually far from every bot color", () => {
       const bots = assignedColors(PlayerType.Bot);
       const confusable = assignedColors(PlayerType.Nation).flatMap((nation) =>

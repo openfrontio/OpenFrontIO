@@ -31,6 +31,21 @@ export class PseudoRandom {
     }
   }
 
+  /** The four sfc32 state words, for snapshots. */
+  getState(): [number, number, number, number] {
+    return [this.s0, this.s1, this.s2, this.s3];
+  }
+
+  /** Rebuilds a generator from getState() output without re-seeding. */
+  static fromState(state: readonly number[]): PseudoRandom {
+    const r = Object.create(PseudoRandom.prototype) as PseudoRandom;
+    r.s0 = state[0] | 0;
+    r.s1 = state[1] | 0;
+    r.s2 = state[2] | 0;
+    r.s3 = state[3] | 0;
+    return r;
+  }
+
   // Generates the next pseudorandom number between 0 and 1.
   next(): number {
     const t = (((this.s0 + this.s1) | 0) + this.s3) | 0;

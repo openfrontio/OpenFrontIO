@@ -36,6 +36,8 @@ export class WorkerClient {
   constructor(
     private gameStartInfo: GameStartInfo,
     private clientID: ClientID | undefined,
+    /** Resume from this game snapshot instead of starting a new game. */
+    private snapshotToRestore?: Uint8Array,
   ) {
     this.messageHandlers = new Map();
   }
@@ -94,6 +96,7 @@ export class WorkerClient {
         gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
         cdnBase: getCdnBase(),
+        snapshot: this.snapshotToRestore,
       });
 
       setTimeout(() => {
@@ -120,6 +123,34 @@ export class WorkerClient {
     this.worker!.postMessage({
       type: "turn",
       turn,
+    });
+  }
+
+  /** Serializes the worker's game at its current tick (uncompressed). */
+  snapshot(gitCommit?: string): Promise<Uint8Array> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (message.type === "snapshot_result") {
+          if (message.snapshot === null) {
+            reject(new Error("Snapshot failed"));
+          } else {
+            resolve(message.snapshot);
+          }
+        }
+      });
+
+      this.worker!.postMessage({
+        type: "snapshot",
+        id: messageId,
+        gitCommit,
+      });
     });
   }
 
@@ -186,15 +217,24 @@ export class WorkerClient {
         reject(new Error("Worker not initialized"));
         return;
       }
-
       const messageId = generateID();
+      const cleanup = (timer: ReturnType<typeof setTimeout>) => {
+        clearTimeout(timer);
+        this.messageHandlers.delete(messageId);
+      };
+      const timeout = setTimeout(() => {
+        cleanup(timeout);
+        console.warn(`player_actions request timed out (request ${messageId})`);
+        reject(new Error("player_actions request timed out"));
+      }, 5000);
 
       this.messageHandlers.set(messageId, (message) => {
-        if (
-          message.type === "player_actions_result" &&
-          message.result !== undefined
-        ) {
+        if (message.type === "player_actions_result") {
+          cleanup(timeout);
           resolve(message.result);
+        } else if (message.type === "player_actions_error") {
+          cleanup(timeout);
+          reject(new Error(message.error));
         }
       });
 

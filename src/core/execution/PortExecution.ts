@@ -1,5 +1,13 @@
+import { z } from "zod";
 import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zRandom, zRef } from "../snapshot/SnapshotType";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
 
@@ -141,4 +149,43 @@ export class PortExecution implements Execution {
     }
     return weightedPorts;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    const initialized = this.mg !== undefined;
+    return PortExecutionSnapshot.write({
+      active: this.active,
+      port: w.unit(this.port),
+      init: initialized
+        ? { random: w.random(this.random), checkOffset: this.checkOffset }
+        : null,
+      tradeShipSpawnRejections: this.tradeShipSpawnRejections,
+    });
+  }
+
+  restoreSnapshot(s: PortState, r: SnapshotReader): void {
+    this.active = s.active;
+    this.port = r.unit(s.port);
+    if (s.init !== null) {
+      this.mg = r.game;
+      this.random = r.random(s.init.random);
+      this.checkOffset = s.init.checkOffset;
+    }
+    this.tradeShipSpawnRejections = s.tradeShipSpawnRejections;
+  }
 }
+
+const PortStateSchema = z.object({
+  active: z.boolean(),
+  port: zRef(),
+  // Set by init.
+  init: z.object({ random: zRandom(), checkOffset: zInt() }).nullable(),
+  tradeShipSpawnRejections: zInt(),
+});
+type PortState = z.infer<typeof PortStateSchema>;
+
+export const PortExecutionSnapshot = execSnapshotType({
+  name: "Port",
+  version: 1,
+  schema: PortStateSchema,
+  cls: () => PortExecution,
+});

@@ -50,6 +50,7 @@ import {
   GameInfo,
 } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
+import { getApiBase, getAudience } from "./ApiBase";
 import {
   getAuthHeader,
   getPlayToken,
@@ -58,6 +59,7 @@ import {
   userAuth,
 } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
+import { ensureServerList } from "./ServerList";
 
 export async function fetchPlayerById(
   playerId: string,
@@ -203,78 +205,105 @@ function isAbortError(e: unknown): boolean {
   return name === "TimeoutError" || name === "AbortError";
 }
 
+/**
+ * One /users/@me round trip, with no memoisation of any kind.
+ *
+ * `aborted` distinguishes the one failure that concluded nothing about the
+ * account (a deadline we imposed ourselves) from every other falsy answer,
+ * which is a conclusion. Only getUserMe acts on it; see the un-caching rule
+ * there.
+ */
+async function requestUserMe(): Promise<{
+  profile: UserMeResponse | false;
+  aborted: boolean;
+}> {
+  try {
+    const userAuthResult = await userAuth();
+    if (!userAuthResult) return { profile: false, aborted: false };
+    const { jwt, claims } = userAuthResult;
+
+    // Get the user object. Bounded like the other auth calls (see
+    // Auth.ts doSteamLogin) because getUserMe memoises the promise around
+    // this: a response that never settles is not one slow call, it pins
+    // __userMe on a forever-pending promise and every later getUserMe() in
+    // the session — cosmetics, store, inventory, the multiplayer join path —
+    // awaits that same promise. An abort lands in the catch below, which
+    // returns false, the same answer a signed-out player already gets.
+    const response = await fetch(getApiBase() + "/users/@me", {
+      headers: {
+        authorization: `Bearer ${jwt}`,
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (response.status === 401) {
+      // Only when the session that issued this request is still the current
+      // one — the same guard, and the same reason, as the setPlayerId one
+      // below. logOut() POSTs /auth/logout with credentials, revoking
+      // whatever refresh cookie is live *now*, so a 401 that merely reports
+      // the death of a session already replaced (sign-out then sign-in while
+      // this was in flight) would end the session that replaced it, signing
+      // out the player who just signed in. A 401 for the session that is
+      // still current is a genuine conclusion about it and still ends it.
+      //
+      // Clearing the session announces itself (see clearLocalSession), so
+      // consumers holding account state don't mistake this for the
+      // transient failure the `false` below also represents.
+      if (isSessionActive(claims.sub)) {
+        await logOut();
+      }
+      return { profile: false, aborted: false };
+    }
+    if (response.status !== 200) return { profile: false, aborted: false };
+    const body = await response.json();
+    const result = UserMeResponseSchema.safeParse(body);
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Invalid response", error);
+      return { profile: false, aborted: false };
+    }
+    // Activate this player's cosmetic selections (and adopt any made while
+    // logged out) before the profile is handed to callers — but not if the
+    // session changed (logout, account switch) while the request was in
+    // flight: a stale response must not reactivate the old player's scope.
+    if (isSessionActive(claims.sub)) {
+      UserSettings.setPlayerId(result.data.player.publicId);
+    }
+    return { profile: result.data, aborted: false };
+  } catch (e) {
+    return { profile: false, aborted: isAbortError(e) };
+  }
+}
+
 export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
     return __userMe;
   }
-  // A holder rather than a plain local so the catch below can recognise its
+  // A holder rather than a plain local so the body below can recognise its
   // own promise as the cached one. Filled in immediately after, which is
   // always before any await inside can resume.
   const attempt: { request?: Promise<UserMeResponse | false> } = {};
   attempt.request = (async () => {
-    try {
-      const userAuthResult = await userAuth();
-      if (!userAuthResult) return false;
-      const { jwt, claims } = userAuthResult;
-
-      // Get the user object. Bounded like the other auth calls (see
-      // Auth.ts doSteamLogin) because the promise above is memoised: a
-      // response that never settles is not one slow call, it pins __userMe
-      // on a forever-pending promise and every later getUserMe() in the
-      // session — cosmetics, store, inventory, the multiplayer join path —
-      // awaits that same promise. An abort lands in the catch below, which
-      // returns false, the same answer a signed-out player already gets.
-      const response = await fetch(getApiBase() + "/users/@me", {
-        headers: {
-          authorization: `Bearer ${jwt}`,
-        },
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (response.status === 401) {
-        // Clearing the session announces itself (see clearLocalSession), so
-        // consumers holding account state don't mistake this for the
-        // transient failure the `false` below also represents.
-        await logOut();
-        return false;
-      }
-      if (response.status !== 200) return false;
-      const body = await response.json();
-      const result = UserMeResponseSchema.safeParse(body);
-      if (!result.success) {
-        const error = z.prettifyError(result.error);
-        console.error("Invalid response", error);
-        return false;
-      }
-      // Activate this player's cosmetic selections (and adopt any made while
-      // logged out) before the profile is handed to callers — but not if the
-      // session changed (logout, account switch) while the request was in
-      // flight: a stale response must not reactivate the old player's scope.
-      if (isSessionActive(claims.sub)) {
-        UserSettings.setPlayerId(result.data.player.publicId);
-      }
-      return result.data;
-    } catch (e) {
-      // Un-cache a timeout, and ONLY a timeout. Every other falsy answer is
-      // a conclusion about the account — signed out, a 401, a rejected token
-      // — and stays remembered; re-deriving those would put an /auth/refresh
-      // behind every getUserMe() call for every logged-out player, which is
-      // the storm, not the fix. A deadline we imposed ourselves concluded
-      // nothing, so leaving it cached would strand a merely-slow connection
-      // as "signed out" for the rest of the session: no player-scoped
-      // settings, no cosmetics, no verified badge, recoverable only by
-      // reloading. Same shape as fetchCosmetics, for the same reason.
-      // Remembering an unreachable backend so the retry is not paid at full
-      // price is OPE-403.
-      //
-      // Cleared here rather than from a .then on the request: this runs
-      // before the promise resolves, so a caller awaiting it cannot observe
-      // the timed-out answer still cached. attempt.request is always set by
-      // now — the catch can only be reached after an await.
-      if (isAbortError(e) && __userMe === attempt.request) {
-        __userMe = null;
-      }
-      return false;
+    const { profile, aborted } = await requestUserMe();
+    // Un-cache a timeout, and ONLY a timeout. Every other falsy answer is
+    // a conclusion about the account — signed out, a 401, a rejected token
+    // — and stays remembered; re-deriving those would put an /auth/refresh
+    // behind every getUserMe() call for every logged-out player, which is
+    // the storm, not the fix. A deadline we imposed ourselves concluded
+    // nothing, so leaving it cached would strand a merely-slow connection
+    // as "signed out" for the rest of the session: no player-scoped
+    // settings, no cosmetics, no verified badge, recoverable only by
+    // reloading. Same shape as fetchCosmetics, for the same reason.
+    // Remembering an unreachable backend so the retry is not paid at full
+    // price is OPE-403.
+    //
+    // Cleared here rather than from a .then on the request: this runs
+    // before the promise resolves, so a caller awaiting it cannot observe
+    // the timed-out answer still cached. attempt.request is always set by
+    // now — this line can only be reached after an await.
+    if (aborted && __userMe === attempt.request) {
+      __userMe = null;
     }
+    return profile;
   })();
   __userMe = attempt.request;
   return attempt.request;
@@ -602,7 +631,7 @@ export async function setCreatorCode(
       return { ok: false, code: "failed" };
     }
     invalidateUserMe();
-    return { ok: true, creator: parsed.data };
+    return { ok: true, creator: parsed.data.creator };
   } catch (e) {
     console.error("setCreatorCode: request failed", e);
     return { ok: false, code: "failed" };
@@ -1854,6 +1883,7 @@ export async function openSubscriptionPortal(): Promise<string | false> {
 // default is to change nothing.
 export async function fetchLobbyListed(gameID: string): Promise<boolean> {
   try {
+    await ensureServerList();
     const res = await fetch(
       `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}`,
       { headers: { Accept: "application/json" } },
@@ -1875,8 +1905,10 @@ export async function fetchLobbyListed(gameID: string): Promise<boolean> {
 export async function setLobbyListed(
   gameID: string,
   listed: boolean,
+  options: { autoStartMs?: number; maxPlayers?: number } = {},
 ): Promise<{ ok: true; listed: boolean } | { ok: false; error?: string }> {
   try {
+    await ensureServerList();
     const token = await getPlayToken();
     const response = await fetch(
       `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}/listing`,
@@ -1886,7 +1918,7 @@ export async function setLobbyListed(
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ listed }),
+        body: JSON.stringify({ listed, ...options }),
       },
     );
     const body = await response.json().catch(() => null);
@@ -1908,6 +1940,31 @@ export async function setLobbyListed(
 // (nginx in prod, the vite dev proxy locally) picks a worker, which mints a
 // self-owned id and returns it.
 export async function createLobby(): Promise<GameInfo> {
+  // A new game needs a server that takes new games on this build: ask the
+  // API (multi-server v2), falling back to the page's own server. When the
+  // list says nothing runs this build any more, creating against the page's
+  // own (by then stale) host would at best mint a lobby on a server that is
+  // going away, so stop here instead. By the time Create is clicked the
+  // lobby socket has almost always raised the "update available" prompt
+  // already; a Create that gets there first fails like any other failed
+  // request, and the caller's own failure path (re-enabling the button,
+  // clearing the share link) runs as usual.
+  //
+  // "outdated" is by construction a page that names no server of its own
+  // (docs/MultiServer.md, OPE-430): there the list is the only thing that
+  // knows where a server is, and it says there is none for this build. A
+  // page a game server rendered answers "fallback" whatever the list says
+  // about its own host, and creating against that host is right — it is
+  // running this build, because it served this page, and it is where this
+  // tab's lobby list and its session already live. That is how Create
+  // behaved before the list existed, and the signal that moves such a tab
+  // off a deployment on its way out is the lobby feed's commit compare and
+  // drain flag, not this.
+  if ((await ensureServerList()) === "outdated") {
+    throw new Error(
+      "createLobby: this build has no server; a newer version is available",
+    );
+  }
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();
@@ -1947,6 +2004,14 @@ export async function createLobby(): Promise<GameInfo> {
 export async function createNextLobby(
   previousGameID: string,
 ): Promise<GameInfo> {
+  // Nothing is caught here: a NoServerError from gameWorkerPath below
+  // propagates to the only caller (GameRightSidebar's successor-lobby
+  // button), which already catches, logs and re-enables the button — the
+  // right answer for "there is no server to create it on". No "outdated"
+  // check either, unlike createLobby: this continues an existing game on
+  // the server that game already lives on, rather than starting something
+  // new somewhere.
+  await ensureServerList();
   const token = await getPlayToken();
   const response = await fetch(
     `${ClientEnv.gameHttpBase(previousGameID)}/${ClientEnv.gameWorkerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
@@ -1966,25 +2031,10 @@ export async function createNextLobby(
   return (await response.json()) as GameInfo;
 }
 
-export function getApiBase() {
-  const domainname = getAudience();
-
-  if (domainname === "localhost") {
-    const apiDomain = process.env.API_DOMAIN;
-    if (apiDomain) {
-      return `https://${apiDomain}`;
-    }
-    return localStorage.getItem("apiHost") ?? "http://localhost:8787";
-  }
-
-  return `https://api.${domainname}`;
-}
-
-export function getAudience() {
-  // Sourced from BOOTSTRAP_CONFIG (server/desktop-injected) rather than
-  // window.location, so the desktop app (app://openfront) targets real infra.
-  return ClientEnv.jwtAudience();
-}
+// getApiBase/getAudience moved to ApiBase.ts so ServerList.ts (which this
+// module imports) can use them without a cycle; re-exported here for every
+// existing importer.
+export { getApiBase, getAudience };
 
 export async function fetchGameById(
   gameId: string,

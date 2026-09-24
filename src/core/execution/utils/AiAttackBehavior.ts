@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Difficulty,
   Game,
@@ -15,6 +16,16 @@ import {
 import { TileRef } from "../../game/GameMap";
 import { canBuildTransportShip } from "../../game/TransportShipUtils";
 import { PseudoRandom } from "../../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  Versioned,
+  zNum,
+} from "../../snapshot/SnapshotType";
 import {
   assertNever,
   boundingBoxCenter,
@@ -30,6 +41,7 @@ import {
   EMOJI_ASSIST_TARGET_ME,
   NationEmojiBehavior,
 } from "../nation/NationEmojiBehavior";
+import { findJuiciestTarget } from "../nation/NationUtils";
 import { TransportShipExecution } from "../TransportShipExecution";
 import { closestTwoTiles } from "../Util";
 
@@ -49,6 +61,39 @@ export class AiAttackBehavior {
     private allianceBehavior?: NationAllianceBehavior,
     private emojiBehavior?: NationEmojiBehavior,
   ) {}
+
+  /** The owner supplies the shared PRNG, player and nation behaviors. */
+  snapshot(w: SnapshotWriter): Versioned {
+    return w.versioned(AiAttackBehaviorSnapshot, {
+      botAttackTroopsSent: this.botAttackTroopsSent,
+      triggerRatio: this.triggerRatio,
+      reserveRatio: this.reserveRatio,
+      expandRatio: this.expandRatio,
+    });
+  }
+
+  /** Fills a prototype-only shell; only assigns (see README). */
+  restoreSnapshot(
+    raw: unknown,
+    r: SnapshotReader,
+    random: PseudoRandom,
+    player: Player,
+    allianceBehavior?: NationAllianceBehavior,
+    emojiBehavior?: NationEmojiBehavior,
+  ): void {
+    const s = readVersioned(AiAttackBehaviorSnapshot, raw);
+    this.random = random;
+    this.game = r.game;
+    this.player = player;
+    this.allianceBehavior = allianceBehavior;
+    this.emojiBehavior = emojiBehavior;
+    this.botAttackTroopsSent = s.botAttackTroopsSent;
+    this.triggerRatio = s.triggerRatio;
+    this.reserveRatio = s.reserveRatio;
+    this.expandRatio = s.expandRatio;
+    // Scratch buffer: always written before it is read.
+    this.nbuf = [0, 0, 0, 0];
+  }
 
   maybeAttack() {
     if (this.player === null || this.allianceBehavior === undefined) {
@@ -380,7 +425,7 @@ export class AiAttackBehavior {
         return [bots, retaliate, assist, betray, nuked, traitor, afk, hated, veryWeak, juicy, victim, weakest, island, donate];
       case Difficulty.Impossible:
         // prettier-ignore
-        return [retaliate, bots, veryWeak, betray, assist, victim, traitor, juicy, afk, hated, nuked, weakest, island, donate];
+        return [retaliate, bots, veryWeak, betray, assist, victim, traitor, juicy, afk, nuked, hated, weakest, island, donate];
       default:
         assertNever(difficulty);
     }
@@ -544,11 +589,16 @@ export class AiAttackBehavior {
     if (this.game.config().disableAlliances()) return false;
 
     if (borderingFriends.length > 0) {
+      // Computed once here, not per friend below - it doesn't depend on which one.
+      const juiciestAlly =
+        this.allianceBehavior.findJuiciestAlly(borderingFriends);
       for (const friend of borderingFriends) {
         if (
           this.allianceBehavior.maybeBetray(
             friend,
-            borderingFriends.length + borderingEnemies.length,
+            juiciestAlly,
+            borderingFriends,
+            borderingEnemies,
           )
         ) {
           return this.sendAttack(friend, true);
@@ -615,61 +665,12 @@ export class AiAttackBehavior {
     return veryWeakEnemies.length > 0 ? veryWeakEnemies[0] : null;
   }
 
-  // Juiciest bordering enemy (Hard & Impossible only): requires troops <= 75%
-  // of ours, then ranks by structures (including levels), troop-cap
-  // headroom, and tiles — each min-max normalized so no metric dominates by scale.
+  // Juiciest bordering enemy (Hard & Impossible only) we could plausibly beat (troops <= 75% of ours)
   private findJuicyTarget(borderingEnemies: Player[]): Player | null {
     const candidates = borderingEnemies.filter(
       (enemy) => enemy.troops() <= this.player.troops() * 0.75,
     );
-    if (candidates.length === 0) return null;
-
-    const stats = candidates.map((enemy) => {
-      // Defense posts and missile silos are defensive, not a prize worth
-      // capturing - only count the rest of the structures.
-      const structureCount = enemy
-        .units()
-        .reduce(
-          (sum, u) =>
-            Structures.has(u.type()) &&
-            u.type() !== UnitType.DefensePost &&
-            u.type() !== UnitType.MissileSilo
-              ? sum + u.level()
-              : sum,
-          0,
-        );
-      const maxTroops = this.game.config().maxTroops(enemy);
-      const troopGapRatio = maxTroops > 0 ? 1 - enemy.troops() / maxTroops : 0;
-      return {
-        enemy,
-        structureCount,
-        troopGapRatio,
-        tiles: enemy.numTilesOwned(),
-      };
-    });
-
-    const normalize = (value: number, values: number[]): number => {
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      return max > min ? (value - min) / (max - min) : 0;
-    };
-    const structureCounts = stats.map((s) => s.structureCount);
-    const troopGapRatios = stats.map((s) => s.troopGapRatio);
-    const tileCounts = stats.map((s) => s.tiles);
-
-    let best: Player | null = null;
-    let bestScore = -Infinity;
-    for (const s of stats) {
-      const juiciness =
-        normalize(s.structureCount, structureCounts) +
-        normalize(s.troopGapRatio, troopGapRatios) +
-        normalize(s.tiles, tileCounts);
-      if (juiciness > bestScore) {
-        bestScore = juiciness;
-        best = s.enemy;
-      }
-    }
-    return best;
+    return findJuiciestTarget(this.game, candidates);
   }
 
   private findNearestIslandEnemy(): Player | null {
@@ -861,7 +862,7 @@ export class AiAttackBehavior {
     return false;
   }
 
-  private readonly nbuf: TileRef[] = [0, 0, 0, 0];
+  private nbuf: TileRef[] = [0, 0, 0, 0];
 
   /** The player's shore border tiles, in border-set order (one pass, no copy of the whole set). */
   private shoreTiles(player: Player): TileRef[] {
@@ -1264,3 +1265,14 @@ export class AiAttackBehavior {
     return true;
   }
 }
+
+export const AiAttackBehaviorSnapshot = snapshotType({
+  name: "AiAttackBehavior",
+  version: 1,
+  schema: z.object({
+    botAttackTroopsSent: zNum(),
+    triggerRatio: zNum(),
+    reserveRatio: zNum(),
+    expandRatio: zNum(),
+  }),
+});

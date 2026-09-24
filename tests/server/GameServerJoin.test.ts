@@ -7,6 +7,7 @@ import {
   makeClient,
   makeGame,
   makeMockWs,
+  mockLogger,
   mockWsOf,
   startGame,
 } from "../util/GameServerHarness";
@@ -76,6 +77,36 @@ describe("GameServer.joinClient — environment guards", () => {
       expect(game.joinClient(account("second"))).toBe("joined");
       expect(mockWsOf(first).close).not.toHaveBeenCalled();
       expect(game.numClients()).toBe(2);
+    });
+  });
+
+  describe("full lobby", () => {
+    it("rejects a late joiner with full-lobby, at debug rather than warn", () => {
+      const log = mockLogger();
+      const game = makeGame({
+        config: { gameType: GameType.Public, maxPlayers: 2 },
+        log,
+      });
+      expect(game.joinClient(makeClient({ clientID: cid("a") }))).toBe(
+        "joined",
+      );
+      expect(game.joinClient(makeClient({ clientID: cid("b") }))).toBe(
+        "joined",
+      );
+      const late = makeClient({ clientID: cid("c") });
+      expect(game.joinClient(late)).toBe("rejected");
+      expect(mockWsOf(late).sent()).toContainEqual({
+        type: "error",
+        error: "full-lobby",
+      });
+      expect(game.numClients()).toBe(2);
+      // Every filled public lobby turns away a stream of late joiners; this
+      // is routine, not something worth a warn line per attempt.
+      expect(log.warn).not.toHaveBeenCalled();
+      expect(log.debug).toHaveBeenCalledWith(
+        expect.stringContaining("cannot add client, game full"),
+        expect.objectContaining({ clientID: cid("c") }),
+      );
     });
   });
 
@@ -228,7 +259,7 @@ describe("GameServer.joinClient — active game reconnection", () => {
     expect((startMsg as any).myClientID).toBe(cid("orig"));
   });
 
-  it("marks genuine late arrival after game start as spectator", () => {
+  it("turns away a genuine late arrival just after game start", () => {
     const game = makeGame();
     const player = makeClient({ clientID: cid("p1"), persistentID: "p1-pid" });
     game.joinClient(player);
@@ -239,7 +270,8 @@ describe("GameServer.joinClient — active game reconnection", () => {
       clientID: cid("late"),
       persistentID: "late-pid",
     });
-    expect(game.joinClient(lateClient)).toBe("joined");
-    expect(lateClient.spectator).toBe(true);
+    expect(game.joinClient(lateClient)).toBe("started");
+    expect(lateClient.spectator).toBe(false);
+    expect(game.getClientIdForPersistentId("late-pid")).toBeNull();
   });
 });

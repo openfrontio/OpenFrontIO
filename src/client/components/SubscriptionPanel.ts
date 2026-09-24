@@ -1,6 +1,6 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { UserSubscription } from "../../core/ApiSchemas";
+import { isGrantedSubscription, UserSubscription } from "../../core/ApiSchemas";
 import { Subscription } from "../../core/CosmeticSchemas";
 import {
   cancelSubscription,
@@ -13,6 +13,7 @@ import { showInGameAlert, showInGameConfirm } from "../InGameModal";
 import { STEAM_TIER_CHANGE_IN_APP } from "../SubscriptionPolicy";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
+import { renderFreePlayPerks } from "./FreePlayPerks";
 import "./PlutoniumIcon";
 
 // The Steam-rail launch policies (S1 tier change, S2 cancel) live in
@@ -119,20 +120,12 @@ export class SubscriptionPanel extends LitElement {
    * therefore must not offer Cancel (nor Manage or Change Tier, which have no
    * billing to reach) and must not claim the month renews.
    *
-   * `=== null`, deliberately, and never `!this.sub.provider`:
-   *
-   *   null      — granted. Hide the destructive controls.
-   *   undefined — the field is absent because the server predates it. We
-   *               CANNOT tell a grant from a Stripe subscription, so keep
-   *               today's behaviour; hiding Cancel on this path would take the
-   *               one control a paying subscriber actually needs.
-   *
-   * A truthiness test is true for both and would do the wrong thing on the
-   * second — which is the whole hazard, because `provider` is on `main` but not
-   * yet on staging, so `undefined` is the live case until the next deploy.
+   * The `=== null` rule itself, and why `undefined` must NOT be treated as a
+   * grant, live on `isGrantedSubscription` — the store asks the same question
+   * (OPE-440) and the two must not drift.
    */
   private isGranted(): boolean {
-    return this.sub.provider === null;
+    return isGrantedSubscription(this.sub);
   }
 
   /** Billed by Steam: managed on the Steam account page, on every surface. */
@@ -180,22 +173,37 @@ export class SubscriptionPanel extends LitElement {
     </span>`;
   }
 
-  // The one date line that matters: when it renews, or when access ends.
+  // The one date line that matters: when it renews, or when the perks end.
   //
   // A grant never renews — `sub_renews_on` was a straight falsehood on it — so
   // it gets an ends-on line instead. Checked before `cancelAtPeriodEnd` because
   // a grant is never winding down: the server has no pending-cancel state for
-  // one, it expires immediately.
-  private renderPeriodLine(): TemplateResult | typeof nothing {
+  // one, it expires immediately. The line names the TIER's perks, not "access":
+  // a Steam buyer reading "access ends" takes it as the game ending.
+  private renderPeriodLine(tierName: string): TemplateResult | typeof nothing {
     const periodEnd = this.periodEnd();
     if (!periodEnd) return nothing;
-    const dateKey = this.isGranted()
-      ? "account_modal.sub_granted_ends_on"
-      : this.sub.cancelAtPeriodEnd
-        ? "account_modal.sub_status_canceling_on"
-        : "account_modal.sub_renews_on";
+    if (this.isGranted()) {
+      return this.renderDateLine(
+        translateText("account_modal.sub_granted_perks_end_on", {
+          tier: tierName,
+          date: periodEnd,
+        }),
+        false,
+      );
+    }
+    const dateKey = this.sub.cancelAtPeriodEnd
+      ? "account_modal.sub_status_canceling_on"
+      : "account_modal.sub_renews_on";
+    return this.renderDateLine(
+      translateText(dateKey, { date: periodEnd }),
+      this.sub.cancelAtPeriodEnd,
+    );
+  }
+
+  private renderDateLine(text: string, windingDown: boolean): TemplateResult {
     return html`<div
-      class="flex items-center gap-2 text-sm ${this.sub.cancelAtPeriodEnd
+      class="flex items-center gap-2 text-sm ${windingDown
         ? "text-amber-200/80"
         : "text-white/50"}"
     >
@@ -215,7 +223,7 @@ export class SubscriptionPanel extends LitElement {
         <line x1="8" y1="3" x2="8" y2="7" />
         <line x1="16" y1="3" x2="16" y2="7" />
       </svg>
-      <span>${translateText(dateKey, { date: periodEnd })}</span>
+      <span>${text}</span>
     </div>`;
   }
 
@@ -277,15 +285,23 @@ export class SubscriptionPanel extends LitElement {
    * Steam purchase would be a fresh instance of exactly the dishonesty this
    * change exists to remove.
    */
-  private renderGrantedNote(): TemplateResult {
+  private renderGrantedNote(tierName: string): TemplateResult {
+    if (!this.sub.currentPeriodEnd) {
+      return html`
+        <p class="text-[11px] text-center text-white/40 leading-snug">
+          ${translateText("account_modal.sub_granted_indefinite")}
+        </p>
+      `;
+    }
     return html`
-      <p class="text-[11px] text-center text-white/40 leading-snug">
-        ${translateText(
-          this.sub.currentPeriodEnd
-            ? "account_modal.sub_granted_from_purchase"
-            : "account_modal.sub_granted_indefinite",
-        )}
-      </p>
+      <div class="flex flex-col gap-3">
+        <p class="text-[11px] text-center text-white/40 leading-snug">
+          ${translateText("account_modal.sub_granted_from_purchase", {
+            tier: tierName,
+          })}
+        </p>
+        ${renderFreePlayPerks("free_play.after_grant_heading")}
+      </div>
     `;
   }
 
@@ -359,11 +375,11 @@ export class SubscriptionPanel extends LitElement {
     `;
   }
 
-  private renderActions(): TemplateResult {
+  private renderActions(tierName: string): TemplateResult {
     // Before every other branch, and NOT gated on the desktop shell: a grant is
     // a property of the account, so a Steam buyer who signs in on the website
     // sees the same panel and would meet the same one-way Cancel there.
-    if (this.isGranted()) return this.renderGrantedNote();
+    if (this.isGranted()) return this.renderGrantedNote(tierName);
     if (this.isSteam()) return this.renderSteamActions();
 
     // The whole desktop build, not just a Steam-authenticated session: the
@@ -460,10 +476,10 @@ export class SubscriptionPanel extends LitElement {
                 )}
               </div>`
             : ""}
-          ${this.renderPeriodLine()}
+          ${this.renderPeriodLine(tierName)}
 
           <div class="border-t border-white/10 pt-4">
-            ${this.renderActions()}
+            ${this.renderActions(tierName)}
           </div>
         </div>
       </div>

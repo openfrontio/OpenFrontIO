@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { fetchCosmetics } from "../../../../src/client/Cosmetics";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import { SendWinnerEvent } from "../../../../src/client/Transport";
@@ -80,6 +81,7 @@ describe("WinModal tick win handling", () => {
     modal?.remove();
     modal = undefined;
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("emits the winner and celebrates when my team wins", async () => {
@@ -149,6 +151,32 @@ describe("WinModal tick win handling", () => {
     expect(events).toHaveLength(1);
     expect(events[0].winner).toBeUndefined();
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
+  });
+
+  it("shows the buttons as soon as show() runs, before the cosmetics fetch settles", async () => {
+    // A visible modal activates steam-wishlist, which observes its own size;
+    // jsdom has no ResizeObserver.
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    vi.mocked(fetchCosmetics).mockReturnValueOnce(new Promise(() => {}));
+    setup(makeGame({ winner: ["team", "Blue"], myTeam: "Blue" }));
+    document.body.appendChild(modal!);
+
+    void modal!.show();
+    await modal!.updateComplete;
+
+    expect(modal!.isVisible).toBe(true);
+    const exit = modal!.querySelector(
+      "o-button[translationKey='win_modal.exit']",
+    );
+    expect(exit).not.toBeNull();
+    expect(exit!.parentElement!.classList.contains("hidden")).toBe(false);
   });
 
   it("ignores a player win whose winner is not a known player", () => {

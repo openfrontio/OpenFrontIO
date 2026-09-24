@@ -8,6 +8,7 @@ import {
 import {
   BOAT_INDEX_CAPTURE,
   BOAT_INDEX_DESTROY,
+  BOAT_INDEX_LOST,
 } from "../src/core/StatsSchemas";
 import { setup } from "./util/Setup";
 
@@ -55,14 +56,15 @@ describe("TransportCaptureStats", () => {
 
     expect(transBoats(captor)?.[BOAT_INDEX_CAPTURE]).toBe(1n);
     expect(transport.owner()).toBe(captor);
-    // Boats have no "lost" slot, so the previous owner records nothing — and
-    // in particular this is not a destruction.
+    // Only a disconnected teammate's fleet gets here, so it is a transfer
+    // inside a team: not a destruction, and not a loss either.
     expect(transBoats(victim)?.[BOAT_INDEX_DESTROY] ?? 0n).toBe(0n);
+    expect(transBoats(victim)?.[BOAT_INDEX_LOST] ?? 0n).toBe(0n);
   });
 
   test("does not count a captured trade ship as a transport", () => {
-    // The warship that hunts a trade ship down records the capture itself, so
-    // routing trade ships through the same path would double-count piracy.
+    // TradeShipExecution records the capture on delivery, so routing trade
+    // ships through the same path would double-count piracy.
     const destinationPort = captor.buildUnit(
       UnitType.Port,
       game.ref(50, 50),

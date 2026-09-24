@@ -1,3 +1,19 @@
+import { z } from "zod";
+import { UnitTypeSchema } from "../snapshot/CommonSchemas";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import {
+  snapshotType,
+  zBytes,
+  zInt,
+  zNum,
+  zPlayerRef,
+  zRef,
+  zTile,
+  zTiles,
+} from "../snapshot/SnapshotType";
 import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
@@ -241,13 +257,13 @@ export class UnitImpl implements Unit {
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
         break;
-      // Transports change hands when their owner is conquered, or when a
-      // disconnected teammate's fleet is inherited. Boats have no "lost"
-      // slot, so only the captor is credited.
+      // Only a disconnected teammate's fleet reaches this case (see
+      // GameImpl.conquerPlayer), so it is a transfer inside a team, not a
+      // loss: the previous owner is credited nothing, not BOAT_INDEX_LOST.
       //
-      // Trade ships are deliberately absent: they reach here too, but the
-      // warship that hunts one down records the capture itself, and counting
-      // it again would double every act of piracy.
+      // Trade ships are deliberately absent: TradeShipExecution records the
+      // capture when the ship reaches the captor's port, so counting it here
+      // would double every act of piracy.
       case UnitType.TransportShip:
         this.mg.stats().boatCapturedTroops(newOwner, this._owner);
         break;
@@ -337,8 +353,21 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
 
-    if (displayMessage !== false) {
+    // `displayMessage === false` is how a caller retires a unit that was not
+    // destroyed: a boat that reached port or retreated, a shell that landed, a
+    // voluntary delete. Every other deletion is a destruction, which costs its
+    // owner the unit even when nobody is credited with the kill -- their own
+    // nuke, their elimination, health reaching zero with no attacker.
+    const wasDestroyed = displayMessage !== false;
+
+    if (wasDestroyed) {
       this.displayMessageOnDeleted();
+      switch (this._type) {
+        case UnitType.TransportShip:
+        case UnitType.TradeShip:
+          this.mg.stats().boatLose(this._owner, this._type);
+          break;
+      }
     }
 
     if (destroyer !== undefined) {
@@ -380,7 +409,12 @@ export class UnitImpl implements Unit {
       MessageType.UNIT_DESTROYED,
       this.owner().id(),
       undefined,
-      { unit: this._type },
+      {
+        unit:
+          this._type === UnitType.TransportShip
+            ? "unit_type.boat"
+            : "unit_type.warship",
+      },
       this.id(),
     );
   }
@@ -754,4 +788,186 @@ export class UnitImpl implements Unit {
       this.mg.addUpdate(this.toUpdate());
     }
   }
+
+  snapshot(w: SnapshotWriter): UnitState {
+    const nuke = this._nukeState;
+    return {
+      id: this._id,
+      type: this._type,
+      owner: w.player(this._owner),
+      tile: this._tile,
+      lastTile: this._lastTile,
+      active: this._active,
+      targetTile: this._targetTile ?? null,
+      targetPlayer:
+        this._targetPlayer !== undefined ? w.owner(this._targetPlayer) : null,
+      targetUnit: w.unitOrNull(this._targetUnit),
+      health: this._health,
+      // Nested states are written field by field, in schema order: the live
+      // objects' key order varies with how they were built, a restore's
+      // does not, and key order is part of the bytes.
+      transportShipState: this._transportShipState
+        ? {
+            isRetreating: this._transportShipState.isRetreating,
+            troops: this._transportShipState.troops,
+          }
+        : null,
+      warshipState: this._warshipState
+        ? {
+            state: this._warshipState.state,
+            patrolTile: this._warshipState.patrolTile,
+            retreatPort: this._warshipState.retreatPort,
+            isInCombat: this._warshipState.isInCombat,
+            lastCombatTick: this._warshipState.lastCombatTick,
+            veterancy: this._warshipState.veterancy,
+            veterancyProgress: this._warshipState.veterancyProgress,
+          }
+        : null,
+      nukeState: nuke
+        ? {
+            trajectoryTiles: Uint32Array.from(nuke.trajectory, (t) => t.tile),
+            trajectoryTargetable: Uint8Array.from(nuke.trajectory, (t) =>
+              t.targetable ? 1 : 0,
+            ),
+            trajectoryIndex: nuke.trajectoryIndex,
+            targetedBySam: nuke.targetedBySam,
+            waitTicks: nuke.waitTicks,
+          }
+        : null,
+      reachedTarget: this._reachedTarget,
+      wasDestroyedByEnemy: this._wasDestroyedByEnemy,
+      destroyer: w.playerOrNull(this._destroyer),
+      lastSetSafeFromPirates: this._lastSetSafeFromPirates,
+      underConstruction: this._underConstruction,
+      lastOwner: w.playerOrNull(this._lastOwner),
+      troops: this._troops,
+      missileTimerQueue: [...this._missileTimerQueue],
+      hasTrainStation: this._hasTrainStation,
+      level: this._level,
+      targetable: this._targetable,
+      loaded: this._loaded ?? null,
+      trainType: this._trainType ?? null,
+      deletionAt: this._deletionAt,
+      samLauncherState: this._samLauncherState
+        ? {
+            upgradeStartTick: this._samLauncherState.upgradeStartTick,
+            startRange: this._samLauncherState.startRange,
+            targetLevel: this._samLauncherState.targetLevel,
+            duration: this._samLauncherState.duration,
+          }
+        : null,
+    };
+  }
+
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: UnitState, r: SnapshotReader): void {
+    this.mg = r.game;
+    this._id = s.id;
+    this._type = s.type;
+    this._owner = r.player(s.owner) as PlayerImpl;
+    this._tile = s.tile;
+    this._lastTile = s.lastTile;
+    this._active = s.active;
+    this._targetTile = s.targetTile ?? undefined;
+    this._targetPlayer =
+      s.targetPlayer !== null ? r.owner(s.targetPlayer) : undefined;
+    this._targetUnit = r.unitOrNull(s.targetUnit) ?? undefined;
+    this._health = s.health;
+    this._transportShipState = s.transportShipState
+      ? { ...s.transportShipState }
+      : undefined;
+    this._warshipState = s.warshipState ? { ...s.warshipState } : undefined;
+    const nuke = s.nukeState;
+    this._nukeState = nuke
+      ? {
+          trajectory: Array.from(nuke.trajectoryTiles, (tile, i) => ({
+            tile,
+            targetable: nuke.trajectoryTargetable[i] === 1,
+          })),
+          trajectoryIndex: nuke.trajectoryIndex,
+          targetedBySam: nuke.targetedBySam,
+          waitTicks: nuke.waitTicks,
+        }
+      : undefined;
+    this._reachedTarget = s.reachedTarget;
+    this._wasDestroyedByEnemy = s.wasDestroyedByEnemy;
+    this._destroyer = r.playerOrNull(s.destroyer) ?? undefined;
+    this._lastSetSafeFromPirates = s.lastSetSafeFromPirates;
+    this._underConstruction = s.underConstruction;
+    this._lastOwner = r.playerOrNull(s.lastOwner) as PlayerImpl | null;
+    this._troops = s.troops;
+    this._missileTimerQueue = [...s.missileTimerQueue];
+    this._hasTrainStation = s.hasTrainStation;
+    this._level = s.level;
+    this._targetable = s.targetable;
+    this._loaded = s.loaded ?? undefined;
+    this._trainType = s.trainType ?? undefined;
+    this._deletionAt = s.deletionAt;
+    this._samLauncherState = s.samLauncherState
+      ? { ...s.samLauncherState }
+      : undefined;
+  }
 }
+
+export const UnitSnapshot = snapshotType({
+  name: "Unit",
+  version: 1,
+  schema: z.object({
+    id: zInt(),
+    type: UnitTypeSchema,
+    owner: zPlayerRef(),
+    tile: zTile(),
+    lastTile: zTile(),
+    active: z.boolean(),
+    targetTile: zTile().nullable(),
+    targetPlayer: zPlayerRef().nullable(),
+    targetUnit: zRef().nullable(),
+    health: z.bigint(),
+    transportShipState: z
+      .object({ isRetreating: z.boolean(), troops: zNum() })
+      .nullable(),
+    warshipState: z
+      .object({
+        state: z.enum(["patrolling", "retreating", "docked"]),
+        patrolTile: zTile().optional(),
+        retreatPort: zTile().optional(),
+        isInCombat: z.boolean().optional(),
+        lastCombatTick: zInt(),
+        veterancy: zInt(),
+        veterancyProgress: zInt(),
+      })
+      .nullable(),
+    nukeState: z
+      .object({
+        trajectoryTiles: zTiles(),
+        trajectoryTargetable: zBytes(),
+        trajectoryIndex: zInt(),
+        targetedBySam: z.boolean(),
+        waitTicks: zInt(),
+      })
+      .nullable(),
+    reachedTarget: z.boolean(),
+    wasDestroyedByEnemy: z.boolean(),
+    destroyer: zPlayerRef().nullable(),
+    lastSetSafeFromPirates: zInt(),
+    underConstruction: z.boolean(),
+    lastOwner: zPlayerRef().nullable(),
+    troops: zNum(),
+    missileTimerQueue: z.array(zInt()),
+    hasTrainStation: z.boolean(),
+    level: zInt(),
+    targetable: z.boolean(),
+    loaded: z.boolean().nullable(),
+    trainType: z.enum(TrainType).nullable(),
+    deletionAt: zInt().nullable(),
+    samLauncherState: z
+      .object({
+        upgradeStartTick: zInt().optional(),
+        startRange: zNum(),
+        targetLevel: zInt(),
+        duration: zInt(),
+      })
+      .nullable(),
+  }),
+});
+export type UnitState = z.infer<typeof UnitSnapshot.schema>;

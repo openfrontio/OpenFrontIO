@@ -26,25 +26,44 @@ import { assertNever, sigmoid, toInt, within } from "../Util";
 
 declare global {
   interface Window {
+    // Values the page carries into the bundle. Every field is optional to
+    // TypeScript because the page is data, not code; ClientEnv.get() decides
+    // which are actually required. Only gitCommit, gameEnv, turnstileSiteKey
+    // and jwtAudience are: they describe the ENVIRONMENT, and are identical
+    // for every player on a site. Everything below them names a SERVER, and
+    // a static page (docs/MultiServer.md, "Server list v2") carries none of
+    // it — the API's list answers instead.
     BOOTSTRAP_CONFIG?: {
       gitCommit?: string;
       assetManifest?: AssetManifest;
       cdnBase?: string;
       gameEnv?: string;
       // The fleet map + which entry served this page (docs/MultiServer.md).
+      // Absent on a static page.
       cluster?: ClusterConfig;
       instanceLetter?: string;
       // Legacy scalar, still injected by desktop shells that predate the
-      // cluster map. Web shells send cluster/instanceLetter instead.
+      // cluster map. Web shells send cluster/instanceLetter instead; a static
+      // page sends neither.
       numWorkers?: number;
       turnstileSiteKey?: string;
       jwtAudience?: string;
+      // Environment-scoped like turnstileSiteKey, but optional: a deployment
+      // without one (dev, desktop shells) just keeps the inline Stripe flow
+      // off.
+      stripePublishableKey?: string;
+      // Environment-scoped and optional like stripePublishableKey: the
+      // Grafana Faro collector URL. Absent keeps client telemetry off.
+      faroCollectorUrl?: string;
+      // The rendering server's own id. Absent on a static page, which no
+      // server rendered; ClientEnv.instanceId() then answers "".
       instanceId?: string;
       // Desktop-only: explicit game-server host for the WebSocket origin.
       // Absent on the web build (client falls back to same-origin location).
       serverHost?: string;
       // The load-balancer apex this deployment sits behind; absent for
-      // standalone deployments (beta, branch previews, dev) and desktop.
+      // standalone deployments (beta, branch previews, dev), desktop, and
+      // static pages.
       siteHost?: string;
     };
   }
@@ -124,8 +143,10 @@ const TERRA_NULLIUS_MAX_COST = 100;
 // army matches the old cost, bigger stacks pay less, smaller pay more.
 const ATTACKER_LOSS_BASE = 0.463;
 const ATTACKER_LOSS_PER_DENSITY = 0.0039;
-// Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
-const SPEED_COST_DIVISOR = 7.77;
+// Speed divisor: 8.25 / 0.965, absorbing the same sigmoid tail. 8.25 is the
+// old 7.5 raised ~10%: v34 pace feedback said attacks felt a bit too slow, so
+// every player-vs-player attack lands ~10% faster across the board.
+const SPEED_COST_DIVISOR = 8.55;
 // Speed-only: the attacker's territory bonus runs a touch deeper for speed
 // than the 0.7 loss depth above (floor 0.27x vs 0.3x). Paired with the 0.82
 // sub-parity floor on the ratio curve, an overwhelming push lands ~18%
@@ -426,15 +447,26 @@ export class Config {
    * Global spawn throttle for the train economy, counted in Train *units*
    * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns for the very
    * first trains, ~1x around 35 units (~5 trains), then a capacity
-   * sigmoid damps spawning past the ~300-unit midpoint. The damping
-   * flattens onto a ~0.25 plateau past ~460 units (~65 trains), so a big
+   * sigmoid damps spawning past the ~560-unit midpoint. The damping
+   * flattens onto a ~0.25 plateau past ~810 units (~115 trains), so a big
    * enough rail economy still scales at a quarter of the un-damped rate,
    * until a global hard cap far beyond any normal game collapses the
    * plateau past ~900 units (~130 trains).
+   *
+   * The midpoint was 300 units in v34.0. Public-game telemetry put a real
+   * lobby at ~4.2 train units per player, so a 50-player game sat at ~210
+   * units and a 70-player game at ~300 — i.e. normal lobbies were landing
+   * on and past the knee, costing factories 35-56% of their v33 income.
+   * The 61-nation benchmark this curve was tuned against peaks at 91 units,
+   * roughly a quarter of a full public lobby, so it never saw that region.
+   * v34.5 moved it to 500 (measured +32% train gold in matched lobbies);
+   * 560 softens the remaining early/mid-game gap vs v33 (~-8% at 50
+   * players, ~-18% at 80) without re-opening v33's big-lobby train
+   * dominance, and leaves the plateau and hard cap untouched.
    */
   trainSaturation(numTrainUnits: number): number {
     const boost = 1 + 0.5 * exp(-numTrainUnits / 30);
-    const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 300);
+    const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 560);
     const plateau = 0.25 * (1 - sigmoid(numTrainUnits, Math.LN2 / 150, 900));
     return boost * Math.max(damping, plateau);
   }
@@ -493,15 +525,22 @@ export class Config {
    * boost while the world fleet is small (the pity timer square-roots the
    * realized effect, so ~1.2x actual spawns), held through the opening
    * trading minutes and crossing the old un-boosted curve around 110
-   * ships, then a capacity sigmoid damps spawning past the ~230-ship
-   * midpoint. The damping flattens onto a 0.25 plateau past ~310 ships
+   * ships, then a capacity sigmoid damps spawning past the ~330-ship
+   * midpoint. The damping flattens onto a 0.25 plateau past ~415 ships
    * (~half cadence per port after the pity timer), so heavy port
    * investment keeps scaling income linearly, until a global hard cap far
    * beyond any normal game collapses the plateau past ~800 at sea.
+   *
+   * The midpoint was 230 in v34.0. v33's was 400, so fleets of 150-350 —
+   * reached within the opening minutes of a 40+ player lobby — ran 30-64%
+   * below v33's spawn odds, which is where the "no early gold for nukes"
+   * deficit lived; the opening (<130 ships) was already above v33 via the
+   * boost. 330 restores that window to near-v33 while the plateau keeps
+   * everything past ~450 ships (the late game) numerically unchanged.
    */
   tradeShipSaturation(numTradeShips: number): number {
     const boost = 1 + 0.45 * exp(-numTradeShips / 120);
-    const damping = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 230);
+    const damping = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 330);
     const plateau = 0.25 * (1 - sigmoid(numTradeShips, Math.LN2 / 100, 800));
     return boost * Math.max(damping, plateau);
   }
@@ -585,7 +624,7 @@ export class Config {
             ) {
               return 0n;
             }
-            return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
+            return 25_000_000n + BigInt(game.mirvsLaunched()) * 15_000_000n;
           },
         };
         break;

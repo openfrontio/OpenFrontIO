@@ -67,6 +67,7 @@ describe("nav-account-menu", () => {
     el.remove();
     vi.clearAllMocks();
     isOnCrazyGames.mockReturnValue(false);
+    delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
     getUserProfile.mockResolvedValue(null);
     window.showPage = undefined;
   });
@@ -172,6 +173,18 @@ describe("nav-account-menu", () => {
     // Their username/subscription management still needs reaching…
     expect(itemKeys()).toContain("change-username");
     // …but signing out happens on CrazyGames, not through /auth/logout.
+    expect(itemKeys()).not.toContain("log-out");
+  });
+
+  it("drops log-out on Steam, where the ticket signs the player back in", async () => {
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      steam: {},
+    };
+    fireUserMe(userMe());
+    await el.updateComplete;
+    await click(trigger());
+
+    expect(itemKeys()).toContain("account-settings");
     expect(itemKeys()).not.toContain("log-out");
   });
 

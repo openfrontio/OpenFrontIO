@@ -82,8 +82,16 @@ export function buildTeamPalettes(
 export class SettingsTheme implements Theme {
   private humanColorAllocator: ColorAllocator;
   private nationColorAllocator: ColorAllocator;
+  private classicBotColorAllocator: ColorAllocator;
   private teamPalettes: Map<Team, Colord[]>;
   private teamPlayerColors = new Map<string, Colord>();
+
+  /**
+   * When true, teamless tribes draw from the classic (pre-v34) bot pool
+   * instead of the flat Bot team color. Kept in sync with the
+   * classicBotColors graphics override by ThemeProvider.current().
+   */
+  useClassicBotColors = false;
 
   private _focusedBorderColor: Colord;
   private _spawnHighlightColor: Colord;
@@ -91,10 +99,15 @@ export class SettingsTheme implements Theme {
   constructor(private settings: ThemeSettings) {
     const humanColors = settings.humanColors.map(colord);
     const nationColors = settings.nationColors.map(colord);
+    const classicBotColors = settings.classicBotColors.map(colord);
     const fallbackColors = settings.fallbackColors.map(colord);
 
     this.humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
     this.nationColorAllocator = new ColorAllocator(nationColors, nationColors);
+    this.classicBotColorAllocator = new ColorAllocator(
+      classicBotColors,
+      classicBotColors,
+    );
     this.teamPalettes = buildTeamPalettes(settings);
 
     this._focusedBorderColor = colord(settings.focusedBorderColor);
@@ -146,6 +159,9 @@ export class SettingsTheme implements Theme {
       return this.humanColorAllocator.assignColor(player.id());
     }
     if (player.type() === PlayerType.Bot) {
+      if (this.useClassicBotColors) {
+        return this.classicBotColorAllocator.assignColor(player.id());
+      }
       // Tribes use the same palette in every mode: the flat Bot team color.
       return this.teamColorForPlayer(ColoredTeams.Bot, player.id());
     }
@@ -263,9 +279,10 @@ class ThemeProvider {
 
   /** The active theme, selected from the palette graphics override. */
   current(): Theme {
-    return this.themes[
-      this.userSettings.graphicsOverrides().palette ?? "default"
-    ];
+    const overrides = this.userSettings.graphicsOverrides();
+    const theme = this.themes[overrides.palette ?? "default"];
+    theme.useClassicBotColors = overrides.classicBotColors ?? false;
+    return theme;
   }
 
   /**

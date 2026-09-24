@@ -44,6 +44,13 @@ const IGNORED_UNUSED_KEY_PATTERNS: RegExp[] = [
   // than the player's. They live here so Crowdin picks them up like any other
   // string.
   /^desktop_presence\./,
+  // The Electron shell's account-linking gate. Same situation as the rich
+  // presence frames above, and for the same reason: the gate is a page the
+  // shell serves from its OWN assets before the client boots, so there is no
+  // translateText() call in this repo to find. The shell's build reads these
+  // out of resources/lang/*.json and emits per-language files next to that
+  // page. They live here so Crowdin picks them up like any other string.
+  /^desktop_gate\./,
 ];
 
 type NestedTranslations = Record<string, unknown>;

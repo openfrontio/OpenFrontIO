@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ClientEnv } from "../src/client/ClientEnv";
 import type { DesktopUpdateState } from "../src/client/DesktopShell";
+import {
+  backendUnreachableConfirmed,
+  ensureServerList,
+  resetServerList,
+  retryServerList,
+} from "../src/client/ServerList";
 import { GameMapType, GameMode } from "../src/core/game/Game";
 import type {
   GameConfig,
@@ -219,6 +226,154 @@ describe("the multiplayer gate at DetailedGameViewModal's join()", () => {
       error: { kind: "refused", message: "403 from the WAF" },
     });
 
+    cardButton("public-1")!.click();
+
+    expect(joinLobby).toHaveBeenCalled();
+  });
+});
+
+/**
+ * OPE-439, from the other side. The update and session halves above are
+ * desktop-only and they DO refuse a card click. A confirmed backend outage
+ * must not, on either shell: every lobby this browser lists arrived over a
+ * live game-server socket, and the outage signal tracks the separate
+ * server-list API, whose health says nothing about that server. That is the
+ * reachability rule at the top of GameModeSelector.ts, and Main's join funnel
+ * already follows it -- these cards are where the very joins that funnel lets
+ * through are produced, so refusing them one step earlier would contradict it.
+ *
+ * Driven through the real ServerList module rather than a mock of it: a
+ * mocked accessor could only prove this component ignores something; this
+ * proves it is unmoved by the signal the heartbeat actually produces, seeded
+ * before it mounted or announced afterwards.
+ */
+describe("DetailedGameViewModal and a confirmed backend outage", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  /**
+   * Throws this modal away and mounts a fresh one, so a test can choose what
+   * the module already knows BEFORE the component exists. The outer
+   * beforeEach always mounts one; that one is no use for a seeding test.
+   */
+  async function remountModal(): Promise<void> {
+    modal.remove();
+    modal = new DetailedGameViewModal() as unknown as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    await pushLobbies({ ffa: [lobby("public-1", "ffa")] });
+  }
+
+  beforeEach(() => {
+    // ServerList reads the site from ClientEnv, which throws without the
+    // config the server injects into index.html -- and a site it cannot
+    // resolve means it never fetches at all.
+    window.BOOTSTRAP_CONFIG = {
+      gameEnv: "dev",
+      numWorkers: 1,
+      turnstileSiteKey: "",
+      jwtAudience: "test",
+      instanceId: "test",
+      gitCommit: "test",
+    };
+    ClientEnv.reset();
+    resetServerList();
+    fetchMock = vi.fn(async () => {
+      throw new TypeError("network down");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    resetServerList();
+    ClientEnv.reset();
+    window.BOOTSTRAP_CONFIG = undefined;
+    vi.unstubAllGlobals();
+  });
+
+  /** Two unanswered attempts in a row, which is what confirms an outage. */
+  async function confirmOutage(): Promise<void> {
+    await ensureServerList();
+    await retryServerList();
+    expect(backendUnreachableConfirmed()).toBe(true);
+  }
+
+  it("still joins a public card when it mounted during a confirmed outage", async () => {
+    await confirmOutage();
+    await remountModal();
+
+    const card = cardButton("public-1");
+    expect(card).not.toBeNull();
+    card!.click();
+
+    expect(joinLobby).toHaveBeenCalled();
+    expect(joinLobby.mock.calls[0][0].detail.gameID).toBe("public-1");
+    // Nothing was refused, so nothing is reported: no wiggle on desktop and
+    // no toast on the web.
+    expect(wiggle).not.toHaveBeenCalled();
+  });
+
+  it("still opens the join modal for a hosted card during that outage", async () => {
+    await confirmOutage();
+    await remountModal();
+    await pushLobbies({ hosted: [lobby("hosted-1", "hosted")] });
+
+    cardButton("hosted-1")!.click();
+
+    expect(joinModalOpen).toHaveBeenCalledWith({ lobbyId: "hosted-1" });
+  });
+
+  it("does not dim its cards during that outage", async () => {
+    await confirmOutage();
+    await remountModal();
+
+    expect(modal.querySelectorAll('button[aria-disabled="true"]').length).toBe(
+      0,
+    );
+  });
+
+  it("is unmoved by an outage announced while it is mounted", async () => {
+    // The subscribe half of the old wiring, from the other direction: this
+    // component no longer listens for "backend-reachability" at all, and an
+    // event that would once have dimmed every card now changes nothing.
+    await remountModal();
+    document.dispatchEvent(
+      new CustomEvent("backend-reachability", {
+        detail: { reachable: false, confirmed: true },
+      }),
+    );
+    await modal.updateComplete;
+
+    expect(modal.querySelectorAll('button[aria-disabled="true"]').length).toBe(
+      0,
+    );
+    cardButton("public-1")!.click();
+
+    expect(joinLobby).toHaveBeenCalled();
+  });
+
+  it("still refuses on a DESKTOP reason during an outage", async () => {
+    // The control that keeps this from being "the gate was deleted": the
+    // update state is a statement about this client rather than about any
+    // server, so it refuses the same card the outage may not.
+    await confirmOutage();
+    await remountModal();
+    await setUpdateState({ status: "staged", bytes: 0, total: 0 });
+
+    cardButton("public-1")!.click();
+
+    expect(joinLobby).not.toHaveBeenCalled();
+    expect(wiggle).toHaveBeenCalled();
+  });
+
+  it("does not refuse after a single missed attempt either", async () => {
+    await ensureServerList();
+    expect(backendUnreachableConfirmed()).toBe(false);
+
+    await remountModal();
     cardButton("public-1")!.click();
 
     expect(joinLobby).toHaveBeenCalled();

@@ -1,7 +1,7 @@
 import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
+import { isGrantedSubscription, UserMeResponse } from "../core/ApiSchemas";
 import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
@@ -14,6 +14,7 @@ import "./components/EffectsGrid";
 import type { InlineCheckout } from "./components/InlineCheckout";
 import "./components/NotLoggedInWarning";
 import "./components/PackContentsDialog";
+import { ProgressiveList } from "./components/ProgressiveList";
 import "./components/PurchaseButton";
 import { alignPurchaseRows } from "./components/PurchaseButton";
 import "./components/TribesPanel";
@@ -74,6 +75,7 @@ export class StoreModal extends BaseModal {
   private visibleGroups: readonly (readonly ResolvedCosmetic[])[] = [];
   /** The bundle whose contents dialog is open, if any. */
   private openedPack: ResolvedCosmetic | null = null;
+  private readonly pages = new ProgressiveList(this);
 
   protected modalConfig() {
     if (this.affiliateCode) {
@@ -459,6 +461,11 @@ export class StoreModal extends BaseModal {
     groups: readonly (readonly ResolvedCosmetic[])[],
     options: StoreBrowserOptions,
   ): TemplateResult {
+    const page = this.pages.page(
+      "store-grid",
+      `${this.affiliateCode ?? ""}:${this.activeTab}:${this.cosmeticsSubTab}`,
+      groups,
+    );
     const cards =
       groups.length === 0
         ? options.trailingContent
@@ -469,12 +476,12 @@ export class StoreModal extends BaseModal {
               ${translateText(options.emptyTranslationKey)}
             </div>`
         : this.renderCosmeticCards(
-            groups,
+            page.items,
             options.userHasSubscription,
             options.cardClass,
           );
     return this.renderBrowserLayout(
-      html`${cards}${options.trailingContent ?? ""}`,
+      html`${cards}${page.more}${options.trailingContent ?? ""}`,
       options.gridClass,
     );
   }
@@ -564,9 +571,15 @@ export class StoreModal extends BaseModal {
   }
 
   private renderSubscriptionGrid(): TemplateResult {
-    const userHasSubscription =
-      this.userMeResponse !== false &&
-      this.userMeResponse.player.subscription !== null;
+    // Drives the "Switch" label on the other tiers' buy buttons. A granted
+    // player is deliberately NOT counted (OPE-440): they have nothing to
+    // switch from — nobody is billing them — so every tier, theirs included,
+    // is a first purchase and reads as a plain price.
+    const sub =
+      this.userMeResponse === false
+        ? null
+        : this.userMeResponse.player.subscription;
+    const userHasSubscription = sub !== null && !isGrantedSubscription(sub);
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_subscriptions",
       userHasSubscription,
@@ -654,6 +667,7 @@ export class StoreModal extends BaseModal {
     this.affiliateCode = null;
     this.openedPack = null;
     this.previewingCosmetic = null;
+    this.pages.reset();
     this.selectVisible(this.groupsForTab(this.activeTab));
   }
 

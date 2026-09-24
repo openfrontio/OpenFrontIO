@@ -9,11 +9,88 @@ import {
 import { migrateLegacyGraphicsSettings } from "../GraphicsPresets";
 import { isLayerVisible, layerAlpha } from "../MapLayerSettings";
 import { type GraphicsOverrides } from "../render/gl";
+import { COSMETICS_SHOW_FROM } from "../render/gl/GraphicsOverrides";
 import renderDefaults from "../render/gl/render-settings.json";
 import { translateText } from "../Utils";
 import "./baseComponents/setting/SettingColor";
+import "./baseComponents/setting/SettingSelect";
 import "./baseComponents/setting/SettingSlider";
 import "./baseComponents/setting/SettingToggle";
+
+const FLAG_OPACITY_MIN = 0;
+const FLAG_OPACITY_MAX = 1;
+const FLAG_OPACITY_STEP = 0.05;
+
+const COSMETICS_SHOW_FROM_LABELS: Record<
+  (typeof COSMETICS_SHOW_FROM)[number],
+  string
+> = {
+  everyone: "graphics_setting.cosmetics_show_from_everyone",
+  teammates: "graphics_setting.cosmetics_show_from_teammates",
+  self: "graphics_setting.cosmetics_show_from_self",
+};
+
+type CosmeticCategory = Exclude<
+  keyof NonNullable<GraphicsOverrides["cosmetics"]>,
+  "showFrom" | "flagOpacity"
+>;
+
+const COSMETIC_CATEGORIES: ReadonlyArray<{
+  key: CosmeticCategory;
+  labelKey: string;
+  descKey: string;
+}> = [
+  {
+    key: "territorySkins",
+    labelKey: "graphics_setting.cosmetics_territory_skins_label",
+    descKey: "graphics_setting.cosmetics_territory_skins_desc",
+  },
+  {
+    key: "flags",
+    labelKey: "graphics_setting.cosmetics_flags_label",
+    descKey: "graphics_setting.cosmetics_flags_desc",
+  },
+  {
+    key: "crowns",
+    labelKey: "graphics_setting.cosmetics_crowns_label",
+    descKey: "graphics_setting.cosmetics_crowns_desc",
+  },
+  {
+    key: "transportShipTrail",
+    labelKey: "graphics_setting.cosmetics_transport_ship_trails_label",
+    descKey: "graphics_setting.cosmetics_transport_ship_trails_desc",
+  },
+  {
+    key: "nukeTrail",
+    labelKey: "graphics_setting.cosmetics_nuke_trails_label",
+    descKey: "graphics_setting.cosmetics_nuke_trails_desc",
+  },
+  {
+    key: "nukeExplosion",
+    labelKey: "graphics_setting.cosmetics_nuke_explosions_label",
+    descKey: "graphics_setting.cosmetics_nuke_explosions_desc",
+  },
+  {
+    key: "structures",
+    labelKey: "graphics_setting.cosmetics_structures_label",
+    descKey: "graphics_setting.cosmetics_structures_desc",
+  },
+  {
+    key: "warship",
+    labelKey: "graphics_setting.cosmetics_warships_label",
+    descKey: "graphics_setting.cosmetics_warships_desc",
+  },
+  {
+    key: "train",
+    labelKey: "graphics_setting.cosmetics_trains_label",
+    descKey: "graphics_setting.cosmetics_trains_desc",
+  },
+  {
+    key: "railroad",
+    labelKey: "graphics_setting.cosmetics_railroads_label",
+    descKey: "graphics_setting.cosmetics_railroads_desc",
+  },
+];
 
 const NAME_SCALE_MIN = 0.2;
 const NAME_SCALE_MAX = 1.5;
@@ -471,6 +548,19 @@ export class GraphicsAdvancedSettings extends LitElement {
     this.patchMapOverlay({ navalHighlight: !this.currentNavalHighlight() });
   }
 
+  private currentClassicBotColors(): boolean {
+    return this.userSettings.graphicsOverrides().classicBotColors ?? false;
+  }
+
+  private onToggleClassicBotColors() {
+    const current = this.userSettings.graphicsOverrides();
+    this.writeOverrides({
+      ...current,
+      classicBotColors: !this.currentClassicBotColors(),
+    });
+    this.requestUpdate();
+  }
+
   private currentHighlightFill(): number {
     return (
       this.userSettings.graphicsOverrides().mapOverlay?.highlightFillBrighten ??
@@ -774,6 +864,38 @@ export class GraphicsAdvancedSettings extends LitElement {
     this.patchSmallPlayerGlow({ strength: value / 100 });
   }
 
+  // ---- Cosmetics ----
+
+  private currentCosmetics(): NonNullable<GraphicsOverrides["cosmetics"]> {
+    return this.userSettings.graphicsOverrides().cosmetics ?? {};
+  }
+
+  private patchCosmetics(patch: Partial<GraphicsOverrides["cosmetics"]>) {
+    const current = this.userSettings.graphicsOverrides();
+    this.writeOverrides({
+      ...current,
+      cosmetics: { ...current.cosmetics, ...patch },
+    });
+    this.requestUpdate();
+  }
+
+  private onCosmeticsShowFromChange(event: Event) {
+    const value = detailValue(event);
+    const showFrom = COSMETICS_SHOW_FROM.find((option) => option === value);
+    if (showFrom === undefined) return;
+    this.patchCosmetics({ showFrom });
+  }
+
+  private onToggleCosmeticCategory(key: CosmeticCategory) {
+    this.patchCosmetics({ [key]: this.currentCosmetics()[key] === false });
+  }
+
+  private onFlagOpacityChange(event: Event) {
+    const value = sliderValue(event);
+    if (value === null) return;
+    this.patchCosmetics({ flagOpacity: value });
+  }
+
   // ---- Reset ----
 
   private onResetClick() {
@@ -843,6 +965,56 @@ export class GraphicsAdvancedSettings extends LitElement {
           `;
         })}
       </div>
+    `;
+  }
+
+  private renderCosmetics() {
+    const cosmetics = this.currentCosmetics();
+    const showFrom = cosmetics.showFrom ?? "everyone";
+    return html`
+      <!-- 👑 Cosmetics -->
+      ${GraphicsAdvancedSettings.section("graphics_setting.section_cosmetics")}
+      <setting-select
+        label=${translateText("graphics_setting.cosmetics_show_from_label")}
+        description=${translateText(
+          "graphics_setting.cosmetics_show_from_desc",
+        )}
+        id="cosmetics-show-from-select"
+        .options=${COSMETICS_SHOW_FROM.map((value) => ({
+          value,
+          label: translateText(COSMETICS_SHOW_FROM_LABELS[value]),
+        }))}
+        .value=${showFrom}
+        @change=${this.onCosmeticsShowFromChange}
+      ></setting-select>
+
+      ${COSMETIC_CATEGORIES.map(
+        ({ key, labelKey, descKey }) => html`
+          <setting-toggle
+            label=${translateText(labelKey)}
+            description=${translateText(descKey)}
+            id=${`cosmetics-${key}-toggle`}
+            .checked=${cosmetics[key] !== false}
+            ?disabled=${showFrom === "self"}
+            @change=${() => this.onToggleCosmeticCategory(key)}
+          ></setting-toggle>
+        `,
+      )}
+
+      <setting-slider
+        label=${translateText("graphics_setting.cosmetics_flag_opacity_label")}
+        description=${translateText(
+          "graphics_setting.cosmetics_flag_opacity_desc",
+        )}
+        id="flag-opacity-slider"
+        min=${FLAG_OPACITY_MIN}
+        max=${FLAG_OPACITY_MAX}
+        step=${FLAG_OPACITY_STEP}
+        unit=""
+        .formatValue=${(v: number) => v.toFixed(2)}
+        .value=${cosmetics.flagOpacity ?? renderDefaults.name.flagAlpha}
+        @change=${this.onFlagOpacityChange}
+      ></setting-slider>
     `;
   }
 
@@ -1009,6 +1181,14 @@ export class GraphicsAdvancedSettings extends LitElement {
         id="naval-highlight-toggle"
         .checked=${this.currentNavalHighlight()}
         @change=${this.onToggleNavalHighlight}
+      ></setting-toggle>
+
+      <setting-toggle
+        label=${translateText("graphics_setting.classic_bot_colors_label")}
+        description=${translateText("graphics_setting.classic_bot_colors_desc")}
+        id="classic-bot-colors-toggle"
+        .checked=${this.currentClassicBotColors()}
+        @change=${this.onToggleClassicBotColors}
       ></setting-toggle>
 
       <setting-slider
@@ -1222,6 +1402,8 @@ export class GraphicsAdvancedSettings extends LitElement {
         .value=${Math.round(this.currentGlowStrength() * 100)}
         @change=${this.onGlowStrengthChange}
       ></setting-slider>
+
+      ${this.renderCosmetics()}
 
       <button
         id="graphics-reset"

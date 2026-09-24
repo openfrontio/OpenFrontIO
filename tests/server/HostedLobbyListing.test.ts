@@ -243,6 +243,23 @@ describe("listed lobby auto-start", () => {
     expect(gm.listedLobbies()).toHaveLength(1);
   });
 
+  it("applies the host's start time and player cap", () => {
+    const game = makeGame();
+    game.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game.setListed(true, { autoStartMs: 2 * 60_000, maxPlayers: 2 });
+    expect(game.autoStartAt()).toBe(Date.now() + 2 * 60_000);
+    expect(game.gameInfo().gameConfig?.maxPlayers).toBe(2);
+    expect(game.phase()).toBe(GamePhase.Lobby);
+
+    // Relisting can't change the advertised cap.
+    game.setListed(true, { maxPlayers: 50 });
+    expect(game.gameInfo().gameConfig?.maxPlayers).toBe(2);
+
+    // Filling to the cap starts the game before the deadline.
+    game.joinClient(makeClient("guest", OTHER_CREATOR, fakeWs()));
+    expect(game.phase()).toBe(GamePhase.Active);
+  });
+
   it("never auto-starts an unlisted lobby", () => {
     const gm = new GameManager(mockLogger);
     const game = gm.createGame("g-manual", undefined, CREATOR)!;
@@ -353,6 +370,20 @@ describe("listed lobby host powers", () => {
     isAdmin: false,
     isAdminBot: false,
   };
+  const asBot = {
+    clientID: "bot",
+    isLobbyCreator: false,
+    isAdmin: true,
+    isAdminBot: true,
+  };
+
+  it("freezes the host's config once listed", () => {
+    const game = makeGame();
+    const bots = { type: "update_game_config", config: { bots: 7 } } as any;
+    game.setListed(true);
+    expect(game.handleIntent(bots, asHost).status).toBe(409);
+    expect(game.gameInfo().gameConfig?.bots).not.toBe(7);
+  });
 
   it("reports host cheats only when a cheat is actually granted", () => {
     expect(makeGame().hasHostCheats()).toBe(false);
@@ -436,14 +467,14 @@ describe("listed lobby host powers", () => {
       type: "update_game_config",
       config: { allowedPublicIds: [] },
     } as any;
-    expect(game.handleIntent(empty, asHost).status).toBe(200);
+    expect(game.handleIntent(empty, asBot).status).toBe(200);
     expect(game.isListed()).toBe(true);
 
     const whitelist = {
       type: "update_game_config",
       config: { allowedPublicIds: ["p1"] },
     } as any;
-    expect(game.handleIntent(whitelist, asHost).status).toBe(409);
+    expect(game.handleIntent(whitelist, asBot).status).toBe(409);
     expect(game.isListed()).toBe(true);
     expect(game.hasJoinWhitelist()).toBe(false);
   });
@@ -456,7 +487,7 @@ describe("listed lobby host powers", () => {
       type: "update_game_config",
       config: { hostCheats: { infiniteGold: true } },
     } as any;
-    expect(game.handleIntent(cheats, asHost).status).toBe(409);
+    expect(game.handleIntent(cheats, asBot).status).toBe(409);
     expect(game.hasHostCheats()).toBe(false);
 
     // A neutral hostCheats block still goes through (the client always
@@ -464,7 +495,7 @@ describe("listed lobby host powers", () => {
     expect(
       game.handleIntent(
         { type: "update_game_config", config: { hostCheats: {} } } as any,
-        asHost,
+        asBot,
       ).status,
     ).toBe(200);
     game.setListed(false);
@@ -712,6 +743,7 @@ describe("WorkerLobbyService hosted lobbies", () => {
       publicLobbies: vi.fn().mockReturnValue([]),
       listedLobbies: vi.fn().mockReturnValue([]),
       game: vi.fn().mockReturnValue(null),
+      activeGames: vi.fn().mockReturnValue(0),
     };
     const server = new EventEmitter();
     service = new WorkerLobbyService(
@@ -774,6 +806,7 @@ describe("WorkerLobbyService hosted lobbies", () => {
     expect(reported.gameConfig.nameReveals).toBeUndefined();
     expect(reported.gameConfig.nameRevealPublicIds).toBeUndefined();
     expect(reported.gameConfig.hostCheats).toBeUndefined();
+    expect(reported.autoStartAt).toBe(game.autoStartAt());
   });
 
   it("excludes matchmaking games (Public but no publicGameType) from the report", () => {
@@ -805,6 +838,32 @@ describe("WorkerLobbyService hosted lobbies", () => {
     expect(lobbyList.lobbies.map((l: any) => l.gameID)).toEqual(["ffa-g1"]);
   });
 
+  it("reports the game manager's live game count to the master", () => {
+    gm.activeGames.mockReturnValue(7);
+    // Drop the stub so the real sendToMaster runs: assert on the message that
+    // actually leaves the worker. Anything that is not ours is forwarded
+    // untouched, since vitest's fork pool talks to its parent on this channel.
+    delete (service as any).sendToMaster;
+    const realSend = process.send;
+    const sent: any[] = [];
+    process.send = ((msg: any, ...rest: any[]) => {
+      if (msg?.type === "lobbyList" || msg?.type === "workerReady") {
+        sent.push(msg);
+        return true;
+      }
+      return (realSend as any)?.apply(process, [msg, ...rest]) ?? true;
+    }) as any;
+    try {
+      emitBroadcast({ ffa: [], team: [], special: [], hosted: [] });
+    } finally {
+      process.send = realSend;
+    }
+
+    const lobbyList = sent.find((m) => m.type === "lobbyList");
+    expect(lobbyList).toBeDefined();
+    expect(lobbyList.liveGames).toBe(7);
+  });
+
   it("strips creatorID from broadcasts and primed snapshots sent to clients", () => {
     const ws = connectClient();
     emitBroadcast({
@@ -824,6 +883,19 @@ describe("WorkerLobbyService hosted lobbies", () => {
     const primed = sentPayloads(lateWs)[0];
     expect(primed.type).toBe("full");
     expect(primed.games.hosted[0].creatorID).toBeUndefined();
+  });
+
+  it("carries a hosted lobby's auto-start deadline to clients", () => {
+    const ws = connectClient();
+    emitBroadcast({
+      ffa: [],
+      team: [],
+      special: [],
+      hosted: [hostedLobby("g1", "hash", { autoStartAt: 123_456 })],
+    });
+
+    const full = sentPayloads(ws).find((p) => p.type === "full");
+    expect(full.games.hosted[0].autoStartAt).toBe(123_456);
   });
 
   it("re-sends a full when a hosted lobby's config changes without a gameID change", () => {
