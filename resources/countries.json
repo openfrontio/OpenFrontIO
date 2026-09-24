@@ -717,7 +717,7 @@
   {
     "code": "Chagossians",
     "continent": "Africa",
-    "name": "CHagossians"
+    "name": "Chagossians"
   },
   {
     "code": "Chaldea",
@@ -1407,9 +1407,9 @@
     "name": "Grand Duchy of Tuscany"
   },
   {
-    "code": "Grande Comore",
+    "code": "km-g",
     "continent": "Africa",
-    "name": "km-g"
+    "name": "Grande Comore"
   },
   {
     "code": "gr",
@@ -3144,7 +3144,7 @@
   {
     "code": "mu-ro",
     "continent": "Africa",
-    "name": "Rodrigues "
+    "name": "Rodrigues"
   },
   {
     "code": "SPQR",
