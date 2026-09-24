@@ -1364,6 +1364,33 @@ describe("CosmeticsSchema tribeNames pricing", () => {
   });
 });
 
+describe("CosmeticsSchema lobbyQueue pricing", () => {
+  it("parses the lobbyQueue config block", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      lobbyQueue: { priceHard: 5 },
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.lobbyQueue?.priceHard).toBe(5);
+  });
+
+  it("parses a cosmetics.json without lobbyQueue (older API)", () => {
+    const result = CosmeticsSchema.safeParse({ patterns: {}, flags: {} });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.lobbyQueue).toBeUndefined();
+  });
+
+  it("rejects a lobbyQueue block missing the price", () => {
+    expect(
+      CosmeticsSchema.safeParse({ patterns: {}, flags: {}, lobbyQueue: {} })
+        .success,
+    ).toBe(false);
+  });
+});
+
 describe("Cosmetic pack schemas", () => {
   const base = { patterns: {}, flags: {} };
   const starter = {

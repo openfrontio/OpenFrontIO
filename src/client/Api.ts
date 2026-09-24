@@ -1935,6 +1935,32 @@ export async function setLobbyListed(
   }
 }
 
+// POST /api/game/:id/queue on the game server — the host of a listed lobby
+// pays plutonium to put it in the public Special queue. The worker charges
+// through the API with the host's token. On failure, `error` is the server's
+// code when available ("insufficient_balance", "queue_payment_failed", ...).
+export async function queueLobby(
+  gameID: string,
+): Promise<{ ok: true } | { ok: false; error?: string }> {
+  try {
+    await ensureServerList();
+    const token = await getPlayToken();
+    const response = await fetch(
+      `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}/queue`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    if (response.ok) return { ok: true };
+    const body = await response.json().catch(() => null);
+    return { ok: false, error: body?.error };
+  } catch (e) {
+    console.error("queueLobby: request failed", e);
+    return { ok: false };
+  }
+}
+
 // POST /api/create_game on the game server — mints a fresh private lobby with
 // the caller as creator. Deliberately has no worker prefix and no id: the edge
 // (nginx in prod, the vite dev proxy locally) picks a worker, which mints a

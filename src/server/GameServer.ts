@@ -360,6 +360,7 @@ export class GameServer {
     const denied = authorizeIntent(intent, actor, {
       isPublic: this.isPublic(),
       isListed: this.isListed(),
+      isQueued: this.listing.isQueued(),
       hasStarted: this.hasStarted(),
     });
     if (denied !== null) {
@@ -791,10 +792,15 @@ export class GameServer {
     // Remove persistentId if the game has not started to prevent going over max players
     this.clients.forgetReconnect(client);
     // Close lobby when host leaves before game starts: without a host it can
-    // never start, and a listed one would haunt the lobby browser and hold
-    // the creator's one-listing quota. phase() reports Finished once ended,
-    // so GameManager's next tick prunes it.
-    if (!this.isPublic() && client.persistentID === this.creatorPersistentID) {
+    // never start. phase() reports Finished once ended, so GameManager's next
+    // tick prunes it. A listed lobby carries on without its host: it starts
+    // on its listing deadline (or the queue's countdown), and the players who
+    // joined it from the lobby browser keep their game.
+    if (
+      !this.isPublic() &&
+      !this.isListed() &&
+      client.persistentID === this.creatorPersistentID
+    ) {
       this.log.info("Host left, closing lobby", {
         gameID: this.id,
       });
@@ -1569,6 +1575,7 @@ export class GameServer {
       label: this.listing.lobbyLabel(),
       accent: this.listing.lobbyAccent(),
       featured: this.listing.isFeatured() ? true : undefined,
+      queued: this.listing.isQueued() ? true : undefined,
     };
   }
 
@@ -1618,6 +1625,21 @@ export class GameServer {
         this.hasReachedMaxPlayerCount = true;
       }
     }
+  }
+
+  public isQueued(): boolean {
+    return this.listing.isQueued();
+  }
+
+  public queuedAt(): number | undefined {
+    return this.listing.queuedAtTime();
+  }
+
+  // The host paid to put this listed lobby in the public Special queue. The
+  // worker then reports it as a Special lobby and the queue's countdown
+  // starts it; the listing deadline no longer applies.
+  public queueForPublic(): void {
+    this.listing.queue();
   }
 
   // Players (not spectators) currently seated in the lobby.
