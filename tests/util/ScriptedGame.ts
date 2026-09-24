@@ -113,14 +113,17 @@ export async function restoreScriptedRunner(
   mapName: string,
   gameStart: GameStartInfo,
   snapshot: Uint8Array,
-  onUpdate: (gu: GameUpdateViewData | ErrorUpdate) => void = recordErrors,
+  onUpdate?: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
   return createGameRunnerFromSnapshot(
     gameStart,
     snapshot,
     undefined,
     new TestDataMapLoader(mapName),
-    onUpdate,
+    (gu) => {
+      recordErrors(gu);
+      onUpdate?.(gu);
+    },
   );
 }
 

@@ -734,12 +734,14 @@ async function createClientGame(
       );
     } catch (e) {
       console.warn("Failed to restore maps from snapshot", e);
+      throw e;
     }
     try {
       const header = readSnapshotHeader(lobbyConfig.resumeSnapshot);
       initialStartTick = header.startTick ?? null;
     } catch (e) {
       console.warn("Failed to read snapshot header for initial startTick", e);
+      throw e;
     }
   }
 
@@ -954,6 +956,7 @@ async function createClientGame(
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
+  private playerDied = false;
 
   private turnsSeen = 0;
   private lastMousePosition: { x: number; y: number } | null = null;
@@ -987,6 +990,7 @@ export class ClientGameRunner {
     this.eventBus.on(SendWinnerEvent, () => {
       this.hasWinner = true;
       if (this.transport.isLocal && !this.lobby.gameRecord) {
+        this.transport.disableLocalSave?.();
         clearSoloSave(this.lobby.gameStartInfo?.gameID);
       }
     });
@@ -1067,6 +1071,19 @@ export class ClientGameRunner {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
       this.gameView.update(gu);
+      if (
+        !this.playerDied &&
+        this.transport.isLocal &&
+        !this.lobby.gameRecord &&
+        !this.gameView.inSpawnPhase()
+      ) {
+        const myPlayer = this.gameView.myPlayer();
+        if (myPlayer && myPlayer.hasSpawned() && !myPlayer.isAlive()) {
+          this.playerDied = true;
+          this.transport.disableLocalSave?.();
+          clearSoloSave(this.lobby.gameStartInfo?.gameID);
+        }
+      }
       this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
       if (
@@ -1074,6 +1091,7 @@ export class ClientGameRunner {
         this.transport.isLocal &&
         !this.lobby.gameRecord &&
         !this.hasWinner &&
+        !this.playerDied &&
         this.lobby.gameStartInfo &&
         gu.tick > 0 &&
         gu.tick % 50 === 0
@@ -1087,7 +1105,12 @@ export class ClientGameRunner {
             return { compressed, snapshotTick };
           })
           .then(({ compressed, snapshotTick }) => {
-            if (!this.hasWinner && this.lobby.gameStartInfo) {
+            if (
+              this.isActive &&
+              !this.hasWinner &&
+              !this.playerDied &&
+              this.lobby.gameStartInfo
+            ) {
               saveSoloSnapshot(
                 this.lobby.gameStartInfo,
                 compressed,
