@@ -19,6 +19,7 @@ import {
   MAX_HOSTED_LOBBIES,
   MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
+  MIN_HOSTED_LOBBY_PLAYERS,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
@@ -290,7 +291,7 @@ export async function startWorker() {
         maxPlayers: z
           .number()
           .int()
-          .min(2)
+          .min(MIN_HOSTED_LOBBY_PLAYERS)
           .max(MAX_HOSTED_LOBBY_PLAYERS)
           .optional(),
       })

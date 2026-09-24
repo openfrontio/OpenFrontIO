@@ -195,6 +195,7 @@ export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
 // The host picks the start time (up to HOSTED_LOBBY_AUTO_START_MS) and the
 // player cap when listing; filling to the cap starts the game early.
 export const MIN_HOSTED_LOBBY_AUTO_START_MS = 60 * 1000;
+export const MIN_HOSTED_LOBBY_PLAYERS = 10;
 export const MAX_HOSTED_LOBBY_PLAYERS = 100;
 
 // A listed lobby this close to its auto-start can no longer be queued, so a
