@@ -170,6 +170,7 @@ describe("SinglePlayerSaveManager", () => {
 
     const save = getSoloSave();
     expect(save?.snapshot).not.toBeUndefined();
+    expect(save?.numTurns).toBe(50);
     const restored = await getSoloSnapshot();
     expect(restored?.snapshot).toEqual(rawBytes);
   });

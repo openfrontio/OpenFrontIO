@@ -128,7 +128,10 @@ export function saveSoloGame(
       savedAt: Date.now(),
       gameStartInfo,
       turns,
-      numTurns: turns.length,
+      numTurns:
+        existing?.gameID === gameStartInfo.gameID && existing.snapshot
+          ? existing.numTurns
+          : turns.length,
       platform: clientPlatform(),
       userId: identity.id,
       steamId: identity.steamId,
