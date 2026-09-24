@@ -252,6 +252,7 @@ export class LocalServer {
     }
     if (clientMsg.type === "winner") {
       this.winner = clientMsg;
+      this.disableSave();
       if (!this.isReplay && this.lobbyConfig.gameStartInfo) {
         clearSoloSave(this.lobbyConfig.gameStartInfo.gameID);
       }
@@ -265,8 +266,15 @@ export class LocalServer {
     }
   }
 
+  private saveEnabled = true;
+
+  public disableSave(): void {
+    this.saveEnabled = false;
+  }
+
   private handleBeforeUnload = () => {
     if (
+      this.saveEnabled &&
       !this.winner &&
       !this.isReplay &&
       this.lobbyConfig.gameStartInfo &&
@@ -315,6 +323,7 @@ export class LocalServer {
     if (!this.isReplay) {
       window.removeEventListener("beforeunload", this.handleBeforeUnload);
       if (
+        this.saveEnabled &&
         !this.winner &&
         this.lobbyConfig.gameStartInfo &&
         this.lobbyConfig.resumeSnapshot === undefined &&
