@@ -170,6 +170,8 @@ export class ClientEnv {
       // Optional: a deployment without a key (or a desktop shell, which
       // buys on Steam) omits it, and the inline Stripe flow stays off.
       stripePublishableKey: bc.stripePublishableKey,
+      // Optional: absent keeps client telemetry off (see Telemetry.ts).
+      faroCollectorUrl: bc.faroCollectorUrl,
       // Absent on a static page: only a server that renders the page knows
       // its own instance id. Empty means "none", and callers send it only
       // when it is there (the API ignores it either way).
@@ -192,6 +194,9 @@ export class ClientEnv {
   }
   static stripePublishableKey(): string | undefined {
     return ClientEnv.get().stripePublishableKey;
+  }
+  static faroCollectorUrl(): string | undefined {
+    return ClientEnv.get().faroCollectorUrl;
   }
   // Worker count of the server this page talks to: the server the API's list
   // picked, else the own cluster entry when the map was injected, else the
@@ -666,6 +671,8 @@ export interface ClientEnvValues {
   // shells). Environment-scoped like turnstileSiteKey, so a static page
   // carries it too.
   stripePublishableKey?: string;
+  // Optional: absent keeps client telemetry off (Telemetry.ts).
+  faroCollectorUrl?: string;
   // "" on a static page, which no server rendered.
   instanceId: string;
   gitCommit: string;

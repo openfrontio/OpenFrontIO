@@ -12,8 +12,13 @@ import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessage,
+  ClientPlatformSchema,
+  HOSTED_LOBBY_AUTO_START_MS,
   ID,
+  isValidGameID,
   MAX_HOSTED_LOBBIES,
+  MAX_HOSTED_LOBBY_PLAYERS,
+  MIN_HOSTED_LOBBY_AUTO_START_MS,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
@@ -36,6 +41,7 @@ import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { startRankedCheckinLoops } from "./RankedCheckin";
 import { ServerEnv } from "./ServerEnv";
+import { SingleplayerPresence } from "./SingleplayerPresence";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
 import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
@@ -76,6 +82,7 @@ export async function startWorker() {
 
   // Initialize lobby service (handles WebSocket upgrade routing)
   const lobbyService = new WorkerLobbyService(server, wss, gm, log);
+  const singleplayerPresence = new SingleplayerPresence();
 
   setTimeout(
     () => {
@@ -94,7 +101,7 @@ export async function startWorker() {
   );
 
   if (ServerEnv.otelEnabled()) {
-    initWorkerMetrics(gm);
+    initWorkerMetrics(gm, lobbyService, singleplayerPresence);
   }
 
   const privilegeRefresher = new PrivilegeRefresher(
@@ -270,11 +277,27 @@ export async function startWorker() {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    const parsed = z.object({ listed: z.boolean() }).safeParse(req.body);
+    const parsed = z
+      .object({
+        listed: z.boolean(),
+        autoStartMs: z
+          .number()
+          .int()
+          .min(MIN_HOSTED_LOBBY_AUTO_START_MS)
+          .max(HOSTED_LOBBY_AUTO_START_MS)
+          .optional(),
+        maxPlayers: z
+          .number()
+          .int()
+          .min(2)
+          .max(MAX_HOSTED_LOBBY_PLAYERS)
+          .optional(),
+      })
+      .safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: z.prettifyError(parsed.error) });
     }
-    const { listed } = parsed.data;
+    const { listed, autoStartMs, maxPlayers } = parsed.data;
 
     const game = gm.game(req.params.id);
     if (game === null) {
@@ -310,6 +333,12 @@ export async function startWorker() {
         return res.status(409).json({ error: "listing_host_cheats_enabled" });
       }
 
+      // A cap at or below the current head count would advertise a lobby
+      // nobody can join.
+      if (maxPlayers !== undefined && maxPlayers <= game.numPlayers()) {
+        return res.status(409).json({ error: "listing_max_players_too_low" });
+      }
+
       // Dev has no subscription backend; skip the check so the feature is
       // testable locally (same precedent as Turnstile).
       if (ServerEnv.env() !== GameEnv.Dev) {
@@ -343,11 +372,31 @@ export async function startWorker() {
       }
     }
 
-    game.setListed(listed);
+    game.setListed(listed, { autoStartMs, maxPlayers });
     log.info(`lobby listing ${listed ? "enabled" : "disabled"}`, {
       gameID: game.id,
+      autoStartMs,
+      maxPlayers,
     });
     res.json({ listed });
+  });
+
+  // Singleplayer games run in the browser; the client beats here once a
+  // minute so the worker can export how many are in progress (see
+  // SingleplayerPresence). The id is client-minted and routes here by hash,
+  // exactly like the game socket would.
+  app.post("/api/singleplayer/:id/heartbeat", (req, res) => {
+    const gameID = req.params.id;
+    if (!isValidGameID(gameID)) {
+      res.status(400).json({ error: "Invalid game ID" });
+      return;
+    }
+    const platform = ClientPlatformSchema.safeParse(req.body?.platform);
+    singleplayerPresence.heartbeat(
+      gameID,
+      platform.success ? platform.data : "unknown",
+    );
+    res.status(204).end();
   });
 
   app.get("/api/game/:id/exists", async (req, res) => {

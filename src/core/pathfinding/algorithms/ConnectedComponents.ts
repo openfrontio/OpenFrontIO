@@ -6,6 +6,14 @@ import { DebugSpan } from "../../utilities/DebugSpan";
 export const LAND_MARKER = 0xff; // Uint8Array sentinel — upgraded to 0xFFFF on Uint16Array promotion
 const LAND_MARKER_WIDE = 0xffff;
 
+export interface ConnectedComponentsState {
+  componentIds: Uint8Array | Uint16Array;
+  componentSizes: (number | undefined)[];
+  parents: number[];
+  maxId: number;
+  landMarker: number;
+}
+
 /**
  * Connected component labeling for grid-based maps.
  * Identifies isolated regions using scan-line flood-fill.
@@ -37,6 +45,27 @@ export class ConnectedComponents {
     this.height = map.height();
     this.numTiles = this.width * this.height;
     this.lastRowStart = (this.height - 1) * this.width;
+  }
+
+  /** Labels and union-find state, for game snapshots. */
+  snapshot(): ConnectedComponentsState | null {
+    if (this.componentIds === null) return null;
+    return {
+      componentIds: this.componentIds.slice(),
+      componentSizes: [...this._componentSizes],
+      parents: [...this.parents],
+      maxId: this.maxId,
+      landMarker: this.landMarker,
+    };
+  }
+
+  /** Replaces initialize() when restoring a snapshot. */
+  restoreSnapshot(s: ConnectedComponentsState): void {
+    this.componentIds = s.componentIds.slice();
+    this._componentSizes = s.componentSizes as number[];
+    this.parents = [...s.parents];
+    this.maxId = s.maxId;
+    this.landMarker = s.landMarker;
   }
 
   initialize(): void {

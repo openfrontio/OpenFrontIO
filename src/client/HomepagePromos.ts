@@ -53,7 +53,12 @@ export class HomepagePromos extends LitElement {
     document.addEventListener("userMeResponse", this.onUserMeResponse);
     document.addEventListener("join-lobby", this.onJoinLobby);
     document.addEventListener("leave-lobby", this.onLeaveLobby);
-    this.topAdMutation = new MutationObserver(() => this.syncTopAd());
+    // Fires on every DOM change in the page, so it must not measure: it only
+    // notices the banner element arriving or leaving, and the observers
+    // syncTopAd attaches to the banner itself track its size and position.
+    this.topAdMutation = new MutationObserver(() => {
+      if (this.findTopAd() !== this.topAdEl) this.syncTopAd();
+    });
     // subtree: the banner is nested inside a wrapper (#pw-oop-flex_container),
     // so watching body's direct children alone misses it.
     this.topAdMutation.observe(document.body, {
@@ -78,10 +83,15 @@ export class HomepagePromos extends LitElement {
       ?.style.removeProperty("min-height");
   }
 
-  private syncTopAd(): void {
-    const el =
+  private findTopAd(): HTMLElement | null {
+    return (
       document.getElementById("pw-oop-flex") ??
-      document.getElementById("adBanner");
+      document.getElementById("adBanner")
+    );
+  }
+
+  private syncTopAd(): void {
+    const el = this.findTopAd();
     if (el !== this.topAdEl) {
       this.topAdResize?.disconnect();
       this.topAdResize = null;

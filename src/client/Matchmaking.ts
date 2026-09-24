@@ -17,6 +17,7 @@ import {
   matchmakingSite,
   redirectToGameVersion,
 } from "./ServerList";
+import { describeSocketClose } from "./SocketClose";
 import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
 
@@ -288,10 +289,13 @@ export class MatchmakingModal extends BaseModal {
     const site = matchmakingSite();
     const siteParam =
       site === undefined ? "" : `&site=${encodeURIComponent(site)}`;
-    this.socket = new WebSocket(
+    const socket = new WebSocket(
       `${ClientEnv.jwtIssuer()}/matchmaking/join?${instanceParam}mode=${this.mode}${versionParam}${siteParam}`,
     );
+    this.socket = socket;
+    let openedAt: number | null = null;
     this.socket.onopen = async () => {
+      openedAt = Date.now();
       console.log("Connected to matchmaking server");
       this.connectTimeout = setTimeout(async () => {
         if (this.socket?.readyState !== WebSocket.OPEN) {
@@ -334,13 +338,13 @@ export class MatchmakingModal extends BaseModal {
         this.gameCheckInterval = setInterval(() => this.checkGame(), 1000);
       }
     };
-    this.socket.onerror = (event: Event) => {
-      console.error("WebSocket error occurred:", event);
-    };
     this.socket.onclose = (event: CloseEvent) => {
-      console.log(
-        `Matchmaking server closed connection: code=${event.code} reason=${event.reason}`,
-      );
+      const detail = `Matchmaking socket ${describeSocketClose(socket.url, event, openedAt)}`;
+      if (this.intentionalClose || this.gameID !== null) {
+        console.log(detail);
+      } else {
+        console.warn(detail);
+      }
       this.clearWatchdog();
       this.queueSize = null;
       if (this.intentionalClose || this.gameID !== null) {

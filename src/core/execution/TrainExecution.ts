@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Execution,
   Game,
@@ -11,6 +12,13 @@ import { MotionPlanRecord } from "../game/MotionPlans";
 import { RailNetwork } from "../game/RailNetwork";
 import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";
 import { TrainStation } from "../game/TrainStation";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zPlayerRef, zRef, zTiles } from "../snapshot/SnapshotType";
 
 export class TrainExecution implements Execution {
   private active = true;
@@ -333,4 +341,96 @@ export class TrainExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    if (this.railNetwork !== w.game.railNetwork()) {
+      throw new Error("TrainExecution: only the game's rail network is stored");
+    }
+    const rr = this.currentRailroad?.getState() ?? null;
+    return TrainExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== null,
+      train: w.unitOrNull(this.train),
+      cars: this.cars.map((c) => w.unit(c)),
+      hasCargo: this.hasCargo,
+      currentTile: this.currentTile,
+      spacing: this.spacing,
+      usedTiles: w.tiles(this.usedTiles),
+      stations: this.stations.map((st) => w.station(st)),
+      currentRailroad:
+        rr === null
+          ? null
+          : { railroad: w.railroad(rr.railroad), forward: rr.forward },
+      speed: this.speed,
+      tradeStopsVisited: this._tradeStopsVisited,
+      pathTiles: w.tiles(this.pathTiles),
+      pathIndex: this.pathIndex,
+      player: w.player(this.player),
+      source: w.station(this.source),
+      destination: w.station(this.destination),
+      numCars: this.numCars,
+    });
+  }
+
+  restoreSnapshot(s: TrainExecutionState, r: SnapshotReader): void {
+    this.active = s.active;
+    this.mg = s.initialized ? r.game : null;
+    this.train = r.unitOrNull(s.train);
+    this.cars = s.cars.map((i) => r.unit(i));
+    this.hasCargo = s.hasCargo;
+    this.currentTile = s.currentTile;
+    this.spacing = s.spacing;
+    this.usedTiles = Array.from(s.usedTiles);
+    this.stations = s.stations.map((i) => r.station(i));
+    // Railroads are filled before executions, so the constructor can read
+    // the railroad's tiles (a forward one shares its array, as when live).
+    this.currentRailroad =
+      s.currentRailroad === null
+        ? null
+        : new OrientedRailroad(
+            r.railroad(s.currentRailroad.railroad),
+            s.currentRailroad.forward,
+          );
+    this.speed = s.speed;
+    this._tradeStopsVisited = s.tradeStopsVisited;
+    this.pathTiles = Array.from(s.pathTiles);
+    this.pathIndex = s.pathIndex;
+    this.railNetwork = r.game.railNetwork();
+    this.player = r.player(s.player);
+    this.source = r.station(s.source);
+    this.destination = r.station(s.destination);
+    this.numCars = s.numCars;
+  }
 }
+
+const TrainExecutionStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  train: zRef().nullable(),
+  /** Back to front. */
+  cars: z.array(zRef()),
+  hasCargo: z.boolean(),
+  currentTile: zInt(),
+  spacing: zInt(),
+  usedTiles: zTiles(),
+  stations: z.array(zRef()),
+  currentRailroad: z
+    .object({ railroad: zRef(), forward: z.boolean() })
+    .nullable(),
+  speed: zInt(),
+  tradeStopsVisited: zInt(),
+  pathTiles: zTiles(),
+  pathIndex: zInt(),
+  player: zPlayerRef(),
+  source: zRef(),
+  destination: zRef(),
+  numCars: zInt(),
+});
+type TrainExecutionState = z.infer<typeof TrainExecutionStateSchema>;
+
+export const TrainExecutionSnapshot = execSnapshotType({
+  name: "Train",
+  version: 1,
+  schema: TrainExecutionStateSchema,
+  cls: () => TrainExecution,
+});

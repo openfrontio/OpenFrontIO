@@ -52,6 +52,9 @@ declare global {
       // without one (dev, desktop shells) just keeps the inline Stripe flow
       // off.
       stripePublishableKey?: string;
+      // Environment-scoped and optional like stripePublishableKey: the
+      // Grafana Faro collector URL. Absent keeps client telemetry off.
+      faroCollectorUrl?: string;
       // The rendering server's own id. Absent on a static page, which no
       // server rendered; ClientEnv.instanceId() then answers "".
       instanceId?: string;
@@ -621,7 +624,7 @@ export class Config {
             ) {
               return 0n;
             }
-            return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
+            return 25_000_000n + BigInt(game.mirvsLaunched()) * 15_000_000n;
           },
         };
         break;

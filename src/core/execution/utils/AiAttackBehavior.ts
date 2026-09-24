@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Difficulty,
   Game,
@@ -15,6 +16,16 @@ import {
 import { TileRef } from "../../game/GameMap";
 import { canBuildTransportShip } from "../../game/TransportShipUtils";
 import { PseudoRandom } from "../../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  Versioned,
+  zNum,
+} from "../../snapshot/SnapshotType";
 import {
   assertNever,
   boundingBoxCenter,
@@ -50,6 +61,39 @@ export class AiAttackBehavior {
     private allianceBehavior?: NationAllianceBehavior,
     private emojiBehavior?: NationEmojiBehavior,
   ) {}
+
+  /** The owner supplies the shared PRNG, player and nation behaviors. */
+  snapshot(w: SnapshotWriter): Versioned {
+    return w.versioned(AiAttackBehaviorSnapshot, {
+      botAttackTroopsSent: this.botAttackTroopsSent,
+      triggerRatio: this.triggerRatio,
+      reserveRatio: this.reserveRatio,
+      expandRatio: this.expandRatio,
+    });
+  }
+
+  /** Fills a prototype-only shell; only assigns (see README). */
+  restoreSnapshot(
+    raw: unknown,
+    r: SnapshotReader,
+    random: PseudoRandom,
+    player: Player,
+    allianceBehavior?: NationAllianceBehavior,
+    emojiBehavior?: NationEmojiBehavior,
+  ): void {
+    const s = readVersioned(AiAttackBehaviorSnapshot, raw);
+    this.random = random;
+    this.game = r.game;
+    this.player = player;
+    this.allianceBehavior = allianceBehavior;
+    this.emojiBehavior = emojiBehavior;
+    this.botAttackTroopsSent = s.botAttackTroopsSent;
+    this.triggerRatio = s.triggerRatio;
+    this.reserveRatio = s.reserveRatio;
+    this.expandRatio = s.expandRatio;
+    // Scratch buffer: always written before it is read.
+    this.nbuf = [0, 0, 0, 0];
+  }
 
   maybeAttack() {
     if (this.player === null || this.allianceBehavior === undefined) {
@@ -818,7 +862,7 @@ export class AiAttackBehavior {
     return false;
   }
 
-  private readonly nbuf: TileRef[] = [0, 0, 0, 0];
+  private nbuf: TileRef[] = [0, 0, 0, 0];
 
   /** The player's shore border tiles, in border-set order (one pass, no copy of the whole set). */
   private shoreTiles(player: Player): TileRef[] {
@@ -1221,3 +1265,14 @@ export class AiAttackBehavior {
     return true;
   }
 }
+
+export const AiAttackBehaviorSnapshot = snapshotType({
+  name: "AiAttackBehavior",
+  version: 1,
+  schema: z.object({
+    botAttackTroopsSent: zNum(),
+    triggerRatio: zNum(),
+    reserveRatio: zNum(),
+    expandRatio: zNum(),
+  }),
+});

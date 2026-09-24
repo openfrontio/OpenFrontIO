@@ -70,6 +70,30 @@ export class FlatBinaryHeap {
     return topTile;
   }
 
+  /**
+   * Live entries in array order (the exact heap layout: ties between equal
+   * priorities dequeue by position), for game snapshots.
+   */
+  getState(): { pri: Float32Array; tiles: Uint32Array; capacity: number } {
+    return {
+      pri: this.pri.slice(0, this.len),
+      tiles: Uint32Array.from(this.tiles.slice(0, this.len)),
+      capacity: this.pri.length,
+    };
+  }
+
+  static fromState(s: {
+    pri: Float32Array;
+    tiles: Uint32Array;
+    capacity: number;
+  }): FlatBinaryHeap {
+    const heap = new FlatBinaryHeap(s.capacity);
+    heap.pri.set(s.pri);
+    s.tiles.forEach((t, i) => (heap.tiles[i] = t));
+    heap.len = s.tiles.length;
+    return heap;
+  }
+
   /** double the underlying storage */
   private grow(): void {
     const newCap = this.pri.length << 1;
