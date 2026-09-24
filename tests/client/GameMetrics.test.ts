@@ -68,6 +68,19 @@ describe("GameMetrics", () => {
     ]);
   });
 
+  it("reports the WebSocket round trip as ws_rtt", () => {
+    const metrics = new GameMetrics("game1234", "c0000001", 1000);
+    metrics.start();
+    metrics.recordRoundTrip(40);
+    metrics.recordRoundTrip(60);
+    vi.advanceTimersByTime(1000);
+    expect(reportMeasurement).toHaveBeenCalledWith(
+      "ws_rtt",
+      { p50: 40, p90: 60, p99: 60, count: 2 },
+      { gameID: "game1234", clientID: "c0000001" },
+    );
+  });
+
   it("reports nothing for an empty window", () => {
     const metrics = new GameMetrics("game1234", undefined, 1000);
     metrics.start();

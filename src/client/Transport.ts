@@ -373,6 +373,7 @@ export class Transport {
       if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
         this.sendMsg({
           type: "ping",
+          sentAt: Math.floor(performance.now()),
         } satisfies ClientPingMessage);
       }
     }, 5 * 1000);

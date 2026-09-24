@@ -1223,6 +1223,11 @@ export class ClientGameRunner {
           "error_modal.connection_error",
         );
       }
+      if (message.type === "pong") {
+        this.metrics?.recordRoundTrip(
+          Math.floor(performance.now()) - message.sentAt,
+        );
+      }
       if (message.type === "new_lobby") {
         // The host reused this private lobby: surface the successor id so the
         // group can hop over. NewLobbyPrompt navigates the host and prompts
