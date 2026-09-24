@@ -13,6 +13,7 @@ export enum GameMapType {
   Arctic = "Arctic", // map-generator/assets/maps/arctic/info.json
   Asia = "Asia", // map-generator/assets/maps/asia/info.json
   Australia = "Australia", // map-generator/assets/maps/australia/info.json
+  BabelMandebStrait = "Bab el-Mandeb Strait", // map-generator/assets/maps/babelmandebstrait/info.json
   Baikal = "Baikal", // map-generator/assets/maps/baikal/info.json
   BaikalNukeWars = "Baikal Nuke Wars", // map-generator/assets/maps/baikalnukewars/info.json
   BajaCalifornia = "Baja California", // map-generator/assets/maps/bajacalifornia/info.json
@@ -363,6 +364,19 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 7,
     themes: ["oceania"],
+  },
+  {
+    id: "BabelMandebStrait",
+    type: GameMapType.BabelMandebStrait,
+    translationKey: "map.babelmandebstrait",
+    categories: ["new", "africa", "asia"],
+    multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: 10,
+    specialFrequency: -1,
+    defaultNationCount: 26,
+    specialTeamCount: 2,
+    themes: ["africa", "asia"],
   },
   {
     id: "Baikal",
