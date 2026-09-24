@@ -408,6 +408,7 @@ export async function startWorker() {
         isQueued: () => game.isQueued(),
         inLobby: () => game.phase() === GamePhase.Lobby && !game.hasStarted(),
         startsAt: () => game.gameInfo().startsAt,
+        autoStartAt: () => game.autoStartAt(),
         queueForPublic: () => game.queueForPublic(),
       },
       auth.persistentId,

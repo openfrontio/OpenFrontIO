@@ -561,9 +561,17 @@ export class JoinLobbyModal extends BaseModal {
           }}
         />
         <div class="flex flex-col flex-1 min-w-0">
-          <span class="text-sm font-bold truncate ${accentClass}"
-            >${featuredLabel ?? mapName}</span
-          >
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-sm font-bold truncate ${accentClass}"
+              >${featuredLabel ?? mapName}</span
+            >
+            ${lobby.custom
+              ? html`<span
+                  class="px-1.5 py-0.5 bg-orange-500 text-white text-[10px] rounded font-bold uppercase tracking-wider shrink-0"
+                  >${translateText("public_lobby.custom")}</span
+                >`
+              : ""}
+          </div>
           <span class="text-xs text-white/60">${subtitleLine}</span>
           ${settings.length > 0 || disabledUnitCount > 0
             ? html`<div class="flex flex-wrap gap-1 mt-1">

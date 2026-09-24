@@ -23,6 +23,7 @@ import {
   ClientInfo,
   GameConfig,
   isValidGameID,
+  LOBBY_QUEUE_CUTOFF_MS,
   LobbyInfoEvent,
   TeamCountConfig,
 } from "../core/Schemas";
@@ -305,7 +306,20 @@ export class HostLobbyModal extends BaseModal {
         >${translateText("host_modal.queued")}</span
       >`;
     }
-    if (this.queuePriceHard === null || this.lobbyStartAt !== null) {
+    // Gone once the lobby is starting or about to auto-start, so the host
+    // can't pay for a spot it starts before reaching (the server refuses
+    // too).
+    if (
+      this.queuePriceHard === null ||
+      this.lobbyStartAt !== null ||
+      (this.autoStartAt !== null &&
+        getSecondsUntilServerTimestamp(
+          this.autoStartAt,
+          this.serverTimeOffset,
+        ) *
+          1000 <
+          LOBBY_QUEUE_CUTOFF_MS)
+    ) {
       return nothing;
     }
     return html`<button

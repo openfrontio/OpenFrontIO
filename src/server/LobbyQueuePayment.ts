@@ -1,3 +1,4 @@
+import { LOBBY_QUEUE_CUTOFF_MS } from "../core/Schemas";
 import { ServerEnv } from "./ServerEnv";
 
 export type LobbyQueuePaymentResult =
@@ -60,6 +61,7 @@ export interface QueueableLobby {
   isQueued(): boolean;
   inLobby(): boolean;
   startsAt(): number | undefined;
+  autoStartAt(): number | undefined;
   queueForPublic(): void;
 }
 
@@ -86,8 +88,14 @@ export async function queueListedLobby(
   if (game.isPublic() || !game.isListed() || !game.inLobby()) {
     return { status: 409, body: { error: "queue_not_listed" } };
   }
-  // The host's own start countdown is already running.
-  if (game.startsAt() !== undefined) {
+  // The host's own start countdown is already running, or the listing is
+  // about to auto-start.
+  const autoStartAt = game.autoStartAt();
+  if (
+    game.startsAt() !== undefined ||
+    (autoStartAt !== undefined &&
+      autoStartAt - Date.now() < LOBBY_QUEUE_CUTOFF_MS)
+  ) {
     return { status: 409, body: { error: "queue_lobby_starting" } };
   }
 

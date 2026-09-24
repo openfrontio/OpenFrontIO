@@ -782,10 +782,15 @@ export class GameServer {
     // Remove persistentId if the game has not started to prevent going over max players
     this.clients.forgetReconnect(client);
     // Close lobby when host leaves before game starts: without a host it can
-    // never start, and a listed one would haunt the lobby browser and hold
-    // the creator's one-listing quota. phase() reports Finished once ended,
-    // so GameManager's next tick prunes it.
-    if (!this.isPublic() && client.persistentID === this.creatorPersistentID) {
+    // never start. phase() reports Finished once ended, so GameManager's next
+    // tick prunes it. A listed lobby carries on without its host: it starts
+    // on its listing deadline (or the queue's countdown), and the players who
+    // joined it from the lobby browser keep their game.
+    if (
+      !this.isPublic() &&
+      !this.isListed() &&
+      client.persistentID === this.creatorPersistentID
+    ) {
       this.log.info("Host left, closing lobby", {
         gameID: this.id,
       });

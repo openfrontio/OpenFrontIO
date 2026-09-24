@@ -217,6 +217,7 @@ export class WorkerLobbyService {
         accent: g.lobbyAccent(),
         featured: g.isFeatured() ? true : undefined,
         autoStartAt: gi.autoStartAt,
+        custom: g.isFeatured() ? undefined : true,
       } satisfies InternalGameInfo;
     });
     this.sendToMaster({

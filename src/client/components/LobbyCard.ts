@@ -132,6 +132,9 @@ const PILL =
 // No backdrop-filter anywhere in the card: under a transformed ancestor
 // Chrome clips it with a separate mask and the map leaks at the corners.
 const BADGE = "rounded bg-black/70";
+/** A player's listed lobby, so it can't pass for a scheduled public game. */
+const CUSTOM_PILL =
+  "rounded bg-orange-500 px-2 py-1 text-xs font-bold tracking-widest text-white";
 
 /** Extreme aspect ratios (Amazon River is ~20:1) show whole rather than cropped. */
 function fitsByContain(mapType: GameMapType): boolean {
@@ -206,6 +209,11 @@ export function lobbyCard({
         class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
       >
         <div class="flex min-w-0 flex-col items-start gap-1">
+          ${lobby.custom
+            ? html`<span class=${CUSTOM_PILL}
+                >${translateText("public_lobby.custom")}</span
+              >`
+            : nothing}
           ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
         </div>
         <span

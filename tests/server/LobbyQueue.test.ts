@@ -2,6 +2,7 @@ import EventEmitter from "events";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
 import { GameType } from "../../src/core/game/Game";
+import { LOBBY_QUEUE_CUTOFF_MS } from "../../src/core/Schemas";
 import { GameServer } from "../../src/server/GameServer";
 import { InternalGameInfo } from "../../src/server/IPCBridgeSchema";
 import {
@@ -57,6 +58,7 @@ describe("queueListedLobby", () => {
       isQueued: () => state.queued,
       inLobby: () => true,
       startsAt: () => undefined,
+      autoStartAt: () => Date.now() + 60_000,
       queueForPublic: () => {
         state.queued = true;
       },
@@ -83,6 +85,12 @@ describe("queueListedLobby", () => {
     ["a public game", { isPublic: () => true }, CREATOR, 409],
     ["a started game", { inLobby: () => false }, CREATOR, 409],
     ["a lobby counting down", { startsAt: () => 123 }, CREATOR, 409],
+    [
+      "a lobby about to auto-start",
+      { autoStartAt: () => Date.now() + LOBBY_QUEUE_CUTOFF_MS - 1000 },
+      CREATOR,
+      409,
+    ],
   ])("refuses %s without charging", async (_, over, who, status) => {
     const { l, state } = lobby(over);
     const pay = paid();
@@ -193,6 +201,26 @@ describe("WorkerLobbyService queued lobbies", () => {
     expect(list.lobbies[0].publicGameType).toBe("special");
     expect(list.lobbies[0].queuedAt).toBe(game.queuedAt());
     expect(list.lobbies[0].autoStartAt).toBeUndefined();
+    expect(list.lobbies[0].custom).toBe(true);
+  });
+
+  it("marks listed lobbies custom, but not featured events", () => {
+    const listed = makeGame("listed-g1");
+    listed.setListed(true);
+    const featured = makeGame("featured-g1");
+    featured.setListed(true);
+    featured.setFeatured({ label: "Weekly Cup" });
+    const { service, sendToMaster } = createService([listed, featured]);
+
+    broadcast(service, { ffa: [], team: [], special: [], hosted: [] });
+
+    const list = sendToMaster.mock.calls
+      .map((c: any[]) => c[0])
+      .find((m: any) => m.type === "lobbyList");
+    const custom = Object.fromEntries(
+      list.lobbies.map((l: any) => [l.gameID, l.custom]),
+    );
+    expect(custom).toEqual({ "listed-g1": true, "featured-g1": undefined });
   });
 
   it("counts a queued lobby on another worker as the creator's listing", () => {
@@ -223,7 +251,7 @@ describe("WorkerLobbyService queued lobbies", () => {
     expect(service.hostedLobbyCount()).toBe(0);
   });
 
-  it("strips queuedAt before the lobby reaches browsers", () => {
+  it("strips queuedAt but keeps the custom flag for browsers", () => {
     const { service } = createService([]);
     const ws = { send: vi.fn(), on: vi.fn(), readyState: WebSocket.OPEN };
     (service as any).lobbiesWss.emit("connection", ws);
@@ -237,6 +265,7 @@ describe("WorkerLobbyService queued lobbies", () => {
           numClients: 1,
           publicGameType: "special",
           queuedAt: 5,
+          custom: true,
         },
       ],
       hosted: [],
@@ -247,6 +276,7 @@ describe("WorkerLobbyService queued lobbies", () => {
       .find((p) => p.type === "full");
     expect(full.games.special[0].gameID).toBe("paid1");
     expect(full.games.special[0].queuedAt).toBeUndefined();
+    expect(full.games.special[0].custom).toBe(true);
   });
 });
 

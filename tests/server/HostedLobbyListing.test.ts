@@ -292,10 +292,9 @@ describe("host-left lobby teardown", () => {
     vi.useRealTimers();
   });
 
-  it("ends, delists and prunes an unstarted lobby when the host leaves", async () => {
+  it("ends and prunes an unlisted lobby when the host leaves", async () => {
     const gm = new GameManager(mockLogger);
     const game = gm.createGame("g-host-leaves", undefined, CREATOR)!;
-    game.setListed(true);
 
     const hostWs = fakeWs();
     const guestWs = fakeWs();
@@ -303,32 +302,47 @@ describe("host-left lobby teardown", () => {
     expect(game.joinClient(makeClient("guest", OTHER_CREATOR, guestWs))).toBe(
       "joined",
     );
-    expect(gm.listedLobbies()).toHaveLength(1);
 
     await hostWs.trigger("close");
 
-    // Remaining players are kicked and the ghost leaves the listing...
+    // Remaining players are kicked...
     expect(guestWs.close).toHaveBeenCalled();
     expect(game.phase()).toBe(GamePhase.Finished);
-    expect(gm.listedLobbies()).toEqual([]);
 
-    // ...and the next manager tick prunes the game entirely, freeing the
-    // creator's one-listing quota.
+    // ...and the next manager tick prunes the game entirely.
     gm.tick();
     expect(gm.game("g-host-leaves")).toBeNull();
+  });
+
+  it("keeps a listed lobby going when the host leaves", async () => {
+    const gm = new GameManager(mockLogger);
+    const game = gm.createGame("g-listed-host-leaves", undefined, CREATOR)!;
+    game.setListed(true);
+
+    const hostWs = fakeWs();
+    const guestWs = fakeWs();
+    game.joinClient(makeClient("host", CREATOR, hostWs));
+    game.joinClient(makeClient("guest", OTHER_CREATOR, guestWs));
+
+    await hostWs.trigger("close");
+
+    // The guest keeps their seat, the lobby stays listed, and it still
+    // starts on its listing deadline.
+    expect(guestWs.close).not.toHaveBeenCalled();
+    expect(game.phase()).toBe(GamePhase.Lobby);
+    expect(gm.listedLobbies()).toEqual([game]);
+    expect(game.autoStartAt()).toBeDefined();
   });
 
   it("tears down even when the host socket was already dead on join", () => {
     const gm = new GameManager(mockLogger);
     const game = gm.createGame("g-dead-socket", undefined, CREATOR)!;
-    game.setListed(true);
 
     const hostWs = fakeWs();
     hostWs.readyState = WebSocket.CLOSED;
     game.joinClient(makeClient("host", CREATOR, hostWs));
 
     expect(game.phase()).toBe(GamePhase.Finished);
-    expect(gm.listedLobbies()).toEqual([]);
   });
 
   it("rejects joins into an ended lobby before it is pruned", async () => {

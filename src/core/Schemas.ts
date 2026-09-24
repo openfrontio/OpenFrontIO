@@ -197,6 +197,10 @@ export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
 export const MIN_HOSTED_LOBBY_AUTO_START_MS = 60 * 1000;
 export const MAX_HOSTED_LOBBY_PLAYERS = 100;
 
+// A listed lobby this close to its auto-start can no longer be queued, so a
+// host can't pay for a queue spot the lobby starts before it reaches.
+export const LOBBY_QUEUE_CUTOFF_MS = 30 * 1000;
+
 // Featured lobbies get a longer window. A scheduled event announced ahead of
 // time needs the listing to still be up when its audience arrives, and unlike a
 // subscriber sitting on a listing the host is an authenticated admin bot. Only
@@ -357,6 +361,10 @@ export const PublicGameInfoSchema = z.object({
   // Hosted lobbies only: server timestamp when the listing auto-starts, so
   // the lobby browser can show a countdown before the host presses Start.
   autoStartAt: zb.uint().optional(),
+  // A player's listed lobby (hosted, or paid into a public queue) rather
+  // than one the server scheduled, so the browser can label it Custom.
+  // Featured lobbies are official events and never carry it.
+  custom: z.boolean().optional(),
 });
 
 export const PublicGamesSchema = z.object({
