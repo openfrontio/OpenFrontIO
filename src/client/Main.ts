@@ -982,6 +982,10 @@ class Client {
       // the URL, which would drop the hash before handleUrl reads it.
       const replayViewerID = parseReplayViewerHash(window.location.hash);
       if (replayViewerID !== null) {
+        if (this.lobbyHandle !== null || this.joinInFlight) {
+          void this.handleLeaveLobby();
+        }
+        this.joinModal?.close();
         void this.openReplayViewer(replayViewerID);
         return;
       }
@@ -1194,6 +1198,10 @@ class Client {
     // The replay viewer takes over the page (loaded on demand).
     const replayViewerID = parseReplayViewerHash(hash);
     if (replayViewerID !== null) {
+      if (this.lobbyHandle !== null || this.joinInFlight) {
+        await this.handleLeaveLobby();
+      }
+      this.joinModal?.close();
       await this.openReplayViewer(replayViewerID);
       return;
     }

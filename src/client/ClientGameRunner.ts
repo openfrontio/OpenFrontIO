@@ -675,7 +675,7 @@ function mountWebGLFrameLoop(
   return { builder, stopFrameLoop };
 }
 
-async function createClientGame(
+export async function createClientGame(
   lobbyConfig: LobbyConfig,
   clientID: ClientID | undefined,
   eventBus: EventBus,
@@ -733,6 +733,7 @@ async function createClientGame(
         gameMap.miniGameMap,
       );
     } catch (e) {
+      worker.cleanup();
       console.warn("Failed to restore maps from snapshot", e);
       throw e;
     }
@@ -740,6 +741,7 @@ async function createClientGame(
       const header = readSnapshotHeader(lobbyConfig.resumeSnapshot);
       initialStartTick = header.startTick ?? null;
     } catch (e) {
+      worker.cleanup();
       console.warn("Failed to read snapshot header for initial startTick", e);
       throw e;
     }
