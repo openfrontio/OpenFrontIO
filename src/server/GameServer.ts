@@ -1816,6 +1816,7 @@ export class GameServer {
         this.visibleAt,
         this.gameStartInfo.tribes,
         [...this.reports.values()],
+        this.publicGameType,
       ),
     );
   }
