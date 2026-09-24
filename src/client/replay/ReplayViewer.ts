@@ -151,6 +151,7 @@ export class ReplayViewer extends LitElement {
   @state() private continueModalOpen = false;
   @state() private continuePlayers: ContinuePlayerOption[] = [];
   @state() private continueInitialPlayerID = "";
+  private continueRequestCount = 0;
 
   private record: GameRecord | null = null;
   /** The processing worker, while it runs. */
@@ -813,18 +814,26 @@ export class ReplayViewer extends LitElement {
     const focusID = adapter?.focus?.id();
     this.continueInitialPlayerID =
       players.find((p) => p.id === focusID)?.id ?? players[0]?.id ?? "";
+    this.continueRequestCount++;
     this.continueModalOpen = true;
+  }
+
+  private closeContinueModal(): void {
+    this.continueRequestCount++;
+    this.continueModalOpen = false;
   }
 
   private async handleContinueGame(
     e: CustomEvent<{ playerID: string; difficulty: Difficulty }>,
   ): Promise<void> {
+    const requestId = this.continueRequestCount;
     const modal = this.querySelector<ContinueGameModal>("continue-game-modal");
     modal?.setLoading(true);
     try {
       let record = this.record;
       if (!record) {
         const res = await fetchReplayRecord(this.gameID);
+        if (this.continueRequestCount !== requestId) return;
         if (res.kind === "record") {
           this.record = res.record;
           record = res.record;
@@ -844,6 +853,7 @@ export class ReplayViewer extends LitElement {
         localClientID,
         e.detail.difficulty,
       );
+      if (this.continueRequestCount !== requestId) return;
 
       document.dispatchEvent(
         new CustomEvent("join-lobby", {
@@ -857,9 +867,10 @@ export class ReplayViewer extends LitElement {
           composed: true,
         }),
       );
-      this.continueModalOpen = false;
+      this.closeContinueModal();
       modal?.setLoading(false);
     } catch (err) {
+      if (this.continueRequestCount !== requestId) return;
       console.error("replay viewer: continue game failed:", err);
       modal?.setLoading(
         false,
@@ -930,7 +941,7 @@ export class ReplayViewer extends LitElement {
           .tick=${this.tick}
           .players=${this.continuePlayers}
           .initialPlayerID=${this.continueInitialPlayerID}
-          @close=${() => (this.continueModalOpen = false)}
+          @close=${() => this.closeContinueModal()}
           @continue=${(
             e: CustomEvent<{ playerID: string; difficulty: Difficulty }>,
           ) => void this.handleContinueGame(e)}
