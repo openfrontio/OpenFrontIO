@@ -36,13 +36,14 @@ import { ensureServerList, redirectToGameVersion } from "./ServerList";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { SendSpectateEvent } from "./Transport";
 import { normaliseMapKey } from "./Utils";
-import { isReplayShellHost, versionedReplayUrl } from "./VersionedReplay";
+import { findVersionedShell } from "./VersionedReplay";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
+import { openReplayViewer } from "./replay/ReplayEntry";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
 @customElement("join-lobby-modal")
@@ -1469,6 +1470,13 @@ export class JoinLobbyModal extends BaseModal {
     // If the modal closes as part of joining the replay, do not leave/reset URL
     this.leaveLobbyOnClose = false;
 
+    // This build can replay it, so open the replay viewer (unless the
+    // viewer already sent this game back to the client-side replay).
+    if (openReplayViewer(lobbyId, parsed.data)) {
+      this.close();
+      return "success";
+    }
+
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -1486,26 +1494,14 @@ export class JoinLobbyModal extends BaseModal {
   // The record was produced by a different build. replay.<domain>/<gameId>
   // serves the matching versioned shell (uploaded by update.sh on every
   // deploy); if it exists, navigate there and let that build replay the game
-  // (#4934). The probe requires text/html so a misrouted host that answers
-  // 200 with something else can't strand the player on a broken page.
+  // (#4934).
   private async redirectToVersionedShell(lobbyId: string): Promise<boolean> {
-    if (isReplayShellHost(window.location.hostname)) {
-      return false;
-    }
-    const url = versionedReplayUrl(ClientEnv.jwtAudience(), lobbyId);
+    const url = await findVersionedShell(
+      ClientEnv.jwtAudience(),
+      lobbyId,
+      window.location.hostname,
+    );
     if (url === null) {
-      return false;
-    }
-    try {
-      const probe = await fetch(url, { method: "HEAD" });
-      if (!probe.ok) {
-        return false;
-      }
-      const contentType = probe.headers.get("content-type") ?? "";
-      if (!contentType.includes("text/html")) {
-        return false;
-      }
-    } catch {
       return false;
     }
     window.location.href = url;

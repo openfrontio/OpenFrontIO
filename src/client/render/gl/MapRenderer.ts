@@ -300,6 +300,11 @@ export class MapRenderer {
     this.storedLayers = layers;
     this.storedLayerImages = images;
     this.renderer?.setMapLayers(layers, images);
+    // The images can arrive after nukes have hit (a replay seeks ahead
+    // while they load), and the new layer passes start undamaged.
+    for (const [id, mask] of this.layerDestroyedMasks) {
+      this.renderer?.setLayerDestroyedMask(id, mask);
+    }
   }
 
   /** Toggle visibility of a single map layer. */
@@ -330,7 +335,11 @@ export class MapRenderer {
 
   /** Bulk-update the destroyed mask for a nukeable layer. */
   setLayerDestroyedMask(layerId: string, mask: Uint8Array): void {
-    this.layerDestroyedMasks.set(layerId, new Uint8Array(mask));
+    // Copied into the mask kept for context restore, which a replay's
+    // seeks reuse rather than allocating a map-sized array each time.
+    const kept = this.layerDestroyedMasks.get(layerId);
+    if (kept?.length === mask.length) kept.set(mask);
+    else this.layerDestroyedMasks.set(layerId, new Uint8Array(mask));
     this.renderer?.setLayerDestroyedMask(layerId, mask);
   }
 
