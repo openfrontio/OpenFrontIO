@@ -2361,6 +2361,7 @@
     "verified_use_hint": "Play under your verified account name"
   },
   "win_modal": {
+    "buy_on_steam": "Buy OpenFront on Steam!",
     "died": "You died",
     "discord_description": "Connect with players, discover new features, and win prizes!",
     "exit": "Exit Game",
