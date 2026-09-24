@@ -1777,6 +1777,8 @@
   "public_lobby": {
     "connecting": "Connecting to lobby...",
     "custom": "Custom",
+    "custom_default_settings": "Standard settings",
+    "custom_tooltip_title": "This is a player-created lobby",
     "invite_friends": "Invite Friends",
     "join_timeout": "You didn't enter the game in time.",
     "notify_armed": "Alert on: a sound will play when your game starts",

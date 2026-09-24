@@ -5,6 +5,7 @@ import { PublicGameInfo } from "../../core/Schemas";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
+import { notableLobbySettings } from "../utilities/LobbySettingsSummary";
 import { getMapName, getModifierLabels, translateText } from "../Utils";
 import "./ConfirmDialog";
 
@@ -180,6 +181,7 @@ export function lobbyCard({
     lobby.gameConfig?.doomsdayClock?.speed,
   ).sort((a, b) => b.length - a.length);
   const trustedOnly = lobby.gameConfig?.trusted === true;
+  const custom = lobby.custom === true;
 
   const state = disabled
     ? "opacity-50 cursor-not-allowed pointer-events-none"
@@ -225,9 +227,12 @@ export function lobbyCard({
       </div>
 
       <div
-        class="absolute inset-x-0 bottom-0 flex flex-col bg-black/65 px-3 py-2 ${trustedOnly
-          ? "pr-10"
-          : ""}"
+        class="absolute inset-x-0 bottom-0 flex flex-col bg-black/65 px-3 py-2 ${trustedOnly &&
+        custom
+          ? "pr-20"
+          : trustedOnly || custom
+            ? "pr-10"
+            : ""}"
       >
         <span
           class="${BADGE} absolute bottom-full right-2 mb-1 flex items-center gap-1 px-2 py-0.5 text-xs font-bold tabular-nums tracking-widest"
@@ -245,6 +250,7 @@ export function lobbyCard({
           </svg>
         </span>
         ${trustedOnly ? trustLockIcon(viewerTrusted) : nothing}
+        ${custom ? customInfoIcon(lobby, trustedOnly) : nothing}
         ${title
           ? html`<p
               class="text-sm font-bold leading-tight tracking-wider @[20rem]:text-base"
@@ -256,6 +262,74 @@ export function lobbyCard({
       </div>
     </button>
   `;
+}
+
+/**
+ * Bottom-right info icon on a player's listed lobby. Hovering shows that a
+ * player made it and the settings it runs with, since a custom lobby in a
+ * public queue otherwise looks like a scheduled game.
+ */
+function customInfoIcon(
+  lobby: PublicGameInfo,
+  besideLock: boolean,
+): TemplateResult {
+  const c = lobby.gameConfig;
+  const enabled = translateText("common.enabled");
+  const lines: string[] = [];
+  if (c?.maxPlayers !== undefined) {
+    lines.push(
+      `${translateText("host_modal.list_lobby_max_players")}: ${c.maxPlayers}`,
+    );
+  }
+  if (c) {
+    for (const s of notableLobbySettings(c, null)) {
+      // Some labels (e.g. game_settings.bots) already end with ": ".
+      const label = s.label.replace(/[:\uFF1A\s]+$/u, "");
+      lines.push(s.value === enabled ? label : `${label}: ${s.value}`);
+    }
+    if ((c.disabledUnits?.length ?? 0) > 0) {
+      lines.push(
+        `${translateText("private_lobby.disabled_units")}: ${c.disabledUnits!.length}`,
+      );
+    }
+  }
+  const title = translateText("public_lobby.custom_tooltip_title");
+  // The tooltip is the icon's sibling, not its child, so it is positioned
+  // against the full-width bottom bar and wraps inside the card (which clips
+  // overflow) instead of hanging off a 16px icon.
+  return html`<span
+      class="${BADGE} peer/custom absolute bottom-2 ${besideLock
+        ? "right-11"
+        : "right-2"} flex items-center px-1.5 py-1 text-orange-400"
+      aria-label=${title}
+      data-custom-info
+    >
+      <svg
+        class="size-4"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z"
+          clip-rule="evenodd"
+        />
+      </svg>
+    </span>
+    <span
+      role="tooltip"
+      class="pointer-events-none absolute inset-x-2 bottom-full mb-1.5 hidden flex-col gap-0.5 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs normal-case tracking-normal text-white shadow-xl peer-hover/custom:flex"
+    >
+      <span class="font-bold">${title}</span>
+      <!-- One wrapped line, not one per setting: the homepage cards are
+           short. -->
+      <span class="text-white/80"
+        >${lines.length > 0
+          ? lines.join(" · ")
+          : translateText("public_lobby.custom_default_settings")}</span
+      >
+    </span>`;
 }
 
 /** Bottom-right lock: red and closed when the viewer can't join, green and open when they can. */
