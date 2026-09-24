@@ -111,6 +111,8 @@ export class GameImpl implements Game {
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
 
+  private _mirvsLaunched = 0;
+
   private _isPaused: boolean = false;
   private _winner: Player | Team | null = null;
   private _waterManager: WaterManager;
@@ -1346,6 +1348,12 @@ export class GameImpl implements Game {
   }
   railNetwork(): RailNetwork {
     return this._railNetwork;
+  }
+  mirvsLaunched(): number {
+    return this._mirvsLaunched;
+  }
+  recordMirvLaunch(): void {
+    this._mirvsLaunched++;
   }
   miniWaterHPA(): PathFinder<number> | null {
     return this._waterManager.miniWaterHPA();
