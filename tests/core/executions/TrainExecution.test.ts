@@ -59,6 +59,7 @@ describe("TrainExecution", () => {
     expect(exec.isActive()).toBe(true);
     exec.tick(4);
     expect(exec.isActive()).toBe(false);
+    expect(exec.tradeStopsVisited()).toBe(4);
   });
 
   it("rejects detour when railroad is rerouted off original motion plan", async () => {
