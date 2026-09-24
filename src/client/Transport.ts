@@ -483,9 +483,10 @@ export class Transport {
           // order, that the server seeded its own from.
           this.zbinCtx = createGameWireContext(msg.gameStartInfo.players);
         }
-        if (!this.isSessionReady) {
-          // We reached a lobby, so the redirect that sent us here is spent:
-          // drop the source's latch so it can route this player again later.
+        if (msg.type === "lobby_info" || msg.type === "start") {
+          // Admitted, so the redirect that sent us here is spent: drop the
+          // source's latch so it can route this player again later. Any other
+          // frame proves nothing — a full sibling sends an error frame first.
           const from = sessionStorage.getItem(POOL_REDIRECT_FROM);
           if (from !== null) {
             sessionStorage.removeItem(poolRedirectLatch(from));

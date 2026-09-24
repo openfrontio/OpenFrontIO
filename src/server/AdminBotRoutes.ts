@@ -90,6 +90,11 @@ function parseCreateGameRequest(reqBody: unknown): ParsedCreateGame {
     return fail(400, { error: z.prettifyError(parsed.error) });
   }
   const config = parsed.data;
+  // Members name each other by id, and an id only exists once the server mints
+  // it, so a caller can never supply a valid pool; create_pool builds one.
+  if (config.pool !== undefined) {
+    return fail(400, { error: "pool_is_generated" });
+  }
   // Optional public listing (#4480). Read alongside the config, not from it:
   // `listed` lives on GameServer precisely so it can't be smuggled through
   // GameConfig, and the schema parse above strips it from `config` for us.
@@ -269,13 +274,6 @@ export function registerAdminBotRoutes(opts: {
       return res.status(500).json({ error: "Could not allocate game id" });
     }
 
-    // A member has to be in its own pool, or it keeps nobody and routes every
-    // joiner away. Only checkable once the id exists, so unlike the guards
-    // above it costs a minted id — but still no lobby.
-    if (config.pool !== undefined && !config.pool.siblings.includes(id)) {
-      return res.status(400).json({ error: "pool_missing_own_id", id });
-    }
-
     const game = gm.createGame(
       id,
       config,
@@ -319,9 +317,6 @@ export function registerAdminBotRoutes(opts: {
     if (!parsed.ok) return res.status(parsed.status).json(parsed.body);
     const request = parsed.value;
 
-    if (request.config.pool !== undefined) {
-      return res.status(400).json({ error: "pool_is_generated" });
-    }
     // A team pin names publicIds for ONE lobby. Repeated across members it
     // would be inert everywhere the hash did not send those players.
     if (request.teams !== undefined) {
@@ -362,6 +357,14 @@ export function registerAdminBotRoutes(opts: {
     // member would spend N of the cluster's hosted-lobby slots on one event
     // and gain nothing, since a joiner who picks any member is routed anyway.
     applyListing(lobbies[0], request);
+    // Most joiners are routed off the entry, so every member has to start on
+    // the entry's deadline, not just the one that is listed.
+    const deadline = lobbies[0].autoStartAt();
+    if (deadline !== undefined) {
+      for (const sibling of lobbies.slice(1)) {
+        sibling.setPoolAutoStartAt(deadline);
+      }
+    }
 
     log.info(`admin bot created a pool of ${count}`, {
       poolId: pool.id,

@@ -13,16 +13,26 @@ function captureHandler(opts: { taken?: string[] } = {}) {
     },
     get() {},
   };
-  const created: { id: string; config: any; listed: boolean }[] = [];
+  const created: {
+    id: string;
+    config: any;
+    listed: boolean;
+    autoStartAt?: number;
+  }[] = [];
   const taken = new Set(opts.taken ?? []);
   const gm: any = {
     game: (id: string) => (taken.has(id) ? {} : null),
     createGame(id: string, config: any) {
-      const record = { id, config, listed: false };
+      const record: (typeof created)[number] = { id, config, listed: false };
       created.push(record);
       return {
         setListed: (v: boolean) => {
           record.listed = v;
+          record.autoStartAt = v ? LISTED_DEADLINE : undefined;
+        },
+        autoStartAt: () => record.autoStartAt,
+        setPoolAutoStartAt: (deadline: number) => {
+          record.autoStartAt = deadline;
         },
         setFeatured: vi.fn(),
         gameInfo: () => ({ gameID: id }),
@@ -51,6 +61,7 @@ function mockRes() {
 }
 
 const BASE = { gameMap: "World", gameMode: "Free For All" };
+const LISTED_DEADLINE = 1_700_000_300_000;
 
 // Ids are minted one at a time; hand out a distinct one per call.
 let minted: string[];
@@ -83,8 +94,7 @@ describe("admin bot create_pool", () => {
       expect(pool).toEqual(pools[0]);
       expect(pool.siblings).toEqual(["aaaa1111", "bbbb2222", "cccc3333"]);
     }
-    // And each member is in its own pool, which is what the create_game guard
-    // refuses to create by hand.
+    // And each member is in its own pool, or it would route every joiner away.
     for (const member of created) {
       expect(member.config.pool.siblings).toContain(member.id);
     }
@@ -100,6 +110,28 @@ describe("admin bot create_pool", () => {
     const { handler, created } = captureHandler();
     handler({ body: { ...BASE, count: 3, listed: true } }, mockRes());
     expect(created.map((c) => c.listed)).toEqual([true, false, false]);
+  });
+
+  it("starts every member on the entry's deadline", () => {
+    // Most joiners are routed off the entry, so an unlisted member with no
+    // deadline would hold them until the maximum game duration.
+    const { handler, created } = captureHandler();
+    handler({ body: { ...BASE, count: 3, listed: true } }, mockRes());
+    expect(created.map((c) => c.autoStartAt)).toEqual([
+      LISTED_DEADLINE,
+      LISTED_DEADLINE,
+      LISTED_DEADLINE,
+    ]);
+  });
+
+  it("gives an unlisted pool no deadline, like an unlisted lobby", () => {
+    const { handler, created } = captureHandler();
+    handler({ body: { ...BASE, count: 3 } }, mockRes());
+    expect(created.map((c) => c.autoStartAt)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
   });
 
   it("refuses a count above the cap", () => {

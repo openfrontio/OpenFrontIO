@@ -234,6 +234,10 @@ export class GameServer {
   // ListingState.ts).
   private readonly listing = new ListingState();
 
+  // A pool member other than the entry is never listed, so it has no listing
+  // deadline of its own and takes the entry's; otherwise nothing starts it.
+  private poolAutoStartAt?: number;
+
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
   private visibleAt?: number;
@@ -1606,7 +1610,7 @@ export class GameServer {
       serverTime: Date.now(),
       publicGameType: this.publicGameType,
       listed: this.isPublic() ? undefined : this.listing.isListed(),
-      autoStartAt: this.listing.autoStartAt(),
+      autoStartAt: this.autoStartAt(),
       label: this.listing.lobbyLabel(),
       accent: this.listing.lobbyAccent(),
       featured: this.listing.isFeatured() ? true : undefined,
@@ -1647,7 +1651,12 @@ export class GameServer {
   }
 
   public autoStartAt(): number | undefined {
-    return this.listing.autoStartAt();
+    return this.listing.autoStartAt() ?? this.poolAutoStartAt;
+  }
+
+  // Only create_pool calls this.
+  public setPoolAutoStartAt(deadline: number): void {
+    this.poolAutoStartAt = deadline;
   }
 
   public isFeatured(): boolean {
@@ -1668,14 +1677,14 @@ export class GameServer {
   }
 
   // Called from GameManager's tick while in the Lobby phase: once the
-  // listed deadline passes, arm the normal start countdown (same path as
+  // listed (or pool) deadline passes, arm the normal start countdown (same path as
   // the host's Start button). Cancelling the countdown re-arms it on the
   // next tick, so the only way out is to unlist.
   public maybeAutoStartListed(): void {
     if (this.hasStarted() || this.startsAt !== undefined) {
       return;
     }
-    const deadline = this.listing.autoStartAt();
+    const deadline = this.autoStartAt();
     if (deadline === undefined || Date.now() < deadline) {
       return;
     }

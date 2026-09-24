@@ -147,11 +147,31 @@ describe("Transport pool redirect", () => {
     expect(sessionStorage.getItem("pool-redirect-from")).toBeNull();
   });
 
-  it("routes again on a later visit to the entry lobby", () => {
-    // The ordinary path this protects: redirected to a sibling, found it
-    // full, came back to the entry point and tried again.
+  it("keeps the latch when the sibling refuses us", () => {
+    // A full sibling sends an error frame right before it closes. That is not
+    // an admission, so going back to the entry shows the refusal instead of
+    // silently sending the player to the same full sibling again.
     connect(ENTRY).deliver({ type: "redirect", gameID: SIBLING });
     connect(SIBLING).deliver({ type: "error", error: "full-lobby" });
+    expect(latch(ENTRY)).not.toBeNull();
+
+    mockLocationHref = HOME;
+    connect(ENTRY).deliver({ type: "redirect", gameID: SIBLING });
+
+    expect(window.location.href).toBe(HOME);
+    expect(modalMocks.showInGameConfirm).toHaveBeenCalledTimes(1);
+    expect(modalMocks.showInGameConfirm.mock.calls[0][0]).toContain(
+      CloseReason.PoolRedirect,
+    );
+  });
+
+  it("routes again on a later visit once a sibling admitted us", () => {
+    connect(ENTRY).deliver({ type: "redirect", gameID: SIBLING });
+    connect(SIBLING).deliver({
+      type: "lobby_info",
+      lobby: { gameID: SIBLING, serverTime: 1_700_000_000_000 },
+      myClientID: "cl001234",
+    });
 
     mockLocationHref = HOME;
     connect(ENTRY).deliver({ type: "redirect", gameID: SIBLING });

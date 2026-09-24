@@ -129,8 +129,9 @@ describe("GameServer - pool routing (GameConfig.pool)", () => {
   });
 
   it("routes a joiner with no publicId by their persistentID", () => {
-    // Anonymous players are pooled like everyone else. Nothing is carved out
-    // for them, so both answers have to turn up across a spread of them.
+    // Dev-only: in production every joiner, anonymous or not, has a publicId,
+    // and a raw persistentID token is refused. This pins the fallback so a dev
+    // server still pools, and both answers have to turn up across a spread.
     const results = new Set(
       Array.from({ length: 40 }, (_, i) =>
         makeGame().joinClient(makeClient(C1, `anon-${i}`, undefined)),
@@ -257,6 +258,20 @@ describe("GameServer - pool routing (GameConfig.pool)", () => {
     const newWs = makeMockWs();
     expect(game.rejoinClient(newWs as any, "p1")).toBe(true);
     expect(newWs.sent().filter((m) => m.type === "redirect")).toEqual([]);
+  });
+
+  it("starts an unlisted member on the pool deadline", () => {
+    const game = makeGame();
+    const deadline = Date.now() + 60_000;
+    game.setPoolAutoStartAt(deadline);
+    expect(game.gameInfo().autoStartAt).toBe(deadline);
+
+    game.maybeAutoStartListed();
+    expect(game.gameInfo().startsAt).toBeUndefined();
+
+    vi.advanceTimersByTime(60_000);
+    game.maybeAutoStartListed();
+    expect(game.gameInfo().startsAt).toBeDefined();
   });
 
   it("keeps the pool out of gameInfo, without touching the stored config", () => {
