@@ -127,6 +127,7 @@ export class HostLobbyModal extends BaseModal {
   // Queue price from cosmetics.json; the Queue button hides without it.
   @state() private queuePriceHard: number | null = null;
   @state() private queueRequestInFlight: boolean = false;
+  @state() private showQueueConfirm: boolean = false;
   @state() private insufficientInfo: InsufficientCurrency | null = null;
   private hardBalance = 0;
 
@@ -311,7 +312,7 @@ export class HostLobbyModal extends BaseModal {
       class="flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-all shrink-0 disabled:opacity-50"
       title=${translateText("host_modal.queue_tooltip")}
       ?disabled=${this.queueRequestInFlight}
-      @click=${() => void this.handleQueue()}
+      @click=${() => (this.showQueueConfirm = true)}
     >
       ${translateText("host_modal.queue")}
       <plutonium-icon .size=${12}></plutonium-icon>
@@ -749,6 +750,21 @@ export class HostLobbyModal extends BaseModal {
               }}
             ></list-lobby-dialog>`
           : ""}
+        ${this.showQueueConfirm && this.queuePriceHard !== null
+          ? html`<confirm-dialog
+              .heading=${translateText("host_modal.queue_confirm_title")}
+              .message=${translateText("host_modal.queue_confirm_body", {
+                price: this.queuePriceHard,
+              })}
+              variant="warning"
+              .confirmText=${translateText("host_modal.queue_confirm")}
+              @cancel=${() => (this.showQueueConfirm = false)}
+              @confirm=${() => {
+                this.showQueueConfirm = false;
+                void this.handleQueue();
+              }}
+            ></confirm-dialog>`
+          : ""}
         <insufficient-currency-dialog
           .info=${this.insufficientInfo}
           @close=${() => (this.insufficientInfo = null)}
@@ -979,6 +995,7 @@ export class HostLobbyModal extends BaseModal {
     this.showListLobbyDialog = false;
     this.queued = false;
     this.queueRequestInFlight = false;
+    this.showQueueConfirm = false;
     this.insufficientInfo = null;
     this.autoStartAt = null;
   }
