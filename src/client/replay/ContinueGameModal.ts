@@ -128,15 +128,12 @@ export class ContinueGameModal extends LitElement {
             </button>
           </div>
 
-          <!-- Time & Tick Info -->
+          <!-- Time Info -->
           <div
             class="px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-sm"
           >
             <span class="text-zinc-400">
-              ${translateText("replay_viewer.tick_info", {
-                time: timeStr,
-                tick: String(this.tick),
-              })}
+              ${translateText("replay_viewer.game_time")}
             </span>
             <span
               class="font-mono text-xs px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-medium"

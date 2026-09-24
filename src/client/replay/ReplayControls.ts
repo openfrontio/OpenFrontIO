@@ -191,6 +191,11 @@ export class ReplayControls extends LitElement {
             ),
             () => this.emit("replay-toggle-play"),
           )}
+          ${iconButton(
+            speedIcon,
+            translateText("replay_panel.replay_speed"),
+            () => (this.speedMenuOpen = !this.speedMenuOpen),
+          )}
           ${this.canContinue
             ? iconButton(
                 continueIcon,
@@ -198,11 +203,6 @@ export class ReplayControls extends LitElement {
                 () => this.emit("replay-continue"),
               )
             : nothing}
-          ${iconButton(
-            speedIcon,
-            translateText("replay_panel.replay_speed"),
-            () => (this.speedMenuOpen = !this.speedMenuOpen),
-          )}
           ${iconButton(
             settingsIcon,
             translateText("user_setting.game_menu_title"),
