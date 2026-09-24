@@ -12,6 +12,7 @@ import {
   PartialGameRecord,
   PlayerRecord,
   PlayerReport,
+  PublicGameType,
   Tribe,
   Turn,
   Winner,
@@ -306,6 +307,8 @@ export function createPartialGameRecord(
   // Player reports filed during the game (multiplayer only; see
   // GameServer.handleReport). The API ingests them for moderation.
   reports?: PlayerReport[],
+  // Public lobbies only (see GameEndInfoSchema.publicGameType).
+  publicGameType?: PublicGameType,
 ): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
   const num_turns = allTurns.length;
@@ -335,6 +338,7 @@ export function createPartialGameRecord(
       winner,
       tribes,
       reports,
+      publicGameType,
     },
     version: "v0.0.2",
     turns,

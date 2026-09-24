@@ -1215,6 +1215,11 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   num_turns: z.number(),
   winner: WinnerSchema,
   lobbyFillTime: z.number().nonnegative(),
+  // The master-scheduled lobby slot this game filled (ffa/team/special), or
+  // "hosted" for a subscriber-listed lobby. Absent on private and
+  // singleplayer games. Only the record carries it (not GameStartInfo, which
+  // is on the wire): infra measures per-type join rates for map rotation.
+  publicGameType: PublicGameTypeSchema.optional(),
   // Absent on singleplayer records and on records read back from the API,
   // which scrubs them like persistentID.
   reports: PlayerReportSchema.array().optional(),
@@ -1241,6 +1246,9 @@ export const AnalyticsRecordSchema = PartialAnalyticsRecordSchema.extend({
   // identity these fields record) is involved.
   subdomain: z.string().optional(),
   domain: z.string().optional(),
+  // The site the server registered under (ClusterCheckin.registeredSite),
+  // which blue/green share. Absent under local dev and on older records.
+  site: z.string().optional(),
 });
 
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
