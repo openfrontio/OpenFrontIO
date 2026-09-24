@@ -49,8 +49,9 @@ function setup(rate: Rate = "ok") {
     kick: vi.fn(),
   };
   const check = vi.fn((): Rate => rate);
+  const log = mockLogger();
   const ingress = new SocketIngress(
-    mockLogger(),
+    log,
     new MatchTelemetryRecorder(emitter, cid("match"), "build-1"),
     view,
     { check },
@@ -59,7 +60,7 @@ function setup(rate: Rate = "ok") {
     emitter.events
       .filter((e) => e.type === "intent_observed")
       .map((e) => e.payload);
-  return { ingress, view, check, observed };
+  return { ingress, view, check, observed, log };
 }
 
 const P1 = cid("p1");
@@ -176,7 +177,7 @@ describe("SocketIngress.receive", () => {
   );
 
   it("drops a rate-limited non-intent quietly", () => {
-    const { ingress, view, observed } = setup("limit");
+    const { ingress, view, observed, log } = setup("limit");
     ingress.receive(
       makeClient({ clientID: P1 }),
       clientFrame({ type: "ping" }),
@@ -184,10 +185,17 @@ describe("SocketIngress.receive", () => {
     expect(view.onMessage).not.toHaveBeenCalled();
     expect(view.kick).not.toHaveBeenCalled();
     expect(observed()).toEqual([]);
+    // A misbehaving client can produce thousands of these a minute; the
+    // aggregate is already counted via telemetry, so this must not be warn.
+    expect(log.warn).not.toHaveBeenCalled();
+    expect(log.debug).toHaveBeenCalledWith(
+      expect.stringContaining("rate limit exceeded"),
+      expect.objectContaining({ clientID: P1 }),
+    );
   });
 
   it("drops what a spectator sends for the simulation, but not housekeeping", () => {
-    const { ingress, view, observed } = setup();
+    const { ingress, view, observed, log } = setup();
     const spectator = makeClient({ clientID: P1, spectator: true });
 
     ingress.receive(spectator, spawn());
@@ -198,6 +206,12 @@ describe("SocketIngress.receive", () => {
     expect(view.onMessage).not.toHaveBeenCalled();
     // Not a rejection of the intent, just a drop: nothing to attribute.
     expect(observed()).toEqual([]);
+    // A probing spectator can produce one line per message; must not be warn.
+    expect(log.warn).not.toHaveBeenCalled();
+    expect(log.debug).toHaveBeenCalledWith(
+      expect.stringContaining("from spectator"),
+      expect.objectContaining({ clientID: P1 }),
+    );
 
     ingress.receive(spectator, clientFrame({ type: "ping" }));
     expect(view.onMessage).toHaveBeenCalledWith(spectator, { type: "ping" });

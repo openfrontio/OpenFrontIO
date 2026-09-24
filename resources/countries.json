@@ -29,6 +29,11 @@
     "name": "Adygea"
   },
   {
+    "code": "Aden State",
+    "continent": "Asia",
+    "name": "Aden State"
+  },
+  {
     "code": "af",
     "continent": "Asia",
     "name": "Afghanistan"
@@ -82,6 +87,11 @@
     "code": "Alaska",
     "continent": "North America",
     "name": "Alaska"
+  },
+  {
+    "code": "Alawi Sheikhdom",
+    "continent": "Asia",
+    "name": "Alawi Sheikhdom"
   },
   {
     "code": "alberta",
@@ -193,6 +203,11 @@
     "name": "Anti-Pope"
   },
   {
+    "code": "Aqrabi Sheikhdom",
+    "continent": "Asia",
+    "name": "Aqrabi Sheikhdom"
+  },
+  {
     "code": "aquitaine",
     "continent": "Europe",
     "name": "Aquitaine"
@@ -271,6 +286,11 @@
     "code": "Atlanta",
     "continent": "North America",
     "name": "Atlanta"
+  },
+  {
+    "code": "nz-auckland",
+    "continent": "Oceania",
+    "name": "Auckland"
   },
   {
     "code": "Austin",
@@ -370,6 +390,11 @@
   {
     "code": "baguette",
     "name": "Baguette"
+  },
+  {
+    "code": "Baidah Sultanate",
+    "continent": "Asia",
+    "name": "Baidah Sultanate"
   },
   {
     "code": "es-ib",
@@ -710,6 +735,11 @@
     "name": "Champagne-Ardenne"
   },
   {
+    "code": "nz-chatham",
+    "continent": "Oceania",
+    "name": "Chatham Islands"
+  },
+  {
     "code": "Cherokee Nation",
     "continent": "North America",
     "name": "Cherokee"
@@ -743,6 +773,11 @@
     "code": "Chinook",
     "continent": "North America",
     "name": "Chinook"
+  },
+  {
+    "code": "nz-christchurch",
+    "continent": "Oceania",
+    "name": "Christchurch"
   },
   {
     "code": "cx",
@@ -942,6 +977,11 @@
     "name": "Dallas"
   },
   {
+    "code": "Dathina Sheikhdom",
+    "continent": "Asia",
+    "name": "Dathina Sheikhdom"
+  },
+  {
     "code": "Delaware",
     "continent": "North America",
     "name": "Delaware"
@@ -1012,6 +1052,11 @@
     "name": "Dumnonia"
   },
   {
+    "code": "nz-dunedin",
+    "continent": "Oceania",
+    "name": "Dunedin"
+  },
+  {
     "code": "Dutch East India Company",
     "name": "Dutch East India Company"
   },
@@ -1071,6 +1116,16 @@
     "name": "Emirate of Asir"
   },
   {
+    "code": "Emirate of Beihan",
+    "continent": "Asia",
+    "name": "Emirate of Beihan"
+  },
+  {
+    "code": "Emirate of Dhala",
+    "continent": "Asia",
+    "name": "Emirate of Dhala"
+  },
+  {
     "code": "granada",
     "continent": "Europe",
     "name": "Emirate of Granada"
@@ -1100,6 +1155,11 @@
     "code": "gq",
     "continent": "Africa",
     "name": "Equatorial Guinea"
+  },
+  {
+    "code": "Eritrea (Ethiopian)",
+    "continent": "Africa",
+    "name": "Eritrea (Ethiopian)"
   },
   {
     "code": "er",
@@ -1457,6 +1517,16 @@
     "name": "Haida"
   },
   {
+    "code": "nu-hak",
+    "continent": "Oceania",
+    "name": "Hakupu"
+  },
+  {
+    "code": "Haushabi",
+    "continent": "Asia",
+    "name": "Haushabi Sultanate"
+  },
+  {
     "code": "fr-hdf",
     "continent": "Europe",
     "name": "Hauts-de-France"
@@ -1666,6 +1736,11 @@
     "name": "Karelo-Finnish SSR"
   },
   {
+    "code": "Kathiri State",
+    "continent": "Asia",
+    "name": "Kathiri State"
+  },
+  {
     "code": "Kayah",
     "continent": "Asia",
     "name": "Kayah"
@@ -1848,6 +1923,11 @@
     "code": "Kokang",
     "continent": "Asia",
     "name": "Kokang"
+  },
+  {
+    "code": "nz-koru",
+    "continent": "Oceania",
+    "name": "Koru"
   },
   {
     "code": "xk",
@@ -2052,6 +2132,11 @@
     "name": "Louisiana"
   },
   {
+    "code": "Lower Aulaqi Sultanate",
+    "continent": "Asia",
+    "name": "Lower Aulaqi Sultanate"
+  },
+  {
     "code": "DE-NI",
     "continent": "Europe",
     "name": "Lower Saxony"
@@ -2100,6 +2185,11 @@
     "code": "mg",
     "continent": "Africa",
     "name": "Madagascar"
+  },
+  {
+    "code": "Mahra Sultanate",
+    "continent": "Asia",
+    "name": "Mahra Sultanate"
   },
   {
     "code": "Maine (1901)",
@@ -2411,6 +2501,11 @@
     "name": "Nantucket"
   },
   {
+    "code": "nz-napier",
+    "continent": "Oceania",
+    "name": "Napier"
+  },
+  {
     "code": "Napoleon",
     "continent": "Europe",
     "name": "Napoleon"
@@ -2453,6 +2548,11 @@
     "code": "Negeri Sembilan",
     "continent": "Asia",
     "name": "Negeri Sembilan"
+  },
+  {
+    "code": "nz-nelson",
+    "continent": "Oceania",
+    "name": "Nelson"
   },
   {
     "code": "np",
@@ -2719,6 +2819,11 @@
     "name": "Orlando"
   },
   {
+    "code": "nz-otago",
+    "continent": "Oceania",
+    "name": "Otago"
+  },
+  {
     "code": "Ottoman Empire",
     "continent": "Asia",
     "name": "Ottoman Empire"
@@ -2878,6 +2983,11 @@
     "name": "Polish–Lithuanian Commonwealth"
   },
   {
+    "code": "nz-porirua",
+    "continent": "Oceania",
+    "name": "Porirua"
+  },
+  {
     "code": "pt",
     "continent": "Europe",
     "name": "Portugal"
@@ -2942,6 +3052,11 @@
     "name": "Qing Dynasty"
   },
   {
+    "code": "Qu'aiti Sultanate",
+    "continent": "Asia",
+    "name": "Qu'aiti Sultanate"
+  },
+  {
     "code": "Quebec",
     "continent": "North America",
     "name": "Quebec"
@@ -2960,6 +3075,11 @@
     "code": "Rashidi Emirate",
     "continent": "Asia",
     "name": "Rashidi Emirate"
+  },
+  {
+    "code": "nz-red peak",
+    "continent": "Oceania",
+    "name": "Red Peak"
   },
   {
     "code": "Republic of China",
@@ -3059,6 +3179,11 @@
   {
     "code": "Ror Empire",
     "name": "Ror Empire"
+  },
+  {
+    "code": "nz-ross dependency",
+    "continent": "Oceania",
+    "name": "Ross Dependency"
   },
   {
     "code": "ru",
@@ -3704,6 +3829,11 @@
     "name": "Seychelles"
   },
   {
+    "code": "Sheikdom of Upper Asir",
+    "continent": "Asia",
+    "name": "Sheikdom of Upper Asir"
+  },
+  {
     "code": "Siam",
     "continent": "Asia",
     "name": "Siam"
@@ -3727,6 +3857,21 @@
     "code": "Sikkim",
     "continent": "Asia",
     "name": "Sikkim"
+  },
+  {
+    "code": "nz-silver fern (black)",
+    "continent": "Oceania",
+    "name": "Silver Fern (black)"
+  },
+  {
+    "code": "nz-silver fern (red)",
+    "continent": "Oceania",
+    "name": "Silver Fern (red)"
+  },
+  {
+    "code": "nz-silver fern (white)",
+    "continent": "Oceania",
+    "name": "Silver Fern (white)"
   },
   {
     "code": "sg",
@@ -3776,6 +3921,11 @@
     "code": "za",
     "continent": "Africa",
     "name": "South Africa"
+  },
+  {
+    "code": "South Arabia Federation",
+    "continent": "Asia",
+    "name": "South Arabia Federation"
   },
   {
     "code": "aus_souaus",
@@ -3856,6 +4006,21 @@
     "code": "sd",
     "continent": "Africa",
     "name": "Sudan"
+  },
+  {
+    "code": "Sultanate of Fadhli",
+    "continent": "Asia",
+    "name": "Sultanate of Fadhli"
+  },
+  {
+    "code": "Sultanate of Lahej",
+    "continent": "Asia",
+    "name": "Sultanate of Lahej"
+  },
+  {
+    "code": "Sultanate of Lower Yafa",
+    "continent": "Asia",
+    "name": "Sultanate of Lower Yafa"
   },
   {
     "code": "Sultanate of Nejd",
@@ -4157,9 +4322,24 @@
     "name": "United States of America"
   },
   {
+    "code": "United Tribes of New Zealand",
+    "continent": "Oceania",
+    "name": "United Tribes of New Zealand"
+  },
+  {
+    "code": "nz-upper hutt",
+    "continent": "Oceania",
+    "name": "Upper Hutt"
+  },
+  {
     "code": "Upper Silesia",
     "continent": "Europe",
     "name": "Upper Silesia"
+  },
+  {
+    "code": "Upper Yafa",
+    "continent": "Asia",
+    "name": "Upper Yafa"
   },
   {
     "code": "Urartu",
@@ -4272,6 +4452,11 @@
     "name": "Wa State"
   },
   {
+    "code": "Wahidi Sultanate of Balhaf",
+    "continent": "Asia",
+    "name": "Wahidi Sultanate of Balhaf"
+  },
+  {
     "code": "gb-wls",
     "continent": "Europe",
     "name": "Wales"
@@ -4290,6 +4475,11 @@
     "code": "Washington",
     "continent": "North America",
     "name": "Washington"
+  },
+  {
+    "code": "nz-wellington",
+    "continent": "Oceania",
+    "name": "Wellington"
   },
   {
     "code": "1_Wessex",

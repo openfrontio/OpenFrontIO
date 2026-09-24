@@ -1,10 +1,34 @@
+import { z } from "zod";
 import { renderNumber } from "../../client/Utils";
 import { UnitView } from "../../client/view";
 import { Config } from "../configuration/Config";
-import { SharedWaterCache } from "../execution/nation/SharedWaterCache";
+import {
+  SharedWaterCache,
+  SharedWaterCacheSnapshot,
+} from "../execution/nation/SharedWaterCache";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
+import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
+import {
+  nationData,
+  NationSchema,
+  playerInfoData,
+  PlayerInfoSchema,
+  UnitTypeSchema,
+} from "../snapshot/CommonSchemas";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  VersionedSchema,
+  zInt,
+  zPlayerRef,
+  zRef,
+} from "../snapshot/SnapshotType";
 import { ATTACK_INDEX_SENT } from "../StatsSchemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
@@ -34,6 +58,7 @@ import {
   TeamGameSpawnAreas,
   TerrainType,
   TerraNullius,
+  Tick,
   Trios,
   Unit,
   UnitInfo,
@@ -44,13 +69,17 @@ import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
-import { createRailNetwork } from "./RailNetworkImpl";
+import {
+  createRailNetwork,
+  RailNetworkImpl,
+  RailNetworkSnapshot,
+} from "./RailNetworkImpl";
 import { Stats } from "./Stats";
-import { StatsImpl } from "./StatsImpl";
+import { StatsImpl, StatsSnapshot } from "./StatsImpl";
 import { assignTeams, resolveTeamsList } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
-import { WaterManager } from "./WaterManager";
+import { WaterManager, WaterManagerSnapshot } from "./WaterManager";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -111,6 +140,10 @@ export class GameImpl implements Game {
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
 
+  private _mirvsLaunched = 0;
+  private shipStaggers = { tradeShip: 0, transportShip: 0 };
+  private _nationMirvTargets = new Map<PlayerID, Tick>();
+
   private _isPaused: boolean = false;
   private _winner: Player | Team | null = null;
   private _waterManager: WaterManager;
@@ -127,6 +160,9 @@ export class GameImpl implements Game {
     private _config: Config,
     private _stats: Stats,
     teamGameSpawnAreas?: TeamGameSpawnAreas,
+    // Restoring a snapshot: skip team and player setup, the snapshot
+    // supplies both (see restoreState).
+    restoring: boolean = false,
   ) {
     const constructorStart = performance.now();
 
@@ -142,10 +178,12 @@ export class GameImpl implements Game {
     );
     this._sharedWaterCache = new SharedWaterCache(this);
 
-    if (_config.gameConfig().gameMode === GameMode.Team) {
-      this.populateTeams();
+    if (!restoring) {
+      if (_config.gameConfig().gameMode === GameMode.Team) {
+        this.populateTeams();
+      }
+      this.addPlayers();
     }
-    this.addPlayers();
 
     console.log(
       `[GameImpl] Constructor total: ${(performance.now() - constructorStart).toFixed(0)}ms`,
@@ -1292,6 +1330,9 @@ export class GameImpl implements Game {
   neighbors4(ref: TileRef, out: TileRef[]): number {
     return this._map.neighbors4(ref, out);
   }
+  neighbors8(ref: TileRef, out: TileRef[]): number {
+    return this._map.neighbors8(ref, out);
+  }
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);
   }
@@ -1344,6 +1385,26 @@ export class GameImpl implements Game {
   railNetwork(): RailNetwork {
     return this._railNetwork;
   }
+  mirvsLaunched(): number {
+    return this._mirvsLaunched;
+  }
+  recordMirvLaunch(): void {
+    this._mirvsLaunched++;
+  }
+  nextShipStagger(kind: "tradeShip" | "transportShip"): number {
+    return this.shipStaggers[kind]++ % WaterPathFinder.STAGGER_SPREAD;
+  }
+  nationMirvTargets(): Map<PlayerID, Tick> {
+    return this._nationMirvTargets;
+  }
+  /** The PlayerInfo object this game holds for a player id, if any. */
+  findPlayerInfo(id: PlayerID): PlayerInfo | undefined {
+    return (
+      this._players.get(id)?.info() ??
+      this._humans.find((h) => h.id === id) ??
+      this._nations.find((n) => n.playerInfo.id === id)?.playerInfo
+    );
+  }
   miniWaterHPA(): PathFinder<number> | null {
     return this._waterManager.miniWaterHPA();
   }
@@ -1365,6 +1426,117 @@ export class GameImpl implements Game {
   sharedWaterComponents(player: Player): Set<number> | null {
     return this._sharedWaterCache.get(player);
   }
+  /**
+   * Game-level state for a snapshot. Taken at a tick boundary, so the
+   * per-tick update buffers (updates, tile pairs, player and attack quads,
+   * motion plans, nuke impacts) are always drained and are not stored.
+   */
+  snapshotState(w: SnapshotWriter): GameState {
+    // Exec list order is state: register both lists first so their table
+    // rows come out in tick order.
+    const execs = this.execs.map((e) => w.exec(e));
+    const unInitExecs = this.unInitExecs.map((e) => w.exec(e));
+    return {
+      ticks: this._ticks,
+      startTick: this.startTick,
+      humans: this._humans.map(playerInfoData),
+      nations: this._nations.map(nationData),
+      players: [...this._players.values()].map((p) => w.player(p)),
+      execs,
+      unInitExecs,
+      allianceRequests: this.allianceRequests.map((r) => w.allianceRequest(r)),
+      nextPlayerID: this.nextPlayerID,
+      nextUnitID: this._nextUnitID,
+      nextAllianceID: this.nextAllianceID,
+      units: [...this._unitMap.values()].map((u) => w.unit(u)),
+      planDrivenUnitIds: [...this.planDrivenUnitIds],
+      unitGrid: this.unitGrid.snapshot((u) => w.unit(u)),
+      playerTeams: [...this.playerTeams],
+      botTeam: this.botTeam,
+      isPaused: this._isPaused,
+      winner:
+        this._winner === null
+          ? null
+          : typeof this._winner === "string"
+            ? { team: this._winner }
+            : { player: w.player(this._winner) },
+      unitsVersion: this._unitsVersion,
+      territoryVersion: this._territoryVersion,
+      shipStaggers: { ...this.shipStaggers },
+      nationMirvTargets: [...this._nationMirvTargets],
+      mirvsLaunched: this._mirvsLaunched,
+      rail: w.versioned(
+        RailNetworkSnapshot,
+        (this._railNetwork as RailNetworkImpl).snapshot(w),
+      ),
+      water: w.versioned(WaterManagerSnapshot, this._waterManager.snapshot()),
+      sharedWaterCache: w.versioned(
+        SharedWaterCacheSnapshot,
+        this._sharedWaterCache.snapshot(w),
+      ),
+      stats: w.versioned(StatsSnapshot, (this._stats as StatsImpl).snapshot()),
+    };
+  }
+
+  /** Registers a restored player shell before any state is filled in. */
+  addRestoredPlayer(player: PlayerImpl, id: PlayerID, smallID: number): void {
+    this._players.set(id, player);
+    this._playersBySmallID[smallID - 1] = player;
+  }
+
+  /**
+   * Applies game-level state to a game constructed with `restoring`, once
+   * every player, unit and execution has been restored.
+   */
+  restoreState(s: GameState, r: SnapshotReader): void {
+    this._ticks = s.ticks;
+    this.startTick = s.startTick;
+    this.execs = s.execs.map((i) => r.exec(i));
+    this.unInitExecs = s.unInitExecs.map((i) => r.exec(i));
+    this.allianceRequests = s.allianceRequests.map((i) =>
+      r.allianceRequest<AllianceRequestImpl>(i),
+    );
+    this.nextPlayerID = s.nextPlayerID;
+    this._nextUnitID = s.nextUnitID;
+    this.nextAllianceID = s.nextAllianceID;
+    this._unitMap = new Map(
+      s.units.map((i) => {
+        const u = r.unit(i);
+        return [u.id(), u];
+      }),
+    );
+    this.planDrivenUnitIds = new Set(s.planDrivenUnitIds);
+    this.unitGrid.restoreSnapshot(s.unitGrid, (i) => r.unit(i));
+    this.playerTeams = [...s.playerTeams];
+    this.botTeam = s.botTeam;
+    this._isPaused = s.isPaused;
+    this._winner =
+      s.winner === null
+        ? null
+        : "team" in s.winner
+          ? s.winner.team
+          : r.player(s.winner.player);
+    this._unitsVersion = s.unitsVersion;
+    this._territoryVersion = s.territoryVersion;
+    this.shipStaggers = { ...s.shipStaggers };
+    this._nationMirvTargets = new Map(s.nationMirvTargets);
+    this._mirvsLaunched = s.mirvsLaunched;
+    (this._railNetwork as RailNetworkImpl).restoreSnapshot(
+      readVersioned(RailNetworkSnapshot, s.rail),
+      r,
+    );
+    this._waterManager.restoreSnapshot(
+      readVersioned(WaterManagerSnapshot, s.water),
+    );
+    this._sharedWaterCache.restoreSnapshot(
+      readVersioned(SharedWaterCacheSnapshot, s.sharedWaterCache),
+      r,
+    );
+    (this._stats as StatsImpl).restoreSnapshot(
+      readVersioned(StatsSnapshot, s.stats),
+    );
+  }
+
   conquerPlayer(conqueror: Player, conquered: Player) {
     if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {
       const ships = conquered
@@ -1448,6 +1620,46 @@ export class GameImpl implements Game {
     });
   }
 }
+
+export const GameSnapshot = snapshotType({
+  name: "Game",
+  version: 1,
+  schema: z.object({
+    ticks: zInt(),
+    startTick: zInt().nullable(),
+    humans: z.array(PlayerInfoSchema),
+    nations: z.array(NationSchema),
+    players: z.array(zPlayerRef()),
+    execs: z.array(zRef()),
+    unInitExecs: z.array(zRef()),
+    allianceRequests: z.array(zRef()),
+    nextPlayerID: zInt(),
+    nextUnitID: zInt(),
+    nextAllianceID: zInt(),
+    units: z.array(zRef()),
+    planDrivenUnitIds: z.array(zInt()),
+    unitGrid: z.array(z.array(z.tuple([UnitTypeSchema, z.array(zRef())]))),
+    playerTeams: z.array(z.string()),
+    botTeam: z.string(),
+    isPaused: z.boolean(),
+    winner: z
+      .union([
+        z.object({ player: zPlayerRef() }),
+        z.object({ team: z.string() }),
+      ])
+      .nullable(),
+    unitsVersion: zInt(),
+    territoryVersion: zInt(),
+    shipStaggers: z.object({ tradeShip: zInt(), transportShip: zInt() }),
+    nationMirvTargets: z.array(z.tuple([z.string(), zInt()])),
+    mirvsLaunched: zInt(),
+    rail: VersionedSchema,
+    water: VersionedSchema,
+    sharedWaterCache: VersionedSchema,
+    stats: VersionedSchema,
+  }),
+});
+export type GameState = z.infer<typeof GameSnapshot.schema>;
 
 // Or a more dynamic approach that will catch new enum values:
 const createGameUpdatesMap = (): GameUpdates => {

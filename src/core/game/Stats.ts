@@ -1,12 +1,15 @@
 import { AllPlayersStats, ClientID } from "../Schemas";
-import { NukeType, OtherUnitType, PlayerStats } from "../StatsSchemas";
+import {
+  BoatUnitType,
+  NukeType,
+  OtherUnitType,
+  PlayerStats,
+} from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
 
 export interface Stats {
   getPlayerStats(player: Player): PlayerStats | null;
   stats(): AllPlayersStats;
-
-  numMirvsLaunched(): bigint;
 
   // Player attacks target
   attack(
@@ -92,6 +95,11 @@ export interface Stats {
   // captured by hunting it down, this one changes hands with its owner.
   boatCapturedTroops(player: Player, target: Player): void;
 
+  // Player's boat was destroyed. Counts every destruction, including ones no
+  // one is credited with (the owner's own nuke, the owner being eliminated),
+  // so it is not the mirror of boatDestroyTrade/boatDestroyTroops.
+  boatLose(player: Player, type: BoatUnitType): void;
+
   // Player launches bomb at target
   bombLaunch(
     player: Player,
@@ -110,6 +118,16 @@ export interface Stats {
 
   // Player earns gold from workers
   goldWork(player: Player, gold: number | bigint): void;
+
+  // Player receives donated gold. `goldBefore` is their balance at the moment
+  // the donation is applied, before the gold is added — nothing else records a
+  // gold balance, so "were they broke when it arrived" cannot be recovered
+  // from the cumulative counters afterwards.
+  goldDonationReceived(
+    player: Player,
+    gold: number | bigint,
+    goldBefore: number | bigint,
+  ): void;
 
   // Player builds a unit of type
   unitBuild(player: Player, type: OtherUnitType): void;

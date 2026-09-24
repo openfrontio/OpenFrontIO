@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { GameEvent } from "../EventBus";
 import {
   ColoredTeams,
@@ -9,6 +10,8 @@ import {
   RankedType,
   Team,
 } from "../game/Game";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type { ExecRecord, SnapshotReader } from "../snapshot/SnapshotContext";
 
 export class WinEvent implements GameEvent {
   constructor(public readonly winner: Player) {}
@@ -195,4 +198,32 @@ export class WinCheckExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(): ExecRecord {
+    return WinCheckExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== null,
+      checkedRankedSpawns: this.checkedRankedSpawns,
+    });
+  }
+
+  restoreSnapshot(s: WinCheckState, r: SnapshotReader): void {
+    this.active = s.active;
+    this.mg = s.initialized ? r.game : null;
+    this.checkedRankedSpawns = s.checkedRankedSpawns;
+  }
 }
+
+const WinCheckStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  checkedRankedSpawns: z.boolean(),
+});
+type WinCheckState = z.infer<typeof WinCheckStateSchema>;
+
+export const WinCheckExecutionSnapshot = execSnapshotType({
+  name: "WinCheck",
+  version: 1,
+  schema: WinCheckStateSchema,
+  cls: () => WinCheckExecution,
+});

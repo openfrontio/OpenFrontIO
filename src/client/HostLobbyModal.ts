@@ -33,6 +33,8 @@ import "./components/ConfirmDialog";
 import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
 import "./components/InputCard";
+import "./components/ListLobbyDialog";
+import { ListLobbyOptions } from "./components/ListLobbyDialog";
 import "./components/LobbyPlayerView";
 import "./components/ToggleInputCard";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
@@ -114,6 +116,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private canListPublicly: boolean = false;
   @state() private publiclyListed: boolean = false;
   @state() private showSubscriptionRequired: boolean = false;
+  @state() private showListLobbyDialog: boolean = false;
   // Server timestamp when the listed lobby auto-starts (from lobby info).
   @state() private autoStartAt: number | null = null;
 
@@ -314,6 +317,11 @@ export class HostLobbyModal extends BaseModal {
       this.showSubscriptionRequired = true;
       return;
     }
+    if (isPublic) {
+      // Listing needs the host's start time and player cap first.
+      this.showListLobbyDialog = true;
+      return;
+    }
     void this.handlePublicListingToggle(isPublic);
   }
 
@@ -502,8 +510,18 @@ export class HostLobbyModal extends BaseModal {
         <div
           class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 mr-1 mx-auto w-full max-w-5xl"
         >
+          ${this.publiclyListed
+            ? html`<div
+                class="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-300"
+              >
+                ${translateText("host_modal.settings_locked_listed")}
+              </div>`
+            : nothing}
+          <!-- Players joined a listed lobby for its advertised settings, so
+               they are frozen (the server rejects changes too). -->
           <game-config-settings
-            class="block"
+            class="block ${this.publiclyListed ? "opacity-60" : ""}"
+            ?inert=${this.publiclyListed}
             .sectionGapClass=${"space-y-10"}
             .settings=${{
               map: {
@@ -636,8 +654,9 @@ export class HostLobbyModal extends BaseModal {
             .onKickPlayer=${this.publiclyListed
               ? undefined
               : (clientID: string) => this.kickPlayer(clientID)}
-            .onToggleNameReveal=${(clientID: string) =>
-              this.toggleNameReveal(clientID)}
+            .onToggleNameReveal=${this.publiclyListed
+              ? undefined
+              : (clientID: string) => this.toggleNameReveal(clientID)}
             .nameReveals=${this.nameReveals}
             .anonymizeNames=${this.anonymizeNames}
           ></lobby-player-view>
@@ -650,11 +669,22 @@ export class HostLobbyModal extends BaseModal {
             width="block"
             size="lg"
             .title=${statusLabel}
+            .uppercase=${secondsRemaining === null}
             ?disable=${this.lobbyStartAt === null && this.clients.length < 2}
             @click=${this.toggleGameStartTimer}
           ></o-button>
         </div>
 
+        ${this.showListLobbyDialog
+          ? html`<list-lobby-dialog
+              .currentPlayers=${this.clients.length}
+              @cancel=${() => (this.showListLobbyDialog = false)}
+              @confirm=${(e: CustomEvent<ListLobbyOptions>) => {
+                this.showListLobbyDialog = false;
+                void this.handlePublicListingToggle(true, e.detail);
+              }}
+            ></list-lobby-dialog>`
+          : ""}
         ${this.showSubscriptionRequired
           ? html`<confirm-dialog
               .heading=${translateText(
@@ -873,6 +903,7 @@ export class HostLobbyModal extends BaseModal {
     this.hostCheatStartingGoldValue = undefined;
     this.publiclyListed = false;
     this.showSubscriptionRequired = false;
+    this.showListLobbyDialog = false;
     this.autoStartAt = null;
   }
 
@@ -1343,10 +1374,13 @@ export class HostLobbyModal extends BaseModal {
 
   // Server-authoritative: it re-verifies the subscription and enforces the
   // listing limits, so a failed request reverts the toggle.
-  private async handlePublicListingToggle(checked: boolean) {
+  private async handlePublicListingToggle(
+    checked: boolean,
+    options?: ListLobbyOptions,
+  ) {
     this.listingRequestInFlight = true;
     this.publiclyListed = checked;
-    const result = await setLobbyListed(this.lobbyId, checked);
+    const result = await setLobbyListed(this.lobbyId, checked, options);
     if (result.ok) {
       this.publiclyListed = result.listed;
     } else {
@@ -1368,6 +1402,8 @@ export class HostLobbyModal extends BaseModal {
       key = "private_lobby.listing_host_cheats_enabled";
     } else if (serverError === "listing_full") {
       key = "private_lobby.listing_full";
+    } else if (serverError === "listing_max_players_too_low") {
+      key = "private_lobby.listing_max_players_too_low";
     }
     showToast(translateText(key), "red", 3000);
   }

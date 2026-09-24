@@ -35,6 +35,7 @@ import {
 } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { isDesktopShell } from "./DesktopShell";
+import { GameMetrics } from "./GameMetrics";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
@@ -52,6 +53,7 @@ import {
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { versionedPathForMismatchedGame } from "./ServerList";
+import { reportGameError } from "./Telemetry";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
@@ -549,6 +551,7 @@ function mountWebGLFrameLoop(
   transformHandler: import("./TransformHandler").TransformHandler,
   gameView: GameView,
   eventBus: EventBus,
+  onFrame: (nowMs: number) => void,
 ): { builder: WebGLFrameBuilder; stopFrameLoop: () => void } {
   const gameMap = terrainMap.gameMap;
   const mapWidth = gameMap.width();
@@ -609,7 +612,8 @@ function mountWebGLFrameLoop(
   // renderer's captured frame callback (which draws). One RAF = one
   // synchronized camera-update + WebGL render.
   let rafId: number | null = null;
-  const driveFrame = (): void => {
+  const driveFrame = (nowMs: number): void => {
+    onFrame(nowMs);
     syncCamera();
     rafId = requestAnimationFrame(driveFrame);
   };
@@ -852,6 +856,7 @@ async function createClientGame(
       mapLayerController,
     );
 
+    const metrics = new GameMetrics(lobbyConfig.gameID, clientID);
     const { builder: webglBuilder, stopFrameLoop } = mountWebGLFrameLoop(
       gameMap,
       view,
@@ -860,6 +865,7 @@ async function createClientGame(
       gameRenderer.transformHandler,
       gameView,
       eventBus,
+      (nowMs) => metrics.recordFrame(nowMs),
     );
 
     // Releases all WebGL/DOM resources this game created. Without it, stopping
@@ -894,6 +900,7 @@ async function createClientGame(
       webglBuilder,
       graphicsListenerAbort,
       disposeRenderer,
+      metrics,
     );
   } catch (err) {
     soundManager.dispose();
@@ -929,6 +936,7 @@ export class ClientGameRunner {
     private webglBuilder: WebGLFrameBuilder | null = null,
     private graphicsListenerAbort: AbortController | null = null,
     private disposeRenderer: (() => void) | null = null,
+    private metrics: GameMetrics | null = null,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -954,6 +962,7 @@ export class ClientGameRunner {
 
     this.isActive = true;
     this.lastMessageTime = Date.now();
+    this.metrics?.start();
     setTimeout(() => {
       this.connectionCheckInterval = setInterval(
         () => this.onConnectionCheck(),
@@ -1009,6 +1018,9 @@ export class ClientGameRunner {
       this.gameView.update(gu);
       this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
+      if (gu.tickExecutionDuration !== undefined) {
+        this.metrics?.recordTickExecution(gu.tickExecutionDuration);
+      }
 
       // Emit tick metrics event for performance overlay
       this.eventBus.emit(
@@ -1051,7 +1063,7 @@ export class ClientGameRunner {
                 this.clientID,
                 true,
                 false,
-                translateText("error_modal.spawn_failed.title"),
+                "error_modal.spawn_failed.title",
               );
               return;
             }
@@ -1124,6 +1136,10 @@ export class ClientGameRunner {
         if (this.lastTickReceiveTime > 0) {
           // Calculate delay between receiving turn messages
           this.currentTickDelay = now - this.lastTickReceiveTime;
+          // Only the wire is worth measuring; a local game paces itself.
+          if (!this.transport.isLocal) {
+            this.metrics?.recordTickInterval(this.currentTickDelay);
+          }
         }
         this.lastTickReceiveTime = now;
 
@@ -1167,6 +1183,7 @@ export class ClientGameRunner {
     if (!this.isActive) return;
 
     this.isActive = false;
+    this.metrics?.stop();
     this.worker.cleanup();
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {
@@ -1210,18 +1227,23 @@ export class ClientGameRunner {
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
-    this.myPlayer.actions(tile, [UnitType.TransportShip]).then((actions) => {
-      if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
-      } else if (this.canAutoBoat(actions.buildableUnits, tile)) {
-        this.sendBoatAttackIntent(tile);
-      }
-    });
+    this.myPlayer
+      .actions(tile, [UnitType.TransportShip])
+      .then((actions) => {
+        if (actions.canAttack) {
+          this.eventBus.emit(
+            new SendAttackIntentEvent(
+              this.gameView.owner(tile).id(),
+              this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
+            ),
+          );
+        } else if (this.canAutoBoat(actions.buildableUnits, tile)) {
+          this.sendBoatAttackIntent(tile);
+        }
+      })
+      .catch((error) => {
+        console.warn("Failed to check boat attack actions:", error);
+      });
   }
 
   private autoUpgradeEvent(event: AutoUpgradeEvent) {
@@ -1254,80 +1276,84 @@ export class ClientGameRunner {
   }
 
   private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile, Structures.types).then((actions) => {
-      const upgradeUnits: {
-        unitId: number;
-        unitType: UnitType;
-        distance: number;
-      }[] = [];
+    this.myPlayer!.actions(clickedTile, Structures.types)
+      .then((actions) => {
+        const upgradeUnits: {
+          unitId: number;
+          unitType: UnitType;
+          distance: number;
+        }[] = [];
 
-      for (const bu of actions.buildableUnits) {
-        if (bu.canUpgrade !== false) {
-          const existingUnit = this.gameView
-            .units()
-            .find((unit) => unit.id() === bu.canUpgrade);
-          if (existingUnit) {
-            const distance = this.gameView.manhattanDist(
-              clickedTile,
-              existingUnit.tile(),
-            );
+        for (const bu of actions.buildableUnits) {
+          if (bu.canUpgrade !== false) {
+            const existingUnit = this.gameView
+              .units()
+              .find((unit) => unit.id() === bu.canUpgrade);
+            if (existingUnit) {
+              const distance = this.gameView.manhattanDist(
+                clickedTile,
+                existingUnit.tile(),
+              );
 
-            upgradeUnits.push({
-              unitId: bu.canUpgrade,
-              unitType: bu.type,
-              distance: distance,
-            });
-          }
-        }
-      }
-
-      if (upgradeUnits.length === 0) {
-        return;
-      }
-
-      // Upgrade the closest affordable building. But if there's an unaffordable
-      // building (any type) that's closer to clickedTile than the best candidate,
-      // do nothing — the player clicked on that unaffordable building intending
-      // to upgrade it, and we must not spend their gold on a different building.
-      const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
-      if (!bestUpgrade) {
-        return;
-      }
-
-      // Check if any unaffordable building is closer than bestUpgrade
-      for (const bu of actions.buildableUnits) {
-        if (bu.canUpgrade === false && bu.type !== bestUpgrade.unitType) {
-          const myPlayerID = this.myPlayer!.id();
-          const closestOfType = this.gameView
-            .nearbyUnits(
-              clickedTile,
-              this.gameView.config().structureMinDist(),
-              bu.type,
-            )
-            .filter(({ unit }) => unit.owner().id() === myPlayerID)
-            .sort((a, b) => a.distSquared - b.distSquared)[0];
-
-          if (closestOfType) {
-            const dist = this.gameView.manhattanDist(
-              clickedTile,
-              closestOfType.unit.tile(),
-            );
-            if (dist <= bestUpgrade.distance) {
-              // An unaffordable building of type bu.type is at least as close
-              // as bestUpgrade — player clicked on it, not on bestUpgrade.
-              return;
+              upgradeUnits.push({
+                unitId: bu.canUpgrade,
+                unitType: bu.type,
+                distance: distance,
+              });
             }
           }
         }
-      }
 
-      this.eventBus.emit(
-        new SendUpgradeStructureIntentEvent(
-          bestUpgrade.unitId,
-          bestUpgrade.unitType,
-        ),
-      );
-    });
+        if (upgradeUnits.length === 0) {
+          return;
+        }
+
+        // Upgrade the closest affordable building. But if there's an unaffordable
+        // building (any type) that's closer to clickedTile than the best candidate,
+        // do nothing — the player clicked on that unaffordable building intending
+        // to upgrade it, and we must not spend their gold on a different building.
+        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
+        if (!bestUpgrade) {
+          return;
+        }
+
+        // Check if any unaffordable building is closer than bestUpgrade
+        for (const bu of actions.buildableUnits) {
+          if (bu.canUpgrade === false && bu.type !== bestUpgrade.unitType) {
+            const myPlayerID = this.myPlayer!.id();
+            const closestOfType = this.gameView
+              .nearbyUnits(
+                clickedTile,
+                this.gameView.config().structureMinDist(),
+                bu.type,
+              )
+              .filter(({ unit }) => unit.owner().id() === myPlayerID)
+              .sort((a, b) => a.distSquared - b.distSquared)[0];
+
+            if (closestOfType) {
+              const dist = this.gameView.manhattanDist(
+                clickedTile,
+                closestOfType.unit.tile(),
+              );
+              if (dist <= bestUpgrade.distance) {
+                // An unaffordable building of type bu.type is at least as close
+                // as bestUpgrade — player clicked on it, not on bestUpgrade.
+                return;
+              }
+            }
+          }
+        }
+
+        this.eventBus.emit(
+          new SendUpgradeStructureIntentEvent(
+            bestUpgrade.unitId,
+            bestUpgrade.unitType,
+          ),
+        );
+      })
+      .catch((error) => {
+        console.warn("Failed to check structure upgrade actions:", error);
+      });
   }
 
   private doBoatAttackUnderCursor(): void {
@@ -1369,16 +1395,21 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile, null).then((actions) => {
-      if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
-      }
-    });
+    this.myPlayer
+      .actions(tile, null)
+      .then((actions) => {
+        if (actions.canAttack) {
+          this.eventBus.emit(
+            new SendAttackIntentEvent(
+              this.gameView.owner(tile).id(),
+              this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
+            ),
+          );
+        }
+      })
+      .catch((error) => {
+        console.warn("Failed to check ground attack actions:", error);
+      });
   }
 
   private doRetaliateAttackMostRecent(): void {
@@ -1433,15 +1464,20 @@ export class ClientGameRunner {
     if (!tileOwner.isPlayer()) return;
     const recipient = tileOwner as PlayerView;
 
-    myPlayer.actions(tile).then((actions) => {
-      if (actions.interaction?.canSendAllianceRequest) {
-        this.eventBus.emit(
-          new SendAllianceRequestIntentEvent(myPlayer, recipient),
-        );
-      } else if (actions.interaction?.allianceInfo?.canExtend) {
-        this.eventBus.emit(new SendAllianceExtensionIntentEvent(recipient));
-      }
-    });
+    myPlayer
+      .actions(tile)
+      .then((actions) => {
+        if (actions.interaction?.canSendAllianceRequest) {
+          this.eventBus.emit(
+            new SendAllianceRequestIntentEvent(myPlayer, recipient),
+          );
+        } else if (actions.interaction?.allianceInfo?.canExtend) {
+          this.eventBus.emit(new SendAllianceExtensionIntentEvent(recipient));
+        }
+      })
+      .catch((error) => {
+        console.warn("Failed to check alliance actions:", error);
+      });
   }
 
   private doBreakAllianceUnderCursor(): void {
@@ -1461,13 +1497,18 @@ export class ClientGameRunner {
     if (!tileOwner.isPlayer()) return;
     const recipient = tileOwner as PlayerView;
 
-    myPlayer.actions(tile).then((actions) => {
-      if (actions.interaction?.canBreakAlliance) {
-        this.eventBus.emit(
-          new SendBreakAllianceIntentEvent(myPlayer, recipient),
-        );
-      }
-    });
+    myPlayer
+      .actions(tile)
+      .then((actions) => {
+        if (actions.interaction?.canBreakAlliance) {
+          this.eventBus.emit(
+            new SendBreakAllianceIntentEvent(myPlayer, recipient),
+          );
+        }
+      })
+      .catch((error) => {
+        console.warn("Failed to check alliance actions:", error);
+      });
   }
 
   private getTileUnderCursor(): TileRef | null {
@@ -1551,6 +1592,8 @@ function showErrorModal(
   if (document.querySelector("#error-modal")) {
     return;
   }
+
+  reportGameError(error, message, gameID, clientID, heading);
 
   const translatedError = translateText(error);
   const displayError = translatedError === error ? error : translatedError;

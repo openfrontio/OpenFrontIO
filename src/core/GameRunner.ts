@@ -30,6 +30,11 @@ import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
+import {
+  readSnapshotHeader,
+  restoreGame,
+  snapshotGame,
+} from "./snapshot/GameSnapshot";
 import { simpleHash } from "./Util";
 
 export async function createGameRunner(
@@ -44,6 +49,7 @@ export async function createGameRunner(
     gameStart.config.gameMapSize,
     mapLoader,
     false, // Worker never renders layers — skip image loading to save memory.
+    true, // The game mutates its maps; never share them with another game.
   );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
@@ -91,18 +97,75 @@ export async function createGameRunner(
   return gr;
 }
 
+/**
+ * Rebuilds a runner from a snapshot (see src/core/snapshot). The game resumes
+ * at the snapshot's tick: the first turn added afterwards is the turn for
+ * that tick. Only runtime details (game id, listing) come from `gameStart`;
+ * the config, players and all state come from the snapshot.
+ */
+export async function createGameRunnerFromSnapshot(
+  gameStart: GameStartInfo,
+  snapshot: Uint8Array,
+  clientID: ClientID | undefined,
+  mapLoader: GameMapLoader,
+  callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+): Promise<GameRunner> {
+  const header = readSnapshotHeader(snapshot);
+  const gameMap = await loadGameMap(
+    header.gameConfig.gameMap,
+    header.gameConfig.gameMapSize,
+    mapLoader,
+    false,
+    true, // restore mutates the maps; never onto a shared, used copy
+  );
+  const game = restoreGame(snapshot, {
+    config: (gc) => new Config(gc, null, false, gameStart.listed),
+    gameMap: gameMap.gameMap,
+    miniGameMap: gameMap.miniGameMap,
+    teamGameSpawnAreas: gameMap.teamGameSpawnAreas,
+  });
+  // No init(): the snapshot already holds every execution init() adds.
+  return new GameRunner(
+    game,
+    new Executor(
+      game,
+      gameStart.gameID,
+      clientID,
+      gameStart.tribes?.map((t) => t.name),
+    ),
+    callBack,
+  );
+}
+
 export class GameRunner {
   private turns: Turn[] = [];
   private currTurn = 0;
   private isExecuting = false;
 
   private playerViewData: Record<PlayerID, NameViewData> = {};
+  // Name placements are recomputed periodically; a runner that starts
+  // mid-game (restored from a snapshot) computes them on its first tick.
+  private viewDataStale = true;
 
   constructor(
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
   ) {}
+
+  /**
+   * Serializes the simulation at the current tick boundary. Turns that were
+   * added but not executed yet are not part of it.
+   */
+  snapshot(gitCommit?: string): Uint8Array {
+    if (this.isExecuting) {
+      throw new Error("cannot snapshot while a tick is executing");
+    }
+    return snapshotGame(this.game, {
+      gameID: this.execManager.gameID(),
+      gitCommit,
+    });
+  }
 
   init() {
     if (this.game.config().gameConfig().gameType !== GameType.Singleplayer) {
@@ -190,9 +253,11 @@ export class GameRunner {
     const spawnJustEnded = wasInSpawnPhase && !this.game.inSpawnPhase();
     if (
       spawnJustEnded ||
+      this.viewDataStale ||
       this.game.ticks() < 3 ||
       this.game.ticks() % 30 === 0
     ) {
+      this.viewDataStale = false;
       for (const p of this.game.players()) {
         this.playerViewData[p.id()] = placeName(this.game, p);
       }

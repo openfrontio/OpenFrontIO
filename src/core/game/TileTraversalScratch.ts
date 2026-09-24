@@ -17,6 +17,7 @@ import { TileRef } from "./GameMap";
 export interface TileTraversalScratch {
   visited: Uint32Array;
   stack: TileRef[];
+  clusterIndexMap: Int32Array;
   /** Current generation — advance via bumpTraversalGeneration(), not directly. */
   gen: number;
 }
@@ -27,7 +28,12 @@ export function tileTraversalScratch(game: Game): TileTraversalScratch {
   const totalTiles = game.width() * game.height();
   let scratch = scratches.get(game);
   if (!scratch || scratch.visited.length < totalTiles) {
-    scratch = { visited: new Uint32Array(totalTiles), stack: [], gen: 0 };
+    scratch = {
+      visited: new Uint32Array(totalTiles),
+      stack: [],
+      clusterIndexMap: new Int32Array(totalTiles),
+      gen: 0,
+    };
     scratches.set(game, scratch);
   }
   return scratch;

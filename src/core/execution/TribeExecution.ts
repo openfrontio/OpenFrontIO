@@ -1,5 +1,18 @@
-﻿import { Execution, Game, Player, Structures } from "../game/Game";
+﻿import { z } from "zod";
+import { Execution, Game, Player, Structures } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import {
+  VersionedSchema,
+  zNum,
+  zPlayerRef,
+  zRandom,
+} from "../snapshot/SnapshotType";
 import { simpleHash } from "../Util";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
@@ -126,4 +139,65 @@ export class TribeExecution implements Execution {
   isActive(): boolean {
     return this.active;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return TribeExecutionSnapshot.write({
+      active: this.active,
+      tribe: w.player(this.tribe),
+      random: w.random(this.random),
+      initialized: this.mg !== undefined,
+      neighborsTerraNullius: this.neighborsTerraNullius,
+      attackBehavior: this.attackBehavior?.snapshot(w) ?? null,
+      attackRate: this.attackRate,
+      attackTick: this.attackTick,
+      triggerRatio: this.triggerRatio,
+      reserveRatio: this.reserveRatio,
+      expandRatio: this.expandRatio,
+    });
+  }
+
+  restoreSnapshot(s: TribeState, r: SnapshotReader): void {
+    this.active = s.active;
+    this.tribe = r.player(s.tribe);
+    // One PRNG shared with the attack behavior, as in a live game.
+    this.random = r.random(s.random);
+    if (s.initialized) this.mg = r.game;
+    this.neighborsTerraNullius = s.neighborsTerraNullius;
+    if (s.attackBehavior === null) {
+      this.attackBehavior = null;
+    } else {
+      const attack = Object.create(
+        AiAttackBehavior.prototype,
+      ) as AiAttackBehavior;
+      attack.restoreSnapshot(s.attackBehavior, r, this.random, this.tribe);
+      this.attackBehavior = attack;
+    }
+    this.attackRate = s.attackRate;
+    this.attackTick = s.attackTick;
+    this.triggerRatio = s.triggerRatio;
+    this.reserveRatio = s.reserveRatio;
+    this.expandRatio = s.expandRatio;
+  }
 }
+
+const TribeStateSchema = z.object({
+  active: z.boolean(),
+  tribe: zPlayerRef(),
+  random: zRandom(),
+  initialized: z.boolean(),
+  neighborsTerraNullius: z.boolean(),
+  attackBehavior: VersionedSchema.nullable(),
+  attackRate: zNum(),
+  attackTick: zNum(),
+  triggerRatio: zNum(),
+  reserveRatio: zNum(),
+  expandRatio: zNum(),
+});
+type TribeState = z.infer<typeof TribeStateSchema>;
+
+export const TribeExecutionSnapshot = execSnapshotType({
+  name: "Tribe",
+  version: 1,
+  schema: TribeStateSchema,
+  cls: () => TribeExecution,
+});

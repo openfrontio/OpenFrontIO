@@ -211,20 +211,59 @@ export async function linkSteam(): Promise<boolean> {
   }
 }
 
-export async function tempTokenLogin(token: string): Promise<string | null> {
-  const response = await fetch(
-    `${getApiBase()}/auth/login/token?login-token=${token}`,
-    {
-      credentials: "include",
-    },
-  );
+export type TokenLoginResult =
+  | { status: "success"; email: string }
+  // A 400 is final: the token was invalid, expired, or already consumed.
+  // Retrying it is pointless.
+  | { status: "failed"; code: "consumed" | "expired" | "invalid" }
+  // A network hiccup or non-400 error — worth retrying.
+  | { status: "retry" };
+
+export async function tempTokenLogin(token: string): Promise<TokenLoginResult> {
+  let response: Response;
+  try {
+    response = await fetch(
+      `${getApiBase()}/auth/login/token?login-token=${token}`,
+      {
+        credentials: "include",
+      },
+    );
+  } catch (e) {
+    console.error("Token login request failed", e);
+    return { status: "retry" };
+  }
+  if (response.status === 400) {
+    const body = await response.json().catch(() => null);
+    const code =
+      body?.code === "consumed" ||
+      body?.code === "expired" ||
+      body?.code === "invalid"
+        ? body.code
+        : "invalid";
+    return { status: "failed", code };
+  }
+  // A permanent client error (anything but the rate-limit 429) can't be
+  // fixed by asking again with the same token — only 429 and a transient
+  // server/network failure are worth retrying.
+  if (
+    response.status >= 400 &&
+    response.status < 500 &&
+    response.status !== 429
+  ) {
+    console.error("Token login failed with a permanent client error", response);
+    return { status: "failed", code: "invalid" };
+  }
   if (response.status !== 200) {
     console.error("Token login failed", response);
-    return null;
+    return { status: "retry" };
   }
-  const json = await response.json();
-  const { email } = json;
-  return email;
+  const body = await response.json().catch(() => null);
+  const email = (body as { email?: unknown } | null)?.email;
+  if (typeof email !== "string") {
+    console.error("Token login succeeded but response had no email", body);
+    return { status: "retry" };
+  }
+  return { status: "success", email };
 }
 
 export async function getAuthHeader(): Promise<string> {

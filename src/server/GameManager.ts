@@ -169,7 +169,9 @@ export class GameManager {
           // start with an empty roster, emitting a playerless match_started
           // and running turns for nobody until the reaper caught up.
           if (game.numClients() === 0) {
-            this.log.info("not starting game, no clients connected", {
+            // Debug, not info: this fires on every tick until the reaper
+            // runs, which on idle staging previews was ~700k lines a day.
+            this.log.debug("not starting game, no clients connected", {
               gameID: id,
             });
           } else {

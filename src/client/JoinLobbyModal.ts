@@ -65,6 +65,9 @@ export class JoinLobbyModal extends BaseModal {
   // the pre-join form.
   @state() private hostedLobbies: PublicGameInfo[] = [];
   @state() private hostedLobbiesLoaded = false;
+  // Clock offset for the hosted list's countdowns, kept apart from
+  // serverTimeOffset (the joined lobby's).
+  private hostedServerTimeOffset = 0;
   // Deliberately not persisted: the bell starts off and is re-armed by hand
   // for each game (reset in startTrackingLobby).
   @state() private notifyOnStart = false;
@@ -79,6 +82,9 @@ export class JoinLobbyModal extends BaseModal {
   private handledJoinTimeout = false;
 
   private readonly hostedLobbySocket = new PublicLobbySocket((lobbies) => {
+    this.hostedServerTimeOffset = calculateServerTimeOffset(lobbies.serverTime);
+    // Re-assigned on every broadcast (~2/s), which also keeps the row
+    // countdowns ticking.
     this.hostedLobbies = lobbies.games?.hosted ?? [];
     this.hostedLobbiesLoaded = true;
   });
@@ -534,6 +540,12 @@ export class JoinLobbyModal extends BaseModal {
     const subtitleLine = featuredLabel
       ? [mapName, subtitle].filter(Boolean).join(" · ")
       : subtitle;
+    // The host's Start countdown once armed, otherwise the listing deadline.
+    const startAt = lobby.startsAt ?? lobby.autoStartAt;
+    const secondsToStart =
+      startAt === undefined
+        ? undefined
+        : getSecondsUntilServerTimestamp(startAt, this.hostedServerTimeOffset);
     return html`
       <button
         type="button"
@@ -556,8 +568,8 @@ export class JoinLobbyModal extends BaseModal {
           ${settings.length > 0 || disabledUnitCount > 0
             ? html`<div class="flex flex-wrap gap-1 mt-1">
                 ${settings.map((s) => {
-                  // Some labels (e.g. game_settings.bots) already end with ": ".
-                  const label = s.label.replace(/[:\s]+$/, "");
+                  // Some labels (e.g. game_settings.bots) already end with ": " or ": ".
+                  const label = s.label.replace(/[:\uFF1A\s]+$/u, "");
                   return html`<span
                     class="px-1.5 py-0.5 bg-white/10 text-white/70 text-[10px] rounded font-bold"
                     >${s.value === enabled
@@ -575,15 +587,24 @@ export class JoinLobbyModal extends BaseModal {
               </div>`
             : ""}
         </div>
-        <div
-          class="flex items-center gap-1 text-white/80 text-xs font-bold shrink-0"
-        >
-          ${lobby.numClients}${c?.maxPlayers ? `/${c.maxPlayers}` : ""}
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.972 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
-            ></path>
-          </svg>
+        <div class="flex flex-col items-end gap-1 shrink-0">
+          <div class="flex items-center gap-1 text-white/80 text-xs font-bold">
+            ${lobby.numClients}${c?.maxPlayers ? `/${c.maxPlayers}` : ""}
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.972 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+              ></path>
+            </svg>
+          </div>
+          ${secondsToStart === undefined
+            ? ""
+            : html`<span
+                class="text-amber-300 text-xs font-bold tabular-nums"
+                title=${translateText("host_modal.auto_start_timer")}
+                >${secondsToStart > 0
+                  ? renderDuration(secondsToStart)
+                  : translateText("public_lobby.starting_game")}</span
+              >`}
         </div>
       </button>
     `;

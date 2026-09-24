@@ -78,6 +78,15 @@ export function authorizeIntent(
       if (intent.config.gameType === GameType.Public) {
         return { status: 400, error: "cannot change a game to public" };
       }
+      // Players joined a listed lobby for the settings it was advertised
+      // with, so the host can't change them afterwards. The admin bot still
+      // manages the lobbies it lists.
+      if (game.isListed && !actor.isAdminBot) {
+        return {
+          status: 409,
+          error: "cannot change the config of a publicly listed lobby",
+        };
+      }
       // Host cheats give the host an asymmetric advantage over players
       // recruited from the lobby browser. Listing is likewise rejected
       // while cheats are on (Worker's listing endpoint), so a listed

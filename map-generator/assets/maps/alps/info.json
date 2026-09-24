@@ -3,7 +3,7 @@
   "name": "Alps",
   "translation_key": "map.alps",
   "categories": ["europe"],
-  "multiplayer_frequency": 4,
+  "multiplayer_frequency": 8,
   "forced_modifiers": ["isWaterNukes:75"],
   "themes": ["europe"],
   "nations": [

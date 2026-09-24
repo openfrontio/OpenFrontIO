@@ -1,4 +1,15 @@
+import { z } from "zod";
 import { Game, Player, PlayerType } from "../../game/Game";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  snapshotType,
+  zInt,
+  zNum,
+  zPlayerRef,
+} from "../../snapshot/SnapshotType";
 
 /**
  * Cache for "which water components does each nation share with a
@@ -30,6 +41,36 @@ export class SharedWaterCache {
   private playerWater = new Map<Player, PlayerWater>();
 
   constructor(private game: Game) {}
+
+  /**
+   * The last build is state, not a cache: callers read it while it is up to
+   * TTL_TICKS stale. playerWater is a transparent cache and is not stored.
+   */
+  snapshot(w: SnapshotWriter): SharedWaterCacheState {
+    return {
+      tick: this.tick,
+      byPlayer:
+        this.byPlayer === null
+          ? null
+          : [...this.byPlayer].map(([p, set]) => [
+              w.player(p),
+              set === null ? null : [...set],
+            ]),
+    };
+  }
+
+  restoreSnapshot(s: SharedWaterCacheState, r: SnapshotReader): void {
+    this.tick = s.tick;
+    this.byPlayer =
+      s.byPlayer === null
+        ? null
+        : new Map(
+            s.byPlayer.map(([p, set]) => [
+              r.player(p),
+              set === null ? null : new Set(set),
+            ]),
+          );
+  }
 
   get(player: Player): Set<number> | null {
     const tick = this.game.ticks();
@@ -128,3 +169,17 @@ export class SharedWaterCache {
     return result;
   }
 }
+
+export const SharedWaterCacheSnapshot = snapshotType({
+  name: "SharedWaterCache",
+  version: 1,
+  schema: z.object({
+    tick: zNum(),
+    byPlayer: z
+      .array(z.tuple([zPlayerRef(), z.array(zInt()).nullable()]))
+      .nullable(),
+  }),
+});
+export type SharedWaterCacheState = z.infer<
+  typeof SharedWaterCacheSnapshot.schema
+>;
