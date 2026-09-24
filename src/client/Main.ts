@@ -1474,6 +1474,11 @@ class Client {
     // above its own lobbyHandle guard precisely because this window exists.
     this.joinInFlight = true;
 
+    if (this.replayViewerID !== null) {
+      document.querySelector("replay-viewer")?.remove();
+      this.replayViewerID = null;
+    }
+
     console.log(`joining lobby ${lobby.gameID}`);
     // Entering a lobby. Singleplayer, public lobbies and replays know their
     // config up front; everything else is filled in by the lobby_info

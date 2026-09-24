@@ -18,6 +18,7 @@ const SPEEDS = [0.5, 1, 2, 4, 8, 16, 32];
 // Same icons as the in-game controls (GameRightSidebar).
 const playIcon = assetUrl("images/PlayIconWhite.svg");
 const pauseIcon = assetUrl("images/PauseIconWhite.svg");
+const continueIcon = assetUrl("images/SwordIconWhite.svg");
 const speedIcon = assetUrl("images/FastForwardIconSolidWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
@@ -79,6 +80,7 @@ export class ReplayControls extends LitElement {
   @property({ type: Number }) total = 0;
   @property({ type: Boolean }) playing = false;
   @property({ type: Number }) speed = 1;
+  @property({ type: Boolean }) canContinue = true;
 
   @state() private speedMenuOpen = false;
   @state() private isFullscreen = document.fullscreenElement !== null;
@@ -189,6 +191,13 @@ export class ReplayControls extends LitElement {
             ),
             () => this.emit("replay-toggle-play"),
           )}
+          ${this.canContinue
+            ? iconButton(
+                continueIcon,
+                translateText("replay_viewer.continue_from_here"),
+                () => this.emit("replay-continue"),
+              )
+            : nothing}
           ${iconButton(
             speedIcon,
             translateText("replay_panel.replay_speed"),
