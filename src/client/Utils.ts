@@ -399,9 +399,11 @@ export function resolveKeybindLabel(
 
   if (layoutMap && layoutMap.has(codeToResolve)) {
     const char = layoutMap.get(codeToResolve)!.toUpperCase();
-    const shiftPrefix = translateText("keybind_shift_prefix");
+    const shiftPrefix = translateText("user_setting.keybind_shift_prefix");
     const prefix =
-      shiftPrefix === "keybind_shift_prefix" ? "Shift+" : shiftPrefix;
+      shiftPrefix === "user_setting.keybind_shift_prefix"
+        ? "Shift+"
+        : shiftPrefix;
     return isShift ? `${prefix}${char}` : char;
   }
 
@@ -418,9 +420,11 @@ export function formatKeyForDisplay(value: string): string {
 
   // Handle Shift+ prefix: format as "Shift+X"
   if (value.startsWith("Shift+")) {
-    const shiftPrefix = translateText("keybind_shift_prefix");
+    const shiftPrefix = translateText("user_setting.keybind_shift_prefix");
     const prefix =
-      shiftPrefix === "keybind_shift_prefix" ? "Shift+" : shiftPrefix;
+      shiftPrefix === "user_setting.keybind_shift_prefix"
+        ? "Shift+"
+        : shiftPrefix;
     return prefix + formatKeyForDisplay(value.slice(6));
   }
 
