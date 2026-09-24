@@ -24,7 +24,9 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-      - run: npm ci
+      - name: Setup npm
+        run: npm install --global --ignore-scripts npm@12.1.0
+      - run: npm ci --ignore-scripts
       - run: npm run build-prod
       - uses: actions/upload-artifact@v7
         with:
@@ -43,7 +45,9 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-      - run: npm ci
+      - name: Setup npm
+        run: npm install --global --ignore-scripts npm@12.1.0
+      - run: npm ci --ignore-scripts
       - run: npm run test:coverage
 
   lint:
@@ -56,7 +60,9 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-      - run: npm ci
+      - name: Setup npm
+        run: npm install --global --ignore-scripts npm@12.1.0
+      - run: npm ci --ignore-scripts
       - run: npm run lint:github
 
   prettier:
@@ -69,7 +75,9 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-      - run: npm ci
+      - name: Setup npm
+        run: npm install --global --ignore-scripts npm@12.1.0
+      - run: npm ci --ignore-scripts
       - run: npx prettier --check .
 
   gen-maps:
@@ -82,11 +90,13 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
+      - name: Setup npm
+        run: npm install --global --ignore-scripts npm@12.1.0
       - uses: actions/setup-go@v7
         with:
           go-version-file: map-generator/go.mod
           cache-dependency-path: map-generator/go.sum
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npm run gen-maps
       - name: Check for diff
         run: |

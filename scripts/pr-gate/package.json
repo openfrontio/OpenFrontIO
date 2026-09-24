@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Deterministic GitHub Action that gates incoming PRs. See README.md.",
+  "engines": {
+    "npm": ">=12.1.0 <13"
+  },
   "dependencies": {
     "@octokit/rest": "^21.0.2",
     "tsx": "^4.21.0"

@@ -9,7 +9,7 @@ CACHE="${OPENFRONT_RUN_CACHE:-$HOME/.cache/openfront-run}"
 mkdir -p "$CACHE/debs" "$CACHE/fonts" "$CACHE/fc-cache"
 
 # 1. Playwright (not a project dependency; --no-save keeps package.json clean)
-npm ls playwright > /dev/null 2>&1 || npm install --no-save playwright
+npm ls playwright > /dev/null 2>&1 || npm install --no-save --ignore-scripts playwright
 
 # 2. Chromium headless shell. Playwright refuses to download on Ubuntu 26.04
 #    ("does not support chromium on ubuntu26.04-x64"); the ubuntu24.04 build

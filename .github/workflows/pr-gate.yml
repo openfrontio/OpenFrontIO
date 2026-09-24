@@ -24,9 +24,11 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
+      - name: Setup npm
+        run: npm install --global --ignore-scripts npm@12.1.0
       - name: Install gate deps
         working-directory: scripts/pr-gate
-        run: npm install --no-audit --no-fund --ignore-scripts
+        run: npm ci --no-audit --no-fund --ignore-scripts
       - name: Run gate
         working-directory: scripts/pr-gate
         env:
