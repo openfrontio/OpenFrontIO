@@ -792,7 +792,9 @@ export class ReplayViewer extends LitElement {
       const landTiles = adapter.numLandTiles();
       players = adapter
         .playerViews()
-        .filter((pv) => inSpawn || pv.isAlive())
+        .filter(
+          (pv) => (inSpawn || pv.isAlive()) && pv.type() !== PlayerType.Bot,
+        )
         .map((pv) => {
           const tiles = pv.numTilesOwned();
           const controlPercent = landTiles > 0 ? (tiles / landTiles) * 100 : 0;
@@ -808,7 +810,9 @@ export class ReplayViewer extends LitElement {
         });
     }
     this.continuePlayers = players;
-    this.continueInitialPlayerID = adapter?.focus?.id() ?? players[0]?.id ?? "";
+    const focusID = adapter?.focus?.id();
+    this.continueInitialPlayerID =
+      players.find((p) => p.id === focusID)?.id ?? players[0]?.id ?? "";
     this.continueModalOpen = true;
   }
 

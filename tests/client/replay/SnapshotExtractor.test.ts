@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { extractSnapshotFromRecord } from "../../../src/client/replay/processor/SnapshotExtractor";
+import { NationExecution } from "../../../src/core/execution/NationExecution";
+import { TribeExecution } from "../../../src/core/execution/TribeExecution";
 import {
   Difficulty,
   GameMapSize,
@@ -134,8 +136,67 @@ describe("SnapshotExtractor", () => {
     expect(player?.name()).toBe(nationName);
     expect(player?.type()).toBe(PlayerType.Human);
 
+    // Verify AI execution was removed for the chosen player
+    for (const exec of (game as any).executions()) {
+      if (exec instanceof NationExecution) {
+        expect(exec.playerID()).not.toBe(player?.id());
+      }
+      if (exec instanceof TribeExecution) {
+        expect(exec.playerID()).not.toBe(player?.id());
+      }
+    }
+
     restoredRunner.addTurn({ turnNumber: 15, intents: [] });
     expect(restoredRunner.executeNextTick()).toBe(true);
     expect(game.ticks()).toBe(16);
+  });
+
+  test("removes TribeExecution and NationExecution when taking over a bot", async () => {
+    const p1 = human(1);
+    const gameConfig = config({
+      gameMap: GameMapType.World,
+      gameMapSize: GameMapSize.Normal,
+      gameMode: GameMode.FFA,
+      gameType: GameType.Public,
+      bots: 5,
+    });
+
+    const { record } = await playAndArchive({
+      gameID: "TEST0003",
+      config: gameConfig,
+      players: [p1],
+      ticks: 40,
+    });
+
+    const botName = "Oman";
+    const result = await extractSnapshotFromRecord({
+      record,
+      targetTick: 20,
+      chosenPlayerID: botName,
+      localClientID: "MYCLIENT3",
+      mapLoader,
+    });
+
+    const restoredRunner = await createGameRunnerFromSnapshot(
+      result.gameStartInfo,
+      result.snapshot,
+      "MYCLIENT3",
+      mapLoader,
+      () => {},
+    );
+
+    const game = restoredRunner.game;
+    const player = game.playerByClientID("MYCLIENT3");
+    expect(player).not.toBeNull();
+    expect(player?.type()).toBe(PlayerType.Human);
+
+    for (const exec of (game as any).executions()) {
+      if (exec instanceof NationExecution) {
+        expect(exec.playerID()).not.toBe(player?.id());
+      }
+      if (exec instanceof TribeExecution) {
+        expect(exec.playerID()).not.toBe(player?.id());
+      }
+    }
   });
 });

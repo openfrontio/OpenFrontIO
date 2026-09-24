@@ -5,6 +5,7 @@
  */
 
 import { NationExecution } from "../../../core/execution/NationExecution";
+import { TribeExecution } from "../../../core/execution/TribeExecution";
 import {
   Difficulty,
   Execution,
@@ -92,15 +93,18 @@ export async function extractSnapshotFromRecord(
 
   const gameImpl = game as unknown as InternalGame;
 
-  // Remove existing AI execution from chosenPlayer if it was previously an AI nation
+  // Remove existing AI executions from chosenPlayer if it was previously an AI nation or tribe
   for (const exec of gameImpl.executions()) {
-    if (exec instanceof NationExecution) {
-      const execPlayer = (
-        exec as unknown as { player?: { id: () => string } | null }
-      ).player;
-      if (execPlayer && execPlayer.id() === chosenPlayer.id()) {
-        gameImpl.removeExecution(exec);
-      }
+    if (
+      exec instanceof NationExecution &&
+      exec.playerID() === chosenPlayer.id()
+    ) {
+      gameImpl.removeExecution(exec);
+    } else if (
+      exec instanceof TribeExecution &&
+      exec.playerID() === chosenPlayer.id()
+    ) {
+      gameImpl.removeExecution(exec);
     }
   }
 
@@ -157,7 +161,6 @@ export async function extractSnapshotFromRecord(
 
       const nationExec = new NationExecution(gameStart.gameID, nation);
       game.addExecution(nationExec);
-      nationExec.init(game);
     }
   }
 
@@ -173,9 +176,12 @@ export async function extractSnapshotFromRecord(
 
   const snapshot = runner.snapshot();
 
+  const originalClientID = chosenInfo.clientID;
   const originalCosmetics =
-    gameStart.players.find((p) => p.username === chosenPlayer.name())
-      ?.cosmetics ?? {};
+    (originalClientID !== null
+      ? gameStart.players.find((p) => p.clientID === originalClientID)
+          ?.cosmetics
+      : undefined) ?? {};
 
   const newGameID = generateID();
   const singlePlayerGameStart: GameStartInfo = {

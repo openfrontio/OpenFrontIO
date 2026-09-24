@@ -10,7 +10,7 @@
 import type { GameRecord } from "../../core/Schemas";
 import { ClientEnv } from "../ClientEnv";
 import { currentPagePath } from "../Utils";
-import { findVersionedShell } from "../VersionedReplay";
+import { findVersionedShell, isReplayShellHost } from "../VersionedReplay";
 import { handOverRecord } from "./ReplayRecord";
 
 /**
@@ -53,6 +53,8 @@ export function classicReplayHref(gameID: string): string {
   } catch {
     // A tab without storage just gets routed back to the viewer.
   }
+  // On a versioned shell the pathname is the game ID; /game/<id> 404s there.
+  if (isReplayShellHost(window.location.hostname)) return `/${gameID}`;
   return currentPagePath(ClientEnv.gamePath(gameID));
 }
 

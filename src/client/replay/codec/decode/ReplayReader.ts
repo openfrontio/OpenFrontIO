@@ -440,6 +440,11 @@ function readTileRuns(
   changed: number[] | null,
 ): number {
   const runs = r.readVarUint();
+  if (runs > tiles.length) {
+    throw new RangeError(
+      `tile run count exceeds map size (${runs} > ${tiles.length})`,
+    );
+  }
   const values = new Uint16Array(runs);
   for (let i = 0; i < runs; i++) values[i] = r.readU16();
   let fallout = 0;

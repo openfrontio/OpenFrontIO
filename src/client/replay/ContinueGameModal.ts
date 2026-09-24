@@ -122,7 +122,7 @@ export class ContinueGameModal extends LitElement {
               class="text-zinc-400 hover:text-white transition p-1.5 rounded-lg hover:bg-white/10"
               @click=${this.close}
               ?disabled=${this.loading}
-              aria-label="Close"
+              aria-label=${translateText("common.close")}
             >
               ✕
             </button>
@@ -265,7 +265,7 @@ export class ContinueGameModal extends LitElement {
                     @click=${() => (this.selectedDifficulty = diff)}
                     ?disabled=${this.loading}
                   >
-                    ${diff}
+                    ${translateText(`difficulty.${diff.toLowerCase()}`)}
                   </button>
                 `,
               )}

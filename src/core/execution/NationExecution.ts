@@ -78,6 +78,10 @@ export class NationExecution implements Execution {
     this.expandRatio = this.random.nextInt(10, 20) / 100;
   }
 
+  playerID(): string {
+    return this.nation.playerInfo.id;
+  }
+
   init(mg: Game) {
     this.mg = mg;
     this.attackRate = this.getAttackRate();
