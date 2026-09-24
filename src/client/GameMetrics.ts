@@ -2,8 +2,8 @@ import { reportMeasurement } from "./Telemetry";
 
 /**
  * In-game performance metrics for Grafana: frame interval, sim tick
- * execution time and the gap between consecutive turn messages from the
- * server. Each is sampled continuously and summarised as p50/p90/p99 once
+ * execution time, the gap between consecutive turn messages from the
+ * server and the WebSocket round trip. Each is sampled continuously and summarised as p50/p90/p99 once
  * per window, so a 60fps client costs one measurement per series per window
  * rather than one event per frame.
  *
@@ -15,9 +15,12 @@ import { reportMeasurement } from "./Telemetry";
  *   reports in each GameUpdate.
  * - tick_interval: time between consecutive turn messages arriving over the
  *   WebSocket. The server sends one per turn interval (100ms), so p50 sits
- *   there and p90/p99 show stalls. Not a one-way latency: turns carry no send
- *   time and pings get no reply. Multiplayer only. A rejoin replays missed
- *   turns in a burst, so the window it lands in reads low.
+ *   there and p90/p99 show stalls. Not a latency: turns carry no send time
+ *   (ws_rtt measures that). Multiplayer only. A rejoin replays missed turns
+ *   in a burst, so the window it lands in reads low.
+ * - ws_rtt: ping → pong round trip over the game WebSocket. The client pings
+ *   every 5s, so a window holds ~6 samples. Includes any time the pong waits
+ *   behind other work on the client's main thread. Multiplayer only.
  */
 
 export const FLUSH_INTERVAL_MS = 30_000;
@@ -46,6 +49,7 @@ export class GameMetrics {
   private frameTime: number[] = [];
   private tickExecution: number[] = [];
   private tickInterval: number[] = [];
+  private roundTrip: number[] = [];
   private lastFrameAt: number | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -86,12 +90,17 @@ export class GameMetrics {
     this.tickInterval.push(ms);
   }
 
+  recordRoundTrip(ms: number): void {
+    this.roundTrip.push(ms);
+  }
+
   flush(): void {
     const context = { gameID: this.gameID, clientID: this.clientID ?? "" };
     for (const [type, samples] of [
       ["frame_time", this.frameTime],
       ["tick_execution", this.tickExecution],
       ["tick_interval", this.tickInterval],
+      ["ws_rtt", this.roundTrip],
     ] as const) {
       const values = percentiles(samples);
       if (values === undefined) continue;
