@@ -298,6 +298,7 @@ class Client {
   private lobbyHandle: JoinLobbyResult | null = null;
   /** The game the replay viewer is showing, once it has replaced the menu. */
   private replayViewerID: string | null = null;
+  private replayViewerOpeningToken = 0;
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
@@ -1109,20 +1110,22 @@ class Client {
     // get here (CrazyGames awaits its SDK first). Only the first opens it.
     if (this.replayViewerID !== null) return;
     this.replayViewerID = gameID;
+    const token = ++this.replayViewerOpeningToken;
     let ReplayViewer: typeof import("./replay/ReplayViewer").ReplayViewer;
     try {
       ({ ReplayViewer } = await import("./replay/ReplayViewer"));
     } catch (err) {
-      if (this.replayViewerID !== gameID) return;
+      if (this.replayViewerOpeningToken !== token) return;
       // The viewer's chunk didn't load (a network error, or a deploy that
       // replaced it). The menu is still up, so fall back to the client-side
       // replay. It's a full page load, which also picks up a new deploy.
       console.error("replay viewer failed to load:", err);
       this.replayViewerID = null;
+      this.replayViewerOpeningToken++;
       window.location.assign(classicReplayHref(gameID));
       return;
     }
-    if (this.replayViewerID !== gameID) return;
+    if (this.replayViewerOpeningToken !== token) return;
     this.gameModeSelector.stop();
     hideMenuChrome();
     setInGameSignal(true);
@@ -1141,6 +1144,7 @@ class Client {
     // Opening the viewer fires both popstate and hashchange, and the first
     // one opens it. The second still points at the open replay.
     if (gameID === this.replayViewerID) return;
+    this.replayViewerOpeningToken++;
     if (gameID !== null) {
       window.location.reload();
     } else {
@@ -1489,6 +1493,7 @@ class Client {
     if (this.replayViewerID !== null) {
       document.querySelector("replay-viewer")?.remove();
       this.replayViewerID = null;
+      this.replayViewerOpeningToken++;
     }
 
     console.log(`joining lobby ${lobby.gameID}`);
