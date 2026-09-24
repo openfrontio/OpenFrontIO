@@ -27,6 +27,7 @@ import {
   GameSpeedUpIntentEvent,
   ReplaySpeedChangeEvent,
 } from "./InputHandler";
+import { startSingleplayerHeartbeat } from "./SingleplayerHeartbeat";
 import {
   defaultReplaySpeedMultiplier,
   ReplaySpeedMultiplier,
@@ -67,6 +68,7 @@ export class LocalServer {
   private turnStartTime = 0;
 
   private turnCheckInterval: NodeJS.Timeout;
+  private stopHeartbeat: (() => void) | null = null;
   private clientConnect: () => void;
   private clientMessage: (message: ServerMessage) => void;
 
@@ -153,6 +155,12 @@ export class LocalServer {
       // Don't send myClientID for replays — viewer has no player identity.
       myClientID: this.lobbyConfig.gameRecord ? undefined : this.clientID,
     } satisfies ServerStartGameMessage);
+    // Last, so a start() that throws above leaves no interval behind.
+    if (!this.isReplay) {
+      this.stopHeartbeat = startSingleplayerHeartbeat(
+        this.lobbyConfig.gameStartInfo.gameID,
+      );
+    }
   }
 
   onMessage(clientMsg: ClientMessage) {
@@ -277,6 +285,8 @@ export class LocalServer {
   public endGame() {
     console.log("local server ending game");
     clearInterval(this.turnCheckInterval);
+    this.stopHeartbeat?.();
+    this.stopHeartbeat = null;
     if (this.isReplay) {
       return;
     }

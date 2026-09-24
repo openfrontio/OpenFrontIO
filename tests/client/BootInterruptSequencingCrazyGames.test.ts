@@ -95,9 +95,12 @@ describe("boot sequencing on CrazyGames", () => {
     const ports: BootInterruptPorts = {
       translate: (key) => `t(${key})`,
       confirm: async () => false,
+      alert: async () => {},
+      tierName: (tier) => tier,
       navigate: (hash) => calls.navigated.push(hash),
       openRewards: () => calls.rewardsOpened++,
       storeClaimPrompt: () => {},
+      storeSteamGrant: () => {},
       now: () => Date.now(),
     };
     const player = userMe.player;
@@ -107,13 +110,16 @@ describe("boot sequencing on CrazyGames", () => {
       username: player.username,
       usernameBase: player.usernameBase,
       lapseNoticeDue: shown,
+      grantWelcomeDue: false,
+      grantEndedDue: false,
+      grantStringsReady: true,
       rewardCount: (player.rewards ?? []).length,
       claimPromptDue: true,
       claimStringsReady: true,
     });
     await runBootInterrupt(
       interrupt,
-      { claimStore: {}, publicId: "p", hasRewards: false },
+      { claimStore: {}, grantStore: {}, publicId: "p", hasRewards: false },
       ports,
     );
     return { interrupt, ...calls };
