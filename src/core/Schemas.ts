@@ -192,6 +192,11 @@ export const MAX_HOSTED_LOBBIES = 10;
 // deadline; relisting starts a fresh one.
 export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
 
+// The host picks the start time (up to HOSTED_LOBBY_AUTO_START_MS) and the
+// player cap when listing; filling to the cap starts the game early.
+export const MIN_HOSTED_LOBBY_AUTO_START_MS = 60 * 1000;
+export const MAX_HOSTED_LOBBY_PLAYERS = 100;
+
 // Featured lobbies get a longer window. A scheduled event announced ahead of
 // time needs the listing to still be up when its audience arrives, and unlike a
 // subscriber sitting on a listing the host is an authenticated admin bot. Only
@@ -346,6 +351,9 @@ export const PublicGameInfoSchema = z.object({
   label: LobbyLabelSchema.optional(),
   accent: LobbyAccentSchema.optional(),
   featured: z.boolean().optional(),
+  // Hosted lobbies only: server timestamp when the listing auto-starts, so
+  // the lobby browser can show a countdown before the host presses Start.
+  autoStartAt: zb.uint().optional(),
 });
 
 export const PublicGamesSchema = z.object({
@@ -1207,6 +1215,11 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   num_turns: z.number(),
   winner: WinnerSchema,
   lobbyFillTime: z.number().nonnegative(),
+  // The master-scheduled lobby slot this game filled (ffa/team/special), or
+  // "hosted" for a subscriber-listed lobby. Absent on private and
+  // singleplayer games. Only the record carries it (not GameStartInfo, which
+  // is on the wire): infra measures per-type join rates for map rotation.
+  publicGameType: PublicGameTypeSchema.optional(),
   // Absent on singleplayer records and on records read back from the API,
   // which scrubs them like persistentID.
   reports: PlayerReportSchema.array().optional(),
@@ -1233,6 +1246,9 @@ export const AnalyticsRecordSchema = PartialAnalyticsRecordSchema.extend({
   // identity these fields record) is involved.
   subdomain: z.string().optional(),
   domain: z.string().optional(),
+  // The site the server registered under (ClusterCheckin.registeredSite),
+  // which blue/green share. Absent under local dev and on older records.
+  site: z.string().optional(),
 });
 
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;

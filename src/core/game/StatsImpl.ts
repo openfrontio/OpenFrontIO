@@ -1,4 +1,6 @@
+import { z } from "zod";
 import { AllPlayersStats, ClientID } from "../Schemas";
+import { snapshotType } from "../snapshot/SnapshotType";
 import {
   ALLIANCE_INDEX_BROKEN_BY_OTHER,
   ALLIANCE_INDEX_EXPIRED,
@@ -13,11 +15,17 @@ import {
   BOAT_INDEX_ARRIVE,
   BOAT_INDEX_CAPTURE,
   BOAT_INDEX_DESTROY,
+  BOAT_INDEX_LOST,
   BOAT_INDEX_SENT,
   BoatUnit,
+  BoatUnitType,
   BOMB_INDEX_INTERCEPT,
   BOMB_INDEX_LAND,
   BOMB_INDEX_LAUNCH,
+  DONATION_BROKE_GOLD_THRESHOLD,
+  DONATION_INDEX_GOLD_RECV,
+  DONATION_INDEX_GOLD_RECV_BROKE,
+  GOLD_INDEX_DONATE_RECV,
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_TRAIN_OTHER,
@@ -38,10 +46,11 @@ import {
   TILE_INDEX_DRAWDOWN_PEAK,
   TILE_INDEX_DRAWDOWN_TROUGH,
   TILE_INDEX_PEAK,
+  unitTypeToBoatUnit,
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
-import { Player, PlayerType, TerraNullius, UnitType } from "./Game";
+import { Player, PlayerType, TerraNullius } from "./Game";
 import { Stats } from "./Stats";
 
 type BigIntLike = bigint | number;
@@ -61,12 +70,15 @@ const conquest_by_type: Record<PlayerType, number> = {
 };
 
 export class StatsImpl implements Stats {
-  private readonly data: AllPlayersStats = {};
+  private data: AllPlayersStats = {};
 
-  private _numMirvLaunched: bigint = 0n;
+  snapshot(): StatsState {
+    return { data: this.data };
+  }
 
-  numMirvsLaunched(): bigint {
-    return this._numMirvLaunched;
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: StatsState): void {
+    this.data = s.data as AllPlayersStats;
   }
 
   getPlayerStats(player: Player): PlayerStats {
@@ -149,6 +161,14 @@ export class StatsImpl implements Stats {
     p.gold ??= [0n];
     while (p.gold.length <= index) p.gold.push(0n);
     p.gold[index] += _bigint(value);
+  }
+
+  private _addDonation(player: Player, index: number, value: BigIntLike) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.donations ??= [0n];
+    while (p.donations.length <= index) p.donations.push(0n);
+    p.donations[index] += _bigint(value);
   }
 
   private _addOtherUnit(
@@ -305,14 +325,15 @@ export class StatsImpl implements Stats {
     this._addBoat(player, "trans", BOAT_INDEX_CAPTURE, 1);
   }
 
+  boatLose(player: Player, type: BoatUnitType): void {
+    this._addBoat(player, unitTypeToBoatUnit[type], BOAT_INDEX_LOST, 1);
+  }
+
   bombLaunch(
     player: Player,
     target: Player | TerraNullius,
     type: NukeType,
   ): void {
-    if (type === UnitType.MIRV) {
-      this._numMirvLaunched++;
-    }
     this._addBomb(player, type, BOMB_INDEX_LAUNCH, 1);
   }
 
@@ -330,6 +351,18 @@ export class StatsImpl implements Stats {
 
   goldWork(player: Player, gold: BigIntLike): void {
     this._addGold(player, GOLD_INDEX_WORK, gold);
+  }
+
+  goldDonationReceived(
+    player: Player,
+    gold: BigIntLike,
+    goldBefore: BigIntLike,
+  ): void {
+    this._addGold(player, GOLD_INDEX_DONATE_RECV, gold);
+    this._addDonation(player, DONATION_INDEX_GOLD_RECV, 1);
+    if (_bigint(goldBefore) < DONATION_BROKE_GOLD_THRESHOLD) {
+      this._addDonation(player, DONATION_INDEX_GOLD_RECV_BROKE, 1);
+    }
   }
 
   goldWar(player: Player, captured: Player, gold: BigIntLike): void {
@@ -453,3 +486,14 @@ export class StatsImpl implements Stats {
 
   lobbyFillTime(fillTimeMs: number): void {}
 }
+
+export const StatsSnapshot = snapshotType({
+  name: "Stats",
+  version: 1,
+  schema: z.object({
+    // Stored as the live AllPlayersStats tree (bigints and all). Its shape is
+    // versioned by StatsSchemas, which game records already keep readable.
+    data: z.record(z.string(), z.unknown()),
+  }),
+});
+export type StatsState = z.infer<typeof StatsSnapshot.schema>;

@@ -893,6 +893,11 @@ export class InputHandler {
     if (event.button > 0) {
       return;
     }
+    // The release listener is global so map drags can end over the HUD. A HUD
+    // click has no matching map pointerdown and must not reuse stale map state.
+    if (!this.pointerDown || !this.pointers.has(event.pointerId)) {
+      return;
+    }
     this.pointerDown = false;
     this.pointers.clear();
 
@@ -1042,12 +1047,15 @@ export class InputHandler {
       return;
     }
 
-    this.pointers.set(event.pointerId, event);
-
     if (!this.pointerDown) {
       this.eventBus.emit(new MouseOverEvent(event.clientX, event.clientY));
       return;
     }
+
+    if (!this.pointers.has(event.pointerId)) {
+      return;
+    }
+    this.pointers.set(event.pointerId, event);
 
     if (this.pointers.size === 1) {
       const deltaX = event.clientX - this.lastPointerX;

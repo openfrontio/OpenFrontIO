@@ -10,6 +10,15 @@ export class AirPathFinder implements PathFinder<TileRef> {
     this.seed = game.ticks();
   }
 
+  /** Paths are drawn from a generator re-seeded with this on every query. */
+  getSeed(): number {
+    return this.seed;
+  }
+
+  setSeed(seed: number): void {
+    this.seed = seed;
+  }
+
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
     if (Array.isArray(from)) {
       throw new Error("AirPathFinder does not support multiple start points");

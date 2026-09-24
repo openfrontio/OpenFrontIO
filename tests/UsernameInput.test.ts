@@ -55,6 +55,7 @@ vi.mock("../src/client/Utils", async (importOriginal) => ({
 }));
 
 // Side-effect import registers <username-input>; vi.mock is hoisted above it.
+import { STEAM_GRANT_NOTICE_KEY } from "../src/client/SteamGrantNotices";
 import "../src/client/UsernameInput";
 import type { UsernameInput as UsernameInputEl } from "../src/client/UsernameInput";
 
@@ -815,6 +816,58 @@ describe("UsernameInput lapse notice", () => {
     const message = showInGameAlert.mock.calls[0][0];
     expect(message).toContain("username.lapse_notice");
     expect(message).toContain("RyanTheGreat");
+  });
+
+  // A Steam buyer whose included month ran out never subscribed, so the
+  // ordinary "your subscription ended... resubscribe" wording is the sentence
+  // that convinces them the game hid one. The notice reads the grant record
+  // Main wrote while the month was running, and marks the sign-off shown so
+  // the boot sequencer does not say it all again next launch.
+  it("uses the after-grant wording for a former Steam grant holder", async () => {
+    localStorage.setItem(
+      STEAM_GRANT_NOTICE_KEY,
+      JSON.stringify({
+        p: {
+          periodEnd: "2026-08-30T00:00:00.000Z",
+          tier: "warlord",
+          welcomed: true,
+          endedShown: false,
+          seenAt: 0,
+        },
+      }),
+    );
+    const el = await mount();
+    await signIn(el, lapsedUser({ publicId: "p" }));
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    const message = showInGameAlert.mock.calls[0][0];
+    expect(message).toContain("username.lapse_notice_after_grant");
+    expect(message).toContain("RyanTheGreat");
+    expect(
+      JSON.parse(localStorage.getItem(STEAM_GRANT_NOTICE_KEY) ?? "{}").p
+        .endedShown,
+    ).toBe(true);
+  });
+
+  it("keeps the ordinary wording when the grant is someone else's", async () => {
+    localStorage.setItem(
+      STEAM_GRANT_NOTICE_KEY,
+      JSON.stringify({
+        other: {
+          periodEnd: "2026-08-30T00:00:00.000Z",
+          tier: "warlord",
+          welcomed: true,
+          endedShown: false,
+          seenAt: 0,
+        },
+      }),
+    );
+    const el = await mount();
+    await signIn(el, lapsedUser({ publicId: "p" }));
+
+    const message = showInGameAlert.mock.calls[0][0];
+    expect(message).toContain("username.lapse_notice");
+    expect(message).not.toContain("after_grant");
   });
 
   it("does not announce it again on the next launch", async () => {

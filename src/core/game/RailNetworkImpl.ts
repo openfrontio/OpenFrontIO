@@ -1,4 +1,10 @@
+import { z } from "zod";
 import { PathFinding } from "../pathfinding/PathFinder";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { snapshotType, zInt, zRef } from "../snapshot/SnapshotType";
 import { Game, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { GameUpdateType } from "./GameUpdates";
@@ -54,6 +60,25 @@ export class StationManagerImpl implements StationManager {
 
   count(): number {
     return this.nextId;
+  }
+
+  snapshot(w: SnapshotWriter): { stations: number[]; nextId: number } {
+    return {
+      stations: [...this.stations].map((s) => w.station(s)),
+      nextId: this.nextId,
+    };
+  }
+
+  restoreSnapshot(
+    s: { stations: number[]; nextId: number },
+    r: SnapshotReader,
+  ): void {
+    this.stations = new Set(s.stations.map((i) => r.station(i)));
+    this.stationsById = [];
+    for (const station of this.stations) {
+      this.stationsById[station.id] = station;
+    }
+    this.nextId = s.nextId;
   }
 }
 
@@ -453,4 +478,40 @@ export class RailNetworkImpl implements RailNetwork {
       merged.merge(cluster);
     }
   }
+
+  snapshot(w: SnapshotWriter): RailNetworkState {
+    const stationManager = this._stationManager as StationManagerImpl;
+    return {
+      stationManager: stationManager.snapshot(w),
+      nextId: this.nextId,
+      dirtyClusters: [...this.dirtyClusters].map((c) => w.cluster(c)),
+      railGrid: this.railGrid.snapshot((r) => w.railroad(r)),
+    };
+  }
+
+  /** Overwrites the dynamic state of a freshly constructed network. */
+  restoreSnapshot(s: RailNetworkState, r: SnapshotReader): void {
+    (this._stationManager as StationManagerImpl).restoreSnapshot(
+      s.stationManager,
+      r,
+    );
+    this.nextId = s.nextId;
+    this.dirtyClusters = new Set(s.dirtyClusters.map((i) => r.cluster(i)));
+    this.railGrid.restoreSnapshot(s.railGrid, (i) => r.railroad(i));
+  }
 }
+
+export const RailNetworkSnapshot = snapshotType({
+  name: "RailNetwork",
+  version: 1,
+  schema: z.object({
+    stationManager: z.object({ stations: z.array(zRef()), nextId: zInt() }),
+    nextId: zInt(),
+    dirtyClusters: z.array(zRef()),
+    railGrid: z.object({
+      cells: z.array(z.tuple([z.string(), z.array(zRef())])),
+      railToCells: z.array(z.tuple([zRef(), z.array(z.string())])),
+    }),
+  }),
+});
+export type RailNetworkState = z.infer<typeof RailNetworkSnapshot.schema>;

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ClientEnv } from "../../src/client/ClientEnv";
+import { ClientEnv, NoServerError } from "../../src/client/ClientEnv";
 import { resetPagePinForTests } from "../../src/client/PagePin";
 import {
   attemptInFlight,
@@ -16,6 +16,7 @@ import {
   retryServerList,
   serverListSite,
   serverListUrl,
+  setServerListInGame,
   startServerListPolling,
   stopServerListPolling,
   versionedPathForMismatchedGame,
@@ -454,6 +455,68 @@ describe("startServerListPolling", () => {
     stopServerListPolling();
     await vi.advanceTimersByTimeAsync(REFRESH_MS * 2);
     expect(fetchMock).toHaveBeenCalledTimes(7);
+  });
+
+  it("skips beats while the tab is hidden and resumes when it is shown", async () => {
+    vi.useFakeTimers();
+    let hidden = false;
+    const hiddenSpy = vi
+      .spyOn(document, "hidden", "get")
+      .mockImplementation(() => hidden);
+    try {
+      startServerListPolling();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Hidden: however long it sits there, no beat goes out.
+      hidden = true;
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(REFRESH_MS * 10);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Shown again: the overdue beat runs at once, and the cadence resumes.
+      hidden = false;
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+
+      // A quick hide-and-show before a beat is due adds no request.
+      hidden = true;
+      document.dispatchEvent(new Event("visibilitychange"));
+      hidden = false;
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      hiddenSpy.mockRestore();
+    }
+  });
+
+  it("skips beats during a match and resumes on the way back to the menu", async () => {
+    vi.useFakeTimers();
+    startServerListPolling();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // In a match: however long it runs, no beat goes out.
+    setServerListInGame(true);
+    await vi.advanceTimersByTimeAsync(REFRESH_MS * 10);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Back at the menu: the overdue beat runs at once, and the cadence resumes.
+    setServerListInGame(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(REFRESH_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    // A match shorter than the time to the next beat adds no request.
+    setServerListInGame(true);
+    setServerListInGame(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("does not poll on a replay shell host", async () => {
@@ -1077,9 +1140,11 @@ describe("picking between open, draining and fenced", () => {
     expect(await ensureServerList()).toBe("outdated");
     // The prompt navigates, not this: the page is left exactly where it is.
     expect(loc.href).toBe("https://openfront.io/w1/game/cAbCd12345?lobby");
-    // Own-server calls fall back to the page's own values — here the
-    // document's origin, the only thing a Worker-served page has...
-    expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
+    // Own-server calls have nothing to fall back to: the document's origin
+    // is all a Worker-served page has, and it is the page host, not a game
+    // server. Dialing it is what produced 1.1M edge timeouts a day
+    // (ai-ops#21); an outdated page should be reloading, not connecting...
+    expect(() => ClientEnv.serverWsBase()).toThrow(NoServerError);
     // ...and existing games still resolve by letter from the list.
     expect(ClientEnv.resolveGame("cAbCd12345")).toEqual({
       kind: "cross",
@@ -1162,7 +1227,12 @@ describe("picking between open, draining and fenced", () => {
     );
     expect(await ensureServerList()).toBe("no-server");
     expect(loc.href).toBe("https://openfront.io/");
-    expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
+    // And it does NOT fall back to the page host. This is one of the two
+    // states that used to dial the apex (the other is "outdated"): the list
+    // answered and named no server for this build, so there is nothing to
+    // connect to, and `wss://openfront.io` is a host whose edge can only time
+    // the connect out (ai-ops#21).
+    expect(() => ClientEnv.serverWsBase()).toThrow(NoServerError);
 
     setWorkerBootstrap({ gitCommit: OLD });
     fetchMock.mockImplementation(async () =>

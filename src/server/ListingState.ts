@@ -16,6 +16,8 @@ export class ListingState {
   // When the lobby was listed. Cleared on delist, so relisting starts a
   // fresh deadline.
   private listedAt?: number;
+  // Host-chosen time from listing to auto-start; defaults to the maximum.
+  private autoStartMs?: number;
   // Featured lobbies: a label shown instead of the map name, an accent for
   // the row, and a longer auto-start deadline.
   private label?: string;
@@ -26,13 +28,14 @@ export class ListingState {
     return this.listed;
   }
 
-  setListed(listed: boolean): void {
+  setListed(listed: boolean, autoStartMs?: number): void {
     if (this.listed === listed) {
       // Duplicate toggles must not extend the auto-start deadline.
       return;
     }
     this.listed = listed;
     this.listedAt = listed ? Date.now() : undefined;
+    this.autoStartMs = listed ? autoStartMs : undefined;
   }
 
   // Deadline after which a listed lobby starts automatically, so hosts
@@ -43,7 +46,7 @@ export class ListingState {
       this.listedAt +
       (this.featured
         ? FEATURED_LOBBY_AUTO_START_MS
-        : HOSTED_LOBBY_AUTO_START_MS)
+        : (this.autoStartMs ?? HOSTED_LOBBY_AUTO_START_MS))
     );
   }
 

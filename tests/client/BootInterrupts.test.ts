@@ -19,6 +19,7 @@ import {
   type BootInterruptPorts,
   type ClaimPromptStore,
 } from "../../src/client/BootInterrupts";
+import type { SteamGrantStore } from "../../src/client/SteamGrantNotices";
 
 const ME = "player-public-id";
 
@@ -33,6 +34,9 @@ function boot(
     username: "Alice",
     usernameBase: "Alice",
     lapseNoticeDue: false,
+    grantWelcomeDue: false,
+    grantEndedDue: false,
+    grantStringsReady: true,
     rewardCount: 0,
     claimPromptDue: true,
     claimStringsReady: true,
@@ -401,8 +405,10 @@ describe("runBootInterrupt", () => {
   function ports(overrides: Partial<BootInterruptPorts> = {}) {
     const calls = {
       confirmed: [] as string[],
+      alerted: [] as string[],
       navigated: [] as string[],
       stored: [] as ClaimPromptStore[],
+      grantStored: [] as SteamGrantStore[],
       rewardsOpened: 0,
     };
     const base: BootInterruptPorts = {
@@ -413,16 +419,21 @@ describe("runBootInterrupt", () => {
         calls.confirmed.push(body);
         return true;
       },
+      alert: async (body) => {
+        calls.alerted.push(body);
+      },
+      tierName: (tier) => `name(${tier})`,
       navigate: (hash) => calls.navigated.push(hash),
       openRewards: () => calls.rewardsOpened++,
       storeClaimPrompt: (store) => calls.stored.push(store),
+      storeSteamGrant: (store) => calls.grantStored.push(store),
       now: () => now,
       ...overrides,
     };
     return { base, calls };
   }
 
-  const context = { claimStore: {}, publicId: ME };
+  const context = { claimStore: {}, grantStore: {}, publicId: ME };
 
   async function run(
     interrupt: BootInterrupt | null,
@@ -490,8 +501,10 @@ describe("runBootInterrupt", () => {
     const calls = await run("lapse-notice");
     expect(calls).toEqual({
       confirmed: [],
+      alerted: [],
       navigated: [],
       stored: [],
+      grantStored: [],
       rewardsOpened: 0,
     });
   });
@@ -500,8 +513,10 @@ describe("runBootInterrupt", () => {
     const calls = await run(null);
     expect(calls).toEqual({
       confirmed: [],
+      alerted: [],
       navigated: [],
       stored: [],
+      grantStored: [],
       rewardsOpened: 0,
     });
   });
@@ -688,6 +703,9 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     username: null,
     usernameBase: null,
     lapseNoticeDue: false,
+    grantWelcomeDue: false,
+    grantEndedDue: false,
+    grantStringsReady: false,
     rewardCount: 2,
     claimPromptDue: true,
     claimStringsReady: claimPromptStringsReady(unready),
@@ -707,16 +725,19 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     };
     await runBootInterrupt(
       nextBootInterrupt(inputs),
-      { claimStore: {}, publicId: ME },
+      { claimStore: {}, grantStore: {}, publicId: ME },
       {
         translate: unready,
         confirm: async (body) => {
           calls.confirmed.push(body);
           return true;
         },
+        alert: async () => {},
+        tierName: (tier) => tier,
         navigate: (hash) => calls.navigated.push(hash),
         openRewards: () => calls.rewardsOpened++,
         storeClaimPrompt: (store) => calls.stored.push(store),
+        storeSteamGrant: () => {},
         now: () => 1_757_000_000_000,
       },
     );
@@ -731,5 +752,199 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
   it("stays quiet, and unspent, when rewards are not waiting either", async () => {
     const alone = { ...inputs, rewardCount: 0 };
     expect(nextBootInterrupt(alone)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The Steam grant notices
+// ---------------------------------------------------------------------------
+
+describe("the Steam grant notices in the ordering", () => {
+  // The buyer has not been told the month is a one-off, and every later
+  // prompt reads as a subscription they never agreed to. The welcome goes
+  // ahead of the claim prompt aimed at the same day-0 buyer.
+  it("welcomes a new grant holder before asking them to claim a name", () => {
+    expect(
+      nextBootInterrupt(
+        boot({
+          grantWelcomeDue: true,
+          username: null,
+          usernameBase: null,
+          rewardCount: 3,
+        }),
+      ),
+    ).toBe("grant-welcome");
+  });
+
+  it("still puts the TEMPORARY#### rename ahead of the welcome", () => {
+    expect(
+      nextBootInterrupt(
+        boot({
+          grantWelcomeDue: true,
+          username: "TEMPORARY1234",
+          usernameBase: "TEMPORARY1234",
+        }),
+      ),
+    ).toBe("username-temporary");
+  });
+
+  // The lapse notice has already spoken by the time the ordering is asked, and
+  // for a former grant holder it carries the sign-off itself.
+  it("lets a lapse notice that spoke stand in for the sign-off", () => {
+    expect(
+      nextBootInterrupt(boot({ grantEndedDue: true, lapseNoticeDue: true })),
+    ).toBe("lapse-notice");
+  });
+
+  it("signs off an ended grant ahead of the rewards popup", () => {
+    expect(
+      nextBootInterrupt(boot({ grantEndedDue: true, rewardCount: 2 })),
+    ).toBe("grant-ended");
+  });
+
+  // Same rule as the claim prompt: a key echoed back must not spend the only
+  // explanation the buyer gets, and must not cost the boot either.
+  it("falls through when the grant strings have not landed", () => {
+    expect(
+      nextBootInterrupt(
+        boot({
+          grantWelcomeDue: true,
+          grantStringsReady: false,
+          rewardCount: 1,
+        }),
+      ),
+    ).toBe("rewards");
+    expect(
+      nextBootInterrupt(
+        boot({ grantEndedDue: true, grantStringsReady: false, rewardCount: 1 }),
+      ),
+    ).toBe("rewards");
+  });
+});
+
+describe("running the Steam grant notices", () => {
+  const now = 1_757_000_000_000;
+  const record = {
+    periodEnd: "2026-10-15T00:00:00.000Z",
+    tier: "warlord",
+    welcomed: false,
+    endedShown: false,
+    seenAt: now,
+  };
+  const grantStore = { [ME]: record };
+
+  function ports() {
+    const calls = {
+      alerted: [] as { body: string; heading: string }[],
+      grantStored: [] as SteamGrantStore[],
+      params: [] as (Record<string, string | number> | undefined)[],
+      rewardsOpened: 0,
+    };
+    const base: BootInterruptPorts = {
+      translate: (key, params) => {
+        calls.params.push(params);
+        return `t(${key})`;
+      },
+      confirm: async () => true,
+      alert: async (body, heading) => {
+        calls.alerted.push({ body, heading });
+      },
+      tierName: (tier) => `name(${tier})`,
+      navigate: () => {},
+      openRewards: () => calls.rewardsOpened++,
+      storeClaimPrompt: () => {},
+      storeSteamGrant: (store) => calls.grantStored.push(store),
+      now: () => now,
+    };
+    return { base, calls };
+  }
+
+  it("welcomes with the tier's display name and the end date", async () => {
+    const { base, calls } = ports();
+    await runBootInterrupt(
+      "grant-welcome",
+      { claimStore: {}, grantStore, publicId: ME },
+      base,
+    );
+    expect(calls.alerted).toEqual([
+      {
+        body: `t(${BOOT_INTERRUPT_KEYS.grantWelcomeBody})`,
+        heading: `t(${BOOT_INTERRUPT_KEYS.grantWelcomeHeading})`,
+      },
+    ]);
+    const bodyParams = calls.params[0];
+    expect(bodyParams?.tier).toBe("name(warlord)");
+    expect(bodyParams?.date).toBe(
+      new Date(record.periodEnd).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }),
+    );
+  });
+
+  // Recorded before the dialog opens: the alert settles only on dismissal.
+  it("records the welcome as shown before opening it", async () => {
+    const { base, calls } = ports();
+    let storedBeforeAlert = false;
+    base.alert = async () => {
+      storedBeforeAlert = calls.grantStored.length === 1;
+    };
+    await runBootInterrupt(
+      "grant-welcome",
+      { claimStore: {}, grantStore, publicId: ME },
+      base,
+    );
+    expect(storedBeforeAlert).toBe(true);
+    expect(calls.grantStored).toEqual([
+      { [ME]: { ...record, welcomed: true } },
+    ]);
+  });
+
+  it("signs off naming the tier, and records that too", async () => {
+    const { base, calls } = ports();
+    await runBootInterrupt(
+      "grant-ended",
+      { claimStore: {}, grantStore, publicId: ME },
+      base,
+    );
+    expect(calls.alerted).toEqual([
+      {
+        body: `t(${BOOT_INTERRUPT_KEYS.grantEndedBody})`,
+        heading: `t(${BOOT_INTERRUPT_KEYS.grantEndedHeading})`,
+      },
+    ]);
+    expect(calls.params[0]?.tier).toBe("name(warlord)");
+    expect(calls.grantStored).toEqual([
+      { [ME]: { ...record, endedShown: true } },
+    ]);
+  });
+
+  it("does nothing without a record to speak from", async () => {
+    const { base, calls } = ports();
+    for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
+      await runBootInterrupt(
+        interrupt,
+        { claimStore: {}, grantStore: {}, publicId: ME },
+        base,
+      );
+    }
+    expect(calls.alerted).toEqual([]);
+    expect(calls.grantStored).toEqual([]);
+  });
+
+  it("opens no rewards and touches no claim record", async () => {
+    const { base, calls } = ports();
+    const claimStored: ClaimPromptStore[] = [];
+    base.storeClaimPrompt = (store) => claimStored.push(store);
+    for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
+      await runBootInterrupt(
+        interrupt,
+        { claimStore: {}, grantStore, publicId: ME },
+        base,
+      );
+    }
+    expect(calls.rewardsOpened).toBe(0);
+    expect(claimStored).toEqual([]);
   });
 });

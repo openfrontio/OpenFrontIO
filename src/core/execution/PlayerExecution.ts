@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { Config } from "../configuration/Config";
 import {
   Cell,
@@ -14,10 +15,19 @@ import {
   tileTraversalScratch,
   TileTraversalScratch,
 } from "../game/TileTraversalScratch";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zPlayerRef } from "../snapshot/SnapshotType";
 import { getMode, simpleHash } from "../Util";
 
+const TICKS_PER_CLUSTER_CALC = 20;
+
 export class PlayerExecution implements Execution {
-  private readonly ticksPerClusterCalc = 20;
+  private ticksPerClusterCalc = TICKS_PER_CLUSTER_CALC;
 
   private config: Config;
   private lastCalc = 0;
@@ -766,4 +776,43 @@ export class PlayerExecution implements Execution {
 
     this.player.removeAllAlliances();
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return PlayerExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      lastCalc: this.lastCalc,
+      player: w.player(this.player),
+    });
+  }
+
+  restoreSnapshot(s: PlayerExecState, r: SnapshotReader): void {
+    this.ticksPerClusterCalc = TICKS_PER_CLUSTER_CALC;
+    this.active = s.active;
+    if (s.initialized) {
+      this.mg = r.game;
+      this.map = r.game.map();
+      this.config = r.game.config();
+    }
+    this.lastCalc = s.lastCalc;
+    // Scratch neighbor buffers: always written before they are read.
+    this.nbuf = [0, 0, 0, 0];
+    this.nbuf8 = [0, 0, 0, 0, 0, 0, 0, 0];
+    this.player = r.player(s.player);
+  }
 }
+
+const PlayerExecStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  lastCalc: zInt(),
+  player: zPlayerRef(),
+});
+type PlayerExecState = z.infer<typeof PlayerExecStateSchema>;
+
+export const PlayerExecutionSnapshot = execSnapshotType({
+  name: "Player",
+  version: 1,
+  schema: PlayerExecStateSchema,
+  cls: () => PlayerExecution,
+});

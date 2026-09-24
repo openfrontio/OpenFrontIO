@@ -1,9 +1,17 @@
+import { z } from "zod";
 import { Execution, Game, Player, PlayerType } from "../game/Game";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zPlayerRef } from "../snapshot/SnapshotType";
 
 export class EmbargoAllExecution implements Execution {
   constructor(
-    private readonly player: Player,
-    private readonly action: "start" | "stop",
+    private player: Player,
+    private action: "start" | "stop",
   ) {}
 
   init(mg: Game, _: number): void {
@@ -35,4 +43,29 @@ export class EmbargoAllExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return EmbargoAllExecutionSnapshot.write({
+      player: w.player(this.player),
+      action: this.action,
+    });
+  }
+
+  restoreSnapshot(s: EmbargoAllState, r: SnapshotReader): void {
+    this.player = r.player(s.player);
+    this.action = s.action;
+  }
 }
+
+const EmbargoAllStateSchema = z.object({
+  player: zPlayerRef(),
+  action: z.enum(["start", "stop"]),
+});
+type EmbargoAllState = z.infer<typeof EmbargoAllStateSchema>;
+
+export const EmbargoAllExecutionSnapshot = execSnapshotType({
+  name: "EmbargoAll",
+  version: 1,
+  schema: EmbargoAllStateSchema,
+  cls: () => EmbargoAllExecution,
+});
