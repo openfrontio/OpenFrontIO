@@ -197,7 +197,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private resumeSave: SoloSaveState | null = null;
   @state() private resumeInFlight: boolean = false;
   private resumeAttempt: number = 0;
-  private clearSaveOnGameStart: boolean = false;
+  private clearSaveOnGameStart: string | null = null;
   @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
   // Maps that support achievements (have nations). null until loaded — the
   // medal overview shows a placeholder total meanwhile.
@@ -271,9 +271,10 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   private handleGameStarting = () => {
-    if (this.clearSaveOnGameStart) {
-      this.clearSaveOnGameStart = false;
-      clearSoloSave();
+    if (this.clearSaveOnGameStart !== null) {
+      const gameID = this.clearSaveOnGameStart;
+      this.clearSaveOnGameStart = null;
+      clearSoloSave(gameID);
       this.resumeSave = null;
       this.requestUpdate();
     }
@@ -318,7 +319,7 @@ export class SinglePlayerModal extends BaseModal {
 
       if (attempt !== this.resumeAttempt) return;
 
-      this.clearSaveOnGameStart = false;
+      this.clearSaveOnGameStart = null;
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
           detail: {
@@ -858,7 +859,7 @@ export class SinglePlayerModal extends BaseModal {
 
   protected onOpen(): void {
     void this.loadNationCount();
-    this.clearSaveOnGameStart = false;
+    this.clearSaveOnGameStart = null;
     this.resumeInFlight = false;
     // Spend the cosmetics round trip while the player is picking a map, not
     // after they commit. startGame() still resolves cosmetics properly; this
@@ -1293,85 +1294,90 @@ export class SinglePlayerModal extends BaseModal {
       // The ad is long enough that the modal can be closed while it runs.
       if (attempt !== this.startAttempt) return;
 
-      this.dispatchEvent(
-        new CustomEvent("join-lobby", {
-          detail: {
+      const joinEvent = new CustomEvent("join-lobby", {
+        detail: {
+          gameID: gameID,
+          gameStartInfo: {
             gameID: gameID,
-            gameStartInfo: {
-              gameID: gameID,
-              players: [
-                {
-                  clientID,
-                  username: resolvedName.name,
-                  clanTag: usernameInput?.getClanTag() ?? null,
-                  cosmetics,
-                },
-              ],
-              config: {
-                gameMap: this.selectedMap,
-                gameMapSize: this.compactMap
-                  ? GameMapSize.Compact
-                  : GameMapSize.Normal,
-                gameType: GameType.Singleplayer,
-                gameMode: this.gameMode,
-                playerTeams: this.teamCount,
-                difficulty: this.selectedDifficulty,
-                maxTimerValue: finalMaxTimerValue,
-                bots: this.bots,
-                infiniteGold: this.infiniteGold,
-                donateGold: this.gameMode === GameMode.Team,
-                donateTroops: this.gameMode === GameMode.Team,
-                infiniteTroops: this.infiniteTroops,
-                instantBuild: this.instantBuild,
-                randomSpawn: this.randomSpawn,
-                disabledUnits: this.disabledUnits.filter(
-                  (unit): unit is UnitType =>
-                    Object.values(UnitType).includes(unit),
-                ),
-                nations: sliderToNationsConfig(
-                  this.nations,
-                  this.defaultNationCount,
-                ),
-                ...(this.goldMultiplier && this.goldMultiplierValue
-                  ? { goldMultiplier: this.goldMultiplierValue }
-                  : {}),
-                ...(this.startingGold && this.startingGoldValue !== undefined
-                  ? {
-                      startingGold: Math.round(
-                        this.startingGoldValue * 1_000_000,
-                      ),
-                    }
-                  : {}),
-                ...(this.customAlliances
-                  ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
-                  : {}),
-                ...(this.waterNukes ? { waterNukes: true } : {}),
-                ...(this.doomsdayClock
-                  ? {
-                      doomsdayClock: {
-                        enabled: true,
-                        speed: this.doomsdayClockSpeed,
-                      },
-                    }
-                  : {}),
-                ...(this.overtime
-                  ? {
-                      overtime: {
-                        enabled: true,
-                        startMinutes: this.overtimeStartMinutes ?? 30,
-                      },
-                    }
-                  : {}),
+            players: [
+              {
+                clientID,
+                username: resolvedName.name,
+                clanTag: usernameInput?.getClanTag() ?? null,
+                cosmetics,
               },
-              lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
+            ],
+            config: {
+              gameMap: this.selectedMap,
+              gameMapSize: this.compactMap
+                ? GameMapSize.Compact
+                : GameMapSize.Normal,
+              gameType: GameType.Singleplayer,
+              gameMode: this.gameMode,
+              playerTeams: this.teamCount,
+              difficulty: this.selectedDifficulty,
+              maxTimerValue: finalMaxTimerValue,
+              bots: this.bots,
+              infiniteGold: this.infiniteGold,
+              donateGold: this.gameMode === GameMode.Team,
+              donateTroops: this.gameMode === GameMode.Team,
+              infiniteTroops: this.infiniteTroops,
+              instantBuild: this.instantBuild,
+              randomSpawn: this.randomSpawn,
+              disabledUnits: this.disabledUnits.filter(
+                (unit): unit is UnitType =>
+                  Object.values(UnitType).includes(unit),
+              ),
+              nations: sliderToNationsConfig(
+                this.nations,
+                this.defaultNationCount,
+              ),
+              ...(this.goldMultiplier && this.goldMultiplierValue
+                ? { goldMultiplier: this.goldMultiplierValue }
+                : {}),
+              ...(this.startingGold && this.startingGoldValue !== undefined
+                ? {
+                    startingGold: Math.round(
+                      this.startingGoldValue * 1_000_000,
+                    ),
+                  }
+                : {}),
+              ...(this.customAlliances
+                ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
+                : {}),
+              ...(this.waterNukes ? { waterNukes: true } : {}),
+              ...(this.doomsdayClock
+                ? {
+                    doomsdayClock: {
+                      enabled: true,
+                      speed: this.doomsdayClockSpeed,
+                    },
+                  }
+                : {}),
+              ...(this.overtime
+                ? {
+                    overtime: {
+                      enabled: true,
+                      startMinutes: this.overtimeStartMinutes ?? 30,
+                    },
+                  }
+                : {}),
             },
-            source: "singleplayer",
-          } satisfies JoinLobbyEvent,
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      this.clearSaveOnGameStart = true;
+            lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
+          },
+          source: "singleplayer",
+        } satisfies JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      const displayedSaveID = this.resumeSave?.gameID ?? null;
+      this.dispatchEvent(joinEvent);
+      if (joinEvent.defaultPrevented) {
+        this.clearSaveOnGameStart = null;
+        return;
+      }
+      this.clearSaveOnGameStart = displayedSaveID;
       // The overlay is the join pipeline's now — GameRenderer or Main's
       // canPlay() refusal hides it. Disowning it keeps the close below (and
       // any later onClose) from taking it down mid game-load.

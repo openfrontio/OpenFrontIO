@@ -1388,9 +1388,11 @@ class Client {
       if (startingModal instanceof GameStartingModal) {
         startingModal.hide();
       }
+      event.preventDefault();
       return;
     }
     if (this.blockedJoin(lobby)) {
+      event.preventDefault();
       return;
     }
     // Only once the join is actually going ahead: a refused dispatch that

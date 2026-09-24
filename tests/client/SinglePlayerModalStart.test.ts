@@ -70,9 +70,36 @@ describe("SinglePlayerModal start", () => {
     // Simulating acceptance: game-starting event fires on document
     document.dispatchEvent(new CustomEvent("game-starting"));
 
-    // Now clearSoloSave should have been called and resumeSave cleared
-    expect(clearSpy).toHaveBeenCalled();
+    // Now clearSoloSave should have been called with the matching gameID and resumeSave cleared
+    expect(clearSpy).toHaveBeenCalledWith("existing_save");
     expect(modal.resumeSave).toBeNull();
+
+    modal.disconnectedCallback();
+    clearSpy.mockRestore();
+  });
+
+  it("does not arm clearSoloSave when join-lobby is prevented", async () => {
+    const modal = createModal();
+    modal.connectedCallback();
+
+    const clearSpy = vi.spyOn(saveManager, "clearSoloSave");
+    modal.resumeSave = {
+      gameID: "existing_save",
+      numTurns: 50,
+      gameStartInfo: { config: { gameMap: "World" } },
+    } as any;
+
+    // Simulate join refusal by preventing default
+    modal.addEventListener("join-lobby", (e: Event) => e.preventDefault());
+
+    await modal.startGame();
+
+    // Simulating a later game-starting event (e.g. from joining a different lobby)
+    document.dispatchEvent(new CustomEvent("game-starting"));
+
+    // clearSoloSave should NOT have been called because join was prevented
+    expect(clearSpy).not.toHaveBeenCalled();
+    expect(modal.resumeSave).not.toBeNull();
 
     modal.disconnectedCallback();
     clearSpy.mockRestore();

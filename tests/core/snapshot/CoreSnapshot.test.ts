@@ -7,9 +7,14 @@ import {
 } from "../../../src/core/game/Game";
 import { GameImpl } from "../../../src/core/game/GameImpl";
 import {
+  readSnapshotHeader,
   restoreMapsFromSnapshot,
   snapshotGame,
 } from "../../../src/core/snapshot/GameSnapshot";
+import {
+  decodeSnapshotValue,
+  encodeSnapshotValue,
+} from "../../../src/core/snapshot/SnapshotCodec";
 import { setup } from "../../util/Setup";
 import {
   diffGraphs,
@@ -86,5 +91,27 @@ describe("core snapshot", () => {
     const b = game.player("bob");
     expect(gameMap.ownerID(game.ref(25, 10))).toBe(b.smallID());
     expect(gameMap.hasFallout(game.ref(40, 40))).toBe(true);
+  });
+
+  test("readSnapshotHeader validates startTick and returns null for malformed values", async () => {
+    const game = await builtGame();
+    const bytes = snapshotGame(game);
+    const header = readSnapshotHeader(bytes);
+    expect(header.tick).toBe(game.ticks());
+
+    // Corrupt startTick in raw snapshot object to various malformed types
+    const raw = decodeSnapshotValue(bytes) as any;
+    for (const malformed of ["not-a-number", 12.34, NaN, {}, [], true]) {
+      raw.game.d.startTick = malformed;
+      const corruptedBytes = encodeSnapshotValue(raw);
+      const corruptedHeader = readSnapshotHeader(corruptedBytes);
+      expect(corruptedHeader.startTick).toBeNull();
+    }
+
+    // When startTick is a valid integer, it should be preserved
+    raw.game.d.startTick = 42;
+    const validBytes = encodeSnapshotValue(raw);
+    const validHeader = readSnapshotHeader(validBytes);
+    expect(validHeader.startTick).toBe(42);
   });
 });

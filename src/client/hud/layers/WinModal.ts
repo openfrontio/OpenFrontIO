@@ -285,7 +285,7 @@ export class WinModal extends LitElement implements Controller {
     this.hide();
     const myPlayer = this.game?.myPlayer();
     if (myPlayer && !myPlayer.isAlive()) {
-      clearSoloSave();
+      clearSoloSave(this.game?.gameID());
     }
     window.location.href = homeHref();
   }

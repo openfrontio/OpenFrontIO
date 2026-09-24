@@ -244,6 +244,12 @@ function decodeRoot(bytes: Uint8Array): Root {
   return root.data;
 }
 
+function readStartTick(d: unknown): number | null {
+  if (typeof d !== "object" || d === null) return null;
+  const v = (d as { startTick?: unknown }).startTick;
+  return typeof v === "number" && Number.isInteger(v) ? v : null;
+}
+
 /** Reads what a restore needs to load first: the config and the map. */
 export function readSnapshotHeader(bytes: Uint8Array): SnapshotHeader {
   const root = decodeRoot(bytes);
@@ -253,9 +259,7 @@ export function readSnapshotHeader(bytes: Uint8Array): SnapshotHeader {
     gameID: root.gameID,
     tick: root.tick,
     gameConfig: GameConfigSchema.parse(root.gameConfig),
-    startTick:
-      (root.game?.d as { startTick?: number | null } | undefined)?.startTick ??
-      null,
+    startTick: readStartTick(root.game?.d),
   };
 }
 
