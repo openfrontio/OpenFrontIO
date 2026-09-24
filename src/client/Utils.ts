@@ -399,7 +399,10 @@ export function resolveKeybindLabel(
 
   if (layoutMap && layoutMap.has(codeToResolve)) {
     const char = layoutMap.get(codeToResolve)!.toUpperCase();
-    return isShift ? `Shift+${char}` : char;
+    const shiftPrefix = translateText("keybind_shift_prefix");
+    const prefix =
+      shiftPrefix === "keybind_shift_prefix" ? "Shift+" : shiftPrefix;
+    return isShift ? `${prefix}${char}` : char;
   }
 
   if (savedKey) {
@@ -415,7 +418,10 @@ export function formatKeyForDisplay(value: string): string {
 
   // Handle Shift+ prefix: format as "Shift+X"
   if (value.startsWith("Shift+")) {
-    return "Shift+" + formatKeyForDisplay(value.slice(6));
+    const shiftPrefix = translateText("keybind_shift_prefix");
+    const prefix =
+      shiftPrefix === "keybind_shift_prefix" ? "Shift+" : shiftPrefix;
+    return prefix + formatKeyForDisplay(value.slice(6));
   }
 
   // Handle space character or "Space" key
