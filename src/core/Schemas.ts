@@ -115,13 +115,15 @@ export type ServerMessage =
   | ServerPrestartMessage
   | ServerErrorMessage
   | ServerLobbyInfoMessage
-  | ServerNewLobbyMessage;
+  | ServerNewLobbyMessage
+  | ServerPongMessage;
 
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
   typeof ServerStartGameMessageSchema
 >;
 export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
+export type ServerPongMessage = z.infer<typeof ServerPongMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
 export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
 export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
@@ -1038,6 +1040,12 @@ export const ServerNewLobbyMessageSchema = z.object({
   gameID: ID,
 });
 
+// The reply to a ClientPingMessage, echoing its sentAt.
+export const ServerPongMessageSchema = z.object({
+  type: z.literal("pong"),
+  sentAt: zb.uint(),
+});
+
 export const ServerMessageSchema = zb.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -1047,6 +1055,7 @@ export const ServerMessageSchema = zb.discriminatedUnion("type", [
   ServerErrorSchema,
   ServerLobbyInfoMessageSchema,
   ServerNewLobbyMessageSchema,
+  ServerPongMessageSchema,
 ]);
 
 //
@@ -1127,8 +1136,12 @@ export const ClientLogMessageSchema = z.object({
   log: ID,
 });
 
+// sentAt is the client's own performance.now() (whole ms), echoed back in the
+// pong so the client can time the round trip without keeping state. Only
+// meaningful to the client that sent it.
 export const ClientPingMessageSchema = z.object({
   type: z.literal("ping"),
+  sentAt: zb.uint(),
 });
 
 export const ClientIntentMessageSchema = z.object({

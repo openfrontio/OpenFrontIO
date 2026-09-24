@@ -42,6 +42,7 @@ import {
   ServerErrorMessage,
   ServerLobbyInfoMessage,
   ServerNewLobbyMessage,
+  ServerPongMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
@@ -737,6 +738,15 @@ export class GameServer {
         // "someone is still out there" clock the empty-game reap waits on.
         this.lastPingUpdate = Date.now();
         client.lastPing = Date.now();
+        client.ws.send(
+          encodeServerMessage(
+            {
+              type: "pong",
+              sentAt: clientMsg.sentAt,
+            } satisfies ServerPongMessage,
+            this.zbinCtx,
+          ),
+        );
         break;
       }
       case "hash": {
