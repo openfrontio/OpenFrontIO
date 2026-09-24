@@ -912,6 +912,9 @@ export interface Game extends GameMap {
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
+  /** MIRVs launched so far by anyone; each one raises the next one's price. */
+  mirvsLaunched(): number;
+  recordMirvLaunch(): void;
   conquerPlayer(conqueror: Player, conquered: Player): void;
   miniWaterHPA(): PathFinder<number> | null;
   miniWaterGraph(): AbstractGraph | null;

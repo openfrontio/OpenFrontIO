@@ -624,7 +624,7 @@ export class Config {
             ) {
               return 0n;
             }
-            return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
+            return 25_000_000n + BigInt(game.mirvsLaunched()) * 15_000_000n;
           },
         };
         break;

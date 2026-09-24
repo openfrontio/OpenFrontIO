@@ -240,6 +240,9 @@ export class NukeExecution implements Execution {
           );
         }
 
+        if (this.nukeType === UnitType.MIRV) {
+          this.mg.recordMirvLaunch();
+        }
         // Record stats
         this.mg.stats().bombLaunch(this.player, target, this.nukeType);
       }

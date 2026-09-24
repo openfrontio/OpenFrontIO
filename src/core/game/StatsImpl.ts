@@ -48,7 +48,7 @@ import {
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
-import { Player, PlayerType, TerraNullius, UnitType } from "./Game";
+import { Player, PlayerType, TerraNullius } from "./Game";
 import { Stats } from "./Stats";
 
 type BigIntLike = bigint | number;
@@ -69,12 +69,6 @@ const conquest_by_type: Record<PlayerType, number> = {
 
 export class StatsImpl implements Stats {
   private readonly data: AllPlayersStats = {};
-
-  private _numMirvLaunched: bigint = 0n;
-
-  numMirvsLaunched(): bigint {
-    return this._numMirvLaunched;
-  }
 
   getPlayerStats(player: Player): PlayerStats {
     const clientID = player.clientID();
@@ -329,9 +323,6 @@ export class StatsImpl implements Stats {
     target: Player | TerraNullius,
     type: NukeType,
   ): void {
-    if (type === UnitType.MIRV) {
-      this._numMirvLaunched++;
-    }
     this._addBomb(player, type, BOMB_INDEX_LAUNCH, 1);
   }
 
