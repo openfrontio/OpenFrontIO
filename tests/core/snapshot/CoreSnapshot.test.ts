@@ -6,9 +6,17 @@ import {
   UnitType,
 } from "../../../src/core/game/Game";
 import { GameImpl } from "../../../src/core/game/GameImpl";
-import { snapshotGame } from "../../../src/core/snapshot/GameSnapshot";
+import {
+  restoreMapsFromSnapshot,
+  snapshotGame,
+} from "../../../src/core/snapshot/GameSnapshot";
 import { setup } from "../../util/Setup";
-import { diffGraphs, diffSnapshots, roundTrip } from "../../util/Snapshot";
+import {
+  diffGraphs,
+  diffSnapshots,
+  loadTestMaps,
+  roundTrip,
+} from "../../util/Snapshot";
 
 const MAP = "plains";
 
@@ -64,5 +72,19 @@ describe("core snapshot", () => {
     expect(diffSnapshots(snapshotGame(game), snapshotGame(restored))).toEqual(
       [],
     );
+  });
+
+  test("restoreMapsFromSnapshot restores tile ownership and map state", async () => {
+    const game = await builtGame();
+    const bytes = snapshotGame(game);
+    const { gameMap, miniGameMap } = await loadTestMaps(MAP);
+    restoreMapsFromSnapshot(bytes, gameMap, miniGameMap);
+
+    const a = game.player("alice");
+    expect(gameMap.ownerID(game.ref(10, 10))).toBe(a.smallID());
+    expect(gameMap.ownerID(game.ref(8, 8))).toBe(a.smallID());
+    const b = game.player("bob");
+    expect(gameMap.ownerID(game.ref(25, 10))).toBe(b.smallID());
+    expect(gameMap.hasFallout(game.ref(40, 40))).toBe(true);
   });
 });

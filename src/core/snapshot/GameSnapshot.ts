@@ -268,6 +268,35 @@ export interface RestoreDeps {
 }
 
 /**
+ * Restores map edits (water nukes, fallout, defense) and tile ownership from a
+ * snapshot onto freshly loaded map instances. Used on the client so GameView's
+ * local maps match the simulation state without waiting for per-tile deltas.
+ */
+export function restoreMapsFromSnapshot(
+  bytes: Uint8Array,
+  gameMap: GameMap,
+  miniGameMap?: GameMap,
+): void {
+  const root = decodeRoot(bytes);
+  (gameMap as GameMapImpl).restoreSnapshot(
+    readVersioned(GameMapSnapshot, root.map),
+  );
+  if (miniGameMap) {
+    (miniGameMap as GameMapImpl).restoreSnapshot(
+      readVersioned(GameMapSnapshot, root.miniMap),
+    );
+  }
+  const players = root.players.map((p) => readVersioned(PlayerSnapshot, p));
+  for (const p of players) {
+    const id = p.smallID;
+    const tiles = p.tiles;
+    for (let i = 0; i < tiles.length; i++) {
+      gameMap.setOwnerID(tiles[i], id);
+    }
+  }
+}
+
+/**
  * Rebuilds a game from a snapshot. The game continues from the stored tick:
  * call executeNextTick as usual, without re-running GameRunner.init.
  */

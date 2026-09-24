@@ -37,6 +37,7 @@ import {
 import {
   compressSnapshot,
   readSnapshotHeader,
+  restoreMapsFromSnapshot,
 } from "../core/snapshot/GameSnapshot";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { isDesktopShell } from "./DesktopShell";
@@ -695,7 +696,15 @@ async function createClientGame(
   );
   let gameMap: TerrainMapData;
 
-  if (terrainLoad) {
+  if (lobbyConfig.resumeSnapshot) {
+    gameMap = await loadTerrainMap(
+      lobbyConfig.gameStartInfo.config.gameMap,
+      lobbyConfig.gameStartInfo.config.gameMapSize,
+      mapLoader,
+      false, // Layer images loaded off the critical path after game start.
+      true, // fresh copy for snapshot restoration
+    );
+  } else if (terrainLoad) {
     gameMap = await terrainLoad;
   } else {
     gameMap = await loadTerrainMap(
@@ -717,6 +726,15 @@ async function createClientGame(
   await atlasDataLoad;
   let initialStartTick: number | null = null;
   if (lobbyConfig.resumeSnapshot) {
+    try {
+      restoreMapsFromSnapshot(
+        lobbyConfig.resumeSnapshot,
+        gameMap.gameMap,
+        gameMap.miniGameMap,
+      );
+    } catch (e) {
+      console.warn("Failed to restore maps from snapshot", e);
+    }
     try {
       const header = readSnapshotHeader(lobbyConfig.resumeSnapshot);
       initialStartTick = header.startTick ?? null;
