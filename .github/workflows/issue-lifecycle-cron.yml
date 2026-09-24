@@ -28,7 +28,7 @@ jobs:
         run: npm install --global --ignore-scripts npm@12.1.0
       - name: Install deps
         working-directory: scripts/issue-lifecycle
-        run: npm ci --no-audit --no-fund --ignore-scripts
+        run: npm ci --no-audit --no-fund
       - name: Run daily sweep
         working-directory: scripts/issue-lifecycle
         env:

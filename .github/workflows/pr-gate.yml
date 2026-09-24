@@ -28,7 +28,7 @@ jobs:
         run: npm install --global --ignore-scripts npm@12.1.0
       - name: Install gate deps
         working-directory: scripts/pr-gate
-        run: npm ci --no-audit --no-fund --ignore-scripts
+        run: npm ci --no-audit --no-fund
       - name: Run gate
         working-directory: scripts/pr-gate
         env:
