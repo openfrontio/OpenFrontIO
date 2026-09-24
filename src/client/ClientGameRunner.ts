@@ -34,7 +34,10 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../core/game/UserSettings";
-import { compressSnapshot } from "../core/snapshot/GameSnapshot";
+import {
+  compressSnapshot,
+  readSnapshotHeader,
+} from "../core/snapshot/GameSnapshot";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
@@ -712,6 +715,16 @@ async function createClientGame(
   );
   await worker.initialize();
   await atlasDataLoad;
+  let initialStartTick: number | null = null;
+  if (lobbyConfig.resumeSnapshot) {
+    try {
+      const header = readSnapshotHeader(lobbyConfig.resumeSnapshot);
+      initialStartTick = header.startTick ?? null;
+    } catch (e) {
+      console.warn("Failed to read snapshot header for initial startTick", e);
+    }
+  }
+
   const gameView = new GameView(
     worker,
     config,
@@ -721,6 +734,7 @@ async function createClientGame(
     lobbyConfig.playerClanTag,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
+    initialStartTick,
   );
 
   // Transparent fullscreen overlay used purely as the pointer-event /

@@ -61,8 +61,11 @@ describe("snapshot fixtures from earlier builds", { timeout: 120_000 }, () => {
       new Uint8Array(fs.readFileSync(path.join(DIR, name))),
     );
     const header = readSnapshotHeader(bytes);
+    expect(header.startTick).not.toBeNull();
     const runner = await restoreScriptedRunner(MAP, start, bytes);
     expect(runner.game.ticks()).toBe(header.tick);
+    expect(runner.game.startTick()).toBe(header.startTick);
+    expect(runner.game.inSpawnPhase()).toBe(false);
     expect(runner.game.players().length).toBeGreaterThan(0);
     for (let i = 0; i < 100; i++) stepScripted(runner);
     // A snapshot written by this build from the migrated game loads too.

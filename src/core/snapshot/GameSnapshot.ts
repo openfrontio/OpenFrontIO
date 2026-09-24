@@ -214,6 +214,7 @@ export interface SnapshotHeader {
   gameID: string | null;
   tick: number;
   gameConfig: GameConfig;
+  startTick?: number | null;
 }
 
 function decodeRoot(bytes: Uint8Array): Root {
@@ -252,6 +253,9 @@ export function readSnapshotHeader(bytes: Uint8Array): SnapshotHeader {
     gameID: root.gameID,
     tick: root.tick,
     gameConfig: GameConfigSchema.parse(root.gameConfig),
+    startTick:
+      (root.game?.d as { startTick?: number | null } | undefined)?.startTick ??
+      null,
   };
 }
 
