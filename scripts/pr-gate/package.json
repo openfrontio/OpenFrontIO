@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Deterministic GitHub Action that gates incoming PRs. See README.md.",
   "engines": {
+    "node": ">=24.15.0 <25",
     "npm": ">=12.1.0 <13"
   },
   "dependencies": {
