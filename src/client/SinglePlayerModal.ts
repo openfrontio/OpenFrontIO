@@ -281,7 +281,7 @@ export class SinglePlayerModal extends BaseModal {
   };
 
   private async handleResumeGame() {
-    if (this.resumeInFlight || !this.resumeSave) return;
+    if (this.starting || this.resumeInFlight || !this.resumeSave) return;
     this.resumeInFlight = true;
     const attempt = ++this.resumeAttempt;
     const save = this.resumeSave;
@@ -342,7 +342,7 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   private async handleDiscardGame() {
-    if (this.resumeInFlight) return;
+    if (this.starting || this.resumeInFlight) return;
     const confirmed = await showInGameConfirm(
       translateText("single_modal.confirm_discard") ||
         "Are you sure you want to discard your saved singleplayer game?",
@@ -387,14 +387,14 @@ export class SinglePlayerModal extends BaseModal {
             variant="secondary"
             size="sm"
             translationKey="single_modal.discard_game"
-            .disabled=${this.resumeInFlight}
+            .disabled=${this.starting || this.resumeInFlight}
             @click=${this.handleDiscardGame}
           ></o-button>
           <o-button
             variant="primary"
             size="sm"
             translationKey="single_modal.resume"
-            .disabled=${this.resumeInFlight}
+            .disabled=${this.starting || this.resumeInFlight}
             @click=${this.handleResumeGame}
           ></o-button>
         </div>

@@ -27,6 +27,8 @@ export function isReplayShellHost(hostname: string): boolean {
   return hostname.startsWith("replay.");
 }
 
+const PROBE_TIMEOUT_MS = 3000;
+
 // The versioned shell URL for a game from another build, if that shell is
 // actually served. Null on a shell host (redirecting again would loop), in
 // dev, or when the probe fails. The probe requires text/html so a misrouted
@@ -42,7 +44,10 @@ export async function findVersionedShell(
   const url = versionedReplayUrl(audience, gameID);
   if (url === null) return null;
   try {
-    const probe = await fetchFn.call(globalThis, url, { method: "HEAD" });
+    const probe = await fetchFn.call(globalThis, url, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
     if (!probe.ok) return null;
     const contentType = probe.headers.get("content-type") ?? "";
     return contentType.includes("text/html") ? url : null;

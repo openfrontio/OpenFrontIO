@@ -33,18 +33,33 @@ export class ContinueGameModal extends LitElement {
   }
 
   willUpdate(changedProperties: Map<string, unknown>): void {
-    if (changedProperties.has("open") && !this.open) {
-      this.searchQuery = "";
-    }
-    if (changedProperties.has("initialPlayerID") && this.initialPlayerID) {
+    if (changedProperties.has("open")) {
+      if (this.open) {
+        if (this.initialPlayerID) {
+          this.selectedPlayerID = this.initialPlayerID;
+        }
+      } else {
+        this.searchQuery = "";
+      }
+    } else if (
+      changedProperties.has("initialPlayerID") &&
+      this.initialPlayerID
+    ) {
       this.selectedPlayerID = this.initialPlayerID;
     }
-    if (
-      changedProperties.has("players") &&
-      !this.selectedPlayerID &&
-      this.players.length > 0
+
+    if (this.players.length === 0) {
+      this.selectedPlayerID = "";
+    } else if (
+      !this.selectedPlayerID ||
+      !this.players.some((p) => p.id === this.selectedPlayerID)
     ) {
-      this.selectedPlayerID = this.players[0].id;
+      const matchInitial = this.players.find(
+        (p) => p.id === this.initialPlayerID,
+      );
+      this.selectedPlayerID = matchInitial
+        ? matchInitial.id
+        : this.players[0].id;
     }
   }
 

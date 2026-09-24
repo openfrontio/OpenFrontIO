@@ -119,7 +119,11 @@ export class ReplayControls extends LitElement {
   /** Seek, but not past what's been loaded (the thumb snaps back). */
   private onTimelineInput(e: Event): void {
     const input = e.target as HTMLInputElement;
-    const frame = Math.min(Number(input.value), this.loaded - 1);
+    if (this.loaded <= 0) {
+      input.value = "0";
+      return;
+    }
+    const frame = Math.max(0, Math.min(Number(input.value), this.loaded - 1));
     if (frame !== Number(input.value)) input.value = String(frame);
     this.emit("replay-seek", frame);
   }
@@ -176,6 +180,7 @@ export class ReplayControls extends LitElement {
             min="0"
             max=${Math.max(0, this.total - 1)}
             .value=${String(frame)}
+            .disabled=${this.loaded <= 0}
             aria-label=${translateText("replay_viewer.timeline")}
             @input=${this.onTimelineInput}
           />

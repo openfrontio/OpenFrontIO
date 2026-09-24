@@ -16,6 +16,7 @@ import {
   PlayerTypeEnum,
   type PlayerStatic,
 } from "../../../src/client/render/types";
+import { ReplayAppearance } from "../../../src/client/replay/ReplayAppearance";
 import { applyReplayEffects } from "../../../src/client/replay/ReplayEffects";
 import {
   buildReplayPalette,
@@ -337,5 +338,50 @@ describe("trail effects", () => {
       after[(block * MAX_TRAIL_COLORS * PALETTE_SIZE + 7) * 4 + 3];
     expect(countAt(0)).toBe(1); // the ship trail still shows
     expect(countAt(1)).toBe(0);
+  });
+});
+
+describe("ReplayAppearance attach and addAppended", () => {
+  test("tracks drawn count from palette players sent to the renderer", () => {
+    const players: PlayerStatic[] = [
+      player(1, "client1"),
+      player(2, "client2"),
+    ];
+    const app = new ReplayAppearance(
+      players,
+      {
+        gameID: "g1",
+        lobbyCreatedAt: 0,
+        players: [],
+        config: {} as any,
+      } as any,
+      { graphicsOverrides: () => ({ cosmetics: {} }) } as any,
+      {
+        setNukeTrailSpiral: vi.fn(),
+        clearNukeTrailSpiral: vi.fn(),
+      },
+    );
+
+    const added: any[] = [];
+    const mockView = {
+      initSkinAtlas: vi.fn(),
+      addPlayers: vi.fn((p: any) => added.push(...p)),
+      applySkins: vi.fn(),
+      setPlayerEffectPalette: vi.fn(),
+    } as any;
+
+    app.attach(mockView);
+    expect((app as any).drawn).toBe(2);
+    expect(added).toHaveLength(2);
+
+    // Append a new player
+    players.push(player(3, "client3"));
+    const adapterMock = { addPlayers: vi.fn() } as any;
+    app.addAppended(adapterMock);
+    expect((app as any).drawn).toBe(3);
+    expect(added).toHaveLength(3);
+    expect(adapterMock.addPlayers).toHaveBeenCalledWith([
+      expect.objectContaining({ smallID: 3 }),
+    ]);
   });
 });

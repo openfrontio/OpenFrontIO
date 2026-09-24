@@ -51,25 +51,45 @@ const BOOL: ValueCodec<boolean> = {
 };
 
 const U8: ValueCodec<number> = {
-  write: (w, v) => w.writeU8(v),
+  write: (w, v) => {
+    if (!Number.isInteger(v) || v < 0 || v > 0xff) {
+      throw new RangeError(`Expected u8, got ${v}`);
+    }
+    w.writeU8(v);
+  },
   read: (r) => r.readU8(),
   eq: same,
 };
 
 const U16: ValueCodec<number> = {
-  write: (w, v) => w.writeU16(v),
+  write: (w, v) => {
+    if (!Number.isInteger(v) || v < 0 || v > 0xffff) {
+      throw new RangeError(`Expected u16, got ${v}`);
+    }
+    w.writeU16(v);
+  },
   read: (r) => r.readU16(),
   eq: same,
 };
 
 const U32: ValueCodec<number> = {
-  write: (w, v) => w.writeU32(v),
+  write: (w, v) => {
+    if (!Number.isInteger(v) || v < 0 || v > 0xffffffff) {
+      throw new RangeError(`Expected u32, got ${v}`);
+    }
+    w.writeU32(v);
+  },
   read: (r) => r.readU32(),
   eq: same,
 };
 
 const I32: ValueCodec<number> = {
-  write: (w, v) => w.writeI32(v),
+  write: (w, v) => {
+    if (!Number.isInteger(v) || v < -0x80000000 || v > 0x7fffffff) {
+      throw new RangeError(`Expected i32, got ${v}`);
+    }
+    w.writeI32(v);
+  },
   read: (r) => r.readI32(),
   eq: same,
 };

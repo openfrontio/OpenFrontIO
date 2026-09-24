@@ -1,9 +1,11 @@
+import { ContinueGameModal } from "../../../src/client/replay/ContinueGameModal";
 import {
   CameraGestures,
   ReplayCamera,
 } from "../../../src/client/replay/ReplayCamera";
 import {
   formatGameTime,
+  ReplayControls,
   timelineFrames,
 } from "../../../src/client/replay/ReplayControls";
 import { ReplayNukedLayers } from "../../../src/client/replay/ReplayNukedLayers";
@@ -233,5 +235,78 @@ describe("the timeline of a game still being processed", () => {
     // Finished: the file is the truth.
     expect(timelineFrames(15691, 15000, false)).toBe(15691);
     expect(timelineFrames(15691, 15000, true)).toBe(15691);
+  });
+});
+
+describe("ContinueGameModal willUpdate", () => {
+  test("resets selectedPlayerID from initialPlayerID on open", () => {
+    const modal = new ContinueGameModal();
+    modal.players = [
+      { id: "p1", name: "P1", smallID: 1, troops: 10, tiles: 10 },
+      { id: "p2", name: "P2", smallID: 2, troops: 20, tiles: 20 },
+    ];
+    modal.initialPlayerID = "p2";
+    modal.open = true;
+    modal.willUpdate(new Map([["open", false]]));
+    expect((modal as any).selectedPlayerID).toBe("p2");
+
+    // Player switches selection, closes modal, and re-opens
+    (modal as any).selectedPlayerID = "p1";
+    modal.open = false;
+    modal.willUpdate(new Map([["open", true]]));
+    expect((modal as any).searchQuery).toBe("");
+
+    modal.open = true;
+    modal.willUpdate(new Map([["open", false]]));
+    expect((modal as any).selectedPlayerID).toBe("p2");
+  });
+
+  test("falls back to first available player if initialPlayerID is not found", () => {
+    const modal = new ContinueGameModal();
+    modal.players = [
+      { id: "p1", name: "P1", smallID: 1, troops: 10, tiles: 10 },
+      { id: "p2", name: "P2", smallID: 2, troops: 20, tiles: 20 },
+    ];
+    modal.initialPlayerID = "nonexistent";
+    modal.open = true;
+    modal.willUpdate(new Map([["open", false]]));
+    expect((modal as any).selectedPlayerID).toBe("p1");
+  });
+
+  test("resets selectedPlayerID to empty if players list is empty", () => {
+    const modal = new ContinueGameModal();
+    modal.players = [];
+    modal.initialPlayerID = "p1";
+    modal.open = true;
+    modal.willUpdate(new Map([["open", false]]));
+    expect((modal as any).selectedPlayerID).toBe("");
+  });
+});
+
+describe("ReplayControls timeline seeking", () => {
+  test("does not emit replay-seek when loaded is 0", () => {
+    const controls = new ReplayControls();
+    controls.loaded = 0;
+    const seeks: number[] = [];
+    controls.addEventListener("replay-seek", (e: any) => seeks.push(e.detail));
+
+    (controls as any).onTimelineInput({ target: { value: "5" } } as any);
+    expect(seeks).toHaveLength(0);
+  });
+
+  test("clamps emitted seek frame between 0 and loaded - 1", () => {
+    const controls = new ReplayControls();
+    controls.loaded = 50;
+    const seeks: number[] = [];
+    controls.addEventListener("replay-seek", (e: any) => seeks.push(e.detail));
+
+    (controls as any).onTimelineInput({ target: { value: "100" } } as any);
+    expect(seeks).toEqual([49]);
+
+    (controls as any).onTimelineInput({ target: { value: "-10" } } as any);
+    expect(seeks).toEqual([49, 0]);
+
+    (controls as any).onTimelineInput({ target: { value: "25" } } as any);
+    expect(seeks).toEqual([49, 0, 25]);
   });
 });

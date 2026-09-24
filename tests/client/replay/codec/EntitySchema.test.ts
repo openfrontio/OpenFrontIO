@@ -357,3 +357,55 @@ describe("attack lists", () => {
     expect(target.outgoingAttacks).toEqual(outgoingAttacks);
   });
 });
+
+describe("primitive integer codec validation", () => {
+  const betrayals = PLAYER_FIELDS.find((f) => f.keys.includes("betrayals"))!;
+  const traitorTicks = PLAYER_FIELDS.find((f) =>
+    f.keys.includes("traitorRemainingTicks"),
+  )!;
+  const markedTick = PLAYER_FIELDS.find((f) =>
+    f.keys.includes("markedDoomsdayClockTick"),
+  )!;
+
+  test("U16 rejects non-integers and out-of-range values", () => {
+    const w = new BinaryWriter(64);
+    for (const invalid of [-1, 65536, 1.5, NaN, Infinity]) {
+      expect(() =>
+        betrayals.write(
+          w,
+          { ...basePlayer, betrayals: invalid },
+          basePlayer,
+          encodeCtx,
+        ),
+      ).toThrow(RangeError);
+    }
+  });
+
+  test("U32 rejects non-integers and out-of-range values", () => {
+    const w = new BinaryWriter(64);
+    for (const invalid of [-1, 4294967296, 3.14, NaN, Infinity]) {
+      expect(() =>
+        traitorTicks.write(
+          w,
+          { ...basePlayer, traitorRemainingTicks: invalid },
+          basePlayer,
+          encodeCtx,
+        ),
+      ).toThrow(RangeError);
+    }
+  });
+
+  test("I32 rejects non-integers and out-of-range values", () => {
+    const w = new BinaryWriter(64);
+    for (const invalid of [2147483648, -2147483649, 10.2, NaN, Infinity]) {
+      expect(() =>
+        markedTick.write(
+          w,
+          { ...basePlayer, markedDoomsdayClockTick: invalid },
+          basePlayer,
+          encodeCtx,
+        ),
+      ).toThrow(RangeError);
+    }
+  });
+});
