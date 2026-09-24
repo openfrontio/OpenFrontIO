@@ -270,6 +270,7 @@ export class LocalServer {
       !this.winner &&
       !this.isReplay &&
       this.lobbyConfig.gameStartInfo &&
+      this.lobbyConfig.resumeSnapshot === undefined &&
       this.turns.length > 0
     ) {
       saveSoloGame(this.lobbyConfig.gameStartInfo, this.turns);
@@ -316,6 +317,7 @@ export class LocalServer {
       if (
         !this.winner &&
         this.lobbyConfig.gameStartInfo &&
+        this.lobbyConfig.resumeSnapshot === undefined &&
         this.turns.length > 0
       ) {
         saveSoloGame(this.lobbyConfig.gameStartInfo, this.turns);
