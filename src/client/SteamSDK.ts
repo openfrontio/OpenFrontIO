@@ -87,12 +87,6 @@ class SteamSDK {
 
   getSteamIdSync(): string | null {
     if (this.cachedUser?.steamId) return this.cachedUser.steamId;
-    try {
-      const stored = localStorage.getItem("openfront_cached_steam_id");
-      if (stored) return stored;
-    } catch {
-      // ignore
-    }
     const bridge = steamBridge();
     if (
       bridge &&
@@ -139,11 +133,6 @@ class SteamSDK {
       const user = await bridge.getUser();
       if (user?.steamId) {
         this.cachedUser = user;
-        try {
-          localStorage.setItem("openfront_cached_steam_id", user.steamId);
-        } catch {
-          // ignore
-        }
       }
       return user;
     } catch {

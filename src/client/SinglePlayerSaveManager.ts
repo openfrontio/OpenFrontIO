@@ -40,9 +40,9 @@ export interface SoloSaveState {
 
 /**
  * Returns the active platform-specific user ID.
- * On Steam, returns the player's 64-bit Steam ID when available.
+ * On Steam, returns the player's 64-bit Steam ID when available, or null if not yet resolved.
  */
-export function getActiveIdentity(): { id: string; steamId?: string } {
+export function getActiveIdentity(): { id: string; steamId?: string } | null {
   const platform = clientPlatform();
   if (platform === "steam") {
     const steamId = steamSDK.getSteamIdSync();
@@ -51,16 +51,18 @@ export function getActiveIdentity(): { id: string; steamId?: string } {
     }
     // Eagerly prewarm the Steam user for future reads
     void steamSDK.getUser();
+    return null;
   }
   return { id: getPersistentID() };
 }
 
 /**
- * Constructs a scoped storage key for singleplayer saves.
+ * Constructs a scoped storage key for singleplayer saves, or null if identity is unresolved.
  */
-export function getScopedSoloSaveKey(): string {
+export function getScopedSoloSaveKey(): string | null {
   const platform = clientPlatform();
   const identity = getActiveIdentity();
+  if (!identity) return null;
   return `openfront_solo_save:${platform}:${identity.id}:v1`;
 }
 
@@ -70,6 +72,7 @@ export function getScopedSoloSaveKey(): string {
 export function migrateLegacySoloSave(): void {
   try {
     const scopedKey = getScopedSoloSaveKey();
+    if (!scopedKey) return;
     if (localStorage.getItem(scopedKey)) {
       return;
     }
@@ -93,6 +96,9 @@ export function saveSoloSnapshot(
 ): void {
   try {
     const identity = getActiveIdentity();
+    const scopedKey = getScopedSoloSaveKey();
+    if (!identity || !scopedKey) return;
+
     const saveState: SoloSaveState = {
       version: 1,
       gameID: gameStartInfo.gameID,
@@ -104,7 +110,6 @@ export function saveSoloSnapshot(
       steamId: identity.steamId,
       snapshot: uint8ArrayToBase64(compressedSnapshot),
     };
-    const scopedKey = getScopedSoloSaveKey();
     localStorage.setItem(scopedKey, JSON.stringify(saveState));
   } catch (e) {
     console.error("Failed to save singleplayer snapshot to localStorage", e);
@@ -122,6 +127,9 @@ export function saveSoloGame(
   try {
     const existing = getSoloSave();
     const identity = getActiveIdentity();
+    const scopedKey = getScopedSoloSaveKey();
+    if (!identity || !scopedKey) return;
+
     const saveState: SoloSaveState = {
       version: 1,
       gameID: gameStartInfo.gameID,
@@ -141,7 +149,6 @@ export function saveSoloGame(
           ? existing?.snapshot
           : undefined,
     };
-    const scopedKey = getScopedSoloSaveKey();
     localStorage.setItem(scopedKey, JSON.stringify(saveState));
   } catch (e) {
     console.error("Failed to save singleplayer game to localStorage", e);
@@ -153,8 +160,9 @@ export function saveSoloGame(
  */
 export function getSoloSave(): SoloSaveState | null {
   try {
-    migrateLegacySoloSave();
     const scopedKey = getScopedSoloSaveKey();
+    if (!scopedKey) return null;
+    migrateLegacySoloSave();
     const raw = localStorage.getItem(scopedKey);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as SoloSaveState;
@@ -198,7 +206,9 @@ export async function getSoloSnapshot(): Promise<{
 export function clearSoloSave(): void {
   try {
     const scopedKey = getScopedSoloSaveKey();
-    localStorage.removeItem(scopedKey);
+    if (scopedKey) {
+      localStorage.removeItem(scopedKey);
+    }
     localStorage.removeItem(LEGACY_SOLO_SAVE_KEY);
   } catch (e) {
     console.error("Failed to clear singleplayer save from localStorage", e);

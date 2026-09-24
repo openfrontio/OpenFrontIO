@@ -60,6 +60,11 @@ describe("SinglePlayerSaveManager", () => {
     );
 
     mockPlatform = "steam";
+    mockSteamId = null;
+    expect(getActiveIdentity()).toBeNull();
+    expect(getScopedSoloSaveKey()).toBeNull();
+    expect(getSoloSave()).toBeNull();
+
     mockSteamId = "76561198012345678";
     expect(getScopedSoloSaveKey()).toBe(
       "openfront_solo_save:steam:76561198012345678:v1",

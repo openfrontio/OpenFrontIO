@@ -17,6 +17,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
+import { clientPlatform } from "./ClientPlatform";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -37,6 +38,7 @@ import {
   getSoloSnapshot,
   SoloSaveState,
 } from "./SinglePlayerSaveManager";
+import { steamSDK } from "./SteamSDK";
 import { UsernameInput } from "./UsernameInput";
 import {
   getBotsForCompactMap,
@@ -239,6 +241,14 @@ export class SinglePlayerModal extends BaseModal {
     );
     void this.loadNationCount();
     this.resumeSave = getSoloSave();
+    if (clientPlatform() === "steam") {
+      void steamSDK.getUser().then((user) => {
+        if (user?.steamId) {
+          this.resumeSave = getSoloSave();
+          this.requestUpdate();
+        }
+      });
+    }
   }
 
   disconnectedCallback() {
@@ -801,6 +811,14 @@ export class SinglePlayerModal extends BaseModal {
     // deliberately does not cache a failure, so the click re-pays one bounded
     // attempt. Remembering an unreachable backend is OPE-403.
     this.resumeSave = getSoloSave();
+    if (clientPlatform() === "steam") {
+      void steamSDK.getUser().then((user) => {
+        if (user?.steamId) {
+          this.resumeSave = getSoloSave();
+          this.requestUpdate();
+        }
+      });
+    }
     void prewarmCosmetics();
   }
 

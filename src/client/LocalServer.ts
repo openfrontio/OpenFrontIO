@@ -328,7 +328,11 @@ export class LocalServer {
   }
 
   private archiveGameRecord(unloading: boolean) {
-    if (this.archived || this.archiveInFlight) {
+    if (
+      this.archived ||
+      this.archiveInFlight ||
+      this.lobbyConfig.resumeSnapshot !== undefined
+    ) {
       return;
     }
     const players: PlayerRecord[] = [

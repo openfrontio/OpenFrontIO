@@ -954,7 +954,9 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
     this.eventBus.on(SendWinnerEvent, () => {
       this.hasWinner = true;
-      clearSoloSave();
+      if (this.transport.isLocal && !this.lobby.gameRecord) {
+        clearSoloSave();
+      }
     });
   }
 
