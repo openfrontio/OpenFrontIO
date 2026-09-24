@@ -1,4 +1,12 @@
+import { z } from "zod";
 import { Execution, Game, Player, Unit } from "../game/Game";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zNum, zPlayerRef, zRef } from "../snapshot/SnapshotType";
 
 export class UpgradeStructureExecution implements Execution {
   private structure: Unit | undefined;
@@ -47,4 +55,36 @@ export class UpgradeStructureExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return UpgradeStructureExecutionSnapshot.write({
+      structure: this.structure === undefined ? null : w.unit(this.structure),
+      player: w.player(this.player),
+      unitId: this.unitId,
+      amount: this.amount,
+    });
+  }
+
+  restoreSnapshot(s: UpgradeStructureState, r: SnapshotReader): void {
+    if (s.structure !== null) this.structure = r.unit(s.structure);
+    this.player = r.player(s.player);
+    this.unitId = s.unitId;
+    this.amount = s.amount;
+  }
 }
+
+// cost is declared but never assigned, so there is nothing to store for it.
+const UpgradeStructureStateSchema = z.object({
+  structure: zRef().nullable(),
+  player: zPlayerRef(),
+  unitId: zNum(),
+  amount: zNum(),
+});
+type UpgradeStructureState = z.infer<typeof UpgradeStructureStateSchema>;
+
+export const UpgradeStructureExecutionSnapshot = execSnapshotType({
+  name: "UpgradeStructure",
+  version: 1,
+  schema: UpgradeStructureStateSchema,
+  cls: () => UpgradeStructureExecution,
+});

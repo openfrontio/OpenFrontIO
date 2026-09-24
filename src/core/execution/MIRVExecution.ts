@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Execution,
   Game,
@@ -15,6 +16,26 @@ import {
 } from "../pathfinding/PathFinder.Parabola";
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import {
+  ParabolaSchema,
+  parabolaState,
+  restoreParabola,
+} from "../snapshot/PathfinderSnapshots";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import {
+  zInt,
+  zNum,
+  zPlayerRef,
+  zRandom,
+  zRef,
+  zTile,
+  zTiles,
+} from "../snapshot/SnapshotType";
 import { simpleHash } from "../Util";
 import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { NukeExecution } from "./NukeExecution";
@@ -32,9 +53,9 @@ export class MirvExecution implements Execution {
   private warheadCount = 350;
 
   private static readonly MATH_SCALE = 100;
-  private readonly longFlightMult = 14;
-  private readonly longFlightLinearPercent = 10;
-  private readonly shortFlightMult = 10;
+  private static readonly longFlightMult = 14;
+  private static readonly longFlightLinearPercent = 10;
+  private static readonly shortFlightMult = 10;
 
   private baseX: number;
   private baseY: number;
@@ -336,12 +357,13 @@ export class MirvExecution implements Execution {
       const diff = idealMirvTicksInt - baseTicksScaled;
       targetMirvTicksInt =
         baseTicksScaled +
-        Math.floor(Math.sqrt(diff)) * this.longFlightMult +
-        Math.floor((diff * this.longFlightLinearPercent) / 100);
+        Math.floor(Math.sqrt(diff)) * MirvExecution.longFlightMult +
+        Math.floor((diff * MirvExecution.longFlightLinearPercent) / 100);
     } else if (idealMirvTicksInt < baseTicksScaled) {
       const diff = baseTicksScaled - idealMirvTicksInt;
       targetMirvTicksInt =
-        baseTicksScaled - Math.floor(Math.sqrt(diff)) * this.shortFlightMult;
+        baseTicksScaled -
+        Math.floor(Math.sqrt(diff)) * MirvExecution.shortFlightMult;
     }
     targetMirvTicksInt = Math.max(MirvExecution.MATH_SCALE, targetMirvTicksInt);
 
@@ -369,4 +391,113 @@ export class MirvExecution implements Execution {
     // safe to use in Parabola since Parabola uses x256 scaled integers.
     return Math.max(1, pureIntegerSpeedScaled / 256);
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return MirvExecutionSnapshot.write({
+      active: this.active,
+      player: w.player(this.player),
+      dst: this.dst,
+      range: this.range,
+      rangeSquared: this.rangeSquared,
+      minimumSpread: this.minimumSpread,
+      warheadCount: this.warheadCount,
+      init:
+        this.mg === undefined
+          ? null
+          : {
+              random: w.random(this.random),
+              targetPlayer: w.owner(this.targetPlayer),
+              baseX: this.baseX,
+              baseY: this.baseY,
+            },
+      nuke: w.unitOrNull(this.nuke),
+      // Set together on the launch tick.
+      launch:
+        this.pathFinder === undefined
+          ? null
+          : {
+              spawnTile: this.spawnTile,
+              separateDst: this.separateDst,
+              pathFinder: parabolaState(this.pathFinder),
+            },
+      speed: this.speed,
+      fullPath: w.tiles(this.fullPath),
+      pathIndex: this.pathIndex,
+      stagedTargets: w.tiles(this.stagedTargets),
+      warheadsSpawned: this.warheadsSpawned,
+      warheadExecutions: this.warheadExecutions.map((e) => w.exec(e)),
+    });
+  }
+
+  restoreSnapshot(s: MirvState, r: SnapshotReader): void {
+    this.active = s.active;
+    this.player = r.player(s.player);
+    this.dst = s.dst;
+    this.range = s.range;
+    this.rangeSquared = s.rangeSquared;
+    this.minimumSpread = s.minimumSpread;
+    this.warheadCount = s.warheadCount;
+    if (s.init !== null) {
+      this.mg = r.game;
+      this.random = r.random(s.init.random);
+      this.targetPlayer = r.owner(s.init.targetPlayer);
+      this.baseX = s.init.baseX;
+      this.baseY = s.init.baseY;
+    }
+    this.nuke = r.unitOrNull(s.nuke);
+    if (s.launch !== null) {
+      this.spawnTile = s.launch.spawnTile;
+      this.separateDst = s.launch.separateDst;
+      this.pathFinder = restoreParabola(r.game, s.launch.pathFinder);
+    }
+    this.speed = s.speed;
+    this.fullPath = Array.from(s.fullPath);
+    this.pathIndex = s.pathIndex;
+    this.stagedTargets = Array.from(s.stagedTargets);
+    this.warheadsSpawned = s.warheadsSpawned;
+    this.warheadExecutions = s.warheadExecutions.map((i) =>
+      r.exec<NukeExecution>(i),
+    );
+  }
 }
+
+const MirvStateSchema = z.object({
+  active: z.boolean(),
+  player: zPlayerRef(),
+  dst: zTile(),
+  range: zInt(),
+  rangeSquared: zInt(),
+  minimumSpread: zInt(),
+  warheadCount: zInt(),
+  init: z
+    .object({
+      random: zRandom(),
+      targetPlayer: zPlayerRef(),
+      baseX: zInt(),
+      baseY: zInt(),
+    })
+    .nullable(),
+  nuke: zRef().nullable(),
+  launch: z
+    .object({
+      spawnTile: zTile(),
+      separateDst: zTile(),
+      pathFinder: ParabolaSchema,
+    })
+    .nullable(),
+  // Fractional: a x256-scaled integer over 256.
+  speed: zNum(),
+  fullPath: zTiles(),
+  pathIndex: zInt(),
+  stagedTargets: zTiles(),
+  warheadsSpawned: z.boolean(),
+  warheadExecutions: z.array(zRef()),
+});
+type MirvState = z.infer<typeof MirvStateSchema>;
+
+export const MirvExecutionSnapshot = execSnapshotType({
+  name: "MIRV",
+  version: 1,
+  schema: MirvStateSchema,
+  cls: () => MirvExecution,
+});

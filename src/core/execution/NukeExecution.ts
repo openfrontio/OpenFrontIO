@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { atan2 } from "../DetMath";
 import {
   Execution,
@@ -16,6 +17,19 @@ import { UniversalPathFinding } from "../pathfinding/PathFinder";
 import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
+import { UnitTypeSchema } from "../snapshot/CommonSchemas";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import {
+  ParabolaSchema,
+  parabolaState,
+  restoreParabola,
+} from "../snapshot/PathfinderSnapshots";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zNum, zPlayerRef, zRef, zTile } from "../snapshot/SnapshotType";
 import { NukeType } from "../StatsSchemas";
 import { listNukeBreakAlliance } from "./Util";
 
@@ -531,4 +545,60 @@ export class NukeExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  // tilesToDestroyCache is not stored: it is filled and read within the
+  // detonation tick, after which the execution is inactive.
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return NukeExecutionSnapshot.write({
+      active: this.active,
+      // mg and the pathfinder are both set by init.
+      pathFinder: this.mg === undefined ? null : parabolaState(this.pathFinder),
+      nuke: w.unitOrNull(this.nuke),
+      nukeType: this.nukeType,
+      player: w.player(this.player),
+      dst: this.dst,
+      src: this.src,
+      speed: this.speed,
+      waitTicks: this.waitTicks,
+      rocketDirectionUp: this.rocketDirectionUp,
+    });
+  }
+
+  restoreSnapshot(s: NukeState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.pathFinder !== null) {
+      this.mg = r.game;
+      this.pathFinder = restoreParabola(r.game, s.pathFinder);
+    }
+    this.nuke = r.unitOrNull(s.nuke);
+    this.nukeType = s.nukeType as NukeType;
+    this.player = r.player(s.player);
+    this.dst = s.dst;
+    this.src = s.src;
+    this.speed = s.speed;
+    this.waitTicks = s.waitTicks;
+    this.rocketDirectionUp = s.rocketDirectionUp;
+  }
 }
+
+const NukeStateSchema = z.object({
+  active: z.boolean(),
+  pathFinder: ParabolaSchema.nullable(),
+  nuke: zRef().nullable(),
+  nukeType: UnitTypeSchema,
+  player: zPlayerRef(),
+  dst: zTile(),
+  // undefined and null both mean "launch from a silo"; kept apart as given.
+  src: zTile().nullable().optional(),
+  speed: zNum(),
+  waitTicks: zInt(),
+  rocketDirectionUp: z.boolean(),
+});
+type NukeState = z.infer<typeof NukeStateSchema>;
+
+export const NukeExecutionSnapshot = execSnapshotType({
+  name: "Nuke",
+  version: 1,
+  schema: NukeStateSchema,
+  cls: () => NukeExecution,
+});
