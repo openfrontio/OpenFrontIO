@@ -1063,10 +1063,18 @@ export class ClientGameRunner {
         this.snapshotInFlight = true;
         this.worker
           .snapshot()
-          .then((raw) => compressSnapshot(raw))
-          .then((compressed) => {
+          .then(async (raw) => {
+            const snapshotTick = readSnapshotHeader(raw).tick;
+            const compressed = await compressSnapshot(raw);
+            return { compressed, snapshotTick };
+          })
+          .then(({ compressed, snapshotTick }) => {
             if (!this.hasWinner && this.lobby.gameStartInfo) {
-              saveSoloSnapshot(this.lobby.gameStartInfo, compressed, gu.tick);
+              saveSoloSnapshot(
+                this.lobby.gameStartInfo,
+                compressed,
+                snapshotTick,
+              );
             }
           })
           .catch((err) => {
