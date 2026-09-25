@@ -190,6 +190,18 @@ export class AbstractGraph {
     this._nodeEdgeIds[edge.nodeB].push(edge.id);
   }
 
+  // Renumbers edges by (nodeA, nodeB) so partial and full builds of the same water match
+  _sortEdges(): void {
+    this._edges.sort((a, b) => a.nodeA - b.nodeA || a.nodeB - b.nodeB);
+    for (const edgeIds of this._nodeEdgeIds) edgeIds.length = 0;
+    for (let i = 0; i < this._edges.length; i++) {
+      const edge = this._edges[i];
+      edge.id = i;
+      this._nodeEdgeIds[edge.nodeA].push(i);
+      this._nodeEdgeIds[edge.nodeB].push(i);
+    }
+  }
+
   _setCluster(key: number, cluster: Cluster): void {
     this._clusters[key] = cluster;
   }
@@ -295,6 +307,7 @@ export class AbstractGraphBuilder {
         this.buildClusterConnections(cx, cy);
       }
     }
+    this.graph._sortEdges();
     DebugSpan.end();
 
     DebugSpan.set("nodes", () => this.graph.getAllNodes());
