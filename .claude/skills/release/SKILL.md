@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut the next patch release on an OpenFront release branch - `/release v34` finds the last v0.34.x tag, collects the commits on the v34 branch since it, writes one curated player-facing line per change with its author, and creates a draft GitHub release v0.34.<next> whose notes are the new section stacked on top of the previous release's notes. Use whenever the user types /release, or asks to cut, tag, ship, draft or write release notes / a changelog for a vNN branch or a v0.NN.x version, even if they don't say "skill".
+description: Cut the next patch release on an OpenFront release branch - `/release v34` finds the last v0.34.x tag, collects the commits on the v34 branch since it, writes one curated player-facing line per change with its author, and creates a draft GitHub release v0.34.N+1 whose notes are the new section stacked on top of the previous release's notes. Use whenever the user types /release, or asks to cut, tag, ship, draft or write release notes / a changelog for a vNN branch or a v0.NN.x version, even if they don't say "skill".
 ---
 
 # /release <branch>
@@ -18,10 +18,12 @@ release first if you have not seen one this session:
 
 ## 1. Collect the commits
 
-From the OpenFrontIO checkout:
+Run the script from the root of an OpenFrontIO checkout. It lives in this
+skill's directory: `.claude/skills/release/` in the repo, or
+`~/.claude/skills/release/` if the skill is installed for your user.
 
 ```bash
-bash .claude/skills/release/scripts/commits.sh v34
+bash .claude/skills/release/scripts/commits.sh v34   # or ~/.claude/skills/release/scripts/commits.sh
 ```
 
 It prints `last_tag`, `next_tag`, `date` (today in America/Los_Angeles, which
