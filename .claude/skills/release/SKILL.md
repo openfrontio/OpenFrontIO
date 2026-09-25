@@ -23,7 +23,7 @@ skill's directory: `.claude/skills/release/` in the repo, or
 `~/.claude/skills/release/` if the skill is installed for your user.
 
 ```bash
-bash .claude/skills/release/scripts/commits.sh v34   # or ~/.claude/skills/release/scripts/commits.sh
+bash .claude/skills/release/scripts/commits.sh v34 # or ~/.claude/skills/release/scripts/commits.sh
 ```
 
 It prints `last_tag`, `next_tag`, `date` (today in America/Los_Angeles, which
@@ -57,7 +57,7 @@ what a change does.
 
 Exact shape (the date is unpadded, month spelled out):
 
-```markdown
+```text
 # v0.34.19
 *September 25, 2026*
 
@@ -66,7 +66,8 @@ Exact shape (the date is unpadded, month spelled out):
 - fix(steam): prevent hardware back button from exiting app — **ayushthepiro11-design**
 ```
 
-The separator is ` — ` (space, em dash, space) and each author is bold. Several
+Between the summary and the author goes a space, an em dash (—) and a space,
+and each author is bold. Several
 authors: `— **Ryan**, **ItsTimeTooSleep**`.
 
 ### Curating
