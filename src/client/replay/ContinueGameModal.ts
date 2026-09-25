@@ -76,8 +76,8 @@ export class ContinueGameModal extends LitElement {
   }
 
   private close(): void {
-    if (this.loading) return;
     this.open = false;
+    this.loading = false;
     this.error = "";
     this.searchQuery = "";
     this.dispatchEvent(
@@ -136,7 +136,6 @@ export class ContinueGameModal extends LitElement {
             <button
               class="text-zinc-400 hover:text-white transition p-1.5 rounded-lg hover:bg-white/10"
               @click=${this.close}
-              ?disabled=${this.loading}
               aria-label=${translateText("common.close")}
             >
               ✕
@@ -300,7 +299,6 @@ export class ContinueGameModal extends LitElement {
             <button
               class="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white transition rounded-xl hover:bg-white/10"
               @click=${this.close}
-              ?disabled=${this.loading}
             >
               ${translateText("replay_viewer.cancel")}
             </button>

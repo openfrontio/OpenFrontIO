@@ -979,14 +979,16 @@ class Client {
         this.leaveReplayViewer();
         return;
       }
-      // Checked before the join modal is closed below: closing it resets
-      // the URL, which would drop the hash before handleUrl reads it.
-      const replayViewerID = parseReplayViewerHash(window.location.hash);
+      const replayHash = window.location.hash;
+      const replayViewerID = parseReplayViewerHash(replayHash);
       if (replayViewerID !== null) {
         if (this.lobbyHandle !== null || this.joinInFlight) {
           void this.handleLeaveLobby();
         }
         this.joinModal?.close();
+        if (window.location.hash !== replayHash) {
+          window.location.hash = replayHash;
+        }
         void this.openReplayViewer(replayViewerID);
         return;
       }
@@ -1208,6 +1210,9 @@ class Client {
         await this.handleLeaveLobby();
       }
       this.joinModal?.close();
+      if (window.location.hash !== hash) {
+        window.location.hash = hash;
+      }
       await this.openReplayViewer(replayViewerID);
       return;
     }

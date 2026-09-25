@@ -99,9 +99,14 @@ describe("ReplayViewer continue game cancellation", () => {
         detail: { playerID: "p1", difficulty: Difficulty.Medium },
       }),
     );
+    expect(extractSnapshotInWorker).toHaveBeenCalledTimes(1);
+    const signal = vi.mocked(extractSnapshotInWorker).mock.calls[0][6];
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal?.aborted).toBe(false);
 
     // User closes modal before worker finishes
     viewer.closeContinueModal();
+    expect(signal?.aborted).toBe(true);
 
     resolveExtract({
       snapshot: new Uint8Array([1, 2, 3]),

@@ -281,6 +281,24 @@ describe("ContinueGameModal willUpdate", () => {
     modal.willUpdate(new Map([["open", false]]));
     expect((modal as any).selectedPlayerID).toBe("");
   });
+
+  test("allows closing while loading and resets loading state", () => {
+    const modal = new ContinueGameModal();
+    modal.open = true;
+    modal.setLoading(true, "some error");
+    expect((modal as any).loading).toBe(true);
+
+    let closed = false;
+    modal.addEventListener("close", () => {
+      closed = true;
+    });
+
+    (modal as any).close();
+    expect(modal.open).toBe(false);
+    expect((modal as any).loading).toBe(false);
+    expect((modal as any).error).toBe("");
+    expect(closed).toBe(true);
+  });
 });
 
 describe("ReplayControls timeline seeking", () => {

@@ -14,6 +14,7 @@ import type {
   ReplayBase,
 } from "../../../src/client/replay/codec/ReplayTypes";
 import {
+  extractSnapshotInWorker,
   processInBrowser,
   type ProcessingHandlers,
 } from "../../../src/client/replay/LocalProcessing";
@@ -107,6 +108,43 @@ describe("processInBrowser", () => {
     worker.answer({ type: "progress", percent: 10 });
     expect(worker.posted).toEqual([]);
     expect(calls).toEqual([]);
+  });
+});
+
+describe("extractSnapshotInWorker", () => {
+  test("terminates worker and rejects if signal is aborted while in flight", async () => {
+    const worker = new FakeWorker();
+    const abortController = new AbortController();
+    const promise = extractSnapshotInWorker(
+      RECORD,
+      10,
+      "p1",
+      "c1",
+      undefined,
+      async () => worker as unknown as Worker,
+      abortController.signal,
+    );
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
+    abortController.abort();
+    await expect(promise).rejects.toThrow();
+    expect(worker.terminated).toBe(true);
+  });
+
+  test("terminates worker immediately if signal is already aborted", async () => {
+    const worker = new FakeWorker();
+    const abortController = new AbortController();
+    abortController.abort();
+    await expect(
+      extractSnapshotInWorker(
+        RECORD,
+        10,
+        "p1",
+        "c1",
+        undefined,
+        async () => worker as unknown as Worker,
+        abortController.signal,
+      ),
+    ).rejects.toThrow();
   });
 });
 

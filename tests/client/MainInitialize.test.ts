@@ -648,4 +648,20 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     );
     closeSpy.mockRestore();
   });
+
+  it("preserves the replay hash when popstate and hashchange are dispatched and closing the join modal resets the URL", async () => {
+    const joinModal = document.querySelector("join-lobby-modal") as unknown as {
+      close: () => void;
+    };
+    const closeSpy = vi
+      .spyOn(joinModal, "close")
+      .mockImplementation(() => history.replaceState(null, "", "/"));
+    window.location.hash = "#replay-viewer=dqKzit4cWu";
+    window.dispatchEvent(new Event("popstate"));
+    window.dispatchEvent(new Event("hashchange"));
+    await vi.waitFor(() =>
+      expect(window.location.hash).toBe("#replay-viewer=dqKzit4cWu"),
+    );
+    closeSpy.mockRestore();
+  });
 });

@@ -152,6 +152,7 @@ export class ReplayViewer extends LitElement {
   @state() private continuePlayers: ContinuePlayerOption[] = [];
   @state() private continueInitialPlayerID = "";
   private continueRequestCount = 0;
+  private continueAbortController: AbortController | null = null;
 
   private record: GameRecord | null = null;
   /** The processing worker, while it runs. */
@@ -196,6 +197,8 @@ export class ReplayViewer extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.continueAbortController?.abort();
+    this.continueAbortController = null;
     this.abort.abort();
     this.processing?.cancel();
     if (this.rafId !== null) cancelAnimationFrame(this.rafId);
@@ -814,11 +817,15 @@ export class ReplayViewer extends LitElement {
     const focusID = adapter?.focus?.id();
     this.continueInitialPlayerID =
       players.find((p) => p.id === focusID)?.id ?? players[0]?.id ?? "";
+    this.continueAbortController?.abort();
+    this.continueAbortController = null;
     this.continueRequestCount++;
     this.continueModalOpen = true;
   }
 
   private closeContinueModal(): void {
+    this.continueAbortController?.abort();
+    this.continueAbortController = null;
     this.continueRequestCount++;
     this.continueModalOpen = false;
   }
@@ -826,6 +833,8 @@ export class ReplayViewer extends LitElement {
   private async handleContinueGame(
     e: CustomEvent<{ playerID: string; difficulty: Difficulty }>,
   ): Promise<void> {
+    const abortController = new AbortController();
+    this.continueAbortController = abortController;
     const requestId = this.continueRequestCount;
     const modal = this.querySelector<ContinueGameModal>("continue-game-modal");
     modal?.setLoading(true);
@@ -852,6 +861,8 @@ export class ReplayViewer extends LitElement {
         e.detail.playerID,
         localClientID,
         e.detail.difficulty,
+        undefined,
+        abortController.signal,
       );
       if (this.continueRequestCount !== requestId) return;
 
@@ -876,6 +887,10 @@ export class ReplayViewer extends LitElement {
         false,
         err instanceof Error ? err.message : String(err),
       );
+    } finally {
+      if (this.continueAbortController === abortController) {
+        this.continueAbortController = null;
+      }
     }
   }
 
