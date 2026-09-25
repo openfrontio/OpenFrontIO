@@ -255,9 +255,9 @@ Tokens are only accepted by the site they were generated for (the JWT `aud`
 claim is your domain), expire after 10 minutes, and carry no identity other
 than the player's public ID. They cannot be used to log in to OpenFront.
 
-Supported sites: `ofstats.io`, `trackerfront.io`. To add a site, ask the
-OpenFront team; it needs a backend change before the option appears in the
-game.
+Supported sites: `ofstats.io`, `trackerfront.io`. To add your site, ask the
+OpenFront team. Sites are managed from the admin panel, so no deploy is
+needed; a new site appears in the game within a few minutes.
 
 You can check a token in either of two ways.
 
