@@ -163,13 +163,11 @@ export function isVerifiedUsername(
 }
 
 // Third-party sites a player can prove account ownership to with a short-lived
-// identity token (POST /users/@me/identity_token). Mirrors the API's
-// IDENTITY_TOKEN_AUDIENCES list — a new site needs a backend change first.
-export const IDENTITY_TOKEN_AUDIENCES = [
-  "ofstats.io",
-  "trackerfront.io",
-] as const;
-export type IdentityTokenAudience = (typeof IDENTITY_TOKEN_AUDIENCES)[number];
+// identity token (POST /users/@me/identity_token). Admin-managed on the API
+// and served by GET /public/identity_token/audiences.
+export const IdentityTokenAudiencesResponseSchema = z.object({
+  audiences: z.array(z.string()),
+});
 
 export const IdentityTokenResponseSchema = z.object({
   token: z.string(),
