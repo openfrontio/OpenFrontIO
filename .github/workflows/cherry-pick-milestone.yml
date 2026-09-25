@@ -39,10 +39,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    # One pick at a time per release branch, so two merges never race to push.
-    concurrency:
-      group: cherry-pick-${{ github.event.pull_request.milestone.title }}
-      cancel-in-progress: false
+    # No concurrency group: GitHub keeps only one waiting run per group and
+    # cancels the rest, which silently dropped a pick when three merges landed
+    # together. Racing pushes are handled by the retry in "Push clean pick".
     env:
       GH_TOKEN: ${{ github.token }}
       PR: ${{ github.event.pull_request.number }}
@@ -165,8 +164,24 @@ jobs:
         if: steps.pick.outputs.result == 'clean'
         run: |
           set -euo pipefail
-          git push origin "HEAD:refs/heads/$TARGET"
-          gh pr comment "$PR" --body "🍒 Cherry-picked onto \`$TARGET\` as $(git rev-parse HEAD)."
+          # Another pick may have pushed since checkout: rebase onto it and retry.
+          for attempt in 1 2 3 4 5; do
+            if git push origin "HEAD:refs/heads/$TARGET"; then
+              gh pr comment "$PR" --body "🍒 Cherry-picked onto \`$TARGET\` as $(git rev-parse HEAD)."
+              exit 0
+            fi
+            sleep $((attempt * 5))
+            git fetch origin "$TARGET"
+            git rebase "origin/$TARGET"
+            # A concurrent run for the same PR got there first; the rebase
+            # dropped the now-empty pick.
+            if [ "$(git rev-parse HEAD)" = "$(git rev-parse "origin/$TARGET")" ]; then
+              echo "PR #$PR landed on $TARGET from another run, nothing to push"
+              exit 0
+            fi
+          done
+          echo "::error::Could not push to $TARGET after 5 attempts"
+          exit 1
 
       # Same npm-install workaround as the shared review workflow
       # (openfrontio/.github claude-code-review.yml): the action's native
