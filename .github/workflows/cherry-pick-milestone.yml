@@ -48,6 +48,8 @@ jobs:
       PR_TITLE: ${{ github.event.pull_request.title }}
       SHA: ${{ github.event.pull_request.merge_commit_sha }}
       TARGET: ${{ github.event.pull_request.milestone.title }}
+      # `secrets` is not available in a step-level `if`, so surface this here.
+      HAS_SLACK: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
       # Built from trusted values only (PR number, merge SHA, and a milestone
       # that the first step requires to match vNN). The PR title and file
       # names stay out: they are author-controlled.
@@ -268,6 +270,24 @@ jobs:
           url=$(GH_TOKEN="$APP_TOKEN" gh pr create --base "$TARGET" --head "$branch" --milestone "$TARGET" --title "[$TARGET] $PR_TITLE" --body "$body")
           gh pr comment "$PR" --body "🍒 Cherry-pick onto \`$TARGET\` conflicted; Claude resolved it in $url for review."
           echo "commented=true" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      # A backport PR needs a human to review it, so say so in Slack. Skipped
+      # when the webhook secret is unset; a Slack outage must not fail the pick.
+      - name: Notify Slack of the backport PR
+        if: steps.open-pr.outputs.url != '' && env.HAS_SLACK == 'true'
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          URL: ${{ steps.open-pr.outputs.url }}
+        run: |
+          set -euo pipefail
+          # The title is author-controlled: escape Slack's control characters
+          # so it cannot form links or mentions like <!channel>.
+          jq -n --arg target "$TARGET" --arg pr "$PR" --arg title "$PR_TITLE" --arg url "$URL" \
+            '($title | gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;")) as $t
+            | {text: "🍒 Backport of #\($pr) onto `\($target)` conflicted; Claude resolved it and it needs review: <\($url)|\($t)>"}' \
+            | curl -fsS -X POST -H 'Content-Type: application/json' --data @- "$SLACK_WEBHOOK_URL"
 
       # Any other failure (a rejected push, a missing app key) would otherwise
       # leave the PR with no sign the backport never happened.
