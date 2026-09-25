@@ -3,16 +3,21 @@
 # PR milestoned beforehand) and on milestoning (for a PR already merged).
 #
 #   - Clean pick: pushed straight to the release branch, same as a hand pick.
+#     It is the exact change already reviewed on main.
 #   - Conflict: Claude resolves it in the working tree, and the result goes up
 #     as a PR against the release branch for a human to check, never straight
-#     to the branch.
+#     to the branch: that code has not been reviewed.
 #
 # pull_request_target, not pull_request, so fork PRs get secrets. That is safe
 # here because the only thing picked is the commit already merged into main.
 # Claude gets file tools and read-only git only: no npm, no push, no gh.
 #
-# Pushes and PRs made with GITHUB_TOKEN do not trigger other workflows, so the
-# conflict PR gets no CI run of its own.
+# Release branches are covered by rulesets that require a PR, so the push and
+# the backport PR use a token from a dedicated backport GitHub App that is on
+# those rulesets' bypass lists. A PR opened with that token also runs CI,
+# which one opened with GITHUB_TOKEN would not. The app can skip review on
+# main too, so its key lives only in the `backport` environment, which is
+# limited to main: a workflow on any other branch cannot read it.
 name: 🍒 Cherry-pick to milestone
 
 on:
@@ -29,8 +34,10 @@ jobs:
       github.event.pull_request.milestone != null
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: backport
+    # GITHUB_TOKEN only comments; pushes and the backport PR use the app token.
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
     # One pick at a time per release branch, so two merges never race to push.
     concurrency:
@@ -89,10 +96,19 @@ jobs:
           fi
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        if: steps.target.outputs.skip == 'false'
+        with:
+          client-id: ${{ vars.BACKPORT_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BACKPORT_APP_PRIVATE_KEY }}
+
+      # The app token is what `git push` authenticates with below.
       - uses: actions/checkout@v7
         if: steps.target.outputs.skip == 'false'
         with:
           ref: ${{ env.TARGET }}
+          token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
           submodules: false
 
@@ -193,14 +209,17 @@ jobs:
             --max-turns 80
 
       - name: Open PR with resolved pick
+        id: open-pr
         if: steps.pick.outputs.result == 'conflict'
         env:
           FILES: ${{ steps.pick.outputs.files }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           if [ -f CHERRY_PICK_ABORT.md ]; then
             reason=$(cat CHERRY_PICK_ABORT.md)
             gh pr comment "$PR" --body "$(printf '🍒 Could not cherry-pick onto `%s`; this needs a manual backport.\n\n%s' "$TARGET" "$reason")"
+            echo "commented=true" >> "$GITHUB_OUTPUT"
             echo "::error::Claude declined the pick: $reason"
             exit 1
           fi
@@ -209,6 +228,7 @@ jobs:
           leftover=$(echo "$FILES" | xargs grep -lE '^(<<<<<<<|>>>>>>>)( |$)' 2>/dev/null || true)
           if [ -n "$leftover" ]; then
             gh pr comment "$PR" --body "🍒 Cherry-pick onto \`$TARGET\` conflicted and was not fully resolved; this needs a manual backport. See ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}."
+            echo "commented=true" >> "$GITHUB_OUTPUT"
             echo "::error::Conflict markers left in: $leftover"
             exit 1
           fi
@@ -225,9 +245,17 @@ jobs:
           Conflicted files:
           $file_list
 
-          Check the resolution before merging. This PR was opened by a workflow,
-          so CI does not run on it.
+          Check the resolution before merging.
           EOF
           )
-          url=$(gh pr create --base "$TARGET" --head "$branch" --title "[$TARGET] $PR_TITLE" --body "$body")
+          # Opened with the app token so CI runs on it. The milestone satisfies
+          # the Has Milestone check.
+          url=$(GH_TOKEN="$APP_TOKEN" gh pr create --base "$TARGET" --head "$branch" --milestone "$TARGET" --title "[$TARGET] $PR_TITLE" --body "$body")
           gh pr comment "$PR" --body "🍒 Cherry-pick onto \`$TARGET\` conflicted; Claude resolved it in $url for review."
+          echo "commented=true" >> "$GITHUB_OUTPUT"
+
+      # Any other failure (a rejected push, a missing app key) would otherwise
+      # leave the PR with no sign the backport never happened.
+      - name: Report failure on the PR
+        if: failure() && steps.target.outputs.skip == 'false' && steps.open-pr.outputs.commented != 'true'
+        run: gh pr comment "$PR" --body "🍒 Cherry-pick onto \`$TARGET\` failed; this needs a manual backport. See ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}."
