@@ -99,6 +99,16 @@ export function hashPersistentID(persistentID: string): string {
   return createHash("sha256").update(persistentID).digest("hex");
 }
 
+// `pool` carries sibling lobby ids, which are join secrets. Strip it from every
+// config that leaves the server — telemetry, the client start message + game
+// record, and the unauthenticated gameInfo route — in one place, so a new
+// export site can't forget.
+function configWithoutPool(config: GameConfig): GameConfig {
+  const copy = { ...config };
+  delete copy.pool;
+  return copy;
+}
+
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
 const KICK_REASON_ADMIN = "kick_reason.admin";
@@ -304,10 +314,8 @@ export class GameServer {
     if (opts.startsAt !== undefined) {
       this.visibleAt = Date.now();
     }
-    // Telemetry ships off-box, and sibling ids are join secrets. Same strip as
-    // gameInfo(), on a copy: the full config stays in use at runtime.
-    const telemetryConfig = { ...opts.gameConfig };
-    delete telemetryConfig.pool;
+    // Telemetry ships off-box, and sibling ids are join secrets.
+    const telemetryConfig = configWithoutPool(opts.gameConfig);
     this.telemetry.emit(
       "match_opened",
       {
@@ -1039,10 +1047,9 @@ export class GameServer {
     // enforced server-side against this.gameConfig (joinClient / seesReal).
     // Keep them out of gameStartInfo: its config goes to every client in the
     // start message and into the publicly downloadable game record.
-    const config = { ...this.gameConfig };
+    const config = configWithoutPool(this.gameConfig);
     delete config.allowedPublicIds;
     delete config.nameRevealPublicIds;
-    delete config.pool;
 
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
@@ -1594,13 +1601,9 @@ export class GameServer {
   // Omitting viewer (e.g. the HTTP /api/game/:id and link-preview routes)
   // anonymizes all names when the option is on.
   public gameInfo(viewer?: ClientID): GameInfo {
-    // Shallow copy, never the stored config: this goes out over the
-    // unauthenticated /api/game/:id route and the per-second lobby_info
-    // broadcast, and sibling ids are join secrets. Third site that sanitises
-    // a config for its own audience — one shared sanitiser would be a
-    // sensible follow-up, but the three strip different fields today.
-    const gameConfig = { ...this.gameConfig };
-    delete gameConfig.pool;
+    // Goes out over the unauthenticated /api/game/:id route and the per-second
+    // lobby_info broadcast, so strip the pool secrets (see configWithoutPool).
+    const gameConfig = configWithoutPool(this.gameConfig);
     return {
       gameID: this.id,
       clients: this.names.lobbyClients(viewer, this.clients.active()),
