@@ -1099,10 +1099,9 @@ export class ClientGameRunner {
         this.snapshotInFlight = true;
         this.worker
           .snapshot()
-          .then(async (raw) => {
-            const snapshotTick = readSnapshotHeader(raw).tick;
-            const compressed = await compressSnapshot(raw);
-            return { compressed, snapshotTick };
+          .then(async ({ bytes, tick }) => {
+            const compressed = await compressSnapshot(bytes);
+            return { compressed, snapshotTick: tick };
           })
           .then(({ compressed, snapshotTick }) => {
             if (
