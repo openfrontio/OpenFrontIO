@@ -4,8 +4,8 @@
 #   bash .claude/skills/release/scripts/commits.sh v34
 #   bash .claude/skills/release/scripts/commits.sh v34 v0.34.13 v0.34.14   # replay a past range
 #
-# Prints the last tag, the next tag and the release date (America/Los_Angeles),
-# then one tab-separated line per commit, oldest first:
+# Prints the last tag, the next tag, the release date (America/Los_Angeles) and
+# the head sha, then one tab-separated line per commit, oldest first:
 #
 #   sha  git-author-name  github-login  pr  subject  co-authors
 #
@@ -33,11 +33,18 @@ fetch() { git fetch --quiet origin "$@" 2> /dev/null || echo "warning	git fetch 
 
 fetch "+refs/heads/$branch:refs/remotes/origin/$branch"
 
-# Last v0.<minor>.<patch> tag on the remote, by version order.
-last_tag="${since:-$(git ls-remote --tags --refs origin "v0.$minor.*" \
-    | sed 's#.*refs/tags/##' \
-    | grep -E "^v0\.$minor\.[0-9]+$" \
-    | sort -V | tail -1 || true)}"
+# Last v0.<minor>.<patch> tag by version order: the remote's, or the local
+# tags when the remote can't be listed (a lookup that fails is not "no tags").
+latest_patch_tag() { grep -E "^v0\.$minor\.[0-9]+$" | sort -V | tail -1 || true; }
+last_tag="$since"
+if [[ -z "$last_tag" ]]; then
+    if remote_tags="$(git ls-remote --tags --refs origin "v0.$minor.*" 2> /dev/null)"; then
+        last_tag="$(sed 's#.*refs/tags/##' <<< "$remote_tags" | latest_patch_tag)"
+    else
+        echo "warning	could not list tags on origin; using local tags, which may be stale"
+        last_tag="$(git tag -l "v0.$minor.*" | latest_patch_tag)"
+    fi
+fi
 
 if [[ -z "$last_tag" ]]; then
     echo "error: no v0.$minor.<patch> tag exists yet; the v0.$minor.0 notes are written by hand" >&2
@@ -70,6 +77,10 @@ fi
 if ! git merge-base --is-ancestor "$last_tag" "$head"; then
     echo "warning	$last_tag is not an ancestor of $head (branch was reset or rebuilt); listing what $head adds, minus cherry-picks of released commits"
 fi
+
+# The exact commit this list describes. The draft release targets this sha,
+# not the branch name, so a later push to the branch can't change what ships.
+echo "head_sha	$(git rev-parse "$head^{commit}")"
 
 # Commits the tip adds (right) and commits the last release had that the tip
 # lacks (left, only non-empty after a reset). Patch-identical pairs cancel out;
