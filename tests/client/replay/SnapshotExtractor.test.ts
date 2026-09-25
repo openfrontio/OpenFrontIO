@@ -199,4 +199,74 @@ describe("SnapshotExtractor", () => {
       }
     }
   });
+
+  test("refreshes attack rate of existing active NationExecutions when difficulty changes", async () => {
+    const p1 = human(1);
+    const p2 = human(2);
+    const gameConfig = config({
+      gameMap: GameMapType.World,
+      gameMapSize: GameMapSize.Normal,
+      gameMode: GameMode.FFA,
+      gameType: GameType.Public,
+      bots: 2,
+      difficulty: Difficulty.Easy,
+    });
+
+    const { record } = await playAndArchive({
+      gameID: "TESTDIFF1",
+      config: gameConfig,
+      players: [p1, p2],
+      ticks: 30,
+    });
+
+    const result = await extractSnapshotFromRecord({
+      record,
+      targetTick: 20,
+      chosenPlayerID: "client001",
+      localClientID: "MYCLIENT_DIFF",
+      difficulty: Difficulty.Impossible,
+      mapLoader,
+    });
+
+    const restoredRunner = await createGameRunnerFromSnapshot(
+      result.gameStartInfo,
+      result.snapshot,
+      "MYCLIENT_DIFF",
+      mapLoader,
+      () => {},
+    );
+
+    const game = restoredRunner.game;
+    const initializedNationExecs = (game as any)
+      .executions()
+      .filter(
+        (e: unknown) =>
+          e instanceof NationExecution && e.isActive() && e.isInitialized(),
+      ) as NationExecution[];
+
+    expect(initializedNationExecs.length).toBeGreaterThan(0);
+    for (const exec of initializedNationExecs) {
+      // Impossible difficulty has attack rate 30..50
+      expect(exec.currentAttackRate()).toBeGreaterThanOrEqual(30);
+      expect(exec.currentAttackRate()).toBeLessThanOrEqual(50);
+      expect(exec.currentAttackTick()).toBeGreaterThanOrEqual(0);
+      expect(exec.currentAttackTick()).toBeLessThan(exec.currentAttackRate());
+    }
+
+    // After adding a turn and ticking the restored runner, uninitialized executions initialize with the new difficulty
+    restoredRunner.addTurn({ turnNumber: 20, intents: [] });
+    expect(restoredRunner.executeNextTick()).toBe(true);
+
+    const allNationExecs = (game as any)
+      .executions()
+      .filter(
+        (e: unknown) => e instanceof NationExecution && e.isActive(),
+      ) as NationExecution[];
+
+    for (const exec of allNationExecs) {
+      expect(exec.isInitialized()).toBe(true);
+      expect(exec.currentAttackRate()).toBeGreaterThanOrEqual(30);
+      expect(exec.currentAttackRate()).toBeLessThanOrEqual(50);
+    }
+  });
 });

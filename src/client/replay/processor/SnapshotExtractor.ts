@@ -171,6 +171,15 @@ export async function extractSnapshotFromRecord(
   };
   if (opts.difficulty !== undefined) {
     config.difficulty = opts.difficulty;
+    for (const exec of gameImpl.executions()) {
+      if (
+        exec instanceof NationExecution &&
+        exec.isActive() &&
+        exec.isInitialized()
+      ) {
+        exec.refreshDifficulty();
+      }
+    }
   }
   config.gameType = GameType.Singleplayer;
 

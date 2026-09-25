@@ -110,6 +110,24 @@ export class NationExecution implements Execution {
     }
   }
 
+  isInitialized(): boolean {
+    return this.mg !== undefined;
+  }
+
+  refreshDifficulty(): void {
+    if (!this.mg) return;
+    this.attackRate = this.getAttackRate();
+    this.attackTick = this.random.nextInt(0, this.attackRate);
+  }
+
+  currentAttackRate(): number {
+    return this.attackRate;
+  }
+
+  currentAttackTick(): number {
+    return this.attackTick;
+  }
+
   tick(ticks: number) {
     // Ship tracking
     if (
