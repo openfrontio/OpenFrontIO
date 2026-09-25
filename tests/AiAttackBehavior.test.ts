@@ -878,7 +878,8 @@ describe("Retaliation by difficulty - end-to-end via maybeAttack", () => {
       const { testGame, nation, enemy, behavior } =
         await setupRetaliation(difficulty);
 
-      nation.setTroops(Math.floor(testGame.config().maxTroops(nation) * 0.1));
+      // Below the 0.3 reserve, above the 0.2 expand floor
+      nation.setTroops(Math.floor(testGame.config().maxTroops(nation) * 0.25));
       enemy.setTroops(100_000);
       attack(testGame, enemy, nation, 30_000);
       expect(nation.incomingAttacks().length).toBeGreaterThan(0);
@@ -916,9 +917,9 @@ describe("Retaliation by difficulty - end-to-end via maybeAttack", () => {
       const { testGame, nation, enemy, other, behavior } =
         await setupRetaliation(difficulty);
 
-      nation.setTroops(300_000);
+      nation.setTroops(380_000);
       other.setTroops(20_000);
-      enemy.setTroops(230_000);
+      enemy.setTroops(250_000);
       attack(testGame, enemy, nation, 50_000);
 
       const incoming = nation
@@ -987,6 +988,60 @@ describe("Retaliation by difficulty - end-to-end via maybeAttack", () => {
     expect(exec).toBeDefined();
     expect((exec as any).startTroops).toBe(incoming);
   });
+
+  it.each([
+    [
+      Difficulty.Impossible,
+      "a wave bigger than its whole army",
+      150_000,
+      450_000,
+      300_000,
+    ],
+    [
+      Difficulty.Impossible,
+      "a wave it can just cancel and push back",
+      300_000,
+      280_000,
+      80_000,
+    ],
+    [
+      Difficulty.Hard,
+      "a wave bigger than its whole army",
+      150_000,
+      450_000,
+      300_000,
+    ],
+    [
+      Difficulty.Hard,
+      "a wave it can just cancel and push back",
+      300_000,
+      280_000,
+      80_000,
+    ],
+  ])(
+    "%s FFA: never empties its home army answering %s",
+    async (difficulty, _scenario, nationTroops, enemyTroops, wave) => {
+      const { testGame, nation, enemy, other, behavior } =
+        await setupRetaliation(difficulty);
+
+      // No other threat, so only the home floor holds troops back
+      other.setTroops(0);
+      nation.setTroops(nationTroops);
+      enemy.setTroops(enemyTroops);
+      attack(testGame, enemy, nation, wave);
+
+      const floor = testGame.config().maxTroops(nation) * 0.2;
+
+      const spy = vi.spyOn(testGame, "addExecution");
+      behavior.maybeAttack();
+
+      const [exec] = sentAttacks(spy, enemy);
+      expect(exec).toBeDefined();
+      const sent = (exec as any).startTroops as number;
+      expect(sent).toBeGreaterThan(0);
+      expect(nation.troops() - sent).toBeGreaterThanOrEqual(floor - 1);
+    },
+  );
 
   it.each([
     [Difficulty.Impossible, false],

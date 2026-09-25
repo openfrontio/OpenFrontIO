@@ -533,6 +533,7 @@ export class AiAttackBehavior {
   // while keeping back what troopSendCap wants for every other neighbor, pushes
   // into its land with at least that much (the attacker isn't a threat then,
   // its army is busy with us). Otherwise only cancels, as far as the reserve allows.
+  // Never dips below the expand ratio: troop growth nearly stops near zero.
   private sendRetaliation(attacker: Player): boolean {
     let incoming = 0;
     for (const attack of this.player.incomingAttacks()) {
@@ -543,9 +544,12 @@ export class AiAttackBehavior {
       if (attack.target() === attacker) pressing += attack.troops();
     }
     const troops = this.player.troops();
-    const spare = Math.min(troops, this.neighborTroopCap(attacker));
-    const aboveReserve =
-      troops - this.game.config().maxTroops(this.player) * this.reserveRatio;
+    const maxTroops = this.game.config().maxTroops(this.player);
+    const spare = Math.min(
+      troops - maxTroops * this.expandRatio,
+      this.neighborTroopCap(attacker),
+    );
+    const aboveReserve = troops - maxTroops * this.reserveRatio;
     const counter = incoming + Math.max(0, attacker.troops() - pressing);
     const send =
       spare >= counter
