@@ -1,4 +1,4 @@
-import { GameID, GameStartInfo, Turn } from "../core/Schemas";
+import { GameID, GameStartInfo, Turn, TurnSchema } from "../core/Schemas";
 import { decompressSnapshot } from "../core/snapshot/GameSnapshot";
 import { getPersistentID } from "./Auth";
 import { clientPlatform } from "./ClientPlatform";
@@ -165,11 +165,34 @@ export function getSoloSave(): SoloSaveState | null {
     migrateLegacySoloSave();
     const raw = localStorage.getItem(scopedKey);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as SoloSaveState;
-    if (parsed.version === 1 && parsed.gameStartInfo && parsed.gameID) {
-      return parsed;
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const record = parsed as Record<string, unknown>;
+
+    if (record.version !== 1) return null;
+    if (typeof record.gameID !== "string" || !record.gameID) return null;
+    if (!record.gameStartInfo || typeof record.gameStartInfo !== "object") {
+      return null;
     }
-    return null;
+    if (
+      typeof record.numTurns !== "number" ||
+      !Number.isInteger(record.numTurns) ||
+      record.numTurns < 0
+    ) {
+      return null;
+    }
+    if (record.snapshot !== undefined && typeof record.snapshot !== "string") {
+      return null;
+    }
+    if (record.turns !== undefined) {
+      if (!Array.isArray(record.turns)) return null;
+      for (const turn of record.turns) {
+        if (!TurnSchema.safeParse(turn).success) {
+          return null;
+        }
+      }
+    }
+    return parsed as SoloSaveState;
   } catch (e) {
     console.error("Failed to read singleplayer save from localStorage", e);
     return null;

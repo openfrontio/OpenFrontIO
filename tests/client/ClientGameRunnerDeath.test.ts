@@ -75,7 +75,11 @@ describe("ClientGameRunner death detection and save clearing", () => {
       start: vi.fn((cb) => {
         workerCallback = cb;
       }),
-      snapshot: vi.fn(async () => new Uint8Array([1, 2, 3])),
+      snapshot: vi.fn(async () => ({
+        bytes: new Uint8Array([1, 2, 3]),
+        snapshot: new Uint8Array([1, 2, 3]),
+        tick: 50,
+      })),
     };
 
     mockTransport = {
@@ -180,5 +184,27 @@ describe("ClientGameRunner death detection and save clearing", () => {
     eventBus.emit(new SendWinnerEvent(undefined, {}));
     expect(clearSoloSaveMock).toHaveBeenCalledWith("game123");
     expect(mockTransport.disableLocalSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves solo snapshot using worker tick on auto-snapshot tick", async () => {
+    const runner = createRunner(true);
+    runner.start();
+
+    // Tick 50 triggers auto-snapshot
+    workerCallback({
+      tick: 50,
+      updates: { [GameUpdateType.Hash]: [] },
+    });
+
+    await vi.waitFor(() => {
+      expect(mockWorker.snapshot).toHaveBeenCalledTimes(1);
+      expect(saveSoloSnapshotMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(saveSoloSnapshotMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      50,
+    );
   });
 });

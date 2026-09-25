@@ -89,7 +89,7 @@ describe("SinglePlayerSaveManager", () => {
 
     const turns: Turn[] = [
       { turnNumber: 0, intents: [] },
-      { turnNumber: 1, intents: [{ type: "attack" } as any] },
+      { turnNumber: 1, intents: [] },
     ];
 
     saveSoloGame(dummyStartInfo(), turns);
@@ -183,5 +183,73 @@ describe("SinglePlayerSaveManager", () => {
     expect(save?.numTurns).toBe(50);
     const restored = await getSoloSnapshot();
     expect(restored?.snapshot).toEqual(rawBytes);
+  });
+
+  it("validates persisted save state and rejects records with malformed numTurns, snapshot, or turns", () => {
+    const validBase = {
+      version: 1,
+      gameID: "game_valid",
+      savedAt: Date.now(),
+      gameStartInfo: dummyStartInfo(),
+      numTurns: 10,
+    };
+    const key = getScopedSoloSaveKey()!;
+
+    // Valid base save
+    localStorage.setItem(key, JSON.stringify(validBase));
+    expect(getSoloSave()).not.toBeNull();
+
+    // Invalid numTurns (negative, float, string)
+    localStorage.setItem(key, JSON.stringify({ ...validBase, numTurns: -1 }));
+    expect(getSoloSave()).toBeNull();
+
+    localStorage.setItem(key, JSON.stringify({ ...validBase, numTurns: 3.14 }));
+    expect(getSoloSave()).toBeNull();
+
+    localStorage.setItem(key, JSON.stringify({ ...validBase, numTurns: "10" }));
+    expect(getSoloSave()).toBeNull();
+
+    // Invalid snapshot (not a string)
+    localStorage.setItem(
+      key,
+      JSON.stringify({ ...validBase, snapshot: 12345 }),
+    );
+    expect(getSoloSave()).toBeNull();
+
+    // Invalid turns (not an array)
+    localStorage.setItem(
+      key,
+      JSON.stringify({ ...validBase, turns: "not-an-array" }),
+    );
+    expect(getSoloSave()).toBeNull();
+
+    // Invalid turn entry (fails TurnSchema.safeParse)
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        ...validBase,
+        turns: [{ turnNumber: -1, intents: [] }],
+      }),
+    );
+    expect(getSoloSave()).toBeNull();
+
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        ...validBase,
+        turns: [{ turnNumber: 0, intents: [{ type: "bogus_intent" }] }],
+      }),
+    );
+    expect(getSoloSave()).toBeNull();
+
+    // Valid turns
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        ...validBase,
+        turns: [{ turnNumber: 0, intents: [] }],
+      }),
+    );
+    expect(getSoloSave()).not.toBeNull();
   });
 });

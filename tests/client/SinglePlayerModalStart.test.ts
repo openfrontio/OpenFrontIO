@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import * as inGameModal from "../../src/client/InGameModal";
 import * as saveManager from "../../src/client/SinglePlayerSaveManager";
 import { UnitType } from "../../src/core/game/Game";
 
@@ -21,8 +22,6 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameAlert: vi.fn(),
   showInGameConfirm: vi.fn(async () => true),
 }));
-
-import { showInGameConfirm } from "../../src/client/InGameModal";
 
 // Side-effect import so the custom element registers (a type-only import
 // would be elided and createElement would return an inert element).
@@ -244,42 +243,83 @@ describe("SinglePlayerModal start", () => {
     decompressSpy.mockRestore();
   });
 
-  it("discards game with displayed saveID only when confirmed", async () => {
+  it("dispatches join-lobby as cancelable on resume and preserves modal when join is prevented", async () => {
     const modal = createModal();
-    modal.resumeSave = { gameID: "save_to_discard" } as any;
-    const clearSpy = vi.spyOn(saveManager, "clearSoloSave");
-    vi.mocked(showInGameConfirm).mockResolvedValueOnce(true);
+    modal.resumeSave = {
+      gameID: "save_cancelable",
+      numTurns: 10,
+      turns: [{ turnNumber: 0, intents: [] }],
+    } as any;
 
-    await modal.handleDiscardGame();
+    let dispatchedEvent: CustomEvent | null = null;
+    modal.addEventListener("join-lobby", (e: Event) => {
+      dispatchedEvent = e as CustomEvent;
+      e.preventDefault();
+    });
 
-    expect(clearSpy).toHaveBeenCalledWith("save_to_discard");
-    expect(modal.resumeSave).toBeNull();
-    clearSpy.mockRestore();
+    const closeSpy = vi.spyOn(modal, "close");
+    await modal.handleResumeGame();
+
+    expect(dispatchedEvent).not.toBeNull();
+    expect(dispatchedEvent!.cancelable).toBe(true);
+    expect(dispatchedEvent!.defaultPrevented).toBe(true);
+    expect(closeSpy).not.toHaveBeenCalled();
+    expect(modal.resumeInFlight).toBe(false);
+
+    closeSpy.mockRestore();
   });
 
-  it("does not clear save if discard is cancelled", async () => {
+  it("captures resumeSave before confirm and passes captured gameID to clearSoloSave", async () => {
     const modal = createModal();
-    modal.resumeSave = { gameID: "save_to_keep" } as any;
     const clearSpy = vi.spyOn(saveManager, "clearSoloSave");
-    vi.mocked(showInGameConfirm).mockResolvedValueOnce(false);
 
-    await modal.handleDiscardGame();
-
-    expect(clearSpy).not.toHaveBeenCalled();
-    expect(modal.resumeSave).not.toBeNull();
-    clearSpy.mockRestore();
-  });
-
-  it("does nothing when discarding with no displayed save ID", async () => {
-    const modal = createModal();
+    // Case A: no displayed save -> returns early
     modal.resumeSave = null;
-    const clearSpy = vi.spyOn(saveManager, "clearSoloSave");
-    vi.mocked(showInGameConfirm).mockClear();
-
     await modal.handleDiscardGame();
-
-    expect(showInGameConfirm).not.toHaveBeenCalled();
     expect(clearSpy).not.toHaveBeenCalled();
+
+    // Case B: user confirms discard -> clears captured save ID
+    modal.resumeSave = {
+      gameID: "save_to_discard",
+      numTurns: 10,
+    } as any;
+
+    let resolveConfirm!: (value: boolean) => void;
+    const confirmPromise = new Promise<boolean>((resolve) => {
+      resolveConfirm = resolve;
+    });
+    const confirmSpy = vi
+      .spyOn(inGameModal, "showInGameConfirm")
+      .mockReturnValue(confirmPromise);
+
+    const discardPromise = modal.handleDiscardGame();
+
+    // While confirmation is pending, simulate a replacement save appearing
+    modal.resumeSave = {
+      gameID: "replacement_save",
+      numTurns: 20,
+    } as any;
+
+    resolveConfirm(true);
+    await discardPromise;
+
+    // Must clear ONLY the captured save ID, not the replacement
+    expect(clearSpy).toHaveBeenCalledWith("save_to_discard");
+    // The replacement save must NOT be discarded or set to null
+    expect(modal.resumeSave).not.toBeNull();
+    expect(modal.resumeSave.gameID).toBe("replacement_save");
+
+    // Case C: user cancels confirm -> does not clear
+    modal.resumeSave = {
+      gameID: "save_keep",
+      numTurns: 5,
+    } as any;
+    confirmSpy.mockResolvedValueOnce(false);
+    await modal.handleDiscardGame();
+    expect(clearSpy).not.toHaveBeenCalledWith("save_keep");
+    expect(modal.resumeSave?.gameID).toBe("save_keep");
+
+    confirmSpy.mockRestore();
     clearSpy.mockRestore();
   });
 });
