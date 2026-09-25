@@ -451,11 +451,13 @@ export class DetailedGameViewModal extends BaseModal {
   private renderCard(lobby: PublicGameInfo) {
     const config = lobby.gameConfig;
     if (!config) return nothing;
+    // The host's Start countdown once armed, otherwise the listing deadline.
+    const startAt = lobby.startsAt ?? lobby.autoStartAt;
     return lobbyCard({
       lobby,
       subtitle: getGameModeLabel(config),
-      timeDisplay: this.timeDisplay(lobby),
-      timeDisplayUppercase: lobby.startsAt === undefined,
+      timeDisplay: this.timeDisplay(lobby, startAt),
+      timeDisplayUppercase: startAt === undefined,
       heightClass: "h-full",
       // Gated, not disabled: `disabled` also sets pointer-events-none and would
       // swallow the click that's supposed to make the update bar wiggle. join()
@@ -472,8 +474,11 @@ export class DetailedGameViewModal extends BaseModal {
     });
   }
 
-  private timeDisplay(lobby: PublicGameInfo): string {
-    if (lobby.startsAt === undefined) {
+  private timeDisplay(
+    lobby: PublicGameInfo,
+    startAt: number | undefined,
+  ): string {
+    if (startAt === undefined) {
       if (lobby.publicGameType === "hosted") {
         return translateText("public_lobby.waiting_for_players");
       }
@@ -487,7 +492,7 @@ export class DetailedGameViewModal extends BaseModal {
       return translateText("detailed_view.queue_position", { position });
     }
     const seconds = getSecondsUntilServerTimestamp(
-      lobby.startsAt,
+      startAt,
       this.serverTimeOffset,
     );
     return seconds > 0
