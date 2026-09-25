@@ -312,6 +312,14 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: "jsdom",
       setupFiles: "./tests/setup.ts",
+      // Node 25 turned Web Storage on by default, where `localStorage` is a
+      // built-in global that evaluates to undefined unless --localstorage-file
+      // is passed. It shadows the jsdom localStorage vitest installs, so every
+      // test touching UserSettings dies on "Cannot read properties of
+      // undefined (reading 'getItem')". Turn Node's own Web Storage off in the
+      // test workers so jsdom always provides it. No-op on Node 24, which keeps
+      // Web Storage behind a flag.
+      execArgv: ["--no-experimental-webstorage"],
       // Git worktrees live inside the repo, so their tests match the default
       // glob and run against that worktree's own (often stale) source and
       // node_modules. Anyone with a worktree checked out sees failures that
