@@ -212,23 +212,19 @@ export function lobbyCard({
         class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
       >
         <div class="flex min-w-0 flex-col items-start gap-1">
-          ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
-        </div>
-        <!-- Custom sits under the time pill: beside it, a long status like
-             "Waiting for players" squeezes it out of view. -->
-        <div class="flex shrink-0 flex-col items-end gap-1">
-          <span
-            class="${PILL} tabular-nums ${timeDisplayUppercase
-              ? ""
-              : "normal-case"}"
-            >${timeDisplay}</span
-          >
           ${custom
             ? html`<span class=${CUSTOM_PILL}
                 >${translateText("public_lobby.custom")}</span
               >`
             : nothing}
+          ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
         </div>
+        <span
+          class="${PILL} shrink-0 tabular-nums ${timeDisplayUppercase
+            ? ""
+            : "normal-case"}"
+          >${timeDisplay}</span
+        >
       </div>
 
       <div
