@@ -1,22 +1,233 @@
-# Thin caller for the shared milestone backport in openfrontio/.github. Only
-# the trigger lives here; the pick, Claude conflict resolution and backport PR
-# are in the shared file:
-# https://github.com/openfrontio/.github/blob/main/.github/workflows/cherry-pick-milestone.yml
+# Backports a merged PR onto the release branch named by its milestone: a PR
+# with milestone "v34" is cherry-picked onto branch v34. Fires on merge (for a
+# PR milestoned beforehand) and on milestoning (for a PR already merged).
 #
-# A merged PR with milestone "v34" is cherry-picked onto branch v34. closed
-# covers a PR milestoned before merge, milestoned one milestoned after.
-# pull_request_target so fork PRs get secrets; only the already-merged commit
-# is picked.
+#   - Clean pick: pushed straight to the release branch, same as a hand pick.
+#   - Conflict: Claude resolves it in the working tree, and the result goes up
+#     as a PR against the release branch for a human to check, never straight
+#     to the branch.
+#
+# pull_request_target, not pull_request, so fork PRs get secrets. That is safe
+# here because the only thing picked is the commit already merged into main.
+# Claude gets file tools and read-only git only: no npm, no push, no gh.
+#
+# Pushes and PRs made with GITHUB_TOKEN do not trigger other workflows, so the
+# conflict PR gets no CI run of its own.
 name: 🍒 Cherry-pick to milestone
 
 on:
   pull_request_target:
     types: [closed, milestoned]
 
+permissions: {}
+
 jobs:
   cherry-pick:
-    uses: openfrontio/.github/.github/workflows/cherry-pick-milestone.yml@main
-    secrets: inherit
+    name: Cherry-pick
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.milestone != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
+    # One pick at a time per release branch, so two merges never race to push.
+    concurrency:
+      group: cherry-pick-${{ github.event.pull_request.milestone.title }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      SHA: ${{ github.event.pull_request.merge_commit_sha }}
+      TARGET: ${{ github.event.pull_request.milestone.title }}
+      # Built from trusted values only (PR number, merge SHA, and a milestone
+      # that the first step requires to match vNN). The PR title and file
+      # names stay out: they are author-controlled.
+      RESOLVE_PROMPT: |
+        You are resolving a cherry-pick conflict in a headless CI job. The
+        working tree is release branch `${{ github.event.pull_request.milestone.title }}`
+        with commit ${{ github.event.pull_request.merge_commit_sha }} (PR
+        #${{ github.event.pull_request.number }}) from main part-way through
+        `git cherry-pick`. `git status` lists the conflicted files.
+
+        Resolve every conflict marker in those files so the change from the
+        PR applies to this branch:
+          - `git show ${{ github.event.pull_request.merge_commit_sha }}` is the
+            change being backported; that intent is what must survive.
+            `git log origin/main` and `git show` let you see how main got there.
+          - This branch is older than main. Keep its code where the PR did not
+            touch it. Do not pull in unrelated features from main to make the
+            pick compile; adapt the change to the code that exists here.
+          - Check that anything the resolved code references (functions,
+            imports, fields, translation keys) exists on this branch.
+          - Leave no conflict markers anywhere.
+
+        Only edit files. Do not run git commands that change state (add,
+        commit, cherry-pick, checkout, reset, stash); the workflow commits
+        after you finish.
+
+        If the change cannot sensibly be applied to this branch (it depends
+        on large pieces of main that are missing here), do not force it:
+        write a short explanation to CHERRY_PICK_ABORT.md at the repo root
+        and stop.
+    steps:
+      - name: Check milestone names a release branch
+        id: target
+        run: |
+          set -euo pipefail
+          if ! [[ "$TARGET" =~ ^v[0-9]+$ ]]; then
+            echo "Milestone \"$TARGET\" is not a release (vNN), skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! git ls-remote --exit-code --heads "https://github.com/$GITHUB_REPOSITORY" "$TARGET" > /dev/null; then
+            echo "::warning::Milestone $TARGET has no branch $TARGET, skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.target.outputs.skip == 'false'
+        with:
+          ref: ${{ env.TARGET }}
+          fetch-depth: 0
+          submodules: false
+
+      - name: Cherry-pick
+        id: pick
+        if: steps.target.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Already there: picked by hand, or by an earlier run of this job.
+          if [ -n "$(git log -1 --format=%h -F --grep="cherry picked from commit $SHA" --grep="(#$PR)" "origin/$TARGET")" ]; then
+            echo "PR #$PR is already on $TARGET, skipping"
+            echo "result=present" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Squash merges give one parent; a merge commit needs a mainline.
+          args=(-x)
+          if [ "$(git rev-list --parents -n 1 "$SHA" | wc -w)" -gt 2 ]; then
+            args+=(-m 1)
+          fi
+
+          if git cherry-pick "${args[@]}" "$SHA"; then
+            echo "result=clean" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          conflicts=$(git diff --name-only --diff-filter=U)
+          if [ -z "$conflicts" ]; then
+            # Picks to nothing: the change is already on the branch under
+            # another commit.
+            if git diff --cached --quiet; then
+              echo "PR #$PR changes nothing on $TARGET, skipping"
+              git cherry-pick --skip
+              echo "result=present" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::Cherry-pick of $SHA failed without conflicts"
+            git status
+            exit 1
+          fi
+          echo "Conflicted files:"
+          echo "$conflicts"
+          {
+            echo "files<<EOF"
+            echo "$conflicts"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "result=conflict" >> "$GITHUB_OUTPUT"
+
+      - name: Push clean pick
+        if: steps.pick.outputs.result == 'clean'
+        run: |
+          set -euo pipefail
+          git push origin "HEAD:refs/heads/$TARGET"
+          gh pr comment "$PR" --body "🍒 Cherry-picked onto \`$TARGET\` as $(git rev-parse HEAD)."
+
+      # Same npm-install workaround as the shared review workflow
+      # (openfrontio/.github claude-code-review.yml): the action's native
+      # installer can exit 0 without leaving a working binary.
+      - name: Install Claude Code from npm
+        id: install-claude
+        if: steps.pick.outputs.result == 'conflict'
+        run: |
+          npm install -g @anthropic-ai/claude-code@2.1.281
+          echo "path=$(command -v claude)" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve conflicts with Claude (primary account)
+        id: claude-primary
+        if: steps.pick.outputs.result == 'conflict'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          path_to_claude_code_executable: ${{ steps.install-claude.outputs.path }}
+          prompt: ${{ env.RESOLVE_PROMPT }}
+          claude_args: |
+            --model claude-opus-5-5
+            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
+            --max-turns 80
+
+      # Backup account for when the primary is out of usage; see the shared
+      # review workflow for the same pattern.
+      - name: Resolve conflicts with Claude (backup account)
+        if: steps.pick.outputs.result == 'conflict' && steps.claude-primary.outcome == 'failure'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_BACKUP }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          path_to_claude_code_executable: ${{ steps.install-claude.outputs.path }}
+          prompt: ${{ env.RESOLVE_PROMPT }}
+          claude_args: |
+            --model claude-opus-5-5
+            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
+            --max-turns 80
+
+      - name: Open PR with resolved pick
+        if: steps.pick.outputs.result == 'conflict'
+        env:
+          FILES: ${{ steps.pick.outputs.files }}
+        run: |
+          set -euo pipefail
+          if [ -f CHERRY_PICK_ABORT.md ]; then
+            reason=$(cat CHERRY_PICK_ABORT.md)
+            gh pr comment "$PR" --body "$(printf '🍒 Could not cherry-pick onto `%s`; this needs a manual backport.\n\n%s' "$TARGET" "$reason")"
+            echo "::error::Claude declined the pick: $reason"
+            exit 1
+          fi
+
+          # Claude must have cleared every marker in the conflicted files.
+          leftover=$(echo "$FILES" | xargs grep -lE '^(<<<<<<<|>>>>>>>)( |$)' 2>/dev/null || true)
+          if [ -n "$leftover" ]; then
+            gh pr comment "$PR" --body "🍒 Cherry-pick onto \`$TARGET\` conflicted and was not fully resolved; this needs a manual backport. See ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}."
+            echo "::error::Conflict markers left in: $leftover"
+            exit 1
+          fi
+
+          git add -A
+          git -c core.editor=true cherry-pick --continue
+
+          branch="cherry-pick/$TARGET/pr-$PR"
+          file_list=$(echo "$FILES" | sed 's/^/- `/; s/$/`/')
+          git push --force origin "HEAD:refs/heads/$branch"
+          body=$(cat <<EOF
+          Cherry-pick of #$PR onto \`$TARGET\`. It conflicted, and Claude resolved it.
+
+          Conflicted files:
+          $file_list
+
+          Check the resolution before merging. This PR was opened by a workflow,
+          so CI does not run on it.
+          EOF
+          )
+          url=$(gh pr create --base "$TARGET" --head "$branch" --title "[$TARGET] $PR_TITLE" --body "$body")
+          gh pr comment "$PR" --body "🍒 Cherry-pick onto \`$TARGET\` conflicted; Claude resolved it in $url for review."
