@@ -116,6 +116,7 @@ export type ServerMessage =
   | ServerErrorMessage
   | ServerLobbyInfoMessage
   | ServerNewLobbyMessage
+  | ServerPongMessage
   | ServerRedirectMessage;
 
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
@@ -123,6 +124,7 @@ export type ServerStartGameMessage = z.infer<
   typeof ServerStartGameMessageSchema
 >;
 export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
+export type ServerPongMessage = z.infer<typeof ServerPongMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
 export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
 export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
@@ -193,6 +195,16 @@ export const MAX_HOSTED_LOBBIES = 10;
 // so hosts can't sit on a listing indefinitely. Unlisting cancels the
 // deadline; relisting starts a fresh one.
 export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
+
+// The host picks the start time (up to HOSTED_LOBBY_AUTO_START_MS) and the
+// player cap when listing; filling to the cap starts the game early.
+export const MIN_HOSTED_LOBBY_AUTO_START_MS = 60 * 1000;
+export const MIN_HOSTED_LOBBY_PLAYERS = 10;
+export const MAX_HOSTED_LOBBY_PLAYERS = 100;
+
+// A listed lobby this close to its auto-start can no longer be queued, so a
+// host can't pay for a queue spot the lobby starts before it reaches.
+export const LOBBY_QUEUE_CUTOFF_MS = 30 * 1000;
 
 // Featured lobbies get a longer window. A scheduled event announced ahead of
 // time needs the listing to still be up when its audience arrives, and unlike a
@@ -331,6 +343,9 @@ export const GameInfoSchema = z.object({
   label: LobbyLabelSchema.optional(),
   accent: LobbyAccentSchema.optional(),
   featured: z.boolean().optional(),
+  // Listed lobbies only: the host paid to put it in the public Special
+  // queue, so the queue's countdown starts it.
+  queued: z.boolean().optional(),
 });
 
 // Browser-facing lobby info. Master/worker-internal fields (the creator hash
@@ -348,6 +363,13 @@ export const PublicGameInfoSchema = z.object({
   label: LobbyLabelSchema.optional(),
   accent: LobbyAccentSchema.optional(),
   featured: z.boolean().optional(),
+  // Hosted lobbies only: server timestamp when the listing auto-starts, so
+  // the lobby browser can show a countdown before the host presses Start.
+  autoStartAt: zb.uint().optional(),
+  // A player's listed lobby (hosted, or paid into a public queue) rather
+  // than one the server scheduled, so the browser can label it Custom.
+  // Featured lobbies are official events and never carry it.
+  custom: z.boolean().optional(),
 });
 
 export const PublicGamesSchema = z.object({
@@ -1063,6 +1085,12 @@ export const ServerNewLobbyMessageSchema = z.object({
   gameID: ID,
 });
 
+// The reply to a ClientPingMessage, echoing its sentAt.
+export const ServerPongMessageSchema = z.object({
+  type: z.literal("pong"),
+  sentAt: zb.uint(),
+});
+
 // Sent to a joiner this lobby's pool assigns elsewhere, immediately before the
 // close. A close frame's reason is a fixed enum and cannot carry an id, so the
 // target needs a frame of its own; the id is all the client needs, since it
@@ -1081,6 +1109,7 @@ export const ServerMessageSchema = zb.discriminatedUnion("type", [
   ServerErrorSchema,
   ServerLobbyInfoMessageSchema,
   ServerNewLobbyMessageSchema,
+  ServerPongMessageSchema,
   // Appended, never inserted: variant order is the wire tag (zbin/README.md).
   ServerRedirectMessageSchema,
 ]);
@@ -1163,14 +1192,24 @@ export const ClientLogMessageSchema = z.object({
   log: ID,
 });
 
+// sentAt is the client's own performance.now() (whole ms), echoed back in the
+// pong so the client can time the round trip without keeping state. Only
+// meaningful to the client that sent it.
 export const ClientPingMessageSchema = z.object({
   type: z.literal("ping"),
+  sentAt: zb.uint(),
 });
 
 export const ClientIntentMessageSchema = z.object({
   type: z.literal("intent"),
   intent: IntentSchema,
 });
+
+// Where the client was distributed, as the client reports it. Unverified, so
+// fit for metric dimensions only; the signed provider="steam" claim is the
+// trustworthy Steam signal. Append new members only (zbin ordinals).
+export const ClientPlatformSchema = z.enum(["web", "steam", "crazygames"]);
+export type ClientPlatform = z.infer<typeof ClientPlatformSchema>;
 
 // WARNING: never send this message to clients.
 // Note: clientID is NOT included - server assigns it based on persistentID from token
@@ -1190,6 +1229,10 @@ export const ClientJoinMessageSchema = z.object({
   // whose commit doesn't match its own (missing counts as a mismatch —
   // pre-feature bundles are by definition stale).
   gitCommit: z.string().max(64).optional(),
+  // Must stay the last field, and its presence bit must not spill into a new
+  // header byte: then a stale bundle's frame (which lacks it) still decodes,
+  // reaches the gitCommit check above, and the player is told to refresh.
+  platform: ClientPlatformSchema.optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
@@ -1241,6 +1284,11 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   num_turns: z.number(),
   winner: WinnerSchema,
   lobbyFillTime: z.number().nonnegative(),
+  // The master-scheduled lobby slot this game filled (ffa/team/special), or
+  // "hosted" for a subscriber-listed lobby. Absent on private and
+  // singleplayer games. Only the record carries it (not GameStartInfo, which
+  // is on the wire): infra measures per-type join rates for map rotation.
+  publicGameType: PublicGameTypeSchema.optional(),
   // Absent on singleplayer records and on records read back from the API,
   // which scrubs them like persistentID.
   reports: PlayerReportSchema.array().optional(),
@@ -1267,6 +1315,9 @@ export const AnalyticsRecordSchema = PartialAnalyticsRecordSchema.extend({
   // identity these fields record) is involved.
   subdomain: z.string().optional(),
   domain: z.string().optional(),
+  // The site the server registered under (ClusterCheckin.registeredSite),
+  // which blue/green share. Absent under local dev and on older records.
+  site: z.string().optional(),
 });
 
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;

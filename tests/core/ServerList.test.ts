@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   commitsMatch,
   isCommitLike,
+  isSiteLike,
   ownLetterIn,
   pickServerForBuild,
   ServerList,
@@ -469,5 +470,25 @@ describe("versionedPathForGame", () => {
     expect(
       versionedPathForGame(OWN, undefined, ID, GAME_PATH, `/game/${ID}`, ""),
     ).toBeNull();
+  });
+});
+
+describe("isSiteLike", () => {
+  // Mirrors the API's SiteSchema: what a join or check-in may name as its
+  // site. Anything else is a 400 there, so it must be left off instead.
+  it("accepts lowercase hostnames", () => {
+    expect(isSiteLike("openfront.io")).toBe(true);
+    expect(isSiteLike("fix-foo.openfront.dev")).toBe(true);
+    expect(isSiteLike("localhost")).toBe(true);
+  });
+
+  it("refuses ports, schemes, paths, uppercase and empty names", () => {
+    expect(isSiteLike("localhost:9000")).toBe(false);
+    expect(isSiteLike("https://openfront.io")).toBe(false);
+    expect(isSiteLike("openfront.io/game")).toBe(false);
+    expect(isSiteLike("OpenFront.io")).toBe(false);
+    expect(isSiteLike("")).toBe(false);
+    expect(isSiteLike("-openfront.io")).toBe(false);
+    expect(isSiteLike("open..front.io")).toBe(false);
   });
 });

@@ -205,78 +205,105 @@ function isAbortError(e: unknown): boolean {
   return name === "TimeoutError" || name === "AbortError";
 }
 
+/**
+ * One /users/@me round trip, with no memoisation of any kind.
+ *
+ * `aborted` distinguishes the one failure that concluded nothing about the
+ * account (a deadline we imposed ourselves) from every other falsy answer,
+ * which is a conclusion. Only getUserMe acts on it; see the un-caching rule
+ * there.
+ */
+async function requestUserMe(): Promise<{
+  profile: UserMeResponse | false;
+  aborted: boolean;
+}> {
+  try {
+    const userAuthResult = await userAuth();
+    if (!userAuthResult) return { profile: false, aborted: false };
+    const { jwt, claims } = userAuthResult;
+
+    // Get the user object. Bounded like the other auth calls (see
+    // Auth.ts doSteamLogin) because getUserMe memoises the promise around
+    // this: a response that never settles is not one slow call, it pins
+    // __userMe on a forever-pending promise and every later getUserMe() in
+    // the session — cosmetics, store, inventory, the multiplayer join path —
+    // awaits that same promise. An abort lands in the catch below, which
+    // returns false, the same answer a signed-out player already gets.
+    const response = await fetch(getApiBase() + "/users/@me", {
+      headers: {
+        authorization: `Bearer ${jwt}`,
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (response.status === 401) {
+      // Only when the session that issued this request is still the current
+      // one — the same guard, and the same reason, as the setPlayerId one
+      // below. logOut() POSTs /auth/logout with credentials, revoking
+      // whatever refresh cookie is live *now*, so a 401 that merely reports
+      // the death of a session already replaced (sign-out then sign-in while
+      // this was in flight) would end the session that replaced it, signing
+      // out the player who just signed in. A 401 for the session that is
+      // still current is a genuine conclusion about it and still ends it.
+      //
+      // Clearing the session announces itself (see clearLocalSession), so
+      // consumers holding account state don't mistake this for the
+      // transient failure the `false` below also represents.
+      if (isSessionActive(claims.sub)) {
+        await logOut();
+      }
+      return { profile: false, aborted: false };
+    }
+    if (response.status !== 200) return { profile: false, aborted: false };
+    const body = await response.json();
+    const result = UserMeResponseSchema.safeParse(body);
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Invalid response", error);
+      return { profile: false, aborted: false };
+    }
+    // Activate this player's cosmetic selections (and adopt any made while
+    // logged out) before the profile is handed to callers — but not if the
+    // session changed (logout, account switch) while the request was in
+    // flight: a stale response must not reactivate the old player's scope.
+    if (isSessionActive(claims.sub)) {
+      UserSettings.setPlayerId(result.data.player.publicId);
+    }
+    return { profile: result.data, aborted: false };
+  } catch (e) {
+    return { profile: false, aborted: isAbortError(e) };
+  }
+}
+
 export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
     return __userMe;
   }
-  // A holder rather than a plain local so the catch below can recognise its
+  // A holder rather than a plain local so the body below can recognise its
   // own promise as the cached one. Filled in immediately after, which is
   // always before any await inside can resume.
   const attempt: { request?: Promise<UserMeResponse | false> } = {};
   attempt.request = (async () => {
-    try {
-      const userAuthResult = await userAuth();
-      if (!userAuthResult) return false;
-      const { jwt, claims } = userAuthResult;
-
-      // Get the user object. Bounded like the other auth calls (see
-      // Auth.ts doSteamLogin) because the promise above is memoised: a
-      // response that never settles is not one slow call, it pins __userMe
-      // on a forever-pending promise and every later getUserMe() in the
-      // session — cosmetics, store, inventory, the multiplayer join path —
-      // awaits that same promise. An abort lands in the catch below, which
-      // returns false, the same answer a signed-out player already gets.
-      const response = await fetch(getApiBase() + "/users/@me", {
-        headers: {
-          authorization: `Bearer ${jwt}`,
-        },
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (response.status === 401) {
-        // Clearing the session announces itself (see clearLocalSession), so
-        // consumers holding account state don't mistake this for the
-        // transient failure the `false` below also represents.
-        await logOut();
-        return false;
-      }
-      if (response.status !== 200) return false;
-      const body = await response.json();
-      const result = UserMeResponseSchema.safeParse(body);
-      if (!result.success) {
-        const error = z.prettifyError(result.error);
-        console.error("Invalid response", error);
-        return false;
-      }
-      // Activate this player's cosmetic selections (and adopt any made while
-      // logged out) before the profile is handed to callers — but not if the
-      // session changed (logout, account switch) while the request was in
-      // flight: a stale response must not reactivate the old player's scope.
-      if (isSessionActive(claims.sub)) {
-        UserSettings.setPlayerId(result.data.player.publicId);
-      }
-      return result.data;
-    } catch (e) {
-      // Un-cache a timeout, and ONLY a timeout. Every other falsy answer is
-      // a conclusion about the account — signed out, a 401, a rejected token
-      // — and stays remembered; re-deriving those would put an /auth/refresh
-      // behind every getUserMe() call for every logged-out player, which is
-      // the storm, not the fix. A deadline we imposed ourselves concluded
-      // nothing, so leaving it cached would strand a merely-slow connection
-      // as "signed out" for the rest of the session: no player-scoped
-      // settings, no cosmetics, no verified badge, recoverable only by
-      // reloading. Same shape as fetchCosmetics, for the same reason.
-      // Remembering an unreachable backend so the retry is not paid at full
-      // price is OPE-403.
-      //
-      // Cleared here rather than from a .then on the request: this runs
-      // before the promise resolves, so a caller awaiting it cannot observe
-      // the timed-out answer still cached. attempt.request is always set by
-      // now — the catch can only be reached after an await.
-      if (isAbortError(e) && __userMe === attempt.request) {
-        __userMe = null;
-      }
-      return false;
+    const { profile, aborted } = await requestUserMe();
+    // Un-cache a timeout, and ONLY a timeout. Every other falsy answer is
+    // a conclusion about the account — signed out, a 401, a rejected token
+    // — and stays remembered; re-deriving those would put an /auth/refresh
+    // behind every getUserMe() call for every logged-out player, which is
+    // the storm, not the fix. A deadline we imposed ourselves concluded
+    // nothing, so leaving it cached would strand a merely-slow connection
+    // as "signed out" for the rest of the session: no player-scoped
+    // settings, no cosmetics, no verified badge, recoverable only by
+    // reloading. Same shape as fetchCosmetics, for the same reason.
+    // Remembering an unreachable backend so the retry is not paid at full
+    // price is OPE-403.
+    //
+    // Cleared here rather than from a .then on the request: this runs
+    // before the promise resolves, so a caller awaiting it cannot observe
+    // the timed-out answer still cached. attempt.request is always set by
+    // now — this line can only be reached after an await.
+    if (aborted && __userMe === attempt.request) {
+      __userMe = null;
     }
+    return profile;
   })();
   __userMe = attempt.request;
   return attempt.request;
@@ -604,7 +631,7 @@ export async function setCreatorCode(
       return { ok: false, code: "failed" };
     }
     invalidateUserMe();
-    return { ok: true, creator: parsed.data };
+    return { ok: true, creator: parsed.data.creator };
   } catch (e) {
     console.error("setCreatorCode: request failed", e);
     return { ok: false, code: "failed" };
@@ -1878,6 +1905,7 @@ export async function fetchLobbyListed(gameID: string): Promise<boolean> {
 export async function setLobbyListed(
   gameID: string,
   listed: boolean,
+  options: { autoStartMs?: number; maxPlayers?: number } = {},
 ): Promise<{ ok: true; listed: boolean } | { ok: false; error?: string }> {
   try {
     await ensureServerList();
@@ -1890,7 +1918,7 @@ export async function setLobbyListed(
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ listed }),
+        body: JSON.stringify({ listed, ...options }),
       },
     );
     const body = await response.json().catch(() => null);
@@ -1903,6 +1931,32 @@ export async function setLobbyListed(
     };
   } catch (e) {
     console.error("setLobbyListed: request failed", e);
+    return { ok: false };
+  }
+}
+
+// POST /api/game/:id/queue on the game server — the host of a listed lobby
+// pays plutonium to put it in the public Special queue. The worker charges
+// through the API with the host's token. On failure, `error` is the server's
+// code when available ("insufficient_balance", "queue_payment_failed", ...).
+export async function queueLobby(
+  gameID: string,
+): Promise<{ ok: true } | { ok: false; error?: string }> {
+  try {
+    await ensureServerList();
+    const token = await getPlayToken();
+    const response = await fetch(
+      `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}/queue`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    if (response.ok) return { ok: true };
+    const body = await response.json().catch(() => null);
+    return { ok: false, error: body?.error };
+  } catch (e) {
+    console.error("queueLobby: request failed", e);
     return { ok: false };
   }
 }

@@ -2,6 +2,8 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
+/* The Steam shell has no ad slots, so it can use the width they reserve. */
+@custom-variant desktop (&:where(.desktop-shell, .desktop-shell *));
 
 @theme {
   --default-ring-width: 3px;
@@ -734,11 +736,13 @@ unit-display .tutorial-highlight::after {
 }
 
 .remove-player-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 16px;
   height: 16px;
+  padding: 0;
+  flex-shrink: 0;
   margin-left: 4px;
   border: none;
   border-radius: 50%;

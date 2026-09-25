@@ -21,11 +21,14 @@ import {
  * that does not own the game. (gamePath() is the deliberate exception: it
  * catches this and falls back to the worker-free `/game/<id>` shape.)
  *
- * serverWsBase() / serverHttpBase() deliberately do NOT throw: the
- * document's own origin is a real game server on a dev box and on a
- * standalone deployment, which is what they answered before any of this
- * existed, and a static page served from the site host fails at connect time
- * rather than at URL-build time.
+ * serverWsBase() / serverHttpBase() raise it too, but only on a page that
+ * names no server of its own. On a dev box, on a standalone deployment and
+ * on any server-rendered page the document's origin IS the game server, so
+ * those keep the same-origin answer they have always had (ownServerKnown).
+ * The static page the site Worker serves is the one case where the origin is
+ * nobody: it is the page host, which runs no game server, so a socket built
+ * from it hangs for the edge's origin-connect timeout and then fails. Failing
+ * at URL-build time instead is what routes it into the path below.
  *
  * Typed so callers can tell "there is no server" from a programming error and
  * route it into the connection-failed path they already have
@@ -90,6 +93,36 @@ export class ClientEnv {
     if (v.serverHost !== undefined) return true;
     return v.cluster !== undefined && v.instanceLetter !== undefined;
   }
+  /**
+   * Whether this page knows a game server WITHOUT falling back to the
+   * document's origin: one the API's list picked, an injected serverHost, the
+   * injected cluster map plus this page's own letter, or the legacy
+   * numWorkers scalar.
+   *
+   * Deliberately the same set numWorkers() answers from, plus serverHost
+   * (which pins the host outright and never reaches the fallback), so every
+   * page where numWorkers() answers keeps the exact origin bases it has
+   * always had — `npm run dev`, a standalone deployment and the desktop
+   * shell all behave as before.
+   *
+   * False only for the static per-version page with no list applied. There
+   * the document's origin is the page host, which is not a game server, and
+   * `servedByGameServer()` is false for the same reason — but that one
+   * answers a different question (what a RELOAD would fetch), so the two are
+   * kept apart.
+   */
+  private static ownServerKnown(): boolean {
+    if (ClientEnv.pickedServer() !== null) return true;
+    const v = ClientEnv.get();
+    if (v.serverHost !== undefined) return true;
+    if (v.cluster !== undefined && v.instanceLetter !== undefined) return true;
+    return v.numWorkers !== undefined;
+  }
+
+  private static requireOwnServer(what: string): void {
+    if (ClientEnv.ownServerKnown()) return;
+    throw new NoServerError(`no ${what} base: no server list, none injected`);
+  }
   private static pickedServer(): { host: string; numWorkers: number } | null {
     const a = ClientEnv.apiList;
     if (a === null || a.picked === null) return null;
@@ -134,6 +167,11 @@ export class ClientEnv {
       numWorkers: bc.numWorkers,
       turnstileSiteKey: bc.turnstileSiteKey,
       jwtAudience: bc.jwtAudience,
+      // Optional: a deployment without a key (or a desktop shell, which
+      // buys on Steam) omits it, and the inline Stripe flow stays off.
+      stripePublishableKey: bc.stripePublishableKey,
+      // Optional: absent keeps client telemetry off (see Telemetry.ts).
+      faroCollectorUrl: bc.faroCollectorUrl,
       // Absent on a static page: only a server that renders the page knows
       // its own instance id. Empty means "none", and callers send it only
       // when it is there (the API ignores it either way).
@@ -153,6 +191,12 @@ export class ClientEnv {
   // takes a source so we don't have to keep them in sync by hand.
   static env(): GameEnv {
     return ClientEnv.get().gameEnv;
+  }
+  static stripePublishableKey(): string | undefined {
+    return ClientEnv.get().stripePublishableKey;
+  }
+  static faroCollectorUrl(): string | undefined {
+    return ClientEnv.get().faroCollectorUrl;
   }
   // Worker count of the server this page talks to: the server the API's list
   // picked, else the own cluster entry when the map was injected, else the
@@ -269,6 +313,33 @@ export class ClientEnv {
       : ClientEnv.serverHttpBase();
   }
   /**
+   * Origin to NAVIGATE a browser to for a game's page: the game's own host
+   * when the id names one, else this page's own origin.
+   *
+   * NOT gameHttpBase, which is where API calls and sockets go and throws when
+   * no game server is known. That is right for a request only a game server
+   * can answer and wrong for a page load: every page host serves
+   * `/game/<id>` — the SPA fallback on a game server, the site Worker's page
+   * on the apex — so a navigation always has a correct target, and a page
+   * that knows no server should reload rather than throw.
+   */
+  static gameNavigateBase(gameID: GameID): string {
+    const r = ClientEnv.resolveGame(gameID);
+    if (r.kind === "cross") return `https://${r.host}`;
+    try {
+      return ClientEnv.serverHttpBase();
+    } catch (e) {
+      if (!(e instanceof NoServerError)) throw e;
+      // The document's own origin, exactly as the base itself used to
+      // answer — deriveServerHttpBase with no serverHost IS that value.
+      return deriveServerHttpBase(
+        undefined,
+        window.location.protocol,
+        window.location.host,
+      );
+    }
+  }
+  /**
    * The same-origin path that opens a game: `/w<n>/game/<id>` when a worker
    * count for that id is known, plain `/game/<id>` when none is.
    *
@@ -349,15 +420,18 @@ export class ClientEnv {
   // public-lobby and in-game WebSockets. The lobby-list and game sockets append
   // their own worker path (e.g. `/w0/lobbies`, `/w0`).
   //
-  // Never throws NoServerError, unlike numWorkers() above: with no list and
-  // no injected serverHost the document's own origin is the answer, and on a
-  // dev box or a standalone deployment it is the CORRECT one — the game
-  // server is the thing that served the page. On a static page it is wrong,
-  // but wrong in the way that surfaces as a connection failure the client
-  // already handles, which beats refusing to build a URL at all.
+  // Throws NoServerError on the same pages numWorkers() does, and for the
+  // same reason: the document's own origin is the game server only when a
+  // game server served the document. On the static page the site Worker
+  // serves it is the page host, which answers no game path — the socket is a
+  // TCP connect the edge times out, and the client then retries a host that
+  // can never answer (1.1M 522s a day on the prod apex; ai-ops#21). Refusing
+  // to build the URL routes it into the connection-failed path callers
+  // already have for numWorkers().
   static serverWsBase(): string {
     const picked = ClientEnv.pickedServer();
     if (picked !== null) return `wss://${picked.host}`;
+    ClientEnv.requireOwnServer("WebSocket");
     return deriveServerWsBase(
       ClientEnv.serverHost(),
       window.location.protocol,
@@ -370,10 +444,14 @@ export class ClientEnv {
   // the route needs one (e.g. `/w0/api/game/<id>`).
   //
   // NOT the account/shop API: that is a separate service on api.<audience>,
-  // reached via getApiBase(). Same same-origin fallback as serverWsBase.
+  // reached via getApiBase(). Same same-origin fallback as serverWsBase, and
+  // the same NoServerError where there is no server to fall back to — which
+  // is what stops createLobby POSTing `/api/create_game` at a page host that
+  // cannot answer it.
   static serverHttpBase(): string {
     const picked = ClientEnv.pickedServer();
     if (picked !== null) return `https://${picked.host}`;
+    ClientEnv.requireOwnServer("HTTP");
     return deriveServerHttpBase(
       ClientEnv.serverHost(),
       window.location.protocol,
@@ -589,6 +667,12 @@ export interface ClientEnvValues {
   numWorkers?: number;
   turnstileSiteKey: string;
   jwtAudience: string;
+  // Optional: absent when the deployment carries no Stripe key (dev, desktop
+  // shells). Environment-scoped like turnstileSiteKey, so a static page
+  // carries it too.
+  stripePublishableKey?: string;
+  // Optional: absent keeps client telemetry off (Telemetry.ts).
+  faroCollectorUrl?: string;
   // "" on a static page, which no server rendered.
   instanceId: string;
   gitCommit: string;

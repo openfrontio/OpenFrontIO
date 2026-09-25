@@ -110,6 +110,39 @@ describe("barSource", () => {
     ).toBe("session");
   });
 
+  // "needs-account" is the one signed-out reason whose remedy (reopening the
+  // gate) is itself a network call, so it is the one exception to "session
+  // always outranks reachability" -- see barSource's own comment.
+  it("shows the account prompt when the backend is reachable", () => {
+    expect(
+      barSource(
+        null,
+        { status: "signed-out", reason: "needs-account" },
+        /* backendOutage */ false,
+      ),
+    ).toBe("session");
+  });
+
+  it("yields to the reachability slot while the backend is unreachable", () => {
+    expect(
+      barSource(
+        null,
+        { status: "signed-out", reason: "needs-account" },
+        /* backendOutage */ true,
+      ),
+    ).toBe("reachability");
+  });
+
+  it("does not change the priority for other signed-out reasons", () => {
+    expect(
+      barSource(
+        null,
+        { status: "signed-out", reason: "steam-wedged" },
+        /* backendOutage */ true,
+      ),
+    ).toBe("session");
+  });
+
   // The argument is the CONFIRMED outage, so "unsettled" and "missed once"
   // both arrive here as false and show nothing. There is no neutral state in
   // this bar to hang a "Checking…" on, and inventing one would put a strip
@@ -404,5 +437,254 @@ describe("the rendered offline state", () => {
     vi.advanceTimersByTime(COOLDOWN_MS);
     await bar.updateComplete;
     expect(retryButton(bar)!.disabled).toBe(false);
+  });
+});
+
+/**
+ * "needs-account" is diagnosed, not a failure: nothing broke, the player
+ * simply has no account yet. Both assertions below exist because the switch
+ * in sessionLabel/sessionAction falls through to a "something went wrong"
+ * default that would be actively wrong here -- see this suite's own
+ * mutation check, which confirms that by deleting each case.
+ */
+describe("the rendered needs-account session state", () => {
+  function mountBar(): HTMLElement & { updateComplete: Promise<unknown> } {
+    const bar = document.createElement("desktop-status-bar") as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    document.body.appendChild(bar);
+    return bar;
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("labels the bar with the needs-account key, not the generic fallback", async () => {
+    const bar = mountBar();
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", {
+        detail: { status: "signed-out", reason: "needs-account" },
+      }),
+    );
+    await bar.updateComplete;
+
+    expect(bar.textContent).toContain("desktop_session.needs_account");
+    expect(bar.textContent).not.toContain("desktop_session.generic");
+  });
+
+  it("offers Go online rather than the generic Retry", async () => {
+    const bar = mountBar();
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", {
+        detail: { status: "signed-out", reason: "needs-account" },
+      }),
+    );
+    await bar.updateComplete;
+
+    const button = bar.querySelector("button");
+    expect(button?.textContent?.trim()).toBe("desktop_status.go_online");
+  });
+
+  // The two above only check the label; this checks the WIRING -- that a
+  // click actually reaches the bridge, not just that a button with the right
+  // text exists. See desktopLinkGate() in DesktopShell.ts: it reads
+  // window.openfrontDesktop.showLinkGate.
+  it("invokes showLinkGate when Go online is clicked", async () => {
+    const showLinkGate = vi.fn(() => Promise.resolve());
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      showLinkGate,
+    };
+
+    const bar = mountBar();
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", {
+        detail: { status: "signed-out", reason: "needs-account" },
+      }),
+    );
+    await bar.updateComplete;
+
+    bar.querySelector("button")!.click();
+
+    expect(showLinkGate).toHaveBeenCalledTimes(1);
+
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = undefined;
+  });
+
+  // A rejected showLinkGate() must be caught, not left to become an
+  // unhandled rejection -- see the handler's own comment on why it uses
+  // `.catch` instead of the bare `void` form used elsewhere in this file.
+  it("handles a rejected showLinkGate without an unhandled rejection", async () => {
+    const showLinkGate = vi.fn(() => Promise.reject(new Error("no bridge")));
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      showLinkGate,
+    };
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const bar = mountBar();
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", {
+        detail: { status: "signed-out", reason: "needs-account" },
+      }),
+    );
+    await bar.updateComplete;
+
+    bar.querySelector("button")!.click();
+
+    // Flush the promise's microtask queue so the `.catch` has run before
+    // this test ends -- otherwise a missing `.catch` would surface as an
+    // unhandled rejection on a LATER test rather than a failure here.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(showLinkGate).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledWith(
+      "desktop-status-bar: showLinkGate failed",
+      expect.any(Error),
+    );
+
+    errorSpy.mockRestore();
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = undefined;
+  });
+});
+
+// A Retry on a gated session that lands back on the same reason (Steam is
+// still not running) repaints nothing: the shell answers in milliseconds, so
+// not even "Signing in…" is seen. The bar wiggles instead, so the press is
+// visibly tried rather than reading as a dead button.
+describe("Retry on a session state that does not change", () => {
+  function mountBar(): HTMLElement & { updateComplete: Promise<unknown> } {
+    const bar = document.createElement("desktop-status-bar") as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    document.body.appendChild(bar);
+    return bar;
+  }
+
+  function setSession(detail: { status: string; reason?: string }) {
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", { detail }),
+    );
+  }
+
+  function strip(bar: HTMLElement): HTMLElement {
+    return bar.querySelector('[role="status"]') as HTMLElement;
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("wiggles when the retry settles on the same signed-out reason", async () => {
+    const bar = mountBar();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(false);
+
+    bar.querySelector("button")!.click();
+    setSession({ status: "retrying" });
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(true);
+  });
+
+  it("does not wiggle when the retry lands somewhere new", async () => {
+    const bar = mountBar();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    bar.querySelector("button")!.click();
+    setSession({ status: "retrying" });
+    setSession({ status: "signed-out", reason: "network" });
+    await bar.updateComplete;
+
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(false);
+  });
+
+  it("does not wiggle on a session change nobody pressed Retry for", async () => {
+    const bar = mountBar();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(false);
+  });
+});
+
+// barSource ranks the session above the update, so a release staged while the
+// session was gated never showed its Reload. The bar applies it itself when
+// the session signs in -- but only from a gated state, and never where a
+// reload would throw the player out of something.
+describe("a staged update when a gated session signs in", () => {
+  let apply: ReturnType<typeof vi.fn>;
+
+  function mountBar(status: string) {
+    apply = vi.fn(() => Promise.resolve());
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      update: {
+        subscribe(cb: (s: unknown) => void) {
+          cb({ status, bytes: 0, total: 0 });
+          return () => {};
+        },
+        apply,
+        retry: () => Promise.resolve(),
+      },
+    };
+    const bar = document.createElement("desktop-status-bar");
+    document.body.appendChild(bar);
+    return bar;
+  }
+
+  function setSession(detail: { status: string; reason?: string }) {
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", { detail }),
+    );
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+    document.body.classList.remove("in-game");
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = undefined;
+  });
+
+  it("applies it when Retry signs the player in", () => {
+    mountBar("staged");
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    setSession({ status: "retrying" });
+    setSession({ status: "signed-in" });
+    expect(apply).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reload on an ordinary first sign-in", () => {
+    mountBar("staged");
+    setSession({ status: "unknown" });
+    setSession({ status: "signed-in" });
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when no update is staged", () => {
+    mountBar("downloading");
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    setSession({ status: "signed-in" });
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it("does not reload a player out of a lobby wait", () => {
+    mountBar("staged");
+    setSession({ status: "signed-out", reason: "network" });
+    document.dispatchEvent(new CustomEvent("join-lobby"));
+    setSession({ status: "signed-in" });
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it("does not reload mid-game", () => {
+    mountBar("staged");
+    setSession({ status: "signed-out", reason: "network" });
+    document.body.classList.add("in-game");
+    setSession({ status: "signed-in" });
+    expect(apply).not.toHaveBeenCalled();
   });
 });

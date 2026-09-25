@@ -2,8 +2,9 @@ name: 🏷️ Release
 
 on:
   release:
+    # No "created": it fires alongside "published" when a release goes live
+    # (and never for drafts), so listing both runs the whole rollout twice.
     types:
-      - created
       - edited
       - published
 
@@ -31,8 +32,8 @@ jobs:
           for name in DEPLOY_TARGETS_BETA DEPLOY_TARGETS_BLUE DEPLOY_TARGETS_GREEN; do
             value="${!name}"
             [ -z "$value" ] && continue
-            if ! printf '%s' "$value" | jq -e 'type == "array" and length > 0 and all(.[]; (.host | type == "string") and (.subdomain | type == "string"))' > /dev/null; then
-              echo "Error: repository var ${name} must be a non-empty JSON array of {host, subdomain} objects, got: ${value}"
+            if ! printf '%s' "$value" | jq -e 'type == "array" and length > 0 and all(.[]; (.host | type == "string") and (.subdomain | type == "string") and (if has("gameHost") then .gameHost | type == "string" else true end))' > /dev/null; then
+              echo "Error: repository var ${name} must be a non-empty JSON array of {host, subdomain[, gameHost]} objects, got: ${value}"
               exit 1
             fi
           done
@@ -46,15 +47,6 @@ jobs:
         env:
           GHCR_REPO: openfront-prod
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
-          # Baked into the client bundle at image-build time (build.sh
-          # --build-arg → Dockerfile → Vite define). Live-mode key, because
-          # release images serve openfront.io where the API mints live
-          # intents; publishable keys ship in the bundle, so a repo-level
-          # var is fine. The same image also serves the alpha ring, whose
-          # API is test-mode — the mode guard in StripeInline.ts keeps the
-          # inline flow off there (redirect checkout still works). Unset
-          # keeps the inline flow off everywhere.
-          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY_LIVE }}
           RELEASE_BODY: ${{ github.event.release.body }}
           RELEASE_NAME: ${{ github.event.release.name }}
           RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
@@ -110,9 +102,14 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
-          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
+          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).
+          # Environment-scoped: the prod-* environments carry the live-mode
+          # key; alpha has no environment and inherits the repo-level
+          # test-mode key, matching its test-mode API.
+          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           SSH_KEY: ~/.ssh/id_rsa
@@ -172,9 +169,15 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
-          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
+          GAME_HOST: ${{ matrix.target.gameHost || '' }}
+          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).
+          # Environment-scoped: the prod-* environments carry the live-mode
+          # key; alpha has no environment and inherits the repo-level
+          # test-mode key, matching its test-mode API.
+          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
@@ -208,7 +211,12 @@ jobs:
     environment: prod-blue
     # One leg per machine in the blue fleet, from the DEPLOY_TARGETS_BLUE
     # REPOSITORY var:
-    #   [{"host":"falk2","subdomain":"blue"}, {"host":"nbg2","subdomain":"blue2"}]
+    #   [{"host":"falk2","subdomain":"blue"},
+    #    {"host":"nbg2","subdomain":"blue","gameHost":"blue.nbg2.openfront.io"}]
+    # gameHost is the name clients open sockets to, defaulting to
+    # <subdomain>.<domain> — pass it to put the machine in the name so every
+    # box carries a plain blue and green (deploy.sh, "identity"). The letter
+    # and worker count are the API registry's (update.sh, "register").
     # Repository-level and per-color on purpose: GitHub expands
     # strategy.matrix before the job's environment exists, so an
     # environment-scoped var is invisible here and would silently fall back
@@ -216,7 +224,7 @@ jobs:
     # list to both colors. host is a machine name deploy.sh resolves via the
     # SERVER_HOSTS_JSON secret (lowercase keys; SERVER_HOST_FALK2 is the
     # only legacy secret wired through in CI); subdomain is that machine's
-    # cluster entry. Defaults to today's single box. Sequential (and
+    # slot. Defaults to today's single box. Sequential (and
     # stopping on the first failure) so a bad image or a dead machine halts
     # the rollout after one leg instead of taking the whole color down.
     strategy:
@@ -248,14 +256,19 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
-          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
+          GAME_HOST: ${{ matrix.target.gameHost || '' }}
+          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).
+          # Environment-scoped: the prod-* environments carry the live-mode
+          # key; alpha has no environment and inherits the repo-level
+          # test-mode key, matching its test-mode API.
+          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
           TARGET_SUBDOMAIN: ${{ matrix.target.subdomain }}
-          EXPECTED_COLOR: blue
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
@@ -286,7 +299,8 @@ jobs:
     # One leg per machine in the green fleet, from the DEPLOY_TARGETS_GREEN
     # REPOSITORY var (see deploy-blue for the format and why it must be
     # repository-level and per-color):
-    #   [{"host":"falk2","subdomain":"green"}, {"host":"nbg2","subdomain":"green2"}]
+    #   [{"host":"falk2","subdomain":"green"},
+    #    {"host":"nbg2","subdomain":"green","gameHost":"green.nbg2.openfront.io"}]
     # Defaults to today's single box. Sequential (and stopping on the first
     # failure) so a bad image or a dead machine halts the rollout after one
     # leg instead of taking the whole color down.
@@ -319,14 +333,19 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
-          CLUSTER_JSON: ${{ vars.CLUSTER_JSON }}
-          CLUSTER_STATE_SOURCE: ${{ vars.CLUSTER_STATE_SOURCE }}
+          GAME_HOST: ${{ matrix.target.gameHost || '' }}
+          LOBBY_COORDINATOR: ${{ vars.LOBBY_COORDINATOR }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          # Runtime env → the page's BOOTSTRAP_CONFIG (see deploy.yml).
+          # Environment-scoped: the prod-* environments carry the live-mode
+          # key; alpha has no environment and inherits the repo-level
+          # test-mode key, matching its test-mode API.
+          STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
           TARGET_SUBDOMAIN: ${{ matrix.target.subdomain }}
-          EXPECTED_COLOR: green
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail

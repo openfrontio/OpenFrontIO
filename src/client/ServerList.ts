@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { GameID } from "../core/Schemas";
 import {
+  commitsMatch,
+  isCommitLike,
+  isSiteLike,
   ownLetterIn,
   pickServerForBuild,
   ServerList,
@@ -49,7 +52,8 @@ const FETCH_TIMEOUT_MS = 4_000;
 const REFRESH_INTERVAL_MS = 30_000;
 // Retry schedule after an unanswered attempt: the first retry comes after
 // RETRY_BASE_MS and each further consecutive failure doubles the wait, up to
-// RETRY_MAX_MS. Any answer at all resets it to the base.
+// RETRY_MAX_MS. Any answer below a 500 resets it to the base; a 5xx counts
+// as unanswered (fetchServerList).
 //
 // The point of the backoff is the long tail. A player who closes their laptop
 // lid, or sits on a train through a tunnel, should not have the page firing a
@@ -120,15 +124,45 @@ let lastAttempt: { at: number; failed: boolean } | null = null;
 let pickedLetter: string | null = null;
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let polling = false;
+// A match is running (setServerListInGame). See scheduleNextPoll.
+let inGame = false;
+// A beat came due while the heartbeat was paused (hidden tab, or in a match)
+// and was skipped; it runs when the pause lifts. See scheduleNextPoll.
+let beatSkipped = false;
 let reachable: boolean | null = null;
-// Consecutive unanswered attempts, reset by any answer. Only this, and not
+// Consecutive unanswered attempts (a 5xx is one), reset by any other
+// answer. Only this, and not
 // `reachable` alone, decides backendUnreachableConfirmed().
 let consecutiveFailures = 0;
-// The most recent player-initiated retry, for the throttle in
-// retryServerList(). Holds the promise so a press inside the window can hand
-// back the same attempt rather than start or skip one.
-let lastManualRetry: { at: number; result: Promise<ServerListStatus> } | null =
-  null;
+// A player-facing entry point's floor. Holds the promise so a call inside
+// the window hands back the same attempt rather than start or skip one.
+class FlooredFetch {
+  private last: { at: number; result: Promise<ServerListStatus> } | null = null;
+
+  run(): Promise<ServerListStatus> {
+    const now = Date.now();
+    if (
+      this.last !== null &&
+      now - this.last.at < MANUAL_RETRY_MIN_INTERVAL_MS
+    ) {
+      return this.last.result;
+    }
+    const result = fetchAndApply();
+    this.last = { at: now, result };
+    return result;
+  }
+
+  lastAt(): number | null {
+    return this.last?.at ?? null;
+  }
+
+  reset(): void {
+    this.last = null;
+  }
+}
+// Two clocks on purpose: see refreshServerList.
+const manualRetry = new FlooredFetch();
+const refresh = new FlooredFetch();
 let warnedMalformed = false;
 
 /** Test-only. */
@@ -138,9 +172,11 @@ export function resetServerList(): void {
   inflight = null;
   lastAttempt = null;
   pickedLetter = null;
+  inGame = false;
   reachable = null;
   consecutiveFailures = 0;
-  lastManualRetry = null;
+  manualRetry.reset();
+  refresh.reset();
   warnedMalformed = false;
   ClientEnv.applyServerList(null, null);
 }
@@ -164,15 +200,27 @@ export function serverListSite(): string | undefined {
   return ClientEnv.siteHost() ?? window.location.host;
 }
 
+/**
+ * The site a ranked join names, so the API pools this page only with game
+ * servers registered under the site whose list it reads: the same site the
+ * list is fetched for, or undefined when there is none or it is not a name
+ * the API would accept (a dev page's `localhost:9000`). See
+ * docs/MultiServer.md, "The ranked queue is keyed by site".
+ */
+export function matchmakingSite(): string | undefined {
+  const site = safeSite();
+  return site !== undefined && isSiteLike(site) ? site : undefined;
+}
+
 export function serverListUrl(site: string): string {
   return `${getApiBase()}/cluster.json?site=${encodeURIComponent(site)}`;
 }
 
 /**
- * Whether the API answered our LAST attempt at all — any HTTP status, a 404
- * included. Null until the first attempt settles, false on a timeout or a
- * network error. "Answered" is not "served a usable list": a site with no
- * list is a reachable backend.
+ * Whether the API answered our LAST attempt — any status below 500, a 404
+ * included. Null until the first attempt settles, false on a timeout, a
+ * network error or a 5xx. "Answered" is not "served a usable list": a site
+ * with no list is a reachable backend.
  *
  * This is the raw signal, and it is deliberately twitchy: one timed-out
  * heartbeat flips it. Anything that takes something AWAY from the player
@@ -196,8 +244,9 @@ export function backendReachable(): boolean | null {
  * a Retry to escape it with.
  *
  * So: false until CONFIRM_OUTAGE_AFTER_FAILURES attempts in a row have gone
- * unanswered, which takes a retry interval to accumulate. Any answer at all
- * resets the count, a player-initiated retry counts like any other attempt,
+ * unanswered, which takes a retry interval to accumulate. Any answer below
+ * a 500 resets the count, a player-initiated retry counts like any other
+ * attempt,
  * and this is never true before the first attempt settles — unknown is not
  * unreachable.
  *
@@ -246,8 +295,9 @@ export function attemptInFlight(): boolean {
  */
 export function manualRetryAvailable(): boolean {
   if (attemptInFlight()) return false;
-  if (lastManualRetry === null) return true;
-  return Date.now() - lastManualRetry.at >= MANUAL_RETRY_COOLDOWN_MS;
+  const at = manualRetry.lastAt();
+  if (at === null) return true;
+  return Date.now() - at >= MANUAL_RETRY_COOLDOWN_MS;
 }
 
 /** The detail carried by the "server-list-attempt" document event. */
@@ -323,6 +373,13 @@ async function fetchServerList(site: string): Promise<ServerList | null> {
     recordAttempt(false, e);
     return null;
   }
+  // A 5xx is the API (or the edge in front of it) failing, not answering:
+  // everything else behind it is failing the same way, so it counts towards
+  // the outage like a timeout does.
+  if (res.status >= 500) {
+    recordAttempt(false, new Error(`server list answered ${res.status}`));
+    return null;
+  }
   recordAttempt(true);
   // A site nobody has registered under answers 404: reachable, no list.
   if (!res.ok) return null;
@@ -389,12 +446,15 @@ export function startServerListPolling(): void {
     return;
   }
   polling = true;
+  document.addEventListener("visibilitychange", onVisibilityChange);
   runPoll();
 }
 
 /** Test-only; also used by resetServerList. */
 export function stopServerListPolling(): void {
   polling = false;
+  beatSkipped = false;
+  document.removeEventListener("visibilitychange", onVisibilityChange);
   if (pollTimer !== null) {
     clearTimeout(pollTimer);
     pollTimer = null;
@@ -415,15 +475,47 @@ function runPoll(): void {
 // updated for the attempt that just settled -- so an answered attempt that
 // carried no list (a 404 for this site) waits the base interval rather than
 // inheriting an earlier outage's backoff.
+//
+// A hidden tab does not beat, and neither does one in a match. Most open
+// tabs are in the background or playing; nobody can click Join from either,
+// the reachability UI is not on screen (the desktop status bar hides itself
+// in-game), a running game already knows its server, and ensureServerList
+// serves the cached list whatever its age. So a beat that comes due while
+// paused is skipped and runs the moment the pause lifts. That is never sooner
+// than it was due, so switching tabs or leaving a match cannot add requests.
 function scheduleNextPoll(gotList: boolean): void {
   if (!polling) return;
   pollTimer = setTimeout(
     () => {
       pollTimer = null;
+      if (heartbeatPaused()) {
+        beatSkipped = true;
+        return;
+      }
       runPoll();
     },
     gotList ? REFRESH_INTERVAL_MS : retryDelayMs(consecutiveFailures),
   );
+}
+
+function heartbeatPaused(): boolean {
+  return document.hidden || inGame;
+}
+
+function onVisibilityChange(): void {
+  if (heartbeatPaused() || !polling || !beatSkipped) return;
+  beatSkipped = false;
+  runPoll();
+}
+
+/**
+ * Told by Main.setInGameSignal, the single point where "a match is running"
+ * is published. The heartbeat pauses for the length of the match and runs
+ * the beat it skipped, if any, on the way back to the menu.
+ */
+export function setServerListInGame(value: boolean): void {
+  inGame = value;
+  onVisibilityChange();
 }
 
 /**
@@ -490,12 +582,13 @@ export async function ensureServerList(): Promise<ServerListStatus> {
 }
 
 /**
- * Try the API again right now, at the player's request (OPE-439). Two
- * callers, one per shell: the Retry on the desktop status bar's offline
- * state, and -- because the web has no such bar -- a refused multiplayer
- * click on the web, which doubles as that press
- * (GameModeSelector.reportMultiplayerRefusal). Both gate themselves on
- * manualRetryAvailable()'s policy first.
+ * Try the API again right now, at the player's request (OPE-439). Three
+ * callers: the Retry on the desktop status bar's offline state, and --
+ * because the web has no such bar -- a refused multiplayer click on the web,
+ * which doubles as that press (GameModeSelector.reportMultiplayerRefusal),
+ * both gating themselves on manualRetryAvailable()'s policy first; and the
+ * desktop session Retry (DesktopSessionRecovery), which gates on nothing
+ * here and relies on its own in-flight latch plus the floor below.
  *
  * Deliberately ignores the heartbeat's retry schedule. That backoff exists
  * to stop TIMER-driven callers hammering a down API between beats, and a
@@ -508,11 +601,10 @@ export async function ensureServerList(): Promise<ServerListStatus> {
  * player leaning on the button cannot outpace the request it started. Past
  * the throttle, fetchOnce() still dedupes: a press landing on top of a
  * heartbeat beat joins that attempt rather than starting a second. This is
- * the last line of defence, not the first: the button that calls this is
- * itself disabled while an attempt is out and for a cooldown after a press
- * (DesktopStatusBar), and the floor is what holds if anything ever calls
- * this without going through such a button, or through
- * manualRetryAvailable().
+ * the last line of defence, not the first: the status bar's offline Retry
+ * is itself disabled while an attempt is out and for a cooldown after a
+ * press, and the floor is what holds for a caller that goes through no such
+ * button (the session Retry above).
  *
  * A retry that fails counts towards the outage confirmation like any other
  * attempt -- pressing Retry against a backend that is genuinely down should
@@ -521,26 +613,39 @@ export async function ensureServerList(): Promise<ServerListStatus> {
  * Never throws, for the same reason ensureServerList does not.
  */
 export function retryServerList(): Promise<ServerListStatus> {
-  const now = Date.now();
-  if (
-    lastManualRetry !== null &&
-    now - lastManualRetry.at < MANUAL_RETRY_MIN_INTERVAL_MS
-  ) {
-    return lastManualRetry.result;
-  }
-  const result = runManualRetry();
-  lastManualRetry = { at: now, result };
-  return result;
+  return manualRetry.run();
 }
 
-async function runManualRetry(): Promise<ServerListStatus> {
+async function fetchAndApply(): Promise<ServerListStatus> {
   try {
     await fetchOnce();
     return apply();
   } catch (e) {
-    console.warn("Server list retry failed, using page values", e);
+    console.warn("Server list fetch failed, using page values", e);
     return "fallback";
   }
+}
+
+/**
+ * The freshest list a player-initiated action can have before it dials: what
+ * the lobby slot's Retry waits on (PublicLobbySocket.start). ensureServerList
+ * cannot serve it, because it answers from the cached list at once, and after
+ * a failure that list may still name the server that just died.
+ *
+ * Not routed through retryServerList, on purpose. Its clock is the shared
+ * policy for the other affordances (manualRetryAvailable): a press here must
+ * neither be answered from a press that settled inside that floor -- which
+ * would be a dial from the cache, the thing this exists to avoid -- nor
+ * stamp the clock and hold the web's refused-click probe for a press it did
+ * not make. It has the same floor on a clock of its own, so a second call
+ * inside MANUAL_RETRY_MIN_INTERVAL_MS is handed the first's result, settled
+ * or not: callers that need a fresh answer per press space presses further
+ * apart than that (the lobby slot's Retry holds itself for the cooldown).
+ *
+ * Never throws, for the same reason ensureServerList does not.
+ */
+export function refreshServerList(): Promise<ServerListStatus> {
+  return refresh.run();
 }
 
 /**
@@ -633,8 +738,8 @@ function apply(): ServerListStatus {
  * **A server-rendered page prefers its own server.** Before v2 a page always
  * talked to the colour that rendered it; the list's random pick can send it
  * to a sibling instead, and the two do not have to agree about that sibling.
- * On dev (`openfront.dev`, a blue/green pair behind the apex with
- * `CLUSTER_STATE_SOURCE=apex`) the registry listed both colours `open` on the
+ * On dev (`openfront.dev`, a blue/green pair behind the apex, then still
+ * draining by an apex colour poll) the registry listed both colours `open` on the
  * same build while the apex poll had green considering itself draining: a
  * page rendered by blue that drew green got a lobby feed reporting
  * `active: false`, read it as "a new version is available", and reloaded —
@@ -755,11 +860,11 @@ export function reloadWouldRescue(listStatus: ServerListStatus): boolean {
  *   `latest` from the static Worker, which is by definition not one
  *   deployment.
  * - Behind an apex — siteHost defined, not the page's own server, and the
- *   page's cluster map has siblings (prod: page openfront.io, servers blue
- *   and green.openfront.io) — reloadForUpdate re-enters through the site
- *   host, which the load balancer answers from a live deployment.
+ *   site's list has siblings (prod: page openfront.io, servers blue and
+ *   green.openfront.io) — reloadForUpdate re-enters through the site host,
+ *   which the load balancer answers from a live deployment.
  * - Standalone (no siteHost, or siteHost IS the page's own server, or the
- *   map names only this server — dev's main.openfront.dev, previews, beta):
+ *   site has only this server — dev's main.openfront.dev, previews, beta):
  *   the reload re-serves the same page from the same server. If that server
  *   is gone the reload fails with it; if it is alive with a
  *   WebSocket-specific problem, the prompt loops. Nothing a prompt can do
@@ -769,15 +874,19 @@ export function reloadWouldRescue(listStatus: ServerListStatus): boolean {
  * GAME_DOMAIN set: its page host (main.openfront.dev) and game host
  * (main.server.openfront.dev) differ, yet both names reach the one
  * container behind Traefik, so a differing siteHost alone proves nothing.
- * Same rule as the server's own apex poll
- * (ActiveDeployment.shouldPollApex).
  */
 function reloadCanLandElsewhere(): boolean {
   if (!ClientEnv.servedByGameServer()) return true;
   const site = ClientEnv.siteHost();
   if (site === undefined || site === ClientEnv.serverHost()) return false;
-  const cluster = ClientEnv.cluster();
-  return cluster !== undefined && Object.keys(cluster).length > 1;
+  // Somewhere else to land: the site's list names a server other than the
+  // one that rendered this page. Only the list can say — the page's injected
+  // map names its own server alone now — and reloadWouldRescue only asks
+  // with a list in hand, so "no list" reads as "nowhere else".
+  const list = cached?.list ?? null;
+  if (list === null) return false;
+  const own = ClientEnv.serverHost();
+  return Object.values(list.servers).some((s) => s.host !== own);
 }
 
 /**
@@ -844,6 +953,43 @@ export function redirectToGameVersion(
   if (target === null) return false;
   window.location.href = target;
   return true;
+}
+
+/**
+ * The `/v/<commit>/` page for a game on THIS page's host, or null when there
+ * is none to go to. The join-time `version_mismatch` handler's first choice
+ * (docs/MultiServer.md, "Opening a game at its server's version", OPE-471).
+ *
+ * Same decision as redirectToGameVersion, with two differences that apply
+ * only once the server has answered: the commit it refused us with wins
+ * over the list, which is stale-while-revalidate, and the loop guard reads
+ * the boot-time pin, since the join has already rewritten the address bar
+ * to the version-free share URL (PagePin.ts).
+ */
+export function versionedPathForMismatchedGame(
+  gameID: GameID,
+  serverCommit: string | undefined,
+): string | null {
+  if (isDesktopShell()) return null;
+  if (isOnReplayShell()) return null;
+  // A GIT_COMMIT that names no commit ("DEV", "unknown") must never reach a
+  // /v/<x>/ URL: treat it as if the server had said nothing.
+  const fromServer =
+    serverCommit !== undefined && isCommitLike(serverCommit)
+      ? serverCommit
+      : undefined;
+  const version = fromServer ?? ClientEnv.gameVersion(gameID);
+  if (version === undefined) return null;
+  const pinned = pagePin();
+  if (pinned !== null && commitsMatch(pinned, version)) return null;
+  return versionedPathForGame(
+    safeOwnCommit(),
+    version,
+    gameID,
+    safeGamePath(gameID),
+    window.location.pathname,
+    window.location.search,
+  );
 }
 
 // The game's own version-free path, which the redirect versions whenever

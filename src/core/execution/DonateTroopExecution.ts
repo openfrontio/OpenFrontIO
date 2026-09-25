@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Difficulty,
   Execution,
@@ -7,6 +8,13 @@ import {
   PlayerType,
 } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zNum, zPlayerRef, zRandom } from "../snapshot/SnapshotType";
 import { assertNever } from "../Util";
 import { EmojiExecution } from "./EmojiExecution";
 import {
@@ -129,4 +137,44 @@ export class DonateTroopsExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return DonateTroopsExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      recipient: this.recipient === undefined ? null : w.player(this.recipient),
+      random: this.random === undefined ? null : w.random(this.random),
+      sender: w.player(this.sender),
+      recipientID: this.recipientID,
+      troops: this.troops,
+    });
+  }
+
+  restoreSnapshot(s: DonateTroopsState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    if (s.recipient !== null) this.recipient = r.player(s.recipient);
+    if (s.random !== null) this.random = r.random(s.random);
+    this.sender = r.player(s.sender);
+    this.recipientID = s.recipientID;
+    this.troops = s.troops;
+  }
 }
+
+const DonateTroopsStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  recipient: zPlayerRef().nullable(),
+  random: zRandom().nullable(),
+  sender: zPlayerRef(),
+  recipientID: z.string(),
+  troops: zNum().nullable(),
+});
+type DonateTroopsState = z.infer<typeof DonateTroopsStateSchema>;
+
+export const DonateTroopsExecutionSnapshot = execSnapshotType({
+  name: "DonateTroops",
+  version: 1,
+  schema: DonateTroopsStateSchema,
+  cls: () => DonateTroopsExecution,
+});

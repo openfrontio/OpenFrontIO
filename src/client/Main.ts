@@ -36,11 +36,16 @@ import {
   nextBootInterrupt,
   parseClaimPromptStore,
   runBootInterrupt,
+  steamGrantStringsReady,
 } from "./BootInterrupts";
 import "./ChangeUsernameModal";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
-import { getPlayerCosmeticsRefs, handlePurchaseReturn } from "./Cosmetics";
+import {
+  getPlayerCosmeticsRefs,
+  handlePurchaseReturn,
+  translateCosmetic,
+} from "./Cosmetics";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
@@ -48,6 +53,7 @@ import {
   resumePendingCreatorCode,
 } from "./CreatorCode";
 import { desktopPresence, type PresencePayload } from "./DesktopPresence";
+import { subscribeDesktopSessionRecovery } from "./DesktopSessionRecovery";
 import {
   desktopUpdate,
   isDesktopShell,
@@ -96,10 +102,21 @@ import { RewardsModal } from "./RewardsModal";
 import {
   ensureServerList,
   redirectToGameVersion,
+  setServerListInGame,
   startServerListPolling,
 } from "./ServerList";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import {
+  parseSteamGrantStore,
+  recordSteamGrant,
+  STEAM_GRANT_NOTICE_KEY,
+  steamGrantEndedDue,
+  steamGrantWelcomeDue,
+} from "./SteamGrantNotices";
+import { steamHandoffMode } from "./SteamHandoff";
+import "./SteamHandoffModal";
+import { SteamHandoffModal } from "./SteamHandoffModal";
 import {
   isSteamLinkHash,
   parseSteamLinkToken,
@@ -107,8 +124,10 @@ import {
 } from "./SteamLink";
 import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
+import { steamSDK } from "./SteamSDK";
 import { StoreModal } from "./Store";
 import "./SubscriptionModal";
+import { initTelemetry } from "./Telemetry";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
@@ -129,6 +148,7 @@ import { UsernameInput } from "./UsernameInput";
 import {
   apexPathFor,
   currentPagePath,
+  flushReloadToast,
   homeHref,
   incrementGamesPlayed,
   presenceMapKey,
@@ -243,12 +263,14 @@ export interface JoinLobbyEvent {
 /**
  * The single point where "a match is running" is published.
  *
- * Two consumers, and they must never disagree:
+ * Three consumers, and they must never disagree:
  *   - the `.in-game` body class, which the client's own markup keys off to hide
  *     the footer, the nav bars and the desktop update snackbar;
  *   - the Electron shell's updater, which pauses asset downloads and version
  *     polling in-game so a cache-bust cannot saturate a player's connection
- *     mid-match.
+ *     mid-match;
+ *   - the server-list heartbeat, which pauses in-game: a running match already
+ *     knows its server, so polling /cluster.json through it buys nothing.
  *
  * Every add/remove of that class goes through here. Setting the class without
  * telling the shell leaves the updater's pause dead; telling the shell without
@@ -261,6 +283,7 @@ export interface JoinLobbyEvent {
  */
 function setInGameSignal(inGame: boolean): void {
   document.body.classList.toggle("in-game", inGame);
+  setServerListInGame(inGame);
   void desktopUpdate()
     ?.setInGame?.(inGame)
     ?.catch(() => {});
@@ -283,6 +306,8 @@ class Client {
   private matchmakingModal: MatchmakingModal;
   private rewardsModal: RewardsModal;
   private steamLinkModal: SteamLinkModal;
+  private steamHandoffModal: SteamHandoffModal | null = null;
+  private steamHandoffDeclinedFor: string | null = null;
   private mostRecentJoinEvent: number;
   // A join the player has committed to but that has not reached a lobbyHandle
   // yet. `lobbyHandle` alone does not cover this: a public-lobby join awaits
@@ -318,6 +343,11 @@ class Client {
     // URL, so take the value while it is still the URL we were served at.
     // See PagePin.ts.
     capturePagePin();
+
+    flushReloadToast();
+
+    // Stale key still in existing players' storage; nothing reads it.
+    localStorage.removeItem("achievements.pushed");
 
     // A store referral banner / account "copy link" hands out `/c/<code>`.
     // There's nothing to open here yet -- the code only does anything once
@@ -641,6 +671,8 @@ class Client {
       console.warn("Steam link modal element not found");
     }
 
+    this.steamHandoffModal = document.querySelector("steam-handoff-modal");
+
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       if (crazyGamesSDK.isOnCrazyGames()) {
         void updateCrazyGamesNavButton();
@@ -667,6 +699,22 @@ class Client {
         });
         adGatekeeper.start();
       }
+      // Before the dispatch: <username-input> reads this store when it picks
+      // the lapse notice's wording, and the record has to be current by then.
+      const grantStoreBefore = parseSteamGrantStore(
+        localStorage.getItem(STEAM_GRANT_NOTICE_KEY),
+      );
+      const grantStore = recordSteamGrant(
+        grantStoreBefore,
+        userMeResponse,
+        Date.now(),
+      );
+      if (grantStore !== grantStoreBefore) {
+        localStorage.setItem(
+          STEAM_GRANT_NOTICE_KEY,
+          JSON.stringify(grantStore),
+        );
+      }
       // Snapshot in, dispatch and comparison inside — see
       // lapseShownAfterDispatch for why the snapshot cannot be read there.
       const lapseShown = lapseShownAfterDispatch(
@@ -681,6 +729,11 @@ class Client {
             }),
           ),
         () => localStorage.getItem(LAPSE_NOTICE_KEY),
+      );
+      // Re-read, not `grantStore`: a lapse notice that carried the grant
+      // sign-off marked it shown from inside the dispatch above.
+      const grantStoreAfterDispatch = parseSteamGrantStore(
+        localStorage.getItem(STEAM_GRANT_NOTICE_KEY),
       );
 
       if (userMeResponse !== false) {
@@ -750,11 +803,22 @@ class Client {
             username,
             usernameBase,
             lapseNoticeDue: lapseShown,
+            grantWelcomeDue: steamGrantWelcomeDue(
+              grantStoreAfterDispatch,
+              userMeResponse,
+              Date.now(),
+            ),
+            grantEndedDue: steamGrantEndedDue(
+              grantStoreAfterDispatch,
+              userMeResponse,
+              Date.now(),
+            ),
+            grantStringsReady: steamGrantStringsReady(translateText),
             rewardCount: rewards.length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
           }),
-          { claimStore, publicId },
+          { claimStore, grantStore: grantStoreAfterDispatch, publicId },
           {
             translate: translateText,
             confirm: (body, heading, confirmText) =>
@@ -765,12 +829,21 @@ class Client {
                 variant: "warning",
                 confirmText,
               }),
+            alert: async (body, heading) => {
+              await showInGameAlert(body, { heading });
+            },
+            tierName: (tier) => translateCosmetic("subscriptions", tier),
             navigate: (hash) => {
               window.location.hash = hash;
             },
             openRewards: () => this.rewardsModal?.openWithRewards(rewards),
             storeClaimPrompt: (store) =>
               localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(store)),
+            storeSteamGrant: (store) =>
+              localStorage.setItem(
+                STEAM_GRANT_NOTICE_KEY,
+                JSON.stringify(store),
+              ),
             now: () => Date.now(),
           },
         );
@@ -783,6 +856,7 @@ class Client {
     // nav and re-disable ads, so a response is only applied while the session
     // it was fetched under is still current.
     let authGeneration = 0;
+
     const applyUserMe =
       (generation: number) => (userMeResponse: UserMeResponse | false) => {
         if (generation !== authGeneration) return;
@@ -800,12 +874,23 @@ class Client {
       void onUserMe(false);
     });
 
+    // Register before initial auth settles: the status bar may already offer
+    // Retry while startup is still waiting for its first session.
+    subscribeDesktopSessionRecovery(async () => {
+      invalidateUserMe();
+      snapshotLapseMarker();
+      const generation = ++authGeneration;
+      const result = await retrySteamSignIn();
+      applyUserMe(generation)(result === false ? false : await getUserMe());
+    });
+
+    const initialAuthGeneration = authGeneration;
     if ((await userAuth()) === false) {
       // Not logged in: apply the signed-out profile directly.
-      onUserMe(false);
+      applyUserMe(initialAuthGeneration)(false);
     } else {
       // JWT appears valid: fetch the profile and apply it if still current.
-      getUserMe().then(applyUserMe(authGeneration));
+      getUserMe().then(applyUserMe(initialAuthGeneration));
     }
 
     // Re-run auth when the player signs into CrazyGames mid-session. Logout
@@ -821,11 +906,6 @@ class Client {
       );
     });
 
-    // The desktop status bar's Retry. Orchestrated here rather than in the
-    // bar because a successful sign-in also has to refresh userMe, the nav
-    // account button and the cached profile -- the same reason the
-    // CrazyGames listener above lives here. The authGeneration guard means a
-    // response that arrives after another auth change cannot be applied.
     // Subscribe to the bridge directly rather than to the status bar's
     // re-broadcast. The bar subscribes when its element upgrades and the
     // bridge replays the current state immediately, so that event fires long
@@ -837,17 +917,6 @@ class Client {
     // bar's own subscription.
     desktopUpdate()?.subscribe((state) => {
       this.desktopUpdateState = state;
-    });
-
-    document.addEventListener("desktop-session-retry", () => {
-      invalidateUserMe();
-      snapshotLapseMarker();
-      const generation = authGeneration;
-      retrySteamSignIn().then((result) =>
-        result === false
-          ? applyUserMe(generation)(false)
-          : getUserMe().then(applyUserMe(generation)),
-      );
     });
 
     this.hostModal = document.querySelector(
@@ -919,6 +988,20 @@ class Client {
     };
 
     const onPopState = () => {
+      // Steam hardware back button fix (Issue #5514):
+      // If we navigate back to root on Steam, push state forward so the back button doesn't exit the app
+      // and show the blank 'Starting' screen.
+      if (
+        steamSDK.isOnSteam() &&
+        (window.location.hash === "" || window.location.hash === "#")
+      ) {
+        history.pushState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
+      }
+
       if (this.currentUrl !== null && this.lobbyHandle !== null) {
         console.info("Game is active");
 
@@ -959,6 +1042,19 @@ class Client {
     window.addEventListener("popstate", onPopState);
     window.addEventListener("hashchange", onHashUpdate);
     window.addEventListener("join-changed", onJoinChanged);
+
+    if (
+      steamSDK.isOnSteam() &&
+      (window.location.hash === "" || window.location.hash === "#")
+    ) {
+      // Push an initial state so the hardware back button has something to pop,
+      // triggering our onPopState trap above instead of exiting the app.
+      history.pushState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    }
 
     function updateSliderProgress(slider: HTMLInputElement) {
       const percent =
@@ -1064,6 +1160,9 @@ class Client {
     // and the token itself is opaque, so no decoding is needed or expected.
     const steamLinkToken = parseSteamLinkToken(hash);
     if (steamLinkToken) {
+      // Only the token form: the desktop gate opened it in this browser, so
+      // the Steam build is on this machine. A typed code can come from a phone.
+      this.userSettings.markSteamBuildSeen();
       strip();
       void this.steamLinkModal?.openWithToken(steamLinkToken);
       return;
@@ -1102,6 +1201,17 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      const handoff =
+        this.steamHandoffDeclinedFor === lobbyId
+          ? "none"
+          : steamHandoffMode(this.userSettings, window.location.search);
+      if (handoff !== "none" && this.steamHandoffModal !== null) {
+        this.steamHandoffModal.offer(lobbyId, handoff, () => {
+          this.steamHandoffDeclinedFor = lobbyId;
+          void this.handleUrl();
+        });
+        return;
+      }
       // Joining needs the API's server list (multi-server v2): the id's
       // letter names the game's server there. No version check: joining an
       // existing game is not starting something new, and the id's letter
@@ -1443,6 +1553,7 @@ class Client {
         "leaderboard-button",
         "token-login",
         "steam-link-modal",
+        "steam-handoff-modal",
         "matchmaking-modal",
         "clan-modal",
         "account-settings-modal",
@@ -1696,7 +1807,10 @@ class Client {
 
     if (this.joinModal.isOpen()) {
       this.joinModal.close();
-      if (event?.detail.cause === "full-lobby") {
+      if (
+        event?.detail.cause === "full-lobby" ||
+        event?.detail.cause === "game-started"
+      ) {
         window.dispatchEvent(
           new CustomEvent("show-message", {
             detail: {
@@ -1808,6 +1922,10 @@ const hideCrazyGamesElements = () => {
 
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
+  // First, so the error hooks are in place for everything below. No-op
+  // without a collector URL (see Telemetry.ts); never awaited.
+  void initTelemetry();
+
   // Prevent Safari's page-level pinch-zoom, which ignores `user-scalable=no`
   // on iOS and can softlock the HUD. See issue #2330.
   installSafariPinchZoomBlocker();

@@ -1,4 +1,12 @@
+import { z } from "zod";
 import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zRef } from "../snapshot/SnapshotType";
 import { TrainStationExecution } from "./TrainStationExecution";
 
 export class CityExecution implements Execution {
@@ -41,4 +49,35 @@ export class CityExecution implements Execution {
       this.mg.addExecution(new TrainStationExecution(this.city));
     }
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return CityExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      stationCreated: this.stationCreated,
+      city: w.unit(this.city),
+    });
+  }
+
+  restoreSnapshot(s: CityState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    this.stationCreated = s.stationCreated;
+    this.city = r.unit(s.city);
+  }
 }
+
+const CityStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  stationCreated: z.boolean(),
+  city: zRef(),
+});
+type CityState = z.infer<typeof CityStateSchema>;
+
+export const CityExecutionSnapshot = execSnapshotType({
+  name: "City",
+  version: 1,
+  schema: CityStateSchema,
+  cls: () => CityExecution,
+});

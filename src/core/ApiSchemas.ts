@@ -79,6 +79,19 @@ const SingleplayerMapAchievementSchema = z.object({
   difficulty: z.enum(Difficulty),
 });
 
+// One row from player_achievements. Feats recur -- one row per qualifying
+// game -- so the same `achievement` appears many times for a veteran player.
+// Consumers that care about "has this been earned" must deduplicate by name.
+export const PlayerAchievementSchema = z.object({
+  achievement: z.string(),
+  // games.game -- the client-generated game id (an instance letter plus a
+  // nine-character nanoid, stored as a varchar). NOT the server's `gameId`,
+  // which is a stringified bigint row id.
+  game: z.string().nullable(),
+  achievedAt: z.iso.datetime().nullable(),
+});
+export type PlayerAchievement = z.infer<typeof PlayerAchievementSchema>;
+
 // An unclaimed subscription reward from GET /users/@me. `id` and `amount` are
 // stringified bigints — keep them as strings (amount can in principle exceed
 // Number.MAX_SAFE_INTEGER). `reason` is open-ended server-side; fall back to
@@ -201,6 +214,10 @@ export const UserMeResponseSchema = z.object({
     flares: z.string().array().optional(),
     achievements: z.object({
       singleplayerMap: z.array(SingleplayerMapAchievementSchema),
+      // Optional with a default rather than required: prod and staging deploy
+      // on separate schedules, and a client that hard-failed against a server
+      // without this field would take out the whole account panel.
+      player: z.array(PlayerAchievementSchema).optional().default([]),
     }),
     leaderboard: z
       .object({
@@ -420,9 +437,18 @@ export type PublicCreator = z.infer<typeof PublicCreatorSchema>;
 // name of the creator the caller is now bound to. Deliberately just the
 // public pair, not the full player.creator record (sinceAt/canChangeAt):
 // callers invalidate the cached /users/@me instead of duplicating those here.
-export const PutCreatorResponseSchema = PublicCreatorSchema.pick({
-  code: true,
-  displayName: true,
+//
+// The API wraps the pair in an envelope — `{ ok: true, creator: { code,
+// displayName } }` (infra `users/@me/creator/PUT.ts` bindingSuccess) — the same
+// `ok` field its failures carry. Parsing the pair at the top level rejected
+// every successful bind, so the panel showed "Something went wrong" after the
+// server had already bound the creator.
+export const PutCreatorResponseSchema = z.object({
+  ok: z.literal(true),
+  creator: PublicCreatorSchema.pick({
+    code: true,
+    displayName: true,
+  }),
 });
 export type PutCreatorResponse = z.infer<typeof PutCreatorResponseSchema>;
 
@@ -830,6 +856,8 @@ export const NewsItemSchema = z.object({
   descriptionTranslationKey: z.string().optional(),
   url: z.string().nullable().optional(),
   type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
+  // Absent or empty means every platform.
+  platforms: z.array(z.string()).optional(),
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
 

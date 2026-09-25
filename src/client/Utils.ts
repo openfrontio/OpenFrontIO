@@ -20,6 +20,13 @@ import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/7J5zwb_s_Cg";
 
+// The desktop shell cannot embed YouTube inside Electron, so it bundles the
+// same tutorial and serves it under a reserved prefix of its app:// scheme
+// (see openfront-desktop's protocol.ts, which pins this path with a test).
+// Only meaningful when Platform.isElectron; on the web this path does not
+// exist.
+export const DESKTOP_TUTORIAL_VIDEO_URL = "/__tutorial/tutorial.webm";
+
 export function normaliseMapKey(mapName: string): string {
   // Asset dirs / translation keys are the map id lowercased. For most maps
   // stripping spaces from the display name gives the same string, but not for
@@ -849,6 +856,29 @@ export function showToast(
       detail: { message, color, duration },
     }),
   );
+}
+
+const RELOAD_TOAST_KEY = "reloadToast";
+
+// Holds the translated text, not the key: on the far side of the reload the
+// language files may not have landed yet and translateText would echo the key.
+export function showToastAfterReload(message: string): void {
+  try {
+    sessionStorage.setItem(RELOAD_TOAST_KEY, message);
+  } catch {
+    // sessionStorage unavailable: the reload still happens, just silently.
+  }
+}
+
+export function flushReloadToast(): void {
+  let message: string | null;
+  try {
+    message = sessionStorage.getItem(RELOAD_TOAST_KEY);
+    sessionStorage.removeItem(RELOAD_TOAST_KEY);
+  } catch {
+    return;
+  }
+  if (message) showToast(message, "green");
 }
 
 export function getSecondsUntilServerTimestamp(

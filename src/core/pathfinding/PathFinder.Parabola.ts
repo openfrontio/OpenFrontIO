@@ -110,4 +110,37 @@ export class ParabolaUniversalPathFinder implements SteppingPathFinder<TileRef> 
   currentIndex(): number {
     return this.curve?.getCurrentIndex() ?? 0;
   }
+
+  /** Flight progress, for game snapshots (see PathfinderSnapshots). */
+  getState(): {
+    options: ParabolaOptions | null;
+    lastTo: TileRef | null;
+    curve: ReturnType<DistanceBasedBezierCurve["getState"]> | null;
+  } {
+    return {
+      options: this.options ? { ...this.options } : null,
+      lastTo: this.lastTo,
+      curve: this.curve?.getState() ?? null,
+    };
+  }
+
+  setState(s: ReturnType<ParabolaUniversalPathFinder["getState"]>): void {
+    this.options = s.options ?? undefined;
+    this.lastTo = s.lastTo;
+    this.curve = null;
+    if (s.curve !== null) {
+      const [p0, p1, p2, p3] = s.curve.points;
+      this.curve = new DistanceBasedBezierCurve(
+        p0,
+        p1,
+        p2,
+        p3,
+        this.options?.increment ?? 3,
+      );
+      this.curve.setProgress(
+        s.curve.currentIndex,
+        s.curve.accumulatedDistanceScaled,
+      );
+    }
+  }
 }

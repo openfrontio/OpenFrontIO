@@ -42,6 +42,7 @@ import {
   ServerErrorMessage,
   ServerLobbyInfoMessage,
   ServerNewLobbyMessage,
+  ServerPongMessage,
   ServerPrestartMessageSchema,
   ServerRedirectMessage,
   ServerStartGameMessage,
@@ -77,6 +78,10 @@ import {
 } from "./telemetry/MatchTelemetry";
 
 // Outcome of GameServer.joinClient. The worker maps each to a close code.
+// A non-spectator join landing this soon after start() is someone who meant
+// to play and missed it; after this they are taken to have come to watch.
+const LATE_JOIN_GRACE_MS = 5_000;
+
 export type JoinResult =
   | "joined"
   | "kicked"
@@ -84,6 +89,7 @@ export type JoinResult =
   | "ended"
   | "not_allowlisted"
   | "not_trusted"
+  | "started"
   // Not a refusal: the client was told which sibling lobby to go to instead.
   | "redirected";
 
@@ -374,6 +380,7 @@ export class GameServer {
     const denied = authorizeIntent(intent, actor, {
       isPublic: this.isPublic(),
       isListed: this.isListed(),
+      isQueued: this.listing.isQueued(),
       hasStarted: this.hasStarted(),
     });
     if (denied !== null) {
@@ -539,11 +546,32 @@ export class GameServer {
     }
 
     // gameStartInfo.players is frozen at start, so a late arrival could never
-    // spawn. They used to join as a player anyway; watching is what actually
-    // happened to them, so it is what they join as.
+    // spawn. An admitted player reconnecting through the join path keeps
+    // their seat. A player whose join lands just after the start meant to
+    // play (a last-second click on the lobby), so they are told they missed
+    // it rather than dropped into a game they cannot play. Anyone later
+    // came to watch (a shared link) and joins as a spectator.
     if (this.stage === "started") {
       if (this.rejoinClient(client.ws, client.persistentID, 0)) {
         return "joined";
+      }
+      if (
+        !client.spectator &&
+        Date.now() - (this._startTime ?? 0) < LATE_JOIN_GRACE_MS
+      ) {
+        this.log.info("cannot add client, game just started", {
+          clientID: client.clientID,
+        });
+        client.ws.send(
+          encodeServerMessage(
+            {
+              type: "error",
+              error: "game-started",
+            } satisfies ServerErrorMessage,
+            this.zbinCtx,
+          ),
+        );
+        return "started";
       }
       client.spectator = true;
     }
@@ -555,7 +583,7 @@ export class GameServer {
       this.gameConfig.maxPlayers &&
       this.playerCount() >= this.gameConfig.maxPlayers
     ) {
-      this.log.warn(`cannot add client, game full`, {
+      this.log.debug(`cannot add client, game full`, {
         clientID: client.clientID,
       });
 
@@ -653,7 +681,7 @@ export class GameServer {
       this.hasReachedMaxPlayerCount = true;
     }
 
-    // In case a client joined the game late and missed the start message.
+    // A spectator arriving mid-game missed the start message.
     if (this.stage === "started") {
       this.sendStartGameMsg(client.ws, 0);
     }
@@ -751,6 +779,15 @@ export class GameServer {
         // "someone is still out there" clock the empty-game reap waits on.
         this.lastPingUpdate = Date.now();
         client.lastPing = Date.now();
+        client.ws.send(
+          encodeServerMessage(
+            {
+              type: "pong",
+              sentAt: clientMsg.sentAt,
+            } satisfies ServerPongMessage,
+            this.zbinCtx,
+          ),
+        );
         break;
       }
       case "hash": {
@@ -795,10 +832,15 @@ export class GameServer {
     // Remove persistentId if the game has not started to prevent going over max players
     this.clients.forgetReconnect(client);
     // Close lobby when host leaves before game starts: without a host it can
-    // never start, and a listed one would haunt the lobby browser and hold
-    // the creator's one-listing quota. phase() reports Finished once ended,
-    // so GameManager's next tick prunes it.
-    if (!this.isPublic() && client.persistentID === this.creatorPersistentID) {
+    // never start. phase() reports Finished once ended, so GameManager's next
+    // tick prunes it. A listed lobby carries on without its host: it starts
+    // on its listing deadline (or the queue's countdown), and the players who
+    // joined it from the lobby browser keep their game.
+    if (
+      !this.isPublic() &&
+      !this.isListed() &&
+      client.persistentID === this.creatorPersistentID
+    ) {
       this.log.info("Host left, closing lobby", {
         gameID: this.id,
       });
@@ -817,6 +859,10 @@ export class GameServer {
 
   public numClients(): number {
     return this.clients.active().length;
+  }
+
+  public activeClients(): readonly Client[] {
+    return this.clients.active();
   }
 
   public numDesyncedClients(): number {
@@ -1617,6 +1663,7 @@ export class GameServer {
       label: this.listing.lobbyLabel(),
       accent: this.listing.lobbyAccent(),
       featured: this.listing.isFeatured() ? true : undefined,
+      queued: this.listing.isQueued() ? true : undefined,
     };
   }
 
@@ -1649,8 +1696,43 @@ export class GameServer {
     }));
   }
 
-  public setListed(listed: boolean): void {
-    this.listing.setListed(listed);
+  // `options` are the host's picks from the listing dialog: how long until
+  // the lobby auto-starts, and the player cap that starts it early once
+  // filled.
+  public setListed(
+    listed: boolean,
+    options: { autoStartMs?: number; maxPlayers?: number } = {},
+  ): void {
+    const wasListed = this.listing.isListed();
+    this.listing.setListed(listed, options.autoStartMs);
+    // Only on the transition: relisting must not change the cap players
+    // joined under.
+    if (listed && !wasListed && options.maxPlayers !== undefined) {
+      this.gameConfig.maxPlayers = options.maxPlayers;
+      if (this.playerCount() >= options.maxPlayers) {
+        this.hasReachedMaxPlayerCount = true;
+      }
+    }
+  }
+
+  public isQueued(): boolean {
+    return this.listing.isQueued();
+  }
+
+  public queuedAt(): number | undefined {
+    return this.listing.queuedAtTime();
+  }
+
+  // The host paid to put this listed lobby in the public Special queue. The
+  // worker then reports it as a Special lobby and the queue's countdown
+  // starts it; the listing deadline no longer applies.
+  public queueForPublic(): void {
+    this.listing.queue();
+  }
+
+  // Players (not spectators) currently seated in the lobby.
+  public numPlayers(): number {
+    return this.playerCount();
   }
 
   public autoStartAt(): number | undefined {
@@ -1824,7 +1906,9 @@ export class GameServer {
       (player) => {
         const stats = winner?.allPlayersStats[player.clientID];
         if (stats === undefined) {
-          this.log.warn(`Unable to find stats for clientID ${player.clientID}`);
+          this.log.debug(
+            `Unable to find stats for clientID ${player.clientID}`,
+          );
         }
         return {
           clientID: player.clientID,
@@ -1857,6 +1941,7 @@ export class GameServer {
         this.visibleAt,
         this.gameStartInfo.tribes,
         [...this.reports.values()],
+        this.publicGameType,
       ),
     );
   }

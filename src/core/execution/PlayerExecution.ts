@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { Config } from "../configuration/Config";
 import {
   Cell,
@@ -14,10 +15,19 @@ import {
   tileTraversalScratch,
   TileTraversalScratch,
 } from "../game/TileTraversalScratch";
-import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zPlayerRef } from "../snapshot/SnapshotType";
+import { getMode, simpleHash } from "../Util";
+
+const TICKS_PER_CLUSTER_CALC = 20;
 
 export class PlayerExecution implements Execution {
-  private readonly ticksPerClusterCalc = 20;
+  private ticksPerClusterCalc = TICKS_PER_CLUSTER_CALC;
 
   private config: Config;
   private lastCalc = 0;
@@ -27,6 +37,7 @@ export class PlayerExecution implements Execution {
   private active = true;
   // Reusable neighbor buffer to avoid closures/allocation in cluster checks.
   private nbuf: TileRef[] = [0, 0, 0, 0];
+  private nbuf8: TileRef[] = [0, 0, 0, 0, 0, 0, 0, 0];
 
   constructor(private player: Player) {}
 
@@ -124,32 +135,156 @@ export class PlayerExecution implements Execution {
   }
 
   private removeClusters() {
-    const clusters = this.calculateClusters();
+    // Perf: We fuse bounds calculations into the initial DFS flood, returning packed Int32Array bounds
+    // instead of scanning every TileRef and allocating hundreds of Object {min, max} Cells.
+    const { clusters, boxes } = this.calculateClusters();
 
     if (clusters.length === 0) {
       this.player.largestClusterBoundingBox = null;
       return;
     }
 
-    // Find the largest cluster with a single linear scan (O(n)).
+    if (clusters.length === 1) {
+      this.player.largestClusterBoundingBox = {
+        min: new Cell(boxes[0], boxes[1]),
+        max: new Cell(boxes[2], boxes[3]),
+      };
+      const surroundedBy = this.surroundedBySamePlayer(
+        clusters[0],
+        boxes[0],
+        boxes[1],
+        boxes[2],
+        boxes[3],
+      );
+      if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
+        this.removeCluster(clusters[0]);
+      }
+      return;
+    }
+
     let largestIndex = 0;
-    let largestSize = clusters[0].length;
     for (let i = 1; i < clusters.length; i++) {
-      const size = clusters[i].length;
-      if (size > largestSize) {
-        largestSize = size;
+      if (clusters[i].length > clusters[largestIndex].length) {
         largestIndex = i;
+      }
+    }
+
+    const tMinX = boxes[largestIndex * 4];
+    const tMinY = boxes[largestIndex * 4 + 1];
+    const tMaxX = boxes[largestIndex * 4 + 2];
+    const tMaxY = boxes[largestIndex * 4 + 3];
+
+    // Fix: Doughnut borders. Prevents a heavily deformed crater (hole) from having more border tiles
+    // and falsely claiming primary cluster. A cluster is a hole if it is completely enclosed by another
+    // cluster of the SAME contiguous territory. Bbox containment alone is insufficient (disjoint C-shapes).
+    let clusterTerritoryIds: Int32Array | null = null;
+    let nextTerritoryId = 1;
+
+    let isLargestHole = false;
+    for (let j = 0; j < clusters.length; j++) {
+      if (j !== largestIndex) {
+        const jIdx = j * 4;
+        if (
+          boxes[jIdx] <= tMinX &&
+          boxes[jIdx + 1] <= tMinY &&
+          boxes[jIdx + 2] >= tMaxX &&
+          boxes[jIdx + 3] >= tMaxY
+        ) {
+          if (!clusterTerritoryIds) {
+            clusterTerritoryIds = new Int32Array(clusters.length);
+            const scratch = this.traversalState();
+            for (let c = 0; c < clusters.length; c++) {
+              const cl = clusters[c];
+              for (let k = 0; k < cl.length; k++) {
+                scratch.clusterIndexMap[cl[k]] = c + 1;
+              }
+            }
+          }
+          nextTerritoryId = this.checkAndAssignTerritory(
+            clusters,
+            largestIndex,
+            j,
+            clusterTerritoryIds,
+            nextTerritoryId,
+          );
+          if (clusterTerritoryIds[largestIndex] === clusterTerritoryIds[j]) {
+            isLargestHole = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (isLargestHole) {
+      let bestIndex = -1;
+      let bestLength = -1;
+      for (let i = 0; i < clusters.length; i++) {
+        if (i === largestIndex || clusters[i].length <= bestLength) continue;
+        let isHole = false;
+        const iIdx = i * 4;
+        const iMinX = boxes[iIdx];
+        const iMinY = boxes[iIdx + 1];
+        const iMaxX = boxes[iIdx + 2];
+        const iMaxY = boxes[iIdx + 3];
+
+        for (let j = 0; j < clusters.length; j++) {
+          if (j !== i) {
+            const jIdx = j * 4;
+            if (
+              boxes[jIdx] <= iMinX &&
+              boxes[jIdx + 1] <= iMinY &&
+              boxes[jIdx + 2] >= iMaxX &&
+              boxes[jIdx + 3] >= iMaxY
+            ) {
+              nextTerritoryId = this.checkAndAssignTerritory(
+                clusters,
+                i,
+                j,
+                clusterTerritoryIds!,
+                nextTerritoryId,
+              );
+              if (clusterTerritoryIds![i] === clusterTerritoryIds![j]) {
+                isHole = true;
+                break;
+              }
+            }
+          }
+        }
+        if (!isHole) {
+          bestLength = clusters[i].length;
+          bestIndex = i;
+        }
+      }
+      if (bestIndex !== -1) {
+        largestIndex = bestIndex;
+      }
+    }
+
+    if (clusterTerritoryIds) {
+      const scratch = this.traversalState();
+      for (let c = 0; c < clusters.length; c++) {
+        const cl = clusters[c];
+        for (let k = 0; k < cl.length; k++) {
+          scratch.clusterIndexMap[cl[k]] = 0;
+        }
       }
     }
 
     const largestCluster = clusters[largestIndex];
     if (largestCluster === undefined) throw new Error("No clusters");
 
-    const largestClusterBox = calculateBoundingBox(this.mg, largestCluster);
-    this.player.largestClusterBoundingBox = largestClusterBox;
+    const lIdx = largestIndex * 4;
+    this.player.largestClusterBoundingBox = {
+      min: new Cell(boxes[lIdx], boxes[lIdx + 1]),
+      max: new Cell(boxes[lIdx + 2], boxes[lIdx + 3]),
+    };
+
     const surroundedBy = this.surroundedBySamePlayer(
       largestCluster,
-      largestClusterBox,
+      boxes[lIdx],
+      boxes[lIdx + 1],
+      boxes[lIdx + 2],
+      boxes[lIdx + 3],
     );
     if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
       this.removeCluster(largestCluster);
@@ -159,26 +294,93 @@ export class PlayerExecution implements Execution {
     for (let i = 0; i < clusters.length; i++) {
       if (i === largestIndex) continue;
       const cluster = clusters[i];
-      if (this.isSurrounded(cluster)) {
+      const idx = i * 4;
+      if (
+        this.isSurrounded(
+          cluster,
+          boxes[idx],
+          boxes[idx + 1],
+          boxes[idx + 2],
+          boxes[idx + 3],
+        )
+      ) {
         this.removeCluster(cluster);
       }
     }
   }
 
+  private checkAndAssignTerritory(
+    clusters: TileRef[][],
+    cIdxA: number,
+    cIdxB: number,
+    clusterTerritoryIds: Int32Array,
+    nextTerritoryId: number,
+  ): number {
+    if (
+      clusterTerritoryIds[cIdxA] !== 0 &&
+      clusterTerritoryIds[cIdxA] === clusterTerritoryIds[cIdxB]
+    ) {
+      return nextTerritoryId;
+    }
+    if (clusterTerritoryIds[cIdxA] !== 0 && clusterTerritoryIds[cIdxB] !== 0) {
+      return nextTerritoryId;
+    }
+
+    const startIdx = clusterTerritoryIds[cIdxB] === 0 ? cIdxB : cIdxA;
+    const territoryId = nextTerritoryId++;
+
+    const state = this.traversalState();
+    const visited = state.visited;
+    const floodGen = this.bumpGeneration();
+    const stack = state.stack;
+    stack.length = 0;
+
+    const start = clusters[startIdx][0];
+    visited[start] = floodGen;
+    stack.push(start);
+
+    const map = this.map;
+    const myOwner = this.player.smallID();
+    clusterTerritoryIds[startIdx] = territoryId;
+
+    while (stack.length > 0) {
+      const tile = stack.pop()!;
+      const numNeighbors = map.neighbors8(tile, this.nbuf8);
+      for (let nIdx = 0; nIdx < numNeighbors; nIdx++) {
+        const n = this.nbuf8[nIdx];
+        if (visited[n] === floodGen) continue;
+        if (map.ownerID(n) === myOwner) {
+          visited[n] = floodGen;
+          stack.push(n);
+          const cIdxPlusOne = state.clusterIndexMap[n];
+          if (cIdxPlusOne > 0) {
+            clusterTerritoryIds[cIdxPlusOne - 1] = territoryId;
+          }
+        }
+      }
+    }
+    return nextTerritoryId;
+  }
+
+  // Perf: Accepts raw bounds to skip allocating {min, max} Box objects for every target evaluated.
   private surroundedBySamePlayer(
     cluster: readonly TileRef[],
-    clusterBox: { min: Cell; max: Cell },
+    clusterBoxMinX: number,
+    clusterBoxMinY: number,
+    clusterBoxMaxX: number,
+    clusterBoxMaxY: number,
   ): false | Player {
     const enemies = new Set<number>();
 
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
+    let minX = 1e9,
+      minY = 1e9,
+      maxX = -1e9,
+      maxY = -1e9;
 
     const map = this.map;
     const mySmallID = this.player.smallID();
-    for (const tile of cluster) {
+    for (let j = 0; j < cluster.length; j++) {
+      const tile = cluster[j];
       if (map.isOceanShore(tile) || map.isOnEdgeOfMap(tile)) {
         return false;
       }
@@ -194,10 +396,10 @@ export class PlayerExecution implements Execution {
           enemies.add(ownerId);
           const px = map.x(n);
           const py = map.y(n);
-          minX = Math.min(minX, px);
-          minY = Math.min(minY, py);
-          maxX = Math.max(maxX, px);
-          maxY = Math.max(maxY, py);
+          if (px < minX) minX = px;
+          if (py < minY) minY = py;
+          if (px > maxX) maxX = px;
+          if (py > maxY) maxY = py;
         }
       }
       if (enemies.size !== 1) {
@@ -209,25 +411,34 @@ export class PlayerExecution implements Execution {
     }
 
     const enemy = this.mg.playerBySmallID(Array.from(enemies)[0]) as Player;
-    const localEnemyBox = {
-      min: new Cell(minX, minY),
-      max: new Cell(maxX, maxY),
-    };
-    if (inscribed(localEnemyBox, clusterBox)) {
+    if (
+      minX <= clusterBoxMinX &&
+      minY <= clusterBoxMinY &&
+      maxX >= clusterBoxMaxX &&
+      maxY >= clusterBoxMaxY
+    ) {
       return enemy;
     }
     return false;
   }
 
-  private isSurrounded(cluster: readonly TileRef[]): boolean {
+  // Perf: Accepts raw bounds to skip allocating {min, max} Box objects.
+  private isSurrounded(
+    cluster: readonly TileRef[],
+    clusterBoxMinX: number,
+    clusterBoxMinY: number,
+    clusterBoxMaxX: number,
+    clusterBoxMaxY: number,
+  ): boolean {
     let hasEnemy = false;
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
+    let minX = 1e9,
+      minY = 1e9,
+      maxX = -1e9,
+      maxY = -1e9;
     const map = this.map;
     const mySmallID = this.player.smallID();
-    for (const tr of cluster) {
+    for (let j = 0; j < cluster.length; j++) {
+      const tr = cluster[j];
       if (map.isShore(tr) || map.isOnEdgeOfMap(tr)) {
         return false;
       }
@@ -239,19 +450,22 @@ export class PlayerExecution implements Execution {
           hasEnemy = true;
           const x = map.x(n);
           const y = map.y(n);
-          minX = Math.min(minX, x);
-          minY = Math.min(minY, y);
-          maxX = Math.max(maxX, x);
-          maxY = Math.max(maxY, y);
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
         }
       }
     }
     if (!hasEnemy) {
       return false;
     }
-    const clusterBox = calculateBoundingBox(this.mg, cluster);
-    const enemyBox = { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
-    return inscribed(enemyBox, clusterBox);
+    return (
+      minX <= clusterBoxMinX &&
+      minY <= clusterBoxMinY &&
+      maxX >= clusterBoxMaxX &&
+      maxY >= clusterBoxMaxY
+    );
   }
 
   private removeCluster(cluster: readonly TileRef[]) {
@@ -287,7 +501,7 @@ export class PlayerExecution implements Execution {
       this.bumpGeneration(),
       this.traversalState().visited,
       [firstTile],
-      (tile, cb) => this.mg.forEachNeighbor(tile, cb),
+      false,
       (tile) => this.mg.ownerID(tile) === this.player.smallID(),
     );
 
@@ -394,9 +608,10 @@ export class PlayerExecution implements Execution {
     return getMode(neighbors);
   }
 
-  private calculateClusters(): TileRef[][] {
+  private calculateClusters(): { clusters: TileRef[][]; boxes: Int32Array } {
     const borderTiles = this.player.borderTiles();
-    if (borderTiles.size === 0) return [];
+    if (borderTiles.size === 0)
+      return { clusters: [], boxes: new Int32Array(0) };
 
     const state = this.traversalState();
     const visited = state.visited;
@@ -412,25 +627,34 @@ export class PlayerExecution implements Execution {
     const currentGen = this.bumpGeneration();
 
     const clusters: TileRef[][] = [];
+    let boxes = new Int32Array(64);
+    let clusterIdx = 0;
 
     // Set.forEach instead of for..of: iterating a large Set allocates an
     // iterator-result object per element, and border sets can be huge.
-    const neighborFn = (tile: TileRef, cb: (neighbor: TileRef) => void) =>
-      this.mg.forEachNeighborWithDiag(tile, cb);
     const includeFn = (tile: TileRef) => visited[tile] === borderGen;
     borderTiles.forEach((startTile) => {
       if (visited[startTile] === currentGen) return;
+
+      if (clusterIdx * 4 >= boxes.length) {
+        const newBoxes = new Int32Array(boxes.length * 2);
+        newBoxes.set(boxes);
+        boxes = newBoxes;
+      }
 
       const cluster = this.floodFillWithGen(
         currentGen,
         visited,
         [startTile],
-        neighborFn,
+        true,
         includeFn,
+        boxes,
+        clusterIdx * 4,
       );
       clusters.push(cluster);
+      clusterIdx++;
     });
-    return clusters;
+    return { clusters, boxes };
   }
 
   owner(): Player {
@@ -452,12 +676,16 @@ export class PlayerExecution implements Execution {
     return bumpTraversalGeneration(this.traversalState());
   }
 
+  // Perf: Replaced `neighborFn` closure parameter with a native 1D loop via `GameMap.neighbors8/4`.
+  // Computes cluster boundary extremes natively inside `outBox` without requiring a secondary iterator pass.
   private floodFillWithGen(
     currentGen: number,
     visited: Uint32Array,
     startTiles: TileRef[],
-    neighborFn: (tile: TileRef, callback: (neighbor: TileRef) => void) => void,
+    diag: boolean,
     includeFn: (tile: TileRef) => boolean,
+    outBox?: Int32Array,
+    outBoxOffset?: number,
   ): TileRef[] {
     // The visited generation array already deduplicates, so the result can be
     // a plain array (in mark order) — far cheaper than a Set of the same
@@ -466,29 +694,64 @@ export class PlayerExecution implements Execution {
     const stack = this.traversalState().stack;
     stack.length = 0;
 
+    let minX = 1e9,
+      minY = 1e9,
+      maxX = -1e9,
+      maxY = -1e9;
+    const map = this.map;
+
     for (const start of startTiles) {
       if (visited[start] === currentGen) continue;
       if (!includeFn(start)) continue;
       visited[start] = currentGen;
       result.push(start);
       stack.push(start);
+      if (outBox !== undefined) {
+        const x = map.x(start);
+        const y = map.y(start);
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
     }
 
-    const visit = (neighbor: TileRef) => {
-      if (visited[neighbor] === currentGen) {
-        return;
-      }
-      if (!includeFn(neighbor)) {
-        return;
-      }
-      visited[neighbor] = currentGen;
-      result.push(neighbor);
-      stack.push(neighbor);
-    };
+    const nbuf = diag ? this.nbuf8 : this.nbuf;
 
     while (stack.length > 0) {
       const tile = stack.pop()!;
-      neighborFn(tile, visit);
+      const numNeighbors = diag
+        ? map.neighbors8(tile, nbuf)
+        : map.neighbors4(tile, nbuf);
+
+      for (let i = 0; i < numNeighbors; i++) {
+        const neighbor = nbuf[i];
+        if (visited[neighbor] === currentGen) continue;
+        if (!includeFn(neighbor)) continue;
+
+        visited[neighbor] = currentGen;
+        result.push(neighbor);
+        stack.push(neighbor);
+
+        if (outBox !== undefined) {
+          const x = map.x(neighbor);
+          const y = map.y(neighbor);
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    // Perf: Commit the cluster's boundary extremes directly into the pre-allocated flat Int32Array.
+    // The array stores consecutive [minX, minY, maxX, maxY] structs linearly via `outBoxOffset`.
+    // By passing outBox down to the DFS, we completely sidestep allocating and returning temporary `Box` or `Cell` objects.
+    if (outBox !== undefined && outBoxOffset !== undefined) {
+      outBox[outBoxOffset] = minX;
+      outBox[outBoxOffset + 1] = minY;
+      outBox[outBoxOffset + 2] = maxX;
+      outBox[outBoxOffset + 3] = maxY;
     }
 
     return result;
@@ -513,4 +776,43 @@ export class PlayerExecution implements Execution {
 
     this.player.removeAllAlliances();
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return PlayerExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      lastCalc: this.lastCalc,
+      player: w.player(this.player),
+    });
+  }
+
+  restoreSnapshot(s: PlayerExecState, r: SnapshotReader): void {
+    this.ticksPerClusterCalc = TICKS_PER_CLUSTER_CALC;
+    this.active = s.active;
+    if (s.initialized) {
+      this.mg = r.game;
+      this.map = r.game.map();
+      this.config = r.game.config();
+    }
+    this.lastCalc = s.lastCalc;
+    // Scratch neighbor buffers: always written before they are read.
+    this.nbuf = [0, 0, 0, 0];
+    this.nbuf8 = [0, 0, 0, 0, 0, 0, 0, 0];
+    this.player = r.player(s.player);
+  }
 }
+
+const PlayerExecStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  lastCalc: zInt(),
+  player: zPlayerRef(),
+});
+type PlayerExecState = z.infer<typeof PlayerExecStateSchema>;
+
+export const PlayerExecutionSnapshot = execSnapshotType({
+  name: "Player",
+  version: 1,
+  schema: PlayerExecStateSchema,
+  cls: () => PlayerExecution,
+});

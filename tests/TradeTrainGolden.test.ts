@@ -138,7 +138,7 @@ describe("train golden values", () => {
   test("trainSaturation: global train sweep", () => {
     // Counted in Train units (~7 per train). >1 boosts spawning only for
     // the very first trains, ~1 around 35 units (~5 trains), damping past
-    // the ~300-unit capacity midpoint onto the ~0.25 plateau (~460+
+    // the ~500-unit capacity midpoint onto the ~0.25 plateau (~730+
     // units), which the ~900-unit hard cap collapses.
     const table: Record<string, number> = {};
     for (const units of [
