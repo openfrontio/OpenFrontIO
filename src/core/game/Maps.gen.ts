@@ -64,6 +64,7 @@ export enum GameMapType {
   Hawaii = "Hawaii", // map-generator/assets/maps/hawaii/info.json
   Hecatestrait = "Hecate Strait", // map-generator/assets/maps/hecatestrait/info.json
   HongKong = "Hong Kong", // map-generator/assets/maps/hongkong/info.json
+  HornOfAfrica = "Horn Of Africa", // map-generator/assets/maps/hornofafrica/info.json
   Iceland = "Iceland", // map-generator/assets/maps/iceland/info.json
   IndianSubcontinent = "Indian Subcontinent", // map-generator/assets/maps/indiansubcontinent/info.json
   IrishSea = "Irish Sea", // map-generator/assets/maps/irishsea/info.json
@@ -1498,6 +1499,18 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 71,
     themes: ["asia"],
+  },
+  {
+    id: "HornOfAfrica",
+    type: GameMapType.HornOfAfrica,
+    translationKey: "map.hornofafrica",
+    categories: ["africa", "new"],
+    multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 29,
+    themes: ["africa"],
   },
   {
     id: "Iceland",
