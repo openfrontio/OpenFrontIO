@@ -22,6 +22,7 @@ import {
   PublicGameInfo,
 } from "../core/Schemas";
 import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -63,14 +64,15 @@ export class JoinLobbyModal extends BaseModal {
   // Clock offset for the hosted list's countdowns, kept apart from
   // serverTimeOffset (the joined lobby's).
   private hostedServerTimeOffset = 0;
-  // Deliberately not persisted: the bell starts off and is re-armed by hand
-  // for each game (reset in startTrackingLobby).
+  // Per-lobby state. A saved preference seeds it in startTrackingLobby, then
+  // the bell can override it without changing future lobbies.
   @state() private notifyOnStart = false;
   // Own Howl rather than SoundManager: that only exists once the game is
   // running, and this has to play during the lobby wait. Fixed volume on
   // purpose -- the SFX slider defaults to 0, and an alert the player asked
   // for must not be silenced by it.
   private startAlertSound: Howl | null = null;
+  private readonly userSettings = new UserSettings();
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
@@ -702,7 +704,13 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyStartAt = null;
     this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
-    this.notifyOnStart = false;
+    this.notifyOnStart = this.userSettings.lobbyStartAlerts();
+    // Preload without the manual-arm toast or another permission prompt. For
+    // click-driven joins this also creates Howler's context under the join
+    // gesture; deep-link joins still follow the browser's autoplay policy.
+    if (this.notifyOnStart) {
+      this.loadStartAlertSound();
+    }
     this.isConnecting = true;
     this.handledJoinTimeout = false;
     this.startLobbyUpdates();

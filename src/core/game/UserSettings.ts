@@ -398,6 +398,14 @@ export class UserSettings {
     return this.getBool("settings.lobbyIdVisibility", true);
   }
 
+  lobbyStartAlerts() {
+    return this.getBool("settings.lobbyStartAlerts", false);
+  }
+
+  setLobbyStartAlerts(value: boolean) {
+    this.setBool("settings.lobbyStartAlerts", value);
+  }
+
   steamBuildSeen() {
     return this.getBool("settings.steamBuildSeen", false);
   }
