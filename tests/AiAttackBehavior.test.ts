@@ -796,6 +796,220 @@ describe("Juicy target strategy - end-to-end via maybeAttack", () => {
   );
 });
 
+describe("Retaliation by difficulty - end-to-end via maybeAttack", () => {
+  /**
+   * Three full-height stripes (enemy | nation | other): the nation borders two
+   * non-allied humans and no unowned land, so nothing pre-empts the attack
+   * logic. `enemy` is the one attacking the nation.
+   */
+  async function setupRetaliation(difficulty: Difficulty) {
+    const testGame = await setup("big_plains", { difficulty }, [
+      new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
+      new PlayerInfo("enemy", PlayerType.Human, null, "enemy_id"),
+      new PlayerInfo("other", PlayerType.Human, null, "other_id"),
+    ]);
+
+    const nation = testGame.player("nation_id");
+    const enemy = testGame.player("enemy_id");
+    const other = testGame.player("other_id");
+
+    for (let x = 0; x < testGame.map().width(); x++) {
+      for (let y = 0; y < testGame.map().height(); y++) {
+        const tile = testGame.ref(x, y);
+        if (!testGame.map().isLand(tile)) continue;
+        if (x < 40) enemy.conquer(tile);
+        else if (x < 60) nation.conquer(tile);
+        else other.conquer(tile);
+      }
+    }
+
+    const emojiBehavior = new NationEmojiBehavior(
+      new PseudoRandom(42),
+      testGame,
+      nation,
+    );
+    const allianceBehavior = new NationAllianceBehavior(
+      new PseudoRandom(42),
+      testGame,
+      nation,
+      emojiBehavior,
+    );
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      nation,
+      0.5, // triggerRatio
+      0.3, // reserveRatio
+      0.2, // expandRatio
+      allianceBehavior,
+      emojiBehavior,
+    );
+
+    return { testGame, nation, enemy, other, behavior };
+  }
+
+  function attack(
+    testGame: Game,
+    attacker: Player,
+    target: Player,
+    troops: number,
+  ) {
+    testGame.addExecution(new AttackExecution(troops, attacker, target.id()));
+    testGame.executeNextTick();
+  }
+
+  function sentAttacks(spy: { mock: { calls: any[][] } }, target: Player) {
+    return spy.mock.calls
+      .map((c) => c[0])
+      .filter(
+        (e): e is AttackExecution =>
+          e instanceof AttackExecution && e.targetID() === target.id(),
+      );
+  }
+
+  it.each([
+    [Difficulty.Impossible, 1],
+    [Difficulty.Hard, 1],
+    [Difficulty.Medium, 0],
+    [Difficulty.Easy, 0],
+  ])(
+    "%s: attacked while below its reserve ratio, sends %i counterattack",
+    async (difficulty, expected) => {
+      const { testGame, nation, enemy, behavior } =
+        await setupRetaliation(difficulty);
+
+      nation.setTroops(Math.floor(testGame.config().maxTroops(nation) * 0.1));
+      enemy.setTroops(100_000);
+      attack(testGame, enemy, nation, 30_000);
+      expect(nation.incomingAttacks().length).toBeGreaterThan(0);
+
+      const spy = vi.spyOn(testGame, "addExecution");
+      behavior.maybeAttack();
+
+      expect(sentAttacks(spy, enemy)).toHaveLength(expected);
+    },
+  );
+
+  it.each([Difficulty.Medium, Difficulty.Hard, Difficulty.Impossible])(
+    "%s: attacked while above its reserve but below its trigger ratio, counterattacks",
+    async (difficulty) => {
+      const { testGame, nation, enemy, behavior } =
+        await setupRetaliation(difficulty);
+
+      nation.setTroops(Math.floor(testGame.config().maxTroops(nation) * 0.4));
+      enemy.setTroops(100_000);
+      attack(testGame, enemy, nation, 30_000);
+
+      const spy = vi.spyOn(testGame, "addExecution");
+      behavior.maybeAttack();
+
+      expect(sentAttacks(spy, enemy)).toHaveLength(1);
+    },
+  );
+
+  it.each([
+    [Difficulty.Hard, 0.75],
+    [Difficulty.Impossible, 0.9],
+  ])(
+    "%s FFA: cancels the attack and matches the attacker's home army when other neighbors allow it",
+    async (difficulty, retain) => {
+      const { testGame, nation, enemy, other, behavior } =
+        await setupRetaliation(difficulty);
+
+      nation.setTroops(300_000);
+      other.setTroops(20_000);
+      enemy.setTroops(230_000);
+      attack(testGame, enemy, nation, 50_000);
+
+      const incoming = nation
+        .incomingAttacks()
+        .reduce((sum, a) => sum + a.troops(), 0);
+      // Keeping the usual share of the attacker's own home army would allow far less
+      const capCountingAttacker = Math.max(
+        nation.troops() - Math.ceil(enemy.troops() * retain),
+        incoming,
+      );
+      const counter = incoming + enemy.troops();
+      const capFromOther = nation.troops() - Math.ceil(other.troops() * retain);
+
+      const spy = vi.spyOn(testGame, "addExecution");
+      behavior.maybeAttack();
+
+      const [exec] = sentAttacks(spy, enemy);
+      expect(exec).toBeDefined();
+      const sent = (exec as any).startTroops as number;
+      expect(sent).toBeGreaterThan(capCountingAttacker);
+      expect(sent).toBeGreaterThanOrEqual(counter);
+      expect(sent).toBeLessThanOrEqual(capFromOther);
+    },
+  );
+
+  it("Impossible FFA: keeps its reserve when it can't afford to counter an attack", async () => {
+    const { testGame, nation, enemy, other, behavior } = await setupRetaliation(
+      Difficulty.Impossible,
+    );
+
+    nation.setTroops(300_000);
+    other.setTroops(400_000);
+    enemy.setTroops(500_000);
+    attack(testGame, enemy, nation, 350_000);
+
+    const reserve = testGame.config().maxTroops(nation) * 0.3;
+
+    const spy = vi.spyOn(testGame, "addExecution");
+    behavior.maybeAttack();
+
+    const [exec] = sentAttacks(spy, enemy);
+    expect(exec).toBeDefined();
+    const sent = (exec as any).startTroops as number;
+    expect(sent).toBeGreaterThan(0);
+    expect(nation.troops() - sent).toBeGreaterThanOrEqual(reserve - 1);
+  });
+
+  it("Impossible FFA: only cancels the incoming troops when another neighbor is too strong", async () => {
+    const { testGame, nation, enemy, other, behavior } = await setupRetaliation(
+      Difficulty.Impossible,
+    );
+
+    nation.setTroops(300_000);
+    other.setTroops(900_000);
+    enemy.setTroops(100_000);
+    attack(testGame, enemy, nation, 40_000);
+
+    const incoming = nation
+      .incomingAttacks()
+      .reduce((sum, a) => sum + a.troops(), 0);
+
+    const spy = vi.spyOn(testGame, "addExecution");
+    behavior.maybeAttack();
+
+    const [exec] = sentAttacks(spy, enemy);
+    expect(exec).toBeDefined();
+    expect((exec as any).startTroops).toBe(incoming);
+  });
+
+  it.each([
+    [Difficulty.Impossible, false],
+    [Difficulty.Hard, false],
+    [Difficulty.Easy, true],
+  ])(
+    "%s: may send random boats while under attack: %s",
+    async (difficulty, expected) => {
+      const { testGame, nation, enemy, behavior } =
+        await setupRetaliation(difficulty);
+
+      nation.setTroops(200_000);
+      enemy.setTroops(100_000);
+      attack(testGame, enemy, nation, 30_000);
+
+      const boatSpy = vi.spyOn(behavior as any, "attackWithRandomBoat");
+      for (let i = 0; i < 60; i++) behavior.maybeAttack();
+
+      expect(boatSpy.mock.calls.length > 0).toBe(expected);
+    },
+  );
+});
+
 describe("Juicy ally betrayal strategy - end-to-end via maybeAttack", () => {
   /**
    * Partitions the entire map between just `attacker` and `ally` - no third

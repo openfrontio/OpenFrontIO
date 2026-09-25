@@ -41,7 +41,7 @@ import {
   EMOJI_ASSIST_TARGET_ME,
   NationEmojiBehavior,
 } from "../nation/NationEmojiBehavior";
-import { findJuiciestTarget } from "../nation/NationUtils";
+import { findJuiciestTarget, findRunawayLeader } from "../nation/NationUtils";
 import { TransportShipExecution } from "../TransportShipExecution";
 import { closestTwoTiles } from "../Util";
 
@@ -140,12 +140,13 @@ export class AiAttackBehavior {
       if (this.sendAttack(this.game.terraNullius())) return;
     }
 
+    const holdBoats = this.holdsBoatsUnderAttack();
     if (borderingEnemies.length === 0) {
-      if (this.random.chance(5)) {
+      if (!holdBoats && this.random.chance(5)) {
         this.attackWithRandomBoat();
       }
     } else {
-      if (this.random.chance(10)) {
+      if (!holdBoats && this.random.chance(10)) {
         this.attackWithRandomBoat(borderingEnemies);
         return;
       }
@@ -279,6 +280,17 @@ export class AiAttackBehavior {
     borderingFriends: Player[],
     borderingEnemies: Player[],
   ) {
+    const { difficulty } = this.game.config().gameConfig();
+
+    // Hard & Impossible: answer attacks right away, even below the reserve and trigger ratios
+    if (
+      (difficulty === Difficulty.Hard ||
+        difficulty === Difficulty.Impossible) &&
+      this.retaliate()
+    ) {
+      return;
+    }
+
     // In games with high starting gold, nations will quickly build a lot of cities
     // This causes them to expand slowly (cities increase max troops), and bots will steal their structures
     // In this case: Attack bots before ratio checks
@@ -288,6 +300,9 @@ export class AiAttackBehavior {
 
     // Save up troops until we reach the reserve ratio
     if (!this.hasReserveRatioTroops()) return;
+
+    // Medium: answer attacks without saving up to the trigger ratio first
+    if (difficulty === Difficulty.Medium && this.retaliate()) return;
 
     // Maybe save up troops until we reach the trigger ratio
     if (!this.hasTriggerRatioTroops() && !this.random.chance(10)) return;
@@ -310,13 +325,7 @@ export class AiAttackBehavior {
     const { difficulty } = this.game.config().gameConfig();
 
     // Define all strategies as functions that return true if they attacked
-    const retaliate = (): boolean => {
-      const attacker = this.findIncomingAttackPlayer();
-      if (attacker) {
-        return this.sendAttack(attacker, true);
-      }
-      return false;
-    };
+    const retaliate = (): boolean => this.retaliate();
 
     const bots = (): boolean => this.attackBots();
 
@@ -409,8 +418,18 @@ export class AiAttackBehavior {
 
     const donate = (): boolean => this.donateTroops();
 
+    const crown = (): boolean => {
+      const leader = this.findCrownTarget(borderingEnemies);
+      return (
+        leader !== null &&
+        this.shouldAttack(leader) &&
+        this.sendLandAttack(leader, undefined, leader)
+      );
+    };
+
     // Return strategies in order based on difficulty
     // Easy nations get the dumbest order, impossible nations get the smartest order
+    // Medium and up retaliate in attackBestTarget, ahead of the ratio checks
     switch (difficulty) {
       case Difficulty.Easy:
         // So dumb, they cant even find islanders
@@ -418,14 +437,14 @@ export class AiAttackBehavior {
         return [nuked, bots, retaliate, assist, betray, hated, weakest];
       case Difficulty.Medium:
         // prettier-ignore
-        return [bots, nuked, retaliate, assist, betray, hated, afk, traitor, weakest, island, donate];
+        return [bots, nuked, assist, betray, hated, afk, traitor, crown, weakest, island, donate];
       case Difficulty.Hard:
         // Strong veryWeak and juicy strats after the distracting hated strat, to make the nations weaker than impossible
         // prettier-ignore
-        return [bots, retaliate, assist, betray, nuked, traitor, afk, hated, veryWeak, juicy, victim, weakest, island, donate];
+        return [bots, assist, betray, nuked, traitor, afk, hated, veryWeak, juicy, victim, crown, weakest, island, donate];
       case Difficulty.Impossible:
         // prettier-ignore
-        return [retaliate, bots, veryWeak, betray, assist, victim, traitor, juicy, afk, nuked, hated, weakest, island, donate];
+        return [bots, veryWeak, betray, assist, victim, crown, traitor, juicy, afk, nuked, hated, weakest, island, donate];
       default:
         assertNever(difficulty);
     }
@@ -476,6 +495,92 @@ export class AiAttackBehavior {
       return largestAttacker;
     }
     return null;
+  }
+
+  private retaliate(): boolean {
+    const attacker = this.findIncomingAttackPlayer();
+    if (attacker === null) return false;
+    const { difficulty } = this.game.config().gameConfig();
+    if (
+      (difficulty === Difficulty.Hard ||
+        difficulty === Difficulty.Impossible) &&
+      this.isFFA() &&
+      this.player.sharesBorderWith(attacker)
+    ) {
+      return this.sendRetaliation(attacker);
+    }
+    return this.sendAttack(attacker, true);
+  }
+
+  // Hard & Impossible keep their troops home while under attack, Medium only sometimes
+  private holdsBoatsUnderAttack(): boolean {
+    if (this.findIncomingAttackPlayer() === null) return false;
+    const { difficulty } = this.game.config().gameConfig();
+    switch (difficulty) {
+      case Difficulty.Easy:
+        return false;
+      case Difficulty.Medium:
+        return this.random.chance(2);
+      case Difficulty.Hard:
+      case Difficulty.Impossible:
+        return true;
+      default:
+        assertNever(difficulty);
+    }
+  }
+
+  // Cancels the attacker's incoming troops. If we can also match its home army
+  // while keeping back what troopSendCap wants for every other neighbor, pushes
+  // into its land with at least that much (the attacker isn't a threat then,
+  // its army is busy with us). Otherwise only cancels, as far as the reserve allows.
+  private sendRetaliation(attacker: Player): boolean {
+    let incoming = 0;
+    for (const attack of this.player.incomingAttacks()) {
+      if (attack.attacker() === attacker) incoming += attack.troops();
+    }
+    let pressing = 0;
+    for (const attack of this.player.outgoingAttacks()) {
+      if (attack.target() === attacker) pressing += attack.troops();
+    }
+    const troops = this.player.troops();
+    const spare = Math.min(troops, this.neighborTroopCap(attacker));
+    const aboveReserve =
+      troops - this.game.config().maxTroops(this.player) * this.reserveRatio;
+    const counter = incoming + Math.max(0, attacker.troops() - pressing);
+    const send =
+      spare >= counter
+        ? Math.max(counter, Math.min(aboveReserve, spare))
+        : Math.min(incoming, Math.max(spare, aboveReserve));
+    return this.sendLandAttack(attacker, () => send, attacker);
+  }
+
+  // A bordering runaway leader. Hard & Impossible always consider it: the
+  // too-weak check in calculateAttackTroops decides whether our stack, plus
+  // the troops already attacking it, is worth it. Medium only joins attacks
+  // already under way.
+  private findCrownTarget(borderingEnemies: Player[]): Player | null {
+    const leader = findRunawayLeader(this.game);
+    if (
+      leader === null ||
+      !borderingEnemies.includes(leader) ||
+      !this.player.sharesBorderWith(leader)
+    ) {
+      return null;
+    }
+    const { difficulty } = this.game.config().gameConfig();
+    if (
+      difficulty === Difficulty.Hard ||
+      difficulty === Difficulty.Impossible
+    ) {
+      return leader;
+    }
+    return this.troopsAttacking(leader) >= leader.troops() * 0.1
+      ? leader
+      : null;
+  }
+
+  private troopsAttacking(target: Player): number {
+    return target.incomingAttacks().reduce((sum, a) => sum + a.troops(), 0);
   }
 
   // Sort neighboring bots by density (troops / tiles) and attempt to attack many of them (Parallel attacks)
@@ -981,9 +1086,24 @@ export class AiAttackBehavior {
    * no cap applies.
    *
    * Nations under attack may retaliate with at least the total incoming
-   * attack troops, even if that exceeds the neighbor-based cap.
+   * attack troops, even if that exceeds the neighbor-based cap. `ignore` is
+   * left out of the neighbor threat (the player being retaliated against).
    */
-  private troopSendCap(): number {
+  private troopSendCap(ignore?: Player): number {
+    let cap = this.neighborTroopCap(ignore);
+
+    // Nations under attack may retaliate with at least the incoming troops
+    const incoming = this.player.incomingAttacks();
+    if (incoming.length > 0) {
+      const totalIncoming = incoming.reduce((sum, a) => sum + a.troops(), 0);
+      cap = Math.max(cap, totalIncoming);
+    }
+
+    return cap;
+  }
+
+  // troopSendCap() without the allowance for nations under attack
+  private neighborTroopCap(ignore?: Player): number {
     if (this.player.type() === PlayerType.Bot) return Infinity;
     if (this.game.config().gameConfig().gameMode === GameMode.Team)
       return Infinity;
@@ -1005,6 +1125,7 @@ export class AiAttackBehavior {
     for (const n of this.player.nearby()) {
       if (
         n.isPlayer() &&
+        n !== ignore &&
         !this.player.isFriendly(n) &&
         n.type() !== PlayerType.Bot &&
         n.troops() > maxNeighborTroops
@@ -1013,22 +1134,9 @@ export class AiAttackBehavior {
       }
     }
 
-    let cap: number;
-    if (maxNeighborTroops === 0) {
-      cap = Infinity;
-    } else {
-      const minRetained = Math.ceil(maxNeighborTroops * retainFraction);
-      cap = Math.max(0, this.player.troops() - minRetained);
-    }
-
-    // Nations under attack may retaliate with at least the incoming troops
-    const incoming = this.player.incomingAttacks();
-    if (incoming.length > 0) {
-      const totalIncoming = incoming.reduce((sum, a) => sum + a.troops(), 0);
-      cap = Math.max(cap, totalIncoming);
-    }
-
-    return cap;
+    if (maxNeighborTroops === 0) return Infinity;
+    const minRetained = Math.ceil(maxNeighborTroops * retainFraction);
+    return Math.max(0, this.player.troops() - minRetained);
   }
 
   // Like troopSendCap(), but floored above 0 — TerraNullius can't fight back, so it's throttled, not frozen.
@@ -1038,9 +1146,13 @@ export class AiAttackBehavior {
     return Math.ceil(this.player.troops() * 0.05);
   }
 
+  // `opponent` is a player we take on on purpose (retaliation, runaway leader):
+  // it doesn't count toward troopSendCap's threats, and troops already
+  // attacking it count toward the too-weak check
   private calculateAttackTroops(
     target: Player | TerraNullius,
     nonBotTroops: (targetTroops: number) => number,
+    opponent?: Player,
   ): number | null {
     const maxTroops = this.game.config().maxTroops(this.player);
     const botWithStructures =
@@ -1070,7 +1182,9 @@ export class AiAttackBehavior {
     // Hard & Impossible: don't drop below neighbor troop threshold (also applies to TerraNullius/fallout).
     troops = Math.min(
       troops,
-      target.isPlayer() ? this.troopSendCap() : this.troopSendCapForExpansion(),
+      target.isPlayer()
+        ? this.troopSendCap(opponent)
+        : this.troopSendCapForExpansion(),
     );
 
     if (troops < 1) {
@@ -1078,7 +1192,11 @@ export class AiAttackBehavior {
     }
 
     // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
-    if (target.isPlayer() && this.isAttackTooWeak(troops, target)) {
+    const pileOn =
+      target.isPlayer() && target === opponent
+        ? this.troopsAttacking(target)
+        : 0;
+    if (target.isPlayer() && this.isAttackTooWeak(troops + pileOn, target)) {
       return null;
     }
 
@@ -1095,11 +1213,13 @@ export class AiAttackBehavior {
     return troops;
   }
 
-  private sendLandAttack(target: Player | TerraNullius): boolean {
-    const troops = this.calculateAttackTroops(
-      target,
-      (targetTroops) => this.player.troops() - targetTroops,
-    );
+  private sendLandAttack(
+    target: Player | TerraNullius,
+    nonBotTroops = (targetTroops: number) =>
+      this.player.troops() - targetTroops,
+    opponent?: Player,
+  ): boolean {
+    const troops = this.calculateAttackTroops(target, nonBotTroops, opponent);
     if (troops === null) {
       return false;
     }
