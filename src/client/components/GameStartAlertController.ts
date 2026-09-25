@@ -6,10 +6,11 @@ import {
   TemplateResult,
 } from "lit";
 import { assetUrl } from "../../core/AssetUrls";
+import { UserSettings } from "../../core/game/UserSettings";
 import { translateText } from "../Utils";
 
 /**
- * The shared opt-in game-start alert used while waiting in either a lobby or
+ * The shared game-start alert used while waiting in either a lobby or
  * ranked matchmaking. It deliberately owns the whole behavior so the two
  * entry paths cannot drift: the bell, toast, audio priming, chime and desktop
  * notification are identical.
@@ -20,6 +21,7 @@ export class GameStartAlertController implements ReactiveController {
   // Howl at full volume so an alert the player explicitly armed is available
   // during the wait and is not silenced by an SFX slider that defaults to 0.
   private sound: Howl | null = null;
+  private readonly userSettings = new UserSettings();
 
   constructor(
     private readonly host: ReactiveControllerHost,
@@ -67,9 +69,14 @@ export class GameStartAlertController implements ReactiveController {
     </button>`;
   }
 
+  // Starts a new wait from the saved preference. The bell then overrides it
+  // for this wait only, without changing the setting.
   reset(): void {
-    if (!this.armed) return;
-    this.armed = false;
+    this.armed = this.userSettings.lobbyStartAlerts();
+    // Preload without the manual-arm toast or another permission prompt. For
+    // click-driven joins this also creates Howler's context under the join
+    // gesture; deep-link joins still follow the browser's autoplay policy.
+    if (this.armed) this.loadSound();
     this.host.requestUpdate();
   }
 

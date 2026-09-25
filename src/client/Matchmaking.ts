@@ -421,9 +421,8 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected async onOpen(): Promise<void> {
-    // Like a lobby bell, this is a per-game opt-in rather than a persisted
-    // notification preference. A cancellation requeue stays armed, but a new
-    // matchmaking session starts off.
+    // Like a lobby bell, a new matchmaking session starts from the saved
+    // default; a cancellation requeue keeps any per-session override.
     this.gameStartAlert.reset();
     const userMe = await getUserMe();
     // Early return if modal was closed during async operation

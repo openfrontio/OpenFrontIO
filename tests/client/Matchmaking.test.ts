@@ -80,6 +80,7 @@ vi.mock("../../src/client/Utils", () => ({
 }));
 
 import { MatchmakingModal } from "../../src/client/Matchmaking";
+import { UserSettings } from "../../src/core/game/UserSettings";
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;
@@ -737,6 +738,13 @@ describe("MatchmakingModal game-start alert", () => {
     closeNotification.mockReset();
     FakeNotification.permission = "default";
     FakeNotification.requestPermission.mockClear();
+    localStorage.clear();
+    const statics = UserSettings as unknown as {
+      cache: Map<string, string | null>;
+      playerId: string | null;
+    };
+    statics.cache.clear();
+    statics.playerId = null;
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal("Notification", FakeNotification);
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -822,5 +830,44 @@ describe("MatchmakingModal game-start alert", () => {
     expect(
       modal.querySelector('[aria-label="public_lobby.notify_off"]'),
     ).not.toBeNull();
+  });
+
+  it("arms from the saved default without a toast or permission prompt", async () => {
+    new UserSettings().setLobbyStartAlerts(true);
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+    const joined = await openAndJoin("1v1");
+    modal = joined.modal;
+    document.body.append(modal);
+    await modal.updateComplete;
+
+    expect(
+      modal.querySelector('[aria-label="public_lobby.notify_on"]'),
+    ).not.toBeNull();
+    expect(alertMocks.construct).toHaveBeenCalledOnce();
+    expect(FakeNotification.requestPermission).not.toHaveBeenCalled();
+    expect(
+      dispatchSpy.mock.calls.filter(
+        ([event]) => (event as Event).type === "show-message",
+      ),
+    ).toHaveLength(0);
+
+    joined.socket.onmessage?.({
+      data: JSON.stringify({
+        type: "match-assignment",
+        gameId: "cAbCd12345",
+      }),
+    });
+    document.dispatchEvent(new CustomEvent("game-starting"));
+
+    expect(alertMocks.play).toHaveBeenCalledOnce();
+    // The setting is a default, not a lock: the bell still turns it off.
+    modal
+      .querySelector<HTMLButtonElement>('[aria-label="public_lobby.notify_on"]')
+      ?.click();
+    await modal.updateComplete;
+    expect(
+      modal.querySelector('[aria-label="public_lobby.notify_off"]'),
+    ).not.toBeNull();
+    expect(new UserSettings().lobbyStartAlerts()).toBe(true);
   });
 });
