@@ -9,7 +9,7 @@ import {
   ClaimRewardResponseSchema,
   GetMyTribeNamesResponse,
   GetMyTribeNamesResponseSchema,
-  IdentityTokenAudience,
+  IdentityTokenAudiencesResponseSchema,
   IdentityTokenResponse,
   IdentityTokenResponseSchema,
   NewsItemSchema,
@@ -409,6 +409,17 @@ export async function setMarketingConsent(
   }
 }
 
+// The sites a player can generate an identity token for. Fails closed: any
+// error lands on an empty list, which hides the account-settings card.
+export async function getIdentityTokenAudiences(): Promise<string[]> {
+  const { audiences } = await getServedConfig(
+    "public/identity_token/audiences",
+    IdentityTokenAudiencesResponseSchema,
+    { audiences: [] },
+  );
+  return audiences;
+}
+
 export type IdentityTokenResult =
   | { ok: true; data: IdentityTokenResponse }
   // 401: the session is gone.
@@ -421,7 +432,7 @@ export type IdentityTokenResult =
 // account the player owns, valid only on `audience`. Nothing is stored
 // server-side and callers must not cache it: mint a fresh one per request.
 export async function createIdentityToken(
-  audience: IdentityTokenAudience,
+  audience: string,
 ): Promise<IdentityTokenResult> {
   try {
     const response = await fetch(`${getApiBase()}/users/@me/identity_token`, {
