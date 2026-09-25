@@ -341,7 +341,15 @@ export class WorkerLobbyService {
         });
 
         ws.on("error", (error) => {
-          this.log.error(`Lobbies WebSocket error:`, error);
+          // ws raises WS_ERR_* for a malformed frame from the peer (e.g. a
+          // reserved close code from a bot or proxy): the peer's fault, not
+          // ours, so it must not drown real server errors.
+          const code = (error as { code?: unknown }).code;
+          if (typeof code === "string" && code.startsWith("WS_ERR_")) {
+            this.log.warn("Lobbies WebSocket peer protocol error", { code });
+          } else {
+            this.log.error(`Lobbies WebSocket error:`, error);
+          }
           this.lobbyClients.delete(ws);
           try {
             if (
