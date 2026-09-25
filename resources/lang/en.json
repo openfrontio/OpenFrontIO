@@ -2292,6 +2292,8 @@
     "left_click_label": "Left Click to Open Menu",
     "lobby_id_visibility_desc": "Hide Lobby ID in private lobby creation",
     "lobby_id_visibility_label": "Hidden Lobby IDs",
+    "lobby_start_alerts_desc": "Play the start chime for each lobby by default and show a desktop notification when permitted. You can override it with the lobby bell.",
+    "lobby_start_alerts_label": "Lobby Start Alerts",
     "menu_shortcuts": "Menu Shortcuts",
     "move_down": "Move Camera Down",
     "move_down_desc": "Move the camera downward",
