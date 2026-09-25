@@ -42,6 +42,36 @@ jobs:
       PR_TITLE: ${{ github.event.pull_request.title }}
       SHA: ${{ github.event.pull_request.merge_commit_sha }}
       TARGET: ${{ github.event.pull_request.milestone.title }}
+      # Built from trusted values only (PR number, merge SHA, and a milestone
+      # that the first step requires to match vNN). The PR title and file
+      # names stay out: they are author-controlled.
+      RESOLVE_PROMPT: |
+        You are resolving a cherry-pick conflict in a headless CI job. The
+        working tree is release branch `${{ github.event.pull_request.milestone.title }}`
+        with commit ${{ github.event.pull_request.merge_commit_sha }} (PR
+        #${{ github.event.pull_request.number }}) from main part-way through
+        `git cherry-pick`. `git status` lists the conflicted files.
+
+        Resolve every conflict marker in those files so the change from the
+        PR applies to this branch:
+          - `git show ${{ github.event.pull_request.merge_commit_sha }}` is the
+            change being backported; that intent is what must survive.
+            `git log origin/main` and `git show` let you see how main got there.
+          - This branch is older than main. Keep its code where the PR did not
+            touch it. Do not pull in unrelated features from main to make the
+            pick compile; adapt the change to the code that exists here.
+          - Check that anything the resolved code references (functions,
+            imports, fields, translation keys) exists on this branch.
+          - Leave no conflict markers anywhere.
+
+        Only edit files. Do not run git commands that change state (add,
+        commit, cherry-pick, checkout, reset, stash); the workflow commits
+        after you finish.
+
+        If the change cannot sensibly be applied to this branch (it depends
+        on large pieces of main that are missing here), do not force it:
+        write a short explanation to CHERRY_PICK_ABORT.md at the repo root
+        and stop.
     steps:
       - name: Check milestone names a release branch
         id: target
@@ -131,46 +161,6 @@ jobs:
         run: |
           npm install -g @anthropic-ai/claude-code@2.1.281
           echo "path=$(command -v claude)" >> "$GITHUB_OUTPUT"
-
-      - name: Write resolve prompt
-        if: steps.pick.outputs.result == 'conflict'
-        env:
-          FILES: ${{ steps.pick.outputs.files }}
-        run: |
-          set -euo pipefail
-          {
-            echo "RESOLVE_PROMPT<<PROMPT_EOF"
-            cat <<EOF
-          You are resolving a cherry-pick conflict in a headless CI job. The
-          working tree is release branch \`$TARGET\` with commit $SHA
-          (PR #$PR, "$PR_TITLE") from main part-way through \`git cherry-pick\`.
-
-          Conflicted files:
-          $FILES
-
-          Resolve every conflict marker in those files so the change from
-          PR #$PR applies to \`$TARGET\`:
-            - \`git show $SHA\` is the change being backported; that intent is
-              what must survive. \`git log origin/main\` and \`git show\` let you
-              see how main got there.
-            - \`$TARGET\` is older than main. Keep its code where the PR did not
-              touch it. Do not pull in unrelated features from main to make the
-              pick compile; adapt the change to the code that exists here.
-            - Check that anything the resolved code references (functions,
-              imports, fields, translation keys) exists on this branch.
-            - Leave no conflict markers anywhere.
-
-          Only edit files. Do not run git commands that change state (add,
-          commit, cherry-pick, checkout, reset, stash); the workflow commits
-          after you finish.
-
-          If the change cannot sensibly be applied to this branch (it depends
-          on large pieces of main that are missing here), do not force it:
-          write a short explanation to CHERRY_PICK_ABORT.md at the repo root
-          and stop.
-          EOF
-            echo "PROMPT_EOF"
-          } >> "$GITHUB_ENV"
 
       - name: Resolve conflicts with Claude (primary account)
         id: claude-primary
