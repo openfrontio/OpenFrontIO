@@ -32,6 +32,7 @@ function publicLobbyGameConfig(gc: GameConfig): GameConfig {
   delete sanitized.nameReveals;
   delete sanitized.nameRevealPublicIds;
   delete sanitized.hostCheats;
+  delete sanitized.pool;
   return sanitized;
 }
 
