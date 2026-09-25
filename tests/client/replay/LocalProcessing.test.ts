@@ -131,7 +131,7 @@ describe("extractSnapshotInWorker", () => {
   });
 
   test("terminates worker immediately if signal is already aborted", async () => {
-    const worker = new FakeWorker();
+    const createWorker = vi.fn();
     const abortController = new AbortController();
     abortController.abort();
     await expect(
@@ -141,10 +141,11 @@ describe("extractSnapshotInWorker", () => {
         "p1",
         "c1",
         undefined,
-        async () => worker as unknown as Worker,
+        createWorker,
         abortController.signal,
       ),
     ).rejects.toThrow();
+    expect(createWorker).not.toHaveBeenCalled();
   });
 });
 

@@ -24,7 +24,7 @@ if (!fs.existsSync(dir)) {
 http
   .createServer((req, res) => {
     // The dev client fetches records from another origin (localhost:9000).
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Origin", "http://localhost:9000");
     // The client-side replay's fetch (JoinLobbyModal) sends Content-Type,
     // so the browser asks first. Without this answer it blocks the fetch.
     if (req.method === "OPTIONS") {

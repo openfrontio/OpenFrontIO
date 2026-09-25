@@ -17,6 +17,13 @@ vi.mock("../../src/client/TerrainMapFileLoader", () => ({
   terrainMapFileLoader: { getMapData: vi.fn() },
 }));
 
+vi.mock("../../src/client/InGameModal", () => ({
+  showInGameAlert: vi.fn(),
+  showInGameConfirm: vi.fn(async () => true),
+}));
+
+import { showInGameConfirm } from "../../src/client/InGameModal";
+
 // Side-effect import so the custom element registers (a type-only import
 // would be elided and createElement would return an inert element).
 import "../../src/client/SinglePlayerModal";
@@ -235,5 +242,44 @@ describe("SinglePlayerModal start", () => {
     expect(events).toHaveLength(1);
     expect(events[0].gameID).toBe("save_turns");
     decompressSpy.mockRestore();
+  });
+
+  it("discards game with displayed saveID only when confirmed", async () => {
+    const modal = createModal();
+    modal.resumeSave = { gameID: "save_to_discard" } as any;
+    const clearSpy = vi.spyOn(saveManager, "clearSoloSave");
+    vi.mocked(showInGameConfirm).mockResolvedValueOnce(true);
+
+    await modal.handleDiscardGame();
+
+    expect(clearSpy).toHaveBeenCalledWith("save_to_discard");
+    expect(modal.resumeSave).toBeNull();
+    clearSpy.mockRestore();
+  });
+
+  it("does not clear save if discard is cancelled", async () => {
+    const modal = createModal();
+    modal.resumeSave = { gameID: "save_to_keep" } as any;
+    const clearSpy = vi.spyOn(saveManager, "clearSoloSave");
+    vi.mocked(showInGameConfirm).mockResolvedValueOnce(false);
+
+    await modal.handleDiscardGame();
+
+    expect(clearSpy).not.toHaveBeenCalled();
+    expect(modal.resumeSave).not.toBeNull();
+    clearSpy.mockRestore();
+  });
+
+  it("does nothing when discarding with no displayed save ID", async () => {
+    const modal = createModal();
+    modal.resumeSave = null;
+    const clearSpy = vi.spyOn(saveManager, "clearSoloSave");
+    vi.mocked(showInGameConfirm).mockClear();
+
+    await modal.handleDiscardGame();
+
+    expect(showInGameConfirm).not.toHaveBeenCalled();
+    expect(clearSpy).not.toHaveBeenCalled();
+    clearSpy.mockRestore();
   });
 });

@@ -60,7 +60,7 @@ export function classicReplayHref(gameID: string): string {
 
 /** The page URL that opens the viewer for a game. */
 export function replayViewerHref(gameID: string): string {
-  return `${window.location.pathname}#replay-viewer=${encodeURIComponent(gameID)}`;
+  return `${window.location.pathname}${window.location.search}#replay-viewer=${encodeURIComponent(gameID)}`;
 }
 
 /**

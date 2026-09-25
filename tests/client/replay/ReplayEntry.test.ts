@@ -88,3 +88,13 @@ test("a game from another build is watched on its versioned shell", async () => 
     vi.unstubAllGlobals();
   }
 });
+
+test("replayViewerHref preserves search parameters", () => {
+  const origSearch = window.location.search;
+  try {
+    history.replaceState(null, "", "/?foo=bar");
+    expect(replayViewerHref("game123")).toBe("/?foo=bar#replay-viewer=game123");
+  } finally {
+    history.replaceState(null, "", "/" + origSearch);
+  }
+});

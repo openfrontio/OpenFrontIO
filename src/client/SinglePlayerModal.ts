@@ -344,12 +344,14 @@ export class SinglePlayerModal extends BaseModal {
 
   private async handleDiscardGame() {
     if (this.starting || this.resumeInFlight) return;
+    const saveID = this.resumeSave?.gameID;
+    if (!saveID) return;
     const confirmed = await showInGameConfirm(
       translateText("single_modal.confirm_discard") ||
         "Are you sure you want to discard your saved singleplayer game?",
     );
     if (!confirmed) return;
-    clearSoloSave();
+    clearSoloSave(saveID);
     this.resumeSave = null;
     this.requestUpdate();
   }
