@@ -1,0 +1,53 @@
+{
+  "skill_name": "release",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/release v34  (replay: last release v0.34.10, branch tip = tag v0.34.11, so the new version is v0.34.11)",
+      "expected_output": "A v0.34.11 section dated today, ~8 player-facing lines, CI/refactor/internal stats commits dropped, Josh Harris credited as Josh, followed by the full v0.34.10 body.",
+      "files": [],
+      "assertions": [
+        "Section header is '# v0.34.N' followed by an italic unpadded date line like '*September 25, 2026*'",
+        "Every bullet ends with ' \u2014 **Author**' (em dash, bold author)",
+        "No PR numbers like (#1234) and no email addresses in the notes",
+        "body.md starts with the new section and then contains the previous release's body unchanged (cumulative notes)",
+        "Nothing was created or published on GitHub; the reply asks the user to review before publishing (draft/approval step)",
+        "Josh Harris is credited as **Josh**, not 'Josh Harris' or an email",
+        "CI-only commit (release workflow running twice) and the pure refactor (floor helper) are not listed as their own bullets",
+        "The reply lists the dropped or folded commits so the user can put them back",
+        "Between 6 and 10 bullets (the published notes had 8 from 12 commits)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/release v34  (replay: last release v0.34.16, branch tip = tag v0.34.17)",
+      "expected_output": "Two or three lines: Josh's stats work, and Evan's telemetry/log commits folded into one line.",
+      "files": [],
+      "assertions": [
+        "Section header is '# v0.34.N' followed by an italic unpadded date line like '*September 25, 2026*'",
+        "Every bullet ends with ' \u2014 **Author**' (em dash, bold author)",
+        "No PR numbers like (#1234) and no email addresses in the notes",
+        "body.md starts with the new section and then contains the previous release's body unchanged (cumulative notes)",
+        "Nothing was created or published on GitHub; the reply asks the user to review before publishing (draft/approval step)",
+        "Evan's three telemetry/log commits are folded into at most one bullet",
+        "Josh's two stats commits appear (as one or two bullets) credited **Josh**",
+        "At most 3 bullets total"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/release v34  (replay: last release v0.34.13, branch tip = tag v0.34.14; the branch was rebuilt in between)",
+      "expected_output": "The non-ancestor warning is surfaced prominently; notes drafted from the commits the tip adds, with the caveat that the list may include things not meant for this release.",
+      "files": [],
+      "assertions": [
+        "Section header is '# v0.34.N' followed by an italic unpadded date line like '*September 25, 2026*'",
+        "Every bullet ends with ' \u2014 **Author**' (em dash, bold author)",
+        "No PR numbers like (#1234) and no email addresses in the notes",
+        "body.md starts with the new section and then contains the previous release's body unchanged (cumulative notes)",
+        "Nothing was created or published on GitHub; the reply asks the user to review before publishing (draft/approval step)",
+        "The reply clearly warns that v0.34.13 is not an ancestor of the tip / the branch was reset or rebuilt, near the top",
+        "The reply flags that the commit list may include changes not intended for this release and asks the user to confirm"
+      ]
+    }
+  ]
+}
