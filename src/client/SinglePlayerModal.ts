@@ -281,7 +281,7 @@ export class SinglePlayerModal extends BaseModal {
   };
 
   private async handleResumeGame() {
-    if (this.resumeInFlight || !this.resumeSave) return;
+    if (this.starting || this.resumeInFlight || !this.resumeSave) return;
     this.resumeInFlight = true;
     const attempt = ++this.resumeAttempt;
     const save = this.resumeSave;
@@ -320,19 +320,20 @@ export class SinglePlayerModal extends BaseModal {
       if (attempt !== this.resumeAttempt) return;
 
       this.clearSaveOnGameStart = null;
-      this.dispatchEvent(
-        new CustomEvent("join-lobby", {
-          detail: {
-            gameID: save.gameID,
-            gameStartInfo: save.gameStartInfo,
-            source: "singleplayer",
-            resumeSnapshot,
-            resumeTurns: turns,
-          } satisfies JoinLobbyEvent,
-          bubbles: true,
-          composed: true,
-        }),
-      );
+      const joinEvent = new CustomEvent("join-lobby", {
+        detail: {
+          gameID: save.gameID,
+          gameStartInfo: save.gameStartInfo,
+          source: "singleplayer",
+          resumeSnapshot,
+          resumeTurns: turns,
+        } satisfies JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      this.dispatchEvent(joinEvent);
+      if (joinEvent.defaultPrevented) return;
       this.close();
     } finally {
       if (attempt === this.resumeAttempt) {
@@ -342,14 +343,18 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   private async handleDiscardGame() {
-    if (this.resumeInFlight) return;
+    if (this.starting || this.resumeInFlight) return;
+    const save = this.resumeSave;
+    if (!save) return;
     const confirmed = await showInGameConfirm(
       translateText("single_modal.confirm_discard") ||
         "Are you sure you want to discard your saved singleplayer game?",
     );
     if (!confirmed) return;
-    clearSoloSave();
-    this.resumeSave = null;
+    clearSoloSave(save.gameID);
+    if (this.resumeSave?.gameID === save.gameID) {
+      this.resumeSave = null;
+    }
     this.requestUpdate();
   }
 
@@ -387,14 +392,14 @@ export class SinglePlayerModal extends BaseModal {
             variant="secondary"
             size="sm"
             translationKey="single_modal.discard_game"
-            .disabled=${this.resumeInFlight}
+            .disabled=${this.starting || this.resumeInFlight}
             @click=${this.handleDiscardGame}
           ></o-button>
           <o-button
             variant="primary"
             size="sm"
             translationKey="single_modal.resume"
-            .disabled=${this.resumeInFlight}
+            .disabled=${this.starting || this.resumeInFlight}
             @click=${this.handleResumeGame}
           ></o-button>
         </div>
