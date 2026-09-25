@@ -1,0 +1,322 @@
+{
+  "id": "HornOfAfrica",
+  "name": "Horn Of Africa",
+  "translation_key": "map.hornofafrica",
+  "categories": ["africa", "new"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [1767, 1707],
+      "name": "Seychelles",
+      "flag": "sc"
+    },
+    {
+      "coordinates": [636, 1817],
+      "name": "Zanzibar",
+      "flag": "Zanzibar"
+    },
+    {
+      "coordinates": [29, 1505],
+      "name": "Rwanda",
+      "flag": "rw"
+    },
+    {
+      "coordinates": [10, 1589],
+      "name": "Burundi",
+      "flag": "bi"
+    },
+    {
+      "coordinates": [86, 1005],
+      "name": "South Sudan",
+      "flag": "ss"
+    },
+    {
+      "coordinates": [186, 332],
+      "name": "Sudan",
+      "flag": "sd"
+    },
+    {
+      "coordinates": [511, 1476],
+      "name": "Kenya",
+      "flag": "ke"
+    },
+    {
+      "coordinates": [178, 1244],
+      "name": "Uganda",
+      "flag": "ug"
+    },
+    {
+      "coordinates": [1017, 422],
+      "name": "Yemen",
+      "flag": "ye"
+    },
+    {
+      "coordinates": [852, 115],
+      "name": "Saudi Arabia",
+      "flag": "sa"
+    },
+    {
+      "coordinates": [1757, 71],
+      "name": "Oman",
+      "flag": "om"
+    },
+    {
+      "coordinates": [864, 546],
+      "name": "Djibouti",
+      "flag": "dj"
+    },
+    {
+      "coordinates": [1642, 508],
+      "name": "Socotra",
+      "flag": "ye"
+    },
+    {
+      "coordinates": [596, 215],
+      "name": "Eritrea",
+      "flag": "er"
+    },
+    {
+      "coordinates": [1148, 1141],
+      "name": "Somalia",
+      "flag": "so"
+    },
+    {
+      "coordinates": [1096, 654],
+      "name": "Somaliland",
+      "flag": "Somaliland"
+    },
+    {
+      "coordinates": [1442, 575],
+      "name": "Puntland",
+      "flag": "Puntland"
+    },
+    {
+      "coordinates": [478, 707],
+      "name": "Ethiopia",
+      "flag": "et"
+    },
+    {
+      "coordinates": [525, 351],
+      "name": "Tigray",
+      "flag": "et-ti"
+    },
+    {
+      "coordinates": [1050, 875],
+      "name": "Ogaden",
+      "flag": "Ogaden"
+    },
+    {
+      "coordinates": [409, 487],
+      "name": "Amhara",
+      "flag": "et-am"
+    },
+    {
+      "coordinates": [679, 551],
+      "name": "Afar",
+      "flag": "et-af"
+    },
+    {
+      "coordinates": [638, 720],
+      "name": "Oromo",
+      "flag": "et-or"
+    },
+    {
+      "coordinates": [450, 1719],
+      "name": "Tanzania",
+      "flag": "tz"
+    },
+    {
+      "coordinates": [61, 400],
+      "name": "Kordofan",
+      "flag": "South Kordofan"
+    },
+    {
+      "coordinates": [318, 1113],
+      "name": "Rift Valley",
+      "flag": "ke"
+    },
+    {
+      "coordinates": [667, 1597],
+      "name": "Mombasa",
+      "flag": "ke"
+    },
+    {
+      "coordinates": [379, 73],
+      "name": "Beja",
+      "flag": "Beja"
+    },
+    {
+      "coordinates": [822, 1346],
+      "name": "Jubaland",
+      "flag": "Jubaland"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [51, 25],
+      "name": "Ash-Shamaliyah",
+      "flag": "sd"
+    },
+    {
+      "coordinates": [283, 245],
+      "name": "Nahr an-Nil",
+      "flag": "sd"
+    },
+    {
+      "coordinates": [522, 134],
+      "name": "Red Sea",
+      "flag": "sd"
+    },
+    {
+      "coordinates": [430, 279],
+      "name": "Kassala",
+      "flag": "sd"
+    },
+    {
+      "coordinates": [215, 506],
+      "name": "White Nile",
+      "flag": "sd"
+    },
+    {
+      "coordinates": [322, 448],
+      "name": "Blue Nile",
+      "flag": "sd"
+    },
+    {
+      "coordinates": [410, 605],
+      "name": "Benishangul-Gumuz",
+      "flag": "et-be"
+    },
+    {
+      "coordinates": [165, 288],
+      "name": "Khartoum",
+      "flag": "sd"
+    },
+    {
+      "coordinates": [473, 675],
+      "name": "Addis Ababa",
+      "flag": "et-aa"
+    },
+    {
+      "coordinates": [187, 724],
+      "name": "Gambela",
+      "flag": "et-ga"
+    },
+    {
+      "coordinates": [315, 841],
+      "name": "Southwest Ethiopia",
+      "flag": "et-sw"
+    },
+    {
+      "coordinates": [455, 964],
+      "name": "South Ethiopia",
+      "flag": "et-se"
+    },
+    {
+      "coordinates": [354, 717],
+      "name": "Central Ethiopia",
+      "flag": "et-ce"
+    },
+    {
+      "coordinates": [433, 808],
+      "name": "Sidama",
+      "flag": "et-si"
+    },
+    {
+      "coordinates": [812, 666],
+      "name": "Dire Dawa",
+      "flag": "et-dd"
+    },
+    {
+      "coordinates": [834, 683],
+      "name": "Harari",
+      "flag": "et-ha"
+    },
+    {
+      "coordinates": [805, 871],
+      "name": "Somali Region",
+      "flag": "et-so"
+    },
+    {
+      "coordinates": [1261, 624],
+      "name": "North East State",
+      "flag": "Khatumo"
+    },
+    {
+      "coordinates": [1313, 880],
+      "name": "Galmudug",
+      "flag": "Galmudug"
+    },
+    {
+      "coordinates": [960, 1221],
+      "name": "Southwest State",
+      "flag": "South West Somalia"
+    },
+    {
+      "coordinates": [1230, 1027],
+      "name": "Hirshabelle",
+      "flag": "Hirshabelle"
+    },
+    {
+      "coordinates": [678, 1203],
+      "name": "North Eastern Region",
+      "flag": "ke"
+    },
+    {
+      "coordinates": [525, 1148],
+      "name": "Eastern Region",
+      "flag": "ke"
+    },
+    {
+      "coordinates": [346, 1402],
+      "name": "Nyanza",
+      "flag": "ke"
+    },
+    {
+      "coordinates": [428, 1451],
+      "name": "Nairobi",
+      "flag": "ke"
+    },
+    {
+      "coordinates": [51, 1159],
+      "name": "Equatoria",
+      "flag": "ss"
+    },
+    {
+      "coordinates": [141, 858],
+      "name": "Upper Nile",
+      "flag": "ss"
+    },
+    {
+      "coordinates": [195, 1616],
+      "name": "Mwanza",
+      "flag": "tz"
+    },
+    {
+      "coordinates": [284, 1546],
+      "name": "Musoma",
+      "flag": "tz"
+    },
+    {
+      "coordinates": [207, 1753],
+      "name": "Tabora",
+      "flag": "tz"
+    },
+    {
+      "coordinates": [1090, 53],
+      "name": "Najran",
+      "flag": "sa"
+    },
+    {
+      "coordinates": [1308, 321],
+      "name": "Hadramaut",
+      "flag": "ye"
+    },
+    {
+      "coordinates": [1528, 159],
+      "name": "Dhofar",
+      "flag": "om"
+    }
+  ],
+  "themes": ["africa"]
+}
