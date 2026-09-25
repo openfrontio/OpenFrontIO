@@ -1845,11 +1845,7 @@ class Client {
         ? "/streamer-mode"
         : ClientEnv.gamePath(lobbyId);
     }
-    const currentUrl = window.location.pathname;
-
-    if (currentUrl !== targetUrl) {
-      history.replaceState(null, "", targetUrl);
-    }
+    history.replaceState(null, "", targetUrl);
   }
 
   private async handleLeaveLobby(event?: CustomEvent) {

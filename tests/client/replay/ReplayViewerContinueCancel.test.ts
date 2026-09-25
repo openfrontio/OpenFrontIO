@@ -143,4 +143,37 @@ describe("ReplayViewer continue game cancellation", () => {
     expect(viewer.continueModalOpen).toBe(false);
     document.removeEventListener("join-lobby", joinLobbyListener);
   });
+
+  it("dispatches join-lobby as cancelable and keeps continue modal open when join is prevented", async () => {
+    const viewer = new ReplayViewer() as any;
+    viewer.gameID = "test1234";
+    viewer.record = { info: { gameID: "test1234" } } as any;
+
+    vi.mocked(extractSnapshotInWorker).mockResolvedValue({
+      snapshot: new Uint8Array([1, 2, 3]),
+      gameStartInfo: { gameID: "test1234_c" } as any,
+    });
+
+    let dispatchedEvent: CustomEvent | null = null;
+    const joinLobbyListener = vi.fn((e: Event) => {
+      dispatchedEvent = e as CustomEvent;
+      e.preventDefault();
+    });
+    document.addEventListener("join-lobby", joinLobbyListener);
+
+    viewer.openContinueModal();
+    await viewer.handleContinueGame(
+      new CustomEvent("continue", {
+        detail: { playerID: "p1", difficulty: Difficulty.Medium },
+      }),
+    );
+
+    expect(joinLobbyListener).toHaveBeenCalledTimes(1);
+    expect(dispatchedEvent).not.toBeNull();
+    expect(dispatchedEvent!.cancelable).toBe(true);
+    expect(dispatchedEvent!.defaultPrevented).toBe(true);
+    expect(viewer.continueModalOpen).toBe(true);
+
+    document.removeEventListener("join-lobby", joinLobbyListener);
+  });
 });

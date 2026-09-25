@@ -866,18 +866,22 @@ export class ReplayViewer extends LitElement {
       );
       if (this.continueRequestCount !== requestId) return;
 
-      document.dispatchEvent(
-        new CustomEvent("join-lobby", {
-          detail: {
-            gameID: gameStartInfo.gameID,
-            gameStartInfo,
-            source: "singleplayer",
-            resumeSnapshot: snapshot,
-          } satisfies JoinLobbyEvent,
-          bubbles: true,
-          composed: true,
-        }),
-      );
+      const joinEvent = new CustomEvent("join-lobby", {
+        detail: {
+          gameID: gameStartInfo.gameID,
+          gameStartInfo,
+          source: "singleplayer",
+          resumeSnapshot: snapshot,
+        } satisfies JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      document.dispatchEvent(joinEvent);
+      if (joinEvent.defaultPrevented) {
+        modal?.setLoading(false);
+        return;
+      }
       this.closeContinueModal();
       modal?.setLoading(false);
     } catch (err) {

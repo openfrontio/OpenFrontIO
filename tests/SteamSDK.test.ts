@@ -3,6 +3,7 @@ import { steamSDK } from "../src/client/SteamSDK";
 
 beforeEach(() => {
   delete (window as any).openfrontDesktop;
+  (steamSDK as any).cachedUser = null;
 });
 
 describe("SteamSDK", () => {
@@ -115,5 +116,48 @@ describe("SteamSDK", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe("getSteamIdSync", () => {
+    it("returns null when not on steam", () => {
+      (steamSDK as any).cachedUser = null;
+      expect(steamSDK.getSteamIdSync()).toBeNull();
+    });
+
+    it("returns bridge.steamId when present on the bridge", () => {
+      (steamSDK as any).cachedUser = null;
+      (window as any).openfrontDesktop = {
+        steam: {
+          steamId: "76561198012345678",
+          getAuthTicket: vi.fn(),
+          getUser: vi.fn(),
+        },
+      };
+      expect(steamSDK.getSteamIdSync()).toBe("76561198012345678");
+    });
+
+    it("returns null if bridge does not have a string steamId", () => {
+      (steamSDK as any).cachedUser = null;
+      (window as any).openfrontDesktop = {
+        steam: {
+          steamId: 12345,
+          getAuthTicket: vi.fn(),
+          getUser: vi.fn(),
+        },
+      };
+      expect(steamSDK.getSteamIdSync()).toBeNull();
+    });
+
+    it("prefers cachedUser.steamId if already populated", () => {
+      (steamSDK as any).cachedUser = { steamId: "cached_id_123", name: "User" };
+      (window as any).openfrontDesktop = {
+        steam: {
+          steamId: "bridge_id_456",
+          getAuthTicket: vi.fn(),
+          getUser: vi.fn(),
+        },
+      };
+      expect(steamSDK.getSteamIdSync()).toBe("cached_id_123");
+    });
   });
 });

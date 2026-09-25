@@ -664,4 +664,33 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     );
     closeSpy.mockRestore();
   });
+
+  it("replaces the URL and clears the replay hash when joining a singleplayer lobby", async () => {
+    history.replaceState(null, "", "/#replay-viewer=dqKzit4cWu");
+    expect(window.location.hash).toBe("#replay-viewer=dqKzit4cWu");
+
+    const replaceSpy = vi.spyOn(history, "replaceState");
+
+    document.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID: "sp_game_clear_hash",
+          source: "singleplayer",
+        },
+        bubbles: true,
+      }),
+    );
+
+    await vi.waitFor(() => {
+      const calls = replaceSpy.mock.calls;
+      const targetCall = calls.find(
+        (call) =>
+          typeof call[2] === "string" && call[2].includes("sp_game_clear_hash"),
+      );
+      expect(targetCall).toBeDefined();
+      expect(targetCall![2]).not.toContain("#");
+    });
+
+    replaceSpy.mockRestore();
+  });
 });
