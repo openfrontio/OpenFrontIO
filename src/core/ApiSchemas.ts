@@ -162,6 +162,21 @@ export function isVerifiedUsername(
   );
 }
 
+// Third-party sites a player can prove account ownership to with a short-lived
+// identity token (POST /users/@me/identity_token). Mirrors the API's
+// IDENTITY_TOKEN_AUDIENCES list — a new site needs a backend change first.
+export const IDENTITY_TOKEN_AUDIENCES = [
+  "ofstats.io",
+  "trackerfront.io",
+] as const;
+export type IdentityTokenAudience = (typeof IDENTITY_TOKEN_AUDIENCES)[number];
+
+export const IdentityTokenResponseSchema = z.object({
+  token: z.string(),
+  expiresAt: z.string(),
+});
+export type IdentityTokenResponse = z.infer<typeof IdentityTokenResponseSchema>;
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
