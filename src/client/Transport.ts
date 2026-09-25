@@ -225,6 +225,14 @@ export class SendSpectateEvent implements GameEvent {
   constructor(public readonly spectator: boolean) {}
 }
 
+// One-shot marker that this lobby has already sent us to a sibling, so a
+// redirect can never become a bounce.
+const poolRedirectLatch = (gameID: string) => `pool-redirect:${gameID}`;
+
+// The lobby a redirect came FROM, carried across the navigation: the latch is
+// keyed by the source, but only the target can see that the redirect worked.
+const POOL_REDIRECT_FROM = "pool-redirect-from";
+
 export class Transport {
   // Retry budget for a dropped game socket. The first retry is immediate (a
   // blip should not cost a second), then exponential from the base to the
@@ -481,10 +489,24 @@ export class Transport {
           new Uint8Array(event.data as ArrayBuffer),
           this.zbinCtx ?? undefined,
         );
+        if (msg.type === "redirect") {
+          this.handlePoolRedirect(msg.gameID);
+          return;
+        }
         if (msg.type === "start") {
           // Seed the dictionary from the same players array, in the same
           // order, that the server seeded its own from.
           this.zbinCtx = createGameWireContext(msg.gameStartInfo.players);
+        }
+        if (msg.type === "lobby_info" || msg.type === "start") {
+          // Admitted, so the redirect that sent us here is spent: drop the
+          // source's latch so it can route this player again later. Any other
+          // frame proves nothing — a full sibling sends an error frame first.
+          const from = sessionStorage.getItem(POOL_REDIRECT_FROM);
+          if (from !== null) {
+            sessionStorage.removeItem(poolRedirectLatch(from));
+            sessionStorage.removeItem(POOL_REDIRECT_FROM);
+          }
         }
         this.isSessionReady = true;
         this.flushBuffer();
@@ -541,6 +563,25 @@ export class Transport {
       }
       this.scheduleReconnect();
     };
+  }
+
+  // The lobby we asked for assigned us to a sibling. Getting here twice is
+  // ordinary — sent to a sibling, found it full, came back — so the latched
+  // branch falls through to the refusal dialog rather than leaving a dead
+  // loading screen, the way the WrongWorker recovery below does.
+  //
+  // The search string is dropped: it belongs to the lobby we asked for, not
+  // the one we land on.
+  private handlePoolRedirect(gameID: string) {
+    const from = this.lobbyConfig.gameID;
+    const latch = poolRedirectLatch(from);
+    if (sessionStorage.getItem(latch) !== null) {
+      this.handleConnectionRefused(CloseReason.PoolRedirect);
+      return;
+    }
+    sessionStorage.setItem(latch, "1");
+    sessionStorage.setItem(POOL_REDIRECT_FROM, from);
+    window.location.href = ClientEnv.gamePath(gameID);
   }
 
   private handleConnectionRefused(reason: string) {
