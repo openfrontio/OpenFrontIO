@@ -9,6 +9,9 @@ import {
   ClaimRewardResponseSchema,
   GetMyTribeNamesResponse,
   GetMyTribeNamesResponseSchema,
+  IdentityTokenAudience,
+  IdentityTokenResponse,
+  IdentityTokenResponseSchema,
   NewsItemSchema,
   PaymentsCheckoutResponse,
   PaymentsCheckoutResponseSchema,
@@ -403,6 +406,55 @@ export async function setMarketingConsent(
   } catch (e) {
     console.error("setMarketingConsent: request failed", e);
     return false;
+  }
+}
+
+export type IdentityTokenResult =
+  | { ok: true; data: IdentityTokenResponse }
+  // 401: the session is gone.
+  | { ok: false; code: "logged_out" }
+  // 429: more than 10 requests/min from this IP.
+  | { ok: false; code: "rate_limited" }
+  | { ok: false; code: "failed" };
+
+// POST /users/@me/identity_token — mint a 10-minute token proving which
+// account the player owns, valid only on `audience`. Nothing is stored
+// server-side and callers must not cache it: mint a fresh one per request.
+export async function createIdentityToken(
+  audience: IdentityTokenAudience,
+): Promise<IdentityTokenResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/identity_token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ audience }),
+    });
+    if (response.status === 401) {
+      return { ok: false, code: "logged_out" };
+    }
+    if (response.status === 429) {
+      return { ok: false, code: "rate_limited" };
+    }
+    if (!response.ok) {
+      console.error(
+        "createIdentityToken: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = IdentityTokenResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error("createIdentityToken: invalid response", parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (e) {
+    console.error("createIdentityToken: request failed", e);
+    return { ok: false, code: "failed" };
   }
 }
 
