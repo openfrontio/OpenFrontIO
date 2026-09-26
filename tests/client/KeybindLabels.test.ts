@@ -6,11 +6,7 @@ import { resolveKeybindLabel } from "../../src/client/Utils";
 describe("resolveKeybindLabel", () => {
   it("handles legacy array-valued keybinds without throwing", () => {
     expect(
-      resolveKeybindLabel(
-        { value: ["Digit1"], key: "1" },
-        "Digit2",
-        null,
-      ),
+      resolveKeybindLabel({ value: ["Digit1"], key: "1" }, "Digit2", null),
     ).toBe("1");
   });
 
@@ -18,21 +14,13 @@ describe("resolveKeybindLabel", () => {
     const layoutMap = new Map([["Digit1", "&"]]);
 
     expect(
-      resolveKeybindLabel(
-        { value: ["Digit1"], key: "1" },
-        "Digit2",
-        layoutMap,
-      ),
+      resolveKeybindLabel({ value: ["Digit1"], key: "1" }, "Digit2", layoutMap),
     ).toBe("&");
   });
 
   it("falls back to the default code for malformed saved values", () => {
     expect(
-      resolveKeybindLabel(
-        { value: [123], key: "1" },
-        "Digit2",
-        null,
-      ),
+      resolveKeybindLabel({ value: [123], key: "1" }, "Digit2", null),
     ).toBe("2");
   });
 });
