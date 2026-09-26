@@ -319,6 +319,7 @@ function announceLoggedOut(): void {
 export function clearLocalSession(): void {
   const hadSession = __jwt !== null;
   __jwt = null;
+  updateUserSettingsForJwt(null);
   localStorage.removeItem(PERSISTENT_ID_KEY);
   // Switch cosmetics back to the logged-out scope. The player's own
   // selections stay stored under their publicId and are restored on the
@@ -498,6 +499,7 @@ async function doRefreshJwt(): Promise<void> {
     // pointless round trips and the player's stored persistent ID every time
     // Steam hiccuped. Record why and stop.
     __jwt = null;
+    updateUserSettingsForJwt(null);
     setSessionState({ status: "signed-out", reason: ticketReason(result) });
     return;
   }
@@ -532,10 +534,12 @@ async function doRefreshJwt(): Promise<void> {
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Refresh succeeded");
     __jwt = jwt;
+    updateUserSettingsForJwt(jwt);
   } catch (e) {
     console.warn("Refresh failed", e);
     // if server unreachable, just clear jwt
     __jwt = null;
+    updateUserSettingsForJwt(null);
     return;
   }
 }
@@ -590,6 +594,7 @@ async function doCrazyGamesLogin(token: string): Promise<void> {
     if (response.status !== 200) {
       console.error("CrazyGames login failed", response);
       __jwt = null;
+      updateUserSettingsForJwt(null);
       return;
     }
     const json = await response.json();
@@ -597,9 +602,11 @@ async function doCrazyGamesLogin(token: string): Promise<void> {
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("CrazyGames login succeeded");
     __jwt = jwt;
+    updateUserSettingsForJwt(jwt);
   } catch (e) {
     console.warn("CrazyGames login failed", e);
     __jwt = null;
+    updateUserSettingsForJwt(null);
   }
 }
 
@@ -624,6 +631,7 @@ async function doSteamLogin(ticket: string): Promise<void> {
     if (response.status !== 200) {
       console.error("Steam login failed", response);
       __jwt = null;
+      updateUserSettingsForJwt(null);
       // 401 is infra's unauthorized("Invalid Steam ticket"); 5xx is its
       // internalServerError for "steam unreachable" / "steam auth error",
       // which is Steam's backend rather than anything the player did. Any
@@ -647,10 +655,12 @@ async function doSteamLogin(ticket: string): Promise<void> {
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Steam login succeeded");
     __jwt = jwt;
+    updateUserSettingsForJwt(jwt);
     setSessionState({ status: "signed-in" });
   } catch (e) {
     console.warn("Steam login failed", e);
     __jwt = null;
+    updateUserSettingsForJwt(null);
     setSessionState({ status: "signed-out", reason: "network" });
   }
 }
@@ -669,6 +679,7 @@ export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
         await __refreshPromise.catch(() => {});
       }
       __jwt = null;
+      updateUserSettingsForJwt(null);
       __expiresAt = 0;
       return await userAuth();
     } finally {
@@ -693,6 +704,7 @@ export async function retrySteamSignIn(): Promise<UserAuth> {
         await __refreshPromise.catch(() => {});
       }
       __jwt = null;
+      updateUserSettingsForJwt(null);
       __expiresAt = 0;
       setSessionState({ status: "retrying" });
       return await userAuth();
@@ -780,4 +792,20 @@ function getPersistentIDFromLocalStorage(): string {
   localStorage.setItem(PERSISTENT_ID_KEY, newID);
 
   return newID;
+}
+function updateUserSettingsForJwt(jwt: string | null) {
+  if (!jwt) {
+    UserSettings.setPlayerId(null);
+  } else {
+    try {
+      const payload = decodeJwt(jwt);
+      if (payload.sub) {
+        UserSettings.setPlayerId(base64urlToUuid(payload.sub));
+      } else {
+        UserSettings.setPlayerId(null);
+      }
+    } catch {
+      UserSettings.setPlayerId(null);
+    }
+  }
 }
