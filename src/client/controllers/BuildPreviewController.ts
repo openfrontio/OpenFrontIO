@@ -669,7 +669,7 @@ export class BuildPreviewController implements Controller {
       if (existing) {
         return existing.level() + 1;
       } else {
-        console.error("Failed to find existing SAMLauncher for upgrade");
+        console.warn("Failed to find existing SAMLauncher for upgrade");
       }
     }
     return 1;

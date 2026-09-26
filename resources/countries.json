@@ -24,6 +24,11 @@
     "name": "Aceh"
   },
   {
+    "code": "Adal Sultanate",
+    "continent": "Africa",
+    "name": "Adal Sultanate"
+  },
+  {
     "code": "Circassia",
     "continent": "Europe",
     "name": "Adygea"
@@ -34,6 +39,16 @@
     "name": "Aden State"
   },
   {
+    "code": "et-aa",
+    "continent": "Africa",
+    "name": "Addis Ababa"
+  },
+  {
+    "code": "et-af",
+    "continent": "Africa",
+    "name": "Afar"
+  },
+  {
     "code": "af",
     "continent": "Asia",
     "name": "Afghanistan"
@@ -42,6 +57,11 @@
     "code": "African union",
     "continent": "Africa",
     "name": "African Union"
+  },
+  {
+    "code": "et-am",
+    "continent": "Africa",
+    "name": "Amhara"
   },
   {
     "code": "es-an",
@@ -447,6 +467,11 @@
     "name": "Bedford"
   },
   {
+    "code": "Beja",
+    "continent": "Africa",
+    "name": "Beja"
+  },
+  {
     "code": "by",
     "continent": "Europe",
     "name": "Belarus"
@@ -460,6 +485,11 @@
     "code": "bz",
     "continent": "North America",
     "name": "Belize"
+  },
+  {
+    "code": "et-be",
+    "continent": "Africa",
+    "name": "Benishangul-Gumuz"
   },
   {
     "code": "bj",
@@ -703,6 +733,11 @@
     "code": "cf",
     "continent": "Africa",
     "name": "Central African Republic"
+  },
+  {
+    "code": "et-ce",
+    "continent": "Africa",
+    "name": "Central Ethiopia"
   },
   {
     "code": "fr-cvl",
@@ -977,6 +1012,11 @@
     "name": "Dallas"
   },
   {
+    "code": "Darfur",
+    "continent": "Africa",
+    "name": "Darfur"
+  },
+  {
     "code": "Dathina Sheikhdom",
     "continent": "Asia",
     "name": "Dathina Sheikhdom"
@@ -997,6 +1037,11 @@
     "name": "Democratic Republic of the Congo"
   },
   {
+    "code": "Dervish State",
+    "continent": "Africa",
+    "name": "Dervish State"
+  },
+  {
     "code": "Deseret",
     "continent": "North America",
     "name": "Deseret"
@@ -1010,6 +1055,11 @@
     "code": "Dilmun",
     "continent": "Asia",
     "name": "Dilmun"
+  },
+  {
+    "code": "et-dd",
+    "continent": "Africa",
+    "name": "Dire Dawa"
   },
   {
     "code": "District_of_Columbia",
@@ -1064,6 +1114,11 @@
     "code": "1_Dyfed",
     "continent": "Europe",
     "name": "Dyfed"
+  },
+  {
+    "code": "East African Community",
+    "continent": "Africa",
+    "name": "East African Community"
   },
   {
     "code": "1_East Anglia",
@@ -1336,9 +1391,19 @@
     "name": "Galicia"
   },
   {
+    "code": "Galmudug",
+    "continent": "Africa",
+    "name": "Galmudug"
+  },
+  {
     "code": "gm",
     "continent": "Africa",
     "name": "Gambia"
+  },
+  {
+    "code": "et-ga",
+    "continent": "Africa",
+    "name": "Gambela"
   },
   {
     "code": "Gascony",
@@ -1522,6 +1587,11 @@
     "name": "Hakupu"
   },
   {
+    "code": "et-ha",
+    "continent": "Africa",
+    "name": "Harari"
+  },
+  {
     "code": "Haushabi",
     "continent": "Asia",
     "name": "Haushabi Sultanate"
@@ -1544,6 +1614,11 @@
     "code": "DE-HE",
     "continent": "Europe",
     "name": "Hesse"
+  },
+  {
+    "code": "Hirshabelle",
+    "continent": "Africa",
+    "name": "Hirshabelle"
   },
   {
     "code": "Holy Roman Empire",
@@ -1706,6 +1781,11 @@
     "name": "Jordan"
   },
   {
+    "code": "Jubaland",
+    "continent": "Africa",
+    "name": "Jubaland"
+  },
+  {
     "code": "Jujuy",
     "continent": "South America",
     "name": "Jujuy"
@@ -1799,6 +1879,11 @@
     "code": "Key West",
     "continent": "North America",
     "name": "Key West"
+  },
+  {
+    "code": "Khatumo",
+    "continent": "Africa",
+    "name": "Khatumo"
   },
   {
     "code": "Khemet",
@@ -2774,6 +2859,11 @@
     "name": "Occitania"
   },
   {
+    "code": "Ogaden",
+    "continent": "Africa",
+    "name": "Ogaden"
+  },
+  {
     "code": "Ohio",
     "continent": "North America",
     "name": "Ohio"
@@ -2817,6 +2907,11 @@
     "code": "Orlando",
     "continent": "North America",
     "name": "Orlando"
+  },
+  {
+    "code": "et-or",
+    "continent": "Africa",
+    "name": "Oromia"
   },
   {
     "code": "nz-otago",
@@ -3031,6 +3126,11 @@
     "code": "pr",
     "continent": "North America",
     "name": "Puerto Rico"
+  },
+  {
+    "code": "Puntland",
+    "continent": "Africa",
+    "name": "Puntland"
   },
   {
     "code": "Purple Flag",
@@ -3849,6 +3949,11 @@
     "name": "Sicily"
   },
   {
+    "code": "et-si",
+    "continent": "Africa",
+    "name": "Sidama"
+  },
+  {
     "code": "sl",
     "continent": "Africa",
     "name": "Sierra Leone"
@@ -3913,9 +4018,19 @@
     "name": "Solomon Islands"
   },
   {
+    "code": "et-so",
+    "continent": "Africa",
+    "name": "Somali Region"
+  },
+  {
     "code": "so",
     "continent": "Africa",
     "name": "Somalia"
+  },
+  {
+    "code": "Somaliland",
+    "continent": "Africa",
+    "name": "Somaliland"
   },
   {
     "code": "za",
@@ -3943,6 +4058,11 @@
     "name": "South Dakota"
   },
   {
+    "code": "et-se",
+    "continent": "Africa",
+    "name": "South Ethiopia"
+  },
+  {
     "code": "gs",
     "continent": "Antarctica",
     "name": "South Georgia and the South Sandwich Islands"
@@ -3953,9 +4073,24 @@
     "name": "South Korea"
   },
   {
+    "code": "South Kordofan",
+    "continent": "Africa",
+    "name": "South Kordofan"
+  },
+  {
     "code": "ss",
     "continent": "Africa",
     "name": "South Sudan"
+  },
+  {
+    "code": "et-sw",
+    "continent": "Africa",
+    "name": "South West Ethiopia"
+  },
+  {
+    "code": "South West Somalia",
+    "continent": "Africa",
+    "name": "South West Somalia"
   },
   {
     "code": "south yemen",
@@ -4008,6 +4143,11 @@
     "name": "Sudan"
   },
   {
+    "code": "Mahdist Sudan",
+    "continent": "Africa",
+    "name": "Sudanese Mahdiyya"
+  },
+  {
     "code": "Sultanate of Fadhli",
     "continent": "Asia",
     "name": "Sultanate of Fadhli"
@@ -4021,6 +4161,11 @@
     "code": "Sultanate of Lower Yafa",
     "continent": "Asia",
     "name": "Sultanate of Lower Yafa"
+  },
+  {
+    "code": "Sultanate of Mogadishu",
+    "continent": "Africa",
+    "name": "Sultanate of Mogadishu"
   },
   {
     "code": "Sultanate of Nejd",
@@ -4166,6 +4311,11 @@
     "code": "Tierra del Fuego",
     "continent": "South America",
     "name": "Tierra del Fuego"
+  },
+  {
+    "code": "et-ti",
+    "continent": "Africa",
+    "name": "Tigray"
   },
   {
     "code": "tl",
@@ -4568,6 +4718,11 @@
     "code": "zm",
     "continent": "Africa",
     "name": "Zambia"
+  },
+  {
+    "code": "Zanzibar",
+    "continent": "Africa",
+    "name": "Zanzibar"
   },
   {
     "code": "zayyanid",
