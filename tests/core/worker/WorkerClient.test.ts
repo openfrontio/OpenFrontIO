@@ -130,3 +130,54 @@ describe("WorkerClient playerInteraction", () => {
     expect(internalClient.messageHandlers.size).toBe(0);
   });
 });
+
+describe("WorkerClient snapshot", () => {
+  it("resolves with bytes, snapshot and tick when worker responds", async () => {
+    const { client, worker, internalClient } = createClient();
+    const promise = client.snapshot("commit-123");
+    const request = vi.mocked(worker.postMessage).mock.calls[0][0] as {
+      type: string;
+      id: string;
+      gitCommit?: string;
+    };
+    expect(request.type).toBe("snapshot");
+    expect(request.gitCommit).toBe("commit-123");
+
+    const dummyBytes = new Uint8Array([1, 2, 3]);
+    internalClient.handleWorkerMessage({
+      data: {
+        type: "snapshot_result",
+        id: request.id,
+        snapshot: dummyBytes,
+        tick: 42,
+      },
+    } as MessageEvent<WorkerMessage>);
+
+    await expect(promise).resolves.toEqual({
+      bytes: dummyBytes,
+      snapshot: dummyBytes,
+      tick: 42,
+    });
+    expect(internalClient.messageHandlers.size).toBe(0);
+  });
+
+  it("rejects when worker returns null snapshot", async () => {
+    const { client, worker, internalClient } = createClient();
+    const promise = client.snapshot();
+    const request = vi.mocked(worker.postMessage).mock.calls[0][0] as {
+      id: string;
+    };
+
+    internalClient.handleWorkerMessage({
+      data: {
+        type: "snapshot_result",
+        id: request.id,
+        snapshot: null,
+        tick: 0,
+      },
+    } as MessageEvent<WorkerMessage>);
+
+    await expect(promise).rejects.toThrow("Snapshot failed");
+    expect(internalClient.messageHandlers.size).toBe(0);
+  });
+});

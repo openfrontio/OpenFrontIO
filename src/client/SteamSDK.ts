@@ -77,6 +77,27 @@ function normaliseTicketResult(value: unknown): SteamTicketResult {
 // Thin renderer wrapper over the desktop shell's Steam bridge. Mirrors
 // CrazyGamesSDK; the native work lives in the Electron main process.
 class SteamSDK {
+  private cachedUser: { steamId: string; name: string } | null = null;
+
+  constructor() {
+    if (typeof window !== "undefined" && this.isOnSteam()) {
+      void this.getUser();
+    }
+  }
+
+  getSteamIdSync(): string | null {
+    if (this.cachedUser?.steamId) return this.cachedUser.steamId;
+    const bridge = steamBridge();
+    if (
+      bridge &&
+      "steamId" in bridge &&
+      typeof (bridge as any).steamId === "string"
+    ) {
+      return (bridge as any).steamId;
+    }
+    return null;
+  }
+
   isOnSteam(): boolean {
     return steamBridge() !== undefined;
   }
@@ -109,7 +130,11 @@ class SteamSDK {
     const bridge = steamBridge();
     if (!bridge) return null;
     try {
-      return await bridge.getUser();
+      const user = await bridge.getUser();
+      if (user?.steamId) {
+        this.cachedUser = user;
+      }
+      return user;
     } catch {
       return null;
     }

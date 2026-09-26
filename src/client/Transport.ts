@@ -727,6 +727,12 @@ export class Transport {
     } satisfies ClientRejoinMessage);
   }
 
+  disableLocalSave(): void {
+    if (this.isLocal) {
+      this.localServer.disableSave();
+    }
+  }
+
   leaveGame() {
     for (const unsubscribe of this.unsubscribers.splice(0)) {
       unsubscribe();

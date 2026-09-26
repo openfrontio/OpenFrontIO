@@ -2,6 +2,10 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import {
+  GameUpdateType,
+  type GameUpdateViewData,
+} from "../../../src/core/game/GameUpdates";
+import {
   compressSnapshot,
   decompressSnapshot,
   readSnapshotHeader,
@@ -61,12 +65,54 @@ describe("snapshot fixtures from earlier builds", { timeout: 120_000 }, () => {
       new Uint8Array(fs.readFileSync(path.join(DIR, name))),
     );
     const header = readSnapshotHeader(bytes);
-    const runner = await restoreScriptedRunner(MAP, start, bytes);
+    expect(header.startTick).not.toBeNull();
+    const recordedUpdates: GameUpdateViewData[] = [];
+    const runner = await restoreScriptedRunner(MAP, start, bytes, (gu) => {
+      if (!("errMsg" in gu)) recordedUpdates.push(gu);
+    });
     expect(runner.game.ticks()).toBe(header.tick);
+    expect(runner.game.startTick()).toBe(header.startTick);
+    expect(runner.game.inSpawnPhase()).toBe(false);
     expect(runner.game.players().length).toBeGreaterThan(0);
-    for (let i = 0; i < 100; i++) stepScripted(runner);
+
+    // The first tick after restoring past spawn phase emits exactly one SpawnPhaseEnd
+    stepScripted(runner);
+    expect(
+      recordedUpdates[0].updates[GameUpdateType.SpawnPhaseEnd],
+    ).toHaveLength(1);
+    expect(
+      recordedUpdates[0].updates[GameUpdateType.SpawnPhaseEnd][0].startTick,
+    ).toBe(header.startTick);
+
+    // The second tick emits none
+    stepScripted(runner);
+    expect(
+      recordedUpdates[1].updates[GameUpdateType.SpawnPhaseEnd],
+    ).toHaveLength(0);
+
+    for (let i = 2; i < 100; i++) stepScripted(runner);
     // A snapshot written by this build from the migrated game loads too.
     const again = await restoreScriptedRunner(MAP, start, runner.snapshot());
     expect(again.game.ticks()).toBe(header.tick + 100);
+  });
+
+  test("restoring a snapshot still in the spawn phase emits no synthetic SpawnPhaseEnd", async () => {
+    const spawnRunner = await createScriptedRunner(MAP, start);
+    expect(spawnRunner.game.inSpawnPhase()).toBe(true);
+    const spawnSnapshot = spawnRunner.snapshot();
+    const spawnUpdates: GameUpdateViewData[] = [];
+    const restoredSpawnRunner = await restoreScriptedRunner(
+      MAP,
+      start,
+      spawnSnapshot,
+      (gu) => {
+        if (!("errMsg" in gu)) spawnUpdates.push(gu);
+      },
+    );
+    expect(restoredSpawnRunner.game.inSpawnPhase()).toBe(true);
+    stepScripted(restoredSpawnRunner);
+    expect(spawnUpdates[0].updates[GameUpdateType.SpawnPhaseEnd]).toHaveLength(
+      0,
+    );
   });
 });

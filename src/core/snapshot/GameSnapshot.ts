@@ -214,6 +214,7 @@ export interface SnapshotHeader {
   gameID: string | null;
   tick: number;
   gameConfig: GameConfig;
+  startTick?: number | null;
 }
 
 function decodeRoot(bytes: Uint8Array): Root {
@@ -243,6 +244,12 @@ function decodeRoot(bytes: Uint8Array): Root {
   return root.data;
 }
 
+function readStartTick(d: unknown): number | null {
+  if (typeof d !== "object" || d === null) return null;
+  const v = (d as { startTick?: unknown }).startTick;
+  return typeof v === "number" && Number.isInteger(v) ? v : null;
+}
+
 /** Reads what a restore needs to load first: the config and the map. */
 export function readSnapshotHeader(bytes: Uint8Array): SnapshotHeader {
   const root = decodeRoot(bytes);
@@ -252,6 +259,7 @@ export function readSnapshotHeader(bytes: Uint8Array): SnapshotHeader {
     gameID: root.gameID,
     tick: root.tick,
     gameConfig: GameConfigSchema.parse(root.gameConfig),
+    startTick: readStartTick(root.game?.d),
   };
 }
 
@@ -261,6 +269,35 @@ export interface RestoreDeps {
   gameMap: GameMap;
   miniGameMap: GameMap;
   teamGameSpawnAreas?: TeamGameSpawnAreas;
+}
+
+/**
+ * Restores map edits (water nukes, fallout, defense) and tile ownership from a
+ * snapshot onto freshly loaded map instances. Used on the client so GameView's
+ * local maps match the simulation state without waiting for per-tile deltas.
+ */
+export function restoreMapsFromSnapshot(
+  bytes: Uint8Array,
+  gameMap: GameMap,
+  miniGameMap?: GameMap,
+): void {
+  const root = decodeRoot(bytes);
+  (gameMap as GameMapImpl).restoreSnapshot(
+    readVersioned(GameMapSnapshot, root.map),
+  );
+  if (miniGameMap) {
+    (miniGameMap as GameMapImpl).restoreSnapshot(
+      readVersioned(GameMapSnapshot, root.miniMap),
+    );
+  }
+  const players = root.players.map((p) => readVersioned(PlayerSnapshot, p));
+  for (const p of players) {
+    const id = p.smallID;
+    const tiles = p.tiles;
+    for (let i = 0; i < tiles.length; i++) {
+      gameMap.setOwnerID(tiles[i], id);
+    }
+  }
 }
 
 /**

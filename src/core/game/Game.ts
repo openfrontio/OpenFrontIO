@@ -835,6 +835,7 @@ export interface Game extends GameMap {
 
   // Game State
   ticks(): Tick;
+  startTick(): Tick | null;
   inSpawnPhase(): boolean;
   endSpawnPhase(): void;
   executeNextTick(): GameUpdates;

@@ -26,6 +26,7 @@ import {
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { isDesktopShell } from "../../DesktopShell";
 import { Platform } from "../../Platform";
+import { clearSoloSave } from "../../SinglePlayerSaveManager";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
@@ -282,6 +283,10 @@ export class WinModal extends LitElement implements Controller {
 
   private _handleExit() {
     this.hide();
+    const myPlayer = this.game?.myPlayer();
+    if (myPlayer && !myPlayer.isAlive()) {
+      clearSoloSave(this.game?.gameID());
+    }
     window.location.href = homeHref();
   }
 

@@ -25,6 +25,12 @@ async function createGameWorker(): Promise<Worker> {
   return new GameWorker();
 }
 
+export interface WorkerSnapshotResult {
+  bytes: Uint8Array;
+  snapshot: Uint8Array;
+  tick: number;
+}
+
 export class WorkerClient {
   private worker: Worker | null = null;
   private isInitialized = false;
@@ -127,7 +133,7 @@ export class WorkerClient {
   }
 
   /** Serializes the worker's game at its current tick (uncompressed). */
-  snapshot(gitCommit?: string): Promise<Uint8Array> {
+  snapshot(gitCommit?: string): Promise<WorkerSnapshotResult> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
         reject(new Error("Worker not initialized"));
@@ -141,7 +147,11 @@ export class WorkerClient {
           if (message.snapshot === null) {
             reject(new Error("Snapshot failed"));
           } else {
-            resolve(message.snapshot);
+            resolve({
+              bytes: message.snapshot,
+              snapshot: message.snapshot,
+              tick: message.tick,
+            });
           }
         }
       });
