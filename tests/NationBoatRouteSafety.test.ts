@@ -239,6 +239,33 @@ describe("Nation boats and hostile warships", () => {
       expect(warshipsOrdered(spy, nation)).toHaveLength(expected);
     },
   );
+
+  it.each([
+    [-1n, 0],
+    [0n, 2],
+  ])(
+    "Impossible owning a warship, with %i gold over the price of 2 more, orders %i",
+    async (extraGold, expected) => {
+      const { game, nation, navy, behavior } = await setupBoats(
+        Difficulty.Impossible,
+      );
+      nation.buildUnit(UnitType.Port, game.ref(7, 8), {});
+      for (const water of [game.ref(11, 12), game.ref(12, 12)]) {
+        navy.buildUnit(UnitType.Warship, water, { patrolTile: water });
+      }
+      const near = game.ref(10, 10);
+      nation.buildUnit(UnitType.Warship, near, { patrolTile: near });
+      const price = (extra: number) =>
+        game.unitInfo(UnitType.Warship).cost(game, nation, extra);
+      expect(price(1)).toBeGreaterThan(price(0));
+      nation.removeGold(nation.gold());
+      nation.addGold(price(0) + price(1) + extraGold);
+      const spy = spyExecutions(game);
+      behavior.maybeAttack();
+      expect(boatsSent(spy)).toHaveLength(0);
+      expect(warshipsOrdered(spy, nation)).toHaveLength(expected);
+    },
+  );
 });
 
 // Synthetic seas: `nation` owns the land in the north, `enemy` the land in the south

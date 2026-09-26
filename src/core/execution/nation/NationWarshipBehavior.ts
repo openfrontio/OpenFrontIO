@@ -350,9 +350,12 @@ export class NationWarshipBehavior {
     // Ships sent in one by one get sunk one by one
     if (builds > 0) {
       if (this.player.units(UnitType.Warship).length + builds > 10) return;
-      if (this.player.gold() < this.cost(UnitType.Warship) * BigInt(builds)) {
-        return;
+      // Each ship we own raises the price of the next
+      let total = 0n;
+      for (let i = 0; i < builds; i++) {
+        total += this.cost(UnitType.Warship, i);
       }
+      if (this.player.gold() < total) return;
       if (this.player.canBuild(UnitType.Warship, target) === false) return;
     }
     for (const w of recruits) {
@@ -594,8 +597,8 @@ export class NationWarshipBehavior {
     this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_WARSHIP_RETALIATION);
   }
 
-  private cost(type: UnitType): Gold {
-    return this.game.unitInfo(type).cost(this.game, this.player);
+  private cost(type: UnitType, extraUnits: number = 0): Gold {
+    return this.game.unitInfo(type).cost(this.game, this.player, extraUnits);
   }
 }
 
