@@ -386,13 +386,15 @@ export function resolveKeybindLabel(
   defaultCode: string,
   layoutMap: Map<string, string> | null,
 ): string {
-  const rawValue =
-    typeof entry === "string" ? entry : (entry?.value ?? defaultCode);
+  const savedValue = typeof entry === "string" ? entry : entry?.value;
+  const hasValidSavedValue =
+    typeof savedValue === "string" ||
+    (Array.isArray(savedValue) && typeof savedValue[0] === "string");
   const valueCode =
-    typeof rawValue === "string"
-      ? rawValue
-      : Array.isArray(rawValue) && typeof rawValue[0] === "string"
-        ? rawValue[0]
+    typeof savedValue === "string"
+      ? savedValue
+      : Array.isArray(savedValue) && typeof savedValue[0] === "string"
+        ? savedValue[0]
         : defaultCode;
   const savedKey =
     typeof entry === "object" && typeof entry?.key === "string"
@@ -416,7 +418,7 @@ export function resolveKeybindLabel(
     return isShift ? `${prefix}${char}` : char;
   }
 
-  if (savedKey) {
+  if (savedKey && hasValidSavedValue) {
     return savedKey;
   }
 
