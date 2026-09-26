@@ -100,6 +100,24 @@ export class TutorialPanel extends LitElement implements Controller {
   @state() private confirmingClose = false;
   @state() private ctx: TutorialContext | null = null;
   @state() private layoutMap: Map<string, string> | null = null;
+  private keyboardLayoutRequestId = 0;
+
+  private readonly refreshKeyboardLayout = () => {
+    const keyboard = navigator.keyboard;
+    if (!keyboard) return;
+
+    const requestId = ++this.keyboardLayoutRequestId;
+    void keyboard
+      .getLayoutMap()
+      .then((map) => {
+        if (requestId === this.keyboardLayoutRequestId) {
+          this.layoutMap = map;
+        }
+      })
+      .catch((e) => {
+        console.warn("Failed to get keyboard layout map:", e);
+      });
+  };
 
   private progress = new TutorialProgress();
   private started = false;
@@ -117,15 +135,23 @@ export class TutorialPanel extends LitElement implements Controller {
   connectedCallback() {
     super.connectedCallback();
     if (navigator.keyboard) {
-      navigator.keyboard
-        .getLayoutMap()
-        .then((map) => {
-          this.layoutMap = map;
-        })
-        .catch((e) => {
-          console.warn("Failed to get keyboard layout map:", e);
-        });
+      navigator.keyboard.addEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+      this.refreshKeyboardLayout();
     }
+  }
+
+  disconnectedCallback() {
+    this.keyboardLayoutRequestId++;
+    if (navigator.keyboard) {
+      navigator.keyboard.removeEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+    }
+    super.disconnectedCallback();
   }
   /** Nation smallID → its attitude toward us, fetched during the ally step. */
   private nationRelations = new Map<number, Relation>();
