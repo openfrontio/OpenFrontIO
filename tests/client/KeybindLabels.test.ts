@@ -85,11 +85,6 @@ describe("HelpModal keyboard layout refresh", () => {
       expect(keyboard.getLayoutMap).toHaveBeenCalledTimes(1);
     });
 
-    resolveFirst(firstMap);
-    await vi.waitFor(() => {
-      expect(state.layoutMap).toBe(firstMap);
-    });
-
     keyboard.dispatchEvent(new Event("layoutchange"));
     await vi.waitFor(() => {
       expect(keyboard.getLayoutMap).toHaveBeenCalledTimes(2);
@@ -100,7 +95,7 @@ describe("HelpModal keyboard layout refresh", () => {
       expect(state.layoutMap).toBe(secondMap);
     });
 
-    resolveFirst(new Map([["KeyQ", "stale"]]));
+    resolveFirst(firstMap);
     await Promise.resolve();
     expect(state.layoutMap).toBe(secondMap);
 
