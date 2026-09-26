@@ -19,13 +19,16 @@ const outDir = path.join(root, "dist", "cosmetic-preview");
 const PACKAGE_NAME = "@openfront/cosmetic-preview";
 const BASE_VERSION = "0.1.0";
 
+/** Run Git in the repository root and return its trimmed standard output. */
 function git(...args: string[]): string {
   return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 }
 
-// Every game asset the bundle can request must ship with it. Asset paths are
-// string literals handed to assetUrl(), so the built JS lists them; the map
-// paths are assembled at runtime, so they are checked separately below.
+/**
+ * Verify that bundled asset literals are listed and every listed file exists.
+ * Map paths are assembled at runtime and covered by the asset resolution tests.
+ * @throws If a referenced asset is unlisted or a listed source file is missing.
+ */
 function checkAssetList(): void {
   const shipped = new Set<string>(PREVIEW_ASSET_PATHS);
   const referenced = new Set<string>();
@@ -51,6 +54,7 @@ function checkAssetList(): void {
   }
 }
 
+/** Copy the listed resources into the package's assets directory. */
 function copyAssets(): void {
   for (const asset of PREVIEW_ASSET_PATHS) {
     const target = path.join(outDir, "assets", asset);
@@ -59,8 +63,9 @@ function copyAssets(): void {
   }
 }
 
-// api.ts is types only with no imports, so it is already a declaration file;
-// the two runtime exports are declared after it.
+/**
+ * Write index.d.ts from the import-free public types and runtime declarations.
+ */
 function writeTypes(): void {
   const api = fs.readFileSync(
     path.join(root, "src", "client", "cosmetic-preview", "api.ts"),
@@ -80,6 +85,7 @@ export declare const PREVIEW_ASSET_PATHS: readonly string[];
   );
 }
 
+/** Write package metadata with the supplied version and commit, and copy licenses. */
 function writePackageJson(version: string, commit: string): void {
   const pkg = {
     name: PACKAGE_NAME,
@@ -105,6 +111,7 @@ function writePackageJson(version: string, commit: string): void {
   }
 }
 
+/** Build and validate the preview library, then pack a commit-versioned tarball. */
 async function main(): Promise<void> {
   const commit = git("rev-parse", "HEAD");
   const dirty = git("status", "--porcelain").length > 0;

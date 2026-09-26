@@ -21,6 +21,11 @@ setStandaloneTranslations({
   "store.preview_salvo_toggle": store.preview_salvo_toggle,
 });
 
+/**
+ * Create a preview handle and return the initial request's validation result.
+ * Replace the host's contents on the first valid request; invalid requests leave
+ * them intact. The handle reuses the canvas until destroy() releases it.
+ */
 function mountCosmeticPreview(
   host: HTMLElement,
   request: CosmeticPreviewRequest,

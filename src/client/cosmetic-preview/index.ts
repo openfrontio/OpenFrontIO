@@ -18,6 +18,10 @@ import "./preview.css";
 
 export { PREVIEW_ASSET_PATHS } from "./assets";
 
+/**
+ * Configure the host's asset base before loading and returning the renderer API.
+ * Reject if asset configuration fails or the renderer cannot be imported.
+ */
 export async function loadCosmeticPreview(
   options: LoadCosmeticPreviewOptions,
 ): Promise<CosmeticPreviewModule> {

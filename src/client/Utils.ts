@@ -479,6 +479,7 @@ type TranslationSource = Pick<
 // has a <lang-selector>, which keeps precedence.
 let standaloneTranslations: TranslationSource | null = null;
 
+/** Register English fallback strings for pages without a <lang-selector>. */
 export function setStandaloneTranslations(
   defaultTranslations: Record<string, string>,
 ): void {
@@ -489,6 +490,10 @@ export function setStandaloneTranslations(
   };
 }
 
+/**
+ * Return the connected language selector, or standalone strings if none exists.
+ * Return null when no document or translation source is available.
+ */
 function getCachedLangSelector(): TranslationSource | null {
   const self = translateText as any;
   const cached = self.langSelector as LangSelector | null | undefined;

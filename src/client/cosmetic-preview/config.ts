@@ -54,6 +54,7 @@ export type PreviewRequestResult =
   | { ok: true; request: PreviewRequest }
   | { ok: false; error: string };
 
+/** Validate a preview request and return parsed data or a readable schema error. */
 export function parsePreviewRequest(input: unknown): PreviewRequestResult {
   const parsed = PreviewRequestSchema.safeParse(input);
   return parsed.success
@@ -64,8 +65,10 @@ export function parsePreviewRequest(input: unknown): PreviewRequestResult {
 // Placeholder name for a cosmetic that has none of its own. Never shown.
 const PREVIEW_NAME = "preview";
 
-// The request as the store component expects it. `relationship` only affects
-// store chrome the preview never draws.
+/**
+ * Convert a validated request into the cosmetic expected by the store renderer.
+ * The owned relationship only affects store chrome the preview never draws.
+ */
 export function toResolvedCosmetic(req: PreviewRequest): ResolvedCosmetic {
   if (req.type === "pattern") {
     const cosmetic: Pattern = {

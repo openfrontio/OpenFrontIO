@@ -13,10 +13,12 @@ export const PREVIEW_ASSET_PATHS = [
   "maps/australia/map4x.bin",
 ] as const;
 
-// assetUrl() (src/core/AssetUrls.ts) reads these globals when no
-// window.BOOTSTRAP_CONFIG exists — which is the case in any host app. Several
-// render passes resolve their URLs when their module loads, so this must run
-// before the renderer is imported; loadCosmeticPreview enforces the order.
+/**
+ * Configure the asset globals used by assetUrl() without window.BOOTSTRAP_CONFIG.
+ * Call before importing the renderer, whose passes resolve URLs on module load.
+ * @param assetBase URL prefix for the shipped assets; trailing slashes are removed.
+ * @throws If the asset base was already configured to a different location.
+ */
 export function configurePreviewAssets(assetBase: string): void {
   const base = assetBase.replace(/\/+$/, "");
   const current = globalThis.__CDN_BASE__;
