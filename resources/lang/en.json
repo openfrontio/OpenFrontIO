@@ -2379,6 +2379,7 @@
     "too_long": "Username must not exceed {max} characters.",
     "too_short": "Username must be at least {min} characters long.",
     "verified_active_hint": "You are playing under your verified account name.",
+    "verified_claim_hint": "Claim your verified name",
     "verified_heading": "Verified name",
     "verified_held_body": "\"{name}\" is held by another subscriber, so you're shown as \"{name}\" with a number and can't play with the verified check under it. Change your name to one you can hold?",
     "verified_held_confirm": "Change name",

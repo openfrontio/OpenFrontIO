@@ -119,7 +119,7 @@ describe("boot sequencing on CrazyGames", () => {
     });
     await runBootInterrupt(
       interrupt,
-      { claimStore: {}, grantStore: {}, publicId: "p" },
+      { claimStore: {}, grantStore: {}, publicId: "p", hasRewards: false },
       ports,
     );
     return { interrupt, ...calls };

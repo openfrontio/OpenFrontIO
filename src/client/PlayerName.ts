@@ -93,6 +93,16 @@ export function accountNameHeld(
   return player.username !== player.usernameBase;
 }
 
+export function accountPremiumUnclaimed(
+  userMe: UserMeResponse | false | null,
+): boolean {
+  if (userMe === null || userMe === false) return false;
+  const player = userMe.player;
+  const status = player.usernameStatus;
+  if (status !== "premium" && status !== "indefinite") return false;
+  return !player.username;
+}
+
 // Cut to the free-form cap, not the wire cap: the result becomes the name in
 // the field, so anything longer would be seeded and then rejected by the very
 // form the player is looking at.

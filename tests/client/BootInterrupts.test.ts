@@ -434,7 +434,12 @@ describe("runBootInterrupt", () => {
     return { base, calls };
   }
 
-  const context = { claimStore: {}, grantStore: {}, publicId: ME };
+  const context = {
+    claimStore: {},
+    grantStore: {},
+    publicId: ME,
+    hasRewards: false,
+  };
 
   async function run(
     interrupt: BootInterrupt | null,
@@ -726,7 +731,7 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     };
     await runBootInterrupt(
       nextBootInterrupt(inputs),
-      { claimStore: {}, grantStore: {}, publicId: ME },
+      { claimStore: {}, grantStore: {}, publicId: ME, hasRewards: false },
       {
         translate: unready,
         confirm: async (body) => {
@@ -864,7 +869,7 @@ describe("running the Steam grant notices", () => {
     const { base, calls } = ports();
     await runBootInterrupt(
       "grant-welcome",
-      { claimStore: {}, grantStore, publicId: ME },
+      { claimStore: {}, grantStore, publicId: ME, hasRewards: false },
       base,
     );
     expect(calls.alerted).toEqual([
@@ -893,7 +898,7 @@ describe("running the Steam grant notices", () => {
     };
     await runBootInterrupt(
       "grant-welcome",
-      { claimStore: {}, grantStore, publicId: ME },
+      { claimStore: {}, grantStore, publicId: ME, hasRewards: false },
       base,
     );
     expect(storedBeforeAlert).toBe(true);
@@ -906,7 +911,7 @@ describe("running the Steam grant notices", () => {
     const { base, calls } = ports();
     await runBootInterrupt(
       "grant-ended",
-      { claimStore: {}, grantStore, publicId: ME },
+      { claimStore: {}, grantStore, publicId: ME, hasRewards: false },
       base,
     );
     expect(calls.alerted).toEqual([
@@ -926,7 +931,7 @@ describe("running the Steam grant notices", () => {
     for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
       await runBootInterrupt(
         interrupt,
-        { claimStore: {}, grantStore: {}, publicId: ME },
+        { claimStore: {}, grantStore: {}, publicId: ME, hasRewards: false },
         base,
       );
     }
@@ -941,7 +946,7 @@ describe("running the Steam grant notices", () => {
     for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
       await runBootInterrupt(
         interrupt,
-        { claimStore: {}, grantStore, publicId: ME },
+        { claimStore: {}, grantStore, publicId: ME, hasRewards: false },
         base,
       );
     }

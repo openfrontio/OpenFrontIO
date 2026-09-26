@@ -818,7 +818,12 @@ class Client {
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
           }),
-          { claimStore, grantStore: grantStoreAfterDispatch, publicId },
+          {
+            claimStore,
+            grantStore: grantStoreAfterDispatch,
+            publicId,
+            hasRewards: rewards.length > 0,
+          },
           {
             translate: translateText,
             confirm: (body, heading, confirmText) =>

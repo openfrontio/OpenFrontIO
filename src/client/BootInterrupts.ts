@@ -491,6 +491,7 @@ export interface BootInterruptContext {
   claimStore: ClaimPromptStore;
   grantStore: SteamGrantStore;
   publicId: string;
+  hasRewards: boolean;
 }
 
 // The panel's own date format, so the dialog and the account panel agree on
@@ -542,7 +543,11 @@ export async function runBootInterrupt(
         claimPromptShown(context.claimStore, ports.now(), context.publicId),
       );
       const accepted = await ports.confirm(body, heading, confirmText);
-      if (accepted) ports.navigate(USERNAME_FORM_HASH);
+      if (accepted) {
+        ports.navigate(USERNAME_FORM_HASH);
+      } else if (context.hasRewards) {
+        ports.openRewards();
+      }
       return;
     }
     // Both grant notices record themselves before opening, for the reason the
