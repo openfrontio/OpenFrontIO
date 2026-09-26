@@ -74,6 +74,11 @@
     "name": "Antigua and Barbuda"
   },
   {
+    "code": "Antankarana",
+    "continent": "Africa",
+    "name": "Antankarana"
+  },
+  {
     "code": "ai",
     "continent": "North America",
     "name": "Anguilla"
@@ -201,6 +206,11 @@
     "code": "Anishinaabe",
     "continent": "North America",
     "name": "Anishinaabe"
+  },
+  {
+    "code": "km-a",
+    "continent": "Africa",
+    "name": "Anjouan"
   },
   {
     "code": "gq-an",
@@ -760,6 +770,11 @@
     "name": "Chad"
   },
   {
+    "code": "Chagossians",
+    "continent": "Africa",
+    "name": "Chagossians"
+  },
+  {
     "code": "Chaldea",
     "continent": "Asia",
     "name": "Chaldea"
@@ -862,6 +877,11 @@
     "code": "km",
     "continent": "Africa",
     "name": "Comoros"
+  },
+  {
+    "code": "Comoros Islamic Republic",
+    "continent": "Africa",
+    "name": "Comoros Islamic Republic"
   },
   {
     "code": "Commonwealth",
@@ -1490,6 +1510,11 @@
     "code": "Grand Duchy of Tuscany",
     "continent": "Europe",
     "name": "Grand Duchy of Tuscany"
+  },
+  {
+    "code": "km-g",
+    "continent": "Africa",
+    "name": "Grande Comore"
   },
   {
     "code": "gr",
@@ -2307,6 +2332,11 @@
     "name": "Malacca"
   },
   {
+    "code": "Malagasy Protectorate",
+    "continent": "Africa",
+    "name": "Malagasy Protectorate"
+  },
+  {
     "code": "mw",
     "continent": "Africa",
     "name": "Malawi"
@@ -2421,6 +2451,16 @@
     "name": "Mercia"
   },
   {
+    "code": "Merina Kingdom",
+    "continent": "Africa",
+    "name": "Merina Kingdom"
+  },
+  {
+    "code": "Merina",
+    "continent": "Africa",
+    "name": "Merina"
+  },
+  {
     "code": "GB-Merseyside",
     "continent": "Europe",
     "name": "Merseyside"
@@ -2486,6 +2526,11 @@
     "name": "Mobile"
   },
   {
+    "code": "km-m",
+    "continent": "Africa",
+    "name": "Moheli"
+  },
+  {
     "code": "Moldavian SSR",
     "continent": "Europe",
     "name": "Moldavian SSR"
@@ -2544,6 +2589,11 @@
     "code": "ha_ma",
     "continent": "Europe",
     "name": "Mount Athos"
+  },
+  {
+    "code": "Mozambique PR",
+    "continent": "Africa",
+    "name": "Mozambique People's Republic"
   },
   {
     "code": "mz",
@@ -3255,6 +3305,11 @@
     "code": "Rio Negro",
     "continent": "South America",
     "name": "Rio Negro"
+  },
+  {
+    "code": "mu-ro",
+    "continent": "Africa",
+    "name": "Rodrigues"
   },
   {
     "code": "SPQR",
