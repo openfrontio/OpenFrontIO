@@ -118,11 +118,7 @@ describe("cosmetic scope derived from the session JWT", () => {
     const originalSetItem = Storage.prototype.setItem;
     const setItemSpy = vi
       .spyOn(Storage.prototype, "setItem")
-      .mockImplementation(function (
-        this: Storage,
-        key: string,
-        value: string,
-      ) {
+      .mockImplementation(function (this: Storage, key: string, value: string) {
         if (key === PUBLIC_ID_CACHE_PREFIX + ME) {
           throw new DOMException("storage unavailable");
         }
