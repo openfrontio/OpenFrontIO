@@ -10,7 +10,11 @@ import {
   GameType,
   PlayerType,
 } from "../../../src/core/game/Game";
-import { createGameRunnerFromSnapshot } from "../../../src/core/GameRunner";
+import {
+  createGameRunner,
+  createGameRunnerFromSnapshot,
+} from "../../../src/core/GameRunner";
+import { decompressGameRecord } from "../../../src/core/Util";
 import { config, human, mapLoader, playAndArchive } from "./util/ArchiveGame";
 
 describe("SnapshotExtractor", () => {
@@ -165,14 +169,40 @@ describe("SnapshotExtractor", () => {
       gameID: "TEST0003",
       config: gameConfig,
       players: [p1],
+      tribes: [{ name: "SaharaNomads" }],
       ticks: 40,
     });
 
-    const botName = "Oman";
+    // Before extraction, verify that the selected tribe exists and has a TribeExecution
+    const preRunner = await createGameRunner(
+      record.info,
+      undefined,
+      mapLoader,
+      () => {},
+    );
+    const turns = decompressGameRecord(record).turns;
+    for (let t = 0; t < 20; t++) {
+      preRunner.addTurn(turns[t]);
+      preRunner.executeNextTick();
+    }
+    const preGame = preRunner.game;
+    const botPlayer = preGame
+      .players()
+      .find((p) => p.type() === PlayerType.Bot && p.name() === "SaharaNomads");
+    expect(botPlayer).toBeDefined();
+
+    const hasTribeExecBefore = (preGame as any)
+      .executions()
+      .some(
+        (exec: any) =>
+          exec instanceof TribeExecution && exec.playerID() === botPlayer!.id(),
+      );
+    expect(hasTribeExecBefore).toBe(true);
+
     const result = await extractSnapshotFromRecord({
       record,
       targetTick: 20,
-      chosenPlayerID: botName,
+      chosenPlayerID: botPlayer!.id(),
       localClientID: "MYCLIENT3",
       mapLoader,
     });
@@ -189,15 +219,24 @@ describe("SnapshotExtractor", () => {
     const player = game.playerByClientID("MYCLIENT3");
     expect(player).not.toBeNull();
     expect(player?.type()).toBe(PlayerType.Human);
+    expect(player?.id()).toBe(botPlayer!.id());
 
+    let chosenHasTribeExec = false;
+    let otherTribesExecCount = 0;
     for (const exec of (game as any).executions()) {
       if (exec instanceof NationExecution) {
         expect(exec.playerID()).not.toBe(player?.id());
       }
       if (exec instanceof TribeExecution) {
-        expect(exec.playerID()).not.toBe(player?.id());
+        if (exec.playerID() === player?.id()) {
+          chosenHasTribeExec = true;
+        } else {
+          otherTribesExecCount++;
+        }
       }
     }
+    expect(chosenHasTribeExec).toBe(false);
+    expect(otherTribesExecCount).toBeGreaterThan(0);
   });
 
   test("refreshes attack rate of existing active NationExecutions when difficulty changes", async () => {

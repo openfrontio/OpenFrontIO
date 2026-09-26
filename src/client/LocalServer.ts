@@ -14,6 +14,7 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
+import { readSnapshotHeader } from "../core/snapshot/GameSnapshot";
 import {
   createPartialGameRecord,
   decompressGameRecord,
@@ -50,6 +51,7 @@ export class LocalServer {
   private replayTurns: Turn[] = [];
 
   private turns: Turn[] = [];
+  private turnOffset = 0;
 
   private intents: StampedIntent[] = [];
   private startedAt: number;
@@ -157,6 +159,14 @@ export class LocalServer {
     ) {
       this.turns = [...this.lobbyConfig.resumeTurns];
     }
+    if (this.lobbyConfig.resumeSnapshot) {
+      try {
+        const header = readSnapshotHeader(this.lobbyConfig.resumeSnapshot);
+        this.turnOffset = header.tick;
+      } catch (e) {
+        console.warn("Failed to read snapshot header for turnOffset", e);
+      }
+    }
     this.clientMessage({
       type: "start",
       gameStartInfo: this.lobbyConfig.gameStartInfo,
@@ -217,7 +227,7 @@ export class LocalServer {
       if (!this.lobbyConfig.gameRecord) {
         if (clientMsg.turnNumber % 100 === 0) {
           // In singleplayer, only store hash every 100 turns to reduce size of game record.
-          const turn = this.turns[clientMsg.turnNumber];
+          const turn = this.turns[clientMsg.turnNumber - this.turnOffset];
           if (turn) {
             turn.hash = clientMsg.hash;
           }
@@ -304,7 +314,7 @@ export class LocalServer {
       this.intents = this.replayTurns[this.turns.length].intents;
     }
     const pastTurn: Turn = {
-      turnNumber: this.turns.length,
+      turnNumber: this.turnOffset + this.turns.length,
       intents: this.intents,
     };
     this.turns.push(pastTurn);
