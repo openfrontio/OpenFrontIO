@@ -114,6 +114,23 @@ describe("cosmetic scope derived from the session JWT", () => {
     expect(setPlayerId).toHaveBeenLastCalledWith(MY_PUBLIC_ID);
   });
 
+  it("prefers the latest in-memory publicId over a stale cache", async () => {
+    localStorage.setItem(
+      PUBLIC_ID_CACHE_PREFIX + ME,
+      "stale-public-id",
+    );
+
+    rememberPublicId(ME, MY_PUBLIC_ID);
+    localStorage.setItem(
+      PUBLIC_ID_CACHE_PREFIX + ME,
+      "stale-public-id",
+    );
+
+    await signInWith(payloadFor(ME));
+
+    expect(setPlayerId).toHaveBeenLastCalledWith(MY_PUBLIC_ID);
+  });
+
   it("uses the in-memory publicId when the persistent cache write fails", async () => {
     const originalSetItem = Storage.prototype.setItem;
     const setItemSpy = vi
