@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import en from "../../resources/lang/en.json";
 import { modalRouter } from "../../src/client/ModalRouter";
@@ -25,12 +25,22 @@ describe("user-setting tabs", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     localStorage.clear();
+    const statics = UserSettings as unknown as {
+      cache: Map<string, string | null>;
+      playerId: string | null;
+    };
+    statics.cache.clear();
+    statics.playerId = null;
     location.hash = "";
     // Main.ts registers this at boot; the URL sync is a no-op without it.
     modalRouter.register("settings", {
       tag: "user-setting",
       pageId: "page-settings",
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("groups the settings as Gameplay, Graphics, Audio and Keybinds, in that order", async () => {
@@ -93,11 +103,38 @@ describe("user-setting tabs", () => {
     "#left-click-toggle",
     "#anonymous-names-toggle",
     "#lobby-id-visibility-toggle",
+    "#lobby-start-alerts-toggle",
     "#go-to-player-toggle",
     "#help-messages-toggle",
     "#attacking-troops-overlay-toggle",
     "#attack-ratio-slider",
   ];
+
+  it("persists the lobby alert default and requests permission only when enabling", async () => {
+    const requestPermission = vi.fn().mockResolvedValue("denied");
+    vi.stubGlobal("Notification", {
+      permission: "default",
+      requestPermission,
+    });
+    const el = await mount(false);
+    el.open({ tab: "gameplay" });
+    await el.updateComplete;
+
+    const input = el.querySelector<HTMLInputElement>(
+      "#lobby-start-alerts-toggle input[type=checkbox]",
+    )!;
+    expect(input.checked).toBe(false);
+
+    input.click();
+    await el.updateComplete;
+    expect(new UserSettings().lobbyStartAlerts()).toBe(true);
+    expect(requestPermission).toHaveBeenCalledOnce();
+
+    input.click();
+    await el.updateComplete;
+    expect(new UserSettings().lobbyStartAlerts()).toBe(false);
+    expect(requestPermission).toHaveBeenCalledOnce();
+  });
 
   it.each(GRAPHICS_CONTROLS)("renders %s on Graphics", async (selector) => {
     const el = await mount(false);

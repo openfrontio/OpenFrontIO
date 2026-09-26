@@ -15,7 +15,7 @@ Deterministic GitHub Action that auto-closes PRs that don't follow the project's
 
 ```bash
 cd scripts/pr-gate
-npm install
+npm ci --ignore-scripts
 export GITHUB_TOKEN=ghp_... # PAT with repo scope
 npx tsx index.ts --pr 1234  # always dry-run unless --no-dry-run
 ```

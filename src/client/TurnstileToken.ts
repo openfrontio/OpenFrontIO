@@ -205,7 +205,7 @@ export async function resolveTurnstileToken(deps: {
     try {
       return (await deps.requestFresh())?.token ?? null;
     } catch (error) {
-      console.error("Turnstile: token request failed", error);
+      console.warn("Turnstile: token request failed", error);
       deps.onError(turnstileErrorCode(error));
       throw error;
     }
