@@ -871,8 +871,7 @@ function updateUserSettingsForJwt(jwt: string | null): void {
 
     const inMemoryPublicId =
       __inMemoryPublicIdSub === sub ? __inMemoryPublicId : null;
-    const publicId =
-      result.data.publicId ?? cachedPublicId ?? inMemoryPublicId;
+    const publicId = result.data.publicId ?? cachedPublicId ?? inMemoryPublicId;
 
     if (result.data.publicId !== undefined) {
       __inMemoryPublicIdSub = sub;
