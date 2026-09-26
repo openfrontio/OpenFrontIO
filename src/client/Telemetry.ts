@@ -5,26 +5,42 @@ import { clientPlatform } from "./ClientPlatform";
 
 /**
  * Browser telemetry via Grafana Faro: uncaught errors, unhandled rejections,
- * web vitals, in-game performance summaries (GameMetrics.ts) and
- * session/view metadata, shipped to the collector named by
+ * console warnings and errors, web vitals, in-game performance summaries
+ * (GameMetrics.ts) and session/view metadata, shipped to the collector named by
  * BOOTSTRAP_CONFIG.faroCollectorUrl (FARO_COLLECTOR_URL on the server).
  *
  * Off entirely when no URL is injected — dev, desktop shells without one,
  * any deployment that has not opted in. The SDK is loaded lazily so a page
  * without telemetry never downloads it and boot is never blocked on it.
  *
- * Console capture is deliberately off: the client logs freely through
- * console.error, and forwarding all of it would drown the signal. Game
- * crashes go through reportGameError instead, which is what the error modal
- * calls.
+ * Console capture covers warn and error only; log and info are chatter.
+ * console.error goes out as a log line, not an exception, so exceptions stay
+ * the uncaught errors and the game errors reportGameError sends from the
+ * error modal.
  */
 
-// Fraction of sessions that report at all. Faro samples per session, so an
-// unsampled session sends nothing — errors included. Prod has enough
-// players that 1% is plenty of signal; everywhere else every session
-// reports, so a staging or dev deployment shows its errors right away.
+// Fraction of sessions that send everything: measurements, events, console
+// logs. Exceptions are sent by every session regardless (see filterSignal).
+// Prod has enough players that 1% is plenty of signal; everywhere else every
+// session reports, so a staging or dev deployment shows everything at once.
 export function sessionSamplingRate(env: GameEnv): number {
   return env === GameEnv.Prod ? 0.01 : 1;
+}
+
+/**
+ * Whether a session falls inside the sampled fraction. A hash of the session
+ * id, so the answer is stable for the session, and persistent sessions keep
+ * it across the reloads the client performs itself.
+ */
+export function isSessionSampled(sessionId: string, rate: number): boolean {
+  if (rate >= 1) return true;
+  // FNV-1a, 32-bit.
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < sessionId.length; i++) {
+    hash ^= sessionId.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0) / 0x1_0000_0000 < rate;
 }
 
 let faroPromise: Promise<Faro | null> | null = null;
@@ -45,7 +61,7 @@ export function initTelemetry(): Promise<Faro | null> {
   }
   const env = ClientEnv.env();
   faroPromise = import("@grafana/faro-web-sdk")
-    .then(({ initializeFaro, getWebInstrumentations }) =>
+    .then(({ initializeFaro, getWebInstrumentations, LogLevel }) =>
       initializeFaro({
         url,
         app: {
@@ -54,7 +70,10 @@ export function initTelemetry(): Promise<Faro | null> {
           environment: environmentName(env),
         },
         sessionTracking: {
-          samplingRate: sessionSamplingRate(env),
+          // Faro can only sample whole sessions, which would drop the
+          // exceptions of every unsampled session too. Every session is
+          // tracked here and filterSignal does the sampling instead.
+          samplingRate: 1,
           // localStorage-backed, so a session (and its sampling decision)
           // survives the reloads the client performs itself — the apex
           // redirect, the versioned-path join, a rejoin after a crash.
@@ -66,8 +85,17 @@ export function initTelemetry(): Promise<Faro | null> {
         // volume of a staging session at ~2KB a line. Navigation timing and
         // web vitals cover page load; the rest is not worth the ingest.
         trackResources: false,
-        instrumentations: getWebInstrumentations({ captureConsole: false }),
-        beforeSend: filterSignal,
+        instrumentations: getWebInstrumentations({ captureConsole: true }),
+        consoleInstrumentation: {
+          disabledLevels: [
+            LogLevel.TRACE,
+            LogLevel.DEBUG,
+            LogLevel.LOG,
+            LogLevel.INFO,
+          ],
+          consoleErrorAsLog: true,
+        },
+        beforeSend: (item) => filterSignal(item, sessionSamplingRate(env)),
       }),
     )
     .catch((e: unknown) => {
@@ -88,16 +116,41 @@ const DROPPED_EVENTS = new Set(["securitypolicyviolation"]);
 // Faro runs this hook unguarded on its flush path. Anything it cannot handle
 // is dropped (null) rather than thrown or sent as-is: telemetry must neither
 // reach the player nor leak what it was meant to cut.
-function filterSignal(item: TransportItem): TransportItem | null {
+function filterSignal(
+  item: TransportItem,
+  samplingRate: number,
+): TransportItem | null {
   try {
     if (item.type === "event") {
       const name = (item.payload as { name?: unknown } | null)?.name;
       if (typeof name === "string" && DROPPED_EVENTS.has(name)) return null;
     }
-    return scrubUrls(item);
+    // Exceptions are the signal we most want and a sliver of the volume
+    // (~0.4% of prod bytes), so only the rest is sampled.
+    if (item.type !== "exception") {
+      const sessionId = item.meta.session?.id;
+      if (sessionId === undefined) return null;
+      if (!isSessionSampled(sessionId, samplingRate)) return null;
+    }
+    return slimBrowserMeta(scrubUrls(item));
   } catch {
     return null;
   }
+}
+
+/**
+ * Faro stamps the browser meta onto every signal, and the full user agent
+ * plus the client-hint brand list were ~300 of a ~1.1KB line. Name, version,
+ * OS and mobile, which stay, carry what they say.
+ */
+function slimBrowserMeta(item: TransportItem): TransportItem {
+  const browser = item.meta.browser;
+  if (browser === undefined) return item;
+  const slim = { ...browser };
+  delete slim.userAgent;
+  delete slim.brands;
+  item.meta = { ...item.meta, browser: slim };
+  return item;
 }
 
 /**
