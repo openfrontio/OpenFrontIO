@@ -86,7 +86,7 @@ export class RankedModal extends BaseModal {
         crazyGamesSDK.isOnCrazyGames() &&
         (await crazyGamesSDK.getUserProfile()) !== null;
     } catch (error) {
-      console.error("Failed to fetch user profile for ranked modal", error);
+      console.warn("Failed to fetch user profile for ranked modal", error);
       this.userMeResponse = false;
       this.errorMessage = translateText("map_component.error");
       this.elo = translateText("map_component.error");

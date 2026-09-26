@@ -71,7 +71,7 @@ export const loadAllSprites = async (): Promise<void> => {
           console.log("All sprites loaded.");
         }
       } catch (err) {
-        console.error(`Failed to load sprite for ${typedUnitType}:`, err);
+        console.warn(`Failed to load sprite for ${typedUnitType}:`, err);
       }
     }),
   );

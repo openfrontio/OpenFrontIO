@@ -517,7 +517,7 @@ export class MatchmakingModal extends BaseModal {
     const gameInfo = await response.json();
 
     if (response.status !== 200) {
-      console.error(`Error checking game ${this.gameID}: ${response.status}`);
+      console.warn(`Error checking game ${this.gameID}: ${response.status}`);
       return;
     }
 

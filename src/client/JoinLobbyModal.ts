@@ -570,7 +570,7 @@ export class JoinLobbyModal extends BaseModal {
           return;
       }
     } catch (error) {
-      console.error("Error checking lobby from URL:", error);
+      console.warn("Error checking lobby from URL:", error);
       this.resetTrackingState();
       this.showMessage(translateText("private_lobby.error"), "red");
     }
@@ -1024,7 +1024,7 @@ export class JoinLobbyModal extends BaseModal {
       const clipText = await navigator.clipboard.readText();
       this.setLobbyId(clipText);
     } catch (err) {
-      console.error("Failed to read clipboard contents: ", err);
+      console.warn("Failed to read clipboard contents: ", err);
     }
   }
 
@@ -1077,7 +1077,7 @@ export class JoinLobbyModal extends BaseModal {
           return;
       }
     } catch (error) {
-      console.error("Error checking lobby existence:", error);
+      console.warn("Error checking lobby existence:", error);
       this.resetTrackingState();
       this.showMessage(translateText("private_lobby.error"), "red");
     }
