@@ -7,7 +7,11 @@ import "./PlutoniumIcon";
 import "./PurchaseButton";
 
 // Fixed rate: 20 plutonium = $1.00 (5 cents each). Bounds and rate are
-// enforced server-side; these are for UX only.
+// enforced server-side. For the redirect flow these are display-only, but
+// the inline flow seeds Stripe Elements with the client-computed amount —
+// a server rate that diverges from this one trips the amount guard in
+// InlineCheckoutSession.confirmInner, which hands the purchase back to the
+// redirect flow rather than confirming a price the tile never displayed.
 const MIN_PLUTONIUM = 20;
 const MAX_PLUTONIUM = 2000;
 
@@ -97,6 +101,11 @@ export class CustomCurrencyCard extends LitElement {
               class="text-[10px] font-bold leading-none text-white/50 uppercase"
               >${translateText("cosmetics.hard")}</span
             >
+            <span
+              data-custom-currency-price
+              class="pt-0.5 text-sm font-bold leading-none text-blue-300"
+              >${price}</span
+            >
           </div>
 
           <input
@@ -116,6 +125,15 @@ export class CustomCurrencyCard extends LitElement {
             class="block w-full"
             .dollarPrice=${price}
             .onPurchaseDollar=${this.buy}
+            .inlineCheckout=${{
+              request: {
+                kind: "custom_currency" as const,
+                hardAmount: this.amount,
+              },
+              // Same fixed rate as priceDollars: 5 cents per plutonium.
+              amountCents: this.amount * 5,
+              successMessageKey: "store.custom_currency_purchase_success",
+            }}
           ></purchase-button>
         </div>
       </article>

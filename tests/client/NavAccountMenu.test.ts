@@ -67,6 +67,7 @@ describe("nav-account-menu", () => {
     el.remove();
     vi.clearAllMocks();
     isOnCrazyGames.mockReturnValue(false);
+    delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
     getUserProfile.mockResolvedValue(null);
     window.showPage = undefined;
   });
@@ -85,13 +86,13 @@ describe("nav-account-menu", () => {
     await el.updateComplete;
   }
 
-  it("offers sign-in and settings while signed out", async () => {
-    // The menu is the only nav route to the settings page now, so it has to
-    // open for guests too.
+  it("offers only sign-in while signed out", async () => {
+    // Game settings are a top-level navbar item, so the dropdown no longer
+    // duplicates them — a "Sign in" trigger listing them read as a bug.
     fireUserMe(false);
     await el.updateComplete;
     await click(trigger());
-    expect(itemKeys()).toEqual(["sign-in", "game-settings"]);
+    expect(itemKeys()).toEqual(["sign-in"]);
 
     const showPage = vi.fn();
     window.showPage = showPage;
@@ -107,7 +108,7 @@ describe("nav-account-menu", () => {
     } as unknown as UserMeResponse);
     await el.updateComplete;
     await click(trigger());
-    expect(itemKeys()).toEqual(["sign-in", "game-settings"]);
+    expect(itemKeys()).toEqual(["sign-in"]);
   });
 
   it("toggles the menu for a signed-in user", async () => {
@@ -128,10 +129,10 @@ describe("nav-account-menu", () => {
       "copy-profile-url",
       "view-account",
       "account-settings",
-      "game-settings",
       "change-username",
       "log-out",
     ]);
+    expect(itemKeys()).not.toContain("game-settings");
 
     // The menu stays open across the refresh, so it re-renders with the extra
     // item as soon as the subscription appears on the session.
@@ -172,6 +173,18 @@ describe("nav-account-menu", () => {
     // Their username/subscription management still needs reaching…
     expect(itemKeys()).toContain("change-username");
     // …but signing out happens on CrazyGames, not through /auth/logout.
+    expect(itemKeys()).not.toContain("log-out");
+  });
+
+  it("drops log-out on Steam, where the ticket signs the player back in", async () => {
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      steam: {},
+    };
+    fireUserMe(userMe());
+    await el.updateComplete;
+    await click(trigger());
+
+    expect(itemKeys()).toContain("account-settings");
     expect(itemKeys()).not.toContain("log-out");
   });
 

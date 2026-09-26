@@ -6,11 +6,24 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameEnv } from "../core/configuration/Config";
+import {
+  applyCheckinState,
+  CHECKIN_INTERVAL_MS,
+  checkinBody,
+  isRefusal,
+  registeredSite,
+  sendCheckin,
+} from "./ClusterCheckin";
 import { getDescriptor } from "./DesktopRelease";
+import {
+  coordinatorUrl,
+  LobbyCoordinatorClient,
+} from "./LobbyCoordinatorClient";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { MasterLobbyService } from "./MasterLobbyService";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
+import { startPolling } from "./PollingLoop";
 import { renderAppShell } from "./RenderHtml";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
@@ -104,6 +117,35 @@ app.use(
   }),
 );
 
+// Apple Pay domain verification (Stripe's universal association file,
+// vendored in resources/public/). Apple fetches this exact path over HTTPS when the
+// domain is registered in the Stripe dashboard, and it must get the raw file:
+// express.static above ignores dotfile paths (so it falls through to here)
+// and the SPA fallback below would answer with the app shell, which makes
+// registration fail with no error anywhere we can see. Registered after the
+// rate limiter so the file read is covered by it. Verify with
+// `curl https://<domain>/.well-known/apple-developer-merchantid-domain-association`.
+app.get(
+  "/.well-known/apple-developer-merchantid-domain-association",
+  (_req, res) => {
+    res.type("text/plain");
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../resources/public/.well-known/apple-developer-merchantid-domain-association",
+      ),
+      // sendFile refuses dotfile path segments (".well-known") by default.
+      // maxAge matters beyond browsers: nginx's proxy cache honours the
+      // upstream Cache-Control, and sendFile's default max-age=0 would veto
+      // the nginx.conf location block that shields this route.
+      { dotfiles: "allow", maxAge: "1d" },
+      (err) => {
+        if (err && !res.headersSent) res.status(404).end();
+      },
+    );
+  },
+);
+
 app.use("/api", (_req, res, next) => {
   setNoStoreHeaders(res);
   next();
@@ -120,7 +162,10 @@ export async function startMaster() {
   log.info(`Primary ${process.pid} is running`);
   log.info(`Setting up ${ServerEnv.numWorkers()} workers...`);
 
-  lobbyService = new MasterLobbyService(playlist, log);
+  // A server that registers schedules nothing until the API calls it open: a
+  // mistyped letter must not mint lobbies under a letter routed elsewhere.
+  const registers = checkinBody(0) !== null;
+  lobbyService = new MasterLobbyService(playlist, log, registers);
 
   const INSTANCE_ID =
     ServerEnv.env() === GameEnv.Dev
@@ -129,6 +174,33 @@ export async function startMaster() {
   process.env.INSTANCE_ID = INSTANCE_ID;
 
   log.info(`Instance ID: ${INSTANCE_ID}`);
+
+  // Join the site's shared public-lobby roster (LobbyCoordinatorClient.ts)
+  // when LOBBY_COORDINATOR=api and this server has a public host to
+  // register under, the same test as the check-in below. Started before the
+  // workers fork so the first roster normally lands before scheduling
+  // begins; until it does, and whenever it stops, the master schedules its
+  // own lobbies exactly as it does without a coordinator.
+  const hello = checkinBody(0);
+  const coordinator = coordinatorUrl(registeredSite());
+  if (coordinator !== null && hello !== null) {
+    log.info(`Joining lobby coordinator at ${coordinator}`);
+    const client = new LobbyCoordinatorClient({
+      url: coordinator,
+      apiKey: ServerEnv.apiKey(),
+      hello: {
+        letter: hello.letter,
+        host: hello.host,
+        version: hello.version,
+        numWorkers: hello.numWorkers,
+        instanceId: INSTANCE_ID,
+      },
+      handlers: lobbyService.coordinatorHandlers(),
+      log,
+    });
+    lobbyService.attachCoordinator(client);
+    client.start();
+  }
 
   // Fork workers
   for (let i = 0; i < ServerEnv.numWorkers(); i++) {
@@ -173,14 +245,44 @@ export async function startMaster() {
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
+
+  // Register with the API and keep checking in (docs/MultiServer.md,
+  // "Server list v2"): the API's list is what clients read to find a
+  // server, so a server that isn't checking in isn't offered to anyone.
+  // Local development (`npm run dev`, no SUBDOMAIN) has no public host and
+  // registers nowhere; every deployed host registers under its own site.
+  if (registers) {
+    log.info(
+      `Checking in with ${ServerEnv.jwtIssuer()}/cluster/checkin every ${CHECKIN_INTERVAL_MS / 1000}s`,
+    );
+    let lastRefusal: string | null = null;
+    startPolling(async () => {
+      const body = checkinBody(lobbyService.liveGames());
+      if (body === null) return;
+      const result = await sendCheckin(body);
+      if (isRefusal(result)) {
+        if (result.refused !== lastRefusal) {
+          log.error(
+            `API refused check-in as letter ${body.letter} from ${body.host}: ${result.refused}. Scheduling no public lobbies until it is accepted.`,
+          );
+        }
+        lastRefusal = result.refused;
+      } else if (result !== null) {
+        lastRefusal = null;
+      }
+      applyCheckinState(result, (active) => lobbyService.setActive(active));
+    }, CHECKIN_INTERVAL_MS);
+  }
 }
 
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;
+  // instanceId is diagnostics: it tells the machines behind an apex apart.
+  const instanceId = ServerEnv.instanceId();
   if (ready) {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", instanceId });
   } else {
-    res.status(503).json({ status: "unavailable" });
+    res.status(503).json({ status: "unavailable", instanceId });
   }
 });
 

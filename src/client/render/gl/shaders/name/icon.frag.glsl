@@ -4,6 +4,7 @@ precision highp sampler2DArray;
 
 uniform sampler2DArray uFlagAtlas;
 uniform sampler2D      uEmojiAtlas;
+uniform float          uFlagAlpha;
 
 in vec2 vUV;
 flat in int vIconType;  // 0 = flag, 1 = emoji, -1 = discard
@@ -18,6 +19,7 @@ void main() {
   vec4 texel;
   if (vIconType == 0) {
     texel = texture(uFlagAtlas, vec3(vUV, float(vFlagLayer)));
+    texel.a *= uFlagAlpha;
   } else {
     texel = texture(uEmojiAtlas, vUV);
   }

@@ -1,7 +1,20 @@
 import { TradeShipExecution } from "../../../src/core/execution/TradeShipExecution";
-import { Game, MessageType, Player, Unit } from "../../../src/core/game/Game";
+import {
+  Game,
+  MessageType,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  Unit,
+  UnitType,
+} from "../../../src/core/game/Game";
 import { PathStatus } from "../../../src/core/pathfinding/types";
+import {
+  BOAT_INDEX_CAPTURE,
+  GOLD_INDEX_STEAL,
+} from "../../../src/core/StatsSchemas";
 import { setup } from "../../util/Setup";
+import { executeTicks } from "../../util/utils";
 
 describe("TradeShipExecution", () => {
   let game: Game;
@@ -199,5 +212,59 @@ describe("TradeShipExecution", () => {
     expect(pirate.addGold).toHaveBeenCalled();
     expect(pirate.addPiracyGold).toHaveBeenCalled();
     expect(pirate.addTradeGold).not.toHaveBeenCalled();
+  });
+});
+
+describe("TradeShipExecution recapture", () => {
+  test("retaking your own trade ship credits no capture", async () => {
+    const game = await setup("half_land_half_ocean", {}, [
+      new PlayerInfo("origin", PlayerType.Human, null, "origin"),
+      new PlayerInfo("partner", PlayerType.Human, null, "partner"),
+      new PlayerInfo("pirate", PlayerType.Human, null, "pirate"),
+    ]);
+    const origin = game.player("origin");
+    const partner = game.player("partner");
+    const pirate = game.player("pirate");
+    executeTicks(game, 50);
+
+    const port = (owner: Player, y: number) => {
+      owner.conquer(game.ref(7, y));
+      return owner.buildUnit(UnitType.Port, game.ref(7, y), {});
+    };
+    const srcPort = port(origin, 1);
+    const homePort = port(origin, 14);
+    const dstPort = port(partner, 8);
+    port(pirate, 4);
+
+    const execution = new TradeShipExecution(origin, srcPort, dstPort);
+    game.addExecution(execution);
+    executeTicks(game, 2);
+    const [tradeShip] = origin.units(UnitType.TradeShip);
+    const displayMessage = vi.spyOn(game, "displayMessage");
+
+    pirate.captureUnit(tradeShip);
+    game.executeNextTick();
+    // Losing the source port keeps the retaken ship sailing home instead of
+    // being scrapped as a same-owner trade.
+    partner.captureUnit(srcPort);
+    origin.captureUnit(tradeShip);
+
+    const goldBefore = origin.gold();
+    for (let i = 0; i < 100 && execution.isActive(); i++) {
+      game.executeNextTick();
+    }
+
+    expect(execution.isActive()).toBe(false);
+    expect(tradeShip.targetUnit()).toBe(homePort);
+    expect(origin.gold()).toBeGreaterThan(goldBefore);
+    expect(origin.piracyGold()).toBe(0n);
+    expect(displayMessage.mock.calls.map(([message]) => message)).not.toContain(
+      "events_display.received_gold_from_captured_ship",
+    );
+    for (const player of [origin, partner, pirate]) {
+      const stats = game.stats().getPlayerStats(player);
+      expect(stats?.boats?.trade?.[BOAT_INDEX_CAPTURE] ?? 0n).toBe(0n);
+      expect(stats?.gold?.[GOLD_INDEX_STEAL] ?? 0n).toBe(0n);
+    }
   });
 });

@@ -1,10 +1,34 @@
+import { z } from "zod";
 import { renderNumber } from "../../client/Utils";
 import { UnitView } from "../../client/view";
 import { Config } from "../configuration/Config";
-import { SharedWaterCache } from "../execution/nation/SharedWaterCache";
+import {
+  SharedWaterCache,
+  SharedWaterCacheSnapshot,
+} from "../execution/nation/SharedWaterCache";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
+import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
+import {
+  nationData,
+  NationSchema,
+  playerInfoData,
+  PlayerInfoSchema,
+  UnitTypeSchema,
+} from "../snapshot/CommonSchemas";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  VersionedSchema,
+  zInt,
+  zPlayerRef,
+  zRef,
+} from "../snapshot/SnapshotType";
 import { ATTACK_INDEX_SENT } from "../StatsSchemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
@@ -34,6 +58,7 @@ import {
   TeamGameSpawnAreas,
   TerrainType,
   TerraNullius,
+  Tick,
   Trios,
   Unit,
   UnitInfo,
@@ -44,13 +69,17 @@ import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
-import { createRailNetwork } from "./RailNetworkImpl";
+import {
+  createRailNetwork,
+  RailNetworkImpl,
+  RailNetworkSnapshot,
+} from "./RailNetworkImpl";
 import { Stats } from "./Stats";
-import { StatsImpl } from "./StatsImpl";
-import { assignTeams } from "./TeamAssignment";
+import { StatsImpl, StatsSnapshot } from "./StatsImpl";
+import { assignTeams, resolveTeamsList } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
-import { WaterManager } from "./WaterManager";
+import { WaterManager, WaterManagerSnapshot } from "./WaterManager";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -111,6 +140,10 @@ export class GameImpl implements Game {
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
 
+  private _mirvsLaunched = 0;
+  private shipStaggers = { tradeShip: 0, transportShip: 0 };
+  private _nationMirvTargets = new Map<PlayerID, Tick>();
+
   private _isPaused: boolean = false;
   private _winner: Player | Team | null = null;
   private _waterManager: WaterManager;
@@ -127,6 +160,9 @@ export class GameImpl implements Game {
     private _config: Config,
     private _stats: Stats,
     teamGameSpawnAreas?: TeamGameSpawnAreas,
+    // Restoring a snapshot: skip team and player setup, the snapshot
+    // supplies both (see restoreState).
+    restoring: boolean = false,
   ) {
     const constructorStart = performance.now();
 
@@ -142,10 +178,12 @@ export class GameImpl implements Game {
     );
     this._sharedWaterCache = new SharedWaterCache(this);
 
-    if (_config.gameConfig().gameMode === GameMode.Team) {
-      this.populateTeams();
+    if (!restoring) {
+      if (_config.gameConfig().gameMode === GameMode.Team) {
+        this.populateTeams();
+      }
+      this.addPlayers();
     }
-    this.addPlayers();
 
     console.log(
       `[GameImpl] Constructor total: ${(performance.now() - constructorStart).toFixed(0)}ms`,
@@ -153,45 +191,11 @@ export class GameImpl implements Game {
   }
 
   private populateTeams() {
-    let numPlayerTeams = this._config.playerTeams();
-
-    // HumansVsNations mode always has exactly 2 teams
-    if (numPlayerTeams === HumansVsNations) {
-      this.playerTeams = [ColoredTeams.Humans, ColoredTeams.Nations];
-      return;
-    }
-
-    if (typeof numPlayerTeams !== "number") {
-      const players = this._humans.length + this._nations.length;
-      switch (numPlayerTeams) {
-        case Duos:
-          numPlayerTeams = Math.ceil(players / 2);
-          break;
-        case Trios:
-          numPlayerTeams = Math.ceil(players / 3);
-          break;
-        case Quads:
-          numPlayerTeams = Math.ceil(players / 4);
-          break;
-        default:
-          throw new Error(`Unknown TeamCountConfig ${numPlayerTeams}`);
-      }
-    }
-    if (numPlayerTeams < 2) {
-      throw new Error(`Too few teams: ${numPlayerTeams}`);
-    } else if (numPlayerTeams < 8) {
-      this.playerTeams = [ColoredTeams.Red, ColoredTeams.Blue];
-      if (numPlayerTeams >= 3) this.playerTeams.push(ColoredTeams.Yellow);
-      if (numPlayerTeams >= 4) this.playerTeams.push(ColoredTeams.Green);
-      if (numPlayerTeams >= 5) this.playerTeams.push(ColoredTeams.Purple);
-      if (numPlayerTeams >= 6) this.playerTeams.push(ColoredTeams.Orange);
-      if (numPlayerTeams >= 7) this.playerTeams.push(ColoredTeams.Teal);
-    } else {
-      this.playerTeams = [];
-      for (let i = 1; i <= numPlayerTeams; i++) {
-        this.playerTeams.push(`Team ${i}`);
-      }
-    }
+    const totalPlayers = this._humans.length + this._nations.length;
+    this.playerTeams = resolveTeamsList(
+      this._config.playerTeams(),
+      totalPlayers,
+    );
   }
 
   private addPlayers() {
@@ -457,6 +461,8 @@ export class GameImpl implements Game {
     );
     (alliance.requestor() as PlayerImpl)._alliances.push(alliance);
     (alliance.recipient() as PlayerImpl)._alliances.push(alliance);
+    this.stats().allianceFormed(requestor);
+    this.stats().allianceFormed(recipient);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
       request,
     );
@@ -544,6 +550,17 @@ export class GameImpl implements Game {
     this.execs.push(...inited);
     this.unInitExecs = unInited;
     for (const player of this._players.values()) {
+      // Sampled before toUpdate so the reading is of the tick that just ran.
+      // Dead and unspawned players are skipped: an eliminated player's fall
+      // to zero tiles would otherwise register as a total collapse.
+      if (player.isAlive() && player.hasSpawned()) {
+        this.stats().recordTickSample(
+          player,
+          player.numTilesOwned(),
+          player.troops(),
+          player.alliances().length,
+        );
+      }
       const update = player.toUpdate(
         this.playerStatsQuads,
         this.attackTroopsQuads,
@@ -866,9 +883,19 @@ export class GameImpl implements Game {
         `${breaker} not allied with ${other}, cannot break alliance`,
       );
     }
+    const duration = this._ticks - alliance.createdAt();
     if (!other.isTraitor() && !other.isDisconnected()) {
       breaker.markTraitor();
+      // Only a real betrayal counts as being betrayed. Gated on the same
+      // condition as markTraitor so that a teammate dropping their connection
+      // is not recorded as having stabbed anyone in the back.
+      this.stats().allianceEnded(other, duration, "brokenByOther");
+    } else {
+      this.stats().allianceEnded(other, duration, null);
     }
+    // The breaker's side is already counted by betray(); this call is only
+    // here so their longest-held maximum still sees this alliance.
+    this.stats().allianceEnded(breaker, duration, null);
 
     this.detachAlliance(alliance);
 
@@ -891,7 +918,11 @@ export class GameImpl implements Game {
         `cannot expire alliance: must have exactly one alliance, have ${alliances.length}`,
       );
     }
-    this.detachAlliance(alliances[0]);
+    const expiring = alliances[0];
+    const duration = this._ticks - expiring.createdAt();
+    this.stats().allianceEnded(expiring.requestor(), duration, "expired");
+    this.stats().allianceEnded(expiring.recipient(), duration, "expired");
+    this.detachAlliance(expiring);
     this.addUpdate({
       type: GameUpdateType.AllianceExpired,
       player1ID: alliance.requestor().smallID(),
@@ -902,7 +933,19 @@ export class GameImpl implements Game {
   public removeAlliancesByPlayerSilently(player: Player): void {
     // Snapshot — detachAlliance reassigns the player's _alliances as it goes.
     const removed = [...(player as PlayerImpl)._alliances];
-    for (const alliance of removed) this.detachAlliance(alliance);
+    for (const alliance of removed) {
+      // Elimination is the fourth way an alliance ends, and in practice the
+      // commonest. Nobody betrayed and nothing expired, so no counter moves;
+      // the null counter is here purely so both sides' longest-held maximum
+      // still sees the alliance. Without this the survivor's longest held
+      // would silently read 0 from an alliance that ran the whole game, and
+      // recordAlliancesAtEnd cannot pick it up either — by then it is
+      // already detached.
+      const duration = this._ticks - alliance.createdAt();
+      this.stats().allianceEnded(alliance.requestor(), duration, null);
+      this.stats().allianceEnded(alliance.recipient(), duration, null);
+      this.detachAlliance(alliance);
+    }
   }
 
   /** Remove an alliance from both participants' per-player alliance lists. */
@@ -954,6 +997,13 @@ export class GameImpl implements Game {
     // OFM: snapshot final tiles for standings (bots skipped in recordFinalTiles).
     for (const player of this.players()) {
       this.stats().recordFinalTiles(player, player.numTilesOwned());
+      const standing = player.alliances();
+      let longest = 0;
+      for (const a of standing) {
+        const held = this._ticks - a.createdAt();
+        if (held > longest) longest = held;
+      }
+      this.stats().recordAlliancesAtEnd(player, standing.length, longest);
     }
     this.addUpdate({
       type: GameUpdateType.Win,
@@ -966,26 +1016,35 @@ export class GameImpl implements Game {
     return this._winner;
   }
 
-  private makeWinner(winner: string | Player): Winner | undefined {
+  private isEligibleForTeamWin(
+    p: Player,
+    team: string,
+    threshold: number,
+  ): boolean {
+    if (p.team() !== team || p.clientID() === null || !p.hasSpawned()) {
+      return false;
+    }
+    if (!p.isDisconnected()) return true;
+    const snap = p.disconnectSnapshot();
+    if (!snap || !snap.wasAlive) return true;
+    return (
+      snap.totalLand > 0 && 10 * snap.teamTiles >= threshold * snap.totalLand
+    );
+  }
+
+  makeWinner(winner: string | Player): Winner | undefined {
     if (typeof winner === "string") {
+      const threshold = this._config.teamLandShareWinThresholdTenths();
       return [
         "team",
         winner,
-        ...this.players()
-          .filter((p) => p.team() === winner && p.clientID() !== null)
+        ...this.allPlayers()
+          .filter((p) => this.isEligibleForTeamWin(p, winner, threshold))
           .map((p) => p.clientID()!),
       ];
-    } else {
-      const clientId = winner.clientID();
-      if (clientId === null) {
-        return ["nation", winner.name()];
-      }
-      return [
-        "player",
-        clientId,
-        // TODO: Assists (vote for peace)
-      ];
     }
+    const clientId = winner.clientID();
+    return clientId === null ? ["nation", winner.name()] : ["player", clientId];
   }
 
   teams(): Team[] {
@@ -993,6 +1052,18 @@ export class GameImpl implements Game {
       return [];
     }
     return [this.botTeam, ...this.playerTeams];
+  }
+
+  teamTilesOwned(team: Team): number {
+    let teamTiles = 0;
+    for (const p of this.allPlayers()) {
+      if (p.team() === team) teamTiles += p.numTilesOwned();
+    }
+    return teamTiles;
+  }
+
+  totalLandTiles(): number {
+    return Math.max(0, this.numLandTiles() - this.numTilesWithFallout());
   }
 
   teamSpawnArea(team: Team): SpawnArea | undefined {
@@ -1259,6 +1330,9 @@ export class GameImpl implements Game {
   neighbors4(ref: TileRef, out: TileRef[]): number {
     return this._map.neighbors4(ref, out);
   }
+  neighbors8(ref: TileRef, out: TileRef[]): number {
+    return this._map.neighbors8(ref, out);
+  }
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);
   }
@@ -1311,6 +1385,26 @@ export class GameImpl implements Game {
   railNetwork(): RailNetwork {
     return this._railNetwork;
   }
+  mirvsLaunched(): number {
+    return this._mirvsLaunched;
+  }
+  recordMirvLaunch(): void {
+    this._mirvsLaunched++;
+  }
+  nextShipStagger(kind: "tradeShip" | "transportShip"): number {
+    return this.shipStaggers[kind]++ % WaterPathFinder.STAGGER_SPREAD;
+  }
+  nationMirvTargets(): Map<PlayerID, Tick> {
+    return this._nationMirvTargets;
+  }
+  /** The PlayerInfo object this game holds for a player id, if any. */
+  findPlayerInfo(id: PlayerID): PlayerInfo | undefined {
+    return (
+      this._players.get(id)?.info() ??
+      this._humans.find((h) => h.id === id) ??
+      this._nations.find((n) => n.playerInfo.id === id)?.playerInfo
+    );
+  }
   miniWaterHPA(): PathFinder<number> | null {
     return this._waterManager.miniWaterHPA();
   }
@@ -1332,6 +1426,117 @@ export class GameImpl implements Game {
   sharedWaterComponents(player: Player): Set<number> | null {
     return this._sharedWaterCache.get(player);
   }
+  /**
+   * Game-level state for a snapshot. Taken at a tick boundary, so the
+   * per-tick update buffers (updates, tile pairs, player and attack quads,
+   * motion plans, nuke impacts) are always drained and are not stored.
+   */
+  snapshotState(w: SnapshotWriter): GameState {
+    // Exec list order is state: register both lists first so their table
+    // rows come out in tick order.
+    const execs = this.execs.map((e) => w.exec(e));
+    const unInitExecs = this.unInitExecs.map((e) => w.exec(e));
+    return {
+      ticks: this._ticks,
+      startTick: this.startTick,
+      humans: this._humans.map(playerInfoData),
+      nations: this._nations.map(nationData),
+      players: [...this._players.values()].map((p) => w.player(p)),
+      execs,
+      unInitExecs,
+      allianceRequests: this.allianceRequests.map((r) => w.allianceRequest(r)),
+      nextPlayerID: this.nextPlayerID,
+      nextUnitID: this._nextUnitID,
+      nextAllianceID: this.nextAllianceID,
+      units: [...this._unitMap.values()].map((u) => w.unit(u)),
+      planDrivenUnitIds: [...this.planDrivenUnitIds],
+      unitGrid: this.unitGrid.snapshot((u) => w.unit(u)),
+      playerTeams: [...this.playerTeams],
+      botTeam: this.botTeam,
+      isPaused: this._isPaused,
+      winner:
+        this._winner === null
+          ? null
+          : typeof this._winner === "string"
+            ? { team: this._winner }
+            : { player: w.player(this._winner) },
+      unitsVersion: this._unitsVersion,
+      territoryVersion: this._territoryVersion,
+      shipStaggers: { ...this.shipStaggers },
+      nationMirvTargets: [...this._nationMirvTargets],
+      mirvsLaunched: this._mirvsLaunched,
+      rail: w.versioned(
+        RailNetworkSnapshot,
+        (this._railNetwork as RailNetworkImpl).snapshot(w),
+      ),
+      water: w.versioned(WaterManagerSnapshot, this._waterManager.snapshot()),
+      sharedWaterCache: w.versioned(
+        SharedWaterCacheSnapshot,
+        this._sharedWaterCache.snapshot(w),
+      ),
+      stats: w.versioned(StatsSnapshot, (this._stats as StatsImpl).snapshot()),
+    };
+  }
+
+  /** Registers a restored player shell before any state is filled in. */
+  addRestoredPlayer(player: PlayerImpl, id: PlayerID, smallID: number): void {
+    this._players.set(id, player);
+    this._playersBySmallID[smallID - 1] = player;
+  }
+
+  /**
+   * Applies game-level state to a game constructed with `restoring`, once
+   * every player, unit and execution has been restored.
+   */
+  restoreState(s: GameState, r: SnapshotReader): void {
+    this._ticks = s.ticks;
+    this.startTick = s.startTick;
+    this.execs = s.execs.map((i) => r.exec(i));
+    this.unInitExecs = s.unInitExecs.map((i) => r.exec(i));
+    this.allianceRequests = s.allianceRequests.map((i) =>
+      r.allianceRequest<AllianceRequestImpl>(i),
+    );
+    this.nextPlayerID = s.nextPlayerID;
+    this._nextUnitID = s.nextUnitID;
+    this.nextAllianceID = s.nextAllianceID;
+    this._unitMap = new Map(
+      s.units.map((i) => {
+        const u = r.unit(i);
+        return [u.id(), u];
+      }),
+    );
+    this.planDrivenUnitIds = new Set(s.planDrivenUnitIds);
+    this.unitGrid.restoreSnapshot(s.unitGrid, (i) => r.unit(i));
+    this.playerTeams = [...s.playerTeams];
+    this.botTeam = s.botTeam;
+    this._isPaused = s.isPaused;
+    this._winner =
+      s.winner === null
+        ? null
+        : "team" in s.winner
+          ? s.winner.team
+          : r.player(s.winner.player);
+    this._unitsVersion = s.unitsVersion;
+    this._territoryVersion = s.territoryVersion;
+    this.shipStaggers = { ...s.shipStaggers };
+    this._nationMirvTargets = new Map(s.nationMirvTargets);
+    this._mirvsLaunched = s.mirvsLaunched;
+    (this._railNetwork as RailNetworkImpl).restoreSnapshot(
+      readVersioned(RailNetworkSnapshot, s.rail),
+      r,
+    );
+    this._waterManager.restoreSnapshot(
+      readVersioned(WaterManagerSnapshot, s.water),
+    );
+    this._sharedWaterCache.restoreSnapshot(
+      readVersioned(SharedWaterCacheSnapshot, s.sharedWaterCache),
+      r,
+    );
+    (this._stats as StatsImpl).restoreSnapshot(
+      readVersioned(StatsSnapshot, s.stats),
+    );
+  }
+
   conquerPlayer(conqueror: Player, conquered: Player) {
     if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {
       const ships = conquered
@@ -1415,6 +1620,46 @@ export class GameImpl implements Game {
     });
   }
 }
+
+export const GameSnapshot = snapshotType({
+  name: "Game",
+  version: 1,
+  schema: z.object({
+    ticks: zInt(),
+    startTick: zInt().nullable(),
+    humans: z.array(PlayerInfoSchema),
+    nations: z.array(NationSchema),
+    players: z.array(zPlayerRef()),
+    execs: z.array(zRef()),
+    unInitExecs: z.array(zRef()),
+    allianceRequests: z.array(zRef()),
+    nextPlayerID: zInt(),
+    nextUnitID: zInt(),
+    nextAllianceID: zInt(),
+    units: z.array(zRef()),
+    planDrivenUnitIds: z.array(zInt()),
+    unitGrid: z.array(z.array(z.tuple([UnitTypeSchema, z.array(zRef())]))),
+    playerTeams: z.array(z.string()),
+    botTeam: z.string(),
+    isPaused: z.boolean(),
+    winner: z
+      .union([
+        z.object({ player: zPlayerRef() }),
+        z.object({ team: z.string() }),
+      ])
+      .nullable(),
+    unitsVersion: zInt(),
+    territoryVersion: zInt(),
+    shipStaggers: z.object({ tradeShip: zInt(), transportShip: zInt() }),
+    nationMirvTargets: z.array(z.tuple([z.string(), zInt()])),
+    mirvsLaunched: zInt(),
+    rail: VersionedSchema,
+    water: VersionedSchema,
+    sharedWaterCache: VersionedSchema,
+    stats: VersionedSchema,
+  }),
+});
+export type GameState = z.infer<typeof GameSnapshot.schema>;
 
 // Or a more dynamic approach that will catch new enum values:
 const createGameUpdatesMap = (): GameUpdates => {

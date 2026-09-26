@@ -79,6 +79,19 @@ const SingleplayerMapAchievementSchema = z.object({
   difficulty: z.enum(Difficulty),
 });
 
+// One row from player_achievements. Feats recur -- one row per qualifying
+// game -- so the same `achievement` appears many times for a veteran player.
+// Consumers that care about "has this been earned" must deduplicate by name.
+export const PlayerAchievementSchema = z.object({
+  achievement: z.string(),
+  // games.game -- the client-generated game id (an instance letter plus a
+  // nine-character nanoid, stored as a varchar). NOT the server's `gameId`,
+  // which is a stringified bigint row id.
+  game: z.string().nullable(),
+  achievedAt: z.iso.datetime().nullable(),
+});
+export type PlayerAchievement = z.infer<typeof PlayerAchievementSchema>;
+
 // An unclaimed subscription reward from GET /users/@me. `id` and `amount` are
 // stringified bigints — keep them as strings (amount can in principle exceed
 // Number.MAX_SAFE_INTEGER). `reason` is open-ended server-side; fall back to
@@ -149,6 +162,19 @@ export function isVerifiedUsername(
   );
 }
 
+// Third-party sites a player can prove account ownership to with a short-lived
+// identity token (POST /users/@me/identity_token). Admin-managed on the API
+// and served by GET /public/identity_token/audiences.
+export const IdentityTokenAudiencesResponseSchema = z.object({
+  audiences: z.array(z.string()),
+});
+
+export const IdentityTokenResponseSchema = z.object({
+  token: z.string(),
+  expiresAt: z.string(),
+});
+export type IdentityTokenResponse = z.infer<typeof IdentityTokenResponseSchema>;
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -201,6 +227,10 @@ export const UserMeResponseSchema = z.object({
     flares: z.string().array().optional(),
     achievements: z.object({
       singleplayerMap: z.array(SingleplayerMapAchievementSchema),
+      // Optional with a default rather than required: prod and staging deploy
+      // on separate schedules, and a client that hard-failed against a server
+      // without this field would take out the whole account panel.
+      player: z.array(PlayerAchievementSchema).optional().default([]),
     }),
     leaderboard: z
       .object({
@@ -316,6 +346,40 @@ export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
 
+/**
+ * Is this subscription a GRANT — free access nobody is billing — rather than
+ * something the player bought?
+ *
+ * The one definition, shared by every surface that has to tell the two apart
+ * (OPE-314 hid the account panel's destructive controls on it; OPE-440 turned
+ * the store's dead "Subscribed" tile back into a buy action). It applies the
+ * exact three-state rule documented on `provider` above, so a caller cannot
+ * re-derive a fourth:
+ *
+ *   null      — granted.
+ *   "stripe" / "steam" (or any future rail) — paid.
+ *   undefined — the server predates the field, so we CANNOT tell. Falls back
+ *               to the PAID behaviour, which is the safe side on every
+ *               caller: it keeps Cancel in front of a paying subscriber, and
+ *               it never sends one to a second checkout.
+ *
+ * Spelled out rather than `!sub.provider`, which is true for `undefined` too
+ * and so collapses the two states that must not collapse.
+ *
+ * The explicit null/undefined guard is for the THIRD case — no subscription at
+ * all. `sub?.provider === null` would in fact answer this predicate correctly
+ * (`undefined === null` is false), but it answers by accident: it returns the
+ * same `false` for "pays us" and "has nothing", and those have separate
+ * branches in every caller. The guard names the case instead of relying on two
+ * unrelated states landing on one value.
+ */
+export function isGrantedSubscription(
+  sub: UserSubscription | null | undefined,
+): boolean {
+  if (sub === null || sub === undefined) return false;
+  return sub.provider === null;
+}
+
 // PUT /users/@me/username success payload. `username` is the resolved display
 // form (safe for optimistic UI). The suffix is re-rolled on every rename and
 // the response carries the fresh 30-day cooldown.
@@ -349,7 +413,23 @@ export const PutUsernameResponseSchema = z.object({
   // response is parsed with safeParse, so requiring the field would make every
   // rename against the current API fail validation and surface as a generic
   // "failed". Treat `undefined` as "the API predates this" and say nothing.
-  bareClaim: BareClaimSchema.optional(),
+  //
+  // `.catch(undefined)` for the mirror image of the same skew: the client also
+  // ships BEHIND the API, on every API change, not just this one. A fourth
+  // value added server-side would otherwise fail safeParse on every
+  // un-updated client — and this is a 200, so the rename has already
+  // committed. Rejecting would report failure for a rename that succeeded,
+  // spend the player's 30-day cooldown and reopen the modal on a name they
+  // never chose. An unknown value is therefore treated as absent, which means
+  // "say nothing".
+  //
+  // The contract that keeps this safe: "unavailable" is the only value that
+  // obliges a client to say anything, so it must remain the value sent
+  // whenever a premium player is given a suffixed name. New values may be
+  // added only for outcomes where saying nothing is correct — splitting
+  // "unavailable" into narrower values would silence this message on clients
+  // that predate the split.
+  bareClaim: BareClaimSchema.optional().catch(undefined),
 });
 export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
 
@@ -370,9 +450,18 @@ export type PublicCreator = z.infer<typeof PublicCreatorSchema>;
 // name of the creator the caller is now bound to. Deliberately just the
 // public pair, not the full player.creator record (sinceAt/canChangeAt):
 // callers invalidate the cached /users/@me instead of duplicating those here.
-export const PutCreatorResponseSchema = PublicCreatorSchema.pick({
-  code: true,
-  displayName: true,
+//
+// The API wraps the pair in an envelope — `{ ok: true, creator: { code,
+// displayName } }` (infra `users/@me/creator/PUT.ts` bindingSuccess) — the same
+// `ok` field its failures carry. Parsing the pair at the top level rejected
+// every successful bind, so the panel showed "Something went wrong" after the
+// server had already bound the creator.
+export const PutCreatorResponseSchema = z.object({
+  ok: z.literal(true),
+  creator: PublicCreatorSchema.pick({
+    code: true,
+    displayName: true,
+  }),
 });
 export type PutCreatorResponse = z.infer<typeof PutCreatorResponseSchema>;
 
@@ -780,6 +869,8 @@ export const NewsItemSchema = z.object({
   descriptionTranslationKey: z.string().optional(),
   url: z.string().nullable().optional(),
   type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
+  // Absent or empty means every platform.
+  platforms: z.array(z.string()).optional(),
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
 
@@ -856,10 +947,19 @@ export type PaymentsKind = z.infer<typeof PaymentsKindSchema>;
 //   - "client_overlay" — Steam's overlay purchase dialog is already on screen
 //                        and `redirectUrl` is null. There is nothing to
 //                        navigate to; wait for Steam to report authorization.
+//   - "client_secret"  — a Stripe PaymentIntent was minted and `clientSecret`
+//                        carries its client secret. The client confirms it
+//                        in-page (wallet button or card form); nothing
+//                        navigates. Only returned when the request listed it
+//                        in `handoffs`, so an older client never sees it.
 //
 // Branching on "is redirectUrl set?" instead would silently mis-handle a
 // client_overlay response, so don't.
-export const PaymentsHandoffSchema = z.enum(["redirect", "client_overlay"]);
+export const PaymentsHandoffSchema = z.enum([
+  "redirect",
+  "client_overlay",
+  "client_secret",
+]);
 export type PaymentsHandoff = z.infer<typeof PaymentsHandoffSchema>;
 
 // The 200 body. Deliberately FLAT — `handoff` is a sibling of `redirectUrl`,
@@ -871,6 +971,9 @@ export type PaymentsHandoff = z.infer<typeof PaymentsHandoffSchema>;
 //
 // `expiresAt` is advisory only. Do not build a countdown or an auto-cancel on
 // it — the server owns the order's lifetime.
+//
+// `clientSecret` defaults to null rather than being required so responses from
+// an API deployed before the inline flow still parse.
 export const PaymentsCheckoutResponseSchema = z
   .object({
     orderId: z.string().nullable(),
@@ -878,13 +981,19 @@ export const PaymentsCheckoutResponseSchema = z
     kind: PaymentsKindSchema,
     handoff: PaymentsHandoffSchema,
     redirectUrl: z.string().nullable(),
+    clientSecret: z.string().nullable().default(null),
     expiresAt: z.string().nullable(),
   })
   // A "redirect" with nowhere to redirect to is not a response we can act on;
-  // rejecting it here keeps every caller from having to re-check.
+  // rejecting it here keeps every caller from having to re-check. Same for a
+  // "client_secret" without a secret.
   .refine((body) => body.handoff !== "redirect" || body.redirectUrl !== null, {
     message: "handoff 'redirect' requires a redirectUrl",
-  });
+  })
+  .refine(
+    (body) => body.handoff !== "client_secret" || body.clientSecret !== null,
+    { message: "handoff 'client_secret' requires a clientSecret" },
+  );
 export type PaymentsCheckoutResponse = z.infer<
   typeof PaymentsCheckoutResponseSchema
 >;

@@ -17,6 +17,54 @@ export function isDesktopShell(): boolean {
 // SteamSDK.ts for why (TS2717).
 type VersionBridge = { version?: () => Promise<string> };
 
+// The locale the player's Steam implies. A plain VALUE, not a function, unlike
+// every other member of this bridge: the shell reads it from Steam once at
+// startup and passes it into the window, so it is fixed for the window's life
+// and needs no IPC round trip. That matters because the shell's own account
+// gate reads it while painting its first screen.
+type LocaleBridge = { steamLocale?: unknown };
+
+/**
+ * The locale Steam reports for this player, or null if it reports none.
+ *
+ * Null and "not on desktop" are deliberately the same answer: both mean
+ * "nothing better than the browser's own locale is known", which is exactly
+ * what the caller should then fall back to. Steam being absent, Steam
+ * declining to answer, and running on the web are not worth distinguishing
+ * here -- they lead to the same behaviour.
+ *
+ * Validated rather than trusted despite coming from our own shell. It arrives
+ * as a process-argv string (see the shell's preload) and is about to be
+ * interpolated into an asset URL by loadLanguage, so a hostile or merely
+ * malformed value should not get that far. A BCP-47-shaped tag is all this
+ * ever needs to be.
+ */
+export function desktopSteamLocale(): string | null {
+  const desktop = window.openfrontDesktop as LocaleBridge | undefined;
+  const locale = desktop?.steamLocale;
+  if (typeof locale !== "string") return null;
+  // Shape first, then BCP-47 proper. The regex alone accepts tags that are
+  // well-shaped but not real -- "en-12", whose second subtag is neither a
+  // region (two alpha, or three digits) nor a variant (5-8 alphanumerics, or
+  // four starting with a digit). getClosestSupportedLang would then narrow it
+  // to "en" on its first two characters, so a malformed value from the shell
+  // would silently beat a perfectly good navigator.language.
+  //
+  // getCanonicalLocales throws on anything structurally invalid, which is the
+  // real check; the regex stays in front of it because it is what rejects the
+  // path- and identifier-shaped inputs explicitly, rather than incidentally.
+  if (!/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(locale)) return null;
+  try {
+    Intl.getCanonicalLocales(locale);
+  } catch {
+    return null;
+  }
+  // The ORIGINAL, not the canonicalised form: this value is matched against
+  // the codes in metadata.json, and canonicalisation is free to rewrite case
+  // and aliases in ways that list does not follow.
+  return locale;
+}
+
 // The version label is purely cosmetic and must never block client
 // initialisation. The bridge below is implemented in a different (private)
 // repository, so this public repo cannot enforce that its version() call
@@ -52,7 +100,13 @@ export function composeVersionDisplay(
   if (!shellVersion) return gameVersion;
   const trimmed = shellVersion.trim();
   if (trimmed === "") return gameVersion;
-  const withV = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
+  // Prefixed only when the value looks like a bare version. The shell reports
+  // its 7-char commit on an untagged build (OPE-358), and "va1b2c3d" reads as
+  // a version that does not exist. Conditional rather than dropped outright
+  // so an older shell -- which always answers "0.2.0" -- still renders
+  // "v0.2.0": the two repositories update on separate schedules, so both
+  // shapes are live at once.
+  const withV = /^\d+\.\d+\.\d+/.test(trimmed) ? `v${trimmed}` : trimmed;
   return `${gameVersion} (Steam ${withV})`;
 }
 
@@ -123,6 +177,50 @@ export function desktopUpdate(): DesktopUpdateBridge | null {
   if (typeof window === "undefined") return null;
   const desktop = window.openfrontDesktop as UpdateBridgeHolder | undefined;
   return desktop?.update ?? null;
+}
+
+let __updateState: DesktopUpdateState | null = null;
+
+/**
+ * The shell's current update state, or null before the first one has been
+ * published -- always the case on the web, where there is no bridge at all.
+ *
+ * This exists for the same reason getDesktopSessionState() does in Auth.ts,
+ * and it fixes the mirror-image bug (OPE-396). The bridge replays its current
+ * state to every new subscriber SYNCHRONOUSLY, so DesktopStatusBar -- the one
+ * subscriber, and therefore the one publisher of `desktop-update-state` --
+ * dispatches during its own upgrade. <game-mode-selector> cannot exist yet at
+ * that moment: it is rendered by <play-page> on a Lit microtask, which cannot
+ * run until module evaluation has already finished. The dispatch is one-shot,
+ * so a component that mounts afterwards never hears it and gates on null.
+ *
+ * That costs nothing on a cold launch (the updater is still `checking`, and
+ * every later state arrives as an ordinary change event), and everything when
+ * the renderer loads a document while the updater ALREADY holds `staged` --
+ * the host navigating to the next lobby, a post-purchase refresh, a failed
+ * apply(). There the replay was the only delivery, so the bar correctly reads
+ * "Update ready" while the gate silently never applies.
+ *
+ * Seeding at the consumer rather than re-dispatching later at the publisher:
+ * a second dispatch would only move the race to whoever mounts after IT.
+ */
+export function getDesktopUpdateState(): DesktopUpdateState | null {
+  return __updateState;
+}
+
+/**
+ * Caches `state` and broadcasts it, so entry-point components can gate
+ * without each opening its own subscription to the bridge. Mirrors Auth.ts's
+ * setSessionState: cache first, then dispatch, so a listener that reads the
+ * accessor during the event sees the value it was just handed.
+ *
+ * Only DesktopStatusBar calls this -- it owns the bridge subscription.
+ */
+export function publishDesktopUpdateState(state: DesktopUpdateState): void {
+  __updateState = state;
+  document.dispatchEvent(
+    new CustomEvent("desktop-update-state", { detail: state }),
+  );
 }
 
 /**
@@ -252,7 +350,8 @@ export type SessionFailureKind =
   | "steam-error" // the native ticket call threw for some other reason
   | "steam-ticket-rejected" // /auth/steam 401: Steam refused the ticket
   | "steam-backend" // /auth/steam 5xx: Steam's backend, not the player
-  | "network"; // the request never completed
+  | "network" // the request never completed
+  | "needs-account"; // the shell won't mint a ticket until the gate is answered
 
 export interface DesktopSessionState {
   status: DesktopSessionStatus;
@@ -283,4 +382,93 @@ export function multiplayerAllowedForSession(
 ): boolean {
   if (state === null) return true;
   return state.status === "unknown" || state.status === "signed-in";
+}
+
+/**
+ * The shell's account-linking gate, re-openable on demand.
+ *
+ * The desktop preload exposes `showLinkGate()`: it navigates the window to
+ * the gate's re-entry variant, which mints a fresh link ticket, opens the
+ * browser at the website's `#steam-link?token=...` URL, polls the ticket and
+ * -- once the browser session has signed in and confirmed the link -- reloads
+ * the game, whose Steam sign-in then resolves to the linked account. That is
+ * the same handoff the first-launch gate uses, and it needs no return path
+ * into the shell, which is why every provider login on desktop goes through
+ * it (see Auth.ts) rather than an OAuth redirect: `window.location.href` in
+ * the shell is `app://openfront/...`, which the API's redirect_uri allowlist
+ * refuses, and the shell registers no scheme handler for a browser-completed
+ * OAuth flow to come back to anyway.
+ *
+ * Guards on `showLinkGate` specifically -- the function actually invoked --
+ * and not on a sibling like `linkGate` (the gate page's own namespace), so a
+ * rename of one cannot leave a caller wired to nothing. Null on the web and
+ * on a shell too old to expose it, for the same degrade-don't-break reason
+ * desktopUpdate() above returns null.
+ */
+export interface DesktopLinkGateBridge {
+  showLinkGate: () => Promise<void>;
+}
+
+export function desktopLinkGate(): DesktopLinkGateBridge | null {
+  if (typeof window === "undefined") return null;
+  const desktop = window.openfrontDesktop as
+    | { showLinkGate?: unknown }
+    | undefined;
+  return typeof desktop?.showLinkGate === "function"
+    ? (desktop as DesktopLinkGateBridge)
+    : null;
+}
+
+/**
+ * The shell's in-app exit (OPE-402).
+ *
+ * The desktop window opens borderless by default since OPE-173, which removes
+ * the title bar, and the menu bar is hidden — so the OS offers the player no
+ * visible way out. F11 back to windowed and Alt+F4 both still work, but
+ * neither is discoverable, and Steam players expect a Quit item in the game's
+ * own UI regardless.
+ *
+ * Null on the web, on CrazyGames and on any shell older than the one that
+ * introduced `quit()` (`shell.api` 4) — the same degrade-don't-break contract
+ * desktopUpdate() and desktopDisplay() keep, and for the same reason: the
+ * shell ships in the Steam depot on Steam's schedule while this client updates
+ * at runtime, so a client newer than its shell is ordinary.
+ *
+ * FEATURE DETECTION ON THE METHOD, not on `shell.api` — the rule
+ * desktopLinkGate() and desktopDisplay() already apply. A rename on the shell
+ * side then hides the control rather than wiring a button to nothing.
+ */
+export interface DesktopQuitBridge {
+  quit: () => Promise<void>;
+}
+
+export function desktopQuit(): DesktopQuitBridge | null {
+  if (typeof window === "undefined") return null;
+  const desktop = window.openfrontDesktop as { quit?: unknown } | undefined;
+  return typeof desktop?.quit === "function"
+    ? (desktop as DesktopQuitBridge)
+    : null;
+}
+
+/**
+ * Asks the shell to quit, and swallows everything.
+ *
+ * The invoke MAY NEVER SETTLE: the main process begins shutting down inside
+ * its handler, so this renderer is usually destroyed before a reply can come
+ * back. Awaiting it in a click handler would leave the caller hanging forever
+ * on the success path, and an unhandled rejection on the failure one.
+ *
+ * There is deliberately nothing to report back. A shell that refuses to quit
+ * leaves the player exactly where they were, with the window they can still
+ * close by every other means; a spinner or an error toast for it would be a
+ * UI for a state that has no remedy.
+ */
+export function requestDesktopQuit(): void {
+  const bridge = desktopQuit();
+  if (bridge === null) return;
+  try {
+    void bridge.quit().catch(() => {});
+  } catch {
+    // A bridge that throws synchronously rather than rejecting.
+  }
 }

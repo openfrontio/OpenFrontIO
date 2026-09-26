@@ -1,6 +1,7 @@
 import { Logger } from "winston";
 import { z } from "zod";
 import { ZbContext } from "../../zbin";
+import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { ClientID, ClientMessage, ClientMessageSchema } from "../core/Schemas";
 import { decodeClientMessageUnvalidated } from "../core/ZbinWire";
 import { Client } from "./Client";
@@ -73,7 +74,7 @@ export class SocketIngress {
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
+        client.ws.close(CloseCode.ProtocolError, CloseReason.ProtocolError);
       }
     });
 
@@ -166,7 +167,10 @@ export class SocketIngress {
           "limit",
         );
       }
-      this.log.warn(`Client message rate limit exceeded, dropping`, {
+      // Rejected intents are already counted via telemetry.intentObserved
+      // above; a misbehaving client can produce thousands of these a
+      // minute, so this is debug-only rather than warn.
+      this.log.debug(`Client message rate limit exceeded, dropping`, {
         clientID: client.clientID,
         type: clientMsg.type,
       });
@@ -176,7 +180,9 @@ export class SocketIngress {
     // game state. Without this, claiming to spectate is a way past the lobby
     // cap and into the intent stream.
     if (client.spectator && SPECTATOR_BLOCKED_MESSAGES.has(clientMsg.type)) {
-      this.log.warn(`dropping ${clientMsg.type} from spectator`, {
+      // Debug-only: a spectator probing blocked types produces one line per
+      // message, which dominates warn volume at scale.
+      this.log.debug(`dropping ${clientMsg.type} from spectator`, {
         clientID: client.clientID,
       });
       return;

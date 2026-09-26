@@ -1,0 +1,337 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [51, 25],
+      "flag": "sd",
+      "name": "Ash-Shamaliyah"
+    },
+    {
+      "coordinates": [283, 245],
+      "flag": "sd",
+      "name": "Nahr an-Nil"
+    },
+    {
+      "coordinates": [522, 134],
+      "flag": "sd",
+      "name": "Red Sea"
+    },
+    {
+      "coordinates": [430, 279],
+      "flag": "sd",
+      "name": "Kassala"
+    },
+    {
+      "coordinates": [215, 506],
+      "flag": "sd",
+      "name": "White Nile"
+    },
+    {
+      "coordinates": [322, 448],
+      "flag": "sd",
+      "name": "Blue Nile"
+    },
+    {
+      "coordinates": [410, 605],
+      "flag": "et-be",
+      "name": "Benishangul-Gumuz"
+    },
+    {
+      "coordinates": [165, 288],
+      "flag": "sd",
+      "name": "Khartoum"
+    },
+    {
+      "coordinates": [473, 675],
+      "flag": "et-aa",
+      "name": "Addis Ababa"
+    },
+    {
+      "coordinates": [187, 724],
+      "flag": "et-ga",
+      "name": "Gambela"
+    },
+    {
+      "coordinates": [315, 841],
+      "flag": "et-sw",
+      "name": "Southwest Ethiopia"
+    },
+    {
+      "coordinates": [455, 964],
+      "flag": "et-se",
+      "name": "South Ethiopia"
+    },
+    {
+      "coordinates": [354, 717],
+      "flag": "et-ce",
+      "name": "Central Ethiopia"
+    },
+    {
+      "coordinates": [433, 808],
+      "flag": "et-si",
+      "name": "Sidama"
+    },
+    {
+      "coordinates": [812, 666],
+      "flag": "et-dd",
+      "name": "Dire Dawa"
+    },
+    {
+      "coordinates": [834, 683],
+      "flag": "et-ha",
+      "name": "Harari"
+    },
+    {
+      "coordinates": [805, 871],
+      "flag": "et-so",
+      "name": "Somali Region"
+    },
+    {
+      "coordinates": [1261, 624],
+      "flag": "Khatumo",
+      "name": "North East State"
+    },
+    {
+      "coordinates": [1313, 880],
+      "flag": "Galmudug",
+      "name": "Galmudug"
+    },
+    {
+      "coordinates": [960, 1221],
+      "flag": "South West Somalia",
+      "name": "Southwest State"
+    },
+    {
+      "coordinates": [1230, 1027],
+      "flag": "Hirshabelle",
+      "name": "Hirshabelle"
+    },
+    {
+      "coordinates": [678, 1203],
+      "flag": "ke",
+      "name": "North Eastern Region"
+    },
+    {
+      "coordinates": [525, 1148],
+      "flag": "ke",
+      "name": "Eastern Region"
+    },
+    {
+      "coordinates": [346, 1402],
+      "flag": "ke",
+      "name": "Nyanza"
+    },
+    {
+      "coordinates": [428, 1451],
+      "flag": "ke",
+      "name": "Nairobi"
+    },
+    {
+      "coordinates": [51, 1159],
+      "flag": "ss",
+      "name": "Equatoria"
+    },
+    {
+      "coordinates": [141, 858],
+      "flag": "ss",
+      "name": "Upper Nile"
+    },
+    {
+      "coordinates": [195, 1616],
+      "flag": "tz",
+      "name": "Mwanza"
+    },
+    {
+      "coordinates": [284, 1546],
+      "flag": "tz",
+      "name": "Musoma"
+    },
+    {
+      "coordinates": [207, 1753],
+      "flag": "tz",
+      "name": "Tabora"
+    },
+    {
+      "coordinates": [1090, 53],
+      "flag": "sa",
+      "name": "Najran"
+    },
+    {
+      "coordinates": [1308, 321],
+      "flag": "ye",
+      "name": "Hadramaut"
+    },
+    {
+      "coordinates": [1528, 159],
+      "flag": "om",
+      "name": "Dhofar"
+    }
+  ],
+  "categories": ["africa", "new"],
+  "id": "HornOfAfrica",
+  "map": {
+    "height": 1864,
+    "num_land_tiles": 2024462,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 466,
+    "num_land_tiles": 123100,
+    "width": 500
+  },
+  "map4x": {
+    "height": 932,
+    "num_land_tiles": 501259,
+    "width": 1000
+  },
+  "multiplayer_frequency": 5,
+  "name": "Horn Of Africa",
+  "nations": [
+    {
+      "coordinates": [1767, 1707],
+      "flag": "sc",
+      "name": "Seychelles"
+    },
+    {
+      "coordinates": [636, 1817],
+      "flag": "Zanzibar",
+      "name": "Zanzibar"
+    },
+    {
+      "coordinates": [29, 1505],
+      "flag": "rw",
+      "name": "Rwanda"
+    },
+    {
+      "coordinates": [10, 1589],
+      "flag": "bi",
+      "name": "Burundi"
+    },
+    {
+      "coordinates": [86, 1005],
+      "flag": "ss",
+      "name": "South Sudan"
+    },
+    {
+      "coordinates": [186, 332],
+      "flag": "sd",
+      "name": "Sudan"
+    },
+    {
+      "coordinates": [511, 1476],
+      "flag": "ke",
+      "name": "Kenya"
+    },
+    {
+      "coordinates": [178, 1244],
+      "flag": "ug",
+      "name": "Uganda"
+    },
+    {
+      "coordinates": [1017, 422],
+      "flag": "ye",
+      "name": "Yemen"
+    },
+    {
+      "coordinates": [852, 115],
+      "flag": "sa",
+      "name": "Saudi Arabia"
+    },
+    {
+      "coordinates": [1757, 71],
+      "flag": "om",
+      "name": "Oman"
+    },
+    {
+      "coordinates": [864, 546],
+      "flag": "dj",
+      "name": "Djibouti"
+    },
+    {
+      "coordinates": [1642, 508],
+      "flag": "ye",
+      "name": "Socotra"
+    },
+    {
+      "coordinates": [596, 215],
+      "flag": "er",
+      "name": "Eritrea"
+    },
+    {
+      "coordinates": [1148, 1141],
+      "flag": "so",
+      "name": "Somalia"
+    },
+    {
+      "coordinates": [1096, 654],
+      "flag": "Somaliland",
+      "name": "Somaliland"
+    },
+    {
+      "coordinates": [1442, 575],
+      "flag": "Puntland",
+      "name": "Puntland"
+    },
+    {
+      "coordinates": [478, 707],
+      "flag": "et",
+      "name": "Ethiopia"
+    },
+    {
+      "coordinates": [525, 351],
+      "flag": "et-ti",
+      "name": "Tigray"
+    },
+    {
+      "coordinates": [1050, 875],
+      "flag": "Ogaden",
+      "name": "Ogaden"
+    },
+    {
+      "coordinates": [409, 487],
+      "flag": "et-am",
+      "name": "Amhara"
+    },
+    {
+      "coordinates": [679, 551],
+      "flag": "et-af",
+      "name": "Afar"
+    },
+    {
+      "coordinates": [638, 720],
+      "flag": "et-or",
+      "name": "Oromo"
+    },
+    {
+      "coordinates": [450, 1719],
+      "flag": "tz",
+      "name": "Tanzania"
+    },
+    {
+      "coordinates": [61, 400],
+      "flag": "South Kordofan",
+      "name": "Kordofan"
+    },
+    {
+      "coordinates": [318, 1113],
+      "flag": "ke",
+      "name": "Rift Valley"
+    },
+    {
+      "coordinates": [667, 1597],
+      "flag": "ke",
+      "name": "Mombasa"
+    },
+    {
+      "coordinates": [379, 73],
+      "flag": "Beja",
+      "name": "Beja"
+    },
+    {
+      "coordinates": [822, 1346],
+      "flag": "Jubaland",
+      "name": "Jubaland"
+    }
+  ],
+  "themes": ["africa"],
+  "translation_key": "map.hornofafrica"
+}

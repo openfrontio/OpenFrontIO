@@ -1,6 +1,29 @@
-import { Execution, Game, isUnit, Player, Unit, UnitType } from "../game/Game";
+import { z } from "zod";
+import {
+  Execution,
+  Game,
+  GameType,
+  isUnit,
+  Player,
+  Unit,
+  UnitType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import {
+  zInt,
+  zNum,
+  zPlayerRef,
+  zRandom,
+  zRef,
+  zTile,
+} from "../snapshot/SnapshotType";
 import { SAMMissileExecution } from "./SAMMissileExecution";
 
 type Target = {
@@ -36,6 +59,23 @@ class SAMTargetingSystem {
   ) {
     this.missileSpeed = this.mg.config().defaultSamMissileSpeed();
     this.isTargetableNearbyUnit = this.isTargetableNearbyUnit.bind(this);
+  }
+
+  /** Cached interceptions in insertion order, for game snapshots. */
+  getState(): TargetingState {
+    return [...this.precomputedNukes].map(([id, c]) => ({
+      id,
+      tick: c.tick,
+      tile: c.tile,
+      minDistSq: c.minDistSq,
+      lastSeenTick: c.lastSeenTick,
+    }));
+  }
+
+  setState(s: TargetingState): void {
+    for (const { id, tick, tile, minDistSq, lastSeenTick } of s) {
+      this.precomputedNukes.set(id, { tick, tile, minDistSq, lastSeenTick });
+    }
   }
 
   onLevelUp(): void {
@@ -165,7 +205,11 @@ class SAMTargetingSystem {
     const samOwner = this.sam.owner();
     const nukeOwner = unit.owner();
     if (samOwner.isFriendly(nukeOwner)) {
-      return this.mg.getWinner() !== null && samOwner.isOnSameTeam(nukeOwner);
+      // Aftergame fun (nuking teammates once the game is over) is disabled in singleplayer.
+      const gameOver =
+        this.mg.getWinner() !== null &&
+        this.mg.config().gameConfig().gameType !== GameType.Singleplayer;
+      return gameOver && samOwner.isOnSameTeam(nukeOwner);
     }
     return true;
   }
@@ -375,4 +419,69 @@ export class SAMLauncherExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return SAMLauncherExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      player: w.player(this.player),
+      tile: this.tile,
+      sam: w.unitOrNull(this.sam),
+      lastLevel: this.lastLevel,
+      // Created on the first tick with a SAM (always this.sam).
+      targeting:
+        this.targetingSystem === undefined
+          ? null
+          : this.targetingSystem.getState(),
+      pseudoRandom:
+        this.pseudoRandom === undefined ? null : w.random(this.pseudoRandom),
+    });
+  }
+
+  restoreSnapshot(s: SAMLauncherState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    this.player = r.player(s.player);
+    this.tile = s.tile;
+    this.sam = r.unitOrNull(s.sam);
+    this.lastLevel = s.lastLevel;
+    if (s.targeting !== null) {
+      // The constructor only stores the SAM and reads the game config.
+      this.targetingSystem = new SAMTargetingSystem(r.game, this.sam!);
+      this.targetingSystem.setState(s.targeting);
+    }
+    this.pseudoRandom =
+      s.pseudoRandom === null ? undefined : r.random(s.pseudoRandom);
+  }
 }
+
+const TargetingStateSchema = z.array(
+  z.object({
+    id: zInt(),
+    tick: zInt(),
+    tile: zTile(),
+    // Infinity when the nuke had no trajectory tiles left to scan.
+    minDistSq: zNum(),
+    lastSeenTick: zInt(),
+  }),
+);
+type TargetingState = z.infer<typeof TargetingStateSchema>;
+
+const SAMLauncherStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  player: zPlayerRef(),
+  tile: zInt().nullable(),
+  sam: zRef().nullable(),
+  lastLevel: zInt(),
+  targeting: TargetingStateSchema.nullable(),
+  pseudoRandom: zRandom().nullable(),
+});
+type SAMLauncherState = z.infer<typeof SAMLauncherStateSchema>;
+
+export const SAMLauncherExecutionSnapshot = execSnapshotType({
+  name: "SAMLauncher",
+  version: 1,
+  schema: SAMLauncherStateSchema,
+  cls: () => SAMLauncherExecution,
+});

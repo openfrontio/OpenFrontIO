@@ -26,6 +26,7 @@ import {
 import { TerrainMapData } from "../../core/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "../../core/game/UnitGrid";
+import { UserSettings } from "../../core/game/UserSettings";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../../core/Schemas";
 import { formatPlayerDisplayName } from "../../core/Util";
 import { WorkerClient } from "../../core/worker/WorkerClient";
@@ -41,8 +42,13 @@ import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
 import { resolveTeamClanTag } from "../Utils";
+import type { CosmeticVisibility } from "./CosmeticVisibility";
 import { PlayerView } from "./PlayerView";
 import { UnitView } from "./UnitView";
+
+function readCosmeticVisibility(): CosmeticVisibility {
+  return new UserSettings().graphicsOverrides().cosmetics ?? {};
+}
 
 const TRAIL_TYPES: ReadonlySet<UnitType> = new Set<UnitType>([
   UnitType.TransportShip,
@@ -143,6 +149,7 @@ export class GameView implements GameMap {
   private toDelete = new Set<number>();
 
   private _cosmetics: Map<string, PlayerCosmetics> = new Map();
+  private _cosmeticVisibility: CosmeticVisibility = readCosmeticVisibility();
 
   private _map: GameMap;
 
@@ -601,7 +608,8 @@ export class GameView implements GameMap {
       tick: gu.tick,
       allianceDuration: this._config.allianceDuration(),
       isTransitiveTarget: (sid) =>
-        this._myPlayer?.hasTransitiveTarget(sid) ?? false,
+        (this._markedPlayers?.has(sid) ?? false) ||
+        (this._myPlayer?.hasTransitiveTarget(sid) ?? false),
       doomsdayClockWarnTicks:
         this._config.doomsdayClockConfig().warnSeconds * 10,
     });
@@ -1081,6 +1089,21 @@ export class GameView implements GameMap {
     }
   }
 
+  cosmeticVisibility(): CosmeticVisibility {
+    return this._cosmeticVisibility;
+  }
+
+  /**
+   * Re-read the cosmetics visibility settings and re-resolve every player's
+   * drawn cosmetics and colors; the renderer must be refreshed afterwards.
+   */
+  refreshPlayerCosmetics(): void {
+    this._cosmeticVisibility = readCosmeticVisibility();
+    for (const p of this._players.values()) {
+      p.refreshCosmetics();
+    }
+  }
+
   playerBySmallID(id: number): PlayerView | TerraNullius {
     if (id === 0) {
       return new TerraNulliusImpl();
@@ -1311,6 +1334,9 @@ export class GameView implements GameMap {
   neighbors4(ref: TileRef, out: TileRef[]): number {
     return this._map.neighbors4(ref, out);
   }
+  neighbors8(ref: TileRef, out: TileRef[]): number {
+    return this._map.neighbors8(ref, out);
+  }
   forEachNeighborWithDiag(
     ref: TileRef,
     callback: (neighbor: TileRef) => void,
@@ -1367,7 +1393,36 @@ export class GameView implements GameMap {
     return this._gameID;
   }
 
+  private _markedPlayers: ReadonlySet<number> | null = null;
+
   focusedPlayer(): PlayerView | null {
     return this.myPlayer();
+  }
+
+  /**
+   * Extra smallIDs drawn with the target crosshair by the name pass, on top
+   * of the player's real transitive targets (e.g. the tutorial pointing at
+   * capturable tribes). Null when nothing is requested.
+   */
+  setMarkedPlayers(ids: ReadonlySet<number> | null): void {
+    this._markedPlayers = ids;
+  }
+
+  markedPlayers(): ReadonlySet<number> | null {
+    return this._markedPlayers;
+  }
+
+  private _ownSpawnRing = false;
+
+  /**
+   * Keep the local player's spawn-phase ring drawn after the phase ends
+   * (the tutorial uses it to show a new player where their territory is).
+   */
+  setOwnSpawnRing(show: boolean): void {
+    this._ownSpawnRing = show;
+  }
+
+  ownSpawnRing(): boolean {
+    return this._ownSpawnRing;
   }
 }

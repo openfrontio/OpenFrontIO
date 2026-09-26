@@ -7,8 +7,9 @@ import {
   retrySteamSignIn,
 } from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
+import { subscribeDesktopSessionRecovery } from "../../src/client/DesktopSessionRecovery";
 import { multiplayerAllowedForSession } from "../../src/client/DesktopShell";
-import { steamSDK } from "../../src/client/SteamSDK";
+import { steamSDK, type SteamTicketFailure } from "../../src/client/SteamSDK";
 
 function setBootstrapConfig() {
   (window as any).BOOTSTRAP_CONFIG = {
@@ -228,6 +229,73 @@ describe("Steam login", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  // The shell declines to mint a ticket until the player answers the
+  // account-link gate. That must land as a diagnosed signed-out state --
+  // and, critically, must never attempt the /auth/steam exchange, because
+  // that exchange is what silently creates a throwaway account.
+  it("does not exchange a ticket when the shell reports needs-account", async () => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: false,
+      reason: "needs-account",
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    await getAuthHeader();
+
+    expect(getDesktopSessionState()).toEqual({
+      status: "signed-out",
+      reason: "needs-account",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // The shell distinguishes three reasons it may decline to mint, and only
+  // one of them is "set up an account". Collapsing them is the bug this
+  // mapping exists to prevent: an OpenFront API outage used to tell a player
+  // with a perfectly good account to set one up. None of them may attempt the
+  // exchange.
+  it.each([
+    ["ticket-rejected", "steam-ticket-rejected"],
+    ["api-unreachable", "network"],
+  ])("maps the shell's %s to %s without exchanging", async (from, to) => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: false,
+      reason: from as SteamTicketFailure,
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    await getAuthHeader();
+
+    expect(getDesktopSessionState()).toEqual({
+      status: "signed-out",
+      reason: to,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // An old client talking to a new shell can receive a ticket failure reason
+  // outside its own SteamTicketFailure union. That must still fall through to
+  // the safe default rather than return undefined at runtime: signed-out with
+  // "steam-error", never attempting an exchange.
+  it("maps an unrecognised ticket failure reason to the steam-error default", async () => {
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: false,
+      reason: "future-reason" as never,
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    await getAuthHeader();
+
+    expect(getDesktopSessionState()).toEqual({
+      status: "signed-out",
+      reason: "steam-error",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["unavailable", "steam-unavailable"],
     ["timeout", "steam-wedged"],
@@ -292,6 +360,63 @@ describe("Steam login", () => {
       status: "signed-out",
       reason: "network",
     });
+  });
+
+  it("restores a session after offline startup and a failed Retry, without reloading", async () => {
+    window.openfrontDesktop = {};
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    const getTicket = vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: true,
+      ticket: "fresh-ticket",
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("offline"));
+    const applyProfile = vi.fn();
+    const stop = subscribeDesktopSessionRecovery(async () => {
+      applyProfile(await retrySteamSignIn());
+    });
+    try {
+      expect(await getAuthHeader()).toBe("");
+      document.dispatchEvent(new CustomEvent("desktop-session-retry"));
+      await vi.waitFor(() => expect(applyProfile).toHaveBeenCalledWith(false));
+
+      document.dispatchEvent(
+        new CustomEvent("backend-reachability", {
+          detail: { reachable: false, confirmed: true },
+        }),
+      );
+      const jwt = new UnsecuredJWT({
+        jti: "some-id",
+        sub: "AAAAAAAAAAAAAAAAAAAAAA",
+        iat: Math.floor(Date.now() / 1000),
+        iss: "https://api.openfront.dev",
+        aud: "openfront.dev",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      }).encode();
+      fetchMock.mockImplementation(
+        async () =>
+          new Response(JSON.stringify({ jwt, expiresIn: 900 }), {
+            status: 200,
+          }),
+      );
+      document.dispatchEvent(
+        new CustomEvent("backend-reachability", {
+          detail: { reachable: true, confirmed: false },
+        }),
+      );
+      await vi.waitFor(() =>
+        expect(applyProfile).toHaveBeenCalledWith(
+          expect.objectContaining({ jwt }),
+        ),
+      );
+      expect(getDesktopSessionState()).toEqual({ status: "signed-in" });
+      expect(await getAuthHeader()).toBe(`Bearer ${jwt}`);
+      expect(getTicket).toHaveBeenCalledTimes(3);
+    } finally {
+      stop();
+      window.openfrontDesktop = undefined;
+    }
   });
 
   it("publishes each transition as a desktop-session-state event", async () => {

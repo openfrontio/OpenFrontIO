@@ -49,7 +49,10 @@ describe("GameServer wire transcript", () => {
       id: cid("golden"),
       creatorPersistentID: "host-pid",
       config: { gameType: GameType.Private, maxPlayers: 3 },
-      deps: { archive },
+      // Pinned so the transcript stays deterministic — and so the snapshot
+      // itself shows the same token reaching every client on both carriers.
+      // The real one is random (see GameServer.mintGroupToken).
+      deps: { archive, mintGroupToken: () => "GoldenGroupTok01" },
     });
     const host = makeClient({
       clientID: HOST,

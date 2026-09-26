@@ -2,9 +2,12 @@
 # generate-nginx-upstream.sh
 #
 # Generates the per-worker nginx config from NUM_WORKERS at container start
-# (NUM_WORKERS arrives via the runtime env file and is not known when the image
-# is built, so it can't be baked into nginx.conf). Emits two things, both in the
-# http context, into a single conf.d file:
+# (the worker count arrives via the runtime env file, from the API registry,
+# and is not known when the image is built, so it can't be baked into
+# nginx.conf). The same value ServerEnv.numWorkers reads; a disagreement here
+# is not a fallback: too few upstreams and the workers nginx never lists get
+# no traffic, too many and it proxies to ports nothing listens on.
+# Emits two things, both in the http context, into a single conf.d file:
 #
 #   1. upstream openfront_workers  - random-balanced across the live workers, so
 #      nginx can spread requests (e.g. POST /api/create_game) without the caller
@@ -16,7 +19,16 @@
 set -eu
 
 OUT="${1:-/etc/nginx/conf.d/00-workers.conf}"
+
 n="${NUM_WORKERS:-1}"
+# Fail loudly on a malformed count: the node server refuses to boot on the
+# same value, so a silent nginx fallback would only mask the real fault.
+case "$n" in
+    "" | *[!0-9]* | 0*)
+        echo "NUM_WORKERS must be a positive integer, got '${n}'" >&2
+        exit 1
+        ;;
+esac
 
 {
     echo 'upstream openfront_workers {'

@@ -104,13 +104,48 @@ curl "https://api.openfront.io/public/player/HabCsQYR"
 
 ### Get Player Sessions
 
-Retrieve a list of games & client ids (session ids) for a specific player.
+Retrieve a list of games & client ids (session ids) for a specific player,
+returned newest game first in pages of 100 with keyset (cursor) pagination
+like [Get Player Games](#get-player-games).
 
 **Endpoint:**
 
 ```
 GET https://api.openfront.io/public/player/:playerId/sessions
 ```
+
+**Query Parameters:**
+
+- `filter` (optional): Mode bucket, one of `[ffa, team, hvn, ranked]`. Omit for all modes.
+- `type` (optional): Game type, one of `[public, private, singleplayer]`. Omit for all types. `filter` and `type` are orthogonal and may be combined.
+- `start` / `end` (optional): ISO 8601 datetimes bounding the game start time (inclusive). Each may be given alone; `start` must be before `end`.
+- `cursor` (optional): Opaque continuation token. Pass the `nextCursor` value from the previous response verbatim to fetch the next page — do not construct or parse it. A cursor is bound to the filters it was issued under; changing any other parameter requires starting over without a cursor.
+
+**Response:**
+
+```json
+{
+  "results": [
+    {
+      "gameId": "abc123",
+      "gameStart": "2026-05-17T21:04:00.000Z",
+      "gameEnd": "2026-05-17T21:24:34.000Z",
+      "gameType": "Public",
+      "gameMode": "Team",
+      "gameRankedType": "unranked",
+      "clientId": "client-session-id",
+      "username": "alice",
+      "clanTag": "ABC",
+      "hasWon": true
+    }
+  ],
+  "nextCursor": "opaque-token"
+}
+```
+
+- `nextCursor` is `null` when there are no more sessions.
+- A known player with no sessions returns an empty `results` array; 404 means
+  the player id is unknown.
 
 **Example:**
 
@@ -168,6 +203,116 @@ GET https://api.openfront.io/public/player/:playerId/games
 
 ```bash
 curl "https://api.openfront.io/public/player/HabCsQYR/games?filter=team&type=public"
+```
+
+### Recently Deleted Players
+
+List the public ids of players deleted in the last 7 days, newest first. Poll
+this daily and delete those players from any data you have collected.
+
+Pass `since` (the `deletedAt` of your last sync, or the time you last polled)
+to fetch only newer deletions. Deletions are never returned more than 7 days
+after the fact: a `since` more than 7 days in the past is rejected with a 400.
+If you miss the window, reconcile instead by dropping any player whose
+`/public/player/:playerId` now returns 404.
+
+**Endpoint:**
+
+```
+GET https://api.openfront.io/public/players/recently-deleted
+```
+
+**Query Parameters:**
+
+- `since` (optional): ISO 8601 timestamp; only return players deleted after
+  this time. Must be within the last 7 days.
+
+**Example:**
+
+```bash
+curl "https://api.openfront.io/public/players/recently-deleted?since=2026-09-14T00:00:00Z"
+```
+
+**Response:**
+
+```json
+[
+  {
+    "publicId": "HabCsQYR",
+    "deletedAt": "2026-09-14T08:12:33.000Z"
+  }
+]
+```
+
+### Verify Account Ownership (Identity Tokens)
+
+Third-party sites can let a player prove which OpenFront account they own. The
+player picks your site under **Account settings → Link to a third-party site**,
+generates a token, and pastes it into your site. You check the token, link the
+returned `publicId` to your user once, and discard the token.
+
+Tokens are only accepted by the site they were generated for (the JWT `aud`
+claim is your domain), expire after 10 minutes, and carry no identity other
+than the player's public ID. They cannot be used to log in to OpenFront.
+
+Supported sites: `ofstats.io`, `trackerfront.io`. To add your site, ask the
+OpenFront team. Sites are managed from the admin panel, so no deploy is
+needed; a new site appears in the game within a few minutes.
+
+You can check a token in either of two ways.
+
+**Option 1: call the validate endpoint.**
+
+```
+POST https://api.openfront.io/public/identity_token/validate
+```
+
+**Body:**
+
+- `token`: The token the player pasted
+- `audience`: Your site, e.g. `ofstats.io`
+
+**Example:**
+
+```bash
+curl -X POST "https://api.openfront.io/public/identity_token/validate" \
+  -H "Content-Type: application/json" \
+  -d '{"token": "eyJ...", "audience": "ofstats.io"}'
+```
+
+**Response:**
+
+```json
+{
+  "publicId": "T8pcWNuC",
+  "expiresAt": "2026-09-25T03:36:56.000Z"
+}
+```
+
+A token that is invalid, expired, or was generated for a different site returns 400.
+
+**Option 2: verify the JWT yourself.** Tokens are EdDSA-signed JWTs. Verify the
+signature against `https://api.openfront.io/.well-known/jwks.json` and check
+that:
+
+- `iss` is `https://api.openfront.io`
+- `aud` is your own domain
+- `typ` is `"identity"`
+- `exp` has not passed
+
+The player's public ID is the `sub` claim.
+
+**Example payload:**
+
+```json
+{
+  "typ": "identity",
+  "sub": "T8pcWNuC",
+  "iat": 1790306816,
+  "exp": 1790307416,
+  "iss": "https://api.openfront.io",
+  "aud": "ofstats.io"
+}
 ```
 
 ## Clans

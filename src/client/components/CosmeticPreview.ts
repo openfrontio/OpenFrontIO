@@ -1,5 +1,5 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import {
   Crown,
   Effect,
@@ -16,6 +16,7 @@ import { translateText } from "../Utils";
 import "./CapIcon";
 import { cosmeticDisplayName } from "./CosmeticPresentation";
 import "./EffectPreview";
+import { observeNear } from "./LazyVisibility";
 import { renderPatternPreview } from "./PatternPreview";
 import "./PlutoniumIcon";
 
@@ -26,6 +27,11 @@ export class CosmeticPreview extends LitElement {
 
   @property({ type: String })
   size: "card" | "detail" = "card";
+
+  // Card previews sit in grids as long as the catalog, so each one only
+  // holds its canvas, animation or image while it is near the screen.
+  @state() private near = false;
+  private stopObserving: (() => void) | null = null;
 
   createRenderRoot() {
     return this;
@@ -38,6 +44,16 @@ export class CosmeticPreview extends LitElement {
     // so previews with no intrinsic size (trail/structure effects) still get a
     // real box to paint into.
     this.classList.add("block", "h-full", "w-full");
+    this.stopObserving = observeNear(this, (near) => {
+      this.near = near;
+    });
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.stopObserving?.();
+    this.stopObserving = null;
+    this.near = false;
   }
 
   render() {
@@ -53,8 +69,24 @@ export class CosmeticPreview extends LitElement {
           ? "w-full"
           : "aspect-square w-full"}
     >
-      ${this.renderResolvedPreview()}
+      ${this.near || !this.deferrable()
+        ? this.renderResolvedPreview()
+        : nothing}
     </div>`;
+  }
+
+  // Text previews size their own box and cost nothing to draw; withholding
+  // them would only collapse the card until it scrolled near.
+  private deferrable(): boolean {
+    if (this.size !== "card") return false;
+    const type = this.resolved.type;
+    return (
+      type === "pattern" ||
+      type === "effect" ||
+      type === "flag" ||
+      type === "crown" ||
+      type === "skin"
+    );
   }
 
   private renderResolvedPreview(): TemplateResult {
@@ -143,6 +175,13 @@ export class CosmeticPreview extends LitElement {
         <span class="text-[10px] font-bold leading-none text-white/50 uppercase"
           >${translateText(currencyKey)}</span
         >
+        ${pack.product?.price
+          ? html`<span
+              data-pack-price
+              class="pt-0.5 text-sm font-bold leading-none text-blue-300"
+              >${pack.product.price}</span
+            >`
+          : nothing}
         ${pack.bonusAmount > 0
           ? html`<div
               class="absolute top-8 -right-10 w-40 bg-green-500 text-white text-[10px] font-black py-0.5 rotate-45 shadow-md uppercase tracking-wide pointer-events-none"

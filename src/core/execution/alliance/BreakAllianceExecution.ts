@@ -1,4 +1,12 @@
+import { z } from "zod";
 import { Execution, Game, Player, PlayerID } from "../../game/Game";
+import { execSnapshotType } from "../../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import { zPlayerRef } from "../../snapshot/SnapshotType";
 
 export class BreakAllianceExecution implements Execution {
   private active = true;
@@ -57,4 +65,38 @@ export class BreakAllianceExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return BreakAllianceExecutionSnapshot.write({
+      active: this.active,
+      recipient: w.playerOrNull(this.recipient),
+      initialized: this.mg !== null,
+      requestor: w.player(this.requestor),
+      recipientID: this.recipientID,
+    });
+  }
+
+  restoreSnapshot(s: BreakAllianceState, r: SnapshotReader): void {
+    this.active = s.active;
+    this.recipient = r.playerOrNull(s.recipient);
+    this.mg = s.initialized ? r.game : null;
+    this.requestor = r.player(s.requestor);
+    this.recipientID = s.recipientID;
+  }
 }
+
+const BreakAllianceStateSchema = z.object({
+  active: z.boolean(),
+  recipient: zPlayerRef().nullable(),
+  initialized: z.boolean(),
+  requestor: zPlayerRef(),
+  recipientID: z.string(),
+});
+type BreakAllianceState = z.infer<typeof BreakAllianceStateSchema>;
+
+export const BreakAllianceExecutionSnapshot = execSnapshotType({
+  name: "BreakAlliance",
+  version: 1,
+  schema: BreakAllianceStateSchema,
+  cls: () => BreakAllianceExecution,
+});

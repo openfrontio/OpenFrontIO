@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
+import { configDefaults } from "vitest/config";
 import {
   type AssetManifest,
   buildAssetUrl,
@@ -16,13 +17,41 @@ import {
   copyRootPublicFiles,
   createHashedPublicAssetFiles,
   getProprietaryDir,
+  getPublicDir,
   getResourcesDir,
   writePublicAssetManifest,
+  writeRootFilesIndex,
 } from "./src/server/PublicAssetManifest";
 
 // Vite already handles these, but its good practice to define them explicitly
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Dev-only: resources/public/ is served at the site root, as the build copies
+// it into static/. Vite's publicDir (resources/) would put it under /public/.
+function serveRootPublicDir(publicDir: string): Plugin {
+  return {
+    name: "serve-root-public-dir",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url) return next();
+        let rel = decodeURIComponent(
+          new URL(req.url, "http://x").pathname,
+        ).replace(/^\/+/, "");
+        if (rel.split(/[\\/]/).some((part) => part === "." || part === ".."))
+          return next();
+        if (rel === "" || rel.endsWith("/")) rel += "index.html";
+        const filePath = path.join(publicDir, rel);
+        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile())
+          return next();
+        const mime = lookupMime(filePath);
+        if (mime) res.setHeader("Content-Type", mime);
+        res.setHeader("Cache-Control", "no-store");
+        fs.createReadStream(filePath).pipe(res);
+      });
+    },
+  };
+}
 
 function serveProprietaryDir(
   proprietaryDir: string,
@@ -152,7 +181,30 @@ function randomWorkerCreateProxy(numWorkers: number): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
-  const devNumWorkers = parseInt(env.NUM_WORKERS ?? "2", 10);
+  // Dev identity: the same INSTANCE_LETTER / NUM_WORKERS defaults the dev
+  // server boots with (ServerEnv), so the dev-served index.html carries the
+  // one-entry map production RenderHtml injects. The proxy below needs the
+  // worker count to know how many /wN paths to forward.
+  const devInstanceLetter = env.INSTANCE_LETTER || "a";
+  // Strict decimal first: Number() alone would take "1e3" or " 2".
+  const devNumWorkers = /^[1-9][0-9]*$/.test(env.NUM_WORKERS || "2")
+    ? Number(env.NUM_WORKERS || 2)
+    : NaN;
+  // The same checks ServerEnv applies: the letter leads every game id, and
+  // the count feeds a modulo, so a bad value here is a wNaN worker path.
+  if (!/^[a-z]$/.test(devInstanceLetter)) {
+    throw new Error(
+      `INSTANCE_LETTER must be one lowercase letter, got ${JSON.stringify(devInstanceLetter)}`,
+    );
+  }
+  if (!Number.isInteger(devNumWorkers) || devNumWorkers < 1) {
+    throw new Error(
+      `NUM_WORKERS must be a positive integer, got ${JSON.stringify(env.NUM_WORKERS)}`,
+    );
+  }
+  const devClusterJson = JSON.stringify({
+    [devInstanceLetter]: { host: "localhost", numWorkers: devNumWorkers },
+  });
   const resourcesDir = getResourcesDir(__dirname);
   const proprietaryDir = getProprietaryDir(__dirname);
   const sourceDirs = [resourcesDir, proprietaryDir];
@@ -164,11 +216,17 @@ export default defineConfig(({ mode }) => {
     assetManifest: JSON.stringify(assetManifest),
     cdnBase: JSON.stringify(cdnBase),
     gameEnv: JSON.stringify(env.GAME_ENV ?? "dev"),
-    numWorkers: JSON.stringify(parseInt(env.NUM_WORKERS ?? "2", 10)),
+    cluster: devClusterJson,
+    instanceLetter: JSON.stringify(devInstanceLetter),
     turnstileSiteKey: JSON.stringify(
       env.TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
     ),
     jwtAudience: JSON.stringify(env.DOMAIN ?? "localhost"),
+    // Dev only: set FARO_COLLECTOR_URL in .env to point a local client at a
+    // collector; unset drops the guarded line, exactly as in production.
+    faroCollectorUrl: env.FARO_COLLECTOR_URL
+      ? JSON.stringify(env.FARO_COLLECTOR_URL)
+      : undefined,
     instanceId: JSON.stringify(env.INSTANCE_ID ?? "DEV_ID"),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
@@ -211,7 +269,8 @@ export default defineConfig(({ mode }) => {
     },
     closeBundle() {
       const outDir = path.join(__dirname, "static");
-      copyRootPublicFiles(resourcesDir, outDir);
+      copyRootPublicFiles(getPublicDir(resourcesDir), outDir);
+      writeRootFilesIndex(getPublicDir(resourcesDir), outDir);
       // Run the source→hashed copy first; createHashedPublicAssetFiles iterates
       // assetManifest and expects every key to resolve to a file in resources/
       // or proprietary/. Vite's bundle output (assets/...) doesn't, so it's
@@ -253,10 +312,49 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: "jsdom",
       setupFiles: "./tests/setup.ts",
+      // Node 25 turned Web Storage on by default, where `localStorage` is a
+      // built-in global that evaluates to undefined unless --localstorage-file
+      // is passed. It shadows the jsdom localStorage vitest installs, so every
+      // test touching UserSettings dies on "Cannot read properties of
+      // undefined (reading 'getItem')". Turn Node's own Web Storage off in the
+      // test workers so jsdom always provides it. No-op on Node 24, which keeps
+      // Web Storage behind a flag.
+      execArgv: ["--no-experimental-webstorage"],
+      // Git worktrees live inside the repo, so their tests match the default
+      // glob and run against that worktree's own (often stale) source and
+      // node_modules. Anyone with a worktree checked out sees failures that
+      // have nothing to do with their branch.
+      // Spread the defaults rather than restating them: setting `exclude`
+      // replaces vitest's built-in list, and hand-copying a subset silently
+      // drops the dot-directory pattern (.git, .cache, .output, ...) --
+      // reintroducing the same stray-file problem this is here to fix.
+      exclude: [
+        ...configDefaults.exclude,
+        "**/.worktrees/**",
+        "**/.claude/worktrees/**",
+      ],
     },
     root: "./",
     base: "/",
     publicDir: isProduction ? false : "resources",
+
+    // Vite's JS preload helper (`__vitePreload`, used by dynamic import())
+    // resolves a chunk's dependency list against `base`, so with base "/" the
+    // helper chunks behind e.g. the lazy Faro import were requested from the
+    // page origin, where nothing serves /assets/ (openfront.io answered 503,
+    // and the import() rejected, so telemetry never started). Emitting those
+    // references relative makes the helper resolve them against
+    // import.meta.url, i.e. wherever the importing chunk itself was loaded
+    // from -- the CDN in production, same-origin in dev -- without baking
+    // CDN_BASE into the bundle (the Docker build does not have it). HTML keeps
+    // Vite's /assets/ refs so rewriteAssetsForCdn can turn them into the
+    // request-time EJS placeholder.
+    experimental: {
+      renderBuiltUrl(_filename, { hostType }) {
+        if (hostType === "js") return { relative: true };
+        return undefined;
+      },
+    },
 
     resolve: {
       tsconfigPaths: true,
@@ -268,6 +366,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       ...(!isProduction
         ? [
+            serveRootPublicDir(getPublicDir(resourcesDir)),
             serveProprietaryDir(proprietaryDir, resourcesDir),
             randomWorkerCreateProxy(devNumWorkers),
             steamLinkAliasRedirect(),
@@ -300,9 +399,6 @@ export default defineConfig(({ mode }) => {
         isProduction ? "" : "localhost:3000",
       ),
       "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
-      "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
-        env.STRIPE_PUBLISHABLE_KEY,
-      ),
       // Force empty under vitest (mode "test") so the getApiBase localhost-
       // fallback test is deterministic regardless of any API_DOMAIN in the
       // host shell / CI environment.

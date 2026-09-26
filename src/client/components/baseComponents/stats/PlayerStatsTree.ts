@@ -14,10 +14,20 @@ import {
   RankedType,
   isDifficulty,
 } from "../../../../core/game/Game";
-import { PlayerStats } from "../../../../core/StatsSchemas";
+import {
+  ATTACK_INDEX_MAX_RECV,
+  PlayerStats,
+} from "../../../../core/StatsSchemas";
 import { translateText } from "../../../Utils";
 import "./PlayerStatsSummary";
 import "./PlayerStatsTable";
+
+const EMPTY_INDEX_SET: ReadonlySet<number> = new Set();
+// ATTACK_INDEX_MAX_RECV is the largest single attack faced in one game, so
+// rolling several games together takes the larger of the two, not their sum.
+const MAX_ATTACK_INDICES: ReadonlySet<number> = new Set([
+  ATTACK_INDEX_MAX_RECV,
+]);
 
 const ALL_SELECTION = "all" as const;
 type AllSelection = typeof ALL_SELECTION;
@@ -387,7 +397,11 @@ export class PlayerStatsTreeView extends LitElement {
     if (!next) return this.cloneStats(base);
 
     return {
-      attacks: this.mergeStatArrays(base.attacks, next.attacks),
+      attacks: this.mergeStatArrays(
+        base.attacks,
+        next.attacks,
+        MAX_ATTACK_INDICES,
+      ),
       betrayals: this.mergeStatValue(base.betrayals, next.betrayals),
       killedAt: this.mergeStatValue(base.killedAt, next.killedAt),
       conquests: this.mergeStatArrays(base.conquests, next.conquests),
@@ -406,15 +420,20 @@ export class PlayerStatsTreeView extends LitElement {
     return (base ?? 0n) + (next ?? 0n);
   }
 
+  /** Slots are summed across buckets, except those named in `maxIndices`,
+   * which already hold a per-game maximum and would be meaningless summed. */
   private mergeStatArrays(
     base: bigint[] | undefined,
     next: bigint[] | undefined,
+    maxIndices: ReadonlySet<number> = EMPTY_INDEX_SET,
   ): bigint[] | undefined {
     if (!base && !next) return undefined;
     const maxLen = Math.max(base?.length ?? 0, next?.length ?? 0);
     const merged: bigint[] = [];
     for (let i = 0; i < maxLen; i += 1) {
-      merged[i] = (base?.[i] ?? 0n) + (next?.[i] ?? 0n);
+      const b = base?.[i] ?? 0n;
+      const n = next?.[i] ?? 0n;
+      merged[i] = maxIndices.has(i) ? (b > n ? b : n) : b + n;
     }
     return merged;
   }

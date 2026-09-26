@@ -1,11 +1,15 @@
 {
   "name": "openfront-client",
+  "engines": {
+    "node": ">=24.15.0 <25",
+    "npm": ">=12.1.0 <13"
+  },
   "scripts": {
     "build-dev": "concurrently \"tsc --noEmit\" \"vite build --mode development\"",
     "build-prod": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"vite build\" && tsx scripts/buildAssetHashes.ts",
     "start:client": "vite",
     "start:server": "tsx src/server/Server.ts",
-    "start:server-dev": "cross-env GAME_ENV=dev NUM_WORKERS=2 TURNSTILE_SITE_KEY=1x00000000000000000000AA API_KEY=WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION ADMIN_BOT_API_KEY=WARNING_DEV_ADMIN_BOT_KEY_DO_NOT_USE_IN_PRODUCTION DOMAIN=localhost GIT_COMMIT=DEV tsx src/server/Server.ts",
+    "start:server-dev": "cross-env GAME_ENV=dev TURNSTILE_SITE_KEY=1x00000000000000000000AA API_KEY=WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION ADMIN_BOT_API_KEY=WARNING_DEV_ADMIN_BOT_KEY_DO_NOT_USE_IN_PRODUCTION DOMAIN=localhost GIT_COMMIT=DEV tsx src/server/Server.ts",
     "dev": "cross-env GAME_ENV=dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "dev:host": "cross-env GAME_ENV=dev VITE_HOST=lan concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "dev:staging": "cross-env GAME_ENV=dev API_DOMAIN=api.openfront.dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
@@ -91,6 +95,7 @@
     "vitest-canvas-mock": "^1.1.4"
   },
   "dependencies": {
+    "@grafana/faro-web-sdk": "^2.12.0",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/api-logs": "^0.216.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.219.0",
@@ -100,6 +105,7 @@
     "@opentelemetry/sdk-metrics": "^2.8.0",
     "@opentelemetry/semantic-conventions": "^1.40.0",
     "@opentelemetry/winston-transport": "^0.26.0",
+    "@stripe/stripe-js": "9.15.0",
     "@types/compression": "^1.8.1",
     "colord": "^2.9.3",
     "compression": "^1.8.1",

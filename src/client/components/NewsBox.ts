@@ -1,7 +1,9 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type { NewsItem } from "../../core/ApiSchemas";
+import type { ClientPlatform } from "../../core/Schemas";
 import { getNews } from "../Api";
+import { clientPlatform } from "../ClientPlatform";
 import { renderMarkdown } from "../Markdown";
 import { translateText } from "../Utils";
 
@@ -23,6 +25,15 @@ function saveDismissedIds(ids: Set<string>): void {
 export function getVisibleNewsItems(items: NewsItem[]): NewsItem[] {
   const dismissed = getDismissedIds();
   return items.filter((item) => !dismissed.has(item.id));
+}
+
+export function filterNewsByPlatform(
+  items: NewsItem[],
+  platform: ClientPlatform,
+): NewsItem[] {
+  return items.filter(
+    (item) => !item.platforms?.length || item.platforms.includes(platform),
+  );
 }
 
 const typeLabelKeys: Record<string, string> = {
@@ -56,7 +67,7 @@ export class NewsBox extends LitElement {
 
   private async loadNews() {
     try {
-      const allItems = await getNews();
+      const allItems = filterNewsByPlatform(await getNews(), clientPlatform());
       // Reset stale dismissed list when all items would be hidden
       const visible = getVisibleNewsItems(allItems);
       if (visible.length === 0 && allItems.length > 0) {
@@ -67,7 +78,7 @@ export class NewsBox extends LitElement {
       }
       this.startCycle();
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   }
 

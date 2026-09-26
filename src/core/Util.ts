@@ -12,6 +12,7 @@ import {
   PartialGameRecord,
   PlayerRecord,
   PlayerReport,
+  PublicGameType,
   Tribe,
   Turn,
   Winner,
@@ -306,6 +307,8 @@ export function createPartialGameRecord(
   // Player reports filed during the game (multiplayer only; see
   // GameServer.handleReport). The API ingests them for moderation.
   reports?: PlayerReport[],
+  // Public lobbies only (see GameEndInfoSchema.publicGameType).
+  publicGameType?: PublicGameType,
 ): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
   const num_turns = allTurns.length;
@@ -335,6 +338,7 @@ export function createPartialGameRecord(
       winner,
       tribes,
       reports,
+      publicGameType,
     },
     version: "v0.0.2",
     turns,
@@ -377,6 +381,21 @@ export function generateID(): GameID {
     8,
   );
   return nanoid();
+}
+
+// Multi-server game id (docs/MultiServer.md): the minting deployment's
+// instance letter + 9 random chars. The 9 random chars carry uniqueness
+// (game ids are permanent archive keys, sized against every game ever
+// minted) and private-lobby unguessability; worker routing hashes the full
+// id, extracting the worker index from entropy that must exist anyway.
+// generateID() stays 8 chars for the ids that never leave one server or one
+// client: client ids, singleplayer games, worker message ids.
+export function generateGameID(instanceLetter: string): GameID {
+  const nanoid = customAlphabet(
+    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
+    9,
+  );
+  return instanceLetter + nanoid();
 }
 
 export function toInt(num: number): bigint {

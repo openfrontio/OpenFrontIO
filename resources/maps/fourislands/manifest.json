@@ -84,5 +84,6 @@
       }
     ]
   },
+  "team_frequency": 30,
   "translation_key": "map.fourislands"
 }

@@ -3,7 +3,7 @@ import { customElement } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import "./components/AccountSettingsPanel";
 import type { AccountSettingsPanel } from "./components/AccountSettingsPanel";
-import { consumeGoogleLinkResult } from "./GoogleLinkResult";
+import { consumeLinkResult } from "./LinkResult";
 import { ProfileMenuModal } from "./ProfileMenuModal";
 
 /**
@@ -32,7 +32,7 @@ export class AccountSettingsModal extends ProfileMenuModal {
   protected onOpenExtra(args?: Record<string, unknown>): void {
     // The panel starts the Google link flow, and linkGoogle() returns to
     // whatever URL started it — so the `link=<result>` arg comes back here.
-    consumeGoogleLinkResult(args);
+    consumeLinkResult(args);
   }
 
   protected onClose(): void {

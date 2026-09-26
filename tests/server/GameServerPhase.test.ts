@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
 import { createGameWireContext } from "../../src/core/ZbinWire";
 import { GameManager } from "../../src/server/GameManager";
 import { GamePhase } from "../../src/server/GameServer";
@@ -82,13 +83,13 @@ describe("GameServer.phase()", () => {
     game.joinClient(chatty);
 
     vi.advanceTimersByTime(60_500);
-    await mockWsOf(chatty).emit({ type: "ping" });
+    await mockWsOf(chatty).emit({ type: "ping", sentAt: 0 });
 
     game.pruneStaleClients();
     expect(game.phase()).toBe(GamePhase.Active);
     expect(mockWsOf(quiet).close).toHaveBeenCalledWith(
-      1000,
-      "no heartbeats received, closing connection",
+      CloseCode.TryAgainLater,
+      CloseReason.NoHeartbeat,
     );
     expect(mockWsOf(chatty).close).not.toHaveBeenCalled();
     expect(game.numClients()).toBe(1);
@@ -164,8 +165,8 @@ describe("GameManager and the ping prune", () => {
 
     gm.tick();
     expect(mockWsOf(quiet).close).toHaveBeenCalledWith(
-      1000,
-      "no heartbeats received, closing connection",
+      CloseCode.TryAgainLater,
+      CloseReason.NoHeartbeat,
     );
     expect(game.numClients()).toBe(0);
   });
@@ -218,7 +219,7 @@ describe("connection status marks in the turn log", () => {
     expect(game.isClientDisconnected(P2)).toBe(false);
 
     // p1 is heard from again: the next boundary marks them reconnected.
-    await mockWsOf(p1).emit({ type: "ping" });
+    await mockWsOf(p1).emit({ type: "ping", sentAt: 0 });
     vi.advanceTimersByTime(5 * TURN_MS);
     expect(game.isClientDisconnected(P1)).toBe(false);
 

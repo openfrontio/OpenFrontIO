@@ -40,12 +40,19 @@ const FREE_FORM_USERNAME_PATTERN = new RegExp(
 // dots (the dot separates base from suffix) and no unicode. Single spaces
 // may separate words; edges are trimmed and consecutive spaces rejected so
 // no two distinct bases render alike.
+// The per-character half of the rule below. Kept beside it, and used to build
+// it, so the two cannot drift: a sanitiser that seeds this form has to agree
+// with the form about which characters survive, and re-typing the class in the
+// sanitiser is exactly how that goes wrong.
+export const ACCOUNT_NAME_CHARS = "a-zA-Z0-9_-";
+export const ACCOUNT_NAME_CHAR_RE = new RegExp(`^[${ACCOUNT_NAME_CHARS}]$`);
+
 export const AccountUsernameSchema = z
   .string()
   .trim()
   .min(MIN_ACCOUNT_USERNAME_LENGTH)
   .max(MAX_ACCOUNT_USERNAME_LENGTH)
-  .regex(/^[a-zA-Z0-9_-]+( [a-zA-Z0-9_-]+)*$/);
+  .regex(new RegExp(`^[${ACCOUNT_NAME_CHARS}]+( [${ACCOUNT_NAME_CHARS}]+)*$`));
 
 export function validateUsername(username: string): {
   isValid: boolean;

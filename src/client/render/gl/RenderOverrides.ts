@@ -26,6 +26,9 @@ export function applyGraphicsOverrides(
   if (overrides.name?.hoverGlowAlpha !== undefined) {
     settings.name.hoverGlowAlpha = overrides.name.hoverGlowAlpha;
   }
+  if (overrides.cosmetics?.flagOpacity !== undefined) {
+    settings.name.flagAlpha = overrides.cosmetics.flagOpacity;
+  }
   if (overrides.structure?.iconSize !== undefined) {
     settings.structure.iconSize = overrides.structure.iconSize;
   }
@@ -106,9 +109,6 @@ export function applyGraphicsOverrides(
   }
   if (overrides.altView?.fillAlpha !== undefined) {
     settings.altView.fillAlpha = overrides.altView.fillAlpha;
-  }
-  if (overrides.altView?.hoverPerspective !== undefined) {
-    settings.altView.hoverPerspective = overrides.altView.hoverPerspective;
   }
   if (overrides.affiliation?.selfColor !== undefined) {
     applyHexColor(overrides.affiliation.selfColor, (r, g, b) => {

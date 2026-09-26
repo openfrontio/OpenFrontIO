@@ -43,6 +43,14 @@
         z-index: 150 !important;
       }
 
+      /* Gutter rails (left/right) get the same inline max z-index, which put
+         them over the featured Twitch player (z-[45000]) and its close
+         button. Cap them like the other units. */
+      [id^="pw-oop-left_rail"],
+      [id^="pw-oop-right_rail"] {
+        z-index: 150 !important;
+      }
+
       /* The flex unit's inline (expanded) state renders into
          #pw-oop-flex_container, a direct <body> child. Body is a flex row,
          which squeezed it to width 0 — the unit could never show its
@@ -58,11 +66,26 @@
         flex-basis: 100%;
         width: 100%;
       }
-      /* body is a column while an inline page is open (see styles.css):
-         size the slot to its content there, not to 100% of the height. */
+      /* While an inline page (store, settings, ...) is open the document is
+         locked at scroll 0 (see styles.css), so the unit would sit expanded
+         (350px tall) in flow above the modal for as long as the page is open,
+         squeezing the modal to a sliver. Playwire docks the unit through an
+         IntersectionObserver on this container, so park the container just
+         above the viewport instead: the unit then collapses to its fixed
+         leaderboard (measured into --top-ad-height, which pads the content
+         area below), and re-expands in flow when the page closes. No
+         transform here — the docked unit is position: fixed and must keep
+         the viewport as its containing block. */
       body.page-open #pw-oop-flex_container {
-        flex-basis: auto;
-        flex-shrink: 0;
+        position: fixed;
+        bottom: 100%;
+        left: 0;
+        width: 100%;
+      }
+      /* Playwire docks the unit with position: fixed and top: auto, i.e. at
+         its static (in-flow) position — which is now above the viewport. */
+      body.page-open #pw-oop-flex {
+        top: 0;
       }
 
       /* Google Funding Choices CCPA link override */
@@ -113,18 +136,41 @@
     <meta property="og:image" content="<%- gameplayScreenshotUrl %>" />
     <meta property="og:type" content="game" />
 
-    <!-- Injected from Server env -->
+    <!--
+      Injected from Server env.
+
+      Every per-server value (cluster, instanceLetter, instanceId, serverHost,
+      siteHost) is emitted through a guard so the whole line — indentation and
+      trailing comma included — disappears when the renderer does not supply
+      it. That is what lets one page be rendered per VERSION rather than per
+      server and uploaded to the CDN (docs/MultiServer.md, "Publish pipeline
+      (v2)"); a game server supplies them all and gets exactly the page it
+      always served.
+
+      Never add a placeholder the Steam shell does not supply: openfront-desktop
+      renders this same template itself and a missing local is a ReferenceError,
+      i.e. a blank window. Guarding an existing one is safe — the shell supplies
+      a value and the line still emits.
+    -->
     <script>
       window.BOOTSTRAP_CONFIG = {
         gitCommit: <%- gitCommit %>,
         assetManifest: <%- assetManifest %>,
         cdnBase: <%- cdnBase %>,
-        gameEnv: <%- gameEnv %>,
-        numWorkers: <%- numWorkers %>,
+        gameEnv: <%- gameEnv %>,<%- typeof cluster !== "undefined" && cluster ? "\n        cluster: " + cluster + "," : "" %><%- typeof instanceLetter !== "undefined" && instanceLetter ? "\n        instanceLetter: " + instanceLetter + "," : "" %>
         turnstileSiteKey: <%- turnstileSiteKey %>,
-        jwtAudience: <%- jwtAudience %>,
-        instanceId: <%- instanceId %>,<%- typeof serverHost !== "undefined" && serverHost ? "\n        serverHost: " + serverHost + "," : "" %>
+        jwtAudience: <%- jwtAudience %>,<%- typeof stripePublishableKey !== "undefined" && stripePublishableKey ? "\n        stripePublishableKey: " + stripePublishableKey + "," : "" %><%- typeof faroCollectorUrl !== "undefined" && faroCollectorUrl ? "\n        faroCollectorUrl: " + faroCollectorUrl + "," : "" %><%- typeof instanceId !== "undefined" && instanceId ? "\n        instanceId: " + instanceId + "," : "" %><%- typeof serverHost !== "undefined" && serverHost ? "\n        serverHost: " + serverHost + "," : "" %><%- typeof siteHost !== "undefined" && siteHost ? "\n        siteHost: " + siteHost + "," : "" %>
       };
+      // Set here rather than from the bundle so the first paint already has the
+      // desktop layout. The shell's preload defines openfrontDesktop before
+      // any page script runs. ?desktop-layout previews it outside prod.
+      if (
+        window.openfrontDesktop ||
+        (window.BOOTSTRAP_CONFIG.gameEnv !== "prod" &&
+          new URLSearchParams(location.search).has("desktop-layout"))
+      ) {
+        document.documentElement.classList.add("desktop-shell");
+      }
       document.documentElement.style.setProperty(
         "--background-image-url",
         `url("<%- backgroundImageUrl %>")`,
@@ -240,12 +286,14 @@
 
     <!-- MAIN CONTENT AREA -->
     <div
-      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] in-[.page-open]:pt-[var(--top-ad-height,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
       <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls,
-           offset below the header ad when one is showing) -->
+           offset below the header ad when one is showing; static while an
+           inline page is open, when the content area is padded below the ad
+           instead and nothing scrolls) -->
       <desktop-nav-bar
-        class="sticky top-[var(--top-ad-height,0px)] z-[60]"
+        class="sticky top-[var(--top-ad-height,0px)] z-[60] in-[.page-open]:static"
       ></desktop-nav-bar>
 
       <div
@@ -360,6 +408,7 @@
 
       <!-- Global Modals -->
       <steam-link-modal></steam-link-modal>
+      <steam-handoff-modal></steam-handoff-modal>
       <!-- Opened from the nav profile menu (#modal=...) -->
       <account-settings-modal></account-settings-modal>
       <change-username-modal></change-username-modal>
@@ -385,6 +434,9 @@
         <attacks-display
           class="w-full pointer-events-auto order-1 sm:order-none"
         ></attacks-display>
+        <tutorial-panel
+          class="hidden w-full order-3 sm:order-none"
+        ></tutorial-panel>
         <div
           class="pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none"
         >
@@ -415,14 +467,18 @@
     <win-modal></win-modal>
     <new-lobby-prompt></new-lobby-prompt>
     <game-starting-modal></game-starting-modal>
-    <div
-      class="flex flex-col items-end fixed top-0 right-0 min-[1200px]:top-4 min-[1200px]:right-4 z-1000 gap-2"
-    >
+    <div class="flex flex-col items-end fixed top-0 right-0 z-1000 gap-2">
       <game-right-sidebar></game-right-sidebar>
       <replay-panel></replay-panel>
     </div>
     <settings-modal></settings-modal>
-    <graphics-settings-modal></graphics-settings-modal>
+    <!-- The in-game settings modal: the same component as #page-settings, but
+         non-inline, and mounted out here because the page's copy sits in a
+         subtree that is hidden during a match. It must stay AFTER
+         #page-settings in document order: ModalRouter.routeFromHash and
+         Main.ts both resolve this component with
+         document.querySelector("user-setting"), which takes the first match. -->
+    <user-setting id="game-settings"></user-setting>
     <player-panel></player-panel>
     <spawn-timer></spawn-timer>
     <immunity-timer></immunity-timer>

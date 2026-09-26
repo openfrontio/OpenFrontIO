@@ -764,6 +764,50 @@ describe("StoreModal cosmetic browser", () => {
     );
   });
 
+  // OPE-440. A grant (`provider: null`) is free access nobody is billing, so
+  // the player is not switching anything — every tier, the one their grant
+  // confers included, is a first purchase. resolveCosmetics is what stops
+  // calling the granted tier "owned" (covered in
+  // GrantedSubscriptionPurchase.test.ts); what this asserts is the store's
+  // half: a purchasable tier renders its buy button and no dead status box,
+  // and the "Switch" label is not applied to a granted player.
+  it("offers a plain buy button on every tier to a granted subscriber", async () => {
+    resolvedCatalog = [
+      { ...goldSubscription, relationship: "purchasable" },
+      platinumSubscription,
+    ];
+    const modal = await openStoreOnTab("subscriptions");
+    await modal.onUserMe({
+      player: {
+        subscription: { tier: "gold", provider: null },
+      },
+    } as never);
+    await modal.updateComplete;
+
+    // The "Subscribed" box was the whole bug: it replaced the buy button.
+    expect(
+      product(modal, goldSubscription.key)?.querySelector(
+        "[data-store-status]",
+      ),
+    ).toBeFalsy();
+
+    const gold = purchaseButton(modal, goldSubscription.key);
+    expect(gold.onPurchaseDollar).toBeTypeOf("function");
+    expect(gold.dollarLabelKey).toBe("");
+
+    await focusCard(modal, platinumSubscription.key);
+    // Not "Switch": there is no paid plan to switch away from.
+    expect(purchaseButton(modal, platinumSubscription.key).dollarLabelKey).toBe(
+      "",
+    );
+
+    await gold.onPurchaseDollar!();
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      { ...goldSubscription, relationship: "purchasable" },
+      "dollar",
+    );
+  });
+
   it("sells a cosmetic bundle for plutonium with its contents listed", async () => {
     resolvedCatalog = [starterBundle];
     const modal = await openStoreOnTab("bundles");
@@ -908,8 +952,8 @@ describe("StoreModal cosmetic browser", () => {
   });
 });
 
-// custom_currency is switched off on the Steam rail for launch: the server
-// answers kind_unavailable_on_provider, so the card must not be offered there.
+// The custom-amount card is sold on both rails since OPE-337: the server
+// accepts custom_currency on Steam, so the card is offered there too.
 describe("StoreModal on the Steam rail", () => {
   Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
 
@@ -949,10 +993,10 @@ describe("StoreModal on the Steam rail", () => {
     expect(modal.querySelector("custom-currency-card")).toBeTruthy();
   });
 
-  it("hides the custom-amount card on Steam", async () => {
+  it("offers the custom-amount card on Steam too", async () => {
     installSteamShell();
     const modal = await openStoreOnTab("packs");
-    expect(modal.querySelector("custom-currency-card")).toBeNull();
+    expect(modal.querySelector("custom-currency-card")).toBeTruthy();
   });
 
   // REQUIRED, not an optimisation: the main process parks authorizations and

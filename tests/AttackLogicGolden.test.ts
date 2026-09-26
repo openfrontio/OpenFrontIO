@@ -135,6 +135,25 @@ describe("attackLogic golden values", () => {
     expect(table).toMatchSnapshot();
   });
 
+  test("player vs player: large attacker overwhelming-push speed floor", () => {
+    // Speed-only bonus, two compounding pieces: the ratio curve floors at
+    // 0.82 below parity (overwhelming stacks ~18% faster for everyone), and
+    // the attacker territory bonus runs deeper for speed than for losses
+    // (0.73 vs 0.7), so an overwhelming push lands ~20% faster at the 300k
+    // midpoint and ~25% for giants. Losses are pinned too, to show they are
+    // NOT affected.
+    const table: Record<string, ReturnType<typeof run>> = {};
+    for (const at of [20_000, 300_000, 2_000_000])
+      for (const r of [0.5, 0.8, 0.9, 1, 1.5]) {
+        table[`attackerTiles=${at} defenderTroops/attackTroops=${r}`] = run({
+          attackTroops: 100_000 / r,
+          attacker: { type: PlayerType.Human, numTiles: at },
+          defender: defender({ numTiles: 20_000, troops: 100_000 }),
+        });
+      }
+    expect(table).toMatchSnapshot();
+  });
+
   test("player vs player: large-territory curves", () => {
     // Sweep territory size on each side independently to pin the sigmoid
     // defender debuff and the >100k attacker bonus.

@@ -77,6 +77,44 @@ describe("UserSettings effect selection", () => {
   });
 });
 
+describe("UserSettings tutorial dismissal", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("defaults to not dismissed and persists dismissal", () => {
+    const s = new UserSettings();
+    expect(s.tutorialDismissed()).toBe(false);
+
+    s.setTutorialDismissed(true);
+    expect(s.tutorialDismissed()).toBe(true);
+    expect(localStorage.getItem("settings.tutorialDismissed")).toBe("true");
+
+    s.setTutorialDismissed(false);
+    expect(s.tutorialDismissed()).toBe(false);
+  });
+});
+
+describe("UserSettings lobby start alerts", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("defaults off and round-trips both choices", () => {
+    const settings = new UserSettings();
+    expect(settings.lobbyStartAlerts()).toBe(false);
+
+    settings.setLobbyStartAlerts(true);
+    expect(settings.lobbyStartAlerts()).toBe(true);
+    expect(localStorage.getItem("settings.lobbyStartAlerts")).toBe("true");
+
+    settings.setLobbyStartAlerts(false);
+    expect(settings.lobbyStartAlerts()).toBe(false);
+    expect(localStorage.getItem("settings.lobbyStartAlerts")).toBe("false");
+  });
+
+  it("falls back to off for malformed storage", () => {
+    localStorage.setItem("settings.lobbyStartAlerts", "enabled");
+    expect(new UserSettings().lobbyStartAlerts()).toBe(false);
+  });
+});
+
 describe("UserSettings cosmetic loadouts", () => {
   beforeEach(resetUserSettingsState);
 
@@ -560,5 +598,21 @@ describe("getDefaultKeybinds", () => {
   it("handles Mac-specific modifier keys correctly", () => {
     const macKeybinds = getDefaultKeybinds(true);
     expect(macKeybinds.buildMenuModifier).toBe("MetaLeft");
+  });
+});
+
+describe("UserSettings audio volumes", () => {
+  beforeEach(resetUserSettingsState);
+
+  // The rest of the audio settings surface is covered by the branch's own
+  // tests/UserSettings.audio.test.ts; only clamping on read is new here.
+  it("clamps an out-of-range legacy value on read", () => {
+    // setAudioVolume clamps, but the legacy keys it reads through to were
+    // never bounded, and the tab renders 0-100.
+    localStorage.setItem("settings.soundEffectsVolume", "1.5");
+    expect(new UserSettings().audioVolume("effects")).toBe(1);
+
+    localStorage.setItem("settings.backgroundMusicVolume", "-1");
+    expect(new UserSettings().audioVolume("music")).toBe(0);
   });
 });

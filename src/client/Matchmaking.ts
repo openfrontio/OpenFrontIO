@@ -2,6 +2,8 @@ import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { CloseCode, isTerminalClose } from "../core/CloseCodes";
+import { isCommitLike } from "../core/ServerList";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
@@ -10,6 +12,12 @@ import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { JoinLobbyEvent } from "./Main";
+import {
+  ensureServerList,
+  matchmakingSite,
+  redirectToGameVersion,
+} from "./ServerList";
+import { describeSocketClose } from "./SocketClose";
 import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
 
@@ -257,10 +265,37 @@ export class MatchmakingModal extends BaseModal {
         this.socket.close();
       }
     }
-    this.socket = new WebSocket(
-      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}&mode=${this.mode}`,
+    // instance_id is the rendering server's own id, which the API ignores
+    // (docs/MultiServer.md) and a static page does not have. Sent only when
+    // the page carries one, rather than as an empty parameter.
+    const instanceId = ClientEnv.instanceId();
+    const instanceParam =
+      instanceId === "" ? "" : `instance_id=${encodeURIComponent(instanceId)}&`;
+    // The queue is partitioned by build (OPE-470), so a match is only ever
+    // assigned on a server this page can play on. Sent only when the build
+    // names a commit: the API rejects anything else, and a label like "DEV"
+    // names no build to partition by.
+    const ownCommit = ClientEnv.gitCommit();
+    const versionParam = isCommitLike(ownCommit)
+      ? `&version=${encodeURIComponent(ownCommit)}`
+      : "";
+    // The queue is also partitioned by SITE: a matched game id is resolved
+    // through this page's server list, so the API pools this page only with
+    // servers registered under the site that list is read for. Without it,
+    // any server on the API that shared blue's letter and build could win
+    // the match — a branch preview did, on 15 Sept 2026 — and the id would
+    // point at a host this page cannot reach. Sent only when the site is a
+    // name the API accepts; a page with none joins the legacy shared pool.
+    const site = matchmakingSite();
+    const siteParam =
+      site === undefined ? "" : `&site=${encodeURIComponent(site)}`;
+    const socket = new WebSocket(
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?${instanceParam}mode=${this.mode}${versionParam}${siteParam}`,
     );
+    this.socket = socket;
+    let openedAt: number | null = null;
     this.socket.onopen = async () => {
+      openedAt = Date.now();
       console.log("Connected to matchmaking server");
       this.connectTimeout = setTimeout(async () => {
         if (this.socket?.readyState !== WebSocket.OPEN) {
@@ -303,37 +338,51 @@ export class MatchmakingModal extends BaseModal {
         this.gameCheckInterval = setInterval(() => this.checkGame(), 1000);
       }
     };
-    this.socket.onerror = (event: Event) => {
-      console.error("WebSocket error occurred:", event);
-    };
     this.socket.onclose = (event: CloseEvent) => {
-      console.log(
-        `Matchmaking server closed connection: code=${event.code} reason=${event.reason}`,
-      );
+      const detail = `Matchmaking socket ${describeSocketClose(socket.url, event, openedAt)}`;
+      if (this.intentionalClose || this.gameID !== null) {
+        console.log(detail);
+      } else {
+        console.warn(detail);
+      }
       this.clearWatchdog();
       this.queueSize = null;
       if (this.intentionalClose || this.gameID !== null) {
         return;
       }
-      // 1008 is also used for auth failures ("Invalid session"), so match on
-      // the reason. Out of free ranked plays — the server will keep refusing
-      // until the next UTC day (or a subscription), so don't reconnect.
-      if (event.code === 1008 && event.reason === "ranked_limit_reached") {
+      // The live matchmaking service still sends these rejections as
+      // 1008/1011 with a bare reason; it is moving to the 41xx codes. Accept
+      // both until that has shipped, or a player out of free ranked matches
+      // would be re-queued by the retry path below instead of told.
+      const legacyReason =
+        event.code === 1008 || event.code === 1011 ? event.reason : null;
+      // Out of free ranked plays — the server will keep refusing until the
+      // next UTC day (or a subscription), so don't reconnect.
+      if (
+        event.code === CloseCode.RankedLimitReached ||
+        legacyReason === "ranked_limit_reached"
+      ) {
         this.connected = false;
         this.limitReached = true;
         return;
       }
-      if (event.code === 1008 && event.reason === "invalid_clan") {
+      if (
+        event.code === CloseCode.InvalidClan ||
+        legacyReason === "invalid_clan"
+      ) {
         this.handleInvalidClan();
         return;
       }
-      if (event.code === 1011 && event.reason === "clan_verification_failed") {
+      if (
+        event.code === CloseCode.ClanVerificationFailed ||
+        legacyReason === "clan_verification_failed"
+      ) {
         this.connected = false;
         this.close();
         this.showMatchmakingError("matchmaking_modal.clan_verification_failed");
         return;
       }
-      if (event.code === 1000) {
+      if (event.code === CloseCode.Normal) {
         // A newer connection for this account (e.g. a second tab) took the
         // queue slot; this socket was replaced. Do not retry.
         window.dispatchEvent(
@@ -346,6 +395,12 @@ export class MatchmakingModal extends BaseModal {
           }),
         );
         this.close();
+        return;
+      }
+      if (isTerminalClose(event.code)) {
+        this.connected = false;
+        this.close();
+        this.showMatchmakingError("matchmaking_modal.rejected");
         return;
       }
       // 1008: the jwt was rejected — getPlayToken() refreshes expired tokens,
@@ -436,7 +491,12 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameID === null) {
       return;
     }
-    const url = `${ClientEnv.serverHttpBase()}/${ClientEnv.workerPath(this.gameID)}/api/game/${this.gameID}/exists`;
+    // The matched game may carry any server's letter: resolve it through
+    // the API's list (multi-server v2) rather than this page's own map. The
+    // version check waits until the game exists, below: this poll fires
+    // every second and must never navigate.
+    await ensureServerList();
+    const url = `${ClientEnv.gameHttpBase(this.gameID)}/${ClientEnv.gameWorkerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -446,7 +506,7 @@ export class MatchmakingModal extends BaseModal {
     const gameInfo = await response.json();
 
     if (response.status !== 200) {
-      console.error(`Error checking game ${this.gameID}: ${response.status}`);
+      console.warn(`Error checking game ${this.gameID}: ${response.status}`);
       return;
     }
 
@@ -458,6 +518,15 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameCheckInterval) {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
+    }
+
+    // A match is made by rating, not by build, so it can land on a server
+    // running another version. Open the game at that version now: being
+    // bounced at join time costs a page load, which a ranked game's start
+    // deadline does not allow. See docs/MultiServer.md, "Opening a game at
+    // its server's version" (OPE-471).
+    if (redirectToGameVersion(this.gameID)) {
+      return;
     }
 
     this.dispatchEvent(

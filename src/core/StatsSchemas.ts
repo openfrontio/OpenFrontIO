@@ -23,10 +23,10 @@ export const BoatUnitSchema = z.enum(boatUnits);
 export type BoatUnit = z.infer<typeof BoatUnitSchema>;
 export type BoatUnitType = UnitType.TradeShip | UnitType.TransportShip;
 
-// export const unitTypeToBoatUnit = {
-//   [UnitType.TradeShip]: "trade",
-//   [UnitType.TransportShip]: "trans",
-// } as const satisfies Record<BoatUnitType, BoatUnit>;
+export const unitTypeToBoatUnit = {
+  [UnitType.TradeShip]: "trade",
+  [UnitType.TransportShip]: "trans",
+} as const satisfies Record<BoatUnitType, BoatUnit>;
 
 export const otherUnits = [
   "city",
@@ -62,6 +62,27 @@ export const unitTypeToOtherUnit = {
 export const ATTACK_INDEX_SENT = 0; // Outgoing attack troops
 export const ATTACK_INDEX_RECV = 1; // Incmoing attack troops
 export const ATTACK_INDEX_CANCEL = 2; // Cancelled attack troops
+// Largest SINGLE incoming attack, by the troop count it launched with. A
+// running maximum, not a sum -- ATTACK_INDEX_RECV already carries the total.
+export const ATTACK_INDEX_MAX_RECV = 3;
+
+// Tiles. Peak is the high-water mark; the drawdown pair is the worst
+// proportional decline from a running peak to any later point (maximum
+// drawdown), which is what makes a comeback measurable. The pair is NOT
+// "peak, then lowest after it" -- recovering to a new peak would erase the
+// collapse that made it a comeback.
+export const TILE_INDEX_PEAK = 0;
+export const TILE_INDEX_DRAWDOWN_PEAK = 1;
+export const TILE_INDEX_DRAWDOWN_TROUGH = 2;
+
+// Alliances. BROKEN_BY_OTHER is the betrayed side; the breaker's side is
+// already counted by `betrayals`. LONGEST_HELD is in ticks.
+export const ALLIANCE_INDEX_FORMED = 0;
+export const ALLIANCE_INDEX_BROKEN_BY_OTHER = 1;
+export const ALLIANCE_INDEX_EXPIRED = 2;
+export const ALLIANCE_INDEX_HELD_TO_END = 3;
+export const ALLIANCE_INDEX_PEAK_CONCURRENT = 4;
+export const ALLIANCE_INDEX_LONGEST_HELD = 5;
 
 // Player types
 export const PLAYER_INDEX_HUMAN = 0;
@@ -73,6 +94,9 @@ export const BOAT_INDEX_SENT = 0; // Boats launched
 export const BOAT_INDEX_ARRIVE = 1; // Boats arrived
 export const BOAT_INDEX_CAPTURE = 2; // Boats captured
 export const BOAT_INDEX_DESTROY = 3; // Boats destroyed
+// Appended: `boats` values are already variable-length arrays, so records
+// written before this index existed stay valid and simply stop one short.
+export const BOAT_INDEX_LOST = 4; // Own boats destroyed, whoever destroyed them
 
 // Bombs
 export const BOMB_INDEX_LAUNCH = 0; // Bombs launched
@@ -86,6 +110,24 @@ export const GOLD_INDEX_TRADE = 2; // Gold earned by trade ships
 export const GOLD_INDEX_STEAL = 3; // Gold earned by capturing trade ships
 export const GOLD_INDEX_TRAIN_SELF = 4; // Gold earned by own trains
 export const GOLD_INDEX_TRAIN_OTHER = 5; // Gold earned by other players trains
+// Appended: `gold` is a variable-length array, so records written before this
+// index existed stay valid and simply stop one short.
+export const GOLD_INDEX_DONATE_RECV = 6; // Gold received from donations
+
+// Donations. Only the receiving side is counted; a donation the sender makes
+// is already visible as the gold leaving their income curve. RECV_BROKE is the
+// subset of RECV that landed while the recipient held less than
+// DONATION_BROKE_GOLD_THRESHOLD, measured before the gold was added.
+export const DONATION_INDEX_GOLD_RECV = 0;
+export const DONATION_INDEX_GOLD_RECV_BROKE = 1;
+
+// Broke means "cannot buy anything at all": the cheapest purchasable unit in
+// the game is a first Defense Post at 50k, and every other structure, warship
+// and warhead costs more (Config.ts). A literal rather than a read of the cost
+// table on purpose — a banked record is judged by infra long after the match,
+// so the line has to mean the same thing forever, even if the economy is
+// rebalanced.
+export const DONATION_BROKE_GOLD_THRESHOLD = 50_000n;
 
 // Other Units
 export const OTHER_INDEX_BUILT = 0; // Structures and warships built
@@ -143,6 +185,13 @@ export const PlayerStatsSchema = z
     bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),
     gold: AtLeastOneNumberSchema.optional(),
     units: z.partialRecord(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
+    // Appended at the end of the shape on purpose: zbin encodes object fields
+    // in declaration order (zbin/zb.ts), so inserting above would silently
+    // change the wire layout for every field after the insertion point.
+    tiles: AtLeastOneNumberSchema.optional(),
+    alliances: AtLeastOneNumberSchema.optional(),
+    peakTroops: BigIntStringSchema.optional(),
+    donations: AtLeastOneNumberSchema.optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;

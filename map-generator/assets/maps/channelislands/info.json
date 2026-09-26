@@ -1,0 +1,333 @@
+{
+  "name": "Channel Islands",
+  "id": "ChannelIslands",
+  "translation_key": "map.channelislands",
+  "categories": ["north_america"],
+  "multiplayer_frequency": 4,
+  "team_frequency": 7,
+  "nations": [
+    {
+      "coordinates": [4060, 214],
+      "name": "Huntington Beach",
+      "flag": "California"
+    },
+    {
+      "coordinates": [4201, 197],
+      "name": "Newport Beach",
+      "flag": "California"
+    },
+    {
+      "coordinates": [4450, 223],
+      "name": "Laguna Beach",
+      "flag": "California"
+    },
+    {
+      "coordinates": [4689, 264],
+      "name": "San Clemente",
+      "flag": "California"
+    },
+    {
+      "coordinates": [4659, 143],
+      "name": "San Juan Capistrano",
+      "flag": "California"
+    },
+    {
+      "coordinates": [4200, 1936],
+      "name": "San Clemente Island",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3668, 1027],
+      "name": "Santa Catalina",
+      "flag": "California"
+    },
+    {
+      "coordinates": [2323, 2145],
+      "name": "San Nicolas",
+      "flag": "California"
+    },
+    {
+      "coordinates": [767, 1448],
+      "name": "Santa Rosa",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1180, 1114],
+      "name": "Santa Cruz",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1674, 802],
+      "name": "Anacapa Island",
+      "flag": "California"
+    },
+    {
+      "coordinates": [300, 1549],
+      "name": "San Miguel",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3653, 180],
+      "name": "Long Beach",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3523, 329],
+      "name": "San Pedro",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3360, 284],
+      "name": "Torrance",
+      "flag": "California"
+    },
+    {
+      "coordinates": [2914, 5],
+      "name": "Santa Monica",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3142, 8],
+      "name": "Beverly Hills",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3259, 92],
+      "name": "Inglewood",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3552, 103],
+      "name": "Compton",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3424, 15],
+      "name": "Los Angeles",
+      "flag": "California"
+    },
+    {
+      "coordinates": [4035, 18],
+      "name": "Anaheim",
+      "flag": "California"
+    },
+    {
+      "coordinates": [4286, 108],
+      "name": "Costa Mesa",
+      "flag": "California"
+    },
+    {
+      "coordinates": [4453, 73],
+      "name": "Irvine",
+      "flag": "California"
+    },
+    {
+      "coordinates": [4215, 4],
+      "name": "Santa Ana",
+      "flag": "California"
+    },
+    {
+      "coordinates": [4698, 23],
+      "name": "Mission Viejo",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3828, 16],
+      "name": "Buena Park",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3714, 32],
+      "name": "Downey",
+      "flag": "California"
+    },
+    {
+      "coordinates": [4088, 111],
+      "name": "Garden Grove",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3939, 94],
+      "name": "Westminster",
+      "flag": "California"
+    },
+    {
+      "coordinates": [3810, 152],
+      "name": "Seal Beach",
+      "flag": "California"
+    },
+    {
+      "coordinates": [2559, 194],
+      "name": "Malibu",
+      "flag": "California"
+    },
+    {
+      "coordinates": [2238, 128],
+      "name": "Thousand Oaks",
+      "flag": "California"
+    },
+    {
+      "coordinates": [2508, 20],
+      "name": "Simi Valley",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1825, 361],
+      "name": "Port Hueneme",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1638, 204],
+      "name": "Ventura",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1862, 227],
+      "name": "Oxnard",
+      "flag": "California"
+    },
+    {
+      "coordinates": [2017, 99],
+      "name": "Camarillo",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1553, 26],
+      "name": "Ojai",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1183, 152],
+      "name": "Carpinteria",
+      "flag": "California"
+    },
+    {
+      "coordinates": [799, 313],
+      "name": "Santa Barbara",
+      "flag": "California"
+    },
+    {
+      "coordinates": [471, 450],
+      "name": "Goleta",
+      "flag": "California"
+    },
+    {
+      "coordinates": [63, 621],
+      "name": "Gaviota",
+      "flag": "California"
+    },
+    {
+      "coordinates": [18, 152],
+      "name": "Buellton",
+      "flag": "California"
+    },
+    {
+      "coordinates": [198, 198],
+      "name": "Solvang",
+      "flag": "dk"
+    }
+  ],
+  "custom_tribes": [
+    "Abenaki Tribe",
+    "Absentee Shawnee Tribe",
+    "Acoma Pueblo Tribe",
+    "Ahtna Tribe",
+    "Aleut Tribe",
+    "Alutiiq Tribe",
+    "Apache Tribe",
+    "Apalachee Tribe",
+    "Arapaho Tribe",
+    "Arikara Tribe",
+    "Assiniboine Tribe",
+    "Barbareño Tribe",
+    "Blackfeet Tribe",
+    "Caddo Tribe",
+    "Cahuilla Tribe",
+    "Calusa Tribe",
+    "Catawba Tribe",
+    "Cayuga Tribe",
+    "Chemehuevi Tribe",
+    "Cherokee Tribe",
+    "Cheyenne Tribe",
+    "Chickasaw Tribe",
+    "Chitimacha Tribe",
+    "Choctaw Tribe",
+    "Chumash Tribe",
+    "Clatsop Tribe",
+    "Coast Miwok Tribe",
+    "Comanche Tribe",
+    "Cowlitz Tribe",
+    "Cree Tribe",
+    "Creek Tribe",
+    "Crow Tribe",
+    "Dakota Tribe",
+    "Delaware Tribe",
+    "Haida Tribe",
+    "Havasupai Tribe",
+    "Hopi Tribe",
+    "Huron Tribe",
+    "Ineseño Tribe",
+    "Inupiat Tribe",
+    "Iowa Tribe",
+    "Iroquois Tribe",
+    "Isleta Pueblo Tribe",
+    "Karuk Tribe",
+    "Kawaiisu Tribe",
+    "Keweenaw Bay Indian Community",
+    "Kiowa Tribe",
+    "Klamath Tribe",
+    "Kootenai Tribe",
+    "Kumeyaay Tribe",
+    "Laguna Pueblo Tribe",
+    "Lakota Tribe",
+    "Lumbee Tribe",
+    "Lummi Tribe",
+    "Luiseño Tribe",
+    "Makah Tribe",
+    "Mandau Tribe",
+    "Menominee Tribe",
+    "Miami Tribe",
+    "Miccosukee Tribe",
+    "Mi'kmaq Tribe",
+    "Modoc Tribe",
+    "Mohawk Tribe",
+    "Mohegan Tribe",
+    "Mojave Tribe",
+    "Muscogee Tribe",
+    "Navajo Tribe",
+    "Nez Perce Tribe",
+    "Nicoleño Tribe",
+    "Nipmuc Tribe",
+    "Nooksack Tribe",
+    "Ojibwe Tribe",
+    "Omaha Tribe",
+    "Oneida Tribe",
+    "Onondaga Tribe",
+    "Osage Tribe",
+    "Otoe-Missouria Tribe",
+    "Ottawa Tribe",
+    "Paiute Tribe",
+    "Pawnee Tribe",
+    "Penobscot Tribe",
+    "Peoria Tribe",
+    "Pequot Tribe",
+    "Pima Tribe",
+    "Pomo Tribe",
+    "Ponca Tribe",
+    "Potawatomi Tribe",
+    "Powhatan Tribe",
+    "Pueblo Tribe",
+    "Quapaw Tribe",
+    "Quechan Tribe",
+    "Quinault Tribe",
+    "Seminole Tribe",
+    "Seneca Tribe",
+    "Serrano Tribe",
+    "Shawnee Tribe",
+    "Shoshone Tribe",
+    "Tlingit Tribe",
+    "Tongva Tribe",
+    "Ventureño Tribe"
+  ],
+  "themes": ["north_america", "western"]
+}

@@ -66,6 +66,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
           "username": "ThirdOne",
         },
       ],
+      "publicGameType": undefined,
       "reports": [],
       "start": 1700000002000,
       "tribes": undefined,
@@ -139,19 +140,19 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
     "cast": [
       [
         1000,
-        "game has ended",
+        "close_reason.game_ended",
       ],
     ],
     "host": [
       [
         1000,
-        "game has ended",
+        "close_reason.game_ended",
       ],
     ],
     "p2": [
       [
         1000,
-        "game has ended",
+        "close_reason.game_ended",
       ],
     ],
     "p3": [
@@ -160,13 +161,14 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
     "p3Again": [
       [
         1000,
-        "game has ended",
+        "close_reason.game_ended",
       ],
     ],
   },
   "frames": {
     "cast": [
       {
+        "groupToken": "GoldenGroupTok01",
         "lobby": {
           "clients": [
             {
@@ -220,6 +222,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
         "type": "lobby_info",
       },
       {
+        "groupToken": "GoldenGroupTok01",
         "lobby": {
           "clients": [
             {
@@ -327,6 +330,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
           ],
           "visibleAt": 1700000001000,
         },
+        "groupToken": "GoldenGroupTok01",
         "lobbyCreatedAt": 1700000000000,
         "myClientID": "cast0000",
         "turns": [],
@@ -521,6 +525,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
     ],
     "host": [
       {
+        "groupToken": "GoldenGroupTok01",
         "lobby": {
           "clients": [
             {
@@ -554,6 +559,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
         "type": "lobby_info",
       },
       {
+        "groupToken": "GoldenGroupTok01",
         "lobby": {
           "clients": [
             {
@@ -607,6 +613,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
         "type": "lobby_info",
       },
       {
+        "groupToken": "GoldenGroupTok01",
         "lobby": {
           "clients": [
             {
@@ -714,6 +721,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
           ],
           "visibleAt": 1700000001000,
         },
+        "groupToken": "GoldenGroupTok01",
         "lobbyCreatedAt": 1700000000000,
         "myClientID": "host0000",
         "turns": [],
@@ -914,6 +922,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
     ],
     "p2": [
       {
+        "groupToken": "GoldenGroupTok01",
         "lobby": {
           "clients": [
             {
@@ -967,6 +976,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
         "type": "lobby_info",
       },
       {
+        "groupToken": "GoldenGroupTok01",
         "lobby": {
           "clients": [
             {
@@ -1074,6 +1084,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
           ],
           "visibleAt": 1700000001000,
         },
+        "groupToken": "GoldenGroupTok01",
         "lobbyCreatedAt": 1700000000000,
         "myClientID": "p2000000",
         "turns": [],
@@ -1268,6 +1279,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
     ],
     "p3": [
       {
+        "groupToken": "GoldenGroupTok01",
         "lobby": {
           "clients": [
             {
@@ -1321,6 +1333,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
         "type": "lobby_info",
       },
       {
+        "groupToken": "GoldenGroupTok01",
         "lobby": {
           "clients": [
             {
@@ -1428,6 +1441,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
           ],
           "visibleAt": 1700000001000,
         },
+        "groupToken": "GoldenGroupTok01",
         "lobbyCreatedAt": 1700000000000,
         "myClientID": "p3000000",
         "turns": [],
@@ -1677,6 +1691,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
           ],
           "visibleAt": 1700000001000,
         },
+        "groupToken": "GoldenGroupTok01",
         "lobbyCreatedAt": 1700000000000,
         "myClientID": "p3000000",
         "turns": [
@@ -1834,6 +1849,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
     "listed": false,
     "lobbyCreatorClientID": "host0000",
     "publicGameType": undefined,
+    "queued": undefined,
     "serverTime": 1700000002000,
     "startsAt": 1700000001000,
   },

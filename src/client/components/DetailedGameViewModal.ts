@@ -7,11 +7,15 @@ import { PublicGameInfo, PublicGames } from "../../core/Schemas";
 import { getDesktopSessionState } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import {
+  getDesktopUpdateState,
   isDesktopShell,
   type DesktopSessionState,
   type DesktopUpdateState,
 } from "../DesktopShell";
-import { shouldBlockMultiplayerAction } from "../GameModeSelector";
+import {
+  reportMultiplayerRefusal,
+  shouldBlockSocketSourcedAction,
+} from "../GameModeSelector";
 import { JoinLobbyModal } from "../JoinLobbyModal";
 import { PublicLobbySocket } from "../LobbySocket";
 import { JoinLobbyEvent } from "../Main";
@@ -118,6 +122,10 @@ export class DetailedGameViewModal extends BaseModal {
   @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
   @state() private desktopSessionState: DesktopSessionState | null = null;
+  // No backend-reachability state, deliberately. Every lobby this browser
+  // shows arrived over a live game-server socket, and by the reachability
+  // rule (GameModeSelector, top of file) the server-list API's health may not
+  // gate such a join -- so there is nothing here for the signal to decide.
 
   private serverTimeOffset = 0;
   private countdownTimer: number | null = null;
@@ -179,6 +187,10 @@ export class DetailedGameViewModal extends BaseModal {
     );
     document.addEventListener("userMeResponse", this.onUserMe);
     if (isDesktopShell()) {
+      // Seed BOTH from their current values -- this modal mounts well after
+      // the update bridge's synchronous replay has already been dispatched
+      // and lost, so without the seed its join() gate sees null (OPE-396).
+      this.desktopUpdateState = getDesktopUpdateState();
       this.desktopSessionState = getDesktopSessionState();
     }
     document.addEventListener(
@@ -439,16 +451,21 @@ export class DetailedGameViewModal extends BaseModal {
   private renderCard(lobby: PublicGameInfo) {
     const config = lobby.gameConfig;
     if (!config) return nothing;
+    // The host's Start countdown once armed, otherwise the listing deadline.
+    const startAt = lobby.startsAt ?? lobby.autoStartAt;
     return lobbyCard({
       lobby,
       subtitle: getGameModeLabel(config),
-      timeDisplay: this.timeDisplay(lobby),
-      timeDisplayUppercase: lobby.startsAt === undefined,
+      timeDisplay: this.timeDisplay(lobby, startAt),
+      timeDisplayUppercase: startAt === undefined,
       heightClass: "h-full",
       // Gated, not disabled: `disabled` also sets pointer-events-none and would
       // swallow the click that's supposed to make the update bar wiggle. join()
       // does the actual refusing.
-      blocked: shouldBlockMultiplayerAction(
+      //
+      // Socket-sourced: the desktop update and session states dim a card, a
+      // list-API outage never does. Same predicate join() refuses on.
+      blocked: shouldBlockSocketSourcedAction(
         this.desktopUpdateState,
         this.desktopSessionState,
       ),
@@ -457,17 +474,25 @@ export class DetailedGameViewModal extends BaseModal {
     });
   }
 
-  private timeDisplay(lobby: PublicGameInfo): string {
-    if (lobby.startsAt === undefined) {
-      // Scheduled lobbies only get a countdown once they're the active one for
-      // their bucket; the one queued behind it is simply next up. Hosted
-      // lobbies never get one — they start when the host says so.
-      return lobby.publicGameType === "hosted"
-        ? translateText("public_lobby.waiting_for_players")
-        : translateText("detailed_view.queued");
+  private timeDisplay(
+    lobby: PublicGameInfo,
+    startAt: number | undefined,
+  ): string {
+    if (startAt === undefined) {
+      if (lobby.publicGameType === "hosted") {
+        return translateText("public_lobby.waiting_for_players");
+      }
+      // Use the full server queue so filtering doesn't renumber waiting lobbies.
+      const queue = this.lobbies?.games[lobby.publicGameType]?.filter(
+        (candidate) => candidate.startsAt === undefined,
+      );
+      const position =
+        (queue?.findIndex((candidate) => candidate.gameID === lobby.gameID) ??
+          -1) + 1;
+      return translateText("detailed_view.queue_position", { position });
     }
     const seconds = getSecondsUntilServerTimestamp(
-      lobby.startsAt,
+      startAt,
       this.serverTimeOffset,
     );
     return seconds > 0
@@ -768,24 +793,25 @@ export class DetailedGameViewModal extends BaseModal {
    * Refuses the action and draws attention to the update bar. Returns true
    * when the caller should stop.
    *
-   * Mirrors GameModeSelector's blockedByUpdate() (deliberately not shared: it
-   * touches this component's own state field) -- see that file for why this
-   * nudges the bar instead of relying on `disabled`, which would swallow the
-   * click.
+   * Mirrors GameModeSelector's blockedFromLobbyJoin() (deliberately not
+   * shared: it touches this component's own state fields) -- see that file for
+   * why this nudges the bar instead of relying on `disabled`, which would
+   * swallow the click.
+   *
+   * Every lobby here came over a live game-server socket, so reachability is
+   * not an input and there is no reachability reason to report: `false` to the
+   * refusal report leaves the desktop wiggle as the only feedback, which is
+   * all the update and session states need.
    */
-  private blockedByUpdate(): boolean {
+  private blockedFromLobbyJoin(): boolean {
     if (
-      !shouldBlockMultiplayerAction(
+      !shouldBlockSocketSourcedAction(
         this.desktopUpdateState,
         this.desktopSessionState,
       )
     )
       return false;
-    (
-      document.querySelector("desktop-status-bar") as
-        | (HTMLElement & { wiggle?: () => void })
-        | null
-    )?.wiggle?.();
+    reportMultiplayerRefusal(false);
     return true;
   }
 
@@ -794,7 +820,7 @@ export class DetailedGameViewModal extends BaseModal {
     // Checked -- and the bar nudged -- before close(): a blocked attempt must
     // leave the modal open and tell the player why, not vanish silently. This
     // sits above the hosted/public branch below so both paths are covered.
-    if (this.blockedByUpdate()) return;
+    if (this.blockedFromLobbyJoin()) return;
     // Also before close(): the popup explains how to become trusted, so it
     // must stay on screen with the browser rather than vanish with it.
     if (!canJoinTrustedLobby(lobby, this.viewerTrusted)) {

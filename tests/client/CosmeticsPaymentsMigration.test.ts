@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/client/Api", () => ({
   changeSubscriptionTier: vi.fn(),
-  createCheckoutSession: vi.fn(),
   getApiBase: vi.fn(() => "https://api.test"),
   getUserMe: vi.fn(async () => false),
   invalidateUserMe: vi.fn(),
@@ -25,21 +24,36 @@ vi.mock("../../src/client/Payments", async (importOriginal) => ({
   startPurchase: vi.fn(async () => ({ outcome: "redirecting" })),
 }));
 
+// The S1 switch, mocked so both settings can be exercised in one run. The
+// default export value (false, blocked) is asserted separately.
+const policy = vi.hoisted(() => ({ STEAM_TIER_CHANGE_IN_APP: false }));
+vi.mock("../../src/client/SubscriptionPolicy", () => ({
+  get STEAM_TIER_CHANGE_IN_APP() {
+    return policy.STEAM_TIER_CHANGE_IN_APP;
+  },
+}));
+
 import {
-  createCheckoutSession,
+  changeSubscriptionTier,
   getUserMe,
   invalidateUserMe,
 } from "../../src/client/Api";
 import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import { purchaseCosmetic, resolveCosmetics } from "../../src/client/Cosmetics";
-import { showInGameAlert } from "../../src/client/InGameModal";
+import {
+  showInGameAlert,
+  showInGameConfirm,
+} from "../../src/client/InGameModal";
 import { startPurchase } from "../../src/client/Payments";
 import type { Cosmetics, Pack, Pattern } from "../../src/core/CosmeticSchemas";
 
 const startPurchaseMock = startPurchase as unknown as ReturnType<typeof vi.fn>;
-const createCheckoutSessionMock =
-  createCheckoutSession as unknown as ReturnType<typeof vi.fn>;
 const alertMock = showInGameAlert as unknown as ReturnType<typeof vi.fn>;
+const getUserMeMock = getUserMe as unknown as ReturnType<typeof vi.fn>;
+const confirmMock = showInGameConfirm as unknown as ReturnType<typeof vi.fn>;
+const changeTierMock = changeSubscriptionTier as unknown as ReturnType<
+  typeof vi.fn
+>;
 
 // A Steam-only currency pack: it is sold on Steam, so it has no Stripe
 // product block at all. `product` is nullable in the schema precisely for it.
@@ -120,7 +134,6 @@ describe("purchaseCosmetic dollar path", () => {
       packName: "starter_pack",
     });
     expect(alertMock).not.toHaveBeenCalled();
-    expect(createCheckoutSessionMock).not.toHaveBeenCalled();
   });
 
   it("buys a subscription tier by name", async () => {
@@ -139,10 +152,126 @@ describe("purchaseCosmetic dollar path", () => {
     });
   });
 
-  // The cosmetic/flare branch of the legacy Stripe endpoint was deliberately
-  // never ported, and it genuinely still needs a priceId.
-  it("keeps the legacy Stripe path for dollar-priced cosmetics", async () => {
-    createCheckoutSessionMock.mockResolvedValue("https://stripe.test/session");
+  // Phase 9 (OPE-230). A subscriber picking a DIFFERENT tier: on Stripe the
+  // change is an in-place reprice (change-tier); on Steam there is no such
+  // thing — the change is a fresh checkout for the new tier, whose approval
+  // makes Steam disable the old agreement. Nothing is cancelled first.
+  describe("changing tier as an existing subscriber", () => {
+    const warlord = () =>
+      resolved({
+        type: "subscription",
+        cosmetic: { name: "warlord", priceMonthly: 10 } as any,
+        key: "subscription:warlord",
+      });
+
+    function subscribedOn(provider: "stripe" | "steam") {
+      getUserMeMock.mockResolvedValue({
+        player: {
+          subscription: {
+            tier: "vanguard",
+            status: "active",
+            provider,
+            cancelAtPeriodEnd: false,
+            currentPeriodEnd: null,
+          },
+        },
+      });
+    }
+
+    it("at launch (S1 blocked) a Steam subscriber is refused before any confirm or checkout", async () => {
+      policy.STEAM_TIER_CHANGE_IN_APP = false;
+      subscribedOn("steam");
+      await purchaseCosmetic(warlord(), "dollar");
+      expect(confirmMock).not.toHaveBeenCalled();
+      expect(startPurchaseMock).not.toHaveBeenCalled();
+      expect(changeTierMock).not.toHaveBeenCalled();
+      expect(alertMock).toHaveBeenCalledWith(
+        "store.tier_change_unavailable_steam",
+      );
+    });
+
+    /** The desktop shell with its Steam bridge: the device that can check
+     *  out on the Steam rail. */
+    function installSteamShell() {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+    }
+
+    afterEach(() => {
+      delete (window as unknown as { openfrontDesktop?: unknown })
+        .openfrontDesktop;
+    });
+
+    it("a Steam-billed subscriber in a plain browser is refused before the confirm — no Stripe checkout is minted", async () => {
+      // `provider` is an account fact; the rail is a device fact. Without
+      // the shell, startPurchase would pick Stripe and the server would 409
+      // at gate 1 with a stranded row.
+      policy.STEAM_TIER_CHANGE_IN_APP = true;
+      subscribedOn("steam");
+      await purchaseCosmetic(warlord(), "dollar");
+      expect(confirmMock).not.toHaveBeenCalled();
+      expect(startPurchaseMock).not.toHaveBeenCalled();
+      expect(changeTierMock).not.toHaveBeenCalled();
+      expect(alertMock).toHaveBeenCalledWith(
+        "store.tier_change_steam_needs_desktop",
+      );
+    });
+
+    it("with S1 enabled, a Steam subscriber in the desktop shell goes through a fresh checkout, never change-tier", async () => {
+      policy.STEAM_TIER_CHANGE_IN_APP = true;
+      installSteamShell();
+      subscribedOn("steam");
+      startPurchaseMock.mockResolvedValue({ outcome: "completed" });
+      await purchaseCosmetic(warlord(), "dollar");
+      // The confirm never promises proration on Steam — full price now, the
+      // rest of the month forfeited.
+      expect(confirmMock).toHaveBeenCalledWith(
+        "store.confirm_tier_change_steam",
+        expect.anything(),
+      );
+      expect(startPurchaseMock).toHaveBeenCalledWith({
+        kind: "subscription_tier",
+        tierName: "warlord",
+      });
+      expect(changeTierMock).not.toHaveBeenCalled();
+      expect(alertMock).toHaveBeenCalledWith("store.change_tier_success_steam");
+    });
+
+    it("a Stripe subscriber in a browser still reprices in place", async () => {
+      subscribedOn("stripe");
+      changeTierMock.mockResolvedValue(true);
+      await purchaseCosmetic(warlord(), "dollar");
+      expect(confirmMock).toHaveBeenCalledWith(
+        "store.confirm_upgrade",
+        expect.anything(),
+      );
+      expect(changeTierMock).toHaveBeenCalledWith("warlord");
+      expect(startPurchaseMock).not.toHaveBeenCalled();
+    });
+
+    it("the tier already held is refused before any call, on either rail", async () => {
+      policy.STEAM_TIER_CHANGE_IN_APP = true;
+      subscribedOn("steam");
+      await purchaseCosmetic(
+        resolved({
+          type: "subscription",
+          cosmetic: { name: "vanguard", priceMonthly: 5 } as any,
+          key: "subscription:vanguard",
+        }),
+        "dollar",
+      );
+      expect(startPurchaseMock).not.toHaveBeenCalled();
+      expect(changeTierMock).not.toHaveBeenCalled();
+      expect(alertMock).toHaveBeenCalledWith("store.already_subscribed");
+    });
+  });
+
+  // Direct dollar purchases of cosmetics/flares are deleted: real money only
+  // buys plutonium (or a subscription), everything else is currency-priced.
+  // Only a stale cached cosmetics.json still carrying a product block can
+  // route "dollar" here — it must fail, never start a checkout.
+  it("refuses a dollar purchase for a cosmetic even when it carries a product", async () => {
     const pattern = {
       name: "camo",
       product: { productId: "prod_p", priceId: "price_p", price: "$1.99" },
@@ -159,11 +288,11 @@ describe("purchaseCosmetic dollar path", () => {
       "dollar",
     );
 
-    expect(createCheckoutSessionMock).toHaveBeenCalledWith("price_p", "blue");
+    expect(alertMock).toHaveBeenCalledWith("store.checkout_failed");
     expect(startPurchaseMock).not.toHaveBeenCalled();
   });
 
-  it("still reports a failure for a dollar-priced cosmetic with no Stripe price", async () => {
+  it("refuses a dollar purchase for a cosmetic with no Stripe price", async () => {
     await purchaseCosmetic(
       resolved({
         type: "pattern",

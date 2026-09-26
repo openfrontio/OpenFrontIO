@@ -1,4 +1,12 @@
+import { z } from "zod";
 import { Execution, Game, Player, PlayerID } from "../game/Game";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zPlayerRef } from "../snapshot/SnapshotType";
 
 export class TargetPlayerExecution implements Execution {
   private target: Player;
@@ -35,4 +43,35 @@ export class TargetPlayerExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return TargetPlayerExecutionSnapshot.write({
+      active: this.active,
+      target: this.target === undefined ? null : w.player(this.target),
+      requestor: w.player(this.requestor),
+      targetID: this.targetID,
+    });
+  }
+
+  restoreSnapshot(s: TargetPlayerState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.target !== null) this.target = r.player(s.target);
+    this.requestor = r.player(s.requestor);
+    this.targetID = s.targetID;
+  }
 }
+
+const TargetPlayerStateSchema = z.object({
+  active: z.boolean(),
+  target: zPlayerRef().nullable(),
+  requestor: zPlayerRef(),
+  targetID: z.string(),
+});
+type TargetPlayerState = z.infer<typeof TargetPlayerStateSchema>;
+
+export const TargetPlayerExecutionSnapshot = execSnapshotType({
+  name: "TargetPlayer",
+  version: 1,
+  schema: TargetPlayerStateSchema,
+  cls: () => TargetPlayerExecution,
+});

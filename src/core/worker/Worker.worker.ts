@@ -1,15 +1,21 @@
 import { assetUrl } from "../AssetUrls";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
-import { createGameRunner, GameRunner } from "../GameRunner";
+import {
+  createGameRunner,
+  createGameRunnerFromSnapshot,
+  GameRunner,
+} from "../GameRunner";
 import {
   AttackClusteredPositionsResultMessage,
   InitializedMessage,
   MainThreadMessage,
+  PlayerActionsErrorMessage,
   PlayerActionsResultMessage,
   PlayerBorderTilesResultMessage,
   PlayerBuildablesResultMessage,
   PlayerProfileResultMessage,
+  SnapshotResultMessage,
   TransportShipSpawnResultMessage,
   WorkerMessage,
 } from "./WorkerMessages";
@@ -146,11 +152,21 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         // Set before createGameRunner so map fetches via mapLoader pick up the
         // CDN base. Workers have no `window`, so AssetUrls falls back to this.
         globalThis.__CDN_BASE__ = message.cdnBase;
-        gameRunner = createGameRunner(
-          message.gameStartInfo,
-          message.clientID,
-          mapLoader,
-          gameUpdate,
+        gameRunner = (
+          message.snapshot !== undefined
+            ? createGameRunnerFromSnapshot(
+                message.gameStartInfo,
+                message.snapshot,
+                message.clientID,
+                mapLoader,
+                gameUpdate,
+              )
+            : createGameRunner(
+                message.gameStartInfo,
+                message.clientID,
+                mapLoader,
+                gameUpdate,
+              )
         ).then((gr) => {
           sendMessage({
             type: "initialized",
@@ -181,7 +197,12 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
 
     case "player_actions":
       if (!gameRunner) {
-        throw new Error("Game runner not initialized");
+        sendMessage({
+          type: "player_actions_error",
+          id: message.id,
+          error: "Game runner not initialized",
+        } as PlayerActionsErrorMessage);
+        break;
       }
 
       try {
@@ -198,7 +219,11 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         } as PlayerActionsResultMessage);
       } catch (error) {
         console.error("Failed to get actions:", error);
-        throw error;
+        sendMessage({
+          type: "player_actions_error",
+          id: message.id,
+          error: error instanceof Error ? error.message : String(error),
+        } as PlayerActionsErrorMessage);
       }
       break;
     case "player_buildables":
@@ -302,6 +327,28 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         console.error("Failed to spawn transport ship:", error);
       }
       break;
+    case "snapshot": {
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+      let snapshot: Uint8Array | null = null;
+      try {
+        // Messages are handled between drain batches, so this is always a
+        // tick boundary.
+        snapshot = (await gameRunner).snapshot(message.gitCommit);
+      } catch (error) {
+        console.error("Failed to snapshot game:", error);
+      }
+      ctx.postMessage(
+        {
+          type: "snapshot_result",
+          id: message.id,
+          snapshot,
+        } as SnapshotResultMessage,
+        snapshot ? [snapshot.buffer] : [],
+      );
+      break;
+    }
     default:
       console.warn("Unknown message :", message);
   }

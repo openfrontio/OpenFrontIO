@@ -26,8 +26,13 @@ echo "======================================================"
 echo "🔄 UPDATING SERVER: ${HOST} ENVIRONMENT"
 echo "======================================================"
 
-# Container and image configuration
-CONTAINER_NAME="openfront-${ENV}-${SUBDOMAIN}"
+# Container and image configuration. DEPLOYMENT_NAME is the bare subdomain
+# for a standalone deployment and <machine>-<subdomain> for a machine-scoped
+# one (deploy.sh, "game host"): the same slot on two machines must not share
+# a container name when both "machines" are names for one box. The fallback
+# keeps a hand-written env file working.
+DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-$SUBDOMAIN}"
+CONTAINER_NAME="openfront-${ENV}-${DEPLOYMENT_NAME}"
 
 echo "Pulling ${GHCR_IMAGE} from GitHub Container Registry..."
 docker pull "${GHCR_IMAGE}"
@@ -65,6 +70,85 @@ echo "Extracted to $STATIC_DIR; top-level contents:"
 ls -la "$STATIC_DIR/" || true
 
 R2_ENDPOINT="https://api.${DOMAIN}"
+# The hostname players load the PAGE from, which is what the server list and
+# the static Worker are keyed by (docs/MultiServer.md, "Server list v2"). Behind
+# a load balancer that is the apex (SITE_HOST); with GAME_DOMAIN set, deploy.sh
+# also fills SITE_HOST in for a standalone deployment, because its page host
+# (<subdomain>.<DOMAIN>) is then a different name from the game host this
+# container answers on (<subdomain>.<GAME_DOMAIN>). An old-style standalone
+# deployment — beta, a branch preview — is its own site, page and game alike.
+SITE="${SITE_HOST:-${SUBDOMAIN}.${DOMAIN}}"
+
+# Ask the API who this container is (infra docs/cluster-registry.md,
+# "Registration"): the registry owns each site's letters and an operator sets
+# worker counts in the admin panel, so neither lives in deploy config. Asked
+# here, once per deploy, and written into the env file so the render steps,
+# nginx and the server all read one answer, and a container restart can never
+# pick up a different worker count while its game ids are live. A value
+# already in the env file wins, as an escape hatch for an API that is down.
+#
+# The markers delimit the block tests/UpdateRegister.test.ts runs against a
+# fake curl. Keep them in place.
+# --- BEGIN register (tested) ---
+: "${REGISTER_ATTEMPTS:=6}"
+: "${REGISTER_RETRY_DELAY:=5}"
+
+register_identity() {
+    local endpoint="$1" api_key="$2" site="$3" host="$4" cpus="$5"
+    local body code attempt payload
+    body="$(mktemp)"
+    payload="$(jq -nc --arg site "$site" --arg host "$host" --argjson cpus "$cpus" \
+        '{site: $site, host: $host, cpus: $cpus}')"
+    for attempt in $(seq 1 "$REGISTER_ATTEMPTS"); do
+        code="$(curl -sS -o "$body" -w "%{http_code}" \
+            --connect-timeout 10 --max-time 30 \
+            -X POST "${endpoint}/cluster/register" \
+            -H "X-API-Key: ${api_key}" \
+            -H "Content-Type: application/json" \
+            -d "$payload" || true)"
+        case "$code" in
+            200)
+                REGISTERED_LETTER="$(jq -r '.letter // empty' "$body")"
+                REGISTERED_NUM_WORKERS="$(jq -r '.numWorkers // empty' "$body")"
+                rm -f "$body"
+                case "$REGISTERED_LETTER" in [a-z]) ;; *) REGISTERED_LETTER="" ;; esac
+                case "$REGISTERED_NUM_WORKERS" in "" | *[!0-9]* | 0*) REGISTERED_NUM_WORKERS="" ;; esac
+                if [ -z "$REGISTERED_LETTER" ] || [ -z "$REGISTERED_NUM_WORKERS" ]; then
+                    REGISTERED_LETTER="" REGISTERED_NUM_WORKERS=""
+                    echo "❌ ${endpoint}/cluster/register answered 200 with an unusable identity."
+                    return 1
+                fi
+                return 0
+                ;;
+            4*)
+                echo "❌ ${endpoint}/cluster/register refused ${host} on ${site} (HTTP ${code}): $(cat "$body" 2> /dev/null)"
+                rm -f "$body"
+                return 1
+                ;;
+        esac
+        echo "… ${endpoint}/cluster/register returned HTTP ${code:-none}; attempt ${attempt}/${REGISTER_ATTEMPTS}"
+        sleep "$REGISTER_RETRY_DELAY"
+    done
+    rm -f "$body"
+    echo "❌ Could not register with ${endpoint}. Set INSTANCE_LETTER and NUM_WORKERS on the deploy to go ahead without it."
+    return 1
+}
+# --- END register (tested) ---
+
+if [ -z "${INSTANCE_LETTER:-}" ] || [ -z "${NUM_WORKERS:-}" ]; then
+    if ! register_identity "$R2_ENDPOINT" "$API_KEY" "$SITE" \
+        "${GAME_HOST:-${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}}" \
+        "$(nproc 2> /dev/null || getconf _NPROCESSORS_ONLN)"; then
+        exit 1
+    fi
+    export INSTANCE_LETTER="${INSTANCE_LETTER:-$REGISTERED_LETTER}"
+    export NUM_WORKERS="${NUM_WORKERS:-$REGISTERED_NUM_WORKERS}"
+    # The env file is what `docker run --env-file` hands the render steps and
+    # the container; drop any empty assignment deploy.sh wrote first.
+    sed -i.bak -e '/^INSTANCE_LETTER=/d' -e '/^NUM_WORKERS=/d' "$ENV_FILE" && rm -f "$ENV_FILE.bak"
+    printf 'INSTANCE_LETTER=%s\nNUM_WORKERS=%s\n' "$INSTANCE_LETTER" "$NUM_WORKERS" >> "$ENV_FILE"
+fi
+echo "Identity: letter ${INSTANCE_LETTER}, ${NUM_WORKERS} workers"
 MANIFEST="$STATIC_DIR/asset-manifest.json"
 if [ ! -f "$MANIFEST" ]; then
     echo "❌ Manifest not found at $MANIFEST"
@@ -182,38 +266,237 @@ else
         exit 1
     fi
     echo "✅ Uploaded $INDEX_KEY."
+
+    # --- Per-version publish (multi-server v2) -------------------------------
+    #
+    # Three more objects, keyed by SITE and the short commit rather than by this
+    # container. Together they are everything a player of this version needs
+    # that is not already a hashed asset: the page, and the desktop shell's
+    # release descriptor plus its cheap poll pointer.
+    #
+    #   game_assets/sites/<site>/v/<short>/index.html
+    #   game_assets/sites/<site>/v/<short>/desktop/release.json
+    #   game_assets/sites/<site>/v/<short>/desktop/version.json
+    #
+    # (The upload endpoint prefixes game_assets/ itself.) Nothing serves these
+    # until the static Worker exists, so this is additive and harmless today —
+    # see docs/MultiServer.md, "Publish pipeline (v2)".
+    #
+    # The page is rendered --environment-only: no cluster, instanceLetter,
+    # instanceId, serverHost or siteHost. One page per VERSION, not per server,
+    # is the whole point; the client asks the API for the server list. The
+    # legacy index-<short>.html above deliberately keeps the server values
+    # until OPE-431 lands, because today's client throws without a worker-count
+    # source.
+    SHORT="${FULL_COMMIT:0:7}"
+    VERSION_PREFIX="sites/${SITE}/v/${SHORT}"
+    echo "Publishing ${VERSION_PREFIX}/ for ${SITE}..."
+
+    # Same single-segment URL encoding the asset loop uses: the whole key goes
+    # through jq's @uri, so "/" arrives as %2F and the endpoint stores it at
+    # game_assets/<key>.
+    upload_versioned() {
+        local key="$1" file="$2" content_type="$3" enc
+        enc="$(jq -rn --arg k "$key" '$k|@uri')"
+        if ! curl -fsS \
+            --retry 5 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 10 --max-time 120 \
+            -X PUT \
+            "$R2_ENDPOINT/game_assets/upload/$enc" \
+            -H "X-API-Key: $API_KEY" \
+            -H "Content-Type: $content_type" \
+            --data-binary "@$file" > /dev/null; then
+            echo "❌ Failed to upload $key"
+            return 1
+        fi
+        echo "✅ Uploaded $key."
+    }
+
+    ENV_INDEX="$EXTRACT_DIR/environment-index.html"
+    if ! docker run --rm --env-file "$ENV_FILE" --entrypoint npx \
+        "${GHCR_IMAGE}" tsx src/server/RenderStaticIndex.ts --environment-only \
+        > "$ENV_INDEX"; then
+        echo "❌ Failed to render the environment-only page"
+        exit 1
+    fi
+    # Same sanity check as the replay shell: a renderer that crashed downstream
+    # of the redirect would otherwise publish an empty page for the version.
+    if ! grep -q "BOOTSTRAP_CONFIG" "$ENV_INDEX"; then
+        echo "❌ The environment-only page looks wrong (no BOOTSTRAP_CONFIG)"
+        exit 1
+    fi
+    # A per-server value in a page served to every player of this version would
+    # pin them all to one server — exactly what v2 removes. Cheap to assert
+    # here, invisible until it hurts otherwise.
+    for FIELD in cluster instanceLetter instanceId serverHost siteHost; do
+        if grep -q "^ *${FIELD}:" "$ENV_INDEX"; then
+            echo "❌ The environment-only page still carries ${FIELD}"
+            exit 1
+        fi
+    done
+
+    DESKTOP_RELEASE="$EXTRACT_DIR/desktop-release.json"
+    DESKTOP_VERSION="$EXTRACT_DIR/desktop-version.json"
+    if ! docker run --rm --env-file "$ENV_FILE" --entrypoint npx \
+        "${GHCR_IMAGE}" tsx src/server/RenderDesktopDescriptor.ts \
+        > "$DESKTOP_RELEASE"; then
+        echo "❌ Failed to build the desktop release descriptor"
+        exit 1
+    fi
+    if ! docker run --rm --env-file "$ENV_FILE" --entrypoint npx \
+        "${GHCR_IMAGE}" tsx src/server/RenderDesktopDescriptor.ts --version-pointer \
+        > "$DESKTOP_VERSION"; then
+        echo "❌ Failed to build the desktop version pointer"
+        exit 1
+    fi
+    # The shell refuses a descriptor it cannot parse, so publishing a truncated
+    # one strands every Steam client on this version.
+    if ! jq -e '.schemaVersion and .clientVersion and .template.sha256' \
+        "$DESKTOP_RELEASE" > /dev/null; then
+        echo "❌ The desktop release descriptor is missing required fields"
+        exit 1
+    fi
+    if ! jq -e '.clientVersion and .coreVersion' "$DESKTOP_VERSION" > /dev/null; then
+        echo "❌ The desktop version pointer is missing required fields"
+        exit 1
+    fi
+
+    upload_versioned "${VERSION_PREFIX}/index.html" "$ENV_INDEX" "text/html" || exit 1
+    upload_versioned "${VERSION_PREFIX}/desktop/release.json" \
+        "$DESKTOP_RELEASE" "application/json" || exit 1
+    upload_versioned "${VERSION_PREFIX}/desktop/version.json" \
+        "$DESKTOP_VERSION" "application/json" || exit 1
+
+    # resources/public/ (policy pages, robots.txt, press/, .well-known/): the
+    # site has no origin behind the Worker, so it serves these from here, by
+    # the index the build wrote. Directory entries ("press/") have no file of
+    # their own.
+    ROOT_FILES_INDEX="$STATIC_DIR/root-files.json"
+    if ! jq -e '.["privacy-policy.html"] and .["terms-of-service.html"]' \
+        "$ROOT_FILES_INDEX" > /dev/null; then
+        echo "❌ The root-files index is missing or lacks the policy pages"
+        exit 1
+    fi
+    while IFS= read -r ROOT_PATH; do
+        case "$ROOT_PATH" in
+            /* | .. | ../* | */../* | */..)
+                echo "❌ refusing unsafe path: $ROOT_PATH" >&2
+                exit 1
+                ;;
+        esac
+        upload_versioned "${VERSION_PREFIX}/root/${ROOT_PATH}" \
+            "$STATIC_DIR/$ROOT_PATH" "application/octet-stream" || exit 1
+    done < <(jq -r 'keys[] | select(endswith("/") | not)' "$ROOT_FILES_INDEX")
+    upload_versioned "${VERSION_PREFIX}/root-files.json" \
+        "$ROOT_FILES_INDEX" "application/json" || exit 1
 fi
+
+# remove_container <name>: stop and remove the container of that exact name,
+# running or not. Silent when there is none.
+remove_container() {
+    local name="$1" running stopped
+    # Use docker ps with filter for exact name match
+    running="$(docker ps --filter "name=^${name}$" -q)"
+    if [ -n "$running" ]; then
+        echo "Stopping running container $running ($name)..."
+        docker stop "$running"
+        echo "Waiting for container to fully stop and release resources..."
+        sleep 5 # Add a 5-second delay
+        docker rm "$running"
+        echo "Container $running stopped and removed."
+    fi
+    # Also check for stopped containers with the same name
+    stopped="$(docker ps -a --filter "name=^${name}$" -q)"
+    if [ -n "$stopped" ]; then
+        echo "Removing stopped container $stopped ($name)..."
+        docker rm "$stopped"
+        echo "Container $stopped removed."
+    fi
+}
 
 echo "Checking for existing container..."
-# Use docker ps with filter for exact name match
-RUNNING_CONTAINER="$(docker ps --filter "name=^${CONTAINER_NAME}$" -q)"
-if [ -n "$RUNNING_CONTAINER" ]; then
-    echo "Stopping running container $RUNNING_CONTAINER..."
-    docker stop "$RUNNING_CONTAINER"
-    echo "Waiting for container to fully stop and release resources..."
-    sleep 5 # Add a 5-second delay
-    docker rm "$RUNNING_CONTAINER"
-    echo "Container $RUNNING_CONTAINER stopped and removed."
+remove_container "${CONTAINER_NAME}"
+# A slot that has just moved to a machine-scoped host leaves its old
+# container behind under the bare name, still claiming
+# <subdomain>.<GAME_DOMAIN> — a host no cluster entry names any more — and,
+# for the long-lived slots, with restart=always keeping it up. The two
+# shapes are exclusive for one slot on one box, so retire it here.
+if [ "${DEPLOYMENT_NAME}" != "${SUBDOMAIN}" ]; then
+    remove_container "openfront-${ENV}-${SUBDOMAIN}"
 fi
 
-# Also check for stopped containers with the same name
-STOPPED_CONTAINER="$(docker ps -a --filter "name=^${CONTAINER_NAME}$" -q)"
-if [ -n "$STOPPED_CONTAINER" ]; then
-    echo "Removing stopped container $STOPPED_CONTAINER..."
-    docker rm "$STOPPED_CONTAINER"
-    echo "Container $STOPPED_CONTAINER removed."
-fi
+# Docker restart policy. `always` means the daemon brings this container back
+# after a crash, and again after a host reboot; `no` means it stays down until
+# somebody deploys again.
+#
+# Which one is right depends entirely on whether the deployment is long-lived,
+# and that is what SUBDOMAIN tells us:
+#
+#   Long-lived, listed below. Something depends on these being reachable at a
+#   fixed hostname without anyone watching. `main` and `nightly` are both
+#   staging deployments people test against; `nightly` is here because a
+#   scheduled deploy is the only thing that would otherwise restart it, so a
+#   crash at 07:05 UTC is a ~24-hour outage rather than a blip (OPE-361).
+#   `green` and `blue` are the dev pools the same schedule fans out to, with
+#   the exact same exposure -- worse, actually, since start.sh caps every
+#   non-main dev container at 25h, so without `always` a single missed nightly
+#   would leave them dead until the next successful one. Any deployment on the
+#   production domain qualifies for the same reason and is matched separately,
+#   since its subdomain is not fixed.
+#
+#   Everything else: a per-branch preview. deploy.yml deploys EVERY push on
+#   EVERY branch to <branch>.openfront.dev, so these accumulate one container
+#   per branch anyone has ever pushed. `no` is what lets them die quietly --
+#   with `always` a host reboot would resurrect months of abandoned branch
+#   containers, each holding its memory and its worker processes, and nothing
+#   would ever clean them up. Their owner is present when they are deployed and
+#   can redeploy, which is exactly the case `no` is for.
+#
+# To make another fixed hostname survive a crash, add its subdomain here.
+#
+# The markers below delimit the block that tests/UpdateRestartPolicy.test.ts
+# extracts and runs against a table of subdomains -- the rest of this script
+# talks to docker and ssh and cannot be executed in a test, but this decision
+# can. Keep them in place.
+# --- BEGIN restart policy (tested) ---
+LONG_LIVED_SUBDOMAINS=" main nightly green blue "
 
-if [ "${SUBDOMAIN}" = main ] || [ "${DOMAIN}" = openfront.io ]; then
+if [[ "${LONG_LIVED_SUBDOMAINS}" == *" ${SUBDOMAIN} "* ]] || [ "${DOMAIN}" = openfront.io ]; then
     RESTART=always
 else
     RESTART=no
 fi
+# --- END restart policy (tested) ---
 
 echo "Starting new container for ${HOST} environment..."
 
 # Ensure the traefik network exists
 docker network create web 2> /dev/null || true
+
+# Traefik Host() rule. The container always answers on its game host —
+# GAME_HOST, as deploy.sh settled it, or
+# <subdomain>.<GAME_DOMAIN>/<subdomain>.<DOMAIN> for an env file written by
+# hand. With GAME_DOMAIN set a standalone deployment also owns its page host
+# (<subdomain>.<DOMAIN>) during the transition, until the static Worker is
+# actually routed there, so the box still answers on the name people already
+# have bookmarked; once the Worker owns it that clause simply never matches.
+# A machine-scoped host (blue.staging2.server.openfront.dev) has no page host
+# of its own — its page is the apex, SITE_HOST — so it gets the one name.
+# With GAME_DOMAIN unset there is one name and the rule is byte-for-byte the
+# one this script has always emitted.
+#
+# The markers below delimit the block tests/UpdateTraefikHostRule.test.ts
+# extracts and runs, the same way the restart policy above is tested: the
+# rest of this script talks to docker, this decision is four strings in and
+# one string out. Keep them in place.
+# --- BEGIN traefik host rule (tested) ---
+GAME_HOST="${GAME_HOST:-${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}}"
+if [ -n "${GAME_DOMAIN:-}" ] && [ "${GAME_HOST}" = "${SUBDOMAIN}.${GAME_DOMAIN}" ]; then
+    TRAEFIK_HOST_RULE="Host(\`${SUBDOMAIN}.${DOMAIN}\`) || Host(\`${GAME_HOST}\`)"
+else
+    TRAEFIK_HOST_RULE="Host(\`${GAME_HOST}\`)"
+fi
+# --- END traefik host rule (tested) ---
 
 docker run -d \
     --restart="${RESTART}" \
@@ -221,7 +504,7 @@ docker run -d \
     --name "${CONTAINER_NAME}" \
     --network web \
     --label "traefik.enable=true" \
-    --label "traefik.http.routers.${CONTAINER_NAME}.rule=Host(\`${SUBDOMAIN}.${DOMAIN}\`)" \
+    --label "traefik.http.routers.${CONTAINER_NAME}.rule=${TRAEFIK_HOST_RULE}" \
     --label "traefik.http.routers.${CONTAINER_NAME}.entrypoints=websecure" \
     --label "traefik.http.routers.${CONTAINER_NAME}.tls=true" \
     --label "traefik.http.services.${CONTAINER_NAME}.loadbalancer.server.port=80" \
@@ -244,6 +527,108 @@ if [ $? -eq 0 ]; then
 else
     echo "Failed to start container"
     exit 1
+fi
+
+# Tell the API which commit new players of this site should get. This is the
+# single switch of multi-server v2 (docs/MultiServer.md): servers running
+# `latest` are `open` and take new games, everything else drains, and the
+# static Worker serves `latest`'s page at <site>/ and its /desktop/*.json.
+#
+# It runs LAST, after the new container is up, because the API refuses to flag
+# a version no server has checked in for — that refusal (409) is the interlock
+# that stops a deploy from pointing every player at a build that cannot serve
+# them. The container registers within ~10s of boot, so a 409 immediately after
+# `docker run` is expected and is retried, not an error. There is no separate
+# health wait in this script; this retry loop is the closest thing to one, and
+# CI's own "Wait for deployment to start" step polls /commit.txt afterwards.
+#
+# The markers below delimit the block that tests/UpdateFlagLatest.test.ts
+# extracts and runs against a fake curl — the rest of this script talks to
+# docker and ssh and cannot be executed in a test, but this decision can. Keep
+# them in place.
+# --- BEGIN flag latest (tested) ---
+# Overridable so the test can drive the same loop without waiting 90 seconds.
+: "${FLAG_LATEST_TIMEOUT:=90}"
+: "${FLAG_LATEST_RETRY_DELAY:=5}"
+
+# flag_latest <site> <version> <endpoint> <api_key>
+#
+# Returns 0 when the deploy may report success, 1 when it must not. Clients
+# get their server list from the API, and a version that was never flagged
+# means no server is `open`: nobody can start a game. A deploy that ends there
+# has not succeeded and must not say it has.
+flag_latest() {
+    local site="$1" version="$2" endpoint="$3" api_key="$4"
+
+    local deadline=$((SECONDS + FLAG_LATEST_TIMEOUT))
+    local body code reason
+    body="$(mktemp)"
+
+    while :; do
+        # No -f: the status code IS the answer here, so it must be read rather
+        # than collapsed into a non-zero exit. A curl that cannot reach the API
+        # at all (DNS, TLS, connect timeout) exits non-zero AND prints 000, so
+        # the fallback must only fill in for a curl that printed nothing —
+        # `|| echo 000` would append to curl's own 000 and yield "000000",
+        # which falls through to the decide-now arm and kills the retry loop
+        # on the one failure it exists to survive.
+        if ! code="$(curl -sS --connect-timeout 10 --max-time 30 \
+            -o "$body" -w "%{http_code}" \
+            -X POST "${endpoint}/cluster/latest" \
+            -H "X-API-Key: ${api_key}" \
+            -H "Content-Type: application/json" \
+            -d "{\"site\": \"${site}\", \"version\": \"${version}\"}")"; then
+            code="${code:-000}"
+        fi
+
+        case "$code" in
+            200 | 204)
+                echo "✅ Flagged ${version} as latest for ${site}."
+                rm -f "$body"
+                return 0
+                ;;
+            404)
+                # The API predates the registry: there is nothing to flag and
+                # nothing reading it.
+                echo "⚠️ ${endpoint}/cluster/latest is not deployed yet (HTTP 404); skipping the latest flag."
+                rm -f "$body"
+                return 0
+                ;;
+            409 | 000 | 5??)
+                # 409: no server has checked in for this version yet — the
+                # normal state for the first few seconds after docker run.
+                # 000/5xx: the API is unreachable or broken; same treatment,
+                # because the deploy is equally unfinished either way.
+                if [ "$SECONDS" -ge "$deadline" ]; then
+                    reason="HTTP ${code} after ${FLAG_LATEST_TIMEOUT}s of retries"
+                    break
+                fi
+                echo "… ${endpoint}/cluster/latest returned HTTP ${code}; retrying in ${FLAG_LATEST_RETRY_DELAY}s"
+                sleep "$FLAG_LATEST_RETRY_DELAY"
+                ;;
+            *)
+                # 400/401/403 and friends: a bad key or a malformed request.
+                # Retrying cannot fix it, so decide now.
+                reason="HTTP ${code}"
+                break
+                ;;
+        esac
+    done
+
+    echo "❌ Failed to flag ${version} as latest for ${site}: ${reason}"
+    cat "$body" || true
+    rm -f "$body"
+    echo "   Clients take their server list from the API, so an unflagged version means no server is open. Failing the deploy."
+    return 1
+}
+# --- END flag latest (tested) ---
+
+if [[ "$FULL_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+    if ! flag_latest "$SITE" "$FULL_COMMIT" "$R2_ENDPOINT" "$API_KEY"; then
+        exit 1
+    fi
+else
+    echo "⚠️ Skipping the latest flag: commit.txt is not a full SHA ('$FULL_COMMIT')"
 fi
 
 echo "======================================================"

@@ -16,34 +16,56 @@ export class ListingState {
   // When the lobby was listed. Cleared on delist, so relisting starts a
   // fresh deadline.
   private listedAt?: number;
+  // Host-chosen time from listing to auto-start; defaults to the maximum.
+  private autoStartMs?: number;
   // Featured lobbies: a label shown instead of the map name, an accent for
   // the row, and a longer auto-start deadline.
   private label?: string;
   private accent?: LobbyAccent;
   private featured = false;
+  // When the host paid to put the lobby in the public Special queue. From
+  // then on the queue's countdown starts it, not the listing deadline.
+  private queuedAt?: number;
 
   isListed(): boolean {
     return this.listed;
   }
 
-  setListed(listed: boolean): void {
+  setListed(listed: boolean, autoStartMs?: number): void {
     if (this.listed === listed) {
       // Duplicate toggles must not extend the auto-start deadline.
       return;
     }
     this.listed = listed;
     this.listedAt = listed ? Date.now() : undefined;
+    this.autoStartMs = listed ? autoStartMs : undefined;
+    if (!listed) this.queuedAt = undefined;
+  }
+
+  isQueued(): boolean {
+    return this.queuedAt !== undefined;
+  }
+
+  queuedAtTime(): number | undefined {
+    return this.queuedAt;
+  }
+
+  // Only listed lobbies can be queued, and only once.
+  queue(): void {
+    if (!this.listed || this.queuedAt !== undefined) return;
+    this.queuedAt = Date.now();
   }
 
   // Deadline after which a listed lobby starts automatically, so hosts
   // can't sit on a public listing indefinitely.
   autoStartAt(): number | undefined {
     if (!this.listed || this.listedAt === undefined) return undefined;
+    if (this.queuedAt !== undefined) return undefined;
     return (
       this.listedAt +
       (this.featured
         ? FEATURED_LOBBY_AUTO_START_MS
-        : HOSTED_LOBBY_AUTO_START_MS)
+        : (this.autoStartMs ?? HOSTED_LOBBY_AUTO_START_MS))
     );
   }
 

@@ -878,6 +878,19 @@ describe("PutUsernameResponseSchema", () => {
     delete rest.base;
     expect(PutUsernameResponseSchema.safeParse(rest).success).toBe(false);
   });
+
+  // Deliberately lenient, unlike every other field here: this is a 200, so
+  // the rename has already committed server-side. Rejecting an unknown
+  // bareClaim would report failure for a rename that succeeded and burn the
+  // player's 30-day cooldown. Dropping it degrades to "say nothing".
+  it("drops an unknown bareClaim instead of failing the parse", () => {
+    const result = PutUsernameResponseSchema.safeParse({
+      ...base,
+      bareClaim: "nope",
+    });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.bareClaim).toBeUndefined();
+  });
 });
 
 describe("UserMeResponseSchema creator", () => {
@@ -983,18 +996,30 @@ describe("PublicCreatorSchema", () => {
 });
 
 describe("PutCreatorResponseSchema", () => {
-  it("parses the bind confirmation (code + displayName only)", () => {
+  it("parses the API's bind confirmation envelope", () => {
     const result = PutCreatorResponseSchema.safeParse({
-      code: "LEWIS",
-      displayName: "Lewis",
+      ok: true,
+      creator: { code: "LEWIS", displayName: "Lewis" },
     });
     expect(result.success).toBe(true);
   });
 
+  it("rejects the un-enveloped pair the API never sends", () => {
+    expect(
+      PutCreatorResponseSchema.safeParse({
+        code: "LEWIS",
+        displayName: "Lewis",
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects a missing displayName", () => {
-    expect(PutCreatorResponseSchema.safeParse({ code: "LEWIS" }).success).toBe(
-      false,
-    );
+    expect(
+      PutCreatorResponseSchema.safeParse({
+        ok: true,
+        creator: { code: "LEWIS" },
+      }).success,
+    ).toBe(false);
   });
 });
 
@@ -1346,5 +1371,22 @@ describe("PostTribeBoostResponseSchema", () => {
         pricePaid: "100",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("UserMeResponseSchema player achievements", () => {
+  const achievements = UserMeResponseSchema.shape.player.shape.achievements;
+
+  it("keeps the server-awarded player achievements array", () => {
+    const parsed = achievements.parse({
+      singleplayerMap: [],
+      player: [{ achievement: "win_ffa", game: "abc123", achievedAt: null }],
+    });
+    expect(parsed.player[0].achievement).toBe("win_ffa");
+  });
+
+  it("defaults player to an empty array when the server omits it", () => {
+    const parsed = achievements.parse({ singleplayerMap: [] });
+    expect(parsed.player).toEqual([]);
   });
 });

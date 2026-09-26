@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/client/Api", () => ({
   changeSubscriptionTier: vi.fn(),
-  createCheckoutSession: vi.fn(),
   getApiBase: vi.fn(() => "https://api.test"),
   getUserMe: vi.fn(async () => false),
   invalidateUserMe: vi.fn(),

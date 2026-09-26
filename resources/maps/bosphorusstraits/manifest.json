@@ -147,6 +147,7 @@
       }
     ]
   },
+  "team_frequency": 10,
   "themes": ["europe", "asia"],
   "translation_key": "map.bosphorusstraits"
 }

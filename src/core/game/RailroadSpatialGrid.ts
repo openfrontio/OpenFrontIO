@@ -84,6 +84,32 @@ export class RailSpatialGrid {
     return result;
   }
 
+  /** Cell and rail entry order both decide query result order. */
+  snapshot(railRef: (r: Railroad) => number): {
+    cells: [string, number[]][];
+    railToCells: [number, string[]][];
+  } {
+    return {
+      cells: [...this.cells].map(([k, set]) => [k, [...set].map(railRef)]),
+      railToCells: [...this.railToCells].map(([rail, keys]) => [
+        railRef(rail),
+        [...keys],
+      ]),
+    };
+  }
+
+  restoreSnapshot(
+    s: { cells: [string, number[]][]; railToCells: [number, string[]][] },
+    rail: (ref: number) => Railroad,
+  ): void {
+    this.cells = new Map(
+      s.cells.map(([k, refs]) => [k, new Set(refs.map(rail))]),
+    );
+    this.railToCells = new Map(
+      s.railToCells.map(([ref, keys]) => [rail(ref), new Set(keys)]),
+    );
+  }
+
   private key(cx: number, cy: number): string {
     return `${cx}:${cy}`;
   }

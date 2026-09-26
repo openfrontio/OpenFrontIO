@@ -553,5 +553,6 @@
       }
     ]
   },
+  "team_frequency": 4,
   "translation_key": "map.labyrinth"
 }

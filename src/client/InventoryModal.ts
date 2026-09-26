@@ -38,7 +38,9 @@ import type {
   InventoryLoadoutEntry,
 } from "./components/InventoryLoadoutBar";
 import "./components/InventoryLoadoutMenu";
+import { ProgressiveList } from "./components/ProgressiveList";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { signedOutNotice } from "./components/ui/SignedOutNotice";
 import {
   fetchCosmetics,
   groupCosmeticVariants,
@@ -106,6 +108,8 @@ export class InventoryModal extends BaseModal {
       ],
     };
   }
+
+  private readonly pages = new ProgressiveList(this);
 
   private _onCosmeticSelected = () => this.updateFromSettings();
 
@@ -473,6 +477,12 @@ export class InventoryModal extends BaseModal {
         this.includedInSearch(r.cosmetic.name),
     );
 
+    const page = this.pages.page(
+      "inventory-skins",
+      this.search,
+      groupCosmeticVariants(items),
+    );
+    const equippedKey = this.equippedSkin()?.key;
     return html`
       ${this.hasOwnedCatalogItem(["pattern", "skin"])
         ? null
@@ -481,8 +491,7 @@ export class InventoryModal extends BaseModal {
         data-inventory-grid="skins"
         class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
       >
-        ${groupCosmeticVariants(items).map((group) => {
-          const equippedKey = this.equippedSkin()?.key;
+        ${page.items.map((group) => {
           const equippedVariant = group.find((r) => r.key === equippedKey);
           const active = equippedVariant ?? group[0];
           return html`
@@ -498,6 +507,7 @@ export class InventoryModal extends BaseModal {
             ></cosmetic-card>
           `;
         })}
+        ${page.more}
       </div>
     `;
   }
@@ -512,6 +522,7 @@ export class InventoryModal extends BaseModal {
         this.includedInSearch(r.cosmetic.name),
     );
 
+    const page = this.pages.page("inventory-crowns", this.search, items);
     const equippedKey = this.equippedCrown()?.key;
     return html`
       ${this.hasOwnedCatalogItem(["crown"])
@@ -521,7 +532,7 @@ export class InventoryModal extends BaseModal {
         data-inventory-grid="crowns"
         class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
       >
-        ${items.map((r) => {
+        ${page.items.map((r) => {
           return html`
             <cosmetic-card
               .resolved=${r}
@@ -530,6 +541,7 @@ export class InventoryModal extends BaseModal {
             ></cosmetic-card>
           `;
         })}
+        ${page.more}
       </div>
     `;
   }
@@ -550,12 +562,16 @@ export class InventoryModal extends BaseModal {
         this.includedInSearch(resolved.key.slice("country:".length)),
     );
 
+    const page = this.pages.page("inventory-flags", this.search, [
+      ...cosmeticFlags,
+      ...countryFlags,
+    ]);
     return html`
       <div
         data-inventory-grid="flags"
         class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
       >
-        ${[...cosmeticFlags, ...countryFlags].map(
+        ${page.items.map(
           (resolved) => html`
             <cosmetic-card
               .resolved=${resolved}
@@ -564,6 +580,7 @@ export class InventoryModal extends BaseModal {
             ></cosmetic-card>
           `,
         )}
+        ${page.more}
       </div>
     `;
   }
@@ -652,6 +669,9 @@ export class InventoryModal extends BaseModal {
   }
 
   protected renderBody(tab: string) {
+    // BaseModal renders the body even while closed, and this one is always
+    // mounted: skip building a grid no one can see from the main menu.
+    if (!this.isModalOpen) return html``;
     if (this.isLoading || this.ownershipState === "loading") {
       return html`<div data-inventory-state="loading" aria-busy="true">
         <span class="sr-only">${translateText("inventory.loading")}</span>
@@ -716,6 +736,14 @@ export class InventoryModal extends BaseModal {
     }
     const category = tab as InventoryCategory;
     return html`
+      ${this.ownershipState === "guest"
+        ? html`<div data-inventory-sign-in>
+            ${signedOutNotice(
+              () => window.showPage?.("page-account"),
+              translateText("inventory.sign_in_for_cosmetics"),
+            )}
+          </div>`
+        : nothing}
       ${this.renderLoadoutMenu()}
       <inventory-loadout-bar
         .entries=${this.loadoutEntries()}
@@ -751,6 +779,7 @@ export class InventoryModal extends BaseModal {
   protected onClose(): void {
     this.search = "";
     this.previewingCosmetic = null;
+    this.pages.reset();
   }
 
   // A query typed for skins rarely matches anything in flags, so a stale

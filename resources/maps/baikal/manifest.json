@@ -1,5 +1,6 @@
 {
   "categories": ["asia"],
+  "ffa_frequency": 5,
   "forced_modifiers": ["isWaterNukes:50"],
   "id": "Baikal",
   "map": {
@@ -17,7 +18,6 @@
     "num_land_tiles": 540826,
     "width": 1250
   },
-  "multiplayer_frequency": 5,
   "name": "Baikal",
   "nations": [
     {

@@ -23,6 +23,7 @@ import {
 import { translateText } from "../Utils";
 import "./CosmeticCard";
 import { cosmeticSelectionLabel } from "./CosmeticPresentation";
+import { ProgressiveList } from "./ProgressiveList";
 
 export interface EffectSlotSelection {
   effectType: EffectType;
@@ -70,6 +71,15 @@ export class EffectsGrid extends LitElement {
 
   private userSettings = new UserSettings();
   private renderedItems: ResolvedCosmetic[] = [];
+  private readonly pages = new ProgressiveList(this);
+  private resolvedCache:
+    | {
+        cosmetics: Cosmetics | null;
+        userMeResponse: UserMeResponse | false;
+        affiliateCode: string | null;
+        items: ResolvedCosmetic[];
+      }
+    | undefined;
   private _onChange = () => this.requestUpdate();
 
   connectedCallback() {
@@ -126,11 +136,26 @@ export class EffectsGrid extends LitElement {
   }
 
   private resolvedItems(): ResolvedCosmetic[] {
-    return resolveCosmetics(
+    const cache = this.resolvedCache;
+    if (
+      cache?.cosmetics === this.cosmetics &&
+      cache.userMeResponse === this.userMeResponse &&
+      cache.affiliateCode === this.affiliateCode
+    ) {
+      return cache.items;
+    }
+    const items = resolveCosmetics(
       this.cosmetics,
       this.userMeResponse,
       this.affiliateCode,
     );
+    this.resolvedCache = {
+      cosmetics: this.cosmetics,
+      userMeResponse: this.userMeResponse,
+      affiliateCode: this.affiliateCode,
+      items,
+    };
+    return items;
   }
 
   private emitActiveSlot(all: ResolvedCosmetic[] = this.resolvedItems()) {
@@ -291,12 +316,12 @@ export class EffectsGrid extends LitElement {
   private renderTabBar(): TemplateResult {
     return html`
       <div
-        class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-b border-white/10 px-4 sm:flex-nowrap"
+        class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-b border-white/10 px-4"
       >
         ${EFFECT_TYPES.map((type) => {
           const active = this.activeType === type;
           return html`<button
-            class="-mb-px min-w-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${active
+            class="-mb-px max-w-full shrink-0 whitespace-normal border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${active
               ? "border-malibu-blue text-aquarius"
               : "border-transparent text-white/40 hover:text-white/70"}"
             @click=${() => this.selectEffectType(type)}
@@ -376,8 +401,13 @@ export class EffectsGrid extends LitElement {
     } else {
       panel = html`
         <div class="flex flex-col gap-4 p-4">
-          ${sections.map(
-            (s) => html`
+          ${sections.map((s) => {
+            const page = this.pages.page(
+              `effects-${s.type}`,
+              `${this.mode}:${this.activeNukeType}:${this.search}`,
+              s.items,
+            );
+            return html`
               <div class="flex flex-col">
                 ${activeType
                   ? nothing
@@ -393,13 +423,14 @@ export class EffectsGrid extends LitElement {
                   data-effects-items
                   class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                 >
-                  ${s.items.map((r) =>
+                  ${page.items.map((r) =>
                     this.renderTile(this.slotForTile(s.type, r), r),
                   )}
+                  ${page.more}
                 </div>
               </div>
-            `,
-          )}
+            `;
+          })}
         </div>
       `;
     }

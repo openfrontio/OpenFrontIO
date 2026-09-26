@@ -5,10 +5,9 @@
  *   Row 0: border colors (4-state: self/ally/neutral/embargo)
  *   Row 1: unit colors (3-state: self/ally/enemy)
  *
- * Colors are computed from the perspective of the hovered player when the
- * cursor is over someone else's territory, otherwise the local player.
+ * Colors are computed from the local player's perspective.
  *
- * Rebuilt when the perspective or relationship data changes.
+ * Rebuilt when the local player or relationship data changes.
  */
 
 import type { RenderSettings } from "../RenderSettings";
@@ -31,7 +30,6 @@ export class AffiliationPalette {
 
   // Cached inputs for rebuilding
   private localPlayerID = 0;
-  private hoveredOwnerID = 0;
   private relationData: Uint8Array | null = null;
   private relationSize = 0;
 
@@ -63,23 +61,6 @@ export class AffiliationPalette {
     this.rebuild();
   }
 
-  /**
-   * Hovered tile owner (0 = none/water). A non-zero owner other than the
-   * local player becomes the perspective the colors are computed from.
-   */
-  setHoveredOwner(id: number): void {
-    if (id === this.hoveredOwnerID) return;
-    const before = this.perspective();
-    this.hoveredOwnerID = id;
-    if (this.perspective() !== before) this.rebuild();
-  }
-
-  private perspective(): number {
-    return this.settings.altView.hoverPerspective && this.hoveredOwnerID > 0
-      ? this.hoveredOwnerID
-      : this.localPlayerID;
-  }
-
   updateRelations(data: Uint8Array, size: number): void {
     this.relationData = data;
     this.relationSize = size;
@@ -107,7 +88,7 @@ export class AffiliationPalette {
 
   private rebuild(): void {
     const d = this.cpuData;
-    const lp = this.perspective();
+    const lp = this.localPlayerID;
     const rel = this.relationData;
     const rs = this.relationSize;
 
