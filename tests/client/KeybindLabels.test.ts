@@ -80,7 +80,7 @@ describe("HelpModal keyboard layout refresh", () => {
       value: keyboard,
     });
 
-    const modal = document.createElement("help-modal") as HelpModal;
+    const modal = new HelpModal();
     const state = modal as unknown as {
       layoutMap: Map<string, string> | null;
       connectedCallback: () => void;
@@ -138,7 +138,7 @@ describe("HelpModal keyboard layout refresh", () => {
       value: keyboard,
     });
 
-    const modal = document.createElement("help-modal") as HelpModal;
+    const modal = new HelpModal();
     const state = modal as unknown as {
       layoutMap: Map<string, string> | null;
       connectedCallback: () => void;
