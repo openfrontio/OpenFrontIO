@@ -118,10 +118,7 @@ describe("cosmetic scope derived from the session JWT", () => {
     localStorage.setItem(PUBLIC_ID_CACHE_PREFIX + ME, "stale-public-id");
 
     rememberPublicId(ME, MY_PUBLIC_ID);
-    localStorage.setItem(
-      PUBLIC_ID_CACHE_PREFIX + ME,
-      "stale-public-id",
-    );
+    localStorage.setItem(PUBLIC_ID_CACHE_PREFIX + ME, "stale-public-id");
 
     await signInWith(payloadFor(ME));
 
