@@ -3,20 +3,20 @@
   "id": "Paris",
   "map": {
     "height": 1300,
-    "num_land_tiles": 2233743,
+    "num_land_tiles": 2239104,
     "width": 1800
   },
   "map16x": {
     "height": 325,
-    "num_land_tiles": 136331,
+    "num_land_tiles": 136860,
     "width": 450
   },
   "map4x": {
     "height": 650,
-    "num_land_tiles": 553768,
+    "num_land_tiles": 555392,
     "width": 900
   },
-  "multiplayer_frequency": 0,
+  "multiplayer_frequency": 3,
   "name": "Paris",
   "nations": [
     {

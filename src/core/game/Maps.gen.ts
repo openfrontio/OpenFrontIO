@@ -2030,7 +2030,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Paris,
     translationKey: "map.paris",
     categories: ["europe", "new"],
-    multiplayerFrequency: 0,
+    multiplayerFrequency: 3,
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
