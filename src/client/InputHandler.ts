@@ -612,22 +612,22 @@ export class InputHandler {
 
       if (
         this.activeKeys.has(this.keybinds.moveUp) ||
-        this.activeKeys.has("ArrowUp")
+        this.activeKeys.has(this.keybinds.moveUpArrow)
       )
         deltaY += this.PAN_SPEED;
       if (
         this.activeKeys.has(this.keybinds.moveDown) ||
-        this.activeKeys.has("ArrowDown")
+        this.activeKeys.has(this.keybinds.moveDownArrow)
       )
         deltaY -= this.PAN_SPEED;
       if (
         this.activeKeys.has(this.keybinds.moveLeft) ||
-        this.activeKeys.has("ArrowLeft")
+        this.activeKeys.has(this.keybinds.moveLeftArrow)
       )
         deltaX += this.PAN_SPEED;
       if (
         this.activeKeys.has(this.keybinds.moveRight) ||
-        this.activeKeys.has("ArrowRight")
+        this.activeKeys.has(this.keybinds.moveRightArrow)
       )
         deltaX -= this.PAN_SPEED;
 
@@ -740,12 +740,12 @@ export class InputHandler {
             this.keybinds.moveDown,
             this.keybinds.moveLeft,
             this.keybinds.moveRight,
+            this.keybinds.moveUpArrow,
+            this.keybinds.moveDownArrow,
+            this.keybinds.moveLeftArrow,
+            this.keybinds.moveRightArrow,
             this.keybinds.zoomOut,
             this.keybinds.zoomIn,
-            "ArrowUp",
-            "ArrowLeft",
-            "ArrowDown",
-            "ArrowRight",
             "Minus",
             "Equal",
             "NumpadAdd",
