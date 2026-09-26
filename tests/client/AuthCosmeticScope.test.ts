@@ -115,10 +115,7 @@ describe("cosmetic scope derived from the session JWT", () => {
   });
 
   it("prefers the latest in-memory publicId over a stale cache", async () => {
-    localStorage.setItem(
-      PUBLIC_ID_CACHE_PREFIX + ME,
-      "stale-public-id",
-    );
+    localStorage.setItem(PUBLIC_ID_CACHE_PREFIX + ME, "stale-public-id");
 
     rememberPublicId(ME, MY_PUBLIC_ID);
     localStorage.setItem(
