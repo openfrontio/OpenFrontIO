@@ -333,11 +333,14 @@ export class ControlPanel extends LitElement implements Controller {
   }
 
   onAttackRatioChange(newRatio: number) {
+    // The element outlives any one game; uiState only exists once init() ran.
+    // Before that (the hidden slider on the lobby page) this.attackRatio holds
+    // the value, and init() reloads it from UserSettings anyway.
+    if (this.uiState === undefined) return;
     this.uiState.attackRatio = newRatio;
   }
 
   private onAttackRatioSettingChanged = () => {
-    // The element outlives any one game; uiState only exists once init() ran.
     if (this.uiState === undefined) return;
     this.attackRatio = new UserSettings().attackRatio();
     this.onAttackRatioChange(this.attackRatio);
