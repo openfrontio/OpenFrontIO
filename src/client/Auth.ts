@@ -864,9 +864,7 @@ function updateUserSettingsForJwt(jwt: string | null): void {
     // The latter keeps the known scope usable when localStorage is unavailable.
     let cachedPublicId: string | null = null;
     try {
-      cachedPublicId = localStorage.getItem(
-        PUBLIC_ID_CACHE_PREFIX + sub,
-      );
+      cachedPublicId = localStorage.getItem(PUBLIC_ID_CACHE_PREFIX + sub);
     } catch (e) {
       console.warn("updateUserSettingsForJwt: cache read failed", e);
     }
