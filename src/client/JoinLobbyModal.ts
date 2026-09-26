@@ -1,4 +1,3 @@
-import { Howl } from "howler";
 import { html, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
@@ -22,7 +21,6 @@ import {
   PublicGameInfo,
 } from "../core/Schemas";
 import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -34,6 +32,7 @@ import { normaliseMapKey } from "./Utils";
 import { isReplayShellHost, versionedReplayUrl } from "./VersionedReplay";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
+import { GameStartAlertController } from "./components/GameStartAlertController";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
@@ -64,15 +63,10 @@ export class JoinLobbyModal extends BaseModal {
   // Clock offset for the hosted list's countdowns, kept apart from
   // serverTimeOffset (the joined lobby's).
   private hostedServerTimeOffset = 0;
-  // Per-lobby state. A saved preference seeds it in startTrackingLobby, then
-  // the bell can override it without changing future lobbies.
-  @state() private notifyOnStart = false;
-  // Own Howl rather than SoundManager: that only exists once the game is
-  // running, and this has to play during the lobby wait. Fixed volume on
-  // purpose -- the SFX slider defaults to 0, and an alert the player asked
-  // for must not be silenced by it.
-  private startAlertSound: Howl | null = null;
-  private readonly userSettings = new UserSettings();
+  private readonly gameStartAlert = new GameStartAlertController(
+    this,
+    () => this.currentLobbyId !== "",
+  );
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
@@ -151,7 +145,7 @@ export class JoinLobbyModal extends BaseModal {
       titleContent: html`<span class="${DEFAULT_TITLE_CLASS}"
           >${translateText("public_lobby.title")}</span
         >
-        ${this.renderNotifyBell()}`,
+        ${this.gameStartAlert.renderBell()}`,
       onBack: () => this.closeAndLeave(),
       ariaLabel: translateText("common.close"),
       // Only pair them behind a wrapper when both are present, so a browser --
@@ -163,115 +157,6 @@ export class JoinLobbyModal extends BaseModal {
           : (copy ?? invite),
     });
   }
-
-  // Bell in the post-join title: opt into an alert for when the wait is over
-  // and the game actually starts -- a chime, plus a desktop notification
-  // where the browser allows one.
-  private renderNotifyBell(): TemplateResult {
-    const on = this.notifyOnStart;
-    const label = translateText(
-      on ? "public_lobby.notify_on" : "public_lobby.notify_off",
-    );
-    return html`<button
-      type="button"
-      class="inline-flex ml-auto p-1 rounded-lg transition-colors ${on
-        ? "text-amber-300 hover:text-amber-200"
-        : "text-white/40 hover:text-white"}"
-      title=${label}
-      aria-label=${label}
-      aria-pressed=${on}
-      @click=${() => this.toggleNotifyOnStart()}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill=${on ? "currentColor" : "none"}
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="w-7 h-7"
-        aria-hidden="true"
-      >
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-      </svg>
-    </button>`;
-  }
-
-  private toggleNotifyOnStart(): void {
-    if (this.notifyOnStart) {
-      this.notifyOnStart = false;
-      return;
-    }
-    this.notifyOnStart = true;
-    // Nothing about a bell says "sound", so say it every time it's armed --
-    // a toast rather than a dialog: it must not add friction to a one-click
-    // toggle.
-    this.showMessage(translateText("public_lobby.notify_armed"));
-    // Both stay synchronous inside the click. Safari only shows the
-    // permission prompt from inside a user gesture, and creating (not
-    // playing) the Howl here opens Howler's AudioContext under that gesture,
-    // which is what lets the chime start later from a background tab with no
-    // gesture of its own.
-    if (
-      typeof Notification !== "undefined" &&
-      Notification.permission === "default"
-    ) {
-      void Notification.requestPermission();
-    }
-    this.loadStartAlertSound();
-  }
-
-  private loadStartAlertSound(): Howl {
-    this.startAlertSound ??= new Howl({
-      src: [assetUrl("sounds/effects/game-start-alert.mp3")],
-    });
-    return this.startAlertSound;
-  }
-
-  private playStartAlertSound(): void {
-    try {
-      this.loadStartAlertSound().play();
-    } catch (error) {
-      console.warn("Failed to play game-start alert sound", error);
-    }
-  }
-
-  // Main.ts dispatches "game-starting" at prestart, before it closes this
-  // modal — so the listener lives on the element, not the open/close cycle.
-  // Deliberately NOT gated on document focus: an armed bell always alerts.
-  // The redundant banner when the player is already watching is cheaper than
-  // a "sometimes it doesn't fire" rule nobody can predict (and the OS may
-  // suppress it for a focused app anyway).
-  // The chime is unconditional and the notification is on top of it, not a
-  // fallback path: `new Notification()` succeeds even when the OS drops the
-  // banner (Focus mode, browser lacking system-level permission), so there
-  // is no failure signal to fall back from.
-  private readonly handleGameStarting = () => {
-    if (!this.notifyOnStart || !this.currentLobbyId) {
-      return;
-    }
-    this.playStartAlertSound();
-    if (
-      typeof Notification === "undefined" ||
-      Notification.permission !== "granted"
-    ) {
-      return;
-    }
-    try {
-      const notification = new Notification(
-        translateText("public_lobby.notify_started"),
-      );
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
-    } catch (error) {
-      // Some mobile browsers only allow notifications via a service worker.
-      console.warn("Failed to show game-start notification", error);
-    }
-  };
 
   // Play/Spectate switch. Hidden once the game is running: the player list is
   // frozen at start, so the server would refuse to seat anyone new and the
@@ -704,13 +589,7 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyStartAt = null;
     this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
-    this.notifyOnStart = this.userSettings.lobbyStartAlerts();
-    // Preload without the manual-arm toast or another permission prompt. For
-    // click-driven joins this also creates Howler's context under the join
-    // gesture; deep-link joins still follow the browser's autoplay policy.
-    if (this.notifyOnStart) {
-      this.loadStartAlertSound();
-    }
+    this.gameStartAlert.reset();
     this.isConnecting = true;
     this.handledJoinTimeout = false;
     this.startLobbyUpdates();
@@ -769,17 +648,11 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyStartAt = null;
     this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
-    this.notifyOnStart = false;
+    this.gameStartAlert.reset();
     this.isConnecting = true;
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    document.addEventListener("game-starting", this.handleGameStarting);
-  }
-
   disconnectedCallback() {
-    document.removeEventListener("game-starting", this.handleGameStarting);
     this.hostedLobbySocket.stop();
     this.clearCountdownTimer();
     this.stopLobbyUpdates();
