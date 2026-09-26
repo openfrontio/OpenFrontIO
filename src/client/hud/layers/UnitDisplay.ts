@@ -47,13 +47,19 @@ export class UnitDisplay extends LitElement implements Controller {
   private _hoveredUnit: PlayerBuildableUnitType | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
   @state() private layoutMap: Map<string, string> | null = null;
+  private keyboardLayoutRequestId = 0;
 
   private readonly refreshKeyboardLayout = () => {
-    if (!navigator.keyboard) return;
-    void navigator.keyboard
+    const keyboard = navigator.keyboard;
+    if (!keyboard) return;
+
+    const requestId = ++this.keyboardLayoutRequestId;
+    void keyboard
       .getLayoutMap()
       .then((map) => {
-        this.layoutMap = map;
+        if (requestId === this.keyboardLayoutRequestId) {
+          this.layoutMap = map;
+        }
       })
       .catch((e) => {
         console.warn("Failed to get keyboard layout map:", e);
