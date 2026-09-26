@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  Cell,
   Difficulty,
   Game,
   GameMode,
@@ -11,10 +12,15 @@ import {
   Relation,
   Structures,
   TerraNullius,
+  Unit,
   UnitType,
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
-import { canBuildTransportShip } from "../../game/TransportShipUtils";
+import {
+  canBuildTransportShip,
+  targetTransportTile,
+} from "../../game/TransportShipUtils";
+import { PathFinding } from "../../pathfinding/PathFinder";
 import { PseudoRandom } from "../../PseudoRandom";
 import type {
   SnapshotReader,
@@ -42,14 +48,35 @@ import {
   NationEmojiBehavior,
 } from "../nation/NationEmojiBehavior";
 import { findJuiciestTarget, findRunawayLeader } from "../nation/NationUtils";
+import type { NationWarshipBehavior } from "../nation/NationWarshipBehavior";
 import { TransportShipExecution } from "../TransportShipExecution";
 import { closestTwoTiles } from "../Util";
 
 // Reusable neighbor buffer for hot loops; the simulation is single-threaded.
 const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
 
+// A planned boat attack: where it lands, how many tiles it sails, what would sink it
+interface BoatRoute {
+  landing: TileRef;
+  length: number;
+  blocker: Unit | null;
+}
+
+type Box = { min: Cell; max: Cell } | null | undefined;
+
+// Fewest tiles between two boxes (unknown boxes count as touching)
+function boxGap(a: Box, b: Box): number {
+  if (!a || !b) return 0;
+  const dx = Math.max(0, a.min.x - b.max.x, b.min.x - a.max.x);
+  const dy = Math.max(0, a.min.y - b.max.y, b.min.y - a.max.y);
+  return dx + dy;
+}
+
 export class AiAttackBehavior {
   private botAttackTroopsSent: number = 0;
+  // Only set during a maybeAttack call: our land neighbors, and each boat route planned
+  private landNeighbors: Set<Player> | null = null;
+  private boatRoutes: Map<Player, BoatRoute | null> | null = null;
 
   constructor(
     private random: PseudoRandom,
@@ -60,6 +87,7 @@ export class AiAttackBehavior {
     private expandRatio: number,
     private allianceBehavior?: NationAllianceBehavior,
     private emojiBehavior?: NationEmojiBehavior,
+    private warshipBehavior?: NationWarshipBehavior,
   ) {}
 
   /** The owner supplies the shared PRNG, player and nation behaviors. */
@@ -80,6 +108,7 @@ export class AiAttackBehavior {
     player: Player,
     allianceBehavior?: NationAllianceBehavior,
     emojiBehavior?: NationEmojiBehavior,
+    warshipBehavior?: NationWarshipBehavior,
   ): void {
     const s = readVersioned(AiAttackBehaviorSnapshot, raw);
     this.random = random;
@@ -87,6 +116,10 @@ export class AiAttackBehavior {
     this.player = player;
     this.allianceBehavior = allianceBehavior;
     this.emojiBehavior = emojiBehavior;
+    this.warshipBehavior = warshipBehavior;
+    // Only set during a maybeAttack call, so always null between ticks.
+    this.landNeighbors = null;
+    this.boatRoutes = null;
     this.botAttackTroopsSent = s.botAttackTroopsSent;
     this.triggerRatio = s.triggerRatio;
     this.reserveRatio = s.reserveRatio;
@@ -96,6 +129,18 @@ export class AiAttackBehavior {
   }
 
   maybeAttack() {
+    const routes = new Map<Player, BoatRoute | null>();
+    this.boatRoutes = routes;
+    try {
+      this.chooseAttack();
+    } finally {
+      this.landNeighbors = null;
+      this.boatRoutes = null;
+    }
+    this.clearBlockedLane(routes);
+  }
+
+  private chooseAttack() {
     if (this.player === null || this.allianceBehavior === undefined) {
       throw new Error("not initialized");
     }
@@ -118,6 +163,7 @@ export class AiAttackBehavior {
     this.player.borderTiles().forEach((t) => {
       this.game.forEachNeighbor(t, visit);
     });
+    this.landNeighbors = new Set(borderingPlayerSet);
     const playerNeighbors = this.player.nearby();
     for (const n of playerNeighbors) {
       if (n.isPlayer()) borderingPlayerSet.add(n);
@@ -181,14 +227,16 @@ export class AiAttackBehavior {
     const src = this.random.randElement(shore);
 
     // First look for high-interest targets (unowned or bot-owned). Mainly relevant for earlygame
-    let dst = this.findRandomBoatTarget(src, borderingEnemies, true);
-    if (dst === null) {
+    let found = this.findRandomBoatTarget(src, borderingEnemies, true);
+    if (found === null) {
       // None found? Then look for players
-      dst = this.findRandomBoatTarget(src, borderingEnemies, false);
-      if (dst === null) {
+      found = this.findRandomBoatTarget(src, borderingEnemies, false);
+      if (found === null) {
         return;
       }
     }
+    const { tile: dst, launch } = found;
+    if (this.sail(launch, dst).blocker !== null) return;
 
     const owner = this.game.owner(dst);
     const cap = owner.isPlayer()
@@ -211,7 +259,7 @@ export class AiAttackBehavior {
     tile: TileRef,
     borderingEnemies: Player[],
     highInterestOnly: boolean = false,
-  ): TileRef | null {
+  ): { tile: TileRef; launch: TileRef } | null {
     if (this.player === null) throw new Error("not initialized");
     const x = this.game.x(tile);
     const y = this.game.y(tile);
@@ -263,14 +311,15 @@ export class AiAttackBehavior {
       }
 
       // Validate that we can actually build a transport ship to this target
-      if (canBuildTransportShip(this.game, this.player, randTile) === false) {
+      const launch = canBuildTransportShip(this.game, this.player, randTile);
+      if (launch === false) {
         if (owner.isPlayer()) {
           unreachablePlayers.add(owner.id());
         }
         continue;
       }
 
-      return randTile;
+      return { tile: randTile, launch };
     }
     return null;
   }
@@ -324,6 +373,56 @@ export class AiAttackBehavior {
   ): Array<() => boolean> {
     const { difficulty } = this.game.config().gameConfig();
 
+    // Target groups, tried in order and each sorted by troops (ascending). Hard & Impossible
+    // without a land front weigh every enemy within boat range across the water alongside
+    // the bordering ones; Impossible with a land front turns to them once it finds nothing there.
+    let groups: Player[][] | null = null;
+    const targetGroups = (): Player[][] => {
+      if (groups !== null) return groups;
+      const byTroops = (a: Player, b: Player) => a.troops() - b.troops();
+      const landFront = borderingEnemies.some((enemy) =>
+        this.bordersByLand(enemy),
+      );
+      if (difficulty === Difficulty.Impossible && landFront) {
+        groups = [
+          borderingEnemies,
+          this.overseasTargets(borderingEnemies).sort(byTroops),
+        ];
+      } else if (
+        (difficulty === Difficulty.Hard ||
+          difficulty === Difficulty.Impossible) &&
+        !landFront
+      ) {
+        groups = [
+          [...borderingEnemies, ...this.overseasTargets(borderingEnemies)].sort(
+            byTroops,
+          ),
+        ];
+      } else {
+        groups = [borderingEnemies];
+      }
+      return groups;
+    };
+
+    // What `find` picks among the targets we can reach right now, from the first group
+    // where it picks anything (Easy doesn't check). Only its picks get a boat route planned.
+    const pick = (
+      find: (enemies: Player[]) => Player | null,
+    ): Player | null => {
+      for (const group of targetGroups()) {
+        let pool = group;
+        for (;;) {
+          const target = find(pool);
+          if (target === null) break;
+          if (difficulty === Difficulty.Easy || this.canReach(target)) {
+            return target;
+          }
+          pool = pool.filter((enemy) => enemy !== target);
+        }
+      }
+      return null;
+    };
+
     // Define all strategies as functions that return true if they attacked
     const retaliate = (): boolean => this.retaliate();
 
@@ -332,7 +431,7 @@ export class AiAttackBehavior {
     const assist = (): boolean => this.assistAllies();
 
     const traitor = (): boolean => {
-      const traitor = this.findTraitor(borderingEnemies);
+      const traitor = pick((enemies) => this.findTraitor(enemies));
       if (traitor) {
         return this.sendAttack(traitor);
       }
@@ -340,11 +439,14 @@ export class AiAttackBehavior {
     };
 
     const afk = (): boolean => {
-      // borderingEnemies is already sorted by troops (ascending), so first match is weakest afk enemy
-      const afk = borderingEnemies.find(
-        (enemy) =>
-          enemy.isDisconnected() &&
-          (!this.isFFA() || enemy.troops() < this.player.troops() * 3),
+      // Groups are sorted by troops (ascending), so the first match is the weakest afk enemy
+      const afk = pick(
+        (enemies) =>
+          enemies.find(
+            (enemy) =>
+              enemy.isDisconnected() &&
+              (!this.isFFA() || enemy.troops() < this.player.troops() * 3),
+          ) ?? null,
       );
       if (afk) {
         return this.sendAttack(afk);
@@ -363,7 +465,7 @@ export class AiAttackBehavior {
     };
 
     const victim = (): boolean => {
-      const victim = this.findVictim(borderingEnemies);
+      const victim = pick((enemies) => this.findVictim(enemies));
       if (victim) {
         return this.sendAttack(victim);
       }
@@ -371,7 +473,7 @@ export class AiAttackBehavior {
     };
 
     const juicy = (): boolean => {
-      const target = this.findJuicyTarget(borderingEnemies);
+      const target = pick((enemies) => this.findJuicyTarget(enemies));
       return target !== null ? this.sendAttack(target) : false;
     };
 
@@ -381,13 +483,14 @@ export class AiAttackBehavior {
         const other = relation.player;
         if (this.player.isFriendly(other)) continue;
         if (this.isFFA() && other.troops() > this.player.troops() * 3) continue;
+        if (difficulty !== Difficulty.Easy && !this.canReach(other)) continue;
         return this.sendAttack(other);
       }
       return false;
     };
 
     const veryWeak = (): boolean => {
-      const veryWeak = this.findVeryWeakEnemy(borderingEnemies);
+      const veryWeak = pick((enemies) => this.findVeryWeakEnemy(enemies));
       if (veryWeak) {
         return this.sendAttack(veryWeak);
       }
@@ -395,19 +498,19 @@ export class AiAttackBehavior {
     };
 
     const weakest = (): boolean => {
-      if (borderingEnemies.length > 0) {
-        // borderingEnemies is already sorted by troops (ascending), so first match is weakest
-        const weakest = borderingEnemies[0];
-        // In FFA, don't attack if they have more troops than us
-        if (!this.isFFA() || weakest.troops() < this.player.troops()) {
-          return this.sendAttack(weakest);
-        }
-      }
-      return false;
+      // Groups are sorted by troops (ascending), so the first match is the weakest.
+      // In FFA, don't attack if they have more troops than us
+      const weakest = pick(
+        (enemies) =>
+          enemies.find(
+            (enemy) => !this.isFFA() || enemy.troops() < this.player.troops(),
+          ) ?? null,
+      );
+      return weakest !== null ? this.sendAttack(weakest) : false;
     };
 
     const island = (): boolean => {
-      if (borderingEnemies.length === 0) {
+      if (pick((enemies) => enemies[0] ?? null) === null) {
         const enemy = this.findNearestIslandEnemy();
         if (enemy) {
           return this.sendAttack(enemy);
@@ -676,12 +779,12 @@ export class AiAttackBehavior {
   }
 
   // Find a traitor who isn't significantly stronger than us
-  private findTraitor(borderingEnemies: Player[]): Player | null {
+  private findTraitor(enemies: Player[]): Player | null {
     if (this.game.config().disableAlliances()) return null;
 
-    // borderingEnemies is already sorted by troops (ascending), so first match is weakest traitor
+    // enemies is already sorted by troops (ascending), so first match is weakest traitor
     return (
-      borderingEnemies.find(
+      enemies.find(
         (enemy) =>
           enemy.isTraitor() &&
           (!this.isFFA() || enemy.troops() < this.player.troops() * 1.2),
@@ -742,10 +845,10 @@ export class AiAttackBehavior {
   }
 
   // Find someone who isn't significantly stronger than us and is under big attack from others (50%+ of their troops incoming)
-  private findVictim(borderingEnemies: Player[]): Player | null {
-    // borderingEnemies is already sorted by troops (ascending), so first match is weakest victim
+  private findVictim(enemies: Player[]): Player | null {
+    // enemies is already sorted by troops (ascending), so first match is weakest victim
     return (
-      borderingEnemies.find((enemy) => {
+      enemies.find((enemy) => {
         if (this.isFFA() && enemy.troops() > this.player.troops() * 1.2) {
           return false;
         }
@@ -761,8 +864,8 @@ export class AiAttackBehavior {
 
   // Find very weak (less than 15% of their maxTroops) enemies
   // which also don't have significantly more troops than us (to target MIRVed players)
-  private findVeryWeakEnemy(borderingEnemies: Player[]): Player | null {
-    const veryWeakEnemies = borderingEnemies.filter((enemy) => {
+  private findVeryWeakEnemy(enemies: Player[]): Player | null {
+    const veryWeakEnemies = enemies.filter((enemy) => {
       const enemyMaxTroops = this.game.config().maxTroops(enemy);
       return (
         enemy.troops() < enemyMaxTroops * 0.15 &&
@@ -770,13 +873,13 @@ export class AiAttackBehavior {
       );
     });
 
-    // borderingEnemies is already sorted by troops (ascending), so first match is weakest very weak enemy
+    // enemies is already sorted by troops (ascending), so first match is weakest very weak enemy
     return veryWeakEnemies.length > 0 ? veryWeakEnemies[0] : null;
   }
 
-  // Juiciest bordering enemy (Hard & Impossible only) we could plausibly beat (troops <= 75% of ours)
-  private findJuicyTarget(borderingEnemies: Player[]): Player | null {
-    const candidates = borderingEnemies.filter(
+  // Juiciest enemy (Hard & Impossible only) we could plausibly beat (troops <= 75% of ours)
+  private findJuicyTarget(enemies: Player[]): Player | null {
+    const candidates = enemies.filter(
       (enemy) => enemy.troops() <= this.player.troops() * 0.75,
     );
     return findJuiciestTarget(this.game, candidates);
@@ -833,14 +936,7 @@ export class AiAttackBehavior {
     // Try players in order of distance until we find reachable candidates
     const reachablePlayers: Player[] = [];
     for (const entry of sortedPlayers) {
-      const closest = closestTwoTiles(
-        this.game,
-        this.shoreTiles(this.player),
-        this.shoreTiles(entry.player),
-      );
-      if (closest === null) continue;
-
-      if (canBuildTransportShip(this.game, this.player, closest.y)) {
+      if (this.canReach(entry.player)) {
         reachablePlayers.push(entry.player);
         // We only need up to 2 reachable candidates
         if (reachablePlayers.length >= 2) break;
@@ -1021,7 +1117,9 @@ export class AiAttackBehavior {
         if (this.game.isImpassable(tile)) continue;
         if (this.game.hasOwner(tile)) continue;
         if (this.game.hasFallout(tile)) continue;
-        if (!canBuildTransportShip(this.game, this.player, tile)) continue;
+        const launch = canBuildTransportShip(this.game, this.player, tile);
+        if (launch === false) continue;
+        if (this.sail(launch, tile).blocker !== null) continue;
 
         const troops = Math.min(
           this.player.troops() / 5,
@@ -1239,20 +1337,8 @@ export class AiAttackBehavior {
   }
 
   private sendBoatAttack(target: Player): boolean {
-    if (this.game.config().isUnitDisabled(UnitType.TransportShip)) {
-      return false;
-    }
-
-    const closest = closestTwoTiles(
-      this.game,
-      this.shoreTiles(this.player),
-      this.shoreTiles(target),
-    );
-    if (closest === null) {
-      return false;
-    }
-
-    if (!canBuildTransportShip(this.game, this.player, closest.y)) {
+    const route = this.boatRoute(target);
+    if (route === null || route.blocker !== null) {
       return false;
     }
 
@@ -1265,9 +1351,285 @@ export class AiAttackBehavior {
     }
 
     this.game.addExecution(
-      new TransportShipExecution(this.player, closest.y, troops),
+      new TransportShipExecution(this.player, route.landing, troops),
     );
     return true;
+  }
+
+  private bordersByLand(target: Player): boolean {
+    return (
+      this.landNeighbors?.has(target) ?? this.player.sharesBorderWith(target)
+    );
+  }
+
+  // By land, or by a boat that passes no hostile warship and isn't sailing too far
+  private canReach(target: Player): boolean {
+    if (this.bordersByLand(target)) return true;
+    const route = this.boatRoute(target);
+    return (
+      route !== null &&
+      route.blocker === null &&
+      route.length <= this.maxBoatRoute()
+    );
+  }
+
+  private boatRoute(target: Player): BoatRoute | null {
+    const known = this.boatRoutes?.get(target);
+    if (known !== undefined) return known;
+    const route = this.planBoatRoute(target);
+    this.boatRoutes?.set(target, route);
+    return route;
+  }
+
+  // The direct crossing, or if a warship blocks it, the shortest safe one landing elsewhere
+  private planBoatRoute(target: Player): BoatRoute | null {
+    if (
+      this.game.config().isUnitDisabled(UnitType.TransportShip) ||
+      this.player.unitCount(UnitType.TransportShip) >=
+        this.game.config().boatMaxNumber()
+    ) {
+      return null;
+    }
+    const ours = this.shoreTiles(this.player);
+    const theirs = this.shoreTiles(target);
+    const closest = closestTwoTiles(this.game, ours, theirs);
+    if (closest === null) return null;
+    const warships = this.hostileWarships();
+    const direct = this.routeTo(closest.y, warships);
+    if (direct !== null && direct.blocker === null) return direct;
+
+    let best: BoatRoute | null = null;
+    for (const landing of this.otherLandings(
+      ours,
+      theirs,
+      closest.y,
+      warships,
+    )) {
+      const route = this.routeTo(landing, warships);
+      if (
+        route !== null &&
+        route.blocker === null &&
+        (best === null || route.length < best.length)
+      ) {
+        best = route;
+      }
+    }
+    return best ?? direct;
+  }
+
+  // The launch follows from the landing: our shore closest to it by water
+  private routeTo(landing: TileRef, warships: Unit[]): BoatRoute | null {
+    const launch = canBuildTransportShip(this.game, this.player, landing);
+    if (launch === false) return null;
+    return { landing, ...this.sail(launch, landing, warships) };
+  }
+
+  // Landing spots on their coast apart from `tried` and clear of hostile warships, nearest to
+  // our coast first: Medium tries 1, Hard 2, Impossible 4
+  private otherLandings(
+    ours: TileRef[],
+    theirs: TileRef[],
+    tried: TileRef,
+    warships: Unit[],
+  ): TileRef[] {
+    const { difficulty } = this.game.config().gameConfig();
+    let count: number;
+    switch (difficulty) {
+      case Difficulty.Easy:
+        return [];
+      case Difficulty.Medium:
+        count = 1;
+        break;
+      case Difficulty.Hard:
+        count = 2;
+        break;
+      case Difficulty.Impossible:
+        count = 4;
+        break;
+      default:
+        assertNever(difficulty);
+    }
+    const rangeSquared = this.dangerRange() ** 2;
+    const ourStep = Math.max(1, Math.floor(ours.length / 32));
+    const ourSample = ours.filter((_, i) => i % ourStep === 0);
+    const candidates: { tile: TileRef; dist: number }[] = [];
+    const theirStep = Math.max(1, Math.floor(theirs.length / 32));
+    for (let i = 0; i < theirs.length; i += theirStep) {
+      const tile = theirs[i];
+      if (
+        warships.some(
+          (w) => this.game.euclideanDistSquared(w.tile(), tile) <= rangeSquared,
+        )
+      ) {
+        continue;
+      }
+      let dist = Infinity;
+      for (const s of ourSample) {
+        dist = Math.min(dist, this.game.manhattanDist(s, tile));
+      }
+      candidates.push({ tile, dist });
+    }
+    candidates.sort((a, b) => a.dist - b.dist);
+    const picked = [tried];
+    for (const { tile } of candidates) {
+      if (picked.length > count) break;
+      if (picked.some((p) => this.game.manhattanDist(p, tile) < 50)) continue;
+      picked.push(tile);
+    }
+    return picked.slice(1);
+  }
+
+  private hostileWarships(): Unit[] {
+    return this.game
+      .units(UnitType.Warship)
+      .filter(
+        (w) =>
+          w.owner() !== this.player &&
+          !w.isUnderConstruction() &&
+          w.warshipState().state !== "docked" &&
+          w.owner().canAttackPlayer(this.player, true),
+      );
+  }
+
+  // Warship targeting range, plus what it may move while our boat approaches
+  private dangerRange(): number {
+    return this.game.config().warshipTargettingRange() + 20;
+  }
+
+  // Tiles a boat sails from launch to the shore at target, and the hostile warship that sinks it.
+  // A warship fires once the boat comes in range; the shell covers 3 tiles a tick (the boat 1),
+  // so a boat landing before the shell can catch it is safe.
+  // Easy doesn't look, Medium checks both shores, Hard & Impossible pathfind.
+  private sail(
+    launch: TileRef,
+    target: TileRef,
+    warships: Unit[] = this.hostileWarships(),
+  ): { length: number; blocker: Unit | null } {
+    const landing =
+      targetTransportTile(this.game, this.player, target) ?? target;
+    const direct = this.game.manhattanDist(launch, landing);
+    const { difficulty } = this.game.config().gameConfig();
+    if (
+      this.player.type() === PlayerType.Bot ||
+      difficulty === Difficulty.Easy
+    ) {
+      return { length: direct, blocker: null };
+    }
+
+    const path =
+      difficulty === Difficulty.Medium || direct <= 20
+        ? null
+        : PathFinding.Water(this.game).findPath(launch, landing);
+    const route = path ?? [launch, landing];
+    const length = path?.length ?? direct;
+    // Without a path, assume the warship can fire as soon as we launch
+    const sailed = (i: number) => (path === null ? 0 : i);
+
+    const range = this.dangerRange();
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const t of route) {
+      minX = Math.min(minX, this.game.x(t));
+      maxX = Math.max(maxX, this.game.x(t));
+      minY = Math.min(minY, this.game.y(t));
+      maxY = Math.max(maxY, this.game.y(t));
+    }
+    for (const w of warships) {
+      const wx = this.game.x(w.tile());
+      const wy = this.game.y(w.tile());
+      if (
+        wx < minX - range ||
+        wx > maxX + range ||
+        wy < minY - range ||
+        wy > maxY + range
+      ) {
+        continue;
+      }
+      for (let i = 0; i < route.length; i++) {
+        if (
+          this.game.euclideanDistSquared(w.tile(), route[i]) >
+          range * range
+        ) {
+          continue;
+        }
+        // Shell and boat close in by at most 4 tiles a tick; 10 tiles spare for its reaction
+        const ticksLeft = length - sailed(i);
+        if (4 * ticksLeft >= this.game.manhattanDist(w.tile(), route[i]) - 10) {
+          return { length, blocker: w };
+        }
+        break;
+      }
+    }
+    return { length, blocker: null };
+  }
+
+  // Hard & Impossible don't sail further than this to attack someone
+  private maxBoatRoute(): number {
+    const { difficulty } = this.game.config().gameConfig();
+    switch (difficulty) {
+      case Difficulty.Easy:
+      case Difficulty.Medium:
+        return Infinity;
+      case Difficulty.Hard:
+        return 300;
+      case Difficulty.Impossible:
+        return 500;
+      default:
+        assertNever(difficulty);
+    }
+  }
+
+  // Enemies across the water (not bordering us) whose main territory is within boat range
+  // of ours; whether a boat really gets there is left to canReach
+  private overseasTargets(borderingEnemies: Player[]): Player[] {
+    if (
+      this.player.unitCount(UnitType.TransportShip) >=
+      this.game.config().boatMaxNumber()
+    ) {
+      return [];
+    }
+    const range = this.maxBoatRoute();
+    const ours = this.player.largestClusterBoundingBox;
+    return this.game
+      .players()
+      .filter(
+        (p) =>
+          p !== this.player &&
+          p.type() !== PlayerType.Bot &&
+          !this.player.isFriendly(p) &&
+          !borderingEnemies.includes(p) &&
+          (!this.isFFA() || p.troops() < this.player.troops()) &&
+          boxGap(ours, p.largestClusterBoundingBox) <= range,
+      );
+  }
+
+  // Hard & Impossible send warships at whatever blocks the juiciest target they couldn't reach
+  private clearBlockedLane(routes: Map<Player, BoatRoute | null>): void {
+    if (this.warshipBehavior === undefined) return;
+    const { difficulty } = this.game.config().gameConfig();
+    if (
+      difficulty !== Difficulty.Hard &&
+      difficulty !== Difficulty.Impossible
+    ) {
+      return;
+    }
+    const maxRoute = this.maxBoatRoute();
+    const blocked = new Map<Player, Unit>();
+    for (const [target, route] of routes) {
+      if (
+        route?.blocker &&
+        route.length <= maxRoute &&
+        (!this.isFFA() || target.troops() < this.player.troops())
+      ) {
+        blocked.set(target, route.blocker);
+      }
+    }
+    const target = findJuiciestTarget(this.game, [...blocked.keys()]);
+    if (target !== null) {
+      this.warshipBehavior.clearSeaLane(blocked.get(target)!);
+    }
   }
 
   private calculateBotAttackTroops(target: Player, maxTroops: number): number {
