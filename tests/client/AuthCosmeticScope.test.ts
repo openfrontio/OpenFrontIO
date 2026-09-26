@@ -1,7 +1,11 @@
 import { base64url } from "jose";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getApiBase } from "../../src/client/ApiBase";
-import { clearLocalSession, userAuth } from "../../src/client/Auth";
+import {
+  clearLocalSession,
+  rememberPublicId,
+  userAuth,
+} from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import { uuidToBase64url } from "../../src/core/Base64";
 import { UserSettings } from "../../src/core/game/UserSettings";
@@ -108,6 +112,38 @@ describe("cosmetic scope derived from the session JWT", () => {
     await signInWith(payloadFor(ME));
 
     expect(setPlayerId).toHaveBeenLastCalledWith(MY_PUBLIC_ID);
+  });
+
+  it("uses the in-memory publicId when the persistent cache write fails", async () => {
+    const originalSetItem = Storage.prototype.setItem;
+    const setItemSpy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (key: string, value: string) {
+        if (key === PUBLIC_ID_CACHE_PREFIX + ME) {
+          throw new DOMException("storage unavailable");
+        }
+        return originalSetItem.call(this, key, value);
+      });
+
+    // This mirrors the /users/@me success path: the server has already
+    // supplied the publicId, but persistence of that known ID fails.
+    rememberPublicId(ME, MY_PUBLIC_ID);
+    expect(setItemSpy).toHaveBeenCalledWith(
+      PUBLIC_ID_CACHE_PREFIX + ME,
+      MY_PUBLIC_ID,
+    );
+
+    await signInWith(payloadFor(ME));
+
+    expect(setPlayerId).toHaveBeenLastCalledWith(MY_PUBLIC_ID);
+  });
+
+  it("replaces the in-memory publicId when the authenticated account changes", async () => {
+    rememberPublicId(ME, MY_PUBLIC_ID);
+
+    await signInWith(payloadFor(SOMEONE_ELSE));
+
+    expect(setPlayerId).toHaveBeenLastCalledWith(null);
   });
 
   it("never reuses another account's cached publicId", async () => {
