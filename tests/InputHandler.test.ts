@@ -324,15 +324,27 @@ describe("InputHandler AutoUpgrade", () => {
     }
 
     function fireLeftPointerUp(ctrlKey: boolean) {
-      const pointerEvent = new PointerEvent("pointerup", {
-        button: 0,
-        clientX: 150,
-        clientY: 250,
+      const shared = {
+        button: 0 as const,
+        pointerId: 1,
         ctrlKey,
-      });
-      inputHandler["lastPointerDownX"] = 149;
-      inputHandler["lastPointerDownY"] = 249;
-      inputHandler["onPointerUp"](pointerEvent);
+      };
+      // Matching pointerdown required: onPointerUp returns early unless
+      // pointerDown is set and pointers has this pointerId.
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          ...shared,
+          clientX: 149,
+          clientY: 249,
+        }),
+      );
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          ...shared,
+          clientX: 150,
+          clientY: 250,
+        }),
+      );
     }
 
     beforeEach(() => {
