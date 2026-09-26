@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 
 declare global {
   interface Navigator {
-    keyboard?: {
+    keyboard?: EventTarget & {
       getLayoutMap(): Promise<Map<string, string>>;
     };
   }
